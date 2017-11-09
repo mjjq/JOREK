@@ -50,8 +50,6 @@ real*8, allocatable     :: T_profile(:)
 real*8     :: density_prof
 real*8, allocatable     :: density_profile(:)
 
-
-
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
   write(*,*) '*           equilibrium               *'
@@ -59,9 +57,7 @@ if (my_id .eq. 0) then
   write(*,*) '   freeboundary_equil : ',freeboundary_equil
   write(*,*) '   X-point      : ',xpoint2
   write(*,*) '   Xcase        : ',xcase2
-
-endif ! my_id == 0
-
+endif
 
 freeboundary_equil2 = freeboundary_equil
 freeboundary_equil  = .false.
@@ -72,7 +68,6 @@ n_iter      = 200
 psi_bnd     = 0.d0
 Z_xpoint(1) = -99.d0
 Z_xpoint(2) = +99.d0
-
 
 i_elm_xpoint=0 
 
@@ -123,7 +118,6 @@ if (my_id == 0) then
   
     if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
     if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
-  
   
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
                  psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1
@@ -210,7 +204,7 @@ if (freeboundary_equil) then
       
       write(*,'(A,1e12.4)') 'Current Feedback factor = ',  current_FB_fact
                      
-      if(my_id == 0) call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+      call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
       
       write(10,'(i6,9e20.12)') iter, current_tot, R_axis, Z_axis, psi_bnd-psi_axis
   
@@ -238,8 +232,8 @@ if (freeboundary_equil) then
       endif
   
   
-  ! Look for a limiter only for the first iterations to avoid "levitating plasma" problems
-  !if (iter .lt. 30) then
+      ! Look for a limiter only for the first iterations to avoid "levitating plasma" problems
+      !if (iter .lt. 30) then
       call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
       if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
         psi_bnd = min(psi_lim,psi_bnd)
@@ -262,7 +256,6 @@ if (freeboundary_equil) then
       end if
      
       if ((mod(iter,n_feedback_vertical) .eq. 0) .and. (iter .ge. start_VFB) ) then
-  
         vertical_FB = FB_Zaxis_position   * (Z_axis-Z_axis_ref) &   ! vertical_FB is used in vacuum_equilibrium.f90 to modify the coils current
                     + FB_Zaxis_integral   * Z_axis_int          &   
                     + FB_Zaxis_derivative * dZ_axis

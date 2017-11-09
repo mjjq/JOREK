@@ -47,11 +47,10 @@ subroutine get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
   if (.not. normal_eqdsk) then
     n_skip = nr/5 + (nr/5)*(nz-1)
   else
-    n_skip = nr/5 + (nr*nz)/5 - 1
+    n_skip = nr/5 + (nr*nz)/5 - nr/5
   endif
-  if (mod(nr,5)    .ne. 0) n_skip = n_skip + 1
   if (mod(nr*nz,5) .ne. 0) n_skip = n_skip + 1
-  if ( (.not. normal_eqdsk) .and. (mod(nr,5) .ne. 0) ) n_skip = n_skip - 1 + nz - 1
+  if ( (.not. normal_eqdsk) .and. (mod(nr,5) .ne. 0) ) n_skip = n_skip - 1 + nz
   
   do i=1,n_skip
     read(5,*) skip

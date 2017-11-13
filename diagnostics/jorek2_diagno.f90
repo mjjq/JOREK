@@ -81,7 +81,7 @@ write(*,*) '***************************************'
 write(*,*) '* JOREK2_diagno                       *'
 write(*,*) '***************************************'
 
-my_id=0
+!my_id=0
 
 #ifdef FUNNELED
   required = MPI_THREAD_FUNNELED
@@ -132,6 +132,33 @@ call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
 
 call initialise_basis()                              ! define the basis functions at the Gaussian points
 
+call broadcast_elements(my_id, element_list)                ! elements
+call broadcast_nodes(my_id, node_list)                      ! nodes
+call broadcast_phys(my_id)                                  ! physics parameters
+
+
+!------------------------------------------------- find x-point(s)
+xcase = 1
+if (xpoint) then
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+  psi_bnd = psi_xpoint(1)
+  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+    psi_bnd = psi_xpoint(2)
+  endif
+else
+  psi_bnd = 0.d0
+endif
+
+call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+
+if (my_id .eq. 0 ) then
+  write(*,*) ' xcase,1st x-point:R,Z,psi: ',xcase, R_xpoint(1),Z_xpoint(1),psi_xpoint(1),psi_bnd
+!   write(*,*) ' PSI_XPOINT : ',psi_xpoint,i_elm_xpoint
+  write(*,*) ' PSI_AXIS : ',psi_axis,i_elm_axis
+  write(*,*) ' RZ_AXIS : ', R_axis, Z_axis
+endif
+
+
 axis_is_min = axis_is_psi_minimum(node_list, element_list, R_axis, Z_axis, psi_axis) !Dump call to initialize
 
 
@@ -142,10 +169,10 @@ write(20,'(A,25(A11,i3.3))') '      i      time',('          M',n_period*((in-1)
 
 do i=2,index_start
 
- Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,i)/energies(n_tor,1,i-1))) &
-             / (xtime(i)-xtime(i-1))
- Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,i)/energies(n_tor,2,i-1))) &
-             / (xtime(i)-xtime(i-1))
+ !Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,i)/energies(n_tor,1,i-1))) &
+ !            / (xtime(i)-xtime(i-1))
+ !Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,i)/energies(n_tor,2,i-1))) &
+ !            / (xtime(i)-xtime(i-1))
 
  !write(*,'(i7,f12.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i),growth_mag,growth_kin
 

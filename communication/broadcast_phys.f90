@@ -351,11 +351,11 @@ end if
   call MPI_PACK(n_up_priv,              1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(n_pfc,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Rmin_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Rmax_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Zmin_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Zmax_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(current_pfc,           20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Rmin_pfc,              40,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Rmax_pfc,              40,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Zmin_pfc,              40,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Zmax_pfc,              40,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(current_pfc,           40,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(mode,               n_tor,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(index_start,            1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -799,11 +799,11 @@ end if
   call MPI_UNPACK(buffer,bufsize,position,n_up_priv,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   
   call MPI_UNPACK(buffer,bufsize,position,n_pfc,		         1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,Rmin_pfc,              20,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,Rmax_pfc,              20,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,Zmin_pfc,              20,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,Zmax_pfc,              20,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,current_pfc,           20,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Rmin_pfc,              40,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Rmax_pfc,              40,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Zmin_pfc,              40,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Zmax_pfc,              40,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,current_pfc,           40,MPI_REAL8,MPI_COMM_WORLD,ierr)
   
   call MPI_UNPACK(buffer,bufsize,position,mode,                  n_tor,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,index_start,            1,MPI_INTEGER,MPI_COMM_WORLD,ierr)

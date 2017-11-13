@@ -187,11 +187,11 @@ module phys_module
   !> @name PF coils definition for initial equilibrium (MAST)
   !! Numerical definition of the PF coils definition for initial equilibrium (MAST)
   integer :: n_pfc            !< Number of coils
-  real*8  :: Rmin_pfc(20)     !< Minimum R of coil
-  real*8  :: Rmax_pfc(20)     !< Maximum R of coil
-  real*8  :: Zmin_pfc(20)     !< Minimum Z of coil
-  real*8  :: Zmax_pfc(20)     !< Maximum Z of coil
-  real*8  :: current_pfc(20)  !< Current density in the coil
+  real*8  :: Rmin_pfc(40)     !< Minimum R of coil
+  real*8  :: Rmax_pfc(40)     !< Maximum R of coil
+  real*8  :: Zmin_pfc(40)     !< Minimum Z of coil
+  real*8  :: Zmax_pfc(40)     !< Maximum Z of coil
+  real*8  :: current_pfc(40)  !< Current density in the coil
   
   !> @name Pellet-related input parameters
   real*8  :: pellet_amplitude  !< amplitude of density source (when pellet modelled as density source)

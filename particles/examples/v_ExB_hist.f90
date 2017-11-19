@@ -12,7 +12,7 @@ use mod_particle_sim
 use mod_fields_linear, only: last_file_before_time
 use mod_fields_hermite_birkhoff
 use phys_module, only: xpoint, xcase
-use mod_pcg32_rng, only: pcg32_rng
+use mod_sobseq_rng, only: sobseq_rng
 use mod_random_seed, only: random_seed
 use constants, only: TWOPI
 use mod_initialise_particles, only: domain_bounding_box
@@ -21,14 +21,14 @@ use domains
 !$ use omp_lib
 implicit none
 
-integer, parameter :: n_points = 1000000, nx = 110, nv = 2000
+integer, parameter :: n_points = 100000000, nx = 110, nv = 2000
 real*8, parameter :: x_min = 0.d0, x_max = 1.1d0, dx = (x_max-x_min)/real(nx,8)
 real*8, parameter :: v_min = -6d3, v_max = 6d3, dv = (v_max-v_min)/real(nv,8)
 
 integer :: counts(nv,nx)
 
 type(particle_sim) :: sim
-type(pcg32_rng) :: rng
+type(sobseq_rng) :: rng
 type(read_jorek_fields_interp_hermite_birkhoff) :: fieldreader
 integer :: i_elm, ifail, i, seed, n_threads, i_thread, unit
 integer :: i_v, i_x
@@ -49,6 +49,7 @@ call fieldreader%do(sim)
 ! Calculate normalization coefficients psi_axis and psi_xpoint(1)
 call find_axis(0, sim%fields%node_list, sim%fields%element_list, psi_axis, x(1), x(2), i_elm, s, t, ifail)
 call find_xpoint(0, sim%fields%node_list, sim%fields%element_list, psi_xpoint, x(1), Z_xpoint, i_elm, s, t, xcase, ifail)
+write(*,*) "Psi_xpoint: ", psi_xpoint(1), " Psi_axis: ", psi_axis
 ! Get the size of the domain
 call domain_bounding_box(sim%fields%node_list, sim%fields%element_list, Rmin, Rmax, Zmin, Zmax)
 
@@ -80,7 +81,8 @@ do i=1,n_points
 
   ! Calculate the normal vector to the flux surface, Grad Psi / |Grad Psi|
   ! Assume no variation of Psi in the toroidal direction
-  grad_psi = ([-B(2),B(1)])/(psi_xpoint(1) - psi_axis) ! in poloidal plane, normalize to grad_psi_N
+  ! 
+  grad_psi = -([-B(2),B(1)])*R/(psi_xpoint(1) - psi_axis) ! in poloidal plane, normalize to grad_psi_N
   ! Convert v_r from m/s to psi/s by multiplying by |grad_psi|
   i_v = floor((dot_product(v(1:2), grad_psi) - v_min)/dv)
   psi_N = (psi - psi_axis)/(psi_xpoint(1) - psi_axis)

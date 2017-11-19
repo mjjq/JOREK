@@ -1,4 +1,18 @@
-!> Module containing routines to project particles onto the JOREK finite elements
+!> Module containing routines to project a function of particles onto the JOREK
+!> finite elements.
+!>
+!> The general routine allows the user to specify a (pure) transformation function
+!> to calculate the quantity to be projected.
+!> Included transformation function (and default) is 1.
+!>
+!> Samples are taken every t_s.
+!> Projections are performed every t_p = n t_s. (integer n >= 1)
+!> If multiple samples are taken they are averaged over the integration time.
+!> 
+!> Projected results can be written to vtk or hdf5 by specifying the appropriate
+!> options at creation time of project_particles_base.
+!> Using project_to_vtk or project_to_h5 is deprecated but still supported.
+!> 
 module mod_project_particles
 use mod_io_actions
 use data_structure
@@ -6,45 +20,107 @@ use mod_particle_sim
 implicit none
 include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 private
-public project_particles, write_particle_distribution_to_vtk
-public prepare_mumps_par, write_particle_distribution_to_h5
-public project_to_vtk, project_to_h5
+public project_particles
+public write_particle_distribution_to_vtk, write_particle_distribution_to_h5 !< public for testing reasons, please don't use directly
+public prepare_mumps_par !< public for testing reasons
+public project_to_vtk, project_to_h5 !< DEPRECATED
 public DMUMPS_STRUC
 
-!> Action to project all particle distributions and save them to vtk
-type, extends(io_action), abstract :: project_particles_base
-  type(type_node_list), allocatable    :: node_list !< node lists to save particle projections in
-  type(type_element_list), allocatable :: element_list
-  real*8 :: smoothing !< Smoothing factor used for this projection
-  type (DMUMPS_STRUC), private :: mumps_par
-  !< is factored by mumps
-end type project_particles_base
-
-type, extends(project_particles_base) :: project_to_vtk
+type :: vtk_grid
   integer :: nsub !< Number of subdivisions to make
   real*4,allocatable, private  :: xyz (:,:) !< positions of points in vtk file
   integer,allocatable, private :: ien (:,:) !< connectivity in vtk file
+end type
+
+!> Action to project all particle distributions and save them to vtk
+type, extends(io_action) :: projection
+  type(type_node_list), allocatable    :: node_list !< node lists to save particle projections in
+  type(type_element_list), allocatable :: element_list
+  real*8 :: smoothing !< Smoothing factor used for this projection
+  type (DMUMPS_STRUC), private :: mumps_par !< matrix is factored by mumps and stored here
+  integer :: n = 1 !< Number of analysis steps per projection step
+  !> Output storage (optional)
+  type(vtk_grid), allocatable, private :: vtk_grid !< if allocated output to vtk
+  logical, public :: to_h5 = .false. !< Output to hdf5 file
 contains
-  procedure :: do => project_and_save_to_vtk
-end type project_to_vtk
+  procedure :: do => project
+end type projection
+interface projection
+  module procedure new_projection
+end interface projection
+
+! Here for legacy reasons, please don't use anymore
+type, extends(projection) :: project_to_vtk
+end type
 interface project_to_vtk
   module procedure new_project_to_vtk
 end interface project_to_vtk
-
-type, extends(project_particles_base) :: project_to_h5
-contains
-  procedure :: do => project_and_save_to_h5
+type, extends(projection) :: project_to_h5
 end type project_to_h5
 interface project_to_h5
   module procedure new_project_to_h5
 end interface project_to_h5
 
 contains
+!> Constructor for project_particles
+!> Be sure to use keyword arguments when initializing, to avoid confusion
+function new_projection(node_list, element_list, smoothing, n, to_h5, to_vtk, &
+    nsub, filename, basename, decimal_digits, fractional_digits) result(new)
+  use mpi
+  type(projection) :: new
+  type(type_node_list), intent(in)       :: node_list
+  type(type_element_list), intent(in)    :: element_list
+  real*8, intent(in)                     :: smoothing
+  ! TODO add aggregating function
+  integer, intent(in), optional          :: n !< Number of analysis steps to each projection step (1 if omitted)
+  logical, intent(in), optional          :: to_h5 !< Write HDF5 output after projecting (false if omitted)
+  logical, intent(in), optional          :: to_vtk !< Write vtk output after projecting (false if omitted)
+  integer, intent(in), optional          :: nsub !< number of subdivisions of the finite elements
+  character(len=*), intent(in), optional :: filename
+  character(len=*), intent(in), optional :: basename
+  integer, intent(in), optional          :: decimal_digits
+  integer, intent(in), optional          :: fractional_digits
+  integer :: my_id, ierr
+
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+
+  allocate(new%node_list,    source=node_list)
+  allocate(new%element_list, source=element_list)
+  new%smoothing = smoothing
+  if (present(to_vtk)) then
+    if (to_vtk) then
+      allocate(new%vtk_grid)
+      new%vtk_grid%nsub = 4
+      if (present(nsub)) new%vtk_grid%nsub = nsub
+      ! Precalculate the node positions in the vtk file and the connectivity
+      if (my_id .eq. 0) call prepare_write_particle_distribution_to_vtk(new%node_list, &
+          new%element_list, new%vtk_grid%nsub, new%vtk_grid%xyz, new%vtk_grid%ien)
+      ! We don't set the extension here since this is dynamically set in the do
+      ! action (to support both vtk and h5 output)
+    end if
+  end if
+  if (present(to_h5)) new%to_h5 = to_h5
+
+  new%basename = "proj"
+  new%n = 1
+  if (present(n)) new%n = n
+  if (present(filename)) new%filename = filename
+  if (present(basename)) new%basename = basename
+  if (present(decimal_digits)) new%decimal_digits = decimal_digits
+  if (present(fractional_digits)) new%fractional_digits = fractional_digits
+  new%name = "Project"
+  new%log = .true.
+
+  call prepare_mumps_par(new%node_list, new%element_list, new%mumps_par, new%smoothing)
+end function new_projection
+
+
 !> Constructor for project_to_vtk
 !> Be sure to use keyword arguments when initializing, to avoid confusion
 function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, basename, decimal_digits, fractional_digits) result(new)
   use mpi
   type(project_to_vtk) :: new
+  type(projection) :: new_base
   type(type_node_list), intent(in)       :: node_list
   type(type_element_list), intent(in)    :: element_list
   real*8, intent(in)                     :: smoothing
@@ -54,32 +130,43 @@ function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, 
   integer, intent(in), optional          :: decimal_digits
   integer, intent(in), optional          :: fractional_digits
   integer :: my_id, ierr
-  allocate(new%node_list,    source=node_list)
-  allocate(new%element_list, source=element_list)
-  new%smoothing = smoothing
-  new%nsub = 4
-  new%basename = "proj"
-  if (present(nsub)) new%nsub = nsub
-  if (present(filename)) new%filename = filename
-  if (present(basename)) new%basename = basename
-  if (present(decimal_digits)) new%decimal_digits = decimal_digits
-  if (present(fractional_digits)) new%fractional_digits = fractional_digits
-  new%extension ='.vtk'
-  new%name = "ProjectToVtk"
-  new%log = .true.
-
-  call prepare_mumps_par(new%node_list, new%element_list, new%mumps_par, new%smoothing)
-
-  ! Precalculate the node positions in the vtk file and the connectivity
-  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
-  if (my_id .eq. 0) call prepare_write_particle_distribution_to_vtk(new%node_list, new%element_list,new%nsub,new%xyz,new%ien)
+  new_base = projection(node_list, element_list, smoothing, &
+      to_h5=.false., to_vtk=.true., nsub=nsub, filename=filename, &
+      basename=basename, decimal_digits=decimal_digits, &
+      fractional_digits=fractional_digits)
+  write(*,*) "DEPRECATION WARNING: project_to_vtk has been replaced with type(projection). Please consider updating your code"
+  call copy_project_h5_vtk(new, new_base)
 end function new_project_to_vtk
+
+
+!> Subroutine needed for backwards compatibility with new_project_to_{vtk,h5}
+!> Copy over all variables one by one...
+subroutine copy_project_h5_vtk(out, in)
+  class(projection), intent(out) :: out
+  type(projection), intent(in) :: in
+  ! Projection
+  out%node_list = in%node_list
+  out%element_list = in%element_list
+  out%MUMPS_PAR = in%MUMPS_PAR
+  out%n = in%n
+  out%vtk_grid = in%vtk_grid
+  out%to_h5 = in%to_h5
+  ! IO_action
+  out%filename = in%filename
+  out%basename = in%basename
+  out%decimal_digits = in%decimal_digits
+  out%fractional_digits = in%fractional_digits
+  out%extension = in%extension
+end subroutine copy_project_h5_vtk
+
+
 
 !> Constructor for project_to_h5
 !> Be sure to use keyword arguments when initializing, to avoid confusion
 function new_project_to_h5(node_list, element_list, smoothing, filename, basename, decimal_digits, fractional_digits) result(new)
   use mpi
   type(project_to_h5) :: new
+  type(projection) :: new_base
   type(type_node_list), intent(in)       :: node_list
   type(type_element_list), intent(in)    :: element_list
   real*8, intent(in)                     :: smoothing
@@ -88,31 +175,37 @@ function new_project_to_h5(node_list, element_list, smoothing, filename, basenam
   integer, intent(in), optional          :: decimal_digits
   integer, intent(in), optional          :: fractional_digits
   integer :: my_id, ierr
-  allocate(new%node_list,    source=node_list)
-  allocate(new%element_list, source=element_list)
-  new%smoothing = smoothing
-  new%basename = "proj"
-  if (present(filename)) new%filename = filename
-  if (present(basename)) new%basename = basename
-  if (present(decimal_digits)) new%decimal_digits = decimal_digits
-  if (present(fractional_digits)) new%fractional_digits = fractional_digits
-  new%extension ='.h5'
-  new%name = "ProjectToH5"
-  new%log = .true.
-
-  call prepare_mumps_par(new%node_list, new%element_list, new%mumps_par, new%smoothing)
+  new_base = projection(node_list, element_list, smoothing, &
+      to_h5=.true., to_vtk=.false., filename=filename, &
+      basename=basename, decimal_digits=decimal_digits, &
+      fractional_digits=fractional_digits)
+  write(*,*) "DEPRECATION WARNING: project_to_h5 has been replaced with type(projection). Please consider updating your code"
+  call copy_project_h5_vtk(new, new_base)
 end function new_project_to_h5
 
-!> Action for projecting all particles and writing output to vtk
-subroutine project_and_save_to_vtk(this, sim, ev)
+
+subroutine project(this, sim, ev)
   use mpi
   use mod_event
   !$ use omp_lib
-  class(project_to_vtk), intent(inout) :: this
+  class(projection), intent(inout) :: this
   type(particle_sim), intent(inout)    :: sim
   type(event), intent(inout), optional :: ev
+
+  call project_only(this, sim) ! TODO support n != 1
+
+  if (this%to_h5) call save_to_h5(this, sim)
+  if (allocated(this%vtk_grid)) call save_to_vtk(this, sim)
+end subroutine project
+
+
+subroutine project_only(this, sim)
+  use mpi
+  use mod_event
+  !$ use omp_lib
+  class(projection), intent(inout) :: this
+  type(particle_sim), intent(inout)    :: sim
   integer :: i, my_id, ierr
-  character(len=120) :: filename
   real*8 :: t0, t1, ostart, oend, mmm(3), mmm2(3)
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
@@ -120,7 +213,6 @@ subroutine project_and_save_to_vtk(this, sim, ev)
   !$ ostart = omp_get_wtime()
   ! Safety checks
   if (.not. allocated(sim%groups)) return
-
 
   do i=1,min(size(sim%groups),n_var) ! only project the first n_var groups
     if (.not. allocated(sim%groups(i)%particles)) cycle
@@ -139,6 +231,25 @@ subroutine project_and_save_to_vtk(this, sim, ev)
   if (my_id .eq. 0) then
     write(*,"(A,3g12.5)") "projection cpu time", mmm
     !$ write(*,"(A,3g12.5)") "projection wall time", mmm2
+  end if
+end subroutine project_only
+
+
+!> Save an already-projected set to a vtk file with current parameters
+subroutine save_to_vtk(this, sim)
+  use mpi
+  use mod_event
+  !$ use omp_lib
+  class(projection), intent(inout) :: this
+  type(particle_sim), intent(inout)    :: sim
+  integer :: i, my_id, ierr
+  real*8 :: t0, t1, ostart, oend
+  character(len=120) :: filename
+
+  this%extension = 'vtk'
+  if (.not. allocated(this%vtk_grid)) then
+    write(*,*) "ERROR: Trying to write unprepared vtk file"
+    return
   end if
 
   if (len_trim(this%filename) .eq. 0) then
@@ -152,7 +263,7 @@ subroutine project_and_save_to_vtk(this, sim, ev)
   if (my_id .eq. 0) then
     ! write only on the host
     call write_particle_distribution_to_vtk(this%node_list, this%element_list, &
-      trim(filename), this%nsub, min(size(sim%groups),n_var), this%xyz, this%ien)
+      trim(filename), this%vtk_grid%nsub, min(size(sim%groups),n_var), this%vtk_grid%xyz, this%vtk_grid%ien)
 
     write(*,*) "Written projection to ", trim(filename)
   end if
@@ -162,46 +273,44 @@ subroutine project_and_save_to_vtk(this, sim, ev)
     write(*,"(A,2g12.5)") "writing cpu time", t1-t0
     !$ write(*,"(A,2g12.5)") "writing wall time", oend-ostart
   end if
+end subroutine save_to_vtk
+
+!> Action for projecting all particles and writing output to vtk
+!> DEPRECATED: use new projection type instead
+subroutine project_and_save_to_vtk(this, sim, ev)
+  use mod_event
+  class(project_to_vtk), intent(inout) :: this
+  type(particle_sim), intent(inout)    :: sim
+  type(event), intent(inout), optional :: ev
+  call project_only(this, sim)
+  call save_to_vtk(this, sim)
 end subroutine project_and_save_to_vtk
 
 
 !> Action for projecting all particles and writing output to vtk
+!> DEPRECATED: use new projection type instead
 subroutine project_and_save_to_h5(this, sim, ev)
-  use mpi
   use mod_event
-  !$ use omp_lib
   class(project_to_h5), intent(inout)  :: this
   type(particle_sim), intent(inout)    :: sim
   type(event), intent(inout), optional :: ev
+  call project_only(this, sim)
+  call save_to_h5(this, sim)
+end subroutine project_and_save_to_h5
+
+
+!> Action for projecting all particles and writing output to vtk
+subroutine save_to_h5(this, sim)
+  use mpi
+  use mod_event
+  !$ use omp_lib
+  class(projection), intent(inout)  :: this
+  type(particle_sim), intent(inout)    :: sim
   integer :: i, my_id, ierr
   character(len=120) :: filename
-  real*8 :: t0, t1, ostart, oend, mmm(3), mmm2(3)
+  real*8 :: t0, t1, ostart, oend
 
-  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
-  call cpu_time(t0)
-  !$ ostart = omp_get_wtime()
-  ! Safety checks
-  if (.not. allocated(sim%groups)) return
-
-
-  do i=1,min(size(sim%groups),n_var) ! only project the first n_var groups
-    if (.not. allocated(sim%groups(i)%particles)) cycle
-    call project_particles(this%node_list, this%element_list, this%mumps_par, &
-        sim%groups(i)%particles, i)
-    ! results are saved only on mpi process 0
-  end do
-  ! Communicate these to all processors
-  call broadcast_elements(my_id, this%element_list)
-  call broadcast_nodes(my_id, this%node_list)
-
-  call cpu_time(t1)
-  !$ oend = omp_get_wtime()
-  !$ mmm = mpi_minmeanmax(t1-t0)
-  !$ mmm2 = mpi_minmeanmax(oend-ostart)
-  if (my_id .eq. 0) then
-    write(*,"(A,3g12.5)") "projection cpu time", mmm
-    !$ write(*,"(A,3g12.5)") "projection wall time", mmm2
-  end if
+  this%extension = 'h5'
 
   if (len_trim(this%filename) .eq. 0) then
     filename = this%get_filename(sim%time)
@@ -225,7 +334,7 @@ subroutine project_and_save_to_h5(this, sim, ev)
     write(*,"(A,2g12.5)") "writing cpu time", t1-t0
     !$ write(*,"(A,2g12.5)") "writing wall time", oend-ostart
   end if
-end subroutine project_and_save_to_h5
+end subroutine save_to_h5
 
 
 

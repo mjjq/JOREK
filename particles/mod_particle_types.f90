@@ -6,6 +6,7 @@ module mod_particle_types
   implicit none
   private
   public particle_base, particle_kinetic, particle_kinetic_leapfrog, particle_gc, particle_fieldline, copy_particle_base
+  public particle_get_q
 
   !> The base type for all other particles. Includes only the position and weight elements
   !> Integration in a 2D finite element method is included in the form of 2 coordinates
@@ -54,4 +55,23 @@ contains
     out%weight = in%weight
     out%i_elm  = in%i_elm
   end subroutine copy_particle_base
+
+  !> Convenience function to obtain q if it exists, or 0 otherwise
+  !> Here also because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82064
+  !> which means that we cannot use the same derived type in too many modules which will be
+  !> imported in the main program (roughly)
+  pure function particle_get_q(in) result(q)
+    class(particle_base), intent(in) :: in
+    integer*1 :: q
+    select type (p => in)
+    type is (particle_kinetic)
+      q = p%q
+    type is (particle_kinetic_leapfrog)
+      q = p%q
+    type is (particle_gc)
+      q = p%q
+    class default
+      q = 0
+    end select
+  end function particle_get_q
 end module mod_particle_types

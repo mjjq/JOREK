@@ -38,4 +38,6 @@ use mod_find_RZ_nearby
 implicit none
 type(particle_sim) :: sim
 type(event), dimension(:), allocatable, target :: events
+
+public
 end module particle_tracer

@@ -2,6 +2,7 @@ module mod_interp_PRZ
   implicit none
   private
   public :: interp_RZ, interp_PRZ, interp_PRZ_delta
+  public :: sincosperiod_moivre, mode_moivre
 contains
 !> This subroutine interpolates space a specific position within one element at a given position (s,t)
 pure subroutine interp_RZ(node_list, element_list, i_elm, s, t, R, R_s, R_t, Z, Z_s, Z_t)
@@ -152,6 +153,30 @@ pure subroutine moivre(ar,ai,br,bi,or,oi)
   or = ar*br - ai*bi
   oi = ai*br + ar*bi
 end subroutine moivre
+
+! Apply De Moivre formula to calculate mode*phi
+! Assumes that mode is of the form [0 1 1 2 2 3 3 4 4] ([0 4 4 8 8 12 12])
+! This is roughly 3-4 times faster in my tests than just calculating the sines
+! and cosines (even when that is vectorized).
+pure subroutine mode_moivre(phi,HZ)
+  use mod_parameters, only: n_tor, n_period
+  integer, parameter :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
+  real*8, intent(in) :: phi
+  real*8, intent(out) :: HZ(n_tor)
+
+  integer :: i
+  HZ(1) = 1.d0
+  if (n_mode .gt. 0) then
+    HZ(2) = cos(n_period*phi)
+    HZ(3) = sin(n_period*phi)
+
+    do i=2,n_mode
+      call moivre(HZ(2),HZ(3), &
+                  HZ(2),HZ(3), &
+                  HZ(2*i),HZ(2*i+1))
+    end do
+  end if
+end subroutine mode_moivre
 
 !> This subroutine interpolates some variables at a specific position within one element at a given position (s,t)
 pure subroutine interp_PRZ_delta(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t)

@@ -2,8 +2,9 @@
 module mod_particle_sim
 use mod_particle_types
 use mod_fields
+use mod_openadas
 implicit none
-!private
+private
 public particle_group, particle_sim
 
 !> A group of particles, implemented as an allocatable array.
@@ -11,6 +12,7 @@ public particle_group, particle_sim
 type :: particle_group
   integer :: Z !< Atomic number of al particles in the group (-1 for electrons, 0 for fieldline-following)
   real*8  :: mass !< Mass of all the particles in the group
+  type(ADF11_all) :: ad !< OPEN-ADAS datafiles for this species
   class(particle_base), dimension(:), allocatable :: particles
 end type particle_group
 

@@ -80,70 +80,89 @@ end subroutine test_flux_40_32_pcg
 
 !> Create a RHS by integrating f_1 and with monte carlo methods and check that they are close
 !> This guards against errors in node indices etc
-subroutine rhs_convergence_square_10_10(node_list, element_list, n, p, rng)
+subroutine rhs_convergence_square_10_10(node_list, element_list, n, rng)
   use mod_initialise_particles
+  use mod_particle_sim
   type(type_node_list), intent(inout) :: node_list
   type(type_element_list), intent(inout)  :: element_list
-  type(DMUMPS_STRUC), intent(inout) :: p
   integer, intent(in) :: n
   class(type_rng), intent(in) :: rng
 
-  integer :: n_AA, ielm_out, ifail, i
+  integer :: n_AA, ielm_out, ifail, i, j
   real*8 :: R_out, Z_out, s_out, t_out, tol
   real*8, allocatable, dimension(:) :: rhs_f
-  type(particle_fieldline), dimension(:), allocatable :: particles
   character*8 :: n_s
+  type(projection) :: p
+  type(particle_sim) :: sim
+  integer :: i_elm, inode, index_ij, index_large_i
+  real*8, dimension(:), allocatable :: my_rhs
+
   write(n_s, '(i8)') n
 
+  p%node_list = node_list
+  p%element_list = element_list
+  allocate(sim%groups(1))
+
   n_AA = maxval(node_list%node(1:node_list%n_nodes)%index(4))
-  allocate(rhs_f(n_AA))
-  allocate(particles(n))
+  allocate(rhs_f(n_AA), my_rhs(n_AA))
+  my_rhs = 0.d0
+  allocate(particle_fieldline::sim%groups(1)%particles(n))
 
   ! to prevent omp trouble
   call find_RZ(node_list,element_list,2.d0,1.d0,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-  call initialise_particles(particles, node_list, element_list, rng)
-  particles(:)%weight = TWOPI/real(n)
-  call project_particles(node_list, element_list, p, particles, 1, skip_proj=.true.)
+
+  call initialise_particles(sim%groups(1)%particles, node_list, element_list, rng)
+  do i=1,n
+    sim%groups(1)%particles(i)%weight = real(TWOPI,4)/real(n,4)
+  end do
+  call sample_rhs(p, sim)
+  deallocate(sim%groups(1)%particles)
+
+  ! Convert RHS per element to 1D
+  do i_elm=1,element_list%n_elements
+    do i=1,n_vertex_max
+      inode = element_list%element(i_elm)%vertex(i)
+      do j=1,n_order+1
+        index_ij = (i-1)*(n_order+1) + j
+        index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
+
+        my_rhs(index_large_i) = my_rhs(index_large_i) + p%rhs(index_ij,i_elm,1,1)
+      enddo
+    enddo
+  enddo
+
   call calc_rhs_f(node_list,element_list,f_1,rhs_f)
   call assert_false(isnan(sum(rhs_f)), 'sum integrated rhs is not nan[n='//trim(adjustl(n_s))//']')
-  call assert_false(isnan(sum(p%rhs)), 'sum MC rhs is not nan[n='//trim(adjustl(n_s))//']')
+  call assert_false(isnan(sum(my_rhs)), 'sum MC rhs is not nan[n='//trim(adjustl(n_s))//']')
   select type (rng)
   type is (pcg32_rng)
     tol = 7d0/sqrt(real(n))
   type is (sobseq_rng)
     tol = 65d0/real(n)
   end select
-  call assert_equals(0.d0, sum(abs(rhs_f-p%rhs)), tol, 'sum abs integrated - MC rhs [n='//trim(adjustl(n_s))//']')
-  call assert_equals(0.d0, maxval(abs(rhs_f-p%rhs)), tol, 'max abs integrated - MC rhs [n='//trim(adjustl(n_s))//']')
+  call assert_equals(0.d0, sum(abs(rhs_f-my_rhs)), tol, 'sum abs integrated - MC rhs [n='//trim(adjustl(n_s))//']')
+  call assert_equals(0.d0, maxval(abs(rhs_f-my_rhs)), tol, 'max abs integrated - MC rhs [n='//trim(adjustl(n_s))//']')
 end subroutine rhs_convergence_square_10_10
 
 !> Test convergence of RHS for n particles
 subroutine test_rhs_square_10_10_pcg
-  type(DMUMPS_STRUC) :: p
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_square_grid(node_list, element_list, 10)
-  call prepare_mumps_par(node_list, element_list, p, smoothing=0.d0)
-  call rhs_convergence_square_10_10(node_list, element_list, 1000, p, pcg32_rng())
-  call rhs_convergence_square_10_10(node_list, element_list, 10000, p, pcg32_rng())
-  call rhs_convergence_square_10_10(node_list, element_list, 100000, p, pcg32_rng())
-  call rhs_convergence_square_10_10(node_list, element_list, 1000000, p, pcg32_rng())
-  p%JOB=-2
-  call DMUMPS(p)
+  call rhs_convergence_square_10_10(node_list, element_list, 1000, pcg32_rng())
+  call rhs_convergence_square_10_10(node_list, element_list, 10000, pcg32_rng())
+  call rhs_convergence_square_10_10(node_list, element_list, 100000, pcg32_rng())
+  call rhs_convergence_square_10_10(node_list, element_list, 1000000, pcg32_rng())
 end subroutine test_rhs_square_10_10_pcg
 !> Test convergence of RHS for n particles
 subroutine test_rhs_square_10_10_sob
-  type(DMUMPS_STRUC) :: p
   type(type_node_list) :: node_list
   type(type_element_list) :: element_list
   call default_square_grid(node_list, element_list, 10)
-  call prepare_mumps_par(node_list, element_list, p, smoothing=0.d0)
-  call rhs_convergence_square_10_10(node_list, element_list, 1000, p, sobseq_rng())
-  call rhs_convergence_square_10_10(node_list, element_list, 10000, p, sobseq_rng())
-  call rhs_convergence_square_10_10(node_list, element_list, 100000, p, sobseq_rng())
-  call rhs_convergence_square_10_10(node_list, element_list, 1000000, p, sobseq_rng())
-  p%JOB=-2
-  call DMUMPS(p)
+  call rhs_convergence_square_10_10(node_list, element_list, 1000, sobseq_rng())
+  call rhs_convergence_square_10_10(node_list, element_list, 10000, sobseq_rng())
+  call rhs_convergence_square_10_10(node_list, element_list, 100000, sobseq_rng())
+  call rhs_convergence_square_10_10(node_list, element_list, 1000000, sobseq_rng())
 end subroutine test_rhs_square_10_10_sob
 
 
@@ -199,8 +218,11 @@ subroutine project_n_polar_30_npol(node_list, element_list, n, rng, rms_tol, mea
 end subroutine project_n_polar_30_npol
 
 !> Helper function to project n particles onto a grid in node_list, element_list with optional smoothing
+!> Creates a projection type behind the scenes and uses that.
+!> We also need to create a particle-sim here
 subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing, rms_tol, mean_tol)
   use mod_initialise_particles
+  use mod_particle_sim
   type(type_node_list), intent(inout) :: node_list
   type(type_element_list), intent(inout) :: element_list
   integer, intent(in), dimension(:) :: n
@@ -209,11 +231,12 @@ subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing, r
   real*8, intent(in) :: volume !< total volume
   real*8, intent(in), dimension(:) :: rms_tol, mean_tol
   real*8, optional, intent(in) :: smoothing
-  type(particle_kinetic), dimension(:), allocatable :: particles
-  type(DMUMPS_STRUC) :: p
+
+  type(projection) :: p
+  type(particle_sim) :: sim
 
   integer :: i, j, ifail, ielm_out
-  real*8 :: x(3), R, Z, R_out, Z_out, Phi, tol, s, s_out, t_out
+  real*8 :: R_out, Z_out, s, s_out, t_out
   real*8 :: m, e !< mean, rms error
   character*8 :: n_s, tol_s, ss
 
@@ -223,21 +246,24 @@ subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing, r
     s = smoothing
     write(ss,'(g8.1)') s
   end if
-  call prepare_mumps_par(node_list, element_list, p, smoothing=s)
-
+  p = projection(node_list, element_list, smoothing=s)
+  allocate(sim%groups(1))
 
   do j=1,size(n)
     write(n_s, '(i8)') n(j)
 
-    allocate(particles(n(j)))
+    allocate(particle_kinetic::sim%groups(1)%particles(n(j)))
     call find_RZ(node_list,element_list,2.d0,1.d0,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-    call initialise_particles(particles, node_list, element_list, rng)
-    particles(:)%weight = volume/real(n(j))
+    call initialise_particles(sim%groups(1)%particles, node_list, element_list, rng)
+    do i=1,n(j)
+      sim%groups(1)%particles(i)%weight = volume/real(n(j))
+    end do
 
-    call project_particles(node_list, element_list, p, particles, 1)
+    call p%do(sim) ! now results are in node_list
+    deallocate(sim%groups(1)%particles)
 
     ! test rms
-    call elements_mean_rms(node_list, element_list, f_1, m, e)
+    call elements_mean_rms(p%node_list, p%element_list, f_1, m, e)
     write(tol_s, '(g8.1)') mean_tol(j)
     call assert_equals(1.d0, m, mean_tol(j), 'mean value 1 [n='//trim(adjustl(n_s))//' -> tol='//trim(tol_s)//']'//trim(ss))
     write(tol_s, '(g8.1)') rms_tol(j)
@@ -246,10 +272,7 @@ subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing, r
       call write_particle_distribution_to_h5(node_list, element_list, &
         filename='part_'//trim(adjustl(n_s))//'_'//trim(name)//'.h5', n_fields=1, time=0.d0)
     end if
-
-    deallocate(particles)
   end do
-  p%JOB=-2
-  call DMUMPS(p)
+  call p%close_mumps()
 end subroutine project_n
 end module particle_projection_spec

@@ -61,7 +61,7 @@ end function corona_matrix
 !> Radiated power in a specific coronal equilibrium configuration and temperature
 pure function coronal_Prad(ad, density, temperature, fractions, neutral_density)
 type (ADF11_all), intent(in)            :: ad !< ADF11 datatype
-real*8, intent(in)                      :: density !< log10 density in cm^-3
+real*8, intent(in)                      :: density !< log10 density in m^-3
 real*8, intent(in)                      :: temperature !< log10 electron temperature in K
 real*8, intent(in), dimension(0:ad%n_Z) :: fractions !< Fractional charge states. Should sum to 1 but we do not check it!
 real*8, intent(in), optional            :: neutral_density !< log10 neutral density in m^-3

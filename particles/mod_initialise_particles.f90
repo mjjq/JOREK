@@ -147,7 +147,10 @@ subroutine initialise_particles(particles, node_list, element_list, &
   ! number of values is 2^31 now.
   ! TODO fix also for MPI or broadcast to nodes
   do while (any(not_found))
-  !$omp parallel default(none) &
+  ! default(shared) is very dangerous but needed due to gfortran failures.
+  ! be very careful (error message for default(none) below)
+  ! Error: ‘__vtab_mod_particle_types_Particle_kinetic_leapfrog’ not specified in enclosing ‘parallel’
+  !$omp parallel default(shared) &
   !$omp   shared(particles, node_list, element_list, Rbox, Zbox, PhiBox, variables, &
   !$omp          rngs, n_threads, n_streams, seed, my_id, n_mhd, n_geom, i_to_find, not_found) &
   !$omp   private(j, i, R, Z, phi, i_elm, s, t, ifail, seq, ran, i_thread, P, DUMMY_REAL)
@@ -379,10 +382,15 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
 
     ! Allocate some temporary storage
     select type (particles)
+    type is (particle_kinetic)
+      write(*,*) "ERROR: particle_kinetic not supported yet for initialize_particles_H_mu_psi"
     type is (particle_kinetic_leapfrog)
       allocate(particle_kinetic_leapfrog::particles_tmp(blocksize))
     type is (particle_gc)
       allocate(particle_gc::particles_tmp(blocksize))
+    class default
+      write(*,*) "ERROR: particle type not supported yet for initialize_particles_H_mu_psi"
+      call exit(1)
     end select
     !allocate(particles_tmp(blocksize), mold=particles) ! this does not work in ifort 17
     allocate(found(blocksize))
@@ -587,7 +595,9 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
     my_alpha = 0.d0 !< Default
   end if
 
-  !$omp parallel do default(none) private(i, psibar, H, n, T, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t) &
+  ! default(shared) is very dangerous but needed due to gfortran failures... be careful adding variables
+  ! and try compilation with default(none) if you change anything.
+  !$omp parallel do default(shared) private(i, psibar, H, n, T, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t) &
   !$omp shared(particles, node_list, element_list, mass, central_density, my_alpha)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .eq. 0) cycle

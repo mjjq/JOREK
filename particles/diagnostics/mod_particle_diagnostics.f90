@@ -10,6 +10,8 @@
 module mod_particle_diagnostics
 use mod_io_actions
 use mod_particle_sim
+use mod_fields
+use mod_particle_types
 use hdf5
 implicit none
 private

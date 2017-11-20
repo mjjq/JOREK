@@ -58,7 +58,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, D_perp_file, ZK_perp_file,                   &
                 rho_file, T_file, ffprime_file,                     &
-                freeboundary_equil, freeboundary,                   &
+                freeboundary_equil, freeboundary,  freeb_change_indices, &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
@@ -105,7 +105,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_pf_coils, pf_coils,                 &
                 Zaxis_find_limit, PF_pert_start_time,               &
-                starwall_equil_coils
+                starwall_equil_coils, freeb_equil_iterate_area,     &
+                psi_offset_freeb, diag_coils, rmp_coils,            &
+                voltage_coils, vert_FB_amp
 
  if (my_id .eq. 0) then
 

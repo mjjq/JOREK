@@ -80,7 +80,7 @@ module vacuum_response
     
     if ( vacuum_debug .and. (my_id == 0) ) call log_starwall_response(sr)
     
-    if ( my_id == 0 ) call read_starwall_response(sr, 'starwall-response.dat')
+    if ( my_id == 0 ) call read_starwall_response(sr, 'starwall-response.dat', bnd_elm_list%n_bnd_elements)
 
     call broadcast_starwall_response(my_id, sr)
     
@@ -239,7 +239,11 @@ module vacuum_response
   
   
   !> Read the STARWALL response matrices from a single file.
-  subroutine read_starwall_response(sr, filename)
+  !!
+  !! file_version 1: Original
+  !! file_version 2: Includes eta_thin_w
+  !! file_version 3: Includes additional coil information
+  subroutine read_starwall_response(sr, filename, n_bnd)
     
     use constants
     use mod_parameters, only: n_tor, n_period
@@ -249,6 +253,7 @@ module vacuum_response
     ! --- Routine parameters
     type(t_starwall_response), intent(inout) :: sr
     character(len=*),          intent(in)    :: filename
+    integer,                   intent(in)    :: n_bnd !< Number of boundary elements for consistency check
     
     ! --- Local variables
     integer, parameter :: filehandle = 60
@@ -261,7 +266,7 @@ module vacuum_response
     !   --- Try to open as unformatted file
     write(*,*) 'Trying to open response as unformatted file...'
     open(filehandle, file=trim(filename), form='unformatted', status='old', action='read', &
-      iostat=err)
+      access='stream', iostat=err)
     if ( err == 0 ) then
       read(filehandle,iostat=err) i_tmp, r_tmp
       if ( (i_tmp/=42) .or. (r_tmp/=42.d0) ) then
@@ -275,7 +280,7 @@ module vacuum_response
       write(*,*) '  ... failed.'
       write(*,*) 'Trying to open response as formatted file...'
       open(filehandle, file=trim(filename), form='formatted', status='old', action='read', &
-        iostat=err)
+        access='stream', iostat=err)
     end if
     
     if ( err /= 0 ) then
@@ -293,12 +298,17 @@ module vacuum_response
     end if
     
     sr%file_version = read_intparam(filehandle, 'file_version')
-    if ( sr%file_version > 2 ) then
+    if ( sr%file_version > 3 ) then
       write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
       stop
     end if
 
     sr%n_bnd  = read_intparam(filehandle, 'n_bnd')
+    if ( n_bnd /= sr%n_bnd ) then
+      write(*,*) 'ERROR: The number of boundary elements in the STARWALL response file is different from your grid.'
+      stop
+    end if
+    
     sr%nd_bez = read_intparam(filehandle, 'nd_bez')
     sr%ncoil  = read_intparam(filehandle, 'ncoil')
     sr%npot_w = read_intparam(filehandle, 'npot_w')
@@ -306,8 +316,38 @@ module vacuum_response
     sr%ntri_w = read_intparam(filehandle, 'ntri_w')
     sr%n_tor  = read_intparam(filehandle, 'n_tor')
     sr%n_tor0 = sr%n_tor
-
-    call read_array(filehandle, 'i_tor',    (/sr%n_tor,0/),          int1d=sr%i_tor)
+    call read_array(filehandle, 'i_tor',         (/sr%n_tor,0/),  int1d=sr%i_tor)
+    
+    ! --- Additional coil information is only available since file_version 3
+    if ( sr%file_version >= 3 ) then
+      sr%ntri_c = read_intparam(filehandle, 'ntri_c')
+      sr%n_pol_coils             = read_intparam(filehandle, 'n_pol_coils')
+      sr%n_rmp_coils             = read_intparam(filehandle, 'n_rmp_coils')
+      sr%n_voltage_coils         = read_intparam(filehandle, 'n_voltage_coils')
+      sr%n_diag_coils            = read_intparam(filehandle, 'n_diag_coils')
+      if (sr%n_voltage_coils > 0 ) then
+        write(*,*) 'ERROR: voltage_coils not yet implemented.'
+        stop
+      end if
+      if ( sr%ncoil /= sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils) then
+        write(*,*) 'ERROR: STARWALL response is inconsistent: ncoil does not match sum.'
+        stop
+      end if
+      sr%ind_start_pol_coils     = read_intparam(filehandle, 'ind_start_pol_coils')
+      sr%ind_start_rmp_coils     = read_intparam(filehandle, 'ind_start_rmp_coils')
+      sr%ind_start_voltage_coils = read_intparam(filehandle, 'ind_start_voltage_coils')
+      sr%ind_start_diag_coils    = read_intparam(filehandle, 'ind_start_diag_coils')
+      
+      if ( sr%ncoil > 0 ) then
+        call read_array(filehandle, 'jtri_c',        (/sr%ncoil,0/),  int1d=sr%jtri_c)
+        call read_array(filehandle, 'x_coil',        (/sr%ntri_c,3/), float2d=sr%x_coil)
+        call read_array(filehandle, 'y_coil',        (/sr%ntri_c,3/), float2d=sr%y_coil)
+        call read_array(filehandle, 'z_coil',        (/sr%ntri_c,3/), float2d=sr%z_coil)
+        call read_array(filehandle, 'phi_coil',      (/sr%ntri_c,3/), float2d=sr%phi_coil)
+        call read_array(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/), float1d=sr%eta_thin_coil)
+        call read_array(filehandle, 'coil_resist',   (/sr%ncoil,0/),  float1d=sr%coil_resist)
+      end if
+    end if
     
     ! --- eta_thin_w is only part of the STARWALL response file since file_version 2
     if ( sr%file_version >= 2 ) then
@@ -395,15 +435,24 @@ module vacuum_response
     if ( vacuum_debug ) write(*,*) my_id, 'Entering broadcast_starwall_response.'
     
     ! --- Broadcast parameters.
-    call MPI_bcast(sr%file_version, 1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_bnd,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%nd_bez,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ncoil,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%npot_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_w,          1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ntri_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_tor,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_tor0,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%file_version,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_bnd,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%nd_bez,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ncoil,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%npot_w,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_w,                     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ntri_w,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_tor,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_tor0,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ntri_c,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_pol_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_rmp_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_voltage_coils,         1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_diag_coils,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_pol_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_rmp_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_voltage_coils, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_diag_coils,    1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%eta_thin_w,   1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     
     n_dof_starwall = sr%nd_bez
@@ -422,26 +471,47 @@ module vacuum_response
       if (allocated(sr%s_ww_inv)) deallocate(sr%s_ww_inv); allocate(sr%s_ww_inv(sr%n_w,sr%n_w))
       if (allocated(sr%xyzpot_w)) deallocate(sr%xyzpot_w); allocate(sr%xyzpot_w(sr%npot_w,3))
       if (allocated(sr%jpot_w)  ) deallocate(sr%jpot_w);   allocate(sr%jpot_w(sr%ntri_w,3))
+      if ( sr%ncoil > 0 ) then
+        if (allocated(sr%jtri_c)       ) deallocate(sr%jtri_c);        allocate(sr%jtri_c(sr%ncoil))
+        if (allocated(sr%x_coil)       ) deallocate(sr%x_coil);        allocate(sr%x_coil(sr%ntri_c,3))
+        if (allocated(sr%y_coil)       ) deallocate(sr%y_coil);        allocate(sr%y_coil(sr%ntri_c,3))
+        if (allocated(sr%z_coil)       ) deallocate(sr%z_coil);        allocate(sr%z_coil(sr%ntri_c,3))
+        if (allocated(sr%phi_coil)     ) deallocate(sr%phi_coil);      allocate(sr%phi_coil(sr%ntri_c,3))
+        if (allocated(sr%eta_thin_coil)) deallocate(sr%eta_thin_coil); allocate(sr%eta_thin_coil(sr%ntri_c))
+        if (allocated(sr%coil_resist)  ) deallocate(sr%coil_resist);   allocate(sr%coil_resist(sr%ncoil))
+      end if
     end if
     
     ! --- Broadcast matrices.
-    call MPI_bcast(sr%i_tor,    sr%n_tor,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%d_yy,     sr%n_w,              MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ye,     sr%n_w*sr%nd_bez,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ey,     sr%nd_bez*sr%n_w,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ee,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_id,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_nw,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%s_ww,     sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%s_ww_inv, sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%i_tor,    sr%n_tor,              MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%d_yy,     sr%n_w,                MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ye,     sr%n_w*sr%nd_bez,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ey,     sr%nd_bez*sr%n_w,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_ee,     sr%nd_bez*sr%nd_bez,   MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_id,     sr%nd_bez*sr%nd_bez,   MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%a_nw,     sr%nd_bez*sr%nd_bez,   MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%s_ww,     sr%n_w*sr%n_w,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%s_ww_inv, sr%n_w*sr%n_w,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,           MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    if ( sr%ncoil > 0 ) then
+      call MPI_bcast(sr%jtri_c,   sr%ncoil,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%x_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%y_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%z_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%coil_resist,   sr%ncoil,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    end if
     
     if ( vacuum_debug ) then
       write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)     &
         + sum(sr%a_ye) + sum(sr%a_ey) + sum(sr%a_ee) + sum(sr%a_id) + sum(sr%a_nw) + sum(sr%s_ww)  &
         + sum(sr%s_ww_inv ) + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil  &
-        + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w + sr%file_version
+        + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w + sr%file_version + sr%ntri_c  &
+        + sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils                   &
+        + sr%ind_start_pol_coils + sr%ind_start_rmp_coils + sr%ind_start_voltage_coils             &
+        + sr%ind_start_diag_coils
       write(*,*) my_id, 'Exiting broadcast_starwall_response.'
     end if
     
@@ -471,30 +541,45 @@ module vacuum_response
     write(*,32)
     write(*,33) 'STARWALL RESPONSE INFORMATION:'
     write(*,32)
-    write(*,33) 'file_version =', sr%file_version
-    write(*,33) 'n_bnd        =', sr%n_bnd
-    write(*,33) 'nd_bez       =', sr%nd_bez
-    write(*,33) 'ncoil        =', sr%ncoil
-    write(*,33) 'npot_w       =', sr%npot_w
-    write(*,33) 'n_w          =', sr%n_w
-    write(*,33) 'ntri_w       =', sr%ntri_w
-    write(*,33) 'n_tor        =', sr%n_tor
-    write(*,33) 'n_tor0       =', sr%n_tor0
-    if ( sr%file_version >= 2) write(*,37) 'eta_thin_w   =', sr%eta_thin_w
-    if (allocated(sr%i_tor)) write(*,33) 'i_tor ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
+    write(*,33) 'file_version            =', sr%file_version
+    write(*,33) 'n_bnd                   =', sr%n_bnd
+    write(*,33) 'nd_bez                  =', sr%nd_bez
+    write(*,33) 'ncoil                   =', sr%ncoil
+    write(*,33) 'npot_w                  =', sr%npot_w
+    write(*,33) 'n_w                     =', sr%n_w
+    write(*,33) 'ntri_w                  =', sr%ntri_w
+    write(*,33) 'n_tor                   =', sr%n_tor
+    write(*,33) 'n_tor0                  =', sr%n_tor0
+    write(*,33) 'n_pol_coils             =', sr%n_pol_coils
+    write(*,33) 'n_rmp_coils             =', sr%n_rmp_coils
+    write(*,33) 'n_voltage_coils         =', sr%n_voltage_coils
+    write(*,33) 'n_diag_coils            =', sr%n_diag_coils
+    write(*,33) 'ind_start_pol_coils     =', sr%ind_start_pol_coils
+    write(*,33) 'ind_start_rmp_coils     =', sr%ind_start_rmp_coils
+    write(*,33) 'ind_start_voltage_coils =', sr%ind_start_voltage_coils
+    write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
+    if ( sr%file_version >= 2) write(*,37) 'eta_thin_w              =', sr%eta_thin_w
+    if (allocated(sr%i_tor)) write(*,33) 'i_tor                   = '//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     if ( vacuum_debug ) then
       write(*,32)
-      if (allocated(sr%i_tor   )) then; write(*,35) 'i_tor   ', sum(sr%i_tor   ); else; write(*,36) 'i_tor   '; end if
-      if (allocated(sr%d_yy    )) then; write(*,34) 'd_yy    ', sum(sr%d_yy    ); else; write(*,36) 'd_yy    '; end if
-      if (allocated(sr%a_ye    )) then; write(*,34) 'a_ye    ', sum(sr%a_ye    ); else; write(*,36) 'a_ye    '; end if
-      if (allocated(sr%a_ey    )) then; write(*,34) 'a_ey    ', sum(sr%a_ey    ); else; write(*,36) 'a_ey    '; end if
-      if (allocated(sr%a_ee    )) then; write(*,34) 'a_ee    ', sum(sr%a_ee    ); else; write(*,36) 'a_ee    '; end if
-      if (allocated(sr%a_id    )) then; write(*,34) 'a_id    ', sum(sr%a_id    ); else; write(*,36) 'a_id    '; end if
-      if (allocated(sr%a_nw    )) then; write(*,34) 'a_nw    ', sum(sr%a_nw    ); else; write(*,36) 'a_nw    '; end if
-      if (allocated(sr%s_ww    )) then; write(*,34) 's_ww    ', sum(sr%s_ww    ); else; write(*,36) 's_ww    '; end if
-      if (allocated(sr%s_ww_inv)) then; write(*,34) 's_ww_inv', sum(sr%s_ww_inv); else; write(*,36) 's_ww_inv'; end if
-      if (allocated(sr%xyzpot_w)) then; write(*,34) 'xyzpot_w', sum(sr%xyzpot_w); else; write(*,36) 'xyzpot_w'; end if
-      if (allocated(sr%jpot_w  )) then; write(*,35) 'jpot_w  ', sum(sr%jpot_w  ); else; write(*,36) 'jpot_w  '; end if
+      if (allocated(sr%i_tor        )) then; write(*,35) 'i_tor        ', sum(sr%i_tor         ); else; write(*,36) 'i_tor        '; end if
+      if (allocated(sr%d_yy         )) then; write(*,34) 'd_yy         ', sum(sr%d_yy          ); else; write(*,36) 'd_yy         '; end if
+      if (allocated(sr%a_ye         )) then; write(*,34) 'a_ye         ', sum(sr%a_ye          ); else; write(*,36) 'a_ye         '; end if
+      if (allocated(sr%a_ey         )) then; write(*,34) 'a_ey         ', sum(sr%a_ey          ); else; write(*,36) 'a_ey         '; end if
+      if (allocated(sr%a_ee         )) then; write(*,34) 'a_ee         ', sum(sr%a_ee          ); else; write(*,36) 'a_ee         '; end if
+      if (allocated(sr%a_id         )) then; write(*,34) 'a_id         ', sum(sr%a_id          ); else; write(*,36) 'a_id         '; end if
+      if (allocated(sr%a_nw         )) then; write(*,34) 'a_nw         ', sum(sr%a_nw          ); else; write(*,36) 'a_nw         '; end if
+      if (allocated(sr%s_ww         )) then; write(*,34) 's_ww         ', sum(sr%s_ww          ); else; write(*,36) 's_ww         '; end if
+      if (allocated(sr%s_ww_inv     )) then; write(*,34) 's_ww_inv     ', sum(sr%s_ww_inv      ); else; write(*,36) 's_ww_inv     '; end if
+      if (allocated(sr%xyzpot_w     )) then; write(*,34) 'xyzpot_w     ', sum(sr%xyzpot_w      ); else; write(*,36) 'xyzpot_w     '; end if
+      if (allocated(sr%jpot_w       )) then; write(*,35) 'jpot_w       ', sum(sr%jpot_w        ); else; write(*,36) 'jpot_w       '; end if
+      if (allocated(sr%jtri_c       )) then; write(*,35) 'jtri_c       ', sum(sr%jtri_c        ); else; write(*,36) 'jtri_c       '; end if
+      if (allocated(sr%x_coil       )) then; write(*,34) 'x_coil       ', sum(sr%x_coil        ); else; write(*,36) 'x_coil       '; end if
+      if (allocated(sr%y_coil       )) then; write(*,34) 'y_coil       ', sum(sr%y_coil        ); else; write(*,36) 'y_coil       '; end if
+      if (allocated(sr%z_coil       )) then; write(*,34) 'z_coil       ', sum(sr%z_coil        ); else; write(*,36) 'z_coil       '; end if
+      if (allocated(sr%phi_coil     )) then; write(*,34) 'phi_coil     ', sum(sr%phi_coil      ); else; write(*,36) 'phi_coil     '; end if
+      if (allocated(sr%eta_thin_coil)) then; write(*,34) 'eta_thin_coil', sum(sr%eta_thin_coil ); else; write(*,36) 'eta_thin_coil'; end if
+      if (allocated(sr%coil_resist  )) then; write(*,34) 'coil_resist  ', sum(sr%coil_resist   ); else; write(*,36) 'coil_resist  '; end if
     end if
     write(*,32)
     write(*,*)
@@ -980,8 +1065,10 @@ module vacuum_response
     real*8   :: i_size
     !   --- Quantities related to the boundary dof contributing to the response
     integer  :: j_dof, j_dir, j_node, j_node_bnd, j_index, j_starwall, j_tor, j_col_psi, j_resp
-
+    
     integer  :: i_resp_old, j_resp_old
+
+    integer  :: i_start_pf, i_end_pf     ! Indices for PF coils
 #ifdef __GFORTRAN__
     real*8 :: wgauss_copy(4)
 #endif
@@ -1021,15 +1108,7 @@ module vacuum_response
     end if
 
     if ( my_id == 0 ) call boundary_check()
-    
-    !-- Add perturbation in PF coils currents to speed-up VDEs
-    if (t_start .gt. PF_pert_start_time)  PF_perturbation = .false.
-    if (PF_perturbation .and. (t_now .ge. PF_pert_start_time) ) then
-      if ( my_id == 0 ) write(*,*) 'Perturbing PF coil currents'
-      I_coils(1:n_coils) = I_coils(1:n_coils) + pf_coils(1:n_coils)%pert
-      PF_perturbation    = .false.
-    endif
-    
+        
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)
 #endif
@@ -1049,7 +1128,8 @@ module vacuum_response
     !$omp   testfunc_l, i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_size, i_starwall,   &
     !$omp   i_tor, i_resp, i_resp_old, i_resp_0, basfunc_i, j_node_bnd, j_dof, j_node, j_dir, j_index,         &
     !$omp   j_starwall, j_tor, j_resp, j_resp_old,j_col_psi, sparsepos_jp, sparsepos_pp, amat_contrib,        &
-    !$omp   rhs_contrib)
+    !$omp   rhs_contrib) &
+    !$omp schedule(dynamic,1)
     L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
       bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
@@ -1400,26 +1480,48 @@ module vacuum_response
   subroutine coil_current_source(my_id)
     
     use constants
+    use phys_module, only: t_now
+    use profiles
     
     implicit none
    
     ! --- Routine parameters
-    integer, intent(in) :: my_id  
-    integer             :: k
-    real*8, allocatable :: potentials_real_0(:)
+    integer, intent(in)       :: my_id  
+    integer                   :: i
+    real*8, allocatable       :: potentials_real_0(:)
+    real*8, save, allocatable :: delta_Icoils_0(:)
+    logical, save             :: initialized=.false.
    
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
-   
+    
+    ! --- Calculate the difference between the input file coil currents and the ones coming from the restart file
+    ! This is used below to avoid violent jumps in I_coils that can happen when restarting from a freeboudary_equil with feedback
+    if(.not. initialized) then
+      if (allocated(delta_Icoils_0)) deallocate(delta_Icoils_0)
+      allocate(delta_Icoils_0(n_coils))
+      delta_Icoils_0 = 0.d0
+      do i=1, n_coils
+        if (vert_FB_amp(i) /= 0.d0) then
+          delta_Icoils_0(i) = I_coils(i) - interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now)
+        endif
+      enddo
+      initialized = .true.
+    endif
+
     if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
     if (.not. allocated (potentials_real_0)) allocate(potentials_real_0(n_wall_curr))
     
+    ! --- Calculate the specified coil currents at present time 
+    do i=1, n_coils
+      I_coils(i) = interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now) + delta_Icoils_0(i)
+    enddo
+    
+    ! --- Transform real currents into starwall currents
     Y_coils0          = 0.d0
     potentials_real_0 = 0.d0
-    
-    potentials_real_0(1:sr%ncoil) = I_coils(1:sr%ncoil) * mu_zero
-    
-    do k = 1, n_wall_curr
-      Y_coils0(k) = sum(sr%s_ww_inv(k,:) * potentials_real_0(:))    
+    potentials_real_0(1:n_coils) = I_coils(1:n_coils) * mu_zero
+    do i = 1, n_wall_curr
+      Y_coils0(i) = sum(sr%s_ww_inv(i,:) * potentials_real_0(:))    
     end do
     
   end subroutine coil_current_source
@@ -1432,7 +1534,7 @@ module vacuum_response
   !> Perform the time-evolution of the wall currents (resistive wall).
   subroutine evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
     
-    use phys_module, only: index_now, resistive_wall
+    use phys_module, only: index_now, index_start, nstep, resistive_wall
     
     implicit none
     
@@ -1442,7 +1544,7 @@ module vacuum_response
     real*8,  intent(in) :: dpsibnd_vec(n_dof_starwall) !< Vector of deltaPsi boundary values
     
     ! --- Local variables
-    integer             :: k
+    integer             :: k, k2
 
     
     if ( vacuum_debug ) write(*,*) 'wall_curr(before)', sum(abs(wall_curr)), sum(wall_curr)    
@@ -1468,6 +1570,18 @@ module vacuum_response
         call log_wall_curr()
         !call log_coil_curr()
       end if
+    end if
+    
+    ! --- Extract diagnostic coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
+    if ( sr%n_diag_coils > 0 ) then
+      if ( .not. allocated(diag_coil_curr) ) then
+         allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
+         diag_coil_curr(:,:) = 0.d0
+      end if
+      do k = 1, sr%n_diag_coils
+        k2 = k + sr%ind_start_diag_coils - 1
+        diag_coil_curr(index_now,k) = sum(sr%s_ww(k2,:) * wall_curr(:))
+      end do
     end if
     
     if ( vacuum_debug ) write(*,*) 'wall_curr(after)', sum(abs(wall_curr)), sum(wall_curr)
@@ -1569,8 +1683,7 @@ module vacuum_response
     zeta  = time_evol_zeta
     
     ! --- Update response matrices only, if parameter values changed or matrices not allocated
-    update_required = ( old_thick   /= wall_thickness      ) &
-                 .or. ( old_res     /= wall_resistivity    ) &
+    update_required = ( old_res     /= wall_resistivity    ) &
                  .or. ( old_tstep   /= tstep               ) &
                  .or. ( old_theta   /= theta               ) &
                  .or. ( old_zeta    /= zeta                ) &
@@ -1591,7 +1704,6 @@ module vacuum_response
     
     if ( update_required ) then
       ! --- Remember parameter values.
-      old_thick   = wall_thickness
       old_res     = wall_resistivity
       old_tstep   = tstep
       old_theta   = theta
@@ -1643,13 +1755,13 @@ module vacuum_response
         
         allocate( tmp_d_s(n_wall_curr) )
         
-        tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity / wall_thickness * sr%d_yy(:)
+        tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity * sr%d_yy(:)
         
         do j = 1, n_dof_starwall
           response_m_a(:,j) = -(1.d0+zeta) * sr%a_ye(:,j) / tmp_d_s(:)
         end do
         
-        response_d_b(:) = - tstep * wall_resistivity / wall_thickness * sr%d_yy(:) / tmp_d_s(:)
+        response_d_b(:) = - tstep * wall_resistivity * sr%d_yy(:) / tmp_d_s(:)
         
         response_d_c(:) = zeta / tmp_d_s(:)
         
@@ -1715,7 +1827,7 @@ module vacuum_response
         write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)
         write(*,*) 'm_l:', sum(abs(response_m_l)), sum(response_m_l)
         write(*,*) 'm_v:', sum(abs(response_m_v)), sum(response_m_v)
-        write(*,*) 'm_eq:', sum(abs(response_m_eq(1:128,1:128))), sum(response_m_eq(1:128,1:128))
+        write(*,*) 'm_eq:', sum(abs(response_m_eq)), sum(response_m_eq)
         write(*,*) 'END: Checksums'
       end if
       

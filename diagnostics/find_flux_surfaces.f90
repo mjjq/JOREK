@@ -1,5 +1,5 @@
 !> The routine finds fluxsurfaces by finding crossings with the edges of the elements
-subroutine find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+subroutine find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_list)
 
 use constants
 use tr_module 
@@ -8,6 +8,7 @@ use data_structure
 implicit none
 
 ! --- Routine parameters
+integer,                  intent(in)     :: my_id        !< MPI proc number
 logical,                  intent(in)     :: xpoint
 integer,                  intent(in)     :: xcase
 type (type_node_list)   , intent(in)	 :: node_list
@@ -24,16 +25,16 @@ real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), r_av, 
 real*8  :: RRg(4),dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8  :: ZZg(4),dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 integer :: l, i_neigh, Xneigh, icount
-integer :: my_id, i, j, k, ifound, iv, im, is, n1, n2, n3
+integer :: i, j, k, ifound, iv, im, is, n1, n2, n3
 integer :: ifail, itht(4), itmp,i_elm_xpoint(2)
 
-write(*,*) '***********************************'
-write(*,*) '*   find_flux_surfaces            *'
-write(*,*) '***********************************'
+if (my_id == 0) then
+  write(*,*) '***********************************'
+  write(*,*) '*   find_flux_surfaces            *'
+  write(*,*) '***********************************'
+endif
 !write(*,*) ' n_psi : ',surface_list%n_psi
 !write(*,*) ' values : ',surface_list%psi_values(1),surface_list%psi_values(surface_list%n_psi)
-
-my_id = 1 ! Just don't want the printout...
 
 if (allocated(surface_list%flux_surfaces)) then
    call tr_unregister_mem(sizeof(surface_list%flux_surfaces),"surface_list%flux_surfaces")

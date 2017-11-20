@@ -163,7 +163,7 @@ do i=1,n_private
   enddo
 enddo
 
-call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
+call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
 
 call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
 

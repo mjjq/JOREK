@@ -267,12 +267,12 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
     flux_list%n_psi = 1
     call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
     flux_list%psi_values(1) = psi_bnd
-    call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
+    call find_flux_surfaces(0, xpoint,xcase,node_list,element_list,flux_list)
     call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
     ! --- If this didn't work, it means psi=1.0 is the grid boundary, try with psi=0.99
     if (i_find .eq. 0) then
       flux_list%psi_values(1) = 0.99 * (psi_bnd - psi_axis) + psi_axis
-      call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
+      call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
       call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
     endif
     if (i_find .ne. 0) then
@@ -350,7 +350,7 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
     flux_list%n_psi = 1
     call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
     flux_list%psi_values(1) = psi_bnd
-    call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
+    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
     call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
     call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
     		   R_find,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &

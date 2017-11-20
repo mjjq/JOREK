@@ -98,7 +98,7 @@ module mod_straight_field_line
       surface_list%psi_values(i) = eq%psi_axis + ( eq%psi_bnd - eq%psi_axis ) * psi_n
     end do
     
-    call find_flux_surfaces(eq%xpoint, eq%xcase, node_list, element_list, surface_list)
+    call find_flux_surfaces(0,eq%xpoint, eq%xcase, node_list, element_list, surface_list)
     
     !###
     ! --- Loop over all flux surfaces

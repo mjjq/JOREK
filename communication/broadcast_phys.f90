@@ -16,7 +16,7 @@ implicit none
 integer, intent(in) :: my_id
 
 ! --- internal variables
-integer                :: ierr, position, bufsize
+integer                :: ierr, position, bufsize, i
 logical                :: err_buff_too_small
 character, allocatable :: buffer(:)
 
@@ -33,9 +33,8 @@ err_buff_too_small = .false.
 
 ! --- Allocate the buffer with a fixed size which needs to be increased only
 !     if many new input parameters are added.
-bufsize = 65536
+bufsize = 1500000
 allocate(buffer(bufsize))
-
 call tr_register_mem(bufsize,"bcastp_buffer")
 
 ! --- Pack the input parameters on the sending MPI task 0.
@@ -225,6 +224,7 @@ if (my_id .eq. 0) then
   call MPI_PACK (equil_accuracy,        1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (equil_accuracy_freeb,  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (current_ref,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK (psi_offset_freeb,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (FB_Ip_position,        1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (FB_Ip_integral,        1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (Z_axis_ref,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -240,9 +240,56 @@ if (my_id .eq. 0) then
   call MPI_PACK (n_iter_freeb,          1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (n_pf_coils,            1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   
-  call MPI_PACK (pf_coils%current,     30,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK (pf_coils%FB_amp,      30,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK (pf_coils%pert,        30,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  do i=1, MAX_COILS
+    call MPI_PACK (pf_coils(i)%current,        1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (pf_coils(i)%pert,           1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    
+	call MPI_PACK (pf_coils(i)%pert_start_time,1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+	call MPI_PACK (pf_coils(i)%pert_growth_time,1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (pf_coils(i)%curr_file,    256,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (pf_coils(i)%time_shift,         1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (pf_coils(i)%time_scale,         1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (pf_coils(i)%curr_scale,         1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (pf_coils(i)%curr_expr,    512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (pf_coils(i)%max_time,       1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (pf_coils(i)%len,            1,  MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (vert_FB_amp(i),             1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+      
+    call MPI_PACK (diag_coils(i)%current,      1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (diag_coils(i)%pert,         1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+	call MPI_PACK (diag_coils(i)%pert_start_time,1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+	call MPI_PACK (diag_coils(i)%pert_growth_time,1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (diag_coils(i)%curr_file,  256,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (diag_coils(i)%time_shift,       1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (diag_coils(i)%time_scale,       1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (diag_coils(i)%curr_scale,       1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (diag_coils(i)%curr_expr,  512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (diag_coils(i)%max_time,     1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (diag_coils(i)%len,          1,  MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+      
+    call MPI_PACK (rmp_coils(i)%current,       1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (rmp_coils(i)%pert,          1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+	call MPI_PACK (rmp_coils(i)%pert_start_time,1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+	call MPI_PACK (rmp_coils(i)%pert_growth_time,1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (rmp_coils(i)%curr_file,   256,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (rmp_coils(i)%time_shift,        1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (rmp_coils(i)%time_scale,        1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (rmp_coils(i)%curr_scale,        1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (rmp_coils(i)%curr_expr,   512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (rmp_coils(i)%max_time,      1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (rmp_coils(i)%len,           1,  MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+      
+    call MPI_PACK (voltage_coils(i)%current,   1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (voltage_coils(i)%pert,      1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+	call MPI_PACK (voltage_coils(i)%pert_start_time,1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+	call MPI_PACK (voltage_coils(i)%pert_growth_time,1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (voltage_coils(i)%curr_file, 256,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (voltage_coils(i)%time_shift,    1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (voltage_coils(i)%time_scale,    1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (voltage_coils(i)%curr_scale,    1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (voltage_coils(i)%curr_expr, 512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (voltage_coils(i)%max_time,  1,    MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK (voltage_coils(i)%len,       1,  MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)  
+  enddo  
 
   call MPI_PACK(nstep,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(nstep_n,               10,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -269,11 +316,11 @@ if (my_id .eq. 0) then
   call MPI_PACK(n_up_priv,              1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(n_pfc,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Rmin_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Rmax_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Zmin_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(Zmax_pfc,              20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(current_pfc,           20,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Rmin_pfc,              40,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Rmax_pfc,              40,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Zmin_pfc,              40,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(Zmax_pfc,              40,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(current_pfc,           40,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(mode,               n_tor,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(index_start,            1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -300,8 +347,10 @@ if (my_id .eq. 0) then
   call MPI_PACK(bootstrap,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(freeboundary,           1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(freeboundary_equil,     1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(freeb_change_indices,   1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(resistive_wall,         1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(starwall_equil_coils,   1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(freeb_equil_iterate_area,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(bc_natural_flux,        1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(bc_natural_open,        1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(use_pellet,             1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -472,7 +521,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,visco_num,              1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,visco_par_num,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,D_perp_num,             1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,Zk_perp_num,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ZK_perp_num,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,Wdia,                   1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,U_sheath,         	  1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
@@ -587,6 +636,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,equil_accuracy ,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,equil_accuracy_freeb ,  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,current_ref ,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,psi_offset_freeb ,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,FB_Ip_position ,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,FB_Ip_integral ,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,Z_axis_ref ,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -602,9 +652,57 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,n_iter_freeb,           1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,n_pf_coils,             1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   
-  call MPI_UNPACK(buffer,bufsize,position,pf_coils%current,      30,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,pf_coils%FB_amp,       30,MPI_REAL8,MPI_COMM_WORLD,ierr) 
-  call MPI_UNPACK(buffer,bufsize,position,pf_coils%pert,         30,MPI_REAL8,MPI_COMM_WORLD,ierr) 
+  do i=1, MAX_COILS
+    call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%current,           1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%pert,              1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%pert_start_time,   1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%pert_growth_time,  1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+	call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%curr_file,       256,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%time_shift,            1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%time_scale,            1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%curr_scale,            1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%curr_expr,       512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%max_time,          1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,pf_coils(i)%len,               1,  MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,vert_FB_amp(i),                1,    MPI_REAL8,MPI_COMM_WORLD,ierr) 
+    
+    call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%current,         1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%pert,            1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%pert_start_time, 1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%pert_growth_time,1,    MPI_REAL8,MPI_COMM_WORLD,ierr)    
+    call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%curr_file,     256,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%time_shift,          1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%time_scale,          1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%curr_scale,          1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%curr_expr,     512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%max_time,        1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,diag_coils(i)%len,             1,  MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    
+    call MPI_UNPACK(buffer,bufsize,position,rmp_coils(i)%current,          1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,rmp_coils(i)%pert,             1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,rmp_coils(i)%pert_start_time,  1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,rmp_coils(i)%pert_growth_time, 1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,rmp_coils(i)%curr_file,      256,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,rmp_coils(i)%time_shift,           1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,rmp_coils(i)%time_scale,           1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,rmp_coils(i)%curr_scale,           1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,rmp_coils(i)%curr_expr,      512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,rmp_coils(i)%max_time,         1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,rmp_coils(i)%len,              1,  MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    
+    call MPI_UNPACK(buffer,bufsize,position,voltage_coils(i)%current,      1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,voltage_coils(i)%pert,         1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,voltage_coils(i)%pert_start_time, 1, MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,voltage_coils(i)%pert_growth_time,1, MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,voltage_coils(i)%curr_file,  256,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,voltage_coils(i)%time_shift,       1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,voltage_coils(i)%time_scale,       1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,voltage_coils(i)%curr_scale,       1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,voltage_coils(i)%curr_expr,  512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,voltage_coils(i)%max_time,     1,    MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,voltage_coils(i)%len,          1,  MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  enddo
+
 
   call MPI_UNPACK(buffer,bufsize,position,nstep,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,nstep_n,               10,MPI_INTEGER,MPI_COMM_WORLD,ierr)
@@ -631,11 +729,11 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,n_up_priv,		  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   
   call MPI_UNPACK(buffer,bufsize,position,n_pfc,		         1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,Rmin_pfc,              20,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,Rmax_pfc,              20,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,Zmin_pfc,              20,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,Zmax_pfc,              20,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,current_pfc,           20,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Rmin_pfc,              40,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Rmax_pfc,              40,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Zmin_pfc,              40,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,Zmax_pfc,              40,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,current_pfc,           40,MPI_REAL8,MPI_COMM_WORLD,ierr)
   
   call MPI_UNPACK(buffer,bufsize,position,mode,                  n_tor,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,index_start,            1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
@@ -665,8 +763,10 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,bootstrap,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,freeboundary,           1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,freeboundary_equil,     1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,freeb_change_indices,   1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,resistive_wall,         1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,starwall_equil_coils,   1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,freeb_equil_iterate_area,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,bc_natural_flux,        1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,bc_natural_open,        1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,use_pellet,             1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)

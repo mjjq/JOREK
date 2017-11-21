@@ -268,6 +268,7 @@ subroutine project(this, sim, ev)
   class(projection), intent(inout) :: this
   type(particle_sim), intent(inout)    :: sim
   type(event), intent(inout), optional :: ev
+  integer :: i_group, i_tor
 
   ! Sample
   call sample_rhs(this, sim)
@@ -275,6 +276,16 @@ subroutine project(this, sim, ev)
 
   ! Project and save
   if (this%i .eq. this%n) then
+    ! Normalize RHS with number of samples
+    !$omp parallel default(none) shared(this) private(i_group, i_tor)
+    do i_group=1,size(this%rhs,4)
+      !$omp do
+      do i_tor=1,size(this%rhs,3)
+        this%rhs(:,:,i_tor,i_group) = this%rhs(:,:,i_tor,i_group) * (1.d0/real(this%n,8))
+      end do
+      !$omp end do
+    end do
+    !$omp end parallel
     call project_only(this, sim)
 
     if (this%to_h5) call save_to_h5(this, sim)

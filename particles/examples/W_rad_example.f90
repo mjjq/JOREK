@@ -23,8 +23,8 @@ real*8, parameter :: timesteps(1) = [1d-9]
 call sim%initialize(num_groups=1)
 
 ! Set up the field reader
-fieldreader = event(read_jorek_fields_interp_hermite_birkhoff(&
-    basename='jorek', i=721, stop_at_end=.false.))
+fieldreader = event(read_jorek_fields_interp_linear(&
+    basename='jorek', i=-1))
 call with(sim, fieldreader)
 
 ! Prepare the coronal equilibrium
@@ -35,7 +35,7 @@ cor = coronal(sim%groups(1)%ad)
 sim%groups(:)%Z    = 74
 sim%groups(:)%mass = 183.84 !< atomic mass units
 do i=1,1
-  allocate(particle_kinetic_leapfrog::sim%groups(i)%particles(1000000))
+  allocate(particle_kinetic_leapfrog::sim%groups(i)%particles(10000000))
   ! For every particle accept or reject it with probability f_psi_inside(psi)
   call initialise_particles_H_mu_psi(sim%groups(i)%particles, &
       sim%fields, sobseq_rng(), &
@@ -53,7 +53,7 @@ end do
 call adjust_particle_weights(sim%groups(1)%particles, 6d16) ! 60 m^3 at n_i = 10^15 /m^3
 
 ! Set up the diagnostics output
-proj = projection(sim%fields%node_list, sim%fields%element_list, smoothing=3d-4, &
+proj = projection(sim%fields%node_list, sim%fields%element_list, smoothing=1d-5, &
     proj_f=proj_Lz, &
     to_h5=.true., to_vtk=.true.)
 

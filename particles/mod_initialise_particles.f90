@@ -811,7 +811,7 @@ class(type_rng), allocatable :: my_rng
 integer :: i, ifail, seed, my_id, n_cpu
 real*8, dimension(4) :: P, P_s, P_t, P_phi
 real*8 :: v_out(3)
-real*8 :: R, R_s, R_t, Z, Z_s, Z_t, Psi, Psi_R, Psi_Z, B_hat(3)
+real*8 :: R, R_s, R_t, Z, Z_s, Z_t, Psi, Psi_R, Psi_Z, B(3)
 real*8, parameter :: r_hat(3) = [1.d0, 0.d0, 0.d0]
 real*8 :: background_kbT, background_Kelvin, background_density, V_thermal
 real*8 :: DUMMY_REAL, Z_coronal, t_norm
@@ -868,8 +868,7 @@ do i=1,size(particles)
     ! Calculate b^ (unit vector in direction of B)
     psi_R = (  P_s(4) * Z_t - P_t(4) * Z_s )/(R_s * Z_t - R_t * Z_s)
     psi_Z = (- P_s(4) * R_t + P_t(4) * R_s )/(R_s * Z_t - R_t * Z_s)
-    B_hat = [psi_Z, -psi_R, F0]/(R)
-    B_hat = B_hat/norm2(B_hat)
+    B = [psi_Z, -psi_R, F0]/(R)
 
     ! Transform parallel and perpendicular velocities to R, Z, Phi
     ! To get the perpendicular vector, get a single vector perpendicular to b (b x r)
@@ -878,7 +877,7 @@ do i=1,size(particles)
     ! I'm not sure if this formula is the same in a right-handed coordinate system...
     ! this might change the direction of the rotation, but that is not important.
     if (present(v_par) .and. v_par) then
-      pa%v = v_out(1) + (P(4)/t_norm) * B_hat
+      pa%v = v_out(1) + (P(4)/t_norm) * B ! See normalisation of v_par
     else
       pa%v = v_out
     end if

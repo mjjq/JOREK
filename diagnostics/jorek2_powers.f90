@@ -91,9 +91,13 @@ L_div_in     = 0.d0; L_div_out     = 0.d0; L_wall_in     = 0.d0; L_wall_out     
 !Z_wall_out = -3.2350
 !Z_wall_in  = -2.5674 
 
-R_in_out   = 3.03
-Z_wall_out = -1.6!-1.9858 
-Z_wall_in  = -1.619!-1.9736
+!R_in_out   = 3.03
+!Z_wall_out = -1.6!-1.9858 
+!Z_wall_in  = -1.619!-1.9736
+
+R_in_out   = 4.82d0    ! ITER divertor try 2
+Z_wall_out = -4.557   ! Outer divertor corner (where it meets the normal wall)
+Z_wall_in  = -3.5095
 
 do m=1, n_plane
 

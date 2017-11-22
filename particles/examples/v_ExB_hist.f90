@@ -21,7 +21,7 @@ use domains
 !$ use omp_lib
 implicit none
 
-integer, parameter :: n_points = 100000000, nx = 110, nv = 2000
+integer, parameter :: n_points = 100000000, nx = 440, nv = 1000
 real*8, parameter :: x_min = 0.d0, x_max = 1.1d0, dx = (x_max-x_min)/real(nx,8)
 real*8, parameter :: v_min = -6d3, v_max = 6d3, dv = (v_max-v_min)/real(nv,8)
 

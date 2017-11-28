@@ -108,7 +108,8 @@ subroutine boundary_check(my_id)
         e_par = (/ R_s, Z_s /) / sqrt( R_s**2 + Z_s**2 ) * (R_s * (R2-R1) + Z_s * (Z2-Z1))/abs(R_s * (R2-R1) + Z_s * (Z2-Z1))
       end if
 
-      step = sr%a_ye%step
+      step       = sr%a_ye%step ! for distributed matrices
+      B_par_v(:) = 0.d0
       
       ! --- Select one STARWALL harmonic
 !$omp parallel do                                                                                  &
@@ -159,45 +160,44 @@ subroutine boundary_check(my_id)
             basfunc_i = H1(i_vertex,i_dof) * i_size
 
             ! --- Determine B_{||,v} as prescribed by the vacuum.
+            B_par_v_tmp = 0.d0
             if ( resistive_wall ) then
               if (  (l_tor == 1) .and. (.not. starwall_equil_coils)  )  then
 
                 if (i_resp>=sr%a_ey%ind_start .AND. i_resp<=sr%a_ey%ind_end) then
-
-                  B_par_v_tmp = basfunc_i * (                           &
-                    + sum( sr%a_ee%loc_mat(i_resp-step*my_id, :) * (psibnd_vec(:) - psibnd_coils(:))) &
-                    + sum( sr%a_ey%loc_mat(i_resp-step*my_id, :) * wall_curr(:)  )                    &
-                    - sum( bext_tan(i_resp_0, :)                                                      &
-                    * I_coils(:) )  )
-                endif
+                  B_par_v_tmp = basfunc_i * (                                                      &
+                    + sum( sr%a_ee%loc_mat(i_resp-step*my_id,:) * (psibnd_vec(:)-psibnd_coils(:)) )&
+                    + sum( sr%a_ey%loc_mat(i_resp-step*my_id,:) * wall_curr(:) )                   &
+                    - sum( bext_tan(i_resp_0, :) * I_coils(:) ) )
+                end if
 
               else
 
                 if (i_resp>=sr%a_ey%ind_start .AND. i_resp<=sr%a_ey%ind_end) then
-
-                  B_par_v_tmp = basfunc_i * (           &
-                    + sum( sr%a_ee%loc_mat(i_resp-step*my_id, :) * psibnd_vec(:) )    &
+                  B_par_v_tmp = basfunc_i * (                                                      &
+                    + sum( sr%a_ee%loc_mat(i_resp-step*my_id, :) * psibnd_vec(:) )                 &
                     + sum( sr%a_ey%loc_mat(i_resp-step*my_id, :) * wall_curr(:)  ) )
-
-                endif
+                end if
                  
 
               end if
             else ! if ( resistive_wall ) then
 
               if (  (l_tor == 1) .and. (.not. starwall_equil_coils)  )  then
-
+                
                 if (i_resp>=sr%a_ey%ind_start .AND. i_resp<=sr%a_ey%ind_end) then
-                  B_par_v_tmp = basfunc_i                                &
-                    * (sum( sr%a_id%loc_mat(i_resp-my_id*step, :) * (psibnd_vec(:) - psibnd_coils(:))) &
-                    - sum( bext_tan(i_resp_0, :) * I_coils(:) ))
-                endif
+                  B_par_v_tmp = basfunc_i * (                                                      &
+                    sum( sr%a_id%loc_mat(i_resp-my_id*step,:) * (psibnd_vec(:) - psibnd_coils(:)) )&
+                    - sum( bext_tan(i_resp_0, :) * I_coils(:) ) )
+                end if
 
               else
+                
                 if (i_resp>=sr%a_ey%ind_start .AND. i_resp<=sr%a_ey%ind_end) then
-                  B_par_v_tmp = basfunc_i            &
-                    * sum( sr%a_id%loc_mat(i_resp-step*my_id, :) * psibnd_vec(:) )
-                endif
+                  B_par_v_tmp = basfunc_i *                                                        &
+                    sum( sr%a_id%loc_mat(i_resp-step*my_id, :) * psibnd_vec(:) )
+                end if
+                
               end if
             end if
             

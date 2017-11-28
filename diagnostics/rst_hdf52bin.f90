@@ -16,7 +16,7 @@ program RST_convert_hdf52bin
 
   implicit none
 
-  integer :: ierr, i, provided, StatInfo
+  integer :: ierr, i, provided, StatInfo, my_id
   character(len=80) :: filein, fileout
   logical :: verbose, file_exists
 
@@ -26,6 +26,8 @@ program RST_convert_hdf52bin
 
   call MPI_Init_thread(MPI_THREAD_FUNNELED, provided, StatInfo)
   call init_threads()
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+
 
   call initialise_parameters(0, '__NO_FILENAME__')
   call vacuum_init(0, freeboundary_equil, freeboundary, resistive_wall)
@@ -69,7 +71,7 @@ program RST_convert_hdf52bin
   if ( freeboundary ) then
     call get_vacuum_response(0, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
       resistive_wall)
-    call update_response(tstep, freeboundary_equil, resistive_wall)
+    call update_response_parallel(my_id, tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', 0)
     if ( .not. wall_curr_initialized ) call init_wall_currents(0, resistive_wall)
   end if

@@ -979,7 +979,7 @@ module vacuum_response
     
               sum_element=0.0 
 !$omp parallel private (j) shared (sum_element,mat1,z,k,tmp) 
-!$omp do schedule(dynamic) reduction (+:sum_element)
+!$omp do reduction (+:sum_element)
               do j = 1, size(mat1%loc_mat,2)
                 sum_element = sum_element + mat1%loc_mat(z,j) * tmp(j,k)         
               end do
@@ -1032,7 +1032,7 @@ module vacuum_response
               sum_element=0.0
 
 !$omp parallel private (j) shared (sum_element,mat1,z,k,tmp) 
-!$omp do schedule(dynamic) reduction (+:sum_element)
+!$omp do reduction (+:sum_element)
               do j = 1, size(mat1%loc_mat,2)
                 sum_element = sum_element + mat1%loc_mat(z,j) * tmp(j,k)
               end do
@@ -1064,7 +1064,7 @@ module vacuum_response
             sum_element=0.0
 
 !$omp parallel private (j) shared (sum_element,mat1,z,k,tmp,mat2_not_distr) 
-!$omp do schedule(dynamic) reduction (+:sum_element) 
+!$omp do reduction (+:sum_element) 
             do j = 1, size(mat1%loc_mat,2)
               sum_element = sum_element + mat1%loc_mat(z,j) *mat2_not_distr(j,k)
             end do

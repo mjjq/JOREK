@@ -38,10 +38,10 @@
   eta_thin_w = 1.d-4  
 
   ! Wall grid points in poloidal direction
-  nwu        = 64
+  nwu        = 24
   
   ! Wall grid points in toroidal direction
-  nwv        = 64
+  nwv        = 24
   
   ! Number of Fourier harmonics
   mn_w       = 2,

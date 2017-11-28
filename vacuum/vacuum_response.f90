@@ -978,10 +978,13 @@ module vacuum_response
             do k = 1, size(tmp,2)
     
               sum_element=0.0 
-              ! OpenMP paralelization can be done in this place            
+!$omp parallel private (j) shared (sum_element,mat1,z,k,tmp) 
+!$omp do schedule(dynamic) reduction (+:sum_element)
               do j = 1, size(mat1%loc_mat,2)
                 sum_element = sum_element + mat1%loc_mat(z,j) * tmp(j,k)         
               end do
+!$omp end do 
+!$omp end parallel
               
               res_mat%loc_mat(z,k+glob_index_j) = sum_element  
         
@@ -1027,10 +1030,15 @@ module vacuum_response
             do k = 1, size(tmp,2)
     
               sum_element=0.0
-              ! OpenMP paralelization can be done in this place
+
+!$omp parallel private (j) shared (sum_element,mat1,z,k,tmp) 
+!$omp do schedule(dynamic) reduction (+:sum_element)
               do j = 1, size(mat1%loc_mat,2)
                 sum_element = sum_element + mat1%loc_mat(z,j) * tmp(j,k)
               end do
+!$omp end do 
+!$omp end parallel
+
               res_mat_not_distr(z + glob_index_i, k + glob_index_j) = sum_element
     
             end do
@@ -1054,10 +1062,15 @@ module vacuum_response
           do k = 1, size(mat2_not_distr,2)
     
             sum_element=0.0
-            ! OpenMP paralelization can be done in this place            
+
+!$omp parallel private (j) shared (sum_element,mat1,z,k,tmp,mat2_not_distr) 
+!$omp do schedule(dynamic) reduction (+:sum_element) 
             do j = 1, size(mat1%loc_mat,2)
               sum_element = sum_element + mat1%loc_mat(z,j) *mat2_not_distr(j,k)
             end do
+!$omp end do 
+!$omp end parallel
+
             res_mat_not_distr(z + glob_index_i, k) = sum_element
     
           end do

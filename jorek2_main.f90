@@ -39,7 +39,7 @@ program JOREK2
   use equil_info
   use mod_boundary,            only: boundary_from_grid
   use vacuum
-  use vacuum_response,     only: get_vacuum_response, update_response,update_response_parallel, init_wall_currents, I_coils
+  use vacuum_response,     only: get_vacuum_response, update_response_parallel, init_wall_currents, I_coils
   use vacuum_equilibrium,  only: import_external_fields
   use live_data
   use mod_bootstrap_functions

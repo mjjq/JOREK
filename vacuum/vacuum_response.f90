@@ -102,38 +102,126 @@ module vacuum_response
         call log_starwall_response_parallel(my_id, sr)
               
   end subroutine get_vacuum_response
-  
-  
+
+
   !> Read an integer parameter from a STARWALL response file.
   integer function read_intparam(filehandle, parameter_name)
-    
+
     implicit none
-    
+
     ! --- Routine parameters
     integer,          intent(in) :: filehandle
     character(len=*), intent(in) :: parameter_name
-    
+
     ! --- Local variables
     character(len=12) :: marker
     character(len=24) :: name
     integer           :: ierr
-    
+
     if ( is_formatted(filehandle) ) then
       read(filehandle,'(A12,A24,I12)',iostat=ierr) marker, name, read_intparam
     else
       read(filehandle, iostat=ierr) marker, name, read_intparam
     end if
-    
+
     if ( (ierr /= 0) .or. (trim(adjustl(marker)) /= '#@intparam') .or. (trim(adjustl(name)) /= trim(parameter_name)) ) then
-      write(*,*) 'ERROR: Could not read parameter "', trim(parameter_name) ,'" from STARWALL response.'
+      write(*,*) 'ERROR: Could not read parameter "', trim(parameter_name) ,'"from STARWALL response.'
       stop
     end if
-    
-    if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"=",I12)',iostat=ierr) name, read_intparam
-    
+
+    if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"=",I12)',iostat=ierr) name,read_intparam
+
   end function read_intparam
-  
-  
+
+
+  !> Read an array from the STARWALL respone file
+  subroutine read_array(filehandle, array_name, dim, int1d, int2d, float1d, float2d)
+
+    implicit none
+
+    ! --- Routine parameters
+    integer, intent(in) :: filehandle
+    character(len=*), intent(in) :: array_name
+    integer, intent(in) :: dim(2)
+    integer, allocatable, optional, intent(inout)   :: int1d(:)
+    integer, allocatable, optional, intent(inout)   :: int2d(:,:)
+    real*8,  allocatable, optional, intent(inout)   :: float1d(:)
+    real*8,  allocatable, optional, intent(inout)   :: float2d(:,:)
+
+    ! --- Local variables
+    character(len=12) :: marker
+    integer           :: nd, d(2), ierr
+    character(len=24) :: name, datatype, requested_type
+    logical           :: error
+
+    if ( present(int1d) .or. present(int2d) ) then
+      requested_type = 'int'
+    else
+      requested_type = 'float'
+    end if
+
+    if ( is_formatted(filehandle) ) then
+      read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker, name, nd, datatype, d
+    else
+      read(filehandle,iostat=ierr) marker, name, nd, datatype, d
+    end if
+    marker   = adjustl(marker)
+    name     = adjustl(name)
+    datatype = adjustl(datatype)
+
+    error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. ( trim(name) /= trim(array_name) )                     &
+      .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. ( trim(datatype) /= trim(requested_type) )
+
+    if ( error ) then
+      write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
+      stop
+    end if
+
+    if ( present(int1d) ) then
+
+      if ( allocated(int1d) ) deallocate( int1d )
+      allocate( int1d(dim(1)) )
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,*) int1d(:)
+      else
+        read(filehandle) int1d(:)
+      end if
+
+    else if ( present(int2d) ) then
+
+      if ( allocated(int2d) ) deallocate( int2d )
+      allocate( int2d(dim(1),dim(2)) )
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,*) int2d(:,:)
+      else
+        read(filehandle) int2d(:,:)
+      end if
+
+    else if ( present(float1d) ) then
+
+      if ( allocated(float1d) ) deallocate( float1d )
+      allocate( float1d(dim(1)) )
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,*) float1d(:)
+      else
+        read(filehandle) float1d(:)
+      end if
+
+    else if ( present(float2d) ) then
+      if ( allocated(float2d) ) deallocate( float2d )
+      allocate( float2d(dim(1),dim(2)) )
+      if ( is_formatted(filehandle) ) then
+        read(filehandle,'(4ES24.16)') float2d(:,:)
+      else
+        read(filehandle) float2d(:,:)
+      end if
+
+    end if
+
+    if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"> type ",A," size ",2I7)')name, trim(datatype), d(1:nd)
+
+  end subroutine read_array
+
   
   !> Read an integer parameter from a STARWALL response file (MPI I/O).
   integer function read_intparam_parallel(filehandle, parameter_name,disp)
@@ -172,99 +260,9 @@ module vacuum_response
     if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"=",I12)',iostat=err) name,read_intparam_parallel
 
   end function read_intparam_parallel  
-  
-  
-  
-  !> Read an array from the STARWALL respone file
-  subroutine read_array(filehandle, array_name, dim, int1d, int2d, float1d, float2d)
-    
-    implicit none
-    
-    ! --- Routine parameters
-    integer, intent(in) :: filehandle
-    character(len=*), intent(in) :: array_name
-    integer, intent(in) :: dim(2)
-    integer, allocatable, optional, intent(inout)   :: int1d(:)
-    integer, allocatable, optional, intent(inout)   :: int2d(:,:)
-    real*8,  allocatable, optional, intent(inout)   :: float1d(:)
-    real*8,  allocatable, optional, intent(inout)   :: float2d(:,:)
-    
-    ! --- Local variables
-    character(len=12) :: marker
-    integer           :: nd, d(2), ierr
-    character(len=24) :: name, datatype, requested_type
-    logical           :: error
-    
-    if ( present(int1d) .or. present(int2d) ) then
-      requested_type = 'int'
-    else
-      requested_type = 'float'
-    end if
-    
-    if ( is_formatted(filehandle) ) then
-      read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker, name, nd, datatype, d
-    else
-      read(filehandle,iostat=ierr) marker, name, nd, datatype, d
-    end if
-    marker   = adjustl(marker)
-    name     = adjustl(name)
-    datatype = adjustl(datatype)
-    
-    error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. ( trim(name) /= trim(array_name) )                     &
-      .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. ( trim(datatype) /= trim(requested_type) )
-    
-    if ( error ) then
-      write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
-      stop
-    end if
-    
-    if ( present(int1d) ) then
-      
-      if ( allocated(int1d) ) deallocate( int1d )
-      allocate( int1d(dim(1)) )
-      if ( is_formatted(filehandle) ) then
-        read(filehandle,*) int1d(:)
-      else
-        read(filehandle) int1d(:)
-      end if
-      
-    else if ( present(int2d) ) then
-      
-      if ( allocated(int2d) ) deallocate( int2d )
-      allocate( int2d(dim(1),dim(2)) )
-      if ( is_formatted(filehandle) ) then
-        read(filehandle,*) int2d(:,:)
-      else
-        read(filehandle) int2d(:,:)
-      end if
-      
-    else if ( present(float1d) ) then
-      
-      if ( allocated(float1d) ) deallocate( float1d )
-      allocate( float1d(dim(1)) )
-      if ( is_formatted(filehandle) ) then
-        read(filehandle,*) float1d(:)
-      else
-        read(filehandle) float1d(:)
-      end if
-      
-    else if ( present(float2d) ) then
-      
-      if ( allocated(float2d) ) deallocate( float2d )
-      allocate( float2d(dim(1),dim(2)) )
-      if ( is_formatted(filehandle) ) then
-        read(filehandle,'(4ES24.16)') float2d(:,:)
-      else
-        read(filehandle) float2d(:,:)
-      end if
-      
-    end if
-    
-    if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"> type ",A," size ",2I7)') name, trim(datatype), d(1:nd)
-    
-  end subroutine read_array
-  
-  
+ 
+
+ 
   
   !> Read an array from the STARWALL respone file (MPI I/O).
   subroutine read_array_sequential(filehandle, array_name, dim, disp, int1d, int2d, float1d, float2d)
@@ -685,182 +683,6 @@ module vacuum_response
   end subroutine read_array_parallel_rowwise
   !===========================================================================================================
   
-  !> Read the STARWALL response matrices from a single file.
-  !!
-  !! file_version 1: Original
-  !! file_version 2: Includes eta_thin_w
-  !! file_version 3: Includes additional coil information
-  subroutine read_starwall_response(sr, filename, n_bnd)
-    
-    use constants
-    use mod_parameters, only: n_tor, n_period
-    
-    implicit none
-    
-    ! --- Routine parameters
-    type(t_starwall_response), intent(inout) :: sr
-    character(len=*),          intent(in)    :: filename
-    integer,                   intent(in)    :: n_bnd !< Number of boundary elements for consistency check
-
-    ! --- Local variables
-    integer, parameter :: filehandle = 60
-    character(len=512) :: comment
-    integer            :: i, j, i_starw, n, is_sin, err, i_tmp
-    real*8             :: r_tmp
-    real*8, allocatable :: tmp(:)
-    
-    ! --- Open file
-    !   --- Try to open as unformatted file
-    write(*,*) 'Trying to open response as unformatted file...'
-    open(filehandle, file=trim(filename),access='stream', form='unformatted', status='old', action='read', &
-      iostat=err)
-    if ( err == 0 ) then
-      read(filehandle,iostat=err) i_tmp, r_tmp
-      if ( (i_tmp/=42) .or. (r_tmp/=42.d0) ) then
-        err=-42
-        close(filehandle)
-      end if
-    end if
-    
-    !   --- Try to open as formatted file
-    if ( err /= 0 ) then
-      write(*,*) '  ... failed.'
-      write(*,*) 'Trying to open response as formatted file...'
-      open(filehandle, file=trim(filename),access='stream',  form='formatted', status='old', action='read', &
-        iostat=err)
-    end if
-    
-    if ( err /= 0 ) then
-      write(*,*) '  ... failed.'
-      write(*,*) 'ERROR: STARWALL response file (',trim(filename),') could not be opened.'
-      stop
-    end if
-    write(*,*) '  ... succeeded.'
-    
-    ! --- Read data from STARWALL response file
-    if ( is_formatted(filehandle) ) then
-      read(filehandle,'(A)') comment
-    else
-      read(filehandle) comment
-    end if
-    
-    sr%file_version = read_intparam(filehandle, 'file_version')
-    if ( sr%file_version > 3 ) then
-      write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
-      stop
-    end if
-
-    sr%n_bnd  = read_intparam(filehandle, 'n_bnd')
-    if ( n_bnd /= sr%n_bnd ) then 
-      write(*,*) 'ERROR: The number of boundary elements in the STARWALL response file is different from your grid.'
-      stop
-    end if
-    sr%nd_bez = read_intparam(filehandle, 'nd_bez')
-    sr%ncoil  = read_intparam(filehandle, 'ncoil')
-    sr%npot_w = read_intparam(filehandle, 'npot_w')
-    sr%n_w    = read_intparam(filehandle, 'n_w')
-    sr%ntri_w = read_intparam(filehandle, 'ntri_w')
-    sr%n_tor  = read_intparam(filehandle, 'n_tor')
-    sr%n_tor0 = sr%n_tor
-    call read_array(filehandle, 'i_tor',         (/sr%n_tor,0/),  int1d=sr%i_tor)
-    
-    ! --- Additional coil information is only available since file_version 3
-    if ( sr%file_version >= 3 ) then
-      sr%ntri_c = read_intparam(filehandle, 'ntri_c')
-      sr%n_pol_coils             = read_intparam(filehandle, 'n_pol_coils')
-      sr%n_rmp_coils             = read_intparam(filehandle, 'n_rmp_coils')
-      sr%n_voltage_coils         = read_intparam(filehandle, 'n_voltage_coils')
-      sr%n_diag_coils            = read_intparam(filehandle, 'n_diag_coils')
-      if (sr%n_voltage_coils > 0 ) then
-        write(*,*) 'ERROR: voltage_coils not yet implemented.'
-        stop
-      end if
-      if ( sr%ncoil /= sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils) then
-        write(*,*) 'ERROR: STARWALL response is inconsistent: ncoil does not match sum.'
-        stop
-      end if
-      sr%ind_start_pol_coils     = read_intparam(filehandle, 'ind_start_pol_coils')
-      sr%ind_start_rmp_coils     = read_intparam(filehandle, 'ind_start_rmp_coils')
-      sr%ind_start_voltage_coils = read_intparam(filehandle, 'ind_start_voltage_coils')
-      sr%ind_start_diag_coils    = read_intparam(filehandle, 'ind_start_diag_coils')
-      
-      if ( sr%ncoil > 0 ) then
-        call read_array(filehandle, 'jtri_c',        (/sr%ncoil,0/),  int1d=sr%jtri_c)
-        call read_array(filehandle, 'x_coil',        (/sr%ntri_c,3/), float2d=sr%x_coil)
-        call read_array(filehandle, 'y_coil',        (/sr%ntri_c,3/), float2d=sr%y_coil)
-        call read_array(filehandle, 'z_coil',        (/sr%ntri_c,3/), float2d=sr%z_coil)
-        call read_array(filehandle, 'phi_coil',      (/sr%ntri_c,3/), float2d=sr%phi_coil)
-        call read_array(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/), float1d=sr%eta_thin_coil)
-        call read_array(filehandle, 'coil_resist',   (/sr%ncoil,0/),  float1d=sr%coil_resist)
-      end if
-    end if
-    
-    ! --- eta_thin_w is only part of the STARWALL response file since file_version 2
-    if ( sr%file_version >= 2 ) then
-      allocate(tmp(1))
-      call read_array(filehandle, 'eta_thin_w', (/1,0/),            float1d=tmp)
-      sr%eta_thin_w = tmp(1)
-      deallocate(tmp)
-    else
-      sr%eta_thin_w = 0.
-    end if
-    
-    call read_array(filehandle, 'yy',       (/sr%n_w,0/),            float1d=sr%d_yy)
-    call read_array(filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    float2d=sr%a_ye%loc_mat)
-    call read_array(filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    float2d=sr%a_ey%loc_mat)
-    call read_array(filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), float2d=sr%a_ee%loc_mat)
-    call read_array(filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       float2d=sr%s_ww%loc_mat)
-    call read_array(filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       float2d=sr%s_ww_inv%loc_mat)
-    call read_array(filehandle, 'xyzpot_w', (/sr%npot_w,3/),         float2d=sr%xyzpot_w)
-    call read_array(filehandle, 'jpot_w',   (/sr%ntri_w,3/),         int2d=sr%jpot_w)
-
-    close(filehandle)
-    if ( vacuum_debug) write(*,*) 'Finished reading vacuum response.'
-
-    ! --- Import normalization
-    sr%a_ee%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) * 2.d0*PI
-    sr%a_ye%loc_mat(:,:) = sr%a_ye%loc_mat(:,:) * 2.d0*PI
-    if ( vacuum_debug) write(*,*) 'Applied import normalization.'
-
-    ! --- STARWALL Cartesian coordinates -> JOREK Cartesian coordinates (replace y <-> z)
-    allocate( tmp(sr%npot_w) )
-    tmp(:)           = sr%xyzpot_w(:,2)
-    sr%xyzpot_w(:,2) = sr%xyzpot_w(:,3)
-    sr%xyzpot_w(:,3) = tmp(:)
-    deallocate( tmp )
-    
-    ! --- Compute ideal-wall and no-wall response matrices.
-    if ( allocated(sr%a_id%loc_mat) ) deallocate(sr%a_id%loc_mat)
-    if ( allocated(sr%a_nw%loc_mat) ) deallocate(sr%a_nw%loc_mat)
-    allocate( sr%a_id%loc_mat(sr%nd_bez,sr%nd_bez), sr%a_nw%loc_mat(sr%nd_bez,sr%nd_bez) )
-    sr%a_nw%loc_mat(:,:) = sr%a_ee%loc_mat(:,:)
-   
-    sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - matmul( sr%a_ey%loc_mat(:,:), sr%a_ye%loc_mat(:,:) )
-        
-
-    ! --- Transform STARWALL harmonics to account for periodicity
-    j = 0
-    do i = 1, sr%n_tor
-      i_starw = sr%i_tor(i)
-      n       = i_starw / 2
-      is_sin  = i_starw - 2 * n
-      i_starw = 2 * n/n_period + is_sin
-      if ( (mod(n, n_period) /= 0) .or. (i_starw < 1) .or. (i_starw > n_tor) ) then
-        write(*,*) 'WARNING: STARWALL harmonic has no JOREK equivalent!'
-        write(*,*) 'i_starw    =', sr%i_tor(i)
-        write(*,*) 'n_period   =', n_period 
-        write(*,*) 'n_tor      =', n_tor
-      else
-        j = j + 1
-        sr%i_tor(j) = i_starw
-      end if
-    end do
-    sr%n_tor = j
-    if ( vacuum_debug) write(*,*) 'End of routine read_starwall_response.'
-
-  end subroutine read_starwall_response
-  
-  
   
   !> Read the STARWALL response matrices from a single file.
   !!
@@ -1243,6 +1065,11 @@ module vacuum_response
         
       end if
     
+    else
+ 
+      write(6,*) "Such multiplication combination does not exist. Stop"
+      stop
+
     end if
   
   end subroutine matrix_multiplication
@@ -1355,174 +1182,6 @@ module vacuum_response
   
   !===========================================================================================  
 
-  !> Broadcast the STARWALL response matrices to the other MPI procs.
-  subroutine broadcast_starwall_response(my_id, sr)
-
-    use mpi_mod
-
-    implicit none
-
-
-    ! --- Routine parameters
-    integer,                   intent(in)    :: my_id
-    type(t_starwall_response), intent(inout) :: sr
-
-    ! --- Local parameters
-    integer :: ierr
-
-    if ( vacuum_debug ) write(*,*) my_id, 'Entering broadcast_starwall_response.'
-
-    ! --- Broadcast parameters.
-    call MPI_bcast(sr%file_version, 1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_bnd,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%nd_bez,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ncoil,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%npot_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_w,          1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ntri_w,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_tor,        1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_tor0,       1, MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ntri_c,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_pol_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_rmp_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_voltage_coils,         1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%n_diag_coils,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ind_start_pol_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ind_start_rmp_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ind_start_voltage_coils, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ind_start_diag_coils,    1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%eta_thin_w,   1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-
-    n_dof_starwall = sr%nd_bez
-    n_wall_curr    = sr%n_w
-  
-    ! --- Allocate matrics.
-    if ( my_id /= 0 ) then
-      if (allocated(sr%i_tor)   ) deallocate(sr%i_tor); allocate(sr%i_tor(sr%n_tor))
-      if (allocated(sr%d_yy)    ) deallocate(sr%d_yy);  allocate(sr%d_yy(sr%n_w))
-      if (allocated(sr%a_ye%loc_mat)    ) deallocate(sr%a_ye%loc_mat);  allocate(sr%a_ye%loc_mat(sr%n_w,sr%nd_bez))
-      if (allocated(sr%a_ey%loc_mat)    ) deallocate(sr%a_ey%loc_mat);  allocate(sr%a_ey%loc_mat(sr%nd_bez,sr%n_w))
-      if (allocated(sr%a_ee%loc_mat)    ) deallocate(sr%a_ee%loc_mat);  allocate(sr%a_ee%loc_mat(sr%nd_bez,sr%nd_bez))
-      if (allocated(sr%a_id%loc_mat)    ) deallocate(sr%a_id%loc_mat);  allocate(sr%a_id%loc_mat(sr%nd_bez,sr%nd_bez))
-      if (allocated(sr%a_nw%loc_mat)    ) deallocate(sr%a_nw%loc_mat);  allocate(sr%a_nw%loc_mat(sr%nd_bez,sr%nd_bez))
-      if (allocated(sr%s_ww%loc_mat)    ) deallocate(sr%s_ww%loc_mat);  allocate(sr%s_ww%loc_mat(sr%n_w,sr%n_w))
-      if (allocated(sr%s_ww_inv%loc_mat)) deallocate(sr%s_ww_inv%loc_mat);  allocate(sr%s_ww_inv%loc_mat(sr%n_w,sr%n_w))
-      if (allocated(sr%xyzpot_w)) deallocate(sr%xyzpot_w);  allocate(sr%xyzpot_w(sr%npot_w,3))
-      if (allocated(sr%jpot_w)  ) deallocate(sr%jpot_w);    allocate(sr%jpot_w(sr%ntri_w,3))
-      if ( sr%ncoil > 0 ) then
-        if (allocated(sr%jtri_c)       ) deallocate(sr%jtri_c);  allocate(sr%jtri_c(sr%ncoil))
-        if (allocated(sr%x_coil)       ) deallocate(sr%x_coil);  allocate(sr%x_coil(sr%ntri_c,3))
-        if (allocated(sr%y_coil)       ) deallocate(sr%y_coil);  allocate(sr%y_coil(sr%ntri_c,3))
-        if (allocated(sr%z_coil)       ) deallocate(sr%z_coil);  allocate(sr%z_coil(sr%ntri_c,3))
-        if (allocated(sr%phi_coil)     ) deallocate(sr%phi_coil);allocate(sr%phi_coil(sr%ntri_c,3))
-        if (allocated(sr%eta_thin_coil)) deallocate(sr%eta_thin_coil); allocate(sr%eta_thin_coil(sr%ntri_c))
-        if (allocated(sr%coil_resist)  ) deallocate(sr%coil_resist);   allocate(sr%coil_resist(sr%ncoil))
-      end if
-    end if
-
-    ! --- Broadcast matrices.
-    call MPI_bcast(sr%i_tor,    sr%n_tor,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%d_yy,     sr%n_w,              MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ye%loc_mat,     sr%n_w*sr%nd_bez,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ey%loc_mat,     sr%nd_bez*sr%n_w,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_ee%loc_mat,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_id%loc_mat,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%a_nw%loc_mat,     sr%nd_bez*sr%nd_bez, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%s_ww%loc_mat,     sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%s_ww_inv%loc_mat, sr%n_w*sr%n_w,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    if ( sr%ncoil > 0 ) then
-      call MPI_bcast(sr%jtri_c,   sr%ncoil,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%x_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%y_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%z_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%coil_resist,   sr%ncoil,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    end if
-
-    if ( vacuum_debug ) then
-      write(*,'("Checksum",I4,ES24.16)') my_id, sum(sr%i_tor) + sum(sr%d_yy)                       &
-        + sum(sr%a_ye%loc_mat) + sum(sr%a_ey%loc_mat) + sum(sr%a_ee%loc_mat) + sum(sr%a_id%loc_mat)&
-        + sum(sr%a_nw%loc_mat) + sum(sr%s_ww%loc_mat) + sum(sr%s_ww_inv%loc_mat )                  &
-        + sum(sr%xyzpot_w) + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil                      &
-        + sr%npot_w + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w + sr%file_version + sr%ntri_c  &
-        + sr%n_pol_coils + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils                   &
-        + sr%ind_start_pol_coils + sr%ind_start_rmp_coils + sr%ind_start_voltage_coils             &
-        + sr%ind_start_diag_coils
-      write(*,*) my_id, 'Exiting broadcast_starwall_response.'
-    end if
-
-  end subroutine broadcast_starwall_response
-  
-  
-  
-  !> Write out information about the STARWALL response matrices.
-  subroutine log_starwall_response(sr)
-    
-    use mod_parameters, only: n_period
-    
-    implicit none
-   
-    type(t_starwall_response), intent(in) :: sr
-    
-    32 format(3x,77('-'))
-    33 format(3x,a,i8)
-    34 format(3x,'sum(',a,')=',es24.16)
-    35 format(3x,'sum(',a,')=',i24)
-    36 format(3x,'sum(',a,')= ---not allocated---')
-    37 format(3x,a,es25.15)
-    write(*,*)
-    write(*,32)
-    write(*,33) 'STARWALL RESPONSE INFORMATION:'
-    write(*,32)
-    write(*,33) 'file_version            =', sr%file_version
-    write(*,33) 'n_bnd                   =', sr%n_bnd
-    write(*,33) 'nd_bez                  =', sr%nd_bez
-    write(*,33) 'ncoil                   =', sr%ncoil
-    write(*,33) 'npot_w                  =', sr%npot_w
-    write(*,33) 'n_w                     =', sr%n_w
-    write(*,33) 'ntri_w                  =', sr%ntri_w
-    write(*,33) 'n_tor                   =', sr%n_tor
-    write(*,33) 'n_tor0                  =', sr%n_tor0
-    write(*,33) 'n_pol_coils             =', sr%n_pol_coils
-    write(*,33) 'n_rmp_coils             =', sr%n_rmp_coils
-    write(*,33) 'n_voltage_coils         =', sr%n_voltage_coils
-    write(*,33) 'n_diag_coils            =', sr%n_diag_coils
-    write(*,33) 'ind_start_pol_coils     =', sr%ind_start_pol_coils
-    write(*,33) 'ind_start_rmp_coils     =', sr%ind_start_rmp_coils
-    write(*,33) 'ind_start_voltage_coils =', sr%ind_start_voltage_coils
-    write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
-    if ( sr%file_version >= 2) write(*,37) 'eta_thin_w   =', sr%eta_thin_w
-    if (allocated(sr%i_tor)) write(*,33) 'i_tor ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
-    if ( vacuum_debug ) then
-      write(*,32)
-      if (allocated(sr%i_tor        )) then; write(*,35) 'i_tor        ', sum(sr%i_tor         ); else; write(*,36) 'i_tor        '; end if
-      if (allocated(sr%d_yy         )) then; write(*,34) 'd_yy         ', sum(sr%d_yy          ); else; write(*,36) 'd_yy         '; end if
-      if (allocated(sr%a_ye%loc_mat         )) then; write(*,34) 'a_ye         ', sum(sr%a_ye%loc_mat          ); else; write(*,36) 'a_ye         '; end if
-      if (allocated(sr%a_ey%loc_mat         )) then; write(*,34) 'a_ey         ', sum(sr%a_ey%loc_mat          ); else; write(*,36) 'a_ey         '; end if
-      if (allocated(sr%a_ee%loc_mat         )) then; write(*,34) 'a_ee         ', sum(sr%a_ee%loc_mat          ); else; write(*,36) 'a_ee         '; end if
-      if (allocated(sr%a_id%loc_mat         )) then; write(*,34) 'a_id         ', sum(sr%a_id%loc_mat          ); else; write(*,36) 'a_id         '; end if
-      if (allocated(sr%a_nw%loc_mat         )) then; write(*,34) 'a_nw         ', sum(sr%a_nw%loc_mat          ); else; write(*,36) 'a_nw         '; end if
-      if (allocated(sr%s_ww%loc_mat         )) then; write(*,34) 's_ww         ', sum(sr%s_ww%loc_mat          ); else; write(*,36) 's_ww         '; end if
-      if (allocated(sr%s_ww_inv%loc_mat     )) then; write(*,34) 's_ww_inv     ', sum(sr%s_ww_inv%loc_mat      ); else; write(*,36) 's_ww_inv     '; end if
-      if (allocated(sr%xyzpot_w     )) then; write(*,34) 'xyzpot_w     ', sum(sr%xyzpot_w      ); else; write(*,36) 'xyzpot_w     '; end if
-      if (allocated(sr%jpot_w       )) then; write(*,35) 'jpot_w       ', sum(sr%jpot_w        ); else; write(*,36) 'jpot_w       '; end if
-      if (allocated(sr%jtri_c       )) then; write(*,35) 'jtri_c       ', sum(sr%jtri_c        ); else; write(*,36) 'jtri_c       '; end if
-      if (allocated(sr%x_coil       )) then; write(*,34) 'x_coil       ', sum(sr%x_coil        ); else; write(*,36) 'x_coil       '; end if
-      if (allocated(sr%y_coil       )) then; write(*,34) 'y_coil       ', sum(sr%y_coil        ); else; write(*,36) 'y_coil       '; end if
-      if (allocated(sr%z_coil       )) then; write(*,34) 'z_coil       ', sum(sr%z_coil        ); else; write(*,36) 'z_coil       '; end if
-      if (allocated(sr%phi_coil     )) then; write(*,34) 'phi_coil     ', sum(sr%phi_coil      ); else; write(*,36) 'phi_coil     '; end if
-      if (allocated(sr%eta_thin_coil)) then; write(*,34) 'eta_thin_coil', sum(sr%eta_thin_coil ); else; write(*,36) 'eta_thin_coil'; end if
-      if (allocated(sr%coil_resist  )) then; write(*,34) 'coil_resist  ', sum(sr%coil_resist   ); else; write(*,36) 'coil_resist  '; end if
-    end if
-    write(*,32)
-    write(*,*)
-    
-  end subroutine log_starwall_response
-  
-  
   
   !> Write out information about the STARWALL response matrices.
   subroutine log_starwall_response_parallel(my_id, sr)
@@ -3099,202 +2758,6 @@ module vacuum_response
 
    call MPI_BARRIER(MPI_COMM_WORLD,ierr)
   end subroutine update_response_parallel 
-  
-  
-  
-  !> Update vacuum response
-  !! This is necessary
-  !! - right after the start or restart of the code
-  !! - when wall resistivity, tstep, or some other parameters have changed.
-  subroutine update_response(tstep, freeboundary_equil, resistive_wall)
-    
-    use phys_module, only: time_evol_theta, time_evol_zeta
-    
-    implicit none
-    
-    ! --- Routine parameters
-    real*8,                      intent(in) :: tstep              !< delta t,timestep
-    logical,                     intent(in) :: freeboundary_equil !< Use free boundary equilibrium?
-    logical,                     intent(in) :: resistive_wall     !< Resistive or ideal wall?
-    
-    ! --- Local variables
-    integer :: i, j, k, j2, k2
-    real*8  :: a, b
-    real*8, allocatable :: tmp_d_s(:)
-    real*8  :: theta, zeta
-    logical :: update_required
-    
-    ! --- Local variables to store the previous values of some parameters.
-    real*8,  save :: old_thick=0.0
-    real*8,  save :: old_res=0.0
-    real*8,  save :: old_tstep=0.0
-    real*8,  save :: old_theta=0.0
-    real*8,  save :: old_zeta=0.0
-    logical, save :: old_reswall=.false.
-    
-    if ( sr%n_tor == 0 ) then
-      write(*,*) 'Remark: Routine update_response is not doing anything since sr%n_tor==0.'
-      return
-    end if
-    
-    theta = time_evol_theta
-    zeta  = time_evol_zeta
-    
-    ! --- Update response matrices only, if parameter values changed or matrices
-    ! not allocated
-    update_required = ( old_res     /= wall_resistivity       ) &
-                 .or. ( old_tstep   /= tstep                  ) &
-                 .or. ( old_theta   /= theta                  ) &
-                 .or. ( old_zeta    /= zeta                   ) &
-                 .or. ( old_reswall .neqv. resistive_wall     ) &
-                 .or. ( .not. allocated(response_m_a%loc_mat) ) &
-                 .or. ( .not. allocated(response_d_b)         ) &
-                 .or. ( .not. allocated(response_d_c)         ) &
-                 .or. ( .not. allocated(response_m_d%loc_mat) ) &
-                 .or. ( .not. allocated(response_m_e)         ) &
-                 .or. ( .not. allocated(response_m_f%loc_mat) ) &
-                 .or. ( .not. allocated(response_m_g%loc_mat) ) &
-                 .or. ( .not. allocated(response_m_h)         ) &
-                 .or. ( .not. allocated(response_m_j)         ) &
-                 .or. ( .not. allocated(response_m_k)         ) &
-                 .or. ( .not. allocated(response_m_l)         ) &
-                 .or. ( .not. allocated(response_m_v%loc_mat) ) &
-                 .or. ( .not. allocated(response_m_eq)        )
-    
-    if ( update_required ) then
-      ! --- Remember parameter values.
-      old_res     = wall_resistivity
-      old_tstep   = tstep
-      old_theta   = theta
-      old_zeta    = zeta
-      old_reswall = resistive_wall
-      
-      ! --- Allocate matrices if required
-      if ( .not. allocated(response_m_eq) ) &
-        allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
-      if ( .not. allocated(response_m_a%loc_mat) ) &
-        allocate( response_m_a%loc_mat(n_wall_curr, n_dof_starwall) )
-      if ( .not. allocated(response_d_b) ) &
-        allocate( response_d_b(n_wall_curr) )
-      if ( .not. allocated(response_d_c) ) &
-        allocate( response_d_c(n_wall_curr) )
-      if ( .not. allocated(response_m_d%loc_mat) ) &
-        allocate( response_m_d%loc_mat(n_wall_curr, n_dof_starwall) )
-      if ( .not. allocated(response_m_e) ) &
-        allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
-      if ( .not. allocated(response_m_f%loc_mat) ) &
-        allocate( response_m_f%loc_mat(n_dof_starwall, n_wall_curr) )
-      if ( .not. allocated(response_m_g%loc_mat) ) &
-        allocate( response_m_g%loc_mat(n_dof_starwall, n_wall_curr) )
-      if ( .not. allocated(response_m_h) ) &
-        allocate( response_m_h(n_dof_starwall, n_dof_starwall) )
-      if ( .not. allocated(response_m_j) ) &
-        allocate( response_m_j(n_dof_starwall, n_dof_starwall) )
-      if ( .not. allocated(response_m_k) ) &
-        allocate( response_m_k(n_wall_curr, sr%ncoil) )
-      if ( .not. allocated(response_m_l) ) &
-        allocate( response_m_l(n_dof_starwall, sr%ncoil) )
-      if ( .not. allocated(response_m_v%loc_mat) ) &
-        allocate( response_m_v%loc_mat(n_dof_starwall, n_wall_curr) )
-      
-      ! --- Derived response matrix for equilibrium (extract n=0 part from
-      ! STARWALL EE matrix)
-      
-      !zeta=1.0
-      response_m_eq = 0.d0
-
-      do j = 1, sr%nd_bez/sr%n_tor0, 2
-        j2 = (j-1)*sr%n_tor0 + 1
-        do k = 1, sr%nd_bez/sr%n_tor0, 2
-          k2 = (k-1)*sr%n_tor0 + 1
-          response_m_eq(j:j+1,k:k+1) = sr%a_ee%loc_mat(j2:j2+1,k2:k2+1)
-        end do
-      end do
-
-      ! --- Derived response matrices for time-evolution
-      if ( resistive_wall ) then
-       
-        allocate( tmp_d_s(n_wall_curr) )
-        
-        tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity * sr%d_yy(:)
-        
-        do j = 1, n_dof_starwall
-          response_m_a%loc_mat(:,j) = -(1.d0+zeta) * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
-        end do
-        
-        response_d_b(:) = - tstep * wall_resistivity * sr%d_yy(:) / tmp_d_s(:)
-        response_d_c(:) = zeta / tmp_d_s(:)
-       
-        do j = 1, n_dof_starwall
-          response_m_d%loc_mat(:,j) = zeta * sr%a_ye%loc_mat(:,j) / tmp_d_s(:)
-        end do
-        
-        response_m_e(:,:) = sr%a_ee%loc_mat(:,:) + matmul( sr%a_ey%loc_mat(:,:),response_m_a%loc_mat(:,:) )
-  
-        do k = 1, n_wall_curr
-          response_m_f%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
-        end do
-        
-        do k = 1, n_wall_curr
-          response_m_g%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
-        end do
-        
-        response_m_h(:,:) = sr%a_ee%loc_mat(:,:)
-       
-        response_m_j(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_d%loc_mat(:,:) )
-
-        do k = 1, n_wall_curr
-          response_m_k(k,:) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(:,k)
-        end do
-       
-        response_m_l(:,:) = matmul( sr%a_ey%loc_mat(:,:), response_m_k(:,:) )
-
-        do k = 1, n_wall_curr
-          response_m_v%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( response_d_b(k) )
-        end do
-
-        deallocate( tmp_d_s )
-        
-      else ! (Ideal wall)
-        
-        response_m_a%loc_mat(:,:) = 0.d0
-        response_d_b(:)   = 0.d0
-        response_d_c(:)   = 0.d0
-        response_m_d%loc_mat(:,:) = 0.d0
-        response_m_e(:,:) = sr%a_id%loc_mat(:,:)
-        response_m_f%loc_mat(:,:) = 0.d0
-        response_m_g%loc_mat(:,:) = 0.d0
-        response_m_h(:,:) = sr%a_id%loc_mat(:,:)
-        response_m_j(:,:) = 0.d0
-        response_m_k(:,:) = 0.d0 !####
-        response_m_l(:,:) = 0.d0 !####
-        response_m_v%loc_mat(:,:) = 0.d0 !####
-        
-      end if
-      
-      if ( vacuum_debug ) then
-        write(*,*) 'DEBUG: Checksums'
-        write(*,*) 'm_a:', sum(abs(response_m_a%loc_mat)),sum(response_m_a%loc_mat)
-        write(*,*) 'd_b:', sum(abs(response_d_b)), sum(response_d_b)
-        write(*,*) '1+d_b:', sum(abs(1.d0+response_d_b)), sum(1.d0+response_d_b)
-        write(*,*) 'd_c:', sum(abs(response_d_c)), sum(response_d_c)
-        write(*,*) 'm_d:', sum(abs(response_m_d%loc_mat)),sum(response_m_d%loc_mat)
-        write(*,*) 'm_e:', sum(abs(response_m_e)), sum(response_m_e)
-        write(*,*) 'm_f:', sum(abs(response_m_f%loc_mat)),sum(response_m_f%loc_mat)
-        write(*,*) 'm_g:', sum(abs(response_m_g%loc_mat)),sum(response_m_g%loc_mat)
-        write(*,*) 'm_h:', sum(abs(response_m_h)), sum(response_m_h)
-        write(*,*) 'm_j:', sum(abs(response_m_j)), sum(response_m_j)
-        write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)
-        write(*,*) 'm_l:', sum(abs(response_m_l)), sum(response_m_l)
-        write(*,*) 'm_v:', sum(abs(response_m_v%loc_mat)),sum(response_m_v%loc_mat)
-        write(*,*) 'm_eq:', sum(abs(response_m_eq)), sum(response_m_eq)
-        write(*,*) 'END: Checksums'
-      end if
-      
-    end if
- 
-  end subroutine update_response
-  
   
   
   !> Read a STARWALL response matrix from a file.

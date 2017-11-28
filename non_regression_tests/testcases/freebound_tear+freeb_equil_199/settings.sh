@@ -1,8 +1,8 @@
 # --- General settings
 jorekmodel="199"
-description="free-boundary 2/1 mode togehter with a freebnd_equil (2 STARWALL modes).   \
-If freebound_equil=.f. the same growth rate 2.29d-4 is found.                           \
-This case is a slightly modified version of the working benchmark with CASTOR."
+description="2/1 mode with freebnd_equil (2 free boundary modes). \
+Same growth rate 2.29d-4 if freebound_equil=.f. \
+Slightly modified version of benchmark with CASTOR."
 mpitasks=2
 binaries="jorek_model${jorekmodel}_1 rst_bin2hdf5 rst_hdf52bin"
 binaries_initial=""

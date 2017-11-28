@@ -393,7 +393,7 @@ module vacuum_response
     ! --- Local variables
     integer, dimension (MPI_STATUS_SIZE) :: status
     character(len=12) :: marker
-    integer           :: nd,d(2),loc_sizes(2),loc_starts(2),ierr,err,step,ntasks
+    integer           :: nd,d(2),loc_sizes(2),loc_starts(2),ierr,err,ntasks
     character(len=24) :: name, datatype, requested_type
     logical           :: error
     integer           :: my_subarray
@@ -444,11 +444,10 @@ module vacuum_response
 
       call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
 
-      step=dim(2)/ntasks
-      loc_sizes(2) = step
-      float2d%step=step
-
-      if(my_id==ntasks-1) loc_sizes(2) = step+dim(2)-ntasks*step
+      float2d%step=dim(2)/ntasks
+      loc_sizes(2) = float2d%step
+     
+      if(my_id==ntasks-1) loc_sizes(2) = float2d%step+dim(2)-ntasks*float2d%step
 
       loc_sizes(1) = dim(1)
 
@@ -457,12 +456,12 @@ module vacuum_response
 
       ! 2 - how many dimentions
       ! dim - int array with each global dimension sizes
-      loc_starts(2)=my_id*step
+      loc_starts(2)=my_id*float2d%step
       loc_starts(1)=0
       
       float2d%row_wise  = .false.
-      float2d%ind_start = my_id*step+1
-      float2d%ind_end   = my_id*step+loc_sizes(2)
+      float2d%ind_start = my_id*float2d%step+1
+      float2d%ind_end   = my_id*float2d%step+loc_sizes(2)
 
       call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
       call MPI_Type_commit(my_subarray,ierr)
@@ -547,7 +546,7 @@ module vacuum_response
     integer, dimension (MPI_STATUS_SIZE) :: status
     ! --- Local variables
     character(len=12) :: marker
-    integer           :: nd, d(2),loc_sizes(2),loc_starts(2),ierr,err,step,ntasks
+    integer           :: nd, d(2),loc_sizes(2),loc_starts(2),ierr,err,ntasks
     character(len=24) :: name, datatype, requested_type
     logical           :: error
     integer           :: my_subarray
@@ -599,10 +598,10 @@ module vacuum_response
 
           call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
 
-          step=dim(1)/ntasks
-          loc_sizes(1) = step
-          float2d%step=step
-          if(my_id==ntasks-1) loc_sizes(1) = step+dim(1)-ntasks*step
+          float2d%step=dim(1)/ntasks
+          loc_sizes(1) = float2d%step
+          
+          if(my_id==ntasks-1) loc_sizes(1) = float2d%step+dim(1)-ntasks*float2d%step
   
           loc_sizes(2) = dim(2)
 
@@ -612,12 +611,12 @@ module vacuum_response
 
           ! 2 - how many dimentions
           ! dim - int array with each global dimension sizes
-          loc_starts(1)=my_id*step
+          loc_starts(1)=my_id*float2d%step
           loc_starts(2)=0         
 
           float2d%row_wise  = .true.
-          float2d%ind_start = my_id*step+1
-          float2d%ind_end   = my_id*step+loc_sizes(1)
+          float2d%ind_start = my_id*float2d%step+1
+          float2d%ind_end   = my_id*float2d%step+loc_sizes(1)
 
           call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION, my_subarray,ierr)
           call MPI_Type_commit(my_subarray,ierr)
@@ -895,7 +894,7 @@ module vacuum_response
     integer(kind=MPI_OFFSET_KIND)        :: disp
     real*8             :: test_sum
 
-    integer            :: loc_sizes(2),step,ntasks
+    integer            :: loc_sizes(2),ntasks
  
     disp=0
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, err)
@@ -1118,7 +1117,7 @@ module vacuum_response
     real*8, allocatable, optional,  intent(inout)   :: res_mat_not_distr(:,:)
   
     ! --- Local variables
-    integer             :: ntasks, ierr, i, k, j, z, length, step, glob_index_i, glob_index_j 
+    integer             :: ntasks, ierr, i, k, j, z, length, glob_index_i, glob_index_j 
     real*8, allocatable :: tmp(:,:)
     real*8  :: sum_element
     
@@ -1128,10 +1127,6 @@ module vacuum_response
     if ( present(res_mat) .and. present(mat2) ) then
     
       res_mat%loc_mat=0.0
-    
-      if(my_id == 0) step = size(mat2%loc_mat,2) 
-      call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
-    
     
       ! check distribution. Result matrix rowwise, first matrix row wise, second
       ! matrix column wise
@@ -1156,7 +1151,7 @@ module vacuum_response
           call MPI_BCAST( tmp, length, MPI_DOUBLE_PRECISION, i-1, MPI_COMM_WORLD, ierr)
        
           ! Matrix -matrix multiplications
-          glob_index_j=(i-1)*step
+          glob_index_j=(i-1)*mat2%step
           do z = 1, size(mat1%loc_mat,1)
             do k = 1, size(tmp,2)
     
@@ -1182,8 +1177,6 @@ module vacuum_response
       if ( mat1%row_wise .and. (.not. mat2%row_wise) ) then
     
         res_mat_not_distr=0.0   
-        if(my_id == 0) step = size(mat2%loc_mat,2)
-        call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
     
         ! loop over all tasks
         do i = 1, ntasks
@@ -1206,8 +1199,8 @@ module vacuum_response
     
           ! Matrix -matrix multiplications
     
-          glob_index_j = (i-1)*step
-          glob_index_i = my_id*step
+          glob_index_j = (i-1)*mat2%step
+          glob_index_i = my_id*mat2%step
           do z = 1, size(mat1%loc_mat,1)
             do k = 1, size(tmp,2)
     
@@ -1231,11 +1224,9 @@ module vacuum_response
       if (mat1%row_wise) then
     
         res_mat_not_distr=0.0
-        if(my_id == 0) step = size(mat1%loc_mat,1)
-        call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
         
         ! Matrix -matrix multiplications     
-        glob_index_i = my_id*step
+        glob_index_i = my_id*mat1%step
     
         do z = 1, size(mat1%loc_mat,1)
           do k = 1, size(mat2_not_distr,2)
@@ -2727,18 +2718,15 @@ module vacuum_response
     real*8, allocatable, intent(in)    :: wall_curr(:)
 
     ! --- Local variables
-    integer :: i, j, ierr, global_index, ntasks, step, my_id
+    integer :: i, j, ierr, global_index, ntasks,  my_id
     integer :: count=1  
 
     if ( allocated(tripot_w) ) deallocate(tripot_w); allocate( tripot_w(sr%npot_w) )    
     if ( allocated(wall_curr) ) then
 
-     call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+      call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
-      if(my_id == 0 ) step = sr%s_ww%ind_end - sr%s_ww%ind_start + 1
-      call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
-
-      global_index = my_id*step
+      global_index = my_id*sr%s_ww%step
       tripot_w=0.0
 
       do i = 1, sr%npot_w
@@ -2800,7 +2788,7 @@ module vacuum_response
     real*8, allocatable :: tmp_d_s(:)
     real*8  :: theta, zeta
     logical :: update_required
-    integer :: ierr,step,loc_size,ntasks
+    integer :: ierr,loc_size,ntasks
     real*8  :: test_sum,test_sum2
    
 
@@ -2857,17 +2845,16 @@ module vacuum_response
         allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
       
       if ( .not. allocated(response_m_a%loc_mat) ) then
-        step=n_dof_starwall/ntasks
-        loc_size = step
-        response_m_a%step=step
-
-        if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+        response_m_a%step=n_dof_starwall/ntasks
+        loc_size = response_m_a%step
+        
+        if(my_id==ntasks-1) loc_size = response_m_a%step+n_dof_starwall-ntasks*response_m_a%step
 
         response_m_a%row_wise  = .false.
         response_m_a%distrib   = .true.          
 
-        response_m_a%ind_start = my_id*step+1
-        response_m_a%ind_end   = my_id*step+loc_size
+        response_m_a%ind_start = my_id*response_m_a%step+1
+        response_m_a%ind_end   = my_id*response_m_a%step+loc_size
 
         allocate( response_m_a%loc_mat(n_wall_curr, loc_size) )
       end if
@@ -2876,17 +2863,16 @@ module vacuum_response
       if ( .not. allocated(response_d_c) ) allocate( response_d_c(n_wall_curr) )
 
       if ( .not. allocated(response_m_d%loc_mat) ) then
-        step=n_dof_starwall/ntasks
-        loc_size = step
-        response_m_d%step=step
-
-        if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+        response_m_d%step=n_dof_starwall/ntasks
+        loc_size = response_m_d%step
+        
+        if(my_id==ntasks-1) loc_size = response_m_d%step+n_dof_starwall-ntasks*response_m_d%step
 
         response_m_d%row_wise  = .false.
         response_m_d%distrib   = .true.
 
-        response_m_d%ind_start = my_id*step+1
-        response_m_d%ind_end   = my_id*step+loc_size
+        response_m_d%ind_start = my_id*response_m_d%step+1
+        response_m_d%ind_end   = my_id*response_m_d%step+loc_size
 
         allocate( response_m_d%loc_mat(n_wall_curr, loc_size) )
       end if
@@ -2894,33 +2880,32 @@ module vacuum_response
       if ( .not. allocated(response_m_e) ) allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
 
       if ( .not. allocated(response_m_f%loc_mat) ) then
-        step=n_dof_starwall/ntasks
-        loc_size = step
-        response_m_f%step=step
-
-        if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+        response_m_f%step=n_dof_starwall/ntasks
+        loc_size = response_m_f%step
+        
+        if(my_id==ntasks-1) loc_size = response_m_f%step+n_dof_starwall-ntasks*response_m_f%step
 
         response_m_f%row_wise  = .true.
         response_m_f%distrib   = .true.
 
-        response_m_f%ind_start = my_id*step+1
-        response_m_f%ind_end   = my_id*step+loc_size
+        response_m_f%ind_start = my_id*response_m_f%step+1
+        response_m_f%ind_end   = my_id*response_m_f%step+loc_size
 
         allocate( response_m_f%loc_mat(loc_size, n_wall_curr) )
       end if
 
       if ( .not. allocated(response_m_g%loc_mat) ) then
-        step=n_dof_starwall/ntasks
-        loc_size = step
-        response_m_g%step=step
+        response_m_g%step=n_dof_starwall/ntasks
+        loc_size = response_m_g%step
+        
 
-        if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+        if(my_id==ntasks-1) loc_size = response_m_g%step+n_dof_starwall-ntasks*response_m_g%step
 
         response_m_g%row_wise  = .true.
         response_m_g%distrib   = .true.
 
-        response_m_g%ind_start = my_id*step+1
-        response_m_g%ind_end   = my_id*step+loc_size
+        response_m_g%ind_start = my_id*response_m_g%step+1
+        response_m_g%ind_end   = my_id*response_m_g%step+loc_size
 
         allocate( response_m_g%loc_mat(loc_size, n_wall_curr) )
       end if
@@ -2931,17 +2916,16 @@ module vacuum_response
       if ( .not. allocated(response_m_l) ) allocate( response_m_l(n_dof_starwall, sr%ncoil) )
 
       if ( .not. allocated(response_m_v%loc_mat) ) then
-        step=n_dof_starwall/ntasks
-        loc_size = step
-        response_m_v%step=step
+        response_m_v%step=n_dof_starwall/ntasks
+        loc_size = response_m_v%step
 
-        if(my_id==ntasks-1) loc_size = step+n_dof_starwall-ntasks*step
+        if(my_id==ntasks-1) loc_size = response_m_v%step+n_dof_starwall-ntasks*response_m_v%step
 
         response_m_g%row_wise  = .true.
         response_m_g%distrib   = .true.
 
-        response_m_g%ind_start = my_id*step+1
-        response_m_g%ind_end   = my_id*step+loc_size
+        response_m_g%ind_start = my_id*response_m_v%step+1
+        response_m_g%ind_end   = my_id*response_m_v%step+loc_size
 
         allocate( response_m_v%loc_mat(loc_size, n_wall_curr) )
       end if
@@ -2951,9 +2935,6 @@ module vacuum_response
      !zeta=1.0
      response_m_eq = 0.d0
 
-     if(my_id==0) step = sr%a_ee%ind_end - sr%a_ee%ind_start + 1
-     call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-
       do j = 1, sr%nd_bez/sr%n_tor0, 2
         j2 = (j-1)*sr%n_tor0 + 1
         do k = 1, sr%nd_bez/sr%n_tor0, 2
@@ -2962,11 +2943,11 @@ module vacuum_response
            if(sr%a_ee%row_wise == .true. ) then
 
              if(j2>=sr%a_ee%ind_start .AND. j2<=sr%a_ee%ind_end) then
-               response_m_eq(j,k:k+1) = sr%a_ee%loc_mat(j2-step*my_id,k2:k2+1)
+               response_m_eq(j,k:k+1) = sr%a_ee%loc_mat(j2-sr%a_ee%step*my_id,k2:k2+1)
              end if
 
              if((j2+1)>=sr%a_ee%ind_start .AND. (j2+1)<=sr%a_ee%ind_end) then
-               response_m_eq(j+1,k:k+1) = sr%a_ee%loc_mat((j2+1)-step*my_id,k2:k2+1)
+               response_m_eq(j+1,k:k+1) = sr%a_ee%loc_mat((j2+1)-sr%a_ee%step*my_id,k2:k2+1)
              end if
 
            end if
@@ -2996,12 +2977,9 @@ module vacuum_response
         
         ! m_e = a_ee - matmul(a_ey, m_a)
         call matrix_multiplication(my_id,sr%a_ey,mat2=response_m_a, res_mat_not_distr=response_m_e)
-         
-        if(my_id==0) step = sr%a_ee%ind_end - sr%a_ee%ind_start + 1
-        call MPI_BCAST(step, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
         do j = 1, size(sr%a_ee%loc_mat,1)
-          response_m_e(j+my_id*step,:) = response_m_e(j+my_id*step,:) + sr%a_ee%loc_mat(j,:)
+          response_m_e(j+my_id*sr%a_ee%step,:) = response_m_e(j+my_id*sr%a_ee%step,:) + sr%a_ee%loc_mat(j,:)
         end do
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_e,size(response_m_e),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 

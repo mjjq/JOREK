@@ -807,8 +807,6 @@ module vacuum_response
       if ( vacuum_debug) write(*,*) 'End of routine read_starwall_response.'
     end if
 
-    call MPI_BARRIER(MPI_COMM_WORLD, err)
-
   end subroutine read_starwall_response
   
   

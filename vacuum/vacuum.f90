@@ -30,7 +30,7 @@ module vacuum
     logical             :: row_wise                      !< Is the matrix distributed rowwise (otherwise columnwise)?
     integer             :: ind_start                     !< Minimum row/column index of local chunk.
     integer             :: ind_end                       !< Maximum row/column index of local chunk.
-    integer             :: step                          !< 
+    integer             :: step                          !< "chunk size" of each MPI task. Note that the last MPI task has a larger chunk size than this!
   end type t_distrib_mat
 
   !> @name JOREK vacuum response matrices

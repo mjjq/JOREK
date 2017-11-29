@@ -896,7 +896,7 @@ module vacuum_response
     ! --- Local variables
     integer             :: ntasks, ierr, i, k, j, z, length, glob_index_i, glob_index_j 
     real*8, allocatable :: tmp(:,:)
-    real*8  :: sum_element
+    real*8              :: sum_element
     
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
   
@@ -905,8 +905,6 @@ module vacuum_response
     
       res_mat%loc_mat=0.0
     
-      ! check distribution. Result matrix rowwise, first matrix row wise, second
-      ! matrix column wise
       if ( res_mat%row_wise .and. mat1%row_wise .and. (.not. mat2%row_wise) ) then
     
         ! loop over all tasks
@@ -947,13 +945,15 @@ module vacuum_response
           end do
     
         end do     
-         
+      
+      else
+        write(*,*) 'ERROR in matrix_multiplication: Combination of rowwise/columnwise not implemented (1).'
+        stop
       end if 
     
     ! --- Multiplication mat1(distributed)*mat2(distributed) =res_mat(not_distributed)
     else if ( present(mat2) .and. present(res_mat_not_distr) ) then
-      ! check distribution. Result matrix not distributed, first matrix row wise, second
-      ! matrix column wise
+      
       if ( mat1%row_wise .and. (.not. mat2%row_wise) ) then
     
         res_mat_not_distr=0.0   
@@ -1000,6 +1000,9 @@ module vacuum_response
           end do
     
         end do
+      else
+        write(*,*) 'ERROR in matrix_multiplication: Combination of rowwise/columnwise not implemented (2).'
+        stop
       end if
      
     ! --- Multiplication mat1(distributed)*mat2(not_distributed) =res_mat(not_distributed)
@@ -1031,11 +1034,14 @@ module vacuum_response
           end do
         end do
         
+      else
+        write(*,*) 'ERROR in matrix_multiplication: Combination of rowwise/columnwise not implemented (3).'
+        stop
       end if
     
     else
  
-      write(6,*) "Such multiplication combination does not exist. Stop"
+      write(6,*) "ERROR in matrix_multiplication: Unsupported set of matrices provided.'
       stop
 
     end if

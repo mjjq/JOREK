@@ -1066,7 +1066,7 @@ module vacuum_response
     integer :: ierr
     real*8    :: test_sum, loc_sum    
 
-    if ( vacuum_debug .AND. my_id == 0) write(*,*) my_id, 'Entering broadcast_starwall_response_parallel.'
+    if ( vacuum_debug .and. (my_id == 0) ) write(*,*) my_id, 'Entering broadcast_starwall_response_parallel.'
     
     ! --- Broadcast parameters.
     call MPI_bcast(sr%file_version,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
@@ -1154,9 +1154,7 @@ module vacuum_response
   end subroutine broadcast_starwall_response_parallel
   
   
-  !===========================================================================================  
 
-  
   !> Write out information about the STARWALL response matrices.
   subroutine log_starwall_response_parallel(my_id, sr)
 
@@ -1171,7 +1169,6 @@ module vacuum_response
     real*8  :: test_sum
     integer :: ierr
 
-
     32 format(3x,77('-'))
     33 format(3x,a,i8)
     34 format(3x,'sum(',a,')=',es24.16)
@@ -1180,8 +1177,7 @@ module vacuum_response
     37 format(3x,a,es25.15)
   
     if (my_id == 0) then
-  
-       write(*,*)
+         write(*,*)
        write(*,32)
        write(*,33) 'STARWALL RESPONSE INFORMATION:'
        write(*,32)
@@ -1202,10 +1198,8 @@ module vacuum_response
        write(*,33) 'ind_start_rmp_coils     =', sr%ind_start_rmp_coils
        write(*,33) 'ind_start_voltage_coils =', sr%ind_start_voltage_coils
        write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
-      
       if ( sr%file_version >= 2) write(*,37) 'eta_thin_w        =', sr%eta_thin_w
       if (allocated(sr%i_tor)) write(*,33) 'i_tor               ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
-
     end if 
 
     if ( vacuum_debug ) then
@@ -1219,60 +1213,60 @@ module vacuum_response
       test_sum=0.0
       if (allocated(sr%a_ye%loc_mat)) then
         call MPI_Reduce(sum(sr%a_ye%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        if(my_id == 0) write(*,34) 'a_ye         ', test_sum 
+        if (my_id == 0) write(*,34) 'a_ye         ', test_sum 
       else
-        if(my_id == 0)  write(*,36) 'a_ye         '
+        if (my_id == 0)  write(*,36) 'a_ye         '
       end if            
  
       test_sum=0.0
       if (allocated(sr%a_ey%loc_mat)) then 
         call MPI_Reduce(sum(sr%a_ey%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        if(my_id == 0) write(*,34) 'a_ey         ', test_sum 
+        if (my_id == 0) write(*,34) 'a_ey         ', test_sum 
       else
-        if(my_id == 0)  write(*,36) 'a_ey         ' 
+        if (my_id == 0)  write(*,36) 'a_ey         ' 
       end if
 
       test_sum=0.0
       if (allocated(sr%a_ee%loc_mat)) then
         call MPI_Reduce(sum(sr%a_ee%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        if(my_id == 0) write(*,34) 'a_ee         ', test_sum
+        if (my_id == 0) write(*,34) 'a_ee         ', test_sum
       else
-        if(my_id == 0) write(*,36) 'a_ee         '
+        if (my_id == 0) write(*,36) 'a_ee         '
       end if
 
       test_sum=0.0
       if (allocated(sr%a_id%loc_mat)) then
         call MPI_Reduce(sum(sr%a_id%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        if(my_id == 0) write(*,34) 'a_id         ', test_sum
+        if (my_id == 0) write(*,34) 'a_id         ', test_sum
       else
-        if(my_id == 0) write(*,36) 'a_id         '
+        if (my_id == 0) write(*,36) 'a_id         '
       end if
 
       test_sum=0.0
       if (allocated(sr%a_nw%loc_mat)) then
         call MPI_Reduce(sum(sr%a_nw%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        if(my_id == 0) write(*,34) 'a_nw         ', test_sum
+        if (my_id == 0) write(*,34) 'a_nw         ', test_sum
       else
-        if(my_id == 0) write(*,36) 'a_nw         '
+        if (my_id == 0) write(*,36) 'a_nw         '
       end if
       
       test_sum=0.0
       if (allocated(sr%s_ww%loc_mat)) then
         call MPI_Reduce(sum(sr%s_ww%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        if(my_id == 0) write(*,34) 's_ww         ', test_sum
+        if (my_id == 0) write(*,34) 's_ww         ', test_sum
       else
-        if(my_id == 0) write(*,36) 's_nw         '
+        if (my_id == 0) write(*,36) 's_nw         '
       end if
 
       test_sum=0.0
       if (allocated(sr%s_ww_inv%loc_mat)) then
         call MPI_Reduce(sum(sr%s_ww_inv%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        if(my_id == 0) write(*,34) 's_ww_inv     ', test_sum
+        if (my_id == 0) write(*,34) 's_ww_inv     ', test_sum
       else
-        if(my_id == 0) write(*,36) 's_nw_inv         '
+        if (my_id == 0) write(*,36) 's_nw_inv         '
       end if
         
-      if(my_id == 0) then
+      if (my_id == 0) then
         if (allocated(sr%xyzpot_w     )) then; write(*,34) 'xyzpot_w     ',sum(sr%xyzpot_w      ); else; write(*,36) 'xyzpot_w     '; end if
         if (allocated(sr%jpot_w       )) then; write(*,35) 'jpot_w       ',sum(sr%jpot_w        ); else; write(*,36) 'jpot_w       '; end if
         if (allocated(sr%jtri_c       )) then; write(*,35) 'jtri_c       ',sum(sr%jtri_c        ); else; write(*,36) 'jtri_c       '; end if
@@ -1316,7 +1310,6 @@ module vacuum_response
     integer, intent(in) :: index !< Time step index
     logical, intent(in) :: resistive_wall
     integer, intent(in) :: my_id
-
     
     ! --- Local variables
     real*8              :: phi1, phi2, phi3, r1(3), r2(3), r3(3), r21(3), r32(3), r13(3), r21_cross_r32(3)
@@ -1335,7 +1328,6 @@ module vacuum_response
     if ( mod(index,nout) /= 0 ) return
 
     if(my_id == 0) then
-
       if ( mod(index,nout) /= 0 ) return
       
       ! --- Preset values
@@ -1740,7 +1732,8 @@ module vacuum_response
   end subroutine write_wall_vtk
   
   
-    !> Implements the boundary integral in the current equation which vanishes for fixed boundary
+
+  !> Implements the boundary integral in the current equation which vanishes for fixed boundary
   !! conditions.
   !!
   !! The magnetic field parallel to the interface (boundary of JOREK computational domain) is
@@ -1834,8 +1827,7 @@ module vacuum_response
     ! --- Perform the time-stepping for the wall currents.
     if ( resistive_wall .and. (index_now>1) .and. (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
 
-    ! --- Update old_dpsibnd_vec  (used for updating the wall currents in the
-    ! next iteration)
+    ! --- Update old_dpsibnd_vec  (used for updating the wall currents in the next iteration)
     old_dpsibnd_vec(:) = dpsibnd_vec(:)
 
     if ( vacuum_debug ) then
@@ -1847,10 +1839,10 @@ module vacuum_response
     allocate(rhs_contrib_arr(n_dof_starwall))
     rhs_contrib_arr=0.0
 
-    do i=response_m_f%ind_start,response_m_f%ind_end
-              rhs_contrib_arr(i) =  sum(response_m_f%loc_mat(i-my_id*response_m_f%step, :) *  wall_curr(:) )  &
-                                   +sum(response_m_g%loc_mat(i-my_id*response_m_g%step, :) * dwall_curr(:) )  &
-                                   -sum(response_m_v%loc_mat(i-my_id*response_m_v%step, :) *   Y_coils0(:) )
+    do i = response_m_f%ind_start,response_m_f%ind_end
+      rhs_contrib_arr(i) =  sum(response_m_f%loc_mat(i-my_id*response_m_f%step, :) *  wall_curr(:) )  &
+        +sum(response_m_g%loc_mat(i-my_id*response_m_g%step, :) * dwall_curr(:) )  &
+        -sum(response_m_v%loc_mat(i-my_id*response_m_v%step, :) *   Y_coils0(:) )
     enddo
     call MPI_ALLReduce(MPI_IN_PLACE, rhs_contrib_arr, size(rhs_contrib_arr),MPI_DOUBLE_PRECISION, &
                        MPI_SUM, MPI_COMM_WORLD, ierr)
@@ -1882,8 +1874,7 @@ module vacuum_response
       ! --- Determine the values of R,s and Z,s at the Gaussian points.
       call det_coord_bnd(bndelem_m, node_list, R_S=x_s, Z_S=y_s)
 
-      ! --- Select a test function (the weak form equation must hold for every
-      ! test function)
+      ! --- Select a test function (the weak form equation must hold for every test function)
       L_LV: do l_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
 
         L_LD: do l_dof = 1, 2 ! (loop over node dofs)
@@ -2027,8 +2018,7 @@ module vacuum_response
 
     !### timing ###
     !call system_clock(count=t1)
-    !write(*,*) 'vacuum_boundary_integral main loop:', real(t1 - t0 ) /
-    !real(rate), 's'
+    !write(*,*) 'vacuum_boundary_integral main loop:', real(t1 - t0 ) / real(rate), 's'
     !write(68+my_id,*) real(t1 - t0 ) / real(rate)
     !###
 
@@ -2040,6 +2030,7 @@ module vacuum_response
   end subroutine vacuum_boundary_integral
   
   
+
   !> Determine the values of \f$R\f$, \f$Z\f$, \f$\partial R/\partial s\f$, and
   !! \f$ \partial Z/\partial s \f$ on the Gaussian points of a given boundary element.
   subroutine det_coord_bnd(bndelem, node_list, R, Z, R_s, Z_s)

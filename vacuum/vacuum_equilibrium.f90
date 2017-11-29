@@ -203,9 +203,9 @@ module vacuum_equilibrium
     integer :: i, j, i_start_pf, i_end_pf
     real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
     real*8  :: x(n_gauss), y(n_gauss), x_s(n_gauss), y_s(n_gauss)
-    real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i,B_tan_coil_i_loc, psi_0_j
+    real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i, B_tan_coil_i_loc, psi_0_j
     real*8, allocatable :: potentials_real(:)
-    integer :: ierr,step
+    integer :: ierr, step
 
     call equilibrium_VFB(my_id) 
     
@@ -220,7 +220,7 @@ module vacuum_equilibrium
       potentials_real(i_start_pf:i_end_pf) = I_coils(i_start_pf:i_end_pf) * mu_zero
 
       do i = 1, n_wall_curr
-        if (i>=sr%s_ww_inv%ind_start .AND. i<=sr%s_ww_inv%ind_end) then
+        if ( (i>=sr%s_ww_inv%ind_start) .and. (i<=sr%s_ww_inv%ind_end) ) then
           wall_curr(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:) *potentials_real(:))
         endif
       end do    
@@ -338,7 +338,7 @@ module vacuum_equilibrium
       
     end do
     
-  if(my_id ==0 )   mumps_par%nz = ilarge   ! update the size of the matrix
+  if ( my_id ==0 ) mumps_par%nz = ilarge   ! update the size of the matrix
     
   end subroutine vacuum_equil
   
@@ -348,11 +348,11 @@ module vacuum_equilibrium
     
    implicit none
   
-   integer,                      intent(in) :: my_id
+   integer, intent(in) :: my_id
 
    integer  :: i
    
-    if(my_id == 0) write(*,*) ' vertical_FB = ', vertical_FB
+    if (my_id == 0) write(*,*) ' vertical_FB = ', vertical_FB
    
    do i=1, n_pf_coils
      if( abs(vert_FB_amp(i)) .gt. 1.d-6 ) then

@@ -80,16 +80,16 @@ module vacuum_response
     ! --- Write out the boundary information for STARWALL.
     if (my_id == 0) call export_boundary(node_list, bnd_elm_list, bnd_node_list)
     
-       if ( vacuum_debug  ) call log_starwall_response_parallel(my_id, sr) 
-       call read_starwall_response_parallel(my_id, sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
-       call broadcast_starwall_response_parallel(my_id, sr)    
+    if ( vacuum_debug  ) call log_starwall_response_parallel(my_id, sr) 
+    call read_starwall_response_parallel(my_id, sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
+    call broadcast_starwall_response_parallel(my_id, sr)
 
     ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
-    if ( sr%file_version == 1  .AND. my_id==0) then
+    if ( (sr%file_version == 1)  .and. (my_id == 0) ) then
       write(*,*) 'Remark: STARWALL response file_version==1 means that wall_resistivity is specified in the JOREK namelist file.'
       write(*,*) '        Thus, the input parameter wall_resistivity_fact is ignored (WARNING).'
     else
-      if(my_id ==0) then
+      if (my_id ==0) then
           write(*,*) 'Remark: STARWALL response file_version>=2 means that eta_thin_w is specified in the STARWALL input.'
           write(*,*) '        The JOREK variable wall_resistivity is automatically calculated from it.'
           write(*,*) '        Thus, the input parameter wall_resistivity is ignored (WARNING).'
@@ -98,13 +98,14 @@ module vacuum_response
         sqrt( central_density * 1.d20 * central_mass * mass_proton / mu_zero )
     end if
    
-        call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-        call log_starwall_response_parallel(my_id, sr)
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    call log_starwall_response_parallel(my_id, sr)
               
   end subroutine get_vacuum_response
 
 
-  !> Read an integer parameter from a STARWALL response file.
+
+  !> Read an integer parameter from the STARWALL response file.
   integer function read_intparam(filehandle, parameter_name)
 
     implicit none
@@ -132,6 +133,7 @@ module vacuum_response
     if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"=",I12)',iostat=ierr) name,read_intparam
 
   end function read_intparam
+
 
 
   !> Read an array from the STARWALL respone file
@@ -208,6 +210,7 @@ module vacuum_response
       end if
 
     else if ( present(float2d) ) then
+      
       if ( allocated(float2d) ) deallocate( float2d )
       allocate( float2d(dim(1),dim(2)) )
       if ( is_formatted(filehandle) ) then
@@ -223,6 +226,7 @@ module vacuum_response
   end subroutine read_array
 
   
+
   !> Read an integer parameter from a STARWALL response file (MPI I/O).
   integer function read_intparam_parallel(filehandle, parameter_name,disp)
 
@@ -230,34 +234,30 @@ module vacuum_response
     implicit none
 
     ! --- Routine parameters
-    integer,          intent(in) :: filehandle
-    character(len=*), intent(in) :: parameter_name
-    integer(kind=MPI_OFFSET_KIND),intent(inout)    :: disp
-    !integer,          intent(inout) :: disp
-    integer, dimension (MPI_STATUS_SIZE) :: status
+    integer,                       intent(in)    :: filehandle
+    character(len=*),              intent(in)    :: parameter_name
+    integer(kind=MPI_OFFSET_KIND), intent(inout) :: disp
 
     ! --- Local variables
+    integer, dimension (MPI_STATUS_SIZE) :: status
     character(len=12) :: marker
     character(len=24) :: name
     integer           :: err
 
     if ( is_formatted(filehandle) ) then
-      read(filehandle,'(A12,A24,I12)',iostat=err) marker, name,read_intparam_parallel
+      read(filehandle,'(A12,A24,I12)',iostat=err) marker, name, read_intparam_parallel
     else
-
       call MPI_FILE_READ(filehandle, marker,sizeof(marker),MPI_CHARACTER,status,err)
       call MPI_FILE_READ(filehandle, name,  sizeof(name)  ,MPI_CHARACTER,status,err)
       call MPI_FILE_READ(filehandle, read_intparam_parallel, 1,MPI_INTEGER,status,err)
-      disp=disp+sizeof(marker)+sizeof(name)+sizeof(10)! any integer 
-
+      disp = disp + sizeof(marker) + sizeof(name) + sizeof(10)! any integer 
     end if
 
     if ( (err /= 0) .or. (trim(adjustl(marker)) /= '#@intparam') .or. (trim(adjustl(name)) /= trim(parameter_name)) ) then
       write(*,*) 'ERROR: Could not read parameter "', trim(parameter_name) ,'"from STARWALL response.'
       stop
     end if
-
-    if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"=",I12)',iostat=err) name,read_intparam_parallel
+    if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"=",I12)',iostat=err) name, read_intparam_parallel
 
   end function read_intparam_parallel  
  
@@ -271,9 +271,9 @@ module vacuum_response
     implicit none
 
     ! --- Routine parameters
-    integer, intent(in) :: filehandle
-    character(len=*), intent(in) :: array_name
-    integer, intent(in) :: dim(2)
+    integer,                        intent(in)      :: filehandle
+    character(len=*),               intent(in)      :: array_name
+    integer,                        intent(in)      :: dim(2)
     integer(kind=MPI_OFFSET_KIND),  intent(inout)   :: disp
     integer, allocatable, optional, intent(inout)   :: int1d(:)
     integer, allocatable, optional, intent(inout)   :: int2d(:,:)
@@ -283,7 +283,7 @@ module vacuum_response
     ! --- Local variables
     integer, dimension (MPI_STATUS_SIZE) :: status
     character(len=12) :: marker
-    integer           :: nd, d(2), ierr,err
+    integer           :: nd, d(2), ierr, err
     character(len=24) :: name, datatype, requested_type
     logical           :: error
 
@@ -294,24 +294,22 @@ module vacuum_response
     end if
 
     if ( is_formatted(filehandle) ) then
-      read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker, name, nd,datatype, d
+      read(filehandle,'(A12,A24,I12,A24,2I12)', iostat=ierr) marker, name, nd, datatype, d
     else
       call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),    MPI_CHARACTER,status,ierr)
       call MPI_FILE_READ(filehandle,  name,     sizeof(name),      MPI_CHARACTER,status,ierr)
       call MPI_FILE_READ(filehandle,  nd,       1,                 MPI_INTEGER  ,status,ierr)
       call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype),  MPI_CHARACTER,status,ierr)
       call MPI_FILE_READ(filehandle,  d,        2,                 MPI_INTEGER  ,status,ierr)
-
-      disp=disp+sizeof(marker)+sizeof(name)+sizeof(nd)+sizeof(datatype)+sizeof(d) 
-
+      disp = disp + sizeof(marker) + sizeof(name) + sizeof(nd) + sizeof(datatype) + sizeof(d) 
     end if
  
     marker   = adjustl(marker)
     name     = adjustl(name)
     datatype = adjustl(datatype)
 
-    error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. ( trim(name)/= trim(array_name) ) &
-      .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. ( trim(datatype) /=trim(requested_type) )
+    error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. ( trim(name) /= trim(array_name) ) &
+      .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. ( trim(datatype) /= trim(requested_type) )
 
     if ( error ) then
       write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
@@ -320,50 +318,42 @@ module vacuum_response
  
    if ( present(int1d) ) then
 
-      if ( allocated(int1d) ) deallocate( int1d )
-      allocate( int1d(dim(1)) )
-      
+      if ( allocated(int1d) ) deallocate( int1d ); allocate( int1d(dim(1)) )
       if ( is_formatted(filehandle) ) then
         read(filehandle,*) int1d(:)
       else
-        call MPI_FILE_READ(filehandle,  int1d,       dim(1), MPI_INTEGER  ,status,ierr)
-        disp=disp+sizeof(int1d)
+        call MPI_FILE_READ(filehandle, int1d, dim(1), MPI_INTEGER  ,status,ierr)
+        disp = disp + sizeof(int1d)
       end if
 
     else if ( present(int2d) ) then
 
-      if ( allocated(int2d) ) deallocate( int2d )
-      allocate( int2d(dim(1),dim(2)) )
-      
+      if ( allocated(int2d) ) deallocate( int2d ); allocate( int2d(dim(1),dim(2)) )
       if ( is_formatted(filehandle) ) then
         read(filehandle,*) int2d(:,:)
       else
-         call MPI_FILE_READ(filehandle,  int2d,       dim(1)*dim(2), MPI_INTEGER  ,status,ierr)
-         disp=disp+sizeof(int2d)
+         call MPI_FILE_READ(filehandle, int2d, dim(1)*dim(2), MPI_INTEGER  ,status,ierr)
+         disp = disp + sizeof(int2d)
       end if
 
     else if ( present(float1d) ) then
 
-      if ( allocated(float1d) ) deallocate( float1d )
-      allocate( float1d(dim(1)) )
-      
+      if ( allocated(float1d) ) deallocate( float1d ); allocate( float1d(dim(1)) )
       if ( is_formatted(filehandle) ) then
         read(filehandle,*) float1d(:)
       else
-        call MPI_FILE_READ(filehandle,  float1d,       dim(1), MPI_DOUBLE_PRECISION  ,status,ierr)
-        disp=disp+sizeof(float1d)
+        call MPI_FILE_READ(filehandle, float1d, dim(1), MPI_DOUBLE_PRECISION  ,status,ierr)
+        disp = disp + sizeof(float1d)
       end if
 
     else if ( present(float2d) ) then
 
-      if ( allocated(float2d) ) deallocate( float2d )
-      allocate( float2d(dim(1),dim(2)) )
-      
+      if ( allocated(float2d) ) deallocate( float2d ); allocate( float2d(dim(1),dim(2)) )
       if ( is_formatted(filehandle) ) then
         read(filehandle,'(4ES24.16)') float2d(:,:)
       else
-        call MPI_FILE_READ(filehandle,  float2d,       dim(1)*dim(2), MPI_DOUBLE_PRECISION  ,status,ierr)
-        disp=disp+sizeof(float2d)
+        call MPI_FILE_READ(filehandle, float2d, dim(1)*dim(2), MPI_DOUBLE_PRECISION  ,status,ierr)
+        disp = disp + sizeof(float2d)
       end if
 
     end if
@@ -375,7 +365,7 @@ module vacuum_response
   
   
   !> Read an array from the STARWALL respone file
-  subroutine read_array_parallel_columnwise(filehandle, array_name, dim, disp, my_id,float2d)
+  subroutine read_array_parallel_columnwise(filehandle, array_name, dim, disp, my_id, float2d)
 
     use mpi_mod
     implicit none
@@ -392,14 +382,12 @@ module vacuum_response
     integer, dimension (MPI_STATUS_SIZE) :: status
     character(len=12) :: marker
     integer           :: nd,d(2),loc_sizes(2),loc_starts(2),ierr,err,ntasks
-    character(len=24) :: name, datatype, requested_type
+    character(len=24) :: name, datatype
     logical           :: error
     integer           :: my_subarray
     integer           :: num_read_elements, n_step_read, step_read
-    integer(KIND=8)   :: local_num_elements,num_read_elements_const, i, i_ind, j_ind
+    integer(KIND=8)   :: local_num_elements, num_read_elements_const, i, i_ind, j_ind
    
-    requested_type = 'float'
-
     if ( is_formatted(filehandle) ) then
       
       read(filehandle,'(A12,A24,I12,A24,2I12)',iostat=ierr) marker,name,nd,datatype, d
@@ -407,20 +395,19 @@ module vacuum_response
     else
 
       if (my_id==0) then
-        call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),MPI_CHARACTER,status,ierr)
-        call MPI_FILE_READ(filehandle,  name,     sizeof(name),MPI_CHARACTER,status,ierr)
-        call MPI_FILE_READ(filehandle,  nd,       1,MPI_INTEGER  ,status,ierr)
-        call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype),MPI_CHARACTER,status,ierr)
-        call MPI_FILE_READ(filehandle,  d,        2,MPI_INTEGER  ,status,ierr)
+        call MPI_FILE_READ(filehandle, marker,   sizeof(marker),  MPI_CHARACTER, status, ierr)
+        call MPI_FILE_READ(filehandle, name,     sizeof(name),    MPI_CHARACTER, status, ierr)
+        call MPI_FILE_READ(filehandle, nd,       1,               MPI_INTEGER,   status, ierr)
+        call MPI_FILE_READ(filehandle, datatype, sizeof(datatype),MPI_CHARACTER, status, ierr)
+        call MPI_FILE_READ(filehandle, d,        2,               MPI_INTEGER,   status, ierr)
 
-        disp=disp+sizeof(marker)+sizeof(name)+sizeof(nd)+sizeof(datatype)+sizeof(d)
-
+        disp = disp + sizeof(marker) + sizeof(name) + sizeof(nd) + sizeof(datatype) + sizeof(d)
         marker   = adjustl(marker)
         name     = adjustl(name)
         datatype = adjustl(datatype)
 
-        error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. (trim(name)/=trim(array_name) ) &
-                 .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. (trim(datatype)/=trim(requested_type) )
+        error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. (trim(name) /= trim(array_name) ) &
+          .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. (trim(datatype) /= 'float' )
 
         if ( error ) then
           write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
@@ -436,88 +423,73 @@ module vacuum_response
       
       if ( allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
       allocate( float2d%loc_mat (dim(1),dim(2)) )
-      read(filehandle,'(4ES24.16)') float2d%loc_mat (:,:)
+      read(filehandle,'(4ES24.16)') float2d%loc_mat(:,:)
       
     else
 
-      call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
+      call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
-      float2d%step=dim(2)/ntasks
-      loc_sizes(2) = float2d%step
-     
-      if(my_id==ntasks-1) loc_sizes(2) = float2d%step+dim(2)-ntasks*float2d%step
+      float2d%step       = dim(2) / ntasks
+      loc_starts(:)      = (/ 0, my_id*float2d%step /)
+      loc_sizes(:)       = (/ dim(1), float2d%step /)
+      if (my_id==ntasks-1) loc_sizes(2) = float2d%step + dim(2)-ntasks*float2d%step
+      local_num_elements = int(loc_sizes(1),8) * int(loc_sizes(2),8)
+      float2d%row_wise   = .false.
+      float2d%ind_start  = my_id*float2d%step+1
+      float2d%ind_end    = my_id*float2d%step+loc_sizes(2)
 
-      loc_sizes(1) = dim(1)
-
-      if ( allocated(float2d%loc_mat ) ) deallocate( float2d%loc_mat  )
-      allocate( float2d%loc_mat (loc_sizes(1),loc_sizes(2)) )
-
-      ! 2 - how many dimentions
-      ! dim - int array with each global dimension sizes
-      loc_starts(2)=my_id*float2d%step
-      loc_starts(1)=0
-      
-      float2d%row_wise  = .false.
-      float2d%ind_start = my_id*float2d%step+1
-      float2d%ind_end   = my_id*float2d%step+loc_sizes(2)
+      if ( allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
+      allocate( float2d%loc_mat(loc_sizes(1),loc_sizes(2)) )
 
       call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
       call MPI_Type_commit(my_subarray,ierr)
+      call MPI_File_set_view(filehandle, disp, MPI_DOUBLE_PRECISION, my_subarray, "native", MPI_INFO_NULL, ierr)
 
-      call MPI_File_set_view(filehandle, disp,MPI_DOUBLE_PRECISION,my_subarray, &
-        "native",MPI_INFO_NULL, ierr)
-
-
-      local_num_elements=int(loc_sizes(1),8)*int(loc_sizes(2),8)
-
-
-      ! The following avoids a bug in Intel MPI library with restriction of 2G file data read for per MPI task
-      ! This number correspond to max_4b_int/8 (bytes for double precision)
-      ! = 2147483647.0/8.0=268435455 -> 250000000 
-      num_read_elements_const=250000000
+      ! -----------------------------------
+      ! The following is a workaround for an Intel MPI limitation not allowing to read more than 2 GB
+      ! of data per MPI task in each call corresponding to 268435455 double precision values.
+      num_read_elements_const = 250000000
 
       if (num_read_elements_const>loc_sizes(1)*loc_sizes(2)) then
-        num_read_elements=local_num_elements
-        n_step_read=1
+        num_read_elements = local_num_elements
+        n_step_read       = 1
       else
-        n_step_read=local_num_elements/num_read_elements_const + 1
-        num_read_elements=num_read_elements_const
+        n_step_read       = local_num_elements/num_read_elements_const + 1
+        num_read_elements = num_read_elements_const
       end if
 
       call MPI_AllREDUCE(MPI_IN_PLACE,n_step_read,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
 
-      ! Next loop is developed in order to overcome the bug in intel MPI
-      ! library of 2G max read size per MPI task. 
-
       i_ind=1
       j_ind=1
-
-      ! reading data from the file with about 2G step. (Intel MPI bag. )
-      do i=1, n_step_read
+      do i = 1, n_step_read
         call MPI_File_read_all(filehandle, float2d%loc_mat(i_ind, j_ind),num_read_elements, &
           MPI_DOUBLE_PRECISION, status, ierr)
 
-        ! Calculation of starting indecies of each slice in local array     
-        j_ind=int(num_read_elements,8)*i/loc_sizes(1) + 1
-        i_ind=int(num_read_elements,8)*i-int((j_ind-1),8)*int(loc_sizes(1),8) + 1
+        ! Calculation of starting indices of each slice in local array     
+        j_ind = int(num_read_elements,8)*i/loc_sizes(1) + 1
+        i_ind = int(num_read_elements,8)*i-int((j_ind-1),8)*int(loc_sizes(1),8) + 1
 
         ! If number of reading step is not eaqual for each MPI task.         
-        if(num_read_elements_const*int((i+1),8)>local_num_elements) then
-            num_read_elements=local_num_elements-i*num_read_elements_const
-               if(num_read_elements<=0) then
-                          num_read_elements=0
-                          j_ind=1
-                          i_ind=1
-               endif
-         endif
+        if (num_read_elements_const*int((i+1),8)>local_num_elements) then
+          num_read_elements = local_num_elements-i*num_read_elements_const
+          if (num_read_elements <= 0) then
+            num_read_elements = 0
+            j_ind = 1
+            i_ind = 1
+          endif
+        endif
       end do
+      ! End of workaround for Intel MPI limitation
+      ! -----------------------------------
+      
+      ! The following line can replace the workaround in the future
+      !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
 
-      !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2),&
-      !  MPI_DOUBLE_PRECISION,status, ierr)
-      disp=disp+sizeof(float2d%loc_mat(1,1))*dim(1)*dim(2)
+      disp = disp + sizeof(float2d%loc_mat(1,1))*dim(1)*dim(2)
 
-      !Return to ordinary file view
-      call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE,"native",MPI_INFO_NULL, ierr);
+      ! Return to ordinary file view
+      call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE,"native",MPI_INFO_NULL, ierr)
 
     end if
 
@@ -526,6 +498,8 @@ module vacuum_response
 
   end subroutine read_array_parallel_columnwise
   
+
+
      !===========================================================================================================
   !> Read an array from the STARWALL respone file
   subroutine read_array_parallel_rowwise(filehandle, array_name, dim, disp, my_id, float2d)

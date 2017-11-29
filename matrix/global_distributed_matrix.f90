@@ -72,7 +72,7 @@ module global_distributed_matrix
     j_col_block   = j_col - (j_block-1) * n_matrix_block_size
     
     ! --- Determine the position of the block in the sparse matrix.
-    det_sparse_pos = -999999999 !###
+    det_sparse_pos = -999999999 ! return a negative value if not found
     do i = 1, ijA_size(i_block_local)
       if ( irn_jcn(i_block_local,i) == j_block ) then ! Block index found?
         ij_sparse_block = ijA_index(i_block_local,i)
@@ -142,8 +142,6 @@ module global_distributed_matrix
     integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_tor, j_var, j_col
     integer :: sparsepos
     
-    !write(*,*) LOG_BEGIN_MARKER//' global_matrix_structure_vacuum'
-    
     !$omp parallel do                                                                    &
     !$omp default(none)                                                                  &
     !$omp shared(bnd_node_list, node_list, index_min, index_max, irn_glob, jcn_glob)     &
@@ -190,8 +188,6 @@ module global_distributed_matrix
       end do
     end do
     !$omp end parallel do
-    
-    !write(*,*) LOG_END_MARKER//' global_matrix_structure_vacuum'
     
   end subroutine global_matrix_structure_vacuum
   

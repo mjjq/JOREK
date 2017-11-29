@@ -43,8 +43,6 @@ subroutine boundary_check(my_id)
     write(*,*) '************************************'
   endif
 
-  i_resp_0 = 0 
-  
   call tr_allocate(val_integral,1,sr%n_tor,"val_integral",CAT_GRID)
   call tr_allocate(err_integral,1,sr%n_tor,"err_integral",CAT_GRID)
   call tr_allocate(psibnd_vec,1,n_dof_starwall,"psibnd_vec",CAT_GRID)
@@ -56,12 +54,13 @@ subroutine boundary_check(my_id)
   err_integral(:) = 0.d0
   B_par(:)        = 0.d0
   B_par_v(:)      = 0.d0
+  i_resp_0        = 0 
 
   call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
 
   ! --- For every boundary element, do...
   L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
-  
+
     bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
     m_elm     = bnd_elm_list%bnd_element(m_bndelem)%element
     mv1       = bnd_elm_list%bnd_element(m_bndelem)%side
@@ -70,7 +69,7 @@ subroutine boundary_check(my_id)
     Z1 = node_list%node(bndelem_m%vertex(1))%x(1,2)
     R2 = node_list%node(bndelem_m%vertex(2))%x(1,1)
     Z2 = node_list%node(bndelem_m%vertex(2))%x(1,2)
-   
+
     ! --- For several points in the boundary element, do...
     L_MP: do m_pt = 1, N_POINTS
 
@@ -79,7 +78,7 @@ subroutine boundary_check(my_id)
 
       ! --- Determine 1D basis function (and derivatives) at current point
       s_or_t = float(m_pt-1)/float(N_POINTS-1)
-    
+
       call basisfunctions1(s_or_t, H1, H1_s, H1_ss)
 
       ! --- Which s and t values correspond to the current point and is the
@@ -215,11 +214,9 @@ subroutine boundary_check(my_id)
       call MPI_AllREDUCE(MPI_IN_PLACE,B_par_v, size(B_par_v), MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD,ierr)
 
       ! --- Debugging output
-      if ( vacuum_debug ) then
-        if (my_id == 0) then
-          write(88,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par(:)
-          write(89,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par_v(:)
-        endif ! my_id == 0
+      if ( vacuum_debug .and. (my_id == 0) ) then
+        write(88,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par(:)
+        write(89,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par_v(:)
       end if
 
       ! --- Integration of B_par_v values and differences between B_par and B_par_v.
@@ -230,23 +227,21 @@ subroutine boundary_check(my_id)
 
   end do L_MB
   
-  if ( minval(abs(val_integral)) /= 0.d0 .AND. my_id == 0) then
+  if ( (minval(abs(val_integral)) /= 0.d0) .and. (my_id == 0) ) then
     write(*,'(1x,A,20ES15.5)') 'Relative errors in harmonics:', err_integral(:) / val_integral(:), err_integral(:), val_integral(:)
   end if
 
   ! --- Debugging output
-  if ( vacuum_debug ) then
-    if (my_id == 0) then
-      write(88,*)
-      write(88,*)
-      write(89,*)
-      write(89,*)
-      if ( minval(abs(val_integral)) /= 0.d0 ) then ! (avoid division by zero in first timestep)
-        write(87,'(20ES15.5)') err_integral(:) / val_integral(:)
-      end if
-    endif ! my_id == 0
+  if ( vacuum_debug .and. (my_id == 0) ) then
+    write(88,*)
+    write(88,*)
+    write(89,*)
+    write(89,*)
+    if ( minval(abs(val_integral)) /= 0.d0 ) then ! (avoid division by zero in first timestep)
+      write(87,'(20ES15.5)') err_integral(:) / val_integral(:)
+    end if
   end if
-  
+
   call tr_deallocate(psibnd_vec,"psibnd_vec",CAT_GRID)
   call tr_deallocate(dpsibnd_vec,"dpsibnd_vec",CAT_GRID)
   call tr_deallocate(B_par,"B_par",CAT_GRID)

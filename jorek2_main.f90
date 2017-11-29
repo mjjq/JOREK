@@ -569,7 +569,7 @@ required = 0
         if ( freeboundary .and. freeb_change_indices .and. (my_id == 0)) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
 
         ! --- Determine boundary information from the grid
-        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)       
+        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
         call export_boundary(node_list, bnd_elm_list, bnd_node_list)
         
         if ( freeb_equil2) then

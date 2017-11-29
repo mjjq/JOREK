@@ -203,9 +203,9 @@ module vacuum_equilibrium
     integer :: i, j, i_start_pf, i_end_pf
     real*8  :: size_l, dA, testfunc_l, size_i, basfunc_i
     real*8  :: x(n_gauss), y(n_gauss), x_s(n_gauss), y_s(n_gauss)
-    real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i,B_tan_coil_i_loc, psi_0_j
+    real*8  :: common_prefactor, psi_coil_j, B_tan_coil_i, B_tan_coil_i_loc, psi_0_j
     real*8, allocatable :: potentials_real(:)
-    integer :: ierr,step
+    integer :: ierr, step
 
     call equilibrium_VFB(my_id) 
     
@@ -220,7 +220,7 @@ module vacuum_equilibrium
       potentials_real(i_start_pf:i_end_pf) = I_coils(i_start_pf:i_end_pf) * mu_zero
 
       do i = 1, n_wall_curr
-        if (i>=sr%s_ww_inv%ind_start .AND. i<=sr%s_ww_inv%ind_end) then
+        if ( (i>=sr%s_ww_inv%ind_start) .and. (i<=sr%s_ww_inv%ind_end) ) then
           wall_curr(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:) *potentials_real(:))
         endif
       end do    
@@ -230,67 +230,50 @@ module vacuum_equilibrium
     ilarge = mumps_par%nz
   
     do m_bndelem = 1, bnd_elm_list%n_bnd_elements
-
-      if (my_id == 0) then
-        bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
-        
-        ! --- Determine the values of R,s and Z,s at the Gaussian points.
-        call det_coord_bnd(bndelem_m, node_list, R=x, Z=y, R_S=x_s, Z_S=y_s)
-      end if ! my_id == 0
+      bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
+      
+      ! --- Determine the values of R,s and Z,s at the Gaussian points.
+      call det_coord_bnd(bndelem_m, node_list, R=x, Z=y, R_S=x_s, Z_S=y_s)
 
       ! --- Select a test function (weak form equation must hold for every test function)
       do l_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
         do l_dof = 1, 2 ! (loop over node dofs)
-            
-          if (my_id == 0) then
-            l_node     = bndelem_m%vertex(l_vertex)
-            l_dir      = bndelem_m%direction(l_vertex,l_dof)
-            l_node_bnd = bndelem_m%bnd_vertex(l_vertex)
-            l_index    = node_list%node(l_node)%index(l_dir)
-            size_l     = bndelem_m%size(l_vertex,l_dof)
-          end if ! my_id == 0
+          l_node     = bndelem_m%vertex(l_vertex)
+          l_dir      = bndelem_m%direction(l_vertex,l_dof)
+          l_node_bnd = bndelem_m%bnd_vertex(l_vertex)
+          l_index    = node_list%node(l_node)%index(l_dir)
+          size_l     = bndelem_m%size(l_vertex,l_dof)
           
           ! --- Integration in s-direction is carried out as Gauss quadrature,
           !       int ds ... = sum_ms wgauss(ms) ...,
           !     where wgauss(ms) denotes the Gaussian weights.
           do ms = 1, n_gauss
-            
-            if (my_id == 0) then
-              testfunc_l = H1(l_vertex,l_dof,ms) * size_l
-              dA         = sqrt(x_s(ms)**2 + y_s(ms)**2) ! Integration factor from definition of dA
-            end if ! my_id == 0
+            testfunc_l = H1(l_vertex,l_dof,ms) * size_l
+            dA         = sqrt(x_s(ms)**2 + y_s(ms)**2) ! Integration factor from definition of dA
             
             ! --- Sum over boundary dofs at which response is calculated
             do i_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
               do i_dof = 1, 2 ! (loop over node dofs)
-                
-                if (my_id == 0 ) then
-                  i_node     = bndelem_m%vertex(i_vertex)
-                  i_dir      = bndelem_m%direction(i_vertex,i_dof)
-                  i_node_bnd = bndelem_m%bnd_vertex(i_vertex)
-                  i_index    = node_list%node(i_node)%index(i_dir)
-                  size_i     = bndelem_m%size(i_vertex,i_dof)
-                  i_resp     = bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)
-                  basfunc_i  = H1(i_vertex,i_dof,ms) *size_i
-                  i_resp_st  = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
-                               + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)-bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
-                  common_prefactor       = wgauss(ms) * dA * testfunc_l * basfunc_i
-                end if ! my_id == 0
+                i_node     = bndelem_m%vertex(i_vertex)
+                i_dir      = bndelem_m%direction(i_vertex,i_dof)
+                i_node_bnd = bndelem_m%bnd_vertex(i_vertex)
+                i_index    = node_list%node(i_node)%index(i_dir)
+                size_i     = bndelem_m%size(i_vertex,i_dof)
+                i_resp     = bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)
+                basfunc_i  = H1(i_vertex,i_dof,ms) *size_i
+                i_resp_st  = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
+                  + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)-bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
+
+                common_prefactor = wgauss(ms) * dA * testfunc_l * basfunc_i
  
                 if (starwall_equil_coils) then
-                  call MPI_bcast(wall_curr, size(wall_curr), MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierr)
-                  call MPI_bcast(i_resp_st, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
- 
                   B_tan_coil_i     = 0.d0
                   B_tan_coil_i_loc = 0.d0
-
                   if (i_resp_st>=sr%a_ey%ind_start .AND. i_resp_st<=sr%a_ey%ind_end) then
                     B_tan_coil_i_loc  = - sum (sr%a_ey%loc_mat(i_resp_st-my_id*sr%a_ey%step,:) * wall_curr(:) )
                   endif
-
                   call MPI_Reduce(B_tan_coil_i_loc, B_tan_coil_i, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
                 else
-                  call MPI_bcast(i_resp, 1, MPI_INTEGER,0, MPI_COMM_WORLD, ierr)
                   B_tan_coil_i         =   sum ( I_coils(:) * bext_tan(i_resp,:) )  
                 endif
                 
@@ -338,7 +321,7 @@ module vacuum_equilibrium
       
     end do
     
-  if(my_id ==0 )   mumps_par%nz = ilarge   ! update the size of the matrix
+  if ( my_id ==0 ) mumps_par%nz = ilarge   ! update the size of the matrix
     
   end subroutine vacuum_equil
   
@@ -348,11 +331,11 @@ module vacuum_equilibrium
     
    implicit none
   
-   integer,                      intent(in) :: my_id
+   integer, intent(in) :: my_id
 
    integer  :: i
    
-    if(my_id == 0) write(*,*) ' vertical_FB = ', vertical_FB
+    if (my_id == 0) write(*,*) ' vertical_FB = ', vertical_FB
    
    do i=1, n_pf_coils
      if( abs(vert_FB_amp(i)) .gt. 1.d-6 ) then

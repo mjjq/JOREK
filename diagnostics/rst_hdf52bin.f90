@@ -28,7 +28,6 @@ program RST_convert_hdf52bin
   call init_threads()
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
-
   call initialise_parameters(0, '__NO_FILENAME__')
   call vacuum_init(0, freeboundary_equil, freeboundary, resistive_wall)
   call update_time_evol_params()

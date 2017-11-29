@@ -78,9 +78,9 @@ module vacuum_response
     ! --- Write out the boundary information for STARWALL.
     if (my_id == 0) call export_boundary(node_list, bnd_elm_list, bnd_node_list)
     
-    if ( vacuum_debug  ) call log_starwall_response_parallel(my_id, sr) 
-    call read_starwall_response_parallel(my_id, sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
-    call broadcast_starwall_response_parallel(my_id, sr)
+    if ( vacuum_debug  ) call log_starwall_response(my_id, sr) 
+    call read_starwall_response(my_id, sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
+    call broadcast_starwall_response(my_id, sr)
 
     ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
     if ( (sr%file_version == 1)  .and. (my_id == 0) ) then
@@ -97,7 +97,7 @@ module vacuum_response
     end if
    
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-    call log_starwall_response_parallel(my_id, sr)
+    call log_starwall_response(my_id, sr)
               
   end subroutine get_vacuum_response
 
@@ -263,7 +263,7 @@ module vacuum_response
  
   
   !> Read an array from the STARWALL respone file (MPI I/O).
-  subroutine read_array_sequential(filehandle, array_name, dim, disp, int1d, int2d, float1d, float2d)
+  subroutine read_array_not_distr(filehandle, array_name, dim, disp, int1d, int2d, float1d, float2d)
 
     use mpi_mod
     implicit none
@@ -358,12 +358,12 @@ module vacuum_response
 
     if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"> type ",A," size ",2I7)')name, trim(datatype), d(1:nd)
 
-  end subroutine read_array_sequential
+  end subroutine read_array_not_distr
   
   
   
   !> Read an array from the STARWALL respone file
-  subroutine read_array_parallel_columnwise(filehandle, array_name, dim, disp, my_id, float2d)
+  subroutine read_array_colwise(filehandle, array_name, dim, disp, my_id, float2d)
 
     use mpi_mod
     implicit none
@@ -494,13 +494,13 @@ module vacuum_response
     if ( vacuum_debug  .and. (my_id==0) ) write(*,'(3x,"Read: ",A24,"> type ",A," size",2I7)')name,&
       trim(datatype), d(1:nd)
 
-  end subroutine read_array_parallel_columnwise
+  end subroutine read_array_colwise
   
 
 
      !===========================================================================================================
   !> Read an array from the STARWALL respone file
-  subroutine read_array_parallel_rowwise(filehandle, array_name, dim, disp, my_id, float2d)
+  subroutine read_array_rowwise(filehandle, array_name, dim, disp, my_id, float2d)
 
     use mpi_mod
     implicit none
@@ -652,7 +652,7 @@ module vacuum_response
         end if
     if ( vacuum_debug  .AND. my_id ==0) write(*,'(3x,"Read: ",A24,"> type ",A," size",2I7)')name, trim(datatype), d(1:nd)
 
-  end subroutine read_array_parallel_rowwise
+  end subroutine read_array_rowwise
   !===========================================================================================================
   
   
@@ -661,7 +661,7 @@ module vacuum_response
   !! file_version 1: Original
   !! file_version 2: Includes eta_thin_w
   !! file_version 3: Includes additional coil information
-  subroutine read_starwall_response_parallel(my_id, sr, filename, n_bnd)
+  subroutine read_starwall_response(my_id, sr, filename, n_bnd)
 
     use constants
     use mod_parameters, only: n_tor, n_period
@@ -747,7 +747,7 @@ module vacuum_response
       sr%n_tor  = read_intparam_parallel(filehandle, 'n_tor' , disp)
       sr%n_tor0 = sr%n_tor
 
-      call read_array_sequential(filehandle, 'i_tor', (/sr%n_tor,0/), disp, int1d=sr%i_tor)
+      call read_array_not_distr(filehandle, 'i_tor', (/sr%n_tor,0/), disp, int1d=sr%i_tor)
 
       if ( sr%file_version >= 3 ) then
         
@@ -773,13 +773,13 @@ module vacuum_response
         sr%ind_start_diag_coils    = read_intparam_parallel(filehandle, 'ind_start_diag_coils',    disp)
 
         if ( sr%ncoil > 0 ) then
-          call read_array_sequential(filehandle, 'jtri_c',        (/sr%ncoil,0/),  disp,  int1d=sr%jtri_c)
-          call read_array_sequential(filehandle, 'x_coil',        (/sr%ntri_c,3/), disp,  float2d=sr%x_coil)
-          call read_array_sequential(filehandle, 'y_coil',        (/sr%ntri_c,3/), disp,  float2d=sr%y_coil)
-          call read_array_sequential(filehandle, 'z_coil',        (/sr%ntri_c,3/), disp,  float2d=sr%z_coil)
-          call read_array_sequential(filehandle, 'phi_coil',      (/sr%ntri_c,3/), disp,  float2d=sr%phi_coil)
-          call read_array_sequential(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/), disp,  float1d=sr%eta_thin_coil)
-          call read_array_sequential(filehandle, 'coil_resist',   (/sr%ncoil,0/),  disp,  float1d=sr%coil_resist)
+          call read_array_not_distr(filehandle, 'jtri_c',        (/sr%ncoil,0/),  disp,  int1d=sr%jtri_c)
+          call read_array_not_distr(filehandle, 'x_coil',        (/sr%ntri_c,3/), disp,  float2d=sr%x_coil)
+          call read_array_not_distr(filehandle, 'y_coil',        (/sr%ntri_c,3/), disp,  float2d=sr%y_coil)
+          call read_array_not_distr(filehandle, 'z_coil',        (/sr%ntri_c,3/), disp,  float2d=sr%z_coil)
+          call read_array_not_distr(filehandle, 'phi_coil',      (/sr%ntri_c,3/), disp,  float2d=sr%phi_coil)
+          call read_array_not_distr(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/), disp,  float1d=sr%eta_thin_coil)
+          call read_array_not_distr(filehandle, 'coil_resist',   (/sr%ncoil,0/),  disp,  float1d=sr%coil_resist)
         end if
         
       end if
@@ -787,29 +787,29 @@ module vacuum_response
       ! --- eta_thin_w is only part of the STARWALL response file since file_version 2
       if ( sr%file_version >= 2 ) then
         allocate(tmp(1))
-        call read_array_sequential(filehandle, 'eta_thin_w', (/1,0/), disp, float1d=tmp)
+        call read_array_not_distr(filehandle, 'eta_thin_w', (/1,0/), disp, float1d=tmp)
         sr%eta_thin_w = tmp(1)
         deallocate(tmp)
       else
         sr%eta_thin_w = 0.
       end if
 
-      call read_array_sequential(filehandle, 'yy', (/sr%n_w,0/), disp, float1d=sr%d_yy)
+      call read_array_not_distr(filehandle, 'yy', (/sr%n_w,0/), disp, float1d=sr%d_yy)
    
     end if
 
     call MPI_BCAST(sr%n_w,    1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
     call MPI_BCAST(sr%nd_bez, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
 
-    call read_array_parallel_columnwise (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,  sr%a_ye)    
-    call read_array_parallel_rowwise    (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,  sr%a_ey)
-    call read_array_parallel_rowwise    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,  sr%a_ee)
-    call read_array_parallel_rowwise    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww)
-    call read_array_parallel_rowwise    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv)
+    call read_array_colwise    (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,  sr%a_ye)    
+    call read_array_rowwise    (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,  sr%a_ey)
+    call read_array_rowwise    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,  sr%a_ee)
+    call read_array_rowwise    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww)
+    call read_array_rowwise    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv)
 
     if(my_id == 0) then
-      call read_array_sequential(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
-      call read_array_sequential(filehandle, 'jpot_w',   (/sr%ntri_w,3/), disp, int2d=sr%jpot_w)
+      call read_array_not_distr(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
+      call read_array_not_distr(filehandle, 'jpot_w',   (/sr%ntri_w,3/), disp, int2d=sr%jpot_w)
     end if
 
     call MPI_FILE_CLOSE(filehandle, err)
@@ -872,7 +872,7 @@ module vacuum_response
 
     call MPI_BARRIER(MPI_COMM_WORLD, err)
 
-  end subroutine read_starwall_response_parallel
+  end subroutine read_starwall_response
   
   
   
@@ -1049,7 +1049,7 @@ module vacuum_response
   
   
   !> Broadcast the STARWALL response matrices to the other MPI procs.
-  subroutine broadcast_starwall_response_parallel(my_id, sr)
+  subroutine broadcast_starwall_response(my_id, sr)
     
     use mpi_mod
     
@@ -1064,7 +1064,7 @@ module vacuum_response
     integer :: ierr
     real*8    :: test_sum, loc_sum    
 
-    if ( vacuum_debug .and. (my_id == 0) ) write(*,*) my_id, 'Entering broadcast_starwall_response_parallel.'
+    if ( vacuum_debug .and. (my_id == 0) ) write(*,*) my_id, 'Entering broadcast_starwall_response.'
     
     ! --- Broadcast parameters.
     call MPI_bcast(sr%file_version,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
@@ -1144,17 +1144,17 @@ module vacuum_response
  
       if(my_id == 0)  write(*,'("Checksum",I4,ES24.16)') my_id, test_sum
       
-      if(my_id == 0)  write(*,*) my_id, 'Exiting broadcast_starwall_response_parallel.'
+      if(my_id == 0)  write(*,*) my_id, 'Exiting broadcast_starwall_response.'
    
     end if  
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
-  end subroutine broadcast_starwall_response_parallel
+  end subroutine broadcast_starwall_response
   
   
 
   !> Write out information about the STARWALL response matrices.
-  subroutine log_starwall_response_parallel(my_id, sr)
+  subroutine log_starwall_response(my_id, sr)
 
     use mod_parameters, only: n_period
     use mpi_mod
@@ -1284,7 +1284,7 @@ module vacuum_response
    
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
     
-  end subroutine log_starwall_response_parallel
+  end subroutine log_starwall_response
   
   
   
@@ -1819,7 +1819,7 @@ module vacuum_response
     endif
 
     ! --- Update the derived response matrices
-    call update_response_parallel(my_id, tstep, freeboundary_equil, resistive_wall)
+    call update_response(my_id, tstep, freeboundary_equil, resistive_wall)
 
     ! --- Perform the time-stepping for the wall currents.
     if ( resistive_wall .and. (index_now>1) .and. (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
@@ -2384,7 +2384,7 @@ module vacuum_response
   !! This is necessary
   !! - right after the start or restart of the code
   !! - when wall resistivity, tstep, or some other parameters have changed.
-  subroutine update_response_parallel(my_id, tstep, freeboundary_equil, resistive_wall)
+  subroutine update_response(my_id, tstep, freeboundary_equil, resistive_wall)
 
     use phys_module, only: time_evol_theta, time_evol_zeta
     use mpi_mod
@@ -2704,7 +2704,7 @@ module vacuum_response
     end if  
 
    call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  end subroutine update_response_parallel 
+  end subroutine update_response
   
   
   !> Read a STARWALL response matrix from a file.

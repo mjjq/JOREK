@@ -242,10 +242,10 @@ module vacuum_response
     character(len=24) :: name
     integer           :: err
 
-      call MPI_FILE_READ(filehandle, marker,sizeof(marker),MPI_CHARACTER,status,err)
-      call MPI_FILE_READ(filehandle, name,  sizeof(name)  ,MPI_CHARACTER,status,err)
-      call MPI_FILE_READ(filehandle, read_intparam_parallel, 1,MPI_INTEGER,status,err)
-      disp = disp + sizeof(marker) + sizeof(name) + sizeof(10)! any integer 
+    call MPI_FILE_READ(filehandle, marker,sizeof(marker),MPI_CHARACTER,status,err)
+    call MPI_FILE_READ(filehandle, name,  sizeof(name)  ,MPI_CHARACTER,status,err)
+    call MPI_FILE_READ(filehandle, read_intparam_parallel, 1,MPI_INTEGER,status,err)
+    disp = disp + sizeof(marker) + sizeof(name) + sizeof(10)! any integer 
 
     if ( (err /= 0) .or. (trim(adjustl(marker)) /= '#@intparam') .or. (trim(adjustl(name)) /= trim(parameter_name)) ) then
       write(*,*) 'ERROR: Could not read parameter "', trim(parameter_name) ,'"from STARWALL response.'
@@ -287,12 +287,12 @@ module vacuum_response
       requested_type = 'float'
     end if
 
-      call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),    MPI_CHARACTER,status,ierr)
-      call MPI_FILE_READ(filehandle,  name,     sizeof(name),      MPI_CHARACTER,status,ierr)
-      call MPI_FILE_READ(filehandle,  nd,       1,                 MPI_INTEGER  ,status,ierr)
-      call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype),  MPI_CHARACTER,status,ierr)
-      call MPI_FILE_READ(filehandle,  d,        2,                 MPI_INTEGER  ,status,ierr)
-      disp = disp + sizeof(marker) + sizeof(name) + sizeof(nd) + sizeof(datatype) + sizeof(d) 
+    call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),    MPI_CHARACTER,status,ierr)
+    call MPI_FILE_READ(filehandle,  name,     sizeof(name),      MPI_CHARACTER,status,ierr)
+    call MPI_FILE_READ(filehandle,  nd,       1,                 MPI_INTEGER  ,status,ierr)
+    call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype),  MPI_CHARACTER,status,ierr)
+    call MPI_FILE_READ(filehandle,  d,        2,                 MPI_INTEGER  ,status,ierr)
+    disp = disp + sizeof(marker) + sizeof(name) + sizeof(nd) + sizeof(datatype) + sizeof(d) 
  
     marker   = adjustl(marker)
     name     = adjustl(name)
@@ -361,8 +361,7 @@ module vacuum_response
     integer           :: my_subarray
     integer           :: num_read_elements, n_step_read, step_read
     integer(KIND=8)   :: local_num_elements, num_read_elements_const, i, i_ind, j_ind
-   
-
+    
     if (my_id==0) then
       call MPI_FILE_READ(filehandle, marker,   sizeof(marker),  MPI_CHARACTER, status, ierr)
       call MPI_FILE_READ(filehandle, name,     sizeof(name),    MPI_CHARACTER, status, ierr)
@@ -485,10 +484,8 @@ module vacuum_response
     integer(KIND=8)   :: local_num_elements,num_read_elements_const,i, i_ind, j_ind
 
     requested_type = 'float'
-
-     
+    
     if(my_id ==0) then
-
          call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),   MPI_CHARACTER,status,ierr)
          call MPI_FILE_READ(filehandle,  name,     sizeof(name),     MPI_CHARACTER,status,ierr)
          call MPI_FILE_READ(filehandle,  nd,       1,                MPI_INTEGER  ,status,ierr)
@@ -510,13 +507,9 @@ module vacuum_response
             write(*,*) 'ERROR: Could not read array ', trim(array_name), ' from STARWALL response.'
             stop
         end if
-
     endif
 
-
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
-
-
     call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr )
 
     float2d%step=dim(1)/ntasks
@@ -527,7 +520,6 @@ module vacuum_response
     loc_sizes(2) = dim(2)
     if ( allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
     allocate( float2d%loc_mat(loc_sizes(1),loc_sizes(2)) )
-
 
     ! 2 - how many dimentions
     ! dim - int array with each global dimension sizes
@@ -638,8 +630,7 @@ module vacuum_response
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, err)
 
     ! --- Open file
-    !   --- Try to open as unformatted file
-    if (my_id ==0 ) write(*,*) 'Trying to open response as unformatted file...'
+    if (my_id ==0 ) write(*,*) 'Trying to open response file...'
 
     call MPI_FILE_OPEN(MPI_COMM_WORLD, 'starwall-response.dat', MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, err)
     if ( (err == 0) .and. (my_id == 0) ) then

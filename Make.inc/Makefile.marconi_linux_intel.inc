@@ -8,7 +8,7 @@ MODEL             = model199
 
 # --- Compiler and options
 FC                = mpif90 -f90=ifort -mt_mpi
-CC                = mpicc
+CC                = mpicc  -cc=icc
 CXX               = mpicxx -cxx=icpc
 FFLAGS_OMP        = -qopenmp 
 FFLAGS            = -r8 -i4 -DUSE_BLOCK

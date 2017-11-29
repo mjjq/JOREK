@@ -569,8 +569,7 @@ required = 0
         if ( freeboundary .and. freeb_change_indices .and. (my_id == 0)) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
 
         ! --- Determine boundary information from the grid
-        if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
-        call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list)
+        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
         call export_boundary(node_list, bnd_elm_list, bnd_node_list)
         
         if ( freeb_equil2) then
@@ -618,6 +617,10 @@ required = 0
   end if if_not_restart
   
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  
+  ! --- Determine boundary information from the grid
+  if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
+  call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list)
   
   ! --- Fill the vacuum response matrices for freeboundary computations
   if ( freeboundary ) then

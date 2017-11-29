@@ -1041,7 +1041,7 @@ module vacuum_response
     
     else
  
-      write(6,*) "ERROR in matrix_multiplication: Unsupported set of matrices provided.'
+      write(6,*) 'ERROR in matrix_multiplication: Unsupported set of matrices provided.'
       stop
 
     end if

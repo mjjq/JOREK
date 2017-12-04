@@ -406,7 +406,8 @@ required = 0
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
     end if
     
-  end if
+  end if !   if ( restart .and. (my_id == 0) ) then
+
 
   ! This is necessary for the parallel vacuum version during the code restart 
   if(restart) then
@@ -524,10 +525,12 @@ required = 0
       endif
     end if ! if (equil) then
 
-    if (my_id == 0) then
+  
 
       ! --- Determine a flux surface aligned grid
-      if (n_flux > 1) then
+    if (n_flux > 1) then
+
+    if (my_id == 0) then
         
        if (xpoint)  then
 
@@ -571,7 +574,9 @@ required = 0
         ! --- Determine boundary information from the grid
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
         call export_boundary(node_list, bnd_elm_list, bnd_node_list)
-        
+
+     endif ! if (my_id == 0) then        
+ 
         if ( freeb_equil2) then
           freeboundary_equil = .true.
           call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
@@ -586,7 +591,9 @@ required = 0
         call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
 
       end if ! if (n_flux > 1) then
-     
+ 
+   if (my_id == 0) then
+          
       ! --- Set initial conditions for time-evolution
       call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)
 

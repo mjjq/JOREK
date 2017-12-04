@@ -609,6 +609,10 @@ module vacuum_response
     call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .true. )
     call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true. )
 
+
+    call print_distr(my_id, "s_ww", sr%s_ww, (/sr%n_w,sr%n_w/))
+
+
     if(my_id == 0) then
       call read_array_not_distr(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
       call read_array_not_distr(filehandle, 'jpot_w',   (/sr%ntri_w,3/), disp, int2d=sr%jpot_w)
@@ -633,21 +637,15 @@ module vacuum_response
     end if
 
     ! --- Compute ideal-wall and no-wall response matrices.
-    if ( allocated(sr%a_id%loc_mat) ) deallocate(sr%a_id%loc_mat)
-    allocate(sr%a_id%loc_mat(size(sr%a_ee%loc_mat,1),size(sr%a_ee%loc_mat,2)))
-    sr%a_id%distrib    =  .true.
-    sr%a_id%row_wise   =  .true.
-    sr%a_id%ind_start  =  sr%a_ee%ind_start
-    sr%a_id%ind_end    =  sr%a_ee%ind_end
-    call matrix_multiplication(my_id, sr%a_ey, mat2=sr%a_ye, res_mat=sr%a_id )
-    sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - sr%a_id%loc_mat(:,:)
 
+    if ( allocated(sr%a_id%loc_mat) ) deallocate(sr%a_id%loc_mat)
+    call  alloc_distr(my_id, sr%a_id,(/sr%nd_bez, sr%nd_bez/), .true.)
     if ( allocated(sr%a_nw%loc_mat) ) deallocate(sr%a_nw%loc_mat)
-    allocate(sr%a_nw%loc_mat(size(sr%a_ee%loc_mat,1),size(sr%a_ee%loc_mat,2)))
-    sr%a_nw%row_wise   =  .true.
-    sr%a_nw%ind_start  =  sr%a_ee%ind_start
-    sr%a_nw%ind_end    =  sr%a_ee%ind_end
+    call  alloc_distr(my_id, sr%a_nw,(/sr%nd_bez, sr%nd_bez/), .true.)
+
     sr%a_nw%loc_mat(:,:) = sr%a_ee%loc_mat(:,:)
+    call matrix_multiplication(my_id,sr%a_ey,mat2=sr%a_ye, res_mat=sr%a_id )
+    sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - sr%a_id%loc_mat(:,:)
 
     ! --- Transform STARWALL harmonics to account for periodicity
     if ( my_id==0 ) then
@@ -2252,94 +2250,20 @@ module vacuum_response
       old_reswall = resistive_wall
 
       ! --- Allocate matrices if required
-      if ( .not. allocated(response_m_eq) ) &
-        allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
-      
-      if ( .not. allocated(response_m_a%loc_mat) ) then
-        response_m_a%step=n_dof_starwall/ntasks
-        loc_size = response_m_a%step
-        
-        if(my_id==ntasks-1) loc_size = response_m_a%step+n_dof_starwall-ntasks*response_m_a%step
-
-        response_m_a%row_wise  = .false.
-        response_m_a%distrib   = .true.          
-
-        response_m_a%ind_start = my_id*response_m_a%step+1
-        response_m_a%ind_end   = my_id*response_m_a%step+loc_size
-
-        allocate( response_m_a%loc_mat(n_wall_curr, loc_size) )
-      end if
-
+      if ( .not. allocated(response_m_eq)) allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
       if ( .not. allocated(response_d_b) ) allocate( response_d_b(n_wall_curr) )
       if ( .not. allocated(response_d_c) ) allocate( response_d_c(n_wall_curr) )
-
-      if ( .not. allocated(response_m_d%loc_mat) ) then
-        response_m_d%step=n_dof_starwall/ntasks
-        loc_size = response_m_d%step
-        
-        if(my_id==ntasks-1) loc_size = response_m_d%step+n_dof_starwall-ntasks*response_m_d%step
-
-        response_m_d%row_wise  = .false.
-        response_m_d%distrib   = .true.
-
-        response_m_d%ind_start = my_id*response_m_d%step+1
-        response_m_d%ind_end   = my_id*response_m_d%step+loc_size
-
-        allocate( response_m_d%loc_mat(n_wall_curr, loc_size) )
-      end if
-
       if ( .not. allocated(response_m_e) ) allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
-
-      if ( .not. allocated(response_m_f%loc_mat) ) then
-        response_m_f%step=n_dof_starwall/ntasks
-        loc_size = response_m_f%step
-        
-        if(my_id==ntasks-1) loc_size = response_m_f%step+n_dof_starwall-ntasks*response_m_f%step
-
-        response_m_f%row_wise  = .true.
-        response_m_f%distrib   = .true.
-
-        response_m_f%ind_start = my_id*response_m_f%step+1
-        response_m_f%ind_end   = my_id*response_m_f%step+loc_size
-
-        allocate( response_m_f%loc_mat(loc_size, n_wall_curr) )
-      end if
-
-      if ( .not. allocated(response_m_g%loc_mat) ) then
-        response_m_g%step=n_dof_starwall/ntasks
-        loc_size = response_m_g%step
-        
-
-        if(my_id==ntasks-1) loc_size = response_m_g%step+n_dof_starwall-ntasks*response_m_g%step
-
-        response_m_g%row_wise  = .true.
-        response_m_g%distrib   = .true.
-
-        response_m_g%ind_start = my_id*response_m_g%step+1
-        response_m_g%ind_end   = my_id*response_m_g%step+loc_size
-
-        allocate( response_m_g%loc_mat(loc_size, n_wall_curr) )
-      end if
-
       if ( .not. allocated(response_m_h) ) allocate( response_m_h(n_dof_starwall, n_dof_starwall) )
       if ( .not. allocated(response_m_j) ) allocate( response_m_j(n_dof_starwall, n_dof_starwall) )
       if ( .not. allocated(response_m_k) ) allocate( response_m_k(n_wall_curr, sr%ncoil) )   
       if ( .not. allocated(response_m_l) ) allocate( response_m_l(n_dof_starwall, sr%ncoil) )
 
-      if ( .not. allocated(response_m_v%loc_mat) ) then
-        response_m_v%step=n_dof_starwall/ntasks
-        loc_size = response_m_v%step
-
-        if(my_id==ntasks-1) loc_size = response_m_v%step+n_dof_starwall-ntasks*response_m_v%step
-
-        response_m_g%row_wise  = .true.
-        response_m_g%distrib   = .true.
-
-        response_m_g%ind_start = my_id*response_m_v%step+1
-        response_m_g%ind_end   = my_id*response_m_v%step+loc_size
-
-        allocate( response_m_v%loc_mat(loc_size, n_wall_curr) )
-      end if
+      call  alloc_distr(my_id, response_m_a, (/n_wall_curr, n_dof_starwall/), .false.)
+      call  alloc_distr(my_id, response_m_d, (/n_wall_curr, n_dof_starwall/), .false.)
+      call  alloc_distr(my_id, response_m_f, (/n_dof_starwall, n_wall_curr/), .true.)
+      call  alloc_distr(my_id, response_m_g, (/n_dof_starwall, n_wall_curr/), .true.)
+      call  alloc_distr(my_id, response_m_v, (/n_dof_starwall, n_wall_curr/), .true.)
 
       ! --- Derived response matrix for equilibrium (extract n=0 part from STARWALL EE matrix)
       response_m_eq = 0.d0
@@ -2690,7 +2614,5 @@ module vacuum_response
     modes_to_str = adjustl(modes_to_str)
     
   end function modes_to_str
-  
-  
   
 end module vacuum_response

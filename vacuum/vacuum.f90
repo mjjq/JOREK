@@ -771,7 +771,87 @@ module vacuum
     call MPI_BCAST(freeb_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     
   end subroutine broadcast_vacuum
-  
-  
-  
+
+
+  subroutine alloc_distr(my_id, matrix, dim, rowwise)
+
+    use mpi_mod
+    implicit none
+
+    ! --- Routine parameters
+    integer,              intent(in)     :: my_id
+    type(t_distrib_mat),  intent(inout)  :: matrix
+    integer,              intent(in)     :: dim(2)
+    logical,              intent(in)     :: rowwise ! if  .true. - rowwise; .false. - columnwise    
+
+    ! --- Local variables
+    integer :: loc_size, ntasks, ierr
+
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
+
+    if ( .not. allocated(matrix%loc_mat) ) then
+      if(rowwise) then
+
+        matrix%step=dim(1)/ntasks
+        loc_size = matrix%step
+        if(my_id==ntasks-1) loc_size = matrix%step + dim(1) - ntasks * matrix%step
+
+        matrix%row_wise  = .true.
+        matrix%distrib   = .true.
+        matrix%ind_start = my_id*matrix%step+1
+        matrix%ind_end   = my_id*matrix%step+loc_size
+
+        allocate( matrix%loc_mat(loc_size, dim(2)) )
+      else
+        matrix%step=dim(2)/ntasks
+        loc_size = matrix%step
+        if(my_id==ntasks-1) loc_size = matrix%step + dim(2) - ntasks * matrix%step
+
+        matrix%row_wise  = .false.
+        matrix%distrib   = .true.
+        matrix%ind_start = my_id*matrix%step+1
+        matrix%ind_end   = my_id*matrix%step+loc_size
+
+        allocate( matrix%loc_mat(dim(1), loc_size) )
+      end if
+    end if
+
+  end subroutine alloc_distr
+
+
+  subroutine dealloc_distr(matrix)
+    implicit none
+    ! --- Routine parameters
+    type(t_distrib_mat),  intent(inout)  :: matrix
+
+    if ( allocated(matrix%loc_mat) ) deallocate(matrix%loc_mat)
+
+  end subroutine dealloc_distr
+
+
+  subroutine print_distr(my_id, matrix_name, matrix, dim)
+
+    use mpi_mod
+    implicit none
+
+    ! --- Routine parameters
+    integer,              intent(in)     :: my_id
+    character(len=*),     intent(in)     :: matrix_name
+    type(t_distrib_mat),  intent(inout)  :: matrix
+    integer,              intent(in)     :: dim(2)
+
+    ! --- Local variables
+    integer ::  ierr
+    
+    if(my_id == 0) then
+       write(6,*) "Global matrix ", trim(matrix_name), " has dimensions : ", dim, &
+                  " distributed rowwise=", matrix%row_wise
+    endif 
+
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    write(6,*) "My_id=", my_id, " local matrix ", trim(matrix_name), " has dimensions : ", &
+               size(matrix%loc_mat,1), size(matrix%loc_mat,2)
+
+  end subroutine print_distr
+ 
 end module vacuum

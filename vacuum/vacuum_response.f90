@@ -700,7 +700,13 @@ module vacuum_response
       res_mat%loc_mat=0.0
     
       if ( res_mat%row_wise .and. mat1%row_wise .and. (.not. mat2%row_wise) ) then
-    
+        
+       if(mat1%dim(2) /= mat2%dim(1) ) then
+          write(6,*) "ERROR: Dimensions of  multiplied matrices (1) #col =", mat1%dim(2), &
+                     " #row =", mat2%dim(1) , "STOP (1)"
+          stop
+       endif   
+ 
         ! loop over all tasks
         do i = 1, ntasks
     
@@ -749,6 +755,12 @@ module vacuum_response
     else if ( present(mat2) .and. present(res_mat_not_distr) ) then
       
       if ( mat1%row_wise .and. (.not. mat2%row_wise) ) then
+       
+        if(mat1%dim(2) /= mat2%dim(1) ) then
+          write(6,*) "ERROR: Dimensions of  multiplied matrices (2) #col =", mat1%dim(2), &
+                     " #row =", mat2%dim(1) , "STOP (2)"
+          stop
+        endif
     
         res_mat_not_distr=0.0   
     
@@ -801,7 +813,13 @@ module vacuum_response
      
     ! --- Multiplication mat1(distributed)*mat2(not_distributed) =res_mat(not_distributed)
     else if(present(mat2_not_distr) .AND. present(res_mat_not_distr)) then
-    
+
+       if(mat1%dim(2) /= size(mat2_not_distr,1) ) then
+          write(6,*) "ERROR: Dimensions of  multiplied matrices (3) #col =", mat1%dim(2), &
+                     " #row =", size(mat2_not_distr,1) , "STOP (3)"
+          stop
+       endif
+       
       !Check distribution. Result matrix not distributed, first matrix row wise, second matrix not distributed
       if (mat1%row_wise) then
     
@@ -2308,6 +2326,7 @@ module vacuum_response
         
         ! --- m_e = a_ee - matmul(a_ey, m_a)
         call matrix_multiplication(my_id,sr%a_ey,mat2=response_m_a, res_mat_not_distr=response_m_e)
+     
         do j = 1, size(sr%a_ee%loc_mat,1)
           response_m_e(j+my_id*sr%a_ee%step,:) = response_m_e(j+my_id*sr%a_ee%step,:) + sr%a_ee%loc_mat(j,:)
         end do
@@ -2323,7 +2342,6 @@ module vacuum_response
 
         response_m_h =0.0
         response_m_h(sr%a_ee%ind_start:sr%a_ee%ind_end,:) = sr%a_ee%loc_mat(:,:)
-
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_h,size(response_m_h),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
         ! --- m_j =  matmul(a_ey, m_d)
@@ -2331,11 +2349,12 @@ module vacuum_response
         call matrix_multiplication(my_id,sr%a_ey,mat2=response_m_d,res_mat_not_distr=response_m_j)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_j,size(response_m_j),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-        do k = 1, n_wall_curr
-          response_m_k(k,1:sr%ncoil) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(1:sr%ncoil,k)
-        end do
-
-        response_m_k=0.0        
+        ! do k = 1, n_wall_curr
+        !   response_m_k(k,1:sr%ncoil) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(1:sr%ncoil,k)
+        ! end do
+        ! It should be checked if we can replace loop below by this calculation of response_m_k       
+        !response_m_k=0.0        
+       
         do k = 1, n_wall_curr
           do j = 1, sr%ncoil
             if(sr%s_ww%ind_start<=j .AND. sr%s_ww%ind_end>=j) then   

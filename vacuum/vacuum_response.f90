@@ -383,8 +383,7 @@ module vacuum_response
         stop
       end if
     end if 
-      
-      
+          
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)  
     call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
@@ -406,6 +405,9 @@ module vacuum_response
       float2d%ind_end    = my_id*float2d%step+loc_sizes(2)
     endif
 
+    float2d%distrib    = .true.
+    float2d%dim(1)     = dim(1) ! Save global matrix dimensions
+    float2d%dim(2)     = dim(2)
     local_num_elements = int(loc_sizes(1),8) * int(loc_sizes(2),8)
 
     if ( allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
@@ -608,10 +610,6 @@ module vacuum_response
     call read_array_par    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,  sr%a_ee,     .true. )
     call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .true. )
     call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true. )
-
-
-    call print_distr(my_id, "s_ww", sr%s_ww, (/sr%n_w,sr%n_w/))
-
 
     if(my_id == 0) then
       call read_array_not_distr(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)

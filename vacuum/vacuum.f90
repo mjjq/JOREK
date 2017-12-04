@@ -31,6 +31,7 @@ module vacuum
     integer             :: ind_start                     !< Minimum row/column index of local chunk.
     integer             :: ind_end                       !< Maximum row/column index of local chunk.
     integer             :: step                          !< "chunk size" of each MPI task. Note that the last MPI task has a larger chunk size than this!
+    integer             :: dim(2)                        !< global matrix dimensions
   end type t_distrib_mat
 
   !> @name JOREK vacuum response matrices
@@ -797,7 +798,6 @@ module vacuum
         if(my_id==ntasks-1) loc_size = matrix%step + dim(1) - ntasks * matrix%step
 
         matrix%row_wise  = .true.
-        matrix%distrib   = .true.
         matrix%ind_start = my_id*matrix%step+1
         matrix%ind_end   = my_id*matrix%step+loc_size
 
@@ -808,12 +808,16 @@ module vacuum
         if(my_id==ntasks-1) loc_size = matrix%step + dim(2) - ntasks * matrix%step
 
         matrix%row_wise  = .false.
-        matrix%distrib   = .true.
         matrix%ind_start = my_id*matrix%step+1
         matrix%ind_end   = my_id*matrix%step+loc_size
 
         allocate( matrix%loc_mat(dim(1), loc_size) )
       end if
+
+      matrix%distrib    = .true.
+      matrix%dim(1)     = dim(1) ! Save global matrix dimensions
+      matrix%dim(2)     = dim(2)
+
     end if
 
   end subroutine alloc_distr
@@ -829,7 +833,7 @@ module vacuum
   end subroutine dealloc_distr
 
 
-  subroutine print_distr(my_id, matrix_name, matrix, dim)
+  subroutine print_distr(my_id, matrix_name, matrix)
 
     use mpi_mod
     implicit none
@@ -838,14 +842,14 @@ module vacuum
     integer,              intent(in)     :: my_id
     character(len=*),     intent(in)     :: matrix_name
     type(t_distrib_mat),  intent(inout)  :: matrix
-    integer,              intent(in)     :: dim(2)
-
+  
     ! --- Local variables
     integer ::  ierr
-    
+
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)    
     if(my_id == 0) then
-       write(6,*) "Global matrix ", trim(matrix_name), " has dimensions : ", dim, &
-                  " distributed rowwise=", matrix%row_wise
+       write(6,*) "Global matrix ", trim(matrix_name), " has dimensions : ", matrix%dim, &
+                  " distributed rowwise =", matrix%row_wise
     endif 
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)

@@ -576,7 +576,8 @@ required = 0
         call export_boundary(node_list, bnd_elm_list, bnd_node_list)
 
      endif ! if (my_id == 0) then        
- 
+
+        call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list) 
         if ( freeb_equil2) then
           freeboundary_equil = .true.
           call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &

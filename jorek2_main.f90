@@ -1161,7 +1161,7 @@ required = 0
        energies4(1:n_tor,2,index_now) = A_jec2(1:n_tor)
 #endif
 
-       write(6,*) ' exiting current energies '
+       write(*,*) ' exiting current energies '
 #endif
        
        ! --- Output some information about the current timestep

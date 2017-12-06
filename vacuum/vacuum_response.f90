@@ -593,6 +593,8 @@ module vacuum_response
    
     end if
 
+    if(my_id==0) call memory_prediction(sr%n_w, sr%nd_bez)
+
     call MPI_BCAST(sr%n_w,    1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
     call MPI_BCAST(sr%nd_bez, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
 
@@ -685,8 +687,7 @@ module vacuum_response
   
     ! --- Multiplication mat1(distributed)*mat2(distributed) =res_mat(distributed)
     if ( present(res_mat) .and. present(mat2) ) then
- 
- 
+  
       call  alloc_distr(my_id, res_mat, (/mat1%dim(1), mat2%dim(2)/), .true.)       
       res_mat%loc_mat=0.0
     
@@ -2630,5 +2631,62 @@ module vacuum_response
     modes_to_str = adjustl(modes_to_str)
     
   end function modes_to_str
+
+
+  subroutine memory_prediction(n_w, nd_bez)
   
+    implicit none
+
+    ! --- Routine parameters
+    integer, intent(in) :: n_w           !< Number of wall 
+    integer, intent(in) :: nd_bez        !< Number of bezier elements
+
+    ! --- Local variables
+    real*8    :: tot_mem, gbyte_conv, real_n_w, real_nd_bez
+
+
+    real_n_w = real(n_w,8); real_nd_bez = real(nd_bez,8) 
+
+    100 format(70('-'))
+    101 format(5x, a,'(n_w,    n_w   ) =                 (',i6,',',i6,') = ',f6.3,' GB')
+    102 format(5x, a,'(n_w,    nd_bez) =                 (',i6,',',i6,') = ',f6.3,' GB')
+    103 format(5x, a,'(nd_bez, n_w   ) =                 (',i6,',',i6,') = ',f6.3,' GB')
+    104 format(5x, a,'(nd_bez, nd_bez) =                 (',i6,',',i6,') = ',f6.3,' GB')
+    105 format(5x, a,'(n_wall_curr,    n_dof_starwall) = (',i6,',',i6,') = ',f6.3,' GB')
+    106 format(5x, a,'(n_dof_starwall, n_wall_curr   ) = (',i6,',',i6,') = ',f6.3,' GB')
+    107 format(5x, a,'(n_dof_starwall, n_dof_starwall) = (',i6,',',i6,') = ',f6.3,' GB')
+    108 format(14x,'TOTAL MEMORY CONSUMPTION PREDICTION = ', f7.3, ' GB') 
+    
+    !1 DP converted to GB 
+    gbyte_conv = 8.d0/1024.d0/1024.d0/1024.d0
+ 
+    write(*,100)  
+    write(*,*) "Predicted memory consumption"
+    write(*,*)
+    write(*,101)"s_ww        ", n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv
+    write(*,101)"s_ww_inv    ", n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv
+    write(*,102)"a_ye        ", n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
+    write(*,103)"a_ey        ", nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
+    write(*,104)"a_ee        ", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,104)"a_id        ", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,104)"a_nw        ", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,105)"response_m_a", n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
+    write(*,105)"response_m_d", n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
+    write(*,106)"response_m_f", nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
+    write(*,106)"response_m_g", nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
+    write(*,106)"response_m_f", nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
+    write(*,107)"response_m_h", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,107)"response_m_j", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,107)"response_m_e", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+
+    tot_mem =  (2.d0*real_n_w**2 + 7.d0*real_n_w*real_nd_bez + 6.d0*real_nd_bez**2) * gbyte_conv
+
+    write(*,*)
+    write(*,108) tot_mem
+    write(*,100)
+
+  end subroutine memory_prediction 
+
 end module vacuum_response
+
+  

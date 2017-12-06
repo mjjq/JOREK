@@ -393,32 +393,24 @@ module vacuum_response
       loc_sizes(:)       = (/ float2d%step, dim(2) /)
       if (my_id==ntasks-1) loc_sizes(1) = float2d%step + dim(1)-ntasks*float2d%step
       float2d%row_wise   = .true.
-      float2d%ind_start  = my_id*float2d%step+1
-      float2d%ind_end    = my_id*float2d%step+loc_sizes(1)
     else             ! If we read matrix columnwise
       float2d%step       = dim(2) / ntasks
       loc_starts(:)      = (/ 0, my_id*float2d%step /)
       loc_sizes(:)       = (/ dim(1), float2d%step /)
       if (my_id==ntasks-1) loc_sizes(2) = float2d%step + dim(2)-ntasks*float2d%step
       float2d%row_wise   = .false.
-      float2d%ind_start  = my_id*float2d%step+1
-      float2d%ind_end    = my_id*float2d%step+loc_sizes(2)
     endif
 
-    float2d%distrib    = .true.
-    float2d%dim(1)     = dim(1) ! Save global matrix dimensions
-    float2d%dim(2)     = dim(2)
     local_num_elements = int(loc_sizes(1),8) * int(loc_sizes(2),8)
 
-    if ( allocated(float2d%loc_mat) ) deallocate( float2d%loc_mat )
-    allocate( float2d%loc_mat(loc_sizes(1),loc_sizes(2)) )
+    call  alloc_distr(my_id, float2d, dim , float2d%row_wise)
 
     call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
     call MPI_Type_commit(my_subarray,ierr)
     call MPI_File_set_view(filehandle, disp, MPI_DOUBLE_PRECISION, my_subarray, "native", MPI_INFO_NULL, ierr)
 
     ! -----------------------------------
-    ! The following is a workaround for an Intel MPI limitation not allowing to read more than 2 GB
+    ! The following is a work around for an Intel MPI limitation not allowing to read more than 2 GB
     ! of data per MPI task in each call corresponding to 268435455 double precision values.
     num_read_elements_const = 250000000
 
@@ -635,10 +627,7 @@ module vacuum_response
     end if
 
     ! --- Compute ideal-wall and no-wall response matrices.
-
-    if ( allocated(sr%a_id%loc_mat) ) deallocate(sr%a_id%loc_mat)
-    call  alloc_distr(my_id, sr%a_id,(/sr%nd_bez, sr%nd_bez/), .true.)
-    if ( allocated(sr%a_nw%loc_mat) ) deallocate(sr%a_nw%loc_mat)
+    
     call  alloc_distr(my_id, sr%a_nw,(/sr%nd_bez, sr%nd_bez/), .true.)
 
     sr%a_nw%loc_mat(:,:) = sr%a_ee%loc_mat(:,:)
@@ -696,13 +685,15 @@ module vacuum_response
   
     ! --- Multiplication mat1(distributed)*mat2(distributed) =res_mat(distributed)
     if ( present(res_mat) .and. present(mat2) ) then
-    
+ 
+ 
+      call  alloc_distr(my_id, res_mat, (/mat1%dim(1), mat2%dim(2)/), .true.)       
       res_mat%loc_mat=0.0
     
       if ( res_mat%row_wise .and. mat1%row_wise .and. (.not. mat2%row_wise) ) then
         
        if(mat1%dim(2) /= mat2%dim(1) ) then
-          write(6,*) "ERROR: Dimensions of  multiplied matrices (1) #col =", mat1%dim(2), &
+          write(*,*) "ERROR: Dimensions of  multiplied matrices (1) #col =", mat1%dim(2), &
                      " #row =", mat2%dim(1) , "STOP (1)"
           stop
        endif   
@@ -754,10 +745,13 @@ module vacuum_response
     ! --- Multiplication mat1(distributed)*mat2(distributed) =res_mat(not_distributed)
     else if ( present(mat2) .and. present(res_mat_not_distr) ) then
       
+      if (allocated(res_mat_not_distr)) deallocate(res_mat_not_distr)
+      allocate( res_mat_not_distr(mat1%dim(1), mat2%dim(2)) )  
+
       if ( mat1%row_wise .and. (.not. mat2%row_wise) ) then
        
         if(mat1%dim(2) /= mat2%dim(1) ) then
-          write(6,*) "ERROR: Dimensions of  multiplied matrices (2) #col =", mat1%dim(2), &
+          write(*,*) "ERROR: Dimensions of  multiplied matrices (2) #col =", mat1%dim(2), &
                      " #row =", mat2%dim(1) , "STOP (2)"
           stop
         endif
@@ -814,8 +808,11 @@ module vacuum_response
     ! --- Multiplication mat1(distributed)*mat2(not_distributed) =res_mat(not_distributed)
     else if(present(mat2_not_distr) .AND. present(res_mat_not_distr)) then
 
+       if (allocated(res_mat_not_distr)) deallocate(res_mat_not_distr)
+       allocate( res_mat_not_distr(mat1%dim(1), size(mat2_not_distr,2)) )
+
        if(mat1%dim(2) /= size(mat2_not_distr,1) ) then
-          write(6,*) "ERROR: Dimensions of  multiplied matrices (3) #col =", mat1%dim(2), &
+          write(*,*) "ERROR: Dimensions of  multiplied matrices (3) #col =", mat1%dim(2), &
                      " #row =", size(mat2_not_distr,1) , "STOP (3)"
           stop
        endif
@@ -853,7 +850,7 @@ module vacuum_response
     
     else
  
-      write(6,*) 'ERROR in matrix_multiplication: Unsupported set of matrices provided.'
+      write(*,*) 'ERROR in matrix_multiplication: Unsupported set of matrices provided.'
       stop
 
     end if
@@ -2269,17 +2266,19 @@ module vacuum_response
       if ( .not. allocated(response_m_eq)) allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
       if ( .not. allocated(response_d_b) ) allocate( response_d_b(n_wall_curr) )
       if ( .not. allocated(response_d_c) ) allocate( response_d_c(n_wall_curr) )
-      if ( .not. allocated(response_m_e) ) allocate( response_m_e(n_dof_starwall, n_dof_starwall) )
       if ( .not. allocated(response_m_h) ) allocate( response_m_h(n_dof_starwall, n_dof_starwall) )
-      if ( .not. allocated(response_m_j) ) allocate( response_m_j(n_dof_starwall, n_dof_starwall) )
       if ( .not. allocated(response_m_k) ) allocate( response_m_k(n_wall_curr, sr%ncoil) )   
-      if ( .not. allocated(response_m_l) ) allocate( response_m_l(n_dof_starwall, sr%ncoil) )
 
-      call  alloc_distr(my_id, response_m_a, (/n_wall_curr, n_dof_starwall/), .false.)
-      call  alloc_distr(my_id, response_m_d, (/n_wall_curr, n_dof_starwall/), .false.)
-      call  alloc_distr(my_id, response_m_f, (/n_dof_starwall, n_wall_curr/), .true.)
-      call  alloc_distr(my_id, response_m_g, (/n_dof_starwall, n_wall_curr/), .true.)
-      call  alloc_distr(my_id, response_m_v, (/n_dof_starwall, n_wall_curr/), .true.)
+      if( .not. allocated (response_m_a%loc_mat) ) &
+            call  alloc_distr(my_id, response_m_a, (/n_wall_curr, n_dof_starwall/), .false.)
+      if( .not. allocated (response_m_d%loc_mat) ) &
+            call  alloc_distr(my_id, response_m_d, (/n_wall_curr, n_dof_starwall/), .false.)
+      if( .not. allocated (response_m_f%loc_mat) ) &
+            call  alloc_distr(my_id, response_m_f, (/n_dof_starwall, n_wall_curr/), .true.)
+      if( .not. allocated (response_m_g%loc_mat) ) & 
+            call  alloc_distr(my_id, response_m_g, (/n_dof_starwall, n_wall_curr/), .true.)
+      if( .not. allocated (response_m_v%loc_mat) ) &
+            call  alloc_distr(my_id, response_m_v, (/n_dof_starwall, n_wall_curr/), .true.)
 
       ! --- Derived response matrix for equilibrium (extract n=0 part from STARWALL EE matrix)
       response_m_eq = 0.d0
@@ -2345,7 +2344,7 @@ module vacuum_response
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_h,size(response_m_h),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
         ! --- m_j =  matmul(a_ey, m_d)
-        response_m_j =0.0
+       
         call matrix_multiplication(my_id,sr%a_ey,mat2=response_m_d,res_mat_not_distr=response_m_j)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_j,size(response_m_j),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
@@ -2353,8 +2352,8 @@ module vacuum_response
         !   response_m_k(k,1:sr%ncoil) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(1:sr%ncoil,k)
         ! end do
         ! It should be checked if we can replace loop below by this calculation of response_m_k       
-        !response_m_k=0.0        
-       
+        
+        response_m_k=0.0        
         do k = 1, n_wall_curr
           do j = 1, sr%ncoil
             if(sr%s_ww%ind_start<=j .AND. sr%s_ww%ind_end>=j) then   

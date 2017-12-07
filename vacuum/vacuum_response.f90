@@ -339,7 +339,7 @@ module vacuum_response
   
   
   !> Read an array from the STARWALL respone file
-  subroutine read_array_par(filehandle, array_name, dim, disp, my_id, float2d, rowwise)
+  subroutine read_array_par(filehandle, array_name, dim, disp, my_id, float2d, row_wise)
 
     use mpi_mod
     implicit none
@@ -351,7 +351,7 @@ module vacuum_response
     integer(kind=MPI_OFFSET_KIND),  intent(inout)   :: disp !< Present location in the file
     integer,                        intent(in)      :: my_id
     type(t_distrib_mat),            intent(inout)   :: float2d
-    logical,                        intent(in)      :: rowwise ! if  .true. -  rowwise reading; .false. - columnwise    
+    logical,                        intent(in)      :: row_wise ! if  .true. -  rowwise reading; .false. - columnwise    
 
     ! --- Local variables
     integer, dimension (MPI_STATUS_SIZE) :: status
@@ -387,7 +387,7 @@ module vacuum_response
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)  
     call MPI_BCAST(disp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
-    if(rowwise) then ! If we read matrix rowwise
+    if(row_wise) then ! If we read matrix rowwise
       float2d%step       = dim(1) / ntasks
       loc_starts(:)      = (/ my_id*float2d%step, 0 /)
       loc_sizes(:)       = (/ float2d%step, dim(2) /)
@@ -403,7 +403,7 @@ module vacuum_response
 
     local_num_elements = int(loc_sizes(1),8) * int(loc_sizes(2),8)
 
-    call  alloc_distr(my_id, float2d, dim , rowwise)
+    call  alloc_distr(my_id, float2d, dim , row_wise)
 
     call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
     call MPI_Type_commit(my_subarray,ierr)

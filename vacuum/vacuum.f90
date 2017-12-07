@@ -776,7 +776,7 @@ module vacuum
 
 
   !> Allocate the memory for a matrix distributed over the MPI tasks.
-  subroutine alloc_distr(my_id, matrix, dim, rowwise)
+  subroutine alloc_distr(my_id, matrix, dim, row_wise)
 
     use mpi_mod
     implicit none
@@ -793,7 +793,7 @@ module vacuum
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
 
     if (allocated(matrix%loc_mat)) call dealloc_distr(matrix)
-    if (rowwise) then
+    if (row_wise) then
 
       matrix%step      = dim(1)/ntasks
       loc_size         = matrix%step

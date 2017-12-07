@@ -396,11 +396,13 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Temperature dependent viscosity
   ! -----------------------------------
   if ( visco_T_dependent ) then       
-    visco_T   =   visco * (T0_corr/T_0)**(-1.5d0)
-    dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+    visco_T     =   visco * (T0_corr/T_0)**(-1.5d0)
+    dvisco_dT   = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+    d2visco_dT2 =   visco * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
   else
-    visco_T   = visco
-    dvisco_dT = 0.d0
+    visco_T     = visco
+    dvisco_dT   = 0.d0
+    d2visco_dT2 = 0.d0
   end if
   visco_parr  = visco_par  
   
@@ -515,8 +517,6 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Diamagnetic terms, avoid problems at the target...
   ! ------------------------------------------------------
   tau_IC = tauIC
-  if (Wdia) W_dia = 1.d0
-  
   
   ! -------------------------
   ! --- Neoclassical rotation
@@ -555,20 +555,20 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
     
     ! --- Toroidal momentum source (NBI)
-  dV_dpsi_source = 0.d0
-  dV_dz_source   = 0.d0
-  if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
-    call velocity(xpoint2, xcase2, y_g, z_xpoint, ps0, psi_axis, psi_bnd, V_source,               &
-      dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2,           &
-      dV_dpsi2_dz)
-    if (normalized_velocity_profile) then
-      Vt0_x = dV_dpsi_source * ps0_x
-      Vt0_y = dV_dz_source + dV_dpsi_source * ps0_y
-    else
-      Omega_tor0_x = dV_dpsi_source * ps0_x
-      Omega_tor0_y = dV_dz_source + dV_dpsi_source * ps0_y
+    dV_dpsi_source = 0.d0
+    dV_dz_source   = 0.d0
+    if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
+      call velocity(xpoint2, xcase2, y_g, z_xpoint, ps0, psi_axis, psi_bnd, V_source,               &
+        dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2,           &
+        dV_dpsi2_dz)
+      if (normalized_velocity_profile) then
+        Vt0_x = dV_dpsi_source * ps0_x
+        Vt0_y = dV_dz_source + dV_dpsi_source * ps0_y
+      else
+        Omega_tor0_x = dV_dpsi_source * ps0_x
+        Omega_tor0_y = dV_dz_source + dV_dpsi_source * ps0_y
+      end if
     end if
-  end if
     
     ! --- Pellet Source
     source_pellet = 0.d0
@@ -607,6 +607,18 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     dK_par      = dK_par      * sqrt(mu_zero  / rho_norm)
     tau_IC      = tau_IC      / sqrt(mu_zero  * rho_norm)
   endif
+
+
+  ! ------------------------------------------------------
+  ! --- Diamagnetic viscosity
+  ! ------------------------------------------------------
+  if (Wdia) then
+    W_dia = + tau_IC /r0_corr2    * (p0_xx + p0_x/R + p0_yy) &
+            - tau_IC /r0_corr2**2 * (r0_x*p0_x + r0_y*p0_y)
+  else
+    W_dia = 0.d0
+  endif
+  
 
   ! -------------------------------------------------------------------
   ! --- SOL sources to stabilise diamagnetic terms (not applied by default!)

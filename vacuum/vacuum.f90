@@ -774,6 +774,8 @@ module vacuum
   end subroutine broadcast_vacuum
 
 
+
+  !> Allocate the memory for a matrix distributed over the MPI tasks.
   subroutine alloc_distr(my_id, matrix, dim, rowwise)
 
     use mpi_mod
@@ -782,8 +784,8 @@ module vacuum
     ! --- Routine parameters
     integer,              intent(in)     :: my_id
     type(t_distrib_mat),  intent(inout)  :: matrix
-    integer,              intent(in)     :: dim(2)
-    logical,              intent(in)     :: rowwise ! if  .true. - rowwise; .false. - columnwise    
+    integer,              intent(in)     :: dim(2)  !< Global dimension
+    logical,              intent(in)     :: rowwise !< if  .true. - rowwise; .false. - columnwise    
 
     ! --- Local variables
     integer :: loc_size, ntasks, ierr
@@ -791,11 +793,11 @@ module vacuum
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
 
     if (allocated(matrix%loc_mat)) call dealloc_distr(matrix)
-    if(rowwise) then
+    if (rowwise) then
 
-      matrix%step=dim(1)/ntasks
-      loc_size = matrix%step
-      if(my_id==ntasks-1) loc_size = matrix%step + dim(1) - ntasks * matrix%step
+      matrix%step      = dim(1)/ntasks
+      loc_size         = matrix%step
+      if (my_id==ntasks-1) loc_size = matrix%step + dim(1) - ntasks * matrix%step
 
       matrix%row_wise  = .true.
       matrix%ind_start = my_id*matrix%step+1
@@ -803,9 +805,9 @@ module vacuum
 
       allocate( matrix%loc_mat(loc_size, dim(2)) )
     else
-      matrix%step=dim(2)/ntasks
-      loc_size = matrix%step
-      if(my_id==ntasks-1) loc_size = matrix%step + dim(2) - ntasks * matrix%step
+      matrix%step      = dim(2)/ntasks
+      loc_size         = matrix%step
+      if (my_id==ntasks-1) loc_size = matrix%step + dim(2) - ntasks * matrix%step
 
       matrix%row_wise  = .false.
       matrix%ind_start = my_id*matrix%step+1
@@ -821,16 +823,28 @@ module vacuum
   end subroutine alloc_distr
 
 
+
+  !> Deallocate the memory of a distributed matrix and set all parameters to default values.
   subroutine dealloc_distr(matrix)
     implicit none
     ! --- Routine parameters
     type(t_distrib_mat),  intent(inout)  :: matrix
 
     if ( allocated(matrix%loc_mat) ) deallocate(matrix%loc_mat)
+    
+    ! --- Set all parameters to default values.
+    matrix%dim(:)    = 0
+    matrix%step      = 0
+    matrix%ind_start = 0
+    matrix%ind_end   = 0
+    matrix%distrib   = .false.
+    matrix%row_wise  = .false.
 
   end subroutine dealloc_distr
 
 
+
+  !> Print information about a distributed matrix for debugging purposes.
   subroutine print_distr(my_id, matrix_name, matrix)
 
     use mpi_mod
@@ -843,16 +857,31 @@ module vacuum
   
     ! --- Local variables
     integer ::  ierr
-
+    
+    800 format(1x,3a)
+    801 format(3x,a,2i12)
+    802 format(3x,a,l12)
+    803 format(5x,2i12,a,i6)
+    
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)    
-    if(my_id == 0) then
-       write(*,*) "Global matrix ", trim(matrix_name), " has dimensions : ", matrix%dim, &
-                  " distributed rowwise =", matrix%row_wise
-    endif 
+    if ( my_id == 0 ) then
+      write(*,800) 'Distributed matrix ', trim(matrix_name), ':'
+      write(*,801) 'dim:      ', matrix%dim
+      write(*,802) 'row_wise: ', matrix%row_wise
+      write(*,802) 'distrib:  ', matrix%distrib
+      write(*,801) 'step:     ', matrix%step
+      write(*,801) 'ind_start, ind_end:'
+    endif
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-    write(*,*) "My_id=", my_id, " local matrix ", trim(matrix_name), " has dimensions : ", &
-               size(matrix%loc_mat,1), size(matrix%loc_mat,2)
+    write(*,803) matrix%ind_start, matrix%ind_end, '@my_id=', my_id
+    
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    if ( my_id == 0 ) write(*,801) 'local dimensions:'
+    
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    write(*,803) size(matrix%loc_mat,1), size(matrix%loc_mat,2) , '@my_id=', my_id
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
   end subroutine print_distr
  

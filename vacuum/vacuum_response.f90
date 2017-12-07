@@ -2345,7 +2345,6 @@ module vacuum_response
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_h,size(response_m_h),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
         ! --- m_j =  matmul(a_ey, m_d)
-       
         call matrix_multiplication(my_id,sr%a_ey,mat2=response_m_d,res_mat_not_distr=response_m_j)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_j,size(response_m_j),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
@@ -2661,23 +2660,23 @@ module vacuum_response
     gbyte_conv = 8.d0/1024.d0/1024.d0/1024.d0
  
     write(*,100)  
-    write(*,*) "Predicted memory consumption"
+    write(*,*) 'Predicted memory consumption in the JOREK-STARWALL part:'
     write(*,*)
-    write(*,101)"s_ww        ", n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv
-    write(*,101)"s_ww_inv    ", n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv
-    write(*,102)"a_ye        ", n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
-    write(*,103)"a_ey        ", nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
-    write(*,104)"a_ee        ", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
-    write(*,104)"a_id        ", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
-    write(*,104)"a_nw        ", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
-    write(*,105)"response_m_a", n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
-    write(*,105)"response_m_d", n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
-    write(*,106)"response_m_f", nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
-    write(*,106)"response_m_g", nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
-    write(*,106)"response_m_f", nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
-    write(*,107)"response_m_h", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
-    write(*,107)"response_m_j", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
-    write(*,107)"response_m_e", nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,101)'s_ww        ', n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv
+    write(*,101)'s_ww_inv    ', n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv
+    write(*,102)'a_ye        ', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
+    write(*,103)'a_ey        ', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
+    write(*,104)'a_ee        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,104)'a_id        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,104)'a_nw        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,105)'response_m_a', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
+    write(*,105)'response_m_d', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
+    write(*,106)'response_m_f', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
+    write(*,106)'response_m_g', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
+    write(*,106)'response_m_f', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
+    write(*,107)'response_m_h', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,107)'response_m_j', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,107)'response_m_e', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
 
     tot_mem =  (2.d0*real_n_w**2 + 7.d0*real_n_w*real_nd_bez + 6.d0*real_nd_bez**2) * gbyte_conv
 

@@ -530,9 +530,9 @@ required = 0
       ! --- Determine a flux surface aligned grid
     if (n_flux > 1) then
 
-    if (my_id == 0) then
+      if (my_id == 0) then
         
-       if (xpoint)  then
+        if (xpoint)  then
 
 !         if (.not. grid_to_wall) then
           if (xcase .ge. 2) then
@@ -575,25 +575,25 @@ required = 0
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
         call export_boundary(node_list, bnd_elm_list, bnd_node_list)
 
-     endif ! if (my_id == 0) then        
+      endif ! if (my_id == 0) then        
 
-        call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list) 
-        if ( freeb_equil2) then
-          freeboundary_equil = .true.
-          call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
-            resistive_wall)
-          call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
-          call import_external_fields('coil_field.dat', my_id)
-          call set_coil_curr_time_trace()
-          if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
-        end if
-        
-        ! --- Compute the plasma equilibrium
-        call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
+      call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list) 
+      if ( freeb_equil2) then
+        freeboundary_equil = .true.
+        call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
+          resistive_wall)
+        call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
+        call import_external_fields('coil_field.dat', my_id)
+        call set_coil_curr_time_trace()
+        if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
+      end if
+      
+      ! --- Compute the plasma equilibrium
+      call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
 
-      end if ! if (n_flux > 1) then
+    end if ! if (n_flux > 1) then
  
-   if (my_id == 0) then
+    if (my_id == 0) then
           
       ! --- Set initial conditions for time-evolution
       call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)

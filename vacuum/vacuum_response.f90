@@ -593,7 +593,7 @@ module vacuum_response
    
     end if
 
-    if(my_id==0) call memory_prediction(sr%n_w, sr%nd_bez)
+    if(my_id==0) call memory_prediction(sr%n_w, sr%nd_bez, ntasks)
 
     call MPI_BCAST(sr%n_w,    1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
     call MPI_BCAST(sr%nd_bez, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
@@ -2627,29 +2627,30 @@ module vacuum_response
   end function modes_to_str
 
 
-  subroutine memory_prediction(n_w, nd_bez)
+  subroutine memory_prediction(n_w, nd_bez, ntasks)
   
+    use mpi_mod
     implicit none
 
     ! --- Routine parameters
     integer, intent(in) :: n_w           !< Number of wall 
     integer, intent(in) :: nd_bez        !< Number of bezier elements
+    integer, intent(in) :: ntasks        !< Number of MPI tasks
 
     ! --- Local variables
     real*8    :: tot_mem, gbyte_conv, real_n_w, real_nd_bez
 
-
     real_n_w = real(n_w,8); real_nd_bez = real(nd_bez,8) 
 
     100 format(70('-'))
-    101 format(5x, a,'(n_w,    n_w   ) =                 (',i6,',',i6,') = ',f6.3,' GB')
-    102 format(5x, a,'(n_w,    nd_bez) =                 (',i6,',',i6,') = ',f6.3,' GB')
-    103 format(5x, a,'(nd_bez, n_w   ) =                 (',i6,',',i6,') = ',f6.3,' GB')
-    104 format(5x, a,'(nd_bez, nd_bez) =                 (',i6,',',i6,') = ',f6.3,' GB')
-    105 format(5x, a,'(n_wall_curr,    n_dof_starwall) = (',i6,',',i6,') = ',f6.3,' GB')
-    106 format(5x, a,'(n_dof_starwall, n_wall_curr   ) = (',i6,',',i6,') = ',f6.3,' GB')
-    107 format(5x, a,'(n_dof_starwall, n_dof_starwall) = (',i6,',',i6,') = ',f6.3,' GB')
-    108 format(14x,'TOTAL MEMORY CONSUMPTION PREDICTION = ', f7.3, ' GB') 
+    101 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
+    102 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
+    103 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
+    104 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
+    105 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
+    106 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task') 
+    107 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
+    108 format(10x,'TOTAL MEMORY CONSUMPTION PREDICTION = ', f8.4, ' GB total /', f8.4, 'GB per MPI task') 
     
     !1 DP converted to GB 
     gbyte_conv = 8.d0/1024.d0/1024.d0/1024.d0
@@ -2657,26 +2658,26 @@ module vacuum_response
     write(*,100)  
     write(*,*) 'Predicted memory consumption in the JOREK-STARWALL part:'
     write(*,*)
-    write(*,101)'s_ww        ', n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv
-    write(*,101)'s_ww_inv    ', n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv
-    write(*,102)'a_ye        ', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
-    write(*,103)'a_ey        ', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
-    write(*,104)'a_ee        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
-    write(*,104)'a_id        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
-    write(*,104)'a_nw        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
-    write(*,105)'response_m_a', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
-    write(*,105)'response_m_d', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv
-    write(*,106)'response_m_f', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
-    write(*,106)'response_m_g', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
-    write(*,106)'response_m_f', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv
-    write(*,107)'response_m_h', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
-    write(*,107)'response_m_j', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
-    write(*,107)'response_m_e', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv
+    write(*,101)'s_ww        ', n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv, real_n_w    * real_n_w    * gbyte_conv / ntasks
+    write(*,101)'s_ww_inv    ', n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv, real_n_w    * real_n_w    * gbyte_conv / ntasks
+    write(*,102)'a_ye        ', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv, real_n_w    * real_nd_bez * gbyte_conv / ntasks
+    write(*,103)'a_ey        ', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv, real_nd_bez * real_n_w    * gbyte_conv / ntasks
+    write(*,104)'a_ee        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
+    write(*,104)'a_id        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
+    write(*,104)'a_nw        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
+    write(*,105)'response_m_a', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv, real_n_w    * real_nd_bez * gbyte_conv / ntasks
+    write(*,105)'response_m_d', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv, real_n_w    * real_nd_bez * gbyte_conv / ntasks
+    write(*,106)'response_m_f', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv, real_nd_bez * real_n_w    * gbyte_conv / ntasks
+    write(*,106)'response_m_g', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv, real_nd_bez * real_n_w    * gbyte_conv / ntasks
+    write(*,106)'response_m_f', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv, real_nd_bez * real_n_w    * gbyte_conv / ntasks
+    write(*,107)'response_m_h', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
+    write(*,107)'response_m_j', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
+    write(*,107)'response_m_e', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
 
     tot_mem =  (2.d0*real_n_w**2 + 7.d0*real_n_w*real_nd_bez + 6.d0*real_nd_bez**2) * gbyte_conv
 
     write(*,*)
-    write(*,108) tot_mem
+    write(*,108) tot_mem, tot_mem / ntasks
     write(*,100)
 
   end subroutine memory_prediction 

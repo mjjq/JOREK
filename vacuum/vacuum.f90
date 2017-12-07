@@ -833,12 +833,12 @@ module vacuum
     if ( allocated(matrix%loc_mat) ) deallocate(matrix%loc_mat)
     
     ! --- Set all parameters to default values.
-    matrix%dim(:)    = 0
-    matrix%step      = 0
-    matrix%ind_start = 0
-    matrix%ind_end   = 0
-    matrix%distrib   = .false.
-    matrix%row_wise  = .false.
+    !matrix%dim(:)    = 0
+    !matrix%step      = 0
+    !matrix%ind_start = 0
+    !matrix%ind_end   = 0
+    !matrix%distrib   = .false.
+    !matrix%row_wise  = .false.
 
   end subroutine dealloc_distr
 

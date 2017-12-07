@@ -785,7 +785,7 @@ module vacuum
     integer,              intent(in)     :: my_id
     type(t_distrib_mat),  intent(inout)  :: matrix
     integer,              intent(in)     :: dim(2)  !< Global dimension
-    logical,              intent(in)     :: rowwise !< if  .true. - rowwise; .false. - columnwise    
+    logical,              intent(in)     :: row_wise !< if  .true. - rowwise; .false. - columnwise    
 
     ! --- Local variables
     integer :: loc_size, ntasks, ierr

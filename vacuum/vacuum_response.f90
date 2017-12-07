@@ -2348,11 +2348,6 @@ module vacuum_response
         call matrix_multiplication(my_id,sr%a_ey,mat2=response_m_d,res_mat_not_distr=response_m_j)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_j,size(response_m_j),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-        ! do k = 1, n_wall_curr
-        !   response_m_k(k,1:sr%ncoil) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(1:sr%ncoil,k)
-        ! end do
-        ! It should be checked if we can replace loop below by this calculation of response_m_k       
-        
         response_m_k=0.0        
         do k = 1, n_wall_curr
           do j = 1, sr%ncoil

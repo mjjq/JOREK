@@ -2643,14 +2643,14 @@ module vacuum_response
     real_n_w = real(n_w,8); real_nd_bez = real(nd_bez,8) 
 
     100 format(70('-'))
-    101 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
-    102 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
-    103 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
-    104 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
-    105 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
-    106 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task') 
-    107 format(5x, a,'(',i6,',',i6,') = ',f7.4,' GB total / ',f7.4, 'GB per MPI task')
-    108 format(10x,'TOTAL MEMORY CONSUMPTION PREDICTION = ', f8.4, ' GB total /', f8.4, 'GB per MPI task') 
+    101 format(5x, a,'(',i6,',',i6,') = ',E11.3E2,' GB total / ',E11.3E2, ' GB per MPI task')
+    102 format(5x, a,'(',i6,',',i6,') = ',E11.3E2,' GB total / ',E11.3E2, ' GB per MPI task')
+    103 format(5x, a,'(',i6,',',i6,') = ',E11.3E2,' GB total / ',E11.3E2, ' GB per MPI task')
+    104 format(5x, a,'(',i6,',',i6,') = ',E11.3E2,' GB total / ',E11.3E2, ' GB per MPI task')
+    105 format(5x, a,'(',i6,',',i6,') = ',E11.3E2,' GB total / ',E11.3E2, ' GB per MPI task')
+    106 format(5x, a,'(',i6,',',i6,') = ',E11.3E2,' GB total / ',E11.3E2, ' GB per MPI task') 
+    107 format(5x, a,'(',i6,',',i6,') = ',E11.3E2,' GB total / ',E11.3E2, ' GB per MPI task')
+    108 format(10x,'TOTAL MEMORY CONSUMPTION PREDICTION = ', E12.3E2, ' GB total /', E11.3E2, 'GB per MPI task') 
     
     !1 DP converted to GB 
     gbyte_conv = 8.d0/1024.d0/1024.d0/1024.d0

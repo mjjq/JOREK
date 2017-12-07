@@ -403,7 +403,7 @@ module vacuum_response
 
     local_num_elements = int(loc_sizes(1),8) * int(loc_sizes(2),8)
 
-    call  alloc_distr(my_id, float2d, dim , row_wise)
+    call  alloc_distr(my_id, float2d, dim , rowwise)
 
     call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
     call MPI_Type_commit(my_subarray,ierr)

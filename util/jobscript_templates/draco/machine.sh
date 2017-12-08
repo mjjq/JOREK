@@ -13,6 +13,7 @@ fi
 
 # --- Compute derived values
 add_param "procs=$[$__JP__nodes*32]"
+add_param "tasks_per_node=$[$__JP__mpi/$__JP__nodes]"
 
 # --- Perform some checks
 if [ $__JP__nodes -gt 32 ]; then

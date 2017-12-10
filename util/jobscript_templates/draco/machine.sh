@@ -4,7 +4,7 @@
 #
 
 # --- Check if variables are set correctly
-if [ -z "$__JP__mpi" ] || [ -z "$__JP__omp" ] || [ -z "$__JP__nodes" ] || [ -z "$__JP_partition" ]; then
+if [ -z "$__JP__mpi" ] || [ -z "$__JP__omp" ] || [ -z "$__JP__nodes" ] || [ -z "$__JP__partition" ]; then
   echo "ERROR in machine.sh: Variable mpi and/or omp and/or nodes and/or partition are not set." >&2
   echo "  Note that you cannot run this script manually." >&2
   echo "  It is sourced by the prepare_run.sh script." >&2

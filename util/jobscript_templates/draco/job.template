@@ -21,8 +21,6 @@
 # Wall clock limit:
 #SBATCH --time=<<runtime>>
 
-#$ -pe impi_hydra <<procs>>
-
 BIN="./jorek_model<<model>>_step<<job_step>>"
 NSLOTS="<<mpi>>"
 INP="./input<<job_step>>"

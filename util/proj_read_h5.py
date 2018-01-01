@@ -251,11 +251,9 @@ def create_grid(x, vertex, size, n_elements, n_sub, phis, n_plane, periodic, qua
 
     xyz = np.zeros((n_points*n_plane,3))
     for i in range(n_plane):
-        xyz[i*n_points:(i+1)*n_points,:] = np.reshape(
-            np.stack((RZ[:,:,:,0]*np.cos(phis[i]),
-                      RZ[:,:,:,1],
-                      RZ[:,:,:,0]*np.sin(phis[i])), axis=-1),
-            (-1,3))
+        xyz[i*n_points:(i+1)*n_points,0] = np.ravel(RZ[:,:,:,0]*np.cos(phis[i]))
+        xyz[i*n_points:(i+1)*n_points,1] = np.ravel(RZ[:,:,:,1])
+        xyz[i*n_points:(i+1)*n_points,2] = np.ravel(RZ[:,:,:,0]*np.sin(phis[i]))
 
     # See http://www.vtk.org/doc/nightly/html/classvtkQuadraticHexahedron.html#details
     if (quadratic):
@@ -361,7 +359,7 @@ Calculate basis functions at n_sub**2 points
 """
 def bf(n_sub):
     # Get the basis functions at each of the points
-    lin = np.linspace(0.0, 1.0, n_sub, dtype=prec)
+    lin = np.linspace(0.0, 1.0, n_sub)
     s  = np.tensordot(lin, [1]*n_sub, axes=0)
     t  = s.transpose()
     return basis_functions(s, t)

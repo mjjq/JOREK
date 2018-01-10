@@ -666,21 +666,21 @@ do ms=1, n_gauss
 
            SELECT CASE(ViscType)
            CASE(0)           
-              !Qvisc_uR        = - (v_R * UR0_R + v_Z * UR0_Z + v_p * uR0_p / BigR**2)  &
-              !     &            - v * ( uR0 / BigR**2 + 2.d0 * up0_p / BigR**2 ) 
-              !Qvisc_uZ        = - (v_R * UZ0_R + v_Z * UZ0_Z + v_p * uZ0_p / BigR**2) 
-              !Qvisc_up        = - (v_R * UP0_R + v_Z * UP0_Z + v_p * uP0_p / BigR**2)  &
-              !     &           - v * ( up0 / BigR**2 - 2.d0 * uR0_p / BigR**2 )
+              Qvisc_uR        = - (v_R * UR0_R + v_Z * UR0_Z + v_p * uR0_p / BigR**2)  &
+                   &            - v * ( uR0 / BigR**2 + 2.d0 * up0_p / BigR**2 ) 
+              Qvisc_uZ        = - (v_R * UZ0_R + v_Z * UZ0_Z + v_p * uZ0_p / BigR**2) 
+              Qvisc_up        = - (v_R * UP0_R + v_Z * UP0_Z + v_p * uP0_p / BigR**2)  &
+                   &           - v * ( up0 / BigR**2 - 2.d0 * uR0_p / BigR**2 )
 
-              !Qvisc_T        = 0.d0
+              Qvisc_T        = 0.d0
 
-              Qvisc_uR        = v * (uR0_RR + uR0_R/BigR + uR0_ZZ + uR0_pp/BigR**2  &
-                                     - uR0/BigR**2 - 2.0d0 * up0_p / BigR**2)
+              !Qvisc_uR        = v * (uR0_RR + uR0_R/BigR + uR0_ZZ + uR0_pp/BigR**2  &
+              !                       - uR0/BigR**2 - 2.0d0 * up0_p / BigR**2)
 
-              Qvisc_uz        = v * (uz0_RR + uz0_R/BigR + uz0_ZZ + uz0_pp/BigR**2)   
+              !Qvisc_uz        = v * (uz0_RR + uz0_R/BigR + uz0_ZZ + uz0_pp/BigR**2)   
 
-              Qvisc_uR        = v * (up0_RR + up0_R/BigR + up0_ZZ + up0_pp/BigR**2  &
-                                     - up0/BigR**2 + 2.0d0 * uR0_p / BigR**2)
+              !Qvisc_uR        = v * (up0_RR + up0_R/BigR + up0_ZZ + up0_pp/BigR**2  &
+              !                       - up0/BigR**2 + 2.0d0 * uR0_p / BigR**2)
  
               Qvisc_T         = 0.0d0                       
 
@@ -789,8 +789,8 @@ do ms=1, n_gauss
            Pvec_prev(var_uR) =   v * r0 * delta_g(mp,var_uR,ms,mt)   &
                                + v * delta_g(mp,var_r,ms,mt) * uR0
                      
-           !Qvec(var_uR)   =  Qconv_uR +  ( v_R + v / BigR ) * p0 + JxB_uR + visco_T * Qvisc_uR &
-           Qvec(var_uR)   =  Qconv_uR -  v * p0_R + JxB_uR + visco_T * Qvisc_uR &     
+           Qvec(var_uR)   =  Qconv_uR +  ( v_R + v / BigR ) * p0 + JxB_uR + visco_T * Qvisc_uR &
+           !Qvec(var_uR)   =  Qconv_uR -  v * p0_R + JxB_uR + visco_T * Qvisc_uR &     
                              - viscoB * divu * ( v_R + v / BigR )                                       
 
                                  ! adding the stabilization contribution
@@ -807,8 +807,8 @@ do ms=1, n_gauss
              Pvec_prev(var_uZ) =   v * r0 * delta_g(mp,var_uZ,ms,mt) &
                                  + v * delta_g(mp,var_r,ms,mt) * uZ0
 
-             !Qvec(var_uZ)  =  Qconv_uZ + v_Z * p0 + JxB_uz + visco_T * Qvisc_uZ        &
-             Qvec(var_uZ)  =  Qconv_uZ - v * p0_Z + JxB_uz + visco_T * Qvisc_uZ        &
+             Qvec(var_uZ)  =  Qconv_uZ + v_Z * p0 + JxB_uz + visco_T * Qvisc_uZ        &
+             !Qvec(var_uZ)  =  Qconv_uZ - v * p0_Z + JxB_uz + visco_T * Qvisc_uZ        &
                               - viscoB * divu * v_Z 
              
              ! adding the stabilization contribution
@@ -826,8 +826,8 @@ do ms=1, n_gauss
             Pvec_prev(var_up) =   v * r0 * delta_g(mp,var_up,ms,mt) &
                  &              + v * delta_g(mp,var_r,ms,mt) * up0
             
-            !Qvec(var_up)      = Qconv_up +  ( v_p/ BigR ) * ( p0) + JxB_up + visco_T * Qvisc_up &
-            Qvec(var_up)      = Qconv_up -  v * ( p0_p/BigR) + JxB_up + visco_T * Qvisc_up &
+            Qvec(var_up)      = Qconv_up +  ( v_p/ BigR ) * ( p0) + JxB_up + visco_T * Qvisc_up &
+            !Qvec(var_up)      = Qconv_up -  v * ( p0_p/BigR) + JxB_up + visco_T * Qvisc_up &
                  &             - viscoB * divu * v_p/ BigR 
 
              ! adding the stabilization contribution
@@ -1061,31 +1061,31 @@ do ms=1, n_gauss
                    CASE(0)
                       ! ---------------------------------------------
                       ! -----------
-                      !Qvisc_uR_uR = + v *  ( - uR / BigR**2 ) &
-                      !     &        -  (v_R * UR_R + v_Z * UR_Z + v_p * uR_p / BigR**2)
-                      !Qvisc_uR_uZ = 0.d0
-                      !Qvisc_uR_up = v *  ( - 2.d0 * up_p / BigR**2 )
-                      Qvisc_uR_uR = v * (uR_RR + uR_R/BigR + uR_ZZ + uR_pp/BigR**2 - uR/BigR**2)
+                      Qvisc_uR_uR = + v *  ( - uR / BigR**2 ) &
+                           &        -  (v_R * UR_R + v_Z * UR_Z + v_p * uR_p / BigR**2)
                       Qvisc_uR_uZ = 0.d0
-                      Qvisc_uR_up = v * (-2.0d0*up_p/BigR**2)
+                      Qvisc_uR_up = v *  ( - 2.d0 * up_p / BigR**2 )
+                      !Qvisc_uR_uR = v * (uR_RR + uR_R/BigR + uR_ZZ + uR_pp/BigR**2 - uR/BigR**2)
+                      !Qvisc_uR_uZ = 0.d0
+                      !Qvisc_uR_up = v * (-2.0d0*up_p/BigR**2)
                       ! ---------------------------------------------
                       ! -----------                
-                      !Qvisc_uZ_uR = 0.d0
-                      !Qvisc_uZ_uZ = - (v_R * UZ_R + v_Z * UZ_Z + v_p * uZ_p / BigR**2) 
-                      !Qvisc_uZ_up = 0.d0                
                       Qvisc_uZ_uR = 0.d0
-                      Qvisc_uZ_uZ = v * (uZ_RR + uZ_R/BigR + uZ_ZZ + uZ_pp/BigR**2)
-                      Qvisc_uZ_up = 0.d0
+                      Qvisc_uZ_uZ = - (v_R * UZ_R + v_Z * UZ_Z + v_p * uZ_p / BigR**2) 
+                      Qvisc_uZ_up = 0.d0                
+                      !Qvisc_uZ_uR = 0.d0
+                      !Qvisc_uZ_uZ = v * (uZ_RR + uZ_R/BigR + uZ_ZZ + uZ_pp/BigR**2)
+                      !Qvisc_uZ_up = 0.d0
                       ! ---------------------------------------------
                       ! -----------
-                      !Qvisc_up_uR = v * (  2.d0 * uR_p / BigR**2  )
-                      !Qvisc_up_uZ = 0.d0
-                      !Qvisc_up_up = - (v_R * UP_R + v_Z * UP_Z + v_p * uP_p / BigR**2)        &
-                      !     + v  * ( - up / BigR**2 )
-
-                      Qvisc_up_uR = v * (2.0d0 * uR_p / BigR**2)
+                      Qvisc_up_uR = v * (  2.d0 * uR_p / BigR**2  )
                       Qvisc_up_uZ = 0.d0
-                      Qvisc_up_up = v * (up_RR + up_R/BigR + up_ZZ + up_pp/BigR**2 - up/BigR**2)                                                 
+                      Qvisc_up_up = - (v_R * UP_R + v_Z * UP_Z + v_p * uP_p / BigR**2)        &
+                           + v  * ( - up / BigR**2 )
+
+                      !Qvisc_up_uR = v * (2.0d0 * uR_p / BigR**2)
+                      !Qvisc_up_uZ = 0.d0
+                      !Qvisc_up_up = v * (up_RR + up_R/BigR + up_ZZ + up_pp/BigR**2 - up/BigR**2)                                                 
                       
                       Qvisc_T_uR  = 0.d0
                       Qvisc_T_uZ  = 0.d0
@@ -1318,11 +1318,11 @@ do ms=1, n_gauss
                  Qjac(var_uR,var_up) =   Qconv_uR_up + visco_T * Qvisc_uR_up                 &
                                        - viscoB * divu_up * ( v_R + v / BigR )
 
-                 !Qjac(var_uR,var_r)  =   Qconv_uR_r +  ( v_R + v / BigR ) * ( r * T0)
-                 Qjac(var_uR,var_r)  =   Qconv_uR_r - v * ( r * T0_R + r_R * T0)                                                                     
+                 Qjac(var_uR,var_r)  =   Qconv_uR_r +  ( v_R + v / BigR ) * ( r * T0)
+                 !Qjac(var_uR,var_r)  =   Qconv_uR_r - v * ( r * T0_R + r_R * T0)                                                                     
 
-                 !Qjac(var_uR,var_T)  =   Qconv_uR_T +  ( v_R + v / BigR ) * ( r0 * T) &
-                 Qjac(var_uR,var_T)  =   Qconv_uR_T -  v * ( r0 * T_R + r0_R * T )  &                   
+                 Qjac(var_uR,var_T)  =   Qconv_uR_T +  ( v_R + v / BigR ) * ( r0 * T) &
+                 !Qjac(var_uR,var_T)  =   Qconv_uR_T -  v * ( r0 * T_R + r0_R * T )  &                   
                       &                + dvisco_dT * T * Qvisc_uR   &
                       &                - dviscoB_dT * T * divu * ( v_R + v / BigR ) 
 
@@ -1387,12 +1387,12 @@ do ms=1, n_gauss
                                        - viscoB * divu_up * v_Z 
 
 
-                 !Qjac(var_uZ,var_r)  =  Qconv_uZ_r +  v_Z * ( r * T0)
-                 Qjac(var_uZ,var_r)  =  Qconv_uZ_r -  v * ( r * T0_Z + r_Z * T0)
+                 Qjac(var_uZ,var_r)  =  Qconv_uZ_r +  v_Z * ( r * T0)
+                 !Qjac(var_uZ,var_r)  =  Qconv_uZ_r -  v * ( r * T0_Z + r_Z * T0)
 
 
-                 !Qjac(var_uZ,var_T)  =  Qconv_uZ_T + v_Z * ( r0 * T)          &
-                 Qjac(var_uZ,var_T)  =  Qconv_uZ_T - v * ( r0 * T_Z + r0_Z * T)          &
+                 Qjac(var_uZ,var_T)  =  Qconv_uZ_T + v_Z * ( r0 * T)          &
+                 !Qjac(var_uZ,var_T)  =  Qconv_uZ_T - v * ( r0 * T_Z + r0_Z * T)          &
                       &                + dvisco_dT * T * Qvisc_uZ             &
                       &                - dviscoB_dT * T * divu * v_Z
                  ! Stabilization
@@ -1451,11 +1451,11 @@ do ms=1, n_gauss
                                        - viscoB * divu_up * v_p/ BigR
                  
 
-                 !Qjac(var_up,var_r)  =  Qconv_up_r + ( v_p/ BigR ) * ( r * T0)
-                 Qjac(var_up,var_r)  =  Qconv_up_r - v * ( r * T0_p + r_p * T0)  
+                 Qjac(var_up,var_r)  =  Qconv_up_r + ( v_p/ BigR ) * ( r * T0)
+                 !Qjac(var_up,var_r)  =  Qconv_up_r - v * ( r * T0_p + r_p * T0)  
                  
-                 !Qjac(var_up,var_T)  =  Qconv_up_T + ( v_p/ BigR ) * ( r0 * T) &
-                 Qjac(var_up,var_T)  =  Qconv_up_T - v * ( r0 * T_p + r0_p * T) &
+                 Qjac(var_up,var_T)  =  Qconv_up_T + ( v_p/ BigR ) * ( r0 * T) &
+                 !Qjac(var_up,var_T)  =  Qconv_up_T - v * ( r0 * T_p + r0_p * T) &
                       &                 + dvisco_dT * T * Qvisc_up &
                       &                 - dviscoB_dT * T * divu * v_p/ BigR
 

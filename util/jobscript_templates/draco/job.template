@@ -1,0 +1,33 @@
+#!/bin/bash -l
+# <<jobscript_comment>>
+#
+# Standard output and error:
+#SBATCH -o ./tjob_hybrid.out.%j
+#SBATCH -e ./tjob_hybrid.err.%j
+# Initial working directory: 
+#SBATCH -D ./
+# Job Name:
+#SBATCH -J <<jobname>>_<<job_step>>
+# Queue (Partition):
+#SBATCH --partition=<<partition>>
+# Number of nodes and MPI tasks per node:
+#SBATCH --nodes=<<mpi>>
+#SBATCH --ntasks-per-node=<<tasks_per_node>>
+# for OpenMP:
+#SBATCH --cpus-per-task=<<omp>>
+#
+#SBATCH --mail-type=END
+#SBATCH --mail-user=<<email>>
+# Wall clock limit:
+#SBATCH --time=<<runtime>>
+
+BIN="./jorek_model<<model>>_step<<job_step>>"
+NSLOTS="<<mpi>>"
+INP="./input<<job_step>>"
+OMP="<<omp>>"
+DIR="<<main_dir>>"
+
+cd $DIR
+export OMP_NUM_THREADS=$OMP
+export OMP_PLACES=cores
+srun $BIN < $INP > logfile_<<job_step>>

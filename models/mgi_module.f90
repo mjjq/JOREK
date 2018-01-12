@@ -218,6 +218,10 @@ real*8, intent(in)  :: mgi_tor_norm
 
  endif
 
+ if (rhon_source < 0.) then
+   rhon_source = 0.
+ end if
+
 return
 end subroutine mgi_source
 

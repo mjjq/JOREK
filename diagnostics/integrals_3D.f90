@@ -405,6 +405,7 @@ do ife = ife_min, ife_max
 
         if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
 
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
         ! --- 3D integrals to get particles deposited within a given flux
         ! surfaces
 
@@ -421,7 +422,7 @@ do ife = ife_min, ife_max
               end if
             end if
           end do
-
+#endif
 
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi

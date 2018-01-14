@@ -10,7 +10,7 @@ use phys_module
 use pellet_module
 use mpi_mod
 use domains
-#if (JOREK_MODEL == 500)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501)
 use mgi_module
 #endif
 
@@ -98,13 +98,15 @@ VK_tot   = 0.d0
 VM_tot   = 0.d0
 J2_tot   = 0.d0
 
+#if (JOREK_MODEL == 303)
 if (use_pellet) then
   local_pellet_particles = 0.d0
   local_plasma_particles = 0.d0
   local_pellet_volume    = 0.d0
 endif
+#endif
 
-#if (JOREK_MODEL == 500)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501)
 local_n_particles_inj = 0.d0
 local_n_particles     = 0.d0
 #endif
@@ -144,7 +146,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
 !$omp          local_n_particles_inj, local_n_particles, mgi_amplitude, mgi_R, mgi_Z,          &
 !$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm,                       &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube, JET_MGI,ASDEX_MGI,            &
@@ -159,7 +161,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
 !$omp           rn0, source_mgi,                                                               &
 #endif
 !$omp           omp_nthreads,omp_tid)
@@ -173,8 +175,11 @@ omp_nthreads = 1
 omp_tid      = 0
 #endif
 
-!$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+!$omp do reduction(+:                                                                         &
+#if (JOREK_MODEL == 303)
+!$omp                local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
+#endif
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
@@ -277,7 +282,7 @@ do ife = ife_min, ife_max
         vpar0 = 0.d0
 #endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
         rn0    = eq_g(mp,8,ms,mt)
 #endif
 	
@@ -327,6 +332,7 @@ do ife = ife_min, ife_max
         gradP_max     = max(gradP_max,grad_P)
         gradP_psi_max = max(gradP_psi_max,grad_P_psi)
 
+#if (JOREK_MODEL == 303)
         if (use_pellet) then
 
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
@@ -339,8 +345,9 @@ do ife = ife_min, ife_max
           local_pellet_volume    = local_pellet_volume    + source_volume * bigR * xjac * wst * delta_phi 
 
         endif
+#endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
 
         source_mgi = 0.d0
 
@@ -415,13 +422,15 @@ call MPI_AllReduce(J2_int,ohm_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,i
 call MPI_AllReduce(J2_ext,ohm_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(J2_tot,ohm_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
+#if (JOREK_MODEL == 303)
 if (use_pellet) then
   call MPI_AllReduce(local_pellet_particles,total_pellet_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_plasma_particles,total_plasma_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_pellet_volume,total_pellet_volume,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 endif
+#endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
   call MPI_AllReduce(local_n_particles_inj, total_n_particles_inj,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_n_particles, total_n_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 #endif
@@ -465,7 +474,9 @@ if (my_id .eq. 0) then
   endif
 
   write(*,'(A,3e14.6,A)') ' Time : ',xt,xt*t_norm,t_norm, ' [s]'
+#if (JOREK_MODEL == 303)
   write(*,'(A,4e14.6)')   ' Integrals_3D, PELLET : ',pellet_volume, total_pellet_volume, total_pellet_particles, total_plasma_particles
+#endif
   write(*,'(A,2e14.6,A)') ' Volume   : ',xt,volume,' [m^3]'
   write(*,'(A,4e14.6,A)') ' density  (total/in/out) : ',xt,density_tot,  density_in,  density_out,'[ 10^20/m^3]'
   write(*,'(A,4e14.6,A)') ' pressure (total/in/out) : ',xt,pressure/1.d6, pressure_in/1.d6, pressure_out/1.d6,' [MJ]'
@@ -487,7 +498,7 @@ if (my_id .eq. 0) then
   write(*,'(A,20e14.6)') 'sum ',xt,density_tot,pressure/1.d6,kin_par_tot/1.d6,kin_perp_tot/1.d6,mag_tot/1.d6, &
                                  Ohm_tot/1.d6,heating_in/1d6+heating_out/1.d6 ,source_in+source_out
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
   write(*,'(A,4e14.6)')   ' Integrals_3D, MGI : ', total_n_particles_inj, total_n_particles
 #endif
 

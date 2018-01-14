@@ -1,0 +1,1393 @@
+#!/usr/bin/env bash
+
+# -----------------------------------------------------------------
+# script used to submit the jorek job
+# -----------------------------------------------------------------
+if [ $# -lt 5 ]; then
+   echo "==================================================================================="
+   echo " Syntaxe subjorek model_number n_tor n_period n_plane input_file"
+   echo "       Example:  subjorek 303 1 1 4 inlowshape"
+   echo "==================================================================================="
+   echo " "
+   exit
+fi
+
+# storing the inputs
+# ------------------
+MODELNUMBER=$1
+NTOR=$2
+NPERIOD=$3
+NPLANE=$4
+DATANAME=$5
+echo "==================================================================================="
+echo " execution of model '"$MODELNUMBER"' with data file '"$DATANAME"', compiled with "
+echo " parameters 'n_tor = "$NTOR"', 'n_period = "$NPERIOD"', 'n_plane = "$NPLANE"'"
+echo "==================================================================================="
+echo " "
+
+if [ -f go_$DATANAME.cmd ]; then
+   rm -f go_$DATANAME.cmd
+fi
+
+# case name
+# ---------
+CASENAME=`basename $5 | tr '[:lower:]' '[:upper:]'`
+MACHNAME=`echo $ARCH | tr '[:lower:]' '[:upper:]'`
+
+FIRSTCAR=${MACHNAME:0:1}
+LASTCAR_MODEL=${MODELNUMBER}
+CASE=D${FIRSTCAR}_${LASTCAR_MODEL}_${CASENAME}
+
+# According to ARCH variable
+# --------------------------
+case ${ARCH} in
+
+# -----------------------------------------------------------------
+# norma (IRFM)
+# -----------------------------------------------------------------
+nfs*)
+
+# batch control
+# -------------
+MPIPROCS=1
+NTHREAD=8
+NNODES=2
+WALLTIME=02:00:00
+((NPES=NNODES*MPIPROCS))
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(dirname $PWD)
+SRCDIR=$DIR
+WKDIR=`pwd`
+UTILDIR=${SRCDIR}/util
+
+DIR=$(basename $(dirname $PWD))
+RESDIR1=/data/${USER}/${DIR}
+RESDIR=${RESDIR1}/${CASE}
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+
+source /data/JOREK/jorek_env/jorek_env.sh
+;;
+
+# -----------------------------------------------------------------
+# ccamu (Marseille)
+# -----------------------------------------------------------------
+ccamu*)
+
+# batch control
+# -------------
+MPIPROCS=1
+NTHREAD=12
+NNODES=6
+WALLTIME=48:00:00
+((NLIM=MPIPROCS*NTHREAD))
+if [ "${NLIM}" -gt "13" ]; then
+   echo "${NLIM} = ", ${NLIM}
+   echo " MPIPROCS*NTHREAD is greater than 12, you are trying to run more MPI processes and threads than reasonable"
+   echo " ===> try running MPIPROCS=1 (1 MPI process per node) and NTHREAD=12 ...."
+   exit
+fi
+((NPES=NNODES*MPIPROCS))
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(dirname $PWD)
+SRCDIR=$DIR
+WKDIR=`pwd`
+UTILDIR=${SRCDIR}/util
+
+DIR=$(basename $(dirname $PWD))
+RESDIR1=/scratch/${USER}/${DIR}
+RESDIR1=${RESDIR1%/}
+RESDIR=${RESDIR1}/${CASE}
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+fi
+
+;;
+
+# -----------------------------------------------------------------
+# helios (IFERC)
+# -----------------------------------------------------------------
+helios*)
+
+# batch control
+# -------------
+# mpi procs per nodes
+MPIPROCS=1
+NTHREAD=16
+NNODES=4
+WALLTIME=24:00:00
+((NLIM=MPIPROCS*NTHREAD))
+if [ "${NLIM}" -gt "16" ]; then
+   echo "${NLIM} = ", ${NLIM}
+   echo " MPIPROCS*NTHREAD is greater than 16, you are trying to run more MPI processes and threads than reasonable"
+   echo " ===> try running MPIPROCS=1 (1 MPI process per node) and NTHREAD=16 ...."
+   exit
+fi
+((NPES=NNODES*MPIPROCS))
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(dirname $PWD)
+# echo " DIR " $DIR
+DIR2=$(dirname $DIR)
+# echo " DIR2 " $DIR2
+DIR3=$(basename $DIR2)
+# echo " DIR3 " $DIR3
+HOMEDIR2=$WORKDIR/${DIR}
+HOMEDIR=${DIR}
+SRCDIR=$HOMEDIR
+UTILDIR=${HOMEDIR}/util
+WKDIR=`pwd`
+
+RESDIR1=$SCRATCHDIR/${DIR3}
+RESDIR=${RESDIR1}/${CASE}
+#echo " HOMEDIR " $HOMEDIR
+#echo " HOMEDIR2 " $HOMEDIR2
+#echo " SRCDIR  " $SRCDIR
+#echo " UTILDIR " $UTILDIR
+#echo " WKDIR   " $WKDIR
+#echo " SCRATCHDIR " $SCRATCHDIR
+#echo " RESDIR1    " $RESDIR1
+#echo " RESDIR     " $RESDIR
+
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+fi
+
+;;
+
+# -----------------------------------------------------------------
+# curie (TGCC)
+# -----------------------------------------------------------------
+curie*)
+
+# batch control
+# -------------
+# mpi procs per nodes
+MPIPROCS=1
+NTHREAD=16
+NNODES=24
+WALLTIME=72000
+((NLIM=MPIPROCS*NTHREAD))
+if [ "${NLIM}" -gt "16" ]; then
+   echo "${NLIM} = ", ${NLIM}
+   echo " MPIPROCS*NTHREAD is greater than 16, you are trying to run more MPI processes and threads than reasonable"
+   echo " ===> try running MPIPROCS=1 (1 MPI process per node) and NTHREAD=16 ...."
+   exit
+fi
+((NPES=NNODES*MPIPROCS))
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(basename $(dirname $PWD))
+echo " DIR      = " $DIR
+#HOMEDIR=$SCRATCHDIR/${DIR}
+#HOMEDIR=$WORKDIR/${DIR}
+HOMEDIR=$HOME/trunk
+echo " HOMEDIR = " $HOMEDIR
+SRCDIR=$HOMEDIR
+UTILDIR=${SRCDIR}/util
+echo " UTLDIR = " $UTILDIR
+WKDIR=$PWD
+echo " WKDIR   = " $WKDIR
+RESDIR1=$SCRATCHDIR/${DIR}    
+echo " RESDIR1  = " $RESDIR1
+RESDIR=${RESDIR1}/${CASE}
+echo " RESDIR = " $RESDIR
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+
+;;
+
+# -----------------------------------------------------------------
+# marconi (CINECA)
+# -----------------------------------------------------------------
+marconi*)
+
+# batch control
+# -------------
+if [ "${JOREK_HOST}" == "marconi_knl" ]; then
+  ((THPNODE=68))
+  MPIPROCS=2
+  NTHREAD=34
+  NNODES=2
+  ((NPES=NNODES*MPIPROCS))
+  PROJ=FUA21_JOREKED
+  WALLTIME=00:30:00
+else
+  if [ "${JOREK_HOST}" == "marconi_skl" ]; then    
+    ((THPNODE=48))
+    MPIPROCS=2
+    NTHREAD=24
+    NNODES=2
+    ((NPES=NNODES*MPIPROCS))
+    PROJ=FUA32_JOREK3D
+    WALLTIME=00:30:00
+  else
+    ((THPNODE=36))
+    MPIPROCS=2
+    NTHREAD=18
+    NNODES=2
+    ((NPES=NNODES*MPIPROCS))
+    PROJ=FUA11_JOREKED
+    WALLTIME=00:30:00
+  fi
+fi
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+SRCDIR=$(dirname $PWD)
+WKDIR=`pwd`
+UTILDIR=${SRCDIR}/util
+DIR=$(basename $(dirname $PWD))
+REP=`echo $DIR | tr -s "/" " " | awk '{print $1}' `
+RESDIR1=$CINECA_SCRATCH/${REP}
+RESDIR=${RESDIR1}/${CASE}
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+fi
+
+;;
+# -----------------------------------------------------------------
+# occigen (CINES)
+# -----------------------------------------------------------------
+occigen*)
+
+# batch control
+# -------------
+# mpi procs per nodes
+MPIPROCS=2
+NTHREAD=24
+NNODES=2
+WALLTIME=1:50:00
+((NPES=NNODES*MPIPROCS))
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(dirname $PWD)
+dir=${DIR#$HOME}
+REP=`echo $dir | tr -s "/" " " | awk '{print $1}' `
+HOMEDIR=${DIR}
+SRCDIR=$HOMEDIR
+UTILDIR=${HOMEDIR}/util
+WKDIR=`pwd`
+echo " USER " $USER
+echo " SCRATCHDIR " $SCRATCHDIR
+RESDIR1=$SCRATCHDIR/${REP}
+echo " RESDIR1 " $RESDIR1
+RESDIR=${RESDIR1}/${CASE}
+echo " RESDIR " $RESDIR
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+fi
+
+;;
+
+# -----------------------------------------------------------------
+# jade (cines)
+# -----------------------------------------------------------------
+jade*)
+
+# batch control
+# -------------
+MPIPROCS=1
+NTHREAD=8
+NNODES=16
+WALLTIME=1800
+((NPES=NNODES*MPIPROCS))
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(basename $(dirname $PWD))
+HOMEDIR=/scratch/$USER/${DIR}
+SRCDIR=$HOMEDIR
+UTILDIR=${SRCDIR}/util
+
+DIR=$(basename $PWD)
+WKDIR=${HOMEDIR}/${DIR}
+RESDIR1=${WKDIR}
+RESDIR=${RESDIR1}/${CASE}
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+fi
+;;
+
+# -----------------------------------------------------------------
+# hpc-ff (Juelich)
+# -----------------------------------------------------------------
+hpcff*)
+
+# batch control
+# -------------
+NODES=32
+NTHREAD=8
+PPN=8   # processs per node=8: reserve the whole node
+WALLTIME=02:00:00
+((NSLOTS=NODES * PPN / NTHREAD))
+echo "==================================================================================="
+echo " ${NODES} nodes are asked for, with ${PPN} processes per node (the whole node) and ${NTHREAD} threads "
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(dirname $PWD)
+SRCDIR=$DIR
+WKDIR=`pwd`
+UTILDIR=${SRCDIR}/util
+RESDIR1=`echo $HOME | sed "s/jhome*[0123456789]/jwork/" `
+
+# Creation of the work directory
+# ------------------------------
+RESDIR=${RESDIR1}/${CASE}
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+;;
+
+*)
+echo " Architecture not defined !! ABORTING "
+exit 0
+
+esac
+   
+RSTDIR=${RESDIR}/RST
+NBFILERST_INI=0
+if [ ! -d ${RSTDIR} ]; then
+    mkdir -p ${RSTDIR}
+else
+    LISTE_NBFILERST=`ls ${RSTDIR}/jorek?????.rst 2> /dev/null`
+    if [ "$LISTE_NBFILERST" != "" ]; then
+	NBFILERST_INI=`ls ${RSTDIR}/jorek?????.rst | wc -l `
+    fi
+fi
+echo "==================================================================================="
+echo " ***   CASENAME = " $CASENAME
+echo " ***   computed in folder = " $CASE
+echo " ============> there are " $NBFILERST_INI " RST files that already exist before this run"
+
+VTKDIR=${RESDIR}/VTK
+NBFILEVTK_INI=0
+if [ ! -d ${VTKDIR} ]; then
+    mkdir -p ${VTKDIR}
+else
+    LISTE_NBFILEVTK=`ls ${VTKDIR}/*.vtk 2> /dev/null`
+    if [ "$LISTE_NBFILEVTK" != "" ]; then
+	NBFILEVTK_INI=`ls ${VTKDIR}/jorek?????.vtk | wc -l `
+    fi
+fi
+echo " ============> there are " $NBFILEVTK_INI " VTK files that already exist before this run"
+echo "==================================================================================="
+echo " "
+
+((NBFILES=$NBFILERST_INI - $NBFILEVTK_INI))
+
+TRACEDIR=${RESDIR}/TRACE
+if [ ! -d ${TRACEDIR} ]; then
+    mkdir -p ${TRACEDIR}
+fi
+
+# -----------------------------------------------------------------
+# creating the correct executables/verifying they exist
+# -----------------------------------------------------------------
+
+# creating the name of the Jorek executable
+#------------------------------------------
+EXECNAME=JOR${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
+EXECNAMEOUT=${EXECNAME%.*}
+VTKEXECNAME=VTK${MODELNUMBER}_NTOR${NTOR}.exe
+TARGET_VTKEXECNAME=TARGET_VTK${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
+POWERSEXECNAME=POWERS${MODELNUMBER}_NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}.exe
+
+if [ -z "$compilethreads" ]; then 
+  MAKE="make"
+else
+  MAKE="make -j $compilethreads"
+fi
+
+# test if the correct jorek and jorek2vtk executables exist given
+# the prescribed set of values for n_tor, n_period, n_plane
+#----------------------------------------------------------
+if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
+  echo "==================================================================================="
+  echo "=============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+  echo "=============>> compiling the jorek executable" ${EXECNAME}
+  echo "==================================================================================="
+  echo " "
+  cd ${SRCDIR}
+
+  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+
+  if [ -e jorek_model${MODELNUMBER} ]; then rm -f jorek_model${MODELNUMBER}; fi
+  make cleanall
+  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+  $MAKE
+  if [ -e jorek_model${MODELNUMBER} ]; then mv jorek_model${MODELNUMBER} ${EXECNAME}; fi
+fi
+
+if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
+  echo "==================================================================================="
+  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+  echo " =============>> compiling the jorek2vtk executable" ${VTKEXECNAME}
+  echo "==================================================================================="
+  echo " "
+  cd ${SRCDIR}
+
+  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+
+  if [ -e jorek2vtk ]; then rm -f jorek2vtk; fi
+  make cleanall
+  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+  $MAKE jorek2vtk
+
+  if [ -e jorek2vtk ]; then mv jorek2vtk ${VTKEXECNAME}; fi
+fi
+
+if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
+  echo "==================================================================================="
+  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+  echo " =============>> compiling the jorek2_target2vtk executable" ${TARGET_VTKEXECNAME}
+  echo "==================================================================================="
+  echo " "
+  cd ${SRCDIR}
+
+  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+
+  if [ -e jorek2_target2vtk ]; then rm -f jorek2_target2vtk; fi
+#  make cleanall
+  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+  $MAKE jorek2_target2vtk
+
+  if [ -e jorek2_target2vtk ]; then mv jorek2_target2vtk ${TARGET_VTKEXECNAME}; fi
+fi
+
+if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
+  echo "==================================================================================="
+  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+  echo " =============>> compiling the jorek2_powers executable" ${POWERSEXECNAME}
+  echo "==================================================================================="
+  echo " "
+  cd ${SRCDIR}
+
+  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+
+  if [ -e jorek2_powers ]; then rm -f jorek2_powers; fi
+#  make cleanall
+  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+  $MAKE jorek2_powers
+
+  if [ -e jorek2_powers ]; then mv jorek2_powers ${POWERSEXECNAME}; fi
+fi
+cd ${WKDIR}
+
+# copy exec files and data file in result directory
+# ------------------------------------------------
+if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
+   echo " Executable ${EXECNAME} does not exist, so exit ";
+   exit
+else
+    cp ${SRCDIR}/${EXECNAME} ${RESDIR}/.
+fi
+if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
+   echo " Executable ${VTKEXECNAME} does not exist, so exit ";
+   exit
+else
+    cp ${SRCDIR}/${VTKEXECNAME} ${RESDIR}/.
+fi
+if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
+   echo " Executable ${TARGET_VTKEXECNAME} does not exist, so exit ";
+   exit
+else
+    cp ${SRCDIR}/${TARGET_VTKEXECNAME} ${RESDIR}/.
+fi
+if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
+   echo " Executable ${POWERSEXECNAME} does not exist, so exit ";
+   exit
+else
+    cp ${SRCDIR}/${POWERSEXECNAME} ${RESDIR}/.
+fi
+
+if [ ! -e ${WKDIR}/${DATANAME} ]; then
+    echo " Datafile ${DATAFILE} does no exist, so exit ";
+    exit
+else
+    cp ${WKDIR}/${DATANAME} ${RESDIR}/${DATANAME}
+fi
+
+# Names of the profile files for
+# rho, T, ffprime
+# --------------------------
+rho_file=`grep rho_file                 $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+T_file=`grep T_file                     $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+ffprime_file=`grep ffprime_file         $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+R_Z_psi_bnd_file=`grep R_Z_psi_bnd_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+wall_file=`grep wall_file               $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+RMP_psi_cos_file=`grep RMP_psi_cos_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+RMP_psi_sin_file=`grep RMP_psi_sin_file $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+neo_file=`grep neo_file                 $DATANAME | head -n 1 | tr -s '=' ' ' | tr -s '"' ' '| awk '{print $2}'`
+
+# copy of the profiles files
+# if they exist 
+# ------------------------------
+echo "==================================================================================="
+if [ "$rho_file" != 'none' ] && [ "$rho_file" != '' ]; then
+   rho_dir=$(dirname $rho_file)
+   rho_file=$(basename $rho_file)
+   echo " ===> reading of the profile file: " ${rho_dir}/${rho_file}
+   if [ -e ${rho_dir}/${rho_file} ]; then
+      echo "    ----- storing it to ${RESDIR}/${rho_dir}"
+      if [ ! -e ${RESDIR}/${rho_dir} ]; then
+         if [ "${rho_dir}" != "." ]; then
+	    # echo " creation of ${RESDIR}/${rho_dir} "
+	    mkdir ${RESDIR}/${rho_dir}
+         fi
+      fi
+      cp ${rho_dir}/${rho_file} ${RESDIR}/${rho_dir}/${rho_file}
+   else
+      echo "The file " ${rho_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no density profile file to read "
+fi
+
+if [ "$T_file" != 'none' ] && [ "$T_file" != '' ]; then
+   T_dir=$(dirname $T_file)
+   T_file=$(basename $T_file)
+   echo " ===> reading of the profile file: " ${T_dir}/${T_file}
+   if [ -e ${RESDIR}/${T_dir} ]; then
+      echo "    ----- storing it to ${RESDIR}/${T_dir}"
+   else
+      if [ "${T_dir}" != "." ]; then
+       	 # echo " creation of ${RESDIR}/${T_dir} "
+	 mkdir ${RESDIR}/${T_dir}
+      fi
+   fi
+   if [ -e ${T_dir}/${T_file} ]; then
+      # echo " cp ${T_dir}/${T_file} ${RESDIR}/${T_dir}/${T_file} "
+      cp ${T_dir}/${T_file} ${RESDIR}/${T_dir}/${T_file}
+   else
+      echo "The file " ${T_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no Temperature profile file to read "
+fi
+
+if [ "$ffprime_file" != 'none' ] && [ "$ffprime_file" != '' ]; then
+   ffprime_dir=$(dirname $ffprime_file)
+   ffprime_file=$(basename $ffprime_file)
+   echo " ===> reading of the file profile: " ${ffprime_dir}/${ffprime_file}
+   if [ -e ${RESDIR}/${ffprime_dir} ]; then
+      echo "    ----- storing it to ${RESDIR}/${ffprime_dir}"
+   else
+       if [ "${ffprime_dir}" != "." ]; then
+       	  # echo " creation of ${RESDIR}/${ffprime_dir} "
+	  mkdir ${RESDIR}/${ffprime_dir}
+       fi
+   fi
+   if [ -e ${ffprime_dir}/${ffprime_file} ]; then
+      # echo " cp ${ffprime_dir}/${ffprime_file} ${RESDIR}/${ffprime_dir}/${ffprime_file} "
+      cp ${ffprime_dir}/${ffprime_file} ${RESDIR}/${ffprime_dir}/${ffprime_file}
+   else
+      echo "The file " ${ffprime_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no ffprime profile file to read "
+fi
+
+if [ "$R_Z_psi_bnd_file" != 'none' ] && [ "$R_Z_psi_bnd_file" != '' ]; then
+   R_Z_psi_bnd_dir=$(dirname $R_Z_psi_bnd_file)
+   R_Z_psi_bnd_file=$(basename $R_Z_psi_bnd_file)
+   echo " ===> reading of the file profile: " ${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file}
+   if [ -e ${RESDIR}/${R_Z_psi_bnd_dir} ]; then
+      echo "    ----- storing it to ${RESDIR}/${R_Z_psi_bnd_dir}"
+   else
+       if [ "${R_Z_psi_bnd_dir}" != "." ]; then
+       	  # echo " creation of ${RESDIR}/${R_Z_psi_bnd_dir} "
+	  mkdir ${RESDIR}/${R_Z_psi_bnd_dir}
+       fi
+   fi
+   if [ -e ${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file} ]; then
+      # echo " cp ${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file} ${RESDIR}/${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file} "
+      cp ${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file} ${RESDIR}/${R_Z_psi_bnd_dir}/${R_Z_psi_bnd_file}
+   else
+      echo "The file " ${R_Z_psi_bnd_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no R_Z_psi_bnd profile file to read "
+fi
+
+if [ "$wall_file" != 'none' ] && [ "$wall_file" != '' ]; then
+   wall_dir=$(dirname $wall_file)
+   wall_file=$(basename $wall_file)
+   echo " ===> reading of the profile file: " ${wall_dir}/${wall_file}
+   if [ -e ${wall_dir}/${wall_file} ]; then
+      echo "    ----- storing it to ${RESDIR}/${wall_dir}"
+      if [ ! -e ${RESDIR}/${wall_dir} ]; then
+         if [ "${wall_dir}" != "." ]; then
+	    # echo " creation of ${RESDIR}/${wall_dir} "
+	    mkdir ${RESDIR}/${wall_dir}
+         fi
+      fi
+      cp ${wall_dir}/${wall_file} ${RESDIR}/wall.txt
+   else
+      echo "The file " ${wall_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no wall file to read "
+fi
+
+if [ "$RMP_psi_cos_file" != 'none' ] && [ "$RMP_psi_cos_file" != '' ]; then
+   RMP_psi_cos_dir=$(dirname $RMP_psi_cos_file)
+   RMP_psi_cos_file=$(basename $RMP_psi_cos_file)
+   echo " ===> reading of the file profile: " ${RMP_psi_cos_dir}/${RMP_psi_cos_file}
+   if [ -e ${RESDIR}/${RMP_psi_cos_dir} ]; then
+      echo "    ----- storing it to ${RESDIR}/${RMP_psi_cos_dir}"
+   else
+       if [ "${RMP_psi_cos_dir}" != "." ]; then
+       	  # echo " creation of ${RESDIR}/${RMP_psi_cos_dir} "
+	  mkdir ${RESDIR}/${RMP_psi_cos_dir}
+       fi
+   fi
+   if [ -e ${RMP_psi_cos_dir}/${RMP_psi_cos_file} ]; then
+      # echo " cp ${RMP_psi_cos_dir}/${RMP_psi_cos_file} ${RESDIR}/${RMP_psi_cos_dir}/${RMP_psi_cos_file} "
+      cp ${RMP_psi_cos_dir}/${RMP_psi_cos_file} ${RESDIR}/${RMP_psi_cos_dir}/${RMP_psi_cos_file}
+   else
+      echo "The file " ${RMP_psi_cos_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no RMP_psi_cos profile file to read "
+fi
+
+if [ "$RMP_psi_sin_file" != 'none' ] && [ "$RMP_psi_sin_file" != '' ]; then
+   RMP_psi_sin_dir=$(dirname $RMP_psi_sin_file)
+   RMP_psi_sin_file=$(basename $RMP_psi_sin_file)
+   echo " ===> reading of the file profile: " ${RMP_psi_sin_dir}/${RMP_psi_sin_file}
+   if [ -e ${RESDIR}/${RMP_psi_sin_dir} ]; then
+      echo "    ----- storing it to ${RESDIR}/${RMP_psi_sin_dir}"
+   else
+       if [ "${RMP_psi_sin_dir}" != "." ]; then
+          # echo " creation of ${RESDIR}/${RMP_psi_sin_dir} "
+          mkdir ${RESDIR}/${RMP_psi_sin_dir}
+       fi
+   fi
+   if [ -e ${RMP_psi_sin_dir}/${RMP_psi_sin_file} ]; then
+      # echo " cp ${RMP_psi_sin_dir}/${RMP_psi_sin_file} ${RESDIR}/${RMP_psi_sin_dir}/${RMP_psi_sin_file} "
+      cp ${RMP_psi_sin_dir}/${RMP_psi_sin_file} ${RESDIR}/${RMP_psi_sin_dir}/${RMP_psi_sin_file}
+   else
+      echo "The file " ${RMP_psi_sin_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no RMP_psi_sin profile file to read "
+fi
+
+if [ "$neo_file" != 'none' ] && [ "$neo_file" != '' ]; then
+   neo_dir=$(dirname $neo_file)
+   neo_file=$(basename $neo_file)
+   echo " ===> reading of the file profile: " ${neo_dir}/${neo_file}
+   if [ -e ${RESDIR}/${neo_dir} ]; then
+      echo "    ----- storing it to ${RESDIR}/${neo_dir}"
+   else
+       if [ "${neo_dir}" != "." ]; then
+          # echo " creation of ${RESDIR}/${neo_dir} "
+          mkdir ${RESDIR}/${neo_dir}
+       fi
+   fi
+   if [ -e ${neo_dir}/${neo_file} ]; then
+      # echo " cp ${neo_dir}/${neo_file} ${RESDIR}/${neo_dir}/${neo_file} "
+      cp ${neo_dir}/${neo_file} ${RESDIR}/${neo_dir}/${neo_file}
+   else
+      echo "The file " ${neo_file} " does not exist, exit"
+      exit
+   fi
+else
+    echo " ===> no neoclassical profile file to read "
+fi
+echo "==================================================================================="
+echo " "
+
+# Execution control
+# -----------------
+if [ ! -e "${RESDIR}/jorek_restart.rst" ]; then
+   echo "==================================================================================="
+   echo " ***   Restart file does not exist, so INIT"
+   out_increment=0
+   cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
+   echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}___${out_increment}.out
+   echo " ============> saving input data to file = " ${CASE}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
+   echo "==================================================================================="
+   echo " "
+else
+   echo "==================================================================================="
+   echo " ***   Restart file does exist, so LOOP"
+   tmp=$(ls ${RESDIR}/*.rst | wc -l)
+   (( out_increment= $tmp - 1 ))
+   cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
+   echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}___${out_increment}.out
+   echo " ============> saving input data to file = " ${CASE}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
+   echo "==================================================================================="
+   echo " "
+fi
+
+# batch job creation
+# ------------------
+case ${ARCH} in
+
+# -----------------------------------------------------------------
+# norma (IRFM)
+# -----------------------------------------------------------------
+nfs*)
+
+JOREKENV="source /data/JOREK/jorek_env/jorek_env.sh"
+CMD_MPIRUN="$JOREKENV; mpirun -np ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
+CMD_SUB="qsub go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#PBS -N ${CASENAME}
+#PBS -V
+#PBS -j oe
+#PBS -l walltime=${WALLTIME}
+#PBS -l select=${NNODES}:ncpus=8:ompthreads=${NTHREAD}:mpiprocs=${MPIPROCS}
+## ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process
+
+# environment
+#------------
+ulimit -Sa
+ulimit -Ha
+
+# machinefile creation
+# -------------------
+source /data/JOREK/jorek_env/jorek_env.sh
+mpdallexit &> /dev/null
+sort -u < \$PBS_NODEFILE > ${RESDIR}/machinefile
+mpdboot -n ${NNODES} -f ${RESDIR}/machinefile
+
+EOF
+;;
+
+# -----------------------------------------------------------------
+# ccamu (Marseille)
+# -----------------------------------------------------------------
+ccamu*)
+
+CMD_MPIRUN="mpiexec -launcher ssh -launcher-exec oarsh -f ${RESDIR}/mach -iface ib0 -n ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
+CMD_SUB="oarsub -S ./go_${DATANAME}.cmd"
+CMD_SUBRST='wrapper_oar "'${CMD_SUB}'"'
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#OAR -n ${CASENAME}
+#OAR -l host=${NNODES},walltime=${WALLTIME}
+#OAR -p nbcores=12 and visu='NO' 
+#OAR -O ${DATANAME}.%jobid%.log
+#OAR -E ${DATANAME}.%jobid%.err
+
+wrapper_oar() { echo \$1 ; ssh $USER@login "cd ${WKDIR}; \$1 "; }
+
+# environment
+#------------
+ulimit -Sa
+ulimit -Ha
+
+# machinefile creation
+# -------------------
+echo " == hostfile ==="
+cat \$OAR_NODEFILE | sort -u > ${RESDIR}/mach
+for i in \$(cat ${RESDIR}/mach); do oarsh \$i hostname; done
+cat ${RESDIR}/mach
+echo ''
+
+module list
+
+export OMP_NUM_THREADS=${NTHREAD}
+
+EOF
+;;
+
+# -----------------------------------------------------------------
+# helios (IFERC)
+# -----------------------------------------------------------------
+helios*)
+
+# Batch control
+((MPIPROCS=16/$NTHREAD))
+((NCPUS=NPES*NTHREAD))
+((NNODES=(NPES*NTHREAD)/16))
+if [ $NNODES -eq 0 ]; then
+   ((NNODES=1))
+fi
+echo " NPES " $NPES " NTHREADS " $NTHREAD "MPIPROCS " $MPIPROCS " NNODES " $NNODES
+
+CMD_MPIRUN="mpirun -np ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+CMD_SUB="sbatch -A JOREK ./go_${DATANAME}.cmd"
+#CMD_SUB="sbatch -A F4E_EU10 ./go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#SBATCH -J 15MA_ITER              # jobname
+#SBATCH -N ${NNODES}              # number of nodes
+#SBATCH -n ${NPES}                # number of tasks
+#SBATCH -o ${CASENAME}%j.out      # strout filename (%j is jobid)
+#SBATCH -e ${CASENAME}%j.out      # stderr filename (%j is jobid)
+#SBATCH -t ${WALLTIME}            # execute time (hh:mm:ss - max 08:00:00)
+# #SBATCH -A JOREK-0 
+
+# environment
+#------------
+ulimit -l unlimited
+
+export OMP_NUM_THREADS=${NTHREAD}
+
+EOF
+;;
+
+
+# -----------------------------------------------------------------
+# curie (TGCC)
+# -----------------------------------------------------------------
+curie*)
+
+# Batch control
+((MPIPROCS=16/$NTHREAD))
+((NCPUS=NPES*NTHREAD))
+((NNODES=(NPES*NTHREAD)/16))
+if [ $NNODES -eq 0 ]; then
+   ((NNODES=1))
+fi
+echo " NPES " $NPES " NTHREADS " $NTHREAD "MPIPROCS " $MPIPROCS " NNODES " $NNODES
+#PROJ_GENCI="-A ra1904 -q standard"
+PROJ_GENCI="-A gen2197 -q standard"
+CMD_MPIRUN="ccc_mprun ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+CMD_SUB="ccc_msub $PROJ_GENCI ./go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#MSUB -r ${CASENAME}          # Nom du job                
+#MSUB -N ${NNODES}            # Nb nodes
+#MSUB -n ${NPES}              # Nb processus
+#MSUB -c ${NTHREAD}           # Nb thread
+###!!#MSUB -x
+#MSUB -T ${WALLTIME}          # Limite de temps elapsed
+#MSUB -e ${CASENAME}.%J        # Erreur standard
+#MSUB -o ${CASENAME}.%J        # Sortie standard
+###!!ulimit -d unlimited
+###!!ulimit -Sa
+###!!ulimit -Ha
+###!!#export OMPI_MCA_coll="^ghc"
+###!!export OMPI_MCA_coll="^ghc,tuned"
+###!!export KMP_AFFINITY="verbose,norespect"
+###!!
+###!!# environment
+###!!#------------
+###!!ulimit -l unlimited
+### with parameters from Guido
+#MSUB -A gen2197             # Project ID
+#MSUB -q standard
+#MSUB -Q normal
+
+set -X
+
+export OMP_NUM_THREADS=${NTHREAD}
+
+EOF
+;;
+
+# -----------------------------------------------------------------
+# marconi (IRFM)
+# -----------------------------------------------------------------
+marconi*)
+
+CMD_MPIRUN="${MPIRUN} ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
+CMD_SUB="qsub go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+if [ "${JOREK_HOST}" == "marconi_knl" ]; then
+  cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#PBS -N ${CASENAME}
+#PBS -A ${PROJ}
+#PBS -q knl
+#PBS -V
+#PBS -j oe
+#PBS -l place=excl
+#PBS -l walltime=${WALLTIME}
+#PBS -l select=${NNODES}:mpiprocs=${MPIPROCS}
+
+# environment
+#------------
+ulimit -l unlimited
+ulimit -s unlimited
+
+export OMP_NUM_THREADS=${NTHREAD}
+
+EOF
+fi
+if [ "${JOREK_HOST}" == "marconi_skl" ]; then
+  cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#PBS -N ${CASENAME}
+#PBS -A ${PROJ}
+#PBS -q xfuasklprod
+#PBS -V
+#PBS -j oe
+#PBS -l place=excl
+#PBS -l walltime=${WALLTIME}
+#PBS -l select=${NNODES}:ncpus=48:mpiprocs=${MPIPROCS}
+
+# environment
+#------------
+ulimit -l unlimited
+ulimit -s unlimited
+
+export OMP_NUM_THREADS=${NTHREAD}
+
+EOF
+fi
+if [ "${JOREK_HOST}" == "marconi" ]; then
+  cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#PBS -N ${CASENAME}
+#PBS -A ${PROJ}
+#PBS -q xfuaprod
+#PBS -V
+#PBS -j oe
+#PBS -l place=excl
+#PBS -l walltime=${WALLTIME}
+#PBS -l select=${NNODES}:ncpus=36:mpiprocs=${MPIPROCS}
+
+# environment
+#------------
+ulimit -l unlimited
+ulimit -s unlimited
+
+export OMP_NUM_THREADS=${NTHREAD}
+
+EOF
+fi
+;;
+
+
+# -----------------------------------------------------------------
+# occigen (CINES)
+# -----------------------------------------------------------------
+occigen*)
+
+# Batch control
+#--cpus-per-task=2 --cpu_bind=verbose,cores -c 24
+#CMD_MPIRUN="srun --cpu_bind=verbose,none --mpi=pmi2 -K1 -m block:block --resv-ports -n \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+#CMD_MPIRUN="srun --cpu_bind=verbose,none --mpi=pmi2 -K1 --resv-ports -n \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+#-env DAPL_DBG_TYPE 0xfff -env I_MPI_DAPL_DIRECT_COPY_THRESHOLD 0 -genv I_MPI_FABRICS shm:ofa -genv I_MPI_DAPL_DIRECT_COPY_THRESHOLD 65536 
+#-genv I_MPI_DAPL_BUFFER_SIZE 131072 -genv I_MPI_RDMA_TRANSLATION_CACHE 1 -genv I_MPI_RDMA_RNDV_BUF_ALIGN 65536 -genv I_MPI_SPIN_COUNT 121
+#CMD_MPIRUN="mpirun  -np \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+CMD_MPIRUN="srun --mpi=pmi2 -K1  -m block:block --resv-ports --cpu_bind=verbose -n \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+CMD_SUB="sbatch ./go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#SBATCH --nodes=${NNODES}
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=24
+#SBATCH --threads-per-core=1
+#SBATCH -J JOREK
+#SBATCH -o ${CASENAME}%j.out      # strout filename (%j is jobid)
+#SBATCH -e ${CASENAME}%j.err      # stderr filename (%j is jobid)
+#SBATCH --time=${WALLTIME}
+
+module purge
+module load intel/14.0.4.211 intelmpi/5.0.1.035
+
+ulimit -Sa
+ulimit -Ha                                                                                                                                                                                                   
+export LANG=C
+export KMP_AFFINITY="granularity=fine,compact,1,0,verbose"
+export MKL_NUM_THREADS=1
+export MKL_DYNAMIC=FALSE
+export OMP_DYNAMIC=FALSE
+export KMP_DYNAMIC=FALSE
+EOF
+;;
+
+# -----------------------------------------------------------------
+# jade (cines)
+# -----------------------------------------------------------------
+jade*)
+
+CMD_MPIRUN="mpiexec ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAME}___${out_increment}.out"
+CMD_SUB="qsub go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#PBS -N ${CASENAME}
+#PBS -V
+#PBS -j oe
+#PBS -l walltime=${WALLTIME}
+##PBS -l select=${NNODES}:ncpus=8:ompthreads=${NTHREAD}:mpiprocs=${MPIPROCS}
+#PBS -l select=1:ncpus=8:ompthreads=${NTHREAD}:mpiprocs=1
+## ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process
+
+# environment
+#------------
+ulimit -Sa
+ulimit -Ha
+
+export OMP_NUM_THREADS=${NTHREAD}
+
+EOF
+;;
+
+# -----------------------------------------------------------------
+# hpc-ff (Juelich)
+# -----------------------------------------------------------------
+hpcff*)
+
+CMD_MPIRUN="mpiexec -np=${NSLOTS} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAME}___${out_increment}.out"
+CMD_SUB="msub go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#MSUB -N ${CASENAME}
+# nodes=Nb of nodes, ppn=process per node (max.8)
+#MSUB -l nodes=${NODES}:ppn=8
+# maximum walltime currently 24hrs walltime=<hh:mm:ss>
+#MSUB -l walltime=${WALLTIME}
+# tpt = Nb of OmpenMp processes
+#MSUB -v tpt=${NTHREAD}
+#MSUB -j oe
+
+# for HPC-FF
+export OMP_NUM_THREADS=8
+export MKL_SERIAL=YES
+export KMP_STACKSIZE=256M
+export PSI_EXPORTS=MKL_SERIAL,OMP_NUM_THREADS,KMP_STACKSIZE
+
+
+EOF
+;;
+
+*)
+esac
+
+cat <<EOF >> go_$DATANAME.cmd
+set -vx
+cd ${RESDIR}
+
+# Test if restart files exist
+# ---------------------------
+file_list=${RESDIR}/NUM_RST
+if [ ! -e "jorek_restart.rst" ]; then
+   echo "==================================================================================="
+   echo " The restart file does not exist, so INIT"
+   echo " nb_restart = " \$nb_restart
+   echo "==================================================================================="
+   echo " "
+   nb_restart=0
+   ${UTILDIR}/setinput.sh ${DATANAME} restart=.f. nstep_n=0 tstep_n=1
+   ${UTILDIR}/setinput.sh ${DATANAME} restart=.f. nstep=0 tstep=1
+else
+   echo "==================================================================================="
+   echo " Restart file does exist, so LOOP"
+   nb_restart=\$(head -n 1 \${file_list} | awk  '{print \$NF}')
+   echo " nb_restart = " \$nb_restart
+   echo "==================================================================================="
+   echo " "
+   ${UTILDIR}/setinput.sh ${DATANAME} restart=.t.
+   # generate files using "utils/extract_live_data.sh"
+   ${UTILDIR}/extract_live_data.sh energies       > ${RESDIR}/energies_${DATANAME}___${out_increment}.dat
+   ${UTILDIR}/extract_live_data.sh growth_rates   > ${RESDIR}/growth_rates_${DATANAME}___${out_increment}.dat
+   ${UTILDIR}/extract_live_data.sh input_profiles > ${RESDIR}/input_profiles_${DATANAME}___${out_increment}.dat
+fi
+
+# Test if restart files exist
+# ---------------------------
+if [ "\$nb_restart" -gt "0" ]; then
+   if [ ! -e "jorek_restart.rst" ] ; then
+      echo "==================================================================================="
+      echo " The restart file 'jorek_restart.rst' does not exist, and should. HALTING.........."
+      echo "==================================================================================="
+      echo " "
+      exit  
+   fi
+fi  
+
+# run jorek
+# ---------
+export OMP_NUM_THREADS=${NTHREAD}
+${CMD_MPIRUN}
+
+# generate files using "utils/extract_live_data.sh"
+${UTILDIR}/extract_live_data.sh energies     > ${RESDIR}/energies_${DATANAME}___${out_increment}.dat
+${UTILDIR}/extract_live_data.sh growth_rates > ${RESDIR}/growth_rates_${DATANAME}___${out_increment}.dat
+${UTILDIR}/extract_live_data.sh input_profiles > ${RESDIR}/input_profiles_${DATANAME}___${out_increment}.dat
+
+status=\$?
+
+#TMP if [ "\$status" -eq "0" ]; then
+#TMP    ((nb_restart=nb_restart+1))
+#TMP    echo "==================================================================================="
+#TMP    echo " nb_restart = " \$nb_restart
+#TMP    echo \$nb_restart > ${RESDIR}/NUM_RST
+#TMP    echo "==================================================================================="
+#TMP    echo " "
+#TMP    cat ${RESDIR}/NUM_RST
+#TMP 
+#TMP    mv jorek_restart.rst jorek_restart.rst.cpy
+#TMP    rm -f machinefile
+#TMP 
+#TMP    # now, let's run jorek2vtk on the restart files
+#TMP    # created during this execution only
+#TMP    # ----------------------------------
+#TMP    # first, let's test if there is the same # of "jorek_0000xxx.rst"
+#TMP    # and "jorek_0000xxx.vtk" files in both RST/ and VTK/
+#TMP    if  [ ${NBFILES} -eq "0" ]; then   
+#TMP       echo "==================================================================================="
+#TMP       echo " =============>> preparing to create the VTK files "
+#TMP       echo "==================================================================================="
+#TMP       echo " "
+#TMP    else
+#TMP       echo "==================================================================================="
+#TMP       echo " =============>> THERE MAY BE A SERIOUS PROBLEM, CHECK CONSISTENCY "
+#TMP       echo " =============>> BETWEEN THE NUMBER OF RST FILES AND VTK FILES     "
+#TMP       echo "==================================================================================="
+#TMP       echo " "
+#TMP    fi
+#TMP 
+#TMP    # first, temporarilly erase "jorek_restart.rst" if it exists
+#TMP    if [ ! -e "jorek_restart.rst" ]; then
+#TMP      echo " jorek_restart.rst has already been removed..... "
+#TMP    else
+#TMP      mv jorek_restart.rst jorek_restart.rst.cpy
+#TMP    fi
+#TMP 
+#TMP    # compute the number of restart and written files
+#TMP    # -----------------------------------------------
+#TMP    # compute how many restart files were written in this execution
+#TMP    NBFILERST_MAIN=\$(ls ${RESDIR}/*.rst | wc -l)
+#TMP    # the actual number of restart files written is thus
+#TMP    (( NBFILE_WRITTEN= \${NBFILERST_MAIN} - ${NBFILEVTK_INI} ))
+#TMP    echo " NBFILERST_MAIN = " \$NBFILERST_MAIN
+#TMP    echo " NBFILE_WRITTEN = " \$NBFILE_WRITTEN
+#TMP    echo " "
+#TMP 
+#TMP    # create the list of all restart names --better to proceed this way because "nout" can be
+#TMP    # any number from one restart to the other
+#TMP    # ----------------------------------------
+#TMP    # thus, list only contains names as "jorek000xxx.rst"
+#TMP    list_tmp=\$(ls jorek*.rst  >TMP_FILE)
+#TMP    # create the array "array_GDP" of "000xxx" values whilst reading every line of file "TMP_FILE"
+#TMP    index="1"
+#TMP    while read line; do 
+#TMP      hoho=\${line:5:5}
+#TMP      array_GDP[\$index]=\$hoho
+#TMP      (( index = \$index + 1 ))
+#TMP    done < TMP_FILE
+#TMP    rm -rf TMP_FILE
+#TMP 
+#TMP    # now create the VTK files
+#TMP    # ------------------------
+#TMP    if [ $NBFILEVTK_INI -eq 0 ]; then
+#TMP       vtkfile="jorek00000.vtk"
+#TMP       rstfile="jorek00000.rst"
+#TMP       echo "==================================================================================="
+#TMP       echo " =============>> creating vtk file = " \${vtkfile} ", in folder = " ${VTKDIR}
+#TMP       echo "==================================================================================="
+#TMP       echo " "
+#TMP       cp \$rstfile jorek_restart.rst
+#TMP       $JOREKENV ./${VTKEXECNAME} < ${DATANAME}
+#TMP       mv jorek_tmp.vtk ${VTKDIR}/\${vtkfile}
+#TMP       # the "jorek_restart.rst" file remains in the working directory
+#TMP       cp \${rstfile}   ${RSTDIR}/\${rstfile}
+#TMP       mv trace*.out ${TRACEDIR}
+#TMP    else
+#TMP       # values in "array_GDP" to be used are the ones from $NBFILEVTK_INI to the end, i.e. the
+#TMP       # size of the array, which corresponds to \${NBFILERST_MAIN}
+#TMP       ((vtkiniplusun=${NBFILEVTK_INI} + 1))
+#TMP       for (( ifile= \${vtkiniplusun} ; ifile <= \${NBFILERST_MAIN} ; ifile += 1 )); do
+#TMP         increment=\${array_GDP[\${ifile}]}
+#TMP         vtkfile='jorek'\${increment}'.vtk'
+#TMP         rstfile='jorek'\${increment}'.rst'
+#TMP         echo "==================================================================================="
+#TMP         echo " =============>> creating vtk file = " \${vtkfile}", in folder = " ${VTKDIR}
+#TMP         echo "==================================================================================="
+#TMP         echo " "
+#TMP         cp \$rstfile jorek_restart.rst
+#TMP         $JOREKENV ./${VTKEXECNAME} < ${DATANAME}
+#TMP         mv jorek_tmp.vtk ${VTKDIR}/\${vtkfile}
+#TMP         # all "jorek_****.rst" file remain in the working directory
+#TMP         cp \${rstfile}   ${RSTDIR}/\${rstfile}
+#TMP         mv trace*.out ${TRACEDIR}
+#TMP       done
+#TMP    fi
+#TMP 
+#TMP    # create again the "jorek_restart.rst" file
+#TMP    cp jorek_restart.rst.cpy jorek_restart.rst
+#TMP 
+#TMP    # new submission
+#TMP    # --------------
+#TMP    cd ${WKDIR}
+#TMP #   ${CMD_SUBRST}
+#TMP else
+#TMP    if [ "\${ARCH}" == "nfs" ]; then
+#TMP       source /data/JOREK/jorek_env/jorek_env.sh &> /dev/null
+#TMP       mpdallexit &> /dev/null
+#TMP    fi
+#TMP fi
+EOF
+
+chmod +x go_$DATANAME.cmd
+cd ${WKDIR}
+${CMD_SUB}
+
+
+

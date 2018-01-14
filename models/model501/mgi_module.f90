@@ -3,7 +3,7 @@ module mgi_module
   use constants
 
   real*8 :: total_n_particles_inj
-  real*8 :: total_n_particles_plasma
+  real*8 :: total_n_particles
   real*8 :: total_n_particles_inj_all
 
   contains 
@@ -237,6 +237,11 @@ module mgi_module
 
     endif
 
+  if (rhon_source < 0.) then
+    rhon_source = 0.
+  end if
+
+
   return
   end subroutine mgi_source
 
@@ -267,7 +272,7 @@ module mgi_module
 
     if (my_id .eq. 0) then
       write(*,*) 'total neutrals particles injected per second =', total_n_particles_inj
-      write(*,*) 'total neutrals particles into the plasma =', total_n_particles_plasma
+      write(*,*) 'total neutrals particles into the plasma =', total_n_particles
       write(*,*) 'total neutrals particles injected since the start of the simulation = ', total_n_particles_inj_all
       !write(*,*) 'Check of density conservation'
     endif

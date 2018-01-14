@@ -103,12 +103,14 @@ while [ $# -gt 0 ]; do
     elif [ "$option" == "-l" ]; then
 	echo ""
 	echo "Available test cases:"
+        echo ""
 	cases=`ls -1 -d ${startdir}/testcases/*/ `
 	for i in $cases; do
 	    if [ -e ${i}/.version ]; then
   	      case=$(basename $i)
 	      source ${startdir}/testcases/$case/settings.sh
-	      printf " %-25s %s\n" "$case" "$description"
+	      printf " %-45s %s\n" "$case" "$description"
+              echo ""
             fi
 	done
 	echo ""

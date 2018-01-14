@@ -1064,6 +1064,8 @@ do ms=1, n_gauss
 			                           - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )         &
 						 * xjac * theta * tstep 
 
+                amat_28 = 0     ! Place holder
+
 !###################################################################################################
 !#  equation 3                                                                                     #
 !###################################################################################################
@@ -1410,6 +1412,8 @@ do ms=1, n_gauss
                                    * (-(ps0_s * vpar_t - ps0_t * vpar_s)/xjac + F0 / BigR * vpar_p) / BigR                        &
                                    * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep   
 
+                amat_78 = 0 ! Place holder
+
 !################################################################################################### 
 !#  equation 8   impurity density equation                                                          # 
 !################################################################################################### 
@@ -1436,7 +1440,10 @@ do ms=1, n_gauss
 
                ! We do not include the term coming from div(rhon * v_star_i) because they are prop. to rho_n/rho, because they may cause problems
                ! in areas where rho is small.                   
-                 
+
+                amat_85 = 0 ! Place holder
+                amat_86 = 0 ! Place holder                 
+
                 amat_87 = + v * F0 / BigR * Vpar * rn0_p                                           * xjac * theta * tstep &
                           + v * Vpar * (rn0_s * ps0_t - rn0_t * ps0_s)                                    * theta * tstep &
                           + v * rn0 * (vpar_s * ps0_t - vpar_t * ps0_s)                                   * theta * tstep &

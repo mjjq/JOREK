@@ -1116,6 +1116,8 @@ do ms=1, n_gauss
                                                - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )  &
                                              * xjac * theta * tstep				 
 
+                amat_28 = 0 ! Place holder
+
 !###################################################################################################
 !#  equation 3   (current definition)                                                              #
 !###################################################################################################
@@ -1581,6 +1583,8 @@ do ms=1, n_gauss
                       * (                                        + F0 / BigR * vpar_p) / BigR                        &
                       * (                                        + F0 / BigR * v_p)  * xjac * theta * tstep*tstep
 		     		     
+                amat_78 = 0 ! Place holder
+
 !################################################################################################### 
 !#  equation 8   neutral density equation                                                          # 
 !################################################################################################### 
@@ -1606,6 +1610,9 @@ do ms=1, n_gauss
                                                      * ( v_x * u0_y - v_y  * u0_x) * xjac * theta * tstep * tstep     &
                    + TG_num8 * 0.25d0 * BigR**3 * (rn0_x * u0_y - rn0_y * u0_x)                                       &
                                                      * ( v_x * u_y  - v_y  * u_x)  * xjac * theta * tstep * tstep 
+
+         amat_85 = 0 ! Place holder
+         amat_86 = 0 ! Place holder
 
       
          amat_87 = + v * F0 / BigR * Vpar * rn0_p                                             *  xjac * theta * tstep &

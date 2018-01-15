@@ -61,8 +61,6 @@ D_int    = 0.d0
 P_int    = 0.d0
 C_intern = 0.d0
 
-write(*,*) "Et tu Brute 00"
-
 D_ext    = 0.d0
 P_ext    = 0.d0
 C_ext    = 0.d0
@@ -71,20 +69,12 @@ C_hel    = 0.d0
 Volume   = 0.d0
 Area     = 0.d0
 
-write(*,*) "Et tu Brute 01"
-
 heat_src_in  = 0.d0
-
-write(*,*) "Et tu Brute 02"
 
 heat_src_out = 0.d0
 part_src_in  = 0.d0
 
-write(*,*) "Et tu Brute 03"
-
 part_src_out = 0.d0
-
-write(*,*) "Et tu Brute"
 
 Bgeo = F0 / R_geo
 

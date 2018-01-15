@@ -175,6 +175,10 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
+
+  integer :: holder
+  integer :: getpid
+
   
   !***********************************************************************
   !*                  intialisation                                      *
@@ -939,6 +943,18 @@ required = 0
       call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
+
+    ! --- The following is for parallel debugging only
+
+    !holder = 0;
+    !write(*,*) "my_id", my_id, "PID", getpid(), "Host", name
+
+    !do while (holder == 0)
+    !  call sleep(5)
+    !end do
+
+    ! --- End of parallel debugging section 
+
     
     ! --- construct the matrix from elemental matrices
     if ( use_pastix .and. use_murge .and. use_murge_element ) then

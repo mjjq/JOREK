@@ -71,11 +71,13 @@ if (my_id .eq. 0) then
     enddo
    
    endif
-!   write(*,'(i5,20e12.4)') i,node_list%node(i)%values(1,:,2),node_list%node(i)%values(2,:,2)
+   !write(*,'(i5,20e12.4)') i,node_list%node(i)%values(1,:,2),node_list%node(i)%values(2,:,2)
 
   enddo
+
   !stop
   do i = 1, node_list%n_nodes
+
   if((node_list%node(i)%constrained) ) then   
 
             lambda = node_list%node(i)%ref_lambda
@@ -83,22 +85,25 @@ if (my_id .eq. 0) then
 	    index_elm = node_list%node(i)%parent_elem
 	    parent(1) = node_list%node(i)%parents(1)
 	    parent(2) = node_list%node(i)%parents(2)
+
         
 	    call basisfunctions(lambda, mu, H, H_s, H_t, H_st)
 	   
             do j = 1, n_vertex_max           
                  Pr(j) = element_list%element(index_elm)%vertex(j)    
             end do 
-      
 	     h_u =1.
 	     h_v =1. 
 	     h_w =h_u*h_v 
+
 
 #ifdef JECCD
 ! the n=0 component of eccd current should never be frozen when linear_run=true
 ! this bit of code separates out that final equation.
 ! update values and deltas for first n_var-1 variables normally
    do ivar=1,n_var-1
+
+
             Psi = 0.
             dPsi_ds = 0.
             dPsi_dt = 0.

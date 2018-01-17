@@ -941,7 +941,7 @@ module exec_commands
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     ! ### is nTht and nphi really chosen well???
-    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=6*n_plane,                &
+    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=max(150,6*n_plane),                &
       nsmallsteps=nsmall)
     tor_pos_list = tor_pos(nphi=max(n_plane,2))
     

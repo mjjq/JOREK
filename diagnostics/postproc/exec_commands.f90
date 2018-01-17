@@ -943,7 +943,7 @@ module exec_commands
     ! ### is nTht and nphi really chosen well???
     pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=6*n_plane,                &
       nsmallsteps=nsmall)
-    tor_pos_list = tor_pos(nphi=n_plane)
+    tor_pos_list = tor_pos(nphi=max(n_plane,2))
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)

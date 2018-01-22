@@ -1065,7 +1065,6 @@ required = 0
        end if
 #endif
 
-       !write(*,*) "Check Point 02"
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)

@@ -33,7 +33,7 @@ subroutine init_live_data_model(file_handle)
     d_perp  = get_dperp (psin)
     zk_perp = get_zkperp(psin)
     
-    write(file_handle,'(a,20es12.4)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens, dn_dpsi,    &
+    write(file_handle,'(a,20es13.4e3)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens, dn_dpsi,    &
       temp, dT_dpsi, S_rho, S_T, d_perp, zk_perp
     
   end do

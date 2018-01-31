@@ -948,8 +948,8 @@ module exec_commands
     
     write(filename,'(15a)') DIR, 'exprs_Rmin', trim(real2str(Rmin)), '_Rmax', trim(real2str(Rmax)),&
       '_Zmin', trim(real2str(Zmin)), '_Zmax', trim(real2str(Zmax)), '_phi', trim(real2str(phi)),   &
-      trim(step_range_string(loop_min_step,loop_max_step)), '.h5'
-    
+      trim(step_range_string(index_now,index_now)), '.h5'
+      
     comment = 'Output produced by jorek2_postproc command "rectangle"'
     
     call eval_expr(eq, units, expr_list,                                                           &

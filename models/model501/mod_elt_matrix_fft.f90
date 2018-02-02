@@ -1208,15 +1208,15 @@ do ms=1, n_gauss
 !#  equation 3   (current definition)                                                              #
 !###################################################################################################
 
-             amat_33 = v * zj / BigR * xjac                                * tstep
-             amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac          * tstep
+             amat_33 = v * zj / BigR * xjac                               
+             amat_31 = (v_x * psi_x + v_y * psi_y ) / BigR * xjac          
 
 !###################################################################################################
 !#  equation 4   (vorticity definition)                                                            #
 !###################################################################################################
 
-             amat_44 =  v * w * BigR * xjac                                * tstep
-             amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac               * tstep
+             amat_44 =  v * w * BigR * xjac                               
+             amat_42 = (v_x * u_x + v_y * u_y) * BigR * xjac               
 
 !###################################################################################################
 !#  equation 5   (density equation)                                                                #

@@ -47,7 +47,7 @@ real*8     :: u0, u0_x, u0_y, u0_p, u0_s, u0_t, u0_ss, u0_st, u0_tt, u0_xx, u0_x
 real*8     :: w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_st, w0_tt, w0_xx, w0_xy, w0_yy
 real*8     :: Vpar0, Vpar0_x, Vpar0_y, Vpar0_p, Vpar0_s, Vpar0_t, Vpar0_ss, Vpar0_st, Vpar0_tt, vpar0_xx, vpar0_xy, vpar0_yy
 real*8     :: r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_st, r0_tt, r0_xx, r0_xy, r0_yy
-real*8     :: r0_corr, rn0_corr, r0_hat, r0_x_hat, r0_y_hat
+real*8     :: r0_corr, rn0_corr, r0_hat, r0_x_hat, r0_y_hat, T0_corr, dT0_corr_dT, d2T0_corr_dT2
 real*8     :: T0, T0_x, T0_y, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt, T0_xx, T0_xy, T0_yy, T_corr
 real*8     :: dT_corr_dT, d2T_corr_dT2
 real*8     :: psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_st, psi_tt, psi_xx, psi_yy, psi_xy
@@ -317,8 +317,6 @@ do ms=1, n_gauss
      r0_tt = eq_tt(mp,5,ms,mt)
 
      r0_corr = corr_neg_dens(r0) ! Correction for negative r0 ...
-     dr0_corr_dr0 = dcorr_neg_temp_dT(r0) ! Improve the correction
-     d2r0_corr_dr02 = d2corr_neg_temp_dT2(r0,(/1.d-8,1.d-5/))
 
      r0_hat   = BigR**2 * r0
      r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
@@ -513,11 +511,9 @@ do ms=1, n_gauss
      if ( visco_T_dependent ) then       
        visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
        dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) * dT0_corr_dT
-       d2visco_d2T = (  visco * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0) ) * d2T0_corr_dT2
      else
        visco_T   = visco
        dvisco_dT = 0.d0
-       d2visco_d2T = 0.d0
      end if
      
      ! --- Temperature dependent parallel heat diffusivity
@@ -744,14 +740,14 @@ do ms=1, n_gauss
 
                       - zeta * BigR * BigR**2 * delta_g(mp,5,ms,mt) * (v_x * u0_x + v_y * u0_y) * xjac &
                       ! Additional zeta term for timesteping here (new momentum)
-                      + BigR**2 * (r0_x_hat * u0_y - r0_y_hat * u0_x) * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
+                      - BigR**2 * (r0_x_hat * u0_y - r0_y_hat * u0_x) * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
                       ! Perp component of the third term of Eq.20 here (new momentum)
-                      - BigR**2 * r0 * F0 / BigR * vpar0_p * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
-                      - BigR**2 * vpar0 * F0 / BigR * r0_p * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
+                      + BigR**2 * r0 * F0 / BigR * vpar0_p * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
+                      + BigR**2 * vpar0 * F0 / BigR * r0_p * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
                       ! Toroidal para component of the third term of Eq.20 here (new momentum)
-                      - BigR**2 * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
+                      + BigR**2 * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
                         * (v_x * u0_x + v_y * u0_y) * xjac* tstep  &
-                      - BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x) &
+                      + BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x) &
                         * (v_x * u0_x + v_y * u0_y) * xjac* tstep
                       ! Poloidal para component of the third term of Eq.20 here (new momentum)
 
@@ -874,14 +870,14 @@ do ms=1, n_gauss
 
                       + zeta * v * delta_g(mp,5,ms,mt) * vpar0 * F0**2 / BigR                    * xjac  &
                       ! Additional zeta term for timesteping here (new momentum)
-                      - (r0_x_hat * u0_y - r0_y_hat * u0_x) * vpar0 * BB2 * v * xjac* tstep &
+                      + (r0_x_hat * u0_y - r0_y_hat * u0_x) * vpar0 * BB2 * v * xjac* tstep &
                       ! Perp component of the fifth term of Eq.29 here (new momentum)
-                      + r0 * F0 / BigR * vpar0_p * vpar0 * BB2 * v * xjac* tstep &
-                      + vpar0 * F0 / BigR * r0_p * vpar0 * BB2 * v * xjac* tstep &
+                      - r0 * F0 / BigR * vpar0_p * vpar0 * BB2 * v * xjac* tstep &
+                      - vpar0 * F0 / BigR * r0_p * vpar0 * BB2 * v * xjac* tstep &
                       ! Toroidal para component of the fifth term of Eq.29 here (new momentum)
-                      + r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
+                      - r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
                         * vpar0 * BB2 * v * xjac* tstep  &
-                      + vpar0 * (r0_x * ps0_y - r0_y * ps0_x) &
+                      - vpar0 * (r0_x * ps0_y - r0_y * ps0_x) &
                         * vpar0 * BB2 * v * xjac* tstep  &
                       ! Poloidal para component of the fifth term of Eq.29 here (new momentum)
 
@@ -1051,9 +1047,9 @@ do ms=1, n_gauss
 
                  amat_21 = - v * (psi_s * zj0_t - psi_t * zj0_s)                          * theta * tstep &
 
-                      + BigR**2 * r0 * (vpar0_x * psi_y - vpar0_y * psi_x) &
+                      - BigR**2 * r0 * (vpar0_x * psi_y - vpar0_y * psi_x) &
                         * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                      + BigR**2 * vpar0 * (r0_x * psi_y - r0_y * psi_x) &
+                      - BigR**2 * vpar0 * (r0_x * psi_y - r0_y * psi_x) &
                         * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
                       ! Poloidal para component of the third term of Eq.20 here (new momentum)
 
@@ -1066,15 +1062,17 @@ do ms=1, n_gauss
 		           + v * tauIC * BigR**4 * (u_xy * (p0_xx - p0_yy) - p0_xy * (u_xx - u_yy))  * xjac * theta * tstep &
                            !- BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
 
-                       - BigR**2 * (r0_x_hat * u_y - r0_y_hat * u_x) * (v_x * u_x + v_y * u_y) &
+                       + BigR**2 * (r0_x_hat * u0_y - r0_y_hat * u0_x) * (v_x * u_x + v_y * u_y) &
+                         * xjac * theta * tstep &
+                       + BigR**2 * (r0_x_hat * u_y - r0_y_hat * u_x) * (v_x * u0_x + v_y * u0_y) &
                          * xjac * theta * tstep &
                       ! Perp component of the third term of Eq.20 here (new momentum)
-                      + BigR**2 * r0 * F0 / BigR * vpar0_p * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
-                      + BigR**2 * vpar0 * F0 / BigR * r0_p * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
+                      - BigR**2 * r0 * F0 / BigR * vpar0_p * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
+                      - BigR**2 * vpar0 * F0 / BigR * r0_p * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
                       ! Toroidal para component of the third term of Eq.20 here (new momentum)
-                      + BigR**2 * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
+                      - BigR**2 * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
                         * (v_x * u_x + v_y * u_y) * xjac * theta * tstep  &
-                      + BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x) &
+                      - BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x) &
                         * (v_x * u_x + v_y * u_y) * xjac * theta * tstep  &
                       ! Poloidal para component of the third term of Eq.20 here (new momentum)
 
@@ -1101,15 +1099,15 @@ do ms=1, n_gauss
                  amat_25 = - BigR**3 * rho * (v_x * u0_x + v_y * u0_y) * xjac  * (1.d0 + zeta)          &
                       ! Additional zeta term for timesteping here (new momentum)
 
-                      - BigR**2 * (rho_x_hat * u0_y - rho_y_hat * u0_x) &
+                      + BigR**2 * (rho_x_hat * u0_y - rho_y_hat * u0_x) &
                         * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
                       ! Perp component of the third term of Eq.20 here (new momentum)
-                      + BigR**2 * rho * F0 / BigR * vpar0_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                      + BigR**2 * vpar0 * F0 / BigR * rho_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                      - BigR**2 * rho * F0 / BigR * vpar0_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                      - BigR**2 * vpar0 * F0 / BigR * rho_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
                       ! Toroidal para component of the third term of Eq.20 here (new momentum)
-                      + BigR**2 * rho * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
+                      - BigR**2 * rho * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
                         * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
-                      + BigR**2 * vpar0 * (rho_x * ps0_y - rho_y * ps0_x) &
+                      - BigR**2 * vpar0 * (rho_x * ps0_y - rho_y * ps0_x) &
                         * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
                       ! Poloidal para component of the third term of Eq.20 here (new momentum)
 
@@ -1144,12 +1142,12 @@ do ms=1, n_gauss
 			                           - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )         &
 						 * xjac * theta * tstep 
 
-             amat_27 = + BigR**2 * r0 * F0 / BigR * vpar_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                      + BigR**2 * vpar * F0 / BigR * r0_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+             amat_27 = - BigR**2 * r0 * F0 / BigR * vpar_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                      - BigR**2 * vpar * F0 / BigR * r0_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
                       ! Toroidal para component of the third term of Eq.20 here (new momentum)
-                      + BigR**2 * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) &
+                      - BigR**2 * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) &
                         * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
-                      + BigR**2 * vpar * (r0_x * ps0_y - r0_y * ps0_x) &
+                      - BigR**2 * vpar * (r0_x * ps0_y - r0_y * ps0_x) &
                         * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
                       ! Poloidal para component of the third term of Eq.20 here (new momentum)
 
@@ -1431,9 +1429,9 @@ do ms=1, n_gauss
 
                          !+ v * (particle_source(ms,mt) + source_pellet) * vpar0 * BB2_psi * BigR * xjac * theta * tstep &
 
-                      - r0 * (vpar0_x * psi_y - vpar0_y * psi_x) &
+                      + r0 * (vpar0_x * psi_y - vpar0_y * psi_x) &
                         * vpar0 * BB2 * v * xjac * theta * tstep  &
-                      - vpar0 * (r0_x * psi_y - r0_y * psi_x) &
+                      + vpar0 * (r0_x * psi_y - r0_y * psi_x) &
                         * vpar0 * BB2 * v * xjac * theta * tstep  &
                       ! Poloidal para component of the fifth term of Eq.29 here (new momentum)
 
@@ -1455,7 +1453,7 @@ do ms=1, n_gauss
                                    * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep
 			 
 
-                 amat_72 = (r0_x_hat * u_y - r0_y_hat * u_x) * vpar0 * BB2 * v * theta * xjac* tstep
+                 amat_72 = - (r0_x_hat * u_y - r0_y_hat * u_x) * vpar0 * BB2 * v * theta * xjac* tstep
                       ! Perp component of the third term of Eq.20 here (new momentum)
  
 
@@ -1471,14 +1469,14 @@ do ms=1, n_gauss
                        + v * rho * vpar0 * F0**2 / BigR * xjac * (1.d0 + zeta)  &
                       ! Additional zeta term for timesteping here (new momentum)
 
-                      + (rho_x_hat * u0_y - rho_y_hat * u0_x) * vpar0 * BB2 * v * theta * xjac* tstep &
+                      - (rho_x_hat * u0_y - rho_y_hat * u0_x) * vpar0 * BB2 * v * theta * xjac* tstep &
                       ! Perp component of the fifth term of Eq.29 here (new momentum)
-                      - rho * F0 / BigR * vpar0_p * vpar0 * BB2 * v * theta * xjac* tstep &
-                      - vpar0 * F0 / BigR * rho_p * vpar0 * BB2 * v * theta * xjac* tstep &
+                      + rho * F0 / BigR * vpar0_p * vpar0 * BB2 * v * theta * xjac* tstep &
+                      + vpar0 * F0 / BigR * rho_p * vpar0 * BB2 * v * theta * xjac* tstep &
                       ! Toroidal para component of the fifth term of Eq.29 here (new momentum)
-                      - rho * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
+                      + rho * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
                         * vpar0 * BB2 * v * theta * xjac* tstep  &
-                      - vpar0 * (rho_x * ps0_y - rho_y * ps0_x) &
+                      + vpar0 * (rho_x * ps0_y - rho_y * ps0_x) &
                         * vpar0 * BB2 * v * theta * xjac* tstep  &
                       ! Poloidal para component of the fifth term of Eq.29 here (new momentum)
 
@@ -1501,14 +1499,17 @@ do ms=1, n_gauss
 
                          !+ v * (particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR  * xjac * theta * tstep &
 
-                      + (r0_x_hat * u0_y - r0_y_hat * u0_x) * vpar * BB2 * v * xjac * theta * tstep &
+                      - (r0_x_hat * u0_y - r0_y_hat * u0_x) * vpar * BB2 * v * xjac * theta * tstep &
                       ! Perp component of the fifth term of Eq.29 here (new momentum)
-                      - r0 * F0 / BigR * vpar_p * vpar * BB2 * v * xjac * theta * tstep &
-                      - vpar * F0 / BigR * r0_p * vpar * BB2 * v * xjac * theta * tstep &
+                      + r0 * F0 /BigR * vpar0_p * vpar * BB2 * v * xjac * theta * tstep &
+                      + r0 * F0 /BigR * vpar_p * vpar0 * BB2 * v * xjac * theta * tstep &
+                      + 2.0 * vpar0 * F0 / BigR * r0_p * vpar * BB2 * v * xjac * theta * tstep &
                       ! Toroidal para component of the fifth term of Eq.29 here (new momentum)
-                      - r0 * (vpar_x * ps0_y - vpar_y * ps0_x) &
+                      + r0 * (vpar_x * ps0_y - vpar_y * ps0_x) &
+                        * vpar0 * BB2 * v * xjac * theta * tstep  &
+                      + r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
                         * vpar * BB2 * v * xjac * theta * tstep  &
-                      - vpar * (r0_x * ps0_y - r0_y * ps0_x) &
+                      + 2.0 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x) &
                         * vpar * BB2 * v * xjac * theta * tstep  &
                       ! Poloidal para component of the fifth term of Eq.29 here (new momentum)
 

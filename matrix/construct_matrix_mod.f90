@@ -51,10 +51,11 @@ contains
     integer iv, iv2, inode1, inode2, i, j
     integer vertex(2), direction(2)
 
+#ifdef COMPARE_ELEMENT_MATRIX
     ! --- Determine ID of each MPI proc
     call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
     my_id = rank
-
+#endif
 
     ! --- Call element_matrix
     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then

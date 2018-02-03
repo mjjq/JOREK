@@ -57,7 +57,7 @@ subroutine initialize(sim, num_groups)
   call MPI_GET_PROCESSOR_NAME(name,resultlength,ierr)
   write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', sim%my_id, ': ', name
 
-  if (sim%my_id .eq. 0) call print_version
+  if (sim%my_id .eq. 0) call jorek2help
 
   ! Initialise mode numbers
   do i_tor=1, n_tor

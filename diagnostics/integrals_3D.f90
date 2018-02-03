@@ -37,7 +37,7 @@ real*8  :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dps
 
 integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_elm_xpoint(2), ifail
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
-real*8  :: R_axis,Z_axis,s_axis,t_axis 
+real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor
 real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, psi_limit
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
@@ -109,7 +109,7 @@ local_n_particles     = 0.d0
 Bgeo = F0 / R_geo
 
 delta_phi = 2.d0 * PI / float(n_plane) / float(n_period)
- 
+
 P_max         = 0.d0
 gradP_max     = 0.d0
 gradP_psi_max = 0.d0
@@ -246,7 +246,7 @@ do ife = ife_min, ife_max
     enddo
   enddo
 
-  eq_zTe = eq_zTe / 2.d0	! electron temperature	
+  eq_zTe = eq_zTe / 2.d0	! electron temperature
 !--------------------------------------------------- sum over the Gaussian integration points
 
   do mp=1,n_plane
@@ -263,7 +263,7 @@ do ife = ife_min, ife_max
         BigR = x_g(ms,mt)
 
         r0     = eq_g(mp,5,ms,mt)
-        T0     = eq_g(mp,6,ms,mt) 
+        T0     = eq_g(mp,6,ms,mt)
         T0e    = eq_g(mp,6,ms,mt) /2.d0
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
@@ -277,7 +277,7 @@ do ife = ife_min, ife_max
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
         rn0    = eq_g(mp,8,ms,mt)
 #endif
-	
+
         eta_T  =   eta   * (abs(T0)/T_0)**(-1.5d0)
 
         dTdx   = (   y_t(ms,mt) * eq_s(mp,6,ms,mt) - y_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
@@ -296,7 +296,7 @@ do ife = ife_min, ife_max
         dPdx = r0 * dTdx + T0 * drhodx
         dPdy = r0 * dTdy + T0 * drhody
 
-        grad_P   = sqrt(dPdx**2   + dPdy**2) 
+        grad_P   = sqrt(dPdx**2   + dPdy**2)
         grad_psi = sqrt(dpsidx**2 + dpsidy**2)
 
         grad_P_psi = (dPdx * dpsidx + dPdy * dpsidy)/grad_psi
@@ -333,7 +333,7 @@ do ife = ife_min, ife_max
 
           local_pellet_particles = local_pellet_particles + source_pellet * bigR * xjac * wst * delta_phi
           local_plasma_particles = local_plasma_particles + r0            * bigR * xjac * wst * delta_phi
-          local_pellet_volume    = local_pellet_volume    + source_volume * bigR * xjac * wst * delta_phi 
+          local_pellet_volume    = local_pellet_volume    + source_volume * bigR * xjac * wst * delta_phi
 
         endif
 
@@ -351,7 +351,7 @@ do ife = ife_min, ife_max
 
 #endif
 
-        if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
+        if (in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis)) then
 
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
@@ -456,7 +456,7 @@ source_in   = n_period * source_in   * central_density / t_norm
 if (my_id .eq. 0) then
 
   if (index_start .gt. 0) then
-    xt = xtime(index_start) 
+    xt = xtime(index_start)
   else
     xt = 0.d0
   endif

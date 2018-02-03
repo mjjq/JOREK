@@ -79,7 +79,7 @@ module mod_straight_field_line
     type(type_node_list),   intent(in)    :: node_list
     type(type_element_list),intent(in)    :: element_list
     type(t_equil_state),    intent(in)    :: eq          !< Equilibrium state information
-    real,                   intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
+    real*8,                 intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
     integer,                intent(in)    :: nPsiN       !< Number of flux surfaces
     integer,                intent(in)    :: nTht        !< Number of points in theta*
     integer,                intent(inout) :: ierr        !< Error code
@@ -227,7 +227,7 @@ module mod_straight_field_line
     type(type_node_list),   intent(in)    :: node_list
     type(type_element_list),intent(in)    :: element_list
     type(t_equil_state),    intent(in)    :: equil_state !< Equilibrium state information
-    real,                   intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
+    real*8,                 intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
     integer,                intent(in)    :: nPsiN       !< Number of flux surfaces
     integer,                intent(in)    :: nTht        !< Number of points in theta*
     integer,                intent(inout) :: ierr        !< Error code
@@ -349,7 +349,7 @@ module mod_straight_field_line
     type(type_node_list),   intent(in)    :: node_list
     type(type_element_list),intent(in)    :: element_list
     type(t_equil_state),    intent(in)    :: equil_state !< Equilibrium state information
-    real,                   intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
+    real*8,                 intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
     integer,                intent(in)    :: nmaxsteps   !< Maximum number of poloidal steps
     real*8,                 intent(in)    :: deltaphi    !< Toroidal step width of the large steps
     integer,                intent(in)    :: nsmallsteps !< Number of small steps between large ones

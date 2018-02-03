@@ -24,7 +24,7 @@ program JOREK2_FOUR
 
   ! ---Field line tracing parameters
   integer                  :: nstpts, nmaxsteps, nsmallsteps, nmaxsteps_corr
-  real                     :: deltaphi, rad_range(2), deltaphi_corr
+  real*8                   :: deltaphi, rad_range(2), deltaphi_corr
   namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps ,rad_range, nTht
   
   ! --- Initialize mode and mode_type arrays

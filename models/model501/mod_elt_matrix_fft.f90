@@ -870,6 +870,7 @@ do ms=1, n_gauss
                                        * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep  &
 
                     - TG_num6 * 0.25d0 / BigR * vpar0**2 &
+                              * T0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                         &
                               * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep  &
 
                     - TG_num6 * 0.25d0 / BigR * vpar0**2 &

@@ -5,6 +5,8 @@ subroutine grid_bezier_square_polar(nR, nZ, n_radial, R_begin, R_end, Z_begin, Z
 use constants
 use mod_parameters
 use data_structure
+use mod_neighbours, only: update_neighbours
+use mod_element_rtree, only: initialized
 
 implicit none
 
@@ -366,5 +368,7 @@ do i=(nR-1)*(nZ-1)+1,(nR-1)*(nZ-1) + 2*(nR-1)+2*(nZ-1)
 enddo
 
 
+initialized = .false. ! Force redo neighbours and rtree
+call update_neighbours(node_list,element_list)
 return
 end subroutine grid_bezier_square_polar

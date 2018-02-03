@@ -48,6 +48,7 @@ program JOREK2
   use mod_global_matrix_structure
   use mod_import_restart
   use mod_export_restart
+  use mod_element_rtree, only: populate_element_rtree
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -322,7 +323,6 @@ required = 0
 #ifdef JECCD
   if ( my_id == 0) ) call init_live_data2()
   if ( my_id == 0) ) call init_live_data3()
-
 #ifdef JEC2DIAG
    if ( my_id == 0 ) call init_live_data4()
 #endif
@@ -414,6 +414,7 @@ required = 0
     call MPI_BCAST(wall_curr_initialized, 1 , MPI_LOGICAl,          0, MPI_COMM_WORLD, ierr)
     call MPI_BCAST(tstep,                 1 , MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
   end if
+  call populate_element_rtree(node_list, element_list)
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *
@@ -478,6 +479,7 @@ required = 0
       
       ! --- Determine boundary information from the grid
       call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+      call populate_element_rtree(node_list, element_list)
 
       call tr_debug_write("JMAIN:Def_grid elt_list",element_list%n_elements)
       call tr_debug_write("JMAIN:Def_grid node_list",node_list%n_nodes)
@@ -657,6 +659,9 @@ required = 0
 
   call broadcast_nodes(my_id, node_list)                      ! nodes
 
+  ! Let every mpi proc calculate this
+  call populate_element_rtree(node_list, element_list)
+
   call broadcast_phys(my_id)                                  ! physics parameters
   if ( freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
   n_AA = 0  
@@ -733,6 +738,7 @@ required = 0
     !*  		 (i.e id=0 from each MPI_COMM_N)   *
     !*******************************************************
     if (gmres) then
+
        N_masters = (n_tor+1)/2
        if (MOD(n_cpu, N_masters) == 0) then
     	  M_cpu = n_cpu / (N_masters)
@@ -889,6 +895,8 @@ required = 0
 
     call find_axis(99,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
+    ! Find the limiter anyways (since integrals => sources uses it)
+    call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
     psi_bnd = 0.d0
     if (xpoint) then
       call find_xpoint(99,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
@@ -898,7 +906,6 @@ required = 0
         psi_bnd = psi_xpoint(2)
       endif
     else
-      call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
       psi_bnd = psi_lim
     end if
     
@@ -924,7 +931,6 @@ required = 0
 
     ! Build the matrix 
     call clck_time_barrier(t0)
-    
     if (gmres) then
       ! Matrix analysis and factorization in the preconditioner is re-done...
       ! ... in the first step of a simulation (also when restarting)

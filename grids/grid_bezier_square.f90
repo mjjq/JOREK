@@ -3,6 +3,8 @@ subroutine grid_bezier_square(nR,nZ,R_begin,R_end,Z_begin,Z_end,boundary,node_li
 
 use mod_parameters
 use data_structure
+use mod_neighbours, only: update_neighbours
+use mod_element_rtree, only: initialized
 
 implicit none
 
@@ -21,7 +23,8 @@ type(type_element_list), intent(inout) :: element_list   !< list of finite eleme
 integer                  :: m, n, i, j, k, iv, inode_0, inode_p, inode, n_elements, i_element, ip, iuv
 integer                  :: n_element_start, n_node_start, n_index_start
 real*8                   :: xx_0(n_dim),xx_p(n_dim),uv_0(n_dim),uv_p(n_dim)
-real*8, external         :: dlength, ddot
+real*8, external         :: dlength
+real*8, external         :: ddot
 
 write(*,*) '*************************************'
 write(*,*) '*       grid_bezier_square          *'
@@ -127,5 +130,7 @@ do k=1, element_list%n_elements   ! fill in the size of the elements
 
 enddo
 
+initialized = .false. ! Force redo neighbours and rtree
+call update_neighbours(node_list,element_list)
 return
 end subroutine grid_bezier_square

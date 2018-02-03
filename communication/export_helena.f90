@@ -178,7 +178,7 @@ write(*,'(A,f8.5,A)') ' amin : ',aminor,' m'
 write(*,'(A,f8.5,A)') ' Rgeo : ',Rgeo,' m'
 write(*,'(A,f8.5,A)') ' Bgeo : ',Bgeo,' T'
 
-call Integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_xpoint, psi_lim, aminor, &
+call Integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_xpoint, psi_bnd, aminor, &
   Bgeo, current, beta_p, beta_t, beta_n, density, density_in, density_out, pressure, pressure_in,  &
   pressure_out, heat_src_in, heat_src_out, part_src_in, part_src_out)
   
@@ -282,6 +282,11 @@ do i=2, surface_list%n_psi
 
   enddo
 
+  if ( sum_dl == 0.d0 ) then
+    sum_dl = 1.d99
+    write(*,*) 'WARNING: Something went wrong in export_helena. sum_dl==0.'
+  end if
+  
   write(11,'(8e16.8)') surface_list%psi_values(i),dp_int/sum_dl,zjz_int/sum_dl,F0 * q / (2.d0 * PI)
 
 enddo

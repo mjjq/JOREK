@@ -515,8 +515,7 @@ module vacuum
     character :: t_freeboundary, t_resistive_wall
     real*8, allocatable :: t_diag_coil_curr(:,:)
     
-    t_freeboundary = "F"
-    if (.false.) call HDF5_char_reading(file_id,t_freeboundary,"freeboundary") ! WARNING disable reading, remove again
+    call HDF5_char_reading(file_id,t_freeboundary,"freeboundary")
     freeboundary_rst = (t_freeboundary == "T")
     
     if ( freeboundary ) then
@@ -734,7 +733,7 @@ module vacuum
     
     ! --- Local variables
     integer :: ierr, sz(2)
-    
+
     call MPI_BCAST(n_dof_starwall,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     
     if ( resistive_wall ) then
@@ -756,10 +755,10 @@ module vacuum
         if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
         allocate( old_dpsibnd_vec(n_dof_starwall) )
         
-        if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
-        if ( minval(sz) > 0 ) allocate( diag_coil_curr(sz(1),sz(2)) )
       else
       end if
+      if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
+      if ( minval(sz) > 0 ) allocate( diag_coil_curr(sz(1),sz(2)) )
       
       call MPI_BCAST(wall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(dwall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)

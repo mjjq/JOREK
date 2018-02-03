@@ -41,6 +41,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   use phys_module
   use pellet_module
   use vacuum, only: import_restart_vacuum, current_FB_fact
+  use mod_element_rtree, only: populate_element_rtree
   
   implicit none
   
@@ -453,6 +454,8 @@ endif
   if (allocated(values_tmp)) call tr_deallocate(values_tmp,"values_tmp",CAT_UNKNOWN)
   if (allocated(deltas_tmp)) call tr_deallocate(deltas_tmp,"deltas_tmp",CAT_UNKNOWN)
 
+  call populate_element_rtree(node_list, element_list)
+
   return
 end subroutine import_binary_restart
 
@@ -468,6 +471,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use phys_module
   use pellet_module
   use vacuum, only: import_HDF5_restart_vacuum, current_FB_fact
+  use mod_element_rtree, only: populate_element_rtree
 #ifdef USE_HDF5
   use hdf5
   use hdf5_io_module
@@ -1039,6 +1043,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 #else
   write (6,*) " ERROR: trying to import with hdf5 but USE_HDF5 was not set at compile-time"
 #endif
+  call populate_element_rtree(node_list, element_list)
 
   return
 end subroutine import_hdf5_restart

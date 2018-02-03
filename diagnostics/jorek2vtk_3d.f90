@@ -160,7 +160,7 @@ do m=1, n_toroidal
             						    - ps_x * HZ(i_tor,m) / R,			  &
             						    + ps_y * HZ(i_tor,m) / R * sin(angle)  /)
             if (i_tor .eq. 1) then
-              vectors(inode,1:3,1) = vectors(inode,1:3,1) + (/ - F0/R * sin(angle), -0., F0/R *cos(angle)/)
+              vectors(inode,1:3,1) = vectors(inode,1:3,1) + (/ - F0/R * sin(angle), -0.d0, F0/R *cos(angle)/)
             endif
 
             call interp(node_list,element_list,i,2,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)

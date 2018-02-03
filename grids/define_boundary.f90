@@ -139,7 +139,7 @@ if (mf .le. 0) then
 
   call tr_deallocate(work,"work",CAT_GRID)
 
-  mf = 2048
+  mf = 256
 
   do j=1, mf
 

@@ -728,6 +728,12 @@ do ms=1, n_gauss
                       - TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x) &
                                 * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep &
 
+!====================================New TG_num terms=================================
+                      - TG_num2 * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                                * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep &
+!===============================End of NewTG_num terms==============================
+
+
                       - v * tauIC * BigR**4 * (p0_s * w0_t - p0_t * w0_s)        * tstep &
 
                       - tauIC * BigR**3 * p0_y * (v_x* u0_x + v_y * u0_y) * xjac * tstep &
@@ -886,9 +892,30 @@ do ms=1, n_gauss
                              * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
                              * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac + F0 / BigR * v_p)  * xjac * tstep * tstep &
 
-                      - TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
-                             * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
-                             * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)  * xjac * tstep * tstep 
+!                      - TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
+!                             * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
+!                             * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)  * xjac * tstep * tstep &
+
+!=============================== New TG_num terms==================================
+
+                      - TG_NUM7 * 0.25d0 * vpar0 * Vpar0**2 * BB2 &
+                             * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR  &
+                             * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac + F0 / BigR * v_p)  * xjac * tstep * tstep 
+
+!===============================End of new TG_num terms============================
+
+
+!=============================== New TG_num !terms==================================
+!
+!            - TG_NUM7 * 0.25d0 * vpar0 * Vpar0**2 * BB2 &
+!                      * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR  &
+!                      * (-(ps0_s * v_t  - ps0_t * v_s) /xjac + F0 / BigR * v_p )  * xjac * tstep * tstep &
+!            - TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
+!                      * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
+!                      * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)  * xjac * tstep * tstep
+!
+!===============================End of new TG_num terms============================
+
 
 !################################################################################################### 
 !#  equation 8 (impurity density equation)                                                          # 
@@ -1081,8 +1108,18 @@ do ms=1, n_gauss
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep   &
 
                            + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)     &
-                                     * ( v_x * u_y - v_y * u_x)   * xjac * theta * tstep * tstep   
-			   
+                                     * ( v_x * u_y - v_y * u_x)   * xjac * theta * tstep * tstep   & 
+
+!====================================New TG_num terms=================================
+                      + TG_num2 * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u_y - r0_y * u_x) &
+                                * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep &
+
+                      + TG_num2 * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                                * ( v_x * u_y - v_y * u_x) * theta * xjac * tstep * tstep
+
+!===============================End of NewTG_num terms==============================
+
+   
                  amat_23 = - v * (ps0_s * zj_t  - ps0_t * zj_s)                           * theta * tstep  &
                            + eps_cyl * F0 / BigR * v * zj_p  * xjac                       * theta * tstep
 
@@ -1094,7 +1131,14 @@ do ms=1, n_gauss
                         + v * tauIC * BigR**4 * (p0_s * w_t - p0_t * w_s)              * theta * tstep &
 
                          + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w_x * u0_y - w_y * u0_x)     &
-                                   * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep
+                                   * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
+
+!====================================New TG_num terms=================================
+                      + TG_num2 * 0.25d0 * w * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                                * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep
+
+!===============================End of NewTG_num terms==============================
+
 
                  amat_25 = - BigR**3 * rho * (v_x * u0_x + v_y * u0_y) * xjac  * (1.d0 + zeta)          &
                       ! Additional zeta term for timesteping here (new momentum)
@@ -1127,7 +1171,14 @@ do ms=1, n_gauss
                                        * xjac * theta * tstep                                          &
 
                          + TG_num2 * 0.25d0 * rho_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x) &
-                                  * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep
+                                  * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
+
+!====================================New TG_num terms=================================
+                      + TG_num2 * 0.25d0 * w * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                                * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep
+
+!===============================End of NewTG_num terms==============================
+
 
                  amat_26 = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)      * theta * tstep  &
                            - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)    * theta * tstep  &
@@ -1444,14 +1495,24 @@ do ms=1, n_gauss
                                    * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / BigR  &
                                    * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac)  * xjac * theta * tstep*tstep &
             
-                         + TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
-                                   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / BigR  &
-                                   * (-(psi_s * r0_t    - psi_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep &
+!                         + TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
+!                                   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / BigR  &
+!                                   * (-(psi_s * r0_t    - psi_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep &
             
-                         + TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
-                                   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / BigR  &
-                                   * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep
-			 
+!                         + TG_NUM7 * 0.25d0 * v  * Vpar0**2 * BB2 &
+!                                   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / BigR  &
+!                                   * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep
+
+!=============================== New TG_num terms==================================
+                       + TG_NUM7 * 0.25d0 * vpar0 * Vpar0**2 * BB2 &
+                                 * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac) / BigR &
+                                 * (-(psi_s * v_t     - psi_t * v_s)    /xjac) * xjac * theta * tstep*tstep &
+
+                       + TG_NUM7 * 0.25d0 * vpar0 * Vpar0**2 * BB2 &
+                                 * (-(psi_s * r0_t - psi_t * r0_s)/xjac) / BigR &
+                                 * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac) * xjac * theta * tstep*tstep
+!===============================End of new TG_num terms============================
+
 
                  amat_72 = - (r0_x_hat * u_y - r0_y_hat * u_x) * vpar0 * BB2 * v * theta * xjac* tstep
                       ! Perp component of the third term of Eq.20 here (new momentum)
@@ -1485,10 +1546,19 @@ do ms=1, n_gauss
                                      * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
                                      * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac + F0 / BigR * v_p)  * xjac * theta * tstep*tstep &
                
-                           + TG_NUM7 * 0.25d0 * v * Vpar0**2 * BB2 &
-                                     * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
-                                     * (-(ps0_s * rho_t   - ps0_t * rho_s)  /xjac + F0 / BigR * rho_p)* xjac * theta * tstep*tstep 
-			   
+!                           + TG_NUM7 * 0.25d0 * v * Vpar0**2 * BB2 &
+!                                     * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
+!                                     * (-(ps0_s * rho_t   - ps0_t * rho_s)  /xjac + F0 / BigR * rho_p)* xjac * theta * tstep*tstep 
+   
+!=============================== New TG_num terms==================================
+
+                           + TG_NUM7 * 0.25d0 * vpar0 * Vpar0**2 * BB2 &
+                                     * (-(ps0_s * rho_t - ps0_t * rho_s)/xjac + F0 / BigR * rho_p) / BigR  &
+                                     * (-(ps0_s * v_t     - ps0_t * v_s) /xjac + F0 / BigR * v_p)  * xjac * theta * tstep*tstep
+
+!===============================End of new TG_num terms============================
+
+
 
                  amat_76 = + v * (T_s * r0 * ps0_t - T_t * r0 * ps0_s)                     * theta * tstep &
                            + v * (T * r0_s * ps0_t - T * r0_t * ps0_s)                     * theta * tstep &
@@ -1525,17 +1595,26 @@ do ms=1, n_gauss
                                    * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                     &
                                    * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac + F0 / BigR * v_p)  * xjac * theta * tstep*tstep  &
              
-                         + TG_NUM7 * 0.5d0 * v * Vpar * Vpar0 * BB2 &
-                                   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                     &
-                                   * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep &
+!                         + TG_NUM7 * 0.5d0 * v * Vpar * Vpar0 * BB2 &
+!                                   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                     &
+!                                   * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep &
              
                          + TG_NUM7 * 0.25d0 * r0 * Vpar0**2 * BB2 &
                                    * (-(ps0_s * vpar_t - ps0_t * vpar_s)/xjac + F0 / BigR * vpar_p) / BigR                        &
                                    * (-(ps0_s * v_t    - ps0_t * v_s)   /xjac + F0 / BigR * v_p)  * xjac * theta * tstep*tstep    &
              
-                         + TG_NUM7 * 0.25d0 * v * Vpar0**2 * BB2 &
-                                   * (-(ps0_s * vpar_t - ps0_t * vpar_s)/xjac + F0 / BigR * vpar_p) / BigR                        &
-                                   * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep   
+!                         + TG_NUM7 * 0.25d0 * v * Vpar0**2 * BB2 &
+!                                   * (-(ps0_s * vpar_t - ps0_t * vpar_s)/xjac + F0 / BigR * vpar_p) / BigR                        &
+!                                   * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep   
+
+!=============================== New TG_num terms==================================
+
+            + TG_NUM7 * 0.75d0 * Vpar * Vpar0**2 * BB2 &
+                      * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR             &
+                      * (-(ps0_s * v_t  - ps0_t * v_s) /xjac + F0 / BigR * v_p)  * xjac * theta * tstep*tstep
+
+!===============================End of new TG_num terms============================
+
 
                 amat_78 = 0 ! Place holder
 

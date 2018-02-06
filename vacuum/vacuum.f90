@@ -742,8 +742,15 @@ module vacuum
       
       if ( n_wall_curr == 0 ) return
       
-      if ( my_id == 0 ) sz(:) = (/ size(diag_coil_curr,1), size(diag_coil_curr,2) /)
+      if ( my_id == 0 ) then
+        if ( allocated(diag_coil_curr) ) then
+          sz(:) = (/ size(diag_coil_curr,1), size(diag_coil_curr,2) /)
+        else
+          sz(:) = 0
+        end if
+      end if
       call MPI_BCAST(sz,2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      
       
       if ( my_id /= 0 ) then
         if ( allocated(wall_curr) ) deallocate(wall_curr)
@@ -755,10 +762,10 @@ module vacuum
         if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
         allocate( old_dpsibnd_vec(n_dof_starwall) )
         
+        if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
+        if ( minval(sz) > 0 ) allocate( diag_coil_curr(sz(1),sz(2)) )
       else
       end if
-      if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
-      if ( minval(sz) > 0 ) allocate( diag_coil_curr(sz(1),sz(2)) )
       
       call MPI_BCAST(wall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(dwall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)

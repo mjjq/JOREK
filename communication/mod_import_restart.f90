@@ -3,7 +3,7 @@ implicit none
 contains
 !> Imports a restart file written out by the routine export_restart.
 
-subroutine import_restart(node_list, element_list, filename, format_rst, ierr)
+subroutine import_restart(node_list, element_list, filename, format_rst, ierr, no_perturbations)
 
   use tr_module
   use data_structure
@@ -18,15 +18,16 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr)
   character*(*)          , intent(in)    :: filename
   integer,                 intent(out)   :: ierr
   integer,                 intent(in)    :: format_rst  ! format of restart file 
+  logical, optional,       intent(in)    :: no_perturbations ! don't initialize new harmonics
 
   if ( rst_hdf5 == 0 ) then
     write(*,*) " Restart from BINARY file " // trim(filename) // '.rst'
     call import_binary_restart(node_list, element_list, trim(filename)//'.rst', &
-            format_rst, ierr)
+            format_rst, ierr, no_perturbations)
   else if ( rst_hdf5 == 1 ) then
     write(*,*) " Restart from HDF5 file " // trim(filename) // '.h5'
     call import_hdf5_restart(node_list, element_list, trim(filename)//'.h5', &
-            format_rst,ierr)
+            format_rst,ierr, no_perturbations)
   end if
 
 end subroutine import_restart
@@ -34,7 +35,7 @@ end subroutine import_restart
 
 !
 ! Import a binary restart file
-subroutine import_binary_restart(node_list, element_list, filename, format_rst, error)
+subroutine import_binary_restart(node_list, element_list, filename, format_rst, error, no_perturbations)
 
   use tr_module 
   use data_structure
@@ -50,6 +51,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   character(len=*),        intent(in)    :: filename
   integer,                 intent(out)   :: error
   integer,                 intent(in)    :: format_rst  ! format of restart file
+  logical, optional,       intent(in)    :: no_perturbations ! don't initialize new harmonics
   
   ! --- Local variables
   integer              :: i, j, m, k, n_tor_tmp
@@ -64,6 +66,10 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   integer, allocatable 			:: mode_tmp_perturbation(:)
   real*8,  allocatable 			:: values_tmp_perturbation(:,:,:), deltas_tmp_perturbation(:,:,:)
   logical, parameter   			:: import_perturbation = .false.
+  logical                               :: no_pert
+  
+  no_pert = .false.
+  if ( present(no_perturbations) ) no_pert = no_perturbations
 
   error = 0
 
@@ -322,7 +328,7 @@ endif
   enddo
   
   ! --- initialise new harmonics (only density and temperature, to be improved)
-  if (n_tor_tmp .lt. n_tor) then
+  if ( (.not. no_pert) .and. (n_tor_tmp .lt. n_tor) ) then
     ! --- Using an already computated mode
     if ( (import_perturbation) .and. (n_tor .gt. 1) ) then
       
@@ -434,10 +440,13 @@ endif
 
       amplitude = 1.d-10
       do i=1,node_list%n_nodes
-        node_list%node(i)%values(n_tor_tmp+1:n_tor,:,1:4)= 0.d0
+        node_list%node(i)%values(n_tor_tmp+1:n_tor,:,:)= 0.d0
         do j=n_tor_tmp+1, n_tor
           node_list%node(i)%values(j,:,5)= amplitude * node_list%node(i)%values(1,:,5)
           node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)
+#if (JOREK_MODEL == 400)
+          node_list%node(i)%values(j,:,8)= amplitude * node_list%node(i)%values(1,:,8)
+#endif
         enddo
       enddo
     endif
@@ -459,7 +468,7 @@ end subroutine import_binary_restart
 
 !
 ! Import an HDF5 restart file
-subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, error)
+subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, error, no_perturbations)
 
 #include "version.h"
 
@@ -483,6 +492,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   character(len=*),        intent(in)    :: filename
   integer,                 intent(in)    :: format_rst  ! format of restart file
   integer,                 intent(out)   :: error
+  logical, optional,       intent(in)    :: no_perturbations ! don't initialize new harmonics
   
   ! --- Perturbation-Import variables
   type (type_node_list)   , pointer	:: node_list_perturbation
@@ -535,6 +545,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: t_energies2(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
   real*8, allocatable :: t_energies3(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
   real*8, allocatable :: t_energies4(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
+  logical                               :: no_pert
+  
+  no_pert = .false.
+  if ( present(no_perturbations) ) no_pert = no_perturbations
+  
   !
 #endif
   error = 0
@@ -971,7 +986,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   ! --- initialise new harmonics (only density and temperature, to be improved)
   n_new_modes = sum(new_mode(1:n_tor))
   write(*,*), 'Warning:', n_new_modes, ' new modes initialized to noise level' 
-  if ( n_new_modes .gt. 0 ) then
+  if ( (.not. no_pert) .and. (n_new_modes .gt. 0) ) then
     ! --- Using an already computed mode
     if ( (import_perturbation) .and. (n_tor .gt. 1) ) then
       write(*,*) 'ERROR: Importing perturbation from jorek_perturbation.rst file...'
@@ -983,9 +998,12 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       do i=1,node_list%n_nodes
         do m=2,n_tor
           if ( new_mode(m) .eq. 1 ) then
-          node_list%node(i)%values(m,:,1:4) = 0.d0
+          node_list%node(i)%values(m,:,:) = 0.d0
           node_list%node(i)%values(m,:,5)   = amplitude * node_list%node(i)%values(1,:,5)
           node_list%node(i)%values(m,:,6)   = amplitude * node_list%node(i)%values(1,:,6)
+#if (JOREK_MODEL == 400)
+          node_list%node(i)%values(j,:,8)= amplitude * node_list%node(i)%values(1,:,8)
+#endif
           end if
         end do
       end do

@@ -42,7 +42,7 @@ call log_parameters(my_id)
 
 iplot_type = 2 ! 1: Poincare plot in (R,Z) coordinates, 2: in (R,theta) coordinates
 
-call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis
 

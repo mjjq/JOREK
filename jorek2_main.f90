@@ -858,7 +858,7 @@ required = 0
   
   if (nstep > 0) call update_deltas(my_id, node_list) ! create list of delta values in local_matrix module
 
-  iter_gmres  = 999
+  iter_gmres  = iter_precon
   iter_big    = gmres_max_iter
   iter_prev   = 0
 
@@ -928,14 +928,14 @@ required = 0
 
     ! Build the matrix 
     call clck_time_barrier(t0)
+    
     if (gmres) then
-       solve_only = .false.
-       if ((gmres) .and. (istep .gt. 1)) then
-    	  solve_only = .true.
-    	  if (iter_gmres+iter_prev .gt. 2*iter_precon) then			   ! redo preconditioner
-    	     solve_only = .false.
-    	  endif
-       endif
+      ! Matrix analysis and factorization in the preconditioner is re-done...
+      ! ... in the first step of a simulation (also when restarting)
+      ! ... when tstep changes
+      ! ... when the previous time steps took too many iterations
+      solve_only = (istep > 1) .and. (iter_gmres+iter_prev <= 2*iter_precon)
+      if ( my_id == 0 ) write(*,*) 'solve_only: ', solve_only
     endif
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)

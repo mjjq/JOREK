@@ -31,13 +31,28 @@ function printusage() {
     echo "   -h            Print this help information"
     echo "   -k            Keep temporary run directory"
     echo "   -j nthreads   Set the number of compile threads (default 1)"
+    echo "   -d            Compilation with debugging options (DEBUG=1)"
     echo "   -l            List available test cases using long format."
     echo "   -L            List available test cases without any description (short format)"
     echo "   -n            Do not compile (assume executables already exist)"
+    echo "   --diff        Print difference between results and reference (using Python + numpy)"
     echo "   -p            Prepare the case but do not run it"
     echo "   -t tempdir    Specify a temp directory used for the test run"
     echo "                 (default: random name in current directory)"
     echo ""
+}
+
+# --- Generic function for comparing test results (values of end.h5 versus jorek_restart.h5).
+#     This function may be used for all testcases, but it is also possible to define specific
+#     functions in the testcase settings.sh files.
+function compare_results_generic() {
+  threshold=$1
+  ./rst_bin2hdf5 < ./input                                                           || exit 1
+  ln -s ${testcasedir}/end.h5 end.h5                                                 || exit 1
+  if [ "$printdiff" == "yes" ]; then
+    echo "Difference of 'values' between result and reference: `python $startdir/tools/maximum-difference.py` (threshold: $threshold)"
+  fi
+  h5diff -d $threshold jorek_restart.h5 end.h5 values                                || exit 1
 }
 
 if [ -z "$PRERUN" ]; then
@@ -83,8 +98,10 @@ compile="yes"           # (preset)
 keep="no"               # (preset)
 runit="yes"             # (preset)
 initialrun="no"         # (preset)
+printdiff="no"          # (preset)
+debugoptions=""         # (preset)
 if [ -z "$compilethreads" ]; then
-    compilethreads="1"  # (preset)
+    compilethreads="8"  # (preset)
 fi
 tmpdir="$startdir/tmp$$"
 
@@ -97,19 +114,25 @@ while [ $# -gt 0 ]; do
     elif [ "$option" == "-j" ]; then
 	compilethreads="$2"
 	shift 2
+    elif [ "$option" == "-d" ]; then
+	debugoptions="DEBUG=1"
+	shift
     elif [ "$option" == "-k" ]; then
 	keep="yes"
 	shift
+    elif [ "$option" == "--diff" ]; then
+        printdiff="yes"
+        shift
     elif [ "$option" == "-l" ]; then
 	echo ""
 	echo "Available test cases:"
         echo ""
 	cases=`ls -1 -d ${startdir}/testcases/*/ `
 	for i in $cases; do
-	    if [ -e ${i}/.version ]; then
+	    if [ -e ${i}/settings.sh ]; then
   	      case=$(basename $i)
 	      source ${startdir}/testcases/$case/settings.sh
-	      printf " %-45s %s\n" "$case" "$description"
+	      printf "$OK_COL %-45s $NO_COL%s\n" "$case" "$description"
               echo ""
             fi
 	done
@@ -118,7 +141,7 @@ while [ $# -gt 0 ]; do
     elif [ "$option" == "-L" ]; then
 	cases=`ls -1 -d ${startdir}/testcases/*/ `
 	for i in $cases; do
-	    if [ -e ${i}/.version ]; then
+	    if [ -e ${i}/settings.sh ]; then
               case=$(basename $i)
               echo $case
             fi
@@ -126,7 +149,7 @@ while [ $# -gt 0 ]; do
 	exit 0
     elif [ "$option" == "-i" ]; then
         if [ "$firstoption" == "no" ]; then
-          echo "ERROR: When providing the option '-i', it needs to be the first option."
+          printf "$ERROR_COL ERROR: When providing the option '-i', it needs to be the first option. \n $NO_COL"
           printusage
           exit -1
         fi
@@ -179,6 +202,7 @@ if [ "$compile" == "yes" ]; then
   cd $codedir
   compilopt="-j $compilethreads"
   compile_jorek
+  make cleanall
   if [ $? -ne 0 ]; then
     printf "\n$ERROR_COL ERROR: Compilation failed.$NO_COL\n"
     exit 1
@@ -205,11 +229,11 @@ if [ "$runit" == "yes" ]; then
   cd $tmpdir
     
   # --- Some preparations
-  if [ -n "$ompthreads" ]; then
-    export OMP_NUM_THREADS=$ompthreads
-  fi
   if [ -n "$PRERUN" ]; then
     eval $PRERUN                                          || exit 1
+  fi
+  if [ -n "$ompthreads" ]; then
+    export OMP_NUM_THREADS=$ompthreads
   fi
   cd $tmpdir                                              || exit 1
 

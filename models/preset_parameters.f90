@@ -173,6 +173,7 @@ subroutine preset_parameters
   visco_par_num = 0.d0
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
+  Dn_perp_num   = 0.d0
 
   heatsource          = 1.e-7
   heatsource_psin     = 1.0d0
@@ -340,6 +341,31 @@ subroutine preset_parameters
     !=====
      delta_n_convection = 0
      nimp_bg = 0.
+
+    !======= Additional parameters for SPI =======
+     spi_Vel_Rref    = 0.0d0
+     spi_Vel_Zref    = 0.0d0
+     spi_Vel_RxZref  = 0.0d0
+     spi_quantity    = 0.0
+     ng_radius_ratio = 1.4d0
+     ng_radius_min   = 8.d-2
+     spi_Vel_diff    = 0.0
+     spi_angle       = 0.0
+     spi_L_inj       = 0.25
+     mgi_phi_rotate  = 0.0
+     tor_frequency   = 0.0
+
+     n_spi           = 1
+
+     flag_spi        = 0
+     flag_spi_size   = 0
+     size_beta       = 3.d3
+
+     toroidal_rotation = .false.
+     abl_history     = .false.
+     using_spi       = .false.
+    !=========== End of SPI parameters ===========
+
 !#endif
 !======================
 

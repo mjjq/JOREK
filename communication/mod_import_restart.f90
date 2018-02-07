@@ -9,6 +9,7 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr)
   use data_structure
   use phys_module
   use pellet_module
+  use mgi_module
 
   implicit none
   
@@ -40,6 +41,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   use data_structure
   use phys_module
   use pellet_module
+  use mgi_module
   use vacuum, only: import_restart_vacuum, current_FB_fact
   
   implicit none
@@ -56,6 +58,17 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
+
+  real*8, allocatable :: spi_R_arr (:)
+  real*8, allocatable :: spi_Z_arr (:)
+  real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_Vel_R_arr (:)
+  real*8, allocatable :: spi_Vel_Z_arr (:)
+  real*8, allocatable :: spi_Vel_RxZ_arr (:)
+  real*8, allocatable :: spi_radius_arr (:)
+  real*8, allocatable :: spi_abl_arr (:)
+
+  integer :: err_alloc
  
   ! --- Perturbation-Import variables
   type (type_node_list)   , pointer	:: node_list_perturbation
@@ -291,6 +304,68 @@ endif
     read(21,err=999, end=999)  pellet_particles, pellet_R, pellet_Z
     write(*,'(A,e12.4,2f10.5)') ' *** PELLET PARAMETERS : ',pellet_particles, pellet_R, pellet_Z
   endif
+
+  if (using_spi) then
+    if (n_spi >= 1) then
+      if (allocated(xtime_spi_ablation)) &
+        call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
+      call tr_allocate(xtime_spi_ablation,1,n_spi,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)  
+      if (allocated(xtime_spi_ablation_rate)) &
+        call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+      call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+
+      if (abl_history == .true.) then
+        read(21)  xtime_spi_ablation(1:n_spi,1:index_start)
+        read(21)  xtime_spi_ablation_rate(1:n_spi,1:index_start)
+      end if
+
+      allocate (spi_R_arr(n_spi),stat=err_alloc)
+      allocate (spi_Z_arr(n_spi),stat=err_alloc)
+      allocate (spi_phi_arr(n_spi),stat=err_alloc)
+      allocate (spi_Vel_R_arr(n_spi),stat=err_alloc)
+      allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
+      allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
+      allocate (spi_radius_arr(n_spi),stat=err_alloc)
+      allocate (spi_abl_arr(n_spi),stat=err_alloc)
+    
+      read(21,err=999, end=999)  spi_R_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_Z_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_phi_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_Vel_R_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_Vel_Z_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_Vel_RxZ_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_radius_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_abl_arr(1:n_spi)
+
+      do i=1, n_spi
+        pellets(i)%spi_R       = spi_R_arr(i)
+        pellets(i)%spi_Z       = spi_Z_arr(i)
+        pellets(i)%spi_phi     = spi_phi_arr(i)
+        pellets(i)%spi_Vel_R   = spi_Vel_R_arr(i)
+        pellets(i)%spi_Vel_Z   = spi_Vel_Z_arr(i)
+        pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_arr(i)
+        pellets(i)%spi_radius  = spi_radius_arr(i)
+        pellets(i)%spi_abl     = spi_abl_arr(i)
+
+        write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+                              pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
+      end do
+
+      deallocate (spi_R_arr)
+      deallocate (spi_Z_arr)
+      deallocate (spi_phi_arr)
+      deallocate (spi_Vel_R_arr)
+      deallocate (spi_Vel_Z_arr)
+      deallocate (spi_Vel_RxZ_arr)
+      deallocate (spi_radius_arr)
+      deallocate (spi_abl_arr)
+
+      if (toroidal_rotation == .true.) then
+        read(21,err=999, end=999) mgi_phi_rotate 
+      end if
+
+    end if
+  end if
 999 continue
   
   close(21)
@@ -467,6 +542,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use data_structure
   use phys_module
   use pellet_module
+  use mgi_module
   use vacuum, only: import_HDF5_restart_vacuum, current_FB_fact
 #ifdef USE_HDF5
   use hdf5
@@ -530,6 +606,19 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer,     allocatable :: t_sons(:,:)
   integer,     allocatable :: t_contain_node(:,:)
   integer,     allocatable :: t_nref(:)
+
+! local variables
+
+  real*8, allocatable :: spi_R_arr (:)
+  real*8, allocatable :: spi_Z_arr (:)
+  real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_Vel_R_arr (:)
+  real*8, allocatable :: spi_Vel_Z_arr (:)
+  real*8, allocatable :: spi_Vel_RxZ_arr (:)
+  real*8, allocatable :: spi_radius_arr (:)
+  real*8, allocatable :: spi_abl_arr (:)
+
+  integer :: err_alloc
 
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
   real*8, allocatable :: t_energies2(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
@@ -942,6 +1031,71 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
      call HDF5_real_reading(file_id,pellet_Z,"pellet_Z")
      call HDF5_real_reading(file_id,pellet_particles,"pellet_particles")
   endif
+
+  if (using_spi) then
+    if (n_spi >= 1) then
+
+      if (allocated(xtime_spi_ablation)) &
+        call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
+      call tr_allocate(xtime_spi_ablation,1,n_spi,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)
+      if (allocated(xtime_spi_ablation_rate)) &
+        call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+      call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+
+      if (abl_history == .true.) then
+        call HDF5_array2D_reading(file_id,xtime_spi_ablation,"xtime_spi_ablation")
+        call HDF5_array2D_reading(file_id,xtime_spi_ablation_rate,"xtime_spi_ablation_rate")
+      end if
+
+      allocate (spi_R_arr(n_spi),stat=err_alloc)
+      allocate (spi_Z_arr(n_spi),stat=err_alloc)
+      allocate (spi_phi_arr(n_spi),stat=err_alloc)
+      allocate (spi_Vel_R_arr(n_spi),stat=err_alloc)
+      allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
+      allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
+      allocate (spi_radius_arr(n_spi),stat=err_alloc)
+      allocate (spi_abl_arr(n_spi),stat=err_alloc)
+
+      call HDF5_array1D_reading(file_id,spi_R_arr,"spi_R_arr")
+      call HDF5_array1D_reading(file_id,spi_Z_arr,"spi_Z_arr")
+      call HDF5_array1D_reading(file_id,spi_phi_arr,"spi_phi_arr")
+      call HDF5_array1D_reading(file_id,spi_Vel_R_arr,"spi_Vel_R_arr")
+      call HDF5_array1D_reading(file_id,spi_Vel_Z_arr,"spi_Vel_Z_arr")
+      call HDF5_array1D_reading(file_id,spi_Vel_RxZ_arr,"spi_Vel_RxZ_arr")
+      call HDF5_array1D_reading(file_id,spi_radius_arr,"spi_radius_arr")
+      call HDF5_array1D_reading(file_id,spi_abl_arr,"spi_abl_arr")
+
+      do i=1, n_spi
+        pellets(i)%spi_R       = spi_R_arr(i)
+        pellets(i)%spi_Z       = spi_Z_arr(i)
+        pellets(i)%spi_phi     = spi_phi_arr(i)
+        pellets(i)%spi_Vel_R   = spi_Vel_R_arr(i)
+        pellets(i)%spi_Vel_Z   = spi_Vel_Z_arr(i)
+        pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_arr(i)
+        pellets(i)%spi_radius  = spi_radius_arr(i)
+        pellets(i)%spi_abl     = spi_abl_arr(i)
+
+        write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+                              pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
+      end do
+
+      deallocate (spi_R_arr)
+      deallocate (spi_Z_arr)
+      deallocate (spi_phi_arr)
+      deallocate (spi_Vel_R_arr)
+      deallocate (spi_Vel_Z_arr)
+      deallocate (spi_Vel_RxZ_arr)
+      deallocate (spi_radius_arr)
+      deallocate (spi_abl_arr)
+
+      if (toroidal_rotation == .true.) then
+        call HDF5_real_reading(file_id,mgi_phi_rotate,"mgi_phi_rotate")
+      end if
+
+
+    end if
+  end if
+
 
   call HDF5_close(file_id)
  

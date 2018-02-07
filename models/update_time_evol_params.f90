@@ -15,7 +15,7 @@ subroutine update_time_evol_params()
     time_evol_theta = 1.0d0
     time_evol_zeta  = 0.5d0
   else
-    write(*,*) 'ERROR: Illegal value for time_evol_scheme.'
+    write(*,*) 'ERROR: Illegal value for time_evol_scheme:'
     stop
   end if
   

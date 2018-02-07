@@ -1059,7 +1059,11 @@ required = 0
        endif
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
-       call update_mgi(my_id,node_list,element_list)
+       if (using_spi == .false.) then
+         call update_mgi(my_id,node_list,element_list)
+       else if (using_spi == .true. .and. t_now >= t_mgi) then
+         call update_spi(my_id,node_list,element_list)
+       end if
 #endif
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values

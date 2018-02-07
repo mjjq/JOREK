@@ -355,6 +355,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'visco_num             ', visco_num
   write(*,REAL_FMT) 'visco_par_num         ', visco_par_num
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
+  write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
   write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
@@ -561,6 +562,22 @@ if (my_id == 0) then
      write(*,REAL_FMT) 't_mgi               ',  t_mgi
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
+
+     !< Additional log for SPI model
+     write(*,LOGI_FMT) 'using_spi           ',  using_spi
+     write(*,LOGI_FMT) 'abl_history         ',  abl_history
+     write(*,LOGI_FMT) 'toroidal rotation   ',  toroidal_rotation
+     write(*,INTG_FMT) 'n_spi               ',  n_spi
+     write(*,INTG_FMT) 'flag_spi            ',  flag_spi
+     write(*,INTG_FMT) 'flag_spi_size       ',  flag_spi_size
+     write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
+     write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
+     write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref
+     write(*,REAL_FMT) 'spi_quantity        ',  spi_quantity
+     write(*,REAL_FMT) 'spi_angle           ',  spi_angle
+     write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
+     write(*,REAL_FMT) 'tor_frequency       ',  tor_frequency
+     write(*,REAL_FMT) 'spi_Vel_diff        ',  spi_Vel_diff
 # endif
 
   write(*,*)

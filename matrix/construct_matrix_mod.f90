@@ -262,6 +262,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     do iv=1,n_vertex_max
 
+      if (ielm > n_elements_max) then
+        write(*,*) "WARNING: ielm, n_elements_max = ", ielm, n_elements_max
+      end if
+
       inode = element_list%element(ielm)%vertex(iv)
 
       if (node_list%node(inode)%boundary .eq. 1) i_bnd = i_bnd + 1

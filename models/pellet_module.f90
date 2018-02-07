@@ -1,6 +1,8 @@
 module pellet_module
 
 use constants
+use data_structure
+
 
 real*8 :: total_pellet_particles   !< the (total) pellet particles added in this timestep
 real*8 :: total_plasma_particles   !< the total plasma density (before this timestep)
@@ -178,6 +180,240 @@ return
  
 end subroutine update_pellet
 
+subroutine update_spi(my_id,node_List,element_list)
+!******************************************************************************
+! routine updates the shattered pellet position and the size of the simulated *
+! and physical pellet sizes (from the integral of the pellet particle source) *
+!******************************************************************************
+
+use constants
+use data_structure
+use phys_module
+use mpi_mod
+use mgi_module
+use corr_neg
+
+implicit none
+
+
+type (type_node_list)    :: node_list
+type (type_element_list) :: element_list
+
+! --- Local variables
+real*8  :: psi_axis, psi_bnd
+integer :: my_id, ierr
+real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
+
+real*8  :: R_out, Z_out
+integer :: i_elm, ifail
+
+integer :: i
+
+real*8, dimension(2) :: P, P_s, P_t, P_phi
+real*8  :: R, R_s, R_t, Z, Z_s, Z_t
+real*8  :: s_out,t_out
+
+real*8  :: n_SI, T_eV, n_corr, T_corr
+real*8  :: t_norm, spi_Vel_totref
+real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
+
+  spi_delta_phi   = 0.
+  spi_Vel_R_tmp   = 0.
+  spi_Vel_phi_tmp = 0.
+  spi_phi_inj     = mgi_phi
+
+  V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
+  t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+
+  if (my_id == 0) then
+    open(20,file="pellets_parameters.dat",position="APPEND",status="OLD")
+    write(20,"(e12.3)",advance="no") t_now/V_normalisation
+  end if
+
+  spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
+    
+  spi_phi_inj     = mgi_phi + mgi_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/mgi_R
+
+  if (spi_phi_inj >= 2.*PI) then
+    spi_phi_inj   = mod(spi_phi_inj,2.*PI)
+  else if (spi_phi_inj < 0.) then
+    spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
+  end if
+
+  do i=1, n_spi
+
+    if (my_id == 0 .and. i < n_spi) then
+      write(20,"(e14.6)",advance="no") pellets(i)%spi_abl
+    elseif (my_id == 0 .and. i == n_spi) then
+      write(20,"(e14.6)") pellets(i)%spi_abl
+    end if
+
+    spi_delta_phi          = pellets(i)%spi_phi - spi_phi_inj
+    spi_Vel_R_tmp          = pellets(i)%spi_Vel_R * cos(spi_delta_phi) &
+                             + pellets(i)%spi_Vel_RxZ * sin(spi_delta_phi)
+    spi_Vel_phi_tmp        = pellets(i)%spi_Vel_RxZ * cos(spi_delta_phi) &
+                             - pellets(i)%spi_Vel_R * sin(spi_delta_phi)
+    spi_Vel_phi_tmp        = spi_Vel_phi_tmp / pellets(i)%spi_R
+
+
+    pellets(i)%spi_R       = pellets(i)%spi_R + spi_Vel_R_tmp * tstep / V_normalisation
+    pellets(i)%spi_Z       = pellets(i)%spi_Z + pellets(i)%spi_Vel_Z * tstep / V_normalisation
+    pellets(i)%spi_phi     = pellets(i)%spi_phi + spi_Vel_phi_tmp * tstep / V_normalisation
+
+    if (toroidal_rotation == .true.) then
+      pellets(i)%spi_phi     = pellets(i)%spi_phi + tor_frequency * 2. * PI * tstep / V_normalisation
+    end if
+
+    pellets(i)%spi_Vel_R   = pellets(i)%spi_Vel_R
+    pellets(i)%spi_Vel_Z   = pellets(i)%spi_Vel_Z
+    pellets(i)%spi_Vel_RxZ = pellets(i)%spi_Vel_RxZ
+
+    if (pellets(i)%spi_phi >= 2.*PI) then
+      pellets(i)%spi_phi   = mod(pellets(i)%spi_phi,2.*PI)
+    else if (pellets(i)%spi_phi < 0.) then
+      pellets(i)%spi_phi   = mod(pellets(i)%spi_phi,2.*PI) + 2.*PI
+    end if
+
+    if (pellets(i)%spi_radius > 0.0) then
+      pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep * &
+                              (pellets(i)%spi_abl / (4.d0 * PI * pellets(i)%spi_radius**2.d0 *    &
+                              pellet_density * 1.d20))
+
+      if (pellets(i)%spi_radius < 0.d0) then
+        pellets(i)%spi_radius = 0.d0
+      end if
+    end if
+
+    if (my_id == 0.) then
+      if (index_now > 1) then
+        xtime_spi_ablation(i,index_now) = xtime_spi_ablation(i,index_now-1) + t_norm * tstep * pellets(i)%spi_abl
+      else
+        xtime_spi_ablation(i,index_now) = t_norm * tstep * pellets(i)%spi_abl
+      end if
+    end if
+
+    if (flag_spi == 0) then
+      pellets(i)%spi_abl   = mgi_amplitude
+    elseif (flag_spi == 1) then
+
+      call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
+                   R_out,Z_out,i_elm,s_out,t_out,ifail)
+      call interp_PRZ(node_list,element_list,i_elm,[5,6],2,s_out,t_out,pellets(i)%spi_phi,&
+                      P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+
+      ! Now, P(1) represents mass density and P(2) represents temperature
+      ! Correct any possible negative values!
+
+      !n_corr         = corr_neg_dens(P(1))
+      !T_corr         = corr_neg_temp(P(2))
+
+      ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e
+      ! = T_i
+      !n_SI           = n_corr * 1.d20 * central_density
+      !T_eV           = T_corr / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
+      
+      n_SI           = P(1) * 1.d20 * central_density
+      if (n_SI < 0.) then
+        n_SI = 0.
+      end if
+
+      T_eV           = P(2) / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
+      if (T_eV < 0.) then
+        T_eV = 0.
+      end if
+
+
+      if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
+        write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
+      end if
+      ! NGS model
+      
+      pellets(i)%spi_abl    = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
+                             (T_eV**1.64)
+    else
+      pellets(i)%spi_abl    = 0.d0
+    end if
+   
+    if (my_id == 0.) then
+      xtime_spi_ablation_rate(i,index_now) = pellets(i)%spi_abl
+    end if
+
+  end do
+
+  if (toroidal_rotation == .true.) then
+    mgi_phi_rotate  = mgi_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
+  end if
+
+
+  !write(*,'(A,4e14.6)') ' pellet (R,Z) =', spi_R, spi_Z,spi_Vel_R/V_normalisation,spi_Vel_Z/V_normalisation
+  
+  if (my_id == 0 .and. mod(index_now,20) == 0) then
+
+    close(20)
+
+    do i=1, 20 !n_spi
+      if (pellets(i)%spi_radius > 0.0) then
+        write(*,*) "Pellet number: ", i
+        write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
+        write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, &
+                                                   pellets(i)%spi_Vel_RxZ
+        write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
+      end if
+    end do
+  end if
+
+  !call Integrals_3D(my_id, node_list,element_list,density,&
+        !density_in,density_out,pressure,pressure_in,pressure_out)
+
+return 
+ 
+end subroutine update_spi
+
+!> This function creates a derived MPI type for the pellets and returns it (in honor of Daan)
+!! If it already exists the old handle is returned
+function get_pellet_derived_type() result(dtype_out)
+  use mpi_mod
+  use mod_parameters
+
+  implicit none
+
+  integer               :: ierr, dtype_out
+  integer, save         :: dtype
+  logical, save         :: dtype_set = .false.
+
+  integer :: len(8) = (/1,1,1,1,1,1,1,1/), t(8) = (/ &
+    MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
+    MPI_REAL8,MPI_REAL8,MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
+
+  integer(kind=MPI_ADDRESS_KIND) :: base, disp(8)
+  type(type_SPI) :: sample_pellet
+
+  dtype_out = dtype
+  if (dtype_set) return
+
+  ! Get memory addresses in the type
+  call MPI_Get_address(sample_pellet,             base,    ierr)
+  call MPI_Get_address(sample_pellet%spi_R,       disp(1), ierr)
+  call MPI_Get_address(sample_pellet%spi_Z,       disp(2), ierr)
+  call MPI_Get_address(sample_pellet%spi_phi,     disp(3), ierr)
+  call MPI_Get_address(sample_pellet%spi_Vel_R,   disp(4), ierr)
+  call MPI_Get_address(sample_pellet%spi_Vel_Z,   disp(5), ierr)
+  call MPI_Get_address(sample_pellet%spi_Vel_RxZ, disp(6), ierr)
+  call MPI_Get_address(sample_pellet%spi_radius,  disp(7), ierr)
+  call MPI_Get_address(sample_pellet%spi_abl,     disp(8), ierr)
+
+  ! Rebase to particle memory beginning
+  disp = disp - base
+
+  ! Commit the structured type
+  call MPI_Type_create_struct(8, len, disp, t, dtype, ierr)
+  call MPI_Type_commit(dtype, ierr)
+
+  ! Set the save bit
+  dtype_set = .true.
+  dtype_out = dtype
+  return
+end function get_pellet_derived_type
 
 subroutine pellet_source(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &

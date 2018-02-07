@@ -49,7 +49,6 @@ real*8     :: Vpar0, Vpar0_x, Vpar0_y, Vpar0_p, Vpar0_s, Vpar0_t, Vpar0_ss, Vpar
 real*8     :: r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_st, r0_tt, r0_xx, r0_xy, r0_yy
 real*8     :: r0_corr, rn0_corr, r0_hat, r0_x_hat, r0_y_hat, T0_corr, dT0_corr_dT, d2T0_corr_dT2
 real*8     :: T0, T0_x, T0_y, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt, T0_xx, T0_xy, T0_yy, T_corr
-real*8     :: dT_corr_dT, d2T_corr_dT2
 real*8     :: psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_st, psi_tt, psi_xx, psi_yy, psi_xy
 real*8     :: zj, zj_x, zj_y, zj_p, zj_s, zj_t, zj_ss, zj_st, zj_tt
 real*8     :: vpar, vpar_x, vpar_y, vpar_s, vpar_t, vpar_p, vpar_ss, vpar_st, vpar_tt, vpar_xx, vpar_xy, vpar_yy
@@ -95,6 +94,23 @@ real*8     :: rn0_xx, rn0_yy, rhon_xx, rhon_yy
 
 ! Neutral source
 real*8     :: source_mgi
+real*8     :: source_mgi_tmp
+
+! time normalization
+real*8     :: t_norm
+
+! Temporary variables serving the SPI module
+integer    :: spi_i
+
+real*8     :: spi_R_tmp
+real*8     :: spi_Z_tmp
+real*8     :: spi_phi_tmp
+real*8     :: spi_abl_tmp
+real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
+! Additional variables reserved for future implementation
+!real*8     :: spi_Vel_R_tmp
+!real*8     :: spi_Vel_Z_tmp
+!real*8     :: spi_Vel_phi_tmp
 
 ! Neutral diffusion coefficients
 real*8     :: Dn0x, Dn0y, Dn0p
@@ -334,7 +350,15 @@ do ms=1, n_gauss
 
      rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0 ...
 
+     rn0_xx = (rn0_ss * y_t(ms,mt)**2 - 2.d0*rn0_st * y_s(ms,mt)*y_t(ms,mt) + rn0_tt * y_s(ms,mt)**2     &
+            + rn0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                 &
+            + rn0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    /    xjac**2               &
+            - xjac_x * (rn0_s* y_t(ms,mt) - rn0_t * y_s(ms,mt))  / xjac**2
 
+     rn0_yy = (rn0_ss * x_t(ms,mt)**2 - 2.d0*rn0_st * x_s(ms,mt)*x_t(ms,mt) + rn0_tt * x_s(ms,mt)**2     &
+            + rn0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                                 &
+            + rn0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )          / xjac**2            &
+            - xjac_y * (- rn0_s * x_t(ms,mt) + rn0_t * x_s(ms,mt) )  / xjac**2
 
 
 
@@ -610,7 +634,7 @@ do ms=1, n_gauss
      Lrad      = 0. ! For Test
 
      ! Derivative wrt to T, with T in JOREK units
-     !dLrad_dT = (1./2.)*coef_rad_1*5.d-32 * (1./10.) * dT_rad_dT * (1-tanh((T_rad-20.)/10.)**2)
+     !dLrad_dT = (1./2.)*coef_rad_1*5.d-32 * (1./10.) * dT_rad_dT * (1-tanh((T_rad-20.)/10.)**2) * dT0_corr_dT
      dLrad_dT = 0. ! For Test
 
 !   else
@@ -623,9 +647,57 @@ do ms=1, n_gauss
    !--------------------------------------------------------
 
      source_mgi = 0.d0                    
-     
-     call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &       
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)                                 
+
+!============================================================!
+! Important note: in order to implementing more complicated  !
+!    model, we should add more arguments to mgi_source       !
+!============================================================!
+
+     if (using_spi == .true.) then
+
+       if (JET_MGI == .true. .or. ASDEX_MGI == .true.) then
+         write(*,*) "WARNING: Using SPI, disabling MGI settings"
+         JET_MGI = .false.
+         ASDEX_MGI = .false.
+       end if
+
+       do spi_i=1, n_spi
+
+         source_mgi_tmp = 0.d0
+
+         if (pellets(spi_i)%spi_radius > 0.0) then
+           spi_R_tmp   = pellets(spi_i)%spi_R
+           spi_Z_tmp   = pellets(spi_i)%spi_Z
+           spi_phi_tmp = pellets(spi_i)%spi_phi
+           spi_abl_tmp = pellets(spi_i)%spi_abl
+
+           ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+
+           if (ng_radius < ng_radius_min) then
+             ng_radius = ng_radius_min
+           end if
+
+           call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
+                         mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),    &
+                         phi,source_mgi_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+         end if
+
+         source_mgi = source_mgi + source_mgi_tmp
+
+       end do
+
+     else
+
+       call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
+                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,  &
+                     JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+     end if
+
+     ! This is to detect N/A
+     if (source_mgi /= source_mgi) then
+       write(*,*) "WARNING: source_mgi = ", source_mgi
+     end if     
 
      if (source_mgi .lt. 0.d0) then
       source_mgi = 0.d0
@@ -686,7 +758,7 @@ do ms=1, n_gauss
 
            Bgrad_rho_star = ( F0 / BigR * v_p  +  v_x  * ps0_y - v_y  * ps0_x ) / BigR    ! F0 due to absence of normalisation
            Bgrad_rho      = ( F0 / BigR * r0_p +  r0_x * ps0_y - r0_y * ps0_x ) / BigR    ! F0 due to absence of normalisation
-           Bgrad_rhon     = ( F0 / BigR * rn0_p +  rn0_x * ps0_y - rn0_x * ps0_x ) / BigR    ! F0 due to absence of normalisation
+           Bgrad_rhon     = ( F0 / BigR * rn0_p +  rn0_x * ps0_y - rn0_y * ps0_x ) / BigR    ! F0 due to absence of normalisation
            Bgrad_T_star   = ( F0 / BigR * v_p  +  v_x  * ps0_y - v_y  * ps0_x ) / BigR    ! F0 due to absence of normalisation
            Bgrad_T        = ( F0 / BigR * T0_p +  T0_x * ps0_y - T0_y * ps0_x ) / BigR    ! F0 due to absence of normalisation
 
@@ -939,7 +1011,8 @@ do ms=1, n_gauss
 
                       + BigR * v * source_mgi                                                                     * xjac * tstep &
 
-                      + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta
+                      + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta                                          &
+                      - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy) * BigR * xjac * tstep
 
 !###################################################################################################
 !#  RHS equations end                                                                                  #
@@ -1672,8 +1745,9 @@ do ms=1, n_gauss
                               * (rhon_x * ps0_y - rhon_y * ps0_x + F0 / BigR * rhon_p)                                    &
                               * ( v_x * ps0_y -  v_y * ps0_x   + F0 / BigR * v_p) * xjac * theta * tstep * tstep          &
                                    
-		          + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y + Dn0p * rhon_p * v_p*eps_cyl**2/BigR**2) * xjac * theta * tstep   
+		          + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y + Dn0p * rhon_p * v_p*eps_cyl**2/BigR**2) * xjac * theta * tstep  & 
 
+                          + Dn_perp_num     * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy)   * BigR * xjac * theta * tstep 
 
 
                  kl1 = index_kl

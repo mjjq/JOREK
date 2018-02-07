@@ -41,6 +41,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
+  use mgi_module
   use vacuum, only: export_restart_vacuum
 
   implicit none
@@ -55,6 +56,18 @@ subroutine export_binary_restart(node_list,element_list,filename)
   ! --- Local variables
   integer :: i
   character*50 :: version_control
+
+  real*8, allocatable :: spi_R_arr (:)
+  real*8, allocatable :: spi_Z_arr (:)
+  real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_Vel_R_arr (:)
+  real*8, allocatable :: spi_Vel_Z_arr (:)
+  real*8, allocatable :: spi_Vel_RxZ_arr (:)
+  real*8, allocatable :: spi_radius_arr (:)
+  real*8, allocatable :: spi_abl_arr (:)
+
+  integer :: err_alloc
+
 
   ! -> Write binary restart file
   open(21, file=filename, form='unformatted', status='replace', action='write')
@@ -118,6 +131,57 @@ subroutine export_binary_restart(node_list,element_list,filename)
      write(21) pellet_particles, pellet_R, pellet_Z
   endif
 
+  ! Dynamically allocate memeries for temporary arrays in order to export
+  if (using_spi .and. n_spi >= 1) then
+
+    if (index_now .gt. 0) then
+      write(21) xtime_spi_ablation(:,1:index_now)
+      write(21) xtime_spi_ablation_rate(:,1:index_now)
+    endif
+
+    allocate (spi_R_arr(n_spi),stat=err_alloc)  
+    allocate (spi_Z_arr(n_spi),stat=err_alloc)     
+    allocate (spi_phi_arr(n_spi),stat=err_alloc) 
+    allocate (spi_Vel_R_arr(n_spi),stat=err_alloc) 
+    allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc) 
+    allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc) 
+    allocate (spi_radius_arr(n_spi),stat=err_alloc) 
+    allocate (spi_abl_arr(n_spi),stat=err_alloc)
+
+    do i=1, n_spi
+      spi_R_arr(i)       = pellets(i)%spi_R
+      spi_Z_arr(i)       = pellets(i)%spi_Z
+      spi_phi_arr(i)     = pellets(i)%spi_phi
+      spi_Vel_R_arr(i)   = pellets(i)%spi_Vel_R
+      spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
+      spi_Vel_RxZ_arr(i) = pellets(i)%spi_Vel_RxZ
+      spi_radius_arr(i)  = pellets(i)%spi_radius
+      spi_abl_arr(i)     = pellets(i)%spi_abl
+    end do
+
+    write(21) spi_R_arr(1:n_spi)
+    write(21) spi_Z_arr(1:n_spi)
+    write(21) spi_phi_arr(1:n_spi)
+    write(21) spi_Vel_R_arr(1:n_spi)
+    write(21) spi_Vel_Z_arr(1:n_spi)
+    write(21) spi_Vel_RxZ_arr(1:n_spi)
+    write(21) spi_radius_arr(1:n_spi)
+    write(21) spi_abl_arr(1:n_spi)
+
+    deallocate (spi_R_arr)
+    deallocate (spi_Z_arr)
+    deallocate (spi_phi_arr)
+    deallocate (spi_Vel_R_arr)
+    deallocate (spi_Vel_Z_arr)
+    deallocate (spi_Vel_RxZ_arr)
+    deallocate (spi_radius_arr)
+    deallocate (spi_abl_arr)
+
+    if (toroidal_rotation == .true.) then
+      write(21) mgi_phi_rotate
+    end if
+
+  end if
    
   ! save Revision control
   write(version_control,'(A)') trim(adjustl(RCS_VERSION))
@@ -152,6 +216,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
+  use mgi_module
   use vacuum, only : export_HDF5_restart_vacuum
   
 #ifdef USE_HDF5
@@ -204,6 +269,18 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   integer,     allocatable :: t_sons(:,:)                  ! 4
   integer,     allocatable :: t_contain_node(:,:)          ! 5
   integer,     allocatable :: t_nref(:)
+
+  ! local variables
+  real*8, allocatable :: spi_R_arr (:)
+  real*8, allocatable :: spi_Z_arr (:)
+  real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_Vel_R_arr (:)
+  real*8, allocatable :: spi_Vel_Z_arr (:)
+  real*8, allocatable :: spi_Vel_RxZ_arr (:)
+  real*8, allocatable :: spi_radius_arr (:)
+  real*8, allocatable :: spi_abl_arr (:)
+
+  integer :: err_alloc
 
   ! index_now+nstep
   real(RKIND), allocatable :: t_xtime(:)                   ! nstep
@@ -474,6 +551,67 @@ end if
      call HDF5_real_saving(file_id,pellet_Z,"pellet_Z"//char(0))
   end if
 
+  ! Dynamically allocate memeries for temporary arrays in order to export
+  if (using_spi .and. n_spi>=1) then
+    if (index_now .gt. 0) then
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation, &
+             n_spi,index_now,'xtime_spi_ablation'//char(0))
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation_rate, &
+             n_spi,index_now,'xtime_spi_ablation_rate'//char(0))
+    end if
+
+
+    allocate (spi_R_arr(n_spi),stat=err_alloc)
+    allocate (spi_Z_arr(n_spi),stat=err_alloc)
+    allocate (spi_phi_arr(n_spi),stat=err_alloc)
+    allocate (spi_Vel_R_arr(n_spi),stat=err_alloc)
+    allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
+    allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
+    allocate (spi_radius_arr(n_spi),stat=err_alloc)
+    allocate (spi_abl_arr(n_spi),stat=err_alloc)
+
+    do i=1, n_spi
+      spi_R_arr(i)       = pellets(i)%spi_R
+      spi_Z_arr(i)       = pellets(i)%spi_Z
+      spi_phi_arr(i)     = pellets(i)%spi_phi
+      spi_Vel_R_arr(i)   = pellets(i)%spi_Vel_R
+      spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
+      spi_Vel_RxZ_arr(i) = pellets(i)%spi_Vel_RxZ
+      spi_radius_arr(i)  = pellets(i)%spi_radius
+      spi_abl_arr(i)     = pellets(i)%spi_abl
+    end do
+
+    call HDF5_array1D_saving(file_id,spi_R_arr, &
+             n_spi,'spi_R_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Z_arr, &
+             n_spi,'spi_Z_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_phi_arr, &
+             n_spi,'spi_phi_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_R_arr, &
+             n_spi,'spi_Vel_R_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_Z_arr, &
+             n_spi,'spi_Vel_Z_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_RxZ_arr, &
+             n_spi,'spi_Vel_RxZ_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_radius_arr, &
+             n_spi,'spi_radius_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_abl_arr, &
+             n_spi,'spi_abl_arr'//char(0))
+
+    deallocate (spi_R_arr)
+    deallocate (spi_Z_arr)
+    deallocate (spi_phi_arr)
+    deallocate (spi_Vel_R_arr)
+    deallocate (spi_Vel_Z_arr)
+    deallocate (spi_Vel_RxZ_arr)
+    deallocate (spi_radius_arr)
+    deallocate (spi_abl_arr)
+
+    if (toroidal_rotation == .true.) then
+      call HDF5_real_saving(file_id,mgi_phi_rotate,"mgi_phi_rotate"//char(0))  
+    end if
+
+  end if
 
   ! Export restart vacuum 
   call export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)

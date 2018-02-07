@@ -3,7 +3,8 @@ module phys_module
   
   use mod_parameters
   use constants
-  
+  use data_structure              !< Added in order to dynamically allocate pellets 
+ 
   implicit none
   
   !> @name Various parameters
@@ -123,7 +124,7 @@ module phys_module
   real*8  :: heatsource_gauss_sig      !< Width over which gaussian source is set
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
-  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num
+  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num
   
   !> @name Timestepping parameters
   real*8  :: tstep             		!< Size of the timesteps (\f$ \Delta t \f$)
@@ -231,6 +232,46 @@ module phys_module
   logical :: ASDEX_MGI
   character(len=80) :: gas_type !< Type of gas used in MGI: Argon, D2, ...
   real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
+
+  !> @name Shattered pellet injection-related input parameters
+  ! Note that the SPI share many of the MGI parameters. The code should return
+  ! to simple MGI upon using_spi = false
+  ! The reference spactial coordinate for shattered pellets are calculated using
+  ! mgi_R etc...... 
+  real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R upon injection
+  real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z upon injection
+  real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection
+  real*8  :: spi_quantity       !< Total injected atom number for SPI
+  real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds 
+                                !< and that of shattered pellets
+
+  real*8  :: spi_Vel_diff       !< The reference veolocity difference from the reference velocity
+  real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
+  real*8  :: spi_L_inj          !< Distance between SPI nozzle and mgi_R, mgi_Z, mgi_phi
+  real*8  :: mgi_phi_rotate     !< The toroidal position of rotated injection point
+  real*8  :: tor_frequency      !< The rigid body rotation frequency
+
+  real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud 
+                                !< with regard to the simulation resolution 
+
+  real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
+  real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
+
+  integer :: n_spi              !< Number of shattered pellets injected
+  integer :: flag_spi           !< Determine which type of ablation model is using.
+                                !< 0 for constant release rate, 1 for NGS model
+  integer :: flag_spi_size      !< Determine which type of shard distribution is used,
+                                !< 0 for uniform shard size, 1 for modified
+                                !BesselK distribution.
+
+  real*8  :: size_beta          !< Parameter for the modified BesselK distribution
+
+  logical :: abl_history        !< Whether or not ablation history is available from previous restart files
+  logical :: using_spi          !< This determines whether to use SPI or traditional MGI
+  logical :: toroidal_rotation  !< Flag to turn on a rigid body toroidal plasma rotation for SPI
+
+  type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet 
+
   
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor  

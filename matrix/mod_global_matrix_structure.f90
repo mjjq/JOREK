@@ -22,10 +22,11 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
 
   integer :: local_elms(*), index_min, index_max, my_id, my_id_n, n_local_elms
   integer :: i, ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2, index1, index2, index1_local, index2_local
-  integer :: j_larger, j, n_max, ibase
-  integer :: inode,i_father
+  integer :: j_larger, j, ibase, n_max
+  integer :: inode,i_father,maxsize
   integer, dimension(n_vertex_max) ::  node_out
   logical :: freeboundary
+  integer, allocatable :: tmp(:,:)
 
   if ( my_id == 0 ) then
     write(*,*) '**********************************'
@@ -232,9 +233,19 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
         enddo            ! end loop over vertices (iv)
      enddo              ! end loop over boundary elements (ibnd)
   endif                ! check if free boundary on
-
-  call tr_allocate(ijA_index,1,index_max-index_min+1,1,n_max,"ijA_index",CAT_DMATRIX)
-
+  
+  ! --- Allocate ijA_index to actually needed size
+  maxsize = maxval(ijA_size)
+  call tr_allocate(ijA_index,1,index_max-index_min+1,1,maxsize,"ijA_index",CAT_DMATRIX)
+  
+  ! --- Re-allocate irn_jcn to actually needed size
+  call tr_allocate(tmp,1,index_max-index_min+1,1,maxsize,"tmp",CAT_DMATRIX)
+  tmp(:,1:maxsize) = irn_jcn(:,1:maxsize)
+  call tr_deallocate(irn_jcn,"irn_jcn",CAT_DMATRIX)
+  call tr_allocate(irn_jcn,1,index_max-index_min+1,1,maxsize,"irn_jcn",CAT_DMATRIX)
+  irn_jcn(:,:) = tmp(:,:)
+  call tr_deallocate(tmp,"tmp",CAT_DMATRIX)
+  
   ibase = 0
   do i=1,index_max-index_min+1
 

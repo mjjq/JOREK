@@ -657,6 +657,18 @@ module mod_expression
             end do
           end do
           
+#if JOREK_MODEL == 400
+          ! --- Sum up electron and ion temperature for model400 (e.g., to calculate total pressure)
+          T0       = Ti0    + Te0   
+          T0_s     = Ti0_s  + Te0_s 
+          T0_t     = Ti0_t  + Te0_t 
+          T0_ss    = Ti0_ss + Te0_ss
+          T0_tt    = Ti0_tt + Te0_tt
+          T0_st    = Ti0_st + Te0_st
+          T0_p     = Ti0_p  + Te0_p 
+          T0_pp    = Ti0_pp + Te0_pp
+#endif
+          
           ! --- Construct Cartesian Derivatives of Variables.
           ps0_R    = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
           ps0_Z    = ( - R_t * ps0_s + R_s * ps0_t ) / xjac

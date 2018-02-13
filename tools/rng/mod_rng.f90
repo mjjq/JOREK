@@ -1,5 +1,7 @@
 !> Module containing abstract type for multi-dimensional (Q)RNGs
 !> subclass type_rng to implement other generators
+!>
+!> See https://www.jorek.eu/wiki/doku.php?id=rngs for more info
 module mod_rng
   implicit none
   private

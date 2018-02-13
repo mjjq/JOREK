@@ -1,4 +1,6 @@
 !> Wrapper in the mod_rng type for [[mod_sobseq]]
+!>
+!> See https://www.jorek.eu/wiki/doku.php?id=rngs
 module mod_sobseq_rng
   use mod_sobseq
   use mod_rng

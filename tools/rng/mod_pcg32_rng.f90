@@ -1,4 +1,6 @@
 !> Wrapper module for the pcg32 rng in the mod_rng type
+!>
+!> See https://www.jorek.eu/wiki/doku.php?id=rngs
 module mod_pcg32_rng
 use mod_pcg32
 use mod_rng

@@ -206,8 +206,10 @@ required = 0
   ! --- Process command line arguments
   if ( my_id == 0 ) call jorek2help(n_cpu, nbthreads)  
   
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
   CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
-  write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', rank, ': ', name
+  write(*,'(A,I5,2A)') '  #MPI id, ProcessorName ', rank, ': ', name
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   ! --- Initialise memory tracing
   call tr_meminit(my_id, n_cpu)
@@ -811,6 +813,7 @@ required = 0
     if (.not. (use_pastix .and. use_murge .and. use_murge_element .and. gmres )) then
        call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
             local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
+       call MPI_Barrier(MPI_COMM_WORLD,ierr)
        if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
          call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1)) 
        endif
@@ -931,7 +934,7 @@ required = 0
       ! ... when tstep changes
       ! ... when the previous time steps took too many iterations
       solve_only = (istep > 1) .and. (iter_gmres+iter_prev <= 2*iter_precon)
-      if ( my_id == 0 ) write(*,*) 'solve_only: ', solve_only
+      !if ( my_id == 0 ) write(*,*) 'solve_only: ', solve_only
     endif
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)

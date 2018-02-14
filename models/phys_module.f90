@@ -467,7 +467,9 @@ module phys_module
   
   !> @name Numerical parameters
   real*8              :: D_prof_neg     !< Diffusion coefficient in regions with negative density
+  real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if rho < D_prof_neg_thresh
   real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
   real*8              :: T_min          !< minimum temperature (limits on the temperature dependence of resistivity etc.
   integer             :: n_tor_fft_thresh !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
   integer*8           :: fftw_plan      !< Required for FFTW library

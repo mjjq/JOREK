@@ -83,8 +83,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                D_prof_neg, ZK_prof_neg, T_min,                     &
-
+                D_prof_neg, ZK_prof_neg,                            &
+                D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 mgi_sig, mgi_deltaphi, ksi_ion,                     &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &

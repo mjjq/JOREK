@@ -161,9 +161,11 @@ subroutine preset_parameters
   D_perp(1)  = 1.d-5; D_perp(2) = 0.d0; D_perp(3)= 0.d0; D_perp(4)= 99.d0; D_perp(5) = 99.d0
   D_par      = 0.d0
   
-  D_prof_neg  = 1.d-5
-  ZK_prof_neg = 1.d-5
-  T_min       = 0.0
+  D_prof_neg         = 1.d-5
+  D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+  ZK_prof_neg        = 1.d-5
+  ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+  T_min              = 0.0
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)

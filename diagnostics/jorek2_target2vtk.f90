@@ -543,10 +543,12 @@ avg7(:) = avg7(:) / MU_zero / t_norm / float(n_plane) * 1.5
 avg8(:) = avg8(:) / MU_zero / t_norm / float(n_plane) * 1.5
 avg11(:)= avg11(:) / MU_zero / t_norm / float(n_plane)
 
-open(23,file='average_target_profile')
+
 open(22,file='target_profile')
+write(22,'(A132)') "  Length          R               Z               angle           conductive_flux heat_flux       density         T              Vpar            particle_flux   parallel_flux"
+
+open(23,file='average_target_profile')
 write(23,'(A132)') '      time         step            Length         R               Z              nTV.n           KparT.n        Kperp.T        nvT_gam'
-write(22,'(A132)') "  Length          R              Z                angle           heat_flux       part_flux       density         T              Vpar"
 
 allocate(tobedone(n_points))
 

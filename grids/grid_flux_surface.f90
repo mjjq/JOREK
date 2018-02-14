@@ -6,7 +6,7 @@ use constants
 use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
-use mod_element_rtree, only: initialized
+use mod_element_rtree, only: rtree_initialized
 
 implicit none
 
@@ -556,7 +556,7 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
  enddo
 
 enddo
-initialized = .false. ! Force redo neighbours and rtree
+rtree_initialized = .false. ! Force redo neighbours and rtree
 call update_neighbours(node_list,element_list)
 return
 end subroutine grid_flux_surface

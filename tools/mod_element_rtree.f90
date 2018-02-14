@@ -3,9 +3,9 @@ module mod_element_rtree
 use iso_c_binding
 use data_structure
 implicit none
-public populate_element_rtree, nearby_elements, elements_containing_point, initialized
+public populate_element_rtree, nearby_elements, elements_containing_point, rtree_initialized
 
-logical :: initialized = .false.
+logical :: rtree_initialized = .false.
 
 interface
   !> Name is element_rtree to match filename `element_rtree.cpp`.
@@ -56,7 +56,7 @@ subroutine populate_element_rtree(node_list, element_list)
   write(*,*) "Initializing RTree"
   ! this cleans out the tree before insertion
   call element_rtree(int(n,C_INT), minx, miny, maxx, maxy)
-  initialized = .true.
+  rtree_initialized = .true.
 end subroutine populate_element_rtree
 
 !> Find probable neighbours of element i and return their indices.
@@ -76,7 +76,7 @@ subroutine nearby_elements(node_list, element_list, i_elm, i_nearby)
   real(C_DOUBLE) :: minx, miny, maxx, maxy
   integer(C_INT) :: num_elements
 
-  if (.not. initialized) then
+  if (.not. rtree_initialized) then
     write(*,*) "ERROR: trying to find nearby elements in uninitialized tree, returning nothing"
     num_elements = 0
   else
@@ -106,7 +106,7 @@ subroutine elements_containing_point(R, Z, i_elms)
   integer, parameter :: n_nearby_C = 500
   integer(C_int), dimension(n_nearby_C) :: i_nearby_C ! large placeholder. Should be larger than n_tht (or n_pol)
 
-  if (.not. initialized) then
+  if (.not. rtree_initialized) then
     write(*,*) "ERROR: trying to find point in uninitialized tree, returning nothing"
     num_elements = 0
   else

@@ -9,7 +9,7 @@ use constants
 use tr_module 
 use data_structure
 use mod_neighbours, only: update_neighbours
-use mod_element_rtree, only: initialized
+use mod_element_rtree, only: rtree_initialized
 
 implicit none
 
@@ -1510,7 +1510,7 @@ call tr_deallocate(ielm_flux,"ielm_flux",CAT_GRID)
 call tr_deallocate(keep,"keep",CAT_GRID)
 call tr_deallocate(k_cross,"k_cross",CAT_GRID)
 
-initialized = .false. ! Force redo neighbours and rtree
+rtree_initialized = .false. ! Force redo neighbours and rtree
 call update_neighbours(node_list,element_list)
 return
 end subroutine grid_xpoint

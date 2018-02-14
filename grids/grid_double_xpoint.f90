@@ -9,7 +9,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_neighbours, only: update_neighbours
-use mod_element_rtree, only: initialized
+use mod_element_rtree, only: rtree_initialized
 
 ! --- Input parameters
 use phys_module, only:     n_flux, n_open, n_tht, n_outer, n_inner, n_private, n_leg, n_up_priv, n_up_leg, 	&
@@ -187,7 +187,7 @@ deallocate(nwpts)
 call tr_unregister_mem(sizeof(stpts),"stpts",CAT_GRID)
 call tr_unregister_mem(sizeof(nwpts),"nwpts",CAT_GRID)
 
-initialized = .false. ! Force redo neighbours and rtree
+rtree_initialized = .false. ! Force redo neighbours and rtree
 call update_neighbours(node_list,element_list)
 return
 end subroutine grid_double_xpoint

@@ -219,7 +219,7 @@ module mgi_module
     
         endif
 
-        mgi_drhon_dt =  mgi_dNinj_dt * central_mass * MASS_PROTON ! Mass density injected per unit time
+        mgi_drhon_dt =  mgi_dNinj_dt * mass_gas ! Mass density injected per unit time
     
         ! Inverse of the number of particles still in the reservoir, formulae given by G. Pautasso (ASDEX-U)
 
@@ -228,7 +228,7 @@ module mgi_module
       else 
 
     rhon_source = rhon_source + (mgi_amplitude * mgi_pol_shape * mgi_tor_shape &
-                  * t_norm /  (V_mgi * 1.d20 * central_density))  
+                  * t_norm * mass_gas /  (V_mgi * 1.d20 * central_density * central_mass * MASS_PROTON))  
  
       endif
 

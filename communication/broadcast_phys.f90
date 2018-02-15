@@ -173,7 +173,6 @@ if (my_id .eq. 0) then
   call MPI_PACK(V_Dmv,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(P_Dmv,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(t_mgi,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(ZK_perp_num,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(mgi_amplitude,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(mgi_R,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)

@@ -395,7 +395,7 @@ do ms=1, n_gauss
      rn0_st = eq_st(mp,8,ms,mt)                                                            
      rn0_tt = eq_tt(mp,8,ms,mt)                                                            
 
-     rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0 ...
+     rn0_corr = corr_neg_dens(rn0) ! Correction for negative rn0 ...
 
      rn0_xx = (rn0_ss * y_t(ms,mt)**2 - 2.d0*rn0_st * y_s(ms,mt)*y_t(ms,mt) + rn0_tt * y_s(ms,mt)**2     &
             + rn0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                 &

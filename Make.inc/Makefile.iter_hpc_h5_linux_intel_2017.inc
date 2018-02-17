@@ -6,9 +6,10 @@
 MODEL = model199
 
 # Fortran compiler 
-FC               = mpif90 
+FC               = mpiifort
 FFLAGS          := $(FFLAGS) -mcmodel=medium -DUSE_BLOCK
-CC = mpicc
+CC = mpiicc
+CXX = mpiicpc
 
 # Solvers dependencies
 USE_HIPS         = 0

@@ -36,8 +36,14 @@ def RequestData(self):
     # Get the current timestep
     req_time = GetUpdateTimestep(self)
 
-    # Read the timestep info from the files
-    xtime = [h5py.File(fname).get("t_now")[0] for fname in FileNames]
+    # Read the timestep info from the filenames without loading the files
+    # this assumes that we're using the default prefix+time.h5 pattern
+    # get the position of the dots and split on those
+    def time_from_name(name):
+        i1 = name.index('.')
+        i2 = name.index('.', i1+1)
+        return float(name[i1:i2-1])
+    xtime = map(time_from_name, FileNames)
 
     # 4 possibilities here:
     # After last step: return last file
@@ -86,8 +92,14 @@ def RequestInformation(self):
         executive = algorithm.GetExecutive()
         outInfo = executive.GetOutputInformation(0)
 
-        # Read the timestep info from the files
-        xtime = [h5py.File(fname).get("t_now")[0] for fname in FileNames]
+        # Read the timestep info from the filenames without loading the files
+        # this assumes that we're using the default prefix+time.h5 pattern
+        # get the position of the dots and split on those
+        def time_from_name(name):
+            i1 = name.index('.')
+            i2 = name.index('.', i1+1)
+            return float(name[i1:i2-1])
+        xtime = map(time_from_name, FileNames)
 
         outInfo.Remove(executive.TIME_STEPS())
         for i in range(len(FileNames)):

@@ -191,7 +191,7 @@ module diffusivities
     else
       
       ! --- Old profile, note, Diff(10) is our switch: =0 => use old profile, =1 => use new profile
-      if (D_perp(10) .ne. 1.d0) then
+      if (ZK_perp(10) .ne. 1.d0) then
         
 	atn_D = (0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4)))
 	get_zkperp2 = ZK_perp(1) * ( (1.d0-ZK_perp(2)) + ZK_perp(2) * atn_D )

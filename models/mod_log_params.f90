@@ -338,18 +338,18 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'particlesource        ', particlesource
   write(*,REAL_FMT) 'particlesource_psin   ', particlesource_psin
   write(*,REAL_FMT) 'particlesource_sig    ', particlesource_sig
-  write(*,REAL_FMT) 'edgeparticlesource        ', edgeparticlesource
-  write(*,REAL_FMT) 'edgeparticlesource_psin   ', edgeparticlesource_psin
-  write(*,REAL_FMT) 'edgeparticlesource_sig    ', edgeparticlesource_sig
+  write(*,REAL_FMT) 'edgeparticlesource    ', edgeparticlesource
+  write(*,REAL_FMT) 'edgeparticlesource_psin', edgeparticlesource_psin
+  write(*,REAL_FMT) 'edgeparticlesource_sig', edgeparticlesource_sig
   write(*,REAL_FMT) 'heatsource            ', heatsource
   write(*,REAL_FMT) 'heatsource_psin       ', heatsource_psin
   write(*,REAL_FMT) 'heatsource_sig        ', heatsource_sig
-  write(*,REAL_FMT) 'particlesource_gauss     ', particlesource_gauss
+  write(*,REAL_FMT) 'particlesource_gauss  ', particlesource_gauss
   write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
   write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig
-  write(*,REAL_FMT) 'heatsource_gauss         ', heatsource_gauss
-  write(*,REAL_FMT) 'heatsource_gauss_psin    ', heatsource_gauss_psin
-  write(*,REAL_FMT) 'heatsource_gauss_sig     ', heatsource_gauss_sig
+  write(*,REAL_FMT) 'heatsource_gauss      ', heatsource_gauss
+  write(*,REAL_FMT) 'heatsource_gauss_psin ', heatsource_gauss_psin
+  write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
   write(*,REAL_FMT) 'tauIC                 ', tauIC
   write(*,REAL_FMT) 'eta_num               ', eta_num
   write(*,REAL_FMT) 'visco_num             ', visco_num
@@ -382,7 +382,6 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'pellet_velocity_Z     ', pellet_velocity_Z
   end if
 
-  write(*,*)
   write(*,REAL_FMT) 'ellip                 ', ellip
   write(*,REAL_FMT) 'tria_u                ', tria_u
   write(*,REAL_FMT) 'tria_l                ', tria_l
@@ -410,13 +409,16 @@ if (my_id == 0) then
 
   write(*,LOGI_FMT) 'freeboundary_equil    ', freeboundary_equil
   write(*,LOGI_FMT) 'freeboundary          ', freeboundary
+  write(*,LOGI_FMT) 'freeb_change_indices  ', freeb_change_indices
   if ( freeboundary ) then
     write(*,LOGI_FMT) 'resistive_wall        ', resistive_wall
     if ( resistive_wall ) then
       write(*,REAL_FMT2) 'wall_resistivity      ', wall_resistivity, ' (used only if STARWALL response file_version==1)'
       write(*,REAL_FMT2) 'wall_resistivity_fact ', wall_resistivity_fact, ' (used only if STARWALL response file_version>=2)'
     end if
-    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time
+
+    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time 
+       
   end if
   
   write(*,REAL_FMT) 'amix                  ', amix
@@ -425,9 +427,11 @@ if (my_id == 0) then
   
   if (freeboundary_equil) then
     write(*,LOGI_FMT) 'starwall_equil_coils  ', starwall_equil_coils
+    write(*,LOGI_FMT) 'freeb_equil_iterate_area    ', freeb_equil_iterate_area
     write(*,REAL_FMT) 'amix_freeb            ', amix_freeb   
     write(*,REAL_FMT) 'equil_accuracy_freeb  ', equil_accuracy_freeb
     write(*,REAL_FMT) 'current_ref           ', current_ref
+    write(*,REAL_FMT) 'psi_offset_freeb      ', psi_offset_freeb
     write(*,REAL_FMT) 'FB_Ip_position        ', FB_Ip_position
     write(*,REAL_FMT) 'FB_Ip_integral        ', FB_Ip_integral
     write(*,REAL_FMT) 'Z_axis_ref            ', Z_axis_ref
@@ -438,20 +442,20 @@ if (my_id == 0) then
     write(*,INTG_FMT) 'n_feedback_current    ', n_feedback_current
     write(*,INTG_FMT) 'n_feedback_vertical   ', n_feedback_vertical
     write(*,INTG_FMT) 'n_iter_freeb          ', n_iter_freeb
-    write(*,INTG_FMT) 'n_coils_nml           ', n_coils_nml
-    write(*,REAL_FMT,advance='no') 'coils0%current        '
-    do i = 1, n_coils_nml
-      write(*,'(10ES12.4)',advance='no') coils0(i)%current
+    write(*,INTG_FMT) 'n_pf_coils            ', n_pf_coils
+    write(*,REAL_FMT,advance='no') 'pf_coils%current      '
+    do i = 1, n_pf_coils
+      write(*,'(10ES12.4)',advance='no') pf_coils(i)%current
     end do
     write(*,*)
-    write(*,REAL_FMT,advance='no') 'coils0%FB_amp         '
-    do i = 1, n_coils_nml
-      write(*,'(10ES12.4)',advance='no') coils0(i)%FB_amp
+    write(*,REAL_FMT,advance='no') 'vert_FB_amp           '
+    do i = 1, n_pf_coils
+      write(*,'(10ES12.4)',advance='no') vert_FB_amp(i)
     end do
     write(*,*)
-    write(*,REAL_FMT,advance='no') 'coils0%pert           '
-    do i = 1, n_coils_nml
-      write(*,'(10ES12.4)',advance='no') coils0(i)%pert
+    write(*,REAL_FMT,advance='no') 'pf_coils%pert         '
+    do i = 1, n_pf_coils
+      write(*,'(10ES12.4)',advance='no') pf_coils(i)%pert
     end do
     write(*,*)
   endif
@@ -511,8 +515,8 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'RMP_growth_rate       ', RMP_growth_rate
      write(*,REAL_FMT) 'RMP_ramp_up_time      ', RMP_ramp_up_time
      write(*,INTG_FMT) 'Number_RMP_harmonics  ', Number_RMP_harmonics 
-     write(*,REAL_FMT) 'RMP_har_cos_spectrum ',  RMP_har_cos_spectrum
-     write(*,REAL_FMT) 'RMP_har_sin_spectrum ',  RMP_har_sin_spectrum
+     write(*,INTG_FMT) 'RMP_har_cos_spectrum  ', RMP_har_cos_spectrum(1:Number_RMP_harmonics)
+     write(*,INTG_FMT) 'RMP_har_sin_spectrum  ', RMP_har_sin_spectrum(1:Number_RMP_harmonics)
   endif
   write(*,LOGI_FMT) 'output_bnd_elements   ', output_bnd_elements
   write(*,LOGI_FMT) 'bootstrap             ', bootstrap

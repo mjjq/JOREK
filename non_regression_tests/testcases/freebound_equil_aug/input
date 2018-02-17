@@ -31,24 +31,24 @@
  n_feedback_vertical  = 1
  n_iter_freeb         = 999 
  
- n_coils_nml          = 13
+ n_pf_coils          = 13
 
- coils0( 1)%current    =  0.59079802d+6     ! IV1o   
- coils0( 2)%current    =  1.47550797d+6     ! IV1u   
- coils0( 3)%current    = -0.40878099d+6     ! IV2o   
- coils0( 4)%current    = -1.08130205d+6     ! IV2u   
- coils0( 5)%current    = -0.11582000d+6     ! IV3o   
- coils0( 6)%current    = -0.11954700d+6     ! IV3u                
- coils0( 7)%current    = -0.00274200d+6     ! ICoIo  
- coils0( 8)%current    = -0.00008600d+6     ! ICoIu  
- coils0( 9)%current    = -0.00048700d+6     ! Ipslon 
- coils0(10)%current    =  0.00222000d+6     ! Ipslun 
- coils0(11)%current    =  1.03397000d+6     ! IHO2od 
- coils0(12)%current    =  1.67137802d+6     ! IHO2ud 
- coils0(13)%current    = -8.31900024d+6     ! IOH    
+ pf_coils( 1)%current    =  0.59079802d+6     ! IV1o   
+ pf_coils( 2)%current    =  1.47550797d+6     ! IV1u   
+ pf_coils( 3)%current    = -0.40878099d+6     ! IV2o   
+ pf_coils( 4)%current    = -1.08130205d+6     ! IV2u   
+ pf_coils( 5)%current    = -0.11582000d+6     ! IV3o   
+ pf_coils( 6)%current    = -0.11954700d+6     ! IV3u                
+ pf_coils( 7)%current    = -0.00274200d+6     ! ICoIo  
+ pf_coils( 8)%current    = -0.00008600d+6     ! ICoIu  
+ pf_coils( 9)%current    = -0.00048700d+6     ! Ipslon 
+ pf_coils(10)%current    =  0.00222000d+6     ! Ipslun 
+ pf_coils(11)%current    =  1.03397000d+6     ! IHO2od 
+ pf_coils(12)%current    =  1.67137802d+6     ! IHO2ud 
+ pf_coils(13)%current    = -8.31900024d+6     ! IOH    
                          
- coils0(3)%FB_amp      =  1.d0              ! IV2o 
- coils0(4)%FB_amp      = -1.d0              ! IV2u
+ vert_FB_amp(3)          =  1.d0              ! IV2o 
+ vert_FB_amp(4)          = -1.d0              ! IV2u
 
  tokamak_device   = 'AUG'
  F0              = 3.03592621927

@@ -50,7 +50,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl, xwidth, xsig, xtheta, xshift, xleft, xpoint, &
                 xcase, D_perp_file, ZK_perp_file,                   &
                 rho_file, T_file, ffprime_file,                     &
-                freeboundary, resistive_wall,                       &
+                freeboundary, resistive_wall, freeb_change_indices, &
                 wall_resistivity, wall_resistivity_fact,            &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp, n_tor_fft_thresh,                         &
@@ -67,16 +67,19 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 save_diagnostics_HDF5,h5_diag_nbtime,               &
 #endif
                 wall_file,                                          &
-                n_limiter, R_limiter, Z_limiter,		                &
-                first_target_point, last_target_point,		          &
+                n_limiter, R_limiter, Z_limiter,                    &
+                first_target_point, last_target_point,		    &
                 linear_run, export_for_nemec,                       &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
-                n_iter_freeb, n_coils_nml, coils0,                  &
-                Zaxis_find_limit, PF_pert_start_time
+                n_iter_freeb, n_pf_coils, pf_coils,                 &
+                Zaxis_find_limit, PF_pert_start_time,               &
+                starwall_equil_coils, freeb_equil_iterate_area,     &
+                psi_offset_freeb, diag_coils, rmp_coils,            &
+                voltage_coils, vert_FB_amp
 
 if (my_id .eq. 0) then
 

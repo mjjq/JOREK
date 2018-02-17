@@ -1,6 +1,6 @@
 module mod_global_matrix_structure
 contains
-subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max)
+subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
   !* matrix                                                              *
@@ -9,6 +9,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   use data_structure
   use global_distributed_matrix
   use mod_ch_node_struct
+  use vacuum, only: sr
 
   implicit none
 
@@ -19,18 +20,19 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   type (type_element)          :: element
   type (type_node)             :: nodes(n_vertex_max)
 
-  integer :: local_elms(*), index_min, index_max, my_id, n_local_elms
+  integer :: local_elms(*), index_min, index_max, my_id, my_id_n, n_local_elms
   integer :: i, ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2, index1, index2, index1_local, index2_local
   integer :: j_larger, j, ibase, n_max
-  integer :: inode,i_father
+  integer :: inode,i_father,maxsize
   integer, dimension(n_vertex_max) ::  node_out
   logical :: freeboundary
+  integer, allocatable :: tmp(:,:)
 
   if ( my_id == 0 ) then
     write(*,*) '**********************************'
     write(*,*) '* global_matrix_structure        *'
     write(*,*) '**********************************'
-    if (freeboundary) write(*,*) ' FREEBOUNDARY is ON'
+    if ( freeboundary .and. (sr%n_tor/=0) ) write(*,*) ' FREEBOUNDARY is ON'
   end if
   
   n_matrix_block_size = n_tor * n_var
@@ -148,7 +150,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   enddo                 ! loop over local elements
 
 
-  if (freeboundary) then      ! add contributions from all boundary nodes
+  if ( freeboundary .and. (sr%n_tor/=0) ) then      ! add contributions from all boundary nodes
 
   do ibnd = 1,boundary_list%n_bnd_elements                                 ! loop over the boundary elements
 
@@ -231,9 +233,19 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
         enddo            ! end loop over vertices (iv)
      enddo              ! end loop over boundary elements (ibnd)
   endif                ! check if free boundary on
-
-  call tr_allocate(ijA_index,1,index_max-index_min+1,1,n_max,"ijA_index",CAT_DMATRIX)
-
+  
+  ! --- Allocate ijA_index to actually needed size
+  maxsize = maxval(ijA_size)
+  call tr_allocate(ijA_index,1,index_max-index_min+1,1,maxsize,"ijA_index",CAT_DMATRIX)
+  
+  ! --- Re-allocate irn_jcn to actually needed size
+  call tr_allocate(tmp,1,index_max-index_min+1,1,maxsize,"tmp",CAT_DMATRIX)
+  tmp(:,1:maxsize) = irn_jcn(:,1:maxsize)
+  call tr_deallocate(irn_jcn,"irn_jcn",CAT_DMATRIX)
+  call tr_allocate(irn_jcn,1,index_max-index_min+1,1,maxsize,"irn_jcn",CAT_DMATRIX)
+  irn_jcn(:,:) = tmp(:,:)
+  call tr_deallocate(tmp,"tmp",CAT_DMATRIX)
+  
   ibase = 0
   do i=1,index_max-index_min+1
 
@@ -250,8 +262,14 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   n_glob  = (index_max-index_min+1) * n_tor * n_var
 
   nz_glob = ijA_index(index_max-index_min+1,ijA_size(index_max-index_min+1)) + (n_tor*n_var)**2 - 1
+  
+  if (.not. allocated(irn_glob))  call tr_allocate(irn_glob,1,nz_glob,"irn_glob",CAT_DMATRIX)
+  if (.not. allocated(jcn_glob))  call tr_allocate(jcn_glob,1,nz_glob,"jcn_glob",CAT_DMATRIX)
+  
+  irn_glob = 0
+  jcn_glob = 0
 
-  write(*,*) my_id,' size matrices : n, nz = ',n_glob, nz_glob
+  write(*,'(2i6,a,2i12)') my_id, my_id_n, ' size matrices : n, nz = ', n_glob, nz_glob
 
   return
 end subroutine global_matrix_structure

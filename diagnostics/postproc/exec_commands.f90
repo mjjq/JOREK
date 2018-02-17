@@ -941,9 +941,9 @@ module exec_commands
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     ! ### is nTht and nphi really chosen well???
-    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=6*n_plane,                &
+    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=max(150,6*n_plane),                &
       nsmallsteps=nsmall)
-    tor_pos_list = tor_pos(nphi=n_plane)
+    tor_pos_list = tor_pos(nphi=max(n_plane,2))
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)
@@ -1112,7 +1112,7 @@ module exec_commands
     do k = 1, npts
       surface_list%psi_values(k) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * real(k-1)/real(npts-1)
     end do
-    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
       eq%Z_xpoint, q, rad)
     
@@ -1187,7 +1187,7 @@ module exec_commands
     do i = 1, npts
       surface_list%psi_values(i) = psi_min + (psi_max-psi_min) * real(i-1)/real(npts-1)
     end do
-    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     
     ! --- Write out flux surfaces
     nplot  = 5
@@ -1275,7 +1275,7 @@ module exec_commands
     surface_list%n_psi = 1
     allocate( surface_list%psi_values(1) )
     surface_list%psi_values(1) = eq%psi_bnd
-    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     
     ! --- Write out flux surfaces
     nplot  = 5

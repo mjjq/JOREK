@@ -14,8 +14,12 @@ INCLUDES += -I$(MODDIR)
 # Detect the compiler vendors (sort to remove duplicates)
 F_COMPILER_FAMILY :=$(sort $(shell $(FC) --version | grep -oim 1 'intel\|gcc\|gnu' | tr A-Z a-z | sed 's/gcc/gnu/'))
 C_COMPILER_FAMILY :=$(sort $(shell $(CC) --version | grep -oim 1 'intel\|gcc\|gnu' | tr A-Z a-z | sed 's/gcc/gnu/'))
+CXX_COMPILER_FAMILY :=$(sort $(shell $(CXX) --version | grep -oim 1 'intel\|gcc\|gnu\|g[+][+]' | tr A-Z a-z | sed -e 's/gcc/gnu/' -e 's/g[+][+]/gnu/'))
 ifneq ($(F_COMPILER_FAMILY),$(C_COMPILER_FAMILY))
   $(error "Fortran compiler ($(F_COMPILER_FAMILY)) must be same as C compiler ($(C_COMPILER_FAMILY))")
+endif
+ifneq ($(CXX_COMPILER_FAMILY),$(C_COMPILER_FAMILY))
+  $(error "C++ compiler ($(CXX_COMPILER_FAMILY)) must be same as C compiler ($(C_COMPILER_FAMILY))")
 endif
 ifeq ($(COMPILER_FAMILY),)
   COMPILER_FAMILY = $(F_COMPILER_FAMILY)
@@ -57,7 +61,7 @@ endif
 # Default flags for intel
 ifeq ($(COMPILER_FAMILY), intel)
   COMPILER_MAJOR_VERSION=$(shell $(FC) -V 2>&1 | grep -o "Version [0-9]*" | cut -d' ' -f 2)
-  FLAGS += -align
+  FFLAGS += -align
   ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -ge 15; echo $$?),0)
     FLAGS += -qopenmp
   else
@@ -109,6 +113,9 @@ $(OBJDIR)/%.o:: $(1)%.f
 
 $(OBJDIR)/%.o:: $(1)%.c
 	$$(CC) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
+
+$(OBJDIR)/%.o:: $(1)%.cpp
+	$$(CXX) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE
@@ -129,7 +136,7 @@ endef
 
 
 
-LIBS := $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
+LIBS += $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
 DEFINES += -DJOREK_MODEL=$(MODEL_NUMBER) -DUSE_MPI
 
 # Use flags

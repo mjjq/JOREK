@@ -5,6 +5,7 @@ MODEL = model199
 # Fortran compiler 
 FC     = mpif90
 CC     = mpicc
+CXX    = g++
 
 FFLAGS_OMP       = -fopenmp 
 FFLAGS           = -g -O0 

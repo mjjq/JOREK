@@ -489,6 +489,7 @@ module mod_diag_output
     character(len=*),           intent(in)    :: filename
     character(len=*), optional, intent(in)    :: comment
     
+#ifdef USE_HDF5
     ! --- Local variables.
     integer(HID_T) :: i_file
     character(len=1), allocatable :: varnames(:) !#####################
@@ -527,6 +528,10 @@ module mod_diag_output
     call HDF5_close(i_file)
     
     deallocate(varnames)
+#else
+    write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Code was not compiled with HDF5.'
+    ierr = 999
+#endif
     
   end subroutine write_hdf5_2d
   

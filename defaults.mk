@@ -162,6 +162,10 @@ ifeq (1, $(USE_PASTIX))
     LIBS     := $(LIBS) $(LIB_PASTIX) $(LIB_PASTIX_BLAS)
     INCLUDES := $(INCLUDES) $(INC_PASTIX)
   endif
+  PASTIX_MEMORY_USAGE?=1
+  ifeq (1, $(PASTIX_MEMORY_USAGE))
+    DEFINES := $(DEFINES) -DMEMORY_USAGE
+  endif
 endif
 
 ifeq (1, $(USE_WSMP))

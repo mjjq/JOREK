@@ -48,6 +48,7 @@ LIB_PASTIX       = `$(PASTIX_HOME)/pastix-conf --libs`
 LIB_PASTIX_MURGE = `$(PASTIX_HOME)/pastix-conf --libs_murge`
 LIB_PASTIX_BLAS  = -lopenblas
 INC_PASTIX       = `$(PASTIX_HOME)/pastix-conf --incs`
+PASTIX_MEMORY_USAGE = 0
 
 #HIPS
 LIBHIPS   = -L$(HOME)/hips_trunk/trunk/LIB -lhips -lio $(LIBSCOTCH)

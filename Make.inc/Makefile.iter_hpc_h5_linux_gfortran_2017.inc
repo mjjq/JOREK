@@ -28,7 +28,7 @@ USE_PASTIX = 1
 USE_PASTIX_MURGE = 0
 USE_MUMPS  = 0
 USE_WSMP   = 0
-USE_FFTW   = 0
+USE_FFTW   = 1
 USE_HDF5   = 1
 
 #Scotch library
@@ -59,6 +59,7 @@ INCHIPS   = -I$(HOME)/hips_trunk/trunk/LIB
 LIB_WSMP = -L$(WSMP_HOME) -lpwsmp64
 
 # LIBFFTW
+FFTWDIR ?= $(EBROOTFFTW)
 LIBFFTW   = -L$(FFTWDIR)/lib -lfftw3
 INC_FFTW  = -I$(FFTWDIR)/include
 

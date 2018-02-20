@@ -14,6 +14,7 @@ CXX = mpicxx
 # Solvers dependencies
 USE_HIPS         = 0
 USE_PASTIX       = 1
+USE_BLOCK        = 1
 USE_PASTIX_MURGE = 0
 USE_MUMPS        = 1
 USE_FFTW         = 1

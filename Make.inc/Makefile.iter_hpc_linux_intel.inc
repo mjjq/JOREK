@@ -36,6 +36,7 @@ FFLAGS_NO_OMP     = -fpp -r8 -i4 -O2 -msse4.2 -align
 # Solvers dependencies
 USE_HIPS         = 0
 USE_PASTIX       = 1
+USE_BLOCK        = 1
 USE_PASTIX_MURGE = 0
 USE_MUMPS        = 1
 USE_FFTW         = 1

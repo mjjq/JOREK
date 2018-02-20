@@ -525,8 +525,10 @@ do ms=1, n_gauss
        d2eta_d2T = 0.d0
      end if
 
-     eta_Sp = 1.65d-9*17*(1.d-3*T0_corr/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
-                               *sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) 
+     !eta_Sp = 1.65d-9*17*(1.d-3*T0_corr/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
+     !                          *sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) 
+
+     eta_Sp = 0. ! For intear benchmark
      
      detaSp_dT = -1.65d-9*17 * (1.5d0) * T0_corr**(-2.5d0) * (1.d-3/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
                       * sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) * dT0_corr_dT
@@ -569,10 +571,12 @@ do ms=1, n_gauss
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
 
-     T_neg = 1.d-5
-     delta_neg = 1.d-4
+!========= For intear benchmark=====
+     !T_neg = 1.d-5
+     !delta_neg = 1.d-4
 
-     ZK_prof = ZK_prof * (1+100*(0.5+0.5*tanh(-(T0-T_neg)/delta_neg))) 
+     !ZK_prof = ZK_prof * (1+100*(0.5+0.5*tanh(-(T0-T_neg)/delta_neg))) 
+!============End==============
 
      !if (T0 .lt. T_neg) then
      !heat_source = 1.d-4
@@ -773,7 +777,7 @@ do ms=1, n_gauss
 !#  equation 1   (induction equation)                                                              #
 !###################################################################################################
 
-              rhs_ij_1 =   v * (eta_T  * zj0)/ BigR  * xjac * tstep &
+              rhs_ij_1 =   v * eta_T  * (zj0 - current_source(ms,mt))/ BigR  * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
@@ -1127,7 +1131,7 @@ do ms=1, n_gauss
                            + v * tauIC * rho /(r0_corr**2 * BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac         * theta * tstep 
 
 
-                 amat_16 = - deta_dT * v * T * (zj0) / BigR * xjac * theta * tstep &
+                 amat_16 = - deta_dT * v * T * (zj0-current_source(ms,mt)) / BigR * xjac * theta * tstep &
  
                         + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s) * theta * tstep &
                         + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)* theta * tstep &   

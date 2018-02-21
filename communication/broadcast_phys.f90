@@ -29,7 +29,6 @@ integer                :: err_alloc = 0
 if ( my_id == 0 ) then
   write(*,*) '*************************************'
   write(*,*) '*        Broadcast_phys             *'
-  write(*,*) '*************************************'
 end if
 
 !----------------------------------- one line would be enough if only MPI_TYPE_STRUCT would work on IXIA
@@ -462,7 +461,7 @@ end if
   call MPI_PACK(RMP_har_cos_spectrum,   N_RMP_MAX,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(RMP_har_sin_spectrum,   N_RMP_MAX,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
-  write(*,'(1x,a,i7,a,i7,a)') 'Buffer usage:', position, ' of', bufsize
+  write(*,'(1x,a,i7,a,i7,a)') '  Buffer usage: ', position, ' of ', bufsize
   if ( position > bufsize ) then
     err_buff_too_small = .true.
     write(*,*) ''
@@ -919,6 +918,8 @@ endif
 
 call tr_unregister_mem(bufsize,"bcastp_buffer")
 deallocate(buffer)
+
+if ( my_id == 0 ) write(*,*) '*************************************'
 
 return
 end subroutine broadcast_phys

@@ -116,7 +116,9 @@ module mod_expression
     call add(exprs_all, 'currdens    ', 'Physical Toroidal Current Density (== zj/R)           ')
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
+    call add(exprs_all, 'ne          ', 'Electron Density                                      ')
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
+    call add(exprs_all, 'Te          ', 'Electron temperature (assuming Ti=Te)                 ')
     call add(exprs_all, 'vpar        ', 'Parallel Velocity (along magnetic field lines)        ')
     call add(exprs_all, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
     call add(exprs_all, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
@@ -406,7 +408,8 @@ module mod_expression
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
     ! --- Normalization factors
-    real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_T, fact_vpar, fact_resistiv, fact_Er
+    real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
+      fact_resistiv, fact_Er
 #if JOREK_MODEL == 500
     real*8  :: coef_rad_1
     real*8  :: T_rad, LradDrays_T, LradDcont_T
@@ -972,7 +975,8 @@ module mod_expression
              rho_norm      = central_density *1.d20 * central_mass * mass_proton   ! rho_0 = central mass density
              fact_time     = sqrt(MU_zero*rho_norm)                                ! time factor
              fact_mu_zero  = MU_zero                                               ! division by mu_zero for P and J
-             fact_ne       = central_density * 1.d20                               ! factor for rho
+             fact_ne       = central_density * 1.d20                               ! factor for n_e
+             fact_rho      = central_density * 1.d20 * central_mass*MASS_PROTON    ! factor for rho
              fact_T        = 1.d0 / ( MU_zero * central_density * 1.d20 * EL_CHG ) ! factor for T
              fact_vpar     = sqrt(BB2) / fact_time                                 ! factor for Vpar
              fact_resistiv = sqrt ( MU_zero / rho_norm )                           ! factor for eta == 1 / (factor for visco)
@@ -981,6 +985,7 @@ module mod_expression
              fact_time     = 1.d0
              fact_mu_zero  = 1.d0
              fact_ne       = 1.d0
+             fact_rho      = 1.d0
              fact_T        = 1.d0
              fact_vpar     = 1.d0
              fact_resistiv = 1.d0
@@ -1043,10 +1048,16 @@ module mod_expression
                 res = w0
                 
               case ( 'rho' )
+                res = r0 * fact_rho
+                
+              case ( 'ne' )
                 res = r0 * fact_ne
                 
               case ( 'T' )
                 res = T0 * fact_T
+              
+              case ( 'Te' )
+                res = T0 * fact_T / 2.d0
               
               case ( 'vpar' )
                 res = Vpar0 * fact_vpar

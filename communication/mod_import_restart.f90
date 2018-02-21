@@ -20,15 +20,19 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr)
   integer,                 intent(out)   :: ierr
   integer,                 intent(in)    :: format_rst  ! format of restart file 
 
+  write(*,*)
+  write(*,*) '************* restart ******************'
+  
   if ( rst_hdf5 == 0 ) then
-    write(*,*) " Restart from BINARY file " // trim(filename) // '.rst'
     call import_binary_restart(node_list, element_list, trim(filename)//'.rst', &
             format_rst, ierr)
   else if ( rst_hdf5 == 1 ) then
-    write(*,*) " Restart from HDF5 file " // trim(filename) // '.h5'
     call import_hdf5_restart(node_list, element_list, trim(filename)//'.h5', &
             format_rst,ierr)
   end if
+  
+  write(*,*) '********* end restart ******************'
+  write(*,*)
 
 end subroutine import_restart
 
@@ -82,7 +86,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   error = 0
 
   write(*,*) 'Importing restart file "', trim(filename), '".'
-  write(*,*) '  Using format : ',rst_format
+  write(*,*) ' Using format : ',rst_format
 
   open(21,file=trim(filename), form='unformatted', status='old', action='read', iostat=error)
   if ( error /= 0 ) then
@@ -98,23 +102,23 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     read(21) mode_tmp
     write(*,*) ' NEW format (1) : ',mode_tmp
   elseif (format_rst == 0) then
-    write(*,*) ' mode : ',mode
+    !write(*,*) ' mode : ',mode
     if (n_tor .eq. n_tor_tmp) then 
        mode_tmp = mode
     else
        mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
     endif
-    write(*,*) ' OLD format (0) : '
-    write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
-    write(*,'(A,999i4)') ' new mode numbers     : ',mode
+    write(*,*) 'OLD format (0) : '
+    write(*,'(A,999i4)') '   previous modenumbers : ',mode_tmp
+    write(*,'(A,999i4)') '   new mode numbers     : ',mode
   elseif ( format_rst > 2 ) then
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
   endif
 
   if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') &
-       ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+       ' Warning: Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
   if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') &
-       ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+       ' Warning: Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
 
   write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics'
 
@@ -374,12 +378,10 @@ endif
   
   close(21)
   
-  write(*,*) '************* restart ******************'
-  write(*,'(A,I6,F14.6,A)') ' *  restart time       : ',index_start,t_start,' *'
+  write(*,'(A,I6,F14.6,A)') ' restart time       : ',index_start,t_start
 #ifdef USE_HDF5
-  write(*,'(A,I4,A)')       ' *  HDF5 files written : ',h5_nbsave_all,'   *'
+  !write(*,'(A,I4,A)')       ' HDF5 files written : ',h5_nbsave_all
 #endif
-  write(*,*) '****************************************'
 
   do i=2,index_start
     if ( (energies(n_tor,1,i).ne.0.) .and. (energies(n_tor,1,i-1).ne.0.)) then
@@ -521,9 +523,6 @@ endif
       enddo
     endif
   endif
-
-  ! End reading binary restart file  
-  write(*,*) '********* end restart ******************'
 
   !call add_pellet(node_list,element_list,25.d0,0.06d0,0.03d0,3.78d0,0.14d0)
 
@@ -683,21 +682,20 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       do j = 1, n_tor, 2
         if ( mode_tmp(i) == mode(j) ) kept = .true.
       end do
-      if ( .not. kept ) write (*,'(1x,a,i5,a)') 'WARNING: The mode n=', mode_tmp(i), ' is being dropped!'
+      if ( .not. kept ) write (*,'(1x,a,i5,a)') 'Warning: The mode n=', mode_tmp(i), ' is being dropped!'
     end do
   elseif ( format_rst > 2 ) then
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
   endif
 
   if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i5))') &
-       ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+       ' Warning: Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
   if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i5))') &
-       ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+       ' Warning: Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
   if (n_period_tmp .ne. n_period) write(*,'(3(a,i5))') &
-       ' IMPORT WARNING : n_period has changed from', n_period_tmp, ' to', n_period
+       ' Warning: n_period has changed from', n_period_tmp, ' to', n_period
 
-
-  write(*,'(2(A,i5))') ' Importing ',n_tor_tmp,' harmonics with n_period=', n_period_tmp 
+  !write(*,'(2(A,i5))') ' Importing ',n_tor_tmp,' harmonics with n_period=', n_period_tmp 
 
   call HDF5_integer_reading(file_id,node_list%n_nodes,"n_nodes")
   call HDF5_integer_reading(file_id,element_list%n_elements,"n_elements")
@@ -770,7 +768,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       end if
     end do
   end do
-  write(*,'(a,999i4)') ' need initialization  : ', new_mode
+  !write(*,'(a,999i4)') ' need initialization  : ', new_mode
   
   do i=1,node_list%n_nodes
     node_list%node(i)%x = t_x(i,:,:) 
@@ -1103,10 +1101,8 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   call HDF5_close(file_id)
  
-  write(*,*) '************* restart ******************'
-  write(*,'(A19,i6,f14.6,A)') ' *  restart time : ',index_start,t_start,' *'
-  write(*,'(A19,I4,A)') ' *  HDF5 files written : ',h5_nbsave_all,' *'
-  write(*,*) '****************************************'
+  write(*,'(A,i6,f14.6,A)') ' restart time         : ',index_start,t_start
+  !write(*,'(A19,I4,A)') ' HDF5 files written : ',h5_nbsave_all
   
   do i=2,index_start
     if ( (energies(n_tor,1,i).ne.0.) .and. (energies(n_tor,1,i-1).ne.0.)) then
@@ -1128,8 +1124,8 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
  
   ! --- initialise new harmonics (only density and temperature, to be improved)
   n_new_modes = sum(new_mode(1:n_tor))
-  write(*,*), 'Warning:', n_new_modes, ' new modes initialized to noise level' 
   if ( n_new_modes .gt. 0 ) then
+    write(*,*), 'Warning:', n_new_modes, ' new modes initialized to noise level'
     ! --- Using an already computed mode
     if ( (import_perturbation) .and. (n_tor .gt. 1) ) then
       write(*,*) 'ERROR: Importing perturbation from jorek_perturbation.rst file...'

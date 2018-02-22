@@ -224,11 +224,6 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
   V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
   t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
-  if (my_id == 0) then
-    open(20,file="pellets_parameters.dat",position="APPEND",status="OLD")
-    write(20,"(e12.3)",advance="no") t_now/V_normalisation
-  end if
-
   spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
     
   spi_phi_inj     = mgi_phi + mgi_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/mgi_R
@@ -240,12 +235,6 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
   end if
 
   do i=1, n_spi
-
-    if (my_id == 0 .and. i < n_spi) then
-      write(20,"(e14.6)",advance="no") pellets(i)%spi_abl
-    elseif (my_id == 0 .and. i == n_spi) then
-      write(20,"(e14.6)") pellets(i)%spi_abl
-    end if
 
     spi_delta_phi          = pellets(i)%spi_phi - spi_phi_inj
     spi_Vel_R_tmp          = pellets(i)%spi_Vel_R * cos(spi_delta_phi) &
@@ -346,8 +335,6 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
   !write(*,'(A,4e14.6)') ' pellet (R,Z) =', spi_R, spi_Z,spi_Vel_R/V_normalisation,spi_Vel_Z/V_normalisation
   
   if (my_id == 0 .and. mod(index_now,20) == 0) then
-
-    close(20)
 
     do i=1, 20 !n_spi
       if (pellets(i)%spi_radius > 0.0) then

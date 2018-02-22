@@ -360,24 +360,6 @@ do ms=1, n_gauss
             - xjac_y * (- rn0_s * x_t(ms,mt) + rn0_t * x_s(ms,mt) )  / xjac**2
 
 
-!===================================Buffer======================================
-!
-!     r0_x  = (   y_t(ms,mt) * eq_s(mp,5,ms,mt) - y_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
-!     r0_y  = ( - x_t(ms,mt) * eq_s(mp,5,ms,mt) + x_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
-!
-!
-!     r0_xx = (r0_ss * y_t(ms,mt)**2 - 2.d0*r0_st * y_s(ms,mt)*y_t(ms,mt) + r0_tt * y_s(ms,mt)**2     &
-!            + r0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &
-!            + r0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2               &
-!            - xjac_x * (r0_s* y_t(ms,mt) - r0_t * y_s(ms,mt))  / xjac**2
-!
-!     r0_yy = (r0_ss * x_t(ms,mt)**2 - 2.d0*r0_st * x_s(ms,mt)*x_t(ms,mt) + r0_tt * x_s(ms,mt)**2     &
-!            + r0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                              &
-!            + r0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2            &  
-!            - xjac_y * (- r0_s * x_t(ms,mt) + r0_t * x_s(ms,mt) )  / xjac**2
-!
-!======================================Buffer end======================================
-
      rn0_hat   = BigR**2 * abs(rn0)                                                        
      rn0_x_hat = 2.d0 * BigR * BigR_x  * rn0 + BigR**2 * rn0_x                             
      rn0_y_hat = BigR**2 * rn0_y                                                            
@@ -533,11 +515,9 @@ do ms=1, n_gauss
      if ( eta_T_dependent ) then
        eta_T     = eta   * (T_corr/T_0)**(-1.5d0)
        deta_dT   = - eta   * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0) * dT_corr_dT
-       d2eta_d2T =   eta   * (3.75d0) * T_corr**(-3.5d0) * T_0**(1.5d0) * (dT_corr_dT**2.0) !Incomplete yet
      else
        eta_T     = eta
        deta_dT   = 0.d0
-       d2eta_d2T = 0.d0
      end if
 
      eta_Sp = 1.65d-9*17*(1.d-3*T_corr/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
@@ -731,7 +711,7 @@ do ms=1, n_gauss
 
      end if
 
-     if (source_mgi /= source_mgi) then
+     if (source_mgi /= source_mgi) then  ! This is to detect N/A
        write(*,*) "WARNING: source_mgi = ", source_mgi
      end if
 

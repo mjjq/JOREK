@@ -36,7 +36,8 @@ real*8  :: spi_gd_angle_01, spi_gd_angle_02        !The dispersion angles for ea
 real*8  :: spi_rotation_01, spi_rotation_02        !The rotation angle from spi coordinate to real coordinate
 real*8  :: spi_Vel_totref, spi_Vel_i, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_tmp
 real*8  :: spi_Vel_x, spi_Vel_y, spi_Vel_z         !Spi velocity in injection coordinate
-real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Injection position of SPI
+real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Representing the shattering point of the pellet
+                                                   !The apex of the spreading cone
 real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_radius_tmp
 real*8  :: sign_corr, real_total_quantity
 real*8, allocatable :: rnd(:)                      !The random number array 
@@ -283,7 +284,7 @@ if (using_spi == .true.) then
   else
     if (n_spi >= 1) then
 
-      if (flag_spi_size == 1) then
+      if (flag_spi_size == 1) then               ! flag_spi_size==1 means BesselK distribution function is used.
         
         real_total_quantity = 0.0
       
@@ -316,11 +317,6 @@ if (using_spi == .true.) then
 
       end if
 
-      if (my_id == 0 .and. restart == .false.) then
-        open(20,file="pellets_parameters.dat",status="REPLACE")
-        write(20,"(A,A11)",advance="no") "# t, "
-      end if
-
       if (allocated(rnd)) then
         deallocate(rnd)
       end if
@@ -339,7 +335,8 @@ if (using_spi == .true.) then
 !direction of spi injection being the z axis, while y axis locates within the 
 !same surface as Z and z. The rotational transform from x, y, z to R, Z, RxZ is
 !as the following: first, we rotate the system around x axis clockwise, facing
-!the positive x direction, for spi_rotation_01 to get coordinate X', Y', Z'. 
+!the positive x direction, for spi_rotation_01 to get coordinate X', Y', Z',
+!with Y'=Z. 
 !Then we further rotate around Y' clockwise, facing the positive Y' direction for
 !spi_rotation_02 to acquire R, Z, RxZ. Hence we have:
 !R   = cos(spi_rotation_02)*x - sin(spi_rotation_02)*(-sin(spi_rotation_01)*y + cos(spi_rotation_01)*z)
@@ -362,6 +359,11 @@ if (using_spi == .true.) then
       write(*,*) "Rotational transform: ", spi_rotation_01, spi_rotation_02
 
 !==========================End of rotational angles==============================
+
+! The random number array rnd contains two random angle representing the
+! velocity direction spread, and one random speed. Those random number uniquely
+! define a random velocity of the shard, which is then transformed into the
+! R, Z, RxZ space.
 
       CALL random_number(rnd)
 

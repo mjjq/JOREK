@@ -549,11 +549,9 @@ do ms=1, n_gauss
      if ( eta_T_dependent ) then
        eta_T     = eta   * (T_corr/T_0)**(-1.5d0)
        deta_dT   = - eta   * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0) * dT_corr_dT
-       d2eta_d2T =   eta   * (3.75d0) * T_corr**(-3.5d0) * T_0**(1.5d0) * (dT_corr_dT**2.0) !Incomplete yet
      else
        eta_T     = eta
        deta_dT   = 0.d0
-       d2eta_d2T = 0.d0
      end if
 
      eta_Sp = 1.65d-9*17*(1.d-3*T_corr/(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(-1.5d0) & 
@@ -746,7 +744,7 @@ do ms=1, n_gauss
    
      end if
 
-     if (source_mgi /= source_mgi) then
+     if (source_mgi /= source_mgi) then ! This is to detect N/A
        write(*,*) "WARNING: source_mgi = ", source_mgi
      end if
 

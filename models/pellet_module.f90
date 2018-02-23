@@ -313,10 +313,16 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
       if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
         write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
       end if
-      ! NGS model
+      ! NGS model (Gal)
       
-      pellets(i)%spi_abl    = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
-                             (T_eV**1.64)
+      !pellets(i)%spi_abl    = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
+      !                       (T_eV**1.64)
+ 
+      ! NGS model (Fitted by Sergeev)
+
+      pellets(i)%spi_abl    = 3.9d14 * (pellets(i)%spi_radius**(1.455)) * (n_SI**(0.455)) * &
+                             (T_eV**1.679)
+
     else
       pellets(i)%spi_abl    = 0.d0
     end if

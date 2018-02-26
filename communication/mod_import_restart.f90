@@ -509,7 +509,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer, allocatable :: mode_tmp(:), new_mode(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
   character*50         :: version_control, version_control_tmp
-  logical              :: kept
+  logical              :: kept, import_3xx_4xx
   
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id
@@ -569,6 +569,16 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   call HDF5_integer_reading(file_id,jorek_model_tmp,"jorek_model")
   call HDF5_integer_reading(file_id,n_var_tmp,"n_var")
+  import_3xx_4xx = .false.
+  if ( (jorek_model >= 400) .and. (jorek_model <= 499) .and. (jorek_model_tmp >= 300) .and. (jorek_model_tmp <= 399) ) then
+    import_3xx_4xx = .true. ! Import a JOREK model 3XX restart file into a 4XX binary
+    write(*,*) 'WARNING: Restarting a JOREK model 3XX simulation with model 4XX.'
+  else if ( n_var /= n_var_tmp ) then
+    write(*,*) 'ERROR: The number of variables in the restart file and the compiled JOREK binary does not agree.'
+    write(*,*) '  Restarting normally works only with the same JOREK model.'
+    write(*,*) '  As an exception, importing a 3XX restart file into model 4XX has been implemented.'
+    stop
+  end if
   call HDF5_integer_reading(file_id,n_order_tmp,"n_order")
   call HDF5_integer_reading(file_id,n_tor_tmp, "n_tor")
   call HDF5_integer_reading(file_id,n_period_tmp, "n_period")
@@ -624,8 +634,8 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   ! -> Allocate temporary arrays 
   call tr_allocate(t_x,     1,node_list%n_nodes,1,n_order+1,1,n_dim,             "node_list%x",     CAT_UNKNOWN)
-  call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor_tmp,1,n_order+1,1,n_var, "node_list%values",CAT_UNKNOWN)
-  call tr_allocate(t_deltas,1,node_list%n_nodes,1,n_tor_tmp,1,n_order+1,1,n_var, "node_list%deltas",CAT_UNKNOWN)
+  call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor_tmp,1,n_order+1,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
+  call tr_allocate(t_deltas,1,node_list%n_nodes,1,n_tor_tmp,1,n_order+1,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
  
 #ifdef fullmhd
   call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_order+1, "node_list%psi_eq",  CAT_UNKNOWN)
@@ -701,17 +711,26 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       do k=1, n_tor,2 
         if (mode_tmp(m) .eq. mode(k)) then
           if ((m .eq. 1) .and. (k.eq.1)) then
-            node_list%node(i)%values(k,:,:) = t_values(i,m,:,:)
-            node_list%node(i)%deltas(k,:,:) = t_deltas(i,m,:,:)
+            node_list%node(i)%values(k,:,1:n_var_tmp)   = t_values(i,m,:,1:n_var_tmp)
+            node_list%node(i)%deltas(k,:,1:n_var_tmp)   = t_deltas(i,m,:,1:n_var_tmp)
           else
-            node_list%node(i)%values(k-1,:,:) = t_values(i,m-1,:,:)
-            node_list%node(i)%deltas(k-1,:,:) = t_deltas(i,m-1,:,:) 
-            node_list%node(i)%values(k,:,:)   = t_values(i,m,:,:) 
-            node_list%node(i)%deltas(k,:,:)   = t_deltas(i,m,:,:)
+            node_list%node(i)%values(k-1,:,1:n_var_tmp) = t_values(i,m-1,:,1:n_var_tmp)
+            node_list%node(i)%deltas(k-1,:,1:n_var_tmp) = t_deltas(i,m-1,:,1:n_var_tmp) 
+            node_list%node(i)%values(k,:,1:n_var_tmp)   = t_values(i,m,:,1:n_var_tmp) 
+            node_list%node(i)%deltas(k,:,1:n_var_tmp)   = t_deltas(i,m,:,1:n_var_tmp)
           end if
         end if
       end do
     end do
+
+    ! --- Split "total" temperature into electron and ion temperature
+    if ( import_3xx_4xx ) then
+      node_list%node(i)%values(:,:,8) = node_list%node(i)%values(:,:,6) / 2.d0
+      node_list%node(i)%deltas(:,:,8) = node_list%node(i)%deltas(:,:,6) / 2.d0
+      node_list%node(i)%values(:,:,6) = node_list%node(i)%values(:,:,6) / 2.d0
+      node_list%node(i)%deltas(:,:,6) = node_list%node(i)%deltas(:,:,6) / 2.d0
+    end if
+
 
 #ifdef fullmhd
     node_list%node(i)%psi_eq   = t_psi_eq(i,:)

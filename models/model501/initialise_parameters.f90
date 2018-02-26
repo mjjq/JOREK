@@ -306,11 +306,6 @@ if (using_spi == .true.) then
 
       end if
 
-      if (my_id == 0 .and. restart == .false.) then
-        open(20,file="pellets_parameters.dat",status="REPLACE")
-        write(20,"(A,A11)",advance="no") "# t, "
-      end if
-
       if (allocated(rnd)) then
         deallocate(rnd)
       end if
@@ -418,10 +413,6 @@ if (using_spi == .true.) then
         end if
         
       end do
-
-      if (my_id == 0 .and. restart == .false.) then
-        close(20)
-      end if
 
       write(*,*) "SPI initialized successfully, total amount of injection:", real_total_quantity
 

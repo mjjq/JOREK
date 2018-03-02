@@ -282,7 +282,7 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
 
     if (flag_spi == 0) then
       pellets(i)%spi_abl   = mgi_amplitude
-    elseif (flag_spi >= 1 .and flag_spi <= 2) then
+    elseif (flag_spi >= 1 .and. flag_spi <= 2) then
 
       call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
                    R_out,Z_out,i_elm,s_out,t_out,ifail)
@@ -321,7 +321,7 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
                              (T_eV**1.64)
       else if (flag_spi ==2) then
       ! NGS model (Fitted by Sergeev)
-      pellets(i)%spi_abl    = 3.9d14 * (pellets(i)%spi_radius**(1.455)) * (n_SI**(0.455)) * &
+      pellets(i)%spi_abl    = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**(1.455)) * ((n_SI*1.d-6)**(0.455)) * &
                              (T_eV**1.679)
       end if
     else

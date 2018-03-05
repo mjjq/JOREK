@@ -4,7 +4,7 @@ module mod_openadas
 implicit none
 private
 public ADF11, ADF11_all, read_ADF11
-public L2Dinterp
+public L2Dinterp, L2D2interp, L2D2interp_grad
 
 !> Custom data structure containing relevant fields from ADF11 format files (unresolved case!)
 type ADF11
@@ -183,4 +183,70 @@ fx1  = (f(ix1,iy1) - f(ix2,iy1))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy1
 fx2  = (f(ix1,iy2) - f(ix2,iy2))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2)
 fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (y - ty(iy1)) + fx1
 end function L2Dinterp
+
+
+pure function L2D2interp(tx,ty,nz,f,x,y) result(fout)
+real*8, intent(in), dimension(:)                    :: tx !< Grid points in x
+real*8, intent(in), dimension(:)                    :: ty !< Grid points in y
+integer, intent(in)                                 :: nz !< number of scalars
+real*8, intent(in), dimension(size(tx),size(ty),nz) :: f !< Function values at these points
+real*8, intent(in)  :: x, y !< Points at which to interpolate
+real*8, dimension(nz) :: fout
+
+integer :: ix1, iy1 !< Index of closest point
+integer :: ix2, iy2 !< Index of other (usually next closest) point
+real*8  :: fx1(nz), fx2(nz) ! Temporary variables
+ix1 = minloc(abs(tx - x), dim=1)
+if (x .ge. tx(ix1)) ix2 = ix1 + 1 ! find other index
+if (x .lt. tx(ix1)) ix2 = ix1 - 1
+if (ix2 .gt. size(tx)) ix2 = size(tx) - 1 ! if it does not exist, extrapolate
+if (ix2 .lt. 1       ) ix2 = 2
+iy1 = minloc(abs(ty - y), dim=1)
+if (y .ge. ty(iy1)) iy2 = iy1 + 1
+if (y .lt. ty(iy1)) iy2 = iy1 - 1
+if (iy2 .gt. size(ty)) iy2 = size(ty) - 1
+if (iy2 .lt. 1       ) iy2 = 2
+
+fx1  = (f(ix1,iy1,:) - f(ix2,iy1,:))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy1,:)
+fx2  = (f(ix1,iy2,:) - f(ix2,iy2,:))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2,:)
+fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (y - ty(iy1)) + fx1
+end function L2D2interp
+
+
+pure function L2D2interp_grad(tx,ty,nz,f,x,y,dim) result(fout)
+real*8, intent(in), dimension(:)                    :: tx !< Grid points in x
+real*8, intent(in), dimension(:)                    :: ty !< Grid points in y
+integer, intent(in)                                 :: nz !< number of scalars
+real*8, intent(in), dimension(size(tx),size(ty),nz) :: f !< Function values at these points
+real*8, intent(in)  :: x, y !< Points at which to interpolate
+integer, intent(in) :: dim !< which dimension to interpolate in
+real*8, dimension(nz) :: fout
+
+integer :: ix1, iy1 !< Index of closest point
+integer :: ix2, iy2 !< Index of other (usually next closest) point
+real*8  :: fx1(nz), fx2(nz) ! Temporary variables
+ix1 = minloc(abs(tx - x), dim=1)
+if (x .ge. tx(ix1)) ix2 = ix1 + 1 ! find other index
+if (x .lt. tx(ix1)) ix2 = ix1 - 1
+if (ix2 .gt. size(tx)) ix2 = size(tx) - 1 ! if it does not exist, extrapolate
+if (ix2 .lt. 1       ) ix2 = 2
+iy1 = minloc(abs(ty - y), dim=1)
+if (y .ge. ty(iy1)) iy2 = iy1 + 1
+if (y .lt. ty(iy1)) iy2 = iy1 - 1
+if (iy2 .gt. size(ty)) iy2 = size(ty) - 1
+if (iy2 .lt. 1       ) iy2 = 2
+
+if (dim .eq. 1) then
+  fx1 = (f(ix1,iy1,:) - f(ix2,iy1,:))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy1,:)
+  fx2 = (f(ix1,iy2,:) - f(ix2,iy2,:))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2,:)
+  fout = (fx1 - fx2) / (ty(iy1) - ty(iy2))
+elseif (dim .eq. 2) then
+  fx1 = (f(ix1,iy1,:) - f(ix1,iy2,:))/(ty(iy1) - ty(iy2)) * (y - ty(iy1)) + f(ix1,iy1,:)
+  fx2 = (f(ix2,iy1,:) - f(ix2,iy2,:))/(ty(iy1) - ty(iy2)) * (y - ty(iy1)) + f(ix1,iy2,:)
+  fout = (fx1 - fx2) / (tx(ix1) - tx(ix2))
+else
+  fout = -1d99
+end if
+
+end function L2D2interp_grad
 end module mod_openadas

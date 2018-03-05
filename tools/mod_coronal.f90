@@ -12,10 +12,11 @@ type coronal
   integer :: n_Z !< Atomic number
   real*8, allocatable :: density(:) !< log10 density (m^-3)
   real*8, allocatable :: temperature(:) !< log10 temperature (K)
-  real*8, allocatable :: Z(:,:) !< Charge state (e)
+  real*8, allocatable :: Z(:,:,:) !< Charge state (e) [i_T, i_n, i_q]
   real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W)
 contains
   procedure :: interp => interpolate_coronal
+  procedure :: interp_gradients => interpolate_coronal_gradients
 end type coronal
 interface coronal
   module procedure coronal_equilibrium
@@ -106,7 +107,7 @@ do iz=0,ad%n_Z
   Z(iz) = real(iz,8)
 enddo
 
-allocate(cor%density(n_d), cor%temperature(n_T), cor%Z(n_d,n_T), cor%Prad(n_d,n_T))
+allocate(cor%density(n_d), cor%temperature(n_T), cor%Z(n_d,n_T,0:cor%n_Z), cor%Prad(n_d,n_T))
 do m=1, n_d
   cor%density(m) = 18.d0 + float(m-1)/n_d * (21.-18.) ! log10 [m^-3]
   do k=1, n_T
@@ -117,7 +118,7 @@ do m=1, n_d
     call coronal_timestep(ad, p, 1.d0, cor%density(m), cor%temperature(k)) ! use a fixed large timestep of 1 to solve the
     ! equilibrium state
 
-    cor%Z(m,k)    = dot_product(p/sum(p),Z)
+    cor%Z(m,k,:)  = p/sum(p)
     cor%Prad(m,k) = coronal_Prad(ad, cor%density(m), cor%temperature(k), p/sum(p)) ! Do not set neutral density yet
   enddo
 enddo
@@ -170,16 +171,29 @@ end subroutine coronal_timestep
 
 
 !> Linear interpolation of coronal model charge at specific density and temperature
-pure subroutine interpolate_coronal(cor, density, temperature, z, rad)
+pure subroutine interpolate_coronal(cor, density, temperature, p, rad)
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 real*8, intent(in)              :: density !< log10 density (m^-3)
 real*8, intent(in)              :: temperature !< log10 temperature (K)
-real*8, intent(out)             :: z !< most probable charge state
+real*8, intent(out), dimension(0:cor%n_Z) :: p !< distribution of charge states (sum = 1)
 real*8, intent(out), optional   :: rad !< radiated power according to coronal equilibrium
 
-z = L2Dinterp(cor%density,cor%temperature,cor%Z(:,:),density,temperature)
+p = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature)
 if (present(rad)) then
   rad = L2Dinterp(cor%density,cor%temperature,cor%Prad(:,:),density,temperature)
 endif
 end subroutine interpolate_coronal
+
+
+!> Linear interpolation of coronal model charge at specific density and temperature.
+!> Evaluate the gradients only
+pure subroutine interpolate_coronal_gradients(cor, density, temperature, p_Te, p_Ne)
+class(coronal), intent(in)      :: cor !< Coronal equilibrium type
+real*8, intent(in)              :: density !< log10 density (m^-3)
+real*8, intent(in)              :: temperature !< log10 temperature (K)
+real*8, intent(out), dimension(0:cor%n_Z) :: p_Te, p_Ne !< gradient of distribution of charge states (sum = 1) to Te and Ne
+
+p_Te = L2D2interp_grad(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature,1)
+p_Ne = L2D2interp_grad(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature,2)
+end subroutine interpolate_coronal_gradients
 end module mod_coronal

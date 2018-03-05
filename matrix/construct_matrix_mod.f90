@@ -356,7 +356,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
       enddo 
     endif
 
-#ifndef USE_OMP_ATOMIC
+#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
     ! --- We don't want the next part to run in parallel
     !$omp critical  
 #endif
@@ -402,7 +402,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
                     irn_glob(ilarge2) = index_large_i	+ j
                     jcn_glob(ilarge2) = index_large_k	+ l
-#ifdef USE_OMP_ATOMIC
+#ifdef CONSTRUCT_MATRIX_OMP_ATOMIC
                     !$omp atomic
 #endif
                     A_glob(ilarge2)   = A_glob(ilarge2) + ELM(index_ij,index_kl)
@@ -422,7 +422,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     endif ! refinement
 
-#ifndef USE_OMP_ATOMIC
+#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
     ! --- Finish sequential
     !$omp end critical
 #endif

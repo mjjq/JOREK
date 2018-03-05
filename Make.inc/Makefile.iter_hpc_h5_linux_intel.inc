@@ -11,6 +11,7 @@ FFLAGS          := $(FFLAGS) -fpp
 FFLAGS          := $(FFLAGS) -msse4.2 -align
 FFLAGS          := $(FFLAGS) -O0 -mcmodel=medium -DUSE_BLOCK
 #FFLAGS          := $(FFLAGS) -O2 -mcmodel=medium -DUSE_BLOCK -Dfullmhd 
+FFLAGS          += -DCONSTRUCT_MATRIX_OMP_ATOMIC
 
 CC = mpicc
 CXX = mpicxx

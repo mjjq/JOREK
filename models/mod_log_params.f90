@@ -132,6 +132,13 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+  write(*,'(1x,a)',advance='no') ' CONSTRUCT_MATRIX_OMP_ATOMIC : '
+#ifdef CONSTRUCT_MATRIX_OMP_ATOMIC
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
   write(*,*)
   write(*,200)
   write(*,*) '* Hard-Coded Parameters:                                                      *'

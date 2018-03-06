@@ -367,12 +367,15 @@ contains
 		  ! Apply conditions to which variables and where?
                   if (  						    		&
                             (apply_on_psi)	 					&
-                      .or.  (k_var .eq. 2)	 					&
+                      .or.  (k_var .eq. 2)  			&
                       .or.  (k_var .eq. 3)	 					&
                       .or.  (k_var .eq. 4)	 					&
-                      .or.( (k_var .eq. 6) .and. (on_private) )				& 
+                      .or.  (k_var .eq. 5)	 					&
+                      .or.  (k_var .eq. 6)	 					&
+                      !.or.( (k_var .eq. 5) .and. (on_private) )				& 
+                      !.or.( (k_var .eq. 6) .and. (on_private) )				& 
                       .or.  (k_var .eq. 7)	 					&
-                      .or.( (k_var .eq. 8) .and. (on_private) )				& 
+                      .or.  (k_var .eq. 8)	 					&
                       ) apply_dirichlet = .true.
 
 		  if (apply_dirichlet) then

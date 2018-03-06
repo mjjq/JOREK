@@ -254,7 +254,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   T0_yy    = get_deriv_yy(T0_s, T0_t, T0_ss, T0_st, T0_tt)
   T0_xy    = get_deriv_xy(T0_s, T0_t, T0_ss, T0_st, T0_tt)
 
-  ! --- Variable 6
+  ! --- Variable 7
   Vpar0_x  = get_deriv_x (Vpar0_s, Vpar0_t)
   Vpar0_y  = get_deriv_y (Vpar0_s, Vpar0_t)
   Vpar0_xx = get_deriv_xx(Vpar0_s, Vpar0_t, Vpar0_ss, Vpar0_st, Vpar0_tt)
@@ -382,7 +382,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Temperature dependent resistivity
   ! -------------------------------------
   if ( eta_T_dependent ) then
-    eta_T     =   eta   * (T0_corr/T_0)**(-1.5d0)
+    eta_T     =   eta   * (T0_corr / T_0)**(-1.5d0)
     deta_dT   = - eta	* (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
     d2eta_d2T =   eta	* (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
   else

@@ -36,7 +36,7 @@ module mod_plasma_response
     real*8,   intent(inout) :: G_psi  !< Green's function for psi
     
     ! --- Local variables
-    real*8   :: rho2, kk, pi, Kellip_kk, Eellip_kk   
+    real*8   :: rho2, kk, Kellip_kk, Eellip_kk   
     
     ! --- Reference : Simple Analytic Expressions for the Magnetic Field of a Circular Current Loop, NASA
     rho2  =  (R_p+R)**2.d0 + (Z_p-Z)**2.d0      

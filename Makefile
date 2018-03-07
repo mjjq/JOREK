@@ -47,6 +47,7 @@ DIRS := diagnostics			\
 	diagnostics/new_diag		\
 	diagnostics/postproc		\
 	tools				\
+	tools/rng                       \
 	datatypes			\
 	.				\
 	vacuum

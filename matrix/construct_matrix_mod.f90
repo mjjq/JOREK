@@ -268,16 +268,12 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Memory allocation
   if (.not. allocated(A_glob))    call tr_allocate(A_glob,  1,nz_glob,"A_glob",  CAT_DMATRIX)
-  if (.not. allocated(irn_glob))  call tr_allocate(irn_glob,1,nz_glob,"irn_glob",CAT_DMATRIX)
-  if (.not. allocated(jcn_glob))  call tr_allocate(jcn_glob,1,nz_glob,"jcn_glob",CAT_DMATRIX)
 
   if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocate (rhs_glob,1,ndof_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocatep(rhs_loc, 1,ndof_glob,"rhs_loc", CAT_DMATRIX)
 
   ! --- Initialise internal variables
-  irn_glob = 0
-  jcn_glob = 0
   A_glob   = 0.d0
   RHS_glob = 0.d0
   RHS_loc  = 0.d0
@@ -360,9 +356,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
       enddo 
     endif
 
+#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
     ! --- We don't want the next part to run in parallel
     !$omp critical  
-    
+#endif
+
     ! --- We only look at non-refined elements
     if ((.not. refinement) .or. (refinement .and. (element%n_sons .eq. 0))) then
     
@@ -404,6 +402,9 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
                     irn_glob(ilarge2) = index_large_i	+ j
                     jcn_glob(ilarge2) = index_large_k	+ l
+#ifdef CONSTRUCT_MATRIX_OMP_ATOMIC
+                    !$omp atomic
+#endif
                     A_glob(ilarge2)   = A_glob(ilarge2) + ELM(index_ij,index_kl)
 
                   enddo
@@ -421,8 +422,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     endif ! refinement
 
+#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
     ! --- Finish sequential
     !$omp end critical
+#endif
 
   end do
   !$omp end do
@@ -431,7 +434,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Add vacuum response (boundary integral) for free boundary computations
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
-    call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max) !###TODO### move somewhere else
     call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list,                   &
       freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, tstep, index_now)
   end if

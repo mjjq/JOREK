@@ -23,21 +23,32 @@ module vacuum
   real*8, allocatable :: dwall_curr(:)                   !< Change of wall current potentials (\f$\delta Y_k\f$).
   real*8, allocatable :: old_dpsibnd_vec(:)              !< Previous delta Psi values required for time-stepping with zeta/=0
 
+  !> Data type for response matrices distributed over the MPI tasks
+  type :: t_distrib_mat
+    real*8, allocatable :: loc_mat(:,:)                  !< Local chunk of the matrix
+    logical             :: distrib                       !< Is the matrix distributed?
+    logical             :: row_wise                      !< Is the matrix distributed rowwise (otherwise columnwise)?
+    integer             :: ind_start                     !< Minimum row/column index of local chunk.
+    integer             :: ind_end                       !< Maximum row/column index of local chunk.
+    integer             :: step                          !< "chunk size" of each MPI task. Note that the last MPI task has a larger chunk size than this!
+    integer             :: dim(2)                        !< global matrix dimensions
+  end type t_distrib_mat
+
   !> @name JOREK vacuum response matrices
   !! Response matrices derived from STARWALL response (w=wall, p=plasma)
-  real*8, allocatable :: response_m_a(:,:)               !< \f$\hat{A}\f$ in the documentation
-  real*8, allocatable :: response_d_b(:)                 !< \f$\hat{B}\f$ in the documentation
-  real*8, allocatable :: response_d_c(:)                 !< \f$\hat{C}\f$ in the documentation
-  real*8, allocatable :: response_m_d(:,:)               !< \f$\hat{D}\f$ in the documentation
-  real*8, allocatable :: response_m_e(:,:)               !< \f$\hat{E}\f$ in the documentation
-  real*8, allocatable :: response_m_f(:,:)               !< \f$\hat{F}\f$ in the documentation
-  real*8, allocatable :: response_m_g(:,:)               !< \f$\hat{G}\f$ in the documentation
-  real*8, allocatable :: response_m_h(:,:)               !< \f$\hat{H}\f$ in the documentation
-  real*8, allocatable :: response_m_j(:,:)               !< \f$\hat{J}\f$ in the documentation
-  real*8, allocatable :: response_m_k(:,:)               !< \f$\hat{K}\f$ in the documentation
-  real*8, allocatable :: response_m_l(:,:)               !< \f$\hat{L}\f$ in the documentation
-  real*8, allocatable :: response_m_v(:,:)               !< \f$\hat{V}\f$ in the documentation
-  real*8, allocatable :: response_m_eq(:,:)              !< Response matrix for vacuum_equil
+  type(t_distrib_mat)  :: response_m_a                   !< \f$\hat{A}\f$ in the documentation
+  real*8, allocatable  :: response_d_b(:)                !< \f$\hat{B}\f$ in the documentation
+  real*8, allocatable  :: response_d_c(:)                !< \f$\hat{C}\f$ in the documentation
+  type(t_distrib_mat)  :: response_m_d                   !< \f$\hat{D}\f$ in the documentation
+  real*8, allocatable  :: response_m_e(:,:)              !< \f$\hat{E}\f$ in the documentation
+  type(t_distrib_mat)  :: response_m_f                   !< \f$\hat{F}\f$ in the documentation
+  type(t_distrib_mat)  :: response_m_g                   !< \f$\hat{G}\f$ in the documentation
+  real*8, allocatable  :: response_m_h(:,:)              !< \f$\hat{H}\f$ in the documentation
+  real*8, allocatable  :: response_m_j(:,:)              !< \f$\hat{J}\f$ in the documentation
+  real*8, allocatable  :: response_m_k(:,:)              !< \f$\hat{K}\f$ in the documentation
+  real*8, allocatable  :: response_m_l(:,:)              !< \f$\hat{L}\f$ in the documentation
+  type(t_distrib_mat)  :: response_m_v                   !< \f$\hat{V}\f$ in the documentation
+  real*8, allocatable  :: response_m_eq(:,:)             !< Response matrix for vacuum_equil
 
   !> @name Equilibrium coil contributions
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
@@ -105,13 +116,13 @@ module vacuum
     real*8  :: eta_thin_w             = 1. !< Thin wall resistivity of wall triangles
     integer, allocatable :: i_tor(:)
     real*8,  allocatable :: d_yy(:)
-    real*8,  allocatable :: a_ye(:,:)
-    real*8,  allocatable :: a_ey(:,:)
-    real*8,  allocatable :: a_ee(:,:)
-    real*8,  allocatable :: a_id(:,:)
-    real*8,  allocatable :: a_nw(:,:)
-    real*8,  allocatable :: s_ww(:,:)
-    real*8,  allocatable :: s_ww_inv(:,:)
+    type(t_distrib_mat)  :: a_ye
+    type(t_distrib_mat)  :: a_ey
+    type(t_distrib_mat)  :: a_ee
+    type(t_distrib_mat)  :: a_id
+    type(t_distrib_mat)  :: a_nw
+    type(t_distrib_mat)  :: s_ww
+    type(t_distrib_mat)  :: s_ww_inv
     real*8,  allocatable :: xyzpot_w(:,:)
     integer, allocatable :: jpot_w(:,:)
   end type t_starwall_response
@@ -160,6 +171,15 @@ module vacuum
     character(len=60) :: s, filename
     real*8 :: r
     class(t_coil_curr_input), pointer :: coil_curr_input
+    
+    !--- Make sure that the main coil current vector (I_coils) is properly allocated
+    if (sr%ncoil > 0) then
+      n_coils = sr%ncoil
+      if (.not. allocated(I_coils)) then 
+        allocate(I_coils(n_coils))
+        I_coils = 0.d0
+      endif
+    endif
         
     do i = 1, sr%ncoil
             
@@ -217,7 +237,7 @@ module vacuum
         
         ! --- Read the result
         call readProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, &
-          coil_curr_time_trace(i)%len, './jorek_curr_expr_'//trim(s)//'.dat')
+          coil_curr_time_trace(i)%len, './jorek_curr_expr_'//trim(adjustl(s))//'.dat')
         
         ! --- Delete temporary files
         call system('rm ./jorek_curr_expr_'//trim(adjustl(s))//'.py ./jorek_curr_expr_'//trim(adjustl(s))//'.dat')
@@ -715,7 +735,7 @@ module vacuum
     
     ! --- Local variables
     integer :: ierr, sz(2)
-    
+
     call MPI_BCAST(n_dof_starwall,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     
     if ( resistive_wall ) then
@@ -724,8 +744,15 @@ module vacuum
       
       if ( n_wall_curr == 0 ) return
       
-      if ( my_id == 0 ) sz(:) = (/ size(diag_coil_curr,1), size(diag_coil_curr,2) /)
+      if ( my_id == 0 ) then
+        if ( allocated(diag_coil_curr) ) then
+          sz(:) = (/ size(diag_coil_curr,1), size(diag_coil_curr,2) /)
+        else
+          sz(:) = 0
+        end if
+      end if
       call MPI_BCAST(sz,2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      
       
       if ( my_id /= 0 ) then
         if ( allocated(wall_curr) ) deallocate(wall_curr)
@@ -754,7 +781,117 @@ module vacuum
     call MPI_BCAST(freeb_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     
   end subroutine broadcast_vacuum
+
+
+
+  !> Allocate the memory for a matrix distributed over the MPI tasks.
+  subroutine alloc_distr(my_id, matrix, dim, row_wise)
+
+    use mpi_mod
+    implicit none
+
+    ! --- Routine parameters
+    integer,              intent(in)     :: my_id
+    type(t_distrib_mat),  intent(inout)  :: matrix
+    integer,              intent(in)     :: dim(2)  !< Global dimension
+    logical,              intent(in)     :: row_wise !< if  .true. - rowwise; .false. - columnwise    
+
+    ! --- Local variables
+    integer :: loc_size, ntasks, ierr
+
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
+
+    if (allocated(matrix%loc_mat)) call dealloc_distr(matrix)
+    if (row_wise) then
+
+      matrix%step      = dim(1)/ntasks
+      loc_size         = matrix%step
+      if (my_id==ntasks-1) loc_size = matrix%step + dim(1) - ntasks * matrix%step
+
+      matrix%row_wise  = .true.
+      matrix%ind_start = my_id*matrix%step+1
+      matrix%ind_end   = my_id*matrix%step+loc_size
+
+      allocate( matrix%loc_mat(loc_size, dim(2)) )
+    else
+      matrix%step      = dim(2)/ntasks
+      loc_size         = matrix%step
+      if (my_id==ntasks-1) loc_size = matrix%step + dim(2) - ntasks * matrix%step
+
+      matrix%row_wise  = .false.
+      matrix%ind_start = my_id*matrix%step+1
+      matrix%ind_end   = my_id*matrix%step+loc_size
+
+      allocate( matrix%loc_mat(dim(1), loc_size) )
+    end if
+
+    matrix%distrib    = .true.
+    matrix%dim(1)     = dim(1) ! Save global matrix dimensions
+    matrix%dim(2)     = dim(2)
+
+  end subroutine alloc_distr
+
+
+
+  !> Deallocate the memory of a distributed matrix and set all parameters to default values.
+  subroutine dealloc_distr(matrix)
+    implicit none
+    ! --- Routine parameters
+    type(t_distrib_mat),  intent(inout)  :: matrix
+
+    if ( allocated(matrix%loc_mat) ) deallocate(matrix%loc_mat)
+    
+    ! --- Set all parameters to default values.
+    matrix%dim(:)    = 0
+    matrix%step      = 0
+    matrix%ind_start = 0
+    matrix%ind_end   = 0
+    matrix%distrib   = .false.
+    matrix%row_wise  = .false.
+
+  end subroutine dealloc_distr
+
+
+
+  !> Print information about a distributed matrix for debugging purposes.
+  subroutine print_distr(my_id, matrix_name, matrix)
+
+    use mpi_mod
+    implicit none
+
+    ! --- Routine parameters
+    integer,              intent(in)     :: my_id
+    character(len=*),     intent(in)     :: matrix_name
+    type(t_distrib_mat),  intent(inout)  :: matrix
   
-  
-  
+    ! --- Local variables
+    integer ::  ierr
+    
+    800 format(1x,3a)
+    801 format(3x,a,2i12)
+    802 format(3x,a,l12)
+    803 format(5x,2i12,a,i6)
+    
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)    
+    if ( my_id == 0 ) then
+      write(*,800) 'Distributed matrix ', trim(matrix_name), ':'
+      write(*,801) 'dim:      ', matrix%dim
+      write(*,802) 'row_wise: ', matrix%row_wise
+      write(*,802) 'distrib:  ', matrix%distrib
+      write(*,801) 'step:     ', matrix%step
+      write(*,801) 'ind_start, ind_end:'
+    endif
+
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    write(*,803) matrix%ind_start, matrix%ind_end, '@my_id=', my_id
+    
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    if ( my_id == 0 ) write(*,801) 'local dimensions:'
+    
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    write(*,803) size(matrix%loc_mat,1), size(matrix%loc_mat,2) , '@my_id=', my_id
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+  end subroutine print_distr
+ 
 end module vacuum

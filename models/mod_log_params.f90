@@ -132,6 +132,13 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+  write(*,'(1x,a)',advance='no') ' CONSTRUCT_MATRIX_OMP_ATOMIC : '
+#ifdef CONSTRUCT_MATRIX_OMP_ATOMIC
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
   write(*,*)
   write(*,200)
   write(*,*) '* Hard-Coded Parameters:                                                      *'
@@ -338,18 +345,18 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'particlesource        ', particlesource
   write(*,REAL_FMT) 'particlesource_psin   ', particlesource_psin
   write(*,REAL_FMT) 'particlesource_sig    ', particlesource_sig
-  write(*,REAL_FMT) 'edgeparticlesource        ', edgeparticlesource
-  write(*,REAL_FMT) 'edgeparticlesource_psin   ', edgeparticlesource_psin
-  write(*,REAL_FMT) 'edgeparticlesource_sig    ', edgeparticlesource_sig
+  write(*,REAL_FMT) 'edgeparticlesource    ', edgeparticlesource
+  write(*,REAL_FMT) 'edgeparticlesource_psin', edgeparticlesource_psin
+  write(*,REAL_FMT) 'edgeparticlesource_sig', edgeparticlesource_sig
   write(*,REAL_FMT) 'heatsource            ', heatsource
   write(*,REAL_FMT) 'heatsource_psin       ', heatsource_psin
   write(*,REAL_FMT) 'heatsource_sig        ', heatsource_sig
-  write(*,REAL_FMT) 'particlesource_gauss     ', particlesource_gauss
+  write(*,REAL_FMT) 'particlesource_gauss  ', particlesource_gauss
   write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
   write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig
-  write(*,REAL_FMT) 'heatsource_gauss         ', heatsource_gauss
-  write(*,REAL_FMT) 'heatsource_gauss_psin    ', heatsource_gauss_psin
-  write(*,REAL_FMT) 'heatsource_gauss_sig     ', heatsource_gauss_sig
+  write(*,REAL_FMT) 'heatsource_gauss      ', heatsource_gauss
+  write(*,REAL_FMT) 'heatsource_gauss_psin ', heatsource_gauss_psin
+  write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
   write(*,REAL_FMT) 'tauIC                 ', tauIC
   write(*,REAL_FMT) 'eta_num               ', eta_num
   write(*,REAL_FMT) 'visco_num             ', visco_num
@@ -382,7 +389,6 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'pellet_velocity_Z     ', pellet_velocity_Z
   end if
 
-  write(*,*)
   write(*,REAL_FMT) 'ellip                 ', ellip
   write(*,REAL_FMT) 'tria_u                ', tria_u
   write(*,REAL_FMT) 'tria_l                ', tria_l

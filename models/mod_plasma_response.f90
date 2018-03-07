@@ -1,4 +1,8 @@
-
+!> Contains functions to calculate the fields created by the plasma current alone and by external currents
+!!
+!!  * The routines B_plasma and psi_plasma calculate the plasma field given a set of (R,Z) points
+!!  * Routines to predict the best coil currents for given fixed-bnd equilibrium are also avaialable
+!!  * Functions to calculate elliptic integrals are accessible as well
 module mod_plasma_response
   
   use constants

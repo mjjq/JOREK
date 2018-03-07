@@ -13,6 +13,50 @@ module mod_plasma_response
   
   contains
   
+    
+  !!-------------------------------------------------------------------
+  !> Calculates Green's fuctions G(r,r') for B_R, B_Z and \psi 
+  !!
+  !! The Green's functions are used to calculate the fields by
+  !! integrating current densities over areas
+  !!
+  !!      \psi(r) = \int G_psi(r,r') J(r') dA'
+  !!-------------------------------------------------------------------
+  pure subroutine Greens_functions(R, Z, R_p, Z_p, G_BR, G_BZ, G_psi)
+  
+    implicit none
+    
+    ! --- Routine parameters
+    real*8,   intent(in)    :: R      !< R
+    real*8,   intent(in)    :: Z      !< Z 
+    real*8,   intent(in)    :: R_p    !< R'
+    real*8,   intent(in)    :: Z_p    !< Z'
+    real*8,   intent(inout) :: G_BR   !< Green's function for BR
+    real*8,   intent(inout) :: G_BZ   !< Green's function for BZ
+    real*8,   intent(inout) :: G_psi  !< Green's function for psi
+    
+    ! --- Local variables
+    real*8   :: rho2, kk, pi, Kellip_kk, Eellip_kk   
+    
+    ! --- Reference : Simple Analytic Expressions for the Magnetic Field of a Circular Current Loop, NASA
+    rho2  =  (R_p+R)**2.d0 + (Z_p-Z)**2.d0      
+    kk    =  sqrt( 4.d0*R_p*R / rho2 ) 
+ 
+    call comelp( kk, Kellip_kk, Eellip_kk)  !--- calculate elliptic functions
+    
+    G_BR  = (0.5d0/PI) / sqrt( rho2 ) * ( Z-Z_p ) / R                      &
+          * ( (R_p**2 + R**2 + (Z_p-Z)**2) / ((R_p-R)**2.d0 + (Z_p-Z)**2.d0) * Eellip_kk - Kellip_kk )
+    
+    G_BZ  = (0.5d0/PI) / sqrt( rho2 )                                      &
+          * ( (R_p**2 - R**2 - (Z_p-Z)**2) / ((R_p-R)**2.d0 + (Z_p-Z)**2.d0) * Eellip_kk + Kellip_kk )
+    
+    G_psi = (0.5d0/PI) * sqrt(R_p*R)/kk * ( (2.d0-kk**2.d0)*Kellip_kk - 2.d0*Eellip_kk )    
+  
+  end subroutine Greens_functions
+  
+  
+  
+  
          
   !------------------------------------------------------------------
   !> Calculates psi_plasma at given (R,Z) points 
@@ -37,7 +81,7 @@ module mod_plasma_response
     integer    :: i, j, ms, mt, iv, inode, ife, mp, in
     integer    :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
     real*8     :: zj0, R, Z, wst, xjac, delta_phi
-    real*8     :: kk, greens_funct, Kellip_kk, Eellip_kk
+    real*8     :: G_BR, G_BZ, G_psi
     integer    :: n_points
     
     n_points = size(R0,1)
@@ -109,14 +153,11 @@ module mod_plasma_response
               Z    = y_g(ms,mt)
               
               !--- Calculate Green's function            
-              kk           = sqrt( 4.d0*R*R0(i) / ( (R+R0(i))**2.d0 + (Z-Z0(i))**2.d0 ) ) 
-              call comelp( kk, Kellip_kk, Eellip_kk)            
-              greens_funct = (0.5d0/PI) * sqrt(R*R0(i))/kk * ( (2.d0-kk**2.d0)*Kellip_kk - 2.d0*Eellip_kk )
-            
+              call Greens_functions(R0(i), Z0(i), R, Z, G_BR, G_BZ, G_psi)
               zj0  = eq_g(mp,ms,mt)
             
               !--- psi = \int Greens_funct * J_phi * dA       see (4.66 Computational Methods in P.Physics, Jardin)
-              psi_p(i) = psi_p(i) - zj0 / R * greens_funct *xjac * wst * delta_phi * n_period/ (2.d0 * PI)
+              psi_p(i) = psi_p(i) - zj0 / R * G_psi *xjac * wst * delta_phi * n_period/ (2.d0 * PI)
             
             enddo
           enddo
@@ -158,7 +199,7 @@ module mod_plasma_response
     integer    :: i, j, ms, mt, iv, inode, ife, mp, in
     integer    :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
     real*8     :: zj0, R, Z, wst, xjac, delta_phi
-    real*8     :: kk, greens_funct_R,greens_funct_Z, Kellip_kk, Eellip_kk, rho2
+    real*8     :: G_BR, G_BZ, G_psi
     integer    :: n_points
     
     n_points = size(R0,1)
@@ -230,20 +271,13 @@ module mod_plasma_response
               Z    = y_g(ms,mt)
               
               !--- Calculate Green's functions (Simple Analytic Expressions for the Magnetic Field of a Circular Current Loop, NASA)      
-              rho2         =  (R+R0(i))**2.d0 + (Z-Z0(i))**2.d0      
-              kk           =  sqrt( 4.d0*R*R0(i) / rho2 ) 
-              call comelp( kk, Kellip_kk, Eellip_kk)            
-              
-              greens_funct_R = (0.5d0/PI) / sqrt( rho2 ) * ( Z0(i)-Z ) / R0(i)                      &
-                             * ( (R**2 + R0(i)**2 + (Z-Z0(i))**2) / ((R-R0(i))**2.d0 + (Z-Z0(i))**2.d0) * Eellip_kk - Kellip_kk )    
-              greens_funct_Z = (0.5d0/PI) / sqrt( rho2 )                                            &
-                             * ( (R**2 - R0(i)**2 - (Z-Z0(i))**2) / ((R-R0(i))**2.d0 + (Z-Z0(i))**2.d0) * Eellip_kk + Kellip_kk )  
+              call Greens_functions(R0(i), Z0(i), R, Z, G_BR, G_BZ, G_psi)  
                       
               zj0  = eq_g(mp,ms,mt)
             
-              !B       =           !j_phi   !green           !dA
-              B_p(i,1) = B_p(i,1) + zj0 / R * greens_funct_R *xjac * wst * delta_phi * n_period/ (2.d0 * PI)
-              B_p(i,2) = B_p(i,2) + zj0 / R * greens_funct_Z *xjac * wst * delta_phi * n_period/ (2.d0 * PI)     
+              !B       =           !j_phi   !green   !dA
+              B_p(i,1) = B_p(i,1) + zj0 / R * G_BR * xjac * wst * delta_phi * n_period/ (2.d0 * PI)
+              B_p(i,2) = B_p(i,2) + zj0 / R * G_BZ * xjac * wst * delta_phi * n_period/ (2.d0 * PI)     
             
             enddo
           enddo
@@ -255,10 +289,10 @@ module mod_plasma_response
 
   end subroutine B_plasma
   
-  
- 
  
 
+  
+  
     
   !---------------------------------------------------------------------
   !> Find the best coil currents for a given fixed boundary equilibrium (using psi)
@@ -266,6 +300,8 @@ module mod_plasma_response
   subroutine find_Icoils(node_list,element_list,bnd_node_list,bnd_elm_list)
     
     use vacuum
+    
+    implicit none
     
     type (type_node_list),       intent(in) :: node_list
     type (type_element_list),    intent(in) :: element_list
@@ -400,13 +436,16 @@ module mod_plasma_response
   
   
   
+  
   !---------------------------------------------------------------------
   !> Find the best coil currents for a given fixed boundary equilibrium (using Btan)
   !---------------------------------------------------------------------
   subroutine find_Icoils2(node_list,element_list,bnd_node_list,bnd_elm_list)
-    
+        
     use vacuum
     use vacuum_response
+    
+    implicit none
     
     type (type_node_list),       intent(in) :: node_list
     type (type_element_list),    intent(in) :: element_list
@@ -467,7 +506,7 @@ module mod_plasma_response
     
     count = 0
   
-      ! --- For every boundary element, do...
+    ! --- For every boundary element, do...
     L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
     
       bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
@@ -624,8 +663,9 @@ module mod_plasma_response
   
   
   
-  ! --- Routines to calculate the elliptic integrals
-  subroutine comelp ( hk, ck, ce )
+  
+  ! --- Routine to calculate the elliptic integrals
+  pure subroutine comelp ( hk, ck, ce )
   
     !*****************************************************************************80
     !
@@ -661,13 +701,14 @@ module mod_plasma_response
     !
       implicit none
     
+      real*8, intent(in)    :: hk
+      real*8, intent(inout) :: ck
+      real*8, intent(inout) :: ce
+      
       real ( kind = 8 ) ae
       real ( kind = 8 ) ak
       real ( kind = 8 ) be
       real ( kind = 8 ) bk
-      real ( kind = 8 ) ce
-      real ( kind = 8 ) ck
-      real ( kind = 8 ) hk
       real ( kind = 8 ) pk
     
       pk = 1.0D+00 - hk * hk

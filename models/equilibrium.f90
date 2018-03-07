@@ -405,7 +405,11 @@ if (my_id == 0) then
       write(*,*) 'The feature "find_pf_coil_currents" is not available yet with STARWALL coils'
       write(*,*) 'Please use COIL_FIELD (in STARWALL repository) for the coil geometry instead'
     else
-      call find_Icoils2(node_list,element_list,bnd_node_list,bnd_elm_list)
+      if (tokamak_device == 'JET') then
+        call find_Icoils_JET(node_list,element_list,bnd_node_list,bnd_elm_list)
+      else
+        call find_Icoils2(node_list,element_list,bnd_node_list,bnd_elm_list)
+      endif
       write(*,*) ' '
       write(*,*) ' Please re-do the equilibrium with the found currents and set find_pf_coil_currents=.false.'
     endif

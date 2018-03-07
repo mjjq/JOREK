@@ -47,9 +47,9 @@ contains
 
     ! --- Call element_matrix
     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   !  for toroidal integration
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)     !  for toroidal integration
     else
-      call element_matrix    (element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)	   ! use direct integration
+      call element_matrix    (element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)     ! use direct integration
     endif
 
     ! --- Apply sheath boundary conditions at the targets
@@ -62,18 +62,18 @@ contains
         inode2 = element%vertex(iv2)
 
         ! --- The target has boundary 1 or 3
-    	if (      ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-    	    .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
+      if (      ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
+          .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
-    	  nodes(1)  = node_list%node(inode1)
-    	  nodes(2)  = node_list%node(inode2)
-    	  
-    	  vertex    = (/ iv, iv2 /)
-    	  direction = (/  1, 2   /)
+        nodes(1)  = node_list%node(inode1)
+        nodes(2)  = node_list%node(inode2)
+        
+        vertex    = (/ iv, iv2 /)
+        direction = (/  1, 2   /)
 
           ! --- Build matrix elements for boundary
-    	  call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
-    	endif
+        call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
+      endif
        
       enddo
     endif
@@ -88,18 +88,18 @@ contains
         inode2 = element%vertex(iv2)
 
         ! --- The target has boundary 1 or 3
-    	if (      ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-    	    .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
+      if (      ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
+          .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
-    	  nodes(1)  = node_list%node(inode1)
-    	  nodes(2)  = node_list%node(inode2)
-    	  
-    	  vertex    = (/ iv, iv2 /)
-    	  direction = (/  1, 2   /)
+        nodes(1)  = node_list%node(inode1)
+        nodes(2)  = node_list%node(inode2)
+        
+        vertex    = (/ iv, iv2 /)
+        direction = (/  1, 2   /)
 
           ! --- Build matrix elements for boundary
-    	  !call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
-    	endif
+        !call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
+      endif
        
       enddo
     endif
@@ -119,38 +119,38 @@ contains
       write(*,*)
       write(*,*) 'Comparing rhs:'
       write(*,*)
-      write(*,'(A)') '  #    my_id	 i ivertex  iorder    ivar    itor	       RHS    ' //&
-    	'	 RHS2	     RHS-RHS2'
+      write(*,'(A)') '  #    my_id   i ivertex  iorder    ivar    itor         RHS    ' //&
+      '   RHS2       RHS-RHS2'
       do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
-    	
-    	if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
-    	  call decrypt_index(i, ivertex, iorder, ivar, itor)
-    	  write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, RHS(i), RHS2(i),	  &
-    	    RHS(i)-RHS2(i)
-    	  rhs_problem(ivar) = .true.
-    	  difference_found  = .true.
-    	endif
-    	
+      
+      if (abs(RHS(i)-RHS2(i))/(abs(RHS(i))+abs(RHS2(i))+1.d0) .gt. 1.d-12) then
+        call decrypt_index(i, ivertex, iorder, ivar, itor)
+        write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, RHS(i), RHS2(i),    &
+          RHS(i)-RHS2(i)
+        rhs_problem(ivar) = .true.
+        difference_found  = .true.
+      endif
+      
       enddo
       
       ! --- Compare matrix entries
       write(*,*)
       write(*,*) 'Comparing elm:'
       write(*,*)
-      write(*,'(A)') '  #    my_id	 i	 j ivertex  iorder    ivar    itor jvertex  ' //  &
-    	'jorder    jvar    jtor 	    ELM 	   ELM2        ELM-ELM2'
+      write(*,'(A)') '  #    my_id   i   j ivertex  iorder    ivar    itor jvertex  ' //  &
+      'jorder    jvar    jtor       ELM      ELM2        ELM-ELM2'
       do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
-    	do j = 1, n_tor*n_vertex_max*(n_order+1)*n_var
-    	  
-    	  if (abs(ELM(i,j)-ELM2(i,j))/(abs(ELM(i,j))+abs(ELM2(i,j))+1.d0) .gt. 1.d-10) then
-    	    call decrypt_index(i, ivertex, iorder, ivar, itor)
-    	    call decrypt_index(j, jvertex, jorder, jvar, jtor)
-    	    write(*,'(4x,11i8,3es16.8)') my_id, i, j, ivertex, iorder, ivar, itor, jvertex,	  &
-    	      jorder, jvar, jtor, ELM(i,j), ELM2(i,j), ELM(i,j)-ELM2(i,j)
-    	    elm_problem(ivar,jvar) = .true.
-    	    difference_found	   = .true.
-    	  endif
-    	  
+      do j = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+        
+        if (abs(ELM(i,j)-ELM2(i,j))/(abs(ELM(i,j))+abs(ELM2(i,j))+1.d0) .gt. 1.d-10) then
+          call decrypt_index(i, ivertex, iorder, ivar, itor)
+          call decrypt_index(j, jvertex, jorder, jvar, jtor)
+          write(*,'(4x,11i8,3es16.8)') my_id, i, j, ivertex, iorder, ivar, itor, jvertex,    &
+            jorder, jvar, jtor, ELM(i,j), ELM2(i,j), ELM(i,j)-ELM2(i,j)
+          elm_problem(ivar,jvar) = .true.
+          difference_found     = .true.
+        endif
+        
         enddo
       enddo
       
@@ -224,6 +224,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer                           :: i_father,INODE_FATHER, ios
   integer, external                 :: omp_get_num_threads, omp_get_thread_num
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
+  integer                           :: random_element, n_var_reduced, v1, v2, im, index_ij_model400_e, index_kl_model400_e
+  real*8                            :: tmp_rhs, tmp_elm, tmp_elm_8
   logical                           :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
   CHARACTER(LEN=128)                :: fname
 
@@ -233,9 +235,9 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   ! --- Printout
   if (my_id .eq. 0) then
     write(*,*) '****************************************'
-    write(*,*) '*  construct matrix		       *'
+    write(*,*) '*  construct matrix           *'
     write(*,*) '****************************************'
-    ! write(*,*) ' n_elements (local)	    : ',my_id,n_local_elms
+    ! write(*,*) ' n_elements (local)      : ',my_id,n_local_elms
     ! write(*,*) ' index_min,index_max      : ',my_id,index_min,index_max
   endif
   
@@ -291,7 +293,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,          &
-  !$omp           ivar, itor, jvertex, jorder, jvar, jtor)
+  !$omp           ivar, itor, jvertex, jorder, jvar, jtor, random_element, n_var_reduced, v1, v2, im,      &
+  !$omp           index_ij_model400_e, index_kl_model400_e,  tmp_rhs, tmp_elm, tmp_elm_8        )
 
 ! --- omp id
 #ifdef _OPENMP
@@ -326,17 +329,17 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
       i_father = element_list%element(ielm)%father
 
       if (i_father .ne. 0) then
-    	element_father = element_list%element(i_father)
-    	do iv = 1, n_vertex_max
-    	  inode_father=element_father%vertex(iv)
-    	  nodes_father(iv) = node_list%node(inode_father)
-    	enddo
+      element_father = element_list%element(i_father)
+      do iv = 1, n_vertex_max
+        inode_father=element_father%vertex(iv)
+        nodes_father(iv) = node_list%node(inode_father)
+      enddo
       endif
   
     else
-    	 
+       
       do iv = 1, n_vertex_max
-       inode	 = element%vertex(iv)
+       inode   = element%vertex(iv)
        nodes(iv) = node_list%node(inode)
       enddo
 
@@ -347,12 +350,124 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
          &                       ELM, RHS, ELM2, RHS2, omp_tid, ife,              &
          &                       n_local_elms, node_list)
     
+    
+ if(.true.) then 
+  
+    ! --- Write out rhs and elm for a random element to be able to compare models
+    random_element = 387
+    if (ife == random_element) then
+      
+      open(unit = 387, file = "comp_matrix_elements_elm.dat", STATUS="REPLACE")
+      open(unit = 388, file = "comp_matrix_elements_rhs.dat", STATUS="REPLACE")
+      write(387, "( '#', A17, 8A4) )" ), 'ELM', 'v1', 'v2', 'i', 'k', 'j', 'l', 'im', 'in'
+      write(388, "( '#', A17, 4A4) )" ), 'RHS', 'v1', 'i', 'j', 'im'
+
+
+      n_var_reduced = n_var
+#if (JOREK_MODEL == 400)
+      n_var_reduced = 7
+#endif
+     
+      do v1 = 1, n_var_reduced
+       
+        do v2 = 1, n_var_reduced
+                  
+          do i = 1, n_vertex_max
+
+            do k = 1, n_vertex_max
+
+              do j = 1, n_order+1
+          
+                do l = 1, n_order+1
+
+                  do im = 1, n_tor
+            
+                    index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (j-1) + n_tor * (v1-1) + im   ! index in the ELM matrix
+                    index_ij_model400_e = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (j-1) + n_tor * (8-1) + im ! index in the ELM matrix for electrons
+
+              
+                    do in = 1, n_tor
+                    
+
+                      !--- elm: compute and write to file
+                      
+                      index_kl = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (l-1) + n_tor * (v2-1) + in   ! index in the ELM matrix
+                      index_kl_model400_e = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (l-1) + n_tor * (8-1) + in ! index in the ELM matrix for electrons
+     
+                      tmp_elm = ELM(index_ij,index_kl)
+                      tmp_elm_8 = tmp_elm
+                      
+#if (JOREK_MODEL == 400)
+                      !--- for model400, add electron part (n_var = 8) to ion part (n_var = 6)                      
+                      if (v2 == 6 ) then
+                                        
+                        if (v1 == 6) then
+                          tmp_elm_8 = ELM(index_ij, index_kl_model400_e) + ELM(index_ij_model400_e, index_kl_model400_e)                        
+                        else                        
+                          tmp_elm_8 = ELM(index_ij, index_kl_model400_e)                        
+                        endif
+                        
+                      endif
+                      
+                      if (v1 == 6) then                     
+                        tmp_elm = tmp_elm + ELM(index_ij_model400_e, index_kl)                          
+                      endif
+#endif                  
+                      !--- compare (6,6) in model400 with (6,6) in others                       
+                      write(387, "( E18.6, 8I4 )" ) tmp_elm,     v1, v2, i, k, j, l, im, in
+                      
+                      if (v2 == 6) then
+                        !--- compare (6,8) in model400 with (6,6) in others                       
+                        write(387, "( E18.6, 8I4 )" ) tmp_elm_8, v1, 8,  i, k, j, l, im, in
+                      endif
+                      
+                   
+                      !--- rhs: compute and write to file
+                      if ( (k==1) .and. (l==1) .and. (v2==1) .and. (in==1) ) then
+
+                        tmp_rhs = RHS(index_ij)
+               
+#if (JOREK_MODEL == 400)
+                         !--- for model400, add electron part (v1 = 8) to ion part (v1 = 6)
+                        if (v1 == 6) then
+              
+                          tmp_rhs = tmp_rhs + RHS(index_ij_model400_e)        
+                
+                        endif
+#endif
+
+                        write(388, "( E18.6, 4I4 )" ) tmp_rhs, v1, i, j, im
+              
+                      end if
+                      
+              
+                    enddo ! n_tor
+
+                  enddo ! n_tor
+
+                enddo ! n_order+1
+
+              enddo ! n_order+1     
+              
+            enddo ! n_vertex_max      
+
+          enddo ! n_vertex_max
+
+        enddo ! n_var_reduced
+
+      enddo ! n_var_reduced
+    
+    endif
+    
+ endif   
+    
+    
     ! --- Define element nodes (depends if it's refined)
     if (refinement) then   
       call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
     else
       do i=1, n_vertex_max
-    	node_out(i) = element%vertex(i)   
+      node_out(i) = element%vertex(i)   
       enddo 
     endif
 
@@ -398,8 +513,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var*n_tor + l
 
-                    irn_glob(ilarge2) = index_large_i	+ j
-                    jcn_glob(ilarge2) = index_large_k	+ l
+                    irn_glob(ilarge2) = index_large_i  + j
+                    jcn_glob(ilarge2) = index_large_k  + l
                     A_glob(ilarge2)   = A_glob(ilarge2) + ELM(index_ij,index_kl)
 
                   enddo

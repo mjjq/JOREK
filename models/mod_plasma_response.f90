@@ -15,6 +15,11 @@ module mod_plasma_response
   
   implicit none
   
+  private
+  
+  public ::  Greens_functions,  psi_plasma,   B_plasma,  comelp
+  public ::  find_Icoils, find_Icoils2, find_Icoils_JET
+  
   contains
   
     

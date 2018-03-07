@@ -330,9 +330,9 @@ do ms=1, n_gauss
          v_t = h_t(i,j,ms,mt) * element%size(i,j)
          v_p = H(i,j,ms,mt)   * element%size(i,j)
          
-         v_ss = h_ss(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
-         v_tt = h_tt(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
-         v_st = h_st(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
+         v_ss = h_ss(i,j,ms,mt) * element%size(i,j) 
+         v_tt = h_tt(i,j,ms,mt) * element%size(i,j) 
+         v_st = h_st(i,j,ms,mt) * element%size(i,j)
 
 	       v_xx = (v_ss * y_t(ms,mt)**2 - 2.d0*v_st * y_s(ms,mt)*y_t(ms,mt) + v_tt * y_s(ms,mt)**2  &
 	           	+ v_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                          &
@@ -426,9 +426,9 @@ do ms=1, n_gauss
              psi_p = H(k,l,ms,mt)   * element%size(k,l)
              psi_s = h_s(k,l,ms,mt) * element%size(k,l)
              psi_t = h_t(k,l,ms,mt) * element%size(k,l)
-             psi_ss = h_ss(k,l,ms,mt) * element%size(k,l) * HZ(in,mp)
-             psi_tt = h_tt(k,l,ms,mt) * element%size(k,l) * HZ(in,mp)
-             psi_st = h_st(k,l,ms,mt) * element%size(k,l) * HZ(in,mp)
+             psi_ss = h_ss(k,l,ms,mt) * element%size(k,l) 
+             psi_tt = h_tt(k,l,ms,mt) * element%size(k,l) 
+             psi_st = h_st(k,l,ms,mt) * element%size(k,l) 
                  
              psi_xx = (psi_ss * y_t(ms,mt)**2 - 2.d0*psi_st * y_s(ms,mt)*y_t(ms,mt) + psi_tt * y_s(ms,mt)**2  &
 		                + psi_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &

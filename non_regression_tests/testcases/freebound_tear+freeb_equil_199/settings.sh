@@ -4,7 +4,7 @@ description="2/1 mode with freebnd_equil (2 free boundary modes). \
 Same growth rate 2.29d-4 if freebound_equil=.f. \
 Slightly modified version of benchmark with CASTOR."
 mpitasks=2
-binaries="jorek_model${jorekmodel}_1 rst_bin2hdf5 rst_hdf52bin"
+binaries="jorek_model${jorekmodel}_1"
 binaries_initial=""
 requiredfiles="input starwall-response.dat"
 extra_remote_files="starwall-response.dat"
@@ -14,7 +14,7 @@ extra_remote_files="starwall-response.dat"
 function compile_jorek () {
   ./util/config.sh model=$jorekmodel n_tor=3 n_plane=4 n_period=1                    || exit 1
   make cleanall                                                                      || exit 1
-  make $compilopt jorek_model${jorekmodel} rst_bin2hdf5 rst_hdf52bin                 || exit 1
+  make $compilopt jorek_model${jorekmodel}                                           || exit 1
   mv jorek_model${jorekmodel} jorek_model${jorekmodel}_1                             || exit 1
 }
 
@@ -35,6 +35,5 @@ function restart_run () {
 
 # --- Compare the results of the test case to the reference solution
 function compare_results () {
-  ./rst_bin2hdf5 < ./input                                                           || exit 1
   h5diff -d 1e-5 jorek_restart.h5 ${testcasedir}/end.h5 values                      || exit 1
 }

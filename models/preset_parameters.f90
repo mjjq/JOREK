@@ -226,7 +226,11 @@ subroutine preset_parameters
 
   nout = 9999999
 
-  rst_hdf5 = 0   ! =0,restart with binary files; =1, with HDF5 files
+  rst_hdf5 = 1   ! =0,restart with binary files; =1, with HDF5 files
+  !> Write out newest HDF5 restart file version this code supports, writing
+  !! out an older version is possible by changing rst_hdf5_verison via the
+  !! namelist input file
+  rst_hdf5_version = rst_hdf5_version_supported
 
   tokamak_device = 'none'
 
@@ -248,10 +252,6 @@ subroutine preset_parameters
   linear_run         = .false.
   
   export_for_nemec      = .false.
-#ifdef USE_HDF5
-  save_diagnostics_HDF5 = .false.
-  h5_diag_nbtime        = 10.d0
-#endif
   
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations

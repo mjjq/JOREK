@@ -473,9 +473,9 @@ NBFILERST_INI=0
 if [ ! -d ${RSTDIR} ]; then
     mkdir -p ${RSTDIR}
 else
-    LISTE_NBFILERST=`ls ${RSTDIR}/jorek?????.rst 2> /dev/null`
+    LISTE_NBFILERST=`ls ${RSTDIR}/jorek?????.h5 2> /dev/null`
     if [ "$LISTE_NBFILERST" != "" ]; then
-	NBFILERST_INI=`ls ${RSTDIR}/jorek?????.rst | wc -l `
+	NBFILERST_INI=`ls ${RSTDIR}/jorek?????.h5 | wc -l `
     fi
 fi
 echo "==================================================================================="
@@ -839,7 +839,7 @@ echo " "
 
 # Execution control
 # -----------------
-if [ ! -e "${RESDIR}/jorek_restart.rst" ]; then
+if [ ! -e "${RESDIR}/jorek_restart.h5" ]; then
    echo "==================================================================================="
    echo " ***   Restart file does not exist, so INIT"
    out_increment=0
@@ -851,7 +851,7 @@ if [ ! -e "${RESDIR}/jorek_restart.rst" ]; then
 else
    echo "==================================================================================="
    echo " ***   Restart file does exist, so LOOP"
-   tmp=$(ls ${RESDIR}/*.rst | wc -l)
+   tmp=$(ls ${RESDIR}/*.h5 | wc -l)
    (( out_increment= $tmp - 1 ))
    cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
    echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}___${out_increment}.out
@@ -1226,7 +1226,7 @@ cd ${RESDIR}
 # Test if restart files exist
 # ---------------------------
 file_list=${RESDIR}/NUM_RST
-if [ ! -e "jorek_restart.rst" ]; then
+if [ ! -e "jorek_restart.h5" ]; then
    echo "==================================================================================="
    echo " The restart file does not exist, so INIT"
    echo " nb_restart = " \$nb_restart
@@ -1252,9 +1252,9 @@ fi
 # Test if restart files exist
 # ---------------------------
 if [ "\$nb_restart" -gt "0" ]; then
-   if [ ! -e "jorek_restart.rst" ] ; then
+   if [ ! -e "jorek_restart.h5" ] ; then
       echo "==================================================================================="
-      echo " The restart file 'jorek_restart.rst' does not exist, and should. HALTING.........."
+      echo " The restart file 'jorek_restart.h5' does not exist, and should. HALTING.........."
       echo "==================================================================================="
       echo " "
       exit  

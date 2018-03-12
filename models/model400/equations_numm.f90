@@ -423,11 +423,17 @@ subroutine ELM_main_lhs_7_numm(amat, amat_k, amat_n, amat_kn)
   ! --- The RHS term (Taylor Galerkin (TG2) stabilisation)	      
   amat(7,1)    = amat(7,1)														&
                  + TG_NUM7 * tstep * 0.25d0 * r0 * Vpar0**2 * BB2									&
-                 	   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / R								&
+                 	   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / R								&
                  	   * (-(psi_s * v_t	- psi_t * v_s)    /xjac)					* xjac * theta * tstep	&
                  + TG_NUM7 * tstep * 0.25d0 * v  * Vpar0**2 * BB2									&
+                 	   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / R								&
+                 	   * (-(psi_s * r0_t	- psi_t * r0_s)   /xjac)					* xjac * theta * tstep  & 
+                 + TG_NUM7 * tstep * 0.25d0 * r0 * Vpar0**2 * BB2									&
                  	   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / R								&
-                 	   * (-(psi_s * r0_t	- psi_t * r0_s)   /xjac)					* xjac * theta * tstep 
+                 	   * (-(ps0_s * v_t	- ps0_t * v_s)    /xjac)					* xjac * theta * tstep	&
+                 + TG_NUM7 * tstep * 0.25d0 * v  * Vpar0**2 * BB2									&
+                 	   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / R								&
+                 	   * (-(ps0_s * r0_t	- ps0_t * r0_s)   /xjac)					* xjac * theta * tstep 
 
   amat(7,5)    = amat(7,5)														&
                  + TG_NUM7 * tstep * 0.25d0 * rho * Vpar0**2 * BB2									&

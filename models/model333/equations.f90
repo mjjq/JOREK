@@ -38,8 +38,8 @@ subroutine ELM_main_rhs_1(rhs,rhs_k)
   ! -----------------------------------    
   ! --- The RHS term (diamagnetic part)	      
   rhs(1) = rhs(1)											&
-           - v * tau_IC/(r0_corr2*BB2) * F0**2/R**2 * (ps0_x*p0_y - ps0_y*p0_x)		* xjac * tstep  & 		  
-           + v * tau_IC/(r0_corr2*BB2) * F0**3/R**3 * eps_cyl * p0_p			* xjac * tstep  
+           - v * tau_IC/(r0_corr2*BB2) * F0**2/R**2 * (ps0_x*P0_y - ps0_y*P0_x)		* xjac * tstep  & 		  
+           + v * tau_IC/(r0_corr2*BB2) * F0**3/R**3 * eps_cyl * P0_p			* xjac * tstep  
   
   return
 
@@ -72,21 +72,21 @@ subroutine ELM_main_lhs_1(amat, amat_k, amat_n, amat_kn)
   amat(1,3)   = - eta_numm * (v_x * zj_x + v_y * zj_y)							* xjac * theta * tstep	&
 	        - eta_T * v * zj / R									* xjac * theta * tstep
 
-  amat(1,6)   = - deta_dT * v * T * (zj0 - current_source - jb) / R					* xjac * theta * tstep	
+ amat(1,6)   = - deta_dT * v * T * (zj0 - current_source - jb) / R					* xjac * theta * tstep	
 
   ! ------------------------------------
   ! --- The LHS terms (diamagnetic part)
   amat(1,1)   = amat(1,1)													&
-                - v * tau_IC/(r0_corr2*BB2**2) * BB2_psi * F0**2/R**2 * (ps0_x*p0_y - ps0_y*p0_x)	* xjac * theta * tstep	&
-                + v * tau_IC/(r0_corr2*BB2**2) * BB2_psi * F0**3/R**3 * eps_cyl * p0_p			* xjac * theta * tstep	&
-                + v * tau_IC/(r0_corr2*BB2) * F0**2/R**2 * (psi_x * p0_y - psi_y * p0_x)		* xjac * theta * tstep
+                - v * tau_IC/(r0_corr2*BB2**2) * BB2_psi * F0**2/R**2 * (ps0_x*P0_y - ps0_y*P0_x)	* xjac * theta * tstep	&
+                + v * tau_IC/(r0_corr2*BB2**2) * BB2_psi * F0**3/R**3 * eps_cyl * P0_p			* xjac * theta * tstep	&
+                + v * tau_IC/(r0_corr2*BB2) * F0**2/R**2 * (psi_x * P0_y - psi_y * P0_x)		* xjac * theta * tstep
   
   amat(1,5)   = amat(1,5)													&
                 + v * tau_IC/(r0_corr2*BB2) * F0**2/R**2 * T0  * (ps0_x*rho_y - ps0_y*rho_x)		* xjac * theta * tstep	&
 	        + v * tau_IC/(r0_corr2*BB2) * F0**2/R**2 * rho * (ps0_x*T0_y  - ps0_y*T0_x )		* xjac * theta * tstep	&
 	        - v * tau_IC/(r0_corr2*BB2) * F0**3/R**3 * eps_cyl * rho * T0_p				* xjac * theta * tstep	&
-		- v * tau_IC * rho /(r0_corr2**2 * BB2) * F0**2/R**2 * (ps0_x*p0_y - ps0_y*p0_x)	* xjac * theta * tstep	&		    
-		+ v * tau_IC * rho /(r0_corr2**2 * BB2) * F0**3/R**3 * eps_cyl * p0_p			* xjac * theta * tstep 
+		- v * tau_IC * rho /(r0_corr2**2 * BB2) * F0**2/R**2 * (ps0_x*P0_y - ps0_y*P0_x)	* xjac * theta * tstep	&		    
+		+ v * tau_IC * rho /(r0_corr2**2 * BB2) * F0**3/R**3 * eps_cyl * P0_p			* xjac * theta * tstep 
   
   amat_n(1,5) = amat_n(1,5)													&
                 - v * tau_IC/(r0_corr2*BB2) * F0**3/R**3 * eps_cyl * T0 * rho_p				* xjac * theta * tstep
@@ -144,7 +144,7 @@ subroutine ELM_main_rhs_2(rhs,rhs_k)
 	   + v * (ps0_x * zj0_y - ps0_y * zj0_x )			 				* xjac * tstep	&
 	   - v * eps_cyl * F0 / R * zj0_p				 				* xjac * tstep	&
            ! --- Grad(p)
-	   + R**2 * (v_x * p0_y     - v_y * p0_x)			 				* xjac * tstep	&
+	   + R**2 * (v_x * P0_y     - v_y * P0_x)			 				* xjac * tstep	&
            ! --- Source interaction
 	   + R**3 * total_rho_source * (v_x * u0_x + v_y * u0_y)					* xjac * tstep	&
            ! --- Viscosity
@@ -520,7 +520,7 @@ subroutine ELM_main_rhs_5(rhs,rhs_k)
   ! -----------------------------------    
   ! --- The RHS term (diamagnetic part)	      
   rhs(5)   = rhs(5)									 	&
-	     + tau_IC * v * 2.d0 * p0_y * R					* xjac * tstep	
+	     + tau_IC * v * 2.d0 * P0_y * R					* xjac * tstep	
   
   
   return

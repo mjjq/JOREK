@@ -652,7 +652,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Neoclassical rotation
   ! -------------------------
   epsil   = 1.d-3
-  Btheta2 = (ps0_x**2.d0 + ps0_y**2.d0) / R**2
+  Btheta2 = (ps0_x**2 + ps0_y**2) / R**2
   if ( NEO ) then 
     if (num_neo_file) then
       call neo_coef(xpoint2, xcase2, y_g, Z_xpoint, ps0, psi_axis, psi_bnd, amu_neo_prof, aki_neo_prof)

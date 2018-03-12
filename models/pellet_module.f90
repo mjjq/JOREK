@@ -320,12 +320,20 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
       if (flag_spi == 1) then
         pellets(i)%spi_abl    = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
                                (T_eV**1.64)
-      else if (flag_spi == 2 .and. gas_type == 'D2') then
-        pellets(i)%spi_abl    = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) * ((n_SI*1.d-6)**0.455) * &
-                               (T_eV**1.679)
-      else if (flag_spi == 2 .and. gas_type == 'Ar') then
-        pellets(i)%spi_abl    = 2.5d13 * ((pellets(i)%spi_radius*1.d2)**1.451) * ((n_SI*1.d-6)**0.451) * &
-                               (T_eV**1.679)
+      else if (flag_spi == 2) then
+        select case ( trim(gas_type) )
+          case('D2')
+            pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
+                                 * ((n_SI*1.d-6)**0.455) * (T_eV**1.679)
+          case('Ar')
+            pellets(i)%spi_abl = 2.5d13 * ((pellets(i)%spi_radius*1.d2)**1.451) &
+                                 * ((n_SI*1.d-6)**0.451) * (T_eV**1.679)
+          case default
+            write(*,*) '!! Gas type "', trim(gas_type), '" unknown !!'
+            write(*,*) '=> We assume the gas is D2.'
+            pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
+                                 * ((n_SI*1.d-6)**0.455) * (T_eV**1.679)
+        end select
       end if
     else
       pellets(i)%spi_abl    = 0.d0

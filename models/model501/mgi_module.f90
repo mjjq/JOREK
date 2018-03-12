@@ -48,6 +48,7 @@ module mgi_module
     integer:: n_gas                    ! = 2/(gamma-1) where gamma = heat capacity ratio of gas
     real*8 :: A_gas                    ! Atomic number of gas particles
     real*8 :: mass_gas                 ! Mass of a gas particles
+    real*8 :: mol_atom                 ! Number of atoms in a molecular
     real*8 :: radius
     real*8 :: mgi_tor_shape
     real*8 :: mgi_pol_shape
@@ -97,11 +98,13 @@ module mgi_module
       case('D2')
         n_gas  = 5
         A_gas  = 4.
+        mol_atom = 2.
         mass_gas = A_gas*MASS_PROTON
         c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(7.d0/5.d0))
       case('Ar')
         n_gas  = 3
         A_gas  = 40.
+        mol_atom = 1.
         mass_gas = A_gas*MASS_PROTON
         c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(5.d0/3.d0))
       case default
@@ -109,6 +112,7 @@ module mgi_module
         write(*,*) '=> We assume the gas is D2.'
         n_gas  = 5
         A_gas  = 4.
+        mol_atom = 2.
         mass_gas = A_gas*MASS_PROTON
         c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(7.d0/5.d0))
     end select
@@ -227,8 +231,8 @@ module mgi_module
 
       else 
 
-    rhon_source = rhon_source + (mgi_amplitude * mgi_pol_shape * mgi_tor_shape &
-                  * t_norm * mass_gas /  (V_mgi * 1.d20 * central_density * central_mass * MASS_PROTON))  
+        rhon_source = rhon_source + (mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
+                      * mass_gas /  (V_mgi * mol_atom * 1.d20 * central_density * central_mass * MASS_PROTON))  
  
       endif
 

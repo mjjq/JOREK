@@ -272,6 +272,8 @@ module phys_module
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet 
 
+  character(len=512)  :: adas_suffix        !< The suffix of adas data file to be read
+  character(len=512)  :: adas_dir           !< The directory where the adas files are stored
   
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor  

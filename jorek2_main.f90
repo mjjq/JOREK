@@ -253,66 +253,66 @@ required = 0
   ! --- Some checks not to waste any cpu time
   if (required .ne. provided) then
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 2, ierr)
     stop
   else if ( (.not. use_mumps) .and. (.not. use_pastix) .and. (.not. use_wsmp) ) then
     write(*,*) ' FATAL : specify a valid solver'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
   else if ( n_plane < 2*(n_tor-1) ) then
     write(*,*) ' FATAL: n_plane >= 2 * (n_tor-1) required to avoid aliasing.'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 4, ierr)
     stop
 #ifndef USE_FFTW
   else if ( ( n_tor >= n_tor_fft_thresh ) .and. ( iand(n_plane,n_plane-1) /= 0 ) ) then
     write(*,*) ' FATAL: If n_tor >= n_tor_fft_thresh, n_plane must be a power of 2.'
     write(*,*) ' Hint: USE_FFTW removes this constraint.'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 5, ierr)
     stop
 #endif
   else if ( gmres .and. (nstep > 0) .and. (mod(n_cpu,(n_tor-1)/2+1) /= 0) ) then
     write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',            &
       (n_tor-1)/2+1,' harmonics'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 6, ierr)
     stop
   else if ( use_mumps ) then
 #ifndef USE_MUMPS
     write(*,*) 'FATAL : use_mumps=.true. requires USE_MUMPS=1 in Makefile.inc'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 7, ierr)
     stop
 #endif
   else if ( use_pastix ) then
 #ifndef USE_PASTIX
      write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 in Makefile.inc'
-     call MPI_Abort(MPI_COMM_WORLD,ierr)
+     call MPI_Abort(MPI_COMM_WORLD, 8, ierr)
      stop
 #endif
      if ( use_murge ) then
 #ifndef USE_MURGE
         write(*,*) 'FATAL : use_murge=.true. requires USE_PASTIX_MURGE=1 in Makefile.inc'
-        call MPI_Abort(MPI_COMM_WORLD,ierr)
+        call MPI_Abort(MPI_COMM_WORLD, 9, ierr)
         stop
 #endif
      endif
   else if ( use_wsmp ) then
 #ifndef USE_WSMP
     write(*,*) 'FATAL : use_wsmp=.true. requires USE_WSMP=1 in Makefile.inc'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 10, ierr)
     stop
 #endif
 #ifdef USE_BLOCK
     write(*,*) 'FATAL : USE_BLOCK=1 in Makefile.inc is currently not possible with use_wsmp'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 11, ierr)
     stop
 #endif
       if ( .not. restart ) then
       write(*,*) 'FATAL : use_wsmp is currently not supported for the equilibrium'
-      call MPI_Abort(MPI_COMM_WORLD,ierr)
+      call MPI_Abort(MPI_COMM_WORLD, 12, ierr)
       stop
     end if
     if ( use_pastix ) then
       write(*,*) 'FATAL : you should only select one of use_wsmp or use_pastix'
-      call MPI_Abort(MPI_COMM_WORLD,ierr)
+      call MPI_Abort(MPI_COMM_WORLD, 13, ierr)
       stop
     end if
   end if
@@ -416,7 +416,7 @@ required = 0
         
       else
         write(*,*) ' FATAL : no valid combination of grid-sizes specified'
-        call MPI_Abort(MPI_COMM_WORLD,ierr)
+        call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
         stop
       end if 
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
@@ -457,7 +457,7 @@ required = 0
 #ifdef USE_MUMPS
     ! --- Initialize MUMPS solver (used for equilibrium)
     call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
-    call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,0,MPI_GROUP_MUMPS_EQUIL,ierr)
+    call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,[0],MPI_GROUP_MUMPS_EQUIL,ierr)
     call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
     if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
 #endif

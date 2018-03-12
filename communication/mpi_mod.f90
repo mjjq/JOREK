@@ -1,14 +1,17 @@
 module mpi_mod
 
-! --- For forchk
-#ifdef FORCHECK
+#ifndef LAHEY
+#ifdef MPI_F08
+  use mpi_f08
+#else
   use mpi
 #endif
-!
+#endif
+
   implicit none
 
 ! --- For Lahey.
-#ifndef FORCHECK
+#ifdef LAHEY
   include 'mpif.h'
 #endif
 

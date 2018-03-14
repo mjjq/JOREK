@@ -12,7 +12,6 @@ use gauss
 use basis_at_gaussian
 use phys_module, only:   n_limiter, R_limiter, Z_limiter
 use mod_neighbours, only: update_neighbours
-use mod_element_rtree, only: rtree_initialized
 
 implicit none
 
@@ -1771,8 +1770,7 @@ deallocate(R_polar,Z_polar,xout)
 deallocate(RR_new,ZZ_new,s_flux,t_flux,t_tht)
 deallocate(ielm_flux,k_cross)
 
-rtree_initialized = .false. ! Force redo neighbours and rtree
-call update_neighbours(node_list,element_list)
+call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 write(*,*) ' completed grid_xpoint_wall'
 
 return

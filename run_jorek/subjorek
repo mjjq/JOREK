@@ -1049,7 +1049,7 @@ if [ "${JOREK_HOST}" == "marconi_knl" ]; then
 #SBATCH -o $JOBNAME%j.out          # strout filename (%j is jobid)
 #SBATCH -e $JOBNAME%j.out          # stderr filename (%j is jobid)
 #SBATCH --exclusive
-#SBATCH --partition=skl_fua_prod
+#SBATCH --partition=knl_fua_prod
 
 # environment
 #------------

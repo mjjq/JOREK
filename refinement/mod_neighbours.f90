@@ -232,9 +232,6 @@ do i=1, element_list%n_elements
 enddo
 !$omp end do
 
-! first one must be complete before second one can start
-!$omp barrier
-
 ! Force search for element crossings over the axis
 !$omp do
 do i=1, element_list%n_elements

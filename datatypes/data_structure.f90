@@ -124,10 +124,9 @@ contains
   subroutine init_threads()
 #ifdef _OPENMP
     use omp_lib
-    INTEGER ierr
     !$OMP PARALLEL shared(nbthreads)
     !$OMP master
-    ierr = omp_set_dynamic(0)
+    call omp_set_dynamic(.false.)
     nbthreads = omp_get_num_threads()
     !$OMP end master
     !$OMP barrier

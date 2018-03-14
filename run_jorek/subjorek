@@ -283,25 +283,15 @@ if [ "${JOREK_HOST}" == "marconi_knl" ]; then
   NNODES=2
   ((NPES=NNODES*MPIPROCS))
   PROJ=FUA21_JOREKED
-  WALLTIME=00:30:00
+  WALLTIME=12:00:00
 else
-  if [ "${JOREK_HOST}" == "marconi_skl" ]; then    
     ((THPNODE=48))
     MPIPROCS=2
     NTHREAD=24
     NNODES=2
     ((NPES=NNODES*MPIPROCS))
     PROJ=FUA32_JOREK3D
-    WALLTIME=00:30:00
-  else
-    ((THPNODE=36))
-    MPIPROCS=2
-    NTHREAD=18
-    NNODES=2
-    ((NPES=NNODES*MPIPROCS))
-    PROJ=FUA11_JOREKED
-    WALLTIME=00:30:00
-  fi
+    WALLTIME=12:0:00
 fi
 echo "==================================================================================="
 echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
@@ -473,9 +463,9 @@ NBFILERST_INI=0
 if [ ! -d ${RSTDIR} ]; then
     mkdir -p ${RSTDIR}
 else
-    LISTE_NBFILERST=`ls ${RSTDIR}/jorek?????.rst 2> /dev/null`
+    LISTE_NBFILERST=`ls ${RSTDIR}/jorek?????.h5 2> /dev/null`
     if [ "$LISTE_NBFILERST" != "" ]; then
-	NBFILERST_INI=`ls ${RSTDIR}/jorek?????.rst | wc -l `
+	NBFILERST_INI=`ls ${RSTDIR}/jorek?????.h5 | wc -l `
     fi
 fi
 echo "==================================================================================="
@@ -839,7 +829,7 @@ echo " "
 
 # Execution control
 # -----------------
-if [ ! -e "${RESDIR}/jorek_restart.rst" ]; then
+if [ ! -e "${RESDIR}/jorek_restart.h5" ]; then
    echo "==================================================================================="
    echo " ***   Restart file does not exist, so INIT"
    out_increment=0
@@ -851,7 +841,7 @@ if [ ! -e "${RESDIR}/jorek_restart.rst" ]; then
 else
    echo "==================================================================================="
    echo " ***   Restart file does exist, so LOOP"
-   tmp=$(ls ${RESDIR}/*.rst | wc -l)
+   tmp=$(ls ${RESDIR}/*.h5 | wc -l)
    (( out_increment= $tmp - 1 ))
    cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
    echo " ============> writing output in file    = " ${CASE}/${EXECNAMEOUT}___${out_increment}.out
@@ -1040,23 +1030,26 @@ EOF
 # -----------------------------------------------------------------
 marconi*)
 
-CMD_MPIRUN="${MPIRUN} ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
-CMD_SUB="qsub go_${DATANAME}.cmd"
+CMD_MPIRUN="mpirun -genv I_MPI_FABRICS shm:tmi -np ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
+CMD_SUB="sbatch go_${DATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 
 # batch job creation
 # ------------------
 if [ "${JOREK_HOST}" == "marconi_knl" ]; then
-  cat <<EOF > go_$DATANAME.cmd
+  cat <<EOF > go_${DATANAME}.cmd
 #!/bin/bash
-#PBS -N ${CASENAME}
-#PBS -A ${PROJ}
-#PBS -q knl
-#PBS -V
-#PBS -j oe
-#PBS -l place=excl
-#PBS -l walltime=${WALLTIME}
-#PBS -l select=${NNODES}:mpiprocs=${MPIPROCS}
+#SBATCH -J ${CASENAME}
+#SBATCH --nodes=${NNODES}
+#SBATCH --ntasks-per-node=${MPIPROCS}
+#SBATCH --threads-per-core=1
+#SBATCH --cpus-per-task=${NTHREAD}
+#SBATCH --time=${WALLTIME}            # execute time (hh:mm:ss - max 08:00:00)
+#SBATCH --account=${PROJ}          # account number
+#SBATCH -o $JOBNAME%j.out          # strout filename (%j is jobid)
+#SBATCH -e $JOBNAME%j.out          # stderr filename (%j is jobid)
+#SBATCH --exclusive
+#SBATCH --partition=skl_fua_prod
 
 # environment
 #------------
@@ -1068,37 +1061,19 @@ export OMP_NUM_THREADS=${NTHREAD}
 EOF
 fi
 if [ "${JOREK_HOST}" == "marconi_skl" ]; then
-  cat <<EOF > go_$DATANAME.cmd
+  cat <<EOF > go_${DATANAME}.cmd
 #!/bin/bash
-#PBS -N ${CASENAME}
-#PBS -A ${PROJ}
-#PBS -q xfuasklprod
-#PBS -V
-#PBS -j oe
-#PBS -l place=excl
-#PBS -l walltime=${WALLTIME}
-#PBS -l select=${NNODES}:ncpus=48:mpiprocs=${MPIPROCS}
-
-# environment
-#------------
-ulimit -l unlimited
-ulimit -s unlimited
-
-export OMP_NUM_THREADS=${NTHREAD}
-
-EOF
-fi
-if [ "${JOREK_HOST}" == "marconi" ]; then
-  cat <<EOF > go_$DATANAME.cmd
-#!/bin/bash
-#PBS -N ${CASENAME}
-#PBS -A ${PROJ}
-#PBS -q xfuaprod
-#PBS -V
-#PBS -j oe
-#PBS -l place=excl
-#PBS -l walltime=${WALLTIME}
-#PBS -l select=${NNODES}:ncpus=36:mpiprocs=${MPIPROCS}
+#SBATCH -J ${CASENAME}
+#SBATCH --nodes=${NNODES}
+#SBATCH --ntasks-per-node=${MPIPROCS}
+#SBATCH --threads-per-core=1
+#SBATCH --cpus-per-task=${NTHREAD}
+#SBATCH --time=${WALLTIME}            # execute time (hh:mm:ss - max 08:00:00)
+#SBATCH --account=${PROJ}          # account number
+#SBATCH -o $JOBNAME%j.out          # strout filename (%j is jobid)
+#SBATCH -e $JOBNAME%j.out          # stderr filename (%j is jobid)
+#SBATCH --exclusive
+#SBATCH --partition=skl_fua_prod
 
 # environment
 #------------
@@ -1226,7 +1201,7 @@ cd ${RESDIR}
 # Test if restart files exist
 # ---------------------------
 file_list=${RESDIR}/NUM_RST
-if [ ! -e "jorek_restart.rst" ]; then
+if [ ! -e "jorek_restart.h5" ]; then
    echo "==================================================================================="
    echo " The restart file does not exist, so INIT"
    echo " nb_restart = " \$nb_restart
@@ -1252,9 +1227,9 @@ fi
 # Test if restart files exist
 # ---------------------------
 if [ "\$nb_restart" -gt "0" ]; then
-   if [ ! -e "jorek_restart.rst" ] ; then
+   if [ ! -e "jorek_restart.h5" ] ; then
       echo "==================================================================================="
-      echo " The restart file 'jorek_restart.rst' does not exist, and should. HALTING.........."
+      echo " The restart file 'jorek_restart.h5' does not exist, and should. HALTING.........."
       echo "==================================================================================="
       echo " "
       exit  
@@ -1282,13 +1257,13 @@ status=\$?
 #TMP    echo " "
 #TMP    cat ${RESDIR}/NUM_RST
 #TMP 
-#TMP    mv jorek_restart.rst jorek_restart.rst.cpy
+#TMP    mv jorek_restart.h5 jorek_restart.h5.cpy
 #TMP    rm -f machinefile
 #TMP 
 #TMP    # now, let's run jorek2vtk on the restart files
 #TMP    # created during this execution only
 #TMP    # ----------------------------------
-#TMP    # first, let's test if there is the same # of "jorek_0000xxx.rst"
+#TMP    # first, let's test if there is the same # of "jorek_0000xxx.h5"
 #TMP    # and "jorek_0000xxx.vtk" files in both RST/ and VTK/
 #TMP    if  [ ${NBFILES} -eq "0" ]; then   
 #TMP       echo "==================================================================================="
@@ -1303,17 +1278,17 @@ status=\$?
 #TMP       echo " "
 #TMP    fi
 #TMP 
-#TMP    # first, temporarilly erase "jorek_restart.rst" if it exists
-#TMP    if [ ! -e "jorek_restart.rst" ]; then
-#TMP      echo " jorek_restart.rst has already been removed..... "
+#TMP    # first, temporarilly erase "jorek_restart.h5" if it exists
+#TMP    if [ ! -e "jorek_restart.h5" ]; then
+#TMP      echo " jorek_restart.h5 has already been removed..... "
 #TMP    else
-#TMP      mv jorek_restart.rst jorek_restart.rst.cpy
+#TMP      mv jorek_restart.h5 jorek_restart.h5.cpy
 #TMP    fi
 #TMP 
 #TMP    # compute the number of restart and written files
 #TMP    # -----------------------------------------------
 #TMP    # compute how many restart files were written in this execution
-#TMP    NBFILERST_MAIN=\$(ls ${RESDIR}/*.rst | wc -l)
+#TMP    NBFILERST_MAIN=\$(ls ${RESDIR}/*.h5 | wc -l)
 #TMP    # the actual number of restart files written is thus
 #TMP    (( NBFILE_WRITTEN= \${NBFILERST_MAIN} - ${NBFILEVTK_INI} ))
 #TMP    echo " NBFILERST_MAIN = " \$NBFILERST_MAIN
@@ -1323,8 +1298,8 @@ status=\$?
 #TMP    # create the list of all restart names --better to proceed this way because "nout" can be
 #TMP    # any number from one restart to the other
 #TMP    # ----------------------------------------
-#TMP    # thus, list only contains names as "jorek000xxx.rst"
-#TMP    list_tmp=\$(ls jorek*.rst  >TMP_FILE)
+#TMP    # thus, list only contains names as "jorek000xxx.h5"
+#TMP    list_tmp=\$(ls jorek*.h5  >TMP_FILE)
 #TMP    # create the array "array_GDP" of "000xxx" values whilst reading every line of file "TMP_FILE"
 #TMP    index="1"
 #TMP    while read line; do 
@@ -1338,15 +1313,15 @@ status=\$?
 #TMP    # ------------------------
 #TMP    if [ $NBFILEVTK_INI -eq 0 ]; then
 #TMP       vtkfile="jorek00000.vtk"
-#TMP       rstfile="jorek00000.rst"
+#TMP       rstfile="jorek00000.h5"
 #TMP       echo "==================================================================================="
 #TMP       echo " =============>> creating vtk file = " \${vtkfile} ", in folder = " ${VTKDIR}
 #TMP       echo "==================================================================================="
 #TMP       echo " "
-#TMP       cp \$rstfile jorek_restart.rst
+#TMP       cp \$rstfile jorek_restart.h5
 #TMP       $JOREKENV ./${VTKEXECNAME} < ${DATANAME}
 #TMP       mv jorek_tmp.vtk ${VTKDIR}/\${vtkfile}
-#TMP       # the "jorek_restart.rst" file remains in the working directory
+#TMP       # the "jorek_restart.h5" file remains in the working directory
 #TMP       cp \${rstfile}   ${RSTDIR}/\${rstfile}
 #TMP       mv trace*.out ${TRACEDIR}
 #TMP    else
@@ -1356,22 +1331,22 @@ status=\$?
 #TMP       for (( ifile= \${vtkiniplusun} ; ifile <= \${NBFILERST_MAIN} ; ifile += 1 )); do
 #TMP         increment=\${array_GDP[\${ifile}]}
 #TMP         vtkfile='jorek'\${increment}'.vtk'
-#TMP         rstfile='jorek'\${increment}'.rst'
+#TMP         rstfile='jorek'\${increment}'.h5'
 #TMP         echo "==================================================================================="
 #TMP         echo " =============>> creating vtk file = " \${vtkfile}", in folder = " ${VTKDIR}
 #TMP         echo "==================================================================================="
 #TMP         echo " "
-#TMP         cp \$rstfile jorek_restart.rst
+#TMP         cp \$rstfile jorek_restart.h5
 #TMP         $JOREKENV ./${VTKEXECNAME} < ${DATANAME}
 #TMP         mv jorek_tmp.vtk ${VTKDIR}/\${vtkfile}
-#TMP         # all "jorek_****.rst" file remain in the working directory
+#TMP         # all "jorek_****.h5" file remain in the working directory
 #TMP         cp \${rstfile}   ${RSTDIR}/\${rstfile}
 #TMP         mv trace*.out ${TRACEDIR}
 #TMP       done
 #TMP    fi
 #TMP 
-#TMP    # create again the "jorek_restart.rst" file
-#TMP    cp jorek_restart.rst.cpy jorek_restart.rst
+#TMP    # create again the "jorek_restart.h5" file
+#TMP    cp jorek_restart.h5.cpy jorek_restart.h5
 #TMP 
 #TMP    # new submission
 #TMP    # --------------

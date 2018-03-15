@@ -3,8 +3,8 @@ module diffusivities
   
   use mod_parameters,  only: jorek_model
   use phys_module, only: num_d_perp, D_perp, num_d_perp_x, num_d_perp_y, num_d_perp_len,           &
-                         num_zk_perp, ZK_perp, ZK_e_perp, ZK_i_perp, num_zk_perp_x, num_zk_perp_y, num_zk_perp_len,      &
-                         num_zk_e_perp_x, num_zk_i_perp_x, num_zk_e_perp_y, num_zk_i_perp_y, num_zk_e_perp_len, num_zk_i_perp_len,      &
+                         num_zk_perp, num_zk_e_perp, num_zk_i_perp, ZK_perp, ZK_e_perp, ZK_i_perp, num_zk_perp_x, num_zk_perp_y, num_zk_perp_len,      &
+                         num_zk_e_perp_x, num_zk_i_perp_x, num_zk_e_perp_y, num_zk_i_perp_y, num_zk_e_perp_len, num_zk_i_perp_len,     &
        xpoint, xcase, rho_0, rho_coef, T_coef
   use profiles,    only: interpolProf
     
@@ -75,9 +75,11 @@ module diffusivities
     real*8, allocatable :: num_zkperp_x(:)
     real*8, allocatable :: num_zkperp_y(:)
     integer             :: num_zkperp_len
+    logical             :: num_zkperp   
     integer, intent(in), optional:: species
     integer                      :: spec
     
+        
     spec = species_comb
     if ( present(species) ) then
        spec = species;      
@@ -87,26 +89,29 @@ module diffusivities
       ZKperp = ZK_perp
       if ( allocated(num_zk_perp_x) ) num_zkperp_x = num_zk_perp_x  
       if ( allocated(num_zk_perp_y) ) num_zkperp_y = num_zk_perp_y  
-      num_zkperp_len = num_zk_perp_len    
+      num_zkperp_len = num_zk_perp_len  
+      num_zkperp = num_zk_perp  
       
     else if ( spec == species_elec) then  
       ZKperp = ZK_e_perp  
       if ( allocated(num_zk_e_perp_x) ) num_zkperp_x = num_zk_e_perp_x  
-      if ( allocated(num_zk_e_perp_y) ) num_zkperp_y = num_zk_e_perp_y  
+      if ( allocated(num_zk_e_perp_y) ) num_zkperp_y = num_zk_e_perp_y
       num_zkperp_len = num_zk_e_perp_len  
+      num_zkperp = num_zk_e_perp
       
     else if ( spec == species_ions) then
       ZKperp = ZK_i_perp  
       if ( allocated(num_zk_i_perp_x) ) num_zkperp_x = num_zk_i_perp_x  
       if ( allocated(num_zk_i_perp_y) ) num_zkperp_y = num_zk_i_perp_y  
-      num_zkperp_len = num_zk_i_perp_len  
+      num_zkperp_len = num_zk_i_perp_len
+      num_zkperp = num_zk_i_perp  
       
     else
       ERROR STOP  
     end if
     
     
-    if ( num_zk_perp ) then
+    if ( num_zkperp ) then
       
       get_zkperp1 = interpolProf(num_zkperp_x, num_zkperp_y, num_zkperp_len, psin)
       
@@ -231,38 +236,43 @@ module diffusivities
     real*8, allocatable :: num_zkperp_x(:)
     real*8, allocatable :: num_zkperp_y(:)
     integer             :: num_zkperp_len
+    logical             :: num_zkperp   
     integer, intent(in), optional:: species
     integer                      :: spec
     
+     
     spec = species_comb
     if ( present(species) ) then
        spec = species;      
-    end if
+    end if   
     
     if ( spec == species_comb) then  
       ZKperp = ZK_perp
       if ( allocated(num_zk_perp_x) ) num_zkperp_x = num_zk_perp_x  
       if ( allocated(num_zk_perp_y) ) num_zkperp_y = num_zk_perp_y  
-      num_zkperp_len = num_zk_perp_len    
+      num_zkperp_len = num_zk_perp_len  
+      num_zkperp = num_zk_perp  
       
     else if ( spec == species_elec) then  
       ZKperp = ZK_e_perp  
       if ( allocated(num_zk_e_perp_x) ) num_zkperp_x = num_zk_e_perp_x  
-      if ( allocated(num_zk_e_perp_y) ) num_zkperp_y = num_zk_e_perp_y  
+      if ( allocated(num_zk_e_perp_y) ) num_zkperp_y = num_zk_e_perp_y
       num_zkperp_len = num_zk_e_perp_len  
+      num_zkperp = num_zk_e_perp
       
     else if ( spec == species_ions) then
       ZKperp = ZK_i_perp  
       if ( allocated(num_zk_i_perp_x) ) num_zkperp_x = num_zk_i_perp_x  
       if ( allocated(num_zk_i_perp_y) ) num_zkperp_y = num_zk_i_perp_y  
-      num_zkperp_len = num_zk_i_perp_len  
+      num_zkperp_len = num_zk_i_perp_len
+      num_zkperp = num_zk_i_perp  
       
     else
       ERROR STOP  
     end if
     
     ! --- Numerical profile
-    if ( num_zk_perp ) then
+    if ( num_zkperp ) then
       
       get_zkperp2 = interpolProf(num_zkperp_x, num_zkperp_y, num_zkperp_len, psi_norm)
       

@@ -452,6 +452,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     d2eta_d2Te = 0.d0
   end if
   
+  
   ! -----------------------------------
   ! --- Temperature dependent viscosity
   ! -----------------------------------
@@ -513,38 +514,13 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! -------------------------
   ! --- Hyper diffusivitities
   ! -------------------------
-  call temperature_e(xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
-  eta_numm	 = eta_num       * (zTe/Te_0)**(-1.5d0)
-  if (eta_numm .gt. 1.d-10) eta_numm = 1.d-10 
-  visco_numm	 = visco_num     * (zTe/Te_0)**(-1.5d0)
-  if (visco_numm .gt. 1.d-10) visco_numm = 1.d-10 
-  visco_par_numm = visco_par_num * (zTe/Te_0)**(-1.5d0)
-  if (visco_par_numm .gt. 1.d-10) visco_par_numm = 1.d-10 
-  D_perp_numm	 = D_perp_num    * (zTe/Te_0)**(-1.5d0)
-  if (D_perp_numm .gt. 1.d-10) D_perp_numm = 1.d-10 
-  Ki_perp_numm	 = ZK_perp_num   * (zTe/Te_0)**(-1.5d0)
-  if (Ki_perp_numm .gt. 1.d-10) Ki_perp_numm = 1.d-10 
-  Ke_perp_numm	 = ZK_perp_num   * (zTe/Te_0)**(-1.5d0)
-  if (Ke_perp_numm .gt. 1.d-10) Ke_perp_numm = 1.d-10 
-  Ki_par_num	 = 0.d-10
-  Ke_par_num	 = 0.d-10		
+  eta_numm	 = eta_num		! hyper-resistivity
+  visco_numm	 = visco_num		! hyper-viscosity
+  visco_par_numm = visco_par_num	! hyper-viscosity
+  D_perp_numm	 = D_perp_num		! hyper-diffusivity
+  Ki_perp_numm	 = ZK_perp_num		! hyper-conductivity
+  Ke_perp_numm	 = ZK_perp_num		! hyper-conductivity
 
-  ! hyper-resistivity
-  eta_numm       = eta_num       
-  visco_numm     = visco_num     
-  visco_par_numm = visco_par_num 
-  D_perp_numm    = D_perp_num    
-  Ki_perp_numm   = ZK_perp_num   
-  Ke_perp_numm   = ZK_perp_num   
-  Ki_par_num     = 0.d-10
-  Ke_par_num     = 0.d-10               
-
-  
-  ! We need hyper diffusivities mostly at the grid axis
-  !if (psi_norm .lt. 0.1d0) eta_numm    = eta_numm   * 1.d2
-  !if (psi_norm .lt. 0.1d0) visco_numm  = visco_numm * 1.d2
-  !if (psi_norm .lt. 0.05d0) visco_numm = visco_numm * 1.d4
-  !if (psi_norm .lt. 0.05d0) eta_numm   = eta_numm   * 1.d4
 
   ! ------------------------------------------------
   ! --- Taylor Galerkin (TG2) stabilisation switches
@@ -652,7 +628,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Neoclassical rotation
   ! -------------------------
   epsil   = 1.d-3
-  Btheta2 = (ps0_x**2 + ps0_y**2) / R**2
+  Btheta2 = (ps0_x**2.d0 + ps0_y**2.d0) / R**2
   if ( NEO ) then 
     if (num_neo_file) then
       call neo_coef(xpoint2, xcase2, y_g, Z_xpoint, ps0, psi_axis, psi_bnd, amu_neo_prof, aki_neo_prof)
@@ -665,7 +641,6 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     aki_neo_prof   = 0.d0
   endif
   
-
   ! -------------------------------------------------------------------
   ! --- Heating, current and particle source (the same for all i_plane)
   ! -------------------------------------------------------------------
@@ -675,10 +650,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
 
     ! --- Density source and heating
     call sources(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd,particle_source,heat_source_i,heat_source_e)
-    ! --- Old simple uniform sources
-    !particle_source   = particlesource * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) )
-    !heat_source_i     = heatsource_i   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
-    !heat_source_e     = heatsource_e   * (0.5d0 - 0.5d0 * tanh((psi_norm-0.5)/0.005) ) 
+ 
     ! --- New source profile: depends on initial equilibirum profiles.
     call density      (xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
     call temperature_i(xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)

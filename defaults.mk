@@ -14,7 +14,7 @@ INCLUDES+=-I$(MODDIR)
 # Detect the compiler vendors (sort to remove duplicates)
 F_COMPILER_FAMILY :=$(sort $(shell $(FC) --version | grep -oim 1 'intel\|gcc\|gnu' | tr A-Z a-z | sed 's/gcc/gnu/'))
 C_COMPILER_FAMILY :=$(sort $(shell $(CC) --version | grep -oim 1 'intel\|gcc\|gnu' | tr A-Z a-z | sed 's/gcc/gnu/'))
-CXX_COMPILER_FAMILY :=$(sort $(shell $(CXX) --version | grep -oim 1 'intel\|gcc\|gnu' | tr A-Z a-z | sed 's/gcc/gnu/'))
+CXX_COMPILER_FAMILY :=$(sort $(shell $(CXX) --version | grep -oim 1 'intel\|gcc\|gnu\|g[+][+]' | tr A-Z a-z | sed -e 's/gcc/gnu/' -e 's/g[+][+]/gnu/'))
 ifneq ($(F_COMPILER_FAMILY),$(C_COMPILER_FAMILY))
   $(error "Fortran compiler ($(F_COMPILER_FAMILY)) must be same as C compiler ($(C_COMPILER_FAMILY))")
 endif

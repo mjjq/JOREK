@@ -742,8 +742,15 @@ module vacuum
       
       if ( n_wall_curr == 0 ) return
       
-      if ( my_id == 0 ) sz(:) = (/ size(diag_coil_curr,1), size(diag_coil_curr,2) /)
+      if ( my_id == 0 ) then
+        if ( allocated(diag_coil_curr) ) then
+          sz(:) = (/ size(diag_coil_curr,1), size(diag_coil_curr,2) /)
+        else
+          sz(:) = 0
+        end if
+      end if
       call MPI_BCAST(sz,2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      
       
       if ( my_id /= 0 ) then
         if ( allocated(wall_curr) ) deallocate(wall_curr)

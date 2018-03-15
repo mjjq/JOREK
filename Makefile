@@ -25,8 +25,7 @@ clean:
 	-@rm -r $(OBJDIR)
 	@echo ">> Deleting Module Files <<"
 	-@rm -r $(MODDIR)
-	-@find . -name '*.mod' -delete -or -name '*.o' -delete -or -name '*.i90' -delete
-	-@rm -f particle_test_driver.f90
+	-@find . -name '*.mod' -delete -or -name '*.o' -delete
 cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -r $(DEPDIR)
@@ -67,6 +66,7 @@ DIRS := diagnostics			\
 	tools				\
 	tools/fruit                     \
 	non_regression_tests/unit_tests \
+	tools/rng                       \
 	datatypes			\
 	.				\
 	vacuum
@@ -150,7 +150,7 @@ particles/examples/%50_w.dat:
 	wget http://open.adas.ac.uk/download/adf11/$*50/$*50_w.dat -O $@
 compare_mc_coronal: | particles/examples/acd50_w.dat particles/examples/scd50_w.dat
 
-eqdsk2jorek: LIBS+=-ldierckx
+eqdsk2jorek: LIBS+=$(LIBDIERCKX)
 
 # Is this used by anyone? Otherwise we could remove it
 # It is not updated to this format yet.

@@ -364,9 +364,11 @@ subroutine preset_parameters
      toroidal_rotation = .false.
      abl_history     = .false.
      using_spi       = .false.
+     flag_adas       = .false.
+     n_adas          = 0
 
-     adas_suffix     ='none'
-     adas_dir        =''
+     adas_dir        = ''
+
     !=========== End of SPI parameters ===========
 
 !#endif

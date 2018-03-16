@@ -566,6 +566,8 @@ if (my_id == 0) then
      write(*,LOGI_FMT) 'using_spi           ',  using_spi
      write(*,LOGI_FMT) 'abl_history         ',  abl_history
      write(*,LOGI_FMT) 'toroidal rotation   ',  toroidal_rotation
+     write(*,LOGI_FMT) 'flag_adas           ',  flag_adas
+     write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
      write(*,INTG_FMT) 'n_spi               ',  n_spi
      write(*,INTG_FMT) 'flag_spi            ',  flag_spi
      write(*,INTG_FMT) 'flag_spi_size       ',  flag_spi_size

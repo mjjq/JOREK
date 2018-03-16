@@ -44,6 +44,7 @@ real*8  :: sign_corr, real_total_quantity
 real*8, allocatable :: rnd(:)                      !The random number array 
 real*8, allocatable :: shard_size(:)               !The shard size array
 
+
 ! --- Namelist with input parameters.                                                                                                                        
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5,                                           &
@@ -122,6 +123,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
                 spi_Vel_diff, t_mgi, JET_MGI, ASDEX_MGI,            &
                 gas_type, delta_n_convection, nimp_bg,              &
+                flag_adas, adas_dir,                                &
                 RMP_on, RMP_har_cos,RMP_har_sin, flag_spi_size,     &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
@@ -269,7 +271,7 @@ if (using_spi == .true.) then
 
   if (err_alloc /= 0) then
     write(*,*) "Error when trying to dynamically allocate memeries for pellets, reverting to non-SPI case."
-    using_spi = .false. 
+    stop 
   else
     if (n_spi >= 1) then
 
@@ -283,7 +285,8 @@ if (using_spi == .true.) then
         allocate (shard_size(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for shard sizes
         if (err_alloc /= 0) then
           write(*,*) "Error when trying to dynamically allocate memeries for shard size, using uniform case."
-          flag_spi_size = 0
+          deallocate(pellets)
+          stop
         else
           shard_size = 0.0
         end if
@@ -300,7 +303,9 @@ if (using_spi == .true.) then
             !write(*,*) " CHECK POINT shard size:", shard_size(1:10)
           else
             write(*,*) "WARNING!!! Shard size file does not exist, reverting to uniform distribution"
-            flag_spi_size = 0
+            deallocate(pellets)
+            deallocate(shard_size)
+            stop
           end if
         end if
 
@@ -314,7 +319,9 @@ if (using_spi == .true.) then
 
       if (err_alloc_rnd /= 0) then
         write(*,*) "Error when trying to dynamically allocate memeries for randoms."
-        using_spi = .false.
+        deallocate(pellets)
+        deallocate(shard_size)
+        stop
       end if
 
 
@@ -417,6 +424,7 @@ if (using_spi == .true.) then
       write(*,*) "SPI initialized successfully, total amount of injection:", real_total_quantity
 
       deallocate(rnd)
+      deallocate(shard_size)
 
       if (allocated(xtime_spi_ablation)) call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_GRID)
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation,1,n_spi,1,nstep,"xtime_spi_ablation")
@@ -433,6 +441,7 @@ if (using_spi == .true.) then
   end if
 
 end if
+
   
 return
 end subroutine initialise_parameters

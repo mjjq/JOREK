@@ -4,6 +4,8 @@ module phys_module
   use mod_parameters
   use constants
   use data_structure              !< Added in order to dynamically allocate pellets 
+  use mod_openadas
+  use mod_coronal
  
   implicit none
   
@@ -270,10 +272,16 @@ module phys_module
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI
   logical :: toroidal_rotation  !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
-  type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet 
+  logical :: flag_adas          !< Flag for whether to use adas data calculating coronal equilibriam
+  integer :: n_adas             !< Number of species to be traced by adas, for future development only
 
-  character(len=512)  :: adas_suffix        !< The suffix of adas data file to be read
-  character(len=512)  :: adas_dir           !< The directory where the adas files are stored
+  type (type_SPI), allocatable  :: pellets(:)     !< Each element corresponds to one injected pellet 
+
+  character(len=512)            :: adas_dir    !< The directory of adas data file to be read
+
+
+  type (adf11_all), allocatable :: imp_adas(:)    !< The ADAS data for impurities
+  type (coronal), allocatable   :: imp_cor(:)     !< The coronal equilibrium distribution of impurities
   
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor  

@@ -165,6 +165,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(ASDEX_MGI,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(gas_type,             80,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(adas_dir,            512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(L_tube,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(K_Dmv,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -196,11 +197,14 @@ if (my_id .eq. 0) then
   call MPI_PACK(flag_spi_size,          1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(using_spi,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(flag_adas,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
 if (using_spi == .true.) then
   call MPI_PACK(pellets,            n_spi,dtype,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   write(*,*) "packing pellets: ", ierr
 end if
+
+
 
 !===============================End of SPI model===============================================
 
@@ -604,6 +608,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,ASDEX_MGI,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,gas_type,             80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,adas_dir,            512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,L_tube,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,K_Dmv,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -635,6 +640,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,flag_spi_size,          1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,using_spi,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,flag_adas,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
 if (using_spi == .true.) then
   if (.not. allocated(pellets)) then

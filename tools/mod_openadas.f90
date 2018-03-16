@@ -17,6 +17,8 @@ type ADF11
   !< PLT, PRB: Wm3 (for P* ?) (converted from Wcm3)
 contains
   procedure :: interp => GRC
+  procedure :: interp_grad_T => dGRC_dT
+  procedure :: interp_grad_n => dGRC_dn
 end type ADF11
 
 !> Compound datatype containing many type_ADF11
@@ -39,7 +41,7 @@ contains
 !> Suffix is usually of the form 50_w, 96_li
 function read_adf11(suffix, directory) result(ad)
 use constants
-use mpi
+use mpi_mod
 character(len=*), intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li)
 character(len=*), intent(in), optional :: directory
 type(ADF11_all), target :: ad !< OpenAdas data type
@@ -122,6 +124,36 @@ end function read_adf11
 
 
 
+!> interpolation of log10 temperature gradient of GRC in density and temperature
+pure function dGRC_dT(a, density, temperature)
+class(ADF11), intent(in) :: a           !< ADF11 datatype
+real*8, intent(in)       :: density     !< log10 density in m^-3
+real*8, intent(in)       :: temperature !< log10 temperature in K
+real*8, dimension(a%n_Z) :: dGRC_dT !< Generalized Radiational Coefficient at this density and temperature
+
+! If GRC exists and we are looking for a Z that is nonzero
+if (allocated(a%GRC)) then
+  dGRC_dT = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,1)
+else
+  dGRC_dT = 0.d0
+endif
+end function dGRC_dT
+
+!> interpolation of log10 density gradient of GRC in density and temperature
+pure function dGRC_dn(a, density, temperature)
+class(ADF11), intent(in) :: a           !< ADF11 datatype
+real*8, intent(in)       :: density     !< log10 density in m^-3
+real*8, intent(in)       :: temperature !< log10 temperature in K
+real*8, dimension(a%n_Z) :: dGRC_dn !< Generalized Radiational Coefficient at this density and temperature
+
+! If GRC exists and we are looking for a Z that is nonzero
+if (allocated(a%GRC)) then
+  dGRC_dn = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,2)
+else
+  dGRC_dn = 0.d0
+endif
+end function dGRC_dn
+
 !> interpolation of log10 values of GRC in density and temperature
 pure function GRC(a, z, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
@@ -137,7 +169,6 @@ else
   GRC = 0.d0
 endif
 end function GRC
-
 
 
 !> Linear 2D interpolation on a rectangular grid
@@ -183,7 +214,6 @@ fx1  = (f(ix1,iy1) - f(ix2,iy1))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy1
 fx2  = (f(ix1,iy2) - f(ix2,iy2))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2)
 fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (y - ty(iy1)) + fx1
 end function L2Dinterp
-
 
 pure function L2D2interp(tx,ty,nz,f,x,y) result(fout)
 real*8, intent(in), dimension(:)                    :: tx !< Grid points in x

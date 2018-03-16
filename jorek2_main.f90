@@ -250,6 +250,13 @@ required = 0
     !gmres     = .false.
     use_murge = .false. 
   end if
+
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  ! --- Read ADAS data and generate coronal equilibrium is needed
+  if (flag_adas == .true.) then
+    call init_imp_adas(my_id)
+  end if
+#endif
   
   ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)

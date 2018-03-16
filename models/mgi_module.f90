@@ -284,4 +284,121 @@ module mgi_module
 
   end subroutine update_mgi
 
+  subroutine init_imp_adas(my_id)
+
+    use phys_module
+    use mod_openadas
+    use mod_coronal
+
+    implicit none
+
+    integer, intent(in) :: my_id
+    integer             :: err_alloc, i
+
+    character(len=512)  :: adas_suffix     !The suffix of adas data file to be read
+
+    n_adas = 1 ! For now we only trace one species, in the future probably more 
+
+    if (allocated(imp_adas)) then
+      deallocate(imp_adas)
+    end if
+
+    allocate (imp_adas(n_adas),stat=err_alloc)  !< Dynamically allocate memeries for adas data
+
+    if (err_alloc /= 0) then
+      write(*,*) "Error when trying to dynamically allocate memeries for adas data.", my_id
+      stop
+    else
+      if (allocated(imp_cor)) then
+        deallocate(imp_cor)
+      end if
+
+      allocate (imp_cor(n_adas),stat=err_alloc)  !< Dynamically allocate memeries for adas data
+      if (err_alloc /= 0) then
+        write(*,*) "Error when trying to dynamically allocate memeries for CE vector.", my_id
+        deallocate(imp_adas)
+        stop
+      else
+        do i=1, n_adas
+          select case ( trim(gas_type) )
+            case('D2')
+              write(*,*) "Deuterium adas calculation unsupported for now, disable flag_adas."
+              deallocate(imp_cor)
+              deallocate(imp_adas)
+              stop
+            case('Ar')
+              adas_suffix = '89_ar'
+            case default
+              write(*,*) "Unrecognized species, disable flag_adas."
+              deallocate(imp_cor)
+              deallocate(imp_adas)
+              stop
+          end select
+
+          imp_adas(i) = read_adf11(adas_suffix,adas_dir)
+          imp_cor(i)  = coronal(imp_adas(i))
+
+        end do
+      end if
+
+    end if
+
+  end subroutine init_imp_adas
+
+  subroutine radiation_function(ad, cor, density, temperature, Lrad, dLrad_dTe, dLrad_dNe)
+
+    use phys_module
+    use mod_openadas
+    use mod_coronal
+
+    implicit none
+
+    type(coronal), intent(in)   :: cor
+    type(adf11_all), intent(in) :: ad
+    real*8, intent(in)          :: density !< log10 density in m^-3
+    real*8, intent(in)          :: temperature !< log10 electron temperature in K
+
+    real*8, intent(out)         :: Lrad ! value of radiation functioni
+    real*8, intent(out), optional :: dLrad_dTe, dLrad_dNe ! derivatives of radiation functioni
+
+    real*8, dimension(ad%n_Z)   :: rad     ! The value of radiation function for each charge state
+    real*8, dimension(ad%n_Z)   :: dlograd_dlogTe, dlograd_dlogNe ! The loglog gradient of radiation function 
+                                                                  ! for each charge state in K and m^-3
+    real*8, dimension(ad%n_Z)   :: drad_dTe, drad_dNe             ! The gradient of radiation function
+    real*8, dimension(0:cor%n_Z):: p          !< charge state distribution
+    real*8, dimension(0:cor%n_Z):: p_Te, p_Ne !< gradient of distribution of charge states (sum = 1) to Te and Ne
+    integer :: iz
+
+    dlograd_dlogTe       = ad%PRB%interp_grad_T(density, temperature) + &
+                           ad%PLT%interp_grad_T(density, temperature)
+    dlograd_dlogNe       = ad%PRB%interp_grad_n(density, temperature) + &
+                           ad%PLT%interp_grad_n(density, temperature)
+
+    do iz=1,ad%n_Z
+      rad(iz)            = ad%PRB%interp(iz, density, temperature) + &
+                           ad%PLT%interp(iz, density, temperature)
+      drad_dTe(iz)       = dlograd_dlogTe(iz) * rad(iz) / (10.0**temperature)
+      drad_dNe(iz)       = dlograd_dlogNe(iz) * rad(iz) / (10.0**density)
+    enddo ! radiation emitted by atoms at level iz
+
+
+    Lrad = L2Dinterp(cor%density,cor%temperature,cor%Prad(:,:),density,temperature)
+    Lrad = Lrad / (10.0**density) ! This is to recover the radiation coefficient
+    
+    if (present(dLrad_dTe) .or. present(dLrad_dNe)) then
+      call cor%interp(density,temperature,p)
+      call cor%interp_gradients(density,temperature,p_Te,p_Ne) 
+      if (present(dLrad_dTe)) then
+        dLrad_dTe = dot_product(p_Te(1:ad%n_Z),rad) + dot_product(p(1:ad%n_Z),drad_dTe)
+      endif
+      if (present(dLrad_dNe)) then
+        dLrad_dNe = dot_product(p_Ne(1:ad%n_Z),rad) + dot_product(p(1:ad%n_Z),drad_dNe)
+      endif
+
+
+    endif
+
+
+  end subroutine radiation_function
+
 end module mgi_module

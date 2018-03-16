@@ -201,7 +201,6 @@ type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 
 ! --- Local variables
-real*8  :: psi_axis, psi_bnd
 integer :: my_id, ierr
 real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
 

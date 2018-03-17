@@ -18,6 +18,7 @@ use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
 use mgi_module
+use mod_coronal
 use vacuum, only: freeb_fact
 
 implicit none
@@ -136,6 +137,7 @@ real*8     :: beta_imp, dbeta_imp_dT
 !   -Radiation from injected impurities
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
 real*8     :: T_rad, dT_rad_dT                                ! Temperature used in radiation rate
+real*8     :: ne_rad                                          ! Electron density used in radiation rate
 real*8     :: coef_rad_1, A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
 real*8     :: A2_rad, T2_rad, sig2_rad
 !   -Radiation from background impurities
@@ -628,20 +630,46 @@ do ms=1, n_gauss
   !-------------------------------------------
   ! Atomic physics parameters for Argon
   !-------------------------------------------
-     m_i_over_m_imp = 1./20. ! Argon mass = 40 u and main ion (D) mass = 2 u
 
-     T0_Zimp        = 437.  ! eV
-     alpha_Zimp     = 0.415
+     select case ( trim(gas_type) )
+       case('D2')
+         m_i_over_m_imp = 1.
+       case('Ar')
+         m_i_over_m_imp = 1./20. ! Argon mass = 40 u and main ion (D) mass = 2 u
+       case default
+         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
+         write(*,*) '=> We assume the gas is D2.'
+         m_i_over_m_imp = 1.
+     end select
 
      ! Te in eV:
      T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      dT_rad_dT = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
-     Z_imp     = 10. !18.*tanh((T_rad/T0_Zimp)**alpha_Zimp)
+     ! We estimate the effective charge by a test density 10^20/m^3
+     ! Later maybe we should implement a iterative method
+     if (flag_adas == .true.) then
+
+       call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+       call imp_cor(1)%interp_gradients(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff_Te=dZ_imp_dT)
+
+       ! Convert gradient in T(K) in to gradient in T (eV)
+       dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
+       ! Derivative wrt to T, with T in JOREK units
+       dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+
+     else
+
+       T0_Zimp        = 437.  ! eV
+       alpha_Zimp     = 0.415
+
+       Z_imp     = 10. !18.*tanh((T_rad/T0_Zimp)**alpha_Zimp)
+
      ! Derivative wrt to Te, with Te in eV
-     dZ_imp_dT = 0. !(18./T0_Zimp)*alpha_Zimp*((T_rad/T0_Zimp)**(alpha_Zimp-1))*(1.-(tanh(T_rad/T0_Zimp))**2.) * dT_rad_dT
+       dZ_imp_dT = 0. !(18./T0_Zimp)*alpha_Zimp*((T_rad/T0_Zimp)**(alpha_Zimp-1))*(1.-(tanh(T_rad/T0_Zimp))**2.) * dT_rad_dT
      ! Derivative wrt to T, with T in JOREK units
-     dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     end if
 
      alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
      dalpha_imp_dT = 0.5*m_i_over_m_imp*dZ_imp_dT
@@ -651,12 +679,35 @@ do ms=1, n_gauss
      dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
 
   !-------------------------------------------
-  ! --- Radiative cooling rate for Argon (approximate fit of cooling rate at coronal equilibrium)
+  ! --- Radiative function, if flag_adas is enabled use interpolation, if not use simple model
   ! ------------------------------------------
-!   if (T_rad .gt. 5.) then
 
      ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-     coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
+     coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                  *(central_density*1.d20)**2.5d0*m_i_over_m_imp
+
+     if (flag_adas == .true.) then
+
+       Lrad = 0.0
+       dLrad_dT = 0.0
+
+       ! Here we are temperarily only considering one impurity species, in the
+       ! future maybe a do loop will is needed
+       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+
+       Lrad = Lrad * coef_rad_1
+
+       ! Convert gradient in T(K) in to gradient in T (eV)
+       dLrad_dT = dLrad_dT * coef_rad_1 * EL_CHG / K_BOLTZ
+       ! Derivative wrt to T, with T in JOREK units
+       dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+
+     else
+  !-------------------------------------------
+  ! --- Radiative cooling rate for Argon (approximate fit of cooling rate at coronal equilibrium)
+  ! ------------------------------------------
+    
+!   if (T_rad .gt. 5.) then
 
      A0_rad   = 2.8*1.d-33    ! W.m^3
      A1_rad   = 2.335*1.d-31  ! W.m^3
@@ -679,6 +730,8 @@ do ms=1, n_gauss
 !     dLrad_dT = 0.d0
 !   endif
 
+     end if
+   
    !--------------------------------------------------------
    ! --- Source of neutrals from Massive Gas Injection (MGI)
    !--------------------------------------------------------

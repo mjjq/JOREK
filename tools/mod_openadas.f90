@@ -68,7 +68,10 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   write(filename,"(A,A,A)") ADF11_filenames(i_ADF11), trim(suffix), '.dat'
   if (present(directory)) filename = trim(directory) // trim(filename)
   inquire(file=filename, exist=file_exists)
-  if (.not. file_exists) cycle ! Skip this type of data
+  if (.not. file_exists) then
+    write(*,*) "File not found for", filename
+    cycle ! Skip this type of data
+  end if
 
   if (my_id .eq. 0) write(*,"(A,A)",advance="no") "Reading data from ", trim(filename)
   open(10,file=filename,status="old",iostat=ierr)

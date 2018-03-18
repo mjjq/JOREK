@@ -323,6 +323,7 @@ module mgi_module
           select case ( trim(gas_type) )
             case('D2')
               write(*,*) "Deuterium adas calculation unsupported for now, disable flag_adas."
+              adas_suffix = 'none'
               deallocate(imp_cor)
               deallocate(imp_adas)
               stop
@@ -330,6 +331,7 @@ module mgi_module
               adas_suffix = '89_ar'
             case default
               write(*,*) "Unrecognized species, disable flag_adas."
+              adas_suffix = 'none'
               deallocate(imp_cor)
               deallocate(imp_adas)
               stop

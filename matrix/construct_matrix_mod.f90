@@ -440,7 +440,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   !$omp end do
   !$omp end parallel
 
-
   ! --- Add vacuum response (boundary integral) for free boundary computations
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
     call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list,                   &

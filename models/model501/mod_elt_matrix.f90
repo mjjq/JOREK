@@ -623,6 +623,9 @@ do ms=1, n_gauss
        call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
        call imp_cor(1)%interp_gradients(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff_Te=dZ_imp_dT)
 
+       !Z_imp     = 10. ! Test
+       !dZ_imp_dT = 0.  ! Test
+
        ! Convert gradient in T(K) in to gradient in T (eV)
        dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
        ! Derivative wrt to T, with T in JOREK units
@@ -647,7 +650,7 @@ do ms=1, n_gauss
      beta_imp     = m_i_over_m_imp*Z_imp - 1.
      dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
 
-     ne_rad       = (r0_corr - beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+     ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
 
   !-------------------------------------------
   ! --- Radiative function, if flag_adas is enabled use interpolation, if not use simple model
@@ -674,6 +677,8 @@ do ms=1, n_gauss
        ! Derivative wrt to T, with T in JOREK units
        dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
+       !Lrad = 0.0        ! Test
+       !dLrad_dT = 0.0    ! Test
 
      else
   !-------------------------------------------
@@ -703,6 +708,7 @@ do ms=1, n_gauss
 !     dLrad_dT = 0.d0
 !   endif
      end if
+
 
    !--------------------------------------------------------
    ! --- Source of neutrals from Massive Gas Injection (MGI)

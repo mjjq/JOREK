@@ -678,7 +678,7 @@ do ms=1, n_gauss
      beta_imp     = m_i_over_m_imp*Z_imp - 1.
      dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
 
-     ne_rad       = (r0_corr - beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+     ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
 
   !-------------------------------------------
   ! --- Radiative function, if flag_adas is enabled use interpolation, if not use simple model

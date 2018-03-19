@@ -677,6 +677,10 @@ do ms=1, n_gauss
        ! Derivative wrt to T, with T in JOREK units
        dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
+       if (T_rad < 1.) then
+         Lrad = 0.
+         dLrad_dT = 0.
+       end if
        !Lrad = 0.0        ! Test
        !dLrad_dT = 0.0    ! Test
 
@@ -987,8 +991,8 @@ do ms=1, n_gauss
                     + zeta * v * alpha_imp * T0 * delta_g(mp,8,ms,mt) * BigR                           * xjac &   
 
                     + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                    * xjac * tstep  &
-                    - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad                         * xjac * tstep  &
-                    - v * BigR * r0_corr * frad_bg                                           * xjac * tstep
+                    - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad          * xjac * tstep  &
+                    - v * BigR * r0_corr * frad_bg                                      * xjac * tstep
 
 !###################################################################################################
 !#  equation 7 (parallel velocity  equation)                                                       #

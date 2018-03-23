@@ -224,8 +224,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer                           :: i_father,INODE_FATHER, ios
   integer, external                 :: omp_get_num_threads, omp_get_thread_num
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
-  integer                           :: random_element, n_var_reduced, v1, v2, im, index_ij_model400_e, index_kl_model400_e
-  real*8                            :: tmp_rhs, tmp_elm, tmp_elm_8
   logical                           :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
   CHARACTER(LEN=128)                :: fname
 
@@ -293,8 +291,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,          &
-  !$omp           ivar, itor, jvertex, jorder, jvar, jtor, random_element, n_var_reduced, v1, v2, im,      &
-  !$omp           index_ij_model400_e, index_kl_model400_e,  tmp_rhs, tmp_elm, tmp_elm_8        )
+  !$omp           ivar, itor, jvertex, jorder, jvar, jtor)
 
 ! --- omp id
 #ifdef _OPENMP
@@ -349,118 +346,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
          &                       Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
          &                       ELM, RHS, ELM2, RHS2, omp_tid, ife,              &
          &                       n_local_elms, node_list)
-    
-    
- if(.true.) then 
-  
-    ! --- Write out rhs and elm for a random element to be able to compare models
-    random_element = 387
-    if (ife == random_element) then
-      
-      open(unit = 387, file = "comp_matrix_elements_elm.dat", STATUS="REPLACE")
-      open(unit = 388, file = "comp_matrix_elements_rhs.dat", STATUS="REPLACE")
-      write(387, "( '#', A17, 8A4) )" ), 'ELM', 'v1', 'v2', 'i', 'k', 'j', 'l', 'im', 'in'
-      write(388, "( '#', A17, 4A4) )" ), 'RHS', 'v1', 'i', 'j', 'im'
-
-
-      n_var_reduced = n_var
-#if (JOREK_MODEL == 400)
-      n_var_reduced = 7
-#endif
-     
-      do v1 = 1, n_var_reduced
-       
-        do v2 = 1, n_var_reduced
-                  
-          do i = 1, n_vertex_max
-
-            do k = 1, n_vertex_max
-
-              do j = 1, n_order+1
-          
-                do l = 1, n_order+1
-
-                  do im = 1, n_tor
-            
-                    index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (j-1) + n_tor * (v1-1) + im   ! index in the ELM matrix
-                    index_ij_model400_e = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (j-1) + n_tor * (8-1) + im ! index in the ELM matrix for electrons
-
-              
-                    do in = 1, n_tor
-                    
-
-                      !--- elm: compute and write to file
-                      
-                      index_kl = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (l-1) + n_tor * (v2-1) + in   ! index in the ELM matrix
-                      index_kl_model400_e = n_tor * n_var * (n_order+1) * (k-1) + n_tor * n_var * (l-1) + n_tor * (8-1) + in ! index in the ELM matrix for electrons
-     
-                      tmp_elm = ELM(index_ij,index_kl)
-                      tmp_elm_8 = tmp_elm
-                      
-#if (JOREK_MODEL == 400)
-                      !--- for model400, add electron part (n_var = 8) to ion part (n_var = 6)                      
-                      if (v2 == 6 ) then
-                                        
-                        if (v1 == 6) then
-                          tmp_elm_8 = ELM(index_ij, index_kl_model400_e) + ELM(index_ij_model400_e, index_kl_model400_e)                        
-                        else                        
-                          tmp_elm_8 = ELM(index_ij, index_kl_model400_e)                        
-                        endif
-                        
-                      endif
-                      
-                      if (v1 == 6) then                     
-                        tmp_elm = tmp_elm + ELM(index_ij_model400_e, index_kl)                          
-                      endif
-#endif                  
-                      !--- compare (6,6) in model400 with (6,6) in others                       
-                      write(387, "( E18.6, 8I4 )" ) tmp_elm,     v1, v2, i, k, j, l, im, in
-                      
-                      if (v2 == 6) then
-                        !--- compare (6,8) in model400 with (6,6) in others                       
-                        write(387, "( E18.6, 8I4 )" ) tmp_elm_8, v1, 8,  i, k, j, l, im, in
-                      endif
-                      
-                   
-                      !--- rhs: compute and write to file
-                      if ( (k==1) .and. (l==1) .and. (v2==1) .and. (in==1) ) then
-
-                        tmp_rhs = RHS(index_ij)
-               
-#if (JOREK_MODEL == 400)
-                         !--- for model400, add electron part (v1 = 8) to ion part (v1 = 6)
-                        if (v1 == 6) then
-              
-                          tmp_rhs = tmp_rhs + RHS(index_ij_model400_e)        
-                
-                        endif
-#endif
-
-                        write(388, "( E18.6, 4I4 )" ) tmp_rhs, v1, i, j, im
-              
-                      end if
-                      
-              
-                    enddo ! n_tor
-
-                  enddo ! n_tor
-
-                enddo ! n_order+1
-
-              enddo ! n_order+1     
-              
-            enddo ! n_vertex_max      
-
-          enddo ! n_vertex_max
-
-        enddo ! n_var_reduced
-
-      enddo ! n_var_reduced
-    
-    endif
-    
- endif   
-    
     
     ! --- Define element nodes (depends if it's refined)
     if (refinement) then   

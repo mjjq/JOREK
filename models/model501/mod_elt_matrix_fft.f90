@@ -658,6 +658,12 @@ do ms=1, n_gauss
        ! Derivative wrt to T, with T in JOREK units
        dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
+       if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
+        write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
+        write(*,*) "T_rad =", T_rad
+        stop
+       end if
+
      else
 
        T0_Zimp        = 437.  ! eV
@@ -688,7 +694,7 @@ do ms=1, n_gauss
      coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
-     if (flag_adas == .true.) then
+     if (flag_adas == .true. .and. ne_rad >= 1.d16 .and. T_rad >= 1.) then
 
        Lrad = 0.0
        dLrad_dT = 0.0
@@ -704,6 +710,9 @@ do ms=1, n_gauss
        ! Derivative wrt to T, with T in JOREK units
        dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
+     else if (flag_adas == .true.) then
+       Lrad = 0.
+       dLrad_dT = 0.
      else
   !-------------------------------------------
   ! --- Radiative cooling rate for Argon (approximate fit of cooling rate at coronal equilibrium)
@@ -1019,8 +1028,8 @@ do ms=1, n_gauss
                     + zeta * v * alpha_imp * T0 * delta_g(mp,8,ms,mt) * BigR                           * xjac &   
 
                     + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                   * xjac * tstep  &
-                    - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad                        * xjac * tstep  &
-                    - v * BigR * r0_corr * frad_bg                                          * xjac * tstep  
+                    - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad         * xjac * tstep  &
+                    - v * BigR * r0_corr * frad_bg                                     * xjac * tstep  
 
          rhs_ij_6_k =  - (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T  * xjac * tstep &
                        - ZK_prof * BigR * (                + v_p*T0_p /BigR**2 )   * xjac * tstep  &

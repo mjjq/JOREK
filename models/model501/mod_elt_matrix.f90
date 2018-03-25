@@ -661,7 +661,7 @@ do ms=1, n_gauss
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
 
-     if (flag_adas == .true.) then
+     if (flag_adas == .true. .and. ne_rad >= 1.d16 .and. T_rad >= 1.) then
 
        Lrad = 0.0
        dLrad_dT = 0.0
@@ -677,14 +677,11 @@ do ms=1, n_gauss
        ! Derivative wrt to T, with T in JOREK units
        dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
-       if (T_rad < 1.) then
-         Lrad = 0.
-         dLrad_dT = 0.
-       end if
-       !Lrad = 0.0        ! Test
-       !dLrad_dT = 0.0    ! Test
-
+     else if (flag_adas == .true.) then
+       Lrad = 0.
+       dLrad_dT = 0.
      else
+
   !-------------------------------------------
   ! --- Radiative cooling rate for Argon (approximate fit of cooling rate at coronal equilibrium)
   ! ------------------------------------------

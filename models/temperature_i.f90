@@ -17,7 +17,7 @@ real*8,  intent(out) :: temperature_i_profile, dTi_dpsi, dTi_dz, dTi_dpsi2, dTi_
 
 ! --- Internal variables.
 real*8  :: prof0, prof1, dprof0_dpsi, dprof0_dpsi2, dprof0_dpsi3, psi_barrier
-real*8  :: psi_n, delta_psi, sig_T, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3
+real*8  :: psi_n, psi_star, delta_psi, sig_T, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3
 real*8  :: atn, datn, d2atn, d3atn
 real*8  :: atn_z,   datn_z,   d2atn_z
 real*8  :: atn_z_u, datn_z_u, d2atn_z_u, factor
@@ -52,9 +52,12 @@ if ( .not. num_Ti ) then ! use analytical representation
   sig_T       = Ti_coef(4)
   psi_barrier = Ti_coef(5)
   
-  tanh1 = tanh((psi_n - psi_barrier)     /sig_T)
-  cosh1 = cosh((psi_n - psi_barrier)     /sig_T)
-  cosh2 = cosh(2.d0*(psi_n - psi_barrier)/sig_T)
+  psi_star = (psi_n - psi_barrier)/sig_T
+  psi_star = min( max( psi_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+  
+  tanh1 = tanh(psi_star)
+  cosh1 = cosh(psi_star)
+  cosh2 = cosh(2.d0*psi_star)
   
   atn   = (0.5d0 - 0.5d0*tanh1)
   datn  = - 1.d0/cosh1**2 / (2.d0 * sig_T)             / delta_psi
@@ -94,6 +97,7 @@ end if
 if (xpoint2) then
   
   sigz     = 0.05d0
+
   Z_star   = (Z_xpoint(1)-Z)/sigz
   Z_star   = min( max( Z_star, -40.d0), 40.d0) ! avoid floating-point exceptions
   Z_star_u = (Z-Z_xpoint(2))/sigz
@@ -146,7 +150,21 @@ else
 
 end if
 
-temperature_i_profile = temperature_i_profile + Ti_1
+if (freeboundary_equil .and. num_Ti) then                       !if the temperature profile is given in a file and there is freeboundary equilibrium
+                                                                !the full profile is multiplied by a facto in order to iterate to a given current
+  temperature_i_profile = temperature_i_profile * current_FB_fact
+  dTi_dpsi     = dTi_dpsi                     * current_FB_fact
+  dTi_dpsi2    = dTi_dpsi2                    * current_FB_fact
+  dTi_dpsi3    = dTi_dpsi3                    * current_FB_fact
+  dTi_dz       = dTi_dz                       * current_FB_fact
+  dTi_dz2      = dTi_dz2                      * current_FB_fact
+  dTi_dpsi_dz  = dTi_dpsi_dz                  * current_FB_fact
+  dTi_dpsi2_dz = dTi_dpsi2_dz                 * current_FB_fact
+  dTi_dpsi_dz2 = dTi_dpsi_dz2                 * current_FB_fact
+
+end if
+
+temperature_e_profile = temperature_e_profile + Te_1
 
 return
 end subroutine temperature_i

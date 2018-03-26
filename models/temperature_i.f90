@@ -165,7 +165,7 @@ if (freeboundary_equil .and. num_Ti) then                       !if the temperat
 
 end if
 
-temperature_e_profile = temperature_e_profile + Te_1
+temperature_i_profile = temperature_i_profile + Ti_1
 
 return
 end subroutine temperature_i

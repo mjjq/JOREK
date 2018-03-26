@@ -49,10 +49,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
                 K_i_par, ZK_i_perp, K_e_par, ZK_e_perp,             &
-                Zk_par, ZK_perp, D_par, D_perp,                     &
+                D_par, D_perp,                                      &
                 Q_bar, sigma, gamma_sheath,                         &
                 V_0,V_1,V_coef,                			    &
-                particlesource, heatsource,                         &
+                particlesource,                                     &
                 heatsource_i, heatsource_e, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num,                  &
                 D_perp_num, ZK_perp_num,                            &

@@ -49,10 +49,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
                 K_i_par, ZK_i_perp, K_e_par, ZK_e_perp,             &
-                Zk_par, ZK_perp, D_par, D_perp,                     &
+                D_par, D_perp,                                      &
                 Q_bar, sigma, gamma_sheath,                         &
-                V_0,V_1,V_coef,                			    &
-                particlesource, heatsource,                         &
+                V_0,V_1,V_coef,                			            &
+                particlesource,                                     &
                 heatsource_i, heatsource_e, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num,                  &
                 D_perp_num, ZK_perp_num,                            &
@@ -63,7 +63,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl,xwidth,xsig,xtheta,xshift,xleft,xpoint,xcase, &
                 D_perp_file, ZK_e_perp_file, ZK_i_perp_file,        &
                 rho_file, T_file, Ti_file, Te_file,                 &
-                ffprime_file, freeboundary_equil, &
+                ffprime_file, freeboundary_equil,                   &
                 freeboundary, resistive_wall, freeb_change_indices, &
                 wall_resistivity, wall_resistivity_fact,            &
                 use_mumps, use_pastix, use_murge, use_murge_element,&

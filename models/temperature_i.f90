@@ -5,6 +5,7 @@ subroutine temperature_i(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,temperat
 ! position (Z, psi) from the analytical or numerical input profile.
 !-----------------------------------------------------------------------
 use phys_module
+use vacuum, only: current_FB_fact
 
 implicit none
 

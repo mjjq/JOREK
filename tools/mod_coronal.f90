@@ -12,8 +12,8 @@ type coronal
   integer :: n_Z !< Atomic number
   real*8, allocatable :: density(:) !< log10 density (m^-3)
   real*8, allocatable :: temperature(:) !< log10 temperature (K)
-  real*8, allocatable :: Z(:,:,:) !< Charge state (e) [i_T, i_n, i_q]
-  real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W)
+  real*8, allocatable :: Z(:,:,:) !< Charge state (e) density for specific temperatures, densities and charge states [i_T, i_n, i_q]
+  real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W) for the above temperatures and densities
 contains
   procedure :: interp => interpolate_coronal
   procedure :: interp_gradients => interpolate_coronal_gradients

@@ -242,6 +242,8 @@ subroutine preset_parameters
   ffprime_file  = 'none'
   d_perp_file   = 'none'
   zk_perp_file  = 'none'
+  zk_e_perp_file  = 'none'
+  zk_i_perp_file  = 'none'
   R_Z_psi_bnd_file = 'none'
   wall_file     = 'none'
   rot_file      = 'none'

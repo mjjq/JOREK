@@ -12,6 +12,7 @@ CC                = mpicc -mt_mpi
 CXX               = mpicxx -mt_mpi
 FFLAGS            = -i4 -DUSE_BLOCK -DFUNNELED #RECENT_PASTIX#-DWORLDWAR2
 FFLAGS           += -xHost -O2
+FFLAGS           += -DCONSTRUCT_MATRIX_OMP_ATOMIC
 
 # --- Various switches
 USE_PASTIX        = 1

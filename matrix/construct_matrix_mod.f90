@@ -359,9 +359,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
       enddo 
     endif
 
+#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
     ! --- We don't want the next part to run in parallel
     !$omp critical  
-   
+#endif
+
     ! --- We only look at non-refined elements
     if ((.not. refinement) .or. (refinement .and. (element%n_sons .eq. 0))) then
     
@@ -403,6 +405,9 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
                     irn_glob(ilarge2) = index_large_i	+ j
                     jcn_glob(ilarge2) = index_large_k	+ l
+#ifdef CONSTRUCT_MATRIX_OMP_ATOMIC
+                    !$omp atomic
+#endif
                     A_glob(ilarge2)   = A_glob(ilarge2) + ELM(index_ij,index_kl)
 
                   enddo
@@ -420,8 +425,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     endif ! refinement
 
+#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
     ! --- Finish sequential
     !$omp end critical
+#endif
 
   end do
   !$omp end do

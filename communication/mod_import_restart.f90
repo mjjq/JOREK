@@ -62,18 +62,14 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
-
-  real*8, allocatable :: spi_R_arr (:)
-  real*8, allocatable :: spi_Z_arr (:)
-  real*8, allocatable :: spi_phi_arr (:)
-  real*8, allocatable :: spi_Vel_R_arr (:)
-  real*8, allocatable :: spi_Vel_Z_arr (:)
-  real*8, allocatable :: spi_Vel_RxZ_arr (:)
-  real*8, allocatable :: spi_radius_arr (:)
-  real*8, allocatable :: spi_abl_arr (:)
-
-  integer :: err_alloc
-
+  real*8,  allocatable :: spi_R_arr (:)
+  real*8,  allocatable :: spi_Z_arr (:)
+  real*8,  allocatable :: spi_phi_arr (:)
+  real*8,  allocatable :: spi_Vel_R_arr (:)
+  real*8,  allocatable :: spi_Vel_Z_arr (:)
+  real*8,  allocatable :: spi_Vel_RxZ_arr (:)
+  real*8,  allocatable :: spi_radius_arr (:)
+  real*8,  allocatable :: spi_abl_arr (:)
 
   ! --- Perturbation-Import variables
   type (type_node_list)   , pointer	:: node_list_perturbation
@@ -313,7 +309,7 @@ endif
   if (using_spi) then
     if (n_spi >= 1) then
 
-      if (abl_history == .true. .and. index_start >= 1) then
+      if (abl_history .and. index_start >= 1) then
 
         if (allocated(xtime_spi_ablation)) &
           call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
@@ -326,14 +322,14 @@ endif
         read(21)  xtime_spi_ablation_rate(1:n_spi,1:index_start)
       end if
 
-      allocate (spi_R_arr(n_spi),stat=err_alloc)
-      allocate (spi_Z_arr(n_spi),stat=err_alloc)
-      allocate (spi_phi_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_R_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
-      allocate (spi_radius_arr(n_spi),stat=err_alloc)
-      allocate (spi_abl_arr(n_spi),stat=err_alloc)
+      allocate (spi_R_arr(n_spi))
+      allocate (spi_Z_arr(n_spi))
+      allocate (spi_phi_arr(n_spi))
+      allocate (spi_Vel_R_arr(n_spi))
+      allocate (spi_Vel_Z_arr(n_spi))
+      allocate (spi_Vel_RxZ_arr(n_spi))
+      allocate (spi_radius_arr(n_spi))
+      allocate (spi_abl_arr(n_spi))
     
       read(21,err=999, end=999)  spi_R_arr(1:n_spi)
       read(21,err=999, end=999)  spi_Z_arr(1:n_spi)
@@ -367,7 +363,7 @@ endif
       deallocate (spi_radius_arr)
       deallocate (spi_abl_arr)
 
-      if (toroidal_rotation == .true.) then
+      if (toroidal_rotation) then
         read(21,err=999, end=999) mgi_phi_rotate 
       end if
 
@@ -1038,7 +1034,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   if (using_spi) then
     if (n_spi >= 1) then
 
-      if (abl_history == .true. .and. index_start >= 1) then
+      if (abl_history .and. index_start >= 1) then
         if (allocated(xtime_spi_ablation)) &
           call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
         call tr_allocate(xtime_spi_ablation,1,n_spi,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)
@@ -1050,14 +1046,14 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         call HDF5_array2D_reading(file_id,xtime_spi_ablation_rate,"xtime_spi_ablation_rate")
       end if
 
-      allocate (spi_R_arr(n_spi),stat=err_alloc)
-      allocate (spi_Z_arr(n_spi),stat=err_alloc)
-      allocate (spi_phi_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_R_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
-      allocate (spi_radius_arr(n_spi),stat=err_alloc)
-      allocate (spi_abl_arr(n_spi),stat=err_alloc)
+      allocate (spi_R_arr(n_spi))
+      allocate (spi_Z_arr(n_spi))
+      allocate (spi_phi_arr(n_spi))
+      allocate (spi_Vel_R_arr(n_spi))
+      allocate (spi_Vel_Z_arr(n_spi))
+      allocate (spi_Vel_RxZ_arr(n_spi))
+      allocate (spi_radius_arr(n_spi))
+      allocate (spi_abl_arr(n_spi))
 
       call HDF5_array1D_reading(file_id,spi_R_arr,"spi_R_arr")
       call HDF5_array1D_reading(file_id,spi_Z_arr,"spi_Z_arr")
@@ -1091,7 +1087,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       deallocate (spi_radius_arr)
       deallocate (spi_abl_arr)
 
-      if (toroidal_rotation == .true.) then
+      if (toroidal_rotation) then
         call HDF5_real_reading(file_id,mgi_phi_rotate,"mgi_phi_rotate")
       end if
 

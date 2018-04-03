@@ -56,7 +56,6 @@ subroutine export_binary_restart(node_list,element_list,filename)
   ! --- Local variables
   integer :: i
   character*50 :: version_control
-
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)
   real*8, allocatable :: spi_phi_arr (:)
@@ -65,8 +64,6 @@ subroutine export_binary_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
-
-  integer :: err_alloc
 
   ! -> Write binary restart file
   open(21, file=filename, form='unformatted', status='replace', action='write')
@@ -139,14 +136,14 @@ subroutine export_binary_restart(node_list,element_list,filename)
       write(21) xtime_spi_ablation_rate(:,1:index_now)
     endif
 
-    allocate (spi_R_arr(n_spi),stat=err_alloc)  
-    allocate (spi_Z_arr(n_spi),stat=err_alloc)     
-    allocate (spi_phi_arr(n_spi),stat=err_alloc) 
-    allocate (spi_Vel_R_arr(n_spi),stat=err_alloc) 
-    allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc) 
-    allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc) 
-    allocate (spi_radius_arr(n_spi),stat=err_alloc) 
-    allocate (spi_abl_arr(n_spi),stat=err_alloc)
+    allocate (spi_R_arr(n_spi))  
+    allocate (spi_Z_arr(n_spi))     
+    allocate (spi_phi_arr(n_spi)) 
+    allocate (spi_Vel_R_arr(n_spi)) 
+    allocate (spi_Vel_Z_arr(n_spi)) 
+    allocate (spi_Vel_RxZ_arr(n_spi)) 
+    allocate (spi_radius_arr(n_spi)) 
+    allocate (spi_abl_arr(n_spi))
 
     do i=1, n_spi
       spi_R_arr(i)       = pellets(i)%spi_R
@@ -177,7 +174,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     deallocate (spi_radius_arr)
     deallocate (spi_abl_arr)
 
-    if (toroidal_rotation == .true.) then
+    if (toroidal_rotation) then
       write(21) mgi_phi_rotate
     end if
 
@@ -279,9 +276,6 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
-
-  integer :: err_alloc
-
 
   ! index_now+nstep
   real(RKIND), allocatable :: t_xtime(:)                   ! nstep
@@ -563,14 +557,14 @@ end if
     end if
 
 
-    allocate (spi_R_arr(n_spi),stat=err_alloc)
-    allocate (spi_Z_arr(n_spi),stat=err_alloc)
-    allocate (spi_phi_arr(n_spi),stat=err_alloc)
-    allocate (spi_Vel_R_arr(n_spi),stat=err_alloc)
-    allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
-    allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
-    allocate (spi_radius_arr(n_spi),stat=err_alloc)
-    allocate (spi_abl_arr(n_spi),stat=err_alloc)
+    allocate (spi_R_arr(n_spi))
+    allocate (spi_Z_arr(n_spi))
+    allocate (spi_phi_arr(n_spi))
+    allocate (spi_Vel_R_arr(n_spi))
+    allocate (spi_Vel_Z_arr(n_spi))
+    allocate (spi_Vel_RxZ_arr(n_spi))
+    allocate (spi_radius_arr(n_spi))
+    allocate (spi_abl_arr(n_spi))
 
     do i=1, n_spi
       spi_R_arr(i)       = pellets(i)%spi_R
@@ -609,13 +603,11 @@ end if
     deallocate (spi_radius_arr)
     deallocate (spi_abl_arr)
 
-    if (toroidal_rotation == .true.) then
+    if (toroidal_rotation) then
       call HDF5_real_saving(file_id,mgi_phi_rotate,"mgi_phi_rotate"//char(0))  
     end if
 
   end if
-
-
 
   ! Export restart vacuum 
   call export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)

@@ -11,7 +11,7 @@ extra_remote_files=""
 # --- Compile the code for the test case
 function compile_jorek () {
   if [ "$initialrun" == "yes" ]; then
-    ./util/config.sh model=$jorekmodel n_tor=1 n_plane=1 n_peri=1                    || exit 1
+    ./util/config.sh model=$jorekmodel n_tor=1 n_plane=1 n_period=1                  || exit 1
     make cleanall                                                                    || exit 1
     make $compilopt $debugoptions jorek_model${jorekmodel}                           || exit 1
     mv jorek_model${jorekmodel} jorek_model${jorekmodel}_1                           || exit 1

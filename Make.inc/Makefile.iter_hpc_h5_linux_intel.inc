@@ -1,37 +1,14 @@
 # Configuration file for jorek
+# Version for ITER regression testing platform using intel compilers
 
 # model directory
 MODEL = model199
 
 # Fortran compiler 
-FC               = mpif90 
-FFLAGS           = -r8 -i4
-FFLAGS          := $(FFLAGS) -fpp
-FFLAGS          := $(FFLAGS) -msse4.2 -align
-FFLAGS          := $(FFLAGS) -O0 -mcmodel=medium -DUSE_BLOCK
-#FFLAGS          := $(FFLAGS) -O2 -mcmodel=medium -DUSE_BLOCK -Dfullmhd 
-FFLAGS          += -DCONSTRUCT_MATRIX_OMP_ATOMIC
-
+FC               = mpifort
+FFLAGS          := $(FFLAGS) -mcmodel=medium -DUSE_BLOCK
 CC = mpicc
 CXX = mpicxx
-
-# --- DEBUGGING
-#   --- Debug symbols for debuggers
-#DEBUGFLAGS  = -g
-#   --- Check array boundaries
-#DEBUGFLAGS += -check bounds -traceback -fpe-all=0 -ftrapuv
-#   --- Generate and check interfaces (__genmod files)
-#DEBUGFLAGS += -gen-interfaces -warn interfaces
-#   --- Check many other things
-#DEBUGFLAGS += -warn all,nounused -check all,noarg_temp_created -debug all -debug-parameters -fstack-security-check -ftrapuv
-#   --- Even more checks and warnings
-#DEBUGFLAGS += -warn all -check all
-
-FFLAGS_FIXEDFORM := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
-FFLAGS_NOBOUNDS  := $(FFLAGS)               $(FFLAGS_OMP)
-FFLAGS           := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
-
-FFLAGS_NO_OMP     = -fpp -r8 -i4 -O2 -msse4.2 -align 
 
 # Solvers dependencies
 USE_HIPS         = 0
@@ -88,4 +65,3 @@ HDF5LIB=$(HDF5_HOME)/lib/libhdf5hl_fortran.a \
         $(HDF5_HOME)/lib/libhdf5_fortran.a   \
         $(HDF5_HOME)/lib/libhdf5.a           \
 	$(ZLIB_HOME)/lib/libz.a
-

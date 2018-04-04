@@ -4,9 +4,10 @@ eval `tclsh /work/imas/opt/modules-tcl/modulecmd.tcl $(basename $SHELL) autoinit
 module purge
 
 module use /work/imas/opt/EasyBuild/modules/all
+module use /work/imas/opt/modules/all
 
 module load cURL/7.40.0-GCC-4.8.3
-module load intel/12.0.2
+module load intel/2018a
 module load mpich2/3.1.3-intel
 module load scotch/5.1.12b
 module load metis/5.1.0

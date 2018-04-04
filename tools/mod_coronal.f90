@@ -186,7 +186,7 @@ integer                         :: iz
 p = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature)
 
 if (present(p_out)) then
-  p_out = p
+  p_out = p/sum(p)
 endif
 
 if (present(z_eff)) then
@@ -225,11 +225,11 @@ p_Te = p_Te / (10.0**temperature)
 p_Ne = p_Ne / (10.0**density)
 
 if (present(p_Te_out)) then
-  p_Te_out = p_Te
+  p_Te_out = p_Te/sum(p)
 endif
 
 if (present(p_Ne_out)) then
-  p_Ne_out = p_Ne
+  p_Ne_out = p_Ne/sum(p)
 endif
 
 if (present(z_eff_Te)) then

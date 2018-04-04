@@ -136,6 +136,11 @@ real*8     :: A2_rad, T2_rad, sig2_rad
 !   -Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 
+!   -Temporary variable for charge state distribution
+real*8, allocatable :: dP_imp_dT(:), P_imp(:)
+real*8     :: E_ion, dE_ion_dT
+integer*8  :: ion_i, ion_k
+
 ! Parameters related to negative temperature handling
 real*8     :: T_neg, delta_neg
 !===============================
@@ -620,8 +625,38 @@ do ms=1, n_gauss
      ! Later maybe we should implement a iterative method
      if (flag_adas == .true.) then
 
-       call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
-       call imp_cor(1)%interp_gradients(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff_Te=dZ_imp_dT)
+       if (allocated(imp_adas(1)%ionisation_energy)) then
+
+         if (allocated(P_imp)) deallocate(P_imp)
+         if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+
+         allocate(P_imp(1:imp_adas(1)%n_Z))
+         allocate(dP_imp_dT(1:imp_adas(1)%n_Z))
+
+         call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                p_out=P_imp,z_eff=Z_imp)
+         call imp_cor(1)%interp_gradients(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                          p_Te_out=dP_imp_dT,z_eff_Te=dZ_imp_dT)
+
+         ! Calculate the ionization potential energy and it's time gradient
+         E_ion     = 0.
+         dE_ion_dT = 0.
+
+         do ion_i=1, imp_adas(1)%n_Z
+           do ion_k=1, ion_i
+             E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+             dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+           end do
+         end do
+         ! Convert from eV to JOREK unit
+         E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
+         dE_ion_dT = dE_ion_dT * dT_rad_dT * EL_CHG*MU_ZERO*central_density*1.d20
+
+       else
+         call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+         call imp_cor(1)%interp_gradients(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff_Te=dZ_imp_dT)
+       end if
+
 
        !Z_imp     = 10. ! Test
        !dZ_imp_dT = 0.  ! Test
@@ -630,7 +665,7 @@ do ms=1, n_gauss
        dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
        ! Derivative wrt to T, with T in JOREK units
        dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-
+       dZ_imp_dT = dZ_imp_dT * dT0_corr_dT
      else
 
        T0_Zimp        = 437.  ! eV
@@ -676,6 +711,7 @@ do ms=1, n_gauss
        dLrad_dT = dLrad_dT * coef_rad_1 * EL_CHG / K_BOLTZ
        ! Derivative wrt to T, with T in JOREK units
        dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       dLrad_dT = dLrad_dT * dT0_corr_dT
 
      else if (flag_adas == .true.) then
        Lrad = 0.
@@ -1533,8 +1569,10 @@ do ms=1, n_gauss
                            + v * BigR * rho * frad_bg                                           * xjac * theta * tstep
 
 
-                 amat_66 =   v * (r0 + rn0 * alpha_imp_bis) * T   * BigR * xjac * (1.d0 + zeta)                      &
-
+                 amat_66 =   v * (r0 + rn0 * alpha_imp_bis) * T * BigR * xjac * (1.d0 + zeta)                     &
+!=============== The ionization potential energy term=========================
+                           + v * rn0 * dE_ion_dT            * T * BigR * xjac * (1.d0 + zeta)                     &
+!================= End ionization potential energy ===========================
                            - v * (r0 + rn0 * alpha_imp_bis) * BigR**2 * ( T_s  * u0_t - T_t  * u0_s) * theta * tstep &
                            - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                       * theta * tstep &
                            - v * alpha_imp_bis * T * BigR**2 * (rn0_s * u0_t - rn0_t * u0_s)       * theta * tstep &
@@ -1597,6 +1635,10 @@ do ms=1, n_gauss
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
                  amat_68 =   v * rhon * alpha_imp * T0 * BigR * xjac * (1.d0 + zeta)                              &
+!=============== The ionization potential energy term=========================
+                           + v * rhon * E_ion          * BigR * xjac * (1.d0 + zeta)                              &
+!================= End ionization potential energy ===========================
+
                            - v * rhon * BigR**2 * alpha_imp_bis * (T0_s * u0_t - T0_t * u0_s)     * theta * tstep &
                            - v * alpha_imp * T0 * BigR**2 * (rhon_s * u0_t - rhon_t * u0_s)       * theta * tstep &
                            + v * rhon * F0 / BigR * Vpar0 * alpha_imp_bis * T0_p           * xjac * theta * tstep &

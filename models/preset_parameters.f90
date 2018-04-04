@@ -371,7 +371,7 @@ subroutine preset_parameters
      flag_spi_size   = 0
      size_beta       = 3.d3
 
-     toroidal_rotation = .false.
+     spi_tor_rot     = .false.
      abl_history     = .false.
      using_spi       = .false.
     !=========== End of SPI parameters ===========

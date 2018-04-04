@@ -571,7 +571,7 @@ if (my_id == 0) then
      !< Additional log for SPI model
      write(*,LOGI_FMT) 'using_spi           ',  using_spi
      write(*,LOGI_FMT) 'abl_history         ',  abl_history
-     write(*,LOGI_FMT) 'toroidal rotation   ',  toroidal_rotation
+     write(*,LOGI_FMT) 'spi_tor_rot         ',  spi_tor_rot
      write(*,INTG_FMT) 'n_spi               ',  n_spi
      write(*,REAL_FMT) 'psi_surfaces        ',  psi_surfaces
      write(*,INTG_FMT) 'flag_spi            ',  flag_spi

@@ -10,7 +10,6 @@
 *.out
 *.log
 Makefile.inc
-Makefile.marconi_linux_intel.inc
 j302_1
 j302_3
 .fuse_hidden*

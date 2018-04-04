@@ -713,6 +713,10 @@ do ms=1, n_gauss
        dZ_imp_dT = 0. !(18./T0_Zimp)*alpha_Zimp*((T_rad/T0_Zimp)**(alpha_Zimp-1))*(1.-(tanh(T_rad/T0_Zimp))**2.) * dT_rad_dT
      ! Derivative wrt to T, with T in JOREK units
        dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+
+       E_ion     = 0.
+       dE_ion_dT = 0.
+
      end if
 
      alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.

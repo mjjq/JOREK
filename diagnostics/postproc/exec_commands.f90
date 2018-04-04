@@ -147,6 +147,8 @@ module exec_commands
           call int_along_pol_line(command, first_step, ierr)
         case ( 'tor_line' )
           call tor_line(command, first_step, ierr)
+        case ( 'rectangle' )
+          call rectangle(command, first_step, ierr)
         case ( 'mark_coords' )
           call mark_coords(command, ierr)
         case ( 'midplane' )

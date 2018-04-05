@@ -221,6 +221,7 @@ p    = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,tem
 p_Te = L2D2interp_grad(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature,1)
 p_Ne = L2D2interp_grad(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature,2)
 
+! Converting log gradient to real gradient
 p_Te = p_Te / (10.0**temperature)
 p_Ne = p_Ne / (10.0**density)
 

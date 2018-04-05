@@ -650,7 +650,9 @@ do ms=1, n_gauss
          end do
          ! Convert from eV to JOREK unit
          E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
-         dE_ion_dT = dE_ion_dT * dT_rad_dT * EL_CHG*MU_ZERO*central_density*1.d20
+         dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20 
+         ! Convert the gradient in K to gradient in JOREK unit
+         dE_ion_dT = dE_ion_dT * dT_rad_dT * EL_CHG / K_BOLTZ
 
        else
          call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)

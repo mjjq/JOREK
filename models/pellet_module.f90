@@ -434,7 +434,7 @@ real*8, allocatable :: shard_size(:)               !The shard size array
             !write(*,*) " CHECK POINT shard size:", shard_size(1:10)
           else
             write(*,*) "WARNING!!! Shard size file does not exist, reverting to uniform distribution"
-            flag_spi = 0
+            flag_spi_size = 0
           end if
         end if
 

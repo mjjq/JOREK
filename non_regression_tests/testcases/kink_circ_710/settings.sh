@@ -12,7 +12,7 @@ extra_remote_files=""
 function compile_jorek () {
   ./util/config.sh model=$jorekmodel n_tor=3 n_plane=4 n_period=1                    || exit 1
   make cleanall                                                                      || exit 1
-  make $compilopt jorek_model${jorekmodel} rst_bin2hdf5 rst_hdf52bin                 || exit 1
+  make $compilopt $debugoptions jorek_model${jorekmodel} rst_bin2hdf5 rst_hdf52bin   || exit 1
   mv jorek_model${jorekmodel} jorek_model${jorekmodel}_3                             || exit 1
 }
 
@@ -20,14 +20,14 @@ function compile_jorek () {
 # --- Re-run the whole case from scratch into the non-linear phase
 function initial_run () {
   ${codedir}/util/setinput.sh input nstep_n=21 tstep_n=300.                          || exit 1
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input | tee -a logfile                  || exit 1
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input | tee -a logfile            || exit 1
 }
 
 
 # --- Carry out the test case, i.e., run a single time step in the non-linear phase
 function restart_run () {
   ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=300. nout=1        || exit 1
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input | tee -a logfile                  || exit 1
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input | tee -a logfile            || exit 1
 }
 
 

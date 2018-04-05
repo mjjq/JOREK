@@ -10,12 +10,16 @@ program jorek2_import_perturbation
   use basis_at_gaussian
   use nodes_elements
   use mod_import_restart
+  use mod_export_restart
   implicit none
 
   ! Internal parameters
   integer i, j, k, l, i_tor
   integer my_id, ierr, n_mode, n_copy
   real*8, allocatable :: energies_save(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
+
+  type(type_node_list) :: node_list2
+  type(type_element_list) :: element_list2
 
   
   ! Name

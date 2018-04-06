@@ -128,11 +128,8 @@ do i_tries=1,  n_tries  ! --- start attempts to find the axis
     fail_elm(i_tries) = i_elm_axis
   else
     found_axis = .true.
-  endif
-
-  if (found_axis) then  ! -- exit attempts loop if the axis is finally found
-    s_axis = s
-    t_axis = t
+    s_axis     = s
+    t_axis     = t
     exit
   endif
   
@@ -144,7 +141,7 @@ do i_tries=1,  n_tries  ! --- start attempts to find the axis
   
 enddo !--- end tries
 
-if (ifail .ne. 0) then    ! --- if all the attempts to find axis failed, the axis is the initial solution
+if (.not. found_axis) then    ! --- if all the attempts to find axis failed, the axis is the initial solution
   s_axis     = s_axis_init
   t_axis     = t_axis_init
   i_elm_axis = i_elm_axis_init

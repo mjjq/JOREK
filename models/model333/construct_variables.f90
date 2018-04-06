@@ -423,17 +423,15 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   D_prof = get_dperp (ps0, psi_norm, psi_axis, psi_bnd, y_g, Z_xpoint)
   K_prof = get_zkperp(ps0, psi_norm, psi_axis, psi_bnd, y_g, Z_xpoint)
   
-  ! --- Increase diffusivity if negative density/temperature
+  ! --- Increase diffusivity if very small density/temperature
   if (xpoint2) then
-    if (r0 .lt. 0.d0)  then
-      D_prof = D_prof_neg  ! JET : 1.d-4; ITER :  4.d-3
+    if (r0 .lt. D_prof_neg_thresh)  then
+      D_prof = D_prof_neg
     endif
-    if (T0 .lt. 0.d0) then
-      K_prof = ZK_prof_neg  ! JET : 1.d-3; ITER : 2.d-2 
+    if (T0 .lt. ZK_prof_neg_thresh) then
+      K_prof = ZK_prof_neg
     endif
   endif
-
-  
   
   ! -----------------------------------------------------
   ! --- Parallel conductivity profiles (Braginskii model)

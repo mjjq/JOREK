@@ -28,7 +28,7 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr)
     call import_hdf5_restart(node_list, element_list, trim(filename)//'.h5', &
             format_rst,ierr)
   end if
-
+  
 end subroutine import_restart
 
 
@@ -69,7 +69,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   error = 0
 
   write(*,*) 'Importing restart file "', trim(filename), '".'
-  write(*,*) '  Using format : ',rst_format
+  write(*,*) ' Using format : ',rst_format
 
   open(21,file=trim(filename), form='unformatted', status='old', action='read', iostat=error)
   if ( error /= 0 ) then
@@ -91,17 +91,18 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     else
        mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
     endif
-    write(*,*) ' OLD format (0) : '
-    write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
-    write(*,'(A,999i4)') ' new mode numbers     : ',mode
+    write(*,*) 'OLD format (0) : '
+    write(*,'(A,999i4)') '   previous modenumbers : ',mode_tmp
+    write(*,'(A,999i4)') '   new mode numbers     : ',mode
   elseif ( format_rst > 2 ) then
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+    stop
   endif
 
   if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') &
-       ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+       ' Warning: Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
   if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i4))') &
-       ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+       ' Warning: Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
 
   write(*,'(A,i5,A)') ' Importing ',n_tor_tmp,' harmonics'
 
@@ -152,13 +153,6 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   read(21) tstep,eta_rst,visco_rst,visco_par_rst
   read(21) index_start
   read(21) t_start
-  
-#ifdef USE_HDF5
-  h5_nbsave_all = 0
-  if ( rst_format > 1 ) then
-    read(21) h5_nbsave_all
-  end if
-#endif
   
   if (index_start .ge. 1) then
 
@@ -298,9 +292,6 @@ endif
   
   write(*,*) '************* restart ******************'
   write(*,'(A,I6,F14.6,A)') ' *  restart time       : ',index_start,t_start,' *'
-#ifdef USE_HDF5
-  write(*,'(A,I4,A)')       ' *  HDF5 files written : ',h5_nbsave_all,'   *'
-#endif
   write(*,*) '****************************************'
 
   do i=2,index_start
@@ -359,6 +350,7 @@ endif
    	write(*,'(A,999i4)') ' new mode numbers     : ',mode
       elseif (format_rst > 2 ) then
    	write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+        stop
       endif
 
       allocate(node_list_perturbation, element_list_perturbation)
@@ -497,7 +489,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   logical, parameter   			:: import_perturbation = .false.
 
   ! --- Local variables
-  integer              :: i, j, m, k, n_tor_tmp, jorek_model_tmp, n_var_tmp, n_order_tmp, n_period_tmp
+  integer              :: i, j, m, k, n_tor_tmp, jorek_model_tmp, n_var_tmp, n_order_tmp, n_period_tmp, rst_hdf5_version_tmp
   integer              :: n_plane_tmp, n_vertex_max_tmp, n_nodes_max_tmp, n_elements_max_tmp,n_boundary_max_tmp
   integer              :: n_pieces_max_tmp, n_degrees_tmp, nref_max_tmp, n_ref_list_tmp, n_new_modes
   real*8               :: growth_mag, growth_kin, amplitude
@@ -554,6 +546,19 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     return
   end if
 
+  ! Restart file version
+  rst_hdf5_version_tmp = 0
+  call HDF5_integer_reading(file_id,rst_hdf5_version_tmp,"rst_hdf5_version")
+  write(*,*) 'Restart file has rst_hdf5_version=', rst_hdf5_version_tmp
+  if ( rst_hdf5_version_tmp > rst_hdf5_version_supported ) then
+    write(*,*) 'ERROR: Cannot read the hdf5 restart file "', trim(filename), '" since it was created with a more recent code version.'
+    write(*,*) '* rst_hdf5_version of the restart file: ', rst_hdf5_version_tmp
+    write(*,*) '* rst_hdf5_version of the code version: ', rst_hdf5_version_supported
+    write(*,*) '* Note that you can export an older restart file version with your newer code by'
+    write(*,*) '    explicitly setting rst_hdf5_version in the namelist input file.'
+    stop
+  end if
+
   call HDF5_char_reading(file_id,version_control_tmp, "RCS_version")
   version_control = trim(adjustl(RCS_VERSION))
 
@@ -593,21 +598,21 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       do j = 1, n_tor, 2
         if ( mode_tmp(i) == mode(j) ) kept = .true.
       end do
-      if ( .not. kept ) write (*,'(1x,a,i5,a)') 'WARNING: The mode n=', mode_tmp(i), ' is being dropped!'
+      if ( .not. kept ) write (*,'(1x,a,i5,a)') 'Warning: The mode n=', mode_tmp(i), ' is being dropped!'
     end do
   elseif ( format_rst > 2 ) then
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+    stop
   endif
 
   if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i5))') &
-       ' IMPORT WARNING : Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+       ' Warning: Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
   if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i5))') &
-       ' IMPORT WARNING : Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+       ' Warning: Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
   if (n_period_tmp .ne. n_period) write(*,'(3(a,i5))') &
-       ' IMPORT WARNING : n_period has changed from', n_period_tmp, ' to', n_period
+       ' Warning: n_period has changed from', n_period_tmp, ' to', n_period
 
-
-  write(*,'(2(A,i5))') ' Importing ',n_tor_tmp,' harmonics with n_period=', n_period_tmp 
+  !write(*,'(2(A,i5))') ' Importing ',n_tor_tmp,' harmonics with n_period=', n_period_tmp 
 
   call HDF5_integer_reading(file_id,node_list%n_nodes,"n_nodes")
   call HDF5_integer_reading(file_id,element_list%n_elements,"n_elements")
@@ -680,7 +685,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       end if
     end do
   end do
-  write(*,'(a,999i4)') ' need initialization  : ', new_mode
+  !write(*,'(a,999i4)') ' need initialization  : ', new_mode
   
   do i=1,node_list%n_nodes
     node_list%node(i)%x = t_x(i,:,:) 
@@ -752,7 +757,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_real_reading(file_id,visco_par_rst,'visco_par')
   call HDF5_integer_reading(file_id,index_start,'index_now')
   call HDF5_real_reading(file_id,t_start,'t_now')
-  call HDF5_integer_reading(file_id,h5_nbsave_all,'h5_nbsave_all')
   
   if (index_start .ge. 1) then
 
@@ -951,7 +955,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
  
   write(*,*) '************* restart ******************'
   write(*,'(A19,i6,f14.6,A)') ' *  restart time : ',index_start,t_start,' *'
-  write(*,'(A19,I4,A)') ' *  HDF5 files written : ',h5_nbsave_all,' *'
   write(*,*) '****************************************'
   
   do i=2,index_start
@@ -974,8 +977,8 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
  
   ! --- initialise new harmonics (only density and temperature, to be improved)
   n_new_modes = sum(new_mode(1:n_tor))
-  write(*,*), 'Warning:', n_new_modes, ' new modes initialized to noise level' 
   if ( n_new_modes .gt. 0 ) then
+    write(*,*), 'Warning:', n_new_modes, ' new modes initialized to noise level'
     ! --- Using an already computed mode
     if ( (import_perturbation) .and. (n_tor .gt. 1) ) then
       write(*,*) 'ERROR: Importing perturbation from jorek_perturbation.rst file...'

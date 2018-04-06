@@ -184,6 +184,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   use mpi_mod
   use mod_boundary_conditions, only : boundary_conditions
   use mod_locate_irn_jcn
+  !$ use omp_lib
   implicit none
   
 #include "r3_info.h"
@@ -222,7 +223,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer                           :: omp_nthreads, omp_tid
   integer                           :: node_out(n_vertex_max)
   integer                           :: i_father,INODE_FATHER, ios
-  integer, external                 :: omp_get_num_threads, omp_get_thread_num
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
   logical                           :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
   CHARACTER(LEN=128)                :: fname
@@ -356,9 +356,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
       enddo 
     endif
 
+#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
     ! --- We don't want the next part to run in parallel
     !$omp critical  
-    
+#endif
+
     ! --- We only look at non-refined elements
     if ((.not. refinement) .or. (refinement .and. (element%n_sons .eq. 0))) then
     
@@ -400,6 +402,9 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
                     irn_glob(ilarge2) = index_large_i	+ j
                     jcn_glob(ilarge2) = index_large_k	+ l
+#ifdef CONSTRUCT_MATRIX_OMP_ATOMIC
+                    !$omp atomic
+#endif
                     A_glob(ilarge2)   = A_glob(ilarge2) + ELM(index_ij,index_kl)
 
                   enddo
@@ -417,8 +422,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     endif ! refinement
 
+#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
     ! --- Finish sequential
     !$omp end critical
+#endif
 
   end do
   !$omp end do

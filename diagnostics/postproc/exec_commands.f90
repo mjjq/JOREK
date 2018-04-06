@@ -502,6 +502,9 @@ module exec_commands
       write (filename,'(a, i5.5, a)') 'jorek', i, '.rst'
       inquire (file=filename, exist=file_exists)
       if (file_exists) write(*,'(i6)',advance='no') i
+      write (filename,'(a, i5.5, a)') 'jorek', i, '.h5'
+      inquire (file=filename, exist=file_exists)
+      if (file_exists) write(*,'(i6)',advance='no') i
     end do
     write(*,*)
     

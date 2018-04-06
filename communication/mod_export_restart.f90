@@ -96,12 +96,6 @@ subroutine export_binary_restart(node_list,element_list,filename)
   write(21) index_now
   write(21) t_now
 
-#ifdef USE_HDF5
-  if (rst_format > 1 ) then
-    write(21) h5_nbsave_all
-  end if
-#endif
-
   if (index_now .gt. 0) then
      write(21) xtime(1:index_now)
      write(21) energies(:,:,1:index_now)
@@ -234,7 +228,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   ! --- Local variables
   integer :: i
-  character*50             :: version_control
+  character(len=50)        :: version_control
 
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id
@@ -406,6 +400,16 @@ end if
           ' ==> error for opening of HDF5 file',filename
   end if
   
+  ! Store the hdf5 restart file version
+  write(*,*) 'Exporting HDF5 restart file with rst_hdf5_version=', rst_hdf5_version
+  if ( rst_hdf5_version > rst_hdf5_version_supported ) then
+    write(*,*) 'ERROR: Cannot write HDF5 restart file with rst_hdf5_version=', rst_hdf5_version
+    write(*,*) '  This code version supports rst_hdf5_version_supported=', rst_hdf5_version_supported
+    write(*,*) '  Please select an appropriate value in the namelist or use the default value.'
+    stop
+  end if
+  call HDF5_integer_saving(file_id,rst_hdf5_version,'rst_hdf5_version'//char(0)) 
+
   ! -> Save version of revision control system
   write(version_control,'(A)') trim(adjustl(RCS_VERSION))
   version_control = trim(adjustl(version_control))
@@ -489,7 +493,12 @@ end if
   call HDF5_real_saving(file_id,visco_par,'visco_par'//char(0))
   call HDF5_integer_saving(file_id,index_now,'index_now'//char(0)) 
   call HDF5_real_saving(file_id,t_now,'t_now'//char(0))
-  call HDF5_integer_saving(file_id,h5_nbsave_all,'h5_nbsave_all'//char(0))
+  call HDF5_real_saving(file_id,central_density,'central_density'//char(0))
+  call HDF5_real_saving(file_id,central_mass,'central_mass'//char(0))
+  call HDF5_real_saving(file_id,F0,'F0'//char(0))
+  call HDF5_real_saving(file_id,sqrt_mu0_rho0,'sqrt_mu0_rho0'//char(0))
+  call HDF5_real_saving(file_id,sqrt_mu0_rho0,'t_norm'//char(0))
+  call HDF5_real_saving(file_id,sqrt_mu0_over_rho0,'sqrt_mu0_over_rho0'//char(0))
 
   if (index_now .gt. 0) then
      call HDF5_array1D_saving(file_id,t_xtime,index_now,'xtime'//char(0))

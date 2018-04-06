@@ -17,6 +17,8 @@ module load fftw/3.3.4
 module load hdf5
 module unload GCC
 
+module list
+
 export ZLIB_HOME=/work/imas/opt/EasyBuild/software/zlib/1.2.8-gompi-1.5.16
 
 export LANG=C

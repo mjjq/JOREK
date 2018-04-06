@@ -41,7 +41,7 @@ real*8, allocatable :: shard_size(:)               !The shard size array
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
-                rst_hdf5,                                           &
+                rst_hdf5, rst_hdf5_version,                         &
                 eta, visco, visco_par,                              &
                 restart, rst_format, regrid, bootstrap,             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
@@ -100,15 +100,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &
                 linear_run, export_for_nemec,                       &
-#ifdef USE_HDF5
-                save_diagnostics_HDF5,h5_diag_nbtime,               &
-#endif
-
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                D_prof_neg, ZK_prof_neg, T_min,                     &
                 spi_tor_rot, tor_frequency,                         &
+                D_prof_neg, ZK_prof_neg,                            &
+                D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 mgi_sig, mgi_deltaphi, ksi_ion, abl_history,        &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &

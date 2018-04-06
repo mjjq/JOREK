@@ -10,6 +10,7 @@ use phys_module
 use pellet_module
 use mpi_mod
 use domains
+!$ use omp_lib
 #if (JOREK_MODEL == 500)
 use mgi_module
 #endif
@@ -66,10 +67,6 @@ real*8     :: ng_radius
 !real*8     :: spi_Vel_Z_tmp
 !real*8     :: spi_Vel_RxZ_tmp
 
-
-#ifdef _OPENMP
-integer,external :: omp_get_num_threads, omp_get_thread_num
-#endif
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 

@@ -9,14 +9,14 @@
 ! INPUT:
 !
 ! The executable needs the following files:
-!   * jorek_restart.rst (main jorek calculation data)
+!   * jorek_restart.rst|h5 (main jorek calculation data)
 !   * the INPUT file use for the main jorek calculation
 !   * (OPTIONAL) vtk_GaussVortTerms.nml (in this file: if n_plane_local = n_plane -> volume averaged 
 !      calculation, if n_plane_local = 1 -> surface averaged calculation)
 !
 ! EXECUTE:
 !
-! To execute for a single time step (for the current jorek_restart.rst):
+! To execute for a single time step (for the current jorek_restart.rst|h5):
 !   * ./jorek2vtk_GaussVortTerms < INPUT_file
 !
 ! To run for several time steps use the bash script: run_vtk_GaussTerms.sh

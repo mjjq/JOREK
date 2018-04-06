@@ -2,7 +2,7 @@
 jorekmodel="199"
 description="Free boundary equilibrium for limiter plasma (JOREK-STARWALL)."
 mpitasks=1
-binaries="jorek_model${jorekmodel}_1 rst_bin2hdf5 rst_hdf52bin"
+binaries="jorek_model${jorekmodel}_1"
 binaries_initial=""
 requiredfiles="input starwall-response.dat coil_field.dat"
 extra_remote_files="starwall-response.dat coil_field.dat"
@@ -11,21 +11,18 @@ extra_remote_files="starwall-response.dat coil_field.dat"
 # --- Compile the code for the test case
 function compile_jorek () {
   ./util/config.sh model=$jorekmodel n_tor=1 n_plane=1 n_period=1                    || exit 1
-  make cleanall                                                                      || exit 1
-  make $compilopt $debugoptions jorek_model${jorekmodel} rst_bin2hdf5 rst_hdf52bin   || exit 1
+  make $compilopt $debugoptions jorek_model${jorekmodel}                             || exit 1
   mv jorek_model${jorekmodel} jorek_model${jorekmodel}_1                             || exit 1
 }
 
 
-# --- Re-run the whole case from scratch into the non-linear phase
+# --- Initial run only required when preparing or updating the test case
 function initial_run () {
-  # --- Dummy run not actually needed...
-  ${codedir}/util/setinput.sh input restart=.f. freeboundary_equil=.f.               || exit 1
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee logfile_initial       || exit 1
+  dummy_initial_run
 }
 
 
-# --- Carry out the test case (not actually a restart for this testcase...).
+# --- Carry out the test case
 function restart_run () {
   ${codedir}/util/setinput.sh input restart=.f. freeboundary_equil=.t.               || exit 1
   $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee logfile               || exit 1

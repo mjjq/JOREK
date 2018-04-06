@@ -14,7 +14,7 @@ INCLUDES += -I$(MODDIR)
 # Detect the compiler vendors (sort to remove duplicates)
 F_COMPILER_FAMILY :=$(sort $(shell $(FC) --version | grep -oim 1 'intel\|gcc\|gnu' | tr A-Z a-z | sed 's/gcc/gnu/'))
 C_COMPILER_FAMILY :=$(sort $(shell $(CC) --version | grep -oim 1 'intel\|gcc\|gnu' | tr A-Z a-z | sed 's/gcc/gnu/'))
-CXX_COMPILER_FAMILY :=$(sort $(shell $(CXX) --version | grep -oim 1 'intel\|gcc\|gnu' | tr A-Z a-z | sed 's/gcc/gnu/'))
+CXX_COMPILER_FAMILY :=$(sort $(shell $(CXX) --version | grep -oim 1 'intel\|gcc\|gnu\|g[+][+]' | tr A-Z a-z | sed -e 's/gcc/gnu/' -e 's/g[+][+]/gnu/'))
 ifneq ($(F_COMPILER_FAMILY),$(C_COMPILER_FAMILY))
   $(error "Fortran compiler ($(F_COMPILER_FAMILY)) must be same as C compiler ($(C_COMPILER_FAMILY))")
 endif
@@ -41,17 +41,19 @@ ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -Wno-unused-variable
   FFLAGS += -Wintrinsics-std
   FFLAGS += -Wcharacter-truncation
-  FFLAGS += -Wsurprising -Wno-tabs
+  FFLAGS += -Wsurprising
   FFLAGS += -ffree-line-length-none
   F77FLAGS += -fdefault-real-8 -fdefault-double-8
   ifeq ($(DEBUG), 1)
     FLAGS  += -g -Og -ggdb -fno-lto
-    FLAGS  += -fcheck=all
-    FLAGS  += -Wunused-variable
-    FLAGS  += -ffpe-trap=invalid,zero,overflow -ftrapv
-    FFLAGS += -Wimplicit-interface -Wimplicit-procedure
+    FFLAGS += -fcheck=all
+    FLAGS  += -ffpe-trap=invalid,zero,overflow
+    FFLAGS += -ftrapv
     FFLAGS += -Wconversion
     F90FLAGS += -fimplicit-none
+  endif
+  ifeq ($(DEBUG), 2)
+    FFLAGS += -Wimplicit-interface -Wimplicit-procedure
   endif
 
   FFLAGS +=-J$(MODDIR)
@@ -114,7 +116,7 @@ $(OBJDIR)/%.o:: $(1)%.c
 	$$(CC) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.cpp
-	$$(CXX) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
+	$$(CXX) $$(FLAGS) $$(CXXFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE
@@ -160,6 +162,10 @@ ifeq (1, $(USE_PASTIX))
   ifeq (0, $(USE_PASTIX_MURGE))
     LIBS     := $(LIBS) $(LIB_PASTIX) $(LIB_PASTIX_BLAS)
     INCLUDES := $(INCLUDES) $(INC_PASTIX)
+  endif
+  PASTIX_MEMORY_USAGE?=1
+  ifeq (1, $(PASTIX_MEMORY_USAGE))
+    DEFINES := $(DEFINES) -DMEMORY_USAGE
   endif
 endif
 

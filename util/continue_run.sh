@@ -23,14 +23,14 @@ shift
 setparams="$@ restart=.true."
 $SCRIPTDIR/setinput.sh $infile $setparams
 
-newest_restart=`ls -1rt jorek*.rst | tail -n 1`
+newest_restart=`ls -1rt jorek*.{rst,h5} | tail -n 1`
 if [ "$newest_restart" == "" ]; then
   echo
   echo "ERROR: Could not find a restart file."
   echo
   exit 1
-elif [ "$newest_restart" != "jorek_restart.rst" ]; then
-  cp $newest_restart jorek_restart.rst
+elif [ "${newest_restart%.*}" != "jorek_restart" ]; then
+  cp $newest_restart jorek_restart.${newest_restart##*.}
 fi
 
 sbatch $jobscript

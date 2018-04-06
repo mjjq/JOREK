@@ -123,6 +123,8 @@ module exec_commands
           call int2d(command, first_step, ierr)
         case ( 'equil_params' )
           call equil_params(command, first_step, ierr)
+        case ( 'energy_spectrum' )
+          call energy_spectrum(command, first_step, ierr)
         case ( 'expressions' )
           call expressions(command, ierr)
         case ( 'fluxsurfaces' )
@@ -179,7 +181,7 @@ module exec_commands
         case ( 'expressions', 'mark_coords', 'int2d', 'midplane', 'average', 'point',      &
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
           'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
-          'si-units', 'grid', 'rectangle' )
+          'si-units', 'grid', 'rectangle', 'energy_spectrum' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -707,6 +709,98 @@ module exec_commands
     end if
     
   end function step_range_string
+  
+  
+  
+  
+  
+  !> Evaluate expressions at a single point.
+  subroutine energy_spectrum(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8              :: tmin, tmax, s(n_tor,2), t((n_tor+1)/2,2), left(n_tor,2), right(n_tor,2)
+    real*8              :: tleft, tright
+    integer             :: i_file, i, j
+    character(len=1024) :: filename
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,2);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    ! --- Preparation
+    tmin  = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    tmax  = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    
+    write(filename,'(9a)') DIR, 'energyspectrum_tmin', trim(real2str(tmin,'(f12.4)')), '_tmax', &
+      trim(real2str(tmax,'(f12.4)')), trim(step_range_string(index_now,index_now)), '.dat'
+    
+    if ( (tmin<xtime(1)) .or. (xtime(index_now)<tmax) .or. (tmax<=tmin) ) then
+      write(*,*) 'ERROR in energy_spectrum: Specified time window is invalid.'
+      return
+    end if
+    
+    s(:,:) = 0.d0
+    
+    ! --- sum up for integration (loop over intervals between)
+    do i = 2, index_now
+      
+      ! --- Left value for summation
+      if ( (xtime(i-1) < tmin) .and. (tmin <= xtime(i)) ) then
+        ! (we are at the beginning of the [tmin,tmax] interval)
+        left (:,:) = ( energies(:,:,i-1) * (xtime(i)-tmin) + energies(:,:,i) * (tmin-xtime(i-1)) ) / (xtime(i)-xtime(i-1))
+        tleft      = tmin
+      else if ( tmin <= xtime(i-1) ) then
+        ! (we are somewhere in the middle of the [tmin,tmax] interval)
+        left (:,:) = energies(:,:,i-1)
+        tleft      = xtime(i-1)
+      else
+        cycle ! present time point can be skipped
+      end if
+      
+      ! --- Right value for summation
+      if ( (xtime(i-1) < tmax) .and. (tmax <= xtime(i)) ) then
+        ! (we are at the end of the [tmin,tmax] interval)
+        right(:,:) = ( energies(:,:,i-1) * (xtime(i)-tmax) + energies(:,:,i) * (tmax-xtime(i-1)) ) / (xtime(i)-xtime(i-1))
+        tright     = tmax
+      else if ( xtime(i) < tmax ) then
+        ! (we are somewhere in the middle of the [tmin,tmax] interval)
+        right(:,:) = energies(:,:,i)
+        tright     = xtime(i)
+      else
+        cycle ! present time point can be skipped
+      end if
+      
+      s(:,:) = s(:,:) + 0.5d0 * ( left(:,:) + right(:,:) ) * ( tright - tleft )
+      
+    end do
+    
+    s(:,:) = s(:,:) / (tmax-tmin) ! normalize integral to interval length
+    
+    ! --- combine cosine and sine components
+    t(:,:) = 0.d0
+    t(1,:) = s(1,:)
+    do i = 1, (n_tor-1)/2
+      t(i+1,:) = s(2*i,:) + s(2*i+1,:)
+    end do
+    
+    ! --- write to ascii file
+    i_file=133
+    open(i_file, file=trim(filename), form='formatted', status='replace', iostat=ierr)
+    write(i_file,*) '# energy spectrum'
+    write(i_file,*) '# toroidal mode number | magnetic energy spectrum | kinetic energy spectrum'
+    do i = 0, (n_tor-1)/2
+      write(i_file,'(i7,2es25.15)') i, t(i+1,:)
+    end do
+    close(i_file)
+    
+  end subroutine energy_spectrum
   
   
   

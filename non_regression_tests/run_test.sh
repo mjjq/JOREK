@@ -241,7 +241,6 @@ if [ "$runit" == "yes" ]; then
   if [ -n "$ompthreads" ]; then
     export OMP_NUM_THREADS=$ompthreads
   fi
-  cd $tmpdir                                              || exit 1
 
   # --- Run the test case
   if [ "$initialrun" == "no" ]; then

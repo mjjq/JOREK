@@ -20,20 +20,16 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr)
   integer,                 intent(out)   :: ierr
   integer,                 intent(in)    :: format_rst  ! format of restart file 
 
-  write(*,*)
-  write(*,*) '************* restart ******************'
-  
   if ( rst_hdf5 == 0 ) then
+    write(*,*) " Restart from BINARY file " // trim(filename) // '.rst'
     call import_binary_restart(node_list, element_list, trim(filename)//'.rst', &
             format_rst, ierr)
   else if ( rst_hdf5 == 1 ) then
+    write(*,*) " Restart from HDF5 file " // trim(filename) // '.h5'
     call import_hdf5_restart(node_list, element_list, trim(filename)//'.h5', &
             format_rst,ierr)
   end if
   
-  write(*,*) '********* end restart ******************'
-  write(*,*)
-
 end subroutine import_restart
 
 
@@ -47,6 +43,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   use pellet_module
   use mgi_module
   use vacuum, only: import_restart_vacuum, current_FB_fact
+  use mod_element_rtree, only: populate_element_rtree
   
   implicit none
   
@@ -101,7 +98,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     read(21) mode_tmp
     write(*,*) ' NEW format (1) : ',mode_tmp
   elseif (format_rst == 0) then
-    !write(*,*) ' mode : ',mode
+    write(*,*) ' mode : ',mode
     if (n_tor .eq. n_tor_tmp) then 
        mode_tmp = mode
     else
@@ -112,6 +109,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     write(*,'(A,999i4)') '   new mode numbers     : ',mode
   elseif ( format_rst > 2 ) then
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+    stop
   endif
 
   if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i4))') &
@@ -168,13 +166,6 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   read(21) tstep,eta_rst,visco_rst,visco_par_rst
   read(21) index_start
   read(21) t_start
-  
-#ifdef USE_HDF5
-  h5_nbsave_all = 0
-  if ( rst_format > 1 ) then
-    read(21) h5_nbsave_all
-  end if
-#endif
   
   if (index_start .ge. 1) then
 
@@ -376,10 +367,9 @@ endif
   
   close(21)
   
-  write(*,'(A,I6,F14.6,A)') ' restart time       : ',index_start,t_start
-#ifdef USE_HDF5
-  !write(*,'(A,I4,A)')       ' HDF5 files written : ',h5_nbsave_all
-#endif
+  write(*,*) '************* restart ******************'
+  write(*,'(A,I6,F14.6,A)') ' *  restart time       : ',index_start,t_start,' *'
+  write(*,*) '****************************************'
 
   do i=2,index_start
     if ( (energies(n_tor,1,i).ne.0.) .and. (energies(n_tor,1,i-1).ne.0.)) then
@@ -437,6 +427,7 @@ endif
    	write(*,'(A,999i4)') ' new mode numbers     : ',mode
       elseif (format_rst > 2 ) then
    	write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+        stop
       endif
 
       allocate(node_list_perturbation, element_list_perturbation)
@@ -522,12 +513,17 @@ endif
     endif
   endif
 
+  ! End reading binary restart file  
+  write(*,*) '********* end restart ******************'
+
   !call add_pellet(node_list,element_list,25.d0,0.06d0,0.03d0,3.78d0,0.14d0)
 
   ! -> Deallocate temporary arrays 
   if (allocated(mode_tmp))   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
   if (allocated(values_tmp)) call tr_deallocate(values_tmp,"values_tmp",CAT_UNKNOWN)
   if (allocated(deltas_tmp)) call tr_deallocate(deltas_tmp,"deltas_tmp",CAT_UNKNOWN)
+
+  call populate_element_rtree(node_list, element_list)
 
   return
 end subroutine import_binary_restart
@@ -545,6 +541,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use pellet_module
   use mgi_module
   use vacuum, only: import_HDF5_restart_vacuum, current_FB_fact
+  use mod_element_rtree, only: populate_element_rtree
 #ifdef USE_HDF5
   use hdf5
   use hdf5_io_module
@@ -570,7 +567,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   logical, parameter   			:: import_perturbation = .false.
 
   ! --- Local variables
-  integer              :: i, j, m, k, n_tor_tmp, jorek_model_tmp, n_var_tmp, n_order_tmp, n_period_tmp
+  integer              :: i, j, m, k, n_tor_tmp, jorek_model_tmp, n_var_tmp, n_order_tmp, n_period_tmp, rst_hdf5_version_tmp
   integer              :: n_plane_tmp, n_vertex_max_tmp, n_nodes_max_tmp, n_elements_max_tmp,n_boundary_max_tmp
   integer              :: n_pieces_max_tmp, n_degrees_tmp, nref_max_tmp, n_ref_list_tmp, n_new_modes
   real*8               :: growth_mag, growth_kin, amplitude
@@ -640,6 +637,19 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     return
   end if
 
+  ! Restart file version
+  rst_hdf5_version_tmp = 0
+  call HDF5_integer_reading(file_id,rst_hdf5_version_tmp,"rst_hdf5_version")
+  write(*,*) 'Restart file has rst_hdf5_version=', rst_hdf5_version_tmp
+  if ( rst_hdf5_version_tmp > rst_hdf5_version_supported ) then
+    write(*,*) 'ERROR: Cannot read the hdf5 restart file "', trim(filename), '" since it was created with a more recent code version.'
+    write(*,*) '* rst_hdf5_version of the restart file: ', rst_hdf5_version_tmp
+    write(*,*) '* rst_hdf5_version of the code version: ', rst_hdf5_version_supported
+    write(*,*) '* Note that you can export an older restart file version with your newer code by'
+    write(*,*) '    explicitly setting rst_hdf5_version in the namelist input file.'
+    stop
+  end if
+
   call HDF5_char_reading(file_id,version_control_tmp, "RCS_version")
   version_control = trim(adjustl(RCS_VERSION))
 
@@ -683,6 +693,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     end do
   elseif ( format_rst > 2 ) then
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+    stop
   endif
 
   if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i5))') &
@@ -837,7 +848,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_real_reading(file_id,visco_par_rst,'visco_par')
   call HDF5_integer_reading(file_id,index_start,'index_now')
   call HDF5_real_reading(file_id,t_start,'t_now')
-  call HDF5_integer_reading(file_id,h5_nbsave_all,'h5_nbsave_all')
   
   if (index_start .ge. 1) then
 
@@ -1100,8 +1110,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   call HDF5_close(file_id)
  
-  write(*,'(A,i6,f14.6,A)') ' restart time         : ',index_start,t_start
-  !write(*,'(A19,I4,A)') ' HDF5 files written : ',h5_nbsave_all
+  write(*,*) '************* restart ******************'
+  write(*,'(A19,i6,f14.6,A)') ' *  restart time : ',index_start,t_start,' *'
+  write(*,*) '****************************************'
   
   do i=2,index_start
     if ( (energies(n_tor,1,i).ne.0.) .and. (energies(n_tor,1,i-1).ne.0.)) then
@@ -1192,6 +1203,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 #else
   write (6,*) " ERROR: trying to import with hdf5 but USE_HDF5 was not set at compile-time"
 #endif
+  call populate_element_rtree(node_list, element_list)
 
   return
 end subroutine import_hdf5_restart

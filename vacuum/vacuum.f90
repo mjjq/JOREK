@@ -2,6 +2,7 @@
 !!
 !! @see vacuum_response, vacuum_equilibrium
 module vacuum
+  use phys_module, only: rst_hdf5_version
   
   implicit none
   

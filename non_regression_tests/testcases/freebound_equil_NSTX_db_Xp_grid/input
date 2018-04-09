@@ -45,10 +45,10 @@
   vert_FB_amp(4)       =  1.0         
   
   amix                 = 0.d0
-  amix_freeb           = 0.65d0
+  amix_freeb           = 0.6d0 !0.65
   FB_Ip_position       = 1.d0
   FB_Ip_integral       = 0.015d0
-  FB_Zaxis_position    = 30.d0  
+  FB_Zaxis_position    = 20.d0  
   FB_Zaxis_derivative  = 0.d0
   
   start_VFB            = 1
@@ -58,23 +58,23 @@
   equil_accuracy_freeb = 1.d-5
   
   current_ref          = 5.703d5
-  Z_axis_ref           = -0.03d0
+  Z_axis_ref           = -0.04d0
  
   !_____________________________________grid parameters
   n_R      = 0
   n_Z      = 0
-  n_radial = 60
-  n_pol    = 80 
+  n_radial = 40
+  n_pol    = 50 
  
-  n_flux    = 30
-  n_tht     = 50 
-  n_open    = 2  ! number of surfaces on outer side (    used for single-null!)
-  n_outer   = 4  ! number of surfaces on outer side (    used for single-null!)
-  n_inner   = 4  ! number of surfaces on inner side (not used for single-null!)
-  n_leg     = 5   ! number of surfaces in lower leg  (    used for single-null!) 
-  n_private = 5   ! number of surfaces in lower priv (    used for single-null!)
-  n_up_leg  = 5	 ! number of surfaces in upper leg  (not used for single-null!) 
-  n_up_priv = 5	 ! number of surfaces in upper priv (not used for single-null!)
+  n_flux    = 18
+  n_tht     = 25 
+  n_open    = 1  ! number of surfaces on outer side (    used for single-null!)
+  n_outer   = 3  ! number of surfaces on outer side (    used for single-null!)
+  n_inner   = 3  ! number of surfaces on inner side (not used for single-null!)
+  n_leg     = 3   ! number of surfaces in lower leg  (    used for single-null!) 
+  n_private = 3   ! number of surfaces in lower priv (    used for single-null!)
+  n_up_leg  = 3	 ! number of surfaces in upper leg  (not used for single-null!) 
+  n_up_priv = 3	 ! number of surfaces in upper priv (not used for single-null!)
 
   !-------------------- Control the localisation of grid resolution
   SIG_closed  = 0.3d0!0.05d0	     

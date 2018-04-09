@@ -1,4 +1,4 @@
-module neutral_source_module
+module mod_neutral_source
 
 use constants
 
@@ -258,4 +258,4 @@ endif
 
 end subroutine update_mgi
 
-end module neutral_source_module
+end module mod_neutral_source

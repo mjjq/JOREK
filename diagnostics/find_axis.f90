@@ -46,7 +46,7 @@ if (my_id .eq. 0) then
   write(*,*) '*********************************'
 endif
 
-n_tries = element_list%n_elements           ! --- number of attempts to find the axis (= number of elements)
+n_tries = 500          ! --- number of attempts to find the axis 
 found_axis = .false.
 
 allocate(grad_psi(element_list%n_elements,4,4))            ! --- vector storing |grad_psi| at gaussian poitns
@@ -55,7 +55,6 @@ grad_psi    = 0.d0
 include_pt  = .false.
 
 ifail        = 1
-i_elm_axis   = 1
 ij_axis      = 1 
 psi_axis     = 1.d20
 
@@ -117,6 +116,17 @@ do i_tries=1,  n_tries  ! --- start attempts to find the axis
 
   min_indexes(:) = minloc(grad_psi, mask=include_pt)  ! --- find minimum of |grad_psi|
   
+  if ((min_indexes(1) == 0) .and. (i_tries == 1)) then     ! --- if all elements are initially excluded, stop search and initialize values
+    found_axis = .false.
+    s_axis_init     = 0.d0
+    t_axis_init     = 0.d0
+    i_elm_axis_init = 1
+    exit
+  else if  (min_indexes(1) == 0) then   ! --- if all elements have been excluded, exit search
+    found_axis = .false.
+    exit
+  endif
+  
   i_elm_axis = min_indexes(1)    ! --- element with minimum |grad_psi|
   s          = Xgauss(min_indexes(2)) 
   t          = Xgauss(min_indexes(3))
@@ -124,7 +134,7 @@ do i_tries=1,  n_tries  ! --- start attempts to find the axis
   ! --- Find \grad_psi = 0 in i_elm_axis with Newton's method
   call mnewtax(node_list,element_list,i_elm_axis,s,t,xerr,ferr,ifail)
 
-  if (ifail .ne. 0 ) then      ! --- if Newton's method failed, skip element in next search
+  if (ifail .ne. 0 ) then      ! --- if Newton's method failed, exclude element in next search
     include_pt(i_elm_axis,:,:) = .false.
   else
     found_axis = .true.

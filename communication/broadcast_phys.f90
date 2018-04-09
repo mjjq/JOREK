@@ -9,7 +9,7 @@ use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pi
 use wsmp_module,   only: use_wsmp
 use vacuum
 use mpi_mod
-use mgi_module
+use mod_neutral_source
 use pellet_module
 
 implicit none

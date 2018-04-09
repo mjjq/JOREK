@@ -315,7 +315,7 @@ subroutine ELM_neutral_rhs_8(rhs,rhs_k)
              ! --- Ionisation term
 	     - R * v * r0 * rn0 * S_ion										* xjac * tstep	&  
              ! --- Source
-	     + R * v * source_mgi										* xjac * tstep
+	     + R * v * source_neutral										* xjac * tstep
 
   rhs_k(8) = + R* (Dn0p * rn0_p * v_p*eps_cyl**2/R**2)								* xjac * tstep        
   

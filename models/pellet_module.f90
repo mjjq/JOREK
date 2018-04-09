@@ -189,7 +189,7 @@ use constants
 use data_structure
 use phys_module
 use mpi_mod
-use mgi_module
+use mod_neutral_source
 use corr_neg
 
 implicit none
@@ -214,6 +214,8 @@ real*8  :: s_out,t_out
 
 real*8  :: n_SI, T_eV, n_corr, T_corr
 real*8  :: t_norm, spi_Vel_totref
+! Temp variables for SPI, used to advance the R, Z, phi position of pellets for
+! given R, Z, RxZ velocity and a calculated apex of the trajectory spreading cone 
 real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
 
   spi_delta_phi   = 0.
@@ -365,7 +367,7 @@ use constants
 use data_structure
 use phys_module
 use mpi_mod
-use mgi_module
+use mod_neutral_source
 use corr_neg
 
 implicit none

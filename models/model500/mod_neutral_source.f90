@@ -1,4 +1,4 @@
-module mgi_module
+module neutral_source_module
 
 use constants
 
@@ -28,7 +28,7 @@ factorial = Ans
 end function factorial
 
 
-subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
+subroutine neutral_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now, &
                       JET_MGI,ASDEX_MGI,central_density,central_mass)
 
@@ -223,7 +223,7 @@ real*8, intent(in)  :: mgi_tor_norm
  end if
 
 return
-end subroutine mgi_source
+end subroutine neutral_source
 
 subroutine update_mgi(my_id,node_list,element_list)
 
@@ -258,4 +258,4 @@ endif
 
 end subroutine update_mgi
 
-end module mgi_module
+end module neutral_source_module

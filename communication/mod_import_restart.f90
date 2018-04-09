@@ -9,7 +9,7 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr)
   use data_structure
   use phys_module
   use pellet_module
-  use mgi_module
+  use mod_neutral_source
 
   implicit none
   
@@ -41,7 +41,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   use data_structure
   use phys_module
   use pellet_module
-  use mgi_module
+  use mod_neutral_source
   use vacuum, only: import_restart_vacuum, current_FB_fact
   use mod_element_rtree, only: populate_element_rtree
   
@@ -537,7 +537,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use data_structure
   use phys_module
   use pellet_module
-  use mgi_module
+  use mod_neutral_source
   use vacuum, only: import_HDF5_restart_vacuum, current_FB_fact
   use mod_element_rtree, only: populate_element_rtree
 #ifdef USE_HDF5

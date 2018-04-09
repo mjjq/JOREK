@@ -246,7 +246,8 @@ module phys_module
   real*8  :: spi_Vel_diff       !< The reference veolocity difference from the reference velocity
   real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
   real*8  :: spi_L_inj          !< Distance between SPI nozzle and mgi_R, mgi_Z, mgi_phi
-  real*8  :: mgi_phi_rotate     !< The toroidal position of rotated injection point
+  real*8  :: mgi_phi_rotate     !< The toroidal position of rotated injection point, 
+                                !< used for mimicking SPI in rotating plasma
   real*8  :: tor_frequency      !< The rigid body rotation frequency of SPI
 
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud 
@@ -263,6 +264,8 @@ module phys_module
 
   real*8  :: size_beta          !< Parameter for the modified BesselK distribution
 
+  !> @name The following five variables are for diagnostic purpose only, used to
+  !estimate the density increase within a given psi surface
   integer :: id_surfaces(4)     !< ID of each tracked flux surface, usded in determining domains
   real*8  :: psi_surfaces(4)    !< Psi of each tracked flux surfaces, do not track if the value is 0
   real*8  :: rho_surfaces(4)    !< Total number of particles withing the respective surfaces

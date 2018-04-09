@@ -69,7 +69,7 @@ program JOREK2
   use mpi_mod
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-  use mgi_module
+  use mod_neutral_source
 #endif
 
   use, intrinsic :: iso_c_binding

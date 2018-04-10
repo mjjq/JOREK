@@ -18,6 +18,7 @@ use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
 use mgi_module
+use mod_coronal
 use vacuum, only: freeb_fact
 
 implicit none
@@ -96,6 +97,7 @@ real*8     :: rn0_xx, rn0_yy, rhon_xx, rhon_yy
 real*8     :: source_mgi
 real*8     :: source_mgi_tmp
 
+
 ! time normalization
 real*8     :: t_norm
 
@@ -123,13 +125,21 @@ real*8     :: Z_imp, dZ_imp_dT, T0_Zimp, alpha_Zimp
 !   -Coefficients related to Z_imp
 real*8     :: alpha_imp, dalpha_imp_dT, alpha_imp_bis
 real*8     :: beta_imp, dbeta_imp_dT
+
 !   -Radiation from injected impurities
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
 real*8     :: T_rad, dT_rad_dT                                ! Temperature used in radiation rate
+real*8     :: ne_rad                                          ! Electron density used in radiation rate
 real*8     :: coef_rad_1, A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
 real*8     :: A2_rad, T2_rad, sig2_rad
+
 !   -Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
+
+!   -Temporary variable for charge state distribution
+real*8, allocatable :: dP_imp_dT(:), P_imp(:)
+real*8     :: E_ion, dE_ion_dT
+integer*8  :: ion_i, ion_k
 
 ! Parameters related to negative temperature handling
 real*8     :: T_neg, delta_neg
@@ -246,7 +256,7 @@ do ms=1, n_gauss
 
        call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
       
-            !current_source(ms,mt) = 0.d0
+       current_source(ms,mt) = 0.d0
 
        call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                     dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
@@ -257,7 +267,6 @@ do ms=1, n_gauss
 enddo
 
 eq_zTe = eq_zTe / 2.d0  ! electron temperature
-
 
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss
@@ -582,6 +591,16 @@ do ms=1, n_gauss
      !heat_source = 1.d-4
      !endif    
 
+     ! --- Increase diffusivity if very small density/temperature
+     if (xpoint2) then
+       if (r0 .lt. D_prof_neg_thresh)  then
+         D_prof  = D_prof_neg
+       endif
+       if (T0 .lt. ZK_prof_neg_thresh) then
+         ZK_prof = ZK_prof_neg
+       endif
+     endif
+
      phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
      delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
 
@@ -595,20 +614,83 @@ do ms=1, n_gauss
   !-------------------------------------------
   ! Atomic physics parameters for Argon
   !-------------------------------------------
-     m_i_over_m_imp = 1./20. ! Argon mass = 40 u and main ion (D) mass = 2 u
 
-     T0_Zimp        = 437.  ! eV
-     alpha_Zimp     = 0.415
+     select case ( trim(gas_type) )
+       case('D2')
+         m_i_over_m_imp = 1.
+       case('Ar')
+         m_i_over_m_imp = 1./20. ! Argon mass = 40 u and main ion (D) mass = 2 u
+       case default
+         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
+         write(*,*) '=> We assume the gas is D2.'
+         m_i_over_m_imp = 1.
+     end select
+
 
      ! Te in eV:
      T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      dT_rad_dT = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
-     Z_imp     = 10. !18.*tanh((T_rad/T0_Zimp)**alpha_Zimp)
+     ! We estimate the effective charge by a test density 10^20/m^3
+     ! Later maybe we should implement a iterative method
+     if (flag_adas == .true.) then
+
+       if (allocated(imp_adas(1)%ionisation_energy)) then
+
+         if (allocated(P_imp)) deallocate(P_imp)
+         if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+
+         allocate(P_imp(1:imp_adas(1)%n_Z))
+         allocate(dP_imp_dT(1:imp_adas(1)%n_Z))
+
+         call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                p_out=P_imp,z_eff=Z_imp)
+         call imp_cor(1)%interp_gradients(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                          p_Te_out=dP_imp_dT,z_eff_Te=dZ_imp_dT)
+
+         ! Calculate the ionization potential energy and it's time gradient
+         E_ion     = 0.
+         dE_ion_dT = 0.
+
+         do ion_i=1, imp_adas(1)%n_Z
+           do ion_k=1, ion_i
+             E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+             dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+           end do
+         end do
+         ! Convert from eV to JOREK unit
+         E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
+         dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20 
+         ! Convert the gradient in K to gradient in JOREK unit
+         dE_ion_dT = dE_ion_dT * dT_rad_dT * EL_CHG / K_BOLTZ
+
+       else
+         call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+         call imp_cor(1)%interp_gradients(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff_Te=dZ_imp_dT)
+         E_ion     = 0.
+         dE_ion_dT = 0.
+       end if
+
+       ! Convert gradient in T(K) in to gradient in T (eV)
+       dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
+       ! Derivative wrt to T, with T in JOREK units
+       dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       dZ_imp_dT = dZ_imp_dT * dT0_corr_dT
+     else
+
+       T0_Zimp        = 437.  ! eV
+       alpha_Zimp     = 0.415
+
+       Z_imp     = 10. !18.*tanh((T_rad/T0_Zimp)**alpha_Zimp)
      ! Derivative wrt to Te, with Te in eV
-     dZ_imp_dT = 0. !(18./T0_Zimp)*alpha_Zimp*((T_rad/T0_Zimp)**(alpha_Zimp-1))*(1.-(tanh(T_rad/T0_Zimp))**2.) * dT_rad_dT
+       dZ_imp_dT = 0. !(18./T0_Zimp)*alpha_Zimp*((T_rad/T0_Zimp)**(alpha_Zimp-1))*(1.-(tanh(T_rad/T0_Zimp))**2.) * dT_rad_dT
      ! Derivative wrt to T, with T in JOREK units
-     dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+
+       E_ion     = 0.
+       dE_ion_dT = 0.
+
+     end if
 
      alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
      dalpha_imp_dT = 0.5*m_i_over_m_imp*dZ_imp_dT
@@ -617,13 +699,46 @@ do ms=1, n_gauss
      beta_imp     = m_i_over_m_imp*Z_imp - 1.
      dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
 
+     ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+
+  !-------------------------------------------
+  ! --- Radiative function, if flag_adas is enabled use interpolation, if not use simple model
+  ! ------------------------------------------
+
+     ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+     coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                  *(central_density*1.d20)**2.5d0*m_i_over_m_imp
+
+
+     if (flag_adas == .true. .and. r0 >= 0. .and. T0 >= 0.) then
+
+       Lrad = 0.0
+       dLrad_dT = 0.0
+
+       ! Here we are temperarily only considering one impurity species, in the
+       ! future maybe a do loop will is needed
+       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+
+       Lrad = Lrad * coef_rad_1
+
+       ! Convert gradient in T(K) in to gradient in T (eV)
+       dLrad_dT = dLrad_dT * coef_rad_1 * EL_CHG / K_BOLTZ
+       ! Derivative wrt to T, with T in JOREK units
+       dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       dLrad_dT = dLrad_dT * dT0_corr_dT
+
+     else if (flag_adas == .true.) then
+       Lrad = 0.
+       dLrad_dT = 0.
+       E_ion = 0.
+       dE_ion_dT = 0.
+     else
+
   !-------------------------------------------
   ! --- Radiative cooling rate for Argon (approximate fit of cooling rate at coronal equilibrium)
   ! ------------------------------------------
+    
 !   if (T_rad .gt. 5.) then
-
-     ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-     coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
      A0_rad   = 2.8*1.d-33    ! W.m^3
      A1_rad   = 2.335*1.d-31  ! W.m^3
@@ -645,6 +760,8 @@ do ms=1, n_gauss
 !     Lrad = 0.d0
 !     dLrad_dT = 0.d0
 !   endif
+     end if
+
 
    !--------------------------------------------------------
    ! --- Source of neutrals from Massive Gas Injection (MGI)
@@ -923,8 +1040,8 @@ do ms=1, n_gauss
                     + zeta * v * alpha_imp * T0 * delta_g(mp,8,ms,mt) * BigR                           * xjac &   
 
                     + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                    * xjac * tstep  &
-                    - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad                         * xjac * tstep  &
-                    - v * BigR * r0_corr * frad_bg                                           * xjac * tstep
+                    - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad          * xjac * tstep  &
+                    - v * BigR * r0_corr * frad_bg                                      * xjac * tstep
 
 !###################################################################################################
 !#  equation 7 (parallel velocity  equation)                                                       #
@@ -1468,8 +1585,10 @@ do ms=1, n_gauss
                            + v * BigR * rho * frad_bg                                           * xjac * theta * tstep
 
 
-                 amat_66 =   v * (r0 + rn0 * alpha_imp_bis) * T   * BigR * xjac * (1.d0 + zeta)                      &
-
+                 amat_66 =   v * (r0 + rn0 * alpha_imp_bis) * T * BigR * xjac * (1.d0 + zeta)                     &
+!=============== The ionization potential energy term=========================
+                           + v * rn0 * dE_ion_dT            * T * BigR * xjac * (1.d0 + zeta)                     &
+!================= End ionization potential energy ===========================
                            - v * (r0 + rn0 * alpha_imp_bis) * BigR**2 * ( T_s  * u0_t - T_t  * u0_s) * theta * tstep &
                            - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                       * theta * tstep &
                            - v * alpha_imp_bis * T * BigR**2 * (rn0_s * u0_t - rn0_t * u0_s)       * theta * tstep &
@@ -1532,6 +1651,10 @@ do ms=1, n_gauss
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
                  amat_68 =   v * rhon * alpha_imp * T0 * BigR * xjac * (1.d0 + zeta)                              &
+!=============== The ionization potential energy term=========================
+                           + v * rhon * E_ion          * BigR * xjac * (1.d0 + zeta)                              &
+!================= End ionization potential energy ===========================
+
                            - v * rhon * BigR**2 * alpha_imp_bis * (T0_s * u0_t - T0_t * u0_s)     * theta * tstep &
                            - v * alpha_imp * T0 * BigR**2 * (rhon_s * u0_t - rhon_t * u0_s)       * theta * tstep &
                            + v * rhon * F0 / BigR * Vpar0 * alpha_imp_bis * T0_p           * xjac * theta * tstep &

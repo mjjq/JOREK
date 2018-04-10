@@ -4,6 +4,8 @@ module phys_module
   use mod_parameters
   use constants
   use data_structure              !< Added in order to dynamically allocate pellets 
+  use mod_openadas
+  use mod_coronal
  
   implicit none
   
@@ -25,6 +27,8 @@ module phys_module
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
   real*8  :: central_density      !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
   real*8  :: central_mass         !< average mass (assumed to be constant in space for the moment)
+  real*8  :: sqrt_mu0_rho0        !< Normalization factor sqrt(mu_0 rho_0) calculated from input
+  real*8  :: sqrt_mu0_over_rho0   !< Normalization factor sqrt(mu_0/rho_0) calculated from input
   real*8  :: gamma                !< ratio of specific heat (=5/3)
   real*8  :: Q_bar                !< (model400)
   real*8  :: sigma                !< (model400)
@@ -142,11 +146,8 @@ module phys_module
   real*8  :: time_evol_zeta    		!< Time evolution parameter zeta (see documentation)
 
   integer :: rst_hdf5
-
-#ifdef USE_HDF5
-  real*8  :: h5_diag_nbtime    		!< the HDF5 diagnostics are saved every "h5_diag_nbtime" Alven times
-  integer :: h5_nbsave_all     		!< number of HDF5 files written [or # of times the HDF5 saving has been called]
-#endif
+  integer :: rst_hdf5_version
+  integer, parameter :: rst_hdf5_version_supported = 1
   
   !> @name Machine name
   character(len=512) :: tokamak_device 	!< Name of the tokamak device we are simulating
@@ -270,8 +271,16 @@ module phys_module
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI
   logical :: toroidal_rotation  !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
-  type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet 
+  logical :: flag_adas          !< Flag for whether to use adas data calculating coronal equilibriam
+  integer :: n_adas             !< Number of species to be traced by adas, for future development only
 
+  type (type_SPI), allocatable  :: pellets(:)     !< Each element corresponds to one injected pellet 
+
+  character(len=512)            :: adas_dir    !< The directory of adas data file to be read
+
+
+  type (adf11_all), allocatable :: imp_adas(:)    !< The ADAS data for impurities
+  type (coronal), allocatable   :: imp_cor(:)     !< The coronal equilibrium distribution of impurities
   
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor  
@@ -510,7 +519,9 @@ module phys_module
   
   !> @name Numerical parameters
   real*8              :: D_prof_neg     !< Diffusion coefficient in regions with negative density
+  real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if rho < D_prof_neg_thresh
   real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
   real*8              :: T_min          !< minimum temperature (limits on the temperature dependence of resistivity etc.
   integer             :: n_tor_fft_thresh !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
   integer*8           :: fftw_plan      !< Required for FFTW library

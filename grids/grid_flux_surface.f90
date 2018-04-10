@@ -5,6 +5,7 @@ subroutine grid_flux_surface(xpoint,xcase,node_list,element_list,surface_list,n_
 use constants
 use tr_module
 use data_structure
+use mod_neighbours, only: update_neighbours
 
 implicit none
 
@@ -554,5 +555,6 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
  enddo
 
 enddo
+call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 return
 end subroutine grid_flux_surface

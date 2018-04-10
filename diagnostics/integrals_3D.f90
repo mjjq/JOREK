@@ -52,10 +52,6 @@ real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0
 
-#ifdef _OPENMP
-integer,external :: omp_get_num_threads, omp_get_thread_num
-#endif
-
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 
 n_cpu = max(n_cpu,1)

@@ -161,9 +161,11 @@ subroutine preset_parameters
   D_perp(1)  = 1.d-5; D_perp(2) = 0.d0; D_perp(3)= 0.d0; D_perp(4)= 99.d0; D_perp(5) = 99.d0
   D_par      = 0.d0
   
-  D_prof_neg  = 1.d-5
-  ZK_prof_neg = 1.d-5
-  T_min       = 0.0
+  D_prof_neg         = 1.d-5
+  D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+  ZK_prof_neg        = 1.d-5
+  ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+  T_min              = 0.0
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
@@ -227,7 +229,11 @@ subroutine preset_parameters
 
   nout = 9999999
 
-  rst_hdf5 = 0   ! =0,restart with binary files; =1, with HDF5 files
+  rst_hdf5 = 1   ! =0,restart with binary files; =1, with HDF5 files
+  !> Write out newest HDF5 restart file version this code supports, writing
+  !! out an older version is possible by changing rst_hdf5_verison via the
+  !! namelist input file
+  rst_hdf5_version = rst_hdf5_version_supported
 
   tokamak_device = 'none'
 
@@ -249,10 +255,6 @@ subroutine preset_parameters
   linear_run         = .false.
   
   export_for_nemec      = .false.
-#ifdef USE_HDF5
-  save_diagnostics_HDF5 = .false.
-  h5_diag_nbtime        = 10.d0
-#endif
   
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
@@ -364,6 +366,11 @@ subroutine preset_parameters
      toroidal_rotation = .false.
      abl_history     = .false.
      using_spi       = .false.
+     flag_adas       = .false.
+     n_adas          = 0
+
+     adas_dir        = ''
+
     !=========== End of SPI parameters ===========
 
 !#endif

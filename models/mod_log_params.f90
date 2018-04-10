@@ -132,6 +132,13 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+  write(*,'(1x,a)',advance='no') ' CONSTRUCT_MATRIX_OMP_ATOMIC : '
+#ifdef CONSTRUCT_MATRIX_OMP_ATOMIC
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
   write(*,*)
   write(*,200)
   write(*,*) '* Hard-Coded Parameters:                                                      *'
@@ -205,6 +212,7 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'restart               ', restart
   write(*,INTG_FMT) 'rst_format            ', rst_format
   write(*,INTG_FMT) 'rst_hdf5              ', rst_hdf5
+  write(*,INTG_FMT) 'rst_hdf5_version      ', rst_hdf5_version
   write(*,LOGI_FMT) 'regrid                ', regrid
   write(*,INTG_FMT) 'n_R                   ', n_R
   write(*,INTG_FMT) 'n_Z                   ', n_Z
@@ -338,18 +346,18 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'particlesource        ', particlesource
   write(*,REAL_FMT) 'particlesource_psin   ', particlesource_psin
   write(*,REAL_FMT) 'particlesource_sig    ', particlesource_sig
-  write(*,REAL_FMT) 'edgeparticlesource        ', edgeparticlesource
-  write(*,REAL_FMT) 'edgeparticlesource_psin   ', edgeparticlesource_psin
-  write(*,REAL_FMT) 'edgeparticlesource_sig    ', edgeparticlesource_sig
+  write(*,REAL_FMT) 'edgeparticlesource    ', edgeparticlesource
+  write(*,REAL_FMT) 'edgeparticlesource_psin', edgeparticlesource_psin
+  write(*,REAL_FMT) 'edgeparticlesource_sig', edgeparticlesource_sig
   write(*,REAL_FMT) 'heatsource            ', heatsource
   write(*,REAL_FMT) 'heatsource_psin       ', heatsource_psin
   write(*,REAL_FMT) 'heatsource_sig        ', heatsource_sig
-  write(*,REAL_FMT) 'particlesource_gauss     ', particlesource_gauss
+  write(*,REAL_FMT) 'particlesource_gauss  ', particlesource_gauss
   write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
   write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig
-  write(*,REAL_FMT) 'heatsource_gauss         ', heatsource_gauss
-  write(*,REAL_FMT) 'heatsource_gauss_psin    ', heatsource_gauss_psin
-  write(*,REAL_FMT) 'heatsource_gauss_sig     ', heatsource_gauss_sig
+  write(*,REAL_FMT) 'heatsource_gauss      ', heatsource_gauss
+  write(*,REAL_FMT) 'heatsource_gauss_psin ', heatsource_gauss_psin
+  write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
   write(*,REAL_FMT) 'tauIC                 ', tauIC
   write(*,REAL_FMT) 'eta_num               ', eta_num
   write(*,REAL_FMT) 'visco_num             ', visco_num
@@ -359,7 +367,9 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
+  write(*,REAL_FMT) 'D_prof_neg_thresh     ', D_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
+  write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
   write(*,LOGI_FMT) 'use_pellet            ', use_pellet
   write(*,REAL_FMT) 'corr_neg_temp_coef    ', corr_neg_temp_coef(:)
@@ -383,7 +393,6 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'pellet_velocity_Z     ', pellet_velocity_Z
   end if
 
-  write(*,*)
   write(*,REAL_FMT) 'ellip                 ', ellip
   write(*,REAL_FMT) 'tria_u                ', tria_u
   write(*,REAL_FMT) 'tria_l                ', tria_l
@@ -472,11 +481,6 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'bc_natural_open       ', bc_natural_open
   write(*,LOGI_FMT) 'produce_live_data     ', produce_live_data
   write(*,LOGI_FMT) 'export_for_nemec      ', export_for_nemec
-#ifdef USE_HDF5
-  write(*,LOGI_FMT) 'save_diagnostics_HDF5 ', save_diagnostics_HDF5
-  write(*,REAL_FMT) 'h5_diag_nbtime        ', h5_diag_nbtime
-!  write(*,LOGI_FMT) 'h5_nbsave_all         ', h5_nbsave_all
-#endif
   write(*,LOGI_FMT) 'linear_run            ', linear_run
   write(*,LOGI_FMT) 'gmres                 ', gmres
   write(*,INTG_FMT) 'gmres_max_iter        ', gmres_max_iter
@@ -542,7 +546,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'jecamp              ',  jecamp
   endif
 
-# if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
      write(*,REAL_FMT) 'mgi_amplitude       ',  mgi_amplitude
      write(*,REAL_FMT) 'mgi_R               ',  mgi_R
      write(*,REAL_FMT) 'mgi_Z               ',  mgi_Z
@@ -567,6 +571,9 @@ if (my_id == 0) then
      write(*,LOGI_FMT) 'using_spi           ',  using_spi
      write(*,LOGI_FMT) 'abl_history         ',  abl_history
      write(*,LOGI_FMT) 'toroidal rotation   ',  toroidal_rotation
+     write(*,LOGI_FMT) 'flag_adas           ',  flag_adas
+     write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
+     write(*,INTG_FMT) 'n_adas              ',  n_adas
      write(*,INTG_FMT) 'n_spi               ',  n_spi
      write(*,INTG_FMT) 'flag_spi            ',  flag_spi
      write(*,INTG_FMT) 'flag_spi_size       ',  flag_spi_size
@@ -578,8 +585,13 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
      write(*,REAL_FMT) 'tor_frequency       ',  tor_frequency
      write(*,REAL_FMT) 'spi_Vel_diff        ',  spi_Vel_diff
-# endif
-
+#endif
+  write(*,*)
+  write(*,200)
+  write(*,*) '* NORMALIZATION FACTORS                                                       *'
+  write(*,200)
+  write(*,REAL_FMT) 'sqrt(mu0*rho0)      ',  sqrt_mu0_rho0 
+  write(*,REAL_FMT) 'sqrt(mu0/rho0)      ',  sqrt_mu0_over_rho0 
   write(*,*)
 
 end if

@@ -11,6 +11,7 @@ use mpi_mod
 use mod_bootstrap_functions
 use corr_neg
 use mod_import_restart
+use mod_log_params
 
 implicit none
 
@@ -293,7 +294,7 @@ endif
 #if (JOREK_MODEL == 500)
  if (include_radiation) then
      scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
-                  = (/ 'Ionis_Wm-3     ', 'Lin_radWm-3     ', 'Brems_Wm-3     ', 'Joule_Wm-3    ', 'Imp_bg_Wm-3 '/)
+                  = (/ 'Ionis_Wm-3  ', 'Lin_radWm-3 ', 'Brems_Wm-3  ', 'Joule_Wm-3  ', 'Imp_bg_Wm-3 '/)
  endif
 #endif
 

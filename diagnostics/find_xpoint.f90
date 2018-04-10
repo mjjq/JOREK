@@ -113,9 +113,9 @@ do i=1,element_list%n_elements    ! --- loop over elements
 enddo    ! --- end loop over elements
 
 
-do i_tries=1,  n_tries  ! --- start attempts to find the x-points
-
-  if(xcase .ne. 2) then  
+if(xcase .ne. 2) then
+  do i_tries=1,  n_tries  ! --- start attempts to find the lower x-point
+    
     ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
     min_indices_lw(:) = minloc(grad_psi, mask=include_pt_lw)
 
@@ -141,15 +141,20 @@ do i_tries=1,  n_tries  ! --- start attempts to find the x-points
       found_lower   = .true.
       s_xpoint(1)   = s
       t_xpoint(1)   = t
+      exit
     endif
     if (i_tries == 1) then    ! --- save first attempt in case all the attempts fail
       s_xp_init(1)     = s
       t_xp_init(1)     = t
       i_elm_xp_init(1) = i_elm_xpoint(1)
     endif     
-  endif
+  enddo
+endif
 
-  if(xcase .ne. 1) then
+if(xcase .ne. 1) then
+
+  do i_tries=1,  n_tries  ! --- start attempts to find the upper x-point
+
     ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
     min_indices_up(:) = minloc(grad_psi, mask=include_pt_up)
     
@@ -175,17 +180,17 @@ do i_tries=1,  n_tries  ! --- start attempts to find the x-points
       found_upper   = .true.
       s_xpoint(2)   = s
       t_xpoint(2)   = t
+      exit
     endif 
     if (i_tries == 1) then    ! --- save first attempt in case all the attempts fail
       s_xp_init(2)     = s
       t_xp_init(2)     = t
       i_elm_xp_init(2) = i_elm_xpoint(2)
-    endif     
-  endif
+    endif
+  enddo ! --- end attempts     
+
+endif  
   
-  if ( (found_upper .or. (xcase==1)) .and. (found_lower .or. (xcase==2)) ) exit
-  
-enddo ! --- end attempts
 
 
 if(xcase .ne. 2) then

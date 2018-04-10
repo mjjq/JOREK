@@ -25,6 +25,8 @@ module phys_module
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
   real*8  :: central_density      !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
   real*8  :: central_mass         !< average mass (assumed to be constant in space for the moment)
+  real*8  :: sqrt_mu0_rho0        !< Normalization factor sqrt(mu_0 rho_0) calculated from input
+  real*8  :: sqrt_mu0_over_rho0   !< Normalization factor sqrt(mu_0/rho_0) calculated from input
   real*8  :: gamma                !< ratio of specific heat (=5/3)
   real*8  :: Q_bar                !< (model400)
   real*8  :: sigma                !< (model400)
@@ -142,11 +144,8 @@ module phys_module
   real*8  :: time_evol_zeta    		!< Time evolution parameter zeta (see documentation)
 
   integer :: rst_hdf5
-
-#ifdef USE_HDF5
-  real*8  :: h5_diag_nbtime    		!< the HDF5 diagnostics are saved every "h5_diag_nbtime" Alven times
-  integer :: h5_nbsave_all     		!< number of HDF5 files written [or # of times the HDF5 saving has been called]
-#endif
+  integer :: rst_hdf5_version
+  integer, parameter :: rst_hdf5_version_supported = 1
   
   !> @name Machine name
   character(len=512) :: tokamak_device 	!< Name of the tokamak device we are simulating
@@ -247,7 +246,8 @@ module phys_module
   real*8  :: spi_Vel_diff       !< The reference veolocity difference from the reference velocity
   real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
   real*8  :: spi_L_inj          !< Distance between SPI nozzle and mgi_R, mgi_Z, mgi_phi
-  real*8  :: mgi_phi_rotate     !< The toroidal position of rotated injection point
+  real*8  :: mgi_phi_rotate     !< The toroidal position of rotated injection point, 
+                                !< used for mimicking SPI in rotating plasma
   real*8  :: tor_frequency      !< The rigid body rotation frequency of SPI
 
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud 
@@ -264,6 +264,8 @@ module phys_module
 
   real*8  :: size_beta          !< Parameter for the modified BesselK distribution
 
+  !> @name The following five variables are for diagnostic purpose only, used to
+  !estimate the density increase within a given psi surface
   integer :: id_surfaces(4)     !< ID of each tracked flux surface, usded in determining domains
   real*8  :: psi_surfaces(4)    !< Psi of each tracked flux surfaces, do not track if the value is 0
   real*8  :: rho_surfaces(4)    !< Total number of particles withing the respective surfaces
@@ -513,7 +515,9 @@ module phys_module
   
   !> @name Numerical parameters
   real*8              :: D_prof_neg     !< Diffusion coefficient in regions with negative density
+  real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if rho < D_prof_neg_thresh
   real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
   real*8              :: T_min          !< minimum temperature (limits on the temperature dependence of resistivity etc.
   integer             :: n_tor_fft_thresh !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
   integer*8           :: fftw_plan      !< Required for FFTW library

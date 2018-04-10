@@ -27,21 +27,9 @@ type (type_element_list) :: element_list
 
 integer :: ierr,err,i
 
-real*8  :: n_SI, T_eV, n_corr, T_corr
-real*8  :: spi_gd_angle_01, spi_gd_angle_02        !The dispersion angles for each spi
-real*8  :: spi_rotation_01, spi_rotation_02        !The rotation angle from spi coordinate to real coordinate
-real*8  :: spi_Vel_totref, spi_Vel_i, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_tmp
-real*8  :: spi_Vel_x, spi_Vel_y, spi_Vel_z         !Spi velocity in injection coordinate
-real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Representing the shattering point of the pellet
-                                                   !The apex of the spreading cone
-real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_radius_tmp
-real*8  :: sign_corr, real_total_quantity
-real*8, allocatable :: rnd(:)                      !The random number array 
-real*8, allocatable :: shard_size(:)               !The shard size array
-
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
-                rst_hdf5,                                           &
+                rst_hdf5, rst_hdf5_version,                         &
                 eta, visco, visco_par,                              &
                 restart, rst_format, regrid, bootstrap,             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
@@ -100,15 +88,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &
                 linear_run, export_for_nemec,                       &
-#ifdef USE_HDF5
-                save_diagnostics_HDF5,h5_diag_nbtime,               &
-#endif
-
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                D_prof_neg, ZK_prof_neg, T_min,                     &
                 spi_tor_rot, tor_frequency,                         &
+                D_prof_neg, ZK_prof_neg,                            &
+                D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 mgi_sig, mgi_deltaphi, ksi_ion, abl_history,        &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &

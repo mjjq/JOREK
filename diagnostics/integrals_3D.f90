@@ -10,8 +10,9 @@ use phys_module
 use pellet_module
 use mpi_mod
 use domains
+!$ use omp_lib
 #if (JOREK_MODEL == 500)
-use mgi_module
+use mod_neutral_source
 #endif
 
 implicit none
@@ -50,7 +51,7 @@ real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0, rho_bar
+real*8  :: local_n_particles_inj, local_n_particles, source_neutral, rn0, rho_bar
 real*8  :: local_rho_surfaces(4), local_count_surfaces(4), local_vol_surfaces(4)
 
 ! Temporary variables serving the SPI module
@@ -66,10 +67,6 @@ real*8     :: ng_radius
 !real*8     :: spi_Vel_Z_tmp
 !real*8     :: spi_Vel_RxZ_tmp
 
-
-#ifdef _OPENMP
-integer,external :: omp_get_num_threads, omp_get_thread_num
-#endif
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 
@@ -181,7 +178,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp           rn0, source_mgi,                                                               &
+!$omp           rn0, source_neutral,                                                               &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -364,7 +361,7 @@ do ife = ife_min, ife_max
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
 
-        source_mgi = 0.d0
+        source_neutral = 0.d0
 
 ! Added to take into account the moving source
      if (using_spi == .true.) then
@@ -382,23 +379,23 @@ do ife = ife_min, ife_max
            ng_radius = ng_radius_min
          end if
 
-         call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
+         call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
                        mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
-                       phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+                       phi,source_neutral,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
        end do
 
 
      else
 
-       call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now, &
+       call neutral_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
+                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
                      JET_MGI,ASDEX_MGI,central_density,central_mass)
 
      end if
 
         !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
 
-        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_mgi * bigR * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
+        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_neutral * bigR * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
         local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
 
 #endif

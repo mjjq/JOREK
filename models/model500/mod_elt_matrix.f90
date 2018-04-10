@@ -17,7 +17,7 @@ use phys_module
 use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
-use mgi_module
+use mod_neutral_source
 use vacuum, only: freeb_fact
 
 implicit none
@@ -92,8 +92,8 @@ real*8     :: rhon, rhon_x, rhon_y, rhon_s, rhon_t, rhon_p, rhon_ss, rhon_st, rh
 real*8     :: rn0_xx, rn0_yy, rhon_xx, rhon_yy
 
 ! Neutral source
-real*8     :: source_mgi
-real*8     :: source_mgi_tmp
+real*8     :: source_neutral
+real*8     :: source_neutral_tmp
 
 ! time normalization
 real*8     :: t_norm
@@ -131,10 +131,6 @@ real*8     :: T_rad                                           ! Temperature used
 real*8     :: coef_rad_1                                      ! Radiation rate parameters
 !   -Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
-
-! Parameters related to negative temperature handling
-real*8     :: T_neg, delta_neg
-!===============================
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
 real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
@@ -563,14 +559,15 @@ do ms=1, n_gauss
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
 
-     T_neg = 1.d-5
-     delta_neg = 1.d-4
-
-     ZK_prof = ZK_prof * (1+100*(0.5+0.5*tanh(-(T0-T_neg)/delta_neg))) 
-
-     !if (T0 .lt. T_neg) then
-     !heat_source = 1.d-4
-     !endif    
+     ! --- Increase diffusivity if very small density/temperature
+     if (xpoint2) then
+       if (r0 .lt. D_prof_neg_thresh)  then
+         D_prof  = D_prof_neg
+       endif
+       if (T0 .lt. ZK_prof_neg_thresh) then
+         ZK_prof = ZK_prof_neg
+       endif
+     endif
 
      phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
      delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
@@ -662,11 +659,11 @@ do ms=1, n_gauss
    ! --- Source of neutrals from Massive Gas Injection (MGI)
    !--------------------------------------------------------
 
-     source_mgi = 0.d0                    
+     source_neutral = 0.d0                    
 
 !============================================================!
 ! Important note: in order to implementing more complicated  !
-!    model, we should add more arguments to mgi_source       !
+!    model, we should add more arguments to neutral_source   !
 !============================================================!
 
      if (using_spi == .true.) then
@@ -679,7 +676,7 @@ do ms=1, n_gauss
 
        do spi_i=1, n_spi
 
-         source_mgi_tmp = 0.d0
+         source_neutral_tmp = 0.d0
 
          if (pellets(spi_i)%spi_radius > 0.0) then
            spi_R_tmp   = pellets(spi_i)%spi_R
@@ -693,29 +690,29 @@ do ms=1, n_gauss
              ng_radius = ng_radius_min
            end if
 
-           call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
+           call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
                          mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
-                         phi,source_mgi_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+                         phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
          end if
 
-         source_mgi = source_mgi + source_mgi_tmp
+         source_neutral = source_neutral + source_neutral_tmp
 
        end do
 
      else
 
-       call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now, &
+       call neutral_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
+                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
                      JET_MGI,ASDEX_MGI,central_density,central_mass)
 
      end if
 
-     if (source_mgi /= source_mgi) then  ! This is to detect N/A
-       write(*,*) "WARNING: source_mgi = ", source_mgi
+     if (source_neutral /= source_neutral) then  ! This is to detect N/A
+       write(*,*) "WARNING: source_neutral = ", source_neutral
      end if
 
-     if (source_mgi .lt. 0.d0) then
-      source_mgi = 0.d0
+     if (source_neutral .lt. 0.d0) then
+      source_neutral = 0.d0
      endif
 
 
@@ -977,7 +974,7 @@ do ms=1, n_gauss
 
 	              - BigR * v * r0_corr * rn0_corr * Sion_T                                                    * xjac * tstep &  
 		      + BigR * v * r0_corr * r0_corr * Srec_T                                                     * xjac * tstep &
-                      + BigR * v * source_mgi                                                                     * xjac * tstep &
+                      + BigR * v * source_neutral                                                                     * xjac * tstep &
                       + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta                                                             &                      
                       - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy) * BigR * xjac * tstep
 

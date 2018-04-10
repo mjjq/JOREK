@@ -424,6 +424,7 @@ real*8, allocatable :: shard_size(:)               !The shard size array
         else
           shard_size = 0.0
         end if
+        ! Generalize!
         size_beta = (spi_quantity/(pellet_density*1.d20*n_spi*6.*(PI**2)))**(-1./3.)
         write(*,*) "Shard Size Beta:", size_beta
 
@@ -539,12 +540,6 @@ real*8, allocatable :: shard_size(:)               !The shard size array
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
                               pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
 
-
-        if (my_id == 0 .and. i < n_spi .and. restart == .false.) then
-          write(20,"(A11,I3.3)",advance="no") "abl N.: ", i
-        elseif (my_id == 0 .and. i == n_spi .and. restart == .false.) then
-          write(20,"(A11,I3.3)") "abl N.: ", i
-        end if
 
       end do
 

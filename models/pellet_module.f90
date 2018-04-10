@@ -529,8 +529,9 @@ real*8, allocatable :: shard_size(:)               !The shard size array
           spi_radius_tmp = (spi_quantity / (n_spi*(4.*PI/3.)*pellet_density*1.d20))**(1./3.)
         else if (flag_spi_size == 1) then
           spi_radius_tmp = shard_size(i)/size_beta
-          real_total_quantity = real_total_quantity + (4./3.) * PI * (spi_radius_tmp**3) * pellet_density
         end if
+
+        real_total_quantity = real_total_quantity + (4./3.) * PI * (spi_radius_tmp**3) * pellet_density
 
         pellets(i)%spi_R       = spi_R_tmp
         pellets(i)%spi_Z       = spi_Z_tmp

@@ -11,8 +11,8 @@ use pellet_module
 use mpi_mod
 use domains
 !$ use omp_lib
-#if (JOREK_MODEL == 500)
-use mod_neutral_source
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_neutral_source
 #endif
 
 implicit none

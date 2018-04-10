@@ -41,7 +41,9 @@ subroutine export_binary_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
   use mod_neutral_source
+#endif
   use vacuum, only: export_restart_vacuum
 
   implicit none
@@ -207,7 +209,9 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
   use mod_neutral_source
+#endif
   use vacuum, only : export_HDF5_restart_vacuum
   
 #ifdef USE_HDF5

@@ -189,7 +189,9 @@ use constants
 use data_structure
 use phys_module
 use mpi_mod
-use mod_neutral_source
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_neutral_source
+#endif
 use corr_neg
 
 implicit none
@@ -367,7 +369,9 @@ use constants
 use data_structure
 use phys_module
 use mpi_mod
-use mod_neutral_source
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_neutral_source
+#endif
 use corr_neg
 
 implicit none

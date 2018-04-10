@@ -591,6 +591,16 @@ do ms=1, n_gauss
      !heat_source = 1.d-4
      !endif    
 
+     ! --- Increase diffusivity if very small density/temperature
+     if (xpoint2) then
+       if (r0 .lt. D_prof_neg_thresh)  then
+         D_prof  = D_prof_neg
+       endif
+       if (T0 .lt. ZK_prof_neg_thresh) then
+         ZK_prof = ZK_prof_neg
+       endif
+     endif
+
      phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
      delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
 
@@ -700,7 +710,7 @@ do ms=1, n_gauss
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
 
-     if (flag_adas == .true. .and. ne_rad >= 1.d16 .and. T_rad >= 1.) then
+     if (flag_adas == .true. .and. r0 >= 0. .and. T0 >= 0.) then
 
        Lrad = 0.0
        dLrad_dT = 0.0
@@ -722,7 +732,6 @@ do ms=1, n_gauss
        dLrad_dT = 0.
        E_ion = 0.
        dE_ion_dT = 0.
-
      else
 
   !-------------------------------------------

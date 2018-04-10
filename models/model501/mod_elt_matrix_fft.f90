@@ -613,14 +613,15 @@ do ms=1, n_gauss
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
 
-     T_neg = 1.d-5
-     delta_neg = 1.d-4
-
-     ZK_prof = ZK_prof * (1+100*(0.5+0.5*tanh(-(T0-T_neg)/delta_neg))) 
-
-     !if (T0 .lt. T_neg) then
-     !heat_source = 1.d-4
-     !endif    
+     ! --- Increase diffusivity if very small density/temperature
+     if (xpoint2) then
+       if (r0 .lt. D_prof_neg_thresh)  then
+         D_prof  = D_prof_neg
+       endif
+       if (T0 .lt. ZK_prof_neg_thresh) then
+         ZK_prof = ZK_prof_neg
+       endif
+     endif
 
      phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
      delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
@@ -738,7 +739,7 @@ do ms=1, n_gauss
      coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
-     if (flag_adas == .true. .and. ne_rad >= 1.d16 .and. T_rad >= 1.) then
+     if (flag_adas == .true. .and. r0 >= 0. .and. T0 >= 0.) then
 
        Lrad = 0.0
        dLrad_dT = 0.0

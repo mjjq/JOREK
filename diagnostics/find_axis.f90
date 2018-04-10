@@ -34,7 +34,7 @@ integer,                 intent(out) :: ifail        !< Error code
 ! --- Local variables
 real*8  :: ps_x, ps_y, ps_s, ps_t, xjac
 real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
-integer :: ij_axis(2), i, iv, ms, mt, kf, kv, i_tries, n_tries, i_elm_axis_init, min_indexes(3)
+integer :: ij_axis(2), i, iv, ms, mt, kf, kv, i_tries, n_tries, i_elm_axis_init, min_indices(3)
 real*8  :: x(2), s, t, xerr, ferr, s_axis_init, t_axis_init
 logical :: found_axis
 real*8,  allocatable :: grad_psi(:,:,:)
@@ -114,22 +114,23 @@ enddo   ! --- end loop over elements
 
 do i_tries=1,  n_tries  ! --- start attempts to find the axis
 
-  min_indexes(:) = minloc(grad_psi, mask=include_pt)  ! --- find minimum of |grad_psi|
+  ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
+  min_indices(:) = minloc(grad_psi, mask=include_pt)  ! --- find minimum of |grad_psi|
   
-  if ((min_indexes(1) == 0) .and. (i_tries == 1)) then     ! --- if all elements are initially excluded, stop search and initialize values
+  if ((min_indices(1) == 0) .and. (i_tries == 1)) then     ! --- if all elements are initially excluded, stop search and initialize values
     found_axis = .false.
     s_axis_init     = 0.d0
     t_axis_init     = 0.d0
     i_elm_axis_init = 1
     exit
-  else if  (min_indexes(1) == 0) then   ! --- if all elements have been excluded, exit search
+  else if  (min_indices(1) == 0) then   ! --- if all elements have been excluded, exit search
     found_axis = .false.
     exit
   endif
   
-  i_elm_axis = min_indexes(1)    ! --- element with minimum |grad_psi|
-  s          = Xgauss(min_indexes(2)) 
-  t          = Xgauss(min_indexes(3))
+  i_elm_axis = min_indices(1)    ! --- element with minimum |grad_psi|
+  s          = Xgauss(min_indices(2)) 
+  t          = Xgauss(min_indices(3))
 
   ! --- Find \grad_psi = 0 in i_elm_axis with Newton's method
   call mnewtax(node_list,element_list,i_elm_axis,s,t,xerr,ferr,ifail)
@@ -163,6 +164,8 @@ call interp_RZ(node_list,element_list,i_elm_axis,s_axis,t_axis,R_axis,R_s,R_t,R_
 
 if (.not. found_axis) write(*,*) 'WARNING: axis was not properly found after ', n_tries, ' attempts'
 if (my_id .eq. 0) write(*,'(A,i6,4f14.8)') ' magnetic axis : ',i_elm_axis,R_axis,Z_axis,psi_axis
+
+deallocate(include_pt, grad_psi)
 
 return
 end subroutine find_axis

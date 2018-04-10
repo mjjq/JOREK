@@ -26,7 +26,7 @@ real*8  :: ps_s, ps_t, ps_x, ps_y, xjac
 real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: x(2), s, t, xerr, ferr, s_xp_init(2), t_xp_init(2)
 integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv, i_tries, n_tries
-integer :: i_elm_xp_init(2), min_indexes_lw(3), min_indexes_up(3)
+integer :: i_elm_xp_init(2), min_indices_lw(3), min_indices_up(3)
 logical :: found_upper, found_lower
 real*8,  allocatable :: grad_psi(:,:,:)
 logical, allocatable :: include_pt_lw(:,:,:), include_pt_up(:,:,:)
@@ -116,23 +116,23 @@ enddo    ! --- end loop over elements
 do i_tries=1,  n_tries  ! --- start attempts to find the x-points
 
   if(xcase .ne. 2) then  
-    
-    min_indexes_lw(:) = minloc(grad_psi, mask=include_pt_lw)
+    ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
+    min_indices_lw(:) = minloc(grad_psi, mask=include_pt_lw)
 
-    if ((min_indexes_lw(1) == 0) .and. (i_tries == 1)) then     ! --- if all elements are initially excluded, stop search and initialize values
+    if ((min_indices_lw(1) == 0) .and. (i_tries == 1)) then     ! --- if all elements are initially excluded, stop search and initialize values
       found_lower      = .false.
       s_xp_init(1)     = 0.d0
       t_xp_init(1)     = 0.d0
       i_elm_xp_init(1) = 1
       exit
-    else if  (min_indexes_lw(1) == 0) then   ! --- if all elements have been excluded, exit search
+    else if  (min_indices_lw(1) == 0) then   ! --- if all elements have been excluded, exit search
       found_lower = .false.
       exit
     endif
     
-    i_elm_xpoint(1) = min_indexes_lw(1)    ! --- element with minimum |grad_psi|
-    s = Xgauss(min_indexes_lw(2)) 
-    t = Xgauss(min_indexes_lw(3))
+    i_elm_xpoint(1) = min_indices_lw(1)    ! --- element with minimum |grad_psi|
+    s = Xgauss(min_indices_lw(2)) 
+    t = Xgauss(min_indices_lw(3))
     
     call mnewtax(node_list,element_list,i_elm_xpoint(1),s,t,xerr,ferr,ifail)
     if (ifail .ne. 0 ) then      ! --- if Newton's method failed, exclude element in next search
@@ -150,22 +150,23 @@ do i_tries=1,  n_tries  ! --- start attempts to find the x-points
   endif
 
   if(xcase .ne. 1) then
-    min_indexes_up(:) = minloc(grad_psi, mask=include_pt_up)
+    ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
+    min_indices_up(:) = minloc(grad_psi, mask=include_pt_up)
     
-    if ((min_indexes_up(1) == 0) .and. (i_tries == 1)) then     ! --- if all elements are initially excluded, stop search and initialize values
+    if ((min_indices_up(1) == 0) .and. (i_tries == 1)) then     ! --- if all elements are initially excluded, stop search and initialize values
       found_upper      = .false.
       s_xp_init(2)     = 0.d0                             
       t_xp_init(2)     = 0.d0
       i_elm_xp_init(2) = 1
       exit
-    else if  (min_indexes_up(1) == 0) then   ! --- if all elements have been excluded, exit search
+    else if  (min_indices_up(1) == 0) then   ! --- if all elements have been excluded, exit search
       found_upper     = .false.
       exit
     endif
 
-    i_elm_xpoint(2) = min_indexes_up(1)    ! --- element with minimum |grad_psi|
-    s = Xgauss(min_indexes_up(2)) 
-    t = Xgauss(min_indexes_up(3))
+    i_elm_xpoint(2) = min_indices_up(1)    ! --- element with minimum |grad_psi|
+    s = Xgauss(min_indices_up(2)) 
+    t = Xgauss(min_indices_up(3))
     
     call mnewtax(node_list,element_list,i_elm_xpoint(2),s,t,xerr,ferr,ifail)
     if (ifail .ne. 0 ) then       ! --- if Newton's method failed, exclude element in next search
@@ -224,8 +225,10 @@ if(xcase .ne. 1) then
   if (my_id .eq. 0) then
     write(*,'(A,i6,4f14.8)') ' Upper X-point : ',i_elm_xpoint(2),R_xpoint(2),Z_xpoint(2),psi_xpoint(2),sqrt(ps_x**2+ps_y**2)
   endif  
-  if ((.not. found_upper )) write(*,*) 'WARNING: lower X-point not properly found after ', n_tries, ' attempts'
+  if ((.not. found_upper )) write(*,*) 'WARNING: upper X-point not properly found after ', n_tries, ' attempts'
 endif
+
+deallocate(include_pt_lw,include_pt_up, grad_psi)
 
 return
 end subroutine find_xpoint

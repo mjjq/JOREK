@@ -151,14 +151,12 @@ module wsmp_module
   subroutine PWGSMP__initialize_solver(my_id_n, MPI_COMM_N)
 
     use mpi_mod
+    !$ use omp_lib
 
     integer, intent(in) :: my_id_n
     integer, intent(in) :: MPI_COMM_N
 
     integer             :: PWGSMP_nthrd
-#ifdef _OPENMP
-    integer, external   :: omp_get_num_threads
-#endif
 
     if (PWSMP__verbose) WRITE(*,*) "Entering PWGSMP__initialize_solver() ..."
 

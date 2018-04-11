@@ -421,9 +421,11 @@ contains
 
                             if (xcase2 .eq. 2) then
                                direction = -direction
-                            elseif ( (xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) then
-                               direction = -direction
-                            endif
+                            else if ((xcase2 .eq. 3).and.(node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).gt.R_xpoint(2))) then
+                              direction = -1.
+                            else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
+                              direction = +1.
+                            end if
 
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 

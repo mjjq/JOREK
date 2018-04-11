@@ -27,7 +27,7 @@ real*8  :: zTi,zTe,dTi_dpsi,dTe_dpsi,dTi_dz,dTe_dz,dTi_dpsi2,dTe_dpsi2,dTi_dz2,d
 real*8  :: dTi_dpsi_dz,dTe_dpsi_dz,dTi_dpsi3,dTe_dpsi3,dTi_dpsi_dz2,dTe_dpsi_dz2,dTi_dpsi2_dz,dTe_dpsi2_dz
 real*8  :: zFFprime, dFFprime_dpsi, dFFprime_dz, dFFprime_dpsi_dz,dFFprime_dpsi2,dFFprime_dz2
 
-if (keep_current_prof == .true.) then
+if (keep_current_prof) then
   psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
 
   call density(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,&

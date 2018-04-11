@@ -290,6 +290,16 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
 
       call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
                    R_out,Z_out,i_elm,s_out,t_out,ifail)
+
+      ! In case the shards are outside of the domain
+      if (ifail == 99 .or. ifail == 999) then
+        pellets(i)%spi_abl = 0.
+        cycle
+      else if (ifail /= 0) then
+        write(*,*) "Something Wrong in find_RZ!! my_id = ", my_id, i_elm, ifail
+        stop
+      end if
+
       call interp_PRZ(node_list,element_list,i_elm,[5,6],2,s_out,t_out,pellets(i)%spi_phi,&
                       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 

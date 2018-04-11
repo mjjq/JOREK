@@ -6,20 +6,16 @@ defined (USE_R3_INFO_OMP) )
 #endif
 
 SUBROUTINE r3_info_init ()
+  !$ use omp_lib
   
   ! Written : r. richter, sgi, oct 2006
   IMPLICIT NONE
   
 #include "r3_info.h"
-  
-  ! Functions
-  INTEGER (4) :: omp_get_thread_num, omp_get_num_threads
-  LOGICAL (4) :: omp_in_parallel
-  
-  
+
 #if defined (USE_R3_INFO_MIX)
   IF (omp_in_parallel()) &
-    STOP 'CALL r3_info_init () in parrallel region is not allowed'
+    STOP 'CALL r3_info_init () in parallel region is not allowed'
   
 !$OMP PARALLEL  
   r3_mytask = omp_get_thread_num()
@@ -30,7 +26,7 @@ SUBROUTINE r3_info_init ()
   
 #elif defined (USE_R3_INFO_OMP)
   IF (omp_in_parallel()) &
-    STOP 'CALL r3_info_init () in parrallel region is not allowed'
+    STOP 'CALL r3_info_init () in parallel region is not allowed'
   
 !$OMP PARALLEL
   CALL r3_info_init_x ()
@@ -49,6 +45,7 @@ SUBROUTINE r3_info_init_x ()
   ! Written : r. richter, sgi, oct 2006
   
   use mpi_mod
+  !$ use omp_lib
   IMPLICIT NONE
   
 #include "r3_info.h"
@@ -60,8 +57,7 @@ SUBROUTINE r3_info_init_x ()
   
   ! Functions
   
-  INTEGER (4)        :: my_pe, num_pes, omp_get_thread_num, &
-    omp_get_num_threads
+  INTEGER (4)        :: my_pe, num_pes
   
   
   ! Initialyze communication parameters
@@ -136,6 +132,7 @@ END SUBROUTINE r3_info_init_x
 !
 
 SUBROUTINE r3_info_print (mode, ind, text)
+  !$ use omp_lib
   
   ! Written : r. richter, sgi, oct 2006
   IMPLICIT NONE
@@ -145,10 +142,6 @@ SUBROUTINE r3_info_print (mode, ind, text)
   INTEGER (4)        :: mode, ind
   CHARACTER (len=*)  :: text
   
-  ! Functions
-  
-  LOGICAL (4)        :: omp_in_parallel
-   
 #if defined (USE_R3_INFO_OMP)
   IF (omp_in_parallel()) THEN
     CALL r3_info_print_x (mode, ind, text)
@@ -467,6 +460,7 @@ SUBROUTINE r3_info_summary ()
 
   ! Written : r. richter, sgi, oct 2006
 
+  !$ use omp_lib
   IMPLICIT NONE
 
 #include "r3_info.h"
@@ -479,9 +473,6 @@ SUBROUTINE r3_info_summary ()
     omp_cnts(-6:r3_info_mx,0:r3_npes-1)
   REAL (8)           :: omp_sncds(2,-6:r3_info_mx,0:r3_npes-1)
   
-  ! Functions
-
-  LOGICAL (4)        :: omp_in_parallel
 
 #if defined (USE_R3_INFO_OMP)
   IF (omp_in_parallel()) &

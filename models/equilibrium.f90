@@ -105,8 +105,7 @@ if (my_id == 0) then
     else
       psi_bnd = 0.d0
     endif
-  
-    if ( .not. xpoint ) then
+    if (.not. xpoint) then
       call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
       if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
         if ((psi_lim .lt. psi_bnd) .and. (n_limiter /= 0)) then

@@ -51,6 +51,7 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   USE murge_module, only : MURGE_SetGlobalRhs
   USE murge_module, only : MURGE_GetGlobalSolution
 #endif
+  !$ use omp_lib
   USE global_distributed_matrix
   USE mod_coicsr
   USE mpi_mod
@@ -74,7 +75,6 @@ SUBROUTINE solve_murge_all(n_cpu,my_id,index_min,index_max, i_tor,  gmres, &
   INTEGER                  :: i, k, j, ierr, m_loc
   INTEGER,ALLOCATABLE      :: counts(:), displacements(:)
   REAL*8, ALLOCATABLE      :: rhs_tmp(:)
-  integer, external :: omp_get_num_threads, omp_get_thread_num
   integer                  :: t0,t1,nb_periodes_max,nb_periodes_sec, nb_periods
   CHARACTER(LEN=20), PARAMETER :: FMT_TIMING = "(I2,A70,F7.2)"
 

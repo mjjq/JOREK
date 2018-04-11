@@ -47,7 +47,7 @@ if (my_id .eq. 0) then
 endif
 
 i_elm_axis = 1
-ij_axis    = 1 
+ij_axis    = 1
 psi_axis   = 1.d20
 grad_psi_min = 1.d20
 
@@ -60,9 +60,9 @@ do i=1,element_list%n_elements
 
       ps_s = 0.d0
       ps_t = 0.d0
-      R_s  = 0.d0 
+      R_s  = 0.d0
       Z_s  = 0.d0
-      R_t  = 0.d0 
+      R_t  = 0.d0
       Z_t  = 0.d0
       R    = 0.d0
       Z    = 0.d0
@@ -100,7 +100,7 @@ do i=1,element_list%n_elements
           ij_axis(1) = ms;         ij_axis(2)  = mt
         endif
       endif
-      
+
     enddo
   enddo
 

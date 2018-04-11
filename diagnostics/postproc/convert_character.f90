@@ -73,10 +73,16 @@ module convert_character
   
   
   !> Convert a real number into a character string (for filename generation).
-  character(len=7) function real2str(r) result(s)
+  character(len=15) function real2str(r,f) result(s)
     real*8, intent(in) :: r
+    character(len=*), optional, intent(in) :: f ! format
     
-    write(s,'(f7.3)') r
+    character(len=30) :: form
+    
+    form = '(f7.3)'
+    if ( present(f) ) form=f
+    
+    write(s,trim(form)) r
     s = adjustl(s)
     
   end function real2str

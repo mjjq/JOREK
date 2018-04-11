@@ -27,6 +27,9 @@ contains
     class(type_rng), intent(in) :: rng_a, rng_b
     logical, dimension(:), intent(in) :: use_a
     type(mix_rng) :: new_mix_rng
+#if (defined(__INTEL_COMPILER) && INTEL_COMPILER <= 1200)
+#warning "Intel compilers 12.0 and below are known to have trouble with Fortran 2003 polymorphic allocation, be careful."
+#endif
     allocate(new_mix_rng%rng_a, source=rng_a)
     allocate(new_mix_rng%rng_b, source=rng_b)
     new_mix_rng%use_a = use_a

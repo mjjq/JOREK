@@ -11,6 +11,7 @@ use global_distributed_matrix
 use mpi_mod
 use mod_clock
 use mod_coicsr
+!$ use omp_lib
 
 implicit none
 
@@ -23,8 +24,6 @@ real*8                   :: tsecond
 integer                  :: i, k, j, ierr, my_id, m_loc
 integer,allocatable      :: counts(:), displacements(:)
 
-integer, external :: omp_get_num_threads, omp_get_thread_num
-  
 !write(*,*) my_id,'*********************************'
 !write(*,*) my_id,'*  solve global matrix (PastiX) *'
 !write(*,*) my_id,'*********************************'

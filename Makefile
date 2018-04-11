@@ -111,6 +111,9 @@ most: jorek2_connection2 \
       rst_bin2hdf5 \
       rst_hdf52bin \
       jorek2_main
+# Make all object files we know of
+find_files = $(wildcard $(dir)/*.f90) $(wildcard $(dir)/*.c) $(wildcard $(dir)/*.f) $(wildcard $(dir)/*.cpp)
+objs: $(foreach file,$(foreach dir,$(DIRS), $(find_files)), $(OBJDIR)/$(notdir $(basename $(file))).o)
 
 # Special cases
 # Add here: Global includes (as the line below)

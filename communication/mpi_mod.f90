@@ -1,14 +1,22 @@
 module mpi_mod
 
-! --- For forchk
-#ifdef FORCHECK
+! backwards compatibility
+#ifdef LAHEY
+#define INCLUDE_MPIFH 1
+#endif
+
+#ifndef INCLUDE_MPIFH
+#ifdef MPI_F08
+  use mpi_f08
+#else
   use mpi
 #endif
-!
+#endif
+
   implicit none
 
-! --- For Lahey.
-#ifndef FORCHECK
+  ! --- If 
+#ifdef INCLUDE_MPIFH
   include 'mpif.h'
 #endif
 

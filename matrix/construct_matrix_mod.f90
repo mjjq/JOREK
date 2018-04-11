@@ -184,6 +184,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   use mpi_mod
   use mod_boundary_conditions, only : boundary_conditions
   use mod_locate_irn_jcn
+  !$ use omp_lib
   implicit none
   
 #include "r3_info.h"
@@ -222,7 +223,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer                           :: omp_nthreads, omp_tid
   integer                           :: node_out(n_vertex_max)
   integer                           :: i_father,INODE_FATHER, ios
-  integer, external                 :: omp_get_num_threads, omp_get_thread_num
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
   logical                           :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
   CHARACTER(LEN=128)                :: fname

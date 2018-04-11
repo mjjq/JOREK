@@ -8,6 +8,7 @@ subroutine grid_xpoint(node_list, element_list, n_flux, n_open, n_private, n_leg
 use constants
 use tr_module 
 use data_structure
+use mod_neighbours, only: update_neighbours
 
 implicit none
 
@@ -1508,5 +1509,6 @@ call tr_deallocate(ielm_flux,"ielm_flux",CAT_GRID)
 call tr_deallocate(keep,"keep",CAT_GRID)
 call tr_deallocate(k_cross,"k_cross",CAT_GRID)
 
+call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 return
 end subroutine grid_xpoint

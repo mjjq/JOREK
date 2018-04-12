@@ -1,5 +1,5 @@
 !> Presets input parameters to reasonable default values.
-!! 
+!!
 !! The model-specific routines initialise_parameters may overwrite
 !! these defaults according to the requirements of the respective
 !! model.
@@ -193,10 +193,10 @@ subroutine preset_parameters
   particlesource_gauss_psin = 0.9d0
   particlesource_gauss_sig  = 0.1d0
   
-  tauIC       = 0.d0
-  Wdia        = .false.
-  U_sheath    = .false.
+  U_sheath = .false.
   renormalise = .false.
+  tauIC = 0.d0
+  Wdia  = .false.
 
   zjz_0 =  0.1173d0;   T_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
   zjz_1 =  0.0d0   ;   T_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0
@@ -219,10 +219,10 @@ subroutine preset_parameters
   pellet_delta_psi  = 999.d0
   pellet_velocity_R = 0.d0
   pellet_velocity_Z = 0.d0
-  pellet_particles  = 0.d0  
+  pellet_particles  = 0.d0
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
   use_pellet        = .false.
- 
+  
   t_now       = 0.d0
   t_start     = 0.d0
   index_start = 0
@@ -310,12 +310,12 @@ subroutine preset_parameters
   Z_limiter = 0.d0
   
  !======================MB rotation profile
-  V_0=0.d0   
-  V_1=0.d0    
+  V_0=0.d0
+  V_1=0.d0
   V_coef=0.d0
   V_coef(1)=0.d0
   V_coef(4)=0.1
-  V_coef(5)=1. 
+  V_coef(5)=1.
 !======================MB
 
 !====================== Massive Gas Injection Parameters

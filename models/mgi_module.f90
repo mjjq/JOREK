@@ -107,6 +107,12 @@ module mgi_module
         mol_atom = 1.
         mass_gas = A_gas*MASS_PROTON
         c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(5.d0/3.d0))
+      case('Ne')
+        n_gas  = 3
+        A_gas  = 20.
+        mol_atom = 1.
+        mass_gas = A_gas*MASS_PROTON
+        c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(5.d0/3.d0))
       case default
         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
         write(*,*) '=> We assume the gas is D2.'
@@ -329,6 +335,8 @@ module mgi_module
               stop
             case('Ar')
               adas_suffix = '89_ar'
+            case('Ne')
+              adas_suffix = '96_ar'
             case default
               write(*,*) "Unrecognized species, disable flag_adas."
               adas_suffix = 'none'

@@ -209,13 +209,16 @@ integer :: i_elm, ifail
 
 integer :: i
 
-real*8, dimension(2) :: P, P_s, P_t, P_phi
+real*8, dimension(3) :: P, P_s, P_t, P_phi
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: s_out,t_out
 
-real*8  :: n_SI, T_eV, n_corr, T_corr
+real*8  :: n_SI, T_eV, n_corr, T_corr, n_imp_SI, ne_SI
 real*8  :: t_norm, spi_Vel_totref
 real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
+
+!   -Mean impurity ionization state and related quantities
+real*8     :: Z_imp, beta_imp, mu_imp
 
   spi_delta_phi   = 0.
   spi_Vel_R_tmp   = 0.
@@ -297,10 +300,11 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
         stop
       end if
 
-      call interp_PRZ(node_list,element_list,i_elm,[5,6],2,s_out,t_out,pellets(i)%spi_phi,&
+      call interp_PRZ(node_list,element_list,i_elm,[5,6,8],3,s_out,t_out,pellets(i)%spi_phi,&
                       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 
-      ! Now, P(1) represents mass density and P(2) represents temperature
+      ! Now, P(1) represents mass density and P(2) represents temperature, P(3)
+      ! is the impurity density
       ! Correct any possible negative values!
 
       !n_corr         = corr_neg_dens(P(1))
@@ -312,15 +316,15 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
       !T_eV           = T_corr / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
       
       n_SI           = P(1) * 1.d20 * central_density
-      if (n_SI < 0.) then
-        n_SI = 0.
-      end if
+      if (n_SI < 0.) n_SI = 0.
 
       T_eV           = P(2) / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
-      if (T_eV < 0.) then
-        T_eV = 0.
-      end if
+      if (T_eV < 0.) T_eV = 0.
 
+      ! This is only used for 501 as impurity density, 500 don't use this
+      ! variable
+      n_imp_SI           = P(3) * 1.d20 * central_density
+      if (n_imp_SI < 0.) n_imp_SI = 0.      
 
       if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
         write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
@@ -332,11 +336,42 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
       else if (flag_spi == 2) then
         select case ( trim(gas_type) )
           case('D2')
+            ! The scaling law is in gauss unit
             pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
                                  * ((n_SI*1.d-6)**0.455) * (T_eV**1.679)
           case('Ar')
+            if (flag_adas == .true.) then
+              ! As with element_matrix, mimick density as 1.d20
+              call imp_cor(1)%interp(density=20.,temperature=log10(T_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+            else
+              Z_imp = 10.
+            end if
+            mu_imp             = 1./20. ! Argon mass = 40 u and main ion (D) mass = 2 u
+            beta_imp           = mu_imp*Z_imp - 1.
+            ne_SI              = n_SI + beta_imp * n_imp_SI
+        
+            ! The scaling law is in gauss unit
             pellets(i)%spi_abl = 2.5d13 * ((pellets(i)%spi_radius*1.d2)**1.451) &
-                                 * ((n_SI*1.d-6)**0.451) * (T_eV**1.679)
+                                 * ((ne_SI*1.d-6)**0.451) * (T_eV**1.679)
+          ! Using general scaling law of Sergeev for Neon
+          case('Ne')
+            if (flag_adas == .true.) then
+              ! As with element_matrix, mimick density as 1.d20
+              call imp_cor(1)%interp(density=20.,temperature=log10(T_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+            else
+              Z_imp = 6.
+            end if
+            mu_imp             = 1./10. ! Neon mass = 20 u and main ion (D) mass = 2 u
+            beta_imp           = mu_imp*Z_imp - 1.
+            ne_SI              = n_SI + beta_imp * n_imp_SI
+
+            ! The scaling law is in gauss unit
+            ! The sublimation energy for Ne is 0.02 eV
+            pellets(i)%spi_abl = 1.94d14 * ((pellets(i)%spi_radius*1.d2)**1.44) &
+                                 * ((ne_SI*1.d-6)**0.45) * (T_eV**1.72)         &
+                                 * (0.02**(-0.16)) * (20.**(-0.28))             &
+                                 * (10.**(-0.56)) * ((2./3.)**0.28)
+
           case default
             write(*,*) '!! Gas type "', trim(gas_type), '" unknown !!'
             write(*,*) '=> We assume the gas is D2.'

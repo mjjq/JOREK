@@ -545,7 +545,7 @@ avg11(:)= avg11(:) / MU_zero / t_norm / float(n_plane)
 
 
 open(22,file='target_profile')
-write(22,'(A132)') "  Length          R               Z               angle           conductive_flux heat_flux       density         T              Vpar            particle_flux   parallel_flux"
+write(22,'(A132)') "  Length          R               Z               angle           KparT_normal    gam_nVT_normal  density         T              Vpar            nv_normal       gam_nvT"
 
 open(23,file='average_target_profile')
 write(23,'(A132)') '      time         step            Length         R               Z              nTV.n           KparT.n        Kperp.T        nvT_gam'

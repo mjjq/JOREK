@@ -1,6 +1,6 @@
 subroutine current(xpoint2,xcase2,R,Z,Z_xpoint,psi,psi_axis,psi_bnd,zjz)
 !-----------------------------------------------------------------------
-! Determine the current at a given position from the density,
+! Determine the current source amplitude at a given position from the density,
 ! temperature, and FF' input profiles
 !-----------------------------------------------------------------------
 

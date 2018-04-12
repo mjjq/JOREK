@@ -137,8 +137,9 @@ while [ $# -gt 0 ]; do
 	    if [ -e ${i}/settings.sh ]; then
   	      case=$(basename $i)
 	      source ${startdir}/testcases/$case/settings.sh
-	      printf "$OK_COL %-45s $NO_COL%s\n" "$case:" "$description"
-        fi
+	      printf "$OK_COL %-45s $NO_COL%s\n" "$case" "$description"
+              echo ""
+            fi
 	done
 	echo ""
 	exit 0
@@ -234,11 +235,11 @@ if [ "$runit" == "yes" ]; then
   cd $tmpdir                                              || exit 1
     
   # --- Some preparations
-  if [ -n "$ompthreads" ]; then
-    export OMP_NUM_THREADS=$ompthreads
-  fi
   if [ -n "$PRERUN" ]; then
     eval $PRERUN                                          || exit 1
+  fi
+  if [ -n "$ompthreads" ]; then
+    export OMP_NUM_THREADS=$ompthreads
   fi
 
   # --- Run the test case

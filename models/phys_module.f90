@@ -24,6 +24,8 @@ module phys_module
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
   real*8  :: central_density      !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
   real*8  :: central_mass         !< average mass (assumed to be constant in space for the moment)
+  real*8  :: sqrt_mu0_rho0        !< Normalization factor sqrt(mu_0 rho_0) calculated from input
+  real*8  :: sqrt_mu0_over_rho0   !< Normalization factor sqrt(mu_0/rho_0) calculated from input
   real*8  :: gamma                !< ratio of specific heat (=5/3)
   real*8  :: Q_bar                !< (model400)
   real*8  :: sigma                !< (model400)
@@ -39,7 +41,7 @@ module phys_module
   integer :: rst_format           !< 0 == olf format, 1 == new format for restart file.
   logical :: restart              !< Restart a code run from the restart file jorek_restart.rst?
   logical :: regrid               !< Re-generate the flux-aligned grid (does not work currently)?
-  logical :: import_equil         
+  logical :: import_equil
   logical :: xpoint               !< X-point geometry?
   logical :: bootstrap            !< Bootstrap-current?
   logical :: refinement           !< Use mesh refinement?
@@ -49,7 +51,7 @@ module phys_module
   logical :: grid_to_wall         !< extend the grid to a physical wall
   logical :: adaptive_time        !< requires no_mpi for Pastix library
   logical :: equil                !< compute equilibrium
-  logical :: bench_without_plot   !< .true. for benchmark (mesuring elapsed time without plot phases) 
+  logical :: bench_without_plot   !< .true. for benchmark (mesuring elapsed time without plot phases)
   logical :: gmres                !< Use iterative GMRES solver
   integer :: gmres_max_iter       !< Maximum number of GMRES iterations
   logical :: linear_run           !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
@@ -141,11 +143,8 @@ module phys_module
   real*8  :: time_evol_zeta    		!< Time evolution parameter zeta (see documentation)
 
   integer :: rst_hdf5
-
-#ifdef USE_HDF5
-  real*8  :: h5_diag_nbtime    		!< the HDF5 diagnostics are saved every "h5_diag_nbtime" Alven times
-  integer :: h5_nbsave_all     		!< number of HDF5 files written [or # of times the HDF5 saving has been called]
-#endif
+  integer :: rst_hdf5_version
+  integer, parameter :: rst_hdf5_version_supported = 1
   
   !> @name Machine name
   character(len=512) :: tokamak_device 	!< Name of the tokamak device we are simulating
@@ -406,7 +405,7 @@ module phys_module
   real*8, allocatable :: num_ffprime_y1(:) !< First derivatives of FFprime profile (\f$ dFF'/d\Psi_N \f$)
   real*8, allocatable :: num_ffprime_y2(:) !< Second derivatives of FFprime profile (\f$ d^2FF'/d\Psi_N^2 \f$)
 
-  !> --- Numerical input profiles for neoclassical coefficients 
+  !> --- Numerical input profiles for neoclassical coefficients
   logical             :: NEO         ! If (NEO == .t.) neoclassical effects are considered
   character(len=512)  :: neo_file    ! ASCII file the aki and amu profiles is read from.
   logical             :: num_neo_file    ! is set true if neo_file /= 'none'
@@ -417,7 +416,7 @@ module phys_module
   real*8  :: aki_neo_const, amu_neo_const !if ( (NEO) .and. (neo_file=='none')), aki_neo and amu_neo are constants
 
   !> @name RMP profiles
-  logical :: output_bnd_elements !< If .true., writes bnd nodes and bnd elements in files 'boundary_nodes.dat' and 'boundary_elements.dat' 
+  logical :: output_bnd_elements !< If .true., writes bnd nodes and bnd elements in files 'boundary_nodes.dat' and 'boundary_elements.dat'
   logical :: RMP_on            !< Activates RMPs on boundary if .true.
   character(len=512)  :: RMP_psi_cos_file  !< ASCII file the profiles of psi_RMP_cos and derivatives are read from
   character(len=512)  :: RMP_psi_sin_file  !< ASCII file the profiles of psi_RMP_sin and derivatives are read from
@@ -428,7 +427,7 @@ module phys_module
   real*8, allocatable :: dpsi_RMP_cos_dZ(:)
   real*8, allocatable :: psi_RMP_sin(:)
   real*8, allocatable :: dpsi_RMP_sin_dR(:)
-  real*8, allocatable :: dpsi_RMP_sin_dZ(:) 
+  real*8, allocatable :: dpsi_RMP_sin_dZ(:)
   integer             :: RMP_har_cos,RMP_har_sin ! Harmoics numbers for RMP-cos and RMP-sin(for ex. ntor=3, nperiod=2,RMP_har_cos=2, RMP_har_sin=3)
   integer, parameter  :: N_RMP_max = 10                  ! Maximum of RMP harmonics to take into account
   integer             :: Number_RMP_harmonics            ! Number_RMP_harmonics < N_RMP_max. If only one harmonic,  Number_RMP_harmonics=1, by default it's =1 in models/preset_parameters.f90 
@@ -448,8 +447,8 @@ module phys_module
   real*8, allocatable :: num_rot_x(:)    !< Radial positions of profile points (PsiN values)
   real*8, allocatable :: num_rot_y0(:)   !< Values of toroidal rotation profile
   real*8, allocatable :: num_rot_y1(:)   !< First derivatives of toroidal rotation profile with respect to $\Psi_{N}$
-  real*8, allocatable :: num_rot_y2(:)   !< Second derivatives of toroidal rotation profile with respect to $\Psi_{N}$ 
-  real*8, allocatable :: num_rot_y3(:)   !< Third derivatives of toroidal rotation profile with respect to $\Psi_{N}$ 
+  real*8, allocatable :: num_rot_y2(:)   !< Second derivatives of toroidal rotation profile with respect to $\Psi_{N}$
+  real*8, allocatable :: num_rot_y3(:)   !< Third derivatives of toroidal rotation profile with respect to $\Psi_{N}$
   logical             :: normalized_velocity_profile !< if true, reads the normalized velocity profile as flux function, else Omega_tor is read as flux function. 
   
   !> @name Global quantities determined in each time step
@@ -468,7 +467,9 @@ module phys_module
   
   !> @name Numerical parameters
   real*8              :: D_prof_neg     !< Diffusion coefficient in regions with negative density
+  real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if rho < D_prof_neg_thresh
   real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
   real*8              :: T_min          !< minimum temperature (limits on the temperature dependence of resistivity etc.
   integer             :: n_tor_fft_thresh !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
   integer*8           :: fftw_plan      !< Required for FFTW library
@@ -478,7 +479,7 @@ module phys_module
   !> @name ECCD current sources
   real*8  :: jecamp             ! parameter, not to be confused with jec_source in element_matrix.f90
   real*8  :: jec_pos1, jec_pos2, jec_pos3, jec_pos4
-  real*8  :: jec_width, jec_width2 
+  real*8  :: jec_width, jec_width2
   real*8  :: nu_jec_fast         ! 1/collision frequency
   real*8  :: nu_jec1_fast,nu_jec2_fast         ! 1/collision frequency
   real*8  :: mod_jec            ! extra parameters for ECCD

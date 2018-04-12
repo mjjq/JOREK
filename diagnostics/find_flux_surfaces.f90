@@ -51,12 +51,14 @@ do j=1, surface_list%n_psi
   surface_list%flux_surfaces(j)%t        = 0
 enddo
 
-if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+if (xpoint) then
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
-! if we have a symmetric double-null, force the single separatrix
-if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. 1.d-4) then
-  psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
-  psi_xpoint(2) = psi_xpoint(1)
+  ! if we have a symmetric double-null, force the single separatrix
+  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. 1.d-4) then
+    psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
+    psi_xpoint(2) = psi_xpoint(1)
+  endif
 endif
 
 

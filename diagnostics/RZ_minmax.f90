@@ -4,13 +4,15 @@ use data_structure
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+type (type_node_list), intent(in)    :: node_list
+type (type_element_list), intent(in) :: element_list
+integer, intent(in) :: i_elm
+real*8, intent(out) :: Rmin, Rmax, Zmin, Zmax
 
-real*8  :: Rmin, Rmax, Zmin, Zmax, psimin, psimax, psma, psmi, psmima, psim, psimr, psip, psipr
+real*8  :: psimin, psimax, psma, psmi, psmima, psim, psimr, psip, psipr
 real*8  :: aa, bb, cc, det, r, dummy
 real*8,external :: root
-integer :: i_elm, iv, n, im, n1, n2
+integer :: iv, n, im, n1, n2
 real*8  :: s,t,P,P_s,P_t,P_st,P_ss,P_tt, ss1, ss2, ss3
 integer :: k
 

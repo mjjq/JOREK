@@ -14,12 +14,12 @@ typedef RTree<ValueType, double, 2, double> MyTree;
 // Persistent tree
 static MyTree ElementTree;
 
-void PopulateTree(int nelm, double minx[], double miny[], double maxx[], double maxy[])
+void PopulateTree(int n, double minx[], double miny[], double maxx[], double maxy[])
 {
   int i;
   double min[2], max[2];
   ElementTree.RemoveAll();
-  for(i=0; i<nelm; i++)
+  for(i=0; i<n; i++)
   {
     min[0] = minx[i];
     min[1] = miny[i];
@@ -42,13 +42,13 @@ int NumElementsInRect(double minx, double miny, double maxx, double maxy)
 
 // Return element indices of elements contained within the rectangle in element_tree
 // i_elm must be allocated by the caller to size at least nelm.
-void ElementsInRect(double minx, double miny, double maxx, double maxy, int *ielm)
+int ElementsInRect(double minx, double miny, double maxx, double maxy, int *ielm)
 {
   double min[2], max[2];
   min[0] = minx;
   min[1] = miny;
   max[0] = maxx;
   max[1] = maxy;
-  ElementTree.Search(min, max, NULL, ielm);
+  return ElementTree.Search(min, max, NULL, ielm);
 }
 }

@@ -8,12 +8,13 @@
 # * see Wiki pages at:
 #       http://jorek.eu/wiki/doku.php?id=nrt
 # * The return code will be zero for a successful test, otherwise non-zero.
+# * Is used for automatic tests on the ITER bamboo platform.
 
 # --- define some Colors
 NO_COL="\x1b[0m"         # black
 ERROR_COL="\x1b[31;01m"  # bold red
 ERROR_COL="\033[0;31m"   # red
-OK_COL="\x1b[32;02m"     # green#
+OK_COL="\x1b[32;02m"     # green
 
 startdir=`readlink -f $(dirname $0)`
 codedir=`readlink -f ${startdir}/..` # Assumption about source code location
@@ -31,13 +32,32 @@ function printusage() {
     echo "   -h            Print this help information"
     echo "   -k            Keep temporary run directory"
     echo "   -j nthreads   Set the number of compile threads (default 1)"
+    echo "   -d            Compilation with debugging options (DEBUG=1)"
     echo "   -l            List available test cases using long format."
     echo "   -L            List available test cases without any description (short format)"
     echo "   -n            Do not compile (assume executables already exist)"
+    echo "   --diff        Print difference between results and reference (using Python + numpy)"
     echo "   -p            Prepare the case but do not run it"
     echo "   -t tempdir    Specify a temp directory used for the test run"
     echo "                 (default: random name in current directory)"
     echo ""
+}
+
+# --- Dummy initial run routine doing nothing (for cases where no initial run is needed)
+function dummy_initial_run() {
+  touch jorek_restart.h5
+}
+
+# --- Generic function for comparing test results (values of end.h5 versus jorek_restart.h5).
+#     This function may be used for all testcases, but it is also possible to define specific
+#     functions in the testcase settings.sh files.
+function compare_results_generic() {
+  threshold=$1
+  ln -s ${testcasedir}/end.h5 end.h5                                                 || exit 1
+  if [ "$printdiff" == "yes" ]; then
+    echo "Difference of 'values' between result and reference: `python $startdir/tools/maximum-difference.py` (threshold: $threshold)"
+  fi
+  h5diff -d $threshold jorek_restart.h5 end.h5 values                                || exit 1
 }
 
 if [ -z "$PRERUN" ]; then
@@ -73,8 +93,8 @@ fi
 
 # --- Verify that 'Makefile.inc' exist
 if [ ! -f "Makefile.inc" ]; then
-    printf "\n$ERROR_COL Please provide a Makefile.inc file.\n $NO_COL"
-    exit 1
+  printf "\n$ERROR_COL Please provide a Makefile.inc file.\n $NO_COL"
+  exit 1
 fi
 
 # --- Process command line options
@@ -83,8 +103,10 @@ compile="yes"           # (preset)
 keep="no"               # (preset)
 runit="yes"             # (preset)
 initialrun="no"         # (preset)
+printdiff="no"          # (preset)
+debugoptions=""         # (preset)
 if [ -z "$compilethreads" ]; then
-    compilethreads="1"  # (preset)
+    compilethreads="8"  # (preset)
 fi
 tmpdir="$startdir/tmp$$"
 
@@ -97,38 +119,44 @@ while [ $# -gt 0 ]; do
     elif [ "$option" == "-j" ]; then
 	compilethreads="$2"
 	shift 2
+    elif [ "$option" == "-d" ]; then
+	debugoptions="DEBUG=1"
+	shift
     elif [ "$option" == "-k" ]; then
 	keep="yes"
 	shift
+    elif [ "$option" == "--diff" ]; then
+        printdiff="yes"
+        shift
     elif [ "$option" == "-l" ]; then
 	echo ""
 	echo "Available test cases:"
         echo ""
 	cases=`ls -1 -d ${startdir}/testcases/*/ `
 	for i in $cases; do
-	    if [ -e ${i}/.version ]; then
+	    if [ -e ${i}/settings.sh ]; then
   	      case=$(basename $i)
 	      source ${startdir}/testcases/$case/settings.sh
-	      printf " %-45s %s\n" "$case" "$description"
+	      printf "$OK_COL %-45s $NO_COL%s\n" "$case" "$description"
               echo ""
             fi
 	done
 	echo ""
-	exit 1
+	exit 0
     elif [ "$option" == "-L" ]; then
 	cases=`ls -1 -d ${startdir}/testcases/*/ `
 	for i in $cases; do
-	    if [ -e ${i}/.version ]; then
+	    if [ -e ${i}/settings.sh ]; then
               case=$(basename $i)
               echo $case
-            fi
+        fi
 	done
 	exit 0
     elif [ "$option" == "-i" ]; then
         if [ "$firstoption" == "no" ]; then
-          echo "ERROR: When providing the option '-i', it needs to be the first option."
+          printf "$ERROR_COL ERROR: When providing the option '-i', it needs to be the first option. \n $NO_COL"
           printusage
-          exit -1
+          exit 1
         fi
 	initialrun="yes"
 	shift
@@ -153,7 +181,7 @@ while [ $# -gt 0 ]; do
 	fi
 	shift
     else
-	printf "$ERROR_COL ERROR: option $option NOT valid ! \n $NO_COL"
+	printf "$ERROR_COL ERROR: invalid option '$option'. \n $NO_COL"
 	printusage
 	exit 1
     fi
@@ -178,7 +206,9 @@ source $testcasedir/settings.sh
 if [ "$compile" == "yes" ]; then
   cd $codedir
   compilopt="-j $compilethreads"
+  make cleanall
   compile_jorek
+  make cleanall
   if [ $? -ne 0 ]; then
     printf "\n$ERROR_COL ERROR: Compilation failed.$NO_COL\n"
     exit 1
@@ -197,29 +227,25 @@ if [ "$runit" == "yes" ]; then
   # --- Copy files
   cd $testcasedir
   echo " requiredfiles=" $requiredfiles
-  cp $requiredfiles $tmpdir || exit 1
-  cp $binaries $tmpdir || exit 1
+  cp $requiredfiles $tmpdir                               || exit 1
+  cp $binaries $tmpdir                                    || exit 1
   if [ "$initialrun" == "yes" ] && [ "$binaries_initial" != "" ]; then
-    cp $binaries_initial $tmpdir || exit 1
+    cp $binaries_initial $tmpdir                          || exit 1
   fi
-  cd $tmpdir
+  cd $tmpdir                                              || exit 1
     
   # --- Some preparations
-  if [ -n "$ompthreads" ]; then
-    export OMP_NUM_THREADS=$ompthreads
-  fi
   if [ -n "$PRERUN" ]; then
     eval $PRERUN                                          || exit 1
   fi
-  cd $tmpdir                                              || exit 1
+  if [ -n "$ompthreads" ]; then
+    export OMP_NUM_THREADS=$ompthreads
+  fi
 
   # --- Run the test case
   if [ "$initialrun" == "no" ]; then
     cp ${testcasedir}/begin.h5 jorek_restart.h5           || exit 1
-    ./rst_hdf52bin < ./input                              || exit 1
     restart_run                                           || exit 1
-    
-    cd $tmpdir                                              || exit 1
     compare_results
     returncode=$?
     if [ $returncode -eq 0 ]; then
@@ -229,19 +255,14 @@ if [ "$runit" == "yes" ]; then
     fi
   else
     initial_run                                           || exit 1
-    ./rst_bin2hdf5 < ./input                              || exit 1
     cp jorek_restart.h5 ${testcasedir}/begin.h5           || exit 1
-    
-    sleep 3s # to avoid strange "tee: write error" problems
-    
     restart_run                                           || exit 1
-    ./rst_bin2hdf5 < ./input                              || exit 1
     cp jorek_restart.h5 ${testcasedir}/end.h5             || exit 1
   fi
 
   # --- Remove the temporary directory
   if [ ! "$keep" == "yes" ]; then
-      rm -rf $tmpdir
+      rm -rf "$tmpdir"
   fi
 fi
 

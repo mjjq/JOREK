@@ -49,3 +49,4 @@ RMP_psi*.txt
 RMP_start_time.dat
 shard_size.dat
 version.h
+/test_*

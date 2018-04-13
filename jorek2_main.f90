@@ -1010,9 +1010,8 @@ required = 0
        endif
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-       if (using_spi == .false.) then
-         call update_mgi(my_id,node_list,element_list)
-       else if (using_spi == .true. .and. t_now >= t_mgi) then
+       call total_neutrals(my_id,node_list,element_list)
+       if (using_spi .and. t_now >= t_mgi) then
          call update_spi(my_id,node_list,element_list)
        end if
 #endif

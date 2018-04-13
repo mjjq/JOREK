@@ -11,6 +11,8 @@ module mod_neutral_source
 
   contains 
 
+
+
   !> Calculates the neutral source
   subroutine neutral_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
                               A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,               &
@@ -137,8 +139,10 @@ module mod_neutral_source
     return
   end subroutine neutral_source
 
+
+
   !> Calculates the total number of neutral particles injected from the start of the simulation and for each timestep.
-  subroutine update_mgi(my_id,node_list,element_list)
+  subroutine total_neutrals(my_id,node_list,element_list)
 
     use data_structure
     use phys_module
@@ -160,12 +164,14 @@ module mod_neutral_source
     total_n_particles_inj_all = total_n_particles_inj_all + total_n_particles_inj*tstep*sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
 
     if (my_id .eq. 0) then
-      write(*,'(A,e14.6)') 'total neutrals particles injected per second =', total_n_particles_inj
-      write(*,'(A,e14.6)') 'total neutrals particles in the plasma       =', total_n_particles
+      write(*,'(A,e14.6)') 'total neutrals particles injected per second = '                       , total_n_particles_inj
+      write(*,'(A,e14.6)') 'total neutrals particles in the plasma       = '                       , total_n_particles
       write(*,'(A,e14.6)') 'total neutrals particles injected since the start of the simulation = ', total_n_particles_inj_all
     endif
 
-  end subroutine update_mgi
+  end subroutine total_neutrals
+
+
 
   !> Calculates the factorial of a number (which appears in gas dynamics formulae!)
   integer function factorial(n)

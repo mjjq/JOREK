@@ -336,7 +336,7 @@ module mgi_module
             case('Ar')
               adas_suffix = '89_ar'
             case('Ne')
-              adas_suffix = '96_ar'
+              adas_suffix = '96_ne'
             case default
               write(*,*) "Unrecognized species, disable flag_adas."
               adas_suffix = 'none'

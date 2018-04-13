@@ -121,8 +121,8 @@ function do_convert () {
   if ( [ ! -e $targetFile ] || [ "$file" -nt "$targetFile" ] ) \
     && [ `is_selected $stepnum` == "yes" ]; then
     
-    rm -f jorek_restart${SUFF}
-    ln -s $file jorek_restart${SUFF}
+    rm -f jorek_restart.${RST_TYPE}
+    ln -s $file jorek_restart.${RST_TYPE}
     for copyfile in $copyfiles; do
       cp $startDir/$copyfile .
     done
@@ -406,18 +406,15 @@ for i in `seq $nthreads`; do
 done
 
 
-H5=$(grep rst_hdf5 $infile | sed 's/^[!].*//g;s/^[^!].*= *\([01]\).*/\1/g')
-if [ -z "$H5" ]; then
-  H5=0
-fi
-if [ $H5 == 0 ]; then
-  SUFF=".rst"
-else
-  SUFF=".h5"
+
+. ${SCRIPTDIR}/detect_rst_type.sh
+if [ "$RST_TYPE" != "h5" ] && [ "$RST_TYPE" != "rst" ]; then
+  echo "ERROR: RST_TYPE not detected properly: $RST_TYPE"
+  stop
 fi
 # --- Parallel file conversion
 echo ""
-files=`ls $sourceDir/jorek?????${SUFF} 2> /dev/null`
+files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
 for file in $files; do
   if [ -f "$ERROR_STOP_FILE" ]; then cleanup; fi
   ithread=`get_available_thread`

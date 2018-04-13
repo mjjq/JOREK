@@ -20,7 +20,7 @@ integer :: ierr
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
-                rst_hdf5, keep_current_prof,                        &
+                rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 restart, regrid,                                    &
                 force_horizontal_Xline,                             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
@@ -65,9 +65,6 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
                 linear_run, export_for_nemec,                       &
-#ifdef USE_HDF5
-                save_diagnostics_HDF5,h5_diag_nbtime,               &
-#endif
                 output_bnd_elements,                                &
                 wall_file,                                          &
                 first_target_point, last_target_point,              &

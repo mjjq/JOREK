@@ -20,7 +20,7 @@ integer :: ierr, i, err
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
-                rst_hdf5, keep_current_prof,                        &
+                rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
                 restart, regrid, bootstrap,                         &
                 force_horizontal_Xline,                             &
@@ -85,9 +85,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 RMP_on, RMP_har_cos,RMP_har_sin,                    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
-#ifdef USE_HDF5
-                save_diagnostics_HDF5,h5_diag_nbtime,               &
-#endif
                 D_neutral_x, D_neutral_y, D_neutral_p,   	    &
                 mgi_sig, mgi_length, n_zero, ksi_ion,               &  
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &

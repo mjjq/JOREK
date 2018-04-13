@@ -43,19 +43,18 @@ CONTAINS
   ! NaN will be present in OUTVEC(i) only if both OUTVEC(i) and INVEC(i) are NaN
   ! If INVEC(i) is zero and OUTVEC(i) is not NaN, we keep OUTVEC(i)
   ! Otherwise we keep OUTVEC(i)
-  INTEGER FUNCTION KEEP_NON_NAN(INVEC, OUTVEC, LEN, TYPE)
+  SUBROUTINE KEEP_NON_NAN(INVEC, INOUTVEC, LEN, TYPE)
     INTEGER:: LEN, TYPE, i
-    REAL*8 :: INVEC(LEN), OUTVEC(LEN)
+    REAL*8 :: INVEC(LEN), INOUTVEC(LEN)
     DO i = 1, LEN
        if (.not. IS_NAN(INVEC(i))) then
-          if (IS_NAN(OUTVEC(i)) .or. INVEC(i) .ne. 0.d0) then
-             OUTVEC(i) = INVEC(i)
+          if (IS_NAN(INOUTVEC(i)) .or. INVEC(i) .ne. 0.d0) then
+             INOUTVEC(i) = INVEC(i)
           end if
        end if
     END DO
-    keep_non_nan=0
     return
-  END FUNCTION KEEP_NON_NAN
+  END SUBROUTINE KEEP_NON_NAN
 END MODULE CONSTRUCT_MATRIX_MURGE_TOOLS
 
 ! Data that are used in the assembly loop and function LOOP that
@@ -853,6 +852,7 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   USE murge_module, ONLY : murge_assembly_step, murge_elem_block_size, &
        murge_global_n, murge_global_n_prod, vertex_is_local
   use mod_boundary_conditions, only : boundary_conditions
+  !$ use omp_lib
   IMPLICIT NONE
 #include "r3_info.h"
   
@@ -936,7 +936,6 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   TYPE(THREAD_DATA_TYPE), ALLOCATABLE :: datas(:)
   INTEGER*8,              ALLOCATABLE :: threads(:)
   INTEGER :: ret, retval
-  INTEGER, EXTERNAL :: omp_get_num_threads, omp_get_thread_num
   CHARACTER(LEN=128) :: fname
   INTEGER :: MPI_KEEP_NON_NAN
 #ifdef MURGE_USE_SEQUENCE

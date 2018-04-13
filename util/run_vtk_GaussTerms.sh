@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
+
  itv=$1
  nvmax=$2
  idelta=$3
@@ -33,11 +35,18 @@
    fi
 
    vtkfile='jorekGauss'$itv'.vtk'
-   rstfile='jorek'$itv'.rst'
+   
+   # ''Intelligently'' determine whether to use .rst or .h5
+   . ${SCRIPTDIR}/detect_rst_type.sh
+   if [ "$RST_TYPE" != "h5" ] && [ "$RST_TYPE" != "rst" ]; then
+     echo "ERROR: RST_TYPE not detected properly: $RST_TYPE"
+     stop
+   fi
+   ext=$RST_TYPE
+   
+   echo $rstfile$ext
 
-   echo $rstfile
-
-   cp $rstfile jorek_restart.rst
+   cp $rstfile jorek_restart$ext
 
    ./jorek2vtk_GaussVortTerms < INPUT
 

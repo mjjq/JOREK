@@ -360,40 +360,37 @@ do ife = ife_min, ife_max
         endif
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+        !--- Calculate the neutral injection rate and the number of neutrals in the plasma
 
         source_neutral = 0.d0
 
-! Added to take into account the moving source
-     if (using_spi == .true.) then
+        if (using_spi == .true.) then
 
-       do spi_i=1, n_spi
+          do spi_i = 1, n_spi
 
-         spi_R_tmp   = pellets(spi_i)%spi_R
-         spi_Z_tmp   = pellets(spi_i)%spi_Z
-         spi_phi_tmp = pellets(spi_i)%spi_phi
-         spi_abl_tmp = pellets(spi_i)%spi_abl
+            spi_R_tmp   = pellets(spi_i)%spi_R
+            spi_Z_tmp   = pellets(spi_i)%spi_Z
+            spi_phi_tmp = pellets(spi_i)%spi_phi
+            spi_abl_tmp = pellets(spi_i)%spi_abl
 
-         ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+            ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
-         if (ng_radius < ng_radius_min) then
-           ng_radius = ng_radius_min
-         end if
+            if (ng_radius < ng_radius_min) then
+              ng_radius = ng_radius_min
+            end if
 
-         call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
-                       mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
-                       phi,source_neutral,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
-       end do
+            call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,     &
+                                  mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
+                                  phi,source_neutral,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+          end do
 
+        else
 
-     else
+          call neutral_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,        &
+                                A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
+                                JET_MGI,ASDEX_MGI,central_density,central_mass)
 
-       call neutral_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
-                     JET_MGI,ASDEX_MGI,central_density,central_mass)
-
-     end if
-
-        !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
+        end if
 
         local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_neutral * bigR * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
         local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi

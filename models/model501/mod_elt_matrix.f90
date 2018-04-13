@@ -764,6 +764,12 @@ do ms=1, n_gauss
 !   endif
      end if
 
+     ! This is to detect N/A
+     if (Lrad/=Lrad .or. dLrad_dT/=dLrad_dT .or. E_ion/=E_ion .or. dE_ion_dT/=dE_ion_dT) then
+       write(*,*) "WARNING: Lrad, dLrad_dT, E_ion/=E_ion, dE_ion_dT/=dE_ion_dT = ",&
+                            Lrad, dLrad_dT, E_ion, dE_ion_dT
+     end if
+
 
    !--------------------------------------------------------
    ! --- Source of neutrals from Massive Gas Injection (MGI)

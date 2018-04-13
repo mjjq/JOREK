@@ -741,7 +741,7 @@ do ms=1, n_gauss
      coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
-     if (flag_adas .and. r0 >= 0. .and. T0 >= 0.) then
+     if (flag_adas .and. r0 > 0. .and. T0 > 0.) then
 
        Lrad = 0.0
        dLrad_dT = 0.0
@@ -795,6 +795,13 @@ do ms=1, n_gauss
 
      end if
    
+     ! This is to detect N/A
+     if (Lrad/=Lrad .or. dLrad_dT/=dLrad_dT .or. E_ion/=E_ion .or. dE_ion_dT/=dE_ion_dT) then
+       write(*,*) "WARNING: Lrad, dLrad_dT, E_ion/=E_ion, dE_ion_dT/=dE_ion_dT = ",&
+                            Lrad, dLrad_dT, E_ion, dE_ion_dT
+     end if
+
+
    !--------------------------------------------------------
    ! --- Source of neutrals from Massive Gas Injection (MGI)
    !--------------------------------------------------------

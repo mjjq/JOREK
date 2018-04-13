@@ -340,9 +340,11 @@ real*8     :: Z_imp, beta_imp, mu_imp
             pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
                                  * ((n_SI*1.d-6)**0.455) * (T_eV**1.679)
           case('Ar')
-            if (flag_adas == .true.) then
+            if (flag_adas == .true. .and. T_eV >= 1.) then
               ! As with element_matrix, mimick density as 1.d20
               call imp_cor(1)%interp(density=20.,temperature=log10(T_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+            else if (flag_adas == .true. .and. T_eV < 1.) then
+              Z_imp = 0.
             else
               Z_imp = 10.
             end if
@@ -355,9 +357,11 @@ real*8     :: Z_imp, beta_imp, mu_imp
                                  * ((ne_SI*1.d-6)**0.451) * (T_eV**1.679)
           ! Using general scaling law of Sergeev for Neon
           case('Ne')
-            if (flag_adas == .true.) then
+            if (flag_adas == .true. .and. T_eV >= 1.) then
               ! As with element_matrix, mimick density as 1.d20
               call imp_cor(1)%interp(density=20.,temperature=log10(T_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+            else if (flag_adas == .true. .and. T_eV < 1.) then
+              Z_imp = 0.
             else
               Z_imp = 6.
             end if

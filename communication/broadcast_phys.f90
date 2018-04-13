@@ -201,7 +201,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(using_spi,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(flag_adas,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
-if (using_spi == .true.) then
+if (using_spi) then
   call MPI_PACK(pellets,            n_spi,dtype,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   write(*,*) "packing pellets: ", ierr
 end if
@@ -642,7 +642,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,using_spi,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,flag_adas,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
-if (using_spi == .true.) then
+if (using_spi) then
   if (.not. allocated(pellets)) then
     allocate (pellets(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for pellets
     if (err_alloc /= 0) then

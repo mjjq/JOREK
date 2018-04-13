@@ -303,7 +303,7 @@ endif
   if (using_spi) then
     if (n_spi >= 1) then
 
-      if (abl_history == .true. .and. index_start >= 1) then
+      if (abl_history .and. index_start >= 1) then
 
         if (allocated(xtime_spi_ablation)) &
           call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
@@ -357,7 +357,7 @@ endif
       deallocate (spi_radius_arr)
       deallocate (spi_abl_arr)
 
-      if (toroidal_rotation == .true.) then
+      if (toroidal_rotation) then
         read(21,err=999, end=999) mgi_phi_rotate 
       end if
 
@@ -1045,7 +1045,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   if (using_spi) then
     if (n_spi >= 1) then
 
-      if (abl_history == .true. .and. index_start >= 1) then
+      if (abl_history .and. index_start >= 1) then
 
         if (allocated(xtime_spi_ablation)) &
           call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
@@ -1099,7 +1099,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       deallocate (spi_radius_arr)
       deallocate (spi_abl_arr)
 
-      if (toroidal_rotation == .true.) then
+      if (toroidal_rotation) then
         call HDF5_real_reading(file_id,mgi_phi_rotate,"mgi_phi_rotate")
       end if
 

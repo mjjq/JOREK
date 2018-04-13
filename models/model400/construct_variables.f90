@@ -762,6 +762,9 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! -------------------------------------------------------------------
   if (i_plane .eq. 1) then
     ! --- Current source
+
+    current_source = 0.
+    if (keep_current_prof == .true.) &
     call current(xpoint2, xcase2, x_g,y_g, Z_xpoint, ps0,psi_axis,psi_bnd,current_source)
 
     ! --- Density source and heating

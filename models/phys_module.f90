@@ -464,9 +464,6 @@ module phys_module
 
   !> @name Taylor-Galerkin Stabilisation coefficients
   real*8              :: tgnum(n_var)
-
-  !> @name Flag to determine whether or not we keep current source term  
-  logical             :: keep_current_prof
   
   !> @name Numerical parameters
   real*8              :: D_prof_neg     !< Diffusion coefficient in regions with negative density

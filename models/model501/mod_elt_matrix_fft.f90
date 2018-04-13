@@ -656,7 +656,7 @@ do ms=1, n_gauss
 
      ! We estimate the effective charge by a test density 10^20/m^3
      ! Later maybe we should implement a iterative method
-     if (flag_adas == .true.) then
+     if (flag_adas) then
 
        if (allocated(imp_adas(1)%ionisation_energy)) then
 
@@ -741,7 +741,7 @@ do ms=1, n_gauss
      coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
-     if (flag_adas == .true. .and. r0 >= 0. .and. T0 >= 0.) then
+     if (flag_adas .and. r0 >= 0. .and. T0 >= 0.) then
 
        Lrad = 0.0
        dLrad_dT = 0.0
@@ -758,7 +758,7 @@ do ms=1, n_gauss
        dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
        dLrad_dT = dLrad_dT * dT0_corr_dT            
 
-     else if (flag_adas == .true.) then
+     else if (flag_adas) then
        Lrad = 0.
        dLrad_dT = 0.
 
@@ -806,9 +806,9 @@ do ms=1, n_gauss
 !    model, we should add more arguments to mgi_source       !
 !============================================================!
 
-     if (using_spi == .true.) then
+     if (using_spi) then
 
-       if (JET_MGI == .true. .or. ASDEX_MGI == .true.) then
+       if (JET_MGI .or. ASDEX_MGI) then
          write(*,*) "WARNING: Using SPI, disabling MGI settings"
          JET_MGI = .false.
          ASDEX_MGI = .false.

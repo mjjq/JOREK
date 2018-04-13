@@ -259,7 +259,7 @@ eta_T_0 = 0.0
 !spi_R = mgi_R
 !spi_Z = mgi_Z
 
-if (using_spi == .true.) then
+if (using_spi) then
 
   if (allocated(pellets)) then
     deallocate(pellets)
@@ -294,7 +294,7 @@ if (using_spi == .true.) then
 
         if (my_id == 0 .and. index_now == 0 .and. flag_spi_size == 1) then
           inquire(file="shard_size.dat", exist=ferr) ! Check if the file exist
-          if (ferr == .true.) then
+          if (ferr) then
             open(42,file="shard_size.dat",status="OLD",action="READ")
             read(42,'(g)')  shard_size(1:n_spi)
             close(42)

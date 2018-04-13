@@ -252,7 +252,7 @@ required = 0
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
   ! --- Read ADAS data and generate coronal equilibrium is needed
-  if (flag_adas == .true.) then
+  if (flag_adas) then
     call init_imp_adas(my_id)
   end if
 #endif
@@ -1020,7 +1020,7 @@ required = 0
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
        if (using_spi == .false.) then
          call update_mgi(my_id,node_list,element_list)
-       else if (using_spi == .true. .and. t_now >= t_mgi) then
+       else if (using_spi .and. t_now >= t_mgi) then
          call update_spi(my_id,node_list,element_list)
        end if
 #endif

@@ -171,7 +171,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     deallocate (spi_radius_arr)
     deallocate (spi_abl_arr)
 
-    if (toroidal_rotation == .true.) then
+    if (toroidal_rotation) then
       write(21) mgi_phi_rotate
     end if
 
@@ -616,7 +616,7 @@ end if
     deallocate (spi_radius_arr)
     deallocate (spi_abl_arr)
 
-    if (toroidal_rotation == .true.) then
+    if (toroidal_rotation) then
       call HDF5_real_saving(file_id,mgi_phi_rotate,"mgi_phi_rotate"//char(0))  
     end if
 

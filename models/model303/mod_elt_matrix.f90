@@ -211,7 +211,7 @@ enddo
 do ms=1, n_gauss
   do mt=1, n_gauss
 
-  if (keep_current_prof == .true.) then
+  if (keep_current_prof) then
 #ifdef altcs
     call current(xpoint2,xcase2,x_g(ms,mt),y_g(ms,mt),Z_xpoint,psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
 #else

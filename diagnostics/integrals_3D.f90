@@ -364,7 +364,7 @@ do ife = ife_min, ife_max
 
         source_neutral = 0.d0
 
-        if (using_spi == .true.) then
+        if (using_spi) then
 
           do spi_i = 1, n_spi
 

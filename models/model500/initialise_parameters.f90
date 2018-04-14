@@ -234,7 +234,7 @@ call derive_num_profiles(my_id)
 !spi_Z = mgi_Z
 
 
-if (using_spi == .true.) call init_spi(my_id)
+if (using_spi) call init_spi(my_id)
   
 return
 end subroutine initialise_parameters

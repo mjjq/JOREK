@@ -252,7 +252,7 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
     pellets(i)%spi_Z       = pellets(i)%spi_Z + pellets(i)%spi_Vel_Z * tstep / V_normalisation
     pellets(i)%spi_phi     = pellets(i)%spi_phi + spi_Vel_phi_tmp * tstep / V_normalisation
 
-    if (spi_tor_rot == .true.) then
+    if (spi_tor_rot) then
       pellets(i)%spi_phi     = pellets(i)%spi_phi + tor_frequency * 2. * PI * tstep / V_normalisation
     end if
 
@@ -348,7 +348,7 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
 
   end do
 
-  if (spi_tor_rot == .true.) then
+  if (spi_tor_rot) then
     mgi_phi_rotate  = mgi_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
   end if
 
@@ -444,7 +444,7 @@ real*8, allocatable :: shard_size(:)               !The shard size array
 
         if (my_id == 0 .and. index_now == 0 .and. flag_spi_size == 1) then
           inquire(file="shard_size.dat", exist=ferr) ! Check if the file exist
-          if (ferr == .true.) then
+          if (ferr) then
             open(42,file="shard_size.dat",status="OLD",action="READ")
             read(42,'(g)')  shard_size(1:n_spi)
             close(42)

@@ -700,9 +700,9 @@ do ms=1, n_gauss
 !    model, we should add more arguments to neutral_source   !
 !============================================================!
 
-     if (using_spi == .true.) then
+     if (using_spi) then
 
-       if (JET_MGI == .true. .or. ASDEX_MGI == .true.) then
+       if (JET_MGI .or. ASDEX_MGI) then
          write(*,*) "WARNING: Using SPI, disabling MGI settings"
          JET_MGI = .false.
          ASDEX_MGI = .false.

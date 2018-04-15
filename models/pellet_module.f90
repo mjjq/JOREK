@@ -351,7 +351,8 @@ real*8     :: Z_imp, beta_imp, mu_imp
             mu_imp             = 1./20. ! Argon mass = 40 u and main ion (D) mass = 2 u
             beta_imp           = mu_imp*Z_imp - 1.
             ne_SI              = n_SI + beta_imp * n_imp_SI
-        
+
+            if (ne_SI<0.) ne_SI = 0.        
             ! The scaling law is in gauss unit
             pellets(i)%spi_abl = 2.5d13 * ((pellets(i)%spi_radius*1.d2)**1.451) &
                                  * ((ne_SI*1.d-6)**0.451) * (T_eV**1.679)
@@ -369,6 +370,7 @@ real*8     :: Z_imp, beta_imp, mu_imp
             beta_imp           = mu_imp*Z_imp - 1.
             ne_SI              = n_SI + beta_imp * n_imp_SI
 
+            if (ne_SI<0.) ne_SI = 0.
             ! The scaling law is in gauss unit
             ! The sublimation energy for Ne is 0.02 eV
             pellets(i)%spi_abl = 1.94d14 * ((pellets(i)%spi_radius*1.d2)**1.44) &

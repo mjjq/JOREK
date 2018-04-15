@@ -859,7 +859,7 @@ enddo  ! n_elements
 
     Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
 
-    T_rad = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+    T_rad = corr_neg_temp(T_real8,(/1.d-2,1.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
     Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
 
@@ -968,7 +968,7 @@ if (SI_units) then
 
     Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
 
-    T_rad = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
+    T_rad = corr_neg_temp(T_real8,(/1.d-2,1.d-1/))/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
 
     Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
 

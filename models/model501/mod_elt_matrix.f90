@@ -768,6 +768,7 @@ do ms=1, n_gauss
      if (Lrad/=Lrad .or. dLrad_dT/=dLrad_dT .or. E_ion/=E_ion .or. dE_ion_dT/=dE_ion_dT) then
        write(*,*) "WARNING: Lrad, dLrad_dT, E_ion/=E_ion, dE_ion_dT/=dE_ion_dT = ",&
                             Lrad, dLrad_dT, E_ion, dE_ion_dT
+       stop
      end if
 
 
@@ -826,6 +827,7 @@ do ms=1, n_gauss
      ! This is to detect N/A
      if (source_mgi /= source_mgi) then
        write(*,*) "WARNING: source_mgi = ", source_mgi
+       stop
      end if     
 
      if (source_mgi .lt. 0.d0) then

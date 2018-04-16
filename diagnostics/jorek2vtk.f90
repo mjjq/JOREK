@@ -11,6 +11,7 @@ use mpi_mod
 use mod_bootstrap_functions
 use corr_neg
 use mod_import_restart
+use mod_vtk
 
 implicit none
 
@@ -816,12 +817,12 @@ do i=1,element_list%n_elements
                 central_density, pellet_particles, pellet_density, &
                 total_pellet_volume, local_source, source_volume)
 
-           scalars(inode,s_pellet+2) = local_source
+           scalars(inode,n_var+n_fluxes+n_neo+n_pellet) = local_source
         endif ! use_pellet
 
-        ! vectors(inode,:,1) = (/ - R * u0_y ,+ R * u0_x ,   0.d0 /)
-        ! vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot
-        ! vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * scalars(inode,7) * Btot, + R * u0_x - ps_x /R * scalars(inode,7) * Btot, 0.d0 /)
+        !	 vectors(inode,:,1) = (/ - R * u0_y ,	+ R * u0_x ,   0.d0 /)
+        !	 vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot
+        !	 vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * scalars(inode,7) * Btot, + R * u0_x - ps_x /R * scalars(inode,7) * Btot, 0.d0 /)
 
      endif ! i_tor from 1 to n_tor
 
@@ -830,7 +831,7 @@ enddo     ! nsub
 
 do j=1,nsub-1
    do k=1,nsub-1
-      ielm        = ielm+1
+      ielm	  = ielm+1
       ien(1,ielm) = inode - nsub*nsub + nsub*(j-1) + k-1       ! 0 based indices for VTK
       ien(2,ielm) = inode - nsub*nsub + nsub*(j  ) + k-1
       ien(3,ielm) = inode - nsub*nsub + nsub*(j  ) + k
@@ -1016,52 +1017,7 @@ endif ! SI_UNITS
 !--------------------------------------------------- write the binary VTK file
 etype = 9  ! for vtk_quad
 
-lf = char(10) ! line feed character
-
-#ifdef IBM_MACHINE
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream')
-#else
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
-#endif
-
-buffer = '# vtk DataFile Version 3.0'//lf    ; write(ivtk) trim(buffer)
-buffer = 'vtk output'//lf                    ; write(ivtk) trim(buffer)
-buffer = 'BINARY'//lf                        ; write(ivtk) trim(buffer)
-buffer = 'DATASET UNSTRUCTURED_GRID'//lf     ; write(ivtk) trim(buffer)
-
-! POINTS SECTION
-write(str1(1:12),'(i12)') nnos
-buffer = 'POINTS '//str1//'  float'//lf      ; write(ivtk) trim(buffer)
-write(ivtk) ((real(xyz(i,j),4),i=1,3),j=1,nnos)
-
-! CELLS SECTION
-write(str1(1:12),'(i12)') nel            ! number of elements (cells)
-write(str2(1:12),'(i12)') nel*(1+nnoel)  ! size of the following element list (nel*(nnoel+1))
-buffer = lf//'CELLS '//str1//' '//str2//lf  ; write(ivtk) trim(buffer)
-write(ivtk) (int(nnoel,4),(int(ien(i,j),4),i=1,nnoel),j=1,nel)
-
-! CELL_TYPES SECTION
-write(str1(1:12),'(i12)') nel   ! number of elements (cells)
-buffer = lf//'CELL_TYPES'//str1//lf         ; write(ivtk) trim(buffer)
-write(ivtk) (int(etype,4),i=1,nel)
-
-! POINT_DATA SECTION
-write(str1(1:12),'(i12)') nnos
-buffer = lf//'POINT_DATA '//str1            ; write(ivtk) trim(buffer)
-
-do i_var =1, n_scalars
-  buffer = lf//'SCALARS '//scalar_names(i_var)//' float'//lf ; write(ivtk) trim(buffer)
-  buffer = 'LOOKUP_TABLE default'//lf
-  write(ivtk) trim(buffer)
-  write(ivtk) (real(scalars(i,i_var),4),i=1,nnos)
-enddo
-
-do i_var =1, n_vectors
-  buffer = lf//lf//'VECTORS '//vector_names(i_var)//' float'//lf ; write(ivtk) trim(buffer)
-  write(ivtk) ((real(vectors(j,i,i_var),4),i=1,3),j=1,nnos)
-enddo
-
-close(ivtk)
+call write_vtk('jorek_tmp.vtk',xyz,ien,etype,scalar_names,scalars,vector_names,vectors)
 
 write(*,*) 'done.'
 

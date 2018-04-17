@@ -10,6 +10,7 @@ use phys_module
 use pellet_module
 use mpi_mod
 use domains
+!$ use omp_lib
 #if (JOREK_MODEL == 500)
 use mgi_module
 #endif
@@ -51,10 +52,6 @@ real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0
-
-#ifdef _OPENMP
-integer,external :: omp_get_num_threads, omp_get_thread_num
-#endif
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 
@@ -354,8 +351,7 @@ do ife = ife_min, ife_max
 
 #endif
 
-!        if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
-        if (( ps0 .lt. psi_limit) .and. (y_g(ms,mt) .gt. Z_xpoint(1)) ) then
+        if (in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis)) then
 
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi

@@ -33,8 +33,8 @@ jorek2_strikes
 enbiggen
 jordel
 jorpol
-jorek2vtk
 jorek2_stan
+jorek2vtk*
 jorek2_fieldlines_vtk
 jorek2vtk_3d
 jorek2_diagno
@@ -62,3 +62,4 @@ coil_field.dat
 RMP_psi*.txt
 RMP_start_time.dat
 non_regression_tests_*
+/test_*

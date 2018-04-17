@@ -223,7 +223,8 @@ enddo
 do ms=1, n_gauss
   do mt=1, n_gauss
 
-    call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    if (keep_current_prof) &
+      call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
     call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
 
 ! Source of parallel velocity
@@ -551,13 +552,14 @@ do ms=1, n_gauss
 
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
-
+     
+     ! --- Increase diffusivity if very small density/temperature
      if (xpoint2) then
-       if (r0 .lt. 0.d0)  then
-         D_prof  = D_prof_neg  ! JET : 1.d-4; ITER :  4.d-3
+       if (r0 .lt. D_prof_neg_thresh)  then
+         D_prof  = D_prof_neg
        endif
-       if (T0 .lt. 0.d0) then
-         ZK_prof = ZK_prof_neg  ! JET : 1.d-3; ITER : 2.d-2 
+       if (T0 .lt. ZK_prof_neg_thresh) then
+         ZK_prof = ZK_prof_neg
        endif
      endif
      

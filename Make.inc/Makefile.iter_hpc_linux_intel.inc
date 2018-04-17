@@ -4,7 +4,9 @@
 MODEL = model199
 
 # Fortran compiler 
-FC               = mpif90 #-f90=ifort
+FC               = mpiifort -mt_mpi
+CC               = mpiicc   -mt_mpi
+CXX              = mpiicpc  -mt_mpi
 FFLAGS_OMP       = -openmp 
 FFLAGS           = -r8 -i4
 FFLAGS          := $(FFLAGS) -fpp
@@ -12,8 +14,6 @@ FFLAGS          := $(FFLAGS) -msse4.2 -align
 FFLAGS          := $(FFLAGS) -O2 -mcmodel=medium -DUSE_BLOCK
 #FFLAGS          := $(FFLAGS) -O2 -mcmodel=medium -DUSE_BLOCK -Dfullmhd 
 
-CC = mpicc
-CXX = mpicxx
 
 # --- DEBUGGING
 #   --- Debug symbols for debuggers
@@ -36,6 +36,7 @@ FFLAGS_NO_OMP     = -fpp -r8 -i4 -O2 -msse4.2 -align
 # Solvers dependencies
 USE_HIPS         = 0
 USE_PASTIX       = 1
+USE_BLOCK        = 1
 USE_PASTIX_MURGE = 0
 USE_MUMPS        = 1
 USE_FFTW         = 1

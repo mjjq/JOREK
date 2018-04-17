@@ -228,9 +228,27 @@ contains
                          u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
                          u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
 
-                         direction = + ps0_x / abs(ps0_x)             ! temporary solution for lower x-point only
-                         if (xcase2 .eq. 2) direction = -direction
-                         if ( (xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
+                         alpha = ((Z_axis) - Z_xpoint(1))/(R_axis - R_xpoint(1))
+
+                         R_inside = alpha*(node_list%node(inode)%x(1,2)-Z_xpoint(1)) &
+                              + node_list%node(inode)%x(1,1) + alpha**2 * R_xpoint(1)
+                         R_inside = R_inside / (1.d0 + alpha**2)
+                         Z_inside = alpha * (R_inside - R_xpoint(1)) + Z_xpoint(1)
+                         
+                         R_inside = min(max(R_inside,R_xpoint(1)),R_axis)
+                         Z_inside = min(max(Z_inside,Z_xpoint(1)),Z_axis)
+                         
+                         direction = ps0_s * (  (node_list%node(inode)%x(1,1)-R_inside)*Z_s &
+                              - (node_list%node(inode)%x(1,2)-Z_inside)*R_s)
+                         direction = direction / abs(direction)
+                         
+                         if (xcase2 .eq. 2) then
+                           direction = -direction
+                         else if ((xcase2 .eq. 3).and.(node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).gt.R_xpoint(2))) then
+                           direction = -1.
+                         else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
+                           direction = +1.
+                         end if
 
                          grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 

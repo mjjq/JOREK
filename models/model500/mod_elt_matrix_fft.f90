@@ -117,10 +117,6 @@ real*8     :: coef_rad_1                                      ! Radiation rate p
 !   -Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 
-! Parameters related to negative temperature handling
-real*8     :: T_neg, delta_neg
-!===============================
-
 real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer*8  :: plan
@@ -262,9 +258,10 @@ enddo
 do ms=1, n_gauss
   do mt=1, n_gauss
 
-       call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    if (keep_current_prof) &
+      call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
 
-      call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
+    call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
 
        !current_source(ms,mt) = 0.d0
     
@@ -562,14 +559,15 @@ do ms=1, n_gauss
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
 
-     T_neg = 1.d-5
-     delta_neg = 1.d-4
-
-     ZK_prof = ZK_prof * (1+100*(0.5+0.5*tanh(-(T0-T_neg)/delta_neg)))
-
-     !if (T0 .lt. T_neg) then
-     !heat_source = 1.d-6
-     !endif    
+     ! --- Increase diffusivity if very small density/temperature
+     if (xpoint2) then
+       if (r0 .lt. D_prof_neg_thresh)  then
+         D_prof  = D_prof_neg
+       endif
+       if (T0 .lt. ZK_prof_neg_thresh) then
+         ZK_prof = ZK_prof_neg
+       endif
+     endif
 
      phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
      delta_phi = 2.d0*PI/float(n_plane) / float(n_period)

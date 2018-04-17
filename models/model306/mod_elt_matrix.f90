@@ -239,12 +239,14 @@ enddo
 !!$endif
 do ms=1, n_gauss
   do mt=1, n_gauss
- 
+
+  if (keep_current_prof) then
 #ifdef altcs
-  call current(xpoint2,xcase2,x_g(ms,mt),y_g(ms,mt),Z_xpoint,psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    call current(xpoint2,xcase2,x_g(ms,mt),y_g(ms,mt),Z_xpoint,psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
 #else
-  call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint,eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint,eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
 #endif
+  end if
 ! eccurrent_source is defined in this module, below.
   call eccurrent_source(x_g(ms,mt),y_g(ms,mt),ec_source(ms,mt))
   call sources(xpoint2,xcase2,y_g(ms,mt),Z_xpoint,eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))

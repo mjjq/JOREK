@@ -11,7 +11,7 @@ contains
        &                             n_local_elms, node_list)
 
     ! --- Modules
-    use mod_parameters,               only : n_tor, jorek_model, n_vertex_max
+    use mod_parameters,           only : n_tor, jorek_model, n_vertex_max
     use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh
     USE data_structure,           only : type_element, type_node, type_node_list
     use mod_boundary_matrix_open, only : boundary_matrix_open
@@ -19,6 +19,7 @@ contains
     use mod_elt_matrix_fft,       only : element_matrix_fft
     use mod_locate_irn_jcn
     use mod_global_matrix_structure
+    use mpi_mod
 
     ! --- Routine parameters
     type (type_element),              intent(in)     :: element
@@ -44,6 +45,17 @@ contains
     ! -- internal parameters
     integer iv, iv2, inode1, inode2, i, j
     integer vertex(2), direction(2)
+
+#ifdef COMPARE_ELEMENT_MATRIX
+    integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
+    integer  :: my_id, rank, ierr
+    logical  :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
+
+    ! --- Determine ID of each MPI proc
+    call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
+    my_id = rank
+#endif
+
 
     ! --- Call element_matrix
     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
@@ -184,6 +196,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   use mpi_mod
   use mod_boundary_conditions, only : boundary_conditions
   use mod_locate_irn_jcn
+  !$ use omp_lib
   implicit none
   
 #include "r3_info.h"
@@ -222,7 +235,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer                           :: omp_nthreads, omp_tid
   integer                           :: node_out(n_vertex_max)
   integer                           :: i_father,INODE_FATHER, ios
-  integer, external                 :: omp_get_num_threads, omp_get_thread_num
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
   logical                           :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
   CHARACTER(LEN=128)                :: fname
@@ -511,37 +523,37 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   if ( difference_found ) stop
 #endif
   
-  
-  
-  contains
-  
-  
-  
+
+end subroutine construct_matrix
+
+
   !> Helps to interprete an element matrix index
   subroutine  decrypt_index(ind, ivertex, iorder, ivar, itor)
-  
+
+    use mod_parameters,  only : n_tor, jorek_model, n_vertex_max, n_var, n_order 
+
     integer, intent(in)  :: ind     !< Element matrix index
     integer, intent(out) :: ivertex !< Vertex index
     integer, intent(out) :: iorder  !< Degree of freedom
     integer, intent(out) :: ivar    !< Variable index
     integer, intent(out) :: itor    !< Toroidal mode index
-    
+
     integer :: ind2
-    
+
     ind2 = ind
-    
+
     ivertex = ( ind2 - 1 ) / ( n_tor*n_var*(n_order+1) ) + 1
     ind2 = ind2 - ( ivertex - 1 ) * ( n_tor*n_var*(n_order+1) )
-    
+
     iorder = ( ind2 - 1 ) / ( n_tor*n_var ) + 1
     ind2 = ind2 - ( iorder - 1 ) * ( n_tor*n_var )
-    
+
     ivar = ( ind2 - 1 ) / ( n_tor ) + 1
     ind2 = ind2 - ( ivar - 1 ) * ( n_tor )
-    
+
     itor = ind2
-    
+
   end subroutine decrypt_index
 
-end subroutine construct_matrix
+
 end module construct_matrix_mod

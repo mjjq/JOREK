@@ -190,8 +190,10 @@ subroutine preset_parameters
   particlesource_gauss_psin = 0.9d0
   particlesource_gauss_sig  = 0.1d0
   
-  tauIC = 0.d0
-  Wdia  = .false.
+  tauIC       = 0.d0
+  Wdia        = .false.
+  U_sheath    = .false.
+  renormalise = .false.
 
   zjz_0 =  0.1173d0;   T_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
   zjz_1 =  0.0d0   ;   T_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0
@@ -217,14 +219,18 @@ subroutine preset_parameters
   pellet_particles  = 0.d0
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
   use_pellet        = .false.
-  
+
   t_now       = 0.d0
   t_start     = 0.d0
   index_start = 0
 
   nout = 9999999
 
-  rst_hdf5 = 0   ! =0,restart with binary files; =1, with HDF5 files
+  rst_hdf5 = 1   ! =0,restart with binary files; =1, with HDF5 files
+  !> Write out newest HDF5 restart file version this code supports, writing
+  !! out an older version is possible by changing rst_hdf5_verison via the
+  !! namelist input file
+  rst_hdf5_version = rst_hdf5_version_supported
 
   tokamak_device = 'none'
 
@@ -246,10 +252,6 @@ subroutine preset_parameters
   linear_run         = .false.
   
   export_for_nemec      = .false.
-#ifdef USE_HDF5
-  save_diagnostics_HDF5 = .false.
-  h5_diag_nbtime        = 10.d0
-#endif
   
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
@@ -259,6 +261,8 @@ subroutine preset_parameters
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
 
   tgnum              = 0.d0                 ! Taylor-Galerkin Stabilisation coefficients (0.d0 == TG not used)
+
+  keep_current_prof  = .true.               ! Keep the current_source term
   
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver

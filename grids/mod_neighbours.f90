@@ -197,12 +197,13 @@ end subroutine coord_in_neighbour
 
 
 
-subroutine update_neighbours(node_list, element_list)
-use mod_element_rtree, only: initialized, populate_element_rtree, nearby_elements
+subroutine update_neighbours(node_list, element_list, force_rtree_initialize)
+use mod_element_rtree, only: rtree_initialized, populate_element_rtree, nearby_elements
 implicit none
 
 type (type_node_list), intent(in)       :: node_list
 type (type_element_list), intent(inout) :: element_list
+logical, intent(in), optional           :: force_rtree_initialize !< default false
 
 type (type_element)      :: elm_i, elm_j
 integer                  :: inb_i, inb_j, i, j, k
@@ -213,7 +214,11 @@ integer, dimension(:), allocatable :: i_nearby
 
 ! Be careful here. If the grid changes the information will be incorrect and you
 ! need to manually call populate_element_rtree
-if (.not. initialized) call populate_element_rtree(node_list, element_list)
+if (present(force_rtree_initialize)) then
+  if (force_rtree_initialize) call populate_element_rtree(node_list, element_list)
+else if (.not. rtree_initialized) then
+  call populate_element_rtree(node_list, element_list)
+end if
 
 !$omp parallel default(none) private(i,k,j,i_node1,i_node2,inb_i,inb_j,i_nearby) shared(element_list,node_list)
 
@@ -231,9 +236,6 @@ do i=1, element_list%n_elements
   enddo
 enddo
 !$omp end do
-
-! first one must be complete before second one can start
-!$omp barrier
 
 ! Force search for element crossings over the axis
 !$omp do

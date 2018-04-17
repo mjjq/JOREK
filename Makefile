@@ -32,9 +32,9 @@ cleandep:
 	-@find . -name '*.d' -delete 2>/dev/null
 test: particle_test nrt_unit
 particle_test:
-	+./util/test_dir.sh particles/tests
+	+./util/fruit.sh particles/tests
 nrt_unit:
-	+./util/test_dir.sh non_regression_tests/unit_tests
+	+./util/fruit.sh non_regression_tests/unit_tests
 doc docs: media/tests/all_pushers/penning.png media/tests/openadas/charge_state_time.png
 	-@rm -r doc/ # workaround for FORD bug
 	ford jorek.md --no-search $(INCLUDES)
@@ -131,6 +131,9 @@ most: jorek2_connection2 \
       rst_bin2hdf5 \
       rst_hdf52bin \
       jorek2_main
+# Make all object files we know of
+find_files = $(wildcard $(dir)/*.f90) $(wildcard $(dir)/*.c) $(wildcard $(dir)/*.f) $(wildcard $(dir)/*.cpp)
+objs: $(foreach file,$(foreach dir,$(DIRS), $(find_files)), $(OBJDIR)/$(notdir $(basename $(file))).o)
 
 # Special cases
 # Add here: Global includes (as the line below)

@@ -9,7 +9,7 @@ MODDIR := .mod
 OBJDIR := .obj
 DEPDIR := .dep
 $(shell mkdir -p $(MODDIR) $(OBJDIR) $(DEPDIR) >/dev/null)
-INCLUDES+=-I$(MODDIR)
+INCLUDES += -I$(MODDIR)
 
 # Detect the compiler vendors (sort to remove duplicates)
 F_COMPILER_FAMILY :=$(sort $(shell $(FC) --version | grep -oim 1 'intel\|gcc\|gnu' | tr A-Z a-z | sed 's/gcc/gnu/'))
@@ -79,6 +79,7 @@ ifeq ($(COMPILER_FAMILY), intel)
     FLAGS += -ftrapuv
     FLAGS += -debug all -debug-parameters
     FLAGS += -fstack-security-check
+    FLAGS += -fpe0
     FFLAGS += -check all,noarg_temp_created
     FFLAGS += -check bounds
     FFLAGS += -check uninit
@@ -115,7 +116,7 @@ $(OBJDIR)/%.o:: $(1)%.c
 	$$(CC) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.cpp
-	$$(CXX) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
+	$$(CXX) $$(FLAGS) $$(CXXFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE
@@ -161,6 +162,10 @@ ifeq (1, $(USE_PASTIX))
   ifeq (0, $(USE_PASTIX_MURGE))
     LIBS     := $(LIBS) $(LIB_PASTIX) $(LIB_PASTIX_BLAS)
     INCLUDES := $(INCLUDES) $(INC_PASTIX)
+  endif
+  PASTIX_MEMORY_USAGE?=1
+  ifeq (1, $(PASTIX_MEMORY_USAGE))
+    DEFINES := $(DEFINES) -DMEMORY_USAGE
   endif
 endif
 

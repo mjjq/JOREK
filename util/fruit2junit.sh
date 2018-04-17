@@ -87,7 +87,7 @@ content=''
 
 # Loop through tests
 for (( i=0; i<${#order}; i++ )); do
-	if [ ${order:$i:1} == "F" ]; then # Failure
+	if [ "${order:$i:1}" == "F" ]; then # Failure
 	    data=($(echo -e "$failed_message" | awk "NR==$l" | awk -vRS="]" -vFS="[" '{print $ 2}'))
 	    content="$content  <testcase name=\"${data[@]:3}\" classname=\"FRUIT\">\n    <failure message=\"Assertion Failed\" type=\"failure\">Reference value = ${data[1]}\nPresent value = ${data[2]}</failure>\n  </testcase>\n"
 	    l=$(($l + 1))

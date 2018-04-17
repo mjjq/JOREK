@@ -161,9 +161,11 @@ subroutine preset_parameters
   D_perp(1)  = 1.d-5; D_perp(2) = 0.d0; D_perp(3)= 0.d0; D_perp(4)= 99.d0; D_perp(5) = 99.d0
   D_par      = 0.d0
   
-  D_prof_neg  = 1.d-5
-  ZK_prof_neg = 1.d-5
-  T_min       = 0.0
+  D_prof_neg         = 1.d-5
+  D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+  ZK_prof_neg        = 1.d-5
+  ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+  T_min              = 0.0
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
@@ -190,10 +192,10 @@ subroutine preset_parameters
   particlesource_gauss_psin = 0.9d0
   particlesource_gauss_sig  = 0.1d0
   
-  tauIC       = 0.d0
-  Wdia        = .false.
-  U_sheath    = .false.
+  U_sheath = .false.
   renormalise = .false.
+  tauIC = 0.d0
+  Wdia  = .false.
 
   zjz_0 =  0.1173d0;   T_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
   zjz_1 =  0.0d0   ;   T_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0
@@ -219,7 +221,7 @@ subroutine preset_parameters
   pellet_particles  = 0.d0
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
   use_pellet        = .false.
-
+  
   t_now       = 0.d0
   t_start     = 0.d0
   index_start = 0

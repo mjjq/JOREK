@@ -26,6 +26,4 @@ module constants
   integer, parameter :: UPPER_XPOINT          = 2
   integer, parameter :: DOUBLE_NULL           = 3
 
-  !> @name Time precision
-  real*8,  parameter :: TICK             = 1d-12                    !< Time precision for events [s]
 end module constants

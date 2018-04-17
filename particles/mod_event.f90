@@ -3,7 +3,6 @@
 !> about when to run, and an action they should run.
 module mod_event
 use mod_particle_sim
-use constants, only: tick
 use mod_event_timestep
 implicit none
 private
@@ -11,6 +10,8 @@ public action, stop_action, cycle_time_action
 public event, with, next_event_at, check_and_fix_timesteps
 public mpi_minmeanmax
 
+!> @name Time precision
+real*8,  parameter :: TICK             = 1d-12                    !< Time precision for events [s]
 
 !> Action abstract type, representing anything that can be done to a simulation
 type, abstract :: action

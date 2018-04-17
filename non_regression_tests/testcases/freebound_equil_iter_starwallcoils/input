@@ -13,14 +13,14 @@
  wall_resistivity   = 8e-6
  
  amix                 = 0.25d0
- amix_freeb           = 0.65d0
+ amix_freeb           = 0.6d0
  FB_Ip_position       = 0.35d0
  FB_Ip_integral       = 0.02d0
  current_ref          = 12.d6
  FB_Zaxis_position    = 10.d0
  Z_axis_ref           = 0.603d0
  Zaxis_find_limit     = 1.5d0
- start_VFB            = 20
+ start_VFB            = 4
  n_feedback_current   = 1
  n_feedback_vertical  = 1
  n_iter_freeb         = 300 

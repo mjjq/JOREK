@@ -19,7 +19,7 @@ integer :: ierr, err, i
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
-                rst_hdf5, rst_hdf5_version,                         &
+                rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 restart, regrid, time_evol_theta, time_evol_zeta,   &
                 force_horizontal_Xline,                             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
@@ -79,7 +79,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Zaxis_find_limit, PF_pert_start_time,               &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
-                voltage_coils, vert_FB_amp
+                voltage_coils, vert_FB_amp, find_pf_coil_currents
 if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.

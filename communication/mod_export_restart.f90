@@ -15,7 +15,7 @@ subroutine export_restart(node_list,element_list,filename)
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
-  character*(*)          , intent(in) :: filename
+  character(len=*)       , intent(in) :: filename
 
   character*17 :: fileout
 
@@ -56,30 +56,10 @@ subroutine export_binary_restart(node_list,element_list,filename)
   integer :: i
   character*50 :: version_control
 
-  ! --- Read in files created with versions of JOREK not having transform in elements
-  type type_element_OLD                               !< type definition for one elements
-    integer :: vertex(n_vertex_max)               !< nodes of the corners
-    integer :: neighbours(n_vertex_max)           !< neighbouring elements
-    real*8  :: size(n_vertex_max,n_order+1)       !< size of vectors at each vertex of the element
-    integer :: father                             !< index of father element (0 if no father)"refinement"
-    integer :: n_sons                             !< Number of sons elements"refinement"
-    integer :: n_gen                              !< Generation rank of the element"refinement"
-    integer :: sons(4)                            !< Sons of the element (=0 if no son)"refinement"
-    integer :: contain_node(5)                    !< nodes belonging to the element"refinement"
-    integer :: nref                               !< How the element has been refined (if so)"refinement"
-  end type type_element_OLD
-  type type_element_list_OLD                          !< type definition for a list of elements
-    integer :: n_elements                         !< number of elements in the list
-    type (type_element_OLD), allocatable, dimension(:) :: element !< list of elements
-  end type type_element_list_OLD
-
-  type(type_element_list_OLD) :: element_list_OLD
-
   ! -> Write binary restart file
   open(21, file=filename, form='unformatted', status='replace', action='write')
 
   write(21) n_tor
-
   write(21) node_list%n_nodes,element_list%n_elements
   write(21) node_list%n_dof
 
@@ -102,21 +82,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
      write(21) node_list%node(i)%constrained
   enddo
 
-  allocate(element_list_old%element(1:element_list%n_elements))
-  ! Save all values explicitly, for compatibility with the new transform parameter
-  do i=1,element_list%n_elements
-    element_list_OLD%element(i)%vertex = element_list%element(i)%vertex
-    element_list_OLD%element(i)%neighbours = element_list%element(i)%neighbours
-    element_list_OLD%element(i)%size = element_list%element(i)%size
-    element_list_OLD%element(i)%father = element_list%element(i)%father
-    element_list_OLD%element(i)%n_sons = element_list%element(i)%n_sons
-    element_list_OLD%element(i)%n_gen = element_list%element(i)%n_gen
-    element_list_OLD%element(i)%sons = element_list%element(i)%sons
-    element_list_OLD%element(i)%contain_node = element_list%element(i)%contain_node
-    element_list_OLD%element(i)%nref = element_list%element(i)%nref
-  enddo
-  write(21) element_list_OLD%element(1:element_list%n_elements)
-  deallocate(element_list_old%element)
+  write(21) element_list%element(1:element_list%n_elements)
   write(21) tstep,eta,visco,visco_par
   write(21) index_now
   write(21) t_now

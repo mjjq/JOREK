@@ -704,9 +704,9 @@ program jorek2_poincare
   ! --- Open file and write headers
   if (my_id .eq. 0) then
 #ifdef IBM_MACHINE
-    open(unit=ivtk,file='connection.vtk',form='unformatted',access='stream')
+    open(unit=ivtk,file='connection.vtk',form='unformatted',access='stream',status='replace')
 #else
-    open(unit=ivtk,file='connection.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+    open(unit=ivtk,file='connection.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN',status='replace')
 #endif
     buffer = '# vtk DataFile Version 3.0'//lf						  ; write(ivtk) trim(buffer)
     buffer = 'vtk output'//lf								  ; write(ivtk) trim(buffer)

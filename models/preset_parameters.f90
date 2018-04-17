@@ -264,6 +264,8 @@ subroutine preset_parameters
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
 
   tgnum              = 0.d0                 ! Taylor-Galerkin Stabilisation coefficients (0.d0 == TG not used)
+
+  keep_current_prof  = .true.               ! Keep the current_source term
   
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver

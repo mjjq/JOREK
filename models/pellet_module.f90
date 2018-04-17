@@ -450,7 +450,6 @@ real*8, allocatable :: shard_size(:)               !The shard size array
             open(42,file="shard_size.dat",status="OLD",action="READ")
             read(42,*)  shard_size(1:n_spi)
             close(42)
-            !write(*,*) " CHECK POINT shard size:", shard_size(1:10)
           else
             write(*,*) "WARNING!!! Shard size file does not exist, reverting to uniform distribution"
             flag_spi_size = 0

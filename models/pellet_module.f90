@@ -444,7 +444,7 @@ real*8, allocatable :: shard_size(:)               !The shard size array
 
         if (my_id == 0 .and. index_now == 0 .and. flag_spi_size == 1) then
           inquire(file="shard_size.dat", exist=ferr) ! Check if the file exist
-          if (ferr) then
+          if (ferr==0) then
             open(42,file="shard_size.dat",status="OLD",action="READ")
             read(42,'(g)')  shard_size(1:n_spi)
             close(42)

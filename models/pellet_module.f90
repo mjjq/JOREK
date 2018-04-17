@@ -448,7 +448,7 @@ real*8, allocatable :: shard_size(:)               !The shard size array
           inquire(file="shard_size.dat", exist=ferr) ! Check if the file exist
           if (ferr) then
             open(42,file="shard_size.dat",status="OLD",action="READ")
-            read(42,'(g)')  shard_size(1:n_spi)
+            read(42,*)  shard_size(1:n_spi)
             close(42)
             !write(*,*) " CHECK POINT shard size:", shard_size(1:10)
           else
@@ -500,6 +500,11 @@ real*8, allocatable :: shard_size(:)               !The shard size array
 
       write(*,*) "Rotational transform: ", spi_rotation_01, spi_rotation_02
 !==========================End of rotational angles==============================
+
+! The random number array rnd contains two random angle representing the
+! velocity direction spread, and one random speed. Those random number uniquely
+! define a random velocity of the shard, which is then transformed into the
+! R, Z, RxZ space.
 
       CALL random_number(rnd)
 

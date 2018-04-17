@@ -387,8 +387,10 @@ use corr_neg
 implicit none
 
 integer, intent(in) :: my_id
-integer             :: ierr,err,ferr,i,i_surface
+integer             :: ierr,err,i,i_surface
 integer             :: err_alloc=0, err_alloc_rnd=0
+
+logical             :: ferr
 
 real*8  :: n_SI, T_eV, n_corr, T_corr
 real*8  :: spi_gd_angle_01, spi_gd_angle_02        !The dispersion angles for each spi
@@ -444,7 +446,7 @@ real*8, allocatable :: shard_size(:)               !The shard size array
 
         if (my_id == 0 .and. index_now == 0 .and. flag_spi_size == 1) then
           inquire(file="shard_size.dat", exist=ferr) ! Check if the file exist
-          if (ferr==0) then
+          if (ferr) then
             open(42,file="shard_size.dat",status="OLD",action="READ")
             read(42,'(g)')  shard_size(1:n_spi)
             close(42)

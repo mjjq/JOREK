@@ -3,7 +3,7 @@ module test_neighbours
 use fruit
 use mod_neighbours
 use data_structure
-use mod_element_rtree, only: initialized, populate_element_rtree, nearby_elements
+use mod_element_rtree, only: rtree_initialized, populate_element_rtree, nearby_elements
 implicit none
 contains
 
@@ -81,7 +81,7 @@ subroutine test_update_neighbours
   call assert_equals(4, inb_i, "i on side 4")
   call assert_equals(2, inb_j, "j on side 2")
 
-  initialized = .false. ! Force remake rtree
+  rtree_initialized = .false. ! Force remake rtree
   call update_neighbours(node_list,element_list)
   nb = [0,2,0,0]
   do i=1,4
@@ -122,7 +122,7 @@ subroutine test_coord_in_neighbour_square
   ! |1     2x1     2|
   ! 1-------2-------3
   element_list%element(2)%vertex = [2,3,6,5]
-  initialized = .false. ! Force remake rtree
+  rtree_initialized = .false. ! Force remake rtree
   call update_neighbours(node_list,element_list)
   ! Now test 1 position on the boundary and see if the transformation is correct
   st = [1.d0, 0.3d0]
@@ -141,7 +141,7 @@ subroutine test_coord_in_neighbour_square
   ! |1     2x4     1|
   ! 1-------2-------3
   element_list%element(2)%vertex = [3,6,5,2]
-  initialized = .false. ! Force remake rtree
+  rtree_initialized = .false. ! Force remake rtree
   call update_neighbours(node_list,element_list)
   st = [1.d0, 0.3d0]
   call coord_in_neighbour(node_list,element_list,1,ito,st)
@@ -160,7 +160,7 @@ subroutine test_coord_in_neighbour_square
   ! |4     1x4     1|
   ! 1-------2-------3
   element_list%element(1)%vertex = [2,5,4,1]
-  initialized = .false. ! Force remake rtree
+  rtree_initialized = .false. ! Force remake rtree
   call update_neighbours(node_list,element_list)
   st = [0.3d0, 0.d0]
   call coord_in_neighbour(node_list,element_list,1,ito,st)
@@ -178,7 +178,7 @@ subroutine test_coord_in_neighbour_square
   ! |4     1x2     1|
   ! 1-------2-------3
   element_list%element(2)%vertex = [3,2,5,6]
-  initialized = .false. ! Force remake rtree
+  rtree_initialized = .false. ! Force remake rtree
   call update_neighbours(node_list,element_list)
   st = [0.3d0, 0.d0]
   call coord_in_neighbour(node_list,element_list,1,ito,st)

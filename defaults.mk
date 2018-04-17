@@ -50,8 +50,6 @@ ifeq ($(COMPILER_FAMILY), gnu)
     FFLAGS += -fcheck=all
     FFLAGS += -ffpe-trap=invalid,zero,overflow -ftrapv
     FFLAGS += -finit-real=snan -finit-integer=12345678
-    FFLAGS += -Wimplicit-interface -Wimplicit-procedure
-    FFLAGS += -Wconversion
     F90FLAGS += -fimplicit-none
   endif
 

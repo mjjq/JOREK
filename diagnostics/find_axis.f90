@@ -105,7 +105,6 @@ do i=1,element_list%n_elements   ! --- loop over elements
             .or. ((tokamak_device(1:4) .eq. 'MAST') .and. ((abs(Z) .lt. 0.2d0) .and. (R .lt. 1.d0))) ) then
         include_pt(i,ms,mt) = .true.                      ! --- only include points within given geometrical limits
       endif
-      
     enddo
   enddo
 

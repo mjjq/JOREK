@@ -55,7 +55,6 @@ write(20,'(A,25(A11,i3.3))') '      i      time',('          M',n_period*((in-1)
                                                  ('          K',n_period*((in-1)/2),in=1,n_tor,2)
 
 do i=2,index_start
-  cycle
 
  Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,i)/energies(n_tor,1,i-1))) &
              / (xtime(i)-xtime(i-1))
@@ -86,7 +85,7 @@ endif
 
 
 
-!call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
+call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 
 if (use_pellet) then
    pellet_volume = total_pellet_volume

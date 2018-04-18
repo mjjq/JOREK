@@ -5,6 +5,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module, only: tokamak_device
+use mod_interp
 
 implicit none
 
@@ -23,7 +24,7 @@ integer,                  intent(out)   :: ifail
 
 ! --- Local variables
 real*8  :: ps_s, ps_t, ps_x, ps_y, xjac
-real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
+real*8  :: R, R_s, R_t, Z, Z_s, Z_t, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: x(2), s, t, xerr, ferr, s_xp_init(2), t_xp_init(2)
 integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv, i_tries, n_tries
 integer :: i_elm_xp_init(2), min_indices_lw(3), min_indices_up(3)
@@ -201,7 +202,7 @@ if(xcase .ne. 2) then
   endif
 
   call interp(node_list,element_list,i_elm_xpoint(1),1,1,s_xpoint(1),t_xpoint(1),psi_xpoint(1),P_s,P_t,P_st,P_ss,P_tt)
-  call interp_RZ(node_list,element_list,i_elm_xpoint(1),s_xpoint(1),t_xpoint(1),R_xpoint(1),R_s,R_t,R_st,R_ss,R_tt,Z_xpoint(1),Z_s,Z_t,Z_st,Z_ss,Z_tt)
+  call interp_RZ(node_list,element_list,i_elm_xpoint(1),s_xpoint(1),t_xpoint(1),R_xpoint(1),R_s,R_t,Z_xpoint(1),Z_s,Z_t)
 
   xjac = R_s * Z_t - R_t * Z_s
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
@@ -221,7 +222,7 @@ if(xcase .ne. 1) then
   endif
   
   call interp(node_list,element_list,i_elm_xpoint(2),1,1,s_xpoint(2),t_xpoint(2),psi_xpoint(2),P_s,P_t,P_st,P_ss,P_tt)
-  call interp_RZ(node_list,element_list,i_elm_xpoint(2),s_xpoint(2),t_xpoint(2),R_xpoint(2),R_s,R_t,R_st,R_ss,R_tt,Z_xpoint(2),Z_s,Z_t,Z_st,Z_ss,Z_tt)
+  call interp_RZ(node_list,element_list,i_elm_xpoint(2),s_xpoint(2),t_xpoint(2),R_xpoint(2),R_s,R_t,Z_xpoint(2),Z_s,Z_t)
 
   xjac = R_s * Z_t - R_t * Z_s
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac

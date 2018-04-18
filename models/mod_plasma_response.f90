@@ -309,6 +309,7 @@ module mod_plasma_response
   subroutine find_Icoils(node_list,element_list,bnd_node_list,bnd_elm_list)
     
     use vacuum
+    use mod_basisfunctions
     
     implicit none
     
@@ -453,6 +454,8 @@ module mod_plasma_response
         
     use vacuum
     use vacuum_response
+    use mod_interp
+    use mod_basisfunctions
     
     implicit none
     
@@ -551,7 +554,7 @@ module mod_plasma_response
         end select
     
         ! --- Determine coordinate values (plus derivatives)
-        call interp_RZ(node_list, element_list, m_elm, s_pt, t_pt, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
+        call interp_RZ(node_list, element_list, m_elm, s_pt, t_pt, R, R_s, R_t, Z, Z_s, Z_t)
     
         ! --- 2D Jacobian
         xjac = R_s * Z_t - R_t * Z_s
@@ -681,6 +684,8 @@ module mod_plasma_response
     
     use vacuum
     use vacuum_response
+    use mod_interp
+    use mod_basisfunctions
     
     type (type_node_list),       intent(in) :: node_list
     type (type_element_list),    intent(in) :: element_list
@@ -696,7 +701,7 @@ module mod_plasma_response
     real*8   :: i_size, basfunc_i
     real*8   :: H1(2,2), H1_s(2,2), H1_ss(2,2)
     real*8   :: P, P_s, P_t, P_st, P_ss, P_tt
-    real*8   :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
+    real*8   :: R, R_s, R_t, Z, Z_s, Z_t
     real*8   :: s_pt, t_pt, s_or_t ! s and t values at current point
     real*8   :: xjac               ! 2D Jacobian
     real*8   :: B_pol(2)           ! Poloidal magnetic field
@@ -782,7 +787,7 @@ module mod_plasma_response
         end select
     
         ! --- Determine coordinate values (plus derivatives)
-        call interp_RZ(node_list, element_list, m_elm, s_pt, t_pt, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
+        call interp_RZ(node_list, element_list, m_elm, s_pt, t_pt, R, R_s, R_t, Z, Z_s, Z_t)
     
         ! --- 2D Jacobian
         xjac = R_s * Z_t - R_t * Z_s

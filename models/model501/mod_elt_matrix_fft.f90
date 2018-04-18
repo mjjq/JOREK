@@ -1200,15 +1200,15 @@ do ms=1, n_gauss
 
          	      + BigR * v * source_mgi                                                                    * xjac * tstep &
 
-                      + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta
+                      + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta                          &
+                      - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy) &
+                        * BigR * xjac * tstep
 
 
            rhs_ij_8_k = BigR* ( - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2)                             * xjac * tstep	        & 
                         - TG_num8 * 0.25d0 / BigR * vpar0**2                                                                    &
                               * (rn0_x * ps0_y - rn0_y * ps0_x + F0 / BigR * rn0_p)                                             &
-                              * (                            + F0 / BigR * v_p) * xjac * tstep * tstep &
-                        - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy) &
-                              * BigR * xjac * tstep
+                              * (                            + F0 / BigR * v_p) * xjac * tstep * tstep 
      
 !###################################################################################################
 !#  RHS equations end                                                                              #

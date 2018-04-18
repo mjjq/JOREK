@@ -79,8 +79,8 @@ do while (.not. sim%stop_now)
           i_elm_old = particles(j)%i_elm
 
           call boris_push_cylindrical(particles(j), sim%groups(i)%mass, E, B, timesteps(i))
-          call find_RZ_nearby(node_list, element_list, particles(j)%x(1:2), rz_old, &
-              st_old, particles(j)%st, i_elm_old, particles(j)%i_elm, ifail)
+          call find_RZ_nearby(node_list, element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
+              particles(j)%x(1), particles(j)%x(2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
           if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1
         end do ! steps
       end do ! particles

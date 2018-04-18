@@ -8,7 +8,7 @@
 subroutine find_theta_psi(node_list,element_list,psi_minmax,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
 use constants
 use data_structure
-use mod_interp_PRZ
+use mod_interp
 use mod_find_RZ_nearby
 implicit none
 ! Allow using .cross. to mean a right-handed cross product
@@ -33,7 +33,7 @@ real*8,                   intent(out)   :: s, t, R, Z
 logical, parameter :: verbose = .false.
 
 ! --- Internal variables
-real*8  :: u, du, R_try, Z_try, s_out, t_out, err, st_out(2)
+real*8  :: u, du, R_try, Z_try, s_out, t_out, err
 real*8, dimension(1) :: P, P_s, P_t, P_phi
 real*8  :: R_s, R_t, Z_s, Z_t
 real*8  :: inv_st_jac, psi_R, psi_Z, psi_u
@@ -215,12 +215,7 @@ do newton_iter_number = 1, newton_iter_max
   R_try = R_axis + (u+du)*cos(theta)
   Z_try = Z_axis + (u+du)*sin(theta)
   ! Find st based on the old value and the size of this step
-  ! strange argument order: new old (RZ), old new (st), old new (i_elm)
-  call find_RZ_nearby(node_list, element_list, [R_try,Z_try], [R,Z], &
-                  [s,t], st_out, i_elm, i_elm_out, ifail)
-              ! watch out for array temporary
-  s_out = st_out(1)
-  t_out = st_out(2)
+  call find_RZ_nearby(node_list, element_list, R, Z, s, t, i_elm, R_try, Z_try, s_out, t_out, i_elm_out, ifail)
   u = u+du
   if (ifail .lt. 0 .or. i_elm_out .eq. 0) then
     out_of_domain = .true.

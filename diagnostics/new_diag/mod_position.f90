@@ -12,6 +12,7 @@ module mod_position
   use equil_info
   use data_structure
   use mod_straight_field_line
+  use mod_interp
   
   
   

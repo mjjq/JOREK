@@ -18,7 +18,7 @@ jorek_model$(MODEL_NUMBER): jorek2_main
 # Some defaults and parsing logic for makefile.inc
 include defaults.mk
 
-.PHONY: .mod/version.h clean cleanall cleandep duplicates
+.PHONY: clean cleanall cleandep duplicates
 cleanall: clean cleandep
 clean:
 	@echo ">> Deleting Object Files <<"
@@ -56,7 +56,6 @@ DIRS := diagnostics			\
 	particles/diagnostics 		\
 	particles/tests 		\
 	particles/benchmarks/pusher     \
-	particles/benchmarks/interp     \
 	particles/benchmarks/projection \
 	elements			\
 	grids				\
@@ -68,6 +67,7 @@ DIRS := diagnostics			\
 	non_regression_tests/unit_tests \
 	tools/rng                       \
 	datatypes			\
+	benchmarks                      \
 	.				\
 	vacuum
 DIRS+=$(EXTRA_DIRS) # Specified in Makefile.inc or commandline

@@ -7,6 +7,7 @@ subroutine define_final_grid(node_list, element_list, flux_list, &
 use tr_module 
 use data_structure
 use grid_xpoint_data
+use mod_interp
 
 implicit none
 

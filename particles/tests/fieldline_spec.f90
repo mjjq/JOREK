@@ -58,8 +58,8 @@ subroutine test_fieldline_backforth_euler
         i_elm_old = p(k)%i_elm
 
         call fieldline_euler_push_cylindrical(p(k), B, dt)
-        call find_RZ_nearby(f%node_list, f%element_list, p(k)%x(1:2), rz_old, &
-            st_old, p(k)%st, i_elm_old, p(k)%i_elm, ifail)
+        call find_RZ_nearby(f%node_list, f%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
+            p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
         if (j .eq. 10*10**(-(i+5))) then
           call assert_equals(0.d0, psi-psi0, 13d4*dt, "Must not leave flux surface mid dt=1e"//is)
           p(k)%v = -v ! go backwards after this point

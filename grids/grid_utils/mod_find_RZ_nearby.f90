@@ -38,18 +38,19 @@ contains
 !! extremely slow but works for all positions in the domain.
 !! In that case, ifail=2:5 is returned.
 !! If ifail=-1 the particle is lost
-subroutine find_RZ_nearby(node_list, element_list, x_new, x_old, st_old, st_new, i_elm_old, i_elm_new, ifail)
+subroutine find_RZ_nearby(node_list, element_list, R_old, Z_old, s_old, t_old, i_elm_old, &
+        R_new, Z_new, s_new, t_new, i_elm_new, ifail)
 use data_structure
 use mod_neighbours
 implicit none
 !> Input parameters
 type (type_node_list),    intent(in)    :: node_list
 type (type_element_list), intent(in)    :: element_list
-real*8,                   intent(in)    :: x_new(2) !< The new R,Z location
-real*8,                   intent(in)    :: x_old(2) !< The old R,Z location
-real*8,                   intent(in)    :: st_old(2) !< The old st location (used to compute a guess)
+real*8,                   intent(in)    :: R_old, Z_old !< The old R,Z location
+real*8,                   intent(in)    :: R_new, Z_new !< The new R,Z location
+real*8,                   intent(in)    :: s_old, t_old !< The old st location (used to compute a guess)
 integer,                  intent(in)    :: i_elm_old
-real*8,                   intent(out)   :: st_new(2) !< The found new coordinates
+real*8,                   intent(out)   :: s_new, t_new !< The found new coordinates
 integer,                  intent(out)   :: i_elm_new
 integer,                  intent(out)   :: ifail !< if ifail = -1 the position could not be found in the grid.
 !< ifail > 0 indicates various other cases
@@ -61,19 +62,20 @@ integer, parameter :: newton_iter_max     = 8 !< Number of iterations to try
 !> Internal variables
 integer :: newton_iter_number, i_elm_tmp
 real*8 :: inv_st_jac_det, R_s, R_t, Z_s, Z_t
-real*8 :: st_step(2), x_step(2), x_tmp(2) ! x_step = (R,Z) of trial position
+real*8 :: st_step(2), x_step(2), x_tmp(2), st_new(2), x_new(2) ! x_step = (R,Z) of trial position
 real*8 :: err2, err2_old, dist(2), fact
 
 ! Check if element is valid
 if (i_elm_old .lt. 1 .or. i_elm_old .gt. element_list%n_elements) then
-  call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
+  call find_RZ(node_list,element_list,R_new,Z_new,x_step(1),x_step(2),i_elm_new,s_new,t_new,ifail)
   return
 end if
 
 ! Setup initial values
-x_step = x_old ! start at the current position
+x_step = [R_old,Z_old] ! start at the current position
 i_elm_new = i_elm_old ! start in the current element
-st_new = st_old ! start at the old position
+st_new = [s_old,t_old] ! start at the old position
+x_new = [R_new,Z_new]
 ! Find the jacobian at the current s and t position
 call try_interp(node_list,element_list,i_elm_new,st_new,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
 err2 = dot_product(x_step-x_new,x_step-x_new)
@@ -102,7 +104,7 @@ do newton_iter_number = 1, newton_iter_max
     i_elm_tmp = i_elm_new
     call coord_in_neighbour(node_list,element_list,i_elm_tmp,i_elm_new,st_new)
     if (i_elm_new .lt. 0) then
-      call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
+      call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,s_new,t_new,ifail)
       return ! Stop because find_RZ works always or the particle is lost. Passthrough ifail
     end if
     if (i_elm_new .eq. 0) then ! No element on that side, particle is lost
@@ -123,6 +125,8 @@ do newton_iter_number = 1, newton_iter_max
     call try_interp(node_list,element_list,i_elm_new,st_new,x_step,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
   end if
   err2 = dot_product(x_step-x_new,x_step-x_new)
+  s_new = st_new(1)
+  t_new = st_new(2)
 
   if (err2 < element_tolerance) exit
 enddo
@@ -130,7 +134,7 @@ enddo
 
 if (isnan(err2)) then
   !write(*,*) "WARNING: NaN encountered after newton iteration, using find_RZ"
-  call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
+  call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,s_new,t_new,ifail)
   if (ifail .eq. 0) ifail=2
   return
 endif
@@ -138,7 +142,7 @@ if (newton_iter_number .gt. newton_iter_max) then
   !write(*,"(A,i4,A,i5,A,2g14.6,A,3g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
   !" using find_RZ", x_new, "err2(old)/convergence: ", err2, err2_old, err2_old/err2
     !write(*,"(A,2g16.8)") "Find_RZ at ", x_new
-  call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,st_new(1),st_new(2),ifail)
+  call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,s_new,t_new,ifail)
   if (ifail .eq. 0) ifail=3
   return
 endif
@@ -148,7 +152,7 @@ end subroutine find_RZ_nearby
 !> Auxiliary subroutine for find_RZ_nearby
 pure subroutine try_interp(node_list,element_list,i_elm,st,x,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
 use data_structure
-use mod_interp_PRZ
+use mod_interp
 implicit none
 !> Input parameters
 type (type_node_list),    intent(in)    :: node_list

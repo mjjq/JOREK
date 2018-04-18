@@ -103,8 +103,8 @@ do while (.not. sim_out%stop_now)
           i_elm_old = particles(j)%i_elm
 
           call fieldline_euler_push_cylindrical(particles(j), B, dt)
-          call find_RZ_nearby(sim_in%fields%node_list, sim_in%fields%element_list, particles(j)%x(1:2), rz_old, &
-              st_old, particles(j)%st, i_elm_old, particles(j)%i_elm, ifail)
+          call find_RZ_nearby(sim_in%fields%node_list, sim_in%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
+              particles(j)%x(1), particles(j)%x(2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
           if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1
         end do ! steps
       end do ! particles

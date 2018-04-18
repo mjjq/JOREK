@@ -5,7 +5,7 @@ use mod_rng
 use data_structure
 use mod_particle_types
 use constants
-use mod_interp_PRZ
+use mod_interp
 implicit none
 private
 public initialise_particles, no_transform, adjust_particle_weights
@@ -39,7 +39,7 @@ subroutine initialise_particles(particles, node_list, element_list, &
   use mpi
   use mod_sampling
   use mod_random_seed
-  use mod_interp4
+  use mod_interp
   !$ use omp_lib
   implicit none
 
@@ -168,7 +168,7 @@ subroutine initialise_particles(particles, node_list, element_list, &
       if (present(variables)) then
         ! Select the mhd variables requested
         if (n_mhd .ge. 1) then
-          call interp4(node_list,element_list,i_elm,variables(n_geom:n_geom+n_mhd),n_mhd,s,t,phi,P(n_geom:n_geom+n_mhd))
+          call interp_0(node_list,element_list,i_elm,variables(n_geom:n_geom+n_mhd),n_mhd,s,t,phi,P(n_geom:n_geom+n_mhd))
         end if
         do k=1,n_geom
           select case (variables(k))
@@ -235,7 +235,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
   use mod_coronal
   use mod_boris, only: gc_to_kinetic_leapfrog
   use mpi
-  use mod_interp4
+  use mod_interp
   implicit none
   class(particle_base), dimension(:), intent(inout) :: particles
   class(fields_base), intent(in)                    :: fields
@@ -667,7 +667,7 @@ end subroutine normalize_with_projection
 !> Note that this multiplies existing weights by the value of f, instead of
 !> overwriting weights. This allows using it with nonuniform weights.
 subroutine weigh_with_interp_f(node_list, element_list, particles, vars, f)
-  use mod_interp4
+  use mod_interp
   type(type_node_list), intent(in)                  :: node_list
   type(type_element_list), intent(in)               :: element_list
   class(particle_base), dimension(:), intent(inout) :: particles
@@ -690,7 +690,7 @@ subroutine weigh_with_interp_f(node_list, element_list, particles, vars, f)
 
   do i=1,size(particles,1)
     if (particles(i)%i_elm .ne. 0) then
-      call interp4(node_list,element_list,particles(i)%i_elm,&
+      call interp_0(node_list,element_list,particles(i)%i_elm,&
         vars(n_geom:n_geom+n_mhd),n_mhd,particles(i)%st(1),particles(i)%st(2),&
         particles(i)%x(3), P(n_geom:n_geom+n_mhd))
       do k=1,n_geom

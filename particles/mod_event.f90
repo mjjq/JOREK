@@ -16,7 +16,7 @@ real*8,  parameter :: TICK             = 1d-12                    !< Time precis
 !> Action abstract type, representing anything that can be done to a simulation
 type, abstract :: action
   !> Logging variable, set this in an initializer
-  character(len=30) :: name = "unset action" !< Event name for logging
+  character(len=50) :: name = "unset action" !< Event name for logging
   logical :: log = .false. !< Output event duration
 
   !> Timing variables

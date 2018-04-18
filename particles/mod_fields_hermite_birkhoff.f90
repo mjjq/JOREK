@@ -21,8 +21,7 @@ use data_structure
 use mod_particle_sim
 use mod_event
 use mod_fields
-use mod_interp4
-use mod_interp_PRZ
+use mod_interp
 use mod_fields_linear
 use mod_hermite_birkhoff
 implicit none
@@ -79,7 +78,6 @@ end function ind
 
 !> Interpolate a variable at a specific position (with phi), with first derivatives only
 pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
-  use mod_interp_PRZ
   class(jorek_fields_interp_hermite_birkhoff),  intent(in)  :: this
   real*8,                   intent(in)  :: time !< Time at which to calculate this variable
   integer,                  intent(in)  :: i_elm
@@ -102,14 +100,14 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
   if (j .eq. this%len) i2 = 99999 ! intentional segfault for debugging
 #endif
 
-  call       interp_PRZ(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
+  call interp_PRZ(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
     V(:,1,1), V(:,2,1), V(:,3,1), V(:,4,1),   R,R_s,R_t,Z,Z_s,Z_t)
-  call       interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
+  call interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
     V(:,1,2), V(:,2,2), V(:,3,2), V(:,4,2),   R,R_s,R_t,Z,Z_s,Z_t)
-  call interp_PRZ_delta(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
-    V(:,1,3), V(:,2,3), V(:,3,3), V(:,4,3),   R,R_s,R_t,Z,Z_s,Z_t)
-  call interp_PRZ_delta(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
-    V(:,1,4), V(:,2,4), V(:,3,4), V(:,4,4),   R,R_s,R_t,Z,Z_s,Z_t)
+  call interp_PRZ(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
+    V(:,1,3), V(:,2,3), V(:,3,3), V(:,4,3),   R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
+  call interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
+    V(:,1,4), V(:,2,4), V(:,3,4), V(:,4,4),   R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
 
   call HB_interp(this%t(i1), this%t(i2), n_v, V(:,1,1), V(:,1,2), V(:,1,3), V(:,1,4), time, P)
   call HB_interp(this%t(i1), this%t(i2), n_v, V(:,2,1), V(:,2,2), V(:,2,3), V(:,2,4), time, P_s)
@@ -319,7 +317,7 @@ subroutine read_next_file(this, f, i_found, prefer_plus_2)
         next_file_found=.true.
 
         ! Read the next restart file
-        call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,my_id,ierr)
+        call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
         call broadcast_elements(my_id, f%element_list)
         call broadcast_nodes(my_id, f%node_list)
         call broadcast_phys(my_id) ! we only really use tstep and t_start but this is simpler to write

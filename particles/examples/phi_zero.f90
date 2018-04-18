@@ -104,8 +104,8 @@ do i=1,size(sim%groups,1)
       st_old    = particles(j)%st
       i_elm_old = particles(j)%i_elm
       call fieldline_euler_push_cylindrical(particles(j), B, dt)
-      call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, particles(j)%x(1:2), rz_old, &
-        st_old, particles(j)%st, i_elm_old, particles(j)%i_elm, ifail)
+      call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
+          particles(j)%x(1), particles(j)%x(2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
       if (particles(j)%i_elm .eq. 0) cycle
       particles(j)%B_hat_prev = B/norm2(B)
 
@@ -119,8 +119,8 @@ do i=1,size(sim%groups,1)
         theta_old = atan2(particles(j)%x(2)-Z_axis, particles(j)%x(1)-R_axis)
 
         call fieldline_adams_bashforth_push_cylindrical(particles(j), B, dt)
-        call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, particles(j)%x(1:2), rz_old, &
-          st_old, particles(j)%st, i_elm_old, particles(j)%i_elm, ifail)
+        call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
+            particles(j)%x(1), particles(j)%x(2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
         if (particles(j)%i_elm .eq. 0) exit
 
         ! Check if the new position is at the outer midplane

@@ -5,8 +5,7 @@ use data_structure
 use mod_particle_sim
 use mod_event
 use mod_fields
-use mod_interp4
-use mod_interp_PRZ
+use mod_interp
 implicit none
 private
 public jorek_fields_interp_linear, read_jorek_fields_interp_linear, last_file_before_time
@@ -42,7 +41,7 @@ contains
 
 !> Interpolate a variable at a specific position (with phi), with first derivatives only
 pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
-  use mod_interp_PRZ
+  use mod_interp
   use constants, only: mu_zero, mass_proton
   use phys_module, only: tstep, central_mass, central_density
   class(jorek_fields_interp_linear),  intent(in)  :: this
@@ -62,14 +61,14 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
   if (abs(this%time_prev-this%time_now) .gt. 1d-10 .and. .not. this%static) then
     dt = 1.d0/(this%time_now - this%time_prev)
     df = (this%time_now - time)*dt
-    call interp_PRZ_delta(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
+    call interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
     P      = P     - df*Pd
     P_s    = P_s   - df*Pd_s
     P_t    = P_t   - df*Pd_t
     P_phi  = P_phi - df*Pd_phi
     P_time = Pd*dt
   else
-    call interp_PRZ_delta(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t)
+    call interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
     P_time = Pd/(tstep*t_norm)
   end if
 
@@ -235,7 +234,7 @@ subroutine do_read(this, sim, ev)
         end if
         inquire(file=trim(restart_file), exist=file_exists)
         if (file_exists) then
-          call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,my_id,ierr)
+          call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,ierr)
           f%static = .true.
         else
           if (my_id .eq. 0) write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
@@ -247,7 +246,7 @@ subroutine do_read(this, sim, ev)
           write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
           inquire(file=trim(restart_file), exist=file_exists)
           if (file_exists) then
-            call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,my_id,ierr)
+            call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
             if (ierr .ne. 0) then
               if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
               call exit(1)
@@ -358,7 +357,7 @@ subroutine merge_restart(node_list,element_list, restart_file, format_rst,my_id,
   tstart_old = t_start
 
   ! Import new values
-  call import_hdf5_restart(node_list,element_list, restart_file, format_rst, my_id, ierr)
+  call import_hdf5_restart(node_list,element_list, restart_file, format_rst, ierr)
 
   ! Calculate deltas as values_new - values_old
   !$omp parallel do default(shared) private(inode)

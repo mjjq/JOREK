@@ -381,7 +381,7 @@ end subroutine project_only
 subroutine sample_rhs(this, sim)
   use mpi
   use mod_event
-  use mod_interp_PRZ, only: mode_moivre, interp_RZ
+  use mod_interp, only: mode_moivre, interp_RZ
   use constants, only: PI
   use mod_basisfunctions
   !$ use omp_lib
@@ -911,7 +911,7 @@ subroutine write_particle_distribution_to_vtk(node_list,element_list,filename,ns
 use data_structure
 use phys_module, only: mode
 use mod_vtk
-use mod_interp4
+use mod_interp
 use mod_basisfunctions
 !$ use omp_lib
 implicit none
@@ -930,6 +930,7 @@ real*4, allocatable :: scalars(:,:), vectors(:,:,:)
 integer :: n_scalars, n_vectors = 0
 character*12, allocatable :: vector_names(:), scalar_names(:)
 real*8 :: s, t
+real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
 
 integer :: i_t, kv, iv, kf
 integer, parameter :: etype = 9 ! for vtk_quad
@@ -951,7 +952,7 @@ vectors = 0.d0
 
 ! Create points for each element
 !$omp parallel do default(none) shared(element_list,nsub,node_list,n_fields,scalars) &
-!$omp private(i,j,k,l,m,inode,ivar,s,t)
+!$omp private(i,j,k,l,m,inode,ivar,s,t,P, P_s, P_t, P_st, P_ss, P_tt)
 do i=1,element_list%n_elements
   do j=1,n_fields
     do k=1,n_tor
@@ -961,7 +962,8 @@ do i=1,element_list%n_elements
         do m=1,nsub
           t = float(m-1)/float(nsub-1)
           inode = (i-1)*nsub*nsub+(l-1)*nsub+m
-          scalars(inode,ivar) = real(interp5(node_list,element_list,i,j,k,s,t),4)
+          call interp(node_list, element_list, i, ivar, k, s, t, P, P_s, P_t, P_st, P_ss, P_tt)
+          scalars(inode,ivar) = real(P,4)
         end do
       end do
     end do

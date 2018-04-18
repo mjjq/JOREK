@@ -238,7 +238,8 @@ function kinetic_leapfrog_to_gc(node_list, element_list, in, B, mass) result(out
       /B_norm/EL_CHG, v_par) ! [eV/T]
 
   ! Calculate new st and i_elm
-  call find_RZ_nearby(node_list, element_list, out%x, in%x, in%st, out%st, in%i_elm, out%i_elm, ifail)
+  call find_RZ_nearby(node_list, element_list, in%x(1), in%x(2), in%st(1), in%st(2), in%i_elm, &
+      out%x(1), out%x(2), out%st(1), out%st(2), out%i_elm, ifail)
 end function kinetic_leapfrog_to_gc
 
 !> Take a particle_gc and get the kinetic particle.

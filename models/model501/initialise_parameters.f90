@@ -252,9 +252,6 @@ call read_num_profiles(my_id)
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
 
-! --- Set current source term to zero
-eta_T_0 = 0.0
-
 ! --- Initialize the shattered pellet position
 !spi_R = mgi_R
 !spi_Z = mgi_Z

@@ -215,8 +215,6 @@ do i=1,node_list%n_nodes
       T0   = node_list%node(i)%values(in,1,6)
       node_list%node(i)%values(in,1,7) = direction / Btot * sqrt(GAMMA * T0)
    
-      eta_T_0 = eta * (T0/T_0)**(-1.5d0) 
-
       T0_s   = node_list%node(i)%values(in,2,6)
       node_list%node(i)%values(in,2,7) = BigR_s / (BigR*Btot) * sqrt(GAMMA * T0) + 0.5d0 / Btot * sqrt(GAMMA / T0) * T0_s
       node_list%node(i)%values(in,2,7) = direction *  node_list%node(i)%values(in,2,7)

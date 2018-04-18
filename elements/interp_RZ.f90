@@ -2,6 +2,7 @@
 subroutine interp_RZ(node_list,element_list,i_elm,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 
 use data_structure
+use mod_basisfunctions
 implicit none
 
 ! --- Routine parameters
@@ -16,7 +17,7 @@ real*8  :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
 real*8  :: xx1, xx2, ss
 integer :: kv, iv, kf
 
-call basisfunctions2(s,t,G,G_s,G_t,G_st,G_ss,G_tt)
+call basisfunctions(s,t,G,G_s,G_t,G_st,G_ss,G_tt)
 
 R = 0.d0; R_s = 0.d0; R_t = 0.d0; R_st = 0.d0; R_ss = 0.d0; R_tt = 0.d0
 Z = 0.d0; Z_s = 0.d0; Z_t = 0.d0; Z_st = 0.d0; Z_ss = 0.d0; Z_tt = 0.d0

@@ -4,6 +4,7 @@ recursive subroutine interp(node_list, element_list, i_elm, i_var, i_harm, s, t,
   P_ss, P_tt)
 
 use data_structure
+use mod_basisfunctions
 
 implicit none
 
@@ -26,7 +27,7 @@ real*8,                   intent(out) :: P_tt
 real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
 integer :: kv, iv, kf 
 
-call basisfunctions2(s,t,G(1:4,1:4),G_s(1:4,1:4),G_t(1:4,1:4),G_st(1:4,1:4),G_ss(1:4,1:4),G_tt(1:4,1:4))
+call basisfunctions(s,t,G(1:4,1:4),G_s(1:4,1:4),G_t(1:4,1:4),G_st(1:4,1:4),G_ss(1:4,1:4),G_tt(1:4,1:4))
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
 

@@ -40,6 +40,7 @@ subroutine find_RZ_single(node_list,element_list,i_elm,R_find,Z_find,R_out,Z_out
 !< i_elm
 !-------------------------------------------------------------------------
 use data_structure
+use mod_interp, only: interp_RZ
 implicit none
 
 type (type_node_list), intent(in)    :: node_list
@@ -85,7 +86,7 @@ do istart = 1,5
 
   do i=1,ntrial
 
-    call interp_RZ2(node_list,element_list,i_elm,x(1),x(2),RRg1,dRRg1_dr,dRRg1_ds, &
+    call interp_RZ(node_list,element_list,i_elm,x(1),x(2),RRg1,dRRg1_dr,dRRg1_ds, &
                                                     ZZg1,dZZg1_dr,dZZg1_ds)
 
     FVEC(1)   = RRg1 - R_find

@@ -1,6 +1,7 @@
 subroutine plot_flux_surfaces(node_list,element_list,surface_list,frame,every_nth,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
 use tr_module 
 use data_structure
+use mod_interp
 implicit none
 
 ! --- Routine parameters
@@ -17,7 +18,6 @@ real*8,                   intent(in) :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
 integer            :: i, j, k,ip, nplot, node1, node2, node3, node4, i_elm, found
 real*8             :: t, rr1, rr2, drr1, drr2, ss1, ss2, dss1, dss2, ri, si, dri, dsi
 real*8             :: R_min, R_max, Z_min, Z_max
-real*8             :: dummy1, dummy2, dummy3, dummy4, dummy5, dummy6, dummy7, dummy8, dummy9, dummy10
 real*8             :: psi_bnd, psi_bnd2
 real*8,allocatable :: rplot(:), zplot(:)
 character*13       :: LABEL
@@ -110,8 +110,7 @@ do j = 1, surface_list%n_psi, every_nth
 !      call INTERP2(RR(:,node1),RR(:,node2),RR(:,node3),RR(:,node4),ri,si,rplot(ip),dummy1,dummy2)
 !      call INTERP2(ZZ(:,node1),ZZ(:,node2),ZZ(:,node3),ZZ(:,node4),ri,si,zplot(ip),dummy1,dummy2)
 
-      call interp_RZ(node_list,element_list,i_elm,ri,si,rplot(ip),dummy1,dummy2,dummy3,dummy4,dummy5, &
-                                                        zplot(ip),dummy6,dummy7,dummy8,dummy9,dummy10)
+      call interp_RZ(node_list,element_list,i_elm,ri,si,rplot(ip),zplot(ip))
 
     enddo
 

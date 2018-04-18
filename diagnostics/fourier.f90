@@ -26,6 +26,7 @@ module fourier
   
   !> Fourier-transform the physical variables in the magnetic angle theta_mag.
   subroutine transform_qttys(mapping, vfour, nTht)
+    use mod_basisfunctions
     
     type(t_theta_mapping), intent(in)    :: mapping
     complex, allocatable,  intent(inout) :: vfour(:,:,:,:) !< Transformed quantities (m,n,irad,ivar)
@@ -77,7 +78,7 @@ module fourier
 	      basis_function = sin(2.*PI*nn*REAL(j-1)/REAL(nequidist_tor))
             end if
 	    
-            call basisfunctions2(s_out,t_out,G(1:4,1:4),G_s(1:4,1:4),G_t(1:4,1:4),G_st(1:4,1:4),   &
+            call basisfunctions(s_out,t_out,G(1:4,1:4),G_s(1:4,1:4),G_t(1:4,1:4),G_st(1:4,1:4),   &
               G_ss(1:4,1:4),G_tt(1:4,1:4))
   
 	    do l = 1, n_var

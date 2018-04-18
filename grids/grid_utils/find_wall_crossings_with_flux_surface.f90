@@ -11,6 +11,7 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list, ignor
   use constants
   use grid_xpoint_data
   use py_plots_grids
+  use mod_interp, only: interp_RZ
   implicit none
   
   ! --- Routine parameters
@@ -288,6 +289,7 @@ subroutine find_wall_crossings_with_flux_surface(node_list, element_list, surfac
   use data_structure
   use phys_module
   use high_resolution_wall
+  use mod_interp, only: interp_RZ
   implicit none
   
   ! --- Routine parameters
@@ -305,8 +307,8 @@ subroutine find_wall_crossings_with_flux_surface(node_list, element_list, surfac
   integer			:: istart,iend
   real*8			:: ss,ss_int, dl_int
   real*8			:: tt,tt_int
-  real*8			:: R,R2,R_tmp,Rbeg,Rend,Rmin,Rmax,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt
-  real*8			:: Z,Z2,Z_tmp,Zbeg,Zend,Zmin,Zmax,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt
+  real*8			:: R_tmp,Rbeg,Rend,Rmin,Rmax
+  real*8			:: Z_tmp,Zbeg,Zend,Zmin,Zmax
   real*8			:: R_cub1d(4)
   real*8			:: Z_cub1d(4)
   real*8			:: distance
@@ -330,15 +332,11 @@ subroutine find_wall_crossings_with_flux_surface(node_list, element_list, surfac
     ! --- Get approximate length of piece
     ss = surface%s(1,j)
     tt = surface%t(1,j)
-    call interp_RZ(node_list,element_list,i_elm,ss,tt,         &
-    		   Rbeg,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt, &
-        	   Zbeg,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt)
+    call interp_RZ(node_list,element_list,i_elm,ss,tt,Rbeg,Zbeg)
 
     ss = surface%s(3,j)
     tt = surface%t(3,j)
-    call interp_RZ(node_list,element_list,i_elm,ss,tt,         &
-    		   Rend,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt, &
-    		   Zend,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt)
+    call interp_RZ(node_list,element_list,i_elm,ss,tt,Rend,Zend)
     
     Rmin = min(Rbeg,Rend) - 0.02d0 ! extra 2cm just to make sure
     Rmax = max(Rbeg,Rend) + 0.02d0 ! extra 2cm just to make sure
@@ -469,6 +467,7 @@ subroutine find_wall_crossings_with_flux_surface_old(node_list, element_list, su
   use data_structure
   use phys_module
   use high_resolution_wall
+  use mod_interp, only: interp_RZ
   implicit none
   
   ! --- Routine parameters
@@ -489,8 +488,8 @@ subroutine find_wall_crossings_with_flux_surface_old(node_list, element_list, su
   real*8			:: ss2, dss2
   real*8			:: tt1, dtt1, tt_int
   real*8			:: tt2, dtt2
-  real*8			:: R,R_save,R_mid,R_tmp,R2,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt
-  real*8			:: Z,Z_save,Z_mid,Z_tmp,Z2,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt
+  real*8			:: R,R_save,R_mid,R_tmp,R2
+  real*8			:: Z,Z_save,Z_mid,Z_tmp,Z2
   real*8			:: R_cub1d(4)
   real*8			:: Z_cub1d(4)
   real*8			:: distance, distance_max
@@ -510,15 +509,11 @@ subroutine find_wall_crossings_with_flux_surface_old(node_list, element_list, su
       ! --- Get approximate length of piece
       ss1 = surface%s(1,j)
       tt1 = surface%t(1,j)
-      call interp_RZ(node_list,element_list,i_elm,ss1,tt1,    &
-                     R,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt, &
-    	  	     Z,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt)
+      call interp_RZ(node_list,element_list,i_elm,ss1,tt1,R,Z)
 
       ss2 = surface%s(3,j)
       tt2 = surface%t(3,j)
-      call interp_RZ(node_list,element_list,i_elm,ss2,tt2,     &
-                     R2,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt, &
-      	  	     Z2,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt)
+      call interp_RZ(node_list,element_list,i_elm,ss2,tt2,R2,Z2)
       
       length = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
       
@@ -547,9 +542,7 @@ subroutine find_wall_crossings_with_flux_surface_old(node_list, element_list, su
         dl = -1.d0 + 2.d0 * real(k-1) / real(n_tmp-1)
         call CUB1D(ss1, dss1, ss2, dss2, dl, si, dsi)
         call CUB1D(tt1, dtt1, tt2, dtt2, dl, ti, dti)
-        call interp_RZ(node_list,element_list,i_elm,si,ti,      &
-	               R,dRR_ds,dRR_dt,dRR_dst,dRR_dss,dRR_dtt, &
-      		       Z,dZZ_ds,dZZ_dt,dZZ_dst,dZZ_dss,dZZ_dtt)
+        call interp_RZ(node_list,element_list,i_elm,si,ti,R,Z)
         
 !write(*,*)'New int:',i,j,k,dl,R,Z
 	! --- Check if point is inside/outside wall

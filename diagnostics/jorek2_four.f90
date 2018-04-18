@@ -10,6 +10,7 @@ program JOREK2_FOUR
   use data_structure
   use mod_boundary
   use mod_log_params
+  use basis_at_gaussian, only: initialise_basis
 
   implicit none
   

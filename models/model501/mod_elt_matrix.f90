@@ -980,8 +980,12 @@ do ms=1, n_gauss
          rhs_ij_5   = v * BigR * (particle_source(ms,mt) + source_pellet + source_mgi)                                 * xjac * tstep &
                     + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                                              * tstep &
                     + v * 2.d0 * BigR * r0 * u0_y                                                                      * xjac * tstep &
-                    - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhon)                            * xjac * tstep &
-                    - D_prof * BigR  * (v_x*(r0_x-rn0_x) + v_y*(r0_y-rn0_y) + v_p*(r0_p-rn0_p) * eps_cyl**2 /BigR**2 ) * xjac * tstep &
+                    !- (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhon)                            * xjac * tstep &
+                    ! The new diffusion scheme for the impurities
+                    - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho)                                       * xjac * tstep &
+                    !- D_prof * BigR  * (v_x*(r0_x-rn0_x) + v_y*(r0_y-rn0_y) + v_p*(r0_p-rn0_p) * eps_cyl**2 /BigR**2 ) * xjac * tstep &
+                    ! The new diffusion scheme for the impurities
+                    - D_prof * BigR  * (v_x*(r0_x) + v_y*(r0_y) + v_p*(r0_p) * eps_cyl**2 /BigR**2 )                   * xjac * tstep &
                     - v * F0 / BigR * Vpar0 * r0_p                                                                     * xjac * tstep &
                     - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                                               * tstep &
                     - v * F0 / BigR * r0 * vpar0_p                                                                     * xjac * tstep &
@@ -1125,8 +1129,10 @@ do ms=1, n_gauss
 !################################################################################################### 
 
 
-	   rhs_ij_8 = BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2)   * xjac * tstep &         
-                      
+	   rhs_ij_8 = BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2)   * xjac * tstep &        
+                      ! New diffusion scheme for impurities
+                      - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rhon)                                      * xjac * tstep & 
+                      - D_prof * BigR  * (v_x*(rn0_x) + v_y*(rn0_y) + v_p*(rn0_p) * eps_cyl**2 /BigR**2 )                * xjac * tstep & 
                       + v * BigR**2 * ( rn0_s * u0_t - rn0_t * u0_s)                                                     * tstep &
                       + v * 2.d0 * BigR * rn0 * u0_y                                                              * xjac * tstep &
                       - v * F0 / BigR * Vpar0 * rn0_p                                                             * xjac * tstep &
@@ -1433,9 +1439,13 @@ do ms=1, n_gauss
                  Bgrad_rho_rhon     = ( F0 / BigR * rhon_p +  rhon_x * ps0_y - rhon_y * ps0_x ) / BigR
                  BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
-                 amat_51 = - (D_par-D_prof) * BigR * BB2_psi / BB2**2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhon)         * xjac * theta * tstep &
-                           + (D_par-D_prof) * BigR / BB2              * Bgrad_rho_star_psi * (Bgrad_rho-Bgrad_rhon)     * xjac * theta * tstep &
-                           + (D_par-D_prof) * BigR / BB2              * Bgrad_rho_star * (Bgrad_rho_psi-Bgrad_rhon_psi) * xjac * theta * tstep &
+                 ! New impurity diffusion scheme
+                 amat_51 = - (D_par-D_prof) * BigR * BB2_psi / BB2**2 * Bgrad_rho_star * (Bgrad_rho)                     * xjac * theta * tstep &
+                           !- (D_par-D_prof) * BigR * BB2_psi / BB2**2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhon)         * xjac * theta * tstep &
+                           !+ (D_par-D_prof) * BigR / BB2              * Bgrad_rho_star_psi * (Bgrad_rho-Bgrad_rhon)     * xjac * theta * tstep &
+                           + (D_par-D_prof) * BigR / BB2              * Bgrad_rho_star_psi * (Bgrad_rho)                 * xjac * theta * tstep &
+                           !+ (D_par-D_prof) * BigR / BB2              * Bgrad_rho_star * (Bgrad_rho_psi-Bgrad_rhon_psi) * xjac * theta * tstep &
+                           + (D_par-D_prof) * BigR / BB2              * Bgrad_rho_star * (Bgrad_rho_psi)                 * xjac * theta * tstep &
                            + v * Vpar0 * (r0_s * psi_t - r0_t * psi_s)                                            * theta * tstep &
                            + v * r0 * (vpar0_s * psi_t - vpar0_t * psi_s)                                         * theta * tstep &
 
@@ -1489,8 +1499,10 @@ do ms=1, n_gauss
                               * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                       &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep 
 
-                 amat_58 = - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon                  * xjac * theta * tstep &
-                           - D_prof * BigR  * (v_x*rhon_x + v_y*rhon_y + v_p*rhon_p * eps_cyl**2 /BigR**2 ) * xjac * theta * tstep &
+                 amat_58 = &
+                           ! New diffusion scheme for impurities
+                           !- (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon                  * xjac * theta * tstep &
+                           !- D_prof * BigR  * (v_x*rhon_x + v_y*rhon_y + v_p*rhon_p * eps_cyl**2 /BigR**2 ) * xjac * theta * tstep &
 
                            + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y + Dn0p * rhon_p * v_p*eps_cyl**2/BigR**2)    &
                                                                                                      * xjac * theta * tstep
@@ -1834,7 +1846,10 @@ do ms=1, n_gauss
 
                 amat_81 =  + v * rn0 * (vpar0_s * psi_t - vpar0_t * psi_s)                                * theta * tstep &
                            + v * Vpar0 * (rn0_s * psi_t - rn0_t * psi_s)                                  * theta * tstep &
-
+                           ! New diffusion scheme for impurities
+                           - (D_par-D_prof) * BigR * BB2_psi / BB2**2 * Bgrad_rho_star * (Bgrad_rhon)                     * xjac * theta * tstep &
+                           + (D_par-D_prof) * BigR / BB2              * Bgrad_rho_star_psi * (Bgrad_rhon)                 * xjac * theta * tstep &
+                           + (D_par-D_prof) * BigR / BB2              * Bgrad_rho_star * (Bgrad_rhon_psi)                 * xjac * theta * tstep &
                            + TG_num8 * 0.25d0 / BigR * vpar0**2                                                           &
                                      * (rn0_x * psi_y - rn0_y * psi_x)                                                    &
                                      * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep     &
@@ -1881,7 +1896,10 @@ do ms=1, n_gauss
                          + TG_num8 * 0.25d0 / BigR * vpar0**2                                                             &
                               * (rhon_x * ps0_y - rhon_y * ps0_x + F0 / BigR * rhon_p)                                    &
                               * ( v_x * ps0_y -  v_y * ps0_x   + F0 / BigR * v_p) * xjac * theta * tstep * tstep          &
-                                   
+                          !New diffusion scheme for impurities
+                         + (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon                  * xjac * theta * tstep &
+                         + D_prof * BigR  * (v_x*rhon_x + v_y*rhon_y + v_p*rhon_p * eps_cyl**2 /BigR**2 ) * xjac * theta * tstep &
+         
 		          + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y + Dn0p * rhon_p * v_p*eps_cyl**2/BigR**2) * xjac * theta * tstep  & 
 
                           + Dn_perp_num     * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy)   * BigR * xjac * theta * tstep 

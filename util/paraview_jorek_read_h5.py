@@ -68,7 +68,11 @@ def RequestData(self):
     else:
         t_norm = 1
     # Read xtime from last file and correlate against file numbers
-    xtime_all = np.insert(h5py.File(FileNames[-1]).get("xtime")*t_norm, 0, 0.0)
+    f = h5py.File(FileNames[-1])
+    if "xtime" in f:
+        xtime_all = np.insert(f.get("xtime")*t_norm, 0, 0.0)
+    else:
+        xtime_all = np.asarray([0.0])
     if len(FileNames) > 1:
         xtime = [xtime_all[int(re.findall(r'\d+', os.path.basename(fname))[0])] for fname in FileNames]
     else:
@@ -155,7 +159,10 @@ def RequestInformation(self):
         # Also read the model number and set this
         with h5py.File(FileNames[-1], 'r') as f:
             self.model = f['jorek_model'][0]
-            xtime_all = np.insert(f.get("xtime")*t_norm, 0, 0.0)
+            if "xtime" in f:
+                xtime_all = np.insert(f.get("xtime")*t_norm, 0, 0.0)
+            else:
+                xtime_all = np.asarray([0.0])
         if len(FileNames) > 1:
             xtime = [xtime_all[int(re.findall(r'\d+', os.path.basename(fname))[0])] for fname in FileNames]
         else:

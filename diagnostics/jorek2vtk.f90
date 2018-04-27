@@ -13,6 +13,7 @@ use corr_neg
 use mod_import_restart
 use mod_log_params
 use mod_vtk
+use mgi_module
 
 implicit none
 
@@ -75,7 +76,32 @@ integer               :: n_radiation,s_radiation
 real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 real*8                :: T_corr, T_rad, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
-real*8                :: T_real8
+real*8                :: T_real8, r0_real8, rn0_real8
+real*8                :: r0_corr, rn0_corr
+
+! Atomic physics coefficients:
+!   -Mass ratio between main ions and impurites (m_i/m_imp)
+real*8     :: m_i_over_m_imp
+!   -Mean impurity ionization state
+real*8     :: Z_imp, T0_Zimp, alpha_Zimp
+!   -Coefficients related to Z_imp
+real*8     :: alpha_imp
+real*8     :: beta_imp
+!   -Radiation from injected impurities
+real*8     :: Lrad, dLrad_dT
+real*8     :: ne_rad                                          ! Electron density used in radiation rate
+real*8     :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
+real*8     :: A2_rad, T2_rad, sig2_rad
+
+
+!   -Temporary variable for charge state distribution
+real*8, allocatable :: P_imp(:)
+real*8     :: E_ion
+integer*8  :: ion_i, ion_k
+
+! MPI arguments
+integer    :: required,provided,StatInfo
+
 #ifdef fullmhd
 !====================== --- Variables related to full mhd 
 integer               :: n_fullmhd,s_fullmhd
@@ -112,6 +138,20 @@ allocate(node_list)
 allocate(element_list)
 allocate(bnd_elm_list)
 
+  ! --- Initialise MPI / threaded MPI
+#ifdef FUNNELED
+required = MPI_THREAD_FUNNELED
+#else
+required = MPI_THREAD_MULTIPLE
+#endif
+#ifdef STAN_FLAG
+required = 0
+#endif
+call MPI_Init_thread(required, provided, StatInfo)
+
+call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread
+
+
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
@@ -129,8 +169,15 @@ include_velocity_field = .false. ! include vector of velocity field (or not)
 include_bootstrap      = .false. ! include bootstrap current and averaged current
 include_psi_norm       = .false.  ! include normalized flux
 
-#if (JOREK_MODEL == 500)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
 include_radiation = .true.
+! --- Read ADAS data and generate coronal equilibrium is needed
+
+write(*,*) "CHECK Point 00"
+if (flag_adas) then
+  call init_imp_adas(my_id)
+end if
+write(*,*) "CHECK Point 01"
 #endif
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
@@ -219,6 +266,14 @@ endif
     n_scalars   = n_scalars + n_radiation
  endif
 #endif
+#if (JOREK_MODEL == 501)
+    n_radiation = 0
+ if (include_radiation) then
+    n_radiation = 4
+    s_radiation = n_scalars
+    n_scalars   = n_scalars + n_radiation
+ endif
+#endif
 
 #if fullmhd
  n_fullmhd = 3
@@ -242,7 +297,7 @@ if ( SI_units ) then
    endif
    scalar_names(7)='Vpar_km/s   '
 
-#if (JOREK_MODEL == 500)
+#if (JOREK_MODEL >= 500)
    scalar_names(8)='N_dens_1d20  '
 #endif
 
@@ -296,6 +351,12 @@ endif
  if (include_radiation) then
      scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
                   = (/ 'Ionis_Wm-3  ', 'Lin_radWm-3 ', 'Brems_Wm-3  ', 'Joule_Wm-3  ', 'Imp_bg_Wm-3 '/)
+ endif
+#endif
+#if (JOREK_MODEL == 501)
+ if (include_radiation) then
+     scalar_names(s_radiation+1:s_radiation+n_radiation) &
+                  = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp '/)
  endif
 #endif
 
@@ -899,7 +960,140 @@ enddo  ! n_elements
 
    enddo
   endif
-#endif /*(JOREK_MODEL == 500)*/
+#endif
+#if (JOREK_MODEL == 501)
+ if (include_radiation) then
+
+  !-------------------------------------------
+  ! Atomic physics parameters for Impurities
+  !-------------------------------------------
+
+   select case ( trim(gas_type) )
+     case('D2')
+       m_i_over_m_imp = 1.
+     case('Ar')
+       m_i_over_m_imp = 1./20. ! Argon mass = 40 u and main ion (D) mass = 2 u
+     case('Ne')
+       m_i_over_m_imp = 1./10. ! Neon mass = 20 u and main ion (D) mass = 2 u
+     case default
+       write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
+       write(*,*) '=> We assume the gas is D2.'
+       m_i_over_m_imp = 1.
+   end select
+
+   do i=1,nnos
+     T_real8 = scalars(i,6)
+     T_rad = corr_neg_temp(T_real8,(/1.d-2,1.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0) &
+                        *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
+
+     r0_real8 = scalars(i,5)
+     rn0_real8 = scalars(i,8)
+
+     r0_corr = corr_neg_dens(r0_real8,(/1.d-8,1.d-5/))
+     rn0_corr = corr_neg_dens(rn0_real8,(/1.d-12,1.d-5/))
+
+
+     ! We estimate the effective charge by a test density 10^20/m^3
+     ! Later maybe we should implement a iterative method
+     if (flag_adas) then
+
+       if (allocated(imp_adas(1)%ionisation_energy)) then
+
+         if (allocated(P_imp)) deallocate(P_imp)
+         allocate(P_imp(1:imp_adas(1)%n_Z))
+
+         call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                p_out=P_imp,z_eff=Z_imp)
+
+       ! Calculate the ionization potential energy and it's time gradient
+         E_ion     = 0.
+
+         do ion_i=1, imp_adas(1)%n_Z
+           do ion_k=1, ion_i
+             E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+           end do
+         end do
+       ! Convert from eV to JOREK unit
+         E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
+       else
+         call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+         E_ion     = 0.
+       end if
+     else
+
+       T0_Zimp        = 437.  ! eV
+       alpha_Zimp     = 0.415
+
+       Z_imp     = 10. !18.*tanh((T_rad/T0_Zimp)**alpha_Zimp)
+       E_ion     = 0.
+     end if
+
+     alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+     beta_imp     = m_i_over_m_imp*Z_imp - 1.
+
+     ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+
+
+  !-------------------------------------------
+  ! --- Radiative function, if flag_adas is enabled use interpolation, if not use simple model
+  ! ------------------------------------------
+
+     ! Normalization coefficient for radiation rate from SI units (W.m^3) to
+     ! JOREK units:
+     coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                  *(central_density*1.d20)**2.5d0*m_i_over_m_imp
+
+     if (flag_adas .and. ne_rad > 1.d16 .and. T_rad > 1.) then
+
+       Lrad = 0.0
+       
+       ! Here we are temperarily only considering one impurity species, in the
+       ! future maybe a do loop will is needed
+       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+
+       Lrad = Lrad * coef_rad_1
+
+     else if (flag_adas) then
+       Lrad = 0.
+       dLrad_dT = 0.
+       E_ion = 0.
+     else
+  !-------------------------------------------
+  ! --- Radiative cooling rate for Argon (approximate fit of cooling rate at
+  ! coronal equilibrium)
+  ! ------------------------------------------
+
+!   if (T_rad .gt. 5.) then
+
+     A0_rad   = 2.8*1.d-33    ! W.m^3
+     A1_rad   = 2.335*1.d-31  ! W.m^3
+     T1_rad   = 23.           ! eV
+     sig1_rad = 14.           ! eV
+     A2_rad   = 3.846*1.d-32  ! W.m^3
+     T2_rad   = 236.          ! eV
+     sig2_rad = 150.          ! eV
+
+!     Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.)
+!     + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
+     !Lrad     = (1./2.)*coef_rad_1*5.d-32 *
+     !(tanh((T_rad-20.)/10.)-tanh(-20./10.))
+     Lrad      = 0. ! For Test
+
+     ! Derivative wrt to T, with T in JOREK units
+     !dLrad_dT = (1./2.)*coef_rad_1*5.d-32 * (1./10.) * dT_rad_dT *
+     !(1-tanh((T_rad-20.)/10.)**2) * dT0_corr_dT
+     dLrad_dT = 0. ! For Test
+     end if
+
+     scalars(i,s_radiation+1) = scalars(i,8) * E_ion
+     scalars(i,s_radiation+2) = (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad
+     scalars(i,s_radiation+3) = (2/(3 * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
+     scalars(i,s_radiation+4) = Z_imp
+
+   end do
+ endif
+#endif /*(JOREK_MODEL == 500 || JOREK_MODEL == 501)*/
 
 
 if (SI_units) then
@@ -924,7 +1118,7 @@ if (SI_units) then
     endif
     !=====================================Vparal in km/s *Btot!!!
     scalars(i,7) = scalars(i,7) /t_norm/1.e3
-#if (JOREK_MODEL == 500)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
     !===================================== Neutral density in 1e20m-3
     scalars(i,8) = scalars(i,8) * central_density
 #endif
@@ -954,7 +1148,7 @@ if (SI_units) then
 
 #if (JOREK_MODEL == 500)
 
- if (include_radiation) then
+  if (include_radiation) then
 
     coef_ion_3 = 27.2d0*EL_CHG*MU_zero*central_density*1.d20
     coef_ion_2 = 0.232d0
@@ -1007,9 +1201,20 @@ if (SI_units) then
 
     scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * frad_bg
 
- endif
+  endif
+#endif
+#if (JOREK_MODEL == 501)
 
-#endif /*(JOREK_MODEL == 500)*/
+  if (include_radiation) then
+   eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0)
+
+   scalars(i,s_radiation+1) = scalars(i,s_radiation+1)/(K_BOLTZ*MU_ZERO)
+   scalars(i,s_radiation+2) = scalars(i,s_radiation+2)*((central_density*1.d20)**2.)/coef_rad_1
+   scalars(i,s_radiation+3) = eta_Sp * (1.d6*scalars(i,3))**2.d0
+   scalars(i,s_radiation+4) = scalars(i,s_radiation+4)
+  end if
+
+#endif /*(JOREK_MODEL >= 500)*/
 
   enddo  ! nnos
 

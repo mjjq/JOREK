@@ -86,8 +86,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 D_neutral_x, D_neutral_y, D_neutral_p,   	    &
-                mgi_sig, mgi_length, n_zero, ksi_ion,               &  
-                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
+                ns_sig, ns_length, n_zero, ksi_ion,                 &  
+                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 output_bnd_elements,                                &
                 wall_file, rot_file, bc_natural_flux,               &
                 first_target_point, last_target_point,              &

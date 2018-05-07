@@ -95,13 +95,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg, ZK_prof_neg,                            &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
-                mgi_sig, mgi_deltaphi, ksi_ion, abl_history,        &
-                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
+                ns_sig, ns_deltaphi, ksi_ion, abl_history,          &
+                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
-                spi_Vel_diff, t_mgi, JET_MGI, ASDEX_MGI,            &
+                spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 delta_n_convection, nimp_bg, psi_surfaces,          &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
@@ -142,7 +142,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   endif
 
   ! --- Calculate normalisation factor for MGI source (related to its toroidal shape)
-  mgi_tor_norm = mgi_deltaphi * PI**0.5 * ERF(PI/mgi_deltaphi)
+  ns_tor_norm = ns_deltaphi * PI**0.5 * ERF(PI/ns_deltaphi)
 
    if (trim(R_Z_psi_bnd_file) .ne. 'none') then
 
@@ -230,8 +230,8 @@ call read_num_profiles(my_id)
 call derive_num_profiles(my_id)
 
 ! --- Initialize the shattered pellet position
-!spi_R = mgi_R
-!spi_Z = mgi_Z
+!spi_R = ns_R
+!spi_Z = ns_Z
 
 
 if (using_spi) call init_spi(my_id)

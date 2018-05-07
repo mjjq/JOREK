@@ -160,9 +160,9 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp          local_n_particles_inj, local_n_particles, mgi_amplitude, mgi_R, mgi_Z,          &
-!$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm, spi_tor_rot,          &
-!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube, JET_MGI,ASDEX_MGI,            &
+!$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,          &
+!$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,          &
+!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,            &
 !$omp          central_mass, pellets, abl_history, psi_surfaces, id_surfaces, tor_frequency,   &
 !$omp          n_spi, using_spi, spi_abl_model, local_count_surfaces, local_vol_surfaces,      &
 !$omp          ng_radius_ratio, ng_radius_min, ng_radius, local_rho_surfaces, spi_shard_file,  &
@@ -379,15 +379,15 @@ do ife = ife_min, ife_max
               ng_radius = ng_radius_min
             end if
 
-            call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,     &
-                                  mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
+            call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,ns_sig,ns_deltaphi,     &
+                                  ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),     &
                                   phi,source_neutral,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
           end do
 
         else
 
-          call neutral_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,        &
-                                A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
+          call neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm,        &
+                                A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
                                 JET_MGI,ASDEX_MGI,central_density,central_mass)
 
         end if

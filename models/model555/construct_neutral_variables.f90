@@ -367,7 +367,7 @@ subroutine ELM_build_neutral_diffusivities_and_sources(element, nodes, xpoint2, 
     ! --- Neutral density source
     phi        = 2.d0*PI * float(i_plane-1) / float(n_plane) / float(n_period)
     source_neutral = 0.d0			
-    call neutral_source(mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius, mgi_sig, mgi_length, x_g, y_g, phi, source_neutral)				    
+    call neutral_source(ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius, ns_sig, ns_length, x_g, y_g, phi, source_neutral)				    
   endif
   
   return

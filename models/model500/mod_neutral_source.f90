@@ -14,42 +14,42 @@ module mod_neutral_source
 
 
   !> Calculates the neutral source
-  subroutine neutral_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                              A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,               &
+  subroutine neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
+                              A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,rhon_source,t_now,               &
                               JET_MGI,ASDEX_MGI,central_density,central_mass)
 
     implicit none
 
     ! --- Routine parameters
-    real*8,  intent(in)  :: R, Z, phi, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_now, t_mgi, mgi_amplitude
-    real*8,  intent(in)  :: mgi_R, mgi_Z, mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, L_tube
-    real*8,  intent(in)  :: central_density, central_mass, mgi_tor_norm
+    real*8,  intent(in)  :: R, Z, phi, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_now, t_ns, ns_amplitude
+    real*8,  intent(in)  :: ns_R, ns_Z, ns_phi, ns_radius, ns_sig, ns_deltaphi, L_tube
+    real*8,  intent(in)  :: central_density, central_mass, ns_tor_norm
     logical, intent(in)  :: JET_MGI, ASDEX_MGI
     real*8,  intent(out) :: rhon_source
 
     ! --- Local variables
-    real*8  :: c0_D, radius, mgi_tor_shape, mgi_pol_shape, dphi, V_mgi, f_Nbar, f_dNbar_dt
-    real*8  :: mgi_dNinj_dt, mgi_drhon_dt, t_loc, t_norm, prof_temp, R_Asdex, mnum, kst, yy, gam
+    real*8  :: c0_D, radius, ns_tor_shape, ns_pol_shape, dphi, V_ns, f_Nbar, f_dNbar_dt
+    real*8  :: ns_dNinj_dt, ns_drhon_dt, t_loc, t_norm, prof_temp, R_Asdex, mnum, kst, yy, gam
     real*8  :: dt_open, N_barlitre, DMV_inj_frac
     integer :: k
 
-    radius = sqrt((R-mgi_R)**2 + (Z-mgi_Z)**2)
+    radius = sqrt((R-ns_R)**2 + (Z-ns_Z)**2)
 
     c0_D = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))  ! Sound speed of Deuterium
 
     ! Poloidal gaussian shape factor
-    mgi_pol_shape = exp(-(radius/mgi_radius)**2.d0)  
+    ns_pol_shape = exp(-(radius/ns_radius)**2.d0)  
 
     ! Toroidal gaussian shape factor
-    dphi = abs(phi - mgi_phi)
+    dphi = abs(phi - ns_phi)
     if (dphi .gt. PI) dphi = 2*PI - dphi  
-    mgi_tor_shape = exp(-(dphi/mgi_deltaphi)**2.d0)
+    ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
 
-    V_mgi  = PI * mgi_R * mgi_tor_norm * mgi_radius**2.d0
+    V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
 
     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20) ! Time normalization factor
 
-    t_loc = (t_now-t_mgi) * t_norm + L_tube/(3.d0 * c0_D)
+    t_loc = (t_now-t_ns) * t_norm + L_tube/(3.d0 * c0_D)
 
     if (t_loc .gt. 0.) then
 
@@ -67,7 +67,7 @@ module mod_neutral_source
       !! P_Dmv: Initial pressure in the DMV reservoir, directly linked to the total number of particles
       !! in the reservoir. Expressed in bar here as it is in all MGI experiments. 
       !!
-      !! A shifted time is used in order to get neutrals as soon as t_now = t_mgi (L_tube/3c0 is the time 
+      !! A shifted time is used in order to get neutrals as soon as t_now = t_ns (L_tube/3c0 is the time 
       !! needed for the gas to propagate in the injection tube)
 
         f_Nbar = 0.d0
@@ -88,13 +88,13 @@ module mod_neutral_source
         !   f_dNbar_dt = 0.d0   ! The gas injection is stopped when the initial number of particles in the reservoir is reached  
         ! endif
 
-        mgi_dNinj_dt = A_Dmv * K_Dmv * L_tube / V_Dmv * (5.d0)**(5.d0) * (6.d0)**(-6.d0) * f_dNbar_dt   ! Normalised number of injected particles per unit time
+        ns_dNinj_dt = A_Dmv * K_Dmv * L_tube / V_Dmv * (5.d0)**(5.d0) * (6.d0)**(-6.d0) * f_dNbar_dt   ! Normalised number of injected particles per unit time
 
-        mgi_drhon_dt = mgi_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * 2.d0 * central_mass * MASS_PROTON ! Mass density per unit time (SI units)
+        ns_drhon_dt = ns_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * 2.d0 * central_mass * MASS_PROTON ! Mass density per unit time (SI units)
     
         ! Apply gaussian shape (toroidally and poloidally) factor (normalized so that the number of particles injected does not depend on the shape)
         ! as well as JOREK normalization
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * mgi_drhon_dt * mgi_pol_shape * mgi_tor_shape / V_mgi
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
 
       elseif (ASDEX_MGI) then
 
@@ -111,20 +111,20 @@ module mod_neutral_source
 
         if (t_loc .lt. dt_open) then
           prof_temp    = - exp(-t_loc*t_loc/2.d0/dt_open*gam)
-          mgi_dNinj_dt = - prof_temp*t_loc*V_Dmv*1.d3*gam*P_Dmv*N_barlitre/dt_open ! Number of particles injected per unit time
+          ns_dNinj_dt = - prof_temp*t_loc*V_Dmv*1.d3*gam*P_Dmv*N_barlitre/dt_open ! Number of particles injected per unit time
         else
           prof_temp    = - exp(-(t_loc-dt_open)*gam)*exp(-dt_open/(2*gam))
-          mgi_dNinj_dt = - prof_temp*gam*V_Dmv*1.d3*P_Dmv*N_barlitre               ! Number of particles injected per unit time
+          ns_dNinj_dt = - prof_temp*gam*V_Dmv*1.d3*P_Dmv*N_barlitre               ! Number of particles injected per unit time
         endif
 
-        mgi_drhon_dt =  mgi_dNinj_dt * central_mass * MASS_PROTON ! Mass density injected per unit time
+        ns_drhon_dt =  ns_dNinj_dt * central_mass * MASS_PROTON ! Mass density injected per unit time
 
         ! Apply JOREK normalization
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * mgi_drhon_dt * mgi_pol_shape * mgi_tor_shape / V_mgi
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
 
       else 
 
-        rhon_source =  mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm / (V_mgi * 1.d20 * central_density)  
+        rhon_source =  ns_amplitude * ns_pol_shape * ns_tor_shape * t_norm / (V_ns * 1.d20 * central_density)  
 
       endif
 

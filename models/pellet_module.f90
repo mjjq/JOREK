@@ -223,14 +223,14 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
   spi_delta_phi   = 0.
   spi_Vel_R_tmp   = 0.
   spi_Vel_phi_tmp = 0.
-  spi_phi_inj     = mgi_phi
+  spi_phi_inj     = ns_phi
 
   V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
   t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
   spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
     
-  spi_phi_inj     = mgi_phi + mgi_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/mgi_R
+  spi_phi_inj     = ns_phi + ns_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
 
   if (spi_phi_inj >= 2.*PI) then
     spi_phi_inj   = mod(spi_phi_inj,2.*PI)
@@ -285,7 +285,7 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
     end if
 
     if (spi_abl_model == 0) then
-      pellets(i)%spi_abl   = mgi_amplitude
+      pellets(i)%spi_abl   = ns_amplitude
     elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2) then
 
       call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
@@ -349,7 +349,7 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
   end do
 
   if (spi_tor_rot) then
-    mgi_phi_rotate  = mgi_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
+    ns_phi_rotate  = ns_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
   end if
 
   if (my_id == 0 .and. mod(index_now,20) == 0) then
@@ -451,8 +451,8 @@ real*8, allocatable :: shard_size(:)               !The shard size array
             read(42,*)  shard_size(1:n_spi)
             close(42)
           else
-            write(*,*) "WARNING!!! Shard size file does not exist, reverting to uniform distribution"
-            spi_shard_file = 'none'
+            write(*,*) "WARNING!!! Shard size file does not exist, exiting now"
+            stop
           end if
         end if
 
@@ -486,9 +486,9 @@ real*8, allocatable :: shard_size(:)               !The shard size array
 
       spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
 
-      spi_R_inj       = mgi_R - spi_L_inj * (spi_Vel_Rref/spi_Vel_totref)
-      spi_Z_inj       = mgi_Z - spi_L_inj * (spi_Vel_Zref/spi_Vel_totref)
-      spi_phi_inj     = mgi_phi - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/mgi_R
+      spi_R_inj       = ns_R - spi_L_inj * (spi_Vel_Rref/spi_Vel_totref)
+      spi_Z_inj       = ns_Z - spi_L_inj * (spi_Vel_Zref/spi_Vel_totref)
+      spi_phi_inj     = ns_phi - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
 
       spi_rotation_01 = asin(spi_Vel_Zref/spi_Vel_totref)
       if (cos(spi_rotation_01) == 0.) then
@@ -539,7 +539,7 @@ real*8, allocatable :: shard_size(:)               !The shard size array
 
         spi_R_tmp       = spi_R_inj + spi_L_inj * (spi_Vel_R_tmp/spi_Vel_totref)
         spi_Z_tmp       = spi_Z_inj + spi_L_inj * (spi_Vel_Z_tmp/spi_Vel_totref)
-        spi_phi_tmp     = spi_phi_inj + spi_L_inj * (spi_Vel_RxZ_tmp/spi_Vel_totref)/mgi_R
+        spi_phi_tmp     = spi_phi_inj + spi_L_inj * (spi_Vel_RxZ_tmp/spi_Vel_totref)/ns_R
 
         if (spi_shard_file == 'none') then
           spi_radius_tmp = (spi_quantity / (n_spi*(4.*PI/3.)*pellet_density*1.d20))**(1./3.)

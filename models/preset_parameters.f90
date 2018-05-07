@@ -324,14 +324,14 @@ subroutine preset_parameters
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
     JET_MGI = .false.
     ASDEX_MGI = .false.
-    mgi_amplitude = 0.d0  ! 0.007d0
-    mgi_R      = 3.2d0
-    mgi_Z      =  1.5d0
-    mgi_phi    = 1.57d0
-    mgi_radius =   0.08d0
-    mgi_sig    =  0.05
-    mgi_deltaphi =  0.5
-    mgi_tor_norm = 1.
+    ns_amplitude = 0.d0  ! 0.007d0
+    ns_R      = 3.2d0
+    ns_Z      =  1.5d0
+    ns_phi    = 1.57d0
+    ns_radius =   0.08d0
+    ns_sig    =  0.05
+    ns_deltaphi =  0.5
+    ns_tor_norm = 1.
     ksi_ion = 1.84d-24
     D_neutral_x = 1.d-5
     D_neutral_y = 1.d-5
@@ -340,7 +340,7 @@ subroutine preset_parameters
      L_tube = 2.d0
      K_Dmv = 4.d-2
      A_Dmv = 1.77d-2
-     t_mgi = 2.d3
+     t_ns  = 2.d3
     !=====
      delta_n_convection = 0
      nimp_bg = 0.
@@ -357,7 +357,7 @@ subroutine preset_parameters
      spi_Vel_diff    = 0.0
      spi_angle       = 0.0
      spi_L_inj       = 0.25
-     mgi_phi_rotate  = 0.0
+     ns_phi_rotate   = 0.0
      tor_frequency   = 0.0
      
      n_spi           = 1

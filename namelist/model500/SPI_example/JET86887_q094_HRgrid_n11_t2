@@ -270,27 +270,27 @@ R_boundary(100) = 3.85,   Z_boundary(100) =  0.15,   psi_boundary(100) =  2.3242
  delta_n_convection = 0.
 
  !JET_MGI = .t.
- !mgi_amplitude = 3.d23 
+ !ns_amplitude = 3.d23 
 
  P_Dmv = 0.1d0 ! in bar
  L_tube = 2.894 !2.359d0
  K_Dmv = 4.d-2
  A_Dmv = 1.77d-2
  V_Dmv = 1.d-3
- t_mgi = 105.55d0!160.d0
+ t_ns  = 105.55d0!160.d0
  
- mgi_R        =  3.00d0
- mgi_Z        =  1.60d0
- mgi_phi      =  4.51d0
- mgi_radius   =  0.08d0
- mgi_deltaphi =  6.d-1
+ ns_R        =  3.00d0
+ ns_Z        =  1.60d0
+ ns_phi      =  4.51d0
+ ns_radius   =  0.08d0
+ ns_deltaphi =  6.d-1
 
 
 !========= Additional input for SPI model =============
  using_spi = .t.
  n_spi = 100
- flag_spi = 1
- flag_spi_size = 1
+ spi_abl_model = 1
+ spi_shard_file = 'shard_size.dat'
  abl_history = .t.
 
  spi_Vel_Rref    = -8.94427d1

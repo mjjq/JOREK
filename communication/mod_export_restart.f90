@@ -171,7 +171,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     deallocate (spi_abl_arr)
 
     if (spi_tor_rot) then
-      write(21) mgi_phi_rotate
+      write(21) ns_phi_rotate
     end if
 
   end if
@@ -617,7 +617,7 @@ end if
     deallocate (spi_abl_arr)
 
     if (spi_tor_rot) then
-      call HDF5_real_saving(file_id,mgi_phi_rotate,"mgi_phi_rotate"//char(0))  
+      call HDF5_real_saving(file_id,ns_phi_rotate,"ns_phi_rotate"//char(0))  
     end if
 
   end if

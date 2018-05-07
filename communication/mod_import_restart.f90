@@ -359,7 +359,7 @@ endif
       deallocate (spi_abl_arr)
 
       if (spi_tor_rot) then
-        read(21,err=999, end=999) mgi_phi_rotate 
+        read(21,err=999, end=999) ns_phi_rotate 
       end if
 
     end if
@@ -1104,7 +1104,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       deallocate (spi_abl_arr)
 
       if (spi_tor_rot) then
-        call HDF5_real_reading(file_id,mgi_phi_rotate,"mgi_phi_rotate")
+        call HDF5_real_reading(file_id,ns_phi_rotate,"ns_phi_rotate")
       end if
 
 

@@ -205,7 +205,7 @@ module phys_module
   real*8  :: pellet_delta_psi  !< width of smoothing in poloidal flux
   real*8  :: pellet_velocity_R !< pellet velocity component radial direction
   real*8  :: pellet_velocity_Z !< pellet velocity component Z direction
-  real*8  :: pellet_density    !< pellet density (in units 10^20 m^-3)
+  real*8  :: pellet_density    !< pellet atom number density (in units 10^20 m^-3)
   real*8  :: pellet_particles  !< the number of particles in the pellet (in units of 10^20)
   logical :: use_pellet
   
@@ -240,9 +240,11 @@ module phys_module
   real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection
   real*8  :: spi_quantity       !< Total injected atom number for SPI
   real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds 
-                                !< and that of shattered pellets
+                                !< and that of shattered pellets, so that if
+                                !< ng_radius_ratio times shard size is greater than ng_radius_min, 
+                                !< this radius is used for neutral deposition
 
-  real*8  :: spi_Vel_diff       !< The reference veolocity difference from the reference velocity
+  real*8  :: spi_Vel_diff       !< The maximum speed difference from the reference speed
   real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
   real*8  :: spi_L_inj          !< Distance between SPI nozzle and mgi_R, mgi_Z, mgi_phi
   real*8  :: mgi_phi_rotate     !< The toroidal position of rotated injection point, 
@@ -250,16 +252,17 @@ module phys_module
   real*8  :: tor_frequency      !< The rigid body rotation frequency of SPI
 
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud 
-                                !< with regard to the simulation resolution
+                                !< This is purely due to numerical constraint on
+                                !< spatial resolution.
 
   real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
   real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
 
   integer :: n_spi              !< Number of shattered pellets injected
-  integer :: flag_spi           !< Determine which type of ablation model is using.
+  integer :: spi_abl_model      !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model
-  integer :: flag_spi_size      !< Determine which type of shard distribution is used,
-                                !< 0 for uniform shard size, 1 for modified BesselK distribution.
+
+  character(len=80) :: spi_shard_file !< The name of the shard size file
 
   real*8  :: size_beta          !< Parameter for the modified BesselK distribution
 

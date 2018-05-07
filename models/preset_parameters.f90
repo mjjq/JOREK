@@ -371,8 +371,8 @@ subroutine preset_parameters
      id_surfaces(3)  = 7
      id_surfaces(4)  = 8
 
-     flag_spi        = 0
-     flag_spi_size   = 0
+     spi_abl_model   = 0
+     spi_shard_file  = 'none'
      size_beta       = 3.d3
 
      spi_tor_rot     = .false.

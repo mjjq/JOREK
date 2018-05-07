@@ -98,12 +98,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mgi_sig, mgi_deltaphi, ksi_ion, abl_history,        &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
-                spi_Vel_RxZref, spi_quantity, flag_spi,             &
+                spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
                 spi_Vel_diff, t_mgi, JET_MGI, ASDEX_MGI,            &
                 delta_n_convection, nimp_bg, psi_surfaces,          &
-                RMP_on, RMP_har_cos,RMP_har_sin, flag_spi_size,     &
+                RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 amix, amix_freeb, equil_accuracy,                   &

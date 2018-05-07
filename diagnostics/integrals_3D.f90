@@ -164,8 +164,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm, spi_tor_rot,          &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube, JET_MGI,ASDEX_MGI,            &
 !$omp          central_mass, pellets, abl_history, psi_surfaces, id_surfaces, tor_frequency,   &
-!$omp          n_spi, using_spi, flag_spi, local_count_surfaces, local_vol_surfaces,           &
-!$omp          ng_radius_ratio, ng_radius_min, ng_radius, local_rho_surfaces, flag_spi_size,   &
+!$omp          n_spi, using_spi, spi_abl_model, local_count_surfaces, local_vol_surfaces,      &
+!$omp          ng_radius_ratio, ng_radius_min, ng_radius, local_rho_surfaces, spi_shard_file,  &
 #endif
 !$omp          wgauss_copy)                                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt, spi_i, i_surface,            &

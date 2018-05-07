@@ -284,9 +284,9 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
       end if
     end if
 
-    if (flag_spi == 0) then
+    if (spi_abl_model == 0) then
       pellets(i)%spi_abl   = mgi_amplitude
-    elseif (flag_spi >= 1 .and. flag_spi <= 2) then
+    elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2) then
 
       call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
                    R_out,Z_out,i_elm,s_out,t_out,ifail)
@@ -329,11 +329,11 @@ real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
       end if
       ! NGS model (Gal)
       
-      if (flag_spi == 1) then
+      if (spi_abl_model == 1) then
       ! NGS model (Gal)
       pellets(i)%spi_abl    = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
                              (T_eV**1.64)
-      else if (flag_spi ==2) then
+      else if (spi_abl_model ==2) then
       ! NGS model (Fitted by Sergeev)
       pellets(i)%spi_abl    = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**(1.455)) * ((n_SI*1.d-6)**(0.455)) * &
                              (T_eV**1.679)
@@ -425,7 +425,7 @@ real*8, allocatable :: shard_size(:)               !The shard size array
   else
     if (n_spi >= 1) then
 
-      if (flag_spi_size == 1) then
+      if (spi_shard_file /= 'none') then
 
         real_total_quantity = 0.0
 
@@ -444,15 +444,15 @@ real*8, allocatable :: shard_size(:)               !The shard size array
         size_beta = (spi_quantity/(pellet_density*1.d20*n_spi*6.*(PI**2)))**(-1./3.)
         write(*,*) "Shard Size Beta:", size_beta
 
-        if (my_id == 0 .and. index_now == 0 .and. flag_spi_size == 1) then
-          inquire(file="shard_size.dat", exist=ferr) ! Check if the file exist
+        if (my_id == 0 .and. index_now == 0 .and. spi_shard_file /= 'none') then
+          inquire(file=trim(spi_shard_file), exist=ferr) ! Check if the file exist
           if (ferr) then
-            open(42,file="shard_size.dat",status="OLD",action="READ")
+            open(42,file=trim(spi_shard_file),status="OLD",action="READ")
             read(42,*)  shard_size(1:n_spi)
             close(42)
           else
             write(*,*) "WARNING!!! Shard size file does not exist, reverting to uniform distribution"
-            flag_spi_size = 0
+            spi_shard_file = 'none'
           end if
         end if
 
@@ -541,9 +541,9 @@ real*8, allocatable :: shard_size(:)               !The shard size array
         spi_Z_tmp       = spi_Z_inj + spi_L_inj * (spi_Vel_Z_tmp/spi_Vel_totref)
         spi_phi_tmp     = spi_phi_inj + spi_L_inj * (spi_Vel_RxZ_tmp/spi_Vel_totref)/mgi_R
 
-        if (flag_spi_size == 0) then
+        if (spi_shard_file == 'none') then
           spi_radius_tmp = (spi_quantity / (n_spi*(4.*PI/3.)*pellet_density*1.d20))**(1./3.)
-        else if (flag_spi_size == 1) then
+        else
           spi_radius_tmp = shard_size(i)/size_beta
         end if
 

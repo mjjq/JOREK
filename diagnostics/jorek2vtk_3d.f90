@@ -160,7 +160,7 @@ do m=1, n_toroidal
             						    - ps_x * HZ(i_tor,m) / R,			  &
             						    + ps_y * HZ(i_tor,m) / R * sin(angle)  /)
             if (i_tor .eq. 1) then
-              vectors(inode,1:3,1) = vectors(inode,1:3,1) + (/ - F0/R * sin(angle), -0., F0/R *cos(angle)/)
+              vectors(inode,1:3,1) = vectors(inode,1:3,1) + (/ - F0/R * sin(angle), -0.d0, F0/R *cos(angle)/)
             endif
 
             call interp(node_list,element_list,i,2,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
@@ -243,9 +243,9 @@ etype = 12  ! for vtk_quad
 lf = char(10) ! line feed character
 
 #ifdef IBM_MACHINE
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream')
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',status='replace')
 #else
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN',status='replace')
 #endif
 
 buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)

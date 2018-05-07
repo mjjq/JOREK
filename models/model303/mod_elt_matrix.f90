@@ -55,7 +55,9 @@ real*8     :: w, w_x, w_y, w_p, w_s, w_t, w_ss, w_st, w_tt, w_xx, w_xy, w_yy
 real*8     :: rho, rho_x, rho_y, rho_s, rho_t, rho_p, rho_ss, rho_st, rho_tt, rho_xx, rho_xy, rho_yy, rho_hat, rho_x_hat, rho_y_hat
 real*8     :: T, T_x, T_y, T_s, T_t, T_p, T_ss, T_st, T_tt, T_xx, T_xy, T_yy
 real*8     :: P0, P0_x, P0_y, P0_s, P0_t, P0_ss, P0_st, P0_tt, P0_p, P0_xx, P0_xy, P0_yy
-real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T
+real*8     :: P0_x_rho, P0_xx_rho, P0_y_rho, P0_yy_rho, P0_xy_rho
+real*8     :: P0_x_T,   P0_xx_T,   P0_y_T,   P0_yy_T,   P0_xy_T
+real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T, eta_num_T, W_dia, W_dia_rho, W_dia_T
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
 real*8     :: amat_51, amat_52, amat_55, amat_56, amat_57, amat_61, amat_62, amat_65, amat_66, amat_67, amat_16, amat_13
 real*8     :: amat_71, amat_72, amat_75, amat_76, amat_77, amat_15
@@ -211,13 +213,15 @@ enddo
 do ms=1, n_gauss
   do mt=1, n_gauss
 
+  if (keep_current_prof) then
 #ifdef altcs
-  call current(xpoint2,xcase2,x_g(ms,mt),y_g(ms,mt),Z_xpoint,psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    call current(xpoint2,xcase2,x_g(ms,mt),y_g(ms,mt),Z_xpoint,psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
 #else
-  call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt),Z_xpoint,eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt),Z_xpoint,eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
 #endif
- 
-    call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
+  end if
+
+  call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
 !=========================================MB :velocity profile
        if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
         call velocity(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt), psi_axis, psi_bnd, V_source(ms,mt), &
@@ -498,15 +502,18 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
-       visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
-       dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+       visco_T     =   visco * (T0_corr/T_0)**(-1.5d0)
+       dvisco_dT   = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+       d2visco_dT2 =   visco * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
        if ( xpoint2 .and. (T0 .lt. T_min) ) then
-         visco_T   = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
-         dvisco_dT = 0.d0
+         visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+         dvisco_dT   = 0.d0
+         d2visco_dT2 = 0.d0
        endif
      else
-       visco_T   = visco
-       dvisco_dT = 0.d0
+       visco_T     = visco
+       dvisco_dT   = 0.d0
+       d2visco_dT2 = 0.d0
      end if
      
      ! --- Temperature dependent parallel heat diffusivity
@@ -526,6 +533,14 @@ do ms=1, n_gauss
        dZKpar_dT = 0.d0
      endif
 
+     ! --- Diamagnetic viscosity
+     if (Wdia) then
+       W_dia = + tauIC /r0_corr    * (p0_xx + p0_x/bigR + p0_yy) &
+               - tauIC /r0_corr**2 * (r0_x*p0_x + r0_y*p0_y)
+     else
+       W_dia = 0.d0
+     endif
+     
      eta_num_T   = eta_num                                           ! hyperresistivity
      visco_num_T = visco_num                                         ! hyperviscosity
 
@@ -655,6 +670,10 @@ do ms=1, n_gauss
 !                      -3*v*tauIC* BigR**3 * (p0_x*u0_xy - p0_y*u0_xx) * xjac * tstep &
 
                       - v * tauIC * BigR**4 * (u0_xy * (p0_xx - p0_yy) - p0_xy * (u0_xx - u0_yy) ) * xjac * tstep &
+
+                      ! --- Diamagnetic viscosity
+                      - dvisco_dT * bigR * W_dia * (v_x*T0_x + v_y*T0_y)    * xjac * tstep  &
+                      - visco_T   * bigR * W_dia * (v_xx + v_x/bigR + v_yy) * xjac * tstep  &
 
                       + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep & 
 
@@ -880,6 +899,31 @@ do ms=1, n_gauss
                  Bgrad_rho_rho      = ( F0 / BigR * rho_p +  rho_x * ps0_y - rho_y * ps0_x ) / BigR
                  BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
+                 P0_x_rho  = rho_x*T0 + rho*T0_x
+                 P0_xx_rho = rho_xx*T0 + 2.0*rho_x*T0_x + rho*T0_xx
+                 P0_y_rho  = rho_y*T0 + rho*T0_y
+                 P0_yy_rho = rho_yy*T0 + 2.0*rho_y*T0_y + rho*T0_yy
+                 P0_xy_rho = rho_xy*T0 + rho*T0_xy + rho_x*T0_y + rho_y*T0_x
+                 
+                 P0_x_T  = r0_x*T + r0*T_x
+                 P0_xx_T = r0_xx*T + 2.0*r0_x*T_x + r0*T_xx
+                 P0_y_T  = r0_y*T + r0*T_y
+                 P0_yy_T = r0_yy*T + 2.0*r0_y*T_y + r0*T_yy
+                 P0_xy_T = r0_xy*T + r0*T_xy + r0_x*T_y + r0_y*T_x
+  
+                 if (Wdia) then
+                   W_dia_rho = - tauIC *     rho/r0_corr**2 * (p0_xx     + p0_x    /bigR + p0_yy    ) &
+                               + tauIC          /r0_corr    * (p0_xx_rho + p0_x_rho/bigR + p0_yy_rho) &
+                               + tauIC * 2.0*rho/r0_corr**3 * (r0_x *p0_x     + r0_y *p0_y    )    &
+                               - tauIC          /r0_corr**2 * (rho_x*p0_x     + rho_y*p0_y    )    &
+                               - tauIC          /r0_corr**2 * (r0_x *p0_x_rho + r0_y *p0_y_rho)
+                   W_dia_T   = + tauIC          /r0_corr    * (p0_xx_T + p0_x_T/bigR + p0_yy_T) &
+                               - tauIC          /r0_corr**2 * (r0_x  *p0_x_T + r0_y  *p0_y_T)
+                 else
+                   W_dia_rho = 0.d0
+                   W_dia_T   = 0.d0
+                 endif
+  
                  if (normalized_velocity_profile) then
                     Vt_x_psi    = dV_dpsi_source(ms,mt) * psi_x
                     Vt_y_psi    = dV_dpsi_source(ms,mt) * psi_y
@@ -1022,6 +1066,10 @@ do ms=1, n_gauss
                                                    - (rho_xy * T0 + rho_x*T0_y + rho_y*T0_x + rho*T0_xy) * (u0_xx - u0_yy)  )   &
                                        * xjac * theta * tstep                                          &
 
+                           ! --- Diamagnetic viscosity
+                           + dvisco_dT * bigR * W_dia_rho * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
+                           + visco_T   * bigR * W_dia_rho * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
+                           
                            + TG_num2 * 0.25d0 * rho_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x) &
                                     * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep
 ! FO to be verified:
@@ -1046,11 +1094,18 @@ do ms=1, n_gauss
                            + v * tauIC * BigR**4 * T  * (r0_s * w0_t - r0_t * w0_s)  * theta * tstep &
 
 		           + tauIC * BigR**3 * (r0_y * T + r0 * T_y) * (v_x* u0_x + v_y * u0_y) * xjac * theta * tstep &
-
-		           + v * tauIC * BigR**4 * ( (u0_xy * (T_xx*r0 + 2.d0*T_x*r0_x + T*r0_xx         &
+                           + v * tauIC * BigR**4 * ( (u0_xy * (T_xx*r0 + 2.d0*T_x*r0_x + T*r0_xx         &
 			                                     - T_yy*r0 - 2.d0*T_y*r0_y - T*r0_yy))       &
 			                           - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )         &
-						 * xjac * theta * tstep 
+						 * xjac * theta * tstep                                                       &
+
+                           ! --- Diamagnetic viscosity
+                           + d2visco_dT2*T * bigR * W_dia   * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
+                           + dvisco_dT*T   * bigR * W_dia   * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
+                           + dvisco_dT     * bigR * W_dia_T * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
+                           + visco_T       * bigR * W_dia_T * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
+                           + dvisco_dT     * bigR * W_dia   * (v_x*T_x  + v_y*T_y )    * xjac * theta * tstep  
+		           
 ! FO to be verified:
 !                          +3*v*tauIC* BigR**3 * ((r0*T_x+r0_x*T)*u0_xy - (r0*T_y+r0_y*T)*u0_xx) * xjac * theta * tstep 
 

@@ -359,6 +359,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'heatsource_gauss_psin ', heatsource_gauss_psin
   write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
   write(*,REAL_FMT) 'tauIC                 ', tauIC
+  write(*,LOGI_FMT) 'Wdia                  ', Wdia
   write(*,REAL_FMT) 'eta_num               ', eta_num
   write(*,REAL_FMT) 'visco_num             ', visco_num
   write(*,REAL_FMT) 'visco_par_num         ', visco_par_num
@@ -366,6 +367,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
   write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
+  write(*,LOGI_FMT) 'keep_current_prof     ', keep_current_prof
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
   write(*,REAL_FMT) 'D_prof_neg_thresh     ', D_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
@@ -438,6 +440,7 @@ if (my_id == 0) then
   
   if (freeboundary_equil) then
     write(*,LOGI_FMT) 'starwall_equil_coils  ', starwall_equil_coils
+    write(*,LOGI_FMT) 'find_pf_coil_currents ', find_pf_coil_currents
     write(*,LOGI_FMT) 'freeb_equil_iterate_area    ', freeb_equil_iterate_area
     write(*,REAL_FMT) 'amix_freeb            ', amix_freeb   
     write(*,REAL_FMT) 'equil_accuracy_freeb  ', equil_accuracy_freeb

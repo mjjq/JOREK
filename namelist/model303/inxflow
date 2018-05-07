@@ -2,8 +2,11 @@
 
  restart = .t.
  regrid  = .f.
- tstep   = 5. 
- nstep   = 0 
+ tstep_n   = 5. 
+ nstep_n   = 0 
+ 
+ freeboundary = .f.
+ wall_resistivity_fact = 1.
 
  nout = 2
 

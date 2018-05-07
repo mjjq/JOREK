@@ -5,8 +5,7 @@
 !! - index 2 : counts the variables (p,u,v,w)
 !! - the functions are defined on the interval [0,1][0,1]
 !! \see ::basisfunctions and ::basisfunctions1
-recursive subroutine basisfunctions2(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
-
+pure subroutine basisfunctions2(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
 implicit none
 
 ! --- Routine parameters

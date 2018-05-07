@@ -872,7 +872,7 @@ scalar_names  = (/ 'length_m    ','T_start_keV ','psi_norm    ' /)
 lf = char(10) ! line feed character
 
 if (my_id .eq. 0) then
-  open(unit=ivtk,file='connection_new.vtk',access='stream',form='unformatted',convert='BIG_ENDIAN')
+  open(unit=ivtk,file='connection_new.vtk',access='stream',form='unformatted',convert='BIG_ENDIAN',status='replace')
 
   buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
   buffer = 'vtk output'//lf                                                             ; write(ivtk) trim(buffer)

@@ -373,7 +373,6 @@ subroutine preset_parameters
 
      spi_abl_model   = 0
      spi_shard_file  = 'none'
-     size_beta       = 3.d3
 
      spi_tor_rot     = .false.
      abl_history     = .false.

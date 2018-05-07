@@ -264,8 +264,6 @@ module phys_module
 
   character(len=80) :: spi_shard_file !< The name of the shard size file
 
-  real*8  :: size_beta          !< Parameter for the modified BesselK distribution
-
   !> @name The following five variables are for diagnostic purpose only, used to
   !estimate the density increase within a given psi surface
   integer :: id_surfaces(4)     !< ID of each tracked flux surface, usded in determining domains

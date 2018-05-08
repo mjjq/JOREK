@@ -380,7 +380,7 @@ module pellet_module
     use phys_module
     use mpi_mod
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
-      use mod_neutral_source
+    use mod_neutral_source
 #endif
     use corr_neg
     
@@ -414,6 +414,11 @@ module pellet_module
         end if
     
       end do
+
+      if (2*PI/n_plane >= ns_deltaphi) then
+        write(*,*) "ERROR, ns_deltaphi too small for the n_plane, exiting now!"
+        stop
+      end if
     
       if (allocated(pellets)) then
         deallocate(pellets)

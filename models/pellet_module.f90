@@ -371,8 +371,7 @@ module pellet_module
 
   subroutine init_spi(my_id)
   !******************************************************************************
-  ! routine updates the shattered pellet position and the size of the simulated *
-  ! and physical pellet sizes (from the integral of the pellet particle source) *
+  ! routine initialize the shattered pellet position, velocity and size         *
   !******************************************************************************
   
     use constants

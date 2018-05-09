@@ -233,7 +233,7 @@ shift
 infile=`readlink -f $1`
 shift
 sourceDir=`readlink -f .`
-copyfiles=`grep _file $infile | grep -v '^ *!' | sed -e "s/^.*= *[\"']\(.*\)[\"'].*$/\1/"`
+copyfiles=`grep _file $infile | grep -v '^ *!' | sed -e "s/^.*= *[\"']\(.*\)[\"'].*$/\1/" | grep -v 'none'`
 copyfiles="$copyfiles $@"
 for copyfile in $copyfiles; do
   if [ ! -f "$copyfile" ]; then

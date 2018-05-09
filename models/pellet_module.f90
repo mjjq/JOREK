@@ -214,137 +214,135 @@ module pellet_module
     ! given R, Z, RxZ velocity and a calculated apex of the trajectory spreading cone 
     real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
   
-      spi_delta_phi   = 0.
-      spi_Vel_R_tmp   = 0.
-      spi_Vel_phi_tmp = 0.
-      spi_phi_inj     = ns_phi
+    spi_delta_phi   = 0.
+    spi_Vel_R_tmp   = 0.
+    spi_Vel_phi_tmp = 0.
+    spi_phi_inj     = ns_phi
     
-      V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
-      t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+    V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
+    t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
     
-      spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
+    spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
         
-      spi_phi_inj     = ns_phi + ns_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
+    spi_phi_inj     = ns_phi + ns_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
     
-      if (spi_phi_inj >= 2.*PI) then
-        spi_phi_inj   = mod(spi_phi_inj,2.*PI)
-      else if (spi_phi_inj < 0.) then
-        spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
-      end if
+    if (spi_phi_inj >= 2.*PI) then
+      spi_phi_inj   = mod(spi_phi_inj,2.*PI)
+    else if (spi_phi_inj < 0.) then
+      spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
+    end if
     
-      loop_over_shards:do i = 1, n_spi
+    loop_over_shards:do i = 1, n_spi
 
-        ! Update position     
-        spi_delta_phi          = pellets(i)%spi_phi - spi_phi_inj
-        spi_Vel_R_tmp          = pellets(i)%spi_Vel_R * cos(spi_delta_phi) &
-                                 + pellets(i)%spi_Vel_RxZ * sin(spi_delta_phi)
-        spi_Vel_phi_tmp        = pellets(i)%spi_Vel_RxZ * cos(spi_delta_phi) &
-                                 - pellets(i)%spi_Vel_R * sin(spi_delta_phi)
-        spi_Vel_phi_tmp        = spi_Vel_phi_tmp / pellets(i)%spi_R
+      ! Update position     
+      spi_delta_phi          = pellets(i)%spi_phi - spi_phi_inj
+      spi_Vel_R_tmp          = pellets(i)%spi_Vel_R * cos(spi_delta_phi) &
+                               + pellets(i)%spi_Vel_RxZ * sin(spi_delta_phi)
+      spi_Vel_phi_tmp        = pellets(i)%spi_Vel_RxZ * cos(spi_delta_phi) &
+                               - pellets(i)%spi_Vel_R * sin(spi_delta_phi)
+      spi_Vel_phi_tmp        = spi_Vel_phi_tmp / pellets(i)%spi_R    
     
-    
-        pellets(i)%spi_R       = pellets(i)%spi_R + spi_Vel_R_tmp * tstep / V_normalisation
-        pellets(i)%spi_Z       = pellets(i)%spi_Z + pellets(i)%spi_Vel_Z * tstep / V_normalisation
-        pellets(i)%spi_phi     = pellets(i)%spi_phi + spi_Vel_phi_tmp * tstep / V_normalisation
-    
-        if (spi_tor_rot) then
-          pellets(i)%spi_phi     = pellets(i)%spi_phi + tor_frequency * 2. * PI * tstep / V_normalisation
-        end if
-    
-        pellets(i)%spi_Vel_R   = pellets(i)%spi_Vel_R
-        pellets(i)%spi_Vel_Z   = pellets(i)%spi_Vel_Z
-        pellets(i)%spi_Vel_RxZ = pellets(i)%spi_Vel_RxZ
-    
-        if (pellets(i)%spi_phi >= 2.*PI) then
-          pellets(i)%spi_phi   = mod(pellets(i)%spi_phi,2.*PI)
-        else if (pellets(i)%spi_phi < 0.) then
-          pellets(i)%spi_phi   = mod(pellets(i)%spi_phi,2.*PI) + 2.*PI
-        end if
-    
-        if (pellets(i)%spi_radius > 0.0) then
-          pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep * &
-                                  (pellets(i)%spi_abl / (4.d0 * PI * pellets(i)%spi_radius**2.d0 *    &
-                                  pellet_density * 1.d20))
-    
-          if (pellets(i)%spi_radius < 0.d0) then
-            pellets(i)%spi_radius = 0.d0
-          end if
-        end if
-
-        ! Update size    
-        if (my_id == 0.) then
-          if (index_now > 1) then
-            xtime_spi_ablation(i,index_now) = xtime_spi_ablation(i,index_now-1) + t_norm * tstep * pellets(i)%spi_abl
-          else
-            xtime_spi_ablation(i,index_now) = t_norm * tstep * pellets(i)%spi_abl
-          end if
-        end if
-
-        ! Update ablation rate    
-        if (spi_abl_model == 0) then ! Constant ablation rate
-          pellets(i)%spi_abl = ns_amplitude
-        elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2) then ! NGS models
-
-          ! Get local n_e, T_e    
-          call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
-                       R_out,Z_out,i_elm,s_out,t_out,ifail)
-    
-          if (ifail == 99 .or. ifail == 999) then ! The shard is outside of the domain
-            pellets(i)%spi_abl = 0.
-            cycle
-          else if (ifail /= 0) then
-            write(*,*) "Something wrong in find_RZ!! my_id = ", my_id, i_elm, ifail
-            stop
-          end if
-    
-          call interp_PRZ(node_list,element_list,i_elm,[5,6],2,s_out,t_out,pellets(i)%spi_phi,&
-                          P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
-          
-          n_SI = P(1) * 1.d20 * central_density
-          if (n_SI < 0.) then
-            n_SI = 0.
-          end if
-
-          ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e = T_i    
-          T_eV = P(2) / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20) 
-          if (T_eV < 0.) then
-            T_eV = 0.
-          end if
-        
-          if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
-            write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
-          end if
-          
-          if (spi_abl_model == 1) then ! NGS model version 1 (K. Gal et al., see http://iopscience.iop.org/article/10.1088/0029-5515/48/8/085005?pageTitle=IOPscience)
-            pellets(i)%spi_abl = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * (T_eV**1.64)
-          else if (spi_abl_model == 2) then ! NGS model version 2 (V. Sergeev et al., see https://link.springer.com/article/10.1134/S1063780X06050023)
-            pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**(1.455)) * ((n_SI*1.d-6)**(0.455)) * (T_eV**1.679)
-          end if
-        else
-          pellets(i)%spi_abl    = 0.d0
-        end if
-       
-        if (my_id == 0.) then
-          xtime_spi_ablation_rate(i,index_now) = pellets(i)%spi_abl
-        end if
-    
-      end do loop_over_shards
+      pellets(i)%spi_R       = pellets(i)%spi_R + spi_Vel_R_tmp * tstep / V_normalisation
+      pellets(i)%spi_Z       = pellets(i)%spi_Z + pellets(i)%spi_Vel_Z * tstep / V_normalisation
+      pellets(i)%spi_phi     = pellets(i)%spi_phi + spi_Vel_phi_tmp * tstep / V_normalisation
     
       if (spi_tor_rot) then
-        ns_phi_rotate  = ns_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
+        pellets(i)%spi_phi     = pellets(i)%spi_phi + tor_frequency * 2. * PI * tstep / V_normalisation
       end if
     
-      if (my_id == 0 .and. mod(index_now,20) == 0) then    
-        do i=1, 20 !n_spi
-          if (pellets(i)%spi_radius > 0.0) then
-            write(*,*) "Pellet number: ", i
-            write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
-            write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, &
-                                                       pellets(i)%spi_Vel_RxZ
-            write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
-          end if
-        end do
+      pellets(i)%spi_Vel_R   = pellets(i)%spi_Vel_R
+      pellets(i)%spi_Vel_Z   = pellets(i)%spi_Vel_Z
+      pellets(i)%spi_Vel_RxZ = pellets(i)%spi_Vel_RxZ
+    
+      if (pellets(i)%spi_phi >= 2.*PI) then
+        pellets(i)%spi_phi   = mod(pellets(i)%spi_phi,2.*PI)
+      else if (pellets(i)%spi_phi < 0.) then
+        pellets(i)%spi_phi   = mod(pellets(i)%spi_phi,2.*PI) + 2.*PI
       end if
+    
+      if (pellets(i)%spi_radius > 0.0) then
+        pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep * &
+                                (pellets(i)%spi_abl / (4.d0 * PI * pellets(i)%spi_radius**2.d0 *    &
+                                pellet_density * 1.d20))   
+        if (pellets(i)%spi_radius < 0.d0) then
+          pellets(i)%spi_radius = 0.d0
+        end if
+      end if
+
+      ! Update size    
+      if (my_id == 0.) then
+        if (index_now > 1) then
+          xtime_spi_ablation(i,index_now) = xtime_spi_ablation(i,index_now-1) + t_norm * tstep * pellets(i)%spi_abl
+        else
+          xtime_spi_ablation(i,index_now) = t_norm * tstep * pellets(i)%spi_abl
+        end if
+      end if
+
+      ! Update ablation rate    
+      if (spi_abl_model == 0) then ! Constant ablation rate
+        pellets(i)%spi_abl = ns_amplitude
+      elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2) then ! NGS models
+
+        ! Get local n_e, T_e    
+        call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
+                     R_out,Z_out,i_elm,s_out,t_out,ifail)
+    
+        if (ifail == 99 .or. ifail == 999) then ! The shard is outside of the domain
+          pellets(i)%spi_abl = 0.
+          cycle
+        else if (ifail /= 0) then
+          write(*,*) "Something wrong in find_RZ!! my_id = ", my_id, i_elm, ifail
+          stop
+        end if
+    
+        call interp_PRZ(node_list,element_list,i_elm,[5,6],2,s_out,t_out,pellets(i)%spi_phi,&
+                        P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+          
+        n_SI = P(1) * 1.d20 * central_density
+        if (n_SI < 0.) then
+          n_SI = 0.
+        end if
+
+        ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e = T_i    
+        T_eV = P(2) / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20) 
+        if (T_eV < 0.) then
+          T_eV = 0.
+        end if
+        
+        if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
+          write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
+        end if
+          
+        if (spi_abl_model == 1) then ! NGS model version 1 (K. Gal et al., see http://iopscience.iop.org/article/10.1088/0029-5515/48/8/085005?pageTitle=IOPscience)
+          pellets(i)%spi_abl = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * (T_eV**1.64)
+        else if (spi_abl_model == 2) then ! NGS model version 2 (V. Sergeev et al., see https://link.springer.com/article/10.1134/S1063780X06050023)
+          pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**(1.455)) * ((n_SI*1.d-6)**(0.455)) * (T_eV**1.679)
+        end if
+      else
+        pellets(i)%spi_abl    = 0.d0
+      end if
+       
+      if (my_id == 0.) then
+        xtime_spi_ablation_rate(i,index_now) = pellets(i)%spi_abl
+      end if
+    
+    end do loop_over_shards
+    
+    if (spi_tor_rot) then
+      ns_phi_rotate  = ns_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
+    end if
+    
+    if (my_id == 0 .and. mod(index_now,20) == 0) then    
+      do i=1, 20 !n_spi
+        if (pellets(i)%spi_radius > 0.0) then
+          write(*,*) "Pellet number: ", i
+          write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
+          write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, &
+                                                     pellets(i)%spi_Vel_RxZ
+          write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
+        end if
+      end do
+    end if
     
     return 
    
@@ -385,191 +383,191 @@ module pellet_module
     real*8  :: size_beta                               ! The characteristic shard size    
     real*8  :: V_shard_norm                            ! The normalized (by size_beta) volume of shards
     
-      do i_surface = 2, 4
-        if (abs(psi_surfaces(i_surface))<abs(psi_surfaces(i_surface-1))) then
-           psi_surfaces(i_surface) = 0.0
-           write(*,*) "WARNING! Please adjust the order of tracked surfaces"
-        end if
-    
-      end do
-
-      if (2*PI/(n_tor*n_period) >= ns_deltaphi) &
-        write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
-    
-      if (allocated(pellets)) then
-        deallocate(pellets)
+    do i_surface = 2, 4
+      if (abs(psi_surfaces(i_surface))<abs(psi_surfaces(i_surface-1))) then
+         psi_surfaces(i_surface) = 0.0
+         write(*,*) "WARNING! Please adjust the order of tracked surfaces"
       end if
     
-      allocate (pellets(n_spi),stat=err_alloc)  ! Dynamically allocate memeries for pellets
-    
-      if (err_alloc /= 0) then
-        write(*,*) "Error when trying to dynamically allocate memeries for pellets, reverting to non-SPI case."
-        stop
-      else
-        if (n_spi >= 1) then
-    
-          ! Read normalized shard size distribution (if given in file) and calculate shard radius normalization factor size_beta
-          if (spi_shard_file /= 'none') then 
-    
-            if (allocated(shard_size)) then
-              deallocate(shard_size)
-            end if
-            allocate (shard_size(n_spi),stat=err_alloc)  ! Dynamically allocate memeries for shard sizes
-            if (err_alloc /= 0) then
-              write(*,*) "Error when trying to dynamically allocate memeries for shard size, using uniform case."
-              deallocate(pellets)
-              stop
-            else
-              shard_size = 0.0
-            end if
-    
-            if (my_id == 0 .and. index_now == 0 .and. spi_shard_file /= 'none') then
-              size_beta    = 0.0
-              V_shard_norm = 0.0
-              inquire(file=trim(spi_shard_file), exist=ferr) ! Check if the file exists
-              if (ferr) then
-                open(42,file=trim(spi_shard_file),status="OLD",action="READ")
-                read(42,*)  shard_size(1:n_spi)
-                close(42)
-              else
-                write(*,*) "WARNING!!! Shard size file does not exist, exiting now"
-                deallocate(shard_size)
-                deallocate(pellets)
-                stop
-              end if
-            end if
+    end do
 
-            do i = 1, n_spi
-              V_shard_norm = V_shard_norm + (4./3.) * PI * (shard_size(i)**3)
-              size_beta    = (spi_quantity / (V_shard_norm)*pellet_density*1.d20) ** (-1./3.)
-              write(*,*) "Characteristic shard size (m):", size_beta
-            end do
+    if (2*PI/(n_tor*n_period) >= ns_deltaphi) &
+      write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
+  
+    if (allocated(pellets)) then
+      deallocate(pellets)
+    end if
+  
+    allocate (pellets(n_spi),stat=err_alloc)  ! Dynamically allocate memeries for pellets
+  
+    if (err_alloc /= 0) then
+      write(*,*) "Error when trying to dynamically allocate memeries for pellets, reverting to non-SPI case."
+      stop
+    else
+      if (n_spi >= 1) then
+  
+	! Read normalized shard size distribution (if given in file) and calculate shard radius normalization factor size_beta
+	if (spi_shard_file /= 'none') then 
+  
+	  if (allocated(shard_size)) then
+	    deallocate(shard_size)
+	  end if
+	  allocate (shard_size(n_spi),stat=err_alloc)  ! Dynamically allocate memeries for shard sizes
+	  if (err_alloc /= 0) then
+	    write(*,*) "Error when trying to dynamically allocate memeries for shard size, using uniform case."
+	    deallocate(pellets)
+	    stop
+	  else
+	    shard_size = 0.0
+	  end if
+  
+	  if (my_id == 0 .and. index_now == 0 .and. spi_shard_file /= 'none') then
+	    size_beta	 = 0.0
+	    V_shard_norm = 0.0
+	    inquire(file=trim(spi_shard_file), exist=ferr) ! Check if the file exists
+	    if (ferr) then
+	      open(42,file=trim(spi_shard_file),status="OLD",action="READ")
+	      read(42,*)  shard_size(1:n_spi)
+	      close(42)
+	    else
+	      write(*,*) "WARNING!!! Shard size file does not exist, exiting now"
+	      deallocate(shard_size)
+	      deallocate(pellets)
+	      stop
+	    end if
+	  end if
 
-          end if
+	  do i = 1, n_spi
+	    V_shard_norm = V_shard_norm + (4./3.) * PI * (shard_size(i)**3)
+	    size_beta	 = (spi_quantity / (V_shard_norm)*pellet_density*1.d20) ** (-1./3.)
+	    write(*,*) "Characteristic shard size (m):", size_beta
+	  end do
 
-          ! Initialize shard radius
-          do i = 1, n_spi 
-            if (spi_shard_file == 'none') then
-              spi_radius_tmp = (spi_quantity / (n_spi*(4.*PI/3.)*pellet_density*1.d20))**(1./3.)
-            else
-              spi_radius_tmp = shard_size(i)/size_beta
-            end if
-            pellets(i)%spi_radius  = spi_radius_tmp
-          end do
-    
-          if (allocated(rnd)) then
-            deallocate(rnd)
-          end if
+	end if
 
-          ! Initialize shard velocity and position    
-          allocate (rnd(3*n_spi),stat=err_alloc_rnd)  ! Dynamically allocate memeries for randoms
-    
-          if (err_alloc_rnd /= 0) then
-            write(*,*) "Error when trying to dynamically allocate memeries for randoms."
-            deallocate(pellets)
-            deallocate(shard_size)
-            stop
-          end if
-    
-    !===================Determine the rotational transform of coordinate===============
-    !Here, we perform the following rotational transform from the original
-    !coordinate R, Z, RxZ to the so-called spi coordinate x, y ,z, with the reference
-    !direction of spi injection being the z axis, while y axis locates within the 
-    !same surface as Z and z. The rotational transform from x, y, z to R, Z, RxZ is
-    !as the following: first, we rotate the system around x axis clockwise, facing
-    !the positive x direction, for spi_rotation_01 to get coordinate X', Y', Z'. 
-    !Then we further rotate around Y' clockwise, facing the positive Y' direction for
-    !spi_rotation_02 to acquire R, Z, RxZ. Hence we have:
-    !R   = cos(spi_rotation_02)*x - sin(spi_rotation_02)*(-sin(spi_rotation_01)*y + cos(spi_rotation_01)*z)
-    !Z   = cos(spi_rotation_01)*y + sin(spi_rotation_01)*z
-    !RxZ = sin(spi_rotation_02)*x + cos(spi_rotation_02)*(-sin(spi_rotation_01)*y + cos(spi_rotation_01)*z)
-    
-          spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
-    
-          spi_R_inj       = ns_R - spi_L_inj * (spi_Vel_Rref/spi_Vel_totref)
-          spi_Z_inj       = ns_Z - spi_L_inj * (spi_Vel_Zref/spi_Vel_totref)
-          spi_phi_inj     = ns_phi - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
-    
-          spi_rotation_01 = asin(spi_Vel_Zref/spi_Vel_totref)
-          if (cos(spi_rotation_01) == 0.) then
-            spi_rotation_02 = 0.
-          else
-            spi_rotation_02 = acos(spi_Vel_RxZref/(spi_Vel_totref*cos(spi_rotation_01)))
-          end if
-    
-          write(*,*) "Rotational transform: ", spi_rotation_01, spi_rotation_02
-    !==========================End of rotational angles==============================
-    
-    ! The random number array rnd contains two random angle representing the
-    ! velocity direction spread, and one random speed. Those random number uniquely
-    ! define a random velocity of the shard, which is then transformed into the
-    ! R, Z, RxZ space.
-    
-          CALL random_number(rnd)
-    
-          !write(*,*) "Random number array:", rnd
-    
-          if (spi_Vel_diff < 0) then
-            write(*,*) "WARNING, negative velocity spread, spi_Vel_diff = ", spi_Vel_diff
-            write(*,*) "Using the absolute value of spi_Vel_diff"
-            spi_Vel_diff = abs(spi_Vel_diff)
-          end if
-    
-          do i = 1, n_spi
-    
-            spi_gd_angle_01 = rnd(3 * i - 2) * spi_angle / 2.0
-            spi_gd_angle_02 = rnd(3 * i - 1) * 2. * PI
-            spi_Vel_i       = (rnd(3*i)-0.5) * spi_Vel_diff + spi_Vel_totref
-    
-    
-            !write(*,*) "Random angle:", i, spi_gd_angle_01, spi_gd_angle_02
-            spi_Vel_x       = spi_Vel_i * sin(spi_gd_angle_01) * cos(spi_gd_angle_02)
-            spi_Vel_y       = spi_Vel_i * sin(spi_gd_angle_01) * sin(spi_gd_angle_02)
-            spi_Vel_z       = spi_Vel_i * cos(spi_gd_angle_01)
-    
-            spi_Vel_R_tmp   = spi_Vel_x * cos(spi_rotation_02) &
-                              - sin(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
-                              + cos(spi_rotation_01)*spi_Vel_z)
-    
-            spi_Vel_Z_tmp   = cos(spi_rotation_01) * spi_Vel_y &
-                              + sin(spi_rotation_01) * spi_Vel_z
-            spi_Vel_RxZ_tmp = spi_Vel_x * sin(spi_rotation_02) &
-                              - cos(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
-                              + cos(spi_rotation_01)*spi_Vel_z)
-    
-            spi_R_tmp       = spi_R_inj + spi_L_inj * (spi_Vel_R_tmp/spi_Vel_totref)
-            spi_Z_tmp       = spi_Z_inj + spi_L_inj * (spi_Vel_Z_tmp/spi_Vel_totref)
-            spi_phi_tmp     = spi_phi_inj + spi_L_inj * (spi_Vel_RxZ_tmp/spi_Vel_totref)/ns_R
-    
-            pellets(i)%spi_R       = spi_R_tmp
-            pellets(i)%spi_Z       = spi_Z_tmp
-            pellets(i)%spi_phi     = spi_phi_tmp
-            pellets(i)%spi_Vel_R   = spi_Vel_R_tmp
-            pellets(i)%spi_Vel_Z   = spi_Vel_Z_tmp
-            pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_tmp
+	! Initialize shard radius
+	do i = 1, n_spi 
+	  if (spi_shard_file == 'none') then
+	    spi_radius_tmp = (spi_quantity / (n_spi*(4.*PI/3.)*pellet_density*1.d20))**(1./3.)
+	  else
+	    spi_radius_tmp = shard_size(i)/size_beta
+	  end if
+	  pellets(i)%spi_radius  = spi_radius_tmp
+	end do
+  
+	if (allocated(rnd)) then
+	  deallocate(rnd)
+	end if
 
-            pellets(i)%spi_abl     = 0.0
+	! Initialize shard velocity and position    
+	allocate (rnd(3*n_spi),stat=err_alloc_rnd)  ! Dynamically allocate memeries for randoms
+  
+	if (err_alloc_rnd /= 0) then
+	  write(*,*) "Error when trying to dynamically allocate memeries for randoms."
+	  deallocate(pellets)
+	  deallocate(shard_size)
+	  stop
+	end if
+  
+  	!===================Determine the rotational transform of coordinate===============
+  	!Here, we perform the following rotational transform from the original
+  	!coordinate R, Z, RxZ to the so-called spi coordinate x, y ,z, with the reference
+  	!direction of spi injection being the z axis, while y axis locates within the 
+  	!same surface as Z and z. The rotational transform from x, y, z to R, Z, RxZ is
+  	!as the following: first, we rotate the system around x axis clockwise, facing
+  	!the positive x direction, for spi_rotation_01 to get coordinate X', Y', Z'. 
+  	!Then we further rotate around Y' clockwise, facing the positive Y' direction for
+  	!spi_rotation_02 to acquire R, Z, RxZ. Hence we have:
+  	!R   = cos(spi_rotation_02)*x - sin(spi_rotation_02)*(-sin(spi_rotation_01)*y + cos(spi_rotation_01)*z)
+  	!Z   = cos(spi_rotation_01)*y + sin(spi_rotation_01)*z
+  	!RxZ = sin(spi_rotation_02)*x + cos(spi_rotation_02)*(-sin(spi_rotation_01)*y + cos(spi_rotation_01)*z)
+  
+	spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
+  
+	spi_R_inj	= ns_R - spi_L_inj * (spi_Vel_Rref/spi_Vel_totref)
+	spi_Z_inj	= ns_Z - spi_L_inj * (spi_Vel_Zref/spi_Vel_totref)
+	spi_phi_inj	= ns_phi - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
+  
+	spi_rotation_01 = asin(spi_Vel_Zref/spi_Vel_totref)
+	if (cos(spi_rotation_01) == 0.) then
+	  spi_rotation_02 = 0.
+	else
+	  spi_rotation_02 = acos(spi_Vel_RxZref/(spi_Vel_totref*cos(spi_rotation_01)))
+	end if
+  
+	write(*,*) "Rotational transform: ", spi_rotation_01, spi_rotation_02
+  	!==========================End of rotational angles==============================
+  	
+  	! The random number array rnd contains two random angle representing the
+  	! velocity direction spread, and one random speed. Those random number uniquely
+  	! define a random velocity of the shard, which is then transformed into the
+  	! R, Z, RxZ space.
+  
+	CALL random_number(rnd)
+  
+	!write(*,*) "Random number array:", rnd
     
-            write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
-                                  pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
-        
-          end do
+	if (spi_Vel_diff < 0) then
+	  write(*,*) "WARNING, negative velocity spread, spi_Vel_diff = ", spi_Vel_diff
+	  write(*,*) "Using the absolute value of spi_Vel_diff"
+	  spi_Vel_diff = abs(spi_Vel_diff)
+	end if
+  
+	do i = 1, n_spi
+  
+	  spi_gd_angle_01 = rnd(3 * i - 2) * spi_angle / 2.0
+	  spi_gd_angle_02 = rnd(3 * i - 1) * 2. * PI
+	  spi_Vel_i	  = (rnd(3*i)-0.5) * spi_Vel_diff + spi_Vel_totref
+  
+  
+	  !write(*,*) "Random angle:", i, spi_gd_angle_01, spi_gd_angle_02
+	  spi_Vel_x	  = spi_Vel_i * sin(spi_gd_angle_01) * cos(spi_gd_angle_02)
+	  spi_Vel_y	  = spi_Vel_i * sin(spi_gd_angle_01) * sin(spi_gd_angle_02)
+	  spi_Vel_z	  = spi_Vel_i * cos(spi_gd_angle_01)
+  
+	  spi_Vel_R_tmp   = spi_Vel_x * cos(spi_rotation_02) &
+			    - sin(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
+			    + cos(spi_rotation_01)*spi_Vel_z)
+  
+	  spi_Vel_Z_tmp   = cos(spi_rotation_01) * spi_Vel_y &
+			    + sin(spi_rotation_01) * spi_Vel_z
+	  spi_Vel_RxZ_tmp = spi_Vel_x * sin(spi_rotation_02) &
+			    - cos(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
+			    + cos(spi_rotation_01)*spi_Vel_z)
+  
+	  spi_R_tmp	  = spi_R_inj + spi_L_inj * (spi_Vel_R_tmp/spi_Vel_totref)
+	  spi_Z_tmp	  = spi_Z_inj + spi_L_inj * (spi_Vel_Z_tmp/spi_Vel_totref)
+	  spi_phi_tmp	  = spi_phi_inj + spi_L_inj * (spi_Vel_RxZ_tmp/spi_Vel_totref)/ns_R
+  
+	  pellets(i)%spi_R	 = spi_R_tmp
+	  pellets(i)%spi_Z	 = spi_Z_tmp
+	  pellets(i)%spi_phi	 = spi_phi_tmp
+	  pellets(i)%spi_Vel_R   = spi_Vel_R_tmp
+	  pellets(i)%spi_Vel_Z   = spi_Vel_Z_tmp
+	  pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_tmp
 
-          if (allocated(rnd)) deallocate(rnd)
-          if (allocated(shard_size)) deallocate(shard_size)
-    
-          if (allocated(xtime_spi_ablation)) call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_GRID)
-          if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation,1,n_spi,1,nstep,"xtime_spi_ablation")
-    
-          if (allocated(xtime_spi_ablation_rate)) &
-          call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_GRID)
-          if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,nstep,"xtime_spi_ablation_rate")
-    
-        else ! n_spi < 1 case
-          write(*,*) "...... Seriously!? Reverting to non-SPI case."
-          using_spi = .false.
-        end if
+	  pellets(i)%spi_abl	 = 0.0
+  
+	  write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+				pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
+      
+	end do
+
+	if (allocated(rnd)) deallocate(rnd)
+	if (allocated(shard_size)) deallocate(shard_size)
+  
+	if (allocated(xtime_spi_ablation)) call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_GRID)
+	if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation,1,n_spi,1,nstep,"xtime_spi_ablation")
+  
+	if (allocated(xtime_spi_ablation_rate)) &
+	call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_GRID)
+	if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,nstep,"xtime_spi_ablation_rate")
+  
+      else ! n_spi < 1 case
+	write(*,*) "...... Seriously!? Reverting to non-SPI case."
+	using_spi = .false.
       end if
+    end if
     
     return
   end subroutine init_spi

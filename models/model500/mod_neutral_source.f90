@@ -49,7 +49,7 @@ module mod_neutral_source
 
     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20) ! Time normalization factor
 
-    t_loc = (t_now-t_ns) * t_norm + L_tube/(3.d0 * c0_D)
+    t_loc = (t_now-t_ns) * t_norm
 
     if (t_loc .gt. 0.) then
 
@@ -66,9 +66,10 @@ module mod_neutral_source
       !! V_Dmv: Volume of the DMV reservoir
       !! P_Dmv: Initial pressure in the DMV reservoir, directly linked to the total number of particles
       !! in the reservoir. Expressed in bar here as it is in all MGI experiments. 
-      !!
-      !! A shifted time is used in order to get neutrals as soon as t_now = t_ns (L_tube/3c0 is the time 
-      !! needed for the gas to propagate in the injection tube)
+
+        ! Shifted t_loc so that the neutral source is turned on as soon as t_now = t_ns 
+        ! (L_tube/3c0 is the time needed for the gas to propagate in the injection tube)
+        t_loc = t_loc + L_tube/(3.d0 * c0_D)
 
         f_Nbar = 0.d0
         f_dNbar_dt = 0.d0

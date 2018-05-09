@@ -454,57 +454,44 @@ module pellet_module
 	  end if
 	  pellets(i)%spi_radius  = spi_radius_tmp
 	end do
-  
-	if (allocated(rnd)) then
-	  deallocate(rnd)
-	end if
 
 	! Initialize shard velocity and position    
-	allocate (rnd(3*n_spi),stat=err_alloc_rnd)  ! Dynamically allocate memeries for randoms
   
-	if (err_alloc_rnd /= 0) then
-	  write(*,*) "Error when trying to dynamically allocate memeries for randoms."
-	  deallocate(pellets)
-	  deallocate(shard_size)
-	  stop
-	end if
-  
-  	!===================Determine the rotational transform of coordinate===============
-  	!Here, we perform the following rotational transform from the original
-  	!coordinate R, Z, RxZ to the so-called spi coordinate x, y ,z, with the reference
-  	!direction of spi injection being the z axis, while y axis locates within the 
-  	!same surface as Z and z. The rotational transform from x, y, z to R, Z, RxZ is
-  	!as the following: first, we rotate the system around x axis clockwise, facing
-  	!the positive x direction, for spi_rotation_01 to get coordinate X', Y', Z'. 
-  	!Then we further rotate around Y' clockwise, facing the positive Y' direction for
-  	!spi_rotation_02 to acquire R, Z, RxZ. Hence we have:
-  	!R   = cos(spi_rotation_02)*x - sin(spi_rotation_02)*(-sin(spi_rotation_01)*y + cos(spi_rotation_01)*z)
-  	!Z   = cos(spi_rotation_01)*y + sin(spi_rotation_01)*z
-  	!RxZ = sin(spi_rotation_02)*x + cos(spi_rotation_02)*(-sin(spi_rotation_01)*y + cos(spi_rotation_01)*z)
-  
-	spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
-  
+  	! Determine rotation angles from SPI coordinate system x, y, z to R, Z, RxZ
+        ! with the reference direction of spi injection being the z axis, while y axis locates within the 
+  	! same surface as Z and z. The rotational transform from x, y, z to R, Z, RxZ is
+  	! as the following: first, we rotate the system around x axis clockwise, facing
+  	! the positive x direction, for spi_rotation_01 to get coordinate X', Y', Z'. 
+  	! Then we further rotate around Y' clockwise, facing the positive Y' direction for
+  	! spi_rotation_02 to acquire R, Z, RxZ. Hence we have:
+  	! R   = cos(spi_rotation_02)*x - sin(spi_rotation_02)*(-sin(spi_rotation_01)*y + cos(spi_rotation_01)*z)
+  	! Z   = cos(spi_rotation_01)*y + sin(spi_rotation_01)*z
+  	! RxZ = sin(spi_rotation_02)*x + cos(spi_rotation_02)*(-sin(spi_rotation_01)*y + cos(spi_rotation_01)*z)  
+	spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)  
 	spi_R_inj	= ns_R - spi_L_inj * (spi_Vel_Rref/spi_Vel_totref)
 	spi_Z_inj	= ns_Z - spi_L_inj * (spi_Vel_Zref/spi_Vel_totref)
-	spi_phi_inj	= ns_phi - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
-  
+	spi_phi_inj	= ns_phi - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R  
 	spi_rotation_01 = asin(spi_Vel_Zref/spi_Vel_totref)
 	if (cos(spi_rotation_01) == 0.) then
 	  spi_rotation_02 = 0.
 	else
 	  spi_rotation_02 = acos(spi_Vel_RxZref/(spi_Vel_totref*cos(spi_rotation_01)))
-	end if
-  
-	write(*,*) "Rotational transform: ", spi_rotation_01, spi_rotation_02
-  	!==========================End of rotational angles==============================
+	end if 
+	write(*,*) "Rotation angles from SPI coordinate system to R, Z, RxZ: ", spi_rotation_01, spi_rotation_02
   	
-  	! The random number array rnd contains two random angle representing the
-  	! velocity direction spread, and one random speed. Those random number uniquely
+  	! Generate a random number array rnd that contains two random angles representing the
+  	! velocity direction spread, and one the random speed. Those random numbers uniquely
   	! define a random velocity of the shard, which is then transformed into the
   	! R, Z, RxZ space.
-  
-	CALL random_number(rnd)
-  
+	if (allocated(rnd)) deallocate(rnd)
+	allocate (rnd(3*n_spi),stat=err_alloc_rnd)  ! Dynamically allocate memeries for randoms  
+	if (err_alloc_rnd /= 0) then
+	  write(*,*) "Error when trying to dynamically allocate memeries for randoms."
+	  deallocate(pellets)
+	  deallocate(shard_size)
+	  stop
+	end if  
+	CALL random_number(rnd)  
 	!write(*,*) "Random number array:", rnd
     
 	if (spi_Vel_diff < 0) then
@@ -517,8 +504,7 @@ module pellet_module
   
 	  spi_gd_angle_01 = rnd(3 * i - 2) * spi_angle / 2.0
 	  spi_gd_angle_02 = rnd(3 * i - 1) * 2. * PI
-	  spi_Vel_i	  = (rnd(3*i)-0.5) * spi_Vel_diff + spi_Vel_totref
-  
+	  spi_Vel_i	  = (rnd(3*i)-0.5) * spi_Vel_diff + spi_Vel_totref 
   
 	  !write(*,*) "Random angle:", i, spi_gd_angle_01, spi_gd_angle_02
 	  spi_Vel_x	  = spi_Vel_i * sin(spi_gd_angle_01) * cos(spi_gd_angle_02)

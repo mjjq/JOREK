@@ -118,11 +118,8 @@ module pellet_module
     return
   end subroutine pellet_source2
 
+  !> Update the pellet position, size and ablation rate
   subroutine update_pellet(my_id,node_List,element_list)
-  !******************************************************************************
-  ! routine updates the pellet position and the size of the simulated           *
-  ! and physical pellet sizes (from the integral of the pellet particle source) *
-  !******************************************************************************
   
     use constants
     use data_structure
@@ -179,11 +176,8 @@ module pellet_module
    
   end subroutine update_pellet
 
+  !> Update the shattered pellet position, size and ablation rate
   subroutine update_spi(my_id,node_List,element_list)
-  !******************************************************************************
-  ! routine updates the shattered pellet position and the size of the simulated *
-  ! and physical pellet sizes (from the integral of the pellet particle source) *
-  !******************************************************************************
   
     use constants
     use data_structure
@@ -219,7 +213,7 @@ module pellet_module
     ! Temp variables for SPI, used to advance the R, Z, phi position of pellets for
     ! given R, Z, RxZ velocity and a calculated apex of the trajectory spreading cone 
     real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
-    
+  
       spi_delta_phi   = 0.
       spi_Vel_R_tmp   = 0.
       spi_Vel_phi_tmp = 0.
@@ -238,8 +232,9 @@ module pellet_module
         spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
       end if
     
-      do i=1, n_spi
-    
+      loop_over_pellet_fragments:do i = 1, n_spi
+
+        ! Update position     
         spi_delta_phi          = pellets(i)%spi_phi - spi_phi_inj
         spi_Vel_R_tmp          = pellets(i)%spi_Vel_R * cos(spi_delta_phi) &
                                  + pellets(i)%spi_Vel_RxZ * sin(spi_delta_phi)
@@ -275,7 +270,8 @@ module pellet_module
             pellets(i)%spi_radius = 0.d0
           end if
         end if
-    
+
+        ! Update size    
         if (my_id == 0.) then
           if (index_now > 1) then
             xtime_spi_ablation(i,index_now) = xtime_spi_ablation(i,index_now-1) + t_norm * tstep * pellets(i)%spi_abl
@@ -283,60 +279,46 @@ module pellet_module
             xtime_spi_ablation(i,index_now) = t_norm * tstep * pellets(i)%spi_abl
           end if
         end if
-    
-        if (spi_abl_model == 0) then
-          pellets(i)%spi_abl   = ns_amplitude
-        elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2) then
-    
+
+        ! Update ablation rate    
+        if (spi_abl_model == 0) then ! Constant ablation rate
+          pellets(i)%spi_abl = ns_amplitude
+        elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2) then ! NGS models
+
+          ! Get local n_e, T_e    
           call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
                        R_out,Z_out,i_elm,s_out,t_out,ifail)
     
-          ! In case the shards are outside of the domain
-          if (ifail == 99 .or. ifail == 999) then
+          if (ifail == 99 .or. ifail == 999) then ! The shard is outside of the domain
             pellets(i)%spi_abl = 0.
             cycle
           else if (ifail /= 0) then
-            write(*,*) "Something Wrong in find_RZ!! my_id = ", my_id, i_elm, ifail
+            write(*,*) "Something wrong in find_RZ!! my_id = ", my_id, i_elm, ifail
             stop
           end if
     
           call interp_PRZ(node_list,element_list,i_elm,[5,6],2,s_out,t_out,pellets(i)%spi_phi,&
                           P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
-    
-          ! Now, P(1) represents mass density and P(2) represents temperature
-          ! Correct any possible negative values!
-    
-          !n_corr         = corr_neg_dens(P(1))
-          !T_corr         = corr_neg_temp(P(2))
-    
-          ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e = T_i
-          !n_SI           = n_corr * 1.d20 * central_density
-          !T_eV           = T_corr / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
           
-          n_SI           = P(1) * 1.d20 * central_density
+          n_SI = P(1) * 1.d20 * central_density
           if (n_SI < 0.) then
             n_SI = 0.
           end if
-    
-          T_eV           = P(2) / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
+
+          ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e = T_i    
+          T_eV = P(2) / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20) 
           if (T_eV < 0.) then
             T_eV = 0.
           end if
-    
-    
+        
           if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
             write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
           end if
-          ! NGS model (Gal)
           
-          if (spi_abl_model == 1) then
-          ! NGS model (Gal)
-          pellets(i)%spi_abl    = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
-                                 (T_eV**1.64)
-          else if (spi_abl_model ==2) then
-          ! NGS model (Fitted by Sergeev)
-          pellets(i)%spi_abl    = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**(1.455)) * ((n_SI*1.d-6)**(0.455)) * &
-                                 (T_eV**1.679)
+          if (spi_abl_model == 1) then ! NGS model version 1 (K. Gal et al., see http://iopscience.iop.org/article/10.1088/0029-5515/48/8/085005?pageTitle=IOPscience)
+            pellets(i)%spi_abl = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * (T_eV**1.64)
+          else if (spi_abl_model == 2) then ! NGS model version 2 (V. Sergeev et al., see https://link.springer.com/article/10.1134/S1063780X06050023)
+            pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**(1.455)) * ((n_SI*1.d-6)**(0.455)) * (T_eV**1.679)
           end if
         else
           pellets(i)%spi_abl    = 0.d0
@@ -346,14 +328,13 @@ module pellet_module
           xtime_spi_ablation_rate(i,index_now) = pellets(i)%spi_abl
         end if
     
-      end do
+      end do loop_over_pellet_fragments
     
       if (spi_tor_rot) then
         ns_phi_rotate  = ns_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
       end if
     
-      if (my_id == 0 .and. mod(index_now,20) == 0) then
-    
+      if (my_id == 0 .and. mod(index_now,20) == 0) then    
         do i=1, 20 !n_spi
           if (pellets(i)%spi_radius > 0.0) then
             write(*,*) "Pellet number: ", i
@@ -369,10 +350,8 @@ module pellet_module
    
   end subroutine update_spi
 
+  !> Initializes the shattered pellet position, velocity and size
   subroutine init_spi(my_id)
-  !******************************************************************************
-  ! routine initialize the shattered pellet position, velocity and size         *
-  !******************************************************************************
   
     use constants
     use data_structure
@@ -591,8 +570,8 @@ module pellet_module
   end subroutine init_spi
 
 
-!> This function creates a derived MPI type for the pellets and returns it (in honor of Daan)
-!! If it already exists the old handle is returned
+  !> This function creates a derived MPI type for the pellets and returns it (in honor of Daan)
+  !! If it already exists the old handle is returned
   function get_pellet_derived_type() result(dtype_out)
     use mpi_mod
     use mod_parameters

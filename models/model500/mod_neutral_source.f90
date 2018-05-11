@@ -51,7 +51,7 @@ module mod_neutral_source
 
     t_loc = (t_now-t_ns) * t_norm
 
-    if (t_loc .gt. 0.) then
+    if (t_loc .ge. 0.) then
 
       if (JET_MGI) then
 

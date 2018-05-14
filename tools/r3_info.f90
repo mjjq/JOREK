@@ -628,18 +628,18 @@ SUBROUTINE r3_info_summary_x (omp_num, omp_chars, omp_flops, &
       DO i = 0, r3_npes - 1
         
 #if defined (USE_R3_INFO_MIX) || defined (USE_R3_INFO_MPI)
-        CALL mpi_recv (num, 1_4, INT (mpi_integer, 4), &
+        CALL mpi_recv (num, 1_4, mpi_integer, &
           INT (r3_root + i, 4), 11_4, r3_comm, &
-          status, info)
+          status(:,1), info)
         CALL mpi_recv (sncds, INT (2 * (num + 7), 4), &
-          INT (mpi_real8, 4), INT (r3_root + i, 4), &
-          12_4, r3_comm, status, info)
-        CALL mpi_recv (cnts, INT (num + 7, 4), INT (mpi_integer8, &
-          4), INT (r3_root + i, 4), 14_4, r3_comm, &
-          status, info)
+          mpi_real8, INT (r3_root + i, 4), &
+          12_4, r3_comm, status(:,2), info)
+        CALL mpi_recv (cnts, INT (num + 7, 4), mpi_integer8, &
+          INT (r3_root + i, 4), 14_4, r3_comm, &
+          status(:,3), info)
         CALL mpi_recv (names, INT (80 * (num + 7), 4), &
-          INT (mpi_byte, 4), INT (r3_root + i, 4), &
-          15_4, r3_comm, status, info)
+          mpi_byte, INT (r3_root + i, 4), &
+          15_4, r3_comm, status(:,4), info)
 #elif defined (USE_R3_INFO_SMA)
         CALL shmem_get4 (num, r3_info_n, 1_4, INT (r3_root + i, &
           4))

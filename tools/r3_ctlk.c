@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include <sys/procfs.h>
 
 #if defined (SGI_MIPS)
 #include <sys/syssgi.h>

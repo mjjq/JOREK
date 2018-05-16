@@ -757,6 +757,11 @@ do ms=1, n_gauss
        dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
        dLrad_dT = dLrad_dT * dT0_corr_dT            
 
+       if (Lrad < 0.) then
+         Lrad = 0.
+         dLrad_dT = 0.
+       end if
+
      else if (flag_adas) then
        Lrad = 0.
        dLrad_dT = 0.

@@ -1560,6 +1560,7 @@ do ms=1, n_gauss
                  
 		 ELM(ij6,kl1) =  ELM(ij6,kl1) + wst * amat_61
                  ELM(ij6,kl2) =  ELM(ij6,kl2) + wst * amat_62
+                 ELM(ij6,kl3) =  ELM(ij6,kl3) + wst * amat_63
                  ELM(ij6,kl5) =  ELM(ij6,kl5) + wst * amat_65
                  ELM(ij6,kl6) =  ELM(ij6,kl6) + wst * amat_66
                  ELM(ij6,kl7) =  ELM(ij6,kl7) + wst * amat_67

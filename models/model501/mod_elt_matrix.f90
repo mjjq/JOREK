@@ -658,7 +658,6 @@ do ms=1, n_gauss
              E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
              dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
            end do
-           !write(*,*) "SANITY CHECK", P_imp(ion_i), ion_i, T_rad
          end do
          ! Convert from eV to JOREK unit
          E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20

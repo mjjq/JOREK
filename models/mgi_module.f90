@@ -303,6 +303,12 @@ module mgi_module
 
     character(len=512)  :: adas_suffix     !The suffix of adas data file to be read
 
+    ! Temporary variable for charge state distribution
+    integer             :: i_T, i_ion
+    real*8, allocatable :: dP_imp_dT(:), P_imp(:)
+    real*8              :: T_rad(101) = 0
+    real*8              :: Z_imp
+
     n_adas = 1 ! For now we only trace one species, in the future probably more 
 
     if (allocated(imp_adas)) then
@@ -348,6 +354,33 @@ module mgi_module
           imp_adas(i) = read_adf11(trim(adas_suffix),trim(adas_dir))
           imp_cor(i)  = coronal(imp_adas(i))
 
+          open(20,file="charge_distribution.dat")
+
+          write(20,'(A11)') 'temperature (log10(K))', 'charge states'
+
+
+          do i_T = 0, 100
+
+            T_rad(i_T) = 2. + 0.06*real(i_T,8)
+
+            if (allocated(P_imp)) deallocate(P_imp)
+            if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+
+            allocate(P_imp(0:imp_adas(1)%n_Z))
+            allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+            call imp_cor(1)%interp(density=20.,temperature=T_rad(i_T),p_out=P_imp,z_eff=Z_imp)
+            if (sum(P_imp) < 0.9) then
+              write(*,*) "WTF", sum(P_imp), size(P_imp)
+              stop
+            end if
+            write(20,'(f12.3)',advance='no'), T_rad(i_T)
+            do i_ion = 0, imp_adas(i)%n_Z
+              write(20,'(f12.5)',advance='no'), P_imp(i_ion)
+            end do
+            write(20,'(f12.5)'), sum(P_imp)
+          end do
+
+          close(20)
         end do
       end if
 

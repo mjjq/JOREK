@@ -1001,7 +1001,7 @@ enddo  ! n_elements
        if (allocated(imp_adas(1)%ionisation_energy)) then
 
          if (allocated(P_imp)) deallocate(P_imp)
-         allocate(P_imp(1:imp_adas(1)%n_Z))
+         allocate(P_imp(0:imp_adas(1)%n_Z))
 
          call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
                                 p_out=P_imp,z_eff=Z_imp)

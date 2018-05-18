@@ -387,8 +387,8 @@ module mgi_module
     do iz=1,ad%n_Z
       rad(iz)            = ad%PRB%interp(iz, density, temperature) + &
                            ad%PLT%interp(iz, density, temperature)
-      drad_dTe(iz)       = dlograd_dlogTe(iz) * rad(iz) / (10.0**temperature)
-      drad_dNe(iz)       = dlograd_dlogNe(iz) * rad(iz) / (10.0**density)
+      drad_dTe(iz)       = dlograd_dlogTe(iz) * rad(iz) / (10.0**temperature) !log10 terms cancel
+      drad_dNe(iz)       = dlograd_dlogNe(iz) * rad(iz) / (10.0**density)     !log10 terms cancel
     enddo ! radiation emitted by atoms at level iz
 
 

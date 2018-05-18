@@ -677,6 +677,19 @@ do ms=1, n_gauss
        ! Derivative wrt to T, with T in JOREK units
        dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
        dZ_imp_dT = dZ_imp_dT * dT0_corr_dT
+
+       if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
+        write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
+        write(*,*) "T_rad =", T_rad
+        stop
+       end if
+
+       if (dZ_imp_dT < 0) then
+         write(*,*) "WARNING, ERROR with dZ_imp_dT = ", dZ_imp_dT
+         write(*,*) "Z_imp, T_e", Z_imp, T_rad, T0
+         stop
+       end if
+
      else
 
        T0_Zimp        = 437.  ! eV
@@ -1869,8 +1882,8 @@ do ms=1, n_gauss
                                      * (rn0_x * ps0_y - rn0_y * ps0_x + F0 / BigR * rn0_p)                                &
                                      * ( v_x * psi_y -  v_y * psi_x                   ) * xjac * theta * tstep * tstep
 
-                amat_82 =  + v * BigR**2 * ( rn0_s * u_t - rn0_t * u_s)                                   * theta * tstep &
-                                              + v * 2.d0 * BigR * rn0 * u_y                        * xjac * theta * tstep &
+                amat_82 =  - v * BigR**2 * ( rn0_s * u_t - rn0_t * u_s)                                   * theta * tstep &
+                           - v * 2.d0 * BigR * rn0 * u_y                                           * xjac * theta * tstep &
 
                            + TG_num8 * 0.25d0 * BigR**3 * (rn0_x * u_y  - rn0_y * u_x)                                    &
                                                         * ( v_x * u0_y - v_y  * u0_x) * xjac * theta * tstep * tstep      &

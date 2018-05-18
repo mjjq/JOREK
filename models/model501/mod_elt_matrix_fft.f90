@@ -706,6 +706,12 @@ do ms=1, n_gauss
         stop
        end if
 
+       if (dZ_imp_dT < 0) then
+         write(*,*) "WARNING, ERROR with dZ_imp_dT = ", dZ_imp_dT
+         write(*,*) "Z_imp, T_e", Z_imp, T_rad, T0
+         stop
+       end if
+
      else
 
        T0_Zimp        = 437.  ! eV

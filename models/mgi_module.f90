@@ -354,6 +354,9 @@ module mgi_module
           imp_adas(i) = read_adf11(trim(adas_suffix),trim(adas_dir))
           imp_cor(i)  = coronal(imp_adas(i))
 
+          
+          ! This is to output a coronal equilibrium charge distribution as a
+          ! function of temperature assuming constant density
           open(20,file="charge_distribution.dat")
 
           write(20,'(A11)') 'temperature (log10(K))', 'charge states'

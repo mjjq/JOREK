@@ -1058,6 +1058,12 @@ do ms=1, n_gauss
                     + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                                       * xjac &
                     + zeta * v * alpha_imp * T0 * delta_g(mp,8,ms,mt) * BigR                           * xjac &   
 
+!===================== Additional terms from ionization energy terms============
+                    + zeta * v * E_ion * delta_g(mp,8,ms,mt) *BigR                                     * xjac &
+                    + zeta * v * dE_ion_dT * rn0 * delta_g(mp,6,ms,mt) *BigR                           * xjac &
+!==============================End of ionization energy terms=================
+
+
                     + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                    * xjac * tstep  &
                     - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad          * xjac * tstep  &
                     - v * BigR * r0_corr * frad_bg                                      * xjac * tstep

@@ -849,7 +849,7 @@ do ms=1, n_gauss
            end if
 
            call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
-                         mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),    &
+                         mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,0.,x_g(ms,mt),y_g(ms,mt),    &
                          phi,source_mgi_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
          end if
 

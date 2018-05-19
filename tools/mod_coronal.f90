@@ -186,11 +186,11 @@ integer                         :: iz
 p = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature)
 
 do iz=0,cor%n_Z
-  if (p(iz)<0) p(iz)=0.
+  if (p(iz)<0.) p(iz)=0.
 end do
 
 if (present(p_out)) then
-  p_out = p/(sum(p))
+  p_out = p/sum(p)
 endif
 
 if (present(z_eff)) then

@@ -1657,7 +1657,7 @@ do ms=1, n_gauss
                        + (ZKpar_T-ZK_prof) * BigR / BB2              * Bgrad_T_star_psi * Bgrad_T     * xjac * theta * tstep &
                        + (ZKpar_T-ZK_prof) * BigR / BB2              * Bgrad_T_star     * Bgrad_T_psi * xjac * theta * tstep &
 
-                       + v * (r0 + rn0 * alpha_imp) * Vpar0 * (T0_s * psi_t - T0_t * psi_s)                  * theta * tstep &
+                       + v * (r0 + rn0 * alpha_imp_bis) * Vpar0 * (T0_s * psi_t - T0_t * psi_s)              * theta * tstep &
                        + v * T0 * Vpar0 * ((r0_s+rn0_s*alpha_imp)*psi_t - (r0_t+rn0_t*alpha_imp)*psi_s)      * theta * tstep &
                        + v * (r0 + rn0 * alpha_imp) * GAMMA * T0 * (vpar0_s * psi_t - vpar0_t * psi_s)       * theta * tstep &
 
@@ -1690,7 +1690,7 @@ do ms=1, n_gauss
                              * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
 
-             amat_62 = - v * (r0 + rn0 * alpha_imp) * BigR**2 * ( T0_s * u_t - T0_t * u_s)             * theta * tstep &
+             amat_62 = - v * (r0 + rn0 * alpha_imp_bis) * BigR**2 * ( T0_s * u_t - T0_t * u_s)         * theta * tstep &
 		       - v * T0 * BigR**2 * ((r0_s+rn0_s*alpha_imp)*u_t - (r0_t+rn0_t*alpha_imp)*u_s)  * theta * tstep &
                        - v * (r0 + rn0 * alpha_imp) * 2.d0* GAMMA * BigR * T0 * u_y             * xjac * theta * tstep &
 
@@ -1820,10 +1820,10 @@ do ms=1, n_gauss
                              * (      + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
 
-             amat_67 = + v * (r0 + rn0 * alpha_imp) * F0 / BigR * Vpar * T0_p           * xjac * theta * tstep &
+             amat_67 = + v * (r0 + rn0 * alpha_imp_bis) * F0 / BigR * Vpar * T0_p       * xjac * theta * tstep &
 		       + v * T0 * F0 / BigR * Vpar * (r0_p + rn0_p * alpha_imp)         * xjac * theta * tstep &
 
-                       + v * (r0 + rn0 * alpha_imp) * Vpar * (T0_s * ps0_t - T0_t * ps0_s)             * theta * tstep &
+                       + v * (r0 + rn0 * alpha_imp_bis) * Vpar * (T0_s * ps0_t - T0_t * ps0_s)         * theta * tstep &
                        + v * T0 * Vpar * ((r0_s+rn0_s*alpha_imp)*ps0_t - (r0_t+rn0_t*alpha_imp)*ps0_s) * theta * tstep &
 
                        + v * (r0 + rn0 * alpha_imp) * GAMMA * T0 * (vpar_s * ps0_t - vpar_t * ps0_s)   * theta * tstep &

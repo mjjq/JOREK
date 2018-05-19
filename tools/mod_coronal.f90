@@ -110,11 +110,13 @@ enddo
 allocate(cor%density(n_d), cor%temperature(n_T), cor%Z(n_d,n_T,0:cor%n_Z), cor%Prad(n_d,n_T))
 do m=1, n_d
   cor%density(m) = 18.d0 + float(m-1)/n_d * (21.-18.) ! log10 [m^-3]
+  p = 0.
+  p(0) = 1.
   do k=1, n_T
 
     cor%temperature(k) = log10( 1.d0 + exp(log(4.d4)*float(k-1)/(float(n_T-1))) - 1.d0 ) + log10(EL_CHG) - log10(K_BOLTZ) ! in log10 [K]
 
-    p = 1.d0
+    !p = 1.d0
     call coronal_timestep(ad, p, 1.d0, cor%density(m), cor%temperature(k)) ! use a fixed large timestep of 1 to solve the
     ! equilibrium state
 
@@ -190,7 +192,7 @@ do iz=0,cor%n_Z
 end do
 
 if (present(p_out)) then
-  p_out = p/sum(p)
+  p_out = p
 endif
 
 if (present(z_eff)) then

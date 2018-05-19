@@ -369,13 +369,9 @@ module mgi_module
             if (allocated(P_imp)) deallocate(P_imp)
             if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
 
-            allocate(P_imp(0:imp_adas(1)%n_Z))
-            allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+            allocate(P_imp(0:imp_adas(i)%n_Z))
+            allocate(dP_imp_dT(0:imp_adas(i)%n_Z))
             call imp_cor(1)%interp(density=20.,temperature=T_rad(i_T),p_out=P_imp,z_eff=Z_imp)
-            if (sum(P_imp) < 0.9) then
-              write(*,*) "WTF", sum(P_imp), size(P_imp)
-              stop
-            end if
             write(20,'(f12.3)',advance='no'), T_rad(i_T)
             do i_ion = 0, imp_adas(i)%n_Z
               write(20,'(f12.5)',advance='no'), P_imp(i_ion)

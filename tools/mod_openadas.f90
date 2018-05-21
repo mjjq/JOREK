@@ -71,7 +71,6 @@ endif
 do i_ADF11 = 1,size(ADF11_filenames,1)
   write(filename,"(A,A,A)") ADF11_filenames(i_ADF11), trim(suffix), '.dat'
   if (present(directory)) filename = trim(directory) // trim(filename)
-
   inquire(file=trim(filename), exist=file_exists)
   if (.not. file_exists) then
     write(*,*) "File not found for", filename
@@ -212,7 +211,6 @@ endif
 end function GRC
 
 
-
 !> Linear 2D interpolation on a rectangular grid
 !> x2y1       xy1    x1y1
 !>  *----------*------*
@@ -257,7 +255,7 @@ fx2  = (f(ix1,iy2) - f(ix2,iy2))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2
 fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (y - ty(iy1)) + fx1
 end function L2Dinterp
 
-
+!> Like [[L2Dinterp]], but interpolate a vector (3rd dimension) of size nz
 pure function L2D2interp(tx,ty,nz,f,x,y) result(fout)
 real*8, intent(in), dimension(:)                    :: tx !< Grid points in x
 real*8, intent(in), dimension(:)                    :: ty !< Grid points in y
@@ -285,7 +283,8 @@ fx2  = (f(ix1,iy2,:) - f(ix2,iy2,:))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1
 fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (y - ty(iy1)) + fx1
 end function L2D2interp
 
-
+!> Like [[L2D2interp]], but calculate the gradient in direction `dim`.
+!> Dim must be 1 or 2.
 pure function L2D2interp_grad(tx,ty,nz,f,x,y,dim) result(fout)
 real*8, intent(in), dimension(:)                    :: tx !< Grid points in x
 real*8, intent(in), dimension(:)                    :: ty !< Grid points in y

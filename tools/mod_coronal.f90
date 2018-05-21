@@ -97,8 +97,10 @@ use constants
 type (ADF11_all), intent(in) :: ad !< ADF11 datatype
 type (coronal)               :: cor !< Coronal equilibrium datatype
 
-real*8, dimension(0:ad%n_Z) :: p, Z
-integer :: n_d, n_T, iz, k, m
+real*8, dimension(0:ad%n_Z) :: p, p_old, Z
+integer :: n_d, n_T, iz, k, m, i
+real*8, parameter :: tolerance = 1d-8 ! on max(abs(new - old))
+logical :: converged
 
 cor%n_Z = ad%n_Z
 n_d = 10
@@ -109,21 +111,30 @@ enddo
 
 allocate(cor%density(n_d), cor%temperature(n_T), cor%Z(n_d,n_T,0:cor%n_Z), cor%Prad(n_d,n_T))
 do m=1, n_d
-  cor%density(m) = 18.d0 + float(m-1)/n_d * (21.-18.) ! log10 [m^-3]i
+  cor%density(m) = 18.d0 + float(m-1)/n_d * (21.-18.) ! log10 [m^-3], linear between 18 and 21
 
   ! Here we are using the distribution from the previous temperature as an
   ! initial guess of the next temperature. So only initialize at a different
   ! density scan instead of every temperature scan.
-  p = 0. 
-  p(0) = 1.
+  p = 0.d0
+  p(0) = 1.d0
 
   do k=1, n_T
-
     cor%temperature(k) = log10( 1.d0 + exp(log(4.d4)*float(k-1)/(float(n_T-1))) - 1.d0 ) + log10(EL_CHG) - log10(K_BOLTZ) ! in log10 [K]
 
-    !p = 1.d0
-    call coronal_timestep(ad, p, 1.d0, cor%density(m), cor%temperature(k)) ! use a fixed large timestep of 1 to solve the
-    ! equilibrium state
+    converged = .false.
+    ! Iterate until converged or we run out of steps
+    do i=1,100
+      p_old = p
+      call coronal_timestep(ad, p, 1.d0, cor%density(m), cor%temperature(k)) ! use a fixed large timestep of 1 to solve the
+      ! equilibrium state
+      if (maxval(abs(p_old - p)) .lt. tolerance) then
+        converged = .true.
+        exit
+      end if
+    end do
+
+    if (.not. converged) write(*,*) "WARNING: coronal equilibrium not converged, delta", maxval(abs(p_old - p))
 
     cor%Z(m,k,:)  = p/sum(p)
     cor%Prad(m,k) = coronal_Prad(ad, cor%density(m), cor%temperature(k), p/sum(p)) ! Do not set neutral density yet
@@ -259,16 +270,16 @@ if (present(z_eff_Ne)) then
 endif
 end subroutine interpolate_coronal_gradients
 
+!> This is to output a coronal equilibrium charge distribution as a
+!> function of temperature assuming constant density 10^20/m^3
+!> to a file charge_distribution.dat
 subroutine output_coronal(cor)
-! This is to output a coronal equilibrium charge distribution as a
-! function of temperature assuming constant density 10^20/m^3
-
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 
 ! Temporary variable for charge state distribution
 integer             :: i_T, i_ion
 real*8, allocatable :: dP_imp_dT(:), P_imp(:)
-real*8              :: T_rad(101) = 0
+real*8              :: T_rad
 real*8              :: Z_imp
 
 
@@ -286,7 +297,7 @@ do i_T = 0, 100
 
   allocate(P_imp(0:cor%n_Z))
   allocate(dP_imp_dT(0:cor%n_Z))
-  call cor%interp(density=20.,temperature=T_rad,p_out=P_imp,z_eff=Z_imp)
+  call cor%interp(density=20.d0,temperature=T_rad,p_out=P_imp,z_eff=Z_imp)
   write(20,'(f12.3)',advance='no'), T_rad
   do i_ion = 0, cor%n_Z
     write(20,'(f12.5)',advance='no'), P_imp(i_ion)
@@ -294,7 +305,6 @@ do i_T = 0, 100
   write(20,'(f12.5)'), sum(P_imp)
 end do
 close (20)
-
 end subroutine output_coronal
 
 end module mod_coronal

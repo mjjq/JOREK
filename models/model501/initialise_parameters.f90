@@ -419,13 +419,12 @@ if (using_spi) then
       deallocate(rnd)
       deallocate(shard_size)
 
-      if (allocated(xtime_spi_ablation)) call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_GRID)
+      if (allocated(xtime_spi_ablation)) call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation,1,n_spi,1,nstep,"xtime_spi_ablation")
 
       if (allocated(xtime_spi_ablation_rate)) &
-      call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_GRID)
+      call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,nstep,"xtime_spi_ablation_rate")
-
 
     else
       write(*,*) "...... Seriously!? Reverting to non-SPI case."

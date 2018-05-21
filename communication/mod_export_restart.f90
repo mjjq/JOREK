@@ -125,6 +125,11 @@ subroutine export_binary_restart(node_list,element_list,filename)
      write(21) pellet_particles, pellet_R, pellet_Z
   endif
 
+  ! Impurity radiation history
+  if (flag_adas) then
+    if (index_now .gt. 0) write(21) xtime_radiation(1:index_now)
+  end if
+
   ! Dynamically allocate memeries for temporary arrays in order to export
   if (using_spi .and. n_spi >= 1) then
 
@@ -559,6 +564,14 @@ end if
      call HDF5_real_saving(file_id,pellet_R,"pellet_R"//char(0))
      call HDF5_real_saving(file_id,pellet_Z,"pellet_Z"//char(0))
   end if
+
+  ! Impurity radiation history
+  if (flag_adas) then
+    if (index_now .gt. 0) then
+      call HDF5_array1D_saving(file_id,xtime_radiation, &
+             index_now,'xtime_radiation'//char(0))
+    end if
+  end if  
 
   ! Dynamically allocate memeries for temporary arrays in order to export
   if (using_spi .and. n_spi>=1) then

@@ -1017,6 +1017,11 @@ required = 0
 
        endif
 
+#if (JOREK_MODEL == 501)
+       if (flag_adas) call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,&
+                                        density_out,pressure_tot,pressure_in,pressure_out)
+#endif
+
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
        if (using_spi == .false.) then
          call update_mgi(my_id,node_list,element_list)

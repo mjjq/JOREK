@@ -257,6 +257,7 @@ module phys_module
 
   real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
   real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
+  real*8, allocatable  :: xtime_radiation(:)    ! The time history of radiated energy in SI unit
 
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: flag_spi           !< Determine which type of ablation model is using.

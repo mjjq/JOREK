@@ -357,33 +357,39 @@ module mgi_module
           
           ! This is to output a coronal equilibrium charge distribution as a
           ! function of temperature assuming constant density
-          open(20,file="charge_distribution.dat")
-
-          write(20,'(A11)') 'temperature (log10(K))', 'charge states'
-
-
-          do i_T = 0, 100
-
-            T_rad(i_T) = 2. + 0.06*real(i_T,8)
-
-            if (allocated(P_imp)) deallocate(P_imp)
-            if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-            allocate(P_imp(0:imp_adas(i)%n_Z))
-            allocate(dP_imp_dT(0:imp_adas(i)%n_Z))
-            call imp_cor(1)%interp(density=20.,temperature=T_rad(i_T),p_out=P_imp,z_eff=Z_imp)
-            write(20,'(f12.3)',advance='no'), T_rad(i_T)
-            do i_ion = 0, imp_adas(i)%n_Z
-              write(20,'(f12.5)',advance='no'), P_imp(i_ion)
+          if (my_id == 0) then
+            open(20,file="charge_distribution.dat")
+  
+            write(20,'(A11)') 'temperature (log10(K))', 'charge states'
+  
+  
+            do i_T = 0, 100
+  
+              T_rad(i_T) = 2. + 0.06*real(i_T,8)
+  
+              if (allocated(P_imp)) deallocate(P_imp)
+              if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+  
+              allocate(P_imp(0:imp_adas(i)%n_Z))
+              allocate(dP_imp_dT(0:imp_adas(i)%n_Z))
+              call imp_cor(1)%interp(density=20.,temperature=T_rad(i_T),p_out=P_imp,z_eff=Z_imp)
+              write(20,'(f12.3)',advance='no'), T_rad(i_T)
+              do i_ion = 0, imp_adas(i)%n_Z
+                write(20,'(f12.5)',advance='no'), P_imp(i_ion)
+              end do
+              write(20,'(f12.5)'), sum(P_imp)
             end do
-            write(20,'(f12.5)'), sum(P_imp)
-          end do
-
-          close(20)
+  
+            close(20)
+          end if
         end do
       end if
 
     end if
+
+    if (allocated(xtime_radiation)) call tr_deallocate(xtime_radiation,"xtime_radiation",CAT_GRID)
+    if (nstep .gt. 0) call tr_allocate(xtime_radiation,1,nstep,"xtime_radiation")
+
 
   end subroutine init_imp_adas
 

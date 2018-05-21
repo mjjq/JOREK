@@ -12,8 +12,8 @@ type coronal
   integer :: n_Z !< Atomic number
   real*8, allocatable :: density(:) !< log10 density (m^-3)
   real*8, allocatable :: temperature(:) !< log10 temperature (K)
-  real*8, allocatable :: Z(:,:,:) !< Charge state (e) density for specific temperatures, densities and charge states [i_T, i_n, i_q]
-  real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W) for the above temperatures and densities
+  real*8, allocatable :: Z(:,:,:) !< Charge state (e) density for specific densities, temperatures and charge states [i_n, i_T, i_q]
+  real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W) for the above densities and temperatures [i_n, i_T]
 contains
   procedure :: interp => interpolate_coronal
   procedure :: interp_gradients => interpolate_coronal_gradients
@@ -98,9 +98,11 @@ type (ADF11_all), intent(in) :: ad !< ADF11 datatype
 type (coronal)               :: cor !< Coronal equilibrium datatype
 
 real*8, dimension(0:ad%n_Z) :: p, p_old, Z
-integer :: n_d, n_T, iz, k, m, i
-real*8, parameter :: tolerance = 1d-8 ! on max(abs(new - old))
+integer :: n_d, n_T, iz, k, m, i, j
+real*8, parameter :: tolerance = 1d-12 ! on max(abs(new - old))
 logical :: converged
+real*8, dimension(1:3,0:ad%n_Z) :: cmat
+real*8 :: dt
 
 cor%n_Z = ad%n_Z
 n_d = 10
@@ -110,6 +112,7 @@ do iz=0,ad%n_Z
 enddo
 
 allocate(cor%density(n_d), cor%temperature(n_T), cor%Z(n_d,n_T,0:cor%n_Z), cor%Prad(n_d,n_T))
+!$omp parallel do default(none) shared(cor, ad, n_d, n_T, Z) private(p, p_old, m, k, converged, cmat, i, j, dt)
 do m=1, n_d
   cor%density(m) = 18.d0 + float(m-1)/n_d * (21.-18.) ! log10 [m^-3], linear between 18 and 21
 
@@ -124,22 +127,28 @@ do m=1, n_d
 
     converged = .false.
     ! Iterate until converged or we run out of steps
-    do i=1,100
-      p_old = p
-      call coronal_timestep(ad, p, 1.d0, cor%density(m), cor%temperature(k)) ! use a fixed large timestep of 1 to solve the
-      ! equilibrium state
-      if (maxval(abs(p_old - p)) .lt. tolerance) then
-        converged = .true.
-        exit
-      end if
-    end do
+    cmat = corona_matrix(ad, cor%density(m), cor%temperature(k))
+    pow_loop: do i=0,5
+      dt = 10.d0**(-i)
+      step_loop: do j=1,10**i + 100 ! extra 100 to perform more large steps
+        p_old = p
+        call coronal_timestep(ad, p, dt, cmat) ! use a fixed timestep of 0.1s to solve the equilibrium state
+        if (maxval(abs(p_old - p)) .lt. tolerance) then
+          converged = .true.
+          exit pow_loop
+        end if
+      end do step_loop
+    end do pow_loop
 
-    if (.not. converged) write(*,*) "WARNING: coronal equilibrium not converged, delta", maxval(abs(p_old - p))
+    !$omp critical
+    if (.not. converged) write(*,*) "WARNING: coronal equilibrium not converged, max delta", maxval(abs(p_old - p))
+    !$omp end critical
 
     cor%Z(m,k,:)  = p/sum(p)
     cor%Prad(m,k) = coronal_Prad(ad, cor%density(m), cor%temperature(k), p/sum(p)) ! Do not set neutral density yet
   enddo
 enddo
+!$omp end parallel do
 end function coronal_equilibrium
 
 
@@ -149,23 +158,19 @@ end function coronal_equilibrium
 !> Discretize as \(p^{n+1} - p^n = \Delta t \left((1-\theta)Ap^n + \theta A p^{n+1}\right)\)
 !> Leading to a matrix equation
 !> \((1-\theta \Delta t A)p^{n+1}a = (1 + \Delta t (1-\theta) A) p^n \)
-subroutine coronal_timestep(ad, p, tstep, density, temperature)
+subroutine coronal_timestep(ad, p, tstep, cmat)
 type (ADF11_all), intent(in)               :: ad !< ADF11 datatype
 real*8, dimension(0:ad%n_Z), intent(inout) :: p !< Population in each level
 real*8, intent(in)                         :: tstep !< Timestep size in s
-real*8, intent(in)                         :: density !< log10 density in m^-3
-real*8, intent(in)                         :: temperature !< log10 temperature in K
+real*8, dimension(1:3,0:ad%n_Z)            :: cmat !< tridiagonal corona matrix
 
 real*8, parameter :: theta = 1.d0 ! 0.5 = Crank-Nicholson, 1.d0 = Backward Euler
 
-real*8, dimension(1:3,0:ad%n_Z) :: cmat
 real*8, dimension(0:ad%n_Z)     :: b
 real*8 :: A_l(1:ad%n_Z), &
           A_d(0:ad%n_Z), &
           A_u(1:ad%n_Z)
 integer :: info, i
-
-cmat = corona_matrix(ad, density, temperature)
 
 ! Lower, diagonal and upper components (I - theta dt A)
 A_l =      - theta * tstep * cmat(1,1:ad%n_Z)

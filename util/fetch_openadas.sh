@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Retrieve the OPEN-ADAS ADF11 datafiles for a specific symbol
+# Retrieve the OPEN-ADAS ADF11 datafiles for a specific symbol.
+# Downloads all files in parallel, removes the ones which were
+# not found (the web service does not give a 404 but bad data)
 #
 # Author: Daan van Vugt <daanvanvugt@gmail.com>
 # Date: 2018-03-28
@@ -36,13 +38,21 @@ fi
 for element in "$@"; do
   type=(${element//_/ }) # an array of 50 and w
   for set in "${ADF11_sets[@]}"; do
-    if wget -q http://open.adas.ac.uk/download/adf11/$set$type/$set$element.dat -O $set$element.dat; then
-      # check if it is a correct file
-      if grep -q "You have an error" $set$element.dat; then
-        rm $set$element.dat
-      else
-        echo "Downloaded $set$element.dat"
-      fi
+    if [ ! -f $set$element.dat ]; then
+      (wget -q http://open.adas.ac.uk/download/adf11/$set$type/$set$element.dat -O $set$element.dat &)
+      echo "Downloading $set$element.dat"
+    fi
+  done
+done
+wait # for the downloader threads above
+sleep 0.5 # wait for FS update
+# Now check for bad files
+for element in "$@"; do
+  type=(${element//_/ }) # an array of 50 and w
+  for set in "${ADF11_sets[@]}"; do
+    if grep -q "You have an error" $set$element.dat; then
+      rm $set$element.dat
+      echo "Nonexisting $set$element.dat, skipping"
     fi
   done
 done

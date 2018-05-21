@@ -357,31 +357,7 @@ module mgi_module
           
           ! This is to output a coronal equilibrium charge distribution as a
           ! function of temperature assuming constant density
-          if (my_id == 0) then
-            open(20,file="charge_distribution.dat")
-  
-            write(20,'(A11)') 'temperature (log10(K))', 'charge states'
-  
-  
-            do i_T = 0, 100
-  
-              T_rad(i_T) = 2. + 0.06*real(i_T,8)
-  
-              if (allocated(P_imp)) deallocate(P_imp)
-              if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-  
-              allocate(P_imp(0:imp_adas(i)%n_Z))
-              allocate(dP_imp_dT(0:imp_adas(i)%n_Z))
-              call imp_cor(1)%interp(density=20.,temperature=T_rad(i_T),p_out=P_imp,z_eff=Z_imp)
-              write(20,'(f12.3)',advance='no'), T_rad(i_T)
-              do i_ion = 0, imp_adas(i)%n_Z
-                write(20,'(f12.5)',advance='no'), P_imp(i_ion)
-              end do
-              write(20,'(f12.5)'), sum(P_imp)
-            end do
-  
-            close(20)
-          end if
+          if (my_id == 0) call output_coronal(imp_cor(i))
         end do
       end if
 

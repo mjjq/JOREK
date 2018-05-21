@@ -6,6 +6,7 @@ implicit none
 private
 public coronal
 public coronal_timestep ! tested in [[compare_mc_coronal]]
+public output_coronal  ! Output conronal equilibrium distribution
 
 !> Coronal equilibrium datatype
 type coronal

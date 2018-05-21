@@ -618,8 +618,8 @@ if (my_id .eq. 0) then
 #endif
 
 #if (JOREK_MODEL == 501)
-  write(*,'(A,4e14.6,A)') 'Radiation power          : ', total_radiation/1.d6, ' [MW]'
-  write(*,'(A,4e14.6,A)') 'Ionization potential E   : ', total_E_ion/1.d6, ' [MJ]'
+  write(*,'(A,1e14.6,A)') 'Radiation power          : ', total_radiation/1.d6, ' [MW]'
+  write(*,'(A,1e14.6,A)') 'Ionization potential E   : ', total_E_ion/1.d6, ' [MJ]'
   if (flag_adas) then
     if (index_now > 1) then
       xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation

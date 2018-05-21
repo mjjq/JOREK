@@ -576,7 +576,7 @@ source_out  = n_period * source_out  * central_density / t_norm
 source_in   = n_period * source_in   * central_density / t_norm
 
 #if (JOREK_MODEL == 501)
-total_radiation = n_period * total_radiation / t_norm
+total_radiation = n_period * total_radiation
 total_E_ion     = n_period * total_E_ion
 #endif
 

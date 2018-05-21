@@ -16,13 +16,13 @@ implicit none
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
-integer :: i, in, i_tor
+integer :: i, in, i_tor, i_spi
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
 real*8  :: Rplot(2), Zplot(2)
 real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis
 integer :: ifail, my_id, ierr, i_elm_axis
 integer :: required, provided, StatInfo
-
+real*8  :: spi_abl_rate_tot, spi_abl_tot
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_diagno                       *'
@@ -83,9 +83,40 @@ if (use_pellet) then
 
 endif
 
+if (flag_adas) then
+
+  open(20,file="rad_history.dat")
+
+  write(20,'(A11)') 'time', 'total_radiation (MJ)'
+
+  do i=1,index_start
+    write(20,'(i7,f12.3,1e14.6)') i,xtime(i), xtime_radiation(i)/1.d6
+  enddo
+  close(20)
+
+end if
+
+if (using_spi .and. abl_history) then
+
+  open(20,file="abl_history.dat")
+
+  write(20,'(A11)') 'time', 'total_abl_rate', 'total_abl_number'
+
+  do i=1,index_start
+    spi_abl_rate_tot = 0.0
+    spi_abl_tot = 0.0
+    do i_spi = 1, n_spi
+      spi_abl_rate_tot = spi_abl_rate_tot + xtime_spi_ablation_rate(i_spi,i)
+      spi_abl_tot = spi_abl_tot + xtime_spi_ablation(i_spi,i)
+    end do
+    write(20,'(i7,f12.3,2e14.6)') i,xtime(i), spi_abl_rate_tot, spi_abl_tot
+  enddo
+  close(20)
+
+endif
 
 
-call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
+!call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 
 if (use_pellet) then
    pellet_volume = total_pellet_volume

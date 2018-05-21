@@ -37,6 +37,7 @@ subroutine test_coronal_Z_increasing
 
   do i_set = 1,size(sets,1)
     cor = coronal(adas(i_set))
+    if (i_set .eq. 7) call output_coronal(cor)
     Z_eff_old = 0.d0
     do i=1,size(cor%temperature,1)
       Z_eff = sum(cor%Z(1, i, :) * [(j,j=0,cor%n_Z)])

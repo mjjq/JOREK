@@ -89,7 +89,7 @@ real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
 
 !================== Parameters specific to model5XX
 ! Matrix, RHS and neutrals-related variables
-real*8     :: amat_28, amat_58, amat_68, amat_78  
+real*8     :: amat_28, amat_58, amat_68, amat_78, amat_78_n  
 real*8     :: amat_81, amat_81_k, amat_82, amat_85, amat_86, amat_87, amat_87_k, amat_87_n 
 real*8     :: amat_88, amat_88_k, amat_88_n, amat_88_kn
 real*8     :: rhs_ij_8, rhs_ij_8_k
@@ -97,7 +97,7 @@ real*8     :: ij8, kl8
 real*8     :: rn0, rn0_x, rn0_y, rn0_p, rn0_s, rn0_t, rn0_ss, rn0_st, rn0_tt, rn0_hat, rn0_x_hat, rn0_y_hat
 real*8     :: rhon, rhon_x, rhon_y, rhon_s, rhon_t, rhon_p, rhon_ss, rhon_st, rhon_tt, rhon_hat, rhon_x_hat, rhon_y_hat  
 
-real*8     :: rn0_xx, rn0_yy, rhon_xx, rhon_yy
+real*8     :: rn0_xx, rn0_yy, rn0_xy, rhon_xx, rhon_yy
 
 ! New momentum equation related rhs and amat
 real*8     :: amat_25_n, amat_27_n
@@ -130,9 +130,9 @@ real*8     :: Dn0x, Dn0y, Dn0p
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8     :: m_i_over_m_imp
 !   -Mean impurity ionization state
-real*8     :: Z_imp, dZ_imp_dT, T0_Zimp, alpha_Zimp
+real*8     :: Z_imp, dZ_imp_dT, d2Z_imp_dT2, T0_Zimp, alpha_Zimp
 !   -Coefficients related to Z_imp
-real*8     :: alpha_imp, dalpha_imp_dT, alpha_imp_bis
+real*8     :: alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis
 real*8     :: beta_imp, dbeta_imp_dT
 !   -Radiation from injected impurities
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
@@ -443,16 +443,6 @@ do ms=1, n_gauss
      Vpar0_st = eq_st(mp,7,ms,mt)
      Vpar0_tt = eq_tt(mp,7,ms,mt)
 
-     P0    = r0 * T0
-     P0_x  = r0_x * T0 + r0 * T0_x
-     P0_y  = r0_y * T0 + r0 * T0_y
-     P0_s  = r0_s * T0 + r0 * T0_s
-     P0_t  = r0_t * T0 + r0 * T0_t
-     P0_p  = r0_p * T0 + r0 * T0_p
-     P0_ss = r0_ss * T0 + 2.d0 * r0_s * T0_s + r0 * T0_ss
-     P0_tt = r0_tt * T0 + 2.d0 * r0_t * T0_t + r0 * T0_tt
-     P0_st = r0_st * T0 + r0_s * T0_t + r0_t * T0_s + r0 * T0_st
-
      ps0_xx = (ps0_ss * y_t(ms,mt)**2 - 2.d0*ps0_st * y_s(ms,mt)*y_t(ms,mt) + ps0_tt * y_s(ms,mt)**2 &
              + ps0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                            &
              + ps0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2             &
@@ -526,11 +516,6 @@ do ms=1, n_gauss
                  - vpar0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                             &
                  - vpar0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2               &
                  - xjac_x * (- vpar0_s * x_t(ms,mt) + vpar0_t * x_s(ms,mt) )   / xjac**2
-
-
-     P0_xx = r0_xx * T0 + 2.d0 * r0_x * T0_x + r0 * T0_xx
-     P0_yy = r0_yy * T0 + 2.d0 * r0_y * T0_y + r0 * T0_yy
-     P0_xy = r0_xy * T0 + r0_x * T0_y + r0_y * T0_x + r0 * T0_xy
  
      T0_ps0_x = T0_xx * ps0_y - T0_xy * ps0_x + T0_x * ps0_xy - T0_y * ps0_xx
      T0_ps0_y = T0_xy * ps0_y - T0_yy * ps0_x + T0_x * ps0_yy - T0_y * ps0_xy
@@ -729,9 +714,12 @@ do ms=1, n_gauss
 
      end if
 
-     alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
-     dalpha_imp_dT = 0.5*m_i_over_m_imp*dZ_imp_dT
-     alpha_imp_bis = alpha_imp + dalpha_imp_dT*T0
+     d2Z_imp_dT2 = 0. !!! TEMPORARY, TO BE IMPROVED !!!
+
+     alpha_imp       = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+     dalpha_imp_dT   = 0.5*m_i_over_m_imp*dZ_imp_dT
+     d2alpha_imp_dT2 = 0.5*m_i_over_m_imp*d2Z_imp_dT2
+     alpha_imp_bis   = alpha_imp + dalpha_imp_dT*T0
 
      beta_imp     = m_i_over_m_imp*Z_imp - 1.
      dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
@@ -892,6 +880,27 @@ do ms=1, n_gauss
                   *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
 
 !--------------------------------------------------------
+
+     P0    = (r0+rn0*alpha_imp) * T0
+     P0_x  = (r0_x+rn0_x*alpha_imp) * T0 + (r0+rn0*alpha_imp_bis) * T0_x
+     P0_y  = (r0_y+rn0_y*alpha_imp) * T0 + (r0+rn0*alpha_imp_bis) * T0_y
+     P0_s  = (r0_s+rn0_s*alpha_imp) * T0 + (r0+rn0*alpha_imp_bis) * T0_s
+     P0_t  = (r0_t+rn0_t*alpha_imp) * T0 + (r0+rn0*alpha_imp_bis) * T0_t
+     P0_p  = (r0_p+rn0_p*alpha_imp) * T0 + (r0+rn0*alpha_imp_bis) * T0_p
+     P0_ss = (r0_ss+rn0_ss*alpha_imp) * T0 + 2.d0 * (r0_s+rn0_s*alpha_imp_bis) * T0_s + (r0+rn0*alpha_imp_bis) * T0_ss &
+             + rn0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * (T0_s)**2.d0
+     P0_tt = (r0_tt+rn0_tt*alpha_imp) * T0 + 2.d0 * (r0_t+rn0_t*alpha_imp_bis) * T0_t + (r0+rn0*alpha_imp_bis) * T0_tt &
+             + rn0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * (T0_t)**2.d0     
+     P0_st = (r0_st+rn0_st*alpha_imp) * T0 + (r0_t+rn0_t*alpha_imp_bis) * T0_s + (r0_s+rn0_s*alpha_imp_bis) * T0_t     &
+             + (r0+rn0*alpha_imp_bis) * T0_st + rn0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * T0_s * T0_t
+     P0_xx = (r0_xx+rn0_xx*alpha_imp) * T0 + 2.d0 * (r0_x+rn0_x*alpha_imp_bis) * T0_x + (r0+rn0*alpha_imp_bis) * T0_xx &
+             + rn0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * (T0_x)**2.d0
+     P0_yy = (r0_yy+rn0_yy*alpha_imp) * T0 + 2.d0 * (r0_y+rn0_y*alpha_imp_bis) * T0_y + (r0+rn0*alpha_imp_bis) * T0_yy &
+             + rn0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * (T0_y)**2.d0	     
+     P0_xy = (r0_xy+rn0_xy*alpha_imp) * T0 + (r0_y+rn0_y*alpha_imp_bis) * T0_x + (r0_x+rn0_x*alpha_imp_bis) * T0_y     &
+             + (r0+rn0*alpha_imp_bis) * T0_xy + rn0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * T0_x * T0_y 
+ 	     
+!-------------------------------------------------------- 
 
 
      do i=1,n_vertex_max
@@ -1474,6 +1483,8 @@ do ms=1, n_gauss
 
              amat_26 = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)      * theta * tstep  &
                        - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)    * theta * tstep  &
+		       - BigR**2 * (v_s * rn0_t * alpha_imp * T - v_t * rn0_s * alpha_imp * T)         * theta * tstep  &
+		       - BigR**2 * (v_s * rn0 * alpha_imp_bis * T_t - v_t * rn0 * alpha_imp_bis * T_s) * theta * tstep  &		       
                        + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac * theta * tstep &
 
                        + v * tauIC * BigR**4 * r0 * (T_s * w0_t - T_t * w0_s)    * theta * tstep &
@@ -1496,7 +1507,8 @@ do ms=1, n_gauss
            amat_27_n = - BigR**2 * r0 * F0 / BigR * vpar_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
                       ! Toroidal para component of the third term of Eq.20 here (new momentum)
 
-                amat_28 = 0 ! Place holder
+		 amat_28 = - BigR**2 * (v_s * rhon_t * alpha_imp * T0     - v_t * rhon_s * alpha_imp * T0  )   * theta * tstep &
+                           - BigR**2 * (v_s * rhon * alpha_imp_bis * T0_t - v_t * rhon * alpha_imp_bis * T0_s) * theta * tstep		
 
 !###################################################################################################
 !#  equation 3   (current definition)                                                              #
@@ -1996,11 +2008,16 @@ do ms=1, n_gauss
 !===============================End of new TG_num terms============================
 
 
-             amat_76 = + v * (T_s * r0 * ps0_t - T_t * r0 * ps0_s)                     * theta * tstep &
-                       + v * (T * r0_s * ps0_t - T * r0_t * ps0_s)                     * theta * tstep &
-                       + v * F0 / BigR * T * r0_p                               * xjac * theta * tstep 
+             amat_76 = + v * (T_s * r0 * ps0_t - T_t * r0 * ps0_s)                                   * theta * tstep &
+                       + v * (T * r0_s * ps0_t - T * r0_t * ps0_s)                                   * theta * tstep &
+                       + v * (T_s * rn0 * alpha_imp_bis * ps0_t - T_t * rn0 * alpha_imp_bis * ps0_s) * theta * tstep &
+                       + v * (T * rn0_s * alpha_imp * ps0_t - T * rn0_t * alpha_imp * ps0_s)         * theta * tstep &		       
+                       + v * F0 / BigR * T * r0_p                                             * xjac * theta * tstep &
+		       + v * F0 / BigR * T * rn0_p * alpha_imp                                * xjac * theta * tstep
 
-             amat_76_n = + v * F0 / BigR * T_p * r0                              * xjac * theta * tstep
+             amat_76_n = + v * F0 / BigR * T_p * r0                                           * xjac * theta * tstep &
+                         + v * F0 / BigR * T_p * rn0 * alpha_imp_bis                          * xjac * theta * tstep 
+
 
              amat_77 = v * Vpar * abs(R0) * F0**2 / BigR * xjac * (1.d0 + zeta) &
                      + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR           * xjac * theta * tstep &
@@ -2086,7 +2103,12 @@ do ms=1, n_gauss
                       * (                                        + F0 / BigR * vpar_p) / BigR                        &
                       * (                                        + F0 / BigR * v_p)  * xjac * theta * tstep*tstep
 		     		     
-                amat_78 = 0 ! Place holder
+				     
+		amat_78 = + v * (rhon_s * alpha_imp * T0 * ps0_t - rhon_t * alpha_imp * T0 * ps0_s)         * theta * tstep &
+                          + v * (rhon * alpha_imp_bis * T0_s * ps0_t - rhon * alpha_imp_bis * T0_t * ps0_s) * theta * tstep &
+			  + v * F0 / BigR * rhon * alpha_imp_bis * T0_p                              * xjac * theta * tstep
+			  
+                amat_78_n = + v * F0 / BigR * rhon_p * alpha_imp * T0                                * xjac * theta * tstep
 
 !################################################################################################### 
 !#  equation 8   neutral density equation                                                          # 
@@ -2288,6 +2310,7 @@ do ms=1, n_gauss
              ELM_n(mp,ij7,kl7)  =  ELM_n(mp,ij7,kl7)  + wst * amat_77_n ! New term due to the new momentum eq.
              ELM_kn(mp,ij7,kl7) =  ELM_kn(mp,ij7,kl7) + wst * amat_77_kn
      	     ELM_p(mp,ij7,kl8)  =  ELM_p(mp,ij7,kl8)  + wst * amat_78
+             ELM_n(mp,ij7,kl8)  =  ELM_n(mp,ij7,kl8)  + wst * amat_78_n
 
              ELM_p(mp,ij8,kl1)  =  ELM_p(mp,ij8,kl1)  + wst * amat_81
              ELM_k(mp,ij8,kl1)  =  ELM_k(mp,ij8,kl1)  + wst * amat_81_k ! Not implemented previously

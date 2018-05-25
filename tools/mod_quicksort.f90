@@ -3,8 +3,18 @@ module mod_quicksort
   private
   public :: quicksort
 contains
+
+pure subroutine quicksort(a)
+  real*8, intent(inout) :: a(:)
+  integer :: i, j
+  i = lbound(a,1)
+  j = ubound(a,1)
+  if (j - i .gt. 1) then ! we don't need to sort a 1 or 0-element array
+    call quicksort_sub(a, i, j)
+  end if
+end subroutine quicksort
 !< A simple recursive quicksort implementation
-pure recursive subroutine quicksort(a, first, last)
+pure recursive subroutine quicksort_sub(a, first, last)
   real*8, intent(inout) :: a(:) !< Array to be sorted
   integer, intent(in)   :: first, last !< First and last element of subsection to sort
   real*8 :: x, t
@@ -28,7 +38,7 @@ pure recursive subroutine quicksort(a, first, last)
      i=i+1
      j=j-1
   end do
-  if (first < i-1) call quicksort(a, first, i-1)
-  if (j+1 < last)  call quicksort(a, j+1, last)
-end subroutine quicksort
+  if (first < i-1) call quicksort_sub(a, first, i-1)
+  if (j+1 < last)  call quicksort_sub(a, j+1, last)
+end subroutine quicksort_sub
 end module mod_quicksort

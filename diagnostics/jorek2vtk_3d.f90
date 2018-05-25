@@ -246,9 +246,9 @@ etype = 12  ! for vtk_quad
 lf = char(10) ! line feed character
 
 #ifdef IBM_MACHINE
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream')
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',status='replace')
 #else
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN',status='replace')
 #endif
 
 buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)

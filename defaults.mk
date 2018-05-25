@@ -34,6 +34,9 @@ endif
 F77FLAGS=
 F90FLAGS=
 
+# Default (GNU) preprocessor
+GCPP ?= cpp
+
 # Default flags for GCC
 ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -cpp -fopenmp
@@ -120,7 +123,7 @@ endef
 define F90_D_TEMPLATE
 $(DEPDIR)/%.d: $(1)%.f90 | $(MODDIR)/version.h
 	@echo "Generating dependencies for $$<"
-	@cpp -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
+	@$(GCPP) -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
 endef
 
 # This template defines a program $(file_stem)

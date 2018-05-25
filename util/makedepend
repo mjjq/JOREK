@@ -46,6 +46,7 @@ sub print_dependencies {
 	    # Add r3_info.o as a dependency if the header file is used
 	    if ($header_name =~ /r3_info[.]h/i) {
 		print "$basename: .obj/r3_info.o\n";
+		print "$basename: .obj/r3_ctlk.o\n";
 	    }
 	# C preprocessor style includes
 	} elsif (/^#\s*include\s*["<]([^">]*)[">]/) {

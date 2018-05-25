@@ -581,7 +581,7 @@ etype = 9  ! for vtk_quad
 
 lf = char(10) ! line feed character
 
-open(unit=ivtk,file='jorek_tmp.vtk',access='stream',form='unformatted',convert='BIG_ENDIAN')
+open(unit=ivtk,file='jorek_tmp.vtk',access='stream',form='unformatted',convert='BIG_ENDIAN',status='replace')
 
 buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
 buffer = 'vtk output'//lf                                                             ; write(ivtk) trim(buffer)

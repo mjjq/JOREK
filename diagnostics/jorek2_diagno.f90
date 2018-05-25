@@ -87,7 +87,7 @@ if (flag_adas) then
 
   open(20,file="rad_history.dat")
 
-  write(20,'(A11)') 'time', 'total_radiation (MJ)'
+  write(20,'(2A20)') 'time', 'total_radiation (MJ)'
 
   do i=1,index_start
     write(20,'(i7,f12.3,1e14.6)') i,xtime(i), xtime_radiation(i)/1.d6

@@ -369,59 +369,44 @@ module mgi_module
 
   end subroutine init_imp_adas
 
-  subroutine radiation_function(ad, cor, density, temperature, Lrad, dLrad_dTe, dLrad_dNe)
+  subroutine radiation_function(ad,cor, density, temperature, Lrad, dLrad_dTe, dLrad_dNe)
 
     use phys_module
     use mod_openadas
     use mod_coronal
+    use mod_interp_splinear
 
     implicit none
 
-    type(coronal), intent(in)   :: cor
     type(adf11_all), intent(in) :: ad
+    type(coronal), intent(in)   :: cor
     real*8, intent(in)          :: density !< log10 density in m^-3
     real*8, intent(in)          :: temperature !< log10 electron temperature in K
 
-    real*8, intent(out)         :: Lrad ! value of radiation functioni
+    real*8, intent(out)         :: Lrad ! value of radiation function
     real*8, intent(out), optional :: dLrad_dTe, dLrad_dNe ! derivatives of radiation functioni
 
-    real*8, dimension(ad%n_Z)   :: rad     ! The value of radiation function for each charge state
-    real*8, dimension(ad%n_Z)   :: dlograd_dlogTe, dlograd_dlogNe ! The loglog gradient of radiation function 
-                                                                  ! for each charge state in K and m^-3
-    real*8, dimension(ad%n_Z)   :: drad_dTe, drad_dNe             ! The gradient of radiation function
+    real*8                      :: rad!Local density multiplied radiation function
+    real*8                      :: radRB, dradRB_dT, dradRB_dn, radLT, dradLT_dT, dradLT_dn
+    real*8, dimension(ad%n_Z)   :: rad_p, drad_dT, drad_dn
     real*8, dimension(0:cor%n_Z):: p          !< charge state distribution
     real*8, dimension(0:cor%n_Z):: p_Te, p_Ne !< gradient of distribution of charge states (sum = 1) to Te and Ne
     integer :: iz
-
-    dlograd_dlogTe       = ad%PRB%interp_grad_T(density, temperature) + &
-                           ad%PLT%interp_grad_T(density, temperature)
-    dlograd_dlogNe       = ad%PRB%interp_grad_n(density, temperature) + &
-                           ad%PLT%interp_grad_n(density, temperature)
-
-    do iz=1,ad%n_Z
-      rad(iz)            = ad%PRB%interp(iz, density, temperature) + &
-                           ad%PLT%interp(iz, density, temperature)
-      drad_dTe(iz)       = dlograd_dlogTe(iz) * rad(iz) / (10.0**temperature) !log10 terms cancel
-      drad_dNe(iz)       = dlograd_dlogNe(iz) * rad(iz) / (10.0**density)     !log10 terms cancel
-    enddo ! radiation emitted by atoms at level iz
-
-
-    Lrad = L2Dinterp(cor%density,cor%temperature,cor%Prad(:,:),density,temperature)
-    Lrad = Lrad / (10.0**density) ! This is to recover the radiation coefficient
     
+    call cor%interp_spl(density,temperature,rad_out=rad)
+    Lrad = rad / (10.0**density) ! This is to recover the radiation coefficient
     if (present(dLrad_dTe) .or. present(dLrad_dNe)) then
-      call cor%interp(density,temperature,p)
-      call cor%interp_gradients(density,temperature,p_Te,p_Ne) 
-      if (present(dLrad_dTe)) then
-        dLrad_dTe = dot_product(p_Te(1:ad%n_Z),rad) + dot_product(p(1:ad%n_Z),drad_dTe)
-      endif
-      if (present(dLrad_dNe)) then
-        dLrad_dNe = dot_product(p_Ne(1:ad%n_Z),rad) + dot_product(p(1:ad%n_Z),drad_dNe)
-      endif
-
-
-    endif
-
+      call cor%interp_spl(density,temperature,p_out=p,p_Te_out=p_Te,p_Ne_out=p_Ne)
+      do iz=1,ad%n_Z
+        call ad%PRB%interp_spl(iz,density,temperature,GRC_out=radRB,dGRC_dT_out=dradRB_dT,dGRC_dn_out=dradRB_dn)
+        call ad%PLT%interp_spl(iz,density,temperature,GRC_out=radLT,dGRC_dT_out=dradLT_dT,dGRC_dn_out=dradLT_dn)
+        rad_p(iz)   = radRB + radLT
+        drad_dT(iz) = dradRB_dT + dradLT_dT
+        drad_dn(iz) = dradRB_dn + dradLT_dn
+      enddo ! radiation emitted by atoms at level iz
+       if (present(dLrad_dTe)) dLrad_dTe = dot_product(p_Te(1:ad%n_Z),rad_p) + dot_product(p(1:ad%n_Z),drad_dT)
+       if (present(dLrad_dNe)) dLrad_dTe = dot_product(p_Ne(1:ad%n_Z),rad_p) + dot_product(p(1:ad%n_Z),drad_dn)
+    end if
 
   end subroutine radiation_function
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 
+from __future__ import print_function
 import os
 import sys
 import inspect
@@ -443,7 +444,8 @@ def replaceFunctionWithSourceString(namespace, functionName, allowEmpty=False):
 
 def generatePythonFilterFromFiles(scriptFile, outputFile):
   namespace = {}
-  execfile(scriptFile, namespace)
+  script = compile(open(scriptFile).read(), scriptFile, mode='exec')
+  exec(script, namespace)
 
   replaceFunctionWithSourceString(namespace, 'RequestData')
   replaceFunctionWithSourceString(namespace, 'RequestInformation', allowEmpty=True)
@@ -456,7 +458,7 @@ def generatePythonFilterFromFiles(scriptFile, outputFile):
 
 def main():
   if len(sys.argv) != 3:
-    print 'Usage: %s <python input filename> <xml output filename>' % sys.argv[0]
+    print('Usage: %s <python input filename> <xml output filename>' % sys.argv[0])
     sys.exit(1)
 
   inputScript = sys.argv[1]

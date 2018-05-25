@@ -42,8 +42,8 @@ def RequestData(self):
     def time_from_name(name):
         i1 = name.index('.')
         i2 = name.index('.', i1+1)
-        return float(name[i1:i2-1])
-    xtime = map(time_from_name, FileNames)
+        return float(name[i1-1:i2-1])
+    xtime = np.asarray(list(map(time_from_name, FileNames)))
 
     # 4 possibilities here:
     # After last step: return last file
@@ -99,7 +99,7 @@ def RequestInformation(self):
             i1 = name.index('.')
             i2 = name.index('.', i1+1)
             return float(name[i1:i2-1])
-        xtime = map(time_from_name, FileNames)
+        xtime = list(map(time_from_name, FileNames))
 
         outInfo.Remove(executive.TIME_STEPS())
         for i in range(len(FileNames)):

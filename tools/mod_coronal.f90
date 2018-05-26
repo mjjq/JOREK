@@ -32,7 +32,7 @@ end interface coronal
 
 contains
 !> Radiated power in a specific coronal equilibrium configuration and temperature
-pure function coronal_Prad(ad, density, temperature, fractions, neutral_density)
+function coronal_Prad(ad, density, temperature, fractions, neutral_density)
 type (ADF11_all), intent(in)            :: ad !< ADF11 datatype
 real*8, intent(in)                      :: density !< log10 density in m^-3
 real*8, intent(in)                      :: temperature !< log10 electron temperature in K

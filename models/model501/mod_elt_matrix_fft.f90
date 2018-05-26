@@ -429,9 +429,11 @@ do ms=1, n_gauss
      T0_tt = eq_tt(mp,6,ms,mt)
      T0_st = eq_st(mp,6,ms,mt)
 
-     T0_corr = corr_neg_temp(T0,(/1.d-2,1.d-1/)) ! For use in eta(T), visco(T), ...
-     dT0_corr_dT = dcorr_neg_temp_dT(T0,(/1.d-2,1.d-1/)) ! Improve the correction
-     d2T0_corr_dT2 = d2corr_neg_temp_dT2(T0,(/1.d-2,1.d-1/))
+     ! The corrected temperature should not go below 1eV otherwise the spline
+     ! fit of effective charge becomes inaccurate
+     T0_corr = corr_neg_temp(T0,(/1.d-1,1.d-1/)) ! For use in eta(T), visco(T), ...
+     dT0_corr_dT = dcorr_neg_temp_dT(T0,(/1.d-1,1.d-1/)) ! Improve the correction
+     d2T0_corr_dT2 = d2corr_neg_temp_dT2(T0,(/1.d-1,1.d-1/))
 
      Vpar0    = eq_g(mp,7,ms,mt)
      Vpar0_x  = (   y_t(ms,mt) * eq_s(mp,7,ms,mt) - y_s(ms,mt) * eq_t(mp,7,ms,mt) ) / xjac

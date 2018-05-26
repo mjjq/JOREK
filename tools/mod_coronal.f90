@@ -5,6 +5,7 @@
 module mod_coronal
 use mod_openadas
 use mod_interp_splinear
+use constants
 implicit none
 private
 public coronal
@@ -250,33 +251,50 @@ real*8, intent(out), optional   :: rad_out, rad_Te_out, rad_Ne_out !< density mu
 
 real*8, dimension(0:cor%n_Z)    :: p !< distribution of charge states (sum = 1)
 real*8, dimension(0:cor%n_Z)    :: p_Te, p_Ne !< gradient of distribution of charge states (sum = 1) to Te and Ne
+real*8, dimension(0:cor%n_Z)    :: p_TeTe, Z_p
 integer                         :: iz
-
+logical                         :: Z_flag !If true, calculate Z_eff from distribution, otherwise interpolate 
 real*8                          :: z, z_Te, z_Ne, z_TeTe ! local variables preparing for output
 real*8                          :: rad, rad_Te, rad_Ne ! local variables preparing for output
 
+Z_flag = .false.
 if (present(p_out) .or. present(p_Te_out) .or. present(p_Ne_out)) then
   do iz = 0, cor%n_z
-    call SL2Dinterp(cor%PFspline(iz),temperature,density,fout=p(iz),dfout_dx=p_Te(iz),dfout_dy=p_Ne(iz))
+    call SL2Dinterp(cor%PFspline(iz),temperature,density,fout=p(iz),dfout_dx=p_Te(iz),&
+                                                         dfout_dy=p_Ne(iz),d2fout_dx2=p_TeTe(iz))
     if (p(iz)<0.) p(iz)=0.
   end do
 
   ! Converting log gradient to real gradient
   p_Te = p_Te / (log(10.)*10.0**temperature)
   p_Ne = p_Ne / (log(10.)*10.0**density)
+  p_TeTe = p_TeTe / (log(10.)**2. * 10.0**(2.*temperature)) - p_Te/(10.0**temperature)
 
   if (present(p_out)) p_out = p
   if (present(p_Te_out)) p_Te_out = p_Te/sum(p)
   if (present(p_Ne_out)) p_Ne_out = p_Ne/sum(p)
+
+  if (temperature < log10(EL_CHG)-log10(K_BOLTZ) .or. temperature > log10(4.d4)+log10(EL_CHG)-log10(K_BOLTZ)) Z_flag = .true.
+
 end if
 
 if (present(z_out) .or. present(z_Te_out) .or. present(z_TeTe_out) .or. present(p_Ne_out)) then
-  call SL2Dinterp(cor%ZFspline,temperature,density,fout=z,dfout_dx=z_Te,dfout_dy=z_Ne,d2fout_dx2=z_TeTe)
-
-  ! Converting log gradient to real gradient
-  z_Te = z_Te / (log(10.)*10.0**temperature)
-  z_Ne = z_Ne / (log(10.)*10.0**density)
-  z_TeTe = (z_TeTe / (log(10.)**2.0 * 10.0**(2.*temperature))) - z_Te/(10.0**temperature)
+  if (Z_flag) then
+    do iz=0,cor%n_Z
+      Z_p(iz) = real(iz,8)
+    enddo
+    z        =  dot_product(p,Z_p)
+    z_Te     =  dot_product(p_Te/sum(p),Z_p)
+    z_Ne     =  dot_product(p_Ne/sum(p),Z_p)
+    Z_TeTe   =  dot_product(p_TeTe/sum(p),Z_p)
+  else
+    call SL2Dinterp(cor%ZFspline,temperature,density,fout=z,dfout_dx=z_Te,dfout_dy=z_Ne,d2fout_dx2=z_TeTe)
+  
+    ! Converting log gradient to real gradient
+    z_Te = z_Te / (log(10.)*10.0**temperature)
+    z_Ne = z_Ne / (log(10.)*10.0**density)
+    z_TeTe = (z_TeTe / (log(10.)**2.0 * 10.0**(2.*temperature))) - z_Te/(10.0**temperature)
+  end if
 
   if (present(z_out)) z_out = z
   if (present(z_Te_out)) z_Te_out = z_Te
@@ -325,7 +343,7 @@ do i_T = 1, size(cor%temperature,1)
   if (allocated(P_imp)) deallocate(P_imp)
 
   allocate(P_imp(0:cor%n_Z))
-  call cor%interp_spl(density=20.d0,temperature=T_rad,p_out=P_imp,z_out=Z_eff,rad_out=Lrad)
+  call cor%interp_spl(density=20.,temperature=T_rad,p_out=P_imp,z_out=Z_eff,rad_out=Lrad)
   Lrad = Lrad / (1.d20) ! This is to recover the radiation coefficient
   write(20,'(f12.3)',advance='no') T_rad
   do i_ion = 0, cor%n_Z

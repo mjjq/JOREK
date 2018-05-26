@@ -614,6 +614,7 @@ do ms=1, n_gauss
      end select
      Z_imp = 0.
      dZ_imp_dT = 0.
+     d2Z_imp_dT2 = 0.
 
      ! Te in eV:
      T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
@@ -636,7 +637,8 @@ do ms=1, n_gauss
          !call imp_cor(1)%interp_gradients(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
          !                                 p_Te_out=dP_imp_dT,z_eff_Te=dZ_imp_dT)
          call imp_cor(1)%interp_spl(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
-                                p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT)
+                                p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
+                                z_TeTe_out=d2Z_imp_dT2)
 
          ! Calculate the ionization potential energy and it's time gradient
          E_ion     = 0.
@@ -658,7 +660,7 @@ do ms=1, n_gauss
          !call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
          !call imp_cor(1)%interp_gradients(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff_Te=dZ_imp_dT)
          call imp_cor(1)%interp_spl(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
-                                                z_out=Z_imp,z_Te_out=dZ_imp_dT)
+                                                z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
          E_ion     = 0.
          dE_ion_dT = 0.
        end if
@@ -697,7 +699,7 @@ do ms=1, n_gauss
 
      end if
 
-     d2Z_imp_dT2 = 0. !!! TEMPORARY, TO BE IMPROVED !!!
+     !d2Z_imp_dT2 = 0. !!! TEMPORARY, TO BE IMPROVED !!!
 
      alpha_imp       = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
      dalpha_imp_dT   = 0.5*m_i_over_m_imp*dZ_imp_dT

@@ -88,7 +88,7 @@ real*8     :: Z_imp, T0_Zimp, alpha_Zimp
 real*8     :: alpha_imp
 real*8     :: beta_imp
 !   -Radiation from injected impurities
-real*8     :: Lrad, dLrad_dT
+real*8     :: Lrad
 real*8     :: ne_rad                                          ! Electron density used in radiation rate
 real*8     :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
 real*8     :: A2_rad, T2_rad, sig2_rad
@@ -1050,13 +1050,12 @@ enddo  ! n_elements
        
        ! Here we are temperarily only considering one impurity species, in the
        ! future maybe a do loop will is needed
-       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad)
 
        Lrad = Lrad * coef_rad_1
 
      else if (flag_adas) then
        Lrad = 0.
-       dLrad_dT = 0.
        E_ion = 0.
      else
   !-------------------------------------------
@@ -1064,26 +1063,22 @@ enddo  ! n_elements
   ! coronal equilibrium)
   ! ------------------------------------------
 
-!   if (T_rad .gt. 5.) then
-
-     A0_rad   = 2.8*1.d-33    ! W.m^3
-     A1_rad   = 2.335*1.d-31  ! W.m^3
-     T1_rad   = 23.           ! eV
-     sig1_rad = 14.           ! eV
-     A2_rad   = 3.846*1.d-32  ! W.m^3
-     T2_rad   = 236.          ! eV
-     sig2_rad = 150.          ! eV
-
-!     Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.)
-!     + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
-     !Lrad     = (1./2.)*coef_rad_1*5.d-32 *
-     !(tanh((T_rad-20.)/10.)-tanh(-20./10.))
-     Lrad      = 0. ! For Test
-
-     ! Derivative wrt to T, with T in JOREK units
-     !dLrad_dT = (1./2.)*coef_rad_1*5.d-32 * (1./10.) * dT_rad_dT *
-     !(1-tanh((T_rad-20.)/10.)**2) * dT0_corr_dT
-     dLrad_dT = 0. ! For Test
+  !   if (T_rad .gt. 5.) then
+  
+       A0_rad   = 2.8*1.d-33    ! W.m^3
+       A1_rad   = 2.335*1.d-31  ! W.m^3
+       T1_rad   = 23.           ! eV
+       sig1_rad = 14.           ! eV
+       A2_rad   = 3.846*1.d-32  ! W.m^3
+       T2_rad   = 236.          ! eV
+       sig2_rad = 150.          ! eV
+  
+  !     Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.)
+  !     + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
+       !Lrad     = (1./2.)*coef_rad_1*5.d-32 *
+       !(tanh((T_rad-20.)/10.)-tanh(-20./10.))
+       Lrad      = 0. ! For Test
+  
      end if
 
      scalars(i,s_radiation+1) = scalars(i,8) * E_ion

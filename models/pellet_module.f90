@@ -342,7 +342,7 @@ real*8     :: Z_imp, beta_imp, mu_imp
           case('Ar')
             if (flag_adas .and. T_eV >= 1.) then
               ! As with element_matrix, mimick density as 1.d20
-              call imp_cor(1)%interp(density=20.,temperature=log10(T_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+              call imp_cor(1)%interp(density=20.,temperature=log10(T_eV*EL_CHG/K_BOLTZ),z_out=Z_imp)
             else if (flag_adas .and. T_eV < 1.) then
               Z_imp = 0.
             else
@@ -360,7 +360,7 @@ real*8     :: Z_imp, beta_imp, mu_imp
           case('Ne')
             if (flag_adas .and. T_eV >= 1.) then
               ! As with element_matrix, mimick density as 1.d20
-              call imp_cor(1)%interp(density=20.,temperature=log10(T_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+              call imp_cor(1)%interp(density=20.,temperature=log10(T_eV*EL_CHG/K_BOLTZ),z_out=Z_imp)
             else if (flag_adas .and. T_eV < 1.) then
               Z_imp = 0.
             else

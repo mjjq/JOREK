@@ -393,13 +393,13 @@ module mgi_module
     real*8, dimension(0:cor%n_Z):: p_Te, p_Ne !< gradient of distribution of charge states (sum = 1) to Te and Ne
     integer :: iz
     
-    call cor%interp_spl(density,temperature,rad_out=rad)
+    call cor%interp(density,temperature,rad_out=rad)
     Lrad = rad / (10.0**density) ! This is to recover the radiation coefficient
     if (present(dLrad_dTe) .or. present(dLrad_dNe)) then
-      call cor%interp_spl(density,temperature,p_out=p,p_Te_out=p_Te,p_Ne_out=p_Ne)
+      call cor%interp(density,temperature,p_out=p,p_Te_out=p_Te,p_Ne_out=p_Ne)
       do iz=1,ad%n_Z
-        call ad%PRB%interp_spl(iz,density,temperature,GRC_out=radRB,dGRC_dT_out=dradRB_dT,dGRC_dn_out=dradRB_dn)
-        call ad%PLT%interp_spl(iz,density,temperature,GRC_out=radLT,dGRC_dT_out=dradLT_dT,dGRC_dn_out=dradLT_dn)
+        call ad%PRB%interp(iz,density,temperature,GRC_out=radRB,dGRC_dT_out=dradRB_dT,dGRC_dn_out=dradRB_dn)
+        call ad%PLT%interp(iz,density,temperature,GRC_out=radLT,dGRC_dT_out=dradLT_dT,dGRC_dn_out=dradLT_dn)
         rad_p(iz)   = radRB + radLT
         drad_dT(iz) = dradRB_dT + dradLT_dT
         drad_dn(iz) = dradRB_dn + dradLT_dn

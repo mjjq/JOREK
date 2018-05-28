@@ -394,8 +394,8 @@ do ife = ife_min, ife_max
    
             allocate(P_imp(0:imp_adas(1)%n_Z))
    
-            call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
-                                   p_out=P_imp,z_eff=Z_imp)
+            call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                          p_out=P_imp,z_eff=Z_imp)
    
             ! Calculate the ionization potential energy and it's time gradient
             E_ion     = 0.
@@ -407,7 +407,7 @@ do ife = ife_min, ife_max
             ! Convert from eV to SI unit
             E_ion     = E_ion * EL_CHG
           else
-            call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+            call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
             E_ion     = 0.
           end if
         else

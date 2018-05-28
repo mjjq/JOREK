@@ -17,10 +17,10 @@ type ADF11
   !< PLT, PRB: Wm3 (for P* ?) (converted from Wcm3)
   type(Fspline), allocatable :: GRCFspline (:) !< spline functions for coefficients at each charge state
 contains
-  procedure :: interp => GRC
+  procedure :: interp => GRC_spl
   procedure :: interp_grad_T => dGRC_dT
   procedure :: interp_grad_n => dGRC_dn
-  procedure :: interp_spl => GRC_spl
+  procedure :: interp_linear => GRC
 end type ADF11
 
 !> Compound datatype containing many type_ADF11
@@ -119,11 +119,7 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
     a%GRCFspline(i)%xspline = a%temperature
     a%GRCFspline(i)%ylinear = a%density
 
-    do i_n = 1, n_d
-      call spline(n_T,a%GRCFspline(i)%xspline,a%GRC(i_n,:,i)-6.d0,0.d0,0.d0,2,&
-                      a%GRCFspline(i)%Aspline(i_n,:),a%GRCFspline(i)%Bspline(i_n,:),&
-                      a%GRCFspline(i)%Cspline(i_n,:),a%GRCFspline(i)%Dspline(i_n,:)) 
-    end do
+    call ConstructFspline(a%GRCFspline(i),a%GRC(:,:,i)-6.d0)
   enddo
   close(10)
 

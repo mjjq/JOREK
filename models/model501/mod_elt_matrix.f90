@@ -632,11 +632,7 @@ do ms=1, n_gauss
          allocate(P_imp(0:imp_adas(1)%n_Z))
          allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
 
-         !call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
-         !                       p_out=P_imp,z_eff=Z_imp)
-         !call imp_cor(1)%interp_gradients(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
-         !                                 p_Te_out=dP_imp_dT,z_eff_Te=dZ_imp_dT)
-         call imp_cor(1)%interp_spl(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+         call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
                                 p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
                                 z_TeTe_out=d2Z_imp_dT2)
 
@@ -657,10 +653,8 @@ do ms=1, n_gauss
          dE_ion_dT = dE_ion_dT * dT_rad_dT * EL_CHG / K_BOLTZ
 
        else
-         !call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
-         !call imp_cor(1)%interp_gradients(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff_Te=dZ_imp_dT)
-         call imp_cor(1)%interp_spl(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
-                                                z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
+         call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                            z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
          E_ion     = 0.
          dE_ion_dT = 0.
        end if

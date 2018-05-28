@@ -391,9 +391,6 @@ module pellet_module
     
     end do
 
-    if (2*PI/(n_tor*n_period) >= ns_deltaphi) &
-      write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
-  
     if (allocated(pellets)) then
       deallocate(pellets)
     end if

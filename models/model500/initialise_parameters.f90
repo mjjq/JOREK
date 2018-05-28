@@ -233,6 +233,13 @@ call derive_num_profiles(my_id)
 !spi_R = ns_R
 !spi_Z = ns_Z
 
+if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
+  write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
+  if (t_now >= t_ns) then
+    write(*,*) "EXISTING NOW!!!"
+    stop
+  end if
+end if
 
 if (using_spi) call init_spi(my_id)
   

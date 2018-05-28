@@ -983,7 +983,7 @@ enddo  ! n_elements
 
    do i=1,nnos
      T_real8 = scalars(i,6)
-     T_rad = corr_neg_temp(T_real8,(/1.d-2,1.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     T_rad = corr_neg_temp(T_real8,(/1.d-1,1.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0) &
                         *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 

@@ -201,12 +201,12 @@ if (iy2 .gt. size(f%ylinear)) iy2 = size(f%ylinear) - 1 ! if it does not exist, 
 if (iy2 .lt. 1              ) iy2 = 2
 
 if (flag_extra) then
-  fy1       = (f%Aspline(ix1,iy1)-f%Aspline(ix2,iy1))/(f%xspline(ix1)-f%xspline(ix2))*&
-              (x-f%xspline(ix1))+f%Aspline(ix1,iy1)
-  fy2       = (f%Aspline(ix1,iy2)-f%Aspline(ix2,iy2))/(f%xspline(ix1)-f%xspline(ix2))*&
-              (x-f%xspline(ix1))+f%Aspline(ix1,iy2)
-  ABLTG1(1) = (f%Aspline(ix1,iy1)-f%Aspline(ix2,iy1))/(f%xspline(ix1)-f%xspline(ix2))
-  ABLTG2(1) = (f%Aspline(ix1,iy2)-f%Aspline(ix2,iy2))/(f%xspline(ix1)-f%xspline(ix2))
+  fy1       = (f%Aspline(iy1,ix1)-f%Aspline(iy1,ix2))/(f%xspline(ix1)-f%xspline(ix2))*&
+              (x-f%xspline(ix1))+f%Aspline(iy1,ix1)
+  fy2       = (f%Aspline(iy2,ix1)-f%Aspline(iy2,ix2))/(f%xspline(ix1)-f%xspline(ix2))*&
+              (x-f%xspline(ix1))+f%Aspline(iy2,ix1)
+  ABLTG1(1) = (f%Aspline(iy1,ix1)-f%Aspline(iy1,ix2))/(f%xspline(ix1)-f%xspline(ix2))
+  ABLTG2(1) = (f%Aspline(iy2,ix1)-f%Aspline(iy2,ix2))/(f%xspline(ix1)-f%xspline(ix2))
   ABLTG1(2) = 0.
   ABLTG1(3) = 0.
   ABLTG2(2) = 0.

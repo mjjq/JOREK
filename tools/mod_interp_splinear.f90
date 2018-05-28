@@ -162,18 +162,44 @@ real*8  :: fy1, fy2 ! Temporary variables on each y index
 
 real*8, external :: spwert ! Evaluation of spline
 real*8  :: ABLTG1(3), ABLTG2(3)        ! The evaluated first, second and third derivatives
+logical :: flag_extra ! Extrapolation flag, if true use linear extrapolation instead of spline
 
+flag_extra = .false.
 ! Find the neighboring index in linear direction
+ix1 = minloc(abs(f%xspline - x), dim=1)
+if (x .ge. f%xspline(ix1)) ix2 = ix1 + 1 ! find other index
+if (x .lt. f%xspline(ix1)) ix2 = ix1 - 1
+if (ix2 .gt. size(f%xspline)) then
+  ix2 = size(f%xspline) - 1 ! if it does not exist, extrapolate
+  flag_extra = .true.
+else if (ix2 .lt. 1) then
+  ix2 = 2
+  flag_extra = .true.
+end if
+
 iy1 = minloc(abs(f%ylinear - y), dim=1) 
 if (y .ge. f%ylinear(iy1)) iy2 = iy1 + 1
 if (y .lt. f%ylinear(iy1)) iy2 = iy1 - 1
 if (iy2 .gt. size(f%ylinear)) iy2 = size(f%ylinear) - 1 ! if it does not exist, extrapolate
 if (iy2 .lt. 1              ) iy2 = 2
 
-fy1  = spwert(f%n_x,x,f%Aspline(iy1,:),f%Bspline(iy1,:),f%Cspline(iy1,:),&
-                      f%Dspline(iy1,:),f%xspline,ABLTG1)
-fy2  = spwert(f%n_x,x,f%Aspline(iy2,:),f%Bspline(iy2,:),f%Cspline(iy2,:),&
-                      f%Dspline(iy2,:),f%xspline,ABLTG2)
+if (flag_extra) then
+  fy1       = (f%Aspline(ix1,iy1)-f%Aspline(ix2,iy1))/(f%xspline(ix1)-f%xspline(ix2))*&
+              (x-f%xspline(ix1))+f%Aspline(ix1,iy1)
+  fy2       = (f%Aspline(ix1,iy2)-f%Aspline(ix2,iy2))/(f%xspline(ix1)-f%xspline(ix2))*&
+              (x-f%xspline(ix1))+f%Aspline(ix1,iy2)
+  ABLTG1(1) = (f%Aspline(ix1,iy1)-f%Aspline(ix2,iy1))/(f%xspline(ix1)-f%xspline(ix2))
+  ABLTG2(1) = (f%Aspline(ix1,iy2)-f%Aspline(ix2,iy2))/(f%xspline(ix1)-f%xspline(ix2))
+  ABLTG1(2) = 0.
+  ABLTG1(3) = 0.
+  ABLTG2(2) = 0.
+  ABLTG2(3) = 0.
+else !If extrapolate, use linear extrapolation
+  fy1  = spwert(f%n_x,x,f%Aspline(iy1,:),f%Bspline(iy1,:),f%Cspline(iy1,:),&
+                        f%Dspline(iy1,:),f%xspline,ABLTG1)
+  fy2  = spwert(f%n_x,x,f%Aspline(iy2,:),f%Bspline(iy2,:),f%Cspline(iy2,:),&
+                        f%Dspline(iy2,:),f%xspline,ABLTG2)
+end if
 
 if (present(fout)) &
   fout = (fy1 - fy2) / (f%ylinear(iy1) - f%ylinear(iy2)) * (y - f%ylinear(iy1)) + fy1

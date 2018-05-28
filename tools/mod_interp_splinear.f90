@@ -204,7 +204,7 @@ if (flag_extra) then
   fy1       = (f%Aspline(iy1,ix1)-f%Aspline(iy1,ix2))/(f%xspline(ix1)-f%xspline(ix2))*&
               (x-f%xspline(ix1))+f%Aspline(iy1,ix1)
   fy2       = (f%Aspline(iy2,ix1)-f%Aspline(iy2,ix2))/(f%xspline(ix1)-f%xspline(ix2))*&
-              (x-f%xspline(ix1))+f%Aspline(iy1,ix1)
+              (x-f%xspline(ix1))+f%Aspline(iy2,ix1)
   ABLTG1(1) = (f%Aspline(iy1,ix1)-f%Aspline(iy1,ix2))/(f%xspline(ix1)-f%xspline(ix2))
   ABLTG2(1) = (f%Aspline(iy2,ix1)-f%Aspline(iy2,ix2))/(f%xspline(ix1)-f%xspline(ix2))
   ABLTG1(2) = 0.

@@ -17,10 +17,10 @@ type ADF11
   !< PLT, PRB: Wm3 (for P* ?) (converted from Wcm3)
   type(Fspline), allocatable :: GRCFspline (:) !< spline functions for coefficients at each charge state
 contains
-  procedure :: interp => GRC
+  procedure :: interp => GRC_spl
   procedure :: interp_grad_T => dGRC_dT
   procedure :: interp_grad_n => dGRC_dn
-  procedure :: interp_spl => GRC_spl
+  procedure :: interp_linear => GRC
 end type ADF11
 
 !> Compound datatype containing many type_ADF11
@@ -119,11 +119,7 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
     a%GRCFspline(i)%xspline = a%temperature
     a%GRCFspline(i)%ylinear = a%density
 
-    do i_n = 1, n_d
-      call spline(n_T,a%GRCFspline(i)%xspline,a%GRC(i_n,:,i)-6.d0,0.d0,0.d0,2,&
-                      a%GRCFspline(i)%Aspline(i_n,:),a%GRCFspline(i)%Bspline(i_n,:),&
-                      a%GRCFspline(i)%Cspline(i_n,:),a%GRCFspline(i)%Dspline(i_n,:)) 
-    end do
+    call ConstructFspline(a%GRCFspline(i),a%GRC(:,:,i)-6.d0)
   enddo
   close(10)
 
@@ -188,10 +184,7 @@ integer                  :: i_z     !< Index of charge state
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC)) then
-  !dGRC_dT = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,1)
-  do i_z = 1, a%n_z
-    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dx=dGRC_dT(i_z))
-  end do
+  dGRC_dT = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,1)
 else
   dGRC_dT = 0.d0
 endif
@@ -208,10 +201,7 @@ integer                  :: i_z     !< Index of charge state
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC)) then
-  !dGRC_dn = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,2)
-  do i_z = 1, a%n_z
-    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dy=dGRC_dn(i_z))
-  end do
+  dGRC_dn = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,2)
 else
   dGRC_dn = 0.d0
 endif
@@ -227,9 +217,7 @@ real*8 :: GRC !< Generalized Radiational Coefficient at this density and tempera
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC) .and. z .le. ubound(a%GRC,3) .and. z .ge. lbound(a%GRC,3)) then
-  !GRC = 10.d0**L2Dinterp(a%density,a%temperature,a%GRC(:,:,z),density,temperature)
-  call SL2Dinterp(a%GRCFspline(z),temperature,density,fout=GRC)
-  GRC = 10.d0**GRC
+  GRC = 10.d0**L2Dinterp(a%density,a%temperature,a%GRC(:,:,z),density,temperature)
 else
   GRC = 0.d0
 endif

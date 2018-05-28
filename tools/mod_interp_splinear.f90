@@ -34,6 +34,23 @@ type(Fspline)                :: f      !< Fspline type to be initialized
 
 end subroutine AllocFspline
 
+! This is a standard rountine to generate the spline functions for given data 
+! We are using natural spline for now, which means the seconde order derivatives
+! at both boundary is zero
+subroutine ConstructFspline(f,f_data)
+real*8, intent(in), dimension(f%n_y,f%n_x) :: f_data !< Data array to be splined      
+type(Fspline)  :: f      !< Fspline type to be initialized
+integer        :: iy
+
+do iy = 1, f%n_y
+  call spline(f%n_x,f%xspline,f_data(iy,:),0.d0,0.d0,2,&
+                    f%Aspline(iy,:),f%Bspline(iy,:),&
+                    f%Cspline(iy,:),f%Dspline(iy,:))
+end do
+
+end subroutine ConstructFspline
+
+
 !> Linear 2D interpolation on a rectangular grid
 !> x2y1       xy1    x1y1
 !>  *----------*------*

@@ -38,8 +38,8 @@ end subroutine AllocFspline
 ! We are using natural spline for now, which means the seconde order derivatives
 ! at both boundary is zero
 subroutine ConstructFspline(f,f_data)
-real*8, intent(in), dimension(f%n_y,f%n_x) :: f_data !< Data array to be splined      
 type(Fspline)  :: f      !< Fspline type to be initialized
+real*8, intent(in), dimension(f%n_y,f%n_x) :: f_data !< Data array to be splined
 integer        :: iy
 
 do iy = 1, f%n_y

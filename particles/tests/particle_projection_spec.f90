@@ -19,6 +19,7 @@ logical, parameter :: EXTRATEST = .false. !< Set to .true. to do flux-aligned gr
 contains
 
 subroutine setup_particle_projection_spec
+  use basis_at_gaussian
   call initialise_basis
 end subroutine setup_particle_projection_spec
 

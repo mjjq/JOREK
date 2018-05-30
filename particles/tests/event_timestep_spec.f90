@@ -1,7 +1,7 @@
 !> This module contains testcases for the event system
 module event_timestep_spec
 use mod_event_timestep
-use constants, only: TICK
+use mod_event, only: TICK
 use fruit
 implicit none
 

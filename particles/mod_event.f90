@@ -9,6 +9,7 @@ private
 public action, stop_action, cycle_time_action
 public event, with, next_event_at, check_and_fix_timesteps
 public mpi_minmeanmax
+public :: TICK
 
 !> @name Time precision
 real*8,  parameter :: TICK             = 1d-12                    !< Time precision for events [s]

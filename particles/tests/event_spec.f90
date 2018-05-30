@@ -14,7 +14,6 @@ subroutine test_create_event_with_stop_action
 end subroutine test_create_event_with_stop_action
 
 subroutine test_event_run_at
-  use constants, only: tick
   type(event) :: e
   e = event(stop_action(), start=1.d0)
   call assert_false(e%run_at(0.d0), 'must not run before start')
@@ -35,7 +34,6 @@ subroutine test_event_run_at
 end subroutine test_event_run_at
 
 subroutine test_next_event_at
-  use constants, only: tick
   type(particle_sim) :: sim
   type(event), dimension(:), allocatable :: events
   events = [event(stop_action(), start=1.d0, end=4.d0, step=0.1d0)]

@@ -15,7 +15,8 @@ contains
 
 !> Actions to perform before any of these tests
 subroutine setup_fieldline_spec
-    call initialise_basis !< Calculate the basis functions at the gaussian points
+  use basis_at_gaussian
+  call initialise_basis !< Calculate the basis functions at the gaussian points
 end subroutine setup_fieldline_spec
 
 !> Test tracing a fieldline back and forth with euler
@@ -111,8 +112,8 @@ subroutine test_fieldline_backforth_adams_bashforth
       st_old    = p(k)%st
       i_elm_old = p(k)%i_elm
       call fieldline_euler_push_cylindrical(p(k), B, dt)
-      call find_RZ_nearby(f%node_list, f%element_list, p(k)%x(1:2), rz_old, &
-        st_old, p(k)%st, i_elm_old, p(k)%i_elm, ifail)
+      call find_RZ_nearby(f%node_list, f%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
+          p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
       p(k)%B_hat_prev = B/norm2(B)
 
       do j=2,20*10**(-(i+5)) ! 200 steps at smallest dt
@@ -127,8 +128,8 @@ subroutine test_fieldline_backforth_adams_bashforth
         i_elm_old = p(k)%i_elm
 
         call fieldline_adams_bashforth_push_cylindrical(p(k), B, dt)
-        call find_RZ_nearby(f%node_list, f%element_list, p(k)%x(1:2), rz_old, &
-            st_old, p(k)%st, i_elm_old, p(k)%i_elm, ifail)
+        call find_RZ_nearby(f%node_list, f%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
+            p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
         if (j .eq. 10*10**(-(i+5))) then
           call assert_equals(0.d0, psi-psi0, 2d9*dt**2, "Must not leave flux surface mid dt=1e"//is)
           p(k)%v = -v ! go backwards after this point

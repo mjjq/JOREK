@@ -647,8 +647,8 @@ do ms=1, n_gauss
            end do
          end do
          ! Convert from eV to JOREK unit
-         E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
-         dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20 
+         E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
+         dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
          ! Convert the gradient in K to gradient in JOREK unit
          dE_ion_dT = dE_ion_dT * dT_rad_dT * EL_CHG / K_BOLTZ
 
@@ -692,8 +692,6 @@ do ms=1, n_gauss
        dE_ion_dT = 0.
 
      end if
-
-     !d2Z_imp_dT2 = 0. !!! TEMPORARY, TO BE IMPROVED !!!
 
      alpha_imp       = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
      dalpha_imp_dT   = 0.5*m_i_over_m_imp*dZ_imp_dT

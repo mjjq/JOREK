@@ -419,7 +419,10 @@ do ife = ife_min, ife_max
         alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
         beta_imp     = m_i_over_m_imp*Z_imp - 1.
         ne_rad       = (r0 + beta_imp * rn0) * 1.d20 * central_density !electron density (SI)
-   
+  
+        P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
+        P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
+
         if (flag_adas .and. ne_rad > 1.d16 .and. T_rad > 1. .and. rn0 > 0.) then
           Lrad = 0.0
           ! Here we are temperarily only considering one impurity species, in the
@@ -430,6 +433,9 @@ do ife = ife_min, ife_max
           Lrad = 0.
           E_ion = 0.
         end if
+
+        Lrad = Lrad * m_i_over_m_imp
+        E_ion = E_ion * m_i_over_m_imp
 
         local_radiation = local_radiation + ne_rad * rn0 * central_density * 1.d20 * Lrad &
                           * bigR * xjac * wst * delta_phi 
@@ -480,6 +486,11 @@ do ife = ife_min, ife_max
           VM_int = VM_int + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
           J2_int = J2_int + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
 
+#if (JOREK_MODEL == 501)
+          P_int = P_int - r0 * T0   * xjac * BigR * wst * delta_phi
+          P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
+#endif
+
         else
 
           D_ext = D_ext + r0         * xjac * BigR * wst * delta_phi
@@ -491,6 +502,12 @@ do ife = ife_min, ife_max
           VK_ext = VK_ext + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_ext = VM_ext + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
           J2_ext = J2_ext + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+
+#if (JOREK_MODEL == 501)
+          P_int = P_int - r0 * T0   * xjac * BigR * wst * delta_phi
+          P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
+#endif
+
 
         endif
 

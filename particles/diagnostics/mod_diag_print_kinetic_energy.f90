@@ -48,7 +48,6 @@ end subroutine do_print_kinetic_energy
 !> if there are any problems, it can be removed along with the simd instruction
 !> The speed improvements of this still have to be tested
 impure elemental function boris_kinetic_energy(particle) result(energy)
-  !$omp declare simd(boris_kinetic_energy)
   class(particle_kinetic_leapfrog), intent(in) :: particle
   real*8 :: energy
   energy = dot_product(particle%v, particle%v)

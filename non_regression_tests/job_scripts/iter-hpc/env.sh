@@ -6,20 +6,20 @@ module purge
 module use /work/imas/opt/EasyBuild/modules/all
 module use /work/imas/etc/modules/all
 
-module load cURL/7.40.0-GCC-4.8.3
+module load cURL/7.28.1-goolf-1.5.16
 module load intel/17.0.4
 module load mpich2/3.1.3-intel
 module load scotch/5.1.12b
 module load metis/5.1.0
 module load mumps/4.10.0
 module load pastix/5.2.2.16
-module load fftw/3.3.4
-module load HDF5/1.10.1-intel-2018a
-module unload GCC
+module load FFTW/3.3.4-gompi-1.5.16
+module unload zlib
+module load HDF5/1.10.0-patch1-goolf-1.5.16
 
 module list
 
-export ZLIB_HOME=/work/imas/opt/EasyBuild/software/zlib/1.2.8-gompi-1.5.16
+#export ZLIB_HOME=/work/imas/opt/EasyBuild/software/zlib/1.2.8-gompi-1.5.16
 
 export LANG=C
 export JOREK_HOST=iter-hpc

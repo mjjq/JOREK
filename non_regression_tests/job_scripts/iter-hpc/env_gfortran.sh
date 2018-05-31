@@ -6,6 +6,7 @@ module purge
 module use /work/imas/opt/EasyBuild/modules/all
 module use /work/imas/etc/modules/all
 
+module load mumps/4.10.0
 module load PaStiX/5.2.2.22-goolf-1.5.16
 module load hdf5/1.8.15p1-gompi-1.5.16
 module load zlib/1.2.8-GCC-4.8.3

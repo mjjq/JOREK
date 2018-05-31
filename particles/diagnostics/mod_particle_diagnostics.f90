@@ -516,6 +516,7 @@ function particles_in_regions(node_list, element_list, particles)
   use mod_particle_types
   use domains
   use mpi
+  use mod_interp, only: interp
   implicit none
 
   type(type_node_list), intent(in)     :: node_list

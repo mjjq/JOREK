@@ -33,16 +33,16 @@ select type (p => sim%groups(1)%particles(1))
 type is (particle_kinetic_leapfrog)
   p%x = [0.d0,0.d0,0.d0]
   p%v = [1.d0,0.d0,0.d0]
-  p%q = 2
+  p%q = 2_1
 end select
-sim%groups(1)%mass = 4.d0
+sim%groups(1)%mass = 4.0
 select type (p => sim%groups(2)%particles(1))
 type is (particle_kinetic_leapfrog)
   p%x = [0.d0,0.d0,0.d0]
   p%v = [10.d0,0.d0,0.d0]
-  p%q = 2
+  p%q = 2_1
 end select
-sim%groups(2)%mass = 4.d0
+sim%groups(2)%mass = 4.0
 
 ! 4. Set an event to stop the simulation.
 events  = [event(stop_action(), start=1.d0), &
@@ -68,7 +68,7 @@ do while (.not. sim%stop_now)
     type is (particle_kinetic_leapfrog)
       ! 7.4 Loop first over particles, and then over how many steps we can take
       !$omp parallel do default(private) &
-      !$omp shared(n_steps, timesteps, i)
+      !$omp shared(sim, particles, n_steps, timesteps, i)
       do j=1,size(particles)
         do k=1,n_steps
           call boris_push_cartesian(particles(j), m=sim%groups(i)%mass, E=[0d0,0d0,0d0], B=[0d0,0d0,1d0], dt=timesteps(i))

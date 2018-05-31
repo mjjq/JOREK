@@ -6,9 +6,9 @@ module purge
 module use /work/imas/opt/EasyBuild/modules/all
 module use /work/imas/etc/modules/all
 
-module load mumps/4.10.0
+module load MUMPS/5.0.1-goolf-1.5.16-metis
 module load PaStiX/5.2.2.22-goolf-1.5.16
-module load hdf5/1.8.15p1-gompi-1.5.16
+module load HDF5/1.10.0-patch1-goolf-1.5.16
 module load zlib/1.2.8-GCC-4.8.3
 module load libibverbs/1.1.4
 # patch libibverbs module on iter since it does not set LIBRARY_PATH correctly

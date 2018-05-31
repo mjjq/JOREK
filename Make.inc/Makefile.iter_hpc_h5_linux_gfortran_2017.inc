@@ -27,7 +27,7 @@ USE_HIPS   = 0
 USE_PASTIX = 1
 USE_BLOCK  = 1
 USE_PASTIX_MURGE = 0
-USE_MUMPS  = 0
+USE_MUMPS  = 1
 USE_WSMP   = 0
 USE_FFTW   = 1
 USE_HDF5   = 1
@@ -38,7 +38,7 @@ USE_HDF5   = 1
 #INC_SCOTCH   = -I$(SCOTCH_HOME)/include
 
 # MUMPS
-MUMPS_HOME ?= 
+MUMPS_HOME ?= $(EBROOTMUMPS)
 LIB_MUMPS  = $(MUMPS_HOME)/lib/libdmumps.a
 LIB_ZMUMPS = $(MUMPS_HOME)/lib/libzmumps.a
 INC_MUMPS  = $(MUMPS_HOME)/include/
@@ -72,7 +72,7 @@ LIBDIERCKX = -L$(DIERCKX_HOME) -ldierckx
 #LIBLAPACK = -L$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
 #SCALAP    = -L$(MKL) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 
 
-HDF5_HOME=$(H5DIR)
+HDF5_HOME?=$(EBROOTHDF5)
 HDF5INCLUDE=$(HDF5_HOME)/include
 HDF5LIB=$(HDF5_HOME)/lib/libhdf5hl_fortran.a \
         $(HDF5_HOME)/lib/libhdf5_hl.a        \

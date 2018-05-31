@@ -144,7 +144,7 @@ do i_tor=1, n_tor
   enddo
 
 enddo ! i_tor
-allocate(sum_counts, mold=counts)
+allocate(sum_counts(size(counts,1),size(counts,1)), mold=counts)
 call MPI_Reduce(counts,sum_counts,size(counts), &
     MPI_REAL4, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
 if (my_id .eq. 0) then

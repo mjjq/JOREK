@@ -14,12 +14,9 @@ module load metis/5.1.0
 module load mumps/4.10.0
 module load pastix/5.2.2.16
 module load FFTW/3.3.4-gompi-1.5.16
-module unload zlib
-module load HDF5/1.10.0-patch1-goolf-1.5.16
+module load hdf5/1.10.2-intel-12.0.2
 
 module list
-
-#export ZLIB_HOME=/work/imas/opt/EasyBuild/software/zlib/1.2.8-gompi-1.5.16
 
 export LANG=C
 export JOREK_HOST=iter-hpc

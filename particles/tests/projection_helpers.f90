@@ -201,7 +201,7 @@ subroutine default_flux_grid(node_list, element_list, npol)
 
   heatsource     = 0.d0
   particlesource = 0.d0
-  rst_hdf5 = .true.
+  rst_hdf5 = 1
 
 
   node_list%n_nodes = 0
@@ -316,7 +316,7 @@ end subroutine calc_rhs_f
 subroutine elements_mean_rms(node_list, element_list, f, mean, rms)
   use basis_at_gaussian
   use constants, only: TWOPI
-  use mod_interp4
+  use mod_interp, only: interp
   type(type_node_list), intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
   real*8, external :: f
@@ -327,7 +327,7 @@ subroutine elements_mean_rms(node_list, element_list, f, mean, rms)
   type(type_node) :: nodes(4)
   real*8, dimension(n_gauss,n_gauss) :: x_g, x_s, x_t, y_g, y_s, y_t
   real*8 :: my_ref, wst, volume, xjac
-  real*8, dimension(1) :: P, P_s, P_t, P_st, P_ss, P_tt
+  real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
 
   call initialise_basis
 
@@ -370,9 +370,9 @@ subroutine elements_mean_rms(node_list, element_list, f, mean, rms)
 
         ! calculate contribution to integral of this point
         call interp(node_list, element_list, i_elm, 1, 1, Xgauss(ms), Xgauss(mt), P, P_s, P_t, P_st, P_ss, P_tt)
-        rms = rms + (P(1)-f(x_g(ms,mt),y_g(ms,mt)))**2 * xjac * TWOPI * x_g(ms,mt) * wst
+        rms = rms + (P-f(x_g(ms,mt),y_g(ms,mt)))**2 * xjac * TWOPI * x_g(ms,mt) * wst
         if (xjac .lt. 0) write(*,*) i_elm, ms, mt, xjac, x_g(ms,mt), wst
-        mean = mean + P(1) * xjac * TWOPI * x_g(ms,mt) * wst
+        mean = mean + P * xjac * TWOPI * x_g(ms,mt) * wst
       enddo
     enddo
   enddo

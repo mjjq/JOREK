@@ -67,11 +67,8 @@ subroutine count_and_save_to_vtk(this, sim, ev)
   type(event), intent(inout), optional :: ev
   integer :: i, my_id, ierr
   character(len=120) :: filename
-  real*8 :: t0, t1, ostart, oend
   real*4, allocatable, dimension(:,:,:) :: counts !< element_id, i_tor, group_id (real because multiplied by toroidal basis function)
 
-  call cpu_time(t0)
-  !$ ostart = omp_get_wtime()
   ! Safety checks
   if (.not. allocated(sim%groups)) return
 
@@ -83,9 +80,6 @@ subroutine count_and_save_to_vtk(this, sim, ev)
         this%nsub, sim%groups(i)%particles)
     ! results are saved only on mpi process 0
   end do
-  call cpu_time(t1)
-  !$ oend = omp_get_wtime()
-  write(*,*) "counting wall/cpu", oend-ostart, t1-t0
 
   if (len_trim(this%filename) .eq. 0) then
     filename = this%get_filename(sim%time)
@@ -93,19 +87,12 @@ subroutine count_and_save_to_vtk(this, sim, ev)
     filename = this%filename
   end if
 
-  call cpu_time(t0)
-  !$ ostart = omp_get_wtime()
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   if (my_id .eq. 0) then
     ! write only on the host
     call write_particle_counts_to_vtk(this%node_list, this%element_list, &
       trim(filename), this%nsub, counts, this%xyz, this%ien)
-
-    write(*,*) "Written projection to ", trim(filename)
   end if
-  call cpu_time(t1)
-  !$ oend = omp_get_wtime()
-  write(*,*) "writing wall/cpu", oend-ostart, t1-t0
   deallocate(counts)
 end subroutine count_and_save_to_vtk
 
@@ -115,6 +102,7 @@ end subroutine count_and_save_to_vtk
 subroutine count_particles(node_list, element_list, counts, nsub, particles)
 use phys_module
 use mpi
+use mod_particle_types
 !$ use omp_lib
 implicit none
 
@@ -131,7 +119,7 @@ call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
 do i_tor=1, n_tor
   do m=1,size(particles,1)
-    if (particles(m)%i_elm .eq. 0) cycle
+    if (particles(m)%i_elm .le. 0) cycle
     ! number the elements from low t to high t and then from low s to high s
     !  __________ s=1
     ! |    |    |
@@ -156,19 +144,20 @@ do i_tor=1, n_tor
   enddo
 
 enddo ! i_tor
-if (my_id .eq. 0) allocate(sum_counts, mold=counts)
-call MPI_Reduce(counts,sum_counts,size(sum_counts), &
+allocate(sum_counts, mold=counts)
+call MPI_Reduce(counts,sum_counts,size(counts), &
     MPI_REAL4, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
 if (my_id .eq. 0) then
   counts = sum_counts
-  deallocate(sum_counts)
 end if
+deallocate(sum_counts)
 end subroutine count_particles
 
 
 !> Calculate the structure of the vtk file without putting in any scalars
 subroutine prepare_write_particle_counts_to_vtk(node_list,element_list,nsub,xyz,ien)
 use data_structure
+use mod_interp
 implicit none
 
 !> Input parameters
@@ -201,7 +190,7 @@ do i=1,element_list%n_elements
         s = float(j_sub-2+j)/float(nsub)
         do k=1,2
           t = float(k_sub-2+k)/float(nsub)
-          call interp_RZ2(node_list,element_list,i,s,t,R,R_s,R_t,Z,Z_s,Z_t)
+          call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,Z,Z_s,Z_t)
           inode = (i-1)*nsub*nsub*4 + (k_sub-1)*4*nsub + (j_sub-1)*4 + (j-1)*2+k
           xyz(1:3,inode) = real([R, Z, 0.d0], 4)
         enddo
@@ -225,7 +214,6 @@ subroutine write_particle_counts_to_vtk(node_list,element_list,filename,nsub,cou
 use data_structure
 use phys_module, only: mode
 use mod_vtk
-use mod_interp4
 use mod_basisfunctions
 use basis_at_gaussian
 use gauss, only: Wgauss

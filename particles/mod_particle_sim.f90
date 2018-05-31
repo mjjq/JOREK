@@ -38,6 +38,7 @@ subroutine initialize(sim, num_groups)
   use mpi
   use mod_parameters, only: n_tor, n_period
   use phys_module, only: mode
+  use basis_at_gaussian, only: initialise_basis
   class(particle_sim), intent(inout) :: sim !< why is this class() and not type()?
   integer, intent(in) :: num_groups
   integer :: provided, ierr, i_tor

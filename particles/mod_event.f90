@@ -449,7 +449,7 @@ function mpi_minmeanmedmax(in) result(out)
   allocate(in_all(n_cpu))
   call MPI_Gather(in, 1, MPI_REAL8, in_all, 1, MPI_REAL8, 0, MPI_COMM_WORLd, ierr)
   if (my_id .eq. 0) then
-    call quicksort(in_all,1,n_cpu)
+    call quicksort(in_all)
     out(1) = in_all(1)
     out(2) = sum(in_all,1)/real(n_cpu)
     out(3) = in_all((n_cpu+1)/2)

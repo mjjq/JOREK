@@ -1,5 +1,6 @@
 program project_R4_convergence_square
 use data_structure
+use basis_at_gaussian, only: initialise_basis
 use projection_helpers, only: project_f, elements_mean_rms, F_R4, &
     default_square_grid
 use mpi

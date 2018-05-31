@@ -416,7 +416,7 @@ subroutine sample_rhs(this, sim)
 
       call interp_RZ(this%node_list,this%element_list,particle%i_elm,x(1),x(2),R_g,R_s,R_t,Z_g,Z_s,Z_t)
       xjac = R_s*Z_t - R_t*Z_s
-      call basisfunctions3(x(1), x(2), HH, HH_s, HH_t)
+      call basisfunctions(x(1), x(2), HH, HH_s, HH_t)
       call mode_moivre(x(3), HZ)
       HZ(1) = HZ(1)*0.5d0 ! int cos^2(nx) from 0 to 2pi = pi for n > 0
       HZ(:) = HZ(:)/PI ! int 1 from 0 to 2pi = 2pi
@@ -749,6 +749,7 @@ end subroutine prepare_mumps_par
 !> Calculate the structure of the vtk file without putting in any scalars
 subroutine prepare_write_particle_distribution_to_vtk(node_list,element_list,nsub,xyz,ien)
 use data_structure
+use mod_interp, only: interp_RZ
 implicit none
 
 !> Input parameters
@@ -780,7 +781,7 @@ do i=1,element_list%n_elements
     ! Create nsub^2 points per element at regularly spaced intervals
     do k=1,nsub
       t = float(k-1)/float(nsub-1)
-      call interp_RZ2(node_list,element_list,i,s,t,R,R_s,R_t,Z,Z_s,Z_t)
+      call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,Z,Z_s,Z_t)
       inode = inode+1
       xyz(1:3,inode) = real([R, Z, 0.d0], 4)
     enddo

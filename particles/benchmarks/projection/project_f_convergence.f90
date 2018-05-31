@@ -1,5 +1,6 @@
 program project_f_convergence
 use data_structure
+use basis_at_gaussian, only: initialise_basis
 use projection_helpers, only: project_f, elements_mean_rms, f_0, f_1, f_R, f_RZ, F_R4, &
     default_square_grid, default_polar_grid, default_flux_grid
 use mpi

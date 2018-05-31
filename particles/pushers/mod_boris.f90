@@ -281,6 +281,7 @@ function gc_to_kinetic_leapfrog(node_list, element_list, in, chi, B, mass) resul
   end if
 
   ! Calculate new st and i_elm
-  call find_RZ_nearby(node_list, element_list, out%x, in%x, in%st, out%st, in%i_elm, out%i_elm, ifail)
+  call find_RZ_nearby(node_list, element_list, in%x(1), in%x(2), in%st(1), in%st(2), in%i_elm, &
+      out%x(1), out%x(2), out%st(1), out%st(2), out%i_elm, ifail)
 end function gc_to_kinetic_leapfrog
 end module mod_boris

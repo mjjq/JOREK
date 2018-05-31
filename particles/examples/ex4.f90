@@ -19,8 +19,6 @@ implicit none
 ! 1. Set up the simulation variables containing
 !    sim: particles, time, and io.
 !    events: halting points for the pushers and actions to run.
-type(particle_sim) :: sim
-type(event), dimension(:), allocatable :: events
 real*8 :: timesteps(1) = [1d-6]
 integer :: i, j, k, n_steps
 real*8  :: target_time
@@ -37,8 +35,8 @@ type is (particle_kinetic_leapfrog)
   p%x = [0.d0,0.d0,0.d0]
   p%v = [1.d0,0.d0,0.d0]
   p%q = 2
-  p%m = 4.d0
 end select
+sim%groups(1)%mass = 4.d0
 
 ! 4. Set an event to stop the simulation.
 events  = [event(stop_action(), start=1.d0), &
@@ -67,7 +65,7 @@ do while (.not. sim%stop_now)
       !$omp shared(n_steps, timesteps, i)
       do j=1,size(particles)
         do k=1,n_steps
-          call boris_push_cartesian(particles(j), E=[0d0,0d0,0d0], B=[0d0,0d0,1d0], dt=timesteps(i))
+          call boris_push_cartesian(particles(j), m=sim%groups(i)%mass, E=[0d0,0d0,0d0], B=[0d0,0d0,1d0], dt=timesteps(i))
         end do ! steps
       end do ! particles
       !$omp end parallel do

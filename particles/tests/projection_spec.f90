@@ -17,7 +17,8 @@ contains
 
 !> Actions to perform before any of these tests
 subroutine setup_projection_spec
-    call initialise_basis !< Calculate the basis functions at the gaussian points
+  use basis_at_gaussian, only: initialise_basis
+  call initialise_basis !< Calculate the basis functions at the gaussian points
 end subroutine setup_projection_spec
 
 

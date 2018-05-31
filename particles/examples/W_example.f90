@@ -84,8 +84,8 @@ do while (.not. sim%stop_now)
           i_elm_old = particles(j)%i_elm
 
           call boris_push_cylindrical(particles(j), sim%groups(i)%mass, E, B, timesteps(i))
-          call find_RZ_nearby(fields%node_list, fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-              particle%x(1), particle%x(2), particle%st(1), particle%st(2), particle%i_elm, ifail)
+          call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
+              particles(j)%x(1), particles(j)%x(2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
         end do ! steps
       end do ! particles
       !$omp end parallel do

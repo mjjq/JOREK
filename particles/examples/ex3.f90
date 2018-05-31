@@ -15,7 +15,6 @@ use mod_diag_print_kinetic_energy
 implicit none
 
 ! 1. Set up the simulation data type and actions
-type(particle_sim) :: sim
 type(read_action)  :: reader
 type(diag_print_kinetic_energy) :: print_ke
 integer :: i

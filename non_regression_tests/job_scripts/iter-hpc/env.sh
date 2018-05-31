@@ -14,7 +14,7 @@ module load metis/5.1.0
 module load mumps/4.10.0
 module load pastix/5.2.2.16
 module load fftw/3.3.4
-module load hdf5
+module load HDF5/1.10.1-intel-2018a
 module unload GCC
 
 module list

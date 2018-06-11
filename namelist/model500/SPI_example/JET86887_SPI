@@ -1,7 +1,7 @@
   &in1
 
  !==============================================================
- ! JET pulse 86887 at time 60.9s (q_95 = 2.9, Bt=2T, Ip = 2.0 MA)
+ ! JET pulse 86887 at time 60.9s (q_95=2.9, Bt=2T, Ip=2.0 MA)
  !
  ! In the expt. the disruption was triggered by a pure D2 MGI
  ! but here we simulate a D2 SPI.
@@ -15,7 +15,7 @@
  ! https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
  !==============================================================
 
- restart = .t.
+ restart = .f.
  
  tstep = 100
  nstep = 100000
@@ -202,7 +202,7 @@
 
  D_par = 0.
 
- D_perp(1)  = 5.d-7
+ D_perp(1)  = 5.d-6
  D_perp(2)  = 0.d0
  D_perp(3)  = 0.13d0
  D_perp(4)  = 0.01d0
@@ -219,6 +219,9 @@
  ZK_perp(5)  = 0.96
  ZK_perp(6)  = 0.d0
  ZK_perp_num = 1.d-12
+
+ ZK_prof_neg_thresh = 1.d-4
+ ZK_prof_neg        = 1.d-2
  
  D_neutral_x = 2.d-3
  D_neutral_y = 2.d-3
@@ -232,8 +235,10 @@
  ! --- Diamagnetic parameter
  tauIC = 0.d0
 
- ! --- Cut the current source!
+ ! --- Cut sources
  keep_current_prof = .f.
+ heatsource        = 0.
+ particlesource    = 0.
 
  ! --- SPI parameters
  using_spi = .t.

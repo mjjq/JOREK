@@ -235,7 +235,7 @@ call derive_num_profiles(my_id)
 
 if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
   write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
-  if (t_now >= t_ns) then
+  if (t_now > t_ns) then
     write(*,*) "EXITING NOW!!!"
     stop
   end if

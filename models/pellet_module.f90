@@ -391,9 +391,6 @@ module pellet_module
     
     end do
 
-    if (2*PI/(n_tor*n_period) >= ns_deltaphi) &
-      write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
-  
     if (allocated(pellets)) then
       deallocate(pellets)
     end if
@@ -607,7 +604,7 @@ module pellet_module
 
   subroutine pellet_source(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                            pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-  			 R,Z,psi,phi,particle_source)
+                           R,Z,psi,phi,particle_source)
   
     use constants
     

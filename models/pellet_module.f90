@@ -326,19 +326,20 @@ real*8     :: Z_imp, beta_imp, mu_imp
       n_imp_SI           = P(3) * 1.d20 * central_density
       if (n_imp_SI < 0.) n_imp_SI = 0.      
 
-      if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
-        write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
-      end if
       ! NGS model
       if (flag_spi == 1) then
         pellets(i)%spi_abl    = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
                                (T_eV**1.64)
+        if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
+          write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
+        end if
       else if (flag_spi == 2) then
         select case ( trim(gas_type) )
           case('D2')
+            ne_SI   = n_SI
             ! The scaling law is in gauss unit
             pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
-                                 * ((n_SI*1.d-6)**0.455) * (T_eV**1.679)
+                                 * ((ne_SI*1.d-6)**0.455) * (T_eV**1.679)
           case('Ar')
             if (flag_adas .and. T_eV >= 1.) then
               ! As with element_matrix, mimick density as 1.d20
@@ -384,6 +385,9 @@ real*8     :: Z_imp, beta_imp, mu_imp
             pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
                                  * ((n_SI*1.d-6)**0.455) * (T_eV**1.679)
         end select
+        if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
+          write(*,*) "Check Point, ne_SI, T_eV = ", ne_SI, T_eV
+        end if
       end if
     else
       pellets(i)%spi_abl    = 0.d0

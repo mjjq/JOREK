@@ -410,12 +410,32 @@ module mod_expression
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
       fact_resistiv, fact_Er
-#if JOREK_MODEL == 500
+#if JOREK_MODEL == 500 || JOREK_MODEL == 501
     real*8  :: coef_rad_1
     real*8  :: T_rad, LradDrays_T, LradDcont_T
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 #endif
+#if JOREK_MODEL == 501
+    ! Atomic physics coefficients:
+    !   -Mass ratio between main ions and impurites (m_i/m_imp)
+    real*8  :: m_i_over_m_imp
+    !   -Mean impurity ionization state
+    real*8  :: Z_imp, T0_Zimp, alpha_Zimp
+    !   -Coefficients related to Z_imp
+    real*8  :: alpha_imp
+    real*8  :: beta_imp
+    !   -Radiation from injected impurities
+    real*8  :: Lrad
+    real*8  :: ne_rad    ! Electron density used in radiation rate
+    real*8  :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
+    real*8  :: A2_rad, T2_rad, sig2_rad
+    !   -Temporary variable for charge state distribution
+    real*8, allocatable :: P_imp(:)
+    real*8  :: E_ion
+    integer*8  :: ion_i, ion_k
+#endif
+
     
     ierr = 0
     
@@ -441,6 +461,21 @@ module mod_expression
       ierr = -103
       return
     end if
+
+#if JOREK_MODEL == 501
+    select case ( trim(gas_type) )
+      case('D2')
+        m_i_over_m_imp = 1.
+      case('Ar')
+        m_i_over_m_imp = 1./20. ! Argon mass = 40 u and main ion (D) mass = 2 u
+      case('Ne')
+        m_i_over_m_imp = 1./10. ! Neon mass = 20 u and main ion (D) mass = 2 u
+      case default
+        write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
+        write(*,*) '=> We assume the gas is D2.'
+        m_i_over_m_imp = 1.
+    end select 
+#endif
     
     if ( allocated(result) ) deallocate(result)
     allocate( result(tor_pos_list%n_pos, pol_pos_list%n_pos(1), pol_pos_list%n_pos(2),             &
@@ -925,7 +960,7 @@ module mod_expression
           J_boot = 0.d0
 #endif
 
-#if JOREK_MODEL == 500
+#if JOREK_MODEL == 500 || JOREK_MODEL == 501
 
    T_rad = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
   !write(*,*) 'T_rad = ', T_rad
@@ -968,7 +1003,17 @@ module mod_expression
   !--------------------------------------------------------
 
 #endif
-
+#if JOREK_MODEL == 501
+          if (flag_adas) then
+            call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+          else
+            Z_imp = 10.0
+          end if
+          alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+          beta_imp     = m_i_over_m_imp*Z_imp - 1.
+        
+          ne_rad       = (r0 + beta_imp * rn0) ! electron density (JOREK unit)
+#endif
 
           ! --- Factors for switching between JOREK normalized and SI units.
           if ( units == SI_UNITS ) then
@@ -1051,8 +1096,11 @@ module mod_expression
                 res = r0 * fact_rho
                 
               case ( 'ne' )
+#if JOREK_MODEL == 501
+                res = ne_rad * fact_ne 
+#else
                 res = r0 * fact_ne
-                
+#endif
               case ( 'T' )
                 res = T0 * fact_T
               

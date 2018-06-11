@@ -79,6 +79,7 @@ real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_
 real*8                :: T_real8, r0_real8, rn0_real8
 real*8                :: r0_corr, rn0_corr
 
+#if JOREK_MODEL == 501
 ! Atomic physics coefficients:
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8     :: m_i_over_m_imp
@@ -92,12 +93,11 @@ real*8     :: Lrad
 real*8     :: ne_rad                                          ! Electron density used in radiation rate
 real*8     :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
 real*8     :: A2_rad, T2_rad, sig2_rad
-
-
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion
 integer*8  :: ion_i, ion_k
+#endif
 
 ! MPI arguments
 integer    :: required,provided,StatInfo

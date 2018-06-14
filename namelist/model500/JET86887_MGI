@@ -218,6 +218,9 @@
  ZK_perp(5)  = 0.96
  ZK_perp(6)  = 0.d0
  ZK_perp_num = 1.d-12
+
+ ZK_prof_neg_thresh = 1.d-4
+ ZK_prof_neg        = 1.d-2
  
  D_neutral_x = 2.d-5
  D_neutral_y = 2.d-3
@@ -230,8 +233,10 @@
  ! --- Diamagnetic parameter
  tauIC = 0.d0
 
- ! --- Cut the current source!
+ ! --- Cut sources
  keep_current_prof = .f.
+ heatsource        = 0.
+ particlesource    = 0.
 
  ! --- MGI parameters
  JET_MGI     = .t. 

@@ -8,7 +8,7 @@
  !
  ! This input file can be run with model500 with n_tor=n_period=n_plane=1
  ! for 10 time steps of tstep=100 and then restarted with
- ! n_tor=11, n_period=1, n_plane=32, still with tstep=100. After some time,
+ ! n_tor=21, n_period=1, n_plane=64, still with tstep=100. After some time,
  ! it will become necessary to decrease the time step...
  !
  ! Explanations on SPI simlations can be found on the wiki:

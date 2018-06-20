@@ -371,7 +371,8 @@ def generatePythonFilter(info):
   fileReaderProperties = getFileReaderXml(info)
 
   # Get paths to put in the file by default
-  pathProperty     = getPythonPathProperty(info.get('PythonPaths',[]))
+  # Disable this temporarily
+  pathProperty     = getPythonPathProperty([]) #info.get('PythonPaths',[]))
 
   outputXml = '''\
 <ServerManagerConfiguration>

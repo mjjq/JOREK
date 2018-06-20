@@ -16,6 +16,7 @@ Calculation time is not really affected, render time maybe?
 """
 import h5py
 import numpy as np
+import vtk
 prec=np.float32
 vtk_prec=vtk.VTK_FLOAT
 
@@ -52,7 +53,7 @@ class fields(object):
                 if (self.n_elements != hf2.get('n_elements')[0]):
                     raise "Error: Files with different numbers of elements read! Refinement is not supported"
             # Interpolate before making grid etc
-            self.values = f*self.values + (1.0-f)*read_mmap_or_h5py(file_prev, 'values', type_out=prec)
+            self.values = interp_fraction*self.values + (1.0-interp_fraction)*read_mmap_or_h5py(file_prev, 'values', type_out=prec)
 
 
     """

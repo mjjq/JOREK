@@ -1,5 +1,5 @@
 Name = 'JorekReadH5'
-Label = 'Jorek Read H5 file'
+Label = 'JorekH5Reader'
 Help = 'Read a jorek restart file in H5 format'
 Extension = 'h5'
 FileDescription = 'JOREK hdf5 files'
@@ -39,10 +39,6 @@ Properties = OrderedDict([
         ('number_of_planes', dict(value=1, min=1, max=360)),
         ('phi_range', dict(value=[0.0, 90.0], widget='double_range', min=0.0, max=360)),
     ])),
-    ('normalisation_options', PropertyGroup([ # Deprecated, can be removed after adoption of new restart file format
-        ('central_mass', 2.0),
-        ('central_density', 1.0),
-    ])),
 ])
 
 
@@ -61,12 +57,7 @@ def RequestData(self):
     req_time = GetUpdateTimestep(self)
 
     # Read the timestep info from the files
-    MU_ZERO       = 4e-7*np.pi
-    MASS_PROTON   = 1.67262178e-27
-    if (central_mass > 0 and central_density > 0):
-        t_norm = np.sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1e20)
-    else:
-        t_norm = 1
+    t_norm = h5py.File(FileNames[0]).get("t_norm", default=[1])[0]
     # Read xtime from last file and correlate against file numbers
     f = h5py.File(FileNames[-1])
     if "xtime" in f:
@@ -97,13 +88,11 @@ def RequestData(self):
             index = 0
         else:
             interp = True
-            index = np.searchsorted(xtime, req_time)
-            f = (req_time - xtime[index-1])/(xtime[index] - xtime[index-1])
+            index = (xtime > req_time).tolist().index(True)
+            interp_fraction = (req_time - xtime[index-1])/(xtime[index] - xtime[index-1])
+            if (interp_fraction > 1 or interp_fraction < 0):
+                print("ERROR in interp_fraction", interp_fraction, xtime, index)
             # how much of second to take == 1-how much of first to take
-
-            # Hack in to not interpolate
-            print('WARNING: disabling interpolation due to issues.')
-            interp = False
 
     # Make a list of variables to read (0-based) and a list of variables to interpret
     # See https://www.jorek.eu/wiki/doku.php?id=models
@@ -131,7 +120,7 @@ def RequestData(self):
         self.f = fields()
     if (interp):
         self.f.read(FileNames[index], variables=to_read, file_prev=FileNames[index-1],
-               interp_fraction=f)
+               interp_fraction=interp_fraction)
     else:
         self.f.read(FileNames[index], variables=to_read)
 
@@ -151,13 +140,7 @@ def RequestInformation(self):
         executive = algorithm.GetExecutive()
         outInfo = executive.GetOutputInformation(0)
 
-        # Read the timestep info from the files
-        MU_ZERO       = 4e-7*np.pi
-        MASS_PROTON   = 1.67262178e-27
-        if (central_mass > 0 and central_density > 0):
-            t_norm = np.sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1e20)
-        else:
-            t_norm = 1
+        t_norm = h5py.File(FileNames[0]).get("t_norm", default=[1])[0]
 
         # Read xtime from last file and correlate against file numbers
         # Also read the model number and set this

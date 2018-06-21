@@ -149,9 +149,6 @@ required = 0
 #endif
 call MPI_Init_thread(required, provided, StatInfo)
 
-call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread
-
-
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
@@ -173,11 +170,9 @@ include_psi_norm       = .false.  ! include normalized flux
 include_radiation = .true.
 ! --- Read ADAS data and generate coronal equilibrium is needed
 
-write(*,*) "CHECK Point 00"
 if (flag_adas) then
   call init_imp_adas(my_id)
 end if
-write(*,*) "CHECK Point 01"
 #endif
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
@@ -1219,6 +1214,8 @@ endif ! SI_UNITS
 etype = 9  ! for vtk_quad
 
 call write_vtk('jorek_tmp.vtk',xyz,ien,etype,scalar_names,scalars,vector_names,vectors)
+
+call MPI_FINALIZE(IERR)                                ! clean up MPI
 
 write(*,*) 'done.'
 

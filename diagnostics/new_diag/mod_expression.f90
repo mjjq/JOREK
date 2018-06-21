@@ -558,7 +558,7 @@ module mod_expression
           Te0   = 0.d0; Te0_s   = 0.d0; Te0_t   = 0.d0; Te0_ss   = 0.d0; Te0_tt   = 0.d0; Te0_st   = 0.d0; Te0_p   = 0.d0; Te0_pp   = 0.d0
           Vpar0 = 0.d0; Vpar0_s = 0.d0; Vpar0_t = 0.d0; Vpar0_ss = 0.d0; Vpar0_tt = 0.d0; Vpar0_st = 0.d0; Vpar0_p = 0.d0; Vpar0_pp = 0.d0
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
-#if JOREK_MODEL == 500
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
           rn0 = 0.d0
           rn0_s = 0.0
           rn0_t = 0.0
@@ -680,7 +680,7 @@ module mod_expression
                 Vpar0_p  = Vpar0_p  + vv(7) * sz * hh    * hhz_p
                 Vpar0_pp = Vpar0_pp + vv(7) * sz * hh    * hhz_pp
 #endif
-#if JOREK_MODEL == 500
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
                 rn0       = rn0       + vv(8) * sz * hh    * hhz
                 rn0_s     = rn0_s     + vv(8) * sz * hh_s  * hhz
                 rn0_t     = rn0_t     + vv(8) * sz * hh_t  * hhz

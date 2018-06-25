@@ -33,6 +33,7 @@ module diffusivities
   !> Determine perpendicular particle diffusivity, D_perp, as a function of Psi_N
   real*8 function get_dperp1(psin)
     
+    !$omp declare simd
     implicit none
     
     real*8, intent(in) :: psin
@@ -62,6 +63,7 @@ module diffusivities
   !> Determine perpendicular heat diffusivity, ZK_perp, as a function of Psi_N
   real*8 function get_zkperp1(psin)
     
+    !$omp declare simd
     implicit none
     
     real*8, intent(in) :: psin

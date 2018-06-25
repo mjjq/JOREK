@@ -293,8 +293,6 @@ CONTAINS
                      &                       data%minRad, data%R_axis, data%Z_axis,           &
                      &                       data%psi_axis, data%psi_bnd, data%R_xpoint,      &
                      &                       data%Z_xpoint,                                   &
-                     &                       ELM, RHS, thread_struct(data%thread_num)%ELM2,   &
-                     &                       thread_struct(data%thread_num)%RHS2,             &
                      &                       data%thread_num, ife,              &
                      &                       data%n_local_elms, data%node_list)
 
@@ -310,7 +308,9 @@ CONTAINS
 #endif
              ! --- Define element nodes (depends if it's refined)
              if (refinement) then   
-                call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
+                call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father, &
+                    thread_struct(data%thread_num)%ELM, thread_struct(data%thread_num)%RHS, node_out)
+                ! note that ELM points to thread_struct(data%thread_num)%ELM
              else
                 do i=1, n_vertex_max
                    node_out(i) = element%vertex(i)   

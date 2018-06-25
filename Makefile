@@ -128,6 +128,7 @@ objs: $(foreach file,$(foreach dir,$(DIRS), $(find_files)), $(OBJDIR)/$(notdir $
 # Special cases
 # Add here: Global includes (as the line below)
 INCLUDES += -Itools # for r3_info.h
+INCLUDES += -Imodels
 # C++ support
 LIBS += -lstdc++
 CXXFLAGS += -pedantic -Wall

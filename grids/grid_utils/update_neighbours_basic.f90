@@ -20,12 +20,14 @@ subroutine update_neighbours_basic(element_list,node_list)
   write(*,*)'----------------------------------------------------------'
   
   ! --- Loop on each element
+!$omp parallel do default(private) &
+!$omp   shared(element_list,node_list)
   do i_elm = 1, element_list%n_elements
   
-    progress = 1.d2 * float(i_elm) / float(element_list%n_elements)
-    progress = max(0.d0,progress)
-    progress = min(1.d2,progress)
-    write(*,"(' Processing  ... ',I0,'%',A,$)") int(progress),CHAR(13)
+    !progress = 1.d2 * float(i_elm) / float(element_list%n_elements)
+    !progress = max(0.d0,progress)
+    !progress = min(1.d2,progress)
+    !write(*,"(' Processing  ... ',I0,'%',A,$)") int(progress),CHAR(13)
     
     ! --- Loop on each side
     do i_side = 1, n_vertex_max
@@ -45,9 +47,10 @@ subroutine update_neighbours_basic(element_list,node_list)
     enddo
   
   enddo
+!$omp end parallel do
 
-  write(*,*) 'Processing  ... 100'
-  write(*,*) 'finished updating neighbours'
+  !write(*,*) 'Processing  ... 100'
+  !write(*,*) 'finished updating neighbours'
   
   return
 

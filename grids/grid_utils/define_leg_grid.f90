@@ -917,31 +917,30 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
       
       ! --- End point
       do i_RZ=1,2
-      i_find = 0
-      !if (abs(Z2-Z1) .gt. abs(R2-R1)) then
-      if (i_RZ .eq. 1) then
-        if ( (min(Z1,Z2) .le. Z_end) .and. (Z_end .le. max(Z1,Z2)) ) then
-          call find_Z_surface(node_list,element_list,surface_list_tmp,1,Z_end,i_elm_find,s_find,t_find,st_find,i_find)
+        i_find = 0
+        if (i_RZ .eq. 1) then
+          if ( (min(Z1,Z2) .le. Z_end) .and. (Z_end .le. max(Z1,Z2)) ) then
+            call find_Z_surface(node_list,element_list,surface_list_tmp,1,Z_end,i_elm_find,s_find,t_find,st_find,i_find)
+          endif
+        else
+          if ( (min(R1,R2) .le. R_end) .and. (R_end .le. max(R1,R2)) ) then
+            call find_R_surface(node_list,element_list,surface_list_tmp,1,R_end,i_elm_find,s_find,t_find,st_find,i_find)
+          endif
         endif
-      else
-        if ( (min(R1,R2) .le. R_end) .and. (R_end .le. max(R1,R2)) ) then
-          call find_R_surface(node_list,element_list,surface_list_tmp,1,R_end,i_elm_find,s_find,t_find,st_find,i_find)
-        endif
-      endif
-      do j_find = 1,i_find
-        rr    = s_find(j_find)
-        ss    = t_find(j_find)
-        i_elm = i_elm_find(j_find)
-        call interp_RZ(node_list,element_list,i_elm,rr1,ss1,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
-                                                            Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
-        diff_end = sqrt( (R3-R_end)**2 + (Z3-Z_end)**2 )
-        if (diff_end .lt. diff_min_end) then
-          diff_min_end = diff_end
-          i_part_end  = i_part
-          i_piece_end = i_piece
-          st_end      = st_find(j_find)
-        endif
-      enddo
+        do j_find = 1,i_find
+          rr    = s_find(j_find)
+          ss    = t_find(j_find)
+          i_elm = i_elm_find(j_find)
+          call interp_RZ(node_list,element_list,i_elm,rr1,ss1,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
+                                                              Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
+          diff_end = sqrt( (R3-R_end)**2 + (Z3-Z_end)**2 )
+          if (diff_end .lt. diff_min_end) then
+            diff_min_end = diff_end
+            i_part_end  = i_part
+            i_piece_end = i_piece
+            st_end      = st_find(j_find)
+          endif
+        enddo
       enddo
     
     enddo
@@ -972,50 +971,49 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
       ! --- Beg point
       i_find = 0
       do i_RZ=1,2
-      !if (abs(Z2-Z1) .gt. abs(R2-R1)) then
-      if (i_RZ .eq. 1) then
-        if ( (min(Z1,Z2) .le. Z_beg) .and. (Z_beg .le. max(Z1,Z2)) ) then
-          call find_Z_surface(node_list,element_list,surface_list_tmp,1,Z_beg,i_elm_find,s_find,t_find,st_find,i_find)
+        if (i_RZ .eq. 1) then
+          if ( (min(Z1,Z2) .le. Z_beg) .and. (Z_beg .le. max(Z1,Z2)) ) then
+            call find_Z_surface(node_list,element_list,surface_list_tmp,1,Z_beg,i_elm_find,s_find,t_find,st_find,i_find)
+          endif
+        else
+          if ( (min(R1,R2) .le. R_beg) .and. (R_beg .le. max(R1,R2)) ) then
+            call find_R_surface(node_list,element_list,surface_list_tmp,1,R_beg,i_elm_find,s_find,t_find,st_find,i_find)
+          endif
         endif
-      else
-        if ( (min(R1,R2) .le. R_beg) .and. (R_beg .le. max(R1,R2)) ) then
-          call find_R_surface(node_list,element_list,surface_list_tmp,1,R_beg,i_elm_find,s_find,t_find,st_find,i_find)
-        endif
-      endif
-      do j_find = 1,i_find
-        rr    = s_find(j_find)
-        ss    = t_find(j_find)
-        i_elm = i_elm_find(j_find)
-        call interp_RZ(node_list,element_list,i_elm,rr1,ss1,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
-                                                            Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
-        diff_beg = sqrt( (R3-R_beg)**2 + (Z3-Z_beg)**2 )
-        if (diff_beg .le. diff_min_beg) then
-          if (.not. xpoint_surface) then
-            diff_min_beg = diff_beg
-            i_part_beg  = i_part
-            i_piece_beg = i_piece
-            st_beg      = st_find(j_find)
-          else
-            if (i_part .eq. i_part_end) then
-              if (xcase .eq. 3) then
-                diff_min_beg = diff_beg
-                i_part_beg  = i_part
-                i_piece_beg = i_piece
-                st_beg      = st_find(j_find)
-              else
-                diff_pieces = abs(i_piece-i_piece_end)
-                if (diff_pieces .lt. diff_pieces_min) then
-                  diff_pieces_min = diff_pieces
+        do j_find = 1,i_find
+          rr    = s_find(j_find)
+          ss    = t_find(j_find)
+          i_elm = i_elm_find(j_find)
+          call interp_RZ(node_list,element_list,i_elm,rr1,ss1,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
+                                                              Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
+          diff_beg = sqrt( (R3-R_beg)**2 + (Z3-Z_beg)**2 )
+          if (diff_beg .le. diff_min_beg) then
+            if (.not. xpoint_surface) then
+              diff_min_beg = diff_beg
+              i_part_beg  = i_part
+              i_piece_beg = i_piece
+              st_beg      = st_find(j_find)
+            else
+              if (i_part .eq. i_part_end) then
+                if (xcase .eq. 3) then
                   diff_min_beg = diff_beg
                   i_part_beg  = i_part
                   i_piece_beg = i_piece
                   st_beg      = st_find(j_find)
+                else
+                  diff_pieces = abs(i_piece-i_piece_end)
+                  if (diff_pieces .lt. diff_pieces_min) then
+                    diff_pieces_min = diff_pieces
+                    diff_min_beg = diff_beg
+                    i_part_beg  = i_part
+                    i_piece_beg = i_piece
+                    st_beg      = st_find(j_find)
+                  endif
                 endif
               endif
             endif
           endif
-        endif
-      enddo
+        enddo
       enddo
     
     enddo

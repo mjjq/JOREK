@@ -207,7 +207,7 @@ call tr_register_mem(sizeof(element_list_new),"element_list_new")
 
 
 !-------------------------------- Respline flux surfaces
-call respline_flux_surfaces(node_list,element_list,flux_list)
+!call respline_flux_surfaces(node_list,element_list,flux_list)
 
 
 

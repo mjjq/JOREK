@@ -59,7 +59,7 @@ integer             :: i_elm_find(8), i_find
 real*8              :: s_find(8), t_find(8)
 integer             :: n_nodes, n_nodes_prev
 integer             :: n_seg, i_seg
-real*8, allocatable :: seg(:),      R_seg(:,:),    Z_seg(:,:), seg_tmp(:)
+real*8, allocatable :: seg(:),      R_seg(:,:),    Z_seg(:,:), seg_tmp(:), seg_new(:)
 real*8, allocatable :: seg_bnd(:),  R_seg_bnd(:),  Z_seg_bnd(:)
 real*8, allocatable :: seg_wall(:), R_seg_wall(:), Z_seg_wall(:)
 real*8, allocatable ::              R_seg_prev(:), Z_seg_prev(:)
@@ -72,6 +72,8 @@ character*2         :: char_tmp2
 logical, parameter  :: plot_grid = .true.
 real*8,  parameter  :: tolerance = 1.d-14
 real*8,  parameter  :: wall_node_proximity_tolerance = 0.5d-2 ! 0.5cm?
+real*8,  parameter  :: far_from_wall_tolerance = 2.d-2 ! 2cm?
+logical             :: far_from_wall
 logical             :: attached
 logical             :: found_elm, found_smaller
 integer             :: element_direction, i_elm, i_elm_save
@@ -303,6 +305,9 @@ if (diff_min_end .lt. wall_node_proximity_tolerance) then
   R_block_points_right(i_ext,n_block_points_right(i_ext)) = R_wall(i_lim_end)
   Z_block_points_right(i_ext,n_block_points_right(i_ext)) = Z_wall(i_lim_end)
 endif
+far_from_wall = .false.
+if (      (diff_min_beg .gt. far_from_wall_tolerance) &
+    .or. (diff_min_end .gt. far_from_wall_tolerance) ) far_from_wall = .true.
 
 ! --- Make sure we are going in right direction
 ! --- We always take the shortest route! if you need a very large extension that spans almost all
@@ -355,9 +360,10 @@ n_lim = count
 
 ! --- We don't allow going all the way around the wall, if this happens, it means our patch is between two
 ! --- wall nodes, ie. both ends of the patch are closer to a single wall node than any other nodes
-if (n_lim .ge. n_wall-1) then
-  n_lim = 0
-endif
+if (n_lim .ge. n_wall-1) n_lim = 0
+
+! --- If all points are far from wall, we just ignore the wall...
+if (far_from_wall) n_lim = 1
 
 
 ! --- Are we joining this block with the previous one?
@@ -493,9 +499,13 @@ if (.not. attached) then
   n_seg = n_ext(i_ext)
 else
   if (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) then
-    length_tmp  = (1.d0 - seg_prev(n_seg_prev-1)) * length_prev
-    length_find = length_left - length_prev
-    n_seg = n_seg_prev + int(length_find/length_tmp) + 1
+    if (n_ext(i_ext) .le. n_seg_prev+2) then 
+      length_tmp  = (1.d0 - seg_prev(n_seg_prev-1)) * length_prev
+      length_find = length_left - length_prev
+      n_seg = n_seg_prev + int(length_find/length_tmp) + 1
+    else
+      n_seg = n_ext(i_ext)
+    endif
   elseif (n_block_points_left(i_ext) .eq. n_block_points_right(i_ext-1)) then
     n_seg = n_seg_prev
   else
@@ -511,7 +521,7 @@ else
 endif
 
 ! --- Now we know how many points our grid will have: n_nodes along the grid edge, and n_seg in the other direction, allocate data
-allocate(seg(n_seg), R_seg(n_seg,n_nodes), Z_seg(n_seg,n_nodes), seg_tmp(n_seg))
+allocate(seg(n_seg), R_seg(n_seg,n_nodes), Z_seg(n_seg,n_nodes), seg_tmp(n_seg), seg_new(n_seg))
 allocate(seg_bnd (n_nodes),  R_seg_bnd (n_nodes),  Z_seg_bnd (n_nodes))
 allocate(seg_wall(n_nodes),  R_seg_wall(n_nodes),  Z_seg_wall(n_nodes))
 allocate(R_dev_bnd(n_nodes),   Z_dev_bnd(n_nodes))
@@ -973,7 +983,7 @@ do i = i_start,n_nodes
   if (alpha .lt. 0.d0   ) alpha = alpha + 2.d0 * PI
   if (alpha .gt. 2.d0*PI) alpha = alpha - 2.d0 * PI
   ! --- In case we do not find good parameters, save an equidistant segmentation
-  call meshac2(n_seg,seg,1.d0,9999.d0,9999.0,9999.d0,1.d0,1.0d0)
+  call meshac2(n_seg,seg_new,1.d0,9999.d0,9999.0,9999.d0,1.d0,1.0d0)
   ! --- Then find the right segmentation to have a smooth transition
   n_tmp    = 100 ! we try a few of them, and take the closest one
   diff_min = 1.d10
@@ -988,7 +998,7 @@ do i = i_start,n_nodes
     diff = abs(length_tmp-previous_length)
     if (diff .lt. diff_min) then
       diff_min = diff
-      call meshac2(n_seg,seg,0.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
+      call meshac2(n_seg,seg_new,0.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
     endif
   enddo
   ! --- Try the other way around as well
@@ -999,9 +1009,17 @@ do i = i_start,n_nodes
     diff = abs(length_tmp-previous_length)
     if (diff .lt. diff_min) then
       diff_min = diff
-      call meshac2(n_seg,seg,1.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
+      call meshac2(n_seg,seg_new,1.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
     endif
   enddo
+  ! --- In case you know you want a specific extension beyond the previous patch
+  if ( attached .and. (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) .and. (n_ext(i_ext) .gt. n_seg_prev+2) ) then
+    do j=1,n_seg
+      seg(j) = seg(j) + real(i-1)/real(n_nodes-1) * (seg_new(j) - seg(j))
+    enddo
+  else
+    seg(1:n_seg) = seg_new(1:n_seg)
+  endif
   ! --- Now, we need to resegment these polar lines
   do i_seg = 2,n_seg-1
     length_find = seg(i_seg) * polar_length
@@ -1210,7 +1228,7 @@ do i_seg=1,n_seg
 enddo
 n_seg_prev = n_seg
 
-deallocate(seg,       R_seg,       Z_seg, seg_tmp)
+deallocate(seg,       R_seg,       Z_seg, seg_tmp, seg_new)
 deallocate(seg_bnd,   R_seg_bnd,   Z_seg_bnd)
 deallocate(seg_wall,  R_seg_wall,  Z_seg_wall)
 deallocate(R_dev_bnd,   Z_dev_bnd)

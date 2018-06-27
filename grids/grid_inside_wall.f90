@@ -378,7 +378,7 @@ subroutine RintersectPolygon(N, rpol, zpol, Rmin, Rmax, Z, accuracy, new_Rmin, n
   real*8,  intent(out) :: new_Rmin, new_Rmax, new_Rmin2, new_Rmax2
   
   ! --- Local variables
-  integer, parameter :: n_iter = 100
+  integer, parameter :: n_iter = 1000
   integer :: inside, i1, i2, i, insidePolygon
   real*8  :: R_iter(n_iter), r_tmp, z_tmp
   real*8  :: Rleft, Rmid, Rright
@@ -675,11 +675,17 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
     width1 = r_max1-r_min1
     width2 = r_max2-r_min2
     if ( (width2 .eq. 0.d0) .and. (width_prev2 .ne. 0.d0) ) then
-      width1 = 0.d0
-      nR_grid(n_off+i,1) = 0
-      r_min2 = r_min1
-      r_max2 = r_max1
-      width2 = r_max2-r_min2
+      if ( abs(r_min1-R_grid(nR_grid(n_off+i-1,1)+1,n_off+i-1)) .lt. abs(r_min1-R_grid(1,n_off+i-1)) ) then
+        width1 = 0.d0
+        nR_grid(n_off+i,1) = 0
+        r_min2 = r_min1
+        r_max2 = r_max1
+        width2 = r_max2-r_min2
+      else
+        width2 = 0.d0
+        width_prev2 = 0.d0
+        nR_grid(n_off+i,2) = 0
+      endif
     endif
     
     if (width1 .gt. 0.d0) then

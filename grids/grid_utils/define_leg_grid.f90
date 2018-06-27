@@ -156,7 +156,7 @@ if (which_leg .le. 2) then
   R_beg(1) = stpts%RMiddle_LowerPrivate; Z_beg(1) = stpts%ZMiddle_LowerPrivate
   R_beg(2) = R_xpoint(1);                Z_beg(2) = Z_xpoint(1)
   i_surf(1) = n_flux + n_open + n_outer + n_inner + n_private
-  if (psi_xpoint(1) .le. psi_xpoint(2)) then
+  if ( (psi_xpoint(1) .le. psi_xpoint(2)) .or. (xcase .ne. 3) ) then
     i_surf(2) = n_flux
   else
     i_surf(2) = n_flux + n_open
@@ -215,10 +215,10 @@ else
   i_surf(1) = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv
   R_beg(1) = stpts%RMiddle_UpperPrivate; Z_beg(1) = stpts%ZMiddle_UpperPrivate
   R_beg(2) = R_xpoint(2);                Z_beg(2) = Z_xpoint(2)
-  if (psi_xpoint(1) .le. psi_xpoint(2)) then
-    i_surf(2) = n_flux + n_open
-  else
+  if ( (psi_xpoint(2) .le. psi_xpoint(1)) .or. (xcase .ne. 3) ) then
     i_surf(2) = n_flux
+  else
+    i_surf(2) = n_flux + n_open
   endif
   if (which_leg .eq. 3) then
     R_end(1) = stpts%RRightCorn_UpperInnerLeg; Z_end(1) = stpts%ZRightCorn_UpperInnerLeg
@@ -863,7 +863,7 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
   
   ! --- Internal variables
   type (type_surface_list) :: surface_list_tmp
-  integer :: i_part, i_piece, i_elm, i_find, j_find, i_seg, diff_pieces_min, diff_pieces
+  integer :: i_part, i_piece, i_elm, i_find, j_find, i_seg, diff_pieces_min, diff_pieces, i_RZ
   integer :: i_part_beg, i_piece_beg
   integer :: i_part_end, i_piece_end
   integer :: i_elm_find(10)
@@ -916,8 +916,10 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
       surface_list_tmp%flux_surfaces(1)%elm(1) = surface%elm(i_piece)
       
       ! --- End point
+      do i_RZ=1,2
       i_find = 0
-      if (abs(Z2-Z1) .gt. abs(R2-R1)) then
+      !if (abs(Z2-Z1) .gt. abs(R2-R1)) then
+      if (i_RZ .eq. 1) then
         if ( (min(Z1,Z2) .le. Z_end) .and. (Z_end .le. max(Z1,Z2)) ) then
           call find_Z_surface(node_list,element_list,surface_list_tmp,1,Z_end,i_elm_find,s_find,t_find,st_find,i_find)
         endif
@@ -939,6 +941,7 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
           i_piece_end = i_piece
           st_end      = st_find(j_find)
         endif
+      enddo
       enddo
     
     enddo
@@ -968,7 +971,9 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
       
       ! --- Beg point
       i_find = 0
-      if (abs(Z2-Z1) .gt. abs(R2-R1)) then
+      do i_RZ=1,2
+      !if (abs(Z2-Z1) .gt. abs(R2-R1)) then
+      if (i_RZ .eq. 1) then
         if ( (min(Z1,Z2) .le. Z_beg) .and. (Z_beg .le. max(Z1,Z2)) ) then
           call find_Z_surface(node_list,element_list,surface_list_tmp,1,Z_beg,i_elm_find,s_find,t_find,st_find,i_find)
         endif
@@ -1010,6 +1015,7 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
             endif
           endif
         endif
+      enddo
       enddo
     
     enddo

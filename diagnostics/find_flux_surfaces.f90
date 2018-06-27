@@ -4,6 +4,7 @@ subroutine find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_
 use constants
 use tr_module 
 use data_structure
+use grid_xpoint_data
 
 implicit none
 
@@ -61,7 +62,7 @@ enddo
 if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
 ! if we have a symmetric double-null, force the single separatrix
-if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. 1.d-4) then
+if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. symmetric_threshold) then
   psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
   psi_xpoint(2) = psi_xpoint(1)
 endif

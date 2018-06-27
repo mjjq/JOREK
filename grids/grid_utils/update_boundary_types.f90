@@ -369,7 +369,7 @@ subroutine update_boundary_types_final(element_list,node_list)
   real*8  :: tang_R2, tang_Z2
   real*8  :: alpha_Bp, alpha_norm, alpha_tang, alpha_tang2, alpha_tmp, alpha_between1, alpha_between2
   logical :: surface_is_tangent
-  real*8, parameter  :: tol_tangent = 1.d-2
+  real*8, parameter  :: tol_tangent = 3.d-2 !1.5d-2 !1.d-2
   
   ! --- Some printouts?
   if (debug) then
@@ -555,6 +555,63 @@ subroutine update_boundary_types_final(element_list,node_list)
   enddo
   
   
+  ! --- Loop over nodes again to check corners
+  do i_node=1,node_list%n_nodes
+    if ( (node_list%node(i_node)%boundary .ne. 3) .and. (node_list%node(i_node)%boundary .ne. 8) ) cycle
+    
+    ! --- Count how many elements we have on this node
+    count = 0
+    do i_elm=1,element_list%n_elements
+      do i_vertex=1,4
+        i_node2 = element_list%element(i_elm)%vertex(i_vertex)
+        if (i_node2 .eq. i_node) then
+          count = count + 1
+          i_elm_bnd(count)  = i_elm
+          i_vertex_bnd(count) = i_vertex
+        endif
+      enddo
+    enddo
+    
+    
+    ! --- The side nodes
+    i_node_inside = mod(i_vertex_bnd(1),4) + 1
+    i_node_inside = element_list%element(i_elm_bnd(1))%vertex(i_node_inside)
+    i_node_side   = mod(i_vertex_bnd(1)+2,4) + 1
+    i_node_side   = element_list%element(i_elm_bnd(1))%vertex(i_node_side)
+    
+    ! --- Check consistency
+    if (     (node_list%node(i_node_inside)%boundary .eq. 3) &
+        .or. (node_list%node(i_node_inside)%boundary .eq. 8) &
+        .or. (node_list%node(i_node_inside)%boundary .eq. 9) &
+        ) then
+      node_list%node(i_node)%boundary = 10
+    endif
+    if (     (node_list%node(i_node_side)%boundary .eq. 3) &
+        .or. (node_list%node(i_node_side)%boundary .eq. 8) &
+        .or. (node_list%node(i_node_side)%boundary .eq. 9) &
+        ) then
+      node_list%node(i_node)%boundary = 10
+    endif
+    if (     (node_list%node(i_node_inside)%boundary .eq. 1) &
+        .or. (node_list%node(i_node_inside)%boundary .eq. 6) &
+        ) then
+      if (     (node_list%node(i_node_side)%boundary .eq. 5) &
+          .or. (node_list%node(i_node_side)%boundary .eq. 7) &
+          ) then
+        node_list%node(i_node)%boundary = 10
+      endif
+    endif
+    if (     (node_list%node(i_node_inside)%boundary .eq. 5) &
+        .or. (node_list%node(i_node_inside)%boundary .eq. 7) &
+        ) then
+      if (     (node_list%node(i_node_side)%boundary .eq. 1) &
+          .or. (node_list%node(i_node_side)%boundary .eq. 6) &
+          ) then
+        node_list%node(i_node)%boundary = 10
+      endif
+    endif
+  enddo
+  
   !!! RECAP!!!
   ! 1: Non-corner target, with tangent on vector 2, inward field
   ! 2: Non-corner flux-aligned boundary, with tangent on vector 3
@@ -565,12 +622,14 @@ subroutine update_boundary_types_final(element_list,node_list)
   ! 7: Non-corner target, with tangent on vector 3, outward field
   ! 8: Corner target, outward field
   ! 9: Inverted corner target (3 elements)
+  !10: Corner target, tangent field
   
      
   
   return
   
 end subroutine update_boundary_types_final
+
 
 
 

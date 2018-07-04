@@ -28,7 +28,7 @@ subroutine py_plot_surface(filename,node_list,element_list,respline, ordered, su
     call respline_flux_surfaces(node_list,element_list,surface_list)
   endif
   if (ordered) then
-    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list)
+    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list, 'r', .false.)
   else
     call print_py_plot_unordered_flux_surfaces(filename, node_list, element_list, surface_list, i_surf)
   endif
@@ -155,7 +155,7 @@ subroutine print_py_plot_unordered_flux_surfaces(filename, node_list, element_li
   real*8        :: ZZg2,dZZg2_dr,dZZg2_ds,dZZg2_drs,dZZg2_drr,dZZg2_dss
   real*8        :: dRRg1_dt, dZZg1_dt, dRRg2_dt, dZZg2_dt
   
-  n_sub = 15 ! 2 minimum!
+  n_sub = 2 ! 2 minimum!
   
   i_start = 1
   i_stop  = surface_list%n_psi
@@ -224,7 +224,7 @@ end subroutine print_py_plot_unordered_flux_surfaces
 
 
 !> This plots fluxsurface using the fact that they are ordered (ie. from the first piece of a part until its last one)
-subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list)
+subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list, colour, dashed)
 
   use data_structure
   implicit none
@@ -234,6 +234,8 @@ subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list
   type (type_node_list),    intent(in)		:: node_list
   type (type_element_list), intent(in)		:: element_list
   type (type_surface_list), intent(in)		:: surface_list
+  character*1,              intent(in)		:: colour
+  logical,                  intent(in)		:: dashed
   
   ! --- Internal variables
   integer	:: i, j, k, l, n_sub, count
@@ -243,7 +245,7 @@ subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list
   real*8	:: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
   real*8        :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2
   
-  n_sub = 15 ! minimum 2
+  n_sub = 2 ! minimum 2
   
   open(101,file=filename,position='append')
     write(101,'(A,i6,A)')' r = N.zeros(',n_pieces_max,')'
@@ -270,9 +272,13 @@ subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list
           enddo
         enddo
         write(101,'(A,i6)')' n_points = ', count
-        write(101,'(A)')' pylab.plot(r[0:n_points],z[0:n_points], "r")'
-        write(101,'(A)')' pylab.plot(r[0],z[0], "rx")'
-        write(101,'(A)')' pylab.plot(r[n_points-1],z[n_points-1], "rx")'
+        if (dashed) then
+          write(101,'(A,A,A)')' pylab.plot(r[0:n_points],z[0:n_points], "',colour,'--")'
+        else
+          write(101,'(A,A,A)')' pylab.plot(r[0:n_points],z[0:n_points], "',colour,'")'
+        endif
+        write(101,'(A,A,A)')' pylab.plot(r[0],z[0], "',colour,'x")'
+        write(101,'(A,A,A)')' pylab.plot(r[n_points-1],z[n_points-1], "',colour,'x")'
       enddo
     enddo
   close(101)
@@ -303,7 +309,7 @@ end subroutine print_py_plot_ordered_flux_surfaces
 ! ----------------------------------------------------------------------------------------------------------------------------------------------
 
 
-!> This plots fluxsurface using the fact that they are ordered (ie. from the first piece of a part until its last one)
+!> This plots the wall
 subroutine print_py_plot_wall(filename)
 
   use data_structure
@@ -317,17 +323,13 @@ subroutine print_py_plot_wall(filename)
   integer	:: i
   
   open(101,file=filename,position='append')
-    write(101,'(A)')							' r_wall = N.zeros(2)'
-    write(101,'(A)')							' z_wall = N.zeros(2)'
-    if (n_limiter .ne. 0) then
-      do i=1,n_limiter-1
-    	write(101,'(A,f15.4)')						' r_wall[0] = ',R_limiter(i)
-    	write(101,'(A,f15.4)')						' z_wall[0] = ',Z_limiter(i)
-    	write(101,'(A,f15.4)')						' r_wall[1] = ',R_limiter(i+1)
-    	write(101,'(A,f15.4)')						' z_wall[1] = ',Z_limiter(i+1)
-        write(101,'(A)')						' pylab.plot(r_wall,z_wall, "b")'
-      enddo
-    endif
+    write  (101,'(A,i8,A)')                                             ' r_points = N.zeros(',n_limiter,')'
+    write  (101,'(A,i8,A)')                                             ' z_points = N.zeros(',n_limiter,')'
+    do i=1,n_limiter
+      write(101,'(A,i8,A,f15.4)')                                       ' r_points[',i-1,'] = ',R_limiter(i)
+      write(101,'(A,i8,A,f15.4)')                                       ' z_points[',i-1,'] = ',Z_limiter(i)
+    enddo
+    write(101,'(A,A,A)')                                                ' pylab.plot(r_points,z_points, "b")'
   close(101)
 
 end subroutine print_py_plot_wall
@@ -384,6 +386,69 @@ subroutine print_py_plot_points(filename, n_points, R_points, Z_points)
   close(101)
 
 end subroutine print_py_plot_points
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+! ----------------------------------------------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------------------------
+! ----------------------------------------------------------------------------------------------------------------------------------------------
+
+
+!> This plots fluxsurface using the fact that they are ordered (ie. from the first piece of a part until its last one)
+subroutine print_py_plot_line(filename, n_points, R_points, Z_points, colour, dashed)
+
+  use data_structure
+  use phys_module
+  implicit none
+  
+  ! --- Routine parameters
+  character*256,            intent(in)          :: filename
+  integer,                  intent(in)          :: n_points
+  real*8,                   intent(in)          :: R_points(n_points), Z_points(n_points)
+  character*1,              intent(in)          :: colour
+  logical,                  intent(in)          :: dashed
+  
+  ! --- Internal variables
+  integer       :: i
+  
+  open(101,file=filename,position='append')
+    write  (101,'(A,i8,A)')                                             ' r_points = N.zeros(',n_points,')'
+    write  (101,'(A,i8,A)')                                             ' z_points = N.zeros(',n_points,')'
+    do i=1,n_points
+      write(101,'(A,i8,A,f17.9)')                                       ' r_points[',i-1,'] = ',R_points(i)
+      write(101,'(A,i8,A,f17.9)')                                       ' z_points[',i-1,'] = ',Z_points(i)
+    enddo
+    if (dashed) then
+      write(101,'(A,A,A)')                                              ' pylab.plot(r_points,z_points, "',colour,'--")'
+    else
+      write(101,'(A,A,A)')                                              ' pylab.plot(r_points,z_points, "',colour,'")'
+    endif
+  close(101)
+
+end subroutine print_py_plot_line
 
 
 end module py_plots_grids

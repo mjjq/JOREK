@@ -169,19 +169,32 @@ if (which_leg .le. 2) then
     R_end(3) = stpts%RLeftCorn_LowerInnerLeg;  Z_end(3) = stpts%ZLeftCorn_LowerInnerLeg
     i_surf(3) = n_flux + n_open + n_outer + n_inner
     n_seg = n_leg
-    n_surf_tot = n_inner + n_open + n_private + 1
-    allocate(i_flux(n_surf_tot))
-    do i=1,n_private
-      i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private - i + 1
-    enddo
-    i_flux(n_private+1) = i_surf(2)
-    i_sep = n_private+1
-    do i=1,n_open
-      i_flux(n_private+1+i) = n_flux + i
-    enddo
-    do i=1,n_inner
-      i_flux(n_private+n_open+1+i) = n_flux + n_open + n_outer + i
-    enddo
+    if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(2)) ) then
+      n_surf_tot = n_inner + n_private + 1
+      allocate(i_flux(n_surf_tot))
+      do i=1,n_private
+        i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private - i + 1
+      enddo
+      i_flux(n_private+1) = i_surf(2)
+      i_sep = n_private+1
+      do i=1,n_inner
+        i_flux(n_private+1+i) = n_flux + n_open + n_outer + i
+      enddo
+    else
+      n_surf_tot = n_inner + n_open + n_private + 1
+      allocate(i_flux(n_surf_tot))
+      do i=1,n_private
+        i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private - i + 1
+      enddo
+      i_flux(n_private+1) = i_surf(2)
+      i_sep = n_private+1
+      do i=1,n_open
+        i_flux(n_private+1+i) = n_flux + i
+      enddo
+      do i=1,n_inner
+        i_flux(n_private+n_open+1+i) = n_flux + n_open + n_outer + i
+      enddo
+    endif
     n_xpoint_1 = 2 ! please see "create_x_node.f90" if confused
     n_xpoint_2 = 1
   else
@@ -192,20 +205,32 @@ if (which_leg .le. 2) then
     i_surf(3) = n_flux + n_open + n_outer
     n_seg = n_leg
     if (n_leg_out .gt. 0) n_seg = n_leg_out
-    n_surf_tot = n_outer + n_open + n_private + 1
-    if ( (xcase .eq. 3) .and. (psi_xpoint(2) .le. psi_xpoint(1)) ) n_surf_tot = n_outer + n_private + 1
-    allocate(i_flux(n_surf_tot))
-    do i=1,n_private
-      i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private - i + 1
-    enddo
-    i_flux(n_private+1) = i_surf(2)
-    i_sep = n_private+1
-    do i=1,n_open
-      i_flux(n_private+1+i) = n_flux + i
-    enddo
-    do i=1,n_outer
-      i_flux(n_private+n_open+1+i) = n_flux + n_open + i
-    enddo
+    if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(2)) ) then
+      n_surf_tot = n_outer + n_private + 1
+      allocate(i_flux(n_surf_tot))
+      do i=1,n_private
+        i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private - i + 1
+      enddo
+      i_flux(n_private+1) = i_surf(2)
+      i_sep = n_private+1
+      do i=1,n_outer
+        i_flux(n_private+1+i) = n_flux + n_open + i
+      enddo
+    else
+      n_surf_tot = n_outer + n_open + n_private + 1
+      allocate(i_flux(n_surf_tot))
+      do i=1,n_private
+        i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private - i + 1
+      enddo
+      i_flux(n_private+1) = i_surf(2)
+      i_sep = n_private+1
+      do i=1,n_open
+        i_flux(n_private+1+i) = n_flux + i
+      enddo
+      do i=1,n_outer
+        i_flux(n_private+n_open+1+i) = n_flux + n_open + i
+      enddo
+    endif
     n_xpoint_1 = 3 ! please see "create_x_node.f90" if confused
     n_xpoint_2 = 4
   endif
@@ -227,19 +252,32 @@ else
     R_end(3) = stpts%RLeftCorn_UpperInnerLeg;  Z_end(3) = stpts%ZLeftCorn_UpperInnerLeg
     i_surf(3) = n_flux + n_open + n_outer + n_inner
     n_seg = n_up_leg
-    n_surf_tot = n_inner + n_open + n_up_priv + 1
-    allocate(i_flux(n_surf_tot))
-    do i=1,n_up_priv
-      i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv - i + 1
-    enddo
-    i_flux(n_up_priv+1) = i_surf(2)
-    i_sep = n_up_priv+1
-    do i=1,n_open
-      i_flux(n_up_priv+1+i) = n_flux + i
-    enddo
-    do i=1,n_inner
-      i_flux(n_up_priv+n_open+1+i) = n_flux + n_open + n_outer +i
-    enddo
+    if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(2)) ) then
+      n_surf_tot = n_inner + n_open + n_up_priv + 1
+      allocate(i_flux(n_surf_tot))
+      do i=1,n_up_priv
+        i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv - i + 1
+      enddo
+      i_flux(n_up_priv+1) = i_surf(2)
+      i_sep = n_up_priv+1
+      do i=1,n_open
+        i_flux(n_up_priv+1+i) = n_flux + i
+      enddo
+      do i=1,n_inner
+        i_flux(n_up_priv+n_open+1+i) = n_flux + n_open + n_outer +i
+      enddo
+    else
+      n_surf_tot = n_inner + n_up_priv + 1
+      allocate(i_flux(n_surf_tot))
+      do i=1,n_up_priv
+        i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv - i + 1
+      enddo
+      i_flux(n_up_priv+1) = i_surf(2)
+      i_sep = n_up_priv+1
+      do i=1,n_inner
+        i_flux(n_up_priv+1+i) = n_flux + n_open + n_outer +i
+      enddo
+    endif
     n_xpoint_1 = 7 ! please see "create_x_node.f90" if confused
     n_xpoint_2 = 8
   ! --- inner or outer leg?
@@ -251,19 +289,32 @@ else
     i_surf(3) = n_flux + n_open + n_outer
     n_seg = n_up_leg
     if (n_up_leg_out .gt. 0) n_seg = n_up_leg_out
-    n_surf_tot = n_outer + n_open + n_up_priv + 1
-    allocate(i_flux(n_surf_tot))
-    do i=1,n_up_priv
-      i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv - i + 1
-    enddo
-    i_flux(n_up_priv+1) = i_surf(2)
-    i_sep = n_up_priv+1
-    do i=1,n_open
-      i_flux(n_up_priv+1+i) = n_flux + i
-    enddo
-    do i=1,n_outer
-      i_flux(n_up_priv+n_open+1+i) = n_flux + n_open + i
-    enddo
+    if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(2)) ) then
+      n_surf_tot = n_outer + n_open + n_up_priv + 1
+      allocate(i_flux(n_surf_tot))
+      do i=1,n_up_priv
+        i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv - i + 1
+      enddo
+      i_flux(n_up_priv+1) = i_surf(2)
+      i_sep = n_up_priv+1
+      do i=1,n_open
+        i_flux(n_up_priv+1+i) = n_flux + i
+      enddo
+      do i=1,n_outer
+        i_flux(n_up_priv+n_open+1+i) = n_flux + n_open + i
+      enddo
+    else
+      n_surf_tot = n_outer + n_up_priv + 1
+      allocate(i_flux(n_surf_tot))
+      do i=1,n_up_priv
+        i_flux(i) = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv - i + 1
+      enddo
+      i_flux(n_up_priv+1) = i_surf(2)
+      i_sep = n_up_priv+1
+      do i=1,n_outer
+        i_flux(n_up_priv+1+i) = n_flux + n_open + i
+      enddo
+    endif
     n_xpoint_1 = 6 ! please see "create_x_node.f90" if confused
     n_xpoint_2 = 5
   endif
@@ -340,28 +391,32 @@ do i = 1,n_surf_tot
         call interp_RZ(node_list,element_list,i_elm,rr1,ss1,R1,dR1_dr,dR1_ds,dR1_drs,dR1_drr,dR1_dss, &
                                                             Z1,dZ1_dr,dZ1_ds,dZ1_drs,dZ1_drr,dZ1_dss)
         if (which_leg .eq. 1) then
-          if ( (R1 .lt. R_xpoint(1)) .and. (Z1 .lt. Z_xpoint(1)) ) then
+          !if ( (R1 .lt. R_xpoint(1)) .and. (Z1 .lt. Z_axis) ) then
+          if (Z1 .lt. Z_axis) then
             count = count + 1
             R_tmp(count) = R1
             Z_tmp(count) = Z1
           endif
         endif
         if (which_leg .eq. 2) then
-          if ( (R1 .gt. R_xpoint(1)) .and. (Z1 .lt. Z_xpoint(1)) ) then
+          !if ( (R1 .gt. R_xpoint(1)) .and. (Z1 .lt. Z_axis) ) then
+          if (Z1 .lt. Z_axis) then
             count = count + 1
             R_tmp(count) = R1
             Z_tmp(count) = Z1
           endif
         endif
         if (which_leg .eq. 3) then
-          if ( (R1 .lt. R_xpoint(2)) .and. (Z1 .gt. Z_xpoint(2)) ) then
+          !if ( (R1 .lt. R_xpoint(2)) .and. (Z1 .gt. Z_axis) ) then
+          if (Z1 .gt. Z_axis) then
             count = count + 1
             R_tmp(count) = R1
             Z_tmp(count) = Z1
           endif
         endif
         if (which_leg .eq. 4) then
-          if ( (R1 .gt. R_xpoint(2)) .and. (Z1 .gt. Z_xpoint(2)) ) then
+          !if ( (R1 .gt. R_xpoint(2)) .and. (Z1 .gt. Z_axis) ) then
+          if (Z1 .gt. Z_axis) then
             count = count + 1
             R_tmp(count) = R1
             Z_tmp(count) = Z1
@@ -374,6 +429,20 @@ do i = 1,n_surf_tot
         endif
       endif
     enddo
+    if (count .ne. 1) then
+      if ( (which_leg .eq. 1) .or. (which_leg .eq. 3) ) then
+        if (R_tmp(1) .gt. R_tmp(2)) then
+          R_tmp(1) = R_tmp(2)
+          Z_tmp(1) = Z_tmp(2)
+        endif
+      else
+        if (R_tmp(1) .lt. R_tmp(2)) then
+          R_tmp(1) = R_tmp(2)
+          Z_tmp(1) = Z_tmp(2)
+        endif
+      endif
+      count = count - 1
+    endif
     if (count .ne. 1) then
       diff_min = 1.d10
       do j=1,count
@@ -465,7 +534,7 @@ if (plot_grid) then
     write(101,'(A)')              ' pylab.plot(r[0],z[0], "rx")'
   enddo
   close(101)
-  call print_py_plot_ordered_flux_surfaces(plot_filename, node_list, element_list, flux_list)
+  call print_py_plot_ordered_flux_surfaces(plot_filename, node_list, element_list, flux_list, 'r', .false.)
   call print_py_plot_wall(plot_filename)
   call print_py_plot_finish_plot(plot_filename)
 endif
@@ -995,20 +1064,13 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
               st_beg      = st_find(j_find)
             else
               if (i_part .eq. i_part_end) then
-                if (xcase .eq. 3) then
+                diff_pieces = abs(i_piece-i_piece_end)
+                if (diff_pieces .lt. diff_pieces_min) then
+                  diff_pieces_min = diff_pieces
                   diff_min_beg = diff_beg
                   i_part_beg  = i_part
                   i_piece_beg = i_piece
                   st_beg      = st_find(j_find)
-                else
-                  diff_pieces = abs(i_piece-i_piece_end)
-                  if (diff_pieces .lt. diff_pieces_min) then
-                    diff_pieces_min = diff_pieces
-                    diff_min_beg = diff_beg
-                    i_part_beg  = i_part
-                    i_piece_beg = i_piece
-                    st_beg      = st_find(j_find)
-                  endif
                 endif
               endif
             endif

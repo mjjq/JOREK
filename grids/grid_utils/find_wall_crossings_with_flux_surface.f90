@@ -84,7 +84,7 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list, ignor
     write(*,*)'number of total intersections found:',n_int 
     filename = 'plot_wall_intersections.py'
     call print_py_plot_prepare_plot(filename)
-    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list)
+    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list, 'r', .false.)
     call print_py_plot_points(filename,n_int,R_int,Z_int)
     call print_py_plot_wall(filename)
     call print_py_plot_finish_plot(filename)
@@ -250,7 +250,7 @@ subroutine get_target_flux_surfaces(node_list, element_list, surface_list, ignor
     write(*,*)'number of total target intersections found:',n_int 
     filename = 'plot_target_intersections.py'
     call print_py_plot_prepare_plot(filename)
-    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list)
+    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list, 'r', .false.)
     call print_py_plot_points(filename,n_int,R_int,Z_int)
     call print_py_plot_wall(filename)
     call print_py_plot_finish_plot(filename)

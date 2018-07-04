@@ -10,6 +10,7 @@ use data_structure
 use grid_xpoint_data
 use mod_export_restart
 use phys_module, only: n_wall_blocks
+use mod_eqdsk_tools
 
 ! --- Input parameters
 use phys_module, only:     n_flux, n_open, n_tht, n_outer, n_inner, n_private, n_leg, n_up_priv, n_up_leg, 	&
@@ -149,7 +150,6 @@ endif
 
 
 
-
 !-------------------------------------------------------------------------------------------!
 !--------------- Define the flux values on which grid will be aligned ----------------------!
 !-------------------------------------------------------------------------------------------!
@@ -181,6 +181,8 @@ if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
 !-------------------------------------------------------------------------------------------!
 
 !-------------------------------- Call the routine
+call reorder_flux_surfaces(node_list, element_list, flux_list, ifail)
+call clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_xpoint,Z_xpoint)
 call find_strategic_points_advanced(node_list, element_list, flux_list, xcase, force_horizontal_Xline, &
                                     R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, n_grids, stpts)
 

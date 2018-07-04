@@ -14,14 +14,28 @@ module grid_xpoint_data
   integer :: n_wall
   real*8  :: R_wall(n_wall_max), Z_wall(n_wall_max)
   
+  ! --- Contours
+  integer, parameter  :: n_contour_max = 10000
+  integer :: n_separatrix_contour
+  real*8  :: R_separatrix_contour(n_contour_max), Z_separatrix_contour(n_contour_max)
+  integer :: n_separatrix2_contour
+  real*8  :: R_separatrix2_contour(n_contour_max), Z_separatrix2_contour(n_contour_max)
+  integer :: n_private_contour
+  real*8  :: R_private_contour(n_contour_max), Z_private_contour(n_contour_max)
+  integer :: n_up_priv_contour
+  real*8  :: R_up_priv_contour(n_contour_max), Z_up_priv_contour(n_contour_max)
+  integer :: n_outer_contour
+  real*8  :: R_outer_contour(n_contour_max), Z_outer_contour(n_contour_max)
+  
   ! --- Regions
-  integer, parameter	:: core			= 1
-  integer, parameter	:: sandwich		= 2
-  integer, parameter	:: SOL			= 3
-  integer, parameter	:: outer		= 4
-  integer, parameter	:: inner		= 5
-  integer, parameter	:: private		= 6
-  integer, parameter	:: upper_private	= 7
+  integer, parameter    :: core                 = 1
+  integer, parameter    :: sandwich             = 2
+  integer, parameter    :: SOL                  = 3
+  integer, parameter    :: outer                = 4
+  integer, parameter    :: inner                = 5
+  integer, parameter    :: private              = 6
+  integer, parameter    :: upper_private        = 7
+  integer, parameter    :: separatrix           = 8
 
   type type_strategic_points                      !< type definition for strategic points
     real*8	      :: RLeftCorn_LowerInnerLeg,   ZLeftCorn_LowerInnerLeg   !< LeftCorn_LowerInnerLeg
@@ -72,5 +86,7 @@ module grid_xpoint_data
     integer           :: ielm_flux(n_flux_max,n_tht_max), k_cross(n_flux_max,n_tht_max)
   end type type_new_points
   
+
+
 end module grid_xpoint_data
 

@@ -25,12 +25,39 @@ subroutine get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
   integer          :: nr, nz
   integer          :: i, n_skip, nbbs, n_wall, str_length
   character*256    :: skip
+  integer          :: find_nr, find_nz, n_tmp
   
   ! --- Open eqdsk fileget_data_from_eqdsk(nR, nZ, R_grid, Z_grid, psi_grid, ier)
   open(unit=5,file=eqdsk_filename, ACTION = 'read', iostat=ier)
   if (ier .ne. 0) return
   
-  read(5,'(A52,2i4)') AA,nr,nz
+  ! --- Deal with first line, the most tricky and unrespected of eqdsk format usually
+  read(5,'(Q,A)') str_length,skip
+  nr = 0
+  nz = 0
+  find_nr = 0
+  find_nz = 0
+  do i = str_length,1,-1
+    if (skip(i:i) .ne. ' ') then
+      if ( (find_nz .ne. 100) .and. (find_nr .eq. 0) ) then
+        read(skip(i:i),'(i1)') n_tmp
+        nz = nz + n_tmp * 10**find_nz
+        find_nz = find_nz + 1
+      endif
+      if (find_nz .eq. 100) then
+        read(skip(i:i),'(i1)') n_tmp
+        nr = nr + n_tmp * 10**find_nr
+        find_nr = find_nr + 1
+      endif
+    else
+      if     ( (find_nz .ne. 0) .and. (find_nr .eq. 0) ) then
+        find_nz = 100
+      elseif ( (find_nz .ne. 0) .and. (find_nr .ne. 0) ) then
+        find_nr = 100
+      endif
+      if ( (find_nz .eq. 100) .and. (find_nr .eq. 100) ) exit
+    endif
+  enddo
   
   normal_eqdsk = .true.
   if (mod(nr,5) .ne. 0) then
@@ -41,6 +68,12 @@ subroutine get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
     enddo
     read(5,'(Q,A)') str_length,skip
     if (str_length .ne. 80) normal_eqdsk = .false.
+  else
+    ! --- The 4 lines of basic info, the 4 profiles F, P, dF2, dP and the first chunk of the psi_RZ grid
+    n_skip = 4 + nr/5 + nr/5 + nr/5 + nr/5 + nr/5
+    do i=1,n_skip
+      read(5,*) skip
+    enddo
   endif
   
   ! --- The last profile q and the rest of the psi_RZ grid
@@ -88,12 +121,39 @@ subroutine get_eqdsk_dimensions(normal_eqdsk, nR, nZ, n_wall, ier)
   character        :: AA*52
   integer          :: i, n_skip, nbbs
   character*256    :: skip
+  integer          :: find_nr, find_nz, n_tmp, str_length
   
   ! --- Open eqdsk fileget_data_from_eqdsk(nR, nZ, R_grid, Z_grid, psi_grid, ier)
   open(unit=5,file=eqdsk_filename, ACTION = 'read', iostat=ier)
   if (ier .ne. 0) return
   
-  read(5,'(A52,2i4)') AA,nr,nz
+  ! --- Deal with first line, the most tricky and unrespected of eqdsk format usually
+  read(5,'(Q,A)') str_length,skip
+  nr = 0
+  nz = 0
+  find_nr = 0
+  find_nz = 0
+  do i = str_length,1,-1
+    if (skip(i:i) .ne. ' ') then
+      if ( (find_nz .ne. 100) .and. (find_nr .eq. 0) ) then
+        read(skip(i:i),'(i1)') n_tmp
+        nz = nz + n_tmp * 10**find_nz
+        find_nz = find_nz + 1
+      endif
+      if (find_nz .eq. 100) then
+        read(skip(i:i),'(i1)') n_tmp
+        nr = nr + n_tmp * 10**find_nr
+        find_nr = find_nr + 1
+      endif
+    else
+      if     ( (find_nz .ne. 0) .and. (find_nr .eq. 0) ) then
+        find_nz = 100
+      elseif ( (find_nz .ne. 0) .and. (find_nr .ne. 0) ) then
+        find_nr = 100
+      endif
+      if ( (find_nz .eq. 100) .and. (find_nr .eq. 100) ) exit
+    endif
+  enddo
   
   ! --- The 4 lines of basic info, the 5 profiles F, P, dF2, dP, q and the psi_RZ grid
   if (.not. normal_eqdsk) then
@@ -145,12 +205,41 @@ subroutine get_data_from_eqdsk(normal_eqdsk, normal_eqdsk_wall, nR, nZ, R_grid, 
   integer          :: mod_lines, n_lines
   integer          :: n_psi, nbbs, nlim
   character        :: AA*52
+  character*256    :: skip
+  integer          :: find_nr, find_nz, n_tmp, str_length
   
   ! --- Open eqdsk file
   open(unit=5,file=eqdsk_filename, ACTION = 'read', iostat=ier)
   if (ier .ne. 0) return
   
-  read(5,'(A52,2i4)') AA,nr,nz
+  ! --- Deal with first line, the most tricky and unrespected of eqdsk format usually
+  read(5,'(Q,A)') str_length,skip
+  nr = 0
+  nz = 0
+  find_nr = 0
+  find_nz = 0
+  do i = str_length,1,-1
+    if (skip(i:i) .ne. ' ') then
+      if ( (find_nz .ne. 100) .and. (find_nr .eq. 0) ) then
+        read(skip(i:i),'(i1)') n_tmp
+        nz = nz + n_tmp * 10**find_nz
+        find_nz = find_nz + 1
+      endif
+      if (find_nz .eq. 100) then
+        read(skip(i:i),'(i1)') n_tmp
+        nr = nr + n_tmp * 10**find_nr
+        find_nr = find_nr + 1
+      endif
+    else
+      if     ( (find_nz .ne. 0) .and. (find_nr .eq. 0) ) then
+        find_nz = 100
+      elseif ( (find_nz .ne. 0) .and. (find_nr .ne. 0) ) then
+        find_nr = 100
+      endif
+      if ( (find_nz .eq. 100) .and. (find_nr .eq. 100) ) exit
+    endif
+  enddo
+  
   read(5,'(5e16.9)') xdim,zdim,rzero,rgrid1,zmid
   read(5,'(5e16.9)') rmaxis,zmaxis,ssimag,ssibry,bcentr
   read(5,'(5e16.9)') xip,ssimag,xdum1,rmaxis,xdum2
@@ -260,6 +349,370 @@ subroutine interpolate_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_
   
   ! --- Local variables
   integer :: ii, jj, i_save, j_save, count
+  real*8  :: R_elm, Z_elm
+  real*8  :: dl
+  real*8  :: psi_left, psi_right, deriv_left, deriv_right
+  
+  ! --- Check bounds
+  if ( (R_find .gt. maxval(xx)) .or. (R_find .lt. minval(xx)) ) then
+    write(*,*)'Warning, asking for point outside eqdsk grid, this should not happen...'
+    psi = 0.d0 ; psi_R = 0.d0 ; psi_Z = 0.d0
+    return
+  endif
+  
+  ! --- Check bounds
+  if ( (Z_find .gt. maxval(yy)) .or. (Z_find .lt. minval(yy)) ) then
+    write(*,*)'Warning, asking for point outside eqdsk grid, this should not happen...'
+    psi = 0.d0 ; psi_R = 0.d0 ; psi_Z = 0.d0
+    return
+  endif
+  
+  ! --- Extrapolate psi value and derivatives from the 4 eqdsk nodes around our point
+  call taylor_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_find, Z_find, psi)
+  
+  ! --- Now derivatives
+  dl = 1.d-4
+  
+  ! --- The R derivative
+  if     (abs(R_find-minval(xx)) .lt. 1.1*dl) then
+    R_elm = R_find + dl
+    Z_elm = Z_find
+    call taylor_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_elm, Z_elm, psi_right)
+    psi_R = (psi_right - psi) / dl
+  elseif (abs(R_find-maxval(xx)) .lt. 1.1*dl) then
+    R_elm = R_find - dl
+    Z_elm = Z_find
+    call taylor_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_elm, Z_elm, psi_left)
+    psi_R = (psi - psi_left) / dl
+  else
+    R_elm = R_find - dl
+    Z_elm = Z_find
+    call taylor_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_elm, Z_elm, psi_left)
+    deriv_left = (psi - psi_left) / dl
+    R_elm = R_find + dl
+    Z_elm = Z_find
+    call taylor_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_elm, Z_elm, psi_right)
+    deriv_right = (psi_right - psi) / dl
+    psi_R = 0.5 * (deriv_left + deriv_right)
+  endif
+  
+  ! --- The Z derivative
+  if     (abs(Z_find-minval(yy)) .lt. 1.1*dl) then
+    R_elm = R_find
+    Z_elm = Z_find + dl
+    call taylor_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_elm, Z_elm, psi_right)
+    psi_Z = (psi_right - psi) / dl
+  elseif (abs(Z_find-maxval(yy)) .lt. 1.1*dl) then
+    R_elm = R_find
+    Z_elm = Z_find - dl
+    call taylor_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_elm, Z_elm, psi_left)
+    psi_Z = (psi - psi_left) / dl
+  else
+    R_elm = R_find
+    Z_elm = Z_find - dl
+    call taylor_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_elm, Z_elm, psi_left)
+    deriv_left = (psi - psi_left) / dl
+    R_elm = R_find
+    Z_elm = Z_find + dl
+    call taylor_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_elm, Z_elm, psi_right)
+    deriv_right = (psi_right - psi) / dl
+    psi_Z = 0.5 * (deriv_left + deriv_right)
+  endif
+
+  ! --- min sign because of JOREK definition of psi
+  psi   = + psi  
+  psi_R = + psi_R
+  psi_Z = + psi_Z
+
+  return
+
+end subroutine interpolate_psi_from_eqdsk_grid
+
+
+
+
+
+
+
+
+
+
+subroutine taylor_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_find, Z_find, psi)
+
+  implicit none
+  
+  ! --- Input variables
+  integer, intent(in)  :: nr_eqdsk, nz_eqdsk
+  real*8,  intent(in)  :: xx(nr_eqdsk), yy(nz_eqdsk), psirz(nr_eqdsk, nz_eqdsk), R_find, Z_find
+  real*8,  intent(out) :: psi
+  
+  ! --- Local variables
+  integer :: ii, jj, i_save, j_save, count
+  real*8  :: psi1,    psi2,    psi3,    psi4
+  real*8  :: psi_R1,  psi_R2,  psi_R3,  psi_R4
+  real*8  :: psi_Z1,  psi_Z2,  psi_Z3,  psi_Z4
+  real*8  :: psi_RR1, psi_RR2, psi_RR3, psi_RR4
+  real*8  :: psi_ZZ1, psi_ZZ2, psi_ZZ3, psi_ZZ4
+  real*8  :: psi_RZ1, psi_RZ2, psi_RZ3, psi_RZ4
+  real*8  :: R_elm, Z_elm
+  real*8  :: psi_left, psi_right, deriv_left, deriv_right
+  
+  if ( (R_find .gt. maxval(xx)) .or. (R_find .lt. minval(xx)) ) then
+    psi = 0.d0
+    return
+  endif
+  
+  if ( (Z_find .gt. maxval(yy)) .or. (Z_find .lt. minval(yy)) ) then
+    psi = 0.d0
+    return
+  endif
+  
+  
+  i_save = 0
+  j_save = 0
+  do ii = 2,nr_eqdsk
+    if ( (R_find .ge. xx(ii-1)) .and. (R_find .le. xx(ii)) ) then
+      i_save = ii
+      exit
+    endif
+  enddo
+  do jj = 2,nz_eqdsk
+    if ( (Z_find .ge. yy(jj-1)) .and. (Z_find .le. yy(jj)) ) then
+      j_save = jj
+      exit
+    endif
+  enddo
+  ! --- Extrapolate psi value and derivatives from the 4 eqdsk nodes around our point
+  call get_psi_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, i_save-1, j_save-1, psi1, psi_R1, psi_Z1, psi_RR1, psi_ZZ1, psi_RZ1)
+  call get_psi_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, i_save  , j_save-1, psi2, psi_R2, psi_Z2, psi_RR2, psi_ZZ2, psi_RZ2)
+  call get_psi_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, i_save  , j_save  , psi3, psi_R3, psi_Z3, psi_RR3, psi_ZZ3, psi_RZ3)
+  call get_psi_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, i_save-1, j_save  , psi4, psi_R4, psi_Z4, psi_RR4, psi_ZZ4, psi_RZ4)
+  
+  ! --- Average of 2nd order Taylor expansions from the 4 sides (safer for poor resolution eqdsk)
+  psi =       0.25 * (psi1 + (R_find-xx(i_save-1))   *psi_R1      + (Z_find-yy(j_save-1))   *psi_Z1  &
+                       + 0.5*(R_find-xx(i_save-1))**2*psi_RR1 + 0.5*(Z_find-yy(j_save-1))**2*psi_ZZ1 &
+                       + 0.5*(R_find-xx(i_save-1))*(Z_find-yy(j_save-1))*psi_RZ1)
+  psi = psi + 0.25 * (psi2 + (R_find-xx(i_save  ))   *psi_R2      + (Z_find-yy(j_save-1))   *psi_Z2  &
+                       + 0.5*(R_find-xx(i_save  ))**2*psi_RR2 + 0.5*(Z_find-yy(j_save-1))**2*psi_ZZ2 &
+                       + 0.5*(R_find-xx(i_save  ))*(Z_find-yy(j_save-1))*psi_RZ2)
+  psi = psi + 0.25 * (psi3 + (R_find-xx(i_save  ))   *psi_R3      + (Z_find-yy(j_save  ))   *psi_Z3  &
+                       + 0.5*(R_find-xx(i_save  ))**2*psi_RR3 + 0.5*(Z_find-yy(j_save  ))**2*psi_ZZ3 &
+                       + 0.5*(R_find-xx(i_save  ))*(Z_find-yy(j_save  ))*psi_RZ3)
+  psi = psi + 0.25 * (psi4 + (R_find-xx(i_save-1))   *psi_R4      + (Z_find-yy(j_save  ))   *psi_Z4  &
+                       + 0.5*(R_find-xx(i_save-1))**2*psi_RR4 + 0.5*(Z_find-yy(j_save  ))**2*psi_ZZ4 &
+                       + 0.5*(R_find-xx(i_save-1))*(Z_find-yy(j_save  ))*psi_RZ4)
+  
+  return
+
+end subroutine taylor_psi_from_eqdsk_grid
+
+
+
+
+
+
+
+
+
+
+subroutine get_psi_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR, iZ, psi, psi_R, psi_Z, psi_RR, psi_ZZ, psi_RZ)
+  
+  implicit none
+  
+  ! --- Input variables
+  integer, intent(in)  :: nr_eqdsk, nz_eqdsk
+  real*8,  intent(in)  :: xx(nr_eqdsk), yy(nz_eqdsk), psirz(nr_eqdsk, nz_eqdsk)
+  integer, intent(in)  :: iR, iZ
+  real*8,  intent(out) :: psi, psi_R, psi_Z, psi_RR, psi_ZZ, psi_RZ
+  
+  ! --- Local variables
+  integer :: ii, jj, i_save, j_save, count
+  real*8  :: psi1, psi2, psi3, psi4
+  real*8  :: R_elm, Z_elm
+  real*8  :: deriv_left, deriv_right, deriv_left2, deriv_right2
+  
+  ! --- psi
+  psi = psirz(iR,iZ)
+  
+  ! --- psi_R
+  if (iR .eq. 1) then
+    psi_R = (psirz(iR+1,iZ) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  ))
+  elseif (iR .eq. nr_eqdsk) then
+    psi_R = (psirz(iR,  iZ) - psirz(iR-1,iZ)) / (xx(iR  ) - xx(iR-1))
+  else
+    deriv_left  = (psirz(iR,  iZ) - psirz(iR-1,iZ)) / (xx(iR  ) - xx(iR-1))
+    deriv_right = (psirz(iR+1,iZ) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  ))
+    psi_R = 0.5 * (deriv_left + deriv_right)
+  endif
+  
+  ! --- psi_Z
+  if (iZ .eq. 1) then
+    psi_Z = (psirz(iR,iZ+1) - psirz(iR,iZ  )) / (yy(iZ+1) - yy(iZ  ))
+  elseif (iZ .eq. nz_eqdsk) then
+    psi_Z = (psirz(iR,iZ  ) - psirz(iR,iZ-1)) / (yy(iZ  ) - yy(iZ-1))
+  else
+    deriv_left  = (psirz(iR,iZ  ) - psirz(iR,iZ-1)) / (yy(iZ  ) - yy(iZ-1))
+    deriv_right = (psirz(iR,iZ+1) - psirz(iR,iZ  )) / (yy(iZ+1) - yy(iZ  ))
+    psi_Z = 0.5 * (deriv_left + deriv_right)
+  endif
+  
+  ! --- psi_RR
+  if (iR .eq. 1) then
+    call get_dpsi_dR_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR+1, iZ, deriv_right)
+    call get_dpsi_dR_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR  , iZ, deriv_left)
+    psi_RR = (deriv_right - deriv_left) / (xx(iR+1) - xx(iR  ))
+  elseif (iR .eq. nr_eqdsk) then
+    call get_dpsi_dR_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR  , iZ, deriv_right)
+    call get_dpsi_dR_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR-1, iZ, deriv_left)
+    psi_RR = (deriv_right - deriv_left) / (xx(iR  ) - xx(iR-1))
+  else
+    call get_dpsi_dR_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR+1, iZ, deriv_right)
+    call get_dpsi_dR_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR  , iZ, deriv_left)
+    deriv_right2 = (deriv_right - deriv_left) / (xx(iR+1) - xx(iR  ))
+    call get_dpsi_dR_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR  , iZ, deriv_right)
+    call get_dpsi_dR_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR-1, iZ, deriv_left)
+    deriv_left2  = (deriv_right - deriv_left) / (xx(iR  ) - xx(iR-1))
+    psi_RR = 0.5 * (deriv_left2 + deriv_right2)
+  endif
+  
+  ! --- psi_ZZ
+  if (iZ .eq. 1) then
+    call get_dpsi_dZ_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR, iZ+1, deriv_right)
+    call get_dpsi_dZ_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR, iZ  , deriv_left)
+    psi_ZZ = (deriv_right - deriv_left) / (yy(iZ+1) - yy(iZ  ))
+  elseif (iZ .eq. nz_eqdsk) then
+    call get_dpsi_dZ_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR, iZ  , deriv_right)
+    call get_dpsi_dZ_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR, iZ-1, deriv_left)
+    psi_ZZ = (deriv_right - deriv_left) / (yy(iZ  ) - yy(iZ-1))
+  else
+    call get_dpsi_dZ_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR, iZ+1, deriv_right)
+    call get_dpsi_dZ_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR, iZ  , deriv_left)
+    deriv_right2 = (deriv_right - deriv_left) / (yy(iZ+1) - yy(iZ  ))
+    call get_dpsi_dZ_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR, iZ  , deriv_right)
+    call get_dpsi_dZ_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR, iZ-1, deriv_left)
+    deriv_left2  = (deriv_right - deriv_left) / (yy(iZ  ) - yy(iZ-1))
+    psi_ZZ = 0.5 * (deriv_left2 + deriv_right2)
+  endif
+  
+  ! --- psi_RZ
+  if     ( (iR .eq. 1       ) .and. (iZ .eq. 1       ) ) then
+    psi_RZ = (psirz(iR+1,iZ+1) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  )) / (yy(iZ+1) - yy(iZ  ))
+  elseif ( (iR .eq. nr_eqdsk) .and. (iZ .eq. 1       ) ) then
+    psi_RZ = (psirz(iR-1,iZ+1) - psirz(iR,  iZ)) / (xx(iR-1) - xx(iR  )) / (yy(iZ+1) - yy(iZ  ))
+  elseif ( (iR .eq. 1       ) .and. (iZ .eq. nz_eqdsk) ) then
+    psi_RZ = (psirz(iR+1,iZ-1) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  )) / (yy(iZ-1) - yy(iZ  ))
+  elseif ( (iR .eq. nr_eqdsk) .and. (iZ .eq. nz_eqdsk) ) then
+    psi_RZ = (psirz(iR-1,iZ-1) - psirz(iR,  iZ)) / (xx(iR-1) - xx(iR  )) / (yy(iZ-1) - yy(iZ  ))
+  else
+    if     (iR .eq. 1       ) then
+      deriv_left  = (psirz(iR+1,iZ-1) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  )) / (yy(iZ-1) - yy(iZ  ))
+      deriv_right = (psirz(iR+1,iZ+1) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  )) / (yy(iZ+1) - yy(iZ  ))
+      psi_RZ = 0.5 * (deriv_left + deriv_right)
+    elseif (iR .eq. nr_eqdsk) then
+      deriv_left  = (psirz(iR-1,iZ-1) - psirz(iR,  iZ)) / (xx(iR-1) - xx(iR  )) / (yy(iZ-1) - yy(iZ  ))
+      deriv_right = (psirz(iR-1,iZ+1) - psirz(iR,  iZ)) / (xx(iR-1) - xx(iR  )) / (yy(iZ+1) - yy(iZ  ))
+      psi_RZ = 0.5 * (deriv_left + deriv_right)
+    elseif (iZ .eq. 1       ) then
+      deriv_left  = (psirz(iR-1,iZ+1) - psirz(iR,  iZ)) / (xx(iR-1) - xx(iR  )) / (yy(iZ+1) - yy(iZ  ))
+      deriv_right = (psirz(iR+1,iZ+1) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  )) / (yy(iZ+1) - yy(iZ  ))
+      psi_RZ = 0.5 * (deriv_left + deriv_right)
+    elseif (iZ .eq. nz_eqdsk) then
+      deriv_left  = (psirz(iR-1,iZ-1) - psirz(iR,  iZ)) / (xx(iR-1) - xx(iR  )) / (yy(iZ-1) - yy(iZ  ))
+      deriv_right = (psirz(iR+1,iZ-1) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  )) / (yy(iZ-1) - yy(iZ  ))
+      psi_RZ = 0.5 * (deriv_left + deriv_right)
+    else
+      deriv_left   = (psirz(iR-1,iZ-1) - psirz(iR,  iZ)) / (xx(iR-1) - xx(iR  )) / (yy(iZ-1) - yy(iZ  ))
+      deriv_right  = (psirz(iR+1,iZ-1) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  )) / (yy(iZ-1) - yy(iZ  ))
+      deriv_left2  = (psirz(iR-1,iZ+1) - psirz(iR,  iZ)) / (xx(iR-1) - xx(iR  )) / (yy(iZ+1) - yy(iZ  ))
+      deriv_right2 = (psirz(iR+1,iZ+1) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  )) / (yy(iZ+1) - yy(iZ  ))
+      psi_RZ = 0.25 * (deriv_left + deriv_right + deriv_left2 + deriv_right2)
+    endif
+  endif
+  
+  
+  return
+end subroutine get_psi_from_eqdsk_grid_point
+
+
+
+
+subroutine get_dpsi_dR_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR, iZ, psi_R)
+  
+  implicit none
+  
+  ! --- Input variables
+  integer, intent(in)  :: nr_eqdsk, nz_eqdsk
+  real*8,  intent(in)  :: xx(nr_eqdsk), yy(nz_eqdsk), psirz(nr_eqdsk, nz_eqdsk)
+  integer, intent(in)  :: iR, iZ
+  real*8,  intent(out) :: psi_R
+  
+  ! --- Local variables
+  integer :: ii, jj, i_save, j_save, count
+  real*8  :: psi1, psi2, psi3, psi4
+  real*8  :: R_elm, Z_elm
+  real*8  :: psi_left, psi_right, deriv_left, deriv_right
+  
+  ! --- psi_R
+  if (iR .eq. 1) then
+    psi_R = (psirz(iR+1,iZ) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  ))
+  elseif (iR .eq. nr_eqdsk) then
+    psi_R = (psirz(iR,  iZ) - psirz(iR-1,iZ)) / (xx(iR  ) - xx(iR-1))
+  else
+    psi_left  = (psirz(iR,  iZ) - psirz(iR-1,iZ)) / (xx(iR  ) - xx(iR-1))
+    psi_right = (psirz(iR+1,iZ) - psirz(iR,  iZ)) / (xx(iR+1) - xx(iR  ))
+    psi_R = 0.5 * (psi_left + psi_right)
+  endif
+  
+  return
+end subroutine get_dpsi_dR_from_eqdsk_grid_point
+
+
+
+
+subroutine get_dpsi_dZ_from_eqdsk_grid_point(nr_eqdsk, nz_eqdsk, xx, yy, psirz, iR, iZ, psi_Z)
+  
+  implicit none
+  
+  ! --- Input variables
+  integer, intent(in)  :: nr_eqdsk, nz_eqdsk
+  real*8,  intent(in)  :: xx(nr_eqdsk), yy(nz_eqdsk), psirz(nr_eqdsk, nz_eqdsk)
+  integer, intent(in)  :: iR, iZ
+  real*8,  intent(out) :: psi_Z
+  
+  ! --- Local variables
+  integer :: ii, jj, i_save, j_save, count
+  real*8  :: psi1, psi2, psi3, psi4
+  real*8  :: R_elm, Z_elm
+  real*8  :: psi_left, psi_right, deriv_left, deriv_right
+  
+  ! --- psi_Z
+  if (iZ .eq. 1) then
+    psi_Z = (psirz(iR,iZ+1) - psirz(iR,iZ  )) / (yy(iZ+1) - yy(iZ  ))
+  elseif (iZ .eq. nz_eqdsk) then
+    psi_Z = (psirz(iR,iZ  ) - psirz(iR,iZ-1)) / (yy(iZ  ) - yy(iZ-1))
+  else
+    psi_left  = (psirz(iR,iZ  ) - psirz(iR,iZ-1)) / (yy(iZ  ) - yy(iZ-1))
+    psi_right = (psirz(iR,iZ+1) - psirz(iR,iZ  )) / (yy(iZ+1) - yy(iZ  ))
+    psi_Z = 0.5 * (psi_left + psi_right)
+  endif
+  
+  return
+end subroutine get_dpsi_dZ_from_eqdsk_grid_point
+
+
+
+
+subroutine interpolate_psi_from_eqdsk_grid_old(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_find, Z_find, psi, psi_R, psi_Z)
+
+  implicit none
+  
+  ! --- Input variables
+  integer, intent(in)  :: nr_eqdsk, nz_eqdsk
+  real*8,  intent(in)  :: xx(nr_eqdsk), yy(nz_eqdsk), psirz(nr_eqdsk, nz_eqdsk), R_find, Z_find
+  real*8,  intent(out) :: psi, psi_R, psi_Z
+  
+  ! --- Local variables
+  integer :: ii, jj, i_save, j_save, count
   real*8  :: psi1, psi2, psi3, psi4
   real*8  :: R_elm, Z_elm
   real*8  :: psi_left, psi_right, deriv_left, deriv_right
@@ -335,13 +788,13 @@ subroutine interpolate_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_
   if (count .gt. 0) psi_Z = psi_Z / real(count)
 
   ! --- min sign because of JOREK definition of psi
-  psi   = - psi  
-  psi_R = - psi_R
-  psi_Z = - psi_Z
+  psi   = + psi  
+  psi_R = + psi_R
+  psi_Z = + psi_Z
 
   return
 
-end subroutine interpolate_psi_from_eqdsk_grid
+end subroutine interpolate_psi_from_eqdsk_grid_old
 
 
 
@@ -377,13 +830,42 @@ subroutine get_wall_from_eqdsk(n_wall, R_wall, Z_wall, ier)
   integer          :: nr, nz, n_psi, nbbs, nlim
   integer          :: nr_eqdsk, nz_eqdsk
   character        :: AA*52
+  character*256    :: skip
+  integer          :: find_nr, find_nz, n_tmp, str_length
   
   ! --- Open eqdsk file
   !write(*,*) 'Opening file eqdsk.dat'
   open(unit=5,file=eqdsk_filename, ACTION = 'read', iostat=ier)
   if (ier .ne. 0) return
   
-  read(5,'(A52,2i4)') AA,nr,nz
+  ! --- Deal with first line, the most tricky and unrespected of eqdsk format usually
+  read(5,'(Q,A)') str_length,skip
+  nr = 0
+  nz = 0
+  find_nr = 0
+  find_nz = 0
+  do i = str_length,1,-1
+    if (skip(i:i) .ne. ' ') then
+      if ( (find_nz .ne. 100) .and. (find_nr .eq. 0) ) then
+        read(skip(i:i),'(i1)') n_tmp
+        nz = nz + n_tmp * 10**find_nz
+        find_nz = find_nz + 1
+      endif
+      if (find_nz .eq. 100) then
+        read(skip(i:i),'(i1)') n_tmp
+        nr = nr + n_tmp * 10**find_nr
+        find_nr = find_nr + 1
+      endif
+    else
+      if     ( (find_nz .ne. 0) .and. (find_nr .eq. 0) ) then
+        find_nz = 100
+      elseif ( (find_nz .ne. 0) .and. (find_nr .ne. 0) ) then
+        find_nr = 100
+      endif
+      if ( (find_nz .eq. 100) .and. (find_nr .eq. 100) ) exit
+    endif
+  enddo
+  
   read(5,'(5e16.9)') xdim,zdim,rzero,rgrid1,zmid
   read(5,'(5e16.9)') rmaxis,zmaxis,ssimag,ssibry,bcentr
   read(5,'(5e16.9)') xip,ssimag,xdum1,rmaxis,xdum2
@@ -437,6 +919,17 @@ subroutine get_wall_from_eqdsk(n_wall, R_wall, Z_wall, ier)
   
   return
 end subroutine get_wall_from_eqdsk
+
+
+
+
+
+
+
+
+
+
+
 
 
 

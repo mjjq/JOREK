@@ -673,7 +673,7 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
     filename = 'plot_added_flux_surfaces.py'
     write(*,*)'number of target intersections found with added surfaces:',n_target
     call print_py_plot_prepare_plot(filename)
-    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list)
+    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list, 'r', .false.)
     call print_py_plot_wall(filename)
     call print_py_plot_points(filename,n_target,R_target,Z_target)
     call print_py_plot_finish_plot(filename)
@@ -927,7 +927,7 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
     filename = 'plot_removed_flux_surfaces.py'
     write(*,*)'number of target intersections found after removing obsolete surfaces:',n_target_new
     call print_py_plot_prepare_plot(filename)
-    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list)
+    call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list, 'r', .false.)
     call print_py_plot_wall(filename)
     call print_py_plot_points(filename,n_target_new,R_target_new,Z_target_new)
     call print_py_plot_finish_plot(filename)

@@ -7,13 +7,14 @@
 MODEL             = model199
 
 # --- Compiler and options
-FC                = mpif90 -f90=ifort -mt_mpi
-CC                = mpicc
-CXX               = mpicxx -cxx=icpc
+FC                = mpiifort -mt_mpi
+CC                = mpiicc   -mt_mpi
+CXX               = mpiicpc  -mt_mpi
 FFLAGS_OMP        = -qopenmp 
 FFLAGS            = -r8 -i4 -DUSE_BLOCK
 FFLAGS           += -fpp
 FFLAGS           += -xHost -O2
+FFLAGS           += -DCONSTRUCT_MATRIX_OMP_ATOMIC
 
 # --- Debugging options
 #DEBUGFLAGS        = -g

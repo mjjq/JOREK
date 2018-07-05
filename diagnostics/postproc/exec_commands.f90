@@ -123,6 +123,8 @@ module exec_commands
           call int2d(command, first_step, ierr)
         case ( 'equil_params' )
           call equil_params(command, first_step, ierr)
+        case ( 'energy_spectrum' )
+          call energy_spectrum(command, first_step, ierr)
         case ( 'expressions' )
           call expressions(command, ierr)
         case ( 'fluxsurfaces' )
@@ -145,6 +147,8 @@ module exec_commands
           call int_along_pol_line(command, first_step, ierr)
         case ( 'tor_line' )
           call tor_line(command, first_step, ierr)
+        case ( 'rectangle' )
+          call rectangle(command, first_step, ierr)
         case ( 'mark_coords' )
           call mark_coords(command, ierr)
         case ( 'midplane' )
@@ -177,7 +181,7 @@ module exec_commands
         case ( 'expressions', 'mark_coords', 'int2d', 'midplane', 'average', 'point',      &
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
           'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
-          'si-units', 'grid' )
+          'si-units', 'grid', 'rectangle', 'energy_spectrum' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -210,7 +214,7 @@ module exec_commands
     ierr = 0
     
     write(file_name,'(a,i5.5)') 'jorek', istep
-    if ( rst_hdf5 ) then
+    if ( rst_hdf5 .ne. 0 ) then
       inquire (file=trim(file_name)//'.h5', exist=file_exists)
     else
       inquire (file=trim(file_name)//'.rst', exist=file_exists)
@@ -498,6 +502,9 @@ module exec_commands
       write (filename,'(a, i5.5, a)') 'jorek', i, '.rst'
       inquire (file=filename, exist=file_exists)
       if (file_exists) write(*,'(i6)',advance='no') i
+      write (filename,'(a, i5.5, a)') 'jorek', i, '.h5'
+      inquire (file=filename, exist=file_exists)
+      if (file_exists) write(*,'(i6)',advance='no') i
     end do
     write(*,*)
     
@@ -708,6 +715,98 @@ module exec_commands
   
   
   !> Evaluate expressions at a single point.
+  subroutine energy_spectrum(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8              :: tmin, tmax, s(n_tor,2), t((n_tor+1)/2,2), left(n_tor,2), right(n_tor,2)
+    real*8              :: tleft, tright
+    integer             :: i_file, i, j
+    character(len=1024) :: filename
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,2);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    ! --- Preparation
+    tmin  = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    tmax  = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    
+    write(filename,'(9a)') DIR, 'energyspectrum_tmin', trim(real2str(tmin,'(f12.4)')), '_tmax', &
+      trim(real2str(tmax,'(f12.4)')), trim(step_range_string(index_now,index_now)), '.dat'
+    
+    if ( (tmin<xtime(1)) .or. (xtime(index_now)<tmax) .or. (tmax<=tmin) ) then
+      write(*,*) 'ERROR in energy_spectrum: Specified time window is invalid.'
+      return
+    end if
+    
+    s(:,:) = 0.d0
+    
+    ! --- sum up for integration (loop over intervals between)
+    do i = 2, index_now
+      
+      ! --- Left value for summation
+      if ( (xtime(i-1) < tmin) .and. (tmin <= xtime(i)) ) then
+        ! (we are at the beginning of the [tmin,tmax] interval)
+        left (:,:) = ( energies(:,:,i-1) * (xtime(i)-tmin) + energies(:,:,i) * (tmin-xtime(i-1)) ) / (xtime(i)-xtime(i-1))
+        tleft      = tmin
+      else if ( tmin <= xtime(i-1) ) then
+        ! (we are somewhere in the middle of the [tmin,tmax] interval)
+        left (:,:) = energies(:,:,i-1)
+        tleft      = xtime(i-1)
+      else
+        cycle ! present time point can be skipped
+      end if
+      
+      ! --- Right value for summation
+      if ( (xtime(i-1) < tmax) .and. (tmax <= xtime(i)) ) then
+        ! (we are at the end of the [tmin,tmax] interval)
+        right(:,:) = ( energies(:,:,i-1) * (xtime(i)-tmax) + energies(:,:,i) * (tmax-xtime(i-1)) ) / (xtime(i)-xtime(i-1))
+        tright     = tmax
+      else if ( xtime(i) < tmax ) then
+        ! (we are somewhere in the middle of the [tmin,tmax] interval)
+        right(:,:) = energies(:,:,i)
+        tright     = xtime(i)
+      else
+        cycle ! present time point can be skipped
+      end if
+      
+      s(:,:) = s(:,:) + 0.5d0 * ( left(:,:) + right(:,:) ) * ( tright - tleft )
+      
+    end do
+    
+    s(:,:) = s(:,:) / (tmax-tmin) ! normalize integral to interval length
+    
+    ! --- combine cosine and sine components
+    t(:,:) = 0.d0
+    t(1,:) = s(1,:)
+    do i = 1, (n_tor-1)/2
+      t(i+1,:) = s(2*i,:) + s(2*i+1,:)
+    end do
+    
+    ! --- write to ascii file
+    i_file=133
+    open(i_file, file=trim(filename), form='formatted', status='replace', iostat=ierr)
+    write(i_file,*) '# energy spectrum'
+    write(i_file,*) '# toroidal mode number | magnetic energy spectrum | kinetic energy spectrum'
+    do i = 0, (n_tor-1)/2
+      write(i_file,'(i7,2es25.15)') i, t(i+1,:)
+    end do
+    close(i_file)
+    
+  end subroutine energy_spectrum
+  
+  
+  
+  
+  
+  !> Evaluate expressions at a single point.
   subroutine point(command, first_step, ierr)
     
     ! --- Routine parameters
@@ -912,6 +1011,60 @@ module exec_commands
   
   
   
+  !> Expressions in a rectangular area.
+  subroutine rectangle(command, first_step, ierr)
+    
+    use mod_position, only: pol_pos, tor_pos
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8  :: Rmin, Rmax, Zmin, Zmax, phi
+    integer :: nR, nZ, units
+    character(len=1024) :: filename, comment
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,7);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    
+    ! --- Preparation
+    Rmin      = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    Rmax      = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    nR        = to_int  (command%args(3), ierr); if ( ierr /= 0 ) return
+    Zmin      = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
+    Zmax      = to_float(command%args(5), ierr); if ( ierr /= 0 ) return
+    nZ        = to_int  (command%args(6), ierr); if ( ierr /= 0 ) return
+    phi       = to_float(command%args(7), ierr); if ( ierr /= 0 ) return
+    units     = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
+    
+    write(filename,'(15a)') DIR, 'exprs_Rmin', trim(real2str(Rmin)), '_Rmax', trim(real2str(Rmax)),&
+      '_Zmin', trim(real2str(Zmin)), '_Zmax', trim(real2str(Zmax)), '_phi', trim(real2str(phi)),   &
+      trim(step_range_string(index_now,index_now)), '.h5'
+      
+    comment = 'Output produced by jorek2_postproc command "rectangle"'
+    
+    call eval_expr(eq, units, expr_list,                                                           &
+       pol_pos(node_list,element_list,eq,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
+       tor_pos(phi=phi), result, ierr)
+    
+    call reduce_result_to_2d(ierr, result, res2d, i1=1)
+    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename))
+    
+    if ( allocated(result) ) deallocate(result)
+    if ( allocated(res2d ) ) deallocate(res2d )
+    
+  end subroutine rectangle
+  
+  
+  
+  
+  
   !> Toroidally and poloidally averaged expressions.
   subroutine average(command, first_step, ierr)
     
@@ -941,9 +1094,9 @@ module exec_commands
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     ! ### is nTht and nphi really chosen well???
-    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=6*n_plane,                &
+    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=max(150,6*n_plane),                &
       nsmallsteps=nsmall)
-    tor_pos_list = tor_pos(nphi=n_plane)
+    tor_pos_list = tor_pos(nphi=max(n_plane,2))
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)

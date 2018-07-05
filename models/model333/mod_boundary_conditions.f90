@@ -548,8 +548,13 @@ contains
       direction = ps0_s * ( (R-R_inside)*Z_s - (Z-Z_inside)*R_s )
       direction = direction / abs(direction)
     endif
-    if (xcase .eq. 2) direction = -direction
-    if ( (xcase .eq. 3) .and. (Z .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
+    if (xcase .eq. 2) then
+      direction = -direction
+    else if ((xcase .eq. 3).and.(Z .gt. Z_axis +0.1) .and. ( R .gt.R_xpoint(2))) then
+      direction = -1.
+    else if ((xcase .eq. 3) .and. (Z .gt. Z_axis +0.1) .and. (R .lt. R_xpoint(2))) then
+      direction = +1.
+    end if
 
     ! --- Diamagnetic term
     tau_IC = tauIC

@@ -11,7 +11,7 @@ contains
        &                             n_local_elms, node_list)
 
     ! --- Modules
-    use mod_parameters,               only : n_tor, jorek_model, n_vertex_max
+    use mod_parameters,           only : n_tor, jorek_model, n_vertex_max
     use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh
     USE data_structure,           only : type_element, type_node, type_node_list
     use mod_boundary_matrix_open, only : boundary_matrix_open
@@ -19,6 +19,7 @@ contains
     use mod_elt_matrix_fft,       only : element_matrix_fft
     use mod_locate_irn_jcn
     use mod_global_matrix_structure
+    use mpi_mod
 
     ! --- Routine parameters
     type (type_element),              intent(in)     :: element
@@ -44,6 +45,17 @@ contains
     ! -- internal parameters
     integer iv, iv2, inode1, inode2, i, j
     integer vertex(2), direction(2)
+
+#ifdef COMPARE_ELEMENT_MATRIX
+    integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
+    integer  :: my_id, rank, ierr
+    logical  :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
+
+    ! --- Determine ID of each MPI proc
+    call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
+    my_id = rank
+#endif
+
 
     ! --- Call element_matrix
     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
@@ -184,6 +196,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   use mpi_mod
   use mod_boundary_conditions, only : boundary_conditions
   use mod_locate_irn_jcn
+  !$ use omp_lib
   implicit none
   
 #include "r3_info.h"
@@ -222,7 +235,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer                           :: omp_nthreads, omp_tid
   integer                           :: node_out(n_vertex_max)
   integer                           :: i_father,INODE_FATHER, ios
-  integer, external                 :: omp_get_num_threads, omp_get_thread_num
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
   logical                           :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
   CHARACTER(LEN=128)                :: fname
@@ -268,16 +280,12 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Memory allocation
   if (.not. allocated(A_glob))    call tr_allocate(A_glob,  1,nz_glob,"A_glob",  CAT_DMATRIX)
-  if (.not. allocated(irn_glob))  call tr_allocate(irn_glob,1,nz_glob,"irn_glob",CAT_DMATRIX)
-  if (.not. allocated(jcn_glob))  call tr_allocate(jcn_glob,1,nz_glob,"jcn_glob",CAT_DMATRIX)
 
   if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocate (rhs_glob,1,ndof_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocatep(rhs_loc, 1,ndof_glob,"rhs_loc", CAT_DMATRIX)
 
   ! --- Initialise internal variables
-  irn_glob = 0
-  jcn_glob = 0
   A_glob   = 0.d0
   RHS_glob = 0.d0
   RHS_loc  = 0.d0
@@ -360,9 +368,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
       enddo 
     endif
 
+#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
     ! --- We don't want the next part to run in parallel
     !$omp critical  
-    
+#endif
+
     ! --- We only look at non-refined elements
     if ((.not. refinement) .or. (refinement .and. (element%n_sons .eq. 0))) then
     
@@ -404,6 +414,9 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
                     irn_glob(ilarge2) = index_large_i	+ j
                     jcn_glob(ilarge2) = index_large_k	+ l
+#ifdef CONSTRUCT_MATRIX_OMP_ATOMIC
+                    !$omp atomic
+#endif
                     A_glob(ilarge2)   = A_glob(ilarge2) + ELM(index_ij,index_kl)
 
                   enddo
@@ -421,8 +434,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     endif ! refinement
 
+#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
     ! --- Finish sequential
     !$omp end critical
+#endif
 
   end do
   !$omp end do
@@ -431,7 +446,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Add vacuum response (boundary integral) for free boundary computations
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
-    call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max) !###TODO### move somewhere else
     call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list,                   &
       freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, tstep, index_now)
   end if
@@ -509,37 +523,37 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   if ( difference_found ) stop
 #endif
   
-  
-  
-  contains
-  
-  
-  
+
+end subroutine construct_matrix
+
+
   !> Helps to interprete an element matrix index
   subroutine  decrypt_index(ind, ivertex, iorder, ivar, itor)
-  
+
+    use mod_parameters,  only : n_tor, jorek_model, n_vertex_max, n_var, n_order 
+
     integer, intent(in)  :: ind     !< Element matrix index
     integer, intent(out) :: ivertex !< Vertex index
     integer, intent(out) :: iorder  !< Degree of freedom
     integer, intent(out) :: ivar    !< Variable index
     integer, intent(out) :: itor    !< Toroidal mode index
-    
+
     integer :: ind2
-    
+
     ind2 = ind
-    
+
     ivertex = ( ind2 - 1 ) / ( n_tor*n_var*(n_order+1) ) + 1
     ind2 = ind2 - ( ivertex - 1 ) * ( n_tor*n_var*(n_order+1) )
-    
+
     iorder = ( ind2 - 1 ) / ( n_tor*n_var ) + 1
     ind2 = ind2 - ( iorder - 1 ) * ( n_tor*n_var )
-    
+
     ivar = ( ind2 - 1 ) / ( n_tor ) + 1
     ind2 = ind2 - ( ivar - 1 ) * ( n_tor )
-    
+
     itor = ind2
-    
+
   end subroutine decrypt_index
 
-end subroutine construct_matrix
+
 end module construct_matrix_mod

@@ -971,12 +971,12 @@ subroutine bootstrap_spline3_coef(n,t,y,z)
   
   implicit none
   
-  integer,              intent(in) ::n
-  real, dimension(0:n), intent(in) ::  t,y
-  real, dimension(0:n), intent(out):: z 
-  real, dimension(0:n-1)           :: h,b
-  real, dimension(n-1)             ::u,v
-  integer                          :: i
+  integer,              intent(in)   :: n
+  real*8, dimension(0:n), intent(in) :: t,y
+  real*8, dimension(0:n), intent(out):: z 
+  real*8, dimension(0:n-1)           :: h,b
+  real*8, dimension(n-1)             :: u,v
+  integer                            :: i
   
   do i = 0,n-1
     h(i) = t(i+1) - t(i)
@@ -1013,11 +1013,11 @@ end subroutine bootstrap_spline3_coef
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 real*8 function bootstrap_spline3_eval(n,t,y,z,x)
-  integer,              intent(in):: n
-  real, dimension(0:n), intent(in):: t,y,z	 
-  real,                 intent(in):: x
-  real                            :: h, temp
-  integer                         :: i
+  integer,              intent(in)   :: n
+  real*8, dimension(0:n), intent(in) :: t,y,z	 
+  real*8,                 intent(in) :: x
+  real*8                             :: h, temp
+  integer                            :: i
   
   do i = n-1,1,-1     
     if( x - t(i) >= 0.0) exit	 
@@ -1046,11 +1046,11 @@ end function bootstrap_spline3_eval
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 subroutine bootstrap_spline3_eval_all(psi_n, q, ft, B)
-  real,    intent(in)    :: psi_n
-  real,    intent(inout) :: q, ft, B
-  real                   :: h, temp
-  integer                :: n
-  integer                :: i
+  real*8,    intent(in)    :: psi_n
+  real*8,    intent(inout) :: q, ft, B
+  real*8                   :: h, temp
+  integer                  :: n
+  integer                  :: i
   
   n = n_spline-1
   do i = n-1,1,-1     

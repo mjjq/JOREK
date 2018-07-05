@@ -48,6 +48,7 @@ program JOREK2
   use mod_global_matrix_structure
   use mod_import_restart
   use mod_export_restart
+  use mod_element_rtree, only: populate_element_rtree
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -64,7 +65,6 @@ program JOREK2
 #ifdef USE_HDF5
   use hdf5
   use hdf5_io_module
-  use out_save_module
 #endif
   use mpi_mod
 
@@ -161,7 +161,6 @@ program JOREK2
   REAL*8                   :: max_time, min_time, tsecond
   integer, allocatable     :: tab_n_local_elems(:)
   real*8                   :: t_this, sum_deltas
-  integer                  :: h5_nbsave_current,h5_nbsave,h5_nbsave_previous
 ! =================== plot NEO coeffs ==================
   real*8                   :: amu_neo_node, aki_neo_node
   real*8,allocatable       :: mu_neo(:), ki_neo(:)
@@ -206,8 +205,10 @@ required = 0
   ! --- Process command line arguments
   if ( my_id == 0 ) call jorek2help(n_cpu, nbthreads)  
   
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
   CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
-  write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', rank, ': ', name
+  write(*,'(A,I5,2A)') '  #MPI id, ProcessorName ', rank, ': ', name
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   ! --- Initialise memory tracing
   call tr_meminit(my_id, n_cpu)
@@ -253,66 +254,66 @@ required = 0
   ! --- Some checks not to waste any cpu time
   if (required .ne. provided) then
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 2, ierr)
     stop
   else if ( (.not. use_mumps) .and. (.not. use_pastix) .and. (.not. use_wsmp) ) then
     write(*,*) ' FATAL : specify a valid solver'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
   else if ( n_plane < 2*(n_tor-1) ) then
     write(*,*) ' FATAL: n_plane >= 2 * (n_tor-1) required to avoid aliasing.'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 4, ierr)
     stop
 #ifndef USE_FFTW
   else if ( ( n_tor >= n_tor_fft_thresh ) .and. ( iand(n_plane,n_plane-1) /= 0 ) ) then
     write(*,*) ' FATAL: If n_tor >= n_tor_fft_thresh, n_plane must be a power of 2.'
     write(*,*) ' Hint: USE_FFTW removes this constraint.'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 5, ierr)
     stop
 #endif
   else if ( gmres .and. (nstep > 0) .and. (mod(n_cpu,(n_tor-1)/2+1) /= 0) ) then
     write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',            &
       (n_tor-1)/2+1,' harmonics'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 6, ierr)
     stop
   else if ( use_mumps ) then
 #ifndef USE_MUMPS
     write(*,*) 'FATAL : use_mumps=.true. requires USE_MUMPS=1 in Makefile.inc'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 7, ierr)
     stop
 #endif
   else if ( use_pastix ) then
 #ifndef USE_PASTIX
      write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 in Makefile.inc'
-     call MPI_Abort(MPI_COMM_WORLD,ierr)
+     call MPI_Abort(MPI_COMM_WORLD, 8, ierr)
      stop
 #endif
      if ( use_murge ) then
 #ifndef USE_MURGE
         write(*,*) 'FATAL : use_murge=.true. requires USE_PASTIX_MURGE=1 in Makefile.inc'
-        call MPI_Abort(MPI_COMM_WORLD,ierr)
+        call MPI_Abort(MPI_COMM_WORLD, 9, ierr)
         stop
 #endif
      endif
   else if ( use_wsmp ) then
 #ifndef USE_WSMP
     write(*,*) 'FATAL : use_wsmp=.true. requires USE_WSMP=1 in Makefile.inc'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 10, ierr)
     stop
 #endif
 #ifdef USE_BLOCK
     write(*,*) 'FATAL : USE_BLOCK=1 in Makefile.inc is currently not possible with use_wsmp'
-    call MPI_Abort(MPI_COMM_WORLD,ierr)
+    call MPI_Abort(MPI_COMM_WORLD, 11, ierr)
     stop
 #endif
       if ( .not. restart ) then
       write(*,*) 'FATAL : use_wsmp is currently not supported for the equilibrium'
-      call MPI_Abort(MPI_COMM_WORLD,ierr)
+      call MPI_Abort(MPI_COMM_WORLD, 12, ierr)
       stop
     end if
     if ( use_pastix ) then
       write(*,*) 'FATAL : you should only select one of use_wsmp or use_pastix'
-      call MPI_Abort(MPI_COMM_WORLD,ierr)
+      call MPI_Abort(MPI_COMM_WORLD, 13, ierr)
       stop
     end if
   end if
@@ -344,36 +345,6 @@ required = 0
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
     if ( ierr /= 0 ) stop
 
-#ifdef USE_HDF5
-    if (save_diagnostics_HDF5 .and. (my_id .eq. 0) ) then
-       write(*,*) ' '
-       write(*,*) '*******************************************************************************'
-       write(*,*) '******* Read and initialise quantites for HDF5 saving --RESTART MODE-- ********'
-       ! --- Read and initialise quantites for HDF5 saving
-       ! "h5_nbsave_previous" exists, so set it to "h5_nbsave_all" = number of HDF5 files
-       ! that have been written in the previous run(s)
-       h5_nbsave_previous = h5_nbsave_all
-       write(*,*) '  h5_nbsave_previous = ',h5_nbsave_previous
-       ! number of HDF5 files that have actually been written in the current run
-       h5_nbsave_current  = 0
-       write(*,*) '  h5_nbsave_current  = ',h5_nbsave_current
-       ! consistency test required: "h5_diag_nbtime" cannot be smaller than 1 Alfven
-       ! time otherwise the "modulo" below fails
-       if ( h5_diag_nbtime < 1.d0 ) then
-          h5_diag_nbtime = 1.d0
-          write(*,*) '  -----> your "h5_diag_nbtime" value is stupid and has been set to 1.d0 '
-       else
-          write(*,*) '  h5_diag_nbtime     = ',h5_diag_nbtime
-       endif
-       ! number of HDF5 files that are going to be written in the current run
-       ! if everything goes right
-       t_this = tstep*nstep
-       h5_nbsave = int((t_this)/h5_diag_nbtime)-1 + min(1,mod( floor(t_this),floor(h5_diag_nbtime) ))
-       write(*,*) '  h5_nbsave          = ',h5_nbsave
-       write(*,*) '*******************************************************************************'
-    endif
-#endif
-    
     ! --- Write live data for previous time-steps
     if ( .not. bench_without_plot ) then
       do index_now = 1, index_start
@@ -409,7 +380,15 @@ required = 0
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
     end if
     
+  end if !   if ( restart .and. (my_id == 0) ) then
+
+
+  ! This is necessary for the parallel vacuum version during the code restart 
+  if(restart) then
+    call MPI_BCAST(wall_curr_initialized, 1 , MPI_LOGICAl,          0, MPI_COMM_WORLD, ierr)
+    call MPI_BCAST(tstep,                 1 , MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
   end if
+  call populate_element_rtree(node_list, element_list)
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *
@@ -420,31 +399,6 @@ required = 0
     element_list%n_elements      = 0
     bnd_elm_list%n_bnd_elements  = 0
     node_list%n_nodes            = 0
-    
-#ifdef USE_HDF5
-    if (save_diagnostics_HDF5 .and. (my_id .eq. 0) ) then
-       write(*,*) ' '
-       write(*,*) '*******************************************************************************'
-       write(*,*) '******* Read and initialise quantites for HDF5 saving --INITIAL STEP-- ********'
-       ! --- Read and initialise quantites for HDF5 saving
-       ! "h5_nbsave_previous" does not exist, so = 0
-       h5_nbsave_previous = 0
-       write(*,*) '  h5_nbsave_previous = ',h5_nbsave_previous
-       ! number of HDF5 files that have actually been written in the current run
-       h5_nbsave_current  = 0
-       write(*,*) '  h5_nbsave_current  = ',h5_nbsave_current
-       ! consistency test required: "h5_diag_nbtime" cannot be smaller than 1 Alfven
-       ! time otherwise the "modulo" below fails
-       if ( h5_diag_nbtime < 1.d0 ) then
-          h5_diag_nbtime = 1.d0
-          write(*,*) '  -----> your "h5_diag_nbtime" value is invalid and has been set to 1.d0 '
-       else
-          write(*,*) '  h5_diag_nbtime     = ',h5_diag_nbtime
-       endif
-       write(*,*) '*******************************************************************************'
-    endif
-#endif
-
     if (my_id == 0) then
       
       ! --- Define the boundary of the initial grid
@@ -471,13 +425,14 @@ required = 0
         
       else
         write(*,*) ' FATAL : no valid combination of grid-sizes specified'
-        call MPI_Abort(MPI_COMM_WORLD,ierr)
+        call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
         stop
       end if 
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
       
       ! --- Determine boundary information from the grid
       call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+      call populate_element_rtree(node_list, element_list)
 
       call tr_debug_write("JMAIN:Def_grid elt_list",element_list%n_elements)
       call tr_debug_write("JMAIN:Def_grid node_list",node_list%n_nodes)
@@ -495,7 +450,7 @@ required = 0
     if ( freeboundary_equil .and. (n_flux .eq. 0)) then
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
         resistive_wall)
-      call update_response(tstep, freeboundary_equil, resistive_wall)
+      call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
       call import_external_fields('coil_field.dat', my_id)
       call set_coil_curr_time_trace()
       if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
@@ -512,48 +467,52 @@ required = 0
 #ifdef USE_MUMPS
     ! --- Initialize MUMPS solver (used for equilibrium)
     call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
-    call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,0,MPI_GROUP_MUMPS_EQUIL,ierr)
+    call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,[0],MPI_GROUP_MUMPS_EQUIL,ierr)
     call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
     if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
 #endif
 
-    if (my_id == 0) then
-      
-      ! --- Compute the plasma equilibrium
-      if (equil) then
-        call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
-        if (export_for_nemec) call export_nemec(node_list, element_list, xpoint, xcase)
-      end if
+    ! --- Compute the plasma equilibrium
+    if (equil) then
+      call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
+      if (export_for_nemec) then
+        if(my_id ==0 ) call export_nemec(node_list, element_list, xpoint, xcase)
+      endif
+    end if ! if (equil) then
+
+  
 
       ! --- Determine a flux surface aligned grid
-      if (n_flux > 1) then
+    if (n_flux > 1) then
+
+      if (my_id == 0) then
         
         if (xpoint)  then
 
-!          if (.not. grid_to_wall) then
+!         if (.not. grid_to_wall) then
           if (xcase .ge. 2) then
-	    if (grid_to_wall) then
-	      call grid_double_xpoint_inside_wall(node_list, element_list)
-	    else
-	      call grid_double_xpoint(node_list, element_list)
-	    endif
+            if (grid_to_wall) then
+              call grid_double_xpoint_inside_wall(node_list, element_list)
+            else
+              call grid_double_xpoint(node_list, element_list)
+            endif
           else
-	  
-	    if (.not. grid_to_wall) then
-	      call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+   
+            if (.not. grid_to_wall) then
+              call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
                                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
-	    else
+            else
 !!! works only for ITER wall for the moment
  !            write(*,*) 'ITER wall started'
-              call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
+              if(my_id == 0 ) call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
                                     SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
-	    endif
-	           
-          endif
+            endif !  if (.not. grid_to_wall) then
+             
+          endif !if (xcase .ge. 2) then
                    
-          call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.,'xpoint')
+            call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.,'xpoint')
           
-        else
+        else ! (if xpoint)
           
           call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht,     &
                                  xr1, sig1, xr2, sig2,refinement)
@@ -567,29 +526,34 @@ required = 0
             call Ref_Update_Index(element_list, node_list)
           end if
              
-        end if
-        if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
-        
+        end if ! (if xpoint)
+
+        if ( freeboundary .and. freeb_change_indices .and. (my_id == 0)) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
+
         ! --- Determine boundary information from the grid
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
-        
-	      call export_boundary(node_list, bnd_elm_list, bnd_node_list)
-        
-        if ( freeb_equil2) then
-          freeboundary_equil = .true.
-          call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
+        call export_boundary(node_list, bnd_elm_list, bnd_node_list)
+
+      endif ! if (my_id == 0) then        
+
+      call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list) 
+      if ( freeb_equil2) then
+        freeboundary_equil = .true.
+        call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
           resistive_wall)
-          call update_response(tstep, freeboundary_equil, resistive_wall)
-          call import_external_fields('coil_field.dat', my_id)
-          call set_coil_curr_time_trace()
-          if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
-        end if
-        
-        ! --- Compute the plasma equilibrium
-        call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
-        
+        call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
+        call import_external_fields('coil_field.dat', my_id)
+        call set_coil_curr_time_trace()
+        if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
       end if
       
+      ! --- Compute the plasma equilibrium
+      call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
+
+    end if ! if (n_flux > 1) then
+ 
+    if (my_id == 0) then
+          
       ! --- Set initial conditions for time-evolution
       call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)
 
@@ -629,7 +593,7 @@ required = 0
   if ( freeboundary ) then
     call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
       resistive_wall)
-    call update_response(tstep, freeboundary_equil, resistive_wall)
+    call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()
     if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
@@ -651,6 +615,9 @@ required = 0
   endif
 
   call broadcast_nodes(my_id, node_list)                      ! nodes
+
+  ! Let every mpi proc calculate this
+  call populate_element_rtree(node_list, element_list)
 
   call broadcast_phys(my_id)                                  ! physics parameters
   if ( freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
@@ -805,8 +772,12 @@ required = 0
 
     ! TODO : ne pas appeler avec MURGE si pas utile
     if (.not. (use_pastix .and. use_murge .and. use_murge_element .and. gmres )) then
-       call global_matrix_structure(my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
+       call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
             local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
+       call MPI_Barrier(MPI_COMM_WORLD,ierr)
+       if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
+         call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1)) 
+       endif
     end if
 
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
@@ -847,7 +818,7 @@ required = 0
   
   if (nstep > 0) call update_deltas(my_id, node_list) ! create list of delta values in local_matrix module
 
-  iter_gmres  = 999
+  iter_gmres  = iter_precon
   iter_big    = gmres_max_iter
   iter_prev   = 0
 
@@ -868,8 +839,8 @@ required = 0
     
     tstep = tstep_n(jstep)
     
-    if ( freeboundary ) call update_response(tstep, freeboundary_equil, resistive_wall)
-    
+    if ( freeboundary ) call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
+
     if ( my_id == 0 ) then
       write(*,*) '******************************************************'
       write(*,'(A17,3i7,f14.5,A)') ' *   time step : ',jstep,istep,index_now,tstep,'  *'
@@ -882,6 +853,8 @@ required = 0
 
     call find_axis(99,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
+    ! Find the limiter anyways (since integrals => sources uses it)
+    call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
     psi_bnd = 0.d0
     if (xpoint) then
       call find_xpoint(99,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
@@ -891,7 +864,6 @@ required = 0
         psi_bnd = psi_xpoint(2)
       endif
     else
-      call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
       psi_bnd = psi_lim
     end if
     
@@ -918,13 +890,12 @@ required = 0
     ! Build the matrix 
     call clck_time_barrier(t0)
     if (gmres) then
-       solve_only = .false.
-       if ((gmres) .and. (istep .gt. 1)) then
-    	  solve_only = .true.
-    	  if (iter_gmres+iter_prev .gt. 2*iter_precon) then			   ! redo preconditioner
-    	     solve_only = .false.
-    	  endif
-       endif
+      ! Matrix analysis and factorization in the preconditioner is re-done...
+      ! ... in the first step of a simulation (also when restarting)
+      ! ... when tstep changes
+      ! ... when the previous time steps took too many iterations
+      solve_only = (istep > 1) .and. (iter_gmres+iter_prev <= 2*iter_precon)
+      !if ( my_id == 0 ) write(*,*) 'solve_only: ', solve_only
     endif
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
@@ -1042,47 +1013,6 @@ required = 0
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)
  
-       !***********************************************************************
-       !*                          output saving for diagnostics              *
-       !*                                                                     *
-       !*  ===> set boolean "save_diagnostics_HDF5" to "true" if wanted       *
-       !*       in the input file, to "false" if not                          *
-       !*  ===> the diagnostics are saved every "h5_diag_nbtime" Alfven times *
-       !***********************************************************************
-#ifdef USE_HDF5
-       !*   0D-1D and 2D diagnostics saving in HDF5 format  *
-       if (save_diagnostics_HDF5 .and. (my_id .eq. 0) ) then
-          ! the number of HDF5 files that:
-          !   - have been written in the previous runs: "h5_nbsave_previous"
-          !   - have been written so far: "h5_nbsave_current"
-          !   - should be written if everything goes right: "h5_nbsave"
-          ! are computed above, around line 288
-          if ( ( (   (mod( floor(t_now),floor(h5_diag_nbtime) ).eq.0).or.(t_now.eq.t_this)   ) &
-               .and. (h5_nbsave_current .le. h5_nbsave) ) &
-               .or. (h5_nbsave_previous .eq. 0)         ) then
-             write(*,*) ' '
-             write(*,*) '*******************************************************************************'
-             write(*,*) '*     BEGIN --- writing the HDF5 diagnostics                                  *'
-             write(*,*) '*******************************************************************************'
-             ! compute quantities in (R,Z) and (psi,theta) coordinates
-!             call HDF5_compute_R_Z_psi_th()
-             write(*,*) ' ===> writing the basic parameters.............................................'
-             call HDF5_basics_save(index_now,t_now)
-             write(*,*) ' ===> writing the n_tor profiles...............................................'
-             call HDF5_ntor_profiles_save(index_now)
-             write(*,*) ' ===> writing the radial (psi) profiles........................................'
-             !call HDF5_radial_profiles_save(index_now)
-             write(*,*) '*******************************************************************************'
-             write(*,*) '*     END --- writing the HDF5 diagnostics                                    *'
-             write(*,*) '*******************************************************************************'
-             write(*,*) ' '
-          endif
-          h5_nbsave_current = h5_nbsave_current + 1
-          ! this quantity is now saved in the restart file and becomes the new h5_nbsave_previous
-          h5_nbsave_all     = h5_nbsave_previous + h5_nbsave_current
-       endif
-#endif
-
           t_now = t_now + tstep
 
        else
@@ -1122,7 +1052,7 @@ required = 0
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
        call energy(node_list,element_list,W_mag,W_kin)
        call integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint,       &
-         psi_xpoint, psi_lim, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
+         psi_xpoint, psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
          beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),           &
          density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                         &
          pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),           &
@@ -1154,7 +1084,7 @@ required = 0
        energies4(1:n_tor,2,index_now) = A_jec2(1:n_tor)
 #endif
 
-       write(6,*) ' exiting current energies '
+       write(*,*) ' exiting current energies '
 #endif
        
        ! --- Output some information about the current timestep
@@ -1466,9 +1396,13 @@ required = 0
     call finplt 					 ! close plot file
 
 !  cll export_POV(node_list,element_list,3,1)	       ! export to POVray native bezier patch format
-
+#ifdef fullmhd
+    write(*,*) ' '
+    write(*,*) 'Warning: Export to helena is not adapted for full MHD'
+    write(*,*) ' '
+#else
     call export_helena(node_list,element_list,bnd_elm_list)
-
+#endif
     if (allocated(energies))  call tr_deallocate(energies,"energies",CAT_UNKNOWN)
     if (allocated(xtime))     call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
 

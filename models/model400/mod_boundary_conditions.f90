@@ -474,10 +474,23 @@ contains
         direction = -1.d0
       endif
     else
-      direction = + ps0_x / abs(ps0_x)
+      !direction = + ps0_x / abs(ps0_x)
+      alpha = (Z_axis - Z_xpoint(1))/(R_axis - R_xpoint(1))
+      R_inside = alpha*(Z-Z_xpoint(1)) + R + alpha**2 * R_xpoint(1)
+      R_inside = R_inside / (1.d0 + alpha**2)
+      Z_inside = alpha * (R_inside - R_xpoint(1)) + Z_xpoint(1)
+      R_inside = min(max(R_inside,R_xpoint(1)),R_axis)
+      Z_inside = min(max(Z_inside,Z_xpoint(1)),Z_axis)
+      direction = ps0_s * ( (R-R_inside)*Z_s - (Z-Z_inside)*R_s )
+      direction = direction / abs(direction)
     endif
-    if (xcase .eq. 2) direction = -direction
-    if ( (xcase .eq. 3) .and. (Z .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
+    if (xcase .eq. 2) then
+      direction = -direction
+    else if ((xcase .eq. 3).and.(Z .gt. Z_axis +0.1) .and. ( R .gt.R_xpoint(2))) then
+      direction = -1.
+    else if ((xcase .eq. 3) .and. (Z .gt. Z_axis +0.1) .and. (R .lt. R_xpoint(2))) then
+      direction = +1.
+    end if
 
     return
   end subroutine construct_variables

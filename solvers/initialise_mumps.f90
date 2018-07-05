@@ -1,4 +1,4 @@
-subroutine initialise_mumps(MPI_COMM)
+subroutine initialise_mumps(MPI_COMM_in)
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
@@ -7,9 +7,9 @@ use mpi_mod
 
 implicit none
 
-integer :: MPI_COMM
+integer :: MPI_COMM_in
 #ifdef USE_MUMPS
-mumps_par%COMM = MPI_COMM                      ! Define a communicator for mumps
+mumps_par%COMM = MPI_COMM_in                      ! Define a communicator for mumps
 
 mumps_par%JOB = -1
 mumps_par%SYM = 0

@@ -83,7 +83,8 @@ subroutine read_num_profiles(my_id)
       write(*,*) '  ERROR: Could not read the numerical profile "'//trim(ffprime_file)//'".'
       stop
     end if
-    FF_1 = 0.
+    FF_0 = num_ffprime_y0(1)
+    FF_1 = num_ffprime_y0(num_ffprime_len)
   end if
   
   num_d_perp = ( d_perp_file /= 'none' )

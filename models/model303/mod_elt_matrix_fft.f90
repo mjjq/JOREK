@@ -56,8 +56,10 @@ real*8     :: rho, rho_x, rho_y, rho_s, rho_t, rho_p, rho_hat, rho_x_hat, rho_y_
 real*8     :: T, T_x, T_y, T_s, T_t, T_p, T_ss, T_st, T_tt, T_xx, T_xy, T_yy
 real*8     :: Vpar, Vpar_x, Vpar_y, Vpar_p, Vpar_s, Vpar_t, Vpar_ss, Vpar_st, Vpar_tt, Vpar_xx, Vpar_yy, Vpar_xy
 real*8     :: P0, P0_s, P0_t, P0_x, P0_y, P0_p, P0_ss, P0_st, P0_tt, P0_xx, P0_xy, P0_yy
+real*8     :: P0_x_rho, P0_xx_rho, P0_y_rho, P0_yy_rho, P0_xy_rho
+real*8     :: P0_x_T,   P0_xx_T,   P0_y_T,   P0_yy_T,   P0_xy_T
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
-real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T
+real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T, eta_num_T, W_dia, W_dia_rho, W_dia_T
 real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
 real*8     :: amat_51, amat_51_n, amat_52, amat_55, amat_56, amat_57, amat_57_k
@@ -223,7 +225,8 @@ enddo
 do ms=1, n_gauss
   do mt=1, n_gauss
 
-    call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    if (keep_current_prof) &
+      call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
     call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
 
 ! Source of parallel velocity
@@ -508,15 +511,18 @@ do ms=1, n_gauss
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
-       visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
-       dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+       visco_T     =   visco * (T0_corr/T_0)**(-1.5d0)
+       dvisco_dT   = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+       d2visco_dT2 =   visco * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
        if ( xpoint2 .and. (T0 .lt. T_min) ) then
-         visco_T   = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
-         dvisco_dT = 0.d0
+         visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+         dvisco_dT   = 0.d0
+         d2visco_dT2 = 0.d0
        endif
      else
-       visco_T   = visco
-       dvisco_dT = 0.d0
+       visco_T     = visco
+       dvisco_dT   = 0.d0
+       d2visco_dT2 = 0.d0
      end if
      
      ! --- Temperature dependent parallel heat diffusivity
@@ -536,6 +542,14 @@ do ms=1, n_gauss
        dZKpar_dT = 0.d0
      endif
 
+     ! --- Diamagnetic viscosity
+     if (Wdia) then
+       W_dia = + tauIC /r0_corr    * (p0_xx + p0_x/bigR + p0_yy) &
+               - tauIC /r0_corr**2 * (r0_x*p0_x + r0_y*p0_y)
+     else
+       W_dia = 0.d0
+     endif
+     
      eta_num_T   = eta_num                         ! hyperresistivity
      visco_num_T = visco_num                       ! hyperviscosity
 
@@ -551,13 +565,14 @@ do ms=1, n_gauss
 
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
-
+     
+     ! --- Increase diffusivity if very small density/temperature
      if (xpoint2) then
-       if (r0 .lt. 0.d0)  then
-         D_prof  = D_prof_neg  ! JET : 1.d-4; ITER :  4.d-3
+       if (r0 .lt. D_prof_neg_thresh)  then
+         D_prof  = D_prof_neg
        endif
-       if (T0 .lt. 0.d0) then
-         ZK_prof = ZK_prof_neg  ! JET : 1.d-3; ITER : 2.d-2 
+       if (T0 .lt. ZK_prof_neg_thresh) then
+         ZK_prof = ZK_prof_neg
        endif
      endif
      
@@ -661,6 +676,10 @@ do ms=1, n_gauss
                       - tauIC * BigR**3 * p0_y * (v_x* u0_x + v_y * u0_y) * xjac * tstep &
 
                       - v * tauIC * BigR**4 * (u0_xy * (p0_xx - p0_yy) - p0_xy * (u0_xx - u0_yy) ) * xjac * tstep &
+
+                      ! --- Diamagnetic viscosity
+                      - dvisco_dT * bigR * W_dia * (v_x*T0_x + v_y*T0_y)    * xjac * tstep  &
+                      - visco_T   * bigR * W_dia * (v_xx + v_x/bigR + v_yy) * xjac * tstep  &
 
                       + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
 
@@ -907,6 +926,31 @@ do ms=1, n_gauss
              Bgrad_rho_rho_n    = ( F0 / BigR * rho_p ) / BigR
              BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
+             P0_x_rho  = rho_x*T0 + rho*T0_x
+             P0_xx_rho = rho_xx*T0 + 2.0*rho_x*T0_x + rho*T0_xx
+             P0_y_rho  = rho_y*T0 + rho*T0_y
+             P0_yy_rho = rho_yy*T0 + 2.0*rho_y*T0_y + rho*T0_yy
+             P0_xy_rho = rho_xy*T0 + rho*T0_xy + rho_x*T0_y + rho_y*T0_x
+            
+             P0_x_T  = r0_x*T + r0*T_x
+             P0_xx_T = r0_xx*T + 2.0*r0_x*T_x + r0*T_xx
+             P0_y_T  = r0_y*T + r0*T_y
+             P0_yy_T = r0_yy*T + 2.0*r0_y*T_y + r0*T_yy
+             P0_xy_T = r0_xy*T + r0*T_xy + r0_x*T_y + r0_y*T_x
+  
+             if (Wdia) then
+               W_dia_rho = - tauIC *     rho/r0_corr**2 * (p0_xx     + p0_x    /bigR + p0_yy    ) &
+                           + tauIC          /r0_corr    * (p0_xx_rho + p0_x_rho/bigR + p0_yy_rho) &
+                           + tauIC * 2.0*rho/r0_corr**3 * (r0_x *p0_x     + r0_y *p0_y    )    &
+                           - tauIC          /r0_corr**2 * (rho_x*p0_x     + rho_y*p0_y    )    &
+                           - tauIC          /r0_corr**2 * (r0_x *p0_x_rho + r0_y *p0_y_rho)
+               W_dia_T   = + tauIC          /r0_corr    * (p0_xx_T + p0_x_T/bigR + p0_yy_T) &
+                           - tauIC          /r0_corr**2 * (r0_x  *p0_x_T + r0_y  *p0_y_T)
+             else
+               W_dia_rho = 0.d0
+               W_dia_T   = 0.d0
+             endif
+  
              if (normalized_velocity_profile) then
                 Vt_x_psi    = dV_dpsi_source(ms,mt) * psi_x
                 Vt_y_psi    = dV_dpsi_source(ms,mt) * psi_y
@@ -1032,6 +1076,10 @@ do ms=1, n_gauss
                              -  rho_yy*T0 - 2.d0*rho_y*T0_y - rho*T0_yy))                           &
                              - (rho_xy * T0 + rho_x*T0_y + rho_y*T0_x + rho*T0_xy) * (u0_xx - u0_yy)  )   &
                                                  * xjac * theta * tstep                             &
+                       ! --- Diamagnetic viscosity
+                       + dvisco_dT * bigR * W_dia_rho * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
+                       + visco_T   * bigR * W_dia_rho * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
+                           
                        + TG_num2 * 0.25d0 * rho_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)         &
                                  * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep
 
@@ -1057,7 +1105,14 @@ do ms=1, n_gauss
                        + v * tauIC * BigR**4 * ( (u0_xy * (T_xx*r0 + 2.d0*T_x*r0_x + T*r0_xx                       &
                                                          - T_yy*r0 - 2.d0*T_y*r0_y - T*r0_yy))                     &
                                                - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )  &
-                                             * xjac * theta * tstep 
+                                             * xjac * theta * tstep                                                &
+                       ! --- Diamagnetic viscosity
+                       + d2visco_dT2*T * bigR * W_dia   * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
+                       + dvisco_dT*T   * bigR * W_dia   * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
+                       + dvisco_dT     * bigR * W_dia_T * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
+                       + visco_T       * bigR * W_dia_T * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
+                       + dvisco_dT     * bigR * W_dia   * (v_x*T_x  + v_y*T_y )    * xjac * theta * tstep  
+                       
 
 !---------------------------------------- NEO
              if ( NEO ) then

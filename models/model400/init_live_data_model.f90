@@ -34,7 +34,7 @@ subroutine init_live_data_model(file_handle)
     call FFprime    (xpoint,xcase,0.d0,(/-99.d0,-99.d0/),psin,0.d0,1.d0,FFp,dFFp_dpsi,d1,d2,d3,d4)
     d_perp  = get_dperp (psin)
     
-    write(file_handle,'(a,20es12.4)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens, dn_dpsi,    &
+    write(file_handle,'(a,20es13.4e3)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens, dn_dpsi,    &
       temp_e, dTe_dpsi, temp_i, dTi_dpsi, S_rho, S_Ti, S_Te, d_perp
       
     ! ### ZK_e_perp, ZK_i_perp missing ###

@@ -20,7 +20,7 @@ jorek2_povray
 jorek2_connection2
 jorek2_connection_stan
 jorek2_strikes
-jorek2vtk
+jorek2vtk*
 jorek2_fieldlines_vtk
 jorek2vtk_3d
 jorek2_diagno
@@ -46,3 +46,4 @@ starwall-response.dat
 coil_field.dat
 RMP_psi*.txt
 RMP_start_time.dat
+/test_*

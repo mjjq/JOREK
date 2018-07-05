@@ -61,8 +61,8 @@ module cla
   type(posarg_t), private, dimension(:), pointer :: pcla_registry
   
   
-  integer(kind=int_kind), private :: cla_num
-  integer(kind=int_kind), private :: pcla_num  
+  integer(kind=int_kind), private :: cla_num = 0
+  integer(kind=int_kind), private :: pcla_num = 0 
 
   interface cla_get
      module procedure &

@@ -336,13 +336,13 @@ do i = 1,n_surf_tot
   seg = 0
   ! --- Change sig near the Xpoint to avoid strong angles
   if (i .lt. i_sep) then
-    sig_tmp = SIG_0 + (1.3d0*SIG_0 - SIG_0) * (real(i-1)/real(i_sep-1))**6 ! large exponent to have fast decay...
+    sig_tmp = SIG_1 + (1.3d0*SIG_1 - SIG_1) * (real(i-1)/real(i_sep-1))**6 ! large exponent to have fast decay...
   else if (i .gt. i_sep) then
-    sig_tmp = SIG_0 + (1.3d0*SIG_0 - SIG_0) * (real(n_surf_tot-i)/real(n_surf_tot-i_sep))**6
+    sig_tmp = SIG_1 + (1.3d0*SIG_1 - SIG_1) * (real(n_surf_tot-i)/real(n_surf_tot-i_sep))**6
   else if (i .eq. i_sep) then
-    sig_tmp = 1.3d0*SIG_0
+    sig_tmp = 1.3d0*SIG_1
   endif
-  call meshac2(n_seg,seg,0.d0,1.d0,sig_tmp,SIG_1,0.6d0,1.0d0)
+  call meshac2(n_seg,seg,0.d0,1.d0,sig_tmp,SIG_0,0.6d0,1.0d0)
   seg = leg_cut*seg ! we cut the end to ensure we remain inside the domain...
   xpoint_surface = .false.
   if (i .eq. i_sep) xpoint_surface = .true.

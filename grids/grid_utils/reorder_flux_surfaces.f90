@@ -672,7 +672,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   type (type_surface)	:: surface
   integer		:: location, ifail
   integer		:: n_flux,   n_open,   n_outer,   n_inner,   n_private,   n_up_priv  
-  integer		:: i_surf, i_part, i_piece, i_part_save
+  integer		:: i_surf, i_part, i_piece, i_part_save, i_pieces_max
   integer		:: i_elm, inside, count
   real*8		:: rr,    ss
   real*8		:: R,dR_dr, dR_ds, dR_drs, dR_drr, dR_dss
@@ -688,7 +688,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   n_open    = n_grids(3); n_outer   = n_grids(4); n_inner = n_grids(5)
   n_private = n_grids(6); n_up_priv = n_grids(7)
 
-  if (debug .eq. 1) then
+  if (debug .ge. 1) then
     filename = 'plot_cleaned_flux_surfaces.py'
     call print_py_plot_prepare_plot(filename)
     colour = 'r' ; dashed = .false.
@@ -705,6 +705,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   if ((xcase .eq. 3) .and. (psi_xpoint(2) .ne. psi_xpoint(1))) sep_list%psi_values(2) = flux_list%psi_values(n_flux+n_open)
   call find_flux_surfaces(0,.true.,xcase,node_list,element_list,sep_list)  
   call reorder_flux_surfaces(node_list, element_list, sep_list, ifail)
+  if (debug .eq. 2) write(*,*) 'cleaning all surfaces'
   if ((xcase .eq. 3) .and. (psi_xpoint(2) .eq. psi_xpoint(1))) then
     call get_symmetric_separatrix_contours(node_list, element_list, sep_list)
   else
@@ -712,12 +713,13 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   endif
   
   ! --- Because this will have been overwritten with the separatrix!
-  if (debug .eq. 1) then
+  if (debug .ge. 1) then
     filename = 'plot_ordered_flux_surfaces.py'
     call py_plot_surface(filename,node_list,element_list,.false., .true., flux_list, -1)
   endif
   
   ! --- Loop over each core surface
+  if (debug .eq. 2) write(*,*) 'cleaning core surfaces'
   do i_surf=1,n_flux-1
     i_part_save = 0
     do i_part = 1, flux_list%flux_surfaces(i_surf)%n_parts
@@ -755,6 +757,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   
   ! --- The main separatrix if not symmetric
   if ( (xcase .ne. 3) .or. (psi_xpoint(2) .ne. psi_xpoint(1)) ) then
+    if (debug .eq. 2) write(*,*) 'cleaning separatrix'
     i_surf = n_flux
     i_part_save = 0
     do i_part = 1, flux_list%flux_surfaces(i_surf)%n_parts
@@ -795,6 +798,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
 
   ! --- Loop over each sandwich surface
   if ( (xcase .eq. 3) .and. (psi_xpoint(2) .ne. psi_xpoint(1)) ) then
+    if (debug .eq. 2) write(*,*) 'cleaning sandwich surfaces'
     i_part_save = 0
     do i_surf=n_flux+1,n_flux+n_open-1
       do i_part = 1, flux_list%flux_surfaces(i_surf)%n_parts
@@ -832,11 +836,43 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
       flux_list%flux_surfaces(i_surf)%n_parts = 1
       flux_list%flux_surfaces(i_surf)%parts_index(2) = count+1
     enddo
+  ! --- Loop over each open surface
+  else
+    if (debug .eq. 2) write(*,*) 'cleaning sandwich surfaces'
+    i_part_save = 0
+    do i_surf=n_flux+1,n_flux+n_open-1
+      i_pieces_max = 0
+      do i_part = 1, flux_list%flux_surfaces(i_surf)%n_parts
+        ! --- Yes, this is dirty, but it should work...
+        i_piece = flux_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1 - flux_list%flux_surfaces(i_surf)%parts_index(i_part)
+        if (i_piece .gt. i_pieces_max) then
+          i_pieces_max = i_piece
+          i_part_save  = i_part
+        endif
+      enddo
+      count = 0
+      i_part = i_part_save
+      do i_piece = flux_list%flux_surfaces(i_surf)%parts_index(i_part),flux_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+        count = count + 1
+        flux_list%flux_surfaces(i_surf)%elm(count) = flux_list%flux_surfaces(i_surf)%elm(i_piece)
+        flux_list%flux_surfaces(i_surf)%s(1,count) = flux_list%flux_surfaces(i_surf)%s(1,i_piece)
+        flux_list%flux_surfaces(i_surf)%s(2,count) = flux_list%flux_surfaces(i_surf)%s(2,i_piece)
+        flux_list%flux_surfaces(i_surf)%s(3,count) = flux_list%flux_surfaces(i_surf)%s(3,i_piece)
+        flux_list%flux_surfaces(i_surf)%s(4,count) = flux_list%flux_surfaces(i_surf)%s(4,i_piece)
+        flux_list%flux_surfaces(i_surf)%t(1,count) = flux_list%flux_surfaces(i_surf)%t(1,i_piece)
+        flux_list%flux_surfaces(i_surf)%t(2,count) = flux_list%flux_surfaces(i_surf)%t(2,i_piece)
+        flux_list%flux_surfaces(i_surf)%t(3,count) = flux_list%flux_surfaces(i_surf)%t(3,i_piece)
+        flux_list%flux_surfaces(i_surf)%t(4,count) = flux_list%flux_surfaces(i_surf)%t(4,i_piece)
+      enddo
+      flux_list%flux_surfaces(i_surf)%n_parts = 1
+      flux_list%flux_surfaces(i_surf)%parts_index(2) = count+1
+    enddo
   endif
   
   
   ! --- Loop over each outer surface
   if (xcase .eq. 3) then
+    if (debug .eq. 2) write(*,*) 'cleaning outer surfaces'
     i_part_save = 0
     do i_surf=n_flux+n_open+1,n_flux+n_open+n_outer
       do i_part = 1, flux_list%flux_surfaces(i_surf)%n_parts
@@ -876,6 +912,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   
   ! --- Loop over each inner surface
   if (xcase .eq. 3) then
+    if (debug .eq. 2) write(*,*) 'cleaning inner surfaces'
     i_part_save = 0
     do i_surf=n_flux+n_open+n_outer+1,n_flux+n_open+n_outer+n_inner
       do i_part = 1, flux_list%flux_surfaces(i_surf)%n_parts
@@ -914,6 +951,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   
   ! --- Loop over each private surface
   i_part_save = 0
+  if (debug .eq. 2) write(*,*) 'cleaning private surfaces'
   do i_surf=n_flux+n_open+n_outer+n_inner+1,n_flux+n_open+n_outer+n_inner+n_private
     do i_part = 1, flux_list%flux_surfaces(i_surf)%n_parts
       i_piece = 0.5 * (flux_list%flux_surfaces(i_surf)%parts_index(i_part) + flux_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1)
@@ -949,6 +987,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   
   ! --- Loop over each private surface
   if (xcase .eq. 3) then
+    if (debug .eq. 2) write(*,*) 'cleaning upper private surfaces'
     i_part_save = 0
     do i_surf=n_flux+n_open+n_outer+n_inner+n_private+1,n_flux+n_open+n_outer+n_inner+n_private+n_up_priv
       do i_part = 1, flux_list%flux_surfaces(i_surf)%n_parts
@@ -1039,7 +1078,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   endif
   
   ! --- Finish plot of cleaned surfaces
-  if (debug .eq. 1) then
+  if (debug .ge. 1) then
     filename = 'plot_cleaned_flux_surfaces.py'
     colour = 'k' ; dashed = .true.
     call print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, flux_list, colour, dashed)
@@ -2141,161 +2180,162 @@ subroutine get_separatrix_contours(node_list, element_list, sep_list)
   
   
   ! --- Then the second separatrix contour
-  i_surf   = 2
-  i_part_1 = 0
-  i_part_2 = 0
-  ! --- Find x-point part
-  do i_part = 1,sep_list%flux_surfaces(i_surf)%n_parts
-    do i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part),sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-      if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
-        if (i_part_1 .eq. 0) then
-          i_part_1 = i_part
-        else
-          i_part_2 = i_part
-        endif
-        exit
-      endif
-    enddo
-  enddo
-  ! --- Get directions
-  i_dir_1  = 1
-  i_dir_2  = 1
-  do i_part = i_part_1,i_part_2,i_part_2-i_part_1
-    i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
-    rr    = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
-    ss    = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
-    i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-    call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                   R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                   Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-    i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-    rr    = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
-    ss    = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
-    i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-    call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                   R2,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                   Z2,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-    if (second_xpoint .eq. 1) then
-      if (i_part .eq. i_part_1) then
-        if (Z2 .gt. Z1) i_dir_1 = -1
-      else
-        if (Z2 .lt. Z1) i_dir_2 = -1
-      endif
-    else
-      if (i_part .eq. i_part_1) then
-        if (Z2 .lt. Z1) i_dir_1 = -1
-      else
-        if (Z2 .gt. Z1) i_dir_2 = -1
-      endif
-    endif
-  enddo
-  ! ---Get contour by stepping along
-  start_stop = .true.
-  n_separatrix2_contour = 0
-  do i_part = i_part_1,i_part_2,i_part_2-i_part_1
-    dir = i_dir_1
-    if (i_part .eq. i_part_2) dir = i_dir_2
-    if (dir .eq. 1) then
-      i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
-      i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-    else
-      i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-      i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
-    endif
-    do i_piece = i_beg, i_end, dir
-      ! --- Splines
-      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-      rr1   = sep_list%flux_surfaces(i_surf)%s(1,i_piece);   ss1  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
-      drr1  = sep_list%flux_surfaces(i_surf)%s(2,i_piece);   dss1 = sep_list%flux_surfaces(i_surf)%t(2,i_piece)
-      rr2   = sep_list%flux_surfaces(i_surf)%s(3,i_piece);   ss2  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
-      drr2  = sep_list%flux_surfaces(i_surf)%s(4,i_piece);   dss2 = sep_list%flux_surfaces(i_surf)%t(4,i_piece)
-      if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
-        ! --- Then end point
-        if (dir .eq. 1) then
-          rr  = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
-          ss  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
-        else
-          rr  = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
-          ss  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
-        endif
+  if (xcase .eq. 3) then
+    i_surf   = 2
+    i_part_1 = 0
+    i_part_2 = 0
+    ! --- Find x-point part
+    do i_part = 1,sep_list%flux_surfaces(i_surf)%n_parts
+      do i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part),sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
         i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-        call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                       R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                       Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-        distance_Xpoint = sqrt( (R1-R_xpoint(second_xpoint))**2 + (Z1-Z_xpoint(second_xpoint))**2 )
-        ! --- Through the X-point the first time
-        if (i_part .eq. i_part_1) then
-          do i_sub = 1,n_sub
-            st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
-            call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
-            call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
-            call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                           R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                           Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-            distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
-            if (distance .gt. distance_Xpoint) then
-              n_separatrix2_contour = n_separatrix2_contour + 1
-              R_separatrix2_contour(n_separatrix2_contour) = R
-              Z_separatrix2_contour(n_separatrix2_contour) = Z
-            endif
-          enddo
-          n_separatrix2_contour = n_separatrix2_contour + 1
-          R_separatrix2_contour(n_separatrix2_contour) = R_xpoint(second_xpoint)
-          Z_separatrix2_contour(n_separatrix2_contour) = Z_xpoint(second_xpoint)
-          start_stop = .false.
-        ! --- Through the X-point the second time
-        else
-          do i_sub = 1,n_sub
-            st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
-            call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
-            call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
-            call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                           R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                           Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-            distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
-            if (distance .lt. distance_Xpoint) then
-              n_separatrix2_contour = n_separatrix2_contour + 1
-              R_separatrix2_contour(n_separatrix2_contour) = R
-              Z_separatrix2_contour(n_separatrix2_contour) = Z
-            endif
-          enddo
-          start_stop = .true.
+        if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
+          if (i_part_1 .eq. 0) then
+            i_part_1 = i_part
+          else
+            i_part_2 = i_part
+          endif
+          exit
         endif
-      ! --- Through non X-point pieces
+      enddo
+    enddo
+    ! --- Get directions
+    i_dir_1  = 1
+    i_dir_2  = 1
+    do i_part = i_part_1,i_part_2,i_part_2-i_part_1
+      i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
+      rr    = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
+      ss    = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
+      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                     R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                     Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+      i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+      rr    = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
+      ss    = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
+      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                     R2,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                     Z2,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+      if (second_xpoint .eq. 1) then
+        if (i_part .eq. i_part_1) then
+          if (Z2 .gt. Z1) i_dir_1 = -1
+        else
+          if (Z2 .lt. Z1) i_dir_2 = -1
+        endif
       else
-        if (start_stop) then
-          do i_sub = 1,n_sub
-            st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
-            call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
-            call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
-            call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                           R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                           Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-            n_separatrix2_contour = n_separatrix2_contour + 1
-            R_separatrix2_contour(n_separatrix2_contour) = R
-            Z_separatrix2_contour(n_separatrix2_contour) = Z
-          enddo
+        if (i_part .eq. i_part_1) then
+          if (Z2 .lt. Z1) i_dir_1 = -1
+        else
+          if (Z2 .gt. Z1) i_dir_2 = -1
         endif
       endif
     enddo
-  enddo
-  
-  ! --- Close contour with the wall
-  R_beg = R_separatrix2_contour(n_separatrix2_contour)
-  Z_beg = Z_separatrix2_contour(n_separatrix2_contour)
-  R_end = R_separatrix2_contour(1)
-  Z_end = Z_separatrix2_contour(1)
-  reversed = .false.
-  call close_contour_with_wall(R_beg, Z_beg, R_end, Z_end, n_lim, index_lim, reversed)
-  do i_piece = 1,n_lim
+    ! ---Get contour by stepping along
+    start_stop = .true.
+    n_separatrix2_contour = 0
+    do i_part = i_part_1,i_part_2,i_part_2-i_part_1
+      dir = i_dir_1
+      if (i_part .eq. i_part_2) dir = i_dir_2
+      if (dir .eq. 1) then
+        i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
+        i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+      else
+        i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+        i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
+      endif
+      do i_piece = i_beg, i_end, dir
+        ! --- Splines
+        i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+        rr1   = sep_list%flux_surfaces(i_surf)%s(1,i_piece);   ss1  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
+        drr1  = sep_list%flux_surfaces(i_surf)%s(2,i_piece);   dss1 = sep_list%flux_surfaces(i_surf)%t(2,i_piece)
+        rr2   = sep_list%flux_surfaces(i_surf)%s(3,i_piece);   ss2  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
+        drr2  = sep_list%flux_surfaces(i_surf)%s(4,i_piece);   dss2 = sep_list%flux_surfaces(i_surf)%t(4,i_piece)
+        if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
+          ! --- Then end point
+          if (dir .eq. 1) then
+            rr  = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
+            ss  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
+          else
+            rr  = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
+            ss  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
+          endif
+          i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+          call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                         R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                         Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+          distance_Xpoint = sqrt( (R1-R_xpoint(second_xpoint))**2 + (Z1-Z_xpoint(second_xpoint))**2 )
+          ! --- Through the X-point the first time
+          if (i_part .eq. i_part_1) then
+            do i_sub = 1,n_sub
+              st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
+              call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
+              call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
+              call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                             R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                             Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+              distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
+              if (distance .gt. distance_Xpoint) then
+                n_separatrix2_contour = n_separatrix2_contour + 1
+                R_separatrix2_contour(n_separatrix2_contour) = R
+                Z_separatrix2_contour(n_separatrix2_contour) = Z
+              endif
+            enddo
+            n_separatrix2_contour = n_separatrix2_contour + 1
+            R_separatrix2_contour(n_separatrix2_contour) = R_xpoint(second_xpoint)
+            Z_separatrix2_contour(n_separatrix2_contour) = Z_xpoint(second_xpoint)
+            start_stop = .false.
+          ! --- Through the X-point the second time
+          else
+            do i_sub = 1,n_sub
+              st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
+              call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
+              call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
+              call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                             R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                             Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+              distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
+              if (distance .lt. distance_Xpoint) then
+                n_separatrix2_contour = n_separatrix2_contour + 1
+                R_separatrix2_contour(n_separatrix2_contour) = R
+                Z_separatrix2_contour(n_separatrix2_contour) = Z
+              endif
+            enddo
+            start_stop = .true.
+          endif
+        ! --- Through non X-point pieces
+        else
+          if (start_stop) then
+            do i_sub = 1,n_sub
+              st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
+              call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
+              call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
+              call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                             R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                             Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+              n_separatrix2_contour = n_separatrix2_contour + 1
+              R_separatrix2_contour(n_separatrix2_contour) = R
+              Z_separatrix2_contour(n_separatrix2_contour) = Z
+            enddo
+          endif
+        endif
+      enddo
+    enddo
+    ! --- Close contour with the wall
+    R_beg = R_separatrix2_contour(n_separatrix2_contour)
+    Z_beg = Z_separatrix2_contour(n_separatrix2_contour)
+    R_end = R_separatrix2_contour(1)
+    Z_end = Z_separatrix2_contour(1)
+    reversed = .false.
+    call close_contour_with_wall(R_beg, Z_beg, R_end, Z_end, n_lim, index_lim, reversed)
+    do i_piece = 1,n_lim
+      n_separatrix2_contour = n_separatrix2_contour + 1
+      R_separatrix2_contour(n_separatrix2_contour) = R_wall(index_lim(i_piece))
+      Z_separatrix2_contour(n_separatrix2_contour) = Z_wall(index_lim(i_piece))
+    enddo
     n_separatrix2_contour = n_separatrix2_contour + 1
-    R_separatrix2_contour(n_separatrix2_contour) = R_wall(index_lim(i_piece))
-    Z_separatrix2_contour(n_separatrix2_contour) = Z_wall(index_lim(i_piece))
-  enddo
-  n_separatrix2_contour = n_separatrix2_contour + 1
-  R_separatrix2_contour(n_separatrix2_contour) = R_separatrix2_contour(1)
-  Z_separatrix2_contour(n_separatrix2_contour) = Z_separatrix2_contour(1)
+    R_separatrix2_contour(n_separatrix2_contour) = R_separatrix2_contour(1)
+    Z_separatrix2_contour(n_separatrix2_contour) = Z_separatrix2_contour(1)
+  endif
   
   
   ! --- Now the main private contour
@@ -2387,8 +2427,6 @@ subroutine get_separatrix_contours(node_list, element_list, sep_list)
       endif
     endif
   enddo
-  
-  
   ! --- Close contour with the wall
   R_beg = R_private_contour(n_private_contour)
   Z_beg = Z_private_contour(n_private_contour)
@@ -2408,352 +2446,351 @@ subroutine get_separatrix_contours(node_list, element_list, sep_list)
   
   
   ! --- Then the second private contour
-  i_surf   = 2
-  i_part_1 = 0
-  i_part_2 = 0
-  ! --- Find x-point part
-  do i_part = 1,sep_list%flux_surfaces(i_surf)%n_parts
-    do i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part),sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-      if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
-        if (i_part_1 .eq. 0) then
-          i_part_1 = i_part
-        else
-          i_part_2 = i_part
-        endif
-        exit
-      endif
-    enddo
-  enddo
-  ! --- Get directions
-  i_dir_1  = 1
-  i_dir_2  = 1
-  do i_part = i_part_1,i_part_2,i_part_2-i_part_1
-    i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
-    rr    = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
-    ss    = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
-    i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-    call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                   R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                   Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-    i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-    rr    = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
-    ss    = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
-    i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-    call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                   R2,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                   Z2,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-    if (second_xpoint .eq. 2) then
-      if (i_part .eq. i_part_1) then
-        if (Z2 .gt. Z1) i_dir_1 = -1
-      else
-        if (Z2 .lt. Z1) i_dir_2 = -1
-      endif
-    else
-      if (i_part .eq. i_part_1) then
-        if (Z2 .lt. Z1) i_dir_1 = -1
-      else
-        if (Z2 .gt. Z1) i_dir_2 = -1
-      endif
-    endif
-  enddo
-  ! ---Get contour by stepping along
-  start_stop = .true.
-  n_up_priv_contour = 0
-  do i_part = i_part_1,i_part_2,i_part_2-i_part_1
-    dir = i_dir_1
-    if (i_part .eq. i_part_2) dir = i_dir_2
-    if (dir .eq. 1) then
-      i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
-      i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-    else
-      i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-      i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
-    endif
-    do i_piece = i_beg, i_end, dir
-      ! --- Splines
-      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-      rr1   = sep_list%flux_surfaces(i_surf)%s(1,i_piece);   ss1  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
-      drr1  = sep_list%flux_surfaces(i_surf)%s(2,i_piece);   dss1 = sep_list%flux_surfaces(i_surf)%t(2,i_piece)
-      rr2   = sep_list%flux_surfaces(i_surf)%s(3,i_piece);   ss2  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
-      drr2  = sep_list%flux_surfaces(i_surf)%s(4,i_piece);   dss2 = sep_list%flux_surfaces(i_surf)%t(4,i_piece)
-      if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
-        ! --- Then end point
-        if (dir .eq. 1) then
-          rr  = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
-          ss  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
-        else
-          rr  = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
-          ss  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
-        endif
+  if (xcase .eq. 3) then
+    i_surf   = 2
+    i_part_1 = 0
+    i_part_2 = 0
+    ! --- Find x-point part
+    do i_part = 1,sep_list%flux_surfaces(i_surf)%n_parts
+      do i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part),sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
         i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-        call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                       R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                       Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-        distance_Xpoint = sqrt( (R1-R_xpoint(second_xpoint))**2 + (Z1-Z_xpoint(second_xpoint))**2 )
-        ! --- Through the X-point the first time
-        if (i_part .eq. i_part_1) then
-          do i_sub = 1,n_sub
-            st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
-            call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
-            call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
-            call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                           R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                           Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-            distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
-            if (distance .gt. distance_Xpoint) then
-              n_up_priv_contour = n_up_priv_contour + 1
-              R_up_priv_contour(n_up_priv_contour) = R
-              Z_up_priv_contour(n_up_priv_contour) = Z
-            endif
-          enddo
-          n_up_priv_contour = n_up_priv_contour + 1
-          R_up_priv_contour(n_up_priv_contour) = R_xpoint(second_xpoint)
-          Z_up_priv_contour(n_up_priv_contour) = Z_xpoint(second_xpoint)
-          start_stop = .false.
-        ! --- Through the X-point the second time
-        else
-          do i_sub = 1,n_sub
-            st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
-            call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
-            call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
-            call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                           R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                           Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-            distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
-            if (distance .lt. distance_Xpoint) then
-              n_up_priv_contour = n_up_priv_contour + 1
-              R_up_priv_contour(n_up_priv_contour) = R
-              Z_up_priv_contour(n_up_priv_contour) = Z
-            endif
-          enddo
-          start_stop = .true.
+        if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
+          if (i_part_1 .eq. 0) then
+            i_part_1 = i_part
+          else
+            i_part_2 = i_part
+          endif
+          exit
         endif
-      ! --- Through non X-point pieces
+      enddo
+    enddo
+    ! --- Get directions
+    i_dir_1  = 1
+    i_dir_2  = 1
+    do i_part = i_part_1,i_part_2,i_part_2-i_part_1
+      i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
+      rr    = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
+      ss    = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
+      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                     R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                     Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+      i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+      rr    = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
+      ss    = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
+      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                     R2,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                     Z2,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+      if (second_xpoint .eq. 2) then
+        if (i_part .eq. i_part_1) then
+          if (Z2 .gt. Z1) i_dir_1 = -1
+        else
+          if (Z2 .lt. Z1) i_dir_2 = -1
+        endif
       else
-        if (start_stop) then
-          do i_sub = 1,n_sub
-            st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
-            call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
-            call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
-            call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                           R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                           Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-            n_up_priv_contour = n_up_priv_contour + 1
-            R_up_priv_contour(n_up_priv_contour) = R
-            Z_up_priv_contour(n_up_priv_contour) = Z
-          enddo
+        if (i_part .eq. i_part_1) then
+          if (Z2 .lt. Z1) i_dir_1 = -1
+        else
+          if (Z2 .gt. Z1) i_dir_2 = -1
         endif
       endif
     enddo
-  enddo
-  
-  
-  ! --- Close contour with the wall
-  R_beg = R_up_priv_contour(n_up_priv_contour)
-  Z_beg = Z_up_priv_contour(n_up_priv_contour)
-  R_end = R_up_priv_contour(1)
-  Z_end = Z_up_priv_contour(1)
-  reversed = .false.
-  call close_contour_with_wall(R_beg, Z_beg, R_end, Z_end, n_lim, index_lim, reversed)
-  do i_piece = 1,n_lim
+    ! ---Get contour by stepping along
+    start_stop = .true.
+    n_up_priv_contour = 0
+    do i_part = i_part_1,i_part_2,i_part_2-i_part_1
+      dir = i_dir_1
+      if (i_part .eq. i_part_2) dir = i_dir_2
+      if (dir .eq. 1) then
+        i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
+        i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+      else
+        i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+        i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
+      endif
+      do i_piece = i_beg, i_end, dir
+        ! --- Splines
+        i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+        rr1   = sep_list%flux_surfaces(i_surf)%s(1,i_piece);   ss1  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
+        drr1  = sep_list%flux_surfaces(i_surf)%s(2,i_piece);   dss1 = sep_list%flux_surfaces(i_surf)%t(2,i_piece)
+        rr2   = sep_list%flux_surfaces(i_surf)%s(3,i_piece);   ss2  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
+        drr2  = sep_list%flux_surfaces(i_surf)%s(4,i_piece);   dss2 = sep_list%flux_surfaces(i_surf)%t(4,i_piece)
+        if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
+          ! --- Then end point
+          if (dir .eq. 1) then
+            rr  = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
+            ss  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
+          else
+            rr  = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
+            ss  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
+          endif
+          i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+          call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                         R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                         Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+          distance_Xpoint = sqrt( (R1-R_xpoint(second_xpoint))**2 + (Z1-Z_xpoint(second_xpoint))**2 )
+          ! --- Through the X-point the first time
+          if (i_part .eq. i_part_1) then
+            do i_sub = 1,n_sub
+              st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
+              call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
+              call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
+              call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                             R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                             Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+              distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
+              if (distance .gt. distance_Xpoint) then
+                n_up_priv_contour = n_up_priv_contour + 1
+                R_up_priv_contour(n_up_priv_contour) = R
+                Z_up_priv_contour(n_up_priv_contour) = Z
+              endif
+            enddo
+            n_up_priv_contour = n_up_priv_contour + 1
+            R_up_priv_contour(n_up_priv_contour) = R_xpoint(second_xpoint)
+            Z_up_priv_contour(n_up_priv_contour) = Z_xpoint(second_xpoint)
+            start_stop = .false.
+          ! --- Through the X-point the second time
+          else
+            do i_sub = 1,n_sub
+              st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
+              call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
+              call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
+              call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                             R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                             Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+              distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
+              if (distance .lt. distance_Xpoint) then
+                n_up_priv_contour = n_up_priv_contour + 1
+                R_up_priv_contour(n_up_priv_contour) = R
+                Z_up_priv_contour(n_up_priv_contour) = Z
+              endif
+            enddo
+            start_stop = .true.
+          endif
+        ! --- Through non X-point pieces
+        else
+          if (start_stop) then
+            do i_sub = 1,n_sub
+              st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
+              call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
+              call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
+              call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                             R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                             Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+              n_up_priv_contour = n_up_priv_contour + 1
+              R_up_priv_contour(n_up_priv_contour) = R
+              Z_up_priv_contour(n_up_priv_contour) = Z
+            enddo
+          endif
+        endif
+      enddo
+    enddo
+    ! --- Close contour with the wall
+    R_beg = R_up_priv_contour(n_up_priv_contour)
+    Z_beg = Z_up_priv_contour(n_up_priv_contour)
+    R_end = R_up_priv_contour(1)
+    Z_end = Z_up_priv_contour(1)
+    reversed = .false.
+    call close_contour_with_wall(R_beg, Z_beg, R_end, Z_end, n_lim, index_lim, reversed)
+    do i_piece = 1,n_lim
+      n_up_priv_contour = n_up_priv_contour + 1
+      R_up_priv_contour(n_up_priv_contour) = R_wall(index_lim(i_piece))
+      Z_up_priv_contour(n_up_priv_contour) = Z_wall(index_lim(i_piece))
+    enddo
     n_up_priv_contour = n_up_priv_contour + 1
-    R_up_priv_contour(n_up_priv_contour) = R_wall(index_lim(i_piece))
-    Z_up_priv_contour(n_up_priv_contour) = Z_wall(index_lim(i_piece))
-  enddo
-  n_up_priv_contour = n_up_priv_contour + 1
-  R_up_priv_contour(n_up_priv_contour) = R_up_priv_contour(1)
-  Z_up_priv_contour(n_up_priv_contour) = Z_up_priv_contour(1)
+    R_up_priv_contour(n_up_priv_contour) = R_up_priv_contour(1)
+    Z_up_priv_contour(n_up_priv_contour) = Z_up_priv_contour(1)
+  endif
   
   
   
   
   ! --- Finally the outer contour
-  i_surf   = 2
-  i_part_1 = 0
-  i_part_2 = 0
-  ! --- Find x-point part
-  do i_part = 1,sep_list%flux_surfaces(i_surf)%n_parts
-    do i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part),sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-      if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
-        if (i_part_1 .eq. 0) then
-          i_part_1 = i_part
-        else
-          i_part_2 = i_part
+  if (xcase .eq. 3) then
+    i_surf   = 2
+    i_part_1 = 0
+    i_part_2 = 0
+    ! --- Find x-point part
+    do i_part = 1,sep_list%flux_surfaces(i_surf)%n_parts
+      do i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part),sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+        i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+        if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
+          if (i_part_1 .eq. 0) then
+            i_part_1 = i_part
+          else
+            i_part_2 = i_part
+          endif
+          exit
         endif
-        exit
+      enddo
+    enddo
+    ! --- Get directions
+    i_dir_1  = 1
+    i_dir_2  = 1
+    do i_part = i_part_1,i_part_2,i_part_2-i_part_1
+      i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
+      rr    = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
+      ss    = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
+      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                     R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                     Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+      i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+      rr    = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
+      ss    = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
+      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+      call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                     R2,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                     Z2,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+      if (Z2 .lt. Z1) then
+        if (i_part .eq. i_part_1) then
+          i_dir_1 = -1
+        else
+          i_dir_2 = -1
+        endif
       endif
     enddo
-  enddo
-  ! --- Get directions
-  i_dir_1  = 1
-  i_dir_2  = 1
-  do i_part = i_part_1,i_part_2,i_part_2-i_part_1
-    i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
+    ! --- Make sure we are on the right (outer) side
+    i_part = i_part_1
+    if (i_dir_1 .eq. 1) then
+      i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
+    else
+      i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+    endif
     rr    = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
     ss    = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
     i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
     call interp_RZ(node_list,element_list,i_elm,rr,ss, &
                    R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
                    Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-    i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+    i_part = i_part_2
+    if (i_dir_2 .eq. 1) then
+      i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
+    else
+      i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+    endif
+    i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
     rr    = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
     ss    = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
     i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
     call interp_RZ(node_list,element_list,i_elm,rr,ss, &
                    R2,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
                    Z2,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-    if (Z2 .lt. Z1) then
-      if (i_part .eq. i_part_1) then
-        i_dir_1 = -1
+    if (R2 .gt. R1) then
+      i_part   = i_part_1
+      i_part_1 = i_part_2
+      i_part_2 = i_part
+      dir     = i_dir_1
+      i_dir_1 = i_dir_2
+      i_dir_2 = dir
+    endif
+    ! ---Get contour by stepping along
+    start_stop = .true.
+    n_outer_contour = 0
+    do i_part = i_part_1,i_part_2,i_part_2-i_part_1
+      dir = i_dir_1
+      if (i_part .eq. i_part_2) dir = i_dir_2
+      if (dir .eq. 1) then
+        i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
+        i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
       else
-        i_dir_2 = -1
+        i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
+        i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
       endif
-    endif
-  enddo
-  ! --- Make sure we are on the right (outer) side
-  i_part = i_part_1
-  if (i_dir_1 .eq. 1) then
-    i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
-  else
-    i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-  endif
-  rr    = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
-  ss    = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
-  i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-  call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                 R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                 Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-  i_part = i_part_2
-  if (i_dir_2 .eq. 1) then
-    i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
-  else
-    i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-  endif
-  i_piece = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
-  rr    = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
-  ss    = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
-  i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-  call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                 R2,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                 Z2,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-  if (R2 .gt. R1) then
-    i_part   = i_part_1
-    i_part_1 = i_part_2
-    i_part_2 = i_part
-    dir     = i_dir_1
-    i_dir_1 = i_dir_2
-    i_dir_2 = dir
-  endif
-  ! ---Get contour by stepping along
-  start_stop = .true.
-  n_outer_contour = 0
-  do i_part = i_part_1,i_part_2,i_part_2-i_part_1
-    dir = i_dir_1
-    if (i_part .eq. i_part_2) dir = i_dir_2
-    if (dir .eq. 1) then
-      i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
-      i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-    else
-      i_beg = sep_list%flux_surfaces(i_surf)%parts_index(i_part+1)-1
-      i_end = sep_list%flux_surfaces(i_surf)%parts_index(i_part)
-    endif
-    do i_piece = i_beg, i_end, dir
-      ! --- Splines
-      i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-      rr1   = sep_list%flux_surfaces(i_surf)%s(1,i_piece);   ss1  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
-      drr1  = sep_list%flux_surfaces(i_surf)%s(2,i_piece);   dss1 = sep_list%flux_surfaces(i_surf)%t(2,i_piece)
-      rr2   = sep_list%flux_surfaces(i_surf)%s(3,i_piece);   ss2  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
-      drr2  = sep_list%flux_surfaces(i_surf)%s(4,i_piece);   dss2 = sep_list%flux_surfaces(i_surf)%t(4,i_piece)
-      if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
-        ! --- Then end point
-        if (dir .eq. 1) then
-          rr  = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
-          ss  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
-        else
-          rr  = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
-          ss  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
-        endif
+      do i_piece = i_beg, i_end, dir
+        ! --- Splines
         i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
-        call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                       R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                       Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-        distance_Xpoint = sqrt( (R1-R_xpoint(second_xpoint))**2 + (Z1-Z_xpoint(second_xpoint))**2 )
-        ! --- Through the X-point the first time
-        if (i_part .eq. i_part_1) then
-          do i_sub = 1,n_sub
-            st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
-            call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
-            call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
-            call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                           R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                           Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-            distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
-            if (distance .gt. distance_Xpoint) then
-              n_outer_contour = n_outer_contour + 1
-              R_outer_contour(n_outer_contour) = R
-              Z_outer_contour(n_outer_contour) = Z
-            endif
-          enddo
-          n_outer_contour = n_outer_contour + 1
-          R_outer_contour(n_outer_contour) = R_xpoint(second_xpoint)
-          Z_outer_contour(n_outer_contour) = Z_xpoint(second_xpoint)
-          start_stop = .false.
-        ! --- Through the X-point the second time
-        else
-          do i_sub = 1,n_sub
-            st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
-            call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
-            call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
-            call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                           R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                           Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-            distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
-            if (distance .lt. distance_Xpoint) then
-              n_outer_contour = n_outer_contour + 1
-              R_outer_contour(n_outer_contour) = R
-              Z_outer_contour(n_outer_contour) = Z
-            endif
-          enddo
-          start_stop = .true.
-        endif
-      ! --- Through non X-point pieces
-      else
-        if (start_stop) then
-          do i_sub = 1,n_sub
-            st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
-            call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
-            call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
-            call interp_RZ(node_list,element_list,i_elm,rr,ss, &
-                           R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
-                           Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+        rr1   = sep_list%flux_surfaces(i_surf)%s(1,i_piece);   ss1  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
+        drr1  = sep_list%flux_surfaces(i_surf)%s(2,i_piece);   dss1 = sep_list%flux_surfaces(i_surf)%t(2,i_piece)
+        rr2   = sep_list%flux_surfaces(i_surf)%s(3,i_piece);   ss2  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
+        drr2  = sep_list%flux_surfaces(i_surf)%s(4,i_piece);   dss2 = sep_list%flux_surfaces(i_surf)%t(4,i_piece)
+        if (i_elm .eq. i_elm_xpoint(second_xpoint)) then
+          ! --- Then end point
+          if (dir .eq. 1) then
+            rr  = sep_list%flux_surfaces(i_surf)%s(3,i_piece)
+            ss  = sep_list%flux_surfaces(i_surf)%t(3,i_piece)
+          else
+            rr  = sep_list%flux_surfaces(i_surf)%s(1,i_piece)
+            ss  = sep_list%flux_surfaces(i_surf)%t(1,i_piece)
+          endif
+          i_elm = sep_list%flux_surfaces(i_surf)%elm(i_piece)
+          call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                         R1,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                         Z1,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+          distance_Xpoint = sqrt( (R1-R_xpoint(second_xpoint))**2 + (Z1-Z_xpoint(second_xpoint))**2 )
+          ! --- Through the X-point the first time
+          if (i_part .eq. i_part_1) then
+            do i_sub = 1,n_sub
+              st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
+              call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
+              call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
+              call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                             R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                             Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+              distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
+              if (distance .gt. distance_Xpoint) then
+                n_outer_contour = n_outer_contour + 1
+                R_outer_contour(n_outer_contour) = R
+                Z_outer_contour(n_outer_contour) = Z
+              endif
+            enddo
             n_outer_contour = n_outer_contour + 1
-            R_outer_contour(n_outer_contour) = R
-            Z_outer_contour(n_outer_contour) = Z
-          enddo
+            R_outer_contour(n_outer_contour) = R_xpoint(second_xpoint)
+            Z_outer_contour(n_outer_contour) = Z_xpoint(second_xpoint)
+            start_stop = .false.
+          ! --- Through the X-point the second time
+          else
+            do i_sub = 1,n_sub
+              st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
+              call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
+              call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
+              call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                             R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                             Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+              distance = sqrt( (R-R1)**2 + (Z-Z1)**2 )
+              if (distance .lt. distance_Xpoint) then
+                n_outer_contour = n_outer_contour + 1
+                R_outer_contour(n_outer_contour) = R
+                Z_outer_contour(n_outer_contour) = Z
+              endif
+            enddo
+            start_stop = .true.
+          endif
+        ! --- Through non X-point pieces
+        else
+          if (start_stop) then
+            do i_sub = 1,n_sub
+              st = -dir*1.d0 + dir*2.d0*real(i_sub-1)/real(n_sub)
+              call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
+              call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
+              call interp_RZ(node_list,element_list,i_elm,rr,ss, &
+                             R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
+                             Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+              n_outer_contour = n_outer_contour + 1
+              R_outer_contour(n_outer_contour) = R
+              Z_outer_contour(n_outer_contour) = Z
+            enddo
+          endif
         endif
-      endif
+      enddo
     enddo
-  enddo
-  
-  
-  
-  ! --- Close contour with the wall
-  R_beg = R_outer_contour(n_outer_contour)
-  Z_beg = Z_outer_contour(n_outer_contour)
-  R_end = R_outer_contour(1)
-  Z_end = Z_outer_contour(1)
-  reversed = .true.
-  call close_contour_with_wall(R_beg, Z_beg, R_end, Z_end, n_lim, index_lim, reversed)
-  do i_piece = 1,n_lim
+    ! --- Close contour with the wall
+    R_beg = R_outer_contour(n_outer_contour)
+    Z_beg = Z_outer_contour(n_outer_contour)
+    R_end = R_outer_contour(1)
+    Z_end = Z_outer_contour(1)
+    reversed = .true.
+    call close_contour_with_wall(R_beg, Z_beg, R_end, Z_end, n_lim, index_lim, reversed)
+    do i_piece = 1,n_lim
+      n_outer_contour = n_outer_contour + 1
+      R_outer_contour(n_outer_contour) = R_wall(index_lim(i_piece))
+      Z_outer_contour(n_outer_contour) = Z_wall(index_lim(i_piece))
+    enddo
     n_outer_contour = n_outer_contour + 1
-    R_outer_contour(n_outer_contour) = R_wall(index_lim(i_piece))
-    Z_outer_contour(n_outer_contour) = Z_wall(index_lim(i_piece))
-  enddo
-  n_outer_contour = n_outer_contour + 1
-  R_outer_contour(n_outer_contour) = R_outer_contour(1)
-  Z_outer_contour(n_outer_contour) = Z_outer_contour(1)
+    R_outer_contour(n_outer_contour) = R_outer_contour(1)
+    Z_outer_contour(n_outer_contour) = Z_outer_contour(1)
+  endif
   
   
   

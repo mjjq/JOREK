@@ -49,9 +49,6 @@ endif
 n_tries = 500          ! --- number of attempts to find the axis 
 found_axis = .false.
 
-<<<<<<< HEAD
-if( Zaxis_find_limit .gt. 50.d0)  Zaxis_find_limit = 0.2d0 * R_geo
-=======
 allocate(grad_psi(element_list%n_elements,4,4))            ! --- vector storing |grad_psi| at gaussian poitns
 allocate(include_pt(element_list%n_elements,4,4))          ! --- vector storing if point should be considered or not
 grad_psi    = 0.d0
@@ -63,7 +60,6 @@ psi_axis     = 1.d20
 
 ! --- define geometrical limits to search for the axis
 if( Zaxis_find_limit .gt. 50.d0)  Zaxis_find_limit = 0.1d0 * R_geo
->>>>>>> cc6fee9808dec9aa805ad5b66a5fc35b309832a2
 
 ! save |grad_psi| at gaussian points of all elements
 do i=1,element_list%n_elements   ! --- loop over elements
@@ -166,7 +162,7 @@ call interp(node_list,element_list,i_elm_axis,1,1,s_axis,t_axis,psi_axis,P_s,P_t
 
 call interp_RZ(node_list,element_list,i_elm_axis,s_axis,t_axis,R_axis,R_s,R_t,R_st,R_ss,R_tt,Z_axis,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 
-if (.not. found_axis) write(*,*) 'WARNING: axis was not properly found after ', n_tries, ' attempts'
+if ((.not. found_axis) .and. (my_id .eq. 0)) write(*,*) 'WARNING: axis was not properly found after ', n_tries, ' attempts'
 if (my_id .eq. 0) write(*,'(A,i6,4f14.8)') ' magnetic axis : ',i_elm_axis,R_axis,Z_axis,psi_axis
 
 deallocate(include_pt, grad_psi)

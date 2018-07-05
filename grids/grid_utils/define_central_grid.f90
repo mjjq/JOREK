@@ -6,7 +6,7 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only:   tokamak_device
+use phys_module, only:   tokamak_device, n_tht_equidistant
 
 implicit none
 

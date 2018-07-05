@@ -85,14 +85,15 @@ module phys_module
   integer :: last_target_point		   !< index of the last  target point on the limiter (does NOT need to be > first_target_point)
   
   !> Points used as blocks to extend grid into complex wall structures
-  integer :: n_wall_blocks                                       !< Number of blocks (max 20)
-  integer, parameter :: n_wall_block_points_max = 100            !< Max number of blocks points
-  integer :: n_block_points_left(20)                             !< Number of points on left side of block
-  real*8  :: R_block_points_left(20,n_wall_block_points_max)     !< R-positions of points on left side of block
-  real*8  :: Z_block_points_left(20,n_wall_block_points_max)     !< Z-positions of points on left side of block
-  integer :: n_block_points_right(20)                            !< Number of points on left side of block
-  real*8  :: R_block_points_right(20,n_wall_block_points_max)    !< R-positions of points on left side of block
-  real*8  :: Z_block_points_right(20,n_wall_block_points_max)    !< Z-positions of points on left side of block
+  integer, parameter :: n_wall_blocks_max = 30                                  !< Maximum number of blocks (30 should be enough)
+  integer :: n_wall_blocks                                                      !< Number of blocks
+  integer, parameter :: n_wall_block_points_max = 20                            !< Max number of blocks points
+  integer :: n_block_points_left (n_wall_blocks_max)                            !< Number of points on left side of block
+  real*8  :: R_block_points_left (n_wall_blocks_max,n_wall_block_points_max)    !< R-positions of points on left side of block
+  real*8  :: Z_block_points_left (n_wall_blocks_max,n_wall_block_points_max)    !< Z-positions of points on left side of block
+  integer :: n_block_points_right(n_wall_blocks_max)                            !< Number of points on left side of block
+  real*8  :: R_block_points_right(n_wall_blocks_max,n_wall_block_points_max)    !< R-positions of points on left side of block
+  real*8  :: Z_block_points_right(n_wall_blocks_max,n_wall_block_points_max)    !< Z-positions of points on left side of block
   
   !> @name Define X-point geometry by geometrical properties
   !!

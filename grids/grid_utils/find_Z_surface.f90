@@ -8,16 +8,16 @@ use data_structure
 implicit none
 
 ! --- Routine parameters
-type (type_node_list),    intent(in)    :: node_list
-type (type_element_list), intent(in)    :: element_list
-type (type_surface_list), intent(in)    :: surface_list
-integer,                  intent(in)    :: j_surf
-real*8,                   intent(in)    :: Z_find
-integer,                  intent(out)   :: i_elm_find(*)
-real*8,                   intent(out)   :: s_find(*)
-real*8,                   intent(out)   :: t_find(*)
-real*8,                   intent(out)   :: st_find(*)
-integer,                  intent(out)   :: i_find
+type (type_node_list),    intent(in)    :: node_list       !< node list
+type (type_element_list), intent(in)    :: element_list    !< element list
+type (type_surface_list), intent(in)    :: surface_list    !< surface list
+integer,                  intent(in)    :: j_surf          !< index of surface we are intersecting in surface_list
+real*8,                   intent(in)    :: Z_find          !< Z-value of horizontal line we are intersecting surface with
+integer,                  intent(out)   :: i_elm_find(*)   !< the elm indices where we found intersections
+real*8,                   intent(out)   :: s_find(*)       !< the local s-value of each element where we found intersections
+real*8,                   intent(out)   :: t_find(*)       !< the local t-value of each element where we found intersections
+real*8,                   intent(out)   :: st_find(*)      !< the surface local parameter at which we found intersection on surface piece (-1<=st<=+1)
+integer,                  intent(out)   :: i_find          !< number of intersections we found
 
 ! --- local variables
 integer :: i, k, i_elm, ifail, iterMax

@@ -25,6 +25,17 @@ module data_structure
 #endif
     integer    :: index(n_order+1)                !< index in the main matrix
     integer    :: boundary                        !< = 1, 2 or 3 for boundary nodes
+                                                  !< For wall-aligned grids, the above are still true, but there are a lot more types:
+                                                  !< 1: Non-corner target, with tangent on vector 2, inward field
+                                                  !< 2: Non-corner flux-aligned boundary, with tangent on vector 3
+                                                  !< 3: Corner target, inward field
+                                                  !< 4: Non-corner flux-aligned boundary, with tangent on vector 2
+                                                  !< 5: Non-corner target, with tangent on vector 2, outward field
+                                                  !< 6: Non-corner target, with tangent on vector 3, inward field
+                                                  !< 7: Non-corner target, with tangent on vector 3, outward field
+                                                  !< 8: Corner target, outward field
+                                                  !< 9: Inverted corner target (3 elements)
+                                                  !<10: Corner target, tangent field
     integer    :: boundary_index                  !< index of the boundary node 
     integer    :: parents(2)                      !< Parent nodes (used if node is constrained)"refinement"
     integer    :: parent_elem                     !< which element do parent nodes belong to ? "refinement"

@@ -230,6 +230,7 @@ else
   
   endif      
 endif
+if (.not. n_tht_equidistant) theta_beg = theta_sep
 
 call tr_deallocate(s_tmp, "s_tmp", CAT_GRID)
 call tr_deallocate(s_tmp2,"s_tmp2",CAT_GRID)

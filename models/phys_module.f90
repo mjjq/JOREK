@@ -284,6 +284,7 @@ module phys_module
   !! Parameters defining a flux-aligned grid without X-point in the poloidal plane.
   integer :: n_flux            !< Number of radial grid points
   integer :: n_tht             !< Number of poloidal grid points
+  logical :: n_tht_equidistant !< switch on to get an equidistant poloidal distribution of elements in the core of the grid (psi<0.5)
   real*8  :: xr1               !< Grid accumulation parameter
   real*8  :: xr2               !< Grid accumulation parameter
   real*8  :: sig1              !< Grid accumulation parameter

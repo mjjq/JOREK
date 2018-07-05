@@ -68,7 +68,8 @@ subroutine preset_parameters
 
   n_flux       = 11
   n_tht        = 16
-
+  n_tht_equidistant = .false.
+  
   n_open       = 5
   n_outer      = 0
   n_inner      = 0

@@ -228,6 +228,7 @@ if (my_id == 0) then
   end if
 
   write(*,INTG_FMT) 'n_tht                 ', n_tht
+  write(*,LOGI_FMT) 'n_tht_equidistant     ', n_tht_equidistant
   write(*,INTG_FMT) 'n_flux                ', n_flux
   write(*,LOGI_FMT) 'xpoint                ', xpoint
 

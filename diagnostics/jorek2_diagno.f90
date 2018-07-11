@@ -12,6 +12,9 @@ use basis_at_gaussian
 use pellet_module
 use mpi_mod
 use mod_import_restart
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+use mgi_module
+#endif
 implicit none
 
 type (type_node_list)    :: node_list
@@ -46,8 +49,9 @@ do i_tor=1, n_tor
 enddo
 
 call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+index_now = index_start
 
-call initialise_basis                              ! define the basis functions at the Gaussian points
+call initialise_basis()                              ! define the basis functions at the Gaussian points
 
 open(20,file='energies.txt')
 
@@ -56,10 +60,10 @@ write(20,'(A,25(A11,i3.3))') '      i      time',('          M',n_period*((in-1)
 
 do i=2,index_start
 
- Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,i)/energies(n_tor,1,i-1))) &
-             / (xtime(i)-xtime(i-1))
- Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,i)/energies(n_tor,2,i-1))) &
-             / (xtime(i)-xtime(i-1))
+ !Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,i)/energies(n_tor,1,i-1))) &
+ !            / (xtime(i)-xtime(i-1))
+ !Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,i)/energies(n_tor,2,i-1))) &
+ !            / (xtime(i)-xtime(i-1))
 
  !write(*,'(i7,f12.3,200e14.6)') i,xtime(i),energies(1:n_tor,:,i),growth_mag,growth_kin
 
@@ -113,15 +117,28 @@ if (using_spi .and. abl_history) then
   enddo
   close(20)
 
+  open(20,file="fragments_position.dat")
+
+  do i_spi = 1, n_spi
+    write(20,'(i7,2f12.3,e14.6)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_radius
+  end do
+  close(20)
+
 endif
 
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  ! --- Read ADAS data and generate coronal equilibrium is needed
+  if (flag_adas) then
+    call init_imp_adas(my_id)
 
-!call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
-
-if (use_pellet) then
-   pellet_volume = total_pellet_volume
-   call update_pellet(my_id,node_list,element_list)
-end if
+    if (output_rad_phi) call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,&
+                                                pressure,pressure_in,pressure_out)
+  end if
+#endif
+!if (use_pellet) then
+!   pellet_volume = total_pellet_volume
+!   call update_pellet(my_id,node_list,element_list)
+!end if
 !------------------lowshape3bis outside
 !Rplot(1) = 3.0
 !Rplot(2) = 3.676
@@ -148,12 +165,12 @@ end if
 
 !call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-Rplot(1) = 1.0
-Rplot(2) = 3.5
-Zplot(1) = Z_axis
-Zplot(2) = Z_axis 
+!Rplot(1) = 1.0
+!Rplot(2) = 3.5
+!Zplot(1) = Z_axis
+!Zplot(2) = Z_axis 
 
-call plot_profiles(node_list,element_list,Rplot,Zplot)
+!call plot_profiles(node_list,element_list,Rplot,Zplot)
 
 
 !call export_helena(node_list,element_list)

@@ -121,7 +121,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
                 spi_Vel_diff, t_mgi, JET_MGI, ASDEX_MGI,            &
                 gas_type, delta_n_convection, nimp_bg,              &
-                flag_adas, adas_dir,                                &
+                flag_adas, adas_dir, output_rad_phi,                &
                 RMP_on, RMP_har_cos,RMP_har_sin, flag_spi_size,     &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &

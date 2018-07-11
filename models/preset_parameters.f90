@@ -369,6 +369,7 @@ subroutine preset_parameters
      abl_history     = .false.
      using_spi       = .false.
      flag_adas       = .false.
+     output_rad_phi  = .false.
      n_adas          = 0
 
      adas_dir        = ''

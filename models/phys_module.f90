@@ -273,6 +273,7 @@ module phys_module
   logical :: toroidal_rotation  !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
   logical :: flag_adas          !< Flag for whether to use adas data calculating coronal equilibriam
+  logical :: output_rad_phi     !< Out put the radiation asymmetry into a file using integras_3D
   integer :: n_adas             !< Number of species to be traced by adas, for future development only
 
   type (type_SPI), allocatable  :: pellets(:)     !< Each element corresponds to one injected pellet 

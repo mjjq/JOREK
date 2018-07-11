@@ -56,6 +56,7 @@ real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0
 ! Additional diagnostic variables for impurity model
 #if (JOREK_MODEL == 501)
 real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion
+real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 ! Atomic physics coefficients:
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8  :: m_i_over_m_imp
@@ -68,7 +69,7 @@ real*8  :: T_rad, T0_corr, ne_rad
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad
-integer*8  :: ion_i, ion_k
+integer*8  :: ion_i, ion_k, i_phi
 
 #endif
 
@@ -131,6 +132,7 @@ local_n_particles     = 0.d0
 #if (JOREK_MODEL == 501)
 local_radiation       = 0.d0
 local_E_ion           = 0.d0
+local_radiation_phi   = 0.d0
 #endif
 
 Bgeo = F0 / R_geo
@@ -176,6 +178,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #if (JOREK_MODEL == 501)
 !$omp          local_radiation, local_E_ion, gas_type, using_spi, flag_adas,                   &
+!$omp          local_radiation_phi,                                                            &
 !$omp          imp_cor, imp_adas,                                                              &
 #endif
 !$omp          wgauss_copy)                                                                    &
@@ -213,7 +216,7 @@ omp_tid      = 0
 !$omp                local_n_particles_inj,  local_n_particles,                               &
 #endif
 #if (JOREK_MODEL == 501)
-!$omp                local_radiation,  local_E_ion,                                           &
+!$omp                local_radiation,  local_E_ion, local_radiation_phi,                      &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
@@ -437,6 +440,8 @@ do ife = ife_min, ife_max
         Lrad = Lrad * m_i_over_m_imp
         E_ion = E_ion * m_i_over_m_imp
 
+        local_radiation_phi(mp) = local_radiation_phi(mp) + ne_rad * rn0 * central_density * 1.d20 * Lrad &
+                          * bigR * xjac * wst * delta_phi        
         local_radiation = local_radiation + ne_rad * rn0 * central_density * 1.d20 * Lrad &
                           * bigR * xjac * wst * delta_phi 
         local_E_ion     = local_E_ion + rn0 * central_density * 1.d20 * E_ion             &
@@ -548,6 +553,8 @@ call MPI_AllReduce(J2_tot,ohm_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,
 #if (JOREK_MODEL == 501)
 call MPI_AllReduce(local_radiation, total_radiation,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_E_ion, total_E_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(local_radiation_phi, total_radiation_phi,n_plane,&
+                   MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 #endif
 
 #if (JOREK_MODEL == 303)
@@ -593,8 +600,9 @@ source_out  = n_period * source_out  * central_density / t_norm
 source_in   = n_period * source_in   * central_density / t_norm
 
 #if (JOREK_MODEL == 501)
-total_radiation = n_period * total_radiation
-total_E_ion     = n_period * total_E_ion
+total_radiation     = n_period * total_radiation
+total_radiation_phi = n_period * total_radiation_phi
+total_E_ion         = n_period * total_E_ion
 #endif
 
 if (my_id .eq. 0) then
@@ -637,6 +645,7 @@ if (my_id .eq. 0) then
 #if (JOREK_MODEL == 501)
   write(*,'(A,1e14.6,A)') 'Radiation power          : ', total_radiation/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') 'Ionization potential E   : ', total_E_ion/1.d6, ' [MJ]'
+  write(*,'(A,1e14.6,A)') 'Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
   if (flag_adas) then
     if (index_now > 1) then
       xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation
@@ -644,6 +653,13 @@ if (my_id .eq. 0) then
       xtime_radiation(index_now) = t_norm * tstep * total_radiation
     end if
   end if 
+  if (output_rad_phi) then
+    open(20,file="rad_asymmetry.dat")
+    do i_phi = 1, n_plane
+      write(20,'(1e14.6)') total_radiation_phi(i_phi)/1.d6
+    end do
+    close (20)
+  end if
 #endif
 
 endif

@@ -1,11 +1,11 @@
   &in1
 
- ! Run this case first with n_tor=n_period=n_plane=1 (using model500)
+ ! Run this case first, using n_tor=n_period=n_plane=1 (using model500).
 
  restart = .f.
 
- nstep_n =  10
- tstep_n = 100
+ nstep_n =  100
+ tstep_n =   10
 
  nout = 10
 
@@ -30,10 +30,10 @@
 
  ! --- Parameters for the flux aligned grid
  xpoint       = .t. 
- n_flux       = 26 !51
- n_tht        = 32 !64
- n_open       = 2  
- n_leg        = 4
+ n_flux       = 16 !26 !51
+ n_tht        = 16 !32 !64
+ n_open       = 1 !2  
+ n_leg        = 2 !4
  n_private    = 1    
  SIG_closed   = 0.5d0	    
  SIG_open     = 0.3d0	    
@@ -178,28 +178,28 @@
  R_boundary(100) = 3.85,       Z_boundary(100) =  0.15,         psi_boundary(100) =  2.3242807
 
  ! --- Diffusion coefficients
- eta      = 1.d-7  
+ eta      = 5.d-6 
  eta_num  = 1.d-12 
 
- visco     = 5.d-7
+ visco     = 1.d-4
  visco_num = 1.d-12
 
- visco_par     = 1.d-5
+ visco_par     = 1.d-3
  visco_par_num = 1.d-9
 
- D_par = 0.
+ D_par = 1.d-2
 
- D_perp(1)  = 5.d-6
+ D_perp(1)  = 2.d-6
  D_perp(2)  = 0.d0
  D_perp(3)  = 0.13d0
  D_perp(4)  = 0.01d0
  D_perp(5)  = 0.92d0
  D_perp(6)  = 0.d0
- D_perp_num = 1.d-12
+ D_perp_num = 0.
 
  ZK_par = 8.d3
 
- ZK_perp(1)  = 5.d-7
+ ZK_perp(1)  = 2.d-6
  ZK_perp(2)  = 0.d0
  ZK_perp(3)  = 0.08d0
  ZK_perp(4)  = 0.01d0
@@ -210,10 +210,10 @@
  ZK_prof_neg_thresh = 1.d-4
  ZK_prof_neg        = 1.d-2
  
- D_neutral_x = 2.d-3
- D_neutral_y = 2.d-3
- D_neutral_p = 2.d-3
- Dn_perp_num = 1.d-7
+ D_neutral_x = 2.d-4
+ D_neutral_y = 2.d-4
+ D_neutral_p = 2.d-4
+ Dn_perp_num = 0.
 
  ! --- Boundary conditions parameters
  bc_natural_open = .t.
@@ -231,26 +231,26 @@
  using_spi = .t.
  t_ns      = 2000.
 
- spi_quantity   = 3.6d22
- pellet_density = 5.958d8
+ spi_quantity   = 5.d26 !3.6d22
+ pellet_density = 5.d6  !5.958d8
 
- n_spi          = 100
+ n_spi          = 1000   !100
  spi_shard_file = 'none' !'shard_size.dat'
 
  spi_abl_model   = 1
  abl_history     = .t.
  ng_radius_ratio = 1.4d0
- ng_radius_min   = 5.d-2 !2.d-2
+ ng_radius_min   = 2.d-1
 
  ns_R        = 3.00d0
  ns_Z        = 1.60d0
  ns_phi      = 4.51d0
- ns_deltaphi = 4. !2.
+ ns_deltaphi = 4.
 
- spi_Vel_Rref   = -8.94427d1
- spi_Vel_Zref   = -1.78885d2
+ spi_Vel_Rref   = -5.d1
+ spi_Vel_Zref   = -1.d2
  spi_Vel_RxZref = 0.d0
- spi_Vel_diff   = 80
+ spi_Vel_diff   = 0.
  spi_angle      = 0.349
  spi_L_inj      = 0.20
  

@@ -80,6 +80,7 @@ module mod_iterate2area
   subroutine area_inside_flux_contour(node_list,element_list, xpoint2, xcase2, psi, area, Rlim, Zlim)
     
     use tr_module
+    use mod_interp, only: interp_RZ
     
     implicit none
     
@@ -95,7 +96,6 @@ module mod_iterate2area
     integer             :: i, j, n_bnd_points, n_points_piece, n_pieces, min_pos
     integer             :: i_elm, ip, k, node1, node2, node3, node4, counter
     real*8              :: t, rr1, rr2, drr1, drr2, ss1, ss2, dss1, dss2, ri, si, dri, dsi
-    real*8              :: dummy1, dummy2, dummy3, dummy4, dummy5, dummy6, dummy7, dummy8, dummy9, dummy10
     real*8              :: R0, Z0
     real*8, allocatable :: Rbnd(:), Zbnd(:), Rnew(:), Znew(:), angle(:)
     type (type_surface_list) :: surface_list
@@ -151,8 +151,7 @@ module mod_iterate2area
           call CUB1D(rr1, drr1, rr2, drr2, t, ri, dri)
           call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
     
-          call interp_RZ(node_list,element_list,i_elm,ri,si,Rbnd(counter),dummy1,dummy2,dummy3,dummy4,dummy5, &
-                                                            Zbnd(counter),dummy6,dummy7,dummy8,dummy9,dummy10)
+          call interp_RZ(node_list,element_list,i_elm,ri,si,Rbnd(counter),Zbnd(counter))
         enddo
     enddo
     

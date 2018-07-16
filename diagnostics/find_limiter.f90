@@ -10,6 +10,7 @@ use phys_module, only: n_limiter, R_limiter, Z_limiter, FF_0
 use data_structure
 use gauss
 use basis_at_gaussian
+use mod_interp
 
 implicit none
 

@@ -10,6 +10,8 @@ subroutine boundary_check(my_id)
   use nodes_elements,  only: node_list, bnd_node_list, element_list, bnd_elm_list
   use vacuum_response
   use mpi_mod
+  use mod_interp
+  use mod_basisfunctions
   
   implicit none
   
@@ -27,7 +29,7 @@ subroutine boundary_check(my_id)
   real*8   :: i_size, basfunc_i
   real*8   :: H1(2,2), H1_s(2,2), H1_ss(2,2)
   real*8   :: P, P_s, P_t, P_st, P_ss, P_tt
-  real*8   :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
+  real*8   :: R, R_s, R_t, Z, Z_s, Z_t
   real*8   :: s_pt, t_pt, s_or_t ! s and t values at current point
   real*8   :: xjac               ! 2D Jacobian
   real*8   :: B_pol(2)           ! Poloidal magnetic field
@@ -95,7 +97,7 @@ subroutine boundary_check(my_id)
       end select
 
       ! --- Determine coordinate values (plus derivatives)
-      call interp_RZ(node_list, element_list, m_elm, s_pt, t_pt, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
+      call interp_RZ(node_list, element_list, m_elm, s_pt, t_pt, R, R_s, R_t, Z, Z_s, Z_t)
 
       ! --- 2D Jacobian
       xjac = R_s * Z_t - R_t * Z_s
@@ -116,7 +118,7 @@ subroutine boundary_check(my_id)
 !$omp   default(none)                                                                              &
 !$omp   shared(node_list, element_list, m_elm, s_pt, t_pt, sr, bndelem_m, bnd_node_list, H1,       &
 !$omp     resistive_wall, starwall_equil_coils, my_id, psibnd_vec, psibnd_coils, wall_curr,        &
-!$omp     bext_tan, I_coils, B_par_v, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt,&
+!$omp     bext_tan, I_coils, B_par_v, R, R_s, R_t, Z, Z_s, Z_t, &
 !$omp     xjac, e_par, B_par, step)                                                                &
 !$omp   private(l_starwall, i_vertex, i_dof, l_tor, P, P_s, P_t, P_st, P_ss, P_tt, P_R, P_Z, B_pol,&
 !$omp     i_node, i_node_bnd, i_size, i_resp_old, i_resp, i_resp_0, basfunc_i, B_par_v_tmp)

@@ -98,9 +98,9 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
       enddo
       write(101,'(A)')       ''
       n_tmp  = (n_wall+1) / 10
-      n_tmp2 = 12*n_tmp - 1
+      n_tmp2 = 12*n_tmp
       if (mod(n_wall+1,10) .ne. 0) n_tmp  = n_tmp  + 1
-      if (mod(n_wall+1,10) .ne. 0) n_tmp2 = n_tmp2 + mod(n_wall,10) + 1
+      if (mod(n_wall+1,10) .ne. 0) n_tmp2 = n_tmp2 + mod(n_wall+1,10) + 1
       write(101,'(A,2i6)')   'LINES ',n_tmp,n_tmp2
       do i=1,n_tmp-1
         write(101,'(A,11i6)') '11 ',10*(i-1),10*(i-1)+1,10*(i-1)+2,10*(i-1)+3,10*(i-1)+4,10*(i-1)+5,10*(i-1)+6,10*(i-1)+7,10*(i-1)+8,10*(i-1)+9,10*(i-1)+10
@@ -660,7 +660,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
   
   ! --- First lower part
   nR_save = nR
-  sig_Z = 0.1
+  sig_Z = 0.3
   call meshac2(nZ/2+1,Zlines,1.d0,9999.d0,sig_Z,9999.d0,0.3,1.0d0)
   Zlines = Zlines * Zmin
   width_prev1    = 0.0
@@ -693,7 +693,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
       ! Jump of resolution
       nR_grid(n_off+i,1) = nR_grid(n_off+i-1,1)
       if (i .eq. 1) nR_grid(n_off+i,1) = nR
-      if ( (width1 .lt. jump_threshold*width_prev1) .and. (i .gt. 1) ) then
+      if ( (width1 .lt. jump_threshold*width_prev1) .and. (i .gt. 1) .and. (i .lt. nZ/2+1) ) then
         diff = width1/width_prev1
         nR_grid(n_off+i,1) = int(real(nR_grid(n_off+i-1,1)) * diff) + 1
         distance_min = 1.d10
@@ -749,7 +749,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
         ! Jump of resolution
         nR_grid(n_off+i,2) = nR_grid(n_off+i-1,2)
         i_start = nR_grid(n_off+i-1,1)
-        if ( (width2 .lt. jump_threshold*width_prev2) .and. (i .gt. 1) ) then
+        if ( (width2 .lt. jump_threshold*width_prev2) .and. (i .gt. 1) .and. (i .lt. nZ/2+1) ) then
           diff = width2/width_prev2
           nR_grid(n_off+i,2) = int(real(nR_grid(n_off+i-1,2)) * diff)
           distance_min = 1.d10
@@ -802,7 +802,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
   
   ! --- Then upper part
   nR = nR_save
-  sig_Z = 0.6
+  sig_Z = 0.3
   call meshac2(nZ/2+1,Zlines,1.d0,9999.d0,sig_Z,9999.d0,0.3,1.0d0)
   Zlines = Zlines * Zmax
   width_prev1    = 0.0
@@ -827,7 +827,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
       ! Jump of resolution
       nR_grid(n_off-i,1) = nR_grid(n_off-i+1,1)
       if (i .eq. 1) nR_grid(n_off-i,1) = nR
-      if ( (width1 .lt. jump_threshold*width_prev1) .and. (i .gt. 1) ) then
+      if ( (width1 .lt. jump_threshold*width_prev1) .and. (i .gt. 1) .and. (i .lt. nZ/2) ) then
         diff = width1/width_prev1
         nR_grid(n_off-i,1) = int(real(nR_grid(n_off-i+1,1)) * diff) + 1
         distance_min = 1.d10
@@ -880,7 +880,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
         ! Jump of resolution
         nR_grid(n_off-i,2) = nR_grid(n_off-i+1,2)
         i_start = nR_grid(n_off-i+1,1)
-        if ( (width2 .lt. jump_threshold*width_prev2) .and. (i .gt. 1) ) then
+        if ( (width2 .lt. jump_threshold*width_prev2) .and. (i .gt. 1) .and. (i .lt. nZ/2) ) then
           diff = width2/width_prev2
           nR_grid(n_off-i,2) = int(real(nR_grid(n_off-i+1,2)) * diff)
           distance_min = 1.d10

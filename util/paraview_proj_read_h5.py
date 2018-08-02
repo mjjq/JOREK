@@ -14,7 +14,7 @@ OutputDataType = 'vtkUnstructuredGrid'
 Properties = dict(
     Variables = "1",
     Number_of_planes = 1,
-    Number_of_subdivisions = 4,
+    Number_of_subelements = 3, # i.e. 3**2 elements per JOREK element
     phi_range_in_pi = [0.0, 1.0],
     Quadratic = False,
     Exclude_n0_mode = False,
@@ -40,9 +40,12 @@ def RequestData(self):
     # this assumes that we're using the default prefix+time.h5 pattern
     # get the position of the dots and split on those
     def time_from_name(name):
-        i1 = name.index('.')
-        i2 = name.index('.', i1+1)
-        return float(name[i1-1:i2-1])
+        try:
+            i1 = name.index('.')
+            i2 = name.index('.', i1+1)
+            return float(name[i1-1:i2-1])
+        except ValueError:
+            return 0.0
     xtime = np.asarray(list(map(time_from_name, FileNames)))
 
     # 4 possibilities here:
@@ -77,7 +80,7 @@ def RequestData(self):
     else:
         self.f.read(FileNames[index], variables=Variables)
 
-    output = self.f.to_vtk(n_sub=Number_of_subdivisions, phi=phi_range_in_pi,
+    output = self.f.to_vtk(n_sub=Number_of_subelements, phi=phi_range_in_pi,
                       n_plane=Number_of_planes, without_n0_mode=Exclude_n0_mode,
                       output=self.GetUnstructuredGridOutput(), quadratic=Quadratic)
     return output
@@ -96,18 +99,24 @@ def RequestInformation(self):
         # this assumes that we're using the default prefix+time.h5 pattern
         # get the position of the dots and split on those
         def time_from_name(name):
-            i1 = name.index('.')
-            i2 = name.index('.', i1+1)
-            return float(name[i1:i2-1])
+            try:
+                i1 = name.index('.')
+                i2 = name.index('.', i1+1)
+                return float(name[i1-1:i2-1])
+            except ValueError:
+                return 0.0
         xtime = list(map(time_from_name, FileNames))
 
         outInfo.Remove(executive.TIME_STEPS())
         for i in range(len(FileNames)):
-            outInfo.Append(executive.TIME_STEPS(), xtime[i])
+            if xtime[i] is not None:
+                outInfo.Append(executive.TIME_STEPS(), xtime[i])
 
         # Remove time range info
         outInfo.Remove(executive.TIME_RANGE())
-        outInfo.Append(executive.TIME_RANGE(), xtime[0])
-        outInfo.Append(executive.TIME_RANGE(), xtime[-1])
+        if xtime[0] is not None:
+            outInfo.Append(executive.TIME_RANGE(), xtime[0])
+        if xtime[-1] is not None:
+            outInfo.Append(executive.TIME_RANGE(), xtime[-1])
 
     setOutputTimesteps(self)

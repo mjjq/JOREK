@@ -88,7 +88,7 @@ class fields(object):
             phis = np.linspace(phi[0],phi[1],num=n_plane,endpoint=not periodic)
 
         if (quadratic):
-            n_sub = n_sub*2-1
+            n_sub = n_sub*2+1
 
         if (output == None):
             output = vtk.vtkUnstructuredGrid()
@@ -182,7 +182,7 @@ def grid_2D(x, vertex, size, n_sub):
     tmp[0,:,:,:] *= size
     tmp[1,:,:,:] *= size
     # Create output array
-    out = np.zeros((vertex.shape[1],n_sub,n_sub,2), dtype=prec)
+    out = np.zeros((vertex.shape[1],n_sub+2,n_sub+2,2), dtype=prec)
     out[:,:,:,0] = np.tensordot(tmp[0,:,:,:], bf(n_sub), axes=((0,1),(0,1)))
     out[:,:,:,1] = np.tensordot(tmp[1,:,:,:], bf(n_sub), axes=((0,1),(0,1)))
     return out
@@ -229,18 +229,20 @@ def interp_scalars_3D(values, vertex, size, n_sub, HZ):
 
 
 """
-Create a grid of nsub**2 points per element, at phis positions
+Create a grid of (nsub+2)**2 points per element, at phis positions
 return points and connectivity matrix
 """
 def create_grid(x, vertex, size, n_elements, n_sub, phis, n_plane, periodic, quadratic):
     RZ     = grid_2D(x, vertex, size, n_sub)
 
+    n_p = n_sub + 2 # number of points per dimension in each element
+
     # Create connectivity data
     # Calculate 2D connectivity first
     # For each element, calculate the number of the lowest point
-    # Create (n_sub-1)**2 quadrangles
-    n_points = n_elements*(n_sub**2) # number of points in one plane
-    n_cells  = n_elements*((n_sub-1)**2) # Number of cells in one plane
+    # Create (n_p-1)**2 quadrangles
+    n_points = n_elements*(n_p**2) # number of points in one plane
+    n_cells  = n_elements*((n_p-1)**2) # Number of cells in one plane
     if (n_plane > 1): # Create a volume
         if (periodic):
             n_cells_tor = n_plane
@@ -260,19 +262,19 @@ def create_grid(x, vertex, size, n_elements, n_sub, phis, n_plane, periodic, qua
         if (n_plane > 1):
             # The base block for a quadratic element
             face_block = np.zeros(21, dtype=np.int32)
-            face_block[1:21] = [0,2*n_sub,2*n_sub+2,2, # corners front face
-                                2*n_points,2*n_points+2*n_sub,2*n_points+2*n_sub+2,2*n_points+2, # corners back face
-                                n_sub,2*n_sub+1,n_sub+2,1,# midedges front face
-                                2*n_points+n_sub,2*n_points+2*n_sub+1,2*n_points+n_sub+2,2*n_points+1,# midedges back face
-                                n_points,2*n_sub+n_points,2*n_sub+2+n_points,2+n_points]# midedges middle
-            i_start_t = np.arange(0,n_sub*(n_sub-1),2*n_sub,dtype=np.int32)
-            i_start_s = np.arange(0,n_sub-1,2,dtype=np.int32)
+            face_block[1:21] = [0,2*n_p,2*n_p+2,2, # corners front face
+                                2*n_points,2*n_points+2*n_p,2*n_points+2*n_p+2,2*n_points+2, # corners back face
+                                n_p,2*n_p+1,n_p+2,1,# midedges front face
+                                2*n_points+n_p,2*n_points+2*n_p+1,2*n_points+n_p+2,2*n_points+1,# midedges back face
+                                n_points,2*n_p+n_points,2*n_p+2+n_points,2+n_points]# midedges middle
+            i_start_t = np.arange(0,n_p*(n_p-1),2*n_p,dtype=np.int32)
+            i_start_s = np.arange(0,n_p-1,2,dtype=np.int32)
 
             element_block = i_start_t[:,np.newaxis,np.newaxis] + \
                             i_start_s[np.newaxis,:,np.newaxis] + \
                             face_block[np.newaxis,np.newaxis,:]
 
-            i_start_elm   = np.arange(0,n_points, n_sub**2, dtype=np.int32)
+            i_start_elm   = np.arange(0,n_points, n_p**2, dtype=np.int32)
             i_start_plane = np.arange(0,n_points*(n_plane-1),2*n_points, dtype=np.int32)
             if (periodic):
                 i_start_plane[-1] = 0
@@ -283,28 +285,28 @@ def create_grid(x, vertex, size, n_elements, n_sub, phis, n_plane, periodic, qua
         else:
             # The base block for a quadratic element
             face_block = np.zeros(9, dtype=np.int32)
-            face_block[1:9] = [0,2*n_sub,2*n_sub+2,2, # corners
-                               n_sub,2*n_sub+1,n_sub+2,1] # midedges
-            i_start_t = np.arange(0,n_sub*(n_sub-1),2*n_sub,dtype=np.int32)
-            i_start_s = np.arange(0,n_sub-1,2,dtype=np.int32)
+            face_block[1:9] = [0,2*n_p,2*n_p+2,2, # corners
+                               n_p,2*n_p+1,n_p+2,1] # midedges
+            i_start_t = np.arange(0,n_p*(n_p-1),2*n_p,dtype=np.int32)
+            i_start_s = np.arange(0,n_p-1,2,dtype=np.int32)
 
             element_block = i_start_t[:,np.newaxis,np.newaxis] + \
                             i_start_s[np.newaxis,:,np.newaxis] + \
                             face_block[np.newaxis,np.newaxis,:]
 
-            i_start_elm = np.arange(0,n_points, n_sub**2, dtype=np.int32)
+            i_start_elm = np.arange(0,n_points, n_p**2, dtype=np.int32)
             ien = np.reshape(i_start_elm[:,np.newaxis,np.newaxis,np.newaxis]+
                              element_block[np.newaxis,:,:,:], (-1,9))
             ien[:,0] = 8
     else:
         # The base block in a 2D plane
-        block = np.zeros((n_sub-1,n_sub-1,4), dtype=np.int32)
-        for j in range(n_sub-1):
-            for k in range(n_sub-1):
-                block[j,k,:] = [n_sub*j    +k  ,n_sub*(j+1)+k,
-                                n_sub*(j+1)+k+1,n_sub*j    +k+1]
+        block = np.zeros((n_p-1,n_p-1,4), dtype=np.int32)
+        for j in range(n_p-1):
+            for k in range(n_p-1):
+                block[j,k,:] = [n_p*j    +k  ,n_p*(j+1)+k,
+                                n_p*(j+1)+k+1,n_p*j    +k+1]
 
-        i_start = np.arange(0,n_points, n_sub**2, dtype=np.int32)
+        i_start = np.arange(0,n_points, n_p**2, dtype=np.int32)
         ien = np.reshape(i_start[:,np.newaxis,np.newaxis,np.newaxis]+
                          block[np.newaxis,:,:,:], (-1,4))
 
@@ -355,11 +357,12 @@ def basis_functions(s,t):
 
 
 """
-Calculate basis functions at n_sub**2 points
+Calculate basis functions at (n_sub+2)**2 points
+n_sub is the number of subdivisions per element, + 2 for the endpoints
 """
 def bf(n_sub):
     # Get the basis functions at each of the points
-    lin = np.linspace(0.0, 1.0, n_sub)
-    s  = np.tensordot(lin, [1]*n_sub, axes=0)
+    lin = np.linspace(0.0, 1.0, n_sub+2)
+    s  = np.tensordot(lin, [1]*(n_sub+2), axes=0)
     t  = s.transpose()
     return basis_functions(s, t)

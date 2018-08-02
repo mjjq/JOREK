@@ -18,18 +18,19 @@
 !> 
 !> Projected results can be written to vtk or hdf5 by specifying the appropriate
 !> options at creation time of project_particles_base.
-!> Using project_to_vtk or project_to_h5 is deprecated but still supported.
-!> They support only transformation function proj_one.
+!>
+!> Projections are written to a node_list. The number of projections is thus limited
+!> by the number of JOREK variables. If you need more, use multiple instances.
 module mod_project_particles
 use mod_io_actions
 use data_structure
 use mod_particle_sim
 use mod_particle_types
 use mod_fields
+use mod_vtk
 implicit none
 include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 private
-!public project_particles
 public projection
 public proj_f_interface, proj_one
 public write_particle_distribution_to_vtk, write_particle_distribution_to_h5 !< public for testing reasons, please don't use directly
@@ -46,12 +47,6 @@ interface
   end function proj_f_interface
 end interface
 
-
-type :: vtk_grid
-  integer :: nsub !< Number of subdivisions to make
-  real*4,allocatable, private  :: xyz (:,:) !< positions of points in vtk file
-  integer,allocatable, private :: ien (:,:) !< connectivity in vtk file
-end type
 
 !> Action to project all particle distributions and save them to vtk
 type, extends(io_action) :: projection
@@ -135,7 +130,7 @@ function new_projection(node_list, element_list, smoothing, smoothing2, proj_f, 
   character(len=*), intent(in), optional :: basename
   integer, intent(in), optional          :: decimal_digits
   integer, intent(in), optional          :: fractional_digits
-  integer :: my_id, ierr
+  integer :: my_id, ierr, my_nsub
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
@@ -147,12 +142,10 @@ function new_projection(node_list, element_list, smoothing, smoothing2, proj_f, 
   if (present(smoothing2)) new%smoothing2 = smoothing2
   if (present(to_vtk)) then
     if (to_vtk) then
-      allocate(new%vtk_grid)
-      new%vtk_grid%nsub = 4
-      if (present(nsub)) new%vtk_grid%nsub = nsub
+      my_nsub = 4
+      if (present(nsub)) my_nsub = nsub
       ! Precalculate the node positions in the vtk file and the connectivity
-      if (my_id .eq. 0) call prepare_write_particle_distribution_to_vtk(new%node_list, &
-          new%element_list, new%vtk_grid%nsub, new%vtk_grid%xyz, new%vtk_grid%ien)
+      if (my_id .eq. 0) new%vtk_grid = vtk_grid(new%node_list, new%element_list, my_nsub)
       ! We don't set the extension here since this is dynamically set in the do
       ! action (to support both vtk and h5 output)
     end if
@@ -264,8 +257,6 @@ subroutine project_only(this, sim)
       this%mumps_par%JOB = 3
       this%mumps_par%icntl(21) = 0 ! solution is available only on host
       this%mumps_par%icntl(4)  = 3 ! print only errors
-      this%mumps_par%icntl(10) = -1 ! iterative refinement of one step seems to work ok
-      this%mumps_par%icntl(11) = 1 ! error analysis
       if (my_id .eq. 0) then
         this%mumps_par%rhs = sum_rhs
       end if
@@ -703,68 +694,12 @@ mumps_par%icntl(5)  = 0 ! assembled form
 mumps_par%icntl(18) = 0 ! centralized input matrix (i.e. only on cpu 0)
 mumps_par%icntl(7)  = 7 ! compute symmetric permutation (PORD or SCOTCH autoselect)
 mumps_par%icntl(8)  = 8 ! scaling
-mumps_par%icntl(14) = 140 ! memory relaxation parameter
-mumps_par%icntl(10) = -2 ! iterative refinement
+mumps_par%icntl(14) = 80 ! memory relaxation parameter
 if (present(skip_factorisation) .and. skip_factorisation) then
 else
   call DMUMPS(mumps_par)
 endif
 end subroutine prepare_mumps_par
-
-
-
-!> Calculate the structure of the vtk file without putting in any scalars
-subroutine prepare_write_particle_distribution_to_vtk(node_list,element_list,nsub,xyz,ien)
-use data_structure
-use mod_interp, only: interp_RZ
-implicit none
-
-!> Input parameters
-type(type_node_list), intent(in)    :: node_list
-type(type_element_list), intent(in) :: element_list
-integer, intent(in)                 :: nsub !< Number of subdivisions of each element
-real*4,allocatable, intent(out)     :: xyz (:,:)
-integer,allocatable, intent(out)    :: ien (:,:)
-
-integer :: nnos, nnoel, nel, i, j, ielm, inode, k
-real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
-
-nnos = nsub*nsub*node_list%n_nodes
-allocate(xyz(3,nnos))
-
-nnoel = 4
-nel   = (nsub-1)*(nsub-1)*element_list%n_elements
-allocate(ien(nnoel,nel))
-
-inode   = 0
-ielm    = 0
-xyz     = 0
-ien     = 0
-
-! Create points for each element
-do i=1,element_list%n_elements
-  do j=1,nsub
-    s = float(j-1)/float(nsub-1)
-    ! Create nsub^2 points per element at regularly spaced intervals
-    do k=1,nsub
-      t = float(k-1)/float(nsub-1)
-      call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,Z,Z_s,Z_t)
-      inode = inode+1
-      xyz(1:3,inode) = real([R, Z, 0.d0], 4)
-    enddo
-  enddo
-
-  do j=1,nsub-1
-     do k=1,nsub-1
-        ielm        = ielm+1
-        ien(1,ielm) = inode - nsub*nsub + nsub*(j-1) + k-1       ! 0 based indices for VTK
-        ien(2,ielm) = inode - nsub*nsub + nsub*(j  ) + k-1
-        ien(3,ielm) = inode - nsub*nsub + nsub*(j  ) + k
-        ien(4,ielm) = inode - nsub*nsub + nsub*(j-1) + k
-     enddo
-  enddo
-enddo  ! n_elements
-end subroutine prepare_write_particle_distribution_to_vtk
 
 
 

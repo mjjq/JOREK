@@ -224,14 +224,20 @@ end subroutine default_flux_grid
 
 
 !> Project a function onto the JOREK elements
-subroutine project_f(node_list, element_list, f)
+subroutine project_f(node_list, element_list, f, smoothing, smoothing2)
   type(type_node_list), intent(inout) :: node_list
   type(type_element_list), intent(inout) :: element_list
   real*8, external :: f
+  real*8, optional, intent(in) :: smoothing, smoothing2 !< smoothing and hyper-smoothing
   type(DMUMPS_STRUC) :: p
   integer :: i, k, index
+  real*8 :: my_smoothing, my_smoothing2
 
-  call prepare_mumps_par(node_list, element_list, p, smoothing=0d0)
+  my_smoothing = 0.d0
+  my_smoothing2 = 0.d0
+  if (present(smoothing)) my_smoothing = smoothing
+  if (present(smoothing2)) my_smoothing2 = smoothing2
+  call prepare_mumps_par(node_list, element_list, p, smoothing=my_smoothing, smoothing2=my_smoothing2)
 
   ! Project manually
   p%JOB = 3

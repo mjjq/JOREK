@@ -10,8 +10,12 @@ use projection_helpers
 use fruit
 implicit none
 
-logical, parameter :: write_proj_output = .false. !< Set to true to write restart files with the projected density
-logical, parameter :: EXTRATEST = .TRUE. !< Set to .true. to do flux-aligned projection tests
+logical, parameter :: write_proj_output = .true. !< Set to true to write restart files with the projected density
+#ifdef PROJECTION_EXTRATEST
+  logical, parameter :: EXTRATEST = .true. !< Set to .true. to do flux-aligned projection tests
+#else
+  logical, parameter :: EXTRATEST = .false. !< Set to .true. to do flux-aligned projection tests
+#endif
 
 contains
 
@@ -132,6 +136,34 @@ end subroutine test_project_R4_square_n
 
 
 
+!> Peaked gaussian at R=1.0 with width a.
+!> On a grid from 0.5 to 1.5 in R, -0.5 to 0.5 in Z the integral is given by
+!> \[
+!> a^2 2\pi^2 \erf\left(\frac{0.5}{a}\right) \erf\left(\frac{0.5}{a}\right)
+!> \]
+!> for a=5e-3 this yields 2pi*0.0000785398 (where the volume is 2pi)
+!> the RMS value is the integral of (f_peak - <mean>)^2 over the volume
+!> and is given by 0.0000397457
+function f_peak(R, Z)
+  real*8, intent(in) :: R, Z
+  real*8 :: f_peak
+  real*8, parameter :: a = 5d-3
+  f_peak = exp(-((R-1.d0)**2+Z**2)/a**2)
+end function f_peak
+
+!> Project a peaked function onto a square grid
+subroutine test_project_peak_square_20_20
+  type(type_node_list) :: node_list
+  type(type_element_list) :: element_list
+  real*8 :: ref = 0.785398d-4
+  real*8 :: rms = 0.397457d-4
+  call default_square_grid(node_list, element_list, 20)
+  call project_f_with_assert_and_write(node_list, element_list, f_peak, ref, rms,&
+      'peak_square_20_20', mean_tol=ref, rms_tol=3d-6, smoothing=1d-4, smoothing2=4d-8)
+  ! the mean-tol is enormous since we do not reproduce this well for very peaked distributions, with ngauss=4
+  ! if ngauss=8 we get to within 20%, but the RMS is much larger
+end subroutine test_project_peak_square_20_20
+
 
 
 
@@ -140,21 +172,29 @@ end subroutine test_project_R4_square_n
 !> Helper function:
 !> Project a function f onto grid in node_list and element_list
 !> and test for mean and RMS value. Optionally write to file for visual inspection.
-subroutine project_f_with_assert_and_write(node_list, element_list, f, mean, RMS, name, rms_tol)
+subroutine project_f_with_assert_and_write(node_list, element_list, f, mean, RMS, name, mean_tol, rms_tol, smoothing, smoothing2)
   type(type_node_list), intent(inout) :: node_list
   type(type_element_list), intent(inout) :: element_list
   real*8, external :: f
   real*8, intent(in) :: mean
   real*8, intent(in) :: rms
-  real*8, intent(in), optional :: rms_tol
+  real*8, intent(in), optional :: mean_tol, rms_tol
+  real*8, intent(in), optional :: smoothing, smoothing2 !< smoothing and hyper-smoothing factor
+  real*8 :: my_smoothing, my_smoothing2
   character(len=*), intent(in) :: name
-  real*8 :: m, e, my_rms_tol
-  call project_f(node_list, element_list, f)
+  real*8 :: m, e, my_rms_tol, my_mean_tol
+  my_smoothing = 0.d0
+  my_smoothing2 = 0.d0
+  if (present(smoothing)) my_smoothing = smoothing
+  if (present(smoothing2)) my_smoothing2 = smoothing2
+  call project_f(node_list, element_list, f, smoothing, smoothing2)
   ! test rms
+  my_mean_tol = 1d-12
   my_rms_tol = 1d-12
+  if (present(mean_tol)) my_mean_tol = mean_tol
   if (present(rms_tol)) my_rms_tol = rms_tol
   call elements_mean_rms(node_list, element_list, f, m, e)
-  call assert_equals(mean, m, 1d-12, 'mean value M')
+  call assert_equals(mean, m, my_mean_tol, 'mean value M')
   call assert_equals(RMS, e, my_rms_tol, 'rms error ok')
   if (write_proj_output) then
     call write_particle_distribution_to_h5(node_list, element_list, &
@@ -184,7 +224,7 @@ subroutine test_projection_matrix_square_2_2
   node_list%n_nodes = 0
   element_list%n_elements = 0
   call grid_bezier_square(n_R, n_Z, R_geo-amin,R_geo+amin, Z_geo-amin, Z_geo+amin, .true., node_list, element_list)
-  call prepare_mumps_par(node_list, element_list, p, smoothing=0d0, skip_factorisation=.true.)
+  call prepare_mumps_par(node_list, element_list, p, smoothing=0d0, skip_factorisation=.true., smoothing2=0d0)
   do i=1,size(p%irn)
     if (p%irn(i) == 1) call assert_equals(ref(p%jcn(i)), p%A(i), tol, 'matrix element must match reference')
   end do
@@ -218,9 +258,9 @@ subroutine test_omp_projection_matrix_construction
   !$omp parallel
     !$n_threads = omp_get_num_threads()
   !$omp end parallel
-  call prepare_mumps_par(node_list, element_list, p_par, smoothing=0d0, skip_factorisation=.true.)
+  call prepare_mumps_par(node_list, element_list, p_par, smoothing=0d0, skip_factorisation=.true.,smoothing2=0.d0)
   !$ call omp_set_num_threads(1)
-  call prepare_mumps_par(node_list, element_list, p_seq, smoothing=0d0, skip_factorisation=.true.)
+  call prepare_mumps_par(node_list, element_list, p_seq, smoothing=0d0, skip_factorisation=.true.,smoothing2=0.d0)
   !$ call omp_set_num_threads(n_threads)
 
   ! Check that p_par and p_seq contain the same matrix

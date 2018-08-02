@@ -34,7 +34,6 @@ public projection
 public proj_f_interface, proj_one
 public write_particle_distribution_to_vtk, write_particle_distribution_to_h5 !< public for testing reasons, please don't use directly
 public prepare_mumps_par, sample_rhs !< public for testing reasons
-public project_to_vtk, project_to_h5 !< DEPRECATED
 public DMUMPS_STRUC
 
 interface
@@ -59,6 +58,7 @@ type, extends(io_action) :: projection
   type(type_node_list), allocatable    :: node_list !< node lists to save particle projections in
   type(type_element_list), allocatable :: element_list
   real*8 :: smoothing !< Smoothing factor used for this projection
+  real*8 :: smoothing2 !< hyper-smoothing factor used for this projection
   type (DMUMPS_STRUC), private :: mumps_par !< matrix is factored by mumps and stored here
   integer, public  :: n = 1 !< Number of analysis steps per projection step
   integer, private :: i = 0 !< Current index of analysis steps
@@ -80,18 +80,6 @@ end type projection
 interface projection
   module procedure new_projection
 end interface projection
-
-! Here for legacy reasons, please don't use anymore
-type, extends(projection) :: project_to_vtk
-end type
-interface project_to_vtk
-  module procedure new_project_to_vtk
-end interface project_to_vtk
-type, extends(projection) :: project_to_h5
-end type project_to_h5
-interface project_to_h5
-  module procedure new_project_to_h5
-end interface project_to_h5
 
 contains
 
@@ -131,13 +119,13 @@ end function proj_q
 
 !> Constructor for project_particles
 !> Be sure to use keyword arguments when initializing, to avoid confusion
-function new_projection(node_list, element_list, smoothing, proj_f, n, to_h5, to_vtk, &
+function new_projection(node_list, element_list, smoothing, smoothing2, proj_f, n, to_h5, to_vtk, &
     nsub, filename, basename, decimal_digits, fractional_digits) result(new)
   use mpi
   type(projection) :: new
   type(type_node_list), intent(in)       :: node_list
   type(type_element_list), intent(in)    :: element_list
-  real*8, intent(in), optional           :: smoothing
+  real*8, intent(in), optional           :: smoothing, smoothing2 !< normal and hyper-smoothing
   procedure(proj_f_interface), optional  :: proj_f !< Function to map over particles before projection
   integer, intent(in), optional          :: n !< Number of analysis steps to each projection step (1 if omitted)
   logical, intent(in), optional          :: to_h5 !< Write HDF5 output after projecting (false if omitted)
@@ -154,7 +142,9 @@ function new_projection(node_list, element_list, smoothing, proj_f, n, to_h5, to
   allocate(new%node_list,    source=node_list)
   allocate(new%element_list, source=element_list)
   new%smoothing = 0.d0
+  new%smoothing2 = 0.d0
   if (present(smoothing)) new%smoothing = smoothing
+  if (present(smoothing2)) new%smoothing2 = smoothing2
   if (present(to_vtk)) then
     if (to_vtk) then
       allocate(new%vtk_grid)
@@ -179,7 +169,7 @@ function new_projection(node_list, element_list, smoothing, proj_f, n, to_h5, to
   new%name = "Project"
   new%log = .true.
 
-  call prepare_mumps_par(new%node_list, new%element_list, new%mumps_par, new%smoothing)
+  call prepare_mumps_par(new%node_list, new%element_list, new%mumps_par, new%smoothing, new%smoothing2)
   
   if (present(proj_f)) new%proj_f => proj_f
 end function new_projection
@@ -189,76 +179,6 @@ subroutine close_mumps(this)
   this%mumps_par%JOB = -2
   call DMUMPS(this%mumps_par)
 end subroutine close_mumps
-
-
-!> Constructor for project_to_vtk
-!> Be sure to use keyword arguments when initializing, to avoid confusion
-function new_project_to_vtk(node_list, element_list, smoothing, nsub, filename, basename, decimal_digits, fractional_digits) result(new)
-  use mpi
-  type(project_to_vtk) :: new
-  type(projection) :: new_base
-  type(type_node_list), intent(in)       :: node_list
-  type(type_element_list), intent(in)    :: element_list
-  real*8, intent(in)                     :: smoothing
-  integer, intent(in), optional          :: nsub !< number of subdivisions of the finite elements
-  character(len=*), intent(in), optional :: filename
-  character(len=*), intent(in), optional :: basename
-  integer, intent(in), optional          :: decimal_digits
-  integer, intent(in), optional          :: fractional_digits
-  integer :: my_id, ierr
-  new_base = projection(node_list, element_list, smoothing, &
-      to_h5=.false., to_vtk=.true., nsub=nsub, filename=filename, &
-      basename=basename, decimal_digits=decimal_digits, &
-      fractional_digits=fractional_digits)
-  write(*,*) "DEPRECATION WARNING: project_to_vtk has been replaced with type(projection). Please consider updating your code"
-  call copy_project_h5_vtk(new, new_base)
-end function new_project_to_vtk
-
-
-!> Subroutine needed for backwards compatibility with new_project_to_{vtk,h5}
-!> Copy over all variables one by one...
-subroutine copy_project_h5_vtk(out, in)
-  class(projection), intent(out) :: out
-  type(projection), intent(in) :: in
-  ! Projection
-  out%node_list = in%node_list
-  out%element_list = in%element_list
-  out%MUMPS_PAR = in%MUMPS_PAR
-  out%n = in%n
-  out%vtk_grid = in%vtk_grid
-  out%to_h5 = in%to_h5
-  ! IO_action
-  out%filename = in%filename
-  out%basename = in%basename
-  out%decimal_digits = in%decimal_digits
-  out%fractional_digits = in%fractional_digits
-  out%extension = in%extension
-  out%proj_f => in%proj_f
-end subroutine copy_project_h5_vtk
-
-
-
-!> Constructor for project_to_h5
-!> Be sure to use keyword arguments when initializing, to avoid confusion
-function new_project_to_h5(node_list, element_list, smoothing, filename, basename, decimal_digits, fractional_digits) result(new)
-  use mpi
-  type(project_to_h5) :: new
-  type(projection) :: new_base
-  type(type_node_list), intent(in)       :: node_list
-  type(type_element_list), intent(in)    :: element_list
-  real*8, intent(in)                     :: smoothing
-  character(len=*), intent(in), optional :: filename
-  character(len=*), intent(in), optional :: basename
-  integer, intent(in), optional          :: decimal_digits
-  integer, intent(in), optional          :: fractional_digits
-  integer :: my_id, ierr
-  new_base = projection(node_list, element_list, smoothing, &
-      to_h5=.true., to_vtk=.false., filename=filename, &
-      basename=basename, decimal_digits=decimal_digits, &
-      fractional_digits=fractional_digits)
-  write(*,*) "DEPRECATION WARNING: project_to_h5 has been replaced with type(projection). Please consider updating your code"
-  call copy_project_h5_vtk(new, new_base)
-end function new_project_to_h5
 
 
 subroutine project(this, sim, ev)
@@ -343,7 +263,9 @@ subroutine project_only(this, sim)
       ! Compute the solution of Ax=b (b = RHS)
       this%mumps_par%JOB = 3
       this%mumps_par%icntl(21) = 0 ! solution is available only on host
-      this%mumps_par%icntl(4)  = 1 ! print only errors
+      this%mumps_par%icntl(4)  = 3 ! print only errors
+      this%mumps_par%icntl(10) = -1 ! iterative refinement of one step seems to work ok
+      this%mumps_par%icntl(11) = 1 ! error analysis
       if (my_id .eq. 0) then
         this%mumps_par%rhs = sum_rhs
       end if
@@ -488,36 +410,7 @@ end subroutine save_to_vtk
 
 
 
-!> Action for projecting all particles and writing output to vtk
-!> DEPRECATED: use new projection type instead
-subroutine project_and_save_to_vtk(this, sim, ev)
-  use mod_event
-  class(project_to_vtk), intent(inout) :: this
-  type(particle_sim), intent(inout)    :: sim
-  type(event), intent(inout), optional :: ev
-  call sample_rhs(this, sim)
-  call project_only(this, sim)
-  call save_to_vtk(this, sim)
-end subroutine project_and_save_to_vtk
-
-!> Action for projecting all particles and writing output to vtk
-!> DEPRECATED: use new projection type instead
-subroutine project_and_save_to_h5(this, sim, ev)
-  use mod_event
-  class(project_to_h5), intent(inout)  :: this
-  type(particle_sim), intent(inout)    :: sim
-  type(event), intent(inout), optional :: ev
-  call sample_rhs(this, sim)
-  call project_only(this, sim)
-  call save_to_h5(this, sim)
-end subroutine project_and_save_to_h5
-
-
-
-
-
-
-!> Action for projecting all particles and writing output to vtk
+!> Action for projecting all particles and writing output to a hdf5 file
 subroutine save_to_h5(this, sim)
   use mpi
   use mod_event
@@ -567,8 +460,8 @@ end subroutine save_to_h5
 !> x is a vector (R,Z,phi) and dV is r dr dphi
 !> divide by 1 or 2pi on both sides (LHS gets 2pi for n=0 mode, 1pi for other modes)
 !>
-!> See also [project_particles]
-subroutine prepare_mumps_par(node_list, element_list, mumps_par, smoothing, skip_factorisation)
+!> See also [project_particles] and [mod_elt_matrix] for reference of the integration method
+subroutine prepare_mumps_par(node_list, element_list, mumps_par, smoothing, smoothing2, skip_factorisation)
 use phys_module
 use data_structure
 use basis_at_gaussian
@@ -580,20 +473,22 @@ type (type_node_list), intent(in)    :: node_list !< A copy of the node list whi
 type (type_element_list), intent(in) :: element_list
 type (DMUMPS_STRUC), intent(inout)   :: mumps_par
 real*8, intent(in)                   :: smoothing
+real*8, intent(in)                   :: smoothing2
 logical, intent(in), optional        :: skip_factorisation
 
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 
-real*8     :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1)), RHS(n_vertex_max*(n_order+1),element_list%n_elements)
+real*8     :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1))
 real*8     :: wgauss2(n_gauss)
-real*8     :: x_g(n_gauss,n_gauss), x_s(n_gauss,n_gauss), x_t(n_gauss,n_gauss)
-real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
-real*8     :: R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3)
-real*8     :: v, v_x, v_y, psi, psi_x, psi_y, wst, area, volume
-integer    :: i, j, k, l, m, i_tor, ilarge, index_large_i, index_large_k, inode, knode
+real*8, dimension(n_gauss,n_gauss) :: x_g, x_s, x_t, x_ss, x_tt, x_st, &
+                                      y_g, y_s, y_t, y_ss, y_tt, y_st
+real*8     :: v, v_s, v_t, v_ss, v_st, v_tt, v_x, v_y, v_xx, v_xy, v_yy
+real*8     :: p, p_s, p_t, p_ss, p_st, p_tt, p_x, p_y, p_xx, p_xy, p_yy
+real*8     :: wst, area, volume, xjac, xjac_x, xjac_y
+integer    :: i, j, k, l, m, ilarge, index_large_i, index_large_k, inode, knode
 integer    :: nz_AA, n_AA, i_elm, index_ij, index_kl
-integer    :: ms, mt, n_p, my_id, ierr
+integer    :: ms, mt, my_id, ierr
 
 ! Initialise MUMPS
 mumps_par%COMM = MPI_COMM_WORLD
@@ -629,11 +524,15 @@ volume = 0.
 write(*,*) '*******************************************'
 write(*,*) '* constructing particle projection matrix *'
 write(*,*) '*******************************************'
-!$omp parallel do default(none) & ! instead of none, bugfix for gfortran: 
-!$omp shared(element_list, node_list, H, H_s, H_t, mumps_par, wgauss2, smoothing) &
+!$omp parallel do default(none) &
+!$omp shared(element_list, node_list, H, H_s, H_t, H_ss, H_st, H_tt, mumps_par, wgauss2, smoothing, smoothing2) &
 !$omp private(ELM, i_elm, element, nodes, i, j, k, l, ms, mt, &
-!$omp         x_g, y_g, x_s, x_t, y_s, y_t, wst, xjac, v, v_x, v_y, &
-!$omp         index_ij, index_kl, psi, psi_x, psi_y, ilarge, &
+!$omp         x_g, x_s, x_t, x_ss, x_st, x_tt, &
+!$omp         y_g, y_s, y_t, y_ss, y_st, y_tt, &
+!$omp         v, v_s, v_t, v_ss, v_st, v_tt, v_x, v_y, v_xx, v_xy, v_yy, &
+!$omp         p, p_s, p_t, p_ss, p_st, p_tt, p_x, p_y, p_xx, p_xy, p_yy, &
+!$omp         wst, xjac, xjac_x, xjac_y, &
+!$omp         index_ij, index_kl, ilarge, &
 !$omp         inode, index_large_i, knode, index_large_k) &
 !$omp reduction(+:area,volume)
 do i_elm=1,element_list%n_elements
@@ -645,19 +544,27 @@ do i_elm=1,element_list%n_elements
   enddo
 
   ! Set up gauss points in this element
-  x_g = 0.d0; x_s = 0.d0; x_t = 0.d0; y_g = 0.d0; y_s = 0.d0; y_t = 0.d0
+  x_g = 0.d0; x_s = 0.d0; x_t = 0.d0; x_ss = 0.d0; x_st = 0.d0; x_tt = 0.d0
+  y_g = 0.d0; y_s = 0.d0; y_t = 0.d0; y_ss = 0.d0; y_st = 0.d0; y_tt = 0.d0
   do i=1,n_vertex_max
     do j=1,n_order+1
       do ms=1, n_gauss
         do mt=1, n_gauss
-          x_g(ms,mt) = x_g(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H(i,j,ms,mt)
-          y_g(ms,mt) = y_g(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H(i,j,ms,mt)
+          x_g(ms,mt)  = x_g(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H(i,j,ms,mt)
+          x_s(ms,mt)  = x_s(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
+          x_t(ms,mt)  = x_t(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
 
-          x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
-          x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
+          x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
+          x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_st(i,j,ms,mt)
+          x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
 
-          y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
-          y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+          y_g(ms,mt)  = y_g(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H(i,j,ms,mt)
+          y_s(ms,mt)  = y_s(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
+          y_t(ms,mt)  = y_t(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+
+          y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
+          y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
+          y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
         enddo
       enddo
     enddo
@@ -669,6 +576,14 @@ do i_elm=1,element_list%n_elements
       wst = wgauss2(ms)*wgauss2(mt)
       xjac =  x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
 
+      xjac_x  = (x_ss(ms,mt)*y_t(ms,mt)**2 - y_ss(ms,mt)*x_t(ms,mt)*y_t(ms,mt) - 2.d0*x_st(ms,mt)*y_s(ms,mt)*y_t(ms,mt)   &
+              + y_st(ms,mt)*(x_s(ms,mt)*y_t(ms,mt) + x_t(ms,mt)*y_s(ms,mt))                                               &
+              + x_tt(ms,mt)*y_s(ms,mt)**2 - y_tt(ms,mt)*x_s(ms,mt)*y_s(ms,mt)) / xjac
+
+      xjac_y  = (y_tt(ms,mt)*x_s(ms,mt)**2 - x_tt(ms,mt)*y_s(ms,mt)*x_s(ms,mt) - 2.d0*y_st(ms,mt)*x_t(ms,mt)*x_s(ms,mt)   &
+              + x_st(ms,mt)*(y_t(ms,mt)*x_s(ms,mt) + y_s(ms,mt)*x_t(ms,mt))                                               &
+              + y_ss(ms,mt)*x_t(ms,mt)**2 - x_ss(ms,mt)*y_t(ms,mt)*x_t(ms,mt)) / xjac
+
       area   = area   + xjac * wst
       volume = volume + TWOPI * x_g(ms,mt) * xjac * wst
 
@@ -676,19 +591,69 @@ do i_elm=1,element_list%n_elements
         do j=1,n_order+1
           index_ij = (i-1)*(n_order+1) + j
 
-          v   = h(i,j,ms,mt)  * element%size(i,j)
-          v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
-          v_y = (- x_t(ms,mt) * h_s(i,j,ms,mt) + x_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
+          v   = h(i,j,ms,mt)   * element%size(i,j)
+          v_s = h_s(i,j,ms,mt) * element%size(i,j)
+          v_t = h_t(i,j,ms,mt) * element%size(i,j)
+
+          v_x = (  y_t(ms,mt) * v_s - y_s(ms,mt) * v_t) / xjac
+          v_y = (- x_t(ms,mt) * v_s + x_s(ms,mt) * v_t) / xjac
+
+          v_ss = h_ss(i,j,ms,mt) * element%size(i,j)
+          v_tt = h_tt(i,j,ms,mt) * element%size(i,j)
+          v_st = h_st(i,j,ms,mt) * element%size(i,j)
+
+          v_xx = (v_ss * y_t(ms,mt)**2 - 2.d0*v_st * y_s(ms,mt)*y_t(ms,mt) + v_tt * y_s(ms,mt)**2  &
+               + v_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                          &
+               + v_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2             &
+               - xjac_x * (v_s * y_t(ms,mt) - v_t * y_s(ms,mt)) / xjac**2
+
+          v_yy = (v_ss * x_t(ms,mt)**2 - 2.d0*v_st * x_s(ms,mt)*x_t(ms,mt) + v_tt * x_s(ms,mt)**2  &
+               + v_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                          &
+               + v_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )     / xjac**2          &
+               - xjac_y * (- v_s * x_t(ms,mt) + v_t * x_s(ms,mt) ) / xjac**2
+
+          v_xy = (- v_ss * y_t(ms,mt)*x_t(ms,mt) - v_tt * x_s(ms,mt)*y_s(ms,mt)                    &
+               + v_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                         &
+               - v_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                         &
+               - v_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2           &
+               - xjac_x * (- v_s * x_t(ms,mt) + v_t * x_s(ms,mt) )   / xjac**2
+
           do k=1,n_vertex_max
             do l=1,n_order+1
               index_kl = (k-1)*(n_order+1) + l
 
-              psi   = h(k,l,ms,mt) * element%size(k,l)
-              psi_x = (   y_t(ms,mt) * h_s(k,l,ms,mt) - y_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
-              psi_y = ( - x_t(ms,mt) * h_s(k,l,ms,mt) + x_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
+              p   = h(k,l,ms,mt)   * element%size(k,l)
+              p_s = h_s(k,l,ms,mt) * element%size(k,l)
+              p_t = h_t(k,l,ms,mt) * element%size(k,l)
 
-              ELM(index_ij,index_kl) = ELM(index_ij,index_kl) + psi * v * xjac * x_g(ms,mt) * wst &
-                                     + smoothing * (psi_x * v_x + psi_y * v_y) * xjac * x_g(ms,mt) * wst
+              p_ss = h_ss(k,l,ms,mt) * element%size(k,l)
+              p_tt = h_tt(k,l,ms,mt) * element%size(k,l)
+              p_st = h_st(k,l,ms,mt) * element%size(k,l)
+
+              p_x = (  y_t(ms,mt) * p_s - y_s(ms,mt) * p_t) / xjac
+              p_y = (- x_t(ms,mt) * p_s + x_s(ms,mt) * p_t) / xjac
+
+              p_xx = (p_ss * y_t(ms,mt)**2 - 2.d0*p_st * y_s(ms,mt)*y_t(ms,mt) + p_tt * y_s(ms,mt)**2  &
+                   + p_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                          &
+                   + p_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2             &
+                   - xjac_x * (p_s * y_t(ms,mt) - p_t * y_s(ms,mt)) / xjac**2
+
+              p_yy = (p_ss * x_t(ms,mt)**2 - 2.d0*p_st * x_s(ms,mt)*x_t(ms,mt) + p_tt * x_s(ms,mt)**2  &
+                   + p_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                          &
+                   + p_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )     / xjac**2          &
+                   - xjac_y * (- p_s * x_t(ms,mt) + p_t * x_s(ms,mt) ) / xjac**2
+
+              p_xy = (- p_ss * y_t(ms,mt)*x_t(ms,mt) - p_tt * x_s(ms,mt)*y_s(ms,mt)                    &
+                   + p_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                         &
+                   - p_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                         &
+                   - p_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2           &
+                   - xjac_x * (- p_s * x_t(ms,mt) + p_t * x_s(ms,mt) )   / xjac**2
+
+
+              ELM(index_ij,index_kl) = ELM(index_ij,index_kl) &
+                                     + p * v * xjac * x_g(ms,mt) * wst &
+                                     + smoothing * (p_x * v_x + p_y * v_y) * xjac * x_g(ms,mt) * wst &
+                                     + smoothing2 * (v_xx + v_x/x_g(ms,mt) + v_yy)*(p_xx + p_x/x_g(ms,mt) + p_yy) * xjac * wst
             enddo
           enddo
         enddo
@@ -732,12 +697,14 @@ end if
 mumps_par%JOB       = 4
 mumps_par%n         = n_AA
 mumps_par%nz        = nz_AA
+mumps_par%icntl(2)  = 6 ! print diagnostics, statistics and warnings to stderr
+mumps_par%icntl(4)  = 3 ! print many things
 mumps_par%icntl(5)  = 0 ! assembled form
 mumps_par%icntl(18) = 0 ! centralized input matrix (i.e. only on cpu 0)
 mumps_par%icntl(7)  = 7 ! compute symmetric permutation (PORD or SCOTCH autoselect)
-mumps_par%icntl(8)  = 7 ! scaling
-mumps_par%icntl(14) = 80 ! memory relaxation parameter
-mumps_par%icntl(4)  = 1 ! 2=Print errors, warnings and main statistics
+mumps_par%icntl(8)  = 8 ! scaling
+mumps_par%icntl(14) = 140 ! memory relaxation parameter
+mumps_par%icntl(10) = -2 ! iterative refinement
 if (present(skip_factorisation) .and. skip_factorisation) then
 else
   call DMUMPS(mumps_par)
@@ -789,7 +756,7 @@ do i=1,element_list%n_elements
 
   do j=1,nsub-1
      do k=1,nsub-1
-        ielm	  = ielm+1
+        ielm        = ielm+1
         ien(1,ielm) = inode - nsub*nsub + nsub*(j-1) + k-1       ! 0 based indices for VTK
         ien(2,ielm) = inode - nsub*nsub + nsub*(j  ) + k-1
         ien(3,ielm) = inode - nsub*nsub + nsub*(j  ) + k

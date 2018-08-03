@@ -956,6 +956,7 @@ enddo  ! n_elements
    enddo
   endif
 #endif
+
 #if (JOREK_MODEL == 501)
  if (include_radiation) then
 
@@ -1028,7 +1029,7 @@ enddo  ! n_elements
      beta_imp     = m_i_over_m_imp*Z_imp - 1.
 
      ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
-
+     scalars(i,5) = (r0_corr + beta_imp * rn0_corr)                           ! electron density (JOREK units)
 
   !-------------------------------------------
   ! --- Radiative function, if flag_adas is enabled use interpolation, if not use simple model
@@ -1193,17 +1194,14 @@ if (SI_units) then
 
   endif
 #endif
+
 #if (JOREK_MODEL == 501)
-
   if (include_radiation) then
-   eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0)
-
    scalars(i,s_radiation+1) = scalars(i,s_radiation+1)/(K_BOLTZ*MU_ZERO)
    scalars(i,s_radiation+2) = scalars(i,s_radiation+2)*((central_density*1.d20)**2.)/coef_rad_1
-   scalars(i,s_radiation+3) = eta_Sp * (1.d6*scalars(i,3))**2.d0
+   scalars(i,s_radiation+3) = scalars(i,s_radiation+3)/(((central_mass*MASS_PROTON*central_density*1.d20)**0.5)*(MU_ZERO**1.5)) 
    scalars(i,s_radiation+4) = scalars(i,s_radiation+4)
   end if
-
 #endif /*(JOREK_MODEL >= 500)*/
 
   enddo  ! nnos

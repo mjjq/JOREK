@@ -239,8 +239,17 @@ subroutine project_only(this, sim)
   ! Safety checks
   if (.not. allocated(sim%groups)) return
 
-  n_rhs = size(this%rhs,5)
-  n_rhs_f = size(this%rhs_f,5)
+  if (.not. allocated(this%rhs)) then
+    n_rhs = 0
+  else
+    n_rhs = size(this%rhs,5)
+  end if
+
+  if (.not. allocated(this%rhs_f)) then
+    n_rhs_f = 0
+  else 
+    n_rhs_f = size(this%rhs_f,5)
+  end if
   if (n_rhs .gt. n_var .and. sim%my_id .eq. 0) then
     write(*,*) 'WARNING: too many rhs-es supplied, skipping after ', n_var
     n_rhs = n_var

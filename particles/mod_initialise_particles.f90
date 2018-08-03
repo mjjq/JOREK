@@ -643,7 +643,7 @@ end subroutine set_particle_weights_canonical_maxwellian
 !> Normalize particles with the result of the projection of the first group
 subroutine normalize_with_projection(proj, particles, i_group)
   use mod_project_particles
-  type(project_to_vtk), intent(in) :: proj
+  type(projection), intent(in) :: proj
   class(particle_base), dimension(:), intent(inout) :: particles
   integer, intent(in), optional :: i_group
 

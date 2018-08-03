@@ -12,10 +12,6 @@
 !>   - tools/mod_radiation.f90
 !>
 !>
-!> Samples are taken every t_s.
-!> Projections are performed every t_p = n t_s. (integer n >= 1)
-!> If multiple samples are taken they are averaged over the integration time.
-!> 
 !> Projected results can be written to vtk or hdf5 by specifying the appropriate
 !> options at creation time of project_particles_base.
 !>
@@ -32,7 +28,9 @@ implicit none
 include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 private
 public projection
-public proj_f_interface, proj_one
+public new_projection !< The constructor function is also public since it provides better error handling than the real constructor
+public proj_f
+public proj_f_interface, proj_one, proj_q
 public write_particle_distribution_to_vtk, write_particle_distribution_to_h5 !< public for testing reasons, please don't use directly
 public prepare_mumps_par, sample_rhs !< public for testing reasons
 public DMUMPS_STRUC
@@ -47,27 +45,42 @@ interface
   end function proj_f_interface
 end interface
 
+!> A wrapper type to contain a projection function and a group to apply it to
+type :: proj_f
+  procedure(proj_f_interface), nopass, pointer :: f
+  integer :: group !< group number to apply this function to
+end type proj_f
+interface proj_f
+  module procedure new_proj_f !< The constructor for this type
+end interface proj_f
 
-!> Action to project all particle distributions and save them to vtk
+!> Action to project all particle distributions and save them to vtk.
+!> You must use the (new_)projection() constructor to set this up.
+!> At construction time the matrix is solved.
 type, extends(io_action) :: projection
   type(type_node_list), allocatable    :: node_list !< node lists to save particle projections in
   type(type_element_list), allocatable :: element_list
+
   real*8 :: smoothing !< Smoothing factor used for this projection
   real*8 :: smoothing2 !< hyper-smoothing factor used for this projection
-  type (DMUMPS_STRUC), private :: mumps_par !< matrix is factored by mumps and stored here
-  integer, public  :: n = 1 !< Number of analysis steps per projection step
-  integer, private :: i = 0 !< Current index of analysis steps
-
-  procedure(proj_f_interface), nopass, pointer :: proj_f => proj_one !< Transformation routine
 
   !> Output storage (optional)
   type(vtk_grid), allocatable, private :: vtk_grid !< if allocated output to vtk
   logical, public :: to_h5 = .false. !< Output to hdf5 file
 
-  !> Temporary storage
-  real*8, dimension(:,:,:,:), allocatable :: rhs !< dim (n_vertex_max*(n_order+1),n_elements,n_tor,n_groups)
+  !> Right-hand side
+  type(proj_f), dimension(:), allocatable :: f !< List of projection transformations to use (n_proj)
+  real*8, dimension(:,:,:,:,:), allocatable :: rhs !< dim (n_vertex_max,n_order+1,n_elements,n_tor,n_proj2)
   !< right-hand side for accumulation during sampling
-  !< not private because we access it in unit tests in particle_projection_spec.f90
+  !< assumed to be filled by the user. Will be MPI_Reduced (+) before projecting
+  !< n_proj + n_proj2 should be less than n_var (extra input will be ignored)
+  !< After projection this will be zeroed but not deallocated
+
+  real*8, dimension(:,:,:,:,:), private, allocatable :: rhs_f !< dim (n_vertex_max,n_order+1,n_elements,n_tor,n_proj) storage
+  !< location for proj_f output
+
+  !> Internal variables
+  type (DMUMPS_STRUC), private :: mumps_par !< matrix is factored by mumps and stored here
 contains
   procedure :: do => project
   procedure :: close_mumps => close_mumps
@@ -78,6 +91,10 @@ end interface projection
 
 contains
 
+!*****************************************************************
+!* Example projection functions for generating a right-hand-side *
+!*****************************************************************
+
 !> Project the particle density by using transformation function 1
 pure function proj_one(sim, group, particle)
   type(particle_sim), intent(in) :: sim
@@ -86,7 +103,6 @@ pure function proj_one(sim, group, particle)
   real*8 :: proj_one
   proj_one = 1.d0
 end function proj_one
-
 
 !> Project the particle charge by using transformation function q
 !> (only valid for particles of type kinetic(_leapfrog) or gc
@@ -111,18 +127,26 @@ pure function proj_q(sim, group, particle)
 end function proj_q
 
 
+!> Constructor for projection function
+function new_proj_f(f, group)
+  type(proj_f) :: new_proj_f
+  procedure(proj_f_interface), pointer, intent(in) :: f
+  integer, intent(in) :: group
+  new_proj_f%f => f
+  new_proj_f%group = group
+end function new_proj_f
+  
 
 !> Constructor for project_particles
 !> Be sure to use keyword arguments when initializing, to avoid confusion
-function new_projection(node_list, element_list, smoothing, smoothing2, proj_f, n, to_h5, to_vtk, &
+function new_projection(node_list, element_list, smoothing, smoothing2, f, to_h5, to_vtk, &
     nsub, filename, basename, decimal_digits, fractional_digits) result(new)
   use mpi
   type(projection) :: new
   type(type_node_list), intent(in)       :: node_list
   type(type_element_list), intent(in)    :: element_list
   real*8, intent(in), optional           :: smoothing, smoothing2 !< normal and hyper-smoothing
-  procedure(proj_f_interface), optional  :: proj_f !< Function to map over particles before projection
-  integer, intent(in), optional          :: n !< Number of analysis steps to each projection step (1 if omitted)
+  type(proj_f), intent(in), dimension(:), optional :: f !< Type with function to map over particles before projection
   logical, intent(in), optional          :: to_h5 !< Write HDF5 output after projecting (false if omitted)
   logical, intent(in), optional          :: to_vtk !< Write vtk output after projecting (false if omitted)
   integer, intent(in), optional          :: nsub !< number of subdivisions of the finite elements
@@ -153,8 +177,6 @@ function new_projection(node_list, element_list, smoothing, smoothing2, proj_f, 
   if (present(to_h5)) new%to_h5 = to_h5
 
   new%basename = "proj"
-  new%n = 1
-  if (present(n)) new%n = n
   if (present(filename)) new%filename = filename
   if (present(basename)) new%basename = basename
   if (present(decimal_digits)) new%decimal_digits = decimal_digits
@@ -164,7 +186,7 @@ function new_projection(node_list, element_list, smoothing, smoothing2, proj_f, 
 
   call prepare_mumps_par(new%node_list, new%element_list, new%mumps_par, new%smoothing, new%smoothing2)
   
-  if (present(proj_f)) new%proj_f => proj_f
+  if (present(f)) new%f = f
 end function new_projection
 
 subroutine close_mumps(this)
@@ -175,40 +197,29 @@ end subroutine close_mumps
 
 
 subroutine project(this, sim, ev)
-  use mpi
   use mod_event
-  !$ use omp_lib
   class(projection), intent(inout) :: this
   type(particle_sim), intent(inout)    :: sim
   type(event), intent(inout), optional :: ev
-  integer :: i_group, i_tor
 
-  ! Sample
+  ! Sample projection functions for each particle
   call sample_rhs(this, sim)
-  this%i = this%i + 1
 
-  ! Project and save
-  if (this%i .eq. this%n) then
-    ! Normalize RHS with number of samples
-    !$omp parallel default(none) shared(this) private(i_group, i_tor)
-    do i_group=1,size(this%rhs,4)
-      !$omp do
-      do i_tor=1,size(this%rhs,3)
-        this%rhs(:,:,i_tor,i_group) = this%rhs(:,:,i_tor,i_group) * (1.d0/real(this%n,8))
-      end do
-      !$omp end do
-    end do
-    !$omp end parallel
-    call project_only(this, sim)
+  ! Project all right-hand sides
+  call project_only(this, sim)
 
-    if (this%to_h5) call save_to_h5(this, sim)
-    if (allocated(this%vtk_grid)) call save_to_vtk(this, sim)
-    this%i = 0
-    this%rhs = 0.d0
-  end if
+  ! Save output if requested
+  if (this%to_h5) call save_to_h5(this, sim)
+  if (allocated(this%vtk_grid)) call save_to_vtk(this, sim)
+
+  ! Clean up storage
+  if (allocated(this%rhs)) this%rhs = 0.d0
+  if (allocated(this%rhs_f)) deallocate(this%rhs_f)
 end subroutine project
 
 
+!> Gather all of the rhs-es into a single matrix and feed it to mumps, and then
+!> broadcast the result
 subroutine project_only(this, sim)
   use mpi
   use mod_event
@@ -216,10 +227,11 @@ subroutine project_only(this, sim)
   class(projection), intent(inout) :: this
   type(particle_sim), intent(inout)    :: sim
   integer :: my_id, ierr
-  integer :: i_var, i_tor, i_elm, i, j, k
-  integer :: index_large_i, inode, index_ij, index
+  integer :: i_tor, i_elm, i, j, k, i_var
+  integer :: index_large_i, inode, index
   real*8 :: t0, t1, ostart, oend, mmm(3), mmm2(3)
-  real*8, dimension(:), allocatable :: my_rhs, sum_rhs
+  real*8, dimension(:), allocatable :: my_rhs
+  integer :: n_rhs, n_rhs_f, i_rhs
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   call cpu_time(t0)
@@ -227,53 +239,88 @@ subroutine project_only(this, sim)
   ! Safety checks
   if (.not. allocated(sim%groups)) return
 
-  ! Preparation
-  allocate(my_rhs(this%mumps_par%n), sum_rhs(this%mumps_par%n))
+  n_rhs = size(this%rhs,5)
+  n_rhs_f = size(this%rhs_f,5)
+  if (n_rhs .gt. n_var .and. sim%my_id .eq. 0) then
+    write(*,*) 'WARNING: too many rhs-es supplied, skipping after ', n_var
+    n_rhs = n_var
+    ! n_rhs_f should already be 0 in this case, as done by sample_rhs
+  end if
+  this%mumps_par%nrhs = (n_rhs + n_rhs_f) * n_tor
+  this%mumps_par%lrhs = this%mumps_par%n
 
-  do i_var=1,min(size(sim%groups),n_var) ! only project the first n_var groups
-    if (.not. allocated(sim%groups(i_var)%particles)) cycle
+  if (sim%my_id .eq. 0) then
+    ! For some reason gfortran throws an error with the allocated statement here. Instead just reallocate on every call
+    !if (allocated(this%mumps_par%rhs) .and. size(this%mumps_par%rhs)/this%mumps_par%n .ne. n_rhs + n_rhs_f) deallocate(this%mumps_par%rhs)
+    !if (.not. allocated(this%mumps_par%rhs)) allocate(this%mumps_par%rhs(this%mumps_par%n*(n_rhs+n_rhs_f)))
+    allocate(this%mumps_par%rhs(this%mumps_par%n*this%mumps_par%nrhs))
+  else
+    allocate(this%mumps_par%rhs(0)) ! dummy allocation for MPI
+  end if
+  this%mumps_par%rhs = 0.d0
+
+  ! Copy the user-passed RHS
+  allocate(my_rhs(this%mumps_par%n*this%mumps_par%nrhs))
+  my_rhs = 0.d0
+  do i_rhs=1,n_rhs
+    ! Fill first part of RHS of Projection matrix
     do i_tor=1,n_tor
-      my_rhs = 0.d0
-      sum_rhs = 0.d0
-
-      ! Fill RHS of Projection matrix
       do i_elm=1,this%element_list%n_elements
         do i=1,n_vertex_max
           inode = this%element_list%element(i_elm)%vertex(i)
           do j=1,n_order+1
-            index_ij = (i-1)*(n_order+1) + j
-            index_large_i = this%node_list%node(inode)%index(j)  ! base index in the main matrix
+            index_large_i = this%node_list%node(inode)%index(j) + this%mumps_par%n * ((i_rhs-1)*n_tor + (i_tor-1))  ! base index in the main matrix + rhs index
 
-            my_rhs(index_large_i) = my_rhs(index_large_i) + this%rhs(index_ij, i_elm, i_tor, i_var)
+            my_rhs(index_large_i) = my_rhs(index_large_i) + this%rhs(j, i, i_elm, i_tor, i_rhs)
           enddo
         enddo
       enddo
+    enddo
+  enddo
+  do i_rhs=1,n_rhs_f
+    ! Fill projection function part
+    do i_tor=1,n_tor
+      do i_elm=1,this%element_list%n_elements
+        do i=1,n_vertex_max
+          inode = this%element_list%element(i_elm)%vertex(i)
+          do j=1,n_order+1
+            index_large_i = this%node_list%node(inode)%index(j) + this%mumps_par%n * (n_rhs*n_tor + (i_rhs-1)*n_tor + (i_tor-1))  ! base index in the main matrix + rhs index
 
-      ! Gather the RHS's to the root process
-      ! cannot do it directly into mumps_par%rhs because this is not allocated in every process
-      call MPI_Reduce(my_rhs,sum_rhs,this%mumps_par%n, &
-          MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-      ! Compute the solution of Ax=b (b = RHS)
-      this%mumps_par%JOB = 3
-      this%mumps_par%icntl(21) = 0 ! solution is available only on host
-      this%mumps_par%icntl(4)  = 3 ! print only errors
-      if (my_id .eq. 0) then
-        this%mumps_par%rhs = sum_rhs
-      end if
-      call DMUMPS(this%mumps_par)
+            my_rhs(index_large_i) = my_rhs(index_large_i) + this%rhs_f(j, i, i_elm, i_tor, i_rhs)
+          enddo
+        enddo
+      enddo
+    enddo
+  enddo
 
-      if (my_id .eq. 0) then
-        do i=1,this%node_list%n_nodes
-          do k=1,n_order+1
-            index = this%node_list%node(i)%index(k)
-            this%node_list%node(i)%values(i_tor,k,i_var) = this%mumps_par%rhs(index)
-          enddo    ! order
-        enddo      ! nodes
-      endif
-    enddo ! i_tor
-  enddo ! i_var
-  deallocate(sum_rhs,my_rhs)
-  ! Communicate these to all processors
+  ! Gather the RHS's to the root process
+  ! cannot do it directly into mumps_par%rhs because this is not allocated in every process
+  call MPI_Reduce(my_rhs,this%mumps_par%rhs,this%mumps_par%n*this%mumps_par%nrhs, &
+      MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+
+
+  ! Compute the solution of Ax=B (B = RHSes)
+  this%mumps_par%JOB = 3
+  this%mumps_par%icntl(21) = 0 ! solution is available only on host
+  this%mumps_par%icntl(4)  = 3 ! print only errors == 1
+  call DMUMPS(this%mumps_par)
+
+  ! Write the solution to the node_list
+  if (my_id .eq. 0) then
+    do i_var=1,min(n_rhs+n_rhs_f,n_var)
+      do i=1,this%node_list%n_nodes
+        do k=1,n_order+1
+          index = this%node_list%node(i)%index(k)
+          do i_tor=1,n_tor
+            this%node_list%node(i)%values(i_tor,k,i_var) = this%mumps_par%rhs(index + this%mumps_par%n*((i_var-1)*n_tor + (i_tor-1)))
+          end do
+        enddo    ! order
+      enddo      ! nodes
+    enddo
+  endif
+  deallocate(my_rhs,this%mumps_par%rhs)
+
+  ! Communicate it to all processors
   call broadcast_elements(my_id, this%element_list)
   call broadcast_nodes(my_id, this%node_list)
 
@@ -288,9 +335,9 @@ subroutine project_only(this, sim)
 end subroutine project_only
 
 
-!> Add samples to the right-hand side, stored in `this` by calling this%f_proj
+!> Add samples to the right-hand side, stored in `this` by calling this%f(i)%f
 !> for every particle and saving the contribution multiplied by each of the basis
-!> functions (poloidal and toroidal) in `this%rhs`
+!> functions (poloidal and toroidal) in `this%rhs_f`
 subroutine sample_rhs(this, sim)
   use mpi
   use mod_event
@@ -303,21 +350,31 @@ subroutine sample_rhs(this, sim)
   integer :: n_sample !< number of groups to sample
   real*8 :: HZ(n_tor)
   real*8 :: v, R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3), HH(4,4), HH_s(4,4), HH_t(4,4)
-  integer :: i_group, m, i, j, i_tor
-  integer :: i_elm, index_ij
+  integer :: i_group, m, i, j, i_tor, i_f
+  integer :: index_ij
 
   ! Safety checks
   if (.not. allocated(sim%groups)) return
-  n_sample = min(size(sim%groups),n_var)  ! because we have only n_var storage for now
-  if (.not. allocated(this%rhs)) then
-    allocate(this%rhs(n_vertex_max*(n_order+1),this%element_list%n_elements,n_tor,n_sample))
-    this%rhs = 0.d0
+  if (allocated(this%rhs)) then
+    n_sample = min(size(this%f),n_var-max(size(this%rhs,5),n_var))  ! because we have only n_var storage for now
+  else
+    n_sample = min(size(this%f),n_var)  ! because we have only n_var storage for now
   end if
+
+  if (n_sample .lt. size(this%f) .and. sim%my_id .eq. 0) then
+    write(*,*) 'WARNING: ignoring proj_f after ', n_sample, ' due to lack of output space'
+  end if
+
+  if (.not. allocated(this%rhs_f)) then
+    allocate(this%rhs_f(n_vertex_max,n_order+1,this%element_list%n_elements,n_tor,n_sample))
+  end if
+  this%rhs_f = 0.d0
 
   !$omp parallel default(none) shared(this, sim, n_sample) &
   !$omp private(x, xjac, HH, HH_s, HH_t, R_g, R_s, R_t, Z_g, Z_s, Z_t, &
-  !$omp         i_group, m, i, j, i_tor, index_ij, v, HZ)
-  do i_group=1,n_sample
+  !$omp         i_group, i_f, m, i, j, i_tor, index_ij, v, HZ)
+  do i_f=1,n_sample
+    i_group = this%f(i_f)%group
     if (.not. allocated(sim%groups(i_group)%particles)) cycle
     !$omp do
     do m=1,size(sim%groups(i_group)%particles,1)
@@ -338,12 +395,12 @@ subroutine sample_rhs(this, sim)
           index_ij = (i-1)*(n_order+1) + j
 
           v = HH(i,j) * this%element_list%element(particle%i_elm)%size(i,j)
-          v = v * this%proj_f(sim, i_group, particle) * particle%weight
+          v = v * this%f(i_f)%f(sim, i_group, particle) * particle%weight
 
           do i_tor=1,n_tor
             !$omp atomic
-            this%rhs(index_ij,particle%i_elm,i_tor,i_group) = &
-            this%rhs(index_ij,particle%i_elm,i_tor,i_group) + HZ(i_tor) * v
+            this%rhs_f(j,i,particle%i_elm,i_tor,i_f) = &
+            this%rhs_f(j,i,particle%i_elm,i_tor,i_f) + HZ(i_tor) * v
           enddo
         enddo
       enddo
@@ -408,7 +465,7 @@ subroutine save_to_h5(this, sim)
   !$ use omp_lib
   class(projection), intent(inout)  :: this
   type(particle_sim), intent(inout)    :: sim
-  integer :: i, my_id, ierr
+  integer :: my_id, ierr, n_proj
   character(len=120) :: filename
   real*8 :: t0, t1, ostart, oend
 
@@ -425,8 +482,10 @@ subroutine save_to_h5(this, sim)
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   if (my_id .eq. 0) then
     ! write only on the host
+    n_proj = size(this%f)
+    if (allocated(this%rhs)) n_proj = n_proj + size(this%rhs,5)
     call write_particle_distribution_to_h5(this%node_list, this%element_list, &
-      trim(filename), min(size(sim%groups),n_var), sim%time)
+      trim(filename), min(n_proj,n_var), sim%time)
 
     write(*,*) "Written projection to ", trim(filename)
   end if
@@ -479,15 +538,18 @@ real*8     :: p, p_s, p_t, p_ss, p_st, p_tt, p_x, p_y, p_xx, p_xy, p_yy
 real*8     :: wst, area, volume, xjac, xjac_x, xjac_y
 integer    :: i, j, k, l, m, ilarge, index_large_i, index_large_k, inode, knode
 integer    :: nz_AA, n_AA, i_elm, index_ij, index_kl
-integer    :: ms, mt, my_id, ierr
+integer    :: ms, mt, my_id, ierr, MPI_COMM_MUMPS
+
+! We need a separate communicator to be able to run multiple MUMPSes
+call MPI_Comm_dup(MPI_COMM_WORLD, MPI_COMM_MUMPS, ierr)
 
 ! Initialise MUMPS
-mumps_par%COMM = MPI_COMM_WORLD
+mumps_par%COMM = MPI_COMM_MUMPS
 mumps_par%JOB  = -1
 mumps_par%SYM  = 0
 mumps_par%PAR  = 1
 call DMUMPS(mumps_par)
-call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+call MPI_COMM_RANK(MPI_COMM_MUMPS, my_id, ierr)
 
 nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
 n_AA = maxval(node_list%node(1:node_list%n_nodes)%index(4))
@@ -499,11 +561,9 @@ write(*,*) ' nz_AA                   : ',nz_AA
 
 ! Allocate space for elements
 allocate(mumps_par%A(nz_AA),mumps_par%irn(nz_AA),mumps_par%jcn(nz_AA))
-allocate(mumps_par%rhs(n_AA))
 mumps_par%irn = 0
 mumps_par%jcn = 0
 mumps_par%A   = 0.d0
-mumps_par%RHS = 0.d0
 
 ! Copy wgauss into wgauss2 to get around gfortran not recognizing it as a shared
 ! thing https://groups.google.com/forum/#!topic/comp.lang.fortran/VKhoAm8m9KE
@@ -729,7 +789,7 @@ integer :: i
 character*50             :: version_control
 
 integer(HID_T)     :: file_id
-integer            :: ind, ierr
+integer            :: ierr
 
 ! type_node, node_list%n_nodes
 real(RKIND), allocatable :: t_x(:,:,:)                   ! n_order+1, n_dim
@@ -835,7 +895,6 @@ character*12, allocatable :: vector_names(:), scalar_names(:)
 real*8 :: s, t
 real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
 
-integer :: i_t, kv, iv, kf
 integer, parameter :: etype = 9 ! for vtk_quad
 
 n_scalars = n_tor * n_fields

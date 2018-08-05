@@ -121,7 +121,8 @@ real*8     :: Dn0x, Dn0y, Dn0p
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8     :: m_i_over_m_imp
 !   -Mean impurity ionization state
-real*8     :: Z_imp, dZ_imp_dT, d2Z_imp_dT2, T0_Zimp, alpha_Zimp
+real*8     :: Z_imp, dZ_imp_dT, d2Z_imp_dT2, T0_Zimp, alpha_Zimp, Z_eff, dZ_eff_dT, eta_coef, deta_coef_dT
+
 !   -Coefficients related to Z_imp
 real*8     :: alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis
 real*8     :: beta_imp, dbeta_imp_dT
@@ -702,6 +703,25 @@ do ms=1, n_gauss
      dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
 
      ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+
+     ! Calculate the effective charge of all species
+     Z_eff        = (r0_corr + beta_imp * rn0_corr) / (r0_corr + rn0_corr*(m_i_over_m_imp-1.))
+     dZ_eff_dT    = dbeta_imp_dT * rn0_corr / (r0_corr + rn0_corr*(m_i_over_m_imp-1.))
+     eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2.)/(1.+2.966*Z_eff+0.753*Z_eff**2.)
+     eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
+     deta_coef_dT = dZ_eff_dT*(1.+1.198*Z_eff+0.222*Z_eff**2.)/(1.+2.966*Z_eff+0.753*Z_eff**2.)
+     deta_coef_dT = deta_coef_dT + Z_eff*(1.198*dZ_eff_dT+2.*0.222*Z_eff*dZ_eff_dT)/(1.+2.966*Z_eff+0.753*Z_eff**2.)
+     deta_coef_dT = deta_coef_dT - Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2.)*(2.966*dZ_eff_dT+2.*0.753*Z_eff*dZ_eff_dT)/((1.+2.966*Z_eff+0.753*Z_eff**2.)**2.)
+     deta_coef_dT = deta_coef_dT / ((1.+1.198+0.222)/(1.+2.966+0.753))
+
+   
+     detaSp_dT    = detaSp_dT * eta_coef + eta_Sp * deta_coef_dT * dT0_corr_dT
+     eta_Sp       = eta_Sp * eta_coef
+
+     if ( eta_T_dependent ) then
+       deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dT * dT0_corr_dT
+       eta_T     = eta_T * eta_coef
+     end if
 
   !-------------------------------------------
   ! --- Radiative function, if flag_adas is enabled use interpolation, if not use simple model

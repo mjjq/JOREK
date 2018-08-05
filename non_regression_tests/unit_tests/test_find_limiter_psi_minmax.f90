@@ -4,6 +4,7 @@ use fruit
 use data_structure
 use mod_boundary
 use phys_module, only : FF_0
+use mod_interp, only: interp
 implicit none
 contains
 
@@ -22,7 +23,7 @@ subroutine test_find_limiter_and_psiminmax
   ! for find_RZ and interp
   real*8 :: R_out, Z_out, s, t
   integer :: i_elm, ifail
-  real*8, dimension(1) :: P, P_s, P_t, P_st, P_tt, P_ss
+  real*8 :: P, P_s, P_t, P_st, P_tt, P_ss
   real*8 :: R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
 
   node_list%n_nodes = 0
@@ -45,17 +46,17 @@ subroutine test_find_limiter_and_psiminmax
   call find_limiter(0, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
 
   ! now we expect to have a minimum at RZ = (5/6, -0.5)
-  call assert_equals(5./6. , R_lim, 1d-12, 'R_limiter')
+  call assert_equals(5d0/6d0 , R_lim, 1d-12, 'R_limiter')
   call assert_equals(-0.5d0, Z_lim, 1d-12, 'Z_limiter')
-  call assert_equals(-4./27., psi_lim, 1d-12, 'psi_limiter')
+  call assert_equals(-4d0/27d0, psi_lim, 1d-12, 'psi_limiter')
 
   call find_RZ(node_list, element_list,R_lim,Z_lim,R_out,Z_out,i_elm,s,t,ifail)
   call interp(node_list, element_list, i_elm, 1, 1, s, t, P, P_s, P_t, P_st, P_ss, P_tt)
-  call assert_equals(psi_lim, P(1), 1d-12, 'psi_limiter equal to psi at R_lim, Z_lim')
+  call assert_equals(psi_lim, P, 1d-12, 'psi_limiter equal to psi at R_lim, Z_lim')
   
   call psi_minmax(node_list,element_list,1,psimin,psimax)
-  call assert_equals(psimin, -4./27., 1d-12, 'psi_minmax:  minimum of psi')
-  call assert_equals(psimax,      0., 1d-12, 'psi_minmax:  maximum of psi')
+  call assert_equals(psimin, -4.d0/27d0, 1d-12, 'psi_minmax:  minimum of psi')
+  call assert_equals(psimax,      0.d0, 1d-12, 'psi_minmax:  maximum of psi')
     
   if (write_psi) then
     open(unit=12,file='psi.txt')

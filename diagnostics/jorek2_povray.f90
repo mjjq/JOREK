@@ -14,6 +14,8 @@ program jorek2_povray
   use diagnostics
   use profiles
   use mod_import_restart
+  use mod_interp
+  use basis_at_gaussian, only: initialise_basis
   
   implicit none
   

@@ -88,6 +88,7 @@ end subroutine print_py_plot_finish_plot
 subroutine print_py_plot_unordered_flux_surfaces(filename, node_list, element_list, surface_list)
 
   use data_structure
+  use mod_interp, only: interp_RZ
   implicit none
   
   ! --- Routine parameters
@@ -99,9 +100,8 @@ subroutine print_py_plot_unordered_flux_surfaces(filename, node_list, element_li
   ! --- Internal variables
   integer	:: i, j
   integer	:: i_elm
-  real*8	:: rr,    ss
-  real*8	:: R, dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
-  real*8	:: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
+  real*8	:: rr, ss
+  real*8	:: R, Z
   
   open(101,file=filename,position='append')
     write(101,'(A)')			      ' rplot = N.zeros(2)'
@@ -111,15 +111,13 @@ subroutine print_py_plot_unordered_flux_surfaces(filename, node_list, element_li
   	i_elm = surface_list%flux_surfaces(i)%elm(j)
   	rr    = surface_list%flux_surfaces(i)%s(1,j)
   	ss    = surface_list%flux_surfaces(i)%t(1,j)
-  	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-        						  Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+  	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
   	write(101,'(A,f15.4)')  	      ' rplot[0] = ',R
   	write(101,'(A,f15.4)')  	      ' zplot[0] = ',Z
         i_elm = surface_list%flux_surfaces(i)%elm(j)
   	rr    = surface_list%flux_surfaces(i)%s(3,j)
   	ss    = surface_list%flux_surfaces(i)%t(3,j)
-  	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-        						  Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+  	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
   	write(101,'(A,f15.4)')  	      ' rplot[1] = ',R
   	write(101,'(A,f15.4)')  	      ' zplot[1] = ',Z
   	write(101,'(A)')		      ' pylab.plot(rplot,zplot, "r")'
@@ -156,6 +154,7 @@ end subroutine print_py_plot_unordered_flux_surfaces
 subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list)
 
   use data_structure
+  use mod_interp, only: interp_RZ
   implicit none
   
   ! --- Routine parameters
@@ -182,18 +181,14 @@ subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list
     	  rr	= surface_list%flux_surfaces(i)%s(1,k)
     	  ss	= surface_list%flux_surfaces(i)%t(1,k)
     	  i_elm = surface_list%flux_surfaces(i)%elm(k)
-    	  call interp_RZ(node_list,element_list,i_elm,rr,ss,&
-	                 R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-  			 Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+    	  call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
     	  write(101,'(A,i6,A,f15.4)')					' r[',k-surface_list%flux_surfaces(i)%parts_index(j),'] = ',R
     	  write(101,'(A,i6,A,f15.4)')					' z[',k-surface_list%flux_surfaces(i)%parts_index(j),'] = ',Z
         enddo
     	rr    = surface_list%flux_surfaces(i)%s(3,surface_list%flux_surfaces(i)%parts_index(j+1)-1)
     	ss    = surface_list%flux_surfaces(i)%t(3,surface_list%flux_surfaces(i)%parts_index(j+1)-1)
     	i_elm = surface_list%flux_surfaces(i)%elm(surface_list%flux_surfaces(i)%parts_index(j+1)-1)
-    	call interp_RZ(node_list,element_list,i_elm,rr,ss,&
-	  	       R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-  	               Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+        call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
     	write(101,'(A,i6,A,f15.4)')					' r[',surface_list%flux_surfaces(i)%parts_index(j+1)-surface_list%flux_surfaces(i)%parts_index(j),'] = ',R
     	write(101,'(A,i6,A,f15.4)')					' z[',surface_list%flux_surfaces(i)%parts_index(j+1)-surface_list%flux_surfaces(i)%parts_index(j),'] = ',Z
         write(101,'(A)')						' pylab.plot(r[0:n_points],z[0:n_points], "r")'

@@ -6,6 +6,7 @@ use constants
 use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
+use mod_interp
 
 implicit none
 

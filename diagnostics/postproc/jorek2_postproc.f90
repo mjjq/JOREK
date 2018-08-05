@@ -12,6 +12,7 @@ program jorek2_postproc
 #if JOREK_MODEL == 501
   use mpi_mod
 #endif  
+  use basis_at_gaussian, only: initialise_basis
   
   implicit none
   

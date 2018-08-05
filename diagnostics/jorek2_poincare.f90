@@ -8,6 +8,7 @@ use elements_nodes_neighbours
 use mod_neighbours
 use mod_import_restart
 use mod_log_params
+use mod_interp
 
 implicit none
 
@@ -453,20 +454,21 @@ subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t)
 use mod_parameters
 use elements_nodes_neighbours
 use phys_module
+use mod_interp
 
 implicit none
 
 integer :: i_var_psi, i_elm, i_tor, i_harm
 
 real*8 :: s_in, t_in, p_in, delta_p, delta_s, delta_t
-real*8 :: R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
+real*8 :: R,R_s,R_t,Z,Z_s,Z_t
 real*8 :: Pcos,Pcos_s,Pcos_t,Pcos_st,Pcos_ss,Pcos_tt, Psin,Psin_s,Psin_t,Psin_st,Psin_ss,Psin_tt
 real*8 :: P0,P0_s,P0_t,P0_st,P0_ss,P0_tt, psi_s, psi_t, Zjac
 real*8 :: AR0_Z, AR0_p, AR0_s, AR0_t, AZ0_R, AZ0_p, AZ0_s, AZ0_t, A30_R, A30_Z, BR0, BZ0, Bp0, Fprof
 
 i_var_psi = 1
 
-call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,Z,Z_s,Z_t)
 
 Zjac = (R_s * Z_t - R_t * Z_s)
 
@@ -556,6 +558,7 @@ subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
 use mod_parameters
 use elements_nodes_neighbours
 use phys_module
+use mod_interp, only: interp
 
 implicit none
 
@@ -565,7 +568,6 @@ real*8 :: s_in, t_in, p_in
 real*8 :: Pcos,Pcos_s,Pcos_t,Pcos_st,Pcos_ss,Pcos_tt, Psin,Psin_s,Psin_t,Psin_st,Psin_ss,Psin_tt
 real*8 :: P0,P0_s,P0_t,P0_st,P0_ss,P0_tt
 real*8 :: value_out
-external interp
 
 !call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 !Zjac = (R_s * Z_t - R_t * Z_s)

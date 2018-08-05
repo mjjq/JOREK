@@ -1,5 +1,5 @@
 subroutine flux_surface_add_point(node_list,element_list,surface_list,s,i_elm,iv,ifound,r_psi,s_psi,dpsi_dr,dpsi_ds)
-
+use mod_interp, only: interp
 use data_structure
 
 implicit none

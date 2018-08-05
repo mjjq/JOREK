@@ -12,6 +12,7 @@ use mod_iterate2area
 use mod_plasma_response
 use vacuum
 use mpi_mod
+use mod_interp, only: interp
 implicit none
 
           

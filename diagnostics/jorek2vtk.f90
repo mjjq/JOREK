@@ -14,6 +14,7 @@ use mod_import_restart
 use mod_log_params
 use mod_vtk
 use mgi_module
+use mod_interp
 
 implicit none
 

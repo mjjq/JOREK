@@ -5,6 +5,7 @@ use constants
 use data_structure
 use phys_module
 use mod_import_restart
+use mod_interp
 implicit none
 
 type (type_node_list)    :: node_list
@@ -132,6 +133,8 @@ do m=1, n_toroidal
       s = float(j-1)/float(nsub-1)
       do k=1,nsub
         t = float(k-1)/float(nsub-1)
+
+        ! The following 50 lines could be replaced with interp_PRZ(_1) (after adding without_n0_mode there, or manually subtracting)
 
         call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
         xjac  = R_s * Z_t - R_t * Z_s

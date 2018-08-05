@@ -49,6 +49,8 @@ program JOREK2
   use mod_import_restart
   use mod_export_restart
   use mod_element_rtree, only: populate_element_rtree
+  use mod_interp
+  use basis_at_gaussian, only: initialise_basis
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD

@@ -1,11 +1,8 @@
   &in1
 
- ! Run this case after running input1.
- ! Use n_tor=3, n_period=1, n_plane=5 (using model500).
+ restart = .f.
 
- restart = .t.
-
- nstep_n =  230
+ nstep_n =  100
  tstep_n =   10
 
  nout = 10

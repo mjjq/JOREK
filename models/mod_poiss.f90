@@ -14,6 +14,7 @@ use phys_module, only: amix, amix_freeb
 use vacuum_equilibrium, only: vacuum_equil
 use mod_coicsr
 use mpi_mod
+use mod_basisfunctions
 implicit none
 
 ! --- Routine parameters

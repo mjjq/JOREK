@@ -5,6 +5,7 @@ subroutine find_theta_surface(node_list,element_list,surface_list,j_surf,theta,R
 
 use constants
 use data_structure
+use mod_interp, only: interp_RZ
 
 implicit none
 

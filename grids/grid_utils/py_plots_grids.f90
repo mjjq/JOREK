@@ -132,6 +132,7 @@ end subroutine print_py_plot_finish_plot
 subroutine print_py_plot_unordered_flux_surfaces(filename, node_list, element_list, surface_list, i_surf)
 
   use data_structure
+  use mod_interp, only: interp_RZ
   implicit none
   
   ! --- Routine parameters
@@ -227,6 +228,7 @@ end subroutine print_py_plot_unordered_flux_surfaces
 subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list, surface_list, colour, dashed)
 
   use data_structure
+  use mod_interp, only: interp_RZ
   implicit none
   
   ! --- Routine parameters
@@ -241,8 +243,7 @@ subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list
   integer	:: i, j, k, l, n_sub, count
   integer	:: i_elm
   real*8	:: st, rr, ss, dr_flux, ds_flux
-  real*8	:: R, dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
-  real*8	:: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
+  real*8	:: R, Z
   real*8        :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2
   
   n_sub = 2 ! minimum 2
@@ -263,9 +264,7 @@ subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list
             call CUB1D(rr1, drr1, rr2, drr2, st, rr, dr_flux)
             call CUB1D(ss1, dss1, ss2, dss2, st, ss, ds_flux)
             i_elm = surface_list%flux_surfaces(i)%elm(k)
-            call interp_RZ(node_list,element_list,i_elm,rr,ss,&
-                           R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-                           Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+            call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
             write(101,'(A,i6,A,f15.4)')' r[',count,'] = ',R
             write(101,'(A,i6,A,f15.4)')' z[',count,'] = ',Z
             count = count + 1

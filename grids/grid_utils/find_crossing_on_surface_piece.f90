@@ -7,6 +7,7 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
   ! finds the crossing of two coordinate lines given as a series of cubics
   !-------------------------------------------------------------------------
   use data_structure
+  use mod_interp, only: interp_RZ
   
   implicit none
   

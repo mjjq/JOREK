@@ -4,6 +4,7 @@ subroutine find_Z_surface(node_list,element_list,surface_list,j_surf,Z_find,i_el
 !---------------------------------------------------------------------------
 
 use data_structure
+use mod_interp, only: interp_rz
 
 implicit none
 

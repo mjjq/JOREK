@@ -8,6 +8,7 @@
 *.tgz
 *.err
 *.out
+*.dat
 Makefile.inc
 j302_1
 j302_3

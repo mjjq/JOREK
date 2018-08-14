@@ -4,6 +4,7 @@ subroutine find_R_surface(node_list,element_list,surface_list,j_surf,R_find,i_el
 !---------------------------------------------------------------------------
 
 use data_structure
+use mod_interp, only: interp_RZ
 
 implicit none
 

@@ -9,6 +9,7 @@ use constants
 use tr_module 
 use data_structure
 use mod_neighbours, only: update_neighbours
+use mod_interp
 
 implicit none
 
@@ -28,8 +29,8 @@ type (type_element_list), pointer :: newelement_list
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
 real*8              :: s_find(8), t_find(8), st_find(8), tht_x, theta, delta, ss, tmp1, tmp2
-real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+real*8              :: RRg1,dRRg1_dr,dRRg1_ds
+real*8              :: ZZg1,dZZg1_dr,dZZg1_ds
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
 real*8,allocatable  :: R_polar(:,:,:),Z_polar(:,:,:),xout(:),xp(:),yp(:)
 real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z
@@ -137,8 +138,7 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   ss1   = flux_list%flux_surfaces(i_surf)%t(1,k)
   i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
-  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,ZZg1)
 
   if ((ZZg1 .lt. ZL1) .and. (RRg1 .lt. R_xpoint(1))) then
     RL1 = RRg1
@@ -153,8 +153,7 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   ss1   = flux_list%flux_surfaces(i_surf)%t(3,k)
   i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
-  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,ZZg1)
 
   if ((ZZg1 .lt. ZL1) .and. (RRg1 .lt. R_xpoint(1))) then
     RL1 = RRg1
@@ -178,8 +177,7 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   ss1   = flux_list%flux_surfaces(i_surf)%t(1,k)
   i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
-  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,ZZg1)
 
   if ((RRg1 .lt. RL2) .and. (ZZg1 .lt. Z_xpoint(1))) then
     RL2 = RRg1
@@ -194,8 +192,7 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   ss1   = flux_list%flux_surfaces(i_surf)%t(3,k)
   i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
-  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,ZZg1)
 
   if ((RRg1 .lt. RL2) .and. (ZZg1 .lt. Z_xpoint(1))) then
     RL2 = RRg1
@@ -213,8 +210,7 @@ if (tht_x .lt. 0.d0) tht_x = tht_x + 2.d0 * PI
 call find_theta_surface(node_list,element_list,flux_list,flux_list%n_psi,tht_x,R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)
 
 do i=1,i_find
-   call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RL5,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                                           ZL5,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+   call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RL5,ZL5)
 
    if (ZL5 .le. Z_xpoint(1)) exit
 enddo
@@ -230,8 +226,7 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   ss1   = flux_list%flux_surfaces(i_surf)%t(1,k)
   i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
-  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,ZZg1)
 
   if ((ZZg1 .lt. ZL6) .and. (RRg1 .lt. R_xpoint(1))) then
     RL6 = RRg1
@@ -246,8 +241,7 @@ do k=1,flux_list%flux_surfaces(i_surf)%n_pieces
   ss1   = flux_list%flux_surfaces(i_surf)%t(3,k)
   i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
-  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+  call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,ZZg1)
 
   if ((ZZg1 .lt. ZL6) .and. (RRg1 .lt. R_xpoint(1))) then
     RL6 = RRg1
@@ -300,8 +294,7 @@ do j=1,n_tht_2
   call find_theta_surface(node_list,element_list,flux_list,i_sep,theta_sep(j),R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)
 
   call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-                 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                 RRg1,ZZg1)
 
   R_sep(j) = RRg1
   Z_sep(j) = ZZg1
@@ -331,16 +324,12 @@ call tr_allocate(R_min,1,n_tht_3,"R_min",CAT_GRID)
 call tr_allocate(Z_min,1,n_tht_3,"Z_min",CAT_GRID)
 
 call find_theta_surface(node_list,element_list,flux_list,i_max,angle_L9,R_xpoint(1),Z_xpoint(1),i_elm_find,s_find,t_find,i_find)
-call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-               RL9,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-               ZL9,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),RL9,ZL9)
 
 write(*,'(A,2e16.8)') ' L9 (outside): ',RL9,ZL9  ! outside wall crossing at x-point level
 
 call find_theta_surface(node_list,element_list,flux_list,i_max,angle_L8,R_xpoint(1),Z_xpoint(1),i_elm_find,s_find,t_find,i_find)
-call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-               RL8,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-               ZL8,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),RL8,ZL8)
 
 write(*,'(A,2e16.8)') ' L8 (inside): ',RL8,ZL8  ! inside wall crossing at x-point level
 
@@ -359,9 +348,7 @@ do j=1,n_tht_2
     
     call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)
 
-    call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),RRg1,ZZg1)
 
 
     if ( ((RRg1 .ge. R_xpoint(1)).and.(j .lt. n_tht_2/2)) .or. ((RRg1 .lt. R_xpoint(1)).and.(j .gt. n_tht_2/2)) ) then
@@ -376,9 +363,7 @@ do j=1,n_tht_2
       
     else
 
-      call interp_RZ(node_list,element_list,i_elm_find(2),s_find(2),t_find(2),&
-                     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+      call interp_RZ(node_list,element_list,i_elm_find(2),s_find(2),t_find(2),RRg1,ZZg1)
       R_max(j)             = RRg1
       RR_new(n_psi_2,j)    = RRg1
       ZZ_new(n_psi_2,j)    = ZZg1
@@ -396,9 +381,7 @@ do j=1,n_tht_2
 
     call find_theta_surface(node_list,element_list,flux_list,i_max,theta,R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)
 
-    call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),RRg1,ZZg1)
 
     R_max(j) = RRg1
     Z_max(j) = ZZg1
@@ -428,9 +411,7 @@ do j=1,n_leg_2
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),&
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (ZZg1 .le. Z_xpoint(1)) exit
 
@@ -448,9 +429,7 @@ do j=1,n_leg_2
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,     &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (ZZg1 .le. Z_xpoint(1)) exit
 
@@ -469,9 +448,7 @@ do j=1,n_leg_2
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),&
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (RRg1 .le. R_xpoint(1)) exit
 
@@ -490,9 +467,7 @@ do j=1,n_leg_2
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),&
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (RRg1 .ge. R_xpoint(1)) exit
 
@@ -511,9 +486,7 @@ do j=1,n_leg_2                        ! inside leg
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),&
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (ZZg1 .le. Z_xpoint(1)) exit
 
@@ -532,9 +505,7 @@ do j=1,n_leg_2
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,     &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (ZZg1 .le. Z_xpoint(1)) exit
 
@@ -802,8 +773,7 @@ do i=1,n_flux-1                 !------------------------ the closed field lines
     call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),tmp2, dZ_dt)
 
     call interp_RZ(node_list,element_list,ielm_flux(i2,j2),s_flux(i2,j2),t_flux(i2,j2), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                   RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
     call interp(node_list,element_list,ielm_flux(i2,j2),1,1,s_flux(i2,j2),t_flux(i2,j2),&
                    PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
@@ -841,8 +811,7 @@ n_xpoint=4
 call interp(node_list,element_list,i_elm_xpoint(1),1,1,s_xpoint(1),t_xpoint(1),&
                    PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
 call interp_RZ(node_list,element_list,i_elm_xpoint(1),s_xpoint(1),t_xpoint(1), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                   RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
 EJAC = dRRg1_dr*dZZg1_ds - dRRg1_ds * dZZg1_dr
 RY = - dRRg1_ds / EJAC
@@ -922,8 +891,7 @@ do i=n_flux,n_flux+n_open           !--------------------------- nodes on the op
     call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),tmp2, dZ_dt)
 
     call interp_RZ(node_list,element_list,ielm_flux(i2,j2),s_flux(i2,j2),t_flux(i2,j2), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                   RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
     call interp(node_list,element_list,ielm_flux(i2,j2),1,1,s_flux(i2,j2),t_flux(i2,j2),&
                    PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
@@ -977,8 +945,7 @@ do j=1, n_leg                         !--------------------------- nodes on righ
       call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),tmp2, dZ_dt)
 
       call interp_RZ(node_list,element_list,ielm_flux(i2,j2),s_flux(i2,j2),t_flux(i2,j2), &
-                     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                     RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
       call interp(node_list,element_list,ielm_flux(i2,j2),1,1,s_flux(i2,j2),t_flux(i2,j2),&
                      PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
@@ -1030,8 +997,7 @@ do l=1, n_leg-1                       !--------------------------- nodes on left
     call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),tmp2, dZ_dt)
 
     call interp_RZ(node_list,element_list,ielm_flux(i2,j2),s_flux(i2,j2),t_flux(i2,j2), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                   RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
     call interp(node_list,element_list,ielm_flux(i2,j2),1,1,s_flux(i2,j2),t_flux(i2,j2),&
                    PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
@@ -1422,8 +1388,7 @@ do i=1,newnode_list%n_nodes
   call find_RZ(node_list,element_list,R1,Z1,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 
   call interp_RZ(node_list,element_list,ielm_out,s_out,t_out, &
-                 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                 RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
   call interp(node_list,element_list,ielm_out,1,1,s_out,t_out,PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
 

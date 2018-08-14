@@ -6,6 +6,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module, only: R_geo, tokamak_device, Zaxis_find_limit  
+use mod_interp
 
 implicit none
 
@@ -160,7 +161,7 @@ endif
 
 call interp(node_list,element_list,i_elm_axis,1,1,s_axis,t_axis,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
 
-call interp_RZ(node_list,element_list,i_elm_axis,s_axis,t_axis,R_axis,R_s,R_t,R_st,R_ss,R_tt,Z_axis,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+call interp_RZ(node_list,element_list,i_elm_axis,s_axis,t_axis,R_axis,Z_axis)
 
 if ((.not. found_axis) .and. (my_id .eq. 0)) write(*,*) 'WARNING: axis was not properly found after ', n_tries, ' attempts'
 if (my_id .eq. 0) write(*,'(A,i6,4f14.8)') ' magnetic axis : ',i_elm_axis,R_axis,Z_axis,psi_axis

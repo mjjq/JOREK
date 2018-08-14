@@ -12,6 +12,7 @@ module high_resolution_wall
 
     use data_structure
     use phys_module
+    use mod_interp, only: interp
     implicit none
     
     ! --- Routine variables

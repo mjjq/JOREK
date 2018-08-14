@@ -11,6 +11,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
   use reorder_surfaces_parameters
   use py_plots_grids
   use grid_xpoint_data
+  use mod_interp, only: interp_RZ
   
   implicit none
   
@@ -111,14 +112,12 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
     	    rr    = surface_list%flux_surfaces(i_surf)%s(3,i_piece)
     	    ss    = surface_list%flux_surfaces(i_surf)%t(3,i_piece)
     	    i_elm = surface_list%flux_surfaces(i_surf)%elm(i_piece)
-    	    call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-    							      Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+    	    call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
 	    
             rr2    = surface_list%flux_surfaces(i_surf)%s(1,parts_index(n_parts))
             ss2    = surface_list%flux_surfaces(i_surf)%t(1,parts_index(n_parts))
             i_elm2 = surface_list%flux_surfaces(i_surf)%elm(parts_index(n_parts))
-            call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss, &
-      								 Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss)
+            call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,Z2)
             
             distance = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
             if (distance .lt. accuracy) then
@@ -215,14 +214,12 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
       	  	rr    = surface_list%flux_surfaces(i_surf)%s(3,i_piece)
       	  	ss    = surface_list%flux_surfaces(i_surf)%t(3,i_piece)
       	  	i_elm = surface_list%flux_surfaces(i_surf)%elm(i_piece)
-      	  	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-      	  							  Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+      	  	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
       	  	
           	rr2    = surface_list%flux_surfaces(i_surf)%s(1,parts_index(n_parts))
           	ss2    = surface_list%flux_surfaces(i_surf)%t(1,parts_index(n_parts))
           	i_elm2 = surface_list%flux_surfaces(i_surf)%elm(parts_index(n_parts))
-          	call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss, &
-          							     Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss)
+          	call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,Z2)
           	
           	distance = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
           	if (distance .lt. accuracy) then
@@ -338,6 +335,7 @@ subroutine get_next_surface_piece(node_list, element_list, surface, i_piece, &
   
   use data_structure
   use reorder_surfaces_parameters
+  use mod_interp, only: interp_RZ
   implicit none
   
   ! --- Routine parameters
@@ -357,10 +355,7 @@ subroutine get_next_surface_piece(node_list, element_list, surface, i_piece, &
   integer	:: i_elm2
   real*8	:: rr,    ss
   real*8	:: rr2,   ss2
-  real*8	:: R, dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
-  real*8	:: R2,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss
-  real*8	:: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
-  real*8	:: Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss
+  real*8	:: R, R2, Z, Z2
   real*8	:: distance
   
   found = 0
@@ -369,8 +364,7 @@ subroutine get_next_surface_piece(node_list, element_list, surface, i_piece, &
   rr	= surface%s(3,i_piece)
   ss	= surface%t(3,i_piece)
   i_elm = surface%elm(i_piece)
-  call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-  						    Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+  call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
 
   ! --- Loop over all remaining pieces
   do i=i_piece+1,surface%n_pieces
@@ -381,8 +375,7 @@ subroutine get_next_surface_piece(node_list, element_list, surface, i_piece, &
       ss2    = surface%t(j,i)
       i_elm2 = surface%elm(i)
 
-      call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss, &
-  							   Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss)
+      call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,Z2)
       
       distance = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
       if (distance .lt. accuracy) then
@@ -543,6 +536,7 @@ subroutine find_all_edge_pieces(node_list, element_list, surface, n_edge_pieces,
 
   use data_structure
   use reorder_surfaces_parameters
+  use mod_interp, only: interp_RZ
   implicit none
   
   ! --- Routine parameters
@@ -560,8 +554,7 @@ subroutine find_all_edge_pieces(node_list, element_list, surface, n_edge_pieces,
   integer	:: i_elm2
   real*8	:: rr,    ss
   real*8	:: rr2,   ss2
-  real*8	:: R,R2,dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
-  real*8	:: Z,Z2,dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
+  real*8	:: R,R2,Z,Z2
   real*8	:: distance
   
   n_isolated_pieces = 0
@@ -577,8 +570,7 @@ subroutine find_all_edge_pieces(node_list, element_list, surface, n_edge_pieces,
       rr    = surface%s(k1,i1)
       ss    = surface%t(k1,i1)
       i_elm = surface%elm(i1)
-      call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-    	  					        Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+      call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
 
       ! --- Loop over all other pieces
       do i2=1,surface%n_pieces
@@ -590,8 +582,7 @@ subroutine find_all_edge_pieces(node_list, element_list, surface, n_edge_pieces,
             ss2    = surface%t(k2,i2)
             i_elm2 = surface%elm(i2)
 
-            call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-          							 Z2,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+            call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,Z2)
             
             distance = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
             if (distance .lt. accuracy) then
@@ -1112,8 +1103,9 @@ subroutine clean_single_surface(node_list,element_list,surface,location,psi_xpoi
 
   use data_structure
   use reorder_surfaces_parameters
-  use phys_module, only : xcase
+  use phys_module, only: xcase
   use grid_xpoint_data
+  use mod_interp, only: interp_RZ
   implicit none
   
   ! --- Routine parameters
@@ -1127,9 +1119,8 @@ subroutine clean_single_surface(node_list,element_list,surface,location,psi_xpoi
   type (type_surface)	:: surface_tmp
   integer		:: i
   integer		:: i_elm
-  real*8		:: rr,    ss
-  real*8		:: R,dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
-  real*8		:: Z,dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
+  real*8		:: rr, ss
+  real*8		:: R, Z
   
   surface_tmp%n_pieces = 0
   ! --- Check each piece
@@ -1138,8 +1129,7 @@ subroutine clean_single_surface(node_list,element_list,surface,location,psi_xpoi
     rr    = surface%s(1,i)
     ss    = surface%t(1,i)
     i_elm = surface%elm(i)
-    call interp_RZ(node_list,element_list,i_elm,rr,ss,R,dRR_dr,dRR_ds,dRR_drs,dRR_drr,dRR_dss, &
-  						      Z,dZZ_dr,dZZ_ds,dZZ_drs,dZZ_drr,dZZ_dss)
+    call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
     
     ! --- Core region (ie. not private parts)
     if (location .eq. core) then

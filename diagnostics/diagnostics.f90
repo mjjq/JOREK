@@ -4,6 +4,7 @@ module diagnostics
   use mod_parameters
   use nodes_elements
   use phys_module
+  use mod_interp
   
   
   
@@ -79,6 +80,7 @@ module diagnostics
   
   
   !> Determines the value of variable ivar at position (s,t,phi) in element i_elm
+  !> This function can be replaced with interp_0 if no_zero == .false.
   real*8 function variable_value_ielm_s_t(ivar, i_elm, s, t, phi, no_zero)
     
     ! --- Routine parameters

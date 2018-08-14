@@ -32,7 +32,12 @@ subroutine get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
   if (ier .ne. 0) return
   
   ! --- Deal with first line, the most tricky and unrespected of eqdsk format usually
-  read(5,'(Q,A)') str_length,skip
+  !read(5,'(Q,A)') str_length,skip ! does not work with gfortran
+  read(5,'(A)') skip
+  str_length = 0
+  do i = 1,256
+    if (skip(i:i) .ne. ' ') str_length = i
+  enddo
   nr = 0
   nz = 0
   find_nr = 0
@@ -66,7 +71,12 @@ subroutine get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
     do i=1,n_skip
       read(5,*) skip
     enddo
-    read(5,'(Q,A)') str_length,skip
+    !read(5,'(Q,A)') str_length,skip ! does not work with gfortran
+    read(5,'(A)') skip
+    str_length = 0
+    do i = 1,256
+      if (skip(i:i) .ne. ' ') str_length = i
+    enddo
     if (str_length .ne. 80) normal_eqdsk = .false.
   else
     ! --- The 4 lines of basic info, the 4 profiles F, P, dF2, dP and the first chunk of the psi_RZ grid
@@ -91,7 +101,12 @@ subroutine get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
   
   read(5,*) nbbs,n_wall
   
-  read(5,'(Q,A)') str_length,skip
+  !read(5,'(Q,A)') str_length,skip ! does not work with gfortran
+  read(5,'(A)') skip
+  str_length = 0
+  do i = 1,256
+    if (skip(i:i) .ne. ' ') str_length = i
+  enddo
   normal_eqdsk_wall = .true.
   if (str_length .ne. 80) normal_eqdsk_wall = .false.
   
@@ -128,7 +143,12 @@ subroutine get_eqdsk_dimensions(normal_eqdsk, nR, nZ, n_wall, ier)
   if (ier .ne. 0) return
   
   ! --- Deal with first line, the most tricky and unrespected of eqdsk format usually
-  read(5,'(Q,A)') str_length,skip
+  !read(5,'(Q,A)') str_length,skip ! does not work with gfortran
+  read(5,'(A)') skip
+  str_length = 0
+  do i = 1,256
+    if (skip(i:i) .ne. ' ') str_length = i
+  enddo
   nr = 0
   nz = 0
   find_nr = 0
@@ -213,7 +233,12 @@ subroutine get_data_from_eqdsk(normal_eqdsk, normal_eqdsk_wall, nR, nZ, R_grid, 
   if (ier .ne. 0) return
   
   ! --- Deal with first line, the most tricky and unrespected of eqdsk format usually
-  read(5,'(Q,A)') str_length,skip
+  !read(5,'(Q,A)') str_length,skip ! does not work with gfortran
+  read(5,'(A)') skip
+  str_length = 0
+  do i = 1,256
+    if (skip(i:i) .ne. ' ') str_length = i
+  enddo
   nr = 0
   nz = 0
   find_nr = 0
@@ -420,9 +445,9 @@ subroutine interpolate_psi_from_eqdsk_grid(nr_eqdsk, nz_eqdsk, xx, yy, psirz, R_
   endif
 
   ! --- min sign because of JOREK definition of psi
-  psi   = - psi  
-  psi_R = - psi_R
-  psi_Z = - psi_Z
+  psi   = + psi  
+  psi_R = + psi_R
+  psi_Z = + psi_Z
 
   return
 
@@ -839,7 +864,12 @@ subroutine get_wall_from_eqdsk(n_wall, R_wall, Z_wall, ier)
   if (ier .ne. 0) return
   
   ! --- Deal with first line, the most tricky and unrespected of eqdsk format usually
-  read(5,'(Q,A)') str_length,skip
+  !read(5,'(Q,A)') str_length,skip ! does not work with gfortran
+  read(5,'(A)') skip
+  str_length = 0
+  do i = 1,256
+    if (skip(i:i) .ne. ' ') str_length = i
+  enddo
   nr = 0
   nz = 0
   find_nr = 0

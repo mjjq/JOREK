@@ -1292,7 +1292,7 @@ subroutine get_symmetric_separatrix_contours(node_list, element_list, sep_list)
   integer               :: n_lim, index_lim(n_wall_max)
   real*8                :: R_beg, Z_beg, R_end, Z_end
   logical               :: start_stop, debug, dashed, reversed
-  character*256,        :: filename
+  character*256         :: filename
   character*1           :: colour
   
   debug = .true.
@@ -2067,7 +2067,7 @@ subroutine get_separatrix_contours(node_list, element_list, sep_list)
   real*8                :: rr2 , ss2, drr2, dss2
   real*8                :: distance, distance_Xpoint
   logical               :: start_stop, debug, dashed, reversed
-  character*256,        :: filename
+  character*256         :: filename
   character*1           :: colour
   
   debug = .true.

@@ -240,7 +240,7 @@ do i=1,newnode_list%n_nodes
       ! --- psi values from eqdsk
       call interpolate_psi_from_eqdsk_grid(nR_eqdsk, nZ_eqdsk, R_eqdsk, Z_eqdsk, psi_eqdsk, R1, Z1, psi, psi_R, psi_Z)
     else
-      write(*,'(A,2f)')'Warning! did not find node one previous grid!',R1,Z1
+      write(*,'(A,2f15.4)')'Warning! did not find node one previous grid!',R1,Z1
       write(*,*)'Unable to extract psi information, the grid might be flawed.'
     endif
   else

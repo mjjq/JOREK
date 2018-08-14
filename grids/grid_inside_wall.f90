@@ -83,7 +83,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
     open(101, file='limiter_file.txt')
       write(101,'(A,i6)') 'n_limiter = ',n_wall
       do i=1,n_wall
-        write(101,'(A,i6,A,e,A,i6,A,e)') 'R_limiter(',i,') = ',R_wall(i),', Z_limiter(',i,') = ',Z_wall(i)
+        write(101,'(A,i6,A,e20.8,A,i6,A,e20.8)') 'R_limiter(',i,') = ',R_wall(i),', Z_limiter(',i,') = ',Z_wall(i)
       enddo
     close(101)
     open(101, file='limiter_file.vtk')

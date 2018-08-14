@@ -47,7 +47,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
                                                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
   call interp_RZ(node_list,element_list,i_elm,rr2,ss2,RRg2,dRRg2_dr,dRRg2_ds,dRRg2_drs,dRRg2_drr,dRRg2_dss, &
                                                       ZZg2,dZZg2_dr,dZZg2_ds,dZZg2_drs,dZZg2_drr,dZZg2_dss)
-!  write(*,'(A,i8,4f)') ' find_R check 0 : ',k,RRg1,ZZg1,RRg2,ZZg2
+!  write(*,'(A,i8,4f15.4)') ' find_R check 0 : ',k,RRg1,ZZg1,RRg2,ZZg2
   dRRg1_dt = dRRg1_dr * drr1 + dRRg1_ds * dss1
   dZZg1_dt = dZZg1_dr * drr1 + dZZg1_ds * dss1
   dRRg2_dt = dRRg2_dr * drr2 + dRRg2_ds * dss2

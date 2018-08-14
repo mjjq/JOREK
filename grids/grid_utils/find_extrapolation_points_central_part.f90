@@ -117,7 +117,7 @@ else
   endif
   if (tht_x1 .lt. 0.d0) tht_x1 = tht_x1 + 2.d0 * PI
   if (tht_x2 .lt. 0.d0) tht_x2 = tht_x2 + 2.d0 * PI
-  !write(*,'(A,2f)') ' angles : ',tht_x1,tht_x2
+  !write(*,'(A,2f15.4)') ' angles : ',tht_x1,tht_x2
   
   ! Spread out points evenly (outer angle between tht_x1 and tht_x2 is usually bigger than inner angle)
   if (psi_xpoint(1) .le. psi_xpoint(2)) then

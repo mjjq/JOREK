@@ -140,7 +140,7 @@ subroutine respline_cub1d_piece(node_list,element_list,s_cub1d,t_cub1d,s_int,tol
         if (found) then
           call CUB1D(t_cub1d(1),t_cub1d(2),t_cub1d(3),t_cub1d(4), st_find, t_find(i), dt_tmp)
         else
-          write(*,'(A,3f,2i4)')'Warning: didnt find s'
+          write(*,'(A)')'Warning: didnt find s'
           return
         endif
       endif

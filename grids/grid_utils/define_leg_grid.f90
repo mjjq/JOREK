@@ -8,6 +8,7 @@ use data_structure
 use grid_xpoint_data
 use phys_module, only:   tokamak_device
 use py_plots_grids
+use mod_interp, only: interp_RZ
 
 implicit none
 
@@ -917,6 +918,7 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
 
   use data_structure
   use phys_module, only: xcase
+  use mod_interp, only: interp_RZ
   
   implicit none
   

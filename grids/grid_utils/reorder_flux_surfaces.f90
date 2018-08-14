@@ -127,7 +127,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
               parts_index(n_parts) = nStart
       	      exit
             else
-      	      write(*,'(A,1i4,1e15.10)') 'Warning! Failed to find parts of the surface',i_surf,distance
+      	      write(*,'(A,1i4,1e16.8)') 'Warning! Failed to find parts of the surface',i_surf,distance
       	      ier = 1
 	    endif
       	  endif
@@ -229,7 +229,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
           	  parts_index(n_parts) = nStart
           	  exit
           	else
-          	  write(*,'(A,1i4,1e15.10)') 'Warning! Failed to find parts of the surface',i_surf,distance
+          	  write(*,'(A,1i4,1e16.8)') 'Warning! Failed to find parts of the surface',i_surf,distance
           	  ier = 1
       	  	endif
               endif
@@ -648,6 +648,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   use phys_module, only : xcase
   use grid_xpoint_data
   use py_plots_grids
+  use mod_interp, only: interp_RZ
   
   implicit none
   
@@ -1258,6 +1259,7 @@ subroutine get_symmetric_separatrix_contours(node_list, element_list, sep_list)
   use phys_module, only : xcase
   use grid_xpoint_data
   use py_plots_grids
+  use mod_interp, only: interp_RZ
   
   implicit none
   
@@ -2033,6 +2035,7 @@ subroutine get_separatrix_contours(node_list, element_list, sep_list)
   use phys_module, only : xcase
   use grid_xpoint_data
   use py_plots_grids
+  use mod_interp, only: interp_RZ
   
   implicit none
   

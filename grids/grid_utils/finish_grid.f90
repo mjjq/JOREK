@@ -8,6 +8,7 @@ use data_structure
 use grid_xpoint_data
 use phys_module, only: xcase
 use mod_eqdsk_tools
+use mod_interp, only: interp_RZ, interp
 
 implicit none
 

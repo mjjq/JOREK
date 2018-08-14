@@ -128,7 +128,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
               parts_index(n_parts) = nStart
       	      exit
             else
-      	      write(*,'(A,1i4,1e)') 'Warning! Failed to find parts of the surface',i_surf,distance
+      	      write(*,'(A,1i4,1e15.10)') 'Warning! Failed to find parts of the surface',i_surf,distance
       	      ier = 1
 	    endif
       	  endif
@@ -232,7 +232,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
           	  parts_index(n_parts) = nStart
           	  exit
           	else
-          	  write(*,'(A,1i4,1e)') 'Warning! Failed to find parts of the surface',i_surf,distance
+          	  write(*,'(A,1i4,1e15.10)') 'Warning! Failed to find parts of the surface',i_surf,distance
           	  ier = 1
       	  	endif
               endif

@@ -813,7 +813,7 @@ subroutine ELM_main_rhs_7(rhs,rhs_k)
       - visco_parr * (v_x * vpar0_x + v_y * vpar0_y) * R                                           * xjac * tstep  
   else
     rhs(7)   = rhs(7)                                                                                                                &
-      - visco_parr * v_x * ( vpar0_x * F0**2 / R**2 -2.d0 * vpar0 * F0**2 / R**3 - 2.d0 * PI * F0 * Omega_tor0_y ) * R * xjac * tstep &
+      - visco_parr * v_x * ( vpar0_x * F0**2 / R**2 -2.d0 * vpar0 * F0**2 / R**3 - 2.d0 * PI * F0 * Omega_tor0_x ) * R * xjac * tstep &
       - visco_parr * v_y * ( vpar0_y * F0**2 / R**2 - 2.d0 * PI * F0 * Omega_tor0_y ) * R                              * xjac * tstep            
   endif
 

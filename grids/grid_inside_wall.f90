@@ -384,6 +384,11 @@ subroutine RintersectPolygon(N, rpol, zpol, Rmin, Rmax, Z, accuracy, new_Rmin, n
   real*8  :: Rleft, Rmid, Rright
   real*8  :: diff
   
+  new_Rmin  = 0.d0
+  new_Rmax  = 0.d0
+  new_Rmin2 = 0.d0
+  new_Rmax2 = 0.d0
+  
   ! --- Find entry and exit points of horizontal line (in/out of polygon)
   inside = 0
   do i = 1,n_iter
@@ -409,13 +414,12 @@ subroutine RintersectPolygon(N, rpol, zpol, Rmin, Rmax, Z, accuracy, new_Rmin, n
   enddo
   if (i1 .eq. -1) then
     write(*,*)'Warning: did not find entry'
-    i1 = 1
+    return
   endif
   if (i2 .eq. -1) then
     write(*,*)'Warning: did not find exit'
-    i2 = 1
+    return
   endif
-  if (i1 .eq. 1) i1 = 2
   
   ! --- Converge to solution at entry point
   Rleft  = R_iter(i1-1)
@@ -498,6 +502,7 @@ subroutine RintersectPolygon(N, rpol, zpol, Rmin, Rmax, Z, accuracy, new_Rmin, n
   i1 = i2
   i2 = i
   if (i1 .eq. 1) i1 = 2
+  if (i2 .eq. 1) i2 = 2
   
   ! --- Converge to solution at entry point
   Rleft  = R_iter(i1)
@@ -675,7 +680,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
     width1 = r_max1-r_min1
     width2 = r_max2-r_min2
     if ( (width2 .eq. 0.d0) .and. (width_prev2 .ne. 0.d0) ) then
-      if ( abs(r_min1-R_grid(nR_grid(n_off+i-1,1)+1,n_off+i-1)) .lt. abs(r_min1-R_grid(1,n_off+i-1)) ) then
+      if ( abs(r_min1-R_grid(nR_grid(n_off+i-1,1)+1,n_off+i-1)) .le. abs(r_min1-R_grid(1,n_off+i-1)) ) then
         width1 = 0.d0
         nR_grid(n_off+i,1) = 0
         r_min2 = r_min1
@@ -797,6 +802,58 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
       width_prev2 = width2
     endif
     
+    ! --- This may happen if there is a sharp corner at the bottom (eg. ITER)
+    if ( (width1 .eq. 0.d0) .and. (width2 .eq. 0.d0) ) then
+      if (width_prev1 .gt. 0.d0) then
+        nR_grid(n_off+i,1) = nR_grid(n_off+i-1,1)
+        do j = 1,nR_grid(n_off+i,1)
+          R_grid(j,n_off+i) = R_grid(j,n_off+i-1)
+          Z_grid(j,n_off+i) = Zlines(i)
+        enddo
+        nR_tmp = min(nR_grid(n_off+i,1),nR_grid(n_off+i-1,1))
+        do j = 1,nR_tmp-1
+          elm_count = elm_count + 1
+          ! R-index
+          node_index(elm_count,1,1) = j
+          node_index(elm_count,2,1) = j+1
+          node_index(elm_count,3,1) = i_start+j+1
+          node_index(elm_count,4,1) = i_start+j
+          ! Z-index
+          node_index(elm_count,1,2) = n_off+i
+          node_index(elm_count,2,2) = n_off+i
+          node_index(elm_count,3,2) = n_off+i-1
+          node_index(elm_count,4,2) = n_off+i-1
+        enddo
+      endif
+      if (width_prev2 .gt. 0.d0) then
+        nR_grid(n_off+i,2) = nR_grid(n_off+i-1,2)
+        i_start = nR_grid(n_off+i-1,1)
+        nR_tmp = nR_grid(n_off+i-1,1)+nR_grid(n_off+i-1,2)
+        if (abs(R_grid(nR_tmp,n_off+i-1)-r_max2) .lt. 1.d-2) then
+          nR_grid(n_off+i,2) = nR_tmp - i_start
+        endif
+        do j = 1,nR_grid(n_off+i,2)
+          R_grid(nR_grid(n_off+i,1)+j,n_off+i) = R_grid(nR_grid(n_off+i,1)+j,n_off+i-1)
+          Z_grid(nR_grid(n_off+i,1)+j,n_off+i) = Zlines(i)
+        enddo
+        nR_tmp = min(nR_grid(n_off+i,2),nR_grid(n_off+i-1,1)+nR_grid(n_off+i-1,2)-i_start+1)
+        if (width_prev2 .eq. 0.d0) nR_tmp = nR_grid(n_off+i,2)
+        do j = 1,nR_tmp-1
+          elm_count = elm_count + 1
+          ! R-index
+          node_index(elm_count,1,1) = nR_grid(n_off+i,1)+j
+          node_index(elm_count,2,1) = nR_grid(n_off+i,1)+j+1
+          node_index(elm_count,3,1) = i_start+j+1
+          node_index(elm_count,4,1) = i_start+j
+          ! Z-index
+          node_index(elm_count,1,2) = n_off+i
+          node_index(elm_count,2,2) = n_off+i
+          node_index(elm_count,3,2) = n_off+i-1
+          node_index(elm_count,4,2) = n_off+i-1
+        enddo
+      endif
+    endif
+    
   enddo
   write(*,*)'Finished lower part of grid'
   
@@ -809,7 +866,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
   width_prev2    = 0.0
   inside_boot    = 0
   do i = 1,nZ/2
-    !write(*,*)'Doing lower horizontal line ',nZ/2+1-i
+    !write(*,*)'Doing upper horizontal line ',nZ/2+1-i
     n_off = nZ/2+1
     call RintersectPolygon(n_wall, R_wall(1:n_wall), Z_wall(1:n_wall), Rmin, Rmax, Zlines(i), accuracy, r_min1, r_max1, r_min2, r_max2)
     width1 = r_max1-r_min1

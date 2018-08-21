@@ -102,7 +102,7 @@ do i=1,element_list%n_elements    ! --- loop over elements
       
       ! --- And for the upper Xpoint
       if (xcase .ne. 1) then
-        if (     ((tokamak_device(1:4) .ne. 'MAST') .and. (Z .gt.  0.8d0)) &
+        if (     ((tokamak_device(1:4) .ne. 'MAST') .and. (Z .gt.  0.4d0)) &
             .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .gt.  0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0)) ) then
           include_pt_up(i,ms,mt) = .true.
         endif

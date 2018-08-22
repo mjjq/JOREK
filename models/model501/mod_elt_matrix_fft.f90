@@ -625,16 +625,17 @@ do ms=1, n_gauss
 
      select case ( trim(gas_type) )
        case('D2')
-         m_i_over_m_imp = 1.
+         m_i_over_m_imp = central_mass/2.
        case('Ar')
-         m_i_over_m_imp = 1./20. ! Argon mass = 40 u and main ion (D) mass = 2 u
+         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
        case('Ne')
-         m_i_over_m_imp = 1./10. ! Neon mass = 20 u and main ion (D) mass = 2 u
+         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
        case default
          write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
-         m_i_over_m_imp = 1.
+         m_i_over_m_imp = central_mass/2.
      end select
+
      Z_imp = 0.
      dZ_imp_dT = 0.
      d2Z_imp_dT2 = 0.

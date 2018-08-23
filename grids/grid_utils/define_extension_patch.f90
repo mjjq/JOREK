@@ -628,9 +628,11 @@ else
   Z_lim(2) = Z_block_points_right(i_ext,n_block_points_right(i_ext))
 endif
 ! --- Make sure we properly connect to the previous patch
-if ( (attached) .and. (n_block_points_left(i_ext) .le. n_block_points_right(i_ext-1)) ) then
-  R_lim(1) = R_seg_prev(n_seg)
-  Z_lim(1) = Z_seg_prev(n_seg)
+if (attached) then
+  if (n_block_points_left(i_ext) .le. n_block_points_right(i_ext-1)) then
+    R_lim(1) = R_seg_prev(n_seg)
+    Z_lim(1) = Z_seg_prev(n_seg)
+  endif
 endif
 call create_polar_lines_simple(n_lim, R_lim(1:n_lim), Z_lim(1:n_lim), R_polar_wall(1:n_lim-1,1:4) , Z_polar_wall(1:n_lim-1,1:4) )
 length_top = 0.d0
@@ -988,8 +990,10 @@ do i = i_start,n_nodes
   n_tmp    = 100 ! we try a few of them, and take the closest one
   diff_min = 1.d10
   sig_tmp  = 0.15d0 ! we take a transition 1/3 of the total length
-  if ( (attached) .and. (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) ) then
-    sig_tmp = (sig_tmp * length_prev) / polar_length ! special case
+  if (attached) then
+    if (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) then
+      sig_tmp = (sig_tmp * length_prev) / polar_length ! special case
+    endif
   endif
   do j = 1,n_tmp
     bgf_tmp = real(j)/real(n_tmp+1)
@@ -1013,10 +1017,14 @@ do i = i_start,n_nodes
     endif
   enddo
   ! --- In case you know you want a specific extension beyond the previous patch
-  if ( attached .and. (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) .and. (n_ext(i_ext) .gt. n_seg_prev+2) ) then
-    do j=1,n_seg
-      seg(j) = seg(j) + real(i-1)/real(n_nodes-1) * (seg_new(j) - seg(j))
-    enddo
+  if (attached) then
+    if ( (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) .and. (n_ext(i_ext) .gt. n_seg_prev+2) ) then
+      do j=1,n_seg
+        seg(j) = seg(j) + real(i-1)/real(n_nodes-1) * (seg_new(j) - seg(j))
+      enddo
+    else
+      seg(1:n_seg) = seg_new(1:n_seg)
+    endif
   else
     seg(1:n_seg) = seg_new(1:n_seg)
   endif

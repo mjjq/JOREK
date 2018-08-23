@@ -1345,22 +1345,17 @@ do ms=1, n_gauss
 			   
 		           + tauIC * BigR**3 * p0_y * (v_x* u_x + v_y * u_y)                         * xjac * theta * tstep &
 		           + v * tauIC * BigR**4 * (u_xy * (p0_xx - p0_yy) - p0_xy * (u_xx - u_yy))  * xjac * theta * tstep &
-                           !- BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
 
-                       + BigR**2 * (r0_x_hat * u0_y - r0_y_hat * u0_x) * (v_x * u_x + v_y * u_y) &
-                         * xjac * theta * tstep &
-                       + BigR**2 * (r0_x_hat * u_y - r0_y_hat * u_x) * (v_x * u0_x + v_y * u0_y) &
-                         * xjac * theta * tstep &
-                      ! Perp component of the third term of Eq.20 here (new momentum)
-                      - BigR**2 * r0 * F0 / BigR * vpar0_p * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
-                      - BigR**2 * vpar0 * F0 / BigR * r0_p * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
-                      ! Toroidal para component of the third term of Eq.20 here (new momentum)
-                      - BigR**2 * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
-                        * (v_x * u_x + v_y * u_y) * xjac * theta * tstep  &
-                      - BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x) &
-                        * (v_x * u_x + v_y * u_y) * xjac * theta * tstep  &
-                      ! Poloidal para component of the third term of Eq.20 here (new momentum)
+                           ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                           ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                           + BigR**2 * (r0_x_hat * u0_y - r0_y_hat * u0_x)      * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
+                           + BigR**2 * (r0_x_hat * u_y  - r0_y_hat * u_x)       * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                           - BigR * F0 * (r0 * vpar0_p + vpar0 * r0_p)          * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
+                           - BigR**2 * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
+                           - BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
 
+                           ! Old term (not to be included anymore due to implementations of terms above):
+                           ! - BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
 
                            + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w0_x * u_y - w0_y * u_x)       &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep   &

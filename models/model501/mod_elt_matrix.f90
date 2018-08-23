@@ -1441,14 +1441,12 @@ do ms=1, n_gauss
 			                           - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )         &
 						 * xjac * theta * tstep 
 
-             amat_27 = - BigR**2 * r0 * F0 / BigR * vpar_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                      - BigR**2 * vpar * F0 / BigR * r0_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                      ! Toroidal para component of the third term of Eq.20 here (new momentum)
-                      - BigR**2 * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) &
-                        * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
-                      - BigR**2 * vpar * (r0_x * ps0_y - r0_y * ps0_x) &
-                        * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
-                      ! Poloidal para component of the third term of Eq.20 here (new momentum)
+                 amat_27 = &
+                           ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                           ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):		 
+		           - BigR * F0 * (r0 * vpar_p + r0_p * vpar)          * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                           - BigR**2 * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                           - BigR**2 * vpar * (r0_x * ps0_y - r0_y * ps0_x)   * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
 
 		 amat_28 = - BigR**2 * (v_s * rhon_t * alpha_imp * T0     - v_t * rhon_s * alpha_imp * T0  )   * theta * tstep &
                            - BigR**2 * (v_s * rhon * alpha_imp_bis * T0_t - v_t * rhon * alpha_imp_bis * T0_s) * theta * tstep
@@ -1969,7 +1967,7 @@ do ms=1, n_gauss
                  ELM(ij2,kl4) =  ELM(ij2,kl4) + wst * amat_24
                  ELM(ij2,kl5) =  ELM(ij2,kl5) + wst * amat_25
                  ELM(ij2,kl6) =  ELM(ij2,kl6) + wst * amat_26
-                 ELM(ij2,kl7) =  ELM(ij2,kl7) + wst * amat_27 ! New term due to the new momentum eq.
+                 ELM(ij2,kl7) =  ELM(ij2,kl7) + wst * amat_27
 		 ELM(ij2,kl8) =  ELM(ij2,kl8) + wst * amat_28
 
                  ELM(ij3,kl1) =  ELM(ij3,kl1) + wst * amat_31

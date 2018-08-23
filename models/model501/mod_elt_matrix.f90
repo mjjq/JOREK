@@ -1333,11 +1333,10 @@ do ms=1, n_gauss
 
                  amat_21 = - v * (psi_s * zj0_t - psi_t * zj0_s)                          * theta * tstep &
 
-                      - BigR**2 * r0 * (vpar0_x * psi_y - vpar0_y * psi_x) &
-                        * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                      - BigR**2 * vpar0 * (r0_x * psi_y - r0_y * psi_x) &
-                        * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
-                      ! Poloidal para component of the third term of Eq.20 here (new momentum)
+                           ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                           ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                           - BigR**2 * r0 * (vpar0_x * psi_y - vpar0_y * psi_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                           - BigR**2 * vpar0 * (r0_x * psi_y - r0_y * psi_x)    * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
 
 
                  amat_22 = - BigR * r0_hat * (v_x * u_x + v_y * u_y) * xjac * (1.d0 + zeta)                                 &

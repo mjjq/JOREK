@@ -1393,25 +1393,18 @@ do ms=1, n_gauss
 !===============================End of NewTG_num terms==============================
 
 
-                 amat_25 = - BigR**3 * rho * (v_x * u0_x + v_y * u0_y) * xjac  * (1.d0 + zeta)          &
-                      ! Additional zeta term for timesteping here (new momentum)
-
-                      + BigR**2 * (rho_x_hat * u0_y - rho_y_hat * u0_x) &
-                        * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                      ! Perp component of the third term of Eq.20 here (new momentum)
-                      - BigR**2 * rho * F0 / BigR * vpar0_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                      - BigR**2 * vpar0 * F0 / BigR * rho_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                      ! Toroidal para component of the third term of Eq.20 here (new momentum)
-                      - BigR**2 * rho * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
-                        * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
-                      - BigR**2 * vpar0 * (rho_x * ps0_y - rho_y * ps0_x) &
-                        * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
-                      ! Poloidal para component of the third term of Eq.20 here (new momentum)
-
-                           + 0.5d0 * vv2 * (v_x * rho_y_hat - v_y * rho_x_hat)   * xjac * theta * tstep &
+                 amat_25 = + 0.5d0 * vv2 * (v_x * rho_y_hat - v_y * rho_x_hat)   * xjac * theta * tstep &
                            + rho_hat * BigR**2 * w0 * (v_s * u0_t - v_t * u0_s)         * theta * tstep &
                            - BigR**2 * (v_s * rho_t * T0   - v_t * rho_s * T0  )        * theta * tstep &
                            - BigR**2 * (v_s * rho   * T0_t - v_t * rho   * T0_s)        * theta * tstep &
+
+                           ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                           ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                           - BigR**3 * rho * (v_x * u0_x + v_y * u0_y) * xjac  * (1.d0 + zeta)          &
+                           + BigR**2 * (rho_x_hat * u0_y - rho_y_hat * u0_x)     * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                           - BigR * F0 * (rho * vpar0_p + rho_p * vpar0)         * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                           - BigR**2 * rho * (vpar0_x * ps0_y - vpar0_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                           - BigR**2 * vpar0 * (rho_x * ps0_y - rho_y * ps0_x)   * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
 
                            + v * tauIC * BigR**4 * T0  * (rho_s * w0_t - rho_t * w0_s)  * theta * tstep &
                            + v * tauIC * BigR**4 * rho * (T0_s  * w0_t - T0_t  * w0_s)  * theta * tstep &

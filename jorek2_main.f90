@@ -365,7 +365,7 @@ required = 0
     ! --- Optional: Redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
       if (xpoint)  then
-        if (xcase .ge. 2) then
+        if ( (xcase .ge. 2) .or. (RZ_grid_inside_wall) ) then
 	  if (grid_to_wall) then
 	    call grid_double_xpoint_inside_wall(node_list, element_list)
 	  else

@@ -1765,9 +1765,9 @@ do ms=1, n_gauss
                                  * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac) * xjac * theta * tstep*tstep
 !===============================End of new TG_num terms============================
 
-
-                 amat_72 = - (r0_x_hat * u_y - r0_y_hat * u_x) * vpar0 * BB2 * v * theta * xjac* tstep
-                      ! Perp component of the third term of Eq.20 here (new momentum)
+                 ! New term coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                 ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                 amat_72 = - v * (r0_x_hat * u_y - r0_y_hat * u_x) * vpar0 * BB2 * theta * xjac * tstep
  
 
                  amat_75 = + v * (rho_s * T0 * ps0_t - rho_t * T0 * ps0_s)                 * theta * tstep &

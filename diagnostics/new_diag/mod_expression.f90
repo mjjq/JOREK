@@ -20,8 +20,14 @@ module mod_expression
   use diffusivities
   use corr_neg
   use mod_basisfunctions
+
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)  
+  use mgi_module
+#endif
   
-  
+#if JOREK_MODEL == 501
+  use mod_coronal
+#endif
   
   
   
@@ -150,8 +156,10 @@ module mod_expression
     call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
-#if JOREK_MODEL == 500
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
     call add(exprs_all, 'radiation   ', 'Radiation terms for bolometry diagnostic              ')
+#endif
+#if JOREK_MODEL == 500
     call add(exprs_all, 'brem        ', 'Brem terms for bolometry diagnostic                   ')
 #endif
     
@@ -427,8 +435,8 @@ module mod_expression
     real*8  :: alpha_imp
     real*8  :: beta_imp
     !   -Radiation from injected impurities
-    real*8  :: Lrad
-    real*8  :: ne_rad    ! Electron density used in radiation rate
+    real*8  :: Lrad, dLrad_dT                      ! Radiation rate and its derivative wrt. temperature
+    real*8  :: ne_rad                              ! Electron density used in radiation rate
     real*8  :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
     real*8  :: A2_rad, T2_rad, sig2_rad
     !   -Temporary variable for charge state distribution
@@ -1004,16 +1012,29 @@ module mod_expression
   !--------------------------------------------------------
 
 #endif
+
 #if JOREK_MODEL == 501
+
           if (flag_adas) then
             call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
           else
             Z_imp = 10.0
           end if
+	  
           alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
           beta_imp     = m_i_over_m_imp*Z_imp - 1.
         
           ne_rad       = (r0 + beta_imp * rn0) ! electron density (JOREK unit)
+
+          if (flag_adas .and. ne_rad > 1.d16 .and. T_rad > 1.) then
+            Lrad = 0.0
+            dLrad_dT = 0.0
+            call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+            Lrad = Lrad * coef_rad_1
+          else
+            Lrad = 0.
+          end if
+
 #endif
 
           ! --- Factors for switching between JOREK normalized and SI units.
@@ -1210,6 +1231,11 @@ module mod_expression
 
               case ( 'brem' )
                 res = r0 * fact_ne * r0 * fact_ne * LradDcont_T
+#endif
+
+#if JOREK_MODEL == 501
+              case ( 'radiation' )
+	        res = 0.
 #endif
 
               case default

@@ -1889,13 +1889,13 @@ do ms=1, n_gauss
                        + 0.5d0 * r0 * vpar0**2 * BB2 * (psi_s * v_t - psi_t * v_s)               * theta * tstep &
                        + 0.5d0 * v  * vpar0**2 * BB2 * (psi_s * r0_t - psi_t * r0_s)             * theta * tstep &
 
-                       !+ v * (particle_source(ms,mt) + source_pellet) * vpar0 * BB2_psi * BigR * xjac * theta * tstep &
-                      + r0 * (vpar0_x * psi_y - vpar0_y * psi_x) &
-                        * vpar0 * BB2 * v * xjac * theta * tstep  &
-                      + vpar0 * (r0_x * psi_y - r0_y * psi_x) &
-                        * vpar0 * BB2 * v * xjac * theta * tstep  &
-                      ! Poloidal para component of the fifth term of Eq.29 here (new momentum)
+                       ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                       ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                       + v * r0 * (vpar0_x * psi_y - vpar0_y * psi_x) * vpar0 * BB2 * xjac * theta * tstep  &
+                       + v * vpar0 * (r0_x * psi_y - r0_y * psi_x)    * vpar0 * BB2 * xjac * theta * tstep  &
 
+                      ! Old term (not to be included anymore due to implementations of terms above):
+		      !+ v * (particle_source(ms,mt) + source_pellet) * vpar0 * BB2_psi * BigR * xjac * theta * tstep &
  
                        + TG_NUM7 * 0.25d0 * r0 * Vpar0**2 * BB2 &
                                  * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / BigR  &

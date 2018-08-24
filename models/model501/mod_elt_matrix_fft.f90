@@ -1940,8 +1940,8 @@ do ms=1, n_gauss
                        ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
                        + v * rho * vpar0 * F0**2 / BigR * xjac * (1.d0 + zeta)  &
                        - v * (rho_x_hat * u0_y - rho_y_hat * u0_x)       * vpar0 * BB2 * theta * xjac * tstep &   
-		       + v * F0 / BigR * rho * vpar0_p                   * vpar0 * BB2 * theta * xjac * tstep &	                            		
-		       + v * rho * (vpar0_x * ps0_y - vpar0_y * ps0_x)   * vpar0 * BB2 * theta * xjac * tstep &
+                       + v * F0 / BigR * rho * vpar0_p                   * vpar0 * BB2 * theta * xjac * tstep &	                            		
+                       + v * rho * (vpar0_x * ps0_y - vpar0_y * ps0_x)   * vpar0 * BB2 * theta * xjac * tstep &
                        + v * vpar0 * (rho_x * ps0_y - rho_y * ps0_x)     * vpar0 * BB2 * theta * xjac * tstep &
 
                        + TG_NUM7 * 0.25d0 * rho * Vpar0**2 * BB2 &

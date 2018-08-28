@@ -1048,7 +1048,9 @@ module mod_expression
              fact_vpar     = sqrt(BB2) / fact_time                                 ! factor for Vpar
              fact_resistiv = sqrt ( MU_zero / rho_norm )                           ! factor for eta == 1 / (factor for visco)
              fact_Er       = F0 / fact_time
+#if JOREK_MODEL == 500 || JOREK_MODEL == 501
 			 fact_rad      = (central_density*1.d20)**2./coef_rad_1
+#endif
           else if ( units == JOREK_UNITS ) then
              fact_time     = 1.d0
              fact_mu_zero  = 1.d0
@@ -1058,7 +1060,9 @@ module mod_expression
              fact_vpar     = 1.d0
              fact_resistiv = 1.d0
              fact_Er       = 1.d0
+#if JOREK_MODEL == 500 || JOREK_MODEL == 501			 
 			 fact_rad      = 1.d0
+#endif
           end if
           
           ! --- Now that everything is prepared, evaluate the requested expressions.

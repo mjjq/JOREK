@@ -44,7 +44,7 @@ contains
     
     ! -- internal parameters
     integer iv, iv2, inode1, inode2, i, j
-    integer vertex(2), direction(2)
+    integer vertex(2), direction(2), bnd1, bnd2
 
 #ifdef COMPARE_ELEMENT_MATRIX
     integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
@@ -73,9 +73,11 @@ contains
         inode1 = element%vertex(iv)
         inode2 = element%vertex(iv2)
 
-        ! --- The target has boundary 1 or 3
-    	if (      ((node_list%node(inode1)%boundary .eq. 1) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-    	    .and. ((node_list%node(inode2)%boundary .eq. 1) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
+        ! --- The target has boundary 1 or 3 in old version, but others in wall-grid
+        bnd1 = node_list%node(inode1)%boundary
+        bnd2 = node_list%node(inode2)%boundary
+        if (      ((bnd1 .eq. 1) .or. (bnd1 .eq. 3) .or. (bnd1 .eq. 5) .or. (bnd1 .eq. 6) .or. (bnd1 .eq. 7) .or. (bnd1 .eq. 8)) &
+            .and. ((bnd2 .eq. 1) .or. (bnd2 .eq. 3) .or. (bnd2 .eq. 5) .or. (bnd2 .eq. 6) .or. (bnd2 .eq. 7) .or. (bnd2 .eq. 8)) ) then
 
     	  nodes(1)  = node_list%node(inode1)
     	  nodes(2)  = node_list%node(inode2)

@@ -79,6 +79,13 @@ if (my_id == 0) then
     if (node_list%node(i)%boundary .eq. 1) n_border = n_border+2
     if (node_list%node(i)%boundary .eq. 2) n_border = n_border+2
     if (node_list%node(i)%boundary .eq. 3) n_border = n_border+3
+    if (node_list%node(i)%boundary .eq. 4) n_border = n_border+2
+    if (node_list%node(i)%boundary .eq. 5) n_border = n_border+2
+    if (node_list%node(i)%boundary .eq. 6) n_border = n_border+2
+    if (node_list%node(i)%boundary .eq. 7) n_border = n_border+2
+    if (node_list%node(i)%boundary .eq. 8) n_border = n_border+3
+    if (node_list%node(i)%boundary .eq. 9) n_border = n_border+2
+    if (node_list%node(i)%boundary .eq.10) n_border = n_border+3
   enddo
   
   if ((.not. freeboundary_equil) .or. (itype .ne. -1)) then

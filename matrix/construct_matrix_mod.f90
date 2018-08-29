@@ -76,7 +76,7 @@ contains
         ! --- The target has boundary 1 or 3 in old version, but others in wall-grid
         bnd1 = node_list%node(inode1)%boundary
         bnd2 = node_list%node(inode2)%boundary
-Â        if (      ((bnd1 .eq. 1) .or. (bnd1 .eq. 3) .or. (bnd1 .eq. 5) .or. (bnd1 .eq. 6) .or. (bnd1 .eq. 7) .or. (bnd1 .eq. 8)) &
+        if (      ((bnd1 .eq. 1) .or. (bnd1 .eq. 3) .or. (bnd1 .eq. 5) .or. (bnd1 .eq. 6) .or. (bnd1 .eq. 7) .or. (bnd1 .eq. 8)) &
             .and. ((bnd2 .eq. 1) .or. (bnd2 .eq. 3) .or. (bnd2 .eq. 5) .or. (bnd2 .eq. 6) .or. (bnd2 .eq. 7) .or. (bnd2 .eq. 8)) ) then
 
     	  nodes(1)  = node_list%node(inode1)

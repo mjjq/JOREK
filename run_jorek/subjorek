@@ -270,6 +270,63 @@ fi
 ;;
 
 # -----------------------------------------------------------------
+# irene (TGCC)
+# -----------------------------------------------------------------
+irene_skl*)
+
+# SKL partition
+PART="skylake"
+
+# batch control
+# -------------
+((THPNODE=48))
+MPIPROCS=2
+NTHREAD=24
+NNODES=2
+((NPES=NNODES*MPIPROCS))
+if [ -z "${PROJ}" ]; then
+    echo "Please set the environment variable PROJ to define the project you are in."
+    exit
+fi
+PROJ=${PROJ}
+WALLTIME=7200
+
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+SRCDIR=$(dirname $PWD)
+WKDIR=`pwd`
+UTILDIR=${SRCDIR}/util
+DIR=$(basename $(dirname $PWD))
+REP=`echo $DIR | tr -s "/" " " | awk '{print $1}' `
+RESDIR1=${JOREK_CCCSCRATCHDIR}/${REP}
+RESDIR=${RESDIR1}/${CASE}
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+fi
+
+;;
+
+# -----------------------------------------------------------------
 # marconi (CINECA)
 # -----------------------------------------------------------------
 marconi*)
@@ -1026,6 +1083,44 @@ EOF
 ;;
 
 # -----------------------------------------------------------------
+# irene SKL (TGCC)
+# -----------------------------------------------------------------
+irene_skl*)
+
+CMD_MPIRUN="ccc_mprun ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
+CMD_SUB="ccc_msub -m work,scratch,store $PROJ_GCH ./go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#MSUB -r $CASENAME          # Nom du job                
+#MSUB -n $NPES              # Nb processus
+#MSUB -N $NNODES            # Nb nodes
+#MSUB -c $NTHREAD           # Nb thread
+#MSUB -T $WALLTIME          # Limite de temps elapsed
+#MSUB -m work
+#MSUB -q $PART
+#MSUB -x
+#MSUB -E '--licenses=fs_unshare,fs_work,fs_scratch'
+#MSUB -o ${CASENAME}_%I.out
+#MSUB -e ${CASENAME}_%I.out
+
+ulimit -d unlimited
+ulimit -Sa
+ulimit -Ha
+
+# The BRIDGE_MSUB_PWD environment variable contains the directory from which the script was submitted
+echo " BRIDGE_MSUB_PWD "
+cd \${BRIDGE_MSUB_PWD}
+pwd
+
+EOF
+
+;;
+
+# -----------------------------------------------------------------
 # marconi (IRFM)
 # -----------------------------------------------------------------
 marconi*)
@@ -1363,6 +1458,3 @@ EOF
 chmod +x go_$DATANAME.cmd
 cd ${WKDIR}
 ${CMD_SUB}
-
-
-

@@ -11,14 +11,18 @@
 # Include jorek-specific things and settings
 include Makefile.inc
 MODEL_NUMBER := $(subst model,,$(MODEL))
-
-jorek_model$(MODEL_NUMBER): jorek2_main
-	mv jorek2_main jorek_model$(MODEL_NUMBER)
+# Default rule needs to be first
+main: jorek_model$(MODEL_NUMBER)
 
 # Some defaults and parsing logic for makefile.inc
 include defaults.mk
 
-.PHONY: .mod/version.h clean cleanall cleandep duplicates
+# Build the main executable with a different name from the source file jorek2_main.o
+jorek_model$(MODEL_NUMBER): $(OBJDIR)/jorek2_main.o $(shell ./util/obj_deps $(DEPDIR)/jorek2_main.d)
+	$(FC) $(FLAGS) $(DEFINES) $(INCLUDES) -o $@ $^ $(LIBS)
+
+
+.PHONY: $(MODDIR)/version.h clean cleanall cleandep duplicates
 cleanall: clean cleandep
 clean:
 	@echo ">> Deleting Object Files <<"

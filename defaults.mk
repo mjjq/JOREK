@@ -212,7 +212,10 @@ Makefile.inc: ;
 # Try to create .mod/version.h, but only overwrite it if the contents have changed
 $(MODDIR)/version.h:
 	@echo "Generate .mod/version.h"
-	@echo "#define RCS_VERSION '`git describe --always --dirty --abbrev 2> /dev/null`'" > $@.tmp
+	@rm -f $@.tmp
+	@echo "#define RCS_VERSION '`git describe --always --dirty --abbrev 2> /dev/null`'" >> $@.tmp
+	@echo "#define RCS_LABEL '`git log -1 --format="%s (%D)" 2> /dev/null`'" >> $@.tmp
+	@echo "#define RCS_TIME '`git log -1 --format="%ad" 2> /dev/null`'" >> $@.tmp
 	@echo "#define compile_command '$(FC)'" >> $@.tmp
 	@echo "#define compile_flags '$(FLAGS) $(FFLAGS) $(F90FLAGS) $(EXTRA_FLAGS)'" >> $@.tmp
 	@echo "#define compile_includes '$(INCLUDES)'" >> $@.tmp

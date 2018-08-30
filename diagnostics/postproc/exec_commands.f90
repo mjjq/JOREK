@@ -123,6 +123,8 @@ module exec_commands
           call average(command, first_step, ierr)
         case ( 'int2d' )
           call int2d(command, first_step, ierr)
+		case ( 'int3d' )
+          call int3d(command, first_step, ierr)
         case ( 'equil_params' )
           call equil_params(command, first_step, ierr)
         case ( 'energy_spectrum' )
@@ -188,10 +190,10 @@ module exec_commands
     else if ( exec_mode == LOOP_MODE ) then
       
       select case ( trim(command%args(0)) )
-        case ( 'expressions', 'mark_coords', 'int2d', 'midplane', 'average', 'point',      &
-          'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
-          'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
-          'si-units', 'grid', 'rectangle', 'energy_spectrum' )
+        case ( 'expressions', 'mark_coords', 'int2d', 'int3d', 'midplane', 'average',    &
+		  'point', 'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params',         &
+          'qprofile', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon',          & 
+          'jorek-units', 'si-units', 'grid', 'rectangle', 'energy_spectrum' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -1238,6 +1240,67 @@ module exec_commands
     
   end subroutine int2d
   
+  
+  
+  !> Output 3d integrals.
+  subroutine int3d(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: units, i_file
+    character(len=1024) :: filename, status, access
+    real*8  :: aminor, Bgeo, current, beta_p, beta_t, beta_n, density_tot, density_in,             &
+      density_out, pressure, pressure_in, pressure_out
+    real*8  :: fact_mu_zero, fact_ne
+    integer :: my_id    
+
+    ierr = 0
+    my_id = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    
+    write(filename,'(4a)') DIR, 'int3d',                                                           &
+      trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '#               time                                                ' 
+    end if
+    
+    if ( units == SI_UNITS ) then
+      fact_mu_zero = MU_zero
+      fact_ne      = central_density * 1.d20
+    else
+      fact_mu_zero = 1.d0
+      fact_ne      = 1.d0
+    end if
+    
+    call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure,   &
+      pressure_in,pressure_out)
+    
+    write(i_file,'(33es20.13)') time_now
+    
+    close(i_file)
+    
+  end subroutine int3d
+
   
   
   

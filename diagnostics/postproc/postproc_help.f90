@@ -31,6 +31,7 @@ module postproc_help
     write(*,*) '  grid                  Output the grid'
     write(*,*) '  help                  Print interactive help information'
     write(*,*) '  int2d                 Calculate various 2D integrals'
+	write(*,*) '  int3d                 Calculate various 3D integrals'
     write(*,*) '  int_along_pol_line    Integrate expr. on line from (R0,Z0,phi) to (R1,Z1,phi)'
     write(*,*) '  jorek-units           Switch to JOREK normalized units'
     write(*,*) '  mark_coords           Mark expressions as coordinates'
@@ -245,6 +246,15 @@ module postproc_help
         write(*,*) ''
         write(*,*) 'Examples:'
         write(*,*) '  int2d'
+      case ( 'int3d' ) 
+        write(*,*) 'Usage:'
+        write(*,*) '  int3d'
+        write(*,*) ''
+        write(*,*) '"int3d" calculates various 3d integrals (calls integrals_3D.f90) and outputs'
+        write(*,*) 'the results to file the file int3d_...'
+        write(*,*) ''
+        write(*,*) 'Examples:'
+        write(*,*) '  int3d'
       case ( 'int_along_pol_line' )
         write(*,*) 'Usage:'
         write(*,*) '  int_along_pol_line R0 Z0 R1 Z1 phi'

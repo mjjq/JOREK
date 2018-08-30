@@ -127,7 +127,7 @@ subroutine rhs_convergence_square_10_10(node_list, element_list, n, rng)
         index_ij = (i-1)*(n_order+1) + j
         index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
 
-        my_rhs(index_large_i) = my_rhs(index_large_i) + p%rhs(index_ij,i_elm,1,1)
+        my_rhs(index_large_i) = my_rhs(index_large_i) + p%rhs(j,i,i_elm,1,1)
       enddo
     enddo
   enddo

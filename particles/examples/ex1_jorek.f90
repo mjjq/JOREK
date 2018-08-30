@@ -44,7 +44,7 @@ call adjust_particle_weights(sim%groups(2)%particles, num_atoms_total=1d23)
 
 events = [event(write_action(basename='test'),   step=1d-4), &
           !event(diag_print_kinetic_energy(),     step=1d-6), &
-          event(project_to_vtk(sim%fields%node_list, sim%fields%element_list, smoothing=1d-3, basename='proj'), step=1d-5), &
+          event(projection(sim%fields%node_list, sim%fields%element_list, f=[proj_f(proj_one, 1)], smoothing=1d-3, basename='proj', to_vtk=.true.), step=1d-5), &
           event(stop_action(), start=1d-3)]
 call check_and_fix_timesteps(timesteps, events)
 call with(sim, events, at=0.d0)

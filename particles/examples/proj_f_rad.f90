@@ -12,6 +12,7 @@ use mod_project_particles
 use gauss
 use constants
 use mod_interp
+use mod_radiation, only: proj_Lz
 !$ use omp_lib
 implicit none
 
@@ -66,30 +67,9 @@ end associate
 
 ! Set up the diagnostics output
 proj = new_projection(sim%fields%node_list, sim%fields%element_list, smoothing=6d-5, &
-    proj_f=proj_q, basename='qperp', &
+    f=[proj_f(proj_Lz, group=1)], basename='qperp', &
     to_h5=.true.)
 call with(sim, proj)
 
 call sim%finalize
-contains
-!> Interpolate the parallel electric field at the particle position
-pure function proj_q(sim, group, particle)
-  use constants
-  use mod_collisions
-  use mod_ionisation_recombination
-  type(particle_sim), intent(in) :: sim
-  integer, intent(in) :: group
-  class(particle_base), intent(in) :: particle
-  real*8 :: proj_q, E(3), B(3), psi, U, q(3)
-  real*8 :: n_e, T_e, grad_T_e(3) ! temperature and gradient in [K]
-  call sim%fields%calc_NeTe(sim%time, particle%i_elm, particle%st, particle%x(3),n_e, T_e, grad_T_e)
-  call sim%fields%calc_EBpsiU(sim%time, particle%i_elm, particle%st, particle%x(3), &
-      E, B, psi, U)
-  q = q_homma2013(T_e*K_BOLTZ, grad_T_e*K_BOLTZ, B, n_e, 2.5d0, 1_1)
-
-  ! choose your component
-  ! hardcode first component
-  proj_q = q(1) !norm2(q - B*dot_product(q,B)/dot_product(B,B)) ! perp, total
-  !proj_q = dot_product(q,B)/norm2(B) ! par
-end function proj_q
-end program Proj_f
+end program proj_f_rad

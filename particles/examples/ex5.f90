@@ -63,19 +63,19 @@ do while (.not. sim%stop_now)
   do i=1,2
     n_steps = nint((target_time - sim%time)/timesteps(i))
 
-    ! 7.3 Select the type of this group once to call the right integrator
-    select type (particles => sim%groups(i)%particles)
-    type is (particle_kinetic_leapfrog)
-      ! 7.4 Loop first over particles, and then over how many steps we can take
-      !$omp parallel do default(private) &
-      !$omp shared(sim, particles, n_steps, timesteps, i)
-      do j=1,size(particles)
-        do k=1,n_steps
-          call boris_push_cartesian(particles(j), m=sim%groups(i)%mass, E=[0d0,0d0,0d0], B=[0d0,0d0,1d0], dt=timesteps(i))
-        end do ! steps
-      end do ! particles
-      !$omp end parallel do
-    end select
+    ! 7.4 Loop first over particles, and then over how many steps we can take
+    !$omp parallel do default(private) &
+    !$omp shared(sim, n_steps, timesteps, i)
+    do j=1,size(sim%groups(i)%particles)
+      ! 7.3 Select the type of this group once to call the right integrator
+      select type (particle => sim%groups(i)%particles(j))
+      type is (particle_kinetic_leapfrog)
+      do k=1,n_steps
+        call boris_push_cartesian(particle, m=sim%groups(i)%mass, E=[0d0,0d0,0d0], B=[0d0,0d0,1d0], dt=timesteps(i))
+      end do ! steps
+      end select
+    end do ! particles
+    !$omp end parallel do
   end do ! groups
 
   ! 7.5 Update the current time and run events

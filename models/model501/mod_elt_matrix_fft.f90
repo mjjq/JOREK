@@ -49,6 +49,7 @@ real*8     :: u0, u0_x, u0_y, u0_p, u0_s, u0_t, u0_ss, u0_st, u0_tt, u0_xx, u0_x
 real*8     :: w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_st, w0_tt, w0_xx, w0_xy, w0_yy
 real*8     :: r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_st, r0_tt, r0_xx, r0_xy, r0_yy
 real*8     :: r0_corr, rn0_corr, r0_hat, r0_x_hat, r0_y_hat, T0_corr, dT0_corr_dT, d2T0_corr_dT2
+real*8     :: dr0_corr_dn, drn0_corr_dn
 real*8     :: T0, T0_x, T0_y, T0_p, T0_s, T0_t, T0_ss, T0_st, T0_tt, T0_xx, T0_xy, T0_yy, T_corr
 real*8     :: psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_st, psi_tt, psi_xx, psi_yy, psi_xy
 real*8     :: zj, zj_x, zj_y, zj_p, zj_s, zj_t, zj_ss, zj_st, zj_tt
@@ -60,11 +61,12 @@ real*8     :: Vpar, Vpar_x, Vpar_y, Vpar_p, Vpar_s, Vpar_t, Vpar_ss, Vpar_st, Vp
 real*8     :: P0, P0_s, P0_t, P0_x, P0_y, P0_p, P0_ss, P0_st, P0_tt, P0_xx, P0_xy, P0_yy
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T, eta_Sp, detaSp_dT
+real*8     :: detaSp_dr0, detaSP_drn0, deta_dr0, deta_drn0
 real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
 real*8     :: amat_51, amat_51_n, amat_52, amat_55, amat_56, amat_57, amat_57_k, amat_58_k, amat_58_n
 real*8     :: amat_61, amat_62, amat_63, amat_65, amat_66, amat_67, amat_65_k, amat_65_kn, amat_67_k, amat_16, amat_13
-real*8     :: amat_71, amat_72, amat_75, amat_76, amat_75_n, amat_76_n, amat_15, amat_15_n, amat_16_n
+real*8     :: amat_71, amat_72, amat_75, amat_76, amat_75_n, amat_76_n, amat_15, amat_15_n, amat_16_n, amat_18
 real*8     :: amat_12_n, amat_23_n, amat_51_k, amat_55_kn, amat_55_k, amat_55_n, amat_57_n, amat_57_kn, amat_58_kn
 real*8     :: amat_75_k, amat_75_kn, amat_77, amat_77_k, amat_77_n, amat_77_kn
 real*8     :: amat_61_k, amat_65_n, amat_66_kn, amat_66_k, amat_66_n, amat_67_n, amat_68_n
@@ -130,7 +132,8 @@ real*8     :: Dn0x, Dn0y, Dn0p
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8     :: m_i_over_m_imp
 !   -Mean impurity ionization state
-real*8     :: Z_imp, dZ_imp_dT, d2Z_imp_dT2, T0_Zimp, alpha_Zimp, Z_eff, dZ_eff_dT, eta_coef, deta_coef_dT
+real*8     :: Z_imp, dZ_imp_dT, d2Z_imp_dT2, T0_Zimp, alpha_Zimp, Z_eff, dZ_eff_dT, eta_coef, deta_coef_dZeff
+real*8     :: dZ_eff_dr0, dZ_eff_drn0
 !   -Coefficients related to Z_imp
 real*8     :: alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis
 real*8     :: beta_imp, dbeta_imp_dT
@@ -138,6 +141,7 @@ real*8     :: beta_imp, dbeta_imp_dT
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
 real*8     :: T_rad, dT_rad_dT                                ! Temperature used in radiation rate
 real*8     :: ne_rad                                          ! Electron density used in radiation rate
+real*8     :: ne_JOREK                                        ! Electron density in JOREK unit 
 real*8     :: coef_rad_1, A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
 real*8     :: A2_rad, T2_rad, sig2_rad
 !   -Radiation from background impurities
@@ -386,6 +390,7 @@ do ms=1, n_gauss
      r0_tt = eq_tt(mp,5,ms,mt)
 
      r0_corr = corr_neg_dens(r0,(/1.d-8,1.d-5/)) ! Correction for negative r0 ...
+     dr0_corr_dn = dcorr_neg_dens_drho(r0,(/1.d-8,1.d-5/))
 
      r0_hat   = BigR**2 * r0
      r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
@@ -402,6 +407,7 @@ do ms=1, n_gauss
      rn0_tt = eq_tt(mp,8,ms,mt)                                                            
 
      rn0_corr = corr_neg_dens(rn0,(/1.d-12,1.d-5/)) ! Correction for negative rn0 ...
+     drn0_corr_dn = dcorr_neg_dens_drho(rn0, (/ 1.d-12, 1.d-5 /))
 
      rn0_xx = (rn0_ss * y_t(ms,mt)**2 - 2.d0*rn0_st * y_s(ms,mt)*y_t(ms,mt) + rn0_tt * y_s(ms,mt)**2     &
             + rn0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                 &
@@ -545,14 +551,24 @@ do ms=1, n_gauss
      delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,1,ms,mt) + x_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
      
      ! --- Temperature dependent resistivity
-     if ( eta_T_dependent ) then
+     if ( eta_T_dependent .and. T0_corr <= T_eta_thres ) then
        eta_T     = eta   * (T0_corr/T_0)**(-1.5d0)
        deta_dT   = ( - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
        d2eta_d2T = (  eta   * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0) ) * d2T0_corr_dT2
+       deta_dr0  = 0.
+       deta_drn0 = 0.
+     else if (eta_T_dependent .and. T0_corr > T_eta_thres) then
+       eta_T     = eta   * (T_eta_thres/T_0)**(-1.5d0)
+       deta_dT   = 0.
+       d2eta_d2T = 0.
+       deta_dr0  = 0.
+       deta_drn0 = 0.
      else
        eta_T     = eta
        deta_dT   = 0.d0
        d2eta_d2T = 0.d0
+       deta_dr0  = 0.
+       deta_drn0 = 0.
      end if
 
      eta_Sp = 1.65d-9*17*(1.d-3*T0_corr/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
@@ -562,9 +578,12 @@ do ms=1, n_gauss
                       * sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) * dT0_corr_dT
 
      ! --- Temperature dependent viscosity
-     if ( visco_T_dependent ) then       
+     if ( visco_T_dependent .and. T0_corr <= T_eta_thres ) then       
        visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
        dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) * dT0_corr_dT
+     else if (visco_T_dependent .and. T0_corr > T_eta_thres) then
+       visco_T   = visco * (T_eta_thres/T_0)**(-1.5d0)
+       dvisco_dT = 0.
      else
        visco_T   = visco
        dvisco_dT = 0.d0
@@ -729,23 +748,59 @@ do ms=1, n_gauss
      dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
 
      ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+     ne_JOREK     = r0_corr + beta_imp * rn0_corr ! Electron density in JOREK unit
+     ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/)) ! Correction for negative electron density
+                                                            ! Too small rho_1 will cause a problem
 
      ! Calculate the effective charge of all species
-     Z_eff        = (r0_corr + beta_imp * rn0_corr) / (r0_corr + rn0_corr*(m_i_over_m_imp-1.))
-     dZ_eff_dT    = dbeta_imp_dT * rn0_corr / (r0_corr + rn0_corr*(m_i_over_m_imp-1.))
-     eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2.)/(1.+2.966*Z_eff+0.753*Z_eff**2.)
+     Z_eff        = 0.
+     dZ_eff_dT    = 0.
+     dZ_eff_dr0   = 0.
+     dZ_eff_drn0  = 0.
+
+     ! First get the value of Z_eff
+     Z_eff        = r0_corr - rn0_corr
+     do ion_i=1, imp_adas(1)%n_Z
+       Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
+     end do
+     Z_eff        = Z_eff / ne_JOREK
+
+     ! Then three(!) gradients
+     do ion_i=1, imp_adas(1)%n_Z
+       dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rn0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
+     end do
+     dZ_eff_dT    = dZ_eff_dT / ne_JOREK
+     dZ_eff_dT    = dZ_eff_dT - Z_eff * dbeta_imp_dT * rn0_corr / ne_JOREK
+
+     dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
+
+     dZ_eff_drn0  = dZ_eff_drn0 - 1.
+     do ion_i=1, imp_adas(1)%n_Z
+       dZ_eff_drn0= dZ_eff_drn0 + m_i_over_m_imp * P_imp(ion_i) * real(ion_i,8)**2
+     end do
+     dZ_eff_drn0  = dZ_eff_drn0 / ne_JOREK
+     dZ_eff_drn0  = dZ_eff_drn0 - Z_eff * beta_imp / ne_JOREK
+
+     ! This is to represent the dependence on Z_eff in resistivity
+     eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
      eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
-     deta_coef_dT = dZ_eff_dT*(1.+1.198*Z_eff+0.222*Z_eff**2.)/(1.+2.966*Z_eff+0.753*Z_eff**2.)
-     deta_coef_dT = deta_coef_dT + Z_eff*(1.198*dZ_eff_dT+2.*0.222*Z_eff*dZ_eff_dT)/(1.+2.966*Z_eff+0.753*Z_eff**2.)
-     deta_coef_dT = deta_coef_dT - Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2.)*(2.966*dZ_eff_dT+2.*0.753*Z_eff*dZ_eff_dT)/((1.+2.966*Z_eff+0.753*Z_eff**2.)**2.)
-     deta_coef_dT = deta_coef_dT / ((1.+1.198+0.222)/(1.+2.966+0.753))
 
+     deta_coef_dZeff = (1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
+     deta_coef_dZeff = deta_coef_dZeff + Z_eff*(1.198+2.*0.222*Z_eff)/(1.+2.966*Z_eff+0.753*Z_eff**2)
+     deta_coef_dZeff = deta_coef_dZeff - Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)*(2.966+2.*0.753*Z_eff)/((1.+2.966*Z_eff+0.753*Z_eff**2)**2)
+     deta_coef_dZeff = deta_coef_dZeff / ((1.+1.198+0.222)/(1.+2.966+0.753))
 
-     detaSp_dT    = detaSp_dT * eta_coef + eta_Sp * deta_coef_dT * dT0_corr_dT
+     detaSp_dr0   = eta_Sp * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
+     detaSp_drn0  = eta_Sp * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
+     detaSp_dT    = detaSp_dT * eta_coef + eta_Sp * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT
      eta_Sp       = eta_Sp * eta_coef
 
      if ( eta_T_dependent ) then
-       deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dT * dT0_corr_dT
+       if (T0_corr <= T_eta_thres) then
+         deta_dr0  = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
+         deta_drn0 = eta_T * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
+         deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT
+       end if
        eta_T     = eta_T * eta_coef
      end if
 
@@ -1381,7 +1436,9 @@ do ms=1, n_gauss
 		       - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * rho * T0_p  * xjac          * theta * tstep &
 
                       - v * tauIC * rho /(r0_corr**2 * BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * theta * tstep &
-                      + v * tauIC * rho /(r0_corr**2 * BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac         * theta * tstep
+                      + v * tauIC * rho /(r0_corr**2 * BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac         * theta * tstep &
+                      ! The density gradient term from Z_eff
+                      - deta_dr0 * v * rho * (zj0-current_source(ms,mt)) / BigR * xjac * theta * tstep
 
              amat_15_n = - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * T0  * rho_p * xjac * theta * tstep 
 
@@ -1391,6 +1448,9 @@ do ms=1, n_gauss
 	             - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * T  * r0_p * xjac        * theta * tstep 
 
              amat_16_n = - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * r0 * T_p  * xjac * theta * tstep 
+
+             ! The density gradient term from Z_eff
+             amat_18 = - deta_drn0 * v * rhon * (zj0-current_source(ms,mt)) / BigR * xjac * theta * tstep
 
 !###################################################################################################
 !#  equation 2   (perpendicular momentum equation)                                                 #
@@ -1751,7 +1811,9 @@ do ms=1, n_gauss
                               * ( v_x * ps0_y -  v_y * ps0_x ) * xjac * theta * tstep * tstep &
 
                     + v * BigR * rho * rn0 * Lrad                                          * xjac * theta * tstep  &
-                    + v * BigR * rho * frad_bg                                             * xjac * theta * tstep 
+                    + v * BigR * rho * frad_bg                                             * xjac * theta * tstep&
+                    ! New term from Z_eff
+                    - v * BigR * rho * ((2d0)/(3*BigR**2)) * detaSp_dr0 * zj0**2           * xjac * theta * tstep 
 
 
              amat_65_n = + v * T0  * F0 / BigR * Vpar0 * rho_p                      * xjac * theta * tstep    &
@@ -1870,6 +1932,9 @@ do ms=1, n_gauss
 !=============== The ionization potential energy term=========================
                        + v * rhon * E_ion          * BigR * xjac * (1.d0 + zeta)                              &
 !================= End ionization potential energy ===========================
+                       ! New term from Z_eff
+                       - v * BigR * rhon * ((2d0)/(3*BigR**2)) * detaSp_drn0 * zj0**2  * xjac * theta * tstep &
+
                        - v * rhon * BigR**2 * alpha_imp_bis * (T0_s * u0_t - T0_t * u0_s)     * theta * tstep &
                        - v * alpha_imp * T0 * BigR**2 * (rhon_s * u0_t - rhon_t * u0_s)       * theta * tstep &
                        + v * rhon * F0 / BigR * Vpar0 * alpha_imp_bis * T0_p           * xjac * theta * tstep &
@@ -2239,6 +2304,7 @@ do ms=1, n_gauss
              ELM_n(mp,ij1,kl5)  =  ELM_n(mp,ij1,kl5) + wst * amat_15_n
              ELM_p(mp,ij1,kl6)  =  ELM_p(mp,ij1,kl6) + wst * amat_16
              ELM_n(mp,ij1,kl6)  =  ELM_n(mp,ij1,kl6) + wst * amat_16_n
+             ELM_p(mp,ij1,kl8)  =  ELM_p(mp,ij1,kl8) + wst * amat_18 ! New Z_eff term
 
              ELM_p(mp,ij2,kl1)  =  ELM_p(mp,ij2,kl1) + wst * amat_21
              ELM_p(mp,ij2,kl2)  =  ELM_p(mp,ij2,kl2) + wst * amat_22

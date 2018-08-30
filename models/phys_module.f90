@@ -12,6 +12,8 @@ module phys_module
   !> @name Various parameters
   real*8  :: eta                  !< Resistivity
   real*8  :: eta_T_0              !< Initial resistivity
+  real*8  :: T_eta_thres          !< The temperature threshold for resistivity,
+                                  !< beyond which the resistivity is truncated.
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant.
   real*8  :: visco                !< Viscosity
 

@@ -4,13 +4,15 @@
 !! compiler flags
 !!
 !! When one or more commandline argument is given this function will loop
-!! through those options and will respond to each one till one is recognized.
+!! through those options and will respond to each one until one is recognized.
 !! The following argument are supported:
 !!
-!!   -h or --help  : print some basic info about JOREK_2
-!!   -p or --param : print hardcoded parameters
+!!   -h or --help: print some basic info about JOREK_2
+!!   -p or --param: print hardcoded parameters
+!!   -v or --version: print the JOREK version info
+!!   -a or --about: print information about JOREK
 !!
-!! unknown argument give a short message that the argument is invalit. When
+!! unknown argument give a short message that the argument is invalid. When
 !! none of the given arguments is recognized a sugestion is given for valid
 !! arguments.
 !!
@@ -109,7 +111,6 @@ contains
     write(*,*) ' MPI processes       : ', n_cpu
     write(*,*) ' OpenMP threads      : ', nbthreads
     write(*,*) ' GIT revision        : ', trim(adjustl(RCS_VERSION))
-    write(*,111) 'compile_time        ', trim(adjustl(compile_time))
     write(*,111) 'compile_user        ', trim(adjustl(compile_user))
     write(*,111) 'compile_machine     ', trim(adjustl(compile_machine))
     write(*,111) 'compile_dir         ', trim(adjustl(compile_dir))

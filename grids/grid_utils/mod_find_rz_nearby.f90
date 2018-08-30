@@ -1,7 +1,7 @@
-module mod_find_RZ_nearby
+module mod_find_rz_nearby
   implicit none
   private
-  public :: find_RZ_nearby
+  public :: find_rz_nearby
 contains
 !> Optimized subroutine to find st coordinates corresponding to x_new=[R_new, Z_new] using
 !! The previous values x_old=[R_old, Z_old], st_old(2), i_elm_old and checking adjacent elements first
@@ -171,4 +171,4 @@ else
   inv_st_jac_det = 1.d0/(jac)
 end if
 end subroutine try_interp
-end module mod_find_RZ_nearby
+end module mod_find_rz_nearby

@@ -21,7 +21,7 @@ end subroutine setup_fieldline_spec
 
 !> Test tracing a fieldline back and forth with euler
 subroutine test_fieldline_backforth_euler
-  use mod_find_RZ_nearby
+  use mod_find_rz_nearby
   type(jorek_fields_interp_linear) :: f
   integer, parameter :: n_p = 2
   type(particle_fieldline) :: p(n_p)
@@ -81,7 +81,7 @@ end subroutine test_fieldline_backforth_euler
 
 !> Test tracing a fieldline back and forth with Adams-Bashforth
 subroutine test_fieldline_backforth_adams_bashforth
-  use mod_find_RZ_nearby
+  use mod_find_rz_nearby
   type(jorek_fields_interp_linear) :: f
   integer, parameter :: n_p = 2
   type(particle_fieldline) :: p(n_p)

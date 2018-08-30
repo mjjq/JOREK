@@ -20,7 +20,7 @@ use constants
 use mod_fields_linear
 use mod_export_restart
 use mod_neighbours
-use mod_find_RZ_nearby
+use mod_find_rz_nearby
 
 implicit none
 

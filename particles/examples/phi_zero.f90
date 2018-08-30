@@ -14,7 +14,7 @@ use mod_event
 use mod_boris
 use mod_fieldline_euler
 use hdf5_io_module
-use mod_find_RZ_nearby
+use mod_find_rz_nearby
 implicit none
 
 type(particle_sim) :: sim

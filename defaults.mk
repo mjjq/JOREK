@@ -122,7 +122,7 @@ $(OBJDIR)/%.o:: $(1)%.cpp
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE
-$(DEPDIR)/%.d: $(1)%.f90
+$(DEPDIR)/%.d: $(1)%.f90 | .mod/version.h
 	@echo "Generating dependencies for $$<"
 	@$(GCPP) -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
 endef

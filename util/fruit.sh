@@ -6,7 +6,6 @@
 # Date: 2018-01-15
 # Author: Daan van Vugt, TU Eindhoven
 #
-
 set -u
 
 function usage() {
@@ -30,7 +29,7 @@ junit=0
 outfile="test"
 test_only=""
 
-while getopts ":hkts:" opt; do
+while getopts ":hkt:s:" opt; do
   case $opt in
     h)
       usage

@@ -1,5 +1,6 @@
 module pellet_module
 
+  use mod_interp
   use constants
   use data_structure
   

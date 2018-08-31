@@ -54,6 +54,7 @@ DIRS := diagnostics			\
 	tools/fruit                     \
 	non_regression_tests/unit_tests \
 	datatypes			\
+	benchmarks                      \
 	.				\
 	vacuum
 

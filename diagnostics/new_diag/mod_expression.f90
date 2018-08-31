@@ -19,6 +19,7 @@ module mod_expression
   use phys_module
   use diffusivities
   use corr_neg
+  use mod_basisfunctions
   
   
   
@@ -475,7 +476,7 @@ module mod_expression
         ielm = pol_pos%ielm
         BigR   = R    ! Just two different names for R
         BigR_R = 1.d0 ! Trivial derivative
-        call basisfunctions2(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
+        call basisfunctions(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
         
         ! --- Poloidal angle theta
         theta = atan2(Z-eq%Z_axis, R-eq%R_axis)

@@ -12,6 +12,7 @@ use mod_bootstrap_functions
 use corr_neg
 use mod_import_restart
 use mod_vtk
+use mod_interp
 
 implicit none
 

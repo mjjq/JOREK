@@ -739,20 +739,24 @@ do ms=1, n_gauss
      Z_eff        = Z_eff / ne_JOREK
      
      ! Then three(!) gradients
-     do ion_i=1, imp_adas(1)%n_Z
-       dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rn0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
-     end do
-     dZ_eff_dT    = dZ_eff_dT / ne_JOREK
-     dZ_eff_dT    = dZ_eff_dT - Z_eff * dbeta_imp_dT * rn0_corr / ne_JOREK
+     if (Z_eff >= 1.) then
+       do ion_i=1, imp_adas(1)%n_Z
+         dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rn0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
+       end do
+       dZ_eff_dT    = dZ_eff_dT / ne_JOREK
+       dZ_eff_dT    = dZ_eff_dT - Z_eff * dbeta_imp_dT * rn0_corr / ne_JOREK
+    
+       dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
   
-     dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
-
-     dZ_eff_drn0  = dZ_eff_drn0 - 1.
-     do ion_i=1, imp_adas(1)%n_Z
-       dZ_eff_drn0= dZ_eff_drn0 + m_i_over_m_imp * P_imp(ion_i) * real(ion_i,8)**2
-     end do
-     dZ_eff_drn0  = dZ_eff_drn0 / ne_JOREK
-     dZ_eff_drn0  = dZ_eff_drn0 - Z_eff * beta_imp / ne_JOREK
+       dZ_eff_drn0  = dZ_eff_drn0 - 1.
+       do ion_i=1, imp_adas(1)%n_Z
+         dZ_eff_drn0= dZ_eff_drn0 + m_i_over_m_imp * P_imp(ion_i) * real(ion_i,8)**2
+       end do
+       dZ_eff_drn0  = dZ_eff_drn0 / ne_JOREK
+       dZ_eff_drn0  = dZ_eff_drn0 - Z_eff * beta_imp / ne_JOREK
+     else
+       Z_eff        = 1.
+     end if
 
      ! This is to represent the dependence on Z_eff in resistivity
      eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
@@ -1659,7 +1663,7 @@ do ms=1, n_gauss
                            + TG_num6 * 0.25d0 * BigR**2 * r0* (T0_x * u0_y - T0_y * u0_x)     &
                                      * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
 
-                amat_63 = - v * BigR * zj * (4/(3 * BigR**2)) * eta_Sp * zj0                      * xjac * theta * tstep
+                amat_63 = - v * BigR * zj * (4./(3. * BigR**2)) * eta_Sp * zj0                      * xjac * theta * tstep
 
 
                 amat_65 =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)    &

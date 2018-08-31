@@ -913,7 +913,7 @@ do ms=1, n_gauss
 
                     - v * BigR * ksiion * r0_corr * rn0_corr * Sion_T                  * xjac * tstep         &
 
-                    + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                    * xjac * tstep  &
+                    + v * BigR * (2./(3. * BigR**2)) * eta_Sp * zj0**2                    * xjac * tstep  &
                     - v * BigR * r0_corr * rn0_corr * LradDrays_T                       * xjac * tstep  &
                     - v * BigR * r0_corr * r0_corr  * LradDcont_T                       * xjac * tstep  &
                     - v * BigR * r0_corr * frad_bg                                      * xjac * tstep

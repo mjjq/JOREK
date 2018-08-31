@@ -1341,7 +1341,7 @@ do ms=1, n_gauss
                            + TG_num6 * 0.25d0 * BigR**2 * r0* (T0_x * u0_y - T0_y * u0_x)     &
                                      * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
 
-                amat_63 = - v * BigR * zj * (4/(3 * BigR**2)) * eta_Sp * zj0                      * xjac * theta * tstep
+                amat_63 = - v * BigR * zj * (4./(3. * BigR**2)) * eta_Sp * zj0                      * xjac * theta * tstep
 
 
                 amat_65 =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)    &
@@ -1636,6 +1636,7 @@ do ms=1, n_gauss
                  
 		 ELM(ij6,kl1) =  ELM(ij6,kl1) + wst * amat_61
                  ELM(ij6,kl2) =  ELM(ij6,kl2) + wst * amat_62
+                 ELM(ij6,kl3) =  ELM(ij6,kl3) + wst * amat_63
                  ELM(ij6,kl5) =  ELM(ij6,kl5) + wst * amat_65
                  ELM(ij6,kl6) =  ELM(ij6,kl6) + wst * amat_66
                  ELM(ij6,kl7) =  ELM(ij6,kl7) + wst * amat_67

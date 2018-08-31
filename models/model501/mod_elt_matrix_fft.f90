@@ -389,8 +389,8 @@ do ms=1, n_gauss
      r0_st = eq_st(mp,5,ms,mt)
      r0_tt = eq_tt(mp,5,ms,mt)
 
-     r0_corr = corr_neg_dens(r0,(/1.d-8,1.d-5/)) ! Correction for negative r0 ...
-     dr0_corr_dn = dcorr_neg_dens_drho(r0,(/1.d-8,1.d-5/))
+     r0_corr = corr_neg_dens(r0,(/1.d-8,1.d-5/),1.d-3) ! Correction for negative r0 ...
+     dr0_corr_dn = dcorr_neg_dens_drho(r0,(/1.d-8,1.d-5/),1.d-3)
 
      r0_hat   = BigR**2 * r0
      r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
@@ -406,8 +406,8 @@ do ms=1, n_gauss
      rn0_st = eq_st(mp,8,ms,mt)                                                            
      rn0_tt = eq_tt(mp,8,ms,mt)                                                            
 
-     rn0_corr = corr_neg_dens(rn0,(/1.d-12,1.d-5/)) ! Correction for negative rn0 ...
-     drn0_corr_dn = dcorr_neg_dens_drho(rn0, (/ 1.d-12, 1.d-5 /))
+     rn0_corr = corr_neg_dens(rn0,(/1.d-12,1.d-5/),1.d-3) ! Correction for negative rn0 ...
+     drn0_corr_dn = dcorr_neg_dens_drho(rn0, (/ 1.d-12, 1.d-5 /),1.d-3)
 
      rn0_xx = (rn0_ss * y_t(ms,mt)**2 - 2.d0*rn0_st * y_s(ms,mt)*y_t(ms,mt) + rn0_tt * y_s(ms,mt)**2     &
             + rn0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                 &
@@ -749,7 +749,7 @@ do ms=1, n_gauss
 
      ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
      ne_JOREK     = r0_corr + beta_imp * rn0_corr ! Electron density in JOREK unit
-     ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/)) ! Correction for negative electron density
+     ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                             ! Too small rho_1 will cause a problem
 
      ! Calculate the effective charge of all species
@@ -1201,7 +1201,7 @@ do ms=1, n_gauss
                     + zeta * v * dE_ion_dT * rn0 * delta_g(mp,6,ms,mt) *BigR                           * xjac &
 !==============================End of ionization energy terms=================
 
-                    + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                   * xjac * tstep  &
+                    + v * BigR * (2./(3. * BigR**2)) * eta_Sp * zj0**2                   * xjac * tstep  &
                     - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad         * xjac * tstep  &
                     - v * BigR * r0_corr * frad_bg                                     * xjac * tstep  
 

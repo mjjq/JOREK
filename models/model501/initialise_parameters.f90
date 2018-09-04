@@ -414,7 +414,9 @@ if (using_spi) then
         
       end do
 
-      write(*,*) "SPI initialized successfully, total amount of injection:", real_total_quantity
+      if (flag_spi_size == 1) then
+        write(*,*) "SPI initialized successfully, total amount of injection:", real_total_quantity
+      end if
 
       deallocate(rnd)
       deallocate(shard_size)

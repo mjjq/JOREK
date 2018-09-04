@@ -416,10 +416,10 @@ if (using_spi) then
 
       if (flag_spi_size == 1) then
         write(*,*) "SPI initialized successfully, total amount of injection:", real_total_quantity
+        deallocate(shard_size)
       end if
 
       deallocate(rnd)
-      deallocate(shard_size)
 
       if (allocated(xtime_spi_ablation)) call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation,1,n_spi,1,nstep,"xtime_spi_ablation")

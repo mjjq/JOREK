@@ -1,7 +1,7 @@
 # Makefile.inc file for compiling JOREK on the Marconi-Fusion Supercomputer
 #
 # * Make sure to set PASTIX_HOME below to the correct directory.
-# * Make sure that you have the following modules loaded: intel/18.0.1.163 mpi/intelmpi/2018.0.3.222
+# * Make sure that you have the following modules loaded: intel/18.0.3.222 mpi/intelmpi/2018.0.3.222
 
 # --- Select physics model
 MODEL             = model303

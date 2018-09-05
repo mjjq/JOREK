@@ -4,12 +4,12 @@
 # * Make sure that you have the following modules loaded: intel/18.0.1.163 mpi/intelmpi/2018.0.3.222
 
 # --- Select physics model
-MODEL             = model199
+MODEL             = model303
 
 # --- Compiler and options
-FC                = mpif90
-CC                = mpicc
-CXX               = mpicxx
+FC                = mpiifort
+CC                = mpiicc
+CXX               = mpiicpc
 FFLAGS_OMP        = -qopenmp 
 FFLAGS            = -r8 -i4 -DUSE_BLOCK
 FFLAGS           += -fpp
@@ -49,7 +49,7 @@ FFLAGS_NOBOUNDS  := $(FFLAGS)               $(FFLAGS_OMP)
 FFLAGS           := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
 FFLAGS_NO_OMP     = $(FFLAGS) $(DEBUGFLAGS)
 
-HDF5_HOME   = /ccc/cont003/home/jorek/jorek/jorek_tools_irene_skl/hdf5-1.10.3
+HDF5_HOME   = /ccc/cont003/home/jorek/jorek/jorek_tools_irene_skl/hdf5-1.8.10
 HDF5INCLUDE = $(HDF5_HOME)/include
 HDF5LIB     = $(HDF5_HOME)/lib/libhdf5hl_fortran.a \
               $(HDF5_HOME)/lib/libhdf5_hl.a \

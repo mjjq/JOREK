@@ -15,6 +15,7 @@ FFLAGS            = -r8 -i4 -DUSE_BLOCK
 FFLAGS           += -fpp
 FFLAGS           += -axCORE-AVX512 -mtune=skylake
 FFLAGS           += -DCONSTRUCT_MATRIX_OMP_ATOMIC
+FFLAGS           += -mcmodel=large # Needed to compile model501 with n_tor>1
 
 # --- Debugging options
 #DEBUGFLAGS        = -g

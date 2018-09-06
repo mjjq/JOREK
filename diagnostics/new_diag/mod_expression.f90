@@ -1049,7 +1049,7 @@ module mod_expression
              fact_resistiv = sqrt ( MU_zero / rho_norm )                           ! factor for eta == 1 / (factor for visco)
              fact_Er       = F0 / fact_time
 #if JOREK_MODEL == 500 || JOREK_MODEL == 501
-			 fact_rad      = (central_density*1.d20)**2./coef_rad_1
+			 fact_rad      = 1.d0/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0)
 #endif
           else if ( units == JOREK_UNITS ) then
              fact_time     = 1.d0

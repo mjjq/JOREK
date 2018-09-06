@@ -55,7 +55,8 @@ DIRS := diagnostics			\
 	particles/examples 		\
 	particles/diagnostics 		\
 	particles/tests 		\
-	particles/benchmarks/pusher     \
+	particles/benchmarks/pusher_cartesian \
+	particles/benchmarks/pusher	\
 	particles/benchmarks/projection \
 	elements			\
 	grids				\

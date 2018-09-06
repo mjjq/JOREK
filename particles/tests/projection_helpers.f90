@@ -238,6 +238,7 @@ subroutine project_f(node_list, element_list, f, smoothing, smoothing2)
   if (present(smoothing)) my_smoothing = smoothing
   if (present(smoothing2)) my_smoothing2 = smoothing2
   call prepare_mumps_par(node_list, element_list, p, smoothing=my_smoothing, smoothing2=my_smoothing2)
+  allocate(p%rhs(p%n))
 
   ! Project manually
   p%JOB = 3

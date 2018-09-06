@@ -4,23 +4,26 @@ module mod_penning_case
   use mod_coordinate_transforms
   use mod_case
   use mod_boris ! Is due to a gfortran bug with derived types and modules
-  ! See 
   use mod_particle_types
   implicit none
 
   private
   public :: penning_trajectory
   public :: case_penning_cartesian, case_penning_cylindrical
+  public :: omega_e, omega_b, epsilon, charge, mass
+  public :: x0, v0
+  public :: time_end
 
   ! Penning trap parameters (in SI units)
   real*8, parameter :: omega_e = 4.9d0 !< rad/s
   real*8, parameter :: omega_b = 25.d0 !< rad/s
   real*8, parameter :: epsilon = -1.d0
-  real*8, parameter :: x0(3)   = [10.d0,0.d0,0.d0] !< m (xyz)
-  real*8, parameter :: v0(3)   = [50.d0,0.d0,20.d0] !< m (xyz)
+  real*8, parameter :: x0(3)   = [10.d0,0.d0,0.d0] !< m (xyz), (RZphi)
+  real*8, parameter :: v0(3)   = [50.d0,0.d0,20.d0] !< m (xyz), [50,20,0] in RZphi
   real*4, parameter :: mass    = 1.d0 !< atomic mass units
   integer*1, parameter :: charge = 1 !< charge units
   real*8, parameter :: time_end = 16.d0 !< s
+  ! The particle remains between +- 3 in Z and 8 and 13 in R for these parameters. set this in an input file
 
   !> See [[mod_penning_case]] for a description of the testcase.
   type, extends(case), abstract :: case_penning
@@ -100,6 +103,7 @@ pure function B_z_cyl(x, t) result(B)
   B = [0.d0, 1.d0, 0.d0]*omega_b*mass*ATOMIC_MASS_UNIT/(real(charge)*EL_CHG)
 end function B_z_cyl
 
+!> Electric field in the penning trap
 pure function E_cartesian(x, t) result(E)
   real*8, dimension(3), intent(in) :: x
   real*8, intent(in) :: t
@@ -114,6 +118,7 @@ pure function E_cylindrical(x, t) result(E)
   E = epsilon*omega_e**2/(real(charge)*el_chg)*mass*atomic_mass_unit * &
       [-x(1), 2.d0*x(2), 0.d0]
 end function E_cylindrical
+
 
 !> Calculate the position of a particle in the penning trap, released at
 !> \(x_0\) with speed \(v_0\), at time \(t\)

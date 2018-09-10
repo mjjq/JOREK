@@ -307,7 +307,7 @@ module phys_module
   
   !> @name Analytical heat, particle and neutral particles diffusivity parameters
   real*8  :: D_perp(10), D_par
-  real*8  :: ZK_perp(10), ZK_par, ZK_par_max, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par
+  real*8  :: ZK_perp(10), ZK_par, ZK_par_max, ZK_i_perp(10), ZK_e_perp(10), ZK_i_par, ZK_e_par
   real*8  :: D_neutral_x, D_neutral_y, D_neutral_p
   logical :: ZKpar_T_dependent
 

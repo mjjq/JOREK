@@ -48,10 +48,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Ti_0,  Ti_1,  Ti_coef,                              &
                 Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
-                K_i_par, ZK_i_perp, K_e_par, ZK_e_perp,             &
+                ZK_i_par, ZK_i_perp, ZK_e_par, ZK_e_perp,           &
                 D_par, D_perp,                                      &
                 Q_bar, sigma, gamma_sheath,                         &
-                V_0,V_1,V_coef,                			    &
+                V_0,V_1,V_coef,                			            &
                 particlesource,                                     &
                 heatsource_i, heatsource_e, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num,                  &
@@ -132,11 +132,11 @@ if (my_id .eq. 0) then
 
   ZK_i_perp(:) = 0.d0
   ZK_i_perp(1) = 1.d-5; ZK_i_perp(2) = 0.d0; ZK_i_perp(3)= 0.d0; ZK_i_perp(4)= 99.d0; ZK_i_perp(5) = 99.d0
-  K_i_par      = 1.d0
+  ZK_i_par     = 1.d0
 
   ZK_e_perp(:) = 0.d0  
   ZK_e_perp(1) = 1.d-5; ZK_e_perp(2) = 0.d0; ZK_e_perp(3)= 0.d0; ZK_e_perp(4)= 99.d0; ZK_e_perp(5) = 99.d0
-  K_e_par      = 1.d0
+  ZK_e_par     = 1.d0
   
   ! --- Read input parameters from namelist.
   if (trim(filename) .ne. "__NO_FILENAME__" ) then

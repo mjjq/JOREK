@@ -1,12 +1,4 @@
 !> This module contains some routines for calculating diagnostics on particles.
-!> Outputs are:
-!> 1. Energy
-!> 2. Magnetic moment
-!> 3. P_phi (generalized toroidal momentum)
-!> 4. Psi_bar (P_phi/q)
-!> 5. Psi
-!> 6. q (charge)
-!> 7. weight
 module mod_particle_diagnostics
 use mod_io_actions
 use mod_particle_sim
@@ -20,11 +12,11 @@ public write_particle_diagnostics, calculate_particle_diagnostics
 !> Cannot use HDF5 types here because these are invalid before h5open_f is called
 !> (I think, did not take the chance)
 integer, parameter :: REAL4 = 1, INT4 = 2
-integer, parameter :: n_var = 10
-character(len=12)  :: var_names(n_var) = ["e      ", "mu     ", &
-  "psi_bar", "rho    ", "weight ", "lost   ", "q      ", "region ", &
+integer, parameter :: n_var = 12
+character(len=7)  :: var_names(n_var) = ["e      ", "k      ", "mu     ", &
+  "psi_n  ", "psi_bar", "p_phi  ", "weight ", "lost   ", "q      ", "region ", &
   "theta  ", "phi    "]
-integer, parameter :: var_types(n_var) = [REAL4, REAL4, REAL4, REAL4, REAL4, INT4, INT4, INT4, REAL4, REAL4]
+integer, parameter :: var_types(n_var) = [REAL4, REAL4, REAL4, REAL4, REAL4, REAL4, REAL4, INT4, INT4, INT4, REAL4, REAL4]
 integer, parameter :: n_real4_var      = count(var_types .eq. REAL4)
 integer, parameter :: n_int4_var       = count(var_types .eq. INT4)
 ! HDF5 does not support booleans, use INT4
@@ -171,6 +163,8 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
             tset, tspace)
       end if
 
+      ! Get the current time dimensions
+      call h5sget_simple_extent_dims_f(tspace, time_dims, time_maxdims, ierr)
       ! Check that the current time is > the last stored time
       if (time_dims(1) .ge. 1) then
         call HDF5_array1D_reading_r4(this%file_id,times,trim(timeset_name),[time_dims(1)-1])
@@ -180,8 +174,6 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
         end if
       end if
 
-      ! Get the current time dimensions
-      call h5sget_simple_extent_dims_f(tspace, time_dims, time_maxdims, ierr)
       ! Extend the dataset by 1 in the time-dimension
       ! After extending, tspace is invalid. Close here already
       call h5sclose_f(tspace, ierr)
@@ -192,7 +184,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
 
     ! Generate data
     call calculate_particle_diagnostics(sim%fields, sim%time, sim%groups(i)%particles, sim%groups(i)%mass, &
-        real4_var(:,:), int4_var(:,:), psi_axis, psi_xpoint)
+        real4_var(:,:), int4_var(:,:), psi_axis, psi_xpoint, dt=sim%groups(i)%dt)
 
     ! Gather to root
     if (my_id .eq. 0) then
@@ -369,7 +361,7 @@ end subroutine create_constants_time_dataset
 
 !> Calculate H, mu, P_phi, Psi_bar, Psi, q, weight for a list of particles.
 !> mask is .f. if a particle is lost. Those values in out are set to 0.d0
-subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_stats, int_stats, psi_axis, psi_limit, mask)
+subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_stats, int_stats, psi_axis, psi_limit, mask, dt)
   use mod_particle_types
   use phys_module, only: F0, xpoint, xcase
   use constants
@@ -383,11 +375,11 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
   real*4, dimension(:,:), intent(out)                          :: real_stats !< List of values (H, mu, P_phi, Rho, weight, theta, phi)
   integer, dimension(:,:), intent(out)                         :: int_stats !< List of values (q, lost, region)
   real*8, intent(out)                                          :: psi_axis, psi_limit
-  logical, dimension(:), intent(out), optional :: mask !< Mask containing .f. if particle is lost
-  real*8, dimension(1) :: P, P_s, P_t, P_phi, P_time
-  real*8               :: inv_st_jac, psi_R, psi_Z, B(3), v_par
-  real*8               :: R, R_s, R_t, Z, Z_s, Z_t
+  logical, dimension(:), intent(out), optional                 :: mask !< Mask containing .f. if particle is lost
+  real*8, intent(in), optional                                 :: dt !< for leapfrog types perform a half step to get the correct velocity
+  real*8               :: psi, U, E(3), B(3), v_par
   type(particle_gc)    :: particle
+  type(particle_kinetic) :: particle_centered ! a particle where position and velocity are known at same time
 
   integer :: i, ifail
   integer :: domain, i_elm_axis, i_elm_xpoint(2)
@@ -400,10 +392,11 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
   if (xpoint) then
     call find_xpoint(1,fields%node_list,fields%element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
     psi_limit  = psi_xpoint(1)
-    if((xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)))) then
+    if((xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)))) then ! less than? assumption on current direction?
       psi_limit = psi_xpoint(2)
     endif
   else
+    write(*,*) "WARNING: particle diagnostics with limiter not fully supported yet! Setting psi_limit to 0"
     psi_limit = 0.d0
   endif
 
@@ -420,8 +413,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
   !$omp parallel do default(shared) & ! for gcc particle types are not in the omp region. reset to none to debug
   !$omp shared(particles, fields, int_stats, real_stats, mask, time, f0, mass, &
   !$omp xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, R_axis, Z_axis, psi_axis) &
-  !$omp private(P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t, &
-  !$omp inv_st_jac, psi_R, psi_Z, B, particle, v_par, domain)
+  !$omp private(E, B, psi, U, particle, v_par, domain, particle_centered)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .lt. 1) then
       if (present(mask)) mask(i) = .false.
@@ -435,57 +427,58 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
         int_stats(i,2) = particle_in%q
       end select
     else
+      call fields%calc_EBpsiU(time, particles(i)%i_elm, particles(i)%st, particles(i)%x(3), E, B, psi, U)
       ! Calculate psi and B in the current particle location (either GC or kinetic)
-      call fields%interp_PRZ(time, particles(i)%i_elm, &
-                    [1], 1, particles(i)%st(1),particles(i)%st(2), &
-                    particles(i)%x(3), P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
-      inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
-      psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
-      psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
-      ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
-      B        = [+psi_Z, -psi_R, F0] / R
 
       select type (particle_in => particles(i))
       type is (particle_kinetic_leapfrog)
-        real_stats(i,3) = real(particle_in%q * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * particle_in%v(3), 4)
-        ! Let the conversion calculate the conserved quantities
-        particle = kinetic_leapfrog_to_gc(fields%node_list, fields%element_list, particle_in, B, mass)
+        ! Let the conversion function calculate the conserved quantities and a new position
+        if (present(dt)) then
+          particle_centered = kinetic_leapfrog_to_kinetic(particle_in, E, B, mass, dt)
+        else
+          particle_centered = kinetic_leapfrog_to_kinetic(particle_in, E, B, mass, 0.d0) ! does no real work
+        end if
+        particle = kinetic_to_gc(fields%node_list, fields%element_list, particle_centered, B, mass)
 
         if (particle%i_elm .eq. 0) cycle
 
-        ! This recalculates P in the gc position also
-        call fields%interp_PRZ(time, particle%i_elm, &
-                      [1], 1, particle%st(1),particle%st(2), &
-                      particle%x(3), P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
-
+        ! P_phi (generalized canonical toroidal momentum) at the particle position
+        real_stats(i,6) = real(particle_centered%q * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle_centered%x(1) * particle_centered%v(3), 4)
       type is (particle_gc)
         v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
         particle = particle_in
-        real_stats(i,3) = real(real(particle_in%q,8) * EL_CHG * P(1) + mass * ATOMIC_MASS_UNIT * R * v_par * B(3)/norm2(B),4)
+
+        real_stats(i,6) = real(real(particle%q,8) * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle%x(1) * v_par * B(3)/norm2(B),4)
       type is (particle_fieldline)
         call copy_particle_base(particle_in, particle)
-        real_stats(i,3) = real(P(1),4) ! Since there is no momentum defined for this we just use psi
+        real_stats(i,6) = 0.d0 ! Since there is no momentum defined for this we just use 0
       class default
         write(*,*) "ERROR: calculate_particle_diagnostics not implemented for this particle type"
         cycle ! skip this iteration
       end select
 
 
-      ! Calculate output variables
-      ! 1. Energy
-      real_stats(i,1) = real(particle%E, 4)
-      ! 2. Magnetic moment
-      real_stats(i,2) = real(particle%mu, 4)
-      ! 3. Psi_bar (P_phi/q)
-      real_stats(i,3) = real_stats(i,3) / real(EL_CHG * max(real(particle%q),1.0),4)
-      ! 4. Psi_N (at GC position)
-      real_stats(i,4) = real((P(1)-psi_axis)/(psi_limit-psi_axis), 4)
-      ! 5. weight
-      real_stats(i,5) = particle%weight
-      ! 6. theta
-      real_stats(i,6) = real(atan2(Z-Z_axis, R-R_axis),4)
-      ! 7. phi
-      real_stats(i,7) = real(particle%x(3),4)
+      ! Calculate output variables (see var_names on top of the module for ordering)
+
+      ! Total energy (including electric potential at this charge state) at kinetic or GC position
+      real_stats(i,1) = real(particle%E + particle%q * U, 4) ! E in [eV] + q [e] * U [V]
+      ! Kinetic energy
+      real_stats(i,2) = real(particle%E, 4)
+      ! Magnetic moment
+      real_stats(i,3) = real(particle%mu, 4)
+      ! Psi_n (normalized psi, at kinetic position)
+      real_stats(i,4) = real((psi-psi_axis)/(psi_limit-psi_axis), 4)
+      ! P_phi (generalized canonical toroidal momentum) (see above
+      ! skipped, see above
+      ! real_stats(i,6) = ...
+      ! Psi_bar = P_phi/Ze
+      if (particle%q .ne. 0) real_stats(i,5) = real_stats(i,6) / real(particle%q * EL_CHG, 4)
+      ! weight
+      real_stats(i,7) = particle%weight
+      ! theta
+      real_stats(i,8) = real(atan2(particles(i)%x(2)-Z_axis, particles(i)%x(1)-R_axis),4)
+      ! phi
+      real_stats(i,9) = real(particles(i)%x(3),4)
 
       ! 1. lost (boolean)
       int_stats(i,1) = 0
@@ -494,7 +487,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
       ! 3. region (enum)
       domain = which_domain(fields%node_list, fields%element_list, &
           particle%x(1), particle%x(2), &
-          P(1), xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
+          psi, xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
           R_axis, Z_axis, psi_axis)
       int_stats(i,3) = domain
 

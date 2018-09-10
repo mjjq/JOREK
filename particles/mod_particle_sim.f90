@@ -14,6 +14,7 @@ type :: particle_group
   real*8  :: mass !< Mass of all the particles in the group
   type(ADF11_all) :: ad !< OPEN-ADAS datafiles for this species
   class(particle_base), dimension(:), allocatable :: particles
+  real*8 :: dt !< timestep (if fixed for all particles in this group)
 end type particle_group
 
 !> Particle simulation type, containing all variables pertaining to a simulation.

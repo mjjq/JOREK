@@ -32,7 +32,7 @@ implicit none
 
 ! Local variables
 integer :: i,ielm_out,ifail,j,i_elm_old
-real*8  :: R,R_s,R_t,R_st,Z,Z_s,Z_t,Z_st
+real*8  :: R,Z
 real*8  :: s,t
 real*8  :: x_a(3), x_e(3), err_norm, err_ref
 real*8  :: rz_old(2), st_old(2)

@@ -514,7 +514,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         chi = TWOPI*ran(6)
         select type(p => particles_tmp(i))
         type is (particle_kinetic_leapfrog)
-          p = gc_to_kinetic_leapfrog(fields%node_list, fields%element_list, particle, chi, B, mass)
+          p = gc_to_kinetic_leapfrog(particle, fields%node_list, fields%element_list, chi, [0.d0, 0.d0, 0.d0], B, mass, dt=0.d0) ! ignore electric field and set dt to 0
           ! if the kinetic position is not in the grid particles(i)%i_elm the particle is lost
         type is (particle_gc)
           p = particle

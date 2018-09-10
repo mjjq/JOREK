@@ -13,18 +13,22 @@ real*8, parameter :: mass = 100 ! amu
 real*8, parameter :: tol  = 1d-11
 contains
 
+subroutine setup_kinetic_to_gc_spec
+  use mod_element_rtree, only: populate_element_rtree
+  node_list%n_nodes = 0
+  element_list%n_elements = 0
+
+  call populate_element_rtree(node_list, element_list)
+end subroutine setup_kinetic_to_gc_spec
+
 !> convert a particle orbiting at 6 different points around a gc and see if we get the right answers
 subroutine test_known_gc_kinetic
   use constants, only: PI, ATOMIC_MASS_UNIT, EL_CHG
-  type(particle_kinetic_leapfrog) :: kinetic
+  type(particle_kinetic) :: kinetic
   type(particle_gc)               :: gc
 
   real*8  :: chi, r, v_perp, v_par, e1(3), e2(3), x_ref(3), v_ref(3)
   integer :: i
-
-  ! should do this in a prefilter
-  node_list%n_nodes = 0
-  element_list%n_elements = 0
 
   gc%x  = [1d0, 2d0, 3d0]
   gc%E  = 1d3 ! [eV]
@@ -44,7 +48,7 @@ subroutine test_known_gc_kinetic
 
   do i=1,12
     chi = PI*i/6d0
-    kinetic = gc_to_kinetic_leapfrog(node_list, element_list, gc, chi, B, mass)
+    kinetic = gc_to_kinetic(node_list, element_list, gc, chi, B, mass)
 
     x_ref = gc%x + cos(chi)*r*e2 - sin(chi)*r*e1
     v_ref = v_perp*cos(chi)*e1 + v_perp*sin(chi)*e2 + v_par*B/norm2(B)
@@ -62,7 +66,7 @@ end subroutine test_known_gc_kinetic
 !> Test a few positions around a known guiding center and see if it is found okay
 subroutine test_known_kinetic_gc
   use constants, only: PI, ATOMIC_MASS_UNIT, EL_CHG
-  type(particle_kinetic_leapfrog) :: kinetic
+  type(particle_kinetic) :: kinetic
   type(particle_gc)               :: gc
 
   real*8  :: chi, r, v_perp, v_par, e1(3), e2(3)
@@ -85,7 +89,7 @@ subroutine test_known_kinetic_gc
     kinetic%x = [1.d0, 2.d0, 3.d0] + r * (cos(chi)*e2-sin(chi)*e1)
     kinetic%i_elm = 0
 
-    gc = kinetic_leapfrog_to_gc(node_list, element_list, kinetic, B, mass)
+    gc = kinetic_to_gc(node_list, element_list, kinetic, B, mass)
     ! this uses the value of B being in the z-direction!
     call assert_equals(1d0, gc%x(1), tol, "R positions must be same")
     call assert_equals(2d0, gc%x(2), tol, "Z positions must be same")
@@ -99,13 +103,9 @@ end subroutine test_known_kinetic_gc
 !> Test the performance by transforming back and forth
 subroutine test_kinetic_gc_kinetic
   use constants, only: PI
-  type(particle_kinetic_leapfrog) :: kinetic1, kinetic2
+  type(particle_kinetic) :: kinetic1, kinetic2
   type(particle_gc)               :: gc
   real*8 :: chi, e1(3), e2(3)
-
-  ! should do this in a prefilter
-  node_list%n_nodes = 0
-  element_list%n_elements = 0
 
   kinetic1%x  = [1d0, 2d0, 3d0]
   kinetic1%v  = [1d3, 1d2, 2d2]
@@ -115,8 +115,8 @@ subroutine test_kinetic_gc_kinetic
   call get_orthonormals(B, e1, e2)
   chi = atan2(dot_product(kinetic1%v,e2),dot_product(kinetic1%v,e1))
 
-  gc = kinetic_leapfrog_to_gc(node_list, element_list, kinetic1, B, mass)
-  kinetic2 = gc_to_kinetic_leapfrog(node_list, element_list, gc, chi, B, mass)
+  gc = kinetic_to_gc(node_list, element_list, kinetic1, B, mass)
+  kinetic2 = gc_to_kinetic(node_list, element_list, gc, chi, B, mass)
 
   call assert_equals(kinetic1%x(1), kinetic2%x(1), tol, "R positions must be same")
   call assert_equals(kinetic1%x(2), kinetic2%x(2), tol, "Z positions must be same")
@@ -130,12 +130,9 @@ end subroutine test_kinetic_gc_kinetic
 
 !> Test the performance by transforming back and forth
 subroutine test_gc_kinetic_gc
-  type(particle_kinetic_leapfrog) :: kinetic
+  type(particle_kinetic) :: kinetic
   type(particle_gc)               :: gc1, gc2
   real*8, parameter :: chi  = 0.d0
-
-  node_list%n_nodes = 0
-  element_list%n_elements = 0
 
   gc1%x  = [1d0, 1d0, 2d0]
   gc1%E  = 1d3
@@ -143,8 +140,8 @@ subroutine test_gc_kinetic_gc
   gc1%q  = 1
   gc1%i_elm = 0
 
-  kinetic = gc_to_kinetic_leapfrog(node_list, element_list, gc1, chi, B, mass)
-  gc2 = kinetic_leapfrog_to_gc(node_list, element_list, kinetic, B, mass)
+  kinetic = gc_to_kinetic(node_list, element_list, gc1, chi, B, mass)
+  gc2 = kinetic_to_gc(node_list, element_list, kinetic, B, mass)
 
   call assert_equals(gc1%x(1), gc2%x(1), tol, "R positions must be same")
   call assert_equals(gc1%x(2), gc2%x(2), tol, "Z positions must be same")
@@ -157,12 +154,9 @@ end subroutine test_gc_kinetic_gc
 
 !> Test the performance by transforming back and forth
 subroutine test_gc_kinetic_gc_negative_mu
-  type(particle_kinetic_leapfrog) :: kinetic
+  type(particle_kinetic) :: kinetic
   type(particle_gc)               :: gc1, gc2
   real*8, parameter :: chi  = 0.d0
-
-  node_list%n_nodes = 0
-  element_list%n_elements = 0
 
   gc1%x  = [1d0, 1d0, 2d0]
   gc1%E  = 1d3
@@ -170,8 +164,8 @@ subroutine test_gc_kinetic_gc_negative_mu
   gc1%q  = 1
   gc1%i_elm = 0
 
-  kinetic = gc_to_kinetic_leapfrog(node_list, element_list, gc1, chi, B, mass)
-  gc2 = kinetic_leapfrog_to_gc(node_list, element_list, kinetic, B, mass)
+  kinetic = gc_to_kinetic(node_list, element_list, gc1, chi, B, mass)
+  gc2 = kinetic_to_gc(node_list, element_list, kinetic, B, mass)
 
   call assert_equals(gc1%x(1), gc2%x(1), tol, "R positions must be same")
   call assert_equals(gc1%x(2), gc2%x(2), tol, "Z positions must be same")

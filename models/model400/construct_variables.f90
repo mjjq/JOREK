@@ -405,7 +405,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   use phys_module
   use equation_variables
   use data_structure
-  use diffusivities, only: get_dperp, get_zkperp, species_elec, species_ions
+  use diffusivities, only: get_dperp, get_zk_iperp, get_zk_eperp
   use mod_bootstrap_functions
   
   implicit none
@@ -480,8 +480,8 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
 
   ! --- Call Diff functions
   D_prof = get_dperp (ps0, psi_norm, psi_axis, psi_bnd, y_g, Z_xpoint)
-  Ke_prof = get_zkperp(ps0, psi_norm, psi_axis, psi_bnd, y_g, Z_xpoint, species_elec)
-  Ki_prof = get_zkperp(ps0, psi_norm, psi_axis, psi_bnd, y_g, Z_xpoint, species_ions)
+  Ke_prof = get_zk_eperp(ps0, psi_norm, psi_axis, psi_bnd, y_g, Z_xpoint)
+  Ki_prof = get_zk_iperp(ps0, psi_norm, psi_axis, psi_bnd, y_g, Z_xpoint)
   
   
 

@@ -192,7 +192,7 @@ contains
           ! --- We only care about boundary elements
           if (node_list%node(inode)%boundary .ne. 0) then
 
-            call construct_variables(node_list%node(inode), R_xpoint, Z_xpoint)
+            call construct_variables(node_list%node(inode), R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
 	    
 	    do i_tor=1, n_tor
 
@@ -418,7 +418,7 @@ contains
   !************ Routine to construct variables once for all routines ************
   !******************************************************************************
   !******************************************************************************
-  subroutine construct_variables(node, R_xpoint, Z_xpoint)
+  subroutine construct_variables(node, R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
   
     use data_structure
     use phys_module, only: F0, xpoint, xcase, tokamak_device
@@ -427,8 +427,11 @@ contains
     
     ! --- Routine variables
     type (type_node),	intent(in)    :: node
+    real*8,		intent(in)    :: R_axis
+    real*8,		intent(in)    :: Z_axis
     real*8,		intent(in)    :: R_xpoint(2)
     real*8,		intent(in)    :: Z_xpoint(2)
+    real*8,		intent(in)    :: psi_bnd
     
     real*8 :: alpha, R_inside, Z_inside
   

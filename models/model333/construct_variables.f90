@@ -345,7 +345,7 @@ end subroutine ELM_build_variables
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
-subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, i_plane)
+subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, i_plane)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_diffusivities_and_sources
 
   ! --- Modules
@@ -366,7 +366,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   logical		      :: xpoint2
   integer		      :: xcase2
   integer		      :: i_plane
-  real*8		      :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
+  real*8		      :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
   
   ! --- Internal variables
   real*8		      :: psi_norm
@@ -479,7 +479,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     Ti0   = T0   / 2.d0 ; Te0	= T0   / 2.d0
     Ti0_x = T0_x / 2.d0 ; Te0_x = T0_x / 2.d0
     Ti0_y = T0_y / 2.d0 ; Te0_y = T0_y / 2.d0
-    call bootstrap_current(minRad, R, y_g,                       &
+    call bootstrap_current(R, y_g,                               &
                            R_axis,   Z_axis,   psi_axis,         &
 			   R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
 			   ps0, ps0_x, ps0_y,                    &
@@ -499,7 +499,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     zTe_y = zTi_y
     zn_x  = dn_dpsi * ps0_x
     zn_y  = dn_dpsi * ps0_y
-    call bootstrap_current(minRad, R, y_g,                       &
+    call bootstrap_current(R, y_g,                               &
                            R_axis,   Z_axis,   psi_axis,         &
 			   R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
 			   ps0, ps0_x, ps0_y,                    &

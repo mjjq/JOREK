@@ -20,6 +20,7 @@ module mod_expression
   use diffusivities
   use corr_neg
   use mod_basisfunctions
+  use mod_bootstrap_functions
   
   
   
@@ -145,7 +146,7 @@ module mod_expression
     call add(exprs_all, 'Vstar_i     ', 'Ion Diamagnetic Velocity                              ')
     call add(exprs_all, 'ki_neo      ', 'Neoclassical Heat Diffusivity                         ')
     call add(exprs_all, 'mu_neo      ', 'Neoclassical Friction Coefficient                     ')
-#if JOREK_MODEL == 400
+#if ( JOREK_MODEL == 400 ) || ( JOREK_MODEL == 333 )
     call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
     call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
@@ -924,9 +925,9 @@ module mod_expression
             end if
           end if
           
-#if JOREK_MODEL == 400
-!          call bootstrap_current_rhs(BigR, 0.0, eq%R_axis, eq%psi_axis, eq%psi_bnd, ps0, ps0_R,    &
-!            ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
+#if (JOREK_MODEL == 400) || (JOREK_MODEL == 333)
+          call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
+            ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
 #else
           J_boot = 0.d0
 #endif
@@ -1142,7 +1143,7 @@ module mod_expression
                 
               case ( 'mu_neo' )
                 res = mu_neo / fact_time
-#if JOREK_MODEL == 400
+#if ( JOREK_MODEL == 400 ) || ( JOREK_MODEL == 333 )
               case ( 'T_e' )
                 res = Te0 * fact_T
               

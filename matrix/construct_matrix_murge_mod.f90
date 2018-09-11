@@ -113,7 +113,6 @@ MODULE THREAD_DATA
      TYPE (type_element_list),  POINTER :: element_list
      LOGICAL,                   POINTER :: gmres, solve_only
      LOGICAL,                   POINTER :: xpoint2
-     REAL*8,                    POINTER :: minRad
      REAL*8,                    POINTER :: R_axis
      REAL*8,                    POINTER :: Z_axis
      REAL*8,                    POINTER :: psi_axis
@@ -290,7 +289,7 @@ CONTAINS
              IF (DATA%mode .EQ. 3) THEN
 #endif
                 call elementary_matrix_build(element, nodes, data%xpoint2, data%xcase2,       &
-                     &                       data%minRad, data%R_axis, data%Z_axis,           &
+                     &                       data%R_axis, data%Z_axis,           &
                      &                       data%psi_axis, data%psi_bnd, data%R_xpoint,      &
                      &                       data%Z_xpoint,                                   &
                      &                       ELM, RHS, thread_struct(data%thread_num)%ELM2,   &
@@ -808,7 +807,7 @@ contains
 SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      &                            bnd_node_list, local_elms,                   &
      &                            n_local_elms, xpoint2, xcase2,               &
-     &                            minRad, R_axis, Z_axis, psi_axis,            &
+     &                            R_axis, Z_axis, psi_axis,                    &
      &                            psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,     &
      &                            gmres, i_tor, n_cpu,                         &
      &                            mpi_comm_n, MPI_COMM_TRANS,                  &
@@ -864,7 +863,6 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   INTEGER, TARGET                :: n_local_elms
   INTEGER, TARGET                :: local_elms(n_local_elms)
   LOGICAL, TARGET                :: xpoint2
-  REAL*8, TARGET                 :: minRad
   REAL*8, TARGET                 :: R_axis
   REAL*8, TARGET                 :: Z_axis
   REAL*8, TARGET                 :: psi_axis
@@ -1331,7 +1329,6 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      datas(iter)%solve_only          => solve_only
      datas(iter)%xpoint2             => xpoint2
      datas(iter)%xcase2              => xcase2
-     datas(iter)%minRad              => minRad
      datas(iter)%R_axis              => R_axis
      datas(iter)%Z_axis              => Z_axis
      datas(iter)%psi_axis            => psi_axis

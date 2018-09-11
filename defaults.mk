@@ -34,6 +34,9 @@ endif
 F77FLAGS=
 F90FLAGS=
 
+# Default (GNU) preprocessor
+GCPP ?= cpp
+
 # Default flags for GCC
 ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -cpp -fopenmp
@@ -41,17 +44,19 @@ ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -Wno-unused-variable
   FFLAGS += -Wintrinsics-std
   FFLAGS += -Wcharacter-truncation
-  FFLAGS += -Wsurprising -Wno-tabs
+  FFLAGS += -Wsurprising
   FFLAGS += -ffree-line-length-none
   F77FLAGS += -fdefault-real-8 -fdefault-double-8
   ifeq ($(DEBUG), 1)
     FLAGS  += -g -Og -ggdb -fno-lto
-    FLAGS  += -fcheck=all
-    FLAGS  += -Wunused-variable
-    FLAGS  += -ffpe-trap=invalid,zero,overflow -ftrapv
-    FFLAGS += -Wimplicit-interface -Wimplicit-procedure
+    FFLAGS += -fcheck=all
+    FLAGS  += -ffpe-trap=invalid,zero,overflow
+    FFLAGS += -ftrapv
     FFLAGS += -Wconversion
     F90FLAGS += -fimplicit-none
+  endif
+  ifeq ($(DEBUG), 2)
+    FFLAGS += -Wimplicit-interface -Wimplicit-procedure
   endif
 
   FFLAGS +=-J$(MODDIR)
@@ -102,6 +107,7 @@ endif
 # Also, it will make everything slightly nicer later
 # Template for generating object files from source files
 # Touch the .mod file again if it exists (because it is not written if there is no change to the interfaces, and this messes with the make rules)
+# Note that gfortran outputs module files in lowercase of the module name, while intel remains case-sensitive. Best to use lowercase module names
 define O_TEMPLATE
 $(OBJDIR)/%.o $(MODDIR)/%.mod:: $(1)%.f90
 	$$(FC) $$(FLAGS) $$(FFLAGS) $$(F90FLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
@@ -114,13 +120,13 @@ $(OBJDIR)/%.o:: $(1)%.c
 	$$(CC) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.cpp
-	$$(CXX) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
+	$$(CXX) $$(FLAGS) $$(CXXFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE
 $(DEPDIR)/%.d: $(1)%.f90 | $(MODDIR)/version.h
 	@echo "Generating dependencies for $$<"
-	@cpp -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
+	@$(GCPP) -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
 endef
 
 # This template defines a program $(file_stem)
@@ -161,6 +167,10 @@ ifeq (1, $(USE_PASTIX))
     LIBS     := $(LIBS) $(LIB_PASTIX) $(LIB_PASTIX_BLAS)
     INCLUDES := $(INCLUDES) $(INC_PASTIX)
   endif
+  PASTIX_MEMORY_USAGE?=1
+  ifeq (1, $(PASTIX_MEMORY_USAGE))
+    DEFINES := $(DEFINES) -DMEMORY_USAGE
+  endif
 endif
 
 ifeq (1, $(USE_WSMP))
@@ -199,17 +209,21 @@ Makefile.inc: ;
 %.mk: ;
 %.f90: ;
 
-.mod/version.h:
+# Try to create .mod/version.h, but only overwrite it if the contents have changed
+$(MODDIR)/version.h:
 	@echo "Generate .mod/version.h"
-	@echo "#define RCS_VERSION '`git describe --always --dirty --abbrev 2> /dev/null`'" > $@
-	@echo "#define compile_command '$(FC)'" >> $@
-	@echo "#define compile_flags '$(FLAGS) $(FFLAGS) $(F90FLAGS) $(EXTRA_FLAGS)'" >> $@
-	@echo "#define compile_includes '$(INCLUDES)'" >> $@
-	@echo "#define compile_defines '$(DEFINES)'" >> $@
-	@echo "#define compile_libs '$(LIBS)'" >> $@
-	-@echo "#define compile_dir '`pwd`'" >> $@
-	-@echo "#define compile_time '`date \"+%F %T\"`'" >> $@
-	-@echo "#define compile_user '`whoami`'" >> $@
-	-@echo "#define compile_machine '`hostname`'" >> $@
-	@echo "#define compile_modules '$(LOADEDMODULES)'" >> $@
-
+	@rm -f $@.tmp
+	@echo "#define RCS_VERSION '`git describe --always --dirty --abbrev 2> /dev/null`'" >> $@.tmp
+	@echo "#define RCS_LABEL '`git log -1 --format="%s (%D)" 2> /dev/null`'" >> $@.tmp
+	@echo "#define RCS_TIME '`git log -1 --format="%ad" 2> /dev/null`'" >> $@.tmp
+	@echo "#define compile_command '$(FC)'" >> $@.tmp
+	@echo "#define compile_flags '$(FLAGS) $(FFLAGS) $(F90FLAGS) $(EXTRA_FLAGS)'" >> $@.tmp
+	@echo "#define compile_includes '$(INCLUDES)'" >> $@.tmp
+	@echo "#define compile_defines '$(DEFINES)'" >> $@.tmp
+	@echo "#define compile_libs '$(LIBS)'" >> $@.tmp
+	-@echo "#define compile_dir '`pwd`'" >> $@.tmp
+	-@echo "#define compile_user '`whoami`'" >> $@.tmp
+	-@echo "#define compile_machine '`hostname`'" >> $@.tmp
+	@echo "#define compile_modules '$(LOADEDMODULES)'" >> $@.tmp
+	@[ -f $@ ] && cmp --silent $@ $@.tmp || mv $@.tmp $@
+	-@rm -f $@.tmp

@@ -7,10 +7,10 @@
 MODEL = model199
 
 # Fortran compiler 
-FC     = mpif90 -f90=ifort -mt_mpi
-CC     = mpicc
-CXX    = mpicxx
-FFLAGS_OMP       = -openmp 
+FC               = mpiifort -mt_mpi
+CC               = mpiicc   -mt_mpi
+CXX              = mpiicpc  -mt_mpi
+FLAGS_OMP        = -openmp 
 FFLAGS           = -r8 -i4
 FFLAGS          := $(FFLAGS) -fpp
 FFLAGS          := $(FFLAGS) -traceback -xSSSE3 -align

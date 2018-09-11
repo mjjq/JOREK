@@ -7,9 +7,9 @@ MODEL = model199
 #NO -DMURGE_USE_SEQUENCE_HARM -DMURGE_USE_DUPLICATE_ELEMENT
 
 # Fortran compiler 
-FC     = mpif90 -f90=ifort #-mt_mpi 
-CC     = mpicc -cc=icc
-CXX    = mpicxx -cxx=icpc
+FC                = mpiifort -mt_mpi
+CC                = mpiicc   -mt_mpi
+CXX               = mpiicpc  -mt_mpi
 FFLAGS_OMP       = -openmp 
 FFLAGS           = -r8 -i4 -traceback
 FFLAGS          := $(FFLAGS) -fpp

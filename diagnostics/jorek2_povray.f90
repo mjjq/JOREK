@@ -1,6 +1,6 @@
 !> Diagnostic program for nice 3D visualizations of JOREK data with the raytracing program Povray.
 !!
-!! * Reads jorek_restart.rst and settings from namelist file povray.nml.
+!! * Reads jorek_restart.rst|h5 and settings from namelist file povray.nml.
 !! * Produces Povray script jorek_data.pov allowing to create nice 3D visualizations.
 !! * Header for Povray script needs to be added manually (camera, light_sources...).
 !! * Is already working but some functionality is missing and will be added soon.
@@ -14,6 +14,8 @@ program jorek2_povray
   use diagnostics
   use profiles
   use mod_import_restart
+  use mod_interp
+  use basis_at_gaussian, only: initialise_basis
   
   implicit none
   

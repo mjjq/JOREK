@@ -6,6 +6,7 @@ use constants
 use tr_module 
 use data_structure
 use phys_module
+use mod_interp
 
 implicit none
 

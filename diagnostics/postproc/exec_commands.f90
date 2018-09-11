@@ -17,6 +17,7 @@ module exec_commands
   use postproc_help
   use mod_log_params
   use mod_import_restart
+  use mod_interp
   
   
   
@@ -214,7 +215,7 @@ module exec_commands
     ierr = 0
     
     write(file_name,'(a,i5.5)') 'jorek', istep
-    if ( rst_hdf5 ) then
+    if ( rst_hdf5 .ne. 0 ) then
       inquire (file=trim(file_name)//'.h5', exist=file_exists)
     else
       inquire (file=trim(file_name)//'.rst', exist=file_exists)
@@ -500,6 +501,9 @@ module exec_commands
     write(*,'(a)') 'Available restart files:'
     do i = 0, 99999
       write (filename,'(a, i5.5, a)') 'jorek', i, '.rst'
+      inquire (file=filename, exist=file_exists)
+      if (file_exists) write(*,'(i6)',advance='no') i
+      write (filename,'(a, i5.5, a)') 'jorek', i, '.h5'
       inquire (file=filename, exist=file_exists)
       if (file_exists) write(*,'(i6)',advance='no') i
     end do

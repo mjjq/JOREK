@@ -5,6 +5,7 @@ use constants
 use data_structure
 use phys_module
 use mod_import_restart
+use mod_interp
 implicit none
 
 type (type_node_list)    :: node_list
@@ -133,6 +134,8 @@ do m=1, n_toroidal
       do k=1,nsub
         t = float(k-1)/float(nsub-1)
 
+        ! The following 50 lines could be replaced with interp_PRZ(_1) (after adding without_n0_mode there, or manually subtracting)
+
         call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
         xjac  = R_s * Z_t - R_t * Z_s
         if ( xjac == 0.d0 ) xjac = 1.d-8 ! (workaround to avoid floating invalid)
@@ -160,7 +163,7 @@ do m=1, n_toroidal
             						    - ps_x * HZ(i_tor,m) / R,			  &
             						    + ps_y * HZ(i_tor,m) / R * sin(angle)  /)
             if (i_tor .eq. 1) then
-              vectors(inode,1:3,1) = vectors(inode,1:3,1) + (/ - F0/R * sin(angle), -0., F0/R *cos(angle)/)
+              vectors(inode,1:3,1) = vectors(inode,1:3,1) + (/ - F0/R * sin(angle), -0.d0, F0/R *cos(angle)/)
             endif
 
             call interp(node_list,element_list,i,2,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
@@ -243,9 +246,9 @@ etype = 12  ! for vtk_quad
 lf = char(10) ! line feed character
 
 #ifdef IBM_MACHINE
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream')
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',status='replace')
 #else
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN',status='replace')
 #endif
 
 buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)

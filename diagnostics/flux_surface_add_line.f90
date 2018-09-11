@@ -1,5 +1,6 @@
 subroutine flux_surface_add_line(node_list,element_list,surface_list,i_elm,j,r_psi,s_psi,dpsi_dr,dpsi_ds)
 use data_structure
+use mod_interp, only: interp
 
 implicit none
 

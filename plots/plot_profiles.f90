@@ -6,6 +6,7 @@ use tr_module
 use data_structure
 use phys_module
 use basis_at_gaussian
+use mod_interp, only: interp
 
 implicit none
 type (type_node_list)    :: node_list

@@ -99,7 +99,7 @@ contains
     logical,                   intent(in)    :: solve_only
 
     ! --- Internal parameters
-    real*8  :: mach1, dmach1, d2mach1_dTi, d2mach1_dTe, mach_u, dmach_u, dmach_rho
+    real*8  :: mach1, dmach1, d2mach1_dTi, d2mach1_dTe, mach_u, dmach_u, dmach_rho, alpha, R_inside, Z_inside
     integer :: i, i_tor, iv, inode, k_var, side
     integer :: index_node, index_node2, ielm, index_tmp
     integer :: ijA_position,ijA_position2, ilarge2, ilarge_vv, ilarge_vTi, ilarge_vTe, ilarge_vus

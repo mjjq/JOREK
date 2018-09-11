@@ -924,9 +924,9 @@ module mod_expression
             end if
           end if
           
-#if JOREK_MODEL == 400
-!          call bootstrap_current_rhs(BigR, 0.0, eq%R_axis, eq%psi_axis, eq%psi_bnd, ps0, ps0_R,    &
-!            ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
+#if (JOREK_MODEL == 400) || (JOREK_MODEL == 333)
+          call bootstrap_current(minRad, R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
+            ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
 #else
           J_boot = 0.d0
 #endif

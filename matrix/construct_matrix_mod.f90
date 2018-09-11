@@ -5,7 +5,7 @@ implicit none
 contains
 
   !> subroutine that will construct elemeentary matrices
-  subroutine elementary_matrix_build(element, nodes, xpoint2, xcase2, minRad, R_axis, &
+  subroutine elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis,         &
        &                             Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
        &                             ELM, RHS, ELM2, RHS2, omp_tid, ife,              &
        &                             n_local_elms, node_list)
@@ -26,7 +26,6 @@ contains
     type (type_node),                 intent(inout)  :: nodes(n_vertex_max)
     logical,                          intent(in)     :: xpoint2
     integer,                          intent(in)     :: xcase2
-    real*8,                           intent(in)     :: minRad
     real*8,                           intent(in)     :: R_axis
     real*8,                           intent(in)     :: Z_axis
     real*8,                           intent(in)     :: psi_axis
@@ -59,9 +58,9 @@ contains
 
     ! --- Call element_matrix
     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)     !  for toroidal integration
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)     !  for toroidal integration
     else
-      call element_matrix    (element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)     ! use direct integration
+      call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, omp_tid)     ! use direct integration
     endif
 
     ! --- Apply sheath boundary conditions at the targets
@@ -124,8 +123,8 @@ contains
     if (ife .eq. n_local_elms/2) then
       
       ! --- Call both routines
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM2, RHS2, omp_tid)
-      call element_matrix    (element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM,  RHS,  omp_tid)
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM2, RHS2, omp_tid)
+      call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM,  RHS,  omp_tid)
       
       ! --- Compare right hand side
       write(*,*)
@@ -178,7 +177,7 @@ contains
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
 subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_max, xpoint2, xcase2,&
-                            minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint)
+                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint)
   
   use tr_module 
   use mod_parameters
@@ -208,7 +207,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer, intent(in) :: index_min
   integer, intent(in) :: index_max
   integer, intent(in) :: xcase2
-  real*8,  intent(in) :: minRad
   real*8,  intent(in) :: R_axis
   real*8,  intent(in) :: Z_axis
   real*8,  intent(in) :: psi_axis
@@ -296,7 +294,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,          &
-  !$omp          index_min, index_max,xpoint2,xcase2,minRad,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,       &
+  !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,       &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
   !$omp          difference_found,rhs_problem,elm_problem)                                                 &
   !$omp   private(ife,ielm,iv,inode,element,nodes,ELM,RHS,ELM2,RHS2,i,inode1,i_order,index_node1,          &
@@ -354,7 +352,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     endif
 
-    call elementary_matrix_build(element, nodes, xpoint2, xcase2, minRad, R_axis, &
+    call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, &
          &                       Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
          &                       ELM, RHS, ELM2, RHS2, omp_tid, ife,              &
          &                       n_local_elms, node_list)

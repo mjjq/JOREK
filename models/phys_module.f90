@@ -44,6 +44,7 @@ module phys_module
   logical :: import_equil
   logical :: xpoint               !< X-point geometry?
   logical :: bootstrap            !< Bootstrap-current?
+  real*8  :: minRad               !< Approximation of minor radius for bootstrap current calculation
   logical :: refinement           !< Use mesh refinement?
   logical :: bc_natural_flux      !< boundary conditions for flux surface boundaries (2 and 3)
   logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines

@@ -107,6 +107,7 @@ endif
 # Also, it will make everything slightly nicer later
 # Template for generating object files from source files
 # Touch the .mod file again if it exists (because it is not written if there is no change to the interfaces, and this messes with the make rules)
+# Note that gfortran outputs module files in lowercase of the module name, while intel remains case-sensitive. Best to use lowercase module names
 define O_TEMPLATE
 $(OBJDIR)/%.o $(MODDIR)/%.mod:: $(1)%.f90
 	$$(FC) $$(FLAGS) $$(FFLAGS) $$(F90FLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
@@ -208,17 +209,21 @@ Makefile.inc: ;
 %.mk: ;
 %.f90: ;
 
-.mod/version.h:
+# Try to create .mod/version.h, but only overwrite it if the contents have changed
+$(MODDIR)/version.h:
 	@echo "Generate .mod/version.h"
-	@echo "#define RCS_VERSION '`git describe --always --dirty --abbrev 2> /dev/null`'" > $@
-	@echo "#define compile_command '$(FC)'" >> $@
-	@echo "#define compile_flags '$(FLAGS) $(FFLAGS) $(F90FLAGS) $(EXTRA_FLAGS)'" >> $@
-	@echo "#define compile_includes '$(INCLUDES)'" >> $@
-	@echo "#define compile_defines '$(DEFINES)'" >> $@
-	@echo "#define compile_libs '$(LIBS)'" >> $@
-	-@echo "#define compile_dir '`pwd`'" >> $@
-	-@echo "#define compile_time '`date \"+%F %T\"`'" >> $@
-	-@echo "#define compile_user '`whoami`'" >> $@
-	-@echo "#define compile_machine '`hostname`'" >> $@
-	@echo "#define compile_modules '$(LOADEDMODULES)'" >> $@
-
+	@rm -f $@.tmp
+	@echo "#define RCS_VERSION '`git describe --always --dirty --abbrev 2> /dev/null`'" >> $@.tmp
+	@echo "#define RCS_LABEL '`git log -1 --format="%s (%D)" 2> /dev/null`'" >> $@.tmp
+	@echo "#define RCS_TIME '`git log -1 --format="%ad" 2> /dev/null`'" >> $@.tmp
+	@echo "#define compile_command '$(FC)'" >> $@.tmp
+	@echo "#define compile_flags '$(FLAGS) $(FFLAGS) $(F90FLAGS) $(EXTRA_FLAGS)'" >> $@.tmp
+	@echo "#define compile_includes '$(INCLUDES)'" >> $@.tmp
+	@echo "#define compile_defines '$(DEFINES)'" >> $@.tmp
+	@echo "#define compile_libs '$(LIBS)'" >> $@.tmp
+	-@echo "#define compile_dir '`pwd`'" >> $@.tmp
+	-@echo "#define compile_user '`whoami`'" >> $@.tmp
+	-@echo "#define compile_machine '`hostname`'" >> $@.tmp
+	@echo "#define compile_modules '$(LOADEDMODULES)'" >> $@.tmp
+	@[ -f $@ ] && cmp --silent $@ $@.tmp || mv $@.tmp $@
+	-@rm -f $@.tmp

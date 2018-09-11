@@ -24,8 +24,9 @@
 !!
 
 real*8 function corr_neg_temp1(val)
+#if _OPENMP >= 201511
   !$omp declare simd 
-  
+#endif
   use phys_module, only: T_1, corr_neg_temp_coef
   
   ! --- Routine parameters
@@ -42,7 +43,9 @@ real*8 function corr_neg_temp1(val)
 end function corr_neg_temp1
 
 real*8 function corr_neg_temp2(val, coef)
+#if _OPENMP >= 201511
   !$omp declare simd uniform(coef)
+#endif
 ! With uniform, we declare thet coeff should be the same for all vector elements.
 ! Is this correct?
   use phys_module, only: T_1
@@ -64,7 +67,9 @@ end function corr_neg_temp2
 
 !> Same for density (so far not used in element_matrix routines).
 real*8 function corr_neg_dens1(val)
+#if _OPENMP >= 201511
 !$omp declare simd
+#endif
   use phys_module, only: rho_1, corr_neg_dens_coef
   
   ! --- Routine parameters
@@ -82,7 +87,9 @@ end function corr_neg_dens1
 
 !We cannot have optional argument for a vector funct, therefore we overload it
 real*8 function corr_neg_dens2(val, coef)
+#if _OPENMP >= 201511
 !$omp declare simd uniform(coef)
+#endif
 ! With uniform, we declare thet coeff should be the same for all vector elements.
 ! Is this correct?
   use phys_module, only: rho_1, corr_neg_dens_coef

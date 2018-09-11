@@ -165,8 +165,9 @@ endif
 
 do i=1,n_vertex_max
  do j=1,n_order+1
-
+#if _OPENMP >= 201511
  !$OMP SIMD collapse(2)
+#endif
    do ms=1, n_gauss
      do mt=1, n_gauss
 
@@ -194,8 +195,9 @@ do i=1,n_vertex_max
          do k=1,n_var
 
            do in=1,n_tor
-
+#if _OPENMP >= 201511
           !$OMP SIMD
+#endif
             do mp=1,n_plane
              eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ(in,mp)
              eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
@@ -279,7 +281,7 @@ do ms=1, n_gauss
 
    eps_cyl = 1.d0          ! for cylinder geometry : epscyl = eps
 
-
+#if _OPENMP >= 201511
 !$OMP SIMD private(ps0, ps0_x, ps0_y, ps0_p, ps0_s, ps0_t, ps0_ss, ps0_tt, ps0_st, &
 !$OMP  u0, u0_x, u0_y, u0_p, u0_s, u0_t, u0_ss, u0_tt, u0_st, vv2, zj0, zj0_x, zj0_y, zj0_p, zj0_s, zj0_t, &
 !$OMP  vt0, Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_tt, w0_st, &
@@ -311,6 +313,7 @@ do ms=1, n_gauss
 !$OMP  amat_66, amat_66_k, amat_66_n, amat_66_kn, amat_67, amat_67_k, amat_67_n, amat_71, amat_71_k, &
 !$OMP  amat_72, amat_75, amat_75_k, amat_75_n, amat_76, amat_76_n, amat_77, amat_77_k, amat_77_n, &
 !$OMP  amat_77_kn, i,j,k,l, index_kl, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3,kl4, kl5,kl6,kl7)
+#endif
    do mp = 1, n_plane
 
      ps0    = eq_g(mp,1,ms,mt)

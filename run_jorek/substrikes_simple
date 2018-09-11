@@ -6,7 +6,7 @@
 if [ $# -lt 6 ]; then
    echo "==================================================================================="
    echo " Syntaxe subjorek model_number n_tor n_period n_plane restart_file namelist_file"
-   echo "       Example:  subjorek 303 1 1 4 inlowshape.rst inlowshape"
+   echo "       Example:  subjorek 303 1 1 4 inlowshape.h5 inlowshape"
    echo "==================================================================================="
    echo " "
    exit
@@ -28,7 +28,7 @@ echo " "
 
 # case name
 # ---------
-BASEDATANAME=`basename $DATANAME .rst`
+BASEDATANAME=`basename $DATANAME .h5`
 CASENAME=`echo $BASEDATANAME | tr '[:lower:]' '[:upper:]'`
 MACHNAME=`echo $ARCH | tr '[:lower:]' '[:upper:]'`
 
@@ -422,7 +422,7 @@ if [ ! -e ${WKDIR}/${DATANAME} ]; then
     echo " Datafile ${DATANAME} does no exist, so exit ";
     exit
 else
-    cp ${WKDIR}/${DATANAME} ${RESDIR}/jorek_restart.rst
+    cp ${WKDIR}/${DATANAME} ${RESDIR}/jorek_restart.h5
 fi
 
 if [ ! -e ${WKDIR}/${NMLNAME} ]; then

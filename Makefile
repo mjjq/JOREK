@@ -30,6 +30,9 @@ cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -r $(DEPDIR)
 	-@find . -name '*.d' -delete 2>/dev/null
+test: nrt_unit
+nrt_unit:
+	+./util/fruit.sh non_regression_tests/unit_tests
 
 
 # Directories containing sources, ordered by number of files
@@ -48,7 +51,10 @@ DIRS := diagnostics			\
 	diagnostics/postproc		\
 	tools				\
 	tools/rng                       \
+	tools/fruit                     \
+	non_regression_tests/unit_tests \
 	datatypes			\
+	benchmarks                      \
 	.				\
 	vacuum
 
@@ -111,6 +117,9 @@ most: jorek2_connection2 \
       rst_bin2hdf5 \
       rst_hdf52bin \
       jorek2_main
+# Make all object files we know of
+find_files = $(wildcard $(dir)/*.f90) $(wildcard $(dir)/*.c) $(wildcard $(dir)/*.f) $(wildcard $(dir)/*.cpp)
+objs: $(foreach file,$(foreach dir,$(DIRS), $(find_files)), $(OBJDIR)/$(notdir $(basename $(file))).o)
 
 # Special cases
 # Add here: Global includes (as the line below)

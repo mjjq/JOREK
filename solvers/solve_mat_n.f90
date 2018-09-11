@@ -69,6 +69,7 @@ contains
     use mod_clock
     use phys_module, only : index_now
     use mod_coicsr
+    !$ use omp_lib
     implicit none
 
 #include "r3_info.h"
@@ -83,7 +84,6 @@ contains
     type(clcktype) :: t_itstart, t0, t1, t2, t3
     real*8  :: tsecond
     real*8, allocatable :: RHS_tmp(:)
-    integer, external :: omp_get_num_threads, omp_get_thread_num
     !Split broadcast
     character*8 :: type
     INTEGER :: increment

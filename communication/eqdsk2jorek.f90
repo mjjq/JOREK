@@ -6,25 +6,25 @@
 !--------------------------------------------------------------------
 implicit none
 
-real,allocatable :: psi(:),p(:),f(:),q(:),rlim(:),zlim(:),rbnd(:), zbnd(:)
-real,allocatable :: apsi(:),bpsi(:),cpsi(:),dpsi(:)
-real,allocatable :: ap(:),bp(:),cp(:),dp(:)
-real,allocatable :: af(:),bf(:),cf(:),df(:)
-real,allocatable :: radius(:),theta(:),rad(:)
-real,allocatable :: ar(:),br(:),cr(:),dr(:)
-real,allocatable :: dpr(:),df2(:),dg(:),work(:),psirz(:,:)
-real,allocatable :: xx(:),yy(:),zc(:), r_bnd(:), z_bnd(:), psi_bnd(:)
-real,allocatable :: df2_ext(:),rho_ext(:),T_ext(:),psi_ext(:),p_ext(:)
-real,allocatable :: tx(:),ty(:),c(:,:),wrk(:)
+real*8,allocatable :: psi(:),p(:),f(:),q(:),rlim(:),zlim(:),rbnd(:), zbnd(:)
+real*8,allocatable :: apsi(:),bpsi(:),cpsi(:),dpsi(:)
+real*8,allocatable :: ap(:),bp(:),cp(:),dp(:)
+real*8,allocatable :: af(:),bf(:),cf(:),df(:)
+real*8,allocatable :: radius(:),theta(:),rad(:)
+real*8,allocatable :: ar(:),br(:),cr(:),dr(:)
+real*8,allocatable :: dpr(:),df2(:),dg(:),work(:),psirz(:,:)
+real*8,allocatable :: xx(:),yy(:),zc(:), r_bnd(:), z_bnd(:), psi_bnd(:)
+real*8,allocatable :: df2_ext(:),rho_ext(:),T_ext(:),psi_ext(:),p_ext(:)
+real*8,allocatable :: tx(:),ty(:),c(:,:),wrk(:)
 integer,allocatable :: iwrk(:)
-real             :: angle, ellip, tria_u, tria_l, quad_u, quad_l, r0, z0, a0, PI
-real             :: dummy(3), xdim,zdim,rzero,rgrid1,zmid,rmaxis,zmaxis,ssimag,ssibry,bcentr
-real             :: xip,xdum1,xdum2,xdum3,xdum4,xdum5
-real             :: psi_sep, sig_sep, tanh1, zmu0, zn0, zmd
-real             :: xb ,xe, yb, ye, smth, fp, fout
-integer          :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt,nx,ny, i1, j1
-integer          :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext
-character        :: AA*52
+real*8             :: angle, ellip, tria_u, tria_l, quad_u, quad_l, r0, z0, a0, PI
+real*8             :: dummy(3), xdim,zdim,rzero,rgrid1,zmid,rmaxis,zmaxis,ssimag,ssibry,bcentr
+real*8             :: xip,xdum1,xdum2,xdum3,xdum4,xdum5
+real*8             :: psi_sep, sig_sep, tanh1, zmu0, zn0, zmd
+real*8             :: xb ,xe, yb, ye, smth, fp, fout
+integer            :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt,nx,ny, i1, j1
+integer            :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext
+character          :: AA*52
 
 !----------------------------- read eqdsk file -----------
 

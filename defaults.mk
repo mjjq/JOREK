@@ -34,6 +34,9 @@ endif
 F77FLAGS=
 F90FLAGS=
 
+# Default (GNU) preprocessor
+GCPP ?= cpp
+
 # Default flags for GCC
 ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -cpp -fopenmp
@@ -41,17 +44,19 @@ ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -Wno-unused-variable
   FFLAGS += -Wintrinsics-std
   FFLAGS += -Wcharacter-truncation
-  FFLAGS += -Wsurprising -Wno-tabs
+  FFLAGS += -Wsurprising
   FFLAGS += -ffree-line-length-none
   F77FLAGS += -fdefault-real-8 -fdefault-double-8
   ifeq ($(DEBUG), 1)
     FLAGS  += -g -Og -ggdb -fno-lto
-    FLAGS  += -fcheck=all
-    FLAGS  += -Wunused-variable
-    FLAGS  += -ffpe-trap=invalid,zero,overflow -ftrapv
-    FFLAGS += -Wimplicit-interface -Wimplicit-procedure
+    FFLAGS += -fcheck=all
+    FLAGS  += -ffpe-trap=invalid,zero,overflow
+    FFLAGS += -ftrapv
     FFLAGS += -Wconversion
     F90FLAGS += -fimplicit-none
+  endif
+  ifeq ($(DEBUG), 2)
+    FFLAGS += -Wimplicit-interface -Wimplicit-procedure
   endif
 
   FFLAGS +=-J$(MODDIR)
@@ -114,13 +119,13 @@ $(OBJDIR)/%.o:: $(1)%.c
 	$$(CC) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 
 $(OBJDIR)/%.o:: $(1)%.cpp
-	$$(CXX) $$(FLAGS) $$(CFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
+	$$(CXX) $$(FLAGS) $$(CXXFLAGS) $$(DEFINES) $$(INCLUDES) $$(EXTRA_FLAGS) -c $$< -o $(OBJDIR)/$$*.o
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE
 $(DEPDIR)/%.d: $(1)%.f90 | $(MODDIR)/version.h
 	@echo "Generating dependencies for $$<"
-	@cpp -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
+	@$(GCPP) -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
 endef
 
 # This template defines a program $(file_stem)
@@ -160,6 +165,10 @@ ifeq (1, $(USE_PASTIX))
   ifeq (0, $(USE_PASTIX_MURGE))
     LIBS     := $(LIBS) $(LIB_PASTIX) $(LIB_PASTIX_BLAS)
     INCLUDES := $(INCLUDES) $(INC_PASTIX)
+  endif
+  PASTIX_MEMORY_USAGE?=1
+  ifeq (1, $(PASTIX_MEMORY_USAGE))
+    DEFINES := $(DEFINES) -DMEMORY_USAGE
   endif
 endif
 

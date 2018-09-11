@@ -2,6 +2,7 @@
 !!
 !! @see vacuum_response, vacuum_equilibrium
 module vacuum
+  use phys_module, only: rst_hdf5_version
   
   implicit none
   
@@ -54,6 +55,7 @@ module vacuum
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
   integer             :: n_pf_coils                      !< number of poloidal field coils
   logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
+  logical             :: find_pf_coil_currents           !< search for optimal pf_coil currents to build a free-bnd equil?
   real*8, allocatable :: I_coils(:)                      !< coil currents
   real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
@@ -328,6 +330,7 @@ module vacuum
     ! --- Preset namelist input parameters.
     freeboundary_equil   = .false.
     starwall_equil_coils = .false.
+    find_pf_coil_currents= .false.
     freeboundary         = .false.
     resistive_wall       = .true.
     wall_resistivity     = 0.d0

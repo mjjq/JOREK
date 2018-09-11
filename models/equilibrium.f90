@@ -9,8 +9,10 @@ use data_structure
 use phys_module
 use mod_poiss
 use mod_iterate2area
+use mod_plasma_response
 use vacuum
 use mpi_mod
+use mod_interp, only: interp
 implicit none
 
           
@@ -104,8 +106,7 @@ if (my_id == 0) then
     else
       psi_bnd = 0.d0
     endif
-  
-    if ( .not. xpoint ) then
+    if (.not. xpoint) then
       call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
       if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
         if ((psi_lim .lt. psi_bnd) .and. (n_limiter /= 0)) then
@@ -144,6 +145,8 @@ end if ! my_id == 0
 !--------------------------------------- freeboundary equilibrium
 freeboundary_equil = freeboundary_equil2
 
+if (find_pf_coil_currents) freeboundary_equil = .false.
+
 current_int = 0.d0; Z_axis_int = 0.d0
  
 T_0_old = T_0;  FF_0_old = FF_0;  T_1_old = T_1;  FF_1_old = FF_1
@@ -151,7 +154,7 @@ T_0_old = T_0;  FF_0_old = FF_0;  T_1_old = T_1;  FF_1_old = FF_1
 if (freeboundary_equil) then
 
   if (my_id == 0) then
-  
+
     write(*,*)
     write(*,*) '------------------------------------------------------'
     write(*,*) '--- Iterative solution of freeboundary equilibrium ---'
@@ -347,6 +350,7 @@ if (my_id == 0) then
     call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
 #endif
+
   
     zjz     = zFFprime      - R*R *      (dn_dpsi    * zT + zn * dT_dpsi)
   
@@ -394,8 +398,23 @@ if (my_id == 0) then
                                     + dj_dZ_dpsi*( node_list%node(i)%x(2,2) * node_list%node(i)%values(1,3,1)   &
                                                  + node_list%node(i)%x(3,2) * node_list%node(i)%values(1,2,1) )
   
-  
   enddo
+  
+  if (find_pf_coil_currents) then
+    if (starwall_equil_coils) then
+      write(*,*) 'The feature "find_pf_coil_currents" is not available yet with STARWALL coils'
+      write(*,*) 'Please use COIL_FIELD (in STARWALL repository) for the coil geometry instead'
+    else
+      if (tokamak_device == 'JET') then
+        call find_Icoils_JET(node_list,element_list,bnd_node_list,bnd_elm_list)
+      else
+        call find_Icoils2(node_list,element_list,bnd_node_list,bnd_elm_list)
+      endif
+      write(*,*) ' '
+      write(*,*) ' Please re-do the equilibrium with the found currents and set find_pf_coil_currents=.false.'
+    endif
+    stop  
+  endif
   
   ! --- Find flux surfaces and plot them; determine the q-profile.  
   if (xpoint2 .and. (n_flux .gt. 1)) then

@@ -242,8 +242,8 @@ module vacuum_response
     character(len=24) :: name
     integer           :: err
 
-    call MPI_FILE_READ(filehandle, marker,sizeof(marker),MPI_CHARACTER,status,err)
-    call MPI_FILE_READ(filehandle, name,  sizeof(name)  ,MPI_CHARACTER,status,err)
+    call MPI_FILE_READ(filehandle, marker,int(sizeof(marker),4),MPI_CHARACTER,status,err)
+    call MPI_FILE_READ(filehandle, name,  int(sizeof(name),4)  ,MPI_CHARACTER,status,err)
     call MPI_FILE_READ(filehandle, read_intparam_parallel, 1,MPI_INTEGER,status,err)
     disp = disp + sizeof(marker) + sizeof(name) + sizeof(10)! any integer 
 
@@ -287,11 +287,11 @@ module vacuum_response
       requested_type = 'float'
     end if
 
-    call MPI_FILE_READ(filehandle,  marker,   sizeof(marker),    MPI_CHARACTER,status,ierr)
-    call MPI_FILE_READ(filehandle,  name,     sizeof(name),      MPI_CHARACTER,status,ierr)
-    call MPI_FILE_READ(filehandle,  nd,       1,                 MPI_INTEGER  ,status,ierr)
-    call MPI_FILE_READ(filehandle,  datatype, sizeof(datatype),  MPI_CHARACTER,status,ierr)
-    call MPI_FILE_READ(filehandle,  d,        2,                 MPI_INTEGER  ,status,ierr)
+    call MPI_FILE_READ(filehandle,  marker,   int(sizeof(marker),4),    MPI_CHARACTER,status,ierr)
+    call MPI_FILE_READ(filehandle,  name,     int(sizeof(name),4),      MPI_CHARACTER,status,ierr)
+    call MPI_FILE_READ(filehandle,  nd,       1,                        MPI_INTEGER  ,status,ierr)
+    call MPI_FILE_READ(filehandle,  datatype, int(sizeof(datatype),4),  MPI_CHARACTER,status,ierr)
+    call MPI_FILE_READ(filehandle,  d,        2,                        MPI_INTEGER  ,status,ierr)
     disp = disp + sizeof(marker) + sizeof(name) + sizeof(nd) + sizeof(datatype) + sizeof(d) 
  
     marker   = adjustl(marker)
@@ -364,11 +364,11 @@ module vacuum_response
     integer(KIND=8)   :: local_num_elements, num_read_elements_const, i, i_ind, j_ind
     
     if (my_id==0) then
-      call MPI_FILE_READ(filehandle, marker,   sizeof(marker),  MPI_CHARACTER, status, ierr)
-      call MPI_FILE_READ(filehandle, name,     sizeof(name),    MPI_CHARACTER, status, ierr)
-      call MPI_FILE_READ(filehandle, nd,       1,               MPI_INTEGER,   status, ierr)
-      call MPI_FILE_READ(filehandle, datatype, sizeof(datatype),MPI_CHARACTER, status, ierr)
-      call MPI_FILE_READ(filehandle, d,        2,               MPI_INTEGER,   status, ierr)
+      call MPI_FILE_READ(filehandle, marker,   int(sizeof(marker), 4),   MPI_CHARACTER, status, ierr)
+      call MPI_FILE_READ(filehandle, name,     int(sizeof(name), 4),     MPI_CHARACTER, status, ierr)
+      call MPI_FILE_READ(filehandle, nd,       1,                        MPI_INTEGER,   status, ierr)
+      call MPI_FILE_READ(filehandle, datatype, int(sizeof(datatype), 4), MPI_CHARACTER, status, ierr)
+      call MPI_FILE_READ(filehandle, d,        2,                        MPI_INTEGER,   status, ierr)
 
       disp = disp + sizeof(marker) + sizeof(name) + sizeof(nd) + sizeof(datatype) + sizeof(d)
       marker   = adjustl(marker)
@@ -519,7 +519,7 @@ module vacuum_response
     ! --- Read data from STARWALL response file
     if (my_id == 0) then
 
-      call MPI_FILE_READ(filehandle, comment,sizeof(comment),MPI_CHARACTER,status,err)
+      call MPI_FILE_READ(filehandle, comment,int(sizeof(comment),4),MPI_CHARACTER,status,err)
       disp = disp + sizeof(comment)
 
       sr%file_version = read_intparam_parallel(filehandle, 'file_version', disp)
@@ -1229,9 +1229,9 @@ module vacuum_response
           angle23 = atan2(-mid23(1),mid23(3))
           
           ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-          ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-          ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-          ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+          ephi12(:) = (/- cos(angle12), 0.d0, - sin(angle12) /)
+          ephi13(:) = (/- cos(angle13), 0.d0, - sin(angle13) /)
+          ephi23(:) = (/- cos(angle23), 0.d0, - sin(angle23) /)
          
           ! --- Quantities needed to calculate the current density vector 
           r21(:) = r1(:)-r2(:)
@@ -1306,9 +1306,9 @@ module vacuum_response
           angle23 = atan2(-mid23(1),mid23(3))
           
           ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-          ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-          ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-          ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+          ephi12(:) = (/- cos(angle12), 0.d0, - sin(angle12) /)
+          ephi13(:) = (/- cos(angle13), 0.d0, - sin(angle13) /)
+          ephi23(:) = (/- cos(angle23), 0.d0, - sin(angle23) /)
          
           ! --- Quantities needed to calculate the current density vector 
           r21(:) = r1(:)-r2(:)
@@ -1396,9 +1396,9 @@ module vacuum_response
           angle23 = atan2(-mid23(1),mid23(3))
           
           ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-          ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-          ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-          ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+          ephi12(:) = (/- cos(angle12), 0.d0, - sin(angle12) /)
+          ephi13(:) = (/- cos(angle13), 0.d0, - sin(angle13) /)
+          ephi23(:) = (/- cos(angle23), 0.d0, - sin(angle23) /)
          
           ! --- Quantities needed to calculate the current density vector 
           r21(:) = r1(:)-r2(:)
@@ -1457,9 +1457,9 @@ module vacuum_response
           angle23 = atan2(-mid23(1),mid23(3))
           
           ! --- Toroidal basis vectors on middle points, in clock-wise direction looking from above the torus
-          ephi12(:) = (/- cos(angle12), 0., - sin(angle12) /)
-          ephi13(:) = (/- cos(angle13), 0., - sin(angle13) /)
-          ephi23(:) = (/- cos(angle23), 0., - sin(angle23) /)
+          ephi12(:) = (/- cos(angle12), 0.d0, - sin(angle12) /)
+          ephi13(:) = (/- cos(angle13), 0.d0, - sin(angle13) /)
+          ephi23(:) = (/- cos(angle23), 0.d0, - sin(angle23) /)
          
           ! --- Quantities needed to calculate the current density vector 
           r21(:) = r1(:)-r2(:)
@@ -1958,6 +1958,7 @@ module vacuum_response
   subroutine init_wall_currents(my_id, resistive_wall)
     
     use nodes_elements, only: bnd_node_list, node_list
+    use phys_module, only: index_now, index_start, nstep
     
     implicit none
     
@@ -1969,7 +1970,7 @@ module vacuum_response
     real*8, allocatable :: psibnd_vec(:)    ! Vector of Psi values at the boundary
     real*8, allocatable :: dpsibnd_vec(:)   ! Vector of deltaPsi values at the boundary
     real*8, allocatable :: wall_and_coil_curr(:)
-    integer             :: k
+    integer             :: k, k2
     
     call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
     
@@ -2003,6 +2004,18 @@ module vacuum_response
     
     call write_wall_vtk(0, resistive_wall, my_id)
     deallocate( psibnd_vec, dpsibnd_vec )
+    
+    ! --- Initialize diagnostic coil currents (for plot_live_data)
+    if ( resistive_wall .and. (sr%n_diag_coils > 0) ) then
+      if ( .not. allocated(diag_coil_curr) ) then
+        allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
+        diag_coil_curr(:,:) = 0.d0
+      end if
+      do k = 1, sr%n_diag_coils
+        k2 = k + sr%ind_start_diag_coils - 1
+        diag_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2,:) * wall_curr(:))
+      end do
+    end if
     
     if ( vacuum_debug .and. (my_id == 0) ) write(*,*) 'Wall currents initialized.'
     wall_curr_initialized = .true.

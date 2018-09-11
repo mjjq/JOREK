@@ -10,6 +10,7 @@ module mod_straight_field_line
   use mod_parameters,      only: n_vertex_max, n_order, n_plane, n_tor, n_var, variable_names
   use phys_module,     only: F0, xpoint, xcase
   use equil_info
+  use mod_interp
   
   
   
@@ -79,7 +80,7 @@ module mod_straight_field_line
     type(type_node_list),   intent(in)    :: node_list
     type(type_element_list),intent(in)    :: element_list
     type(t_equil_state),    intent(in)    :: eq          !< Equilibrium state information
-    real,                   intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
+    real*8,                 intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
     integer,                intent(in)    :: nPsiN       !< Number of flux surfaces
     integer,                intent(in)    :: nTht        !< Number of points in theta*
     integer,                intent(inout) :: ierr        !< Error code
@@ -227,7 +228,7 @@ module mod_straight_field_line
     type(type_node_list),   intent(in)    :: node_list
     type(type_element_list),intent(in)    :: element_list
     type(t_equil_state),    intent(in)    :: equil_state !< Equilibrium state information
-    real,                   intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
+    real*8,                 intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
     integer,                intent(in)    :: nPsiN       !< Number of flux surfaces
     integer,                intent(in)    :: nTht        !< Number of points in theta*
     integer,                intent(inout) :: ierr        !< Error code
@@ -340,6 +341,7 @@ module mod_straight_field_line
   !> Trace field lines in the n=0 component of Psi.
   subroutine trace_fieldlines(mapping, node_list, element_list, equil_state, PsiNRange,     &
     nmaxsteps, deltaphi, nsmallsteps, ierr)
+    use mod_interp
     
     ! --- Constants
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':trace_fieldlines'
@@ -349,7 +351,7 @@ module mod_straight_field_line
     type(type_node_list),   intent(in)    :: node_list
     type(type_element_list),intent(in)    :: element_list
     type(t_equil_state),    intent(in)    :: equil_state !< Equilibrium state information
-    real,                   intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
+    real*8,                 intent(in)    :: PsiNRange(2)!< Radial range of Psi_N values to cover
     integer,                intent(in)    :: nmaxsteps   !< Maximum number of poloidal steps
     real*8,                 intent(in)    :: deltaphi    !< Toroidal step width of the large steps
     integer,                intent(in)    :: nsmallsteps !< Number of small steps between large ones
@@ -440,7 +442,7 @@ module mod_straight_field_line
           ! - Interpolate Psi to current position.
           call interp0(node_list, element_list, i_elm_out,1,1,s_out,t_out,P,P_s,P_t)
           ! - Determine derivatives of R and Z with respect to s and t at current position.
-          call interp_RZ0(node_list,element_list,i_elm_out,s_out,t_out,x,x_s,x_t,y,y_s,y_t)
+          call interp_RZ(node_list,element_list,i_elm_out,s_out,t_out,x,x_s,x_t,y,y_s,y_t)
           ! - Determine derivatives of Psi with respect to R and Z.
           xjac     = x_s*y_t - x_t*y_s
           dpsi_dzn = ( - x_t*P_s + x_s*P_t ) / xjac
@@ -460,7 +462,7 @@ module mod_straight_field_line
           ! - Interpolate Psi to current position.
           call interp0(node_list, element_list, i_elm_out,1,1,s_out,t_out,P,P_s,P_t)
           ! - Determine derivatives of R and Z with respect to s and t at current position.
-          call interp_RZ0(node_list,element_list,i_elm_out,s_out,t_out,x,x_s,x_t,y,y_s,y_t)
+          call interp_RZ(node_list,element_list,i_elm_out,s_out,t_out,x,x_s,x_t,y,y_s,y_t)
           ! - Determine derivatives of Psi with respect to R and Z.
           xjac     = x_s*y_t - x_t*y_s
           dpsi_dzh = ( - x_t*P_s + x_s*P_t ) / xjac
@@ -566,15 +568,18 @@ module mod_straight_field_line
   
   
   !> Same as interp, but less derivatives are calculated
-  recursive subroutine interp0(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t)
+  pure subroutine interp0(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t)
+    use mod_basisfunctions
   
     type(type_node_list),   intent(in)    :: node_list
     type(type_element_list),intent(in)    :: element_list
+    integer, intent(in)                   :: i_elm, i_var, i_harm
+    real*8, intent(in)                    :: s, t
+    real*8, intent(out)                   :: P, P_s, P_t
     real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
-    real*8 :: s, t, P, P_s, P_t
-    integer :: kv, iv, kf, i_harm, i_var, i_elm
+    integer :: kv, iv, kf
     
-    call basisfunctions2(s,t,G(1:4,1:4),G_s(1:4,1:4),G_t(1:4,1:4),G_st(1:4,1:4),G_ss(1:4,1:4),     &
+    call basisfunctions(s,t,G(1:4,1:4),G_s(1:4,1:4),G_t(1:4,1:4),G_st(1:4,1:4),G_ss(1:4,1:4),     &
       G_tt(1:4,1:4))
   
     P = 0.d0; P_s = 0.d0; P_t = 0.d0
@@ -598,56 +603,6 @@ module mod_straight_field_line
     
   end subroutine interp0
   
-  
-  
-  
-  
-  !> Same as routine interp_RZ but with less derivatives
-  recursive subroutine interp_RZ0(node_list,element_list,i_elm,s,t,R,R_s,R_t,Z,Z_s,Z_t)
-  
-  use data_structure
-  implicit none
-  
-  ! --- Routine parameters
-  type (type_node_list),    intent(in)  :: node_list
-  type (type_element_list), intent(in)  :: element_list
-  real*8,                   intent(in)  :: s,t
-  real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
-  
-  ! --- Local variables
-  real*8  :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
-  real*8  :: xx1, xx2, ss
-  integer :: kv, iv, kf, i_elm
-  
-  call basisfunctions2(s,t,G,G_s,G_t,G_st,G_ss,G_tt)
-  
-  R = 0.d0; R_s = 0.d0; R_t = 0.d0
-  Z = 0.d0; Z_s = 0.d0; Z_t = 0.d0
-  
-  do kv = 1,n_vertex_max  ! 4 vertices
-  
-    iv = element_list%element(i_elm)%vertex(kv)  ! the node number
-  
-    do kf = 1, n_order+1       ! 4 basis functions
-      
-      xx1 = node_list%node(iv)%x(kf,1)
-      xx2 = node_list%node(iv)%x(kf,2)
-      ss  = element_list%element(i_elm)%size(kv,kf)
-      
-      R    = R    + xx1 * ss * G(kv,kf)
-      R_s  = R_s  + xx1 * ss * G_s(kv,kf)
-      R_t  = R_t  + xx1 * ss * G_t(kv,kf)
-  
-      Z    = Z    + xx2 * ss * G(kv,kf)
-      Z_s  = Z_s  + xx2 * ss * G_s(kv,kf)
-      Z_t  = Z_t  + xx2 * ss * G_t(kv,kf)
-  
-    end do
-  
-  end do
-  
-  return
-  end subroutine interp_RZ0
   
   
   

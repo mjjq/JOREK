@@ -6,6 +6,7 @@ use tr_module
 use mod_parameters
 use data_structure
 use phys_module
+use mod_interp
 
 implicit none
 
@@ -22,7 +23,6 @@ real*8 :: psi_lim,R_lim,Z_lim
 real*8 :: psi_bnd, Rmin, Rmax, rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2 
 real*8 :: t, ri, dri, si, dsi, rplot_tmp, zplot_tmp, s_value
 real*8 :: aminor, Rgeo, Bgeo, current,beta_p,beta_t,beta_n, dp_int, zjz_int, sum_dl, q, dl, dp_dpsi
-real*8 :: dummy1, dummy2, dummy3, dummy4, dummy5, dummy6, dummy7, dummy8, dummy9, dummy10
 real*8 :: PSgi,dPSgi_dr,dPSgi_ds,dPSgi_drs,dPSgi_drr,dPSgi_dss
 real*8 :: R0gi,dR0gi_dr,dR0gi_ds,dR0gi_drs,dR0gi_drr,dR0gi_dss
 real*8 :: T0gi,dT0gi_dr,dT0gi_ds,dT0gi_drs,dT0gi_drr,dT0gi_dss
@@ -143,8 +143,7 @@ do k=1,surface_list%flux_surfaces(j)%n_pieces
     call CUB1D(rr1, drr1, rr2, drr2, t, ri, dri)
     call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
 
-    call interp_RZ(node_list,element_list,i_elm,ri,si,rplot_tmp,dummy1,dummy2,dummy3,dummy4,dummy5, &
-                                                        zplot_tmp,dummy6,dummy7,dummy8,dummy9,dummy10)
+    call interp_RZ(node_list,element_list,i_elm,ri,si,rplot_tmp,zplot_tmp)
 
     if ( (zplot_tmp .ge. Z_xpoint(1)) .and. ((zplot_tmp .le. Z_xpoint(2)) ) ) then
       Rmin = min(rplot_tmp,Rmin)

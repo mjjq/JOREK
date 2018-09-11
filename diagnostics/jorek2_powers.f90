@@ -15,6 +15,7 @@ use gauss
 use constants
 use diffusivities, only: get_dperp, get_zkperp
 use mod_import_restart
+use mod_interp
 implicit none
 
 type (type_node_list)    :: node_list

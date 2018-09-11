@@ -1,5 +1,5 @@
 !> Presets input parameters to reasonable default values.
-!! 
+!!
 !! The model-specific routines initialise_parameters may overwrite
 !! these defaults according to the requirements of the respective
 !! model.
@@ -161,9 +161,11 @@ subroutine preset_parameters
   D_perp(1)  = 1.d-5; D_perp(2) = 0.d0; D_perp(3)= 0.d0; D_perp(4)= 99.d0; D_perp(5) = 99.d0
   D_par      = 0.d0
   
-  D_prof_neg  = 1.d-5
-  ZK_prof_neg = 1.d-5
-  T_min       = 0.0
+  D_prof_neg         = 1.d-5
+  D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+  ZK_prof_neg        = 1.d-5
+  ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+  T_min              = 0.0
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
@@ -190,10 +192,10 @@ subroutine preset_parameters
   particlesource_gauss_psin = 0.9d0
   particlesource_gauss_sig  = 0.1d0
   
-  tauIC       = 0.d0
-  Wdia        = .false.
-  U_sheath    = .false.
+  U_sheath = .false.
   renormalise = .false.
+  tauIC = 0.d0
+  Wdia  = .false.
 
   zjz_0 =  0.1173d0;   T_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
   zjz_1 =  0.0d0   ;   T_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0
@@ -220,17 +222,21 @@ subroutine preset_parameters
   pellet_delta_psi  = 999.d0
   pellet_velocity_R = 0.d0
   pellet_velocity_Z = 0.d0
-  pellet_particles  = 0.d0  
+  pellet_particles  = 0.d0
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
   use_pellet        = .false.
- 
+  
   t_now       = 0.d0
   t_start     = 0.d0
   index_start = 0
 
   nout = 9999999
 
-  rst_hdf5 = 0   ! =0,restart with binary files; =1, with HDF5 files
+  rst_hdf5 = 1   ! =0,restart with binary files; =1, with HDF5 files
+  !> Write out newest HDF5 restart file version this code supports, writing
+  !! out an older version is possible by changing rst_hdf5_verison via the
+  !! namelist input file
+  rst_hdf5_version = rst_hdf5_version_supported
 
   tokamak_device = 'none'
 
@@ -252,10 +258,6 @@ subroutine preset_parameters
   linear_run         = .false.
   
   export_for_nemec      = .false.
-#ifdef USE_HDF5
-  save_diagnostics_HDF5 = .false.
-  h5_diag_nbtime        = 10.d0
-#endif
   
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
@@ -265,6 +267,8 @@ subroutine preset_parameters
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
 
   tgnum              = 0.d0                 ! Taylor-Galerkin Stabilisation coefficients (0.d0 == TG not used)
+
+  keep_current_prof  = .true.               ! Keep the current_source term
   
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver
@@ -311,12 +315,12 @@ subroutine preset_parameters
   Z_limiter = 0.d0
   
  !======================MB rotation profile
-  V_0=0.d0   
-  V_1=0.d0    
+  V_0=0.d0
+  V_1=0.d0
   V_coef=0.d0
   V_coef(1)=0.d0
   V_coef(4)=0.1
-  V_coef(5)=1. 
+  V_coef(5)=1.
 !======================MB
 
 !======================AF Massive Gas Injection Parameters

@@ -10,12 +10,16 @@ program jorek2_import_perturbation
   use basis_at_gaussian
   use nodes_elements
   use mod_import_restart
+  use mod_export_restart
   implicit none
 
   ! Internal parameters
   integer i, j, k, l, i_tor
   integer my_id, ierr, n_mode, n_copy
   real*8, allocatable :: energies_save(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
+
+  type(type_node_list) :: node_list2
+  type(type_element_list) :: element_list2
 
   
   ! Name
@@ -27,11 +31,11 @@ program jorek2_import_perturbation
   write(*,*)' '
   write(*,*)'------------------------------------------------------'
   write(*,*)'This Program will import an n_tor=3 perturbation'
-  write(*,*)'from the .rst file named jorek_perturbation.rst and'
-  write(*,*)'export that perturbation into jorek_restart.rst, whose'
+  write(*,*)'from the .rst|h5 file named jorek_perturbation.rst|h5 and'
+  write(*,*)'export that perturbation into jorek_restart.rst|h5, whose'
   write(*,*)'final n_tor number is determined by the n_tor you used'
   write(*,*)'to compile this code (ie. in mod_parameters.f90).'
-  write(*,*)'Note that jorek_restart.rst and jorek_perturbation.rst'
+  write(*,*)'Note that jorek_restart.rst|h5 and jorek_perturbation.rst|h5'
   write(*,*)'must have exactly the same grids.'
   write(*,*)'------------------------------------------------------'
   write(*,*)' '

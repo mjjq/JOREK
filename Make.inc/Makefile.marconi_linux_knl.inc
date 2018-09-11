@@ -7,9 +7,9 @@
 MODEL             = model303
 
 # --- Compiler and options
-FC                = mpif90 -mt_mpi
-CC                = mpicc -mt_mpi
-CXX               = mpicxx -mt_mpi
+FC                = mpiifort -mt_mpi
+CC                = mpiicc   -mt_mpi
+CXX               = mpiicpc  -mt_mpi
 FFLAGS            = -i4 -DUSE_BLOCK -DFUNNELED #RECENT_PASTIX#-DWORLDWAR2
 FFLAGS           += -axmic-avx512 -qopt-prefetch=5 -O2
 FFLAGS           += -DCONSTRUCT_MATRIX_OMP_ATOMIC

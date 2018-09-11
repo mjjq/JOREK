@@ -20,7 +20,7 @@ integer :: ierr,err,i
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
-                rst_hdf5,                                           &
+                rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
                 restart, rst_format, regrid, bootstrap,             &
                 force_horizontal_Xline,                             &
@@ -86,9 +86,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &
                 linear_run, export_for_nemec,                       &
-#ifdef USE_HDF5
-                save_diagnostics_HDF5,h5_diag_nbtime,               &
-#endif
                 RMP_on, RMP_har_cos,RMP_har_sin,                    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
@@ -108,7 +105,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Zaxis_find_limit, PF_pert_start_time,               &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
-                voltage_coils, vert_FB_amp
+                voltage_coils, vert_FB_amp, find_pf_coil_currents
 
  if (my_id .eq. 0) then
 

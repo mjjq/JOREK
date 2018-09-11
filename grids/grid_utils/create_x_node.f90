@@ -41,6 +41,7 @@ subroutine create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
 use tr_module 
 use data_structure
 use grid_xpoint_data
+use mod_interp
 
 implicit none
 

@@ -21,7 +21,7 @@ integer :: ierr,err,i
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
-                rst_hdf5,                                           &
+                rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
                 restart, rst_format, regrid, bootstrap,             &
                 force_horizontal_Xline,                             &
@@ -48,7 +48,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 T_0,   T_1,   T_coef,                               &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_par, ZK_par_max, ZK_perp, D_par, D_perp,         &
-                particlesource, heatsource, tauIC,                  &
+                particlesource, heatsource, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ZK_perp_num,                                        &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
@@ -86,9 +86,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &
                 linear_run, export_for_nemec,                       &
-#ifdef USE_HDF5
-                save_diagnostics_HDF5,h5_diag_nbtime,               &
-#endif
                 RMP_on, RMP_har_cos,RMP_har_sin,                    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
@@ -97,9 +94,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_limiter, R_limiter, Z_limiter,                    &
                 first_target_point, last_target_point,		    &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
-                time_evol_scheme,                                   &
-                corr_neg_temp_coef, corr_neg_dens_coef,             &
-                D_prof_neg, ZK_prof_neg, T_min,                     &
+                time_evol_scheme, corr_neg_temp_coef,               &
+                corr_neg_dens_coef, D_prof_neg, ZK_prof_neg,        &
+                D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 Number_RMP_harmonics,RMP_har_cos_spectrum,          &
                 RMP_har_sin_spectrum,                               &
                 amix, amix_freeb, equil_accuracy,                   &
@@ -111,7 +108,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Zaxis_find_limit, PF_pert_start_time,               &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
-                voltage_coils, vert_FB_amp
+                voltage_coils, vert_FB_amp, find_pf_coil_currents
 
 if (my_id .eq. 0) then
 

@@ -1087,7 +1087,7 @@ EOF
 # -----------------------------------------------------------------
 irene_skl*)
 
-CMD_MPIRUN="ccc_mprun ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
+CMD_MPIRUN="ccc_mprun -n ${NPES} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"
 CMD_SUB="ccc_msub -m work,scratch,store $PROJ_GCH ./go_${DATANAME}.cmd"
 CMD_SUBRST=${CMD_SUB}
 

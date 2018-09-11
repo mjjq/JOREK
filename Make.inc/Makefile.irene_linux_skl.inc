@@ -7,10 +7,10 @@
 MODEL             = model303
 
 # --- Compiler and options
-FC                = mpiifort
-CC                = mpiicc
-CXX               = mpiicpc
-FFLAGS_OMP        = -qopenmp 
+FC                = mpiifort -f90=ifort -mt_mpi
+CC                = mpiicc   -cc=icc    -mt_mpi
+CXX               = mpiicpc  -cxx=icpc  -mt_mpi
+FFLAGS_OMP        = -qopenmp
 FFLAGS            = -r8 -i4 -DUSE_BLOCK
 FFLAGS           += -fpp
 FFLAGS           += -axCORE-AVX512 -mtune=skylake

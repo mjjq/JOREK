@@ -7,9 +7,9 @@
 MODEL             = model199
 
 # --- Compiler and options
-FC                = mpiifort -mt_mpi
-CC                = mpiicc   -mt_mpi
-CXX               = mpiicpc  -mt_mpi
+FC                = mpiifort -f90=ifort -mt_mpi
+FC                = mpiifort -cc=icc    -mt_mpi
+CXX               = mpiicc   -cxx=icpc  -mt_mpi
 FFLAGS_OMP        = -qopenmp 
 FFLAGS            = -r8 -i4 -DUSE_BLOCK
 FFLAGS           += -fpp

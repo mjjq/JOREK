@@ -490,23 +490,23 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Parallel conductivity profiles (Braginskii model)
   ! -----------------------------------------------------
   if (ZKpar_T_dependent ) then
-    Ki_par    = K_i_par * (Ti0_corr/Ti_0)**(+2.5d0)
-    dKi_par   = K_i_par * (2.5d0)  * Ti0_corr**(+1.5d0) * Ti_0**(-2.5d0)
-    Ke_par    = K_e_par * (Te0_corr/Te_0)**(+2.5d0)
-    dKe_par   = K_e_par * (2.5d0)  * Te0_corr**(+1.5d0) * Te_0**(-2.5d0)
+    Ki_par    = ZK_i_par * (Ti0_corr/Ti_0)**(+2.5d0)
+    dKi_par   = ZK_i_par * (2.5d0)  * Ti0_corr**(+1.5d0) * Ti_0**(-2.5d0)
+    Ke_par    = ZK_e_par * (Te0_corr/Te_0)**(+2.5d0)
+    dKe_par   = ZK_e_par * (2.5d0)  * Te0_corr**(+1.5d0) * Te_0**(-2.5d0)
 
     if (Ki_par .gt. ZK_par_max) then
-      Ki_par  = Zk_par_max
-      dKi_par = 0.d0
+      Ki_par   = Zk_par_max
+      dKi_par  = 0.d0
     end if
     if (Ke_par .gt. ZK_par_max) then
-      Ke_par  = Zk_par_max
-      dKe_par = 0.d0
+      Ke_par   = Zk_par_max
+      dKe_par  = 0.d0
     endif
   else
-    Ki_par = K_i_par
+    Ki_par  = ZK_i_par
     dKi_par = 0.d0
-    Ke_par = K_e_par
+    Ke_par  = ZK_e_par
     dKe_par = 0.d0
   endif
  

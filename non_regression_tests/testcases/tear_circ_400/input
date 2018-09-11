@@ -60,8 +60,8 @@
  D_par  = 0.d0
  D_perp = 1.d-7
 
- K_i_par  = 1.d0
- K_e_par  = 1.d0
+ ZK_i_par  = 1.d0
+ ZK_e_par  = 1.d0
  ZK_i_perp = 1.d-7
  ZK_e_perp = 1.d-7
 

@@ -104,6 +104,8 @@ subroutine test_write_sim_one_group_boris
   allocate(sim_to_write%groups(1))
   call allocate_particles(sim_to_write%groups(1)%particles, 2)
   sim_to_write%time = 21.d0
+  sim_to_write%groups(1)%Z = 2
+  sim_to_write%groups(1)%mass = 2.0
 
   call writer%run(sim_to_write)
   ! test if a file with the right name was created
@@ -124,6 +126,9 @@ subroutine test_write_sim_one_group_boris
             'particle i must be as written')
       end do
     end if
+
+    call assert_equals(2, sim_to_read%groups(1)%Z, 'Z equal')
+    call assert_equals(2.0, sim_to_read%groups(1)%mass, 'mass equal')
   end if
 
   ! Delete the file

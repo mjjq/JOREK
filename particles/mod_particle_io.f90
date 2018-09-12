@@ -244,6 +244,8 @@ if (allocated(sim%groups)) then
       call HDF5_array1D_saving_int(file,i_elm_all,n_total,group_name//"i_elm")
 
       call HDF5_char_saving(file,particle_type_name,group_name//"type")
+      call HDF5_integer_saving(file,sim%groups(i)%Z,group_name//"Z")
+      call HDF5_real_saving(file,sim%groups(i)%mass,group_name//"mass")
     end if
     deallocate(x,x_all,st,st_all,weight,weight_all,i_elm,i_elm_all)
   end do
@@ -454,6 +456,8 @@ do i=1,n
     deallocate(real8_1D)
   end select
 
+  call HDF5_integer_reading(file,sim%groups(i)%Z,group_name//"Z")
+  call HDF5_real_reading(file,sim%groups(i)%mass,group_name//"mass")
 end do
 
 ! Close everything else

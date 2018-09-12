@@ -14,7 +14,6 @@ FFLAGS_OMP        = -qopenmp
 FFLAGS            = -r8 -i4 -DUSE_BLOCK
 FFLAGS           += -fpp
 FFLAGS           += -xHost -O2
-FFLAGS           += -DCONSTRUCT_MATRIX_OMP_ATOMIC
 
 # --- Debugging options
 #DEBUGFLAGS        = -g

@@ -240,6 +240,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
   logical                           :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
   CHARACTER(LEN=128)                :: fname
+  
+  real*8 :: tmp(n_tor*n_var*n_tor*n_var)
 
   ! --- Timing call
   call r3_info_begin (r3_info_index_0, 'construct_matrix')
@@ -305,7 +307,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,          &
-  !$omp           ivar, itor, jvertex, jorder, jvar, jtor)
+  !$omp           ivar, itor, jvertex, jorder, jvar, jtor, tmp)
 
 ! --- omp id
 #ifdef _OPENMP
@@ -360,11 +362,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
       enddo 
     endif
 
-#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
-    ! --- We don't want the next part to run in parallel
-    !$omp critical  
-#endif
-
     ! --- We only look at non-refined elements
     if ((.not. refinement) .or. (refinement .and. (element%n_sons .eq. 0))) then
     
@@ -385,18 +382,24 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
               index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
 
               rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij)
+            
+            end do
 
-              do k=1,n_vertex_max
+            do k=1,n_vertex_max
 
-                knode = node_out(k)
+              knode = node_out(k)
 
-                do k_order = 1, n_order+1
+              do k_order = 1, n_order+1
 
-                  index_node2 = node_list%node(knode)%index(k_order)
+                index_node2 = node_list%node(knode)%index(k_order)
 
-                  index_large_k = n_tor * n_var * (index_node2 - 1)
+                index_large_k = n_tor * n_var * (index_node2 - 1)
 
-                  call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position)
+                call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position)
+                  
+                tmp(:) = 0.d0
+                do j = 1, n_var * n_tor
+                  index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
 
                   do l = 1, n_var * n_tor
 
@@ -404,16 +407,19 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var*n_tor + l
 
-                    irn_glob(ilarge2) = index_large_i	+ j
-                    jcn_glob(ilarge2) = index_large_k	+ l
-#ifdef CONSTRUCT_MATRIX_OMP_ATOMIC
-                    !$omp atomic
-#endif
-                    A_glob(ilarge2)   = A_glob(ilarge2) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
+                    irn_glob(ilarge2) = index_large_i + j
+                    jcn_glob(ilarge2) = index_large_k + l
+                    
+                    tmp((j-1)*n_var*n_tor+l) = tmp((j-1)*n_var*n_tor+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
 
                   enddo
-
+                  
                 enddo ! n_order+1
+
+                !$omp critical
+                A_glob(ijA_position : ijA_position + n_var*n_tor*n_var*n_tor - 1) = &
+                  A_glob(ijA_position : ijA_position + n_var*n_tor*n_var*n_tor - 1) + tmp(:)
+                !$omp end critical
 
               enddo ! n_vertex_max
             enddo ! n_var * n_tor
@@ -425,11 +431,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
       enddo ! n_vertex_max
 
     endif ! refinement
-
-#ifndef CONSTRUCT_MATRIX_OMP_ATOMIC
-    ! --- Finish sequential
-    !$omp end critical
-#endif
 
   end do
   !$omp end do

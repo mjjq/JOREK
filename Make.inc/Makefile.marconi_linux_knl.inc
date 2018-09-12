@@ -12,7 +12,6 @@ CC                = mpiicc   -mt_mpi
 CXX               = mpiicpc  -mt_mpi
 FFLAGS            = -i4 -DUSE_BLOCK -DFUNNELED #RECENT_PASTIX#-DWORLDWAR2
 FFLAGS           += -axmic-avx512 -qopt-prefetch=5 -O2
-FFLAGS           += -DCONSTRUCT_MATRIX_OMP_ATOMIC
 
 # --- Various switches
 USE_PASTIX        = 1

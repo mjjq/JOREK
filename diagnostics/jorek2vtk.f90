@@ -140,15 +140,15 @@ allocate(element_list)
 allocate(bnd_elm_list)
 
   ! --- Initialise MPI / threaded MPI
-#ifdef FUNNELED
-required = MPI_THREAD_FUNNELED
-#else
-required = MPI_THREAD_MULTIPLE
-#endif
-#ifdef STAN_FLAG
-required = 0
-#endif
-call MPI_Init_thread(required, provided, StatInfo)
+!#ifdef FUNNELED
+!required = MPI_THREAD_FUNNELED
+!#else
+!required = MPI_THREAD_MULTIPLE
+!#endif
+!#ifdef STAN_FLAG
+!required = 0
+!#endif
+!call MPI_Init_thread(required, provided, StatInfo)
 
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
@@ -1214,7 +1214,7 @@ etype = 9  ! for vtk_quad
 
 call write_vtk('jorek_tmp.vtk',xyz,ien,etype,scalar_names,scalars,vector_names,vectors)
 
-call MPI_FINALIZE(IERR)                                ! clean up MPI
+!call MPI_FINALIZE(IERR)                                ! clean up MPI
 
 write(*,*) 'done.'
 

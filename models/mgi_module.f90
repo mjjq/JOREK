@@ -351,7 +351,7 @@ module mgi_module
               stop
           end select
 
-          imp_adas(i) = read_adf11(trim(adas_suffix),trim(adas_dir))
+          imp_adas(i) = read_adf11(my_id, trim(adas_suffix),trim(adas_dir))
           imp_cor(i)  = coronal(imp_adas(i))
 
           

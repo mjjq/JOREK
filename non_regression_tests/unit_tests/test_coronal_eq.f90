@@ -13,8 +13,9 @@ contains
 
 !> Download necessary files from the open-adas website
 subroutine setup_test_coronal_eq
-  integer :: i
+  integer :: i, my_id
   character(len=200) :: set
+  my_id = 0
   set = ''
   do i=1,size(sets,1)
     set = trim(set) // ' ' // trim(sets(i))
@@ -24,7 +25,7 @@ subroutine setup_test_coronal_eq
   ! Now we need to wait a bit for filesystem update
   call system('sleep 0.5')
   do i=1,size(sets,1)
-    adas(i) = read_adf11(trim(sets(i)))
+    adas(i) = read_adf11(my_id, trim(sets(i)))
   end do
 end subroutine setup_test_coronal_eq
 

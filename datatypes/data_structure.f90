@@ -114,6 +114,7 @@ module data_structure
      real*8, dimension(:,:,:,:) , allocatable:: eq_ss, eq_st, eq_tt   
      real*8, dimension(:,:,:,:) , allocatable :: delta_g, delta_s, delta_t
 
+     real*8, dimension(:), allocatable  :: synch_buff
   END TYPE type_thread_buffer
   
   integer                                         , public :: nbthreads
@@ -150,7 +151,8 @@ contains
           call tr_allocate(thread_struct(i)%RHS_p, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),"RHS_p",CAT_MATELEM)                                     
           call tr_allocate(thread_struct(i)%RHS_k, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),"RHS_k",CAT_MATELEM)                                     
           call tr_allocate(thread_struct(i)%ELM,   1,n_tor*n_vertex_max*(n_order+1)*n_var,1,n_tor*n_vertex_max*(n_order+1)*n_var,"ELM",CAT_MATELEM)       
-          call tr_allocate(thread_struct(i)%RHS,   1,n_tor*n_vertex_max*(n_order+1)*n_var,"RHS",CAT_MATELEM)                                     
+          call tr_allocate(thread_struct(i)%RHS,   1,n_tor*n_vertex_max*(n_order+1)*n_var,"RHS",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%synch_buff, 1,n_tor*n_var*n_tor*n_var,"synch_buff",CAT_MATELEM)
           thread_struct(i)%ELM_p   = 0.d0
           thread_struct(i)%ELM_n   = 0.d0
           thread_struct(i)%ELM_k   = 0.d0
@@ -159,6 +161,7 @@ contains
           thread_struct(i)%RHS_k   = 0.d0
           thread_struct(i)%ELM     = 0.d0
           thread_struct(i)%RHS     = 0.d0
+          thread_struct(i)%synch_buff     = 0.d0
           if (jorek_model .ne. 400) then
             call tr_allocate(thread_struct(i)%eq_g   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_g",CAT_MATELEM)
             call tr_allocate(thread_struct(i)%eq_s   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_s",CAT_MATELEM)
@@ -204,6 +207,7 @@ contains
        call tr_deallocate(thread_struct(i)%RHS_k,"RHS_k",CAT_MATELEM)                                     
        call tr_deallocate(thread_struct(i)%ELM,"ELM",CAT_MATELEM)
        call tr_deallocate(thread_struct(i)%RHS,"RHS",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%synch_buff,"synch_buff",CAT_MATELEM)
        if (jorek_model .ne. 400) then
          call tr_deallocate(thread_struct(i)%eq_g   ,"eq_g",CAT_MATELEM)
          call tr_deallocate(thread_struct(i)%eq_s   ,"eq_s",CAT_MATELEM)

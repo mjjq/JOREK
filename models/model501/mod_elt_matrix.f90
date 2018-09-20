@@ -655,7 +655,7 @@ do ms=1, n_gauss
                                 p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
                                 z_TeTe_out=d2Z_imp_dT2)
 
-         ! Calculate the ionization potential energy and it's time gradient
+         ! Calculate the ionization potential energy and its derivative wrt. temperature
          E_ion     = 0.
          dE_ion_dT = 0.
 

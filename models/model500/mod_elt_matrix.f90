@@ -655,7 +655,7 @@ do ms=1, n_gauss
     dSrec_dT  = - 0.5d0 * (1.d0/2.d0) * coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(0.5d0) * (T_corr/(2.d0))**(-1.5d0) * dT_corr_dT
 
    !--------------------------------------------------------
-   ! --- Source of neutrals from Massive Gas Injection (MGI)
+   ! --- Source of neutrals, e.g. from MGI/SPI
    !--------------------------------------------------------
 
      source_neutral = 0.d0                    

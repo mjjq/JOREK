@@ -306,7 +306,9 @@ module pellet_module
           pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**(1.455)) * ((n_SI*1.d-6)**(0.455)) * (T_eV**1.679)
         end if
       else
-        pellets(i)%spi_abl    = 0.d0
+        write(*,*) "Forbidden value for spi_abl_model: ", spi_abl_model
+	write(*,*) "=> EXIT"
+        stop
       end if
        
       if (my_id == 0) then

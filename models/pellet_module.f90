@@ -272,7 +272,7 @@ module pellet_module
       ! Update ablation rate    
       if (spi_abl_model == 0) then ! Constant ablation rate
         pellets(i)%spi_abl = ns_amplitude
-      elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2) then ! NGS models
+      elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2) then ! NGS models (see Wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial)
 
         ! Get local n_e, T_e    
         call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&

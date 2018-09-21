@@ -678,8 +678,8 @@ do ms=1, n_gauss
                       - v * tauIC * BigR**4 * (u0_xy * (p0_xx - p0_yy) - p0_xy * (u0_xx - u0_yy) ) * xjac * tstep &
 
                       ! --- Diamagnetic viscosity
-                      - dvisco_dT * bigR * W_dia * (v_x*T0_x + v_y*T0_y)    * xjac * tstep  &
-                      - visco_T   * bigR * W_dia * (v_xx + v_x/bigR + v_yy) * xjac * tstep  &
+                      + dvisco_dT * bigR * W_dia * (v_x*T0_x + v_y*T0_y)    * xjac * tstep  &
+                      + visco_T   * bigR * W_dia * (v_xx + v_x/bigR + v_yy) * xjac * tstep  &
 
                       + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
 
@@ -1077,8 +1077,8 @@ do ms=1, n_gauss
                              - (rho_xy * T0 + rho_x*T0_y + rho_y*T0_x + rho*T0_xy) * (u0_xx - u0_yy)  )   &
                                                  * xjac * theta * tstep                             &
                        ! --- Diamagnetic viscosity
-                       + dvisco_dT * bigR * W_dia_rho * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
-                       + visco_T   * bigR * W_dia_rho * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
+                       - dvisco_dT * bigR * W_dia_rho * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
+                       - visco_T   * bigR * W_dia_rho * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
                            
                        + TG_num2 * 0.25d0 * rho_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)         &
                                  * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep
@@ -1107,11 +1107,11 @@ do ms=1, n_gauss
                                                - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )  &
                                              * xjac * theta * tstep                                                &
                        ! --- Diamagnetic viscosity
-                       + d2visco_dT2*T * bigR * W_dia   * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
-                       + dvisco_dT*T   * bigR * W_dia   * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
-                       + dvisco_dT     * bigR * W_dia_T * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
-                       + visco_T       * bigR * W_dia_T * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
-                       + dvisco_dT     * bigR * W_dia   * (v_x*T_x  + v_y*T_y )    * xjac * theta * tstep  
+                       - d2visco_dT2*T * bigR * W_dia   * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
+                       - dvisco_dT*T   * bigR * W_dia   * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
+                       - dvisco_dT     * bigR * W_dia_T * (v_x*T0_x + v_y*T0_y)    * xjac * theta * tstep  &
+                       - visco_T       * bigR * W_dia_T * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
+                       - dvisco_dT     * bigR * W_dia   * (v_x*T_x  + v_y*T_y )    * xjac * theta * tstep  
                        
 
 !---------------------------------------- NEO

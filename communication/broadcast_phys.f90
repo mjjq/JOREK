@@ -639,14 +639,10 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,using_spi,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   if (using_spi) then
     if (.not. allocated(pellets)) then
-      allocate (pellets(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for pellets
-      if (err_alloc /= 0) then
-        write(*,*) "WARNING: Error when trying to allocate pellets on MPI nodes!!!"
-      end if
+      allocate (pellets(n_spi))  !< Dynamically allocate memeries for pellets
     end if
     
     call MPI_UNPACK(buffer,bufsize,position,pellets,              n_spi,dtype,MPI_COMM_WORLD,ierr)
-    write(*,*) "unpacking pellets: ",ierr
     
     call MPI_UNPACK(buffer,bufsize,position,spi_tor_rot,          1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
     if (spi_tor_rot) then

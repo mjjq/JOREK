@@ -290,15 +290,11 @@ module pellet_module
                         P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
           
         n_SI = P(1) * 1.d20 * central_density
-        if (n_SI < 0.) then
-          n_SI = 0.
-        end if
+        n_SI = max(n_SI,0.d0)
 
         ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e = T_i    
         T_eV = P(2) / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20) 
-        if (T_eV < 0.) then
-          T_eV = 0.
-        end if
+        T_eV = max(T_eV,0.d0)
         
         if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
           write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
@@ -313,7 +309,7 @@ module pellet_module
         pellets(i)%spi_abl    = 0.d0
       end if
        
-      if (my_id == 0.) then
+      if (my_id == 0) then
         xtime_spi_ablation_rate(i,index_now) = pellets(i)%spi_abl
       end if
     
@@ -355,7 +351,6 @@ module pellet_module
     
     integer, intent(in) :: my_id
     integer             :: ierr,err,i,i_surface
-    integer             :: err_alloc=0, err_alloc_rnd=0
     
     logical             :: ferr
     
@@ -386,62 +381,52 @@ module pellet_module
       deallocate(pellets)
     end if
   
-    allocate (pellets(n_spi),stat=err_alloc)  ! Dynamically allocate memeries for pellets
+    allocate (pellets(n_spi))  ! Dynamically allocate memeries for pellets
   
-    if (err_alloc /= 0) then
-      write(*,*) "Error when trying to dynamically allocate memeries for pellets, reverting to non-SPI case."
-      stop
-    else
-      if (n_spi >= 1) then
+    if (n_spi >= 1) then
   
-	! Read normalized shard size distribution (if given in file) and calculate shard radius normalization factor size_beta
-	if (spi_shard_file /= 'none') then 
+      ! Read normalized shard size distribution (if given in file) and calculate shard radius normalization factor size_beta
+      if (spi_shard_file /= 'none') then 
   
-	  if (allocated(shard_size)) then
+	if (allocated(shard_size)) then
+	  deallocate(shard_size)
+	end if
+	allocate (shard_size(n_spi))  ! Dynamically allocate memeries for shard sizes
+	shard_size = 0.0
+  
+	if (my_id == 0 .and. index_now == 0 .and. spi_shard_file /= 'none') then
+	  size_beta	 = 0.0
+	  V_shard_norm = 0.0
+	  inquire(file=trim(spi_shard_file), exist=ferr) ! Check if the file exists
+	  if (ferr) then
+	    open(42,file=trim(spi_shard_file),status="OLD",action="READ")
+	    read(42,*)  shard_size(1:n_spi)
+	    close(42)
+	  else
+	    write(*,*) "WARNING!!! Shard size file does not exist, exiting now"
 	    deallocate(shard_size)
-	  end if
-	  allocate (shard_size(n_spi),stat=err_alloc)  ! Dynamically allocate memeries for shard sizes
-	  if (err_alloc /= 0) then
-	    write(*,*) "Error when trying to dynamically allocate memeries for shard size, using uniform case."
 	    deallocate(pellets)
 	    stop
-	  else
-	    shard_size = 0.0
 	  end if
-  
-	  if (my_id == 0 .and. index_now == 0 .and. spi_shard_file /= 'none') then
-	    size_beta	 = 0.0
-	    V_shard_norm = 0.0
-	    inquire(file=trim(spi_shard_file), exist=ferr) ! Check if the file exists
-	    if (ferr) then
-	      open(42,file=trim(spi_shard_file),status="OLD",action="READ")
-	      read(42,*)  shard_size(1:n_spi)
-	      close(42)
-	    else
-	      write(*,*) "WARNING!!! Shard size file does not exist, exiting now"
-	      deallocate(shard_size)
-	      deallocate(pellets)
-	      stop
-	    end if
-	  end if
-
-	  do i = 1, n_spi
-	    V_shard_norm = V_shard_norm + (4./3.) * PI * (shard_size(i)**3)
-	    size_beta	 = (spi_quantity / (V_shard_norm)*pellet_density*1.d20) ** (-1./3.)
-	    write(*,*) "Characteristic shard size (m):", size_beta
-	  end do
-
 	end if
 
-	! Initialize shard radius
-	do i = 1, n_spi 
-	  if (spi_shard_file == 'none') then
-	    spi_radius_tmp = (spi_quantity / (n_spi*(4.*PI/3.)*pellet_density*1.d20))**(1./3.)
-	  else
-	    spi_radius_tmp = shard_size(i)/size_beta
-	  end if
-	  pellets(i)%spi_radius  = spi_radius_tmp
+	do i = 1, n_spi
+	  V_shard_norm = V_shard_norm + (4./3.) * PI * (shard_size(i)**3)
+	  size_beta	 = (spi_quantity / (V_shard_norm)*pellet_density*1.d20) ** (-1./3.)
+	  write(*,*) "Characteristic shard size (m):", size_beta
 	end do
+
+      end if
+
+      ! Initialize shard radius
+      do i = 1, n_spi 
+	if (spi_shard_file == 'none') then
+	  spi_radius_tmp = (spi_quantity / (n_spi*(4.*PI/3.)*pellet_density*1.d20))**(1./3.)
+	else
+	  spi_radius_tmp = shard_size(i)/size_beta
+	end if
+	pellets(i)%spi_radius  = spi_radius_tmp
+      end do
 
 	! Initialize shard velocity and position    
   
@@ -472,15 +457,8 @@ module pellet_module
   	! define a random velocity of the shard, which is then transformed into the
   	! R, Z, RxZ space.
 	if (allocated(rnd)) deallocate(rnd)
-	allocate (rnd(3*n_spi),stat=err_alloc_rnd)  ! Dynamically allocate memeries for randoms  
-	if (err_alloc_rnd /= 0) then
-	  write(*,*) "Error when trying to dynamically allocate memeries for randoms."
-	  deallocate(pellets)
-	  deallocate(shard_size)
-	  stop
-	end if  
+	allocate (rnd(3*n_spi))  ! Dynamically allocate memeries for randoms   
 	CALL random_number(rnd)  
-	!write(*,*) "Random number array:", rnd
     
 	if (spi_Vel_diff < 0) then
 	  write(*,*) "WARNING, negative velocity spread, spi_Vel_diff = ", spi_Vel_diff
@@ -541,7 +519,6 @@ module pellet_module
 	write(*,*) "...... Seriously!? Reverting to non-SPI case."
 	using_spi = .false.
       end if
-    end if
     
     return
   end subroutine init_spi

@@ -394,8 +394,8 @@ module pellet_module
 	allocate (shard_size(n_spi))  ! Dynamically allocate memeries for shard sizes
 	shard_size = 0.0
   
-	if (my_id == 0 .and. index_now == 0 .and. spi_shard_file /= 'none') then
-	  size_beta	 = 0.0
+	if (my_id == 0 .and. index_now == 0) then
+	  size_beta    = 0.0
 	  V_shard_norm = 0.0
 	  inquire(file=trim(spi_shard_file), exist=ferr) ! Check if the file exists
 	  if (ferr) then
@@ -404,15 +404,13 @@ module pellet_module
 	    close(42)
 	  else
 	    write(*,*) "WARNING!!! Shard size file does not exist, exiting now"
-	    deallocate(shard_size)
-	    deallocate(pellets)
 	    stop
 	  end if
 	end if
 
 	do i = 1, n_spi
 	  V_shard_norm = V_shard_norm + (4./3.) * PI * (shard_size(i)**3)
-	  size_beta	 = (spi_quantity / (V_shard_norm)*pellet_density*1.d20) ** (-1./3.)
+	  size_beta    = (spi_quantity / (V_shard_norm)*pellet_density*1.d20) ** (-1./3.)
 	  write(*,*) "Characteristic shard size (m):", size_beta
 	end do
 

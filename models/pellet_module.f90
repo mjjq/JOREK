@@ -126,18 +126,16 @@ module pellet_module
     use data_structure
     use phys_module
     use mpi_mod
-    implicit none
+    implicit none  
     
+    type (type_node_list), intent(in)    :: node_list
+    type (type_element_list), intent(in) :: element_list
     
-    type (type_node_list)    :: node_list
-    type (type_element_list) :: element_list
-    
-    real*8  :: psi_axis, psi_bnd
-    integer :: my_id, ierr
-    real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
-    
-    real*8 :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
-    integer :: i_elm, ifail
+    real*8              :: psi_axis, psi_bnd
+    integer, intent(in) :: my_id
+	integer             :: ierr, i_elm, ifail
+    real*8              :: V_normalisation, density, density_in, density_out, pressure, pressure_in, pressure_out   
+    real*8              :: R_out, Z_out, s_out, t_out, P0_s, P0_t, P0_st, P0_ss, P0_tt
     
     if (pellet_amplitude .gt. 0) return
     
@@ -192,28 +190,20 @@ module pellet_module
     implicit none
     
     
-    type (type_node_list)    :: node_list
-    type (type_element_list) :: element_list
+    type (type_node_list), intent(in)    :: node_list
+    type (type_element_list), intent(in) :: element_list
     
     ! --- Local variables
-    real*8  :: psi_axis, psi_bnd
-    integer :: my_id, ierr
-    real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
-    
-    real*8  :: R_out, Z_out
-    integer :: i_elm, ifail
-    
-    integer :: i
-    
-    real*8, dimension(2) :: P, P_s, P_t, P_phi
-    real*8  :: R, R_s, R_t, Z, Z_s, Z_t
-    real*8  :: s_out,t_out
-    
-    real*8  :: n_SI, T_eV, n_corr, T_corr
-    real*8  :: t_norm, spi_Vel_totref
+    real*8               :: psi_axis, psi_bnd
+    integer, intent(in)  :: my_id
+	integer              :: ierr, i_elm, ifail, i
+    real*8               :: V_normalisation, density, density_in, density_out, pressure, pressure_in, pressure_out    
+    real*8               :: R_out, Z_out, R, R_s, R_t, Z, Z_s, Z_t, s_out, t_out    
+    real*8, dimension(2) :: P, P_s, P_t, P_phi   
+    real*8               :: n_SI, T_eV, n_corr, T_corr, t_norm, spi_Vel_totref
     ! Temp variables for SPI, used to advance the R, Z, phi position of pellets for
     ! given R, Z, RxZ velocity and a calculated apex of the trajectory spreading cone 
-    real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
+    real*8               :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
   
     spi_delta_phi   = 0.
     spi_Vel_R_tmp   = 0.

@@ -206,7 +206,7 @@ function kinetic_leapfrog_to_gc(node_list, element_list, in, E, B, mass, dt) res
   real*8, dimension(3), intent(in)            :: E !< Electric field at kinetic position [V/m]
   real*8, dimension(3), intent(in)            :: B !< Magnetic field at kinetic position [T]
   real*8, intent(in)                          :: mass !< Mass of the particle [amu]
-  real*8, intent(in)                          :: dt !< Timestep, i.e. time in seconds by which the position is known ahead of the velocity
+  real*8, intent(in)                          :: dt !< Timestep [s]
   type(particle_gc)             :: out
   out = kinetic_to_gc(node_list, element_list, &
       kinetic_leapfrog_to_kinetic(in, E, B, mass, dt), &
@@ -224,7 +224,7 @@ function gc_to_kinetic_leapfrog(in, node_list, element_list, chi, E, B, mass, dt
   type(type_node_list), intent(in)            :: node_list
   type(type_element_list), intent(in)         :: element_list
   real*8, intent(in)                          :: mass !< Mass of the particle [amu]
-  real*8, intent(in)                          :: dt !< Timestep, i.e. time in seconds by which the position is known ahead of the velocity
+  real*8, intent(in)                          :: dt !< Timestep [s]
   type(particle_kinetic_leapfrog)             :: out
   out = kinetic_to_kinetic_leapfrog(gc_to_kinetic(node_list, element_list, in, chi, B, mass), &
       E, B, mass, dt)
@@ -238,7 +238,7 @@ function kinetic_to_kinetic_leapfrog(in, E, B, mass, dt) result(out)
   real*8, dimension(3), intent(in)            :: B !< Magnetic field at kinetic position [T]
   real*8, dimension(3), intent(in)            :: E !< Electric field at kinetic position [V/m]
   real*8, intent(in)                          :: mass !< Mass of the particle [amu]
-  real*8, intent(in)                          :: dt !< Timestep, i.e. time in seconds by which the position is known ahead of the velocity
+  real*8, intent(in)                          :: dt !< Timestep,[s]
   type(particle_kinetic_leapfrog)             :: out
   call copy_particle_base(in, out)
   out%q = in%q
@@ -253,20 +253,20 @@ function kinetic_leapfrog_to_kinetic(in, E, B, mass, dt) result(out)
   real*8, dimension(3), intent(in)            :: B !< Magnetic field at kinetic position [T]
   real*8, dimension(3), intent(in)            :: E !< Electric field at kinetic position [V/m]
   real*8, intent(in)                          :: mass !< Mass of the particle [amu]
-  real*8, intent(in)                          :: dt !< Timestep, i.e. time in seconds by which the position is known ahead of the velocity
+  real*8, intent(in)                          :: dt !< Timestep [s]
   type(particle_kinetic)                      :: out
   type(particle_kinetic_leapfrog) :: tmp ! needed because we cannot alter `in`
   tmp = in
-  call boris_push_cylindrical(tmp, mass, E, B, dt)
+  call boris_initial_half_step_backwards_RZPhi(tmp, mass, E, B, -dt)
   call copy_particle_base(in, out)
   out%q = in%q
-  out%v = (tmp%v + in%v)*0.5d0
+  out%v = tmp%v
 end function kinetic_leapfrog_to_kinetic
 
 
-!> Take a particle_kinetic_leapfrog and B and return a particle_guiding_centre.
+!> Take a particle_kinetic and B and return a particle_guiding_centre.
 !> This is an approximation based on the magnetic field at the kinetic position.
-!> gc_to_kinetic_leapfrog is not a true inverse of this function! Use with care. (only works if B uniform)
+!> gc_to_kinetic is not a true inverse of this function! Use with care. (only works if B uniform)
 !> This should actually use the current timestep size and fields to be a bit more accurate.
 !>
 !> See for instance http://iter.rma.ac.be/Stufftodownload/Texts/GuidingCenterMotion.pdf

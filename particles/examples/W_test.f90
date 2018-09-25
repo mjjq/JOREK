@@ -7,15 +7,17 @@ program W_test
 use particle_tracer
 use mod_pcg32_rng
 use mod_particle_diagnostics
+!$ use omp_lib
 implicit none
 
 type(write_particle_diagnostics) :: diag
 
-real*8 :: timesteps(8) = [3d-7,1d-7,3d-8,1d-8,3d-9,1d-9,3d-10,1d-10]
+real*8 :: timesteps(8) = [3.1623d-7,1d-7,3.1623d-8,1d-8,3.1623d-9,1d-9,3.1623d-10,1d-10]
 integer :: i, j, k, n_steps, n_lost, i_elm_old, ifail
 real*8 :: target_time, t
 real*8 :: E(3), B(3), rz_old(2), st_old(2), psi, U
 type(event) :: fieldreader
+!$ real*8 :: t0, t1
 
 ! Start up MPI, jorek
 call sim%initialize(num_groups=8)
@@ -25,11 +27,19 @@ sim%groups(:)%dt = timesteps
 fieldreader = event(read_jorek_fields_interp_linear(basename='jorek', i=-1))
 call with(sim, fieldreader)
 
+! Disable the electric field for this run
+do i=1,sim%fields%node_list%n_nodes
+  sim%fields%node_list%node(i)%values(:,:,2) = 0.d0
+  sim%fields%node_list%node(i)%deltas(:,:,2) = 0.d0
+  ! also disable dpsi_dt term
+  sim%fields%node_list%node(i)%deltas(:,:,1) = 0.d0
+end do
+
 ! Set up particles
 sim%groups(:)%Z    = 74
 sim%groups(:)%mass = 183.84 !< atomic mass units
 do i=1,size(sim%groups,1)
-  allocate(particle_kinetic_leapfrog::sim%groups(i)%particles(1000))
+  allocate(particle_kinetic_leapfrog::sim%groups(i)%particles(100))
   ! For every particle accept or reject it with probability f_psi_inside(psi)
   call initialise_particles_H_mu_psi(sim%groups(i)%particles, &
       sim%fields, sobseq_rng(), &
@@ -54,6 +64,7 @@ events = [event(diag, step=1d-5), &
 call with(sim, events, at=0.d0)
 
 do while (.not. sim%stop_now)
+  !$ t0 = omp_get_wtime()
   target_time = next_event_at(sim, events)
   do i=1,size(sim%groups,1)
     n_steps = nint((target_time - sim%time)/sim%groups(i)%dt)
@@ -73,8 +84,6 @@ do while (.not. sim%stop_now)
           st_old    = particles(j)%st
           i_elm_old = particles(j)%i_elm
 
-          E = 0.d0 ! disable the electric field for a P_phi test
-
           call boris_push_cylindrical(particles(j), sim%groups(i)%mass, E, B, timesteps(i))
           call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
               particles(j)%x(1), particles(j)%x(2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
@@ -84,6 +93,8 @@ do while (.not. sim%stop_now)
     end select
   end do ! groups
   sim%time = target_time
+  !$ t1 = omp_get_wtime()
+  !$ write(*,*) sim%time, " stepping took ", t1-t0, "s"
   call with(sim, events, at=sim%time)
 end do
 call sim%finalize

@@ -16,7 +16,7 @@ integer, parameter :: n_var = 12
 character(len=7)  :: var_names(n_var) = ["e      ", "k      ", "mu     ", &
   "psi_n  ", "psi_bar", "p_phi  ", "weight ", "lost   ", "q      ", "region ", &
   "theta  ", "phi    "]
-integer, parameter :: var_types(n_var) = [REAL8, REAL4, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4]
+integer, parameter :: var_types(n_var) = [REAL4, REAL8, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4]
 integer, parameter :: n_real8_var      = count(var_types .eq. REAL8)
 integer, parameter :: n_real4_var      = count(var_types .eq. REAL4)
 integer, parameter :: n_int4_var       = count(var_types .eq. INT4)

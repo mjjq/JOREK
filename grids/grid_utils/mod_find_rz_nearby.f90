@@ -142,9 +142,15 @@ if (newton_iter_number .gt. newton_iter_max) then
   !write(*,"(A,i4,A,i5,A,2g14.6,A,3g14.6)") "WARNING: iteration for st did not converge after", newton_iter_max, " tries in element ", i_elm_new, &
   !" using find_RZ", x_new, "err2(old)/convergence: ", err2, err2_old, err2_old/err2
     !write(*,"(A,2g16.8)") "Find_RZ at ", x_new
-  call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,s_new,t_new,ifail)
-  if (ifail .eq. 0) ifail=3
-  return
+  ! See if with reduced tolerance it's ok (find_RZ has 10^-8 tolerance, so we check 10^-16)
+  if (err2 .le. 1e-16) then
+    ifail = 3
+    return
+  else
+    call find_RZ(node_list,element_list,x_new(1),x_new(2),x_step(1),x_step(2),i_elm_new,s_new,t_new,ifail)
+    if (ifail .eq. 0) ifail=3
+    return
+  end if
 endif
 end subroutine find_RZ_nearby
 

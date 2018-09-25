@@ -1,24 +1,24 @@
-!> particles/examples/W_example.f90
+!> particles/examples/W_test.f90
 !> Requires: acd50_w.dat, scd50_w.dat and the JOREK input file
-!> Compile with `j2p W_example` and run with `W_example < in1`
-!> Read fields from jorek00721.h5 and onwards and push W particles
-program W_example
+!> Compile with `j2p W_test` and run with `W_test < in1`
+!> Read fields from jorek_restart.h5 and push W particles
+!> disable the electric field.
+program W_test
 use particle_tracer
-use mod_sobseq_rng
+use mod_pcg32_rng
 use mod_particle_diagnostics
 implicit none
 
 type(write_particle_diagnostics) :: diag
 
-real*8 :: timesteps(1) = [1d-7]
+real*8 :: timesteps(8) = [3d-7,1d-7,3d-8,1d-8,3d-9,1d-9,3d-10,1d-10]
 integer :: i, j, k, n_steps, n_lost, i_elm_old, ifail
 real*8 :: target_time, t
 real*8 :: E(3), B(3), rz_old(2), st_old(2), psi, U
-real*8, parameter :: alpha = 0.d0 !< if 0, sample from maxwellian
 type(event) :: fieldreader
 
 ! Start up MPI, jorek
-call sim%initialize(num_groups=1)
+call sim%initialize(num_groups=8)
 sim%groups(:)%dt = timesteps
 
 ! Set up the field reader
@@ -28,8 +28,8 @@ call with(sim, fieldreader)
 ! Set up particles
 sim%groups(:)%Z    = 74
 sim%groups(:)%mass = 183.84 !< atomic mass units
-do i=1,1
-  allocate(particle_kinetic_leapfrog::sim%groups(i)%particles(10))
+do i=1,size(sim%groups,1)
+  allocate(particle_kinetic_leapfrog::sim%groups(i)%particles(1000))
   ! For every particle accept or reject it with probability f_psi_inside(psi)
   call initialise_particles_H_mu_psi(sim%groups(i)%particles, &
       sim%fields, sobseq_rng(), &
@@ -46,32 +46,34 @@ do i=1,1
 end do
 
 ! Set up the diagnostics output
-diag = write_particle_diagnostics(filename='diag.h5')
+diag = write_particle_diagnostics(filename='diag.h5', only=[2,6]) ! store kinetic energy and p_phi only
 
 ! Perform a simple equilibrium simulation
 events = [event(diag, step=1d-5), &
-          !event(write_action(), step=1d-5), &
-          event(stop_action(), start=1d-3)]
-call check_and_fix_timesteps(timesteps, events)
+          event(stop_action(), start=1d-2)]
 call with(sim, events, at=0.d0)
 
 do while (.not. sim%stop_now)
   target_time = next_event_at(sim, events)
   do i=1,size(sim%groups,1)
     n_steps = nint((target_time - sim%time)/sim%groups(i)%dt)
+    ! Note that the intel compiler produces a segmentation faulting executable
+    ! if the select type and omp regions below are switched
     select type (particles => sim%groups(i)%particles)
     type is (particle_kinetic_leapfrog)
       !$omp parallel do default(private) &
       !$omp shared(sim, n_steps, timesteps, i)
       do j=1,size(particles,1)
         do k=1,n_steps
-          if (particles(j)%i_elm .eq. 0) exit
+          if (particles(j)%i_elm .le. 0) exit
           t = sim%time + k*timesteps(i)
           call sim%fields%calc_EBpsiU(t, particles(j)%i_elm, &
               particles(j)%st, particles(j)%x(3), E, B, psi, U)
           rz_old    = particles(j)%x(1:2)
           st_old    = particles(j)%st
           i_elm_old = particles(j)%i_elm
+
+          E = 0.d0 ! disable the electric field for a P_phi test
 
           call boris_push_cylindrical(particles(j), sim%groups(i)%mass, E, B, timesteps(i))
           call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
@@ -86,11 +88,12 @@ do while (.not. sim%stop_now)
 end do
 call sim%finalize
 contains
+!> Create a small ring of particles for a fair test of P_phi
 pure function f_psi_inside(n, P, grad_P) result(f)
   integer, intent(in) :: n
   real*8, intent(in) :: P(n), grad_P(3,n)
   real*4 :: f
-  f = 5e-2
-  if (P(1) .lt. -0.26 .and. P(1) .gt. -0.35) f = 1e0
+  f = 0e0
+  if (P(1) .lt. -0.25 .and. P(1) .gt. -0.35) f = 1e0
 end function f_psi_inside
-end program W_example
+end program W_test

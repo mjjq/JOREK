@@ -11,12 +11,13 @@ public write_particle_diagnostics, calculate_particle_diagnostics
 
 !> Cannot use HDF5 types here because these are invalid before h5open_f is called
 !> (I think, did not take the chance)
-integer, parameter :: REAL4 = 1, INT4 = 2
+integer, parameter :: REAL4 = 1, INT4 = 2, REAL8 = 3
 integer, parameter :: n_var = 12
 character(len=7)  :: var_names(n_var) = ["e      ", "k      ", "mu     ", &
   "psi_n  ", "psi_bar", "p_phi  ", "weight ", "lost   ", "q      ", "region ", &
   "theta  ", "phi    "]
-integer, parameter :: var_types(n_var) = [REAL4, REAL4, REAL4, REAL4, REAL4, REAL4, REAL4, INT4, INT4, INT4, REAL4, REAL4]
+integer, parameter :: var_types(n_var) = [REAL8, REAL4, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4]
+integer, parameter :: n_real8_var      = count(var_types .eq. REAL8)
 integer, parameter :: n_real4_var      = count(var_types .eq. REAL4)
 integer, parameter :: n_int4_var       = count(var_types .eq. INT4)
 ! HDF5 does not support booleans, use INT4
@@ -30,6 +31,8 @@ type, extends(io_action) :: write_particle_diagnostics
   integer(HID_T) :: file_id !< file identifier
   logical :: append = .false. !< Append to existing file
   logical, private :: init_done = .false. !< True after we have checked for an existing file
+  integer, allocatable :: only(:) !< Do not output all variables (list of index into var_names)
+  !< if not allocated skip it
 contains
   procedure :: do => do_write_particle_diagnostics
 end type write_particle_diagnostics
@@ -40,14 +43,16 @@ end interface write_particle_diagnostics
 
 contains
 !> Constructor
-function new_write_particle_diagnostics(filename, append) result(new)
+function new_write_particle_diagnostics(filename, append, only) result(new)
   type(write_particle_diagnostics) :: new
   character(len=*), intent(in)     :: filename
   logical, intent(in), optional    :: append
+  integer, intent(in), optional    :: only(:) !< if present do not write every variable
   new%filename = filename
   new%name = "WriteConstantsOfMotion"
   new%log = .true.
   if (present(append)) new%append = append
+  if (present(only)) allocate(new%only, source=only)
 end function new_write_particle_diagnostics
 
 !> Action to calculate all of these values and write them to an HDF5 file
@@ -69,10 +74,12 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
   character(len=80) :: dataset_name, timeset_name, group_name
   character(len=123):: filename !< len=120 from this%filename + 3
   integer, dimension(:), allocatable           :: particles_per_proc
-  real*4,  dimension(:,:), allocatable, target :: real4_var, real4_var_all ! Data storage order: particle index, var
-  integer, dimension(:,:), allocatable, target :: int4_var, int4_var_all ! Data storage order: particle index, var
+  real*8, dimension(:,:), allocatable, target  :: real8_var, real8_var_all !< Data storage order: particle index, var
+  real*4,  dimension(:,:), allocatable, target :: real4_var, real4_var_all !< Data storage order: particle index, var
+  integer, dimension(:,:), allocatable, target :: int4_var, int4_var_all !< Data storage order: particle index, var
   real*4 :: tmpreal4, times(1)
   integer :: tmpint4
+  real*8 :: tmpreal8
 
   ! For psi_Axis, psi_sep
   real*8 :: psi_val, R, Z, s, t, psi_axis, psi_xpoint
@@ -132,6 +139,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
     n = size(sim%groups(i)%particles,1)
     call MPI_Gather(n,1,MPI_INTEGER,&
         particles_per_proc,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    allocate(real8_var(n,n_real8_var))
     allocate(real4_var(n,n_real4_var))
     allocate(int4_var( n,n_int4_var))
 
@@ -184,16 +192,24 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
 
     ! Generate data
     call calculate_particle_diagnostics(sim%fields, sim%time, sim%groups(i)%particles, sim%groups(i)%mass, &
-        real4_var(:,:), int4_var(:,:), psi_axis, psi_xpoint, dt=sim%groups(i)%dt)
+        real8_var(:,:), real4_var(:,:), int4_var(:,:), psi_axis, psi_xpoint, dt=sim%groups(i)%dt)
 
     ! Gather to root
     if (my_id .eq. 0) then
+      allocate(real8_var_all(sum(particles_per_proc,1),n_real8_var))
       allocate(real4_var_all(sum(particles_per_proc,1),n_real4_var))
       allocate(int4_var_all( sum(particles_per_proc,1),n_int4_var))
     else
-      allocate(real4_var_all(1,n_real4_var)) ! dummy allocations to make the compiler happy
+      ! dummy allocations to make the compiler happy
+      allocate(real8_var_all(1,n_real8_var))
+      allocate(real4_var_all(1,n_real4_var))
       allocate(int4_var_all( 1,n_int4_var))
     end if
+    do j=1,n_real8_var
+      call MPI_Gatherv(real8_var(:,j), size(real8_var,1), MPI_REAL8, &
+        real8_var_all(:,j), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+    end do
     do j=1,n_real4_var
       call MPI_Gatherv(real4_var(:,j), size(real4_var,1), MPI_REAL4, &
         real4_var_all(:,j), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
@@ -206,8 +222,12 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
     end do
 
     if (my_id .eq. 0) then
-      ! Loop over real4 variables, write
+      ! Loop over variables, write
       do j=1,n_var
+        if (allocated(this%only)) then
+          if (.not. any(this%only .eq. j)) cycle ! skip this variable
+        end if
+
         write(dataset_name,'(A,i0.3,A,A)') 'groups/', i, "/", trim(var_names(j))
         call h5lexists_f(this%file_id, trim(dataset_name), link_exists, ierr)
         if (link_exists) then
@@ -226,6 +246,8 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
           call h5pcreate_f(H5P_DATASET_CREATE_F, plist, ierr)
           call h5pset_chunk_f(plist, 2, chunk_size, ierr)
           select case (var_types(j))
+            case (REAL8)
+              call h5dcreate_f(this%file_id, dataset_name, H5T_IEEE_F64LE, dspace, dset, ierr, plist)
             case (REAL4)
               call h5dcreate_f(this%file_id, dataset_name, H5T_IEEE_F32LE, dspace, dset, ierr, plist)
             case (INT4)
@@ -262,6 +284,9 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
 
         var_index = count(var_types(1:j) .eq. var_types(j))
         select case (var_types(j))
+          case (REAL8)
+            call h5dwrite_f(dset, H5T_NATIVE_DOUBLE, real8_var_all(:,var_index:var_index), [1_HSIZE_T,1_HSIZE_T], &
+                 ierr, file_space_id = dspace, mem_space_id = mem_space)
           case (REAL4)
             call h5dwrite_f(dset, H5T_NATIVE_REAL, real4_var_all(:,var_index:var_index), [1_HSIZE_T,1_HSIZE_T], &
                  ierr, file_space_id = dspace, mem_space_id = mem_space)
@@ -290,8 +315,8 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
       call h5sclose_f(tspace, ierr)
       call h5dclose_f(tset, ierr)
     end if
-    deallocate(real4_var_all,int4_var_all)
-    deallocate(real4_var,int4_var)
+    deallocate(real8_var_all,real4_var_all,int4_var_all)
+    deallocate(real8_var,real4_var,int4_var)
   end do
 
 
@@ -361,7 +386,7 @@ end subroutine create_constants_time_dataset
 
 !> Calculate H, mu, P_phi, Psi_bar, Psi, q, weight for a list of particles.
 !> mask is .f. if a particle is lost. Those values in out are set to 0.d0
-subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_stats, int_stats, psi_axis, psi_limit, mask, dt)
+subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_stats, real4_stats, int_stats, psi_axis, psi_limit, mask, dt)
   use mod_particle_types
   use phys_module, only: F0, xpoint, xcase
   use constants
@@ -372,7 +397,8 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
   real*8, intent(in)                                           :: time
   class(particle_base), intent(in), dimension(:)               :: particles
   real*8, intent(in)                                           :: mass
-  real*4, dimension(:,:), intent(out)                          :: real_stats !< List of values (H, mu, P_phi, Rho, weight, theta, phi)
+  real*8, dimension(:,:), intent(out)                          :: real8_stats !< List of values (H, mu, P_phi, Rho, weight, theta, phi)
+  real*4, dimension(:,:), intent(out)                          :: real4_stats !< List of values (H, mu, P_phi, Rho, weight, theta, phi)
   integer, dimension(:,:), intent(out)                         :: int_stats !< List of values (q, lost, region)
   real*8, intent(out)                                          :: psi_axis, psi_limit
   logical, dimension(:), intent(out), optional                 :: mask !< Mask containing .f. if particle is lost
@@ -386,7 +412,10 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
   real*8  :: R_axis, Z_axis, s_axis, t_axis
   real*8, dimension(2) :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint
 
-  !! Preparation (force my_id to 1 to suppress message)
+  real*8 :: real_stats_tmp(n_real8_var+n_real4_var) !< Temporary storage for real8 and real4 stats
+  integer :: i_real8, i_real4, i_tmp, j
+
+  ! Preparation (force my_id to 1 to suppress message)
   call find_axis(1,fields%node_list,fields%element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
   if (xpoint) then
@@ -408,12 +437,13 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
 
 
   if (present(mask)) mask = .true.
-  real_stats = 0.d0
+  real8_stats = 0.d0
+  real4_stats = 0.d0
   int_stats  = 0
   !$omp parallel do default(shared) & ! for gcc particle types are not in the omp region. reset to none to debug
-  !$omp shared(particles, fields, int_stats, real_stats, mask, time, f0, mass, &
+  !$omp shared(particles, fields, int_stats, real4_stats, real8_stats, mask, time, f0, mass, &
   !$omp xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, R_axis, Z_axis, psi_axis) &
-  !$omp private(E, B, psi, U, particle, v_par, domain, particle_centered)
+  !$omp private(E, B, psi, U, particle, v_par, domain, particle_centered, real_stats_tmp, i_real8, i_real4, i_tmp, j)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .lt. 1) then
       if (present(mask)) mask(i) = .false.
@@ -443,15 +473,15 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
         if (particle%i_elm .eq. 0) cycle
 
         ! P_phi (generalized canonical toroidal momentum) at the particle position
-        real_stats(i,6) = real(particle_centered%q * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle_centered%x(1) * particle_centered%v(3), 4)
+        real_stats_tmp(6) = particle_centered%q * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle_centered%x(1) * particle_centered%v(3)
       type is (particle_gc)
         v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
         particle = particle_in
 
-        real_stats(i,6) = real(real(particle%q,8) * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle%x(1) * v_par * B(3)/norm2(B),4)
+        real_stats_tmp(6) = real(particle%q,8) * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle%x(1) * v_par * B(3)/norm2(B)
       type is (particle_fieldline)
         call copy_particle_base(particle_in, particle)
-        real_stats(i,6) = 0.d0 ! Since there is no momentum defined for this we just use 0
+        real_stats_tmp(6) = 0.d0 ! Since there is no momentum defined for this we just use 0
       class default
         write(*,*) "ERROR: calculate_particle_diagnostics not implemented for this particle type"
         cycle ! skip this iteration
@@ -461,24 +491,24 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
       ! Calculate output variables (see var_names on top of the module for ordering)
 
       ! Total energy (including electric potential at this charge state) at kinetic or GC position
-      real_stats(i,1) = real(particle%E + particle%q * U, 4) ! E in [eV] + q [e] * U [V]
+      real_stats_tmp(1) = particle%E + particle%q * U ! E in [eV] + q [e] * U [V]
       ! Kinetic energy
-      real_stats(i,2) = real(particle%E, 4)
+      real_stats_tmp(2) = particle%E
       ! Magnetic moment
-      real_stats(i,3) = real(particle%mu, 4)
+      real_stats_tmp(3) = particle%mu
       ! Psi_n (normalized psi, at kinetic position)
-      real_stats(i,4) = real((psi-psi_axis)/(psi_limit-psi_axis), 4)
+      real_stats_tmp(4) = (psi-psi_axis)/(psi_limit-psi_axis)
       ! P_phi (generalized canonical toroidal momentum) (see above
       ! skipped, see above
       ! real_stats(i,6) = ...
       ! Psi_bar = P_phi/Ze
-      if (particle%q .ne. 0) real_stats(i,5) = real_stats(i,6) / real(particle%q * EL_CHG, 4)
+      if (particle%q .ne. 0) real_stats_tmp(5) = real_stats_tmp(6) / (particle%q * EL_CHG)
       ! weight
-      real_stats(i,7) = particle%weight
+      real_stats_tmp(7) = real(particle%weight, 8)
       ! theta
-      real_stats(i,8) = real(atan2(particles(i)%x(2)-Z_axis, particles(i)%x(1)-R_axis),4)
+      real_stats_tmp(8) = atan2(particles(i)%x(2)-Z_axis, particles(i)%x(1)-R_axis)
       ! phi
-      real_stats(i,9) = real(particles(i)%x(3),4)
+      real_stats_tmp(9) = particles(i)%x(3)
 
       ! 1. lost (boolean)
       int_stats(i,1) = 0
@@ -491,6 +521,21 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real_st
           R_axis, Z_axis, psi_axis)
       int_stats(i,3) = domain
 
+      ! Distribute output to real4 or real8 as needed
+      i_real8 = 0
+      i_real4 = 0
+      i_tmp = 0
+      do j=1,n_var
+        if (var_types(j) .eq. REAL8) then
+          i_tmp = i_tmp + 1
+          i_real8 = i_real8 + 1
+          real8_stats(i,i_real8) = real_stats_tmp(i_tmp)
+        else if (var_types(j) .eq. REAL4) then
+          i_tmp = i_tmp + 1
+          i_real4 = i_real4 + 1
+          real4_stats(i,i_real4) = real(real_stats_tmp(i_tmp), 4)
+        end if
+      end do
     endif
   enddo
   !$omp end parallel do

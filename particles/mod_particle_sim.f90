@@ -39,6 +39,7 @@ subroutine initialize(sim, num_groups)
   use mpi
   use mod_parameters, only: n_tor, n_period
   use phys_module, only: mode
+  use data_structure, only: nbthreads
   use basis_at_gaussian, only: initialise_basis
   class(particle_sim), intent(inout) :: sim !< why is this class() and not type()?
   integer, intent(in) :: num_groups
@@ -59,7 +60,7 @@ subroutine initialize(sim, num_groups)
   call MPI_GET_PROCESSOR_NAME(name,resultlength,ierr)
   write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', sim%my_id, ': ', name
 
-  if (sim%my_id .eq. 0) call jorek2help
+  if (sim%my_id .eq. 0) call jorek2help(sim%n_cpu, nbthreads)
 
   ! Initialise mode numbers
   do i_tor=1, n_tor

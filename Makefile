@@ -30,6 +30,7 @@ clean:
 	@echo ">> Deleting Module Files <<"
 	-@rm -r $(MODDIR)
 	-@find . -name '*.mod' -delete -or -name '*.o' -delete
+	-@rm mpiversion.mk
 cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -r $(DEPDIR)
@@ -136,6 +137,17 @@ CXXFLAGS += -pedantic -Wall
 # Rule-specific includes: an example
 #jorek2_main: DEFINES+="-DMAIN "
 eqdsk2jorek: LIBS+=$(LIBDIERCKX)
+
+# We need the MPI_VERSION variable for conditional compilation, but
+# unfortunately Fortran defines it as an integer parameter, which
+# we cannot use as a preprocessor symbol. To overcome this problem,
+# we create a small program that prints out the value of the
+# MPI_VERSION parameter and use this to add -DMPI_VERSION=X to FFLAGS.
+mpiversion.mk:
+	printf "include 'mpif.h'\nWRITE(*,fmt='(A22,I1)') 'FFLAGS+=-DMPI_VERSION=', MPI_VERSION\nEND" > ${OBJDIR}/mpi_version.f90
+	(${FC} $(FLAGS) $(DEFINES) $(INCLUDES) -o ${OBJDIR}/mpi_version ${OBJDIR}/mpi_version.f90 ${LIBS} && ${OBJDIR}/mpi_version | tail -n1 > mpiversion.mk) || echo FFLAGS+=-DMPI_VERSION=0 > mpiversion.mk
+
+-include mpiversion.mk
 
 # Is this used by anyone? Otherwise we could remove it
 # It is not updated to this format yet.

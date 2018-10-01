@@ -1012,7 +1012,7 @@ enddo  ! n_elements
            end do
          end do
        ! Convert from eV to JOREK unit
-         E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
+         E_ion     = (2./3.) * E_ion * EL_CHG*MU_ZERO*central_density*1.d20
        else
          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
          E_ion     = 0.

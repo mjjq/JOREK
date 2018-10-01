@@ -39,7 +39,7 @@ end subroutine AllocFspline
 ! at both boundary is zero
 subroutine ConstructFspline(f,f_data)
 type(Fspline)  :: f      !< Fspline type to be initialized
-real*8, intent(in), dimension(f%n_y,f%n_x) :: f_data !< Data array to be splined 
+real*8, intent(in), dimension(f%n_y,f%n_x) :: f_data !< Data array to be splined
 integer        :: iy
 
 do iy = 1, f%n_y

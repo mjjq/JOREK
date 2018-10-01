@@ -52,7 +52,9 @@ module exec_commands
   complex*16, allocatable, private, save :: cp(:,:,:,:)
   real*8,              private, save :: time_now !< Time of current restart file in selected units
   
-  
+  ! --- used by average_h5 command:
+  real*8, allocatable, private, save :: values(:,:,:,:)
+  real*8,                       save :: weight, total_weight
   
   
   
@@ -121,6 +123,8 @@ module exec_commands
       select case ( trim(command%args(0)) )
         case ( 'average' )
           call average(command, first_step, ierr)
+        case ( 'average_h5' )
+          call average_h5(command, first_step, ierr)
         case ( 'int2d' )
           call int2d(command, first_step, ierr)
 		case ( 'int3d' )
@@ -190,10 +194,10 @@ module exec_commands
     else if ( exec_mode == LOOP_MODE ) then
       
       select case ( trim(command%args(0)) )
-        case ( 'expressions', 'mark_coords', 'int2d', 'int3d', 'midplane', 'average',    &
-		  'point', 'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params',         &
-          'qprofile', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon',          & 
-          'jorek-units', 'si-units', 'grid', 'rectangle', 'energy_spectrum' )
+        case ( 'expressions', 'mark_coords', 'int2d', 'int3d', 'midplane', 'average', 'point',&
+          'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
+          'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
+          'si-units', 'grid', 'rectangle', 'energy_spectrum', 'average_h5' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -207,6 +211,38 @@ module exec_commands
     end if
     
   end subroutine exec_command
+  
+  
+  
+  
+  
+  !> Finalize a command once a loop has finished (not needed for most commands)
+  subroutine finalize_command(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    verbose = get_log_setting('verbose', ierr)
+    debug   = get_log_setting('debug', ierr)
+    
+    if ( debug ) then
+      write(*,'(a)') 'Finalize_command was called with:'
+      call print_command(command)
+      write(*,*)
+    end if
+    
+    select case ( trim(command%args(0)) )
+      case ( 'average_h5' )
+        call average_h5_finalize(command, first_step, ierr)
+      case default
+        if (debug) write(*,*) 'Command does not need finalize.'
+    end select
+    
+  end subroutine finalize_command
   
   
   
@@ -395,6 +431,10 @@ module exec_commands
       end do
       
       first_step = .false.
+    end do
+    
+    do jcmd = 1, n_queued_commands
+      call finalize_command(command_queue(jcmd), first_step, ierr)
     end do
     
     if ( first_step ) then
@@ -721,6 +761,88 @@ module exec_commands
     end if
     
   end function step_range_string
+  
+  
+  
+  
+  
+  !> Read several .h5 files and create an "average" one (average of absolute values).
+  subroutine average_h5(command, first_step, ierr)
+    
+    use mod_export_restart
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: i
+    integer, save :: prev_index
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    weight = 0.d0
+    if (first_step) then
+      allocate(values(n_tor,n_order+1,n_var,node_list%n_nodes))
+      values = 0.d0
+    else
+      weight = xtime(index_now)-xtime(prev_index)
+    end if
+    total_weight = total_weight + weight
+    prev_index = index_now
+    
+    do i = 1, node_list%n_nodes
+      values(:,1,:,i) = values(:,1,:,i) + abs(node_list%node(i)%values(:,1,:)) * weight
+      ! Since the purpose of this postproc command is to visualize the localization of a
+      ! particular mode activity, we take the time average over the absolute value. In the
+      ! Bezier representation, this we have to throw away the degrees of freedomn 2,3,4 in
+      ! doing so, since their respective basis functions are not only positive but change
+      ! sign. Consequently, the absolute value of them cannot be represented in the same
+      ! basis.
+      ! As a result, the created h5 file contains the time average of the absolute values
+      ! with a limited resolution since only the first dof is kept on each node.
+    end do
+    
+    ! see also average_h5_finalize below, which writes out the result
+    
+  end subroutine average_h5
+  
+  
+  
+  
+  
+  !> Read several .h5 files and create an "average" one (average of absolute values).
+  subroutine average_h5_finalize(command, first_step, ierr)
+    
+    use mod_export_restart
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    integer :: i
+    
+    ierr = 0
+    if ( .not. allocated(values) ) then
+      write(*,*) 'average_h5_finalize called, but values not allocated!'
+      ierr = 99
+      return
+    end if
+    
+    ! copy back for writing out
+    do i = 1, node_list%n_nodes
+      node_list%node(i)%values(:,:,:) = values(:,:,:,i) / total_weight
+    end do
+    call export_restart(node_list, element_list, 'jorek99999')
+    deallocate(values)
+    
+  end subroutine average_h5_finalize
   
   
   

@@ -65,7 +65,7 @@ contains
                            RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ,    &
                            psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ,            &
 			   t_now, RMP_start_time, tstep, RMP_har_cos, RMP_har_sin,   &
-                           RMP_growth_rate, RMP_ramp_up_time
+                           RMP_growth_rate, RMP_ramp_up_time, T_min
     USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
@@ -421,7 +421,7 @@ contains
   subroutine construct_variables(node, R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
   
     use data_structure
-    use phys_module, only: F0, xpoint, xcase, tokamak_device
+    use phys_module, only: F0, xpoint, xcase, tokamak_device, T_min
     
     implicit none
     
@@ -460,12 +460,12 @@ contains
     u0_y      = (- R_t*u0_s + R_s*u0_t) / xjac
 
     ! --- Define Ti variables
-    Ti0       = node%values(1,1,6)
+    Ti0       = max(node%values(1,1,6),T_min)
     Ti0_s     = node%values(1,2,6)
     Ti0_t     = node%values(1,3,6)
     
     ! --- Define Te variables
-    Te0       = node%values(1,1,8)
+    Te0       = max(node%values(1,1,8),T_min)
     Te0_s     = node%values(1,2,8)
     Te0_t     = node%values(1,3,8)
     

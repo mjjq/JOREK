@@ -297,7 +297,7 @@ end module mod_elt_matrix_fft
 module mod_elt_matrix
 contains
 
-  subroutine element_matrix(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
+  subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
   !--------------------------------------------------------------------------
   ! This is just a wrapper to the real routine since I combined both into one
   !--------------------------------------------------------------------------

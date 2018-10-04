@@ -68,6 +68,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
+  integer, allocatable :: spi_species_arr (:)
 
   integer :: err_alloc
  
@@ -334,6 +335,7 @@ endif
       allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
       allocate (spi_radius_arr(n_spi),stat=err_alloc)
       allocate (spi_abl_arr(n_spi),stat=err_alloc)
+      allocate (spi_species_arr(n_spi),stat=err_alloc)
     
       read(21,err=999, end=999)  spi_R_arr(1:n_spi)
       read(21,err=999, end=999)  spi_Z_arr(1:n_spi)
@@ -343,6 +345,7 @@ endif
       read(21,err=999, end=999)  spi_Vel_RxZ_arr(1:n_spi)
       read(21,err=999, end=999)  spi_radius_arr(1:n_spi)
       read(21,err=999, end=999)  spi_abl_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_species_arr(1:n_spi)
 
       do i=1, n_spi
         pellets(i)%spi_R       = spi_R_arr(i)
@@ -353,6 +356,7 @@ endif
         pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_arr(i)
         pellets(i)%spi_radius  = spi_radius_arr(i)
         pellets(i)%spi_abl     = spi_abl_arr(i)
+        pellets(i)%spi_species = spi_species_arr(i)
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
                               pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
@@ -366,6 +370,7 @@ endif
       deallocate (spi_Vel_RxZ_arr)
       deallocate (spi_radius_arr)
       deallocate (spi_abl_arr)
+      deallocate (spi_species_arr)
 
       if (toroidal_rotation) then
         read(21,err=999, end=999) mgi_phi_rotate 
@@ -625,8 +630,10 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
+  integer, allocatable :: spi_species_arr (:)
 
-  integer :: err_alloc
+  integer :: err_alloc, err_exists
+  logical :: flag_exists
 
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
   real*8, allocatable :: t_energies2(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
@@ -1086,6 +1093,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
       allocate (spi_radius_arr(n_spi),stat=err_alloc)
       allocate (spi_abl_arr(n_spi),stat=err_alloc)
+      allocate (spi_species_arr(n_spi),stat=err_alloc)
 
       call HDF5_array1D_reading(file_id,spi_R_arr,"spi_R_arr")
       call HDF5_array1D_reading(file_id,spi_Z_arr,"spi_Z_arr")
@@ -1096,6 +1104,13 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       call HDF5_array1D_reading(file_id,spi_radius_arr,"spi_radius_arr")
       call HDF5_array1D_reading(file_id,spi_abl_arr,"spi_abl_arr")
 
+      call H5Lexists_f(file_id,"spi_species_arr",flag_exists,err_exists)
+      if (flag_exists .and. err_exists == 0) then
+        call HDF5_array1D_reading_int(file_id,spi_species_arr,"spi_species_arr")
+      else
+        spi_species_arr = 1
+      end if
+
       do i=1, n_spi
         pellets(i)%spi_R       = spi_R_arr(i)
         pellets(i)%spi_Z       = spi_Z_arr(i)
@@ -1105,6 +1120,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_arr(i)
         pellets(i)%spi_radius  = spi_radius_arr(i)
         pellets(i)%spi_abl     = spi_abl_arr(i)
+        pellets(i)%spi_species = spi_species_arr(i)
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
                               pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
@@ -1118,6 +1134,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       deallocate (spi_Vel_RxZ_arr)
       deallocate (spi_radius_arr)
       deallocate (spi_abl_arr)
+      deallocate (spi_species_arr)
 
       if (toroidal_rotation) then
         call HDF5_real_reading(file_id,mgi_phi_rotate,"mgi_phi_rotate")

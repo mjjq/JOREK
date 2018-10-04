@@ -68,7 +68,7 @@ real*8  :: alpha_imp, beta_imp
 real*8  :: T_rad, T0_corr, ne_rad
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
-real*8     :: E_ion, Lrad
+real*8     :: E_ion, Lrad, E_ion_bg
 integer*8  :: ion_i, ion_k, i_phi
 
 #endif
@@ -195,7 +195,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #if (JOREK_MODEL == 501)
 !$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
-!$omp           T_rad, T0_corr, ne_rad, P_imp, Lrad, E_ion, ion_i, ion_k,                      &
+!$omp           T_rad, T0_corr, ne_rad, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,            &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -402,6 +402,7 @@ do ife = ife_min, ife_max
    
             ! Calculate the ionization potential energy and it's time gradient
             E_ion     = 0.
+            E_ion_bg  = 13.6
             do ion_i=1, imp_adas(1)%n_Z
               do ion_k=1, ion_i
                 E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
@@ -409,15 +410,18 @@ do ife = ife_min, ife_max
             end do
             ! Convert from eV to SI unit
             E_ion     = E_ion * EL_CHG
+            E_ion_bg  = E_ion_bg * EL_CHG
           else
             call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
             E_ion     = 0.
+            E_ion_bg  = 0.
           end if
         else
           T0_Zimp        = 437.  ! eV
           alpha_Zimp     = 0.415
           Z_imp     = 10. !18.*tanh((T_rad/T0_Zimp)**alpha_Zimp)
           E_ion     = 0.
+          E_ion_bg  = 0.
         end if
         alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
         beta_imp     = m_i_over_m_imp*Z_imp - 1.
@@ -446,7 +450,8 @@ do ife = ife_min, ife_max
                           * bigR * xjac * wst * delta_phi 
         local_E_ion     = local_E_ion + rn0 * central_density * 1.d20 * E_ion             &
                           * bigR * xjac * wst * delta_phi
-
+        local_E_ion     = local_E_ion + (r0 - rn0) * central_density * 1.d20 * E_ion_bg   &
+                          * bigR * xjac * wst * delta_phi
 #endif
 
 #if (JOREK_MODEL == 303)

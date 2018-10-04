@@ -105,9 +105,8 @@ real*8     :: rn0_xx, rn0_yy, rn0_xy, rhon_xx, rhon_yy
 real*8     :: amat_25_n, amat_27_n
 
 ! Neutral source
-real*8     :: source_mgi
-
-real*8     :: source_mgi_tmp       !Temporary neutral source for each shattered pellets 
+real*8     :: source_imp, source_bg
+real*8     :: source_tmp       !Temporary neutral source for each shattered pellets 
 
 ! time normalization
 real*8     :: t_norm
@@ -149,7 +148,7 @@ real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: dP_imp_dT(:), P_imp(:)
-real*8     :: E_ion, dE_ion_dT
+real*8     :: E_ion, dE_ion_dT, E_ion_bg
 integer*8  :: ion_i, ion_k
 
 ! Parameters related to negative temperature handling
@@ -683,6 +682,8 @@ do ms=1, n_gauss
          ! Calculate the ionization potential energy and its derivative wrt. temperature
          E_ion     = 0.
          dE_ion_dT = 0.
+         E_ion_bg  = 13.6 ! Hydrogen and deterium seem to have different ionization energy, 
+                          ! but the difference is of the next order.
 
          do ion_i=1, imp_adas(1)%n_Z
            do ion_k=1, ion_i
@@ -693,6 +694,7 @@ do ms=1, n_gauss
          ! Convert from eV to JOREK unit
          E_ion     = (2./3.) * E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
          dE_ion_dT = (2./3.) * dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
+         E_ion_bg  = (2./3.) * E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
          ! Convert the gradient in K to gradient in JOREK unit
          dE_ion_dT = dE_ion_dT * dT_rad_dT * EL_CHG / K_BOLTZ
 
@@ -702,6 +704,7 @@ do ms=1, n_gauss
 
          E_ion     = 0.
          dE_ion_dT = 0.
+         E_ion_bg  = 0.
        end if
 
        ! Convert gradient in T(K) in to gradient in T (eV)
@@ -736,7 +739,7 @@ do ms=1, n_gauss
 
        E_ion     = 0.
        dE_ion_dT = 0.
-
+       E_ion_bg  = 0.
      end if
 
      alpha_imp       = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
@@ -888,7 +891,8 @@ do ms=1, n_gauss
    ! --- Source of neutrals from Massive Gas Injection (MGI)
    !--------------------------------------------------------
 
-     source_mgi = 0.d0                    
+     source_imp = 0.d0
+     source_bg  = 0.d0
 
 !============================================================!
 ! Important note: in order to implementing more complicated  !
@@ -905,7 +909,7 @@ do ms=1, n_gauss
 
        do spi_i=1, n_spi
 
-         source_mgi_tmp = 0.d0 
+         source_tmp = 0.d0 
 
          if (pellets(spi_i)%spi_radius > 0.0) then
            spi_R_tmp   = pellets(spi_i)%spi_R
@@ -921,32 +925,39 @@ do ms=1, n_gauss
 
            call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
                          mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,0.,x_g(ms,mt),y_g(ms,mt),    &
-                         phi,source_mgi_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+                         phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass, &
+                         pellets(spi_i)%spi_species)
          end if
 
-         source_mgi = source_mgi + source_mgi_tmp
+         if (pellets(spi_i)%spi_species == 0) then
+           source_bg  = source_bg + source_tmp
+         else if (pellets(spi_i)%spi_species == 1) then
+           source_imp = source_imp + source_tmp
+         end if
 
        end do
 
      else
 
        call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,  &
+                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_imp,t_now,  &
                      JET_MGI,ASDEX_MGI,central_density,central_mass)
    
      end if
 
      ! This is to detect N/A
-     if (source_mgi /= source_mgi) then
-       write(*,*) "WARNING: source_mgi = ", source_mgi
+     if (source_imp /= source_imp .or. source_bg /= source_bg) then
+       write(*,*) "WARNING: source_imp = ", source_imp
+       write(*,*) "WARNING: source_bg = ", source_bg
        stop
      end if
      
-
-     if (source_mgi .lt. 0.d0) then
-      source_mgi = 0.d0
+     if (source_imp .lt. 0.d0) then
+      source_imp = 0.d0
      endif
-
+     if (source_bg .lt. 0.d0) then
+      source_bg = 0.d0
+     endif
 
    !--------------------------------------------------------
    ! --- Radiation from background impurity
@@ -1108,7 +1119,7 @@ do ms=1, n_gauss
 !#  equation 5 (total density equation)                                                                  #
 !###################################################################################################
 
-         rhs_ij_5   = v * BigR * (particle_source(ms,mt) + source_pellet + source_mgi)         * xjac * tstep &
+         rhs_ij_5   = v * BigR * (particle_source(ms,mt) + source_pellet+source_bg+source_imp) * xjac * tstep &
                     + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep &
                     + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep &
 !                    - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhon)    * xjac * tstep &
@@ -1199,6 +1210,7 @@ do ms=1, n_gauss
 !===================== Additional terms from ionization energy terms============
                     + zeta * v * E_ion * delta_g(mp,8,ms,mt) *BigR                                     * xjac &
                     + zeta * v * dE_ion_dT * rn0 * delta_g(mp,6,ms,mt) *BigR                           * xjac &
+                    + zeta * v * E_ion_bg * (delta_g(mp,5,ms,mt) - delta_g(mp,8,ms,mt)) *BigR          * xjac &
 !==============================End of ionization energy terms=================
 
                     + v * BigR * (2./(3. * BigR**2)) * eta_Sp * zj0**2                   * xjac * tstep  &
@@ -1311,7 +1323,7 @@ do ms=1, n_gauss
                               * (rn0_x * ps0_y - rn0_y * ps0_x + F0 / BigR * rn0_p)                                             &
                               * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep                         &
 
-         	      + BigR * v * source_mgi                                                                    * xjac * tstep &
+         	      + BigR * v * source_imp                                    * xjac * tstep                                 &
 
                       + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta                          &
                       - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy) &
@@ -1812,7 +1824,10 @@ do ms=1, n_gauss
                     + v * BigR * rho * rn0 * Lrad                                          * xjac * theta * tstep  &
                     + v * BigR * rho * frad_bg                                             * xjac * theta * tstep&
                     ! New term from Z_eff
-                    - v * BigR * rho * ((2d0)/(3*BigR**2)) * detaSp_dr0 * zj0**2           * xjac * theta * tstep 
+                    - v * BigR * rho * ((2d0)/(3*BigR**2)) * detaSp_dr0 * zj0**2           * xjac * theta * tstep&
+!=============== The ionization potential energy term=========================
+                    + v * rho * E_ion_bg * BigR * xjac * (1.d0 + zeta)
+!================= End ionization potential energy =========================== 
 
 
              amat_65_n = + v * T0  * F0 / BigR * Vpar0 * rho_p                      * xjac * theta * tstep    &
@@ -1929,7 +1944,7 @@ do ms=1, n_gauss
 	     
 	     amat_68 =   v * rhon * alpha_imp * T0 * BigR * xjac * (1.d0 + zeta)                              &
 !=============== The ionization potential energy term=========================
-                       + v * rhon * E_ion          * BigR * xjac * (1.d0 + zeta)                              &
+                       + v * rhon * (E_ion - E_ion_bg) * BigR * xjac * (1.d0 + zeta)                          &
 !================= End ionization potential energy ===========================
                        ! New term from Z_eff
                        - v * BigR * rhon * ((2d0)/(3*BigR**2)) * detaSp_drn0 * zj0**2  * xjac * theta * tstep &

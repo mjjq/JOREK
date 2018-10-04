@@ -210,7 +210,8 @@ module phys_module
   real*8  :: pellet_delta_psi  !< width of smoothing in poloidal flux
   real*8  :: pellet_velocity_R !< pellet velocity component radial direction
   real*8  :: pellet_velocity_Z !< pellet velocity component Z direction
-  real*8  :: pellet_density    !< pellet density (in units 10^20 m^-3)
+  real*8  :: pellet_density    !< working pellet density (in units 10^20 m^-3)
+  real*8  :: pellet_density_bg !< background species pellet density (in units 10^20 m^-3)
   real*8  :: pellet_particles  !< the number of particles in the pellet (in units of 10^20)
   logical :: use_pellet
   
@@ -244,7 +245,8 @@ module phys_module
   real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R upon injection
   real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z upon injection
   real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection
-  real*8  :: spi_quantity       !< Total injected atom number for SPI
+  real*8  :: spi_quantity       !< Total injected atom number for impurity SPI
+  real*8  :: spi_quantity_bg    !< Total injected atom number for background species SPI
   real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds 
                                 !< and that of shattered pellets
 
@@ -262,13 +264,9 @@ module phys_module
   real*8, allocatable  :: xtime_radiation(:)    ! The time history of radiated energy in SI unit
 
   integer :: n_spi              !< Number of shattered pellets injected
-  integer :: flag_spi           !< Determine which type of ablation model is using.
+  integer :: spi_abl_model      !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model
-  integer :: flag_spi_size      !< Determine which type of shard distribution is used,
-                                !< 0 for uniform shard size, 1 for modified
-                                !BesselK distribution.
-
-  real*8  :: size_beta          !< Parameter for the modified BesselK distribution
+  character(len=80) :: spi_shard_file !< The name of the shard size file
 
   logical :: abl_history        !< Whether or not ablation history is available from previous restart files
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI

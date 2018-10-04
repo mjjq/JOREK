@@ -391,6 +391,7 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'pellet_theta          ', pellet_theta
     write(*,REAL_FMT) 'pellet_delta_psi      ', pellet_delta_psi
     write(*,REAL_FMT) 'pellet_density        ', pellet_density
+    write(*,REAL_FMT) 'pellet_density_bg     ', pellet_density_bg
     write(*,REAL_FMT) 'pellet_particles      ', pellet_particles
     write(*,REAL_FMT) 'pellet_velocity_R     ', pellet_velocity_R
     write(*,REAL_FMT) 'pellet_velocity_Z     ', pellet_velocity_Z
@@ -579,12 +580,13 @@ if (my_id == 0) then
      write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
      write(*,INTG_FMT) 'n_adas              ',  n_adas
      write(*,INTG_FMT) 'n_spi               ',  n_spi
-     write(*,INTG_FMT) 'flag_spi            ',  flag_spi
-     write(*,INTG_FMT) 'flag_spi_size       ',  flag_spi_size
+     write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
+     write(*,CHAR_FMT) 'spi_shard_file      ',  spi_shard_file
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
      write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
      write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref
      write(*,REAL_FMT) 'spi_quantity        ',  spi_quantity
+     write(*,REAL_FMT) 'spi_quantity_bg     ',  spi_quantity_bg
      write(*,REAL_FMT) 'spi_angle           ',  spi_angle
      write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
      write(*,REAL_FMT) 'tor_frequency       ',  tor_frequency

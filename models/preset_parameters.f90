@@ -222,6 +222,7 @@ subroutine preset_parameters
   pellet_velocity_Z = 0.d0
   pellet_particles  = 0.d0
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
+  pellet_density_bg = 3.d8
   use_pellet        = .false.
   
   t_now       = 0.d0
@@ -352,6 +353,7 @@ subroutine preset_parameters
      spi_Vel_Zref    = 0.0d0
      spi_Vel_RxZref  = 0.0d0
      spi_quantity    = 0.0
+     spi_quantity_bg = 0.0
      ng_radius_ratio = 1.4d0
      ng_radius_min   = 8.d-2
      spi_Vel_diff    = 0.0
@@ -362,9 +364,8 @@ subroutine preset_parameters
 
      n_spi           = 1
 
-     flag_spi        = 0
-     flag_spi_size   = 0
-     size_beta       = 3.d3
+     spi_abl_model   = 0
+     spi_shard_file  = 'none'
 
      toroidal_rotation = .false.
      abl_history     = .false.

@@ -120,7 +120,8 @@ if (using_spi .and. abl_history) then
   open(20,file="fragments_position.dat")
 
   do i_spi = 1, n_spi
-    write(20,'(i7,2f12.3,e14.6)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_radius
+    write(20,'(i7,2f12.3,e14.6,i7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_radius,&
+                                            pellets(i_spi)%spi_species
   end do
   close(20)
 

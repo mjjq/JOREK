@@ -217,6 +217,7 @@ real*8  :: s_out,t_out
 real*8  :: n_SI, T_eV, n_corr, T_corr, n_imp_SI, ne_SI
 real*8  :: t_norm, spi_Vel_totref
 real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
+real*8  :: spi_density_tmp
 
 !   -Mean impurity ionization state and related quantities
 real*8     :: Z_imp, beta_imp, mu_imp
@@ -268,9 +269,16 @@ real*8     :: Z_imp, beta_imp, mu_imp
     end if
 
     if (pellets(i)%spi_radius > 0.0) then
+      if (pellets(i)%spi_species == 1) then
+        spi_density_tmp = pellet_density
+      else if (pellets(i)%spi_species == 0) then
+        spi_density_tmp = pellet_density_bg
+      else
+        spi_density_tmp = 0.
+      end if
       pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep * &
                               (pellets(i)%spi_abl / (4.d0 * PI * pellets(i)%spi_radius**2.d0 *    &
-                              pellet_density * 1.d20))
+                              spi_density_tmp * 1.d20))
 
       if (pellets(i)%spi_radius < 0.d0) then
         pellets(i)%spi_radius = 0.d0
@@ -285,9 +293,9 @@ real*8     :: Z_imp, beta_imp, mu_imp
       end if
     end if
 
-    if (flag_spi == 0) then
+    if (spi_abl_model == 0) then
       pellets(i)%spi_abl   = mgi_amplitude
-    elseif (flag_spi >= 1 .and. flag_spi <= 2 ) then
+    elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2 ) then
 
       call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
                    R_out,Z_out,i_elm,s_out,t_out,ifail)
@@ -328,13 +336,13 @@ real*8     :: Z_imp, beta_imp, mu_imp
       if (n_imp_SI < 0.) n_imp_SI = 0.      
 
       ! NGS model
-      if (flag_spi == 1) then
+      if (spi_abl_model == 1) then
         pellets(i)%spi_abl    = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
                                (T_eV**1.64)
         if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
           write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
         end if
-      else if (flag_spi == 2) then
+      else if (spi_abl_model == 2) then
         select case ( trim(gas_type) )
           case('D2')
             ne_SI   = n_SI
@@ -356,8 +364,13 @@ real*8     :: Z_imp, beta_imp, mu_imp
 
             if (ne_SI<0.) ne_SI = 0.        
             ! The scaling law is in gauss unit
-            pellets(i)%spi_abl = 2.5d13 * ((pellets(i)%spi_radius*1.d2)**1.451) &
-                                 * ((ne_SI*1.d-6)**0.451) * (T_eV**1.679)
+            if (pellets(i)%spi_species == 1) then
+              pellets(i)%spi_abl = 2.5d13 * ((pellets(i)%spi_radius*1.d2)**1.451) &
+                                   * ((ne_SI*1.d-6)**0.451) * (T_eV**1.679)
+            else if (pellets(i)%spi_species == 0) then
+              pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
+                                   * ((ne_SI*1.d-6)**0.455) * (T_eV**1.679)              
+            end if
           ! Using general scaling law of Sergeev for Neon
           case('Ne')
             if (flag_adas .and. T_eV >= 1.) then
@@ -375,11 +388,15 @@ real*8     :: Z_imp, beta_imp, mu_imp
             if (ne_SI<0.) ne_SI = 0.
             ! The scaling law is in gauss unit
             ! The sublimation energy for Ne is 0.02 eV
-            pellets(i)%spi_abl = 1.94d14 * ((pellets(i)%spi_radius*1.d2)**1.44) &
-                                 * ((ne_SI*1.d-6)**0.45) * (T_eV**1.72)         &
-                                 * (0.02**(-0.16)) * (20.**(-0.28))             &
-                                 * (10.**(-0.56)) * ((2./3.)**0.28)
-
+            if (pellets(i)%spi_species == 1) then
+              pellets(i)%spi_abl = 1.94d14 * ((pellets(i)%spi_radius*1.d2)**1.44) &
+                                   * ((ne_SI*1.d-6)**0.45) * (T_eV**1.72)         &
+                                   * (0.02**(-0.16)) * (20.**(-0.28))             &
+                                   * (10.**(-0.56)) * ((2./3.)**0.28)
+            else if (pellets(i)%spi_species == 0) then
+              pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
+                                   * ((ne_SI*1.d-6)**0.455) * (T_eV**1.679)
+            end if
           case default
             write(*,*) '!! Gas type "', trim(gas_type), '" unknown !!'
             write(*,*) '=> We assume the gas is D2.'
@@ -426,6 +443,230 @@ real*8     :: Z_imp, beta_imp, mu_imp
 return 
  
 end subroutine update_spi
+
+  !> Initializes the shattered pellet position, velocity and size
+  subroutine init_spi(my_id)
+  
+    use constants
+    use data_structure
+    use phys_module
+    use mpi_mod
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+    use mgi_module
+#endif
+    use corr_neg
+    
+    implicit none
+    
+    integer, intent(in) :: my_id
+    integer             :: ierr,err,i,i_surface
+    integer             :: err_alloc=0, err_alloc_rnd=0    
+    logical             :: ferr
+    
+    real*8  :: n_SI, T_eV, n_corr, T_corr
+    real*8  :: spi_gd_angle_01, spi_gd_angle_02        !The dispersion angles for each spi
+    real*8  :: spi_rotation_01, spi_rotation_02        !The rotation angle from spi coordinate to real coordinate
+    real*8  :: spi_Vel_totref, spi_Vel_i, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_tmp
+    real*8  :: spi_Vel_x, spi_Vel_y, spi_Vel_z         !Spi velocity in injection coordinate
+    real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Representing the shattering point of the pellet
+                                                       !The apex of the
+                                                       !spreading cone
+    real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_radius_tmp, spi_density_tmp
+    real*8  :: sign_corr
+    real*8, allocatable :: rnd(:)                      !The random number array 
+    real*8, allocatable :: shard_size(:)               !The shard size array
+
+    real*8  :: size_beta                               ! The characteristic shard size    
+    real*8  :: N_shard_norm                            ! The normalized (by size_beta) number of atoms
+    real*8  :: mix_ratio                               ! Mixture ratio of the mixed pellet 
+                                                       ! normalized by pellet density
+    real*8  :: real_spi_quantity(2)                    ! Final injection quantity
+
+    if (allocated(pellets)) then
+      deallocate(pellets)
+    end if
+  
+    allocate (pellets(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for pellets
+  
+    if (err_alloc /= 0) then
+      write(*,*) "Error when trying to dynamically allocate memeries for pellets, exiting."
+      stop
+    else
+      if (n_spi >= 1) then
+  
+        if (allocated(shard_size)) deallocate(shard_size)
+        allocate (shard_size(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for shard sizes
+        if (err_alloc /= 0) then
+          write(*,*) "Error when trying to dynamically allocate memeries for shard size, exiting."
+          deallocate(pellets)
+          stop
+        else
+          shard_size = 0.0
+        end if
+  
+        size_beta    = 0.0
+        N_shard_norm = 0.0
+        real_spi_quantity = 0.
+  
+        ! Read normalized shard size distribution (if given in file) and calculate
+        ! shard radius normalization factor size_beta
+        if (spi_shard_file /= 'none') then 
+          inquire(file=trim(spi_shard_file), exist=ferr) ! Check if the file exists
+          if (ferr) then
+            open(42,file=trim(spi_shard_file),status="OLD",action="READ")
+            read(42,*)  shard_size(1:n_spi)
+            close(42)
+          else
+            write(*,*) "WARNING!!! Shard size file does not exist, exiting now"
+            stop
+          end if
+        else
+          shard_size = 1.
+        end if
+  
+        if (spi_quantity_bg /= 0. .and. pellet_density_bg /= 0.) then
+          mix_ratio = (spi_quantity/pellet_density)&
+                      /((spi_quantity/pellet_density)+(spi_quantity_bg/pellet_density_bg))
+        else 
+          mix_ratio = 1.
+        end if
+  
+        do i = 1, n_spi
+          if (i <= n_spi*int((mix_ratio))) then
+            pellets(i)%spi_species = 1
+            spi_density_tmp = pellet_density
+            real_spi_quantity(2) = real_spi_quantity(2) + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
+          else
+            pellets(i)%spi_species = 0
+            spi_density_tmp = pellet_density_bg
+            real_spi_quantity(1) = real_spi_quantity(1) + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
+          end if
+          N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
+        end do
+  
+        size_beta    = (spi_quantity / N_shard_norm) ** (-1./3.)
+        real_spi_quantity(1) = real_spi_quantity(1) * size_beta**3
+        real_spi_quantity(2) = real_spi_quantity(2) * size_beta**3
+        write(*,*) "Characteristic shard size (m):", size_beta
+        write(*,*) "Real injection quantity (atom):", real_spi_quantity
+  
+        ! Initialize shard radius
+        do i = 1, n_spi 
+          spi_radius_tmp = shard_size(i)/size_beta
+          pellets(i)%spi_radius  = spi_radius_tmp
+        end do
+  
+  !===================Determine the rotational transform of coordinate===============
+  !Here, we perform the following rotational transform from the original
+  !coordinate R, Z, RxZ to the so-called spi coordinate x, y ,z, with the !reference
+  !direction of spi injection being the z axis, while y axis locates within the 
+  !same surface as Z and z. The rotational transform from x, y, z to R, Z, RxZ is
+  !as the following: first, we rotate the system around x axis clockwise, facing
+  !the positive x direction, for spi_rotation_01 to get coordinate X', Y', Z'. 
+  !Then we further rotate around Y' clockwise, facing the positive Y' direction !for
+  !spi_rotation_02 to acquire R, Z, RxZ. Hence we have:
+  !R   = cos(spi_rotation_02)*x - sin(spi_rotation_02)*(-sin(spi_rotation_01)*y + !cos(spi_rotation_01)*z)
+  !Z   = cos(spi_rotation_01)*y + sin(spi_rotation_01)*z
+  !RxZ = sin(spi_rotation_02)*x + cos(spi_rotation_02)*(-sin(spi_rotation_01)*y + !cos(spi_rotation_01)*z)
+  
+        spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
+  
+        spi_R_inj       = mgi_R - spi_L_inj * (spi_Vel_Rref/spi_Vel_totref)
+        spi_Z_inj       = mgi_Z - spi_L_inj * (spi_Vel_Zref/spi_Vel_totref)
+        spi_phi_inj     = mgi_phi - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/mgi_R
+  
+        spi_rotation_01 = asin(spi_Vel_Zref/spi_Vel_totref)
+        if (cos(spi_rotation_01) == 0.) then
+          spi_rotation_02 = 0.
+        else
+          spi_rotation_02 = acos(spi_Vel_RxZref/(spi_Vel_totref*cos(spi_rotation_01)))
+        end if
+  
+        write(*,*) "Rotational transform: ", spi_rotation_01, spi_rotation_02
+  
+  !==========================End of rotational angles==============================
+  
+        ! Generate a random number array rnd that contains two random angles
+        ! representing the velocity direction spread, and one the random speed. Those random
+        ! numbers uniquely define a random velocity of the shard, which is then transformed into
+        ! the R, Z, RxZ space.
+        if (allocated(rnd)) deallocate(rnd)
+        allocate (rnd(3*n_spi),stat=err_alloc_rnd)  !< Dynamically allocate memeries for randoms
+  
+        if (err_alloc_rnd /= 0) then
+          write(*,*) "Error when trying to dynamically allocate memeries for randoms."
+          deallocate(pellets)
+          deallocate(shard_size)
+          stop
+        end if
+  
+        CALL random_number(rnd)
+  
+        !write(*,*) "Random number array:", rnd
+  
+        if (spi_Vel_diff < 0) then
+          write(*,*) "WARNING, negative velocity spread, spi_Vel_diff = ", spi_Vel_diff
+          write(*,*) "Using the absolute value of spi_Vel_diff" 
+          spi_Vel_diff = abs(spi_Vel_diff)
+        end if
+  
+        do i=1, n_spi
+  
+          spi_gd_angle_01 = rnd(3 * i - 2) * spi_angle / 2.0
+          spi_gd_angle_02 = rnd(3 * i - 1) * 2. * PI
+          spi_Vel_i       = (rnd(3*i)-0.5) * spi_Vel_diff + spi_Vel_totref
+  
+  
+          !write(*,*) "Random angle:", i, spi_gd_angle_01, spi_gd_angle_02
+  
+          spi_Vel_x       = spi_Vel_i * sin(spi_gd_angle_01) * cos(spi_gd_angle_02)
+          spi_Vel_y       = spi_Vel_i * sin(spi_gd_angle_01) * sin(spi_gd_angle_02)
+          spi_Vel_z       = spi_Vel_i * cos(spi_gd_angle_01)
+  
+          spi_Vel_R_tmp   = spi_Vel_x * cos(spi_rotation_02) &
+                            - sin(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
+                            + cos(spi_rotation_01)*spi_Vel_z)
+  
+          spi_Vel_Z_tmp   = cos(spi_rotation_01) * spi_Vel_y &
+                            + sin(spi_rotation_01) * spi_Vel_z
+          spi_Vel_RxZ_tmp = spi_Vel_x * sin(spi_rotation_02) &
+                            - cos(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
+                            + cos(spi_rotation_01)*spi_Vel_z)
+  
+          spi_R_tmp       = spi_R_inj + spi_L_inj * (spi_Vel_R_tmp/spi_Vel_totref)
+          spi_Z_tmp       = spi_Z_inj + spi_L_inj * (spi_Vel_Z_tmp/spi_Vel_totref)
+          spi_phi_tmp     = spi_phi_inj + spi_L_inj * (spi_Vel_RxZ_tmp/spi_Vel_totref)/mgi_R
+  
+          pellets(i)%spi_R       = spi_R_tmp
+          pellets(i)%spi_Z       = spi_Z_tmp
+          pellets(i)%spi_phi     = spi_phi_tmp
+          pellets(i)%spi_Vel_R   = spi_Vel_R_tmp
+          pellets(i)%spi_Vel_Z   = spi_Vel_Z_tmp
+          pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_tmp
+          pellets(i)%spi_abl     = 0.0
+  
+          write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+                                pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
+        end do
+  
+        deallocate(rnd)
+  
+        if (allocated(xtime_spi_ablation)) call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
+        if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation,1,n_spi,1,nstep,"xtime_spi_ablation")
+  
+        if (allocated(xtime_spi_ablation_rate)) &
+        call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+        if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,nstep,"xtime_spi_ablation_rate")
+  
+      else
+        write(*,*) "...... Seriously!? Double check the input file"
+        stop
+      end if
+    end if
+
+
+    return
+  end subroutine init_spi
 
 !> This function creates a derived MPI type for the pellets and returns it (in honor of Daan)
 !! If it already exists the old handle is returned

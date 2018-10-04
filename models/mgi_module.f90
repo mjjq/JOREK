@@ -30,7 +30,7 @@ module mgi_module
 
   subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,  &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,                  &
-                        JET_MGI,ASDEX_MGI,central_density,central_mass)
+                        JET_MGI,ASDEX_MGI,central_density,central_mass,species)
 
   !=================================================================================
   !  This subroutine computes the neutral density source for a realistic Deuterium
@@ -93,6 +93,8 @@ module mgi_module
     logical, intent(in) :: ASDEX_MGI
     real*8, intent(out) :: rhon_source
     real*8, intent(in)  :: mgi_tor_norm
+
+    integer, optional, intent(in) :: species
 
     select case ( trim(gas_type) )
       case('D2')
@@ -237,9 +239,13 @@ module mgi_module
 
       else 
 
-        rhon_source = rhon_source + (mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
-                      * mass_gas /  (V_mgi * mol_atom * 1.d20 * central_density * central_mass * MASS_PROTON))  
- 
+        if (present(species) .and. species == 0) then
+          rhon_source = rhon_source + (mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
+                        /  (V_mgi * mol_atom * 1.d20 * central_density * MASS_PROTON))  
+        else 
+          rhon_source = rhon_source + (mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
+                        * mass_gas /  (V_mgi * mol_atom * 1.d20 * central_density * central_mass * MASS_PROTON))
+        end if
       endif
 
     else

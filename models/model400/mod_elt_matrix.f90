@@ -1,8 +1,3 @@
-
-
-
-
-
 ! This module contains nothing (just a wrapper) but it is needed by construct_matrix for the other models.
 ! Can be removed once the other models have also combined element_matrix and element_matrix_fft.
 module mod_elt_matrix

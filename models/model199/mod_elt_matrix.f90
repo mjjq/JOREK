@@ -22,8 +22,8 @@ implicit none
 type (type_element), intent(in)   :: element
 type (type_node)   , intent(in)   :: nodes(n_vertex_max)
 
-real*8, dimension (:,:), pointer  :: ELM
-real*8, dimension (:)  , pointer  :: RHS
+real*8, dimension (:,:), allocatable  :: ELM
+real*8, dimension (:)  , allocatable  :: RHS
 integer, intent(in) :: tid
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2

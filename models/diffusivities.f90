@@ -41,7 +41,9 @@ module diffusivities
   
   !> Determine perpendicular particle diffusivity, D_perp, as a function of Psi_N
   real*8 function get_dperp1(psin)
-    
+#if _OPENMP >= 201511
+    !$omp declare simd
+#endif
     implicit none
     
     real*8, intent(in) :: psin
@@ -70,7 +72,9 @@ module diffusivities
   
   !> Determine perpendicular heat diffusivity, ZK_perp, as a function of Psi_N
   real*8 function get_zkperp1(psin)
-    
+#if _OPENMP >= 201511
+    !$omp declare simd
+#endif
     implicit none
     
     real*8, intent(in)  :: psin 

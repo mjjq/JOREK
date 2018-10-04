@@ -5,7 +5,8 @@ use tr_module
 use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
+use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, &
+    pastix_maxthrd
 use vacuum
 use wsmp_module,   only: use_wsmp
 
@@ -51,7 +52,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_i_par, ZK_i_perp, ZK_e_par, ZK_e_perp,           &
                 D_par, D_perp,                                      &
                 Q_bar, sigma, gamma_sheath,                         &
-                V_0,V_1,V_coef,                			            &
+                V_0,V_1,V_coef,                			    &
                 particlesource,                                     &
                 heatsource_i, heatsource_e, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num,                  &
@@ -100,8 +101,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Zaxis_find_limit, PF_pert_start_time,               &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
-                voltage_coils, vert_FB_amp, iter_precon, gmres_4,   &
-                find_pf_coil_currents
+                voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
+                pastix_maxthrd
 
 if (my_id .eq. 0) then
 
@@ -121,9 +122,9 @@ if (my_id .eq. 0) then
   Te_0   =  0.5d-6
   Te_1   =  0.5d-8
   
-  Ti_coef     =  0.d0
+  Ti_coef     = 0.d0
   Ti_coef(1)  = -1.d0
-  Te_coef     =  0.d0
+  Te_coef     = 0.d0
   Te_coef(1)  = -1.d0
 
   heatsource_i   = 0.5e-7
@@ -132,7 +133,7 @@ if (my_id .eq. 0) then
   ZK_i_perp(:) = 0.d0
   ZK_i_perp(1) = 1.d-5; ZK_i_perp(2) = 0.d0; ZK_i_perp(3)= 0.d0; ZK_i_perp(4)= 99.d0; ZK_i_perp(5) = 99.d0
   ZK_i_par     = 1.d0
-
+  
   ZK_e_perp(:) = 0.d0  
   ZK_e_perp(1) = 1.d-5; ZK_e_perp(2) = 0.d0; ZK_e_perp(3)= 0.d0; ZK_e_perp(4)= 99.d0; ZK_e_perp(5) = 99.d0
   ZK_e_par     = 1.d0

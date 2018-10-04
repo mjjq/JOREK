@@ -15,8 +15,8 @@ subroutine Ch_nod_rhs_elm(i_element, element,nodes,element_father,nodes_father,E
   type (type_node)      :: nodes(n_vertex_max)
   type (type_node)      :: nodes_father(n_vertex_max)
 
-  real*8, dimension (:,:), pointer  :: ELM
-  real*8, dimension (:)  , pointer  :: RHS
+  real*8, dimension (:,:), allocatable  :: ELM
+  real*8, dimension (:)  , allocatable  :: RHS
   real*8, dimension(n_vertex_max*n_var*(n_order+1)*n_tor,&
 		 n_vertex_max*n_var*(n_order+1)*n_tor)  	:: ELM_bis, ELM_tr, C_matrix
 

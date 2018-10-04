@@ -24,11 +24,15 @@ contains
     integer    :: xcase2
     logical    :: xpoint2
     real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
-    real*8, dimension (:,:), pointer  :: ELM
-    real*8, dimension (:)  , pointer  :: RHS
+    real*8, dimension (:,:), allocatable  :: ELM
+    real*8, dimension (:)  , allocatable  :: RHS
     integer, intent(in) 	      :: tid
 
-    call element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
+    call element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
+      thread_struct(tid)%ELM_p, thread_struct(tid)%ELM_n, thread_struct(tid)%ELM_k, thread_struct(tid)%ELM_kn, &
+      thread_struct(tid)%RHS_p, thread_struct(tid)%RHS_k,  thread_struct(tid)%eq_g, thread_struct(tid)%eq_s, &
+      thread_struct(tid)%eq_t, thread_struct(tid)%eq_p, thread_struct(tid)%eq_ss, thread_struct(tid)%eq_st, &
+      thread_struct(tid)%eq_tt, thread_struct(tid)%delta_g, thread_struct(tid)%delta_s, thread_struct(tid)%delta_t)
 
     return
 

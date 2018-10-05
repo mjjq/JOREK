@@ -405,6 +405,12 @@ do ms=1, n_gauss
             + rn0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )    /    xjac**2               &
             - xjac_y * (- rn0_s * x_t(ms,mt) + rn0_t * x_s(ms,mt) )  / xjac**2
 
+     rn0_xy = (- rn0_ss * y_t(ms,mt)*x_t(ms,mt) - rn0_tt * x_s(ms,mt)*y_s(ms,mt) &
+              + rn0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  ) &
+              - rn0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) ) &
+              - rn0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2              &
+              - xjac_x * (- rn0_s * x_t(ms,mt) + rn0_t * x_s(ms,mt) )   / xjac**2
+
 
 
      rn0_hat   = BigR**2 * rn0                                                        

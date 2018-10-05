@@ -10,9 +10,9 @@ use phys_module
 use pellet_module
 use mpi_mod
 use domains
+use corr_neg
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501)
 use mgi_module
-use corr_neg
 #endif
 
 implicit none
@@ -39,7 +39,7 @@ integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_el
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor
-real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, r0_corr, T0, T0e, Vol, Volume, Area, Bgeo, psi_limit
+real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, r0_corr, T0, T0_corr, T0e, Vol, Volume, Area, Bgeo, psi_limit
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, P_max, delta_phi, phi, P_tot, D_tot
 real*8  :: VP_int, VP_ext, VK_int, VK_ext, vpar0, BB2, VP_tot, VK_tot
@@ -65,7 +65,7 @@ real*8  :: Z_imp, T0_Zimp, alpha_Zimp
 !   -Coefficients related to Z_imp
 real*8  :: alpha_imp, beta_imp
 !   -Corrected plasma temperature and density for radiation calculation
-real*8  :: T_rad, T0_corr, ne_rad
+real*8  :: T_rad, ne_rad
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
@@ -169,12 +169,12 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
-!$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
+!$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume, central_mass, &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
 !$omp          local_n_particles_inj, local_n_particles, mgi_amplitude, mgi_R, mgi_Z,          &
 !$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm,                       &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube, JET_MGI,ASDEX_MGI,            &
-!$omp          central_mass, pellets,                                                          &
+!$omp          pellets,                                                          &
 #endif
 #if (JOREK_MODEL == 501)
 !$omp          local_radiation, local_E_ion, gas_type, using_spi, flag_adas,                   &
@@ -184,7 +184,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          wgauss_copy)                                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
-!$omp           wst, BigR, r0, r0_corr, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
+!$omp           wst, BigR, r0, r0_corr, T0, T0_corr, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
 !$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi,        &
 !$omp           P_max, source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,               &
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
@@ -195,7 +195,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #if (JOREK_MODEL == 501)
 !$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
-!$omp           T_rad, T0_corr, ne_rad, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,            &
+!$omp           T_rad, ne_rad, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,            &
 #endif
 !$omp           omp_nthreads,omp_tid)
 

@@ -176,6 +176,25 @@ contains
                 do in=1, n_tor
 
                    do k=1, n_var
+                                                                                         !-----(General for all bnd types)
+                      !------------ Decide when Psi or Current need BCs --------------------------------------------------                      
+                      !----Psi
+                      apply_psi_BC = .false.
+                      if (k == 1) then                        
+                        if ( (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1))                    )   apply_psi_BC = .true.
+                        if ( (RMP_on) .and. (in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)) )   apply_psi_BC = .true.
+                        if ( (.not. RMP_on) .and. (in .ge. 2)              )                         apply_psi_BC = .true.
+                        if (              in .eq. 1                        )                         apply_psi_BC = .true.
+                        if (           is_freebound(in,k)                  )                         apply_psi_BC = .false.                     
+                      endif
+                      
+                      !----Current
+                      apply_current_BC = .false.
+                      if (k == 3) then
+                        if ( .not. is_freebound(in,k) )   apply_current_BC = .true.
+                      endif
+                      !---------------------------------------------------------------------------------------------------
+
 
                       !-----(General for all bnd types)
                       !------------ Decide when Psi or Current need BCs

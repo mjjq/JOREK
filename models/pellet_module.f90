@@ -527,12 +527,20 @@ end subroutine update_spi
         else
           shard_size = 1.
         end if
-  
-        if (spi_quantity_bg /= 0. .and. pellet_density_bg /= 0.) then
+ 
+        ! Determine approximately how many fragments are of the impurity, how
+        ! much are of the background species. 
+        if (spi_quantity_bg /= 0. .and. pellet_density_bg /= 0. &
+            .and. spi_quantity /= 0. .and. pellet_density /= 0.) then
           mix_ratio = (spi_quantity/pellet_density)&
                       /((spi_quantity/pellet_density)+(spi_quantity_bg/pellet_density_bg))
-        else 
+        else if (spi_quantity /= 0. .and. pellet_density /= 0.) then 
           mix_ratio = 1.
+        else if (spi_quantity_bg /= 0. .and. pellet_density_bg /= 0.) then
+          mix_ratio = 0.
+        else
+          write(*,*) "WARNING!!! Something is wrong in the injection quantity or pellet density, exiting."
+          stop
         end if
   
         do i = 1, n_spi

@@ -279,6 +279,7 @@ PART="skylake"
 
 # batch control
 # -------------
+<<<<<<< Updated upstream
 ((THPNODE=48))
 MPIPROCS=2
 NTHREAD=24

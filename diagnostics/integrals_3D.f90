@@ -10,9 +10,9 @@ use phys_module
 use pellet_module
 use mpi_mod
 use domains
+use corr_neg
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501)
 use mgi_module
-use corr_neg
 #endif
 
 implicit none
@@ -39,7 +39,7 @@ integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_el
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor
-real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, r0_corr, T0, T0e, Vol, Volume, Area, Bgeo, psi_limit
+real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, r0_corr, T0, T0_corr, T0e, Vol, Volume, Area, Bgeo, psi_limit
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, P_max, delta_phi, phi, P_tot, D_tot
 real*8  :: VP_int, VP_ext, VK_int, VK_ext, vpar0, BB2, VP_tot, VK_tot
@@ -65,7 +65,7 @@ real*8  :: Z_imp, T0_Zimp, alpha_Zimp
 !   -Coefficients related to Z_imp
 real*8  :: alpha_imp, beta_imp
 !   -Corrected plasma temperature and density for radiation calculation
-real*8  :: T_rad, T0_corr, ne_rad
+real*8  :: T_rad, ne_rad
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg

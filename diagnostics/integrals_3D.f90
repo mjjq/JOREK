@@ -39,7 +39,7 @@ integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_el
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor
-real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, psi_limit
+real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, r0_corr, T0, T0e, Vol, Volume, Area, Bgeo, psi_limit
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, P_max, delta_phi, phi, P_tot, D_tot
 real*8  :: VP_int, VP_ext, VK_int, VK_ext, vpar0, BB2, VP_tot, VK_tot
@@ -49,9 +49,9 @@ real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, sourc
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
-real*8  :: source_volume, source_pellet, eta_T
+real*8  :: source_volume, source_pellet, eta_T, eta_Sp
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0
+real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0, rn0_corr
 
 ! Additional diagnostic variables for impurity model
 #if (JOREK_MODEL == 501)
@@ -164,7 +164,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
 !$omp          R_xpoint, Z_xpoint, my_id, use_pellet, psi_limit, delta_phi, R_axis, Z_axis, psi_axis, psi_bnd, &
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
-!$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int, eta_T,  &
+!$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int, eta_T, eta_Sp,  &
 !$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0,                    &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
@@ -184,14 +184,14 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          wgauss_copy)                                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
-!$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
+!$omp           wst, BigR, r0, r0_corr, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
 !$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi,        &
 !$omp           P_max, source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,               &
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
-!$omp           rn0, source_mgi,                                                               &
+!$omp           rn0, rn0_corr, source_mgi,                                                               &
 #endif
 #if (JOREK_MODEL == 501)
 !$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
@@ -307,7 +307,9 @@ do ife = ife_min, ife_max
         BigR = x_g(ms,mt)
 
         r0     = eq_g(mp,5,ms,mt)
+		r0_corr = corr_neg_dens(r0,(/1.d-8,1.d-5/),1.d-3) ! Correction for negative r0 ...
         T0     = eq_g(mp,6,ms,mt)
+	    T0_corr = corr_neg_temp(T0,(/1.d-1,1.d-1/))
         T0e    = eq_g(mp,6,ms,mt) /2.d0
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
@@ -320,10 +322,14 @@ do ife = ife_min, ife_max
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
         rn0    = eq_g(mp,8,ms,mt)
+		rn0_corr = corr_neg_dens(rn0, (/ 1.d-12, 1.d-5 /),1.d-3) ! Correction for negative rn0 ...
 #endif
 
-        eta_T  =   eta   * (abs(T0)/T_0)**(-1.5d0)
+        eta_T  = eta * (T0_corr/T_0)**(-1.5d0)
+        eta_Sp = 1.65d-9*17*(1.d-3*T0_corr/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
+                               *sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) 
 
+		
         dTdx   = (   y_t(ms,mt) * eq_s(mp,6,ms,mt) - y_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
         dTdy   = ( - x_t(ms,mt) * eq_s(mp,6,ms,mt) + x_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
         drhodx = (   y_t(ms,mt) * eq_s(mp,5,ms,mt) - y_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
@@ -361,8 +367,10 @@ do ife = ife_min, ife_max
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
         VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-        J2_tot = J2_tot + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+!        J2_tot = J2_tot + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+        J2_tot = J2_tot + eta_Sp * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
 
+		
         P_max = max(P_max,r0 * T0)
 
         gradP_max     = max(gradP_max,grad_P)
@@ -387,7 +395,6 @@ do ife = ife_min, ife_max
      end select
 
         ! Te in eV:
-        T0_corr = corr_neg_temp(T0,(/1.d-2,1.d-1/))
         T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
         if (flag_adas) then
    
@@ -425,7 +432,7 @@ do ife = ife_min, ife_max
         end if
         alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
         beta_imp     = m_i_over_m_imp*Z_imp - 1.
-        ne_rad       = (r0 + beta_imp * rn0) * 1.d20 * central_density !electron density (SI)
+        ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
   
         P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
         P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
@@ -444,9 +451,9 @@ do ife = ife_min, ife_max
         Lrad = Lrad * m_i_over_m_imp
         E_ion = E_ion * m_i_over_m_imp
 
-        local_radiation_phi(mp) = local_radiation_phi(mp) + ne_rad * rn0 * central_density * 1.d20 * Lrad &
+        local_radiation_phi(mp) = local_radiation_phi(mp) + ne_rad * rn0_corr * central_density * 1.d20 * Lrad &
                           * bigR * xjac * wst * delta_phi        
-        local_radiation = local_radiation + ne_rad * rn0 * central_density * 1.d20 * Lrad &
+        local_radiation = local_radiation + ne_rad * rn0_corr * central_density * 1.d20 * Lrad &
                           * bigR * xjac * wst * delta_phi 
         local_E_ion     = local_E_ion + rn0 * central_density * 1.d20 * E_ion             &
                           * bigR * xjac * wst * delta_phi
@@ -494,8 +501,9 @@ do ife = ife_min, ife_max
           VP_int = VP_int + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_int = VK_int + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_int = VM_int + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-          J2_int = J2_int + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
-
+!          J2_int = J2_int + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+          J2_int = J2_int + eta_Sp * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+		  
 #if (JOREK_MODEL == 501)
           P_int = P_int - r0 * T0   * xjac * BigR * wst * delta_phi
           P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
@@ -511,7 +519,8 @@ do ife = ife_min, ife_max
           VP_ext = VP_ext + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_ext = VK_ext + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_ext = VM_ext + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-          J2_ext = J2_ext + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+!          J2_ext = J2_ext + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+          J2_ext = J2_ext + eta_Sp * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi		  
 
 #if (JOREK_MODEL == 501)
           P_int = P_int - r0 * T0   * xjac * BigR * wst * delta_phi

@@ -34,7 +34,7 @@ contains
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, freeboundary, tstep, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_start_time, RMP_har_cos,RMP_har_sin,             &
-       RMP_growth_rate, RMP_ramp_up_time
+       RMP_growth_rate, RMP_ramp_up_time, T_min
     USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
@@ -334,7 +334,7 @@ contains
                             index_node  = node_list%node(inode)%index(1)             ! position of value
                             index_node2 = node_list%node(inode)%index(2)             ! position of first deriative
 
-                            T0        = abs(node_list%node(inode)%values(1,1,6))
+                            T0        = max(node_list%node(inode)%values(1,1,6), T_min)
                             Vpar0     = node_list%node(inode)%values(1,1,7)
                             BigR      = node_list%node(inode)%x(1,1)
                             dT0_ds    = node_list%node(inode)%values(1,2,6)
@@ -643,7 +643,7 @@ contains
                             index_node  = node_list%node(inode)%index(1)             ! position of value
                             index_node2 = node_list%node(inode)%index(3)             ! position of first deriative
 
-                            T0        = abs(node_list%node(inode)%values(1,1,6));  T0 = max(T0,0.001)
+                            T0        = max(node_list%node(inode)%values(1,1,6), T_min)
                             Vpar0     = node_list%node(inode)%values(1,1,7)
                             BigR      = node_list%node(inode)%x(1,1)
                             dT0_dt    = node_list%node(inode)%values(1,3,6)

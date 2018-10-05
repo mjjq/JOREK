@@ -246,6 +246,8 @@ real*8     :: Z_imp, beta_imp, mu_imp
 
   do i=1, n_spi
 
+    !if (my_id == 1) write(*,*) "CHECK loop_start,", i, pellets(i)%spi_R
+
     spi_delta_phi          = pellets(i)%spi_phi - spi_phi_inj
     spi_Vel_R_tmp          = pellets(i)%spi_Vel_R * cos(spi_delta_phi) &
                              + pellets(i)%spi_Vel_RxZ * sin(spi_delta_phi)
@@ -253,10 +255,13 @@ real*8     :: Z_imp, beta_imp, mu_imp
                              - pellets(i)%spi_Vel_R * sin(spi_delta_phi)
     spi_Vel_phi_tmp        = spi_Vel_phi_tmp / pellets(i)%spi_R
 
+    !if (my_id == 1) write(*,*) "CHECK spi_radius,", i
 
     pellets(i)%spi_R       = pellets(i)%spi_R + spi_Vel_R_tmp * tstep / V_normalisation
     pellets(i)%spi_Z       = pellets(i)%spi_Z + pellets(i)%spi_Vel_Z * tstep / V_normalisation
     pellets(i)%spi_phi     = pellets(i)%spi_phi + spi_Vel_phi_tmp * tstep / V_normalisation
+
+   ! if (my_id == 1) write(*,*) "CHECK post spi_radius,", i
 
     if (toroidal_rotation) then
       pellets(i)%spi_phi     = pellets(i)%spi_phi + tor_frequency * 2. * PI * tstep / V_normalisation
@@ -278,8 +283,12 @@ real*8     :: Z_imp, beta_imp, mu_imp
       else if (pellets(i)%spi_species == 0) then
         spi_density_tmp = pellet_density_bg
       else
-        spi_density_tmp = 0.
+        write(*,*) "Something is wrong when determining the pellet species, exiting"
+        stop
       end if
+
+      if (spi_density_tmp == 0.) write(*,*) "Zero spi_density!"
+
       pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep * &
                               (pellets(i)%spi_abl / (4.d0 * PI * pellets(i)%spi_radius**2.d0 *    &
                               spi_density_tmp * 1.d20))
@@ -301,8 +310,10 @@ real*8     :: Z_imp, beta_imp, mu_imp
       pellets(i)%spi_abl   = mgi_amplitude
     elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2 ) then
 
+      !if (my_id == 1) write(*,*) "CHECK find_RZ,", i
       call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
                    R_out,Z_out,i_elm,s_out,t_out,ifail)
+      !if (my_id == 1) write(*,*) "CHECK post find_RZ,", i, ifail 
 
       ! In case the shards are outside of the domain
       if (ifail == 99 .or. ifail == 999) then
@@ -313,8 +324,12 @@ real*8     :: Z_imp, beta_imp, mu_imp
         stop
       end if
 
+      !if (my_id == 1) write(*,*) "CHECK interp_PRZ,", i
+
       call interp_PRZ(node_list,element_list,i_elm,[5,6,8],3,s_out,t_out,pellets(i)%spi_phi,&
                       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+
+      !if (my_id == 1) write(*,*) "CHECK post interp_PRZ,", i
 
       ! Now, P(1) represents mass density and P(2) represents temperature, P(3)
       ! is the impurity density
@@ -425,6 +440,7 @@ real*8     :: Z_imp, beta_imp, mu_imp
     mgi_phi_rotate  = mgi_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
   end if
 
+  !write(*,*) "CHECK end of update,", my_id
 
   !write(*,'(A,4e14.6)') ' pellet (R,Z) =', spi_R, spi_Z,spi_Vel_R/V_normalisation,spi_Vel_Z/V_normalisation
   
@@ -692,11 +708,11 @@ function get_pellet_derived_type() result(dtype_out)
   integer, save         :: dtype
   logical, save         :: dtype_set = .false.
 
-  integer :: len(8) = (/1,1,1,1,1,1,1,1/), t(8) = (/ &
+  integer :: len(9) = (/1,1,1,1,1,1,1,1,1/), t(9) = (/ &
     MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
-    MPI_REAL8,MPI_REAL8,MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
+    MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_INTEGER/) ! MPI_INTEGER1 == MPI_LOGICAL1
 
-  integer(kind=MPI_ADDRESS_KIND) :: base, disp(8)
+  integer(kind=MPI_ADDRESS_KIND) :: base, disp(9)
   type(type_SPI) :: sample_pellet
 
   dtype_out = dtype
@@ -712,12 +728,13 @@ function get_pellet_derived_type() result(dtype_out)
   call MPI_Get_address(sample_pellet%spi_Vel_RxZ, disp(6), ierr)
   call MPI_Get_address(sample_pellet%spi_radius,  disp(7), ierr)
   call MPI_Get_address(sample_pellet%spi_abl,     disp(8), ierr)
+  call MPI_Get_address(sample_pellet%spi_species, disp(9), ierr)
 
   ! Rebase to particle memory beginning
   disp = disp - base
 
   ! Commit the structured type
-  call MPI_Type_create_struct(8, len, disp, t, dtype, ierr)
+  call MPI_Type_create_struct(9, len, disp, t, dtype, ierr)
   call MPI_Type_commit(dtype, ierr)
 
   ! Set the save bit

@@ -1109,6 +1109,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         call HDF5_array1D_reading_int(file_id,spi_species_arr,"spi_species_arr")
       else
         spi_species_arr = 1
+        write(*,*)"Backward Compatibility: No species information found, assuming full impurity"
       end if
 
       do i=1, n_spi

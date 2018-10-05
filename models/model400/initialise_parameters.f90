@@ -80,10 +80,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_gauss, heatsource_gauss,             &
                 heatsource_gauss_psin, heatsource_gauss_sig,        &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
-                produce_live_data, gmres, gmres_max_iter,           &
+                produce_live_data,                                  &
                 linear_run, export_for_nemec,                       &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
-                gmres_m, gmres_tol, tgnum,                          &
+                gmres, gmres_max_iter,                              &
+                gmres_m, gmres_4, gmres_tol, iter_precon, tgnum,    &
                 RMP_on, RMP_har_cos, RMP_har_sin,                   &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &

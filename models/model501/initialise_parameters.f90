@@ -9,7 +9,8 @@ use mpi_mod
 use corr_neg
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
+use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, &
+    pastix_maxthrd
 use vacuum
 use wsmp_module,   only: use_wsmp
 use mgi_module,    only: total_n_particles_inj_all
@@ -104,7 +105,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
-                tgnum,  pastix_pivot,                               &
+                tgnum,  pastix_pivot, pastix_maxthrd,               &
                 linear_run, export_for_nemec,                       &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &

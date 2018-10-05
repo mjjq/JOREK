@@ -38,8 +38,8 @@ include 'mpif.h'
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
 
-real*8, dimension (:,:), pointer  :: ELM
-real*8, dimension (:)  , pointer  :: RHS
+real*8, dimension (:,:), allocatable  :: ELM
+real*8, dimension (:)  , allocatable  :: RHS
 integer, intent(in) :: tid
 
 integer    :: i, j, k, l, index_ij, index_kl, index, xcase2, inode

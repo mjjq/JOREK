@@ -74,9 +74,9 @@ def RequestData(self):
     else:
         xtime_all = np.asarray([0.0])
     if len(FileNames) > 1:
-        xtime = [xtime_all[int(re.findall(r'\d+', os.path.basename(fname))[0])] for fname in FileNames]
+        xtime = np.asarray([xtime_all[int(re.findall(r'\d+', os.path.basename(fname))[0])] for fname in FileNames])
     else:
-        xtime = [xtime_all[-1]]
+        xtime = np.asarray([xtime_all[-1]])
 
     # 4 possibilities here:
     # After last step: return last file
@@ -97,9 +97,13 @@ def RequestData(self):
             index = 0
         else:
             interp = True
-            index = (req_time > xtime).tolist().index(True)
+            index = np.searchsorted(xtime, req_time)
             f = (req_time - xtime[index-1])/(xtime[index] - xtime[index-1])
             # how much of second to take == 1-how much of first to take
+
+            # Hack in to not interpolate
+            print('WARNING: disabling interpolation due to issues.')
+            interp = False
 
     # Make a list of variables to read (0-based) and a list of variables to interpret
     # See https://www.jorek.eu/wiki/doku.php?id=models

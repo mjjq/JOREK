@@ -293,10 +293,16 @@ real*8     :: Z_imp, beta_imp, mu_imp
     end if
 
     if (my_id == 0.) then
-      if (index_now > 1) then
-        xtime_spi_ablation(i,index_now) = xtime_spi_ablation(i,index_now-1) + t_norm * tstep * pellets(i)%spi_abl
+      if (index_now > 1 .and. pellets(i)%spi_species == 1) then
+        xtime_spi_ablation(i,index_now)    = xtime_spi_ablation(i,index_now-1) &
+                                             + t_norm * tstep * pellets(i)%spi_abl
+      else if (index_now > 1 .and. pellets(i)%spi_species == 0) then
+        xtime_spi_ablation_bg(i,index_now) = xtime_spi_ablation_bg(i,index_now-1) &
+                                             + t_norm * tstep * pellets(i)%spi_abl
+      else if (pellets(i)%spi_species == 1) then
+        xtime_spi_ablation(i,index_now)    = t_norm * tstep * pellets(i)%spi_abl
       else
-        xtime_spi_ablation(i,index_now) = t_norm * tstep * pellets(i)%spi_abl
+        xtime_spi_ablation_bg(i,index_now) = t_norm * tstep * pellets(i)%spi_abl
       end if
     end if
 
@@ -418,8 +424,9 @@ real*8     :: Z_imp, beta_imp, mu_imp
       pellets(i)%spi_abl    = 0.d0
     end if
    
-    if (my_id == 0.) then
-      xtime_spi_ablation_rate(i,index_now) = pellets(i)%spi_abl
+    if (my_id == 0) then
+      if (pellets(i)%spi_species == 1) xtime_spi_ablation_rate(i,index_now) = pellets(i)%spi_abl
+      if (pellets(i)%spi_species == 0) xtime_spi_ablation_bg_rate(i,index_now) = pellets(i)%spi_abl
     end if
 
   end do
@@ -547,7 +554,7 @@ end subroutine update_spi
         end if
   
         do i = 1, n_spi
-          if (i <= n_spi*int((mix_ratio))) then
+          if (i <= int(real(n_spi,8)*(mix_ratio))) then
             pellets(i)%spi_species = 1
             spi_density_tmp = pellet_density
             real_spi_quantity(2) = real_spi_quantity(2) + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
@@ -559,11 +566,11 @@ end subroutine update_spi
           N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
         end do
   
-        size_beta    = (spi_quantity / N_shard_norm) ** (-1./3.)
-        real_spi_quantity(1) = real_spi_quantity(1) * size_beta**3
-        real_spi_quantity(2) = real_spi_quantity(2) * size_beta**3
-        write(*,*) "Characteristic shard size (m):", size_beta
-        write(*,*) "Real injection quantity (atom):", real_spi_quantity
+        size_beta    = ((spi_quantity+spi_quantity_bg) / N_shard_norm) ** (-1./3.)
+        real_spi_quantity(1) = real_spi_quantity(1) / size_beta**3
+        real_spi_quantity(2) = real_spi_quantity(2) / size_beta**3
+        write(*,*) "Characteristic shard size (m):", 1./size_beta
+        write(*,*) "Real injection quantity (atom):", real_spi_quantity(1), real_spi_quantity(2)
   
         ! Initialize shard radius
         do i = 1, n_spi 
@@ -672,7 +679,16 @@ end subroutine update_spi
         if (allocated(xtime_spi_ablation_rate)) &
         call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
         if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,nstep,"xtime_spi_ablation_rate")
-  
+ 
+        if (allocated(xtime_spi_ablation_bg)) &
+        call tr_deallocate(xtime_spi_ablation_bg,"xtime_spi_ablation_bg",CAT_UNKNOWN)
+        if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg,1,n_spi,1,nstep,"xtime_spi_ablation_bg")
+
+        if (allocated(xtime_spi_ablation_bg_rate)) &
+        call tr_deallocate(xtime_spi_ablation_bg_rate,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
+        if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi,1,nstep,"xtime_spi_ablation_bg_rate")
+
+ 
       else
         write(*,*) "...... Seriously!? Double check the input file"
         stop

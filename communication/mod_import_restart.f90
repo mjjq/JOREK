@@ -322,9 +322,18 @@ endif
         if (allocated(xtime_spi_ablation_rate)) &
           call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
         call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+        if (allocated(xtime_spi_ablation_bg)) &
+          call tr_deallocate(xtime_spi_ablation_bg,"xtime_spi_ablation_bg",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_bg,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_bg",CAT_UNKNOWN)
+        if (allocated(xtime_spi_ablation_bg_rate)) &
+          call tr_deallocate(xtime_spi_ablation_bg_rate,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
 
         read(21)  xtime_spi_ablation(1:n_spi,1:index_start)
         read(21)  xtime_spi_ablation_rate(1:n_spi,1:index_start)
+        read(21)  xtime_spi_ablation_bg(1:n_spi,1:index_start)
+        read(21)  xtime_spi_ablation_bg_rate(1:n_spi,1:index_start)
+
       end if
 
       allocate (spi_R_arr(n_spi),stat=err_alloc)
@@ -1080,9 +1089,25 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         if (allocated(xtime_spi_ablation_rate)) &
           call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
         call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+        if (allocated(xtime_spi_ablation_bg)) &
+          call tr_deallocate(xtime_spi_ablation_bg,"xtime_spi_ablation_bg",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_bg,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_bg",CAT_UNKNOWN)
+        if (allocated(xtime_spi_ablation_bg_rate)) &
+          call tr_deallocate(xtime_spi_ablation_bg_rate,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
 
         call HDF5_array2D_reading(file_id,xtime_spi_ablation,"xtime_spi_ablation")
         call HDF5_array2D_reading(file_id,xtime_spi_ablation_rate,"xtime_spi_ablation_rate")
+
+        call H5Lexists_f(file_id,"xtime_spi_ablation_bg",flag_exists,err_exists) !Backward compatibility
+        if (flag_exists .and. err_exists == 0) then
+          call HDF5_array2D_reading(file_id,xtime_spi_ablation_bg,"xtime_spi_ablation_bg")
+          call HDF5_array2D_reading(file_id,xtime_spi_ablation_bg_rate,"xtime_spi_ablation_bg_rate")
+        else
+          xtime_spi_ablation_bg = 0.
+          xtime_spi_ablation_bg_rate = 0.
+          write(*,*)"Backward Compatibility: No bg species ablation history information found, assuming none."
+        end if
       end if
 
       allocate (spi_R_arr(n_spi),stat=err_alloc)
@@ -1109,7 +1134,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         call HDF5_array1D_reading_int(file_id,spi_species_arr,"spi_species_arr")
       else
         spi_species_arr = 1
-        write(*,*)"Backward Compatibility: No species information found, assuming full impurity"
+        write(*,*)"Backward Compatibility: No species information found, assuming full impurity."
       end if
 
       do i=1, n_spi

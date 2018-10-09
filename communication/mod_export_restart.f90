@@ -137,6 +137,8 @@ subroutine export_binary_restart(node_list,element_list,filename)
     if (index_now .gt. 0) then
       write(21) xtime_spi_ablation(:,1:index_now)
       write(21) xtime_spi_ablation_rate(:,1:index_now)
+      write(21) xtime_spi_ablation_bg(:,1:index_now)
+      write(21) xtime_spi_ablation_bg_rate(:,1:index_now)
     endif
 
     allocate (spi_R_arr(n_spi),stat=err_alloc)  
@@ -586,6 +588,11 @@ end if
              n_spi,index_now,'xtime_spi_ablation'//char(0))
       call HDF5_array2D_saving(file_id,xtime_spi_ablation_rate, &
              n_spi,index_now,'xtime_spi_ablation_rate'//char(0))
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation_bg, &
+             n_spi,index_now,'xtime_spi_ablation_bg'//char(0))
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation_bg_rate, &
+             n_spi,index_now,'xtime_spi_ablation_bg_rate'//char(0))
+
     end if
 
 

@@ -259,8 +259,11 @@ module phys_module
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud 
                                 !< with regard to the simulation resolution 
 
-  real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
-  real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
+  real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation for working species
+  real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate for working speacies
+  real*8, allocatable  :: xtime_spi_ablation_bg(:,:) ! The time history of spi ablation for background species
+  real*8, allocatable  :: xtime_spi_ablation_bg_rate(:,:) ! The time history of spi ablation rate for bg species
+
   real*8, allocatable  :: xtime_radiation(:)    ! The time history of radiated energy in SI unit
 
   integer :: n_spi              !< Number of shattered pellets injected

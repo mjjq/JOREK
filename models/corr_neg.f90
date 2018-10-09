@@ -2,137 +2,39 @@ module corr_neg
 
 implicit none
 
+  interface corr_neg_dens
+    module procedure corr_neg_dens1, corr_neg_dens2, corr_neg_dens3
+  end interface
+
+  interface dcorr_neg_dens_drho
+    module procedure dcorr_neg_dens_drho1, dcorr_neg_dens_drho2, dcorr_neg_dens_drho3
+  end interface
+      
+  interface corr_neg_temp
+    module procedure corr_neg_temp1, corr_neg_temp2, corr_neg_temp3
+  end interface
+
+  interface dcorr_neg_temp_dT
+    module procedure dcorr_neg_temp_dT1, dcorr_neg_temp_dT2, dcorr_neg_temp_dT3
+  end interface
+
+  interface d2corr_neg_temp_dT2
+    module procedure d2corr_neg_temp_dT21, d2corr_neg_temp_dT22, d2corr_neg_temp_dT23
+  end interface
+
+
 contains
 
-
-
-!> NUMERICAL IMPROVEMENT FOR CASES WHERE TEMPERATURES CLOSE TO OR BELOW ZERO CAN OCCUR.
-!! 
-!! PROBLEM:
-!! 
-!! T^-1.5 is undefined for negative temperatures (resistivity and other quantities).
-!! Thus, abs(T) was used so far which may, however, still cause discontinuities
-!! in the resistivity.
-!! 
-!! SOLUTION:
-!! 
-!! Replace abs(T) by smooth function:
-!! 
-!!   f(T) = T                             if T>L1+L2
-!!   f(T) = L1 + L2 * exp((T-(L2+L1))/L2) otherwise
-!!   
-!! where L1 and L2 are derived from the input parameter T_1:
-!! 
-!!   L1 = T_1 * corr_neg_temp_coef(1)
-!!   L2 = T_1 * corr_neg_temp_coef(2)
-!!   
-!! The default values corr_neg_temp_coef(:) = (/ 0.5, 0.5 /) can be
-!! changed via the namelist input file. Alternatively, different values
-!! can be provided via the optional routine parameter coef.
-!!
-real*8 function corr_neg_temp(val, coef)
-  
-  use phys_module, only: T_1, corr_neg_temp_coef
-  
-  ! --- Routine parameters
-  real*8, intent(in)           :: val       !< Temperature value to be "corrected".
-  real*8, intent(in), optional :: coef(2)   !< Optional coefficients, if not provided the
-                                            !! input parameter corr_neg_temp_coef is used instead.
-  
-  real*8 :: L1, L2
-  
-  if ( present(coef) ) then
-    L1 = T_1 * coef(1)
-    L2 = T_1 * coef(2)
-  else
-    L1 = T_1 * corr_neg_temp_coef(1)
-    L2 = T_1 * corr_neg_temp_coef(2)
-  end if
-
-  corr_neg_temp = val
-  if ( val < L1 + L2 ) corr_neg_temp = L1 + L2 * exp( (val-(L1+L2)) / L2 )
-
-end function corr_neg_temp
-
-
-
-!> Same for density (so far not used in element_matrix routines).
-real*8 function corr_neg_dens(val, coef)
-  
-  use phys_module, only: rho_1, corr_neg_dens_coef
-  
-  ! --- Routine parameters
-  real*8, intent(in)           :: val       !< Density value to be "corrected".
-  real*8, intent(in), optional :: coef(2)   !< Optional coefficients, if not provided the
-                                            !! input parameter corr_neg_temp_coef is used instead.
-  
-  real*8 :: L1, L2
-  
-  if ( present(coef) ) then
-    L1 = rho_1 * coef(1)
-    L2 = rho_1 * coef(2)
-  else
-    L1 = rho_1 * corr_neg_dens_coef(1)
-    L2 = rho_1 * corr_neg_dens_coef(2)
-  end if
-
-  corr_neg_dens = val
-  if ( val < L1 + L2 ) corr_neg_dens = L1 + L2 * exp( (val-(L1+L2)) / L2 )
-
-end function corr_neg_dens
-
-!> dT_corr/dT
-real*8 function dcorr_neg_temp_dT(val, coef)
-
-  use phys_module, only: T_1, corr_neg_temp_coef
-   
-  implicit none
-  
-  ! --- Routine parameters
-  real*8, intent(in)           :: val       !< Temperature value to be "corrected".
-  real*8, intent(in), optional :: coef(2)   !< Optional coefficients, if not provided the
-                                            !! input parameter corr_neg_temp_coef is used instead.
-
-  real*8 :: L1, L2
-
-  if ( present(coef) ) then
-    L1 = T_1 * coef(1)
-    L2 = T_1 * coef(2)
-  else
-    L1 = T_1 * corr_neg_temp_coef(1)
-    L2 = T_1 * corr_neg_temp_coef(2)
-  end if
-  
-  dcorr_neg_temp_dT = 1.d0
-  if ( val < L1 + L2 ) dcorr_neg_temp_dT =  exp( (val-(L1+L2)) / L2 )
-  
-end function dcorr_neg_temp_dT
-
-!> drho_corr/drho
-real*8 function dcorr_neg_dens_drho(val, coef)
-
-  use phys_module, only: rho_1, corr_neg_dens_coef  
-  
-  implicit none
-  
-  ! --- Routine parameters
-  real*8, intent(in)           :: val         !< Temperature value to be "corrected".
-  real*8, intent(in), optional :: coef(2)   !< Optional coefficients, if not provided the
-                                            !! input parameter corr_neg_temp_coef is used instead.
-
-  real*8 :: L1, L2
-
-  if ( present(coef) ) then
-    L1 = rho_1 * coef(1)
-    L2 = rho_1 * coef(2)
-  else
-    L1 = rho_1 * corr_neg_dens_coef(1)
-    L2 = rho_1 * corr_neg_dens_coef(2)
-  end if
-
-  dcorr_neg_dens_drho = 1.d0
-  if ( val < L1 + L2 ) dcorr_neg_dens_drho = exp( (val-(L1+L2)) / L2 )
-
-end function dcorr_neg_dens_drho
-
+! Source code moved to an include file to be able to inline function calls into the loops
+! in element_matrix. This module file is kept for those models which do not use inlining.
+!
+! For optimized element_matrix construction subroutines, inlining the corr_neg functions improves
+! the performance. But the -ipo switch, which would enable inlining across compilation units, makes
+! the compilation very slow and certain other subroutines become slower with it. As an alternative
+! to -ipo, we separete the function definitions into the corr_neg_include.f90 file, which can be
+! included into the source files that define element matrix. This way the compiler will be able to
+! inline the corr_neg functions.
+!
+! The include directive is used here to avoid code duplication.
+#include "corr_neg_include.f90"
 end module corr_neg

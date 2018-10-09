@@ -238,14 +238,7 @@ contains
         ! --- Dstribute data to the MPI "slave" tasks (>0)
         !     (When using WSMP, this is *not necessary* in 0-master mode!)
         if ((.not. use_wsmp).and.(.not. pastix_smp_only)) then
-
-          !$omp parallel default(none) shared(pastix_nthrd)    
-          !$omp master
-              pastix_nthrd = omp_get_num_threads()
-          !$omp end master
-          !$omp end parallel
-          
-          if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd
+          call pastix_init_num_threads(my_id)
 
           call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
           call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
@@ -320,14 +313,8 @@ contains
 #endif
             elseif (use_pastix) then
 
-              !          if (pastix_smp_only) pastix_nthrd = n_cpu_n                ! use the size of the MPIgroup for the number of threads
+              call pastix_init_num_threads(my_id)
 
-              !$omp parallel default(none) shared(pastix_nthrd)    
-              !$omp master
-              pastix_nthrd = omp_get_num_threads()
-              !$omp end master
-              !$omp end parallel
-              if (my_id .eq. 0) write(*,'(I5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd
               pastix_iparm(IPARM_MODIFY_PARAMETER+increment) = API_NO         ! insert default values
               pastix_iparm(IPARM_START_TASK+increment)       = API_TASK_INIT  ! initializse
               pastix_iparm(IPARM_END_TASK+increment)         = API_TASK_INIT
@@ -410,7 +397,7 @@ contains
               end if
 
             else if (use_pastix) then
-
+              pastix_iparm(IPARM_THREAD_NBR+increment) = pastix_nthrd
               pastix_iparm(IPARM_START_TASK+increment) = API_TASK_ORDERING
               pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_ANALYSE
 !              pastix_iparm(IPARM_BINDTHRD+increment)   = API_NO
@@ -475,6 +462,7 @@ contains
 
         else if (use_pastix) then
 
+          pastix_iparm(IPARM_THREAD_NBR+increment) = pastix_nthrd
           pastix_iparm(IPARM_START_TASK+increment) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_NUMFACT
 #if defined(WORLDWAR2) && defined(CORES_PER_NODE)
@@ -542,6 +530,7 @@ contains
 #endif
       else if (use_pastix) then
 
+        pastix_iparm(IPARM_THREAD_NBR+increment) = pastix_nthrd
         pastix_iparm(IPARM_START_TASK+increment) = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK+increment)   = pastix_endsolve
 !        pastix_iparm(IPARM_BINDTHRD+increment)   = API_NO

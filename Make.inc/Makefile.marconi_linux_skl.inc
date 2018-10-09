@@ -13,8 +13,7 @@ CXX               = mpiicpc  -mt_mpi
 FFLAGS_OMP        = -qopenmp 
 FFLAGS            = -r8 -i4 -DUSE_BLOCK
 FFLAGS           += -fpp
-FFLAGS           += -axCORE-AVX512 -mtune=skylake
-FFLAGS           += -DCONSTRUCT_MATRIX_OMP_ATOMIC
+FFLAGS           += -axCORE-AVX512 -mtune=skylake -align array64byte -qopt-zmm-usage=high  -vecabi=cmdtarget
 
 # --- Debugging options
 #DEBUGFLAGS        = -g

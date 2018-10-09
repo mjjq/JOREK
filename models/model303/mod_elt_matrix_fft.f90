@@ -4,7 +4,10 @@ module mod_elt_matrix_fft
 
 contains
 
-subroutine element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
+#include "corr_neg_include.f90"
+
+subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
+  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -16,7 +19,6 @@ use basis_at_gaussian
 use phys_module
 use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
-use corr_neg
 use vacuum, only: freeb_fact
 
 implicit none
@@ -24,8 +26,10 @@ implicit none
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
 
-real*8, dimension (:,:), pointer  :: ELM
-real*8, dimension (:)  , pointer  :: RHS
+#define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
+
+real*8, dimension (DIM0,DIM0)  :: ELM
+real*8, dimension (DIM0) :: RHS
 integer, intent(in) :: tid
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
@@ -90,40 +94,27 @@ real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer*8  :: plan
 
-real*8, dimension(:,:,:) , pointer :: ELM_p
-real*8, dimension(:,:,:) , pointer :: ELM_n
-real*8, dimension(:,:,:) , pointer :: ELM_k
-real*8, dimension(:,:,:) , pointer :: ELM_kn
-real*8, dimension(:,:)   , pointer :: RHS_p
-real*8, dimension(:,:)   , pointer :: RHS_k 
+integer    :: i_v, i_loc, j_loc
+#define DIM1 n_plane
+#define DIM2 1:n_vertex_max*n_var*(n_order+1)
+
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_p
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_n
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_k
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_kn
+real*8, dimension(DIM1, DIM2)       :: RHS_p
+real*8, dimension(DIM1, DIM2)       :: RHS_k
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
 real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
 real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t
 real*8, dimension(n_gauss,n_gauss)    :: y_ss, y_st, y_tt
 
-real*8, dimension(:,:,:,:) , pointer :: eq_g, eq_s, eq_t
-real*8, dimension(:,:,:,:) , pointer :: eq_p
-real*8, dimension(:,:,:,:) , pointer :: eq_ss, eq_st, eq_tt   
-real*8, dimension(:,:,:,:) , pointer :: delta_g, delta_s, delta_t
+real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_g, eq_s, eq_t
+real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_p
+real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_ss, eq_st, eq_tt
+real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: delta_g, delta_s, delta_t
 
-eq_g    => thread_struct(tid)%eq_g   
-eq_s    => thread_struct(tid)%eq_s   
-eq_t    => thread_struct(tid)%eq_t   
-eq_p    => thread_struct(tid)%eq_p   
-eq_ss   => thread_struct(tid)%eq_ss  
-eq_st   => thread_struct(tid)%eq_st  
-eq_tt   => thread_struct(tid)%eq_tt  
-delta_g => thread_struct(tid)%delta_g
-delta_s => thread_struct(tid)%delta_s
-delta_t => thread_struct(tid)%delta_t
-
-ELM_p  => thread_struct(tid)%ELM_p 
-ELM_n  => thread_struct(tid)%ELM_n 
-ELM_k  => thread_struct(tid)%ELM_k
-ELM_kn => thread_struct(tid)%ELM_kn
-RHS_p  => thread_struct(tid)%RHS_p 
-RHS_k  => thread_struct(tid)%RHS_k 
 
 ELM_p = 0.d0
 ELM_n = 0.d0
@@ -139,7 +130,6 @@ epsil=1.d-3
 
 zk_par_num = 0.d0
 amat_57_kn = 0.d0
-amat_27    = 0.d0
 
 ! --- Taylor-Galerkin Stabilisation coefficients
 TG_num1    = TGNUM(1); TG_num2    = TGNUM(2); TG_num5    = TGNUM(5); TG_num6    = TGNUM(6); TG_num7    = TGNUM(7);
@@ -172,7 +162,9 @@ endif
 
 do i=1,n_vertex_max
  do j=1,n_order+1
-
+#if _OPENMP >= 201511
+ !$OMP SIMD collapse(2)
+#endif
    do ms=1, n_gauss
      do mt=1, n_gauss
 
@@ -192,12 +184,18 @@ do i=1,n_vertex_max
        y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
        y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
 
-       do mp=1,n_plane
+     end do
+  end do
 
+   do ms=1, n_gauss
+     do mt=1, n_gauss
          do k=1,n_var
 
            do in=1,n_tor
-
+#if _OPENMP >= 201511
+          !$OMP SIMD
+#endif
+            do mp=1,n_plane
              eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ(in,mp)
              eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
              eq_t(mp,k,ms,mt) = eq_t(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ(in,mp)
@@ -259,9 +257,15 @@ enddo
 eq_zTe = eq_zTe / 2.d0  ! electron temperature  
 
 !--------------------------------------------------- sum over the Gaussian integration points
-do ms=1, n_gauss
+do i=1,n_vertex_max
+  do j=1,n_order+1
+  ELM_p(:,:,1:n_var) = 0
+  ELM_n(:,:,1:n_var) = 0
+  ELM_k(:,:,1:n_var) = 0
+  ELM_kn(:,:,1:n_var) = 0
 
- do mt=1, n_gauss
+  do ms=1, n_gauss
+  do mt=1, n_gauss
 
    wst = wgauss(ms)*wgauss(mt)
 
@@ -280,6 +284,44 @@ do ms=1, n_gauss
 
    eps_cyl = 1.d0          ! for cylinder geometry : epscyl = eps
 
+#if _OPENMP >= 201511
+! Variables that are part of the PRIVATE clause are uninitialized at the beginnig of the
+! OpenMP construct. (Each thread starts with its own uninitialized copy).
+! To keep the initial value that was set before entering the OpenMP constuct, one would
+! need to use the FIRSTPRIVATE clause.
+!
+!$OMP SIMD private(ps0, ps0_x, ps0_y, ps0_p, ps0_s, ps0_t, ps0_ss, ps0_tt, ps0_st, &
+!$OMP  u0, u0_x, u0_y, u0_p, u0_s, u0_t, u0_ss, u0_tt, u0_st, vv2, zj0, zj0_x, zj0_y, zj0_p, zj0_s, zj0_t, &
+!$OMP  vt0, Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_tt, w0_st, &
+!$OMP  r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_tt, r0_st, r0_corr, r0_hat, r0_x_hat, r0_y_hat, &
+!$OMP  t0, t0_x, t0_y, t0_p, t0_s, t0_t, t0_ss, t0_tt, t0_st, t0_corr, &
+!$OMP  vpar0, vpar0_x, vpar0_y, vpar0_p, vpar0_s, vpar0_t, vpar0_ss, vpar0_tt, vpar0_st, &
+!$OMP  P0, P0_x, P0_y, P0_p, P0_s, P0_t, P0_ss, P0_tt, P0_st, &
+!$OMP  ps0_xx, ps0_yy, ps0_xy, w0_xx, w0_yy, w0_xy, r0_xx, r0_yy, r0_xy, T0_xx, T0_yy, T0_xy, vpar0_xx,&
+!$OMP  vpar0_yy, vpar0_xy, P0_xx, P0_yy, P0_xy, T0_ps0_x, T0_ps0_y, u0_xx, u0_yy, u0_xy, delta_u_x, &
+!$OMP  delta_u_y, delta_ps_x, delta_ps_y, eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, d2visco_dT2, &
+!$OMP  ZKpar_T, dZKpar_dT, W_dia, eta_num_T, visco_num_T, psi_norm, D_prof, ZK_prof, phi, delta_phi,&
+!$OMP  source_pellet, source_volume, index_ij, v, v_x, v_y, v_s, v_t, v_p, v_ss, v_tt, v_st, v_xx, v_yy, &
+!$OMP  v_xy, Bgrad_rho_star, Bgrad_rho_k_star, Bgrad_rho, Bgrad_T_star, Bgrad_T_k_star, Bgrad_T, BB2, &
+!$OMP  Btheta2, v_ps0_x, v_ps0_y, rhs_ij_1, rhs_ij_2, rhs_ij_3, rhs_ij_4, rhs_ij_5, rhs_ij_5_k,&
+!$OMP  rhs_ij_6, rhs_ij_6_k, rhs_ij_7, rhs_ij_7_k, psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_tt,&
+!$OMP  psi_st, psi_xx, psi_yy, psi_xy, u, zj, w, rho, T, vpar, u_x, zj_x, w_x, rho_x, T_x, vpar_x, u_y, &
+!$OMP  zj_y, w_y, rho_y, T_y, vpar_y, u_p, zj_p, w_p, rho_p, T_p, vpar_p, u_s, zj_s, w_s, rho_s, T_s, &
+!$OMP  vpar_s,  u_t, zj_t, w_t, rho_t, T_t, vpar_t, u_ss, zj_ss, w_ss, rho_ss, T_ss, vpar_ss, u_tt, zj_tt, &
+!$OMP  w_tt, rho_tt, T_tt, vpar_tt, u_st, zj_st, w_st, rho_st, T_st, vpar_st, u_xx, w_xx, rho_xx, T_xx, &
+!$OMP  vpar_xx, u_yy, w_yy, rho_yy, T_yy, vpar_yy, u_xy, w_xy, rho_xy, T_xy, vpar_xy, rho_hat, rho_x_hat, &
+!$OMP  rho_y_hat, Btheta2_psi, Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_rho_rho_n, BB2_psi, &
+!$OMP  P0_x_rho, P0_xx_rho, P0_y_rho, P0_yy_rho, P0_xy_rho, P0_x_T, P0_xx_T, P0_y_T, P0_yy_T, P0_xy_T, &
+!$OMP  W_dia_rho, W_dia_T, Vt_x_psi, Vt_y_psi, Omega_tor_x_psi, Omega_tor_y_psi, amat_11, amat_12, &
+!$OMP  amat_12_n, amat_13, amat_15, amat_15_n, amat_16, amat_16_n, amat_21, amat_22, amat_23, amat_23_n, &
+!$OMP  amat_24, amat_25, amat_26, amat_27, amat_33, amat_31, amat_44, amat_42, amat_51, amat_51_k, &
+!$OMP  amat_51_n, amat_52, amat_55, amat_55_k, amat_55_n, amat_55_kn, amat_56, amat_57, amat_57_k, &
+!$OMP  amat_57_n, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, Bgrad_T_T_n, T_ps0_x, T_ps0_y, T0_psi_x, &
+!$OMP  T0_psi_y, v_psi_x, v_psi_y, amat_61, amat_61_k, amat_62, amat_65, amat_65_n, amat_65_k, amat_65_kn, &
+!$OMP  amat_66, amat_66_k, amat_66_n, amat_66_kn, amat_67, amat_67_k, amat_67_n, amat_71, amat_71_k, &
+!$OMP  amat_72, amat_75, amat_75_k, amat_75_n, amat_76, amat_76_n, amat_77, amat_77_k, amat_77_n, &
+!$OMP  amat_77_kn, k,l, index_kl, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3,kl4, kl5,kl6,kl7)
+#endif
    do mp = 1, n_plane
 
      ps0    = eq_g(mp,1,ms,mt)
@@ -333,7 +375,7 @@ do ms=1, n_gauss
      w0_st = eq_st(mp,4,ms,mt)
 
      r0    = eq_g(mp,5,ms,mt)
-     r0_corr = corr_neg_dens(r0)
+     r0_corr = corr_neg_dens1(r0)
      r0_x  = (   y_t(ms,mt) * eq_s(mp,5,ms,mt) - y_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
      r0_y  = ( - x_t(ms,mt) * eq_s(mp,5,ms,mt) + x_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
      r0_p  = eq_p(mp,5,ms,mt)
@@ -348,7 +390,7 @@ do ms=1, n_gauss
      r0_y_hat = BigR**2 * r0_y
 
      T0    = eq_g(mp,6,ms,mt)
-     T0_corr = corr_neg_temp(T0)
+     T0_corr = corr_neg_temp1(T0)
      T0_x  = (   y_t(ms,mt) * eq_s(mp,6,ms,mt) - y_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
      T0_y  = ( - x_t(ms,mt) * eq_s(mp,6,ms,mt) + x_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
      T0_p  = eq_p(mp,6,ms,mt)
@@ -590,10 +632,6 @@ do ms=1, n_gauss
                            central_density, pellet_particles, pellet_density, total_pellet_volume, &
                            source_pellet, source_volume)
      endif
-
-     do i=1,n_vertex_max
-
-       do j=1,n_order+1
 
          index_ij = n_var*(n_order+1)*(i-1) + n_var * (j-1) + 1   ! index in the ELM matrix
 
@@ -1122,6 +1160,8 @@ do ms=1, n_gauss
                 
                 amat_27= amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)*r0*vpar*(ps0_x*v_x+ps0_y*v_y)&
                      *BigR*xjac*tstep*theta 
+             else
+                amat_27 = 0
              endif
 
 !---------------------------------------- NEO
@@ -1606,88 +1646,95 @@ do ms=1, n_gauss
              kl5 = index_kl + 4
              kl6 = index_kl + 5
              kl7 = index_kl + 6
+             ij1 = 1
+             ij2 = 2
+             ij3 = 3
+             ij4 = 4
+             ij5 = 5
+             ij6 = 6
+             ij7 = 7
 
-             ELM_p(mp,ij1,kl1)  =  ELM_p(mp,ij1,kl1) + wst * amat_11
-             ELM_n(mp,ij1,kl2)  =  ELM_n(mp,ij1,kl2) + wst * amat_12_n
+             ELM_p(mp,kl1,ij1)  =  ELM_p(mp,kl1,ij1) + wst * amat_11
+             ELM_n(mp,kl2,ij1)  =  ELM_n(mp,kl2,ij1) + wst * amat_12_n
 
-             ELM_p(mp,ij1,kl2)  =  ELM_p(mp,ij1,kl2) + wst * amat_12
-             ELM_p(mp,ij1,kl3)  =  ELM_p(mp,ij1,kl3) + wst * amat_13
-             ELM_p(mp,ij1,kl5)  =  ELM_p(mp,ij1,kl5) + wst * amat_15
-             ELM_n(mp,ij1,kl5)  =  ELM_n(mp,ij1,kl5) + wst * amat_15_n
-             ELM_p(mp,ij1,kl6)  =  ELM_p(mp,ij1,kl6) + wst * amat_16
-             ELM_n(mp,ij1,kl6)  =  ELM_n(mp,ij1,kl6) + wst * amat_16_n
+             ELM_p(mp,kl2,ij1)  =  ELM_p(mp,kl2,ij1) + wst * amat_12
+             ELM_p(mp,kl3,ij1)  =  ELM_p(mp,kl3,ij1) + wst * amat_13
+             ELM_p(mp,kl5,ij1)  =  ELM_p(mp,kl5,ij1) + wst * amat_15
+             ELM_n(mp,kl5,ij1)  =  ELM_n(mp,kl5,ij1) + wst * amat_15_n
+             ELM_p(mp,kl6,ij1)  =  ELM_p(mp,kl6,ij1) + wst * amat_16
+             ELM_n(mp,kl6,ij1)  =  ELM_n(mp,kl6,ij1) + wst * amat_16_n
 
-             ELM_p(mp,ij2,kl1)  =  ELM_p(mp,ij2,kl1) + wst * amat_21
-             ELM_p(mp,ij2,kl2)  =  ELM_p(mp,ij2,kl2) + wst * amat_22
-             ELM_p(mp,ij2,kl3)  =  ELM_p(mp,ij2,kl3) + wst * amat_23
-             ELM_n(mp,ij2,kl3)  =  ELM_n(mp,ij2,kl3) + wst * amat_23_n
+             ELM_p(mp,kl1,ij2)  =  ELM_p(mp,kl1,ij2) + wst * amat_21
+             ELM_p(mp,kl2,ij2)  =  ELM_p(mp,kl2,ij2) + wst * amat_22
+             ELM_p(mp,kl3,ij2)  =  ELM_p(mp,kl3,ij2) + wst * amat_23
+             ELM_n(mp,kl3,ij2)  =  ELM_n(mp,kl3,ij2) + wst * amat_23_n
 
-             ELM_p(mp,ij2,kl4)  =  ELM_p(mp,ij2,kl4) + wst * amat_24
-             ELM_p(mp,ij2,kl5)  =  ELM_p(mp,ij2,kl5) + wst * amat_25
-             ELM_p(mp,ij2,kl6)  =  ELM_p(mp,ij2,kl6) + wst * amat_26
+             ELM_p(mp,kl4,ij2)  =  ELM_p(mp,kl4,ij2) + wst * amat_24
+             ELM_p(mp,kl5,ij2)  =  ELM_p(mp,kl5,ij2) + wst * amat_25
+             ELM_p(mp,kl6,ij2)  =  ELM_p(mp,kl6,ij2) + wst * amat_26
 !---------------------------------------- NEO
-             ELM_p(mp,ij2,kl7)  =  ELM_p(mp,ij2,kl7) + wst * amat_27
+             ELM_p(mp,kl7,ij2)  =  ELM_p(mp,kl7,ij2) + wst * amat_27
 !---------------------------------------- NEO
 
 
-             ELM_p(mp,ij3,kl1)  =  ELM_p(mp,ij3,kl1) + wst * amat_31
-             ELM_p(mp,ij3,kl3)  =  ELM_p(mp,ij3,kl3) + wst * amat_33
+             ELM_p(mp,kl1,ij3)  =  ELM_p(mp,kl1,ij3) + wst * amat_31
+             ELM_p(mp,kl3,ij3)  =  ELM_p(mp,kl3,ij3) + wst * amat_33
 
-             ELM_p(mp,ij4,kl2)  =  ELM_p(mp,ij4,kl2) + wst * amat_42
-             ELM_p(mp,ij4,kl4)  =  ELM_p(mp,ij4,kl4) + wst * amat_44
+             ELM_p(mp,kl2,ij4)  =  ELM_p(mp,kl2,ij4) + wst * amat_42
+             ELM_p(mp,kl4,ij4)  =  ELM_p(mp,kl4,ij4) + wst * amat_44
 
 
-             ELM_p(mp,ij5,kl1)  =  ELM_p(mp,ij5,kl1)  + wst * amat_51
-             ELM_k(mp,ij5,kl1)  =  ELM_k(mp,ij5,kl1)  + wst * amat_51_k
+             ELM_p(mp,kl1,ij5)  =  ELM_p(mp,kl1,ij5)  + wst * amat_51
+             ELM_k(mp,kl1,ij5)  =  ELM_k(mp,kl1,ij5)  + wst * amat_51_k
 
-             ELM_p(mp,ij5,kl2)  =  ELM_p(mp,ij5,kl2)  + wst * amat_52
+             ELM_p(mp,kl2,ij5)  =  ELM_p(mp,kl2,ij5)  + wst * amat_52
 
-             ELM_p(mp,ij5,kl5)  =  ELM_p(mp,ij5,kl5)  + wst * amat_55
-             ELM_k(mp,ij5,kl5)  =  ELM_k(mp,ij5,kl5)  + wst * amat_55_k
-             ELM_n(mp,ij5,kl5)  =  ELM_n(mp,ij5,kl5)  + wst * amat_55_n
-             ELM_kn(mp,ij5,kl5) =  ELM_kn(mp,ij5,kl5) + wst * amat_55_kn
+             ELM_p(mp,kl5,ij5)  =  ELM_p(mp,kl5,ij5)  + wst * amat_55
+             ELM_k(mp,kl5,ij5)  =  ELM_k(mp,kl5,ij5)  + wst * amat_55_k
+             ELM_n(mp,kl5,ij5)  =  ELM_n(mp,kl5,ij5)  + wst * amat_55_n
+             ELM_kn(mp,kl5,ij5) =  ELM_kn(mp,kl5,ij5) + wst * amat_55_kn
 
-             ELM_p(mp,ij5,kl6)  =  ELM_p(mp,ij5,kl6)  + wst * amat_56
+             ELM_p(mp,kl6,ij5)  =  ELM_p(mp,kl6,ij5)  + wst * amat_56
 
-             ELM_p(mp,ij5,kl7)  =  ELM_p(mp,ij5,kl7)  + wst * amat_57
-             ELM_n(mp,ij5,kl7)  =  ELM_n(mp,ij5,kl7)  + wst * amat_57_n
-             ELM_k(mp,ij5,kl7)  =  ELM_k(mp,ij5,kl7)  + wst * amat_57_k
-             ELM_kn(mp,ij5,kl7) =  ELM_kn(mp,ij5,kl7) + wst * amat_57_kn
+             ELM_p(mp,kl7,ij5)  =  ELM_p(mp,kl7,ij5)  + wst * amat_57
+             ELM_n(mp,kl7,ij5)  =  ELM_n(mp,kl7,ij5)  + wst * amat_57_n
+             ELM_k(mp,kl7,ij5)  =  ELM_k(mp,kl7,ij5)  + wst * amat_57_k
+             ELM_kn(mp,kl7,ij5) =  ELM_kn(mp,kl7,ij5) + wst * amat_57_kn
 
-             ELM_p(mp,ij6,kl1)  =  ELM_p(mp,ij6,kl1)  + wst * amat_61
-             ELM_k(mp,ij6,kl1)  =  ELM_k(mp,ij6,kl1)  + wst * amat_61_k
+             ELM_p(mp,kl1,ij6)  =  ELM_p(mp,kl1,ij6)  + wst * amat_61
+             ELM_k(mp,kl1,ij6)  =  ELM_k(mp,kl1,ij6)  + wst * amat_61_k
 
-             ELM_p(mp,ij6,kl2)  =  ELM_p(mp,ij6,kl2)  + wst * amat_62
-             ELM_p(mp,ij6,kl5)  =  ELM_p(mp,ij6,kl5)  + wst * amat_65
-             ELM_n(mp,ij6,kl5)  =  ELM_n(mp,ij6,kl5)  + wst * amat_65_n
-             ELM_k(mp,ij6,kl5)  =  ELM_k(mp,ij6,kl5)  + wst * amat_65_k
-             ELM_kn(mp,ij6,kl5) =  ELM_kn(mp,ij6,kl5) + wst * amat_65_kn
+             ELM_p(mp,kl2,ij6)  =  ELM_p(mp,kl2,ij6)  + wst * amat_62
+             ELM_p(mp,kl5,ij6)  =  ELM_p(mp,kl5,ij6)  + wst * amat_65
+             ELM_n(mp,kl5,ij6)  =  ELM_n(mp,kl5,ij6)  + wst * amat_65_n
+             ELM_k(mp,kl5,ij6)  =  ELM_k(mp,kl5,ij6)  + wst * amat_65_k
+             ELM_kn(mp,kl5,ij6) =  ELM_kn(mp,kl5,ij6) + wst * amat_65_kn
 
-             ELM_p(mp,ij6,kl6)  =  ELM_p(mp,ij6,kl6)  + wst * amat_66
-             ELM_k(mp,ij6,kl6)  =  ELM_k(mp,ij6,kl6)  + wst * amat_66_k
-             ELM_n(mp,ij6,kl6)  =  ELM_n(mp,ij6,kl6)  + wst * amat_66_n
-             ELM_kn(mp,ij6,kl6) =  ELM_kn(mp,ij6,kl6) + wst * amat_66_kn
+             ELM_p(mp,kl6,ij6)  =  ELM_p(mp,kl6,ij6)  + wst * amat_66
+             ELM_k(mp,kl6,ij6)  =  ELM_k(mp,kl6,ij6)  + wst * amat_66_k
+             ELM_n(mp,kl6,ij6)  =  ELM_n(mp,kl6,ij6)  + wst * amat_66_n
+             ELM_kn(mp,kl6,ij6) =  ELM_kn(mp,kl6,ij6) + wst * amat_66_kn
 
-             ELM_p(mp,ij6,kl7)  =  ELM_p(mp,ij6,kl7)  + wst * amat_67
-             ELM_k(mp,ij6,kl7)  =  ELM_k(mp,ij6,kl7)  + wst * amat_67_k
-             ELM_n(mp,ij6,kl7)  =  ELM_n(mp,ij6,kl7)  + wst * amat_67_n
+             ELM_p(mp,kl7,ij6)  =  ELM_p(mp,kl7,ij6)  + wst * amat_67
+             ELM_k(mp,kl7,ij6)  =  ELM_k(mp,kl7,ij6)  + wst * amat_67_k
+             ELM_n(mp,kl7,ij6)  =  ELM_n(mp,kl7,ij6)  + wst * amat_67_n
 
-             ELM_p(mp,ij7,kl1)  =  ELM_p(mp,ij7,kl1)  + wst * amat_71
-             ELM_k(mp,ij7,kl1)  =  ELM_k(mp,ij7,kl1)  + wst * amat_71_k
+             ELM_p(mp,kl1,ij7)  =  ELM_p(mp,kl1,ij7)  + wst * amat_71
+             ELM_k(mp,kl1,ij7)  =  ELM_k(mp,kl1,ij7)  + wst * amat_71_k
 
-             ELM_p(mp,ij7,kl2)  =  ELM_p(mp,ij7,kl2)  + wst * amat_72
+             ELM_p(mp,kl2,ij7)  =  ELM_p(mp,kl2,ij7)  + wst * amat_72
 
-             ELM_p(mp,ij7,kl5)  =  ELM_p(mp,ij7,kl5)  + wst * amat_75
-             ELM_n(mp,ij7,kl5)  =  ELM_n(mp,ij7,kl5)  + wst * amat_75_n
-             ELM_k(mp,ij7,kl5)  =  ELM_k(mp,ij7,kl5)  + wst * amat_75_k
+             ELM_p(mp,kl5,ij7)  =  ELM_p(mp,kl5,ij7)  + wst * amat_75
+             ELM_n(mp,kl5,ij7)  =  ELM_n(mp,kl5,ij7)  + wst * amat_75_n
+             ELM_k(mp,kl5,ij7)  =  ELM_k(mp,kl5,ij7)  + wst * amat_75_k
 
-             ELM_p(mp,ij7,kl6)  =  ELM_p(mp,ij7,kl6)  + wst * amat_76
-             ELM_n(mp,ij7,kl6)  =  ELM_n(mp,ij7,kl6)  + wst * amat_76_n
+             ELM_p(mp,kl6,ij7)  =  ELM_p(mp,kl6,ij7)  + wst * amat_76
+             ELM_n(mp,kl6,ij7)  =  ELM_n(mp,kl6,ij7)  + wst * amat_76_n
 
-             ELM_p(mp,ij7,kl7)  =  ELM_p(mp,ij7,kl7)  + wst * amat_77
-             ELM_k(mp,ij7,kl7)  =  ELM_k(mp,ij7,kl7)  + wst * amat_77_k
-             ELM_n(mp,ij7,kl7)  =  ELM_n(mp,ij7,kl7)  + wst * amat_77_n
-             ELM_kn(mp,ij7,kl7) =  ELM_kn(mp,ij7,kl7) + wst * amat_77_kn
+             ELM_p(mp,kl7,ij7)  =  ELM_p(mp,kl7,ij7)  + wst * amat_77
+             ELM_k(mp,kl7,ij7)  =  ELM_k(mp,kl7,ij7)  + wst * amat_77_k
+             ELM_n(mp,kl7,ij7)  =  ELM_n(mp,kl7,ij7)  + wst * amat_77_n
+             ELM_kn(mp,kl7,ij7) =  ELM_kn(mp,kl7,ij7) + wst * amat_77_kn
 
            enddo
 
@@ -1697,27 +1744,26 @@ do ms=1, n_gauss
      enddo
    enddo
 
- enddo
-enddo
 
-do i=1,n_vertex_max*n_var*(n_order+1)
-
-  do j=1, n_vertex_max*n_var*(n_order+1)
-
-    in_fft =  ELM_p(1:n_plane,i,j)
+   do i_v = 1, n_var
+   do j_loc=1, n_vertex_max*n_var*(n_order+1)
+!       index_ij = n_var*(n_order+1)*(i-1) + n_var * (j-1) + 1
+!       i_loc = index_ij + i_v-1
+     i_loc = n_var*(n_order+1)*(i-1) + n_var * (j-1) + i_v 
+     in_fft =  ELM_p(1:n_plane,j_loc,i_v)
 #ifdef USE_FFTW
     call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
 #else
     call my_fft(in_fft, out_fft, n_plane)
 #endif
+    do m=1,(n_tor+1)/2
+
+      index_m = n_tor*(j_loc-1) + max(2*(m-1),1)
 
     do k=1,(n_tor+1)/2
 
-      index_k = n_tor*(i-1) + max(2*(k-1),1)
+        index_k = n_tor*(i_loc-1) + max(2*(k-1),1)
 
-      do m=1,(n_tor+1)/2
-
-        index_m = n_tor*(j-1) + max(2*(m-1),1)
 
         l = (k-1) + (m-1)
 
@@ -1759,32 +1805,23 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
     enddo
 
-  enddo
+    if (maxval(abs(ELM_n(1:n_plane,j_loc, i_v))) .ne. 0.d0) then
 
-enddo
-
-do i=1,n_vertex_max*n_var*(n_order+1)
-
-  do j=1, n_vertex_max*n_var*(n_order+1)
-
-  if (maxval(abs(ELM_n(1:n_plane,i,j))) .ne. 0.d0) then
-
-    in_fft =  ELM_n(1:n_plane,i,j)
+    in_fft =  ELM_n(1:n_plane,j_loc, i_v)
 #ifdef USE_FFTW
     call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
 #else
     call my_fft(in_fft, out_fft, n_plane)
 #endif
 
+      do m=1,(n_tor+1)/2
+        im = max(2*(m-1),1)
+        index_m = n_tor*(j_loc-1) + max(2*(m-1),1)
     
     do k=1,(n_tor+1)/2
 
-      index_k = n_tor*(i-1) + max(2*(k-1),1)
+        index_k = n_tor*(i_loc-1) + max(2*(k-1),1)
 
-      do m=1,(n_tor+1)/2
-
-        im = max(2*(m-1),1)
-        index_m = n_tor*(j-1) + max(2*(m-1),1)
 
         l = (k-1) + (m-1)
 
@@ -1827,31 +1864,25 @@ do i=1,n_vertex_max*n_var*(n_order+1)
     enddo
 
   endif
-  enddo
 
-enddo
+  if (maxval(abs(ELM_k(1:n_plane,j_loc, i_v))) .ne. 0.d0) then
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+    in_fft =  ELM_k(1:n_plane,j_loc, i_v)
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
-
-  if (maxval(abs(ELM_k(1:n_plane,i,j))) .ne. 0.d0) then
-
-    in_fft =  ELM_k(1:n_plane,i,j)
 #ifdef USE_FFTW
     call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
 #else
     call my_fft(in_fft, out_fft, n_plane)
 #endif
     
+    do m=1,(n_tor+1)/2
+
+     index_m = n_tor*(j_loc-1) + max(2*(m-1),1)
     do k=1,(n_tor+1)/2
 
       ik      = max(2*(k-1),1)
-      index_k = n_tor*(i-1) + max(2*(k-1),1)
+        index_k = n_tor*(i_loc-1) + max(2*(k-1),1)
 
-      do m=1,(n_tor+1)/2
-
-        index_m = n_tor*(j-1) + max(2*(m-1),1)
 
         l = (k-1) + (m-1)
 
@@ -1894,32 +1925,24 @@ do i=1,n_vertex_max*n_var*(n_order+1)
     enddo
 
   endif
-  enddo
 
-enddo
+  if (maxval(abs(ELM_kn(1:n_plane,j_loc, i_v))) .ne. 0.d0) then
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+    in_fft =  ELM_kn(1:n_plane,j_loc, i_v)
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
-
-  if (maxval(abs(ELM_kn(1:n_plane,i,j))) .ne. 0.d0) then
-
-    in_fft =  ELM_kn(1:n_plane,i,j)
 #ifdef USE_FFTW
     call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
 #else
     call my_fft(in_fft, out_fft, n_plane)
 #endif
     
-    do k=1,(n_tor+1)/2
-
-      ik      = max(2*(k-1),1)
-      index_k = n_tor*(i-1) + max(2*(k-1),1)
-
-      do m=1,(n_tor+1)/2
-
+    do m=1,(n_tor+1)/2
         im      = max(2*(m-1),1)
-        index_m = n_tor*(j-1) + max(2*(m-1),1)
+        index_m = n_tor*(j_loc-1) + max(2*(m-1),1)
+      do k=1,(n_tor+1)/2
+
+        ik      = max(2*(k-1),1)
+        index_k = n_tor*(i_loc-1) + max(2*(k-1),1)
 
         l = (k-1) + (m-1)
 
@@ -1965,6 +1988,9 @@ do i=1,n_vertex_max*n_var*(n_order+1)
   enddo
 
 enddo
+
+end do
+end do
 
 ELM = 0.5d0 * ELM
 

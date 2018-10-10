@@ -435,9 +435,6 @@ real*8     :: Z_imp, beta_imp, mu_imp
     mgi_phi_rotate  = mgi_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
   end if
 
-
-  !write(*,'(A,4e14.6)') ' pellet (R,Z) =', spi_R, spi_Z,spi_Vel_R/V_normalisation,spi_Vel_Z/V_normalisation
-  
   if (my_id == 0 .and. mod(index_now,20) == 0) then
 
     do i=1, 20 !n_spi
@@ -447,12 +444,11 @@ real*8     :: Z_imp, beta_imp, mu_imp
         write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, &
                                                    pellets(i)%spi_Vel_RxZ
         write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
+        write(*,*) "Pellet species = ", pellets(i)%spi_species
       end if
     end do
   end if
 
-  !call Integrals_3D(my_id, node_list,element_list,density,&
-        !density_in,density_out,pressure,pressure_in,pressure_out)
 
 return 
  

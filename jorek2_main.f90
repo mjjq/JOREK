@@ -1019,11 +1019,6 @@ required = 0
 
        endif
 
-#if (JOREK_MODEL == 501)
-       if (flag_adas) call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,&
-                                        density_out,pressure_tot,pressure_in,pressure_out)
-#endif
-
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
        if (using_spi == .false.) then
          call update_mgi(my_id,node_list,element_list)
@@ -1035,17 +1030,21 @@ required = 0
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)
  
-          t_now = t_now + tstep
+       t_now = t_now + tstep
 
-       else
-          if ( my_id == 0 ) then
-             write(*,*)
-             write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', iter_gmres, ' ITERATIONS. ABORTING <<<<<'
-             write(*,*)
-          end if
-          index_now = index_now - 1 ! Undo the time step
-          exit jstep_loop
+#if (JOREK_MODEL == 501)
+       if (flag_adas) call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,&
+                                        density_out,pressure_tot,pressure_in,pressure_out)
+#endif
+    else
+       if ( my_id == 0 ) then
+          write(*,*)
+          write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', iter_gmres, ' ITERATIONS. ABORTING <<<<<'
+          write(*,*)
        end if
+       index_now = index_now - 1 ! Undo the time step
+       exit jstep_loop
+    end if
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) then

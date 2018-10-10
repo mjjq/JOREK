@@ -240,11 +240,11 @@ module mgi_module
       else 
 
         if (present(species) .and. species == 0) then
-          rhon_source = rhon_source + (mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
-                        /  (V_mgi * mol_atom * 1.d20 * central_density * MASS_PROTON))  
+          rhon_source = mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
+                        /  (V_mgi * mol_atom * 1.d20 * central_density)
         else 
-          rhon_source = rhon_source + (mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
-                        * mass_gas /  (V_mgi * mol_atom * 1.d20 * central_density * central_mass * MASS_PROTON))
+          rhon_source = mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
+                        * mass_gas /  (V_mgi * mol_atom * 1.d20 * central_density * central_mass * MASS_PROTON)
         end if
       endif
 

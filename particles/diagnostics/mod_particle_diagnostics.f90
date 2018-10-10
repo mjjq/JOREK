@@ -52,7 +52,7 @@ function new_write_particle_diagnostics(filename, append, only) result(new)
   new%name = "WriteConstantsOfMotion"
   new%log = .true.
   if (present(append)) new%append = append
-  if (present(only)) allocate(new%only, source=only)
+  if (present(only)) allocate(new%only(1:size(only)), source=only)
 end function new_write_particle_diagnostics
 
 !> Action to calculate all of these values and write them to an HDF5 file

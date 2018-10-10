@@ -6,7 +6,9 @@ use mod_parameters, only: n_period, n_tor
 implicit none
 private
 public :: interp !< interp a specific harmonic in finite elements
+public :: interp_delta !< interp a specific harmonic in finite elements, of the deltas
 public :: interp_0 !< interp variable only, no derivatives at a specific position in domain
+public :: interp_0_delta !< interp variable only, no derivatives at a specific position in domain, of the deltas
 public :: interp_RZ !< Interpolate space only
 public :: interp_PRZ !< interp variable + pos at values or deltas
 public :: sincosperiod_moivre, mode_moivre !< public for regtesting, used by interp_PRZ
@@ -372,6 +374,49 @@ end do
 end subroutine interp
 
 
+!> subroutine calculates the interpolation within one element (i_elm) for a given position
+!> (s,t) in the local coordinates, of the deltas instead of the values
+pure subroutine interp_delta(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t, P_st, P_ss, P_tt)
+type (type_node_list),    intent(in)  :: node_list
+type (type_element_list), intent(in)  :: element_list
+integer,                  intent(in)  :: i_elm
+integer,                  intent(in)  :: i_var
+integer,                  intent(in)  :: i_harm
+real*8,                   intent(in)  :: s
+real*8,                   intent(in)  :: t
+real*8,                   intent(out) :: P, P_s, P_t, P_st, P_ss, P_tt
+
+! --- Local variables
+real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
+integer :: kv, iv, kf 
+
+call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)
+
+P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
+
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
+  do kf = 1, n_order+1       ! 4 basis functions
+
+#ifdef fullmhd
+    if (i_var == 456) then
+      ! TODO: what is the equivalent of Fprof_eq for deltas?
+    else
+#endif
+      P    = P    + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+      P_s  = P_s  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
+      P_t  = P_t  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
+      P_st = P_st + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
+      P_ss = P_ss + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
+      P_tt = P_tt + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
+#ifdef fullmhd
+    endif
+#endif
+  end do
+end do
+end subroutine interp_delta
+
+
 !> This subroutine interpolates some variables at a specific position within one element at a given position (s,t)
 pure subroutine interp_0(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P)
 type (type_node_list),    intent(in)  :: node_list
@@ -404,6 +449,42 @@ do kv = 1,n_vertex_max  ! 4 vertices
   end do
 end do
 end subroutine interp_0
+
+
+
+!> This subroutine interpolates some variables at a specific position within one element at a given position (s,t)
+!> of the deltas, not the values
+pure subroutine interp_0_delta(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P)
+type (type_node_list),    intent(in)  :: node_list
+type (type_element_list), intent(in)  :: element_list
+integer,                  intent(in)  :: i_elm
+integer,                  intent(in)  :: n_v, i_v(n_v)
+real*8,                   intent(in)  :: s, t, phi
+real*8,                   intent(out) :: P(n_v)
+
+real*8  :: H(4,4), ss, mode
+integer :: kv, iv, kf, m, i, i_harm, i_tor
+
+call basisfunctions(s,t,H)
+
+P = 0.d0
+
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
+  do kf = 1, n_order+1       ! 4 basis functions
+    ss  = element_list%element(i_elm)%size(kv,kf)
+    do i = 1, n_v
+      P(i)    = P(i)   + node_list%node(iv)%deltas(1,kf,i_v(i)) * ss * H(kv,kf)
+      do i_tor = 1, (n_tor-1)/2
+        i_harm = 2*i_tor
+        mode = i_tor * n_period
+        P(i)    = P(i)   + node_list%node(iv)%deltas(i_harm,kf,i_v(i))   * ss * H(kv,kf)   * cos(mode*phi)
+        P(i)    = P(i)   + node_list%node(iv)%deltas(i_harm+1,kf,i_v(i)) * ss * H(kv,kf)   * sin(mode*phi)
+      end do
+    end do
+  end do
+end do
+end subroutine interp_0_delta
 
 
 

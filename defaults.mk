@@ -51,9 +51,14 @@ ifeq ($(COMPILER_FAMILY), gnu)
     FLAGS  += -g -Og -ggdb -fno-lto
     FLAGS  += -Wunused-variable
     FFLAGS += -fcheck=all
-    FFLAGS += -ffpe-trap=invalid,zero,overflow -ftrapv
+    FLAGS  += -ffpe-trap=invalid,zero,overflow
+    FFLAGS += -ftrapv
     FFLAGS += -finit-real=snan -finit-integer=12345678
+    FFLAGS += -Wconversion
     F90FLAGS += -fimplicit-none
+  endif
+  ifeq ($(DEBUG), 2)
+    FFLAGS += -Wimplicit-interface -Wimplicit-procedure
   endif
 
   FFLAGS +=-J$(MODDIR)
@@ -84,7 +89,7 @@ ifeq ($(COMPILER_FAMILY), intel)
     FFLAGS += -check all,noarg_temp_created
     FFLAGS += -check bounds
     FFLAGS += -check uninit
-    FFLAGS += -init=snan -init=zero -init=arrays
+    FFLAGS += -init=snan -init=zero
     FFLAGS += -gen-interfaces -warn-interfaces
     F90FLAGS += -implicitnone
   endif
@@ -122,7 +127,7 @@ $(OBJDIR)/%.o:: $(1)%.cpp
 endef
 # Template for generating dependencies from source file
 define F90_D_TEMPLATE
-$(DEPDIR)/%.d: $(1)%.f90 | .mod/version.h
+$(DEPDIR)/%.d: $(1)%.f90 | $(MODDIR)/version.h
 	@echo "Generating dependencies for $$<"
 	@$(GCPP) -traditional-cpp -dI $$(DEFINES) $$(INCLUDES) $$< | util/makedepend $$< - $(DIRS) > $(DEPDIR)/$$(*F).d
 endef
@@ -208,9 +213,12 @@ Makefile.inc: ;
 %.f90: ;
 
 # Try to create .mod/version.h, but only overwrite it if the contents have changed
-.mod/version.h: FORCE
+$(MODDIR)/version.h:
 	@echo "Generate .mod/version.h"
-	@echo "#define RCS_VERSION '`git describe --always --dirty --abbrev 2> /dev/null`'" > $@.tmp
+	@rm -f $@.tmp
+	@echo "#define RCS_VERSION '`git describe --always --dirty --abbrev 2> /dev/null`'" >> $@.tmp
+	@echo "#define RCS_LABEL '`git log -1 --format="%s (%D)" 2> /dev/null | sed -e "s/'/''/g" `'" >> $@.tmp
+	@echo "#define RCS_TIME '`git log -1 --format="%ad" 2> /dev/null`'" >> $@.tmp
 	@echo "#define compile_command '$(FC)'" >> $@.tmp
 	@echo "#define compile_flags '$(FLAGS) $(FFLAGS) $(F90FLAGS) $(EXTRA_FLAGS)'" >> $@.tmp
 	@echo "#define compile_includes '$(INCLUDES)'" >> $@.tmp
@@ -222,6 +230,3 @@ Makefile.inc: ;
 	@echo "#define compile_modules '$(LOADEDMODULES)'" >> $@.tmp
 	@[ -f $@ ] && cmp --silent $@ $@.tmp || mv $@.tmp $@
 	-@rm -f $@.tmp
-
-# Force a rule depending on this to be run every time
-FORCE:

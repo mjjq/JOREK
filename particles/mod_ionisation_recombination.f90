@@ -10,7 +10,7 @@ public fields_interp_ne_Te
 contains
 
 !> Calculate new charge state at a specific density, temperature and timestep
-pure function new_charge(z, ad, electron_density, electron_temperature, timestep, ran2) result(z_new)
+function new_charge(z, ad, electron_density, electron_temperature, timestep, ran2) result(z_new)
 implicit none
 
 integer, intent(in)              :: z !< Old charge state
@@ -21,13 +21,13 @@ real*8, intent(in)               :: timestep !< Timestep in s
 real*8, intent(in), dimension(2) :: ran2 !< Random numbers to use to select a new charge or not
 integer :: z_new
 
-real*8 :: prob(2)
+real*8 :: prob(2), acd, scd
 
 z_new = z
 ! probabilities of recombination and ionisation events
-prob = 1.d0 - exp(-[ad%ACD%interp(z,   electron_density, electron_temperature), & ! rec
-                    ad%SCD%interp(z+1, electron_density, electron_temperature)] & ! ion
-                  * 10.d0**electron_density * timestep)
+call ad%ACD%interp(z,   electron_density, electron_temperature, acd)
+call ad%SCD%interp(z,   electron_density, electron_temperature, scd)
+prob = 1.d0 - exp(-[acd, scd] * 10.d0**electron_density * timestep)
 z_new = z_new + sum([-1, 1], mask=(prob .gt. ran2))
 
 end function new_charge

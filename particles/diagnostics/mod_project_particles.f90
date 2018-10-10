@@ -36,7 +36,7 @@ public prepare_mumps_par, sample_rhs !< public for testing reasons
 public DMUMPS_STRUC
 
 interface
-  pure function proj_f_interface(sim, group, particle)
+  function proj_f_interface(sim, group, particle)
     import particle_sim, particle_base
     type(particle_sim), intent(in) :: sim
     integer, intent(in) :: group

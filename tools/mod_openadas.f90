@@ -1,10 +1,10 @@
 !> module takes the OPEN-ADAS data to calculate the steady state (or time evolution) charge distribution
 !> and average charge state as a function of temperature
 module mod_openadas
+use mod_interp_splinear
 implicit none
 private
 public ADF11, ADF11_all, read_ADF11
-public L2Dinterp
 
 !> Custom data structure containing relevant fields from ADF11 format files (unresolved case!)
 type ADF11
@@ -15,8 +15,12 @@ type ADF11
   real*8, allocatable :: GRC(:,:,:) !< log10 of coefficient (parameters: d, T, z). Units:
   !< ACD, SCD: m3s-1 (for *CD ?) (converted from cm3s-1)
   !< PLT, PRB: Wm3 (for P* ?) (converted from Wcm3)
+  type(Fspline), allocatable :: GRCFspline (:) !< spline functions for coefficients at each charge state
 contains
-  procedure :: interp => GRC
+  procedure :: interp => GRC_spl
+  procedure :: interp_grad_T => dGRC_dT
+  procedure :: interp_grad_n => dGRC_dn
+  procedure :: interp_linear => GRC
 end type ADF11
 
 !> Compound datatype containing many type_ADF11
@@ -28,6 +32,7 @@ type ADF11_all
   type(ADF11) :: PLT !< Line power driven by excitation of dominant ions
   type(ADF11) :: PRB !< Continuum and line power driven by recombination and bremsstrahlung of dominant ions
   type(ADF11) :: PRC !< Line power due to charge transfer from thermal neutral hydrogen to dominant ions
+  real*8, dimension(:), allocatable :: ionisation_energy !< energy in eV required to ionize to a level, indexed by the new charge state (i.e. 1 to 74 for W), no interpolation needed
 end type ADF11_all
 !< Recombination data is given as recombining FROM (Z=1 to Z=74)
 !< Ionisation data is given as ionising TO (Z=1 up to Z=74)
@@ -37,9 +42,11 @@ contains
 !> Tries to read ACD, SCD, CCD, PLT, PRB, PRC coefficients
 !> if the files exist. Files of format acd$suffix.dat are read.
 !> Suffix is usually of the form 50_w, 96_li
+!> Try to also read the ionisation energy coefficients, but don't crash if they
+!> are not present.
 function read_adf11(suffix, directory) result(ad)
 use constants
-use mpi
+use mpi_mod
 character(len=*), intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li)
 character(len=*), intent(in), optional :: directory
 type(ADF11_all), target :: ad !< OpenAdas data type
@@ -49,7 +56,7 @@ integer :: i_ADF11
 character*3, dimension(1:6), parameter :: ADF11_filenames = (/"acd", "scd", "ccd", "plt", "prb", "prc"/)
 character*120 :: filename
 
-integer :: i, ierr, n_d, n_T, k, my_id
+integer :: i, ierr, n_d, n_T, k, my_id, q, i_n
 logical :: file_exists
 
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
@@ -65,11 +72,14 @@ endif
 do i_ADF11 = 1,size(ADF11_filenames,1)
   write(filename,"(A,A,A)") ADF11_filenames(i_ADF11), trim(suffix), '.dat'
   if (present(directory)) filename = trim(directory) // trim(filename)
-  inquire(file=filename, exist=file_exists)
-  if (.not. file_exists) cycle ! Skip this type of data
+  inquire(file=trim(filename), exist=file_exists)
+  if (.not. file_exists) then
+    write(*,*) "File not found for", filename
+    cycle ! Skip this type of data
+  end if
 
   if (my_id .eq. 0) write(*,"(A,A)",advance="no") "Reading data from ", trim(filename)
-  open(10,file=filename,status="old",iostat=ierr)
+  open(10,file=trim(filename),status="old",iostat=ierr)
   if (ierr .ne. 0) then
     write(*,*) my_id, " failed with code ", ierr
     cycle
@@ -88,7 +98,8 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   read(10,*)  a%n_z, n_d, n_T, a%izmin, a%izmax
   ad%n_z = a%n_z
   allocate(a%density(n_d), a%temperature(n_T), a%GRC(n_d,n_T,a%n_z))
-
+  allocate(a%GRCFspline(a%n_z))
+  
   read(10,*)
   read(10,*) a%density(:)
   ! Convert densities to log10 of m^-3 instead of cm^-3
@@ -102,6 +113,13 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   do i = a%izmin, a%izmax
     read(10,*)
     read(10,*) a%GRC(:,:,i)
+
+    call AllocFspline(a%GRCFspline(i),n_T,n_d)
+
+    a%GRCFspline(i)%xspline = a%temperature
+    a%GRCFspline(i)%ylinear = a%density
+
+    call ConstructFspline(a%GRCFspline(i),a%GRC(:,:,i)-6.d0)
   enddo
   close(10)
 
@@ -118,12 +136,79 @@ if (.not. (allocated(ad%ACD%density) .and. allocated(ad%SCD%density))) then
 else
   if (my_id .eq. 0) write(*,*) 'Done reading adas data for atomic number', ad%n_Z
 endif
+
+
+! Try to load the ionisation energies
+! try 2 cases, first the full suffix and then the stripped suffix
+! i.e. ion50_w.dat and ion_w.dat
+do i=1,3,2 ! full, strip
+  ! assume the suffix starts with 2 digits
+  write(filename,"(A,A,A)") 'ion', trim(suffix(i:len(suffix))), '.dat'
+  if (present(directory)) filename = trim(directory) // trim(filename)
+  inquire(file=trim(filename), exist=file_exists)
+  if (file_exists) then
+    open(10,file=trim(filename),status="old",iostat=ierr)
+    if (ierr .ne. 0) then
+      write(*,*) my_id, " failed with code ", ierr
+    else
+      allocate(ad%ionisation_energy(1:ad%n_Z))
+      do k=1,ad%n_Z
+        read(10,*) q, ad%ionisation_energy(k)
+        if (q + 1 .ne. k) then ! conversion from 0-based to 1-based indices for ionisation energies
+          write(*,*) 'Mismatch in detected energy levels, ', q+1, k
+          stop 1
+        end if
+      end do
+      write(*,*) "Read ionisation energies from ", trim(filename)
+      close(10)
+      exit ! the loop, we have found a file
+    endif
+  else
+    if (i .eq. 3) then
+      write(*,*) "Cannot find ionisation data file ", trim(filename), "not loading ionisation energies"
+    end if
+  end if
+end do
 end function read_adf11
 
 
 
+!> interpolation of log10 temperature gradient of GRC in density and temperature
+!> Loglog gradient!
+function dGRC_dT(a, density, temperature)
+class(ADF11), intent(in) :: a           !< ADF11 datatype
+real*8, intent(in)       :: density     !< log10 density in m^-3
+real*8, intent(in)       :: temperature !< log10 temperature in K
+real*8, dimension(a%n_Z) :: dGRC_dT !< Generalized Radiational Coefficient at this density and temperature
+integer                  :: i_z     !< Index of charge state
+
+! If GRC exists and we are looking for a Z that is nonzero
+if (allocated(a%GRC)) then
+  dGRC_dT = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,1)
+else
+  dGRC_dT = 0.d0
+endif
+end function dGRC_dT
+
+!> interpolation of log10 density gradient of GRC in density and temperature.
+!> Loglog gradient!
+function dGRC_dn(a, density, temperature)
+class(ADF11), intent(in) :: a           !< ADF11 datatype
+real*8, intent(in)       :: density     !< log10 density in m^-3
+real*8, intent(in)       :: temperature !< log10 temperature in K
+real*8, dimension(a%n_Z) :: dGRC_dn !< Generalized Radiational Coefficient at this density and temperature
+integer                  :: i_z     !< Index of charge state
+
+! If GRC exists and we are looking for a Z that is nonzero
+if (allocated(a%GRC)) then
+  dGRC_dn = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,2)
+else
+  dGRC_dn = 0.d0
+endif
+end function dGRC_dn
+
 !> interpolation of log10 values of GRC in density and temperature
-pure function GRC(a, z, density, temperature)
+function GRC(a, z, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)            :: density     !< log10 density in m^-3
 real*8, intent(in)            :: temperature !< log10 temperature in K
@@ -138,49 +223,35 @@ else
 endif
 end function GRC
 
+!> interpolation of log10 values of GRC in density and temperature
+subroutine GRC_spl(a, z, density, temperature, GRC_out, dGRC_dT_out, dGRC_dn_out)
+class(ADF11), intent(in)      :: a           !< ADF11 datatype
+real*8, intent(in)            :: density     !< log10 density in m^-3
+real*8, intent(in)            :: temperature !< log10 temperature in K
+integer, intent(in)           :: z !< index in a%GRC(:,:,z) (is ionisation level or ionisation level - 1, 1:n_z)
+real*8, intent(out), optional :: GRC_out !< Generalized Radiational Coefficient at this density and temperature
+real*8, intent(out), optional :: dGRC_dT_out !< Temperature gradient of GRC
+real*8, intent(out), optional :: dGRC_dn_out !< Density gradient of GRC
+real*8                        :: GRC, dGRC_dT, dGRC_dn !< Local generalized Radiational Coefficient
 
 
-!> Linear 2D interpolation on a rectangular grid
-!> x2y1       xy1    x1y1
-!>  *----------*------*
-!>             |
-!>             * xy
-!>             |
-!>             |
-!>  *----------*------*
-!> x2y2       xy2    x1y2
-!>
-!> Calculates the interpolation using two intermediate values
-!> fxy1 and fxy2.
-!> Equations used are:
-!> \[fx1  = \frac{f_{11}-f_{21}}{x_1-x_2} (x-x_1) + f_{11}\]
-!> \[fx2  = \frac{f_{12}-f_{22}}{x_1-x_2} (x-x_1) + f_{12}\]
-!> \[fout = \frac{f_{x1}-f_{x2}}{y_1-y_2} (y-y_1) + f_{x1}\]
-!> x1,2 and y1,2 are chosen in order of closeness
-!> This algorithm can also be used for extrapolation
-pure function L2Dinterp(tx,ty,f,x,y) result(fout)
-real*8, intent(in), dimension(:)                 :: tx !< Grid points in x
-real*8, intent(in), dimension(:)                 :: ty !< Grid points in y
-real*8, intent(in), dimension(size(tx),size(ty)) :: f !< Function values at these points
-real*8, intent(in)  :: x, y !< Points at which to interpolate
-real*8              :: fout
+! If GRC exists and we are looking for a Z that is nonzero
+if (allocated(a%GRC) .and. z .le. ubound(a%GRC,3) .and. z .ge. lbound(a%GRC,3)) then
+  call SL2Dinterp(a%GRCFspline(z),temperature,density,fout=GRC,dfout_dx=dGRC_dT,dfout_dy=dGRC_dn)
+  GRC     = 10.d0**GRC ! Converting from log10
+  dGRC_dT = dGRC_dT * GRC / (10.0**temperature) ! Converting from loglog, log10 terms cancel
+  dGRC_dn = dGRC_dn * GRC / (10.0**density) ! Converting from loglog, log10 terms cancel
+else
+  GRC     = 0.d0
+  dGRC_dT = 0.d0
+  dGRC_dn = 0.d0
+endif
 
-integer :: ix1, iy1 !< Index of closest point
-integer :: ix2, iy2 !< Index of other (usually next closest) point
-real*8  :: fx1, fx2 ! Temporary variables
-ix1 = minloc(abs(tx - x), dim=1)
-if (x .ge. tx(ix1)) ix2 = ix1 + 1 ! find other index
-if (x .lt. tx(ix1)) ix2 = ix1 - 1
-if (ix2 .gt. size(tx)) ix2 = size(tx) - 1 ! if it does not exist, extrapolate
-if (ix2 .lt. 1       ) ix2 = 2
-iy1 = minloc(abs(ty - y), dim=1)
-if (y .ge. ty(iy1)) iy2 = iy1 + 1
-if (y .lt. ty(iy1)) iy2 = iy1 - 1
-if (iy2 .gt. size(ty)) iy2 = size(ty) - 1
-if (iy2 .lt. 1       ) iy2 = 2
+if (present(GRC_out)) GRC_out = GRC
+if (present(dGRC_dT_out)) dGRC_dT_out = dGRC_dT
+if (present(dGRC_dT_out)) dGRC_dn_out = dGRC_dn
 
-fx1  = (f(ix1,iy1) - f(ix2,iy1))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy1)
-fx2  = (f(ix1,iy2) - f(ix2,iy2))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2)
-fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (y - ty(iy1)) + fx1
-end function L2Dinterp
+end subroutine GRC_spl
+
+
 end module mod_openadas

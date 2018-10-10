@@ -67,6 +67,10 @@ module hdf5_io_module
 
   !----------------------------------------
   ! Open or create HDF5 file
+  ! Takes a property list as optional argument, which can be used to set parameters
+  ! for the file opening or access, such as block size, offsets, buffering,
+  ! parallel IO and data alignment.
+  ! See https://support.hdfgroup.org/HDF5/doc1.6/Files.html for more information.
   !----------------------------------------
   subroutine HDF5_open_or_create(filename,plist,file_id,ierr)
     use mpi

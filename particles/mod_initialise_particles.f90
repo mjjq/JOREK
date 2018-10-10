@@ -783,7 +783,7 @@ local_Te = local_T_e*2d0 ! P(1) contains the electron temperature, reverse previ
 if (local_Ne .le. 0.d0 .or. local_Te .le. 0.d0) then
   q_coronal = 0
 else
-  call cor%interp(log10(local_Ne),log10(local_Te),q,DUMMY_REAL)
+  call cor%interp(log10(local_Ne),log10(local_Te),z_out=q)
   q_coronal = nint(q,1)
 endif
 end function
@@ -814,7 +814,7 @@ real*8 :: v_out(3)
 real*8 :: R, R_s, R_t, Z, Z_s, Z_t, Psi, Psi_R, Psi_Z, B(3)
 real*8, parameter :: r_hat(3) = [1.d0, 0.d0, 0.d0]
 real*8 :: background_kbT, background_Kelvin, background_density, V_thermal
-real*8 :: DUMMY_REAL, Z_coronal, t_norm
+real*8 :: Z_coronal, t_norm
 
 t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
@@ -861,7 +861,7 @@ do i=1,size(particles)
       if (background_density .le. 0.d0 .or. background_kelvin .le. 0.d0) then
         Z_coronal = 0.d0
       else
-        call cor%interp(log10(background_density),log10(background_kelvin),Z_coronal,DUMMY_REAL)
+        call cor%interp(log10(background_density),log10(background_kelvin),z_out=Z_coronal)
       endif
     end if
 

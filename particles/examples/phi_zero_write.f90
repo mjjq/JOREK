@@ -55,8 +55,9 @@ do i=1,size(sim_in%groups)
         ! Calculate magnetic field to get GC coordinate
         call sim_in%fields%calc_EBpsiU(0.d0, particles(j)%i_elm, &
             particles(j)%st, particles(j)%x(3), E, B, psi, U)
-        call copy_particle_base(kinetic_leapfrog_to_gc(sim_in%fields%node_list, sim_in%fields%element_list, particles(j), B, sim_in%groups(i)%mass), &
+        call copy_particle_base(kinetic_leapfrog_to_gc(sim_in%fields%node_list, sim_in%fields%element_list, particles(j), E, B, sim_in%groups(i)%mass, dt=0.d0), &
             sim_out%groups(i)%particles(j))
+        ! dt above is not per-se the right dt for this particle (since we read it from a file). Use 0 instead
       end if
     end do
   type is (particle_gc)

@@ -71,14 +71,15 @@ do i=1,size(sim%groups,1)
     select type (p => sim%groups(i)%particles)
     type is (particle_kinetic_leapfrog)
       do j=1,size(p)
-        if (p(j)%i_elm .eq. 0) then
+        if (p(j)%i_elm .le. 0) then
           call copy_particle_base(p(j), particles(j))
         else
           ! Calculate magnetic field to get GC coordinate
           call sim%fields%calc_EBpsiU(0.d0, p(j)%i_elm, &
               p(j)%st, p(j)%x(3), E, B, psi, U)
-          call copy_particle_base(kinetic_leapfrog_to_gc(sim%fields%node_list, sim%fields%element_list, &
-              p(j), B, sim%groups(i)%mass), particles(j))
+          call copy_particle_base(kinetic_leapfrog_to_gc(sim%fields%node_list, sim%fields%element_list, p(j), E, B, sim%groups(i)%mass, dt=0.d0), &
+              particles(j))
+          ! dt above is not per-se the right dt for this particle (since we read it from a file). Use 0 instead
         end if
       end do
     type is (particle_gc)

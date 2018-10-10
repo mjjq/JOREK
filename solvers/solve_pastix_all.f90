@@ -141,12 +141,7 @@ call clck_time(t1)
 call clck_ldiff(t0,t1,tsecond)
 if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecond
 
-
-!$omp parallel default(none) shared(pastix_nthrd)    
-pastix_nthrd = omp_get_num_threads()
-!$omp end parallel
-
-if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ',pastix_nthrd 
+call pastix_init_num_threads(my_id)
 
 if (.not. pastix_initialised) then
 
@@ -205,6 +200,7 @@ endif
 
 if (.not. pastix_analysed) then
 
+  pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd                       ! number of threads
   pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
   pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
  
@@ -240,6 +236,7 @@ endif
 
 call clck_time(t0)
 
+pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd
 pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
 pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
 #ifdef WORLDWAR2

@@ -5,7 +5,8 @@ use tr_module
 use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
+use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, &
+    pastix_maxthrd
 use vacuum
 use wsmp_module,   only: use_wsmp
 
@@ -80,7 +81,8 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
-                voltage_coils, vert_FB_amp, find_pf_coil_currents
+                voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
+                pastix_maxthrd
 
 if (my_id .eq. 0) then
 

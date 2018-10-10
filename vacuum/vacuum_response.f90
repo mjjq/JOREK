@@ -1958,6 +1958,7 @@ module vacuum_response
   subroutine init_wall_currents(my_id, resistive_wall)
     
     use nodes_elements, only: bnd_node_list, node_list
+    use phys_module, only: index_now, index_start, nstep
     
     implicit none
     
@@ -1969,7 +1970,7 @@ module vacuum_response
     real*8, allocatable :: psibnd_vec(:)    ! Vector of Psi values at the boundary
     real*8, allocatable :: dpsibnd_vec(:)   ! Vector of deltaPsi values at the boundary
     real*8, allocatable :: wall_and_coil_curr(:)
-    integer             :: k
+    integer             :: k, k2
     
     call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
     
@@ -2003,6 +2004,18 @@ module vacuum_response
     
     call write_wall_vtk(0, resistive_wall, my_id)
     deallocate( psibnd_vec, dpsibnd_vec )
+    
+    ! --- Initialize diagnostic coil currents (for plot_live_data)
+    if ( resistive_wall .and. (sr%n_diag_coils > 0) ) then
+      if ( .not. allocated(diag_coil_curr) ) then
+        allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
+        diag_coil_curr(:,:) = 0.d0
+      end if
+      do k = 1, sr%n_diag_coils
+        k2 = k + sr%ind_start_diag_coils - 1
+        diag_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2,:) * wall_curr(:))
+      end do
+    end if
     
     if ( vacuum_debug .and. (my_id == 0) ) write(*,*) 'Wall currents initialized.'
     wall_curr_initialized = .true.

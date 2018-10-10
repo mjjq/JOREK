@@ -28,7 +28,11 @@ subroutine pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_p
                           particle_source, volume_source)
 
 implicit none
-
+#if _OPENMP >= 201511
+!$omp declare simd uniform(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
+!$omp                           pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
+!$omp                          R,Z, r0, T0, central_density, pellet_particles, pellet_density, pellet_volume)
+#endif
 !input variables
 real*8 :: R, Z, psi, phi            ! position whereh the particle source will be calculated
 real*8 :: T0, r0                    ! local temperature and mass density (JOREK normalised)

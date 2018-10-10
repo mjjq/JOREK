@@ -12,12 +12,13 @@ public proj_Lz
 contains
 
 !> Project the particle radiated power density L_z (W/atom)
-pure function proj_Lz(sim, group, particle)
+function proj_Lz(sim, group, particle)
   type(particle_sim), intent(in) :: sim
   integer, intent(in) :: group
   class(particle_base), intent(in) :: particle
   real*8 :: proj_Lz
   real*8 :: n_e, T_e, log_T_e, log_n_e
+  real*8 :: prb, plt, prc
   integer :: q
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
   real*8 :: n_n
@@ -40,10 +41,12 @@ pure function proj_Lz(sim, group, particle)
 
   q = particle_get_q(particle)
   ! From here on out we have a q
-  proj_Lz      = (sim%groups(group)%ad%PRB%interp(q, log_n_e, log_T_e) + &
-                 sim%groups(group)%ad%PLT%interp(q, log_n_e, log_T_e)) * n_e
+  call sim%groups(group)%ad%PRB%interp(q, log_n_e, log_T_e, prb)
+  call sim%groups(group)%ad%PLT%interp(q, log_n_e, log_T_e, plt)
+  proj_Lz      = (prb + plt) * n_e
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-  proj_Lz      = proj_Lz + sim%groups(group)%ad%PRC%interp(q, log_n_e, log_T_e) * n_n
+  call sim%groups(group)%ad%PRC%interp(q, log_n_e, log_T_e, prc)
+  proj_Lz      = proj_Lz + prc * n_n
 #endif
 end function proj_Lz
 end module mod_radiation

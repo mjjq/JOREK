@@ -664,7 +664,7 @@ do ms=1, n_gauss
          ! Calculate the ionization potential energy and its derivative wrt. temperature
          E_ion     = 0.
          dE_ion_dT = 0.
-         E_ion_bg  = 0.!13.6 ! Hydrogen and deterium seem to have different ionization energy, 
+         E_ion_bg  = 13.6 ! Hydrogen and deterium seem to have different ionization energy, 
                           ! but the difference is of the next order.
 
          do ion_i=1, imp_adas(1)%n_Z

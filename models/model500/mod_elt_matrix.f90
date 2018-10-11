@@ -19,6 +19,7 @@ use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
 use mgi_module
 use vacuum, only: freeb_fact
+use mod_bootstrap_functions
 
 implicit none
 
@@ -55,6 +56,9 @@ real*8     :: u, u_x, u_y, u_p, u_s, u_t, u_ss, u_st, u_tt, u_xx, u_xy, u_yy
 real*8     :: w, w_x, w_y, w_p, w_s, w_t, w_ss, w_st, w_tt, w_xx, w_xy, w_yy
 real*8     :: rho, rho_x, rho_y, rho_s, rho_t, rho_p, rho_ss, rho_st, rho_tt, rho_xx, rho_xy, rho_yy, rho_hat, rho_x_hat, rho_y_hat
 real*8     :: T, T_x, T_y, T_s, T_t, T_p, T_ss, T_st, T_tt, T_xx, T_xy, T_yy
+real*8     :: Ti0, Ti0_x, Ti0_y, Te0, Te0_x, Te0_y
+real*8     :: zTi, zTi_x, zTi_y, zTe, zTe_x, zTe_y, zn_x, zn_y
+real*8	   :: Jb_0 , Jb
 real*8     :: P0, P0_x, P0_y, P0_s, P0_t, P0_ss, P0_st, P0_tt, P0_p, P0_xx, P0_xy, P0_yy
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T, eta_Sp, detaSp_dT
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
@@ -70,8 +74,8 @@ real*8     :: dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
 real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
 !=======================================
 real*8     :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
-real*8     :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
-real*8     :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
+real*8     :: dn_dpsi(n_gauss,n_gauss),dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
+real*8     :: dT_dpsi(n_gauss,n_gauss),dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
 real*8     :: w00_xx, w00_yy 
 !======================================= NEO
 real*8     :: amat_27, Btheta2
@@ -224,10 +228,10 @@ do ms=1, n_gauss
             !current_source(ms,mt) = 0.d0
 
        call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
-                    dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+                    dn_dpsi(ms,mt),dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
        call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
-                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+                        dT_dpsi(ms,mt),dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
   enddo
 enddo
 
@@ -522,6 +526,45 @@ do ms=1, n_gauss
          psi_norm = 2.d0 - psi_norm
        endif
      endif
+     
+     ! --- Bootstrap current 
+
+     if (bootstrap) then
+       ! --- Full Sauter formula
+       Ti0   = T0   / 2.d0 ; Te0	= T0   / 2.d0
+       Ti0_x = T0_x / 2.d0 ; Te0_x = T0_x / 2.d0
+       Ti0_y = T0_y / 2.d0 ; Te0_y = T0_y / 2.d0
+       call bootstrap_current(minRad, bigR, y_g(ms,mt),             &
+                              R_axis,   Z_axis,   psi_axis,         &
+                              R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+		  	      ps0, ps0_x, ps0_y,                    &
+	 		      r0,  r0_x,  r0_y,                     &
+	 		      Ti0, Ti0_x, Ti0_y,                    &
+	 		      Te0, Te0_x, Te0_y,                  Jb)
+       
+       
+       ! --- Full Sauter formula for initial profiles
+       
+       zTi   = eq_zTe(ms,mt)  ! Dividing by 2.0 not necessary because it's been done above already            
+       zTi_x = dT_dpsi(ms,mt) * ps0_x / 2.d0
+       zTi_y = dT_dpsi(ms,mt) * ps0_y / 2.d0
+       zTe   = zTi  
+       zTe_x = zTi_x
+       zTe_y = zTi_y
+       zn_x  = dn_dpsi(ms,mt) * ps0_x
+       zn_y  = dn_dpsi(ms,mt) * ps0_y
+       call bootstrap_current(minRad, bigR, y_g(ms,mt) ,            &
+                              R_axis,   Z_axis,   psi_axis,         &
+                              R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+                              ps0, ps0_x, ps0_y,		      &
+                              eq_zne(ms,mt),  zn_x,  zn_y,	      &
+                              zTi, zTi_x, zTi_y,		      &
+                              zTe, zTe_x, zTe_y,		    Jb_0)
+       ! --- Subtract the initial equilibrium part
+       Jb = Jb - Jb_0
+     else
+       Jb = 0.d0
+     endif
 
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
@@ -705,7 +748,7 @@ do ms=1, n_gauss
 !###################################################################################################
 
 
-           rhs_ij_1 =   v * (eta_T  * zj0 - eta_T_0 * current_source(ms,mt))/ BigR  * xjac * tstep &
+           rhs_ij_1 =   v * (eta_T  * zj0 - eta_T_0 * current_source(ms,mt) - Jb )/ BigR  * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
@@ -1011,7 +1054,7 @@ do ms=1, n_gauss
                            + v * tauIC * rho /(r0**2 * BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac         * theta * tstep 
 
 
-                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt)) / BigR * xjac * theta * tstep &
+                 amat_16 = - deta_dT * v * T * (zj0 - current_source(ms,mt) - Jb ) / BigR * xjac * theta * tstep &
  
                         + v * tauIC/(r0*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s) * theta * tstep &
                         + v * tauIC/(r0*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)* theta * tstep &

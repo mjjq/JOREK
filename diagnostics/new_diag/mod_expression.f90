@@ -145,9 +145,9 @@ module mod_expression
     call add(exprs_all, 'Vstar_i     ', 'Ion Diamagnetic Velocity                              ')
     call add(exprs_all, 'ki_neo      ', 'Neoclassical Heat Diffusivity                         ')
     call add(exprs_all, 'mu_neo      ', 'Neoclassical Friction Coefficient                     ')
-#if JOREK_MODEL == 400
     call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
     call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
 #if JOREK_MODEL == 500
@@ -761,6 +761,29 @@ module mod_expression
           Ti0_Z     = ( - R_t * Ti0_s  + R_s * Ti0_t ) / xjac
           Te0_R     = (   Z_t * Te0_s  - Z_s * Te0_t ) / xjac
           Te0_Z     = ( - R_t * Te0_s  + R_s * Te0_t ) / xjac
+#else
+          ! --- Set electron and ion temperatures to T/2 for diagnostic purposes
+          Te0     = T0     / 2.d0
+          Te0_s   = T0_s   / 2.d0
+          Te0_t   = T0_t   / 2.d0
+          Te0_st  = T0_st  / 2.d0
+          Te0_ss  = T0_ss  / 2.d0
+          Te0_tt  = T0_tt  / 2.d0
+          Te0_p   = T0_p   / 2.d0
+          Te0_pp  = T0_pp  / 2.d0
+          Te0_R   = T0_R   / 2.d0
+          Te0_Z   = T0_Z   / 2.d0
+
+          Ti0     = T0     / 2.d0
+          Ti0_s   = T0_s   / 2.d0
+          Ti0_t   = T0_t   / 2.d0
+          Ti0_st  = T0_st  / 2.d0
+          Ti0_ss  = T0_ss  / 2.d0
+          Ti0_tt  = T0_tt  / 2.d0
+          Ti0_p   = T0_p   / 2.d0
+          Ti0_pp  = T0_pp  / 2.d0
+          Ti0_R   = T0_R   / 2.d0
+          Ti0_Z   = T0_Z   / 2.d0
 #endif
           T0_RR    = (T0_ss * Z_t**2 - 2.d0*T0_st * Z_s*Z_t + T0_tt * Z_s**2 &
                       + T0_s * (Z_st*Z_t - Z_tt*Z_s )                                 &
@@ -912,7 +935,7 @@ module mod_expression
             end if
           end if
           
-#if JOREK_MODEL == 400
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
           call bootstrap_current_rhs(BigR, 0.0, eq%R_axis, eq%psi_axis, eq%psi_bnd, ps0, ps0_R,    &
             ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
 #else
@@ -1130,13 +1153,14 @@ module mod_expression
                 
               case ( 'mu_neo' )
                 res = mu_neo / fact_time
-#if JOREK_MODEL == 400
+                
               case ( 'T_e' )
                 res = Te0 * fact_T
-              
+                
               case ( 'T_i' )
                 res = Ti0 * fact_T
-              
+                
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
               case ( 'J_bootstrap' )
                 res = J_boot ! ### check if no normalization needed
 #endif

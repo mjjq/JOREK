@@ -19,5 +19,42 @@ module mpi_mod
 #ifdef INCLUDE_MPIFH
   include 'mpif.h'
 #endif
-
+  !> Number of mpi tasks per node. 
+  !> Will be determined by calling get_tasks_per_node.
+  integer, private :: mpi_tasks_per_node = -1 
+  
+  contains
+  
+  !> Returns the number of MPI tasks per node.
+  !! The number of tasks is determined at the first call to this function,
+  !! and cached into the mpi_tasks_per_node module variable.
+  !! The first call has a collective communication, therefore must be called by every task.
+  integer function get_tasks_per_node()
+    integer :: comm, ierr, myrank
+    if (mpi_tasks_per_node < 0) then
+      ! First call.
+#if MPI_VERSION >= 3
+      ! We create a shared memory communicator, and count the number of tasks in it.
+      call MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, comm, ierr)
+      call MPI_Comm_size(comm, mpi_tasks_per_node, ierr)
+      call MPI_Comm_free(comm, ierr)
+#else
+      ! MPI_COMM_TYPE_SHARED is only available since MPI 3.0
+      ierr = 1
+#endif
+      if (ierr.ne.0 .or. mpi_tasks_per_node < 1) then
+        ! We set a safe default in case there was an error
+        mpi_tasks_per_node = 1
+        call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ierr)
+        if (myrank == 0) then
+          write(*,*) 'Could not determine the number of MPI tasks per node.'
+          write(*,*) 'This information would be used to limit the number of PaStiX threads per node.'
+          write(*,*) 'In case you are using pastix_maxthrd, then you should compile with MPI 3,'
+          write(*,*) 'otherwise you can ignore this message.'
+        endif
+      endif
+    endif
+    get_tasks_per_node = mpi_tasks_per_node
+  end function get_tasks_per_node
+  
 end module mpi_mod

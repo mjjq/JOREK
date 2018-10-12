@@ -131,7 +131,7 @@ program JOREK2
   real*8                   :: psi_lim, R_lim, Z_lim
   real*8                   :: t_matrix, t_send, t_solve
   type(clcktype)           :: t_itstart, t0, t1
-  real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis, minRad
+  real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis
   real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
   integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint(2)
@@ -864,7 +864,7 @@ required = 0
     ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
     minRad = 0.0
     if (bootstrap) then
-      call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+      call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd)
       call bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
     endif
     
@@ -898,13 +898,13 @@ required = 0
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
 
        call construct_matrix_murge(my_id, node_list, element_list, bnd_node_list, local_elms,      &
-    	 n_local_ELms, xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,         &
+    	 n_local_ELms, xpoint, xcase, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,                 &
          Z_xpoint, psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, mpi_comm_trans, my_id_trans,       &
          n_cpu_trans, solve_only)
     else
 
        call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),                  &
-         index_max(my_id+1), xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,   &
+         index_max(my_id+1), xpoint, xcase, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,           &
          Z_xpoint, psi_xpoint)
     endif
     

@@ -266,7 +266,7 @@ module exec_commands
     write(*,*)
     
     ! --- Load the restart file
-    call import_restart(node_list, element_list, file_name, rst_format, ierr)
+    call import_restart(node_list, element_list, file_name, rst_format, ierr, .true.)
     if ( ierr /= 0 ) return
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
     

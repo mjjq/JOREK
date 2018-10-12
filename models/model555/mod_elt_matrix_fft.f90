@@ -16,7 +16,7 @@ contains
   !------------------------------------------------------------------------------------------------------------------------------
   !------------------------------------------------------------------------------------------------------------------------------
   !------------------------------------------------------------------------------------------------------------------------------
-  subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
+  subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
   ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t)
 
     ! --- Modules
@@ -71,7 +71,7 @@ contains
     ! --- Routine variables (Xpoint and axis)
     logical    :: xpoint2
     integer    :: xcase2
-    real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
+    real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
     
     ! --- Integration weight
     real*8     :: wst
@@ -123,7 +123,7 @@ contains
 
     	  call ELM_build_neutral_variables(element, nodes, ms, mt, i_plane)
           
-    	  call ELM_build_diffusivities_and_sources        (element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, i_plane)
+    	  call ELM_build_diffusivities_and_sources        (element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, i_plane)
           call ELM_build_neutral_diffusivities_and_sources(element, nodes, xpoint2, xcase2,         R_axis, Z_axis, psi_axis, psi_bnd,           Z_xpoint, i_plane)
 
     	  ! --- Now the equations, first the RHS
@@ -308,7 +308,7 @@ end module mod_elt_matrix_fft
 module mod_elt_matrix
 contains
 
-  subroutine element_matrix(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
+  subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
   !--------------------------------------------------------------------------
   ! This is just a wrapper to the real routine since I combined both into one
   !--------------------------------------------------------------------------
@@ -323,12 +323,12 @@ contains
 
     integer    :: xcase2
     logical    :: xpoint2
-    real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
+    real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
     real*8, dimension (:,:), allocatable  :: ELM
     real*8, dimension (:)  , allocatable  :: RHS
     integer, intent(in) 	      :: tid
 
-    call element_matrix_fft(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
+    call element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
       thread_struct(tid)%ELM_p, thread_struct(tid)%ELM_n, thread_struct(tid)%ELM_k, thread_struct(tid)%ELM_kn, &
       thread_struct(tid)%RHS_p, thread_struct(tid)%RHS_k,  thread_struct(tid)%eq_g, thread_struct(tid)%eq_s, &
       thread_struct(tid)%eq_t, thread_struct(tid)%eq_p, thread_struct(tid)%eq_ss, thread_struct(tid)%eq_st, &

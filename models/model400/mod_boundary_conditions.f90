@@ -61,11 +61,12 @@ contains
 
     use data_structure
     use global_distributed_matrix
+    use vacuum, ONLY: is_freebound
     use phys_module, only: F0, GAMMA, freeboundary, tokamak_device,                  &
                            RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ,    &
                            psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ,            &
 			   t_now, RMP_start_time, tstep, RMP_har_cos, RMP_har_sin,   &
-                           RMP_growth_rate, RMP_ramp_up_time
+                           RMP_growth_rate, RMP_ramp_up_time, T_min
     USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN,     &
          use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
          MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
@@ -107,7 +108,7 @@ contains
     integer :: loop_nbr, loop, cnt, cnt_prod
     integer :: ierr
     logical :: is_local, only_count
-    logical :: apply_dirichlet, apply_on_psi, on_private, on_inner, on_inner_or_private
+    logical :: apply_dirichlet, apply_on_psi, apply_on_current, on_private, on_inner, on_inner_or_private
 
     ! --- RMP parameters
     real*8, allocatable	:: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
@@ -162,6 +163,7 @@ contains
       only_count = .false.
     end if
 
+    ! --- Main loop over MURGE (if used)
     do loop = 1, loop_nbr
 
 #ifdef USE_MURGE
@@ -192,7 +194,7 @@ contains
           ! --- We only care about boundary elements
           if (node_list%node(inode)%boundary .ne. 0) then
 
-            call construct_variables(node_list%node(inode), R_xpoint, Z_xpoint)
+            call construct_variables(node_list%node(inode), R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
 	    
 	    do i_tor=1, n_tor
 
@@ -206,6 +208,7 @@ contains
                   .or. (node_list%node(inode)%boundary .eq. 4) &
                   .or. (node_list%node(inode)%boundary .eq. 9)) then
 		      
+		  ! --- Which side is this? 2 => d/ds, 3 => d/dt
 		  side = 2
 
                   ! ---------------------------------------------
@@ -227,18 +230,21 @@ contains
 		  apply_dirichlet = .false.
 		  ! --- Determine if we need to apply condition on psi (we don't want to overwrite RMPs)
 		  apply_on_psi = .false.
-                  if (k_var .eq. 1) then
+                  if ((k_var .eq. 1) .and. (.not. is_freebound(i_tor,k_var))) then
                     if  		      (i_tor .eq. 1)	         apply_on_psi = .true.
                     if ( (.not. RMP_on) .and. (i_tor .ge. 2 )	       ) apply_on_psi = .true.
                     if ( (RMP_on)	.and. (i_tor .lt. RMP_har_cos) ) apply_on_psi = .true.
                     if ( (RMP_on)	.and. (i_tor .gt. RMP_har_sin) ) apply_on_psi = .true.
 		  endif
+		  
+		  apply_on_current = .false.
+		  if ((k_var .eq. 3) .and. (.not. is_freebound(i_tor,k_var))) apply_on_current = .true.
                   
 		  ! --- Apply conditions to which variables?
                   if (  			&
                            apply_on_psi 	& 
-                      .or. (k_var .eq. 2)	&
-                      .or. (k_var .eq. 3)	&
+                      .or. apply_on_current                             &
+                      .or. (k_var .eq. 2) 	&
                       .or. (k_var .eq. 4)  	&
                       ) apply_dirichlet = .true.
 
@@ -262,6 +268,7 @@ contains
                 if    ((node_list%node(inode)%boundary .eq. 5) &
                   .or. (node_list%node(inode)%boundary .eq. 9)) then
 
+		  ! --- Which side is this? 2 => d/ds, 3 => d/dt
 		  side = 3
                   
 		  ! ---------------------------------------------
@@ -283,18 +290,21 @@ contains
 		  apply_dirichlet = .false.
 		  ! --- Determine if we need to apply condition on psi (we don't want to overwrite RMPs)
 		  apply_on_psi = .false.
-                  if (k_var .eq. 1) then
+                  if ((k_var .eq. 1) .and. (.not. is_freebound(i_tor,k_var))) then
                     if  		      (i_tor .eq. 1)	         apply_on_psi = .true.
                     if ( (.not. RMP_on) .and. (i_tor .ge. 2 )	       ) apply_on_psi = .true.
                     if ( (RMP_on)	.and. (i_tor .lt. RMP_har_cos) ) apply_on_psi = .true.
                     if ( (RMP_on)	.and. (i_tor .gt. RMP_har_sin) ) apply_on_psi = .true.
 		  endif
+		  
+		  apply_on_current = .false.
+		  if ((k_var .eq. 3) .and. (.not. is_freebound(i_tor,k_var))) apply_on_current = .true.
                   
 		  ! --- Apply conditions to which variables?
                   if (  			&
                            apply_on_psi 	& 
+                      .or. apply_on_current                             &
                       .or. (k_var .eq. 2)	&
-                      .or. (k_var .eq. 3)	&
                       .or. (k_var .eq. 4)  	&
                       ) apply_dirichlet = .true.
 
@@ -317,6 +327,7 @@ contains
                 ! ----------------------------------------------------------------------------------------------------
                 if (   (node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3) ) then
 
+		  ! --- Which side is this? 2 => d/ds, 3 => d/dt
 		  side = 3
                   
 		  ! ---------------------------------------------
@@ -354,25 +365,28 @@ contains
 		  
 		  ! --- Determine if we need to apply condition on psi (we don't want to overwrite RMPs)
 		  apply_on_psi = .false.
-                  if (k_var .eq. 1) then
-                    if ( (freeboundary) .and. (i_tor .eq. 1) ) apply_on_psi = .true.
-                    if (.not. freeboundary) then
+                  if ((k_var .eq. 1).and.(.not. is_freebound(i_tor,k_var))) then
                       if                        (i_tor .eq. 1)             apply_on_psi = .true.
                       if ( (.not. RMP_on) .and. (i_tor .ge. 2)           ) apply_on_psi = .true.
                       if ( (RMP_on)	  .and. (i_tor .lt. RMP_har_cos) ) apply_on_psi = .true.
                       if ( (RMP_on)	  .and. (i_tor .gt. RMP_har_sin) ) apply_on_psi = .true.
 		    endif
-		  endif
+		  
+		  apply_on_current = .false.
+		  if ((k_var .eq. 3) .and. (.not. is_freebound(i_tor,k_var))) apply_on_current = .true.
 		  
 		  ! Apply conditions to which variables and where?
                   if (  						    		&
                             (apply_on_psi)	 					&
-                      .or.  (k_var .eq. 2)	 					&
-                      .or.  (k_var .eq. 3)	 					&
+                      .or.  (apply_on_current)	 					&
+                      .or.  (k_var .eq. 2)                   	&
                       .or.  (k_var .eq. 4)	 					&
-                      .or.( (k_var .eq. 6) .and. (on_private) )				& 
+                      .or.  (k_var .eq. 5)	 					&
+                      .or.  (k_var .eq. 6)	 					&
+                      !.or.( (k_var .eq. 5) .and. (on_private) )				& 
+                      !.or.( (k_var .eq. 6) .and. (on_private) )				& 
                       .or.  (k_var .eq. 7)	 					&
-                      .or.( (k_var .eq. 8) .and. (on_private) )				& 
+                      .or.  (k_var .eq. 8)	 					&
                       ) apply_dirichlet = .true.
 
 		  if (apply_dirichlet) then
@@ -415,17 +429,22 @@ contains
   !************ Routine to construct variables once for all routines ************
   !******************************************************************************
   !******************************************************************************
-  subroutine construct_variables(node, R_xpoint, Z_xpoint)
+  subroutine construct_variables(node, R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
   
     use data_structure
-    use phys_module, only: F0, xpoint, xcase, tokamak_device
+    use phys_module, only: F0, xpoint, xcase, tokamak_device, T_min
     
     implicit none
     
     ! --- Routine variables
     type (type_node),	intent(in)    :: node
+    real*8,		intent(in)    :: R_axis
+    real*8,		intent(in)    :: Z_axis
     real*8,		intent(in)    :: R_xpoint(2)
     real*8,		intent(in)    :: Z_xpoint(2)
+    real*8,		intent(in)    :: psi_bnd
+    
+    real*8 :: alpha, R_inside, Z_inside
   
     ! --- Define (R,Z) coords and Jacobian
     R	      = node%x(1,1)
@@ -452,12 +471,12 @@ contains
     u0_y      = (- R_t*u0_s + R_s*u0_t) / xjac
 
     ! --- Define Ti variables
-    Ti0       = node%values(1,1,6)
+    Ti0       = max(node%values(1,1,6),T_min)
     Ti0_s     = node%values(1,2,6)
     Ti0_t     = node%values(1,3,6)
     
     ! --- Define Te variables
-    Te0       = node%values(1,1,8)
+    Te0       = max(node%values(1,1,8),T_min)
     Te0_s     = node%values(1,2,8)
     Te0_t     = node%values(1,3,8)
     
@@ -599,6 +618,7 @@ contains
     use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
     USE murge_module, ONLY : use_murge, use_murge_element, murge_add_one_entry, vertex_is_local
+    use mod_locate_irn_jcn
     
     implicit none
     
@@ -669,7 +689,8 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: GAMMA
-    USE murge_module, ONLY : use_murge, use_murge_element, murge_add_one_entry
+    USE murge_module, ONLY : use_murge, use_murge_element, murge_add_one_entry, vertex_is_local
+    use mod_locate_irn_jcn
     
     implicit none
     

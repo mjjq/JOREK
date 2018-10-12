@@ -600,7 +600,7 @@
  D_perp(5) = 0.92d0
  D_perp(6) = 2.d-5
 
- K_i_par  = 1.d4
+ ZK_i_par  = 1.d4
  ZK_i_perp(1) = 5.0d-6
  ZK_i_perp(2) = 0.8d0
  ZK_i_perp(3) = 0.08d0
@@ -608,7 +608,7 @@
  ZK_i_perp(5) = 0.96
  ZK_i_perp(6) = 5.0d-6
 
- K_e_par  = 4.d5
+ ZK_e_par  = 4.d5
  ZK_e_perp(1) = 5.0d-6
  ZK_e_perp(2) = 0.8d0
  ZK_e_perp(3) = 0.08d0

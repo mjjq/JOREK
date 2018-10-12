@@ -5,7 +5,7 @@ implicit none
 contains
 
   !> subroutine that will construct elemeentary matrices
-  subroutine elementary_matrix_build(element, nodes, xpoint2, xcase2, minRad, R_axis, &
+  subroutine elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, &
        &                             Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
        &                             omp_tid, ife, n_local_elms, node_list)
 
@@ -25,7 +25,6 @@ contains
     type (type_node),                 intent(inout)  :: nodes(n_vertex_max)
     logical,                          intent(in)     :: xpoint2
     integer,                          intent(in)     :: xcase2
-    real*8,                           intent(in)     :: minRad
     real*8,                           intent(in)     :: R_axis
     real*8,                           intent(in)     :: Z_axis
     real*8,                           intent(in)     :: psi_axis
@@ -36,7 +35,7 @@ contains
     integer,                          intent(in)     :: ife
     integer,                          intent(in)     :: n_local_elms
     TYPE (type_node_list),            intent(in)     :: node_list
-
+    
     ! -- internal parameters
     integer iv, iv2, inode1, inode2, i, j
     integer vertex(2), direction(2)
@@ -54,7 +53,7 @@ contains
 
     ! --- Call element_matrix
     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid, &
         thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn, &
         thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k,  thread_struct(omp_tid)%eq_g, thread_struct(omp_tid)%eq_s, &
@@ -63,7 +62,7 @@ contains
         thread_struct(omp_tid)%delta_t)
       !  for toroidal integration
     else
-      call element_matrix    (element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
+      call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid)	   ! use direct integration
     endif
 
@@ -128,14 +127,14 @@ contains
     if (ife .eq. n_local_elms/2) then
       
       ! --- Call both routines
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM2, thread_struct(omp_tid)%RHS2, omp_tid, &
         thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn, &
         thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k,  thread_struct(omp_tid)%eq_g, thread_struct(omp_tid)%eq_s, &
         thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, &
         thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, &
         thread_struct(omp_tid)%delta_t)
-      call element_matrix    (element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
+      call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM,  thread_struct(omp_tid)%RHS,  omp_tid)
       
       ! --- Compare right hand side
@@ -192,7 +191,7 @@ contains
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
 subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_max, xpoint2, xcase2,&
-                            minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint)
+                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint)
   
   use tr_module 
   use mod_parameters
@@ -222,7 +221,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer, intent(in) :: index_min
   integer, intent(in) :: index_max
   integer, intent(in) :: xcase2
-  real*8,  intent(in) :: minRad
   real*8,  intent(in) :: R_axis
   real*8,  intent(in) :: Z_axis
   real*8,  intent(in) :: psi_axis
@@ -248,7 +246,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
   logical                           :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
   CHARACTER(LEN=128)                :: fname
-  
+
   ! --- Timing call
   call r3_info_begin (r3_info_index_0, 'construct_matrix')
 
@@ -306,7 +304,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,          &
-  !$omp          index_min, index_max,xpoint2,xcase2,minRad,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,       &
+  !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,       &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
   !$omp          difference_found,rhs_problem,elm_problem)                                                 &
   !$omp   private(ife,ielm,iv,inode,element,nodes,i,inode1,i_order,index_node1,          &
@@ -323,7 +321,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   omp_nthreads = 1
   omp_tid      = 1
 #endif
-
+  
   ! --- Loop over local elements
   !$omp do schedule(runtime)
   do ife =1, n_local_elms
@@ -354,7 +352,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
     endif
 
-    call elementary_matrix_build(element, nodes, xpoint2, xcase2, minRad, R_axis, &
+    call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, &
          &                       Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
          &                       omp_tid, ife, n_local_elms, node_list)
     
@@ -391,18 +389,18 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
             
             end do
 
-            do k=1,n_vertex_max
+              do k=1,n_vertex_max
 
-              knode = node_out(k)
+                knode = node_out(k)
 
-              do k_order = 1, n_order+1
+                do k_order = 1, n_order+1
 
-                index_node2 = node_list%node(knode)%index(k_order)
+                  index_node2 = node_list%node(knode)%index(k_order)
 
-                index_large_k = n_tor * n_var * (index_node2 - 1)
+                  index_large_k = n_tor * n_var * (index_node2 - 1)
 
-                call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position)
-                  
+                  call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position)
+
                 thread_struct(omp_tid)%synch_buff(:) = 0.d0
                 do j = 1, n_var * n_tor
                   index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
@@ -413,14 +411,14 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var*n_tor + l
 
-                    irn_glob(ilarge2) = index_large_i + j
-                    jcn_glob(ilarge2) = index_large_k + l
+                    irn_glob(ilarge2) = index_large_i	+ j
+                    jcn_glob(ilarge2) = index_large_k	+ l
                     
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
 
                   enddo
-                  
+
                 enddo ! n_order+1
 
                 !$omp critical

@@ -20,6 +20,7 @@ module mod_expression
   use diffusivities
   use corr_neg
   use mod_basisfunctions
+  use mod_bootstrap_functions
   
   
   
@@ -661,6 +662,18 @@ module mod_expression
             end do
           end do
           
+#if JOREK_MODEL == 400
+          ! --- Sum up electron and ion temperature for model400 (e.g., to calculate total pressure)
+          T0       = Ti0    + Te0   
+          T0_s     = Ti0_s  + Te0_s 
+          T0_t     = Ti0_t  + Te0_t 
+          T0_ss    = Ti0_ss + Te0_ss
+          T0_tt    = Ti0_tt + Te0_tt
+          T0_st    = Ti0_st + Te0_st
+          T0_p     = Ti0_p  + Te0_p 
+          T0_pp    = Ti0_pp + Te0_pp
+#endif
+          
           ! --- Construct Cartesian Derivatives of Variables.
           ps0_R    = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
           ps0_Z    = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
@@ -936,7 +949,7 @@ module mod_expression
           end if
           
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
-          call bootstrap_current_rhs(BigR, 0.0, eq%R_axis, eq%psi_axis, eq%psi_bnd, ps0, ps0_R,    &
+          call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
             ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
 #else
           J_boot = 0.d0

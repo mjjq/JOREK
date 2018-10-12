@@ -56,7 +56,7 @@ real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, 
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
 integer               :: n_fluxes, n_neo, n_bfield, n_vfield,n_pellet,n_bootstrap, n_psi_norm
 integer               :: s_fluxes, s_neo, s_bfield, s_vfield,s_pellet,s_bootstrap, s_psi_norm
-real*8                :: Jb, minRad,rho_norm,t_norm
+real*8                :: Jb,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
@@ -310,7 +310,7 @@ do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
 enddo
 
-call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
@@ -342,7 +342,7 @@ endif
 
 minRad = 0.0
 if (bootstrap) then
-  call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+  call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd)
   call bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
   call bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
 endif
@@ -747,7 +747,7 @@ do i=1,element_list%n_elements
         endif
 
         if (include_bootstrap) then
-          call bootstrap_current(minRad, R, Z, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+          call bootstrap_current(R, Z, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
                                  psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,      &
                                  Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb   )
           scalars(inode,s_bootstrap+1) = Jb

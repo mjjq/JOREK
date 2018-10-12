@@ -199,9 +199,13 @@ subroutine preset_parameters
 
   zjz_0 =  0.1173d0;   T_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
   zjz_1 =  0.0d0   ;   T_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0
+  
+  Te_0 = 5.d-7; Te_1 = 5.d-9; Ti_0 = 5.d-7; Ti_1 = 5.d-9
 
   zj_coef     = 0.d0;  zj_coef(1)  = -1.d0
   T_coef      = 0.d0;  T_coef(1)   = -1.d0
+  Te_coef     = 0.d0;  Te_coef(1)  = -1.d0
+  Ti_coef     = 0.d0;  Ti_coef(1)  = -1.d0
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
 
@@ -244,6 +248,8 @@ subroutine preset_parameters
   ffprime_file  = 'none'
   d_perp_file   = 'none'
   zk_perp_file  = 'none'
+  zk_e_perp_file  = 'none'
+  zk_i_perp_file  = 'none'
   R_Z_psi_bnd_file = 'none'
   wall_file     = 'none'
   rot_file      = 'none'

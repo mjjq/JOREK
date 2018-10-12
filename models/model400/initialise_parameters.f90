@@ -49,11 +49,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Ti_0,  Ti_1,  Ti_coef,                              &
                 Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
-                K_i_par, ZK_i_perp, K_e_par, ZK_e_perp,             &
-                Zk_par, ZK_perp, D_par, D_perp,                     &
+                ZK_i_par, ZK_i_perp, ZK_e_par, ZK_e_perp,           &
+                D_par, D_perp,                                      &
                 Q_bar, sigma, gamma_sheath,                         &
                 V_0,V_1,V_coef,                			    &
-                particlesource, heatsource,                         &
+                particlesource,                                     &
                 heatsource_i, heatsource_e, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num,                  &
                 D_perp_num, ZK_perp_num,                            &
@@ -63,7 +63,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft,xpoint,xcase, &
                 D_perp_file, ZK_e_perp_file, ZK_i_perp_file,        &
-                rho_file, T_file, ffprime_file, freeboundary_equil, &
+                rho_file, T_file, Ti_file, Te_file,                 &
+                ffprime_file, freeboundary_equil,                   &
                 freeboundary, resistive_wall, freeb_change_indices, &
                 wall_resistivity, wall_resistivity_fact,            &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
@@ -79,10 +80,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_gauss, heatsource_gauss,             &
                 heatsource_gauss_psin, heatsource_gauss_sig,        &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
-                produce_live_data, gmres, gmres_max_iter,           &
+                produce_live_data,                                  &
                 linear_run, export_for_nemec,                       &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
-                gmres_m, gmres_tol, tgnum,                          &
+                gmres, gmres_max_iter,                              &
+                gmres_m, gmres_4, gmres_tol, iter_precon, tgnum,    &
                 RMP_on, RMP_har_cos, RMP_har_sin,                   &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
@@ -115,25 +117,27 @@ if (my_id .eq. 0) then
   ZK_e_perp_file = 'none'
   ZK_i_perp_file = 'none'
   
-  Ti_0   =  1.d-6
-  Ti_1   =  1.d-8
+  Ti_0   =  0.5d-6
+  Ti_1   =  0.5d-8
   
-  Te_0   =  1.d-6
-  Te_1   =  1.d-8
+  Te_0   =  0.5d-6
+  Te_1   =  0.5d-8
   
   Ti_coef     = 0.d0
   Ti_coef(1)  = -1.d0
   Te_coef     = 0.d0
   Te_coef(1)  = -1.d0
 
-  heatsource_i   = 1.e-7
-  heatsource_e   = 1.e-7
+  heatsource_i   = 0.5e-7
+  heatsource_e   = 0.5e-7
 
+  ZK_i_perp(:) = 0.d0
   ZK_i_perp(1) = 1.d-5; ZK_i_perp(2) = 0.d0; ZK_i_perp(3)= 0.d0; ZK_i_perp(4)= 99.d0; ZK_i_perp(5) = 99.d0
-  K_i_par      = 1.d+6
+  ZK_i_par     = 1.d0
   
+  ZK_e_perp(:) = 0.d0  
   ZK_e_perp(1) = 1.d-5; ZK_e_perp(2) = 0.d0; ZK_e_perp(3)= 0.d0; ZK_e_perp(4)= 99.d0; ZK_e_perp(5) = 99.d0
-  K_e_par      = 1.d+7
+  ZK_e_par     = 1.d0
   
   ! --- Read input parameters from namelist.
   if (trim(filename) .ne. "__NO_FILENAME__" ) then

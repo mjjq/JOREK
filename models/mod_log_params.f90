@@ -317,8 +317,8 @@ if (my_id == 0) then
     end if
     write(*,REAL_FMT) 'heatsource_e           ', heatsource_e
     write(*,REAL_FMT) 'heatsource_i           ', heatsource_i
-    write(*,REAL_FMT) 'K_e_par                ', K_e_par
-    write(*,REAL_FMT) 'K_i_par                ', K_i_par
+    write(*,REAL_FMT) 'ZK_e_par               ', ZK_e_par
+    write(*,REAL_FMT) 'ZK_i_par               ', ZK_i_par
   end if
 
   if ( .not. num_ffprime ) then

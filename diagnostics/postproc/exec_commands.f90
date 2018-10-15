@@ -945,23 +945,39 @@ module exec_commands
     ierr = 0
     
     ! --- Some checks
-    call check_args(command%n_args,ierr,3);  if ( ierr /= 0 ) return
+    call check_args(command%n_args,ierr,2,3);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);          if ( ierr /= 0 ) return
     call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
     
     ! --- Preparation
     R     = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
     Z     = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
-    phi   = to_float(command%args(3), ierr); if ( ierr /= 0 ) return
     units = get_int_setting('units', ierr)
     
-    write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',    &
-      trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
-    
-    call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),               &
-      tor_pos(phi=phi), result, ierr)
-    
-    call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+    if (command%n_args == 3) then ! local values
+      
+      phi = to_float(command%args(3), ierr); if ( ierr /= 0 ) return
+      
+      write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',  &
+        trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+      
+      call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),             &
+        tor_pos(phi=phi), result, ierr)
+      
+      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+      
+    else ! toroidally averaged values
+      
+      write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)),        &
+        '_toroidally-averaged', trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+      
+      call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),             &
+        tor_pos(nphi=4*n_plane), result, ierr)
+      
+      call apply_four_filter(result, simple_filter(n=0), expr_list%n_coord, ierr)
+      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+      
+    end if
     
     call write_ascii_0d(ierr, eq, expr_list, res0d, FORM_TABLE, header=first_step,                 &
       filename=trim(filename), append=(.not.first_step), blanks=.false.)
@@ -981,25 +997,40 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer :: units, npts
-    character(len=1024) :: filename, comment
+    integer :: units, npts, side
+    character(len=1024) :: filename, comment, s
     
     ierr = 0
     
     ! --- Some checks
-    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
-    call check_step_imported(ierr);          if ( ierr /= 0 ) return
-    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);            if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);           if ( ierr /= 0 ) return
     
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('linepoints', ierr)
     
-    write(filename,'(4a)') DIR, 'exprs_midplane',                                                  &
+    if ( command%n_args == 0 ) then
+      s = 'midplane'
+      side = BOTH_SIDES
+    else if ( command%args(1) == 'outer' ) then
+      s = 'outer-midplane'
+      side = LOWFIELD_SIDE
+    else if ( command%args(1) == 'inner' ) then
+      s = 'inner-midplane'
+      side = HIGHFIELD_SIDE
+    else
+      write(*,*) 'WARNING: Illegal parameter for command "midplane".'
+      ierr = 1
+      return
+    end if
+    
+    write(filename,'(4a)') DIR, 'exprs_'//trim(s)//                                                &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call midplane_profile(node_list, element_list, eq, units, expr_list, res1d, BOTH_SIDES, npts,  &
+    call midplane_profile(node_list, element_list, eq, units, expr_list, res1d, side, npts,        &
       ierr, filename=trim(filename), append=(.not.first_step), comment=trim(comment) )
     
   end subroutine midplane

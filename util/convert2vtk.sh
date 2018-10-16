@@ -32,23 +32,30 @@ function usage () {
   echo "Usage: `basename $0` [options] binary infile [extra-files]"
   echo ""
   echo "Options:"
-  echo "  -dir <dir>          Specify a custom target directory (see remarks below)"
-  echo "  -j <nthreads>       Convert using <nthreads> threads [default: 1]"
-  echo "  -only <step>,<step> Convert only listed time steps"
-  echo "  -only <step>-<step> Convert only time steps in the given range"
-  echo "  -zip                Compress the .vtk files using gzip"
+  echo "  -dir <dir>                  Specify a custom target directory (see remarks below)"
+  echo "  -j <nthreads>               Convert using <nthreads> threads [default: 1]"
+  echo "  -only <step>,<step>         Convert only listed time steps"
+  echo "  -only <step>-<step>         Convert only time steps in the given range"
+  echo "  -only <step>-<dstep>-<step> Convert only time steps in the given range with given interval"
+  echo "  -zip                        Compress the .vtk files using gzip"
   echo ""
   echo "Options passed to the binary via namelist input (source code for details):"
-  echo "  -i_tor <i_tor>      Select one toroidal mode [default: -1] (2D VTK ONLY)"
-  echo "  -i_plane <i_plane>  Select the toroidal plane [default: 1] (2D VTK ONLY)"
-  echo "  -no0                Don't include the n=0 mode for i_tor=-1 [default: off]"
-  echo "  -nsub <nsub>        Number of finite element subdivisions [default: 5]"
-  echo "  -[no]periodic       (Un)set periodicity for 3D plot (3D VTK ONLY)"
-  echo "  -si                 Convert to VTK file with SI units (2D VTK ONLY)"
+  echo "  -i_tor <i_tor>              Select one toroidal mode [default: -1] (2D VTK ONLY)"
+  echo "  -i_plane <i_plane>          Select the toroidal plane [default: 1] (2D VTK ONLY)"
+  echo "  -no0                        Don't include the n=0 mode for i_tor=-1 [default: off]"
+  echo "  -nsub <nsub>                Number of finite element subdivisions [default: 5]"
+  echo "  -[no]periodic               (Un)set periodicity for 3D plot (3D VTK ONLY)"
+  echo "  -si                         Convert to VTK file with SI units (2D VTK ONLY)"
+  echo "  -fluxes                     Include energy and density fluxes [default: off] (2D VTK ONLY)"
+  echo "  -neo                        Include neoclassical and more terms [default: off] (2D VTK ONLY)"
+  echo "  -Bfield                     Include vector of magnetic field [default: off] (2D VTK ONLY)"
+  echo "  -Vfield                     Include vector of velocity field [default: off] (2D VTK ONLY)"
+  echo "  -[no]psiN                   Include normalized poloidal flux or not [default: on] (2D VTK ONLY)"
+  echo "  -bootstrap                  Include bootstrap current decomposition [default: off] (2D VTK ONLY)"
   echo ""
-  echo "  binary              executable (jorek2vtk, jorek2vtk_3d, jorek2_target2vtk)"
-  echo "  infile              Input file of the corresponding JOREK run"
-  echo "  extra-files         Additional files that are required for running"
+  echo "  binary                      executable (jorek2vtk, jorek2vtk_3d, jorek2_target2vtk)"
+  echo "  infile                      Input file of the corresponding JOREK run"
+  echo "  extra-files                 Additional files that are required for running"
   echo ""
   echo "Remarks:"
   echo "  * <i_tor> and <i_plane> may contain lists and/or ranges, e.g., -i_tor 3,5-7"
@@ -98,7 +105,8 @@ function is_selected () {
   for step_range in $step_ranges; do
     step_numbers=(`echo $step_range | tr '-' ' '`) # split step_range, e.g., 1-3 -> 1 3
     if [[ ${#step_numbers[*]} -eq 1 && ${step_numbers[0]} -eq $step_number ]] || \
-       [[ ${#step_numbers[*]} -eq 2 && ${step_numbers[0]} -le $step_number && ${step_numbers[1]} -ge $step_number ]]; then
+       [[ ${#step_numbers[*]} -eq 2 && ${step_numbers[0]} -le $step_number && ${step_numbers[1]} -ge $step_number ]] || \
+       [[ ${#step_numbers[*]} -eq 3 && ${step_numbers[0]} -le $step_number && $(($step_number % ${step_numbers[1]})) -eq 0 && ${step_numbers[2]} -ge $step_number ]] ; then
       echo "yes" # the step is contained in selected_steps, so answer 'yes'
       return
     fi
@@ -169,6 +177,12 @@ no0=""
 periodic=""
 writenml="no"
 si_units=""
+include_fluxes=""         # include energy and density fluxes (or not)
+include_neo=""            # include neoclassical and more terms (or not)
+include_magnetic_field="" # include vector of magnetic field (or not)
+include_velocity_field="" # include vector of velocity field (or not)
+include_bootstrap=""      # include bootstrap current and averaged current
+include_psi_norm=".true." # include normalized flux
 while [ $# -gt 1 ]; do
   if [ "$1" == "-j" ]; then
     nthreads="$2"
@@ -208,6 +222,30 @@ while [ $# -gt 1 ]; do
     writenml="yes"
   elif [ "$1" == "-si" ]; then
     si_units=".true."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-fluxes" ]; then
+    include_fluxes=".true."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-neo" ]; then
+    include_neo=".true."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-Bfield" ] || [ "$1" == "-magnetic_field" ]; then
+    include_magnetic_field=".true."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-Vfield" ] || [ "$1" == "-velocity_field" ]; then
+    include_velocity_field=".true."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-bootstrap" ]; then
+    include_bootstrap=".true."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-nopsiN" ] || [ "$1" == "-nopsi_norm" ]; then
+    include_psi_norm=".false."
     shift 1
     writenml="yes"
   elif [ "$1" == "-h" ] || [ "$1" = "--help" ]; then
@@ -256,8 +294,6 @@ function get_recursive_params () {
   params="$params $binary $infile $copyfiles"
   echo $params
 }
-
-
 
 # --- Handle range specifications (e.g., 3-7) and list specifications (e.g., 3,5,7)
 #     for i_tor and i_plane via recursive calls
@@ -388,6 +424,24 @@ if [ "$writenml" == "yes" ]; then
   fi
   if [ ! -z "$si_units" ]; then
     echo "  si_units = $si_units" >> $vtk_nml
+  fi
+  if [ ! -z "$include_fluxes" ]; then
+    echo "  include_fluxes = $include_fluxes" >> $vtk_nml
+  fi
+  if [ ! -z "$include_neo" ]; then
+    echo "  include_neo = $include_neo" >> $vtk_nml
+  fi
+  if [ ! -z "$include_magnetic_field" ]; then
+    echo "  include_magnetic_field = $include_magnetic_field" >> $vtk_nml
+  fi
+  if [ ! -z "$include_velocity_field" ]; then
+    echo "  include_velocity_field = $include_velocity_field" >> $vtk_nml
+  fi
+  if [ ! -z "$include_bootstrap" ]; then
+    echo "  include_bootstrap = $include_bootstrap" >> $vtk_nml
+  fi
+  if [ ! -z "$include_psi_norm" ]; then
+    echo "  include_psi_norm = $include_psi_norm" >> $vtk_nml
   fi
   echo "/"                        >> $vtk_nml
   copyfiles="$copyfiles $vtk_nml"

@@ -265,7 +265,7 @@ module pellet_module
       end if
 
       ! Update size    
-      if (my_id == 0.) then
+      if (my_id == 0) then
         if (index_now > 1) then
           xtime_spi_ablation(i,index_now) = xtime_spi_ablation(i,index_now-1) + t_norm * tstep * pellets(i)%spi_abl
         else

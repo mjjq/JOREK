@@ -449,7 +449,7 @@ module pellet_module
       spi_Z_inj	      = ns_Z - spi_L_inj * (spi_Vel_Zref/spi_Vel_totref)
       spi_phi_inj     = ns_phi - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R  
       spi_rotation_01 = asin(spi_Vel_Zref/spi_Vel_totref)
-      if (cos(spi_rotation_01) == 0) then
+      if (cos(spi_rotation_01) == 0.) then
 	spi_rotation_02 = 0.
       else
 	spi_rotation_02 = acos(spi_Vel_RxZref/(spi_Vel_totref*cos(spi_rotation_01)))

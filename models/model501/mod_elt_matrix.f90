@@ -549,6 +549,7 @@ do ms=1, n_gauss
      detaSp_dT = -1.65d-9*17 * (1.5d0) * T0_corr**(-2.5d0) * (1.d-3/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
                       * sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) * dT0_corr_dT
 
+     !detaSp_dT = 0. ! For intear benchmark
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent .and. T0_corr <= T_eta_thres ) then       
        visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
@@ -782,6 +783,11 @@ do ms=1, n_gauss
      detaSp_drn0  = eta_Sp * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
      detaSp_dT    = detaSp_dT * eta_coef + eta_Sp * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT
      eta_Sp       = eta_Sp * eta_coef
+
+     !eta_Sp = 0. ! For intear benchmark
+     !detaSp_dT = 0. ! For intear benchmark
+     !detaSp_dr0 = 0.
+     !detaSp_drn0 = 0.
 
      if ( eta_T_dependent ) then
        if (T0_corr <= T_eta_thres) then
@@ -1189,6 +1195,15 @@ do ms=1, n_gauss
                     - (2./3.) * v * rn0 * dE_ion_dT * Vpar0 * (T0_s * ps0_t - T0_t * ps0_s)    * tstep  &
                     - (2./3.) * v * E_ion * Vpar0 * (rn0_s * ps0_t - rn0_t * ps0_s)            * tstep  &
                     - (2./3.) * v * E_ion_bg * Vpar0*((r0_s-rn0_s)*ps0_t - (r0_t-rn0_t)*ps0_s) * tstep  &
+
+                    + (2./3.) * v * E_ion * rn0 * 2.d0 * BigR * u0_y                    * xjac * tstep  &
+                    - (2./3.) * v * E_ion * rn0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)          * tstep  &
+                    - (2./3.) * v * E_ion * rn0 * F0 / BigR * vpar0_p                   * xjac * tstep  &
+
+                    + (2./3.) * v * E_ion_bg * (r0-rn0) * 2.d0 * BigR * u0_y            * xjac * tstep  &
+                    - (2./3.) * v * E_ion_bg * (r0-rn0) * (vpar0_s * ps0_t - vpar0_t * ps0_s)  * tstep  &
+                    - (2./3.) * v * E_ion_bg * (r0-rn0) * F0 / BigR * vpar0_p           * xjac * tstep  &
+
 !==============================End of ionization energy terms=================
 
 
@@ -1660,6 +1675,8 @@ do ms=1, n_gauss
                            + (2./3.) * v * rn0 * dE_ion_dT * Vpar0 * (T0_s * psi_t - T0_t * psi_s)           * theta * tstep &
                            + (2./3.) * v * E_ion * Vpar0 * (rn0_s * psi_t - rn0_t * psi_s)                   * theta * tstep &
                            + (2./3.) * v * E_ion_bg *Vpar0*((r0_s-rn0_s)*psi_t - (r0_t-rn0_t)*psi_s)         * theta * tstep &
+                           + (2./3.) * v * E_ion * rn0 * (vpar0_s * psi_t - vpar0_t * psi_s)                 * theta * tstep &
+                           + (2./3.) * v * E_ion_bg * (r0-rn0) * (vpar0_s * psi_t - vpar0_t * psi_s)         * theta * tstep &
 !================= End ionization potential energy ===========================
 
                            + ZK_par_num * (v_psi_x  * ps0_y - v_psi_y  * ps0_x + v_ps0_x * psi_y - v_ps0_y * psi_x)          &
@@ -1691,6 +1708,8 @@ do ms=1, n_gauss
                            - (2./3.) * v * rn0 * dE_ion_dT * BigR**2 * ( T0_s * u_t - T0_t * u_s)          * theta * tstep &
                            - (2./3.) * v * E_ion * BigR**2 * (rn0_s * u_t - rn0_t * u_s)                   * theta * tstep &
                            - (2./3.) * v * E_ion_bg * BigR**2 *((r0_s-rn0_s)*u_t - (r0_t-rn0_t)*u_s)       * theta * tstep &
+                           - (2./3.) * v * E_ion * rn0 * 2.d0 * BigR * u_y                          * xjac * theta * tstep &
+                           - (2./3.) * v * E_ion_bg * (r0-rn0) * 2.d0 * BigR * u_y                  * xjac * theta * tstep &
 !================= End ionization potential energy ===========================
 
                            + TG_num6 * 0.25d0 * BigR**2 * T0* (r0_x * u_y - r0_y * u_x)       &
@@ -1748,7 +1767,12 @@ do ms=1, n_gauss
 
                            + (2./3.) * v * E_ion_bg * F0 / BigR * Vpar0 * rho_p        * xjac * theta * tstep &
 
-                           + (2./3.) * v * E_ion_bg * Vpar0 * (rho_s * ps0_t - rho_t * ps0_s) * theta * tstep 
+                           + (2./3.) * v * E_ion_bg * Vpar0 * (rho_s * ps0_t - rho_t * ps0_s) * theta * tstep &
+
+                           - (2./3.) * v * E_ion_bg * rho * 2.d0 * BigR * u0_y         * xjac * theta * tstep &
+                           + (2./3.) * v * E_ion_bg * rho * (vpar0_s*ps0_t - vpar0_t*ps0_s)   * theta * tstep &
+                           + (2./3.) * v * E_ion_bg * rho * F0 / BigR * vpar0_p        * xjac * theta * tstep  
+
 !================= End ionization potential energy ===========================
 
 
@@ -1817,6 +1841,16 @@ do ms=1, n_gauss
                            + (2./3.) * v * rn0 * dE_ion_dT * F0 / BigR * Vpar * T0_p        * xjac * theta * tstep  &
                            + (2./3.) * v * E_ion * F0 / BigR * Vpar * rn0_p                 * xjac * theta * tstep  &
                            + (2./3.) * v * E_ion_bg * F0 / BigR * Vpar * (r0_p-rn0_p)       * xjac * theta * tstep  &
+
+                           + (2./3.) * v * rn0 * dE_ion_dT * Vpar * (T0_s * ps0_t - T0_t * ps0_s)  * theta * tstep  &
+                           + (2./3.) * v * E_ion * Vpar * (rn0_s * ps0_t - rn0_t * ps0_s)          * theta * tstep  &
+                           + (2./3.) * v * E_ion_bg*Vpar*((r0_s-rn0_s)*ps0_t - (r0_t-rn0_t)*ps0_s) * theta * tstep  &
+
+                           + (2./3.) * v * E_ion * rn0 * (vpar_s * ps0_t - vpar_t * ps0_s)         * theta * tstep  &
+                           + (2./3.) * v * E_ion * rn0 * F0 / BigR * vpar_p                 * xjac * theta * tstep  &
+
+                           + (2./3.) * v * E_ion_bg * (r0-rn0) * (vpar_s * ps0_t - vpar_t * ps0_s) * theta * tstep  &
+                           + (2./3.) * v * E_ion_bg * (r0-rn0) * F0 / BigR * vpar_p         * xjac * theta * tstep  &
 !================= End ionization potential energy ===========================
 
                            + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
@@ -1839,6 +1873,11 @@ do ms=1, n_gauss
 
                            + (2./3.) * v * rhon * dE_ion_dT * Vpar0 * (T0_s*ps0_t - T0_t*ps0_s)    * theta * tstep&
                            + (2./3.) * v * (E_ion-E_ion_bg) * Vpar0 * (rhon_s*ps0_t - rhon_t*ps0_s)* theta * tstep&
+
+                           - (2./3.) * v * (E_ion-E_ion_bg) * rhon * 2.d0 * BigR * u0_y     * xjac * theta * tstep&
+                           + (2./3.) * v * (E_ion-E_ion_bg) * rhon*(vpar0_s*ps0_t - vpar0_t*ps0_s) * theta * tstep&
+                           + (2./3.) * v * (E_ion-E_ion_bg) * rhon * F0 / BigR * vpar0_p    * xjac * theta * tstep&
+
 !================= End ionization potential energy ===========================
                            ! New term from Z_eff
                            - v * BigR * rhon * ((2d0)/(3*BigR**2)) * detaSp_drn0 * zj0**2  * xjac * theta * tstep &

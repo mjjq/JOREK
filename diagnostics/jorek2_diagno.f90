@@ -26,6 +26,7 @@ real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis
 integer :: ifail, my_id, ierr, i_elm_axis
 integer :: required, provided, StatInfo
 real*8  :: spi_abl_rate_tot, spi_abl_tot
+real*8  :: spi_abl_bg_rate_tot, spi_abl_bg_tot
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_diagno                       *'
@@ -109,11 +110,15 @@ if (using_spi .and. abl_history) then
   do i=1,index_start
     spi_abl_rate_tot = 0.0
     spi_abl_tot = 0.0
+    spi_abl_bg_rate_tot = 0.0
+    spi_abl_bg_tot = 0.0
     do i_spi = 1, n_spi
       spi_abl_rate_tot = spi_abl_rate_tot + xtime_spi_ablation_rate(i_spi,i)
       spi_abl_tot = spi_abl_tot + xtime_spi_ablation(i_spi,i)
+      spi_abl_bg_rate_tot = spi_abl_bg_rate_tot + xtime_spi_ablation_bg_rate(i_spi,i)
+      spi_abl_bg_tot = spi_abl_bg_tot + xtime_spi_ablation_bg(i_spi,i)
     end do
-    write(20,'(i7,f12.3,2e14.6)') i,xtime(i), spi_abl_rate_tot, spi_abl_tot
+    write(20,'(i7,f12.3,4e14.6)') i,xtime(i), spi_abl_rate_tot, spi_abl_tot, spi_abl_bg_rate_tot, spi_abl_bg_tot
   enddo
   close(20)
 

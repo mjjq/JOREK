@@ -114,11 +114,11 @@ call spline(n_flux,s_equidistant,s_tmp,0.d0,0.d0,2,Aspline,Bspline,Cspline,Dspli
 do i=1,n_flux-1
   s_values(i) = s_tmp(i+1)
   flux_list%psi_values(i) =  psi_axis + s_values(i)**2 * (psi_xpoint(1) - psi_axis)
-  do j=1,4
-    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
-    s_gaussian = SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
-    psi_gaussians(j,i) = psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
-  enddo
+!  do j=1,4
+!    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
+!    s_gaussian = SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
+!    psi_gaussians(j,i) = psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
+!  enddo
 enddo
 
 deallocate(s_tmp,Aspline,Bspline,Cspline,Dspline,s_equidistant)
@@ -134,11 +134,11 @@ call spline(n_open+1,s_equidistant,s_tmp,0.d0,0.d0,2,Aspline,Bspline,Cspline,Dsp
 do i=1,n_open
   s_values(i+n_flux-1)             =  1.d0 + dPSI_open*s_tmp(i+1)
   flux_list%psi_values(i+n_flux-1) =  psi_axis + s_values(i+n_flux-1)**2 * (psi_xpoint(1) - psi_axis)
-  do j=1,4
-    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
-    s_gaussian = 1.d0 + DPSI_open*SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
-    psi_gaussians(j,(n_flux-1)+i) =  psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
-  enddo
+!  do j=1,4
+!    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
+!    s_gaussian = 1.d0 + DPSI_open*SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
+!    psi_gaussians(j,(n_flux-1)+i) =  psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
+!  enddo
 enddo
 
 deallocate(s_tmp,Aspline,Bspline,Cspline,Dspline,s_equidistant)
@@ -156,11 +156,11 @@ call spline(n_private+1,s_equidistant,s_tmp,0.d0,0.d0,2,Aspline,Bspline,Cspline,
 do i=1,n_private
   s_values(i+n_flux-1+n_open)             =  1.d0 - dPSI_private*s_tmp(i+1)
   flux_list%psi_values(i+n_flux-1+n_open) =  psi_axis + s_values(i+n_flux-1+n_open)**2 * (psi_xpoint(1) - psi_axis)
-  do j=1,4
-    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
-    s_gaussian = 1.d0 - DPSI_private*SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
-    psi_gaussians(j,n_flux-1+n_open+i) =  psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
-  enddo
+!  do j=1,4
+!    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
+!    s_gaussian = 1.d0 - DPSI_private*SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
+!    psi_gaussians(j,n_flux-1+n_open+i) =  psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
+!  enddo
 enddo
 
 call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
@@ -346,28 +346,36 @@ do i=1, n_open + n_private + 1
     Zw = Z_wall(k+1)
     theta = atan2(Z_wall(k)-Zw, R_wall(k)-Rw)
 
-    call find_theta_surface(node_list,element_list,flux_list,i_flux,theta,Rw,Zw,i_elm_find,s_find,t_find,i_find)
+    if (R_wall(k) .eq. R_wall(k+1)) then
+
+      call find_R_surface(node_list,element_list,flux_list,i_flux,Rw,i_elm_find,s_find,t_find,i_find)
+
+    elseif (Z_wall(k) .eq. Z_wall(k+1)) then
+
+      call find_Z_surface(node_list,element_list,flux_list,i_flux,Rw,i_elm_find,s_find,t_find,i_find)
+
+    else
+
+       call find_theta_surface(node_list,element_list,flux_list,i_flux,theta,Rw,Zw,i_elm_find,s_find,t_find,i_find)
+
+    endif
 
     do j=1,i_find
 
       call interp_RZ(node_list,element_list,i_elm_find(j),s_find(j),t_find(j),RRg1,ZZg1)
 
-      if ( (((R_wall(k)-RRg1)*(R_wall(k+1)-RRg1) .le. 0.d0) .and. (R_wall(k+1) .ne. R_wall(k))) &
-
-        .or.((Z_wall(k)-ZZg1)*(Z_wall(k+1)-ZZg1) .le. 0.d0) )  then
+      if   ( (((R_wall(k)-RRg1)*(R_wall(k+1)-RRg1) .le. 0.d0) .or. (R_wall(k) .eq. R_wall(k+1))) &
+      
+           .and. ((Z_wall(k)-ZZg1)*(Z_wall(k+1)-ZZg1) .le. 0.d0) )  then
 
         if ((RRg1 .le. R_xpoint(1)) .and. (ZZg1 .le. Z_axis)) then
-          if (RRg1 .lt. R_strike(i,1)) then
             R_strike(i,1) = RRg1
             Z_strike(i,1) = ZZg1
             write(*,'(A,i3,2f8.4)') ' INNER strike point : ',i,RRg1,ZZg1
-          endif
         elseif ((RRg1 .gt. R_xpoint(1)) .and. (ZZg1 .le. Z_axis)) then
-           if (RRg1 .gt. R_strike(i,1)) then
              R_strike(i,2) = RRg1
              Z_strike(i,2) = ZZg1
              write(*,'(A,i3,2f8.4)') ' OUTER strike point : ',i,RRg1,ZZg1
-           endif
          endif
 
       endif
@@ -504,30 +512,23 @@ do j=1,n_leg
 enddo
 Z_sep(n_tht+2*n_leg) = Z_xpoint(1) ! this one is known
 
+s_tmp = 0.d0
+call meshac2(n_leg,s_tmp,0.d0,1.d0,0.3d0,0.3d0,0.6d0,1.0d0)
+
 do j=1,n_leg
-!  R_wall_max(j+n_tht) = R_wall_max(n_tht) + (R_max(n_tht+1) - R_wall_max(n_tht)) * s_tmp(j)
-!  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + (Z_max(n_tht+1) - Z_wall_max(n_tht)) * s_tmp(j)
-!  R_wall_max(j+n_tht) = R_wall_max(n_tht) + 0.5d0*(R_max(n_tht+1) - R_wall_max(n_tht)) * float(j-1)/float(n_leg-1)
-!  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + 0.5d0*(Z_max(n_tht+1) - Z_wall_max(n_tht)) * float(j-1)/float(n_leg-1) 
-  R_wall_max(j+n_tht) = R_wall_max(n_tht) + 0.8d0*(R_max(n_tht+1) - R_wall_max(n_tht)) * float(j-1)/float(n_leg-1)
-  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + 0.8d0*(Z_max(n_tht+1) - Z_wall_max(n_tht)) * float(j-1)/float(n_leg-1) 
-  tht_max = PI
-  call find_wall_crossing(R_wall,Z_wall,n_wall,R_max(n_tht+n_leg-j+1)+0.1,Z_wall_max(j+n_tht),tht_max,Rw,Zw,Tw)
-  R_wall_max(j+n_tht) = Rw
-  Z_wall_max(j+n_tht) = Zw
-  T_wall_par(j+n_tht) = Tw
+
+  R_wall_max(j+n_tht) = R_wall_max(n_tht) + (R_max(n_tht+1) - R_wall_max(n_tht)) * s_tmp(j)
+  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + (Z_max(n_tht+1) - Z_wall_max(n_tht)) * s_tmp(j)
+
 enddo
+
 do j=1,n_leg
-!  R_wall_max(j+n_tht+n_leg) = R_wall_max(1) + (R_max(n_tht+n_leg+1)-R_wall_max(1)) * s_tmp(j)
-!  Z_wall_max(j+n_tht+n_leg) = Z_wall_max(1) + (Z_max(n_tht+n_leg+1)-Z_wall_max(1)) * s_tmp(j)
-  R_wall_max(j+n_tht+n_leg) = R_wall_max(1) + 0.8d0*(R_max(n_tht+n_leg+1)-R_wall_max(1)) * float(j-1)/float(n_leg-1)
-  Z_wall_max(j+n_tht+n_leg) = Z_wall_max(1) + 0.8d0*(Z_max(n_tht+n_leg+1)-Z_wall_max(1)) * float(j-1)/float(n_leg-1)
-  tht_max = 0.d0
-  call find_wall_crossing(R_wall,Z_wall,n_wall,R_max(j+n_tht+n_leg)-0.1,Z_wall_max(j+n_tht+n_leg),tht_max,Rw,Zw,Tw)
-  R_wall_max(j+n_tht+n_leg) = Rw
-  Z_wall_max(j+n_tht+n_leg) = Zw
-  T_wall_par(j+n_tht+n_leg) = Tw
+
+  R_wall_max(j+n_tht+n_leg) = R_wall_max(1) + (R_max(n_tht+n_leg+1)-R_wall_max(1)) * s_tmp(j)
+  Z_wall_max(j+n_tht+n_leg) = Z_wall_max(1) + (Z_max(n_tht+n_leg+1)-Z_wall_max(1)) * s_tmp(j)
+
 enddo
+
 
 call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
 
@@ -542,6 +543,10 @@ call lplot6(1,1,R_min(n_tht+1),Z_min(n_tht+1),-(2*n_leg),' ')
 call lincol(4)
 call lplot6(1,1,R_sep,Z_sep,-(n_tht+2*n_leg),' ')
 call lincol(0)
+
+do i=1,n_tht+2*n_leg
+  write(*,'(A,i4,6f10.6)') ' R_max,Z_max : ',i,R_max(i),Z_max(i),R_sep(i),Z_sep(i),R_min(i),Z_min(i)
+enddo
 
 !------------------------------ interpolation points are known, construct polar coordinate lines
 n_pieces=3
@@ -584,25 +589,44 @@ do j=1,n_tht
   Z_polar(2,2,j) = ( Z_polar(2,1,j) +  2.d0 * Z_sep(j) ) / 3.d0
   Z_polar(2,3,j) = ( Z_polar(2,4,j) +  2.d0 * Z_sep(j) ) / 3.d0
 
+#ifdef D3D_WALL
+  if (j .eq. 1) then
+    R_polar(3,1,n_tht+j) = R_wall_max(n_tht+j2)
+    R_polar(3,4,n_tht+j) = R_wall_max(n_tht+j2) 
+    R_polar(3,2,n_tht+j) = R_wall_max(n_tht+j2) 
+    R_polar(3,3,n_tht+j) = R_wall_max(n_tht+j2) 
+
+    Z_polar(3,4,n_tht+j) = -1.223 
+
+    Z_polar(3,2,n_tht+j) = (2.d0 * Z_polar(3,1,n_tht+j) +        Z_polar(3,4,n_tht+j)) / 3.d0
+    Z_polar(3,3,n_tht+j) = (       Z_polar(3,1,n_tht+j) + 2.d0 * Z_polar(3,4,n_tht+j)) / 3.d0
+
+    R_polar(2,4,n_tht+j) = R_wall_max(n_tht+j2) 
+    Z_polar(2,4,n_tht+j) = -1.223 
+
+  endif
+
+  if ((j .ge. 2) .and. (j .le. 5)) then
+
+    R_polar(3,4,n_tht+j) =  0.25d0 * R_polar(3,4,n_tht+j) + 0.75d0 * R_polar(3,4,n_tht+j-1)
+    
+    R_polar(3,2,n_tht+j) = (2.0d0 * R_polar(3,1,n_tht+j) +         R_polar(3,4,n_tht+j)) / 3.d0
+    R_polar(3,3,n_tht+j) = (        R_polar(3,1,n_tht+j) + 2.0d0 * R_polar(3,4,n_tht+j)) / 3.d0
+
+    Z_polar(3,4,n_tht+j) = -1.223 
+
+    Z_polar(3,2,n_tht+j) = (2.d0 * Z_polar(3,1,n_tht+j) +        Z_polar(3,4,n_tht+j)) / 3.d0
+    Z_polar(3,3,n_tht+j) = (       Z_polar(3,1,n_tht+j) + 2.d0 * Z_polar(3,4,n_tht+j)) / 3.d0
+
+    R_polar(2,4,n_tht+j) = R_polar(3,4,n_tht+j) 
+    Z_polar(2,4,n_tht+j) = Z_polar(3,4,n_tht+j) 
+
+  endif
+#endif
+
 enddo
 
-!---------------------- temporary fix to better match the corners of the ITER divertor
-! should make curves with more pieces, matched to divertor shape
-do j=1,n_leg
-  R_sep(n_tht+j) = R_sep(n_tht+j) + (float(n_leg-j)/float(n_leg-1))**8 * ( 4.1799 - R_sep(n_tht+j))
-  Z_sep(n_tht+j) = Z_sep(n_tht+j) + (float(n_leg-j)/float(n_leg-1))**8 * (-3.8847 - Z_sep(n_tht+j))
-enddo
-R_sep(n_tht+2) = (R_sep(n_tht+1) + R_sep(n_tht+3))/2.d0
-Z_sep(n_tht+2) = (Z_sep(n_tht+1) + Z_sep(n_tht+3))/2.d0
-do j=1,n_leg
-  R_sep(n_tht+n_leg+j) = R_sep(n_tht+n_leg+j) + (float(n_leg-j)/float(n_leg-1))**8 * ( 5.5650 - R_sep(n_tht+n_leg+j))
-  Z_sep(n_tht+n_leg+j) = Z_sep(n_tht+n_leg+j) + (float(n_leg-j)/float(n_leg-1))**8 * (-4.6 - Z_sep(n_tht+n_leg+j))
-enddo
 
-! 5.5650,-4.5559
-
-R_sep(n_tht+n_leg+2) = (R_sep(n_tht+n_leg+1) + R_sep(n_tht+n_leg+3))/2.d0
-Z_sep(n_tht+n_leg+2) = (Z_sep(n_tht+n_leg+1) + Z_sep(n_tht+n_leg+3))/2.d0
 
 do j=1,2*n_leg
 

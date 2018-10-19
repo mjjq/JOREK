@@ -104,7 +104,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 
 enddo
 
-if (i_find .eq. 0) write(*,*) ' WARNING : no Z surface found'
+!if (i_find .eq. 0) write(*,*) ' WARNING : no Z surface found'
 
 return
 end subroutine find_Z_surface

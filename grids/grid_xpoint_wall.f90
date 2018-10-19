@@ -371,11 +371,11 @@ do i=1, n_open + n_private + 1
         if ((RRg1 .le. R_xpoint(1)) .and. (ZZg1 .le. Z_axis)) then
             R_strike(i,1) = RRg1
             Z_strike(i,1) = ZZg1
-            write(*,'(A,i3,2f8.4)') ' INNER strike point : ',i,RRg1,ZZg1
+!            write(*,'(A,i3,2f8.4)') ' INNER strike point : ',i,RRg1,ZZg1
         elseif ((RRg1 .gt. R_xpoint(1)) .and. (ZZg1 .le. Z_axis)) then
              R_strike(i,2) = RRg1
              Z_strike(i,2) = ZZg1
-             write(*,'(A,i3,2f8.4)') ' OUTER strike point : ',i,RRg1,ZZg1
+!             write(*,'(A,i3,2f8.4)') ' OUTER strike point : ',i,RRg1,ZZg1
          endif
 
       endif
@@ -516,17 +516,22 @@ s_tmp = 0.d0
 call meshac2(n_leg,s_tmp,0.d0,1.d0,0.3d0,0.3d0,0.6d0,1.0d0)
 
 do j=1,n_leg
-
-  R_wall_max(j+n_tht) = R_wall_max(n_tht) + (R_max(n_tht+1) - R_wall_max(n_tht)) * s_tmp(j)
-  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + (Z_max(n_tht+1) - Z_wall_max(n_tht)) * s_tmp(j)
-
+  R_wall_max(j+n_tht) = R_wall_max(n_tht) + 0.8d0*(R_max(n_tht+1) - R_wall_max(n_tht)) * float(j-1)/float(n_leg-1)
+  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + 0.8d0*(Z_max(n_tht+1) - Z_wall_max(n_tht)) * float(j-1)/float(n_leg-1) 
+  tht_max = PI
+  call find_wall_crossing(R_wall,Z_wall,n_wall,R_max(n_tht+n_leg-j+1)+0.1,Z_wall_max(j+n_tht),tht_max,Rw,Zw,Tw)
+  R_wall_max(j+n_tht) = Rw
+  Z_wall_max(j+n_tht) = Zw
+  T_wall_par(j+n_tht) = Tw
 enddo
-
 do j=1,n_leg
-
-  R_wall_max(j+n_tht+n_leg) = R_wall_max(1) + (R_max(n_tht+n_leg+1)-R_wall_max(1)) * s_tmp(j)
-  Z_wall_max(j+n_tht+n_leg) = Z_wall_max(1) + (Z_max(n_tht+n_leg+1)-Z_wall_max(1)) * s_tmp(j)
-
+  R_wall_max(j+n_tht+n_leg) = R_wall_max(1) + 0.8d0*(R_max(n_tht+n_leg+1)-R_wall_max(1)) * float(j-1)/float(n_leg-1)
+  Z_wall_max(j+n_tht+n_leg) = Z_wall_max(1) + 0.8d0*(Z_max(n_tht+n_leg+1)-Z_wall_max(1)) * float(j-1)/float(n_leg-1)
+  tht_max = 0.d0
+  call find_wall_crossing(R_wall,Z_wall,n_wall,R_max(j+n_tht+n_leg)-0.1,Z_wall_max(j+n_tht+n_leg),tht_max,Rw,Zw,Tw)
+  R_wall_max(j+n_tht+n_leg) = Rw
+  Z_wall_max(j+n_tht+n_leg) = Zw
+  T_wall_par(j+n_tht+n_leg) = Tw
 enddo
 
 
@@ -544,9 +549,9 @@ call lincol(4)
 call lplot6(1,1,R_sep,Z_sep,-(n_tht+2*n_leg),' ')
 call lincol(0)
 
-do i=1,n_tht+2*n_leg
-  write(*,'(A,i4,6f10.6)') ' R_max,Z_max : ',i,R_max(i),Z_max(i),R_sep(i),Z_sep(i),R_min(i),Z_min(i)
-enddo
+!do i=1,n_tht+2*n_leg
+!  write(*,'(A,i4,6f10.6)') ' R_max,Z_max : ',i,R_max(i),Z_max(i),R_sep(i),Z_sep(i),R_min(i),Z_min(i)
+!enddo
 
 !------------------------------ interpolation points are known, construct polar coordinate lines
 n_pieces=3
@@ -588,41 +593,6 @@ do j=1,n_tht
   Z_polar(2,4,j) = Z_polar(3,4,j)
   Z_polar(2,2,j) = ( Z_polar(2,1,j) +  2.d0 * Z_sep(j) ) / 3.d0
   Z_polar(2,3,j) = ( Z_polar(2,4,j) +  2.d0 * Z_sep(j) ) / 3.d0
-
-#ifdef D3D_WALL
-  if (j .eq. 1) then
-    R_polar(3,1,n_tht+j) = R_wall_max(n_tht+j2)
-    R_polar(3,4,n_tht+j) = R_wall_max(n_tht+j2) 
-    R_polar(3,2,n_tht+j) = R_wall_max(n_tht+j2) 
-    R_polar(3,3,n_tht+j) = R_wall_max(n_tht+j2) 
-
-    Z_polar(3,4,n_tht+j) = -1.223 
-
-    Z_polar(3,2,n_tht+j) = (2.d0 * Z_polar(3,1,n_tht+j) +        Z_polar(3,4,n_tht+j)) / 3.d0
-    Z_polar(3,3,n_tht+j) = (       Z_polar(3,1,n_tht+j) + 2.d0 * Z_polar(3,4,n_tht+j)) / 3.d0
-
-    R_polar(2,4,n_tht+j) = R_wall_max(n_tht+j2) 
-    Z_polar(2,4,n_tht+j) = -1.223 
-
-  endif
-
-  if ((j .ge. 2) .and. (j .le. 5)) then
-
-    R_polar(3,4,n_tht+j) =  0.25d0 * R_polar(3,4,n_tht+j) + 0.75d0 * R_polar(3,4,n_tht+j-1)
-    
-    R_polar(3,2,n_tht+j) = (2.0d0 * R_polar(3,1,n_tht+j) +         R_polar(3,4,n_tht+j)) / 3.d0
-    R_polar(3,3,n_tht+j) = (        R_polar(3,1,n_tht+j) + 2.0d0 * R_polar(3,4,n_tht+j)) / 3.d0
-
-    Z_polar(3,4,n_tht+j) = -1.223 
-
-    Z_polar(3,2,n_tht+j) = (2.d0 * Z_polar(3,1,n_tht+j) +        Z_polar(3,4,n_tht+j)) / 3.d0
-    Z_polar(3,3,n_tht+j) = (       Z_polar(3,1,n_tht+j) + 2.d0 * Z_polar(3,4,n_tht+j)) / 3.d0
-
-    R_polar(2,4,n_tht+j) = R_polar(3,4,n_tht+j) 
-    Z_polar(2,4,n_tht+j) = Z_polar(3,4,n_tht+j) 
-
-  endif
-#endif
 
 enddo
 
@@ -674,6 +644,40 @@ do j=1,2*n_leg
   Z_polar(2,2,n_tht+j) = ( Z_polar(2,1,n_tht+j) +  2.d0 * Z_sep(n_tht+j) ) / 3.d0
   Z_polar(2,3,n_tht+j) = ( Z_polar(2,4,n_tht+j) +  2.d0 * Z_sep(n_tht+j) ) / 3.d0
 
+#ifdef D3D_WALL
+  if (j .eq. 1) then
+    R_polar(3,1,n_tht+j) = R_wall_max(n_tht+j2)
+    R_polar(3,4,n_tht+j) = R_wall_max(n_tht+j2) 
+    R_polar(3,2,n_tht+j) = R_wall_max(n_tht+j2) 
+    R_polar(3,3,n_tht+j) = R_wall_max(n_tht+j2) 
+
+    Z_polar(3,4,n_tht+j) = -1.223 
+
+    Z_polar(3,2,n_tht+j) = (2.d0 * Z_polar(3,1,n_tht+j) +        Z_polar(3,4,n_tht+j)) / 3.d0
+    Z_polar(3,3,n_tht+j) = (       Z_polar(3,1,n_tht+j) + 2.d0 * Z_polar(3,4,n_tht+j)) / 3.d0
+
+    R_polar(2,4,n_tht+j) = R_wall_max(n_tht+j2) 
+    Z_polar(2,4,n_tht+j) = -1.223 
+
+  endif
+
+  if ((j .ge. 2) .and. (j .le. 5)) then
+
+    R_polar(3,4,n_tht+j) =  0.25d0 * R_polar(3,4,n_tht+j) + 0.75d0 * R_polar(3,4,n_tht+j-1)
+    
+    R_polar(3,2,n_tht+j) = (2.0d0 * R_polar(3,1,n_tht+j) +         R_polar(3,4,n_tht+j)) / 3.d0
+    R_polar(3,3,n_tht+j) = (        R_polar(3,1,n_tht+j) + 2.0d0 * R_polar(3,4,n_tht+j)) / 3.d0
+
+    Z_polar(3,4,n_tht+j) = -1.223 
+
+    Z_polar(3,2,n_tht+j) = (2.d0 * Z_polar(3,1,n_tht+j) +        Z_polar(3,4,n_tht+j)) / 3.d0
+    Z_polar(3,3,n_tht+j) = (       Z_polar(3,1,n_tht+j) + 2.d0 * Z_polar(3,4,n_tht+j)) / 3.d0
+
+    R_polar(2,4,n_tht+j) = R_polar(3,4,n_tht+j) 
+    Z_polar(2,4,n_tht+j) = Z_polar(3,4,n_tht+j) 
+
+  endif
+#endif
 enddo
 
 

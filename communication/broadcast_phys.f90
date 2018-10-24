@@ -360,6 +360,9 @@ if (my_id .eq. 0) then
   call MPI_PACK (FB_Zaxis_derivative,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (FB_Zaxis_integral,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (axis_srch_radius ,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK (delta_psi_GS     ,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    
+  call MPI_PACK (newton_GS_fixbnd,    1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK (newton_GS_freebnd,   1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    
   call MPI_PACK (PF_pert_start_time ,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   
   call MPI_PACK (n_wall_blocks,         1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -940,6 +943,9 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,FB_Zaxis_derivative ,   1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,FB_Zaxis_integral ,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,axis_srch_radius ,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,delta_psi_GS     ,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,newton_GS_fixbnd ,    1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,newton_GS_freebnd ,   1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,PF_pert_start_time ,    1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   
   call MPI_UNPACK(buffer,bufsize,position,n_wall_blocks          ,    1,MPI_INTEGER,MPI_COMM_WORLD,ierr)

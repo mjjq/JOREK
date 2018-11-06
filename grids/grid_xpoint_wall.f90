@@ -59,6 +59,7 @@ real*8,allocatable  :: Aspline(:), Bspline(:), Cspline(:), Dspline(:)
 real*8              :: x_g(n_gauss,n_gauss), y_g(n_gauss,n_gauss), psi_g(n_gauss,n_gauss), xmin(2), xmax(2)
 real*8              :: abltg(3), s_gaussian, xwert, t_node
 real*8              :: Rtmp, Ztmp, dRtmp, dZtmp, Rtmp2, Ztmp2, dRtmp2, dZtmp2, Rtmp3, Ztmp3, dRtmp3, dZtmp3
+real*8              :: t2, t3, t_delta, t_total
 logical             :: xpoint, extend
 real*8,external     :: root, spwert
 character*4         :: label
@@ -559,7 +560,7 @@ allocate(R_polar(n_pieces,4,n_tht+2*n_leg),Z_polar(n_pieces,4,n_tht+2*n_leg))
 
 do j=1,n_tht
 
-  delta = 0.1
+  delta = 0.08
 
   if ((j .eq. 1) .or. (j .eq. n_tht))       delta = 0.d0
   if ((j .eq. 2) .or. (j .eq. n_tht - 1))   delta = 0.05d0
@@ -600,9 +601,11 @@ enddo
 
 do j=1,2*n_leg
 
-  delta = 0.1
+  delta = 0.2
+
   if ((j .eq. n_leg)   .or. (j .eq. 2*n_leg))    delta = 0.d0
   if ((j .eq. n_leg-1) .or. (j .eq. 2*n_leg-1))  delta = 0.05d0
+  if ((j .eq. n_leg-2) .or. (j .eq. 2*n_leg-2))  delta = 0.1d0
 !  if  (j .eq. 1)        delta = 0.05d0
 !  if  (j .eq. 2)        delta = 0.08d0
 !  if  (j .eq. 1+n_leg)  delta = 0.05d0
@@ -678,8 +681,50 @@ do j=1,2*n_leg
 
   endif
 #endif
+
 enddo
 
+#ifdef AUG_WALL
+
+R_polar(3,2,n_tht+1) =  1.294 
+Z_polar(3,2,n_tht+1) = -0.955
+
+R_polar(3,3,n_tht+1) =  1.292 
+Z_polar(3,3,n_tht+1) = -0.983
+
+R_polar(3,4,n_tht+1) =  1.287 
+Z_polar(3,4,n_tht+1) = -1.001
+
+R_polar(2,4,n_tht+1) = R_polar(3,4,n_tht+1) 
+Z_polar(2,4,n_tht+1) = Z_polar(3,4,n_tht+1) 
+
+Z_polar(2,3,n_tht+1) = 2.d0 * Z_polar(2,4,n_tht+1) - Z_polar(3,3,n_tht+1)  
+R_polar(2,3,n_tht+1) = 2.d0 * R_polar(2,4,n_tht+1) - R_polar(3,3,n_tht+1)  
+
+j_end = n_leg/2
+
+do j= 2, j_end-1
+
+  R_polar(3,:,n_tht+j) =  real(j-1,8)/real(j_end-1,8) * R_polar(3,:,n_tht+j_end) + real(j_end-j,8)/real(j_end-1,8) * R_polar(3,:,n_tht+1)
+  Z_polar(3,:,n_tht+j) =  real(j-1,8)/real(j_end-1,8) * Z_polar(3,:,n_tht+j_end) + real(j_end-j,8)/real(j_end-1,8) * Z_polar(3,:,n_tht+1)
+  
+  R_polar(2,4,n_tht+j) = R_polar(3,4,n_tht+j) 
+  Z_polar(2,4,n_tht+j) = Z_polar(3,4,n_tht+j) 
+
+  Z_polar(2,3,n_tht+j) = 2.d0 * Z_polar(2,4,n_tht+j) - Z_polar(3,3,n_tht+j)  
+  R_polar(2,3,n_tht+j) = 2.d0 * R_polar(2,4,n_tht+j) - R_polar(3,3,n_tht+j)  
+
+enddo
+
+R_polar(3,:,n_tht+2) = 0.5d0 * R_polar(3,:,n_tht+1) + 0.5d0 * R_polar(3,:,n_tht+3)
+Z_polar(3,:,n_tht+2) = 0.5d0 * Z_polar(3,:,n_tht+1) + 0.5d0 * Z_polar(3,:,n_tht+3)
+  
+R_polar(2,4,n_tht+2) = R_polar(3,4,n_tht+2) 
+Z_polar(2,4,n_tht+2) = Z_polar(3,4,n_tht+2) 
+
+Z_polar(2,3,n_tht+2) = 2.d0 * Z_polar(2,4,n_tht+2) - Z_polar(3,3,n_tht+2)  
+R_polar(2,3,n_tht+2) = 2.d0 * R_polar(2,4,n_tht+2) - R_polar(3,3,n_tht+2)  
+#endif
 
 call lincol(3)
 
@@ -1114,12 +1159,37 @@ if (extend) then
 
       k = k_cross(n_flux+n_open,j)
 
+      if (k .eq. 2) then
+        
+        t2 = 1.d0 - t_tht(n_flux+n_open,j)
+        t3 = 2.d0
+
+        t_total = t2 + t3
+
+        t_delta = t_total * real(i,8)/real(n_ext,8)
+
+        t_node = t_tht(n_flux+n_open,j) + t_delta
+
+        if (t_node .gt. 1.d0) then
+
+          k = 3
+
+          t_node = 1.d0 - (t_delta - t2)
+        
+        endif
+
+      else
+
+        t_node = -1.d0 + float(n_ext-i)/float(n_ext) * (t_tht(n_flux+n_open,j)+1.d0)
+
+      endif  
+
+
       R_cub1d = (/ R_polar(k,1,j), 3.d0/2.d0 *(R_polar(k,2,j)-R_polar(k,1,j)), &
                    R_polar(k,4,j), 3.d0/2.d0 *(R_polar(k,4,j)-R_polar(k,3,j))  /)
       Z_cub1d = (/ Z_polar(k,1,j), 3.d0/2.d0 *(Z_polar(k,2,j)-Z_polar(k,1,j)), &
                    Z_polar(k,4,j), 3.d0/2.d0 *(Z_polar(k,4,j)-Z_polar(k,3,j)) /)
 
-      t_node = -1.d0 + float(n_ext-i)/float(n_ext) * (t_tht(n_flux+n_open,j)+1.d0)
 
       call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4), t_node, Rtmp, dR_dt)
       call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4), t_node, Ztmp, dZ_dt)

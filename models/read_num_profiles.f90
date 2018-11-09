@@ -2,7 +2,7 @@
 subroutine read_num_profiles(my_id)
   
   use phys_module
-  use profiles
+  use profiles, only: readProf, readProfNeo
   
   implicit none
   
@@ -11,10 +11,7 @@ subroutine read_num_profiles(my_id)
   num_rho = ( rho_file /= 'none' )
   if ( num_rho .and. ( my_id == 0 ) ) then
     call readProf(num_rho_x, num_rho_y0, num_rho_len, rho_file)
-    if ( num_rho_len < 2 ) then 
-      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(rho_file)//'".'
-      stop
-    end if
+    call check_num_prof(num_rho, num_rho_x, num_rho_y0, num_rho_len, 'rho', check_positive=.true.)
     rho_1 = num_rho_y0(num_rho_len)
     num_rho_y0 = num_rho_y0 - rho_1
   end if
@@ -22,10 +19,8 @@ subroutine read_num_profiles(my_id)
   num_rhon = ( rhon_file /= 'none' )
   if ( num_rhon .and. ( my_id == 0 ) ) then
     call readProf(num_rhon_x, num_rhon_y0, num_rhon_len, rhon_file)
-    if ( num_rhon_len < 2 ) then 
-      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(rhon_file)//'".'
-      stop
-    end if
+    call check_num_prof(num_rhon, num_rhon_x, num_rhon_y0, num_rhon_len, 'rhon',                   &
+      check_positive=.true.)
     rhon_1 = num_rhon_y0(num_rhon_len)
     num_rhon_y0 = num_rhon_y0 - rhon_1
   end if
@@ -33,10 +28,7 @@ subroutine read_num_profiles(my_id)
   num_T = ( T_file /= 'none' )
   if ( num_T .and. ( my_id == 0 ) ) then
     call readProf(num_T_x, num_T_y0, num_T_len, T_file)
-    if ( num_T_len < 2 ) then 
-      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(T_file)//'".'
-      stop
-    end if
+    call check_num_prof(num_T, num_T_x, num_T_y0, num_T_len, 'T', check_positive=.true.)
     T_1 = num_T_y0(num_T_len)
     num_T_y0 = num_T_y0 - T_1
     T_0 = num_T_y0(1)
@@ -45,10 +37,7 @@ subroutine read_num_profiles(my_id)
   num_Te = ( Te_file /= 'none' )
   if ( num_Te .and. ( my_id == 0 ) ) then
     call readProf(num_Te_x, num_Te_y0, num_Te_len, Te_file)
-    if ( num_Te_len < 2 ) then 
-      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(Te_file)//'".'
-      stop
-    end if
+    call check_num_prof(num_Te, num_Te_x, num_Te_y0, num_Te_len, 'Te', check_positive=.true.)
     Te_1 = num_Te_y0(num_Te_len)
     num_Te_y0 = num_Te_y0 - Te_1
   end if
@@ -56,33 +45,16 @@ subroutine read_num_profiles(my_id)
   num_Ti = ( Ti_file /= 'none' )
   if ( num_Ti .and. ( my_id == 0 ) ) then
     call readProf(num_Ti_x, num_Ti_y0, num_Ti_len, Ti_file)
-    if ( num_Ti_len < 2 ) then 
-      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(Ti_file)//'".'
-      stop
-    end if
+    call check_num_prof(num_Ti, num_Ti_x, num_Ti_y0, num_Ti_len, 'Ti', check_positive=.true.)
     Ti_1 = num_Ti_y0(num_Ti_len)
     num_Ti_y0 = num_Ti_y0 - Ti_1
   end if
   
-!  num_rhon = ( rhon_file /= 'none' )
-!  if ( num_rhon .and. ( my_id == 0 ) ) then
-!    call readProf(num_rhon_x, num_rhon_y0, num_rhon_len, rhon_file)
-!    if ( num_rhon_len < 2 ) then 
-!      write(*,*) '  ERROR: Could not read the numerical profile !"'//trim(rhon_file)//'".'
-!      stop
-!    end if
-!    rhon_1 = num_rhon_y0(num_rhon_len)
-!    num_rhon_y0 = num_rhon_y0 - rhon_1
-!  end if
-  
-  
   num_ffprime = ( ffprime_file /= 'none' )
   if ( num_ffprime .and. ( my_id == 0 ) ) then
     call readProf(num_ffprime_x, num_ffprime_y0, num_ffprime_len, ffprime_file)
-    if ( num_ffprime_len < 2 ) then 
-      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(ffprime_file)//'".'
-      stop
-    end if
+    call check_num_prof(num_ffprime, num_ffprime_x, num_ffprime_y0, num_ffprime_len, 'ffprime',    &
+      check_positive=.false.)
     FF_0 = num_ffprime_y0(1)
     FF_1 = num_ffprime_y0(num_ffprime_len)
   end if
@@ -90,63 +62,111 @@ subroutine read_num_profiles(my_id)
   num_d_perp = ( d_perp_file /= 'none' )
   if ( num_d_perp .and. ( my_id == 0 ) ) then
     call readProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, d_perp_file)
-    if ( num_d_perp_len < 2 ) then 
-      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(d_perp_file)//'".'
-      stop
-    end if
+    call check_num_prof(num_d_perp, num_d_perp_x, num_d_perp_y, num_d_perp_len, 'd_perp',          &
+      check_positive=.true.)
   end if
 
   num_zk_perp = ( zk_perp_file /= 'none' )
   if ( num_zk_perp .and. ( my_id == 0 ) ) then
     call readProf(num_zk_perp_x, num_zk_perp_y, num_zk_perp_len, zk_perp_file)
-    if ( num_zk_perp_len < 2 ) then 
-      write(*,*) '  ERROR: Could not read the numerical profile "'//trim(zk_perp_file)//'".'
-      stop
-    end if
+    call check_num_prof(num_zk_perp, num_zk_perp_x, num_zk_perp_y, num_zk_perp_len, 'zk_perp',     &
+      check_positive=.true.)
   end if
 
-  if ( jorek_model == 400 ) then
-    num_zk_e_perp = ( zk_e_perp_file /= 'none' )
-    if ( num_zk_e_perp .and. ( my_id == 0 ) ) then
-      call readProf(num_zk_e_perp_x, num_zk_e_perp_y, num_zk_e_perp_len, zk_e_perp_file)
-      if ( num_zk_e_perp_len < 2 ) then 
-        write(*,*) '  ERROR: Could not read the numerical profile "'//trim(zk_e_perp_file)//'".'
+  num_zk_e_perp = ( zk_e_perp_file /= 'none' )
+  if ( num_zk_e_perp .and. ( my_id == 0 ) ) then
+    call readProf(num_zk_e_perp_x, num_zk_e_perp_y, num_zk_e_perp_len, zk_e_perp_file)
+    call check_num_prof(num_zk_e_perp, num_zk_e_perp_x, num_zk_e_perp_y, num_zk_e_perp_len,        &
+      'zk_e_perp', check_positive=.true.)
+  end if
+  
+  num_zk_i_perp = ( zk_i_perp_file /= 'none' )
+  if ( num_zk_i_perp .and. ( my_id == 0 ) ) then
+    call readProf(num_zk_i_perp_x, num_zk_i_perp_y, num_zk_i_perp_len, zk_i_perp_file)
+    call check_num_prof(num_zk_i_perp, num_zk_i_perp_x, num_zk_i_perp_y, num_zk_i_perp_len,        &
+      'zk_i_perp', check_positive=.true.)
+  end if
+
+  num_neo_file= NEO .and. ( neo_file /= 'none')
+  if ( num_neo_file .and. ( my_id == 0 ) ) then
+    write(*,*) 'using ki and mui profiles from file "'//trim(neo_file)//'"'
+    call readProfNeo(num_neo_psi, num_amu_value, num_aki_value, num_neo_len, neo_file)
+    if ( num_neo_len <= 2 ) then 
+      write(*,*) '  ERROR: Could not read the numerical profile.'
+      stop
+    end if
+    ! (no additional checks done at present)
+  end if
+  
+  num_rot = ( rot_file /= 'none' )
+  if ( (num_rot) .and. ( my_id == 0 ) ) then
+    call readProf(num_rot_x, num_rot_y0, num_rot_len, rot_file)
+    call check_num_prof(num_rot, num_rot_x, num_rot_y0, num_rot_len, 'rot', check_positive=.false.)
+  end if
+  
+  
+  
+  contains
+  
+  
+  
+  subroutine check_num_prof(num, x, y, len, name, check_positive)
+    
+    implicit none
+    
+    logical,             intent(in) :: num
+    real*8, allocatable, intent(in) :: x(:)
+    real*8, allocatable, intent(in) :: y(:)
+    integer,             intent(in) :: len
+    character(len=*),    intent(in) :: name
+    logical,             intent(in) :: check_positive !< should we check for positivity?
+    
+    integer :: i
+    
+    if ( num ) then
+      if ( len < 2 ) then 
+        write(*,*) '  ERROR: Could not read the numerical profile for '//trim(name)
         stop
+      end if
+      if ( abs(x(1))>1.d-6 ) then
+        write(*,*) 'WARNING: Numerical '//trim(name)//' input does not start at Psi_N=0'
+      end if
+      if ( x(len) < 1.d0 ) then
+        write(*,*) 'WARNING: Numerical '//trim(name)//' input does not include Psi_N=1'
+      end if
+      if ( len < 50 ) then
+        write(*,*) 'WARNING: Numerical '//trim(name)//' input has a small number of points'
+        write(*,*) '  This might lead to numerical problems or inaccuracy'
+        write(*,*) '  Typically recommended number of points ~200'
+      else if ( len > 500 ) then
+        write(*,*) 'WARNING: Numerical '//trim(name)//' input has a very large number of points'
+        write(*,*) '  This might slow down your simulation'
+        write(*,*) '  Typically recommended number of points ~200'
+      end if
+      if ( xpoint .and. ( x(len) < 1.03d0 ) ) then
+        write(*,*) 'WARNING: Numerical '//trim(name)//' input in SOL possibly not defined'
+        write(*,*) '  In X-point simulations, numerical profiles should be specified such that'
+        write(*,*) '  they cover the whole SOL region. Otherwise, extrapolation is used.'
+      end if
+      do i = 1, len-1
+        if ( x(i+1)<=x(i) ) then
+          write(*,*) 'ERROR: Numerical '//trim(name)//' input not correct'
+          write(*,*) '  Psi_N values do not increase in a strictly monotonic way'
+          stop
+        end if
+      end do
+      if ( (minval(x) /= minval(x)) .or. (minval(y) /= minval(y)) ) then
+        write(*,*) 'ERROR: Numerical '//trim(name)//' input contains NaNs'
+        stop
+      end if
+      if ( check_positive ) then
+        if ( minval(y) < 0.d0 ) then
+          write(*,*) 'ERROR: Numerical '//trim(name)//' input has non-positive values'
+          stop
+        end if
       end if
     end if
     
-    num_zk_i_perp = ( zk_i_perp_file /= 'none' )
-    if ( num_zk_i_perp .and. ( my_id == 0 ) ) then
-      call readProf(num_zk_i_perp_x, num_zk_i_perp_y, num_zk_i_perp_len, zk_i_perp_file)
-      if ( num_zk_i_perp_len < 2 ) then 
-        write(*,*) '  ERROR: Could not read the numerical profile "'//trim(zk_i_perp_file)//'".'
-        stop
-      end if
-    end if
- end if
+  end subroutine check_num_prof
 
-if (NEO) then
-   num_neo_file= ( neo_file /= 'none')
-   if ( num_neo_file .and. ( my_id == 0 ) ) then
-      write(*,*) 'using ki and mui profiles from file "'//trim(neo_file)//'"'
-      call readProfNeo(num_neo_psi, num_amu_value, num_aki_value, num_neo_len, neo_file)
-      
-      if ( num_neo_len <= 2 ) then 
-         write(*,*) '  ERROR: Could not read the numerical profile.'
-         stop
-      end if
-   end if
-endif
-
-num_rot = ( rot_file /= 'none' )
-if ( (num_rot) .and. ( my_id == 0 ) ) then
-  call readProf(num_rot_x, num_rot_y0, num_rot_len, rot_file)
-  if ( num_rot_len < 2 ) then 
-    write(*,*) '  ERROR: Could not read the numerical profile "'//trim(rot_file)//'".'
-    stop
-  end if
-end if
-
-
-return
 end subroutine read_num_profiles

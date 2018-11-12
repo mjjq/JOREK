@@ -57,7 +57,7 @@ real*8              :: RL5, RL8, RL9, RL10, RL11, ZL5, ZL8, ZL9, ZL10, ZL11, ang
 real*8,allocatable  :: psi_gaussians(:,:), angle_gaussians(:,:), s_equidistant(:)
 real*8,allocatable  :: Aspline(:), Bspline(:), Cspline(:), Dspline(:)
 real*8              :: x_g(n_gauss,n_gauss), y_g(n_gauss,n_gauss), psi_g(n_gauss,n_gauss), xmin(2), xmax(2)
-real*8              :: abltg(3), s_gaussian, xwert, t_node
+real*8              :: abltg(3), t_node
 real*8              :: Rtmp, Ztmp, dRtmp, dZtmp, Rtmp2, Ztmp2, dRtmp2, dZtmp2, Rtmp3, Ztmp3, dRtmp3, dZtmp3
 real*8              :: t2, t3, t_delta, t_total
 logical             :: xpoint, extend
@@ -115,11 +115,6 @@ call spline(n_flux,s_equidistant,s_tmp,0.d0,0.d0,2,Aspline,Bspline,Cspline,Dspli
 do i=1,n_flux-1
   s_values(i) = s_tmp(i+1)
   flux_list%psi_values(i) =  psi_axis + s_values(i)**2 * (psi_xpoint(1) - psi_axis)
-!  do j=1,4
-!    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
-!    s_gaussian = SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
-!    psi_gaussians(j,i) = psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
-!  enddo
 enddo
 
 deallocate(s_tmp,Aspline,Bspline,Cspline,Dspline,s_equidistant)
@@ -135,11 +130,6 @@ call spline(n_open+1,s_equidistant,s_tmp,0.d0,0.d0,2,Aspline,Bspline,Cspline,Dsp
 do i=1,n_open
   s_values(i+n_flux-1)             =  1.d0 + dPSI_open*s_tmp(i+1)
   flux_list%psi_values(i+n_flux-1) =  psi_axis + s_values(i+n_flux-1)**2 * (psi_xpoint(1) - psi_axis)
-!  do j=1,4
-!    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
-!    s_gaussian = 1.d0 + DPSI_open*SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
-!    psi_gaussians(j,(n_flux-1)+i) =  psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
-!  enddo
 enddo
 
 deallocate(s_tmp,Aspline,Bspline,Cspline,Dspline,s_equidistant)
@@ -157,11 +147,6 @@ call spline(n_private+1,s_equidistant,s_tmp,0.d0,0.d0,2,Aspline,Bspline,Cspline,
 do i=1,n_private
   s_values(i+n_flux-1+n_open)             =  1.d0 - dPSI_private*s_tmp(i+1)
   flux_list%psi_values(i+n_flux-1+n_open) =  psi_axis + s_values(i+n_flux-1+n_open)**2 * (psi_xpoint(1) - psi_axis)
-!  do j=1,4
-!    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
-!    s_gaussian = 1.d0 - DPSI_private*SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
-!    psi_gaussians(j,n_flux-1+n_open+i) =  psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
-!  enddo
 enddo
 
 call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
@@ -395,6 +380,9 @@ deallocate(s_tmp); allocate(s_tmp(n_leg))
 s_tmp = 0
 call meshac2(n_leg,s_tmp,0.d0,1.d0,SIG_leg_0,SIG_leg_1,0.6d0,1.0d0)
 
+do j=1,n_leg
+  s_tmp(j) = real(j-1,8)/real(n_leg-1,8)
+enddo
 
 !----------------------------- inner leg, private side
 do j=1,n_leg
@@ -1564,16 +1552,6 @@ if (extend) then
         if (j .eq. n_leg-1)then
           newnode_list%node(newelement_list%element(index)%vertex(3))%boundary = 9 !3  ! LEFT LEG
           newnode_list%node(newelement_list%element(index)%vertex(4))%boundary = 4 !3  ! LEFT LEG
-
-          newnode_list%node(newelement_list%element(index)%vertex(2))%x =         &
-              0.4 * newnode_list%node(newelement_list%element(index)%vertex(2))%x  &
-            + 0.6 * newnode_list%node(newelement_list%element(index)%vertex(3))%x
-          newnode_list%node(newelement_list%element(index)%vertex(4))%x =         &
-              0.4 * newnode_list%node(newelement_list%element(index)%vertex(4))%x  &
-            + 0.6 * newnode_list%node(newelement_list%element(index)%vertex(3))%x
-          newnode_list%node(newelement_list%element(index)%vertex(3))%x =         &
-              0.5 * newnode_list%node(newelement_list%element(index)%vertex(2))%x  &
-            + 0.5 * newnode_list%node(newelement_list%element(index)%vertex(4))%x
         endif
       endif
       if ((j .eq. n_leg-1) .and. (i .ne. n_ext)) then
@@ -1623,17 +1601,6 @@ if (extend) then
         if (j .eq. n_leg-1)then
           newnode_list%node(newelement_list%element(index)%vertex(1))%boundary = 4 ! 3  ! RIGHT LEG
           newnode_list%node(newelement_list%element(index)%vertex(2))%boundary = 9 ! 3  ! RIGHT LEG
-
-          newnode_list%node(newelement_list%element(index)%vertex(1))%x =         &
-              0.4 * newnode_list%node(newelement_list%element(index)%vertex(1))%x  &
-            + 0.6 * newnode_list%node(newelement_list%element(index)%vertex(2))%x
-          newnode_list%node(newelement_list%element(index)%vertex(3))%x =         &
-              0.4 * newnode_list%node(newelement_list%element(index)%vertex(3))%x  &
-            + 0.6 * newnode_list%node(newelement_list%element(index)%vertex(2))%x
-          newnode_list%node(newelement_list%element(index)%vertex(2))%x =         &
-              0.5 * newnode_list%node(newelement_list%element(index)%vertex(1))%x  &
-            + 0.5 * newnode_list%node(newelement_list%element(index)%vertex(3))%x
-
         endif
       endif
  

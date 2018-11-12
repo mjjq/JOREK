@@ -88,13 +88,13 @@ area_div_in  = 0.d0; area_div_out  = 0.d0; area_wall_in  = 0.d0; area_wall_out  
 Q_div_in     = 0.d0; Q_div_out     = 0.d0; Q_wall_in     = 0.d0; Q_wall_out     = 0.d0
 L_div_in     = 0.d0; L_div_out     = 0.d0; L_wall_in     = 0.d0; L_wall_out     = 0.d0
 
-!R_in_out   = 5.d0    ! ITER divertor
-!Z_wall_out = -3.2350
-!Z_wall_in  = -2.5674 
+R_in_out   = 5.d0    ! ITER divertor
+Z_wall_out = -3.2350
+Z_wall_in  = -2.5674 
 
-R_in_out   = 2.55
-Z_wall_out = -1.5
-Z_wall_in  = -1.5
+!R_in_out   = 2.55
+!Z_wall_out = -1.5
+!Z_wall_in  = -1.5
 
 do m=1, n_plane
 
@@ -341,8 +341,9 @@ do m=1, n_plane
 
         enddo
 
-      elseif ((node_list%node(inode1)%boundary .ne. 0) .and. (node_list%node(inode2)%boundary .ne. 0)) then
+      else if ((node_list%node(inode1)%boundary .ne. 0) .and. (node_list%node(inode2)%boundary .ne. 0)) then
         write(*,*) 'problem : ',inode1,inode2,node_list%node(inode1)%boundary,node_list%node(inode2)%boundary
+        stop
       endif
 
     enddo

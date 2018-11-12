@@ -544,8 +544,6 @@ do ms=1, n_gauss
      eta_Sp = 1.65d-9*17*(1.d-3*T0_corr/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
                                *sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) 
 
-     !eta_Sp = 0. ! For intear benchmark
-     
      detaSp_dT = -1.65d-9*17 * (1.5d0) * T0_corr**(-2.5d0) * (1.d-3/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
                       * sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) * dT0_corr_dT
 

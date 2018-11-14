@@ -617,6 +617,7 @@ do ms=1, n_gauss
        endif
        if (T0 .lt. ZK_prof_neg_thresh) then
          ZK_prof = ZK_prof_neg
+         ZKpar_T = ZK_par_neg
        endif
      endif
 

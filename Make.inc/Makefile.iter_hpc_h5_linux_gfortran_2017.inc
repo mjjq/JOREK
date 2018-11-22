@@ -79,5 +79,4 @@ HDF5LIB=$(HDF5_HOME)/lib/libhdf5hl_fortran.a \
         $(HDF5_HOME)/lib/libhdf5_fortran.a   \
         $(HDF5_HOME)/lib/libhdf5.a           \
 	$(EBROOTZLIB)/lib/libz.a             \
-        -lsz
-
+        -lsz -ldl

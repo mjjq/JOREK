@@ -39,10 +39,10 @@ USE_HDF5   = 1
 
 # MUMPS
 MUMPS_HOME ?= $(EBROOTMUMPS)
-LIB_MUMPS   = -L$(MUMPS_HOME)/lib/ -ldmumps -lmumps_common -lesmumps -lblas -llapack -lscalapack
+LIB_MUMPS   = -L$(MUMPS_HOME)/lib/ -ldmumps -lmumps_common -lesmumps -lscalapack
 LIB_ZMUMPS  = -lzmumps
 INC_MUMPS   =  $(MUMPS_HOME)/include/
-ORDLIB      = -L$(METIS_HOME)/lib -lptscotch -lscotch -lscotcherr -lscotcherrexit -lmetis -lpord -llapack -lblas
+ORDLIB      = -L$(METIS_HOME)/lib -lptscotch -lscotch -lscotcherr -lscotcherrexit -lmetis -lpord -lscalapack
 
 # PASTIX
 PASTIX_HOME      ?= $(EBROOTPASTIX)

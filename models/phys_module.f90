@@ -216,7 +216,7 @@ module phys_module
   logical :: use_pellet
   
   !> @name Massive gas injection-related input parameters
-  real*8  :: mgi_amplitude      !< amplitude of neutral density source
+  real*8  :: mgi_amplitude     !< amplitude of neutral density source
   real*8  :: mgi_R             !< major radius position of neutral density source
   real*8  :: mgi_Z             !< Z position of neutral density source
   real*8  :: mgi_phi           !< width of the neutral density source in toroidal direction
@@ -449,6 +449,9 @@ module phys_module
   real*8, allocatable :: num_rhon_y1(:)   !< First derivatives of neutral density profile (\f$ d\rhon/d\Psi_N \f$)
   real*8, allocatable :: num_rhon_y2(:)   !< Second derivatives of neutral density profile (\f$ d^2\rhon/d\Psi_N^2 \f$)
   real*8, allocatable :: num_rhon_y3(:)   !< Third derivatives of neutral density profile (\f$ d^3\rhon/d\Psi_N^3 \f$)
+ 
+  !> @name Input for impurity density profile (model 501)
+  real*8              :: rho_imp          !< Uniform impurity density
   
   !> @name Analytical input profile for FFprime
   real*8  :: FF_0,  FF_1,   FF_coef(10)

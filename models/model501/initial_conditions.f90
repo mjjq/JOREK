@@ -113,8 +113,11 @@ if (my_id .eq. 0) then
  
     node_list%node(i)%values(1,:,4) = 0.d0        ! vorticity (will be filled just below with inverse Poisson)
     node_list%node(i)%values(1,:,7) = 0.d0        ! parallel velocity
-    
+    node_list%node(i)%values(1,:,8) = 0.d0        ! Impurity density   
+    node_list%node(i)%values(1,1,8) = rho_imp     ! Impurity density                                                                                                                                               
+
     node_list%node(i)%deltas = 0.d0
+
 
   enddo
 

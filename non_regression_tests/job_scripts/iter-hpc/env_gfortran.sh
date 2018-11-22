@@ -6,16 +6,9 @@ module purge
 module use /work/imas/opt/EasyBuild/modules/all
 module use /work/imas/etc/modules/all
 
-module load MUMPS/5.0.1-goolf-1.5.16-metis
-module load PaStiX/5.2.2.22-goolf-1.5.16
-module load HDF5/1.10.0-patch1-goolf-1.5.16
-module load Szip/2.1-goolf-1.5.16
-module load zlib/1.2.8-GCC-4.8.3
-module load libibverbs/1.1.4
-# patch libibverbs module on iter since it does not set LIBRARY_PATH correctly
-export LIBRARY_PATH=$LIBRARY_PATH:/work/imas/opt/libibverbs/1.1.4/lib
-
-export ZLIB_HOME=$EBROOTZLIB
+module load MUMPS/5.1.2-foss-2018a-metis
+module load PaStiX/5.2.3-foss-2018a
+module load HDF5/1.10.1-foss-2018a
 
 export LANG=C
 export JOREK_HOST=iter-hpc

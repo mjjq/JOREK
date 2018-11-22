@@ -21,3 +21,5 @@ export CXXFLAGS=-O0 # problem with stdio library on ITER http://gcc.1065356.n8.n
 
 export http_proxy=10.10.240.146:8080
 export https_proxy=10.10.240.146:8080
+
+alias mpirun='mpirun --allow-run-as-root'

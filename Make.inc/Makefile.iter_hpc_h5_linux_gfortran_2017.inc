@@ -7,6 +7,8 @@ FC     = mpif90
 CC     = mpicc
 CXX    = g++
 
+DEBUG ?= 1
+
 FFLAGS_OMP       = -fopenmp 
 FFLAGS           = -g -O0 
 FFLAGS          := $(FFLAGS) -fdefault-real-8 -fdefault-double-8

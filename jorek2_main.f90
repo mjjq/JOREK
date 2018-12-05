@@ -22,12 +22,6 @@ program JOREK2
   use constants
   use mumps_module
   use pastix_module
-  use murge_module,        only: murge_initialization, murge_setGraph,         &
-       &                         MURGE_Clean,                                  &
-       &                         use_murge,                                    &
-       &                         use_murge_element, murge_initialised,         &
-       &                         murge_glob2loc, murge_loc2glob, murge_id,     &
-       &                         murge_termination
   use wsmp_module
   use data_structure
   use phys_module
@@ -44,7 +38,6 @@ program JOREK2
   use live_data
   use mod_bootstrap_functions
   use construct_matrix_mod, only : construct_matrix
-  use construct_matrix_murge_mod, only : construct_matrix_murge
   use mod_global_matrix_structure
   use mod_import_restart
   use mod_export_restart
@@ -234,7 +227,6 @@ required = 0
   ! --- Preset some solver variables
   pastix_initialised = .false.
   pastix_analysed    = .false.
-  murge_initialised  = .false.
   
   ! --- Preset input parameters to reasonable defaults, then read the input file.
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
@@ -242,10 +234,10 @@ required = 0
   ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)
   
-  ! --- MURGE with ntor=1 doesn't work up to now because i_tor is not allocated correctly
+  ! --- GMRES makes no sense with n_tor=1
   if (n_tor == 1) then
+    write(*,*) 'Remark: Setting gmres=.false. since n_tor=1'
     gmres     = .false.
-    use_murge = .false. 
   end if
   
   ! --- Write out all parameters defined in parameters and the namelist input file.
@@ -294,13 +286,6 @@ required = 0
      call MPI_Abort(MPI_COMM_WORLD, 8, ierr)
      stop
 #endif
-     if ( use_murge ) then
-#ifndef USE_MURGE
-        write(*,*) 'FATAL : use_murge=.true. requires USE_PASTIX_MURGE=1 in Makefile.inc'
-        call MPI_Abort(MPI_COMM_WORLD, 9, ierr)
-        stop
-#endif
-     endif
   else if ( use_wsmp ) then
 #ifndef USE_WSMP
     write(*,*) 'FATAL : use_wsmp=.true. requires USE_WSMP=1 in Makefile.inc'
@@ -753,21 +738,12 @@ required = 0
     !***********************************************************************
     !*  	  distribute nodes and elements over cpu's		   *
     !***********************************************************************
-    if ( use_pastix .and. use_murge .and. use_murge_element .and. gmres ) then
-       index_size  = n_cpu_n
-       id_elements = my_id_n
-    else
-       index_size  = n_cpu
-       id_elements = my_id
-    endif
+    index_size  = n_cpu
+    id_elements = my_id
 
     call tr_allocate(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
     call tr_allocate(index_min,1,index_size,"index_min",CAT_FEM)
     call tr_allocate(index_max,1,index_size,"index_max",CAT_FEM)
-    if ( .not. (use_pastix .and. use_murge .and. use_murge_element .and. gmres) ) then
-       call tr_allocate(local_index_start,1,n_cpu,"local_index_start",CAT_FEM)
-       call tr_allocate(local_index_end,1,n_cpu,"local_index_end",CAT_FEM)
-    end if
     !
     ! Construct index_min, index_max and local_elems
     !
@@ -775,36 +751,17 @@ required = 0
     	 n_local_elms,ndof_glob,index_min,index_max)
 
     node_list%n_dof = ndof_glob
-    if ( .not. (use_pastix .and. use_murge  .and. use_murge_element .and. gmres) ) then
-       local_index_start = index_min
-       local_index_end   = index_max
-    end if
+    local_index_start = index_min
+    local_index_end   = index_max
     ! Build ijA_index, ijA_size and irn_jcn
 
-    ! TODO : ne pas appeler avec MURGE si pas utile
-    if (.not. (use_pastix .and. use_murge .and. use_murge_element .and. gmres )) then
-       call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
-            local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
-       call MPI_Barrier(MPI_COMM_WORLD,ierr)
-       if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-         call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1)) 
-       endif
-    end if
+    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
+         local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+    if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
+      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1)) 
+    endif
 
-    if ( use_pastix .and. use_murge .and. use_murge_element ) then
-       
-       write (*,*) "--- Murge initilisation ---"
-
-       ! TODO : deplacer dans un subroutine, dans mod_murge.f90
-
-       ! --- Murge initialisation and graph definition edge by edge
-       if (use_murge_element) call murge_initialization(gmres, my_id, MPI_COMM_N, i_tor)
-       ! --- Build the graph
-       call murge_setgraph(gmres, mumps_par%n, local_elms, n_local_elms,      &
-            &              element_list, node_list, n_aa, my_id, my_id_trans, &
-            &              n_cpu_trans, MPI_COMM_N, MPI_COMM_TRANS)
-
-    END IF
     if (use_mumps) then
        if (.not. gmres) then
     	  call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
@@ -925,20 +882,9 @@ required = 0
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
     
-    ! --- construct the matrix from elemental matrices
-    if ( use_pastix .and. use_murge .and. use_murge_element ) then
-
-       call construct_matrix_murge(my_id, node_list, element_list, bnd_node_list, local_elms,      &
-    	 n_local_ELms, xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,         &
-         Z_xpoint, psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, mpi_comm_trans, my_id_trans,       &
-         n_cpu_trans, solve_only)
-    else
-
-       call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),                  &
-         index_max(my_id+1), xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,   &
-         Z_xpoint, psi_xpoint)
-    endif
-    
+    call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),                  &
+      index_max(my_id+1), xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,   &
+      Z_xpoint, psi_xpoint)
 
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
@@ -952,30 +898,17 @@ required = 0
     call del_thread_buffers()
 
     if (.not. gmres) then
+
        if (use_mumps) then
-
     	  call solve_mumps_all(my_id)
-
        else
-
-    	  ! Recuperer la solution
-    	  if (use_murge) then
-    	     call solve_murge_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
-    	  else
-    	     call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
-    	  endif
-
+          call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
        endif
 
     else
        call clck_time(t0)
        if (.not. solve_only) then
-    	  ! with murge elementary assembly harmonic distribution is already done.
-    	  IF ( .not. ( use_pastix .and. use_murge .and. use_murge_element ) ) THEN
-    	     call distribute_harmonics(my_id,my_id_n,n_cpu)
-    	  ELSE
-    	     call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.false.)	       
-    	  END IF
+          call distribute_harmonics(my_id,my_id_n,n_cpu)
        else
           call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
        endif
@@ -986,11 +919,7 @@ required = 0
        end if
 
        call clck_time(t0)
-       if (use_murge .and. use_murge_element) then
-    	  call solve_murge_all(n_cpu,my_id,index_min(my_id_n+1),index_max(my_id_n+1), i_tor, gmres, my_id_n, mpi_comm_n, mpi_comm_master)
-       else
-    	  call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
-       end if
+       call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
        call clck_time_barrier(t1)
        call clck_ldiff(t0,t1,tsecond)
        if (my_id .eq. 0) then
@@ -1209,32 +1138,25 @@ required = 0
   !***********************************************************************
 
   if (nstep .gt.0) then
+
     if (use_mumps) then
 #ifdef USE_MUMPS
       mumps_par%JOB = -2                            ! clean up this instance of mumps
       call DMUMPS(mumps_par)
 #endif
+
     elseif (use_pastix) then
-       if ( use_murge ) then 
-    	 call murge_termination(gmres)
-       else
-    	  pastix_iparm(2)     = 7			! Clean-up
-    	  pastix_iparm(3)     = 7
+      pastix_iparm(2)     = 7                       ! Clean-up
+      pastix_iparm(3)     = 7
 
-    	  if (.not. gmres) then
-
-    	     call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-    		  pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-
-    	  elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
-
-            call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-                 DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-   
-       	  endif
-          
-       end if
+      if (.not. gmres) then
+         call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
+              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+      elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
+        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
+             DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
+             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+      endif
 
     elseif (use_wsmp) then
 
@@ -1243,6 +1165,7 @@ required = 0
 #endif
 
     endif
+    
   endif
   
   ! --- Close open files

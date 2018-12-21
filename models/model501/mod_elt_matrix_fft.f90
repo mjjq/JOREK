@@ -142,6 +142,7 @@ real*8     :: beta_imp, dbeta_imp_dT
 !   -Radiation from injected impurities
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
 real*8     :: T_rad, dT_rad_dT                                ! Temperature used in radiation rate
+real*8     :: T_rad_real                                      ! Uncorrected temperature
 real*8     :: ne_rad                                          ! Electron density used in radiation rate
 real*8     :: ne_JOREK                                        ! Electron density in JOREK unit 
 real*8     :: coef_rad_1, A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
@@ -655,6 +656,7 @@ do ms=1, n_gauss
      ! Te in eV:
      T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      dT_rad_dT = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
      ! We estimate the effective charge by a test density 10^20/m^3
      ! Later maybe we should implement a iterative method
@@ -814,7 +816,7 @@ do ms=1, n_gauss
      coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
-     if (flag_adas .and. ne_rad > 1.d16 .and. T_rad > 1.) then
+     if (flag_adas .and. ne_rad > 1.d16 .and. T_rad_real > 5.) then
 
        Lrad = 0.0
        dLrad_dT = 0.0

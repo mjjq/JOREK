@@ -3,11 +3,12 @@ program jorek2_fieldlines_vtk
 use constants
 use data_structure
 use phys_module
-use basis_at_gaussian
+use basis_at_gaussian                                       
 use elements_nodes_neighbours
 use tr_module
 use mod_neighbours
 use mod_import_restart
+use equil_info, only : get_psi_n, ES
 use mod_interp
 
 implicit none
@@ -24,9 +25,7 @@ real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s,
 real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, Rmax, Zmin, Zmax, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step, total_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, value_out
-real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_bnd
-real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis, psi_norm_out, theta_out
-integer :: i_elm_xpoint, i_elm_axis
+real*8  :: psi_norm_out, theta_out
 
 character :: buffer*80, lf*1, str1*12, str2*12, str3*24
 integer :: ivtk, i_var, my_id, ierr
@@ -162,26 +161,11 @@ write(*,*) ' number of elements : ',element_list%n_elements
 
 if (psi_theta) then
    !------------------------------------------------- find x-point(s), psi_bnd and psi_axis
-   !xcase = 1
-   write(*,*) ' xpoint : ',xpoint
-   write(*,*) ' xcase : ',xcase
-   if (xpoint) then
-      call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-      psi_bnd = psi_xpoint(1)
-      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-         psi_bnd = psi_xpoint(2)
-      endif
-   else
-      psi_bnd = 0.d0
-   endif
-
-   call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-   
    if (my_id .eq. 0 ) then
-      write(*,*) ' xcase,1st x-point:R,Z,psi: ',xcase, R_xpoint(1),Z_xpoint(1),psi_xpoint(1),psi_bnd
+      write(*,*) ' xcase,1st x-point:R,Z,psi: ',xcase, ES%R_xpoint(1),ES%Z_xpoint(1),ES%psi_xpoint(1),ES%psi_bnd
       !   write(*,*) ' PSI_XPOINT : ',psi_xpoint,i_elm_xpoint
-      write(*,*) ' PSI_AXIS : ',psi_axis,i_elm_axis
-      write(*,*) ' RZ_AXIS : ', R_axis, Z_axis
+      write(*,*) ' PSI_AXIS : ', ES%psi_axis,ES%i_elm_axis
+      write(*,*) ' RZ_AXIS : ',  ES%R_axis, ES%Z_axis
    endif
 endif
 
@@ -204,8 +188,8 @@ do i =n_start, n_end
       call var_value(i,1,s_ini,t_ini,0.d0,value_out)
 
       call interp_RZ(node_list,element_list,i,s_ini,t_ini,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
-      psi_norm_out = ( value_out  - psi_axis ) / (psi_bnd - psi_axis )
-      theta_out = atan2( (Z_out - Z_axis) , (R_out - R_axis) ) !/ (2.d0*PI)      
+      psi_norm_out = get_psi_n(value_out, Z_out)
+      theta_out = atan2( (Z_out - ES%Z_axis) , (R_out - ES%R_axis) ) !/ (2.d0*PI)      
       if (psi_theta) then
          coord_out(1) = psi_norm_out
          coord_out(2) = theta_out

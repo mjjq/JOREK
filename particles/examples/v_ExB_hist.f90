@@ -84,9 +84,9 @@ do i=1,n_points
   ! 
   grad_psi = -([-B(2),B(1)])*R/(psi_xpoint(1) - psi_axis) ! in poloidal plane, normalize to grad_psi_N
   ! Convert v_r from m/s to psi/s by multiplying by |grad_psi|
-  i_v = floor((dot_product(v(1:2), grad_psi) - v_min)/dv)
+  i_v = ceiling((dot_product(v(1:2), grad_psi) - v_min)/dv)
   psi_N = (psi - psi_axis)/(psi_xpoint(1) - psi_axis)
-  i_x = floor((psi_N - x_min)/dx)
+  i_x = ceiling((psi_N - x_min)/dx)
   if (i_v .ge. lbound(counts,1) .and. i_x .ge. lbound(counts,2) .and. &
       i_v .le. ubound(counts,1) .and. i_x .le. ubound(counts,2)) then
     counts(i_v, i_x) = counts(i_v, i_x) + 1

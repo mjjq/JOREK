@@ -123,18 +123,15 @@ program JOREK2
   end interface
   
   type (type_surface_list) :: surface_list
-  type (t_equil_state)     :: equil_state
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
 #ifdef JECCD
   real*8                   :: A_tem(n_tor), A_den(n_tor), A_jen(n_tor), A_jec(n_tor),A_jec1(n_tor), A_jec2(n_tor)
 #endif
-  real*8                   :: psi_lim, R_lim, Z_lim
   real*8                   :: t_matrix, t_send, t_solve
   type(clcktype)           :: t_itstart, t0, t1
-  real*8                   :: psi_bnd, psi_axis, R_axis, Z_axis, s_axis, t_axis, minRad
-  real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), mindelta, maxdelta
+  real*8                   :: minRad, mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
-  integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint(2)
+  integer                  :: istep,jstep,ierr,i,itor,inode
   integer                  :: n_local_ELMs
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
@@ -565,6 +562,9 @@ required = 0
  
     if (my_id == 0) then
           
+      ! --- Update the status of the equilibrium
+      call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+      
       ! --- Set initial conditions for time-evolution
       call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)
 
@@ -631,6 +631,7 @@ required = 0
   call populate_element_rtree(node_list, element_list)
 
   call broadcast_phys(my_id)                                  ! physics parameters
+  call broadcast_equil_state(my_id)                           ! equil_state
   if ( freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
   n_AA = 0  
   do inode = 1, node_list%n_nodes  
@@ -666,10 +667,10 @@ required = 0
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
-  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, equil_state)
+  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
   if ( my_id == 0 ) then
-    call print_equil_state(equil_state, .true.)
-    call save_special_points(equil_state, 'special_equilibrium_points.dat', .false., ierr)
+    call print_equil_state(.true.)
+    call save_special_points('special_equilibrium_points.dat', .false., ierr)
   end if
 
   !***********************************************************************
@@ -677,24 +678,8 @@ required = 0
   !***********************************************************************
   
   t_now     = t_start      ! t_now: current time in the simulation
-  psi_bnd   = 0.d0
   
   if (nstep > 0) then
-
-    !### THINGS LIKE THIS SHOULD BE REPLACED BY update_equil_state in the future:
-    psi_bnd = 0.d0
-    if (xpoint) then
-      call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
-        i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
-      psi_bnd  = psi_xpoint(1)
-      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-        psi_bnd = psi_xpoint(2)
-      endif
-    else
-      call find_limiter(my_id, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
-      psi_bnd = psi_lim
-    end if
-    !###
     
     !*******************************************************
     !*      create groups /communicators		   *
@@ -871,37 +856,19 @@ required = 0
     ! --- Initialise the buffers needed by OpenMP threads. The values of n_tor, 
     ! --- n_plane, n_var have to remain the same until the end of the program.
     call new_thread_buffers()
-
-    call find_axis(99,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
-    ! Find the limiter anyways (since integrals => sources uses it)
-    call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
-    psi_bnd = 0.d0
-    if (xpoint) then
-      call find_xpoint(99,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
-        i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
-      psi_bnd  = psi_xpoint(1)
-      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-        psi_bnd = psi_xpoint(2)
-      endif
-    else
-      psi_bnd = psi_lim
-    end if
     
-    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, equil_state)
-    if ( my_id == 0 ) call print_equil_state(equil_state, .false.)
-    psi_bnd = equil_state%psi_bnd
-    
+    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+    if ( my_id == 0 ) call print_equil_state(.false.)
+
     ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
     minRad = 0.0
     if (bootstrap) then
-      call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
-      call bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
+      call bootstrap_find_minRad(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, minRad)
+      call bootstrap_get_q_and_ft_splines(node_list, element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
     endif
     
-    call tr_debug_write("JMAIN:Find_axis_R",R_axis)
-    call tr_debug_write("JMAIN:Find_axis_Z",Z_axis)
-    call tr_debug_write("JMAIN:Find_axis_T",T_axis)
+    call tr_debug_write("JMAIN:Find_axis_R",ES%R_axis)
+    call tr_debug_write("JMAIN:Find_axis_Z",ES%Z_axis)
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
 !    if (my_id .eq. 0) then
@@ -929,14 +896,14 @@ required = 0
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
 
        call construct_matrix_murge(my_id, node_list, element_list, bnd_node_list, local_elms,      &
-    	 n_local_ELms, xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,         &
-         Z_xpoint, psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, mpi_comm_trans, my_id_trans,       &
+    	 n_local_ELms, xpoint, xcase, minRad, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, ES%R_xpoint,         &
+         ES%Z_xpoint, ES%psi_xpoint, gmres, i_tor, n_cpu, mpi_comm_n, mpi_comm_trans, my_id_trans,       &
          n_cpu_trans, solve_only)
     else
 
        call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),                  &
-         index_max(my_id+1), xpoint, xcase, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,   &
-         Z_xpoint, psi_xpoint)
+         index_max(my_id+1), xpoint, xcase, minRad, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, ES%R_xpoint,   &
+         ES%Z_xpoint, ES%psi_xpoint)
     endif
     
 
@@ -1072,15 +1039,15 @@ required = 0
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
        call energy(node_list,element_list,W_mag,W_kin)
-       call integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint,       &
-         psi_xpoint, psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
+       call integrals(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint,       &
+         ES%psi_xpoint, ES%psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
          beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),           &
          density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                         &
          pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),           &
          part_src_in_t(index_now), part_src_out_t(index_now))
-       R_axis_t(index_now)   = R_axis
-       Z_axis_t(index_now)   = Z_axis
-       psi_axis_t(index_now) = psi_axis
+       R_axis_t(index_now)   = ES%R_axis
+       Z_axis_t(index_now)   = ES%Z_axis
+       psi_axis_t(index_now) = ES%psi_axis
 
        xtime(index_now) = t_now
        energies(1:n_tor,1,index_now) = W_mag(1:n_tor)
@@ -1313,7 +1280,6 @@ required = 0
     endif
 
 !---------------------------------------------- plot equilibrium current profile (to be removed)
-    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis, ifail)
 
     nplot = 501
     call tr_allocate(xp,1,nplot,"xp",CAT_GRID)
@@ -1327,23 +1293,10 @@ required = 0
     endif
     iplot = 0
 
-    psi_bnd = 0.d0
-    if (xpoint) then
-      call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,		  &
-    	i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
-      psi_bnd  = psi_xpoint(1)
-      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    	psi_bnd = psi_xpoint(2)
-      endif
-    else
-      call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
-      psi_bnd = psi_lim
-    end if
+    Rp_start = ES%R_axis - amin*2.d0
+    Rp_end   = ES%R_axis + amin*2.d0
 
-    Rp_start = R_axis - amin*2.d0
-    Rp_end   = R_axis + amin*2.d0
-
-    Zp = Z_axis
+    Zp = ES%Z_axis
 
     do i=1,nplot
 
@@ -1355,25 +1308,25 @@ required = 0
 
     	  call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
 
-    	  call density(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,	       &
+    	  call density(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
     	       zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
     	  if (jorek_model .eq. 400) then	     
-    	    call temperature_i(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
+    	    call temperature_i(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
     			     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
-    	    call temperature_e(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
+    	    call temperature_e(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
     	     zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)	     
       zT = zTi + zTe
     	    dT_dpsi = dTi_dpsi + dTe_dpsi	    
     	  else
-      call temperature(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
+      call temperature(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
     		   zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
     	  endif
-    	  call FFprime(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,	       &
+    	  call FFprime(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
     	       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
 
        if (NEO) then
           if (num_neo_file) then
-             call neo_coef (xpoint, xcase, Zp, Z_xpoint, psi, psi_axis,psi_bnd, &
+             call neo_coef (xpoint, xcase, Zp, ES%Z_xpoint, psi, ES%psi_axis,ES%psi_bnd, &
                   amu_neo_node, aki_neo_node)
           endif
        endif
@@ -1387,12 +1340,12 @@ required = 0
     	  yp2(iplot) = zjz
     	  yp3(iplot) = - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT) / Rp
 
-    	  !	 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_bnd,yp2(iplot),yp1(iplot),yp3(iplot)
+    	  !	 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,ES%psi_axis,ES%psi_bnd,yp2(iplot),yp1(iplot),yp3(iplot)
            if (NEO) then
               if ( num_neo_file) then
                  mu_neo(iplot) = amu_neo_node
                  ki_neo(iplot) = aki_neo_node
-                 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_xpoint,mu_neo(iplot),ki_neo(iplot)
+                 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,ES%psi_axis,ES%psi_xpoint,mu_neo(iplot),ki_neo(iplot)
               endif
            endif
 

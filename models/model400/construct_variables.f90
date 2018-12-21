@@ -444,6 +444,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   use equation_variables
   use data_structure
   use mod_bootstrap_functions
+  use equil_info, only : get_psi_n
   
   implicit none
   
@@ -515,15 +516,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- D_perp and K_perp profiles (for fixed pedestal gradients)
   ! -------------------------------------------------------------
   ! --- First need psi_norm
-  psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-  if (xpoint2) then
-    if ((psi_norm .lt. 1.d0) .and. (y_g .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
-      psi_norm = 2.d0 - psi_norm
-    endif
-    if ((psi_norm .lt. 1.d0) .and. (y_g .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
-      psi_norm = 2.d0 - psi_norm
-    endif
-  endif
+  psi_norm = get_psi_n(ps0, y_g)
 
   ! --- Take values from input file (rho_coef, T_coef...) 
   do id = 1,10

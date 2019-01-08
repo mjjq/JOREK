@@ -808,7 +808,7 @@ do ms=1, n_gauss
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
 
-     if (flag_adas .and. ne_rad > 1.d16 .and. T_rad_real > 5.) then
+     if (flag_adas .and. ne_rad > 1.d18 .and. T_rad_real > 5.) then
 
        Lrad = 0.0
        dLrad_dT = 0.0

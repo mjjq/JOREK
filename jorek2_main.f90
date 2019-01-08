@@ -347,7 +347,7 @@ required = 0
   write(*,*) 'WARNING: You are not using USE_BLOCK=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_BLOCK=1 in your Makefile.inc'
 #endif
-#ifndef FFTW
+#ifndef USE_FFTW
   write(*,*) 'WARNING: You are not using USE_FFTW=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_FFTW=1 in your Makefile.inc'
 #endif
@@ -355,8 +355,8 @@ required = 0
   ! --- Initialize live data file which will be filled during the code run
   if ( my_id == 0 ) call init_live_data()
 #ifdef JECCD
-  if ( my_id == 0) ) call init_live_data2()
-  if ( my_id == 0) ) call init_live_data3()
+  if ( my_id == 0 ) call init_live_data2()
+  if ( my_id == 0 ) call init_live_data3()
 #ifdef JEC2DIAG
    if ( my_id == 0 ) call init_live_data4()
 #endif

@@ -75,7 +75,7 @@ real*8                :: angle, source_volume, local_density, local_temperature,
 logical               :: include_radiation
 integer               :: n_radiation,s_radiation
 real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
-real*8                :: T_corr, T_rad, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
+real*8                :: T_corr, T_rad, T_rad_real, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: T_real8, r0_real8, rn0_real8
 real*8                :: r0_corr, rn0_corr
@@ -980,7 +980,8 @@ enddo  ! n_elements
 
    do i=1,nnos
      T_real8 = scalars(i,6)
-     T_rad = corr_neg_temp(T_real8,(/1.d-1,1.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     T_rad = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     T_rad_real = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0) &
                         *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 
@@ -1041,7 +1042,7 @@ enddo  ! n_elements
      coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
-     if (flag_adas .and. ne_rad > 1.d16 .and. T_rad > 1.) then
+     if (flag_adas .and. ne_rad > 1.d18 .and. T_rad_real > 5.) then
 
        Lrad = 0.0
        

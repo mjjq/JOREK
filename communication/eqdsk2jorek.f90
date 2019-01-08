@@ -114,6 +114,7 @@ if (tokamak_name == 'ITER') then
 else if (tokamak_name == 'JET') then
   
   !-------------------- contour outside JET wall
+  ! blue contour in https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
   ellip  = 1.85
   tria_u = 0.4
   tria_l = 0.4
@@ -123,6 +124,19 @@ else if (tokamak_name == 'JET') then
   r0     = 2.9
   z0     = 0.1
   a0     = 1.08
+
+  !-------------------- contour to avoid too long divertor legs
+  ! red contour in https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
+
+  ellip  = 1.7
+  tria_u = 0.4
+  tria_l = 0.4
+  quad_u = -0.4
+  quad_l = -0.2
+  n_tht   = 257
+  r0     = 2.85
+  z0     = 0.15
+  a0     = 1.1
 
 else if (tokamak_name == 'DIII-D') then
   
@@ -158,7 +172,10 @@ yb = yy(1)
 ye = yy(nz)
 kx = 3
 ky = 3
-smth = 1.d-6
+!beware, the smoothing parameter smth can strongly affect the interpolation routine and it should always be checked that the resulting interpolation along the JOREK boundary is smooth enough
+!refer to the "Hard-coded parameters" section of the wikipage https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
+!smth = 1.d-6 !this value can give a non-smooth interpolation close to the X-point, resulting in artifacts in the flux-aligned mesh computed by JOREK
+smth = 3.d-3 ! this is usually the best trade-off for good results both at and away from the Xpoint
 nxest = nr-5
 nyest = nz-5
 lwrk  = 4+nxest*(my+2*kx+5)+nyest*(2*ky+5)+mx*(kx+1)+my*(ky+1)+my+nxest

@@ -3,6 +3,8 @@
 ! little program to construct an input file for jorek out of data
 ! in a eqdsk file
 !                         Guido Huysmans,          date : 14-12-2010
+!
+! Some documentation can be found here: https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
 !--------------------------------------------------------------------
 implicit none
 
@@ -24,11 +26,15 @@ real*8             :: psi_sep, sig_sep, tanh1, zmu0, zn0, zmd
 real*8             :: xb ,xe, yb, ye, smth, fp, fout
 integer            :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt,nx,ny, i1, j1
 integer            :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext
-character          :: AA*52
+character          :: AA*52, tokamak_name*50
 
 !----------------------------- read eqdsk file -----------
 
 write(*,*) ' EQDSK to JOREK2 '
+
+tokamak_name = 'JET' ! 'ITER', 'DIII-D'
+
+write(*,*) 'Tokamak = ', tokamak_name
 
 read(5,'(A52,2i4)') AA,nr,nz
 
@@ -81,50 +87,63 @@ do i=1,nz
   yy(i) = zmid + zdim*(real(i-1)/real(nz-1)-0.5)
 enddo     
 
-!--------------------close fit to ITER wall
-ellip  = 2.0
-tria_u = 0.55
-tria_l = 0.65
-quad_u = -0.1
-quad_l = 0.15
-n_tht   = 257
-r0     = 6.2
-z0     = 0.1
-a0     = 2.25 
+if (tokamak_name == 'ITER') then
 
-!-------------------- contour outside ITER wall
-ellip  = 2.1
-tria_u = 0.58
-tria_l = 0.65
-quad_u = -0.12
-quad_l = -0.
-n_tht   = 257
-r0     = 6.2
-z0     = -0.05
-a0     = 2.34 
+  !--------------------close fit to ITER wall
+  ellip  = 2.0
+  tria_u = 0.55
+  tria_l = 0.65
+  quad_u = -0.1
+  quad_l = 0.15
+  n_tht   = 257
+  r0     = 6.2
+  z0     = 0.1
+  a0     = 2.25 
 
-!-------------------- contour outside JET wall
-ellip  = 1.85
-tria_u = 0.4
-tria_l = 0.4
-quad_u = -0.2
-quad_l = -0.2
-n_tht   = 257
-r0     = 2.9
-z0     = 0.1
-a0     = 1.08
+  !-------------------- contour outside ITER wall
+  ellip  = 2.1
+  tria_u = 0.58
+  tria_l = 0.65
+  quad_u = -0.12
+  quad_l = -0.
+  n_tht   = 257
+  r0     = 6.2
+  z0     = -0.05
+  a0     = 2.34 
 
-!-------------------- contour outside DIII-D wall
-ellip  = 1.85
-tria_u = 0.4
-tria_l = 0.4
-quad_u = -0.2
-quad_l = -0.2
-n_tht   = 257
-r0     = 1.7
-z0     = 0.
-a0     = 0.7
+else if (tokamak_name == 'JET') then
+  
+  !-------------------- contour outside JET wall
+  ellip  = 1.85
+  tria_u = 0.4
+  tria_l = 0.4
+  quad_u = -0.2
+  quad_l = -0.2
+  n_tht   = 257
+  r0     = 2.9
+  z0     = 0.1
+  a0     = 1.08
 
+else if (tokamak_name == 'DIII-D') then
+  
+  !-------------------- contour outside DIII-D wall
+  ellip  = 1.85
+  tria_u = 0.4
+  tria_l = 0.4
+  quad_u = -0.2
+  quad_l = -0.2
+  n_tht   = 257
+  r0     = 1.7
+  z0     = 0.
+  a0     = 0.7
+
+else
+
+  write(*,*) 'Tokamak name not or wrongly specified, stopping'
+  stop
+
+end if  
+  
 PI = 2.d0 * asin(1.d0)
 
 allocate(r_bnd(n_tht),z_bnd(n_tht),psi_bnd(n_tht))
@@ -303,7 +322,11 @@ write(21,*) ' resistive_wall = .f.'
 
 write(21,*) ' R_geo = ',r0
 write(21,*) ' Z_geo = ',z0
-write(21,*) ' F0    = ',r0*bcentr
+if (tokamak_name=='JET') then
+  write(21,*) ' F0    = ',2.96*bcentr ! By convention, the vacuum toroidal field is given at 2.96m in JET eqdsk files
+else
+  write(21,*) ' F0    = ',r0*bcentr
+end if
 write(21,*) ' amin  = 1.d0 ! scale factor for plasma size only'
 
 write(21,*)

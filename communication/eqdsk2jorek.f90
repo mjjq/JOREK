@@ -264,7 +264,7 @@ call lplot6(3,2,psi,p,-n_psi,'pressure')
 
 open(21,file='jorek_ffprime')
 do i=1,n_ext
-  write(21,*) psi_ext(i),-df2_ext(i)
+  write(21,*) psi_ext(i),-df2_ext(i)  ! Minus sign because ff' in JOREK is opposite to the usual ff' for historical reasons
 enddo
 close(21)
 open(21,file='jorek_density')
@@ -284,7 +284,7 @@ write(21,*)             '***************************************'
 write(21,'(A)')        '*  namelist produced by eqdsk2jorek   *'
 write(21,*)             '***************************************'
 write(21,*) AA
-write(21,'(A,f8.3,A)') ' magentic field : ',Bcentr,' T'
+write(21,'(A,f8.3,A)') ' magnetic field : ',Bcentr,' T'
 write(21,'(A,f8.3,A)') ' current        : ',xip/1d6,' MA'
 write(21,*)             '***************************************'
 write(21,*)
@@ -323,7 +323,10 @@ write(21,*) ' resistive_wall = .f.'
 write(21,*) ' R_geo = ',r0
 write(21,*) ' Z_geo = ',z0
 if (tokamak_name=='JET') then
-  write(21,*) ' F0    = ',2.96*bcentr ! By convention, the vacuum toroidal field is given at 2.96m in JET eqdsk files
+  write(21,*) ' F0    = ',2.96*bcentr ! By convention, the vacuum toroidal field is given at 2.96m in JET eqdsk files.
+                                      ! Note that in principle we should put a minus sign due to opposite conventions
+                                      ! for the toroidal angle in JOREK and EFIT, but presently (08/01/19) we reverse
+                                      ! the field for reasons explained here: https://www.jorek.eu/wiki/doku.php?id=jet									  
 else
   write(21,*) ' F0    = ',r0*bcentr
 end if

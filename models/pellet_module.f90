@@ -92,7 +92,7 @@ module pellet_module
   
   !  pellet_volume = PI * pellet_radius**2 * pellet_R * pellet_phi ! simulated pellet volume
   
-    phys_pellet_volume = pellet_particles(:) /pellet_density         ! physical pellet volume 
+    phys_pellet_volume = pellet_particles /pellet_density         ! physical pellet volume 
   
   ! the number of particles ablated from the physical pellet in units 10^20 m^-3 per unit of JOREK time
   

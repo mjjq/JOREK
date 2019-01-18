@@ -262,7 +262,7 @@ module phys_module
   integer :: spi_abl_model      !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model
 
-  character(len=80) :: spi_shard_file !< The name of the shard size file
+  character(len=256) :: spi_shard_file !< The name of the shard size file
 
   logical :: abl_history        !< Whether or not ablation history is available from previous restart files
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI

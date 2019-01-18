@@ -326,10 +326,10 @@ required = 0
   ! --- Initialize live data file which will be filled during the code run
   if ( my_id == 0 ) call init_live_data()
 #ifdef JECCD
-  if ( my_id == 0) ) call init_live_data2()
-  if ( my_id == 0) ) call init_live_data3()
+  if ( my_id == 0 ) call init_live_data2()
+  if ( my_id == 0 ) call init_live_data3()
 #ifdef JEC2DIAG
-   if ( my_id == 0 ) call init_live_data4()
+  if ( my_id == 0 ) call init_live_data4()
 #endif
 #endif
   

@@ -379,10 +379,10 @@ module pellet_module
       deallocate(pellets)
     end if
   
-    allocate (pellets(n_spi))  ! Dynamically allocate memeries for pellets
-  
     if (n_spi >= 1) then
-  
+ 
+      allocate (pellets(n_spi))  ! Dynamically allocate memeries for pellets
+ 
       ! Read normalized shard size distribution (if given in file) and calculate shard radius normalization factor size_beta
       if (spi_shard_file /= 'none') then 
   
@@ -456,11 +456,7 @@ module pellet_module
       allocate (rnd(3*n_spi))  ! Dynamically allocate memeries for randoms   
       CALL random_number(rnd)  
     
-      if (spi_Vel_diff < 0) then
-        write(*,*) "WARNING, negative velocity spread, spi_Vel_diff = ", spi_Vel_diff
-        write(*,*) "Using the absolute value of spi_Vel_diff"
-        spi_Vel_diff = abs(spi_Vel_diff)
-      end if
+      spi_Vel_diff = abs(spi_Vel_diff) ! To avoid negative velocity spread
   
       do i = 1, n_spi
   
@@ -498,7 +494,7 @@ module pellet_module
   
 	write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
 				pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
-      
+        
       end do
 
       if (allocated(rnd)) deallocate(rnd)
@@ -510,10 +506,10 @@ module pellet_module
       if (allocated(xtime_spi_ablation_rate)) &
       call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_GRID)
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,nstep,"xtime_spi_ablation_rate")
-  
-    else ! n_spi < 1 case
-      write(*,*) "...... Seriously!? Reverting to non-SPI case."
-      using_spi = .false.
+      
+    else ! In the illigal case of n_spi < 1
+      write(*,*) "......Seriously!? Using the spi flag while n_spi is set to be smaller than 1, double check the input file."
+      stop
     end if
     
     return

@@ -210,7 +210,7 @@ module phys_module
   logical :: use_pellet
   
   !> @name Massive gas injection-related input parameters
-  real*8  :: ns_amplitude      !< amplitude of neutral density source
+  real*8  :: ns_amplitude      !< amplitude of neutral density source (atoms/s)
   real*8  :: ns_R             !< major radius position of neutral density source
   real*8  :: ns_Z             !< Z position of neutral density source
   real*8  :: ns_phi           !< width of the neutral density source in toroidal direction
@@ -233,12 +233,10 @@ module phys_module
   !> @name Shattered pellet injection-related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
   ! The reference spactial coordinate for shattered pellets are calculated using ns_R etc...... 
-  !real*8  :: spi_R             !< major radius position of shattered pellet center
-  !real*8  :: spi_Z             !< Z position of shattered pellet center
   real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R upon injection
   real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z upon injection
   real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection
-  real*8  :: spi_quantity       !< Total injected atom number for SPI
+  real*8  :: spi_quantity       !< Total number of injected atoms by SPI
   real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds 
                                 !< and that of shattered pellets, so that if
                                 !< ng_radius_ratio times shard size is greater than ng_radius_min, 

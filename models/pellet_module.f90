@@ -475,27 +475,19 @@ module pellet_module
 	spi_Vel_y	  = spi_Vel_i * sin(spi_gd_angle_01) * sin(spi_gd_angle_02)
 	spi_Vel_z	  = spi_Vel_i * cos(spi_gd_angle_01)
   
-	spi_Vel_R_tmp   = spi_Vel_x * cos(spi_rotation_02) &
-                 	    - sin(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
-			    + cos(spi_rotation_01)*spi_Vel_z)
+	pellets(i)%spi_Vel_R   = spi_Vel_x * cos(spi_rotation_02) &
+                 	         - sin(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
+			         + cos(spi_rotation_01)*spi_Vel_z)
+	pellets(i)%spi_Vel_Z   = cos(spi_rotation_01) * spi_Vel_y &
+			         + sin(spi_rotation_01) * spi_Vel_z
+	pellets(i)%spi_Vel_RxZ = spi_Vel_x * sin(spi_rotation_02) &
+			         - cos(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
+			         + cos(spi_rotation_01)*spi_Vel_z)
   
-	spi_Vel_Z_tmp   = cos(spi_rotation_01) * spi_Vel_y &
-			    + sin(spi_rotation_01) * spi_Vel_z
-	spi_Vel_RxZ_tmp = spi_Vel_x * sin(spi_rotation_02) &
-			    - cos(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
-			    + cos(spi_rotation_01)*spi_Vel_z)
+	pellets(i)%spi_R       = spi_R_inj + spi_L_inj * (pellets(i)%spi_Vel_R/spi_Vel_totref)
+	pellets(i)%spi_Z       = spi_Z_inj + spi_L_inj * (pellets(i)%spi_Vel_Z/spi_Vel_totref)
+	pellets(i)%spi_phi     = spi_phi_inj + spi_L_inj * (pellets(i)%spi_Vel_RxZ/spi_Vel_totref)/ns_R
   
-	spi_R_tmp	  = spi_R_inj + spi_L_inj * (spi_Vel_R_tmp/spi_Vel_totref)
-	spi_Z_tmp	  = spi_Z_inj + spi_L_inj * (spi_Vel_Z_tmp/spi_Vel_totref)
-	spi_phi_tmp	  = spi_phi_inj + spi_L_inj * (spi_Vel_RxZ_tmp/spi_Vel_totref)/ns_R
-  
-	pellets(i)%spi_R	 = spi_R_tmp
-	pellets(i)%spi_Z	 = spi_Z_tmp
-	pellets(i)%spi_phi	 = spi_phi_tmp
-	pellets(i)%spi_Vel_R   = spi_Vel_R_tmp
-	pellets(i)%spi_Vel_Z   = spi_Vel_Z_tmp
-	pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_tmp
-
 	pellets(i)%spi_abl	 = 0.0
   
 	write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i, pellets(i)%spi_R, pellets(i)%spi_Z, &

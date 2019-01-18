@@ -390,7 +390,7 @@ module pellet_module
 	  deallocate(shard_size)
 	end if
 	allocate (shard_size(n_spi))  ! Dynamically allocate memeries for shard sizes
-	shard_size = 0.0
+	shard_size(:) = 0.0
   
 	size_beta    = 0.0
 	V_shard_norm = 0.0
@@ -408,7 +408,7 @@ module pellet_module
           else
             write(*,*) "The shard information will be overwritten by restart read anyway, proceed assuming no shard size file is given."
             spi_shard_file = 'none'
-            shard_size = 1.0
+            shard_size(:) = 1.0
           end if
 	end if
 

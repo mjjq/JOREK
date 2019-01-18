@@ -54,10 +54,9 @@ real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, source_neutral, rn0, rho_bar
-real*8  :: local_rho_surfaces(4), local_count_surfaces(4), local_vol_surfaces(4)
 
 ! Temporary variables serving the SPI module
-integer    :: spi_i, i_surface, sur_domain
+integer    :: spi_i
 
 real*8     :: spi_R_tmp
 real*8     :: spi_Z_tmp
@@ -121,9 +120,6 @@ endif
 #if (JOREK_MODEL == 500)
 local_n_particles_inj = 0.d0
 local_n_particles     = 0.d0
-local_rho_surfaces    = 0.d0
-local_count_surfaces  = 0.d0
-local_vol_surfaces    = 0.d0
 #endif
 
 Bgeo = F0 / R_geo
@@ -162,16 +158,15 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,          &
-!$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,          &
-!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,            &
-!$omp          central_mass, pellets, abl_history, psi_surfaces, id_surfaces, tor_frequency,   &
-!$omp          n_spi, using_spi, local_count_surfaces, local_vol_surfaces,                     &
-!$omp          ng_radius_ratio, ng_radius_min, ng_radius, local_rho_surfaces, spi_shard_file,  &
+!$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
+!$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,               &
+!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
+!$omp          central_mass, pellets, abl_history, tor_frequency, n_spi, using_spi,            &
+!$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
 #endif
 !$omp          wgauss_copy)                                                                    &
-!$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt, spi_i, i_surface,            &
-!$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_abl_tmp, sur_domain,                    &
+!$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt, spi_i,                       &
+!$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_abl_tmp,                                &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
 !$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi,        &
@@ -196,7 +191,6 @@ omp_tid      = 0
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
-!$omp                local_rho_surfaces,  local_count_surfaces,  local_vol_surfaces,          &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
@@ -401,25 +395,6 @@ do ife = ife_min, ife_max
 
         if (in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis)) then
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-        ! --- 3D integrals to get particles deposited within a given flux
-        ! surfaces
-
-          do i_surface = 1, 4
-            if (psi_surfaces(i_surface)/=0.0) then
-              sur_domain = which_surface(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,&
-                          xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis)
-
-              if (sur_domain <= id_surfaces(i_surface) .and. sur_domain >= id_surfaces(1)) then
-
-                local_rho_surfaces(i_surface) = local_rho_surfaces(i_surface) + r0 * xjac * BigR * wst * delta_phi
-                local_vol_surfaces(i_surface) = local_vol_surfaces(i_surface) + xjac * BigR * wst * delta_phi
-                local_count_surfaces(i_surface) = local_count_surfaces(i_surface) + 1
-              end if
-            end if
-          end do
-#endif
-
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
           C_intern = C_intern + zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
@@ -488,18 +463,6 @@ endif
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
   call MPI_AllReduce(local_n_particles_inj, total_n_particles_inj,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_n_particles, total_n_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-
-  do i_surface = 1, 4
-    call MPI_AllReduce(local_rho_surfaces(i_surface), rho_surfaces(i_surface),1,&
-                         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    call MPI_AllReduce(local_vol_surfaces(i_surface), vol_surfaces(i_surface),1,&
-                         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-
-
-    call MPI_AllReduce(local_count_surfaces(i_surface), count_surfaces(i_surface),1,&
-                         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-  end do
-
 #endif
 
 rho_norm = central_density*1.d20 * central_mass * 1.67d-27
@@ -530,11 +493,6 @@ heating_out = n_period * heating_out / MU_zero / t_norm * 1.5d0
 heating_in  = n_period * heating_in  / MU_zero / t_norm * 1.5d0
 source_out  = n_period * source_out  * central_density / t_norm
 source_in   = n_period * source_in   * central_density / t_norm
-
-do i_surface = 1,4
-  rho_surfaces(i_surface) = n_period * rho_surfaces(i_surface) * central_density
-  vol_surfaces(i_surface) = n_period * vol_surfaces(i_surface)
-end do
 
 if (my_id .eq. 0) then
 
@@ -569,14 +527,6 @@ if (my_id .eq. 0) then
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
   write(*,'(A,4e14.6)')   ' Integrals_3D, MGI : ', total_n_particles_inj, total_n_particles
-
-  do i_surface = 1 , 4
-    if (psi_surfaces(i_surface)/= 0.0) then
-      rho_bar = rho_surfaces(i_surface)/vol_surfaces(i_surface)
-      write(*,'(A,I,4e14.6)')   ' Particles within flux sufaces : ', i_surface, &
-                                psi_surfaces(i_surface), rho_surfaces(i_surface), vol_surfaces(i_surface), rho_bar
-    end if
-  end do
 
   write(*,'(A,4e14.6)')   ' CHECK POINT : ', psi_xpoint, psi_axis
 

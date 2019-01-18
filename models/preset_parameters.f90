@@ -345,9 +345,6 @@ subroutine preset_parameters
      delta_n_convection = 0
      nimp_bg = 0.
     !======= Additional parameters for SPI =======
-    !spi_Vel_R    = 0.0d0
-    !spi_Vel_Z    = 0.0d0
- 
      spi_Vel_Rref    = 0.0d0
      spi_Vel_Zref    = 0.0d0
      spi_Vel_RxZref  = 0.0d0
@@ -361,15 +358,6 @@ subroutine preset_parameters
      tor_frequency   = 0.0
      
      n_spi           = 1
-     psi_surfaces(:) = 0.0
-     rho_surfaces(:) = 0.0
-     vol_surfaces(:) = 0.0
-     count_surfaces(:) = 0.0
-     id_surfaces(:)  = -1
-     id_surfaces(1)  = 5
-     id_surfaces(2)  = 6
-     id_surfaces(3)  = 7
-     id_surfaces(4)  = 8
 
      spi_abl_model   = 0
      spi_shard_file  = 'none'

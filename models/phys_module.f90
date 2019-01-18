@@ -264,14 +264,6 @@ module phys_module
 
   character(len=80) :: spi_shard_file !< The name of the shard size file
 
-  !> @name The following five variables are for diagnostic purpose only, used to
-  !estimate the density increase within a given psi surface
-  integer :: id_surfaces(4)     !< ID of each tracked flux surface, usded in determining domains
-  real*8  :: psi_surfaces(4)    !< Psi of each tracked flux surfaces, do not track if the value is 0
-  real*8  :: rho_surfaces(4)    !< Total number of particles withing the respective surfaces
-  real*8  :: count_surfaces(4)  !< element count for diagnostic
-  real*8  :: vol_surfaces(4)    !< element count for diagnostic  
-
   logical :: abl_history        !< Whether or not ablation history is available from previous restart files
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI

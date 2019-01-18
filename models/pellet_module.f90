@@ -356,7 +356,7 @@ module pellet_module
     implicit none
     
     integer, intent(in) :: my_id
-    integer             :: ierr,err,i,i_surface
+    integer             :: ierr,err,i
     
     logical             :: ferr
     
@@ -375,14 +375,6 @@ module pellet_module
     real*8  :: size_beta                               ! The characteristic shard size    
     real*8  :: V_shard_norm                            ! The normalized (by size_beta) volume of shards
     
-    do i_surface = 2, 4
-      if (abs(psi_surfaces(i_surface))<abs(psi_surfaces(i_surface-1))) then
-         psi_surfaces(i_surface) = 0.0
-         write(*,*) "WARNING! Please adjust the order of tracked surfaces"
-      end if
-    
-    end do
-
     if (allocated(pellets)) then
       deallocate(pellets)
     end if

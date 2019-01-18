@@ -111,8 +111,8 @@ contains
     write(*,*) ' MPI processes       : ', n_cpu
     write(*,*) ' OpenMP threads      : ', nbthreads
     write(*,*) ' GIT revision        : ', trim(adjustl(RCS_VERSION))
-    write(*,*) ' GIT revision label  : ', trim(adjustl(RCS_LABEL))
-    write(*,*) ' GIT revision time   : ', trim(adjustl(RCS_TIME))
+!    write(*,*) ' GIT revision label  : ', trim(adjustl(RCS_LABEL))
+!    write(*,*) ' GIT revision time   : ', trim(adjustl(RCS_TIME))
     write(*,111) 'compile_user        ', trim(adjustl(compile_user))
     write(*,111) 'compile_machine     ', trim(adjustl(compile_machine))
     write(*,111) 'compile_dir         ', trim(adjustl(compile_dir))

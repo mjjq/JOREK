@@ -582,7 +582,6 @@ if (my_id == 0) then
      write(*,LOGI_FMT) 'abl_history         ',  abl_history
      write(*,LOGI_FMT) 'spi_tor_rot         ',  spi_tor_rot
      write(*,INTG_FMT) 'n_spi               ',  n_spi
-     write(*,REAL_FMT) 'psi_surfaces        ',  psi_surfaces
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
      write(*,CHAR_FMT) 'spi_shard_file      ',  spi_shard_file
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref

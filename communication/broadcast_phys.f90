@@ -210,8 +210,6 @@ if (my_id .eq. 0) then
     end if
   end if
 
-  call MPI_PACK(psi_surfaces,           4,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-
   call MPI_PACK(nimp_bg,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(gmres_4,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -651,8 +649,6 @@ if (my_id .ne. 0) then
       call MPI_UNPACK(buffer,bufsize,position,ns_phi_rotate,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
     end if
   end if
-  call MPI_UNPACK(buffer,bufsize,position,psi_surfaces,           4,MPI_REAL8,MPI_COMM_WORLD,ierr)
-
   call MPI_UNPACK(buffer,bufsize,position,nimp_bg,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,gmres_4,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)

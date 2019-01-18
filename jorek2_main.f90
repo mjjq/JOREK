@@ -897,19 +897,6 @@ required = 0
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
 
-    ! --- The following is for parallel debugging only
-
-    !holder = 0;
-    !write(*,*) "my_id", my_id, "PID", getpid(), "Host", name
-
-    !do while (holder == 0)
-    !  call sleep(5)
-    !end do
-
-    ! --- End of parallel debugging section 
-   
-    !write(*,*) "Check Point 01"
- 
     ! --- construct the matrix from elemental matrices
     if ( use_pastix .and. use_murge .and. use_murge_element ) then
 

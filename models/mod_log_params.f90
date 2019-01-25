@@ -578,6 +578,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
 
      !< Additional log for SPI model
+   if(using_spi) then
      write(*,LOGI_FMT) 'using_spi           ',  using_spi
      write(*,LOGI_FMT) 'abl_history         ',  abl_history
      write(*,LOGI_FMT) 'spi_tor_rot         ',  spi_tor_rot
@@ -592,7 +593,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
      write(*,REAL_FMT) 'tor_frequency       ',  tor_frequency
      write(*,REAL_FMT) 'spi_Vel_diff        ',  spi_Vel_diff
-
+   end if
 
 #endif
   write(*,*)

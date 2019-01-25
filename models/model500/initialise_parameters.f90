@@ -232,8 +232,6 @@ call read_num_profiles(my_id)
 call derive_num_profiles(my_id)
 
 ! --- Initialize the shattered pellet position
-!spi_R = ns_R
-!spi_Z = ns_Z
 
 if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
   write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
@@ -243,7 +241,16 @@ if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
   end if
 end if
 
-if (using_spi) call init_spi(my_id)
+if (using_spi) then
+  if (JET_MGI .or. ASDEX_MGI) then
+    write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
+    write(*,*) "JET_MGI:", JET_MGI
+    write(*,*) "ASDEX_MGI:", ASDEX_MGI
+    stop
+  else 
+    call init_spi(my_id)
+  end if
+end if
   
 return
 end subroutine initialise_parameters

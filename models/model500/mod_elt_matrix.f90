@@ -667,12 +667,6 @@ do ms=1, n_gauss
 
      if (using_spi) then
 
-       if (JET_MGI .or. ASDEX_MGI) then
-         write(*,*) "WARNING: Using SPI, disabling MGI settings"
-         JET_MGI = .false.
-         ASDEX_MGI = .false.
-       end if
-
        do spi_i=1, n_spi
 
          source_neutral_tmp = 0.d0
@@ -705,11 +699,8 @@ do ms=1, n_gauss
                      JET_MGI,ASDEX_MGI,central_density,central_mass)
 
      end if
-
-     if (source_neutral .lt. 0.d0) then
-      source_neutral = 0.d0
-     endif
-
+    
+     source_neutral = max(source_neutral,0.)
 
    !--------------------------------------------------------
    ! --- Radiation from background impurity

@@ -23,6 +23,10 @@ module phys_module
   real*8  :: eta_rst
   !
 
+  ! Temperature dependence of the hyper-resistivity and hyper-viscosity
+  logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature, otherwise constant
+  logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature, otherwise constant
+
   real*8  :: visco2               !< Second coefficient of viscosity
   logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
   real*8  :: visco_par            !< Parallel viscosity

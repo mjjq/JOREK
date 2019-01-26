@@ -386,7 +386,9 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'tauIC                 ', tauIC
   write(*,LOGI_FMT) 'Wdia                  ', Wdia
   write(*,REAL_FMT) 'eta_num               ', eta_num
+  write(*,LOGI_FMT) 'eta_num_T_dependent   ', eta_num_T_dependent
   write(*,REAL_FMT) 'visco_num             ', visco_num
+  write(*,LOGI_FMT) 'visco_num_T_dependent ', visco_num_T_dependent
   write(*,REAL_FMT) 'visco_par_num         ', visco_par_num
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
   write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num

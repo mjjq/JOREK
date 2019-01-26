@@ -64,7 +64,7 @@ real*8     :: Vpar, Vpar_x, Vpar_y, Vpar_p, Vpar_s, Vpar_t, Vpar_ss, Vpar_st, Vp
 real*8     :: P0, P0_s, P0_t, P0_x, P0_y, P0_p, P0_ss, P0_st, P0_tt, P0_xx, P0_xy, P0_yy
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T, eta_Sp, detaSp_dT
-real*8     :: detaSp_dr0, detaSP_drn0, deta_dr0, deta_drn0
+real*8     :: detaSp_dr0, detaSP_drn0, deta_dr0, deta_drn0, deta_num_dT, dvisco_num_dT
 real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
 real*8     :: amat_51, amat_51_n, amat_52, amat_55, amat_56, amat_57, amat_57_k, amat_58_k, amat_58_n
@@ -595,8 +595,34 @@ do ms=1, n_gauss
        dZKpar_dT = 0.d0
      endif
 
-     eta_num_T   = eta_num                         ! hyperresistivity
-     visco_num_T = visco_num                       ! hyperviscosity
+     ! --- Temperature dependent hyper-resistivity resistivity, there is no
+     ! physical reason for this dependence whatsoever, just to keep a constant
+     ! ratio between the resistivity and hyper-resistivity
+     if ( eta_num_T_dependent .and. T0_corr <= T_eta_thres) then
+       eta_num_T = eta_num * (T0_corr/T_0)**(-1.5d0)
+       deta_num_dT = ( - eta_num * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
+     else if (eta_num_T_dependent .and. T0_corr > T_eta_thres) then
+       eta_num_T = eta_num * (T_eta_thres/T_0)**(-1.5d0)
+       deta_num_dT = 0.
+     else
+       eta_num_T = eta_num
+       deta_num_dT = 0.
+     end if
+
+     if ( visco_num_T_dependent .and. T0_corr <= T_eta_thres) then
+       visco_num_T = visco_num * (T0_corr/T_0)**(-1.5d0)
+       dvisco_num_dT = ( - visco_num * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
+     else if (visco_num_T_dependent .and. T0_corr > T_eta_thres) then
+       visco_num_T = visco_num * (T_eta_thres/T_0)**(-1.5d0)
+       dvisco_num_dT = 0.
+     else
+       visco_num_T = visco_num
+       dvisco_num_dT = 0.
+     end if
+
+
+     !eta_num_T   = eta_num                         ! hyperresistivity
+     !visco_num_T = visco_num                       ! hyperviscosity
 
      psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
      if (xpoint2) then
@@ -842,8 +868,8 @@ do ms=1, n_gauss
        Lrad = 0.
        dLrad_dT = 0.
 
-       E_ion = 0.
-       dE_ion_dT = 0.
+       !E_ion = 0.
+       !dE_ion_dT = 0.
 
      else
   !-------------------------------------------
@@ -1473,7 +1499,9 @@ do ms=1, n_gauss
              amat_16 = - deta_dT * v * T * (zj0-current_source(ms,mt))/ BigR * xjac         * theta * tstep &
 		     + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s) * theta * tstep &
 		     + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)* theta * tstep &
-	             - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * T  * r0_p * xjac        * theta * tstep 
+	             - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * T  * r0_p * xjac        * theta * tstep &
+                       ! Temperature dependent hyper-resistivity
+                       - deta_num_dT * T * (v_x * zj0_x + v_y * zj0_y)       * xjac         * theta * tstep 
 
              amat_16_n = - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * r0 * T_p  * xjac * theta * tstep 
 
@@ -1583,6 +1611,8 @@ do ms=1, n_gauss
 		       - BigR**2 * (v_s * rn0_t * alpha_imp * T - v_t * rn0_s * alpha_imp * T)         * theta * tstep  &
 		       - BigR**2 * (v_s * rn0 * alpha_imp_bis * T_t - v_t * rn0 * alpha_imp_bis * T_s) * theta * tstep  &		       
                        + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac * theta * tstep &
+                       ! Hyper-viscosity terms
+                       + dvisco_num_dT * T * (v_xx + v_x/Bigr + v_yy)*(w0_xx + w0_x/Bigr + w0_yy)* xjac * theta * tstep &
 
                        + v * tauIC * BigR**4 * r0 * (T_s * w0_t - T_t * w0_s)    * theta * tstep &
                        + v * tauIC * BigR**4 * T  * (r0_s * w0_t - r0_t * w0_s)  * theta * tstep &

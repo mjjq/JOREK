@@ -107,11 +107,9 @@ VK_tot   = 0.d0
 VM_tot   = 0.d0
 J2_tot   = 0.d0
 
-if (use_pellet) then
-  local_pellet_particles = 0.d0
-  local_plasma_particles = 0.d0
-  local_pellet_volume    = 0.d0
-endif
+local_pellet_particles = 0.d0
+local_plasma_particles = 0.d0
+local_pellet_volume    = 0.d0
 
 #if (JOREK_MODEL == 500)
 local_n_particles_inj = 0.d0

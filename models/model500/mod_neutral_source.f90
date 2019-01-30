@@ -5,9 +5,9 @@ module mod_neutral_source
 
   implicit none
 
-  real*8 :: total_n_particles_inj
-  real*8 :: total_n_particles
-  real*8 :: total_n_particles_inj_all
+  real*8, save :: total_n_particles_inj     = 0.d0
+  real*8, save :: total_n_particles         = 0.d0
+  real*8, save :: total_n_particles_inj_all = 0.d0
 
   contains 
 

@@ -127,7 +127,6 @@ else if (tokamak_name == 'JET') then
 
   !-------------------- contour to avoid too long divertor legs
   ! red contour in https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
-
   ellip  = 1.7
   tria_u = 0.4
   tria_l = 0.4
@@ -280,9 +279,15 @@ call lplot6(2,2,psi,df2,-n_psi,'df2')
 call lplot6(3,2,psi,p,-n_psi,'pressure')
 
 open(21,file='jorek_ffprime')
-do i=1,n_ext
-  write(21,*) psi_ext(i),-df2_ext(i)  ! Minus sign because ff' in JOREK is opposite to the usual ff' for historical reasons
-enddo
+if (tokamak_name=='JET') then
+  do i=1,n_ext
+    write(21,*) psi_ext(i),df2_ext(i)  ! In the case of JET (using EFIT) the minus sign (see below) is cancelled due to opposite sign conventions for psi, see https://www.jorek.eu/wiki/doku.php?id=jet.
+  enddo  
+else
+  do i=1,n_ext
+    write(21,*) psi_ext(i),-df2_ext(i) ! The minus sign is because ff' in JOREK is opposite to the usual ff' for historical reasons.
+  enddo  
+end if
 close(21)
 open(21,file='jorek_density')
 do i=1,n_ext
@@ -318,12 +323,21 @@ write(21,*)
 write(21,*) ' !_____________________________________boundary definition'
 write(21,*) ' mf = 0'
 write(21,*) ' n_boundary = ',n_tht
-do j=1,n_tht
-  write(21,'(A,i3,A,e16.8,A,i3,A,e16.8,A,i3,A,e16.8,A)'), &
-            '  R_boundary(',j,') =',r_bnd(j), &
-            ', Z_boundary(',j,') =',z_bnd(j), &
-            ', psi_boundary(',j,') =',psi_bnd(j),','
-enddo
+if (tokamak_name=='JET') then
+  do j=1,n_tht
+    write(21,'(A,i3,A,e16.8,A,i3,A,e16.8,A,i3,A,e16.8,A)'), &
+             '  R_boundary(',j,') =',r_bnd(j), &
+             ', Z_boundary(',j,') =',z_bnd(j), &
+             ', psi_boundary(',j,') =',-psi_bnd(j),','   ! The minus sign is because of opposite conventions between EFIT and JOREK, see https://www.jorek.eu/wiki/doku.php?id=jet.
+  enddo
+else
+  do j=1,n_tht
+    write(21,'(A,i3,A,e16.8,A,i3,A,e16.8,A,i3,A,e16.8,A)'), &
+             '  R_boundary(',j,') =',r_bnd(j), &
+             ', Z_boundary(',j,') =',z_bnd(j), &
+             ', psi_boundary(',j,') =',psi_bnd(j),','
+  enddo	     
+end if
 
 write(21,*) ' ellip  = ',ellip
 write(21,*) ' tria_u = ',tria_u
@@ -340,10 +354,8 @@ write(21,*) ' resistive_wall = .f.'
 write(21,*) ' R_geo = ',r0
 write(21,*) ' Z_geo = ',z0
 if (tokamak_name=='JET') then
-  write(21,*) ' F0    = ',2.96*bcentr ! By convention, the vacuum toroidal field is given at 2.96m in JET eqdsk files.
-                                      ! Note that in principle we should put a minus sign due to opposite conventions
-                                      ! for the toroidal angle in JOREK and EFIT, but presently (08/01/19) we reverse
-                                      ! the field for reasons explained here: https://www.jorek.eu/wiki/doku.php?id=jet									  
+  write(21,*) ' F0    = ',-2.96*bcentr ! By convention, the vacuum toroidal field is given at 2.96m in JET eqdsk files. 
+                                       ! The minus sign is because of opposite conventions for the toroidal angle between EFIT and JOREK, see https://www.jorek.eu/wiki/doku.php?id=jet.								  
 else
   write(21,*) ' F0    = ',r0*bcentr
 end if

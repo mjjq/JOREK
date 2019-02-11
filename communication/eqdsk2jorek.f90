@@ -32,7 +32,7 @@ character          :: AA*52, tokamak_name*50
 
 write(*,*) ' EQDSK to JOREK2 '
 
-tokamak_name = 'JET' ! 'ITER', 'DIII-D'
+tokamak_name = 'DIII-D' ! 'JET' 'ITER'
 
 write(*,*) 'Tokamak = ', tokamak_name
 
@@ -138,13 +138,24 @@ else if (tokamak_name == 'JET') then
   a0     = 1.1
 
 else if (tokamak_name == 'DIII-D') then
-  
+
   !-------------------- contour outside DIII-D wall
   ellip  = 1.85
   tria_u = 0.4
   tria_l = 0.4
   quad_u = -0.2
   quad_l = -0.2
+  n_tht   = 257
+  r0     = 1.7
+  z0     = 0.
+  a0     = 0.7
+  
+  !-------------------- Atomic physics JOREK/NIMROD/M3D-C1 benchmark case (paper by B. Lyons)
+  ellip  = 1.35/0.7
+  tria_u = 0.3
+  tria_l = 0.3
+  quad_u = 0.
+  quad_l = 0.
   n_tht   = 257
   r0     = 1.7
   z0     = 0.
@@ -279,16 +290,19 @@ call lplot6(2,2,psi,df2,-n_psi,'df2')
 call lplot6(3,2,psi,p,-n_psi,'pressure')
 
 open(21,file='jorek_ffprime')
-if (tokamak_name=='JET') then
-  do i=1,n_ext
-    write(21,*) psi_ext(i),df2_ext(i)  ! In the case of JET (using EFIT) the minus sign (see below) is cancelled due to opposite sign conventions for psi, see https://www.jorek.eu/wiki/doku.php?id=jet.
-  enddo  
-else
+! We change or not the sign of ff' depending on the sign of Ip because (we assume that) in EQDSK files, 
+! psi_axis is always < psi_boundary, whatever the direction of Ip.
+if (xip>0) then
   do i=1,n_ext
     write(21,*) psi_ext(i),-df2_ext(i) ! The minus sign is because ff' in JOREK is opposite to the usual ff' for historical reasons.
   enddo  
+else
+  do i=1,n_ext
+    write(21,*) psi_ext(i),df2_ext(i) 
+  enddo  
 end if
 close(21)
+
 open(21,file='jorek_density')
 do i=1,n_ext
   write(21,*) psi_ext(i),rho_ext(i)
@@ -323,19 +337,21 @@ write(21,*)
 write(21,*) ' !_____________________________________boundary definition'
 write(21,*) ' mf = 0'
 write(21,*) ' n_boundary = ',n_tht
-if (tokamak_name=='JET') then
+! We change or not the sign of psi_bnd depending on the sign of Ip because (we assume that) in EQDSK files, 
+! psi_axis is always < psi_boundary, whatever the direction of Ip.
+if (xip>0) then
   do j=1,n_tht
     write(21,'(A,i3,A,e16.8,A,i3,A,e16.8,A,i3,A,e16.8,A)'), &
              '  R_boundary(',j,') =',r_bnd(j), &
              ', Z_boundary(',j,') =',z_bnd(j), &
-             ', psi_boundary(',j,') =',-psi_bnd(j),','   ! The minus sign is because of opposite conventions between EFIT and JOREK, see https://www.jorek.eu/wiki/doku.php?id=jet.
+             ', psi_boundary(',j,') =',psi_bnd(j),','
   enddo
 else
   do j=1,n_tht
     write(21,'(A,i3,A,e16.8,A,i3,A,e16.8,A,i3,A,e16.8,A)'), &
              '  R_boundary(',j,') =',r_bnd(j), &
              ', Z_boundary(',j,') =',z_bnd(j), &
-             ', psi_boundary(',j,') =',psi_bnd(j),','
+             ', psi_boundary(',j,') =',-psi_bnd(j),','
   enddo	     
 end if
 
@@ -354,10 +370,9 @@ write(21,*) ' resistive_wall = .f.'
 write(21,*) ' R_geo = ',r0
 write(21,*) ' Z_geo = ',z0
 if (tokamak_name=='JET') then
-  write(21,*) ' F0    = ',-2.96*bcentr ! By convention, the vacuum toroidal field is given at 2.96m in JET eqdsk files. 
-                                       ! The minus sign is because of opposite conventions for the toroidal angle between EFIT and JOREK, see https://www.jorek.eu/wiki/doku.php?id=jet.								  
+  write(21,*) ' F0    = ',-2.96*bcentr ! By convention, the vacuum toroidal field is given at 2.96m in JET eqdsk files. 					
 else
-  write(21,*) ' F0    = ',r0*bcentr
+  write(21,*) ' F0    = ',-r0*bcentr
 end if
 write(21,*) ' amin  = 1.d0 ! scale factor for plasma size only'
 

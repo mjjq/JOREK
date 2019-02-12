@@ -430,9 +430,16 @@ do ms=1, n_gauss
 
      ! The corrected temperature should not go below 1eV otherwise the spline
      ! fit of effective charge becomes inaccurate
-     T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/)) ! For use in eta(T), visco(T), ...
-     dT0_corr_dT = dcorr_neg_temp_dT(T0,(/5.d-1,5.d-1/)) ! Improve the correction
-     d2T0_corr_dT2 = d2corr_neg_temp_dT2(T0,(/5.d-1,5.d-1/))
+     if (T_min > 2.*T_1) then
+       T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),T_min) ! For use in eta(T), visco(T), ...
+       dT0_corr_dT = dcorr_neg_temp_dT(T0,(/5.d-1,5.d-1/),T_min) ! Improve the correction
+       d2T0_corr_dT2 = d2corr_neg_temp_dT2(T0,(/5.d-1,5.d-1/),T_min)
+
+     else
+       T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_1) ! For use in eta(T), visco(T), ...
+       dT0_corr_dT = dcorr_neg_temp_dT(T0,(/5.d-1,5.d-1/),2.*T_1) ! Improve the correction
+       d2T0_corr_dT2 = d2corr_neg_temp_dT2(T0,(/5.d-1,5.d-1/),2.*T_1)
+     end if
 
      Vpar0    = eq_g(mp,7,ms,mt)
      Vpar0_x  = (   y_t(ms,mt) * eq_s(mp,7,ms,mt) - y_s(ms,mt) * eq_t(mp,7,ms,mt) ) / xjac

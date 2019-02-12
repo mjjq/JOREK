@@ -65,7 +65,7 @@ real*8  :: Z_imp, T0_Zimp, alpha_Zimp
 !   -Coefficients related to Z_imp
 real*8  :: alpha_imp, beta_imp
 !   -Corrected plasma temperature and density for radiation calculation
-real*8  :: T_rad, ne_rad
+real*8  :: T_rad, ne_rad, T_rad_real
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
@@ -195,7 +195,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #if (JOREK_MODEL == 501)
 !$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
-!$omp           T_rad, ne_rad, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,            &
+!$omp           T_rad, T_rad_real, ne_rad, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,         &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -307,9 +307,9 @@ do ife = ife_min, ife_max
         BigR = x_g(ms,mt)
 
         r0     = eq_g(mp,5,ms,mt)
-		r0_corr = corr_neg_dens(r0,(/1.d-8,1.d-5/),1.d-3) ! Correction for negative r0 ...
+	r0_corr = corr_neg_dens(r0,(/1.d-8,1.d-5/),1.d-3) ! Correction for negative r0 ...
         T0     = eq_g(mp,6,ms,mt)
-	    T0_corr = corr_neg_temp(T0,(/1.d-1,1.d-1/))
+        T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/))
         T0e    = eq_g(mp,6,ms,mt) /2.d0
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
@@ -396,6 +396,7 @@ do ife = ife_min, ife_max
 
         ! Te in eV:
         T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
         if (flag_adas) then
    
           if (allocated(imp_adas(1)%ionisation_energy)) then
@@ -437,7 +438,7 @@ do ife = ife_min, ife_max
         P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
         P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
 
-        if (flag_adas .and. ne_rad > 1.d16 .and. T_rad > 1. .and. rn0 > 0.) then
+        if (flag_adas .and. ne_rad > 1.d16 .and. T_rad_real > 3. .and. rn0 > 0.) then
           Lrad = 0.0
           ! Here we are temperarily only considering one impurity species, in the
           ! future maybe a do loop will is needed

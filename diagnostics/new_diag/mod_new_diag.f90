@@ -291,8 +291,8 @@ module mod_new_diag
 
       end do
 
-    ! We do not want to integrate the time along the line
-    if ( (expr_list%expr(iexpr)%name).eq.'t' ) sum(iexpr)=res1d(i,iexpr)
+      ! We do not want to integrate the time along the line
+      if ( (expr_list%expr(iexpr)%name).eq.'t' ) sum(iexpr)=res1d(i,iexpr)
 
     end do
 

@@ -421,7 +421,7 @@ module mod_expression
       fact_resistiv, fact_Er, fact_rad
 #if JOREK_MODEL == 500 || JOREK_MODEL == 501
     real*8  :: coef_rad_1
-    real*8  :: T_rad, LradDrays_T, LradDcont_T
+    real*8  :: T_rad, LradDrays_T, LradDcont_T, T_rad_real
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 #endif
@@ -972,7 +972,8 @@ module mod_expression
 
 #if JOREK_MODEL == 500
 
-  T_rad = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+  T_rad = corr_neg_temp(T0,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+  T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
 
   if ( units == SI_UNITS ) then
     coef_rad_1 = 1.d0
@@ -1005,9 +1006,10 @@ module mod_expression
 
 #if JOREK_MODEL == 501
 
-		  T0_corr = corr_neg_temp(T0,(/1.d-1,1.d-1/))
-		  T_rad   = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-		  
+	  T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/))
+	  T_rad   = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+	  T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+  
           if (flag_adas) then
             call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
           else
@@ -1024,7 +1026,7 @@ module mod_expression
 		  ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
           coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
 		  
-          if (flag_adas .and. ne_rad > 1.d16 .and. T_rad > 1.) then
+          if (flag_adas .and. ne_rad > 1.d16 .and. T_rad_real > 3.) then
             Lrad = 0.0
             dLrad_dT = 0.0
             call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)

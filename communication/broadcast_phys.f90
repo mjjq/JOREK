@@ -77,7 +77,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(rho_1,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(rho_coef,              10,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)                                                                                                                   
   call MPI_PACK(rho_imp,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  
+  call MPI_PACK(scale_ohmic,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(FF_0,                   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(FF_1,                   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -525,7 +525,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,rho_0,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,rho_1,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,rho_coef,              10,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,rho_imp,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)                                                                                                                 
+  call MPI_UNPACK(buffer,bufsize,position,rho_imp,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)                                                                                                          
+  call MPI_UNPACK(buffer,bufsize,position,scale_ohmic,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,FF_0,                   1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,FF_1,                   1,MPI_REAL8,MPI_COMM_WORLD,ierr)

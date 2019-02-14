@@ -98,7 +98,6 @@ real*8     :: rn0_xx, rn0_yy, rn0_xy, rhon_xx, rhon_yy
 real*8     :: source_imp, source_bg
 real*8     :: source_tmp
 
-
 ! time normalization
 real*8     :: t_norm
 
@@ -1210,7 +1209,7 @@ do ms=1, n_gauss
 !==============================End of ionization energy terms=================
 
 
-                    + v * BigR * (2./(3. * BigR**2)) * eta_Sp * zj0**2                  * xjac * tstep  &
+                    + v * BigR * (2./(3. * BigR**2)) * eta_Sp * zj0**2 * scale_ohmic    * xjac * tstep  &
                     - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad          * xjac * tstep  &
                     - v * BigR * r0_corr * frad_bg                                      * xjac * tstep
 
@@ -1727,7 +1726,7 @@ do ms=1, n_gauss
                            + TG_num6 * 0.25d0 * BigR**2 * r0* (T0_x * u0_y - T0_y * u0_x)     &
                                      * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
 
-                amat_63 = - v * BigR * zj * (4./(3. * BigR**2)) * eta_Sp * zj0                      * xjac * theta * tstep
+                amat_63 = - v * BigR * zj * (4./(3. * BigR**2)) * eta_Sp * zj0 * scale_ohmic        * xjac * theta * tstep
 
 
                 amat_65 =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)    &

@@ -452,7 +452,8 @@ module phys_module
  
   !> @name Input for impurity density profile (model 501)
   real*8              :: rho_imp          !< Uniform impurity density
-  
+  real*8              :: scale_ohmic      !< Scaling factor to alter the Ohmic heating terms
+
   !> @name Analytical input profile for FFprime
   real*8  :: FF_0,  FF_1,   FF_coef(10)
   

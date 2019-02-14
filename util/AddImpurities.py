@@ -89,11 +89,12 @@ def main():
     if profile == True : #Follow electron density profile
         arr[7,:,:,:] = arr[4,:,:,:]*args.profile
         print "Maximum impurity density = ", np.amax(arr[7,:,:,:]) * n0 * rho_0, " [m^-3]"
-
+        print "rho_imp in JOREK units: ", np.amax(arr[7,:,:,:])
     elif profile == False : #Constant density
         arr[7,:,:,:] = 0.0
         arr[7,0,0,:] = args.constant
         print "Constant impurity density = ", np.amax(arr[7,0,0,:]) * n0 * rho_0, " [m^-3]"
+        print "rho_imp in JOREK units: ", np.amax(arr[7,0,0,:])
 
     #After you are done
     f.close()

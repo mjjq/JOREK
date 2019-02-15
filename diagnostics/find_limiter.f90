@@ -10,7 +10,7 @@ use phys_module, only: n_limiter, R_limiter, Z_limiter
 use data_structure
 use gauss
 use basis_at_gaussian
-use equil_info, only : ES, is_axis_psi_mininum
+use equil_info, only : ES, is_axis_psi_mininum, get_psi_n
 use mod_interp
 
 implicit none
@@ -137,6 +137,20 @@ do ibnd=1,bnd_elm_list%n_bnd_elements
         if (prod < 0.d0) is_private = .true.
       else
         if (prod > 0.d0) is_private = .true.
+      endif
+
+      if (ES%initialized) then
+        if (get_psi_n(P,Z) > 1.d0) then
+          if ((P < ES%psi_bnd) .and. (ES%axis_is_psi_minimum)) then
+            is_private = .true.
+          elseif ((P > ES%psi_bnd) .and. (.not. ES%axis_is_psi_minimum)) then
+            is_private = .true. 
+          else
+            is_private = .false.
+          endif
+        else
+          is_private = .false.
+        endif
       endif
       
       if (.not. is_private) then

@@ -554,7 +554,7 @@ do i=1,element_list%n_elements
 
         do m=1,n_var
           call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
-          scalars(inode,m) = P
+          scalars(inode,m) = P * HZ(i_tor,i_plane)
         enddo
 
         if ((xjac .gt. 1.d-6)) then

@@ -208,7 +208,7 @@ required = 0
   my_id = rank
   
   ! --- Process command line arguments
-  if ( my_id == 0 ) call jorek2help(n_cpu, nbthreads)  
+  if ( my_id == 0 ) call jorek2help(n_cpu, nbthreads)
   
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
@@ -264,6 +264,10 @@ required = 0
   else if ( (.not. use_mumps) .and. (.not. use_pastix) .and. (.not. use_wsmp) ) then
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  else if ( mod(n_tor,2) == 0 ) then
+    write(*,*) ' FATAL: n_tor must be an uneven number.'
+    call MPI_Abort(MPI_COMM_WORLD, 4, ierr)
     stop
   else if ( n_plane < 2*(n_tor-1) ) then
     write(*,*) ' FATAL: n_plane >= 2 * (n_tor-1) required to avoid aliasing.'
@@ -322,6 +326,23 @@ required = 0
       stop
     end if
   end if
+  if ( iand(n_plane,n_plane-1) /= 0 ) then
+    write(*,*) 'WARNING: n_plane is not a power of two. This might be inefficient.'
+    write(*,*) '  When using FFTW, it is possible to run like this, but it might not be fast.'
+  end if
+  if ( (nbthreads > 24) .and. (my_id == 0) ) then
+    write(*,*) 'WARNING: You are using more than 24 OpenMP threads which might be inefficient.'
+    write(*,*) '  Consider testing, whether you get better performance by increasing the number'
+    write(*,*) '  of MPI tasks and reducing the number of OpenMP threads in the jobscript.'
+  end if
+#ifndef USE_BLOCK
+  write(*,*) 'WARNING: You are not using USE_BLOCK=1 which might be inefficient.'
+  write(*,*) '  Consider setting USE_BLOCK=1 in your Makefile.inc'
+#endif
+#ifndef USE_FFTW
+  write(*,*) 'WARNING: You are not using USE_FFTW=1 which might be inefficient.'
+  write(*,*) '  Consider setting USE_FFTW=1 in your Makefile.inc'
+#endif
   
   ! --- Initialize live data file which will be filled during the code run
   if ( my_id == 0 ) call init_live_data()
@@ -801,6 +822,16 @@ required = 0
   if ( (my_id == 0) .and. (.not. restart) ) then
     fileout = 'jorek00000'
     call export_restart(node_list, element_list, fileout)
+  end if
+  
+  if ( ( my_id == 0 ) .and. ( (node_list%n_nodes > n_nodes_max+1000)                               &
+    .or. (element_list%n_elements > n_elements_max+1000) ) ) then
+    write(*,*) 'WARNING: n_nodes_max and/or n_elements_max is too large. This wastes memory.'
+    write(*,*) '  n_nodes_max,    n_nodes    =', n_nodes_max,    node_list%n_nodes
+    write(*,*) '  n_elements_max, n_elements =', n_elements_max, element_list%n_elements
+    write(*,*) '  Note: for the equilibrium calculation higher values might be needed depending'
+    write(*,*) '  on the resolution of your initial grid. In that case, you can run with reduced'
+    write(*,*) '  values after restarting.'
   end if
   
   !***********************************************************************

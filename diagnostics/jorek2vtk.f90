@@ -40,6 +40,8 @@ real*8                :: T0,  T0_s,  T0_t,  T0_st,  T0_ss,  T0_tt,  TT,  TT_s, T
 real*8                :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti,  Ti_s, Ti_t, Ti_st, Ti_ss, Ti_tt
 real*8                :: Te0, Te0_s, Te0_t, Te0_st, Te0_ss, Te0_tt, Te, Te_s,  Te_t, Te_st, Te_ss, Te_tt
 real*8                :: V0,  V0_s,  V0_t,  V0_st,  V0_ss,  V0_tt,  V, V_s, V_t, V_st, V_ss, V_tt
+real*8                :: dPsi, dPs_s, dPs_t, dPs_st, dPs_ss, dPs_tt
+real*8                :: dU,    dU_s,  dU_t,  dU_st,  dU_ss,  dU_tt
 real*8                :: ps0_x, ps0_y, psi_sum, ps_x, ps_y, ps_p
 real*8                :: u0_x,  u0_y,  u_sum,   u_x,  u_y,  u_p
 real*8                :: zj0_x, zj0_y, zj_sum,  zj_x, zj_y, zj_p
@@ -52,15 +54,16 @@ real*8                :: AR_Z, AR_p, AZ_R, AZ_p, A3_R, A3_Z, Fprof
 real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
 real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8                :: psi_norm, psi_bnd, grad_psi
+real*8                :: E_phi, E_R, E_Z, dU_x, dU_y
 real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
-integer               :: n_fluxes, n_neo, n_bfield, n_vfield,n_pellet,n_bootstrap, n_psi_norm
-integer               :: s_fluxes, s_neo, s_bfield, s_vfield,s_pellet,s_bootstrap, s_psi_norm
+integer               :: n_fluxes, n_neo, n_bfield, n_vfield,n_pellet,n_bootstrap, n_psi_norm, n_Efield
+integer               :: s_fluxes, s_neo, s_bfield, s_vfield,s_pellet,s_bootstrap, s_psi_norm, s_Efield
 real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
-logical               :: include_bootstrap, include_psi_norm
+logical               :: include_bootstrap, include_psi_norm, include_electric_field 
 real*8                :: toroidal_angle
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
@@ -89,8 +92,7 @@ real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
-                      include_bootstrap, include_psi_norm
-
+                      include_bootstrap, include_psi_norm, include_electric_field 
 
 
 write(*,*) '***************************************'
@@ -102,6 +104,7 @@ write(*,*) '   -include_fluxes'
 write(*,*) '   -include_neo'
 write(*,*) '   -include_magnetic_field'
 write(*,*) '   -include_velocity_field'
+write(*,*) '   -include_electric_field'
 write(*,*) '   -include_bootstrap'
 write(*,*) '   -include_psi_norm'
 write(*,*) '***************************************'
@@ -126,8 +129,9 @@ include_fluxes         = .false. ! include energy and density fluxes (or not)
 include_neo            = .false. ! include neoclassical and more terms (or not)
 include_magnetic_field = .false. ! include vector of magnetic field (or not)
 include_velocity_field = .false. ! include vector of velocity field (or not)
+include_electric_field = .true. ! include vector of E-field (or not), evaluated at t-dt/2 
 include_bootstrap      = .false. ! include bootstrap current and averaged current
-include_psi_norm       = .false.  ! include normalized flux
+include_psi_norm       = .false. ! include normalized flux
 
 #if (JOREK_MODEL == 500)
 include_radiation = .true.
@@ -153,8 +157,10 @@ write(*,*) 'include_fluxes  =', include_fluxes
 write(*,*) 'include_neo     =', include_neo
 write(*,*) 'include_magnetic_field =',include_magnetic_field
 write(*,*) 'include_velocity_field =',include_velocity_field
+write(*,*) 'include_electric_field =',include_electric_field
 write(*,*) 'include_bootstrap =',include_bootstrap
 write(*,*) 'include_psi_norm =', include_psi_norm
+
 
 write(*,*) '-----------'
 write(*,*) 'n_tor           =', n_tor
@@ -171,6 +177,7 @@ n_fluxes    = 0
 n_neo       = 0
 n_bfield    = 0
 n_vfield    = 0
+n_Efield    = 0
 n_pellet    = 0
 n_bootstrap = 0
 n_psi_norm  = 0
@@ -194,6 +201,11 @@ if (include_velocity_field) then
   n_vfield  = 1
   s_vfield  = n_vectors
   n_vectors = n_vectors + n_vfield
+endif
+if (include_electric_field) then
+  n_Efield  = 1
+  s_Efield  = n_vectors
+  n_vectors = n_vectors + n_Efield
 endif
 if (use_pellet) then
   n_pellet  = 2  ! pellet and pressuren
@@ -282,6 +294,7 @@ else
       if (.not. bootstrap) write(*,*)'VTK WARNING: if you want the bootstrap, please set bootstrap=.t. in your input file!'
       scalar_names(s_bootstrap+1:s_bootstrap+n_bootstrap) = (/ 'j_bootstrap ', 'j_averaged  ' /)
    endif
+
 !======================end SI units
 endif
 
@@ -305,6 +318,7 @@ scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_phi       ', 'B_R        
 
 if (include_magnetic_field)  vector_names(s_bfield+1:s_bfield+n_bfield) = (/ 'B_R     ','B_Z     ','B_phi   '/)
 if (include_velocity_field)  vector_names(s_vfield+1:s_vfield+n_vfield) = (/ 'V_R     ','V_Z     ','V_phi   '/)
+if (include_electric_field)  vector_names(s_Efield+1:s_Efield+n_Efield) = 'E_field_tmid'
 
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
@@ -607,6 +621,8 @@ do i=1,element_list%n_elements
         Ti_sum  = 0.d0; Ti_x = 0.d0; Ti_y = 0.d0; Ti_p = 0.d0
         Te_sum  = 0.d0; Te_x = 0.d0; Te_y = 0.d0; Te_p = 0.d0
         w_sum   = 0.d0; w_x  = 0.d0; w_y  = 0.d0; w_p  = 0.d0; w_xx = 0.d0; w_yy = 0.d0
+        E_R     = 0.d0; E_z  = 0.d0; E_phi= 0.d0
+        dU_x    = 0.d0; dU_y = 0.d0
 
 #ifdef fullmhd
         !reinitialize Bphi,BR,B_Z for loop over all modes
@@ -614,7 +630,7 @@ do i=1,element_list%n_elements
         scalars(inode,s_fullmhd+2) = 0.  
         scalars(inode,s_fullmhd+3) = 0.  
 #endif /*fullmhd*/
-
+        
         do i_tor = 1, n_tor
 
           if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
@@ -623,6 +639,9 @@ do i=1,element_list%n_elements
              call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
              scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
           enddo
+          
+          call interp_delta(node_list,element_list,i,1,i_tor,s,t,dpsi,dPs_s, dPs_t, dPs_st, dPs_ss, dPs_tt)
+          call interp_delta(node_list,element_list,i,2,i_tor,s,t,dU,dU_s, dU_t, dU_st, dU_ss, dU_tt)         
 
           call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s, Ps_t, Ps_st, Ps_ss, Ps_tt)
           call interp(node_list,element_list,i,2,i_tor,s,t,U  ,U_s,  U_t,  U_st,  U_ss,  U_tt)
@@ -630,6 +649,7 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,4,i_tor,s,t,W  ,W_s,  W_t,  W_st,  W_ss,  W_tt)
           call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
           call interp(node_list,element_list,i,6,i_tor,s,t,TT ,TT_s, TT_t, TT_st, TT_ss, TT_tt)
+         
           if ( jorek_model >= 300 ) then
              call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
           else
@@ -685,6 +705,9 @@ do i=1,element_list%n_elements
              u_x  = u_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
              u_y  = u_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
 
+             du_x = du_x  + (   Z_t * dU_s - Z_s * dU_t )   / xjac * HZ(i_tor,i_plane)
+             du_y = du_y  + ( - R_t * dU_s + R_s * dU_t )   / xjac * HZ(i_tor,i_plane)
+
              ps_x  = ps_x + (   Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,i_plane)
              ps_y  = ps_y + ( - R_t * PS_s + R_s * PS_t )   / xjac * HZ(i_tor,i_plane)
 
@@ -727,6 +750,11 @@ do i=1,element_list%n_elements
                   + w_s * (R_st*R_t - R_tt*R_s )                                        &
                   + w_t * (R_st*R_s - R_ss*R_t ) )       / xjac**2                      &
                   - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
+
+            ! --- Full toroidal electric field evaluated at t_now - dt/2
+            E_R   = E_R   - F0*(U_x-0.5d0*dU_x)*HZ(i_tor,i_plane)
+            E_Z   = E_Z   - F0*(U_y-0.5d0*dU_y)*HZ(i_tor,i_plane) 
+            E_phi = E_phi - dpsi/tstep * HZ(i_tor,i_plane)/BigR - F0*(U-0.5d0*dU)*HZ_p(i_tor,i_plane)/BigR 
 
           endif ! xjac
 
@@ -797,7 +825,10 @@ do i=1,element_list%n_elements
 
           endif ! grad_psi
         endif ! include_fluxes
-
+        if (include_electric_field) then
+          vectors(inode,:,s_Efield + 1) =  (/ E_R, E_Z, E_phi /)
+        endif
+        
         if (include_psi_norm) then
            scalars(inode,s_psi_norm+1) = psi_norm
         endif
@@ -949,6 +980,9 @@ if (SI_units) then
     if (include_bootstrap) then
     scalars(i,s_bootstrap+1)=scalars(i,s_bootstrap+1)/MU_zero*1.e-6
     scalars(i,s_bootstrap+2)=scalars(i,s_bootstrap+2)/MU_zero*1.e-6
+    endif
+    if (include_electric_field) then 
+      vectors(inode,:,s_Efield + 1) = vectors(inode,:,s_Efield + 1)/t_norm
     endif
   !========================================================
 

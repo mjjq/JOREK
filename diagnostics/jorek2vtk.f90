@@ -129,7 +129,7 @@ include_fluxes         = .false. ! include energy and density fluxes (or not)
 include_neo            = .false. ! include neoclassical and more terms (or not)
 include_magnetic_field = .false. ! include vector of magnetic field (or not)
 include_velocity_field = .false. ! include vector of velocity field (or not)
-include_electric_field = .true. ! include vector of E-field (or not), evaluated at t-dt/2 
+include_electric_field = .false. ! include vector of E-field (or not), evaluated at t-dt/2 
 include_bootstrap      = .false. ! include bootstrap current and averaged current
 include_psi_norm       = .false. ! include normalized flux
 
@@ -316,8 +316,8 @@ endif
 scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_phi       ', 'B_R         ', 'B_Z         '/)
 #endif /*fullmhd*/
 
-if (include_magnetic_field)  vector_names(s_bfield+1:s_bfield+n_bfield) = (/ 'B_R     ','B_Z     ','B_phi   '/)
-if (include_velocity_field)  vector_names(s_vfield+1:s_vfield+n_vfield) = (/ 'V_R     ','V_Z     ','V_phi   '/)
+if (include_magnetic_field)  vector_names(s_bfield+1:s_bfield+n_bfield) = 'B_field' 
+if (include_velocity_field)  vector_names(s_vfield+1:s_vfield+n_vfield) = 'v_field'
 if (include_electric_field)  vector_names(s_Efield+1:s_Efield+n_Efield) = 'E_field_tmid'
 
 do k_tor=1, n_tor
@@ -575,10 +575,6 @@ do i=1,element_list%n_elements
            !*** compute diagnostics ***
           v_perp  = R * sqrt(u_x*u_x + u_y*u_y)
 
-              !  vectors(inode,:,1) = (/ - R * u0_y ,+ R * u0_x ,   0.d0 /)
-              !  vectors(inode,:,2) = (/ + ps_y /R * V, - ps_x /R * V, F0/R * V /)
-              !  vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * V, + R * u0_x - ps_x /R * V, F0/R * V /)
-
           psi_J = (Ps_s * ZJ_t - PS_t * ZJ_s ) / xjac
           R_p   = (2.d0 * R * (R_s * (RHO_t * TT + RHO * TT_t) - R_t * (RHO_s * TT + RHO * TT_s) )) / xjac
           error = psi_J - R_p  ! "error" in Grad_Shafranov equilibrium force balance
@@ -825,6 +821,15 @@ do i=1,element_list%n_elements
 
           endif ! grad_psi
         endif ! include_fluxes
+
+        if (include_magnetic_field) then
+          vectors(inode,:,s_Bfield + 1) = (/ ps_y/BigR, -ps_x/BigR, F0/BigR /)          
+        endif
+
+        if (include_velocity_field) then
+          vectors(inode,:,s_vfield + 1) = (/ -BigR*u_y + V/BigR*ps_y, BigR*u_x - V/BigR*ps_x, V*F0/BigR /)          
+        endif
+
         if (include_electric_field) then
           vectors(inode,:,s_Efield + 1) =  (/ E_R, E_Z, E_phi /)
         endif
@@ -981,8 +986,11 @@ if (SI_units) then
     scalars(i,s_bootstrap+1)=scalars(i,s_bootstrap+1)/MU_zero*1.e-6
     scalars(i,s_bootstrap+2)=scalars(i,s_bootstrap+2)/MU_zero*1.e-6
     endif
+    if (include_velocity_field) then 
+      vectors(i,:,s_vfield + 1) = vectors(i,:,s_vfield + 1)/t_norm
+    endif
     if (include_electric_field) then 
-      vectors(inode,:,s_Efield + 1) = vectors(inode,:,s_Efield + 1)/t_norm
+      vectors(i,:,s_Efield + 1) = vectors(i,:,s_Efield + 1)/t_norm
     endif
   !========================================================
 

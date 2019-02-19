@@ -13,6 +13,7 @@ use corr_neg
 use mod_import_restart
 use mod_vtk
 use mod_interp
+use mod_poloidal_currents
 
 implicit none
 
@@ -54,16 +55,18 @@ real*8                :: AR_Z, AR_p, AZ_R, AZ_p, A3_R, A3_Z, Fprof
 real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
 real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8                :: psi_norm, psi_bnd, grad_psi
-real*8                :: E_phi, E_R, E_Z, dU_x, dU_y
+real*8                :: E_phi, E_R, E_Z, dU_x, dU_y, Jpol_R, Jpol_Z
 real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
 integer               :: n_fluxes, n_neo, n_bfield, n_vfield,n_pellet,n_bootstrap, n_psi_norm, n_Efield
+integer               :: n_Jpol
 integer               :: s_fluxes, s_neo, s_bfield, s_vfield,s_pellet,s_bootstrap, s_psi_norm, s_Efield
+integer               :: s_Jpol
 real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
-logical               :: include_bootstrap, include_psi_norm, include_electric_field 
+logical               :: include_bootstrap, include_psi_norm, include_electric_field, include_Jpol 
 real*8                :: toroidal_angle
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
@@ -92,7 +95,7 @@ real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
-                      include_bootstrap, include_psi_norm, include_electric_field 
+                      include_bootstrap, include_psi_norm, include_electric_field, include_Jpol
 
 
 write(*,*) '***************************************'
@@ -105,6 +108,7 @@ write(*,*) '   -include_neo'
 write(*,*) '   -include_magnetic_field'
 write(*,*) '   -include_velocity_field'
 write(*,*) '   -include_electric_field'
+write(*,*) '   -include_Jpol'
 write(*,*) '   -include_bootstrap'
 write(*,*) '   -include_psi_norm'
 write(*,*) '***************************************'
@@ -130,6 +134,7 @@ include_neo            = .false. ! include neoclassical and more terms (or not)
 include_magnetic_field = .false. ! include vector of magnetic field (or not)
 include_velocity_field = .false. ! include vector of velocity field (or not)
 include_electric_field = .false. ! include vector of E-field (or not), evaluated at t-dt/2 
+include_Jpol           = .false. ! include poloidal current vector (J_phi=0 for visualization)
 include_bootstrap      = .false. ! include bootstrap current and averaged current
 include_psi_norm       = .false. ! include normalized flux
 
@@ -158,8 +163,9 @@ write(*,*) 'include_neo     =', include_neo
 write(*,*) 'include_magnetic_field =',include_magnetic_field
 write(*,*) 'include_velocity_field =',include_velocity_field
 write(*,*) 'include_electric_field =',include_electric_field
-write(*,*) 'include_bootstrap =',include_bootstrap
-write(*,*) 'include_psi_norm =', include_psi_norm
+write(*,*) 'include_Jpol      =', include_Jpol
+write(*,*) 'include_bootstrap =', include_bootstrap
+write(*,*) 'include_psi_norm  =', include_psi_norm
 
 
 write(*,*) '-----------'
@@ -178,6 +184,7 @@ n_neo       = 0
 n_bfield    = 0
 n_vfield    = 0
 n_Efield    = 0
+n_Jpol      = 0
 n_pellet    = 0
 n_bootstrap = 0
 n_psi_norm  = 0
@@ -206,6 +213,11 @@ if (include_electric_field) then
   n_Efield  = 1
   s_Efield  = n_vectors
   n_vectors = n_vectors + n_Efield
+endif
+if (include_Jpol) then
+  n_Jpol    = 1
+  s_Jpol    = n_vectors
+  n_vectors = n_vectors + n_Jpol
 endif
 if (use_pellet) then
   n_pellet  = 2  ! pellet and pressuren
@@ -277,6 +289,8 @@ if ( SI_units ) then
      scalar_names(s_bootstrap+1:s_bootstrap+n_bootstrap) = (/'j_b_MA/m2   ', 'j_av_MA/m2  '/)
   endif
 
+  if (include_Jpol)  vector_names(s_Jpol  +1:s_Jpol  +n_Jpol  ) = 'Jpol (MA/m2)'
+
 else
 
   if (include_fluxes) then
@@ -294,6 +308,8 @@ else
       if (.not. bootstrap) write(*,*)'VTK WARNING: if you want the bootstrap, please set bootstrap=.t. in your input file!'
       scalar_names(s_bootstrap+1:s_bootstrap+n_bootstrap) = (/ 'j_bootstrap ', 'j_averaged  ' /)
    endif
+
+   if (include_Jpol)  vector_names(s_Jpol  +1:s_Jpol  +n_Jpol  ) = 'Jpol'
 
 !======================end SI units
 endif
@@ -833,6 +849,11 @@ do i=1,element_list%n_elements
         if (include_electric_field) then
           vectors(inode,:,s_Efield + 1) =  (/ E_R, E_Z, E_phi /)
         endif
+
+        if (include_Jpol) then
+          call J_pol(node_list, element_list, i, s, t, i_plane, Jpol_R, Jpol_Z, .false.)
+          vectors(inode,:, s_Jpol  + 1) =  (/ Jpol_R, Jpol_Z, 0.d0 /)
+        endif
         
         if (include_psi_norm) then
            scalars(inode,s_psi_norm+1) = psi_norm
@@ -992,6 +1013,10 @@ if (SI_units) then
     if (include_electric_field) then 
       vectors(i,:,s_Efield + 1) = vectors(i,:,s_Efield + 1)/t_norm
     endif
+    if (include_Jpol) then
+      vectors(i,:, s_Jpol  + 1) = vectors(i,:,s_Jpol   + 1)/MU_zero*1e-6
+    endif
+ 
   !========================================================
 
 #if (JOREK_MODEL == 500)

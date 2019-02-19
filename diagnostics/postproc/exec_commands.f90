@@ -166,6 +166,8 @@ module exec_commands
           call point(command, first_step, ierr)
         case ( 'qprofile' )
           call qprofile(command, first_step, ierr)
+         case ( 'q_at_psin' )
+          call q_at_given_psin(command, first_step, ierr)
         case ( 'separatrix' )
           call separatrix(command, ierr)
         case ( 'set' )
@@ -185,7 +187,7 @@ module exec_commands
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'mark_coords', 'int2d', 'midplane', 'average', 'point',      &
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
-          'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
+          'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
           'si-units', 'grid', 'rectangle', 'energy_spectrum', 'average_h5' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
@@ -1444,10 +1446,75 @@ module exec_commands
     if ( allocated(rad)                        ) deallocate(rad)
     
   end subroutine qprofile
+
+
+
+
+  
+  !> Output q over time at a certain psi_n
+  subroutine q_at_given_psin(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: i_file
+    character(len=1024) :: filename, status, access
+    real*8 :: t_norm, psin, q_psin(2), rad(2) 
+    
+    type (type_surface_list) :: surface_list
+ 
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    psin  = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+   
+    write(filename,'(5a)') DIR, 'q_at_psin_', trim(real2str(psin,'(f12.4)')), &
+       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '#               time            q'
+    end if
+    
+    ! --- Find flux surfaces and determine q-profile
+    surface_list%n_psi = 2 
+    allocate( surface_list%psi_values(2) )
+    surface_list%psi_values(1) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * 0.2d0
+    surface_list%psi_values(2) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * psin
+
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
+    call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
+      eq%Z_xpoint, q_psin, rad)
+    
+    write(i_file,'(2es20.13)') time_now, q_psin(2) 
+    
+    close(i_file)
+
+    ! --- Clean up.
+    if ( allocated(surface_list%psi_values)    ) deallocate(surface_list%psi_values)
+    if ( allocated(surface_list%flux_surfaces) ) deallocate(surface_list%flux_surfaces)
+    
+  end subroutine q_at_given_psin
   
   
   
-  
+
   
   !> Output the flux surfaces.
   recursive subroutine fluxsurfaces(command, ierr)

@@ -55,7 +55,7 @@ real*8                :: AR_Z, AR_p, AZ_R, AZ_p, A3_R, A3_Z, Fprof
 real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
 real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8                :: psi_norm, psi_bnd, grad_psi
-real*8                :: E_phi, E_R, E_Z, dU_x, dU_y, Jpol_R, Jpol_Z
+real*8                :: E_phi, E_R, E_Z, dU_x, dU_y, Jpol_R, Jpol_Z, FFp
 real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
 integer               :: n_fluxes, n_neo, n_bfield, n_vfield,n_pellet,n_bootstrap, n_psi_norm, n_Efield
@@ -851,7 +851,7 @@ do i=1,element_list%n_elements
         endif
 
         if (include_Jpol) then
-          call J_pol(node_list, element_list, i, s, t, i_plane, Jpol_R, Jpol_Z, .false.)
+          call J_pol(node_list, element_list, i, s, t, i_plane,.false., Jpol_R, Jpol_Z, FFp)
           vectors(inode,:, s_Jpol  + 1) =  (/ Jpol_R, Jpol_Z, 0.d0 /)
         endif
         

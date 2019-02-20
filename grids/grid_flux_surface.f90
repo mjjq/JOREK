@@ -7,6 +7,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
+use phys_module, only: force_central_node
 
 implicit none
 
@@ -435,7 +436,7 @@ do i=1,nrnew
 
     if (.not. refinement) then       ! keep original formulation if not using refinement
    
-      if (i.eq.1) then
+      if ((force_central_node) .and. (i.eq.1)) then
 
         node_list%node(index)%index(1) = 1
 

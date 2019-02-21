@@ -20,7 +20,7 @@ module mod_expression
   use diffusivities
   use corr_neg
   use mod_basisfunctions
-  
+  use mod_poloidal_currents 
   
   
   
@@ -115,6 +115,8 @@ module mod_expression
     call add(exprs_all, 'Phi         ', 'Electric Potential Phi                                ')
     call add(exprs_all, 'zj          ', 'Toroidal Current Density Multiplied by 1/R            ')
     call add(exprs_all, 'currdens    ', 'Physical Toroidal Current Density (== zj/R)           ')
+    call add(exprs_all, 'FFprime_loc ', 'Local FFprime value, calculated from 3D JxB=\grad p   ')
+    call add(exprs_all, 'Jpol        ', 'Poloidal current value in the poloidal field direction')
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'ne          ', 'Electron Density                                      ')
@@ -406,6 +408,7 @@ module mod_expression
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot 
+    real*8 :: FFprime_loc, Jpol
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
     ! --- Normalization factors
@@ -823,7 +826,14 @@ module mod_expression
           psi_norm = get_psi_n(eq, ps0)
           Btheta  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z) / BigR
           psi_abs = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z)
-          
+
+          if (psi_abs > 1.d-6) then
+            FFprime_loc = zj0 + (R**2.d0) * (ps0_R*P0_R + ps0_Z*P0_Z)/(psi_abs**2.d0)
+          else
+            FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
+          endif
+          Jpol = FFprime_loc * Btheta
+
           ! --- Some input profiles
           if ( eta_T_dependent ) then
             eta_T     = eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
@@ -1091,6 +1101,12 @@ module mod_expression
                 
               case ( 'currdens' )
                 res = zj0 / R / fact_mu_zero
+
+              case ( 'FFprime_loc' )
+                res = FFprime_loc
+
+              case ( 'Jpol' )
+                res = Jpol / fact_mu_zero
                 
               case ( 'Er' )
                 res = Er * fact_Er

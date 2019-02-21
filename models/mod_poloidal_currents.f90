@@ -115,7 +115,7 @@ module mod_poloidal_currents
 
     grad_psi = sqrt(psi_x**2.d0 + psi_y**2.d0)
     if ( grad_psi > 1.d-6 ) then
-      FFp    = ZJ_sum + (psi_x*P0_R + psi_y*P0_Z)/(grad_psi**2.0d0)
+      FFp    = ZJ_sum + (R**2.d0)*(psi_x*P0_R + psi_y*P0_Z)/(grad_psi**2.0d0)
     else
       FFp    = ZJ_sum !--- difficult to correct the other term when grad_psi=0...
     endif

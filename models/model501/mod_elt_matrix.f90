@@ -346,8 +346,8 @@ do ms=1, n_gauss
      r0_st = eq_st(mp,5,ms,mt)
      r0_tt = eq_tt(mp,5,ms,mt)
 
-     r0_corr = corr_neg_dens(r0,(/1.d-8,1.d-5/),1.d-3) ! Correction for negative r0 ...
-     dr0_corr_dn = dcorr_neg_dens_drho(r0,(/1.d-8,1.d-5/),1.d-3)
+     r0_corr = corr_neg_dens(r0,(/1.d-9,1.d-5/),1.d-3) ! Correction for negative r0 ...
+     dr0_corr_dn = dcorr_neg_dens_drho(r0,(/1.d-9,1.d-5/),1.d-3)
      
      r0_hat   = BigR**2 * r0
      r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
@@ -363,8 +363,8 @@ do ms=1, n_gauss
      rn0_st = eq_st(mp,8,ms,mt)                                                            
      rn0_tt = eq_tt(mp,8,ms,mt)                                                            
 
-     rn0_corr = corr_neg_dens(rn0, (/ 1.d-12, 1.d-5 /),1.d-3) ! Correction for negative rn0 ...
-     drn0_corr_dn = dcorr_neg_dens_drho(rn0, (/ 1.d-12, 1.d-5 /),1.d-3)
+     rn0_corr = corr_neg_dens(rn0, (/ 1.d-9, 1.d-5 /),1.d-3) ! Correction for negative rn0 ...
+     drn0_corr_dn = dcorr_neg_dens_drho(rn0, (/ 1.d-9, 1.d-5 /),1.d-3)
 
      rn0_xx = (rn0_ss * y_t(ms,mt)**2 - 2.d0*rn0_st * y_s(ms,mt)*y_t(ms,mt) + rn0_tt * y_s(ms,mt)**2     &
             + rn0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                 &
@@ -841,7 +841,7 @@ do ms=1, n_gauss
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
 
-     if (flag_adas .and. ne_rad > 1.d18 .and. T_rad_real > 5.) then
+     if (flag_adas .and. ne_rad > 1.d18 .and. T_rad_real > 5. .and. rn0 > 1.d-8) then
 
        Lrad = 0.0
        dLrad_dT = 0.0

@@ -30,8 +30,8 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
-  eta_num_T_dependent = .true.
-  visco_num_T_dependent = .true.
+  eta_num_T_dependent = .false.
+  visco_num_T_dependent = .false.
 
   eta   = 1.d-5
   T_eta_thres = 1.d0

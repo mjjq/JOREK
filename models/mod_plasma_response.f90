@@ -12,6 +12,7 @@ module mod_plasma_response
   use basis_at_gaussian
   use tr_module
   use phys_module
+  use mod_vtk
   
   implicit none
   
@@ -19,7 +20,28 @@ module mod_plasma_response
   
   public ::  Greens_functions,  psi_plasma,   B_plasma,  comelp
   public ::  find_Icoils, find_Icoils2, find_Icoils_JET
+  public ::  t_pol_coil, t_coil, psi_coils
+  public ::  read_coils, construct_test_coil, destruct_coils, log_coils, log_coil
   
+  ! --- Derived datatypes
+  type :: t_pol_coil
+    integer             :: n_fila
+    real*8, allocatable :: R_fila(:)
+    real*8, allocatable :: Z_fila(:)
+    real*8, allocatable :: weight(:)
+  end type t_pol_coil
+  
+  type :: t_coil
+    character(len=80)      :: name
+    integer                :: coil_type
+    type(t_pol_coil) :: pol_coil
+  end type t_coil
+  
+  integer, parameter :: C_POL_COIL  = 1       !< Value of coil_type indicating a poloidal field coil
+  logical            :: debug=.true.        !< Output debugging information (fort.xxx files)
+  logical            :: debug_norm=.false.   !< Output normalized magnetic field vectors
+  logical            :: verbose=.false.      !< Output verbose information
+ 
   contains
   
     
@@ -1060,6 +1082,232 @@ module mod_plasma_response
     
       return
   end  subroutine comelp
+
+
+
+
+
+
+! --- Routines related to coils
+
+  subroutine read_coils(coils, coil_file)
+    implicit none
+    
+    ! --- Routine parameters
+    type(t_coil), allocatable, intent(inout) :: coils(:)
+    character(len=*),          intent(in)    :: coil_file
+    ! --- Local variables
+    integer :: file_handle = 21
+    integer :: err, ncoils, i_c, i_f
+    real*8, allocatable :: n_turns(:)
+    real*8  :: n_turns_fila
+    character(len=512) :: comment_line
+    
+    call destruct_coils(coils)
+    open(file_handle, file=trim(coil_file), status='old', action='read', iostat=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR: Cannot open coil file "'//trim(coil_file)//'".'
+      stop
+    end if
+    
+    read(file_handle,'(a)') comment_line
+    read(file_handle,*) ncoils
+    
+    allocate( coils(ncoils), n_turns(ncoils) )
+    
+    read(file_handle,'(a)') comment_line
+    do i_c = 1, ncoils
+      read(file_handle,*) coils(i_c)%pol_coil%n_fila, coils(i_c)%name, n_turns(i_c)
+      
+      coils(i_c)%coil_type = C_POL_COIL
+      coils(i_c)%name = trim(adjustl(coils(i_c)%name))
+      allocate( coils(i_c)%pol_coil%R_fila(coils(i_c)%pol_coil%n_fila) )
+      allocate( coils(i_c)%pol_coil%Z_fila(coils(i_c)%pol_coil%n_fila) )
+      allocate( coils(i_c)%pol_coil%weight(coils(i_c)%pol_coil%n_fila) )
+    end do
+    
+    do i_c = 1, ncoils
+      read(file_handle,'(a)') comment_line
+      read(file_handle,'(a)') comment_line
+      read(file_handle,'(a)') comment_line
+      do i_f = 1, coils(i_c)%pol_coil%n_fila
+        read(file_handle,*) coils(i_c)%pol_coil%R_fila(i_f), coils(i_c)%pol_coil%Z_fila(i_f),      &
+          n_turns_fila
+        
+        coils(i_c)%pol_coil%weight(i_f) = n_turns_fila / n_turns(i_c)
+      end do
+    end do
+    
+    close(file_handle)
+    
+  end subroutine read_coils
+  
+  
+  
+  subroutine construct_test_coil(coils)
+    implicit none
+    
+    ! --- Routine parameters
+    type(t_coil), allocatable, intent(inout) :: coils(:)
+    
+    call destruct_coils(coils)
+    allocate( coils(1) )
+    coils(1)%name = 'Axisymmetric Test-Coil'
+    coils(1)%coil_type = C_POL_COIL
+    coils(1)%pol_coil%n_fila = 1
+    allocate( coils(1)%pol_coil%R_fila(1) )
+    allocate( coils(1)%pol_coil%Z_fila(1) )
+    allocate( coils(1)%pol_coil%weight(1) )
+    coils(1)%pol_coil%R_fila(:) = (/ 9.2 /)
+    coils(1)%pol_coil%Z_fila(:) = (/ 1.0 /)
+    coils(1)%pol_coil%weight(:) = (/ 1.0 /)
+  end subroutine construct_test_coil
+  
+  
+  
+  subroutine destruct_coils(coils)
+    implicit none
+    
+    ! --- Routine parameters
+    type(t_coil), allocatable, intent(inout) :: coils(:)
+    ! --- Local variables
+    integer :: i_c
+    
+    if ( allocated(coils) ) then
+      do i_c = 1, size(coils,1)
+        if ( allocated(coils(i_c)%pol_coil%R_fila) ) deallocate(coils(i_c)%pol_coil%R_fila)
+        if ( allocated(coils(i_c)%pol_coil%Z_fila) ) deallocate(coils(i_c)%pol_coil%Z_fila)
+        if ( allocated(coils(i_c)%pol_coil%weight) ) deallocate(coils(i_c)%pol_coil%weight)
+      end do
+      deallocate(coils)
+    end if
+  end subroutine destruct_coils
+  
+  
+  
+  subroutine log_coils(coils,verbose)
+    implicit none
+    
+    ! --- Routine parameters
+    type(t_coil), allocatable, intent(in) :: coils(:)
+    logical,                   intent(in) :: verbose
+    ! --- Local variables
+    integer :: i
+    
+    write(*,*)
+    write(*,*) '+-- COILS --------------------------------------------------------'
+    if ( allocated(coils) ) then
+      write(*,'(1x,a,i4)') '| Number of coils:', size(coils,1)
+      do i = 1, size(coils,1)
+        call log_coil(coils(i),verbose)
+      end do
+    else
+      write(*,*) '| [not allocated]'
+    end if
+    write(*,*) '+-----------------------------------------------------------------'
+    write(*,*)
+  end subroutine log_coils
+  
+  
+  
+  subroutine log_coil(coil,verbose)
+    implicit none
+    
+    ! --- Routine parameters
+    type(t_coil), intent(in) :: coil
+    logical,      intent(in) :: verbose
+    ! --- Local variables
+    integer :: i
+    
+    write(*,'(1x,5a)') '| Coil "', trim(coil%name), '" (', trim(coil_type_name(coil%coil_type)), ')'
+    if ( verbose .or. debug ) then
+      if ( coil%coil_type == C_POL_COIL ) then
+        write(*,*) '|   Filament         R               Z            weight'
+        do i = 1, coil%pol_coil%n_fila
+          write(*,'(1x,a,i10,3es16.7)') '|', i, coil%pol_coil%R_fila(i), coil%pol_coil%Z_fila(i),   &
+            coil%pol_coil%weight(i)
+          if ( debug ) write(37,*) coil%pol_coil%R_fila(i), coil%pol_coil%Z_fila(i)
+        end do
+        if ( debug ) write(37,*)
+      else
+        write(*,*) '|   ERROR: ILLEGAL COIL_TYPE!'
+      end if
+    end if
+    
+  end subroutine log_coil
+ 
+
+
+
+
+  character(len=128) function coil_type_name(coil_type)
+    implicit none
+    
+    ! --- Routine parameters
+    integer, intent(in) :: coil_type
+    
+    if ( coil_type == C_POL_COIL ) then
+      coil_type_name = 'poloidal field coil'
+    else
+      coil_type_name = 'ILLEGAL COIL TYPE'
+    end if
+    
+  end function coil_type_name
+ 
+
+
+
+
+  !------------------------------------------------------------------
+  !> Calculates psi_coils at given (R,Z) points 
+  !------------------------------------------------------------------
+  subroutine psi_coils(coils, R0, Z0, psi_c)
+
+    use vacuum, only : pf_coils
+
+    implicit none
+
+    type(t_coil),  intent(in) :: coils(:)
+
+    real*8, intent(in)        :: R0(:), Z0(:)
+    real*8, intent(inout)     :: psi_c(:)
+    
+    ! --- local variables    
+    integer    :: i_p, i_c, i_f 
+    real*8     :: R_f, Z_f, I_coil
+    real*8     :: G_BR, G_BZ, G_psi
+    integer    :: n_points, n_coils
+    
+    n_points = size(R0,1)
+    n_coils  = size(coils,1)    
+
+    psi_c    = 0.d0
+        
+    do i_p = 1, n_points   ! --- loop over given RZ points 
+      do i_c =1, n_coils     ! --- loop over coils
+
+        I_coil = pf_coils(i_c)%current
+   
+        do i_f = 1, coils(i_c)%pol_coil%n_fila ! (Loop over coil filaments)
+
+          ! --- Position of filament point
+          R_f   = coils(i_c)%pol_coil%R_fila(i_f)
+          Z_f   = coils(i_c)%pol_coil%Z_fila(i_f)
+
+           !--- Calculate Green's function            
+          call Greens_functions(R0(i_p), Z0(i_p), R_f, Z_f, G_BR, G_BZ, G_psi)
+            
+          !--- psi = \int Greens_funct * I   see (4.66 Computational Methods in P.Physics, Jardin)
+          psi_c(i_p) = psi_c(i_p) - G_psi * I_coil * coils(i_c)%pol_coil%weight(i_f) * mu_zero
+
+        enddo
+      enddo
+    enddo
+      
+  end subroutine psi_coils
+ 
+ 
+ 
 
     
 end module mod_plasma_response

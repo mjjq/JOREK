@@ -54,6 +54,7 @@ module phys_module
   logical :: xpoint               !< X-point geometry?
   logical :: bootstrap            !< Bootstrap-current?
   logical :: refinement           !< Use mesh refinement?
+  logical :: force_central_node   !< Force all nodes in the center to have the same values in flux aligned grids?
   logical :: bc_natural_flux      !< boundary conditions for flux surface boundaries (2 and 3)
   logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines
   logical :: produce_live_data    !< Write data to 'energies.dat', 'growth_rates.dat', and 'times.dat' during the code run?

@@ -281,6 +281,7 @@ subroutine preset_parameters
   use_wsmp           = .false.              ! Use WSMP solver (use with care, still in development!)
   
   refinement         = .false.              ! enable mesh refinement
+  force_central_node = .true.               ! force all nodes in the grid center to have the same values in flux surface aligned grids
   
   grid_to_wall       = .false.              ! extend the grid to a physical wall
   

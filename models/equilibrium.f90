@@ -46,7 +46,7 @@ real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xj
 real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
 real*8     :: sigmas(16), dZ_axis, Z_axis_int, Z_axis_old, area_ref
 integer    :: n_grids(10)
-logical    :: freeboundary_equil2, find_pf2
+logical    :: freeboundary_equil2
 real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
 real*8, allocatable     :: T_profile(:)
 real*8     :: density_prof
@@ -144,14 +144,6 @@ end if ! my_id == 0
 
 !--------------------------------------- freeboundary equilibrium
 freeboundary_equil = freeboundary_equil2
-
-if ( (.not. freeboundary_equil) .and. (find_pf_coil_currents) ) then
-  find_pf2 = .false.  !just initial polar grid, don't call find_pf_coils later
-else
-  find_pf2 = .true.   ! find_pf_coils can be called if need it
-endif
-if (find_pf_coil_currents) freeboundary_equil = .false.
-
 
 current_int = 0.d0; Z_axis_int = 0.d0
  
@@ -405,22 +397,6 @@ if (my_id == 0) then
                                                  + node_list%node(i)%x(3,2) * node_list%node(i)%values(1,2,1) )
   
   enddo
-  
-  if (find_pf_coil_currents .and. find_pf2) then
-    if (starwall_equil_coils) then
-      write(*,*) 'The feature "find_pf_coil_currents" is not available yet with STARWALL coils'
-      write(*,*) 'Please use COIL_FIELD (in STARWALL repository) for the coil geometry instead'
-    else
-      if (tokamak_device == 'JET') then
-        call find_Icoils_JET(node_list,element_list,bnd_node_list,bnd_elm_list)
-      else
-        call find_Icoils2(node_list,element_list,bnd_node_list,bnd_elm_list)
-      endif
-      write(*,*) ' '
-      write(*,*) ' Please re-do the equilibrium with the found currents and set find_pf_coil_currents=.false.'
-    endif
-    stop  
-  endif
   
   ! --- Find flux surfaces and plot them; determine the q-profile.  
   if (xpoint2 .and. (n_flux .gt. 1)) then

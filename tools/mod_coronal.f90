@@ -60,7 +60,7 @@ else ! otherwise set it to some extremely low value
   density_n = -99.d0 ! this is log10 of density
 endif
 
-coronal_Prad = dot_product(fractions(1:ad%n_Z), rad*10.d0**density + rad_RC*10.d0**density_n)
+coronal_Prad = dot_product(fractions(0:ad%n_Z), rad*10.d0**density + rad_RC*10.d0**density_n)
 end function coronal_Prad
 
 
@@ -110,8 +110,8 @@ do m=1, n_d
   do k=1, n_T
     p(0) = 1.d0
     do iz=1,ad%n_Z
-      call ad%SCD%interp(iz, cor%density(m), cor%temperature(k), ion_rate) ! ionizing to level iz (0 is neutral)
-      call ad%ACD%interp(iz, cor%density(m), cor%temperature(k), rec_rate) ! recombining from iz+1
+      call ad%SCD%interp(iz-1, cor%density(m), cor%temperature(k), ion_rate) ! ionizing to level iz (0 is neutral)
+      call ad%ACD%interp(iz, cor%density(m), cor%temperature(k), rec_rate) ! recombining from iz
       p(iz) = p(iz-1) * ion_rate/rec_rate
     end do
 

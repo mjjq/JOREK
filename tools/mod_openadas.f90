@@ -238,9 +238,9 @@ real*8 :: GRC !< Generalized Radiational Coefficient at this density and tempera
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC) .and. z .le. ubound(a%GRC,3) .and. z .ge. lbound(a%GRC,3)) then
-  !GRC = 10.d0**L2Dinterp(a%density,a%temperature,a%GRC(:,:,z),density,temperature)
-  call SL2Dinterp(a%GRCFspline(z),temperature,density,fout=GRC)
-  GRC = 10.d0**GRC
+  GRC = 10.d0**L2Dinterp(a%density,a%temperature,a%GRC(:,:,z),density,temperature)
+  !call SL2Dinterp(a%GRCFspline(z),temperature,density,fout=GRC)
+  !GRC = 10.d0**GRC
 else
   GRC = 0.d0
 endif
@@ -251,7 +251,7 @@ subroutine GRC_spl(a, z, density, temperature, GRC_out, dGRC_dT_out, dGRC_dn_out
 class(ADF11), intent(in)      :: a           !< ADF11 datatype
 real*8, intent(in)            :: density     !< log10 density in m^-3
 real*8, intent(in)            :: temperature !< log10 temperature in K
-integer, intent(in)           :: z !< index in a%GRC(:,:,z) (is ionisation level or ionisation level - 1, 1:n_z)
+integer, intent(in)           :: z !< index in a%GRC(:,:,z) (is ionisation level, 0:n_z)
 real*8, intent(out), optional :: GRC_out !< Generalized Radiational Coefficient at this density and temperature
 real*8, intent(out), optional :: dGRC_dT_out !< Temperature gradient of GRC
 real*8, intent(out), optional :: dGRC_dn_out !< Density gradient of GRC

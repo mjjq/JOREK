@@ -99,7 +99,7 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   read(10,*)  a%n_z, n_d, n_T, a%izmin, a%izmax
   ad%n_z = a%n_z
   allocate(a%density(n_d), a%temperature(n_T), a%GRC(n_d,n_T,0:a%n_z))
-  allocate(a%GRCFspline(a%n_z))
+  allocate(a%GRCFspline(0:a%n_z))
   
   read(10,*)
   read(10,*) a%density(:)
@@ -114,36 +114,32 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   ! Note that recombination data is given as recombining FROM (Z=1 to Z=74)
   ! and ionisation data is given as ionising TO (Z=1 up to Z=74)
   ! renormalise this so the recombination data is given for the source z
-  ! and the ionisation data is given for hte source z also
+  ! and the ionisation data is given for the source z also
   if (recombining) then
     do i = a%izmin, a%izmax ! 1 to n_z
       read(10,*)
       read(10,*) a%GRC(:,:,i)
-    
-      call AllocFspline(a%GRCFspline(i),n_T,n_d)
-
-      a%GRCFspline(i)%xspline = a%temperature
-      a%GRCFspline(i)%ylinear = a%density
-
-      call ConstructFspline(a%GRCFspline(i),a%GRC(:,:,i)-6.d0)
-    enddo
+    end do
   else
-    do i = a%izmin-1, a%izmax-1 ! 0 to n_z - 1
+    do i = a%izmin-1, a%izmax-1 ! 0 to n-z - 1
       read(10,*)
       read(10,*) a%GRC(:,:,i)
-      
-      call AllocFspline(a%GRCFspline(i),n_T,n_d)
-
-      a%GRCFspline(i)%xspline = a%temperature
-      a%GRCFspline(i)%ylinear = a%density
-
-      call ConstructFspline(a%GRCFspline(i),a%GRC(:,:,i)-6.d0)
-    enddo
+    end do
   end if
   close(10)
 
   ! Convert GRC coefficients from cm to m
   a%GRC = a%GRC - 6.d0 ! because it is a logarithm. Conversion: /100.d0**3 (cm3s-1 => m3s-1)
+
+  ! Allocate and construct the splines
+  do i = 0, a%n_z
+    call AllocFspline(a%GRCFspline(i),n_T,n_d)
+
+    a%GRCFspline(i)%xspline = a%temperature
+    a%GRCFspline(i)%ylinear = a%density
+
+    call ConstructFspline(a%GRCFspline(i),a%GRC(:,:,i))
+  end do   
 
   if (my_id .eq. 0) write(*,"(A)") " succeeded"
 enddo

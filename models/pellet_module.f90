@@ -410,7 +410,6 @@ real*8     :: Z_imp, beta_imp, mu_imp
               pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
                                    * ((ne_SI*1.d-6)**0.455) * (T_eV**1.679)
             end if
-            
           case default
             write(*,*) '!! Gas type "', trim(gas_type), '" unknown !!'
             write(*,*) '=> We assume the gas is D2.'

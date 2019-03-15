@@ -676,10 +676,6 @@ do ms=1, n_gauss
          m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
        case('Ne')
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
-       case('C')
-         m_i_over_m_imp = central_mass/12. ! Carbon mass = 12 u and main ion (D) mass = 2 u
-       case('W')
-         m_i_over_m_imp = central_mass/183.84 ! Tungsten mass = 183.84 u and main ion (D) mass = 2 u
        case default
          write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
@@ -889,13 +885,13 @@ do ms=1, n_gauss
     
 !   if (T_rad .gt. 5.) then
 
-!     A0_rad   = 2.8*1.d-33    ! W.m^3
-!     A1_rad   = 2.335*1.d-31  ! W.m^3
-!     T1_rad   = 23.           ! eV
-!     sig1_rad = 14.           ! eV
-!     A2_rad   = 3.846*1.d-32  ! W.m^3
-!     T2_rad   = 236.          ! eV
-!     sig2_rad = 150.          ! eV
+     A0_rad   = 2.8*1.d-33    ! W.m^3
+     A1_rad   = 2.335*1.d-31  ! W.m^3
+     T1_rad   = 23.           ! eV
+     sig1_rad = 14.           ! eV
+     A2_rad   = 3.846*1.d-32  ! W.m^3
+     T2_rad   = 236.          ! eV
+     sig2_rad = 150.          ! eV
 
 !     Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.) + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
      !Lrad     = (1./2.)*coef_rad_1*5.d-32 * (tanh((T_rad-20.)/10.)-tanh(-20./10.))
@@ -1261,7 +1257,7 @@ do ms=1, n_gauss
 
 !==============================End of ionization energy terms=================
 
-                    + v * BigR * (2./(3. * BigR**2)) * eta_Sp * zj0**2 * scale_ohmic   * xjac * tstep  &
+                    + v * BigR * (2./(3. * BigR**2)) * eta_Sp * zj0**2                 * xjac * tstep  &
                     - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad         * xjac * tstep  &
                     - v * BigR * r0_corr * frad_bg                                     * xjac * tstep  
 
@@ -1868,7 +1864,7 @@ do ms=1, n_gauss
                                        * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
 
 
-             amat_63 = - v * BigR * zj * (4./(3. * BigR**2)) * eta_Sp * zj0 * scale_ohmic       * xjac * theta * tstep
+             amat_63 = - v * BigR * zj * (4./(3. * BigR**2)) * eta_Sp * zj0                      * xjac * theta * tstep
 
 
              amat_65 =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)     &

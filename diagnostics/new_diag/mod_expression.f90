@@ -480,10 +480,6 @@ module mod_expression
          m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
        case('Ne')
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
-       case('C')
-         m_i_over_m_imp = central_mass/12. ! Carbon mass = 12 u and main ion (D) mass = 2 u
-       case('W')
-         m_i_over_m_imp = central_mass/183.84 ! Tungsten mass = 183.84 u and main ion (D) mass = 2 u
        case default
          write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'

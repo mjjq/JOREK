@@ -1,4 +1,4 @@
-program radiation_function
+program radiation_function_diano
 use mpi_mod
 use mod_openadas
 use mod_coronal
@@ -115,4 +115,4 @@ close(5)
 !  write(*,*) T_e, cor%interp(0, log10(n_e),log10(T_e*EL_CHG/K_BOLTZ))*n_e
 !end do
 
-end program radiation_function
+end program radiation_function_diagno

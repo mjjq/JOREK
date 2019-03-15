@@ -40,12 +40,12 @@ real*8, intent(in), dimension(0:ad%n_Z) :: fractions !< Fractional charge states
 real*8, intent(in), optional            :: neutral_density !< log10 neutral density in m^-3
 real*8                                  :: coronal_Prad !< Output power in W / atom
 
-real*8, dimension(ad%n_Z) :: rad
-real*8, dimension(ad%n_Z) :: rad_RC
+real*8, dimension(0:ad%n_Z) :: rad
+real*8, dimension(0:ad%n_Z) :: rad_RC
 real*8  :: density_n, rad_RB, rad_LT
 integer :: iz
 
-do iz=1,ad%n_Z
+do iz=0,ad%n_Z
   call ad%PRB%interp(iz, density, temperature, rad_RB)
   call ad%PLT%interp(iz, density, temperature, rad_LT)
   call ad%PRC%interp(iz, density, temperature, rad_RC(iz))
@@ -91,7 +91,7 @@ call AllocFspline(cor%ZFspline,n_T,n_d)
 call AllocFspline(cor%PradFspline,n_T,n_d)
 
 do m=1, n_d
-  cor%density(m) = 18.d0 + float(m-1)/n_d * (21.-18.) ! log10 [m^-3], linear between 18 and 21
+  cor%density(m) = 18.d0 + float(m-1)/(n_d-1) * (21.-18.) ! log10 [m^-3], linear between 18 and 21
 end do
 do k=1, n_T
   cor%temperature(k) = log10( 1.d0 + exp(log(4.d4)*float(k-1)/(float(n_T-1))) - 1.d0 ) + log10(EL_CHG) - log10(K_BOLTZ) ! in log10 [K], 1 to 40000 eV in logscale
@@ -110,8 +110,10 @@ do m=1, n_d
   do k=1, n_T
     p(0) = 1.d0
     do iz=1,ad%n_Z
-      call ad%SCD%interp(iz-1, cor%density(m), cor%temperature(k), ion_rate) ! ionizing to level iz (0 is neutral)
-      call ad%ACD%interp(iz, cor%density(m), cor%temperature(k), rec_rate) ! recombining from iz
+      ! The flux of particles from state iz to iz-1 is given by
+      ! p(iz-1) * scd(iz-1) - p(iz) * acd(iz)
+      call ad%SCD%interp(iz-1, cor%density(m), cor%temperature(k), ion_rate) ! ionizing from level iz-1 to iz
+      call ad%ACD%interp(iz, cor%density(m), cor%temperature(k), rec_rate) ! recombining from iz to iz - 1
       p(iz) = p(iz-1) * ion_rate/rec_rate
     end do
 

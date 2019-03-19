@@ -232,28 +232,29 @@ subroutine preset_parameters
   !> Write out newest HDF5 restart file version this code supports, writing
   !! out an older version is possible by changing rst_hdf5_verison via the
   !! namelist input file
-  rst_hdf5_version = rst_hdf5_version_supported
+  rst_hdf5_version   = rst_hdf5_version_supported
 
-  tokamak_device = 'none'
-
-  rho_file      = 'none'
-  rhon_file     = 'none'
-  T_file        = 'none'
-  Te_file       = 'none'
-  Ti_file       = 'none'
-  ffprime_file  = 'none'
-  d_perp_file   = 'none'
-  zk_perp_file  = 'none'
-  R_Z_psi_bnd_file = 'none'
-  wall_file     = 'none'
-  rot_file      = 'none'
+  tokamak_device     = 'none'
+  rho_file           = 'none'
+  rhon_file          = 'none'
+  T_file             = 'none'
+  Te_file            = 'none'
+  Ti_file            = 'none'
+  ffprime_file       = 'none'
+  d_perp_file        = 'none'
+  zk_perp_file       = 'none'
+  zk_e_perp_file     = 'none'
+  zk_i_perp_file     = 'none'
+  R_Z_psi_bnd_file   = 'none'
+  wall_file          = 'none'
+  rot_file           = 'none'
   normalized_velocity_profile = .true.
 
-  produce_live_data = .true.
+  produce_live_data  = .true.
   
   linear_run         = .false.
   
-  export_for_nemec      = .false.
+  export_for_nemec   = .false.
   
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
@@ -273,6 +274,7 @@ subroutine preset_parameters
   use_wsmp           = .false.              ! Use WSMP solver (use with care, still in development!)
   
   refinement         = .false.              ! enable mesh refinement
+  force_central_node = .true.               ! force all nodes in the grid center to have the same values in flux surface aligned grids
   
   grid_to_wall       = .false.              ! extend the grid to a physical wall
   

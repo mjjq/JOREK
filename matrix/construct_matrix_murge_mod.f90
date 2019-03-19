@@ -962,9 +962,10 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
   ! --- Memory tracking
   call tr_print_memsize("DebConstM")
   
+thread_nbr = 1
 !$omp PARALLEL shared(thread_nbr)
 !$OMP master
-  thread_nbr = omp_get_num_threads()
+  !$ thread_nbr = omp_get_num_threads()
 !$omp end master
 !$omp end PARALLEL
 
@@ -1363,8 +1364,9 @@ SUBROUTINE construct_matrix_murge(my_id,node_list,element_list,                &
      END IF
      mode = 1
 #endif
+     iter = 1
      !$OMP parallel private(iter,ret) default(shared)
-     iter = 1+omp_get_thread_num()
+     !$ iter = 1+omp_get_thread_num()
      ret = LOOP(datas(iter))
      !$OMP barrier
      !$OMP end parallel

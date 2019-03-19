@@ -53,12 +53,12 @@ ifeq ($(COMPILER_FAMILY), gnu)
     FFLAGS += -fcheck=all
     FLAGS  += -ffpe-trap=invalid,zero,overflow
     FFLAGS += -ftrapv
-    FFLAGS += -finit-real=snan -finit-integer=12345678
     FFLAGS += -Wconversion
     F90FLAGS += -fimplicit-none
   endif
   ifeq ($(DEBUG), 2)
     FFLAGS += -Wimplicit-interface -Wimplicit-procedure
+    FFLAGS += -finit-real=snan -finit-integer=12345678 # This one poses problems sometimes, but can be very useful
   endif
 
   FFLAGS +=-J$(MODDIR)
@@ -89,9 +89,11 @@ ifeq ($(COMPILER_FAMILY), intel)
     FFLAGS += -check all,noarg_temp_created
     FFLAGS += -check bounds
     FFLAGS += -check uninit
-    FFLAGS += -init=snan -init=zero
     FFLAGS += -gen-interfaces -warn-interfaces
     F90FLAGS += -implicitnone
+  endif
+  ifeq ($(DEBUG), 2)
+    FFLAGS += -init=snan -init=zero # This one poses problems sometimes, but can be very useful
   endif
 
   FFLAGS +=-module $(MODDIR)

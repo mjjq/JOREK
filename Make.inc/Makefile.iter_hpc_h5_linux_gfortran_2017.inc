@@ -7,7 +7,7 @@ FC     = mpif90
 CC     = mpicc
 CXX    = g++
 
-DEBUG ?= 1
+DEBUG ?= 0 # build in release mode by default
 
 FFLAGS_OMP       = -fopenmp 
 FFLAGS           = -g -O0 

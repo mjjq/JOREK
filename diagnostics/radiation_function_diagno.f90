@@ -1,4 +1,4 @@
-program radiation_function_diano
+program radiation_function_diagno
 use mpi_mod
 use mod_openadas
 use mod_coronal

@@ -1,6 +1,6 @@
 # Configuration file for jorek
 # model directory
-MODEL = model199
+MODEL = model303
 
 # Fortran compiler 
 FC     = mpif90
@@ -8,7 +8,7 @@ CC     = mpicc
 CXX    = g++
 
 FFLAGS_OMP       = -fopenmp 
-FFLAGS           = -g -O0 
+FFLAGS           = -g -Og 
 FFLAGS          := $(FFLAGS) -fdefault-real-8 -fdefault-double-8
 FFLAGS          := $(FFLAGS) -ffree-line-length-none
 FFLAGS          := $(FFLAGS) -x f95-cpp-input
@@ -20,14 +20,14 @@ FFLAGS_NOBOUNDS  = $(FFLAGS) -ffixed-form                 $(FFLAGS_OMP)
 FFLAGS          := $(FFLAGS)               -fbounds-check $(FFLAGS_OMP) 
 
 #FFLAGS_NO_OMP   = -fpp -O2 -xT -align
-FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0
+FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0 -DUSE_BLOCK
 
 # Solvers dependencies
 USE_HIPS   = 0
-USE_PASTIX = 1
+USE_PASTIX = 0
 USE_BLOCK  = 1
 USE_PASTIX_MURGE = 0
-USE_MUMPS  = 0
+USE_MUMPS  = 1
 USE_WSMP   = 0
 USE_FFTW   = 1
 USE_HDF5   = 1
@@ -38,16 +38,20 @@ USE_HDF5   = 1
 #INC_SCOTCH   = -I$(SCOTCH_HOME)/include
 
 # MUMPS
-MUMPS_HOME ?= 
-LIB_MUMPS  = $(MUMPS_HOME)/lib/libdmumps.a
-LIB_ZMUMPS = $(MUMPS_HOME)/lib/libzmumps.a
+MUMPS_HOME ?= $(EBROOTMUMPS)
+LIB_MUMPS  = -L$(MUMPS_HOME)/lib -ldmumps -lmumps_common
+LIB_MUMPS += -L$(SCOTCH_HOME) -lptesmumps -lesmumps -lptscotch -lptscotcherrexit -lscotch -lscotcherrexit
+LIB_MUMPS += -L$(EBROOTMETIS)/lib -lmetis
+LIB_MUMPS += -lopenblas -lscalapack -llapack
+LIB_ZMUMPS = -lzmumps
 INC_MUMPS  = $(MUMPS_HOME)/include/
-ORDLIB     = $(MUMPS_HOME)/lib/libpord.a
+INC_MUMPS_EXTRA = `$(PASTIX_HOME)/pastix-conf --incs` # for murge
+ORDLIB     = -lpord
 
 # PASTIX
 PASTIX_HOME      ?= $(EBROOTPASTIX)
 LIB_PASTIX       = `$(PASTIX_HOME)/pastix-conf --libs`
-LIB_PASTIX_MURGE = `$(PASTIX_HOME)/pastix-conf --libs_murge`
+LIB_PASTIX_MURGE = `$(PASTIX_HOME)/pastix-conf --libs_murge` 
 LIB_PASTIX_BLAS  = -lopenblas
 INC_PASTIX       = `$(PASTIX_HOME)/pastix-conf --incs`
 PASTIX_MEMORY_USAGE = 0

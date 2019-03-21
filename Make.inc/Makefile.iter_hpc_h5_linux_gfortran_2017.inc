@@ -32,21 +32,13 @@ USE_WSMP   = 0
 USE_FFTW   = 1
 USE_HDF5   = 1
 
+
 #Scotch library
+SCOTCH_HOME ?= $(EBROOTSCOTCH)
 #SCOTCH_HOME  = /home/ITER/vanvugd/source/scotch_5.1.12
 #LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lscotch -lscotcherr
 #INC_SCOTCH   = -I$(SCOTCH_HOME)/include
 
-# MUMPS
-MUMPS_HOME ?= $(EBROOTMUMPS)
-LIB_MUMPS  = -L$(MUMPS_HOME)/lib -ldmumps -lmumps_common
-LIB_MUMPS += -L$(SCOTCH_HOME) -lptesmumps -lesmumps -lptscotch -lptscotcherrexit -lscotch -lscotcherrexit
-LIB_MUMPS += -L$(EBROOTMETIS)/lib -lmetis
-LIB_MUMPS += -lopenblas -lscalapack -llapack
-LIB_ZMUMPS = -lzmumps
-INC_MUMPS  = $(MUMPS_HOME)/include/
-INC_MUMPS_EXTRA = `$(PASTIX_HOME)/pastix-conf --incs` # for murge
-ORDLIB     = -lpord
 
 # PASTIX
 PASTIX_HOME      ?= $(EBROOTPASTIX)
@@ -55,6 +47,18 @@ LIB_PASTIX_MURGE = `$(PASTIX_HOME)/pastix-conf --libs_murge`
 LIB_PASTIX_BLAS  = -lopenblas
 INC_PASTIX       = `$(PASTIX_HOME)/pastix-conf --incs`
 PASTIX_MEMORY_USAGE = 0
+
+# MUMPS
+MUMPS_HOME ?= $(EBROOTMUMPS)
+METIS_HOME ?= $(EBROOTMETIS)
+LIB_MUMPS  = -L$(MUMPS_HOME)/lib -ldmumps -lmumps_common
+LIB_MUMPS += -L$(SCOTCH_HOME) -lptesmumps -lesmumps -lptscotch -lptscotcherrexit -lscotch -lscotcherrexit
+LIB_MUMPS += -L$(METIS_HOME)/lib -lmetis
+LIB_MUMPS += -lopenblas -lscalapack -llapack
+LIB_ZMUMPS = -lzmumps
+INC_MUMPS  = $(MUMPS_HOME)/include/
+INC_MUMPS_EXTRA = `$(PASTIX_HOME)/pastix-conf --incs` # for murge
+ORDLIB     = -lpord
 
 #HIPS
 LIBHIPS   = -L$(HOME)/hips_trunk/trunk/LIB -lhips -lio $(LIBSCOTCH)

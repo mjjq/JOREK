@@ -72,11 +72,11 @@ LIBDIERCKX = -L$(DIERCKX_HOME) -ldierckx
 #LIBLAPACK = -L$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
 #SCALAP    = -L$(MKL) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 
 
-HDF5_HOME=$(H5DIR)
+HDF5_HOME=$(EBROOTHDF5)
 HDF5INCLUDE=$(HDF5_HOME)/include
 HDF5LIB=$(HDF5_HOME)/lib/libhdf5hl_fortran.a \
         $(HDF5_HOME)/lib/libhdf5_hl.a        \
         $(HDF5_HOME)/lib/libhdf5_fortran.a   \
         $(HDF5_HOME)/lib/libhdf5.a           \
-	$(EBROOTZLIB)/lib/libz.a
+	$(EBROOTZLIB)/lib/libz.a -lz -lsz -ldl
 

@@ -1013,7 +1013,7 @@ enddo  ! n_elements
            end do
          end do
        ! Convert from eV to JOREK unit
-         E_ion     = (2./3.) * E_ion * EL_CHG*MU_ZERO*central_density*1.d20
+         E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
        else
          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
          E_ion     = 0.
@@ -1079,9 +1079,9 @@ enddo  ! n_elements
   
      end if
 
-     scalars(i,s_radiation+1) = scalars(i,8) * E_ion
+     scalars(i,s_radiation+1) = (2./3.) * scalars(i,8) * E_ion
      scalars(i,s_radiation+2) = (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad
-     scalars(i,s_radiation+3) = (2/(3 * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
+     scalars(i,s_radiation+3) = (2./(3. * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
      scalars(i,s_radiation+4) = Z_imp
 
    end do

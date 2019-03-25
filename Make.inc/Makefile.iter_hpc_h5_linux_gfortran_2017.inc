@@ -42,7 +42,7 @@ SCOTCH_HOME ?= $(EBROOTSCOTCH)
 
 # PASTIX
 PASTIX_HOME      ?= $(EBROOTPASTIX)
-LIB_PASTIX       = `$(PASTIX_HOME)/pastix-conf --libs`
+LIB_PASTIX       = `$(PASTIX_HOME)/pastix-conf --libs` `pkg-config --libs openblas`
 LIB_PASTIX_MURGE = `$(PASTIX_HOME)/pastix-conf --libs_murge` 
 LIB_PASTIX_BLAS  = -lopenblas
 INC_PASTIX       = `$(PASTIX_HOME)/pastix-conf --incs`
@@ -54,7 +54,7 @@ METIS_HOME ?= $(EBROOTMETIS)
 LIB_MUMPS  = -L$(MUMPS_HOME)/lib -ldmumps -lmumps_common
 LIB_MUMPS += -L$(SCOTCH_HOME)/lib -lptesmumps -lesmumps -lptscotch -lptscotcherrexit -lscotch -lscotcherrexit
 LIB_MUMPS += -L$(METIS_HOME)/lib -lmetis
-LIB_MUMPS += -lopenblas -lscalapack -llapack
+LIB_MUMPS += -lscalapack `pkg-config --libs openblas`
 LIB_ZMUMPS = -lzmumps
 INC_MUMPS  = $(MUMPS_HOME)/include/
 INC_MUMPS_EXTRA = `$(PASTIX_HOME)/pastix-conf --incs` # for murge

@@ -60,7 +60,7 @@ real*8                :: Jb, minRad,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
-logical               :: include_bootstrap, include_psi_norm
+logical               :: include_bootstrap, include_psi_norm, cartesian
 real*8                :: toroidal_angle
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
@@ -89,7 +89,7 @@ real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
-                      include_bootstrap, include_psi_norm
+                      include_bootstrap, include_psi_norm, cartesian
 
 
 
@@ -127,7 +127,8 @@ include_neo            = .false. ! include neoclassical and more terms (or not)
 include_magnetic_field = .false. ! include vector of magnetic field (or not)
 include_velocity_field = .false. ! include vector of velocity field (or not)
 include_bootstrap      = .false. ! include bootstrap current and averaged current
-include_psi_norm       = .false.  ! include normalized flux
+include_psi_norm       = .false. ! include normalized flux
+cartesian              = .false. ! use xyz transformation (R,0,Z) instead of (R,Z,0)
 
 #if (JOREK_MODEL == 500)
 include_radiation = .true.
@@ -387,9 +388,12 @@ do i=1,element_list%n_elements
               + R_st*(Z_t*R_s + Z_s*R_t) + Z_ss*R_t**2 - R_ss*Z_t*R_t) / xjac
 
       inode = inode+1
-
-      xyz(1:3,inode) = (/ R, Z, 0.d0/)
-
+      
+      if (cartesian) then
+        xyz(1:3,inode) = (/ R, 0.d0,    Z /)
+      else
+        xyz(1:3,inode) = (/ R,    Z, 0.d0 /)
+      endif
       !====================== --- specific for axisymmetric quantities
       ! Put here all quantities that are axisymmetric (n=0 mode only) and should not be summed
       ! over all harmonics: for instance, to compute Vtheta, Er, Vneo, etc.

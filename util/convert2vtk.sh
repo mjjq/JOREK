@@ -183,6 +183,7 @@ include_magnetic_field="" # include vector of magnetic field (or not)
 include_velocity_field="" # include vector of velocity field (or not)
 include_bootstrap=""      # include bootstrap current and averaged current
 include_psi_norm=".true." # include normalized flux
+cartesian=".false."       # use (R,0,Z) xyz coordinates instead of (R,Z,0)
 while [ $# -gt 1 ]; do
   if [ "$1" == "-j" ]; then
     nthreads="$2"
@@ -246,6 +247,10 @@ while [ $# -gt 1 ]; do
     writenml="yes"
   elif [ "$1" == "-nopsiN" ] || [ "$1" == "-nopsi_norm" ]; then
     include_psi_norm=".false."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-cartesian" ] || [ "$1" == "-cart" ]; then
+    cartesian=".true."
     shift 1
     writenml="yes"
   elif [ "$1" == "-h" ] || [ "$1" = "--help" ]; then
@@ -442,6 +447,9 @@ if [ "$writenml" == "yes" ]; then
   fi
   if [ ! -z "$include_psi_norm" ]; then
     echo "  include_psi_norm = $include_psi_norm" >> $vtk_nml
+  fi
+  if [ ! -z "$cartesian" ]; then
+    echo "  cartesian = $cartesian" >> $vtk_nml
   fi
   echo "/"                        >> $vtk_nml
   copyfiles="$copyfiles $vtk_nml"

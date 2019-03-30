@@ -561,13 +561,13 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
       call velocity(xpoint2, xcase2, y_g, z_xpoint, ps0, psi_axis, psi_bnd, V_source,               &
         dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2,           &
         dV_dpsi2_dz)
-      if (normalized_velocity_profile) then
-        Vt0_x = dV_dpsi_source * ps0_x
-        Vt0_y = dV_dz_source + dV_dpsi_source * ps0_y
-      else
-        Omega_tor0_x = dV_dpsi_source * ps0_x
-        Omega_tor0_y = dV_dz_source + dV_dpsi_source * ps0_y
-      end if
+    end if
+    if (normalized_velocity_profile) then
+      Vt0_x = dV_dpsi_source * ps0_x
+      Vt0_y = dV_dz_source + dV_dpsi_source * ps0_y
+    else
+      Omega_tor0_x = dV_dpsi_source * ps0_x
+      Omega_tor0_y = dV_dz_source + dV_dpsi_source * ps0_y
     end if
     
     ! --- Pellet Source

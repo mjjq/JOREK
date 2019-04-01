@@ -1112,8 +1112,8 @@ if (SI_units) then
     !=====================================Vparal in km/s *Btot!!!
     scalars(i,7) = scalars(i,7) /t_norm/1.e3
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
-    !===================================== Neutral density in 1e20m-3
-    scalars(i,8) = scalars(i,8) * central_density
+    !===================================== Impurity density in 1e20m-3
+    scalars(i,8) = scalars(i,8) * central_density * m_i_over_m_imp
 #endif
     !=====================Pressure in kPa
     if (include_fluxes) scalars(i,s_fluxes+1) = scalars(i,s_fluxes+1) / MU_zero/1.e3

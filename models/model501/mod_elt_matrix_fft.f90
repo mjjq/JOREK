@@ -1256,6 +1256,10 @@ do ms=1, n_gauss
                     - (2./3.) * v * E_ion_bg * (r0-rn0) * (vpar0_s * ps0_t - vpar0_t * ps0_s) * tstep  &
 
 !==============================End of ionization energy terms=================
+!===================== Additional terms from friction terms============
+                    + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg + source_imp) * xjac * tstep &
+                    + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
+!==============================End of friction terms=================
 
                     + v * BigR * (2./(3. * BigR**2)) * eta_Sp * zj0**2                 * xjac * tstep  &
                     - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad         * xjac * tstep  &
@@ -1813,6 +1817,11 @@ do ms=1, n_gauss
                        + (2./3.) * v * E_ion_bg * (r0-rn0) * (vpar0_s * psi_t - vpar0_t * psi_s)             * theta * tstep &
 
 !================= End ionization potential energy ===========================
+!===================== Additional terms from friction terms============
+                       - v * ((GAMMA - 1.) / BigR) * vpar0**2 * (psi_x * ps0_x + psi_y * ps0_y)                          &
+                           * (source_bg + source_imp)                                             * xjac * theta * tstep &
+!==============================End of friction terms=================
+
 
                        + ZK_par_num * (v_psi_x  * ps0_y - v_psi_y  * ps0_x + v_ps0_x * psi_y - v_ps0_y * psi_x)          &
                                     * (T0_ps0_x * ps0_y - T0_ps0_y * ps0_x)                       * xjac * theta * tstep &
@@ -1853,6 +1862,10 @@ do ms=1, n_gauss
                        - (2./3.) * v * E_ion * rn0 * 2.d0 * BigR * u_y                          * xjac * theta * tstep &
                        - (2./3.) * v * E_ion_bg * (r0-rn0) * 2.d0 * BigR * u_y                  * xjac * theta * tstep &
 !================= End ionization potential energy ===========================
+!===================== Additional terms from friction terms============
+                       - v * BigR**3 * (GAMMA - 1.) * (u_x * u0_x + u_y * u0_y)                                        &
+                           * (source_bg + source_imp)                                           * xjac * theta * tstep &
+!==============================End of friction terms=================
 
                     + TG_num6 * 0.25d0 * BigR**2 * T0* (r0_x * u_y - r0_y * u_x)                &
                                        * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep  &
@@ -2021,6 +2034,9 @@ do ms=1, n_gauss
 
                        + (2./3.) * v * E_ion_bg * (r0-rn0) * (vpar_s * ps0_t - vpar_t * ps0_s) * theta * tstep  &
 !================= End ionization potential energy ===========================
+!===================== Additional terms from friction terms============
+                       - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp) * xjac * theta * tstep &
+!==============================End of friction terms=================
  
                    + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
                              * T0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                          &

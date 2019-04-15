@@ -68,7 +68,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
-  integer, allocatable :: spi_species_arr (:)
+  real*8, allocatable :: spi_species_arr (:)
 
   integer :: err_alloc
  
@@ -601,7 +601,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   logical              :: kept
   
 #ifdef USE_HDF5
-  integer(HID_T)     :: file_id
+  integer(HID_T)     :: file_id, datatype, dataset
   integer            :: ind
   
   real(RKIND), allocatable :: t_x(:,:,:)
@@ -639,10 +639,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
-  integer, allocatable :: spi_species_arr (:)
+  real*8, allocatable :: spi_species_arr (:)
+  integer, allocatable :: spi_species_arr_old (:)  !< For backward compatibility only
 
-  integer :: err_alloc, err_exists
-  logical :: flag_exists
+  integer :: err_alloc, err_exists, dterr
+  logical :: flag_exists, type_match
 
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
   real*8, allocatable :: t_energies2(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
@@ -1131,9 +1132,24 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
       call H5Lexists_f(file_id,"spi_species_arr",flag_exists,err_exists)
       if (flag_exists .and. err_exists == 0) then
-        call HDF5_array1D_reading_int(file_id,spi_species_arr,"spi_species_arr")
+        call H5Dopen_f(file_id,"spi_species_arr",dataset,dterr)
+        call H5Dget_type_f(dataset,datatype,dterr)
+        call H5Tequal_f(datatype,H5T_NATIVE_INTEGER,type_match,dterr)
+        call H5Tclose_f(datatype,dterr)
+        call H5Dclose_f(dataset,dterr)
+        if (type_match .and. dterr == 0) then
+          write(*,*) "Backward Compatibility: Converting integer spi_species into double precision"
+          allocate (spi_species_arr_old(n_spi),stat=err_alloc)
+          call HDF5_array1D_reading_int(file_id,spi_species_arr_old,"spi_species_arr")
+          spi_species_arr = REAL(spi_species_arr_old,8)
+        else if (dterr == 0) then
+          call HDF5_array1D_reading(file_id,spi_species_arr,"spi_species_arr")
+        else
+          write(*,*) "Error while trying to determine spi_species type, exiting!"
+          stop
+        end if
       else
-        spi_species_arr = 1
+        spi_species_arr = 1.0
         write(*,*)"Backward Compatibility: No species information found, assuming full impurity."
       end if
 
@@ -1161,6 +1177,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       deallocate (spi_radius_arr)
       deallocate (spi_abl_arr)
       deallocate (spi_species_arr)
+      if (allocated(spi_species_arr_old)) deallocate (spi_species_arr_old)
 
       if (toroidal_rotation) then
         call HDF5_real_reading(file_id,mgi_phi_rotate,"mgi_phi_rotate")

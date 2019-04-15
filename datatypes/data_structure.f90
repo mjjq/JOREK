@@ -127,8 +127,9 @@ module data_structure
     real*8  :: spi_Vel_RxZ                        !< Velocity of pellet along RxZ direction (m/s)
     real*8  :: spi_radius                         !< Radisu of pellet assuming spherical pellet (m)
     real*8  :: spi_abl                            !< Pellet ablation rate (atom/s)
-    integer :: spi_species                        !< Species indicator for pellets 0 for background species
-                                                  !< and 1 for impurities. Only necessary for model 501.
+    real*8  :: spi_species                        !< Species mixture ratio in atom number for pellets. 
+                                                  !< 0 for pure background species and 1 for pure impurities. 
+                                                  !< Only necessary for model 501.
   end type type_SPI
 ! End of shattered pellet type
 

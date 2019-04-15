@@ -272,16 +272,18 @@ real*8     :: Z_imp, beta_imp, mu_imp
     end if
 
     if (pellets(i)%spi_radius > 0.0) then
-      if (pellets(i)%spi_species == 1) then
+      if (pellets(i)%spi_species == 1.) then
         spi_density_tmp = pellet_density
-      else if (pellets(i)%spi_species == 0) then
+      else if (pellets(i)%spi_species == 0.) then
         spi_density_tmp = pellet_density_bg
+      else if (pellet_density_bg > 0. .and. pellet_density > 0.) then
+        spi_density_tmp = 1./((1.-pellets(i)%spi_species)/pellet_density_bg + pellets(i)%spi_species/pellet_density)
       else
         write(*,*) "Something is wrong when determining the pellet species, exiting"
         stop
       end if
 
-      if (spi_density_tmp == 0.) write(*,*) "Zero spi_density!"
+      if (spi_density_tmp == 0. .or. spi_density_tmp /= spi_density_tmp) write(*,*) "Wrong spi_density!", spi_density_tmp
 
       pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep * &
                               (pellets(i)%spi_abl / (4.d0 * PI * pellets(i)%spi_radius**2.d0 *    &
@@ -293,22 +295,20 @@ real*8     :: Z_imp, beta_imp, mu_imp
     end if
 
     if (my_id == 0.) then
-      if (index_now > 1 .and. pellets(i)%spi_species == 1) then
+      if (index_now > 1) then
         xtime_spi_ablation(i,index_now)    = xtime_spi_ablation(i,index_now-1) &
-                                             + t_norm * tstep * pellets(i)%spi_abl
-      else if (index_now > 1 .and. pellets(i)%spi_species == 0) then
+                                             + t_norm * tstep * pellets(i)%spi_abl * pellets(i)%spi_species
         xtime_spi_ablation_bg(i,index_now) = xtime_spi_ablation_bg(i,index_now-1) &
-                                             + t_norm * tstep * pellets(i)%spi_abl
-      else if (pellets(i)%spi_species == 1) then
-        xtime_spi_ablation(i,index_now)    = t_norm * tstep * pellets(i)%spi_abl
+                                             + t_norm * tstep * pellets(i)%spi_abl * (1. - pellets(i)%spi_species)
       else
-        xtime_spi_ablation_bg(i,index_now) = t_norm * tstep * pellets(i)%spi_abl
+        xtime_spi_ablation(i,index_now)    = t_norm * tstep * pellets(i)%spi_abl * pellets(i)%spi_species
+        xtime_spi_ablation_bg(i,index_now) = t_norm * tstep * pellets(i)%spi_abl * (1. - pellets(i)%spi_species) 
       end if
     end if
 
     if (spi_abl_model == 0) then
       pellets(i)%spi_abl   = mgi_amplitude
-    elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2 ) then
+    elseif (spi_abl_model >= 1) then
 
       call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
                    R_out,Z_out,i_elm,s_out,t_out,ifail)
@@ -371,18 +371,18 @@ real*8     :: Z_imp, beta_imp, mu_imp
             else
               Z_imp = 10.
             end if
-            mu_imp             = 1./20. ! Argon mass = 40 u and main ion (D) mass = 2 u
+            mu_imp             = central_mass/40. ! Argon mass = 40 u and main ion mass = central_mass u
             beta_imp           = mu_imp*Z_imp - 1.
             ne_SI              = n_SI + beta_imp * n_imp_SI
 
             if (ne_SI<0.) ne_SI = 0.        
             ! The scaling law is in gauss unit
-            if (pellets(i)%spi_species == 1) then
+            if (pellets(i)%spi_species == 1.) then
               pellets(i)%spi_abl = 2.5d13 * ((pellets(i)%spi_radius*1.d2)**1.451) &
                                    * ((ne_SI*1.d-6)**0.451) * (T_eV**1.679)
-            else if (pellets(i)%spi_species == 0) then
+            else if (pellets(i)%spi_species == 0.) then
               pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
-                                   * ((ne_SI*1.d-6)**0.455) * (T_eV**1.679)              
+                                   * ((ne_SI*1.d-6)**0.455) * (T_eV**1.679) 
             end if
           ! Using general scaling law of Sergeev for Neon
           case('Ne')
@@ -394,19 +394,19 @@ real*8     :: Z_imp, beta_imp, mu_imp
             else
               Z_imp = 6.
             end if
-            mu_imp             = 1./10. ! Neon mass = 20 u and main ion (D) mass = 2 u
+            mu_imp             = central_mass/20. ! Neon mass = 20 u and main ion mass = central_mass u
             beta_imp           = mu_imp*Z_imp - 1.
             ne_SI              = n_SI + beta_imp * n_imp_SI
 
             if (ne_SI<0.) ne_SI = 0.
             ! The scaling law is in gauss unit
             ! The sublimation energy for Ne is 0.02 eV
-            if (pellets(i)%spi_species == 1) then
+            if (pellets(i)%spi_species == 1.) then
               pellets(i)%spi_abl = 1.94d14 * ((pellets(i)%spi_radius*1.d2)**1.44) &
                                    * ((ne_SI*1.d-6)**0.45) * (T_eV**1.72)         &
                                    * (0.02**(-0.16)) * (20.**(-0.28))             &
                                    * (10.**(-0.56)) * ((2./3.)**0.28)
-            else if (pellets(i)%spi_species == 0) then
+            else if (pellets(i)%spi_species == 0.) then
               pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
                                    * ((ne_SI*1.d-6)**0.455) * (T_eV**1.679)
             end if
@@ -419,14 +419,74 @@ real*8     :: Z_imp, beta_imp, mu_imp
         if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
           write(*,*) "Check Point, ne_SI, T_eV = ", ne_SI, T_eV
         end if
+      else if (spi_abl_model == 3) then
+        select case ( trim(gas_type) )
+          case('D2') ! We temporarily wusing D2 ablation rate for H2 ablation here
+            pellets(i)%spi_abl = 39.0023 * 2. * MOLE_NUMBER * ((pellets(i)%spi_radius*1.d2 / 0.2)**(4./3.)) &
+                                 * ((n_SI*1.d-20)**(1./3.)) * ((T_eV/2.d3)**(5./3.)) / 4.0282
+          case('Ar')  ! Argon and H2/D2 formed separately
+            if (flag_adas .and. T_eV >= 1.) then
+              ! As with element_matrix, mimick density as 1.d20
+              call imp_cor(1)%interp(density=20.,temperature=log10(T_eV*EL_CHG/K_BOLTZ),z_out=Z_imp)
+            else if (flag_adas .and. T_eV < 1.) then
+              Z_imp = 0.
+            else
+              Z_imp = 10.
+            end if
+            mu_imp             = central_mass/40. ! Argon mass = 40 u and main ion mass = central_mass u
+            beta_imp           = mu_imp*Z_imp - 1.
+            ne_SI              = n_SI + beta_imp * n_imp_SI
+
+            if (ne_SI<0.) ne_SI = 0.
+            ! The scaling law is in gauss unit
+            if (pellets(i)%spi_species == 1.) then
+              pellets(i)%spi_abl = 36.6337 * MOLE_NUMBER * ((pellets(i)%spi_radius*1.d2 / 0.2)**(4./3.)) &
+                                   * ((ne_SI*1.d-20)**(1./3.)) * ((T_eV/2.d3)**(5./3.)) / 39.948
+            else if (pellets(i)%spi_species == 0.) then
+              pellets(i)%spi_abl = 39.0023 * 2. * MOLE_NUMBER * ((pellets(i)%spi_radius*1.d2 / 0.2)**(4./3.)) &
+                                   * ((ne_SI*1.d-20)**(1./3.)) * ((T_eV/2.d3)**(5./3.)) / 4.0282
+            end if
+          case('Ne')  ! Neond and H2/D2 mixed together
+            if (flag_adas .and. T_eV >= 1.) then
+              ! As with element_matrix, mimick density as 1.d20
+              call imp_cor(1)%interp(density=20.,temperature=log10(T_eV*EL_CHG/K_BOLTZ),z_out=Z_imp)
+            else if (flag_adas .and. T_eV < 1.) then
+              Z_imp = 0.
+            else
+              Z_imp = 6.
+            end if
+            mu_imp             = central_mass/20. ! Neon mass = 20 u and main ion mass = central_mass u
+            beta_imp           = mu_imp*Z_imp - 1.
+            ne_SI              = n_SI + beta_imp * n_imp_SI
+
+            if (ne_SI<0.) ne_SI = 0.
+            ! The scaling law is in gauss unit
+            ! The sublimation energy for Ne is 0.02 eV
+              pellets(i)%spi_abl = (27.0837 + TAN(1.48709*pellets(i)%spi_species/(2.-pellets(i)%spi_species))) &
+                                   * MOLE_NUMBER * ((pellets(i)%spi_radius*1.d2 / 0.2)**(4./3.)) &
+                                   * ((ne_SI*1.d-20)**(1./3.)) * ((T_eV/2.d3)**(5./3.)) &
+                                   / (20.183*pellets(i)%spi_species + 2.0141*(1.-pellets(i)%spi_species)) 
+
+          case default
+            write(*,*) '!! Gas type "', trim(gas_type), '" unknown !!'
+            write(*,*) '=> We assume the gas is D2.'
+            pellets(i)%spi_abl = 39.0023 * 2. * MOLE_NUMBER * ((pellets(i)%spi_radius*1.d2 / 0.2)**(4./3.)) &
+                                 * ((n_SI*1.d-20)**(1./3.)) * ((T_eV/2.d3)**(5./3.)) / 4.0282
+        end select
+      else 
+        write(*,*) "Unknown ablation model, terminating now!"
+        stop
+      end if
+      if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
+        write(*,*) "Check Point, ne_SI, T_eV = ", ne_SI, T_eV
       end if
     else
       pellets(i)%spi_abl    = 0.d0
     end if
    
     if (my_id == 0) then
-      if (pellets(i)%spi_species == 1) xtime_spi_ablation_rate(i,index_now) = pellets(i)%spi_abl
-      if (pellets(i)%spi_species == 0) xtime_spi_ablation_bg_rate(i,index_now) = pellets(i)%spi_abl
+      xtime_spi_ablation_rate(i,index_now) = pellets(i)%spi_abl * pellets(i)%spi_species
+      xtime_spi_ablation_bg_rate(i,index_now) = pellets(i)%spi_abl * (1. - pellets(i)%spi_species)
     end if
 
   end do
@@ -488,8 +548,7 @@ end subroutine update_spi
 
     real*8  :: size_beta                               ! The characteristic shard size    
     real*8  :: N_shard_norm                            ! The normalized (by size_beta) number of atoms
-    real*8  :: mix_ratio                               ! Mixture ratio of the mixed pellet 
-                                                       ! normalized by pellet density
+    real*8  :: mix_ratio                               ! Volume mixture ratio of the mixed pellet 
     real*8  :: real_spi_quantity(2)                    ! Final injection quantity
 
     if (allocated(pellets)) then
@@ -536,32 +595,75 @@ end subroutine update_spi
  
         ! Determine approximately how many fragments are of the impurity, how
         ! much are of the background species. 
-        if (spi_quantity_bg /= 0. .and. pellet_density_bg /= 0. &
-            .and. spi_quantity /= 0. .and. pellet_density /= 0.) then
+
+        if (spi_quantity_bg > 0. .and. pellet_density_bg > 0. &
+            .and. spi_quantity > 0. .and. pellet_density > 0.) then
           mix_ratio = (spi_quantity/pellet_density)&
                       /((spi_quantity/pellet_density)+(spi_quantity_bg/pellet_density_bg))
-        else if (spi_quantity /= 0. .and. pellet_density /= 0.) then 
+        else if (spi_quantity > 0. .and. pellet_density > 0.) then
           mix_ratio = 1.
-        else if (spi_quantity_bg /= 0. .and. pellet_density_bg /= 0.) then
+        else if (spi_quantity_bg > 0. .and. pellet_density_bg > 0.) then
           mix_ratio = 0.
         else
           write(*,*) "WARNING!!! Something is wrong in the injection quantity or pellet density, exiting."
           stop
         end if
-  
-        do i = 1, n_spi
-          if (i <= int(real(n_spi,8)*(mix_ratio))) then
-            pellets(i)%spi_species = 1
-            spi_density_tmp = pellet_density
-            real_spi_quantity(2) = real_spi_quantity(2) + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
-          else
-            pellets(i)%spi_species = 0
-            spi_density_tmp = pellet_density_bg
-            real_spi_quantity(1) = real_spi_quantity(1) + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
-          end if
-          N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
-        end do
-  
+
+
+        select case ( trim(gas_type) ) 
+          case('D2')
+            write(*,*) "Injection of D2 species should be done by spi_qiantity_bg, please revise input file accordingly."
+            stop
+          case('Ne')
+            ! Only Parks formula can properly treat the mixing of neon and D2/H2,
+            ! otherwise we assume neon and D2/H2 formed seperately.
+            if (spi_abl_model == 3 .and. mix_ratio < 1. .and. mix_ratio > 0.) then                 
+              do i = 1, n_spi
+                pellets(i)%spi_species = spi_quantity/(spi_quantity + spi_quantity_bg)
+                spi_density_tmp = 1./((1.-pellets(i)%spi_species)/pellet_density_bg &
+                                      + pellets(i)%spi_species/pellet_density) 
+                real_spi_quantity(2) = real_spi_quantity(2) &
+                                       + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp * 1.d20 * pellets(i)%spi_species
+                real_spi_quantity(1) = real_spi_quantity(1) &
+                                       + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp * 1.d20 &
+                                         * (1. - pellets(i)%spi_species)
+                N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
+              end do
+            else
+              do i = 1, n_spi
+                if (i <= int(real(n_spi,8)*(mix_ratio))) then
+                  pellets(i)%spi_species = 1.
+                  spi_density_tmp = pellet_density
+                  real_spi_quantity(2) = real_spi_quantity(2) + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
+                else
+                  pellets(i)%spi_species = 0.
+                  spi_density_tmp = pellet_density_bg
+                  real_spi_quantity(1) = real_spi_quantity(1) + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
+                end if
+                N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
+              end do
+            end if
+          case('Ar')
+            ! Argon and D2/H2 part of the pellet are always formed seperately, thus we always treat them as such.
+            do i = 1, n_spi
+              if (i <= int(real(n_spi,8)*(mix_ratio))) then
+                pellets(i)%spi_species = 1.
+                spi_density_tmp = pellet_density
+                real_spi_quantity(2) = real_spi_quantity(2) + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
+              else
+                pellets(i)%spi_species = 0.
+                spi_density_tmp = pellet_density_bg
+                real_spi_quantity(1) = real_spi_quantity(1) + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
+              end if
+              N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
+            end do
+          case default
+            write(*,*) '!! Gas type "', trim(gas_type), '" unknown !!'
+            write(*,*) '=> We assume the gas is D2.'
+            write(*,*) "Injection of D2 species should be done by spi_qiantity_bg, please revise input file accordingly."
+            stop
+        end select
+    
         size_beta    = ((spi_quantity+spi_quantity_bg) / N_shard_norm) ** (-1./3.)
         real_spi_quantity(1) = real_spi_quantity(1) / size_beta**3
         real_spi_quantity(2) = real_spi_quantity(2) / size_beta**3
@@ -709,7 +811,7 @@ function get_pellet_derived_type() result(dtype_out)
 
   integer :: len(9) = (/1,1,1,1,1,1,1,1,1/), t(9) = (/ &
     MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
-    MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_INTEGER/) ! MPI_INTEGER1 == MPI_LOGICAL1
+    MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
 
   integer(kind=MPI_ADDRESS_KIND) :: base, disp(9)
   type(type_SPI) :: sample_pellet

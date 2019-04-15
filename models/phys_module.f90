@@ -215,8 +215,8 @@ module phys_module
   real*8  :: pellet_delta_psi  !< width of smoothing in poloidal flux
   real*8  :: pellet_velocity_R !< pellet velocity component radial direction
   real*8  :: pellet_velocity_Z !< pellet velocity component Z direction
-  real*8  :: pellet_density    !< working pellet density (in units 10^20 m^-3)
-  real*8  :: pellet_density_bg !< background species pellet density (in units 10^20 m^-3)
+  real*8  :: pellet_density    !< working pellet atom number density (in units 10^20 m^-3)
+  real*8  :: pellet_density_bg !< background species pellet atom number density (in units 10^20 m^-3)
   real*8  :: pellet_particles  !< the number of particles in the pellet (in units of 10^20)
   logical :: use_pellet
   
@@ -273,7 +273,8 @@ module phys_module
 
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: spi_abl_model      !< Determine which type of ablation model is using.
-                                !< 0 for constant release rate, 1 for NGS model
+                                !< 0 for constant release rate, 1 for NGS model,
+                                !< 2 for Sergeev formula, 3 for Parks formula.
   character(len=80) :: spi_shard_file !< The name of the shard size file
 
   logical :: abl_history        !< Whether or not ablation history is available from previous restart files

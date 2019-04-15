@@ -65,7 +65,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
-  integer, allocatable :: spi_species_arr (:)
+  real*8, allocatable :: spi_species_arr (:)
 
   integer :: err_alloc
 
@@ -285,7 +285,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
-  integer, allocatable :: spi_species_arr (:)
+  real*8, allocatable :: spi_species_arr (:)
 
   integer :: err_alloc
 
@@ -634,7 +634,7 @@ end if
              n_spi,'spi_radius_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_abl_arr, &
              n_spi,'spi_abl_arr'//char(0))
-    call HDF5_array1D_saving_int(file_id,spi_species_arr, &
+    call HDF5_array1D_saving(file_id,spi_species_arr, &
              n_spi,'spi_species_arr'//char(0))
 
     deallocate (spi_R_arr)

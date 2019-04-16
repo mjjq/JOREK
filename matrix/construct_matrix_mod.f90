@@ -502,8 +502,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
               index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
 
+              !$omp atomic
               rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij)
-            
+              !$omp end atomic
+
             end do
 
             do k=1,n_vertex_max

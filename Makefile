@@ -137,6 +137,7 @@ CXXFLAGS += -pedantic -Wall
 # Rule-specific includes: an example
 #jorek2_main: DEFINES+="-DMAIN "
 eqdsk2jorek: LIBS+=$(LIBDIERCKX)
+eqdsk2jorek_new: LIBS+=$(LIBDIERCKX)
 
 # We need the MPI_VERSION variable for conditional compilation, but
 # unfortunately Fortran defines it as an integer parameter, which

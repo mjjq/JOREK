@@ -169,8 +169,8 @@ compare_mc_coronal: | particles/examples/acd50_w.dat particles/examples/scd50_w.
 # we create a small program that prints out the value of the
 # MPI_VERSION parameter and use this to add -DMPI_VERSION=X to FFLAGS.
 mpiversion.mk:
-	printf "include 'mpif.h'\nWRITE(*,fmt='(A22,I1)') 'FFLAGS+=-DMPI_VERSION=', MPI_VERSION\nEND" > ${OBJDIR}/mpi_version.f90
-	(${FC} $(FLAGS) $(DEFINES) $(INCLUDES) -o ${OBJDIR}/mpi_version ${OBJDIR}/mpi_version.f90 ${LIBS} && ${OBJDIR}/mpi_version | tail -n1 > mpiversion.mk) || echo FFLAGS+=-DMPI_VERSION=0 > mpiversion.mk
+	printf "include 'mpif.h'\nWRITE(*,fmt='(A22,I1)') 'FFLAGS+=-DMPI_VERSION=', MPI_VERSION\nEND" > $(OBJDIR)/mpi_version.f90
+	($(FC) $(FLAGS) $(DEFINES) $(INCLUDES) -o $(OBJDIR)/mpi_version $(OBJDIR)/mpi_version.f90 $(LIBS) && $(OBJDIR)/mpi_version | tail -n1 > mpiversion.mk) || echo FFLAGS+=-DMPI_VERSION=0 > mpiversion.mk
 
 -include mpiversion.mk
 eqdsk2jorek: LIBS+=$(LIBDIERCKX)

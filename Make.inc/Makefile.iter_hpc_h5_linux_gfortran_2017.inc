@@ -1,16 +1,14 @@
 # Configuration file for jorek
 # model directory
-MODEL = model199
+MODEL = model303
 
 # Fortran compiler 
 FC     = mpif90
 CC     = mpicc
 CXX    = g++
 
-DEBUG ?= 0 # build in release mode by default
-
 FFLAGS_OMP       = -fopenmp 
-FFLAGS           = -g -O0 
+FFLAGS           = -g -Og 
 FFLAGS          := $(FFLAGS) -fdefault-real-8 -fdefault-double-8
 FFLAGS          := $(FFLAGS) -ffree-line-length-none
 FFLAGS          := $(FFLAGS) -x f95-cpp-input
@@ -22,11 +20,11 @@ FFLAGS_NOBOUNDS  = $(FFLAGS) -ffixed-form                 $(FFLAGS_OMP)
 FFLAGS          := $(FFLAGS)               -fbounds-check $(FFLAGS_OMP) 
 
 #FFLAGS_NO_OMP   = -fpp -O2 -xT -align
-FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0
+FFLAGS          := $(FFLAGS) -DMURGE_INTERFACE_MAJOR_VERSION=1 -DMURGE_INTERFACE_MINOR_VERSION=0 -DUSE_BLOCK
 
 # Solvers dependencies
 USE_HIPS   = 0
-USE_PASTIX = 1
+USE_PASTIX = 0
 USE_BLOCK  = 1
 USE_PASTIX_MURGE = 0
 USE_MUMPS  = 1
@@ -35,24 +33,31 @@ USE_FFTW   = 1
 USE_HDF5   = 1
 
 #Scotch library
+SCOTCH_HOME ?= $(EBROOTSCOTCH)
 #SCOTCH_HOME  = /home/ITER/vanvugd/source/scotch_5.1.12
 #LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lscotch -lscotcherr
 #INC_SCOTCH   = -I$(SCOTCH_HOME)/include
 
-# MUMPS
-MUMPS_HOME ?= $(EBROOTMUMPS)
-LIB_MUMPS   = -L$(MUMPS_HOME)/lib/ -ldmumps -lmumps_common -lesmumps -lscalapack
-LIB_ZMUMPS  = -lzmumps
-INC_MUMPS   =  $(MUMPS_HOME)/include/
-ORDLIB      = -L$(METIS_HOME)/lib -lptscotch -lscotch -lscotcherr -lscotcherrexit -lmetis -lpord -lscalapack
 
 # PASTIX
 PASTIX_HOME      ?= $(EBROOTPASTIX)
-LIB_PASTIX       = `$(PASTIX_HOME)/pastix-conf --libs`
-LIB_PASTIX_MURGE = `$(PASTIX_HOME)/pastix-conf --libs_murge`
+LIB_PASTIX       = `$(PASTIX_HOME)/pastix-conf --libs` `pkg-config --libs openblas`
+LIB_PASTIX_MURGE = `$(PASTIX_HOME)/pastix-conf --libs_murge` 
 LIB_PASTIX_BLAS  = -lopenblas
 INC_PASTIX       = `$(PASTIX_HOME)/pastix-conf --incs`
 PASTIX_MEMORY_USAGE = 0
+
+# MUMPS
+MUMPS_HOME ?= $(EBROOTMUMPS)
+METIS_HOME ?= $(EBROOTMETIS)
+LIB_MUMPS  = -L$(MUMPS_HOME)/lib -ldmumps -lmumps_common
+LIB_MUMPS += -L$(SCOTCH_HOME)/lib -lptesmumps -lesmumps -lptscotch -lptscotcherrexit -lscotch -lscotcherrexit
+LIB_MUMPS += -L$(METIS_HOME)/lib -lmetis
+LIB_MUMPS += -lscalapack `pkg-config --libs openblas`
+LIB_ZMUMPS = -lzmumps
+INC_MUMPS  = $(MUMPS_HOME)/include/
+INC_MUMPS_EXTRA = `$(PASTIX_HOME)/pastix-conf --incs` # for murge
+ORDLIB     = -lpord
 
 #HIPS
 LIBHIPS   = -L$(HOME)/hips_trunk/trunk/LIB -lhips -lio $(LIBSCOTCH)
@@ -80,5 +85,5 @@ HDF5LIB=$(HDF5_HOME)/lib/libhdf5hl_fortran.a \
         $(HDF5_HOME)/lib/libhdf5_hl.a        \
         $(HDF5_HOME)/lib/libhdf5_fortran.a   \
         $(HDF5_HOME)/lib/libhdf5.a           \
-	$(EBROOTZLIB)/lib/libz.a             \
-        -lsz -ldl
+	$(EBROOTZLIB)/lib/libz.a -lz -lsz -ldl
+

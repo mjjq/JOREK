@@ -174,6 +174,9 @@ ifeq (1, $(USE_PASTIX))
   ifeq (1, $(PASTIX_MEMORY_USAGE))
     DEFINES := $(DEFINES) -DMEMORY_USAGE
   endif
+else
+  # This is a hack to remove the linking problems that otherwise arise
+  DEFINES += -Dpastix_fortran=fake_pastix_fortran
 endif
 
 ifeq (1, $(USE_WSMP))
@@ -189,7 +192,7 @@ endif
 
 ifeq (1, $(USE_MUMPS))
   LIBS := $(LIBS) $(LIB_MUMPS) $(ORDLIB) $(SCALAP) $(BLACS) $(LIBLAPACK) $(LIBBLAS) $(PPPLIB) $(OPENMP_LIB) $(LIBFFTW)
-  INCLUDES := $(INCLUDES) -I$(INC_MUMPS)
+  INCLUDES := $(INCLUDES) -I$(INC_MUMPS) $(INC_MUMPS_EXTRA)
   DEFINES := $(DEFINES) -DUSE_MUMPS
 endif
 

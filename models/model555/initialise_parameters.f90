@@ -68,7 +68,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 wall_resistivity, wall_resistivity_fact,            &
                 use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp,                                           &
-                pastix_smp_only, refinement, grid_to_wall,          &
+                pastix_smp_only, refinement, force_central_node,    &
+                grid_to_wall,                                       &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &

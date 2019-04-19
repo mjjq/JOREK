@@ -91,7 +91,7 @@ module mgi_module
     real*8              :: DMV_inj_frac
     logical, intent(in) :: JET_MGI
     logical, intent(in) :: ASDEX_MGI
-    real*8, intent(out) :: rhon_source
+    real*8, intent(out) :: rhon_source  ! This is in number desntiy
     real*8, intent(in)  :: mgi_tor_norm
 
     select case ( trim(gas_type) )
@@ -198,6 +198,8 @@ module mgi_module
         ! Apply JOREK normalization
         rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * rhon_source
 
+        ! Converting mass density into number density
+        rhon_source = rhon_source * (central_mass * MASS_PROTON / mass_gas)
       elseif (ASDEX_MGI) then
 
         N_barlitre = (6.02d23*1.d5*1.d-3)/(8.3144d0*293d0)
@@ -234,6 +236,9 @@ module mgi_module
         ! Inverse of the number of particles still in the reservoir, formulae given by G. Pautasso (ASDEX-U)
 
         rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*mgi_drhon_dt * mgi_pol_shape  * mgi_tor_shape / V_mgi
+
+        ! Converting mass density into number density
+        rhon_source = rhon_source * (central_mass * MASS_PROTON / mass_gas)
 
       else 
 

@@ -968,6 +968,10 @@ do ms=1, n_gauss
        call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_imp,t_now,  &
                      JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+       ! Converting number density into mass density for each species
+       ! respectively
+       source_imp = source_imp / m_i_over_m_imp
    
      end if
 

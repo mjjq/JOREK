@@ -87,37 +87,37 @@ do i=1,nz
 enddo     
 
 !--------------------close fit to ITER wall
-ellip  = 2.0
-tria_u = 0.55
-tria_l = 0.65
-quad_u = -0.1
-quad_l = 0.15
-n_tht   = 257
-r0     = 6.2
-z0     = 0.1
-a0     = 2.25 
+!ellip  = 2.0
+!tria_u = 0.55
+!tria_l = 0.65
+!quad_u = -0.1
+!quad_l = 0.15
+!n_tht   = 257
+!r0     = 6.2
+!z0     = 0.1
+!a0     = 2.25 
 
 !-------------------- contour outside ITER wall
-ellip  = 2.1
-tria_u = 0.58
-tria_l = 0.65
-quad_u = -0.12
-quad_l = -0.
-n_tht   = 257
-r0     = 6.2
-z0     = -0.05
-a0     = 2.34 
+!ellip  = 2.1
+!tria_u = 0.58
+!tria_l = 0.65
+!quad_u = -0.12
+!quad_l = -0.
+!n_tht   = 257
+!r0     = 6.2
+!z0     = -0.05
+!a0     = 2.34 
 
 !-------------------- contour outside JET wall
-ellip  = 1.85
-tria_u = 0.4
-tria_l = 0.4
-quad_u = -0.2
-quad_l = -0.2
-n_tht   = 257
-r0     = 2.9
-z0     = 0.1
-a0     = 1.08
+!ellip  = 1.85
+!tria_u = 0.4
+!tria_l = 0.4
+!quad_u = -0.2
+!quad_l = -0.2
+!n_tht   = 257
+!r0     = 2.9
+!z0     = 0.1
+!a0     = 1.08
 
 !-------------------- contour outside DIII-D wall
 ellip  = 1.85
@@ -206,7 +206,7 @@ call lplot6(3,3,psi,q,n_psi,'q')
 
 
 !---------------------------- write JOREK input files
-n_sol = (n_psi-1)/2
+n_sol = (n_psi-1)/5
 n_ext = n_psi + n_sol
 
 write(*,*) ' n_psi, n_sol, n_ext : ',n_psi, n_sol, n_ext
@@ -249,7 +249,7 @@ sig_sep = 0.02
 
 psi_ext(1:n_psi) = psi(1:n_psi)
 do i=n_psi+1,n_ext
-  psi_ext(i) = 1.d0 + 0.5 * float(i-n_psi)/float(n_sol)
+  psi_ext(i) = 1.d0 + 0.2 * float(i-n_psi)/float(n_sol)
 enddo
 
 zmu0 = 4.d-7 * PI
@@ -259,15 +259,15 @@ do i=1,n_ext
   df2_ext(i) = df2_ext(i) * (0.5d0 - 0.5d0*tanh1)
   !rho_ext(i) = rho_ext(i) * (0.5d0 - 0.5d0*tanh1)
   if (allocated(ne_spline)) then
-    rho_ext(i) = rho_ext(i) * ne_spline(i) * (0.5d0 - 0.5d0*tanh1)
+    rho_ext(i) = rho_ext(i) * (ne_spline(i) * (0.5d0 - 0.5d0*tanh1) + 1.d-2 * (0.5 + 0.5*tanh1))
   else
-    rho_ext(i) = rho_ext(i) * (0.5d0 - 0.5d0*tanh1)
+    rho_ext(i) = rho_ext(i) * ((0.5d0 - 0.5d0*tanh1) + 1.d-2 * (0.5 + 0.5*tanh1))
   end if
   !T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0 
   if (allocated(ne_spline)) then
-    T_ext(i)   = T_ext(i)   / ne_spline(i) * (0.5d0 - 0.5d0*tanh1) * zmu0
+    T_ext(i)   = T_ext(i)   / (ne_spline(i) * (0.5d0 - 0.5d0*tanh1)+ 1.d-2 * (0.5 + 0.5*tanh1)) * zmu0
   else
-    T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0
+    T_ext(i)   = T_ext(i)   * ((0.5d0 - 0.5d0*tanh1) + 1.d-2 * (0.5 + 0.5*tanh1)) * zmu0
   end if
   p_ext(i)   = rho_ext(i) * T_ext(i)
 enddo

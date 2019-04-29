@@ -219,7 +219,7 @@ real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: s_out,t_out
 
 real*8  :: n_SI, T_eV, n_corr, T_corr, n_imp_SI, ne_SI
-real*8  :: t_norm, spi_Vel_totref
+real*8  :: t_norm, spi_Vel_totref, B0, nu
 real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
 real*8  :: spi_density_tmp
 
@@ -466,13 +466,17 @@ real*8     :: Z_imp, beta_imp, mu_imp
                                    * MOLE_NUMBER * ((pellets(i)%spi_radius*1.d2 / 0.2)**(4./3.)) &
                                    * ((ne_SI*1.d-20)**(1./3.)) * ((T_eV/2.d3)**(5./3.)) &
                                    / (20.183*pellets(i)%spi_species + 2.0141*(1.-pellets(i)%spi_species)) 
-
           case default
             write(*,*) '!! Gas type "', trim(gas_type), '" unknown !!'
             write(*,*) '=> We assume the gas is D2.'
             pellets(i)%spi_abl = 39.0023 * 2. * MOLE_NUMBER * ((pellets(i)%spi_radius*1.d2 / 0.2)**(4./3.)) &
                                  * ((n_SI*1.d-20)**(1./3.)) * ((T_eV/2.d3)**(5./3.)) / 4.0282
         end select
+
+        B0 = abs(F0 / R_geo)
+        nu = 0.843
+        if (B0 > 2.) pellets(i)%spi_abl = pellets(i)%spi_abl * (2./B0)**nu
+
       else 
         write(*,*) "Unknown ablation model, terminating now!"
         stop

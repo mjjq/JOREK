@@ -1,0 +1,40 @@
+#!/bin/bash
+#MSUB -r _CASE_          # job name
+#MSUB -n 2              # Nb processes
+#MSUB -N 1            # Nb nodes
+#MSUB -c 24           # Nb threads
+#MSUB -T 1800              # Time elapsed
+#MSUB -m work,scratch
+#MSUB -q skylake
+#MSUB -A gen2197
+#MSUB -x
+#MSUB -E '--licenses=fs_unshare,fs_work,fs_scratch'
+#MSUB -o _CASE__%I.out
+#MSUB -e _CASE__%I.out
+
+ulimit -d unlimited
+ulimit -Sa
+ulimit -Ha
+
+# The BRIDGE_MSUB_PWD environment variable contains the directory from which the script was submitted
+echo " BRIDGE_MSUB_PWD "
+cd ${BRIDGE_MSUB_PWD}
+
+CASE=_CASE_
+JOREK_HOME=`readlink -f ${PWD}/../../..` # Assumption about source code location
+echo " jorek_home = " ${JOREK_HOME}
+
+export OMP_NUM_THREADS=24
+
+#export NPROC=`qstat -f $PBS_JOBID | awk '/Resource_List.mpiprocs/ {print $3}'`
+
+cd ${JOREK_HOME}
+source non_regression_tests/job_scripts/irene_skl/env.sh
+echo $MPIRUN
+## Compile with:       
+#non_regression_tests/run_test.sh -p $CASE
+## Initial Long run: 
+#non_regression_tests/run_test.sh -i -k -n $CASE 
+## Restart run: 
+non_regression_tests/run_test.sh -k -n $CASE 
+

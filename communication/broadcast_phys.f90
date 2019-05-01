@@ -5,7 +5,8 @@ use tr_module
 use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_cuda_nbr
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
+use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, &
+    pastix_maxthrd
 use wsmp_module,   only: use_wsmp
 use vacuum
 use mpi_mod
@@ -404,6 +405,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(use_murge_element,      1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(pastix_smp_only,        1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(refinement,             1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(force_central_node,     1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(grid_to_wall,           1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(RZ_grid_inside_wall,    1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(adaptive_time,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -439,6 +441,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(Number_RMP_harmonics,   1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(RMP_har_cos_spectrum,   N_RMP_MAX,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(RMP_har_sin_spectrum,   N_RMP_MAX,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(pastix_maxthrd,         1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   write(*,'(1x,a,i7,a,i7,a)') '  Buffer usage: ', position, ' of ', bufsize
   if ( position > bufsize ) then
@@ -835,6 +838,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,use_murge_element,      1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,pastix_smp_only,        1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,refinement,             1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,force_central_node,     1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,grid_to_wall,           1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,RZ_grid_inside_wall,    1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,adaptive_time,          1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
@@ -871,7 +875,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position, Number_RMP_harmonics,   1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position, RMP_har_cos_spectrum,   N_RMP_MAX,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position, RMP_har_sin_spectrum,   N_RMP_MAX,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-
+  call MPI_UNPACK(buffer,bufsize,position,pastix_maxthrd,         1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
 endif
 
 call tr_unregister_mem(bufsize,"bcastp_buffer")

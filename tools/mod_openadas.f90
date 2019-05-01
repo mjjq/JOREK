@@ -1,10 +1,10 @@
 !> module takes the OPEN-ADAS data to calculate the steady state (or time evolution) charge distribution
 !> and average charge state as a function of temperature
 module mod_openadas
+use mod_interp_splinear
 implicit none
 private
 public ADF11, ADF11_all, read_ADF11
-public L2Dinterp, L2D2interp, L2D2interp_grad
 
 !> Custom data structure containing relevant fields from ADF11 format files (unresolved case!)
 type ADF11
@@ -15,10 +15,12 @@ type ADF11
   real*8, allocatable :: GRC(:,:,:) !< log10 of coefficient (parameters: d, T, z). Units:
   !< ACD, SCD: m3s-1 (for *CD ?) (converted from cm3s-1)
   !< PLT, PRB: Wm3 (for P* ?) (converted from Wcm3)
+  type(Fspline), allocatable :: GRCFspline (:) !< spline functions for coefficients at each charge state
 contains
-  procedure :: interp => GRC
+  procedure :: interp => GRC_spl
   procedure :: interp_grad_T => dGRC_dT
   procedure :: interp_grad_n => dGRC_dn
+  procedure :: interp_linear => GRC
 end type ADF11
 
 !> Compound datatype containing many type_ADF11
@@ -30,8 +32,7 @@ type ADF11_all
   type(ADF11) :: PLT !< Line power driven by excitation of dominant ions
   type(ADF11) :: PRB !< Continuum and line power driven by recombination and bremsstrahlung of dominant ions
   type(ADF11) :: PRC !< Line power due to charge transfer from thermal neutral hydrogen to dominant ions
-  real*8, dimension(:), allocatable :: ionisation_energy !< energy in eV required to ionize to a level, indexed by the new charge
-  !< state (i.e. 1 to 74 for W)
+  real*8, dimension(:), allocatable :: ionisation_energy !< energy in eV required to ionize to a level, indexed by the new charge state (i.e. 1 to 74 for W), no interpolation needed
 end type ADF11_all
 !< Recombination data is given as recombining FROM (Z=1 to Z=74)
 !< Ionisation data is given as ionising TO (Z=1 up to Z=74)
@@ -55,7 +56,7 @@ integer :: i_ADF11
 character*3, dimension(1:6), parameter :: ADF11_filenames = (/"acd", "scd", "ccd", "plt", "prb", "prc"/)
 character*120 :: filename
 
-integer :: i, ierr, n_d, n_T, k, my_id, q
+integer :: i, ierr, n_d, n_T, k, my_id, q, i_n
 logical :: file_exists
 
 call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
@@ -97,7 +98,8 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   read(10,*)  a%n_z, n_d, n_T, a%izmin, a%izmax
   ad%n_z = a%n_z
   allocate(a%density(n_d), a%temperature(n_T), a%GRC(n_d,n_T,a%n_z))
-
+  allocate(a%GRCFspline(a%n_z))
+  
   read(10,*)
   read(10,*) a%density(:)
   ! Convert densities to log10 of m^-3 instead of cm^-3
@@ -111,6 +113,13 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   do i = a%izmin, a%izmax
     read(10,*)
     read(10,*) a%GRC(:,:,i)
+
+    call AllocFspline(a%GRCFspline(i),n_T,n_d)
+
+    a%GRCFspline(i)%xspline = a%temperature
+    a%GRCFspline(i)%ylinear = a%density
+
+    call ConstructFspline(a%GRCFspline(i),a%GRC(:,:,i)-6.d0)
   enddo
   close(10)
 
@@ -165,11 +174,13 @@ end function read_adf11
 
 
 !> interpolation of log10 temperature gradient of GRC in density and temperature
-pure function dGRC_dT(a, density, temperature)
+!> Loglog gradient!
+function dGRC_dT(a, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)       :: density     !< log10 density in m^-3
 real*8, intent(in)       :: temperature !< log10 temperature in K
 real*8, dimension(a%n_Z) :: dGRC_dT !< Generalized Radiational Coefficient at this density and temperature
+integer                  :: i_z     !< Index of charge state
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC)) then
@@ -179,12 +190,14 @@ else
 endif
 end function dGRC_dT
 
-!> interpolation of log10 density gradient of GRC in density and temperature
-pure function dGRC_dn(a, density, temperature)
+!> interpolation of log10 density gradient of GRC in density and temperature.
+!> Loglog gradient!
+function dGRC_dn(a, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)       :: density     !< log10 density in m^-3
 real*8, intent(in)       :: temperature !< log10 temperature in K
 real*8, dimension(a%n_Z) :: dGRC_dn !< Generalized Radiational Coefficient at this density and temperature
+integer                  :: i_z     !< Index of charge state
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC)) then
@@ -195,7 +208,7 @@ endif
 end function dGRC_dn
 
 !> interpolation of log10 values of GRC in density and temperature
-pure function GRC(a, z, density, temperature)
+function GRC(a, z, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)            :: density     !< log10 density in m^-3
 real*8, intent(in)            :: temperature !< log10 temperature in K
@@ -210,115 +223,35 @@ else
 endif
 end function GRC
 
+!> interpolation of log10 values of GRC in density and temperature
+subroutine GRC_spl(a, z, density, temperature, GRC_out, dGRC_dT_out, dGRC_dn_out)
+class(ADF11), intent(in)      :: a           !< ADF11 datatype
+real*8, intent(in)            :: density     !< log10 density in m^-3
+real*8, intent(in)            :: temperature !< log10 temperature in K
+integer, intent(in)           :: z !< index in a%GRC(:,:,z) (is ionisation level or ionisation level - 1, 1:n_z)
+real*8, intent(out), optional :: GRC_out !< Generalized Radiational Coefficient at this density and temperature
+real*8, intent(out), optional :: dGRC_dT_out !< Temperature gradient of GRC
+real*8, intent(out), optional :: dGRC_dn_out !< Density gradient of GRC
+real*8                        :: GRC, dGRC_dT, dGRC_dn !< Local generalized Radiational Coefficient
 
-!> Linear 2D interpolation on a rectangular grid
-!> x2y1       xy1    x1y1
-!>  *----------*------*
-!>             |
-!>             * xy
-!>             |
-!>             |
-!>  *----------*------*
-!> x2y2       xy2    x1y2
-!>
-!> Calculates the interpolation using two intermediate values
-!> fxy1 and fxy2.
-!> Equations used are:
-!> \[fx1  = \frac{f_{11}-f_{21}}{x_1-x_2} (x-x_1) + f_{11}\]
-!> \[fx2  = \frac{f_{12}-f_{22}}{x_1-x_2} (x-x_1) + f_{12}\]
-!> \[fout = \frac{f_{x1}-f_{x2}}{y_1-y_2} (y-y_1) + f_{x1}\]
-!> x1,2 and y1,2 are chosen in order of closeness
-!> This algorithm can also be used for extrapolation
-pure function L2Dinterp(tx,ty,f,x,y) result(fout)
-real*8, intent(in), dimension(:)                 :: tx !< Grid points in x
-real*8, intent(in), dimension(:)                 :: ty !< Grid points in y
-real*8, intent(in), dimension(size(tx),size(ty)) :: f !< Function values at these points
-real*8, intent(in)  :: x, y !< Points at which to interpolate
-real*8              :: fout
 
-integer :: ix1, iy1 !< Index of closest point
-integer :: ix2, iy2 !< Index of other (usually next closest) point
-real*8  :: fx1, fx2 ! Temporary variables
-ix1 = minloc(abs(tx - x), dim=1)
-if (x .ge. tx(ix1)) ix2 = ix1 + 1 ! find other index
-if (x .lt. tx(ix1)) ix2 = ix1 - 1
-if (ix2 .gt. size(tx)) ix2 = size(tx) - 1 ! if it does not exist, extrapolate
-if (ix2 .lt. 1       ) ix2 = 2
-iy1 = minloc(abs(ty - y), dim=1)
-if (y .ge. ty(iy1)) iy2 = iy1 + 1
-if (y .lt. ty(iy1)) iy2 = iy1 - 1
-if (iy2 .gt. size(ty)) iy2 = size(ty) - 1
-if (iy2 .lt. 1       ) iy2 = 2
-
-fx1  = (f(ix1,iy1) - f(ix2,iy1))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy1)
-fx2  = (f(ix1,iy2) - f(ix2,iy2))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2)
-fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (y - ty(iy1)) + fx1
-end function L2Dinterp
-
-!> Like [[L2Dinterp]], but interpolate a vector (3rd dimension) of size nz
-pure function L2D2interp(tx,ty,nz,f,x,y) result(fout)
-real*8, intent(in), dimension(:)                    :: tx !< Grid points in x
-real*8, intent(in), dimension(:)                    :: ty !< Grid points in y
-integer, intent(in)                                 :: nz !< number of scalars
-real*8, intent(in), dimension(size(tx),size(ty),nz) :: f !< Function values at these points
-real*8, intent(in)  :: x, y !< Points at which to interpolate
-real*8, dimension(nz) :: fout
-
-integer :: ix1, iy1 !< Index of closest point
-integer :: ix2, iy2 !< Index of other (usually next closest) point
-real*8  :: fx1(nz), fx2(nz) ! Temporary variables
-ix1 = minloc(abs(tx - x), dim=1)
-if (x .ge. tx(ix1)) ix2 = ix1 + 1 ! find other index
-if (x .lt. tx(ix1)) ix2 = ix1 - 1
-if (ix2 .gt. size(tx)) ix2 = size(tx) - 1 ! if it does not exist, extrapolate
-if (ix2 .lt. 1       ) ix2 = 2
-iy1 = minloc(abs(ty - y), dim=1)
-if (y .ge. ty(iy1)) iy2 = iy1 + 1
-if (y .lt. ty(iy1)) iy2 = iy1 - 1
-if (iy2 .gt. size(ty)) iy2 = size(ty) - 1
-if (iy2 .lt. 1       ) iy2 = 2
-
-fx1  = (f(ix1,iy1,:) - f(ix2,iy1,:))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy1,:)
-fx2  = (f(ix1,iy2,:) - f(ix2,iy2,:))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2,:)
-fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (y - ty(iy1)) + fx1
-end function L2D2interp
-
-!> Like [[L2D2interp]], but calculate the gradient in direction `dim`.
-!> Dim must be 1 or 2.
-pure function L2D2interp_grad(tx,ty,nz,f,x,y,dim) result(fout)
-real*8, intent(in), dimension(:)                    :: tx !< Grid points in x
-real*8, intent(in), dimension(:)                    :: ty !< Grid points in y
-integer, intent(in)                                 :: nz !< number of scalars
-real*8, intent(in), dimension(size(tx),size(ty),nz) :: f !< Function values at these points
-real*8, intent(in)  :: x, y !< Points at which to interpolate
-integer, intent(in) :: dim !< which dimension to interpolate in
-real*8, dimension(nz) :: fout
-
-integer :: ix1, iy1 !< Index of closest point
-integer :: ix2, iy2 !< Index of other (usually next closest) point
-real*8  :: fx1(nz), fx2(nz) ! Temporary variables
-ix1 = minloc(abs(tx - x), dim=1)
-if (x .ge. tx(ix1)) ix2 = ix1 + 1 ! find other index
-if (x .lt. tx(ix1)) ix2 = ix1 - 1
-if (ix2 .gt. size(tx)) ix2 = size(tx) - 1 ! if it does not exist, extrapolate
-if (ix2 .lt. 1       ) ix2 = 2
-iy1 = minloc(abs(ty - y), dim=1)
-if (y .ge. ty(iy1)) iy2 = iy1 + 1
-if (y .lt. ty(iy1)) iy2 = iy1 - 1
-if (iy2 .gt. size(ty)) iy2 = size(ty) - 1
-if (iy2 .lt. 1       ) iy2 = 2
-
-if (dim .eq. 1) then
-  fx1 = (f(ix1,iy1,:) - f(ix2,iy1,:))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy1,:)
-  fx2 = (f(ix1,iy2,:) - f(ix2,iy2,:))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2,:)
-  fout = (fx1 - fx2) / (ty(iy1) - ty(iy2))
-elseif (dim .eq. 2) then
-  fx1 = (f(ix1,iy1,:) - f(ix1,iy2,:))/(ty(iy1) - ty(iy2)) * (y - ty(iy1)) + f(ix1,iy1,:)
-  fx2 = (f(ix2,iy1,:) - f(ix2,iy2,:))/(ty(iy1) - ty(iy2)) * (y - ty(iy1)) + f(ix1,iy2,:)
-  fout = (fx1 - fx2) / (tx(ix1) - tx(ix2))
+! If GRC exists and we are looking for a Z that is nonzero
+if (allocated(a%GRC) .and. z .le. ubound(a%GRC,3) .and. z .ge. lbound(a%GRC,3)) then
+  call SL2Dinterp(a%GRCFspline(z),temperature,density,fout=GRC,dfout_dx=dGRC_dT,dfout_dy=dGRC_dn)
+  GRC     = 10.d0**GRC ! Converting from log10
+  dGRC_dT = dGRC_dT * GRC / (10.0**temperature) ! Converting from loglog, log10 terms cancel
+  dGRC_dn = dGRC_dn * GRC / (10.0**density) ! Converting from loglog, log10 terms cancel
 else
-  fout = -1d99
-end if
+  GRC     = 0.d0
+  dGRC_dT = 0.d0
+  dGRC_dn = 0.d0
+endif
 
-end function L2D2interp_grad
+if (present(GRC_out)) GRC_out = GRC
+if (present(dGRC_dT_out)) dGRC_dT_out = dGRC_dT
+if (present(dGRC_dT_out)) dGRC_dn_out = dGRC_dn
+
+end subroutine GRC_spl
+
+
 end module mod_openadas

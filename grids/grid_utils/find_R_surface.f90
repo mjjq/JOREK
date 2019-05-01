@@ -114,7 +114,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 
 enddo
 
-if (i_find .eq. 0) write(*,*) ' WARNING : no R surface found'
+!if (i_find .eq. 0) write(*,*) ' WARNING : no R surface found'
 
 return
 end subroutine find_R_surface

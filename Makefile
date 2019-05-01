@@ -11,14 +11,18 @@
 # Include jorek-specific things and settings
 include Makefile.inc
 MODEL_NUMBER := $(subst model,,$(MODEL))
-
-jorek_model$(MODEL_NUMBER): jorek2_main
-	mv jorek2_main jorek_model$(MODEL_NUMBER)
+# Default rule needs to be first
+main: jorek_model$(MODEL_NUMBER)
 
 # Some defaults and parsing logic for makefile.inc
 include defaults.mk
 
-.PHONY: .mod/version.h clean cleanall cleandep duplicates
+# Build the main executable with a different name from the source file jorek2_main.o
+jorek_model$(MODEL_NUMBER): $(OBJDIR)/jorek2_main.o $(shell ./util/obj_deps $(DEPDIR)/jorek2_main.d)
+	$(FC) $(FLAGS) $(DEFINES) $(INCLUDES) -o $@ $^ $(LIBS)
+
+
+.PHONY: $(MODDIR)/version.h clean cleanall cleandep duplicates
 cleanall: clean cleandep
 clean:
 	@echo ">> Deleting Object Files <<"
@@ -26,6 +30,7 @@ clean:
 	@echo ">> Deleting Module Files <<"
 	-@rm -r $(MODDIR)
 	-@find . -name '*.mod' -delete -or -name '*.o' -delete
+	-@rm mpiversion.mk
 cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -r $(DEPDIR)
@@ -124,6 +129,7 @@ objs: $(foreach file,$(foreach dir,$(DIRS), $(find_files)), $(OBJDIR)/$(notdir $
 # Special cases
 # Add here: Global includes (as the line below)
 INCLUDES += -Itools # for r3_info.h
+INCLUDES += -Imodels
 # C++ support
 LIBS += -lstdc++
 CXXFLAGS += -pedantic -Wall
@@ -131,6 +137,17 @@ CXXFLAGS += -pedantic -Wall
 # Rule-specific includes: an example
 #jorek2_main: DEFINES+="-DMAIN "
 eqdsk2jorek: LIBS+=$(LIBDIERCKX)
+
+# We need the MPI_VERSION variable for conditional compilation, but
+# unfortunately Fortran defines it as an integer parameter, which
+# we cannot use as a preprocessor symbol. To overcome this problem,
+# we create a small program that prints out the value of the
+# MPI_VERSION parameter and use this to add -DMPI_VERSION=X to FFLAGS.
+mpiversion.mk:
+	printf "include 'mpif.h'\nWRITE(*,fmt='(A22,I1)') 'FFLAGS+=-DMPI_VERSION=', MPI_VERSION\nEND" > $(OBJDIR)/mpi_version.f90
+	($(FC) $(FLAGS) $(DEFINES) $(INCLUDES) -o $(OBJDIR)/mpi_version $(OBJDIR)/mpi_version.f90 $(LIBS) && $(OBJDIR)/mpi_version | tail -n1 > mpiversion.mk) || echo FFLAGS+=-DMPI_VERSION=0 > mpiversion.mk
+
+-include mpiversion.mk
 
 # Is this used by anyone? Otherwise we could remove it
 # It is not updated to this format yet.

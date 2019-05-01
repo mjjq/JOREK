@@ -24,7 +24,9 @@ module profiles
   
   !> Interpolate a given profile to a certain position x0.
   real*8 function interpolProf(x, y, len, x0)
-    
+#if _OPENMP >= 201511
+    !$omp declare simd uniform(x,y,len)
+#endif
     real*8, allocatable, intent(in) :: x(:)
     real*8, allocatable, intent(in) :: y(:)
     integer,             intent(in) :: len

@@ -11,7 +11,7 @@ subroutine log_parameters(my_id, short)
 use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_cuda_nbr
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot
+use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
 use wsmp_module,   only: use_wsmp
 use vacuum
 
@@ -139,6 +139,13 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+  write(*,'(1x,a)',advance='no') ' PRINT_ELM_RHS : '
+#ifdef PRINT_ELM_RHS
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
   write(*,*)
   write(*,200)
   write(*,*) '* Hard-Coded Parameters:                                                      *'
@@ -151,6 +158,7 @@ if (my_id == 0) then
   write(*,  112) ' n_period       =  ', n_period          
   write(*,  112) ' n_plane        =  ', n_plane           
   write(*,  112) ' n_vertex_max   =  ', n_vertex_max      
+  write(*,  112) ' n_nodes_max    =  ', n_nodes_max       
   write(*,  112) ' n_elements_max =  ', n_elements_max    
   write(*,  112) ' n_boundary_max =  ', n_boundary_max    
   write(*,  112) ' n_pieces_max   =  ', n_pieces_max      
@@ -233,18 +241,34 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'xpoint                ', xpoint
 
   if ( xpoint ) then
+    write(*,INTG_FMT) 'xcase                 ', xcase
     write(*,INTG_FMT) 'n_open                ', n_open
     write(*,INTG_FMT) 'n_private             ', n_private
     write(*,INTG_FMT) 'n_leg                 ', n_leg
+    write(*,INTG_FMT) 'n_ext                 ', n_ext
+    write(*,INTG_FMT) 'n_outer               ', n_outer
+    write(*,INTG_FMT) 'n_inner               ', n_inner
+    write(*,LOGI_FMT) 'force_horizontal_xline', force_horizontal_xline
+    write(*,INTG_FMT) 'n_up_priv             ', n_up_priv
+    write(*,INTG_FMT) 'n_up_leg              ', n_up_leg
     write(*,REAL_FMT) 'SIG_closed            ', SIG_closed
     write(*,REAL_FMT) 'SIG_open              ', SIG_open
     write(*,REAL_FMT) 'SIG_private           ', SIG_private
     write(*,REAL_FMT) 'SIG_theta             ', SIG_theta
     write(*,REAL_FMT) 'SIG_leg_0             ', SIG_leg_0
     write(*,REAL_FMT) 'SIG_leg_1             ', SIG_leg_1
+    write(*,REAL_FMT) 'SIG_outer             ', SIG_outer
+    write(*,REAL_FMT) 'SIG_inner             ', SIG_inner
+    write(*,REAL_FMT) 'SIG_up_leg_0          ', SIG_up_leg_0
+    write(*,REAL_FMT) 'SIG_up_leg_1          ', SIG_up_leg_1
+    write(*,REAL_FMT) 'SIG_up_priv           ', SIG_up_priv
     write(*,REAL_FMT) 'dPSI_open             ', dPSI_open
     write(*,REAL_FMT) 'dPSI_private          ', dPSI_private
-    write(*,INTG_FMT) 'xcase                 ', xcase
+    write(*,REAL_FMT) 'dPSI_outer            ', dPSI_outer
+    write(*,REAL_FMT) 'dPSI_inner            ', dPSI_inner
+    write(*,REAL_FMT) 'dPSI_up_priv          ', dPSI_up_priv
+    write(*,INTG_FMT) 'first_target_point    ', first_target_point
+    write(*,INTG_FMT) 'last_target_point     ', last_target_point
   end if
 
   write(*,INTG_FMT) 'nout                  ', nout
@@ -395,6 +419,7 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'pellet_velocity_Z     ', pellet_velocity_Z
   end if
 
+  write(*,CHAR_FMT) 'tokamak_device        ', trim(tokamak_device)
   write(*,REAL_FMT) 'ellip                 ', ellip
   write(*,REAL_FMT) 'tria_u                ', tria_u
   write(*,REAL_FMT) 'tria_l                ', tria_l
@@ -500,7 +525,9 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'murge_cuda_nbr        ', murge_cuda_nbr
   write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot
+  write(*,INTG_FMT) 'pastix_maxthrd        ', pastix_maxthrd
   write(*,LOGI_FMT) 'refinement            ', refinement
+  write(*,LOGI_FMT) 'force_central_node    ', force_central_node
   write(*,LOGI_FMT) 'grid_to_wall          ', grid_to_wall
   write(*,LOGI_FMT) 'adaptive_time         ', adaptive_time
   write(*,LOGI_FMT) 'equil                 ', equil

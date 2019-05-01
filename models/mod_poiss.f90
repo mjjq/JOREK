@@ -245,7 +245,6 @@ else        ! apply fixed boundary conditions
             .or. (node_list%node(i)%boundary .eq. 8) &
             .or. (node_list%node(i)%boundary .eq. 9) &
             .or. (node_list%node(i)%boundary .eq.10)) then
-
           index_i = node_list%node(i)%index(2)  ! base index in the main matrix
 
           mumps_par%irn(ilarge+1) = index_i
@@ -253,7 +252,6 @@ else        ! apply fixed boundary conditions
           mumps_par%A(ilarge+1)   = zbig
           ilarge = ilarge + 1
         endif
-
         if (     (node_list%node(i)%boundary .eq. 2) &
             .or. (node_list%node(i)%boundary .eq. 3) &
             .or. (node_list%node(i)%boundary .eq. 6) &
@@ -261,7 +259,6 @@ else        ! apply fixed boundary conditions
             .or. (node_list%node(i)%boundary .eq. 8) &
             .or. (node_list%node(i)%boundary .eq. 9) &
             .or. (node_list%node(i)%boundary .eq.10)) then
-
           index_i = node_list%node(i)%index(3)  ! base index in the main matrix
   
           mumps_par%irn(ilarge+1) = index_i

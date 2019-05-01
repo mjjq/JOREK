@@ -10,6 +10,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
+use phys_module, only: force_central_node
 
 implicit none
 
@@ -1343,7 +1344,7 @@ do i=1,newnode_list%n_nodes
     index = index + 1
     newnode_list%node(i)%index(k) = index
 
-    if ((i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
+    if ((force_central_node) .and. (i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
       newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
       index = index - 1
     endif

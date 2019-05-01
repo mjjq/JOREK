@@ -1,9 +1,0 @@
-fruit_test_driver
-particles
-static_field_example
-pusher_test
-compare_mc_coronal
-ex[0-9]*
-!examples/ex[0-9]*.f90
-*.png
-*.h5

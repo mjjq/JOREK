@@ -40,7 +40,7 @@ particle_test:
 	+./util/fruit.sh particles/tests
 nrt_unit:
 	+./util/fruit.sh non_regression_tests/unit_tests
-doc docs: media/tests/all_pushers/penning.png media/tests/openadas/charge_state_time.png
+doc docs:
 	-@rm -r doc/ # workaround for FORD bug
 	ford jorek.md --no-search $(INCLUDES)
 
@@ -153,11 +153,6 @@ CXXFLAGS += -pedantic -Wall
 #jorek2_main: DEFINES+="-DMAIN "
 eqdsk2jorek: LIBS+=$(LIBDIERCKX)
 
-# Benchmarks and other output used in the documentation
-media/tests/all_pushers/penning.png: pusher_test # do not name other outputs
-	./pusher_test
-media/tests/openadas/charge_state_time.png: compare_mc_coronal # do not name other output
-	./compare_mc_coronal
 # Automatically download adas data for tungsten
 particles/examples/%50_w.dat:
 	wget http://open.adas.ac.uk/download/adf11/$*50/$*50_w.dat -O $@

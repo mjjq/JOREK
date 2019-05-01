@@ -1,3 +1,5 @@
+!> Benchmark the projection routines by projecting R^4 onto a square grid
+!> and calculating the error
 program project_R4_convergence_square
 use data_structure
 use basis_at_gaussian, only: initialise_basis

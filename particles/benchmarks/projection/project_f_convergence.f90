@@ -1,3 +1,5 @@
+!> Benchmark the projection function by projection 0, 1, R, RZ and R^4
+!> onto a square, polar and flux aligned grid and write the error to a file
 program project_f_convergence
 use data_structure
 use basis_at_gaussian, only: initialise_basis

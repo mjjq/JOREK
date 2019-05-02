@@ -1,10 +1,13 @@
 !> Find the element and position at this psi, with poloidal angle theta.
+!> This can be useful for experimenting with low-discrepancy sequences.
 !> Root finding on the line from R_axis, Z_axis, parametrised by u.
 !> R = R_axis + u cos(theta); Z = Z_axis + u sin(theta).
 !> The objective function is (psi - psi(u)) where psi(u) = psi(st(RZ(u)))
 !> and we calculate st with find_RZ_nearby and RZ as above.
 !> Use Newton's method to find the root. This code could be upgraded to use a
 !> higher-order method, as we also have the second derivatives.
+!> Be careful when using this routine with psi_n > 1, as multiple intersections
+!> can exist.
 subroutine find_theta_psi(node_list,element_list,psi_minmax,theta,psi,phi,R_axis,Z_axis,i_elm,s,t,R,Z)
 use constants
 use data_structure
@@ -30,7 +33,7 @@ real*8,                   intent(in)    :: Z_axis
 integer,                  intent(out)   :: i_elm
 real*8,                   intent(out)   :: s, t, R, Z
 
-logical, parameter :: verbose = .false.
+logical, parameter :: verbose = .true.
 
 ! --- Internal variables
 real*8  :: u, du, R_try, Z_try, s_out, t_out, err
@@ -161,13 +164,14 @@ do i=1,element_list%n_elements
 end do
 if (u .lt. 0.d0) then
   if (verbose) write(*,"(A,g13.6,A,g13.6,A)") "WARNING: no suitable elements found, skipping for psi=", psi, " theta=", theta/PI, "pi", "u=", u
+  i_elm = 0
   return
 end if
 
 
 ! prepare looping
 ! Keep trying with smaller u until we find an element
-! this helps a bit for partices very close to the edge
+! this helps a bit for particles very close to the edge
 do backtrack_step = 0, num_backtrack_steps
   R_try = R_axis + u*cos(theta)
   Z_try = Z_axis + u*sin(theta)
@@ -180,6 +184,7 @@ do backtrack_step = 0, num_backtrack_steps
 end do
 if (backtrack_step .gt. num_backtrack_steps .or. ifail .ne. 0 .or. i_elm_out .eq. 0) then
   if (verbose) write(*,*) "Cannot find initial position after ", backtrack_step
+  i_elm = 0
   return
 end if
 

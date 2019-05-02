@@ -2834,6 +2834,7 @@ subroutine close_contour_with_wall(R_beg, Z_beg, R_end, Z_end, n_lim, index_lim,
   ! --- Internal parameters
   integer :: count, direction, n_tmp, i
   integer :: i_wall, i_lim_next, i_lim_beg, i_lim_end
+  real*8  :: length1, length2
   real*8  :: diff_min_beg, diff_min_end, diff
   real*8  :: diff_R, diff_Z
   real*8  :: R_average
@@ -2868,11 +2869,13 @@ subroutine close_contour_with_wall(R_beg, Z_beg, R_end, Z_end, n_lim, index_lim,
   count = 1
   i_wall = i_lim_beg
   direction = +1
+  length1 = 0.0
   do i=1,n_wall
     i_lim_next = i_wall + direction
     if (i_lim_next .gt. n_wall) i_lim_next = 1
     if (i_lim_next .lt. 1     ) i_lim_next = n_wall
     count = count + 1
+    length1 = length1 + sqrt( (R_wall(i_wall)-R_wall(i_lim_next))**2 + (Z_wall(i_wall)-Z_wall(i_lim_next))**2 )
     if (i_lim_next .eq. i_lim_end) exit
     i_wall = i_lim_next
   enddo
@@ -2882,15 +2885,18 @@ subroutine close_contour_with_wall(R_beg, Z_beg, R_end, Z_end, n_lim, index_lim,
   count = 1
   i_wall = i_lim_beg
   direction = -1
+  length2 = 0.0
   do i=1,n_wall
     i_lim_next = i_wall + direction
     if (i_lim_next .gt. n_wall) i_lim_next = 1
     if (i_lim_next .lt. 1     ) i_lim_next = n_wall
     count = count + 1
+    length2 = length2 + sqrt( (R_wall(i_wall)-R_wall(i_lim_next))**2 + (Z_wall(i_wall)-Z_wall(i_lim_next))**2 )
     if (i_lim_next .eq. i_lim_end) exit
     i_wall = i_lim_next
   enddo
-  if (count .lt. n_tmp) then
+  !if (count .lt. n_tmp) then
+  if (length2 .lt. length1) then
     direction = -1
   else
     direction = +1

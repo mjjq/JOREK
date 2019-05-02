@@ -1,5 +1,5 @@
 !> Program to convert a JOREK2 restart file into binary VTK format
-program jorek2vtk
+program jorek2_get_new_extension_patch_connections
 
 use mod_parameters, only: n_var, variable_names
 use data_structure
@@ -75,7 +75,7 @@ do i_ext = 1,n_wall_blocks
   write(*,*)''
 enddo
 
-end program jorek2vtk
+end program jorek2_get_new_extension_patch_connections
 
 
 

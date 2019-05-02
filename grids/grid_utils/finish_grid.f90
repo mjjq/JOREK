@@ -21,6 +21,8 @@ integer,                      intent(in)    :: n_grids(10)
 
 
 integer             :: i, j, j2, k, l, my_id, ifail, n_tmp
+integer             :: i_elm1, i_vertex1, i_node1, i_node_save
+integer             :: i_elm2, i_vertex2, i_node2
 integer             :: i_elm_xpoint(2), i_elm_axis
 integer             :: n_loop, n_loop2, n_start_connect
 integer             :: n_psi, n_tht_mid, n_tht_mid2
@@ -120,99 +122,6 @@ enddo
 
 
 !-------------------------------------------------------------------------------------------!
-!------------------------------ Define nodes index in the matrix ---------------------------!
-!-------------------------------------------------------------------------------------------!
-write(*,*) '                 Definition of nodes index '
-
-
-!-------------------------------- Combine multiple nodes at axis and Xpoints
-index = 0
-do i=1,newnode_list%n_nodes
-  do k=1,n_order+1
-
-    index = index + 1
-    newnode_list%node(i)%index(k) = index
-
-    ! Remove all but one node at axis
-    if (xcase .ne. 3) then
-      if ((i .gt. 5) .and. (i .le. 4+n_tht) .and. (k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(1)
-        index = index - 1
-      endif
-    else
-      if ((i .gt. 9) .and. (i .le. 8+n_tht-1) .and. (k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(9)%index(1)
-        index = index - 1
-      endif
-    endif
-    
-    ! Remove all but one node at first Xpoint
-    if ((i .eq. 2).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 2).and.(k.eq.3)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 3).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 3).and.(k.eq.2)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(2)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.2)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.3)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(3)%index(k)
-      index = index - 1
-    endif
-  
-    ! Remove all but one node at second Xpoint
-    if (xcase .eq. 3) then
-      if ((i .eq. 6).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 6).and.(k.eq.3)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 7).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 7).and.(k.eq.2)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(6)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 8).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 8).and.(k.eq.2)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 8).and.(k.eq.3)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(7)%index(k)
-        index = index - 1
-      endif
-    endif
-  
-  enddo  
-  newnode_list%node(i)%constrained = .false.
-enddo
-
-!-------------------------------------------------------------------------------------------!
 !--------------------------- Fill in the values into the new grid --------------------------!
 !-------------------------------------------------------------------------------------------!
 write(*,*) '                 Fill in psi-values '
@@ -309,11 +218,140 @@ do i=1,element_list%n_elements
 enddo
 
 !---------------------------- copy new grid into nodes/elements
-node_list%n_nodes = newnode_list%n_nodes
-node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
-
 element_list%n_elements = newelement_list%n_elements
 element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
+
+! --- This is the old way
+!node_list%n_nodes = newnode_list%n_nodes
+!node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+
+! --- Now, we define only the nodes that belong to elements! (this gets rid of potential orphan nodes, which the matrix doesn't like, obviously...)
+node_list%n_nodes = 4
+node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+if (xcase .eq. 3) then
+  node_list%n_nodes = 8
+  node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+endif
+do i_elm1 = 1,element_list%n_elements
+  do i_vertex1 = 1,n_vertex_max
+    i_node1 = newelement_list%element(i_elm1)%vertex(i_vertex1)
+    if ( ((i_node1.gt.8).and.(xcase.eq.3)) .or. ((i_node1.gt.4).and.(xcase.ne.3)) ) then
+      i_node_save = 0
+      do i_elm2 = 1,i_elm1-1
+        do i_vertex2 = 1,n_vertex_max
+          i_node2 = newelement_list%element(i_elm2)%vertex(i_vertex2)
+          if (i_node2 .eq. i_node1) then
+            i_node_save = i_node1
+            exit
+          endif
+        enddo
+        if (i_node_save .ne. 0) exit
+      enddo
+      if (i_node_save .eq. 0) then
+        node_list%n_nodes = node_list%n_nodes + 1
+        node_list%node(node_list%n_nodes) = newnode_list%node(i_node1)
+        newnode_list%node(i_node1)%boundary = node_list%n_nodes ! using "boundary" to save new node index, since newnode_list will be scrapped
+        element_list%element(i_elm1)%vertex(i_vertex1) = node_list%n_nodes
+      else
+        element_list%element(i_elm1)%vertex(i_vertex1) = newnode_list%node(i_node_save)%boundary
+      endif
+    endif
+  enddo
+enddo
+
+!-------------------------------------------------------------------------------------------!
+!------------------------------ Define nodes index in the matrix ---------------------------!
+!-------------------------------------------------------------------------------------------!
+write(*,*) '                 Definition of nodes index '
+
+! --- Note: it's very important that we do this after copying the nodes and after eliminating the orphan nodes!
+
+!-------------------------------- Combine multiple nodes at axis and Xpoints
+index = 0
+do i=1,node_list%n_nodes
+  do k=1,n_order+1
+
+    index = index + 1
+    node_list%node(i)%index(k) = index
+
+    ! Remove all but one node at axis
+    if (xcase .ne. 3) then
+      if ((i .gt. 5) .and. (i .le. 4+n_tht) .and. (k.eq.1)) then
+        node_list%node(i)%index(k) = node_list%node(5)%index(1)
+        index = index - 1
+      endif
+    else
+      if ((i .gt. 9) .and. (i .le. 8+n_tht-1) .and. (k.eq.1)) then
+        node_list%node(i)%index(k) = node_list%node(9)%index(1)
+        index = index - 1
+      endif
+    endif
+    
+    ! Remove all but one node at first Xpoint
+    if ((i .eq. 2).and.(k.eq.1)) then
+      node_list%node(i)%index(k) = node_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 2).and.(k.eq.3)) then
+      node_list%node(i)%index(k) = node_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 3).and.(k.eq.1)) then
+      node_list%node(i)%index(k) = node_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 3).and.(k.eq.2)) then
+      node_list%node(i)%index(k) = node_list%node(2)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 4).and.(k.eq.1)) then
+      node_list%node(i)%index(k) = node_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 4).and.(k.eq.2)) then
+      node_list%node(i)%index(k) = node_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 4).and.(k.eq.3)) then
+      node_list%node(i)%index(k) = node_list%node(3)%index(k)
+      index = index - 1
+    endif
+  
+    ! Remove all but one node at second Xpoint
+    if (xcase .eq. 3) then
+      if ((i .eq. 6).and.(k.eq.1)) then
+        node_list%node(i)%index(k) = node_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 6).and.(k.eq.3)) then
+        node_list%node(i)%index(k) = node_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 7).and.(k.eq.1)) then
+        node_list%node(i)%index(k) = node_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 7).and.(k.eq.2)) then
+        node_list%node(i)%index(k) = node_list%node(6)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 8).and.(k.eq.1)) then
+        node_list%node(i)%index(k) = node_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 8).and.(k.eq.2)) then
+        node_list%node(i)%index(k) = node_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 8).and.(k.eq.3)) then
+        node_list%node(i)%index(k) = node_list%node(7)%index(k)
+        index = index - 1
+      endif
+    endif
+  
+  enddo  
+  node_list%node(i)%constrained = .false.
+enddo
 
 
 !----temporary, needs to be completed, neighbour and boundary information

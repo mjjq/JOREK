@@ -84,7 +84,7 @@ if (my_id == 0) then
     if (node_list%node(i)%boundary .eq. 6) n_border = n_border+2
     if (node_list%node(i)%boundary .eq. 7) n_border = n_border+2
     if (node_list%node(i)%boundary .eq. 8) n_border = n_border+3
-    if (node_list%node(i)%boundary .eq. 9) n_border = n_border+2
+    if (node_list%node(i)%boundary .eq. 9) n_border = n_border+3
     if (node_list%node(i)%boundary .eq.10) n_border = n_border+3
   enddo
   

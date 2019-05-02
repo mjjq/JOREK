@@ -14,6 +14,7 @@ use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
 use wsmp_module,   only: use_wsmp
 use vacuum
+use gauss, only: n_gauss
 
 implicit none
 
@@ -165,6 +166,7 @@ if (my_id == 0) then
   write(*,  112) ' n_degrees      =  ', n_degrees         
   write(*,  112) ' nref_max       =  ', nref_max          
   write(*,  112) ' n_ref_list     =  ', n_ref_list        
+  write(*,  112) ' gauss_order    =  ', n_gauss
 
   write(*,*)
   write(*,200)

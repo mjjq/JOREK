@@ -1,5 +1,5 @@
 subroutine find_crossing(node_list,element_list,surface_list,j_surf,R_c,Z_c, &
-                         R_out,Z_out,ielm_flux,r_flux,s_flux,t_tht,ifail)
+                         R_out,Z_out,ielm_flux,r_flux,s_flux,t_tht,ifail, go_fast)
 
   use data_structure
   
@@ -14,11 +14,16 @@ subroutine find_crossing(node_list,element_list,surface_list,j_surf,R_c,Z_c, &
   real*8,                   intent(inout)	:: R_out,    Z_out
   real*8,                   intent(inout)	:: r_flux,s_flux,t_tht
   integer,                  intent(inout)	:: ifail
+  logical,                  optional            :: go_fast
 
   ! --- Local variables
   integer :: k
   integer :: ielm_flux
+  logical :: gofast
   
+  gofast = .false.
+  if (present(go_fast)) gofast = go_fast
+
   if ((R_c(1) .eq. R_c(3)) .and. (Z_c(1) .eq. Z_c(3))) then
     ifail = 9
     return
@@ -29,7 +34,7 @@ subroutine find_crossing(node_list,element_list,surface_list,j_surf,R_c,Z_c, &
   do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
     
     call find_crossing_on_surface_piece(node_list,element_list,surface_list%flux_surfaces(j_surf), &
-                                        k, R_c,Z_c, R_out,Z_out, r_flux,s_flux, t_tht, ifail)
+                                        k, R_c,Z_c, R_out,Z_out, r_flux,s_flux, t_tht, ifail, gofast)
     if (ifail .eq. 0) then
       ielm_flux = surface_list%flux_surfaces(j_surf)%elm(k)
       return

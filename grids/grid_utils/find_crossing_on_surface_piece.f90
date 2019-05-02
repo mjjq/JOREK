@@ -1,5 +1,5 @@
 subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, R_c,Z_c, &
-                                          R_out,Z_out, r_flux,s_flux, t_tht,ifail)
+                                          R_out,Z_out, r_flux,s_flux, t_tht,ifail, go_fast)
   !-------------------------------------------------------------------------
   ! solves two non-linear equations using Newtons method (from numerical recipes)
   ! LU decomposition replaced by explicit solution of 2x2 matrix.
@@ -8,18 +8,20 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
   !-------------------------------------------------------------------------
   use data_structure
   use mod_interp, only: interp_RZ
+  use phys_module, only: R_geo
   
   implicit none
   
   ! --- Routine parameters
-  type (type_node_list),    intent(in)		:: node_list
-  type (type_element_list), intent(in)		:: element_list
-  type (type_surface),      intent(in)		:: surface
-  integer,                  intent(in)		:: piece
-  real*8,                   intent(inout)	:: R_c(4),   Z_c(4)
-  real*8,                   intent(inout)	:: R_out,    Z_out
-  real*8,                   intent(inout)	:: r_flux,s_flux,t_tht
-  integer,                  intent(inout)	:: ifail
+  type (type_node_list),    intent(in)          :: node_list
+  type (type_element_list), intent(in)          :: element_list
+  type (type_surface),      intent(in)          :: surface
+  integer,                  intent(in)          :: piece
+  real*8,                   intent(inout)       :: R_c(4),   Z_c(4)
+  real*8,                   intent(inout)       :: R_out,    Z_out
+  real*8,                   intent(inout)       :: r_flux,s_flux,t_tht
+  integer,                  intent(inout)       :: ifail
+  logical,                  optional            :: go_fast
 
   ! --- Local variables
   integer :: i, ntrial, istart
@@ -33,7 +35,14 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
   real*8  :: dRRg1_dt, dZZg1_dt, dRRg2_dt, dZZg2_dt
   real*8  :: RR_flux, dRR_flux, RR_tht, dRR_tht,  ZZ_flux, dZZ_flux, ZZ_tht, dZZ_tht
   real*8  :: x(2), FVEC(2), FJAC(2,2), p(2), x_previous(2)
-  real*8  :: tolx, tolf, errx, errf, temp, dis, max_step
+  real*8  :: tolx, tolf, errx, errf, temp, dis, max_step, tol_far
+  real*8  :: RR_mid, ZZ_mid
+  real*8  :: RR_mid_surf, ZZ_mid_surf
+  logical :: gofast
+
+  gofast = .false.
+  if (present(go_fast)) gofast = go_fast
+  tol_far = 0.1 * R_geo
 
   x_previous = 0.d0
   
@@ -238,6 +247,10 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
         ifail = 0
         return
       endif
+      
+      if (gofast) then
+        if ( (i .gt. 3) .and. (errx .gt. tol_far) ) exit
+      endif
   
     enddo
   enddo
@@ -247,3 +260,4 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
   return
 
 end
+

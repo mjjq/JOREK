@@ -435,7 +435,7 @@ endif
 
       amplitude = 1.d-10
       do i=1,node_list%n_nodes
-        node_list%node(i)%values(n_tor_tmp+1:n_tor,:,1:4)= 0.d0
+        node_list%node(i)%values(n_tor_tmp+1:n_tor,:,:)= 0.d0
         do j=n_tor_tmp+1, n_tor
           node_list%node(i)%values(j,:,5)= amplitude * node_list%node(i)%values(1,:,5)
           node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)

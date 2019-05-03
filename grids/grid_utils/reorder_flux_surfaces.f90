@@ -2902,16 +2902,6 @@ subroutine close_contour_with_wall(R_beg, Z_beg, R_end, Z_end, n_lim, index_lim,
     direction = +1
   endif
   
-  ! --- If we want reversed, this means we want the outer wall on the right
-  if (reversed) then
-    R_average = 0.d0
-    do i=1,n_lim
-      R_average = R_average + R_wall(index_lim(i)) / real(n_lim)
-    enddo
-    if (R_average .lt. min(R_beg, R_end)) direction = -direction
-  endif
-  
-  
   ! --- And copy indices
   count = 1
   index_lim(1) = i_lim_beg
@@ -2927,6 +2917,30 @@ subroutine close_contour_with_wall(R_beg, Z_beg, R_end, Z_end, n_lim, index_lim,
   enddo
   n_lim = count
   
+  ! --- If we want reversed, this means we want the outer wall on the right
+  if (reversed) then
+    R_average = 0.d0
+    do i=1,n_lim
+      R_average = R_average + R_wall(index_lim(i)) / real(n_lim)
+    enddo
+    if (R_average .lt. min(R_beg, R_end)) then
+      direction = -direction
+      ! --- And copy indices
+      count = 1
+      index_lim(1) = i_lim_beg
+      i_wall = i_lim_beg
+      do i=1,n_wall
+        i_lim_next = i_wall + direction
+        if (i_lim_next .gt. n_wall) i_lim_next = 1
+        if (i_lim_next .lt. 1     ) i_lim_next = n_wall
+        count = count + 1
+        index_lim(count) = i_lim_next
+        if (i_lim_next .eq. i_lim_end) exit
+        i_wall = i_lim_next
+      enddo
+      n_lim = count
+    endif
+  endif
   
   ! --- Check that we don't make a u-turn at the beginning or the end
   diff_R = abs(R_wall(index_lim(1))-R_wall(index_lim(2)))

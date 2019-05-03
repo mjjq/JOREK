@@ -665,7 +665,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   integer		:: location, ifail
   integer		:: n_flux,   n_open,   n_outer,   n_inner,   n_private,   n_up_priv  
   integer		:: i_surf, i_part, i_piece, i_part_save, i_pieces_max
-  integer		:: i_elm, inside, count
+  integer		:: i_elm, inside, inside2, count
   real*8		:: rr,    ss
   real*8		:: R,dR_dr, dR_ds, dR_drs, dR_drr, dR_dss
   real*8		:: Z,dZ_dr, dZ_ds, dZ_drs, dZ_drr, dZ_dss
@@ -760,12 +760,15 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
       call interp_RZ(node_list,element_list,i_elm,rr,ss, &
                      R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
                      Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
+      inside2 = 0
       if ( (xcase .eq. 1) .or. ((xcase .eq. 3) .and. (psi_xpoint(1) .lt. psi_xpoint(2))) ) then
         call check_point_is_inside_contour(R, Z, n_private_contour, R_private_contour, Z_private_contour, inside)
+        if (xcase .eq. 3) call check_point_is_inside_contour(R, Z, n_up_priv_contour, R_up_priv_contour, Z_up_priv_contour, inside2)
       else
         call check_point_is_inside_contour(R, Z, n_up_priv_contour, R_up_priv_contour, Z_up_priv_contour, inside)
+        if (xcase .eq. 3) call check_point_is_inside_contour(R, Z, n_private_contour, R_private_contour, Z_private_contour, inside2)
       endif
-      if (inside .eq. 0) then
+      if ( (inside .eq. 0) .and. (inside2 .eq. 0) ) then
         i_part_save = i_part
         exit
       endif

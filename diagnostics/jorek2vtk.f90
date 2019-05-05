@@ -89,6 +89,8 @@ real*8     :: Z_imp, T0_Zimp, alpha_Zimp
 !   -Coefficients related to Z_imp
 real*8     :: alpha_imp
 real*8     :: beta_imp
+!   - Effective charge state
+real*8     :: Z_eff, eta_coef
 !   -Radiation from injected impurities
 real*8     :: Lrad
 real*8     :: ne_rad                                          ! Electron density used in radiation rate
@@ -265,7 +267,7 @@ endif
 #if (JOREK_MODEL == 501)
     n_radiation = 0
  if (include_radiation) then
-    n_radiation = 4
+    n_radiation = 5
     s_radiation = n_scalars
     n_scalars   = n_scalars + n_radiation
  endif
@@ -352,7 +354,7 @@ endif
 #if (JOREK_MODEL == 501)
  if (include_radiation) then
      scalar_names(s_radiation+1:s_radiation+n_radiation) &
-                  = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp '/)
+                  = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp ', 'Z_eff '/)
  endif
 #endif
 
@@ -1033,6 +1035,20 @@ enddo  ! n_elements
      ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
      scalars(i,5) = (r0_corr + beta_imp * rn0_corr)                           ! electron density (JOREK units)
 
+     !Calculate the Z_eff, as it is done in mod_elt_matrix
+     Z_eff = r0_corr - rn0_corr
+     do ion_i=1, imp_adas(1)%n_Z
+       Z_eff = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
+     end do
+     Z_eff = Z_eff / scalars(i,5)  
+     scalars(inode,s_radiation+5) = Z_eff
+
+     ! This is to represent the dependence on Z_eff in resistivity
+     eta_coef = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2) 
+     eta_coef = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
+
+     eta_Sp       = eta_Sp * eta_coef
+
   !-------------------------------------------
   ! --- Radiative function, if flag_adas is enabled use interpolation, if not use simple model
   ! ------------------------------------------
@@ -1083,6 +1099,7 @@ enddo  ! n_elements
      scalars(i,s_radiation+2) = (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad
      scalars(i,s_radiation+3) = (2./(3. * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
      scalars(i,s_radiation+4) = Z_imp
+     scalars(i,s_radiation+5) = Z_eff
 
    end do
  endif
@@ -1205,7 +1222,7 @@ if (SI_units) then
   if (include_radiation) then
    scalars(i,s_radiation+1) = scalars(i,s_radiation+1)/(K_BOLTZ*MU_ZERO)
    scalars(i,s_radiation+2) = scalars(i,s_radiation+2)/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)
-   scalars(i,s_radiation+3) = scalars(i,s_radiation+3)/(((central_mass*MASS_PROTON*central_density*1.d20)**0.5)*(MU_ZERO**1.5)) 
+   scalars(i,s_radiation+3) = scalars(i,s_radiation+3)/(2.d0/3.d0*((central_mass*MASS_PROTON*central_density*1.d20)**0.5)*(MU_ZERO**1.5)) 
    scalars(i,s_radiation+4) = scalars(i,s_radiation+4)
   end if
 #endif /*(JOREK_MODEL >= 500)*/

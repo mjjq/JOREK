@@ -259,15 +259,16 @@ do i=1,n_ext
   df2_ext(i) = df2_ext(i) * (0.5d0 - 0.5d0*tanh1)
   !rho_ext(i) = rho_ext(i) * (0.5d0 - 0.5d0*tanh1)
   if (allocated(ne_spline)) then
-    rho_ext(i) = rho_ext(i) * (ne_spline(i) * (0.5d0 - 0.5d0*tanh1) + 1.d-2 * (0.5 + 0.5*tanh1))
+    !rho_ext(i) = rho_ext(i) * ne_spline(i)
+    rho_ext(i) = rho_ext(i) * ne_spline(i) * (0.5d0 - 0.5d0*tanh1) + 1.d-2 * (0.5 + 0.5*tanh1)
   else
-    rho_ext(i) = rho_ext(i) * ((0.5d0 - 0.5d0*tanh1) + 1.d-2 * (0.5 + 0.5*tanh1))
+    rho_ext(i) = rho_ext(i) * (0.5d0 - 0.5d0*tanh1) + 1.d-2 * (0.5 + 0.5*tanh1)
   end if
   !T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0 
   if (allocated(ne_spline)) then
-    T_ext(i)   = T_ext(i)   / (ne_spline(i) * (0.5d0 - 0.5d0*tanh1)+ 1.d-2 * (0.5 + 0.5*tanh1)) * zmu0
+    T_ext(i)   = T_ext(i) * zmu0 * (0.5d0 - 0.5d0*tanh1) / rho_ext(i) + 1.d-5 * (0.5 + 0.5*tanh1)
   else
-    T_ext(i)   = T_ext(i)   * ((0.5d0 - 0.5d0*tanh1) + 1.d-2 * (0.5 + 0.5*tanh1)) * zmu0
+    T_ext(i)   = T_ext(i) * zmu0 * (0.5d0 - 0.5d0*tanh1) + 1.d-5 * (0.5 + 0.5*tanh1)
   end if
   p_ext(i)   = rho_ext(i) * T_ext(i)
 enddo

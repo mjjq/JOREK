@@ -459,9 +459,11 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   if ( visco_T_dependent ) then
     visco_Te	 =   visco * (Te0_corr/Te_0)**(-1.5d0)
     dvisco_dTe   =  - visco * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
+    d2visco_dTe2 =   visco * (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0)
   else
-    visco_Te   = visco
-    dvisco_dTe = 0.d0
+    visco_Te     = visco
+    dvisco_dTe   = 0.d0
+    d2visco_dTe2 = 0.d0
   end if
   
   ! -------------------------------------------------------------

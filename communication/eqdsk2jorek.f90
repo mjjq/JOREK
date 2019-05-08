@@ -3,6 +3,8 @@
 ! little program to construct an input file for jorek out of data
 ! in a eqdsk file
 !                         Guido Huysmans,          date : 14-12-2010
+!
+! Some documentation can be found here: https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
 !--------------------------------------------------------------------
 implicit none
 
@@ -24,11 +26,15 @@ real*8             :: psi_sep, sig_sep, tanh1, zmu0, zn0, zmd
 real*8             :: xb ,xe, yb, ye, smth, fp, fout
 integer            :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt,nx,ny, i1, j1
 integer            :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext
-character          :: AA*52
+character          :: AA*52, tokamak_name*50
 
 !----------------------------- read eqdsk file -----------
 
 write(*,*) ' EQDSK to JOREK2 '
+
+tokamak_name = 'DIII-D' ! 'JET' 'ITER'
+
+write(*,*) 'Tokamak = ', tokamak_name
 
 read(5,'(A52,2i4)') AA,nr,nz
 
@@ -81,50 +87,87 @@ do i=1,nz
   yy(i) = zmid + zdim*(real(i-1)/real(nz-1)-0.5)
 enddo     
 
-!--------------------close fit to ITER wall
-ellip  = 2.0
-tria_u = 0.55
-tria_l = 0.65
-quad_u = -0.1
-quad_l = 0.15
-n_tht   = 257
-r0     = 6.2
-z0     = 0.1
-a0     = 2.25 
+if (tokamak_name == 'ITER') then
 
-!-------------------- contour outside ITER wall
-ellip  = 2.1
-tria_u = 0.58
-tria_l = 0.65
-quad_u = -0.12
-quad_l = -0.
-n_tht   = 257
-r0     = 6.2
-z0     = -0.05
-a0     = 2.34 
+  !--------------------close fit to ITER wall
+  ellip  = 2.0
+  tria_u = 0.55
+  tria_l = 0.65
+  quad_u = -0.1
+  quad_l = 0.15
+  n_tht   = 257
+  r0     = 6.2
+  z0     = 0.1
+  a0     = 2.25 
 
-!-------------------- contour outside JET wall
-ellip  = 1.85
-tria_u = 0.4
-tria_l = 0.4
-quad_u = -0.2
-quad_l = -0.2
-n_tht   = 257
-r0     = 2.9
-z0     = 0.1
-a0     = 1.08
+  !-------------------- contour outside ITER wall
+  ellip  = 2.1
+  tria_u = 0.58
+  tria_l = 0.65
+  quad_u = -0.12
+  quad_l = -0.
+  n_tht   = 257
+  r0     = 6.2
+  z0     = -0.05
+  a0     = 2.34 
 
-!-------------------- contour outside DIII-D wall
-ellip  = 1.85
-tria_u = 0.4
-tria_l = 0.4
-quad_u = -0.2
-quad_l = -0.2
-n_tht   = 257
-r0     = 1.7
-z0     = 0.
-a0     = 0.7
+else if (tokamak_name == 'JET') then
+  
+  !-------------------- contour outside JET wall
+  ! blue contour in https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
+  ellip  = 1.85
+  tria_u = 0.4
+  tria_l = 0.4
+  quad_u = -0.2
+  quad_l = -0.2
+  n_tht   = 257
+  r0     = 2.9
+  z0     = 0.1
+  a0     = 1.08
 
+  !-------------------- contour to avoid too long divertor legs
+  ! red contour in https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
+  ellip  = 1.7
+  tria_u = 0.4
+  tria_l = 0.4
+  quad_u = -0.4
+  quad_l = -0.2
+  n_tht   = 257
+  r0     = 2.85
+  z0     = 0.15
+  a0     = 1.1
+
+else if (tokamak_name == 'DIII-D') then
+
+  !-------------------- contour outside DIII-D wall
+  ellip  = 1.85
+  tria_u = 0.4
+  tria_l = 0.4
+  quad_u = -0.2
+  quad_l = -0.2
+  n_tht   = 257
+  r0     = 1.7
+  z0     = 0.
+  a0     = 0.7
+  
+  !-------------------- Atomic physics JOREK/NIMROD/M3D-C1 benchmark case (paper by B. Lyons)
+  ellip  = 1.35/0.7
+  tria_u = 0.3
+  tria_l = 0.3
+  quad_u = 0.
+  quad_l = 0.
+  n_tht   = 257
+  r0     = 1.7
+  z0     = 0.
+  a0     = 0.7
+
+else
+
+  write(*,*) 'Tokamak name not or wrongly specified, stopping'
+  stop
+
+end if  
+  
 PI = 2.d0 * asin(1.d0)
 
 allocate(r_bnd(n_tht),z_bnd(n_tht),psi_bnd(n_tht))
@@ -139,7 +182,10 @@ yb = yy(1)
 ye = yy(nz)
 kx = 3
 ky = 3
-smth = 1.d-6
+!beware, the smoothing parameter smth can strongly affect the interpolation routine and it should always be checked that the resulting interpolation along the JOREK boundary is smooth enough
+!refer to the "Hard-coded parameters" section of the wikipage https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
+!smth = 1.d-6 !this value can give a non-smooth interpolation close to the X-point, resulting in artifacts in the flux-aligned mesh computed by JOREK
+smth = 3.d-3 ! this is usually the best trade-off for good results both at and away from the Xpoint
 nxest = nr-5
 nyest = nz-5
 lwrk  = 4+nxest*(my+2*kx+5)+nyest*(2*ky+5)+mx*(kx+1)+my*(ky+1)+my+nxest
@@ -244,10 +290,19 @@ call lplot6(2,2,psi,df2,-n_psi,'df2')
 call lplot6(3,2,psi,p,-n_psi,'pressure')
 
 open(21,file='jorek_ffprime')
-do i=1,n_ext
-  write(21,*) psi_ext(i),-df2_ext(i)
-enddo
+! We change or not the sign of ff' depending on the sign of Ip because (we assume that) in EQDSK files, 
+! psi_axis is always < psi_boundary, whatever the direction of Ip.
+if (xip>0) then
+  do i=1,n_ext
+    write(21,*) psi_ext(i),-df2_ext(i) ! The minus sign is because ff' in JOREK is opposite to the usual ff' for historical reasons.
+  enddo  
+else
+  do i=1,n_ext
+    write(21,*) psi_ext(i),df2_ext(i) 
+  enddo  
+end if
 close(21)
+
 open(21,file='jorek_density')
 do i=1,n_ext
   write(21,*) psi_ext(i),rho_ext(i)
@@ -265,7 +320,7 @@ write(21,*)             '***************************************'
 write(21,'(A)')        '*  namelist produced by eqdsk2jorek   *'
 write(21,*)             '***************************************'
 write(21,*) AA
-write(21,'(A,f8.3,A)') ' magentic field : ',Bcentr,' T'
+write(21,'(A,f8.3,A)') ' magnetic field : ',Bcentr,' T'
 write(21,'(A,f8.3,A)') ' current        : ',xip/1d6,' MA'
 write(21,*)             '***************************************'
 write(21,*)
@@ -282,12 +337,23 @@ write(21,*)
 write(21,*) ' !_____________________________________boundary definition'
 write(21,*) ' mf = 0'
 write(21,*) ' n_boundary = ',n_tht
-do j=1,n_tht
-  write(21,'(A,i3,A,e16.8,A,i3,A,e16.8,A,i3,A,e16.8,A)'), &
-            '  R_boundary(',j,') =',r_bnd(j), &
-            ', Z_boundary(',j,') =',z_bnd(j), &
-            ', psi_boundary(',j,') =',psi_bnd(j),','
-enddo
+! We change or not the sign of psi_bnd depending on the sign of Ip because (we assume that) in EQDSK files, 
+! psi_axis is always < psi_boundary, whatever the direction of Ip.
+if (xip>0) then
+  do j=1,n_tht
+    write(21,'(A,i3,A,e16.8,A,i3,A,e16.8,A,i3,A,e16.8,A)'), &
+             '  R_boundary(',j,') =',r_bnd(j), &
+             ', Z_boundary(',j,') =',z_bnd(j), &
+             ', psi_boundary(',j,') =',psi_bnd(j),','
+  enddo
+else
+  do j=1,n_tht
+    write(21,'(A,i3,A,e16.8,A,i3,A,e16.8,A,i3,A,e16.8,A)'), &
+             '  R_boundary(',j,') =',r_bnd(j), &
+             ', Z_boundary(',j,') =',z_bnd(j), &
+             ', psi_boundary(',j,') =',-psi_bnd(j),','
+  enddo	     
+end if
 
 write(21,*) ' ellip  = ',ellip
 write(21,*) ' tria_u = ',tria_u
@@ -303,7 +369,11 @@ write(21,*) ' resistive_wall = .f.'
 
 write(21,*) ' R_geo = ',r0
 write(21,*) ' Z_geo = ',z0
-write(21,*) ' F0    = ',r0*bcentr
+if (tokamak_name=='JET') then
+  write(21,*) ' F0    = ',-2.96*bcentr ! By convention, the vacuum toroidal field is given at 2.96m in JET eqdsk files. 					
+else
+  write(21,*) ' F0    = ',-r0*bcentr
+end if
 write(21,*) ' amin  = 1.d0 ! scale factor for plasma size only'
 
 write(21,*)

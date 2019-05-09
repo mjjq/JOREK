@@ -51,6 +51,8 @@ program JOREK2
   use mod_element_rtree, only: populate_element_rtree
   use mod_interp
   use basis_at_gaussian, only: initialise_basis
+  use mod_expression, only: exprs_all_int, init_expr
+  use mod_integrals3D
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -154,6 +156,7 @@ program JOREK2
   real*8                   :: Rp, Zp, R_out,Z_out,s_out,t_out,P_s,P_t,P_st,P_ss,P_tt, psi
   real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
+  real*8,allocatable       :: res(:) 
   integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev
   logical                  :: is_local, file_exists
   integer                  :: i_elem, inode1, i_order, index_node1
@@ -176,6 +179,10 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
+
+  call init_expr()
+  allocate(res(exprs_all_int%n_expr+1))
+  res = 0.d0   
   
   !***********************************************************************
   !*                  intialisation                                      *
@@ -1129,15 +1136,19 @@ required = 0
        endif
        write(*,132)
        write(*,*)
+    endif   !--- my_id=0
 
-       ! --- Output energies and growth_rates to text files during the code run
-       call write_live_data(index_now)
-       call write_live_data_vacuum(index_now, diag_coil_curr)
+    call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
+
+    if (my_id .eq. 0 ) then
+      ! --- Output energies and growth_rates to text files during the code run
+      call write_live_data(index_now)
+      call write_live_data_vacuum(index_now, diag_coil_curr)
 #ifdef JECCD
-       call write_live_data2(index_now)
-       call write_live_data3(index_now)
+      call write_live_data2(index_now)
+      call write_live_data3(index_now)
 #ifdef JEC2DIAG
-       call write_live_data4(index_now)
+      call write_live_data4(index_now)
 #endif
 #endif
     endif

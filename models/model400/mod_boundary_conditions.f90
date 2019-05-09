@@ -567,6 +567,7 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
+    use mod_locate_irn_jcn
     
     implicit none
     
@@ -626,6 +627,7 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: GAMMA
+    use mod_locate_irn_jcn
     
     implicit none
     

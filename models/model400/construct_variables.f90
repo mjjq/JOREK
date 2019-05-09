@@ -420,20 +420,8 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   
   ! --- Internal variables
   integer		      :: id
-  real*8		      :: psi_norm, psi_D
-  real*8		      :: atn_D, datn_D, atn_D_n, pol_D, dpol_D, D_min
-  real*8		      :: prof(1:3),Diff(1:3,1:10)
-  real*8                      :: Ti_min_Kpar, Te_min_Kpar
+  real*8		      :: psi_norm
   real*8		      :: V_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
-  real*8		      :: distance_xpoint
-  logical, parameter	      :: avoid_xpoint = .true.
-  real*8		      :: slope, offset, Z_tmp
-  real*8		      :: Rline1, Zline1
-  real*8		      :: Rline2, Zline2
-  real*8		      :: Rline3, Zline3
-  real*8		      :: Rline4, Zline4
-  real*8                      :: target_buffer_width, tan_width
-  real*8                      :: drho_dpsi, grad_psi
   real*8		      :: zTi_x, zTi_y
   real*8		      :: zTe_x, zTe_y
   real*8		      :: zn_x,  zn_y
@@ -443,8 +431,8 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Temperature dependent resistivity
   ! -------------------------------------
   if ( eta_T_dependent ) then
-    eta_Te	     =   eta   * (Te0_corr / Te_0)**(-1.5d0)
-    deta_dTe	 = - eta   * (1.5d0)  * Te0_corr **(-2.5d0) * Te_0**(1.5d0)
+    eta_Te       =   eta   * (Te0_corr / Te_0)**(-1.5d0)
+    deta_dTe     = - eta   * (1.5d0)  * Te0_corr **(-2.5d0) * Te_0**(1.5d0)
     d2eta_d2Te   =   eta   * (3.75d0) * Te0_corr **(-3.5d0) * Te_0**(1.5d0)
   else
     eta_Te     = eta
@@ -575,56 +563,6 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Diamagnetic terms, avoid problems at the target...
   ! ------------------------------------------------------
   tau_IC = tauIC
-  if (Wdia) W_dia = 1.d0
-  if (avoid_xpoint) then
-    if (xpoint2 .and.  (xcase2 .ne. 2) ) then
-      distance_xpoint = sqrt( (x_g - R_xpoint(1))**2 + (y_g - Z_xpoint(1))**2 )
-      tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.05d0)/0.01d0 ) )
-    endif
-    if (xpoint2 .and.  (xcase2 .ne. 1) ) then
-      distance_xpoint = sqrt( (x_g - R_xpoint(2))**2 + (y_g - Z_xpoint(2))**2 )
-      tau_IC = tau_IC * (0.5d0 - 0.5d0 * tanh( -(distance_xpoint - 0.15d0)/0.01d0 ) )
-    endif
-  endif
-
-  ! --- Switch off diamagnetic terms in private region?
-  if ( (ps0 .le. psi_bnd) .and. (y_g .le. Z_xpoint(1)) ) tau_IC  = 0.d0
-  !if ( (ps0 .le. psi_bnd) .and. (y_g .le. Z_xpoint(1)) ) visco_Te = visco_Te + 1.d3 * visco_Te
-  !if ( ( (ps0-psi_axis)/(psi_bnd-psi_axis) .le. 1.01d0) .and. (y_g .le. Z_xpoint(1)) ) tau_IC  = 0.d0
-  !if ( ( (ps0-psi_axis)/(psi_bnd-psi_axis) .le. 1.01d0) .and. (y_g .le. Z_xpoint(1)) ) visco_Te = visco_Te + 1.d3 * visco_Te
-
-  ! --- Viscosity buffer (and other buffers) at targets
-  if (R_limiter(1) .ne. 0.d0) then
-    Rline1 = R_limiter(1)  ; Zline1 = Z_limiter(1)
-    Rline2 = R_limiter(2)  ; Zline2 = Z_limiter(2)
-    Rline3 = R_limiter(3)  ; Zline3 = Z_limiter(3)
-    Rline4 = R_limiter(4)  ; Zline4 = Z_limiter(4)
-  else
-    Rline1 = 0.d0  ; Zline1 = -10.d0
-    Rline2 = 1.d0  ; Zline2 = -11.d0
-    Rline3 = 0.d0  ; Zline3 = -10.d0
-    Rline4 = 1.d0  ; Zline4 = -11.d0
-  endif
-  if (R .lt. R_xpoint(1)) then
-    slope  = (Zline1 - Zline2) / (Rline1 - Rline2)
-    offset = (Rline1*Zline2 - Rline2*Zline1) / (Rline1 - Rline2)
-  else
-    slope  = (Zline3 - Zline4) / (Rline3 - Rline4)
-    offset = (Rline3*Zline4 - Rline4*Zline3) / (Rline3 - Rline4)
-  endif
-  Z_tmp = offset + slope * R
-  target_buffer_width = 0.02d0
-  tan_width           = target_buffer_width / 1.d0
-  ! --- Choose buffers
-  !visco_Te   = visco_Te + 1.d3 * visco_Te * (0.5d0 - 0.5d0 * tanh(  (abs(y_g - Z_tmp) - target_buffer_width)/tan_width ))
-  !eta_Te     = eta_Te   + 1.d3 * eta_Te   * (0.5d0 - 0.5d0 * tanh(  (abs(y_g - Z_tmp) - target_buffer_width)/tan_width ))
-  !dvisco_dTe = dvisco_dTe                 * (0.5d0 - 0.5d0 * tanh( -(abs(y_g - Z_tmp) - target_buffer_width)/tan_width ))
-  !deta_dTe   = deta_dTe                   * (0.5d0 - 0.5d0 * tanh( -(abs(y_g - Z_tmp) - target_buffer_width)/tan_width ))
-  tau_IC     = tau_IC                     * (0.5d0 - 0.5d0 * tanh( -(abs(y_g - Z_tmp) - target_buffer_width)/tan_width ))
-
-  ! --- Viscosity buffer for the type-2 boundary
-  !visco_Te   = visco_Te + 1.d3 * visco_Te * (0.5d0 - 0.5d0 * tanh(  -( psi_norm - (rho_coef(5)+4*rho_coef(4)) )/rho_coef(4) ))
-  !tau_IC     = tau_IC                     * (0.5d0 - 0.5d0 * tanh(   ( psi_norm - (rho_coef(5)+4*rho_coef(4)) )/rho_coef(4) ))
 
   ! -------------------------
   ! --- Neoclassical rotation
@@ -693,6 +631,18 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     !heat_source_e = 1.d-5
   endif
     
+
+  ! ------------------------------------------------------
+  ! --- Diamagnetic viscosity
+  ! ------------------------------------------------------
+  if (Wdia) then
+    W_dia = + tau_IC /r0_corr2    * (Pi0_xx + Pi0_x/R + Pi0_yy) &
+            - tau_IC /r0_corr2**2 * (r0_x*Pi0_x + r0_y*Pi0_y)
+  else
+    W_dia = 0.d0
+  endif
+  
+
   return
 
 end subroutine ELM_build_diffusivities_and_sources

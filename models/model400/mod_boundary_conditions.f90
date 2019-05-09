@@ -144,41 +144,6 @@ contains
     ! --- Retrieve RMP profiles (END)
     ! -------------------------------
     
-<<<<<<< HEAD
-    ! --- when we use murge assembly we first count entries then we had them.
-    if (use_murge .and. use_murge_element) then
-      loop_nbr   = 2
-      cnt	 = 0
-      cnt_prod   = 0
-      only_count = .true.
-    else
-    ! --- No need to do 2 loops when we build irn_glob, jcn_glob, A_glob.
-      loop_nbr   = 1
-      only_count = .false.
-    end if
-
-    ! --- Main loop over MURGE (if used)
-    do loop = 1, loop_nbr
-
-#ifdef USE_MURGE
-      if (loop == 2) then
-        only_count = .false.
-        write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
-        if (.not. solve_only) then
-          CALL MURGE_ASSEMBLYBEGIN( murge_id, murge_global_n, cnt,	       &
-               &		    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,    &
-               &		    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-        endif
-        if (gmres) then
-          CALL MURGE_ASSEMBLYBEGIN( murge_id_prod, murge_global_n_prod, cnt_prod, &
-               &		    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,	  &
-               &		    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-        endif
-      endif
-#endif
-
-=======
->>>>>>> develop
       ! --- Loop on each element
       do i=1, n_local_elms
         ielm = local_elms(i)
@@ -602,11 +567,6 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
-<<<<<<< HEAD
-    USE murge_module, ONLY : use_murge, use_murge_element, murge_add_one_entry, vertex_is_local
-    use mod_locate_irn_jcn
-=======
->>>>>>> develop
     
     implicit none
     
@@ -666,11 +626,6 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: GAMMA
-<<<<<<< HEAD
-    USE murge_module, ONLY : use_murge, use_murge_element, murge_add_one_entry, vertex_is_local
-    use mod_locate_irn_jcn
-=======
->>>>>>> develop
     
     implicit none
     

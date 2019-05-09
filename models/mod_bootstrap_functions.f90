@@ -23,7 +23,7 @@ contains
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
-subroutine bootstrap_current(minRad, R, Z,                   &
+subroutine bootstrap_current(R, Z,                           &
                              R_axis, Z_axis, psi_axis,       &
 			     R_xpoint, Z_Xpoint, psi_bnd,    &
                              psi_norm, ps0, ps0_x, ps0_y,    &
@@ -41,7 +41,7 @@ subroutine bootstrap_current(minRad, R, Z,                   &
 
   implicit none
   ! --- Routine parameters
-  real*8, intent(in)  :: minRad, R, Z
+  real*8, intent(in)  :: R, Z
   real*8, intent(in)  :: R_axis, Z_axis, psi_axis
   real*8, intent(in)  :: R_xpoint(2), Z_xpoint(2), psi_bnd
   real*8, intent(in)  :: psi_norm
@@ -234,7 +234,7 @@ end subroutine bootstrap_current
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
-subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd)
 
   use data_structure
   use phys_module
@@ -246,7 +246,6 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
   type (type_element_list),     intent(inout) :: element_list
   real*8, 			intent(in)    :: R_axis, Z_axis
   real*8, 			intent(in)    :: psi_axis, psi_bnd
-  real*8, 			intent(inout) :: minRad
   
   ! --- Internal parameters
   type (type_surface_list) 	:: surface_list, flux_list
@@ -1081,7 +1080,7 @@ end subroutine bootstrap_spline3_eval_all
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
-subroutine bootstrap_current_wilson(minRad, R, R_axis,    &
+subroutine bootstrap_current_wilson(R, R_axis,    &
                                     psi_axis, psi_bnd,    &
                                     psi_norm,             &
                                     ps0, ps0_x, ps0_y,    &
@@ -1099,7 +1098,7 @@ subroutine bootstrap_current_wilson(minRad, R, R_axis,    &
 
   implicit none
   ! --- Routine parameters
-  real*8, intent(in)  :: minRad, R, R_axis
+  real*8, intent(in)  :: R, R_axis
   real*8, intent(in)  :: psi_axis, psi_bnd
   real*8, intent(in)  :: psi_norm
   real*8, intent(in)  :: ps0, ps0_x, ps0_y

@@ -7,7 +7,6 @@ subroutine preset_parameters
   
   use phys_module
   use mumps_module,  only: use_mumps, no_zeros_mumps
-  use murge_module,  only: use_murge, use_murge_element
   use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
   use wsmp_module,   only: use_wsmp
   
@@ -199,9 +198,13 @@ subroutine preset_parameters
 
   zjz_0 =  0.1173d0;   T_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
   zjz_1 =  0.0d0   ;   T_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0
+  
+  Te_0 = 5.d-7; Te_1 = 5.d-9; Ti_0 = 5.d-7; Ti_1 = 5.d-9
 
   zj_coef     = 0.d0;  zj_coef(1)  = -1.d0
   T_coef      = 0.d0;  T_coef(1)   = -1.d0
+  Te_coef     = 0.d0;  Te_coef(1)  = -1.d0
+  Ti_coef     = 0.d0;  Ti_coef(1)  = -1.d0
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
 
@@ -262,6 +265,11 @@ subroutine preset_parameters
   gmres_4            = 1.d3                 ! error estimate GMRES (ratio preconditioned versus non-preconditioned error
   gmres_m            = 20                   ! gmres restart parameter
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
+  
+  ! --- deprecated, code will stop if these parameters are set to .true. ---
+  use_murge          = .false.
+  use_murge_element  = .false.
+  ! ------------------------------------------------------------------------
 
   tgnum              = 0.d0                 ! Taylor-Galerkin Stabilisation coefficients (0.d0 == TG not used)
 
@@ -269,8 +277,6 @@ subroutine preset_parameters
   
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver
-  use_murge          = .false.              ! Use MURGE interface to PASTIX solver
-  use_murge_element  = .false.              ! Build the matrix through murge, not with a CSC.
   use_wsmp           = .false.              ! Use WSMP solver (use with care, still in development!)
   
   refinement         = .false.              ! enable mesh refinement

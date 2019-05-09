@@ -21,8 +21,8 @@ subroutine sources(xpoint2, xcase2, Z, Z_xpoint, psi, psi_axis, psi_bnd, particl
   ! --- Local variables
   real*8 :: psi_n, sig_Ti, sig_Te
   
-  sig_Ti = 0.01
-  sig_Te = 0.01
+!  sig_Ti = 0.01
+!  sig_Te = 0.01
 
   psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
   
@@ -35,18 +35,23 @@ subroutine sources(xpoint2, xcase2, Z, Z_xpoint, psi, psi_axis, psi_bnd, particl
   particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - particlesource_psin)/particlesource_sig))   &
       + edgeparticlesource * (0.5d0 + 0.5d0*tanh((psi_n - edgeparticlesource_psin)/edgeparticlesource_sig))   &
       + particlesource_gauss * exp(-(psi_n - particlesource_gauss_psin)**2/(particlesource_gauss_sig**2))
-  if(xcase2 .eq. 1) then
-    heat_source_i   = heatsource_i   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Ti )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01))
-    heat_source_e   = heatsource_e   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Te )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01))
-  endif
-  if(xcase2 .eq. 2) then
-    heat_source_i   = heatsource_i   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Ti )) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
-    heat_source_e   = heatsource_e   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Te )) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
-  endif
-  if(xcase2 .eq. 3) then
-    heat_source_i   = heatsource_i   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Ti )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01)) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
-    heat_source_e   = heatsource_e   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Te )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01)) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
-  endif
+  heat_source_i     = heatsource_i     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
+      + heatsource_gauss * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+  heat_source_e     = heatsource_e     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
+      + heatsource_gauss * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+
+!  if(xcase2 .eq. 1) then
+!    heat_source_i   = heatsource_i   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Ti )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01))
+!    heat_source_e   = heatsource_e   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Te )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01))
+!  endif
+!  if(xcase2 .eq. 2) then
+!    heat_source_i   = heatsource_i   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Ti )) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
+!    heat_source_e   = heatsource_e   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Te )) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
+!  endif
+!  if(xcase2 .eq. 3) then
+!    heat_source_i   = heatsource_i   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Ti )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01)) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
+!    heat_source_e   = heatsource_e   * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig_Te )) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01)) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
+!  endif
 
   return
 end subroutine sources

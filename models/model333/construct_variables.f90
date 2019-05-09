@@ -254,7 +254,7 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
   T0_yy    = get_deriv_yy(T0_s, T0_t, T0_ss, T0_st, T0_tt)
   T0_xy    = get_deriv_xy(T0_s, T0_t, T0_ss, T0_st, T0_tt)
 
-  ! --- Variable 6
+  ! --- Variable 7
   Vpar0_x  = get_deriv_x (Vpar0_s, Vpar0_t)
   Vpar0_y  = get_deriv_y (Vpar0_s, Vpar0_t)
   Vpar0_xx = get_deriv_xx(Vpar0_s, Vpar0_t, Vpar0_ss, Vpar0_st, Vpar0_tt)
@@ -345,7 +345,7 @@ end subroutine ELM_build_variables
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
-subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, i_plane)
+subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, i_plane)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_build_diffusivities_and_sources
 
   ! --- Modules
@@ -366,7 +366,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   logical		      :: xpoint2
   integer		      :: xcase2
   integer		      :: i_plane
-  real*8		      :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
+  real*8		      :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
   
   ! --- Internal variables
   real*8		      :: psi_norm
@@ -382,7 +382,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Temperature dependent resistivity
   ! -------------------------------------
   if ( eta_T_dependent ) then
-    eta_T     =   eta   * (T0_corr/T_0)**(-1.5d0)
+    eta_T     =   eta   * (T0_corr / T_0)**(-1.5d0)
     deta_dT   = - eta	* (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
     d2eta_d2T =   eta	* (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
   else
@@ -479,7 +479,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     Ti0   = T0   / 2.d0 ; Te0	= T0   / 2.d0
     Ti0_x = T0_x / 2.d0 ; Te0_x = T0_x / 2.d0
     Ti0_y = T0_y / 2.d0 ; Te0_y = T0_y / 2.d0
-    call bootstrap_current(minRad, R, y_g,                       &
+    call bootstrap_current(R, y_g,                               &
                            R_axis,   Z_axis,   psi_axis,         &
 			   R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
 			   ps0, ps0_x, ps0_y,                    &
@@ -499,7 +499,7 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     zTe_y = zTi_y
     zn_x  = dn_dpsi * ps0_x
     zn_y  = dn_dpsi * ps0_y
-    call bootstrap_current(minRad, R, y_g,                       &
+    call bootstrap_current(R, y_g,                               &
                            R_axis,   Z_axis,   psi_axis,         &
 			   R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
 			   ps0, ps0_x, ps0_y,                    &
@@ -561,13 +561,13 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
       call velocity(xpoint2, xcase2, y_g, z_xpoint, ps0, psi_axis, psi_bnd, V_source,               &
         dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2,           &
         dV_dpsi2_dz)
-      if (normalized_velocity_profile) then
-        Vt0_x = dV_dpsi_source * ps0_x
-        Vt0_y = dV_dz_source + dV_dpsi_source * ps0_y
-      else
-        Omega_tor0_x = dV_dpsi_source * ps0_x
-        Omega_tor0_y = dV_dz_source + dV_dpsi_source * ps0_y
-      end if
+    end if
+    if (normalized_velocity_profile) then
+      Vt0_x = dV_dpsi_source * ps0_x
+      Vt0_y = dV_dz_source + dV_dpsi_source * ps0_y
+    else
+      Omega_tor0_x = dV_dpsi_source * ps0_x
+      Omega_tor0_y = dV_dz_source + dV_dpsi_source * ps0_y
     end if
     
     ! --- Pellet Source

@@ -40,6 +40,7 @@ subroutine read_num_profiles(my_id)
     call check_num_prof(num_Te, num_Te_x, num_Te_y0, num_Te_len, 'Te', check_positive=.true.)
     Te_1 = num_Te_y0(num_Te_len)
     num_Te_y0 = num_Te_y0 - Te_1
+    Te_0 = num_Te_y0(1)
   end if
   
   num_Ti = ( Ti_file /= 'none' )
@@ -48,6 +49,12 @@ subroutine read_num_profiles(my_id)
     call check_num_prof(num_Ti, num_Ti_x, num_Ti_y0, num_Ti_len, 'Ti', check_positive=.true.)
     Ti_1 = num_Ti_y0(num_Ti_len)
     num_Ti_y0 = num_Ti_y0 - Ti_1
+    Ti_0 = num_Ti_y0(1)
+  end if
+  
+  if ( jorek_model == 400 ) then
+    T_0 = Te_0 + Ti_0
+    T_1 = Te_1 + Ti_1
   end if
   
   num_ffprime = ( ffprime_file /= 'none' )
@@ -97,7 +104,7 @@ subroutine read_num_profiles(my_id)
     end if
     ! (no additional checks done at present)
   end if
-  
+
   num_rot = ( rot_file /= 'none' )
   if ( (num_rot) .and. ( my_id == 0 ) ) then
     call readProf(num_rot_x, num_rot_y0, num_rot_len, rot_file)

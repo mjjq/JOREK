@@ -166,7 +166,7 @@ call initialise_parameters(my_id, "__NO_FILENAME__")
 call det_modes()
 
 ! --- Read rst file
-call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 ! --- Define the basis functions at the Gaussian points
 call initialise_basis

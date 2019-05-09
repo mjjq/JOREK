@@ -10,7 +10,6 @@ subroutine log_parameters(my_id, short)
 
 use phys_module
 use mumps_module,  only: use_mumps, no_zeros_mumps
-use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_cuda_nbr
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
 use wsmp_module,   only: use_wsmp
 use vacuum
@@ -84,11 +83,8 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
-  write(*,'(1x,a)',advance='no') ' USE_MURGE           : '
 #ifdef USE_MURGE
-  write(*,*) 'on'
-#else
-  write(*,*) 'off'
+  write(*,*) 'WARNING: USE_MURGE IS NOT SUPPORTED ANY MORE'
 #endif
 
   write(*,'(1x,a)',advance='no') ' USE_HIPS            : '
@@ -343,8 +339,8 @@ if (my_id == 0) then
     end if
     write(*,REAL_FMT) 'heatsource_e           ', heatsource_e
     write(*,REAL_FMT) 'heatsource_i           ', heatsource_i
-    write(*,REAL_FMT) 'K_e_par                ', K_e_par
-    write(*,REAL_FMT) 'K_i_par                ', K_i_par
+    write(*,REAL_FMT) 'ZK_e_par               ', ZK_e_par
+    write(*,REAL_FMT) 'ZK_i_par               ', ZK_i_par
   end if
 
   if ( .not. num_ffprime ) then
@@ -520,10 +516,6 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'use_mumps             ', use_mumps
   write(*,LOGI_FMT) 'use_wsmp              ', use_wsmp
   write(*,LOGI_FMT) 'use_pastix            ', use_pastix
-  write(*,LOGI_FMT) 'use_murge             ', use_murge
-  write(*,LOGI_FMT) 'use_murge_element     ', use_murge_element
-  write(*,LOGI_FMT) 'murge_with_starpu     ', murge_with_starpu
-  write(*,INTG_FMT) 'murge_cuda_nbr        ', murge_cuda_nbr
   write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot
   write(*,INTG_FMT) 'pastix_maxthrd        ', pastix_maxthrd

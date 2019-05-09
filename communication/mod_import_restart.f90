@@ -893,7 +893,143 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
     part_src_out_t = 0.d0
     call HDF5_array1D_reading(file_id,part_src_out_t,'part_src_out_t')
-    
+
+    if (allocated(E_tot_t)) call tr_deallocate(E_tot_t,"E_tot_t",CAT_UNKNOWN)
+    call tr_allocate(E_tot_t,1,index_start+nstep,"E_tot_t",CAT_UNKNOWN)
+    E_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,E_tot_t,'E_tot_t')
+
+    if (allocated(helicity_tot_t)) call tr_deallocate(helicity_tot_t,"helicity_tot_t",CAT_UNKNOWN)
+    call tr_allocate(helicity_tot_t,1,index_start+nstep,"helicity_tot_t",CAT_UNKNOWN)
+    helicity_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,helicity_tot_t,'helicity_tot_t')
+
+    if (allocated(thermal_tot_t)) call tr_deallocate(thermal_tot_t,"thermal_tot_t",CAT_UNKNOWN)
+    call tr_allocate(thermal_tot_t,1,index_start+nstep,"thermal_tot_t",CAT_UNKNOWN)
+    thermal_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,thermal_tot_t,'thermal_tot_t')
+
+    if (allocated(kin_par_tot_t)) call tr_deallocate(kin_par_tot_t,"kin_par_tot_t",CAT_UNKNOWN)
+    call tr_allocate(kin_par_tot_t,1,index_start+nstep,"kin_par_tot_t",CAT_UNKNOWN)
+    kin_par_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,kin_par_tot_t,'kin_par_tot_t')
+
+    if (allocated(kin_perp_tot_t)) call tr_deallocate(kin_perp_tot_t,"kin_perp_tot_t",CAT_UNKNOWN)
+    call tr_allocate(kin_perp_tot_t,1,index_start+nstep,"kin_perp_tot_t",CAT_UNKNOWN)
+    kin_perp_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,kin_perp_tot_t,'kin_perp_tot_t')
+
+    if (allocated(Ip_tot_t)) call tr_deallocate(Ip_tot_t,"Ip_tot_t",CAT_UNKNOWN)
+    call tr_allocate(Ip_tot_t,1,index_start+nstep,"Ip_tot_t",CAT_UNKNOWN)
+    Ip_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,Ip_tot_t,'Ip_tot_t')
+
+    if (allocated(ohmic_tot_t)) call tr_deallocate(ohmic_tot_t,"ohmic_tot_t",CAT_UNKNOWN)
+    call tr_allocate(ohmic_tot_t,1,index_start+nstep,"ohmic_tot_t",CAT_UNKNOWN)
+    ohmic_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,ohmic_tot_t,'ohmic_tot_t')
+
+    if (allocated(Wmag_tot_t)) call tr_deallocate(Wmag_tot_t,"Wmag_tot_t",CAT_UNKNOWN)
+    call tr_allocate(Wmag_tot_t,1,index_start+nstep,"Wmag_tot_t",CAT_UNKNOWN)
+    Wmag_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,Wmag_tot_t,'Wmag_tot_t')
+
+    if (allocated(Magwork_tot_t)) call tr_deallocate(Magwork_tot_t,"Magwork_tot_t",CAT_UNKNOWN)
+    call tr_allocate(Magwork_tot_t,1,index_start+nstep,"Magwork_tot_t",CAT_UNKNOWN)
+    Magwork_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,Magwork_tot_t,'Magwork_tot_t')
+
+    if (allocated(flux_qpar_t)) call tr_deallocate(flux_qpar_t,"flux_qpar_t",CAT_UNKNOWN)
+    call tr_allocate(flux_qpar_t,1,index_start+nstep,"flux_qpar_t",CAT_UNKNOWN)
+    flux_qpar_t = 0.d0
+    call HDF5_array1D_reading(file_id,flux_qpar_t,'flux_qpar_t')
+
+    if (allocated(flux_qperp_t)) call tr_deallocate(flux_qperp_t,"flux_qperp_t",CAT_UNKNOWN)
+    call tr_allocate(flux_qperp_t,1,index_start+nstep,"flux_qperp_t",CAT_UNKNOWN)
+    flux_qperp_t = 0.d0
+    call HDF5_array1D_reading(file_id,flux_qperp_t,'flux_qperp_t')
+
+    if (allocated(flux_kinpar_t)) call tr_deallocate(flux_kinpar_t,"flux_kinpar_t",CAT_UNKNOWN)
+    call tr_allocate(flux_kinpar_t,1,index_start+nstep,"flux_kinpar_t",CAT_UNKNOWN)
+    flux_kinpar_t = 0.d0
+    call HDF5_array1D_reading(file_id,flux_kinpar_t,'flux_kinpar_t')
+
+    if (allocated(flux_Pvn_t)) call tr_deallocate(flux_Pvn_t,"flux_Pvn_t",CAT_UNKNOWN)
+    call tr_allocate(flux_Pvn_t,1,index_start+nstep,"flux_Pvn_t",CAT_UNKNOWN)
+    flux_Pvn_t = 0.d0
+    call HDF5_array1D_reading(file_id,flux_Pvn_t,'flux_Pvn_t')
+
+   if (allocated(dE_tot_dt)) call tr_deallocate(dE_tot_dt,"dE_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dE_tot_dt,1,index_start+nstep,"dE_tot_dt",CAT_UNKNOWN)
+    dE_tot_dt = 0.d0
+    call HDF5_array1D_reading(file_id,dE_tot_dt,'dE_tot_dt')
+
+    if (allocated(dWmag_tot_dt)) call tr_deallocate(dWmag_tot_dt,"dWmag_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dWmag_tot_dt,1,index_start+nstep,"dWmag_tot_dt",CAT_UNKNOWN)
+    dWmag_tot_dt = 0.d0
+    call HDF5_array1D_reading(file_id,dWmag_tot_dt,'dWmag_tot_dt')
+
+    if (allocated(dthermal_tot_dt)) call tr_deallocate(dthermal_tot_dt,"dthermal_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dthermal_tot_dt,1,index_start+nstep,"dthermal_tot_dt",CAT_UNKNOWN)
+    dthermal_tot_dt = 0.d0
+    call HDF5_array1D_reading(file_id,dthermal_tot_dt,'dthermal_tot_dt')
+
+    if (allocated(dkinperp_tot_dt)) call tr_deallocate(dkinperp_tot_dt,"dkinperp_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dkinperp_tot_dt,1,index_start+nstep,"dkinperp_tot_dt",CAT_UNKNOWN)
+    dkinperp_tot_dt = 0.d0
+    call HDF5_array1D_reading(file_id,dkinperp_tot_dt,'dkinperp_tot_dt')
+
+    if (allocated(dkinpar_tot_dt)) call tr_deallocate(dkinpar_tot_dt,"dkinpar_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dkinpar_tot_dt,1,index_start+nstep,"dkinpar_tot_dt",CAT_UNKNOWN)
+    dkinpar_tot_dt = 0.d0
+    call HDF5_array1D_reading(file_id,dkinpar_tot_dt,'dkinpar_tot_dt')
+
+    if (allocated(heat_src_tot_t)) call tr_deallocate(heat_src_tot_t,"heat_src_tot_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_tot_t,1,index_start+nstep,"heat_src_tot_t",CAT_UNKNOWN)
+    heat_src_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,heat_src_tot_t,'heat_src_tot_t')
+
+    if (allocated(part_src_tot_t)) call tr_deallocate(part_src_tot_t,"part_src_tot_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_tot_t,1,index_start+nstep,"part_src_tot_t",CAT_UNKNOWN)
+    part_src_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_src_tot_t,'part_src_tot_t')
+
+    if (allocated(li3_tot_t)) call tr_deallocate(li3_tot_t,"li3_tot_t",CAT_UNKNOWN)
+    call tr_allocate(li3_tot_t,1,index_start+nstep,"li3_tot_t",CAT_UNKNOWN)
+    li3_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,li3_tot_t,'li3_tot_t')
+
+    if (allocated(li3_t)) call tr_deallocate(li3_t,"li3_t",CAT_UNKNOWN)
+    call tr_allocate(li3_t,1,index_start+nstep,"li3_t",CAT_UNKNOWN)
+    li3_t = 0.d0
+    call HDF5_array1D_reading(file_id,li3_t,'li3_t')
+
+    if (allocated(viscopar_flux_t)) call tr_deallocate(viscopar_flux_t,"viscopar_flux_t",CAT_UNKNOWN)
+    call tr_allocate(viscopar_flux_t,1,index_start+nstep,"viscopar_flux_t",CAT_UNKNOWN)
+    viscopar_flux_t = 0.d0
+    call HDF5_array1D_reading(file_id,viscopar_flux_t,'viscopar_flux_t')
+
+    if (allocated(viscopar_dissip_tot_t)) call tr_deallocate(viscopar_dissip_tot_t,"viscopar_dissip_tot_t",CAT_UNKNOWN)
+    call tr_allocate(viscopar_dissip_tot_t,1,index_start+nstep,"viscopar_dissip_tot_t",CAT_UNKNOWN)
+    viscopar_dissip_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,viscopar_dissip_tot_t,'viscopar_dissip_tot_t')
+
+    if (allocated(thmwork_tot_t)) call tr_deallocate(thmwork_tot_t,"thmwork_tot_t",CAT_UNKNOWN)
+    call tr_allocate(thmwork_tot_t,1,index_start+nstep,"thmwork_tot_t",CAT_UNKNOWN)
+    thmwork_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,thmwork_tot_t,'thmwork_tot_t')
+
+    if (allocated(volume_t)) call tr_deallocate(volume_t,"volume_t",CAT_UNKNOWN)
+    call tr_allocate(volume_t,1,index_start+nstep,"volume_t",CAT_UNKNOWN)
+    volume_t = 0.d0
+    call HDF5_array1D_reading(file_id,volume_t,'volume_t')
+
+    if (allocated(area_t)) call tr_deallocate(area_t,"area_t",CAT_UNKNOWN)
+    call tr_allocate(area_t,1,index_start+nstep,"area_t",CAT_UNKNOWN)
+    area_t = 0.d0
+    call HDF5_array1D_reading(file_id,area_t,'area_t')
+
+ 
 #ifdef JECCD                   
     if (allocated(t_energies2))   call tr_deallocate(t_energies2,"t_energies2",CAT_UNKNOWN)
     call tr_allocate(t_energies2,1,n_tor_tmp,1,2,1,index_start+nstep, "t_energies2",CAT_UNKNOWN)

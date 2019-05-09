@@ -65,7 +65,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, resistive_wall, freeb_change_indices, &
                 wall_resistivity, wall_resistivity_fact,            &
-                use_mumps, use_pastix, &
+                use_mumps, use_pastix, use_murge, use_murge_element,&
                 use_wsmp,                                           &
                 pastix_smp_only, refinement, force_central_node,    &
                 grid_to_wall,                                       &

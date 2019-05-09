@@ -106,8 +106,8 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies_ylabel: Total integrated energies [J]'
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies_logy: 0'
-    write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies: %"time"           "Total energy"              "Magnetic"           "kinetic parallel"    &
-                                   "kinetic_perpendicular"                 "thermal_energy"     '
+    write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies: %"time"           "Total energy"              "Magnetic"           "Kinetic parallel"    &
+                                   "Kinetic perpendicular"                 "Thermal energy"     '
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_bnd_fluxes: ', 4 
@@ -119,21 +119,21 @@ module live_data
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_current: ', 3 
     write(LIVE_DATA_HANDLE,'(A)') '@current_xlabel: normalized time'
-    write(LIVE_DATA_HANDLE,'(A)') '@current_ylabel: plasma current'
+    write(LIVE_DATA_HANDLE,'(A)') '@current_ylabel: plasma current [A]'
     write(LIVE_DATA_HANDLE,'(A)') '@current_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@current: %"time"       "Total"    "Inside LCFS"   "Outside LCFS" '
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_helicity: ', 1
     write(LIVE_DATA_HANDLE,'(A)') '@helicity_xlabel: normalized time'
-    write(LIVE_DATA_HANDLE,'(A)') '@helicity_ylabel: Total helicity'
+    write(LIVE_DATA_HANDLE,'(A)') '@helicity_ylabel: Total helicity [Wb^2]'
     write(LIVE_DATA_HANDLE,'(A)') '@helicity_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@helicity: %"time"           "Helicity"'
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_area: ', 1
     write(LIVE_DATA_HANDLE,'(A)') '@area_xlabel: normalized time'
-    write(LIVE_DATA_HANDLE,'(A)') '@area_ylabel: Total area'
+    write(LIVE_DATA_HANDLE,'(A)') '@area_ylabel: Total area [m^2]'
     write(LIVE_DATA_HANDLE,'(A)') '@area_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@area: %"time"           "Plasma cross sectional area"'
     write(LIVE_DATA_HANDLE,*)
@@ -154,9 +154,9 @@ module live_data
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energy_conservation: ', 2
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_xlabel: normalized time'
-    write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_ylabel: Total energy_conservation'
+    write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_ylabel: Total energy conservation'
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_logy: 0'
-    write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation: %"time"       "-dEtotdt"     "Sum bnd fluxes + dissipative terms" '
+    write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation: %"time"       "-dEtotdt"     "Sum bnd fluxes + sources + dissipative terms" '
     write(LIVE_DATA_HANDLE,*)
  
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dissipative_terms: ', 2
@@ -170,7 +170,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@work_terms_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@work_terms_ylabel: Total work [W]'
     write(LIVE_DATA_HANDLE,'(A)') '@work_terms_logy: 0'
-    write(LIVE_DATA_HANDLE,'(A)') '@work_terms: %"time"     "Magnetic = JxB~\nabla p"   "Thermal = vpar*\nabla p"  '
+    write(LIVE_DATA_HANDLE,'(A)') '@work_terms: %"time"     "Magnetic = JxB~nabla p"   "Thermal = vpar*nabla p"  '
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dEdt: ', 5 
@@ -299,7 +299,7 @@ module live_data
                                             -dthermal_tot_dt(index-1),-dkinperp_tot_dt(index-1),-dkinpar_tot_dt(index-1)
    
        sum_fluxes_dissip = flux_Pvn_t(index-1)  + flux_kinpar_t(index-1) + flux_qpar_t(index-1) + flux_qperp_t(index-1) &
-                         + ohmic_tot_t(index-1) + viscopar_dissip_tot_t(index-1)
+                         + ohmic_tot_t(index-1) + viscopar_dissip_tot_t(index-1) - heat_src_tot_t(index-1)
  
       write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@energy_conservation: ', xtime(index-1), -dE_tot_dt(index-1), sum_fluxes_dissip 
 

@@ -1,4 +1,4 @@
-!> Module containing functions to determine particle and heat diffusivities
+!> Module containing functions to determine the plasma resistivity 
 module mod_resistivity 
   
   use phys_module, only: eta_T_dependent, T_0, T_min, xpoint, eta 

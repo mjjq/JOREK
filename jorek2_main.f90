@@ -1137,17 +1137,19 @@ required = 0
        write(*,132)
        write(*,*)
     endif   !--- my_id=0
+
     call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
 
-if (my_id .eq. 0 ) then
-       ! --- Output energies and growth_rates to text files during the code run
-       call write_live_data(index_now)
-       call write_live_data_vacuum(index_now, diag_coil_curr)
+    if (my_id .eq. 0 ) then
+      ! --- Output energies and growth_rates to text files during the code run
+      call write_live_data(index_now)
+      call write_live_data_vacuum(index_now, diag_coil_curr)
+
 #ifdef JECCD
-       call write_live_data2(index_now)
-       call write_live_data3(index_now)
+      call write_live_data2(index_now)
+      call write_live_data3(index_now)
 #ifdef JEC2DIAG
-       call write_live_data4(index_now)
+      call write_live_data4(index_now)
 #endif
 #endif
 endif

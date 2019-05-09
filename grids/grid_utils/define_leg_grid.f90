@@ -1002,8 +1002,8 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
           rr    = s_find(j_find)
           ss    = t_find(j_find)
           i_elm = i_elm_find(j_find)
-          call interp_RZ(node_list,element_list,i_elm,rr1,ss1,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
-                                                              Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
+          call interp_RZ(node_list,element_list,i_elm,rr,ss,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
+                                                            Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
           diff_end = sqrt( (R3-R_end)**2 + (Z3-Z_end)**2 )
           if (diff_end .lt. diff_min_end) then
             diff_min_end = diff_end
@@ -1055,8 +1055,8 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
           rr    = s_find(j_find)
           ss    = t_find(j_find)
           i_elm = i_elm_find(j_find)
-          call interp_RZ(node_list,element_list,i_elm,rr1,ss1,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
-                                                              Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
+          call interp_RZ(node_list,element_list,i_elm,rr,ss,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
+                                                            Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
           diff_beg = sqrt( (R3-R_beg)**2 + (Z3-Z_beg)**2 )
           if (diff_beg .le. diff_min_beg) then
             if (.not. xpoint_surface) then

@@ -21,9 +21,9 @@ contains
     real*8, intent(in)           :: cyl(3) !< The vector components in RZPhi coordinates
     real*8                       :: xyz(3) !< The vector components in xyz coordinates
 
-    xyz(1) = cyl(1)*cos(-cyl(3))
-    xyz(2) = cyl(1)*sin(-cyl(3))
-    xyz(3) = cyl(2)
+    xyz(1) =  cyl(1)*cos(cyl(3))
+    xyz(2) = -cyl(1)*sin(cyl(3))
+    xyz(3) =  cyl(2)
   end function cylindrical_to_cartesian
 
   !> multiply a vector with the rotation matrix for angle phi around the z-axis in RZPhi coordinates

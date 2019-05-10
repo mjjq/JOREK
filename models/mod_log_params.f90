@@ -143,6 +143,13 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+  write(*,'(1x,a)',advance='no') ' GAUSS_ORDER : '
+#ifdef GAUSS_ORDER
+  write(*,*) 'Preprocessor flag has been set! Thus, n_gauss=', n_gauss
+#else
+  write(*,*) 'Preprocessor flag not set. Thus, n_gauss=', n_gauss
+#endif
+
   write(*,*)
   write(*,200)
   write(*,*) '* Hard-Coded Parameters:                                                      *'
@@ -162,7 +169,6 @@ if (my_id == 0) then
   write(*,  112) ' n_degrees      =  ', n_degrees         
   write(*,  112) ' nref_max       =  ', nref_max          
   write(*,  112) ' n_ref_list     =  ', n_ref_list        
-  write(*,  112) ' gauss_order    =  ', n_gauss
 
   write(*,*)
   write(*,200)

@@ -98,43 +98,46 @@ if (xpoint2) then
   
   sigz            = 0.05d0
 
-  Z_star   = (Z_xpoint(1)-Z)/sigz
-  Z_star   = min( max( Z_star, -40.d0), 40.d0) ! avoid floating-point exceptions
-  Z_star_u = (Z-Z_xpoint(2))/sigz
-  Z_star_u = min( max( Z_star_u, -40.d0), 40.d0) ! avoid floating-point exceptions
-
-  tanh2   = tanh(Z_star)
-  cosh3   = cosh(Z_star)
-  tanh2_u = tanh(Z_star_u)
-  cosh3_u = cosh(Z_star_u)
-    
-  atn_z 	   = (0.5d0 - 0.5d0*tanh2)
-  datn_z	   =  0.5d0/cosh3**2   / sigz
-  d2atn_z	   =  1.0d0/cosh3**2   / sigz**2 * tanh2
-  atn_z_u	   = (0.5d0 - 0.5d0*tanh2_u)
-  datn_z_u	   = -0.5d0/cosh3_u**2 / sigz
-  d2atn_z_u	   =  1.0d0/cosh3_u**2 / sigz**2 * tanh2_u
-  
   if(xcase2 .eq. 1) then
-    atn_z_u          = 1.d0
-    datn_z_u         = 0.d0
-    d2atn_z_u        = 0.d0
+    atn_z_u   = 1.d0
+    datn_z_u  = 0.d0
+    d2atn_z_u = 0.d0
+  else
+    Z_star_u  = (Z-Z_xpoint(2))/sigz
+    Z_star_u  = min( max( Z_star_u, -40.d0), 40.d0) ! avoid floating-point exceptions
+
+    tanh2_u   = tanh(Z_star_u)
+    cosh3_u   = cosh(Z_star_u)
+
+    atn_z_u   = (0.5d0 - 0.5d0*tanh2_u)
+    datn_z_u  = -0.5d0/cosh3_u**2 / sigz
+    d2atn_z_u =  1.0d0/cosh3_u**2 / sigz**2 * tanh2_u
   endif
-  if(xcase2 .eq. 2) then
-    atn_z            = 1.d0
-    datn_z           = 0.d0
-    d2atn_z          = 0.d0
-  endif
+  if (xcase2 .eq. 2) then
+    atn_z   = 1.d0
+    datn_z  = 0.d0
+    d2atn_z = 0.d0
+  else
+    Z_star  = (Z_xpoint(1)-Z)/sigz
+    Z_star  = min( max( Z_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+
+    tanh2   = tanh(Z_star)
+    cosh3   = cosh(Z_star)
+      
+    atn_z   = (0.5d0 - 0.5d0*tanh2)
+    datn_z  =  0.5d0/cosh3**2   / sigz
+    d2atn_z =  1.0d0/cosh3**2   / sigz**2 * tanh2
+  endif  
   
-  temperature_profile = prof1      *	atn_z * atn_z_u
-  dT_dpsi         =   dprof1_dpsi  *	atn_z * atn_z_u
-  dT_dpsi2        =   dprof1_dpsi2 *	atn_z * atn_z_u
-  dT_dpsi3        =   dprof1_dpsi3 *	atn_z * atn_z_u  
-  dT_dz           = + prof1        * ( datn_z * atn_z_u  +	    atn_z * datn_z_u)
-  dT_dz2          = + prof1        * (d2atn_z * atn_z_u  +  2.d0 * datn_z * datn_z_u  +  atn_z * d2atn_z_u) 
-  dT_dpsi_dz      =   dprof1_dpsi  * ( datn_z * atn_z_u  +	    atn_z * datn_z_u)
-  dT_dpsi_dz2     =   dprof1_dpsi  * (d2atn_z * atn_z_u  +  2.d0 * datn_z * datn_z_u  +  atn_z * d2atn_z_u) 
-  dT_dpsi2_dz     =   dprof1_dpsi2 * ( datn_z * atn_z_u  +	    atn_z * datn_z_u)
+  temperature_profile = prof1      *    atn_z * atn_z_u
+  dT_dpsi         =   dprof1_dpsi  *    atn_z * atn_z_u
+  dT_dpsi2        =   dprof1_dpsi2 *    atn_z * atn_z_u
+  dT_dpsi3        =   dprof1_dpsi3 *    atn_z * atn_z_u  
+  dT_dz           = + prof1        * ( datn_z * atn_z_u +          atn_z * datn_z_u)
+  dT_dz2          = + prof1        * (d2atn_z * atn_z_u +  2.d0 * datn_z * datn_z_u  + atn_z * d2atn_z_u) 
+  dT_dpsi_dz      =   dprof1_dpsi  * ( datn_z * atn_z_u +          atn_z * datn_z_u)
+  dT_dpsi_dz2     =   dprof1_dpsi  * (d2atn_z * atn_z_u +  2.d0 * datn_z * datn_z_u  + atn_z * d2atn_z_u) 
+  dT_dpsi2_dz     =   dprof1_dpsi2 * ( datn_z * atn_z_u +          atn_z * datn_z_u)
   
 else
   

@@ -550,11 +550,15 @@ do ms=1, n_gauss
 
      psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
      if (xpoint2) then
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
-         psi_norm = 2.d0 - psi_norm
+       if (xcase2 .ne. 2) then
+         if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) ) then
+           psi_norm = 2.d0 - psi_norm
+         endif
        endif
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
-         psi_norm = 2.d0 - psi_norm
+       if (xcase2 .ne. 1) then
+         if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. z_xpoint(2)) ) then
+           psi_norm = 2.d0 - psi_norm
+         endif
        endif
      endif
 

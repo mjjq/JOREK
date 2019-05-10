@@ -71,10 +71,12 @@ do j = 1, surface_list%n_psi, every_nth
       if ((surface_list%psi_values(j) .lt. surface_list%psi_values(j-1))  .and. (found .eq. 3)) found = 4
       if ((surface_list%psi_values(j) .lt. surface_list%psi_values(j-1))  .and. (found .eq. 2)) found = 3
       if ((surface_list%psi_values(j) .gt. surface_list%psi_values(j-1))  .and. (found .eq. 4)) found = 5
-      if ((surface_list%psi_values(j) .lt. psi_xpoint(2)) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) &
-          .and. (     abs(surface_list%psi_values(j)  -surface_list%psi_values(j-1)) .gt. &
-	         2.d0*abs(surface_list%psi_values(j-1)-surface_list%psi_values(j-2))       ) &
-          .and. (found .eq. 4) ) found = 5
+      if (xcase .gt. 1) then
+        if ((surface_list%psi_values(j) .lt. psi_xpoint(2)) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) &
+            .and. (     abs(surface_list%psi_values(j)  -surface_list%psi_values(j-1)) .gt. &
+             2.d0*abs(surface_list%psi_values(j-1)-surface_list%psi_values(j-2))       ) &
+            .and. (found .eq. 4) ) found = 5
+      endif
 
     endif
   endif

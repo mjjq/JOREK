@@ -7,7 +7,6 @@ subroutine preset_parameters
   
   use phys_module
   use mumps_module,  only: use_mumps, no_zeros_mumps
-  use murge_module,  only: use_murge, use_murge_element
   use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
   use wsmp_module,   only: use_wsmp
   
@@ -236,30 +235,29 @@ subroutine preset_parameters
   !> Write out newest HDF5 restart file version this code supports, writing
   !! out an older version is possible by changing rst_hdf5_verison via the
   !! namelist input file
-  rst_hdf5_version = rst_hdf5_version_supported
+  rst_hdf5_version   = rst_hdf5_version_supported
 
-  tokamak_device = 'none'
-
-  rho_file      = 'none'
-  rhon_file     = 'none'
-  T_file        = 'none'
-  Te_file       = 'none'
-  Ti_file       = 'none'
-  ffprime_file  = 'none'
-  d_perp_file   = 'none'
-  zk_perp_file  = 'none'
-  zk_e_perp_file  = 'none'
-  zk_i_perp_file  = 'none'
-  R_Z_psi_bnd_file = 'none'
-  wall_file     = 'none'
-  rot_file      = 'none'
+  tokamak_device     = 'none'
+  rho_file           = 'none'
+  rhon_file          = 'none'
+  T_file             = 'none'
+  Te_file            = 'none'
+  Ti_file            = 'none'
+  ffprime_file       = 'none'
+  d_perp_file        = 'none'
+  zk_perp_file       = 'none'
+  zk_e_perp_file     = 'none'
+  zk_i_perp_file     = 'none'
+  R_Z_psi_bnd_file   = 'none'
+  wall_file          = 'none'
+  rot_file           = 'none'
   normalized_velocity_profile = .true.
 
-  produce_live_data = .true.
+  produce_live_data  = .true.
   
   linear_run         = .false.
   
-  export_for_nemec      = .false.
+  export_for_nemec   = .false.
   
   gmres              = .true.               ! Use iterative solver
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
@@ -267,6 +265,11 @@ subroutine preset_parameters
   gmres_4            = 1.d3                 ! error estimate GMRES (ratio preconditioned versus non-preconditioned error
   gmres_m            = 20                   ! gmres restart parameter
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
+  
+  ! --- deprecated, code will stop if these parameters are set to .true. ---
+  use_murge          = .false.
+  use_murge_element  = .false.
+  ! ------------------------------------------------------------------------
 
   tgnum              = 0.d0                 ! Taylor-Galerkin Stabilisation coefficients (0.d0 == TG not used)
 
@@ -274,11 +277,10 @@ subroutine preset_parameters
   
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver
-  use_murge          = .false.              ! Use MURGE interface to PASTIX solver
-  use_murge_element  = .false.              ! Build the matrix through murge, not with a CSC.
   use_wsmp           = .false.              ! Use WSMP solver (use with care, still in development!)
   
   refinement         = .false.              ! enable mesh refinement
+  force_central_node = .true.               ! force all nodes in the grid center to have the same values in flux surface aligned grids
   
   grid_to_wall       = .false.              ! extend the grid to a physical wall
   

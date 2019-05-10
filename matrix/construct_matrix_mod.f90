@@ -5,7 +5,7 @@ implicit none
 contains
 
   !> subroutine that will construct elementary matrices
-  subroutine elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, &
+  subroutine elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis,         &
        &                             Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
        &                             omp_tid, ife, n_local_elms, node_list)
 
@@ -500,8 +500,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
               index_ij = n_tor * n_var * (n_order+1) * (i-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
 
+              !$omp atomic
               rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij)
-            
+              !$omp end atomic
+
             end do
 
               do k=1,n_vertex_max

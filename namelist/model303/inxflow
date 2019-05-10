@@ -107,9 +107,4 @@
  gmres_4 = 1.d0
  gmres_max_iter = 200
  gmres_tol = 1.d-8
-
- use_murge    = .f.
- use_murge_element = .f.
- murge_with_starpu = .f.
- murge_cuda_nbr = 0
 /

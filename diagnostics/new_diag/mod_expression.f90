@@ -20,11 +20,10 @@ module mod_expression
   use diffusivities
   use corr_neg
   use mod_basisfunctions
-
+  use mod_bootstrap_functions
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501)  
   use mgi_module
 #endif
-  
 #if JOREK_MODEL == 501
   use mod_coronal
 #endif
@@ -87,7 +86,7 @@ module mod_expression
   
   
   ! --- Standard lists of expressions (require init_expr call first!).
-  type(t_expr_list), save :: exprs_all           !< All available expressions.
+  type(t_expr_list), save :: exprs_all, exprs_all_int     !< All available expressions.
   
   
   
@@ -102,7 +101,8 @@ module mod_expression
   !> Initialization for the module. Should be called before any other 
   subroutine init_expr()
     
-    exprs_all%n_expr = 0
+    exprs_all%n_expr     = 0
+    exprs_all_int%n_expr = 0
     call add(exprs_all, 'R           ', 'Cylindrical Coordinate R (== Major Radius)            ')
     call add(exprs_all, 'Z           ', 'Cylindrical Coordinate Z                              ')
     call add(exprs_all, 'phi         ', 'Cylindrical Coordinate phi                            ')
@@ -151,7 +151,7 @@ module mod_expression
     call add(exprs_all, 'Vstar_i     ', 'Ion Diamagnetic Velocity                              ')
     call add(exprs_all, 'ki_neo      ', 'Neoclassical Heat Diffusivity                         ')
     call add(exprs_all, 'mu_neo      ', 'Neoclassical Friction Coefficient                     ')
-#if JOREK_MODEL == 400
+#if ( JOREK_MODEL == 400 ) || ( JOREK_MODEL == 333 )
     call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
     call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
@@ -162,7 +162,30 @@ module mod_expression
 #if JOREK_MODEL == 500
     call add(exprs_all, 'brem        ', 'Brem terms for bolometry diagnostic                   ')
 #endif
-    
+    ! --- List of volume and boundary integrals
+    call add(exprs_all_int, 'E_tot       ', 'Total energy                                          ')
+    call add(exprs_all_int, 'Wmag_tot    ', 'Total magnetic energy                                 ')
+    call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')
+    call add(exprs_all_int, 'Thermal_tot ', 'Total thermal energy                                  ')
+    call add(exprs_all_int, 'Helicity_tot', 'Total magnetic helicity                               ')
+    call add(exprs_all_int, 'Ip_tot      ', 'Total toroidal plasma current                         ')
+    call add(exprs_all_int, 'Kin_par_tot ', 'Total parallel kinetic energy                         ')
+    call add(exprs_all_int, 'Kin_perp_tot', 'Total perpendicular kinetic energy                    ')
+    call add(exprs_all_int, 'Mag_work_tot', 'Total magnetic work = -\int v\cdot(JxB) dV            ')
+    call add(exprs_all_int, 'Thm_work_tot', 'Total thermal work  = \int vpar\cdot\nabla p dV       ')
+    call add(exprs_all_int, 'Part_src_tot', 'Total particle source                                 ')
+    call add(exprs_all_int, 'Heat_src_tot', 'Total heat source                                     ')
+    call add(exprs_all_int, 'Viscpar_diss', 'ToTal parallel viscosty dissipation                   ')
+    call add(exprs_all_int, 'li3         ', 'Internal inductance inside LCFS, li(3)                ')
+    call add(exprs_all_int, 'li3_tot     ', 'Internal inductance inside grid, li(3)                ')
+    call add(exprs_all_int, 'betap       ', 'Poloidal beta, of the plasma inside LCFS              ')
+    call add(exprs_all_int, 'area        ', 'Poloidal cross section area inside LCFS               ')
+    call add(exprs_all_int, 'volume      ', 'Plasma volume, inside LCFS                            ')
+    call add(exprs_all_int, 'P_vn        ', 'Boundary flux of outgoing pressure                    ')
+    call add(exprs_all_int, 'qn_par      ', 'Boundary flux of the parallel thermal conduction      ')
+    call add(exprs_all_int, 'qn_perp     ', 'Boundary flux of the perpendicular thermal conduction ')
+    call add(exprs_all_int, 'kinpar_flux ', 'Boundary flux of parallel kinetic energy              ')
+ 
   end subroutine init_expr
   
   
@@ -220,6 +243,37 @@ module mod_expression
   end function exprs
   
   
+  !> Creates a subset of all available expressions.
+  function exprs_int(name, n_expr, n_coord) result(expr_list)
+    type(t_expr_list) :: expr_list
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':exprs'
+    
+    ! --- Routine parameters
+    character(len=*),  intent(in) :: name(n_expr)
+    integer,           intent(in) :: n_expr
+    integer, optional, intent(in) :: n_coord
+    
+    ! --- Local variables
+    integer :: i, j, k
+    
+    k = 0
+    do i = 1, n_expr
+      j = get_expr_num_int(exprs_all_int, trim(name(i)))
+      if ( j < 1 ) then
+        write(*,*) 'WARNING in '//trim(THIS_ROUTINE_NAME)//': Unknown expression "'//trim(name(i)) &
+          //'" ignored.'
+        cycle
+      end if
+      k = k + 1
+      expr_list%expr(k) = exprs_all_int%expr(j)
+    end do
+    expr_list%n_expr = k
+    
+    expr_list%n_coord = 0
+    if ( present(n_coord) ) expr_list%n_coord = n_coord
+    
+  end function exprs_int
   
   
   
@@ -336,6 +390,25 @@ module mod_expression
   end function get_expr_num
   
   
+   !> Find out expression number in an expression list.
+  integer function get_expr_num_int(expr_list, name) result(num)
+    
+    ! --- Routine parameters
+    type(t_expr_list),       intent(in) :: expr_list
+    character(len=*), intent(in) :: name
+    
+    ! --- Local variables
+    integer :: i
+    
+    num = -99
+    do i = 1, exprs_all_int%n_expr
+      if ( trim(exprs_all_int%expr(i)%name) == trim(name) ) then
+        num = i
+        exit
+      end if
+    end do
+    
+  end function get_expr_num_int
   
   
   
@@ -712,6 +785,18 @@ module mod_expression
             end do
           end do
           
+#if JOREK_MODEL == 400
+          ! --- Sum up electron and ion temperature for model400 (e.g., to calculate total pressure)
+          T0       = Ti0    + Te0   
+          T0_s     = Ti0_s  + Te0_s 
+          T0_t     = Ti0_t  + Te0_t 
+          T0_ss    = Ti0_ss + Te0_ss
+          T0_tt    = Ti0_tt + Te0_tt
+          T0_st    = Ti0_st + Te0_st
+          T0_p     = Ti0_p  + Te0_p 
+          T0_pp    = Ti0_pp + Te0_pp
+#endif
+          
           ! --- Construct Cartesian Derivatives of Variables.
           ps0_R    = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
           ps0_Z    = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
@@ -963,8 +1048,8 @@ module mod_expression
             end if
           end if
           
-#if JOREK_MODEL == 400
-          call bootstrap_current_rhs(BigR, 0.0, eq%R_axis, eq%psi_axis, eq%psi_bnd, ps0, ps0_R,    &
+#if (JOREK_MODEL == 400) || (JOREK_MODEL == 333)
+          call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
             ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
 #else
           J_boot = 0.d0
@@ -1214,7 +1299,7 @@ module mod_expression
                 
               case ( 'mu_neo' )
                 res = mu_neo / fact_time
-#if JOREK_MODEL == 400
+#if ( JOREK_MODEL == 400 ) || ( JOREK_MODEL == 333 )
               case ( 'T_e' )
                 res = Te0 * fact_T
               

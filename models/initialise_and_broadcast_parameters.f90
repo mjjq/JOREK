@@ -26,4 +26,14 @@ subroutine initialise_and_broadcast_parameters(my_id, filename)
   sqrt_mu0_rho0      = sqrt( mu_zero * ( central_density * 1.d20 * central_mass * mass_proton ) )
   sqrt_mu0_over_rho0 = sqrt( mu_zero / ( central_density * 1.d20 * central_mass * mass_proton ) )
   
+  ! --- Deprecated input parameters ---
+  if ( use_murge ) then
+    write(*,*) 'ERROR: use_murge=.true. is not supported any more. Remove this parameter from the namelist input file.'
+    stop
+  else if ( use_murge_element ) then
+    write(*,*) 'ERROR: use_murge_element=.true. is not supported any more. Remove this parameter from the namelist input file.'
+    stop
+  end if
+  ! -----------------------------------
+  
 end subroutine initialise_and_broadcast_parameters

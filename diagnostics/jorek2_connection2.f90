@@ -108,7 +108,7 @@ do i_tor=1, n_tor
   endif
 enddo
 
-call import_restart(node_list,element_list, 'jorek_poincare', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                                       ! define the basis functions at the Gaussian points
 

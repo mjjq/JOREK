@@ -2,7 +2,7 @@ module mod_elt_matrix
   implicit none
 contains
 
-subroutine element_matrix(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
+subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -26,7 +26,7 @@ integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, xjac3, BigR, phi
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss), source_pellet
-real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
+real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
 real*8     :: UR0, UR0_x, UR0_y, UR0_p, UR0_s, UR0_t, UR0_ss, UR0_st, UR0_tt
 real*8     :: UZ0, UZ0_x, UZ0_y, UZ0_p, UZ0_s, UZ0_t, UZ0_ss, UZ0_st, UZ0_tt
 real*8     :: UP0, UP0_x, UP0_y, UP0_p, UP0_s, UP0_t, UP0_ss, UP0_st, UP0_tt

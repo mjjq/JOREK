@@ -366,6 +366,11 @@ do i=(nR-1)*(nZ-1)+1,(nR-1)*(nZ-1) + 2*(nR-1)+2*(nZ-1)
 
 enddo
 
+!------------------------------- initialise square center
+do i=1,n_polar
+  node_list%node(i)%values = 0.d0
+  node_list%node(i)%values(1,1,1) = node_list%node(n_polar+1)%values(1,1,1)
+enddo
 
 call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 return

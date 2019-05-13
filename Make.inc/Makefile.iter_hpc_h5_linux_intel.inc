@@ -58,10 +58,6 @@ SCALAP    = -L$(MKL) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64
 LIBDIERCKX = $(LIBDIR)/Dierckx/dierckx.a
 
 #HDF5
-HDF5_HOME=/work/imas/opt/hdf5/1.8.15
+HDF5_HOME ?= $(H5DIR)
 HDF5INCLUDE=$(HDF5_HOME)/include
-HDF5LIB=$(HDF5_HOME)/lib/libhdf5hl_fortran.a \
-        $(HDF5_HOME)/lib/libhdf5_hl.a        \
-        $(HDF5_HOME)/lib/libhdf5_fortran.a   \
-        $(HDF5_HOME)/lib/libhdf5.a           \
-	$(ZLIB_HOME)/lib/libz.a
+HDF5LIB=-lhdf5hl_fortran -lhdf5_hl -lhdf5_fortran -lhdf5 -lz

@@ -10,11 +10,21 @@
 *.out
 *.log
 *.dat
+*.swp
+*.i90
+*.orig
+*.pyc
+*.xml
+*.png
+*.csv
+*.inc
+*.optrpt
 Makefile.inc
 j302_1
 j302_3
 .fuse_hidden*
 jorek_model*
+jorek_*_model*
 jorek2_poincare
 jorek2_four
 jorek2_postproc*
@@ -22,6 +32,10 @@ jorek2_povray
 jorek2_connection2*
 jorek2_connection_stan
 jorek2_strikes
+enbiggen
+jordel
+jorpol
+jorek2_stan
 jorek2vtk*
 jorek2_fieldlines_vtk
 jorek2vtk_3d
@@ -35,6 +49,7 @@ jorek2_import_perturbation
 jorek2_import_perturbation_new_flags
 jorek2_import_perturbation_new_flags
 jorek2_import_perturbation_tmp
+jorek_extract_data
 forcheck*
 *__genmod*
 rst_bin2hdf5
@@ -50,3 +65,5 @@ coil_field.dat
 RMP_psi*.txt
 RMP_start_time.dat
 shard_size.dat
+non_regression_tests_*
+/test_*

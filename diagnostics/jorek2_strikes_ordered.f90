@@ -123,7 +123,7 @@ do i_tor=1, n_tor
 enddo
 
 if (my_id .eq. 0) then
-  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 endif
 
 call initialise_basis                                       ! define the basis functions at the Gaussian points

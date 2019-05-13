@@ -6,7 +6,7 @@ contains
 
 #include "corr_neg_include.f90"
 
-subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
+subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
   ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
@@ -36,7 +36,7 @@ integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
-real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz, source_pellet, source_volume
+real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz, source_pellet, source_volume
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
 real*8     :: Bgrad_rho_rho_n, Bgrad_T_T_n, Bgrad_rho_k_star, Bgrad_T_k_star, ZKpar_T, dZKpar_dT
@@ -264,8 +264,8 @@ do i=1,n_vertex_max
   ELM_k(:,:,1:n_var) = 0
   ELM_kn(:,:,1:n_var) = 0
 
-  do ms=1, n_gauss
-  do mt=1, n_gauss
+do ms=1, n_gauss
+ do mt=1, n_gauss
 
    wst = wgauss(ms)*wgauss(mt)
 
@@ -1939,9 +1939,9 @@ do i=1,n_vertex_max
     do m=1,(n_tor+1)/2
         im      = max(2*(m-1),1)
         index_m = n_tor*(j_loc-1) + max(2*(m-1),1)
-      do k=1,(n_tor+1)/2
+    do k=1,(n_tor+1)/2
 
-        ik      = max(2*(k-1),1)
+      ik      = max(2*(k-1),1)
         index_k = n_tor*(i_loc-1) + max(2*(k-1),1)
 
         l = (k-1) + (m-1)
@@ -1990,7 +1990,7 @@ do i=1,n_vertex_max
 enddo
 
 end do
-end do
+enddo
 
 ELM = 0.5d0 * ELM
 

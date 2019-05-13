@@ -44,6 +44,7 @@ module phys_module
   logical :: import_equil
   logical :: xpoint               !< X-point geometry?
   logical :: bootstrap            !< Bootstrap-current?
+  real*8  :: minRad               !< Approximation of minor radius for bootstrap current calculation
   logical :: refinement           !< Use mesh refinement?
   logical :: force_central_node   !< Force all nodes in the center to have the same values in flux aligned grids?
   logical :: bc_natural_flux      !< boundary conditions for flux surface boundaries (2 and 3)
@@ -57,6 +58,7 @@ module phys_module
   integer :: gmres_max_iter       !< Maximum number of GMRES iterations
   logical :: linear_run           !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
   logical :: export_for_nemec     !< Export data such that the NEMEC Code can reconstruct the same equilibrium?
+  logical :: use_murge, use_murge_element ! Deprecated, code will stop if these input parameters are set to .true.
 
 #ifdef USE_HDF5
   ! for HDF5 diagnostics
@@ -345,7 +347,7 @@ module phys_module
   
   !> @name Analytical heat, particle and neutral particles diffusivity parameters
   real*8  :: D_perp(10), D_par
-  real*8  :: ZK_perp(10), ZK_par, ZK_par_max, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par
+  real*8  :: ZK_perp(10), ZK_par, ZK_par_max, ZK_i_perp(10), ZK_e_perp(10), ZK_i_par, ZK_e_par
   real*8  :: D_neutral_x, D_neutral_y, D_neutral_p
   logical :: ZKpar_T_dependent
 
@@ -493,7 +495,12 @@ module phys_module
   !> @name Global quantities determined in each time step
   real*8, allocatable :: R_axis_t(:), Z_axis_t(:), psi_axis_t(:), current_t(:), beta_p_t(:),       &
     beta_t_t(:), beta_n_t(:), density_in_t(:), density_out_t(:), pressure_in_t(:),                 &
-    pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:)
+    pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:),   &
+    E_tot_t(:), Helicity_tot_t(:), Kin_perp_tot_t(:), thermal_tot_t(:), kin_par_tot_t(:), ohmic_tot_t(:),      &
+    Wmag_tot_t(:), Ip_tot_t(:), flux_Pvn_t(:), flux_qpar_t(:), dE_tot_dt(:), flux_qperp_t(:), flux_kinpar_t(:), &
+    dWmag_tot_dt(:), dthermal_tot_dt(:), dkinpar_tot_dt(:), dkinperp_tot_dt(:),                      &
+    Magwork_tot_t(:), thmwork_tot_t(:), viscopar_dissip_tot_t(:), viscopar_flux_t(:), li3_t(:),      &
+    li3_tot_t(:), part_src_tot_t(:), heat_src_tot_t(:), volume_t(:), area_t(:) 
   
   !> @name gmres parameters
   integer             :: iter_precon    !< if number of gmres iterations > iter_precon, the preconditioner is updated

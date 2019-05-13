@@ -340,7 +340,7 @@ do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
 enddo
 
-call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
@@ -372,7 +372,7 @@ endif
 
 minRad = 0.0
 if (bootstrap) then
-  call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+  call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd)
   call bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
   call bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
 endif
@@ -787,7 +787,7 @@ do i=1,element_list%n_elements
         endif
 
         if (include_bootstrap) then
-          call bootstrap_current(minRad, R, Z, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+          call bootstrap_current(R, Z, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
                                  psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,      &
                                  Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb   )
           scalars(inode,s_bootstrap+1) = Jb

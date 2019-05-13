@@ -21,6 +21,18 @@ subroutine derive_num_profiles(my_id)
       call derivProf(num_T_x, num_T_y1, num_T_len, num_T_y2)
       call derivProf(num_T_x, num_T_y2, num_T_len, num_T_y3)
     end if
+
+    if ( num_Ti ) then
+      call derivProf(num_Ti_x, num_Ti_y0, num_Ti_len, num_Ti_y1)
+      call derivProf(num_Ti_x, num_Ti_y1, num_Ti_len, num_Ti_y2)
+      call derivProf(num_Ti_x, num_Ti_y2, num_Ti_len, num_Ti_y3)
+    end if
+
+    if ( num_Te ) then
+      call derivProf(num_Te_x, num_Te_y0, num_Te_len, num_Te_y1)
+      call derivProf(num_Te_x, num_Te_y1, num_Te_len, num_Te_y2)
+      call derivProf(num_Te_x, num_Te_y2, num_Te_len, num_Te_y3)
+    end if
     
     if ( num_ffprime ) then
       call derivProf(num_ffprime_x, num_ffprime_y0, num_ffprime_len, num_ffprime_y1)

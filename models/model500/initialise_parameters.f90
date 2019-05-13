@@ -234,11 +234,13 @@ call derive_num_profiles(my_id)
 
 ! --- Initialize the shattered pellet position
 
-if (2*PI/(n_tor*n_period) >= ns_deltaphi .and. my_id == 0) then
-  write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
-  if (t_now > t_ns) then
-    write(*,*) "EXITING NOW!!!"
-    stop
+if ( my_id == 0 ) then
+  if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
+    write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
+    if (t_now > t_ns) then
+      write(*,*) "EXITING NOW!!!"
+      stop
+    end if
   end if
 end if
 

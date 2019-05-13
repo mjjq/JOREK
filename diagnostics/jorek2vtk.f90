@@ -62,7 +62,7 @@ integer               :: n_fluxes, n_neo, n_bfield, n_vfield,n_pellet,n_bootstra
 integer               :: n_Jpol
 integer               :: s_fluxes, s_neo, s_bfield, s_vfield,s_pellet,s_bootstrap, s_psi_norm, s_Efield
 integer               :: s_Jpol
-real*8                :: Jb, minRad,rho_norm,t_norm
+real*8                :: Jb,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field

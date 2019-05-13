@@ -13,6 +13,7 @@ use mumps_module,  only: use_mumps, no_zeros_mumps
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
 use wsmp_module,   only: use_wsmp
 use vacuum
+use gauss, only: n_gauss
 
 implicit none
 
@@ -140,6 +141,13 @@ if (my_id == 0) then
   write(*,*) 'on'
 #else
   write(*,*) 'off'
+#endif
+
+  write(*,'(1x,a)',advance='no') ' GAUSS_ORDER : '
+#ifdef GAUSS_ORDER
+  write(*,*) 'Preprocessor flag has been set! Thus, n_gauss=', n_gauss
+#else
+  write(*,*) 'Preprocessor flag not set. Thus, n_gauss=', n_gauss
 #endif
 
   write(*,*)

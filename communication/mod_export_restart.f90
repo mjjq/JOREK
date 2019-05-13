@@ -15,7 +15,7 @@ subroutine export_restart(node_list,element_list,filename)
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
-  character*(*)          , intent(in) :: filename
+  character(len=*)       , intent(in) :: filename
 
   character*17 :: fileout
 
@@ -51,7 +51,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
-  character*(*),           intent(in) :: filename
+  character(len=*),        intent(in) :: filename
 
   ! --- Local variables
   integer :: i
@@ -327,18 +327,14 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call tr_allocate(t_constrained,1,node_list%n_nodes,"constrained",CAT_UNKNOWN)
 
   ! element_list%n_elements
-  call tr_allocate(t_vertex,1,element_list%n_elements,1,n_vertex_max, &
-       "vertex",CAT_UNKNOWN)
-  call tr_allocate(t_neighbours,1,element_list%n_elements,1,n_vertex_max, &
-       "neighbours",CAT_UNKNOWN)
-  call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_order+1, &
-       "size",CAT_UNKNOWN)
+  call tr_allocate(t_vertex,1,element_list%n_elements,1,n_vertex_max,"vertex",CAT_UNKNOWN)
+  call tr_allocate(t_neighbours,1,element_list%n_elements,1,n_vertex_max,"neighbours",CAT_UNKNOWN)
+  call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_order+1,"size",CAT_UNKNOWN)
   call tr_allocate(t_father,1,element_list%n_elements,"father",CAT_UNKNOWN)
   call tr_allocate(t_n_sons,1,element_list%n_elements,"n_sons",CAT_UNKNOWN)
   call tr_allocate(t_n_gen,1,element_list%n_elements,"n_gen",CAT_UNKNOWN)
   call tr_allocate(t_sons,1,element_list%n_elements,1,4,"sons",CAT_UNKNOWN)
-  call tr_allocate(t_contain_node,1,element_list%n_elements,1,5, &
-       "contain_node",CAT_UNKNOWN)
+  call tr_allocate(t_contain_node,1,element_list%n_elements,1,5,"contain_node",CAT_UNKNOWN)
   call tr_allocate(t_nref,1,element_list%n_elements,"nref",CAT_UNKNOWN)
 
   ! index_now+nstep
@@ -348,29 +344,25 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
      t_xtime(:) = xtime(1:index_now)
 
      if (allocated(t_energies)) call tr_deallocate(t_energies,"energies",CAT_UNKNOWN)
-     call tr_allocate(t_energies,1,n_tor,1,2,1,index_now, &
-          "energies",CAT_UNKNOWN)
+     call tr_allocate(t_energies,1,n_tor,1,2,1,index_now,"energies",CAT_UNKNOWN)
      t_energies(:,:,:) = energies(:,:,1:index_now)
-#ifdef JECCD                   
-     if (allocated(t_energies2)) call tr_deallocate(t_energies2,"energies2",CAT_UNKNOWN)     
-     call tr_allocate(t_energies2,1,n_tor,1,2,1,index_now, &
-          "energies2",CAT_UNKNOWN)
+#ifdef JECCD
+     if (allocated(t_energies2)) call tr_deallocate(t_energies2,"energies2",CAT_UNKNOWN)
+     call tr_allocate(t_energies2,1,n_tor,1,2,1,index_now,"energies2",CAT_UNKNOWN)
      t_energies2(:,:,:) = t_energies2(:,:,1:index_now)
 
      if (allocated(t_energies3)) call tr_deallocate(t_energies3,"energies3",CAT_UNKNOWN)
-     call tr_allocate(t_energies3,1,n_tor,1,2,1,index_now, &
-          "energies3",CAT_UNKNOWN)
+     call tr_allocate(t_energies3,1,n_tor,1,2,1,index_now, "energies3",CAT_UNKNOWN)
      t_energies3(:,:,:) = t_energies3(:,:,1:index_now)
 
 #ifdef JEC2DIAG
      if (allocated(t_energies4)) call tr_deallocate(t_energies4,"energies4",CAT_UNKNOWN)
-     call tr_allocate(t_energies4,1,n_tor,1,2,1,index_now, &
-          "energies4",CAT_UNKNOWN)
+     call tr_allocate(t_energies4,1,n_tor,1,2,1,index_now, "energies4",CAT_UNKNOWN)
      t_energies4(:,:,:) = t_energies4(:,:,1:index_now)
 #endif
 #endif
 
-end if
+  end if
 
   !
   do i=1,node_list%n_nodes
@@ -434,21 +426,21 @@ end if
   call HDF5_char_saving(file_id,version_control,"RCS_version"//char(0))
 
   ! -> Save parameters
-  call HDF5_integer_saving(file_id,jorek_model,'jorek_model'//char(0)) 
-  call HDF5_integer_saving(file_id,n_var,'n_var'//char(0)) 
-  call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0)) 
-  call HDF5_integer_saving(file_id,n_order,'n_order'//char(0)) 
-  call HDF5_integer_saving(file_id,n_tor,'n_tor'//char(0)) 
-  call HDF5_integer_saving(file_id,n_period,'n_period'//char(0)) 
-  call HDF5_integer_saving(file_id,n_plane,'n_plane'//char(0)) 
-  call HDF5_integer_saving(file_id,n_vertex_max,'n_vertex_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_nodes_max,'n_nodes_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_elements_max,'n_elements_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_boundary_max,'n_boundary_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_pieces_max,'n_pieces_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_degrees,'n_degrees'//char(0)) 
-  call HDF5_integer_saving(file_id,nref_max,'nref_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_ref_list,'n_ref_list'//char(0)) 
+  call HDF5_integer_saving(file_id,jorek_model,'jorek_model'//char(0))
+  call HDF5_integer_saving(file_id,n_var,'n_var'//char(0))
+  call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0))
+  call HDF5_integer_saving(file_id,n_order,'n_order'//char(0))
+  call HDF5_integer_saving(file_id,n_tor,'n_tor'//char(0))
+  call HDF5_integer_saving(file_id,n_period,'n_period'//char(0))
+  call HDF5_integer_saving(file_id,n_plane,'n_plane'//char(0))
+  call HDF5_integer_saving(file_id,n_vertex_max,'n_vertex_max'//char(0))
+  call HDF5_integer_saving(file_id,n_nodes_max,'n_nodes_max'//char(0))
+  call HDF5_integer_saving(file_id,n_elements_max,'n_elements_max'//char(0))
+  call HDF5_integer_saving(file_id,n_boundary_max,'n_boundary_max'//char(0))
+  call HDF5_integer_saving(file_id,n_pieces_max,'n_pieces_max'//char(0))
+  call HDF5_integer_saving(file_id,n_degrees,'n_degrees'//char(0))
+  call HDF5_integer_saving(file_id,nref_max,'nref_max'//char(0))
+  call HDF5_integer_saving(file_id,n_ref_list,'n_ref_list'//char(0))
 
   ! -> 
   call HDF5_integer_saving(file_id,node_list%n_nodes,'n_nodes'//char(0))

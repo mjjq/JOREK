@@ -286,6 +286,10 @@ required = 0
     call MPI_Abort(MPI_COMM_WORLD, 5, ierr)
     stop
 #endif
+  else if ( n_tor_fft_thresh < 2 ) then
+    write(*,*) ' FATAL: n_tor_fft_thresh < 2 presently not allowed. Will cause problems for n_tor=1.'
+    call MPI_Abort(MPI_COMM_WORLD, 5, ierr)
+    stop
   else if ( gmres .and. (nstep > 0) .and. (mod(n_cpu,(n_tor-1)/2+1) /= 0) ) then
     write(*,'(A,i4,A,i4,A)') ' FATAL : need a multiple of ',(n_tor-1)/2+1,' cpus for ',            &
       (n_tor-1)/2+1,' harmonics'

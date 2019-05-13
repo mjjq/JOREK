@@ -44,14 +44,16 @@ ifeq ($(COMPILER_FAMILY), gnu)
   FLAGS += -Wno-unused-variable
   FFLAGS += -Wintrinsics-std
   FFLAGS += -Wcharacter-truncation
-  FFLAGS += -Wsurprising
+  FFLAGS += -Wsurprising -Wno-tabs
   FFLAGS += -ffree-line-length-none
   F77FLAGS += -fdefault-real-8 -fdefault-double-8
   ifeq ($(DEBUG), 1)
     FLAGS  += -g -Og -ggdb -fno-lto
+    FLAGS  += -Wunused-variable
     FFLAGS += -fcheck=all
     FLAGS  += -ffpe-trap=invalid,zero,overflow
     FFLAGS += -ftrapv
+    FFLAGS += -finit-real=snan -finit-integer=12345678
     FFLAGS += -Wconversion
     F90FLAGS += -fimplicit-none
   endif
@@ -87,6 +89,7 @@ ifeq ($(COMPILER_FAMILY), intel)
     FFLAGS += -check all,noarg_temp_created
     FFLAGS += -check bounds
     FFLAGS += -check uninit
+    FFLAGS += -init=snan -init=zero
     FFLAGS += -gen-interfaces -warn-interfaces
     F90FLAGS += -implicitnone
   endif
@@ -136,7 +139,7 @@ endef
 file_stem=$(notdir $(basename $(1)))
 define PROGRAM_TEMPLATE
 $(notdir $(basename $(1))): $(OBJDIR)/$(file_stem).o $(shell ./util/obj_deps $(DEPDIR)/$(file_stem).d)
-	$$(FC) $$(FLAGS) $$(DEFINES) $$(INCLUDES) -o $(file_stem) $$^ $$(LIBS)
+	$$(FC) $$(FLAGS) $$(EXTRA_FLAGS) $$(DEFINES) $$(INCLUDES) -o $(file_stem) $$^ $$(LIBS)
 endef
 
 

@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# Purpose: Compile a jorek2_particles program not in the main git dir.
+# This is achieved by including the current directory in the search path of
+# the makefile and changing directory to the JOREK dir.
+#
+# Date: 2016-10-12
+# Author: Daan van Vugt, ITER & TU Eindhoven
+#
+set -o pipefail
+set -o errtrace
+set -o nounset
+set -o errexit
+
+function usage() {
+  echo ""
+  echo "Compiles a jorek2_particles program with the settings from Makefile.inc"
+  echo "  and optional extra flags and make commands."
+  echo ""
+  echo "Usage: $0 [make-commands] program_name"
+  echo "  where program_name is the basename of your source file (in the current dir)"
+  echo ""
+  echo "Examples:"
+  echo "  $0 test_static_adas"
+  echo "  $0 test_static_adas"
+  echo "  $0 clean test_static_adas"
+  echo "  $0 DEBUG=1 test_static_adas"
+  echo ""
+}
+
+if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+  usage && exit
+fi
+
+target_dir=$(pwd)
+cd "$(dirname "${BASH_SOURCE[0]}")/.." && make "EXTRA_DIRS=$target_dir" "$@" && cp "${!#}" "$target_dir"

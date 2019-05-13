@@ -69,6 +69,8 @@ C_hel    = 0.d0
 Volume   = 0.d0
 Area     = 0.d0
 
+heat_src = 0.d0
+part_src = 0.d0
 heat_src_in  = 0.d0
 
 heat_src_out = 0.d0

@@ -154,11 +154,11 @@ subroutine interpolate_coronal(cor, density, temperature, p_out, z_eff, rad)
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 real*8, intent(in)              :: density !< log10 density (m^-3)
 real*8, intent(in)              :: temperature !< log10 temperature (K)
-real*8, dimension(0:cor%n_Z)    :: p !< distribution of charge states (sum = 1)
 real*8, intent(out), optional, dimension(0:cor%n_Z) :: p_out !< distribution of charge states (sum = 1)
 real*8, intent(out), optional   :: z_eff !< effective charge according to coronal equilibrium
 real*8, intent(out), optional   :: rad !< radiated power according to coronal equilibrium
 
+real*8, dimension(0:cor%n_Z)    :: p !< distribution of charge states (sum = 1)
 real*8, dimension(0:cor%n_Z)    :: Z !< The charge number at each charge state
 integer                         :: iz
 
@@ -171,9 +171,9 @@ endif
 if (present(z_eff)) then
   do iz=0,cor%n_Z
     Z(iz) = real(iz,8)
-    if (p(iz)<0.) p(iz)=0.
+    if (p(iz)<0.d0) p(iz)=0.d0
   enddo
-  z_eff =  dot_product(p/sum(p),Z)
+  z_eff = dot_product(p/sum(p),Z)
 endif
 
 if (present(rad)) then
@@ -338,7 +338,7 @@ do i_T = 1, size(cor%temperature,1)
   if (allocated(P_imp)) deallocate(P_imp)
 
   allocate(P_imp(0:cor%n_Z))
-  call cor%interp(density=20.,temperature=T_rad,p_out=P_imp,z_out=Z_eff,rad_out=Lrad)
+  call cor%interp(density=20.d0,temperature=T_rad,p_out=P_imp,z_out=Z_eff,rad_out=Lrad)
   Lrad = Lrad / (1.d20) ! This is to recover the radiation coefficient
   write(20,'(f12.3)',advance='no') T_rad
   do i_ion = 0, cor%n_Z

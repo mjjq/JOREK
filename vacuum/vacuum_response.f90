@@ -1634,7 +1634,7 @@ module vacuum_response
     call update_response(my_id, tstep, freeboundary_equil, resistive_wall)
 
     ! --- Perform the time-stepping for the wall currents.
-    if ( resistive_wall .and. (index_now>1) .and. (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
+    if ( resistive_wall .and.  (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
 
     ! --- Update old_dpsibnd_vec  (used for updating the wall currents in the next iteration)
     old_dpsibnd_vec(:) = dpsibnd_vec(:)
@@ -2006,7 +2006,7 @@ module vacuum_response
     deallocate( psibnd_vec, dpsibnd_vec )
     
     ! --- Initialize diagnostic coil currents (for plot_live_data)
-    if ( resistive_wall .and. (sr%n_diag_coils > 0) ) then
+    if ( resistive_wall .and. (sr%n_diag_coils > 0) .and. (index_now>0) .and. (index_start+nstep>0)) then
       if ( .not. allocated(diag_coil_curr) ) then
         allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
         diag_coil_curr(:,:) = 0.d0
@@ -2121,25 +2121,29 @@ module vacuum_response
     call MPI_ALLReduce(MPI_IN_PLACE, dwall_curr,size(dwall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
     dwall_curr(:)= dwall_curr(:)+dwall_curr_2(:)
+
+    if (index_now <= 1 ) dwall_curr = 0.d0
     wall_curr(:) = wall_curr(:) + dwall_curr(:)
 
     call write_wall_vtk(index_now, resistive_wall, my_id)
 
-     if ( vacuum_debug .and. resistive_wall ) then
-       call log_wall_curr(my_id)
-       !call log_coil_curr()
-     end if
+    if ( vacuum_debug .and. resistive_wall ) then
+      call log_wall_curr(my_id)
+      !call log_coil_curr()
+    end if
  
     ! --- Extract diagnostic coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
     if ( sr%n_diag_coils > 0 ) then
-      if ( .not. allocated(diag_coil_curr) ) then
+      if ( (.not. allocated(diag_coil_curr)) .and. (index_start+nstep >0) ) then
         allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
         diag_coil_curr(:,:) = 0.d0
       end if
-      do k = 1, sr%n_diag_coils
-        k2 = k + sr%ind_start_diag_coils - 1
-        diag_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2,:) * wall_curr(:))
-      end do
+      if (index_now>0) then
+        do k = 1, sr%n_diag_coils
+          k2 = k + sr%ind_start_diag_coils - 1
+          diag_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2,:) * wall_curr(:))
+        end do
+      endif
     end if
     
     if ( vacuum_debug .and. (my_id ==0) ) write(*,*) 'wall_curr(after)', sum(abs(wall_curr)), sum(wall_curr)

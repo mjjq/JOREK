@@ -1,0 +1,9 @@
+Examples to be made:
+ex1: static fields
+ex2: input/output
+ex3: diagnostics (as postprocessing tool)
+ex4: diagnostics (live in run)
+ex5: multiple groups and different pushers
+
+jorek/ex1_jorek: static fields
+jorek/ex2_jorek: time-varying fields (as postprocessing tool, with interpolation)

@@ -1,3 +1,4 @@
+!> Routines to import a restart file written out by a routine in [[export_restart]].
 module mod_import_restart
 implicit none
 contains
@@ -73,6 +74,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8, allocatable :: spi_species_arr (:)
 
   integer :: err_alloc
+  logical              :: modes_changed
  
   ! --- Perturbation-Import variables
   type (type_node_list)   , pointer	:: node_list_perturbation
@@ -106,14 +108,20 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     write(*,*) ' NEW format (1) : ',mode_tmp
   elseif (format_rst == 0) then
     write(*,*) ' mode : ',mode
+    modes_changed = .false.
     if (n_tor .eq. n_tor_tmp) then 
        mode_tmp = mode
     else
        mode_tmp(1:min(n_tor,n_tor_tmp)) = mode(1:min(n_tor,n_tor_tmp))
+       modes_changed = .true.
     endif
-    write(*,*) 'OLD format (0) : '
-    write(*,'(A,999i4)') '   previous modenumbers : ',mode_tmp
-    write(*,'(A,999i4)') '   new mode numbers     : ',mode
+    if (modes_changed) then
+      write(*,*) 'OLD format (0) : '
+      write(*,'(A,999i4)') '  previous modenumbers : ',mode_tmp
+      write(*,'(A,999i4)') '  new mode numbers     : ',mode
+    else
+      write(*,*) 'OLD format (0)'
+    endif
   elseif ( format_rst > 2 ) then
     write(*,'(A,i3)') ' restart file format not supported : ',format_rst
     stop
@@ -608,7 +616,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer, allocatable :: mode_tmp(:), new_mode(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
   character*50         :: version_control, version_control_tmp
-  logical              :: kept, import_3xx_4xx
+  logical              :: kept, modes_changed, import_3xx_4xx
   
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id, datatype, dataset
@@ -723,6 +731,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   if (allocated(mode_tmp))   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
   allocate(mode_tmp(n_tor_tmp))
+  mode_tmp = -1 ! unset
 
   if (format_rst == 1) then
     call HDF5_array1D_reading_int(file_id,mode_tmp,"mode_tmp")
@@ -732,6 +741,12 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     do i=1, n_tor_tmp
        mode_tmp(i) = int(i / 2) * n_period_tmp
     end do
+    modes_changed = .false.
+    if (n_tor_tmp .ne. n_tor) then
+      modes_changed = .true.
+    elseif (sum(abs(mode_tmp-mode)) .gt. 0) then
+      modes_changed = .true.
+    end if
     
     write(*,*) ' OLD format (0) : '
     write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
@@ -828,7 +843,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       end if
     end do
   end do
-  !write(*,'(a,999i4)') ' need initialization  : ', new_mode
+  if (any(new_mode .ne. 0)) write(*,'(a,999i4)') ' need initialization  : ', new_mode
   
   do i=1,node_list%n_nodes
     node_list%node(i)%x = t_x(i,:,:) 

@@ -242,18 +242,18 @@ if ( my_id == 0 ) then
       stop
     end if
   end if
-end if
 
-if (using_spi) then
-  if (JET_MGI .or. ASDEX_MGI) then
-    write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
-    write(*,*) "JET_MGI:", JET_MGI
-    write(*,*) "ASDEX_MGI:", ASDEX_MGI
-    stop
-  else 
-    call init_spi(my_id)
+  if (using_spi) then
+    if (JET_MGI .or. ASDEX_MGI) then
+      write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
+      write(*,*) "JET_MGI:", JET_MGI
+      write(*,*) "ASDEX_MGI:", ASDEX_MGI
+      stop
+    else 
+      call init_spi(my_id)
+    end if
   end if
 end if
-  
+
 return
 end subroutine initialise_parameters

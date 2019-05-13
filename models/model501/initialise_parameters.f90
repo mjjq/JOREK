@@ -139,10 +139,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents 
 
- ! --- Preset input parameters to reasonable default values.
- call preset_parameters()
-
  if (my_id .eq. 0) then
+  ! --- Preset input parameters to reasonable default values.
+  call preset_parameters()
 
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
   
@@ -259,27 +258,28 @@ call derive_num_profiles(my_id)
 !spi_R = mgi_R
 !spi_Z = mgi_Z
 
-if (2*PI/(n_tor*n_period) >= mgi_deltaphi .and. my_id == 0) then
-  write(*,*) "WARNING! mgi_deltaphi too small for the n_tor, BEWARE!"
-  if (t_now > t_mgi) then
-    write(*,*) "EXITING NOW!!!"
-    stop
+if ( my_id == 0 ) then
+  if (2*PI/(n_tor*n_period) >= mgi_deltaphi .and. my_id == 0) then
+    write(*,*) "WARNING! mgi_deltaphi too small for the n_tor, BEWARE!"
+    if (t_now > t_mgi) then
+      write(*,*) "EXITING NOW!!!"
+      stop
+    end if
+  end if
+  
+  
+  !if (using_spi) call init_spi(my_id)
+  if (using_spi) then
+    if (JET_MGI .or. ASDEX_MGI) then
+      write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
+      write(*,*) "JET_MGI:", JET_MGI
+      write(*,*) "ASDEX_MGI:", ASDEX_MGI
+      stop
+    else
+      call init_spi(my_id)
+    end if
   end if
 end if
-
-
-!if (using_spi) call init_spi(my_id)
-if (using_spi) then
-  if (JET_MGI .or. ASDEX_MGI) then
-    write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
-    write(*,*) "JET_MGI:", JET_MGI
-    write(*,*) "ASDEX_MGI:", ASDEX_MGI
-    stop
-  else
-    call init_spi(my_id)
-  end if
-end if
-
   
 return
 end subroutine initialise_parameters

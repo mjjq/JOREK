@@ -262,6 +262,7 @@ module phys_module
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: spi_abl_model      !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model
+                                !< 2 for Sergeev formula
 
   character(len=256) :: spi_shard_file !< The name of the shard size file
 

@@ -30,7 +30,7 @@ subroutine int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list
 
 !$ use omp_lib
 #if (JOREK_MODEL == 500)
-use mgi_module
+  use mod_neutral_source
 #endif
  
 implicit none

@@ -137,7 +137,7 @@ module pellet_module
     
     real*8              :: psi_axis, psi_bnd
     integer, intent(in) :: my_id
-	integer             :: ierr, i_elm, ifail
+    integer             :: ierr, i_elm, ifail
     real*8              :: V_normalisation, density, density_in, density_out, pressure, pressure_in, pressure_out   
     real*8              :: R_out, Z_out, s_out, t_out, P0_s, P0_t, P0_st, P0_ss, P0_tt
     
@@ -200,7 +200,7 @@ module pellet_module
     ! --- Local variables
     real*8               :: psi_axis, psi_bnd
     integer, intent(in)  :: my_id
-	integer              :: ierr, i_elm, ifail, i
+    integer              :: ierr, i_elm, ifail, i
     real*8               :: V_normalisation, density, density_in, density_out, pressure, pressure_in, pressure_out    
     real*8               :: R_out, Z_out, R, R_s, R_t, Z, Z_s, Z_t, s_out, t_out    
     real*8, dimension(2) :: P, P_s, P_t, P_phi   
@@ -311,7 +311,7 @@ module pellet_module
         end if
       else
         write(*,*) "Forbidden value for spi_abl_model: ", spi_abl_model
-	write(*,*) "=> EXIT"
+        write(*,*) "=> EXIT"
         stop
       end if
        
@@ -385,22 +385,22 @@ module pellet_module
       ! Read normalized shard size distribution (if given in file) and calculate shard radius normalization factor size_beta
       if (spi_shard_file /= 'none') then 
   
-	if (allocated(shard_size)) then
-	  deallocate(shard_size)
-	end if
-	allocate (shard_size(n_spi))  ! Dynamically allocate memeries for shard sizes
-	shard_size(:) = 0.0
+        if (allocated(shard_size)) then
+          deallocate(shard_size)
+        end if
+        allocate (shard_size(n_spi))  ! Dynamically allocate memeries for shard sizes
+        shard_size(:) = 0.0
   
-	size_beta    = 0.0
-	V_shard_norm = 0.0
-	inquire(file=trim(spi_shard_file), exist=ferr) ! Check if the file exists
-	if (ferr) then
-	  open(42,file=trim(spi_shard_file),status="OLD",action="READ")
-	  read(42,*)  shard_size(1:n_spi)
-	  close(42)
-	else
-	  write(*,*) "WARNING!!! Shard size file does not exist!"
-	  if (index_now == 0) then
+        size_beta    = 0.0
+        V_shard_norm = 0.0
+        inquire(file=trim(spi_shard_file), exist=ferr) ! Check if the file exists
+        if (ferr) then
+          open(42,file=trim(spi_shard_file),status="OLD",action="READ")
+          read(42,*)  shard_size(1:n_spi)
+          close(42)
+        else
+          write(*,*) "WARNING!!! Shard size file does not exist!"
+          if (index_now == 0) then
             deallocate(shard_size)
             deallocate(pellets)
             stop
@@ -409,23 +409,23 @@ module pellet_module
             spi_shard_file = 'none'
             shard_size(:) = 1.0
           end if
-	end if
+        end if
 
-	do i = 1, n_spi
-	  V_shard_norm = V_shard_norm + (4./3.) * PI * (shard_size(i)**3)
-	  size_beta    = (spi_quantity / (V_shard_norm)*pellet_density*1.d20) ** (-1./3.)
-	  write(*,*) "Characteristic shard size (m):", size_beta
-	end do
+        do i = 1, n_spi
+          V_shard_norm = V_shard_norm + (4./3.) * PI * (shard_size(i)**3)
+          size_beta    = (spi_quantity / (V_shard_norm)*pellet_density*1.d20) ** (-1./3.)
+          write(*,*) "Characteristic shard size (m):", size_beta
+        end do
 
       end if
 
       ! Initialize shard radius
       do i = 1, n_spi 
-	if (spi_shard_file == 'none') then
-	  pellets(i)%spi_radius = (spi_quantity / (n_spi*(4.*PI/3.)*pellet_density*1.d20))**(1./3.)
-	else
-	  pellets(i)%spi_radius = shard_size(i)/size_beta
-	end if
+        if (spi_shard_file == 'none') then
+          pellets(i)%spi_radius = (spi_quantity / (n_spi*(4.*PI/3.)*pellet_density*1.d20))**(1./3.)
+        else
+          pellets(i)%spi_radius = shard_size(i)/size_beta
+        end if
       end do
 
       ! Initialize shard velocity and position    
@@ -441,17 +441,17 @@ module pellet_module
       ! Z   = cos(spi_rotation_01)*y + sin(spi_rotation_01)*z
       ! RxZ = sin(spi_rotation_02)*x + cos(spi_rotation_02)*(-sin(spi_rotation_01)*y + cos(spi_rotation_01)*z)  
       spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)  
-      spi_R_inj	      = ns_R - spi_L_inj * (spi_Vel_Rref/spi_Vel_totref)
-      spi_Z_inj	      = ns_Z - spi_L_inj * (spi_Vel_Zref/spi_Vel_totref)
+      spi_R_inj       = ns_R - spi_L_inj * (spi_Vel_Rref/spi_Vel_totref)
+      spi_Z_inj       = ns_Z - spi_L_inj * (spi_Vel_Zref/spi_Vel_totref)
       spi_phi_inj     = ns_phi - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R  
       spi_rotation_01 = asin(spi_Vel_Zref/spi_Vel_totref)
       if (cos(spi_rotation_01) == 0.) then
-	spi_rotation_02 = 0.
+        spi_rotation_02 = 0.
       else
-	spi_rotation_02 = acos(spi_Vel_RxZref/(spi_Vel_totref*cos(spi_rotation_01)))
+        spi_rotation_02 = acos(spi_Vel_RxZref/(spi_Vel_totref*cos(spi_rotation_01)))
       end if 
       write(*,*) "Rotation angles from SPI coordinate system to R, Z, RxZ: ", spi_rotation_01, spi_rotation_02
-  	
+
       ! Generate a random number array rnd that contains two random angles representing the
       ! velocity direction spread, and one the random speed. Those random numbers uniquely
       ! define a random velocity of the shard, which is then transformed into the
@@ -464,32 +464,32 @@ module pellet_module
   
       do i = 1, n_spi
   
-	spi_gd_angle_01 = rnd(3 * i - 2) * spi_angle / 2.0
-	spi_gd_angle_02 = rnd(3 * i - 1) * 2. * PI
-	spi_Vel_i	  = (rnd(3*i)-0.5) * spi_Vel_diff + spi_Vel_totref 
+        spi_gd_angle_01 = rnd(3 * i - 2) * spi_angle / 2.0
+        spi_gd_angle_02 = rnd(3 * i - 1) * 2. * PI
+        spi_Vel_i       = (rnd(3*i)-0.5) * spi_Vel_diff + spi_Vel_totref 
   
-	!write(*,*) "Random angle:", i, spi_gd_angle_01, spi_gd_angle_02
-	spi_Vel_x	  = spi_Vel_i * sin(spi_gd_angle_01) * cos(spi_gd_angle_02)
-	spi_Vel_y	  = spi_Vel_i * sin(spi_gd_angle_01) * sin(spi_gd_angle_02)
-	spi_Vel_z	  = spi_Vel_i * cos(spi_gd_angle_01)
+        !write(*,*) "Random angle:", i, spi_gd_angle_01, spi_gd_angle_02
+        spi_Vel_x       = spi_Vel_i * sin(spi_gd_angle_01) * cos(spi_gd_angle_02)
+        spi_Vel_y       = spi_Vel_i * sin(spi_gd_angle_01) * sin(spi_gd_angle_02)
+        spi_Vel_z       = spi_Vel_i * cos(spi_gd_angle_01)
   
-	pellets(i)%spi_Vel_R   = spi_Vel_x * cos(spi_rotation_02) &
-                 	         - sin(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
-			         + cos(spi_rotation_01)*spi_Vel_z)
-	pellets(i)%spi_Vel_Z   = cos(spi_rotation_01) * spi_Vel_y &
-			         + sin(spi_rotation_01) * spi_Vel_z
-	pellets(i)%spi_Vel_RxZ = spi_Vel_x * sin(spi_rotation_02) &
-			         - cos(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
-			         + cos(spi_rotation_01)*spi_Vel_z)
+        pellets(i)%spi_Vel_R   = spi_Vel_x * cos(spi_rotation_02) &
+                                 - sin(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
+                                 + cos(spi_rotation_01)*spi_Vel_z)
+        pellets(i)%spi_Vel_Z   = cos(spi_rotation_01) * spi_Vel_y &
+                                 + sin(spi_rotation_01) * spi_Vel_z
+        pellets(i)%spi_Vel_RxZ = spi_Vel_x * sin(spi_rotation_02) &
+                                 - cos(spi_rotation_02) * (-sin(spi_rotation_01)*spi_Vel_y &
+                                 + cos(spi_rotation_01)*spi_Vel_z)
   
-	pellets(i)%spi_R       = spi_R_inj + spi_L_inj * (pellets(i)%spi_Vel_R/spi_Vel_totref)
-	pellets(i)%spi_Z       = spi_Z_inj + spi_L_inj * (pellets(i)%spi_Vel_Z/spi_Vel_totref)
-	pellets(i)%spi_phi     = spi_phi_inj + spi_L_inj * (pellets(i)%spi_Vel_RxZ/spi_Vel_totref)/ns_R
+        pellets(i)%spi_R       = spi_R_inj + spi_L_inj * (pellets(i)%spi_Vel_R/spi_Vel_totref)
+        pellets(i)%spi_Z       = spi_Z_inj + spi_L_inj * (pellets(i)%spi_Vel_Z/spi_Vel_totref)
+        pellets(i)%spi_phi     = spi_phi_inj + spi_L_inj * (pellets(i)%spi_Vel_RxZ/spi_Vel_totref)/ns_R
   
-	pellets(i)%spi_abl	 = 0.0
+        pellets(i)%spi_abl     = 0.0
   
-	write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
-				pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
+        write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+                                pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
         
       end do
 

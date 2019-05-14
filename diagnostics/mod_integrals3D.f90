@@ -424,7 +424,7 @@ do ife = ife_min, ife_max
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
         source_ns = 0.d0
 
-        call ns_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
+        call neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_ns,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
 
         !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma

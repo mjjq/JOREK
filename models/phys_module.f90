@@ -279,7 +279,6 @@ module phys_module
                                 !< 2 for Sergeev formula, 3 for Parks formula.
   character(len=80) :: spi_shard_file !< The name of the shard size file
 
-  logical :: abl_history        !< Whether or not ablation history is available from previous restart files
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI
   logical :: toroidal_rotation  !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 

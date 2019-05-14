@@ -380,7 +380,6 @@ subroutine preset_parameters
      spi_shard_file  = 'none'
 
      toroidal_rotation = .false.
-     abl_history     = .false.
      using_spi       = .false.
      flag_adas       = .false.
      output_rad_phi  = .false.

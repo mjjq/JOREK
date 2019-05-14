@@ -355,7 +355,6 @@ module pellet_module
     
     implicit none
     
-    integer, intent(in) :: my_id
     integer             :: ierr,err,i
     
     logical             :: ferr

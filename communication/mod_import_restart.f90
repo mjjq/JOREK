@@ -644,8 +644,8 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
 
-  integer :: err_alloc
-
+  integer :: err_alloc, err_exists
+  logical :: flag_exists
 
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
   real*8, allocatable :: t_energies2(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.

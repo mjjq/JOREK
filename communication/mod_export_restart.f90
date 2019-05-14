@@ -643,6 +643,9 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
       call HDF5_real_saving(file_id,ns_phi_rotate,"ns_phi_rotate"//char(0))  
     end if
 
+  else
+    n_spi = 0
+    call HDF5_integer_saving(file_id,n_spi,"n_spi"//char(0))
   end if
 
   ! Export restart vacuum 

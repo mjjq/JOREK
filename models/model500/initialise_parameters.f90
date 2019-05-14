@@ -119,7 +119,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
                 pastix_maxthrd
 
- if (my_id .eq. 0) then
+if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()

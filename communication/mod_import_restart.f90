@@ -73,7 +73,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8, allocatable :: spi_abl_arr (:)
   real*8, allocatable :: spi_species_arr (:)
 
-  integer :: err_alloc
+  integer              :: err_alloc, n_spi_check
   logical              :: modes_changed
  
   ! --- Perturbation-Import variables
@@ -350,6 +350,14 @@ endif
 
       end if
 
+      read(21,err=999, end=999) n_spi_check
+
+      if (n_spi_check /= n_spi) then
+        write(*,*) "Inconsistency in n_spi detected, exiting!"
+        stop
+      end if
+
+
       allocate (spi_R_arr(n_spi),stat=err_alloc)
       allocate (spi_Z_arr(n_spi),stat=err_alloc)
       allocate (spi_phi_arr(n_spi),stat=err_alloc)
@@ -620,7 +628,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id, datatype, dataset
-  integer            :: ind
+  integer            :: ind, n_spi_check
   
   real(RKIND), allocatable :: t_x(:,:,:)
   real(RKIND), allocatable :: t_values(:,:,:,:)
@@ -1295,6 +1303,18 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
           write(*,*)"Backward Compatibility: No bg species ablation history information found, assuming none."
         end if
       end if
+
+      call H5Lexists_f(file_id,"n_spi",flag_exists,err_exists) !Backward compatibility
+      if (flag_exists .and. err_exists == 0) then
+        call HDF5_integer_reading(file_id,n_spi_check,"n_spi")
+        if (n_spi_check /= n_spi) then
+          write(*,*) "Inconsistency in n_spi detected, exiting!"
+          stop
+        end if
+      else
+        write(*,*)"Backward Compatibility: No n_spi information found, assuming consistent."
+      end if
+
 
       allocate (spi_R_arr(n_spi),stat=err_alloc)
       allocate (spi_Z_arr(n_spi),stat=err_alloc)

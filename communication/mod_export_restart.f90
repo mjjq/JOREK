@@ -141,6 +141,8 @@ subroutine export_binary_restart(node_list,element_list,filename)
       write(21) xtime_spi_ablation_bg_rate(:,1:index_now)
     endif
 
+    write(21) n_spi
+
     allocate (spi_R_arr(n_spi),stat=err_alloc)  
     allocate (spi_Z_arr(n_spi),stat=err_alloc)     
     allocate (spi_phi_arr(n_spi),stat=err_alloc) 
@@ -615,6 +617,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
     end if
 
+    call HDF5_integer_saving(file_id,n_spi,"n_spi"//char(0))
 
     allocate (spi_R_arr(n_spi),stat=err_alloc)
     allocate (spi_Z_arr(n_spi),stat=err_alloc)

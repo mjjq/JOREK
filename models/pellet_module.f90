@@ -342,7 +342,7 @@ module pellet_module
   end subroutine update_spi
 
   !> Initializes the shattered pellet position, velocity and size
-  subroutine init_spi(my_id)
+  subroutine init_spi
   
     use constants
     use data_structure

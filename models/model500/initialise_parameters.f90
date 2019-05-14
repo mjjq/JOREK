@@ -332,7 +332,7 @@ if ( my_id == 0 ) then
       write(*,*) "ASDEX_MGI:", ASDEX_MGI
       stop
     else 
-      call init_spi(my_id)
+      call init_spi()
     end if
   end if
 end if

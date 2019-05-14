@@ -72,6 +72,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8,  allocatable :: spi_radius_arr (:)
   real*8,  allocatable :: spi_abl_arr (:)
 
+  integer              :: n_spi_check
   logical              :: modes_changed
  
   ! --- Perturbation-Import variables
@@ -329,6 +330,13 @@ endif
         read(21)  xtime_spi_ablation_rate(1:n_spi,1:index_start)
       end if
 
+      read(21,err=999, end=999) n_spi_check
+
+      if (n_spi_check /= n_spi) then
+        write(*,*) "Inconsistency in n_spi detected, exiting!"
+        stop
+      end if
+      
       allocate (spi_R_arr(n_spi))
       allocate (spi_Z_arr(n_spi))
       allocate (spi_phi_arr(n_spi))
@@ -598,7 +606,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id
-  integer            :: ind
+  integer            :: ind, n_spi_check
   
   real(RKIND), allocatable :: t_x(:,:,:)
   real(RKIND), allocatable :: t_values(:,:,:,:)
@@ -1244,6 +1252,17 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         call HDF5_array2D_reading(file_id,xtime_spi_ablation_rate,"xtime_spi_ablation_rate")
       end if
 
+      call H5Lexists_f(file_id,"n_spi",flag_exists,err_exists) !Backward compatibility
+      if (flag_exists .and. err_exists == 0) then
+        call HDF5_integer_reading(file_id,n_spi_check,"n_spi")
+        if (n_spi_check /= n_spi) then
+          write(*,*) "Inconsistency in n_spi detected, exiting!"
+          stop
+        end if
+      else
+        write(*,*)"Backward Compatibility: No n_spi information found, assuming consistent."
+      end if
+      
       allocate (spi_R_arr(n_spi))
       allocate (spi_Z_arr(n_spi))
       allocate (spi_phi_arr(n_spi))

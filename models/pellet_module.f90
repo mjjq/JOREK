@@ -413,9 +413,10 @@ module pellet_module
 
         do i = 1, n_spi
           V_shard_norm = V_shard_norm + (4./3.) * PI * (shard_size(i)**3)
-          size_beta    = (spi_quantity / (V_shard_norm)*pellet_density*1.d20) ** (-1./3.)
-          write(*,*) "Characteristic shard size (m):", size_beta
         end do
+
+        size_beta    = (spi_quantity / (V_shard_norm)*pellet_density*1.d20) ** (-1./3.)
+        write(*,*) "Characteristic shard size (m):", size_beta
 
       end if
 

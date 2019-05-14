@@ -3,10 +3,6 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
-use data_structure
-use constants
-use mpi_mod
-use corr_neg
 use mumps_module,  only: use_mumps, no_zeros_mumps
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd

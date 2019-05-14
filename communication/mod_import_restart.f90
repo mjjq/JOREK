@@ -317,7 +317,7 @@ endif
   if (using_spi) then
     if (n_spi >= 1) then
 
-      if (abl_history .and. index_start >= 1) then
+      if (index_start >= 1) then
 
         if (allocated(xtime_spi_ablation)) &
           call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
@@ -1240,7 +1240,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   if (using_spi) then
     if (n_spi >= 1) then
 
-      if (abl_history .and. index_start >= 1) then
+      if (index_start >= 1) then
         if (allocated(xtime_spi_ablation)) &
           call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
         call tr_allocate(xtime_spi_ablation,1,n_spi,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)

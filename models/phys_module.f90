@@ -266,7 +266,6 @@ module phys_module
 
   character(len=256) :: spi_shard_file !< The name of the shard size file
 
-  logical :: abl_history        !< Whether or not ablation history is available from previous restart files
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 

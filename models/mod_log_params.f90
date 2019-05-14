@@ -599,7 +599,6 @@ if (my_id == 0) then
      !< Additional log for SPI model
    if(using_spi) then
      write(*,LOGI_FMT) 'using_spi           ',  using_spi
-     write(*,LOGI_FMT) 'abl_history         ',  abl_history
      write(*,LOGI_FMT) 'spi_tor_rot         ',  spi_tor_rot
      write(*,INTG_FMT) 'n_spi               ',  n_spi
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model

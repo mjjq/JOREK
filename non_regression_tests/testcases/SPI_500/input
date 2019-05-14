@@ -236,7 +236,6 @@
  spi_shard_file = 'none' !'shard_size.dat'
 
  spi_abl_model   = 1
- abl_history     = .t.
  ng_radius_ratio = 1.4d0
  ng_radius_min   = 2.d-1
 

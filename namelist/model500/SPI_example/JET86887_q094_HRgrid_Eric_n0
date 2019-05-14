@@ -230,7 +230,6 @@
  n_spi          = 100
  spi_abl_model  = 1
  spi_shard_file = 'shard_size.dat'
- abl_history    = .t.
 
  spi_Vel_Rref    = -8.94427d1
  spi_Vel_Zref    = -1.78885d2

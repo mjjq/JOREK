@@ -196,7 +196,7 @@ if (use_pellet) then
 
 endif
 
-if (using_spi .and. abl_history) then
+if (using_spi) then
 
   open(20,file="abl_history.dat")
 

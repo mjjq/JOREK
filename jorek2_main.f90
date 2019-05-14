@@ -173,10 +173,6 @@ program JOREK2
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
  
-  integer :: holder
-  integer :: getpid
-
-
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
   res = 0.d0   

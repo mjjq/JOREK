@@ -371,7 +371,6 @@ subroutine preset_parameters
      spi_shard_file  = 'none'
 
      spi_tor_rot     = .false.
-     abl_history     = .false.
      using_spi       = .false.
     !=========== End of SPI parameters ===========
 

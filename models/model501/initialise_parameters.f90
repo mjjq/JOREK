@@ -268,7 +268,7 @@ if ( my_id == 0 ) then
   end if
   
   
-  !if (using_spi) call init_spi(my_id)
+  !if (using_spi) call init_spi()
   if (using_spi) then
     if (JET_MGI .or. ASDEX_MGI) then
       write(*,*) "WARNING: Using SPI, conflicting with MGI settings"

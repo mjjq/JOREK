@@ -519,7 +519,7 @@ return
 end subroutine update_spi
 
   !> Initializes the shattered pellet position, velocity and size
-  subroutine init_spi(my_id)
+  subroutine init_spi
   
     use constants
     use data_structure
@@ -532,7 +532,6 @@ end subroutine update_spi
     
     implicit none
     
-    integer, intent(in) :: my_id
     integer             :: ierr,err,i,i_surface
     integer             :: err_alloc=0, err_alloc_rnd=0    
     logical             :: ferr
@@ -850,7 +849,7 @@ end function get_pellet_derived_type
 
 subroutine pellet_source(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
-			 R,Z,psi,phi,particle_source)
+                         R,Z,psi,phi,particle_source)
 
 use constants
 

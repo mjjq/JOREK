@@ -22,9 +22,6 @@ character(len=*),             intent(in) :: filename
 real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-
 integer :: ierr,err,i
 
 ! --- Namelist with input parameters.

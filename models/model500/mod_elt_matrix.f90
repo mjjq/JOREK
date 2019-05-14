@@ -660,11 +660,6 @@ do ms=1, n_gauss
 
      source_neutral = 0.d0                    
 
-!============================================================!
-! Important note: in order to implementing more complicated  !
-!    model, we should add more arguments to neutral_source   !
-!============================================================!
-
      if (using_spi) then
 
        do spi_i=1, n_spi

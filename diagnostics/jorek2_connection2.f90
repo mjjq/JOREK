@@ -45,7 +45,7 @@ logical :: psi_theta
 
 integer :: n_stride
 
-namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, n_stride, element_start_percent
+namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, n_stride, P_start, element_start_percent
 
 call MPI_INIT(IERR)
 !required=MPI_THREAD_MULTIPLE
@@ -76,6 +76,7 @@ n_phi   = 200 !1000            ! number of steps per toroidal turn
 ns = 1                          ! number of (s) starting points within one element
 nt = 1                          ! number of (t) starting points within one element
 n_stride =  1                   ! interval of elements between starting points
+P_start  = PI/4.!0.d0
 element_start_percent = 0.25
 
 ! --- Read parameters from namelist file 'connecvtk.nml' if it exists
@@ -250,7 +251,6 @@ do i = local_elm_start, local_elm_end, n_stride
       i_elm   = i
       R_start = R_out
       Z_start = Z_out
-      P_start = PI/4.!0.d0
 
      ! write (*,*) 'i_line,R_start,Z_start',i_line,R_start,Z_start
       R_all(i_line) = R_start

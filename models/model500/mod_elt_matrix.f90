@@ -808,7 +808,7 @@ do ms=1, n_gauss
 !#  equation 1   (induction equation)                                                              #
 !###################################################################################################
 
-         rhs_ij_1 =   v * (eta_T  * (zj0-current_source(ms,mt)) - Jb)/ BigR    * xjac * tstep &
+         rhs_ij_1 =   v * (eta_T  * (zj0-current_source(ms,mt) - Jb))/ BigR    * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &

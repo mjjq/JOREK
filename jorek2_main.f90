@@ -765,6 +765,9 @@ required = 0
     call tr_allocate(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
     call tr_allocate(index_min,1,index_size,"index_min",CAT_FEM)
     call tr_allocate(index_max,1,index_size,"index_max",CAT_FEM)
+    call tr_allocate(local_index_start,1,n_cpu,"local_index_start",CAT_FEM)
+    call tr_allocate(local_index_end,1,n_cpu,"local_index_end",CAT_FEM)
+
     !
     ! Construct index_min, index_max and local_elems
     !

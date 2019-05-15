@@ -54,15 +54,7 @@ real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, source_neutral, rn0, rho_bar
 
 integer    :: spi_i
-real*8     :: spi_R_tmp
-real*8     :: spi_Z_tmp
-real*8     :: spi_phi_tmp
-real*8     :: spi_abl_tmp
 real*8     :: ng_radius
-! Additional variables reserved for future implementation
-!real*8     :: spi_Vel_R_tmp
-!real*8     :: spi_Vel_Z_tmp
-!real*8     :: spi_Vel_RxZ_tmp
 
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
@@ -161,7 +153,6 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 !$omp          wgauss_copy)                                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt, spi_i,                       &
-!$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_abl_tmp,                                &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
 !$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi,        &
@@ -359,18 +350,14 @@ do ife = ife_min, ife_max
 
           do spi_i = 1, n_spi
 
-            spi_R_tmp   = pellets(spi_i)%spi_R
-            spi_Z_tmp   = pellets(spi_i)%spi_Z
-            spi_phi_tmp = pellets(spi_i)%spi_phi
-            spi_abl_tmp = pellets(spi_i)%spi_abl
-
             ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
             if (ng_radius < ng_radius_min) then
               ng_radius = ng_radius_min
             end if
 
-            call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,ns_sig,ns_deltaphi,     &
+            call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
+                                  ng_radius,ns_sig,ns_deltaphi,     &
                                   ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),     &
                                   phi,source_neutral,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
           end do

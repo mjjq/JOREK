@@ -118,9 +118,9 @@ module data_structure
     real*8  :: spi_R        !< R coordinate of pellet (m)
     real*8  :: spi_Z        !< Z coordinate of pellet (m)
     real*8  :: spi_phi      !< Phi coordinate of pellet (degree)
-    real*8  :: spi_Vel_R    !< Velocity of pellet along R direction (m/s)
-    real*8  :: spi_Vel_Z    !< Velocity of pellet along Z direction (m/s)
-    real*8  :: spi_Vel_RxZ  !< Velocity of pellet along RxZ direction (m/s)
+    real*8  :: spi_Vel_R    !< Velocity of pellet along R direction (m/s), note that the R direction of the injection location is used here
+    real*8  :: spi_Vel_Z    !< Velocity of pellet along Z direction (m/s), note that the Z direction of the injection location is used here
+    real*8  :: spi_Vel_RxZ  !< Velocity of pellet along RxZ direction (m/s), note that the RxZ direction of the injection location is used here
     real*8  :: spi_radius   !< Radius of pellet assuming spherical pellet (m)
     real*8  :: spi_abl      !< Pellet ablation rate (atom/s)
   end type type_SPI

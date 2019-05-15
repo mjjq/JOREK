@@ -105,15 +105,7 @@ real*8     :: t_norm
 ! Temporary variables serving the SPI module
 integer    :: spi_i
 
-real*8     :: spi_R_tmp
-real*8     :: spi_Z_tmp
-real*8     :: spi_phi_tmp
-real*8     :: spi_abl_tmp
 real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
-! Additional variables reserved for future implementation
-!real*8     :: spi_Vel_R_tmp
-!real*8     :: spi_Vel_Z_tmp
-!real*8     :: spi_Vel_phi_tmp
 
 
 ! Neutral diffusion coefficients
@@ -710,10 +702,6 @@ do ms=1, n_gauss
          source_neutral_tmp = 0.d0
 
          if (pellets(spi_i)%spi_radius > 0.0) then
-           spi_R_tmp   = pellets(spi_i)%spi_R
-           spi_Z_tmp   = pellets(spi_i)%spi_Z
-           spi_phi_tmp = pellets(spi_i)%spi_phi
-           spi_abl_tmp = pellets(spi_i)%spi_abl
 
            ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
@@ -721,7 +709,8 @@ do ms=1, n_gauss
              ng_radius = ng_radius_min
            end if
 
-           call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,ns_sig,ns_deltaphi,&
+           call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
+                         ng_radius,ns_sig,ns_deltaphi,&
                          ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,0.,x_g(ms,mt),y_g(ms,mt),     &
                          phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
          end if

@@ -67,6 +67,8 @@ P_hel    = 0.d0
 C_hel    = 0.d0
 Volume   = 0.d0
 Area     = 0.d0
+heat_src = 0.d0
+part_src = 0.d0
 heat_src_in  = 0.d0
 heat_src_out = 0.d0
 part_src_in  = 0.d0
@@ -152,7 +154,7 @@ do ife =1, element_list%n_elements
         
 #if JOREK_MODEL == 400
         call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
-          psi_limit, par_src, heat_src_i, heat_src_e)
+          psi_limit, part_src, heat_src_i, heat_src_e)
           heat_src = heat_src_i + heat_src_e
 #else
         call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &

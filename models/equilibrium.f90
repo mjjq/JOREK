@@ -35,6 +35,7 @@ real*8     :: zn,  dn_dpsi,  dn_dpsi2,  dn_dz,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3, 
 real*8     :: zT,  dT_dpsi,  dT_dpsi2,  dT_dz,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi2_dz,  dT_dpsi_dz2
 real*8     :: zTi, dTi_dpsi, dTi_dpsi2, dTi_dz, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi2_dz, dTi_dpsi_dz2
 real*8     :: zTe, dTe_dpsi, dTe_dpsi2, dTe_dz, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi2_dz, dTe_dpsi_dz2
+real*8     :: Ti_prof, Te_prof
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
 real*8     :: F_prof, dF_dpsi, dF_dz, dF_dpsi2, dF_dz2, dF_dpsi_dz
 real*8     :: xx, x_s, x_t, x_st, x_ss, x_tt, yy, y_s, y_t, y_st, y_ss, y_tt
@@ -47,7 +48,7 @@ real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xj
 real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
 real*8     :: sigmas(16), dZ_axis, Z_axis_int, Z_axis_old, area_ref
 integer    :: n_grids(10)
-logical    :: freeboundary_equil2
+logical    :: freeboundary_equil2, find_pf2
 real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
 real*8, allocatable     :: T_profile(:)
 real*8     :: density_prof
@@ -146,7 +147,13 @@ end if ! my_id == 0
 !--------------------------------------- freeboundary equilibrium
 freeboundary_equil = freeboundary_equil2
 
+if ( (.not. freeboundary_equil) .and. (find_pf_coil_currents) ) then
+  find_pf2 = .false.  !just initial polar grid, don't call find_pf_coils later
+else
+  find_pf2 = .true.   ! find_pf_coils can be called if need it
+endif
 if (find_pf_coil_currents) freeboundary_equil = .false.
+
 
 current_int = 0.d0; Z_axis_int = 0.d0
  
@@ -407,7 +414,7 @@ if (my_id == 0) then
   
   enddo
   
-  if (find_pf_coil_currents) then
+  if (find_pf_coil_currents .and. find_pf2) then
     if (starwall_equil_coils) then
       write(*,*) 'The feature "find_pf_coil_currents" is not available yet with STARWALL coils'
       write(*,*) 'Please use COIL_FIELD (in STARWALL repository) for the coil geometry instead'
@@ -527,14 +534,33 @@ if (my_id == 0) then
   call tr_allocate(density_profile,1,surface_list%n_psi,"density_profile",CAT_GRID)
   
   do i=2,surface_list%n_psi
-     psi= surface_list%psi_values(i)
-     call temperature(.false.,xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,T_prof,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
-          dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
-     call density( .false., xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,density_prof,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+    psi= surface_list%psi_values(i)
+    
+    if (jorek_model .eq. 400) then
+      call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+           Ti_prof,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
+  
+      call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+           Te_prof,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
+      T_prof      = Ti_prof      + Te_prof
+      dT_dpsi     = dTi_dpsi     + dTe_dpsi
+      dT_dpsi2    = dTi_dpsi2    + dTe_dpsi2
+      dT_dpsi3    = dTi_dpsi3    + dTe_dpsi3
+      dT_dz       = dTi_dz       + dTe_dz
+      dT_dz2      = dTi_dz2      + dTe_dz2
+      dT_dpsi_dz  = dTi_dpsi_dz  + dTe_dpsi_dz
+      dT_dpsi2_dz = dTi_dpsi2_dz + dTe_dpsi2_dz
+      dT_dpsi_dz2 = dTi_dpsi_dz2 + dTe_dpsi_dz2 
+    else
+      call temperature(.false.,xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,T_prof,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
+        dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+    endif
+
+    call density( .false., xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,density_prof,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
           dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
   
-     T_profile(i)=T_prof
-     density_profile(i)=density_prof
+    T_profile(i)=T_prof
+    density_profile(i)=density_prof
   end do
   
   write(*,*) '***************************************'
@@ -557,7 +583,11 @@ if (my_id == 0) then
   
 end if ! my_id == 0
 
-if (freeboundary_equil) call boundary_check(my_id)
-
+if (freeboundary_equil) then
+  call broadcast_elements(my_id, element_list)
+  call broadcast_nodes(my_id, node_list)  !--- This is required for boundary_check
+  call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list)
+  call boundary_check(my_id)
+endif
 return
 end subroutine equilibrium

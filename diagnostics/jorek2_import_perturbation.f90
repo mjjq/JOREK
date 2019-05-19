@@ -42,7 +42,7 @@ program jorek2_import_perturbation
   
   
   ! --- Import main restart file
-  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 
   ! --- Import rst file that contains the perturbation you want to import
   write(*,*)' '

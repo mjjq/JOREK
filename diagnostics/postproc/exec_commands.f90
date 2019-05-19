@@ -18,7 +18,7 @@ module exec_commands
   use mod_log_params
   use mod_import_restart
   use mod_interp
-  
+  use mod_poloidal_currents 
   
   
   
@@ -125,12 +125,16 @@ module exec_commands
           call average_h5(command, first_step, ierr)
         case ( 'int2d' )
           call int2d(command, first_step, ierr)
+        case ( 'int3d' )
+          call int3d(command, first_step, ierr)
         case ( 'equil_params' )
           call equil_params(command, first_step, ierr)
         case ( 'energy_spectrum' )
           call energy_spectrum(command, first_step, ierr)
         case ( 'expressions' )
           call expressions(command, ierr)
+        case ( 'expressions_int' )
+          call expressions_int(command, ierr)
         case ( 'fluxsurfaces' )
           call fluxsurfaces(command, ierr)
         case ( 'for' )
@@ -143,6 +147,10 @@ module exec_commands
           call grid(command, ierr)
         case ( 'help' )
           call help(command, ierr)
+        case ( 'I_halo_TPF' )
+          call I_halo_TPF(command, first_step, ierr)
+        case ( 'jnorm_bnd_curr' )
+          call jnorm_bnd_RZ(command, ierr)
         case ( 'jorek-units' )
           call select_jorek_units(command, ierr)
         case ( 'pol_line' )
@@ -165,6 +173,8 @@ module exec_commands
           call point(command, first_step, ierr)
         case ( 'qprofile' )
           call qprofile(command, first_step, ierr)
+         case ( 'q_at_psin' )
+          call q_at_given_psin(command, first_step, ierr)
         case ( 'separatrix' )
           call separatrix(command, ierr)
         case ( 'set' )
@@ -182,10 +192,11 @@ module exec_commands
     else if ( exec_mode == LOOP_MODE ) then
       
       select case ( trim(command%args(0)) )
-        case ( 'expressions', 'mark_coords', 'int2d', 'midplane', 'average', 'point',      &
+        case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane', 'average', 'point',      &
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
-          'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
-          'si-units', 'grid', 'rectangle', 'energy_spectrum', 'average_h5' )
+          'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
+          'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'energy_spectrum', 'average_h5', &
+          'I_halo_TPF')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -265,7 +276,7 @@ module exec_commands
     write(*,*)
     
     ! --- Load the restart file
-    call import_restart(node_list, element_list, file_name, rst_format, ierr)
+    call import_restart(node_list, element_list, file_name, rst_format, ierr, .true.)
     if ( ierr /= 0 ) return
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
     
@@ -712,7 +723,30 @@ module exec_commands
   end subroutine expressions
   
   
-  
+
+
+  !> List or Select Available Expressions.
+  subroutine expressions_int(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    if ( command%n_args == 0 ) then
+      
+      call print_exprs(exprs_all_int)
+      
+    else
+      
+    expr_list = exprs_int(command%args(1:command%n_args), command%n_args)
+    call print_exprs(expr_list,.true.)
+       
+    end if
+    
+  end subroutine expressions_int
+ 
   
   
   !> Mark some expressions as coordinates.
@@ -1313,6 +1347,57 @@ module exec_commands
     close(i_file)
     
   end subroutine equil_params
+
+
+
+
+  
+  !> Output integrated poloidal current that is normal to the boudary and
+  !! toroidal peaking factor (TPF)
+  subroutine I_halo_TPF(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: i_file
+    character(len=1024) :: filename, status, access
+    real*8 :: I_halo, TPF  
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    write(filename,'(4a)') DIR, 'I_halo_TPF',  &
+       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '#               time            I_halo [MA]             TPF'
+    end if
+    
+    call integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF)
+ 
+    write(i_file,'(3es20.9)') time_now, I_halo, TPF 
+    
+    close(i_file)
+
+  end subroutine I_halo_TPF
+  
   
   
   
@@ -1380,11 +1465,128 @@ module exec_commands
     close(i_file)
     
   end subroutine int2d
+ 
+
+
+
+ 
+  
+  !> Output 3d integrals.
+  subroutine int3D(command, first_step, ierr)
+    
+    use mod_integrals3D
+    use mpi_mod
+
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: i_file, i, units, my_id
+    integer :: required, provided, StatInfo
+    character(len=1024) :: filename, status, access
+    real*8, allocatable :: res(:)
+    character(len=23)   :: s
+
+    ierr = 0
+    my_id=0
+
+    ! --- Initialize MPI
+#ifdef FUNNELED
+    required = MPI_THREAD_FUNNELED
+#else
+    required = MPI_THREAD_MULTIPLE
+#endif
+
+    if (first_step)  call MPI_Init_thread(required, provided, StatInfo)
+   
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);            if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);           if ( ierr /= 0 ) return
+    units = get_int_setting('units', ierr)
+
+    allocate(res(expr_list%n_expr+1))
+    res = 0.d0   
+ 
+    write(filename,'(4a)') DIR, 'integrals3D',  &
+       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)',advance='no') '# time                   '
+      do i = 1, expr_list%n_expr
+        s = trim(expr_list%expr(i)%name)
+        write(i_file,'(a)',advance='no') s
+      end do
+      write(i_file,'(a)')
+    end if
+    close(i_file)
+ 
+   call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)        
+
+   call write_ascii_0d(ierr, eq, expr_list, res, FORM_TABLE, header=.false.,                   &
+     filename=filename, append=.true., blanks=.false.)
+   
+  end subroutine int3D
   
   
   
+ 
+
+
+  !> Output current density normal to the jorek boundary as a function of Rbnd
+  !! and Zbnd
+  subroutine jnorm_bnd_RZ(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    logical   :: bool_si_units 
+    integer   :: i_plane, units
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    units = get_int_setting('units', ierr)
+
+    i_plane  = to_int(command%args(1), ierr); if ( ierr /= 0 ) return
+
+    if ((i_plane <= 0) .or. (i_plane > n_plane) ) then
+      write(*,*) 'Incorrect i_plane, note that    0 < i_plane <= n_plane'
+      return
+    endif
+
+    if ( units == SI_UNITS ) then
+      bool_si_units = .true. 
+    else
+      bool_si_units = .false.
+    end if
+ 
+    call normal_bnd_curr(node_list, element_list, bnd_node_list, &
+                            bnd_elm_list, i_plane, bool_si_units) 
+
+  end subroutine jnorm_bnd_RZ
   
   
+
+
+ 
   !> Output the q-profile as a function of Psi_N
   recursive subroutine qprofile(command, first_step, ierr)
   
@@ -1443,10 +1645,75 @@ module exec_commands
     if ( allocated(rad)                        ) deallocate(rad)
     
   end subroutine qprofile
+
+
+
+
+  
+  !> Output q over time at a certain psi_n
+  subroutine q_at_given_psin(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: i_file
+    character(len=1024) :: filename, status, access
+    real*8 :: t_norm, psin, q_psin(2), rad(2) 
+    
+    type (type_surface_list) :: surface_list
+ 
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    psin  = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+   
+    write(filename,'(5a)') DIR, 'q_at_psin_', trim(real2str(psin,'(f12.4)')), &
+       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '#               time            q'
+    end if
+    
+    ! --- Find flux surfaces and determine q-profile
+    surface_list%n_psi = 2 
+    allocate( surface_list%psi_values(2) )
+    surface_list%psi_values(1) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * 0.2d0
+    surface_list%psi_values(2) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * psin
+
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
+    call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
+      eq%Z_xpoint, q_psin, rad)
+    
+    write(i_file,'(2es20.13)') time_now, q_psin(2) 
+    
+    close(i_file)
+
+    ! --- Clean up.
+    if ( allocated(surface_list%psi_values)    ) deallocate(surface_list%psi_values)
+    if ( allocated(surface_list%flux_surfaces) ) deallocate(surface_list%flux_surfaces)
+    
+  end subroutine q_at_given_psin
   
   
   
-  
+
   
   !> Output the flux surfaces.
   recursive subroutine fluxsurfaces(command, ierr)

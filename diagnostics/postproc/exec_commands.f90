@@ -1536,7 +1536,7 @@ module exec_commands
  
    call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)        
 
-   call write_ascii_0d(ierr, eq, expr_list, res, FORM_TABLE, header=.false.,                   &
+   call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
      filename=filename, append=.true., blanks=.false.)
    
   end subroutine int3D
@@ -1694,12 +1694,12 @@ module exec_commands
     ! --- Find flux surfaces and determine q-profile
     surface_list%n_psi = 2 
     allocate( surface_list%psi_values(2) )
-    surface_list%psi_values(1) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * 0.2d0
-    surface_list%psi_values(2) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * psin
+    surface_list%psi_values(1) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.2d0
+    surface_list%psi_values(2) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * psin
 
     call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
-    call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
-      eq%Z_xpoint, q_psin, rad)
+    call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
+      ES%Z_xpoint, q_psin, rad)
     
     write(i_file,'(2es20.13)') time_now, q_psin(2) 
     

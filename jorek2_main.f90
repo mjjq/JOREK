@@ -124,7 +124,7 @@ program JOREK2
 #endif
   real*8                   :: t_matrix, t_send, t_solve
   type(clcktype)           :: t_itstart, t0, t1
-  real*8                   :: minRad, mindelta, maxdelta
+  real*8                   :: mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
   integer                  :: istep,jstep,ierr,i,itor,inode
   integer                  :: n_local_ELMs

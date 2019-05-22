@@ -367,6 +367,124 @@ subroutine update_boundary_types_final(element_list,node_list)
   real*8  :: norm_R,  norm_Z
   real*8  :: tang_R,  tang_Z
   real*8  :: tang_R2, tang_Z2
+  real*8  :: alpha_Bp, alpha_minus_Bp, alpha_norm, alpha_tang, alpha_tang2, alpha_tmp, alpha_between1, alpha_between2
+  logical :: surface_is_tangent
+  real*8, parameter  :: tol_tangent = 3.d-2 !1.5d-2 !1.d-2
+  
+  ! --- Some printouts?
+  if (debug) then
+    write(*,*)'----------------------------------------------------------'
+    write(*,*)'---------------- Updating boundary types. ----------------'
+    write(*,*)'----------------------------------------------------------'
+  endif
+  
+  ! --- Loop over nodes
+  do i_node=1,node_list%n_nodes
+    if (node_list%node(i_node)%boundary .eq. 0) cycle
+    ! --- Count how many elements we have on this node
+    count = 0
+    do i_elm=1,element_list%n_elements
+      do i_vertex=1,4
+        i_node2 = element_list%element(i_elm)%vertex(i_vertex)
+        if (i_node2 .eq. i_node) then
+          count = count + 1
+          i_elm_bnd(count)  = i_elm
+          i_vertex_bnd(count) = i_vertex
+        endif
+      enddo
+    enddo
+
+    ! --- psi and RZ variables
+    R         = node_list%node(i_node)%x(1,1)
+    R_s       = node_list%node(i_node)%x(2,1)
+    R_t       = node_list%node(i_node)%x(3,1)
+    Z         = node_list%node(i_node)%x(1,2)
+    Z_s       = node_list%node(i_node)%x(2,2)
+    Z_t       = node_list%node(i_node)%x(3,2)
+    
+    ! --- If we have a corner
+    if ( (count .eq. 1) .or. (count .eq. 3) ) then
+      node_list%node(i_node)%boundary = 9
+    ! --- Standard boundary
+    else
+      if (node_list%node(i_node)%boundary .ne. 1) then
+        node_list%node(i_node)%boundary = 5
+      endif
+    endif
+  enddo
+  
+  !!! RECAP!!! DEFINED NOW
+  ! 1: Non-corner target, with tangent on vector 2
+  ! 2: Non-corner flux-aligned boundary, with tangent on vector 3
+  ! 3: Corner between type-1 and type-2
+  ! 4: Same as type-1
+  ! 5: Non-corner target, with tangent on vector 3
+  ! 9: Corner between type-4 and type-5
+  
+  !!! RECAP!!! WHAT WOULD GIVE MORE OPTIONS
+  ! 1: Non-corner target, with tangent on vector 2
+  ! 2: Non-corner flux-aligned boundary, with tangent on vector 3
+  ! 3: Corner between type-1 and type-2
+  ! 4: Same as type-1
+  ! 5: Non-corner target, with tangent on vector 3
+  ! 6: Non-corner flux-aligned boundary, with tangent on vector 2
+  ! 8: Corner between type-2 and type-6
+  ! 9: Corner between type-4 and type-5
+  !11: Corner between type-5 and type-6
+  
+     
+  
+  return
+  
+end subroutine update_boundary_types_final
+
+
+
+
+
+
+
+
+
+
+! --- This is the old version, which defines the field direction directly in the nodes types
+subroutine update_boundary_types_final_old(element_list,node_list)
+  
+  
+  use constants
+  use mod_parameters
+  use data_structure
+  use phys_module, only: xcase
+  use mod_boundary
+  
+  implicit none
+  
+  ! --- Routine variables
+  type(type_node_list),    intent(inout) :: node_list	   !< list of grid nodes
+  type(type_element_list), intent(inout) :: element_list   !< list of finite elements
+  
+  type (type_bnd_node_list)    :: bnd_node_list
+  type (type_bnd_element_list) :: bnd_elm_list
+  
+  ! --- Internal variables
+  integer :: i_elm,       i_vertex,  i_node,  i_node_prev, i
+  integer :: i_elm2,      i_vertex2, i_node2, i_node_inside, i_node_side, i_node_side2
+  integer :: elm_sum
+  integer :: i_elm_first, i_vertex_first
+  integer :: i_elm_now,   i_vertex_now, i_vertex_next, i_vertex_save
+  integer :: i_elm_prev
+  integer :: iter, n_xpoints, count
+  integer :: i_elm_bnd(4), i_vertex_bnd(4)
+  logical :: found_first, found_next, reverse
+  logical, parameter :: debug  = .false.
+  real*8  :: xjac
+  real*8  :: psi_s, psi_t, psi_x, psi_y
+  real*8  :: R, R_s, R_t
+  real*8  :: Z, Z_s, Z_t
+  real*8  :: BR, BZ
+  real*8  :: norm_R,  norm_Z
+  real*8  :: tang_R,  tang_Z
+  real*8  :: tang_R2, tang_Z2
   real*8  :: alpha_Bp, alpha_norm, alpha_tang, alpha_tang2, alpha_tmp, alpha_between1, alpha_between2
   logical :: surface_is_tangent
   real*8, parameter  :: tol_tangent = 3.d-2 !1.5d-2 !1.d-2
@@ -628,8 +746,6 @@ subroutine update_boundary_types_final(element_list,node_list)
   
   return
   
-end subroutine update_boundary_types_final
-
-
+end subroutine update_boundary_types_final_old
 
 

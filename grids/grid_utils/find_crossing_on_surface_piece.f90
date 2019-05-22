@@ -42,7 +42,7 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
 
   gofast = .false.
   if (present(go_fast)) gofast = go_fast
-  tol_far = 0.1 * R_geo
+  tol_far = 0.2 * R_geo
 
   x_previous = 0.d0
   
@@ -249,7 +249,7 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
       endif
       
       if (gofast) then
-        if ( (i .gt. 3) .and. (errx .gt. tol_far) ) exit
+        if ( (i .gt. 5) .and. (errx .gt. tol_far) ) exit
       endif
   
     enddo

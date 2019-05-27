@@ -115,7 +115,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
-                mgi_sig, mgi_deltaphi, ksi_ion,                     &
+                mgi_sig, mgi_deltaphi, ksi_ion,  rnd_seed,          &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &

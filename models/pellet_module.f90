@@ -722,7 +722,8 @@ end subroutine update_spi
           deallocate(shard_size)
           stop
         end if
-  
+ 
+        CALL random_seed(put=rnd_seed) 
         CALL random_number(rnd)
   
         !write(*,*) "Random number array:", rnd

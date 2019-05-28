@@ -219,6 +219,12 @@ module pellet_module
     
     spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
         
+    write(*,*) 'a', ns_phi
+    write(*,*) 'b', ns_phi_rotate
+    write(*,*) 'c', spi_L_inj
+    write(*,*) 'd', spi_Vel_RxZref
+    write(*,*) 'e', spi_Vel_totref
+    write(*,*) 'f', ns_R
     spi_phi_inj     = ns_phi + ns_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
     
     if (spi_phi_inj >= 2.*PI) then

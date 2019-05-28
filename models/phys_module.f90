@@ -277,7 +277,7 @@ module phys_module
   integer :: spi_abl_model      !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model,
                                 !< 2 for Sergeev formula, 3 for Parks formula.
-  integer :: rnd_seed(10)       !< Random seed array
+  integer :: spi_rnd_seed(40)   !< Random seed array
 
   character(len=80) :: spi_shard_file !< The name of the shard size file
 

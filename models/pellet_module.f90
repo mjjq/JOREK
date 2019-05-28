@@ -723,7 +723,7 @@ end subroutine update_spi
           stop
         end if
  
-        CALL random_seed(put=rnd_seed) 
+        CALL random_seed(put=spi_rnd_seed) 
         CALL random_number(rnd)
   
         !write(*,*) "Random number array:", rnd

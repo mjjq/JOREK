@@ -264,7 +264,7 @@ module phys_module
                                 !< 0 for constant release rate, 1 for NGS model
                                 !< 2 for Sergeev formula
 
-  integer :: rnd_seed(10)       !< Random seed array
+  integer :: spi_rnd_seed(40)   !< Random seed array
 
   character(len=256) :: spi_shard_file !< The name of the shard size file
 

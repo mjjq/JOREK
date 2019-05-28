@@ -601,7 +601,7 @@ if (my_id == 0) then
      write(*,LOGI_FMT) 'using_spi           ',  using_spi
      write(*,LOGI_FMT) 'spi_tor_rot         ',  spi_tor_rot
      write(*,INTG_FMT) 'n_spi               ',  n_spi
-     write(*,INTG_FMT) 'rnd_seed            ',  rnd_seed
+     write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
      write(*,CHAR_FMT) 'spi_shard_file      ',  spi_shard_file
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref

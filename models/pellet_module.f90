@@ -459,7 +459,7 @@ module pellet_module
       if (allocated(rnd)) deallocate(rnd)
       allocate (rnd(3*n_spi))  ! Dynamically allocate memeries for randoms   
 
-      CALL random_seed(put=rnd_seed)
+      CALL random_seed(put=spi_rnd_seed)
       CALL random_number(rnd)  
     
       spi_Vel_diff = abs(spi_Vel_diff) ! To avoid negative velocity spread

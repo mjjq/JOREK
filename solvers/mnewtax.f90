@@ -57,8 +57,8 @@ do k=1,ntrial
 
   errx=abs(p(1)) + abs(p(2))
 
-  p = min(p,+0.5d0)
-  p = max(p,-0.5d0)
+  p = min(p,+0.25d0)
+  p = max(p,-0.25d0)
 
   x = x + p
 

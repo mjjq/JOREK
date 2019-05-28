@@ -366,6 +366,7 @@ subroutine preset_parameters
      tor_frequency   = 0.0
      
      n_spi           = 1
+     rnd_seed        = 0
 
      spi_abl_model   = 0
      spi_shard_file  = 'none'

@@ -204,10 +204,8 @@ if (my_id .eq. 0) then
     write(*,*) "packing pellets: ", ierr
     
     call MPI_PACK(spi_tor_rot,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    if (spi_tor_rot) then
-      call MPI_PACK(tor_frequency,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-      call MPI_PACK(ns_phi_rotate,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    end if
+    call MPI_PACK(tor_frequency,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(ns_phi_rotate,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   end if
 
   call MPI_PACK(nimp_bg,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -642,10 +640,8 @@ if (my_id .ne. 0) then
     call MPI_UNPACK(buffer,bufsize,position,pellets,              n_spi,dtype,MPI_COMM_WORLD,ierr)
     
     call MPI_UNPACK(buffer,bufsize,position,spi_tor_rot,          1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
-    if (spi_tor_rot) then
-      call MPI_UNPACK(buffer,bufsize,position,tor_frequency,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-      call MPI_UNPACK(buffer,bufsize,position,ns_phi_rotate,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-    end if
+    call MPI_UNPACK(buffer,bufsize,position,tor_frequency,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,ns_phi_rotate,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   end if
   call MPI_UNPACK(buffer,bufsize,position,nimp_bg,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 

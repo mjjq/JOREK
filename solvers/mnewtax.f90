@@ -62,7 +62,7 @@ do k=1,ntrial
 
   x = x + p
 
-  x = max(x,-1.d0)
+  x = max(x, 0.d0)
   x = min(x,+1.d0)
 
   if (errx .le. tolx) then

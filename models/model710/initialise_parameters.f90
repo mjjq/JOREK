@@ -56,7 +56,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, resistive_wall, freeb_change_indices, &
                 use_mumps, use_mumps_BLR, mumps_BLR_eps,            &
-                use_pastix, use_murge, use_murge_element, use_wsmp, &
+                use_pastix, use_murge, use_murge_element,           &
                 pastix_smp_only, refinement, grid_to_wall,          &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &

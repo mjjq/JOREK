@@ -9,7 +9,7 @@ contains
 subroutine log_parameters(my_id, short)
 
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps
+use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
 use wsmp_module,   only: use_wsmp
 use vacuum
@@ -533,6 +533,8 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
+  write(*,LOGI_FMT) 'use_mumps_BLR         ', use_mumps_BLR
+  write(*,REAL_FMT) 'mumps_BLR_eps         ', mumps_BLR_eps
 
   write(*,INTG_FMT) 'n_pfc                 ', n_pfc
   if ( n_pfc > 0 ) then

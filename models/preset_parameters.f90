@@ -6,7 +6,7 @@
 subroutine preset_parameters
   
   use phys_module
-  use mumps_module,  only: use_mumps, no_zeros_mumps
+  use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps
   use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
   use wsmp_module,   only: use_wsmp
   
@@ -291,6 +291,9 @@ subroutine preset_parameters
   bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
   no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
   no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
+
+  use_mumps_BLR      = .false.              ! Use MUMPS solver with Block-low-rank (BLR) compression
+  mumps_BLR_eps      = 0                    ! Accuracy of MUMPS BLR approximations (0 = full precision)
   
 !==== RMP parameters =====
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)

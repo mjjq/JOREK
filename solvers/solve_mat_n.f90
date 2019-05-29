@@ -123,12 +123,17 @@ contains
       if (use_mumps) then
 #ifdef USE_MUMPS
 
-        mumps_par%JOB = 1                                 ! Analysis, only needed when grid has changed
+        mumps_par%JOB = 1                                  ! Analysis, only needed when grid has changed
 
-        mumps_par%icntl(7)  = 4                            ! reorderign option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
+        mumps_par%icntl(7)  = 7                            ! reordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
         mumps_par%icntl(8)  = 7                            ! row and column scaling
         mumps_par%icntl(14) = 30                           ! MAXS
         mumps_par%icntl(18) = 0
+
+        if (use_mumps_BLR) then
+          mumps_par%icntl(35) = 1                          ! Block-low-rank (BLR) compression. 0: off (default), 1: automatic, 2: factorisation and solution, 3: only factorisation
+          mumps_par%cntl(7) = mumps_BLR_eps                ! Accuracy of BLR approximation
+        endif
 
         call DMUMPS(mumps_par)
 

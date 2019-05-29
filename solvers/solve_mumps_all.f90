@@ -28,6 +28,7 @@ mumps_par%rhs     => rhs_glob(1:nz_glob)
 mumps_par%n      = ndof_glob
 mumps_par%nz_loc = nz_glob
 
+
 if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
 if (allocated(column_local))    call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
 call tr_allocate(column_scaling,1,mumps_par%N,"column_scaling",CAT_DMATRIX)
@@ -45,11 +46,19 @@ do k=1,mumps_par%nz_loc
   mumps_par%A_loc(k) = mumps_par%A_loc(k) / column_scaling(j)
 enddo
 
+
+
 mumps_par%JOB = 1                                  ! Analysis, only needed when grid has changed
-mumps_par%icntl(7)  = 7
+
+mumps_par%icntl(7)  = 7                            ! reordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
 mumps_par%icntl(8)  = 7                            ! row and column scaling  7: automatic scaling
 mumps_par%icntl(18) = 3
 mumps_par%icntl(14) = 50                           ! MAXS
+
+if (use_mumps_BLR) then
+  mumps_par%icntl(35) = 1                          ! Block-low-rank (BLR) compression. 0: off (default), 1: automatic, 2: factorisation and solution, 3: only factorisation
+  mumps_par%cntl(7) = mumps_BLR_eps                ! Accuracy of BLR approximation
+endif
 
 call clck_time(t0)
 

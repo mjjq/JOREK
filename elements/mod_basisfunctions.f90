@@ -7,7 +7,7 @@ implicit none
 private
 public :: basisfunctions1, basisfunctions
 public :: basisfunctions_2D_1_T !< Transposed version, for faster interp_PRZ
-public :: basisfunctions3, basisfunctions4
+public :: basisfunctions3
 
 !> One-dimensional basisfunctions with derivatives of order n
 interface basisfunctions1
@@ -554,36 +554,5 @@ H(4,4)   =-9.d0*(-1.d0 + s)**2*s*(-1.d0 + t)*t**2
 H_s(4,4) =9.d0*(1.d0 - 3.d0*s)*(-1.d0 + s)*(-1.d0 + t)*t**2
 H_t(4,4) =-9.d0*(-1.d0 + s)**2*s*t*(-2.d0 + 3.d0*t)
 end subroutine basisfunctions3
-
-!> Basisfunctions, value only.
-pure subroutine basisfunctions4(s, t, H)
-implicit none
-
-! --- Routine parameters
-real*8, intent(in)  :: s          !< s-coordinate in the element
-real*8, intent(in)  :: t          !< t-coordinate in the element
-real*8, intent(out) :: H(4,4)     !< Basis functions
-
-!---------------------------------------------------------- vertex (1)
-H(1,1)   =(-1.d0 + s)**2*(1.d0 + 2.d0*s)*(-1.d0 + t)**2*(1.d0 + 2.d0*t)
-H(1,2)   =3.d0*(-1.d0 + s)**2*s*(-1.d0 + t)**2*(1.d0 + 2.d0*t)
-H(1,3)   =3.d0*(-1.d0 + s)**2*(1.d0 + 2.d0*s)*(-1.d0 + t)**2*t
-H(1,4)   =9.d0*(-1.d0 + s)**2*s*(-1.d0 + t)**2*t
-!---------------------------------------------------------- vertex (2)
-H(2,1)   =-(s**2*(-3.d0 + 2.d0*s)*(-1.d0 + t)**2*(1.d0 + 2.d0*t))
-H(2,2)   =-3.d0*(-1.d0 + s)*s**2*(-1.d0 + t)**2*(1.d0 + 2.d0*t)
-H(2,3)   =-3.d0*s**2*(-3.d0 + 2.d0*s)*(-1.d0 + t)**2*t
-H(2,4)   =-9.d0*(-1.d0 + s)*s**2*(-1.d0 + t)**2*t
-!---------------------------------------------------------- vertex (3)
-H(3,1)   =s**2*(-3.d0 + 2.d0*s)*t**2*(-3.d0 + 2.d0*t)
-H(3,2)   =3.d0*(-1.d0 + s)*s**2*t**2*(-3.d0 + 2.d0*t)
-H(3,3)   =3.d0*s**2*(-3.d0 + 2.d0*s)*(-1.d0 + t)*t**2
-H(3,4)   =9.d0*(-1.d0 + s)*s**2*(-1.d0 + t)*t**2
-!---------------------------------------------------------- vertex (4)
-H(4,1)   =-((-1.d0 + s)**2*(1.d0 + 2.d0*s)*t**2*(-3.d0 + 2.d0*t))
-H(4,2)   =-3.d0*(-1.d0 + s)**2*s*t**2*(-3.d0 + 2.d0*t)
-H(4,3)   =-3.d0*(-1.d0 + s)**2*(1.d0 + 2.d0*s)*(-1.d0 + t)*t**2
-H(4,4)   =-9.d0*(-1.d0 + s)**2*s*(-1.d0 + t)*t**2
-end subroutine basisfunctions4
 
 end module mod_basisfunctions

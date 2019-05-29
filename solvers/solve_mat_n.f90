@@ -7,7 +7,11 @@ contains
     
     implicit none
 
+#ifdef USE_PASTIX
 #include "pastix_fortran.h"
+#else
+#include "no_pastix_fortran.h"
+#endif
 
     integer, intent(in) :: my_id
     integer*4, dimension(1:pastix_nthrd) :: thread_map
@@ -40,7 +44,11 @@ contains
     
     implicit none
 
+#ifdef USE_PASTIX
 #include "pastix_fortran.h"
+#else
+#include "no_pastix_fortran.h"
+#endif
 #include "r3_info.h"
 
     integer, intent(in) :: my_id

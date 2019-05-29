@@ -1,5 +1,9 @@
 module pastix_module             ! PastiX specific variables
+#ifdef USE_PASTIX
 #include "pastix_fortran.h"
+#else
+#include "no_pastix_fortran.h"
+#endif
   integer(kind=8)       :: pastix_data
   integer               :: pastix_iparm(IPARM_SIZE)
   real*8                :: pastix_dparm(DPARM_SIZE)

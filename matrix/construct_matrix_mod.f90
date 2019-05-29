@@ -146,7 +146,7 @@ contains
             (abs(thread_struct(omp_tid)%RHS(i))+abs(thread_struct(omp_tid)%RHS2(i))+1.d0) .gt. 1.d-12) then
     	  call decrypt_index(i, ivertex, iorder, ivar, itor)
     	  write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, thread_struct(omp_tid)%RHS(i), &
-    	      thread_struct(omp_tid)%RHS2(i), RHS(i)-RHS2(i)
+    	      thread_struct(omp_tid)%RHS2(i), thread_struct(omp_tid)%RHS(i)-thread_struct(omp_tid)%RHS2(i)
     	  rhs_problem(ivar) = .true.
     	  difference_found  = .true.
     	endif

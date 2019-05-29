@@ -39,7 +39,7 @@ jorek2_stan
 jorek2vtk*
 jorek2_fieldlines_vtk
 jorek2vtk_3d
-jorek2_diagno
+jorek2_diagno*
 jorek_to_helena
 import_eqdsk
 jorek2_main

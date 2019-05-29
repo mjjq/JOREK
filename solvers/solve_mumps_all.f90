@@ -50,7 +50,7 @@ enddo
 
 mumps_par%JOB = 1                                  ! Analysis, only needed when grid has changed
 
-mumps_par%icntl(7)  = 7                            ! reordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
+mumps_par%icntl(7)  = mumps_ordering               ! ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS), default: 7
 mumps_par%icntl(8)  = 7                            ! row and column scaling  7: automatic scaling
 mumps_par%icntl(18) = 3
 mumps_par%icntl(14) = 50                           ! MAXS

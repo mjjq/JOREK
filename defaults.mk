@@ -51,7 +51,7 @@ ifeq ($(COMPILER_FAMILY), gnu)
     FLAGS  += -g -Og -ggdb -fno-lto
     FLAGS  += -Wunused-variable
     FFLAGS += -fcheck=all
-    FLAGS  += -ffpe-trap=invalid,zero,overflow
+    FLAGS  += -ffpe-trap=invalid,zero,overflow,denormal
     FFLAGS += -ftrapv
     FFLAGS += -finit-real=snan -finit-integer=12345678
     FFLAGS += -Wconversion

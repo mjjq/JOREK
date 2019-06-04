@@ -329,6 +329,9 @@ if (my_id .eq. 0) then
   if (allocated(area_t)) call tr_deallocate(area_t,"area_t",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(area_t,1,index_start+nstep,"area_t",CAT_UNKNOWN)
 
+  if (allocated(mag_ener_src_tot)) call tr_deallocate(mag_ener_src_tot,"mag_ener_src_tot",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(mag_ener_src_tot,1,index_start+nstep,"mag_ener_src_tot",CAT_UNKNOWN)
+
 
 endif
 

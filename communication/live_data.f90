@@ -31,7 +31,7 @@ module live_data
   subroutine init_live_data()
     
     use mod_parameters,    only: n_tor, n_plane, n_period, jorek_model, variable_names
-    use phys_module,   only: produce_live_data, mode, mode_type, xpoint, xcase
+    use phys_module,   only: produce_live_data, mode, mode_type, xpoint, xcase, central_density, sqrt_mu0_rho0, sqrt_mu0_over_rho0
     
     implicit none
     
@@ -56,22 +56,34 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_tor: ', n_tor
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_plane: ', n_plane
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_period: ', n_period
-    write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies growth_rates times input_profiles axis current betas particlecontent thermalenergy heatingpower &
-                                    particlesource diag_coil_curr integrated_energies bnd_fluxes dEdt helicity dissipative_terms work_terms             &
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@sqrt_mu0_rho0: ', sqrt_mu0_rho0 
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@sqrt_mu0_over_rho0: ', sqrt_mu0_over_rho0
+    write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies magnetic_energies kinetic_energies growth_rates magnetic_growth_rates  &
+                                    kinetic_growth_rates times input_profiles axis current betas particlecontent thermalenergy & 
+                                    heatingpower particlesource diag_coil_curr integrated_energies bnd_fluxes dEdt helicity    &
+                                    dissipative_terms work_terms             &
                                     area volume li3 energy_conservation'
     write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names
     
     ! --- Write file headers indicating what data is in the files.
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_times: ', 1
     write(LIVE_DATA_HANDLE,'(A)') '@times_xlabel: time step'
+    write(LIVE_DATA_HANDLE,'(A)') '@times_xlabel_si: time step'
     write(LIVE_DATA_HANDLE,'(A)') '@times_ylabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@times_ylabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@times_x2si: ', 1.0
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@times_y2si: ', sqrt_mu0_rho0*1.e3
     write(LIVE_DATA_HANDLE,'(A)') '@times_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@times: "step"     "time"'
     
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energies: ', 2*(n_tor+1)/2
     write(LIVE_DATA_HANDLE,'(A)') '@energies_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@energies_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@energies_ylabel: normalized energy'
+    write(LIVE_DATA_HANDLE,'(A)') '@energies_ylabel_si: normalized energy'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@energies_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@energies_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@energies_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@energies: %"time"           '
     do n = 1, n_tor, 2
@@ -81,10 +93,44 @@ module live_data
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{kin', mode(n), '}"'
     end do
     write(LIVE_DATA_HANDLE,*)
+
+
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_magnetic_energies: ', (n_tor+1)/2
+    write(LIVE_DATA_HANDLE,'(A)') '@magnetic_energies_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@magnetic_energies_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@magnetic_energies_ylabel: normalized magnetic energy'
+    write(LIVE_DATA_HANDLE,'(A)') '@magnetic_energies_ylabel_si: normalized magnetic energy'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@magnetic_energies_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@magnetic_energies_y2si: ', 1.0
+    write(LIVE_DATA_HANDLE,'(A)') '@magnetic_energies_logy: 1'
+    write(LIVE_DATA_HANDLE,'(A)',advance='no') '@magnetic_energies: %"time"           '
+    do n = 1, n_tor, 2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{mag', mode(n), '}"'
+    end do
+    write(LIVE_DATA_HANDLE,*)
+
+
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_kinetic_energies: ', (n_tor+1)/2
+    write(LIVE_DATA_HANDLE,'(A)') '@kinetic_energies_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@kinetic_energies_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@kinetic_energies_ylabel: normalized kinetic energy'
+    write(LIVE_DATA_HANDLE,'(A)') '@kinetic_energies_ylabel_si: normalized kinetic energy'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@kinetic_energies_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@kinetic_energies_y2si: ', 1.0
+    write(LIVE_DATA_HANDLE,'(A)') '@kinetic_energies_logy: 1'
+    write(LIVE_DATA_HANDLE,'(A)',advance='no') '@kinetic_energies: %"time"           '
+    do n = 1, n_tor, 2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"E_{kin', mode(n), '}"'
+    end do
+    write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_growth_rates: ', 2*(n_tor+1)/2
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_ylabel: normalized growth rate'
+    write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_ylabel_si: growth rate [1/s]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@growth_rates_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@growth_rates_y2si: ', 1./sqrt_mu0_rho0
     write(LIVE_DATA_HANDLE,'(A)') '@growth_rates_logy: 1'
     write(LIVE_DATA_HANDLE,'(A)',advance='no') '@growth_rates: %"time"           '
     do n = 1, n_tor, 2
@@ -94,17 +140,54 @@ module live_data
       write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{kin', mode(n), '}"'
     end do
     write(LIVE_DATA_HANDLE,*)
-    
+
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_magnetic_growth_rates: ', (n_tor+1)/2
+    write(LIVE_DATA_HANDLE,'(A)') '@magnetic_growth_rates_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@magnetic_growth_rates_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@magnetic_growth_rates_ylabel: normalized growth rate'
+    write(LIVE_DATA_HANDLE,'(A)') '@magnetic_growth_rates_ylabel_si: growth rate [1/s]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@magnetic_growth_rates_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@magnetic_growth_rates_y2si: ', 1./sqrt_mu0_rho0
+    write(LIVE_DATA_HANDLE,'(A)') '@magnetic_growth_rates_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)',advance='no') '@magnetic_growth_rates: %"time"           '
+    do n = 1, n_tor, 2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{mag', mode(n), '}"'
+    end do
+    write(LIVE_DATA_HANDLE,*)
+ 
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_kinetic_growth_rates: ', (n_tor+1)/2
+    write(LIVE_DATA_HANDLE,'(A)') '@kinetic_growth_rates_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@kinetic_growth_rates_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@kinetic_growth_rates_ylabel: normalized growth rate'
+    write(LIVE_DATA_HANDLE,'(A)') '@kinetic_growth_rates_ylabel_si: growth rate [1/s]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@kinetic_growth_rates_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@kinetic_growth_rates_y2si: ', 1./sqrt_mu0_rho0
+    write(LIVE_DATA_HANDLE,'(A)') '@kinetic_growth_rates_logy: 1'
+    write(LIVE_DATA_HANDLE,'(A)',advance='no') '@kinetic_growth_rates: %"time"           '
+    do n = 1, n_tor, 2
+      write(LIVE_DATA_HANDLE,'(A7,",",I2.2,A2,1x)',advance='no') '"G_{kin', mode(n), '}"'
+    end do
+    write(LIVE_DATA_HANDLE,*)
+
+
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_axis: ', 3
     write(LIVE_DATA_HANDLE,'(A)') '@axis_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@axis_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@axis_ylabel: Magnetic axis properties'
+    write(LIVE_DATA_HANDLE,'(A)') '@axis_ylabel_si: Magnetic axis properties'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@axis_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@axis_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@axis_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@axis: %"time"           "R position"              "Z position"           "Psi on axis"'
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_integrated_energies: ', 5 
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies__xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies_ylabel: Total integrated energies [J]'
+    write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies_ylabel_si: Total integrated energies [J]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@integrated_energies_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@integrated_energies_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies: %"time"           "Total energy"              "Magnetic"           "Kinetic parallel"    &
                                    "Kinetic perpendicular"                 "Thermal energy"     '
@@ -112,28 +195,44 @@ module live_data
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_bnd_fluxes: ', 4 
     write(LIVE_DATA_HANDLE,'(A)') '@bnd_fluxes_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_fluxes_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@bnd_fluxes_ylabel: Total boundary fluxes [W]'
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_fluxes_ylabel_si: Total boundary fluxes [W]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@bnd_fluxes_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@bnd_fluxes_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@bnd_fluxes_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@bnd_fluxes: %"time"       "p vn"  "kinpar-flux"    "qn-par"    "qn-perp"   '
     write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_current: ', 3 
     write(LIVE_DATA_HANDLE,'(A)') '@current_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@current_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@current_ylabel: plasma current [A]'
+    write(LIVE_DATA_HANDLE,'(A)') '@current_ylabel_si: plasma current [MA]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@current_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@current_y2si: ', 1.e-6
     write(LIVE_DATA_HANDLE,'(A)') '@current_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@current: %"time"       "Total"    "Inside LCFS"   "Outside LCFS" '
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_helicity: ', 1
     write(LIVE_DATA_HANDLE,'(A)') '@helicity_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@helicity_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@helicity_ylabel: Total helicity [Wb^2]'
+    write(LIVE_DATA_HANDLE,'(A)') '@helicity_ylabel_si: Total helicity [Wb^2]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@helicity_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@helicity_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@helicity_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@helicity: %"time"           "Helicity"'
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_area: ', 1
     write(LIVE_DATA_HANDLE,'(A)') '@area_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@area_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@area_ylabel: Total area [m^2]'
+    write(LIVE_DATA_HANDLE,'(A)') '@area_ylabel_si: Total area [m^2]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@area_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@area_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@area_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@area: %"time"           "Plasma cross sectional area"'
     write(LIVE_DATA_HANDLE,*)
@@ -147,77 +246,121 @@ module live_data
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_volume: ', 1
     write(LIVE_DATA_HANDLE,'(A)') '@volume_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@volume_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@volume_ylabel: Total volume [m^3]'
+    write(LIVE_DATA_HANDLE,'(A)') '@volume_ylabel_si: Total volume [m^3]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@volume_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@volume_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@volume_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@volume: %"time"           "Plasma volume"'
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_li3: ', 2
     write(LIVE_DATA_HANDLE,'(A)') '@li3_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@li3_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@li3_ylabel: li(3) '
+    write(LIVE_DATA_HANDLE,'(A)') '@li3_ylabel_si: li(3) '
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@li3_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@li3_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@li3_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@li3: %"time"         "inside separatrix"  "All domain" '
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energy_conservation: ', 2
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_ylabel: Total energy conservation'
+    write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_ylabel_si: Total energy conservation'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@energy_conservation_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@energy_conservation_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation: %"time"       "-dEtotdt"     "Sum bnd fluxes + sources + dissipative terms" '
     write(LIVE_DATA_HANDLE,*)
  
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dissipative_terms: ', 2
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_ylabel: Dissipative powers [W]'
+    write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_ylabel_si: Dissipative powers [W]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms: %"time"         "Ohmic power"   "Parallel viscosity power" '
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_work_terms: ', 2 
     write(LIVE_DATA_HANDLE,'(A)') '@work_terms_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@work_terms_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@work_terms_ylabel: Total work [W]'
+    write(LIVE_DATA_HANDLE,'(A)') '@work_terms_ylabel_si: Total work [W]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@work_terms_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@work_terms_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@work_terms_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@work_terms: %"time"     "Magnetic = JxB~nabla p"   "Thermal = vpar*nabla p"  '
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dEdt: ', 5 
     write(LIVE_DATA_HANDLE,'(A)') '@dEdt_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@dEdt_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@dEdt_ylabel: -dEnergydt [W]'
+    write(LIVE_DATA_HANDLE,'(A)') '@dEdt_ylabel_si: -dEnergydt [W]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dEdt_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dEdt_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@dEdt_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@dEdt: %"time"    "Etot"  "Wmagtot"  "thermaltot"   "kinperptot"  "kinpartot"      '
     write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_betas: ', 3
     write(LIVE_DATA_HANDLE,'(A)') '@betas_xlabel: normalized time'
-    write(LIVE_DATA_HANDLE,'(A)') '@betas_ylabel: plasma beta'
+    write(LIVE_DATA_HANDLE,'(A)') '@betas_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@betas_ylabel: plasma beta [%]'
+    write(LIVE_DATA_HANDLE,'(A)') '@betas_ylabel_si: plasma beta [%]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@betas_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@betas_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@betas_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@betas: %"time"           "beta poloidal"       "beta toroidal"       "beta normalized"'
     write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_particlecontent: ', 2
     write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_xlabel: normalized time'
-    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_ylabel: particle content'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_ylabel: normalized particle content'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_ylabel_si: particle content'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent_y2si: ', 1.e20 * central_density
     write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@particlecontent: %"time"           "inside separatrix"   "outside separatrix"'
     write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_thermalenergy: ', 2
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_xlabel: normalized time'
-    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_ylabel: thermal energy'
+    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_ylabel: normalized thermal energy'
+    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_ylabel_si: thermal energy [MJ]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@thermalenergy_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@thermalenergy_y2si: ', 1.e-6/(sqrt_mu0_rho0 * sqrt_mu0_over_rho0)
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy: %"time"   "inside separatrix"   "outside separatrix"'
     write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_heatingpower: ', 3 
     write(LIVE_DATA_HANDLE,'(A)') '@heatingpower_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@heatingpower_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@heatingpower_ylabel: heating power [W]'
+    write(LIVE_DATA_HANDLE,'(A)') '@heatingpower_ylabel_si: heating power [MW]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@heatingpower_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@heatingpower_y2si: ', 1.e-6
     write(LIVE_DATA_HANDLE,'(A)') '@heatingpower_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@heatingpower: %"time"  "Total"     "inside separatrix"   "outside separatrix"'
     write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_particlesource: ', 3 
     write(LIVE_DATA_HANDLE,'(A)') '@particlesource_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlesource_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@particlesource_ylabel: particle source [10^20/m^3/s]'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlesource_ylabel_si: particle source [10^20/m^3/s]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlesource_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlesource_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@particlesource_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@particlesource: %"time"  "Total"   "inside separatrix"   "outside separatrix"   '
     write(LIVE_DATA_HANDLE,*)
@@ -265,6 +408,16 @@ module live_data
       end do
     end do
     write(LIVE_DATA_HANDLE,*)
+    write(LIVE_DATA_HANDLE,'(A,ES17.9)',advance='no') '@magnetic_energies:', xtime(index)
+    do i = 1, n_tor, 2
+      write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') sum(energies(max(i-1,1):i,1,index))
+    end do
+    write(LIVE_DATA_HANDLE,*)
+    write(LIVE_DATA_HANDLE,'(A,ES17.9)',advance='no') '@kinetic_energies:', xtime(index)
+    do i = 1, n_tor, 2
+      write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') sum(energies(max(i-1,1):i,2,index))
+    end do
+    write(LIVE_DATA_HANDLE,*)
     if ( index > 1 ) then
       write(LIVE_DATA_HANDLE,'(A,ES17.9)',advance='no') '@growth_rates:', &
         (xtime(index)+xtime(index-1))/2.d0
@@ -279,6 +432,32 @@ module live_data
           endif
           write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') growth_rate
         end do
+      end do 
+      write(LIVE_DATA_HANDLE,*)
+      write(LIVE_DATA_HANDLE,'(A,ES17.9)',advance='no') '@magnetic_growth_rates:', &
+        (xtime(index)+xtime(index-1))/2.d0
+      do i = 1, n_tor, 2
+        e1 = sum(energies(max(i-1,1):i,1,index))
+        e2 = sum(energies(max(i-1,1):i,1,index-1))
+        if ( (e1 .NE. 0.) .and. (e2 .NE. 0.) ) then
+           growth_rate = 0.5d0 * ( log(e1) - log(e2) ) / (xtime(index)-xtime(index-1))
+        else
+           growth_rate = 0.d0
+        endif
+        write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') growth_rate
+      end do
+      write(LIVE_DATA_HANDLE,*)
+      write(LIVE_DATA_HANDLE,'(A,ES17.9)',advance='no') '@kinetic_growth_rates:', &
+        (xtime(index)+xtime(index-1))/2.d0
+      do i = 1, n_tor, 2
+        e1 = sum(energies(max(i-1,1):i,2,index))
+        e2 = sum(energies(max(i-1,1):i,2,index-1))
+        if ( (e1 .NE. 0.) .and. (e2 .NE. 0.) ) then
+           growth_rate = 0.5d0 * ( log(e1) - log(e2) ) / (xtime(index)-xtime(index-1))
+        else
+           growth_rate = 0.d0
+        endif
+        write(LIVE_DATA_HANDLE,'(ES17.9)',advance='no') growth_rate
       end do
     end if
     write(LIVE_DATA_HANDLE,*)

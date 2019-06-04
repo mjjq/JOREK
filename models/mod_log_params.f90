@@ -533,9 +533,14 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
-  write(*,INTG_FMT) 'mumps_ordering        ', mumps_ordering
-  write(*,LOGI_FMT) 'use_mumps_BLR         ', use_mumps_BLR
-  write(*,REAL_FMT) 'mumps_BLR_eps         ', mumps_BLR_eps
+
+  if (use_mumps .eq. .true.) then
+    write(*,INTG_FMT) 'mumps_ordering        ', mumps_ordering
+    write(*,LOGI_FMT) 'use_mumps_BLR         ', use_mumps_BLR
+    if (use_mumps_BLR .eq. .true.) then
+      write(*,REAL_FMT) 'mumps_BLR_eps         ', mumps_BLR_eps
+    endif
+  endif
 
   write(*,INTG_FMT) 'n_pfc                 ', n_pfc
   if ( n_pfc > 0 ) then

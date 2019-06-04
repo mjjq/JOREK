@@ -534,10 +534,10 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
 
-  if (use_mumps .eq. .true.) then
+  if (use_mumps) then
     write(*,INTG_FMT) 'mumps_ordering        ', mumps_ordering
     write(*,LOGI_FMT) 'use_mumps_BLR         ', use_mumps_BLR
-    if (use_mumps_BLR .eq. .true.) then
+    if (use_mumps_BLR) then
       write(*,REAL_FMT) 'mumps_BLR_eps         ', mumps_BLR_eps
     endif
   endif

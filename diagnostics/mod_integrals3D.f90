@@ -94,7 +94,7 @@ real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0
 real*8  :: E_tot, Zkpar_T, D_prof, ZK_prof
 real*8  :: fact_mu0, fact_flux
 real*8  :: hel1, heli, helicity_tot, psi_off, curr, Ip, vn_p0, qn, pflow, kinflow, cond_par, cond_perp
-real*8  :: kinpar_flux, qn_par, qn_perp, etajxb, eta_JxB, mag_work_tot
+real*8  :: kinpar_flux, qn_par, qn_perp, etajxb, eta_JxB, mag_work_tot, mag_src_tot, mag_source_tot
 real*8  :: s_or_t,sg,tg,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
 real*8  :: RH,RH_s,RH_t,RH_st,RH_ss,RH_tt
 real*8  :: TT,TT_s,TT_t,TT_st,TT_ss,TT_tt 
@@ -156,6 +156,7 @@ vpar_disp_tot= 0.d0
 psi_off      = 0.d0
 thm_wk_tot   = 0.d0
 mag_wk_tot   = 0.d0
+mag_src_tot  = 0.d0
 
 local_pellet_particles = 0.d0
 local_plasma_particles = 0.d0
@@ -193,7 +194,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, thm_wk_tot,                   &
-!$omp          mag_wk_tot, vpar_disp_tot, area1, &
+!$omp          mag_wk_tot, vpar_disp_tot, area1, mag_src_tot,  &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
 !$omp          local_n_particles_inj, local_n_particles, mgi_amplitude, mgi_R, mgi_Z,          &
 !$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm,                       &
@@ -233,7 +234,7 @@ omp_tid      = 0
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
 !$omp                VM_int, VM_tot, Vol, P_tot, D_tot,J2_tot, J2_int, J2_ext,                &
-!$omp                heli_tot, mag_wk_tot, vpar_disp_tot, thm_wk_tot, area1 )
+!$omp                heli_tot, mag_wk_tot, vpar_disp_tot, thm_wk_tot, area1, mag_src_tot )
 
 
 do ife = ife_min, ife_max
@@ -390,7 +391,9 @@ do ife = ife_min, ife_max
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
         VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-        J2_tot = J2_tot + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+        J2_tot = J2_tot + eta_T *(ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
+
+        mag_src_tot   = mag_src_tot + eta_T*ZJ0*current_source/(BigR**2) * xjac * BigR * wst * delta_phi
 
         heli_tot      = heli_tot   + hel1         * BigR * xjac * wst * delta_phi
         mag_wk_tot    = mag_wk_tot + mag_wk                     * wst * delta_phi
@@ -432,7 +435,7 @@ do ife = ife_min, ife_max
           VP_int = VP_int + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_int = VK_int + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_int = VM_int + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-          J2_int = J2_int + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+          J2_int = J2_int + eta_T * (ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
         else
           D_ext = D_ext + r0         * xjac * BigR * wst * delta_phi
           P_ext = P_ext + r0   * T0  * xjac * BigR * wst * delta_phi
@@ -442,7 +445,7 @@ do ife = ife_min, ife_max
           VP_ext = VP_ext + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_ext = VK_ext + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_ext = VM_ext + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-          J2_ext = J2_ext + eta_T * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+          J2_ext = J2_ext + eta_T * (ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
         endif
 
       enddo
@@ -670,6 +673,7 @@ call MPI_AllReduce(heli_tot, helicity_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COM
 call MPI_AllReduce(thm_wk_tot, thermal_work_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(mag_wk_tot, mag_work_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(vpar_disp_tot, viscopar_dissip_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(mag_src_tot, mag_source_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
 if (use_pellet) then
   call MPI_AllReduce(local_pellet_particles,total_pellet_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -725,6 +729,7 @@ helicity_tot         = n_period * helicity_tot
 thermal_work_tot     = n_period * thermal_work_tot    * fact_flux 
 mag_work_tot         = n_period * mag_work_tot        * fact_flux
 viscopar_dissip_tot  = n_period * viscopar_dissip_tot * fact_flux
+mag_source_tot       = n_period * mag_source_tot      * fact_flux
 volume               = n_period * volume
 area                 = n_period * area / (2.d0 * PI)
 
@@ -827,6 +832,9 @@ if (my_id .eq. 0) then
       case ( 'volume' )
         res(iexpr+1) = volume
 
+      case ( 'Wmag_src_tot' )
+        res(iexpr+1) = mag_source_tot 
+
     end select
             
   end do loop_expr
@@ -887,6 +895,7 @@ if (my_id .eq. 0) then
     part_src_out_t(index_now)        = source_out
     area_t(index_now)                = area
     volume_t(index_now)              = volume
+    mag_ener_src_tot(index_now)      = mag_source_tot
 
     !--- Calculate time derivatives at previous step (second order accuracy)
     if (index_now > 2) then

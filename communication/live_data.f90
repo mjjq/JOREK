@@ -237,6 +237,13 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@area: %"time"           "Plasma cross sectional area"'
     write(LIVE_DATA_HANDLE,*)
 
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_mag_energy_src: ', 1
+    write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_src_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_src_ylabel: Total magnetic energy source [W]'
+    write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_src_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_src: %"time"       "Mag source"'
+    write(LIVE_DATA_HANDLE,*)
+
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_volume: ', 1
     write(LIVE_DATA_HANDLE,'(A)') '@volume_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@volume_xlabel_si: time [ms]'
@@ -378,7 +385,7 @@ module live_data
       Wmag_tot_t, Ip_tot_t, flux_pvn_t, flux_qpar_t, flux_qperp_t, flux_kinpar_t, dE_tot_dt, &
       dWmag_tot_dt, dthermal_tot_dt, dkinpar_tot_dt, dkinperp_tot_dt,  Magwork_tot_t,   &
       thmwork_tot_t, viscopar_dissip_tot_t, viscopar_flux_t, li3_t,      &
-      li3_tot_t, part_src_tot_t, heat_src_tot_t, volume_t, area_t 
+      li3_tot_t, part_src_tot_t, heat_src_tot_t, volume_t, area_t, mag_ener_src_tot, eta_ohmic, eta 
 
 
     implicit none
@@ -469,6 +476,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@li3: ', xtime(index), li3_t(index), li3_tot_t(index)
 
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms: ', xtime(index), ohmic_tot_t(index), viscopar_dissip_tot_t(index)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@mag_energy_src: ', xtime(index), mag_ener_src_tot(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@work_terms: ', xtime(index), Magwork_tot_t(index), thmwork_tot_t(index)
     write(LIVE_DATA_HANDLE,'(A,7ES17.9)') '@bnd_fluxes: ', xtime(index), flux_Pvn_t(index), flux_kinpar_t(index), &
                                            flux_qpar_t(index), flux_qperp_t(index)
@@ -478,7 +486,8 @@ module live_data
                                             -dthermal_tot_dt(index-1),-dkinperp_tot_dt(index-1),-dkinpar_tot_dt(index-1)
    
        sum_fluxes_dissip = flux_Pvn_t(index-1)  + flux_kinpar_t(index-1) + flux_qpar_t(index-1) + flux_qperp_t(index-1) &
-                         + ohmic_tot_t(index-1) + viscopar_dissip_tot_t(index-1) - heat_src_tot_t(index-1)
+                         + viscopar_dissip_tot_t(index-1) - heat_src_tot_t(index-1)  &
+                         + ohmic_tot_t(index-1)*(1.d0 - eta_ohmic/eta) - mag_ener_src_tot(index-1)
  
       write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@energy_conservation: ', xtime(index-1), -dE_tot_dt(index-1), sum_fluxes_dissip 
 

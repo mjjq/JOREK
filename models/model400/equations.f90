@@ -1034,11 +1034,13 @@ subroutine ELM_main_rhs_8(rhs,rhs_k)
        - Ke_prof * R * (v_x*Te0_x + v_y*Te0_y )                        * xjac * tstep  &
              ! --- Numerical conductivity
        - Ke_perp_numm * (v_xx  + v_x /R + v_yy )              &
-                      * (Te0_xx + Te0_x/R + Te0_yy) * R                * xjac * tstep  
-
+                      * (Te0_xx + Te0_x/R + Te0_yy) * R                * xjac * tstep  &
+             ! --- Ohmic heating
+       + v * (gamma-1.d0) * eta_Te_ohm * (zj0 / R)**2.d0 * R           * xjac * tstep
+ 
   rhs_k(8) = - (Ke_par-Ke_prof) * R / BB2 * Bgrad_Te_k_star * Bgrad_Te      * xjac * tstep  &
-       - Ke_prof * R * ( v_p*Te0_p /R**2 )                                  * xjac * tstep 
-  
+       - Ke_prof * R * ( v_p*Te0_p /R**2 )                                  * xjac * tstep
+
   return
 
 end subroutine ELM_main_rhs_8
@@ -1084,6 +1086,8 @@ subroutine ELM_main_lhs_8(amat, amat_k, amat_n, amat_kn)
      - v * Te0 * R**2 * ( r0_x * u_y - r0_y * u_x)                                   * xjac * theta * tstep  &
      - v * 2.d0 * GAMMA * r0 * R * Te0 * u_y                                         * xjac * theta * tstep 
 
+  amat(8,3)   = - v * (gamma-1.d0) * eta_Te_ohm * 2.d0 * zj * zj0/(R**2.d0) * R      * xjac * theta * tstep
+
   amat(8,5)    = + v * rho * Te0_corr * R                                            * xjac * (1.d0 + zeta)  &
      - v * rho * R**2    * (Te0_x  * u0_y  - Te0_y  * u0_x )                         * xjac * theta * tstep  &
      - v * Te0  * R**2    * (rho_x * u0_y  - rho_y * u0_x )                          * xjac * theta * tstep  &
@@ -1118,8 +1122,8 @@ subroutine ELM_main_lhs_8(amat, amat_k, amat_n, amat_kn)
      + dKe_par * Te     * R / BB2 * Bgrad_Te_star * Bgrad_Te              * xjac * theta * tstep  &
      + Ke_prof * R * (v_x*Te_x + v_y*Te_y )                               * xjac * theta * tstep  & 
      + Ke_perp_numm * (v_xx + v_x/R + v_yy)                    &
-                  * (Te_xx + Te_x/R + Te_yy) * R                          * xjac * theta * tstep
-
+                  * (Te_xx + Te_x/R + Te_yy) * R                          * xjac * theta * tstep  &
+     - v * Te * (gamma-1.d0) * deta_dTe_ohm * (zj0 / R)**2.d0 * R         * xjac * theta * tstep
   
   amat_k(8,8)  = + (Ke_par-Ke_prof) * R / BB2 * Bgrad_Te_k_star * Bgrad_Te_Te            * xjac * theta * tstep  &
      + dKe_par * Te     * R / BB2 * Bgrad_Te_k_star * Bgrad_Te                           * xjac * theta * tstep 

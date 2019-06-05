@@ -391,7 +391,14 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     d2eta_d2T = 0.d0
   end if
   
-  
+
+  ! -------------------------
+  ! --- Eta for ohmic heating
+  ! -------------------------
+  eta_T_ohm   = (eta_T/eta)  * eta_ohmic
+  deta_dT_ohm = (deta_dT/eta) * eta_ohmic
+   
+
   ! -----------------------------------
   ! --- Temperature dependent viscosity
   ! -----------------------------------
@@ -598,6 +605,8 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     endif
     eta_T       = eta_T       * sqrt(rho_norm / mu_zero )
     deta_dT     = deta_dT     * sqrt(rho_norm / mu_zero )
+    eta_T_ohm   = eta_T_ohm   * sqrt(rho_norm / mu_zero )
+    deta_dT_ohm = deta_dT_ohm * sqrt(rho_norm / mu_zero )
     visco_T     = visco_T     * sqrt(mu_zero  / rho_norm)
     dvisco_dT   = dvisco_dT   * sqrt(mu_zero  / rho_norm)
     visco_parr  = visco_par   * sqrt(mu_zero  / rho_norm)

@@ -62,8 +62,9 @@ real*8     :: P0, P0_x, P0_y, P0_s, P0_t, P0_ss, P0_st, P0_tt, P0_p, P0_xx, P0_x
 real*8     :: P0_x_rho, P0_xx_rho, P0_y_rho, P0_yy_rho, P0_xy_rho
 real*8     :: P0_x_T,   P0_xx_T,   P0_y_T,   P0_yy_T,   P0_xy_T
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T, eta_num_T, W_dia, W_dia_rho, W_dia_T
+real*8     :: eta_T_ohm, deta_dT_ohm
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
-real*8     :: amat_51, amat_52, amat_55, amat_56, amat_57, amat_61, amat_62, amat_65, amat_66, amat_67, amat_16, amat_13
+real*8     :: amat_51, amat_52, amat_55, amat_56, amat_57, amat_61, amat_62, amat_63, amat_65, amat_66, amat_67, amat_16, amat_13
 real*8     :: amat_71, amat_72, amat_75, amat_76, amat_77, amat_15
 real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7
@@ -503,6 +504,10 @@ do ms=1, n_gauss
        deta_dT   = 0.d0
        d2eta_d2T = 0.d0
      end if
+
+     ! --- Eta for ohmic heating
+     eta_T_ohm   = (eta_T/eta)  * eta_ohmic
+     deta_dT_ohm = (deta_dT/eta) * eta_ohmic
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
@@ -817,7 +822,9 @@ do ms=1, n_gauss
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * tstep * tstep        &
 
                     + zeta * v * r0 * delta_g(mp,6,ms,mt) * BigR                       * xjac &
-                    + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                       * xjac
+                    + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                       * xjac &
+
+                    + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR * xjac  * tstep
 
 !###################################################################################################
 !#  equation 7 (parallel velocity  equation)                                                       #
@@ -1311,6 +1318,8 @@ do ms=1, n_gauss
                                      * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
 
 
+                amat_63 = - v * (gamma-1.d0) * eta_T_ohm * 2.d0 * zj * zj0 / (BigR**2)   * BigR * xjac * theta * tstep
+
                 amat_65 =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)    &
 
 		           - v * rho * BigR**2 * ( T0_s  * u0_t - T0_t  * u0_s)                        * theta * tstep &
@@ -1377,7 +1386,9 @@ do ms=1, n_gauss
 
                            + TG_num6 * 0.25d0 / BigR * vpar0**2 &
                               * r0 * (T_x * ps0_y - T_y * ps0_x + F0 / BigR * T_p)                            &
-                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
+
+                           -v * T * (gamma-1.d0) * deta_dT_ohm * (zj0 / BigR)**2.d0  * BigR * xjac * theta * tstep
 
 
                  amat_67 = + v * r0 * F0 / BigR * Vpar * T0_p                               * xjac * theta * tstep &
@@ -1575,6 +1586,7 @@ do ms=1, n_gauss
 
                  ELM(ij6,kl1) =  ELM(ij6,kl1) + wst * amat_61
                  ELM(ij6,kl2) =  ELM(ij6,kl2) + wst * amat_62
+                 ELM(ij6,kl3) =  ELM(ij6,kl3) + wst * amat_63
                  ELM(ij6,kl5) =  ELM(ij6,kl5) + wst * amat_65
                  ELM(ij6,kl6) =  ELM(ij6,kl6) + wst * amat_66
                  ELM(ij6,kl7) =  ELM(ij6,kl7) + wst * amat_67

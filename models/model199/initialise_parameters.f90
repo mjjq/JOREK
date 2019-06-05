@@ -4,7 +4,7 @@ subroutine initialise_parameters(my_id, filename)
 use tr_module
 use phys_module
 use pellet_module
-use mumps_module,  only: use_mumps, no_zeros_mumps
+use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
 use vacuum
@@ -67,8 +67,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
-                use_mumps, use_pastix, use_murge, use_murge_element,&
-                use_wsmp,                                           &
+                use_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering, &
+                use_pastix, use_murge, use_murge_element, use_wsmp, &
                 pastix_smp_only, refinement, force_central_node,    &
                 grid_to_wall,                                       &
                 adaptive_time, equil, bench_without_plot,           &
@@ -107,7 +107,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd
+                pastix_maxthrd, eta_ohmic
 
 if (my_id .eq. 0) then
 
@@ -333,6 +333,9 @@ if (my_id .eq. 0) then
 
   if (allocated(area_t)) call tr_deallocate(area_t,"area_t",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(area_t,1,index_start+nstep,"area_t",CAT_UNKNOWN)
+
+  if (allocated(mag_ener_src_tot)) call tr_deallocate(mag_ener_src_tot,"mag_ener_src_tot",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(mag_ener_src_tot,1,index_start+nstep,"mag_ener_src_tot",CAT_UNKNOWN)
 
 
 endif

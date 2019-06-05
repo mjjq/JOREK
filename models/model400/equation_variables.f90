@@ -16,6 +16,7 @@ module equation_variables
   ! --- Diffusivities
   real*8 	:: r0_corr, r0_corr2, Ti0_corr, Te0_corr
   real*8 	:: eta_Te,    deta_dTe, d2eta_d2Te
+  real*8        :: eta_Te_ohm, deta_dTe_ohm
   real*8 	:: visco_Te,  dvisco_dTe, d2visco_dTe2
   real*8 	:: D_prof
   real*8 	:: Ki_prof, Ki_par, dKi_par
@@ -104,6 +105,7 @@ module equation_variables
   !$omp 	current_source, particle_source, heat_source_i, heat_source_e, Vt0_x, Vt0_y, dV_dpsi_source, dV_dz_source,		   &
   !$omp 	r0_corr, r0_corr2, Ti0_corr, Te0_corr,											   &
   !$omp 	eta_Te,    deta_dTe, d2eta_d2Te,											   &
+  !$omp         eta_Te_ohm, deta_dTe_ohm,                                                                                                  & 
   !$omp 	visco_Te,  dvisco_dTe, d2visco_dTe2,											   &
   !$omp 	D_prof, 														   &
   !$omp 	Ki_prof, Ki_par, dKi_par,												   &

@@ -1146,6 +1146,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     area_t = 0.d0
     call HDF5_array1D_reading(file_id,area_t,'area_t')
 
+    if (allocated(mag_ener_src_tot)) call tr_deallocate(mag_ener_src_tot,"mag_ener_src_tot",CAT_UNKNOWN)
+    call tr_allocate(mag_ener_src_tot,1,index_start+nstep,"mag_ener_src_tot",CAT_UNKNOWN)
+    mag_ener_src_tot = 0.d0
+    call HDF5_array1D_reading(file_id,mag_ener_src_tot,'mag_ener_src_tot')
+
 #ifdef JECCD                   
     if (allocated(t_energies2))   call tr_deallocate(t_energies2,"t_energies2",CAT_UNKNOWN)
     call tr_allocate(t_energies2,1,n_tor_tmp,1,2,1,index_start+nstep, "t_energies2",CAT_UNKNOWN)

@@ -214,30 +214,32 @@ module phys_module
   real*8  :: pellet_particles  !< the number of particles in the pellet (in units of 10^20)
   logical :: use_pellet
   
-  !> @name Massive gas injection-related input parameters
-  real*8  :: ns_amplitude      !< amplitude of neutral density source (atoms/s)
-  real*8  :: ns_R             !< major radius position of neutral density source
-  real*8  :: ns_Z             !< Z position of neutral density source
-  real*8  :: ns_phi           !< width of the neutral density source in toroidal direction
-  real*8  :: ns_radius        !< radius of the neutral density source in poloidal plane
-  real*8  :: ns_sig           !< width of smoothing of the neutral density source in poloidal plane
-  real*8  :: ns_deltaphi      !< width of smoothing of the neutral density source in toroidal direction
-  real*8  :: ns_tor_norm      !< MGI source normalization factor related to its toroidal shape
-  real*8  :: ksi_ion           !< energy cost of each ionization
-  real*8  :: A_Dmv             !< Cross sectional area of DMV (Disruption mitigation valve) pipe
-  real*8  :: K_Dmv             !< Correction parameter describing the gas expansion near the pipe orifice
-  real*8  :: L_tube            !< Pipe length
-  real*8  :: V_Dmv             !< Volume of the DMV reservoir
-  real*8  :: P_Dmv             !< Pressure in the DMV reservoir
-  real*8  :: t_ns              !< Beginning of the MGI
-  real*8  :: delta_n_convection!< Switch to activate the convection term for neutrals (at the plasma velocity)
-  logical :: JET_MGI !< Switch to have a real time dependent MGI or a constant injection
-  logical :: ASDEX_MGI
-  real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
+  !> @name MGI or SPI-related input parameters
+  ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
+  real*8  :: t_ns               !< Neutrals source onset time (JOREK units)
+  real*8  :: ns_amplitude       !< Amplitude of neutrals source (atoms/s)
+  real*8  :: ns_R               !< R position of neutrals source
+  real*8  :: ns_Z               !< Z position of neutrals source
+  real*8  :: ns_phi             !< Phi position of neutrals source
+  real*8  :: ns_radius          !< Poloidal radius of neutral source
+  real*8  :: ns_deltaphi        !< Toroidal extension of neutrals source
+  real*8  :: ns_tor_norm        !< Neutrals source normalization factor related to its toroidal shape
+  real*8  :: ns_sig             !< Obsolete (still in the code but not used)
+  logical :: JET_MGI            !< Switch to use a JET-like MGI
+  logical :: ASDEX_MGI          !< Switch to use an ASDEX-like MGI
+  real*8  :: V_Dmv              !< Volume of the DMV reservoir
+  real*8  :: P_Dmv              !< Pressure in the DMV reservoir (bar)
+  real*8  :: A_Dmv              !< Cross sectional area of DMV (Disruption mitigation valve) pipe
+  real*8  :: K_Dmv              !< Correction parameter describing the gas expansion near the pipe orifice
+  real*8  :: L_tube             !< Pipe length
+  real*8  :: ksi_ion            !< Energy cost of each ionization
+  real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
+  real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
  
   !> @name Shattered pellet injection-related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
-  ! The reference spactial coordinate for shattered pellets are calculated using ns_R etc...... 
+  ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
+  ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
   real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R upon injection
   real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z upon injection
   real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection

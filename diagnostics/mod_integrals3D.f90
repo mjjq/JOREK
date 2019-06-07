@@ -871,7 +871,7 @@ if (my_id .eq. 0) then
   write(*,'(A,2es14.6)')   ' li(3)                           : ',xt, li3 
   write(*,'(A,2es14.6)')   ' betap(1)                        : ',xt, betap
 
-  write(*,'A')             ' sum ,time ,density_tot, pressure, Wkin_par, Wkin_perp, Wmag, Ohm, heating, source'
+  write(*,'(A)')           ' sum ,time ,density_tot, pressure, Wkin_par, Wkin_perp, Wmag, Ohm, heating, source'
 
   write(*,'(A,20es14.6)')  ' sum ',xt,density_tot,pressure/1.d6,kin_par_tot/1.d6,kin_perp_tot/1.d6,mag_tot/1.d6, &
                                  Ohm_tot/1.d6,heating_in/1d6+heating_out/1.d6 ,source_in+source_out

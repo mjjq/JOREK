@@ -25,7 +25,7 @@ module phys_module
   real*8  :: gamma                !< ratio of specific heat (=5/3)
   real*8  :: Q_bar                !< (model400)
   real*8  :: sigma                !< (model400)
-  real*8  :: tauIC                !< Scaling factor for diamagnetic terms (see https://www.jorek.eu/wiki/doku.php?id=diamag)
+  real*8  :: tauIC                !< Scaling factor for diamagnetic terms (see [[diamag|diamagnetic]])
   logical :: Wdia                 !< Include diamagnetic flows in viscosity terms?
   logical :: U_sheath             !< Use Stangeby BCs for electric potential
   logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
@@ -41,7 +41,7 @@ module phys_module
   logical :: xpoint               !< X-point plasma or not? see also xcase
   logical :: bootstrap            !< Evolve the Bootstrap current consistently with time?
   real*8  :: minRad               !< Approximation of minor radius for bootstrap current calculation
-  logical :: refinement           !< Use mesh refinement?
+  logical :: refinement           !< Use mesh refinement? (not presently available)
   logical :: force_central_node   !< Force all nodes in the center to have the same values in flux aligned grids or independent values?
   logical :: bc_natural_flux      !< boundary conditions for flux surface boundaries (2 and 3)
   logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines
@@ -131,10 +131,10 @@ module phys_module
   integer :: index_start       		!< Time step index at the beginning of the code run (zero or from restart file)
   integer :: index_now         		!< Current time step index
   real*8, allocatable :: xtime(:) 	!< Time values corresponding to the timesteps.
-  character(len=80) :: time_evol_scheme !< Time evolution scheme to use. This determines the values
+  character(len=80) :: time_evol_scheme !< Time evolution scheme to use (see [[time-integration|time_integration]] ) 
                                		!! used for time_evol_theta and time_evol_zeta.
-  real*8  :: time_evol_theta   		!< Time evolution parameter theta (see documentation)
-  real*8  :: time_evol_zeta    		!< Time evolution parameter zeta (see documentation)
+  real*8  :: time_evol_theta   		!< Time evolution parameter theta (see [[time-integration|time_integration]] ) 
+  real*8  :: time_evol_zeta    		!< Time evolution parameter zeta (see [[time-integration|time_integration]] ) 
 
   integer :: rst_hdf5                   !< Write hdf5 restart files if set to 1
   integer :: rst_hdf5_version           !< Write which version of hdf5 files?
@@ -155,12 +155,12 @@ module phys_module
   !! - for \f$ \theta \ge \pi \f$:
   !!   \f$ R=R_{geo} + a_{min} \cos\left[\theta+T_l\sin(\theta)+Q_l\sin(2\theta)\right] \f$
   !!
-  real*8  :: amin              !< Minor radius
-  real*8  :: ellip             !< Ellipticity
-  real*8  :: tria_u            !< Upper triangularity
-  real*8  :: tria_l            !< Lower triangularity
-  real*8  :: quad_u            !< Upper quadrangularity
-  real*8  :: quad_l            !< Lower quadrangularity
+  real*8  :: amin              !< Minor radius for polar grid construction, set to 1 if boundary is specified with R,Z points
+  real*8  :: ellip             !< Ellipticity of polar grid (see analytical definition in phys_module.f90)
+  real*8  :: tria_u            !< Upper triangularity of polar grid (see analytical definition in phys_module.f90)
+  real*8  :: tria_l            !< Lower triangularity of polar grid (see analytical definition in phys_module.f90)
+  real*8  :: quad_u            !< Upper quadrangularity of polar grid (see analytical definition in phys_module.f90)
+  real*8  :: quad_l            !< Lower quadrangularity of polar grid (see analytical definition in phys_module.f90)
   
   !> @name Fourier expanded boundary of initial grid
   !! Boundary of the non flux-aligned initial polar grid given as Fourier series
@@ -178,12 +178,12 @@ module phys_module
   
   !> @name PF coils definition for initial equilibrium (MAST)
   !! Numerical definition of the PF coils definition for initial equilibrium (MAST)
-  integer :: n_pfc            !< Number of coils
-  real*8  :: Rmin_pfc(40)     !< Minimum R of coil
-  real*8  :: Rmax_pfc(40)     !< Maximum R of coil
-  real*8  :: Zmin_pfc(40)     !< Minimum Z of coil
-  real*8  :: Zmax_pfc(40)     !< Maximum Z of coil
-  real*8  :: current_pfc(40)  !< Current density in the coil
+  integer :: n_pfc            !< Number of coils, (OLD! for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
+  real*8  :: Rmin_pfc(40)     !< Minimum R of coil, (OLD! for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
+  real*8  :: Rmax_pfc(40)     !< Maximum R of coil, (OLD! for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
+  real*8  :: Zmin_pfc(40)     !< Minimum Z of coil, (OLD! for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
+  real*8  :: Zmax_pfc(40)     !< Maximum Z of coil, (OLD! for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
+  real*8  :: current_pfc(40)  !< Current density in the coil, (OLD! for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
   
   !> @name Pellet-related input parameters
   real*8  :: pellet_amplitude  !< amplitude of density source (when pellet modelled as density source)
@@ -201,7 +201,7 @@ module phys_module
   real*8  :: pellet_velocity_Z !< pellet velocity component Z direction
   real*8  :: pellet_density    !< pellet density (in units \f$10^{20} m^{-3}\f$)
   real*8  :: pellet_particles  !< the number of particles in the pellet (in units of \f$10^{20}\f$)
-  logical :: use_pellet
+  logical :: use_pellet        !< true for using the pellet module
   
   !> @name Massive gas injection-related input parameters
   real*8  :: mgi_amplitude     !< amplitude of neutral density source
@@ -234,42 +234,43 @@ module phys_module
   logical :: freeboundary_equil      !< use a free or fixed boundary equilibrium?
   logical :: freeboundary            !< use free or fixed boundary conditions in time-evolution?
   logical :: resistive_wall          !< use a resistive or ideal wall?    (free boundary only)
-  logical :: freeb_equil_iterate_area      !< iterate to a target area during freeboundary equilibrium limiter cases?
+  logical :: freeb_equil_iterate_area  !< iterate to a target area during freeboundary equilibrium limiter cases [[jorek-starwall-faqs|jorek_starwall]]
   real*8  :: amix_freeb              !< choose amix for freeboundary equilibriums
   real*8  :: equil_accuracy_freeb    !< Tolerance of the convergence for the free-boundary equilibrium
   logical :: freeb_change_indices    !< Exchange grid node indices to parallelize boundary integral
   
   !> @name Rectangular Grid
   !! Parameters defining a rectangular grid in R- and Z-directions in the poloidal plane.
-  integer :: n_R               !< Number of grid points in R-direction
-  integer :: n_Z               !< Number of grid points in Z-direction
-  real*8  :: R_begin           !< Left boundary of grid in R-direction
-  real*8  :: R_end             !< Right boundary of grid in R-direction
-  real*8  :: Z_begin           !< Lower boundary of grid in Z-direction
-  real*8  :: Z_end             !< Upper boundary of grid in Z-direction
+  integer :: n_R               !< Number of grid points in R-direction (for rectangular grid)
+  integer :: n_Z               !< Number of grid points in Z-direction (for rectangular grid)
+  real*8  :: R_begin           !< Left boundary of grid in R-direction (for rectangular grid)
+  real*8  :: R_end             !< Right boundary of grid in R-direction (for rectangular grid)
+  real*8  :: Z_begin           !< Lower boundary of grid in Z-direction (for rectangular grid)
+  real*8  :: Z_end             !< Upper boundary of grid in Z-direction (for rectangular grid)
+
   
   !> @name Polar Grid
   !! Parameters defining a non flux-aligned polar grid in the poloidal plane.
   logical :: force_horizontal_Xline     !< Force the grid line through Xpoint to be horizontal
   					!  (instead of perpendicular to line between Xpoint and Axis)
-  integer :: n_radial          		!< Number of radial grid points
-  integer :: n_pol             		!< Number of poloidal grid points
-  real*8  :: R_geo             		!< Center of the grid
-  real*8  :: Z_geo             		!< Center of the grid
-  real*8  :: psi_axis_init     		!< Initial guess for Psi at the magnetic axis
-  real*8  :: XR_r(2)           		!< Psi_N position of radial grid accumulation (two positions)
-  real*8  :: SIG_r(2)          		!< Width of grid accumulation (two positions)
-  real*8  :: XR_tht(2)         		!< Position of poloidal grid accumulation (0...1, two positions)
-  real*8  :: SIG_tht(2)        		!< Width of grid accumulation (two positions)
+  integer :: n_radial          		!< Number of radial grid points (for polar grid) 
+  integer :: n_pol             		!< Number of poloidal grid points (for polar grid)
+  real*8  :: R_geo             		!< Center of the grid (for polar grid)
+  real*8  :: Z_geo             		!< Center of the grid (for polar grid)
+  real*8  :: psi_axis_init     		!< Initial guess for Psi at the magnetic axis (for polar grid)
+  real*8  :: XR_r(2)           		!< Psi_N position of radial grid accumulation (two positions) (for polar grid)
+  real*8  :: SIG_r(2)          		!< Width of grid accumulation (two positions) (for polar grid)
+  real*8  :: XR_tht(2)         		!< Position of poloidal grid accumulation (0...1, two positions) (for polar grid)
+  real*8  :: SIG_tht(2)        		!< Width of grid accumulation (two positions) (for polar grid)
   
   !> @name Flux surface grid
   !! Parameters defining a flux-aligned grid without X-point in the poloidal plane.
-  integer :: n_flux            !< Number of radial grid points
-  integer :: n_tht             !< Number of poloidal grid points
-  real*8  :: xr1               !< Grid accumulation parameter
-  real*8  :: xr2               !< Grid accumulation parameter
-  real*8  :: sig1              !< Grid accumulation parameter
-  real*8  :: sig2              !< Grid accumulation parameter
+  integer :: n_flux            !< Number of radial grid points (for flux-aligned grid)
+  integer :: n_tht             !< Number of poloidal grid points (for flux-aligned grid)
+  real*8  :: xr1               !< Grid accumulation parameter (for flux-aligned grid)
+  real*8  :: xr2               !< Grid accumulation parameter (for flux-aligned grid)
+  real*8  :: sig1              !< Grid accumulation parameter (for flux-aligned grid)
+  real*8  :: sig2              !< Grid accumulation parameter (for flux-aligned grid)
   
   !> @name Flux surface grid with X-point
   !! Parameters defining a flux-aligned grid with X-point in the poloidal plane.
@@ -281,22 +282,22 @@ module phys_module
   integer :: n_up_priv         !< Number of 'radial' grid points in the private flux region on the upper side (upper Xpoint or double-null)
   integer :: n_up_leg          !< Number of 'poloidal' grid points along the divertor legs on the upper side (upper Xpoint or double-null)
   integer :: n_ext             !< Number of 'radial' grid points from the outermost flux surface to wall)
-  real*8  :: SIG_closed        !< Width with grid accumulation
-  real*8  :: SIG_open          !< Width with grid accumulation
-  real*8  :: SIG_outer         !< Width with grid accumulation
-  real*8  :: SIG_inner         !< Width with grid accumulation
-  real*8  :: SIG_private       !< Width with grid accumulation
-  real*8  :: SIG_up_priv       !< Width with grid accumulation
-  real*8  :: SIG_theta         !< Width with grid accumulation
-  real*8  :: SIG_leg_0         !< Width with grid accumulation
-  real*8  :: SIG_leg_1         !< Width with grid accumulation
-  real*8  :: SIG_up_leg_0      !< Width with grid accumulation
-  real*8  :: SIG_up_leg_1      !< Width with grid accumulation
-  real*8  :: dPSI_open         !< Delta Psi grid extends into the open flux region
-  real*8  :: dPSI_outer        !< Delta Psi grid extends into the open flux region
-  real*8  :: dPSI_inner        !< Delta Psi grid extends into the open flux region
-  real*8  :: dPSI_private      !< Delta Psi grid extends into the private flux region
-  real*8  :: dPSI_up_priv      !< Delta Psi grid extends into the private flux region
+  real*8  :: SIG_closed        !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_open          !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_outer         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_inner         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_private       !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_up_priv       !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_theta         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_leg_0         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_leg_1         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_up_leg_0      !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_up_leg_1      !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: dPSI_open         !< Delta Psi grid extends into the open flux region (for flux-aligned grid)
+  real*8  :: dPSI_outer        !< Delta Psi grid extends into the open flux region (for flux-aligned grid)
+  real*8  :: dPSI_inner        !< Delta Psi grid extends into the open flux region (for flux-aligned grid)
+  real*8  :: dPSI_private      !< Delta Psi grid extends into the private flux region (for flux-aligned grid)
+  real*8  :: dPSI_up_priv      !< Delta Psi grid extends into the private flux region (for flux-aligned grid)
   
   !> @name Analytical heat, particle and neutral particles diffusivity parameters
   real*8  :: D_perp(10) = 0.d0    !< Coefficients for perpendicular particle diffusion profile
@@ -513,5 +514,7 @@ module phys_module
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral
+  
+  contains
   
 end module phys_module

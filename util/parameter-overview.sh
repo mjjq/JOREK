@@ -30,23 +30,68 @@ function insert_header() {
   echo "" >> $outfile
 }
 
+function find_variables() {
+  file=$1
+  grep -B 9999 'contains' $file | egrep '^[^!]*::' | sed -e 's/^.*:://' -e s'/!.*$//' -e 's/([^)]*)//g' -e 's/=.*//' -e 's/&//' -e 's/,/ /g' -e 's/$/ /' | tr -d '\n' | sed -e 's/\t/ /g' -e 's/  */ /g' | tr ' ' '\n'
+}
+
+function is_in_namelists() {
+  param=$1
+  anymatch=0
+  for model in $models; do
+    matches=`egrep -i -x $param tmp_${model}_$$ | wc -l`
+    if [ "$matches" == "1" ]; then
+      anymatch=1
+    fi
+  done
+  echo $anymatch
+}
+
+find_variables models/phys_module.f90 > tmp_$$_phys
+find_variables vacuum/vacuum.f90      > tmp_$$_vacu
+
 rm -f $outfile
+
+echo "===== phys_module =====" >> $outfile
 insert_header
 k=0
-for param in `cat tmp_$$`; do
-  k=$[k+1]
-  m=$(( $k % 20 ))
-  if [ $m -eq 0 ]; then
-    insert_header
+for param in `cat tmp_$$_phys`; do
+  if [ "`is_in_namelists $param`" == "1" ]; then
+    k=$[k+1]
+    m=$(( $k % 20 ))
+    if [ $m -eq 0 ]; then
+      insert_header
+    fi
+    description=`egrep -i "^[^!]* $param[( ]" models/phys_module.f90 | grep "!" | sed -e 's/^.*![< ]*//' -e 's/\\\f//g' | tr '\n' ';' | sed -e 's/;$//' -e 's/((/( (/' -e 's/))/) )/' -e s'|//|/ /|'`
+    default=`egrep -i "^[^!] $param[ =(]" models/preset_parameters.f90 | sed -e 's/^[^!]*= *//' -e 's/!.*$//' -e 's| *(/ *||' -e 's| */) *||' -e 's/d0//g' -e 's/rst_hdf5_version_supported//' -e 's/[ \t]*$//'`
+    echo -n "| **$param** | $default | $description |" >> $outfile
+    for model in $models; do
+      matches=`egrep -x $param tmp_${model}_$$ | wc -l | sed -e 's/0/ /' -e "s/1/x/"`
+      echo -n "  $matches  |" >> $outfile
+    done
+    echo "" >> $outfile
   fi
-  description=`egrep "^[^!]* $param[( ]" models/phys_module.f90 | grep "!" | sed -e 's/^.*![< ]*//' -e 's/\\\f//g' | tr '\n' ';' | sed -e 's/;$//' -e 's/((/( (/' -e 's/))/) )/' -e s'|//|/ /|'`
-  default=`egrep "^[^!] $param[ =(]" models/preset_parameters.f90 | sed -e 's/^[^!]*= *//' -e 's/!.*$//' -e 's| *(/ *||' -e 's| */) *||' -e 's/d0//g' -e 's/rst_hdf5_version_supported//'`
-  echo -n "| **$param** | $default | $description |" >> $outfile
-  for model in $models; do
-    matches=`egrep -x $param tmp_${model}_$$ | wc -l | sed -e 's/0/ /' -e "s/1/x/"`
-    echo -n "  $matches  |" >> $outfile
-  done
- echo "" >> $outfile
 done
 
-rm -f tmp*_$$
+echo "===== vacuum =====" >> $outfile
+insert_header
+k=0
+for param in `cat tmp_$$_vacu`; do
+  if [ "`is_in_namelists $param`" == "1" ]; then
+    k=$[k+1]
+    m=$(( $k % 20 ))
+    if [ $m -eq 0 ]; then
+      insert_header
+    fi
+    description=`egrep -i "^[^!]* $param[( ]" vacuum/vacuum.f90 | grep "!" | sed -e 's/^.*![< ]*//' -e 's/\\\f//g' | tr '\n' ';' | sed -e 's/;$//' -e 's/((/( (/' -e 's/))/) )/' -e s'|//|/ /|'`
+    default=`egrep -A 9999 "^ *subroutine vacuum_preset" vacuum/vacuum.f90 | grep -B 9999 "end subroutine vacuum_preset" | grep "$param[ =(]" | sed -e 's/^[^!]*= *//' -e 's/!.*$//' -e 's/d0//g'`
+    echo -n "| **$param** | $default | $description |" >> $outfile
+    for model in $models; do
+      matches=`egrep -x $param tmp_${model}_$$ | wc -l | sed -e 's/0/ /' -e "s/1/x/"`
+      echo -n "  $matches  |" >> $outfile
+    done
+    echo "" >> $outfile
+  fi
+done
+
+rm -f tmp*_$$*

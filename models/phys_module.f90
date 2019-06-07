@@ -204,24 +204,24 @@ module phys_module
   logical :: use_pellet        !< true for using the pellet module
   
   !> @name Massive gas injection-related input parameters
-  real*8  :: mgi_amplitude     !< amplitude of neutral density source
-  real*8  :: mgi_R             !< major radius position of neutral density source
-  real*8  :: mgi_Z             !< Z position of neutral density source
-  real*8  :: mgi_phi           !< width of the neutral density source in toroidal direction
-  real*8  :: mgi_radius        !< radius of the neutral density source in poloidal plane
-  real*8  :: mgi_sig           !< width of smoothing of the neutral density source in poloidal plane
-  real*8  :: mgi_deltaphi      !< width of smoothing of the neutral density source in toroidal direction
-  real*8  :: mgi_tor_norm      !< MGI source normalization factor related to its toroidal shape
-  real*8  :: ksi_ion           !< energy cost of each ionization
+  real*8  :: t_mgi             !< MGI onset time (JOREK units)  
+  real*8  :: mgi_amplitude     !< Amplitude of gas source
+  real*8  :: mgi_R             !< R position of gas source
+  real*8  :: mgi_Z             !< Z position of gas source
+  real*8  :: mgi_phi           !< Phi position of gas source
+  real*8  :: mgi_radius        !< Poloidal radius of gas source
+  real*8  :: mgi_sig           !< Obsolete (still in the code but not used)
+  real*8  :: mgi_deltaphi      !< Toroidal extension of gas source
+  real*8  :: mgi_tor_norm      !< Gas source normalization factor related to its toroidal shape
+  logical :: JET_MGI           !< Switch to use a JET-like MGI
+  logical :: ASDEX_MGI         !< Switch to use an ASDEX-like MGI
+  real*8  :: V_Dmv             !< Volume of the DMV reservoir
+  real*8  :: P_Dmv             !< Pressure in the DMV reservoir (bar)
   real*8  :: A_Dmv             !< Cross sectional area of DMV (Disruption mitigation valve) pipe
   real*8  :: K_Dmv             !< Correction parameter describing the gas expansion near the pipe orifice
   real*8  :: L_tube            !< Pipe length
-  real*8  :: V_Dmv             !< Volume of the DMV reservoir
-  real*8  :: P_Dmv             !< Pressure in the DMV reservoir
-  real*8  :: t_mgi             !< Beginning of the MGI
-  real*8  :: delta_n_convection!< Switch to activate the convection term for neutrals (at the plasma velocity)
-  logical :: JET_MGI           !< Switch to have a real time dependent MGI or a constant injection (?)
-  logical :: ASDEX_MGI         !< (?)
+  real*8  :: ksi_ion           !< Energy cost of each ionization
+  real*8  :: delta_n_convection!< Switch to activate the convection term for neutrals (at the plasma velocity)  
   real*8  :: nimp_bg           !< Density of background impurity (in \f$m^{-3}\f$)
   
   !> @name Fix boundary equilibrium parameters

@@ -47,6 +47,17 @@ function is_in_namelists() {
   echo $anymatch
 }
 
+cat communication/broadcast_phys.f90 > tmp_$$_comm
+egrep -A 9999 "^ *subroutine broadcast_vacuum" vacuum/vacuum.f90 | grep -B 9999 "end subroutine broadcast_vacuum" >> tmp_$$_comm
+
+function is_communicated() {
+  param=$1
+  num_found=`egrep -i "^[^!]*\([ \t]*$param[ ,(]"  tmp_$$_comm | wc -l`
+  if [ "$num_found" == "0" ]; then
+    echo "Warning: Parameter $param might not get communicated!"
+  fi
+}
+
 find_variables models/phys_module.f90 > tmp_$$_phys
 find_variables vacuum/vacuum.f90      > tmp_$$_vacu
 
@@ -62,6 +73,7 @@ for param in `cat tmp_$$_phys`; do
     if [ $m -eq 0 ]; then
       insert_header
     fi
+    is_communicated $param
     description=`egrep -i "^[^!]* $param[( ]" models/phys_module.f90 | grep "!" | sed -e 's/^.*![< ]*//' -e 's/\\\f//g' | tr '\n' ';' | sed -e 's/;$//' -e 's/((/( (/' -e 's/))/) )/' -e s'|//|/ /|'`
     default=`egrep -i "^[^!] $param[ =(]" models/preset_parameters.f90 | sed -e 's/^[^!]*= *//' -e 's/!.*$//' -e 's| *(/ *||' -e 's| */) *||' -e 's/d0//g' -e 's/rst_hdf5_version_supported//' -e 's/[ \t]*$//'`
     echo -n "| **$param** | $default | $description |" >> $outfile
@@ -83,6 +95,7 @@ for param in `cat tmp_$$_vacu`; do
     if [ $m -eq 0 ]; then
       insert_header
     fi
+    is_communicated $param
     description=`egrep -i "^[^!]* $param[( ]" vacuum/vacuum.f90 | grep "!" | sed -e 's/^.*![< ]*//' -e 's/\\\f//g' | tr '\n' ';' | sed -e 's/;$//' -e 's/((/( (/' -e 's/))/) )/' -e s'|//|/ /|'`
     default=`egrep -A 9999 "^ *subroutine vacuum_preset" vacuum/vacuum.f90 | grep -B 9999 "end subroutine vacuum_preset" | grep "$param[ =(]" | sed -e 's/^[^!]*= *//' -e 's/!.*$//' -e 's/d0//g'`
     echo -n "| **$param** | $default | $description |" >> $outfile

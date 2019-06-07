@@ -22,6 +22,7 @@ implicit none
 real*8 :: timesteps(1) = [1d-6]
 integer :: i, j, k, n_steps
 real*8  :: target_time
+type(particle_kinetic_leapfrog) :: particle ! define a type particle_kinetic_leapfrog
 
 ! 2. Allocate a group and a particle of type particle_kinetic_leapfrog.
 call sim%initialize(num_groups=1)
@@ -51,33 +52,34 @@ call with(sim, events, at=0.d0)
 do while (.not. sim%stop_now)
   ! 7.1 Find out which events are next and when they will run
   target_time = next_event_at(sim, events)
-
   ! 7.2 Loop over all particle groups
   do i=1,1
     n_steps = nint((target_time - sim%time)/timesteps(i))
-
     ! 7.4 Loop first over particles, and then over how many steps we can take
-    !$omp parallel do default(shared) &
-    !$omp shared(sim, n_steps, timesteps, i) private(j, k)
+    !$omp parallel do default(private) shared(sim, n_steps, timesteps, i)
     do j=1,size(sim%groups(i)%particles)
-      ! 7.3 Select the type of this group once to call the right integrator
-      select type (particle => sim%groups(i)%particles(j))
-      type is (particle_kinetic_leapfrog)
+      ! 7.3 copy the particle j in the i-th groups to the dummy structure particle
+      call copy_particle_derived(sim%groups(i)%particles(j),particle)
       do k=1,n_steps
+        ! 7.4 integrating the particle trajectory via boris scheme
         call boris_push_cartesian(particle, m=sim%groups(i)%mass, E=[0d0,0d0,0d0], B=[0d0,0d0,1d0], dt=timesteps(i))
       end do ! steps
-      end select
+      ! 7.5 copy the particle final state at the j-th position i-th particle list  
+      call copy_particle_derived(particle,sim%groups(i)%particles(j))
     end do ! particles
     !$omp end parallel do
   end do ! groups
 
-  ! 7.5 Update the current time and run events
+  ! 7.6 Update the current time and run events
   sim%time = target_time
   call with(sim, events, at=sim%time)
 end do
 
 ! 8. Print some info of the particle
 write(*,*) norm2(sim%groups(1)%particles(1)%x)
-
+select type (p => sim%groups(1)%particles(1))
+  type is (particle_kinetic_leapfrog) 
+    write(*,*) norm2(p%v)
+end select
 call sim%finalize
 end program ex1

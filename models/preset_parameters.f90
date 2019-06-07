@@ -110,7 +110,7 @@ subroutine preset_parameters
   GAMMA     = 5.d0 / 3.d0
 
   mf        = 2
-  fbnd      = 0.d0; fbnd(1) =2.d0
+  fbnd      = 0.d0;   fbnd(1)  = 2.d0
 
   R_boundary   = 0.d0
   Z_boundary   = 0.d0
@@ -193,11 +193,22 @@ subroutine preset_parameters
   tauIC = 0.d0
   Wdia  = .false.
 
-  zjz_0 =  0.1173d0;   T_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
-  zjz_1 =  0.0d0   ;   T_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0
-  
-  Te_0 = 5.d-7; Te_1 = 5.d-9; Ti_0 = 5.d-7; Ti_1 = 5.d-9
+  zjz_0 =  0.1173d0   
+  zjz_1 =  0.0d0   
 
+  T_0   =  1.d-6  
+  Ti_0  =  5.d-7
+  Te_0  =  5.d-7
+
+  T_1   =  1.d-8  
+  Te_1  =  5.d-9
+  Ti_1  =  5.d-9
+
+  rho_0 =  1.d0   
+  rho_1 =  1.d0   
+  FF_0  =  1.d0
+  FF_1  =  0.d0
+  
   zj_coef     = 0.d0;  zj_coef(1)  = -1.d0
   T_coef      = 0.d0;  T_coef(1)   = -1.d0
   Te_coef     = 0.d0;  Te_coef(1)  = -1.d0
@@ -321,46 +332,44 @@ subroutine preset_parameters
 !======================MB
 
 !======================AF Massive Gas Injection Parameters
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-    JET_MGI = .false.
-    ASDEX_MGI = .false.
-    mgi_amplitude = 0.d0  ! 0.007d0
-    mgi_R      = 3.2d0
-    mgi_Z      =  1.5d0
-    mgi_phi    = 1.57d0
-    mgi_radius =   0.08d0
-    mgi_sig    =  0.05
-    mgi_deltaphi =  0.5
-    mgi_tor_norm = 1.
-    ksi_ion = 1.84d-24
-    D_neutral_x = 1.d-5
-    D_neutral_y = 1.d-5
-    D_neutral_p = 1.d-5
-    !====== JET DMV-2 parameters
-     L_tube = 2.d0
-     K_Dmv = 4.d-2
-     A_Dmv = 1.77d-2
-     t_mgi = 2.d3
-    !=====
-     delta_n_convection = 0
-     nimp_bg = 0.
-#endif
+  JET_MGI   = .false.
+  ASDEX_MGI = .false.
+  mgi_amplitude = 0.d0  ! 0.007d0
+  mgi_R      = 3.2d0
+  mgi_Z      =  1.5d0
+  mgi_phi    = 1.57d0
+  mgi_radius =   0.08d0
+  mgi_sig    =  0.05
+  mgi_deltaphi =  0.5
+  mgi_tor_norm = 1.
+  ksi_ion     = 1.84d-24
+  D_neutral_x = 1.d-5
+  D_neutral_y = 1.d-5
+  D_neutral_p = 1.d-5
+  !====== JET DMV-2 parameters
+  L_tube      = 2.d0
+  K_Dmv       = 4.d-2
+  A_Dmv       = 1.77d-2
+  t_mgi       = 2.d3
+  !=====
+  delta_n_convection = 0
+  nimp_bg = 0.
 !======================AF
 
 !======================JP ECCD injection parameters
- nu_jec_fast=1.d1
- nu_jec1_fast=1.d1
- nu_jec2_fast=1.d1
- JJ_par=0.d1
- jecamp=1.d1
- jec_pos1=0.6d0
- jec_pos2=0.6d0
- jec_pos3=0.6d0
- jec_pos4=0.6d0
- jec_width=0.5d0
- jec_width2=0.5d0
- jw1=5.d-1 ! inner cut-off
- jw2=1.d0  ! outer cut-off
- jw3=1.d0  ! outer cut-off
+  nu_jec_fast=1.d1
+  nu_jec1_fast=1.d1
+  nu_jec2_fast=1.d1
+  JJ_par=0.d1
+  jecamp=1.d1
+  jec_pos1=0.6d0
+  jec_pos2=0.6d0
+  jec_pos3=0.6d0
+  jec_pos4=0.6d0
+  jec_width=0.5d0
+  jec_width2=0.5d0
+  jw1=5.d-1 ! inner cut-off
+  jw2=1.d0  ! outer cut-off
+  jw3=1.d0  ! outer cut-off
 
 end subroutine preset_parameters

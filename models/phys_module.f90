@@ -514,4 +514,6 @@ module phys_module
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral
   
+  contains
+  
 end module phys_module

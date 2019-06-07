@@ -5,7 +5,7 @@
 module mod_particle_types
   implicit none
   private
-  public particle_base, particle_kinetic, particle_kinetic_leapfrog, particle_gc, particle_fieldline, copy_particle_base
+  public particle_base, particle_kinetic, particle_kinetic_leapfrog, particle_gc, particle_fieldline, copy_particle_base, copy_particle_derived
   public particle_get_q
 
   !> The base type for all other particles. Includes only the position and weight elements
@@ -74,4 +74,50 @@ contains
       q = 0
     end select
   end function particle_get_q
+
+  !> This subroutine copies derived particles type.
+  !> we do not use a different subroutine for each derived particle type
+  !> because fortran for avoiding problems when type selectors are given 
+  !> in functions / subroutines within OpenMP regions
+  !> inputs:
+  !>   in: (type particle) particle to be copied
+  !> outputs:
+  !>   out: (type particle) copy destination
+  !> Author: C. Sommariva, 07/06/2019, email: cristian.sommariva[at]epfl.ch
+  pure subroutine copy_particle_derived(in,out)
+    !< definitions
+    class(particle_base),intent(in) :: in !< define the particle to be copied
+    class(particle_base),intent(out) :: out !< define the destination particle
+
+    !< actions
+    call copy_particle_base(in, out) !< first, copy the particle base
+    !< select the "in" particle type
+    select type (p_in => in)
+    type is (particle_fieldline) !< in particle is particle_fieldline type
+      select type (p_out => out) !< the particle out type is selected
+          type is (particle_fieldline) !< in particle is particle_fieldline type
+          p_out%B_hat_prev = p_in%B_hat_prev !< copy the magnetic field
+          p_out%v = p_in%v                   !< copy the parallel velocity along a magnetic field line
+      end select !< end the particle "out" select
+    type is (particle_gc)        !< in particle is particle_gc type
+      select type (p_out => out) !< the particle out type is selected
+        type is (particle_gc)    !< in particle is particle_gc type
+        p_out%E = p_in%E   !< copy the energy
+        p_out%mu = p_in%mu !< copy the magnetic moment
+        p_out%q = p_in%q   !< copy the charge
+      end select !< end the particle "out" select
+    type is (particle_kinetic) !< in particle is particle_kinetic type
+      select type (p_out => out)   !< the particle out type is selected
+        type is (particle_kinetic) !< in particle is particle_kinetic type
+        p_out%v = p_in%v !< copy the velocity
+        p_out%q = p_in%q !< copy the charge
+      end select!< end the particle "out" select
+    type is (particle_kinetic_leapfrog) !< in particle is particle_kinetic type
+      select type (p_out => out)            !< the particle out type is selected
+        type is (particle_kinetic_leapfrog) !< in particle is particle_kinetic type
+        p_out%v = p_in%v !< copy the velocity
+        p_out%q = p_in%q !< copy charge
+      end select !< end the particle "out" select
+    end select !< end the particle "in" select
+  end subroutine copy_particle_derived
 end module mod_particle_types

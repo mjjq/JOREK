@@ -899,10 +899,9 @@ required = 0
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
+      call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
-    
-    call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
     
     call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),                  &
       index_max(my_id+1), xpoint, xcase, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,   &

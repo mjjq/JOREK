@@ -22,6 +22,7 @@ implicit none
 real*8 :: timesteps(1) = [1d-6]
 integer :: i, j, k, n_steps
 real*8  :: target_time
+type(particle_kinetic_leapfrog) :: particle ! define a type particle_kinetic_leapfrog
 
 ! 2. Allocate a group and a particle of type particle_kinetic_leapfrog.
 call sim%initialize(num_groups=1)
@@ -61,18 +62,25 @@ do while (.not. sim%stop_now)
     !$omp parallel do default(private) &
     !$omp shared(sim, n_steps, timesteps, i)
     do j=1,size(sim%groups(i)%particles)
-      ! 7.3 Select the type of this group once to call the right integrator
-      select type (particle => sim%groups(i)%particles(j))
-      type is (particle_kinetic_leapfrog)
+      ! 7.3 copy the particle j in the i-th groups to the dummy structure particle
+      !< get particle base attributes from sim%groups(i)%particles(j)
+      call copy_particle_base(sim%groups(i)%particles(j),particle)
+      !< get derived type attributes from sim%groups(i)%particles(j)
+      call get_particle_kinetic_leapfrog_attributes(sim%groups(i)%particles(j),particle)
       do k=1,n_steps
+        ! 7.4 integrating the particle trajectory via boris scheme
         call boris_push_cartesian(particle, m=sim%groups(i)%mass, E=[0d0,0d0,0d0], B=[0d0,0d0,1d0], dt=timesteps(i))
       end do ! steps
-      end select
+      ! 7.5 copy the particle final state at the j-th position i-th particle list
+      !< set particle base attributes to sim%groups(i)%particles(j)  
+      call copy_particle_base(particle,sim%groups(i)%particles(j))
+      !< set derived type attributes to sim%groups(i)%particles(j)
+      call set_particle_kinetic_leapfrog_attributes(particle,sim%groups(i)%particles(j))
     end do ! particles
     !$omp end parallel do
   end do ! groups
 
-  ! 7.5 Update the current time and run events
+  ! 7.6 Update the current time and run events
   sim%time = target_time
   call with(sim, events, at=sim%time)
 end do

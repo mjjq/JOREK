@@ -5,6 +5,11 @@
 !>* pusher: boris
 !>* geometry: cartesian
 !>
+!> Note: BE CAREFUL! the time step is too large for correctly resolve the particle
+!>       gyro-orbit! The large time step is used for executing relatively fast tests on
+!>       the particle tracker
+!> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
+!>
 !> Compile with: `make ex1`
 !> Run with: `./ex1`
 !> See the [annotated source](../sourcefile/ex1.f90.html) for details.

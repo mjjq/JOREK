@@ -5,8 +5,16 @@
 module mod_particle_types
   implicit none
   private
-  public particle_base, particle_kinetic, particle_kinetic_leapfrog, particle_gc, particle_fieldline, copy_particle_base, copy_particle_derived
+  public particle_base, particle_kinetic, particle_kinetic_leapfrog, particle_gc, particle_fieldline, copy_particle_base
   public particle_get_q
+  !< access to derived type get subroutines
+  public get_particle_fieldline_attributes,get_particle_gc_attributes
+  !< access to derived type get subroutines
+  public get_particle_kinetic_attributes,get_particle_kinetic_leapfrog_attributes
+  !< access to derived type set subroutines
+  public set_particle_fieldline_attributes,set_particle_gc_attributes
+  !< access to derived type set subroutines
+  public set_particle_kinetic_attributes,set_particle_kinetic_leapfrog_attributes
 
   !> The base type for all other particles. Includes only the position and weight elements
   !> Integration in a 2D finite element method is included in the form of 2 coordinates
@@ -47,7 +55,8 @@ module mod_particle_types
 
 contains
   !> Copy the base variables from one particle of class(particle_base) to another
-  pure subroutine copy_particle_base(in, out)
+  !pure subroutine copy_particle_base(in, out)
+  subroutine copy_particle_base(in, out)
     class(particle_base), intent(in)    :: in
     class(particle_base), intent(inout) :: out
     out%x      = in%x
@@ -75,49 +84,161 @@ contains
     end select
   end function particle_get_q
 
-  !> This subroutine copies derived particles type.
-  !> we do not use a different subroutine for each derived particle type
-  !> because fortran for avoiding problems when type selectors are given 
-  !> in functions / subroutines within OpenMP regions
+  !> Get attribute particle_fieldline from particle_base datatype. This data are copied 
+  !> into a particle_fieldline type.
   !> inputs:
-  !>   in: (type particle) particle to be copied
-  !> outputs:
-  !>   out: (type particle) copy destination
-  !> Author: C. Sommariva, 07/06/2019, email: cristian.sommariva[at]epfl.ch
-  pure subroutine copy_particle_derived(in,out)
-    !< definitions
-    class(particle_base),intent(in) :: in !< define the particle to be copied
-    class(particle_base),intent(out) :: out !< define the destination particle
+  !>   particle_in:   (particle_base) particle from which data are copied
+  !> ouputs:
+  !>    particle_out: (particle_fieldline) particle in which data are stored
+  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
+  pure subroutine get_particle_fieldline_attributes(particle_in,particle_out)
+    class(particle_base),intent(in) :: particle_in          !< define input particle as particle base
+    class(particle_fieldline),intent(inout) :: particle_out !< define particle output as particle_fieldline
 
-    !< actions
-    call copy_particle_base(in, out) !< first, copy the particle base
-    !< select the "in" particle type
-    select type (p_in => in)
-    type is (particle_fieldline) !< in particle is particle_fieldline type
-      select type (p_out => out) !< the particle out type is selected
-          type is (particle_fieldline) !< in particle is particle_fieldline type
-          p_out%B_hat_prev = p_in%B_hat_prev !< copy the magnetic field
-          p_out%v = p_in%v                   !< copy the parallel velocity along a magnetic field line
-      end select !< end the particle "out" select
-    type is (particle_gc)        !< in particle is particle_gc type
-      select type (p_out => out) !< the particle out type is selected
-        type is (particle_gc)    !< in particle is particle_gc type
-        p_out%E = p_in%E   !< copy the energy
-        p_out%mu = p_in%mu !< copy the magnetic moment
-        p_out%q = p_in%q   !< copy the charge
-      end select !< end the particle "out" select
-    type is (particle_kinetic) !< in particle is particle_kinetic type
-      select type (p_out => out)   !< the particle out type is selected
-        type is (particle_kinetic) !< in particle is particle_kinetic type
-        p_out%v = p_in%v !< copy the velocity
-        p_out%q = p_in%q !< copy the charge
-      end select!< end the particle "out" select
-    type is (particle_kinetic_leapfrog) !< in particle is particle_kinetic type
-      select type (p_out => out)            !< the particle out type is selected
-        type is (particle_kinetic_leapfrog) !< in particle is particle_kinetic type
-        p_out%v = p_in%v !< copy the velocity
-        p_out%q = p_in%q !< copy charge
-      end select !< end the particle "out" select
-    end select !< end the particle "in" select
-  end subroutine copy_particle_derived
-end module mod_particle_types
+    particle_out%B_hat_prev = (/0.d0,0.d0,0.d0/)!< initialise magnetic field to zero
+    particle_out%v = 0.d0                       !< initialise parallel velocity to zero
+
+    select type (p_in => particle_in) !< select data type for particle_in
+    type is (particle_fieldline)      !< define the type as field line for particle_in
+      particle_out%B_hat_prev = p_in%B_hat_prev !< copy magnetic field in particle out 
+      particle_out%v = p_in%v                   !< copy the field line parallel velocity in particle out 
+    end select                        !< end select data type for particle_in
+  end subroutine get_particle_fieldline_attributes !< end of subroutine get_particle_fieldline_attributes
+
+  !> Set attribute from particle_fieldline in particle_base datatype.
+  !> inputs:
+  !>    particle_in:  (particle_fieldline) particle from which data are copied
+  !> outputs:
+  !>    particle_out: (particle_base) particle in which data are stored
+  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
+  pure subroutine set_particle_fieldline_attributes(particle_in,particle_out)
+    class(particle_fieldline),intent(in)  :: particle_in !< define particle input as particle_fieldline
+    class(particle_base),intent(inout) :: particle_out   !< define output particle as particle base
+
+    select type (p_out => particle_out) !< select data type for particle_out
+    type is (particle_fieldline)        !< define the type as field line for particle_out
+      p_out%B_hat_prev = particle_in%B_hat_prev !< copy magnetic field in particle out
+      p_out%v = particle_in%v                   !< copy the field line parallel velocity in particle out
+    end select                          !< end select data type for particle_out
+  end subroutine set_particle_fieldline_attributes !< end of subroutine set_particle_fieldline_attributes
+
+
+  !> Get attribute particle_gc from particle_base datatype. This data are copied 
+  !> into a particle_gc type.
+  !> inputs:
+  !>   particle_in:   (particle_base) particle from which data are copied
+  !> ouputs:
+  !>    particle_out: (particle_gc) particle in which data are stored
+  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
+  pure subroutine get_particle_gc_attributes(particle_in,particle_out)
+    class(particle_base),intent(in) :: particle_in   !< define input particle as particle base
+    class(particle_gc),intent(inout) :: particle_out !< define particle output as particle_gc
+
+    particle_out%E =  0.d0 !< initialise gc energy to 0
+    particle_out%mu = 0.d0 !< initialise gc magnetic moment to 0
+    particle_out%q =  0    !< initialise gc charge to 0
+
+    select type (p_in => particle_in) !< select data type for particle_in
+    type is (particle_gc)             !< define the type as gc for particle_in
+      particle_out%E = p_in%E   !< copy the gc energy in particle out 
+      particle_out%mu = p_in%mu !< copy the gc magnetic moment in particle out
+      particle_out%q = p_in%q   !< copy the gc charge in particle out
+    end select                        !< end select data type for particle_in
+  end subroutine get_particle_gc_attributes !< end of subroutine get_particle_gc_attributes
+
+  !> Set attribute from particle_gc in particle_base datatype.
+  !> inputs:
+  !>    particle_in:  (particle_gc) particle from which data are copied
+  !> outputs:
+  !>    particle_out: (particle_base) particle in which data are stored
+  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
+  pure subroutine set_particle_gc_attributes(particle_in,particle_out)
+    class(particle_gc),intent(in)  :: particle_in      !< define particle input as particle_gc
+    class(particle_base),intent(inout) :: particle_out !< define output particle as particle base
+
+    select type (p_out => particle_out) !< select data type for particle_out
+    type is (particle_gc)               !< define the type as field line for particle_out
+      p_out%E = particle_in%E   !< copy the gc energy in particle out
+      p_out%mu = particle_in%mu !< copy the gc magnetic moment in particle out
+      p_out%q = particle_in%q   !< copy the gc charge in particle out 
+    end select                          !< end select data type for particle_out
+  end subroutine set_particle_gc_attributes !< end of subroutine set_particle_gc_attributes
+
+  !> Get attribute particle_kinetic from particle_base datatype. This data are copied 
+  !> into a particle_kinetic type.
+  !> inputs:
+  !>   particle_in:   (particle_base) particle from which data are copied
+  !> ouputs:
+  !>    particle_out: (particle_kinetic) particle in which data are stored
+  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
+  pure subroutine get_particle_kinetic_attributes(particle_in,particle_out)
+    class(particle_base),intent(in) :: particle_in        !< define input particle as particle base
+    class(particle_kinetic),intent(inout) :: particle_out !< define particle output as particle_kinetic
+
+    particle_out%v = (/0.d0,0.d0,0.d0/) !< initialise particle out velocity to zero
+    particle_out%q = 0                  !< initialise particle out charge to zero
+
+    select type (p_in => particle_in) !< select data type for particle_in
+    type is (particle_kinetic)        !< define the type as particle kinetic for particle_in
+      particle_out%v = p_in%v !< copy the velocity in particle out 
+      particle_out%q = p_in%q !< copy the charge in particle out 
+    end select                        !< end select data type for particle_in
+  end subroutine get_particle_kinetic_attributes !< end of subroutine get_particle_kinetic_attributes
+
+  !> Set attribute from particle_kinetic in particle_base datatype.
+  !> inputs:
+  !>    particle_in:  (particle_kinetic) particle from which data are copied
+  !> outputs:
+  !>    particle_out: (particle_base) particle in which data are stored
+  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
+  pure subroutine set_particle_kinetic_attributes(particle_in,particle_out)
+    class(particle_kinetic),intent(in)  :: particle_in !< define particle input as particle_kinetic
+    class(particle_base),intent(inout) :: particle_out !< define output particle as particle base
+
+    select type (p_out => particle_out) !< select data type for particle_out
+    type is (particle_kinetic)          !< define the type as particle kinetic for particle_out
+      p_out%v = particle_in%v !< copy the velocity in particle out
+      p_out%q = particle_in%q !< copy the charge parallel velocity in particle out
+    end select                          !< end select data type for particle_out
+  end subroutine set_particle_kinetic_attributes !< end of subroutine set_particle_kinetic_attributes
+
+  !> Get attribute particle_kinetic_leapfrog from particle_base datatype. This data are copied 
+  !> into a particle_kinetic_leapfrog type.
+  !> inputs:
+  !>   particle_in:   (particle_base) particle from which data are copied
+  !> ouputs:
+  !>    particle_out: (particle_kinetic_leapfrog) particle in which data are stored
+  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
+  pure subroutine get_particle_kinetic_leapfrog_attributes(particle_in,particle_out)
+    class(particle_base),intent(in) :: particle_in                 !< define input particle as particle base
+    class(particle_kinetic_leapfrog),intent(inout) :: particle_out !< define particle output as
+                                                                   !< particle_kinetic_leapfrog
+    particle_out%v = (/0.d0,0.d0,0.d0/) !< initialise particle out velocity to zero
+    particle_out%q = 0                  !< initialise particle out charge to zero
+
+    select type (p_in => particle_in)   !< select data type for particle_in
+    type is (particle_kinetic_leapfrog) !< define the type as particle kinetic leapfrog for particle_in
+      particle_out%v = p_in%v !< copy the velocity in particle out 
+      particle_out%q = p_in%q !< copy the charge in particle out 
+    end select                          !< end select data type for particle_in
+  end subroutine get_particle_kinetic_leapfrog_attributes !< end of subroutine get_particle_kinetic_leapfrog_attributes
+
+  !> Set attribute from particle_kinetic_leapfrog in particle_base datatype.
+  !> inputs:
+  !>    particle_in:  (particle_kinetic_leapfrog) particle from which data are copied
+  !> outputs:
+  !>    particle_out: (particle_base) particle in which data are stored
+  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
+  pure subroutine set_particle_kinetic_leapfrog_attributes(particle_in,particle_out)
+    class(particle_kinetic_leapfrog),intent(in)  :: particle_in !< define particle input as
+                                                                !< particle_kinetic_leapfrog
+    class(particle_base),intent(inout) :: particle_out          !< define output particle as particle base
+    select type (p_out => particle_out) !< select data type for particle_out
+    type is (particle_kinetic_leapfrog) !< define the type as particle kinetic leapfrog for particle_out
+      p_out%v = particle_in%v !< copy the velocity in particle out
+      p_out%q = particle_in%q !< copy the charge parallel velocity in particle out
+    end select                          !< end select data type for particle_out
+  end subroutine set_particle_kinetic_leapfrog_attributes !< end of subroutine set_particle_kinetic_leapfrog_attributes
+
+end module mod_particle_types !< end-of-module mod_particle_types
+

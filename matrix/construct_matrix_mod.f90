@@ -3,9 +3,7 @@ module construct_matrix_mod
 use mod_parameters, only : n_var
 implicit none
 
-#ifdef COMPARE_ELEMENT_MATRIX
 logical  :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
-#endif
 
 
 contains

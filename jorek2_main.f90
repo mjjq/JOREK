@@ -292,10 +292,16 @@ required = 0
     stop
 #endif
   else if ( use_pastix ) then
-#ifndef USE_PASTIX
-     write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 in Makefile.inc'
-     call MPI_Abort(MPI_COMM_WORLD, 8, ierr)
-     stop
+#if !( defined(USE_PASTIX)  ^  defined(USE_PASTIX6) ) 
+    write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 xor USE_PASTIX6 = 1 in Makefile.inc'
+    call MPI_Abort(MPI_COMM_WORLD, 8, ierr)
+    stop
+#endif
+#ifdef USE_PASTIX6
+    if (n_cpu /= ((n_tor-1)/2+1)) then
+      write(*,*) 'FATAL : Pastix6 is not yet MPI parallelised (Pastix 6.0)! Please use #procs = (n_tor+1)/2.'
+      call MPI_Abort(MPI_COMM_WORLD, 6, ierr)
+    endif
 #endif
   else if ( use_wsmp ) then
 #ifndef USE_WSMP
@@ -328,13 +334,6 @@ required = 0
     write(*,*) '  Consider testing, whether you get better performance by increasing the number'
     write(*,*) '  of MPI tasks and reducing the number of OpenMP threads in the jobscript.'
   end if
-  if ((jorek_model==199) .or. (jorek_model==303)) then
-    if (abs(eta-eta_ohmic)/(eta+eta_ohmic) > 1.d-6) then
-      write(*,*) 'WARNING: The resistivity eta and the resistivity used for Ohmic heating '
-      write(*,*) '  eta_ohm are not the same. No problem if you know what you are doing,  ' 
-      write(*,*) '  but with this setup you are not conserving energy.   '
-    endif
-  endif
 #ifndef USE_BLOCK
   write(*,*) 'WARNING: You are not using USE_BLOCK=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_BLOCK=1 in your Makefile.inc'
@@ -592,9 +591,10 @@ required = 0
     mumps_par%JOB = -2
     if (my_id == 0) call DMUMPS(mumps_par)
 #endif
+#ifndef USE_PASTIX6
     if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
     if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
-  
+#endif
   end if if_not_restart
   
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -1176,12 +1176,16 @@ endif
       pastix_iparm(3)     = 7
 
       if (.not. gmres) then
+#ifndef USE_PASTIX6
          call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
               pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
       elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#else
+        call pastixFinalize(pastix_data)
+#endif
       endif
 
     elseif (use_wsmp) then

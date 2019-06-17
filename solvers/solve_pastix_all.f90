@@ -13,13 +13,23 @@ use mod_clock
 use mod_coicsr
 !$ use omp_lib
 
+#ifdef USE_PASTIX6
+use iso_c_binding
+use pastixf
+use pastix_enums
+use spmf
+#endif
+ 
 implicit none
 
+#ifndef USE_PASTIX6
 #ifdef USE_PASTIX
 #include "pastix_fortran.h"
 #else
 #include "no_pastix_fortran.h"
 #endif
+#endif
+
 
 integer                  :: n_cpu, index_min, index_max       ! global index_min, index_max for this cpu
 real*8,allocatable       :: column_local(:)
@@ -27,10 +37,18 @@ type(clcktype)           :: t_itstart, t0, t1, t2, t3
 real*8                   :: tsecond
 integer                  :: i, k, j, ierr, my_id, m_loc
 integer,allocatable      :: counts(:), displacements(:)
+#ifdef USE_PASTIX6
+    integer(c_int)     :: pastix_info
+    type(c_ptr)        :: pastix_rhs_ptr
+    integer(kind=spm_int_t), dimension(:), pointer       :: pastix_colptr
+    integer(kind=spm_int_t), dimension(:), pointer       :: pastix_rowptr
+    real(kind=c_double)    , dimension(:), pointer       :: pastix_values
+#endif
 
-!write(*,*) my_id,'*********************************'
-!write(*,*) my_id,'*  solve global matrix (PastiX) *'
-!write(*,*) my_id,'*********************************'
+
+write(*,*) my_id,'*********************************'
+write(*,*) my_id,'*  solve global matrix (PastiX) *'
+write(*,*) my_id,'*********************************'
 
 m_loc = (index_max - index_min + 1) * n_tor * n_var
 mumps_par%nz_loc = nz_glob
@@ -126,8 +144,10 @@ allocate(sparskit_work(n_block+1))
 
 call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%JCN(1:nnz_block),block_size,sparskit_work)
 
+#ifndef USE_PASTIX6
 if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,n_block,"pastix_perm_vars",CAT_UNKNOWN)
 if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,n_block,"pastix_iperm_vars",CAT_UNKNOWN)
+#endif
 
 #else
 
@@ -135,79 +155,144 @@ if (allocated(sparskit_work)) deallocate(sparskit_work)
 allocate(sparskit_work(mumps_par%N + 1))
 
 call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
-
-if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
-if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
-
 #endif
 
 call clck_time(t1)
 call clck_ldiff(t0,t1,tsecond)
 if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecond
 
+
+#ifndef USE_PASTIX6
+if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
+if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
+#else
+  ! Pastix6: Initialise sparse matrix structure  
+  allocate(pastix_spm) ! Replace by tr_allocate etc.?!
+  call spmInit(pastix_spm)
+
+#ifdef USE_BLOCK
+  pastix_spm%n           =  n_block
+  pastix_spm%nnz         =  nnz_block
+  pastix_spm%dof         =  block_size
+#else
+  pastix_spm%n           =  mumps_par%n
+  pastix_spm%nnz         =  mumps_par%nz
+  pastix_spm%dof         =  1
+#endif
+  call spmUpdateComputedFields(pastix_spm)
+  call spmAlloc(pastix_spm)
+
+  call c_f_pointer(pastix_spm%colptr,pastix_colptr, [pastix_spm%nnz])
+  call c_f_pointer(pastix_spm%rowptr,pastix_rowptr, [pastix_spm%nnz])
+  call c_f_pointer(pastix_spm%values,pastix_values, [pastix_spm%nnz])
+            
+! pastix_colptr      => mumps_par%irn ! just like in Pastix5, invert col and row because our matrix is in CSR and pastix uses CSC by default.
+! pastix_rowptr      => mumps_par%jcn ! could also change in Pastix6 to spm->fmttype = SpmCSR
+! pastix_values      => mumps_par%A
+
+  ! Temporary!!! Copy over mumps_par to spm matrix structure
+  do i = 1,pastix_spm%nnz
+    pastix_values(i) = mumps_par%A(i) 
+    pastix_rowptr(i) = mumps_par%irn(i) 
+  enddo
+  do i = 1,pastix_spm%n+1
+    pastix_colptr(i) = mumps_par%jcn(i) 
+  enddo
+  allocate(pastix_spm_check)
+  call spmCheckAndCorrect(pastix_spm, pastix_spm_check, pastix_info)
+  if (pastix_info .ne. 0) then
+    call spmExit(pastix_spm)
+    pastix_spm = pastix_spm_check
+  endif
+  deallocate(pastix_spm_check)
+
+  call spmPrintInfo(pastix_spm)
+#endif
 call pastix_init_num_threads(my_id)
 
 if (.not. pastix_initialised) then
 
+#ifndef USE_PASTIX6
   pastix_iparm(IPARM_MODIFY_PARAMETER)  = API_NO          ! insert default values
   pastix_iparm(IPARM_START_TASK)        = API_TASK_INIT   ! initializse
   pastix_iparm(IPARM_END_TASK)          = API_TASK_INIT
+#else
+  call pastixInitParam(pastix_iparm, pastix_dparm)
+#endif
   if (my_id .eq. 0) then
     write(*,*) '***********************************'
     write(*,*) '* initialise PastiX               *'
     write(*,*) '***********************************'
   endif
   
+#ifndef USE_PASTIX6
 #ifdef USE_BLOCK
   call pastix_fortran(pastix_data,MPI_COMM_WORLD,n_block,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                        pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
   call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                        pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#endif
 #endif
 
-  pastix_iparm(IPARM_VERBOSE)            = pastix_verb
-  pastix_iparm(IPARM_ITERMAX)            = pastix_iter                 ! refinement : max number of iterations
+  ! pastix input parameters working in Pastix5 and Pastix6 (SOME NOT ACTUALLY NEEDED IN PASTIX6)
+  pastix_iparm(IPARM_VERBOSE)               = pastix_verb              
+  pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations
 
-  pastix_iparm(IPARM_FACTORIZATION)      = pastix_facto
-  pastix_iparm(IPARM_THREAD_NBR)         = pastix_nthrd               ! number of threads
-  pastix_iparm(IPARM_RHS_MAKING)         = pastix_rhs                 ! right hand side (0 : use RHS)
+  pastix_iparm(IPARM_FACTORIZATION)         = pastix_facto
+  pastix_iparm(IPARM_THREAD_NBR)            = pastix_nthrd               ! number of threads
+  pastix_iparm(IPARM_INCOMPLETE)            = pastix_ricar
+  pastix_iparm(IPARM_LEVEL_OF_FILL)         = pastix_iluk
+  pastix_dparm(DPARM_EPSILON_REFINEMENT)    = pastix_epsilon             ! error level refinement
+  pastix_dparm(DPARM_EPSILON_MAGN_CTRL)     = pastix_pivot               ! pivot threshold
+#ifdef USE_BLOCK
+  pastix_iparm(IPARM_DOF_NBR)               = block_size                 ! block size
+#else
+  pastix_iparm(IPARM_DOF_NBR)               = 1
+#endif
 
-  pastix_iparm(IPARM_MATRIX_VERIFICATION) = API_NO
 
-  pastix_iparm(IPARM_SYM)                = pastix_sym
-  
-  pastix_iparm(IPARM_INCOMPLETE)         = pastix_ricar
-  pastix_iparm(IPARM_LEVEL_OF_FILL)      = pastix_iluk
-  pastix_iparm(IPARM_AMALGAMATION_LEVEL) = pastix_amalg
-!  pastix_iparm(IPARM_BINDTHRD)           = API_NO
 
+#ifndef USE_PASTIX6
+  ! pastix input parameters working only in Pastix5
+  pastix_iparm(IPARM_RHS_MAKING)            = pastix_rhs                 ! right hand side (0 : use RHS)
+  pastix_iparm(IPARM_SYM)                   = pastix_sym
+  pastix_iparm(IPARM_AMALGAMATION_LEVEL)    = pastix_amalg
 #ifdef WORLDWAR2
 #ifdef FUNNELED
-  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_FUNNELED
+  pastix_iparm(IPARM_THREAD_COMM_MODE)      = API_THREAD_FUNNELED
 #else
-  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_MULTIPLE
+  pastix_iparm(IPARM_THREAD_COMM_MODE)      = API_THREAD_MULTIPLE
 #endif
 #endif
-  
-  pastix_dparm(DPARM_EPSILON_REFINEMENT) = pastix_epsilon             ! error level refinement
-  pastix_dparm(DPARM_EPSILON_MAGN_CTRL)  = pastix_pivot               ! pivot threshold?
+
+
+#else
+  ! equivalent pastix input parameters for Pastix6 (SOME NOT ACTUALLY NEEDED IN PASTIX6)
+  pastix_iparm(IPARM_MTX_TYPE)              = pastix_sym
+  pastix_iparm(IPARM_AMALGAMATION_LVLCBLK)  = pastix_amalg
+
+! TEMPORARY: not yet relevant for Pastix6 as MPI parallelisation is not implemented
+!#ifdef WORLDWAR2
+!#ifdef FUNNELED
+!   pastix_iparm(IPARM_THREAD_COMM_MODE)      = PastixThreadFunneled
+!#else
+!   pastix_iparm(IPARM_THREAD_COMM_MODE)      = PastixThreadMultiple
+!#endif
+!#endif
+
+  call pastixInit(pastix_data, 0, pastix_iparm, pastix_dparm)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
+#endif
   pastix_initialised = .true.
-
-#ifdef USE_BLOCK
-  pastix_iparm(IPARM_DOF_NBR)            = block_size
-#else
-  pastix_iparm(IPARM_DOF_NBR)            = 1
-#endif
-
 endif
 
 if (.not. pastix_analysed) then
 
-  pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd                       ! number of threads
+#ifndef USE_PASTIX6
+  pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd
   pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
   pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
- 
+#endif 
   call clck_time(t0)
   
   if (my_id .eq. 0) then
@@ -216,6 +301,7 @@ if (.not. pastix_analysed) then
     write(*,*) '***********************************'
   endif
 
+#ifndef USE_PASTIX6
 #ifdef USE_BLOCK
   
   call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block, &
@@ -230,6 +316,10 @@ if (.not. pastix_analysed) then
 
 #endif
 
+#else
+  call pastix_task_analyze(pastix_data,pastix_spm,pastix_info)
+#endif
+ 
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis :', tsecond
@@ -240,6 +330,7 @@ endif
 
 call clck_time(t0)
 
+#ifndef USE_PASTIX6
 pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd
 pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
 pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
@@ -250,6 +341,7 @@ pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
   pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_MULTIPLE
 #endif
 #endif
+#endif
 
 if (my_id .eq. 0) then
   write(*,*) '***********************************'
@@ -257,6 +349,7 @@ if (my_id .eq. 0) then
   write(*,*) '***********************************'
 endif
 
+#ifndef USE_PASTIX6
 #ifdef USE_BLOCK
 
 pastix_iparm(IPARM_DOF_NBR)            = block_size
@@ -271,6 +364,15 @@ call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mump
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #endif
+
+#else
+call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
+pastix_rhs_ptr = c_loc(mumps_par%rhs)
+call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,pastix_spm%n,pastix_info)
+call spmExit(pastix_spm)
+deallocate(pastix_spm)
+#endif
+
 
 call clck_time(t1)
 call clck_ldiff(t0,t1,tsecond)

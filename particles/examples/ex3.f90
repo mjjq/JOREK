@@ -9,7 +9,6 @@
 !>
 !> Note: in order to avoid conflicts with jorek2help during input parsing,
 !>       please compile ex3 with the flag -DNO_HELP
-!> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
 !>
 !>## Description
 !> This example outputs statistics on the kinetic energy of all particles

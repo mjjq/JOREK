@@ -480,7 +480,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
 
         real_stats_tmp(6) = real(particle%q,8) * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle%x(1) * v_par * B(3)/norm2(B)
       type is (particle_fieldline)
-        call copy_particle_base(particle_in, particle)
+        particle = particle_in
         real_stats_tmp(6) = 0.d0 ! Since there is no momentum defined for this we just use 0
       class default
         write(*,*) "ERROR: calculate_particle_diagnostics not implemented for this particle type"

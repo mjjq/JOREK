@@ -90,7 +90,6 @@ contains
   !>   particle_in:   (particle_base) particle from which data are copied
   !> ouputs:
   !>    particle_out: (particle_fieldline) particle in which data are stored
-  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
   pure subroutine get_particle_fieldline_attributes(particle_in,particle_out)
     class(particle_base),intent(in) :: particle_in          !< define input particle as particle base
     class(particle_fieldline),intent(inout) :: particle_out !< define particle output as particle_fieldline
@@ -110,7 +109,6 @@ contains
   !>    particle_in:  (particle_fieldline) particle from which data are copied
   !> outputs:
   !>    particle_out: (particle_base) particle in which data are stored
-  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
   pure subroutine set_particle_fieldline_attributes(particle_in,particle_out)
     class(particle_fieldline),intent(in)  :: particle_in !< define particle input as particle_fieldline
     class(particle_base),intent(inout) :: particle_out   !< define output particle as particle base
@@ -129,7 +127,6 @@ contains
   !>   particle_in:   (particle_base) particle from which data are copied
   !> ouputs:
   !>    particle_out: (particle_gc) particle in which data are stored
-  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
   pure subroutine get_particle_gc_attributes(particle_in,particle_out)
     class(particle_base),intent(in) :: particle_in   !< define input particle as particle base
     class(particle_gc),intent(inout) :: particle_out !< define particle output as particle_gc
@@ -151,7 +148,6 @@ contains
   !>    particle_in:  (particle_gc) particle from which data are copied
   !> outputs:
   !>    particle_out: (particle_base) particle in which data are stored
-  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
   pure subroutine set_particle_gc_attributes(particle_in,particle_out)
     class(particle_gc),intent(in)  :: particle_in      !< define particle input as particle_gc
     class(particle_base),intent(inout) :: particle_out !< define output particle as particle base
@@ -170,7 +166,6 @@ contains
   !>   particle_in:   (particle_base) particle from which data are copied
   !> ouputs:
   !>    particle_out: (particle_kinetic) particle in which data are stored
-  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
   pure subroutine get_particle_kinetic_attributes(particle_in,particle_out)
     class(particle_base),intent(in) :: particle_in        !< define input particle as particle base
     class(particle_kinetic),intent(inout) :: particle_out !< define particle output as particle_kinetic
@@ -190,7 +185,6 @@ contains
   !>    particle_in:  (particle_kinetic) particle from which data are copied
   !> outputs:
   !>    particle_out: (particle_base) particle in which data are stored
-  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
   pure subroutine set_particle_kinetic_attributes(particle_in,particle_out)
     class(particle_kinetic),intent(in)  :: particle_in !< define particle input as particle_kinetic
     class(particle_base),intent(inout) :: particle_out !< define output particle as particle base
@@ -208,7 +202,6 @@ contains
   !>   particle_in:   (particle_base) particle from which data are copied
   !> ouputs:
   !>    particle_out: (particle_kinetic_leapfrog) particle in which data are stored
-  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
   pure subroutine get_particle_kinetic_leapfrog_attributes(particle_in,particle_out)
     class(particle_base),intent(in) :: particle_in                 !< define input particle as particle base
     class(particle_kinetic_leapfrog),intent(inout) :: particle_out !< define particle output as
@@ -228,7 +221,6 @@ contains
   !>    particle_in:  (particle_kinetic_leapfrog) particle from which data are copied
   !> outputs:
   !>    particle_out: (particle_base) particle in which data are stored
-  !> Author: C. Sommariva, 11/06/2019, email: cristian.sommariva[at]epfl.ch
   pure subroutine set_particle_kinetic_leapfrog_attributes(particle_in,particle_out)
     class(particle_kinetic_leapfrog),intent(in)  :: particle_in !< define particle input as
                                                                 !< particle_kinetic_leapfrog

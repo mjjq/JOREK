@@ -80,6 +80,6 @@ function gc_to_fieldline(in) result(out)
   use data_structure
   type(particle_gc), intent(in)       :: in
   type(particle_fieldline)     :: out !< Particle of which to update x and v
-  call copy_particle_base(in, out)
+  out = in
 end function gc_to_fieldline
 end module mod_fieldline_euler

@@ -7,7 +7,6 @@
 !> Run with: `./ex2 && ./ex3 part*h5`
 !> See the [annotated source](../sourcefile/ex3.f90.html) for details.
 !>
-!>
 !>## Description
 !> This example outputs statistics on the kinetic energy of all particles
 program ex3
@@ -22,7 +21,6 @@ integer :: i
 
 ! 1. Set up MPI
 call sim%initialize(num_groups=0,skip_jorek2help=.true.)
-
 ! 2. Loop over command arguments
 do i=1,command_argument_count()
   ! 3. Read files from commandline

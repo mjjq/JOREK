@@ -7,8 +7,6 @@
 !> Run with: `./ex2 && ./ex3 part*h5`
 !> See the [annotated source](../sourcefile/ex3.f90.html) for details.
 !>
-!> Note: in order to avoid conflicts with jorek2help during input parsing,
-!>       please compile ex3 with the flag -DNO_HELP
 !>
 !>## Description
 !> This example outputs statistics on the kinetic energy of all particles
@@ -23,7 +21,7 @@ type(diag_print_kinetic_energy) :: print_ke
 integer :: i
 
 ! 1. Set up MPI
-call sim%initialize(num_groups=0)
+call sim%initialize(num_groups=0,skip_jorek2help=.true.)
 
 ! 2. Loop over command arguments
 do i=1,command_argument_count()

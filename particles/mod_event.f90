@@ -24,7 +24,7 @@ type, abstract :: action
   real*8, private :: t0 = 0.d0, w0 = 0.d0
 contains
   procedure, pass, public :: run
-  procedure(do_interface), deferred, pass,public :: do !< this procedure is accessed by derived classes in different
+  procedure(do_interface), deferred, pass, public :: do !< this procedure is accessed by derived classes in different
   ! modules hence it has to be set to public or, if private access must be enforced, 
   ! public get/set procedures has to be implemented
 end type action

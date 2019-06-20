@@ -282,7 +282,7 @@ module pellet_module
       ! Update ablation rate    
       if (spi_abl_model == 0) then ! Constant ablation rate
         pellets(i)%spi_abl = ns_amplitude
-      elseif (spi_abl_model >= 1 .and. spi_abl_model <= 2) then ! NGS models (see Wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial)
+      elseif (spi_abl_model >= 1 .and. spi_abl_model <= 3) then ! NGS models (see Wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial)
 
         ! Get local n_e, T_e    
         call find_RZ(node_list,element_list,pellets(i)%spi_R,pellets(i)%spi_Z,&
@@ -314,6 +314,10 @@ module pellet_module
           pellets(i)%spi_abl = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * (T_eV**1.64)
         else if (spi_abl_model == 2) then ! NGS model version 2 (V. Sergeev et al., see https://link.springer.com/article/10.1134/S1063780X06050023)
           pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**(1.455)) * ((n_SI*1.d-6)**(0.455)) * (T_eV**1.679)
+        else if (spi_abl_model == 3) then ! NGS model version 3 (P.B. Parks et al., to be published)
+          pellets(i)%spi_abl = 39.0023 * 2. * MOLE_NUMBER * ((T_eV/2.d3)**(5./3.)) &
+                                            * ((pellets(i)%spi_radius*1.d2/0.2)**(4./3.)) &
+                                            * ((n_SI*1.d-20)**(1./3.)) / 4.0282
         end if
       else
         write(*,*) "Forbidden value for spi_abl_model: ", spi_abl_model

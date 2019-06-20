@@ -440,6 +440,7 @@ module pellet_module
       if (n_spi == 1) then
         spi_Vel_diff = 0.
         spi_angle    = 0.
+        write(*,*) "WARNING!!! Since there is only one fragment/pellet, the speed and angle distribution is disabled."
       end if
 
       ! Determine rotation angles from SPI coordinate system x, y, z to R, Z, RxZ

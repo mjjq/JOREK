@@ -435,7 +435,13 @@ module pellet_module
       end do
 
       ! Initialize shard velocity and position    
-  
+
+      ! If only one fragment, no speed or angle distribution
+      if (n_spi == 1) then
+        spi_Vel_diff = 0.
+        spi_angle    = 0.
+      end if
+
       ! Determine rotation angles from SPI coordinate system x, y, z to R, Z, RxZ
       ! with the reference direction of spi injection being the z axis, while y axis locates within the 
       ! same surface as Z and z. The rotational transform from x, y, z to R, Z, RxZ is

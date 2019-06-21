@@ -68,6 +68,8 @@ integer*8 :: check_data
 #ifdef USE_PASTIX6
 integer(c_int)     :: pastix_info
 type(c_ptr)        :: pastix_rhs_ptr
+type(c_ptr)        :: pastix_x_ptr
+real(kind=c_double)    , dimension(:), allocatable, target :: pastix_rhs
 integer(kind=spm_int_t), dimension(:), pointer  :: pastix_colptr
 integer(kind=spm_int_t), dimension(:), pointer  :: pastix_rowptr
 real(kind=c_double)    , dimension(:), pointer  :: pastix_values
@@ -309,6 +311,7 @@ if (my_id == 0) then
   if (allocated(sparskit_work)) deallocate(sparskit_work)
   allocate(sparskit_work(mumps_par%N + 1))
   call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
+  if (allocated(sparskit_work)) deallocate(sparskit_work)
   
   nnz = mumps_par%JCN(mumps_par%N+1) - 1
   write (*,*) "nnz", nnz
@@ -341,46 +344,50 @@ if (my_id == 0) then
   if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
   
 #else
-  ! Pastix6: Initialise sparse matrix structure  
+  call pastix_fortran_checkmatrix(check_data, MPI_COMM_SELF, &
+       1, pastix_sym, 1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -1, 1)
+
+  mumps_par%NZ = mumps_par%JCN(mumps_par%N+1) - 1
+  if (mumps_par%NZ /= nnz ) then
+     write (*,*) "associated (mumps_par%IRN)", associated (mumps_par%IRN)
+     if (associated (mumps_par%IRN)) call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN",CAT_DMATRIX)
+     if (associated (mumps_par%A)  ) call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+     call tr_allocatep(mumps_par%IRN,1,mumps_par%NZ,"mumps_par%IRN",CAT_DMATRIX)
+     call tr_allocatep(mumps_par%A,1,mumps_par%NZ,"mumps_par%A",CAT_DMATRIX)
+     call pastix_fortran_checkmatrix_end(check_data, &
+          1, mumps_par%IRN,mumps_par%A, 1)
+  endif
+  
+
+   ! Pastix6: Initialise sparse matrix structure  
   allocate(pastix_spm) ! Replace by tr_allocate etc.?!
-  write(*,*) 'Made it to spmInit'
   call spmInit(pastix_spm)
 
   pastix_spm%n           =  mumps_par%n
   pastix_spm%nnz         =  nnz
-  write(*,*) 'Made it to spmUpdateComputedFields'
+  pastix_spm%dof         =  1
   call spmUpdateComputedFields(pastix_spm)
   call spmAlloc(pastix_spm)
 
-  write(*,*) 'Made it to c_f_pointer'
-  call c_f_pointer(pastix_spm%colptr,pastix_colptr, [pastix_spm%nnz])
+  call c_f_pointer(pastix_spm%colptr,pastix_colptr, [pastix_spm%n+1])
   call c_f_pointer(pastix_spm%rowptr,pastix_rowptr, [pastix_spm%nnz])
-  call c_f_pointer(pastix_spm%values,pastix_values, [pastix_spm%nnz])
-              
-! pastix_colptr      => mumps_par%irn ! just like in Pastix5, invert col and row because our matrix is in CSR and pastix uses CSC by default.
-! pastix_rowptr      => mumps_par%jcn ! could also change in Pastix6 to spm->fmttype = SpmCSR
-! pastix_values      => mumps_par%A
+  call c_f_pointer(pastix_spm%values,pastix_values, [mumps_par%nz])
+  
+  pastix_colptr      = mumps_par%jcn 
+  pastix_rowptr      = mumps_par%irn
+  pastix_values      = mumps_par%A
 
-  ! Temporary!!! Copy over mumps_par to spm matrix structure
-  write(*,*) 'Made it to copy loop.'
-  do i = 1,pastix_spm%nnz
-    pastix_values(i) = mumps_par%A(i) 
-    pastix_rowptr(i) = mumps_par%irn(i) 
-  enddo
-  do i = 1,pastix_spm%n+1
-    pastix_colptr(i) = mumps_par%jcn(i) 
-  enddo
-  write(*,*) 'Made it to matrix check'
   allocate(pastix_spm_check)
+  write(*,*) "Made it to matrix check"
   call spmCheckAndCorrect(pastix_spm, pastix_spm_check, pastix_info)
+  write(*,*) "Made it past Check"
   if (pastix_info .ne. 0) then
-    write(*,*) 'Matrix was not correct.'
+    write(*,*) "Have to correct matrix"
     call spmExit(pastix_spm)
     pastix_spm = pastix_spm_check
   endif
   deallocate(pastix_spm_check)
 
-  write(*,*) 'Made it to spmPrintInfo'
   call spmPrintInfo(pastix_spm)
 #endif
 
@@ -398,7 +405,7 @@ if (my_id == 0) then
   pastix_iparm(52) = 2
 #endif
   
-  pastix_data = 0
+   pastix_data = 0
    call pastix_fortran(pastix_data,MPI_COMM_SELF,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
        pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
   
@@ -426,7 +433,6 @@ if (my_id == 0) then
 
 #else
   ! PaStiX 6
-  write(*,*) 'Made it to pastixInitParam'
   call pastixInitParam(pastix_iparm, pastix_dparm)
 
   pastix_iparm(IPARM_VERBOSE)               = pastix_verb              
@@ -447,7 +453,6 @@ if (my_id == 0) then
 ! pastix_iparm(IPARM_THREAD_COMM_MODE)      = PastixThreadFunneled
 !#endif
 
-  write(*,*) 'Made it to pastixInit!'
   call pastixInit(pastix_data, 0, pastix_iparm, pastix_dparm)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
 #endif
 
@@ -460,16 +465,20 @@ if (my_id == 0) then
   call pastix_fortran(pastix_data,MPI_COMM_SELF, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
-  write(*,*) 'Made it to pastix_task_analyze!'
   call pastix_task_analyze(pastix_data,pastix_spm,pastix_info)
-          write(*,*) 'Made it to pastix_task numfact'
-          call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
-       write(*,*) 'Made it to pastix_task solve'
-       call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,pastix_spm%n,pastix_info)
-       write(*,*) 'Made it to pastixFinalize'
-       call pastixFinalize(pastix_data)
-       call spmExit(pastix_spm)
-       deallocate(pastix_spm)
+  call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
+
+  pastix_x_ptr = c_loc(mumps_par%rhs)
+  allocate(pastix_rhs(pastix_spm%n))
+  pastix_rhs_ptr = c_loc(pastix_rhs)
+  pastix_rhs = mumps_par%rhs
+  call pastix_task_solve(pastix_data,1,pastix_x_ptr,pastix_spm%n,pastix_info)
+!  call pastix_task_refine(pastix_data,pastix_spm%n,1,pastix_rhs_ptr,pastix_spm%n,pastix_x_ptr,pastix_spm%n,pastix_info)
+  deallocate(pastix_rhs)
+
+  call pastixFinalize(pastix_data)
+  call spmExit(pastix_spm)
+  deallocate(pastix_spm)
   
 #endif
   call tr_print_memsize("PASTIX_For_Poisson")

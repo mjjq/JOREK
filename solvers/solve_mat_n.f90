@@ -1,8 +1,11 @@
 module solve_mat_n
 
 contains
+#ifndef USE_PASTIX6
   subroutine pastix_bind_threads(my_id)
-  
+#else
+  subroutine pastix_bind_threads(my_id, thread_map)
+#endif
     use pastix_module
     
     implicit none
@@ -16,7 +19,11 @@ contains
 #endif
 
     integer, intent(in) :: my_id
+#ifndef USE_PASTIX6
     integer*4, dimension(1:pastix_nthrd) :: thread_map
+#else
+    integer(kind=c_int)    , dimension(1:pastix_nthrd), intent(out)   :: thread_map
+#endif
     integer*4 k, packsize, procpernode
     
 #if defined(WORLDWAR2) && defined(CORES_PER_NODE)
@@ -26,7 +33,9 @@ contains
     Do k = 1, pastix_nthrd
       thread_map(k) = mod(my_id * packsize,CORES_PER_NODE) + k-1
     end do
+#ifndef USE_PASTIX6
     call pastix_fortran_bindthreads(pastix_data, pastix_nthrd, thread_map(1:))
+#endif
 #endif
   end subroutine pastix_bind_threads
 
@@ -84,7 +93,7 @@ contains
     integer(kind=spm_int_t), dimension(:), pointer  :: pastix_colptr
     integer(kind=spm_int_t), dimension(:), pointer  :: pastix_rowptr
     real(kind=c_double)    , dimension(:), pointer  :: pastix_values
-    integer(kind=c_int)    , dimension(:), allocatable   :: bindtab
+    integer(kind=c_int)    , dimension(1:pastix_nthrd) :: thread_map
 #endif
 
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
@@ -280,32 +289,23 @@ contains
               call spmUpdateComputedFields(pastix_spm)
               call spmAlloc(pastix_spm)
 
-              call c_f_pointer(pastix_spm%colptr,pastix_colptr, [pastix_spm%nnz])
+              call c_f_pointer(pastix_spm%colptr,pastix_colptr, [pastix_spm%n+1])
               call c_f_pointer(pastix_spm%rowptr,pastix_rowptr, [pastix_spm%nnz])
-              call c_f_pointer(pastix_spm%values,pastix_values, [pastix_spm%nnz])
+              call c_f_pointer(pastix_spm%values,pastix_values, [mumps_par%nz])
               
-!              pastix_colptr      => mumps_par%irn ! just like in Pastix5, invert col and row because our matrix is in CSR and pastix uses CSC by default.
-!              pastix_rowptr      => mumps_par%jcn ! could also change in Pastix6 to spm->fmttype = SpmCSR
-!              pastix_values      => mumps_par%A
+              pastix_colptr      = mumps_par%jcn 
+              pastix_rowptr      = mumps_par%irn
+              pastix_values      = mumps_par%A
 
-              ! Temporary!!! Copy over mumps_par to spm matrix structure
-              do i = 1,mumps_par%nz
-                  pastix_values(i) = mumps_par%A(i) 
-              enddo
-              do i = 1,pastix_spm%nnz
-                  pastix_rowptr(i) = mumps_par%irn(i) 
-              enddo
-              do i = 1,pastix_spm%n+1
-                  pastix_colptr(i) = mumps_par%jcn(i) 
-              enddo
-              allocate(pastix_spm_check)
-              call spmCheckAndCorrect(pastix_spm, pastix_spm_check, pastix_info)
-              if (pastix_info .ne. 0) then
-                write(*,*) "Had to correct pastix_spm!"
-                call spmExit(pastix_spm)
-                pastix_spm = pastix_spm_check
-              endif
-              deallocate(pastix_spm_check)
+!              CHECK AND CORRECT PASTIX_SPM MATRIX
+!              allocate(pastix_spm_check)
+!              call spmCheckAndCorrect(pastix_spm, pastix_spm_check, pastix_info)
+!              if (pastix_info .ne. 0) then
+!                write(*,*) "Had to correct pastix_spm!"
+!                call spmExit(pastix_spm)
+!                pastix_spm = pastix_spm_check
+!              endif
+!              deallocate(pastix_spm_check)
 
               call spmPrintInfo(pastix_spm)
 #endif
@@ -394,14 +394,17 @@ contains
 !#endif
               ! BLR Compression
               if (use_mumps_BLR) then
-                iparm[IPARM_COMPRESS_WHEN]       = PastixCompressWhenEnd;
-                iparm[IPARM_COMPRESS_METHOD]     = PastixCompressMethodPQRCP;
-                iparm[IPARM_COMPRESS_MIN_WIDTH]  = 128;
-                iparm[IPARM_COMPRESS_MIN_HEIGHT] = 25;
-                dparm[DPARM_COMPRESS_TOLERANCE]  = 1e-8;
+                pastix_iparm(IPARM_COMPRESS_WHEN)       = PastixCompressWhenEnd;
+!                pastix_iparm(IPARM_COMPRESS_METHOD)     = PastixCompressMethodPQRCP;
+!                pastix_iparm(IPARM_COMPRESS_MIN_WIDTH)  = 128;
+!                pastix_iparm(IPARM_COMPRESS_MIN_HEIGHT) = 25;
+                pastix_dparm(DPARM_COMPRESS_TOLERANCE)  = mumps_BLR_eps;
               endif
 
-              call pastixInit(pastix_data, 0, pastix_iparm, pastix_dparm)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
+              ! bind threads and initialise
+              call pastix_bind_threads(my_id, thread_map)
+              call pastixInitWithAffinity(pastix_data, 0, pastix_iparm, pastix_dparm, thread_map)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
+!              call pastixInit(pastix_data, 0, pastix_iparm, pastix_dparm)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
 #endif
 
              else if (use_wsmp) then
@@ -435,15 +438,16 @@ contains
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
+              pastix_analysed = .true.
 
 #else
               call pastix_task_analyze(pastix_data,pastix_spm,pastix_info)
+              pastix_analysed = .false. ! analysis changes at every step, don't know why?
 #endif
             else if (use_wsmp) then
               ! do nothing
             endif
 
-            pastix_analysed = .true.
           endif
 
         endif ! .not. pastix_analysed
@@ -479,20 +483,22 @@ contains
 #if defined(WORLDWAR2) && defined(CORES_PER_NODE)
           pastix_iparm(IPARM_BINDTHRD)   = API_BIND_TAB
 #endif
-#ifdef USE_BLOCK
           call pastix_bind_threads(my_id)
+#ifdef USE_BLOCK
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
             mumps_par%jcn, mumps_par%irn, mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #else	   
-          call pastix_bind_threads(my_id)
           call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
 
 #else
           call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
+
+          call spmExit(pastix_spm)
+          if (allocated(pastix_spm)) deallocate(pastix_spm)
 #endif
 
         else if (use_wsmp) then
@@ -557,9 +563,11 @@ contains
 
 #else
        pastix_rhs_ptr = c_loc(mumps_par%rhs)
-       call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,pastix_spm%n,pastix_info)
-       call spmExit(pastix_spm)
-       if (allocated(pastix_spm)) deallocate(pastix_spm)
+#ifdef USE_BLOCK
+       call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,n_block,pastix_info)
+#else
+       call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,mumps_par%n,pastix_info)
+#endif
 #endif
 
       else if (use_wsmp) then

@@ -182,29 +182,22 @@ if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mum
   call spmUpdateComputedFields(pastix_spm)
   call spmAlloc(pastix_spm)
 
-  call c_f_pointer(pastix_spm%colptr,pastix_colptr, [pastix_spm%nnz])
+  call c_f_pointer(pastix_spm%colptr,pastix_colptr, [pastix_spm%n+1])
   call c_f_pointer(pastix_spm%rowptr,pastix_rowptr, [pastix_spm%nnz])
-  call c_f_pointer(pastix_spm%values,pastix_values, [pastix_spm%nnz])
+  call c_f_pointer(pastix_spm%values,pastix_values, [mumps_par%nz])
             
-! pastix_colptr      => mumps_par%irn ! just like in Pastix5, invert col and row because our matrix is in CSR and pastix uses CSC by default.
-! pastix_rowptr      => mumps_par%jcn ! could also change in Pastix6 to spm->fmttype = SpmCSR
-! pastix_values      => mumps_par%A
+ pastix_colptr      = mumps_par%jcn
+ pastix_rowptr      = mumps_par%irn
+ pastix_values      = mumps_par%A
 
-  ! Temporary!!! Copy over mumps_par to spm matrix structure
-  do i = 1,pastix_spm%nnz
-    pastix_values(i) = mumps_par%A(i) 
-    pastix_rowptr(i) = mumps_par%irn(i) 
-  enddo
-  do i = 1,pastix_spm%n+1
-    pastix_colptr(i) = mumps_par%jcn(i) 
-  enddo
-  allocate(pastix_spm_check)
-  call spmCheckAndCorrect(pastix_spm, pastix_spm_check, pastix_info)
-  if (pastix_info .ne. 0) then
-    call spmExit(pastix_spm)
-    pastix_spm = pastix_spm_check
-  endif
-  deallocate(pastix_spm_check)
+!  CHECK AND CORRECT PASTIX_SPM MATRIX
+!  allocate(pastix_spm_check)
+!  call spmCheckAndCorrect(pastix_spm, pastix_spm_check, pastix_info)
+!  if (pastix_info .ne. 0) then
+!    call spmExit(pastix_spm)
+!    pastix_spm = pastix_spm_check
+!  endif
+!  deallocate(pastix_spm_check)
 
   call spmPrintInfo(pastix_spm)
 #endif
@@ -315,16 +308,17 @@ if (.not. pastix_analysed) then
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 
 #endif
+  pastix_analysed = .true.
 
 #else
   call pastix_task_analyze(pastix_data,pastix_spm,pastix_info)
+  pastix_analysed = .false. ! analysis changes at every step, don't know why?
 #endif
  
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis :', tsecond
 
-  pastix_analysed = .true.
 
 endif
 

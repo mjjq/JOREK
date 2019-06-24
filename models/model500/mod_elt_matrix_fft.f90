@@ -66,7 +66,8 @@ real*8	   :: Jb_0 , Jb
 real*8     :: Vpar, Vpar_x, Vpar_y, Vpar_p, Vpar_s, Vpar_t, Vpar_ss, Vpar_st, Vpar_tt, Vpar_xx, Vpar_yy, Vpar_xy
 real*8     :: P0, P0_s, P0_t, P0_x, P0_y, P0_p, P0_ss, P0_st, P0_tt, P0_xx, P0_xy, P0_yy
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
-real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T, eta_Sp, detaSp_dT
+real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T
+real*8     :: eta_T_ohm, deta_dT_ohm
 real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
 real*8     :: amat_51, amat_51_n, amat_52, amat_55, amat_56, amat_57, amat_57_k
@@ -532,11 +533,9 @@ do ms=1, n_gauss
        deta_dT   = 0.d0
      end if
 
-     eta_Sp = 1.65d-9*17*(1.d-3*T_corr/(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(-1.5d0) & 
-                               *sqrt(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO) 
-     
-     detaSp_dT = - 1.65d-9*17 * (1.5d0) * T_corr**(-2.5d0) * (1.d-3/(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(-1.5d0) &
-                        * sqrt(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO) * dT_corr_dT
+     ! --- Eta for ohmic heating
+     eta_T_ohm   = (eta_T/eta)  * eta_ohmic
+     deta_dT_ohm = (deta_dT/eta) * eta_ohmic
 
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then       
@@ -963,7 +962,7 @@ do ms=1, n_gauss
                     
                     - v * BigR * ksiion * r0_corr * rn0_corr * Sion_T                  * xjac * tstep &
 
-                    + v * BigR * (2./(3. * BigR**2)) * eta_Sp * zj0**2                 * xjac * tstep  &
+                    + v * BigR * (2./(3. * BigR**2)) * eta_T_ohm * zj0**2              * xjac * tstep  &
                     - v * BigR * r0_corr * rn0_corr * LradDrays_T                      * xjac * tstep  &
                     - v * BigR * r0_corr * r0_corr  * LradDcont_T                      * xjac * tstep  &
                     - v * BigR * r0_corr * frad_bg                                     * xjac * tstep  
@@ -1428,7 +1427,7 @@ do ms=1, n_gauss
                                        * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
 
 
-             amat_63 = - v * BigR * zj * (4./(3. * BigR**2)) * eta_Sp * zj0                      * xjac * theta * tstep
+             amat_63 = - v * BigR * zj * (4./(3. * BigR**2)) * eta_T_ohm * zj0              * xjac * theta * tstep
 
 
              amat_65 =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)     &
@@ -1511,7 +1510,7 @@ do ms=1, n_gauss
  
 		        + v * BigR * r0_corr * rn0_corr * ksiion * dSion_dT * T        * xjac * theta * tstep &
 
-                           - v * BigR * T * ((2d0)/(3*BigR**2)) * detaSp_dT * zj0**2                              * xjac * theta * tstep  &
+                           - v * BigR * T * ((2d0)/(3*BigR**2)) * deta_dT_ohm * zj0**2                            * xjac * theta * tstep  &
                            + v * BigR * T * r0_corr * rn0_corr * dLradDrays_dT                                    * xjac * theta * tstep  & 
                            + v * BigR * T * r0_corr * r0_corr  * dLradDcont_dT                                    * xjac * theta * tstep  &
                            + v * BigR * T * r0_corr * dfrad_bg_dT                                                 * xjac * theta * tstep

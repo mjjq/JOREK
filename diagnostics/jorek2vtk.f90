@@ -86,7 +86,7 @@ real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_
 real*8                :: T_real8, r0_real8, rn0_real8
 real*8                :: r0_corr, rn0_corr
 
-#if JOREK_MODEL == 501
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
 ! Atomic physics coefficients:
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8     :: m_i_over_m_imp
@@ -178,7 +178,7 @@ include_Jpol           = .false. ! include poloidal current vector (J_phi=0 for 
 include_bootstrap      = .false. ! include bootstrap current and averaged current
 include_psi_norm       = .false. ! include normalized flux
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502)
 include_radiation = .true.
 ! --- Read ADAS data and generate coronal equilibrium is needed
 
@@ -288,7 +288,7 @@ endif
     n_scalars   = n_scalars + n_radiation
  endif
 #endif
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
     n_radiation = 0
  if (include_radiation) then
     n_radiation = 5
@@ -380,7 +380,7 @@ endif
                   = (/ 'Ionis_Wm-3  ', 'Lin_radWm-3 ', 'Brems_Wm-3  ', 'Joule_Wm-3  ', 'Imp_bg_Wm-3 '/)
  endif
 #endif
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
  if (include_radiation) then
      scalar_names(s_radiation+1:s_radiation+n_radiation) &
                   = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp ', 'Z_eff '/)
@@ -1017,7 +1017,7 @@ enddo  ! n_elements
   endif
 #endif
 
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
  if (include_radiation) then
 
   !-------------------------------------------
@@ -1160,7 +1160,7 @@ enddo  ! n_elements
 
    end do
  endif
-#endif /*(JOREK_MODEL == 500 || JOREK_MODEL == 501)*/
+#endif /*(JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502)*/
 
 
 if (SI_units) then
@@ -1189,7 +1189,7 @@ if (SI_units) then
     !===================================== Neutral density in 1e20m-3
     scalars(i,8) = scalars(i,8) * central_density
 #endif
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
     !===================================== Impurity density in 1e20m-3
     scalars(i,8) = scalars(i,8) * central_density * m_i_over_m_imp
 #endif
@@ -1285,7 +1285,7 @@ if (SI_units) then
   endif
 #endif
 
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   if (include_radiation) then
    scalars(i,s_radiation+1) = scalars(i,s_radiation+1)/(K_BOLTZ*MU_ZERO)
    scalars(i,s_radiation+2) = scalars(i,s_radiation+2)/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)

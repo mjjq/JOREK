@@ -21,10 +21,10 @@ module mod_expression
   use corr_neg
   use mod_basisfunctions
   use mod_bootstrap_functions
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)  
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502)  
   use mgi_module
 #endif
-#if JOREK_MODEL == 501
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   use mod_coronal
 #endif
   use mod_poloidal_currents
@@ -159,7 +159,7 @@ module mod_expression
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502)
     call add(exprs_all, 'radiation   ', 'Radiation terms for bolometry diagnostic              ')
 #endif
 #if JOREK_MODEL == 500
@@ -497,13 +497,13 @@ module mod_expression
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
       fact_resistiv, fact_Er, fact_rad
-#if JOREK_MODEL == 500 || JOREK_MODEL == 501
+#if JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502
     real*8  :: coef_rad_1
     real*8  :: T_rad, LradDrays_T, LradDcont_T, T_rad_real
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 #endif
-#if JOREK_MODEL == 501
+#if JOREK_MODEL == 501 || JOREK_MODEL == 502
     real*8 :: T0_corr, r0_corr, rn0_corr
     ! Atomic physics coefficients:
     !   -Mass ratio between main ions and impurites (m_i/m_imp)
@@ -550,7 +550,7 @@ module mod_expression
       return
     end if
 
-#if JOREK_MODEL == 501
+#if JOREK_MODEL == 501 || JOREK_MODEL == 502
      select case ( trim(gas_type) )
        case('D2')
          m_i_over_m_imp = central_mass/2.
@@ -646,7 +646,7 @@ module mod_expression
           Te0   = 0.d0; Te0_s   = 0.d0; Te0_t   = 0.d0; Te0_ss   = 0.d0; Te0_tt   = 0.d0; Te0_st   = 0.d0; Te0_p   = 0.d0; Te0_pp   = 0.d0
           Vpar0 = 0.d0; Vpar0_s = 0.d0; Vpar0_t = 0.d0; Vpar0_ss = 0.d0; Vpar0_tt = 0.d0; Vpar0_st = 0.d0; Vpar0_p = 0.d0; Vpar0_pp = 0.d0
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502)
           rn0 = 0.d0
           rn0_s = 0.0
           rn0_t = 0.0
@@ -768,7 +768,7 @@ module mod_expression
                 Vpar0_p  = Vpar0_p  + vv(7) * sz * hh    * hhz_p
                 Vpar0_pp = Vpar0_pp + vv(7) * sz * hh    * hhz_pp
 #endif
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502)
                 rn0       = rn0       + vv(8) * sz * hh    * hhz
                 rn0_s     = rn0_s     + vv(8) * sz * hh_s  * hhz
                 rn0_t     = rn0_t     + vv(8) * sz * hh_t  * hhz
@@ -1124,7 +1124,7 @@ module mod_expression
 
 #endif
 
-#if JOREK_MODEL == 501
+#if JOREK_MODEL == 501 || JOREK_MODEL == 502
 
 	  T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/))
 	  T_rad   = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
@@ -1170,7 +1170,7 @@ module mod_expression
              fact_vpar     = sqrt(BB2) / fact_time                                 ! factor for Vpar
              fact_resistiv = sqrt ( MU_zero / rho_norm )                           ! factor for eta == 1 / (factor for visco)
              fact_Er       = F0 / fact_time
-#if JOREK_MODEL == 500 || JOREK_MODEL == 501
+#if JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502
 			 fact_rad      = 1.d0/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)
 #endif
           else if ( units == JOREK_UNITS ) then
@@ -1182,7 +1182,7 @@ module mod_expression
              fact_vpar     = 1.d0
              fact_resistiv = 1.d0
              fact_Er       = 1.d0
-#if JOREK_MODEL == 500 || JOREK_MODEL == 501			 
+#if JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502			 
 			 fact_rad      = 1.d0
 #endif
           end if
@@ -1246,7 +1246,7 @@ module mod_expression
                 res = r0 * fact_rho
                 
               case ( 'ne' )
-#if JOREK_MODEL == 501
+#if JOREK_MODEL == 501 || JOREK_MODEL == 502
                 res = ne_rad * fact_ne 
 #else
                 res = r0 * fact_ne
@@ -1368,7 +1368,7 @@ module mod_expression
                 res = r0 * fact_ne * r0 * fact_ne * LradDcont_T
 #endif
 
-#if JOREK_MODEL == 501
+#if JOREK_MODEL == 501 || JOREK_MODEL == 502
               case ( 'radiation' )
 	          res = (r0_corr + beta_imp*rn0_corr) * rn0_corr * Lrad * fact_rad
 #endif

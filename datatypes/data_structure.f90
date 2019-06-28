@@ -125,7 +125,7 @@ module data_structure
     real*8  :: spi_abl                            !< Pellet ablation rate (atom/s)
     real*8  :: spi_species                        !< Species mixture ratio in atom number for pellets. 
                                                   !< 0 for pure background species and 1 for pure impurities. 
-                                                  !< Only necessary for model 501.
+                                                  !< Only necessary for model 501 & 502.
   end type type_SPI
 ! End of shattered pellet type
 

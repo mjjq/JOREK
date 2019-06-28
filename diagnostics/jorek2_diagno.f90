@@ -12,7 +12,7 @@ use basis_at_gaussian
 use pellet_module
 use mpi_mod
 use mod_import_restart
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
 use mgi_module
 #endif
 implicit none
@@ -131,7 +131,7 @@ if (using_spi) then
 
 endif
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
   ! --- Read ADAS data and generate coronal equilibrium is needed
   if (flag_adas) then
     call init_imp_adas(my_id)

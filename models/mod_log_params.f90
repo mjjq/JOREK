@@ -590,7 +590,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'jecamp              ',  jecamp
   endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501 || JOREK_MODEL == 502) || (JOREK_MODEL == 555)
      write(*,REAL_FMT) 'mgi_amplitude       ',  mgi_amplitude
      write(*,REAL_FMT) 'mgi_R               ',  mgi_R
      write(*,REAL_FMT) 'mgi_Z               ',  mgi_Z

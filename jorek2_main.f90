@@ -65,7 +65,7 @@ program JOREK2
 #endif
   use mpi_mod
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
   use mgi_module
 #endif
 
@@ -250,7 +250,7 @@ required = 0
     gmres     = .false.
   end if
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
   ! --- Read ADAS data and generate coronal equilibrium is needed
   if (flag_adas) then
     call init_imp_adas(my_id)
@@ -999,7 +999,7 @@ required = 0
 
        endif
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
        if (using_spi == .false.) then
          call update_mgi(my_id,node_list,element_list)
        else if (using_spi .and. t_now >= t_mgi) then
@@ -1012,7 +1012,7 @@ required = 0
  
        t_now = t_now + tstep
 
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
        if (flag_adas) call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,&
                                         density_out,pressure_tot,pressure_in,pressure_out)
 #endif

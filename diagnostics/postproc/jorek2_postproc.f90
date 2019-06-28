@@ -9,7 +9,7 @@ program jorek2_postproc
   use parse_commands, only: read_command, type_command
   use exec_commands,  only: exec_command, specific_help
   use settings,       only: set_setting
-#if JOREK_MODEL == 501
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   use mpi_mod
 #endif  
   use basis_at_gaussian, only: initialise_basis
@@ -19,7 +19,7 @@ program jorek2_postproc
   type(type_command) :: command
   integer            :: ierr
 
-#if JOREK_MODEL == 501
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   integer            :: required,provided,StatInfo
 
   !***********************************************************************

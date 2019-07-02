@@ -6,7 +6,7 @@
 subroutine preset_parameters
   
   use phys_module
-  use mumps_module,  only: use_mumps, no_zeros_mumps
+  use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering
   use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
   use wsmp_module,   only: use_wsmp
   
@@ -29,7 +29,8 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
-  eta   = 1.d-5
+  eta       = 1.d-5
+  eta_ohmic = 0.d0
   visco = 1.d-5
   visco_par = 1.d-5
   visco2    = 0.d0
@@ -300,6 +301,10 @@ subroutine preset_parameters
   bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
   no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
   no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
+
+  mumps_ordering     = 7                    ! MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
+  use_mumps_BLR      = .false.              ! Use MUMPS solver with Block-low-rank (BLR) compression
+  mumps_BLR_eps      = 0                    ! Accuracy of MUMPS BLR approximations (0 = full precision)
   
 !==== RMP parameters =====
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)

@@ -10,7 +10,6 @@
 !!
 !! @note The variable s in a boundary element may correspond to s or t of the respective
 !! 2D element depending on element orientation.
-#include "pastix_fortran.h"
 module vacuum_response
   
   use vacuum

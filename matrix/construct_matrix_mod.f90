@@ -410,11 +410,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
                       !--- RHS: simple output of vector element
                       if ( (k==1) .and. (l==1) .and. (v2==1) .and. (in==1) ) then
                         
-                        tmp_rhs = RHS(index_ij)
+                        tmp_rhs = thread_struct(omp_tid)%RHS(index_ij)
                         
 #if (JOREK_MODEL == 400)
                           !--- RHS: for model400, add T_e (v1=8) to T_i (v1=6)
-                          if (v1 == 6) tmp_rhs = tmp_rhs + RHS(index_ij_model400_e)
+                          if (v1 == 6) tmp_rhs = tmp_rhs + thread_struct(omp_tid)%RHS(index_ij_model400_e)
 #endif
                         
                         write(388, "( E18.6, 4I4 )" ) tmp_rhs, v1, i, j, im
@@ -423,7 +423,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
 
                       ! --- ELM: simple output of matrix element
-                      tmp_elm   = ELM(index_ij,index_kl)
+                      tmp_elm   = thread_struct(omp_tid)%ELM(index_ij,index_kl)
 
                       ! --- ELM: additional output for comparison with model400, output as v2=8, below v2=6
                       ! --- for model != model400: duplicate of ELM(v1, v2=6)
@@ -434,14 +434,14 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
 #if (JOREK_MODEL == 400)
                         if (v2 == 6 ) then
-                          tmp_elm_v2_8 = ELM(index_ij, index_kl_model400_e)
+                          tmp_elm_v2_8 = thread_struct(omp_tid)%ELM(index_ij, index_kl_model400_e)
                           if (v1 == 6) then
-                            tmp_elm_v2_8 = tmp_elm_v2_8 + ELM(index_ij_model400_e, index_kl_model400_e)
+                            tmp_elm_v2_8 = tmp_elm_v2_8 + thread_struct(omp_tid)%ELM(index_ij_model400_e, index_kl_model400_e)
                           end if
                         end if
                       
                         if (v1 == 6) then
-                          tmp_elm = tmp_elm + ELM(index_ij_model400_e, index_kl)
+                          tmp_elm = tmp_elm + thread_struct(omp_tid)%ELM(index_ij_model400_e, index_kl)
                         end if
 #endif
 

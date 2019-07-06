@@ -140,7 +140,7 @@ do ife =1, element_list%n_elements
       BigR = x_g(ms,mt)
 
       rho_00 = eq_g(5,ms,mt)
-      if (jorek_model .eq. 400) then
+      if (jorek_model .eq. 400 || jorek_model .eq. 502) then
         Ti_00 = eq_g(6,ms,mt)
         Te_00 = eq_g(n_var,ms,mt)
         T_00  = Ti_00 + Te_00
@@ -156,7 +156,7 @@ do ife =1, element_list%n_elements
       if ( in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),eq_g(1,ms,mt),xpoint,&
         xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
         
-#if JOREK_MODEL == 400
+#if JOREK_MODEL == 400 || JOREK_MODEL == 502
         call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
           psi_limit, part_src, heat_src_i, heat_src_e)
           heat_src = heat_src_i + heat_src_e

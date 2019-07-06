@@ -311,9 +311,9 @@ scalar_names(1:n_var) = variable_names(1:n_var)
 if ( SI_units ) then
    scalar_names(3)='j_MA/m2     '
    scalar_names(5)='n_e20m-3    '
-   if (jorek_model .eq. 400) then
+   if (jorek_model .eq. 400 || jorek_model .eq. 502) then
       scalar_names(6)='Ti_keV      '
-      scalar_names(8)='Te_keV      '
+      scalar_names(n_var)='Te_keV      ' !WARNING, here we always assume the electron temperature is the last variable
    else
       scalar_names(6)='Te_keV      '
    endif
@@ -726,9 +726,9 @@ do i=1,element_list%n_elements
           else
              V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
           endif
-          if ( jorek_model .eq. 400 ) then
+          if ( jorek_model .eq. 400 || jorek_model .eq. 502 ) then
              call interp(node_list,element_list,i,6,i_tor,s,t,Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt)
-             call interp(node_list,element_list,i,8,i_tor,s,t,Te,Te_s,Te_t,Te_st,Te_ss,Te_tt)
+             call interp(node_list,element_list,i,n_var,i_tor,s,t,Te,Te_s,Te_t,Te_st,Te_ss,Te_tt) !WARNING, here we always assume the electron temperature is the last variable
           endif
 
           psi_sum = psi_sum + psi * HZ(i_tor,i_plane)
@@ -736,7 +736,7 @@ do i=1,element_list%n_elements
           u_sum   = u_sum   + U   * HZ(i_tor,i_plane)
           w_sum   = w_sum   + w   * HZ(i_tor,i_plane)
           zn_sum  = zn_sum  + RHO * HZ(i_tor,i_plane)
-          if ( jorek_model .eq. 400 ) then
+          if ( jorek_model .eq. 400 || jorek_model .eq. 502 ) then
             Ti_sum  = Ti_sum + Ti * HZ(i_tor,i_plane)
             Te_sum  = Te_sum + Te * HZ(i_tor,i_plane)
           else
@@ -789,7 +789,7 @@ do i=1,element_list%n_elements
              TT_y  = TT_y + ( - R_t * TT_s + R_s * TT_t )   / xjac * HZ(i_tor,i_plane)
              TT_p  = TT_p + TT * HZ_p(i_tor,i_plane)
 
-             if ( jorek_model .eq. 400 ) then
+             if ( jorek_model .eq. 400 || jorek_model .eq. 502 ) then
                Ti_x  = Ti_x + (   Z_t * Ti_s - Z_s * Ti_t )   / xjac * HZ(i_tor,i_plane)
                Ti_y  = Ti_y + ( - R_t * Ti_s + R_s * Ti_t )   / xjac * HZ(i_tor,i_plane)
                Ti_p  = Ti_p + Ti * HZ_p(i_tor,i_plane)
@@ -1175,10 +1175,10 @@ if (SI_units) then
     scalars(i,3) = scalars(i,3)/ MU_zero*1.e-6
     !============================================density in 1e20m-3
     scalars(i,5) = scalars(i,5) * central_density
-    if ( jorek_model .eq. 400 ) then
+    if ( jorek_model .eq. 400 || jorek_model .eq. 502 ) then
       !===========================================ion and electron temperatures in keV
       scalars(i,6) = scalars(i,6) / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 !
-      scalars(i,8) = scalars(i,8) / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 !
+      scalars(i,n_var) = scalars(i,n_var) / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 ! !WARNING, here we always assume the electron temperature is the last variable
     else
     !===========================================electron temperature in keV
       scalars(i,6) = scalars(i,6) / MU_zero / (central_density * 1d20) / EL_CHG /2./1.e3 !(assumes Te=Ti=T/2)

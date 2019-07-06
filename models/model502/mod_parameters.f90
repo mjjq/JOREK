@@ -5,7 +5,7 @@ module mod_parameters
 
   integer, parameter :: jorek_model    = 502       !< JOREK physics model
 
-  integer, parameter :: n_var          = 8         !< number of variables
+  integer, parameter :: n_var          = 9         !< number of variables
   integer, parameter :: n_dim          = 2         !< number of dimensions
   integer, parameter :: n_order        = 3         !< order of the polynomial basis
   integer, parameter :: n_tor          = 11         !< number of toroidal harmonics
@@ -23,6 +23,6 @@ module mod_parameters
   !> Names of the physical variables
   character(len=11) :: variable_names(n_var) =                       &
     (/ 'Flux       ','Potential  ','Current    ','Vorticity  ',      &
-       'Density    ','Temperature','V_parallel ','N_density  ' /)
+       'Density    ','Ions_Temp  ','V_parallel ','N_density  ','Elec_Temp  '/)
 
 end module mod_parameters

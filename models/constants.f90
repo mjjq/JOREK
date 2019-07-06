@@ -11,6 +11,7 @@ module constants
   real*8,  parameter :: EL_CHG        = 1.602176565d-19          !< Elementary charge  [C]
   real*8,  parameter :: K_BOLTZ       = 1.3806488d-23            !< Boltzmann constant [J/K]
   real*8,  parameter :: MASS_PROTON   = 1.67262178d-27           !< proton mass [kg]
+  real*8,  parameter :: MASS_ELECTRON = 9.1094d-31               !< electron mass [kg]
   real*8,  parameter :: ATOMIC_MASS_UNIT = 1.660539040d-27       !< standardized mass unit [kg]
   real*8,  parameter :: MASS_ELECTRON = 9.10938291d-31           !< electron mass [kg]
   real*8,  parameter :: MOLE_NUMBER   = 6.02214076d23            !< The Avogadro constant

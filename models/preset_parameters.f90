@@ -159,6 +159,10 @@ subroutine preset_parameters
   
   ZK_perp(:) = 0.d0
   ZK_perp(1) = 1.d-5; ZK_perp(2) = 0.d0; ZK_perp(3)= 0.d0; ZK_perp(4)= 99.d0; ZK_perp(5) = 99.d0
+  ZK_i_perp(:) = 0.d0
+  ZK_i_perp(1) = 1.d-5; ZK_i_perp(2) = 0.d0; ZK_i_perp(3)= 0.d0; ZK_i_perp(4)= 99.d0; ZK_i_perp(5) = 99.d0
+  ZK_e_perp(:) = 0.d0
+  ZK_e_perp(1) = 1.d-5; ZK_e_perp(2) = 0.d0; ZK_e_perp(3)= 0.d0; ZK_e_perp(4)= 99.d0; ZK_e_perp(5) = 99.d0
   ZK_par     = 1.d0
   ZK_par_max = 1.d20
   D_perp(:)  = 0.d0
@@ -183,6 +187,8 @@ subroutine preset_parameters
   Dn_perp_num   = 0.d0
 
   heatsource          = 1.e-7
+  heatsource_i        = 5.d-8
+  heatsource_e        = 5.d-8
   heatsource_psin     = 1.0d0
   heatsource_sig      = 0.1d0
   particlesource      = 1.e-5

@@ -72,10 +72,10 @@ module mod_poloidal_currents
 
       call interp(node_list,element_list,i_elm,1,i_tor,s,t,Psi,Ps_s, Ps_t, Ps_st, Ps_ss, Ps_tt)
       call interp(node_list,element_list,i_elm,3,i_tor,s,t,ZJ ,ZJ_s, ZJ_t, ZJ_st, ZJ_ss, ZJ_tt)
-      if (jorek_model .eq. 400) then
+      if (jorek_model .eq. 400 || jorek_model .eq. 502) then
         call interp(node_list,element_list,i_elm,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
         call interp(node_list,element_list,i_elm,6,1,s,t,Ti0,Ti0_s,Ti0_t,Ti0_st,Ti0_ss,Ti0_tt)
-        call interp(node_list,element_list,i_elm,8,1,s,t,Te0,Te0_s,Te0_t,Te0_st,Te0_ss,Te0_tt)
+        call interp(node_list,element_list,i_elm,n_var,1,s,t,Te0,Te0_s,Te0_t,Te0_st,Te0_ss,Te0_tt) !WARNING, here we always assume the electron temperature is the last variable
         T0    = Ti0   + Te0
         T0_s  = Ti0_s + Te0_s
         T0_t  = Ti0_t + Te0_t

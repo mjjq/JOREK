@@ -18,8 +18,10 @@ integer    :: my_id, i, in, mm, i_elm_axis, i_elm_xpoint(2), i_elm, ifail, xcase
 real*8     :: amplitude, psi, psi_axis, theta
 real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
 real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
+real*8     :: zTi, dTi_dpsi, dTi_dpsi2, dTi_dz, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi2_dz, dTi_dpsi_dz2
+real*8     :: zTe, dTe_dpsi, dTe_dpsi2, dTe_dz, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi2_dz, dTe_dpsi_dz2
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
-real*8     :: R_axis, Z_axis, s_axis, t_axis, R, Z, BigR, T0, BigR_s, T0_s
+real*8     :: R_axis, Z_axis, s_axis, t_axis, R, Z, BigR, T0, BigR_s, T0_s, Ti0, Ti0_s, Te0, Te0_s
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi
 real*8     :: zp, dp_dpsi, dp_dpsi2, dp_dz, dp_dz2, P_ss, P_st, P_tt, R_out,Z_out,s_out,t_out
 real*8     :: psi_n, psi_bnd,psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2),psi_lim,R_lim,Z_lim
@@ -28,7 +30,7 @@ logical    :: xpoint2
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
-  write(*,*) '*      initial conditions  (500)      *'
+  write(*,*) '*      initial conditions  (502)      *'
   write(*,*) '***************************************'
 endif
 Z_xpoint(1) = -99.d0
@@ -74,12 +76,21 @@ if (my_id .eq. 0) then
     call density(  xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
                                                                dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-    call temperature(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
-                                                               dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+    call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+    		       zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
+    
+    call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+    		       zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
 
     call FFprime(   xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
 							       
+    zT       = zTi + zTe
+    dT_dpsi  = dTi_dpsi + dTe_dpsi
+    dT_dpsi2 = dTi_dpsi2 + dTe_dpsi2
+    dT_dz    = dTi_dz + dTe_dz
+    dT_dz2   = dTi_dz2 + dTe_dz2
+
     zp       = zn * zT
     dp_dpsi  = zn * dT_dpsi + dn_dpsi * zT
     dp_dpsi2 = zn * dT_dpsi2 + 2.d0 * dn_dpsi * dT_dpsi + dn_dpsi2 * zT
@@ -95,14 +106,28 @@ if (my_id .eq. 0) then
                                     + dn_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
                                     + dn_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2)      
 
-    node_list%node(i)%values(1,1,6) = zT
-    node_list%node(i)%values(1,2,6) = dT_dpsi    * node_list%node(i)%values(1,2,1) + dT_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,6) = dT_dpsi    * node_list%node(i)%values(1,3,1) + dT_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,6) = dT_dpsi    * node_list%node(i)%values(1,4,1) + dT_dz * node_list%node(i)%x(4,2) &
-                                    + dT_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dT_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
-                                    + dT_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
-                                    + dT_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2)      
+    node_list%node(i)%values(1,1,8) = 0.
+    node_list%node(i)%values(1,2,8) = 0.
+    node_list%node(i)%values(1,3,8) = 0.
+    node_list%node(i)%values(1,4,8) = 0.
+
+    node_list%node(i)%values(1,1,6) = zTi
+    node_list%node(i)%values(1,2,6) = dTi_dpsi  * node_list%node(i)%values(1,2,1) + dTi_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%values(1,3,6) = dTi_dpsi  * node_list%node(i)%values(1,3,1) + dTi_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,4,6) = dTi_dpsi  * node_list%node(i)%values(1,4,1) + dTi_dz * node_list%node(i)%x(4,2) &
+                                    + dTi_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)   &
+                                    + dTi_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)          &
+                                    + dTi_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
+                                    + dTi_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2)      
+
+    node_list%node(i)%values(1,1,9) = zTe
+    node_list%node(i)%values(1,2,9) = dTe_dpsi  * node_list%node(i)%values(1,2,1) + dTe_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%values(1,3,9) = dTe_dpsi  * node_list%node(i)%values(1,3,1) + dTe_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,4,9) = dTe_dpsi  * node_list%node(i)%values(1,4,1) + dTe_dz * node_list%node(i)%x(4,2) &
+                                    + dTe_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)   &
+                                    + dTe_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)          &
+                                    + dTe_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
+                                    + dTe_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2)      
 
     node_list%node(i)%values(1,1,2) = - tauIC * zp 
     node_list%node(i)%values(1,2,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,2,1) + dp_dz * node_list%node(i)%x(2,2))
@@ -212,10 +237,14 @@ do i=1,node_list%n_nodes
 
     do in=1,n_tor
 
-      T0   = node_list%node(i)%values(in,1,6)
+      Ti0   = node_list%node(i)%values(in,1,6)
+      Te0   = node_list%node(i)%values(in,1,9)
+      T0    = Ti0 + Te0
       node_list%node(i)%values(in,1,7) = direction / Btot * sqrt(GAMMA * T0)
    
-      T0_s   = node_list%node(i)%values(in,2,6)
+      Ti0_s   = node_list%node(i)%values(in,2,6)
+      Te0_s   = node_list%node(i)%values(in,2,9)
+      T0_s    = Ti0_s + Te0_s
       node_list%node(i)%values(in,2,7) = BigR_s / (BigR*Btot) * sqrt(GAMMA * T0) + 0.5d0 / Btot * sqrt(GAMMA / T0) * T0_s
       node_list%node(i)%values(in,2,7) = direction *  node_list%node(i)%values(in,2,7)
 

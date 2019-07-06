@@ -69,8 +69,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef,                               &
+                Ti_0,  Ti_1,  Ti_coef,                              &
+                Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
-                ZK_par, ZK_par_max, ZK_perp, D_par, D_perp,         &
+                ZK_i_par, ZK_e_par, ZK_par_max,                     &
+                ZK_i_perp, ZK_e_perp, D_par, D_perp,                &
                 particlesource, heatsource, tauIC,                  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
@@ -82,8 +85,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pellet_particles, use_pellet,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                xcase, D_perp_file, ZK_perp_file,                   &
-                rho_file, T_file, ffprime_file,                     &
+                xcase, D_perp_file, ZK_i_perp_file, ZK_e_perp_file, &
+                rho_file, T_file, Ti_file, Te_file, ffprime_file,   &
                 freeboundary_equil, freeboundary,  freeb_change_indices, &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &

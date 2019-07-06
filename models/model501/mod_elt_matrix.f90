@@ -1241,17 +1241,18 @@ do ms=1, n_gauss
                     - ZK_par_num * (v_ps0_x  * ps0_y - v_ps0_y  * ps0_x) &
                                  * (T0_ps0_x * ps0_y - T0_ps0_y * ps0_x)               * xjac * tstep &
 
-                    - TG_num6 * 0.25d0 * BigR**3 * T0 * (r0_x * u0_y - r0_y * u0_x) &
+                    - TG_num6 * 0.25d0 * BigR**3 * T0 * ((r0_x+alpha_imp*rn0_x) * u0_y - ((r0_y+alpha_imp*rn0_y)) * u0_x) &
                                        * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep  &
-                    - TG_num6 * 0.25d0 * BigR**3 * r0 * (T0_x * u0_y - T0_y * u0_x) &
+                    - TG_num6 * 0.25d0 * BigR**3 * (r0+alpha_imp_bis*rn0) * (T0_x * u0_y - T0_y * u0_x) &
                                        * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep  &
 
                     - TG_num6 * 0.25d0 / BigR * vpar0**2 &
-                              * T0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                         &
+                              * T0 * ((r0_x+alpha_imp*rn0_x) * ps0_y - (r0_y+alpha_imp*rn0_y) * ps0_x &
+                                      + F0 / BigR * (r0_p+alpha_imp*rn0_p))                           &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * tstep * tstep        &
 
                     - TG_num6 * 0.25d0 / BigR * vpar0**2 &
-                              * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                         &
+                              * (r0+alpha_imp_bis*rn0) * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)     &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * tstep * tstep        &
 
                     + zeta * v * (r0 + rn0 * alpha_imp_bis) * delta_g(mp,6,ms,mt) * BigR               * xjac &

@@ -322,8 +322,13 @@ real*8     :: Z_imp, beta_imp, mu_imp
         stop
       end if
 
+#if (JOREK_MODEL == 502)
+      call interp_PRZ(node_list,element_list,i_elm,[5,9,8],3,s_out,t_out,pellets(i)%spi_phi,&
+                      P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+#else
       call interp_PRZ(node_list,element_list,i_elm,[5,6,8],3,s_out,t_out,pellets(i)%spi_phi,&
                       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+#endif
 
       ! Now, P(1) represents mass density and P(2) represents temperature, P(3)
       ! is the impurity density
@@ -340,7 +345,11 @@ real*8     :: Z_imp, beta_imp, mu_imp
       n_SI           = P(1) * 1.d20 * central_density
       if (n_SI < 0.) n_SI = 0.
 
+#if (JOREK_MODEL == 502)
+      T_eV           = P(2) / (EL_CHG * MU_ZERO * central_density * 1.d20)
+#else
       T_eV           = P(2) / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
+#endif
       if (T_eV < 0.) T_eV = 0.
 
       ! This is only used for 501 as impurity density, 500 don't use this

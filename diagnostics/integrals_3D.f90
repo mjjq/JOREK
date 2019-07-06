@@ -351,7 +351,7 @@ do ife = ife_min, ife_max
 
         grad_P_psi = (dPdx * dpsidx + dPdy * dpsidy)/grad_psi
 
-#if (JOREK_MODEL == 400)
+#if (JOREK_MODEL == 400 || JOREK_MODEL == 502)
         call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_limit, &
                      particle_source,heat_source_i,heat_source_e)
 		     heat_source = heat_source_i + heat_source_e

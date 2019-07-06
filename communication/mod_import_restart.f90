@@ -557,6 +557,9 @@ endif
 #if (JOREK_MODEL == 400)
           node_list%node(i)%values(j,:,8)= amplitude * node_list%node(i)%values(1,:,8)
 #endif
+#if (JOREK_MODEL == 502)
+          node_list%node(i)%values(j,:,9)= amplitude * node_list%node(i)%values(1,:,9)
+#endif
         enddo
       enddo
     endif
@@ -1442,6 +1445,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
           node_list%node(i)%values(m,:,6)   = amplitude * node_list%node(i)%values(1,:,6)
 #if (JOREK_MODEL == 400)
           node_list%node(i)%values(j,:,8)= amplitude * node_list%node(i)%values(1,:,8)
+#endif
+#if (JOREK_MODEL == 502)
+          node_list%node(i)%values(j,:,9)= amplitude * node_list%node(i)%values(1,:,9)
 #endif
           end if
         end do

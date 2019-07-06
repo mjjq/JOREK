@@ -1339,12 +1339,12 @@ endif
 
     	  call density(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,	       &
     	       zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-    	  if (jorek_model .eq. 400) then	     
+    	  if (jorek_model .eq. 400 || jorek_model .eq. 502) then	     
     	    call temperature_i(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
     			     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
     	    call temperature_e(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
     	     zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)	     
-      zT = zTi + zTe
+            zT = zTi + zTe
     	    dT_dpsi = dTi_dpsi + dTe_dpsi	    
     	  else
       call temperature(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &

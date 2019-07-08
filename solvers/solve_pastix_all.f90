@@ -11,6 +11,8 @@ use global_distributed_matrix
 use mpi_mod
 use mod_clock
 use mod_coicsr
+use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR
+
 !$ use omp_lib
 
 #ifdef USE_PASTIX6
@@ -48,9 +50,9 @@ real(kind=c_double)    , dimension(:), pointer       :: pastix_values
 #endif
 
 
-write(*,*) my_id,'*********************************'
-write(*,*) my_id,'*  solve global matrix (PastiX) *'
-write(*,*) my_id,'*********************************'
+!write(*,*) my_id,'*********************************'
+!write(*,*) my_id,'*  solve global matrix (PastiX) *'
+!write(*,*) my_id,'*********************************'
 
 m_loc = (index_max - index_min + 1) * n_tor * n_var
 mumps_par%nz_loc = nz_glob
@@ -189,10 +191,14 @@ call spmAlloc(pastix_spm)
 call c_f_pointer(pastix_spm%colptr,pastix_colptr, [pastix_spm%n+1])
 call c_f_pointer(pastix_spm%rowptr,pastix_rowptr, [pastix_spm%nnz])
 call c_f_pointer(pastix_spm%values,pastix_values, [mumps_par%nz])
-            
-pastix_colptr      = mumps_par%jcn
-pastix_rowptr      = mumps_par%irn
-pastix_values      = mumps_par%A
+
+pastix_colptr      = mumps_par%jcn(1:pastix_spm%n+1)
+pastix_rowptr      = mumps_par%irn(1:pastix_spm%nnz)
+pastix_values      = mumps_par%A(1:mumps_par%nz)
+    
+!pastix_colptr      = mumps_par%jcn
+!pastix_rowptr      = mumps_par%irn
+!pastix_values      = mumps_par%A
 #endif
 
 call pastix_init_num_threads(my_id)
@@ -225,7 +231,7 @@ if (.not. pastix_initialised) then
 #endif
 #endif
 
-  ! pastix input parameters working in Pastix5 and Pastix6 (SOME NOT ACTUALLY NEEDED IN PASTIX6)
+  ! pastix input parameters working in Pastix5 and Pastix6
   pastix_iparm(IPARM_VERBOSE)               = pastix_verb              
   pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations
 
@@ -347,7 +353,12 @@ if (.not. pastix_analysed) then
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis :', tsecond
 
   pastix_analysed = .true.
-endif
+else
+#if (defined(USE_PASTIX6) && defined(USE_BLOCK))
+  ! Expand spm matrix because rest of Pastix6 cannot handle multiple dofs (yet)
+  call pastixExpand(pastix_data,pastix_spm)
+#endif
+endif ! .not. pastix_analysed
 
 call clck_time(t0)
 
@@ -391,10 +402,10 @@ call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mump
 #else
 ! -- For PaStiX solver version 6.x
 
-!call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
-call pastix_subtask_spm2bcsc(pastix_data,pastix_spm,pastix_info )
-call pastix_subtask_bcsc2ctab(pastix_data,pastix_info )
-call pastix_subtask_sopalin(pastix_data,pastix_info )
+call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
+!call pastix_subtask_spm2bcsc(pastix_data,pastix_spm,pastix_info )
+!call pastix_subtask_bcsc2ctab(pastix_data,pastix_info )
+!call pastix_subtask_sopalin(pastix_data,pastix_info )
 
 pastix_rhs_ptr = c_loc(mumps_par%rhs)
 call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,pastix_spm%n,pastix_info)

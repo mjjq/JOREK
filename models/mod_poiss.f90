@@ -23,7 +23,7 @@ use pastix_enums
 use spmf
 #endif
 
- implicit none
+implicit none
 
 ! --- Routine parameters
 integer,                  intent(in)    :: my_id             ! MPI id
@@ -72,9 +72,9 @@ integer(c_int)     :: pastix_info
 type(c_ptr)        :: pastix_rhs_ptr
 type(c_ptr)        :: pastix_x_ptr
 real(kind=c_double)    , dimension(:), allocatable, target :: pastix_rhs
-integer(kind=spm_int_t), dimension(:), pointer  :: pastix_colptr
-integer(kind=spm_int_t), dimension(:), pointer  :: pastix_rowptr
-real(kind=c_double)    , dimension(:), pointer  :: pastix_values
+integer(kind=spm_int_t), dimension(:), pointer             :: pastix_colptr
+integer(kind=spm_int_t), dimension(:), pointer             :: pastix_rowptr
+real(kind=c_double)    , dimension(:), pointer             :: pastix_values
 #endif
 
 

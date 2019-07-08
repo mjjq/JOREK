@@ -155,7 +155,7 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
    if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 
    if (use_pastix) then
-      ! pastix input parameters working in Pastix5 and Pastix6 (SOME NOT ACTUALLY NEEDED IN PASTIX6)
+      ! pastix input parameters working in Pastix5 and Pastix6
       pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations
       pastix_iparm(IPARM_FACTORIZATION)         = pastix_facto
       pastix_iparm(IPARM_THREAD_NBR)            = pastix_nthrd               ! number of threads

@@ -98,9 +98,9 @@ contains
     ! -- For PaStiX solver version 6.x
     integer(c_int)     :: pastix_info
     type(c_ptr)        :: pastix_rhs_ptr
-    integer(kind=spm_int_t), dimension(:), pointer  :: pastix_colptr
-    integer(kind=spm_int_t), dimension(:), pointer  :: pastix_rowptr
-    real(kind=c_double)    , dimension(:), pointer  :: pastix_values
+    integer(kind=spm_int_t), dimension(:), pointer     :: pastix_colptr
+    integer(kind=spm_int_t), dimension(:), pointer     :: pastix_rowptr
+    real(kind=c_double)    , dimension(:), pointer     :: pastix_values
     integer(kind=c_int)    , dimension(1:pastix_nthrd) :: thread_map
 #endif
 
@@ -198,7 +198,7 @@ contains
           if (my_id .ne. 0) block_size = 2*n_var
 
           block_size2 = block_size**2
-          !---------------------------- reduce IRN,JCN to make use of blocksize nvar
+          !---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
           n_block   = mumps_par%n  / block_size
           nnz_block = mumps_par%nz / block_size2
 
@@ -307,8 +307,6 @@ contains
           pastix_colptr      = mumps_par%jcn(1:pastix_spm%n+1)
           pastix_rowptr      = mumps_par%irn(1:pastix_spm%nnz)
           pastix_values      = mumps_par%A(1:mumps_par%nz)
-
-          call spmPrintInfo(pastix_spm)
 #endif
 
 
@@ -475,7 +473,9 @@ contains
 
             pastix_analysed = .true.
           endif
-
+        else
+          ! Expand spm matrix because rest of Pastix6 cannot handle multiple dofs (yet)
+          call pastixExpand(pastix_data,pastix_spm)
         endif ! .not. pastix_analysed
 
       endif   ! (else, use_mumps)
@@ -523,10 +523,10 @@ contains
 
 #else
           ! -- For PaStiX solver version 6.x
-!          call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
-          call pastix_subtask_spm2bcsc(pastix_data,pastix_spm,pastix_info )
-          call pastix_subtask_bcsc2ctab(pastix_data,pastix_info )
-          call pastix_subtask_sopalin(pastix_data,pastix_info )
+          call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
+!          call pastix_subtask_spm2bcsc(pastix_data,pastix_spm,pastix_info )
+!          call pastix_subtask_bcsc2ctab(pastix_data,pastix_info )
+!          call pastix_subtask_sopalin(pastix_data,pastix_info )
 
           call spmExit(pastix_spm)
           deallocate(pastix_spm)

@@ -3,8 +3,14 @@
 !> 5-steps Volume Preserving Integrators: R. Zhang et all, Phys. of Plasmas,
 !> vol.22, p.044501 2015
 module mod_kinetic_relativistic
+use mod_particle_types
+! use electric charge, atomic mass unit and speed of ligth
+use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGTH
+
 implicit none
+
 private
+
 public relativistic_volume_preserving_push_cartesian
 
 contains
@@ -25,8 +31,6 @@ contains
 !> outputs:
 !>   particle: (particle_kinetic_relativistic) relativistic particle type
 pure subroutine volume_preserving_push_cartesian(particle,m,E,B,dt)
-  ! use electric charge, atomic mass unit and speed of ligth
-  use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGTH
   use mod_pusher_tools, only: cayley_transform !< use full Cayley transform
   ! define input output variables
   class(particle_kinetic_relativistic), intent(inout) :: particle !< relativistic particle

@@ -11,12 +11,14 @@ use mpi_mod
 use mod_clock
 
 #ifdef USE_PASTIX6
+! -- For PaStiX solver version 6.x
 use pastixf
 use pastix_enums
 use spmf
 #endif
 
 #ifndef USE_PASTIX6
+! -- For PaStiX solver before version 6.x
 #ifdef USE_PASTIX
 #include "pastix_fortran.h"
 #else
@@ -41,6 +43,7 @@ integer             :: ibuf_size, status(MPI_STATUS_SIZE)
 real*8  :: DUMMY_REAL(1:1)
 integer :: DUMMY_INT (1:1)
 #ifdef USE_PASTIX6
+! -- For PaStiX solver version 6.x
 integer(c_int)     :: pastix_info
 type(c_ptr)        :: pastix_rhs_ptr
 #endif
@@ -168,7 +171,7 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
 
 
 #ifndef USE_PASTIX6
-      ! pastix input parameters working only in Pastix5
+      ! -- For PaStiX solver before version 6.x
       pastix_iparm(IPARM_START_TASK)            = API_TASK_SOLVE
       pastix_iparm(IPARM_END_TASK)              = pastix_endsolve
       pastix_iparm(IPARM_RHS_MAKING)            = pastix_rhs                 ! right hand side (0 : use RHS)
@@ -176,13 +179,14 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
       pastix_iparm(IPARM_AMALGAMATION_LEVEL)    = pastix_amalg
 
 #else
-! equivalent pastix input parameters for Pastix6 (SOME NOT ACTUALLY NEEDED IN PASTIX6)
+      ! -- For PaStiX solver version 6.x
       pastix_iparm(IPARM_MTX_TYPE)              = pastix_sym
       pastix_iparm(IPARM_AMALGAMATION_LVLCBLK)  = pastix_amalg
 #endif
 
      
 #ifndef USE_PASTIX6
+      ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
       call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
            !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
@@ -194,6 +198,7 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
 #endif
 
 #else
+       ! -- For PaStiX solver version 6.x
        pastix_rhs_ptr = c_loc(mumps_par%rhs)
 #ifdef USE_BLOCK
        call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,n_block,pastix_info)

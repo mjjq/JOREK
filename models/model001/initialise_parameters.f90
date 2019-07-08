@@ -3,7 +3,7 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering
+use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, &
     pastix_maxthrd
 use vacuum
@@ -52,7 +52,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_file, T_file, ffprime_file,                     &
                 freeboundary, resistive_wall, freeb_change_indices, &
                 wall_resistivity, wall_resistivity_fact,            &
-                use_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering, &
+                use_mumps, mumps_ordering,                          &
+                use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
                 n_tor_fft_thresh,                                   &
                 pastix_smp_only, refinement, force_central_node,    &
@@ -280,6 +281,8 @@ if (my_id .eq. 0) then
   if (allocated(area_t)) call tr_deallocate(area_t,"area_t",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(area_t,1,index_start+nstep,"area_t",CAT_UNKNOWN)
 
+  if (allocated(mag_ener_src_tot)) call tr_deallocate(mag_ener_src_tot,"mag_ener_src_tot",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(mag_ener_src_tot,1,index_start+nstep,"mag_ener_src_tot",CAT_UNKNOWN)
 
 endif
 

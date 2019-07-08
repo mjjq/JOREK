@@ -16,6 +16,7 @@ use mod_coicsr
 use mpi_mod
 use mod_basisfunctions
 #ifdef USE_PASTIX6
+! -- For PaStiX solver version 6.x
 use iso_c_binding
 use pastixf
 use pastix_enums
@@ -66,8 +67,11 @@ integer:: nnz, ierr
 integer*8 :: check_data
 
 #ifdef USE_PASTIX6
+! -- For PaStiX solver version 6.x
 integer(c_int)     :: pastix_info
 type(c_ptr)        :: pastix_rhs_ptr
+type(c_ptr)        :: pastix_x_ptr
+real(kind=c_double)    , dimension(:), allocatable, target :: pastix_rhs
 integer(kind=spm_int_t), dimension(:), pointer  :: pastix_colptr
 integer(kind=spm_int_t), dimension(:), pointer  :: pastix_rowptr
 real(kind=c_double)    , dimension(:), pointer  :: pastix_values
@@ -309,11 +313,13 @@ if (my_id == 0) then
   if (allocated(sparskit_work)) deallocate(sparskit_work)
   allocate(sparskit_work(mumps_par%N + 1))
   call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
+  if (allocated(sparskit_work)) deallocate(sparskit_work)
   
   nnz = mumps_par%JCN(mumps_par%N+1) - 1
   write (*,*) "nnz", nnz
 
 #ifndef USE_PASTIX6
+  ! -- For PaStiX solver before version 6.x
   call pastix_fortran_checkmatrix(check_data, MPI_COMM_SELF, &
        1, pastix_sym, 1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -1, 1)
 
@@ -339,33 +345,29 @@ if (my_id == 0) then
   end if
   if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
   if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
-  
+
+ 
 #else
-  ! Pastix6: Initialise sparse matrix structure  
+  ! -- For PaStiX solver version 6.x
+  ! Initialise sparse matrix structure  
   allocate(pastix_spm) ! Replace by tr_allocate etc.?!
   call spmInit(pastix_spm)
 
   pastix_spm%n           =  mumps_par%n
   pastix_spm%nnz         =  nnz
+  pastix_spm%dof         =  1
   call spmUpdateComputedFields(pastix_spm)
   call spmAlloc(pastix_spm)
 
-  call c_f_pointer(pastix_spm%colptr,pastix_colptr, [pastix_spm%nnz])
+  call c_f_pointer(pastix_spm%colptr,pastix_colptr, [pastix_spm%n+1])
   call c_f_pointer(pastix_spm%rowptr,pastix_rowptr, [pastix_spm%nnz])
-  call c_f_pointer(pastix_spm%values,pastix_values, [pastix_spm%nnz])
-              
-! pastix_colptr      => mumps_par%irn ! just like in Pastix5, invert col and row because our matrix is in CSR and pastix uses CSC by default.
-! pastix_rowptr      => mumps_par%jcn ! could also change in Pastix6 to spm->fmttype = SpmCSR
-! pastix_values      => mumps_par%A
+  call c_f_pointer(pastix_spm%values,pastix_values, [mumps_par%nz])
+  
+  pastix_colptr      = mumps_par%jcn 
+  pastix_rowptr      = mumps_par%irn
+  pastix_values      = mumps_par%A
 
-  ! Temporary!!! Copy over mumps_par to spm matrix structure
-  do i = 1,pastix_spm%nnz
-    pastix_values(i) = mumps_par%A(i) 
-    pastix_rowptr(i) = mumps_par%irn(i) 
-  enddo
-  do i = 1,pastix_spm%n+1
-    pastix_colptr(i) = mumps_par%jcn(i) 
-  enddo
+  ! Check matrix and remove duplicates
   allocate(pastix_spm_check)
   call spmCheckAndCorrect(pastix_spm, pastix_spm_check, pastix_info)
   if (pastix_info .ne. 0) then
@@ -373,8 +375,6 @@ if (my_id == 0) then
     pastix_spm = pastix_spm_check
   endif
   deallocate(pastix_spm_check)
-
-  call spmPrintInfo(pastix_spm)
 #endif
 
   write(*,*) '***********************************'
@@ -384,6 +384,7 @@ if (my_id == 0) then
   pastix_nthrd     = nbthreads
 
 #ifndef USE_PASTIX6
+  ! -- For PaStiX solver before version 6.x
   pastix_iparm(1)  = 0          ! insert default values
   pastix_iparm(2)  = 0          ! initializse
   pastix_iparm(3)  = 0
@@ -391,7 +392,7 @@ if (my_id == 0) then
   pastix_iparm(52) = 2
 #endif
   
-  pastix_data = 0
+   pastix_data = 0
    call pastix_fortran(pastix_data,MPI_COMM_SELF,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
        pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
   
@@ -418,8 +419,7 @@ if (my_id == 0) then
   pastix_dparm(11) = pastix_pivot      ! pivot threshold?
 
 #else
-  ! PaStiX 6
-  write(*,*) 'Made it to pastixInitParam'
+  ! -- For PaStiX solver version 6.x
   call pastixInitParam(pastix_iparm, pastix_dparm)
 
   pastix_iparm(IPARM_VERBOSE)               = pastix_verb              
@@ -449,15 +449,26 @@ if (my_id == 0) then
   write(*,*) '***********************************'
   
 #ifndef USE_PASTIX6
+  ! -- For PaStiX solver before version 6.x
   call pastix_fortran(pastix_data,MPI_COMM_SELF, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
+  ! -- For PaStiX solver version 6.x
   call pastix_task_analyze(pastix_data,pastix_spm,pastix_info)
   call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
-  call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,pastix_spm%n,pastix_info)
+
+  pastix_x_ptr = c_loc(mumps_par%rhs)
+  allocate(pastix_rhs(pastix_spm%n))
+  pastix_rhs_ptr = c_loc(pastix_rhs)
+  pastix_rhs = mumps_par%rhs
+  call pastix_task_solve(pastix_data,1,pastix_x_ptr,pastix_spm%n,pastix_info)
+  call pastix_task_refine(pastix_data,pastix_spm%n,1,pastix_rhs_ptr,pastix_spm%n,pastix_x_ptr,pastix_spm%n,pastix_info)
+  deallocate(pastix_rhs)
+
   call pastixFinalize(pastix_data)
   call spmExit(pastix_spm)
   deallocate(pastix_spm)
+  
 #endif
   call tr_print_memsize("PASTIX_For_Poisson")
   

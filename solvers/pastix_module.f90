@@ -1,13 +1,14 @@
 module pastix_module             ! PastiX specific variables
 #ifndef USE_PASTIX6
+! -- For PaStiX solver before version 6.x
 #ifdef USE_PASTIX 
 #include "pastix_fortran.h"
 #else
 #include "no_pastix_fortran.h"
 #endif
-#endif
 
-#ifdef USE_PASTIX6
+#else
+  ! -- For PaStiX solver version 6.x
   use iso_c_binding
   use pastixf
   use pastix_enums
@@ -21,6 +22,7 @@ module pastix_module             ! PastiX specific variables
   logical               :: use_pastix, pastix_initialised, pastix_analysed, pastix_smp_only, no_zeros_pastix
 
 #ifndef USE_PASTIX6
+  ! -- For PaStiX solver before version 6.x
   integer(kind=8)       :: pastix_data
   integer               :: pastix_iparm(IPARM_SIZE)
   real*8                :: pastix_dparm(DPARM_SIZE)
@@ -31,14 +33,17 @@ module pastix_module             ! PastiX specific variables
   integer, parameter    :: pastix_endsolve = API_TASK_SOLVE
   integer, parameter    :: pastix_rhs      = 0
 #else
-  type(pastix_data_t), pointer     :: pastix_data
-  type(spmatrix_t),    allocatable :: pastix_spm
-  type(spmatrix_t),    allocatable :: pastix_spm_check
-  integer(kind=pastix_int_t), target   :: pastix_iparm(iparm_size)
-  real(kind=c_double),        target   :: pastix_dparm(dparm_size)
-  integer, parameter    :: pastix_facto    = PastixFactLU
-  integer, parameter    :: pastix_sym      = PastixGeneral
-  integer, parameter    :: pastix_verb     = PastixVerboseNo 
+  ! -- For PaStiX solver version 6.x
+  type(pastix_data_t),  pointer       :: pastix_data
+  type(spmatrix_t),     pointer       :: pastix_spm
+  type(spmatrix_t),     pointer       :: pastix_spm_check
+  type(pastix_order_t), pointer       :: pastix_myorder => null()
+  integer(kind=pastix_int_t), target  :: pastix_iparm(iparm_size)
+  real(kind=c_double),        target  :: pastix_dparm(dparm_size)
+  integer, parameter                  :: pastix_facto    = PastixFactLU
+  integer, parameter                  :: pastix_sym      = PastixGeneral
+  integer, parameter                  :: pastix_verb     = PastixVerboseNo 
+
 #endif
 
   integer               :: pastix_nthrd    = 1

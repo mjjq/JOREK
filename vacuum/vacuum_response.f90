@@ -1132,8 +1132,6 @@ module vacuum_response
     real*8, allocatable :: tripot_w(:)
     integer :: ierr
 
-    call MPI_BCAST(nout,1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-
     if ( mod(index,nout) /= 0 ) return
 
     if(my_id == 0) then

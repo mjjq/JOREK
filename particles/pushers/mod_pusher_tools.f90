@@ -8,7 +8,7 @@ private
 !> public procedures
 public get_orthonormals
 public left_handed_cross_product, right_handed_cross_product
-public cayley_transofrm,approximated_cayley_transofrm
+public right_handed_cayley_transofrm,right_handed_approximated_cayley_transofrm
 contains
 
 !---------------------------------------------------------------------------
@@ -60,7 +60,7 @@ end function right_handed_cross_product
 
 !---------------------------------------------------------------------------
 
-!> This function computes the Cayley transform of a vector vec multiplied 
+!> This function computes the right handed Cayley transform of a vector vec multiplied 
 !> by a constant \alpha. The Cayley transform is defined as:
 !> cayley(alpha\cdot B) = \(I-\alpha \cdot B\\)^\{-1\} \cdot \(I+\alpha \cdot b\)
 !> Where B is the vector product skew symmetric matrix of the vector B,
@@ -70,12 +70,12 @@ end function right_handed_cross_product
 !>   vec:     (real8)(3) vector to be transformed
 !> outputs:
 !>   cayley_transofrm: (real8)(3,3) the Cayley transfrom of vec
-pure function cayley_transofrm(alpha,vec)
+pure function cayley_transform(alpha,vec)
 ! defining input variables
 real(kind=8),intent(in) :: alpha !< multiplicative constant
 real(kind=8),dimension(3),intent(in) :: vec !< vector to be transformed
 ! defining output variables
-real(kind=8),dimension(3,3) :: cayley_transofrm !< Cayley transform of vec
+real(kind=8),dimension(3,3) :: cayley_transform !< Cayley transform of vec
 ! defining internal variables
 real(kind=8),dimension(3,3) :: A,B !< \(I-\alpha \cdot B\\)^\{-1\} and \(I+\alpha \cdot b\)
 
@@ -93,9 +93,9 @@ real(kind=8),dimension(3,3) :: A,B !< \(I-\alpha \cdot B\\)^\{-1\} and \(I+\alph
             (1.0 + alpha*alpha*vec(3)*vec(3))/)
 
 ! computing the Cayley transform
-cayley_transofrm = (matmul(A,B))/(1.d0 + alpha*alpha*(dot_product(vec,vec)))
+cayley_transform = (matmul(A,B))/(1.d0 + alpha*alpha*(dot_product(vec,vec)))
 
-end function cayley_transofrm
+end function cayley_transform
 
 !---------------------------------------------------------------------------
 
@@ -108,12 +108,12 @@ end function cayley_transofrm
 !> outputs:
 !>   approximated_cayley_transofrm: (real8)(3,3) the approximated Cayley 
 !>                                               transfrom of vec
-pure function approximated_cayley_transofrm(alpha,vec)
+pure function approximated_cayley_transform(alpha,vec)
 ! defining input variables
 real(kind=8),intent(in) :: alpha !< multiplicative constant
 real(kind=8),dimension(3),intent(in) :: vec !< vector to be transformed
 ! defining output variables
-real(kind=8),dimension(3,3) :: approximated_cayley_transofrm !< approximated Cayley transform of V
+real(kind=8),dimension(3,3) :: approximated_cayley_transform !< approximated Cayley transform of V
 ! internal variables
 real(kind=8) :: coefficient
 
@@ -121,20 +121,20 @@ real(kind=8) :: coefficient
 coefficient = (2.0*alpha)/(1.0 + alpha*alpha*(dot_product(vec,vec)))
 
 ! compute the approximated Cayley transform
-approximated_cayley_transofrm(1:3,1) = &
+approximated_cayley_transform(1:3,1) = &
   (/1.0-coefficient*alpha*(vec(3)*vec(3) + vec(2)*vec(2)),&
   coefficient*(vec(3) + alpha*vec(2)*vec(1)),&
   coefficient*(alpha*vec(3)*vec(1) - vec(2))/)
-approximated_cayley_transofrm(1:3,2) = &
+approximated_cayley_transform(1:3,2) = &
   (/coefficient*(alpha*vec(1)*vec(2) - vec(3)),&
   1.0-coefficient*alpha*(vec(3)*vec(3) + vec(1)*vec(1)),&
   coefficient*(alpha*vec(3)*vec(2) + vec(1))/)
-approximated_cayley_transofrm(1:3,3) = &
+approximated_cayley_transform(1:3,3) = &
   (/coefficient*(alpha*vec(1)*vec(3) + vec(2)),&
   coefficient*(alpha*vec(2)*vec(3) - vec(1)),1.0-&
   coefficient*alpha*(vec(2)*vec(2) + vec(1)*vec(1))/)
 
-end function approximated_cayley_transofrm
+end function approximated_cayley_transform
 !---------------------------------------------------------------------------
 
 end module mod_pusher_tools

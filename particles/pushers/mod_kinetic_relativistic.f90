@@ -7,6 +7,8 @@ implicit none
 private
 public relativistic_volume_preserving_push_cartesian()
 
+contains
+
 !---------------------------------------------------------------------------
 !> This subroutine implements a test version of the volume preserving 
 !> algorithm: described in R. Zhang, Phys. of Plasmas, vol.22, p.044501, 2015.

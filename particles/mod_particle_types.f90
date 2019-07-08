@@ -49,6 +49,13 @@ module mod_particle_types
     integer*1            :: q !< charge [e]
   end type particle_kinetic_leapfrog
 
+  !> This particle type is used for computing the full orbit trajectory
+  !> of a relativistic particle. Final particle positions and momenta are given at time \(t\) 
+  type, extends(particle_base) :: particle_kinetic_relativistic
+    real(kind=8),dimension(3) :: p !< Momenta (p_x,p_y,p_z) in [AMU*m/s]
+    integer(kind=1)           :: q !< charge [e]
+  end type particle_kinetic_relativistic
+
 contains
   !> Convenience function to obtain q if it exists, or 0 otherwise
   !> Here also because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82064

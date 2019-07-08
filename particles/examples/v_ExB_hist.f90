@@ -16,7 +16,7 @@ use mod_sobseq_rng, only: sobseq_rng
 use mod_random_seed, only: random_seed
 use constants, only: TWOPI
 use mod_initialise_particles, only: domain_bounding_box
-use mod_boris, only: left_handed_cross_product
+use mod_pusher_tools, only: left_handed_cross_product
 use domains
 !$ use omp_lib
 implicit none

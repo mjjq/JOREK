@@ -10,9 +10,9 @@ module mod_boris
   private
 
   public boris_push_cylindrical, boris_push_cartesian, boris_initial_half_step_backwards_XYZ
-  public boris_initial_half_step_backwards_RZPhi, left_handed_cross_product, right_handed_cross_product
+  public boris_initial_half_step_backwards_RZPhi
   public boris_all_initial_half_step_backwards_RZPhi
-  public gc_to_kinetic, kinetic_to_gc, get_orthonormals
+  public gc_to_kinetic, kinetic_to_gc
   public kinetic_to_kinetic_leapfrog, kinetic_leapfrog_to_kinetic
   public kinetic_leapfrog_to_gc, gc_to_kinetic_leapfrog
 contains
@@ -21,6 +21,7 @@ contains
 !> See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details.
 !> This routine works in RZPhi coordinates
 pure subroutine boris_push_cylindrical(particle, m, E, B, dt)
+  use mod_pusher_tools only left_handed_cross_product
   type(particle_kinetic_leapfrog), intent(inout)  :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -66,6 +67,7 @@ end subroutine boris_push_cylindrical
 !> See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
 !> This routine works in a left-handed cartesian coordinate system (XYZ)
 pure subroutine boris_push_cartesian(particle, m, E, B, dt)
+  use mod_pusher_tools only right_handed_cross_product
   class(particle_kinetic_leapfrog), intent(inout)  :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -100,6 +102,7 @@ end subroutine boris_push_cartesian
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
 pure subroutine boris_initial_half_step_backwards_XYZ(particle, m, E, B, dt)
   use constants, only: EL_CHG, ATOMIC_MASS_UNIT
+  use mod_pusher_tools only right_handed_cross_product
   class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -120,6 +123,7 @@ end subroutine boris_initial_half_step_backwards_XYZ
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
 pure subroutine boris_initial_half_step_backwards_RZPhi(particle, m, E, B, dt)
   use constants, only: EL_CHG, ATOMIC_MASS_UNIT
+  use mod_pusher_tools only left_handed_cross_product
   class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -156,45 +160,6 @@ subroutine boris_all_initial_half_step_backwards_RZPhi(particles, m, fields, t, 
   end do
   !$omp end parallel do
 end subroutine boris_all_initial_half_step_backwards_RZPhi
-
-!> The cross product in a right-handed coordinate system (e.g. XYZ or RPhiZ)
-pure function right_handed_cross_product(a, b)
-  real*8, dimension(3) :: right_handed_cross_product
-  real*8, dimension(3), intent(in) :: a, b
-
-  right_handed_cross_product(1) = a(2) * b(3) - a(3) * b(2)
-  right_handed_cross_product(2) = a(3) * b(1) - a(1) * b(3)
-  right_handed_cross_product(3) = a(1) * b(2) - a(2) * b(1)
-end function right_handed_cross_product
-!> The cross product in a left-handed coordinate system (e.g. RZPhi)
-pure function left_handed_cross_product(a, b)
-  real*8, dimension(3) :: left_handed_cross_product
-  real*8, dimension(3), intent(in) :: a, b
-
-  left_handed_cross_product(1) = a(2) * b(3) - a(3) * b(2)
-  left_handed_cross_product(2) = a(3) * b(1) - a(1) * b(3)
-  left_handed_cross_product(3) = a(1) * b(2) - a(2) * b(1)
-end function left_handed_cross_product
-!> Get two vectors orthogonal to a given vector.
-!> This is the RZPhi-version, the right-handed version will have different directions but will also work.
-pure subroutine get_orthonormals(b, e1, e2)
-  real*8, dimension(3), intent(in)  :: b !< Does not need to be normalized
-  real*8, dimension(3), intent(out) :: e1, e2
-
-  ! Take r as a reference vector (this will fail therefore if B is purely in r direction)
-  if (b(2) .eq. 0.d0 .and. b(3) .eq. 0.d0) then
-    e1 = [0.d0, 1.d0, 0.d0]
-    e2 = [0.d0, 0.d0, 1.d0]
-  else
-    e1 = left_handed_cross_product(b, [1.d0, 0.d0, 0.d0])
-    ! Normalize
-    e1 = e1/norm2(e1)
-    ! Obtain a second reference vector
-    e2 = left_handed_cross_product(b, e1)
-    ! Normalize
-    e2 = e2/norm2(e2)
-  end if
-end subroutine get_orthonormals
 
 !> Shortcut functions for converting between kinetic leapfrog and GC,
 !> by converting first to kinetic as an intermediate step.
@@ -276,6 +241,7 @@ end function kinetic_leapfrog_to_kinetic
 !> Which can easily be adjusted to obtain the gc position from a kinetic position and velocity.
 function kinetic_to_gc(node_list, element_list, in, B, mass) result(out)
   use data_structure
+  use mod_pusher_tools only left_handed_cross_product
   use mod_find_rz_nearby
   type(type_node_list), intent(in)            :: node_list
   type(type_element_list), intent(in)         :: element_list
@@ -319,6 +285,7 @@ end function kinetic_to_gc
 function gc_to_kinetic(node_list, element_list, in, chi, B, mass) result(out)
   use constants
   use data_structure
+  use mod_pusher_tools only get_orthonormals,left_handed_cross_product
   use mod_find_rz_nearby
   type(type_node_list), intent(in)    :: node_list
   type(type_element_list), intent(in) :: element_list

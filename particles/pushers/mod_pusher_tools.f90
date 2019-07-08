@@ -8,7 +8,7 @@ private
 !> public procedures
 public get_orthonormals
 public left_handed_cross_product, right_handed_cross_product
-public right_handed_cayley_transofrm,right_handed_approximated_cayley_transofrm
+public cayley_transform,approximated_cayley_transform
 contains
 
 !---------------------------------------------------------------------------

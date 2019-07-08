@@ -5,7 +5,7 @@
 module mod_kinetic_relativistic
 implicit none
 private
-public relativistic_volume_preserving_push_cartesian()
+public relativistic_volume_preserving_push_cartesian
 
 contains
 

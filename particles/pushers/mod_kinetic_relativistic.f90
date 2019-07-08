@@ -11,7 +11,7 @@ implicit none
 
 private
 
-public relativistic_volume_preserving_push_cartesian
+public volume_preserving_push_cartesian
 
 contains
 
@@ -24,18 +24,18 @@ contains
 !> uniform E and B.
 !> inputs:
 !>   particle: (particle_kinetic_relativistic) relativistic particle type
-!>   m:        (real8) particle mass in [AMU]
+!>   mass:        (real8) particle mass in [AMU]
 !>   E:        (real8)(3) electric field in [V/m]
 !>   B:        (real8)(3) magnetic field in [T]
 !>   dt:       (real8) time step in [s]
 !> outputs:
 !>   particle: (particle_kinetic_relativistic) relativistic particle type
-pure subroutine volume_preserving_push_cartesian(particle,m,E,B,dt)
+pure subroutine volume_preserving_push_cartesian(particle,mass,E,B,dt)
   use mod_pusher_tools, only: cayley_transform !< use full Cayley transform
   ! define input output variables
   class(particle_kinetic_relativistic), intent(inout) :: particle !< relativistic particle
   ! define input variables
-  real(kind=8), intent(in) :: m, dt !< mass and time step
+  real(kind=8), intent(in) :: mass, dt !< mass and time step
   real(kind=8), dimension(3), intent(in) :: E,B !< electric and magnetic field
   ! internal variable
   real(kind=8) :: scaling_factor !< scaling factor [s^2*C/(kg*m)]

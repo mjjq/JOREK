@@ -60,79 +60,79 @@ end function right_handed_cross_product
 
 !---------------------------------------------------------------------------
 
-!> This function computes the Cayley transform of a vector V multiplied 
+!> This function computes the Cayley transform of a vector vec multiplied 
 !> by a constant \alpha. The Cayley transform is defined as:
 !> cayley(alpha\cdot B) = \(I-\alpha \cdot B\\)^\{-1\} \cdot \(I+\alpha \cdot b\)
 !> Where B is the vector product skew symmetric matrix of the vector B,
 !> \alpha is a constant and I is the identity matrix.
 !> inputs:
 !>   alpha: (real8) multiplicative constant
-!>   V:     (real8)(3) vector to be transformed
+!>   vec:     (real8)(3) vector to be transformed
 !> outputs:
-!>   cayley_transofrm: (real8)(3,3) the Cayley transfrom of V
-pure function cayley_transofrm(alpha,V)
+!>   cayley_transofrm: (real8)(3,3) the Cayley transfrom of vec
+pure function cayley_transofrm(alpha,vec)
 ! defining input variables
 real(kind=8),intent(in) :: alpha !< multiplicative constant
-real(kind=8),dimension(3),intent(in) :: V !< vector to be transformed
+real(kind=8),dimension(3),intent(in) :: vec !< vector to be transformed
 ! defining output variables
-real(kind=8),dimension(3,3) :: cayley_transofrm !< Cayley transform of V
+real(kind=8),dimension(3,3) :: cayley_transofrm !< Cayley transform of vec
 ! defining internal variables
 real(kind=8),dimension(3,3) :: A,B !< \(I-\alpha \cdot B\\)^\{-1\} and \(I+\alpha \cdot b\)
 
 ! computing \(I+\alpha \cdot b\)
- B(1:3,1) = (/1.d0,(-alpha*V(3)),alpha*V(2)/)
- B(1:3,2) = (/alpha*V(3),1.d0,(-alpha*V(1))/)
- B(1:3,3) = (/(-alpha*V(2)),alpha*V(1),1.d0/)
+ B(1:3,1) = (/1.d0,(-alpha*vec(3)),alpha*vec(2)/)
+ B(1:3,2) = (/alpha*vec(3),1.d0,(-alpha*vec(1))/)
+ B(1:3,3) = (/(-alpha*vec(2)),alpha*vec(1),1.d0/)
 
 !computing \(I-\alpha \cdot B\\)^\{-1\}
- A(1:3,1) = (/(1.0 + alpha*alpha*V(1)*V(1)),(alpha*(alpha*V(1)*V(2) - V(3))),&
-            (alpha*(alpha*V(3)*V(1) + V(2)))/)
- A(1:3,2) = (/(alpha*(alpha*V(2)*V(1) + V(3))),(1.0 + alpha*alpha*V(2)*V(2)),&
-            (alpha*(alpha*V(3)*V(2) - V(1)))/)
- A(1:3,3) = (/(alpha*(alpha*V(3)*V(1) - V(2))),(alpha*(alpha*V(2)*V(3) + V(1))),&
-            (1.0 + alpha*alpha*V(3)*V(3))/)
+ A(1:3,1) = (/(1.0 + alpha*alpha*vec(1)*vec(1)),(alpha*(alpha*vec(1)*vec(2) - vec(3))),&
+            (alpha*(alpha*vec(3)*vec(1) + vec(2)))/)
+ A(1:3,2) = (/(alpha*(alpha*vec(2)*vec(1) + vec(3))),(1.0 + alpha*alpha*vec(2)*vec(2)),&
+            (alpha*(alpha*vec(3)*vec(2) - vec(1)))/)
+ A(1:3,3) = (/(alpha*(alpha*vec(3)*vec(1) - vec(2))),(alpha*(alpha*vec(2)*vec(3) + vec(1))),&
+            (1.0 + alpha*alpha*vec(3)*vec(3))/)
 
 ! computing the Cayley transform
-cayley_transofrm = (matmul(A,B))/(1.d0 + alpha*alpha*(dot_product(V,V)))
+cayley_transofrm = (matmul(A,B))/(1.d0 + alpha*alpha*(dot_product(vec,vec)))
 
 end function cayley_transofrm
 
 !---------------------------------------------------------------------------
 
-!> This function computes the approximated Cayley transform a vector V 
+!> This function computes the approximated Cayley transform a vector vec 
 !> multiplied by a constant \alpha as reported in R. Zhang, Phys. of Plasmas,
 !> vol.22, p.044501, 2015.
 !> inputs:
 !>   alpha: (real8) multiplicative constant
-!>   V:     (real8)(3) vector to be transformed
+!>   vec:     (real8)(3) vector to be transformed
 !> outputs:
 !>   approximated_cayley_transofrm: (real8)(3,3) the approximated Cayley 
-!>                                               transfrom of V
-pure function approximated_cayley_transofrm
+!>                                               transfrom of vec
+pure function approximated_cayley_transofrm(alpha,vec)
 ! defining input variables
 real(kind=8),intent(in) :: alpha !< multiplicative constant
-real(kind=8),dimension(3),intent(in) :: V !< vector to be transformed
+real(kind=8),dimension(3),intent(in) :: vec !< vector to be transformed
 ! defining output variables
 real(kind=8),dimension(3,3) :: approximated_cayley_transofrm !< approximated Cayley transform of V
 ! internal variables
 real(kind=8) :: coefficient
 
 ! compute the approximated transfrom coefficient
-coefficient = (2.0*alpha)/(1.0 + alpha*alpha*(dot_product(V,V)))
+coefficient = (2.0*alpha)/(1.0 + alpha*alpha*(dot_product(vec,vec)))
 
 ! compute the approximated Cayley transform
 approximated_cayley_transofrm(1:3,1) = &
-  (/1.0-coefficient*alpha*(V(3)*V(3) + V(2)*V(2)),&
-  coefficient*(V(3) + alpha*V(2)*V(1)),&
-  coefficient*(alpha*V(3)*V(1) - V(2))/)
+  (/1.0-coefficient*alpha*(vec(3)*vec(3) + vec(2)*vec(2)),&
+  coefficient*(vec(3) + alpha*vec(2)*vec(1)),&
+  coefficient*(alpha*vec(3)*vec(1) - vec(2))/)
 approximated_cayley_transofrm(1:3,2) = &
-  (/coefficient*(alpha*V(1)*V(2) - V(3)),&
-  1.0-coefficient*alpha*(V(3)*V(3) + V(1)*V(1)),&
-  coefficient*(alpha*V(3)*V(2) + V(1))/)
+  (/coefficient*(alpha*vec(1)*vec(2) - vec(3)),&
+  1.0-coefficient*alpha*(vec(3)*vec(3) + vec(1)*vec(1)),&
+  coefficient*(alpha*vec(3)*vec(2) + vec(1))/)
 approximated_cayley_transofrm(1:3,3) = &
-  (/coefficient*(alpha*V(1)*V(3) + V(2)),&
-  coefficient*(alpha*V(2)*V(3) - V(1)),1.0-&
-  coefficient*alpha*(V(2)*V(2) + V(1)*V(1))/)
+  (/coefficient*(alpha*vec(1)*vec(3) + vec(2)),&
+  coefficient*(alpha*vec(2)*vec(3) - vec(1)),1.0-&
+  coefficient*alpha*(vec(2)*vec(2) + vec(1)*vec(1))/)
 
 end function approximated_cayley_transofrm
 !---------------------------------------------------------------------------

@@ -60,6 +60,9 @@ module phys_module
   logical :: linear_run           !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
   logical :: export_for_nemec     !< Export data such that the NEMEC Code can reconstruct the same equilibrium?
   logical :: use_murge, use_murge_element ! Deprecated, code will stop if these input parameters are set to .true.
+  logical :: use_BLR_compression  !< Use Block-Low-Rank (BLR) compression in MUMPS / PaStiX 6 solvers
+  real*8  :: epsilon_BLR          !< Accuracy of BLR compression
+  logical :: just_in_time_BLR     !< Use Just-in-time strategy for BLR compression (speed optimized)
 
 #ifdef USE_HDF5
   ! for HDF5 diagnostics

@@ -342,6 +342,12 @@ required = 0
   write(*,*) 'WARNING: You are not using USE_FFTW=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_FFTW=1 in your Makefile.inc'
 #endif
+#ifndef USE_PASTIX6
+  if (use_pastix .and. use_BLR_compression) then
+    write(*,*) 'WARNING: PaStiX versions before 6.x do not support BLR compression.'
+    write(*,*) '  No compression will be used in this run.'
+  endif
+#endif
   
   ! --- Initialize live data file which will be filled during the code run
   if ( my_id == 0 ) call init_live_data()
@@ -592,6 +598,7 @@ required = 0
     if (my_id == 0) call DMUMPS(mumps_par)
 #endif
 #ifndef USE_PASTIX6
+    ! -- For PaStiX solver before version 6.x
     if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
     if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
 #endif
@@ -1172,21 +1179,25 @@ endif
 #endif
 
     elseif (use_pastix) then
+#ifndef USE_PASTIX6
+      ! -- For PaStiX solver before version 6.x
       pastix_iparm(2)     = 7                       ! Clean-up
       pastix_iparm(3)     = 7
 
       if (.not. gmres) then
-#ifndef USE_PASTIX6
          call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
               pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
       elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#else
-        call pastixFinalize(pastix_data)
-#endif
       endif
+#else
+      ! -- For PaStiX solver version 6.x
+      if (.not. gmres .or. ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) ) then
+        call pastixFinalize(pastix_data)
+      endif
+#endif
 
     elseif (use_wsmp) then
 

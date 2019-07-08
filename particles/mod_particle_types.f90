@@ -71,6 +71,8 @@ contains
       q = p%q
     type is (particle_gc)
       q = p%q
+    type is (particle_kinetic_relativistic)
+      q = p%q
     class default
       q = 0
     end select
@@ -132,6 +134,15 @@ contains
       class default
         ! the transformation from kinetic to kinetic_leapfrog could be done with a small error here
         p_out%v  = [0.d0, 0.d0, 0.d0]
+        p_out%q  = 0
+      end select
+    type is (particle_kinetic_relativistic)
+      select type (p_in => particle_in)
+      type is (particle_kinetic_relativistic)
+        p_out%p  = p_in%p
+        p_out%q  = p_in%q
+      class default
+        p_out%p  = [0.d0, 0.d0, 0.d0]
         p_out%q  = 0
       end select
     end select

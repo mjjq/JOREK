@@ -165,9 +165,7 @@ if (freeboundary_equil .and. num_ffprime) then            !if the ffprime profil
 
 end if
 
-if (.not. num_ffprime) then
-  FFprime_profile = FFprime_profile + FF_1
-endif
+FFprime_profile = FFprime_profile + FF_1
 
 return
 end subroutine FFprime

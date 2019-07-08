@@ -64,6 +64,7 @@ subroutine read_num_profiles(my_id)
       check_positive=.false.)
     FF_0 = num_ffprime_y0(1)
     FF_1 = num_ffprime_y0(num_ffprime_len)
+    num_ffprime_y0 = num_ffprime_y0 - FF_1
   end if
   
   num_d_perp = ( d_perp_file /= 'none' )

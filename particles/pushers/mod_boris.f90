@@ -21,7 +21,7 @@ contains
 !> See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details.
 !> This routine works in RZPhi coordinates
 pure subroutine boris_push_cylindrical(particle, m, E, B, dt)
-  use mod_pusher_tools only left_handed_cross_product
+  use mod_pusher_tools only: left_handed_cross_product
   type(particle_kinetic_leapfrog), intent(inout)  :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -67,7 +67,7 @@ end subroutine boris_push_cylindrical
 !> See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
 !> This routine works in a left-handed cartesian coordinate system (XYZ)
 pure subroutine boris_push_cartesian(particle, m, E, B, dt)
-  use mod_pusher_tools only right_handed_cross_product
+  use mod_pusher_tools only: right_handed_cross_product
   class(particle_kinetic_leapfrog), intent(inout)  :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -102,7 +102,7 @@ end subroutine boris_push_cartesian
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
 pure subroutine boris_initial_half_step_backwards_XYZ(particle, m, E, B, dt)
   use constants, only: EL_CHG, ATOMIC_MASS_UNIT
-  use mod_pusher_tools only right_handed_cross_product
+  use mod_pusher_tools only: right_handed_cross_product
   class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -123,7 +123,7 @@ end subroutine boris_initial_half_step_backwards_XYZ
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
 pure subroutine boris_initial_half_step_backwards_RZPhi(particle, m, E, B, dt)
   use constants, only: EL_CHG, ATOMIC_MASS_UNIT
-  use mod_pusher_tools only left_handed_cross_product
+  use mod_pusher_tools only: left_handed_cross_product
   class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -241,7 +241,7 @@ end function kinetic_leapfrog_to_kinetic
 !> Which can easily be adjusted to obtain the gc position from a kinetic position and velocity.
 function kinetic_to_gc(node_list, element_list, in, B, mass) result(out)
   use data_structure
-  use mod_pusher_tools only left_handed_cross_product
+  use mod_pusher_tools only: left_handed_cross_product
   use mod_find_rz_nearby
   type(type_node_list), intent(in)            :: node_list
   type(type_element_list), intent(in)         :: element_list
@@ -285,7 +285,7 @@ end function kinetic_to_gc
 function gc_to_kinetic(node_list, element_list, in, chi, B, mass) result(out)
   use constants
   use data_structure
-  use mod_pusher_tools only get_orthonormals,left_handed_cross_product
+  use mod_pusher_tools only: get_orthonormals,left_handed_cross_product
   use mod_find_rz_nearby
   type(type_node_list), intent(in)    :: node_list
   type(type_element_list), intent(in) :: element_list

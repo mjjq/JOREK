@@ -8,7 +8,7 @@ use mumps_module
 use global_distributed_matrix
 use mpi_mod
 use mod_clock
-use phys_module, only: use_BLR_compression, epsilon_BLR
+use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR
 
 implicit none
 

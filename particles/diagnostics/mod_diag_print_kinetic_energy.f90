@@ -66,7 +66,7 @@ end function boris_kinetic_energy
 !>   mass:     (real8) the particle mass
 !> outputs:
 !>   energy: (real8) the particle kinetic energy
-impure elemental function particle_relativistic_kinetic_energy(p,mass) result(energy)
+impure elemental function particle_relativistic_kinetic_energy(particle,mass) result(energy)
   use constants, only: SPEED_OF_LIGTH !< speed of light value
   ! declare input variables
   class(particle_kinetic_relativistic),intent(in) :: particle !< relativistic particle

@@ -63,14 +63,14 @@ do while (.not. sim%stop_now)
     do j=1,size(sim%groups(i)%particles)
       ! 7.3 copy the particle j in the i-th groups to the dummy structure particle
       !< get particle base attributes from sim%groups(i)%particles(j)
-      particle = sim%groups(i)%particles(j)
+      call copy_particle(particle,sim%groups(i)%particles(j))
       do k=1,n_steps
         ! 7.4 integrating the particle trajectory via boris scheme
         call boris_push_cartesian(particle, m=sim%groups(i)%mass, E=[0d0,0d0,0d0], B=[0d0,0d0,1d0], dt=timesteps(i))
       end do ! steps
       ! 7.5 copy the particle final state at the j-th position i-th particle list
       !< set particle base attributes to sim%groups(i)%particles(j)  
-      sim%groups(i)%particles(j) = particle
+      call copy_particle(sim%groups(i)%particles(j),particle)
     end do ! particles
     !$omp end parallel do
   end do ! groups

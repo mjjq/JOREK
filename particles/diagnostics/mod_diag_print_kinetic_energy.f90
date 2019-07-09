@@ -56,8 +56,8 @@ impure elemental function boris_kinetic_energy(particle) result(energy)
 end function boris_kinetic_energy
 
 !> This function computes the kinetic energy of a realtivistic
-!> particle in AMU*\(\frac{m}{s}\)^2 which is equal to:
-!> E_{kin} = c\[\sqrt{\(mc\)^2 + p^2}-mc\]
+!> particle in eV which is equal to:
+!> E_{kin} = c\[\sqrt{\(mc\)^2 + p^2}-mc\]/q_proton
 !> The impure elemental declaration is preserved for consistency with
 !> boris_kinetic_energy() function despite I hardly belive this will make any
 !> difference in terms of performances due to the lack of data continuity.
@@ -65,9 +65,9 @@ end function boris_kinetic_energy
 !>   particle: (particle_kinetic_relativistic) a relativistic kinetic particle type
 !>   mass:     (real8) the particle mass
 !> outputs:
-!>   energy: (real8) the particle kinetic energy
+!>   energy: (real8) the particle kinetic energy in eV
 impure elemental function particle_relativistic_kinetic_energy(particle,mass) result(energy)
-  use constants, only: SPEED_OF_LIGTH !< speed of light value
+  use constants, only: SPEED_OF_LIGTH,ATOMIC_MASS_UNIT,EL_CHG
   ! declare input variables
   class(particle_kinetic_relativistic),intent(in) :: particle !< relativistic particle
   real(kind=8),intent(in) :: mass !< particle mass
@@ -75,8 +75,9 @@ impure elemental function particle_relativistic_kinetic_energy(particle,mass) re
   real(kind=8) :: energy !< particle kinetic energy
 
   ! compute the relativistic particle kinetic energy
-  energy = SPEED_OF_LIGTH*(sqrt((mass*SPEED_OF_LIGTH)*(mass*SPEED_OF_LIGTH)+&
-  dot_product(particle%p,particle%p))-mass*SPEED_OF_LIGTH)  
+  energy = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*(sqrt((mass*SPEED_OF_LIGTH)&
+  *(mass*SPEED_OF_LIGTH)+dot_product(particle%p,particle%p))-&
+  mass*SPEED_OF_LIGTH)/EL_CHG  
 
 end function
 

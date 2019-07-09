@@ -6,7 +6,6 @@
 # Date: 2018-01-15
 # Author: Daan van Vugt, TU Eindhoven
 #
-
 set -u
 
 function usage() {
@@ -15,8 +14,9 @@ function usage() {
   echo ""
   echo "  <file/dir> A file or directory containing FRUIT test (files)."
   echo "  -h         Print this usage information and exit"
-  echo "  -k         Keep the generated test executable (for running in GDB)"
+  echo "  -k         Keep the generated test executable and source file (for running in GDB)"
   echo "  -t <type>  Type of output. Either none, junit or xml (default none)"
+  echo "  -s <name>  Test only a single subroutine if specified"
   echo ""
   echo "The executable created will have a temporary file name."
 }
@@ -27,8 +27,9 @@ keep_executable=0
 xml=""
 junit=0
 outfile="test"
+test_only=""
 
-while getopts ":hkt:" opt; do
+while getopts ":hkt:s:" opt; do
   case $opt in
     h)
       usage
@@ -54,6 +55,9 @@ while getopts ":hkt:" opt; do
           ;;
       esac
       ;;
+    s)
+      test_only="$OPTARG"
+      ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
       usage
@@ -74,9 +78,9 @@ function set_outfile() {
 }
 
 function cleanup() {
-  rm -f "$outfile.f90" "$outfile.mods" "$outfile.tests"
+  rm -f "$outfile.mods" "$outfile.tests" "$outfile.setup" "$outfile.teardown"
   if [ "$keep_executable" -eq 0 ]; then
-    rm -f "$outfile"
+    rm -f "$outfile" "$outfile.f90"
   else
     echo "Test executable saved in $outfile"
   fi
@@ -101,12 +105,12 @@ function scanfile() {
     fi
   fi
   # Look for any subroutines called setup_* or *_setup
-  grep -o 'subroutine setup_[^ ]*\|subroutine [^ ]*_setup' "$file" >> $outfile.tests
+  grep -o 'subroutine setup_[^ ]*\|subroutine [^ ]*_setup' "$file" >> $outfile.setup
   # Look for any subroutines called test_* or *_test
   # might contain duplicates due to end subroutine. Remove those later
   grep -o 'subroutine test_[^ ]*' "$file" >> $outfile.tests
   # Look for any subroutines called teardown_* or *_teardo
-  grep -o 'subroutine teardown_[^ ]*\|subroutine [^ ]*_teardown' "$file" >> $outfile.tests
+  grep -o 'subroutine teardown_[^ ]*\|subroutine [^ ]*_teardown' "$file" >> $outfile.teardown
 
   # Look for teardown subroutine (global, can be only one)
   if grep -q 'subroutine \bteardown\b' "$file"; then
@@ -123,9 +127,16 @@ function writetest() {
   if [ $has_setup -eq 1 ]; then
     echo "call setup" >> $outfile.f90
   fi
-  uniq $outfile.tests | sed -e 's/subroutine \([^ ]*\)/call run_test_case(\1,"\1")/g' >> $outfile.f90
+  sed -e 's/subroutine/call/' < $outfile.setup >> $outfile.f90
+  if [ ! -z "$test_only" ]; then
+    # Filter out the subroutine if we wish to test only one
+    uniq $outfile.tests | grep -F "subroutine $test_only" | sed -e 's/subroutine \([^ ]*\)/call run_test_case(\1,"\1")/g' >> $outfile.f90
+  else
+    uniq $outfile.tests | sed -e 's/subroutine \([^ ]*\)/call run_test_case(\1,"\1")/g' >> $outfile.f90
+  fi
   echo "call fruit_summary$xml" >> $outfile.f90
   echo "call fruit_finalize" >> $outfile.f90
+  sed -e 's/subroutine/call/' < $outfile.teardown >> $outfile.f90
   if [ $has_teardown -eq 1 ]; then
     echo "call teardown" >> $outfile.f90
   fi

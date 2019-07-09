@@ -2,8 +2,16 @@ module solve_mat_n
 
 contains
   subroutine pastix_bind_threads(my_id)
-
+  
     use pastix_module
+    
+    implicit none
+
+#ifdef USE_PASTIX
+#include "pastix_fortran.h"
+#else
+#include "no_pastix_fortran.h"
+#endif
 
     integer, intent(in) :: my_id
     integer*4, dimension(1:pastix_nthrd) :: thread_map
@@ -26,42 +34,6 @@ contains
     use tr_module
     use mod_parameters
     use mumps_module
-    use murge_module, only: API_NO, IPARM_MODIFY_PARAMETER, MURGE_EPSILON,     &
-         &                  MURGE_RPARAM_EPSILON_ERROR, MURGE_IPARAM_BASEVAL,  &
-         &                  MURGE_SYM, MURGE_IPARAM_SYM, MURGE_PIVOT,          &
-         &                  DPARM_EPSILON_MAGN_CTRL, IPARM_PID, MURGE_AMALG,   &
-         &                  IPARM_AMALGAMATION_LEVEL, MURGE_RICAR,             &
-         &                  IPARM_INCOMPLETE, MURGE_ILUK, IPARM_LEVEL_OF_FILL, &
-         &                  MURGE_ILUK, IPARM_LEVEL_OF_FILL, MURGE_NTHRD,      &
-         &                  IPARM_THREAD_NBR, MURGE_ITER, IPARM_ITERMAX,       &
-         &                  API_YES, IPARM_MATRIX_VERIFICATION,                &
-         &                  API_VERBOSE_NO, IPARM_VERBOSE,                     &
-         &                  MURGE_SOLVER_PASTIX, MURGE_SOLVER, murge_id,       &
-         &                  use_murge, MURGE_SUCCESS, DPARM_MEM_MAX,           &
-         &                  API_TASK_SOLVE, API_TASK_NUMFACT,                  &
-         &                  MURGE_ASSEMBLY_OVW, API_TASK_ANALYSE,              &
-         &                  API_TASK_ORDERING, IPARM_DOF_NBR,                  &
-         &                  DPARM_EPSILON_REFINEMENT, IPARM_SYM,               &
-         &                  IPARM_RHS_MAKING, IPARM_FACTORIZATION,             &
-#ifdef WORLDWAR2
-         &                  API_THREAD_MULTIPLE, API_THREAD_FUNNELED,          &
-#endif
-         &                  IPARM_THREAD_COMM_MODE,                            &
-         &                  IPARM_END_TASK, API_TASK_INIT, IPARM_START_TASK,   &
-         &                  IPARM_BINDTHRD, API_BIND_TAB
-#ifdef USE_MURGE
-    use murge_module, only : MURGE_MatrixReset
-    USE murge_module, only : MURGE_Initialize
-    USE murge_module, only : MURGE_GetSolver
-    USE murge_module, only : MURGE_SetDefaultOptions
-    USE murge_module, only : MURGE_SetOptionINT
-    USE murge_module, only : MURGE_SetOptionREAL
-    USE murge_module, only : MURGE_SetCommunicator
-    USE murge_module, only : MURGE_GraphGlobalCSC
-    USE murge_module, only : MURGE_MatrixGlobalCSC
-    USE murge_module, only : MURGE_SetGlobalRhs
-    USE murge_module, only : MURGE_GetGlobalSolution
-#endif
     use wsmp_module
     use pastix_module
     use global_distributed_matrix
@@ -69,9 +41,14 @@ contains
     use mod_clock
     use phys_module, only : index_now
     use mod_coicsr
-    !$ use omp_lib
+    
     implicit none
 
+#ifdef USE_PASTIX
+#include "pastix_fortran.h"
+#else
+#include "no_pastix_fortran.h"
+#endif
 #include "r3_info.h"
 
     integer, intent(in) :: my_id
@@ -154,17 +131,22 @@ contains
       if (use_mumps) then
 #ifdef USE_MUMPS
 
-        mumps_par%JOB = 1                                 ! Analysis, only needed when grid has changed
+        mumps_par%JOB = 1                                  ! Analysis, only needed when grid has changed
 
-        mumps_par%icntl(7)  = 4                            ! reorderign option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
+        mumps_par%icntl(7)  = mumps_ordering               ! ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS), default: 7
         mumps_par%icntl(8)  = 7                            ! row and column scaling
         mumps_par%icntl(14) = 30                           ! MAXS
         mumps_par%icntl(18) = 0
 
+        if (use_mumps_BLR) then
+          mumps_par%icntl(35) = 1                          ! Block-low-rank (BLR) compression. 0: off (default), 1: automatic, 2: factorisation and solution, 3: only factorisation
+          mumps_par%cntl(7) = mumps_BLR_eps                ! Accuracy of BLR approximation
+        endif
+
         call DMUMPS(mumps_par)
 
 #endif
-      else ! .not. use_mumps --> use_pastix or use_murge or use_wsmp
+      else ! .not. use_mumps --> use_pastix or use_wsmp
 
         if (my_id_n .eq. 0) then           
 
@@ -272,46 +254,7 @@ contains
 
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
-            if (use_murge) then
-
-#ifdef USE_MURGE
-              CALL MURGE_Initialize(n_tor, ierr)
-              if (ierr /= MURGE_SUCCESS) then 
-                write (*,*) "ERROR in MURGE_Initialize"; 
-                STOP
-              end if
-              murge_id = 0
-              write (*,*) "murge_id : ", murge_id
-              CALL MURGE_GetSolver(murge_solver, ierr)
-              IF (murge_solver == MURGE_SOLVER_PASTIX) THEN
-                CALL MURGE_SetDefaultOptions(murge_id, 0, ierr)
-                CALL MURGE_SetOptionINT(murge_id, IPARM_VERBOSE,             API_VERBOSE_NO,  ierr)
-                CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, API_YES,         ierr)
-                CALL MURGE_SetOptionINT(murge_id, IPARM_ITERMAX,             murge_iter,      ierr) ! refinement : max number of iterations
-                !    CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_DOF     , n_tor * n_var,  ierr)   ! degrees of freedom per node (not correct)
-                CALL MURGE_SetOptionINT(murge_id, IPARM_THREAD_NBR,          murge_nthrd,     ierr)
-                CALL MURGE_SetOptionINT(murge_id, IPARM_LEVEL_OF_FILL,       murge_iluk,      ierr)
-                CALL MURGE_SetOptionINT(murge_id, IPARM_INCOMPLETE,          murge_ricar,     ierr)
-                CALL MURGE_SetOptionINT(murge_id, IPARM_AMALGAMATION_LEVEL,  murge_amalg,     ierr)
-                CALL MURGE_SetOptionINT(murge_id, IPARM_MATRIX_VERIFICATION, API_YES, ierr)
-                CALL MURGE_SetOptionINT(murge_id, IPARM_PID,                 murge_id, ierr);
-
-                CALL MURGE_SetOptionREAL(murge_id, DPARM_EPSILON_MAGN_CTRL,    murge_pivot,   ierr)
-
-              ENDIF
-
-
-              CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_SYM,         murge_sym,   ierr)
-              CALL MURGE_SetOptionINT(murge_id, MURGE_IPARAM_BASEVAL,     mumps_par%jcn(1),   ierr)
-
-              CALL MURGE_SetOptionREAL(murge_id, MURGE_RPARAM_EPSILON_ERROR, murge_epsilon, ierr)
-              CALL MURGE_SetCommunicator(murge_id, MPI_COMM_N, ierr)
-              write (*,*) murge_id, "MPI_COMM_N", MPI_COMM_N
-#else
-              print *, "Binary built without murge"
-              call abort()
-#endif
-            elseif (use_pastix) then
+            if (use_pastix) then
 
               call pastix_init_num_threads(my_id)
 
@@ -380,23 +323,7 @@ contains
 
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
-            if (use_murge) then
-
-              WRITE(*,*) '***********************************'
-              WRITE(*,*) '* analyse Murge                   *'
-              WRITE(*,*) '***********************************'
-#ifdef USE_MURGE
-              CALL MURGE_GraphGlobalCSC(murge_id, mumps_par%n, mumps_par%jcn, mumps_par%irn, -1, ierr)
-#else
-              print *, "Binary built without murge"
-              call abort()
-#endif
-              if (ierr /= MURGE_SUCCESS) then 
-                write (*,*) "ERROR in MURGE_GraphGlobalCSC"; 
-                STOP
-              end if
-
-            else if (use_pastix) then
+            if (use_pastix) then
               pastix_iparm(IPARM_THREAD_NBR+increment) = pastix_nthrd
               pastix_iparm(IPARM_START_TASK+increment) = API_TASK_ORDERING
               pastix_iparm(IPARM_END_TASK+increment)   = API_TASK_ANALYSE
@@ -440,27 +367,7 @@ contains
 #endif
       elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
-        if (use_murge) then
-          WRITE(*,*) '***********************************'
-          WRITE(*,*) '* Matrix Murge                    *'
-          WRITE(*,*) '***********************************'
-#ifdef USE_MURGE
-          CALL MURGE_MatrixGlobalCSC(murge_id, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
-            -1, MURGE_ASSEMBLY_OVW, murge_sym, ierr)
-#else
-          print *, "Binary built without murge"
-          call abort()
-#endif
-          if (ierr /= MURGE_SUCCESS) then 
-            write (*,*) "ERROR in MURGE_MatrixGlobalCSC"; 
-            STOP
-          end if
-
-          call tr_deallocatep(mumps_par%A,"special:mumps_par%A",CAT_DMATRIX)
-          call tr_deallocatep(mumps_par%irn,"special:mumps_par%irn",CAT_DMATRIX)
-          call tr_deallocatep(mumps_par%jcn,"special:mumps_par%jcn",CAT_DMATRIX)
-
-        else if (use_pastix) then
+        if (use_pastix) then
 
           pastix_iparm(IPARM_THREAD_NBR+increment) = pastix_nthrd
           pastix_iparm(IPARM_START_TASK+increment) = API_TASK_NUMFACT
@@ -511,24 +418,7 @@ contains
 #endif
     elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
-      if (use_murge) then
-#ifdef USE_MURGE
-        call tr_locvnorms("smn_rhs",mumps_par%rhs,mumps_par%n)
-        CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, 0,MURGE_ASSEMBLY_OVW , ierr)
-        if (ierr /= MURGE_SUCCESS) then 
-          write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
-          STOP
-        end if
-        CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, 0, ierr)
-        if (ierr /= MURGE_SUCCESS) then 
-          write (*,*) "ERROR in MURGE_GetGlobalSolution"; 
-          STOP
-        end if
-#else
-        print *, "Binary built without murge"
-        call abort()
-#endif
-      else if (use_pastix) then
+      if (use_pastix) then
 
         pastix_iparm(IPARM_THREAD_NBR+increment) = pastix_nthrd
         pastix_iparm(IPARM_START_TASK+increment) = API_TASK_SOLVE
@@ -607,9 +497,7 @@ contains
       call tr_locvnorms("smn_res",mumps_par%rhs,mumps_par%n)
       call tr_locvnorms("smn_delta",deltas,ndof_glob)
     endif
-    if (.not. use_murge) then
-      call tr_set_precondmem(pastix_dparm(DPARM_MEM_MAX+increment)) 
-    end if
+    call tr_set_precondmem(pastix_dparm(DPARM_MEM_MAX+increment)) 
     call tr_print_memsize("AfterSolveN")
     call r3_info_end (r3_info_index_0)         ! timing
     return

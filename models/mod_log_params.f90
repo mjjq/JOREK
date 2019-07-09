@@ -9,11 +9,11 @@ contains
 subroutine log_parameters(my_id, short)
 
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps
-use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_cuda_nbr
+use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
 use wsmp_module,   only: use_wsmp
 use vacuum
+use gauss, only: n_gauss
 
 implicit none
 
@@ -83,11 +83,8 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
-  write(*,'(1x,a)',advance='no') ' USE_MURGE           : '
 #ifdef USE_MURGE
-  write(*,*) 'on'
-#else
-  write(*,*) 'off'
+  write(*,*) 'WARNING: USE_MURGE IS NOT SUPPORTED ANY MORE'
 #endif
 
   write(*,'(1x,a)',advance='no') ' USE_HIPS            : '
@@ -144,6 +141,13 @@ if (my_id == 0) then
   write(*,*) 'on'
 #else
   write(*,*) 'off'
+#endif
+
+  write(*,'(1x,a)',advance='no') ' GAUSS_ORDER : '
+#ifdef GAUSS_ORDER
+  write(*,*) 'Preprocessor flag has been set! Thus, n_gauss=', n_gauss
+#else
+  write(*,*) 'Preprocessor flag not set. Thus, n_gauss=', n_gauss
 #endif
 
   write(*,*)
@@ -214,6 +218,7 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'nstep_n               ', nstep_n
   write(*,LOGI_FMT) 'eta_T_dependent       ', eta_T_dependent
   write(*,REAL_FMT) 'eta                   ', eta
+  write(*,REAL_FMT) 'eta_ohmic             ', eta_ohmic
   write(*,LOGI_FMT) 'visco_T_dependent     ', visco_T_dependent
   write(*,REAL_FMT) 'visco                 ', visco
   write(*,REAL_FMT) 'visco_par             ', visco_par
@@ -342,8 +347,8 @@ if (my_id == 0) then
     end if
     write(*,REAL_FMT) 'heatsource_e           ', heatsource_e
     write(*,REAL_FMT) 'heatsource_i           ', heatsource_i
-    write(*,REAL_FMT) 'K_e_par                ', K_e_par
-    write(*,REAL_FMT) 'K_i_par                ', K_i_par
+    write(*,REAL_FMT) 'ZK_e_par               ', ZK_e_par
+    write(*,REAL_FMT) 'ZK_i_par               ', ZK_i_par
   end if
 
   if ( .not. num_ffprime ) then
@@ -519,10 +524,6 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'use_mumps             ', use_mumps
   write(*,LOGI_FMT) 'use_wsmp              ', use_wsmp
   write(*,LOGI_FMT) 'use_pastix            ', use_pastix
-  write(*,LOGI_FMT) 'use_murge             ', use_murge
-  write(*,LOGI_FMT) 'use_murge_element     ', use_murge_element
-  write(*,LOGI_FMT) 'murge_with_starpu     ', murge_with_starpu
-  write(*,INTG_FMT) 'murge_cuda_nbr        ', murge_cuda_nbr
   write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot
   write(*,INTG_FMT) 'pastix_maxthrd        ', pastix_maxthrd
@@ -534,6 +535,14 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
+
+  if (use_mumps) then
+    write(*,INTG_FMT) 'mumps_ordering        ', mumps_ordering
+    write(*,LOGI_FMT) 'use_mumps_BLR         ', use_mumps_BLR
+    if (use_mumps_BLR) then
+      write(*,REAL_FMT) 'mumps_BLR_eps         ', mumps_BLR_eps
+    endif
+  endif
 
   write(*,INTG_FMT) 'n_pfc                 ', n_pfc
   if ( n_pfc > 0 ) then

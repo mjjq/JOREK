@@ -43,8 +43,8 @@ contains
   !*   element_list - List of all elements                                       *
   !*   local_elms   - List of local elements                                     *
   !*   n_local_elms - Number of local elements                                   *
-  !*   index_min    - Minimal index of local elements (not with murge assembly)  *
-  !*   index_max    - Maximal index of local elements (not with murge assembly)  *
+  !*   index_min    - Minimal index of local elements                            *
+  !*   index_max    - Maximal index of local elements                            *
   !*   xpoint2      -                                                            *
   !*   xcase2       -                                                            *
   !*   psi_axis     -                                                            *
@@ -52,9 +52,6 @@ contains
   !*   Z_xpoint     -                                                            *
   !*   gmres        - boolean indicating if we are using GMRES method            *
   !*   solve_only   - Indicate if we want to perform only solve                  *
-  !*                                                                             *
-  !* Authors:                                                                    *
-  !*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
   !*                                                                             *
   !*******************************************************************************
   subroutine boundary_conditions(my_id, node_list, element_list, bnd_node_list,           &
@@ -71,11 +68,7 @@ contains
                            RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ,    &
                            psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ,            &
                            t_now, RMP_growth_rate, RMP_ramp_up_time,  &
-                           RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, n_wall_blocks
-    USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN_WRAPPER => MURGE_ASSEMBLYBEGIN,     &
-         use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
-         MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
-         MURGE_SUCCESS, murge_add_one_entry, vertex_is_local
+                           RMP_start_time, tstep, RMP_har_cos, RMP_har_sin
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
@@ -165,38 +158,6 @@ contains
     ! --- Retrieve RMP profiles (END)
     ! -------------------------------
     
-    ! --- when we use murge assembly we first count entries then we had them.
-    if (use_murge .and. use_murge_element) then
-      loop_nbr   = 2
-      cnt	 = 0
-      cnt_prod   = 0
-      only_count = .true.
-    else
-    ! --- No need to do 2 loops when we build irn_glob, jcn_glob, A_glob.
-      loop_nbr   = 1
-      only_count = .false.
-    end if
-
-    ! --- Main loop over MURGE (if used)
-    do loop = 1, loop_nbr
-
-#ifdef USE_MURGE
-      if (loop == 2) then
-        only_count = .false.
-        write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
-        if (.not. solve_only) then
-          CALL MURGE_ASSEMBLYBEGIN( murge_id, murge_global_n, cnt,	       &
-               &		    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,    &
-               &		    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-        endif
-        if (gmres) then
-          CALL MURGE_ASSEMBLYBEGIN( murge_id_prod, murge_global_n_prod, cnt_prod, &
-               &		    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,	  &
-               &		    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-        endif
-      endif
-#endif
-
       ! --- Loop on each element
       do i=1, n_local_elms
         ielm = local_elms(i)
@@ -446,17 +407,6 @@ contains
           endif
         enddo
       enddo
-#ifdef USE_MURGE
-       if (loop == 2) then
-          if (.not. solve_only) then
-             CALL MURGE_ASSEMBLYEND(murge_id, ierr)
-          end if
-          if (gmres) then
-             CALL MURGE_ASSEMBLYEND(murge_id_prod, ierr)
-          end if
-       end if
-#endif
-    end do
     return
   end subroutine boundary_conditions
   
@@ -601,7 +551,6 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
-    use murge_module, only : use_murge, use_murge_element
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     
     implicit none
@@ -650,13 +599,11 @@ contains
     	 index_node, k_psi, i_tor,          &
     	 index_node, k_psi, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
     if (.not. only_count) then
       call boundary_conditions_add_RHS(     &
     	   index_node, k_psi, i_tor, 	    &
-    	   use_murge, use_murge_element,    &
     	   index_min, index_max,	    &
     	   RHS_loc, rhs_tmp)
     endif
@@ -669,13 +616,11 @@ contains
     	 index_node2, k_psi, i_tor,         &
     	 index_node2, k_psi, i_tor,         &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
     if (.not. only_count) then
       call boundary_conditions_add_RHS(     &
     	   index_node2, k_psi, i_tor,	    &
-    	   use_murge, use_murge_element,    &
     	   index_min, index_max,	    &
     	   RHS_loc, rhs_tmp)
     endif
@@ -698,7 +643,6 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
-    use murge_module, only : use_murge, use_murge_element, murge_add_one_entry
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     
     implicit none
@@ -726,7 +670,6 @@ contains
          index_node, k_var, i_tor,          &
          index_node, k_var, i_tor,          &
          lhs_tmp, solve_only, gmres,        &
-         use_murge, use_murge_element,      &
          cnt, cnt_prod, only_count,         &
          index_min, index_max)
 
@@ -735,7 +678,6 @@ contains
          index_node2, k_var, i_tor,         &
          index_node2, k_var, i_tor,         &
          lhs_tmp, solve_only, gmres,        &
-         use_murge, use_murge_element,      &
          cnt, cnt_prod, only_count,         &
          index_min, index_max)
     
@@ -757,7 +699,6 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: GAMMA, tauIC, central_density, mu_zero
-    use murge_module, only : use_murge, use_murge_element, murge_add_one_entry
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     
     implicit none
@@ -836,7 +777,6 @@ contains
     	 index_node, k_Vpar, i_tor,	    &
     	 index_node, k_Vpar, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -845,7 +785,6 @@ contains
     	 index_node,  k_Vpar, i_tor,	    &
     	 index_node2, k_psi,  i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -854,7 +793,6 @@ contains
     	 index_node,  k_Vpar, i_tor,	    &
     	 index_node2, k_u,    i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -863,7 +801,6 @@ contains
     	 index_node,  k_Vpar, i_tor,	    &
     	 index_node,  k_rho,  i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -872,7 +809,6 @@ contains
     	 index_node,  k_Vpar, i_tor,	    &
     	 index_node2, k_rho,  i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -881,7 +817,6 @@ contains
     	 index_node,  k_Vpar, i_tor,	    &
     	 index_node,  k_Ti,   i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -890,7 +825,6 @@ contains
     	 index_node,  k_Vpar, i_tor,	    &
     	 index_node2, k_Ti,   i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -902,7 +836,6 @@ contains
       endif
       call boundary_conditions_add_RHS(       &
     	   index_node, k_Vpar, i_tor,	      &
-    	   use_murge, use_murge_element,      &
     	   index_min, index_max,	      &
     	   RHS_loc, rhs_tmp)
     endif
@@ -913,7 +846,6 @@ contains
     	 index_node2, k_Vpar, i_tor,	    &
     	 index_node2, k_Vpar, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -922,7 +854,6 @@ contains
     	 index_node2, k_Vpar, i_tor,	    &
     	 index_node,  k_Ti,   i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -931,7 +862,6 @@ contains
     	 index_node2, k_Vpar, i_tor,	    &
     	 index_node2, k_Ti,   i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -943,7 +873,6 @@ contains
       endif
       call boundary_conditions_add_RHS(       &
     	   index_node2, k_Vpar, i_tor,	      &
-    	   use_murge, use_murge_element,      &
     	   index_min, index_max,	      &
     	   RHS_loc, rhs_tmp)
     endif
@@ -971,7 +900,6 @@ contains
     use data_structure
     use global_distributed_matrix
     use phys_module, only: GAMMA, tauIC, central_density, mu_zero, F0, FF_0
-    use murge_module, only : use_murge, use_murge_element, murge_add_one_entry
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     
     implicit none
@@ -1026,7 +954,6 @@ contains
     	 index_node, k_u, i_tor,	    &
     	 index_node, k_u, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -1035,7 +962,6 @@ contains
     	 index_node, k_u,  i_tor,	    &
     	 index_node, k_Ti, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -1047,7 +973,6 @@ contains
       endif
       call boundary_conditions_add_RHS(       &
     	   index_node, k_u, i_tor,	      &
-    	   use_murge, use_murge_element,      &
     	   index_min, index_max,	      &
     	   RHS_loc, rhs_tmp)
     endif
@@ -1058,7 +983,6 @@ contains
     	 index_node2, k_u, i_tor,	    &
     	 index_node2, k_u, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -1067,7 +991,6 @@ contains
     	 index_node2, k_u, i_tor,	    &
     	 index_node2, k_Ti, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
-    	 use_murge, use_murge_element,      &
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max)
 
@@ -1079,7 +1002,6 @@ contains
       endif
       call boundary_conditions_add_RHS(       &
     	   index_node2, k_u, i_tor,	      &
-    	   use_murge, use_murge_element,      &
     	   index_min, index_max,	      &
     	   RHS_loc, rhs_tmp)
     endif

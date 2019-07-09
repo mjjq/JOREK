@@ -3,7 +3,6 @@ subroutine gmres_driver(my_id,my_id_n,i_tor,n_tor,MPI_COMM_N,MPI_COMM_MASTER,ite
 
 use tr_module 
 use mumps_module
-use murge_module
 use global_distributed_matrix
 use mpi_mod
 use mod_clock

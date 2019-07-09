@@ -5,7 +5,7 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only: tokamak_device, n_ext, n_wall_blocks, n_wall_block_points_max, &
+use phys_module, only: tokamak_device, n_ext_block, n_wall_blocks, n_wall_block_points_max, &
                        n_block_points_left, R_block_points_left, Z_block_points_left, &
                        n_block_points_right, R_block_points_right, Z_block_points_right, xcase, &
                        n_limiter, R_limiter, Z_limiter
@@ -496,15 +496,15 @@ enddo
 
 
 if (.not. attached) then
-  n_seg = n_ext(i_ext)
+  n_seg = n_ext_block(i_ext)
 else
   if (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) then
-    if (n_ext(i_ext) .le. n_seg_prev+2) then 
+    if (n_ext_block(i_ext) .le. n_seg_prev+2) then 
       length_tmp  = (1.d0 - seg_prev(n_seg_prev-1)) * length_prev
       length_find = length_left - length_prev
       n_seg = n_seg_prev + int(length_find/length_tmp) + 1
     else
-      n_seg = n_ext(i_ext)
+      n_seg = n_ext_block(i_ext)
     endif
   elseif (n_block_points_left(i_ext) .eq. n_block_points_right(i_ext-1)) then
     n_seg = n_seg_prev
@@ -1018,7 +1018,7 @@ do i = i_start,n_nodes
   enddo
   ! --- In case you know you want a specific extension beyond the previous patch
   if (attached) then
-    if ( (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) .and. (n_ext(i_ext) .gt. n_seg_prev+2) ) then
+    if ( (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) .and. (n_ext_block(i_ext) .gt. n_seg_prev+2) ) then
       do j=1,n_seg
         seg(j) = seg(j) + real(i-1)/real(n_nodes-1) * (seg_new(j) - seg(j))
       enddo

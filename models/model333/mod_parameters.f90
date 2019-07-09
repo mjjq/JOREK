@@ -23,6 +23,6 @@ module mod_parameters
   !> Names of the physical variables
   character(len=11) :: variable_names(n_var) =                       &
     (/ 'Flux       ','Potential  ','Current    ','Vorticity  ',      &
-       'Density    ','Ions_Temp  ','V_parallel '/)
+       'Density    ','Temperature','V_parallel '/)
  
 end module mod_parameters

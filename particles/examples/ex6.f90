@@ -61,7 +61,7 @@ do while (.not. sim%stop_now)
     !$omp parallel do default(private) shared (i,n_steps,timesteps,sim)
     do j=1,size(sim%groups(i)%particles)
       ! 7.5 copy the i-th particle in particle
-      call copy_particle(particle,sim%groups(i)%particles(j)) 
+      particle = sim%groups(i)%particles(j) 
       ! 7.6 loop on the time steps
       do k=1,n_steps
           ! 7.7 integrate via volume preserving algorithm
@@ -69,7 +69,7 @@ do while (.not. sim%stop_now)
                E=[0.d0,0.d0,0.d0],B=[0.d0,0.d0,1.d0],dt=timesteps(i))
       enddo !< time steps
       ! 7.8 copy back the particle into particle groups
-      call copy_particle(sim%groups(i)%particles(j),particle)
+      sim%groups(i)%particles(j) = particle
     enddo !< particles
     !$omp end parallel do
   enddo !< groups

@@ -8,6 +8,7 @@ private
 !> public procedures
 public get_orthonormals
 public left_handed_cross_product, right_handed_cross_product
+public vector_transform_RZPHI_to_XYZ,vector_transform_XYZ_to_RZPHI
 public cayley_transform,approximated_cayley_transform
 contains
 
@@ -70,7 +71,10 @@ pure function vector_transform_RZPHI_to_XYZ(phi,a) result(b)
   ! declare output variables
   real(kind=8), dimension(3), intent(in) :: b
   ! declare internal variables
-  real(kind=8),dimension(2) :: sincosphi=(/sin(phi),cos(phi)/)
+  real(kind=8),dimension(2) :: sincosphi
+
+  ! computing sinus and cosinus
+  sincosphi = (/sin(phi),cos(phi)/)
 
   b(1) = a(1)*sincosphi(2) - a(3)*sincosphi(1) 
   b(2) = -1.d0*(a(1)*sincosphi(1) + a(3)*sincosphi(2))
@@ -88,7 +92,10 @@ pure function vector_transform_XYZ_to_RZPHI(phi,a) result(b)
   ! declare output variables
   real(kind=8), dimension(3), intent(in) :: b
   ! declare internal variables
-  real(kind=8),dimension(2) :: sincosphi=(/sin(phi),cos(phi)/)
+  real(kind=8),dimension(2) :: sincosphi
+
+  ! computing sinus and cosinus
+  sincosphi = (/sin(phi),cos(phi)/)
 
   b(1) = a(1)*sincosphi(2) - a(2)*sincosphi(1) 
   b(2) = a(3)

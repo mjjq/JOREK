@@ -69,7 +69,7 @@ pure function vector_transform_RZPHI_to_XYZ(phi,a) result(b)
   real(kind=8), intent(in) :: phi
   real(kind=8), dimension(3), intent(in) :: a
   ! declare output variables
-  real(kind=8), dimension(3), intent(in) :: b
+  real(kind=8), dimension(3) :: b
   ! declare internal variables
   real(kind=8),dimension(2) :: sincosphi
 
@@ -90,7 +90,7 @@ pure function vector_transform_XYZ_to_RZPHI(phi,a) result(b)
   real(kind=8), intent(in) :: phi
   real(kind=8), dimension(3), intent(in) :: a
   ! declare output variables
-  real(kind=8), dimension(3), intent(in) :: b
+  real(kind=8), dimension(3) :: b
   ! declare internal variables
   real(kind=8),dimension(2) :: sincosphi
 

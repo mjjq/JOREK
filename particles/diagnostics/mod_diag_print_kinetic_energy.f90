@@ -49,6 +49,10 @@ end subroutine do_print_kinetic_energy
 !>
 !> if there are any problems, it can be removed along with the simd instruction
 !> The speed improvements of this still have to be tested
+!>
+!> Probably this is a bug because if a function has to be used
+!> within a SIMD region it must be declared to be SIMD compatible 
+!> with the pragma: !$omp declare simd (options)
 impure elemental function boris_kinetic_energy(particle) result(energy)
   class(particle_kinetic_leapfrog), intent(in) :: particle
   real*8 :: energy
@@ -58,9 +62,13 @@ end function boris_kinetic_energy
 !> This function computes the kinetic energy of a realtivistic
 !> particle in eV which is equal to:
 !> E_{kin} = c\[\sqrt{\(mc\)^2 + p^2}-mc\]/q_proton
+!>
 !> The impure elemental declaration is preserved for consistency with
 !> boris_kinetic_energy() function despite I hardly belive this will make any
 !> difference in terms of performances due to the lack of data continuity.
+!>
+!> In addition, if it has to be used within a SIMD region it must be declare as
+!> SIMD compatible function using the pragama: !$omp declare simd (options)
 !> inputs:
 !>   particle: (particle_kinetic_relativistic) a relativistic kinetic particle type
 !>   mass:     (real8) the particle mass

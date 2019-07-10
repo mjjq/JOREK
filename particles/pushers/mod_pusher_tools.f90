@@ -10,6 +10,7 @@ public get_orthonormals
 public left_handed_cross_product, right_handed_cross_product
 public vector_transform_RZPHI_to_XYZ,vector_transform_XYZ_to_RZPHI
 public cayley_transform,approximated_cayley_transform
+public coordinate_transfrom_RZPHI_to_XYZ,coordinate_transfrom_XYZ_to_RZPHI
 contains
 
 !---------------------------------------------------------------------------
@@ -61,9 +62,58 @@ end function right_handed_cross_product
 
 !---------------------------------------------------------------------------
 
-!> This function rotates a vector from a \{R,Z,phi\} basis to a \{X,Y,Z\}
+!> This function computes the cartesian coordinate position
+!> \{X,Y,Z\} from cylindrical one \{R,Z,\phi\}.
+!> Be careful: positive angle in \{X,Y,Z\} are counter-clockwise
+!> while in \{R,Z,\phi\} are clockwise hence -phi is used.
+!> inputs:
+!>   a: (real8)(3) position in \{R,Z,\phi\} coordinates 
+!> outputs:
+!>   b: (real8)(3) position in \{X,Y,Z} coordinates
+pure function coordinate_transfrom_RZPHI_to_XYZ(a) result(b)
+  ! declare input variables
+  real(kind=8),dimension(3),intent(in) :: a
+  ! declare output variables
+  real(kind=8),dimension(3) :: b
+
+  b(1) = a(1)*cos(a(3))
+  b(2) = -1.d0*a(1)*sin(a(3)) !< negative sign: clockwise -> counter-clockwise
+  b(3) = a(2)
+
+end function coordinate_transfrom_RZPHI_to_XYZ
+
+!---------------------------------------------------------------------------
+
+!> This function computes the cartesian coordinate position
+!> \{R,Z,\phi\} from cylindrical one \{X,Y,Z}.
+!> Be careful: positive angle in \{X,Y,Z\} are counter-clockwise
+!> while in \{R,Z,\phi\} are clockwise hence -phi is used.
+!> inputs:
+!>   a: (real8)(3) position in \{X,Y,Z} coordinates 
+!> outputs:
+!>   b: (real8)(3) position in \{R,Z,\phi\} coordinates
+pure function coordinate_transfrom_XYZ_to_RZPHI(a) result(b)
+  ! declare input variables
+  real(kind=8),dimension(3),intent(in) :: a
+  ! declare output variables
+  real(kind=8),dimension(3) :: b
+
+  b(1) = sqrt(a(1)*a(1)+a(2)*a(2))
+  b(2) = a(3)
+  b(3) = atan2(-a(2),a(1)) !< negative sign: counter-clockwise -> clockwise
+
+end function coordinate_transfrom_XYZ_to_RZPHI
+
+!---------------------------------------------------------------------------
+
+!> This function rotates a vector from a \{R,Z,\phi\} basis to a \{X,Y,Z\}
 !> This is done performing a first swap and reflaction of the Y axis
 !> and then, a rotation of angle phi (clockwise)
+!> inputs:
+!>   phi: (real8) angle positive-clockwise
+!>   a:   (real8)(3) vector in the reference \{R,Z,\phi\} 
+!> outputs:
+!>   b: (real8)(3) vector in the reference \{X,Y,Z\}
 pure function vector_transform_RZPHI_to_XYZ(phi,a) result(b)
   ! declare input variables
   real(kind=8), intent(in) :: phi
@@ -84,7 +134,12 @@ end function vector_transform_RZPHI_to_XYZ
 
 !---------------------------------------------------------------------------
 
-!> This function rotates a vector from a \{X,Y,Z\} basis to a \{R,Z,phi\}
+!> This function rotates a vector from a \{X,Y,Z\} basis to a \{R,Z,\phi\}
+!> inputs:
+!>   phi: (real8) angle positive-clockwise
+!>   a:   (real8)(3) vector in the reference \{X,Y,Z\} 
+!> outputs:
+!>   b: (real8)(3) vector in the reference \{R,Z,\phi\}
 pure function vector_transform_XYZ_to_RZPHI(phi,a) result(b)
   ! declare input variables
   real(kind=8), intent(in) :: phi

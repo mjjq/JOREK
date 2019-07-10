@@ -53,7 +53,7 @@ module mod_particle_types
   !> This particle type is used for computing the full orbit trajectory
   !> of a relativistic particle. Final particle positions and momenta are given at time \(t\) 
   type, extends(particle_base) :: particle_kinetic_relativistic
-    real(kind=8),dimension(3) :: p !< Momenta (p_x,p_y,p_z) in [AMU*m/s]
+    real(kind=8),dimension(3) :: p !< Momentum in Cartesian coordinates (p_x,p_y,p_z) in [AMU*m/s]
     integer(kind=1)           :: q !< charge [e]
   end type particle_kinetic_relativistic
 

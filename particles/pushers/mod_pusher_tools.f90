@@ -60,6 +60,44 @@ end function right_handed_cross_product
 
 !---------------------------------------------------------------------------
 
+!> This function rotates a vector from a \{R,Z,phi\} basis to a \{X,Y,Z\}
+!> This is done performing a first swap and reflaction of the Y axis
+!> and then, a rotation of angle phi (clockwise)
+pure function vector_transform_RZPHI_to_XYZ(phi,a) result(b)
+  ! declare input variables
+  real(kind=8), intent(in) :: phi
+  real(kind=8), dimension(3), intent(in) :: a
+  ! declare output variables
+  real(kind=8), dimension(3), intent(in) :: b
+  ! declare internal variables
+  real(kind=8),dimension(2) :: sincosphi=(/sin(phi),cos(phi)/)
+
+  b(1) = a(1)*sincosphi(2) - a(3)*sincosphi(1) 
+  b(2) = -1.d0*(a(1)*sincosphi(1) + a(3)*sincosphi(2))
+  b(3) = a(2)
+
+end function vector_transform_RZPHI_to_XYZ
+
+!---------------------------------------------------------------------------
+
+!> This function rotates a vector from a \{X,Y,Z\} basis to a \{R,Z,phi\}
+pure function vector_transform_XYZ_to_RZPHI(phi,a) result(b)
+  ! declare input variables
+  real(kind=8), intent(in) :: phi
+  real(kind=8), dimension(3), intent(in) :: a
+  ! declare output variables
+  real(kind=8), dimension(3), intent(in) :: b
+  ! declare internal variables
+  real(kind=8),dimension(2) :: sincosphi=(/sin(phi),cos(phi)/)
+
+  b(1) = a(1)*sincosphi(2) - a(2)*sincosphi(1) 
+  b(2) = a(3)
+  b(3) = -1.d0*(a(1)*sincosphi(1) + a(2)*sincosphi(2))
+
+end function vector_transform_XYZ_to_RZPHI
+
+!---------------------------------------------------------------------------
+
 !> This function computes the right handed Cayley transform of a vector vec multiplied 
 !> by a constant \alpha. The Cayley transform is defined as:
 !> cayley(alpha\cdot B) = \(I-\alpha \cdot B\\)^\{-1\} \cdot \(I+\alpha \cdot b\)

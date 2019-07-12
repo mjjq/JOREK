@@ -90,6 +90,10 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
   real(kind=8) :: B_norm,p_par !< magnetic intensity, parallel momentum
   real(kind=8),dimension(3) :: B_hat !< magnetic field direction
 
+  ! TEST TEST TEST
+  real(kind=8) :: test_energy
+  ! TEST TEST TEST
+
   ! initialise default variable for particle gc
   out = in
   ! initialise the electric charge
@@ -103,8 +107,9 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
 
   ! compute the guiding center total energy in [eV]
   out%E = p_par
-  !out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*sqrt((mass*SPEED_OF_LIGTH)*&
-  (mass*SPEED_OF_LIGTH)+dot_product(in%p,in%p))/EL_CHG
+  
+  test_energy = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*sqrt((mass*SPEED_OF_LIGTH)*&
+  !(mass*SPEED_OF_LIGTH)+dot_product(in%p,in%p))/EL_CHG
   ! compute the magnetic moment p_perp^2/(2*B) in [eV/T]
   ! the sign is given by the particle parallel momentum 
   !out%mu = sign((ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*dot_product(in%p-p_par*B_hat,&
@@ -124,6 +129,9 @@ end function relativistic_kinetic_to_gc
 !> This subroutine computes the relativistic gc particle coordinates
 !> from relativistic kinetic particle type
 !> inputs:
+!>   node_list:    (node_list) simulation node list
+!>   element_list: (element_list) simulation element list
+!    in:	   ()
 !> outputs:
 subroutine relativistic_kinetic_position_to_gc(node_list,element_list,&
 in,B_hat,B_norm,x_gc_out,st_gc_out,i_elm_out)

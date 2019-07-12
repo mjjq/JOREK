@@ -353,10 +353,9 @@ if (.not. pastix_analysed) then
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis :', tsecond
 
   pastix_analysed = .true.
-else
 #if (defined(USE_PASTIX6) && defined(USE_BLOCK))
-  ! Expand spm matrix because rest of Pastix6 cannot handle multiple dofs (yet)
-  call pastixExpand(pastix_data,pastix_spm)
+  pastix_analysed = .false. ! Necessary for now such that the spm expansion is done every time step. 
+                            ! Can be removed once the PaStiX team has implemented multi-dof for all pastix_subtasks.
 #endif
 endif ! .not. pastix_analysed
 

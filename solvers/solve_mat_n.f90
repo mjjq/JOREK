@@ -173,9 +173,6 @@ contains
         if (use_BLR_compression) then
           mumps_par%icntl(35) = 1                          ! Block-low-rank (BLR) compression. 0: off (default), 1: automatic, 2: factorisation and solution, 3: only factorisation
           mumps_par%cntl(7)   = epsilon_BLR                ! Accuracy of BLR approximation
-          if (just_in_time_BLR) then
-            mumps_par%icntl(36) = 1                        ! earlier compression to further reduce number of operations, may have numerical impact
-          endif
         endif
 
         call DMUMPS(mumps_par)
@@ -472,12 +469,12 @@ contains
             endif
 
             pastix_analysed = .true.
+#if (defined(USE_PASTIX6) && defined(USE_BLOCK))
+            pastix_analysed = .false. ! Necessary for now such that the spm expansion is done every time step. 
+                                      ! Can be removed once the PaStiX team has implemented multi-dof for all pastix_subtasks.
+#endif
           endif
-        else
-          ! Expand spm matrix because rest of Pastix6 cannot handle multiple dofs (yet)
-          call pastixExpand(pastix_data,pastix_spm)
         endif ! .not. pastix_analysed
-
       endif   ! (else, use_mumps)
 
 

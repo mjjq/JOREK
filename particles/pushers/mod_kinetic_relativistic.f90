@@ -109,11 +109,11 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
   out%E = p_par
   
   test_energy = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*sqrt((mass*SPEED_OF_LIGTH)*&
-  !(mass*SPEED_OF_LIGTH)+dot_product(in%p,in%p))/EL_CHG
+  (mass*SPEED_OF_LIGTH)+dot_product(in%p,in%p))/EL_CHG
   ! compute the magnetic moment p_perp^2/(2*B) in [eV/T]
   ! the sign is given by the particle parallel momentum 
   !out%mu = sign((ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*dot_product(in%p-p_par*B_hat,&
-  in%p-p_par*B_hat))/(2.d0*B_norm*mass*EL_CHG),p_par)
+  !in%p-p_par*B_hat))/(2.d0*B_norm*mass*EL_CHG),p_par)
 
   ! check whether the particle is not a field line
   if(out%q.ne.0) then
@@ -131,7 +131,11 @@ end function relativistic_kinetic_to_gc
 !> inputs:
 !>   node_list:    (node_list) simulation node list
 !>   element_list: (element_list) simulation element list
-!    in:	   ()
+!>    in:	   (particle_kinetic_relativistic) a kinetic 
+!>				  relativistic particle
+!>    B_hat:	   (real8)(3) magnetic field direction in [T]
+!>    B_norm:	   (real8) magnetic field intensity in [T]
+!>    x_gc_out:    (real8)(3)
 !> outputs:
 subroutine relativistic_kinetic_position_to_gc(node_list,element_list,&
 in,B_hat,B_norm,x_gc_out,st_gc_out,i_elm_out)

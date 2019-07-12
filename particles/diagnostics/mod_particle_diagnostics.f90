@@ -491,7 +491,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
         real_stats_tmp(6) = real(particle_in%q,8)*EL_CHG*psi - ATOMIC_MASS_UNIT*particle_in%x(1)*&
         (particle_in%p(1)*cos(particle_in%x(3))+particle_in%p(2)*sin(particle_in%x(3)))
 	! transform a relativistic kinetic particle into gc
-        particle = relativistic_kinetic_to_gc(node_list,element_list,particle_in,B,mass)
+        particle = relativistic_kinetic_to_gc(fields%node_list,fields%element_list,particle_in,B,mass)
       class default
         write(*,*) "ERROR: calculate_particle_diagnostics not implemented for this particle type"
         cycle ! skip this iteration

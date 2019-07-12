@@ -102,8 +102,8 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
   p_par = dot_product(in%p,B_hat)
 
   ! compute the guiding center total energy in [eV]
-  out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*(sqrt((mass*SPEED_OF_LIGTH)&
-  *(mass*SPEED_OF_LIGTH)+dot_product(in%p,in%p)))/EL_CHG
+  out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*sqrt((mass*SPEED_OF_LIGTH)*&
+  (mass*SPEED_OF_LIGTH)+dot_product(in%p,in%p))/EL_CHG
   ! compute the magnetic moment p_perp^2/(2*B) in [eV/T]
   ! the sign is given by the particle parallel momentum 
   out%mu = sign((ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*dot_product(in%p-p_par*B_hat,&
@@ -127,8 +127,10 @@ end function relativistic_kinetic_to_gc
 subroutine relativistic_kinetic_position_to_gc(node_list,element_list,&
 in,B_hat,B_norm,x_gc_out,st_gc_out,i_elm_out)
   use data_structure
-  use mod_pusher_tools, only: right_handed_cross_product,&
-  coordinate_transfrom_RZPHI_to_XYZ,coordinate_transfrom_XYZ_to_RZPHI
+  use mod_pusher_tools, only: right_handed_cross_product
+  use mod_pusher_tools, only: vector_transform_RZPHI_to_XYZ
+  use mod_pusher_tools, only: coordinate_transfrom_RZPHI_to_XYZ
+  use mod_pusher_tools, only: coordinate_transfrom_XYZ_to_RZPHI
   use mod_find_rz_nearby
   ! declare input variables
   type(type_node_list),intent(in) :: node_list

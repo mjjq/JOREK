@@ -10,8 +10,8 @@ use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGTH
 implicit none
 
 private
-
 public volume_preserving_push_cartesian,relativistic_kinetic_to_gc
+public gc_to_relativistic_kinetic
 
 contains
 

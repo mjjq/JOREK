@@ -86,20 +86,18 @@ end subroutine volume_preserving_push_cartesian
 !>   out: (particle_gc) a guiding center particle
 function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out)
   use data_structure
+  use mod_pusher_tools, only: vector_transform_RZPHI_to_XYZ
   ! declare input variables
   type(type_node_list),intent(in) :: node_list
   type(type_element_list),intent(in) :: element_list
   type(particle_kinetic_relativistic),intent(in) :: in ! input kinetic particle
-  real(kind=8),dimension(3),intent(in) :: mass,B !< mass in AMU magnetic field in [T]
+  real(kind=8),intent(in) :: mass !< particle mass in AMU
+  real(kind=8),dimension(3),intent(in) :: B !< mass in AMU magnetic field in [T]
   ! delcare output variables
   type(particle_gc) :: out ! output particle guiding center
   ! declare internal variable
   real(kind=8) :: B_norm,p_par !< magnetic intensity, parallel momentum
   real(kind=8),dimension(3) :: B_hat !< magnetic field direction
-
-  ! TEST TEST TEST
-  real(kind=8) :: test_energy
-  ! TEST TEST TEST
 
   ! initialise default variable for particle gc
   out = in
@@ -108,24 +106,23 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
 
   ! compute magnetic field intensity and direction
   B_norm = norm2(B) !< intensity
-  B_hat = B/B_norm  !< direction
+  B_hat_cart = vector_transform_RZPHI_to_XYZ(B)/B_norm  !< direction
   ! compute the parallel momentum
-  p_par = dot_product(in%p,B_hat)
+  p_par = dot_product(in%p,B_hat_cart)
 
   ! compute the guiding center total energy in [eV]
-  out%E = p_par
-  
-  test_energy = dot_product(in%p,in%p)
+  out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*&
+  sqrt((mass*SPEED_OF_LIGTH)*(mass*SPEED_OF_LIGTH)+dot_product(in%p,in%p))
   ! compute the magnetic moment p_perp^2/(2*B) in [eV/T]
   ! the sign is given by the particle parallel momentum 
-  !out%mu = sign((ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*dot_product(in%p-p_par*B_hat,&
-  !in%p-p_par*B_hat))/(2.d0*B_norm*mass*EL_CHG),p_par)
+  out%mu = sign((ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*dot_product(in%p-p_par*B_hat_cart,&
+  in%p-p_par*B_hat_cart))/(2.d0*B_norm*mass*EL_CHG),p_par)
 
   ! check whether the particle is not a field line
   if(out%q.ne.0) then
     ! compute the gc position
     call relativistic_kinetic_position_to_gc(node_list,element_list,&
-    in,B_hat,B_norm,out%x,out%st,out%i_elm)
+    in,B_hat_cart,B_norm,out%x,out%st,out%i_elm)
   endif
   
 end function relativistic_kinetic_to_gc
@@ -139,17 +136,16 @@ end function relativistic_kinetic_to_gc
 !>   element_list: (element_list) simulation element list
 !>   in:	   (particle_kinetic_relativistic) a kinetic 
 !>				  relativistic particle
-!>   B_hat:	   (real8)(3) magnetic field direction in [T]
+!>   B_hat_cart:   (real8)(3) magnetic field direction in X,Y,Z reference
 !>   B_norm:	   (real8) magnetic field intensity in [T]
 !> outputs:
 !>   x_gc_out:  (real8)(3) gc coordinates in global R,Z,Phi reference
 !>   st_gc_out: (real8)(2) gc coordinates in local s,t reference
 !>   i_elm_out: (integer4) gc elements index
 subroutine relativistic_kinetic_position_to_gc(node_list,element_list,&
-in,B_hat,B_norm,x_gc_out,st_gc_out,i_elm_out)
+in,B_hat_cart,B_norm,x_gc_out,st_gc_out,i_elm_out)
   use data_structure
   use mod_pusher_tools, only: right_handed_cross_product
-  use mod_pusher_tools, only: vector_transform_RZPHI_to_XYZ
   use mod_pusher_tools, only: coordinate_transfrom_RZPHI_to_XYZ
   use mod_pusher_tools, only: coordinate_transfrom_XYZ_to_RZPHI
   use mod_find_rz_nearby
@@ -157,7 +153,7 @@ in,B_hat,B_norm,x_gc_out,st_gc_out,i_elm_out)
   type(type_node_list),intent(in) :: node_list
   type(type_element_list),intent(in) :: element_list
   type(particle_kinetic_relativistic),intent(in) :: in
-  real(kind=8),dimension(3),intent(in) :: B_hat !< Magnetic field direction B/B_norm
+  real(kind=8),dimension(3),intent(in) :: B_hat_cart !< Magnetic field direction B/B_norm
   real(kind=8),intent(in) :: B_norm !< magentic field intensity in [T]
   ! declare output variables
   integer(kind=4),intent(out) :: i_elm_out 
@@ -168,8 +164,7 @@ in,B_hat,B_norm,x_gc_out,st_gc_out,i_elm_out)
 
   ! compute the guiding center position in cartesian reference
   x_gc_out = coordinate_transfrom_RZPHI_to_XYZ(in%x)+&
-  (ATOMIC_MASS_UNIT*right_handed_cross_product(in%p,&
-  vector_transform_RZPHI_to_XYZ(in%x(3),B_hat)))/&
+  (ATOMIC_MASS_UNIT*right_handed_cross_product(in%p,B_hat_cart))/&
   (EL_CHG*real(in%q,8)*B_norm)
 
   ! transform back from a cartesian to a cylindrical coordinate system

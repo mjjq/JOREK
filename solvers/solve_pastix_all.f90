@@ -402,9 +402,6 @@ call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mump
 ! -- For PaStiX solver version 6.x
 
 call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
-!call pastix_subtask_spm2bcsc(pastix_data,pastix_spm,pastix_info )
-!call pastix_subtask_bcsc2ctab(pastix_data,pastix_info )
-!call pastix_subtask_sopalin(pastix_data,pastix_info )
 
 pastix_rhs_ptr = c_loc(mumps_par%rhs)
 call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,pastix_spm%n,pastix_info)

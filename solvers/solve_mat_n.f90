@@ -521,9 +521,6 @@ contains
 #else
           ! -- For PaStiX solver version 6.x
           call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
-!          call pastix_subtask_spm2bcsc(pastix_data,pastix_spm,pastix_info )
-!          call pastix_subtask_bcsc2ctab(pastix_data,pastix_info )
-!          call pastix_subtask_sopalin(pastix_data,pastix_info )
 
           call spmExit(pastix_spm)
           deallocate(pastix_spm)

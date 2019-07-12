@@ -76,7 +76,14 @@ end subroutine volume_preserving_push_cartesian
 !> particle gc datatype. Phase space particle coordinates are transformed
 !> in guiding center position, energy in [eV] and magnetic moment in [eV/T]
 !> inputs:
+!>   node_list:    (node_list) simulation node list
+!>   element_list: (element_list) simulation element list
+!>   in:	   (particle_kinetic_relativistic) a kinetic 
+!>				  relativistic particle
+!>   B:		   (real8)(3) magnetic field [T]
+!>   mass:	   (real8) particle mass in [AMU]
 !> outputs:
+!>   out: (particle_gc) a guiding center particle
 function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out)
   use data_structure
   ! declare input variables
@@ -108,8 +115,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
   ! compute the guiding center total energy in [eV]
   out%E = p_par
   
-  test_energy = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*sqrt((mass*SPEED_OF_LIGTH)*&
-  (mass*SPEED_OF_LIGTH)+dot_product(in%p,in%p))/EL_CHG
+  test_energy = dot_product(in%p,in%p)
   ! compute the magnetic moment p_perp^2/(2*B) in [eV/T]
   ! the sign is given by the particle parallel momentum 
   !out%mu = sign((ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*dot_product(in%p-p_par*B_hat,&
@@ -131,12 +137,14 @@ end function relativistic_kinetic_to_gc
 !> inputs:
 !>   node_list:    (node_list) simulation node list
 !>   element_list: (element_list) simulation element list
-!>    in:	   (particle_kinetic_relativistic) a kinetic 
+!>   in:	   (particle_kinetic_relativistic) a kinetic 
 !>				  relativistic particle
-!>    B_hat:	   (real8)(3) magnetic field direction in [T]
-!>    B_norm:	   (real8) magnetic field intensity in [T]
-!>    x_gc_out:    (real8)(3)
+!>   B_hat:	   (real8)(3) magnetic field direction in [T]
+!>   B_norm:	   (real8) magnetic field intensity in [T]
 !> outputs:
+!>   x_gc_out:  (real8)(3) gc coordinates in global R,Z,Phi reference
+!>   st_gc_out: (real8)(2) gc coordinates in local s,t reference
+!>   i_elm_out: (integer4) gc elements index
 subroutine relativistic_kinetic_position_to_gc(node_list,element_list,&
 in,B_hat,B_norm,x_gc_out,st_gc_out,i_elm_out)
   use data_structure

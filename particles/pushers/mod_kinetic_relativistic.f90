@@ -102,11 +102,12 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
   p_par = dot_product(in%p,B_hat)
 
   ! compute the guiding center total energy in [eV]
-  out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*sqrt((mass*SPEED_OF_LIGTH)*&
+  out%E = p_par
+  !out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*sqrt((mass*SPEED_OF_LIGTH)*&
   (mass*SPEED_OF_LIGTH)+dot_product(in%p,in%p))/EL_CHG
   ! compute the magnetic moment p_perp^2/(2*B) in [eV/T]
   ! the sign is given by the particle parallel momentum 
-  out%mu = sign((ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*dot_product(in%p-p_par*B_hat,&
+  !out%mu = sign((ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*dot_product(in%p-p_par*B_hat,&
   in%p-p_par*B_hat))/(2.d0*B_norm*mass*EL_CHG),p_par)
 
   ! check whether the particle is not a field line

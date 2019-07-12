@@ -97,7 +97,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
   type(particle_gc) :: out ! output particle guiding center
   ! declare internal variable
   real(kind=8) :: B_norm,p_par !< magnetic intensity, parallel momentum
-  real(kind=8),dimension(3) :: B_hat !< magnetic field direction
+  real(kind=8),dimension(3) :: B_hat_cart !< magnetic field direction
 
   ! initialise default variable for particle gc
   out = in

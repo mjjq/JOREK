@@ -116,7 +116,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
     in,B_hat,B_norm,out%x,out%st,out%i_elm)
   endif
   
-end function relativistic_particle_to_gc
+end function relativistic_kinetic_to_gc
 
 !---------------------------------------------------------------------------
 
@@ -134,7 +134,7 @@ in,B_hat,B_norm,x_gc_out,st_gc_out,i_elm_out)
   type(type_node_list),intent(in) :: node_list
   type(type_element_list),intent(in) :: element_list
   type(particle_kinetic_relativistic),intent(in) :: in
-  real(kind=8),dimension(3), intent(in) :: B_hat !< Magnetic field direction B/B_norm
+  real(kind=8),dimension(3),intent(in) :: B_hat !< Magnetic field direction B/B_norm
   real(kind=8),intent(in) :: B_norm !< magentic field intensity in [T]
   ! declare output variables
   integer(kind=4),intent(out) :: i_elm_out 

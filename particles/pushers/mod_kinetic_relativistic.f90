@@ -106,7 +106,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
 
   ! compute magnetic field intensity and direction
   B_norm = norm2(B) !< intensity
-  B_hat_cart = vector_transform_RZPHI_to_XYZ(B)/B_norm  !< direction
+  B_hat_cart = vector_transform_RZPHI_to_XYZ(in%x(3),B)/B_norm  !< direction
   ! compute the parallel momentum
   p_par = dot_product(in%p,B_hat_cart)
 

@@ -1192,16 +1192,12 @@ endif
       pastix_iparm(3)     = 7
 
       if (.not. gmres) then
-#ifndef USE_PASTIX6
          call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
               pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
       elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#else
-        call pastixFinalize(pastix_data)
-#endif
       endif
 #else
       ! -- For PaStiX solver version 6.x

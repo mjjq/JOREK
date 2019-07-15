@@ -37,8 +37,9 @@ real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_ph
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)
 real*8     :: source_volume, source_pellet, source_pellet2
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
-real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_rhon, Bgrad_T_star, Bgrad_T, BB2
-real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rhon_psi, Bgrad_rho_rho, Bgrad_rho_rhon, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
+real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_rhon, Bgrad_T_star, Bgrad_Ti, Bgrad_Te, BB2
+real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rhon_psi, Bgrad_rho_rho, Bgrad_rho_rhon
+real*8     :: Bgrad_T_star_psi, Bgrad_Ti_psi, Bgrad_Ti_T, Bgrad_Te_psi, Bgrad_Te_T, BB2_psi
 real*8     :: rhs_ij_1,   rhs_ij_2,   rhs_ij_3,   rhs_ij_4,   rhs_ij_5,   rhs_ij_6, rhs_ij_7
 real*8     :: rhs_stab_1, rhs_stab_2, rhs_stab_3, rhs_stab_4, rhs_stab_5, rhs_stab_6    
 real*8     :: ZK_e_prof, ZK_i_prof, D_prof, psi_norm, theta, zeta, delta_u_x, delta_u_y, delta_ps_x, delta_ps_y
@@ -66,12 +67,15 @@ real*8     :: Te, Te_x, Te_y, Te_s, Te_t, Te_p, Te_ss, Te_st, Te_tt, Te_xx, Te_x
 real*8     :: zTi, zTi_x, zTi_y, zTe, zTe_x, zTe_y, zn_x, zn_y
 real*8     :: Jb_0 , Jb
 real*8     :: P0, P0_x, P0_y, P0_s, P0_t, P0_ss, P0_st, P0_tt, P0_p, P0_xx, P0_xy, P0_yy
+real*8     :: Pi0, Pi0_x, Pi0_y, Pi0_s, Pi0_t, Pi0_ss, Pi0_st, Pi0_tt, Pi0_p, Pi0_xx, Pi0_xy, Pi0_yy
+real*8     :: Pe0, Pe0_x, Pe0_y, Pe0_s, Pe0_t, Pe0_ss, Pe0_st, Pe0_tt, Pe0_p, Pe0_xx, Pe0_xy, Pe0_yy
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_d2T, deta_dr0, deta_drn0
 real*8     :: visco_num_T, eta_num_T, eta_Sp, detaSp_dT, detaSp_dr0, detaSP_drn0, deta_num_dT, dvisco_num_dT
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
 real*8     :: amat_51, amat_52, amat_55, amat_56, amat_57, amat_61, amat_62, amat_63, amat_65, amat_66, amat_67, amat_16, amat_13
-real*8     :: amat_71, amat_72, amat_75, amat_76, amat_77, amat_15, amat_18
-real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
+real*8     :: amat_71, amat_72, amat_75, amat_76, amat_77, amat_15, amat_18, amat_19, amat_29
+real*8     :: ZK_par_num, Ti0_ps0_x, Ti_ps0_x, Ti0_psi_x, Ti0_ps0_y, Ti_ps0_y, Ti0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
+real*8     :: Te0_ps0_x, Te_ps0_x, Te0_psi_x, Te0_ps0_y, Te_ps0_y, Te0_psi_y
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7, TG_num8, TG_num9
 logical    :: xpoint2
 
@@ -94,10 +98,11 @@ real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
 
 !================== Parameters specific to model5XX
 ! Matrix, RHS and neutrals-related variables
-real*8     :: amat_28, amat_58, amat_68, amat_78
+real*8     :: amat_28, amat_58, amat_68, amat_78, amat_69, amat_79
 real*8     :: amat_81, amat_82, amat_85, amat_86, amat_87, amat_88
-real*8     :: rhs_ij_8
-real*8     :: ij8, kl8
+real*8     :: amat_91, amat_92, amat_93, amat_95, amat_96, amat_97, amat_98, amat_99
+real*8     :: rhs_ij_8, rhs_ij_9
+real*8     :: ij8, kl8, ij9, kl9
 real*8     :: rn0, rn0_x, rn0_y, rn0_p, rn0_s, rn0_t, rn0_ss, rn0_st, rn0_tt, rn0_hat, rn0_x_hat, rn0_y_hat
 real*8     :: rhon, rhon_x, rhon_y, rhon_s, rhon_t, rhon_p, rhon_ss, rhon_st, rhon_tt, rhon_hat, rhon_x_hat, rhon_y_hat
 real*8     :: rn0_xx, rn0_yy, rn0_xy, rhon_xx, rhon_yy
@@ -134,7 +139,7 @@ real*8     :: Z_imp, dZ_imp_dT, d2Z_imp_dT2, T0_Zimp, alpha_Zimp, Z_eff, dZ_eff_
 real*8     :: dZ_eff_dr0, dZ_eff_drn0
 
 !   -Coefficients related to Z_imp
-real*8     :: alpha_i, dalpha_i_dT, d2alpha_i_dT2, alpha_imp_bis
+real*8     :: alpha_i, dalpha_i_dT, d2alpha_i_dT2
 real*8     :: alpha_e, dalpha_e_dT, d2alpha_e_dT2, alpha_e_bis
 
 !   -Radiation from injected impurities
@@ -984,26 +989,22 @@ do ms=1, n_gauss
   ! --- Radiative cooling rate for Argon (approximate fit of cooling rate at coronal equilibrium)
   ! ------------------------------------------
     
-     A0_rad   = 2.8*1.d-33    ! W.m^3
-     A1_rad   = 2.335*1.d-31  ! W.m^3
-     T1_rad   = 23.           ! eV
-     sig1_rad = 14.           ! eV
-     A2_rad   = 3.846*1.d-32  ! W.m^3
-     T2_rad   = 236.          ! eV
-     sig2_rad = 150.          ! eV
+       A0_rad   = 2.8*1.d-33    ! W.m^3
+       A1_rad   = 2.335*1.d-31  ! W.m^3
+       T1_rad   = 23.           ! eV
+       sig1_rad = 14.           ! eV
+       A2_rad   = 3.846*1.d-32  ! W.m^3
+       T2_rad   = 236.          ! eV
+       sig2_rad = 150.          ! eV
+  
+!      Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.) + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
+       !Lrad     = (1./2.)*coef_rad_1*5.d-32 * (tanh((T_rad-20.)/10.)-tanh(-20./10.))
+       Lrad      = 0. ! For Test
+  
+       ! Derivative wrt to T, with T in JOREK units
+       !dLrad_dT = (1./2.)*coef_rad_1*5.d-32 * (1./10.) * dT_rad_dT * (1-tanh((T_rad-20.)/10.)**2) * dT0_corr_dT
+       dLrad_dT = 0. ! For Test
 
-!     Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.) + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
-     !Lrad     = (1./2.)*coef_rad_1*5.d-32 * (tanh((T_rad-20.)/10.)-tanh(-20./10.))
-     Lrad      = 0. ! For Test
-
-     ! Derivative wrt to T, with T in JOREK units
-     !dLrad_dT = (1./2.)*coef_rad_1*5.d-32 * (1./10.) * dT_rad_dT * (1-tanh((T_rad-20.)/10.)**2) * dT0_corr_dT
-     dLrad_dT = 0. ! For Test
-
-!   else
-!     Lrad = 0.d0
-!     dLrad_dT = 0.d0
-!   endif
      end if
 
      ! This is to detect N/A
@@ -1095,10 +1096,10 @@ do ms=1, n_gauss
     Crad_bg = 0.8
 
     frad_bg     = (GAMMA-1.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                  *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                  *nimp_bg*Arad_bg*exp(-((log(Te_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
 
     dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
-                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(Te_rad)-log(Brad_bg))*(1./Te_rad)*exp(-((log(Te_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
 
    !--------------------------------------------------------
    ! --- Ion-electron energy transfer
@@ -1157,38 +1158,52 @@ do ms=1, n_gauss
     ddTi_e_drho     = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_drho  / (r0_corr+alpha_i*rn0_corr) &
                       -dTe_i * (alpha_i-alpha_e) * rn0_corr * dr0_corr_dn / (r0_corr+alpha_i*rn0_corr)**2
 !--------------------------------------------------------
+     Pi0    = (r0+rn0*alpha_i) * Ti0
+     Pi0_x  = (r0_x+rn0_x*alpha_i) * Ti0 + (r0+rn0*alpha_i) * Ti0_x 
+     Pi0_y  = (r0_y+rn0_y*alpha_i) * Ti0 + (r0+rn0*alpha_i) * Ti0_y
+     Pi0_s  = (r0_s+rn0_s*alpha_i) * Ti0 + (r0+rn0*alpha_i) * Ti0_s
+     Pi0_t  = (r0_t+rn0_t*alpha_i) * Ti0 + (r0+rn0*alpha_i) * Ti0_t
+     Pi0_p  = (r0_p+rn0_p*alpha_i) * Ti0 + (r0+rn0*alpha_i) * Ti0_p
+     Pi0_ss = (r0_ss+rn0_ss*alpha_i) * Ti0 + 2.d0 * (r0_s+rn0_s*alpha_i) * Ti0_s + (r0+rn0*alpha_i) * Ti0_ss 
+     Pi0_tt = (r0_tt+rn0_tt*alpha_i) * Ti0 + 2.d0 * (r0_t+rn0_t*alpha_i) * Ti0_t + (r0+rn0*alpha_i) * Ti0_tt
+     Pi0_st = (r0_st+rn0_st*alpha_i) * Ti0 + (r0_t+rn0_t*alpha_i) * Ti0_s + (r0_s+rn0_s*alpha_i) * Ti0_t               &
+              + (r0+rn0*alpha_i) * Ti0_st
+     Pi0_xx = (r0_xx+rn0_xx*alpha_i) * Ti0 + 2.d0 * (r0_x+rn0_x*alpha_i) * Ti0_x + (r0+rn0*alpha_i) * Ti0_xx
+     Pi0_yy = (r0_yy+rn0_yy*alpha_i) * Ti0 + 2.d0 * (r0_y+rn0_y*alpha_i) * Ti0_y + (r0+rn0*alpha_i) * Ti0_yy
+     Pi0_xy = (r0_xy+rn0_xy*alpha_i) * Ti0 + (r0_y+rn0_y*alpha_i) * Ti0_x + (r0_x+rn0_x*alpha_i) * Ti0_y               &
+              + (r0+rn0*alpha_i) * Ti0_xy
 
-     P0    = (r0+rn0*alpha_i) * Ti0 + (r0+rn0*alpha_e) * Te0
-     P0_x  = (r0_x+rn0_x*alpha_i) * Ti0 + (r0_x+rn0_x*alpha_e) * Te0 &
-             + (r0+rn0*alpha_i) * Ti0_x + (r0+rn0*alpha_e_bis) * Te0_x
-     P0_y  = (r0_y+rn0_y*alpha_i) * Ti0 + (r0_y+rn0_y*alpha_e) * Te0 &
-             + (r0+rn0*alpha_i) * Ti0_y + (r0+rn0*alpha_e_bis) * Te0_y
-     P0_s  = (r0_s+rn0_s*alpha_i) * Ti0 + (r0_s+rn0_s*alpha_e) * Te0 &
-             + (r0+rn0*alpha_i) * Ti0_s + (r0+rn0*alpha_e_bis) * Te0_s
-     P0_t  = (r0_t+rn0_t*alpha_i) * Ti0 + (r0_t+rn0_t*alpha_e) * Te0 &
-             + (r0+rn0*alpha_i) * Ti0_t + (r0+rn0*alpha_e_bis) * Te0_t
-     P0_p  = (r0_p+rn0_p*alpha_i) * Ti0 + (r0_p+rn0_p*alpha_e) * Te0 &
-             + (r0+rn0*alpha_i) * Ti0_p + (r0+rn0*alpha_e_bis) * Te0_p
-     P0_ss = (r0_ss+rn0_ss*alpha_i) * Ti0 + 2.d0 * (r0_s+rn0_s*alpha_i) * Ti0_s + (r0+rn0*alpha_i) * Ti0_ss           &
-             + (r0_ss+rn0_ss*alpha_e) * Te0 + 2.d0 * (r0_s+rn0_s*alpha_e_bis) * Te0_s + (r0+rn0*alpha_e_bis) * Te0_ss &
-             + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_s)**2.d0
-     P0_tt = (r0_tt+rn0_tt*alpha_i) * Ti0 + 2.d0 * (r0_t+rn0_t*alpha_i) * Ti0_t + (r0+rn0*alpha_i) * Ti0_tt           &
-             + (r0_tt+rn0_tt*alpha_e) * Te0 + 2.d0 * (r0_t+rn0_t*alpha_e_bis) * Te0_t + (r0+rn0*alpha_e_bis) * Te0_tt &
-             + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_t)**2.d0
-     P0_st = (r0_st+rn0_st*alpha_i) * Ti0 + (r0_t+rn0_t*alpha_i) * Ti0_s + (r0_s+rn0_s*alpha_i) * Ti0_t               &
-             + (r0+rn0*alpha_i) * Ti0_st + (r0+rn0*alpha_e_bis) * Te0_st                                              &
-             + (r0_st+rn0_st*alpha_e) * Te0 + (r0_t+rn0_t*alpha_e_bis) * Te0_s + (r0_s+rn0_s*alpha_e_bis) * Te0_t     &
-             + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * Te0_s * Te0_t
-     P0_xx = (r0_xx+rn0_xx*alpha_i) * Ti0 + 2.d0 * (r0_x+rn0_x*alpha_i) * Ti0_x + (r0+rn0*alpha_i) * Ti0_xx           &
-             + (r0_xx+rn0_xx*alpha_e) * Te0 + 2.d0 * (r0_x+rn0_x*alpha_e_bis) * Te0_x + (r0+rn0*alpha_e_bis) * Te0_xx &
-             + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_x)**2.d0
-     P0_yy = (r0_yy+rn0_yy*alpha_i) * Ti0 + 2.d0 * (r0_y+rn0_y*alpha_i) * Ti0_y + (r0+rn0*alpha_i) * Ti0_yy           &
-             + (r0_yy+rn0_yy*alpha_e) * Te0 + 2.d0 * (r0_y+rn0_y*alpha_e_bis) * Te0_y + (r0+rn0*alpha_e_bis) * Te0_yy &
-             + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_y)**2.d0
-     P0_xy = (r0_xy+rn0_xy*alpha_i) * Ti0 + (r0_y+rn0_y*alpha_i) * Ti0_x + (r0_x+rn0_x*alpha_i) * Ti0_y               &
-             + (r0+rn0*alpha_i) * Ti0_xy + (r0+rn0*alpha_e_bis) * Te0_xy                                              &
-             + (r0_xy+rn0_xy*alpha_e) * Te0 + (r0_y+rn0_y*alpha_e_bis) * Te0_x + (r0_x+rn0_x*alpha_e_bis) * Te0_y     &
-             + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * Te0_x * Te0_y
+     Pe0    = (r0+rn0*alpha_e) * Te0
+     Pe0_x  = (r0_x+rn0_x*alpha_e) * Te0 + (r0+rn0*alpha_e_bis) * Te0_x
+     Pe0_y  = (r0_y+rn0_y*alpha_e) * Te0 + (r0+rn0*alpha_e_bis) * Te0_y
+     Pe0_s  = (r0_s+rn0_s*alpha_e) * Te0 + (r0+rn0*alpha_e_bis) * Te0_s
+     Pe0_t  = (r0_t+rn0_t*alpha_e) * Te0 + (r0+rn0*alpha_e_bis) * Te0_t
+     Pe0_p  = (r0_p+rn0_p*alpha_e) * Te0 + (r0+rn0*alpha_e_bis) * Te0_p
+     Pe0_ss = (r0_ss+rn0_ss*alpha_e) * Te0 + 2.d0 * (r0_s+rn0_s*alpha_e_bis) * Te0_s + (r0+rn0*alpha_e_bis) * Te0_ss &
+              + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_s)**2.d0
+     Pe0_tt = (r0_tt+rn0_tt*alpha_e) * Te0 + 2.d0 * (r0_t+rn0_t*alpha_e_bis) * Te0_t + (r0+rn0*alpha_e_bis) * Te0_tt &
+              + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_t)**2.d0
+     Pe0_st = (r0_st+rn0_st*alpha_e) * Te0 + (r0_t+rn0_t*alpha_e_bis) * Te0_s + (r0_s+rn0_s*alpha_e_bis) * Te0_t     &
+              + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * Te0_s * Te0_t + (r0+rn0*alpha_e_bis) * Te0_st
+     Pe0_xx = (r0_xx+rn0_xx*alpha_e) * Te0 + 2.d0 * (r0_x+rn0_x*alpha_e_bis) * Te0_x + (r0+rn0*alpha_e_bis) * Te0_xx &
+              + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_x)**2.d0
+     Pe0_yy = (r0_yy+rn0_yy*alpha_e) * Te0 + 2.d0 * (r0_y+rn0_y*alpha_e_bis) * Te0_y + (r0+rn0*alpha_e_bis) * Te0_yy &
+              + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_y)**2.d0
+     Pe0_xy = (r0_xy+rn0_xy*alpha_e) * Te0 + (r0_y+rn0_y*alpha_e_bis) * Te0_x + (r0_x+rn0_x*alpha_e_bis) * Te0_y     &
+              + rn0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * Te0_x * Te0_y + (r0+rn0*alpha_e_bis) * Te0_xy
+
+     P0     = Pi0 + Pe0
+     P0_x   = Pi0_x + Pe0_x
+     P0_y   = Pi0_y + Pe0_y
+     P0_s   = Pi0_s + Pe0_s
+     P0_t   = Pi0_t + Pe0_t 
+     P0_p   = Pi0_p + Pe0_p 
+     P0_ss  = Pi0_ss + Pe0_ss 
+     P0_tt  = Pi0_tt + Pe0_tt 
+     P0_st  = Pi0_st + Pe0_st 
+     P0_xx  = Pi0_xx + Pe0_xx
+     P0_yy  = Pi0_yy + Pe0_yy 
+     P0_xy  = Pi0_xy + Pe0_xy 
 
 !--------------------------------------------------------     
 
@@ -1252,8 +1267,8 @@ do ms=1, n_gauss
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
 
-                      - v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * tstep &
-                      + v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac * tstep &
+                      - v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * (ps0_s * pi0_t - ps0_t * pi0_s) * tstep &
+                      + v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * pi0_p * xjac * tstep &
 
                       + zeta * v * delta_g(mp,1,ms,mt) / BigR             * xjac
 
@@ -1280,11 +1295,11 @@ do ms=1, n_gauss
 !===============================End of NewTG_num terms==============================
 
 
-                      - v * tauIC * BigR**4 * (p0_s * w0_t - p0_t * w0_s)        * tstep &
+                      - v * tauIC * BigR**4 * (pi0_s * w0_t - pi0_t * w0_s)        * tstep &
 
-                      - tauIC * BigR**3 * p0_y * (v_x* u0_x + v_y * u0_y) * xjac * tstep &
+                      - tauIC * BigR**3 * pi0_y * (v_x* u0_x + v_y * u0_y) * xjac * tstep &
 
-                      - v * tauIC * BigR**4 * (u0_xy * (p0_xx - p0_yy) - p0_xy * (u0_xx - u0_yy) ) * xjac * tstep &
+                      - v * tauIC * BigR**4 * (u0_xy * (pi0_xx - pi0_yy) - pi0_xy * (u0_xx - u0_yy) ) * xjac * tstep &
 
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac &
 
@@ -1329,7 +1344,7 @@ do ms=1, n_gauss
                     - v * F0 / BigR * r0 * vpar0_p                                                                     * xjac * tstep &
                     - v * r0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                                            * tstep &
 
-                    + v * 2.d0 * tauIC * p0_y * BigR                                                                   * xjac * tstep &
+                    + v * 2.d0 * tauIC * pi0_y * BigR                                                                  * xjac * tstep &
 
                     + zeta * v * delta_g(mp,5,ms,mt) * BigR                                                                   * xjac  &
 
@@ -1396,6 +1411,7 @@ do ms=1, n_gauss
                     + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg + source_imp) * xjac * tstep &
                     + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
 !==============================End of friction terms=================
+                    ! Energy exchange term
                     + v * BigR * dTi_e                                                         * xjac * tstep 
 
 !###################################################################################################
@@ -1488,7 +1504,7 @@ do ms=1, n_gauss
 
 
 !###################################################################################################
-!#  equation 9 (electron energy  equation)                                                              #
+!#  equation 9 (electron energy  equation)                                                         #
 !###################################################################################################
 
          rhs_ij_9 =   v * BigR * heat_source(ms,mt)                                    * xjac * tstep &
@@ -1563,7 +1579,9 @@ do ms=1, n_gauss
 !==============================End of ionization energy terms=================
                     + v * BigR * ((GAMMA-1.)/(BigR**2)) * eta_Sp * zj0**2                    * xjac * tstep &
                     - v * BigR * (r0_corr+alpha_e*rn0_corr) * rn0_corr * Lrad                * xjac * tstep &
-                    - v * BigR * r0_corr * frad_bg                                           * xjac * tstep
+                    - v * BigR * r0_corr * frad_bg                                           * xjac * tstep &
+                    ! Energy exchange term
+                    + v * BigR * dTe_i                                                       * xjac * tstep
 
 !###################################################################################################
 !#  RHS equations end                                                                                  #
@@ -1577,6 +1595,7 @@ do ms=1, n_gauss
          ij6 = index_ij + 5*n_tor
          ij7 = index_ij + 6*n_tor
          ij8 = index_ij + 7*n_tor
+         ij9 = index_ij + 8*n_tor
 
            RHS(ij1) = RHS(ij1) + rhs_ij_1 * wst
            RHS(ij2) = RHS(ij2) + rhs_ij_2 * wst
@@ -1586,6 +1605,7 @@ do ms=1, n_gauss
            RHS(ij6) = RHS(ij6) + rhs_ij_6 * wst
            RHS(ij7) = RHS(ij7) + rhs_ij_7 * wst
            RHS(ij8) = RHS(ij8) + rhs_ij_8 * wst
+           RHS(ij9) = RHS(ij9) + rhs_ij_9 * wst
 	   
            do k=1,n_vertex_max
 
@@ -1624,19 +1644,19 @@ do ms=1, n_gauss
 	                - psi_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2               &		
                         - xjac_x * (- psi_s * x_t(ms,mt) + psi_t * x_s(ms,mt) )   / xjac**2
  
-                 u    = psi    ;  zj    = psi    ;  w    = psi    ; rho    = psi    ;  T    = psi    ; vpar    = psi    ; rhon   = psi  
-                 u_x  = psi_x  ;  zj_x  = psi_x  ;  w_x  = psi_x  ; rho_x  = psi_x  ;  T_x  = psi_x  ; vpar_x  = psi_x  ; rhon_x = psi_x
-                 u_y  = psi_y  ;  zj_y  = psi_y  ;  w_y  = psi_y  ; rho_y  = psi_y  ;  T_y  = psi_y  ; vpar_y  = psi_y  ; rhon_y = psi_y
-                 u_p  = psi_p  ;  zj_p  = psi_p  ;  w_p  = psi_p  ; rho_p  = psi_p  ;  T_p  = psi_p  ; vpar_p  = psi_p  ; rhon_p = psi_p
-                 u_s  = psi_s  ;  zj_s  = psi_s  ;  w_s  = psi_s  ; rho_s  = psi_s  ;  T_s  = psi_s  ; vpar_s  = psi_s  ; rhon_s = psi_s
-                 u_t  = psi_t  ;  zj_t  = psi_t  ;  w_t  = psi_t  ; rho_t  = psi_t  ;  T_t  = psi_t  ; vpar_t  = psi_t  ; rhon_t = psi_t
-                 u_ss = psi_ss ;  zj_ss = psi_ss ;  w_ss = psi_ss ; rho_ss = psi_ss ;  T_ss = psi_ss ; vpar_ss = psi_ss ; rhon_ss = psi_ss
-                 u_tt = psi_tt ;  zj_tt = psi_tt ;  w_tt = psi_tt ; rho_tt = psi_tt ;  T_tt = psi_tt ; vpar_tt = psi_tt ; rhon_tt = psi_tt
-                 u_st = psi_st ;  zj_st = psi_st ;  w_st = psi_st ; rho_st = psi_st ;  T_st = psi_st ; vpar_st = psi_st ; rhon_st = psi_st
+                 u    = psi    ;  zj    = psi    ;  w    = psi    ; rho    = psi    ;  Ti    = psi    ;  Te    = psi    ; vpar    = psi    ; rhon   = psi  
+                 u_x  = psi_x  ;  zj_x  = psi_x  ;  w_x  = psi_x  ; rho_x  = psi_x  ;  Ti_x  = psi_x  ;  Te_x  = psi_x  ; vpar_x  = psi_x  ; rhon_x = psi_x
+                 u_y  = psi_y  ;  zj_y  = psi_y  ;  w_y  = psi_y  ; rho_y  = psi_y  ;  Ti_y  = psi_y  ;  Te_y  = psi_y  ; vpar_y  = psi_y  ; rhon_y = psi_y
+                 u_p  = psi_p  ;  zj_p  = psi_p  ;  w_p  = psi_p  ; rho_p  = psi_p  ;  Ti_p  = psi_p  ;  Te_p  = psi_p  ; vpar_p  = psi_p  ; rhon_p = psi_p
+                 u_s  = psi_s  ;  zj_s  = psi_s  ;  w_s  = psi_s  ; rho_s  = psi_s  ;  Ti_s  = psi_s  ;  Te_s  = psi_s  ; vpar_s  = psi_s  ; rhon_s = psi_s
+                 u_t  = psi_t  ;  zj_t  = psi_t  ;  w_t  = psi_t  ; rho_t  = psi_t  ;  Ti_t  = psi_t  ;  Te_t  = psi_t  ; vpar_t  = psi_t  ; rhon_t = psi_t
+                 u_ss = psi_ss ;  zj_ss = psi_ss ;  w_ss = psi_ss ; rho_ss = psi_ss ;  Ti_ss = psi_ss ;  Te_ss = psi_ss  ; vpar_ss = psi_ss ; rhon_ss = psi_ss
+                 u_tt = psi_tt ;  zj_tt = psi_tt ;  w_tt = psi_tt ; rho_tt = psi_tt ;  Ti_tt = psi_tt ;  Te_tt = psi_tt ; vpar_tt = psi_tt ; rhon_tt = psi_tt
+                 u_st = psi_st ;  zj_st = psi_st ;  w_st = psi_st ; rho_st = psi_st ;  Ti_st = psi_st ;  Te_st = psi_st ; vpar_st = psi_st ; rhon_st = psi_st
 
-                 u_xx = psi_xx ;                                    rho_xx = psi_xx ;  T_xx = psi_xx ; vpar_xx = psi_xx ; rhon_xx = psi_xx
-                 u_yy = psi_yy ;                                    rho_yy = psi_yy ;  T_yy = psi_yy ; vpar_yy = psi_yy ; rhon_yy = psi_yy
-                 u_xy = psi_xy ;                                    rho_xy = psi_xy ;  T_xy = psi_xy ; vpar_xy = psi_xy
+                 u_xx = psi_xx ;                                    rho_xx = psi_xx ;  Ti_xx = psi_xx ;  Te_xx = psi_xx ; vpar_xx = psi_xx ; rhon_xx = psi_xx
+                 u_yy = psi_yy ;                                    rho_yy = psi_yy ;  Ti_yy = psi_yy ;  Te_yy = psi_yy ; vpar_yy = psi_yy ; rhon_yy = psi_yy
+                 u_xy = psi_xy ;                                    rho_xy = psi_xy ;  Ti_xy = psi_xy ;  Te_xy = psi_xy ; vpar_xy = psi_xy 
 
                  w_xx = (psi_ss * y_t(ms,mt)**2 - 2.d0*psi_st * y_s(ms,mt)*y_t(ms,mt) + psi_tt * y_s(ms,mt)**2 ) / xjac**2       
                  w_yy = (psi_ss * x_t(ms,mt)**2 - 2.d0*psi_st * x_s(ms,mt)*x_t(ms,mt) + psi_tt * x_s(ms,mt)**2 ) / xjac**2
@@ -1659,7 +1679,7 @@ do ms=1, n_gauss
                  amat_11 = v * psi / BigR * xjac * (1.d0 + zeta)                                     &
                          - v * (psi_s * u0_t - psi_t * u0_s)                        * theta * tstep  &
 
-                          + v * tauIC/(r0_corr*BB2)*F0**2/BigR**2 * (psi_s * p0_t - psi_t * p0_s) * theta * tstep 
+                          + v * tauIC/(r0_corr*BB2)*F0**2/BigR**2 * (psi_s * pi0_t - psi_t * pi0_s) * theta * tstep 
  
                  ! term with BB2 still missing
 
@@ -1669,28 +1689,29 @@ do ms=1, n_gauss
                  amat_13 = - eta_num_T * (v_x * zj_x + v_y * zj_y)           * xjac * theta * tstep  &
                            - eta_T * v * zj / BigR                           * xjac * theta * tstep
    
-                  amat_15 =  v * tauIC/(r0_corr*BB2)*F0**2/BigR**2* T0  * (ps0_s * rho_t - ps0_t * rho_s) * theta * tstep &
-                           + v * tauIC/(r0_corr*BB2)*F0**2/BigR**2* rho * (ps0_s * T0_t  - ps0_t * T0_s)  * theta * tstep & 
-                           - v * tauIC/(r0_corr*BB2)*F0**3/BigR**3* eps_cyl * T0  * rho_p * xjac * theta * tstep &
-                           - v * tauIC/(r0_corr*BB2)*F0**3/BigR**3* eps_cyl * rho * T0_p  * xjac * theta * tstep &
+                 amat_15 =   v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * Ti0 * (ps0_s*rho_t - ps0_t*rho_s) * theta * tstep &
+                           + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * rho * (ps0_s*Ti0_t - ps0_t*Ti0_s) * theta * tstep & 
+                           - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * Ti0 * rho_p      * xjac * theta * tstep &
+                           - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * rho * Ti0_p      * xjac * theta * tstep &
    
-                           - v * tauIC * rho /(r0_corr**2 * BB2) * F0**2/BigR**2 * (ps0_s * p0_t - ps0_t * p0_s) * theta * tstep &      
-                           + v * tauIC * rho /(r0_corr**2 * BB2) * F0**3/BigR**3 * eps_cyl * p0_p * xjac         * theta * tstep &
+                           - v * tauIC * rho /(r0_corr**2 * BB2) * F0**2/BigR**2 * (ps0_s * pi0_t - ps0_t * pi0_s) * theta * tstep &      
+                           + v * tauIC * rho /(r0_corr**2 * BB2) * F0**3/BigR**3 * eps_cyl * pi0_p * xjac          * theta * tstep &
                            ! The density gradient term from Z_eff
                            - deta_dr0 * v * rho * (zj0-current_source(ms,mt)) / BigR * xjac * theta * tstep  
 
 
-                 amat_16 = - deta_dT * v * T * (zj0-current_source(ms,mt)-Jb) / BigR * xjac * theta * tstep &
- 
-                        + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s) * theta * tstep &
-                        + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)* theta * tstep &   
-                        - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * r0 * T_p  * xjac * theta * tstep &
-                        - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * T  * r0_p * xjac * theta * tstep &
-                           ! Temperature dependent hyper-resistivity
-                           - deta_num_dT * T * (v_x * zj0_x + v_y * zj0_y)        * xjac * theta * tstep 
+                 amat_16 = v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * (r0 + alpha_i* rn0) * (ps0_s * Ti_t  - ps0_t * Ti_s)                * theta * tstep &
+                           + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * Ti * (ps0_s * (r0_t+alpha_i*rn0_t) - ps0_t * (r0_s+alpha_i*rn0_s))* theta * tstep &   
+                           - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * (r0+alpha_i*rn0) * Ti_p                          * xjac * theta * tstep &
+                           - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * eps_cyl * Ti * (r0_p+alpha_i*rn0_p)                        * xjac * theta * tstep &
 
                  ! The density gradient term from Z_eff
                  amat_18 = - deta_drn0 * v * rhon * (zj0-current_source(ms,mt)) / BigR * xjac * theta * tstep
+
+                 amat_19 = - deta_dT * v * Te * (zj0-current_source(ms,mt)-Jb) / BigR * xjac * theta * tstep &
+                           ! Temperature dependent hyper-resistivity
+                           - deta_num_dT * Te * (v_x * zj0_x + v_y * zj0_y)             * xjac * theta * tstep
+
 
 !---------------------------------------------------------------- equation 1
 !                 amat_11 = v * psi / BigR * xjac * (1.d0 + zeta)                                        &
@@ -1714,8 +1735,8 @@ do ms=1, n_gauss
                            + r0_hat * BigR**2 * w0 * (v_s * u_t  - v_t  * u_s)                              * theta * tstep &
                            + BigR**2 * (u_x * u0_x + u_y * u0_y) * (v_x * r0_y_hat - v_y * r0_x_hat) * xjac * theta * tstep &
 			   
-		           + tauIC * BigR**3 * p0_y * (v_x* u_x + v_y * u_y)                         * xjac * theta * tstep &
-		           + v * tauIC * BigR**4 * (u_xy * (p0_xx - p0_yy) - p0_xy * (u_xx - u_yy))  * xjac * theta * tstep &
+		           + tauIC * BigR**3 * pi0_y * (v_x* u_x + v_y * u_y)                           * xjac * theta * tstep &
+		           + v * tauIC * BigR**4 * (u_xy * (pi0_xx - pi0_yy) - pi0_xy * (u_xx - u_yy))  * xjac * theta * tstep &
 
                            ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
                            ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
@@ -1752,7 +1773,7 @@ do ms=1, n_gauss
 
                          + visco_num_T * (v_xx + v_x/BigR + v_yy)*(w_xx + w_x/BigR + w_yy) * xjac * theta * tstep    &
      
-                        + v * tauIC * BigR**4 * (p0_s * w_t - p0_t * w_s)              * theta * tstep &
+                        + v * tauIC * BigR**4 * (pi0_s * w_t - pi0_t * w_s)              * theta * tstep &
 
                          + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w_x * u0_y - w_y * u0_x)     &
                                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
@@ -1766,8 +1787,8 @@ do ms=1, n_gauss
 
                  amat_25 = + 0.5d0 * vv2 * (v_x * rho_y_hat - v_y * rho_x_hat)   * xjac * theta * tstep &
                            + rho_hat * BigR**2 * w0 * (v_s * u0_t - v_t * u0_s)         * theta * tstep &
-                           - BigR**2 * (v_s * rho_t * T0   - v_t * rho_s * T0  )        * theta * tstep &
-                           - BigR**2 * (v_s * rho   * T0_t - v_t * rho   * T0_s)        * theta * tstep &
+                           - BigR**2 * (v_s*rho_t*(Ti0+Te0) - v_t*rho_s*(Ti0+Te0))      * theta * tstep &
+                           - BigR**2 * (v_s*rho*(Ti0_t+Te0_t) - v_t*rho*(Ti0_s+Te0_s))  * theta * tstep &
 
                            ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
                            ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
@@ -1777,14 +1798,14 @@ do ms=1, n_gauss
                            - BigR**2 * rho * (vpar0_x * ps0_y - vpar0_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
                            - BigR**2 * vpar0 * (rho_x * ps0_y - rho_y * ps0_x)   * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
 
-                           + v * tauIC * BigR**4 * T0  * (rho_s * w0_t - rho_t * w0_s)  * theta * tstep &
-                           + v * tauIC * BigR**4 * rho * (T0_s  * w0_t - T0_t  * w0_s)  * theta * tstep &
+                           + v * tauIC * BigR**4 * Ti0  * (rho_s * w0_t - rho_t * w0_s)  * theta * tstep &
+                           + v * tauIC * BigR**4 * rho * (Ti0_s  * w0_t - Ti0_t  * w0_s)  * theta * tstep &
 
-                           + tauIC * BigR**3 * (T0_y * rho + T0 * rho_y) * (v_x* u0_x + v_y * u0_y) * xjac * theta * tstep &
+                           + tauIC * BigR**3 * (Ti0_y * rho + Ti0 * rho_y) * (v_x* u0_x + v_y * u0_y) * xjac * theta * tstep &
 
-                           + v * tauIC * BigR**4 * ( (u0_xy * (rho_xx*T0 + 2.d0*rho_x*T0_x + rho*T0_xx           &
-                                                            -  rho_yy*T0 - 2.d0*rho_y*T0_y - rho*T0_yy))         &
-                                                   - (rho_xy * T0 + rho_x*T0_y + rho_y*T0_x + rho*T0_xy) * (u0_xx - u0_yy)  )   &
+                           + v * tauIC * BigR**4 * ( (u0_xy * (rho_xx*Ti0 + 2.d0*rho_x*Ti0_x + rho*Ti0_xx           &
+                                                            -  rho_yy*Ti0 - 2.d0*rho_y*Ti0_y - rho*Ti0_yy))         &
+                                                   - (rho_xy * Ti0 + rho_x*Ti0_y + rho_y*Ti0_x + rho*Ti0_xy) * (u0_xx - u0_yy)  )   &
                                        * xjac * theta * tstep                                          &
 
                          + TG_num2 * 0.25d0 * rho_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x) &
@@ -1797,22 +1818,19 @@ do ms=1, n_gauss
 !===============================End of NewTG_num terms==============================
 
 
-                 amat_26 = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)      * theta * tstep  &
-                           - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)    * theta * tstep  &
-			   - BigR**2 * (v_s * rn0_t * alpha_imp * T - v_t * rn0_s * alpha_imp * T)         * theta * tstep  &
-			   - BigR**2 * (v_s * rn0 * alpha_imp_bis * T_t - v_t * rn0 * alpha_imp_bis * T_s) * theta * tstep  &
-                           + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac  * theta * tstep &
-                           ! Hyper-viscosity terms
-                           + dvisco_num_dT * T * (v_xx + v_x/Bigr + v_yy)*(w0_xx + w0_x/Bigr + w0_yy)* xjac * theta * tstep &
+                 amat_26 = - BigR**2 * (v_s * r0_t * Ti   - v_t * r0_s * Ti)      * theta * tstep  &
+                           - BigR**2 * (v_s * r0   * Ti_t - v_t * r0   * Ti_s)    * theta * tstep  &
+                           - BigR**2 * (v_s * rn0_t * alpha_i * Ti - v_t * rn0_s * alpha_i * Ti) * theta * tstep  &
+                           - BigR**2 * (v_s * rn0 * alpha_i * Ti_t - v_t * rn0 * alpha_i * Ti_s) * theta * tstep  &
 
                            + v * tauIC * BigR**4 * r0 * (T_s  * w0_t - T_t  * w0_s)  * theta * tstep &
                            + v * tauIC * BigR**4 * T  * (r0_s * w0_t - r0_t * w0_s)  * theta * tstep &
 
-		            + tauIC * BigR**3 * (r0_y * T + r0 * T_y) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-		            + v * tauIC * BigR**4 * ( (u0_xy * (T_xx * r0 + 2.d0 * T_x * r0_x + T * r0_xx         &
-			                                     - T_yy*r0 - 2.d0 * T_y * r0_y - T * r0_yy))       &			 
-			                           - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  )         &
-						 * xjac * theta * tstep 
+                           + tauIC * BigR**3 * (r0_y * T + r0 * T_y) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                           + v * tauIC * BigR**4 * ( (u0_xy * (T_xx * r0 + 2.d0 * T_x * r0_x + T * r0_xx         &
+                                                               - T_yy*r0 - 2.d0 * T_y * r0_y - T * r0_yy))       &
+                                                    - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy)  ) &
+                                                                                                 * xjac * theta * tstep 
 
                  amat_27 = &
                            ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
@@ -1821,8 +1839,19 @@ do ms=1, n_gauss
                            - BigR**2 * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
                            - BigR**2 * vpar * (r0_x * ps0_y - r0_y * ps0_x)   * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
 
-		 amat_28 = - BigR**2 * (v_s * rhon_t * alpha_imp * T0     - v_t * rhon_s * alpha_imp * T0  )   * theta * tstep &
-                           - BigR**2 * (v_s * rhon * alpha_imp_bis * T0_t - v_t * rhon * alpha_imp_bis * T0_s) * theta * tstep
+                 amat_28 = - BigR**2 * (v_s * rhon_t * alpha_i * Ti0 - v_t * rhon_s * alpha_i * Ti0)         * theta * tstep &
+                           - BigR**2 * (v_s * rhon * alpha_i * Ti0_t - v_t * rhon * alpha_i * Ti0_s)         * theta * tstep &
+                           - BigR**2 * (v_s * rhon_t * alpha_e * Te0     - v_t * rhon_s * alpha_e * Te0)     * theta * tstep &
+                           - BigR**2 * (v_s * rhon * alpha_e_bis * Te0_t - v_t * rhon * alpha_e_bis * Te0_s) * theta * tstep
+
+                 amat_29 = - BigR**2 * (v_s * r0_t * Te   - v_t * r0_s * Te)      * theta * tstep  &
+                           - BigR**2 * (v_s * r0   * Te_t - v_t * r0   * Te_s)    * theta * tstep  &
+                           - BigR**2 * (v_s * rn0_t * alpha_e * Te - v_t * rn0_s * alpha_e * Te)         * theta * tstep  &
+                           - BigR**2 * (v_s * rn0 * alpha_e_bis * Te_t - v_t * rn0 * alpha_e_bis * Te_s) * theta * tstep  &
+                           + dvisco_dT * Te * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac  * theta * tstep &
+                           ! Hyper-viscosity terms
+                           + dvisco_num_dT * Te * (v_xx + v_x/Bigr + v_yy)*(w0_xx + w0_x/Bigr + w0_yy)*xjac * theta * tstep &
+
 
 !###################################################################################################
 !#  equation 3                                                                                     #
@@ -1887,7 +1916,7 @@ do ms=1, n_gauss
                          + v * rho * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                      * theta * tstep &
                          + v * rho * F0 / BigR * vpar0_p                                               * xjac * theta * tstep &
 
-                        - v * 2.d0 * tauIC * (rho_y * T0 + rho*T0_y) * BigR                           * xjac * theta * tstep &
+                        - v * 2.d0 * tauIC * (rho_y * Ti0 + rho*T0_y) * BigR                           * xjac * theta * tstep &
                                                  
                          + D_perp_num     * (v_xx + v_x/BigR + v_yy)*(rho_xx + rho_x/BigR + rho_yy)   * BigR * xjac * theta * tstep &
 
@@ -1898,7 +1927,7 @@ do ms=1, n_gauss
                               * (rho_x * ps0_y - rho_y * ps0_x + F0 / BigR * rho_p)                          &
                               * ( v_x * ps0_y -  v_y * ps0_x   + F0 / BigR * v_p) * xjac * theta * tstep * tstep 
 
-		 amat_56 = - v * 2.d0 * tauIC * (T_y * r0 + T*r0_y) * BigR                               * xjac * theta * tstep 
+                 amat_56 = - v * 2.d0 * tauIC * (Ti_y * r0 + Ti*r0_y) * BigR                         * xjac * theta * tstep 
 
                  amat_57 = + v * F0 / BigR * Vpar * r0_p                                             * xjac * theta * tstep &
                            + v * Vpar * (r0_s * ps0_t - r0_t * ps0_s)                                       * theta * tstep &
@@ -1918,36 +1947,28 @@ do ms=1, n_gauss
                                                                                                      * xjac * theta * tstep
 
 !###################################################################################################
-!#  equation 6   energy equation                                                                   #
+!#  equation 6   ion energy equation                                                               #
 !###################################################################################################
 
                  Bgrad_T_star_psi = ( v_x  * psi_y - v_y  * psi_x  ) / BigR
-                 Bgrad_T_psi      = ( T0_x * psi_y - T0_y * psi_x )  / BigR
-                 Bgrad_T_T        = ( F0 / BigR * T_p +  T_x * ps0_y - T_y * ps0_x ) / BigR          ! F0 due to absence of normalisation
-
-                 T_ps0_x = T_xx * ps0_y - T_xy * ps0_x + T_x * ps0_xy - T_y * ps0_xx
-                 T_ps0_y = T_xy * ps0_y - T_yy * ps0_x + T_x * ps0_yy - T_y * ps0_xy
+                 Bgrad_Ti_psi     = ( Ti0_x * psi_y - Ti0_y * psi_x )  / BigR
+                 Bgrad_Ti_T       = ( F0 / BigR * Ti_p +  Ti_x * ps0_y - Ti_y * ps0_x ) / BigR ! F0 due to absence of normalisation
+                 Ti_ps0_x = Ti_xx * ps0_y - Ti_xy * ps0_x + Ti_x * ps0_xy - Ti_y * ps0_xx
+                 Ti_ps0_y = Ti_xy * ps0_y - Ti_yy * ps0_x + Ti_x * ps0_yy - Ti_y * ps0_xy
  
-                 T0_psi_x = T0_xx * psi_y - T0_xy * psi_x + T0_x * psi_xy - T0_y * psi_xx
-                 T0_psi_y = T0_xy * psi_y - T0_yy * psi_x + T0_x * psi_yy - T0_y * psi_xy
-                 
+                 Ti0_psi_x = Ti0_xx * psi_y - Ti0_xy * psi_x + Ti0_x * psi_xy - Ti0_y * psi_xx
+                 Ti0_psi_y = Ti0_xy * psi_y - Ti0_yy * psi_x + Ti0_x * psi_yy - Ti0_y * psi_xy
+
                  v_psi_x = v_xx * psi_y - v_xy * psi_x + v_x * psi_xy - v_y * psi_xx
                  v_psi_y = v_xy * psi_y - v_yy * psi_x + v_x * psi_yy - v_y * psi_xy
 
 
-                 amat_61 = - (ZKpar_T-ZK_prof) * BigR * BB2_psi / BB2**2 * Bgrad_T_star * Bgrad_T     * xjac * theta * tstep &
-                           + (ZKpar_T-ZK_prof) * BigR / BB2     * Bgrad_T_star_psi      * Bgrad_T     * xjac * theta * tstep &
-                           + (ZKpar_T-ZK_prof) * BigR / BB2     * Bgrad_T_star          * Bgrad_T_psi * xjac * theta * tstep &
-                           + v * (r0 + rn0 * alpha_imp_bis) * Vpar0 * (T0_s * psi_t - T0_t * psi_s)          * theta * tstep &
-                           + v * T0 * Vpar0 * ((r0_s+rn0_s*alpha_imp)*psi_t - (r0_t+rn0_t*alpha_imp)*psi_s)  * theta * tstep &
-                           + v * (r0 + rn0 * alpha_imp) * GAMMA * T0 * (vpar0_s * psi_t - vpar0_t * psi_s)   * theta * tstep &
-!=============== The ionization potential energy term=========================
-                           + (GAMMA-1.) * v * rn0 * dE_ion_dT * Vpar0 * (T0_s * psi_t - T0_t * psi_s)           * theta * tstep &
-                           + (GAMMA-1.) * v * E_ion * Vpar0 * (rn0_s * psi_t - rn0_t * psi_s)                   * theta * tstep &
-                           + (GAMMA-1.) * v * E_ion_bg *Vpar0*((r0_s-rn0_s)*psi_t - (r0_t-rn0_t)*psi_s)         * theta * tstep &
-                           + (GAMMA-1.) * v * E_ion * rn0 * (vpar0_s * psi_t - vpar0_t * psi_s)                 * theta * tstep &
-                           + (GAMMA-1.) * v * E_ion_bg * (r0-rn0) * (vpar0_s * psi_t - vpar0_t * psi_s)         * theta * tstep &
-!================= End ionization potential energy ===========================
+                 amat_61 = - (ZK_i_par_T-ZK_i_prof)*BigR * BB2_psi / BB2**2 * Bgrad_T_star * Bgrad_Ti * xjac * theta * tstep &
+                           + (ZK_i_par_T-ZK_i_prof) * BigR / BB2     * Bgrad_T_star_psi    * Bgrad_Ti * xjac * theta * tstep &
+                           + (ZK_i_par_T-ZK_i_prof) * BigR / BB2     * Bgrad_T_star    * Bgrad_Ti_psi * xjac * theta * tstep &
+                           + v * (r0 + rn0 * alpha_i) * Vpar0 * (Ti0_s * psi_t - Ti0_t * psi_s)              * theta * tstep &
+                           + v * Ti0 * Vpar0 * ((r0_s+rn0_s*alpha_i)*psi_t - (r0_t+rn0_t*alpha_i)*psi_s)     * theta * tstep &
+                           + v * (r0 + rn0 * alpha_i) * GAMMA * Ti0 * (vpar0_s * psi_t - vpar0_t * psi_s)    * theta * tstep &
 
 !===================== Additional terms from friction terms============
                            - v * ((GAMMA - 1.) / BigR) * vpar0**2 * (psi_x * ps0_x + psi_y * ps0_y)                          &
@@ -1956,230 +1977,185 @@ do ms=1, n_gauss
 
 
                            + ZK_par_num * (v_psi_x  * ps0_y - v_psi_y  * ps0_x + v_ps0_x * psi_y - v_ps0_y * psi_x)          &
-                                        * (T0_ps0_x * ps0_y - T0_ps0_y * ps0_x)                       * xjac * theta * tstep &
-                           + ZK_par_num * (T0_psi_x * ps0_y - T0_psi_y * ps0_x + T0_ps0_x * psi_y - T0_ps0_y * psi_x)        &
+                                        * (Ti0_ps0_x * ps0_y - Ti0_ps0_y * ps0_x)                     * xjac * theta * tstep &
+                           + ZK_par_num * (Ti0_psi_x * ps0_y - Ti0_psi_y * ps0_x + Ti0_ps0_x * psi_y - Ti0_ps0_y * psi_x)    &
                                         * (v_ps0_x  * ps0_y - v_ps0_y  * ps0_x)                       * xjac * theta * tstep &
 
                            + TG_num6 * 0.25d0 / BigR * vpar0**2                                                       &
-                                     * T0 * (r0_x * psi_y - r0_y * psi_x)                                             &
+                                     * Ti0 * ((r0_x+alpha_i*rn0_x) * psi_y - (r0_y+alpha_i*rn0_y) * psi_x)            &
                                      * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
                      
                            + TG_num6 * 0.25d0 / BigR * vpar0**2                                                       &
-                                     * r0 * (T0_x * psi_y - T0_y * psi_x)                                             &
+                                     * (r0+alpha_i*rn0) * (Ti0_x * psi_y - Ti0_y * psi_x)                             &
                                      * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
                      
                            + TG_num6 * 0.25d0 / BigR * vpar0**2                                                       &
-                                     * T0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                          &
+                                     * Ti0 * ((r0_x+alpha_i*rn0_x) * ps0_y - (r0_y+alpha_i*rn0_y) * ps0_x             &
+                                             + F0 / BigR * (r0_p+alpha_i*rn0_p))                                      &
                                      * ( v_x * psi_y -  v_y * psi_x ) * xjac * theta * tstep * tstep                  &
                      
                            + TG_num6 * 0.25d0 / BigR * vpar0**2                                                       &
-                                     * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                          &
+                                     * (r0+alpha_i*rn0) * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)         &
                                      * ( v_x * psi_y -  v_y * psi_x ) * xjac * theta * tstep * tstep
 
 
-                 amat_62 = - v * (r0 + rn0 * alpha_imp_bis) * BigR**2 * ( T0_s * u_t - T0_t * u_s)         * theta * tstep &
-		           - v * T0 * BigR**2 * ((r0_s+rn0_s*alpha_imp)*u_t - (r0_t+rn0_t*alpha_imp)*u_s)  * theta * tstep &
-                           - v * (r0 + rn0 * alpha_imp) * 2.d0* GAMMA * BigR * T0 * u_y             * xjac * theta * tstep &
-!=============== The ionization potential energy term=========================
-                           - (GAMMA-1.) * v * rn0 * dE_ion_dT * BigR**2 * ( T0_s * u_t - T0_t * u_s)          * theta * tstep &
-                           - (GAMMA-1.) * v * E_ion * BigR**2 * (rn0_s * u_t - rn0_t * u_s)                   * theta * tstep &
-                           - (GAMMA-1.) * v * E_ion_bg * BigR**2 *((r0_s-rn0_s)*u_t - (r0_t-rn0_t)*u_s)       * theta * tstep &
-                           - (GAMMA-1.) * v * E_ion * rn0 * 2.d0 * BigR * u_y                          * xjac * theta * tstep &
-                           - (GAMMA-1.) * v * E_ion_bg * (r0-rn0) * 2.d0 * BigR * u_y                  * xjac * theta * tstep &
-!================= End ionization potential energy ===========================
+                 amat_62 = - v * (r0 + rn0 * alpha_i) * BigR**2 * ( Ti0_s * u_t - Ti0_t * u_s)             * theta * tstep &
+                           - v * Ti0 * BigR**2 * ((r0_s+rn0_s*alpha_i)*u_t - (r0_t+rn0_t*alpha_i)*u_s)     * theta * tstep &
+                           - v * (r0 + rn0 * alpha_i) * 2.d0* GAMMA * BigR * Ti0 * u_y              * xjac * theta * tstep &
 
 !===================== Additional terms from friction terms============
                            - v * BigR**3 * (GAMMA - 1.) * (u_x * u0_x + u_y * u0_y)                                        &
                                * (source_bg + source_imp)                                           * xjac * theta * tstep &
 !==============================End of friction terms=================
 
-
-                           + TG_num6 * 0.25d0 * BigR**2 * T0* (r0_x * u_y - r0_y * u_x)       &
+                           + TG_num6 * 0.25d0 * BigR**2 * Ti0* ((r0_x+alpha_i*rn0_x) * u_y - (r0_y+alpha_i*rn0_y) * u_x) &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep  &
 
-                           + TG_num6 * 0.25d0 * BigR**2 * r0* (T0_x * u_y - T0_y * u_x)       &
+                           + TG_num6 * 0.25d0 * BigR**2 * (r0+alpha_i*rn0)* (Ti0_x * u_y - Ti0_y * u_x)                  &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep  &
 
-                           + TG_num6 * 0.25d0 * BigR**2 * T0* (r0_x * u0_y - r0_y * u0_x)     &
+                           + TG_num6 * 0.25d0 * BigR**2 * Ti0* ((r0_x+alpha_i*rn0_x)*u0_y - (r0_y+alpha_i*rn0_y)*u0_x)   &
                                      * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep    &
 
-                           + TG_num6 * 0.25d0 * BigR**2 * r0* (T0_x * u0_y - T0_y * u0_x)     &
-                                     * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
-
-                amat_63 = - v * BigR * zj * (4./(3. * BigR**2)) * eta_Sp * zj0                      * xjac * theta * tstep
+                           + TG_num6 * 0.25d0 * BigR**2 * (r0+alpha_i*rn0)* (Ti0_x * u0_y - Ti0_y * u0_x)                &
+                                     * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep
 
 
-                amat_65 =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)    &
+                amat_63 =  0.
 
-		           - v * rho * BigR**2 * ( T0_s  * u0_t - T0_t  * u0_s)                        * theta * tstep &
-		           - v * T0  * BigR**2 * ( rho_s * u0_t - rho_t * u0_s)                        * theta * tstep &
 
-                           - v * rho * 2.d0* GAMMA * BigR * T0 * u0_y                           * xjac * theta * tstep &
+                amat_65 =  + v * rho * Ti0 * BigR * xjac * (1.d0 + zeta)    &
 
-                           + v * rho * F0 / BigR * Vpar0 * T0_p                                 * xjac * theta * tstep &
-                           + v * T0  * F0 / BigR * Vpar0 * rho_p                                * xjac * theta * tstep &
+                           - v * rho * BigR**2 * ( Ti0_s  * u0_t - Ti0_t  * u0_s)                      * theta * tstep &
+                           - v * Ti0  * BigR**2 * ( rho_s * u0_t - rho_t * u0_s)                       * theta * tstep &
 
-                           + v * rho * Vpar0 * (T0_s  * ps0_t - T0_t  * ps0_s)                         * theta * tstep &
-                           + v * T0  * Vpar0 * (rho_s * ps0_t - rho_t * ps0_s)                         * theta * tstep &
+                           - v * rho * 2.d0* GAMMA * BigR * Ti0 * u0_y                          * xjac * theta * tstep &
 
-                           + v * rho * GAMMA * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                * theta * tstep &
-                           + v * rho * GAMMA * T0 * F0 / BigR * vpar0_p                         * xjac * theta * tstep &
+                           + v * rho * F0 / BigR * Vpar0 * Ti0_p                                * xjac * theta * tstep &
+                           + v * Ti0  * F0 / BigR * Vpar0 * rho_p                               * xjac * theta * tstep &
 
-                           + TG_num6 * 0.25d0 * BigR**2 * T0* (rho_x * u0_y - rho_y * u0_x)      &
+                           + v * rho * Vpar0 * (Ti0_s  * ps0_t - Ti0_t  * ps0_s)                       * theta * tstep &
+                           + v * Ti0  * Vpar0 * (rho_s * ps0_t - rho_t * ps0_s)                        * theta * tstep &
+
+                           + v * rho * GAMMA * Ti0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)               * theta * tstep &
+                           + v * rho * GAMMA * Ti0 * F0 / BigR * vpar0_p                        * xjac * theta * tstep &
+
+                           ! Energy exchange term
+                           - v * BigR * ddTi_e_drho * rho                                       * xjac * theta * tstep &
+
+                           + TG_num6 * 0.25d0 * BigR**2 * Ti0* (rho_x * u0_y - rho_y * u0_x)     &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep     &
 
-                           + TG_num6 * 0.25d0 * BigR**2 * rho * (T0_x * u0_y - T0_y * u0_x)      &
+                           + TG_num6 * 0.25d0 * BigR**2 * rho * (Ti0_x * u0_y - Ti0_y * u0_x)    &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac* theta*tstep*tstep      &
 
                            + TG_num6 * 0.25d0 / BigR * vpar0**2 &
-                              * T0 * (rho_x * ps0_y - rho_y * ps0_x + F0 / BigR * rho_p)                      &
+                              * Ti0 * (rho_x * ps0_y - rho_y * ps0_x + F0 / BigR * rho_p)                     &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep&
 
                            + TG_num6 * 0.25d0 / BigR * vpar0**2 &
-                              * rho * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                        &
-                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
-
-                           + v * BigR * rho * rn0_corr * Lrad                                   * xjac * theta * tstep &
-                           + v * BigR * rho * frad_bg                                           * xjac * theta * tstep &
-                        ! New term from Z_eff
-                           - v * BigR * rho * ((2d0)/(3*BigR**2)) * detaSp_dr0 * zj0**2         * xjac * theta * tstep &
-!=============== The ionization potential energy term=========================
-                           + (GAMMA-1.) * v * rho * E_ion_bg * BigR * xjac * (1.d0 + zeta)  &
-                           - (GAMMA-1.) * v * E_ion_bg * BigR**2 * (rho_s * u0_t - rho_t * u0_s) * theta * tstep &
-
-                           + (GAMMA-1.) * v * E_ion_bg * F0 / BigR * Vpar0 * rho_p        * xjac * theta * tstep &
-
-                           + (GAMMA-1.) * v * E_ion_bg * Vpar0 * (rho_s * ps0_t - rho_t * ps0_s) * theta * tstep &
-
-                           - (GAMMA-1.) * v * E_ion_bg * rho * 2.d0 * BigR * u0_y         * xjac * theta * tstep &
-                           + (GAMMA-1.) * v * E_ion_bg * rho * (vpar0_s*ps0_t - vpar0_t*ps0_s)   * theta * tstep &
-                           + (GAMMA-1.) * v * E_ion_bg * rho * F0 / BigR * vpar0_p        * xjac * theta * tstep  
-
-!================= End ionization potential energy ===========================
+                              * rho * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                      &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep 
 
 
-                 amat_66 =   v * (r0 + rn0 * alpha_imp_bis) * T * BigR * xjac * (1.d0 + zeta)                     &
-!=============== The ionization potential energy term=========================
-                           + (GAMMA-1.) * v * rn0 * dE_ion_dT  * T * BigR * xjac * (1.d0 + zeta)                     &
-                           - (GAMMA-1.) * v * rn0 * dE_ion_dT * BigR**2 * (T_s*u0_t - T_t*u0_s)    * theta * tstep &
+                 amat_66 =   v * (r0 + rn0 * alpha_i) * Ti * BigR * xjac * (1.d0 + zeta)                           &
+                           - v * (r0 + rn0 * alpha_i) * BigR**2 * ( Ti_s  * u0_t - Ti_t  * u0_s)   * theta * tstep &
+                           - v * Ti  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                      * theta * tstep &
+                           - v * alpha_i * Ti * BigR**2 * (rn0_s * u0_t - rn0_t * u0_s)            * theta * tstep &
 
-                           + (GAMMA-1.) * v * rn0 * dE_ion_dT * F0 / BigR * Vpar0 * T_p     * xjac * theta * tstep &
-
-                           + (GAMMA-1.) * v * rn0 * dE_ion_dT * Vpar0 * (T_s*ps0_t - T_t*ps0_s)    * theta * tstep &
-!================= End ionization potential energy ===========================
-                           - v * (r0 + rn0 * alpha_imp_bis) * BigR**2 * ( T_s  * u0_t - T_t  * u0_s) * theta * tstep &
-                           - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                       * theta * tstep &
-                           - v * alpha_imp_bis * T * BigR**2 * (rn0_s * u0_t - rn0_t * u0_s)       * theta * tstep &
-
-                           - v * (r0 + rn0 * alpha_imp_bis) * 2.d0* GAMMA * BigR * T * u0_y * xjac * theta * tstep &
+                           - v * (r0 + rn0 * alpha_i) * 2.d0* GAMMA * BigR * Ti * u0_y      * xjac * theta * tstep &
 
 
-                           + v * (r0 + rn0 * alpha_imp_bis) * F0 / BigR * Vpar0 * T_p       * xjac * theta * tstep &
-                           + v * T * F0  / BigR * Vpar0 * (r0_p + rn0_p * alpha_imp_bis)    * xjac * theta * tstep &
+                           + v * (r0 + rn0 * alpha_i) * F0 / BigR * Vpar0 * Ti_p            * xjac * theta * tstep &
+                           + v * Ti * F0  / BigR * Vpar0 * (r0_p + rn0_p * alpha_i)         * xjac * theta * tstep &
 
-                           + v * (r0 + rn0 * alpha_imp_bis) * Vpar0 * (T_s  * ps0_t - T_t  * ps0_s)* theta * tstep &
-                           + v * T  * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                        * theta * tstep &
-                           + v * alpha_imp_bis * T * Vpar0 * (rn0_s * ps0_t - rn0_t * ps0_s)       * theta * tstep &
+                           + v * (r0 + rn0 * alpha_i) * Vpar0 * (Ti_s  * ps0_t - Ti_t  * ps0_s)    * theta * tstep &
+                           + v * Ti  * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                       * theta * tstep &
+                           + v * alpha_imp * Ti * Vpar0 * (rn0_s * ps0_t - rn0_t * ps0_s)          * theta * tstep &
 
-                           + v * (r0 + rn0 * alpha_imp_bis) * GAMMA * T * (vpar0_s * ps0_t - vpar0_t * ps0_s) * theta * tstep &
-                           + v * (r0 + rn0 * alpha_imp_bis) * GAMMA * T * F0 / BigR * vpar0_p          * xjac * theta * tstep &
+                           + v * (r0 + rn0 * alpha_i) * GAMMA * Ti * (vpar0_s * ps0_t - vpar0_t * ps0_s) * theta * tstep &
+                           + v * (r0 + rn0 * alpha_i) * GAMMA * Ti * F0 / BigR * vpar0_p          * xjac * theta * tstep &
 
-                           + (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T_T      * xjac * theta * tstep &
-                           + ZK_prof * BigR * (v_x*T_x + v_y*T_y + v_p*T_p /BigR**2 )       * xjac * theta * tstep &
+                           ! Energy exchange term
+                           - v * BigR * ddTi_e_dTi * Ti                                           * xjac * theta * tstep &
 
-                           + dZKpar_dT * T * BigR / BB2 * Bgrad_T_star * Bgrad_T            * xjac * theta * tstep &
+                           + (ZK_i_par_T-ZK_i_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Ti_T      * xjac * theta * tstep &
+                           + ZK_i_prof * BigR * (v_x*Ti_x + v_y*Ti_y + v_p*Ti_p /BigR**2 )        * xjac * theta * tstep &
 
-                           + ZK_perp_num * (v_xx + v_x/BigR + v_yy)*(T_xx + T_x/BigR + T_yy) * BigR * xjac * theta * tstep &
+                           + dZK_i_par_dT * Ti * BigR / BB2 * Bgrad_T_star * Bgrad_Ti             * xjac * theta * tstep &
 
-                           + TG_num6 * 0.25d0 * BigR**2 * T* (r0_x * u0_y - r0_y * u0_x)         &
+                           + ZK_perp_num * (v_xx + v_x/BigR + v_yy)*(Ti_xx+Ti_x/BigR+Ti_yy)*BigR  * xjac * theta * tstep &
+
+                           + TG_num6 * 0.25d0 * BigR**2 * Ti * ((r0_x+alpha_i*rn0_x)*u0_y - (r0_y+alpha_i*rn0_y)*u0_x)   &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
 
-                           + TG_num6 * 0.25d0 * BigR**2 * r0* (T_x * u0_y - T_y * u0_x)          &
+                           + TG_num6 * 0.25d0 * BigR**2 * (r0+alpha_i*rn0)* (Ti_x * u0_y - Ti_y * u0_x)                  &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
 
                            + TG_num6 * 0.25d0 / BigR * vpar0**2 &
-                              * T * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                          &
+                              * Ti * ((r0_x+alpha_i*rn0_x)*ps0_y - (r0_y+alpha_i*rn0_y)*ps0_x                 &
+                                     + F0/BigR*(r0_p+alpha_i*rn0_p))                                          &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep&
 
                            + TG_num6 * 0.25d0 / BigR * vpar0**2 &
-                              * r0 * (T_x * ps0_y - T_y * ps0_x + F0 / BigR * T_p)                            &
-                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
-
-                           - v * BigR * T * ((2d0)/(3*BigR**2)) * detaSp_dT * zj0**2        * xjac * theta * tstep  &
-                           + v * BigR * T * (r0_corr + alpha_e*rn0_corr) * rn0_corr * dLrad_dT  * xjac * theta * tstep  &
-                           + v * BigR * T * dalpha_e_dT * rn0_corr**2 * Lrad                    * xjac * theta * tstep  &
-                           + v * BigR * T * r0_corr * dfrad_bg_dT                                * xjac * theta * tstep
+                              * (r0+alpha_i*rn0) * (Ti_x * ps0_y - Ti_y * ps0_x + F0 / BigR * Ti_p)            &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep 
 
 
-                 amat_67 = + v * (r0 + rn0 * alpha_imp_bis) * F0 / BigR * Vpar * T0_p       * xjac * theta * tstep &
-		           + v * T0 * F0 / BigR * Vpar * (r0_p + rn0_p * alpha_imp)         * xjac * theta * tstep &
 
-                           + v * (r0 + rn0 * alpha_imp_bis) * Vpar * (T0_s * ps0_t - T0_t * ps0_s)         * theta * tstep &
-                           + v * T0 * Vpar * ((r0_s+rn0_s*alpha_imp)*ps0_t - (r0_t+rn0_t*alpha_imp)*ps0_s) * theta * tstep &
+                 amat_67 = + v * (r0 + rn0 * alpha_i) * F0 / BigR * Vpar * Ti0_p            * xjac * theta * tstep &
+                           + v * Ti0 * F0 / BigR * Vpar * (r0_p + rn0_p * alpha_i)          * xjac * theta * tstep &
 
-                           + v * (r0 + rn0 * alpha_imp) * GAMMA * T0 * (vpar_s * ps0_t - vpar_t * ps0_s)   * theta * tstep &
-                           + v * (r0 + rn0 * alpha_imp) * GAMMA * T0 * F0 / BigR * vpar_p           * xjac * theta * tstep &
-!=============== The ionization potential energy term=========================
-                           + (GAMMA-1.) * v * rn0 * dE_ion_dT * F0 / BigR * Vpar * T0_p        * xjac * theta * tstep  &
-                           + (GAMMA-1.) * v * E_ion * F0 / BigR * Vpar * rn0_p                 * xjac * theta * tstep  &
-                           + (GAMMA-1.) * v * E_ion_bg * F0 / BigR * Vpar * (r0_p-rn0_p)       * xjac * theta * tstep  &
+                           + v * (r0 + rn0 * alpha_i) * Vpar * (Ti0_s * ps0_t - Ti0_t * ps0_s)            * theta * tstep &
+                           + v * Ti0 * Vpar * ((r0_s+rn0_s*alpha_i)*ps0_t - (r0_t+rn0_t*alpha_i)*ps0_s)   * theta * tstep &
 
-                           + (GAMMA-1.) * v * rn0 * dE_ion_dT * Vpar * (T0_s * ps0_t - T0_t * ps0_s)  * theta * tstep  &
-                           + (GAMMA-1.) * v * E_ion * Vpar * (rn0_s * ps0_t - rn0_t * ps0_s)          * theta * tstep  &
-                           + (GAMMA-1.) * v * E_ion_bg*Vpar*((r0_s-rn0_s)*ps0_t - (r0_t-rn0_t)*ps0_s) * theta * tstep  &
-
-                           + (GAMMA-1.) * v * E_ion * rn0 * (vpar_s * ps0_t - vpar_t * ps0_s)         * theta * tstep  &
-                           + (GAMMA-1.) * v * E_ion * rn0 * F0 / BigR * vpar_p                 * xjac * theta * tstep  &
-
-                           + (GAMMA-1.) * v * E_ion_bg * (r0-rn0) * (vpar_s * ps0_t - vpar_t * ps0_s) * theta * tstep  &
-                           + (GAMMA-1.) * v * E_ion_bg * (r0-rn0) * F0 / BigR * vpar_p         * xjac * theta * tstep  &
-!================= End ionization potential energy ===========================
+                           + v * (r0 + rn0 * alpha_i) * GAMMA * Ti0 * (vpar_s * ps0_t - vpar_t * ps0_s)   * theta * tstep &
+                           + v * (r0 + rn0 * alpha_i) * GAMMA * Ti0 * F0 / BigR * vpar_p           * xjac * theta * tstep &
 
 !===================== Additional terms from friction terms============
                            - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp) * xjac * theta * tstep &
 !==============================End of friction terms=================
-
-
                            + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
-                              * T0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                          &
+                              * Ti0 * ((r0_x+alpha_i*rn0_x)*ps0_y - (r0_y+alpha_i*rn0_y)*ps0_x                 &
+                                      + F0 / BigR * (r0_p+alpha_i*rn0_p))                                      &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
 
                            + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
-                              * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                          &
+                              * (r0+alpha_i*rn0) * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)         &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
-                 amat_68 =   v * rhon * alpha_imp * T0 * BigR * xjac * (1.d0 + zeta)                              &
-!=============== The ionization potential energy term=========================
-                           + (GAMMA-1.) * v * rhon * (E_ion - E_ion_bg) * BigR * xjac * (1.d0 + zeta)                &
 
-                           - (GAMMA-1.) * v * rhon * dE_ion_dT * BigR**2 * (T0_s*u0_t - T0_t*u0_s)    * theta * tstep&
-                           - (GAMMA-1.) * v * (E_ion-E_ion_bg) * BigR**2 * (rhon_s*u0_t - rhon_t*u0_s)* theta * tstep&
+                 amat_68 =   v * rhon * alpha_i * Ti0 * BigR * xjac * (1.d0 + zeta)                                  &
+!=========================New TG_num terms====================================
+                           + TG_num6 * 0.25d0 * BigR**2 * Ti0 * alpha_i * (rhon_x * u0_y - rhon_y * u0_x)        &
+                                     * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep     &
 
-                           + (GAMMA-1.) * v * rhon * dE_ion_dT * F0 / BigR * Vpar0 * T0_p      * xjac * theta * tstep&
-                           + (GAMMA-1.) * v * (E_ion-E_ion_bg) * F0 / BigR * Vpar0 * rhon_p    * xjac * theta * tstep&
+                           + TG_num6 * 0.25d0 * BigR**2 * alpha_i * rhon * (Ti0_x * u0_y - Ti0_y * u0_x)         &
+                                     * ( v_x * u0_y - v_y * u0_x) * xjac* theta*tstep*tstep      &
 
-                           + (GAMMA-1.) * v * rhon * dE_ion_dT * Vpar0 * (T0_s*ps0_t - T0_t*ps0_s)    * theta * tstep&
-                           + (GAMMA-1.) * v * (E_ion-E_ion_bg) * Vpar0 * (rhon_s*ps0_t - rhon_t*ps0_s)* theta * tstep&
+                           + TG_num6 * 0.25d0 / BigR * vpar0**2 &
+                              * Ti0 * alpha_i * (rhon_x * ps0_y - rhon_y * ps0_x + F0 / BigR * rhon_p)           &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep   &
 
-                           - (GAMMA-1.) * v * (E_ion-E_ion_bg) * rhon * 2.d0 * BigR * u0_y     * xjac * theta * tstep&
-                           + (GAMMA-1.) * v * (E_ion-E_ion_bg) * rhon*(vpar0_s*ps0_t - vpar0_t*ps0_s) * theta * tstep&
-                           + (GAMMA-1.) * v * (E_ion-E_ion_bg) * rhon * F0 / BigR * vpar0_p    * xjac * theta * tstep&
+                           + TG_num6 * 0.25d0 / BigR * vpar0**2 &
+                              * alpha_i * rhon * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)           &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
+!===========================End of new TG_num terms===========================
 
-!================= End ionization potential energy ===========================
-                           ! New term from Z_eff
-                           - v * BigR * rhon * ((2d0)/(3*BigR**2)) * detaSp_drn0 * zj0**2  * xjac * theta * tstep &
-                           - v * rhon * BigR**2 * alpha_imp_bis * (T0_s * u0_t - T0_t * u0_s)     * theta * tstep &
-                           - v * alpha_imp * T0 * BigR**2 * (rhon_s * u0_t - rhon_t * u0_s)       * theta * tstep &
-                           + v * rhon * F0 / BigR * Vpar0 * alpha_imp_bis * T0_p           * xjac * theta * tstep &
-                           + v * alpha_imp * T0 * F0 / BigR * Vpar0 * rhon_p               * xjac * theta * tstep &
-                           + v * rhon * Vpar0 * alpha_imp_bis * (T0_s * ps0_t - T0_t * ps0_s)     * theta * tstep &
-                           + v * alpha_imp * T0 * Vpar0 * (rhon_s * ps0_t - rhon_t * ps0_s)       * theta * tstep &
+                           - v * rhon * BigR**2 * alpha_i * (Ti0_s * u0_t - Ti0_t * u0_s)         * theta * tstep &
+                           - v * alpha_i * Ti0 * BigR**2 * (rhon_s * u0_t - rhon_t * u0_s)        * theta * tstep &
+                           + v * rhon * F0 / BigR * Vpar0 * alpha_i * Ti0_p                * xjac * theta * tstep &
+                           + v * alpha_i * Ti0 * F0 / BigR * Vpar0 * rhon_p                * xjac * theta * tstep &
+                           + v * rhon * Vpar0 * alpha_i * (Ti0_s * ps0_t - Ti0_t * ps0_s)         * theta * tstep &
+                           + v * alpha_i * Ti0 * Vpar0 * (rhon_s * ps0_t - rhon_t * ps0_s)        * theta * tstep &
 
-                           - v * alpha_imp * rhon * 2.d0* GAMMA * BigR * T0 * u0_y                   * xjac * theta * tstep &
-                           + v * alpha_imp * rhon * GAMMA * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)        * theta * tstep &
-                           + v * alpha_imp * rhon * GAMMA * T0 * F0 / BigR * vpar0_p                 * xjac * theta * tstep &
+                           - v * alpha_i * rhon * 2.d0* GAMMA * BigR * Ti0 * u0_y                  * xjac * theta * tstep &
+                           + v * alpha_i * rhon * GAMMA * Ti0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)       * theta * tstep &
+                           + v * alpha_i * rhon * GAMMA * Ti0 * F0 / BigR * vpar0_p                * xjac * theta * tstep &
+                           ! Energy exchange term
+                           - v * BigR * ddTi_e_drhon * rhon                                        * xjac * theta * tstep 
 
-                           + v * BigR * rhon * (r0_corr + 2*alpha_e*rn0_corr) * Lrad                          * xjac * theta * tstep			   
+                 amat_69 = - v * BigR * ddTi_e_dTe * Te                                            * xjac * theta * tstep 
 
 !###################################################################################################
 !#  equation 7   parallel velocity equation                                                        #
@@ -2230,9 +2206,9 @@ do ms=1, n_gauss
                  amat_72 = - v * (r0_x_hat * u_y - r0_y_hat * u_x) * vpar0 * BB2 * theta * xjac * tstep
  
 
-                 amat_75 = + v * (rho_s * T0 * ps0_t - rho_t * T0 * ps0_s)                 * theta * tstep &
-                           + v * (rho * T0_s * ps0_t - rho * T0_t * ps0_s)                 * theta * tstep &
-                           + v * F0 / BigR * (rho_p * T0 + rho * T0_p)              * xjac * theta * tstep &
+                 amat_75 = + v * (rho_s * (Ti0+Te0) * ps0_t - rho_t * (Ti0+Te0) * ps0_s)           * theta * tstep &
+                           + v * (rho * (Ti0_s+Te0_s) * ps0_t - rho * (Ti0_t+Te0_t) * ps0_s)       * theta * tstep &
+                           + v * F0 / BigR * (rho_p * (Ti0+Te0) + rho * (Ti0_p+Te0_p))      * xjac * theta * tstep &
 
 		           + 0.5d0 * rho * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)    * theta * tstep &
 		           - 0.5d0 * rho * vpar0**2 * BB2 * F0 / BigR * v_p         * xjac * theta * tstep &
@@ -2265,12 +2241,12 @@ do ms=1, n_gauss
 
 
 
-                 amat_76 = + v * (T_s * r0 * ps0_t - T_t * r0 * ps0_s)                     * theta * tstep &
-                           + v * (T * r0_s * ps0_t - T * r0_t * ps0_s)                     * theta * tstep &
-                           + v * F0 / BigR * (T_p * r0 + T * r0_p)                  * xjac * theta * tstep &
-                           + v * (T_s * rn0 * alpha_imp_bis * ps0_t - T_t * rn0 * alpha_imp_bis * ps0_s) * theta * tstep &
-                           + v * (T * rn0_s * alpha_imp * ps0_t - T * rn0_t * alpha_imp * ps0_s)         * theta * tstep &
-                           + v * F0 / BigR * (T_p * rn0 * alpha_imp_bis + T * rn0_p * alpha_imp)  * xjac * theta * tstep 		   
+                 amat_76 = + v * (Ti_s * r0 * ps0_t - Ti_t * r0 * ps0_s)                          * theta * tstep &
+                           + v * (Ti * r0_s * ps0_t - Ti * r0_t * ps0_s)                          * theta * tstep &
+                           + v * F0 / BigR * (Ti_p * r0 + Ti * r0_p)                       * xjac * theta * tstep &
+                           + v * (Ti_s * rn0 * alpha_i * ps0_t - Ti_t * rn0 * alpha_i * ps0_s)    * theta * tstep &
+                           + v * (Ti * rn0_s * alpha_i * ps0_t - Ti * rn0_t * alpha_i * ps0_s)    * theta * tstep &
+                           + v * F0 / BigR * (Ti_p * rn0 * alpha_i + Ti * rn0_p * alpha_i) * xjac * theta * tstep    
 
 
                  amat_77 = v * Vpar * abs(r0) * F0**2 / BigR * xjac * (1.d0 + zeta) &
@@ -2280,11 +2256,11 @@ do ms=1, n_gauss
                          ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
                          - v * (r0_x_hat * u0_y - r0_y_hat * u0_x) * vpar         * BB2 * xjac * theta * tstep &
                          + 2.0 * v * vpar0 * F0 / BigR * r0_p      * vpar         * BB2 * xjac * theta * tstep &
-                         + v * r0 * F0 /BigR * vpar0_p             * vpar         * BB2 * xjac * theta * tstep &		      
+                         + v * r0 * F0 /BigR * vpar0_p             * vpar         * BB2 * xjac * theta * tstep &      
                          + v * r0 * F0 /BigR * vpar_p * vpar0                     * BB2 * xjac * theta * tstep &
-                         + v * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) * vpar0     * BB2 * xjac * theta * tstep &		      
-                         + v * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * vpar    * BB2 * xjac * theta * tstep &		      
-                         + 2.0 * v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x) * vpar * BB2 * xjac * theta * tstep  &
+                         + v * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) * vpar0     * BB2 * xjac * theta * tstep &      
+                         + v * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * vpar    * BB2 * xjac * theta * tstep &      
+                         + 2.0 * v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x) * vpar * BB2 * xjac * theta * tstep &
 
                          ! Old term (not to be included anymore due to implementations of terms above):
                          ! + v * (particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR  * xjac * theta * tstep &
@@ -2314,15 +2290,25 @@ do ms=1, n_gauss
 
 !=============================== New TG_num terms==================================
 
-            + TG_NUM7 * 0.75d0 * Vpar * Vpar0**2 * BB2 &
-                      * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR             &
-                      * (-(ps0_s * v_t  - ps0_t * v_s) /xjac + F0 / BigR * v_p)  * xjac * theta * tstep*tstep
+                         + TG_NUM7 * 0.75d0 * Vpar * Vpar0**2 * BB2 &
+                                   * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR             &
+                                   * (-(ps0_s * v_t  - ps0_t * v_s) /xjac + F0 / BigR * v_p)  * xjac * theta * tstep*tstep
 
 !===============================End of new TG_num terms============================
 
-		amat_78 = + v * (rhon_s * alpha_imp * T0 * ps0_t - rhon_t * alpha_imp * T0 * ps0_s)         * theta * tstep &
-                          + v * (rhon * alpha_imp_bis * T0_s * ps0_t - rhon * alpha_imp_bis * T0_t * ps0_s) * theta * tstep &
-                          + v * F0 / BigR * (rhon_p * alpha_imp * T0 + rhon * alpha_imp_bis * T0_p)         * xjac * theta * tstep
+                 amat_78 = + v * (rhon_s * alpha_i * Ti0 * ps0_t - rhon_t * alpha_i * Ti0 * ps0_s)         * theta * tstep &
+                           + v * (rhon * alpha_i * Ti0_s * ps0_t - rhon * alpha_i * Ti0_t * ps0_s)         * theta * tstep &
+                           + v * F0 / BigR * (rhon_p * alpha_i * Ti0 + rhon * alpha_i * Ti0_p)      * xjac * theta * tstep &
+                           + v * (rhon_s * alpha_e * Te0 * ps0_t - rhon_t * alpha_e * Te0 * ps0_s)         * theta * tstep &
+                           + v * (rhon * alpha_e_bis * Te0_s * ps0_t - rhon * alpha_e_bis * Te0_t * ps0_s) * theta * tstep &
+                           + v * F0 / BigR * (rhon_p * alpha_e * Te0 + rhon * alpha_e_bis * Te0_p)  * xjac * theta * tstep 
+
+                 amat_79 = + v * (Te_s * r0 * ps0_t - Te_t * r0 * ps0_s)                               * theta * tstep &
+                           + v * (Te * r0_s * ps0_t - Te * r0_t * ps0_s)                               * theta * tstep &
+                           + v * F0 / BigR * (Te_p * r0 + Te * r0_p)                            * xjac * theta * tstep &
+                           + v * (Te_s * rn0 * alpha_e_bis * ps0_t - Te_t * rn0 * alpha_e_bis * ps0_s) * theta * tstep &
+                           + v * (Te * rn0_s * alpha_e * ps0_t - Te * rn0_t * alpha_e * ps0_s)         * theta * tstep &
+                           + v * F0 / BigR * (Te_p * rn0 * alpha_e_bis + Te * rn0_p * alpha_e)  * xjac * theta * tstep 
 
 !################################################################################################### 
 !#  equation 8   impurity density equation                                                          # 
@@ -2389,6 +2375,279 @@ do ms=1, n_gauss
                           + Dn_perp_num     * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy)   * BigR * xjac * theta * tstep 
 
 
+!###################################################################################################
+!#  equation 9   electron energy equation                                                          #
+!###################################################################################################
+
+                 Bgrad_Te_psi     = ( Te0_x * psi_y - Te0_y * psi_x )  / BigR
+                 Bgrad_Te_T       = ( F0 / BigR * Te_p +  Te_x * ps0_y - Te_y * ps0_x ) / BigR ! F0 due to absence of normalisation
+
+                 Te_ps0_x = Te_xx * ps0_y - Te_xy * ps0_x + Te_x * ps0_xy - Te_y * ps0_xx
+                 Te_ps0_y = Te_xy * ps0_y - Te_yy * ps0_x + Te_x * ps0_yy - Te_y * ps0_xy
+
+                 Te0_psi_x = Te0_xx * psi_y - Te0_xy * psi_x + Te0_x * psi_xy - Te0_y * psi_xx
+                 Te0_psi_y = Te0_xy * psi_y - Te0_yy * psi_x + Te0_x * psi_yy - Te0_y * psi_xy
+ 
+                 amat_91 = - (ZK_e_par_T-ZK_e_prof)*BigR * BB2_psi / BB2**2 * Bgrad_T_star * Bgrad_Te * xjac * theta * tstep &
+                           + (ZK_e_par_T-ZK_e_prof) * BigR / BB2 * Bgrad_T_star_psi        * Bgrad_Te * xjac * theta * tstep &
+                           + (ZK_e_par_T-ZK_e_prof) * BigR / BB2 * Bgrad_T_star        * Bgrad_Te_psi * xjac * theta * tstep &
+                           + v * (r0 + rn0 * alpha_e_bis) * Vpar0 * (Te0_s * psi_t - Te0_t * psi_s)          * theta * tstep &
+                           + v * Te0 * Vpar0 * ((r0_s+rn0_s*alpha_e)*psi_t - (r0_t+rn0_t*alpha_e)*psi_s)     * theta * tstep &
+                           + v * (r0 + rn0 * alpha_e) * GAMMA * Te0 * (vpar0_s * psi_t - vpar0_t * psi_s)    * theta * tstep &
+!=============== The ionization potential energy term=========================
+                           + (GAMMA-1.) * v * rn0 * dE_ion_dT * Vpar0 * (Te0_s * psi_t - Te0_t * psi_s)         * theta * tstep &
+                           + (GAMMA-1.) * v * E_ion * Vpar0 * (rn0_s * psi_t - rn0_t * psi_s)                   * theta * tstep &
+                           + (GAMMA-1.) * v * E_ion_bg *Vpar0*((r0_s-rn0_s)*psi_t - (r0_t-rn0_t)*psi_s)         * theta * tstep &
+                           + (GAMMA-1.) * v * E_ion * rn0 * (vpar0_s * psi_t - vpar0_t * psi_s)                 * theta * tstep &
+                           + (GAMMA-1.) * v * E_ion_bg * (r0-rn0) * (vpar0_s * psi_t - vpar0_t * psi_s)         * theta * tstep &
+!================= End ionization potential energy ===========================
+
+                           + ZK_par_num * (v_psi_x  * ps0_y - v_psi_y  * ps0_x + v_ps0_x * psi_y - v_ps0_y * psi_x)          &
+                                        * (Te0_ps0_x * ps0_y - Te0_ps0_y * ps0_x)                     * xjac * theta * tstep &
+                           + ZK_par_num * (Te0_psi_x * ps0_y - Te0_psi_y * ps0_x + Te0_ps0_x * psi_y - Te0_ps0_y * psi_x)        &
+                                        * (v_ps0_x  * ps0_y - v_ps0_y  * ps0_x)                       * xjac * theta * tstep &
+
+                           + TG_num9 * 0.25d0 / BigR * vpar0**2                                                       &
+                                     * Te0 * ((r0_x+alpha_e*rn0_x) * psi_y - (r0_y+alpha_e*rn0_y) * psi_x)            &
+                                     * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
+                     
+                           + TG_num9 * 0.25d0 / BigR * vpar0**2                                                       &
+                                     * (r0+alpha_e_bis*rn0) * (Te0_x * psi_y - Te0_y * psi_x)                         &
+                                     * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
+                     
+                           + TG_num9 * 0.25d0 / BigR * vpar0**2                                                       &
+                                     * Te0 * ((r0_x+alpha_e*rn0_x) * ps0_y - (r0_y+alpha_e*rn0_y) * ps0_x             &
+                                             + F0 / BigR * (r0_p+alpha_e*rn0_p))                                      &
+                                     * ( v_x * psi_y -  v_y * psi_x ) * xjac * theta * tstep * tstep                  &
+                     
+                           + TG_num9 * 0.25d0 / BigR * vpar0**2                                                       &
+                                     * (r0+alpha_e_bis*rn0) * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)     &
+                                     * ( v_x * psi_y -  v_y * psi_x ) * xjac * theta * tstep * tstep
+
+
+                 amat_92 = - v * (r0 + rn0 * alpha_e_bis) * BigR**2 * ( Te0_s * u_t - Te0_t * u_s)       * theta * tstep &
+		           - v * Te0 * BigR**2 * ((r0_s+rn0_s*alpha_e)*u_t - (r0_t+rn0_t*alpha_e)*u_s)   * theta * tstep &
+                           - v * (r0 + rn0 * alpha_e) * 2.d0* GAMMA * BigR * Te0 * u_y            * xjac * theta * tstep &
+!=============== The ionization potential energy term=========================
+                           - (GAMMA-1.) * v * rn0 * dE_ion_dT * BigR**2 * ( Te0_s * u_t - Te0_t * u_s)        * theta * tstep &
+                           - (GAMMA-1.) * v * E_ion * BigR**2 * (rn0_s * u_t - rn0_t * u_s)                   * theta * tstep &
+                           - (GAMMA-1.) * v * E_ion_bg * BigR**2 *((r0_s-rn0_s)*u_t - (r0_t-rn0_t)*u_s)       * theta * tstep &
+                           - (GAMMA-1.) * v * E_ion * rn0 * 2.d0 * BigR * u_y                          * xjac * theta * tstep &
+                           - (GAMMA-1.) * v * E_ion_bg * (r0-rn0) * 2.d0 * BigR * u_y                  * xjac * theta * tstep &
+!================= End ionization potential energy ===========================
+
+                           + TG_num9 * 0.25d0 * BigR**2 * Te0* ((r0_x+alpha_e*rn0_x) * u_y - (r0_y+alpha_e*rn0_y) * u_x) &
+                                     * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep  &
+
+                           + TG_num9 * 0.25d0 * BigR**2 * (r0+alpha_e_bis*rn0) * (Te0_x * u_y - Te0_y * u_x)             &
+                                     * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep  &
+
+                           + TG_num9 * 0.25d0 * BigR**2 * Te0* ((r0_x+alpha_e*rn0_x)*u0_y - (r0_y+alpha_e*rn0_y)*u0_x)   &
+                                     * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep    &
+
+                           + TG_num9 * 0.25d0 * BigR**2 * (r0+alpha_e_bis*rn0)* (Te0_x * u0_y - Te0_y * u0_x)            &
+                                     * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep
+
+
+                amat_93 = - v * BigR * zj * 2. * ((GAMMA-1.)/BigR**2) * eta_Sp * zj0            * xjac * theta * tstep
+
+
+                amat_95 =   v * rho * Te0   * BigR * xjac * (1.d0 + zeta)    &
+
+                           - v * rho * BigR**2 * ( Te0_s  * u0_t - Te0_t  * u0_s)                      * theta * tstep &
+                           - v * Te0  * BigR**2 * ( rho_s * u0_t - rho_t * u0_s)                       * theta * tstep &
+
+                           - v * rho * 2.d0* GAMMA * BigR * Te0 * u0_y                          * xjac * theta * tstep &
+
+                           + v * rho * F0 / BigR * Vpar0 * Te0_p                                * xjac * theta * tstep &
+                           + v * Te0 * F0 / BigR * Vpar0 * rho_p                                * xjac * theta * tstep &
+
+                           + v * rho * Vpar0 * (Te0_s * ps0_t - Te0_t * ps0_s)                         * theta * tstep &
+                           + v * Te0 * Vpar0 * (rho_s * ps0_t - rho_t * ps0_s)                         * theta * tstep &
+
+                           + v * rho * GAMMA * Te0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)               * theta * tstep &
+                           + v * rho * GAMMA * Te0 * F0 / BigR * vpar0_p                        * xjac * theta * tstep &
+
+                           ! Energy exchange term
+                           - v * BigR * ddTe_i_drho * rho                                       * xjac * theta * tstep &
+
+                           + TG_num9 * 0.25d0 * BigR**2 * Te0* (rho_x * u0_y - rho_y * u0_x)     &
+                                     * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep     &
+
+                           + TG_num9 * 0.25d0 * BigR**2 * rho * (Te0_x * u0_y - Te0_y * u0_x)    &
+                                     * ( v_x * u0_y - v_y * u0_x) * xjac* theta*tstep*tstep      &
+
+                           + TG_num9 * 0.25d0 / BigR * vpar0**2 &
+                              * Te0 * (rho_x * ps0_y - rho_y * ps0_x + F0 / BigR * rho_p)                     &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep&
+
+                           + TG_num9 * 0.25d0 / BigR * vpar0**2 &
+                              * rho * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                      &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
+
+                           + v * BigR * rho * rn0_corr * Lrad                                   * xjac * theta * tstep &
+                           + v * BigR * rho * frad_bg                                           * xjac * theta * tstep &
+                        ! New term from Z_eff
+                           - v * BigR * rho * ((GAMMA-1.)/BigR**2) * detaSp_dr0 * zj0**2        * xjac * theta * tstep &
+!=============== The ionization potential energy term=========================
+                           + (GAMMA-1.) * v * rho * E_ion_bg * BigR * xjac * (1.d0 + zeta)  &
+                           - (GAMMA-1.) * v * E_ion_bg * BigR**2 * (rho_s * u0_t - rho_t * u0_s) * theta * tstep &
+
+                           + (GAMMA-1.) * v * E_ion_bg * F0 / BigR * Vpar0 * rho_p        * xjac * theta * tstep &
+
+                           + (GAMMA-1.) * v * E_ion_bg * Vpar0 * (rho_s * ps0_t - rho_t * ps0_s) * theta * tstep &
+
+                           - (GAMMA-1.) * v * E_ion_bg * rho * 2.d0 * BigR * u0_y         * xjac * theta * tstep &
+                           + (GAMMA-1.) * v * E_ion_bg * rho * (vpar0_s*ps0_t - vpar0_t*ps0_s)   * theta * tstep &
+                           + (GAMMA-1.) * v * E_ion_bg * rho * F0 / BigR * vpar0_p        * xjac * theta * tstep  
+
+!================= End ionization potential energy ===========================
+
+                 amat_96 = - v * BigR * ddTe_i_dTi * Ti                                     * xjac * theta * tstep 
+
+
+                 amat_97 = + v * (r0 + rn0 * alpha_e_bis) * F0 / BigR * Vpar * Te0_p        * xjac * theta * tstep &
+		           + v * Te0 * F0 / BigR * Vpar * (r0_p + rn0_p * alpha_e)          * xjac * theta * tstep &
+
+                           + v * (r0 + rn0 * alpha_e_bis) * Vpar * (Te0_s * ps0_t - Te0_t * ps0_s)         * theta * tstep &
+                           + v * Te0 * Vpar * ((r0_s+rn0_s*alpha_e)*ps0_t - (r0_t+rn0_t*alpha_e)*ps0_s)    * theta * tstep &
+
+                           + v * (r0 + rn0 * alpha_e) * GAMMA * Te0 * (vpar_s * ps0_t - vpar_t * ps0_s)    * theta * tstep &
+                           + v * (r0 + rn0 * alpha_e) * GAMMA * Te0 * F0 / BigR * vpar_p            * xjac * theta * tstep &
+!=============== The ionization potential energy term=========================
+                           + (GAMMA-1.) * v * rn0 * dE_ion_dT * F0 / BigR * Vpar * Te0_p       * xjac * theta * tstep  &
+                           + (GAMMA-1.) * v * E_ion * F0 / BigR * Vpar * rn0_p                 * xjac * theta * tstep  &
+                           + (GAMMA-1.) * v * E_ion_bg * F0 / BigR * Vpar * (r0_p-rn0_p)       * xjac * theta * tstep  &
+
+                           + (GAMMA-1.) * v * rn0 * dE_ion_dT * Vpar * (Te0_s * ps0_t - Te0_t * ps0_s)* theta * tstep  &
+                           + (GAMMA-1.) * v * E_ion * Vpar * (rn0_s * ps0_t - rn0_t * ps0_s)          * theta * tstep  &
+                           + (GAMMA-1.) * v * E_ion_bg*Vpar*((r0_s-rn0_s)*ps0_t - (r0_t-rn0_t)*ps0_s) * theta * tstep  &
+
+                           + (GAMMA-1.) * v * E_ion * rn0 * (vpar_s * ps0_t - vpar_t * ps0_s)         * theta * tstep  &
+                           + (GAMMA-1.) * v * E_ion * rn0 * F0 / BigR * vpar_p                 * xjac * theta * tstep  &
+
+                           + (GAMMA-1.) * v * E_ion_bg * (r0-rn0) * (vpar_s * ps0_t - vpar_t * ps0_s) * theta * tstep  &
+                           + (GAMMA-1.) * v * E_ion_bg * (r0-rn0) * F0 / BigR * vpar_p         * xjac * theta * tstep  &
+!================= End ionization potential energy ===========================
+
+                           + TG_num9 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
+                              * Te0 * ((r0_x+alpha_e*rn0_x)*ps0_y - (r0_y+alpha_e*rn0_y)*ps0_x                 &
+                                      + F0 / BigR * (r0_p+alpha_e*rn0_p))                                      &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
+
+                           + TG_num9 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
+                              * (r0+alpha_e_bis*rn0) * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)     &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep
+
+
+                 amat_98 =   v * rhon * alpha_e * Te0 * BigR * xjac * (1.d0 + zeta)                              &
+!=============== The ionization potential energy term=========================
+                           + (GAMMA-1.) * v * rhon * (E_ion - E_ion_bg) * BigR * xjac * (1.d0 + zeta)                &
+
+                           - (GAMMA-1.) * v * rhon * dE_ion_dT * BigR**2 * (Te0_s*u0_t - Te0_t*u0_s)  * theta * tstep&
+                           - (GAMMA-1.) * v * (E_ion-E_ion_bg) * BigR**2 * (rhon_s*u0_t - rhon_t*u0_s)* theta * tstep&
+
+                           + (GAMMA-1.) * v * rhon * dE_ion_dT * F0 / BigR * Vpar0 * Te0_p     * xjac * theta * tstep&
+                           + (GAMMA-1.) * v * (E_ion-E_ion_bg) * F0 / BigR * Vpar0 * rhon_p    * xjac * theta * tstep&
+
+                           + (GAMMA-1.) * v * rhon * dE_ion_dT * Vpar0 * (Te0_s*ps0_t - Te0_t*ps0_s)  * theta * tstep&
+                           + (GAMMA-1.) * v * (E_ion-E_ion_bg) * Vpar0 * (rhon_s*ps0_t - rhon_t*ps0_s)* theta * tstep&
+
+                           - (GAMMA-1.) * v * (E_ion-E_ion_bg) * rhon * 2.d0 * BigR * u0_y     * xjac * theta * tstep&
+                           + (GAMMA-1.) * v * (E_ion-E_ion_bg) * rhon*(vpar0_s*ps0_t - vpar0_t*ps0_s) * theta * tstep&
+                           + (GAMMA-1.) * v * (E_ion-E_ion_bg) * rhon * F0 / BigR * vpar0_p    * xjac * theta * tstep&
+
+!================= End ionization potential energy ===========================
+!=========================New TG_num terms====================================
+                           + TG_num9 * 0.25d0 * BigR**2 * Te0 * alpha_e * (rhon_x * u0_y - rhon_y * u0_x)        &
+                                     * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep     &
+
+                           + TG_num9 * 0.25d0 * BigR**2 * alpha_e_bis * rhon * (Te0_x * u0_y - Te0_y * u0_x)     &
+                                     * ( v_x * u0_y - v_y * u0_x) * xjac* theta*tstep*tstep      &
+
+                           + TG_num9 * 0.25d0 / BigR * vpar0**2 &
+                              * Te0 * alpha_e * (rhon_x * ps0_y - rhon_y * ps0_x + F0 / BigR * rhon_p)           &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep   &
+
+                           + TG_num9 * 0.25d0 / BigR * vpar0**2 &
+                              * alpha_e_bis * rhon * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)         &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
+!===========================End of new TG_num terms===========================
+
+                           ! New term from Z_eff
+                           - v * BigR * rhon * ((GAMMA-1.)/BigR**2) * detaSp_drn0 * zj0**2 * xjac * theta * tstep &
+                           - v * rhon * BigR**2 * alpha_e_bis * (Te0_s * u0_t - Te0_t * u0_s)     * theta * tstep &
+                           - v * alpha_e * Te0 * BigR**2 * (rhon_s * u0_t - rhon_t * u0_s)        * theta * tstep &
+                           + v * rhon * F0 / BigR * Vpar0 * alpha_e_bis * Te0_p            * xjac * theta * tstep &
+                           + v * alpha_e * Te0 * F0 / BigR * Vpar0 * rhon_p                * xjac * theta * tstep &
+                           + v * rhon * Vpar0 * alpha_e_bis * (Te0_s * ps0_t - Te0_t * ps0_s)     * theta * tstep &
+                           + v * alpha_e * Te0 * Vpar0 * (rhon_s * ps0_t - rhon_t * ps0_s)        * theta * tstep &
+
+                           - v * alpha_e * rhon * 2.d0 * GAMMA * BigR * Te0 * u0_y                  * xjac * theta * tstep &
+                           + v * alpha_e * rhon * GAMMA * Te0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)        * theta * tstep &
+                           + v * alpha_e * rhon * GAMMA * Te0 * F0 / BigR * vpar0_p                 * xjac * theta * tstep &
+
+                           ! Energy exchange term
+                           - v * BigR * ddTe_i_drhon * rhon                                         * xjac * theta * tstep & 
+
+                           + v * BigR * rhon * (r0_corr + 2.*alpha_e*rn0_corr) * Lrad               * xjac * theta * tstep
+
+
+                 amat_99 =   v * (r0 + rn0 * alpha_e_bis) * Te * BigR * xjac * (1.d0 + zeta)                     &
+!=============== The ionization potential energy term=========================
+                           + (GAMMA-1.) * v * rn0 * dE_ion_dT  * Te * BigR * xjac * (1.d0 + zeta)                &
+                           - (GAMMA-1.) * v * rn0 * dE_ion_dT * BigR**2 * (Te_s*u0_t - Te_t*u0_s)  * theta * tstep &
+
+                           + (GAMMA-1.) * v * rn0 * dE_ion_dT * F0 / BigR * Vpar0 * Te_p    * xjac * theta * tstep &
+
+                           + (GAMMA-1.) * v * rn0 * dE_ion_dT * Vpar0 * (Te_s*ps0_t - Te_t*ps0_s)  * theta * tstep &
+!================= End ionization potential energy ===========================
+                           - v * (r0 + rn0 * alpha_e_bis) * BigR**2 * (Te_s * u0_t - Te_t  * u0_s) * theta * tstep &
+                           - v * Te  * BigR**2 * (r0_s * u0_t - r0_t * u0_s)                       * theta * tstep &
+                           - v * alpha_e_bis * Te * BigR**2 * (rn0_s * u0_t - rn0_t * u0_s)        * theta * tstep &
+
+                           - v * (r0 + rn0 * alpha_e_bis) * 2.d0* GAMMA * BigR * Te * u0_y  * xjac * theta * tstep &
+
+
+                           + v * (r0 + rn0 * alpha_e_bis) * F0 / BigR * Vpar0 * Te_p        * xjac * theta * tstep &
+                           + v * Te * F0  / BigR * Vpar0 * (r0_p + rn0_p * alpha_e_bis)     * xjac * theta * tstep &
+
+                           + v * (r0 + rn0 * alpha_e_bis) * Vpar0 * (Te_s  * ps0_t - Te_t  * ps0_s)* theta * tstep &
+                           + v * Te  * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                       * theta * tstep &
+                           + v * alpha_e_bis * Te * Vpar0 * (rn0_s * ps0_t - rn0_t * ps0_s)        * theta * tstep &
+
+                           + v * (r0 + rn0 * alpha_e_bis) * GAMMA * Te * (vpar0_s * ps0_t - vpar0_t * ps0_s)* theta * tstep &
+                           + v * (r0 + rn0 * alpha_e_bis) * GAMMA * Te * F0 / BigR * vpar0_p         * xjac * theta * tstep &
+
+                           ! Energy exchange term
+                           - v * BigR * ddTe_i_dTe * Te                                              * xjac * theta * tstep &
+
+                           + (ZK_e_par_T-ZK_e_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Te_T         * xjac * theta * tstep &
+                           + ZK_e_prof * BigR * (v_x*Te_x + v_y*Te_y + v_p*Te_p /BigR**2 )           * xjac * theta * tstep &
+
+                           + dZK_e_par_dT * Te * BigR / BB2 * Bgrad_T_star * Bgrad_Te                * xjac * theta * tstep &
+
+                           + ZK_perp_num*(v_xx + v_x/BigR + v_yy)*(Te_xx + Te_x/BigR + Te_yy) * BigR * xjac * theta * tstep &
+
+                           + TG_num9 * 0.25d0 * BigR**2 * Te * ((r0_x+alpha_e_bis*rn0_x)*u0_y &
+                                                                - (r0_y+alpha_e_bis*rn0_y)*u0_x)   &
+                                     * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
+
+                           + TG_num9 * 0.25d0 * BigR**2 * (r0+alpha_e_bis*rn0)* (Te_x * u0_y - Te_y * u0_x)  &
+                                     * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
+
+                           + TG_num9 * 0.25d0 / BigR * vpar0**2 &
+                              * Te * ((r0_x+alpha_e_bis*rn0_x)*ps0_y - (r0_y+alpha_e_bis*rn0_y)*ps0_x         &
+                                     + F0/BigR*(r0_p+alpha_e_bis*rn0_p))                                      &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep&
+
+                           + TG_num9 * 0.25d0 / BigR * vpar0**2 &
+                              * (r0+alpha_e_bis*rn0) * (Te_x * ps0_y - Te_y * ps0_x + F0 / BigR * Te_p)        &
+                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
+
+                           - v * BigR * Te * ((GAMMA-1.)/BigR**2) * detaSp_dT * zj0**2          * xjac * theta * tstep  &
+                           + v * BigR * Te * (r0_corr + alpha_e*rn0_corr) * rn0_corr * dLrad_dT * xjac * theta * tstep  
+
                  kl1 = index_kl
                  kl2 = index_kl + 1*n_tor
                  kl3 = index_kl + 2*n_tor
@@ -2397,13 +2656,16 @@ do ms=1, n_gauss
                  kl6 = index_kl + 5*n_tor
                  kl7 = index_kl + 6*n_tor
                  kl8 = index_kl + 7*n_tor
-		 
+                 kl9 = index_kl + 8*n_tor
+
                  ELM(ij1,kl1) =  ELM(ij1,kl1) + wst * amat_11
                  ELM(ij1,kl2) =  ELM(ij1,kl2) + wst * amat_12
                  ELM(ij1,kl3) =  ELM(ij1,kl3) + wst * amat_13
                  ELM(ij1,kl5) =  ELM(ij1,kl5) + wst * amat_15
                  ELM(ij1,kl6) =  ELM(ij1,kl6) + wst * amat_16
                  ELM(ij1,kl8) =  ELM(ij1,kl8) + wst * amat_18 ! New term from Z_eff
+                 ELM(ij1,kl9) =  ELM(ij1,kl9) + wst * amat_19 ! New term from electron temperature
+
 
                  ELM(ij2,kl1) =  ELM(ij2,kl1) + wst * amat_21
                  ELM(ij2,kl2) =  ELM(ij2,kl2) + wst * amat_22
@@ -2413,6 +2675,7 @@ do ms=1, n_gauss
                  ELM(ij2,kl6) =  ELM(ij2,kl6) + wst * amat_26
                  ELM(ij2,kl7) =  ELM(ij2,kl7) + wst * amat_27
 		 ELM(ij2,kl8) =  ELM(ij2,kl8) + wst * amat_28
+                 ELM(ij2,kl9) =  ELM(ij2,kl9) + wst * amat_29 ! New term from electron temperature
 
                  ELM(ij3,kl1) =  ELM(ij3,kl1) + wst * amat_31
                  ELM(ij3,kl3) =  ELM(ij3,kl3) + wst * amat_33
@@ -2434,6 +2697,7 @@ do ms=1, n_gauss
                  ELM(ij6,kl6) =  ELM(ij6,kl6) + wst * amat_66
                  ELM(ij6,kl7) =  ELM(ij6,kl7) + wst * amat_67
 		 ELM(ij6,kl8) =  ELM(ij6,kl8) + wst * amat_68
+                 ELM(ij6,kl9) =  ELM(ij6,kl9) + wst * amat_69 ! New term from electron temperature
 
                  ELM(ij7,kl1) =  ELM(ij7,kl1) + wst * amat_71
                  ELM(ij7,kl2) =  ELM(ij7,kl2) + wst * amat_72
@@ -2441,6 +2705,7 @@ do ms=1, n_gauss
                  ELM(ij7,kl6) =  ELM(ij7,kl6) + wst * amat_76
                  ELM(ij7,kl7) =  ELM(ij7,kl7) + wst * amat_77
 		 ELM(ij7,kl8) =  ELM(ij7,kl8) + wst * amat_78
+                 ELM(ij7,kl9) =  ELM(ij7,kl9) + wst * amat_79 ! New term from electron temperature
 
                  ELM(ij8,kl1) =  ELM(ij8,kl1) + wst * amat_81
                  ELM(ij8,kl2) =  ELM(ij8,kl2) + wst * amat_82		 
@@ -2449,6 +2714,16 @@ do ms=1, n_gauss
                  ELM(ij8,kl7) =  ELM(ij8,kl7) + wst * amat_87
                  ELM(ij8,kl8) =  ELM(ij8,kl8) + wst * amat_88
 
+                 ! New term from electron temperature
+                 ELM(ij9,kl1) =  ELM(ij9,kl1) + wst * amat_91
+                 ELM(ij9,kl2) =  ELM(ij9,kl2) + wst * amat_92
+                 ELM(ij9,kl3) =  ELM(ij9,kl3) + wst * amat_93
+                 ELM(ij9,kl5) =  ELM(ij9,kl5) + wst * amat_95
+                 ELM(ij9,kl6) =  ELM(ij9,kl6) + wst * amat_96
+                 ELM(ij9,kl7) =  ELM(ij9,kl7) + wst * amat_97
+                 ELM(ij9,kl8) =  ELM(ij9,kl8) + wst * amat_98
+                 ELM(ij9,kl9) =  ELM(ij9,kl9) + wst * amat_99 
+                 
                enddo
              enddo
            enddo

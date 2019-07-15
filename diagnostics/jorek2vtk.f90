@@ -311,7 +311,7 @@ scalar_names(1:n_var) = variable_names(1:n_var)
 if ( SI_units ) then
    scalar_names(3)='j_MA/m2     '
    scalar_names(5)='n_e20m-3    '
-   if (jorek_model .eq. 400 || jorek_model .eq. 502) then
+   if (jorek_model .eq. 400 .or. jorek_model .eq. 502) then
       scalar_names(6)='Ti_keV      '
       scalar_names(n_var)='Te_keV      ' !WARNING, here we always assume the electron temperature is the last variable
    else
@@ -726,7 +726,7 @@ do i=1,element_list%n_elements
           else
              V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
           endif
-          if ( jorek_model .eq. 400 || jorek_model .eq. 502 ) then
+          if ( jorek_model .eq. 400 .or. jorek_model .eq. 502 ) then
              call interp(node_list,element_list,i,6,i_tor,s,t,Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt)
              call interp(node_list,element_list,i,n_var,i_tor,s,t,Te,Te_s,Te_t,Te_st,Te_ss,Te_tt) !WARNING, here we always assume the electron temperature is the last variable
           endif
@@ -789,7 +789,7 @@ do i=1,element_list%n_elements
              TT_y  = TT_y + ( - R_t * TT_s + R_s * TT_t )   / xjac * HZ(i_tor,i_plane)
              TT_p  = TT_p + TT * HZ_p(i_tor,i_plane)
 
-             if ( jorek_model .eq. 400 || jorek_model .eq. 502 ) then
+             if ( jorek_model .eq. 400 .or. jorek_model .eq. 502 ) then
                Ti_x  = Ti_x + (   Z_t * Ti_s - Z_s * Ti_t )   / xjac * HZ(i_tor,i_plane)
                Ti_y  = Ti_y + ( - R_t * Ti_s + R_s * Ti_t )   / xjac * HZ(i_tor,i_plane)
                Ti_p  = Ti_p + Ti * HZ_p(i_tor,i_plane)
@@ -1175,7 +1175,7 @@ if (SI_units) then
     scalars(i,3) = scalars(i,3)/ MU_zero*1.e-6
     !============================================density in 1e20m-3
     scalars(i,5) = scalars(i,5) * central_density
-    if ( jorek_model .eq. 400 || jorek_model .eq. 502 ) then
+    if ( jorek_model .eq. 400 .or. jorek_model .eq. 502 ) then
       !===========================================ion and electron temperatures in keV
       scalars(i,6) = scalars(i,6) / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 !
       scalars(i,n_var) = scalars(i,n_var) / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 ! !WARNING, here we always assume the electron temperature is the last variable

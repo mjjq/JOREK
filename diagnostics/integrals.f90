@@ -140,7 +140,7 @@ do ife =1, element_list%n_elements
       BigR = x_g(ms,mt)
 
       rho_00 = eq_g(5,ms,mt)
-      if (jorek_model .eq. 400 || jorek_model .eq. 502) then
+      if (jorek_model .eq. 400 .or. jorek_model .eq. 502) then
         Ti_00 = eq_g(6,ms,mt)
         Te_00 = eq_g(n_var,ms,mt)
         T_00  = Ti_00 + Te_00

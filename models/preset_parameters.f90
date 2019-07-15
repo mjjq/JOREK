@@ -115,7 +115,7 @@ subroutine preset_parameters
   GAMMA     = 5.d0 / 3.d0
 
   mf        = 2
-  fbnd      = 0.d0; fbnd(1) =2.d0
+  fbnd      = 0.d0;   fbnd(1)  = 2.d0
 
   R_boundary   = 0.d0
   Z_boundary   = 0.d0
@@ -144,7 +144,6 @@ subroutine preset_parameters
   xshift = 0.d0
   xleft  = 0.d0
   xpoint = .false.
-  xcase  = 1
   force_horizontal_Xline = .false.
 
   xr1  = 9999.d0
@@ -157,13 +156,11 @@ subroutine preset_parameters
   Z_begin = -0.1d0
   Z_end   = 0.1d0
   
-  ZK_perp(:) = 0.d0
-  ZK_perp(1) = 1.d-5; ZK_perp(2) = 0.d0; ZK_perp(3)= 0.d0; ZK_perp(4)= 99.d0; ZK_perp(5) = 99.d0
-  ZK_par     = 1.d0
-  ZK_par_max = 1.d20
-  D_perp(:)  = 0.d0
-  D_perp(1)  = 1.d-5; D_perp(2) = 0.d0; D_perp(3)= 0.d0; D_perp(4)= 99.d0; D_perp(5) = 99.d0
-  D_par      = 0.d0
+  ZK_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_par       = 1.d0
+  ZK_par_max   = 1.d20
+  D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  D_par        = 0.d0
   
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
@@ -203,11 +200,22 @@ subroutine preset_parameters
   tauIC = 0.d0
   Wdia  = .false.
 
-  zjz_0 =  0.1173d0;   T_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
-  zjz_1 =  0.0d0   ;   T_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0
-  
-  Te_0 = 5.d-7; Te_1 = 5.d-9; Ti_0 = 5.d-7; Ti_1 = 5.d-9
+  zjz_0 =  0.1173d0   
+  zjz_1 =  0.0d0   
 
+  T_0   =  1.d-6  
+  Ti_0  =  5.d-7
+  Te_0  =  5.d-7
+
+  T_1   =  1.d-8  
+  Te_1  =  5.d-9
+  Ti_1  =  5.d-9
+
+  rho_0 =  1.d0   
+  rho_1 =  1.d0   
+  FF_0  =  1.d0
+  FF_1  =  0.d0
+  
   zj_coef     = 0.d0;  zj_coef(1)  = -1.d0
   T_coef      = 0.d0;  T_coef(1)   = -1.d0
   Te_coef     = 0.d0;  Te_coef(1)  = -1.d0
@@ -240,6 +248,7 @@ subroutine preset_parameters
   nout = 9999999
 
   rst_hdf5 = 1   ! =0,restart with binary files; =1, with HDF5 files
+
   !> Write out newest HDF5 restart file version this code supports, writing
   !! out an older version is possible by changing rst_hdf5_verison via the
   !! namelist input file
@@ -311,13 +320,11 @@ subroutine preset_parameters
   RMP_growth_rate    = 0.011 ! RMP_growth_rate * RMP_ramp_up_time must be ~cst
   RMP_ramp_up_time   = 1000  ! in JOREK times
   output_bnd_elements = .false.  ! writes bnd nodes and elements in output files (boundary_nodes.dat and boundary_elements.dat)
-  RMP_har_cos=2
-  RMP_har_sin=3
-  Number_RMP_harmonics=1
-  RMP_har_cos_spectrum(:)=0
-  RMP_har_cos_spectrum(1)=RMP_har_cos ! =2 if only one harmonic (ntor=3) and this harmonic is RMP 
-  RMP_har_sin_spectrum(:)=0
-  RMP_har_sin_spectrum(1)=RMP_har_sin ! =3 if only one harmonic (ntor=3) and this harmonic is RMP 
+  RMP_har_cos = 2
+  RMP_har_sin = 3
+  Number_RMP_harmonics = 1
+  RMP_har_cos_spectrum(1) = RMP_har_cos ! 2 if only one harmonic (ntor=3) and this harmonic is RMP 
+  RMP_har_sin_spectrum(1) = RMP_har_sin ! 3 if only one harmonic (ntor=3) and this harmonic is RMP 
 
 ! ===== Neoclassical parameters ======
   NEO = .false.
@@ -331,12 +338,9 @@ subroutine preset_parameters
   Z_limiter = 0.d0
   
  !======================MB rotation profile
-  V_0=0.d0
-  V_1=0.d0
-  V_coef=0.d0
-  V_coef(1)=0.d0
-  V_coef(4)=0.1
-  V_coef(5)=1.
+  V_0 = 0.d0
+  V_1 = 0.d0
+  V_coef(1:5) = (/ 0.d0, 0.d0, 0.d0, 0.1d0, 1.0d0 /)
 !======================MB
 
 !====================== Massive Gas Injection Parameters
@@ -399,19 +403,19 @@ subroutine preset_parameters
 !======================
 
 !======================JP ECCD injection parameters
- nu_jec_fast=1.d1
- nu_jec1_fast=1.d1
- nu_jec2_fast=1.d1
- JJ_par=0.d1
- jecamp=1.d1
- jec_pos1=0.6d0
- jec_pos2=0.6d0
- jec_pos3=0.6d0
- jec_pos4=0.6d0
- jec_width=0.5d0
- jec_width2=0.5d0
- jw1=5.d-1 ! inner cut-off
- jw2=1.d0  ! outer cut-off
- jw3=1.d0  ! outer cut-off
+  nu_jec_fast=1.d1
+  nu_jec1_fast=1.d1
+  nu_jec2_fast=1.d1
+  JJ_par=0.d1
+  jecamp=1.d1
+  jec_pos1=0.6d0
+  jec_pos2=0.6d0
+  jec_pos3=0.6d0
+  jec_pos4=0.6d0
+  jec_width=0.5d0
+  jec_width2=0.5d0
+  jw1=5.d-1 ! inner cut-off
+  jw2=1.d0  ! outer cut-off
+  jw3=1.d0  ! outer cut-off
 
 end subroutine preset_parameters

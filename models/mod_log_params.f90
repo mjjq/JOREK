@@ -9,7 +9,7 @@ contains
 subroutine log_parameters(my_id, short)
 
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps
+use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
 use wsmp_module,   only: use_wsmp
 use vacuum
@@ -219,6 +219,7 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'eta_T_dependent       ', eta_T_dependent
   write(*,REAL_FMT) 'eta                   ', eta
   write(*,REAL_FMT) 'T_eta_thres           ', T_eta_thres
+  write(*,REAL_FMT) 'eta_ohmic             ', eta_ohmic
   write(*,LOGI_FMT) 'visco_T_dependent     ', visco_T_dependent
   write(*,REAL_FMT) 'visco                 ', visco
   write(*,REAL_FMT) 'visco_par             ', visco_par
@@ -540,6 +541,14 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
 
+  if (use_mumps) then
+    write(*,INTG_FMT) 'mumps_ordering        ', mumps_ordering
+    write(*,LOGI_FMT) 'use_mumps_BLR         ', use_mumps_BLR
+    if (use_mumps_BLR) then
+      write(*,REAL_FMT) 'mumps_BLR_eps         ', mumps_BLR_eps
+    endif
+  endif
+
   write(*,INTG_FMT) 'n_pfc                 ', n_pfc
   if ( n_pfc > 0 ) then
     write(*,REA3_FMT) 'Rmin_pfc              ', Rmin_pfc(1:min(9,n_pfc))
@@ -609,6 +618,7 @@ if (my_id == 0) then
      write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
      write(*,INTG_FMT) 'n_adas              ',  n_adas
      write(*,INTG_FMT) 'n_spi               ',  n_spi
+     write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
      write(*,CHAR_FMT) 'spi_shard_file      ',  spi_shard_file
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref

@@ -1,6 +1,10 @@
 module construct_matrix_mod
 
+use mod_parameters, only : n_var
 implicit none
+
+logical  :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
+
 
 contains
 
@@ -10,7 +14,7 @@ contains
        &                             omp_tid, ife, n_local_elms, node_list)
 
     ! --- Modules
-    use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order, n_var
+    use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order
     use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh
     USE data_structure,           only : type_element, type_node, type_node_list, thread_struct
     use mod_boundary_matrix_open, only : boundary_matrix_open
@@ -39,7 +43,6 @@ contains
 #ifdef COMPARE_ELEMENT_MATRIX
     integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
     integer  :: my_id, rank, ierr
-    logical  :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
 #endif
     
     ! -- internal parameters
@@ -149,7 +152,7 @@ contains
             (abs(thread_struct(omp_tid)%RHS(i))+abs(thread_struct(omp_tid)%RHS2(i))+1.d0) .gt. 1.d-12) then
     	  call decrypt_index(i, ivertex, iorder, ivar, itor)
     	  write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, thread_struct(omp_tid)%RHS(i), &
-    	      thread_struct(omp_tid)%RHS2(i), RHS(i)-RHS2(i)
+    	      thread_struct(omp_tid)%RHS2(i), thread_struct(omp_tid)%RHS(i)-thread_struct(omp_tid)%RHS2(i)
     	  rhs_problem(ivar) = .true.
     	  difference_found  = .true.
     	endif
@@ -246,7 +249,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
   integer                           :: random_element, n_var_reduced, v1, v2, im, index_ij_model400_e, index_kl_model400_e
   real*8                            :: tmp_rhs, tmp_elm, tmp_elm_v2_8
-  logical                           :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
   CHARACTER(LEN=128)                :: fname
 
   ! --- Timing call

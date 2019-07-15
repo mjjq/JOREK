@@ -1,4 +1,4 @@
-!> Model-specific part of the routine init_live_data in ommunication/mod_live_data.f90
+!> Model-specific part of the routine init_live_data in communication/mod_live_data.f90
 !!
 !! Writes all input profiles to 'macroscopic_vars.dat'.
 subroutine init_live_data_model(file_handle)

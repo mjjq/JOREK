@@ -14,6 +14,7 @@ module phys_module
   real*8  :: eta_T_0              !< Initial resistivity
   real*8  :: T_eta_thres          !< The temperature threshold for resistivity,
                                   !< beyond which the resistivity is truncated.
+  real*8  :: eta_ohmic            !< Resistivity at core for the ohmic heating term
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant.
   real*8  :: visco                !< Viscosity
 
@@ -277,6 +278,8 @@ module phys_module
   integer :: spi_abl_model      !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model,
                                 !< 2 for Sergeev formula, 3 for Parks formula.
+  integer :: spi_rnd_seed(40)   !< Random seed array
+
   character(len=80) :: spi_shard_file !< The name of the shard size file
 
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI
@@ -523,7 +526,7 @@ module phys_module
     Wmag_tot_t(:), Ip_tot_t(:), flux_Pvn_t(:), flux_qpar_t(:), dE_tot_dt(:), flux_qperp_t(:), flux_kinpar_t(:), &
     dWmag_tot_dt(:), dthermal_tot_dt(:), dkinpar_tot_dt(:), dkinperp_tot_dt(:),                      &
     Magwork_tot_t(:), thmwork_tot_t(:), viscopar_dissip_tot_t(:), viscopar_flux_t(:), li3_t(:),      &
-    li3_tot_t(:), part_src_tot_t(:), heat_src_tot_t(:), volume_t(:), area_t(:) 
+    li3_tot_t(:), part_src_tot_t(:), heat_src_tot_t(:), volume_t(:), area_t(:), mag_ener_src_tot(:) 
   
   !> @name gmres parameters
   integer             :: iter_precon    !< if number of gmres iterations > iter_precon, the preconditioner is updated

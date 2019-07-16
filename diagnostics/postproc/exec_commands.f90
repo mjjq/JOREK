@@ -1486,7 +1486,7 @@ module exec_commands
  
   
   !> Output 3d integrals.
-  subroutine int3d(command, first_step, ierr)
+  subroutine int3D(command, first_step, ierr)
     
     use mod_integrals3D
     use mpi_mod
@@ -1553,7 +1553,7 @@ module exec_commands
    call write_ascii_0d(ierr, eq, expr_list, res, FORM_TABLE, header=.false.,                   &
      filename=filename, append=.true., blanks=.false.)
    
-  end subroutine int3d
+  end subroutine int3D
   
   
  

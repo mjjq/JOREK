@@ -28,7 +28,7 @@ fieldreader = event(read_jorek_fields_interp_linear(&
 call with(sim, fieldreader)
 
 ! Prepare the coronal equilibrium
-sim%groups(1)%ad = read_adf11('50_w')
+sim%groups(1)%ad = read_adf11(0,'50_w')
 cor = coronal(sim%groups(1)%ad)
 
 ! Set up particles

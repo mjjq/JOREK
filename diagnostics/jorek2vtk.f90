@@ -736,7 +736,7 @@ do i=1,element_list%n_elements
           u_sum   = u_sum   + U   * HZ(i_tor,i_plane)
           w_sum   = w_sum   + w   * HZ(i_tor,i_plane)
           zn_sum  = zn_sum  + RHO * HZ(i_tor,i_plane)
-          if ( jorek_model .eq. 400 || jorek_model .eq. 502 ) then
+          if ( jorek_model .eq. 400 .or. jorek_model .eq. 502 ) then
             Ti_sum  = Ti_sum + Ti * HZ(i_tor,i_plane)
             Te_sum  = Te_sum + Te * HZ(i_tor,i_plane)
           else

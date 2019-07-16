@@ -28,7 +28,7 @@ fieldreader = event(read_jorek_fields_interp_hermite_birkhoff(&
 call with(sim, fieldreader)
 
 ! Prepare the coronal equilibrium
-adas = read_adf11('50_w')
+adas = read_adf11(0,'50_w')
 cor  = coronal(adas)
 
 ! Set up particles

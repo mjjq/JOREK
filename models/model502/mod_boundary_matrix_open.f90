@@ -172,8 +172,8 @@ do ms=1, n_gauss
 
                  amat_91 = + v * (gamma_sheath-1.d0) * r0  * Te0 * vpar0 * psi_s * theta * tstep 
                  amat_95 = + v * (gamma_sheath-1.d0) * rho * Te0 * vpar0 * ps0_s * theta * tstep 
-                 amat_99 = + v * (gamma_sheath-1.d0) * r0  * Te  * vpar0 * ps0_s * theta * tstep 
                  amat_97 = + v * (gamma_sheath-1.d0) * r0  * Te0 * vpar  * ps0_s * theta * tstep
+                 amat_99 = + v * (gamma_sheath-1.d0) * r0  * Te  * vpar0 * ps0_s * theta * tstep
                  index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix
 
                  kl1 = index_kl
@@ -191,10 +191,10 @@ do ms=1, n_gauss
                  ELM(ij6,kl6) =  ELM(ij6,kl6) + ws * amat_66
                  ELM(ij6,kl7) =  ELM(ij6,kl7) + ws * amat_67
 
-                 ELM(ij9,kl1) =  ELM(ij9,kl1) + ws * amat_81
-                 ELM(ij9,kl5) =  ELM(ij9,kl5) + ws * amat_85
+                 ELM(ij9,kl1) =  ELM(ij9,kl1) + ws * amat_91
+                 ELM(ij9,kl5) =  ELM(ij9,kl5) + ws * amat_95
+                 ELM(ij9,kl7) =  ELM(ij9,kl7) + ws * amat_97
                  ELM(ij9,kl9) =  ELM(ij9,kl9) + ws * amat_99
-                 ELM(ij9,kl7) =  ELM(ij9,kl7) + ws * amat_87
 
                enddo
              enddo

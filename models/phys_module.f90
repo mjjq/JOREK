@@ -48,12 +48,8 @@ module phys_module
   logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines
   logical :: produce_live_data    !< Write data 'macroscopic_vars.dat' during the code run allowing to use plot_live_data.sh?
   logical :: grid_to_wall         !< extend the grid to a physical wall
-<<<<<<< HEAD
   logical :: RZ_grid_inside_wall  !< build the rectangular grid inside first wall
-  logical :: adaptive_time        !< requires no_mpi for Pastix library
-=======
   logical :: adaptive_time        !< (presently not useful)
->>>>>>> develop
   logical :: equil                !< compute equilibrium
   logical :: bench_without_plot   !< if .true., do not produce certain output plots (e.g., for benchmarking)
   logical :: gmres                !< Use iterative GMRES solver
@@ -305,6 +301,7 @@ module phys_module
   integer :: n_up_leg          !< Number of 'poloidal' grid points along the divertor legs at the top (upper Xpoint or double-null)
   integer :: n_up_leg_out      !< Number of 'poloidal' grid points along the divertor legs on the top on the LFS (upper Xpoint or double-null)
   integer :: n_ext             !< Number of 'radial' grid points from the outermost flux surface to wall)
+  logical :: n_tht_equidistant !< switch on to get an equidistant poloidal distribution of elements in the core of the grid (psi<0.5)
   real*8  :: SIG_closed        !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_open          !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_outer         !< Width with grid accumulation (for flux-aligned grid)

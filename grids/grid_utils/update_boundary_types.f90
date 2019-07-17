@@ -409,6 +409,8 @@ subroutine update_boundary_types_final(element_list,node_list)
     else
       if (node_list%node(i_node)%boundary .ne. 1) then
         node_list%node(i_node)%boundary = 5
+      else
+        node_list%node(i_node)%boundary = 4
       endif
     endif
   enddo

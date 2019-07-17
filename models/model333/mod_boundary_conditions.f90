@@ -64,10 +64,10 @@ contains
     use data_structure
     use global_distributed_matrix
     use vacuum, ONLY: is_freebound
-    use phys_module, only: F0, GAMMA, freeboundary, tokamak_device, U_sheath,        &
-                           RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ,    &
-                           psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ,            &
-                           t_now, RMP_growth_rate, RMP_ramp_up_time,  &
+    use phys_module, only: F0, GAMMA, freeboundary, tokamak_device, U_sheath, grid_to_wall, &
+                           RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ,           &
+                           psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ,                   &
+                           t_now, RMP_growth_rate, RMP_ramp_up_time,                        &
                            RMP_start_time, tstep, RMP_har_cos, RMP_har_sin
     USE tr_module
     use mpi_mod
@@ -170,8 +170,8 @@ contains
           if (node_list%node(inode)%boundary .ne. 0) then
 
             call construct_variables(node_list%node(inode), R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
-	    
-	    do i_tor=1, n_tor
+            
+            do i_tor=1, n_tor
 
               do k_var=1, n_var
 
@@ -180,70 +180,53 @@ contains
                 ! --------------------------------------------------------------------------------------------------------------
                 if    ((node_list%node(inode)%boundary .eq. 1) &
                   .or. (node_list%node(inode)%boundary .eq. 3) &
-                  .or. (node_list%node(inode)%boundary .eq. 5) &
-                  .or. (node_list%node(inode)%boundary .eq. 8)) then
-		      
-		  ! --- Which side is this? 2 => d/ds, 3 => d/dt
-		  side = 2
-
-                  if (n_wall_blocks .eq. 0) then
-                    direction = + ps0_x / abs(ps0_x)           ! temporary solution for lower x-point only
-                    if (xcase2 .eq. 2) direction = -direction
-                    if ( (xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
-                  else
-                    direction = 1
-                    if (node_list%node(inode)%boundary .eq. 5) direction = -direction
-                    if (node_list%node(inode)%boundary .eq. 8) direction = -direction
-                  endif
+                  .or. (node_list%node(inode)%boundary .eq. 4) &
+                  .or. (node_list%node(inode)%boundary .eq. 9)) then
+                      
+                  ! --- Which side is this? 2 => d/ds, 3 => d/dt
+                  side = 2
 
                   ! ---------------------------------------------
                   ! --- Apply RMP on target (only depends on 's')
-                  if (      RMP_on							&
-		      .and. (k_var .eq. 1)						&
-		      .and. ((i_tor.eq.RMP_har_cos) .or. (i_tor.eq.RMP_har_sin))	&
-		      .and. (.not. freeboundary)					) then
-                        		 
-		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,		&
-		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
-		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                                         solve_only, gmres,	     				&
-    	                                 cnt, cnt_prod, only_count, index_min,index_max)
-
+                  if (      RMP_on                                                      &
+                      .and. (k_var .eq. 1)                                              &
+                      .and. ((i_tor.eq.RMP_har_cos) .or. (i_tor.eq.RMP_har_sin))        &
+                      .and. (.not. freeboundary)                                        ) then
+                                         
+                      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,           &
+                                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,      &
+                                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,      &
+                                         solve_only, gmres,                                     &
+                                         cnt, cnt_prod, only_count, index_min,index_max)
                   endif
                   
                   ! -----------------------------------------------
-		  ! --- Dirichlet BCs (or Neumann if commented out)
-		  apply_dirichlet = .false.
-		  ! --- Determine if we need to apply condition on psi (we don't want to overwrite RMPs)
-		  apply_on_psi = .false.
+                  ! --- Dirichlet BCs (or Neumann if commented out)
+                  apply_dirichlet = .false.
+                  ! --- Determine if we need to apply condition on psi (we don't want to overwrite RMPs)
+                  apply_on_psi = .false.
                   if ((k_var .eq. 1) .and. (.not. is_freebound(i_tor,k_var))) then
-                    if  		      (i_tor .eq. 1)	         apply_on_psi = .true.
-                    if ( (.not. RMP_on) .and. (i_tor .ge. 2 )	       ) apply_on_psi = .true.
-                    if ( (RMP_on)	.and. (i_tor .lt. RMP_har_cos) ) apply_on_psi = .true.
-                    if ( (RMP_on)	.and. (i_tor .gt. RMP_har_sin) ) apply_on_psi = .true.
-		  endif
-		  
-		  apply_on_current = .false.
-		  if ((k_var .eq. 3) .and. (.not. is_freebound(i_tor,k_var))) apply_on_current = .true.
+                    if                        (i_tor .eq. 1)             apply_on_psi = .true.
+                    if ( (.not. RMP_on) .and. (i_tor .ge. 2 )          ) apply_on_psi = .true.
+                    if ( (RMP_on)       .and. (i_tor .lt. RMP_har_cos) ) apply_on_psi = .true.
+                    if ( (RMP_on)       .and. (i_tor .gt. RMP_har_sin) ) apply_on_psi = .true.
+                  endif
                   
-		  ! --- Apply conditions to which variables?
-                  if (  						&
-                           apply_on_psi 	                        &
+                  apply_on_current = .false.
+                  if ((k_var .eq. 3) .and. (.not. is_freebound(i_tor,k_var))) apply_on_current = .true.
+                  
+                  ! --- Apply conditions to which variables?
+                  if (                                                  &
+                           apply_on_psi                                 &
                       .or. apply_on_current                             &
-                      .or.( (k_var .eq. 2) .and. (.not. U_sheath) )	&
-                      .or.  (k_var .eq. 4)  				&
+                      .or.( (k_var .eq. 2) .and. (.not. U_sheath) )     &
+                      .or.  (k_var .eq. 4)                              &
+                      !.or.  (k_var .eq. 7)                              &
                       ) apply_dirichlet = .true.
 
-		  ! --- Apply Dirichlet if required
-		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
-                  endif
-
-                  ! --------------
-		  ! --- Mach-1 BCs
-                  if (k_var .eq. 7) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
-                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                  ! --- Apply Dirichlet if required
+                  if (apply_dirichlet) then
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
                   endif
 
                 endif
@@ -252,151 +235,128 @@ contains
                 ! --------------------------------------------------------------------------------------------------------------
                 ! ------------------------- the non-targets open field-lines (for grid_xpoint_wall) ----------------------------
                 ! --------------------------------------------------------------------------------------------------------------
-                !if    ((node_list%node(inode)%boundary .eq. 5) &
-                !  .or. (node_list%node(inode)%boundary .eq. 9)) then
-                if    ((node_list%node(inode)%boundary .eq. 3) &
-                  .or. (node_list%node(inode)%boundary .eq. 6) &
-                  .or. (node_list%node(inode)%boundary .eq. 7) &
-                  .or. (node_list%node(inode)%boundary .eq. 8)) then
+                if    ((node_list%node(inode)%boundary .eq. 5) &
+                  .or. (node_list%node(inode)%boundary .eq. 9)) then
 
-		  ! --- Which side is this? 2 => d/ds, 3 => d/dt
-		  side = 3
+                  ! --- Which side is this? 2 => d/ds, 3 => d/dt
+                  side = 3
                   
-                  if (n_wall_blocks .eq. 0) then
-                    direction = + ps0_x / abs(ps0_x)           ! temporary solution for lower x-point only
-                    if (xcase2 .eq. 2) direction = -direction
-                    if ( (xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
-                  else
-                    direction = 1
-                    if (node_list%node(inode)%boundary .eq. 7) direction = -direction
-                    if (node_list%node(inode)%boundary .eq. 8) direction = -direction
-                  endif
-
-		  ! ---------------------------------------------
-		  ! --- Apply RMP on target (only depends on 's')
-                  if (      RMP_on							&
-		      .and. (k_var .eq. 1)						&
-		      .and. ((i_tor.eq.RMP_har_cos) .or. (i_tor.eq.RMP_har_sin))	&
-		      .and. (.not. freeboundary)					) then
-                        		 
-		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,		&
-		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
-		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                                         solve_only, gmres,	     				&
-    	                                 cnt, cnt_prod, only_count, index_min,index_max)
-
+                  ! ---------------------------------------------
+                  ! --- Apply RMP on target (only depends on 's')
+                  if (      RMP_on                                                      &
+                      .and. (k_var .eq. 1)                                              &
+                      .and. ((i_tor.eq.RMP_har_cos) .or. (i_tor.eq.RMP_har_sin))        &
+                      .and. (.not. freeboundary)                                        ) then
+                                         
+                      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,           &
+                                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,      &
+                                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,      &
+                                         solve_only, gmres,                                     &
+                                         cnt, cnt_prod, only_count, index_min,index_max)
                   endif
                   
                   ! -----------------------------------------------
-		  ! --- Dirichlet BCs (or Neumann if commented out)
-		  apply_dirichlet = .false.
-		  ! --- Determine if we need to apply condition on psi (we don't want to overwrite RMPs)
-		  apply_on_psi = .false.
+                  ! --- Dirichlet BCs (or Neumann if commented out)
+                  apply_dirichlet = .false.
+                  ! --- Determine if we need to apply condition on psi (we don't want to overwrite RMPs)
+                  apply_on_psi = .false.
                   if ((k_var .eq. 1) .and. (.not. is_freebound(i_tor,k_var))) then
-                    if  		      (i_tor .eq. 1)	         apply_on_psi = .true.
-                    if ( (.not. RMP_on) .and. (i_tor .ge. 2 )	       ) apply_on_psi = .true.
-                    if ( (RMP_on)	.and. (i_tor .lt. RMP_har_cos) ) apply_on_psi = .true.
-                    if ( (RMP_on)	.and. (i_tor .gt. RMP_har_sin) ) apply_on_psi = .true.
-		  endif
-		  
-		  apply_on_current = .false.
-		  if ((k_var .eq. 3) .and. (.not. is_freebound(i_tor,k_var))) apply_on_current = .true.
+                    if                        (i_tor .eq. 1)             apply_on_psi = .true.
+                    if ( (.not. RMP_on) .and. (i_tor .ge. 2 )          ) apply_on_psi = .true.
+                    if ( (RMP_on)       .and. (i_tor .lt. RMP_har_cos) ) apply_on_psi = .true.
+                    if ( (RMP_on)       .and. (i_tor .gt. RMP_har_sin) ) apply_on_psi = .true.
+                  endif
                   
-		  ! --- Apply conditions to which variables?
-                  if (  						&
-                           apply_on_psi 				&
+                  apply_on_current = .false.
+                  if ((k_var .eq. 3) .and. (.not. is_freebound(i_tor,k_var))) apply_on_current = .true.
+                  
+                  ! --- Apply conditions to which variables?
+                  if (                                                  &
+                           apply_on_psi                                 &
                       .or. apply_on_current                             &
-                      .or.( (k_var .eq. 2) .and. (.not. U_sheath) )	&
-                      .or.  (k_var .eq. 4)  				&
+                      .or.( (k_var .eq. 2) .and. (.not. U_sheath) )     &
+                      .or.  (k_var .eq. 4)                              &
+                      !.or.  (k_var .eq. 7)                              &
                       ) apply_dirichlet = .true.
 
-		  ! --- Apply Dirichlet if required
-		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
-                  endif
-
-                  ! --------------
-		  ! --- Mach-1 BCs
-                  if (k_var .eq. 7) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
-                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                  ! --- Apply Dirichlet if required
+                  if (apply_dirichlet) then
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
                   endif
 
                 endif
 
                 
-		! ----------------------------------------------------------------------------------------------------
+                ! ----------------------------------------------------------------------------------------------------
                 ! ------------------------------------ the flux-surface boundaries -----------------------------------
                 ! ----------------------------------------------------------------------------------------------------
-                !if (   (node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3) ) then
-                if ( (node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 4) ) then
+                if ( (node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3) ) then
 
-		  ! --- Which side is this? 2 => d/ds, 3 => d/dt
-		  side = 3
-                  if (node_list%node(inode)%boundary .eq. 4) side = 2
+                  ! --- Which side is this? 2 => d/ds, 3 => d/dt
+                  side = 3
+                  !if (node_list%node(inode)%boundary .eq. 4) side = 2
                   
-		  ! ---------------------------------------------
+                  ! ---------------------------------------------
                   ! --- Apply RMP on target (only depends on 't')
-                  if (      RMP_on 							&
-		      .and. (k_var .eq. 1)						&
-		      .and. ((i_tor.eq.RMP_har_cos) .or. (i_tor.eq.RMP_har_sin))	&
-		      .and. (.not. freeboundary) 					) then
-                        		 
-		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,		&
-		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
-		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                                         solve_only, gmres,	     				&
-    	                                 cnt, cnt_prod, only_count, index_min,index_max)
-
+                  if (      RMP_on                                                      &
+                      .and. (k_var .eq. 1)                                              &
+                      .and. ((i_tor.eq.RMP_har_cos) .or. (i_tor.eq.RMP_har_sin))        &
+                      .and. (.not. freeboundary)                                        ) then
+                                         
+                      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,           &
+                                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,      &
+                                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,      &
+                                         solve_only, gmres,                                     &
+                                         cnt, cnt_prod, only_count, index_min,index_max)
                   endif
                   
                   ! -----------------------------------------------
-		  ! --- Dirichlet BCs (or Neumann if commented out)
-		  apply_dirichlet = .false.
-		  
-		  ! --- Determine if we are on the private or the inner boundary
-		  on_private		= .false.
-		  on_inner		= .false.
-		  on_inner_or_private	= .false.
+                  ! --- Dirichlet BCs (or Neumann if commented out)
+                  apply_dirichlet = .false.
+                  
+                  ! --- Determine if we are on the private or the inner boundary
+                  on_private            = .false.
+                  on_inner              = .false.
+                  on_inner_or_private   = .false.
                   if ((xcase2 .ne. 3) .and. (ps0 .lt. psi_bnd)) then
-		    on_inner_or_private = .true.
-		    on_private          = .true.
-		  endif
+                    on_inner_or_private = .true.
+                    on_private          = .true.
+                  endif
                   if  (xcase2 .eq. 3) then
                     if ( (Z .lt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) .and. (ps0 .lt. psi_xpoint(1)) )                    on_private = .true.
                     if ( (Z .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) .and. (ps0 .lt. psi_xpoint(2)) )                    on_private = .true.
                     if ( (R .lt. (R_xpoint(1)+R_xpoint(2))/2.d0) .and. (ps0 .gt. max(psi_xpoint(2),psi_xpoint(2))) ) on_inner   = .true.
-		  endif
-		  if (on_private .or. on_inner) on_inner_or_private = .true.
-		  
-		  ! --- Determine if we need to apply condition on psi (we don't want to overwrite RMPs)
-		  apply_on_psi = .false.
+                  endif
+                  if (on_private .or. on_inner) on_inner_or_private = .true.
+                  
+                  ! --- Determine if we need to apply condition on psi (we don't want to overwrite RMPs)
+                  apply_on_psi = .false.
                   if ((k_var .eq. 1).and.(.not. is_freebound(i_tor,k_var))) then
                     if                        (i_tor .eq. 1)             apply_on_psi = .true.
                     if ( (.not. RMP_on) .and. (i_tor .ge. 2)           ) apply_on_psi = .true.
-                    if ( (RMP_on)	  .and. (i_tor .lt. RMP_har_cos) ) apply_on_psi = .true.
-                    if ( (RMP_on)	  .and. (i_tor .gt. RMP_har_sin) ) apply_on_psi = .true.
-		  endif
-		  
-		  apply_on_current = .false.
-		  if ((k_var .eq. 3) .and. (.not. is_freebound(i_tor,k_var))) apply_on_current = .true.
-		  
-		  ! Apply conditions to which variables and where?
-                  if (  						    		&
-                            (apply_on_psi)	 					&
-                      .or.  (apply_on_current)	 					&
-                      .or.( (k_var .eq. 2) .and. (.not. U_sheath) )			&
-                      .or.  (k_var .eq. 4)	 					&
-                      .or.  (k_var .eq. 5)	 					&
-                      .or.  (k_var .eq. 6)	 					&
-                      !.or.( (k_var .eq. 5) .and. (on_private) )				& 
-                      !.or.( (k_var .eq. 6) .and. (on_private) )				& 
-                      .or.  (k_var .eq. 7)	 					&
+                    if ( (RMP_on)         .and. (i_tor .lt. RMP_har_cos) ) apply_on_psi = .true.
+                    if ( (RMP_on)         .and. (i_tor .gt. RMP_har_sin) ) apply_on_psi = .true.
+                  endif
+                  
+                  apply_on_current = .false.
+                  if ((k_var .eq. 3) .and. (.not. is_freebound(i_tor,k_var))) apply_on_current = .true.
+                  
+                  ! Apply conditions to which variables and where?
+                  if (                                                                  &
+                            (apply_on_psi)                                              &
+                      .or.  (apply_on_current)                                          &
+                      .or.( (k_var .eq. 2) .and. (.not. U_sheath) )                     &
+                      .or.  (k_var .eq. 4)                                              &
+                      .or.  (k_var .eq. 5)                                              &
+                      .or.  (k_var .eq. 6)                                              &
+                      !.or.( (k_var .eq. 5) .and. (on_private) )                                & 
+                      !.or.( (k_var .eq. 6) .and. (on_private) )                                & 
+                      .or.  (k_var .eq. 7)                                              &
                       ) apply_dirichlet = .true.
 
-		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
-		    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                  if (apply_dirichlet) then
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
                   endif
 
                 endif

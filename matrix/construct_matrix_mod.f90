@@ -37,8 +37,8 @@ contains
     TYPE (type_node_list),            intent(in)     :: node_list
     
     ! -- internal parameters
-    integer iv, iv2, inode1, inode2, i, j
-    integer vertex(2), direction(2), bnd1, bnd2
+    integer :: iv, iv2, iv3, iv4, inode1, inode2, inode3, inode4, i, j
+    integer :: vertex(2), direction(2), bnd1, bnd2
 
 #ifdef COMPARE_ELEMENT_MATRIX
     integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
@@ -65,33 +65,60 @@ contains
       call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid)	   ! use direct integration
     endif
-
+    
     ! --- Apply sheath boundary conditions at the targets
     if (bc_natural_open) then
       ! --- Loop over the 4 nodes
       do iv = 1, n_vertex_max
-
+        
         iv2  = mod(iv, n_vertex_max) + 1
+        iv3 = mod(iv2, n_vertex_max) + 1
+        iv4 = mod(iv3, n_vertex_max) + 1
+        
         inode1 = element%vertex(iv)
         inode2 = element%vertex(iv2)
-
-        ! --- The target has boundary 1 or 3 in old version, but others in wall-grid
+        inode3 = element%vertex(iv3)
+        inode4 = element%vertex(iv4)
+        
         bnd1 = node_list%node(inode1)%boundary
         bnd2 = node_list%node(inode2)%boundary
-        if (      ((bnd1 .eq. 1) .or. (bnd1 .eq. 3) .or. (bnd1 .eq. 5) .or. (bnd1 .eq. 6) .or. (bnd1 .eq. 7) .or. (bnd1 .eq. 8)) &
-            .and. ((bnd2 .eq. 1) .or. (bnd2 .eq. 3) .or. (bnd2 .eq. 5) .or. (bnd2 .eq. 6) .or. (bnd2 .eq. 7) .or. (bnd2 .eq. 8)) ) then
-
-        nodes(1)  = node_list%node(inode1)
-        nodes(2)  = node_list%node(inode2)
         
+        ! --- carry on only if on boundary
+        if ( (bnd1 .eq. 0) .or. (bnd2 .eq. 0)) cycle
+        
+        nodes(1) = node_list%node(inode1)
+        nodes(2) = node_list%node(inode2)
+        nodes(3) = node_list%node(inode3)
+        nodes(4) = node_list%node(inode4)
         vertex    = (/ iv, iv2 /)
-        direction = (/  1, 2   /)
-
-          ! --- Build matrix elements for boundary
-    	  call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, &
-    	      R_xpoint, Z_xpoint, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS)
-    	endif
-       
+        
+        ! --- The target has boundary 1 or 3
+        if (     (  ((bnd1 .eq. 1) .or. (bnd1 .eq. 3)) .and. ((bnd2 .eq. 1) .or. (bnd2 .eq. 3))  ) &
+            .or. (  ((bnd1 .eq. 1) .or. (bnd1 .eq. 9)) .and. ((bnd2 .eq. 1) .or. (bnd2 .eq. 9))  ) &
+            .or. (  ((bnd1 .eq. 4) .or. (bnd1 .eq. 9)) .and. ((bnd2 .eq. 4) .or. (bnd2 .eq. 9))  ) &
+            .or. (  ((bnd1 .eq. 1) .or. (bnd1 .eq. 4)) .and. ((bnd2 .eq. 4) .or. (bnd2 .eq. 1))  ) ) then
+          
+          direction = (/  1, 2  /)
+          
+        elseif (  ((bnd1 .eq. 5) .or. (bnd1 .eq. 9)) .and. ((bnd2 .eq. 5) .or. (bnd2 .eq. 9)) ) then
+          
+          direction = (/  1, 3  /)
+          
+        elseif (  ((bnd1 .eq. 2) .or. (bnd1 .eq. 3)) .and. ((bnd2 .eq. 2) .or. (bnd2 .eq. 3)) ) then
+          
+          direction = (/  1, 3  /)
+          cycle
+          
+        else
+          write(*,'(A,4i8)') 'WARNING: boundary_matrix_open, boundary element not included ',&
+                             inode1,node_list%node(inode1)%boundary,inode2,node_list%node(inode2)%boundary  
+          cycle
+        endif
+          
+        call boundary_matrix_open(vertex, direction, element, nodes, &
+                                  xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
+                                  thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS)
+        
       enddo
     endif
     
@@ -105,18 +132,18 @@ contains
         inode2 = element%vertex(iv2)
 
         ! --- The target has boundary 1 or 3
-      if (      ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-          .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
+        if (      ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
+            .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
 
-        nodes(1)  = node_list%node(inode1)
-        nodes(2)  = node_list%node(inode2)
-        
-        vertex    = (/ iv, iv2 /)
-        direction = (/  1, 2   /)
+          nodes(1)  = node_list%node(inode1)
+          nodes(2)  = node_list%node(inode2)
+          
+          vertex    = (/ iv, iv2 /)
+          direction = (/  1, 2   /)
 
-          ! --- Build matrix elements for boundary
-        !call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
-      endif
+            ! --- Build matrix elements for boundary
+          !call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
+        endif
        
       enddo
     endif
@@ -508,17 +535,17 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
             end do
 
-              do k=1,n_vertex_max
+            do k=1,n_vertex_max
 
-                knode = node_out(k)
+              knode = node_out(k)
 
-                do k_order = 1, n_order+1
+              do k_order = 1, n_order+1
 
-                  index_node2 = node_list%node(knode)%index(k_order)
+                index_node2 = node_list%node(knode)%index(k_order)
 
-                  index_large_k = n_tor * n_var * (index_node2 - 1)
+                index_large_k = n_tor * n_var * (index_node2 - 1)
 
-                  call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position)
+                call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position)
 
                 thread_struct(omp_tid)%synch_buff(:) = 0.d0
                 do j = 1, n_var * n_tor

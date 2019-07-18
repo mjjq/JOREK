@@ -43,7 +43,3 @@ subroutine sources(xpoint2, xcase2, Z, Z_xpoint, psi, psi_axis, psi_bnd, particl
   return
 end subroutine sources
 
-
-
-return
-end subroutine sources

@@ -1038,9 +1038,15 @@ enddo  ! n_elements
      end select
 
    do i=1,nnos
-     T_real8 = scalars(i,6)
-     T_rad = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-     T_rad_real = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     if (jorek_model .eq. 502 ) then
+       T_real8 = scalars(i,n_var)
+       T_rad = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(EL_CHG*MU_ZERO*central_density*1.d20
+       T_rad_real = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20))
+     else
+       T_real8 = scalars(i,6)
+       T_rad = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       T_rad_real = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     endif
      eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0) &
                         *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 

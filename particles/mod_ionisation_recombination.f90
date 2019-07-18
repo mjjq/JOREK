@@ -45,8 +45,8 @@ real*8, intent(out)                               :: T_e !< electron temperature
 real*8, dimension(2) :: P, P_s, P_t, P_phi, P_time
 real*8               :: R, R_s, R_t, Z, Z_s, Z_t
 call fields%interp_PRZ(time,i_elm,&
-#if (JOREK_MODEL == 400)
-      [5,8],& ! electron temperature
+#if (JOREK_MODEL == 400 || JOREK_MODEL == 502)
+      [5,n_var],& ! electron temperature
 #else
       [5,6],& ! electron temperature + ion temperature (assumed equal)
 #endif
@@ -54,7 +54,7 @@ call fields%interp_PRZ(time,i_elm,&
 
 n_e = max(P(1) * central_density * 1d20,1d16)                           ! plasma density [1/m^3], capped against negative
 T_e = max(P(2)/(2.d0*MU_ZERO*central_density*1.d20)/K_BOLTZ, 1.d0) ! temperature capped against going negative
-#if (JOREK_MODEL == 400)
+#if (JOREK_MODEL == 400 || JOREK_MODEL == 502)
 T_e = T_e*2d0 ! P(1) contains the electron temperature, reverse previous correction
 #endif
 end subroutine fields_interp_ne_Te

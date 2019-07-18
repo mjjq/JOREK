@@ -156,7 +156,7 @@ module mod_expression
     call add(exprs_all, 'mu_neo      ', 'Neoclassical Friction Coefficient                     ')
     call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
     call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL >= 500
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502)
@@ -726,7 +726,7 @@ module mod_expression
                 r0_p     = r0_p     + vv(5) * sz * hh    * hhz_p
                 r0_pp    = r0_pp    + vv(5) * sz * hh    * hhz_pp
                 
-#if JOREK_MODEL == 400
+#if JOREK_MODEL == 400 || JOREK_MODEL == 502
                 ! --- Ion temperature
                 Ti0       = Ti0       + vv(6) * sz * hh    * hhz
                 Ti0_s     = Ti0_s     + vv(6) * sz * hh_s  * hhz
@@ -790,7 +790,7 @@ module mod_expression
             end do
           end do
           
-#if JOREK_MODEL == 400
+#if JOREK_MODEL == 400 || JOREK_MODEL == 502
           ! --- Sum up electron and ion temperature for model400 (e.g., to calculate total pressure)
           T0       = Ti0    + Te0   
           T0_s     = Ti0_s  + Te0_s 
@@ -897,7 +897,7 @@ module mod_expression
           
           T0_R     = (   Z_t * T0_s  - Z_s * T0_t ) / xjac
           T0_Z     = ( - R_t * T0_s  + R_s * T0_t ) / xjac
-#if JOREK_MODEL == 400
+#if JOREK_MODEL == 400 || JOREK_MODEL == 502
           Ti0_R     = (   Z_t * Ti0_s  - Z_s * Ti0_t ) / xjac
           Ti0_Z     = ( - R_t * Ti0_s  + R_s * Ti0_t ) / xjac
           Te0_R     = (   Z_t * Te0_s  - Z_s * Te0_t ) / xjac
@@ -1083,7 +1083,7 @@ module mod_expression
             end if
           end if
           
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL >= 500
           call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
             ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
 #else
@@ -1347,7 +1347,7 @@ module mod_expression
               case ( 'T_i' )
                 res = Ti0 * fact_T
                 
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL >= 500
               case ( 'J_bootstrap' )
                 res = J_boot ! ### check if no normalization needed
 #endif

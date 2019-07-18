@@ -278,6 +278,7 @@ do ife = ife_min, ife_max
     enddo
   enddo
 
+#if (JOREK_MODEL == 303)
   do ms=1, n_gauss
     do mt=1, n_gauss
 
@@ -291,6 +292,7 @@ do ife = ife_min, ife_max
   enddo
 
   eq_zTe = eq_zTe / 2.d0	! electron temperature
+#endif
 !--------------------------------------------------- sum over the Gaussian integration points
 
   do mp=1,n_plane

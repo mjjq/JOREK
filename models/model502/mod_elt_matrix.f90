@@ -34,7 +34,8 @@ integer, intent(in) :: tid
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
-real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)
+real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss)
+real*8     :: heat_source_i(n_gauss,n_gauss), heat_source_e(n_gauss,n_gauss)
 real*8     :: source_volume, source_pellet, source_pellet2
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_rhon, Bgrad_T_star, Bgrad_Ti, Bgrad_Te, BB2
@@ -215,7 +216,8 @@ delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
 
 current_source  = 0.d0
 particle_source = 0.d0
-heat_source     = 0.d0
+heat_source_i   = 0.d0
+heat_source_e   = 0.d0
 V_source=0.d0
 dV_dpsi_source=0.d0
 dV_dz_source=0.d0
@@ -281,7 +283,7 @@ do ms=1, n_gauss
        if (keep_current_prof) &
          call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
 
-       call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
+       call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source_i(ms,mt),heat_source_e(ms,mt))
 
        call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                     dn_dpsi(ms,mt),dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
@@ -1363,7 +1365,7 @@ do ms=1, n_gauss
 !#  equation 6 (ion energy  equation)                                                              #
 !###################################################################################################
 
-         rhs_ij_6 =   v * BigR * heat_source(ms,mt)                                    * xjac * tstep &
+         rhs_ij_6 =   v * BigR * heat_source_i(ms,mt)                                  * xjac * tstep &
  
                     + v * (r0 + rn0*alpha_i) * BigR**2 * ( Ti0_s * u0_t - Ti0_t * u0_s)       * tstep &
                     + v * Ti0 * BigR**2 * (r0_s * u0_t - r0_t * u0_s)                         * tstep &
@@ -1507,7 +1509,7 @@ do ms=1, n_gauss
 !#  equation 9 (electron energy  equation)                                                         #
 !###################################################################################################
 
-         rhs_ij_9 =   v * BigR * heat_source(ms,mt)                                    * xjac * tstep &
+         rhs_ij_9 =   v * BigR * heat_source_e(ms,mt)                                  * xjac * tstep &
  
                     + v * (r0 + rn0*alpha_e_bis) * BigR**2 * ( Te0_s * u0_t - Te0_t * u0_s)   * tstep &
                     + v * Te0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                        * tstep &

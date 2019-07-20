@@ -2707,7 +2707,7 @@ do ms=1, n_gauss
              v_psi_y = v_xy * psi_y - v_yy * psi_x + v_x * psi_yy - v_y * psi_xy
 
              Bgrad_Te_psi     = ( Te0_x * psi_y - Te0_y * psi_x )  / BigR
-             Bgrad_Te_T       = ( F0 / BigR * Te_p +  Te_x * ps0_y - Te_y * ps0_x ) / BigR 
+             Bgrad_Te_T       = ( Te_x * ps0_y - Te_y * ps0_x ) / BigR 
              Bgrad_Te_T_n     = ( F0 / BigR * Te_p) / BigR
 
              Te_ps0_x = Te_xx * ps0_y - Te_xy * ps0_x + Te_x * ps0_xy - Te_y * ps0_xx

@@ -2811,12 +2811,12 @@ do ms=1, n_gauss
                                  * ( v_x * u0_y - v_y * u0_x) * xjac* theta*tstep*tstep      &
 
                        + TG_num9 * 0.25d0 / BigR * vpar0**2 &
-                          * Te0 * (rho_x * ps0_y - rho_y * ps0_x + F0 / BigR * rho_p)                     &
-                          * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep&
+                          * Te0 * (rho_x * ps0_y - rho_y * ps0_x                    )                     &
+                          * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep&
 
                        + TG_num9 * 0.25d0 / BigR * vpar0**2 &
                           * rho * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                      &
-                          * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
+                          * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
 
                        + v * BigR * rho * rn0_corr * Lrad                                   * xjac * theta * tstep &
                        + v * BigR * rho * frad_bg                                           * xjac * theta * tstep &

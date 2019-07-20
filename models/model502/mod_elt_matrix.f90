@@ -2648,7 +2648,9 @@ do ms=1, n_gauss
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
 
                            - v * BigR * Te * ((GAMMA-1.)/BigR**2) * detaSp_dT * zj0**2          * xjac * theta * tstep  &
-                           + v * BigR * Te * (r0_corr + alpha_e*rn0_corr) * rn0_corr * dLrad_dT * xjac * theta * tstep  
+                           + v * BigR * Te * (r0_corr + alpha_e*rn0_corr) * rn0_corr * dLrad_dT * xjac * theta * tstep  &
+                           + v * BigR * Te * dalpha_e_dT * rn0_corr**2 * Lrad                   * xjac * theta * tstep  &
+                           + v * BigR * Te * r0_corr * dfrad_bg_dT                              * xjac * theta * tstep
 
                  kl1 = index_kl
                  kl2 = index_kl + 1*n_tor

@@ -1040,8 +1040,8 @@ enddo  ! n_elements
    do i=1,nnos
      if (jorek_model .eq. 502 ) then
        T_real8 = scalars(i,n_var)
-       T_rad = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(EL_CHG*MU_ZERO*central_density*1.d20
-       T_rad_real = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20))
+       T_rad = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(EL_CHG*MU_ZERO*central_density*1.d20)
+       T_rad_real = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20)
      else
        T_real8 = scalars(i,6)
        T_rad = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)

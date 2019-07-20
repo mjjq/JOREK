@@ -886,6 +886,7 @@ do ms=1, n_gauss
      ne_JOREK     = r0_corr + alpha_e * rn0_corr ! Electron density in JOREK unit
      ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                             ! Too small rho_1 will cause a problem
+     if (ne_rad < 1.d16) ne_rad = 1.d16
 
      ! Calculate the effective charge of all species
      Z_eff        = 0.

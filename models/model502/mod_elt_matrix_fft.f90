@@ -1432,11 +1432,11 @@ do ms=1, n_gauss
                     - TG_num6 * 0.25d0 / BigR * vpar0**2 &
                               * Ti0 * ((r0_x+alpha_i*rn0_x) * ps0_y - (r0_y+alpha_i*rn0_y) * ps0_x &
                                         + F0 / BigR * (r0_p+alpha_i*rn0_p))                        &
-                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * tstep * tstep        &
+                              * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * tstep * tstep        &
 
                     - TG_num6 * 0.25d0 / BigR * vpar0**2 &
                               * (r0+alpha_i*rn0) * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)        &
-                              * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * tstep * tstep        &
+                              * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * tstep * tstep        &
 
                     + zeta * v * (r0 + rn0 * alpha_i) * delta_g(mp,6,ms,mt) * BigR                     * xjac &
                     + zeta * v * Ti0 * delta_g(mp,5,ms,mt) * BigR                                      * xjac &

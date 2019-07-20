@@ -1618,7 +1618,7 @@ do ms=1, n_gauss
                               * (r0+alpha_e_bis*rn0) * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)    &
                               * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * tstep * tstep        &
 
-                    + zeta * v * (r0 + rn0 * alpha_e) * delta_g(mp,9,ms,mt) * BigR                     * xjac &
+                    + zeta * v * (r0 + rn0 * alpha_e_bis) * delta_g(mp,9,ms,mt) * BigR                 * xjac &
                     + zeta * v * Te0 * delta_g(mp,5,ms,mt) * BigR                                      * xjac &
                     + zeta * v * alpha_e * Te0 * delta_g(mp,8,ms,mt) * BigR                            * xjac &   
 
@@ -1662,7 +1662,7 @@ do ms=1, n_gauss
                                * (                                 + F0 / BigR * v_p) * xjac * tstep * tstep   &
 
                        - TG_num9 * 0.25d0 / BigR * vpar0**2 &
-                               * (r0+alpha_e*rn0) * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)        &
+                               * (r0+alpha_e_bis*rn0) * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)    &
                                * (                                 + F0 / BigR * v_p) * xjac * tstep * tstep
  
 !###################################################################################################

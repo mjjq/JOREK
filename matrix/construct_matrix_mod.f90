@@ -149,7 +149,7 @@ contains
       do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
     	
     	if (abs(thread_struct(omp_tid)%RHS(i)-thread_struct(omp_tid)%RHS2(i)) / &
-            (abs(thread_struct(omp_tid)%RHS(i))+abs(thread_struct(omp_tid)%RHS2(i))+1.d0) .gt. 1.d-12) then
+            (abs(thread_struct(omp_tid)%RHS(i))+abs(thread_struct(omp_tid)%RHS2(i))+1.d0) .gt. 1.d-10) then
     	  call decrypt_index(i, ivertex, iorder, ivar, itor)
     	  write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, thread_struct(omp_tid)%RHS(i), &
     	      thread_struct(omp_tid)%RHS2(i), thread_struct(omp_tid)%RHS(i)-thread_struct(omp_tid)%RHS2(i)
@@ -169,7 +169,7 @@ contains
     	do j = 1, n_tor*n_vertex_max*(n_order+1)*n_var
     	  
     	  if (abs(thread_struct(omp_tid)%ELM(i,j)-thread_struct(omp_tid)%ELM2(i,j))/  &
-    	      (abs(thread_struct(omp_tid)%ELM(i,j))+abs(thread_struct(omp_tid)%ELM2(i,j))+1.d0) .gt. 1.d-10) then
+    	      (abs(thread_struct(omp_tid)%ELM(i,j))+abs(thread_struct(omp_tid)%ELM2(i,j))+1.d0) .gt. 1.d-8) then
     	    call decrypt_index(i, ivertex, iorder, ivar, itor)
     	    call decrypt_index(j, jvertex, jorder, jvar, jtor)
     	    write(*,'(4x,11i8,3es16.8)') my_id, i, j, ivertex, iorder, ivar, itor, jvertex,	  &

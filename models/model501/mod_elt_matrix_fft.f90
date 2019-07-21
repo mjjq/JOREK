@@ -141,7 +141,7 @@ real*8     :: m_i_over_m_imp
 real*8     :: Z_imp, dZ_imp_dT, d2Z_imp_dT2, T0_Zimp, alpha_Zimp, Z_eff, dZ_eff_dT, eta_coef, deta_coef_dZeff
 real*8     :: dZ_eff_dr0, dZ_eff_drn0
 !   -Coefficients related to Z_imp
-real*8     :: alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis
+real*8     :: alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis, alpha_imp_tri
 real*8     :: beta_imp, dbeta_imp_dT
 !   -Radiation from injected impurities
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
@@ -817,6 +817,7 @@ do ms=1, n_gauss
      dalpha_imp_dT   = 0.5*m_i_over_m_imp*dZ_imp_dT
      d2alpha_imp_dT2 = 0.5*m_i_over_m_imp*d2Z_imp_dT2
      alpha_imp_bis   = alpha_imp + dalpha_imp_dT*T0
+     alpha_imp_tri   = 2. * dalpha_imp_dT + d2alpha_imp_dT2 * T0
 
      beta_imp     = m_i_over_m_imp*Z_imp - 1.
      dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
@@ -1663,8 +1664,11 @@ do ms=1, n_gauss
 
              amat_26 = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)      * theta * tstep  &
                        - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)    * theta * tstep  &
-		       - BigR**2 * (v_s * rn0_t * alpha_imp * T - v_t * rn0_s * alpha_imp * T)         * theta * tstep  &
-		       - BigR**2 * (v_s * rn0 * alpha_imp_bis * T_t - v_t * rn0 * alpha_imp_bis * T_s) * theta * tstep  &		       
+                       - BigR**2 * (v_s * rn0_t * alpha_imp_bis * T - v_t * rn0_s * alpha_imp_bis * T) * theta * tstep  &
+                       - BigR**2 * (v_s * rn0 * alpha_imp_bis * T_t - v_t * rn0 * alpha_imp_bis * T_s) * theta * tstep  &
+                       - BigR**2 * (v_s * rn0 * alpha_imp_tri * T * T0_t &
+                                    - v_t * rn0 * alpha_imp_tri * T * T0_s) * theta * tstep  &
+
                        + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac * theta * tstep &
                        ! Hyper-viscosity terms
                        + dvisco_num_dT * T * (v_xx + v_x/Bigr + v_yy)*(w0_xx + w0_x/Bigr + w0_yy)* xjac * theta * tstep &
@@ -1996,18 +2000,22 @@ do ms=1, n_gauss
                        + (2./3.) * v * rn0 * dE_ion_dT * Vpar0 * (T_s*ps0_t - T_t*ps0_s)         * theta * tstep &
 !================= End ionization potential energy ===========================
                        - v * (r0 + rn0 * alpha_imp_bis) * BigR**2 * ( T_s  * u0_t - T_t  * u0_s) * theta * tstep &
-		       - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * theta * tstep &
+                       - v * (rn0 * alpha_imp_tri) * T  * BigR**2 * ( T0_s * u0_t - T0_t * u0_s) * theta * tstep &
+                       - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * theta * tstep &
                        - v * alpha_imp_bis * T * BigR**2 * (rn0_s * u0_t - rn0_t * u0_s)         * theta * tstep &
+
                        - v * (r0 + rn0 * alpha_imp_bis) * 2.d0* GAMMA * BigR * T * u0_y   * xjac * theta * tstep &
 
                        + v * (r0 + rn0 * alpha_imp_bis) * Vpar0 * (T_s  * ps0_t - T_t  * ps0_s) * theta * tstep &
+                       + v * (rn0 * alpha_imp_tri) * T  * Vpar0 * (T0_s * ps0_t - T0_t * ps0_s) * theta * tstep &
                        + v * T  * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                         * theta * tstep & 
                        + v * alpha_imp_bis * T * Vpar0 * (rn0_s * ps0_t - rn0_t * ps0_s)        * theta * tstep &
 
                        + v * (r0 + rn0 * alpha_imp_bis) * GAMMA * T * (vpar0_s * ps0_t - vpar0_t * ps0_s)  * theta * tstep &
                        + v * (r0 + rn0 * alpha_imp_bis) * GAMMA * T * F0 / BigR * vpar0_p           * xjac * theta * tstep &
 
-                       + v * T * F0 / BigR * Vpar0 * (r0_p + rn0_p * alpha_imp_bis) * xjac * theta * tstep &
+                       + v * (rn0 * alpha_imp_tri) * T  * F0 / BigR * Vpar0 * T0_p       * xjac * theta * tstep &
+                       + v * T * F0 / BigR * Vpar0 * (r0_p + rn0_p * alpha_imp_bis)      * xjac * theta * tstep &
 
                        + (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T_T * xjac * theta * tstep &
                        + ZK_prof * BigR * ( v_x*T_x + v_y*T_y )                    * xjac * theta * tstep &
@@ -2021,6 +2029,9 @@ do ms=1, n_gauss
                              * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
                    + TG_num6 * 0.25d0 * BigR**2 * (r0+alpha_imp_bis*rn0) * (T_x * u0_y - T_y * u0_x)          &
                              * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
+                   + TG_num6 * 0.25d0 * BigR**2 * (alpha_imp_tri*rn0)*T* (T0_x * u0_y - T0_y * u0_x)         &
+                             * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
+
                    + TG_num6 * 0.25d0 / BigR * vpar0**2 &
                              * T * ((r0_x+alpha_imp_bis*rn0_x) * ps0_y - (r0_y+alpha_imp_bis*rn0_y) * ps0_x &
                                     + F0 / BigR * (r0_p+alpha_imp_bis*rn0_p))                           &
@@ -2028,6 +2039,10 @@ do ms=1, n_gauss
                    + TG_num6 * 0.25d0 / BigR * vpar0**2 &
                              * (r0+alpha_imp_bis*rn0) * (T_x * ps0_y - T_y * ps0_x               )            &
                              * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
+                   + TG_num6 * 0.25d0 / BigR * vpar0**2 &
+                             * (alpha_imp_tri*rn0)*T* * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)      &
+                             * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
+
 
                            - v * BigR * T * ((2d0)/(3*BigR**2)) * detaSp_dT * zj0**2                              * xjac * theta * tstep  &
                            + v * BigR * T * (r0 + beta_imp*rn0) * rn0 * dLrad_dT                                  * xjac * theta * tstep  &
@@ -2042,6 +2057,9 @@ do ms=1, n_gauss
                              * T * ((r0_x+alpha_imp_bis*rn0_x) * ps0_y - (r0_y+alpha_imp_bis*rn0_y) * ps0_x      &
                                     + F0 / BigR * (r0_p+alpha_imp_bis*rn0_p))                                    &
                              * (                                + F0 / BigR * v_p) * xjac * theta * tstep * tstep&
+                   + TG_num6 * 0.25d0 / BigR * vpar0**2 &
+                             * (alpha_imp_tri*rn0)*T* * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)      &
+                             * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
                    + TG_num6 * 0.25d0 / BigR * vpar0**2 &
                              * (r0+alpha_imp_bis*rn0) * (T_x * ps0_y - T_y * ps0_x                  )            &
                              * (                               + F0 / BigR * v_p) * xjac * theta * tstep * tstep
@@ -2317,9 +2335,12 @@ do ms=1, n_gauss
              amat_76 = + v * (T_s * r0 * ps0_t - T_t * r0 * ps0_s)                                   * theta * tstep &
                        + v * (T * r0_s * ps0_t - T * r0_t * ps0_s)                                   * theta * tstep &
                        + v * (T_s * rn0 * alpha_imp_bis * ps0_t - T_t * rn0 * alpha_imp_bis * ps0_s) * theta * tstep &
-                       + v * (T * rn0_s * alpha_imp * ps0_t - T * rn0_t * alpha_imp * ps0_s)         * theta * tstep &		       
+                       + v * (T0_s* rn0 * alpha_imp_tri*T*ps0_t - T0_t* rn0 * alpha_imp_tri*T*ps0_s) * theta * tstep &
+                       + v * (T * rn0_s * alpha_imp_bis * ps0_t - T * rn0_t * alpha_imp_bis * ps0_s) * theta * tstep &
+
                        + v * F0 / BigR * T * r0_p                                             * xjac * theta * tstep &
-		       + v * F0 / BigR * T * rn0_p * alpha_imp                                * xjac * theta * tstep
+                       + v * F0 / BigR * T * rn0_p * alpha_imp_bis                            * xjac * theta * tstep &
+                       + v * F0 / BigR *  T0_p * rn0 * T                    * alpha_imp_tri   * xjac * theta * tstep
 
              amat_76_n = + v * F0 / BigR * T_p * r0                                           * xjac * theta * tstep &
                          + v * F0 / BigR * T_p * rn0 * alpha_imp_bis                          * xjac * theta * tstep 

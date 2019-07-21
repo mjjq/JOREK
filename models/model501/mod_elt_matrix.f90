@@ -1938,7 +1938,7 @@ do ms=1, n_gauss
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
 
                            + TG_num6 * 0.25d0 / BigR * vpar0**2 &
-                              * (alpha_imp_tri*rn0)*T* * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)      &
+                              * (alpha_imp_tri*rn0)* T * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)      &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
 
                            - v * BigR * T * ((2d0)/(3*BigR**2)) * detaSp_dT * zj0**2        * xjac * theta * tstep  &

@@ -235,6 +235,7 @@ module phys_module
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
   ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
   ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
+  logical :: using_spi          !< This determines whether to use SPI or traditional MGI; see [[spi_tutorial|SPI Tutorial]]
   real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R upon injection (in m/s)
   real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z upon injection (in m/s)
   real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection (in m/s)
@@ -261,7 +262,6 @@ module phys_module
 
   character(len=256) :: spi_shard_file !< The name of the shard size file
 
-  logical :: using_spi          !< This determines whether to use SPI or traditional MGI
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)

@@ -7,7 +7,7 @@
 !>* Geometry: cartesian
 !>* Particle type: electron
 !>* Kinetic energy: 10 MeV
-!>* Gyro-period: 3.5723d-11 [s]
+!>* Gyro-period: 3.5723d-13 [s]
 !>
 !> Note: Only 100 gyro-orbits are considered for fast pusher testing
 !>
@@ -20,7 +20,7 @@ implicit none
 ! 1. Set up the simulation variables
 !    sim: particles, time, io
 !    events: pusher halting points and actions to run
-real(kind=8)    :: timesteps(1) = [3.5723d-12]
+real(kind=8)    :: timesteps(1) = [3.5723d-13]
 integer(kind=4) :: i,j,k,n_steps
 real(kind=8)    :: target_time
 type(particle_kinetic_relativistic) :: particle !< define a relativistic particle

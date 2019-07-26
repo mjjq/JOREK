@@ -1144,7 +1144,7 @@ do ms=1, n_gauss
     nu_e_bg  = nu_e_bg * t_norm
 
     dTe_i    = (nu_e_imp + nu_e_bg) * (Ti0 - Te0)
-    dTi_e    = -dTe_i * (r0 + alpha_e*rn0) / (r0 + alpha_i*rn0)
+    dTi_e    = -dTe_i * (r0 + alpha_e*rn0) / (r0_corr + alpha_i*rn0_corr)
 
     !Calculating the density and temperature derivative for amats
     !We negelect the coulomb log's dericatives due to their smallness

@@ -239,11 +239,6 @@ module phys_module
   real*8  :: A_Dmv             !< Cross sectional area of DMV (Disruption mitigation valve) pipe
   real*8  :: K_Dmv             !< Correction parameter describing the gas expansion near the pipe orifice
   real*8  :: L_tube            !< Pipe length
-  real*8  :: V_Dmv             !< Volume of the DMV reservoir
-  real*8  :: P_Dmv             !< Pressure in the DMV reservoir
-  real*8  :: t_mgi             !< Beginning of the MGI
-  logical :: JET_MGI !< Switch to have a real time dependent MGI or a constant injection
-  logical :: ASDEX_MGI
   character(len=80) :: gas_type !< Type of gas used in MGI: Argon, D2, ...
 
   !> @name Shattered pellet injection-related input parameters

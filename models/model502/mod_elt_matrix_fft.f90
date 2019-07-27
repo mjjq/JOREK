@@ -1144,7 +1144,7 @@ do ms=1, n_gauss
     nu_e_bg  = nu_e_bg * t_norm
 
     dTe_i    = (nu_e_imp + nu_e_bg) * (Ti0 - Te0)
-    dTi_e    = -dTe_i * (r0 + alpha_e*rn0) / (r0_corr + alpha_i*rn0_corr)
+    dTi_e    = -dTe_i * (r0_corr + alpha_e*rn0_corr) / (r0_corr + alpha_i*rn0_corr)
 
     !Calculating the density and temperature derivative for amats
     !We negelect the coulomb log's dericatives due to their smallness
@@ -1177,6 +1177,14 @@ do ms=1, n_gauss
                       -dTe_i * (alpha_e-alpha_i) * r0_corr * drn0_corr_dn / (r0_corr+alpha_i*rn0_corr)**2
     ddTi_e_drho     = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_drho  / (r0_corr+alpha_i*rn0_corr) &
                       -dTe_i * (alpha_i-alpha_e) * rn0_corr * dr0_corr_dn / (r0_corr+alpha_i*rn0_corr)**2
+
+    if (r0_corr+alpha_e*rn0_corr < 0.) then
+      dTi_e         = 0.
+      ddTi_e_dTi    = 0.
+      ddTe_i_dTe    = 0.
+      ddTi_e_drhon  = 0.
+      ddTi_e_drho   = 0.
+    end if
 
 !--------------------------------------------------------
 

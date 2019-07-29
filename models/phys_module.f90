@@ -205,8 +205,8 @@ module phys_module
   real*8  :: pellet_delta_psi  !< width of smoothing in poloidal flux
   real*8  :: pellet_velocity_R !< pellet velocity component radial direction
   real*8  :: pellet_velocity_Z !< pellet velocity component Z direction
-  real*8  :: pellet_density    !< pellet atom number density (in units 10^20 m^-3)
-  real*8  :: pellet_particles  !< the number of particles in the pellet (in units of 10^20)
+  real*8  :: pellet_density    !< pellet atom number density (in units \f$10^{20} m^{-3}\f$)
+  real*8  :: pellet_particles  !< the number of particles in the pellet (in units of \f$10^{20}\f$)
   logical :: use_pellet
   
   !> @name MGI or SPI-related input parameters

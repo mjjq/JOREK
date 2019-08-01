@@ -182,6 +182,8 @@ module exec_commands
           call set(command, ierr)
         case ( 'si-units' )
           call select_si_units(command, ierr)
+        case ( 'spi-state' )
+          call spi_state(command, first_step, ierr)
         case ( 'timesteps' )
           call timesteps 
         case default
@@ -197,7 +199,7 @@ module exec_commands
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
           'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
           'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'energy_spectrum', 'average_h5', &
-          'I_halo_TPF')
+          'I_halo_TPF', 'spi-state')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -1348,6 +1350,82 @@ module exec_commands
     close(i_file)
     
   end subroutine equil_params
+
+
+
+
+  
+  !> Write out SPI related information
+  subroutine spi_state(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: units, i_file, i
+    character(len=1024) :: filename, status, access
+    real*8 :: R_av, Z_av, phi_av, shard_atoms_left, atoms_left, abl_tot
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    
+    write(filename,'(4a)') DIR, 'spi', trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    R_av       = 0.d0
+    Z_av       = 0.d0
+    phi_av     = 0.d0
+    atoms_left = 0.d0
+    abl_tot    = 0.d0
+    
+    do i = 1, n_SPI
+      shard_atoms_left = 4./3.*PI*pellets(i)%spi_radius**3 * pellet_density * 1.d20
+      
+      atoms_left = atoms_left + shard_atoms_left
+      
+      R_av   = R_av   + pellets(i)%spi_R   * shard_atoms_left
+      Z_av   = Z_av   + pellets(i)%spi_Z   * shard_atoms_left
+      phi_av = phi_av + pellets(i)%spi_phi * shard_atoms_left
+      
+      abl_tot = abl_tot + pellets(i)%spi_abl
+    end do
+    
+    if ( atoms_left /= 0.d0 ) then
+      R_av   = R_av / atoms_left
+      Z_av   = Z_av / atoms_left
+      phi_av = phi_av / atoms_left
+    else
+      R_av   = 0.d0
+      Z_av   = 0.d0
+      phi_av = 0.d0
+    end if
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '# time                R_average           Z_average           '//       &
+        'phi_average         atoms_left          ablation_rate'
+    end if
+    
+    write(i_file,'(es20.13,3f20.16,3es20.12)') time_now, R_av, Z_av, phi_av, atoms_left, abl_tot
+    
+    close(i_file)
+    
+  end subroutine spi_state
 
 
 

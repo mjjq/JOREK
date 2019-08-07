@@ -1366,7 +1366,7 @@ module exec_commands
     ! --- Local variables
     integer :: units, i_file, i
     character(len=1024) :: filename, status, access
-    real*8 :: R_av, Z_av, phi_av, shard_atoms_left, atoms_left, abl_tot
+    real*8 :: R_av, Z_av, phi_av, shard_atoms_left, atoms_left, abl_tot, xx, yy, zz
     
     ierr = 0
     
@@ -1388,9 +1388,9 @@ module exec_commands
     open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
         iostat=ierr)
     
-    R_av       = 0.d0
-    Z_av       = 0.d0
-    phi_av     = 0.d0
+    xx         = 0.d0
+    yy         = 0.d0
+    zz         = 0.d0
     atoms_left = 0.d0
     abl_tot    = 0.d0
     
@@ -1399,17 +1399,17 @@ module exec_commands
       
       atoms_left = atoms_left + shard_atoms_left
       
-      R_av   = R_av   + pellets(i)%spi_R   * shard_atoms_left
-      Z_av   = Z_av   + pellets(i)%spi_Z   * shard_atoms_left
-      phi_av = phi_av + pellets(i)%spi_phi * shard_atoms_left
+      xx = xx + pellets(i)%spi_R * cos(pellets(i)%spi_phi) * shard_atoms_left
+      yy = yy - pellets(i)%spi_R * sin(pellets(i)%spi_phi) * shard_atoms_left
+      zz = zz + pellets(i)%spi_Z                           * shard_atoms_left
       
       abl_tot = abl_tot + pellets(i)%spi_abl
     end do
     
     if ( atoms_left /= 0.d0 ) then
-      R_av   = R_av / atoms_left
-      Z_av   = Z_av / atoms_left
-      phi_av = phi_av / atoms_left
+      R_av   = sqrt( xx**2 + yy**2 ) / atoms_left
+      Z_av   = Z_av                  / atoms_left
+      phi_av = atan2( xx, yy )       / atoms_left
     else
       R_av   = 0.d0
       Z_av   = 0.d0

@@ -1409,7 +1409,8 @@ module exec_commands
     if ( atoms_left /= 0.d0 ) then
       R_av   = sqrt( xx**2 + yy**2 ) / atoms_left
       Z_av   = Z_av                  / atoms_left
-      phi_av = atan2( xx, yy )       / atoms_left
+      phi_av = -atan2( yy, xx )      / atoms_left
+      if ( phi_av < 0.d0 ) phi_av = phi_av + 2.d0*PI
     else
       R_av   = 0.d0
       Z_av   = 0.d0

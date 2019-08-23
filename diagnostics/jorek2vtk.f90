@@ -108,6 +108,14 @@ real*8     :: E_ion
 integer*8  :: ion_i, ion_k
 #endif
 
+!====================== --- Variables related to neutral density evolution (model 500 or 555)
+logical               :: include_neutral_dens
+integer               :: n_rn0, s_rn0
+real*8                :: r0_corr, rn0_corr
+real*8                :: r0_real8, rn0_real8
+real*8                :: IonN, RecN, AblN, coef_rec_1, Srec_T
+
+
 ! MPI arguments
 integer    :: required,provided,StatInfo
 
@@ -185,6 +193,7 @@ include_radiation = .true.
 if (flag_adas) then
   call init_imp_adas(my_id)
 end if
+include_neutral_dens = .true.
 #endif
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
@@ -287,6 +296,15 @@ endif
     s_radiation = n_scalars
     n_scalars   = n_scalars + n_radiation
  endif
+
+    n_rn0 = 0
+ if (include_neutral_dens) then
+    n_rn0       = 2
+    s_rn0       = n_scalars
+    n_scalars   = n_scalars + n_rn0
+ endif
+
+
 #endif
 #if (JOREK_MODEL == 501)
     n_radiation = 0
@@ -376,9 +394,16 @@ endif
 
 #if (JOREK_MODEL == 500)
  if (include_radiation) then
-     scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
+   scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
                   = (/ 'Ionis_Wm-3  ', 'Lin_radWm-3 ', 'Brems_Wm-3  ', 'Joule_Wm-3  ', 'Imp_bg_Wm-3 '/)
  endif
+
+ if (include_neutral_dens) then
+   scalar_names(s_rn0+1:s_rn0+n_rn0)&
+                  = (/ 'IonN_s-1     ', 'RecN_s-1     '/)
+
+ endif
+
 #endif
 #if (JOREK_MODEL == 501)
  if (include_radiation) then
@@ -973,6 +998,8 @@ enddo  ! n_elements
 
     T_real8 = scalars(i,6)
 
+    T_corr = corr_neg_temp(T_real8)
+
     Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
 
     T_rad = corr_neg_temp(T_real8,(/1.d-2,1.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
@@ -1015,7 +1042,7 @@ enddo  ! n_elements
 
    enddo
   endif
-#endif
+#endif /*(JOREK_MODEL==500)
 
 #if (JOREK_MODEL == 501)
  if (include_radiation) then
@@ -1160,7 +1187,49 @@ enddo  ! n_elements
 
    end do
  endif
-#endif /*(JOREK_MODEL == 500 || JOREK_MODEL == 501)*/
+#endif /*(JOREK_MODEL == 501)*/
+#if (JOREK_MODEL == 500)
+ if (include_neutral_dens) then
+
+   coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density * 1.d20)**(1.5d0)
+
+   coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
+   coef_ion_2 = 0.232d0
+   coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
+   S_ion_puiss = 3.9d-1
+
+   do i=1,nnos
+
+     T_real8 = scalars(i,6)
+
+     T_corr = corr_neg_temp(T_real8)
+
+
+     Srec_T    = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T_corr/(2.d0))**(-0.5d0)
+
+     Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
+ 
+     Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
+
+
+     r0_real8  = scalars(i,5)
+     rn0_real8 = scalars(i,8)
+
+     r0_corr   = corr_neg_dens(r0_real8)
+     rn0_corr  = corr_neg_dens(rn0_real8, (/ 0.d-5, 1.d-5 /))
+
+     IonN      = -(r0_corr) * (rn0_corr) * Sion_T
+     RecN      = (r0_corr)**2 * Srec_T 
+
+     scalars(i,s_rn0+1) = IonN
+     scalars(i,s_rn0+2) = RecN
+
+
+   end do
+ end if
+
+
+#endif /*(JOREK_MODEL == 500)*/
 
 
 if (SI_units) then

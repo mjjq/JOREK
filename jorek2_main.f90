@@ -66,7 +66,7 @@ program JOREK2
   use mpi_mod
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
-  use mgi_module
+  use mod_neutral_source
 #endif
 
   use, intrinsic :: iso_c_binding
@@ -259,9 +259,9 @@ required = 0
   
   ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)
-  
+ 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  
+
   ! --- Some checks not to waste any cpu time
   if (required .ne. provided) then
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
@@ -360,7 +360,7 @@ required = 0
   if ( my_id == 0 ) call init_live_data2()
   if ( my_id == 0 ) call init_live_data3()
 #ifdef JEC2DIAG
-   if ( my_id == 0 ) call init_live_data4()
+  if ( my_id == 0 ) call init_live_data4()
 #endif
 #endif
   
@@ -1000,12 +1000,12 @@ required = 0
        endif
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
-       if (using_spi == .false.) then
-         call update_mgi(my_id,node_list,element_list)
-       else if (using_spi .and. t_now >= t_mgi) then
+       call total_neutrals(my_id,node_list,element_list)
+       if (using_spi .and. t_now >= t_ns) then
          call update_spi(my_id,node_list,element_list)
        end if
 #endif
+
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)

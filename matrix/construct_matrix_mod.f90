@@ -5,7 +5,6 @@ implicit none
 
 logical  :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
 
-
 contains
 
   !> subroutine that will construct elementary matrices
@@ -40,16 +39,14 @@ contains
     integer,                          intent(in)     :: n_local_elms
     TYPE (type_node_list),            intent(in)     :: node_list
     
-#ifdef COMPARE_ELEMENT_MATRIX
-    integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
-    integer  :: my_id, rank, ierr
-#endif
-    
     ! -- internal parameters
     integer iv, iv2, inode1, inode2, i, j
     integer vertex(2), direction(2)
 
 #ifdef COMPARE_ELEMENT_MATRIX
+    integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
+    integer  :: my_id, rank, ierr
+
     ! --- Determine ID of each MPI proc
     call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
     my_id = rank
@@ -121,8 +118,6 @@ contains
        
       enddo
     endif
-    
-    
     
     ! --- Compare the two element_matrix routines (error thresholds might need to be adapted!)
 #ifdef COMPARE_ELEMENT_MATRIX
@@ -330,8 +325,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   omp_nthreads = 1
   omp_tid      = 1
 #endif
-  
-  ! --- Loop over local elements
+
+! --- Loop over local elements
   !$omp do schedule(runtime)
   do ife =1, n_local_elms
     
@@ -592,9 +587,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_glob,nz_glob)
- 
+
   ! --- Form a global rhs from the rhss of the individual mpi threads.
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+
   call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
 
   ! --- For debugging purpose

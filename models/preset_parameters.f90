@@ -343,64 +343,53 @@ subroutine preset_parameters
   V_coef(1:5) = (/ 0.d0, 0.d0, 0.d0, 0.1d0, 1.0d0 /)
 !======================MB
 
-!====================== Massive Gas Injection Parameters
-!#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
-    JET_MGI = .false.
-    ASDEX_MGI = .false.
-    gas_type = 'D2'
-    mgi_amplitude = 0.d0  ! 0.007d0
-    mgi_R      = 3.2d0
-    mgi_Z      =  1.5d0
-    mgi_phi    = 1.57d0
-    mgi_radius =   0.08d0
-    mgi_sig    =  0.05
-    mgi_deltaphi =  0.5
-    mgi_tor_norm = 1.
-    ksi_ion = 1.84d-24
-    D_neutral_x = 0.d-5
-    D_neutral_y = 0.d-5
-    D_neutral_p = 0.d-5
-    !====== JET DMV-2 parameters
-     L_tube = 2.d0
-     K_Dmv = 4.d-2
-     A_Dmv = 1.77d-2
-     t_mgi = 2.d3
-    !=====
-     delta_n_convection = 0
-     nimp_bg = 0.
+  JET_MGI = .false.
+  ASDEX_MGI = .false.
+  ns_amplitude = 0.d0
+  ns_R      = 3.2d0
+  ns_Z      =  1.5d0
+  ns_phi    = 1.57d0
+  ns_radius =   0.08d0
+  ns_sig    =  0.05
+  ns_deltaphi =  0.5
+  ns_tor_norm = 1.
+  ksi_ion = 1.84d-24
+  D_neutral_x = 1.d-5
+  D_neutral_y = 1.d-5
+  D_neutral_p = 1.d-5
+  delta_n_convection = 0
+  nimp_bg = 0.
+  !====== JET DMV-2 parameters
+  L_tube = 2.d0
+  K_Dmv = 4.d-2
+  A_Dmv = 1.77d-2
+  t_ns  = 2.d3
+  !======= Additional parameters for SPI =======
+  spi_Vel_Rref    = 0.0d0
+  spi_Vel_Zref    = 0.0d0
+  spi_Vel_RxZref  = 0.0d0
+  spi_quantity    = 0.0
+  spi_quantity_bg = 0.0
+  ng_radius_ratio = 1.4d0
+  ng_radius_min   = 8.d-2
+  spi_Vel_diff    = 0.0
+  spi_angle       = 0.0
+  spi_L_inj       = 0.25
+  ns_phi_rotate   = 0.0
+  tor_frequency   = 0.0
+  n_spi           = 1
+  spi_rnd_seed    = 0
+  spi_abl_model   = 0
+  spi_shard_file  = 'none'
+  spi_tor_rot     = .false.
+  using_spi       = .false.
 
-    !======= Additional parameters for SPI =======
-     spi_Vel_Rref    = 0.0d0
-     spi_Vel_Zref    = 0.0d0
-     spi_Vel_RxZref  = 0.0d0
-     spi_quantity    = 0.0
-     spi_quantity_bg = 0.0
-     ng_radius_ratio = 1.4d0
-     ng_radius_min   = 8.d-2
-     spi_Vel_diff    = 0.0
-     spi_angle       = 0.0
-     spi_L_inj       = 0.25
-     mgi_phi_rotate  = 0.0
-     tor_frequency   = 0.0
+  flag_adas       = .false.
+  output_rad_phi  = .false.
+  n_adas          = 0
 
-     n_spi           = 1
-     spi_rnd_seed    = 0
+  adas_dir        = ''
 
-     spi_abl_model   = 0
-     spi_shard_file  = 'none'
-
-     toroidal_rotation = .false.
-     using_spi       = .false.
-     flag_adas       = .false.
-     output_rad_phi  = .false.
-     n_adas          = 0
-
-     adas_dir        = ''
-
-    !=========== End of SPI parameters ===========
-
-!#endif
-!======================
 
 !======================JP ECCD injection parameters
   nu_jec_fast=1.d1

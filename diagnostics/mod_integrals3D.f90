@@ -30,7 +30,7 @@ subroutine int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list
 
 !$ use omp_lib
 #if (JOREK_MODEL == 500)
-use mgi_module
+  use mod_neutral_source
 #endif
  
 implicit none
@@ -90,7 +90,7 @@ real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0
+real*8  :: local_n_particles_inj, local_n_particles, source_ns, rn0
 real*8  :: E_tot, Zkpar_T, D_prof, ZK_prof
 real*8  :: fact_mu0, fact_flux
 real*8  :: hel1, heli, helicity_tot, psi_off, curr, Ip, vn_p0, qn, pflow, kinflow, cond_par, cond_perp
@@ -199,9 +199,9 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, thm_wk_tot,                   &
 !$omp          mag_wk_tot, vpar_disp_tot, area1, mag_src_tot,  &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp          local_n_particles_inj, local_n_particles, mgi_amplitude, mgi_R, mgi_Z,          &
-!$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm,                       &
-!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube, JET_MGI,ASDEX_MGI,            &
+!$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
+!$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm,                            &
+!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,            &
 !$omp          central_mass,                                                                   &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
@@ -217,7 +217,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, &
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp           rn0, source_mgi,                                                               &
+!$omp           rn0, source_ns,                                                               &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -423,14 +423,14 @@ do ife = ife_min, ife_max
         endif
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-        source_mgi = 0.d0
+        source_ns = 0.d0
 
-        call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+        call neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
+                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_ns,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
 
         !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
 
-        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_mgi * bigR *&
+        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_ns * bigR *&
                                  xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
         local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
 #endif

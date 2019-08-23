@@ -1,5 +1,5 @@
 !> Definitions of derived data types for grid nodes and elements, boundary nodes and elements,
-!! and flux surface elements
+!! and flux surface elements, as well as the shattered pellets
 module data_structure
   use mod_parameters
   use tr_module
@@ -128,7 +128,6 @@ module data_structure
                                                   !< Only necessary for model 501.
   end type type_SPI
 ! End of shattered pellet type
-
   
   integer                                         , public :: nbthreads
   TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()

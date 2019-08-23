@@ -87,8 +87,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 D_neutral_x, D_neutral_y, D_neutral_p,   	    &
-                mgi_sig, mgi_length, n_zero, ksi_ion,               &  
-                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
+                ns_sig, ns_length, n_zero, ksi_ion,                 &  
+                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 output_bnd_elements,                                &
                 wall_file, rot_file, bc_natural_flux,               &
                 first_target_point, last_target_point,              &
@@ -338,6 +338,28 @@ call read_num_profiles(my_id)
 
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
+
+! --- Initialize the shattered pellet position
+if (my_id == 0) then
+  if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
+    write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
+    if (t_now > t_ns) then
+      write(*,*) "EXITING NOW!!!"
+      stop
+    end if
+  end if
+  
+  if (using_spi) then
+    if (JET_MGI .or. ASDEX_MGI) then
+      write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
+      write(*,*) "JET_MGI:", JET_MGI
+      write(*,*) "ASDEX_MGI:", ASDEX_MGI
+      stop
+    else
+      call init_spi()
+    end if
+  end if
+end if
   
 return
 end subroutine initialise_parameters

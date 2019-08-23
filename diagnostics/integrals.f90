@@ -205,13 +205,13 @@ beta_p  = 8.d0 * PI * P_hel / (C_hel**2 )
 beta_t  = 2.d0 * P_hel / Bgeo**2 / (Area)
 beta_n  = 100.d0 * (4.*PI/10.) * beta_t / (MU_zero * abs(current) /  (aminor * Bgeo))
 
-write(*,'(A,f12.7)')    ' psi_limit        : ',psi_limit
-write(*,'(A,f12.7,A)')  ' current          : ',current/1.e6,' MA'
-write(*,'(A,f12.7)')    ' beta_p           : ',beta_p
-write(*,'(A,f12.7)')    ' beta_t           : ',beta_t
-write(*,'(A,f12.7,A)')  ' beta_n           : ',beta_n,' [%]'
-write(*,'(A,f12.7,A)')  ' Area             : ',area,' m^2'
-write(*,'(A,f12.7,A)')  ' Volume           : ',volume,' m^3'
+write(*,'(A,f16.7)')    ' psi_limit        : ',psi_limit
+write(*,'(A,f16.7,A)')  ' current          : ',current/1.e6,' MA'
+write(*,'(A,f16.7)')    ' beta_p           : ',beta_p
+write(*,'(A,f16.7)')    ' beta_t           : ',beta_t
+write(*,'(A,f16.7,A)')  ' beta_n           : ',beta_n,' [%]'
+write(*,'(A,f16.7,A)')  ' Area             : ',area,' m^2'
+write(*,'(A,f16.7,A)')  ' Volume           : ',volume,' m^3'
 write(*,'(A,2es18.7,A)') ' Heat.src (in/out): ', heat_src_in, heat_src_out, '/ sqrt((mu_0)^3 rho_0) W'
 write(*,'(A,2es18.7,A)') ' Part.src (in/out): ', part_src_in, part_src_out
 

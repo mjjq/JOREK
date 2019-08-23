@@ -9,7 +9,9 @@ use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pi
 use wsmp_module,   only: use_wsmp
 use vacuum
 use mpi_mod
-use mgi_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_neutral_source
+#endif
 use pellet_module
 
 implicit none
@@ -177,18 +179,20 @@ if (my_id .eq. 0) then
   call MPI_PACK(A_Dmv,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(V_Dmv,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(P_Dmv,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(t_mgi,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(t_ns,                   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
-  call MPI_PACK(mgi_amplitude,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(mgi_R,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(mgi_Z,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(mgi_phi,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(mgi_radius,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(mgi_sig,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(mgi_deltaphi,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(mgi_tor_norm,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ns_amplitude,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ns_R,                   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ns_Z,                   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ns_phi,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ns_radius,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ns_sig,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ns_deltaphi,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ns_tor_norm,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
 !==========================Added input for SPI model===========================================
+
+  call MPI_PACK(spi_L_inj,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(spi_Vel_Rref,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(spi_Vel_Zref,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -208,17 +212,14 @@ if (my_id .eq. 0) then
   call MPI_PACK(using_spi,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(flag_adas,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
-if (using_spi) then
-  call MPI_PACK(pellets,            n_spi,dtype,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  write(*,*) "packing pellets: ", ierr
+  if (using_spi) then
+    call MPI_PACK(pellets,              n_spi,dtype,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    write(*,*) "packing pellets: ", ierr
 
-    call MPI_PACK(toroidal_rotation,    1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    if (toroidal_rotation) then
-      call MPI_PACK(tor_frequency,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    end if
-
-end if
-
+    call MPI_PACK(spi_tor_rot,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(tor_frequency,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(ns_phi_rotate,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  end if
 
 
 !===============================End of SPI model===============================================
@@ -681,18 +682,17 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,A_Dmv,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,V_Dmv,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,P_Dmv,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,t_mgi,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,t_ns,                   1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
-  call MPI_UNPACK(buffer,bufsize,position,mgi_amplitude,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,mgi_R,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,mgi_Z,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,mgi_phi,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,mgi_radius,             1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,mgi_sig,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,mgi_deltaphi,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,mgi_tor_norm,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-
-!==========================Added input for SPI model===========================================
+  call MPI_UNPACK(buffer,bufsize,position,ns_amplitude,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ns_R,                   1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ns_Z,                   1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ns_phi,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ns_radius,              1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ns_sig,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ns_deltaphi,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ns_tor_norm,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,spi_L_inj,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,spi_Vel_Rref,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,spi_Vel_Zref,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -723,10 +723,9 @@ if (my_id .ne. 0) then
     call MPI_UNPACK(buffer,bufsize,position,pellets,            n_spi,dtype,MPI_COMM_WORLD,ierr)
     write(*,*) "unpacking pellets: ", my_id,ierr
 
-    call MPI_UNPACK(buffer,bufsize,position,toroidal_rotation,    1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
-    if (toroidal_rotation) then
-      call MPI_UNPACK(buffer,bufsize,position,tor_frequency,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-    end if
+    call MPI_UNPACK(buffer,bufsize,position,spi_tor_rot,          1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,tor_frequency,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,ns_phi_rotate,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   end if
 

@@ -393,7 +393,7 @@ contains
         end if
 
       endif
-      
+     
       if (my_id_n .eq.0) then                            ! elapsed time facto end
          call MPI_Barrier(MPI_COMM_MASTER,ierr)
          call clck_time(t1)

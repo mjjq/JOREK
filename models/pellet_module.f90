@@ -1,10 +1,5 @@
 module pellet_module
 
-use constants
-use data_structure
-use phys_module
-
-
 real*8 :: total_pellet_particles   !< the (total) pellet particles added in this timestep
 real*8 :: total_plasma_particles   !< the total plasma density (before this timestep)
 real*8 :: total_pellet_volume      !< the volume of the simulated pellet in this timestep
@@ -29,6 +24,9 @@ subroutine pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_p
                           pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
                           R,Z,psi,phi, r0, T0, central_density, pellet_particles, pellet_density, pellet_volume, &
                           particle_source, volume_source)
+use constants
+use data_structure
+!use phys_module
 
 implicit none
 #if _OPENMP >= 201511
@@ -196,7 +194,10 @@ subroutine update_spi(my_id,node_List,element_list,&
 
 use constants
 use data_structure
-use phys_module
+use phys_module, only: pellets, gas_type, central_density, central_mass, spi_abl_model, flag_adas, toroidal_rotation,&
+                       mgi_phi_rotate, tor_frequency, tstep, pellet_density, pellet_density_bg,                      &
+                       index_now, xtime_spi_ablation, xtime_spi_ablation_bg, xtime_spi_ablation_rate,&
+                       xtime_spi_ablation_bg_rate, F0, R_geo, imp_cor
 use mpi_mod
 use mgi_module
 use corr_neg
@@ -214,7 +215,7 @@ implicit none
   real*8  :: R_out, Z_out
   integer :: i_elm, ifail
   
-  integer :: ii, i_p
+  integer :: i, i_p
   
   real*8, dimension(3) :: P, P_s, P_t, P_phi
   real*8  :: R, R_s, R_t, Z, Z_s, Z_t
@@ -553,8 +554,11 @@ end subroutine update_spi
                       spi_quantity,spi_quantity_bg,spi_Vel_diff,spi_L_inj,n_spi,n_spi_begin)
   
     use constants
+    use tr_module
     use data_structure
-    use phys_module, only: pellets
+    use phys_module, only: pellets, gas_type, central_density, central_mass, pellet_density, pellet_density_bg,&
+                           spi_rnd_seed, spi_angle, xtime_spi_ablation, xtime_spi_ablation_bg, xtime_spi_ablation_rate,&
+                           xtime_spi_ablation_bg_rate, nstep, spi_shard_file, spi_abl_model
     use mpi_mod
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
     use mgi_module
@@ -772,8 +776,8 @@ end subroutine update_spi
 
       if (spi_Vel_diff < 0) then
         write(*,*) "WARNING, negative velocity spread, spi_Vel_diff = ", spi_Vel_diff
-        write(*,*) "Using the absolute value of spi_Vel_diff" 
-        spi_Vel_diff = abs(spi_Vel_diff)
+        write(*,*) "Please always use a positive spi_Vel_diff, EXITING!" 
+        stop
       end if
 
       do i=1, n_spi
@@ -847,6 +851,7 @@ end subroutine update_spi
 function get_pellet_derived_type() result(dtype_out)
   use mpi_mod
   use mod_parameters
+  use data_structure
 
   implicit none
 

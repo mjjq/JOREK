@@ -44,6 +44,7 @@ real*8  :: sign_corr, real_total_quantity
 real*8, allocatable :: rnd(:)                      !The random number array 
 real*8, allocatable :: shard_size(:)               !The shard size array
 
+integer :: err_alloc=0
 
 ! --- Namelist with input parameters.                                                                                                                        
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
@@ -348,7 +349,7 @@ call derive_num_profiles(my_id)
 if ( my_id == 0 ) then
   if (2*PI/(n_tor*n_period) >= mgi_deltaphi .and. my_id == 0) then
     write(*,*) "WARNING! mgi_deltaphi too small for the n_tor, BEWARE!"
-    if (t_now > t_mgi) then
+    if (t_now > minval(t_mgi)) then
       write(*,*) "EXITING NOW!!!"
       stop
     end if

@@ -36,7 +36,7 @@ real*8  :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dps
 real*8  :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz
 
 integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_elm_xpoint(2), ifail
-integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
+integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid, i_inj
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor
 real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, r0_corr, T0, T0_corr, T0e, Vol, Volume, Area, Bgeo, psi_limit
@@ -51,7 +51,7 @@ real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
 real*8  :: source_volume, source_pellet, eta_T, eta_Sp
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0, rn0_corr
+real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0, rn0_corr, source_tmp
 
 ! Additional diagnostic variables for impurity model
 #if (JOREK_MODEL == 501) || (JOREK_MODEL == 502) 
@@ -191,7 +191,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
-!$omp           rn0, rn0_corr, source_mgi,                                                               &
+!$omp           rn0, rn0_corr, source_mgi, i_inj, source_tmp, n_inj,                           &
 #endif
 #if (JOREK_MODEL == 501) || (JOREK_MODEL == 502)
 !$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
@@ -483,8 +483,14 @@ do ife = ife_min, ife_max
 
         source_mgi = 0.d0
 
-        call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+        do i_inj = 1, n_inj
+          call mgi_source(mgi_amplitude(i_inj),mgi_R(i_inj),mgi_Z(i_inj),mgi_phi(i_inj),&
+                          mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
+                          A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi(i),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_tmp,t_now, &
+                          JET_MGI,ASDEX_MGI,central_density,central_mass)
+          source_mgi = source_mgi + source_tmp
+        end do
+
 
         !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
 

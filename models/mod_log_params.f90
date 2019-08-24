@@ -618,6 +618,8 @@ if (my_id == 0) then
      write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
      write(*,INTG_FMT) 'n_adas              ',  n_adas
      write(*,INTG_FMT) 'n_spi               ',  n_spi
+     write(*,INTG_FMT) 'n_spi_tot           ',  n_spi_tot
+     write(*,INTG_FMT) 'n_inj               ',  n_inj
      write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
      write(*,CHAR_FMT) 'spi_shard_file      ',  spi_shard_file

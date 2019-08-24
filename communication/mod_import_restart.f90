@@ -73,7 +73,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8, allocatable :: spi_abl_arr (:)
   real*8, allocatable :: spi_species_arr (:)
 
-  integer              :: err_alloc, n_spi_check
+  integer              :: err_alloc, n_spi_check, n_inj_check
   logical              :: modes_changed
  
   ! --- Perturbation-Import variables
@@ -326,59 +326,65 @@ endif
   end if
 
   if (using_spi) then
-    if (n_spi >= 1) then
+    if (n_spi_tot >= 1) then
 
       if (index_start >= 1) then
 
         if (allocated(xtime_spi_ablation)) &
           call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
-        call tr_allocate(xtime_spi_ablation,1,n_spi,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation,1,n_spi_tot,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)
         if (allocated(xtime_spi_ablation_rate)) &
           call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
-        call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_rate,1,n_spi_tot,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
         if (allocated(xtime_spi_ablation_bg)) &
           call tr_deallocate(xtime_spi_ablation_bg,"xtime_spi_ablation_bg",CAT_UNKNOWN)
-        call tr_allocate(xtime_spi_ablation_bg,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_bg",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_bg,1,n_spi_tot,1,index_start+nstep,"xtime_spi_ablation_bg",CAT_UNKNOWN)
         if (allocated(xtime_spi_ablation_bg_rate)) &
           call tr_deallocate(xtime_spi_ablation_bg_rate,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
-        call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi_tot,1,index_start+nstep,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
 
-        read(21)  xtime_spi_ablation(1:n_spi,1:index_start)
-        read(21)  xtime_spi_ablation_rate(1:n_spi,1:index_start)
-        read(21)  xtime_spi_ablation_bg(1:n_spi,1:index_start)
-        read(21)  xtime_spi_ablation_bg_rate(1:n_spi,1:index_start)
+        read(21)  xtime_spi_ablation(1:n_spi_tot,1:index_start)
+        read(21)  xtime_spi_ablation_rate(1:n_spi_tot,1:index_start)
+        read(21)  xtime_spi_ablation_bg(1:n_spi_tot,1:index_start)
+        read(21)  xtime_spi_ablation_bg_rate(1:n_spi_tot,1:index_start)
 
       end if
 
       read(21,err=999, end=999) n_spi_check
 
-      if (n_spi_check /= n_spi) then
-        write(*,*) "Inconsistency in n_spi detected, exiting!"
+      if (n_spi_check /= n_spi_tot) then
+        write(*,*) "Inconsistency in n_spi_tot detected, exiting!"
         stop
       end if
 
+      read(21,err=999, end=999) n_inj_check
 
-      allocate (spi_R_arr(n_spi),stat=err_alloc)
-      allocate (spi_Z_arr(n_spi),stat=err_alloc)
-      allocate (spi_phi_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_R_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
-      allocate (spi_radius_arr(n_spi),stat=err_alloc)
-      allocate (spi_abl_arr(n_spi),stat=err_alloc)
-      allocate (spi_species_arr(n_spi),stat=err_alloc)
+      if (n_inj_check /= n_inj) then
+        write(*,*) "Inconsistency in n_inj detected, exiting!"
+        stop
+      end if      
+
+      allocate (spi_R_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_Z_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_phi_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_Vel_R_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_Vel_Z_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_Vel_RxZ_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_radius_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_abl_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_species_arr(n_spi_tot),stat=err_alloc)
     
-      read(21,err=999, end=999)  spi_R_arr(1:n_spi)
-      read(21,err=999, end=999)  spi_Z_arr(1:n_spi)
-      read(21,err=999, end=999)  spi_phi_arr(1:n_spi)
-      read(21,err=999, end=999)  spi_Vel_R_arr(1:n_spi)
-      read(21,err=999, end=999)  spi_Vel_Z_arr(1:n_spi)
-      read(21,err=999, end=999)  spi_Vel_RxZ_arr(1:n_spi)
-      read(21,err=999, end=999)  spi_radius_arr(1:n_spi)
-      read(21,err=999, end=999)  spi_abl_arr(1:n_spi)
-      read(21,err=999, end=999)  spi_species_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_R_arr(1:n_spi_tot)
+      read(21,err=999, end=999)  spi_Z_arr(1:n_spi_tot)
+      read(21,err=999, end=999)  spi_phi_arr(1:n_spi_tot)
+      read(21,err=999, end=999)  spi_Vel_R_arr(1:n_spi_tot)
+      read(21,err=999, end=999)  spi_Vel_Z_arr(1:n_spi_tot)
+      read(21,err=999, end=999)  spi_Vel_RxZ_arr(1:n_spi_tot)
+      read(21,err=999, end=999)  spi_radius_arr(1:n_spi_tot)
+      read(21,err=999, end=999)  spi_abl_arr(1:n_spi_tot)
+      read(21,err=999, end=999)  spi_species_arr(1:n_spi_tot)
 
-      do i=1, n_spi
+      do i=1, n_spi_tot
         pellets(i)%spi_R       = spi_R_arr(i)
         pellets(i)%spi_Z       = spi_Z_arr(i)
         pellets(i)%spi_phi     = spi_phi_arr(i)
@@ -631,7 +637,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id, datatype, dataset
-  integer            :: ind, n_spi_check
+  integer            :: ind, n_spi_check, n_inj_check
   
   real(RKIND), allocatable :: t_x(:,:,:)
   real(RKIND), allocatable :: t_values(:,:,:,:)
@@ -1281,22 +1287,22 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   end if
 
   if (using_spi) then
-    if (n_spi >= 1) then
+    if (n_spi_tot >= 1) then
 
       if (index_start >= 1) then
 
         if (allocated(xtime_spi_ablation)) &
           call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
-        call tr_allocate(xtime_spi_ablation,1,n_spi,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation,1,n_spi_tot,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)
         if (allocated(xtime_spi_ablation_rate)) &
           call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
-        call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_rate,1,n_spi_tot,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
         if (allocated(xtime_spi_ablation_bg)) &
           call tr_deallocate(xtime_spi_ablation_bg,"xtime_spi_ablation_bg",CAT_UNKNOWN)
-        call tr_allocate(xtime_spi_ablation_bg,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_bg",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_bg,1,n_spi_tot,1,index_start+nstep,"xtime_spi_ablation_bg",CAT_UNKNOWN)
         if (allocated(xtime_spi_ablation_bg_rate)) &
           call tr_deallocate(xtime_spi_ablation_bg_rate,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
-        call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi_tot,1,index_start+nstep,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
 
         call HDF5_array2D_reading(file_id,xtime_spi_ablation,"xtime_spi_ablation")
         call HDF5_array2D_reading(file_id,xtime_spi_ablation_rate,"xtime_spi_ablation_rate")
@@ -1312,27 +1318,38 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         end if
       end if
 
-      call H5Lexists_f(file_id,"n_spi",flag_exists,err_exists) !Backward compatibility
+      call H5Lexists_f(file_id,"n_spi_tot",flag_exists,err_exists) !Backward compatibility
       if (flag_exists .and. err_exists == 0) then
-        call HDF5_integer_reading(file_id,n_spi_check,"n_spi")
-        if (n_spi_check /= n_spi) then
-          write(*,*) "Inconsistency in n_spi detected, exiting!"
+        call HDF5_integer_reading(file_id,n_spi_check,"n_spi_tot")
+        if (n_spi_check /= n_spi_tot) then
+          write(*,*) "Inconsistency in n_spi_tot detected, exiting!"
           stop
         end if
       else
-        write(*,*)"Backward Compatibility: No n_spi information found, assuming consistent."
+        write(*,*)"Backward Compatibility: No n_spi_tot information found, assuming consistent."
       end if
 
+      call H5Lexists_f(file_id,"n_inj",flag_exists,err_exists) !Backward compatibility
+      if (flag_exists .and. err_exists == 0) then
+        call HDF5_integer_reading(file_id,n_inj_check,"n_inj")
+        if (n_inj_check /= n_inj) then
+          write(*,*) "Inconsistency in n_inj detected, exiting!"
+          stop
+        end if
+      else
+        write(*,*)"Backward Compatibility: No n_inj information found, assuming consistent."
+      end if
+      
 
-      allocate (spi_R_arr(n_spi),stat=err_alloc)
-      allocate (spi_Z_arr(n_spi),stat=err_alloc)
-      allocate (spi_phi_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_R_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
-      allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
-      allocate (spi_radius_arr(n_spi),stat=err_alloc)
-      allocate (spi_abl_arr(n_spi),stat=err_alloc)
-      allocate (spi_species_arr(n_spi),stat=err_alloc)
+      allocate (spi_R_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_Z_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_phi_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_Vel_R_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_Vel_Z_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_Vel_RxZ_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_radius_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_abl_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_species_arr(n_spi_tot),stat=err_alloc)
 
       call HDF5_array1D_reading(file_id,spi_R_arr,"spi_R_arr")
       call HDF5_array1D_reading(file_id,spi_Z_arr,"spi_Z_arr")
@@ -1352,7 +1369,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         call H5Dclose_f(dataset,dterr)
         if (type_match .and. dterr == 0) then
           write(*,*) "Backward Compatibility: Converting integer spi_species into double precision"
-          allocate (spi_species_arr_old(n_spi),stat=err_alloc)
+          allocate (spi_species_arr_old(n_spi_tot),stat=err_alloc)
           call HDF5_array1D_reading_int(file_id,spi_species_arr_old,"spi_species_arr")
           spi_species_arr = REAL(spi_species_arr_old,8)
         else if (dterr == 0) then
@@ -1366,7 +1383,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         write(*,*)"Backward Compatibility: No species information found, assuming full impurity."
       end if
 
-      do i=1, n_spi
+      do i=1, n_spi_tot
         pellets(i)%spi_R       = spi_R_arr(i)
         pellets(i)%spi_Z       = spi_Z_arr(i)
         pellets(i)%spi_phi     = spi_phi_arr(i)

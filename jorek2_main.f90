@@ -150,7 +150,7 @@ program JOREK2
   real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   real*8,allocatable       :: res(:) 
-  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev
+  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev, n_spi_begin
   logical                  :: is_local, file_exists
   integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
@@ -1003,7 +1003,13 @@ required = 0
        if (using_spi == .false.) then
          call update_mgi(my_id,node_list,element_list)
        else if (using_spi .and. t_now >= t_mgi) then
-         call update_spi(my_id,node_list,element_list)
+         n_spi_begin = 1
+         do i = 1, n_inj !< Do one update for each injection location
+           call update_spi(my_id,node_list,element_list,&
+                           mgi_R(i),mgi_Z(i),mgi_phi(i),mgi_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
+                           spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),n_spi(i),n_spi_begin)
+           n_spi_begin = n_spi_begin + n_spi(i)
+         end do
        end if
 #endif
 

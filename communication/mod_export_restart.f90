@@ -132,7 +132,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   end if
 
   ! Dynamically allocate memeries for temporary arrays in order to export
-  if (using_spi .and. n_spi >= 1) then
+  if (using_spi .and. n_spi_tot >= 1) then
 
     if (index_now .gt. 0) then
       write(21) xtime_spi_ablation(:,1:index_now)
@@ -141,19 +141,20 @@ subroutine export_binary_restart(node_list,element_list,filename)
       write(21) xtime_spi_ablation_bg_rate(:,1:index_now)
     endif
 
-    write(21) n_spi
+    write(21) n_inj
+    write(21) n_spi_tot
 
-    allocate (spi_R_arr(n_spi),stat=err_alloc)  
-    allocate (spi_Z_arr(n_spi),stat=err_alloc)     
-    allocate (spi_phi_arr(n_spi),stat=err_alloc) 
-    allocate (spi_Vel_R_arr(n_spi),stat=err_alloc) 
-    allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc) 
-    allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc) 
-    allocate (spi_radius_arr(n_spi),stat=err_alloc) 
-    allocate (spi_abl_arr(n_spi),stat=err_alloc)
-    allocate (spi_species_arr(n_spi),stat=err_alloc)
+    allocate (spi_R_arr(n_spi_tot),stat=err_alloc)  
+    allocate (spi_Z_arr(n_spi_tot),stat=err_alloc)     
+    allocate (spi_phi_arr(n_spi_tot),stat=err_alloc) 
+    allocate (spi_Vel_R_arr(n_spi_tot),stat=err_alloc) 
+    allocate (spi_Vel_Z_arr(n_spi_tot),stat=err_alloc) 
+    allocate (spi_Vel_RxZ_arr(n_spi_tot),stat=err_alloc) 
+    allocate (spi_radius_arr(n_spi_tot),stat=err_alloc) 
+    allocate (spi_abl_arr(n_spi_tot),stat=err_alloc)
+    allocate (spi_species_arr(n_spi_tot),stat=err_alloc)
 
-    do i=1, n_spi
+    do i=1, n_spi_tot
       spi_R_arr(i)       = pellets(i)%spi_R
       spi_Z_arr(i)       = pellets(i)%spi_Z
       spi_phi_arr(i)     = pellets(i)%spi_phi
@@ -165,15 +166,15 @@ subroutine export_binary_restart(node_list,element_list,filename)
       spi_species_arr(i) = pellets(i)%spi_species
     end do
 
-    write(21) spi_R_arr(1:n_spi)
-    write(21) spi_Z_arr(1:n_spi)
-    write(21) spi_phi_arr(1:n_spi)
-    write(21) spi_Vel_R_arr(1:n_spi)
-    write(21) spi_Vel_Z_arr(1:n_spi)
-    write(21) spi_Vel_RxZ_arr(1:n_spi)
-    write(21) spi_radius_arr(1:n_spi)
-    write(21) spi_abl_arr(1:n_spi)
-    write(21) spi_species_arr(1:n_spi)
+    write(21) spi_R_arr(1:n_spi_tot)
+    write(21) spi_Z_arr(1:n_spi_tot)
+    write(21) spi_phi_arr(1:n_spi_tot)
+    write(21) spi_Vel_R_arr(1:n_spi_tot)
+    write(21) spi_Vel_Z_arr(1:n_spi_tot)
+    write(21) spi_Vel_RxZ_arr(1:n_spi_tot)
+    write(21) spi_radius_arr(1:n_spi_tot)
+    write(21) spi_abl_arr(1:n_spi_tot)
+    write(21) spi_species_arr(1:n_spi_tot)
 
     deallocate (spi_R_arr)
     deallocate (spi_Z_arr)
@@ -605,32 +606,33 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   end if  
 
   ! Dynamically allocate memeries for temporary arrays in order to export
-  if (using_spi .and. n_spi>=1) then
+  if (using_spi .and. n_spi_tot>=1) then
     if (index_now .gt. 0) then
       call HDF5_array2D_saving(file_id,xtime_spi_ablation, &
-             n_spi,index_now,'xtime_spi_ablation'//char(0))
+             n_spi_tot,index_now,'xtime_spi_ablation'//char(0))
       call HDF5_array2D_saving(file_id,xtime_spi_ablation_rate, &
-             n_spi,index_now,'xtime_spi_ablation_rate'//char(0))
+             n_spi_tot,index_now,'xtime_spi_ablation_rate'//char(0))
       call HDF5_array2D_saving(file_id,xtime_spi_ablation_bg, &
-             n_spi,index_now,'xtime_spi_ablation_bg'//char(0))
+             n_spi_tot,index_now,'xtime_spi_ablation_bg'//char(0))
       call HDF5_array2D_saving(file_id,xtime_spi_ablation_bg_rate, &
-             n_spi,index_now,'xtime_spi_ablation_bg_rate'//char(0))
+             n_spi_tot,index_now,'xtime_spi_ablation_bg_rate'//char(0))
 
     end if
 
-    call HDF5_integer_saving(file_id,n_spi,"n_spi"//char(0))
+    call HDF5_integer_saving(file_id,n_inj,"n_inj"//char(0))
+    call HDF5_integer_saving(file_id,n_spi_tot,"n_spi_tot"//char(0))
 
-    allocate (spi_R_arr(n_spi),stat=err_alloc)
-    allocate (spi_Z_arr(n_spi),stat=err_alloc)
-    allocate (spi_phi_arr(n_spi),stat=err_alloc)
-    allocate (spi_Vel_R_arr(n_spi),stat=err_alloc)
-    allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
-    allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
-    allocate (spi_radius_arr(n_spi),stat=err_alloc)
-    allocate (spi_abl_arr(n_spi),stat=err_alloc)
-    allocate (spi_species_arr(n_spi),stat=err_alloc)
+    allocate (spi_R_arr(n_spi_tot),stat=err_alloc)
+    allocate (spi_Z_arr(n_spi_tot),stat=err_alloc)
+    allocate (spi_phi_arr(n_spi_tot),stat=err_alloc)
+    allocate (spi_Vel_R_arr(n_spi_tot),stat=err_alloc)
+    allocate (spi_Vel_Z_arr(n_spi_tot),stat=err_alloc)
+    allocate (spi_Vel_RxZ_arr(n_spi_tot),stat=err_alloc)
+    allocate (spi_radius_arr(n_spi_tot),stat=err_alloc)
+    allocate (spi_abl_arr(n_spi_tot),stat=err_alloc)
+    allocate (spi_species_arr(n_spi_tot),stat=err_alloc)
 
-    do i=1, n_spi
+    do i=1, n_spi_tot
       spi_R_arr(i)       = pellets(i)%spi_R
       spi_Z_arr(i)       = pellets(i)%spi_Z
       spi_phi_arr(i)     = pellets(i)%spi_phi
@@ -643,23 +645,23 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
     end do
 
     call HDF5_array1D_saving(file_id,spi_R_arr, &
-             n_spi,'spi_R_arr'//char(0))
+             n_spi_tot,'spi_R_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_Z_arr, &
-             n_spi,'spi_Z_arr'//char(0))
+             n_spi_tot,'spi_Z_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_phi_arr, &
-             n_spi,'spi_phi_arr'//char(0))
+             n_spi_tot,'spi_phi_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_Vel_R_arr, &
-             n_spi,'spi_Vel_R_arr'//char(0))
+             n_spi_tot,'spi_Vel_R_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_Vel_Z_arr, &
-             n_spi,'spi_Vel_Z_arr'//char(0))
+             n_spi_tot,'spi_Vel_Z_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_Vel_RxZ_arr, &
-             n_spi,'spi_Vel_RxZ_arr'//char(0))
+             n_spi_tot,'spi_Vel_RxZ_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_radius_arr, &
-             n_spi,'spi_radius_arr'//char(0))
+             n_spi_tot,'spi_radius_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_abl_arr, &
-             n_spi,'spi_abl_arr'//char(0))
+             n_spi_tot,'spi_abl_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_species_arr, &
-             n_spi,'spi_species_arr'//char(0))
+             n_spi_tot,'spi_species_arr'//char(0))
 
     deallocate (spi_R_arr)
     deallocate (spi_Z_arr)

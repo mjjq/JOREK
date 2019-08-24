@@ -27,7 +27,7 @@ real*8 :: vacuum_fraction, b_over_a, a_over_b
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 
-integer :: ierr,err,ferr,i,ifail,i_elm,i_surface
+integer :: ierr,err,ferr,i,ifail,i_elm, n_spi_begin
 
 real*8, dimension(2) :: P, P_s, P_t, P_phi
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t
@@ -120,7 +120,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 mgi_sig, mgi_deltaphi, ksi_ion, spi_rnd_seed,       &
                 mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
-                spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
+                spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
                 spi_quantity_bg, pellet_density_bg,                 &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
@@ -353,17 +353,42 @@ if ( my_id == 0 ) then
       stop
     end if
   end if
-  
+
+  if (n_inj > 10 .or. n_inj < 1) then
+    write(*,*) "ERROR! Do not support n_inj larger than 10 or smaller than 1, EXITING!"
+    stop
+  end if  
   
   !if (using_spi) call init_spi()
   if (using_spi) then
-    if (JET_MGI .or. ASDEX_MGI) then
-      write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
-      write(*,*) "JET_MGI:", JET_MGI
-      write(*,*) "ASDEX_MGI:", ASDEX_MGI
+    n_spi_tot = 0
+    do i = 1, n_inj
+      n_spi_tot = n_spi_tot + n_spi(i)
+    end do
+
+    if (allocated(pellets)) then
+      deallocate(pellets)
+    end if
+
+    allocate (pellets(n_spi_tot),stat=err_alloc)  !< Dynamically allocate memeries for pellets
+
+    if (err_alloc /= 0) then
+      write(*,*) "Error when trying to dynamically allocate memeries for pellets, exiting."
       stop
-    else
-      call init_spi()
+    else    
+      if (JET_MGI .or. ASDEX_MGI) then
+        write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
+        write(*,*) "JET_MGI:", JET_MGI
+        write(*,*) "ASDEX_MGI:", ASDEX_MGI
+        stop
+      else      !< Do one initialization for each injection location
+        n_spi_begin = 1
+        do i = 1, n_inj
+          call init_spi(mgi_R(i),mgi_Z(i),mgi_phi(i),mgi_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
+                        spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),n_spi(i),n_spi_begin)
+          n_spi_begin = n_spi_begin + n_spi(i)
+        end do
+      end if
     end if
   end if
 end if

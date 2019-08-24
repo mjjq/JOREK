@@ -223,11 +223,11 @@ module phys_module
   logical :: use_pellet
   
   !> @name Massive gas injection-related input parameters
-  real*8  :: t_mgi             !< MGI onset time (JOREK units)
-  real*8  :: mgi_amplitude     !< Amplitude of gas source
-  real*8  :: mgi_R             !< R position of gas source
-  real*8  :: mgi_Z             !< Z position of gas source
-  real*8  :: mgi_phi           !< Phi position of gas source
+  real*8  :: t_mgi(10)         !< MGI onset time (JOREK units)
+  real*8  :: mgi_amplitude(10) !< Amplitude of gas source
+  real*8  :: mgi_R(10)         !< R position of gas source
+  real*8  :: mgi_Z(10)         !< Z position of gas source
+  real*8  :: mgi_phi(10)       !< Phi position of gas source
   real*8  :: mgi_radius        !< Poloidal radius of gas source
   real*8  :: mgi_sig           !< Obsolete (still in the code but not used)
   real*8  :: mgi_deltaphi      !< Toroidal extension of gas source
@@ -246,17 +246,17 @@ module phys_module
   ! to simple MGI upon using_spi = false
   ! The reference spactial coordinate for shattered pellets are calculated using
   ! mgi_R etc...... 
-  real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R upon injection
-  real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z upon injection
-  real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection
-  real*8  :: spi_quantity       !< Total injected atom number for impurity SPI
-  real*8  :: spi_quantity_bg    !< Total injected atom number for background species SPI
+  real*8  :: spi_Vel_Rref(10)   !< Reference velocity of pellet center along R upon injection
+  real*8  :: spi_Vel_Zref(10)   !< Reference velocity of pellet center along Z upon injection
+  real*8  :: spi_Vel_RxZref(10) !< Reference velocity of pellet center along RxZ direction upon injection
+  real*8  :: spi_quantity(10)   !< Total injected atom number for impurity SPI
+  real*8  :: spi_quantity_bg(10)!< Total injected atom number for background species SPI
   real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds 
                                 !< and that of shattered pellets
 
-  real*8  :: spi_Vel_diff       !< The reference veolocity difference from the reference velocity
+  real*8  :: spi_Vel_diff(10)   !< The reference veolocity difference from the reference velocity
   real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
-  real*8  :: spi_L_inj          !< Distance between SPI nozzle and mgi_R, mgi_Z, mgi_phi
+  real*8  :: spi_L_inj(10)      !< Distance between SPI nozzle and mgi_R, mgi_Z, mgi_phi
   real*8  :: mgi_phi_rotate     !< The toroidal position of rotated injection point
   real*8  :: tor_frequency      !< The rigid body rotation frequency
 
@@ -270,7 +270,9 @@ module phys_module
 
   real*8, allocatable  :: xtime_radiation(:)    ! The time history of radiated energy in SI unit
 
-  integer :: n_spi              !< Number of shattered pellets injected
+  integer :: n_spi(10)          !< Number of shattered pellets injected
+  integer :: n_spi_tot          !< Total number of shattered pellets injected
+  integer :: n_inj              !< Number of injection locations
   integer :: spi_abl_model      !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model,
                                 !< 2 for Sergeev formula, 3 for Parks formula.

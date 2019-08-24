@@ -34,7 +34,7 @@ real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0) :: RHS
 integer, intent(in) :: tid
 
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2, i_inj, n_spi_tmp
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss)
@@ -1053,7 +1053,7 @@ do ms=1, n_gauss
          ASDEX_MGI = .false.
        end if
 
-       do spi_i=1, n_spi
+       do spi_i=1, n_spi_tot
 
          source_tmp = 0.d0 
 
@@ -1069,6 +1069,12 @@ do ms=1, n_gauss
              ng_radius = ng_radius_min
            end if
 
+           n_spi_tmp = 0
+           do i_inj = 1, n_inj
+             n_spi_tmp = n_spi_tmp + n_spi(i)
+             if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
+           end do
+
            call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
                          mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,0.,x_g(ms,mt),y_g(ms,mt),    &
                          phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
@@ -1082,9 +1088,13 @@ do ms=1, n_gauss
 
      else
 
-       call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_imp,t_now,  &
-                     JET_MGI,ASDEX_MGI,central_density,central_mass)
+       do i_inj = 1, n_inj
+         call mgi_source(mgi_amplitude(i_inj),mgi_R(i_inj),mgi_Z(i_inj),mgi_phi(i_inj),&
+                         mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
+                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi(i),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_tmp,t_now,  &
+                         JET_MGI,ASDEX_MGI,central_density,central_mass)
+         source_imp = source_imp + source_tmp
+       end do
 
        ! Converting number density into mass density for each species
        ! respectively

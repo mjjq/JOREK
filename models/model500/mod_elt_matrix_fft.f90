@@ -741,7 +741,7 @@ do ms=1, n_gauss
          ASDEX_MGI = .false.
        end if
 
-       do spi_i=1, n_spi
+       do spi_i=1, n_spi_tot
 
          source_mgi_tmp = 0.d0 
 

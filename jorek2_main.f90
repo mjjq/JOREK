@@ -1002,12 +1002,15 @@ required = 0
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
        if (using_spi == .false.) then
          call update_mgi(my_id,node_list,element_list)
-       else if (using_spi .and. t_now >= t_mgi) then
+       else if (using_spi) then
          n_spi_begin = 1
          do i = 1, n_inj !< Do one update for each injection location
-           call update_spi(my_id,node_list,element_list,&
-                           mgi_R(i),mgi_Z(i),mgi_phi(i),mgi_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
-                           spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),n_spi(i),n_spi_begin)
+           if (t_now >= t_mgi(i)) then
+             call update_spi(my_id,node_list,element_list,&
+                             mgi_R(i),mgi_Z(i),mgi_phi(i),mgi_amplitude(i),&
+                             spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
+                             spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),n_spi(i),n_spi_begin)
+           end if
            n_spi_begin = n_spi_begin + n_spi(i)
          end do
        end if

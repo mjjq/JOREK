@@ -492,7 +492,7 @@ implicit none
             if (ne_SI<0.) ne_SI = 0.
             ! The scaling law is in gauss unit
             ! The sublimation energy for Ne is 0.02 eV
-              pellets(i_p)%spi_abl = (27.0837 + TAN(1.48709*pellets(i_p)%spi_species/(2.-pellets(i_p)%spi_species))) &
+              pellets(i_p)%spi_abl = (27.0837 + TAN(1.48709*(1.-pellets(i_p)%spi_species)/(1.+pellets(i_p)%spi_species))) &
                                      * MOLE_NUMBER * ((pellets(i_p)%spi_radius*1.d2 / 0.2)**(4./3.)) &
                                      * ((ne_SI*1.d-20)**(1./3.)) * ((T_eV/2.d3)**(5./3.)) &
                                      / (20.183*pellets(i_p)%spi_species + 2.0141*(1.-pellets(i_p)%spi_species)) 

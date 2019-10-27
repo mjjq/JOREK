@@ -359,6 +359,13 @@ if ( my_id == 0 ) then
     write(*,*) "ERROR! Do not support n_inj larger than 10 or smaller than 1, EXITING!"
     stop
   end if  
+
+  do i = 1, 10
+    if (n_spi(i)/=0 .and. i > n_inj) then
+      write(*,*) "ERROR! Something wrong with n_inj, double check, EXITING!"
+      stop
+    end if
+  end do 
   
   !if (using_spi) call init_spi()
   if (using_spi) then

@@ -19,7 +19,7 @@ implicit none
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
-integer :: i, in, i_tor, i_spi
+integer :: i, in, i_tor, i_spi, n_spi_total
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
 real*8  :: Rplot(2), Zplot(2)
 real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis
@@ -106,12 +106,13 @@ if (using_spi) then
 
   write(20,'(A11)') 'time', 'total_abl_rate', 'total_abl_number'
 
+  n_spi_total = sum(n_spi)
   do i=1,index_start
     spi_abl_rate_tot = 0.0
     spi_abl_tot = 0.0
     spi_abl_bg_rate_tot = 0.0
     spi_abl_bg_tot = 0.0
-    do i_spi = 1, n_spi
+    do i_spi = 1, n_spi_total
       spi_abl_rate_tot = spi_abl_rate_tot + xtime_spi_ablation_rate(i_spi,i)
       spi_abl_tot = spi_abl_tot + xtime_spi_ablation(i_spi,i)
       spi_abl_bg_rate_tot = spi_abl_bg_rate_tot + xtime_spi_ablation_bg_rate(i_spi,i)
@@ -123,7 +124,7 @@ if (using_spi) then
 
   open(20,file="fragments_position.dat")
 
-  do i_spi = 1, n_spi
+  do i_spi = 1, n_spi_total
     write(20,'(i7,2f12.3,e14.6,f12.3)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_radius,&
                                             pellets(i_spi)%spi_species
   end do

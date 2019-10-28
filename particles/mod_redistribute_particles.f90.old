@@ -28,9 +28,10 @@ function get_particle_derived_type(particles) result(dtype_out)
   class(particle_base), dimension(:), intent(in) :: particles
   integer               :: ierr, dtype_out, dtype_tmp, n_fields
   ! Save one dtype for each type of particle
-  integer, save         :: dtype_fieldline, dtype_gc, dtype_kinetic, dtype_kinetic_leapfrog !< MPI type identifiers
+  integer, save         :: dtype_fieldline, dtype_gc, dtype_kinetic, dtype_kinetic_leapfrog, &
+    dtype_kinetic_relativistic !< MPI type identifiers 
   logical, save         :: set_fieldline=.false., set_gc=.false., &
-    set_kinetic=.false., set_kinetic_leapfrog=.false. !< Whether we have
+    set_kinetic=.false., set_kinetic_leapfrog=.false.,set_kinetic_relativistic=.false. !< Whether we have
   !< calculated the identifier before (stored in dtype above)
   integer, allocatable, dimension(:) :: len, types
   integer(kind=MPI_ADDRESS_KIND), allocatable, dimension(:) :: disp
@@ -55,6 +56,10 @@ function get_particle_derived_type(particles) result(dtype_out)
     n_fields = 6
     set => set_kinetic_leapfrog
     dtype => dtype_kinetic_leapfrog
+  type is (particle_kinetic_relativistic)
+    n_fields = 6
+    set => set_kinetic_relativistic
+    dtype => dtype_kinetic_relativistic
   class default
     write(*,*) "ERROR: unknown type for get_particle_derived_type"
     return
@@ -83,6 +88,9 @@ function get_particle_derived_type(particles) result(dtype_out)
     call MPI_Get_address(p(1)%v,  disp(5), ierr); len(5) = 3; types(5) = MPI_REAL8
     call MPI_Get_address(p(1)%q,  disp(6), ierr); len(6) = 1; types(6) = MPI_INTEGER1
   type is particle_kinetic_leapfrog
+    call MPI_Get_address(p(1)%v,  disp(5), ierr); len(5) = 3; types(5) = MPI_REAL8
+    call MPI_Get_address(p(1)%q,  disp(6), ierr); len(6) = 1; types(6) = MPI_INTEGER1
+  type is (particle_kinetic_relativistic)
     call MPI_Get_address(p(1)%v,  disp(5), ierr); len(5) = 3; types(5) = MPI_REAL8
     call MPI_Get_address(p(1)%q,  disp(6), ierr); len(6) = 1; types(6) = MPI_INTEGER1
   end select
@@ -141,6 +149,11 @@ subroutine resize_particle_array(particles, n)
     select type (p2 => particles)
     type is particle_kinetic_leapfrog
       do i=1,n_cp; p2(i) = p1(i); end do
+    end select type
+  type is (particle_kinetic_relativistic) !< if the first particle is a relativistic type
+    select type (p2 => particles) !< select a second particle from particles
+    type is (particle_kinetic_relativistic) !< as relativistic particle
+      do i=1,n_cp; p2(i) = p1(i); end do !< copy all fields
     end select type
   class default
     write(*,*) "ERROR: unknown type for resize_particle_array"

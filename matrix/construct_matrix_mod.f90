@@ -1,6 +1,10 @@
 module construct_matrix_mod
 
+use mod_parameters, only : n_var
+
 implicit none
+
+logical  :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
 
 contains
 
@@ -10,7 +14,7 @@ contains
        &                             omp_tid, ife, n_local_elms, node_list)
 
     ! --- Modules
-    use mod_parameters,           only : n_tor, jorek_model, n_vertex_max
+    use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order
     use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh
     USE data_structure,           only : type_element, type_node, type_node_list, thread_struct
     use mod_boundary_matrix_open, only : boundary_matrix_open
@@ -43,13 +47,11 @@ contains
 #ifdef COMPARE_ELEMENT_MATRIX
     integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
     integer  :: my_id, rank, ierr
-    logical  :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
 
     ! --- Determine ID of each MPI proc
     call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
     my_id = rank
 #endif
-
 
     ! --- Call element_matrix
     if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
@@ -119,8 +121,6 @@ contains
       enddo
     endif
     
-    
-    
     ! --- Compare the two element_matrix routines (error thresholds might need to be adapted!)
 #ifdef COMPARE_ELEMENT_MATRIX
     ! --- Comparison is performed only for one finite element
@@ -149,7 +149,7 @@ contains
             (abs(thread_struct(omp_tid)%RHS(i))+abs(thread_struct(omp_tid)%RHS2(i))+1.d0) .gt. 1.d-12) then
     	  call decrypt_index(i, ivertex, iorder, ivar, itor)
     	  write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, thread_struct(omp_tid)%RHS(i), &
-    	      thread_struct(omp_tid)%RHS2(i), RHS(i)-RHS2(i)
+    	      thread_struct(omp_tid)%RHS2(i), thread_struct(omp_tid)%RHS(i)-thread_struct(omp_tid)%RHS2(i)
     	  rhs_problem(ivar) = .true.
     	  difference_found  = .true.
     	endif
@@ -246,7 +246,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
   integer                           :: random_element, n_var_reduced, v1, v2, im, index_ij_model400_e, index_kl_model400_e
   real*8                            :: tmp_rhs, tmp_elm, tmp_elm_v2_8
-  logical                           :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
   CHARACTER(LEN=128)                :: fname
 
   ! --- Timing call
@@ -271,6 +270,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
     ielm = local_elms(i)
 
     do iv=1,n_vertex_max
+
+      if (ielm > n_elements_max) then
+        write(*,*) "WARNING: ielm, n_elements_max = ", ielm, n_elements_max
+      end if
 
       inode = element_list%element(ielm)%vertex(iv)
 
@@ -324,8 +327,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   omp_nthreads = 1
   omp_tid      = 1
 #endif
-  
-  ! --- Loop over local elements
+
+! --- Loop over local elements
   !$omp do schedule(runtime)
   do ife =1, n_local_elms
     
@@ -407,11 +410,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
                       !--- RHS: simple output of vector element
                       if ( (k==1) .and. (l==1) .and. (v2==1) .and. (in==1) ) then
                         
-                        tmp_rhs = RHS(index_ij)
+                        tmp_rhs = thread_struct(omp_tid)%RHS(index_ij)
                         
 #if (JOREK_MODEL == 400)
                           !--- RHS: for model400, add T_e (v1=8) to T_i (v1=6)
-                          if (v1 == 6) tmp_rhs = tmp_rhs + RHS(index_ij_model400_e)
+                          if (v1 == 6) tmp_rhs = tmp_rhs + thread_struct(omp_tid)%RHS(index_ij_model400_e)
 #endif
                         
                         write(388, "( E18.6, 4I4 )" ) tmp_rhs, v1, i, j, im
@@ -420,7 +423,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
 
                       ! --- ELM: simple output of matrix element
-                      tmp_elm   = ELM(index_ij,index_kl)
+                      tmp_elm   = thread_struct(omp_tid)%ELM(index_ij,index_kl)
 
                       ! --- ELM: additional output for comparison with model400, output as v2=8, below v2=6
                       ! --- for model != model400: duplicate of ELM(v1, v2=6)
@@ -431,14 +434,14 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
 #if (JOREK_MODEL == 400)
                         if (v2 == 6 ) then
-                          tmp_elm_v2_8 = ELM(index_ij, index_kl_model400_e)
+                          tmp_elm_v2_8 = thread_struct(omp_tid)%ELM(index_ij, index_kl_model400_e)
                           if (v1 == 6) then
-                            tmp_elm_v2_8 = tmp_elm_v2_8 + ELM(index_ij_model400_e, index_kl_model400_e)
+                            tmp_elm_v2_8 = tmp_elm_v2_8 + thread_struct(omp_tid)%ELM(index_ij_model400_e, index_kl_model400_e)
                           end if
                         end if
                       
                         if (v1 == 6) then
-                          tmp_elm = tmp_elm + ELM(index_ij_model400_e, index_kl)
+                          tmp_elm = tmp_elm + thread_struct(omp_tid)%ELM(index_ij_model400_e, index_kl)
                         end if
 #endif
 
@@ -559,7 +562,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   !$omp end do
   !$omp end parallel
 
-
   ! --- Add vacuum response (boundary integral) for free boundary computations
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
     call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list,                   &
@@ -587,9 +589,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_glob,nz_glob)
- 
+
   ! --- Form a global rhs from the rhss of the individual mpi threads.
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+
   call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
 
   ! --- For debugging purpose
@@ -639,7 +642,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   if ( difference_found ) stop
 #endif
   
-
 end subroutine construct_matrix
 
 

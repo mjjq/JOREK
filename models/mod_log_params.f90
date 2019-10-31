@@ -393,6 +393,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'visco_num             ', visco_num
   write(*,REAL_FMT) 'visco_par_num         ', visco_par_num
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
+  write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
   write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
   write(*,LOGI_FMT) 'keep_current_prof     ', keep_current_prof
@@ -585,14 +586,14 @@ if (my_id == 0) then
   endif
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-     write(*,REAL_FMT) 'mgi_amplitude       ',  mgi_amplitude
-     write(*,REAL_FMT) 'mgi_R               ',  mgi_R
-     write(*,REAL_FMT) 'mgi_Z               ',  mgi_Z
-     write(*,REAL_FMT) 'mgi_phi             ',  mgi_phi
-     write(*,REAL_FMT) 'mgi_radius          ',  mgi_radius
-     write(*,REAL_FMT) 'mgi_sig             ',  mgi_sig
-     write(*,REAL_FMT) 'mgi_deltaphi        ',  mgi_deltaphi
-     write(*,REAL_FMT) 'mgi_tor_norm        ',  mgi_tor_norm
+     write(*,REAL_FMT) 'ns_amplitude        ',  ns_amplitude
+     write(*,REAL_FMT) 'ns_R                ',  ns_R
+     write(*,REAL_FMT) 'ns_Z                ',  ns_Z
+     write(*,REAL_FMT) 'ns_phi              ',  ns_phi
+     write(*,REAL_FMT) 'ns_radius           ',  ns_radius
+     write(*,REAL_FMT) 'ns_sig              ',  ns_sig
+     write(*,REAL_FMT) 'ns_deltaphi         ',  ns_deltaphi
+     write(*,REAL_FMT) 'ns_tor_norm         ',  ns_tor_norm
      write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion
      write(*,LOGI_FMT) 'JET_MGI             ',  JET_MGI
      write(*,LOGI_FMT) 'ASDEX_MGI           ',  ASDEX_MGI
@@ -600,9 +601,28 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'K_Dmv               ',  K_Dmv
      write(*,REAL_FMT) 'V_Dmv               ',  V_Dmv
      write(*,REAL_FMT) 'L_tube              ',  L_tube
-     write(*,REAL_FMT) 't_mgi               ',  t_mgi
+     write(*,REAL_FMT) 't_ns                ',  t_ns
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
+
+     !< Additional log for SPI model
+   if(using_spi) then
+     write(*,LOGI_FMT) 'using_spi           ',  using_spi
+     write(*,LOGI_FMT) 'spi_tor_rot         ',  spi_tor_rot
+     write(*,INTG_FMT) 'n_spi               ',  n_spi
+     write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
+     write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
+     write(*,CHAR_FMT) 'spi_shard_file      ',  spi_shard_file
+     write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
+     write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
+     write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref
+     write(*,REAL_FMT) 'spi_quantity        ',  spi_quantity
+     write(*,REAL_FMT) 'spi_angle           ',  spi_angle
+     write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
+     write(*,REAL_FMT) 'tor_frequency       ',  tor_frequency
+     write(*,REAL_FMT) 'spi_Vel_diff        ',  spi_Vel_diff
+   end if
+
 #endif
   write(*,*)
   write(*,200)

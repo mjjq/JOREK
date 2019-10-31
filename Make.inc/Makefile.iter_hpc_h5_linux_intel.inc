@@ -5,10 +5,10 @@
 MODEL = model199
 
 # Fortran compiler 
-FC               = mpifort
+FC               = mpiifort
 FFLAGS          := $(FFLAGS) -mcmodel=medium -DUSE_BLOCK
-CC = mpicc
-CXX = mpicxx
+CC = mpiicc
+CXX = mpiicpc
 
 # Solvers dependencies
 USE_HIPS         = 0
@@ -24,22 +24,22 @@ LIBDIR = $(HOME)/lib
 
 #Scotch library
 SCOTCH_HOME ?=  $(LIBDIR)/scotch/scotch_5.1
-LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lptscotch -lptscotcherr
+LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lptscotch -lptscotcherr -lscotch
 INC_SCOTCH   = -I$(SCOTCH_HOME)/include
 
 # MUMPS
 MUMPS_HOME ?=  $(LIBDIR)/MUMPS_4.8.3
-LIB_MUMPS   = -L$(MUMPS_HOME)/lib/ -ldmumps -lmumps_common
+ORDLIB      = -L$(METIS_HOME)/lib -lpord -lmetis -lparmetis
+LIB_MUMPS   = $(LIB_SCOTCH) -L$(MUMPS_HOME)/lib/ -ldmumps -lmumps_common -lesmumps $(LIB_SCOTCH) $(ORDLIB)
 LIB_ZMUMPS  = -lzmumps
 INC_MUMPS   =  $(MUMPS_HOME)/include/
-ORDLIB      = -L$(METIS_HOME)/lib -lpord -lmetis
 
 # PASTIX
 PASTIX_HOME     ?=  $(LIBDIR)/pastix/install/
-LIB_PASTIX       = -L$(PASTIX_HOME) -lpastix_murge -lpastix $(LIB_SCOTCH)
-LIB_PASTIX_MURGE = -L$(PASTIX_HOME) -lpastix_murge -lpastix $(LIB_SCOTCH)
-LIB_PASTIX_BLAS  = 
-INC_PASTIX       = -I$(PASTIX_HOME) $(INC_SCOTCH)
+LIB_PASTIX       = `pastix-conf --libs` #-L$(PASTIX_HOME)/lib/ -lpastix_murge -lpastix $(LIB_SCOTCH)
+LIB_PASTIX_MURGE = `pastix-conf --libs_murge` #-L$(PASTIX_HOME)/lib/ -lpastix_murge -lpastix $(LIB_SCOTCH)
+LIB_PASTIX_BLAS  = `pastix-conf --blas`
+INC_PASTIX       = `pastix-conf --incs` #-I$(PASTIX_HOME) $(INC_SCOTCH)
 
 #HIPS
 LIBHIPS   = -L$(HOME)/hips_trunk/trunk/LIB -lhips -lio $(LIBSCOTCH)

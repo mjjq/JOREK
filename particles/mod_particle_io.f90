@@ -238,7 +238,7 @@ if (allocated(sim%groups)) then
       allocate(v(3,n_here), v_all(3,n_total)) !< maybe only master process requries to allocate v_all
       ! loop on the local particle array
       do j=1,n_here
-        v(:,j) = p(j)%v ! store all momenta
+        v(:,j) = p(j)%p ! store all momenta
       end do
       ! retrive momenta from all particle table and store them in the global one in master process
       call MPI_Gatherv(v(:,:), 3*n_here, MPI_REAL8, &
@@ -493,7 +493,7 @@ do i=1,n
     allocate(real8_2D(3,n_here))
     call HDF5_array2D_reading(file, real8_2D, group_name//"v",start=[0_HSIZE_T,i_here])
     do j=1,n_here
-      p(j)%v = real8_2D(:,j)
+      p(j)%p = real8_2D(:,j)
     end do
     deallocate(real8_2D)
     ! electric charge q

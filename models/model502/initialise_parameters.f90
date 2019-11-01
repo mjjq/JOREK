@@ -362,7 +362,7 @@ if ( my_id == 0 ) then
 
   do i = 1, 10
     if (n_spi(i)/=0 .and. i > n_inj) then
-      write(*,*) "ERROR! Something wrong with n_inj, double check, EXITING!"
+      write(*,*) "ERROR! Something wrong with n_inj, double check, EXITING!", n_spi, n_inj
       stop
     end if
   end do 

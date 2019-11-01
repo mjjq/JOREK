@@ -317,13 +317,13 @@ implicit none
 
     if (my_id == 0.) then
       if (index_now > 1) then
-        xtime_spi_ablation(i,index_now)    = xtime_spi_ablation(i,index_now-1) &
+        xtime_spi_ablation(i_p,index_now)    = xtime_spi_ablation(i_p,index_now-1) &
                                              + t_norm * tstep * pellets(i_p)%spi_abl * pellets(i_p)%spi_species
-        xtime_spi_ablation_bg(i,index_now) = xtime_spi_ablation_bg(i,index_now-1) &
+        xtime_spi_ablation_bg(i_p,index_now) = xtime_spi_ablation_bg(i_p,index_now-1) &
                                              + t_norm * tstep * pellets(i_p)%spi_abl * (1. - pellets(i_p)%spi_species)
       else
-        xtime_spi_ablation(i,index_now)    = t_norm * tstep * pellets(i_p)%spi_abl * pellets(i_p)%spi_species
-        xtime_spi_ablation_bg(i,index_now) = t_norm * tstep * pellets(i_p)%spi_abl * (1. - pellets(i_p)%spi_species) 
+        xtime_spi_ablation(i_p,index_now)    = t_norm * tstep * pellets(i_p)%spi_abl * pellets(i_p)%spi_species
+        xtime_spi_ablation_bg(i_p,index_now) = t_norm * tstep * pellets(i_p)%spi_abl * (1. - pellets(i_p)%spi_species) 
       end if
     end if
 
@@ -519,8 +519,8 @@ implicit none
     end if
    
     if (my_id == 0) then
-      xtime_spi_ablation_rate(i,index_now) = pellets(i_p)%spi_abl * pellets(i_p)%spi_species
-      xtime_spi_ablation_bg_rate(i,index_now) = pellets(i_p)%spi_abl * (1. - pellets(i_p)%spi_species)
+      xtime_spi_ablation_rate(i_p,index_now) = pellets(i_p)%spi_abl * pellets(i_p)%spi_species
+      xtime_spi_ablation_bg_rate(i_p,index_now) = pellets(i_p)%spi_abl * (1. - pellets(i_p)%spi_species)
     end if
 
   end do
@@ -823,19 +823,19 @@ end subroutine update_spi
       deallocate(rnd)
 
       if (allocated(xtime_spi_ablation)) call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
-      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation,1,n_spi,1,nstep,"xtime_spi_ablation")
+      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation,1,n_spi_tot,1,nstep,"xtime_spi_ablation")
 
       if (allocated(xtime_spi_ablation_rate)) &
       call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
-      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,nstep,"xtime_spi_ablation_rate")
+      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi_tot,1,nstep,"xtime_spi_ablation_rate")
 
       if (allocated(xtime_spi_ablation_bg)) &
       call tr_deallocate(xtime_spi_ablation_bg,"xtime_spi_ablation_bg",CAT_UNKNOWN)
-      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg,1,n_spi,1,nstep,"xtime_spi_ablation_bg")
+      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg,1,n_spi_tot,1,nstep,"xtime_spi_ablation_bg")
 
       if (allocated(xtime_spi_ablation_bg_rate)) &
       call tr_deallocate(xtime_spi_ablation_bg_rate,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
-      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi,1,nstep,"xtime_spi_ablation_bg_rate")
+      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi_tot,1,nstep,"xtime_spi_ablation_bg_rate")
 
 
     else

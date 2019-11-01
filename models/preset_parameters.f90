@@ -358,9 +358,9 @@ subroutine preset_parameters
     ASDEX_MGI = .false.
     gas_type = 'D2'
     mgi_amplitude = 0.d0  ! 0.007d0
-    mgi_R      = 3.2d0
-    mgi_Z      =  1.5d0
-    mgi_phi    = 1.57d0
+    mgi_R      = 0.d0
+    mgi_Z      =  0.d0
+    mgi_phi    = 0.d0
     mgi_radius =   0.08d0
     mgi_sig    =  0.05
     mgi_deltaphi =  0.5
@@ -392,9 +392,9 @@ subroutine preset_parameters
      mgi_phi_rotate  = 0.0
      tor_frequency   = 0.0
 
-     n_spi           = 1
-     n_spi_tot       = 1
-     n_inj           = 1
+     n_spi           = 0
+     n_spi_tot       = 0
+     n_inj           = 0
      spi_rnd_seed    = 0
 
      spi_abl_model   = 0

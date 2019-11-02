@@ -328,9 +328,14 @@ do ife = ife_min, ife_max
 #endif
 
         eta_T  = eta * (T0_corr/T_0)**(-1.5d0)
-        eta_Sp = 1.65d-9*17*(1.d-3*T0_corr/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
-                               *sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) 
 
+#if (JOREK_MODEL == 502)
+        eta_Sp = 1.65d-9*17*(1.d-3*T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
+                               *sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) 
+#else
+        eta_Sp = 1.65d-9*17*(1.d-3*T0_corr/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
+                               *sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO)
+#endif
 		
         dTdx   = (   y_t(ms,mt) * eq_s(mp,6,ms,mt) - y_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
         dTdy   = ( - x_t(ms,mt) * eq_s(mp,6,ms,mt) + x_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
@@ -397,8 +402,13 @@ do ife = ife_min, ife_max
      end select
 
         ! Te in eV:
+#if (JOREK_MODEL == 502)
+        T_rad = T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+        T_rad_real = T0/(EL_CHG*MU_ZERO*central_density*1.d20)
+#else
         T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
         T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+#endif
         if (flag_adas) then
    
           if (allocated(imp_adas(1)%ionisation_energy)) then

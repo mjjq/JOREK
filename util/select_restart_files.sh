@@ -14,16 +14,17 @@ function usage() {
   echo ""
   echo "Usage: `basename $0` [options]"
   echo ""
-  echo "  -h                           Print this help text"
-  echo "  -only <step>,<step>          Convert only listed time steps"
-  echo "  -only <step>-<step>          Convert only time steps in the given range"
-  echo "  -only <step>-<dstep>-<step>  Convert only time steps in the given range with given interval"
-  echo "  -donly <dstep>               Equivalent to -only 0-<dstep>-99999"
-  echo "  -time <time>,<time>          Selects time step roughly at <time> (JOREK-units)"
-  echo "  -time <time>-<dtime>-<time>  Selects time step within given time range with given interval"
-  echo "  -dtime <dtime>               Equivalent to -onlyT 0-<dtime>-infinity"
-  echo "  -s                           Prints only the selected stepnumbers, otherwise the full paths (default)"
-  echo "  -l                           Creates a file containing all selected timesteps and times (default:off)"
+  echo "  -h                          Print this help text"
+  echo "  -only <step>,<step>         Convert only listed time steps"
+  echo "  -only <step>-<step>         Convert only time steps in the given range"
+  echo "  -only <step>-<dstep>-<step> Convert only time steps in the given range with given interval"
+  echo "  -donly <dstep>              Equivalent to -only 0-<dstep>-99999"
+  echo "  -time <time>,<time>         Selects time step roughly at <time> (JOREK-units)"
+  echo "  -time <time>-<dtime>-<time> Selects time step within given time range with given interval"
+  echo "  -dtime <dtime>              Equivalent to -time 0-<dtime>-infinity"
+  echo "  -sec                        -time is given in seconds instead of in JOREK-units"
+  echo "  -s                          Prints only the selected stepnumbers, otherwise the full paths (default)"
+  echo "  -l                          Creates a file containing all selected timesteps and times (default:off)"
   echo ""
   echo "Remarks:"
   echo "  * Option -only will only select those restart files,"
@@ -36,6 +37,7 @@ function usage() {
 selected_steps="0-99999"
 onlyT=""
 full=1
+sec=0
 list=0
 while [ $# -gt 0 ]; do
   if [ "$1" == "-j" ]; then
@@ -53,6 +55,9 @@ while [ $# -gt 0 ]; do
   elif [ "$1" == "-time" ]; then
     onlyT="$2"
     shift 2
+  elif [ "$1" == "-sec" ]; then
+    sec=1
+    shift 1
   elif [ "$1" == "-s" ]; then
     full=0
     shift 1 
@@ -73,6 +78,7 @@ done
 
 SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 export sourceDir=`readlink -f .`
+unit=`${SCRIPTDIR}/extract_live_data.sh sqrt_mu0_rho0`
 
 
 
@@ -107,7 +113,7 @@ fi
 
 
 if [ ! -z $onlyT ]; then
-  python ${SCRIPTDIR}/select_restart_files.py $name_times $name_steps $full $onlyT $list
+  python ${SCRIPTDIR}/select_restart_files.py $name_times $name_steps $full $onlyT $list $unit $sec
   rm $name_times
   rm $name_steps
 else

@@ -34,13 +34,15 @@ function usage () {
   echo "Options:"
   echo "  -dir <dir>                  Specify a custom target directory (see remarks below)"
   echo "  -j <nthreads>               Convert using <nthreads> threads [default: 1]"
-  echo "  -only <step>,<step>          Convert only listed time steps"
-  echo "  -only <step>-<step>          Convert only time steps in the given range"
-  echo "  -only <step>-<dstep>-<step>  Convert only time steps in the given range with given interval"
-  echo "  -donly <dstep>               Equivalent to -only 0-<dstep>-99999"
-  echo "  -time <time>,<time>          Selects time step roughly at <time> (JOREK-units)"
-  echo "  -time <time>-<dtime>-<time>  Selects time step within given time range with given interval"
-  echo "  -dtime <dtime>               Equivalent to -time 0-<dtime>-inf"
+  echo "  -only <step>,<step>         Convert only listed time steps"
+  echo "  -only <step>-<step>         Convert only time steps in the given range"
+  echo "  -only <step>-<dstep>-<step> Convert only time steps in the given range with given interval"
+  echo "  -donly <dstep>              Equivalent to -only 0-<dstep>-99999"
+  echo "  -time <time>,<time>         Selects time step roughly at <time> (default in JOREK-units)"
+  echo "  -time <time>-<dtime>-<time> Selects time step within given time range with given interval"
+  echo "  -dtime <dtime>              Equivalent to -time 0-<dtime>-inf"
+  echo "  -sec                        -time is given in seconds instead of in JOREK-units"
+  echo "  -l                          Creates a file containing all selected timesteps and times (default:off)"
   echo "  -zip                        Compress the .vtk files using gzip"
   echo ""
   echo "Options passed to the binary via namelist input (source code for details):"
@@ -195,15 +197,21 @@ while [ $# -gt 1 ]; do
     shift 2
   elif [ "$1" == "-only" ]; then
     selected_steps="$2"
-    #select_arguments="$1 $2"
+    #select_arguments="$select_arguments $1 $2"
     shift 2
   elif [ "$1" == "-donly" ]; then
     selected_steps="0-$2-99999"
-    #select_arguments="$1 $2"
+    #select_arguments="$select_arguments $1 $2"
     shift 2
   elif ( [ "$1" == "-time" ] || [ "$1" == "-dtime" ] ) ; then
-    select_arguments="$1 $2"
+    select_arguments="$select_arguments $1 $2"
     shift 2
+  elif [ "$1" == "-sec" ]; then
+    select_arguments="$select_arguments $1"
+    shift 1
+  elif [ "$1" == "-l" ]; then
+    select_arguments="$select_arguments $1"
+    shift 1
   elif [ "$1" == "-dir" ]; then
     customdir="$2"
     shift 2

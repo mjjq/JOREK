@@ -12,36 +12,33 @@ import numpy as np
 import os
 import sys
 
-def getIndex(time):
-
+def getStep(time):
   #Determine stepnumber from time
-  step=np.abs(time-TimeS)
-  step=np.where(step==min(step))[0][0]
-
-  #Determine index of file from step number
-  index=np.abs(step-FileS)
-  index=np.where(index==min(index))[0][0]
-
-  return index
+  temp  = np.abs(time-AvailTimeS)
+  index  = np.where(temp==min(temp))[0][0]	
+  return FileS[index]
 
 
 
 # Evaluates the arguments
-if len(sys.argv)<5 :
+if len(sys.argv)<7 :
   print("Not enough arguments!")
   exit()
 
-full=int(sys.argv[3])
-name_times=sys.argv[1]
-name_steps=sys.argv[2]
-onlyT=sys.argv[4]
-listfile=int(sys.argv[5])
+full       = int(sys.argv[3])
+name_times = sys.argv[1]
+name_steps = sys.argv[2]
+onlyT      = sys.argv[4]
+listfile   = int(sys.argv[5])
+unit       = float(sys.argv[6])
+sec        = int(sys.argv[7])
 
 
 
 # Loads the list of times and step numbers from the existing restart files
-FileS=np.loadtxt(name_steps,dtype=int)
-TimeS=np.loadtxt(name_times)
+FileS      = np.loadtxt(name_steps,dtype=int)
+TimeS      = np.loadtxt(name_times)
+AvailTimeS = TimeS[FileS]
 
 
 
@@ -49,20 +46,22 @@ TimeS=np.loadtxt(name_times)
 SelectedTimeS=np.array([])
 for onlyT_0 in onlyT.split(","):
   if "-" in onlyT_0:
-    onlyT_1=onlyT_0.split("-")
-    if float(onlyT_1[2]) > TimeS[-1] :
-      SelectedTimeS=np.concatenate((SelectedTimeS,np.arange(float(onlyT_1[0]),TimeS[-1],float(onlyT_1[1]))))
-      SelectedTimeS=np.append(SelectedTimeS,TimeS[-1])
+    onlyT_1 = np.array(onlyT_0.split("-"),dtype=float)
+    if sec:
+      onlyT_1 = onlyT_1/unit
+    if onlyT_1[2] > TimeS[-1] :
+      SelectedTimeS = np.concatenate((SelectedTimeS,np.arange(onlyT_1[0],TimeS[-1],onlyT_1[1])))
+      SelectedTimeS = np.append(SelectedTimeS,TimeS[-1])
     else:
-      SelectedTimeS=np.concatenate((SelectedTimeS,np.arange(float(onlyT_1[0]),float(onlyT_1[2]),float(onlyT_1[1]))))
+      SelectedTimeS = np.concatenate((SelectedTimeS,np.arange(onlyT_1[0],onlyT_1[2],onlyT_1[1])))
   else:
-    SelectedTimeS=np.append(SelectedTimeS,float(onlyT_0))
+    SelectedTimeS   = np.append(SelectedTimeS,onlyT_0)
 
 
 
 # For each selected time, the correspoding restart file is being identified
-SelectedFileS=[FileS[getIndex(a)] for a in SelectedTimeS] 
-SelectedFileS=np.unique(SelectedFileS) #remove possible duplicates
+SelectedFileS = [getStep(a) for a in SelectedTimeS] 
+SelectedFileS = np.unique(SelectedFileS) #remove possible duplicates
 
 
 
@@ -78,7 +77,11 @@ else:
 
 #Stores selected step numbers and corresponding times in a file
 if listfile:
-  with open("selected_files_"+onlyT+".dat","w+") as f:
-    f.write('"step"   "time"\n')
+  if sec:
+    pre="_sec"
+  else:
+    pre=""
+  with open("selected_files_"+onlyT+pre+".dat","w+") as f:
+    f.write('"step"    "time/sqrt(mu_0rho_0)"    "time/s"\n')
     for SelectedFile in SelectedFileS:
-      f.write(str(SelectedFile).zfill(5)+"    "+str(TimeS[SelectedFile])+"\n")
+      f.write(str(SelectedFile).zfill(5)+"    "+'%.7E' % TimeS[SelectedFile]+"    "+'%.7E' % (TimeS[SelectedFile]*unit)+"\n")

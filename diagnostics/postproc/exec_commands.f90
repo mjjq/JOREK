@@ -39,7 +39,7 @@ module exec_commands
   integer :: loop_inc_step              !< Timestep index step width of for loop
   real*8  :: loop_min_time              !< Smallest time of for loop
   real*8  :: loop_max_time              !< Largest time of for loop
-  real*8  :: loop_inc_time              !< Timestep time interval width of for loop  
+  real*8  :: loop_inc_time              !< Timestep time interval width of for loop
   
   integer, parameter :: MAX_QUEUE_LENGTH  = 9999         !< Maximum length of command queue
   integer            :: n_queued_commands = 0            !< Number of commands in the queue
@@ -158,6 +158,8 @@ module exec_commands
           call jnorm_bnd_RZ(command, ierr)
         case ( 'jorek-units' )
           call select_jorek_units(command, ierr)
+        case ( 'for-jorek-units' )
+          call select_loop_jorek_units(command, ierr)
         case ( 'pol_line' )
           call pol_line(command, first_step, ierr)
         case ( 'int_along_pol_line' )
@@ -186,6 +188,8 @@ module exec_commands
           call set(command, ierr)
         case ( 'si-units' )
           call select_si_units(command, ierr)
+        case ( 'for-si-units' )
+          call select_loop_si_units(command, ierr)
         case ( 'spi-state' )
           call spi_state(command, first_step, ierr)
         case ( 'timesteps' )
@@ -477,9 +481,10 @@ module exec_commands
     integer,            intent(out)    :: ierr    !< Error flag
     
     ! --- Local variables
-    integer              :: jcmd, istep, load_error, n_avail, itime, n_time, iavail, f_avail
+    integer              :: jcmd, istep, load_error, n_avail, itime, n_time, iavail, n_select, & 
+                            temp_select, loop_unit
     logical              :: first_step, file_exists   ! Is true for the first timestep loaded in the for-loop
-    real*8               :: time_loop
+    real*8               :: time_loop, rho_norm, loop_fact_time
     character(len=256)   :: filename
     integer, allocatable :: selected_steps(:)
     real*8 , allocatable :: selected_times(:)
@@ -515,7 +520,7 @@ module exec_commands
       
         first_step = .false.
       end do
-    else
+    else		
       exec_mode = NORMAL_MODE
       write(*,*) '--------------------------------------------------'
       write(*,*) '   Selects restart files for choosen time points'
@@ -542,42 +547,61 @@ module exec_commands
         end if
       end do
 
+      ! --- Set time unit correctly
+      loop_unit = get_int_setting('loop_unit', ierr),
+      rho_norm       = central_density *1.d20 * central_mass * mass_proton   ! rho_0 = central mass density
+      loop_fact_time = sqrt(MU_zero*rho_norm)
+      if ( loop_unit .eq. SI_UNITS ) then
+        loop_min_time  = loop_min_time/loop_fact_time
+        loop_max_time  = loop_max_time/loop_fact_time
+        loop_inc_time  = loop_inc_time/loop_fact_time
+      end if
+
       ! --- Find for each selected time a corresponding step number
       if (loop_max_time .gt. xtime(index_start)) then
-        loop_max_time=xtime(index_start)
+        loop_max_time = xtime(index_start)
       end if
       if (loop_min_time .gt. xtime(index_start)) then
-        loop_min_time=xtime(index_start)
+        loop_min_time = xtime(index_start)
       end if
-      n_time = int(((loop_max_time-loop_min_time)/loop_inc_time))+1
+      n_time   = int(((loop_max_time-loop_min_time)/loop_inc_time))+1
+      n_select = 0 
       allocate(selected_steps(n_time))
-      f_avail = 1 !< Thats the index of the first available file that will be compared
       do itime = 1,n_time
-        time_loop = loop_min_time+loop_inc_time*(itime-1)        
-        ! --- Go through list of available (and relevant) restart files
+        time_loop = loop_min_time+loop_inc_time*(itime-1) ! requested time
+        ! --- Go through list of available restart files
         !     and compare their xtime with time_loop
-        do iavail = f_avail, n_avail
-          if ( iavail .gt. f_avail ) then
+        do iavail = 1, n_avail
+          if ( iavail .gt. 1 ) then
             if ( abs(xtime(available_steps(iavail)) - time_loop) .gt.  &
-                 abs(xtime( selected_steps(itime)) - time_loop)      ) then
+                 abs(xtime(temp_select)             - time_loop)) then
               exit
             end if
           end if
-          selected_steps(itime)=available_steps(iavail)
-          !f_avail=iavail+1
+          temp_select = available_steps(iavail)
         end do
-        write(*,'(a,f13.6)') 'For time point: ', time_loop
-        write(*,'(a, i5.5, a,f13.6)') 'Selected Step: ', selected_steps(itime),&
-        ' at t=',xtime(selected_steps(itime))
+        write(*,'(a,f13.6,a,f13.6,a)') 'Requested time point: ', time_loop,' (',time_loop*loop_fact_Time*1000,' ms)'
+
+        if ( n_select .gt. 0 .and. ANY( selected_steps .eq. temp_select )) then
+          write(*,*) 'Ignored, Step number already selected!'
+        else
+          n_select                 = n_select+1
+          selected_steps(n_select) = temp_select
+
+          write(*,'(a, i5.5, a,f13.6)') 'Selected Step: ', selected_steps(n_select),&
+          ' at t=',xtime(selected_steps(n_select))
+          write(*,'(a,f13.6,a)') '                        (=',xtime(selected_steps(n_select))*loop_fact_Time*1000,' ms)'
+        end if
+
         write(*,*) '****************************'
       end do
 
       loop_min_step=selected_steps(1)
-      loop_max_step=selected_steps(size(selected_steps))
+      loop_max_step=selected_steps(n_select)
 
       write(*,*) '--------------------------------------------------'
 
-      do istep = 1, size(selected_steps)
+      do istep = 1, n_select
         call load_step( selected_steps(istep), load_error)
         if ( load_error /= 0 ) cycle
       
@@ -2331,6 +2355,46 @@ module exec_commands
     call set_setting('units', '1', ierr)
     
   end subroutine select_si_units
+  
+  
+  
+  
+  
+  !> Select JOREK normalized units in for time loop.
+  subroutine select_loop_jorek_units(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0); if ( ierr /= 0 ) return
+    
+    call set_setting('loop_unit', '0', ierr)
+    
+  end subroutine select_loop_jorek_units
+  
+  
+  
+  
+  
+  !> Select SI units in for time loop.
+  subroutine select_loop_si_units(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0); if ( ierr /= 0 ) return
+    
+    call set_setting('loop_unit', '1', ierr)
+    
+  end subroutine select_loop_si_units
   
   
   

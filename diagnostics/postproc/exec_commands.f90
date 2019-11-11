@@ -548,7 +548,7 @@ module exec_commands
       end do
 
       ! --- Set time unit correctly
-      loop_unit = get_int_setting('loop_unit', ierr),
+      loop_unit = get_int_setting('loop_unit', ierr)
       rho_norm       = central_density *1.d20 * central_mass * mass_proton   ! rho_0 = central mass density
       loop_fact_time = sqrt(MU_zero*rho_norm)
       if ( loop_unit .eq. SI_UNITS ) then

@@ -2,7 +2,7 @@
 
 #
 # Purpose: Produces poincare files that can be plotted, e.g., by gnuplot from JOREK restart files.
-#          Adapted form convert2vtk.sh
+#          Adapted from convert2vtk.sh.
 #
 # Date: 2019-10-25
 # Author: Fabian Wieschollek, IPP Garching
@@ -51,9 +51,6 @@ function usage () {
   echo "  infile                      Input file of the corresponding JOREK run"
   echo "  extra-files                 Additional files that are required for running"
   echo ""
-#  echo "Remarks:"
-#  echo "  * none"
-#  echo ""
 }
 
 function mark_running () {
@@ -172,11 +169,9 @@ while [ $# -gt 1 ]; do
     shift 2
   elif [ "$1" == "-only" ]; then
     selected_steps="$2"
-    #select_arguments="$select_arguments $1 $2"
     shift 2
   elif [ "$1" == "-donly" ]; then
     selected_steps="0-$2-99999"
-    #select_arguments="$select_arguments $1 $2"
     shift 2
   elif ( [ "$1" == "-time" ] || [ "$1" == "-dtime" ] ) ; then
     select_arguments="$1 $2"
@@ -302,8 +297,8 @@ if [ -z "$select_arguments" ]; then
   files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
 else
   files=`${SCRIPTDIR}/select_restart_files.sh $select_arguments`
-  if [ "$files" == "Files are missing" ] ; then
-    echo "Files to select restart files are missing"
+  if [ "${files:0:5}" == "ERROR" ] ; then
+    echo $files
     stop
   fi
 fi

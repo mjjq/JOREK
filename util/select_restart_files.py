@@ -20,7 +20,7 @@ def getStep(time):
 
 
 
-# Evaluates the arguments
+# --- Process the arguments
 if len(sys.argv)<7 :
   print("Not enough arguments!")
   exit()
@@ -35,14 +35,14 @@ sec        = int(sys.argv[7])
 
 
 
-# Loads the list of times and step numbers from the existing restart files
+# --- Loads the list of times and step numbers from the existing restart files
 FileS      = np.loadtxt(name_steps,dtype=int)
 TimeS      = np.loadtxt(name_times)
 AvailTimeS = TimeS[FileS]
 
 
 
-# Creates the list of selected times, by evaluating onlyT
+# --- Creates the list of selected times, by evaluating onlyT
 SelectedTimeS=np.array([])
 for onlyT_0 in onlyT.split(","):
   if "-" in onlyT_0:
@@ -59,13 +59,13 @@ for onlyT_0 in onlyT.split(","):
 
 
 
-# For each selected time, the correspoding restart file is being identified
+# --- For each selected time, the correspoding restart file is being identified
 SelectedFileS = [getStep(a) for a in SelectedTimeS] 
 SelectedFileS = np.unique(SelectedFileS) #remove possible duplicates
 
 
 
-#Prints list of absolute paths of the selected restart files or only their step numbers
+# --- Prints list of absolute paths of the selected restart files or only their step numbers
 if full:
   for SelectedFile in SelectedFileS:
     print(os.environ["sourceDir"]+"/jorek"+str(SelectedFile).zfill(5)+"."+os.environ["RST_TYPE"])
@@ -75,7 +75,7 @@ else:
 
 
 
-#Stores selected step numbers and corresponding times in a file
+# --- Stores selected step numbers and corresponding times in a file
 if listfile:
   if sec:
     pre="_sec"

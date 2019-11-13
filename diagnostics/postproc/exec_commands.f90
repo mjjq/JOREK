@@ -527,7 +527,7 @@ module exec_commands
       write(*,*) '   Selects restart files for choosen time points'
       write(*,*) '--------------------------------------------------'
 
-      ! --- Gets list of available restart files
+      ! --- Get list of available restart files
       n_avail=0
       allocate(available_steps(100000))
       do istep = 0, 99999
@@ -545,9 +545,10 @@ module exec_commands
         end if
       end do
 
-      ! --- Gets xtime from jorek_restart
+      ! --- Get xtime from the restart file with the highest step number
       write (file_name,'(a, i5.5)') 'jorek', available_steps(n_avail)
       call import_restart(node_list, element_list, file_name, rst_format, ierr, .true.)
+      if ( ierr /= 0 ) return
 
       ! --- Set time unit correctly
       loop_unit = get_int_setting('loop_unit', ierr)

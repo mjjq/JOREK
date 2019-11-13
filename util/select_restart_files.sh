@@ -34,6 +34,7 @@ function usage() {
   echo ""
 }
 
+# --- Process command line parameters
 selected_steps="0-99999"
 onlyT=""
 full=1
@@ -92,9 +93,14 @@ fi
 
 
 
+# --- Creates list of restart files
 avail_steps=`find . -regextype sed -regex  "\./jorek[0-9]*\.h5*" | \
 sort -n |  sed  -e "s/\.\/jorek\([0-9]*\)\.h5/\1/g" `
 
+
+
+# --- Checks, if restart files are present, 
+#     and if macroscopic_vars are present, if time points are selected
 if  [ -z "$avail_steps" ] || ( [ ! -f "./macroscopic_vars.dat" ] && [ ! -z $onlyT ] ) ; then
   echo "ERROR: No restart files or macroscopic_vars.dat could be detected."
   exit 0
@@ -102,10 +108,11 @@ fi
 
 
 
+# --- Gets normalization value
 unit=`${SCRIPTDIR}/extract_live_data.sh sqrt_mu0_rho0`
 
 
-
+# --- If time points are given, select restart files via the Python-script
 if [ ! -z $onlyT ]; then
   name_times="times_tmp_$$"
   name_steps="steps_tmp_$$"
@@ -115,6 +122,8 @@ if [ ! -z $onlyT ]; then
   python ${SCRIPTDIR}/select_restart_files.py $name_times $name_steps $full $onlyT $list $unit $sec
   rm $name_times
   rm $name_steps
+	
+# --- If step numbers are given, select restart files as below
 else
   for avail_step in $avail_steps; do
     step_number=`echo $avail_step | sed -e 's/^[0 ]*\(.*.\)$/\1/'` # remove leading zeros
@@ -124,6 +133,8 @@ else
       if [[ ${#step_numbers[*]} -eq 1 && ${step_numbers[0]} -eq $step_number ]] || \
          [[ ${#step_numbers[*]} -eq 2 && ${step_numbers[0]} -le $step_number && ${step_numbers[1]} -ge $step_number ]] || \
          [[ ${#step_numbers[*]} -eq 3 && ${step_numbers[0]} -le $step_number && $(($step_number % ${step_numbers[1]})) -eq 0 && ${step_numbers[2]} -ge $step_number ]] ; then
+
+        # --- Prints list of absolute paths of the selected restart files or only their step numbers
         if [ $full ] ; then
           echo "$sourceDir/jorek$avail_step.${RST_TYPE}"
         else

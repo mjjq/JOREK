@@ -55,7 +55,7 @@ for onlyT_0 in onlyT.split(","):
     else:
       SelectedTimeS = np.concatenate((SelectedTimeS,np.arange(onlyT_1[0],onlyT_1[2],onlyT_1[1])))
   else:
-    SelectedTimeS   = np.append(SelectedTimeS,onlyT_0)
+    SelectedTimeS   = np.append(SelectedTimeS,float(onlyT_0))
 
 
 

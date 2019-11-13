@@ -197,11 +197,9 @@ while [ $# -gt 1 ]; do
     shift 2
   elif [ "$1" == "-only" ]; then
     selected_steps="$2"
-    #select_arguments="$select_arguments $1 $2"
     shift 2
   elif [ "$1" == "-donly" ]; then
     selected_steps="0-$2-99999"
-    #select_arguments="$select_arguments $1 $2"
     shift 2
   elif ( [ "$1" == "-time" ] || [ "$1" == "-dtime" ] ) ; then
     select_arguments="$select_arguments $1 $2"
@@ -511,8 +509,8 @@ if [ -z "$select_arguments" ]; then
   files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
 else
   files=`${SCRIPTDIR}/select_restart_files.sh $select_arguments`
-  if [ "$files" == "Files are missing" ] ; then
-    echo "Files to select restart files are missing"
+  if [ "${files:0:5}" == "ERROR" ] ; then
+    echo $files
     exit 0
   fi
 fi

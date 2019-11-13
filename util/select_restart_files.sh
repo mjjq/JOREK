@@ -29,7 +29,7 @@ function usage() {
   echo "Remarks:"
   echo "  * Option -only will only select those restart files,"
   echo "    whose stepnumber are explictly given by the user."
-  echo "  * Option -onlyT will try to identifiy for each time step a restart file,"
+  echo "  * Option -time will try to identifiy for each time step a restart file,"
   echo "    that matches the time most likely."
   echo ""
 }
@@ -78,7 +78,7 @@ done
 
 SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 export sourceDir=`readlink -f .`
-unit=`${SCRIPTDIR}/extract_live_data.sh sqrt_mu0_rho0`
+
 
 
 
@@ -96,9 +96,13 @@ avail_steps=`find . -regextype sed -regex  "\./jorek[0-9]*\.h5*" | \
 sort -n |  sed  -e "s/\.\/jorek\([0-9]*\)\.h5/\1/g" `
 
 if  [ -z "$avail_steps" ] || ( [ ! -f "./macroscopic_vars.dat" ] && [ ! -z $onlyT ] ) ; then
-  echo "Files are missing"
+  echo "ERROR: No restart files or macroscopic_vars.dat could be detected."
   exit 0
 fi
+
+
+
+unit=`${SCRIPTDIR}/extract_live_data.sh sqrt_mu0_rho0`
 
 
 
@@ -108,11 +112,6 @@ if [ ! -z $onlyT ]; then
   echo "0." > $name_times #Set t=0. for the 0th Step
   ${SCRIPTDIR}/extract_live_data.sh times | tail -n +2 | sed  -e "s/[0-9 ]* //g"  >> $name_times
   echo $avail_steps > $name_steps
-fi
-
-
-
-if [ ! -z $onlyT ]; then
   python ${SCRIPTDIR}/select_restart_files.py $name_times $name_steps $full $onlyT $list $unit $sec
   rm $name_times
   rm $name_steps

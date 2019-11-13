@@ -279,6 +279,7 @@ module exec_commands
     end if
     if ( .not. file_exists ) then
       ierr = 42
+      write(*,'(a,i5.5,a)') 'Restart file for step ', istep,' does not exist.'
       return
     end if
     
@@ -485,7 +486,7 @@ module exec_commands
                             temp_select, loop_unit
     logical              :: first_step, file_exists   ! Is true for the first timestep loaded in the for-loop
     real*8               :: time_loop, rho_norm, loop_fact_time
-    character(len=256)   :: filename
+    character(len=64)    :: file_name
     integer, allocatable :: selected_steps(:)
     real*8 , allocatable :: selected_times(:)
     integer, allocatable :: available_steps(:)
@@ -526,19 +527,16 @@ module exec_commands
       write(*,*) '   Selects restart files for choosen time points'
       write(*,*) '--------------------------------------------------'
 
-      ! --- Gets xtime from jorek_restart
-      call import_restart(node_list, element_list, "jorek_restart", rst_format, ierr, .true.)
-      allocate(available_steps(index_start+1))
-
       ! --- Gets list of available restart files
       n_avail=0
-      do istep = 0, index_start
+      allocate(available_steps(100000))
+      do istep = 0, 99999
         if ( rst_hdf5 .ne. 0 ) then
-          write (filename,'(a, i5.5, a)') 'jorek', istep, '.h5'
-          inquire (file=filename, exist=file_exists)
+          write (file_name,'(a, i5.5, a)') 'jorek', istep, '.h5'
+          inquire (file=file_name, exist=file_exists)
         else
-          write (filename,'(a, i5.5, a)') 'jorek', istep, '.rst'
-          inquire (file=filename, exist=file_exists)
+          write (file_name,'(a, i5.5, a)') 'jorek', istep, '.rst'
+          inquire (file=file_name, exist=file_exists)
         end if
 
         if ( file_exists ) then
@@ -546,6 +544,10 @@ module exec_commands
           available_steps(n_avail) = istep
         end if
       end do
+
+      ! --- Gets xtime from jorek_restart
+      write (file_name,'(a, i5.5)') 'jorek', available_steps(n_avail)
+      call import_restart(node_list, element_list, file_name, rst_format, ierr, .true.)
 
       ! --- Set time unit correctly
       loop_unit = get_int_setting('loop_unit', ierr)

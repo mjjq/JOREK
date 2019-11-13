@@ -1246,7 +1246,7 @@ module exec_commands
        tor_pos(phi=phi), result, ierr)
     
     call reduce_result_to_2d(ierr, result, res2d, i1=1)
-    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename))
+    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename), comment=trim(comment))
     
     if ( allocated(result) ) deallocate(result)
     if ( allocated(res2d ) ) deallocate(res2d )
@@ -1302,7 +1302,7 @@ module exec_commands
        pol_pos(node_list,element_list,eq,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
        tor_pos(phistart=phimin, phiend=phimax, nphi=nphi), result, ierr)
     
-    call write_hdf5_3d(ierr, expr_list, result, trim(filename))
+    call write_hdf5_3d(ierr, expr_list, result, trim(filename), comment=trim(comment))
     
     if ( allocated(result) ) deallocate(result)
     

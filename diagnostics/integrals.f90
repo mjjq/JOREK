@@ -67,6 +67,8 @@ P_hel    = 0.d0
 C_hel    = 0.d0
 Volume   = 0.d0
 Area     = 0.d0
+heat_src = 0.d0
+part_src = 0.d0
 heat_src_in  = 0.d0
 heat_src_out = 0.d0
 part_src_in  = 0.d0
@@ -152,7 +154,7 @@ do ife =1, element_list%n_elements
         
 #if JOREK_MODEL == 400
         call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
-          psi_limit, par_src, heat_src_i, heat_src_e)
+          psi_limit, part_src, heat_src_i, heat_src_e)
           heat_src = heat_src_i + heat_src_e
 #else
         call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
@@ -198,13 +200,13 @@ beta_p  = 8.d0 * PI * P_hel / (C_hel**2 )
 beta_t  = 2.d0 * P_hel / Bgeo**2 / (Area)
 beta_n  = 100.d0 * (4.*PI/10.) * beta_t / (MU_zero * abs(current) /  (aminor * Bgeo))
 
-write(*,'(A,f12.7)')    ' psi_limit        : ',psi_limit
-write(*,'(A,f12.7,A)')  ' current          : ',current/1.e6,' MA'
-write(*,'(A,f12.7)')    ' beta_p           : ',beta_p
-write(*,'(A,f12.7)')    ' beta_t           : ',beta_t
-write(*,'(A,f12.7,A)')  ' beta_n           : ',beta_n,' [%]'
-write(*,'(A,f12.7,A)')  ' Area             : ',area,' m^2'
-write(*,'(A,f12.7,A)')  ' Volume           : ',volume,' m^3'
+write(*,'(A,f16.7)')    ' psi_limit        : ',psi_limit
+write(*,'(A,f16.7,A)')  ' current          : ',current/1.e6,' MA'
+write(*,'(A,f16.7)')    ' beta_p           : ',beta_p
+write(*,'(A,f16.7)')    ' beta_t           : ',beta_t
+write(*,'(A,f16.7,A)')  ' beta_n           : ',beta_n,' [%]'
+write(*,'(A,f16.7,A)')  ' Area             : ',area,' m^2'
+write(*,'(A,f16.7,A)')  ' Volume           : ',volume,' m^3'
 write(*,'(A,2es18.7,A)') ' Heat.src (in/out): ', heat_src_in, heat_src_out, '/ sqrt((mu_0)^3 rho_0) W'
 write(*,'(A,2es18.7,A)') ' Part.src (in/out): ', part_src_in, part_src_out
 

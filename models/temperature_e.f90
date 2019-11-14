@@ -5,6 +5,7 @@ subroutine temperature_e(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,temperat
 ! position (Z, psi) from the analytical or numerical input profile.
 !-----------------------------------------------------------------------
 use phys_module
+use vacuum, only: current_FB_fact
 
 implicit none
 
@@ -17,7 +18,7 @@ real*8,  intent(out) :: temperature_e_profile, dTe_dpsi, dTe_dz, dTe_dpsi2, dTe_
 
 ! --- Internal variables.
 real*8  :: prof0, prof1, dprof0_dpsi, dprof0_dpsi2, dprof0_dpsi3, psi_barrier
-real*8  :: psi_n, delta_psi, sig_T, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3
+real*8  :: psi_n, psi_star, delta_psi, sig_T, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3
 real*8  :: atn, datn, d2atn, d3atn
 real*8  :: atn_z,   datn_z,   d2atn_z
 real*8  :: atn_z_u, datn_z_u, d2atn_z_u, factor
@@ -52,9 +53,12 @@ if ( .not. num_Te ) then ! use analytical representation
   sig_T       = Te_coef(4)
   psi_barrier = Te_coef(5)
   
-  tanh1 = tanh((psi_n - psi_barrier)     /sig_T)
-  cosh1 = cosh((psi_n - psi_barrier)     /sig_T)
-  cosh2 = cosh(2.d0*(psi_n - psi_barrier)/sig_T)
+  psi_star = (psi_n - psi_barrier)/sig_T
+  psi_star = min( max( psi_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+  
+  tanh1 = tanh(psi_star)
+  cosh1 = cosh(psi_star)
+  cosh2 = cosh(2.d0*psi_star)
   
   atn   = (0.5d0 - 0.5d0*tanh1)
   datn  = - 1.d0/cosh1**2 / (2.d0 * sig_T)             / delta_psi
@@ -144,6 +148,20 @@ else
   dTe_dpsi_dz  = 0.d0
   dTe_dpsi2_dz = 0.d0
   dTe_dpsi_dz2 = 0.d0
+
+end if
+
+if (freeboundary_equil .and. num_Te) then                       !if the temperature profile is given in a file and there is freeboundary equilibrium
+                                                                !the full profile is multiplied by a facto in order to iterate to a given current
+  temperature_e_profile = temperature_e_profile * current_FB_fact
+  dTe_dpsi     = dTe_dpsi                     * current_FB_fact
+  dTe_dpsi2    = dTe_dpsi2                    * current_FB_fact
+  dTe_dpsi3    = dTe_dpsi3                    * current_FB_fact
+  dTe_dz       = dTe_dz                       * current_FB_fact
+  dTe_dz2      = dTe_dz2                      * current_FB_fact
+  dTe_dpsi_dz  = dTe_dpsi_dz                  * current_FB_fact
+  dTe_dpsi2_dz = dTe_dpsi2_dz                 * current_FB_fact
+  dTe_dpsi_dz2 = dTe_dpsi_dz2                 * current_FB_fact
 
 end if
 

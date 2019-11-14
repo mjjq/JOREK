@@ -9,11 +9,11 @@ contains
 subroutine log_parameters(my_id, short)
 
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps
-use murge_module,  only: use_murge, use_murge_element, murge_with_starpu, murge_cuda_nbr
+use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
 use wsmp_module,   only: use_wsmp
 use vacuum
+use gauss, only: n_gauss
 
 implicit none
 
@@ -83,11 +83,8 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
-  write(*,'(1x,a)',advance='no') ' USE_MURGE           : '
 #ifdef USE_MURGE
-  write(*,*) 'on'
-#else
-  write(*,*) 'off'
+  write(*,*) 'WARNING: USE_MURGE IS NOT SUPPORTED ANY MORE'
 #endif
 
   write(*,'(1x,a)',advance='no') ' USE_HIPS            : '
@@ -144,6 +141,13 @@ if (my_id == 0) then
   write(*,*) 'on'
 #else
   write(*,*) 'off'
+#endif
+
+  write(*,'(1x,a)',advance='no') ' GAUSS_ORDER : '
+#ifdef GAUSS_ORDER
+  write(*,*) 'Preprocessor flag has been set! Thus, n_gauss=', n_gauss
+#else
+  write(*,*) 'Preprocessor flag not set. Thus, n_gauss=', n_gauss
 #endif
 
   write(*,*)
@@ -214,6 +218,7 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'nstep_n               ', nstep_n
   write(*,LOGI_FMT) 'eta_T_dependent       ', eta_T_dependent
   write(*,REAL_FMT) 'eta                   ', eta
+  write(*,REAL_FMT) 'eta_ohmic             ', eta_ohmic
   write(*,LOGI_FMT) 'visco_T_dependent     ', visco_T_dependent
   write(*,REAL_FMT) 'visco                 ', visco
   write(*,REAL_FMT) 'visco_par             ', visco_par
@@ -341,8 +346,8 @@ if (my_id == 0) then
     end if
     write(*,REAL_FMT) 'heatsource_e           ', heatsource_e
     write(*,REAL_FMT) 'heatsource_i           ', heatsource_i
-    write(*,REAL_FMT) 'K_e_par                ', K_e_par
-    write(*,REAL_FMT) 'K_i_par                ', K_i_par
+    write(*,REAL_FMT) 'ZK_e_par               ', ZK_e_par
+    write(*,REAL_FMT) 'ZK_i_par               ', ZK_i_par
   end if
 
   if ( .not. num_ffprime ) then
@@ -388,6 +393,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'visco_num             ', visco_num
   write(*,REAL_FMT) 'visco_par_num         ', visco_par_num
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
+  write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
   write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
   write(*,LOGI_FMT) 'keep_current_prof     ', keep_current_prof
@@ -518,10 +524,6 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'use_mumps             ', use_mumps
   write(*,LOGI_FMT) 'use_wsmp              ', use_wsmp
   write(*,LOGI_FMT) 'use_pastix            ', use_pastix
-  write(*,LOGI_FMT) 'use_murge             ', use_murge
-  write(*,LOGI_FMT) 'use_murge_element     ', use_murge_element
-  write(*,LOGI_FMT) 'murge_with_starpu     ', murge_with_starpu
-  write(*,INTG_FMT) 'murge_cuda_nbr        ', murge_cuda_nbr
   write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot
   write(*,INTG_FMT) 'pastix_maxthrd        ', pastix_maxthrd
@@ -533,6 +535,14 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
+
+  if (use_mumps) then
+    write(*,INTG_FMT) 'mumps_ordering        ', mumps_ordering
+    write(*,LOGI_FMT) 'use_mumps_BLR         ', use_mumps_BLR
+    if (use_mumps_BLR) then
+      write(*,REAL_FMT) 'mumps_BLR_eps         ', mumps_BLR_eps
+    endif
+  endif
 
   write(*,INTG_FMT) 'n_pfc                 ', n_pfc
   if ( n_pfc > 0 ) then
@@ -576,14 +586,14 @@ if (my_id == 0) then
   endif
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-     write(*,REAL_FMT) 'mgi_amplitude       ',  mgi_amplitude
-     write(*,REAL_FMT) 'mgi_R               ',  mgi_R
-     write(*,REAL_FMT) 'mgi_Z               ',  mgi_Z
-     write(*,REAL_FMT) 'mgi_phi             ',  mgi_phi
-     write(*,REAL_FMT) 'mgi_radius          ',  mgi_radius
-     write(*,REAL_FMT) 'mgi_sig             ',  mgi_sig
-     write(*,REAL_FMT) 'mgi_deltaphi        ',  mgi_deltaphi
-     write(*,REAL_FMT) 'mgi_tor_norm        ',  mgi_tor_norm
+     write(*,REAL_FMT) 'ns_amplitude        ',  ns_amplitude
+     write(*,REAL_FMT) 'ns_R                ',  ns_R
+     write(*,REAL_FMT) 'ns_Z                ',  ns_Z
+     write(*,REAL_FMT) 'ns_phi              ',  ns_phi
+     write(*,REAL_FMT) 'ns_radius           ',  ns_radius
+     write(*,REAL_FMT) 'ns_sig              ',  ns_sig
+     write(*,REAL_FMT) 'ns_deltaphi         ',  ns_deltaphi
+     write(*,REAL_FMT) 'ns_tor_norm         ',  ns_tor_norm
      write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion
      write(*,LOGI_FMT) 'JET_MGI             ',  JET_MGI
      write(*,LOGI_FMT) 'ASDEX_MGI           ',  ASDEX_MGI
@@ -591,9 +601,28 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'K_Dmv               ',  K_Dmv
      write(*,REAL_FMT) 'V_Dmv               ',  V_Dmv
      write(*,REAL_FMT) 'L_tube              ',  L_tube
-     write(*,REAL_FMT) 't_mgi               ',  t_mgi
+     write(*,REAL_FMT) 't_ns                ',  t_ns
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
+
+     !< Additional log for SPI model
+   if(using_spi) then
+     write(*,LOGI_FMT) 'using_spi           ',  using_spi
+     write(*,LOGI_FMT) 'spi_tor_rot         ',  spi_tor_rot
+     write(*,INTG_FMT) 'n_spi               ',  n_spi
+     write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
+     write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
+     write(*,CHAR_FMT) 'spi_shard_file      ',  spi_shard_file
+     write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
+     write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
+     write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref
+     write(*,REAL_FMT) 'spi_quantity        ',  spi_quantity
+     write(*,REAL_FMT) 'spi_angle           ',  spi_angle
+     write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
+     write(*,REAL_FMT) 'tor_frequency       ',  tor_frequency
+     write(*,REAL_FMT) 'spi_Vel_diff        ',  spi_Vel_diff
+   end if
+
 #endif
   write(*,*)
   write(*,200)

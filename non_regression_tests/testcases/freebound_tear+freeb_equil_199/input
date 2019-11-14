@@ -99,6 +99,4 @@
  iter_precon = 11
  gmres_max_iter = 40
  gmres_tol = 1.d-7
-
- use_murge = .f.
 /

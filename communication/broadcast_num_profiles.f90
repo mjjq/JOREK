@@ -78,6 +78,38 @@ if ( num_T ) then
   call MPI_BCAST(num_T_y3,num_T_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
+if ( num_Ti ) then
+  call MPI_BCAST(num_Ti_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  if ( my_id /= 0 ) then
+     call tr_allocate(num_Ti_x,1,num_Ti_len,"num_Ti_x",CAT_UNKNOWN)
+     call tr_allocate(num_Ti_y0,1,num_Ti_len,"num_Ti_y0",CAT_UNKNOWN)
+     call tr_allocate(num_Ti_y1,1,num_Ti_len,"num_Ti_y1",CAT_UNKNOWN)
+     call tr_allocate(num_Ti_y2,1,num_Ti_len,"num_Ti_y2",CAT_UNKNOWN)
+     call tr_allocate(num_Ti_y3,1,num_Ti_len,"num_Ti_y3",CAT_UNKNOWN)
+  end if
+  call MPI_BCAST(num_Ti_x,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_Ti_y0,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_Ti_y1,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_Ti_y2,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_Ti_y3,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+end if
+
+if ( num_Te ) then
+  call MPI_BCAST(num_Te_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  if ( my_id /= 0 ) then
+     call tr_allocate(num_Te_x,1,num_Te_len,"num_Te_x",CAT_UNKNOWN)
+     call tr_allocate(num_Te_y0,1,num_Te_len,"num_Te_y0",CAT_UNKNOWN)
+     call tr_allocate(num_Te_y1,1,num_Te_len,"num_Te_y1",CAT_UNKNOWN)
+     call tr_allocate(num_Te_y2,1,num_Te_len,"num_Te_y2",CAT_UNKNOWN)
+     call tr_allocate(num_Te_y3,1,num_Te_len,"num_Te_y3",CAT_UNKNOWN)
+  end if
+  call MPI_BCAST(num_Te_x,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_Te_y0,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_Te_y1,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_Te_y2,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_Te_y3,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+end if
+
 if ( num_ffprime ) then
   call MPI_BCAST(num_ffprime_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if ( my_id /= 0 ) then

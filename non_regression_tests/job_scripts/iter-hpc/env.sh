@@ -3,24 +3,33 @@ eval `tclsh /work/imas/opt/modules-tcl/modulecmd.tcl $(basename $SHELL) autoinit
 
 module purge
 
-module use /work/imas/opt/EasyBuild/modules/all
 module use /work/imas/etc/modules/all
 
-module load cURL/7.40.0-GCC-4.8.3
-module load intel/17.0.4
-module load mpich2/3.1.3-intel
-module load scotch/5.1.12b
-module load metis/5.1.0
-module load mumps/4.10.0
-module load pastix/5.2.2.16
-module load fftw/3.3.4
-module load hdf5
-module unload GCC
+module load cURL/7.58.0-GCCcore-6.4.0
+module load MUMPS/5.1.2-intel-2018a-metis
+module load PaStiX/5.2.3-intel-2018a
+module load FFTW/3.3.7-intel-2018a
+module load HDF5/1.10.1-intel-2018a
 
+module avail MUMPS
+module avail SCOTCH
+module avail PaStiX
+module avail ParMETIS
+module show PaStiX/5.2.3-intel-2018a
+module show SCOTCH/6.0.4-intel-2018a
+module show MUMPS/5.1.2-intel-2018a-metis
+module show ParMETIS/4.0.3-intel-2018a
 module list
+ls $EBROOTPASTIX/lib
+ls $EBROOTSCOTCH/lib
+ls $EBROOTMUMPS/lib
+ls $EBROOTPARMETIS/lib
 
-export ZLIB_HOME=/work/imas/opt/EasyBuild/software/zlib/1.2.8-gompi-1.5.16
 
+export PASTIX_HOME=$EBROOTPASTIX
+export MUMPS_HOME=$EBROOTMUMPS
+export METIS_HOME=$EBROOTPARMETIS
+export SCOTCH_HOME=$EBROOTSCOTCH
 export LANG=C
 export JOREK_HOST=iter-hpc
 export compilethreads=4
@@ -28,6 +37,7 @@ export MAKEFLAGS="-j$compilethreads"
 export PRERUN="export OMP_NUM_THREADS=4"
 export MPIRUN="mpirun -np "
 export BATCHCOMMAND="qsub"
+export CXXFLAGS=-O0 # problem with stdio library on ITER http://gcc.1065356.n8.nabble.com/g-4-8-fails-with-Ox-option-td953876.html
 
 export http_proxy=10.10.240.146:8080
 export https_proxy=10.10.240.146:8080

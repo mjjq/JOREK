@@ -32,7 +32,6 @@ USE_WSMP   = 0
 USE_FFTW   = 1
 USE_HDF5   = 1
 
-
 #Scotch library
 SCOTCH_HOME ?= $(EBROOTSCOTCH)
 #SCOTCH_HOME  = /home/ITER/vanvugd/source/scotch_5.1.12
@@ -80,7 +79,7 @@ LIBDIERCKX = -L$(DIERCKX_HOME) -ldierckx
 #LIBLAPACK = -L$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
 #SCALAP    = -L$(MKL) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 
 
-HDF5_HOME=$(EBROOTHDF5)
+HDF5_HOME?=$(EBROOTHDF5)
 HDF5INCLUDE=$(HDF5_HOME)/include
 HDF5LIB=$(HDF5_HOME)/lib/libhdf5hl_fortran.a \
         $(HDF5_HOME)/lib/libhdf5_hl.a        \

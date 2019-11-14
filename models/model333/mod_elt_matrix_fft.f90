@@ -14,7 +14,7 @@ contains
   !------------------------------------------------------------------------------------------------------------------------------
   !------------------------------------------------------------------------------------------------------------------------------
   !------------------------------------------------------------------------------------------------------------------------------
-  subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
+  subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
   ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g_arg, delta_s_arg, delta_t_arg)
 
     ! --- Modules
@@ -57,7 +57,7 @@ contains
     real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_p
     real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_ss, eq_st, eq_tt
     real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: delta_g_arg, delta_s_arg, delta_t_arg
-
+    
     ! --- Indexes
     integer    :: i_ij, ij_tmp
     integer    :: i_kl, kl_tmp
@@ -71,7 +71,7 @@ contains
     ! --- Routine variables (Xpoint and axis)
     logical    :: xpoint2
     integer    :: xcase2
-    real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
+    real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
     
     ! --- Integration weight
     real*8     :: wst
@@ -123,7 +123,7 @@ contains
 
     	  call ELM_build_variables(element, nodes, ms, mt, i_plane)
           
-    	  call ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, i_plane)
+    	  call ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, i_plane)
 
     	  ! --- Now the equations, first the RHS
     	  do i_vertex =1,n_vertex_max

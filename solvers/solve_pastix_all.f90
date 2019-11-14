@@ -15,7 +15,11 @@ use mod_coicsr
 
 implicit none
 
+#ifdef USE_PASTIX
 #include "pastix_fortran.h"
+#else
+#include "no_pastix_fortran.h"
+#endif
 
 integer                  :: n_cpu, index_min, index_max       ! global index_min, index_max for this cpu
 real*8,allocatable       :: column_local(:)

@@ -1,0 +1,5 @@
+This folder contains scripts to run a penning-trap testcase in different grid layouts.
+Use run.sh to compile and run a testcase (by using an optional filename argument) or all testcases (run without arguments).
+See http://jorek.eu/wiki/doku.php?id=penning_test for more details about the testcase.
+
+If one of the testcases fails, use gnuplot to load 'penning_error.gp' to see the scaling of the error.

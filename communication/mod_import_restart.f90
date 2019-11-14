@@ -42,6 +42,9 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   use data_structure
   use phys_module
   use pellet_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_neutral_source
+#endif
   use vacuum, only: import_restart_vacuum, current_FB_fact
   use mod_element_rtree, only: populate_element_rtree
   
@@ -60,6 +63,16 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
+  real*8,  allocatable :: spi_R_arr (:)
+  real*8,  allocatable :: spi_Z_arr (:)
+  real*8,  allocatable :: spi_phi_arr (:)
+  real*8,  allocatable :: spi_Vel_R_arr (:)
+  real*8,  allocatable :: spi_Vel_Z_arr (:)
+  real*8,  allocatable :: spi_Vel_RxZ_arr (:)
+  real*8,  allocatable :: spi_radius_arr (:)
+  real*8,  allocatable :: spi_abl_arr (:)
+
+  integer              :: n_spi_check
   logical              :: modes_changed
  
   ! --- Perturbation-Import variables
@@ -300,6 +313,78 @@ endif
     read(21,err=999, end=999)  pellet_particles, pellet_R, pellet_Z
     write(*,'(A,e12.4,2f10.5)') ' *** PELLET PARAMETERS : ',pellet_particles, pellet_R, pellet_Z
   endif
+
+  if (using_spi) then
+    if (n_spi >= 1) then
+
+      if (index_start >= 1) then
+
+        if (allocated(xtime_spi_ablation)) &
+          call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation,1,n_spi,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)
+        if (allocated(xtime_spi_ablation_rate)) &
+          call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+
+        read(21)  xtime_spi_ablation(1:n_spi,1:index_start)
+        read(21)  xtime_spi_ablation_rate(1:n_spi,1:index_start)
+      end if
+
+      read(21,err=999, end=999) n_spi_check
+
+      if (n_spi_check /= n_spi) then
+        write(*,*) "Inconsistency in n_spi detected, exiting!"
+        stop
+      end if
+      
+      allocate (spi_R_arr(n_spi))
+      allocate (spi_Z_arr(n_spi))
+      allocate (spi_phi_arr(n_spi))
+      allocate (spi_Vel_R_arr(n_spi))
+      allocate (spi_Vel_Z_arr(n_spi))
+      allocate (spi_Vel_RxZ_arr(n_spi))
+      allocate (spi_radius_arr(n_spi))
+      allocate (spi_abl_arr(n_spi))
+    
+      read(21,err=999, end=999)  spi_R_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_Z_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_phi_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_Vel_R_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_Vel_Z_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_Vel_RxZ_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_radius_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_abl_arr(1:n_spi)
+
+      do i=1, n_spi
+        pellets(i)%spi_R       = spi_R_arr(i)
+        pellets(i)%spi_Z       = spi_Z_arr(i)
+        pellets(i)%spi_phi     = spi_phi_arr(i)
+        pellets(i)%spi_Vel_R   = spi_Vel_R_arr(i)
+        pellets(i)%spi_Vel_Z   = spi_Vel_Z_arr(i)
+        pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_arr(i)
+        pellets(i)%spi_radius  = spi_radius_arr(i)
+        pellets(i)%spi_abl     = spi_abl_arr(i)
+
+        write(*,'(A,I5,6ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+                        pellets(i)%spi_phi, pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
+      end do
+
+      deallocate (spi_R_arr)
+      deallocate (spi_Z_arr)
+      deallocate (spi_phi_arr)
+      deallocate (spi_Vel_R_arr)
+      deallocate (spi_Vel_Z_arr)
+      deallocate (spi_Vel_RxZ_arr)
+      deallocate (spi_radius_arr)
+      deallocate (spi_abl_arr)
+
+      if (spi_tor_rot) then
+        read(21,err=999, end=999) ns_phi_rotate 
+      end if
+
+    end if
+  end if
+
 999 continue
   
   close(21)
@@ -479,6 +564,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use data_structure
   use phys_module
   use pellet_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_neutral_source
+#endif
   use vacuum, only: import_HDF5_restart_vacuum, current_FB_fact
   use mod_element_rtree, only: populate_element_rtree
 #ifdef USE_HDF5
@@ -518,7 +606,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id
-  integer            :: ind
+  integer            :: ind, n_spi_check
   
   real(RKIND), allocatable :: t_x(:,:,:)
   real(RKIND), allocatable :: t_values(:,:,:,:)
@@ -544,6 +632,20 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer,     allocatable :: t_sons(:,:)
   integer,     allocatable :: t_contain_node(:,:)
   integer,     allocatable :: t_nref(:)
+
+! local variables
+
+  real*8, allocatable :: spi_R_arr (:)
+  real*8, allocatable :: spi_Z_arr (:)
+  real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_Vel_R_arr (:)
+  real*8, allocatable :: spi_Vel_Z_arr (:)
+  real*8, allocatable :: spi_Vel_RxZ_arr (:)
+  real*8, allocatable :: spi_radius_arr (:)
+  real*8, allocatable :: spi_abl_arr (:)
+
+  integer :: err_alloc, err_exists
+  logical :: flag_exists
 
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
   real*8, allocatable :: t_energies2(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
@@ -787,7 +889,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_array2D_reading_int(file_id,t_sons,        'sons')
   call HDF5_array2D_reading_int(file_id,t_contain_node,'contain_node')
   call HDF5_array1D_reading_int(file_id,t_nref,        'nref')
- 
+
   do i=1,element_list%n_elements
     element_list%element(i)%vertex	 = t_vertex(i,:)
     element_list%element(i)%neighbours   = t_neighbours(i,:)
@@ -908,7 +1010,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
     part_src_out_t = 0.d0
     call HDF5_array1D_reading(file_id,part_src_out_t,'part_src_out_t')
-
+  
     if (allocated(E_tot_t)) call tr_deallocate(E_tot_t,"E_tot_t",CAT_UNKNOWN)
     call tr_allocate(E_tot_t,1,index_start+nstep,"E_tot_t",CAT_UNKNOWN)
     E_tot_t = 0.d0
@@ -1049,7 +1151,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     mag_ener_src_tot = 0.d0
     call HDF5_array1D_reading(file_id,mag_ener_src_tot,'mag_ener_src_tot')
 
-
 #ifdef JECCD                   
     if (allocated(t_energies2))   call tr_deallocate(t_energies2,"t_energies2",CAT_UNKNOWN)
     call tr_allocate(t_energies2,1,n_tor_tmp,1,2,1,index_start+nstep, "t_energies2",CAT_UNKNOWN)
@@ -1140,6 +1241,81 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
      call HDF5_real_reading(file_id,pellet_Z,"pellet_Z")
      call HDF5_real_reading(file_id,pellet_particles,"pellet_particles")
   endif
+
+  if (using_spi) then
+    if (n_spi >= 1) then
+
+      if (index_start >= 1) then
+        if (allocated(xtime_spi_ablation)) &
+          call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation,1,n_spi,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)
+        if (allocated(xtime_spi_ablation_rate)) &
+          call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+        call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,index_start+nstep,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+
+        call HDF5_array2D_reading(file_id,xtime_spi_ablation,"xtime_spi_ablation")
+        call HDF5_array2D_reading(file_id,xtime_spi_ablation_rate,"xtime_spi_ablation_rate")
+      end if
+
+      call H5Lexists_f(file_id,"n_spi",flag_exists,err_exists) !Backward compatibility
+      if (flag_exists .and. err_exists == 0) then
+        call HDF5_integer_reading(file_id,n_spi_check,"n_spi")
+        if (n_spi_check /= n_spi) then
+          write(*,*) "Inconsistency in n_spi detected, exiting!"
+          stop
+        end if
+      else
+        write(*,*)"Backward Compatibility: No n_spi information found, assuming consistent."
+      end if
+      
+      allocate (spi_R_arr(n_spi))
+      allocate (spi_Z_arr(n_spi))
+      allocate (spi_phi_arr(n_spi))
+      allocate (spi_Vel_R_arr(n_spi))
+      allocate (spi_Vel_Z_arr(n_spi))
+      allocate (spi_Vel_RxZ_arr(n_spi))
+      allocate (spi_radius_arr(n_spi))
+      allocate (spi_abl_arr(n_spi))
+
+      call HDF5_array1D_reading(file_id,spi_R_arr,"spi_R_arr")
+      call HDF5_array1D_reading(file_id,spi_Z_arr,"spi_Z_arr")
+      call HDF5_array1D_reading(file_id,spi_phi_arr,"spi_phi_arr")
+      call HDF5_array1D_reading(file_id,spi_Vel_R_arr,"spi_Vel_R_arr")
+      call HDF5_array1D_reading(file_id,spi_Vel_Z_arr,"spi_Vel_Z_arr")
+      call HDF5_array1D_reading(file_id,spi_Vel_RxZ_arr,"spi_Vel_RxZ_arr")
+      call HDF5_array1D_reading(file_id,spi_radius_arr,"spi_radius_arr")
+      call HDF5_array1D_reading(file_id,spi_abl_arr,"spi_abl_arr")
+
+      do i=1, n_spi
+        pellets(i)%spi_R       = spi_R_arr(i)
+        pellets(i)%spi_Z       = spi_Z_arr(i)
+        pellets(i)%spi_phi     = spi_phi_arr(i)
+        pellets(i)%spi_Vel_R   = spi_Vel_R_arr(i)
+        pellets(i)%spi_Vel_Z   = spi_Vel_Z_arr(i)
+        pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_arr(i)
+        pellets(i)%spi_radius  = spi_radius_arr(i)
+        pellets(i)%spi_abl     = spi_abl_arr(i)
+
+        write(*,'(A,I5,6ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+                        pellets(i)%spi_phi, pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
+      end do
+
+      deallocate (spi_R_arr)
+      deallocate (spi_Z_arr)
+      deallocate (spi_phi_arr)
+      deallocate (spi_Vel_R_arr)
+      deallocate (spi_Vel_Z_arr)
+      deallocate (spi_Vel_RxZ_arr)
+      deallocate (spi_radius_arr)
+      deallocate (spi_abl_arr)
+
+      if (spi_tor_rot) then
+        call HDF5_real_reading(file_id,ns_phi_rotate,"ns_phi_rotate")
+      end if
+
+
+    end if
+  end if
 
   call HDF5_close(file_id)
  

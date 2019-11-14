@@ -65,8 +65,8 @@ program JOREK2
 #endif
   use mpi_mod
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-  use mgi_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_neutral_source
 #endif
 
   use, intrinsic :: iso_c_binding
@@ -172,7 +172,7 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
-
+ 
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
   res = 0.d0   
@@ -249,9 +249,9 @@ required = 0
   
   ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)
-  
+ 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  
+
   ! --- Some checks not to waste any cpu time
   if (required .ne. provided) then
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
@@ -359,10 +359,10 @@ required = 0
   ! --- Initialize live data file which will be filled during the code run
   if ( my_id == 0 ) call init_live_data()
 #ifdef JECCD
-  if ( my_id == 0) ) call init_live_data2()
-  if ( my_id == 0) ) call init_live_data3()
+  if ( my_id == 0 ) call init_live_data2()
+  if ( my_id == 0 ) call init_live_data3()
 #ifdef JEC2DIAG
-   if ( my_id == 0 ) call init_live_data4()
+  if ( my_id == 0 ) call init_live_data4()
 #endif
 #endif
   
@@ -992,8 +992,12 @@ required = 0
        endif
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-       call update_mgi(my_id,node_list,element_list)
+       call total_neutrals(my_id,node_list,element_list)
+       if (using_spi .and. t_now >= t_ns) then
+         call update_spi(my_id,node_list,element_list)
+       end if
 #endif
+
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)

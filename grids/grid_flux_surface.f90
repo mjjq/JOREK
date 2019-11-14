@@ -384,6 +384,11 @@ enddo
 element_list%n_elements = (nrnew-1)*npnew
 node_list%n_nodes       = nrnew*npnew
 
+if ( element_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_flux_surface: hard-coded parameter n_elements_max is too small'
+  stop
+end if
+
 n_node_start    = 0
 n_element_start = 0
 n_index_start   = 0

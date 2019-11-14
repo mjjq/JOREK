@@ -1396,6 +1396,11 @@ enddo
 
 newelement_list%n_elements = (n_flux - 1)*(n_tht - 1)
 
+if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
+
 node_start = (n_flux-1) * (n_tht-1) + n_xpoint
 
 do i=1,n_open
@@ -1432,6 +1437,11 @@ do i=1,n_open
 enddo
 
 newelement_list%n_elements = newelement_list%n_elements + (n_open) * (n_tht-1)
+
+if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 node_start   = (n_flux-1)*(n_tht-1) + 4 + (n_open+1) * n_tht - 2
 
@@ -1615,11 +1625,21 @@ if (extend) then
   enddo
 
   newelement_list%n_elements = newelement_list%n_elements + n_ext * (n_tht-1) + 2*n_ext*(n_leg-1)
+  
+  if ( newelement_list%n_elements > n_elements_max ) then
+    write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+    stop
+  end if
 
 endif
 
 !newelement_list%n_elements = newelement_list%n_elements + (n_open+n_private)*(2*n_leg-2)
 newelement_list%n_elements = index
+
+if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 write(*,*) ' definition of elements completed'
 
@@ -1789,6 +1809,10 @@ node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 element_list%n_elements = newelement_list%n_elements
 element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
 
+if ( element_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 !----temporary, needs to be completed, neighbour information
 do i=1, element_list%n_elements

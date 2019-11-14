@@ -452,6 +452,10 @@ contains
 #else
               ! -- For PaStiX solver version 6.x
 #ifdef USE_BLOCK
+! ############################################################################
+! ####### these lines can be replaced by pastix_task_analyze in the future,
+! ####### as soon as PaStiX 6 supports multiple dofs in all solver steps.
+! ############################################################################
               call pastix_subtask_order(pastix_data,pastix_spm,pastix_myorder,pastix_info)
               call pastix_subtask_symbfact(pastix_data,pastix_info)
               call pastix_subtask_reordering(pastix_data,pastix_info)
@@ -460,6 +464,9 @@ contains
               call pastixExpand(pastix_data,pastix_spm)
              
               call pastix_subtask_blend(pastix_data,pastix_info)
+! ############################################################################
+! ####### end these lines can be replaced...
+! ############################################################################
 #else
               call pastix_task_analyze(pastix_data,pastix_spm,pastix_info)
 #endif
@@ -652,6 +659,7 @@ contains
 #ifndef USE_PASTIX6
     ! -- For PaStiX solver before version 6.x
     call tr_set_precondmem(pastix_dparm(DPARM_MEM_MAX)) ! DPARM_MEM_MAX DEPRECATED IN PASTIX6: how to change this?
+    ! ############### This should be looked at at some point
 #endif
     call tr_print_memsize("AfterSolveN")
     call r3_info_end (r3_info_index_0)         ! timing

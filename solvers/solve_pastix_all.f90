@@ -334,6 +334,10 @@ if (.not. pastix_analysed) then
 #else
   ! -- For PaStiX solver version 6.x
 #ifdef USE_BLOCK
+! ############################################################################
+! ####### these lines can be replaced by pastix_task_analyze in the future,
+! ####### as soon as PaStiX 6 supports multiple dofs in all solver steps.
+! ############################################################################
   call pastix_subtask_order(pastix_data,pastix_spm,pastix_myorder,pastix_info)
   call pastix_subtask_symbfact(pastix_data,pastix_info)
   call pastix_subtask_reordering(pastix_data,pastix_info)
@@ -342,6 +346,9 @@ if (.not. pastix_analysed) then
   call pastixExpand(pastix_data,pastix_spm)
 
   call pastix_subtask_blend(pastix_data,pastix_info)
+! ############################################################################
+! ####### end these lines can be replaced...
+! ############################################################################
 #else
   call pastix_task_analyze(pastix_data,pastix_spm,pastix_info)
 #endif

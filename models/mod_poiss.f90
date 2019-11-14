@@ -371,6 +371,7 @@ if (my_id == 0) then
   allocate(pastix_spm_check)
   call spmCheckAndCorrect(pastix_spm, pastix_spm_check, pastix_info)
   if (pastix_info .ne. 0) then
+    ! this if clause is always entered since duplicate entries are removed from the matrix
     call spmExit(pastix_spm)
     pastix_spm = pastix_spm_check
   endif

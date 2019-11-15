@@ -42,7 +42,7 @@ function usage () {
   echo "  -time <time>,<time>         Selects time step roughly at <time> (JOREK-units)"
   echo "  -time <time>-<dtime>-<time> Selects time step within given time range with given interval"
   echo "  -dtime <dtime>              Equivalent to -time 0-<dtime>-infinity"
-  echo "  -sec                        -time is given in seconds instead of in JOREK-units"
+  echo "  -ms                         -time is given in milliseconds instead of in JOREK-units"
   echo "  -l                          Creates a file containing all selected timesteps and times (default:off)"
   echo "  -zip                        Compress the .dat files using gzip"
   echo "  -stpts                      Filename of startpoints [default:stpts]"
@@ -112,6 +112,8 @@ function do_convert () {
   targetFile1="$targetDir/poinc_rho-theta.$stepnum.dat" # Target filename with same number as source
   
   # Convert only new, selected restart files
+  #   If -only flag is used, $select_arguments is empty and selection of steps is carried out below via 'is_selected'.
+  #   If -time flag is used, selection of steps has happened before by python and every incoming step is accepted here.
   if ( [ ! -e $targetFile0 ] || [ "$file" -nt "$targetFile0" ] ) \
     &&  ( [ ! -z "$select_arguments" ] || [ `is_selected $stepnum` == "yes" ] ) ; then
     rm -f jorek_restart.${RST_TYPE}
@@ -176,7 +178,7 @@ while [ $# -gt 1 ]; do
   elif ( [ "$1" == "-time" ] || [ "$1" == "-dtime" ] ) ; then
     select_arguments="$1 $2"
     shift 2
-  elif [ "$1" == "-sec" ]; then
+  elif [ "$1" == "-ms" ]; then
     select_arguments="$select_arguments $1"
     shift 1
   elif [ "$1" == "-l" ]; then
@@ -285,7 +287,7 @@ done
 . ${SCRIPTDIR}/detect_rst_type.sh
 if [ "$RST_TYPE" != "h5" ] && [ "$RST_TYPE" != "rst" ]; then
   echo "ERROR: RST_TYPE not detected properly: $RST_TYPE"
-  stop
+  exit 0
 fi
 
 
@@ -299,7 +301,11 @@ else
   files=`${SCRIPTDIR}/select_restart_files.sh $select_arguments`
   if [ "${files:0:5}" == "ERROR" ] ; then
     echo $files
-    stop
+    echo ""
+    echo "ABORTING"
+    echo ""
+    rm -rf $local_tmp_dir
+    exit 0
   fi
 fi
 for file in $files; do

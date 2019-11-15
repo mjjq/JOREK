@@ -22,9 +22,9 @@ function usage() {
   echo "  -time <time>,<time>         Selects time step roughly at <time> (JOREK-units)"
   echo "  -time <time>-<dtime>-<time> Selects time step within given time range with given interval"
   echo "  -dtime <dtime>              Equivalent to -time 0-<dtime>-infinity"
-  echo "  -sec                        -time is given in seconds instead of in JOREK-units"
+  echo "  -ms                         -time is given in milli seconds instead of in JOREK-units"
   echo "  -s                          Prints only the selected stepnumbers, otherwise the full paths (default)"
-  echo "  -l                          Creates a file containing all selected timesteps and times (default:off)"
+  echo "  -l                          Creates a file listing all selected timesteps and times (default:off)"
   echo ""
   echo "Remarks:"
   echo "  * Option -only will only select those restart files,"
@@ -36,9 +36,9 @@ function usage() {
 
 # --- Process command line parameters
 selected_steps="0-99999"
-onlyT=""
-full=1
-sec=0
+selected_times=""
+full_path=1
+ms=0
 list=0
 while [ $# -gt 0 ]; do
   if [ "$1" == "-j" ]; then
@@ -51,16 +51,16 @@ while [ $# -gt 0 ]; do
     selected_steps="0-$2-99999"
     shift 2
   elif [ "$1" == "-dtime" ]  ; then
-    onlyT="0-$2-infinity"
+    selected_times="0-$2-infinity"
     shift 2
   elif [ "$1" == "-time" ]; then
-    onlyT="$2"
+    selected_times="$2"
     shift 2
-  elif [ "$1" == "-sec" ]; then
-    sec=1
+  elif [ "$1" == "-ms" ]; then
+    ms=1
     shift 1
   elif [ "$1" == "-s" ]; then
-    full=0
+    full_path=0
     shift 1 
   elif [ "$1" == "-l" ]; then
     list=1
@@ -101,7 +101,7 @@ sort -n |  sed  -e "s/\.\/jorek\([0-9]*\)\.h5/\1/g" `
 
 # --- Checks, if restart files are present, 
 #     and if macroscopic_vars are present, if time points are selected
-if  [ -z "$avail_steps" ] || ( [ ! -f "./macroscopic_vars.dat" ] && [ ! -z $onlyT ] ) ; then
+if  [ -z "$avail_steps" ] || ( [ ! -f "./macroscopic_vars.dat" ] && [ ! -z $selected_times ] ) ; then
   echo "ERROR: No restart files or macroscopic_vars.dat could be detected."
   exit 0
 fi
@@ -113,13 +113,13 @@ unit=`${SCRIPTDIR}/extract_live_data.sh sqrt_mu0_rho0`
 
 
 # --- If time points are given, select restart files via the Python-script
-if [ ! -z $onlyT ]; then
+if [ ! -z $selected_times ]; then
   name_times="times_tmp_$$"
   name_steps="steps_tmp_$$"
   echo "0." > $name_times #Set t=0. for the 0th Step
   ${SCRIPTDIR}/extract_live_data.sh times | tail -n +2 | sed  -e "s/[0-9 ]* //g"  >> $name_times
   echo $avail_steps > $name_steps
-  python ${SCRIPTDIR}/select_restart_files.py $name_times $name_steps $full $onlyT $list $unit $sec
+  python ${SCRIPTDIR}/select_restart_files.py $name_times $name_steps $full_path $selected_times $list $unit $ms
   rm $name_times
   rm $name_steps
 	
@@ -135,7 +135,7 @@ else
          [[ ${#step_numbers[*]} -eq 3 && ${step_numbers[0]} -le $step_number && $(($step_number % ${step_numbers[1]})) -eq 0 && ${step_numbers[2]} -ge $step_number ]] ; then
 
         # --- Prints list of absolute paths of the selected restart files or only their step numbers
-        if [ $full ] ; then
+        if [ $full_path ] ; then
           echo "$sourceDir/jorek$avail_step.${RST_TYPE}"
         else
           echo $avail_step

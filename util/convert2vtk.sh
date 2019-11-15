@@ -41,7 +41,7 @@ function usage () {
   echo "  -time <time>,<time>         Selects time step roughly at <time> (default in JOREK-units)"
   echo "  -time <time>-<dtime>-<time> Selects time step within given time range with given interval"
   echo "  -dtime <dtime>              Equivalent to -time 0-<dtime>-inf"
-  echo "  -sec                        -time is given in seconds instead of in JOREK-units"
+  echo "  -ms                         -time is given in milliseconds instead of in JOREK-units"
   echo "  -l                          Creates a file containing all selected timesteps and times (default:off)"
   echo "  -zip                        Compress the .vtk files using gzip"
   echo ""
@@ -206,7 +206,7 @@ while [ $# -gt 1 ]; do
   elif ( [ "$1" == "-time" ] || [ "$1" == "-dtime" ] ) ; then
     select_arguments="$select_arguments $1 $2"
     shift 2
-  elif [ "$1" == "-sec" ]; then
+  elif [ "$1" == "-ms" ]; then
     select_arguments="$select_arguments $1"
     shift 1
   elif [ "$1" == "-l" ]; then

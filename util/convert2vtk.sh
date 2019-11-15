@@ -132,6 +132,8 @@ function do_convert () {
   targetFile="$targetDir/$targetFile" # Target filename with full path
 
   # Convert only new, selected restart files
+  #   If -only flag is used, $select_arguments is empty and selection of steps is carried out below via 'is_selected'.
+  #   If -time flag is used, selection of steps has happened before by python and every incoming step is accepted here.
   if ( [ ! -e $targetFile ] || [ "$file" -nt "$targetFile" ] ) \
     &&  ( [ ! -z "$select_arguments" ] || [ `is_selected $stepnum` == "yes" ] ) ; then
     rm -f jorek_restart.${RST_TYPE}
@@ -197,11 +199,9 @@ while [ $# -gt 1 ]; do
     shift 2
   elif [ "$1" == "-only" ]; then
     selected_steps="$2"
-    #select_arguments="$select_arguments $1 $2"
     shift 2
   elif [ "$1" == "-donly" ]; then
     selected_steps="0-$2-99999"
-    #select_arguments="$select_arguments $1 $2"
     shift 2
   elif ( [ "$1" == "-time" ] || [ "$1" == "-dtime" ] ) ; then
     select_arguments="$select_arguments $1 $2"
@@ -511,8 +511,12 @@ if [ -z "$select_arguments" ]; then
   files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
 else
   files=`${SCRIPTDIR}/select_restart_files.sh $select_arguments`
-  if [ "$files" == "Files are missing" ] ; then
-    echo "Files to select restart files are missing"
+  if [ "${files:0:5}" == "ERROR" ] ; then
+    echo $files
+    echo ""
+    echo "ABORTING"
+    echo ""
+    rm -rf $local_tmp_dir
     exit 0
   fi
 fi

@@ -487,7 +487,7 @@ module postproc_help
         write(*,*) 'See also "help jorek-units"'
       case ( 'for-si-units' ) 
         write(*,*) 'Usage:'
-        write(*,*) '  for-jorek-units'
+        write(*,*) '  for-si-units'
         write(*,*) ''
         write(*,*) 'Time parameters in a following "for time" loop are given in SI units.'
         write(*,*) ''

@@ -28,6 +28,7 @@ program JOREK2
   use mod_parameters
   use mod_log_params
   use global_distributed_matrix
+  use harmonic_distributed_matrix!, only: ijA_size_harm, ijA_index_harm, irn_jcn_harm
   use nodes_elements
   use pellet_module
   use equil_info
@@ -38,6 +39,7 @@ program JOREK2
   use live_data
   use mod_bootstrap_functions
   use construct_matrix_mod, only : construct_matrix
+  use construct_harmonic_matrix_mod                !*psv
   use mod_global_matrix_structure
   use mod_import_restart
   use mod_export_restart
@@ -130,7 +132,7 @@ program JOREK2
   real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
   integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint(2)
-  integer                  :: n_local_ELMs
+  integer                  :: n_local_ELMs, n_local_elms_harm
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
   integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
@@ -138,6 +140,7 @@ program JOREK2
   character*14             :: fileout
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
+  integer, allocatable     :: local_elms_harm(:), index_min_harm(:), index_max_harm(:)
   real*8                   :: zjz, E_min, E_max
   logical                  :: solve_only, to_quit, freeb_equil2
   integer*4                :: rank, comm_size 
@@ -168,11 +171,18 @@ program JOREK2
   complex*16 :: out_fft(1:n_plane)
 #endif
 
+#ifdef PSV
+! =================== PSV TEST VARIABLES ==================
+  real*8,allocatable       :: A(:), rhs(:)
+  integer,allocatable      :: irn(:), jcn(:)
+! ======================================================
+#endif
+
   real*8  :: DUMMY_REAL(1:1)
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
- 
+  integer ::  i_tor_min, i_tor_max 
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
   res = 0.d0   
@@ -759,6 +769,11 @@ required = 0
     index_size  = n_cpu
     id_elements = my_id
 
+
+    call tr_allocate(local_elms_harm,1,element_list%n_elements,"local_elms_harm",CAT_FEM)
+    call tr_allocate(index_min_harm,1,index_size,"index_min_harm",CAT_FEM)
+    call tr_allocate(index_max_harm,1,index_size,"index_max_harm",CAT_FEM) 
+
     call tr_allocate(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
     call tr_allocate(index_min,1,index_size,"index_min",CAT_FEM)
     call tr_allocate(index_max,1,index_size,"index_max",CAT_FEM)
@@ -776,8 +791,12 @@ required = 0
     local_index_end   = index_max
     ! Build ijA_index, ijA_size and irn_jcn
 
+         i_tor_min = 1
+         i_tor_max = n_tor
     call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
-         local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
+         local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),& 
+                          ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max,&
+                          n_glob, nz_glob, n_matrix_block_size)
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
       call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1)) 
@@ -903,15 +922,150 @@ required = 0
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
     
+    i_tor_min = 1
+    i_tor_max = n_tor
     call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),                  &
       index_max(my_id+1), xpoint, xcase, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,   &
-      Z_xpoint, psi_xpoint)
+      Z_xpoint, psi_xpoint, i_tor_min, i_tor_max)
 
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
        call clck_ldiff(t0,t1,tsecond)
       write(*,FMT_TIMING) my_id, '# Elapsed time construct_matrix :',tsecond
     endif     
+
+
+
+!#ifdef PSV        
+    ! Build the harmonic matrix 
+    if(n_tor.gt.1) then
+
+      call clck_time_barrier(t0)
+
+      if(my_id .lt. m_cpu)  then
+       i_tor_min = 1
+       i_tor_max = 1
+      else
+       i_tor_min = 2*(my_id - MOD(my_id, m_cpu))/m_cpu
+       i_tor_max = i_tor_min + 1
+      endif
+
+ 
+    call distribute_nodes_elements_harmonic(my_id,m_cpu,n_cpu,node_list,element_list,local_elms_harm,	  &
+    	 n_local_elms_harm,index_min_harm,index_max_harm)
+
+    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
+                                 local_elms_harm,n_local_elms_harm,index_min_harm(id_elements+1),& 
+                                 index_max_harm(id_elements+1), ijA_index_harm, ijA_size_harm,   &
+                                 irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, i_tor_max,& 
+                                 n_glob_harm, nz_glob_harm, n_matrix_block_size_harm)
+    
+
+     call construct_harmonic_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms_harm, n_local_elms_harm,& 
+                                    index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint, xcase, R_axis, Z_axis,&
+                                     psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm)
+
+     call clck_time_barrier(t1) 
+
+    if (my_id .eq. 0) then
+       call clck_ldiff(t0,t1,tsecond)
+      write(*,FMT_TIMING) my_id, '# Elapsed time construct_harmonic_matrix :',tsecond
+    endif     
+
+
+#ifdef PSV
+
+    if (my_id .eq. 1) then
+     write(200,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
+     write(200,*) 'i, rhs_construct ' 
+     do i = 1, mumps_par%n
+     write(200,*) i, mumps_par%rhs(i) 
+     enddo
+    endif
+
+
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+    write(*,*) 'psv1, my_id =', my_id, mumps_par%n, mumps_par%nz
+   
+    if (my_id .eq. 0) then
+      write(100,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
+      write(100,*) 'i, irn, jcn, A' 
+     do i = 1, mumps_par%nz
+     write(100,*) i, mumps_par%irn(i),mumps_par%jcn(i),mumps_par%A(i) 
+     enddo 
+      write(101,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
+      write(101,*) 'i, rhs ' 
+     do i = 1, mumps_par%n
+     write(101,*) i, mumps_par%rhs(i) 
+     enddo
+    endif     
+
+    write(*,*) 'psv2, my_id =', my_id, mumps_par%n, mumps_par%nz
+   
+    if (my_id .eq. 1) then
+      write(200,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
+      write(200,*) 'i, irn, jcn, A' 
+     do i = 1, mumps_par%nz
+      write(200,*) i, mumps_par%irn(i),mumps_par%jcn(i),mumps_par%A(i) 
+     enddo 
+      write(201,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
+      write(201,*) 'i, rhs ' 
+     do i = 1, mumps_par%n
+     write(201,*) i, mumps_par%rhs(i) 
+     enddo
+    endif     
+
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+   
+    write(*,*) 'psv3, my_id =', my_id, mumps_par%n, mumps_par%nz
+   
+    if (my_id .eq. 2) then
+      write(300,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
+      write(300,*) 'i, irn, jcn, A' 
+     do i = 1, mumps_par%nz
+      write(300,*) i, mumps_par%irn(i),mumps_par%jcn(i),mumps_par%A(i) 
+     enddo 
+      write(301,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
+      write(301,*) 'i, rhs ' 
+     do i = 1, mumps_par%n
+     write(301,*) i, mumps_par%rhs(i) 
+     enddo
+    endif     
+
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+   
+    write(*,*) 'psv4, my_id =', my_id, mumps_par%n, mumps_par%nz
+    if (my_id .eq. 3) then
+      write(400,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
+      write(400,*) 'i, irn, jcn, A' 
+     do i = 1, mumps_par%nz
+      write(400,*) i, mumps_par%irn(i),mumps_par%jcn(i),mumps_par%A(i) 
+     enddo 
+      write(401,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
+      write(401,*) 'i, rhs ' 
+     do i = 1, mumps_par%n
+     write(401,*) i, mumps_par%rhs(i) 
+     enddo
+    endif     
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+
+    allocate(A(mumps_par%nz))
+    allocate(irn(mumps_par%nz))
+    allocate(jcn(mumps_par%nz))
+    allocate(rhs(mumps_par%n))
+
+    A   = mumps_par%A
+    irn = mumps_par%irn
+    jcn = mumps_par%jcn
+    rhs = mumps_par%rhs
+
+#endif
+ 
+    endif
+
+
     ! Ici c'est OK
     !CALL MPI_Abort(MPI_COMM_WORLD, 1, ierr)
 
@@ -927,17 +1081,82 @@ required = 0
        endif
 
     else
-       call clck_time(t0)
-       if (.not. solve_only) then
-          call distribute_harmonics(my_id,my_id_n,n_cpu)
-       else
-          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
-       endif
-       call clck_time_barrier(t1)
-       call clck_ldiff(t0,t1,tsecond)
-       if (my_id .eq. 0) then
-          write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
-       end if
+      ! call clck_time(t0)
+      ! if (.not. solve_only) then
+      !    call distribute_harmonics(my_id,my_id_n,n_cpu)
+      ! else
+      !    call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
+      ! endif
+      ! call clck_time_barrier(t1)
+      ! call clck_ldiff(t0,t1,tsecond)
+      ! if (my_id .eq. 0) then
+      !    write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
+      ! end if
+
+#ifdef PSV        
+  
+    if (my_id .eq. 1) then
+     write(201,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
+     write(201,*) 'i, rhs_distributed ' 
+     do i = 1, mumps_par%n
+     write(201,*) i, mumps_par%rhs(i) 
+     enddo
+    endif
+
+  
+    if ((my_id .eq. 1)) then
+          
+       write(202,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
+      write(202,*) 'i, rhs_distributed, rhs_construct' 
+       do i = 1, mumps_par%n
+         if(abs(mumps_par%rhs(i)-rhs(i))/mumps_par%rhs(i).gt.1E-3)  write(202,*) i, mumps_par%rhs(i), rhs(i) 
+       enddo
+
+    endif     
+
+  
+    if ((my_id .eq. 0)) then
+      write(200,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
+      write(200,*) 'i, irn_distributed, irn_construct, irn_distributed-irn_construct' 
+     do i = 1, mumps_par%nz
+      if(mumps_par%irn(i).ne.irn(i))  write(200,*) i, mumps_par%irn(i), irn(i), mumps_par%irn(i)-irn(i) 
+     enddo 
+      write(201,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
+       write(201,*) 'i, jcn_distributed, jcn_construct, jcn_distributed-jcn_construct' 
+      do i = 1, mumps_par%nz
+      if(mumps_par%jcn(i).ne.jcn(i))  write(201,*) i, mumps_par%jcn(i), jcn(i), mumps_par%jcn(i) - jcn(i) 
+       enddo
+    
+       write(202,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
+      write(202,*) 'i, rhs_distributed, rhs_construct' 
+       do i = 1, mumps_par%n
+         if(abs(mumps_par%rhs(i)-rhs(i))/mumps_par%rhs(i).gt.1E-3)  write(202,*) i, mumps_par%rhs(i), rhs(i) 
+       enddo
+
+      write(203,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
+      write(203,*) 'i, A_distributed, A_construct' 
+     do i = 1, mumps_par%nz
+      if(abs(mumps_par%A(i)-A(i))/mumps_par%A(i).gt.1E-3)  write(203,*) i, mumps_par%A(i), A(i)!, mumps_par%A(i)-A(i) 
+    enddo 
+
+    endif     
+
+#endif
+   
+!    if (my_id .eq. 0) then
+!      write(200,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
+!      write(200,*) 'i, irn, jcn, A' 
+!     do i = 1, mumps_par%nz
+!      write(200,*) i, mumps_par%irn(i),mumps_par%jcn(i),mumps_par%A(i) 
+!    enddo 
+!      write(201,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
+!      write(201,*) 'i, rhs ' 
+!     do i = 1, mumps_par%n
+!      write(201,*) i, mumps_par%rhs(i) 
+!     enddo
+!    endif     
+
+
 
        call clck_time(t0)
        call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
@@ -1388,7 +1607,16 @@ endif
 #endif
 #endif
   endif
-  
+ 
+#ifdef PSV 
+   deallocate(A)
+   deallocate(irn)
+   deallocate(jcn)
+   deallocate(rhs)
+#endif
+
+
+ 
 #ifdef USE_FFTW
   call dfftw_destroy_plan(fftw_plan)
 #endif

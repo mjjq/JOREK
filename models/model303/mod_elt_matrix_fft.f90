@@ -98,15 +98,6 @@ real*8     :: amat_41_kn, amat_42_kn, amat_43_kn, amat_44_kn, amat_45_kn, amat_4
 real*8     :: amat_51_kn, amat_52_kn, amat_53_kn, amat_54_kn, amat_55_kn, amat_56_kn, amat_57_kn
 real*8     :: amat_61_kn, amat_62_kn, amat_63_kn, amat_64_kn, amat_65_kn, amat_66_kn, amat_67_kn
 real*8     :: amat_71_kn, amat_72_kn, amat_73_kn, amat_74_kn, amat_75_kn, amat_76_kn, amat_77_kn
-
-
-real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
-real*8     :: amat_51, amat_51_n, amat_52, amat_55, amat_56, amat_57, amat_57_k
-real*8     :: amat_61, amat_62, amat_63, amat_65, amat_66, amat_67, amat_65_k, amat_65_kn, amat_67_k, amat_16, amat_13
-real*8     :: amat_71_k, amat_71, amat_72, amat_75, amat_76, amat_75_n, amat_76_n, amat_15, amat_15_n, amat_16_n
-real*8     :: amat_12_n, amat_23_n, amat_51_k, amat_55_kn, amat_55_k, amat_55_n, amat_57_n, amat_57_kn, amat_75_k
-real*8     :: amat_77, amat_77_k, amat_77_n, amat_77_kn
-real*8     :: amat_61_k, amat_65_n, amat_66_kn, amat_66_k, amat_66_n, amat_67_n
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7
 !==================MB: velocity profile is kept by a source which compensating diffusion
 real*8     :: Vt0,Omega_tor0_x,Omega_tor0_y,Vt0_x,Vt0_y

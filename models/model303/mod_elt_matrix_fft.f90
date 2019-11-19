@@ -181,9 +181,9 @@ if (n_tor .gt. n_tor_fft_thresh) then
 else
   do in = 1,n_tor
     do mp=1,n_plane
-      HHZ   (in,m_plane) = HZ   (in,mp)
-      HHZ_p (in,m_plane) = HZ_p (in,mp)
-      HHZ_pp(in,m_plane) = HZ_pp(in,mp)
+      HHZ   (in,mp) = HZ   (in,mp)
+      HHZ_p (in,mp) = HZ_p (in,mp)
+      HHZ_pp(in,mp) = HZ_pp(in,mp)
     enddo
   enddo
 endif
@@ -1958,7 +1958,7 @@ do i=1,n_vertex_max
 
           enddo ! im loop (n_tor, or not...)
 
-        enddo ! m_plane loop
+        enddo ! mp loop (n_plane)
 
       enddo ! ms loop
     enddo ! mt loop

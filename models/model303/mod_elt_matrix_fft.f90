@@ -1964,7 +1964,7 @@ do i=1,n_vertex_max
     enddo ! mt loop
 
 
-    if (n_tor .le. n_tor_fft_thresh) then
+    if (n_tor .gt. n_tor_fft_thresh) then
 
       do i_v = 1, n_var
         do j_loc=1, n_vertex_max*n_var*(n_order+1)

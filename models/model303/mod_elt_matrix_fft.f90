@@ -1016,7 +1016,7 @@ do i=1,n_vertex_max
             if (n_tor .gt. n_tor_fft_thresh) then
               index_ij =       n_var*(n_order+1)*(i-1) +       n_var*(j-1) + 1
             else
-              index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor*n_var*(j-1) + i_tor
+              index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor*n_var*(j-1) + im
             endif
 
             ij1 = index_ij
@@ -1790,7 +1790,7 @@ do i=1,n_vertex_max
                   if (n_tor .gt. n_tor_fft_thresh) then
                     index_kl =       n_var*(n_order+1)*(k-1) +       n_var*(l-1) + 1
                   else
-                    index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor*n_var*(l-1) + j_tor
+                    index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor*n_var*(l-1) + in
                   endif
 
                   kl1 = index_kl

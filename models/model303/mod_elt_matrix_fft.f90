@@ -1793,23 +1793,23 @@ do i=1,n_vertex_max
                     index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor*n_var*(l-1) + in
                   endif
 
-                  kl1 = index_kl
-                  kl2 = index_kl + 1
-                  kl3 = index_kl + 2
-                  kl4 = index_kl + 3
-                  kl5 = index_kl + 4
-                  kl6 = index_kl + 5
-                  kl7 = index_kl + 6
-                  ij1 = 1
-                  ij2 = 2
-                  ij3 = 3
-                  ij4 = 4
-                  ij5 = 5
-                  ij6 = 6
-                  ij7 = 7
-
                   ! --- Fill up the matrix
                   if (n_tor .gt. n_tor_fft_thresh) then
+                    kl1 = index_kl
+                    kl2 = index_kl + 1
+                    kl3 = index_kl + 2
+                    kl4 = index_kl + 3
+                    kl5 = index_kl + 4
+                    kl6 = index_kl + 5
+                    kl7 = index_kl + 6
+                    ij1 = 1
+                    ij2 = 2
+                    ij3 = 3
+                    ij4 = 4
+                    ij5 = 5
+                    ij6 = 6
+                    ij7 = 7
+
                     ELM_p(mp,kl1,ij1)  =  ELM_p(mp,kl1,ij1) + wst * amat_11
                     ELM_n(mp,kl2,ij1)  =  ELM_n(mp,kl2,ij1) + wst * amat_12_n
 
@@ -1893,6 +1893,21 @@ do i=1,n_vertex_max
                     ELM_n(mp,kl7,ij7)  =  ELM_n(mp,kl7,ij7)  + wst * amat_77_n
                     ELM_kn(mp,kl7,ij7) =  ELM_kn(mp,kl7,ij7) + wst * amat_77_kn
                   else
+                    kl1 = index_kl
+                    kl2 = index_kl + 1 * n_tor_loop
+                    kl3 = index_kl + 2 * n_tor_loop
+                    kl4 = index_kl + 3 * n_tor_loop
+                    kl5 = index_kl + 4 * n_tor_loop
+                    kl6 = index_kl + 5 * n_tor_loop
+                    kl7 = index_kl + 6 * n_tor_loop
+                    ij1 = index_ij
+                    ij2 = index_ij + 1 * n_tor_loop
+                    ij3 = index_ij + 2 * n_tor_loop
+                    ij4 = index_ij + 3 * n_tor_loop
+                    ij5 = index_ij + 4 * n_tor_loop
+                    ij6 = index_ij + 5 * n_tor_loop
+                    ij7 = index_ij + 6 * n_tor_loop
+                    
                     ELM(ij1,kl1) = ELM(ij1,kl1) + (amat_11 + amat_11_k + amat_11_n + amat_11_kn) * wst
                     ELM(ij1,kl2) = ELM(ij1,kl2) + (amat_12 + amat_12_k + amat_12_n + amat_12_kn) * wst
                     ELM(ij1,kl3) = ELM(ij1,kl3) + (amat_13 + amat_13_k + amat_13_n + amat_13_kn) * wst

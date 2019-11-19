@@ -111,7 +111,7 @@ real*8     :: dT_dpsi(n_gauss,n_gauss),dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3
 logical    :: xpoint2
 real*8     :: w00_xx, w00_yy                                                                                                                                                                
 !======================================= NEO
-real*8     :: amat_27, Btheta2
+real*8     :: Btheta2
 real*8     :: epsil, Btheta2_psi
 real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
 !======================================= NEO

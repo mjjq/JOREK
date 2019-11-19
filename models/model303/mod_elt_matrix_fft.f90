@@ -213,13 +213,13 @@ amat_41_n = 0.d0 ; amat_42_n = 0.d0 ; amat_43_n = 0.d0 ; amat_44_n = 0.d0 ; amat
 amat_51_n = 0.d0 ; amat_52_n = 0.d0 ; amat_53_n = 0.d0 ; amat_54_n = 0.d0 ; amat_55_n = 0.d0 ; amat_56_n = 0.d0 ; amat_57_n = 0.d0
 amat_61_n = 0.d0 ; amat_62_n = 0.d0 ; amat_63_n = 0.d0 ; amat_64_n = 0.d0 ; amat_65_n = 0.d0 ; amat_66_n = 0.d0 ; amat_67_n = 0.d0
 amat_71_n = 0.d0 ; amat_72_n = 0.d0 ; amat_73_n = 0.d0 ; amat_74_n = 0.d0 ; amat_75_n = 0.d0 ; amat_76_n = 0.d0 ; amat_77_n = 0.d0
-amat_11_kn = 0.d0 ; amat_12_kn = 0.d0 ; amat_13_kn = 0.d0 ; amat_14_kn = 0.d0 ; amat_15_kn = 0.d0 ; amat_16_kn = 0.d0 ; amat_17_kn
-amat_21_kn = 0.d0 ; amat_22_kn = 0.d0 ; amat_23_kn = 0.d0 ; amat_24_kn = 0.d0 ; amat_25_kn = 0.d0 ; amat_26_kn = 0.d0 ; amat_27_kn
-amat_31_kn = 0.d0 ; amat_32_kn = 0.d0 ; amat_33_kn = 0.d0 ; amat_34_kn = 0.d0 ; amat_35_kn = 0.d0 ; amat_36_kn = 0.d0 ; amat_37_kn
-amat_41_kn = 0.d0 ; amat_42_kn = 0.d0 ; amat_43_kn = 0.d0 ; amat_44_kn = 0.d0 ; amat_45_kn = 0.d0 ; amat_46_kn = 0.d0 ; amat_47_kn
-amat_51_kn = 0.d0 ; amat_52_kn = 0.d0 ; amat_53_kn = 0.d0 ; amat_54_kn = 0.d0 ; amat_55_kn = 0.d0 ; amat_56_kn = 0.d0 ; amat_57_kn
-amat_61_kn = 0.d0 ; amat_62_kn = 0.d0 ; amat_63_kn = 0.d0 ; amat_64_kn = 0.d0 ; amat_65_kn = 0.d0 ; amat_66_kn = 0.d0 ; amat_67_kn
-amat_71_kn = 0.d0 ; amat_72_kn = 0.d0 ; amat_73_kn = 0.d0 ; amat_74_kn = 0.d0 ; amat_75_kn = 0.d0 ; amat_76_kn = 0.d0 ; amat_77_kn
+amat_11_kn = 0.d0 ; amat_12_kn = 0.d0 ; amat_13_kn = 0.d0 ; amat_14_kn = 0.d0 ; amat_15_kn = 0.d0 ; amat_16_kn = 0.d0 ; amat_17_kn = 0.d0
+amat_21_kn = 0.d0 ; amat_22_kn = 0.d0 ; amat_23_kn = 0.d0 ; amat_24_kn = 0.d0 ; amat_25_kn = 0.d0 ; amat_26_kn = 0.d0 ; amat_27_kn = 0.d0
+amat_31_kn = 0.d0 ; amat_32_kn = 0.d0 ; amat_33_kn = 0.d0 ; amat_34_kn = 0.d0 ; amat_35_kn = 0.d0 ; amat_36_kn = 0.d0 ; amat_37_kn = 0.d0
+amat_41_kn = 0.d0 ; amat_42_kn = 0.d0 ; amat_43_kn = 0.d0 ; amat_44_kn = 0.d0 ; amat_45_kn = 0.d0 ; amat_46_kn = 0.d0 ; amat_47_kn = 0.d0
+amat_51_kn = 0.d0 ; amat_52_kn = 0.d0 ; amat_53_kn = 0.d0 ; amat_54_kn = 0.d0 ; amat_55_kn = 0.d0 ; amat_56_kn = 0.d0 ; amat_57_kn = 0.d0
+amat_61_kn = 0.d0 ; amat_62_kn = 0.d0 ; amat_63_kn = 0.d0 ; amat_64_kn = 0.d0 ; amat_65_kn = 0.d0 ; amat_66_kn = 0.d0 ; amat_67_kn = 0.d0
+amat_71_kn = 0.d0 ; amat_72_kn = 0.d0 ; amat_73_kn = 0.d0 ; amat_74_kn = 0.d0 ; amat_75_kn = 0.d0 ; amat_76_kn = 0.d0 ; amat_77_kn = 0.d0
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_st  = 0.d0; x_ss  = 0.d0; x_tt  = 0.d0;

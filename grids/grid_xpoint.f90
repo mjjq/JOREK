@@ -1094,7 +1094,10 @@ enddo
 
 newelement_list%n_elements = (n_flux - 1)*(n_tht - 1)
 
-if ( newelement_list%n_elements > n_elements_max ) then
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
   write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_elements_max is too small'
   stop
 end if
@@ -1139,7 +1142,10 @@ enddo
 
 newelement_list%n_elements = newelement_list%n_elements + (n_open) * (n_tht-1)
 
-if ( newelement_list%n_elements > n_elements_max ) then
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
   write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_elements_max is too small'
   stop
 end if
@@ -1241,7 +1247,10 @@ enddo
 
 newelement_list%n_elements = newelement_list%n_elements + (n_open+n_private)*(2*n_leg-2)
 
-if ( newelement_list%n_elements > n_elements_max ) then
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
   write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_elements_max is too small'
   stop
 end if

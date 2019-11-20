@@ -3,72 +3,68 @@ module phys_module
   
   use mod_parameters
   use constants
+  use data_structure              !< Added in order to dynamically allocate pellets
   
   implicit none
   
   !> @name Various parameters
-  real*8  :: eta                  !< Resistivity
+  real*8  :: eta                  !< Resistivity at plasma cener (normalized)
   real*8  :: eta_T_0              !< Initial resistivity
+  real*8  :: eta_ohmic            !< Resistivity at core for the ohmic heating term
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant.
-  real*8  :: visco                !< Viscosity
-
-  ! varivale needed by rst_bin2hdf5 and rst_hdf52bin
-  real*8  :: visco_rst
-  real*8  :: visco_par_rst
-  real*8  :: eta_rst
-  !
-
+  real*8  :: visco                !< Viscosity at plasma center (normalized)
+  real*8  :: visco_rst            !< visco value from restart file
+  real*8  :: visco_par_rst        !< visco_par value from restart file
+  real*8  :: eta_rst              !< eta value from restart file
   real*8  :: visco2               !< Second coefficient of viscosity
   logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
-  real*8  :: visco_par            !< Parallel viscosity
+  real*8  :: visco_par            !< Parallel viscosity (normalized)
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
   real*8  :: central_density      !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
-  real*8  :: central_mass         !< average mass (assumed to be constant in space for the moment)
-  real*8  :: sqrt_mu0_rho0        !< Normalization factor sqrt(mu_0 rho_0) calculated from input
-  real*8  :: sqrt_mu0_over_rho0   !< Normalization factor sqrt(mu_0/rho_0) calculated from input
-  real*8  :: gamma                !< ratio of specific heat (=5/3)
+  real*8  :: central_mass         !< average ion mass in atomic mass units (constant in time and space)
+  real*8  :: sqrt_mu0_rho0        !< Normalization factor \f$\sqrt(\mu_0 \rho_0)\f$ calculated from input
+  real*8  :: sqrt_mu0_over_rho0   !< Normalization factor \f$\sqrt(\mu_0/\rho_0)\f$ calculated from input
+  real*8  :: gamma                !< ratio of specific heat (typically 5/3)
   real*8  :: Q_bar                !< (model400)
   real*8  :: sigma                !< (model400)
-  real*8  :: tauIC                !< (diamagnetic terms)
-  logical :: Wdia                 !< (diamagnetic vorticity)
+  real*8  :: tauIC                !< Scaling factor for diamagnetic terms (see [[diamag|diamagnetic]])
+  logical :: Wdia                 !< Include diamagnetic flows in viscosity terms? (see [[wdia|here]])
   logical :: U_sheath             !< Use Stangeby BCs for electric potential
   logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
-  real*8  :: gamma_sheath         !< sheath boundary condition open fieldlines (model303)
-  real*8  :: density_reflection   !< density reflection coeeficient open fieldlines (model303)
+  real*8  :: gamma_sheath         !< sheath boundary condition on open fieldlines
+  real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
-  integer :: nout                 !< Output a restart file every nout timesteps.
-  integer :: xcase                !< DoubleNull: 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull.
-  integer :: rst_format           !< 0 == olf format, 1 == new format for restart file.
-  logical :: restart              !< Restart a code run from the restart file jorek_restart.rst?
+  integer :: nout                 !< Output a restart file every nout timesteps
+  integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
+  integer :: rst_format           !< 0 == old format, 1 == new format for restart file
+  logical :: restart              !< Restart a code run from the restart file jorek_restart.h5?
   logical :: regrid               !< Re-generate the flux-aligned grid (does not work currently)?
-  logical :: import_equil
-  logical :: xpoint               !< X-point geometry?
-  logical :: bootstrap            !< Bootstrap-current?
-  logical :: refinement           !< Use mesh refinement?
+  logical :: import_equil         !< (presently unused)
+  logical :: xpoint               !< X-point plasma or not? see also xcase
+  logical :: bootstrap            !< Evolve the Bootstrap current consistently with time?
+  real*8  :: minRad               !< Approximation of minor radius for bootstrap current calculation
+  logical :: refinement           !< Use mesh refinement? (not presently available)
+  logical :: force_central_node   !< Force all nodes in the center to have the same values in flux aligned grids or independent values?
   logical :: bc_natural_flux      !< boundary conditions for flux surface boundaries (2 and 3)
   logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines
-  logical :: produce_live_data    !< Write data to 'energies.dat', 'growth_rates.dat', and 'times.dat' during the code run?
+  logical :: produce_live_data    !< Write data 'macroscopic_vars.dat' during the code run allowing to use plot_live_data.sh?
   logical :: grid_to_wall         !< extend the grid to a physical wall
-  logical :: adaptive_time        !< requires no_mpi for Pastix library
+  logical :: adaptive_time        !< (presently not useful)
   logical :: equil                !< compute equilibrium
-  logical :: bench_without_plot   !< .true. for benchmark (mesuring elapsed time without plot phases)
+  logical :: bench_without_plot   !< if .true., do not produce certain output plots (e.g., for benchmarking)
   logical :: gmres                !< Use iterative GMRES solver
   integer :: gmres_max_iter       !< Maximum number of GMRES iterations
   logical :: linear_run           !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
-  logical :: export_for_nemec     !< Export data such that the NEMEC Code can reconstruct the same equilibrium?
+  logical :: export_for_nemec     !< Export equilibrium information for the NEMEC code?
+  logical :: use_murge            !< (Deprecated, Cannot be used any more)
+  logical :: use_murge_element    !< (Deprecated, Cannot be used any more)
 
-#ifdef USE_HDF5
-  ! for HDF5 diagnostics
-  logical :: save_diagnostics_HDF5  !< Export data in HDF5 format
-#endif
-  ! Number of digits that ends the filenames of diagnostics
-  integer             :: nbdigits   = 5
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"
   ! Identity of the processor
   integer  :: pglobal_id
   
-  real*8, allocatable :: energies(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
+  real*8, allocatable :: energies(:,:,:)   !< Magnetic and kinetic mode energies at timesteps.
   real*8, allocatable :: energies2(:,:,:)  !< global density and temperature at timesteps.
   real*8, allocatable :: energies3(:,:,:)  !< global currents (general and total eccd) at timesteps.
   real*8, allocatable :: energies4(:,:,:)  !< global applied eccd currents j1 and j2 at timesteps.
@@ -93,7 +89,12 @@ module phys_module
   !!            \left(\frac{x_{width}\cdot(\theta-x_{theta})}{x_{sig}}\right)^2-1
   !!          \right]exp\left[-\left(\frac{\theta-x_{theta}}{x_{sig}}\right)^2\right]
   !! \f]
-  real*8  :: xampl, xwidth, xsig, xtheta, xshift, xleft
+  real*8  :: xampl    !< Allows to construct simple X-point cases by coefficients (modifies Psi boundary condition)
+  real*8  :: xwidth   !< Allows to construct simple X-point cases by coefficients (modifies Psi boundary condition)
+  real*8  :: xsig     !< Allows to construct simple X-point cases by coefficients (modifies Psi boundary condition)
+  real*8  :: xtheta   !< Allows to construct simple X-point cases by coefficients (modifies Psi boundary condition)
+  real*8  :: xshift   !< Allows to construct simple X-point cases by coefficients (modifies Psi boundary condition)
+  real*8  :: xleft    !< Allows to construct simple X-point cases by coefficients (modifies Psi boundary condition)
   
   !> @name Heat and particle sources
   !!
@@ -106,26 +107,26 @@ module phys_module
   !! - \f$ \Psi_{N,0} \f$ denotes the position around which the source is ramped down (e.g., heatsource_psin)
   !! - \f$ \sigma \f$ denotes the width over which the source is ramped down (e.g., heatsource_sig)
   !!
-  real*8  :: particlesource            !< Particle source strength
-  real*8  :: particlesource_psin       !< Position around which source is ramped down
-  real*8  :: particlesource_sig        !< Width over which source is ramped down
-  real*8  :: particlesource_gauss      !< Additional gaussian particle source strength
-  real*8  :: particlesource_gauss_psin !< Position around which gaussian source is set
-  real*8  :: particlesource_gauss_sig  !< Width over which gaussian source is set
-  real*8  :: edgeparticlesource        !< Edge particle source strench 
-  real*8  :: edgeparticlesource_psin   !< Position around which edge particle source is ramped down    
-  real*8  :: edgeparticlesource_sig    !< Width over which edge particle source is ramped down
-  real*8  :: heatsource                !< Heat source strength
-  real*8  :: heatsource_psin           !< Position around which source is ramped down
-  real*8  :: heatsource_sig            !< Width over which source is ramped down
-  real*8  :: heatsource_i              !< Heat source strength (ions), model4xx only
-  real*8  :: heatsource_e              !< Heat source strength (electrons), model4xx only
-  real*8  :: heatsource_gauss          !< Additional gaussian heat source strength
-  real*8  :: heatsource_gauss_psin     !< Position around which gaussian source is set
-  real*8  :: heatsource_gauss_sig      !< Width over which gaussian source is set
+  real*8  :: particlesource            !< Particle source amplitude
+  real*8  :: particlesource_psin       !< Position around which the source is ramped down
+  real*8  :: particlesource_sig        !< Width over which the source is ramped down
+  real*8  :: particlesource_gauss      !< Additional Gaussian particle source amplitude
+  real*8  :: particlesource_gauss_psin !< Position around which Gaussian source is set
+  real*8  :: particlesource_gauss_sig  !< Width over which Gaussian source is set
+  real*8  :: edgeparticlesource        !< Edge particle source amplitude
+  real*8  :: edgeparticlesource_psin   !< Position around which the edge particle source is located
+  real*8  :: edgeparticlesource_sig    !< Width over which edge particle source extends
+  real*8  :: heatsource                !< Heat source amplitude
+  real*8  :: heatsource_psin           !< Position around which the source is ramped down
+  real*8  :: heatsource_sig            !< Width over which the source is ramped down
+  real*8  :: heatsource_i              !< Ion heat source amplitude
+  real*8  :: heatsource_e              !< Electron heat source amplitude
+  real*8  :: heatsource_gauss          !< Additional Gaussian heat source amplitude
+  real*8  :: heatsource_gauss_psin     !< Position around which Gaussian source is located
+  real*8  :: heatsource_gauss_sig      !< Width over which Gaussian source extends
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
-  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num
+  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num
   
   !> @name Timestepping parameters
   real*8  :: tstep             		!< Size of the timesteps (\f$ \Delta t \f$)
@@ -137,14 +138,13 @@ module phys_module
   integer :: index_start       		!< Time step index at the beginning of the code run (zero or from restart file)
   integer :: index_now         		!< Current time step index
   real*8, allocatable :: xtime(:) 	!< Time values corresponding to the timesteps.
-  character(len=80) :: time_evol_scheme !< Time evolution scheme to use. This determines the values
-                               		!! used for time_evol_theta and time_evol_zeta.
-  real*8  :: time_evol_theta   		!< Time evolution parameter theta (see documentation)
-  real*8  :: time_evol_zeta    		!< Time evolution parameter zeta (see documentation)
+  character(len=80) :: time_evol_scheme !< Time evolution scheme to use (see [[time-integration|time_integration]])
+  real*8  :: time_evol_theta   		!< Time evolution parameter theta (see [[time-integration|time_integration]])
+  real*8  :: time_evol_zeta    		!< Time evolution parameter zeta (see [[time-integration|time_integration]])
 
-  integer :: rst_hdf5
-  integer :: rst_hdf5_version
-  integer, parameter :: rst_hdf5_version_supported = 1
+  integer :: rst_hdf5                   !< Write hdf5 restart files if set to 1
+  integer :: rst_hdf5_version           !< Write which version of hdf5 files?
+  integer, parameter :: rst_hdf5_version_supported = 1 !< What is the highest version number supported?
   
   !> @name Machine name
   character(len=512) :: tokamak_device 	!< Name of the tokamak device we are simulating
@@ -161,12 +161,12 @@ module phys_module
   !! - for \f$ \theta \ge \pi \f$:
   !!   \f$ R=R_{geo} + a_{min} \cos\left[\theta+T_l\sin(\theta)+Q_l\sin(2\theta)\right] \f$
   !!
-  real*8  :: amin              !< Minor radius
-  real*8  :: ellip             !< Ellipticity
-  real*8  :: tria_u            !< Upper triangularity
-  real*8  :: tria_l            !< Lower triangularity
-  real*8  :: quad_u            !< Upper quadrangularity
-  real*8  :: quad_l            !< Lower quadrangularity
+  real*8  :: amin              !< Minor radius for polar grid construction, set to 1 if boundary is specified with R,Z points
+  real*8  :: ellip             !< Ellipticity of polar grid (see analytical definition in phys_module.f90)
+  real*8  :: tria_u            !< Upper triangularity of polar grid (see analytical definition in phys_module.f90)
+  real*8  :: tria_l            !< Lower triangularity of polar grid (see analytical definition in phys_module.f90)
+  real*8  :: quad_u            !< Upper quadrangularity of polar grid (see analytical definition in phys_module.f90)
+  real*8  :: quad_l            !< Lower quadrangularity of polar grid (see analytical definition in phys_module.f90)
   
   !> @name Fourier expanded boundary of initial grid
   !! Boundary of the non flux-aligned initial polar grid given as Fourier series
@@ -184,12 +184,12 @@ module phys_module
   
   !> @name PF coils definition for initial equilibrium (MAST)
   !! Numerical definition of the PF coils definition for initial equilibrium (MAST)
-  integer :: n_pfc            !< Number of coils
-  real*8  :: Rmin_pfc(40)     !< Minimum R of coil
-  real*8  :: Rmax_pfc(40)     !< Maximum R of coil
-  real*8  :: Zmin_pfc(40)     !< Minimum Z of coil
-  real*8  :: Zmax_pfc(40)     !< Maximum Z of coil
-  real*8  :: current_pfc(40)  !< Current density in the coil
+  integer :: n_pfc            !< Number of coils, (OLD. for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
+  real*8  :: Rmin_pfc(40)     !< Minimum R of coil, (OLD. for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
+  real*8  :: Rmax_pfc(40)     !< Maximum R of coil, (OLD. for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
+  real*8  :: Zmin_pfc(40)     !< Minimum Z of coil, (OLD. for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
+  real*8  :: Zmax_pfc(40)     !< Maximum Z of coil, (OLD. for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
+  real*8  :: current_pfc(40)  !< Current density in the coil, (OLD. for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
   
   !> @name Pellet-related input parameters
   real*8  :: pellet_amplitude  !< amplitude of density source (when pellet modelled as density source)
@@ -205,163 +205,216 @@ module phys_module
   real*8  :: pellet_delta_psi  !< width of smoothing in poloidal flux
   real*8  :: pellet_velocity_R !< pellet velocity component radial direction
   real*8  :: pellet_velocity_Z !< pellet velocity component Z direction
-  real*8  :: pellet_density    !< pellet density (in units 10^20 m^-3)
-  real*8  :: pellet_particles  !< the number of particles in the pellet (in units of 10^20)
+  real*8  :: pellet_density    !< pellet atom number density (in units \f$10^{20} m^{-3}\f$)
+  real*8  :: pellet_particles  !< the number of particles in the pellet (in units of \f$10^{20}\f$)
   logical :: use_pellet
   
-  !> @name Massive gas injection-related input parameters
-  real*8  :: mgi_amplitude      !< amplitude of neutral density source
-  real*8  :: mgi_R             !< major radius position of neutral density source
-  real*8  :: mgi_Z             !< Z position of neutral density source
-  real*8  :: mgi_phi           !< width of the neutral density source in toroidal direction
-  real*8  :: mgi_radius        !< radius of the neutral density source in poloidal plane
-  real*8  :: mgi_sig           !< width of smoothing of the neutral density source in poloidal plane
-  real*8  :: mgi_deltaphi      !< width of smoothing of the neutral density source in toroidal direction
-  real*8  :: mgi_tor_norm      !< MGI source normalization factor related to its toroidal shape
-  real*8  :: ksi_ion           !< energy cost of each ionization
-  real*8  :: A_Dmv             !< Cross sectional area of DMV (Disruption mitigation valve) pipe
-  real*8  :: K_Dmv             !< Correction parameter describing the gas expansion near the pipe orifice
-  real*8  :: L_tube            !< Pipe length
-  real*8  :: V_Dmv             !< Volume of the DMV reservoir
-  real*8  :: P_Dmv             !< Pressure in the DMV reservoir
-  real*8  :: t_mgi             !< Beginning of the MGI
-  real*8  :: delta_n_convection!< Switch to activate the convection term for neutrals (at the plasma velocity)
-  logical :: JET_MGI !< Switch to have a real time dependent MGI or a constant injection
-  logical :: ASDEX_MGI
-  real*8  :: nimp_bg           !< Density of background impurity (in m^-3)
+  !> @name MGI or SPI-related input parameters
+  ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
+  real*8  :: t_ns               !< Neutrals source onset time (JOREK units)
+  real*8  :: ns_amplitude       !< Amplitude of neutrals source (atoms/s)
+  real*8  :: ns_R               !< R position of neutrals source
+  real*8  :: ns_Z               !< Z position of neutrals source
+  real*8  :: ns_phi             !< Phi position of neutrals source
+  real*8  :: ns_radius          !< Poloidal radius of neutral source
+  real*8  :: ns_deltaphi        !< Toroidal extension of neutrals source
+  real*8  :: ns_tor_norm        !< Neutrals source normalization factor related to its toroidal shape
+  real*8  :: ns_sig             !< Obsolete (still in the code but not used)
+  logical :: JET_MGI            !< Switch to use a JET-like MGI
+  logical :: ASDEX_MGI          !< Switch to use an ASDEX-like MGI
+  real*8  :: V_Dmv              !< Volume of the DMV reservoir
+  real*8  :: P_Dmv              !< Pressure in the DMV reservoir (bar)
+  real*8  :: A_Dmv              !< Cross sectional area of DMV (Disruption mitigation valve) pipe
+  real*8  :: K_Dmv              !< Correction parameter describing the gas expansion near the pipe orifice
+  real*8  :: L_tube             !< Pipe length
+  real*8  :: ksi_ion            !< Energy cost of each ionization
+  real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
+  real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
+ 
+  !> @name Shattered pellet injection-related input parameters
+  ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
+  ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
+  ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
+  logical :: using_spi          !< This determines whether to use SPI or traditional MGI; see [[spi_tutorial|SPI Tutorial]]
+  real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R upon injection (in m/s)
+  real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z upon injection (in m/s)
+  real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection (in m/s)
+  real*8  :: spi_quantity       !< Total number of injected atoms by SPI
+  real*8  :: ng_radius_ratio    !! Ratio between the radius of neutral gas cloud and shard radius
+                                !! Assumed constant. If ng_radius_ratio times shard radius > ng_radius_min,
+                                !! this radius is used for neutral deposition, otherwise the ng_radius_min.
+
+  real*8  :: spi_Vel_diff       !< The maximum speed difference from the reference speed
+  real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
+  real*8  :: spi_L_inj          !< Distance between SPI nozzle and ns_R, ns_Z, ns_phi
+  real*8  :: ns_phi_rotate      !< Toroidal position of injection point, used for mimicking rotating plasma
+  real*8  :: tor_frequency      !< The rigid body rotation frequency of SPI
+
+  real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud for numerical reasons (in m)
+
+  real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
+  real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
+
+  integer :: n_spi              !< Number of shattered pellets injected
+  integer :: spi_abl_model      !< Ablation model to be used. 0 for constant release rate, 1 for NGS model, 2 for Sergeev formula
+
+  integer :: spi_rnd_seed(40)   !< Random seed array used for the generation of the SPI velocity spread
+
+  character(len=256) :: spi_shard_file !< The name of the shard size file
+
+  logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
+
+  type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
   
   !> @name Fix boundary equilibrium parameters
-  real*8  :: amix              !< Mix Poisson solution with previous one with a given factor  
+  real*8  :: amix              !< Mix Poisson solution with previous one with a given factor
   real*8  :: equil_accuracy    !< Tolerance of the convergence for the fix-boundary equilibrium
   real*8  :: Zaxis_find_limit  !< Magnetic axis will be searched between Z=0 and Z=abs(Zaxis_find_limit)
   
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).
-  logical :: freeboundary_equil      !< use a free or fixed boundary equilibrium?
-  logical :: freeboundary            !< use free or fixed boundary conditions in time-evolution?
-  logical :: resistive_wall          !< use a resistive or ideal wall?    (free boundary only)
-  logical :: freeb_equil_iterate_area      !< iterate to a target area during freeboundary equilibrium limiter cases?
-  real*8  :: amix_freeb              !< choose amix for freeboundary equilibriums
-  real*8  :: equil_accuracy_freeb    !< Tolerance of the convergence for the free-boundary equilibrium
+  logical :: freeboundary_equil      !< use a free or fixed boundary equilibrium? ([[jorek-starwall|JOREK-STARWALL]])
+  logical :: freeboundary            !< use free or fixed boundary conditions in time-evolution? ([[jorek-starwall|JOREK-STARWALL]])
+  logical :: resistive_wall          !< use a resistive or ideal wall? ([[jorek-starwall|JOREK-STARWALL]])
+  logical :: freeb_equil_iterate_area !< iterate to a target area during freeboundary equilibrium limiter cases [[jorek-starwall-faqs|jorek_starwall]]
+  real*8  :: amix_freeb              !< choose amix for freeboundary equilibrium
+  real*8  :: equil_accuracy_freeb    !< Tolerance of the convergence for the freeboundary equilibrium
   logical :: freeb_change_indices    !< Exchange grid node indices to parallelize boundary integral
   
   !> @name Rectangular Grid
   !! Parameters defining a rectangular grid in R- and Z-directions in the poloidal plane.
-  integer :: n_R               !< Number of grid points in R-direction
-  integer :: n_Z               !< Number of grid points in Z-direction
-  real*8  :: R_begin           !< Left boundary of grid in R-direction
-  real*8  :: R_end             !< Right boundary of grid in R-direction
-  real*8  :: Z_begin           !< Lower boundary of grid in Z-direction
-  real*8  :: Z_end             !< Upper boundary of grid in Z-direction
+  integer :: n_R               !< Number of grid points in R-direction (for rectangular grid) (see also [[grids#tutorials|here]])
+  integer :: n_Z               !< Number of grid points in Z-direction (for rectangular grid)
+  real*8  :: R_begin           !< Left boundary of grid in R-direction (for rectangular grid)
+  real*8  :: R_end             !< Right boundary of grid in R-direction (for rectangular grid)
+  real*8  :: Z_begin           !< Lower boundary of grid in Z-direction (for rectangular grid)
+  real*8  :: Z_end             !< Upper boundary of grid in Z-direction (for rectangular grid)
+
   
   !> @name Polar Grid
   !! Parameters defining a non flux-aligned polar grid in the poloidal plane.
-  logical :: force_horizontal_Xline     !< Force the grid line through Xpoint to be horizontal
-  					!  (instead of perpendicular to line between Xpoint and Axis)
-  integer :: n_radial          		!< Number of radial grid points
-  integer :: n_pol             		!< Number of poloidal grid points
-  real*8  :: R_geo             		!< Center of the grid
-  real*8  :: Z_geo             		!< Center of the grid
-  real*8  :: psi_axis_init     		!< Initial guess for Psi at the magnetic axis
-  real*8  :: XR_r(2)           		!< Psi_N position of radial grid accumulation (two positions)
-  real*8  :: SIG_r(2)          		!< Width of grid accumulation (two positions)
-  real*8  :: XR_tht(2)         		!< Position of poloidal grid accumulation (0...1, two positions)
-  real*8  :: SIG_tht(2)        		!< Width of grid accumulation (two positions)
+  logical :: force_horizontal_Xline !< Force the grid line through Xpoint to be horizontal (instead of perp. to line between Xpoint and axis)
+  integer :: n_radial          	    !< Number of radial grid points (for polar grid) (see also [[grids|here]])
+  integer :: n_pol             	    !< Number of poloidal grid points (for polar grid)
+  real*8  :: R_geo             	    !< Center of the grid (for polar grid)
+  real*8  :: Z_geo             	    !< Center of the grid (for polar grid)
+  real*8  :: psi_axis_init     	    !< Initial guess for Psi at the magnetic axis (for polar grid)
+  real*8  :: XR_r(2)           	    !< Psi_N position of radial grid accumulation (two positions) (for polar grid)
+  real*8  :: SIG_r(2)          	    !< Width of grid accumulation (two positions) (for polar grid)
+  real*8  :: XR_tht(2)         	    !< Position of poloidal grid accumulation (0...1, two positions) (for polar grid)
+  real*8  :: SIG_tht(2)        	    !< Width of grid accumulation (two positions) (for polar grid)
   
   !> @name Flux surface grid
   !! Parameters defining a flux-aligned grid without X-point in the poloidal plane.
-  integer :: n_flux            !< Number of radial grid points
-  integer :: n_tht             !< Number of poloidal grid points
-  real*8  :: xr1               !< Grid accumulation parameter
-  real*8  :: xr2               !< Grid accumulation parameter
-  real*8  :: sig1              !< Grid accumulation parameter
-  real*8  :: sig2              !< Grid accumulation parameter
+  integer :: n_flux            !< Number of radial grid points (for flux-aligned grid) (see also [[grids#tutorials|here]])
+  integer :: n_tht             !< Number of poloidal grid points (for flux-aligned grid)
+  real*8  :: xr1               !< Grid accumulation parameter (for flux-aligned grid)
+  real*8  :: xr2               !< Grid accumulation parameter (for flux-aligned grid)
+  real*8  :: sig1              !< Grid accumulation parameter (for flux-aligned grid)
+  real*8  :: sig2              !< Grid accumulation parameter (for flux-aligned grid)
   
   !> @name Flux surface grid with X-point
   !! Parameters defining a flux-aligned grid with X-point in the poloidal plane.
-  integer :: n_open            !< Number of 'radial' grid points in the open flux region - in between the two separatrices in case of double-null
-  integer :: n_outer           !< Number of 'radial' grid points in the open flux region on the outer side (LFS) in case of double-null
-  integer :: n_inner           !< Number of 'radial' grid points in the open flux region on the inner side (HFS) in case of double-null
-  integer :: n_private         !< Number of 'radial' grid points in the private flux region on the lower side
-  integer :: n_leg             !< Number of 'poloidal' grid points along the divertor legs on the lower side
-  integer :: n_up_priv         !< Number of 'radial' grid points in the private flux region on the upper side (upper Xpoint or double-null)
-  integer :: n_up_leg          !< Number of 'poloidal' grid points along the divertor legs on the upper side (upper Xpoint or double-null)
+  integer :: n_open            !< Number of 'radial' grid points in the open flux region - between the two separatrices if double-null
+  integer :: n_outer           !< Number of 'radial' grid points in the open flux region on the outer side (LFS) if double-null
+  integer :: n_inner           !< Number of 'radial' grid points in the open flux region on the inner side (HFS) if double-null
+  integer :: n_private         !< Number of 'radial' grid points in the private flux region at the bottom
+  integer :: n_leg             !< Number of 'poloidal' grid points along the divertor legs at the bottom
+  integer :: n_up_priv         !< Number of 'radial' grid points in the private flux region at the top (upper Xpoint or double-null)
+  integer :: n_up_leg          !< Number of 'poloidal' grid points along the divertor legs at the top (upper Xpoint or double-null)
   integer :: n_ext             !< Number of 'radial' grid points from the outermost flux surface to wall)
-  real*8  :: SIG_closed        !< Width with grid accumulation
-  real*8  :: SIG_open          !< Width with grid accumulation
-  real*8  :: SIG_outer         !< Width with grid accumulation
-  real*8  :: SIG_inner         !< Width with grid accumulation
-  real*8  :: SIG_private       !< Width with grid accumulation
-  real*8  :: SIG_up_priv       !< Width with grid accumulation
-  real*8  :: SIG_theta         !< Width with grid accumulation
-  real*8  :: SIG_leg_0         !< Width with grid accumulation
-  real*8  :: SIG_leg_1         !< Width with grid accumulation
-  real*8  :: SIG_up_leg_0      !< Width with grid accumulation
-  real*8  :: SIG_up_leg_1      !< Width with grid accumulation
-  real*8  :: dPSI_open         !< Delta Psi grid extends into the open flux region
-  real*8  :: dPSI_outer        !< Delta Psi grid extends into the open flux region
-  real*8  :: dPSI_inner        !< Delta Psi grid extends into the open flux region
-  real*8  :: dPSI_private      !< Delta Psi grid extends into the private flux region
-  real*8  :: dPSI_up_priv      !< Delta Psi grid extends into the private flux region
+  real*8  :: SIG_closed        !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_open          !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_outer         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_inner         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_private       !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_up_priv       !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_theta         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_leg_0         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_leg_1         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_up_leg_0      !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_up_leg_1      !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: dPSI_open         !< Delta Psi grid extends into the open flux region (for flux-aligned grid)
+  real*8  :: dPSI_outer        !< Delta Psi grid extends into the open flux region (for flux-aligned grid)
+  real*8  :: dPSI_inner        !< Delta Psi grid extends into the open flux region (for flux-aligned grid)
+  real*8  :: dPSI_private      !< Delta Psi grid extends into the private flux region (for flux-aligned grid)
+  real*8  :: dPSI_up_priv      !< Delta Psi grid extends into the private flux region (for flux-aligned grid)
   
   !> @name Analytical heat, particle and neutral particles diffusivity parameters
-  real*8  :: D_perp(10), D_par
-  real*8  :: ZK_perp(10), ZK_par, ZK_par_max, ZK_i_perp(10), ZK_e_perp(10), K_i_par, K_e_par
-  real*8  :: D_neutral_x, D_neutral_y, D_neutral_p
-  logical :: ZKpar_T_dependent
+  real*8  :: D_perp(10)    = 0.d0 !< Coefficients for perpendicular particle diffusion profile
+  real*8  :: D_par                !< Parallel particle diffusion (usually not useful)
+  real*8  :: ZK_perp(10)   = 0.d0 !< Coefficients for perpendicular heat diffusion profile
+  real*8  :: ZK_par               !< Parallel heat diffusion value in the plasma center
+  real*8  :: ZK_par_max           !< Do not use larger parallel heat diffusion values for numerical reasons
+  real*8  :: ZK_i_perp(10) = 0.d0 !< Coefficients for perpendicular ion heat diffusion profile
+  real*8  :: ZK_e_perp(10) = 0.d0 !< Coefficients for perpendicular electron heat diffusion profile
+  real*8  :: ZK_i_par             !< Ion parallel heat diffusion coefficient in the plasma center
+  real*8  :: ZK_e_par             !< Electron parallel heat diffusion coefficient in the plasma center
+  real*8  :: D_neutral_x          !< Neutral particle diffusivity in R-direction
+  real*8  :: D_neutral_y          !< Neutral particle diffusivity in Z-direction
+  real*8  :: D_neutral_p          !< Neutral particle diffusivity in phi-direction
+  logical :: ZKpar_T_dependent    !< Use a temperature dependent parallel heat diffusivity
 
   !> @name Numerical heat and particle diffusivity profiles
-  character(len=512)  :: d_perp_file        !< ASCII file the profile is read from
-  character(len=512)  :: zk_perp_file       !< ASCII file the profile is read from
-  character(len=512)  :: zk_e_perp_file     !< ASCII file the profile is read from (model400)
-  character(len=512)  :: zk_i_perp_file     !< ASCII file the profile is read from (model400)
-  logical             :: num_d_perp         !< is set true if d_perp_file /= 'none'
-  logical             :: num_zk_perp        !< is set true if zk_perp_file /= 'none'
-  logical             :: num_zk_e_perp      !< is set true if zk_e_perp_file /= 'none' (model400)
-  logical             :: num_zk_i_perp      !< is set true if zk_i_perp_file /= 'none' (model400)
-  integer             :: num_d_perp_len     !< Number of datapoints in the profile
-  integer             :: num_zk_perp_len    !< Number of datapoints in the profile
-  integer             :: num_zk_e_perp_len  !< Number of datapoints in the profile (model400)
-  integer             :: num_zk_i_perp_len  !< Number of datapoints in the profile (model400)
-  real*8, allocatable :: num_d_perp_x(:)    !< Psi_N values of the profile
-  real*8, allocatable :: num_d_perp_y(:)    !< D_perp values of the profile
-  real*8, allocatable :: num_zk_perp_x(:)   !< Psi_N values of the profile
-  real*8, allocatable :: num_zk_perp_y(:)   !< ZK_perp values of the profile
-  real*8, allocatable :: num_zk_e_perp_x(:) !< Psi_N values of the profile (model400)
-  real*8, allocatable :: num_zk_e_perp_y(:) !< ZK_perp values of the profile (model400)
-  real*8, allocatable :: num_zk_i_perp_x(:) !< Psi_N values of the profile (model400)
-  real*8, allocatable :: num_zk_i_perp_y(:) !< ZK_perp values of the profile (model400)
+  character(len=512)  :: d_perp_file        !< ASCII file with perpendicular particle diffusion profile
+  character(len=512)  :: zk_perp_file       !< ASCII file with perpendicular heat diffusion profile
+  character(len=512)  :: zk_e_perp_file     !< ASCII file with perpendicular electron heat diffusion profile
+  character(len=512)  :: zk_i_perp_file     !< ASCII file wtih perpendicular ion heat diffusion profile
+  logical             :: num_d_perp         !< automatically set true if d_perp_file /= 'none'
+  logical             :: num_zk_perp        !< automatically set true if zk_perp_file /= 'none'
+  logical             :: num_zk_e_perp      !< automatically set true if zk_e_perp_file /= 'none'
+  logical             :: num_zk_i_perp      !< automatically set true if zk_i_perp_file /= 'none'
+  integer             :: num_d_perp_len     !< Number of datapoints in d_perp profile
+  integer             :: num_zk_perp_len    !< Number of datapoints in zk_perp profile
+  integer             :: num_zk_e_perp_len  !< Number of datapoints in zk_e_perp profile
+  integer             :: num_zk_i_perp_len  !< Number of datapoints in zk_i_perp profile
+  real*8, allocatable :: num_d_perp_x(:)    !< Psi_N values of d_perp  profile
+  real*8, allocatable :: num_d_perp_y(:)    !< D_perp values of d_perp profile
+  real*8, allocatable :: num_zk_perp_x(:)   !< Psi_N values of zk_perp profile
+  real*8, allocatable :: num_zk_perp_y(:)   !< ZK_perp values of zk_perp profile
+  real*8, allocatable :: num_zk_e_perp_x(:) !< Psi_N values of zk_e_perp profile
+  real*8, allocatable :: num_zk_e_perp_y(:) !< ZK_perp values of zk_e_perp profile
+  real*8, allocatable :: num_zk_i_perp_x(:) !< Psi_N values of zk_i_perp profile
+  real*8, allocatable :: num_zk_i_perp_y(:) !< ZK_perp values of zk_i_perp profile
   
   !> @name Analytical input profile for the density
-  real*8  :: rho_0, rho_1,  rho_coef(10)
+  real*8  :: rho_0             !< Central normalized density (usually 1)
+  real*8  :: rho_1             !< SOL normalized density
+  real*8  :: rho_coef(10)      !< Density profile coefficients
   
   !> @name Numerical input profile for the density
-  character(len=512)  :: rho_file        !< ASCII file the profile is read from.
-  logical             :: num_rho         !< is set true if rho_file /= 'none'
-  integer             :: num_rho_len     !< Number of points in profile
-  real*8, allocatable :: num_rho_x(:)    !< Radial positions of profile points (PsiN values)
-  real*8, allocatable :: num_rho_y0(:)   !< Values of density profile
+  character(len=512)  :: rho_file        !< ASCII file the density profile is read from.
+  logical             :: num_rho         !< automatically set true if rho_file /= 'none'
+  integer             :: num_rho_len     !< Number of points in rho profile
+  real*8, allocatable :: num_rho_x(:)    !< Psi_N values of rho profile points
+  real*8, allocatable :: num_rho_y0(:)   !< Density values of rho profile
   real*8, allocatable :: num_rho_y1(:)   !< First derivatives of density profile (\f$ d\rho/d\Psi_N \f$)
   real*8, allocatable :: num_rho_y2(:)   !< Second derivatives of density profile (\f$ d^2\rho/d\Psi_N^2 \f$)
   real*8, allocatable :: num_rho_y3(:)   !< Third derivatives of density profile (\f$ d^3\rho/d\Psi_N^3 \f$)
 
   !> @name Analytical input profile for the temperature
-  real*8  :: T_0,   T_1,    T_coef(10)
-  real*8  :: Ti_0,  Ti_1,   Ti_coef(10)
-  real*8  :: Te_0,  Te_1,   Te_coef(10)
+  real*8  :: T_0            !< Central normalized temperature
+  real*8  :: T_1            !< SOL normalized temperature
+  real*8  :: T_coef(10)     !< Temperature profile coefficients
+  real*8  :: Ti_0           !< Central ion normalized temperature
+  real*8  :: Ti_1           !< SOL ion normalized temperature
+  real*8  :: Ti_coef(10)    !< Ion temperature profile coefficients
+  real*8  :: Te_0           !< Central ion normalized temperature
+  real*8  :: Te_1           !< SOL ion normalized temperature
+  real*8  :: Te_coef(10)    !< Ion temperature profile coefficients
   
   !> @name Numerical input profile for the temperature
-  character(len=512)  :: T_file          !< ASCII file the profile is read from.
-  logical             :: num_T           !< is set true if T_file /= 'none'
-  integer             :: num_T_len       !< Number of points in profile
-  real*8, allocatable :: num_T_x(:)      !< Radial positions of profile points (PsiN values)
-  real*8, allocatable :: num_T_y0(:)     !< Values of temperature profile
+  character(len=512)  :: T_file          !< ASCII file the temperature profile is read from.
+  logical             :: num_T           !< automatically set true if T_file /= 'none'
+  integer             :: num_T_len       !< Number of points in T profile
+  real*8, allocatable :: num_T_x(:)      !< PsiN values of T profile points (PsiN values)
+  real*8, allocatable :: num_T_y0(:)     !< Temperature values of T profile
   real*8, allocatable :: num_T_y1(:)     !< First derivatives of temperature profile (\f$ dT/d\Psi_N \f$)
   real*8, allocatable :: num_T_y2(:)     !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
   real*8, allocatable :: num_T_y3(:)     !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
   
   !> @name Numerical input profile for the ion temperature (model400)
-  character(len=512)  :: Ti_file         !< ASCII file the profile is read from.
+  character(len=512)  :: Ti_file         !< ASCII file the ion temperature profile is read from.
   logical             :: num_Ti          !< is set true if T_file /= 'none'
   integer             :: num_Ti_len      !< Number of points in profile
   real*8, allocatable :: num_Ti_x(:)     !< Radial positions of profile points (PsiN values)
@@ -371,7 +424,7 @@ module phys_module
   real*8, allocatable :: num_Ti_y3(:)    !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
   
   !> @name Numerical input profile for the electron temperature (model400)
-  character(len=512)  :: Te_file         !< ASCII file the profile is read from.
+  character(len=512)  :: Te_file         !< ASCII file the electron temperature profile is read from.
   logical             :: num_Te          !< is set true if T_file /= 'none'
   integer             :: num_Te_len      !< Number of points in profile
   real*8, allocatable :: num_Te_x(:)     !< Radial positions of profile points (PsiN values)
@@ -381,10 +434,12 @@ module phys_module
   real*8, allocatable :: num_Te_y3(:)    !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)  
   
   !> @name Analytical input profile for the neutral density (model 500)
-  real*8  :: rhon_0, rhon_1,  rhon_coef(10)
+  real*8  :: rhon_0           !< Central value for the initial normalized neutral density
+  real*8  :: rhon_1           !< SOL value for the initial normalized neutral density
+  real*8  :: rhon_coef(10)    !< Coefficients for the intitial neutral density profile
   
   !> @name Numerical input profile for the neutral density (model 500)
-  character(len=512)  :: rhon_file        !< ASCII file the profile is read from.
+  character(len=512)  :: rhon_file        !< ASCII file the neutral density profile is read from.
   logical             :: num_rhon         !< is set true if rho_file /= 'none'
   integer             :: num_rhon_len     !< Number of points in profile
   real*8, allocatable :: num_rhon_x(:)    !< Radial positions of profile points (PsiN values)
@@ -394,56 +449,61 @@ module phys_module
   real*8, allocatable :: num_rhon_y3(:)   !< Third derivatives of neutral density profile (\f$ d^3\rhon/d\Psi_N^3 \f$)
   
   !> @name Analytical input profile for FFprime
-  real*8  :: FF_0,  FF_1,   FF_coef(10)
+  real*8  :: FF_0              !< FF' value in the plasma center
+  real*8  :: FF_1              !< FF' value in the SOL
+  real*8  :: FF_coef(10)       !< Coefficients for FF' profile
   
   !> @name Numerical input profile for FFprime
-  character(len=512)  :: ffprime_file    !< ASCII file the profile is read from.
-  logical             :: num_ffprime     !< is set true if ffprime_file /= 'none'
-  integer             :: num_ffprime_len !< Number of points in profile
-  real*8, allocatable :: num_ffprime_x(:)!< Radial positions of profile points (PsiN values)
+  character(len=512)  :: ffprime_file      !< ASCII file the FF' profile is read from.
+  logical             :: num_ffprime       !< is set true if ffprime_file /= 'none'
+  integer             :: num_ffprime_len   !< Number of points in profile
+  real*8, allocatable :: num_ffprime_x(:)  !< Radial positions of profile points (PsiN values)
   real*8, allocatable :: num_ffprime_y0(:) !< Values of FFprime profile
   real*8, allocatable :: num_ffprime_y1(:) !< First derivatives of FFprime profile (\f$ dFF'/d\Psi_N \f$)
   real*8, allocatable :: num_ffprime_y2(:) !< Second derivatives of FFprime profile (\f$ d^2FF'/d\Psi_N^2 \f$)
 
   !> --- Numerical input profiles for neoclassical coefficients
-  logical             :: NEO         ! If (NEO == .t.) neoclassical effects are considered
-  character(len=512)  :: neo_file    ! ASCII file the aki and amu profiles is read from.
-  logical             :: num_neo_file    ! is set true if neo_file /= 'none'
-  integer             :: num_neo_len     ! Number of points in aki_neo, mu_neo profiles
-  real*8, allocatable :: num_neo_psi(:)  ! Radial positions of profile points (PsiN values)
-  real*8, allocatable :: num_aki_value(:)  !numerical aki profile (PsiN values)
-  real*8, allocatable :: num_amu_value(:)!numerical amu profile (PsiN values)
-  real*8  :: aki_neo_const, amu_neo_const !if ( (NEO) .and. (neo_file=='none')), aki_neo and amu_neo are constants
+  logical             :: NEO              !< If .true. neoclassical effects are considered, (see [[neo|here]])
+  character(len=512)  :: neo_file         !< ASCII file the aki and amu profiles is read from.
+  logical             :: num_neo_file     !< automatically set true if neo_file /= 'none'
+  integer             :: num_neo_len      !< Number of points in aki_neo, mu_neo profiles
+  real*8, allocatable :: num_neo_psi(:)   !< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_aki_value(:) !< numerical aki profile (PsiN values)
+  real*8, allocatable :: num_amu_value(:) !< numerical amu profile (PsiN values)
+  real*8              :: aki_neo_const    !< if ( (NEO) .and. (neo_file=='none')), this constant value is used for aki_neo
+  real*8              :: amu_neo_const    !< if ( (NEO) .and. (neo_file=='none')), this constant value is used for amu_neo
 
   !> @name RMP profiles
   logical :: output_bnd_elements !< If .true., writes bnd nodes and bnd elements in files 'boundary_nodes.dat' and 'boundary_elements.dat'
-  logical :: RMP_on            !< Activates RMPs on boundary if .true.
+  logical :: RMP_on              !< Activates RMPs on boundary if .true. (the old version without STARWALL)
   character(len=512)  :: RMP_psi_cos_file  !< ASCII file the profiles of psi_RMP_cos and derivatives are read from
   character(len=512)  :: RMP_psi_sin_file  !< ASCII file the profiles of psi_RMP_sin and derivatives are read from
   real*8  :: RMP_growth_rate, RMP_ramp_up_time  !< parameters for time dependence of psi_RMP: Sigmoid f(t)= 1/ (1 + exp(-RMP_growth_rate*(t-RMP_ramp_up_time/2)))
-  real*8  :: RMP_start_time    !< time when RMP coils have been activated (RMP_on = .t.)
+  real*8  :: RMP_start_time    !< time when RMP coils are activated (RMP_on = .t.)
   real*8, allocatable :: psi_RMP_cos(:)
   real*8, allocatable :: dpsi_RMP_cos_dR(:)
   real*8, allocatable :: dpsi_RMP_cos_dZ(:)
   real*8, allocatable :: psi_RMP_sin(:)
   real*8, allocatable :: dpsi_RMP_sin_dR(:)
   real*8, allocatable :: dpsi_RMP_sin_dZ(:)
-  integer             :: RMP_har_cos,RMP_har_sin ! Harmoics numbers for RMP-cos and RMP-sin(for ex. ntor=3, nperiod=2,RMP_har_cos=2, RMP_har_sin=3)
+  integer             :: RMP_har_cos,RMP_har_sin ! Harmonics numbers for RMP-cos and RMP-sin(for ex. ntor=3, nperiod=2,RMP_har_cos=2, RMP_har_sin=3)
   integer, parameter  :: N_RMP_max = 10                  ! Maximum of RMP harmonics to take into account
   integer             :: Number_RMP_harmonics            ! Number_RMP_harmonics < N_RMP_max. If only one harmonic,  Number_RMP_harmonics=1, by default it's =1 in models/preset_parameters.f90 
-  integer             :: RMP_har_cos_spectrum(N_RMP_max) ! If only one harmonic,by default RMP_har_cos_spectrum(1)=RMP_har_cos; 
-  integer             :: RMP_har_sin_spectrum(N_RMP_max) ! If only one harmonic,by default RMP_har_sin_spectrum(1)=RMP_har_sin;
+  integer             :: RMP_har_cos_spectrum(N_RMP_max) = 0 ! If only one harmonic,by default RMP_har_cos_spectrum(1)=RMP_har_cos; 
+  integer             :: RMP_har_sin_spectrum(N_RMP_max) = 0 ! If only one harmonic,by default RMP_har_sin_spectrum(1)=RMP_har_sin;
 
 
   !> @name toroidal rotation profile
-  real*8              :: V_0,   V_1,    V_coef(10)! analytical // rotation profile similar to temperature and density in model 303
-  character(len=512)  :: R_Z_psi_bnd_file !< ASCII file for R_boundary,Z_boundary, psi_boundary, with n_boundary size.
-  character(len=512)  :: wall_file        !< ASCII file for external wall geometry, if n_ext is greater than zero.
+  real*8              :: V_0               !< analytical parallel rotation profile -- central value
+  real*8              :: V_1               !< analytical parallel rotation profile -- SOL value
+  real*8              :: V_coef(10) = 0.d0 !< analytical parallel rotation profile -- coefficients
+  character(len=512)  :: R_Z_psi_bnd_file  !< ASCII file for R_boundary,Z_boundary, psi_boundary, with n_boundary size.
+  character(len=512)  :: wall_file         !< ASCII file for external wall geometry, if n_ext is greater than zero.
   
   !> @name Numerical input profile for the toroidal rotation
-  character(len=512)  :: rot_file        !< ASCII file the profile is read from.
-  logical             :: num_rot         !< is set true if rot_file /= 'none'
-  integer             :: num_rot_len     !< Number of points in profile
+  character(len=512)  :: rot_file        !< ASCII file the parallel rotation profile is read from (see normalized_velocity_profile)
+  logical             :: num_rot         !< automatically set true if rot_file /= 'none'
+  integer             :: num_rot_len     !< Number of points in rotation profile
   real*8, allocatable :: num_rot_x(:)    !< Radial positions of profile points (PsiN values)
   real*8, allocatable :: num_rot_y0(:)   !< Values of toroidal rotation profile
   real*8, allocatable :: num_rot_y1(:)   !< First derivatives of toroidal rotation profile with respect to $\Psi_{N}$
@@ -454,28 +514,33 @@ module phys_module
   !> @name Global quantities determined in each time step
   real*8, allocatable :: R_axis_t(:), Z_axis_t(:), psi_axis_t(:), current_t(:), beta_p_t(:),       &
     beta_t_t(:), beta_n_t(:), density_in_t(:), density_out_t(:), pressure_in_t(:),                 &
-    pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:)
+    pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:),   &
+    E_tot_t(:), Helicity_tot_t(:), Kin_perp_tot_t(:), thermal_tot_t(:), kin_par_tot_t(:), ohmic_tot_t(:),      &
+    Wmag_tot_t(:), Ip_tot_t(:), flux_Pvn_t(:), flux_qpar_t(:), dE_tot_dt(:), flux_qperp_t(:), flux_kinpar_t(:), &
+    dWmag_tot_dt(:), dthermal_tot_dt(:), dkinpar_tot_dt(:), dkinperp_tot_dt(:),                      &
+    Magwork_tot_t(:), thmwork_tot_t(:), viscopar_dissip_tot_t(:), viscopar_flux_t(:), li3_t(:),      &
+    li3_tot_t(:), part_src_tot_t(:), heat_src_tot_t(:), volume_t(:), area_t(:), mag_ener_src_tot(:) 
   
   !> @name gmres parameters
-  integer             :: iter_precon    !< if number of gmres iterations > iter_precon, the preconditioner is updated
-  integer             :: gmres_m        !< gmres restart (dimension)
-  real*8              :: gmres_4        !< see gmres manual (error ratio between preconditioned and non-preconditioned error
-  real*8              :: gmres_tol      !< the tolerance for the gmres iterations
+  integer             :: iter_precon    !< whenever the number of gmres iterations exceeds iter_precon, the preconditioning matrix is updated
+  integer             :: gmres_m        !< gmres restart parameter (dimension)
+  real*8              :: gmres_4        !< see gmres manual (error ratio between preconditioned and non-preconditioned error)
+  real*8              :: gmres_tol      !< the tolerance for the gmres iterations to be seen as converged
 
   !> @name Taylor-Galerkin Stabilisation coefficients
-  real*8              :: tgnum(n_var)
+  real*8              :: tgnum(n_var)   !< Coefficients for Taylor Galerkin stabilization for each equation separately
 
   !> @name Flag to determine whether or not we keep current source term  
-  logical             :: keep_current_prof
+  logical             :: keep_current_prof !< Artificial current source to approximately keep the initial current profile, i.e., \f$\eta(j-j0)\f$?
   
   !> @name Numerical parameters
-  real*8              :: D_prof_neg     !< Diffusion coefficient in regions with negative density
+  real*8              :: D_prof_neg         !< Particle diffusion coefficient in regions with negative density
   real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if rho < D_prof_neg_thresh
-  real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_prof_neg        !< Heat diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
-  real*8              :: T_min          !< minimum temperature (limits on the temperature dependence of resistivity etc.
-  integer             :: n_tor_fft_thresh !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
-  integer*8           :: fftw_plan      !< Required for FFTW library
+  real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.)
+  integer             :: n_tor_fft_thresh   !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
+  integer*8           :: fftw_plan          !< Required for FFTW library
   real*8              :: corr_neg_temp_coef(2) !< Parameters used in models/corr_neg.f90
   real*8              :: corr_neg_dens_coef(2) !< Parameters used in models/corr_neg.f90
 
@@ -492,5 +557,7 @@ module phys_module
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral
+  
+  contains
   
 end module phys_module

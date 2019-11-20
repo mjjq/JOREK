@@ -11,8 +11,8 @@ use pellet_module
 use mpi_mod
 use domains
 !$ use omp_lib
-#if (JOREK_MODEL == 500)
-use mgi_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_neutral_source
 #endif
 
 implicit none
@@ -51,7 +51,11 @@ real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0
+real*8  :: local_n_particles_inj, local_n_particles, source_neutral, rn0, rho_bar
+
+integer    :: spi_i
+real*8     :: ng_radius
+
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 
@@ -95,11 +99,9 @@ VK_tot   = 0.d0
 VM_tot   = 0.d0
 J2_tot   = 0.d0
 
-if (use_pellet) then
-  local_pellet_particles = 0.d0
-  local_plasma_particles = 0.d0
-  local_pellet_volume    = 0.d0
-endif
+local_pellet_particles = 0.d0
+local_plasma_particles = 0.d0
+local_pellet_volume    = 0.d0
 
 #if (JOREK_MODEL == 500)
 local_n_particles_inj = 0.d0
@@ -135,29 +137,31 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
 !$omp          R_xpoint, Z_xpoint, my_id, use_pellet, psi_limit, delta_phi, R_axis, Z_axis, psi_axis, psi_bnd, &
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
-!$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int, eta_T,  &
+!$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
 !$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0,                    &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp          local_n_particles_inj, local_n_particles, mgi_amplitude, mgi_R, mgi_Z,          &
-!$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm,                       &
-!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube, JET_MGI,ASDEX_MGI,            &
-!$omp          central_mass,                                                                   &
+!$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
+!$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,               &
+!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
+!$omp          central_mass, pellets, tor_frequency,                                           &
+!$omp          n_spi, using_spi,                                                               &
+!$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
 #endif
 !$omp          wgauss_copy)                                                                    &
-!$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
+!$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt, spi_i,                       &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
 !$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi,        &
-!$omp           P_max, source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,               &
+!$omp           P_max, source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2, eta_T,        &
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp           rn0, source_mgi,                                                               &
+!$omp           rn0, source_neutral,                                                               &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -338,15 +342,35 @@ do ife = ife_min, ife_max
         endif
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+        !--- Calculate the neutral injection rate and the number of neutrals in the plasma
 
-        source_mgi = 0.d0
+        source_neutral = 0.d0
 
-        call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+        if (using_spi) then
 
-        !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
+          do spi_i = 1, n_spi
 
-        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_mgi * bigR * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
+            ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+
+            if (ng_radius < ng_radius_min) then
+              ng_radius = ng_radius_min
+            end if
+
+            call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
+                                  ng_radius,ns_sig,ns_deltaphi,     &
+                                  ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),     &
+                                  phi,source_neutral,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+          end do
+
+        else
+
+          call neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm,        &
+                                A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
+                                JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+        end if
+
+        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_neutral * bigR * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
         local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
 
 #endif
@@ -452,7 +476,6 @@ heating_in  = n_period * heating_in  / MU_zero / t_norm * 1.5d0
 source_out  = n_period * source_out  * central_density / t_norm
 source_in   = n_period * source_in   * central_density / t_norm
 
-
 if (my_id .eq. 0) then
 
   if (index_start .gt. 0) then
@@ -464,7 +487,7 @@ if (my_id .eq. 0) then
   write(*,'(A,3e14.6,A)') ' Time : ',xt,xt*t_norm,t_norm, ' [s]'
   write(*,'(A,4e14.6)')   ' Integrals_3D, PELLET : ',pellet_volume, total_pellet_volume, total_pellet_particles, total_plasma_particles
   write(*,'(A,2e14.6,A)') ' Volume   : ',xt,volume,' [m^3]'
-  write(*,'(A,4e14.6,A)') ' density  (total/in/out) : ',xt,density_tot,  density_in,  density_out,'[ 10^20/m^3]'
+  write(*,'(A,4e14.6,A)') ' density  (total/in/out) : ',xt,density_tot,  density_in,  density_out,' [10^20/m^3]'
   write(*,'(A,4e14.6,A)') ' pressure (total/in/out) : ',xt,pressure/1.d6, pressure_in/1.d6, pressure_out/1.d6,' [MJ]'
   write(*,'(A,4e14.6,A)') ' kinetic parallel (total/in/out) : ',xt,kin_par_tot/1.d6, kin_par_in/1.d6, kin_par_out/1.d6,' [MJ]'
 

@@ -662,7 +662,7 @@ current_pfc(10) = -0.15753674
  D_perp(5) = 0.96d0
  D_perp(6) = 0.d-0
 
- K_i_par      = 1.d5
+ ZK_i_par      = 1.d5
  ZK_i_perp(1) = 2.d-6
  ZK_i_perp(2) = 0.9d0
  ZK_i_perp(3) = 0.05d0
@@ -670,7 +670,7 @@ current_pfc(10) = -0.15753674
  ZK_i_perp(5) = 0.96d0
  ZK_i_perp(6) = 0.d0
 
- K_e_par      = 4.d6
+ ZK_e_par      = 4.d6
  ZK_e_perp(1) = 2.d-6
  ZK_e_perp(2) = 0.9d0
  ZK_e_perp(3) = 0.05d0

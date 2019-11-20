@@ -181,6 +181,8 @@ include_fluxes=""         # include energy and density fluxes (or not)
 include_neo=""            # include neoclassical and more terms (or not)
 include_magnetic_field="" # include vector of magnetic field (or not)
 include_velocity_field="" # include vector of velocity field (or not)
+include_electric_field="" # include vector of electric field (or not)
+include_Jpol=""           # include vector of poloidal currents (or not)
 include_bootstrap=""      # include bootstrap current and averaged current
 include_psi_norm=".true." # include normalized flux
 while [ $# -gt 1 ]; do
@@ -240,6 +242,14 @@ while [ $# -gt 1 ]; do
     include_velocity_field=".true."
     shift 1
     writenml="yes"
+  elif [ "$1" == "-Efield" ] || [ "$1" == "-electric_field" ]; then
+    include_electric_field=".true."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-Jpol" ] || [ "$1" == "-poloidal_currents" ]; then
+    include_Jpol =".true."
+    shift 1
+    writenml="yes"
   elif [ "$1" == "-bootstrap" ]; then
     include_bootstrap=".true."
     shift 1
@@ -271,7 +281,7 @@ shift
 infile=`readlink -f $1`
 shift
 sourceDir=`readlink -f .`
-copyfiles=`grep _file $infile | grep -v '^ *!' | sed -e "s/^.*= *[\"']\(.*\)[\"'].*$/\1/"`
+copyfiles=`grep _file $infile | grep -v '^ *!' | sed -e "s/^.*= *[\"']\(.*\)[\"'].*$/\1/" | grep -v 'none'`
 copyfiles="$copyfiles $@"
 for copyfile in $copyfiles; do
   if [ ! -f "$copyfile" ]; then
@@ -436,6 +446,12 @@ if [ "$writenml" == "yes" ]; then
   fi
   if [ ! -z "$include_velocity_field" ]; then
     echo "  include_velocity_field = $include_velocity_field" >> $vtk_nml
+  fi
+  if [ ! -z "$include_electric_field" ]; then
+    echo "  include_electric_field = $include_electric_field" >> $vtk_nml
+  fi
+   if [ ! -z "$include_Jpol" ]; then
+    echo "  include_Jpol = $include_Jpol" >> $vtk_nml
   fi
   if [ ! -z "$include_bootstrap" ]; then
     echo "  include_bootstrap = $include_bootstrap" >> $vtk_nml

@@ -5,9 +5,6 @@ use tr_module
 use mod_parameters
 use mumps_module
 use pastix_module
-use murge_module, only : use_murge, murge_id, MURGE_ASSEMBLY_OVW, MURGE_SUCCESS
-use murge_module, only : MURGE_SetGlobalRHS
-use murge_module, only : MURGE_GetGlobalSolution
 use wsmp_module
 use global_distributed_matrix
 use mpi_mod
@@ -135,23 +132,7 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
    
    if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 
-   if (use_murge) then
-#ifdef USE_MURGE
-      CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
-      if (ierr /= MURGE_SUCCESS) then 
-         write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
-         STOP
-      end if
-      CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, -1, ierr)
-      if (ierr /= MURGE_SUCCESS) then 
-         write (*,*) "ERROR in MURGE_GetGlobalSolution"; 
-         STOP
-      end if
-#else
-      print *, "Binary built without murge"
-      call abort()
-#endif
-   else if (use_pastix) then
+   if (use_pastix) then
       pastix_iparm(2) = 5
       pastix_iparm(3) = pastix_endsolve
       pastix_iparm(6) = pastix_iter           ! refinement : max number of iterations

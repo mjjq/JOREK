@@ -117,6 +117,7 @@ do i_tries=1,  n_tries  ! --- start attempts to find the axis
 
   ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
   min_indices(:) = minloc(grad_psi, mask=include_pt)  ! --- find minimum of |grad_psi|
+  if (.not. any(grad_psi)) min_indices = 0
   
   if ((min_indices(1) == 0) .and. (i_tries == 1)) then     ! --- if all elements are initially excluded, stop search and initialize values
     found_axis = .false.

@@ -200,6 +200,10 @@ end if
 write(*,*) ' Dierckx ier   : ',ier
 write(*,*) ' Dierckx fp    : ',fp
 write(*,*) ' Dierckx nx,ny : ',nx,ny
+if (ier > 0) then
+  write(*,*) '!!!!! Exiting                                                !!!!!'
+  stop
+end if 
 
 lwrk = mx*(kx+1)+my*(ky+1)
 kwrk = mx+my

@@ -10,7 +10,6 @@
 !!
 !! @note The variable s in a boundary element may correspond to s or t of the respective
 !! 2D element depending on element orientation.
-#include "pastix_fortran.h"
 module vacuum_response
   
   use vacuum
@@ -1132,8 +1131,6 @@ module vacuum_response
     character(len=18)   :: filename
     real*8, allocatable :: tripot_w(:)
     integer :: ierr
-
-    call MPI_BCAST(nout,1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
     if ( mod(index,nout) /= 0 ) return
 

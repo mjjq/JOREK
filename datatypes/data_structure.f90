@@ -1,5 +1,5 @@
 !> Definitions of derived data types for grid nodes and elements, boundary nodes and elements,
-!! and flux surface elements
+!! and flux surface elements, as well as the shattered pellets
 module data_structure
   use mod_parameters
   use tr_module
@@ -112,7 +112,19 @@ module data_structure
 
      real*8, dimension(:), allocatable  :: synch_buff
   END TYPE type_thread_buffer
-  
+
+ !> Data type to represent one shattered pellet piece
+  type type_SPI
+    real*8  :: spi_R        !< R coordinate of pellet (m)
+    real*8  :: spi_Z        !< Z coordinate of pellet (m)
+    real*8  :: spi_phi      !< Phi coordinate of pellet (degree)
+    real*8  :: spi_Vel_R    !< Velocity of pellet along R direction (m/s), note that the R direction of the injection location is used here
+    real*8  :: spi_Vel_Z    !< Velocity of pellet along Z direction (m/s), note that the Z direction of the injection location is used here
+    real*8  :: spi_Vel_RxZ  !< Velocity of pellet along RxZ direction (m/s), note that the RxZ direction of the injection location is used here
+    real*8  :: spi_radius   !< Radius of pellet assuming spherical pellet (m)
+    real*8  :: spi_abl      !< Pellet ablation rate (atom/s)
+  end type type_SPI
+ 
   integer                                         , public :: nbthreads
   TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()
   

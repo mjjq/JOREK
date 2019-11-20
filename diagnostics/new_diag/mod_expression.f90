@@ -171,7 +171,8 @@ module mod_expression
     call add(exprs_all_int, 'Thm_work_tot', 'Total thermal work  = \int vpar\cdot\nabla p dV       ')
     call add(exprs_all_int, 'Part_src_tot', 'Total particle source                                 ')
     call add(exprs_all_int, 'Heat_src_tot', 'Total heat source                                     ')
-    call add(exprs_all_int, 'Viscpar_diss', 'ToTal parallel viscosty dissipation                   ')
+    call add(exprs_all_int, 'Viscpar_diss', 'Total parallel viscosity dissipation                  ')
+    call add(exprs_all_int, 'Wmag_src_tot', 'Total magnetic energy source (from current source)    ')
     call add(exprs_all_int, 'li3         ', 'Internal inductance inside LCFS, li(3)                ')
     call add(exprs_all_int, 'li3_tot     ', 'Internal inductance inside grid, li(3)                ')
     call add(exprs_all_int, 'betap       ', 'Poloidal beta, of the plasma inside LCFS              ')
@@ -604,6 +605,13 @@ module mod_expression
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
 #if JOREK_MODEL == 500
           rn0 = 0.d0
+          rn0_s = 0.0
+          rn0_t = 0.0
+          rn0_ss = 0.0
+          rn0_tt = 0.0
+          rn0_st = 0.0
+          rn0_p = 0.0
+          rn0_pp = 0.0
 #endif
           
           ! --- Reconstruct variables

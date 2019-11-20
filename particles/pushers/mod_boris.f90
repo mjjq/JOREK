@@ -240,7 +240,7 @@ function kinetic_to_kinetic_leapfrog(in, E, B, mass, dt) result(out)
   real*8, intent(in)                          :: mass !< Mass of the particle [amu]
   real*8, intent(in)                          :: dt !< Timestep,[s]
   type(particle_kinetic_leapfrog)             :: out
-  call copy_particle_base(in, out)
+  out = in
   out%q = in%q
   out%v = in%v
   call boris_initial_half_step_backwards_RZPhi(out, mass, E, B, dt)
@@ -258,7 +258,7 @@ function kinetic_leapfrog_to_kinetic(in, E, B, mass, dt) result(out)
   type(particle_kinetic_leapfrog) :: tmp ! needed because we cannot alter `in`
   tmp = in
   call boris_initial_half_step_backwards_RZPhi(tmp, mass, E, B, -dt)
-  call copy_particle_base(in, out)
+  out = in
   out%q = in%q
   out%v = tmp%v
 end function kinetic_leapfrog_to_kinetic
@@ -286,7 +286,7 @@ function kinetic_to_gc(node_list, element_list, in, B, mass) result(out)
   real*8  :: B_hat(3), B_norm, v_par, v2
   integer :: ifail
 
-  call copy_particle_base(in, out)
+  out = in
   out%q      = in%q
 
   B_norm = norm2(B)
@@ -330,7 +330,7 @@ function gc_to_kinetic(node_list, element_list, in, chi, B, mass) result(out)
   real*8 :: B_norm, v_perp, v_par, B_hat(3), e1(3), e2(3)
   integer :: ifail
 
-  call copy_particle_base(in, out)
+  out = in
   out%q      = in%q
 
   B_norm = norm2(B)

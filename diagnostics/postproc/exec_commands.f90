@@ -162,6 +162,8 @@ module exec_commands
           call tor_line(command, first_step, ierr)
         case ( 'rectangle' )
           call rectangle(command, first_step, ierr)
+        case ( 'rectangular_torus' )
+          call rectangular_torus(command, first_step, ierr)
         case ( 'mark_coords' )
           call mark_coords(command, ierr)
         case ( 'midplane' )
@@ -182,6 +184,8 @@ module exec_commands
           call set(command, ierr)
         case ( 'si-units' )
           call select_si_units(command, ierr)
+        case ( 'spi-state' )
+          call spi_state(command, first_step, ierr)
         case ( 'timesteps' )
           call timesteps 
         case default
@@ -196,8 +200,8 @@ module exec_commands
         case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane', 'average', 'point',      &
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
           'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
-          'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'energy_spectrum', 'average_h5', &
-          'I_halo_TPF')
+          'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'rectangular_torus', 'energy_spectrum', 'average_h5', &
+          'I_halo_TPF', 'spi-state')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -1242,7 +1246,7 @@ module exec_commands
        tor_pos(phi=phi), result, ierr)
     
     call reduce_result_to_2d(ierr, result, res2d, i1=1)
-    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename))
+    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename), comment=trim(comment))
     
     if ( allocated(result) ) deallocate(result)
     if ( allocated(res2d ) ) deallocate(res2d )
@@ -1252,7 +1256,62 @@ module exec_commands
   
   
   
-  
+
+  !> Expressions in a rectangular area.
+  subroutine rectangular_torus(command, first_step, ierr)
+    
+    use mod_position, only: pol_pos, tor_pos
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8  :: Rmin, Rmax, Zmin, Zmax, phimin, phimax
+    integer :: nR, nZ, nphi, units
+    character(len=1024) :: filename, comment
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,9);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    
+    ! --- Preparation
+    Rmin      = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    Rmax      = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    nR        = to_int  (command%args(3), ierr); if ( ierr /= 0 ) return
+    Zmin      = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
+    Zmax      = to_float(command%args(5), ierr); if ( ierr /= 0 ) return
+    nZ        = to_int  (command%args(6), ierr); if ( ierr /= 0 ) return
+    phimin    = to_float(command%args(7), ierr); if ( ierr /= 0 ) return
+    phimax    = to_float(command%args(8), ierr); if ( ierr /= 0 ) return
+    nphi      = to_float(command%args(9), ierr); if ( ierr /= 0 ) return
+    units     = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
+    
+    write(filename,'(15a)') DIR, 'exprs_Rmin', trim(real2str(Rmin)), '_Rmax', trim(real2str(Rmax)),&
+                                      '_Zmin', trim(real2str(Zmin)), '_Zmax', trim(real2str(Zmax)),&
+                              '_phimin', trim(real2str(phimin)), '_phimax', trim(real2str(phimax)),&
+      trim(step_range_string(index_now,index_now)), '.h5'
+      
+    comment = 'Output produced by jorek2_postproc command "rectangular_torus"'
+    
+    call eval_expr(eq, units, expr_list,                                                           &
+       pol_pos(node_list,element_list,eq,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
+       tor_pos(phistart=phimin, phiend=phimax, nphi=nphi), result, ierr)
+    
+    call write_hdf5_3d(ierr, expr_list, result, trim(filename), comment=trim(comment))
+    
+    if ( allocated(result) ) deallocate(result)
+    
+  end subroutine rectangular_torus
+
+
+
+
+
   !> Toroidally and poloidally averaged expressions.
   subroutine average(command, first_step, ierr)
     
@@ -1348,6 +1407,83 @@ module exec_commands
     close(i_file)
     
   end subroutine equil_params
+
+
+
+
+  
+  !> Write out SPI related information
+  subroutine spi_state(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: units, i_file, i
+    character(len=1024) :: filename, status, access
+    real*8 :: R_av, Z_av, phi_av, shard_atoms_left, atoms_left, abl_tot, xx, yy, zz
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    
+    write(filename,'(4a)') DIR, 'spi', trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    xx         = 0.d0
+    yy         = 0.d0
+    zz         = 0.d0
+    atoms_left = 0.d0
+    abl_tot    = 0.d0
+    
+    do i = 1, n_SPI
+      shard_atoms_left = 4./3.*PI*pellets(i)%spi_radius**3 * pellet_density * 1.d20
+      
+      atoms_left = atoms_left + shard_atoms_left
+      
+      xx = xx + pellets(i)%spi_R * cos(pellets(i)%spi_phi) * shard_atoms_left
+      yy = yy - pellets(i)%spi_R * sin(pellets(i)%spi_phi) * shard_atoms_left
+      zz = zz + pellets(i)%spi_Z                           * shard_atoms_left
+      
+      abl_tot = abl_tot + pellets(i)%spi_abl
+    end do
+    
+    if ( atoms_left /= 0.d0 ) then
+      R_av   = sqrt( xx**2 + yy**2 ) / atoms_left
+      Z_av   = Z_av                  / atoms_left
+      phi_av = -atan2( yy, xx )      / atoms_left
+      if ( phi_av < 0.d0 ) phi_av = phi_av + 2.d0*PI
+    else
+      R_av   = 0.d0
+      Z_av   = 0.d0
+      phi_av = 0.d0
+    end if
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '# time                R_average           Z_average           '//       &
+        'phi_average         atoms_left          ablation_rate'
+    end if
+    
+    write(i_file,'(es20.13,3f20.16,3es20.12)') time_now, R_av, Z_av, phi_av, atoms_left, abl_tot
+    
+    close(i_file)
+    
+  end subroutine spi_state
 
 
 

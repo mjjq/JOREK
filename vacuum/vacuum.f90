@@ -55,7 +55,7 @@ module vacuum
   integer             :: n_coils                         !< number of poloidal field coils in coil_field.dat
   integer             :: n_pf_coils                      !< number of poloidal field coils
   logical             :: starwall_equil_coils            !< specify wheter the equilibrium PF coils will be given by STARWALL or not
-  logical             :: find_pf_coil_currents           !< search for optimal pf_coil currents to build a free-bnd equil?
+  logical             :: find_pf_coil_currents           !< search for optimal pf_coil currents to build a free-bnd equil? [[jorek-starwall-faqs|fbnd_eq_FAQs]]
   real*8, allocatable :: I_coils(:)                      !< coil currents
   real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
@@ -65,17 +65,17 @@ module vacuum
   real*8              :: psi_offset_freeb                !< Allows to shift the value of psi by a global constant for freeb_equil (improves convergence)
   
   !> @name Equilibrium parameters for feedback
-  real*8              :: current_ref                     !< Target total plasma current Ip for the feedback (FB)
-  real*8              :: FB_Ip_position                  !< Amplification factor for Ip feedback
-  real*8              :: FB_Ip_integral                  !< Amplification factor for Ip feedback
-  real*8              :: Z_axis_ref                      !< Target magnetic axis vertical position
-  real*8              :: FB_Zaxis_position               !< Amplification factor for Zaxis feedback
-  real*8              :: FB_Zaxis_derivative             !< Amplification factor for Zaxis feedback
-  real*8              :: FB_Zaxis_integral               !< Amplification factor for Zaxis feedback
-  integer             :: start_VFB                       !< Iteration for starting vertical feedback
-  integer             :: n_feedback_current              !< Feedback will be performed each n_... iterations
-  integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations
-  integer             :: n_iter_freeb                    !< Number of iterations for freeboundary equilibirum
+  real*8              :: current_ref                     !< Target total plasma current Ip for the feedback (FB) [[jorek-starwall-faqs|fbnd_eq_FAQs]]
+  real*8              :: FB_Ip_position                  !< Amplification factor for Ip feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  real*8              :: FB_Ip_integral                  !< Amplification factor for Ip feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  real*8              :: Z_axis_ref                      !< Target magnetic axis vertical position (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  real*8              :: FB_Zaxis_position               !< Amplification factor for Zaxis feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  real*8              :: FB_Zaxis_derivative             !< Amplification factor for Zaxis feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  real*8              :: FB_Zaxis_integral               !< Amplification factor for Zaxis feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  integer             :: start_VFB                       !< Iteration for starting vertical feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  integer             :: n_feedback_current              !< Feedback will be performed each n_... iterations (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  integer             :: n_iter_freeb                    !< Number of iterations for freeboundary equilibirum (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   
   !> @name Time-evolution PF coils parameters
   real*8              :: PF_pert_start_time              !< Time to start a perturbation to speed-up VDEs
@@ -84,7 +84,7 @@ module vacuum
   ! ### various variables, some need to be removed
   real*8, allocatable :: R_coils(:), Z_coils(:)          ! ### old
   real*8, allocatable :: dR_coils(:), dZ_coils(:)        ! ### old
-  real*8, allocatable :: coil_voltages(:)                !< Coil voltages
+  real*8, allocatable :: coil_voltages(:)                !< Coil voltages (not ready yet)
   real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
   real*8, allocatable :: diag_coil_curr(:,:)
   
@@ -150,14 +150,13 @@ module vacuum
     real*8, allocatable:: curr(:)  !< current-values of numerical time trace
   end type t_coil_curr_time_trace
   integer, parameter              :: MAX_COILS = 299
-  type(t_coil_curr_input), target :: diag_coils(MAX_COILS)
-  type(t_coil_curr_input), target :: rmp_coils(MAX_COILS) 
-  type(t_coil_curr_input), target :: voltage_coils(MAX_COILS)
-  type(t_coil_curr_input), target :: pf_coils(MAX_COILS)
+  type(t_coil_curr_input), target :: diag_coils(MAX_COILS)    ! see [[jorek-starwall-faqs|jorek_starwall_FAQs]]
+  type(t_coil_curr_input), target :: rmp_coils(MAX_COILS)     ! see [[jorek-starwall-faqs|jorek_starwall_FAQs]]
+  type(t_coil_curr_input), target :: voltage_coils(MAX_COILS) ! not ready yet (see [[jorek-starwall-faqs|jorek_starwall_FAQs]])
+  type(t_coil_curr_input), target :: pf_coils(MAX_COILS)      ! see [[jorek-starwall-faqs|jorek_starwall_FAQs]]
   type(t_coil_curr_time_trace)    :: coil_curr_time_trace(4*MAX_COILS)
   
-  real*8 :: vert_FB_amp(MAX_COILS) = 0.d0 !< Allows to tune direction and magnitude of vertical feedback for each poloidal field coil.
-  
+  real*8 :: vert_FB_amp(MAX_COILS) = 0.d0 !< Tune direction and magnitude of vert feedback for each poloidal field coil ([[jorek-starwall-faqs|eq_FAQs]])
   
   
   contains
@@ -767,9 +766,12 @@ module vacuum
         
       else
       end if
-      if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
-      if ( minval(sz) > 0 ) allocate( diag_coil_curr(sz(1),sz(2)) )
-      
+
+      if ( my_id /= 0 ) then
+        if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
+        if ( minval(sz) > 0 ) allocate( diag_coil_curr(sz(1),sz(2)) )
+      end if
+
       call MPI_BCAST(wall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(dwall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(old_dpsibnd_vec,n_dof_starwall,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 

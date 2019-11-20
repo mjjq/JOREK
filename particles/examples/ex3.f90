@@ -20,8 +20,7 @@ type(diag_print_kinetic_energy) :: print_ke
 integer :: i
 
 ! 1. Set up MPI
-call sim%initialize(num_groups=0)
-
+call sim%initialize(num_groups=0,skip_jorek2help=.true.)
 ! 2. Loop over command arguments
 do i=1,command_argument_count()
   ! 3. Read files from commandline

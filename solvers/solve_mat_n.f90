@@ -7,7 +7,11 @@ contains
     
     implicit none
 
+#ifdef USE_PASTIX
 #include "pastix_fortran.h"
+#else
+#include "no_pastix_fortran.h"
+#endif
 
     integer, intent(in) :: my_id
     integer*4, dimension(1:pastix_nthrd) :: thread_map
@@ -40,7 +44,11 @@ contains
     
     implicit none
 
+#ifdef USE_PASTIX
 #include "pastix_fortran.h"
+#else
+#include "no_pastix_fortran.h"
+#endif
 #include "r3_info.h"
 
     integer, intent(in) :: my_id
@@ -123,12 +131,17 @@ contains
       if (use_mumps) then
 #ifdef USE_MUMPS
 
-        mumps_par%JOB = 1                                 ! Analysis, only needed when grid has changed
+        mumps_par%JOB = 1                                  ! Analysis, only needed when grid has changed
 
-        mumps_par%icntl(7)  = 4                            ! reorderign option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
+        mumps_par%icntl(7)  = mumps_ordering               ! ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS), default: 7
         mumps_par%icntl(8)  = 7                            ! row and column scaling
         mumps_par%icntl(14) = 30                           ! MAXS
         mumps_par%icntl(18) = 0
+
+        if (use_mumps_BLR) then
+          mumps_par%icntl(35) = 1                          ! Block-low-rank (BLR) compression. 0: off (default), 1: automatic, 2: factorisation and solution, 3: only factorisation
+          mumps_par%cntl(7) = mumps_BLR_eps                ! Accuracy of BLR approximation
+        endif
 
         call DMUMPS(mumps_par)
 
@@ -380,7 +393,7 @@ contains
         end if
 
       endif
-      
+     
       if (my_id_n .eq.0) then                            ! elapsed time facto end
          call MPI_Barrier(MPI_COMM_MASTER,ierr)
          call clck_time(t1)

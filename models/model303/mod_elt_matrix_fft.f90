@@ -1019,16 +1019,16 @@ do i=1,n_vertex_max
               index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor*n_var*(j-1) + im
             endif
 
-            ij1 = index_ij
-            ij2 = index_ij + 1
-            ij3 = index_ij + 2
-            ij4 = index_ij + 3
-            ij5 = index_ij + 4
-            ij6 = index_ij + 5
-            ij7 = index_ij + 6
 
             ! --- Fill up the matrix
             if (n_tor .gt. n_tor_fft_thresh) then
+              ij1 = index_ij
+              ij2 = index_ij + 1
+              ij3 = index_ij + 2
+              ij4 = index_ij + 3
+              ij5 = index_ij + 4
+              ij6 = index_ij + 5
+              ij7 = index_ij + 6
               RHS_p(mp,ij1) = RHS_p(mp,ij1) + rhs_ij_1 * wst
               RHS_p(mp,ij2) = RHS_p(mp,ij2) + rhs_ij_2 * wst
               RHS_p(mp,ij3) = RHS_p(mp,ij3) + rhs_ij_3 * wst
@@ -1041,6 +1041,13 @@ do i=1,n_vertex_max
               RHS_k(mp,ij6) = RHS_k(mp,ij6) + rhs_ij_6_k * wst
               RHS_k(mp,ij7) = RHS_k(mp,ij7) + rhs_ij_7_k * wst
             else
+              ij1 = index_ij
+              ij2 = index_ij + 1*n_tor_loop
+              ij3 = index_ij + 2*n_tor_loop
+              ij4 = index_ij + 3*n_tor_loop
+              ij5 = index_ij + 4*n_tor_loop
+              ij6 = index_ij + 5*n_tor_loop
+              ij7 = index_ij + 6*n_tor_loop
               RHS(ij1) = RHS(ij1) + (rhs_ij_1 + rhs_ij_1_k) * wst
               RHS(ij2) = RHS(ij2) + (rhs_ij_2 + rhs_ij_2_k) * wst
               RHS(ij3) = RHS(ij3) + (rhs_ij_3 + rhs_ij_3_k) * wst

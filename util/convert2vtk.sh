@@ -52,6 +52,7 @@ function usage () {
   echo "  -Vfield                     Include vector of velocity field [default: off] (2D VTK ONLY)"
   echo "  -[no]psiN                   Include normalized poloidal flux or not [default: on] (2D VTK ONLY)"
   echo "  -bootstrap                  Include bootstrap current decomposition [default: off] (2D VTK ONLY)"
+  echo "  -RphiZ_coords               (R,phi,Z) coordinate system instead of (R,Z,phi) in the VTK file"
   echo ""
   echo "  binary                      executable (jorek2vtk, jorek2vtk_3d, jorek2_target2vtk)"
   echo "  infile                      Input file of the corresponding JOREK run"

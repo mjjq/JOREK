@@ -28,9 +28,9 @@ real*8                :: U,U_s,U_t,U_st,U_ss,U_tt, RHO,RH_s,RH_t,RH_st,RH_ss,RH_
 real*8                :: u0_x, u0_y, xjac, v_perp, Psi_J, R_p, error, zj_x, zj_y, ps_x, ps_y
 logical               :: periodic, density_only
 integer               :: ierr, my_id
-logical               :: without_n0_mode, cartesian
+logical               :: without_n0_mode, RphiZ_coords
 
-namelist /vtk_params/ nsub, without_n0_mode, periodic, cartesian
+namelist /vtk_params/ nsub, without_n0_mode, periodic, RphiZ_coords
 
 write(*,*) 'jorek2vtk_3d'
 
@@ -44,7 +44,7 @@ without_n0_mode = .false.  		! If true, do not include the n=0 mode (i_tor=1)
 periodic        = .true.		! Are we doing the whole tor?
 density_only    = .false.		! Write density only (for smaller vtk file)
 n_toroidal      = 200 !n_plane 		! Number of toroidal snapshots
-cartesian       = .false.               ! use xyz transformation from JOREK wiki 
+RphiZ_coords    = .false.               ! use xyz transformation from JOREK wiki 
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -143,7 +143,7 @@ do m=1, n_toroidal
 
         inode = inode+1
 
-        if (cartesian) then
+        if (RphiZ_coords) then
           xyz(1:3,inode) = (/ R * cos(angle), -R*sin(angle), Z /)   !from the JOREK wiki
         else
           xyz(1:3,inode) = (/ R * cos(angle), Z, R*sin(angle) /)

@@ -185,7 +185,7 @@ include_electric_field="" # include vector of electric field (or not)
 include_Jpol=""           # include vector of poloidal currents (or not)
 include_bootstrap=""      # include bootstrap current and averaged current
 include_psi_norm=".true." # include normalized flux
-cartesian=".false."       # use (R,0,Z) xyz coordinates instead of (R,Z,0)
+RphiZ_coords=".false."    # use (R,0,Z) xyz coordinates instead of (R,Z,0)
 while [ $# -gt 1 ]; do
   if [ "$1" == "-j" ]; then
     nthreads="$2"
@@ -259,8 +259,8 @@ while [ $# -gt 1 ]; do
     include_psi_norm=".false."
     shift 1
     writenml="yes"
-  elif [ "$1" == "-cartesian" ] || [ "$1" == "-cart" ]; then
-    cartesian=".true."
+  elif [ "$1" == "-RphiZ_coords" ] || [ "$1" == "-RphiZ" ]; then
+    RphiZ_coords=".true."
     shift 1
     writenml="yes"
   elif [ "$1" == "-h" ] || [ "$1" = "--help" ]; then
@@ -464,8 +464,8 @@ if [ "$writenml" == "yes" ]; then
   if [ ! -z "$include_psi_norm" ]; then
     echo "  include_psi_norm = $include_psi_norm" >> $vtk_nml
   fi
-  if [ ! -z "$cartesian" ]; then
-    echo "  cartesian = $cartesian" >> $vtk_nml
+  if [ ! -z "$RphiZ_coords" ]; then
+    echo "  RphiZ_coords = $RphiZ_coords" >> $vtk_nml
   fi
   echo "/"                        >> $vtk_nml
   copyfiles="$copyfiles $vtk_nml"

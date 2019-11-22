@@ -138,6 +138,13 @@ node_list%node(nR*nZ+2*nR+2*nZ)%index(2)  = n_index_start + 1
 
 element_list%n_elements = element_list%n_elements + 2*(nR-1)+2*(nZ-1)
 
+if ( node_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_bezier_square_polar: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( element_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_bezier_square_polar: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 !-------------- add the polar grid
 

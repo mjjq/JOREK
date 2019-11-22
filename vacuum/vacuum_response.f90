@@ -618,15 +618,6 @@ module vacuum_response
     sr%a_ye%loc_mat(:,:) = sr%a_ye%loc_mat(:,:) * 2.d0*PI
     if ( vacuum_debug .and. (my_id==0) ) write(*,*) 'Applied import normalization.'
 
-    ! --- STARWALL Cartesian coordinates -> JOREK Cartesian coordinates (replace y <-> z)
-    if (my_id==0) then
-      allocate( tmp(sr%npot_w) )
-      tmp(:)           = sr%xyzpot_w(:,2)
-      sr%xyzpot_w(:,2) = sr%xyzpot_w(:,3)
-      sr%xyzpot_w(:,3) = tmp(:)
-      deallocate( tmp )
-    end if
-
     ! --- Compute ideal-wall and no-wall response matrices.
     
     call  alloc_distr(my_id, sr%a_nw,(/sr%nd_bez, sr%nd_bez/), .true.)

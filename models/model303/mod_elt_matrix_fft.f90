@@ -1986,7 +1986,7 @@ do i=1,n_vertex_max
     enddo ! mt loop
 
 
-    if (n_tor .gt. n_tor_fft_thresh) then
+    if ( (n_tor .gt. n_tor_fft_thresh) .and. (n_tor .ne. 1) ) then
 
       do i_v = 1, n_var
         do j_loc=1, n_vertex_max*n_var*(n_order+1)
@@ -2205,7 +2205,7 @@ do i=1,n_vertex_max
   enddo ! j loop (n_order+1)
 enddo ! i loop (n_vertex)
 
-if (n_tor .le. n_tor_fft_thresh) return
+if ( (n_tor .le. n_tor_fft_thresh) .or. (n_tor .eq. 1) ) return
 
 ELM = 0.5d0 * ELM
 

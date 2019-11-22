@@ -141,6 +141,8 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_p
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_ss, eq_st, eq_tt
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: delta_g, delta_s, delta_t
 
+real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
+
 
 ELM_p = 0.d0
 ELM_n = 0.d0
@@ -195,6 +197,17 @@ amat_41_kn = 0.d0 ; amat_42_kn = 0.d0 ; amat_43_kn = 0.d0 ; amat_44_kn = 0.d0 ; 
 amat_51_kn = 0.d0 ; amat_52_kn = 0.d0 ; amat_53_kn = 0.d0 ; amat_54_kn = 0.d0 ; amat_55_kn = 0.d0 ; amat_56_kn = 0.d0 ; amat_57_kn = 0.d0
 amat_61_kn = 0.d0 ; amat_62_kn = 0.d0 ; amat_63_kn = 0.d0 ; amat_64_kn = 0.d0 ; amat_65_kn = 0.d0 ; amat_66_kn = 0.d0 ; amat_67_kn = 0.d0
 amat_71_kn = 0.d0 ; amat_72_kn = 0.d0 ; amat_73_kn = 0.d0 ; amat_74_kn = 0.d0 ; amat_75_kn = 0.d0 ; amat_76_kn = 0.d0 ; amat_77_kn = 0.d0
+
+! --- Toroidal functions            
+if (n_tor .gt. 1) then
+  HHZ    = 1.d0
+  HHZ_p  = 1.d0
+  HHZ_pp = 1.d0
+else
+  HHZ   (1,1) = HZ   (1,1)
+  HHZ_p (1,1) = HZ_p (1,1)
+  HHZ_pp(1,1) = HZ_pp(1,1)
+endif
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_st  = 0.d0; x_ss  = 0.d0; x_tt  = 0.d0;
@@ -735,17 +748,17 @@ do i=1,n_vertex_max
                                 source_pellet, source_volume)
           endif
 
-          v   =  H(i,j,ms,mt) * element%size(i,j)
-          v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
-          v_y = (- x_t(ms,mt) * h_s(i,j,ms,mt) + x_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
+          v   =  H(i,j,ms,mt) * element%size(i,j) * HHZ(1,mp)
+          v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac * HHZ(1,mp)
+          v_y = (- x_t(ms,mt) * h_s(i,j,ms,mt) + x_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac * HHZ(1,mp)
 
-          v_s = h_s(i,j,ms,mt) * element%size(i,j)
-          v_t = h_t(i,j,ms,mt) * element%size(i,j)
-          v_p = H(i,j,ms,mt)   * element%size(i,j)
+          v_s = h_s(i,j,ms,mt) * element%size(i,j) * HHZ(1,mp)
+          v_t = h_t(i,j,ms,mt) * element%size(i,j) * HHZ(1,mp)
+          v_p = H(i,j,ms,mt)   * element%size(i,j) * HHZ_p(1,mp)
 
-          v_ss = h_ss(i,j,ms,mt) * element%size(i,j)
-          v_tt = h_tt(i,j,ms,mt) * element%size(i,j)
-          v_st = h_st(i,j,ms,mt) * element%size(i,j)
+          v_ss = h_ss(i,j,ms,mt) * element%size(i,j) * HHZ(1,mp)
+          v_tt = h_tt(i,j,ms,mt) * element%size(i,j) * HHZ(1,mp)
+          v_st = h_st(i,j,ms,mt) * element%size(i,j) * HHZ(1,mp)
 
           v_xx = (v_ss * y_t(ms,mt)**2 - 2.d0*v_st * y_s(ms,mt)*y_t(ms,mt) + v_tt * y_s(ms,mt)**2    &
                  + v_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                          &
@@ -1029,17 +1042,17 @@ do i=1,n_vertex_max
 
             do l=1,n_order+1
 
-              psi   = H(k,l,ms,mt) * element%size(k,l)
+              psi   = H(k,l,ms,mt) * element%size(k,l) * HHZ(1,mp)
 
-              psi_x = (   y_t(ms,mt) * h_s(k,l,ms,mt) - y_s(ms,mt) * h_t(k,l,ms,mt) ) / xjac * element%size(k,l)
-              psi_y = ( - x_t(ms,mt) * h_s(k,l,ms,mt) + x_s(ms,mt) * h_t(k,l,ms,mt) ) / xjac * element%size(k,l)
+              psi_x = (   y_t(ms,mt) * h_s(k,l,ms,mt) - y_s(ms,mt) * h_t(k,l,ms,mt) ) / xjac * element%size(k,l) * HHZ(1,mp)
+              psi_y = ( - x_t(ms,mt) * h_s(k,l,ms,mt) + x_s(ms,mt) * h_t(k,l,ms,mt) ) / xjac * element%size(k,l) * HHZ(1,mp)
 
-              psi_p  = H(k,l,ms,mt)   * element%size(k,l)
-              psi_s  = h_s(k,l,ms,mt) * element%size(k,l)
-              psi_t  = h_t(k,l,ms,mt) * element%size(k,l)
-              psi_ss = h_ss(k,l,ms,mt) * element%size(k,l)
-              psi_tt = h_tt(k,l,ms,mt) * element%size(k,l)
-              psi_st = h_st(k,l,ms,mt) * element%size(k,l)
+              psi_p  = H(k,l,ms,mt)   * element%size(k,l) * HHZ_p(1,mp)
+              psi_s  = h_s(k,l,ms,mt) * element%size(k,l) * HHZ(1,mp)
+              psi_t  = h_t(k,l,ms,mt) * element%size(k,l) * HHZ(1,mp)
+              psi_ss = h_ss(k,l,ms,mt) * element%size(k,l) * HHZ(1,mp)
+              psi_tt = h_tt(k,l,ms,mt) * element%size(k,l) * HHZ(1,mp)
+              psi_st = h_st(k,l,ms,mt) * element%size(k,l) * HHZ(1,mp)
 
               psi_xx = (psi_ss * y_t(ms,mt)**2 - 2.d0*psi_st * y_s(ms,mt)*y_t(ms,mt) + psi_tt * y_s(ms,mt)**2  &
                      + psi_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &

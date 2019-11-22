@@ -14,7 +14,7 @@ subroutine preset_parameters
   
   time_evol_scheme = 'Crank-Nicholson'
   
-  n_tor_fft_thresh = 5
+  n_tor_fft_thresh = 2
   if(jorek_model == 305 .or. jorek_model == 306) n_tor_fft_thresh = 99
   
   ! --- DoubleNull flag

@@ -544,6 +544,7 @@ if (my_id == 0) then
   if (use_BLR_compression) then
     write(*,REAL_FMT) 'epsilon_BLR           ', epsilon_BLR
     write(*,LOGI_FMT) 'just_in_time_BLR      ', just_in_time_BLR
+    write(*,LOGI_FMT) 'pastix_blr_abs_tol    ', pastix_blr_abs_tol
   endif
 
   write(*,INTG_FMT) 'n_pfc                 ', n_pfc

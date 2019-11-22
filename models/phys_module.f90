@@ -61,6 +61,7 @@ module phys_module
   logical :: use_BLR_compression  !< Use Block-Low-Rank (BLR) compression in MUMPS / PaStiX 6 solvers
   real*8  :: epsilon_BLR          !< Accuracy of BLR compression
   logical :: just_in_time_BLR     !< Use Just-in-time strategy for BLR compression (speed optimized)
+  logical :: pastix_blr_abs_tol   !< Use absolute tolerance for BLR
 
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"

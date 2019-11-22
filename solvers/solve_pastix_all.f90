@@ -284,6 +284,11 @@ if (.not. pastix_initialised) then
     else 
       pastix_iparm(IPARM_COMPRESS_WHEN)     = PastixCompressWhenBegin ! Minimal-memory (default)
     endif
+    if (pastix_blr_abs_tol) then
+      pastix_iparm(IPARM_COMPRESS_RELTOL)     = 0
+    else
+      pastix_iparm(IPARM_COMPRESS_RELTOL)     = 1
+    end if
     pastix_dparm(DPARM_COMPRESS_TOLERANCE)  = epsilon_BLR
 
 !!   Additional PaStiX compression parameters (currently set to their default values)

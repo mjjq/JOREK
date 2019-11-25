@@ -129,6 +129,7 @@ module diffusivities
         get_dzkperp1 = get_dzkperp1 + ZK_perp(6)*ZK_perp(2) / (cosh(2.d0*((-psin+ZK_perp(5)+ZK_perp(3))/ZK_perp(4))) + 1.d0) / ZK_perp(4)
 
       end if
+    end if
       
   end function get_dzkperp1
 	

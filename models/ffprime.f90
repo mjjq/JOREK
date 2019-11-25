@@ -33,33 +33,50 @@ psi_n     = (psi - psi_axis) / delta_psi
 
 psi_n = max( min(psi_n, 2.), 0. )
 
-factor = 1.d0
-
-if (xpoint2) then
-  if ((Z .lt. Z_xpoint(1)) .and. (psi_n .lt. 1.d0) ) then
-    psi_n = 2.d0 - psi_n
-    factor = -1.d0
-  endif
-endif
+!factor = 1.d0
+!if (xpoint2) then
+!  if ((Z .lt. Z_xpoint) .and. (psi_n .lt. 1.d0) ) then
+!    psi_n = 2.d0 - psi_n
+!    factor = -1.d0
+!  endif
+!endif
 
 ! --- Profile as a function of Psi_N.
 if ( .not. num_ffprime ) then ! use analytical representation
+  
+  d_pert  = + FF_coef(6)/cosh((psi_n - FF_coef(7))/FF_coef(8))**2 / (2.d0 * FF_coef(8)) / delta_psi
+  d2_pert = - FF_coef(6)/cosh((psi_n - FF_coef(7))/FF_coef(8))**2 / (FF_coef(8)**2)  &
+            * tanh((psi_n - FF_coef(7))/FF_coef(8)) / delta_psi**2
+  d3_pert = + FF_coef(6)/cosh((psi_n - FF_coef(7))/FF_coef(8))**4 / (FF_coef(8)**3)  &
+            * (-2.d0 + cosh(2.d0*(psi_n-FF_coef(7))/FF_coef(8)) ) / delta_psi**3
   
   prof0        = (FF_0 - FF_1) * ( 1.d0 + FF_coef(1) * psi_n + FF_coef(2) * psi_n**2 + FF_coef(3) * psi_n**3)
   dprof0_dpsi  = (FF_0 - FF_1) * ( FF_coef(1) + 2.d0 * FF_coef(2) * psi_n + 3.d0 * FF_coef(3) * psi_n**2)    / delta_psi
   dprof0_dpsi2 = (FF_0 - FF_1) * (2.d0 * FF_coef(2) + 6.d0 * FF_coef(3) * psi_n) / delta_psi**2
   
-   
-  prof1        = prof0        
-  dprof1_dpsi  = dprof0_dpsi  
-  dprof1_dpsi2 = dprof0_dpsi2 
-
-  if (psi_n .gt. 1.d0) then
-    prof1        = 0.d0
-    dprof1_dpsi  = 0.d0  
-    dprof1_dpsi2 = 0.d0 
-  endif
-
+  prof0        = prof0        + d_pert
+  dprof0_dpsi  = dprof0_dpsi  + d2_pert
+  dprof0_dpsi2 = dprof0_dpsi2 + d3_pert
+  
+  sig_F        = FF_coef(4)
+  psi_barrier  = FF_coef(5)
+  
+  psi_star = (psi_n - psi_barrier)/sig_F
+  psi_star = min( max( psi_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+  
+  tanh1 = tanh(psi_star)
+  cosh1 = cosh(psi_star)
+  cosh2 = cosh(2.d0*psi_star)
+  
+  atn   = (0.5d0 - 0.5d0*tanh1)
+  datn  = - 1.d0/cosh1**2 / (2.d0 * sig_F) / delta_psi
+  d2atn =   1.d0/cosh1**2 / sig_F**2 * tanh1 / delta_psi**2
+  d3atn = - 1.d0/cosh1**4 / sig_F**3 * (-2.d0 + cosh2) / delta_psi**3
+  
+  prof1        = prof0        * atn
+  dprof1_dpsi  = dprof0_dpsi  * atn +         prof0       * datn
+  dprof1_dpsi2 = dprof0_dpsi2 * atn + 2.d0 * dprof0_dpsi  * datn + prof0       * d2atn
+  
 else ! use numerical representation.
   
   ! --- Interpolate profile and derivatives to position psi_n by bisections.

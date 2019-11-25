@@ -23,7 +23,7 @@ contains
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
-subroutine bootstrap_current(minRad, R, Z,                   &
+subroutine bootstrap_current(R, Z,                           &
                              R_axis, Z_axis, psi_axis,       &
 			     R_xpoint, Z_Xpoint, psi_bnd,    &
                              psi_norm, ps0, ps0_x, ps0_y,    &
@@ -41,7 +41,7 @@ subroutine bootstrap_current(minRad, R, Z,                   &
 
   implicit none
   ! --- Routine parameters
-  real*8, intent(in)  :: minRad, R, Z
+  real*8, intent(in)  :: R, Z
   real*8, intent(in)  :: R_axis, Z_axis, psi_axis
   real*8, intent(in)  :: R_xpoint(2), Z_xpoint(2), psi_bnd
   real*8, intent(in)  :: psi_norm
@@ -234,10 +234,11 @@ end subroutine bootstrap_current
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
-subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
+subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd)
 
   use data_structure
   use phys_module
+  use mod_interp
 
   implicit none
   ! --- Routine parameters
@@ -245,7 +246,6 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
   type (type_element_list),     intent(inout) :: element_list
   real*8, 			intent(in)    :: R_axis, Z_axis
   real*8, 			intent(in)    :: psi_axis, psi_bnd
-  real*8, 			intent(inout) :: minRad
   
   ! --- Internal parameters
   type (type_surface_list) 	:: surface_list, flux_list
@@ -258,8 +258,6 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
   real*8			:: s_find(8), t_find(8)
   integer			:: i_elm_find(8),i_find
   real*8			:: psi, psi_norm, psi_s,psi_t,psi_st,psi_ss,psi_tt
-  real*8			:: dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-  real*8			:: dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
   logical			:: found
 
   ! --- Simplest case when we have a limiter plasma
@@ -267,18 +265,16 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
     flux_list%n_psi = 1
     call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
     flux_list%psi_values(1) = psi_bnd
-    call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
+    call find_flux_surfaces(0, xpoint,xcase,node_list,element_list,flux_list)
     call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
     ! --- If this didn't work, it means psi=1.0 is the grid boundary, try with psi=0.99
     if (i_find .eq. 0) then
       flux_list%psi_values(1) = 0.99 * (psi_bnd - psi_axis) + psi_axis
-      call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
+      call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
       call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
     endif
     if (i_find .ne. 0) then
-      call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-    		     R_find,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
-    		     Z_find,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+      call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),R_find,Z_find)
       minRad = R_find - R_axis
     else
       minRad = amin
@@ -350,11 +346,9 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
     flux_list%n_psi = 1
     call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
     flux_list%psi_values(1) = psi_bnd
-    call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
+    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
     call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
-    call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-    		   R_find,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
-    		   Z_find,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),R_find,Z_find)
     call tr_deallocate(flux_list%psi_values,"flux_list%psi_values",CAT_GRID)
     minRad = R_find - R_axis
   else
@@ -384,6 +378,7 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
   use data_structure
   use phys_module
   use grid_xpoint_data
+  use mod_interp
 
   implicit none
   ! --- Routine parameters
@@ -403,8 +398,8 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
   real*8                   :: sigmas(16)
   integer                  :: n_grids(10)
   real*8                   :: rr, s, t, ds, dt, xjac, dl, sum_dl
-  real*8                   :: R,  dR_ds,  dR_dt,  dR_dst,  dR_dss,  dR_dtt, dR_dl
-  real*8                   :: Z,  dZ_ds,  dZ_dt,  dZ_dst,  dZ_dss,  dZ_dtt, dZ_dl
+  real*8                   :: R, dR_ds, dR_dt, dR_dl
+  real*8                   :: Z, dZ_ds, dZ_dt, dZ_dl
   real*8                   :: psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt, psi_R, psi_Z
   real*8                   :: zj, dzj_ds, dzj_dt, dzj_dst, dzj_dss, dzj_dtt
 
@@ -496,8 +491,7 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
 	rr = xgs(ig)
   	i_elm = flux_list%flux_surfaces(i)%elm(k)
         call compute_surface_basics(flux_list, i, k, rr, s, t, ds, dt)
-  	call interp_RZ(node_list,element_list,i_elm,s,t,R,dR_ds,dR_dt,dR_dst,dR_dss,dR_dtt, &
-  							Z,dZ_ds,dZ_dt,dZ_dst,dZ_dss,dZ_dtt  )
+  	call interp_RZ(node_list,element_list,i_elm,s,t,R,dR_ds,dR_dt,Z,dZ_ds,dZ_dt)
   	call interp(node_list,element_list,i_elm,3,1,s,t,zj, dzj_ds, dzj_dt, dzj_dst, dzj_dss, dzj_dtt)
   	call interp(node_list,element_list,i_elm,1,1,s,t,psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt)
 
@@ -570,6 +564,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   use data_structure
   use phys_module
   use grid_xpoint_data
+  use mod_interp
 
   implicit none
   ! --- Routine parameters
@@ -590,8 +585,8 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   real*8                   :: sigmas(16)
   integer                  :: n_grids(10)
   real*8                   :: rr, s, t, ds, dt, xjac, dl, sum_dl
-  real*8                   :: R,  dR_ds,  dR_dt,  dR_dst,  dR_dss,  dR_dtt, dR_dl
-  real*8                   :: Z,  dZ_ds,  dZ_dt,  dZ_dst,  dZ_dss,  dZ_dtt, dZ_dl
+  real*8                   :: R,  dR_ds,  dR_dt, dR_dl
+  real*8                   :: Z,  dZ_ds,  dZ_dt, dZ_dl
   real*8                   :: psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt, psi_R, psi_Z
   real*8                   :: grad_psi, B_tot, B_pol
   real*8                   :: hh2(n_spline), ft_int(n_spline)
@@ -694,8 +689,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
 	rr = xgs(ig)
   	i_elm = flux_list%flux_surfaces(i)%elm(k)
         call compute_surface_basics(flux_list, i, k, rr, s, t, ds, dt)
-  	call interp_RZ(node_list,element_list,i_elm,s,t,R,dR_ds,dR_dt,dR_dst,dR_dss,dR_dtt, &
-  							Z,dZ_ds,dZ_dt,dZ_dst,dZ_dss,dZ_dtt  )
+  	call interp_RZ(node_list,element_list,i_elm,s,t,R,dR_ds,dR_dt,Z,dZ_ds,dZ_dt)
   	call interp(node_list,element_list,i_elm,1,1,s,t,psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt)
 
   	! --- Ignore flux surface segments in the private flux region below the x-point.
@@ -740,8 +734,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
 	rr = xgs(ig)
   	i_elm = flux_list%flux_surfaces(i)%elm(k)
         call compute_surface_basics(flux_list, i, k, rr, s, t, ds, dt)
-  	call interp_RZ(node_list,element_list,i_elm,s,t,R,dR_ds,dR_dt,dR_dst,dR_dss,dR_dtt, &
-  							Z,dZ_ds,dZ_dt,dZ_dst,dZ_dss,dZ_dtt  )
+  	call interp_RZ(node_list,element_list,i_elm,s,t,R,dR_ds,dR_dt,Z,dZ_ds,dZ_dt)
   	call interp(node_list,element_list,i_elm,1,1,s,t,psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt)
 
   	! --- Ignore flux surface segments in the private flux region below the x-point.
@@ -773,8 +766,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
 	rr = xgs(ig)
   	i_elm = flux_list%flux_surfaces(i)%elm(k)
         call compute_surface_basics(flux_list, i, k, rr, s, t, ds, dt)
-  	call interp_RZ(node_list,element_list,i_elm,s,t,R,dR_ds,dR_dt,dR_dst,dR_dss,dR_dtt, &
-  							Z,dZ_ds,dZ_dt,dZ_dst,dZ_dss,dZ_dtt  )
+  	call interp_RZ(node_list,element_list,i_elm,s,t,R,dR_ds,dR_dt,Z,dZ_ds,dZ_dt)
   	call interp(node_list,element_list,i_elm,1,1,s,t,psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt)
 
   	! --- Ignore flux surface segments in the private flux region below the x-point.
@@ -819,8 +811,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   	  rr = xgs(ig)
     	  i_elm = flux_list%flux_surfaces(i)%elm(k)
     	  call compute_surface_basics(flux_list, i, k, rr, s, t, ds, dt)
-    	  call interp_RZ(node_list,element_list,i_elm,s,t,R,dR_ds,dR_dt,dR_dst,dR_dss,dR_dtt, &
-    							  Z,dZ_ds,dZ_dt,dZ_dst,dZ_dss,dZ_dtt  )
+    	  call interp_RZ(node_list,element_list,i_elm,s,t,R,dR_ds,dR_dt,Z,dZ_ds,dZ_dt)
     	  call interp(node_list,element_list,i_elm,1,1,s,t,psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt)
 
     	  ! --- Ignore flux surface segments in the private flux region below the x-point.
@@ -971,12 +962,12 @@ subroutine bootstrap_spline3_coef(n,t,y,z)
   
   implicit none
   
-  integer,              intent(in) ::n
-  real, dimension(0:n), intent(in) ::  t,y
-  real, dimension(0:n), intent(out):: z 
-  real, dimension(0:n-1)           :: h,b
-  real, dimension(n-1)             ::u,v
-  integer                          :: i
+  integer,              intent(in)   :: n
+  real*8, dimension(0:n), intent(in) :: t,y
+  real*8, dimension(0:n), intent(out):: z 
+  real*8, dimension(0:n-1)           :: h,b
+  real*8, dimension(n-1)             :: u,v
+  integer                            :: i
   
   do i = 0,n-1
     h(i) = t(i+1) - t(i)
@@ -1013,11 +1004,11 @@ end subroutine bootstrap_spline3_coef
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 real*8 function bootstrap_spline3_eval(n,t,y,z,x)
-  integer,              intent(in):: n
-  real, dimension(0:n), intent(in):: t,y,z	 
-  real,                 intent(in):: x
-  real                            :: h, temp
-  integer                         :: i
+  integer,              intent(in)   :: n
+  real*8, dimension(0:n), intent(in) :: t,y,z	 
+  real*8,                 intent(in) :: x
+  real*8                             :: h, temp
+  integer                            :: i
   
   do i = n-1,1,-1     
     if( x - t(i) >= 0.0) exit	 
@@ -1046,11 +1037,11 @@ end function bootstrap_spline3_eval
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 subroutine bootstrap_spline3_eval_all(psi_n, q, ft, B)
-  real,    intent(in)    :: psi_n
-  real,    intent(inout) :: q, ft, B
-  real                   :: h, temp
-  integer                :: n
-  integer                :: i
+  real*8,    intent(in)    :: psi_n
+  real*8,    intent(inout) :: q, ft, B
+  real*8                   :: h, temp
+  integer                  :: n
+  integer                  :: i
   
   n = n_spline-1
   do i = n-1,1,-1     
@@ -1089,7 +1080,7 @@ end subroutine bootstrap_spline3_eval_all
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
-subroutine bootstrap_current_wilson(minRad, R, R_axis,    &
+subroutine bootstrap_current_wilson(R, R_axis,    &
                                     psi_axis, psi_bnd,    &
                                     psi_norm,             &
                                     ps0, ps0_x, ps0_y,    &
@@ -1107,7 +1098,7 @@ subroutine bootstrap_current_wilson(minRad, R, R_axis,    &
 
   implicit none
   ! --- Routine parameters
-  real*8, intent(in)  :: minRad, R, R_axis
+  real*8, intent(in)  :: R, R_axis
   real*8, intent(in)  :: psi_axis, psi_bnd
   real*8, intent(in)  :: psi_norm
   real*8, intent(in)  :: ps0, ps0_x, ps0_y

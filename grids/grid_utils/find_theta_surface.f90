@@ -5,6 +5,7 @@ subroutine find_theta_surface(node_list,element_list,surface_list,j_surf,theta,R
 
 use constants
 use data_structure
+use mod_interp, only: interp_RZ
 
 implicit none
 
@@ -134,7 +135,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 
 enddo
 
-if (i_find .eq. 0) write(*,*) ' WARNING : no theta surface found'
+!if (i_find .eq. 0) write(*,*) ' WARNING : no theta surface found'
 
 return
 end subroutine find_theta_surface

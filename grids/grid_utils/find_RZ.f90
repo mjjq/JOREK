@@ -4,7 +4,7 @@ subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_o
 !< Return the first result.
 !-------------------------------------------------------------------------
 use data_structure
-use mod_element_rtree
+use mod_element_rtree, only: elements_containing_point
 implicit none
 
 type (type_node_list), intent(in)    :: node_list
@@ -14,26 +14,21 @@ real*8, intent(out)    :: R_out,Z_out,s_out,t_out
 integer, intent(inout) :: ielm_out
 integer, intent(out)   :: ifail
 
-logical, save        :: rtree_initialised = .false.
-
 integer :: k
 integer, dimension(:), allocatable :: i_elms
 
 ielm_out = 0
-if (.not. rtree_initialised) then
-  call populate_element_rtree(node_list, element_list) ! not OMP safe, call once outside of openmp
-  rtree_initialised = .true.
-end if
-
-call elements_containing_point(node_list, element_list, R_find, Z_find, i_elms)
+call elements_containing_point(R_find, Z_find, i_elms)
 
 ! then loop through all
 do k=1,size(i_elms)
   call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-  if (ifail .eq. 0) return
+  if (ifail .eq. 0) exit
 enddo
 
 if (ielm_out .eq. 0) ifail = 99
+if (ifail .eq. 999) ielm_out = 0 ! Otherwise testing ielm=0 on output does not
+! work anymore (and we don't always check ifail)
 end subroutine find_RZ
 
 subroutine find_RZ_single(node_list,element_list,i_elm,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
@@ -45,6 +40,7 @@ subroutine find_RZ_single(node_list,element_list,i_elm,R_find,Z_find,R_out,Z_out
 !< i_elm
 !-------------------------------------------------------------------------
 use data_structure
+use mod_interp, only: interp_RZ
 implicit none
 
 type (type_node_list), intent(in)    :: node_list
@@ -56,14 +52,16 @@ integer, intent(out)   :: ielm_out
 integer, intent(out)   :: ifail
 
 integer :: i, ntrial, istart
-real*8  :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-real*8  :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+real*8  :: RRg1,dRRg1_dr,dRRg1_ds
+real*8  :: ZZg1,dZZg1_dr,dZZg1_ds
 real*8  :: tolx, tolf, errx, errf, temp, dis
 real*8  :: x(2), FVEC(2), FJAC(2,2), p(2)
 
 ntrial = 20
 tolx = 1.d-8
 tolf = 1.d-15
+
+ielm_out = i_elm ! Since we only test a single element
 
 do istart = 1,5
 
@@ -88,8 +86,8 @@ do istart = 1,5
 
   do i=1,ntrial
 
-    call interp_RZ(node_list,element_list,i_elm,x(1),x(2),RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm,x(1),x(2),RRg1,dRRg1_dr,dRRg1_ds, &
+                                                    ZZg1,dZZg1_dr,dZZg1_ds)
 
     FVEC(1)   = RRg1 - R_find
     FVEC(2)   = ZZg1 - Z_find

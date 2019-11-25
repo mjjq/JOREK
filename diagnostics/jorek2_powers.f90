@@ -15,6 +15,7 @@ use gauss
 use constants
 use diffusivities, only: get_dperp, get_zkperp
 use mod_import_restart
+use mod_interp
 implicit none
 
 type (type_node_list)    :: node_list
@@ -60,7 +61,7 @@ do i_tor=1, n_tor
   write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
 enddo
 
-call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 

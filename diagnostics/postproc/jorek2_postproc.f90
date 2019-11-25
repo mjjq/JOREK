@@ -9,6 +9,7 @@ program jorek2_postproc
   use parse_commands, only: read_command, type_command
   use exec_commands,  only: exec_command, specific_help
   use settings,       only: set_setting
+  use basis_at_gaussian, only: initialise_basis
   
   implicit none
   

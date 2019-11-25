@@ -17,7 +17,8 @@ module exec_commands
   use postproc_help
   use mod_log_params
   use mod_import_restart
-  
+  use mod_interp
+  use mod_poloidal_currents 
   
   
   
@@ -51,7 +52,9 @@ module exec_commands
   complex*16, allocatable, private, save :: cp(:,:,:,:)
   real*8,              private, save :: time_now !< Time of current restart file in selected units
   
-  
+  ! --- used by average_h5 command:
+  real*8, allocatable, private, save :: values(:,:,:,:)
+  real*8,                       save :: weight, total_weight
   
   
   
@@ -119,12 +122,20 @@ module exec_commands
       select case ( trim(command%args(0)) )
         case ( 'average' )
           call average(command, first_step, ierr)
+        case ( 'average_h5' )
+          call average_h5(command, first_step, ierr)
         case ( 'int2d' )
           call int2d(command, first_step, ierr)
+        case ( 'int3d' )
+          call int3d(command, first_step, ierr)
         case ( 'equil_params' )
           call equil_params(command, first_step, ierr)
+        case ( 'energy_spectrum' )
+          call energy_spectrum(command, first_step, ierr)
         case ( 'expressions' )
           call expressions(command, ierr)
+        case ( 'expressions_int' )
+          call expressions_int(command, ierr)
         case ( 'fluxsurfaces' )
           call fluxsurfaces(command, ierr)
         case ( 'for' )
@@ -137,6 +148,10 @@ module exec_commands
           call grid(command, ierr)
         case ( 'help' )
           call help(command, ierr)
+        case ( 'I_halo_TPF' )
+          call I_halo_TPF(command, first_step, ierr)
+        case ( 'jnorm_bnd_curr' )
+          call jnorm_bnd_RZ(command, ierr)
         case ( 'jorek-units' )
           call select_jorek_units(command, ierr)
         case ( 'pol_line' )
@@ -145,6 +160,10 @@ module exec_commands
           call int_along_pol_line(command, first_step, ierr)
         case ( 'tor_line' )
           call tor_line(command, first_step, ierr)
+        case ( 'rectangle' )
+          call rectangle(command, first_step, ierr)
+        case ( 'rectangular_torus' )
+          call rectangular_torus(command, first_step, ierr)
         case ( 'mark_coords' )
           call mark_coords(command, ierr)
         case ( 'midplane' )
@@ -157,12 +176,16 @@ module exec_commands
           call point(command, first_step, ierr)
         case ( 'qprofile' )
           call qprofile(command, first_step, ierr)
+         case ( 'q_at_psin' )
+          call q_at_given_psin(command, first_step, ierr)
         case ( 'separatrix' )
           call separatrix(command, ierr)
         case ( 'set' )
           call set(command, ierr)
         case ( 'si-units' )
           call select_si_units(command, ierr)
+        case ( 'spi-state' )
+          call spi_state(command, first_step, ierr)
         case ( 'timesteps' )
           call timesteps 
         case default
@@ -174,10 +197,11 @@ module exec_commands
     else if ( exec_mode == LOOP_MODE ) then
       
       select case ( trim(command%args(0)) )
-        case ( 'expressions', 'mark_coords', 'int2d', 'midplane', 'average', 'point',      &
+        case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane', 'average', 'point',      &
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
-          'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
-          'si-units', 'grid' )
+          'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
+          'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'rectangular_torus', 'energy_spectrum', 'average_h5', &
+          'I_halo_TPF', 'spi-state')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -191,6 +215,38 @@ module exec_commands
     end if
     
   end subroutine exec_command
+  
+  
+  
+  
+  
+  !> Finalize a command once a loop has finished (not needed for most commands)
+  subroutine finalize_command(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    verbose = get_log_setting('verbose', ierr)
+    debug   = get_log_setting('debug', ierr)
+    
+    if ( debug ) then
+      write(*,'(a)') 'Finalize_command was called with:'
+      call print_command(command)
+      write(*,*)
+    end if
+    
+    select case ( trim(command%args(0)) )
+      case ( 'average_h5' )
+        call average_h5_finalize(command, first_step, ierr)
+      case default
+        if (debug) write(*,*) 'Command does not need finalize.'
+    end select
+    
+  end subroutine finalize_command
   
   
   
@@ -210,7 +266,7 @@ module exec_commands
     ierr = 0
     
     write(file_name,'(a,i5.5)') 'jorek', istep
-    if ( rst_hdf5 ) then
+    if ( rst_hdf5 .ne. 0 ) then
       inquire (file=trim(file_name)//'.h5', exist=file_exists)
     else
       inquire (file=trim(file_name)//'.rst', exist=file_exists)
@@ -225,7 +281,7 @@ module exec_commands
     write(*,*)
     
     ! --- Load the restart file
-    call import_restart(node_list, element_list, file_name, rst_format, ierr)
+    call import_restart(node_list, element_list, file_name, rst_format, ierr, .true.)
     if ( ierr /= 0 ) return
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
     
@@ -381,6 +437,10 @@ module exec_commands
       first_step = .false.
     end do
     
+    do jcmd = 1, n_queued_commands
+      call finalize_command(command_queue(jcmd), first_step, ierr)
+    end do
+    
     if ( first_step ) then
       write(*,'(a,i5.5,a,i5.5,a)') 'WARNING: There were no restart files for steps ',              &
         loop_min_step, ' to ', loop_max_step, '.'
@@ -496,6 +556,9 @@ module exec_commands
     write(*,'(a)') 'Available restart files:'
     do i = 0, 99999
       write (filename,'(a, i5.5, a)') 'jorek', i, '.rst'
+      inquire (file=filename, exist=file_exists)
+      if (file_exists) write(*,'(i6)',advance='no') i
+      write (filename,'(a, i5.5, a)') 'jorek', i, '.h5'
       inquire (file=filename, exist=file_exists)
       if (file_exists) write(*,'(i6)',advance='no') i
     end do
@@ -665,7 +728,30 @@ module exec_commands
   end subroutine expressions
   
   
-  
+
+
+  !> List or Select Available Expressions.
+  subroutine expressions_int(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    if ( command%n_args == 0 ) then
+      
+      call print_exprs(exprs_all_int)
+      
+    else
+      
+    expr_list = exprs_int(command%args(1:command%n_args), command%n_args)
+    call print_exprs(expr_list,.true.)
+       
+    end if
+    
+  end subroutine expressions_int
+ 
   
   
   !> Mark some expressions as coordinates.
@@ -707,6 +793,180 @@ module exec_commands
   
   
   
+  !> Read several .h5 files and create an "average" one (average of absolute values).
+  subroutine average_h5(command, first_step, ierr)
+    
+    use mod_export_restart
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: i
+    integer, save :: prev_index
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    weight = 0.d0
+    if (first_step) then
+      allocate(values(n_tor,n_order+1,n_var,node_list%n_nodes))
+      values = 0.d0
+    else
+      weight = xtime(index_now)-xtime(prev_index)
+    end if
+    total_weight = total_weight + weight
+    prev_index = index_now
+    
+    do i = 1, node_list%n_nodes
+      values(:,1,:,i) = values(:,1,:,i) + abs(node_list%node(i)%values(:,1,:)) * weight
+      ! Since the purpose of this postproc command is to visualize the localization of a
+      ! particular mode activity, we take the time average over the absolute value. In the
+      ! Bezier representation, this we have to throw away the degrees of freedomn 2,3,4 in
+      ! doing so, since their respective basis functions are not only positive but change
+      ! sign. Consequently, the absolute value of them cannot be represented in the same
+      ! basis.
+      ! As a result, the created h5 file contains the time average of the absolute values
+      ! with a limited resolution since only the first dof is kept on each node.
+    end do
+    
+    ! see also average_h5_finalize below, which writes out the result
+    
+  end subroutine average_h5
+  
+  
+  
+  
+  
+  !> Read several .h5 files and create an "average" one (average of absolute values).
+  subroutine average_h5_finalize(command, first_step, ierr)
+    
+    use mod_export_restart
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    integer :: i
+    
+    ierr = 0
+    if ( .not. allocated(values) ) then
+      write(*,*) 'average_h5_finalize called, but values not allocated!'
+      ierr = 99
+      return
+    end if
+    
+    ! copy back for writing out
+    do i = 1, node_list%n_nodes
+      node_list%node(i)%values(:,:,:) = values(:,:,:,i) / total_weight
+    end do
+    call export_restart(node_list, element_list, 'jorek99999')
+    deallocate(values)
+    
+  end subroutine average_h5_finalize
+  
+  
+  
+  
+  
+  !> Evaluate expressions at a single point.
+  subroutine energy_spectrum(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8              :: tmin, tmax, s(n_tor,2), t((n_tor+1)/2,2), left(n_tor,2), right(n_tor,2)
+    real*8              :: tleft, tright
+    integer             :: i_file, i, j
+    character(len=1024) :: filename
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,2);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    ! --- Preparation
+    tmin  = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    tmax  = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    
+    write(filename,'(9a)') DIR, 'energyspectrum_tmin', trim(real2str(tmin,'(f12.4)')), '_tmax', &
+      trim(real2str(tmax,'(f12.4)')), trim(step_range_string(index_now,index_now)), '.dat'
+    
+    if ( (tmin<xtime(1)) .or. (xtime(index_now)<tmax) .or. (tmax<=tmin) ) then
+      write(*,*) 'ERROR in energy_spectrum: Specified time window is invalid.'
+      return
+    end if
+    
+    s(:,:) = 0.d0
+    
+    ! --- sum up for integration (loop over intervals between)
+    do i = 2, index_now
+      
+      ! --- Left value for summation
+      if ( (xtime(i-1) < tmin) .and. (tmin <= xtime(i)) ) then
+        ! (we are at the beginning of the [tmin,tmax] interval)
+        left (:,:) = ( energies(:,:,i-1) * (xtime(i)-tmin) + energies(:,:,i) * (tmin-xtime(i-1)) ) / (xtime(i)-xtime(i-1))
+        tleft      = tmin
+      else if ( tmin <= xtime(i-1) ) then
+        ! (we are somewhere in the middle of the [tmin,tmax] interval)
+        left (:,:) = energies(:,:,i-1)
+        tleft      = xtime(i-1)
+      else
+        cycle ! present time point can be skipped
+      end if
+      
+      ! --- Right value for summation
+      if ( (xtime(i-1) < tmax) .and. (tmax <= xtime(i)) ) then
+        ! (we are at the end of the [tmin,tmax] interval)
+        right(:,:) = ( energies(:,:,i-1) * (xtime(i)-tmax) + energies(:,:,i) * (tmax-xtime(i-1)) ) / (xtime(i)-xtime(i-1))
+        tright     = tmax
+      else if ( xtime(i) < tmax ) then
+        ! (we are somewhere in the middle of the [tmin,tmax] interval)
+        right(:,:) = energies(:,:,i)
+        tright     = xtime(i)
+      else
+        cycle ! present time point can be skipped
+      end if
+      
+      s(:,:) = s(:,:) + 0.5d0 * ( left(:,:) + right(:,:) ) * ( tright - tleft )
+      
+    end do
+    
+    s(:,:) = s(:,:) / (tmax-tmin) ! normalize integral to interval length
+    
+    ! --- combine cosine and sine components
+    t(:,:) = 0.d0
+    t(1,:) = s(1,:)
+    do i = 1, (n_tor-1)/2
+      t(i+1,:) = s(2*i,:) + s(2*i+1,:)
+    end do
+    
+    ! --- write to ascii file
+    i_file=133
+    open(i_file, file=trim(filename), form='formatted', status='replace', iostat=ierr)
+    write(i_file,*) '# energy spectrum'
+    write(i_file,*) '# toroidal mode number | magnetic energy spectrum | kinetic energy spectrum'
+    do i = 0, (n_tor-1)/2
+      write(i_file,'(i7,2es25.15)') i, t(i+1,:)
+    end do
+    close(i_file)
+    
+  end subroutine energy_spectrum
+  
+  
+  
+  
+  
   !> Evaluate expressions at a single point.
   subroutine point(command, first_step, ierr)
     
@@ -723,23 +983,39 @@ module exec_commands
     ierr = 0
     
     ! --- Some checks
-    call check_args(command%n_args,ierr,3);  if ( ierr /= 0 ) return
+    call check_args(command%n_args,ierr,2,3);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);          if ( ierr /= 0 ) return
     call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
     
     ! --- Preparation
     R     = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
     Z     = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
-    phi   = to_float(command%args(3), ierr); if ( ierr /= 0 ) return
     units = get_int_setting('units', ierr)
     
-    write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',    &
-      trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
-    
-    call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),               &
-      tor_pos(phi=phi), result, ierr)
-    
-    call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+    if (command%n_args == 3) then ! local values
+      
+      phi = to_float(command%args(3), ierr); if ( ierr /= 0 ) return
+      
+      write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',  &
+        trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+      
+      call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),             &
+        tor_pos(phi=phi), result, ierr)
+      
+      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+      
+    else ! toroidally averaged values
+      
+      write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)),        &
+        '_toroidally-averaged', trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+      
+      call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),             &
+        tor_pos(nphi=4*n_plane), result, ierr)
+      
+      call apply_four_filter(result, simple_filter(n=0), expr_list%n_coord, ierr)
+      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+      
+    end if
     
     call write_ascii_0d(ierr, eq, expr_list, res0d, FORM_TABLE, header=first_step,                 &
       filename=trim(filename), append=(.not.first_step), blanks=.false.)
@@ -759,25 +1035,40 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer :: units, npts
-    character(len=1024) :: filename, comment
+    integer :: units, npts, side
+    character(len=1024) :: filename, comment, s
     
     ierr = 0
     
     ! --- Some checks
-    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
-    call check_step_imported(ierr);          if ( ierr /= 0 ) return
-    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);            if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);           if ( ierr /= 0 ) return
     
     units = get_int_setting('units', ierr)
     npts  = get_int_setting('linepoints', ierr)
     
-    write(filename,'(4a)') DIR, 'exprs_midplane',                                                  &
+    if ( command%n_args == 0 ) then
+      s = 'midplane'
+      side = BOTH_SIDES
+    else if ( command%args(1) == 'outer' ) then
+      s = 'outer-midplane'
+      side = LOWFIELD_SIDE
+    else if ( command%args(1) == 'inner' ) then
+      s = 'inner-midplane'
+      side = HIGHFIELD_SIDE
+    else
+      write(*,*) 'WARNING: Illegal parameter for command "midplane".'
+      ierr = 1
+      return
+    end if
+    
+    write(filename,'(4a)') DIR, 'exprs_'//trim(s)//                                                &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call midplane_profile(node_list, element_list, eq, units, expr_list, res1d, BOTH_SIDES, npts,  &
+    call midplane_profile(node_list, element_list, eq, units, expr_list, res1d, side, npts,        &
       ierr, filename=trim(filename), append=(.not.first_step), comment=trim(comment) )
     
   end subroutine midplane
@@ -912,6 +1203,115 @@ module exec_commands
   
   
   
+  !> Expressions in a rectangular area.
+  subroutine rectangle(command, first_step, ierr)
+    
+    use mod_position, only: pol_pos, tor_pos
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8  :: Rmin, Rmax, Zmin, Zmax, phi
+    integer :: nR, nZ, units
+    character(len=1024) :: filename, comment
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,7);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    
+    ! --- Preparation
+    Rmin      = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    Rmax      = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    nR        = to_int  (command%args(3), ierr); if ( ierr /= 0 ) return
+    Zmin      = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
+    Zmax      = to_float(command%args(5), ierr); if ( ierr /= 0 ) return
+    nZ        = to_int  (command%args(6), ierr); if ( ierr /= 0 ) return
+    phi       = to_float(command%args(7), ierr); if ( ierr /= 0 ) return
+    units     = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
+    
+    write(filename,'(15a)') DIR, 'exprs_Rmin', trim(real2str(Rmin)), '_Rmax', trim(real2str(Rmax)),&
+      '_Zmin', trim(real2str(Zmin)), '_Zmax', trim(real2str(Zmax)), '_phi', trim(real2str(phi)),   &
+      trim(step_range_string(index_now,index_now)), '.h5'
+      
+    comment = 'Output produced by jorek2_postproc command "rectangle"'
+    
+    call eval_expr(eq, units, expr_list,                                                           &
+       pol_pos(node_list,element_list,eq,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
+       tor_pos(phi=phi), result, ierr)
+    
+    call reduce_result_to_2d(ierr, result, res2d, i1=1)
+    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename), comment=trim(comment))
+    
+    if ( allocated(result) ) deallocate(result)
+    if ( allocated(res2d ) ) deallocate(res2d )
+    
+  end subroutine rectangle
+  
+  
+  
+  
+
+  !> Expressions in a rectangular area.
+  subroutine rectangular_torus(command, first_step, ierr)
+    
+    use mod_position, only: pol_pos, tor_pos
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8  :: Rmin, Rmax, Zmin, Zmax, phimin, phimax
+    integer :: nR, nZ, nphi, units
+    character(len=1024) :: filename, comment
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,9);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    
+    ! --- Preparation
+    Rmin      = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    Rmax      = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    nR        = to_int  (command%args(3), ierr); if ( ierr /= 0 ) return
+    Zmin      = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
+    Zmax      = to_float(command%args(5), ierr); if ( ierr /= 0 ) return
+    nZ        = to_int  (command%args(6), ierr); if ( ierr /= 0 ) return
+    phimin    = to_float(command%args(7), ierr); if ( ierr /= 0 ) return
+    phimax    = to_float(command%args(8), ierr); if ( ierr /= 0 ) return
+    nphi      = to_float(command%args(9), ierr); if ( ierr /= 0 ) return
+    units     = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
+    
+    write(filename,'(15a)') DIR, 'exprs_Rmin', trim(real2str(Rmin)), '_Rmax', trim(real2str(Rmax)),&
+                                      '_Zmin', trim(real2str(Zmin)), '_Zmax', trim(real2str(Zmax)),&
+                              '_phimin', trim(real2str(phimin)), '_phimax', trim(real2str(phimax)),&
+      trim(step_range_string(index_now,index_now)), '.h5'
+      
+    comment = 'Output produced by jorek2_postproc command "rectangular_torus"'
+    
+    call eval_expr(eq, units, expr_list,                                                           &
+       pol_pos(node_list,element_list,eq,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
+       tor_pos(phistart=phimin, phiend=phimax, nphi=nphi), result, ierr)
+    
+    call write_hdf5_3d(ierr, expr_list, result, trim(filename), comment=trim(comment))
+    
+    if ( allocated(result) ) deallocate(result)
+    
+  end subroutine rectangular_torus
+
+
+
+
+
   !> Toroidally and poloidally averaged expressions.
   subroutine average(command, first_step, ierr)
     
@@ -941,9 +1341,9 @@ module exec_commands
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     ! ### is nTht and nphi really chosen well???
-    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=6*n_plane,                &
+    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=max(150,6*n_plane),                &
       nsmallsteps=nsmall)
-    tor_pos_list = tor_pos(nphi=n_plane)
+    tor_pos_list = tor_pos(nphi=max(n_plane,2))
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)
@@ -1007,6 +1407,134 @@ module exec_commands
     close(i_file)
     
   end subroutine equil_params
+
+
+
+
+  
+  !> Write out SPI related information
+  subroutine spi_state(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: units, i_file, i
+    character(len=1024) :: filename, status, access
+    real*8 :: R_av, Z_av, phi_av, shard_atoms_left, atoms_left, abl_tot, xx, yy, zz
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    
+    write(filename,'(4a)') DIR, 'spi', trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    xx         = 0.d0
+    yy         = 0.d0
+    zz         = 0.d0
+    atoms_left = 0.d0
+    abl_tot    = 0.d0
+    
+    do i = 1, n_SPI
+      shard_atoms_left = 4./3.*PI*pellets(i)%spi_radius**3 * pellet_density * 1.d20
+      
+      atoms_left = atoms_left + shard_atoms_left
+      
+      xx = xx + pellets(i)%spi_R * cos(pellets(i)%spi_phi) * shard_atoms_left
+      yy = yy - pellets(i)%spi_R * sin(pellets(i)%spi_phi) * shard_atoms_left
+      zz = zz + pellets(i)%spi_Z                           * shard_atoms_left
+      
+      abl_tot = abl_tot + pellets(i)%spi_abl
+    end do
+    
+    if ( atoms_left /= 0.d0 ) then
+      R_av   = sqrt( xx**2 + yy**2 ) / atoms_left
+      Z_av   = Z_av                  / atoms_left
+      phi_av = -atan2( yy, xx )      / atoms_left
+      if ( phi_av < 0.d0 ) phi_av = phi_av + 2.d0*PI
+    else
+      R_av   = 0.d0
+      Z_av   = 0.d0
+      phi_av = 0.d0
+    end if
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '# time                R_average           Z_average           '//       &
+        'phi_average         atoms_left          ablation_rate'
+    end if
+    
+    write(i_file,'(es20.13,3f20.16,3es20.12)') time_now, R_av, Z_av, phi_av, atoms_left, abl_tot
+    
+    close(i_file)
+    
+  end subroutine spi_state
+
+
+
+
+  
+  !> Output integrated poloidal current that is normal to the boudary and
+  !! toroidal peaking factor (TPF)
+  subroutine I_halo_TPF(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: i_file
+    character(len=1024) :: filename, status, access
+    real*8 :: I_halo, TPF  
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    write(filename,'(4a)') DIR, 'I_halo_TPF',  &
+       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '#               time            I_halo [MA]             TPF'
+    end if
+    
+    call integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF)
+ 
+    write(i_file,'(3es20.9)') time_now, I_halo, TPF 
+    
+    close(i_file)
+
+  end subroutine I_halo_TPF
+  
   
   
   
@@ -1074,11 +1602,128 @@ module exec_commands
     close(i_file)
     
   end subroutine int2d
+ 
+
+
+
+ 
+  
+  !> Output 3d integrals.
+  subroutine int3D(command, first_step, ierr)
+    
+    use mod_integrals3D
+    use mpi_mod
+
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: i_file, i, units, my_id
+    integer :: required, provided, StatInfo
+    character(len=1024) :: filename, status, access
+    real*8, allocatable :: res(:)
+    character(len=23)   :: s
+
+    ierr = 0
+    my_id=0
+
+    ! --- Initialize MPI
+#ifdef FUNNELED
+    required = MPI_THREAD_FUNNELED
+#else
+    required = MPI_THREAD_MULTIPLE
+#endif
+
+    if (first_step)  call MPI_Init_thread(required, provided, StatInfo)
+   
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);            if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);           if ( ierr /= 0 ) return
+    units = get_int_setting('units', ierr)
+
+    allocate(res(expr_list%n_expr+1))
+    res = 0.d0   
+ 
+    write(filename,'(4a)') DIR, 'integrals3D',  &
+       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)',advance='no') '# time                   '
+      do i = 1, expr_list%n_expr
+        s = trim(expr_list%expr(i)%name)
+        write(i_file,'(a)',advance='no') s
+      end do
+      write(i_file,'(a)')
+    end if
+    close(i_file)
+ 
+   call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)        
+
+   call write_ascii_0d(ierr, eq, expr_list, res, FORM_TABLE, header=.false.,                   &
+     filename=filename, append=.true., blanks=.false.)
+   
+  end subroutine int3D
   
   
   
+ 
+
+
+  !> Output current density normal to the jorek boundary as a function of Rbnd
+  !! and Zbnd
+  subroutine jnorm_bnd_RZ(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    logical   :: bool_si_units 
+    integer   :: i_plane, units
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    units = get_int_setting('units', ierr)
+
+    i_plane  = to_int(command%args(1), ierr); if ( ierr /= 0 ) return
+
+    if ((i_plane <= 0) .or. (i_plane > n_plane) ) then
+      write(*,*) 'Incorrect i_plane, note that    0 < i_plane <= n_plane'
+      return
+    endif
+
+    if ( units == SI_UNITS ) then
+      bool_si_units = .true. 
+    else
+      bool_si_units = .false.
+    end if
+ 
+    call normal_bnd_curr(node_list, element_list, bnd_node_list, &
+                            bnd_elm_list, i_plane, bool_si_units) 
+
+  end subroutine jnorm_bnd_RZ
   
   
+
+
+ 
   !> Output the q-profile as a function of Psi_N
   recursive subroutine qprofile(command, first_step, ierr)
   
@@ -1112,7 +1757,7 @@ module exec_commands
     do k = 1, npts
       surface_list%psi_values(k) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * real(k-1)/real(npts-1)
     end do
-    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
       eq%Z_xpoint, q, rad)
     
@@ -1137,10 +1782,75 @@ module exec_commands
     if ( allocated(rad)                        ) deallocate(rad)
     
   end subroutine qprofile
+
+
+
+
+  
+  !> Output q over time at a certain psi_n
+  subroutine q_at_given_psin(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: i_file
+    character(len=1024) :: filename, status, access
+    real*8 :: t_norm, psin, q_psin(2), rad(2) 
+    
+    type (type_surface_list) :: surface_list
+ 
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    psin  = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+   
+    write(filename,'(5a)') DIR, 'q_at_psin_', trim(real2str(psin,'(f12.4)')), &
+       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '#               time            q'
+    end if
+    
+    ! --- Find flux surfaces and determine q-profile
+    surface_list%n_psi = 2 
+    allocate( surface_list%psi_values(2) )
+    surface_list%psi_values(1) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * 0.2d0
+    surface_list%psi_values(2) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * psin
+
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
+    call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
+      eq%Z_xpoint, q_psin, rad)
+    
+    write(i_file,'(2es20.13)') time_now, q_psin(2) 
+    
+    close(i_file)
+
+    ! --- Clean up.
+    if ( allocated(surface_list%psi_values)    ) deallocate(surface_list%psi_values)
+    if ( allocated(surface_list%flux_surfaces) ) deallocate(surface_list%flux_surfaces)
+    
+  end subroutine q_at_given_psin
   
   
   
-  
+
   
   !> Output the flux surfaces.
   recursive subroutine fluxsurfaces(command, ierr)
@@ -1187,7 +1897,7 @@ module exec_commands
     do i = 1, npts
       surface_list%psi_values(i) = psi_min + (psi_max-psi_min) * real(i-1)/real(npts-1)
     end do
-    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     
     ! --- Write out flux surfaces
     nplot  = 5
@@ -1275,7 +1985,7 @@ module exec_commands
     surface_list%n_psi = 1
     allocate( surface_list%psi_values(1) )
     surface_list%psi_values(1) = eq%psi_bnd
-    call find_flux_surfaces(xpoint, xcase, node_list, element_list, surface_list)
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     
     ! --- Write out flux surfaces
     nplot  = 5

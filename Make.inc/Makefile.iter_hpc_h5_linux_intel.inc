@@ -1,41 +1,19 @@
 # Configuration file for jorek
+# Version for ITER regression testing platform using intel compilers
 
 # model directory
 MODEL = model199
 
 # Fortran compiler 
-FC               = mpif90 
-FFLAGS_OMP       = -openmp 
-FFLAGS           = -r8 -i4
-FFLAGS          := $(FFLAGS) -fpp
-FFLAGS          := $(FFLAGS) -msse4.2 -align
-FFLAGS          := $(FFLAGS) -O0 -mcmodel=medium -DUSE_BLOCK
-#FFLAGS          := $(FFLAGS) -O2 -mcmodel=medium -DUSE_BLOCK -Dfullmhd 
-
-CC = mpicc
-CXX = mpicxx
-
-# --- DEBUGGING
-#   --- Debug symbols for debuggers
-#DEBUGFLAGS  = -g
-#   --- Check array boundaries
-#DEBUGFLAGS += -check bounds -traceback -fpe-all=0 -ftrapuv
-#   --- Generate and check interfaces (__genmod files)
-#DEBUGFLAGS += -gen-interfaces -warn interfaces
-#   --- Check many other things
-#DEBUGFLAGS += -warn all,nounused -check all,noarg_temp_created -debug all -debug-parameters -fstack-security-check -ftrapuv
-#   --- Even more checks and warnings
-#DEBUGFLAGS += -warn all -check all
-
-FFLAGS_FIXEDFORM := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
-FFLAGS_NOBOUNDS  := $(FFLAGS)               $(FFLAGS_OMP)
-FFLAGS           := $(FFLAGS) $(DEBUGFLAGS) $(FFLAGS_OMP)
-
-FFLAGS_NO_OMP     = -fpp -r8 -i4 -O2 -msse4.2 -align 
+FC               = mpiifort
+FFLAGS          := $(FFLAGS) -mcmodel=medium -DUSE_BLOCK
+CC = mpiicc
+CXX = mpiicpc
 
 # Solvers dependencies
 USE_HIPS         = 0
 USE_PASTIX       = 1
+USE_BLOCK        = 1
 USE_PASTIX_MURGE = 0
 USE_MUMPS        = 1
 USE_FFTW         = 1
@@ -46,22 +24,22 @@ LIBDIR = $(HOME)/lib
 
 #Scotch library
 SCOTCH_HOME ?=  $(LIBDIR)/scotch/scotch_5.1
-LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lptscotch -lptscotcherr
+LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lptscotch -lptscotcherr -lscotch
 INC_SCOTCH   = -I$(SCOTCH_HOME)/include
 
 # MUMPS
 MUMPS_HOME ?=  $(LIBDIR)/MUMPS_4.8.3
-LIB_MUMPS   = -L$(MUMPS_HOME)/lib/ -ldmumps -lmumps_common
+ORDLIB      = -L$(METIS_HOME)/lib -lpord -lmetis -lparmetis
+LIB_MUMPS   = $(LIB_SCOTCH) -L$(MUMPS_HOME)/lib/ -ldmumps -lmumps_common -lesmumps $(LIB_SCOTCH) $(ORDLIB)
 LIB_ZMUMPS  = -lzmumps
 INC_MUMPS   =  $(MUMPS_HOME)/include/
-ORDLIB      = -L$(METIS_HOME)/lib -lpord -lmetis
 
 # PASTIX
 PASTIX_HOME     ?=  $(LIBDIR)/pastix/install/
-LIB_PASTIX       = -L$(PASTIX_HOME) -lpastix_murge -lpastix $(LIB_SCOTCH)
-LIB_PASTIX_MURGE = -L$(PASTIX_HOME) -lpastix_murge -lpastix $(LIB_SCOTCH)
-LIB_PASTIX_BLAS  = 
-INC_PASTIX       = -I$(PASTIX_HOME) $(INC_SCOTCH)
+LIB_PASTIX       = `pastix-conf --libs` #-L$(PASTIX_HOME)/lib/ -lpastix_murge -lpastix $(LIB_SCOTCH)
+LIB_PASTIX_MURGE = `pastix-conf --libs_murge` #-L$(PASTIX_HOME)/lib/ -lpastix_murge -lpastix $(LIB_SCOTCH)
+LIB_PASTIX_BLAS  = `pastix-conf --blas`
+INC_PASTIX       = `pastix-conf --incs` #-I$(PASTIX_HOME) $(INC_SCOTCH)
 
 #HIPS
 LIBHIPS   = -L$(HOME)/hips_trunk/trunk/LIB -lhips -lio $(LIBSCOTCH)
@@ -80,11 +58,6 @@ SCALAP    = -L$(MKL) -lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64
 LIBDIERCKX = $(LIBDIR)/Dierckx/dierckx.a
 
 #HDF5
-HDF5_HOME=/work/imas/opt/hdf5/1.8.15
+HDF5_HOME ?= $(H5DIR)
 HDF5INCLUDE=$(HDF5_HOME)/include
-HDF5LIB=$(HDF5_HOME)/lib/libhdf5hl_fortran.a \
-        $(HDF5_HOME)/lib/libhdf5_hl.a        \
-        $(HDF5_HOME)/lib/libhdf5_fortran.a   \
-        $(HDF5_HOME)/lib/libhdf5.a           \
-	$(ZLIB_HOME)/lib/libz.a
-
+HDF5LIB=-lhdf5hl_fortran -lhdf5_hl -lhdf5_fortran -lhdf5 -lz

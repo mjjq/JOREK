@@ -8,6 +8,7 @@ use elements_nodes_neighbours
 use mod_neighbours
 use mod_import_restart
 use mod_log_params
+use mod_interp
 
 implicit none
 
@@ -20,7 +21,7 @@ integer :: i, j, iside_i, iside_j, ip, i_lines, n_lines, i_tor, i_harm, i_var_ps
 integer :: i_elm, ifail, i_phi, n_phi, i_turn, i_elm_out, i_elm_prev, i_elm_tmp,i_steps
 real*8  :: R_line, Z_line, s_line, t_line, p_line, R_mid, Z_mid, s_mid, t_mid, p_mid, s_out, t_out
 real*8, allocatable :: R_start(:), Z_start(:), P_start(:)
-real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
+real*8  :: R, Z, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, Rmax, Zmin, Zmax, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step
 real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, atmp, cur_pert
@@ -42,7 +43,7 @@ call log_parameters(my_id)
 
 iplot_type = 2 ! 1: Poincare plot in (R,Z) coordinates, 2: in (R,theta) coordinates
 
-call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis
 
@@ -151,7 +152,7 @@ else ! if no stpts file exists, use the following hard-coded default startpoints
  
 end if
 
-n_phi   = 500
+n_phi   = 1500
 delta_phi = 2.d0 * PI / float(n_period*n_phi)
 tol       = 1.d-6
 
@@ -288,7 +289,7 @@ L_IL: do i_lines=1,n_lines
               t_line = t_line + small_delta * delta_t
               p_line = p_line + small_delta * delta_phi_step
 	      
-              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,R_s,R_t,R_st,R_ss,R_tt,Z_in,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,Z_in)
 
 	      i_elm_prev = i_elm      
               i_elm      = element_neighbours(2,i_elm_prev)
@@ -298,7 +299,7 @@ L_IL: do i_lines=1,n_lines
 	
               s_line = 0.d0
 
-              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,Z_out)
 	      
 	      if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
 	        write(*,'(A,2i6,4f8.4)') ' error in element change (1) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
@@ -309,7 +310,7 @@ L_IL: do i_lines=1,n_lines
 	      t_line = t_line + small_delta * delta_t
 	      p_line = p_line + small_delta * delta_phi_step
 
-              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,R_s,R_t,R_st,R_ss,R_tt,Z_in,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,Z_in)
       
 	      i_elm_prev = i_elm      
               i_elm      = element_neighbours(4,i_elm_prev)
@@ -320,7 +321,7 @@ L_IL: do i_lines=1,n_lines
 
               s_line = 1.d0
 
-              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,Z_out)
 	      
 	      if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
 	        write(*,'(A,2i6,4f8.4)') ' error in element change (2) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
@@ -335,7 +336,7 @@ L_IL: do i_lines=1,n_lines
               t_line = 1.d0
               p_line = p_line + small_delta * delta_phi_step
 
-              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,R_s,R_t,R_st,R_ss,R_tt,Z_in,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,Z_in)
 
 	      i_elm_prev = i_elm      
               i_elm      = element_neighbours(3,i_elm_prev)
@@ -346,7 +347,7 @@ L_IL: do i_lines=1,n_lines
 	
               t_line = 0.d0
 
-              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,Z_out)
 	      
 	      if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
 	        write(*,'(A,2i6,4f8.4)') ' error in element change (3) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
@@ -357,7 +358,7 @@ L_IL: do i_lines=1,n_lines
 	      t_line = 0.d0
 	      p_line = p_line + small_delta * delta_phi_step
  
-              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,R_s,R_t,R_st,R_ss,R_tt,Z_in,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,Z_in)
 
 	      i_elm_prev = i_elm      
               i_elm      = element_neighbours(1,i_elm_prev)
@@ -368,7 +369,7 @@ L_IL: do i_lines=1,n_lines
  
               t_line = 1.d0
 
-              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+              call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_out,Z_out)
 	      
 	      if ( (abs(R_in - R_out) .gt. 1.d-8) .or. (abs(Z_in - Z_out) .gt. 1.d-8)) &
 	        write(*,'(A,2i6,4f8.4)') ' error in element change (4) ',i_elm_prev,i_elm,R_in,R_out,Z_in,Z_out
@@ -401,7 +402,7 @@ L_IL: do i_lines=1,n_lines
             
     enddo ! end of a 2Pi turn
 
-    call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+    call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R,Z)
 
     R_line = R
     Z_line = Z
@@ -453,20 +454,21 @@ subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t)
 use mod_parameters
 use elements_nodes_neighbours
 use phys_module
+use mod_interp
 
 implicit none
 
 integer :: i_var_psi, i_elm, i_tor, i_harm
 
 real*8 :: s_in, t_in, p_in, delta_p, delta_s, delta_t
-real*8 :: R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
+real*8 :: R,R_s,R_t,Z,Z_s,Z_t
 real*8 :: Pcos,Pcos_s,Pcos_t,Pcos_st,Pcos_ss,Pcos_tt, Psin,Psin_s,Psin_t,Psin_st,Psin_ss,Psin_tt
 real*8 :: P0,P0_s,P0_t,P0_st,P0_ss,P0_tt, psi_s, psi_t, Zjac
 real*8 :: AR0_Z, AR0_p, AR0_s, AR0_t, AZ0_R, AZ0_p, AZ0_s, AZ0_t, A30_R, A30_Z, BR0, BZ0, Bp0, Fprof
 
 i_var_psi = 1
 
-call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,Z,Z_s,Z_t)
 
 Zjac = (R_s * Z_t - R_t * Z_s)
 
@@ -556,6 +558,7 @@ subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
 use mod_parameters
 use elements_nodes_neighbours
 use phys_module
+use mod_interp, only: interp
 
 implicit none
 
@@ -565,7 +568,6 @@ real*8 :: s_in, t_in, p_in
 real*8 :: Pcos,Pcos_s,Pcos_t,Pcos_st,Pcos_ss,Pcos_tt, Psin,Psin_s,Psin_t,Psin_st,Psin_ss,Psin_tt
 real*8 :: P0,P0_s,P0_t,P0_st,P0_ss,P0_tt
 real*8 :: value_out
-external interp
 
 !call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 !Zjac = (R_s * Z_t - R_t * Z_s)

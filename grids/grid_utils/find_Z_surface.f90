@@ -4,6 +4,7 @@ subroutine find_Z_surface(node_list,element_list,surface_list,j_surf,Z_find,i_el
 !---------------------------------------------------------------------------
 
 use data_structure
+use mod_interp, only: interp_rz
 
 implicit none
 
@@ -103,7 +104,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 
 enddo
 
-if (i_find .eq. 0) write(*,*) ' WARNING : no Z surface found'
+!if (i_find .eq. 0) write(*,*) ' WARNING : no Z surface found'
 
 return
 end subroutine find_Z_surface

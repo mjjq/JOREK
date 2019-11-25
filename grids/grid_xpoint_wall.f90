@@ -11,6 +11,8 @@ use tr_module
 use gauss
 use basis_at_gaussian
 use phys_module, only:   n_limiter, R_limiter, Z_limiter
+use mod_neighbours, only: update_neighbours
+use mod_interp
 
 implicit none
 
@@ -34,8 +36,8 @@ real*8, allocatable :: R_wall_max(:), Z_wall_max(:), T_wall_par(:), R_wall_min(:
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis
 real*8              :: R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
 real*8              :: PI, s_find(8), t_find(8), tht_x, theta, delta, ss, tmp1, tmp2, tan_max, tht_bnd, tht_ext
-real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+real*8              :: RRg1,dRRg1_dr,dRRg1_ds
+real*8              :: ZZg1,dZZg1_dr,dZZg1_ds
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
 real*8,allocatable  :: R_polar(:,:,:),Z_polar(:,:,:),xout(:),xp(:),yp(:), R_strike(:,:), Z_strike(:,:)
 real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z, Rw, Rw2, Zw, Zw2, Tw, tan12
@@ -55,8 +57,9 @@ real*8              :: RL5, RL8, RL9, RL10, RL11, ZL5, ZL8, ZL9, ZL10, ZL11, ang
 real*8,allocatable  :: psi_gaussians(:,:), angle_gaussians(:,:), s_equidistant(:)
 real*8,allocatable  :: Aspline(:), Bspline(:), Cspline(:), Dspline(:)
 real*8              :: x_g(n_gauss,n_gauss), y_g(n_gauss,n_gauss), psi_g(n_gauss,n_gauss), xmin(2), xmax(2)
-real*8              :: abltg(3), s_gaussian, xwert, t_node
+real*8              :: abltg(3), t_node
 real*8              :: Rtmp, Ztmp, dRtmp, dZtmp, Rtmp2, Ztmp2, dRtmp2, dZtmp2, Rtmp3, Ztmp3, dRtmp3, dZtmp3
+real*8              :: t2, t3, t_delta, t_total
 logical             :: xpoint, extend
 real*8,external     :: root, spwert
 character*4         :: label
@@ -112,11 +115,6 @@ call spline(n_flux,s_equidistant,s_tmp,0.d0,0.d0,2,Aspline,Bspline,Cspline,Dspli
 do i=1,n_flux-1
   s_values(i) = s_tmp(i+1)
   flux_list%psi_values(i) =  psi_axis + s_values(i)**2 * (psi_xpoint(1) - psi_axis)
-  do j=1,4
-    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
-    s_gaussian = SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
-    psi_gaussians(j,i) = psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
-  enddo
 enddo
 
 deallocate(s_tmp,Aspline,Bspline,Cspline,Dspline,s_equidistant)
@@ -132,11 +130,6 @@ call spline(n_open+1,s_equidistant,s_tmp,0.d0,0.d0,2,Aspline,Bspline,Cspline,Dsp
 do i=1,n_open
   s_values(i+n_flux-1)             =  1.d0 + dPSI_open*s_tmp(i+1)
   flux_list%psi_values(i+n_flux-1) =  psi_axis + s_values(i+n_flux-1)**2 * (psi_xpoint(1) - psi_axis)
-  do j=1,4
-    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
-    s_gaussian = 1.d0 + DPSI_open*SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
-    psi_gaussians(j,(n_flux-1)+i) =  psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
-  enddo
 enddo
 
 deallocate(s_tmp,Aspline,Bspline,Cspline,Dspline,s_equidistant)
@@ -154,14 +147,9 @@ call spline(n_private+1,s_equidistant,s_tmp,0.d0,0.d0,2,Aspline,Bspline,Cspline,
 do i=1,n_private
   s_values(i+n_flux-1+n_open)             =  1.d0 - dPSI_private*s_tmp(i+1)
   flux_list%psi_values(i+n_flux-1+n_open) =  psi_axis + s_values(i+n_flux-1+n_open)**2 * (psi_xpoint(1) - psi_axis)
-  do j=1,4
-    xwert = s_equidistant(i) + (s_equidistant(i+1)-s_equidistant(i)) * xgauss(j)
-    s_gaussian = 1.d0 - DPSI_private*SPWERT(n_flux,xwert,Aspline,Bspline,Cspline,Dspline,s_equidistant,ABLTG)
-    psi_gaussians(j,n_flux-1+n_open+i) =  psi_axis + s_gaussian**2 * (psi_xpoint(1) - psi_axis)
-  enddo
 enddo
 
-call find_flux_surfaces(xpoint,xcase,node_list,element_list,flux_list)
+call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
 
 call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
 
@@ -232,9 +220,7 @@ do j=2,n_tht-1
 
   call find_theta_surface(node_list,element_list,flux_list,i_sep,theta_sep(j),R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)
 
-  call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-                 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+  call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),RRg1,ZZg1)
 
   R_sep(j) = RRg1
   Z_sep(j) = ZZg1
@@ -304,18 +290,14 @@ call tr_allocate(Z_min,1,n_tht_3,"Z_min")
 call find_theta_surface(node_list,element_list,flux_list,i_max,angle_L9,R_xpoint(1),Z_xpoint(1), &
                         i_elm_find,s_find,t_find,i_find)
 
-call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-               RL10,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-               ZL10,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),RL10,ZL10)
 
 write(*,'(A,2e16.8)') ' L10 (last flux surface level x-point, outside): ',RL10,ZL10 ! outside wall crossing at x-point level
 
 call find_theta_surface(node_list,element_list,flux_list,i_max,angle_L8,R_xpoint(1),Z_xpoint(1), &
                         i_elm_find,s_find,t_find,i_find)
 
-call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-               RL11,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-               ZL11,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),RL11,ZL11)
 
 write(*,'(A,2e16.8)') ' L11 (last flux surface level x-point, inside): ',RL11,ZL11  ! inside wall crossing at x-point level
 
@@ -325,8 +307,7 @@ write(*,'(A,2e16.8)') ' L11 (last flux surface level x-point, inside): ',RL11,ZL
 call find_theta_surface(node_list,element_list,flux_list,flux_list%n_psi,tht_x,R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)
 
 do i=1,i_find
-   call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RL5,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                                                                           ZL5,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+   call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RL5,ZL5)
 
    if (ZL5 .le. Z_xpoint(1)) exit
 enddo
@@ -351,30 +332,36 @@ do i=1, n_open + n_private + 1
     Zw = Z_wall(k+1)
     theta = atan2(Z_wall(k)-Zw, R_wall(k)-Rw)
 
-    call find_theta_surface(node_list,element_list,flux_list,i_flux,theta,Rw,Zw,i_elm_find,s_find,t_find,i_find)
+    if (R_wall(k) .eq. R_wall(k+1)) then
+
+      call find_R_surface(node_list,element_list,flux_list,i_flux,Rw,i_elm_find,s_find,t_find,i_find)
+
+    elseif (Z_wall(k) .eq. Z_wall(k+1)) then
+
+      call find_Z_surface(node_list,element_list,flux_list,i_flux,Rw,i_elm_find,s_find,t_find,i_find)
+
+    else
+
+       call find_theta_surface(node_list,element_list,flux_list,i_flux,theta,Rw,Zw,i_elm_find,s_find,t_find,i_find)
+
+    endif
 
     do j=1,i_find
 
-      call interp_RZ(node_list,element_list,i_elm_find(j),s_find(j),t_find(j), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+      call interp_RZ(node_list,element_list,i_elm_find(j),s_find(j),t_find(j),RRg1,ZZg1)
 
-      if ( (((R_wall(k)-RRg1)*(R_wall(k+1)-RRg1) .le. 0.d0) .and. (R_wall(k+1) .ne. R_wall(k))) &
-
-        .or.((Z_wall(k)-ZZg1)*(Z_wall(k+1)-ZZg1) .le. 0.d0) )  then
+      if   ( (((R_wall(k)-RRg1)*(R_wall(k+1)-RRg1) .le. 0.d0) .or. (R_wall(k) .eq. R_wall(k+1))) &
+      
+           .and. ((Z_wall(k)-ZZg1)*(Z_wall(k+1)-ZZg1) .le. 0.d0) )  then
 
         if ((RRg1 .le. R_xpoint(1)) .and. (ZZg1 .le. Z_axis)) then
-          if (RRg1 .lt. R_strike(i,1)) then
             R_strike(i,1) = RRg1
             Z_strike(i,1) = ZZg1
-            write(*,'(A,i3,2f8.4)') ' INNER strike point : ',i,RRg1,ZZg1
-          endif
+!            write(*,'(A,i3,2f8.4)') ' INNER strike point : ',i,RRg1,ZZg1
         elseif ((RRg1 .gt. R_xpoint(1)) .and. (ZZg1 .le. Z_axis)) then
-           if (RRg1 .gt. R_strike(i,1)) then
              R_strike(i,2) = RRg1
              Z_strike(i,2) = ZZg1
-             write(*,'(A,i3,2f8.4)') ' OUTER strike point : ',i,RRg1,ZZg1
-           endif
+!             write(*,'(A,i3,2f8.4)') ' OUTER strike point : ',i,RRg1,ZZg1
          endif
 
       endif
@@ -393,6 +380,9 @@ deallocate(s_tmp); allocate(s_tmp(n_leg))
 s_tmp = 0
 call meshac2(n_leg,s_tmp,0.d0,1.d0,SIG_leg_0,SIG_leg_1,0.6d0,1.0d0)
 
+do j=1,n_leg
+  s_tmp(j) = real(j-1,8)/real(n_leg-1,8)
+enddo
 
 !----------------------------- inner leg, private side
 do j=1,n_leg
@@ -403,9 +393,7 @@ do j=1,n_leg
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,     &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (ZZg1 .le. Z_xpoint(1)) exit
 
@@ -424,9 +412,7 @@ do j=1,n_leg
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),&
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (ZZg1 .le. Z_xpoint(1)) exit
 
@@ -447,9 +433,7 @@ do j=1,n_leg
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),&
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (RRg1 .le. R_xpoint(1)) exit
 
@@ -468,9 +452,7 @@ do j=1,n_leg
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),&
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (RRg1 .ge. R_xpoint(1)) exit
 
@@ -489,9 +471,7 @@ do j=1,n_leg
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,     &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (ZZg1 .le. Z_xpoint(1)) exit
 
@@ -510,9 +490,7 @@ do j=1,n_leg
 
   do i=1,i_find
 
-    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),&
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+    call interp_RZ(node_list,element_list,i_elm_find(i),s_find(i),t_find(i),RRg1,ZZg1)
 
     if (ZZg1 .le. Z_xpoint(1)) exit
 
@@ -523,11 +501,10 @@ do j=1,n_leg
 enddo
 Z_sep(n_tht+2*n_leg) = Z_xpoint(1) ! this one is known
 
+s_tmp = 0.d0
+call meshac2(n_leg,s_tmp,0.d0,1.d0,0.3d0,0.3d0,0.6d0,1.0d0)
+
 do j=1,n_leg
-!  R_wall_max(j+n_tht) = R_wall_max(n_tht) + (R_max(n_tht+1) - R_wall_max(n_tht)) * s_tmp(j)
-!  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + (Z_max(n_tht+1) - Z_wall_max(n_tht)) * s_tmp(j)
-!  R_wall_max(j+n_tht) = R_wall_max(n_tht) + 0.5d0*(R_max(n_tht+1) - R_wall_max(n_tht)) * float(j-1)/float(n_leg-1)
-!  Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + 0.5d0*(Z_max(n_tht+1) - Z_wall_max(n_tht)) * float(j-1)/float(n_leg-1) 
   R_wall_max(j+n_tht) = R_wall_max(n_tht) + 0.8d0*(R_max(n_tht+1) - R_wall_max(n_tht)) * float(j-1)/float(n_leg-1)
   Z_wall_max(j+n_tht) = Z_wall_max(n_tht) + 0.8d0*(Z_max(n_tht+1) - Z_wall_max(n_tht)) * float(j-1)/float(n_leg-1) 
   tht_max = PI
@@ -537,8 +514,6 @@ do j=1,n_leg
   T_wall_par(j+n_tht) = Tw
 enddo
 do j=1,n_leg
-!  R_wall_max(j+n_tht+n_leg) = R_wall_max(1) + (R_max(n_tht+n_leg+1)-R_wall_max(1)) * s_tmp(j)
-!  Z_wall_max(j+n_tht+n_leg) = Z_wall_max(1) + (Z_max(n_tht+n_leg+1)-Z_wall_max(1)) * s_tmp(j)
   R_wall_max(j+n_tht+n_leg) = R_wall_max(1) + 0.8d0*(R_max(n_tht+n_leg+1)-R_wall_max(1)) * float(j-1)/float(n_leg-1)
   Z_wall_max(j+n_tht+n_leg) = Z_wall_max(1) + 0.8d0*(Z_max(n_tht+n_leg+1)-Z_wall_max(1)) * float(j-1)/float(n_leg-1)
   tht_max = 0.d0
@@ -547,6 +522,7 @@ do j=1,n_leg
   Z_wall_max(j+n_tht+n_leg) = Zw
   T_wall_par(j+n_tht+n_leg) = Tw
 enddo
+
 
 call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
 
@@ -562,13 +538,17 @@ call lincol(4)
 call lplot6(1,1,R_sep,Z_sep,-(n_tht+2*n_leg),' ')
 call lincol(0)
 
+!do i=1,n_tht+2*n_leg
+!  write(*,'(A,i4,6f10.6)') ' R_max,Z_max : ',i,R_max(i),Z_max(i),R_sep(i),Z_sep(i),R_min(i),Z_min(i)
+!enddo
+
 !------------------------------ interpolation points are known, construct polar coordinate lines
 n_pieces=3
 allocate(R_polar(n_pieces,4,n_tht+2*n_leg),Z_polar(n_pieces,4,n_tht+2*n_leg))
 
 do j=1,n_tht
 
-  delta = 0.1
+  delta = 0.08
 
   if ((j .eq. 1) .or. (j .eq. n_tht))       delta = 0.d0
   if ((j .eq. 2) .or. (j .eq. n_tht - 1))   delta = 0.05d0
@@ -605,29 +585,15 @@ do j=1,n_tht
 
 enddo
 
-!---------------------- temporary fix to better match the corners of the ITER divertor
-! should make curves with more pieces, matched to divertor shape
-do j=1,n_leg
-  R_sep(n_tht+j) = R_sep(n_tht+j) + (float(n_leg-j)/float(n_leg-1))**8 * ( 4.1799 - R_sep(n_tht+j))
-  Z_sep(n_tht+j) = Z_sep(n_tht+j) + (float(n_leg-j)/float(n_leg-1))**8 * (-3.8847 - Z_sep(n_tht+j))
-enddo
-R_sep(n_tht+2) = (R_sep(n_tht+1) + R_sep(n_tht+3))/2.d0
-Z_sep(n_tht+2) = (Z_sep(n_tht+1) + Z_sep(n_tht+3))/2.d0
-do j=1,n_leg
-  R_sep(n_tht+n_leg+j) = R_sep(n_tht+n_leg+j) + (float(n_leg-j)/float(n_leg-1))**8 * ( 5.5650 - R_sep(n_tht+n_leg+j))
-  Z_sep(n_tht+n_leg+j) = Z_sep(n_tht+n_leg+j) + (float(n_leg-j)/float(n_leg-1))**8 * (-4.6 - Z_sep(n_tht+n_leg+j))
-enddo
 
-! 5.5650,-4.5559
-
-R_sep(n_tht+n_leg+2) = (R_sep(n_tht+n_leg+1) + R_sep(n_tht+n_leg+3))/2.d0
-Z_sep(n_tht+n_leg+2) = (Z_sep(n_tht+n_leg+1) + Z_sep(n_tht+n_leg+3))/2.d0
 
 do j=1,2*n_leg
 
-  delta = 0.1
+  delta = 0.2
+
   if ((j .eq. n_leg)   .or. (j .eq. 2*n_leg))    delta = 0.d0
   if ((j .eq. n_leg-1) .or. (j .eq. 2*n_leg-1))  delta = 0.05d0
+  if ((j .eq. n_leg-2) .or. (j .eq. 2*n_leg-2))  delta = 0.1d0
 !  if  (j .eq. 1)        delta = 0.05d0
 !  if  (j .eq. 2)        delta = 0.08d0
 !  if  (j .eq. 1+n_leg)  delta = 0.05d0
@@ -669,8 +635,84 @@ do j=1,2*n_leg
   Z_polar(2,2,n_tht+j) = ( Z_polar(2,1,n_tht+j) +  2.d0 * Z_sep(n_tht+j) ) / 3.d0
   Z_polar(2,3,n_tht+j) = ( Z_polar(2,4,n_tht+j) +  2.d0 * Z_sep(n_tht+j) ) / 3.d0
 
+#ifdef D3D_WALL
+  if (j .eq. 1) then
+    R_polar(3,1,n_tht+j) = R_wall_max(n_tht+j2)
+    R_polar(3,4,n_tht+j) = R_wall_max(n_tht+j2) 
+    R_polar(3,2,n_tht+j) = R_wall_max(n_tht+j2) 
+    R_polar(3,3,n_tht+j) = R_wall_max(n_tht+j2) 
+
+    Z_polar(3,4,n_tht+j) = -1.223 
+
+    Z_polar(3,2,n_tht+j) = (2.d0 * Z_polar(3,1,n_tht+j) +        Z_polar(3,4,n_tht+j)) / 3.d0
+    Z_polar(3,3,n_tht+j) = (       Z_polar(3,1,n_tht+j) + 2.d0 * Z_polar(3,4,n_tht+j)) / 3.d0
+
+    R_polar(2,4,n_tht+j) = R_wall_max(n_tht+j2) 
+    Z_polar(2,4,n_tht+j) = -1.223 
+
+  endif
+
+  if ((j .ge. 2) .and. (j .le. 5)) then
+
+    R_polar(3,4,n_tht+j) =  0.25d0 * R_polar(3,4,n_tht+j) + 0.75d0 * R_polar(3,4,n_tht+j-1)
+    
+    R_polar(3,2,n_tht+j) = (2.0d0 * R_polar(3,1,n_tht+j) +         R_polar(3,4,n_tht+j)) / 3.d0
+    R_polar(3,3,n_tht+j) = (        R_polar(3,1,n_tht+j) + 2.0d0 * R_polar(3,4,n_tht+j)) / 3.d0
+
+    Z_polar(3,4,n_tht+j) = -1.223 
+
+    Z_polar(3,2,n_tht+j) = (2.d0 * Z_polar(3,1,n_tht+j) +        Z_polar(3,4,n_tht+j)) / 3.d0
+    Z_polar(3,3,n_tht+j) = (       Z_polar(3,1,n_tht+j) + 2.d0 * Z_polar(3,4,n_tht+j)) / 3.d0
+
+    R_polar(2,4,n_tht+j) = R_polar(3,4,n_tht+j) 
+    Z_polar(2,4,n_tht+j) = Z_polar(3,4,n_tht+j) 
+
+  endif
+#endif
+
 enddo
 
+#ifdef AUG_WALL
+
+R_polar(3,2,n_tht+1) =  1.294 
+Z_polar(3,2,n_tht+1) = -0.955
+
+R_polar(3,3,n_tht+1) =  1.292 
+Z_polar(3,3,n_tht+1) = -0.983
+
+R_polar(3,4,n_tht+1) =  1.287 
+Z_polar(3,4,n_tht+1) = -1.001
+
+R_polar(2,4,n_tht+1) = R_polar(3,4,n_tht+1) 
+Z_polar(2,4,n_tht+1) = Z_polar(3,4,n_tht+1) 
+
+Z_polar(2,3,n_tht+1) = 2.d0 * Z_polar(2,4,n_tht+1) - Z_polar(3,3,n_tht+1)  
+R_polar(2,3,n_tht+1) = 2.d0 * R_polar(2,4,n_tht+1) - R_polar(3,3,n_tht+1)  
+
+j_end = n_leg/2
+
+do j= 2, j_end-1
+
+  R_polar(3,:,n_tht+j) =  real(j-1,8)/real(j_end-1,8) * R_polar(3,:,n_tht+j_end) + real(j_end-j,8)/real(j_end-1,8) * R_polar(3,:,n_tht+1)
+  Z_polar(3,:,n_tht+j) =  real(j-1,8)/real(j_end-1,8) * Z_polar(3,:,n_tht+j_end) + real(j_end-j,8)/real(j_end-1,8) * Z_polar(3,:,n_tht+1)
+  
+  R_polar(2,4,n_tht+j) = R_polar(3,4,n_tht+j) 
+  Z_polar(2,4,n_tht+j) = Z_polar(3,4,n_tht+j) 
+
+  Z_polar(2,3,n_tht+j) = 2.d0 * Z_polar(2,4,n_tht+j) - Z_polar(3,3,n_tht+j)  
+  R_polar(2,3,n_tht+j) = 2.d0 * R_polar(2,4,n_tht+j) - R_polar(3,3,n_tht+j)  
+
+enddo
+
+R_polar(3,:,n_tht+2) = 0.5d0 * R_polar(3,:,n_tht+1) + 0.5d0 * R_polar(3,:,n_tht+3)
+Z_polar(3,:,n_tht+2) = 0.5d0 * Z_polar(3,:,n_tht+1) + 0.5d0 * Z_polar(3,:,n_tht+3)
+  
+R_polar(2,4,n_tht+2) = R_polar(3,4,n_tht+2) 
+Z_polar(2,4,n_tht+2) = Z_polar(3,4,n_tht+2) 
+
+Z_polar(2,3,n_tht+2) = 2.d0 * Z_polar(2,4,n_tht+2) - Z_polar(3,3,n_tht+2)  
+R_polar(2,3,n_tht+2) = 2.d0 * R_polar(2,4,n_tht+2) - R_polar(3,3,n_tht+2)  
+#endif
 
 call lincol(3)
 
@@ -842,8 +884,7 @@ do i=1,n_flux-1                 !------------------------ the closed field lines
     call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i,j),tmp2, dZ_dt)
 
     call interp_RZ(node_list,element_list,ielm_flux(i,j),s_flux(i,j),t_flux(i,j), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                   RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
     call interp(node_list,element_list,ielm_flux(i,j),1,1,s_flux(i,j),t_flux(i,j),&
                    PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
@@ -880,8 +921,7 @@ n_xpoint=4
 call interp(node_list,element_list,i_elm_xpoint(1),1,1,s_xpoint(1),t_xpoint(1),&
                    PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
 call interp_RZ(node_list,element_list,i_elm_xpoint(1),s_xpoint(1),t_xpoint(1), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                   RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
 EJAC = dRRg1_dr*dZZg1_ds - dRRg1_ds * dZZg1_dr
 RY = - dRRg1_ds / EJAC
@@ -953,8 +993,7 @@ do i=n_flux-1,n_flux-1+n_open           !--------------------------- nodes on th
     call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i,j),tmp2, dZ_dt)
 
     call interp_RZ(node_list,element_list,ielm_flux(i,j),s_flux(i,j),t_flux(i,j), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                   RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
     call interp(node_list,element_list,ielm_flux(i+1,j),1,1,s_flux(i+1,j),t_flux(i+1,j),&
                    PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
@@ -1011,8 +1050,7 @@ do j=1, n_leg                         !--------------------------- nodes on oute
       call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i+1,j2),tmp2, dZ_dt)
 
       call interp_RZ(node_list,element_list,ielm_flux(i+1,j2),s_flux(i+1,j2),t_flux(i+1,j2), &
-                     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                     RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
       call interp(node_list,element_list,ielm_flux(i+1,j2),1,1,s_flux(i+1,j2),t_flux(i+1,j2),&
                      PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
@@ -1068,8 +1106,7 @@ do l=1, n_leg-1                       !--------------------------- nodes on inne
     call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i+1,j2),tmp2, dZ_dt)
 
     call interp_RZ(node_list,element_list,ielm_flux(i+1,j2),s_flux(i+1,j2),t_flux(i+1,j2), &
-                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                   RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
     call interp(node_list,element_list,ielm_flux(i+1,j2),1,1,s_flux(i+1,j2),t_flux(i+1,j2),&
                    PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
@@ -1110,12 +1147,37 @@ if (extend) then
 
       k = k_cross(n_flux+n_open,j)
 
+      if (k .eq. 2) then
+        
+        t2 = 1.d0 - t_tht(n_flux+n_open,j)
+        t3 = 2.d0
+
+        t_total = t2 + t3
+
+        t_delta = t_total * real(i,8)/real(n_ext,8)
+
+        t_node = t_tht(n_flux+n_open,j) + t_delta
+
+        if (t_node .gt. 1.d0) then
+
+          k = 3
+
+          t_node = 1.d0 - (t_delta - t2)
+        
+        endif
+
+      else
+
+        t_node = -1.d0 + float(n_ext-i)/float(n_ext) * (t_tht(n_flux+n_open,j)+1.d0)
+
+      endif  
+
+
       R_cub1d = (/ R_polar(k,1,j), 3.d0/2.d0 *(R_polar(k,2,j)-R_polar(k,1,j)), &
                    R_polar(k,4,j), 3.d0/2.d0 *(R_polar(k,4,j)-R_polar(k,3,j))  /)
       Z_cub1d = (/ Z_polar(k,1,j), 3.d0/2.d0 *(Z_polar(k,2,j)-Z_polar(k,1,j)), &
                    Z_polar(k,4,j), 3.d0/2.d0 *(Z_polar(k,4,j)-Z_polar(k,3,j)) /)
 
-      t_node = -1.d0 + float(n_ext-i)/float(n_ext) * (t_tht(n_flux+n_open,j)+1.d0)
 
       call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4), t_node, Rtmp, dR_dt)
       call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4), t_node, Ztmp, dZ_dt)
@@ -1334,6 +1396,14 @@ enddo
 
 newelement_list%n_elements = (n_flux - 1)*(n_tht - 1)
 
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
+
 node_start = (n_flux-1) * (n_tht-1) + n_xpoint
 
 do i=1,n_open
@@ -1370,6 +1440,14 @@ do i=1,n_open
 enddo
 
 newelement_list%n_elements = newelement_list%n_elements + (n_open) * (n_tht-1)
+
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 node_start   = (n_flux-1)*(n_tht-1) + 4 + (n_open+1) * n_tht - 2
 
@@ -1490,16 +1568,6 @@ if (extend) then
         if (j .eq. n_leg-1)then
           newnode_list%node(newelement_list%element(index)%vertex(3))%boundary = 9 !3  ! LEFT LEG
           newnode_list%node(newelement_list%element(index)%vertex(4))%boundary = 4 !3  ! LEFT LEG
-
-          newnode_list%node(newelement_list%element(index)%vertex(2))%x =         &
-              0.4 * newnode_list%node(newelement_list%element(index)%vertex(2))%x  &
-            + 0.6 * newnode_list%node(newelement_list%element(index)%vertex(3))%x
-          newnode_list%node(newelement_list%element(index)%vertex(4))%x =         &
-              0.4 * newnode_list%node(newelement_list%element(index)%vertex(4))%x  &
-            + 0.6 * newnode_list%node(newelement_list%element(index)%vertex(3))%x
-          newnode_list%node(newelement_list%element(index)%vertex(3))%x =         &
-              0.5 * newnode_list%node(newelement_list%element(index)%vertex(2))%x  &
-            + 0.5 * newnode_list%node(newelement_list%element(index)%vertex(4))%x
         endif
       endif
       if ((j .eq. n_leg-1) .and. (i .ne. n_ext)) then
@@ -1549,17 +1617,6 @@ if (extend) then
         if (j .eq. n_leg-1)then
           newnode_list%node(newelement_list%element(index)%vertex(1))%boundary = 4 ! 3  ! RIGHT LEG
           newnode_list%node(newelement_list%element(index)%vertex(2))%boundary = 9 ! 3  ! RIGHT LEG
-
-          newnode_list%node(newelement_list%element(index)%vertex(1))%x =         &
-              0.4 * newnode_list%node(newelement_list%element(index)%vertex(1))%x  &
-            + 0.6 * newnode_list%node(newelement_list%element(index)%vertex(2))%x
-          newnode_list%node(newelement_list%element(index)%vertex(3))%x =         &
-              0.4 * newnode_list%node(newelement_list%element(index)%vertex(3))%x  &
-            + 0.6 * newnode_list%node(newelement_list%element(index)%vertex(2))%x
-          newnode_list%node(newelement_list%element(index)%vertex(2))%x =         &
-              0.5 * newnode_list%node(newelement_list%element(index)%vertex(1))%x  &
-            + 0.5 * newnode_list%node(newelement_list%element(index)%vertex(3))%x
-
         endif
       endif
  
@@ -1574,11 +1631,27 @@ if (extend) then
   enddo
 
   newelement_list%n_elements = newelement_list%n_elements + n_ext * (n_tht-1) + 2*n_ext*(n_leg-1)
+  
+  if ( newnode_list%n_nodes > n_nodes_max ) then
+    write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'
+    stop
+  else if ( newelement_list%n_elements > n_elements_max ) then
+    write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+    stop
+  end if
 
 endif
 
 !newelement_list%n_elements = newelement_list%n_elements + (n_open+n_private)*(2*n_leg-2)
 newelement_list%n_elements = index
+
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 write(*,*) ' definition of elements completed'
 
@@ -1694,8 +1767,7 @@ do i=1,newnode_list%n_nodes
   call find_RZ(node_list,element_list,R1,Z1,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 
   call interp_RZ(node_list,element_list,ielm_out,s_out,t_out, &
-                 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-                 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                 RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
   call interp(node_list,element_list,ielm_out,1,1,s_out,t_out,PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
 
@@ -1749,6 +1821,13 @@ node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 element_list%n_elements = newelement_list%n_elements
 element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
 
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( element_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 !----temporary, needs to be completed, neighbour information
 do i=1, element_list%n_elements
@@ -1769,6 +1848,7 @@ deallocate(R_polar,Z_polar,xout)
 deallocate(RR_new,ZZ_new,s_flux,t_flux,t_tht)
 deallocate(ielm_flux,k_cross)
 
+call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 write(*,*) ' completed grid_xpoint_wall'
 
 return

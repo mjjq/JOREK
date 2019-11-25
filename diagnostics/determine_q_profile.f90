@@ -6,6 +6,7 @@ use constants
 use tr_module 
 use data_structure
 use phys_module
+use mod_interp
 
 implicit none
 
@@ -36,11 +37,12 @@ integer :: i,m, ig, ip
 
 !write(*,*) '   i     psi           q          sum_dl'
 
-  rad(:)   = 0.d0
+  rad(:) = 0.d0
   q(:)   = 0.d0
+  Fgi    = 0.d0
 
 do i=2, surface_list%n_psi
-  rad(i)   = 0.d0
+  rad(i) = 0.d0
   q(i)   = 0.d0
   sum_dl = 0.d0
   do k=1, surface_list%flux_surfaces(i)%n_pieces

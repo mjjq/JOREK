@@ -13,8 +13,8 @@ contains
 !*   element_list - List of all elements                                       *
 !*   local_elms   - List of local elements                                     *
 !*   n_local_elms - Number of local elements                                   *
-!*   index_min    - Minimal index of local elements (not with murge assembly)  *
-!*   index_max    - Maximal index of local elements (not with murge assembly)  *
+!*   index_min    - Minimal index of local elements                            *
+!*   index_max    - Maximal index of local elements (                          *
 !*   xpoint2      -                                                            *
 !*   xcase2       -                                                            *
 !*   psi_axis     -                                                            *
@@ -22,9 +22,6 @@ contains
 !*   Z_xpoint     -                                                            *
 !*   gmres        - boolean indicating if we are using GMRES method            *
 !*   solve_only   - Indicate if we want to perform only solve                  *
-!*                                                                             *
-!* Authors:                                                                    *
-!*   Xavier Lacoste - xavier.lacoste@inria.fr                                  *
 !*                                                                             *
 !*******************************************************************************
   subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,    & 
@@ -38,13 +35,8 @@ contains
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
-       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, &
+       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min, &
        Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum
-    USE murge_module, ONLY : MURGE_ASSEMBLYBEGIN => MURGE_ASSEMBLYBEGIN_WRAPPER,     &
-         use_murge, use_murge_element, murge_id, murge_global_n, MURGE_ASSEMBLY_OVW, &
-         MURGE_ASSEMBLY_FOOL, murge_sym, murge_id_prod, murge_global_n_prod,         &
-         MURGE_SUCCESS, murge_add_one_entry
-    use murge_module, only : MURGE_ASSEMBLYEND
     USE tr_module
     use mpi_mod
 
@@ -82,6 +74,7 @@ contains
   integer :: loop_nbr, loop, cnt, cnt_prod
   integer :: ierr
   logical :: is_local, only_count
+  logical :: apply_psi_BC, apply_current_BC
   real*8, allocatable :: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
   real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
   real*8  :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
@@ -137,35 +130,6 @@ contains
   end if RMPspectrum
 
   zbig = 1.d12
-  if (use_murge .and. use_murge_element) then
-     ! when we use murge assembly we first count entries then we had them.
-     loop_nbr   = 2
-     cnt        = 0
-     cnt_prod   = 0
-     only_count = .true.
-  else
-     ! No need to do 2 loops when we build irn_glob, jcn_glob, A_glob.
-     loop_nbr   = 1
-     only_count = .false.
-  end if
-
-  do loop = 1, loop_nbr
-#ifdef USE_MURGE
-       if (loop == 2)  then
-          only_count = .false.
-          write (*,*) my_id, ":: Murge Boundary Assembly phase :: ", cnt, " entries"
-          if (.not. solve_only) then
-             CALL MURGE_ASSEMBLYBEGIN( murge_id, murge_global_n, cnt,              &
-                  &                    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,     &
-                  &                    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-          end if
-          if (gmres) then
-             CALL MURGE_ASSEMBLYBEGIN( murge_id_prod, murge_global_n_prod, cnt_prod,    &
-                  &                    MURGE_ASSEMBLY_OVW, MURGE_ASSEMBLY_OVW,          &
-                  &                    MURGE_ASSEMBLY_FOOL, murge_sym, ierr)
-          end if
-       end if
-#endif
      do i=1, n_local_elms !===============================do elements
 
         ielm = local_elms(i)
@@ -181,13 +145,32 @@ contains
 !              do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
 
                  do k=1, n_var ! ================================do variables
+                 
+                                                                                      !-----(General for all bnd types)
+                   !------------ Decide when Psi or Current need BCs --------------------------------------------------                      
+                   !----Psi
+                   apply_psi_BC = .false.
+                   if (k == 1) then                        
+                     if ( (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1))                    )   apply_psi_BC = .true.
+                     if ( (RMP_on) .and. (in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)) )   apply_psi_BC = .true.
+                     if ( (.not. RMP_on) .and. (in .ge. 2)              )                         apply_psi_BC = .true.
+                     if (              in .eq. 1                        )                         apply_psi_BC = .true.
+                     if (           is_freebound(in,k)                  )                         apply_psi_BC = .false.                     
+                   endif
+                      
+                   !----Current
+                   apply_current_BC = .false.
+                   if (k == 3) then
+                     if ( .not. is_freebound(in,k) )   apply_current_BC = .true.
+                   endif
+                   !---------------------------------------------------------------------------------------------------
 
 !========================================================================
 ! conditions for direction 1 (s), i.e. boundary types 1, 3, 4, 9
 ! apply fixed bc for variables k=1,2,3,4
 ! apply v_par = cs for k=7
 !========================================================================
-                    if    ((node_list%node(inode)%boundary .eq. 1) &
+                   if     ((node_list%node(inode)%boundary .eq. 1) &
                       .or. (node_list%node(inode)%boundary .eq. 4) &
                       .or. (node_list%node(inode)%boundary .eq. 9) &
                       .or. (node_list%node(inode)%boundary .eq. 3)) then
@@ -232,14 +215,12 @@ contains
                                   index_node, kv, in,                &
                                   index_node, kp, in,                &
                                   zbig, solve_only, gmres,           &
-                                  use_murge, use_murge_element,      &
                                   cnt, cnt_prod, only_count,         &
                                   index_min, index_max)
 
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(  &
                                      index_node, kv, in,           &
-                                     use_murge, use_murge_element, &
                                      index_min, index_max,         &
                                      RHS_loc, ZBIG * delta_psi_rmp)
                              endif
@@ -250,13 +231,11 @@ contains
                                   index_node2, kv, in,               &
                                   index_node2, kp, in,               &
                                   zbig, solve_only, gmres,           &
-                                  use_murge, use_murge_element,      &
                                   cnt, cnt_prod, only_count,         &
                                   index_min, index_max)
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(       &
                                      index_node2, kv, in,               &
-                                     use_murge, use_murge_element,      &
                                      index_min, index_max,              &
                                      RHS_loc, ZBIG * delta_psi_rmp_ds)
                              endif
@@ -267,18 +246,14 @@ contains
 !======================================= end RMPs ==================================
 
                       
-                       if (                  &
-                            ((k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))      &
-                            .or.((k .eq. 1) .and. (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1)))&
-                            .or. ((k .eq. 1) .and. (in .eq. 1))  & 
-                            .or. ((k .eq. 1) .and. ( RMP_on) .and.(in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)))  & 
-                            .or. (k .eq. 2)  &
-                            .or. (k .eq. 3)  &
-                            .or. (k .eq. 4)  &
-                                !.or. (k .eq. 5) &
-                                !.or. (k .eq. 6) &
-                                !.or. (k .eq. 7) &
-                              ) then
+                       if (        apply_psi_BC      &
+                              .or. apply_current_BC  &
+                              .or. (k .eq. 2)        &
+                              .or. (k .eq. 4)        &
+                             !.or. (k .eq. 5)        &
+                             !.or. (k .eq. 6)        &
+                             !.or. (k .eq. 7)        &
+                           ) then
 
 
                             index_node = node_list%node(inode)%index(1)
@@ -287,7 +262,6 @@ contains
                                  index_node, k, in,                 &
                                  index_node, k, in,                 &
                                  zbig, solve_only, gmres,           &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -297,7 +271,6 @@ contains
                                  index_node, k, in,                 &
                                  index_node, k, in,                 &
                                  zbig, solve_only, gmres,           &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -309,7 +282,7 @@ contains
                             index_node  = node_list%node(inode)%index(1)             ! position of value
                             index_node2 = node_list%node(inode)%index(2)             ! position of first deriative
 
-                            T0        = abs(node_list%node(inode)%values(1,1,6))
+                            T0        = max(node_list%node(inode)%values(1,1,6), T_min)
                             Vpar0     = node_list%node(inode)%values(1,1,7)
                             BigR      = node_list%node(inode)%x(1,1)
                             dT0_ds    = node_list%node(inode)%values(1,2,6)
@@ -373,7 +346,6 @@ contains
                                  index_node, kv, in,                &
                                  index_node, kv, in,                &
                                  zbig, solve_only, gmres,           &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -385,7 +357,6 @@ contains
                                  - zbig / Btot * 0.5d0 * GAMMA      &
                                  / sqrt(GAMMA*T0) * direction       &
                                  , solve_only, gmres,               &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -396,7 +367,6 @@ contains
                                  index_node2, ku, in,               &
                                  - zbig * BigR**2 / ps0_s,          &
                                  solve_only, gmres,                 &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -404,7 +374,6 @@ contains
                                if (in .eq. 1) then
                                   call boundary_conditions_add_RHS(       &
                                        index_node, kv, in,                &
-                                       use_murge, use_murge_element,      &
                                        index_min, index_max,              &
                                        RHS_loc,                           &
                                        Zbig * ( - Vpar0 + BigR**2 *       &
@@ -412,7 +381,6 @@ contains
                                else
                                   call boundary_conditions_add_RHS(       &
                                        index_node, kv, in,                &
-                                       use_murge, use_murge_element,      &
                                        index_min, index_max,              &
                                        RHS_loc, 0.d0)
 
@@ -427,7 +395,6 @@ contains
                                  index_node2, kv, in,                &
                                  index_node2, kv, in,                &
                                  zbig, solve_only, gmres,           &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -439,7 +406,6 @@ contains
                                  - zbig / Btot * 0.5d0 * GAMMA      &
                                  / sqrt(GAMMA*T0) * direction,      &
                                  solve_only, gmres,                 &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -452,7 +418,6 @@ contains
                                  / (GAMMA*T0)**(3/2) * dT0_ds *     &
                                  direction,                         &
                                  solve_only, gmres,                 &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -460,7 +425,6 @@ contains
                                if (in .eq. 1) then
                                   call boundary_conditions_add_RHS(       &
                                        index_node2, kv, in,               &
-                                       use_murge, use_murge_element,      &
                                        index_min, index_max,              &
                                        RHS_loc,                           &
                                        Zbig*(-dVpar0_ds +  0.5d0 / Btot * &
@@ -468,7 +432,6 @@ contains
                                else
                                   call boundary_conditions_add_RHS(       &
                                        index_node2, kv, in,               &
-                                       use_murge, use_murge_element,      &
                                        index_min, index_max,              &
                                        RHS_loc, 0.d0)
 
@@ -487,14 +450,13 @@ contains
                            .or. (node_list%node(inode)%boundary .eq. 9)) then
 
 
-                         if (                  &
-                              (k .eq. 1)  &
-                              .or. (k .eq. 2)  &
-                              .or. (k .eq. 3)  &
-                              .or. (k .eq. 4)  &
-                                !.or. (k .eq. 5) &
-                                !.or. (k .eq. 6) &
-                                !.or. (k .eq. 7) &
+                         if (      apply_psi_BC      &
+                              .or. apply_current_BC  &
+                              .or. (k .eq. 2)        &
+                              .or. (k .eq. 4)        &
+                             !.or. (k .eq. 5)        &
+                             !.or. (k .eq. 6)        &
+                             !.or. (k .eq. 7)        &
                               ) then
 
 
@@ -504,7 +466,6 @@ contains
                                  index_node,  k, in,                &
                                  index_node,  k, in,                &
                                  zbig, solve_only, gmres,           &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -514,7 +475,6 @@ contains
                                  index_node,  k, in,                &
                                  index_node,  k, in,                &
                                  zbig, solve_only, gmres,           &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -526,7 +486,7 @@ contains
                             index_node  = node_list%node(inode)%index(1)             ! position of value
                             index_node2 = node_list%node(inode)%index(3)             ! position of first deriative
 
-                            T0        = abs(node_list%node(inode)%values(1,1,6));  T0 = max(T0,0.001)
+                            T0        = max(node_list%node(inode)%values(1,1,6), T_min)
                             Vpar0     = node_list%node(inode)%values(1,1,7)
                             BigR      = node_list%node(inode)%x(1,1)
                             dT0_dt    = node_list%node(inode)%values(1,3,6)
@@ -576,7 +536,6 @@ contains
                                  index_node, kv, in,                &
                                  index_node, kv, in,                &
                                  zbig, solve_only, gmres,           &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -586,7 +545,6 @@ contains
                                  - zbig / Btot * 0.5d0 * GAMMA /    &
                                  sqrt(GAMMA*T0) * direction,        &
                                  solve_only, gmres,                 &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -595,7 +553,6 @@ contains
                                  index_node2, ku, in,               &
                                  - zbig * BigR**2 / ps0_t,          &
                                  solve_only, gmres,                 &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -603,7 +560,6 @@ contains
                                if (in .eq. 1) then
                                   call boundary_conditions_add_RHS(       &
                                        index_node, kv, in,                &
-                                       use_murge, use_murge_element,      &
                                        index_min, index_max,              &
                                        RHS_loc,                           &
                                        Zbig * ( - Vpar0 + BigR**2 * U0_t  &
@@ -612,7 +568,6 @@ contains
                                else
                                   call boundary_conditions_add_RHS(       &
                                        index_node, kv, in,                &
-                                       use_murge, use_murge_element,      &
                                        index_min, index_max,              &
                                        RHS_loc, 0.d0)
 
@@ -628,7 +583,6 @@ contains
                                  index_node2, kv, in,               &
                                  index_node2, kv, in,               &
                                  zbig, solve_only, gmres,           &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -637,7 +591,6 @@ contains
                                  index_node2, kT, in,               &
                                  - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction, &
                                  solve_only, gmres,                 &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -646,7 +599,6 @@ contains
                                  index_node,  kT, in,               &
                                  + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_dt * direction, &
                                  solve_only, gmres,                 &
-                                 use_murge, use_murge_element,      &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
@@ -654,7 +606,6 @@ contains
                                if (in .eq. 1) then
                                   call boundary_conditions_add_RHS(       &
                                        index_node2, kv, in,               &
-                                       use_murge, use_murge_element,      &
                                        index_min, index_max,              &
                                        RHS_loc,                           &
                                        Zbig*(-dVpar0_dt +  0.5d0 / Btot * &
@@ -662,7 +613,6 @@ contains
                                else
                                   call boundary_conditions_add_RHS(       &
                                        index_node2, kv, in,               &
-                                       use_murge, use_murge_element,      &
                                        index_min, index_max,              &
                                        RHS_loc, 0.d0)
 
@@ -732,14 +682,12 @@ contains
                                   index_node, kv, in,                &
                                   index_node, kp, in,                &
                                   zbig, solve_only, gmres,           &
-                                  use_murge, use_murge_element,      &
                                   cnt, cnt_prod, only_count,         &
                                   index_min, index_max)
 
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(  &
                                      index_node, kv, in,           &
-                                     use_murge, use_murge_element, &
                                      index_min, index_max,         &
                                      RHS_loc, ZBIG * delta_psi_rmp)
                              endif
@@ -750,13 +698,11 @@ contains
                                   index_node2, kv, in,               &
                                   index_node2, kp, in,               &
                                   zbig, solve_only, gmres,           &
-                                  use_murge, use_murge_element,      &
                                   cnt, cnt_prod, only_count,         &
                                   index_min, index_max)
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(       &
                                      index_node2, kv, in,               &
-                                     use_murge, use_murge_element,      &
                                      index_min, index_max,              &
                                      RHS_loc, ZBIG * delta_psi_rmp_dt)
                              endif
@@ -765,12 +711,9 @@ contains
                         endif        !(end RMPs on)  ==================================
 
                        ! decides when the boundary conditions should be applied (for freeboundary and RMP cases)
-                       if (      (( .not. freeboundary) .and. (k .eq. 1) .and. (.not. RMP_on) .and. ( in .ge. 2 ))        &
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .lt. RMP_har_cos_spectrum(1) ))   &
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. (in .eq. 1))                               &
-                            .or. (( .not. freeboundary) .and. (k .eq. 1) .and. ( RMP_on) .and. ( in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics) )) & 
-                            .or. (.not. is_freebound(in,k))                                                               &
-                          ) then
+                        if (       apply_psi_BC                   &
+                              .or. apply_current_BC               &
+                              .or. (( k /= 1 ) .and. ( k /= 3 ))  ) then
 
                           index_node = node_list%node(inode)%index(1)
 
@@ -778,7 +721,6 @@ contains
                                index_node,  k,  in,               &
                                index_node,  k,  in,               &
                                zbig, solve_only, gmres,           &
-                               use_murge, use_murge_element,      &
                                cnt, cnt_prod, only_count,         &
                                index_min, index_max)
 
@@ -788,7 +730,6 @@ contains
                                index_node,  k,  in,               &
                                index_node,  k,  in,               &
                                zbig, solve_only, gmres,           &
-                               use_murge, use_murge_element,      &
                                cnt, cnt_prod, only_count,         &
                                index_min, index_max)
 
@@ -808,19 +749,6 @@ contains
 
  
     enddo !===============================do elements
-
- 
-#ifdef USE_MURGE
-       if (loop == 2) then
-          if (.not. solve_only) then
-             CALL MURGE_ASSEMBLYEND(murge_id, ierr)
-          end if
-          if (gmres) then
-             CALL MURGE_ASSEMBLYEND(murge_id_prod, ierr)
-          end if
-       end if
-#endif
-    end do
 
     if (RMP_on) then
        if (allocated(psi_RMP_cos1))         call tr_deallocate(psi_RMP_cos1,"psi_RMP_cos1",CAT_UNKNOWN)

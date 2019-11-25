@@ -293,9 +293,9 @@ NBFILERST_INI=0
 if [ ! -d ${RSTDIR} ]; then
     mkdir -p ${RSTDIR}
 else
-    LISTE_NBFILERST=`ls ${RSTDIR}/jorek?????.rst 2> /dev/null`
+    LISTE_NBFILERST=`ls ${RSTDIR}/jorek?????.h5 2> /dev/null`
     if [ "$LISTE_NBFILERST" != "" ]; then
-	NBFILERST_INI=`ls ${RSTDIR}/jorek?????.rst | wc -l `
+	NBFILERST_INI=`ls ${RSTDIR}/jorek?????.h5 | wc -l `
     fi
 fi
 echo "==================================================================================="
@@ -715,7 +715,7 @@ echo " "
 
 # Execution control
 # -----------------
-if [ ! -e "${RESDIR}/jorek_restart.rst" ]; then
+if [ ! -e "${RESDIR}/jorek_restart.h5" ]; then
    echo "==================================================================================="
    echo " ***   Restart file does not exist, so INIT"
    out_increment=0
@@ -727,7 +727,7 @@ if [ ! -e "${RESDIR}/jorek_restart.rst" ]; then
 else
    echo "==================================================================================="
    echo " ***   Restart file does exist, so LOOP"
-   tmp=$(ls ${RESDIR}/*.rst | wc -l)
+   tmp=$(ls ${RESDIR}/*.h5 | wc -l)
    (( out_increment= $tmp - 1 ))
    cp ${WKDIR}/${DATANAME} ${RESDIR}/DATA___NTOR${NTOR}_NPER${NPERIOD}_NPLA${NPLANE}___${out_increment}
    echo " ============> writing output in file    = " ${CASE}/${STRIKEXECNAMEOUT}___${out_increment}.out
@@ -928,7 +928,7 @@ cd ${RESDIR}
 # Test if restart files exist
 # ---------------------------
 file_list=${RESDIR}/NUM_RST
-if [ ! -e "jorek_restart.rst" ]; then
+if [ ! -e "jorek_restart.h5" ]; then
    echo "==================================================================================="
    echo " The restart file does not exist, so INIT"
    echo " nb_restart = " \$nb_restart
@@ -953,9 +953,9 @@ fi
 # Test if restart files exist
 # ---------------------------
 if [ "\$nb_restart" -gt "0" ]; then
-   if [ ! -e "jorek_restart.rst" ] ; then
+   if [ ! -e "jorek_restart.h5" ] ; then
       echo "==================================================================================="
-      echo " The restart file 'jorek_restart.rst' does not exist, and should. HALTING.........."
+      echo " The restart file 'jorek_restart.h5' does not exist, and should. HALTING.........."
       echo "==================================================================================="
       echo " "
       exit  
@@ -1004,17 +1004,17 @@ if [ "\$status" -eq "0" ]; then
       echo " "
    fi
 
-   # first, temporarilly erase "jorek_restart.rst" if it exists
-   if [ ! -e "jorek_restart.rst" ]; then
-     echo " jorek_restart.rst has already been removed..... "
+   # first, temporarilly erase "jorek_restart.h5" if it exists
+   if [ ! -e "jorek_restart.h5" ]; then
+     echo " jorek_restart.h5 has already been removed..... "
    else
-     mv jorek_restart.rst jorek_restart.rst.cpy
+     mv jorek_restart.h5 jorek_restart.h5.cpy
    fi
 
    # compute the number of restart and written files
    # -----------------------------------------------
    # compute how many restart files were written in this execution
-   NBFILERST_MAIN=\$(ls ${RESDIR}/*.rst | wc -l)
+   NBFILERST_MAIN=\$(ls ${RESDIR}/*.h5 | wc -l)
    # the actual number of restart files written is thus
    (( NBFILE_WRITTEN= \${NBFILERST_MAIN} - ${NBFILEVTK_INI} ))
    echo " NBFILERST_MAIN = " \$NBFILERST_MAIN
@@ -1024,8 +1024,8 @@ if [ "\$status" -eq "0" ]; then
    # create the list of all restart names --better to proceed this way because "nout" can be
    # any number from one restart to the other
    # ----------------------------------------
-   # thus, list only contains names as "jorek000xxx.rst"
-   list_tmp=\$(ls jorek*.rst  >TMP_FILE)
+   # thus, list only contains names as "jorek000xxx.h5"
+   list_tmp=\$(ls jorek*.h5  >TMP_FILE)
    # create the array "array_GDP" of "000xxx" values whilst reading every line of file "TMP_FILE"
    index="1"
    while read line; do 
@@ -1039,15 +1039,15 @@ if [ "\$status" -eq "0" ]; then
    # ------------------------
    if [ $NBFILEVTK_INI -eq 0 ]; then
       vtkfile="jorek00000.vtk"
-      rstfile="jorek00000.rst"
+      rstfile="jorek00000.h5"
       echo "==================================================================================="
       echo " =============>> creating vtk file = " \${vtkfile} ", in folder = " ${VTKDIR}
       echo "==================================================================================="
       echo " "
-      cp \$rstfile jorek_restart.rst
+      cp \$rstfile jorek_restart.h5
       $JOREKENV ./${VTKEXECNAME} < ${DATANAME}
       mv jorek_tmp.vtk ${VTKDIR}/\${vtkfile}
-      # the "jorek_restart.rst" file remains in the working directory
+      # the "jorek_restart.h5" file remains in the working directory
       cp \${rstfile}   ${RSTDIR}/\${rstfile}
       mv trace*.out ${TRACEDIR}
    else
@@ -1057,22 +1057,22 @@ if [ "\$status" -eq "0" ]; then
       for (( ifile= \${vtkiniplusun} ; ifile <= \${NBFILERST_MAIN} ; ifile += 1 )); do
         increment=\${array_GDP[\${ifile}]}
         vtkfile='jorek'\${increment}'.vtk'
-        rstfile='jorek'\${increment}'.rst'
+        rstfile='jorek'\${increment}'.h5'
         echo "==================================================================================="
         echo " =============>> creating vtk file = " \${vtkfile}", in folder = " ${VTKDIR}
         echo "==================================================================================="
         echo " "
-        cp \$rstfile jorek_restart.rst
+        cp \$rstfile jorek_restart.h5
         $JOREKENV ./${VTKEXECNAME} < ${DATANAME}
         mv jorek_tmp.vtk ${VTKDIR}/\${vtkfile}
-        # all "jorek_****.rst" file remain in the working directory
+        # all "jorek_****.h5" file remain in the working directory
         cp \${rstfile}   ${RSTDIR}/\${rstfile}
         mv trace*.out ${TRACEDIR}
       done
    fi
 
-   # create again the "jorek_restart.rst" file
-   cp jorek_restart.rst.cpy jorek_restart.rst
+   # create again the "jorek_restart.h5" file
+   cp jorek_restart.h5.cpy jorek_restart.h5
 
    # new submission
    # --------------

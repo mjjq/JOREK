@@ -26,8 +26,8 @@ real*8     :: y_g(n_gauss), y_s(n_gauss), y_ss(n_gauss)
 real*8     :: eq_g(n_plane,n_var,n_gauss), eq_s(n_plane,n_var,n_gauss), eq_p(n_plane,n_var,n_gauss), eq_ss(n_plane,n_var,n_gauss)
 real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
-real*8, dimension (:,:), pointer  :: ELM
-real*8, dimension (:)  , pointer  :: RHS
+real*8, dimension (:,:), allocatable  :: ELM
+real*8, dimension (:)  , allocatable  :: RHS
 
 integer    :: vertex(2), direction(2), i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7

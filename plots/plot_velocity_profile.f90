@@ -5,6 +5,7 @@ subroutine plot_velocity_profile(node_list,element_list,Rp_start,Zp_start,Rp_end
 use tr_module 
 use data_structure
 use phys_module
+use mod_interp
 
 implicit none
 type (type_node_list)    :: node_list
@@ -13,7 +14,7 @@ type (type_element_list) :: element_list
 real*8  :: Rp_start, Zp_start, Rp_end, Zp_end
 real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
 real*8  :: P, P_s, P_t, P_st, P_ss, P_tt, U, U_s, U_t, U_st, U_ss, U_tt
-real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
+real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: ps0_x, ps0_y, u0_x, u0_y, xjac
 real*8, allocatable :: xp(:),yp(:),stmp(:),stmp2(:)
 integer :: i, i_elm, i_var, i_harm, ifail, iplot, nplot, nplot2
@@ -65,7 +66,7 @@ do i=1,nplot
 
     call interp(node_list,element_list,i_elm,1,i_harm,s_out,t_out,P,P_s,P_t,P_st,P_ss,P_tt)
     call interp(node_list,element_list,i_elm,i_var,i_harm,s_out,t_out,U,U_s,U_t,U_st,U_ss,U_tt)
-    call interp_RZ(node_list,element_list,i_elm,s_out,t_out,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+    call interp_RZ(node_list,element_list,i_elm,s_out,t_out,R,R_s,R_t,Z,Z_s,Z_t)
 
     xjac  = R_s * Z_t - R_t * Z_s
     ps0_x = (   Z_t * P_s - Z_s * P_t ) / xjac

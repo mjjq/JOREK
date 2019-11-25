@@ -15,8 +15,9 @@ module equation_variables
   
   ! --- Diffusivities
   real*8 	:: r0_corr, r0_corr2, T0_corr
-  real*8 	:: eta_T,    deta_dT, d2eta_d2T
-  real*8 	:: visco_T,  dvisco_dT
+  real*8 	:: eta_T,    deta_dT,   d2eta_d2T
+  real*8        :: eta_T_ohm, deta_dT_ohm
+  real*8 	:: visco_T,  dvisco_dT, d2visco_dT2
   real*8 	:: visco_parr
   real*8 	:: D_prof
   real*8 	:: K_prof, K_par, dK_par
@@ -30,7 +31,7 @@ module equation_variables
   
   ! --- Diamagnetic parameters
   real*8   :: tau_IC
-  real*8   :: W_dia
+  real*8   :: W_dia, W_dia_rho, W_dia_T
 
   ! --- Neoclassical coefficients
   real*8   :: epsil, Btheta2
@@ -106,15 +107,16 @@ module equation_variables
   !$omp 	source_mgi, source_pellet, source_volume,											&
   !$omp 	Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, dV_dpsi_source, dV_dz_source,				                                &
   !$omp 	r0_corr, r0_corr2, T0_corr,													&
-  !$omp 	eta_T,    deta_dT, d2eta_d2T,													&
-  !$omp 	visco_T,  dvisco_dT,														&
+  !$omp 	eta_T,    deta_dT,   d2eta_d2T,													&
+  !$omp         eta_T_ohm, deta_dT_ohm,                                                                                                         & 
+  !$omp 	visco_T,  dvisco_dT, d2visco_dT2,												&
   !$omp 	visco_parr,															&
   !$omp 	D_prof,																&
   !$omp 	K_prof, K_par, dK_par,														&
   !$omp 	Dn0x, Dn0y, Dn0p, S_ion, S_ion_T, phi, ksiion,											&
   !$omp 	eta_numm, visco_numm, visco_par_numm, D_perp_numm, K_perp_numm,									&
   !$omp         TG_num1, TG_num2, TG_num5, TG_num6, TG_num7, TG_num8,										&
-  !$omp         tau_IC, W_dia,															&
+  !$omp         tau_IC, W_dia, W_dia_rho, W_dia_T,												&
   !$omp         epsil, Btheta2,															&
   !$omp         amu_neo_prof, aki_neo_prof,													&
   !$omp 	jb,										   					   	&

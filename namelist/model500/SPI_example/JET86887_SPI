@@ -1,0 +1,276 @@
+  &in1
+
+ !==============================================================
+ ! JET pulse 86887 at time 60.9s (q_95=2.9, Bt=2T, Ip=2.0 MA)
+ !
+ ! In the expt. the disruption was triggered by a pure D2 MGI
+ ! but here we simulate a D2 SPI.
+ !
+ ! This input file can be run with model500 with n_tor=n_period=n_plane=1
+ ! for 10 time steps of tstep=100 and then restarted with
+ ! n_tor=21, n_period=1, n_plane=64, still with tstep=100. After some time,
+ ! it will become necessary to decrease the time step...
+ !
+ ! Explanations on SPI simlations can be found on the wiki:
+ ! https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
+ !==============================================================
+
+ restart = .f.
+ 
+ tstep = 100
+ nstep = 100000
+
+ nout = 10
+
+ ! --- Numerical parameters
+ time_evol_scheme = 'Gears'
+ TGNUM(2)         = 0.5d0
+ TGNUM(5)         = 0.5d0
+ TGNUM(6)         = 0.5d0
+ TGNUM(7)         = 1.d0
+ gmres_tol        = 1.d-7
+ gmres_4          = 1.d4
+ gmres_max_iter   = 500
+ iter_precon      = 0
+
+ ! --- Parameters for the initial polar grid 
+ mf	  = 0
+ R_geo    = 2.85000
+ Z_geo    = 0.15000							
+ amin     = 1.0
+ n_radial = 100
+ n_pol    = 200
+
+ ! --- Parameters for the flux aligned grid
+ xpoint       = .t. 
+ n_flux       = 51
+ n_tht        = 64
+ n_open       = 2  
+ n_leg        = 4
+ n_private    = 1    
+ SIG_closed   = 0.5d0	    
+ SIG_open     = 0.3d0	    
+ SIG_private  = 0.5d0	    
+ SIG_theta    = 0.05d0 
+ SIG_leg_0    = 0.3d0
+ SIG_leg_1    = 0.3d0
+ dPSI_open    = 0.02	
+ dPSI_private = 0.01
+
+ ! --- Initial profiles
+ F0         = -5.7459
+ FF_0       = 4.4         
+ FF_1       = 0
+ FF_coef(1) = -0.67 
+ FF_coef(2) = -1    
+ FF_coef(3) = 0.6   
+ FF_coef(4) = 0.01
+ FF_coef(5) = 0.98
+ FF_coef(6) = 0
+ FF_coef(7) = 0.975
+ FF_coef(8) = 0.022
+
+ central_density = 2.9287d-1 ! 10^20/m^3
+ rho_0       = 1
+ rho_1       = 0.001
+ rho_coef(1) = 0.035243
+ rho_coef(2) = 0.16357
+ rho_coef(3) = -0.6945
+ rho_coef(4) = 0.03
+ rho_coef(5) = 0.98
+
+ T_0       = 0.014867
+ T_1       = 1.d-4
+ T_coef(1) = 0.020693
+ T_coef(2) = -2.4654
+ T_coef(3) = 1.4847
+ T_coef(4) = 0.03
+ T_coef(5) = 0.98
+
+ ! --- Boundary condition for the Grad-Shafranov equation
+ n_boundary = 100
+ R_boundary(1)  = 3.85,        Z_boundary(1) =  0.15,         psi_boundary(1) =  2.3242807
+ R_boundary(2)  = 3.8479834,   Z_boundary(2) =  0.26733425,   psi_boundary(2) =  2.3228211
+ R_boundary(3)  = 3.8419032,   Z_boundary(3) =  0.38419604,   psi_boundary(3) =  2.328984
+ R_boundary(4)  = 3.8316689,   Z_boundary(4) =  0.5001148,    psi_boundary(4) =  2.3419328
+ R_boundary(5)  = 3.817135,    Z_boundary(5) =  0.61462378,   psi_boundary(5) =  2.3602987
+ R_boundary(6)  = 3.7981082,   Z_boundary(6) =  0.72726187,   psi_boundary(6) =  2.3822358
+ R_boundary(7)  = 3.7743575,   Z_boundary(7) =  0.83757554,   psi_boundary(7) =  2.4059778
+ R_boundary(8)  = 3.7456284,   Z_boundary(8) =  0.94512059,   psi_boundary(8) =  2.429924
+ R_boundary(9)  = 3.7116594,   Z_boundary(9) =  1.049464,     psi_boundary(9) =  2.4526035
+ R_boundary(10) = 3.6722013,   Z_boundary(10) =  1.1501855,   psi_boundary(10) =  2.4728927
+ R_boundary(11) = 3.6270393,   Z_boundary(11) =  1.2468797,   psi_boundary(11) =  2.4898953
+ R_boundary(12) = 3.5760163,   Z_boundary(12) =  1.3391571,   psi_boundary(12) =  2.5029506
+ R_boundary(13) = 3.5190575,   Z_boundary(13) =  1.4266462,   psi_boundary(13) =  2.5115518
+ R_boundary(14) = 3.4561937,   Z_boundary(14) =  1.5089947,   psi_boundary(14) =  2.515315
+ R_boundary(15) = 3.3875821,   Z_boundary(15) =  1.585871,    psi_boundary(15) =  2.5140012
+ R_boundary(16) = 3.3135242,   Z_boundary(16) =  1.6569655,   psi_boundary(16) =  2.507563
+ R_boundary(17) = 3.2344765,   Z_boundary(17) =  1.721992,    psi_boundary(17) =  2.4962439
+ R_boundary(18) = 3.1510544,   Z_boundary(18) =  1.7806887,   psi_boundary(18) =  2.4806363
+ R_boundary(19) = 3.0640275,   Z_boundary(19) =  1.8328192,   psi_boundary(19) =  2.4617299
+ R_boundary(20) = 2.9743048,   Z_boundary(20) =  1.8781735,   psi_boundary(20) =  2.440813
+ R_boundary(21) = 2.8829111,   Z_boundary(21) =  1.9165691,   psi_boundary(21) =  2.4193677
+ R_boundary(22) = 2.7909545,   Z_boundary(22) =  1.9478514,   psi_boundary(22) =  2.3988632
+ R_boundary(23) = 2.6995869,   Z_boundary(23) =  1.9718943,   psi_boundary(23) =  2.3805788
+ R_boundary(24) = 2.6099602,   Z_boundary(24) =  1.9886012,   psi_boundary(24) =  2.3654771
+ R_boundary(25) = 2.5231809,   Z_boundary(25) =  1.9979046,   psi_boundary(25) =  2.3541195
+ R_boundary(26) = 2.4402665,   Z_boundary(26) =  1.9997671,   psi_boundary(26) =  2.3466483
+ R_boundary(27) = 2.3621061,   Z_boundary(27) =  1.9941813,   psi_boundary(27) =  2.3428382
+ R_boundary(28) = 2.2894293,   Z_boundary(28) =  1.9811697,   psi_boundary(28) =  2.3422073
+ R_boundary(29) = 2.2227842,   Z_boundary(29) =  1.9607845,   psi_boundary(29) =  2.3441607
+ R_boundary(30) = 2.1625259,   Z_boundary(30) =  1.933108,    psi_boundary(30) =  2.3481222
+ R_boundary(31) = 2.1088167,   Z_boundary(31) =  1.8982515,   psi_boundary(31) =  2.3536176
+ R_boundary(32) = 2.0616353,   Z_boundary(32) =  1.8563554,   psi_boundary(32) =  2.3603021
+ R_boundary(33) = 2.020796,    Z_boundary(33) =  1.8075885,   psi_boundary(33) =  2.3679437
+ R_boundary(34) = 1.9859732,   Z_boundary(34) =  1.752147,    psi_boundary(34) =  2.3763864
+ R_boundary(35) = 1.9567317,   Z_boundary(35) =  1.6902542,   psi_boundary(35) =  2.3854902
+ R_boundary(36) = 1.9325571,   Z_boundary(36) =  1.6221594,   psi_boundary(36) =  2.3950551
+ R_boundary(37) = 1.9128878,   Z_boundary(37) =  1.5481367,   psi_boundary(37) =  2.4047723
+ R_boundary(38) = 1.8971428,   Z_boundary(38) =  1.4684842,   psi_boundary(38) =  2.4141944
+ R_boundary(39) = 1.8847478,   Z_boundary(39) =  1.3835227,   psi_boundary(39) =  2.4227696
+ R_boundary(40) = 1.8751552,   Z_boundary(40) =  1.2935941,   psi_boundary(40) =  2.4299036
+ R_boundary(41) = 1.8678597,   Z_boundary(41) =  1.1990607,   psi_boundary(41) =  2.4350758
+ R_boundary(42) = 1.8624095,   Z_boundary(42) =  1.1003032,   psi_boundary(42) =  2.4379447
+ R_boundary(43) = 1.8584113,   Z_boundary(43) =  0.99771907,   psi_boundary(43) =  2.4384312
+ R_boundary(44) = 1.8555328,   Z_boundary(44) =  0.89172149,   psi_boundary(44) =  2.4367689
+ R_boundary(45) = 1.8535008,   Z_boundary(45) =  0.78273727,   psi_boundary(45) =  2.4335081
+ R_boundary(46) = 1.8520974,   Z_boundary(46) =  0.67120523,   psi_boundary(46) =  2.4294596
+ R_boundary(47) = 1.8511542,   Z_boundary(47) =  0.55757449,   psi_boundary(47) =  2.4256171
+ R_boundary(48) = 1.8505464,   Z_boundary(48) =  0.44230258,   psi_boundary(48) =  2.4230142
+ R_boundary(49) = 1.8501868,   Z_boundary(49) =  0.32585368,   psi_boundary(49) =  2.4225431
+ R_boundary(50) = 1.8500202,   Z_boundary(50) =  0.20869668,   psi_boundary(50) =  2.4248007
+ R_boundary(51) = 1.8500202,   Z_boundary(51) =  0.091303323,	psi_boundary(51) =  2.4299923
+ R_boundary(52) = 1.8501868,   Z_boundary(52) =  -0.02585368,	psi_boundary(52) =  2.4378914
+ R_boundary(53) = 1.8505464,   Z_boundary(53) =  -0.14230258,	psi_boundary(53) =  2.4478575
+ R_boundary(54) = 1.8511542,   Z_boundary(54) =  -0.25757449,	psi_boundary(54) =  2.4589334
+ R_boundary(55) = 1.8520974,   Z_boundary(55) =  -0.37120523,	psi_boundary(55) =  2.4700165
+ R_boundary(56) = 1.8535008,   Z_boundary(56) =  -0.48273726,	psi_boundary(56) =  2.4799795
+ R_boundary(57) = 1.8555328,   Z_boundary(57) =  -0.59172149,	psi_boundary(57) =  2.4877957
+ R_boundary(58) = 1.8584113,   Z_boundary(58) =  -0.69771907,	psi_boundary(58) =  2.4926386
+ R_boundary(59) = 1.8624095,   Z_boundary(59) =  -0.80030317,	psi_boundary(59) =  2.4939325
+ R_boundary(60) = 1.8678597,   Z_boundary(60) =  -0.89906075,	psi_boundary(60) =  2.4913733
+ R_boundary(61) = 1.8751552,   Z_boundary(61) =  -0.99359412,	psi_boundary(61) =  2.4849209
+ R_boundary(62) = 1.8847478,   Z_boundary(62) =  -1.0835227,   psi_boundary(62) =  2.4747617
+ R_boundary(63) = 1.8971428,   Z_boundary(63) =  -1.1684842,   psi_boundary(63) =  2.4612486
+ R_boundary(64) = 1.9128878,   Z_boundary(64) =  -1.2481367,   psi_boundary(64) =  2.4448214
+ R_boundary(65) = 1.9325571,   Z_boundary(65) =  -1.3221594,   psi_boundary(65) =  2.4259307
+ R_boundary(66) = 1.9567317,   Z_boundary(66) =  -1.3902542,   psi_boundary(66) =  2.4049258
+ R_boundary(67) = 1.9859732,   Z_boundary(67) =  -1.452147,    psi_boundary(67) =  2.3817055
+ R_boundary(68) = 2.020796,    Z_boundary(68) =  -1.5075885,   psi_boundary(68) =  2.3565597
+ R_boundary(69) = 2.0616353,   Z_boundary(69) =  -1.5563554,   psi_boundary(69) =  2.3306149
+ R_boundary(70) = 2.1088167,   Z_boundary(70) =  -1.5982515,   psi_boundary(70) =  2.3058218
+ R_boundary(71) = 2.1625259,   Z_boundary(71) =  -1.633108,    psi_boundary(71) =  2.2850007
+ R_boundary(72) = 2.2227842,   Z_boundary(72) =  -1.6607845,   psi_boundary(72) =  2.267619
+ R_boundary(73) = 2.2894293,   Z_boundary(73) =  -1.6811697,   psi_boundary(73) =  2.2496767
+ R_boundary(74) = 2.3621061,   Z_boundary(74) =  -1.6941813,   psi_boundary(74) =  2.2310823
+ R_boundary(75) = 2.4402665,   Z_boundary(75) =  -1.6997671,   psi_boundary(75) =  2.2172779
+ R_boundary(76) = 2.5231809,   Z_boundary(76) =  -1.6979046,   psi_boundary(76) =  2.2167302
+ R_boundary(77) = 2.6099602,   Z_boundary(77) =  -1.6886012,   psi_boundary(77) =  2.235214
+ R_boundary(78) = 2.6995869,   Z_boundary(78) =  -1.6718943,   psi_boundary(78) =  2.2698844
+ R_boundary(79) = 2.7909545,   Z_boundary(79) =  -1.6478514,   psi_boundary(79) =  2.315835
+ R_boundary(80) = 2.8829111,   Z_boundary(80) =  -1.6165691,   psi_boundary(80) =  2.3696081
+ R_boundary(81) = 2.9743048,   Z_boundary(81) =  -1.5781735,   psi_boundary(81) =  2.4280093
+ R_boundary(82) = 3.0640275,   Z_boundary(82) =  -1.5328192,   psi_boundary(82) =  2.48811
+ R_boundary(83) = 3.1510544,   Z_boundary(83) =  -1.4806887,   psi_boundary(83) =  2.546321
+ R_boundary(84) = 3.2344765,   Z_boundary(84) =  -1.421992,    psi_boundary(84) =  2.594752
+ R_boundary(85) = 3.3135242,   Z_boundary(85) =  -1.3569655,   psi_boundary(85) =  2.6190976
+ R_boundary(86) = 3.3875821,   Z_boundary(86) =  -1.285871,    psi_boundary(86) =  2.6205529
+ R_boundary(87) = 3.4561937,   Z_boundary(87) =  -1.2089947,   psi_boundary(87) =  2.6127721
+ R_boundary(88) = 3.5190575,   Z_boundary(88) =  -1.1266462,   psi_boundary(88) =  2.6007508
+ R_boundary(89) = 3.5760163,   Z_boundary(89) =  -1.0391571,   psi_boundary(89) =  2.5855318
+ R_boundary(90) = 3.6270393,   Z_boundary(90) =  -0.94687967,	psi_boundary(90) =  2.5669616
+ R_boundary(91) = 3.6722013,   Z_boundary(91) =  -0.85018551,	psi_boundary(91) =  2.5449269
+ R_boundary(92) = 3.7116594,   Z_boundary(92) =  -0.74946396,	psi_boundary(92) =  2.5195598
+ R_boundary(93) = 3.7456284,   Z_boundary(93) =  -0.64512059,	psi_boundary(93) =  2.4913484
+ R_boundary(94) = 3.7743575,   Z_boundary(94) =  -0.53757554,	psi_boundary(94) =  2.461166
+ R_boundary(95) = 3.7981082,   Z_boundary(95) =  -0.42726187,	psi_boundary(95) =  2.4302746
+ R_boundary(96) = 3.817135,    Z_boundary(96) =  -0.31462378,   psi_boundary(96) =  2.4002804
+ R_boundary(97) = 3.8316689,   Z_boundary(97) =  -0.2001148,    psi_boundary(97) =  2.3729474
+ R_boundary(98) = 3.8419032,   Z_boundary(98) =  -0.084196039,  psi_boundary(98) =  2.3501559
+ R_boundary(99) = 3.8479834,   Z_boundary(99) =  0.032665748,   psi_boundary(99) =  2.3335556
+ R_boundary(100) = 3.85,       Z_boundary(100) =  0.15,         psi_boundary(100) =  2.3242807
+
+ ! --- Diffusion coefficients
+ eta      = 1.d-7  
+ eta_num  = 1.d-12 
+
+ visco     = 5.d-7
+ visco_num = 1.d-12
+
+ visco_par     = 1.d-5
+ visco_par_num = 1.d-9
+
+ D_par = 0.
+
+ D_perp(1)  = 5.d-6
+ D_perp(2)  = 0.d0
+ D_perp(3)  = 0.13d0
+ D_perp(4)  = 0.01d0
+ D_perp(5)  = 0.92d0
+ D_perp(6)  = 0.d0
+ D_perp_num = 1.d-12
+
+ ZK_par = 8.d3
+
+ ZK_perp(1)  = 5.d-7
+ ZK_perp(2)  = 0.d0
+ ZK_perp(3)  = 0.08d0
+ ZK_perp(4)  = 0.01d0
+ ZK_perp(5)  = 0.96
+ ZK_perp(6)  = 0.d0
+ ZK_perp_num = 1.d-12
+
+ ZK_prof_neg_thresh = 1.d-4
+ ZK_prof_neg        = 1.d-2
+ 
+ D_neutral_x = 2.d-3
+ D_neutral_y = 2.d-3
+ D_neutral_p = 2.d-3
+ Dn_perp_num = 1.d-7
+
+ ! --- Boundary conditions parameters
+ bc_natural_open = .t.
+ gamma_sheath    = 8.d0
+
+ ! --- Diamagnetic parameter
+ tauIC = 0.d0
+
+ ! --- Cut sources
+ keep_current_prof = .f.
+ heatsource        = 0.
+ particlesource    = 0.
+
+ ! --- SPI parameters
+ using_spi = .t.
+ t_ns      = 2000.
+
+ spi_quantity   = 3.6d22
+ pellet_density = 5.958d8
+
+ n_spi          = 100
+ spi_shard_file = 'none' !'shard_size.dat'
+
+ spi_abl_model   = 1
+ ng_radius_ratio = 1.4d0
+ ng_radius_min   = 2.d-2
+
+ ns_R        = 3.00d0
+ ns_Z        = 1.60d0
+ ns_phi      = 4.51d0
+ ns_deltaphi = 2.
+
+ spi_Vel_Rref   = -8.94427d1
+ spi_Vel_Zref   = -1.78885d2
+ spi_Vel_RxZref = 0.d0
+ spi_Vel_diff   = 80
+ spi_angle      = 0.349
+ spi_L_inj      = 0.20
+ 
+ ! --- Ionisation energy of neutrals
+ ksi_ion = 1.8d-24
+
+ ! --- Background impurity density (/m^3)
+ nimp_bg = 0. 
+
+ /
+

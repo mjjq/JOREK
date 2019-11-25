@@ -6,6 +6,7 @@ use constants
 use tr_module
 use mod_parameters
 use data_structure
+use mod_neighbours, only: update_neighbours
 use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht
 
 implicit none
@@ -37,6 +38,7 @@ real*8              :: abltg(3), dr_ds, dtht_dt
 real*8, allocatable :: S1(:), S2(:), SP1(:), SP2(:), SP3(:), SP4(:)
 real*8, allocatable :: T1(:), T2(:), TP1(:), TP2(:), TP3(:), TP4(:)
 real*8, external    :: spwert
+logical             :: skip_update_neighbours
 
 
 call tr_allocate(RR,1,4,1,nr*np,"RR",CAT_GRID)
@@ -48,6 +50,21 @@ ds = 1.d0/real(nr-1)
 
 n_element_start  = element_list%n_elements
 n_node_start     = node_list%n_nodes
+do i=n_node_start+1,n_nodes_max
+  node_list%node(i)%x        = 0.d0
+  node_list%node(i)%values   = 0.d0
+  node_list%node(i)%index    = 0
+  node_list%node(i)%boundary = 0
+enddo
+
+skip_update_neighbours = .false.
+if ( n_element_start /= 0 ) skip_update_neighbours = .true. ! In such a case, the call to update_neighbours needs to be done in another routine like grid_bezier_square_polar
+
+do i=n_element_start+1,n_elements_max
+  element_list%element(i)%vertex     = 0
+  element_list%element(i)%size       = 0.d0
+  element_list%element(i)%neighbours = 0
+enddo
 
 n_index_start = 0
 do i=1,n_node_start
@@ -172,6 +189,15 @@ enddo
 element_list%n_elements  = n_element_start  + (nr-1)*np
 node_list%n_nodes        = n_node_start     + nr*np
 
+if ( node_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_polar_bezier: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( element_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_polar_bezier: hard-coded parameter n_elements_max is too small'
+  stop
+end if
+
+
 do i=1,nr-1
 
  do j=1,np
@@ -266,6 +292,7 @@ do i=1,nr
    node_list%node(index)%X(4,2)        = ZZ(4,index0)  * 4.d0/9.d0
    node_list%node(index)%values(1,4,1) = PSI(4,index0) * 4.d0/9.d0
 
+   node_list%node(index)%boundary = 0
    if (i .eq. nr) node_list%node(index)%boundary = 2
 
    do k=1,n_order+1
@@ -338,5 +365,6 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
 
 enddo
 
+if ( .not. skip_update_neighbours ) call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 return
 end subroutine grid_polar_bezier

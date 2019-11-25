@@ -18,8 +18,8 @@ implicit none
 type (type_element)   :: element
 type (type_node)      :: nodes(2)        ! the two nodes containing the boundary nodes
 
-real*8, dimension (:,:), pointer  :: ELM
-real*8, dimension (:)  , pointer  :: RHS
+real*8, dimension (:,:), allocatable  :: ELM
+real*8, dimension (:)  , allocatable  :: RHS
 
 integer    :: vertex(2), direction(2), xcase2
 real*8     :: psi_axis, R_axis, Z_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)

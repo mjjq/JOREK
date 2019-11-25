@@ -9,6 +9,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   
   use constants
   use data_structure
+  use mod_interp, only: interp_RZ
   
   implicit none
   
@@ -29,7 +30,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   real*8, allocatable :: q(:), rad(:), PhiN(:)
   integer :: nplot, j, k, i_elm, node1, node2, node3, node4, ip
   real*8  :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2, t, ri, dri, si, dsi
-  real*8  :: R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
+  real*8  :: R,Z
   
   write(*,*) 'BEGIN: export_nemec'
   
@@ -54,7 +55,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
     surface_list%psi_values(i) = (float(i)/float(surface_list%n_psi))**2 * (psi_bnd - psi_axis)    &
       + psi_axis
   enddo
-  call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+  call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,surface_list)
   
   ! --- Determine the q-profile.
   call tr_allocate(q,1,surface_list%n_psi,"q",CAT_GRID)
@@ -147,8 +148,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
       call CUB1D(rr1, drr1, rr2, drr2, t, ri, dri)
       call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
       
-      call interp_RZ(node_list,element_list,i_elm,ri,si,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,   &
-        Z_ss,Z_tt)
+      call interp_RZ(node_list,element_list,i_elm,ri,si,R,Z)
       
       write(42,'(2es15.7)') R, Z
       

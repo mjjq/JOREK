@@ -9,6 +9,7 @@ use elements_nodes_neighbours
 use constants
 use mod_import_restart
 use mod_neighbours
+use mod_interp
 
 implicit none
 include 'mpif.h'
@@ -42,7 +43,9 @@ character          :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:)
 logical :: psi_theta
 
-namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, element_start_percent
+integer :: n_stride
+
+namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, n_stride, P_start, element_start_percent
 
 call MPI_INIT(IERR)
 !required=MPI_THREAD_MULTIPLE
@@ -72,6 +75,8 @@ n_phi   = 200 !1000            ! number of steps per toroidal turn
 
 ns = 1                          ! number of (s) starting points within one element
 nt = 1                          ! number of (t) starting points within one element
+n_stride =  1                   ! interval of elements between starting points
+P_start  = PI/4.!0.d0
 element_start_percent = 0.25
 
 ! --- Read parameters from namelist file 'connecvtk.nml' if it exists
@@ -93,6 +98,7 @@ if (my_id .eq. 0 ) then
    write(*,*) 'n_phi = ', n_phi
    write(*,*) 'ns = ', ns
    write(*,*) 'nt = ', nt
+   write(*,*) 'n_stride = ', n_stride
    write(*,*) 'element_start = ', element_start_percent, ' percent of nb_elements'
 endif
 
@@ -104,7 +110,7 @@ do i_tor=1, n_tor
   endif
 enddo
 
-call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                                       ! define the basis functions at the Gaussian points
 
@@ -140,7 +146,7 @@ tol       = 1.d-6!1.e-6
 
 i_var_psi = 1                                  ! the index of the magnetic flux variable
 
-n_lines = element_list%n_elements * ns * nt    ! number of starting points
+n_lines = int(element_list%n_elements * ns * nt / n_stride)   ! number of starting points
 
 allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines),B_strike(n_lines))
 allocate(T0_strike(n_lines),T_strike(n_lines),ZN0_strike(n_lines),ZN_strike(n_lines),PS0_strike(n_lines))
@@ -213,7 +219,7 @@ ikeep = 0
 allocate(RZkeep(2,1000000),scalars(1000000,n_scalars))
 
 
-do i = local_elm_start, local_elm_end
+do i = local_elm_start, local_elm_end, n_stride
 
   do k=1, ns
 
@@ -245,7 +251,6 @@ do i = local_elm_start, local_elm_end
       i_elm   = i
       R_start = R_out
       Z_start = Z_out
-      P_start =  PI/4.!0.d0
 
      ! write (*,*) 'i_line,R_start,Z_start',i_line,R_start,Z_start
       R_all(i_line) = R_start
@@ -692,7 +697,7 @@ do i = local_elm_start, local_elm_end
 
         endif
       enddo
-if ((i == local_elm_start) .or.(i == local_elm_end)) then
+if ((i == local_elm_start) .or.(i >= local_elm_end)) then
 write (*,*) 'popopop 9', my_id, i, scalars(ikeep,1:n_scalars)
 endif
 
@@ -724,9 +729,9 @@ lf = char(10) ! line feed character
 
 if (my_id .eq. 0) then
 #ifdef IBM_MACHINE
-  open(unit=ivtk,file='connection_new.vtk',form='unformatted',access='stream')
+  open(unit=ivtk,file='connection_new.vtk',form='unformatted',access='stream',status='replace')
 #else
-  open(unit=ivtk,file='connection_new.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+  open(unit=ivtk,file='connection_new.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN',status='replace')
 #endif
 
   buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
@@ -934,6 +939,7 @@ subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t
 use mod_parameters
 use elements_nodes_neighbours
 use phys_module
+use mod_interp
 
 implicit none
 
@@ -947,7 +953,7 @@ real*8 :: P0,P0_s,P0_t,P0_st,P0_ss,P0_tt, psi_s, psi_t, Zjac
 
 i_var_psi = 1
 
-call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,Z,Z_s,Z_t)
 
 Zjac = (R_s * Z_t - R_t * Z_s)
 
@@ -982,6 +988,7 @@ subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
 use mod_parameters
 use elements_nodes_neighbours
 use phys_module
+use mod_interp, only: interp
 
 implicit none
 

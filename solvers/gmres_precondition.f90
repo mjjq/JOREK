@@ -5,13 +5,27 @@ use tr_module
 use mod_parameters
 use mumps_module
 use pastix_module
-use murge_module, only : use_murge, murge_id, MURGE_ASSEMBLY_OVW, MURGE_SUCCESS
-use murge_module, only : MURGE_SetGlobalRHS
-use murge_module, only : MURGE_GetGlobalSolution
 use wsmp_module
 use global_distributed_matrix
 use mpi_mod
 use mod_clock
+
+#ifdef USE_PASTIX6
+! -- For PaStiX solver version 6.x
+use pastixf
+use pastix_enums
+use spmf
+#endif
+
+#ifndef USE_PASTIX6
+! -- For PaStiX solver before version 6.x
+#ifdef USE_PASTIX
+#include "pastix_fortran.h"
+#else
+#include "no_pastix_fortran.h"
+#endif
+#endif
+
 
 implicit none
 
@@ -28,6 +42,11 @@ integer             :: ibuf_size, status(MPI_STATUS_SIZE)
 
 real*8  :: DUMMY_REAL(1:1)
 integer :: DUMMY_INT (1:1)
+#ifdef USE_PASTIX6
+! -- For PaStiX solver version 6.x
+integer(c_int)     :: pastix_info
+type(c_ptr)        :: pastix_rhs_ptr
+#endif
 
 !write(*,*) my_id,my_id_n,' GMRES preconditioning ',MPI_COMM_WORLD
 
@@ -135,53 +154,60 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
    
    if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 
-   if (use_murge) then
-#ifdef USE_MURGE
-      CALL MURGE_SetGlobalRhs(murge_id, mumps_par%rhs, -1,MURGE_ASSEMBLY_OVW , ierr)
-      if (ierr /= MURGE_SUCCESS) then 
-         write (*,*) "ERROR in MURGE_SetGlobalRhs"; 
-         STOP
-      end if
-      CALL MURGE_GetGlobalSolution(murge_id, mumps_par%rhs, -1, ierr)
-      if (ierr /= MURGE_SUCCESS) then 
-         write (*,*) "ERROR in MURGE_GetGlobalSolution"; 
-         STOP
-      end if
-#else
-      print *, "Binary built without murge"
-      call abort()
-#endif
-   else if (use_pastix) then
-      pastix_iparm(2) = 5
-      pastix_iparm(3) = pastix_endsolve
-      pastix_iparm(6) = pastix_iter           ! refinement : max number of iterations
-      
-      pastix_iparm(31) = pastix_facto
-      pastix_iparm(35) = pastix_nthrd         ! number of threads
-      pastix_iparm(37) = pastix_iluk
-      pastix_iparm(39) = pastix_rhs           ! right hand side (0 : use RHS)
-      pastix_iparm(41) = pastix_sym
-      
-      pastix_iparm(42) = pastix_ricar
-      pastix_iparm(37) = pastix_iluk
-      pastix_iparm(14) = pastix_amalg
-      
-      pastix_dparm(6)  = pastix_epsilon    ! error level refinement
-      pastix_dparm(11) = pastix_pivot      ! pivot threshold?
-
+   if (use_pastix) then
+      ! pastix input parameters working in Pastix5 and Pastix6
+      pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations
+      pastix_iparm(IPARM_FACTORIZATION)         = pastix_facto
+      pastix_iparm(IPARM_THREAD_NBR)            = pastix_nthrd               ! number of threads
+      pastix_iparm(IPARM_INCOMPLETE)            = pastix_ricar
+      pastix_iparm(IPARM_LEVEL_OF_FILL)         = pastix_iluk
+      pastix_dparm(DPARM_EPSILON_REFINEMENT)    = pastix_epsilon             ! error level refinement
+      pastix_dparm(DPARM_EPSILON_MAGN_CTRL)     = pastix_pivot               ! pivot threshold
 #ifdef USE_BLOCK
-      pastix_iparm(5) = block_size      ! block size
-      
+      pastix_iparm(IPARM_DOF_NBR)               = block_size                 ! block size
+#else
+      pastix_iparm(IPARM_DOF_NBR)               = 1
+#endif
+
+
+#ifndef USE_PASTIX6
+      ! -- For PaStiX solver before version 6.x
+      pastix_iparm(IPARM_START_TASK)            = API_TASK_SOLVE
+      pastix_iparm(IPARM_END_TASK)              = pastix_endsolve
+      pastix_iparm(IPARM_RHS_MAKING)            = pastix_rhs                 ! right hand side (0 : use RHS)
+      pastix_iparm(IPARM_SYM)                   = pastix_sym
+      pastix_iparm(IPARM_AMALGAMATION_LEVEL)    = pastix_amalg
+
+#else
+      ! -- For PaStiX solver version 6.x
+      pastix_iparm(IPARM_MTX_TYPE)              = pastix_sym
+      pastix_iparm(IPARM_AMALGAMATION_LVLCBLK)  = pastix_amalg
+#endif
+
+     
+#ifndef USE_PASTIX6
+      ! -- For PaStiX solver before version 6.x
+#ifdef USE_BLOCK
       call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
            !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                  DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
                     pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else      
-      pastix_iparm(5) = 1      ! block size
-      
       call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
            pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #endif
+
+#else
+       ! -- For PaStiX solver version 6.x
+       pastix_rhs_ptr = c_loc(mumps_par%rhs)
+#ifdef USE_BLOCK
+       call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,n_block,pastix_info)
+#else
+       call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,mumps_par%n,pastix_info)
+#endif
+
+#endif
+
 
    elseif (use_wsmp) then
 #ifdef USE_WSMP

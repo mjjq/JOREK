@@ -6,6 +6,7 @@ use constants
 use data_structure
 use phys_module
 use mod_poiss
+use mod_interp, only: interp
 implicit none
 
 type (type_node_list)    :: node_list

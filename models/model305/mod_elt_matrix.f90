@@ -4,7 +4,7 @@ module mod_elt_matrix
 
 contains
 
-subroutine element_matrix(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM,RHS, tid)
+subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM,RHS, tid)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 ! using the equations for model305, which is the same as model303, but solves
@@ -29,8 +29,8 @@ implicit none
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
 
-real*8, dimension (:,:), pointer  :: ELM
-real*8, dimension (:)  , pointer  :: RHS
+real*8, dimension (:,:), allocatable  :: ELM
+real*8, dimension (:)  , allocatable  :: RHS
 integer, intent(in) :: tid
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
@@ -38,7 +38,7 @@ integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)
 real*8     :: source_volume, source_pellet, source_pellet2
-real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
+real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
 real*8     :: rhs_ij_1,   rhs_ij_2,   rhs_ij_3,   rhs_ij_4,   rhs_ij_5,   rhs_ij_6, rhs_ij_7
@@ -232,12 +232,14 @@ enddo
 !!$endif
 do ms=1, n_gauss
   do mt=1, n_gauss
- 
+
+  if (keep_current_prof) then 
 #ifdef altcs
-  call current(xpoint2,xcase2,x_g(ms,mt),y_g(ms,mt),Z_xpoint,psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    call current(xpoint2,xcase2,x_g(ms,mt),y_g(ms,mt),Z_xpoint,psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
 #else
-  call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint,eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint,eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
 #endif
+  end if
 ! eccurrent_source is defined in this module, below.
   call eccurrent_source(x_g(ms,mt),y_g(ms,mt),ec_source(ms,mt))
   call sources(xpoint2,xcase2,y_g(ms,mt),Z_xpoint,eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))

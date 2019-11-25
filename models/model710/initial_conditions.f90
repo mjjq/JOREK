@@ -101,16 +101,20 @@ if (my_id .eq. 0) then
     node_list%node(i)%values(1,2,var_r) = dn_dpsi  * node_list%node(i)%values(1,2,var_A3) + dn_dz * node_list%node(i)%x(2,2)
     node_list%node(i)%values(1,3,var_r) = dn_dpsi  * node_list%node(i)%values(1,3,var_A3) + dn_dz * node_list%node(i)%x(3,2)
     node_list%node(i)%values(1,4,var_r) = dn_dpsi  * node_list%node(i)%values(1,4,var_A3) + dn_dz * node_list%node(i)%x(4,2) &
-                                      + dn_dpsi2 * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
-                                      + dn_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+                                      + dn_dpsi2   * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
+                                      + dn_dz2     * node_list%node(i)%x(2,2)             * node_list%node(i)%x(3,2)         &
+                                      + dn_dpsi_dz * node_list%node(i)%values(1,3,var_A3) * node_list%node(i)%x(2,2)         &
+                                      + dn_dpsi_dz * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%x(3,2)      
 
 
     node_list%node(i)%values(1,1,var_T) = zT
-    node_list%node(i)%values(1,2,var_T) = dT_dpsi  * node_list%node(i)%values(1,2,1) + dT_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,var_T) = dT_dpsi  * node_list%node(i)%values(1,3,1) + dT_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,var_T) = dT_dpsi  * node_list%node(i)%values(1,4,1) + dT_dz * node_list%node(i)%x(4,2) &
-                                      + dT_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                      + dT_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,2,var_T) = dT_dpsi  * node_list%node(i)%values(1,2,var_A3) + dT_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%values(1,3,var_T) = dT_dpsi  * node_list%node(i)%values(1,3,var_A3) + dT_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,4,var_T) = dT_dpsi  * node_list%node(i)%values(1,4,var_A3) + dT_dz * node_list%node(i)%x(4,2) &
+                                      + dT_dpsi2   * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
+                                      + dT_dz2     * node_list%node(i)%x(2,2)             * node_list%node(i)%x(3,2)         &
+                                      + dT_dpsi_dz * node_list%node(i)%values(1,3,var_A3) * node_list%node(i)%x(2,2)         &
+                                      + dT_dpsi_dz * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%x(3,2)      
     
     node_list%node(i)%values(1,:,var_up) = 0.d0
 
@@ -133,9 +137,11 @@ if (my_id .eq. 0) then
     node_list%node(i)%Fprof_eq(1) =   F_prof
     node_list%node(i)%Fprof_eq(2) =   dF_dpsi  * node_list%node(i)%values(1,2,var_A3) + dF_dz * node_list%node(i)%x(2,2)
     node_list%node(i)%Fprof_eq(3) =   dF_dpsi  * node_list%node(i)%values(1,3,var_A3) + dF_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%Fprof_eq(4) =   dF_dpsi  * node_list%node(i)%values(1,4,var_A3) + dF_dz * node_list%node(i)%x(4,2)      &
-                                    + dF_dpsi2 * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
-                                    + dF_dz2   * node_list%node(i)%x(2,2) * node_list%node(i)%x(3,2)
+    node_list%node(i)%Fprof_eq(4) = dF_dpsi    * node_list%node(i)%values(1,4,var_A3) + dF_dz * node_list%node(i)%x(4,2) &
+                                  + dF_dpsi2   * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
+                                  + dF_dz2     * node_list%node(i)%x(2,2)             * node_list%node(i)%x(3,2)         &
+                                  + dF_dpsi_dz * node_list%node(i)%values(1,3,var_A3) * node_list%node(i)%x(2,2)         &
+                                  + dF_dpsi_dz * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%x(3,2)      
 
 #endif
 

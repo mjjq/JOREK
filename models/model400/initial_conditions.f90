@@ -105,23 +105,29 @@ if (my_id .eq. 0) then
     node_list%node(i)%values(1,1,5) = zn
     node_list%node(i)%values(1,2,5) = dn_dpsi  * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(2,2)
     node_list%node(i)%values(1,3,5) = dn_dpsi  * node_list%node(i)%values(1,3,1) + dn_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,5) = dn_dpsi  * node_list%node(i)%values(1,4,1) + dn_dz * node_list%node(i)%x(4,2) &
-                                    + dn_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dn_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,4,5) = dn_dpsi    * node_list%node(i)%values(1,4,1) + dn_dz * node_list%node(i)%x(4,2) &
+                                    + dn_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dn_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
+                                    + dn_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
+                                    + dn_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2)      
 
     node_list%node(i)%values(1,1,6) = zTi
-    node_list%node(i)%values(1,2,6) = dTi_dpsi  * node_list%node(i)%values(1,2,1) + dTi_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,6) = dTi_dpsi  * node_list%node(i)%values(1,3,1) + dTi_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,6) = dTi_dpsi  * node_list%node(i)%values(1,4,1) + dTi_dz * node_list%node(i)%x(4,2) &
-                                    + dTi_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dTi_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,2,6) = dTi_dpsi    * node_list%node(i)%values(1,2,1) + dTi_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%values(1,3,6) = dTi_dpsi    * node_list%node(i)%values(1,3,1) + dTi_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,4,6) = dTi_dpsi    * node_list%node(i)%values(1,4,1) + dTi_dz * node_list%node(i)%x(4,2) &
+                                    + dTi_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dTi_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
+                                    + dTi_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
+                                    + dTi_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2)      
 
     node_list%node(i)%values(1,1,8) = zTe
-    node_list%node(i)%values(1,2,8) = dTe_dpsi  * node_list%node(i)%values(1,2,1) + dTe_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,8) = dTe_dpsi  * node_list%node(i)%values(1,3,1) + dTe_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,8) = dTe_dpsi  * node_list%node(i)%values(1,4,1) + dTe_dz * node_list%node(i)%x(4,2) &
-                                    + dTe_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dTe_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,2,8) = dTe_dpsi    * node_list%node(i)%values(1,2,1) + dTe_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%values(1,3,8) = dTe_dpsi    * node_list%node(i)%values(1,3,1) + dTe_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,4,8) = dTe_dpsi    * node_list%node(i)%values(1,4,1) + dTe_dz * node_list%node(i)%x(4,2) &
+                                    + dTe_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dTe_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
+                                    + dTe_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
+                                    + dTe_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2)      
 
     node_list%node(i)%values(1,1,2) = - tauIC * zp 
     node_list%node(i)%values(1,2,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,2,1) + dp_dz * node_list%node(i)%x(2,2))

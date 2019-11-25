@@ -47,7 +47,7 @@ real*8              :: Rmid, Zmid, R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, siz
 real*8              :: R1, Z1, s_out, t_out, R_out, Z_out
 real*8              :: EJAC, RX, RY, SX, SY, CRR, CZZ, CRZ, alpha1, alpha2, alpha_max, alpha_min
 real*8              :: RL1, RL2, RL3, RL4, RL5, RL6, RL7, RL8, RL9, ZL1, ZL2, ZL3, ZL4, ZL5, ZL6, ZL7, ZL8, ZL9
-real*8              :: angle_L1, angle_L8, angle_L9, rr1, ss1, theta_axis, xl_axis
+real*8              :: angle_L1, angle_L8, angle_L9, rr1, ss1
 logical             :: xpoint
 real*8,external     :: root
 character*4         :: label
@@ -535,8 +535,6 @@ do j=1,n_tht_2
 
   if ((j .eq. 1) .or. (j .eq. n_tht_2))       delta = 0.d0
   if ((j .eq. 2) .or. (j .eq. n_tht_2 - 1))   delta = 0.05d0
-  
-  theta_axis = tht_x + 2.*PI*(j-1)/(n_tht_2-1)
 
   R_polar(1,1,j) = R_axis
   R_polar(1,4,j) = delta * R_axis + (1.d0 - delta) * R_sep(j)
@@ -548,11 +546,6 @@ do j=1,n_tht_2
   Z_polar(1,2,j) = ( 2.d0 * Z_polar(1,1,j)  +         Z_polar(1,4,j) ) / 3.d0
   Z_polar(1,3,j) = (        Z_polar(1,1,j)  +  2.d0 * Z_polar(1,4,j) ) / 3.d0
 
-  xl_axis = sqrt((R_polar(1,2,j) -  R_axis)**2 + (Z_polar(1,2,j) -  Z_axis)**2 )
-
-  R_polar(1,2,j) = R_axis +  0.8 * xl_axis * cos(theta_axis)
-  Z_polar(1,2,j) = Z_axis +  0.8 * xl_axis * sin(theta_axis)
-  
   R_polar(3,1,j) = R_max(j)
   R_polar(3,4,j) = delta * R_max(j) + (1.d0 - delta) * R_sep(j)
   R_polar(3,2,j) = ( 2.d0 * R_polar(3,1,j)  +         R_polar(3,4,j) ) / 3.d0

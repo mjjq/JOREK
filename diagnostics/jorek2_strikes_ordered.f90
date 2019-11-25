@@ -10,9 +10,11 @@ use constants
 use mod_boundary
 use divertor_desc
 use mod_import_restart
+use mpi
+use mod_neighbours
+use mod_interp
 
 implicit none
-include 'mpif.h'
 
 real*8,allocatable  :: rp(:), zp(:), R_all(:), Z_all(:), C_all(:)
 real*4,allocatable  :: R_strike(:),  Z_strike(:), P_strike(:)        ! position of strike points
@@ -55,7 +57,6 @@ type(type_bnd_element), allocatable :: bnd_elements(:)
 real*8 startpos
 logical :: psi_theta
 
-logical, external :: neighbours
 
 integer f_div, f_testelem_nodes, f_testelem_interp, f_cl_plus, f_cl_minus, f_phistart, f_turns_plus, f_turns_minus, f_divstart, f_divshape
 integer f_heatflux, f_dens, f_temp, f_heatflux_par, f_dens_norm
@@ -64,6 +65,7 @@ REAL*8, ALLOCATABLE :: div_start(:), phis(:)
 integer, allocatable :: k_list(:), local_k_list(:)
 CHARACTER*160 :: divfname = 'divertor_shape.dat'
 logical div_is_bnd
+namelist /connecvtk_params/ psi_theta, n_turns, n_phi, div_is_bnd
 
 call MPI_INIT(IERR)
 !required=MPI_THREAD_MULTIPLE
@@ -72,7 +74,6 @@ call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)      ! id of each MPI proc
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)      ! number of MPI procs
 write(*,*) 'my_id = ', my_id
 
-namelist /connecvtk_params/ psi_theta, n_turns, n_phi, div_is_bnd
 
 if (my_id .eq. 0 ) then
    write(*,*) '***************************************'
@@ -122,7 +123,7 @@ do i_tor=1, n_tor
 enddo
 
 if (my_id .eq. 0) then
-  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 endif
 
 call initialise_basis                                       ! define the basis functions at the Gaussian points
@@ -867,12 +868,12 @@ n_scalars = 3             ! number of scalars to write to the VTK output file
 
 allocate(scalar_names(n_scalars))
 
-scalar_names  = (/ 'length_m    ','T_start_keV ','psi_norm  ' /)
+scalar_names  = (/ 'length_m    ','T_start_keV ','psi_norm    ' /)
 
 lf = char(10) ! line feed character
 
 if (my_id .eq. 0) then
-  open(unit=ivtk,file='connection_new.vtk',form='binary',convert='BIG_ENDIAN')
+  open(unit=ivtk,file='connection_new.vtk',access='stream',form='unformatted',convert='BIG_ENDIAN',status='replace')
 
   buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
   buffer = 'vtk output'//lf                                                             ; write(ivtk) trim(buffer)
@@ -1068,7 +1069,7 @@ do i=1,i_strike
 enddo
 
 if (my_id .eq. 0) then
-  open(unit=ivtk,file='strikes.vtk',form='binary',convert='BIG_ENDIAN')
+  open(unit=ivtk,file='strikes.vtk',access='stream',form='unformatted',convert='BIG_ENDIAN')
 
   buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
   buffer = 'vtk output'//lf                                                             ; write(ivtk) trim(buffer)
@@ -1263,7 +1264,8 @@ contains
     heatflux_par = heatflux_par_norm / MU_zero / t_norm
 
     ! cf. jorek2_target2vtk.f90, scalars(... 6)
-    heatflux_surf_norm = - gamma_sheath*(rho * T * Vpar * psi_s * normal) / R / sqrt(R_s**2 + Z_s**2)
+    ! assume normal=1 and remove it, since the variable was undefined
+    heatflux_surf_norm = - gamma_sheath*(rho * T * Vpar * psi_s) / R / sqrt(R_s**2 + Z_s**2)
     heatflux_surf = heatflux_surf_norm / MU_zero / t_norm * 1.5
 
   end subroutine quantities_local
@@ -1481,20 +1483,20 @@ subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t
 use mod_parameters
 use elements_nodes_neighbours
 use phys_module
+use mod_interp
 
 implicit none
 
 integer :: i_var_psi, i_elm, i_tor, i_harm
 
 real*8 :: s_in, t_in, p_in, delta_p, delta_s, delta_t
-real*8 :: R_out, Z_out, Rs_out, Rt_out, Zs_out, Zt_out
-real*8 :: R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
+real*8 :: R,R_s,R_t,Z,Z_s,Z_t
 real*8 :: Pcos,Pcos_s,Pcos_t,Pcos_st,Pcos_ss,Pcos_tt, Psin,Psin_s,Psin_t,Psin_st,Psin_ss,Psin_tt
 real*8 :: P0,P0_s,P0_t,P0_st,P0_ss,P0_tt, psi_s, psi_t, Zjac
 
 i_var_psi = 1
 
-call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,Z,Z_s,Z_t)
 
 Zjac = (R_s * Z_t - R_t * Z_s)
 
@@ -1529,6 +1531,7 @@ subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
 use mod_parameters
 use elements_nodes_neighbours
 use phys_module
+use mod_interp
 
 implicit none
 

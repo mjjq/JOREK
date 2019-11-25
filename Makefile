@@ -11,14 +11,18 @@
 # Include jorek-specific things and settings
 include Makefile.inc
 MODEL_NUMBER := $(subst model,,$(MODEL))
-
-jorek_model$(MODEL_NUMBER): jorek2_main
-	mv jorek2_main jorek_model$(MODEL_NUMBER)
+# Default rule needs to be first
+main: jorek_model$(MODEL_NUMBER)
 
 # Some defaults and parsing logic for makefile.inc
 include defaults.mk
 
-.PHONY: .mod/version.h clean cleanall cleandep duplicates
+# Build the main executable with a different name from the source file jorek2_main.o
+jorek_model$(MODEL_NUMBER): $(OBJDIR)/jorek2_main.o $(shell ./util/obj_deps $(DEPDIR)/jorek2_main.d)
+	$(FC) $(FLAGS) $(DEFINES) $(INCLUDES) -o $@ $^ $(LIBS)
+
+
+.PHONY: clean cleanall cleandep duplicates
 cleanall: clean cleandep
 clean:
 	@echo ">> Deleting Object Files <<"
@@ -26,10 +30,20 @@ clean:
 	@echo ">> Deleting Module Files <<"
 	-@rm -r $(MODDIR)
 	-@find . -name '*.mod' -delete -or -name '*.o' -delete
+	-@rm mpiversion.mk
 cleandep:
 	@echo ">> Deleting Dependency Files <<"
 	-@rm -r $(DEPDIR)
 	-@find . -name '*.d' -delete 2>/dev/null
+test: particle_test nrt_unit
+particle_test:
+	+./util/fruit.sh particles/tests
+nrt_unit:
+	+./util/fruit.sh non_regression_tests/unit_tests
+doc docs:
+	-@rm -r doc/ # workaround for FORD bug
+	ford jorek.md --no-search $(INCLUDES)
+
 
 
 # Directories containing sources, ordered by number of files
@@ -41,15 +55,28 @@ DIRS := diagnostics			\
 	models/$(MODEL)			\
 	refinement			\
 	matrix				\
+	particles 			\
+	particles/pushers 		\
+	particles/examples 		\
+	particles/diagnostics 		\
+	particles/tests 		\
+	particles/benchmarks/pusher_cartesian \
+	particles/benchmarks/pusher	\
+	particles/benchmarks/projection \
 	elements			\
 	grids				\
 	plots				\
 	diagnostics/new_diag		\
 	diagnostics/postproc		\
 	tools				\
+	tools/rng                       \
+	tools/fruit                     \
+	non_regression_tests/unit_tests \
 	datatypes			\
+	benchmarks                      \
 	.				\
 	vacuum
+DIRS+=$(EXTRA_DIRS) # Specified in Makefile.inc or commandline
 
 # All .f90 files we should generate .d dependency files for
 depends:=$(basename $(notdir $(shell find $(DIRS) -maxdepth 1 -iname '*.f90')))
@@ -96,6 +123,7 @@ all: $(basename $(notdir $(PROGRAM_SOURCES)))
 most: jorek2_connection2 \
       jorek2_connection_stan \
       jorek2_diagno \
+      jorek2_diagno_spi \
       jorek2_fieldlines_vtk \
       jorek2_four \
       jorek2_poincare \
@@ -110,16 +138,37 @@ most: jorek2_connection2 \
       rst_bin2hdf5 \
       rst_hdf52bin \
       jorek2_main
+# Make all object files we know of
+find_files = $(wildcard $(dir)/*.f90) $(wildcard $(dir)/*.c) $(wildcard $(dir)/*.f) $(wildcard $(dir)/*.cpp)
+objs: $(foreach file,$(foreach dir,$(DIRS), $(find_files)), $(OBJDIR)/$(notdir $(basename $(file))).o)
 
 # Special cases
 # Add here: Global includes (as the line below)
 INCLUDES += -Itools # for r3_info.h
+INCLUDES += -Imodels
 # C++ support
 LIBS += -lstdc++
 CXXFLAGS += -pedantic -Wall
 
 # Rule-specific includes: an example
 #jorek2_main: DEFINES+="-DMAIN "
+eqdsk2jorek: LIBS+=$(LIBDIERCKX)
+
+# Automatically download adas data for tungsten
+particles/examples/%50_w.dat:
+	wget http://open.adas.ac.uk/download/adf11/$*50/$*50_w.dat -O $@
+compare_mc_coronal: | particles/examples/acd50_w.dat particles/examples/scd50_w.dat
+
+# We need the MPI_VERSION variable for conditional compilation, but
+# unfortunately Fortran defines it as an integer parameter, which
+# we cannot use as a preprocessor symbol. To overcome this problem,
+# we create a small program that prints out the value of the
+# MPI_VERSION parameter and use this to add -DMPI_VERSION=X to FFLAGS.
+mpiversion.mk:
+	printf "include 'mpif.h'\nWRITE(*,fmt='(A22,I1)') 'FFLAGS+=-DMPI_VERSION=', MPI_VERSION\nEND" > $(OBJDIR)/mpi_version.f90
+	($(FC) $(FLAGS) $(DEFINES) $(INCLUDES) -o $(OBJDIR)/mpi_version $(OBJDIR)/mpi_version.f90 $(LIBS) && $(OBJDIR)/mpi_version | tail -n1 > mpiversion.mk) || echo FFLAGS+=-DMPI_VERSION=0 > mpiversion.mk
+
+-include mpiversion.mk
 eqdsk2jorek: LIBS+=$(LIBDIERCKX)
 
 # Is this used by anyone? Otherwise we could remove it

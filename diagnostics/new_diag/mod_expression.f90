@@ -19,7 +19,9 @@ module mod_expression
   use phys_module
   use diffusivities
   use corr_neg
-  
+  use mod_basisfunctions
+  use mod_bootstrap_functions
+  use mod_poloidal_currents
   
   
   
@@ -80,7 +82,7 @@ module mod_expression
   
   
   ! --- Standard lists of expressions (require init_expr call first!).
-  type(t_expr_list), save :: exprs_all           !< All available expressions.
+  type(t_expr_list), save :: exprs_all, exprs_all_int     !< All available expressions.
   
   
   
@@ -95,7 +97,8 @@ module mod_expression
   !> Initialization for the module. Should be called before any other 
   subroutine init_expr()
     
-    exprs_all%n_expr = 0
+    exprs_all%n_expr     = 0
+    exprs_all_int%n_expr = 0
     call add(exprs_all, 'R           ', 'Cylindrical Coordinate R (== Major Radius)            ')
     call add(exprs_all, 'Z           ', 'Cylindrical Coordinate Z                              ')
     call add(exprs_all, 'phi         ', 'Cylindrical Coordinate phi                            ')
@@ -114,9 +117,13 @@ module mod_expression
     call add(exprs_all, 'Phi         ', 'Electric Potential Phi                                ')
     call add(exprs_all, 'zj          ', 'Toroidal Current Density Multiplied by 1/R            ')
     call add(exprs_all, 'currdens    ', 'Physical Toroidal Current Density (== zj/R)           ')
+    call add(exprs_all, 'FFprime_loc ', 'Local FFprime value, calculated from 3D JxB=\grad p   ')
+    call add(exprs_all, 'Jpol        ', 'Poloidal current value in the poloidal field direction')
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
+    call add(exprs_all, 'ne          ', 'Electron Density                                      ')
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
+    call add(exprs_all, 'Te          ', 'Electron temperature (assuming Ti=Te)                 ')
     call add(exprs_all, 'vpar        ', 'Parallel Velocity (along magnetic field lines)        ')
     call add(exprs_all, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
     call add(exprs_all, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
@@ -142,16 +149,40 @@ module mod_expression
     call add(exprs_all, 'Vstar_i     ', 'Ion Diamagnetic Velocity                              ')
     call add(exprs_all, 'ki_neo      ', 'Neoclassical Heat Diffusivity                         ')
     call add(exprs_all, 'mu_neo      ', 'Neoclassical Friction Coefficient                     ')
-#if JOREK_MODEL == 400
     call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
     call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
 #if JOREK_MODEL == 500
     call add(exprs_all, 'radiation   ', 'Radiation terms for bolometry diagnostic              ')
     call add(exprs_all, 'brem        ', 'Brem terms for bolometry diagnostic                   ')
 #endif
-    
+    ! --- List of volume and boundary integrals
+    call add(exprs_all_int, 'E_tot       ', 'Total energy                                          ')
+    call add(exprs_all_int, 'Wmag_tot    ', 'Total magnetic energy                                 ')
+    call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')
+    call add(exprs_all_int, 'Thermal_tot ', 'Total thermal energy                                  ')
+    call add(exprs_all_int, 'Helicity_tot', 'Total magnetic helicity                               ')
+    call add(exprs_all_int, 'Ip_tot      ', 'Total toroidal plasma current                         ')
+    call add(exprs_all_int, 'Kin_par_tot ', 'Total parallel kinetic energy                         ')
+    call add(exprs_all_int, 'Kin_perp_tot', 'Total perpendicular kinetic energy                    ')
+    call add(exprs_all_int, 'Mag_work_tot', 'Total magnetic work = -\int v\cdot(JxB) dV            ')
+    call add(exprs_all_int, 'Thm_work_tot', 'Total thermal work  = \int vpar\cdot\nabla p dV       ')
+    call add(exprs_all_int, 'Part_src_tot', 'Total particle source                                 ')
+    call add(exprs_all_int, 'Heat_src_tot', 'Total heat source                                     ')
+    call add(exprs_all_int, 'Viscpar_diss', 'Total parallel viscosity dissipation                  ')
+    call add(exprs_all_int, 'Wmag_src_tot', 'Total magnetic energy source (from current source)    ')
+    call add(exprs_all_int, 'li3         ', 'Internal inductance inside LCFS, li(3)                ')
+    call add(exprs_all_int, 'li3_tot     ', 'Internal inductance inside grid, li(3)                ')
+    call add(exprs_all_int, 'betap       ', 'Poloidal beta, of the plasma inside LCFS              ')
+    call add(exprs_all_int, 'area        ', 'Poloidal cross section area inside LCFS               ')
+    call add(exprs_all_int, 'volume      ', 'Plasma volume, inside LCFS                            ')
+    call add(exprs_all_int, 'P_vn        ', 'Boundary flux of outgoing pressure                    ')
+    call add(exprs_all_int, 'qn_par      ', 'Boundary flux of the parallel thermal conduction      ')
+    call add(exprs_all_int, 'qn_perp     ', 'Boundary flux of the perpendicular thermal conduction ')
+    call add(exprs_all_int, 'kinpar_flux ', 'Boundary flux of parallel kinetic energy              ')
+ 
   end subroutine init_expr
   
   
@@ -209,6 +240,37 @@ module mod_expression
   end function exprs
   
   
+  !> Creates a subset of all available expressions.
+  function exprs_int(name, n_expr, n_coord) result(expr_list)
+    type(t_expr_list) :: expr_list
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':exprs'
+    
+    ! --- Routine parameters
+    character(len=*),  intent(in) :: name(n_expr)
+    integer,           intent(in) :: n_expr
+    integer, optional, intent(in) :: n_coord
+    
+    ! --- Local variables
+    integer :: i, j, k
+    
+    k = 0
+    do i = 1, n_expr
+      j = get_expr_num_int(exprs_all_int, trim(name(i)))
+      if ( j < 1 ) then
+        write(*,*) 'WARNING in '//trim(THIS_ROUTINE_NAME)//': Unknown expression "'//trim(name(i)) &
+          //'" ignored.'
+        cycle
+      end if
+      k = k + 1
+      expr_list%expr(k) = exprs_all_int%expr(j)
+    end do
+    expr_list%n_expr = k
+    
+    expr_list%n_coord = 0
+    if ( present(n_coord) ) expr_list%n_coord = n_coord
+    
+  end function exprs_int
   
   
   
@@ -325,6 +387,25 @@ module mod_expression
   end function get_expr_num
   
   
+   !> Find out expression number in an expression list.
+  integer function get_expr_num_int(expr_list, name) result(num)
+    
+    ! --- Routine parameters
+    type(t_expr_list),       intent(in) :: expr_list
+    character(len=*), intent(in) :: name
+    
+    ! --- Local variables
+    integer :: i
+    
+    num = -99
+    do i = 1, exprs_all_int%n_expr
+      if ( trim(exprs_all_int%expr(i)%name) == trim(name) ) then
+        num = i
+        exit
+      end if
+    end do
+    
+  end function get_expr_num_int
   
   
   
@@ -403,10 +484,12 @@ module mod_expression
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot 
+    real*8 :: FFprime_loc, Jpol
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
     ! --- Normalization factors
-    real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_T, fact_vpar, fact_resistiv, fact_Er
+    real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
+      fact_resistiv, fact_Er
 #if JOREK_MODEL == 500
     real*8  :: coef_rad_1
     real*8  :: T_rad, LradDrays_T, LradDcont_T
@@ -472,7 +555,7 @@ module mod_expression
         ielm = pol_pos%ielm
         BigR   = R    ! Just two different names for R
         BigR_R = 1.d0 ! Trivial derivative
-        call basisfunctions2(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
+        call basisfunctions(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
         
         ! --- Poloidal angle theta
         theta = atan2(Z-eq%Z_axis, R-eq%R_axis)
@@ -522,6 +605,13 @@ module mod_expression
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
 #if JOREK_MODEL == 500
           rn0 = 0.d0
+          rn0_s = 0.0
+          rn0_t = 0.0
+          rn0_ss = 0.0
+          rn0_tt = 0.0
+          rn0_st = 0.0
+          rn0_p = 0.0
+          rn0_pp = 0.0
 #endif
           
           ! --- Reconstruct variables
@@ -657,6 +747,18 @@ module mod_expression
             end do
           end do
           
+#if JOREK_MODEL == 400
+          ! --- Sum up electron and ion temperature for model400 (e.g., to calculate total pressure)
+          T0       = Ti0    + Te0   
+          T0_s     = Ti0_s  + Te0_s 
+          T0_t     = Ti0_t  + Te0_t 
+          T0_ss    = Ti0_ss + Te0_ss
+          T0_tt    = Ti0_tt + Te0_tt
+          T0_st    = Ti0_st + Te0_st
+          T0_p     = Ti0_p  + Te0_p 
+          T0_pp    = Ti0_pp + Te0_pp
+#endif
+          
           ! --- Construct Cartesian Derivatives of Variables.
           ps0_R    = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
           ps0_Z    = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
@@ -757,6 +859,29 @@ module mod_expression
           Ti0_Z     = ( - R_t * Ti0_s  + R_s * Ti0_t ) / xjac
           Te0_R     = (   Z_t * Te0_s  - Z_s * Te0_t ) / xjac
           Te0_Z     = ( - R_t * Te0_s  + R_s * Te0_t ) / xjac
+#else
+          ! --- Set electron and ion temperatures to T/2 for diagnostic purposes
+          Te0     = T0     / 2.d0
+          Te0_s   = T0_s   / 2.d0
+          Te0_t   = T0_t   / 2.d0
+          Te0_st  = T0_st  / 2.d0
+          Te0_ss  = T0_ss  / 2.d0
+          Te0_tt  = T0_tt  / 2.d0
+          Te0_p   = T0_p   / 2.d0
+          Te0_pp  = T0_pp  / 2.d0
+          Te0_R   = T0_R   / 2.d0
+          Te0_Z   = T0_Z   / 2.d0
+
+          Ti0     = T0     / 2.d0
+          Ti0_s   = T0_s   / 2.d0
+          Ti0_t   = T0_t   / 2.d0
+          Ti0_st  = T0_st  / 2.d0
+          Ti0_ss  = T0_ss  / 2.d0
+          Ti0_tt  = T0_tt  / 2.d0
+          Ti0_p   = T0_p   / 2.d0
+          Ti0_pp  = T0_pp  / 2.d0
+          Ti0_R   = T0_R   / 2.d0
+          Ti0_Z   = T0_Z   / 2.d0
 #endif
           T0_RR    = (T0_ss * Z_t**2 - 2.d0*T0_st * Z_s*Z_t + T0_tt * Z_s**2 &
                       + T0_s * (Z_st*Z_t - Z_tt*Z_s )                                 &
@@ -819,7 +944,14 @@ module mod_expression
           psi_norm = get_psi_n(eq, ps0)
           Btheta  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z) / BigR
           psi_abs = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z)
-          
+
+          if (psi_abs > 1.d-6) then
+            FFprime_loc = zj0 + (R**2.d0) * (ps0_R*P0_R + ps0_Z*P0_Z)/(psi_abs**2.d0)
+          else
+            FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
+          endif
+          Jpol = FFprime_loc * Btheta
+
           ! --- Some input profiles
           if ( eta_T_dependent ) then
             eta_T     = eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
@@ -908,8 +1040,8 @@ module mod_expression
             end if
           end if
           
-#if JOREK_MODEL == 400
-          call bootstrap_current_rhs(BigR, 0.0, eq%R_axis, eq%psi_axis, eq%psi_bnd, ps0, ps0_R,    &
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
+          call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
             ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
 #else
           J_boot = 0.d0
@@ -965,7 +1097,8 @@ module mod_expression
              rho_norm      = central_density *1.d20 * central_mass * mass_proton   ! rho_0 = central mass density
              fact_time     = sqrt(MU_zero*rho_norm)                                ! time factor
              fact_mu_zero  = MU_zero                                               ! division by mu_zero for P and J
-             fact_ne       = central_density * 1.d20                               ! factor for rho
+             fact_ne       = central_density * 1.d20                               ! factor for n_e
+             fact_rho      = central_density * 1.d20 * central_mass*MASS_PROTON    ! factor for rho
              fact_T        = 1.d0 / ( MU_zero * central_density * 1.d20 * EL_CHG ) ! factor for T
              fact_vpar     = sqrt(BB2) / fact_time                                 ! factor for Vpar
              fact_resistiv = sqrt ( MU_zero / rho_norm )                           ! factor for eta == 1 / (factor for visco)
@@ -974,6 +1107,7 @@ module mod_expression
              fact_time     = 1.d0
              fact_mu_zero  = 1.d0
              fact_ne       = 1.d0
+             fact_rho      = 1.d0
              fact_T        = 1.d0
              fact_vpar     = 1.d0
              fact_resistiv = 1.d0
@@ -1036,10 +1170,16 @@ module mod_expression
                 res = w0
                 
               case ( 'rho' )
+                res = r0 * fact_rho
+                
+              case ( 'ne' )
                 res = r0 * fact_ne
                 
               case ( 'T' )
                 res = T0 * fact_T
+              
+              case ( 'Te' )
+                res = T0 * fact_T / 2.d0
               
               case ( 'vpar' )
                 res = Vpar0 * fact_vpar
@@ -1079,6 +1219,12 @@ module mod_expression
                 
               case ( 'currdens' )
                 res = zj0 / R / fact_mu_zero
+
+              case ( 'FFprime_loc' )
+                res = FFprime_loc
+
+              case ( 'Jpol' )
+                res = Jpol / fact_mu_zero
                 
               case ( 'Er' )
                 res = Er * fact_Er
@@ -1118,13 +1264,14 @@ module mod_expression
                 
               case ( 'mu_neo' )
                 res = mu_neo / fact_time
-#if JOREK_MODEL == 400
+                
               case ( 'T_e' )
                 res = Te0 * fact_T
-              
+                
               case ( 'T_i' )
                 res = Ti0 * fact_T
-              
+                
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
               case ( 'J_bootstrap' )
                 res = J_boot ! ### check if no normalization needed
 #endif

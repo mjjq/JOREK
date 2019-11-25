@@ -1,0 +1,79 @@
+&coil_set_nml
+  description = 'Poloidal field coil set for STARWALL_J (produced by J.Artola)'
+  ncoil       = 6
+/
+
+&coils_nml
+  coil( 1)%name      = 'PF_VF_1'
+  coil( 1)%coil_type = 'axisym_thick'
+  coil( 1)%resist    = 1.d0
+  coil( 1)%nturns    = 1.d0
+  coil( 1)%ntorpts   = 60 
+  coil( 1)%R         = 7.d0
+  coil( 1)%Z         = 3.d0
+  coil( 1)%dR        = 0.01d0
+  coil( 1)%dZ        = 0.01d0
+  coil( 1)%nbands_R  = 1
+  coil( 1)%nbands_Z  = 1
+  
+  coil( 2)%name      = 'PF_VF_2'
+  coil( 2)%coil_type = 'axisym_thick'
+  coil( 2)%resist    = 1.d0
+  coil( 2)%nturns    = 1.d0
+  coil( 2)%ntorpts   = 60 
+  coil( 2)%R         = 7.d0
+  coil( 2)%Z         = 0.d0
+  coil( 2)%dR        = 0.01d0
+  coil( 2)%dZ        = 0.01d0
+  coil( 2)%nbands_R  = 1
+  coil( 2)%nbands_Z  = 1
+  
+  coil( 3)%name      = 'PF_VF_3'
+  coil( 3)%coil_type = 'axisym_thick'
+  coil( 3)%resist    = 1.d0
+  coil( 3)%nturns    = 1.d0
+  coil( 3)%ntorpts   = 60 
+  coil( 3)%R         = 7.d0
+  coil( 3)%Z         =-3.d0
+  coil( 3)%dR        = 0.01d0
+  coil( 3)%dZ        = 0.01d0
+  coil( 3)%nbands_R  = 1
+  coil( 3)%nbands_Z  = 1
+  
+  coil( 4)%name      = 'PF_VF_4'
+  coil( 4)%coil_type = 'axisym_thick'
+  coil( 4)%resist    = 1.d0
+  coil( 4)%nturns    = 1.d0
+  coil( 4)%ntorpts   = 60 
+  coil( 4)%R         = 14.d0
+  coil( 4)%Z         = 3.d0
+  coil( 4)%dR        = 0.01d0
+  coil( 4)%dZ        = 0.01d0
+  coil( 4)%nbands_R  = 1
+  coil( 4)%nbands_Z  = 1
+
+  coil( 5)%name      = 'PF_VF_5'
+  coil( 5)%coil_type = 'axisym_thick'
+  coil( 5)%resist    = 1.d0
+  coil( 5)%nturns    = 1.d0
+  coil( 5)%ntorpts   = 60 
+  coil( 5)%R         = 14.d0
+  coil( 5)%Z         = 0.d0
+  coil( 5)%dR        = 0.01d0
+  coil( 5)%dZ        = 0.01d0
+  coil( 5)%nbands_R  = 1
+  coil( 5)%nbands_Z  = 1  
+
+  coil( 6)%name      = 'PF_VF_6'
+  coil( 6)%coil_type = 'axisym_thick'
+  coil( 6)%resist    = 1.d0
+  coil( 6)%nturns    = 1.d0
+  coil( 6)%ntorpts   = 60 
+  coil( 6)%R         = 14.d0
+  coil( 6)%Z         =-3.d0
+  coil( 6)%dR        = 0.01d0
+  coil( 6)%dZ        = 0.01d0
+  coil( 6)%nbands_R  = 1
+  coil( 6)%nbands_Z  = 1
+
+/

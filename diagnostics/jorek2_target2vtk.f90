@@ -14,6 +14,7 @@ use diffusivities, only: get_dperp, get_zkperp
 use nodes_elements
 use mod_boundary
 use mod_import_restart
+use mod_interp
 implicit none
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors, my_id
@@ -91,7 +92,7 @@ do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
 enddo
 
-call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
@@ -543,10 +544,12 @@ avg7(:) = avg7(:) / MU_zero / t_norm / float(n_plane) * 1.5
 avg8(:) = avg8(:) / MU_zero / t_norm / float(n_plane) * 1.5
 avg11(:)= avg11(:) / MU_zero / t_norm / float(n_plane)
 
-open(23,file='average_target_profile')
+
 open(22,file='target_profile')
+write(22,'(A132)') "  Length          R               Z               angle           KparT_normal    gam_nVT_normal  density         T              Vpar            nv_normal       gam_nvT"
+
+open(23,file='average_target_profile')
 write(23,'(A132)') '      time         step            Length         R               Z              nTV.n           KparT.n        Kperp.T        nvT_gam'
-write(22,'(A132)') "  Length          R              Z                angle           heat_flux       part_flux       density         T              Vpar"
 
 allocate(tobedone(n_points))
 
@@ -578,7 +581,7 @@ etype = 9  ! for vtk_quad
 
 lf = char(10) ! line feed character
 
-open(unit=ivtk,file='jorek_tmp.vtk',form='binary',convert='BIG_ENDIAN')
+open(unit=ivtk,file='jorek_tmp.vtk',access='stream',form='unformatted',convert='BIG_ENDIAN',status='replace')
 
 buffer = '# vtk DataFile Version 3.0'//lf                                             ; write(ivtk) trim(buffer)
 buffer = 'vtk output'//lf                                                             ; write(ivtk) trim(buffer)

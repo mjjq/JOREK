@@ -10,6 +10,7 @@ program JOREK2_FOUR
   use data_structure
   use mod_boundary
   use mod_log_params
+  use basis_at_gaussian, only: initialise_basis
 
   implicit none
   
@@ -24,7 +25,7 @@ program JOREK2_FOUR
 
   ! ---Field line tracing parameters
   integer                  :: nstpts, nmaxsteps, nsmallsteps, nmaxsteps_corr
-  real                     :: deltaphi, rad_range(2), deltaphi_corr
+  real*8                   :: deltaphi, rad_range(2), deltaphi_corr
   namelist / four_params / nstpts, nmaxsteps, deltaphi, nsmallsteps ,rad_range, nTht
   
   ! --- Initialize mode and mode_type arrays
@@ -36,7 +37,7 @@ program JOREK2_FOUR
   call initialise_parameters(0, "__NO_FILENAME__")                 ! default values and namelist input
   call log_parameters(0)
   call initialise_basis                         ! define the basis functions at the Gaussian points
-  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)   ! read restart file
+  call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)   ! read restart file
 
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 

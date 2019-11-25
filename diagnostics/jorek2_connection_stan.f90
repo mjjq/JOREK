@@ -9,6 +9,7 @@ program jorek2_poincare
   use constants
   use mod_import_restart
   use mod_neighbours
+  use mod_interp
   
   implicit none
   include 'mpif.h'
@@ -92,7 +93,7 @@ program jorek2_poincare
   do i_tor=1, n_tor
     mode(i_tor) = + int(i_tor / 2) * n_period
   enddo
-  call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+  call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
   call initialise_basis 				      ! define the basis functions at the Gaussian points
   
   ! --- Broadcast accross MPIs
@@ -704,9 +705,9 @@ program jorek2_poincare
   ! --- Open file and write headers
   if (my_id .eq. 0) then
 #ifdef IBM_MACHINE
-    open(unit=ivtk,file='connection.vtk',form='unformatted',access='stream')
+    open(unit=ivtk,file='connection.vtk',form='unformatted',access='stream',status='replace')
 #else
-    open(unit=ivtk,file='connection.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+    open(unit=ivtk,file='connection.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN',status='replace')
 #endif
     buffer = '# vtk DataFile Version 3.0'//lf						  ; write(ivtk) trim(buffer)
     buffer = 'vtk output'//lf								  ; write(ivtk) trim(buffer)
@@ -974,6 +975,7 @@ subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t
   use mod_parameters
   use elements_nodes_neighbours
   use phys_module
+  use mod_interp
   
   implicit none
   
@@ -987,7 +989,7 @@ subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t
   
   i_var_psi = 1
   
-  call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+  call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,Z,Z_s,Z_t)
   
   Zjac = (R_s * Z_t - R_t * Z_s)
   
@@ -1051,6 +1053,7 @@ subroutine var_value(i_elm,i_var,s_in,t_in,p_in,value_out)
   use mod_parameters
   use elements_nodes_neighbours
   use phys_module
+  use mod_interp
   
   implicit none
   

@@ -9,14 +9,14 @@
 ! INPUT:
 !
 ! The executable needs the following files:
-!   * jorek_restart.rst (main jorek calculation data)
+!   * jorek_restart.rst|h5 (main jorek calculation data)
 !   * the INPUT file use for the main jorek calculation
 !   * (OPTIONAL) vtk_GaussVortTerms.nml (in this file: if n_plane_local = n_plane -> volume averaged 
 !      calculation, if n_plane_local = 1 -> surface averaged calculation)
 !
 ! EXECUTE:
 !
-! To execute for a single time step (for the current jorek_restart.rst):
+! To execute for a single time step (for the current jorek_restart.rst|h5):
 !   * ./jorek2vtk_GaussVortTerms < INPUT_file
 !
 ! To run for several time steps use the bash script: run_vtk_GaussTerms.sh
@@ -166,7 +166,7 @@ call initialise_parameters(my_id, "__NO_FILENAME__")
 call det_modes()
 
 ! --- Read rst file
-call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 ! --- Define the basis functions at the Gaussian points
 call initialise_basis
@@ -1320,9 +1320,9 @@ lf = char(10) ! line feed character
 
 
 #ifdef IBM_MACHINE
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream')
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',status='replace')
 #else
-open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN')
+open(unit=ivtk,file='jorek_tmp.vtk',form='unformatted',access='stream',convert='BIG_ENDIAN',status='replace')
 #endif
 
 

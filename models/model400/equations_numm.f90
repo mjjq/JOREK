@@ -99,7 +99,7 @@ subroutine ELM_main_rhs_5_numm(rhs,rhs_k)
   ! --- The RHS term (Taylor Galerkin (TG2) stabilisation)	      
   rhs(5)   = rhs(5)										&
              - TG_num5 * tstep * 0.25d0 * R**3 * (r0_x * u0_y - r0_y * u0_x)			&
-                                                  * (v_x  * u0_y - v_y  * u0_x)	* xjac * tstep	&
+                                               * (v_x  * u0_y - v_y  * u0_x)	* xjac * tstep	&
              - TG_num5 * tstep * 0.25d0 / R * vpar0**2						&
                        * (r0_x * ps0_y - r0_y * ps0_x + F0 / R * r0_p)				&
                        * ( v_x * ps0_y -  v_y * ps0_x )				* xjac * tstep
@@ -275,7 +275,7 @@ subroutine ELM_main_lhs_6_numm(amat, amat_k, amat_n, amat_kn)
 
   amat_k(6,1)  = amat_k(6,1)													&
                  + TG_num6 * tstep * 0.25d0 / R * vpar0**2 * Ti0								&
-                	   * (r0_x * psi_y - r0_y * psi_x)									&
+               	   * (r0_x * psi_y - r0_y * psi_x)									&
                 	   * ( F0 / R * v_p)								* xjac * theta * tstep	&
                  + TG_num6 * tstep * 0.25d0 / R * vpar0**2 * r0									&
                 	   * (Ti0_x * psi_y - Ti0_y * psi_x)									&
@@ -423,11 +423,17 @@ subroutine ELM_main_lhs_7_numm(amat, amat_k, amat_n, amat_kn)
   ! --- The RHS term (Taylor Galerkin (TG2) stabilisation)	      
   amat(7,1)    = amat(7,1)														&
                  + TG_NUM7 * tstep * 0.25d0 * r0 * Vpar0**2 * BB2									&
-                 	   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / R								&
+                 	   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / R								&
                  	   * (-(psi_s * v_t	- psi_t * v_s)    /xjac)					* xjac * theta * tstep	&
                  + TG_NUM7 * tstep * 0.25d0 * v  * Vpar0**2 * BB2									&
+                 	   * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / R								&
+                 	   * (-(psi_s * r0_t	- psi_t * r0_s)   /xjac)					* xjac * theta * tstep  & 
+                 + TG_NUM7 * tstep * 0.25d0 * r0 * Vpar0**2 * BB2									&
                  	   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / R								&
-                 	   * (-(psi_s * r0_t	- psi_t * r0_s)   /xjac)					* xjac * theta * tstep 
+                 	   * (-(ps0_s * v_t	- ps0_t * v_s)    /xjac)					* xjac * theta * tstep	&
+                 + TG_NUM7 * tstep * 0.25d0 * v  * Vpar0**2 * BB2									&
+                 	   * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / R								&
+                 	   * (-(ps0_s * r0_t	- ps0_t * r0_s)   /xjac)					* xjac * theta * tstep 
 
   amat(7,5)    = amat(7,5)														&
                  + TG_NUM7 * tstep * 0.25d0 * rho * Vpar0**2 * BB2									&
@@ -496,7 +502,7 @@ end subroutine ELM_main_lhs_7_numm
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
-!------------------------------------------------ Equation 6 (Ti - Ion energy) ------------------------------------------------
+!------------------------------------------------ Equation 8 (Te - Electron energy) ------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
@@ -526,7 +532,7 @@ subroutine ELM_main_rhs_8_numm(rhs,rhs_k)
              	       * (r0_x  * ps0_y - r0_y  * ps0_x + F0 / R * r0_p)				&
              	       * ( v_x  * ps0_y -  v_y  * ps0_x)				* xjac * tstep	&
              - TG_num8 * tstep * 0.25d0 / R * vpar0**2 * r0						&
-             	       * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / R * Te0_p)				&
+            	       * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / R * Te0_p)				&
              	       * (  v_x * ps0_y -   v_y * ps0_x)				* xjac * tstep 
   
   rhs_k(8) = rhs_k(8)											&

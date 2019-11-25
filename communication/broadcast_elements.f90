@@ -7,7 +7,6 @@ use data_structure
 use mpi_mod
 implicit none
 
-type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 type (type_element)      :: anelement
 integer                  :: my_id, ife, ierr, position, bufsize, IDBL_EXT, INT_EXT, ILOG_EXT

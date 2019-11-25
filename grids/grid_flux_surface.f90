@@ -5,6 +5,9 @@ subroutine grid_flux_surface(xpoint,xcase,node_list,element_list,surface_list,n_
 use constants
 use tr_module
 use data_structure
+use mod_neighbours, only: update_neighbours
+use mod_interp
+use phys_module, only: force_central_node
 
 implicit none
 
@@ -97,7 +100,7 @@ RRnew(1:4,1:nrnew*npnew)  = 0.d0
 ZZnew(1:4,1:nrnew*npnew)  = 0.d0
 PSInew(1:4,1:nrnew*npnew) = 0.d0
 
-call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_list)
 call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
 
 !call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
@@ -381,6 +384,14 @@ enddo
 element_list%n_elements = (nrnew-1)*npnew
 node_list%n_nodes       = nrnew*npnew
 
+if ( node_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_flux_surface: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( element_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_flux_surface: hard-coded parameter n_elements_max is too small'
+  stop
+end if
+
 n_node_start    = 0
 n_element_start = 0
 n_index_start   = 0
@@ -433,7 +444,7 @@ do i=1,nrnew
 
     if (.not. refinement) then       ! keep original formulation if not using refinement
    
-      if (i.eq.1) then
+      if ((force_central_node) .and. (i.eq.1)) then
 
         node_list%node(index)%index(1) = 1
 
@@ -554,5 +565,6 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
  enddo
 
 enddo
+call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 return
 end subroutine grid_flux_surface

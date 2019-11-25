@@ -4,6 +4,7 @@ subroutine find_R_surface(node_list,element_list,surface_list,j_surf,R_find,i_el
 !---------------------------------------------------------------------------
 
 use data_structure
+use mod_interp, only: interp_RZ
 
 implicit none
 
@@ -111,7 +112,7 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
 
 enddo
 
-if (i_find .eq. 0) write(*,*) ' WARNING : no R surface found'
+!if (i_find .eq. 0) write(*,*) ' WARNING : no R surface found'
 
 return
 end subroutine find_R_surface

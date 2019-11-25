@@ -35,6 +35,9 @@
 
 
 &PARAMS_WALL
+
+  eta_thin_w = 1.d0
+
   ! Wall grid points in poloidal direction
   nwu        = 5,
   

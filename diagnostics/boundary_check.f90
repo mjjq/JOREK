@@ -2,18 +2,23 @@
 !!
 !! The relative difference is calculated according to:
 !! \f$\frac{\int dA |B_{tan,plasma}-B_{tan,vacuum}|}{\int dA |B_{tan,vacuum}|}\f$.
-subroutine boundary_check()
+subroutine boundary_check(my_id)
   
   use tr_module
   use data_structure,  only: type_bnd_element 
   use phys_module,     only: resistive_wall
   use nodes_elements,  only: node_list, bnd_node_list, element_list, bnd_elm_list
   use vacuum_response
+  use mpi_mod
+  use mod_interp
+  use mod_basisfunctions
   
   implicit none
   
+  integer,                      intent(in)    :: my_id
+
   ! --- Local variables
-  integer, parameter     :: N_POINTS = 11 ! Number of evaluation points per element
+  integer, parameter     :: N_POINTS = 3 ! Number of evaluation points per element
   type(type_bnd_element) :: bndelem_m
   real*8, allocatable    :: B_par(:), B_par_v(:)
   real*8, allocatable    :: val_integral(:), err_integral(:)
@@ -24,32 +29,36 @@ subroutine boundary_check()
   real*8   :: i_size, basfunc_i
   real*8   :: H1(2,2), H1_s(2,2), H1_ss(2,2)
   real*8   :: P, P_s, P_t, P_st, P_ss, P_tt
-  real*8   :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
+  real*8   :: R, R_s, R_t, Z, Z_s, Z_t
   real*8   :: s_pt, t_pt, s_or_t ! s and t values at current point
   real*8   :: xjac               ! 2D Jacobian
   real*8   :: B_pol(2)           ! Poloidal magnetic field
   real*8   :: e_par(2)           ! Vector tangential to interface
   real*8   :: P_R, P_Z           ! dPsi/dR, dPsi/dZ
-  real*8   :: R1, R2, Z1, Z2
+  real*8   :: R1, R2, Z1, Z2, B_par_v_tmp
   logical  :: s_const            ! Is the bound. elem. an s=const side of the 2D element?
+  integer  :: ierr,step          ! variables for parallel version 
   
-  
-  write(*,*) '************************************'
-  write(*,*) '*    check boundary conditions     *'
-  write(*,*) '************************************'
-  
+  if(my_id == 0) then
+    write(*,*) '************************************'
+    write(*,*) '*    check boundary conditions     *'
+    write(*,*) '************************************'
+  endif
+
+  call tr_allocate(val_integral,1,sr%n_tor,"val_integral",CAT_GRID)
+  call tr_allocate(err_integral,1,sr%n_tor,"err_integral",CAT_GRID)
   call tr_allocate(psibnd_vec,1,n_dof_starwall,"psibnd_vec",CAT_GRID)
+  call tr_allocate(psibnd_coils,1,n_dof_starwall,"psibnd_vec",CAT_GRID)
   call tr_allocate(dpsibnd_vec,1,n_dof_starwall,"dpsibnd_vec",CAT_GRID)
   call tr_allocate(B_par,1,sr%n_tor,"B_par",CAT_GRID)
   call tr_allocate(B_par_v,1,sr%n_tor,"B_par_v",CAT_GRID)
-  call tr_allocate(val_integral,1,sr%n_tor,"val_integral",CAT_GRID)
-  call tr_allocate(err_integral,1,sr%n_tor,"err_integral",CAT_GRID)
-
-  ! --- Determine vectors with the Psi and deltaPsi values at the boundary.
-  call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
-
   val_integral(:) = 0.d0
   err_integral(:) = 0.d0
+  B_par(:)        = 0.d0
+  B_par_v(:)      = 0.d0
+  i_resp_0        = 0 
+
+  call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
 
   ! --- For every boundary element, do...
   L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
@@ -66,6 +75,7 @@ subroutine boundary_check()
     ! --- For several points in the boundary element, do...
     L_MP: do m_pt = 1, N_POINTS
 
+      B_par(:)   = 0.d0
       B_par_v(:) = 0.d0
 
       ! --- Determine 1D basis function (and derivatives) at current point
@@ -87,7 +97,7 @@ subroutine boundary_check()
       end select
 
       ! --- Determine coordinate values (plus derivatives)
-      call interp_RZ(node_list, element_list, m_elm, s_pt, t_pt, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
+      call interp_RZ(node_list, element_list, m_elm, s_pt, t_pt, R, R_s, R_t, Z, Z_s, Z_t)
 
       ! --- 2D Jacobian
       xjac = R_s * Z_t - R_t * Z_s
@@ -99,7 +109,19 @@ subroutine boundary_check()
         e_par = (/ R_s, Z_s /) / sqrt( R_s**2 + Z_s**2 ) * (R_s * (R2-R1) + Z_s * (Z2-Z1))/abs(R_s * (R2-R1) + Z_s * (Z2-Z1))
       end if
 
+      step       = sr%a_ye%step ! for distributed matrices
+      B_par_v(:) = 0.d0
+      
       ! --- Select one STARWALL harmonic
+!$omp parallel do                                                                                  &
+!$omp   schedule(dynamic)                                                                          &
+!$omp   default(none)                                                                              &
+!$omp   shared(node_list, element_list, m_elm, s_pt, t_pt, sr, bndelem_m, bnd_node_list, H1,       &
+!$omp     resistive_wall, starwall_equil_coils, my_id, psibnd_vec, psibnd_coils, wall_curr,        &
+!$omp     bext_tan, I_coils, B_par_v, R, R_s, R_t, Z, Z_s, Z_t, &
+!$omp     xjac, e_par, B_par, step)                                                                &
+!$omp   private(l_starwall, i_vertex, i_dof, l_tor, P, P_s, P_t, P_st, P_ss, P_tt, P_R, P_Z, B_pol,&
+!$omp     i_node, i_node_bnd, i_size, i_resp_old, i_resp, i_resp_0, basfunc_i, B_par_v_tmp)
       L_LS: do l_starwall = 1, sr%n_tor
 
         l_tor = sr%i_tor(l_starwall)
@@ -113,7 +135,9 @@ subroutine boundary_check()
         B_pol = (/ P_Z, -P_R /) / R
 
         ! --- Tangential magnetic field B_{||} reconstructed from the plasma
+!$omp critical
         B_par(l_starwall) = - sum( B_pol * e_par )
+!$omp end critical
 
         ! --- Sum over boundary dofs at which response is calculated
         L_IV: do i_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
@@ -130,48 +154,72 @@ subroutine boundary_check()
             i_resp   = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor &
                      + bnd_node_list%bnd_node(i_node_bnd)%n_dof*(l_starwall-1) &
                      + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)-bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
-                     
+                   
             i_resp_0 = response_index_eq(i_node_bnd,i_dof)
-
 
             ! --- Determine basis function
             basfunc_i = H1(i_vertex,i_dof) * i_size
 
             ! --- Determine B_{||,v} as prescribed by the vacuum.
+            B_par_v_tmp = 0.d0
             if ( resistive_wall ) then
               if (  (l_tor == 1) .and. (.not. starwall_equil_coils)  )  then
-                B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i * (     &
-                  + sum( sr%a_ee(i_resp, :) * (psibnd_vec(:) - psibnd_coils(:)))                 &
-                  + sum( sr%a_ey(i_resp, :) * wall_curr(:)  ) - sum( bext_tan(i_resp_0, :) * I_coils(:) )  )
+
+                if (i_resp>=sr%a_ey%ind_start .AND. i_resp<=sr%a_ey%ind_end) then
+                  B_par_v_tmp = basfunc_i * (                                                      &
+                    + sum( sr%a_ee%loc_mat(i_resp-step*my_id,:) * (psibnd_vec(:)-psibnd_coils(:)) )&
+                    + sum( sr%a_ey%loc_mat(i_resp-step*my_id,:) * wall_curr(:) )                   &
+                    - sum( bext_tan(i_resp_0, :) * I_coils(:) ) )
+                end if
+
               else
-                B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i * (     &
-                  + sum( sr%a_ee(i_resp, :) * psibnd_vec(:) )                 &
-                  + sum( sr%a_ey(i_resp, :) * wall_curr(:)  ) )
+
+                if (i_resp>=sr%a_ey%ind_start .AND. i_resp<=sr%a_ey%ind_end) then
+                  B_par_v_tmp = basfunc_i * (                                                      &
+                    + sum( sr%a_ee%loc_mat(i_resp-step*my_id, :) * psibnd_vec(:) )                 &
+                    + sum( sr%a_ey%loc_mat(i_resp-step*my_id, :) * wall_curr(:)  ) )
+                end if
+                 
+
               end if
-            else
+            else ! if ( resistive_wall ) then
+
               if (  (l_tor == 1) .and. (.not. starwall_equil_coils)  )  then
-                B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i         &
-                  * (sum( sr%a_id(i_resp, :) * (psibnd_vec(:) - psibnd_coils(:))) - sum( bext_tan(i_resp_0, :) * I_coils(:) ))
+                
+                if (i_resp>=sr%a_ey%ind_start .AND. i_resp<=sr%a_ey%ind_end) then
+                  B_par_v_tmp = basfunc_i * (                                                      &
+                    sum( sr%a_id%loc_mat(i_resp-my_id*step,:) * (psibnd_vec(:) - psibnd_coils(:)) )&
+                    - sum( bext_tan(i_resp_0, :) * I_coils(:) ) )
+                end if
+
               else
-                B_par_v(l_starwall) = B_par_v(l_starwall) + basfunc_i         &
-                  * sum( sr%a_id(i_resp, :) * psibnd_vec(:) )
+                
+                if (i_resp>=sr%a_ey%ind_start .AND. i_resp<=sr%a_ey%ind_end) then
+                  B_par_v_tmp = basfunc_i *                                                        &
+                    sum( sr%a_id%loc_mat(i_resp-step*my_id, :) * psibnd_vec(:) )
+                end if
+                
               end if
             end if
+            
+!$omp critical
+            B_par_v(l_starwall) = B_par_v(l_starwall) + B_par_v_tmp
+!$omp end critical
 
 !            write(*,'(6i5,8e12.4)') l_starwall,i_vertex,i_dof,i_node,i_node_bnd,i_resp,i_size,basfunc_i
-
           end do L_ID
         end do L_IV
 
       end do L_LS
+!$omp end parallel do
+ 
+      call MPI_AllREDUCE(MPI_IN_PLACE,B_par_v, size(B_par_v), MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD,ierr)
 
       ! --- Debugging output
-      if ( vacuum_debug ) then
+      if ( vacuum_debug .and. (my_id == 0) ) then
         write(88,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par(:)
         write(89,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par_v(:)
       end if
-
-!      write(*,'(20ES15.5)') (m_bndelem-1 + s_or_t)/REAL(bnd_elm_list%n_bnd_elements), B_par(:), B_par_v(:),R,Z,e_par
 
       ! --- Integration of B_par_v values and differences between B_par and B_par_v.
       val_integral(:) = val_integral(:) + abs( B_par_v(:) )
@@ -180,13 +228,13 @@ subroutine boundary_check()
     end do L_MP
 
   end do L_MB
-
-  if ( minval(abs(val_integral)) /= 0.d0 ) then
+  
+  if ( (minval(abs(val_integral)) /= 0.d0) .and. (my_id == 0) ) then
     write(*,'(1x,A,20ES15.5)') 'Relative errors in harmonics:', err_integral(:) / val_integral(:), err_integral(:), val_integral(:)
   end if
 
   ! --- Debugging output
-  if ( vacuum_debug ) then
+  if ( vacuum_debug .and. (my_id == 0) ) then
     write(88,*)
     write(88,*)
     write(89,*)

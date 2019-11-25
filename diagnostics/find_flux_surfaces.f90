@@ -1,13 +1,15 @@
 !> The routine finds fluxsurfaces by finding crossings with the edges of the elements
-subroutine find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+subroutine find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_list)
 
 use constants
 use tr_module 
 use data_structure
+use mod_interp
 
 implicit none
 
 ! --- Routine parameters
+integer,                  intent(in)     :: my_id        !< MPI proc number
 logical,                  intent(in)     :: xpoint
 integer,                  intent(in)     :: xcase
 type (type_node_list)   , intent(in)	 :: node_list
@@ -21,19 +23,18 @@ real*8  :: p1, dp1, dp4, p4, p2, p3, r_psi(4), s_psi(4), tht(4)
 real*8  :: s, s2, s3, r_tmp, s_tmp, psr_tmp, pss_tmp, ttmp, tt
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), r_av, s_av
 
-real*8  :: RRg(4),dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-real*8  :: ZZg(4),dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+real*8  :: RRg(4), ZZg(4)
 integer :: l, i_neigh, Xneigh, icount
-integer :: my_id, i, j, k, ifound, iv, im, is, n1, n2, n3
+integer :: i, j, k, ifound, iv, im, is, n1, n2, n3
 integer :: ifail, itht(4), itmp,i_elm_xpoint(2)
 
-write(*,*) '***********************************'
-write(*,*) '*   find_flux_surfaces            *'
-write(*,*) '***********************************'
+if (my_id == 0) then
+  write(*,*) '***********************************'
+  write(*,*) '*   find_flux_surfaces            *'
+  write(*,*) '***********************************'
+endif
 !write(*,*) ' n_psi : ',surface_list%n_psi
 !write(*,*) ' values : ',surface_list%psi_values(1),surface_list%psi_values(surface_list%n_psi)
-
-my_id = 1 ! Just don't want the printout...
 
 if (allocated(surface_list%flux_surfaces)) then
    call tr_unregister_mem(sizeof(surface_list%flux_surfaces),"surface_list%flux_surfaces")
@@ -50,12 +51,14 @@ do j=1, surface_list%n_psi
   surface_list%flux_surfaces(j)%t        = 0
 enddo
 
-if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+if (xpoint) then
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
-! if we have a symmetric double-null, force the single separatrix
-if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. 1.d-4) then
-  psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
-  psi_xpoint(2) = psi_xpoint(1)
+  ! if we have a symmetric double-null, force the single separatrix
+  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. 1.d-4) then
+    psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
+    psi_xpoint(2) = psi_xpoint(1)
+  endif
 endif
 
 
@@ -182,9 +185,7 @@ do i=1, element_list%n_elements
 	    .or. ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2)) & 
 	    .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1)) ) then
 	    do k=1,4
-	      call interp_RZ(node_list,element_list,i,r_psi(k),s_psi(k),&
-	     		     RRg(k),dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,	    &
-	       		     ZZg(k),dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+	      call interp_RZ(node_list,element_list,i,r_psi(k),s_psi(k),RRg(k),ZZg(k))
 	    enddo
 	  endif
           ! Then, look if the element is above/below or right/left of i_elm_xpoint, 

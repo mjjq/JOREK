@@ -4,7 +4,8 @@ module mod_elt_matrix_fft
 
 contains
 
-subroutine element_matrix_fft(element,nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
+subroutine element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
+  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -23,15 +24,17 @@ implicit none
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
 
-real*8, dimension (:,:), pointer  :: ELM
-real*8, dimension (:)  , pointer  :: RHS
+#define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
+
+real*8, dimension (DIM0,DIM0)  :: ELM
+real*8, dimension (DIM0) :: RHS
 integer, intent(in) :: tid
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
-real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz, source_pellet, source_volume
+real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz, source_pellet, source_volume
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
 real*8     :: Bgrad_rho_rho_n, Bgrad_T_T_n, Bgrad_rho_k_star, Bgrad_T_k_star, ZKpar_T, dZKpar_dT
@@ -77,40 +80,28 @@ integer*8  :: plan
 
 INTEGER    :: FFTW_FORWARD,  FFTW_BACKWARD, FFTW_ESTIMATE
 PARAMETER (FFTW_FORWARD=-1,FFTW_BACKWARD=+1, FFTW_ESTIMATE=64)
-real*8, dimension(:,:,:) , pointer :: ELM_p
-real*8, dimension(:,:,:) , pointer :: ELM_n
-real*8, dimension(:,:,:) , pointer :: ELM_k
-real*8, dimension(:,:,:) , pointer :: ELM_kn
-real*8, dimension(:,:)   , pointer :: RHS_p
-real*8, dimension(:,:)   , pointer :: RHS_k 
+
+#define DIM1 n_plane
+#define DIM2 1:n_vertex_max*n_var*(n_order+1)
+
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_p
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_n
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_k
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_kn
+real*8, dimension(DIM1, DIM2)       :: RHS_p
+real*8, dimension(DIM1, DIM2)       :: RHS_k
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
 real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
 real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t
 real*8, dimension(n_gauss,n_gauss)    :: y_ss, y_st, y_tt
 
-real*8, dimension(:,:,:,:) , pointer :: eq_g, eq_s, eq_t
-real*8, dimension(:,:,:,:) , pointer :: eq_p
-real*8, dimension(:,:,:,:) , pointer :: eq_ss, eq_st, eq_tt   
-real*8, dimension(:,:,:,:) , pointer :: delta_g, delta_s, delta_t
+real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_g, eq_s, eq_t
+real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_p
+real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_ss, eq_st, eq_tt
+real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: delta_g, delta_s, delta_t
 
-eq_g    => thread_struct(tid)%eq_g   
-eq_s    => thread_struct(tid)%eq_s   
-eq_t    => thread_struct(tid)%eq_t   
-eq_p    => thread_struct(tid)%eq_p   
-eq_ss   => thread_struct(tid)%eq_ss  
-eq_st   => thread_struct(tid)%eq_st  
-eq_tt   => thread_struct(tid)%eq_tt  
-delta_g => thread_struct(tid)%delta_g
-delta_s => thread_struct(tid)%delta_s
-delta_t => thread_struct(tid)%delta_t
 
-ELM_p  => thread_struct(tid)%ELM_p 
-ELM_n  => thread_struct(tid)%ELM_n 
-ELM_k  => thread_struct(tid)%ELM_k
-ELM_kn => thread_struct(tid)%ELM_kn
-RHS_p  => thread_struct(tid)%RHS_p 
-RHS_k  => thread_struct(tid)%RHS_k 
 
 ELM_p = 0.d0
 ELM_n = 0.d0
@@ -197,7 +188,8 @@ enddo
 do ms=1, n_gauss
   do mt=1, n_gauss
 
-    call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+    if (keep_current_prof) &
+      call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
     call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
 
     call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &

@@ -1,0 +1,17 @@
+
+ &in1
+
+ tstep_n = 2.0d1
+ nstep_n = 1
+
+ R_geo   = 11.
+ Z_geo   = 0.
+ amin    = 4.2426 ! 3*sqrt(2)
+
+ n_radial = 20
+ n_pol    = 20 
+
+ mf = 0
+ ellip = 1.
+
+ &end

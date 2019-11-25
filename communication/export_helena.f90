@@ -6,6 +6,7 @@ use tr_module
 use mod_parameters
 use data_structure
 use phys_module
+use mod_interp
 
 implicit none
 
@@ -22,7 +23,6 @@ real*8 :: psi_lim,R_lim,Z_lim
 real*8 :: psi_bnd, Rmin, Rmax, rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2 
 real*8 :: t, ri, dri, si, dsi, rplot_tmp, zplot_tmp, s_value
 real*8 :: aminor, Rgeo, Bgeo, current,beta_p,beta_t,beta_n, dp_int, zjz_int, sum_dl, q, dl, dp_dpsi
-real*8 :: dummy1, dummy2, dummy3, dummy4, dummy5, dummy6, dummy7, dummy8, dummy9, dummy10
 real*8 :: PSgi,dPSgi_dr,dPSgi_ds,dPSgi_drs,dPSgi_drr,dPSgi_dss
 real*8 :: R0gi,dR0gi_dr,dR0gi_ds,dR0gi_drs,dR0gi_drr,dR0gi_dss
 real*8 :: T0gi,dT0gi_dr,dT0gi_ds,dT0gi_drs,dT0gi_drr,dT0gi_dss
@@ -99,7 +99,7 @@ else
   surface_list%psi_values(3) =  psi_axis + 0.999 * (psi_bnd - psi_axis)
 endif
 
-call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_list)
 
 nplot = 3
 
@@ -143,8 +143,7 @@ do k=1,surface_list%flux_surfaces(j)%n_pieces
     call CUB1D(rr1, drr1, rr2, drr2, t, ri, dri)
     call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
 
-    call interp_RZ(node_list,element_list,i_elm,ri,si,rplot_tmp,dummy1,dummy2,dummy3,dummy4,dummy5, &
-                                                        zplot_tmp,dummy6,dummy7,dummy8,dummy9,dummy10)
+    call interp_RZ(node_list,element_list,i_elm,ri,si,rplot_tmp,zplot_tmp)
 
     if ( (zplot_tmp .ge. Z_xpoint(1)) .and. ((zplot_tmp .le. Z_xpoint(2)) ) ) then
       Rmin = min(rplot_tmp,Rmin)
@@ -178,7 +177,7 @@ write(*,'(A,f8.5,A)') ' amin : ',aminor,' m'
 write(*,'(A,f8.5,A)') ' Rgeo : ',Rgeo,' m'
 write(*,'(A,f8.5,A)') ' Bgeo : ',Bgeo,' T'
 
-call Integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_xpoint, psi_lim, aminor, &
+call Integrals(node_list, element_list, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_xpoint, psi_bnd, aminor, &
   Bgeo, current, beta_p, beta_t, beta_n, density, density_in, density_out, pressure, pressure_in,  &
   pressure_out, heat_src_in, heat_src_out, part_src_in, part_src_out)
   
@@ -196,7 +195,7 @@ do i=1,n_flux
   surface_list%psi_values(i) =  psi_axis + s_value**2 * (psi_bnd - psi_axis)
 enddo
 
-call find_flux_surfaces(xpoint,xcase,node_list,element_list,surface_list)
+call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_list)
 
 write(11,*) n_flux-1
 
@@ -247,8 +246,12 @@ do i=2, surface_list%n_psi
       ! --- Make sure that for flux surfaces at Psi_N < 1, the surface integral is carried out only
       !     over the flux surface segments of the plasma region.
       !     I.e., ignore flux surface segments in the private flux region below the x-point.
-      if ( xpoint .and. ((PSgi-psi_axis)/(psi_xpoint(1)-psi_axis) < 1.d0) .and. (ZZgi < z_xpoint(1)) .and. (xcase .ne. 2)) cycle
-      if ( xpoint .and. ((PSgi-psi_axis)/(psi_xpoint(2)-psi_axis) < 1.d0) .and. (ZZgi > z_xpoint(2)) .and. (xcase .ne. 1)) cycle
+      if (xcase .ne. 2) then 
+        if ( xpoint .and. ((PSgi-psi_axis)/(psi_xpoint(1)-psi_axis) < 1.d0) .and. (ZZgi < z_xpoint(1))) cycle
+      endif
+      if (xcase .ne. 1) then
+        if ( xpoint .and. ((PSgi-psi_axis)/(psi_xpoint(2)-psi_axis) < 1.d0) .and. (ZZgi > z_xpoint(2))) cycle
+      endif
 
       dRRgi_dt = dRRgi_dr * dri + dRRgi_ds * dsi
       dZZgi_dt = dZZgi_dr * dri + dZZgi_ds * dsi
@@ -282,6 +285,11 @@ do i=2, surface_list%n_psi
 
   enddo
 
+  if ( sum_dl == 0.d0 ) then
+    sum_dl = 1.d99
+    write(*,*) 'WARNING: Something went wrong in export_helena. sum_dl==0.'
+  end if
+  
   write(11,'(8e16.8)') surface_list%psi_values(i),dp_int/sum_dl,zjz_int/sum_dl,F0 * q / (2.d0 * PI)
 
 enddo

@@ -7,6 +7,7 @@ subroutine define_final_grid(node_list, element_list, flux_list, &
 use tr_module 
 use data_structure
 use grid_xpoint_data
+use mod_interp
 
 implicit none
 
@@ -664,6 +665,10 @@ do i=1,n_flux
 enddo
 newelement_list%n_elements = index
 
+if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in define_final_grid: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 !-------------------------------- The open (or sandwich) region (between the two separatrices)
 if (xcase .eq. 1) then
@@ -752,6 +757,10 @@ if (psi_xpoint(1) .ne. psi_xpoint(2)) then ! ignore if symmetric double-null
 endif
 newelement_list%n_elements = index
 
+if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in define_final_grid: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 !-------------------------------- The outer region
 if (xcase .eq. 3) then
@@ -803,6 +812,10 @@ if (xcase .eq. 3) then
 endif
 newelement_list%n_elements = index
 
+if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in define_final_grid: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 !-------------------------------- The inner region
 if (xcase .eq. 3) then
@@ -854,6 +867,10 @@ if (xcase .eq. 3) then
 endif
 newelement_list%n_elements = index
 
+if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in define_final_grid: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 !-------------------------------- The lower private region
 if (xcase .ne. 2) then
@@ -904,6 +921,10 @@ if (xcase .ne. 2) then
 endif
 newelement_list%n_elements = index
 
+if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in define_final_grid: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 !-------------------------------- The upper private region
 if (xcase .ne. 1) then
@@ -950,7 +971,10 @@ if (xcase .ne. 1) then
 endif
 newelement_list%n_elements = index
 
-
+if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in define_final_grid: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 
 !-------------------------------------------------------------------------------------------!

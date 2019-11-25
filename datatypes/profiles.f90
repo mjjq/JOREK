@@ -24,14 +24,16 @@ module profiles
   
   !> Interpolate a given profile to a certain position x0.
   real*8 function interpolProf(x, y, len, x0)
-    
-    real, allocatable, intent(in) :: x(:)
-    real, allocatable, intent(in) :: y(:)
-    integer,           intent(in) :: len
-    real,              intent(in) :: x0
+#if _OPENMP >= 201511
+    !$omp declare simd uniform(x,y,len)
+#endif
+    real*8, allocatable, intent(in) :: x(:)
+    real*8, allocatable, intent(in) :: y(:)
+    integer,             intent(in) :: len
+    real*8,              intent(in) :: x0
     
     integer :: left, mid, right
-    real    :: aux1, aux2
+    real*8  :: aux1, aux2
     
     left  = 1
     right = len
@@ -55,7 +57,7 @@ module profiles
   !> Construct a profile.
   recursive subroutine constructProf(x, y, len)
 
-    real, allocatable, intent(inout) :: x(:), y(:)
+    real*8, allocatable, intent(inout) :: x(:), y(:)
     integer,           intent(inout) :: len
     
     call destructProf(x, y, len)
@@ -71,13 +73,13 @@ module profiles
   !> Change the size of a profile.
   recursive subroutine resizeProf(x, y, len, newLen, keep)
 
-    real, allocatable, intent(inout) :: x(:), y(:)
+    real*8, allocatable, intent(inout) :: x(:), y(:)
     integer,           intent(inout) :: len
     integer,           intent(in)    :: newLen
     logical,           intent(in)    :: keep !< Keep the data in the x and y arrays?
     
-    real, ALLOCATABLE            :: px(:) ! copy of x (in case keep=.TRUE.)
-    real, ALLOCATABLE            :: py(:) ! copy of y (in case keep=.TRUE.)
+    real*8, ALLOCATABLE            :: px(:) ! copy of x (in case keep=.TRUE.)
+    real*8, ALLOCATABLE            :: py(:) ! copy of y (in case keep=.TRUE.)
     
     ! --- Recursive call with newLen=1 if newLen < 1.
     if ( newLen < 1 ) then
@@ -123,7 +125,7 @@ module profiles
   !> Destroy a profile.
   recursive subroutine destructProf(x, y, len)
 
-    real, allocatable, intent(inout) :: x(:), y(:)
+    real*8, allocatable, intent(inout) :: x(:), y(:)
     integer,           intent(inout) :: len
     
     if ( allocated(x) ) call tr_deallocate(x,"x",CAT_GRID)
@@ -137,13 +139,13 @@ module profiles
   !> Read a profile from a file.
   recursive subroutine readProf(x, y, len, file)
     
-    real, allocatable, intent(inout) :: x(:), y(:)
-    integer,           intent(inout) :: len
-    CHARACTER(LEN=*),  intent(in)    :: file    !< Filename.
+    real*8, allocatable, intent(inout) :: x(:), y(:)
+    integer,           intent(inout)   :: len
+    CHARACTER(LEN=*),  intent(in)      :: file    !< Filename.
     
     integer :: err
     integer :: usedLen
-    real    :: xx, yy
+    real*8  :: xx, yy
     
     call destructProf(x, y, len)
     
@@ -188,7 +190,7 @@ module profiles
   !> Write a profile to a file.
   recursive subroutine writProf(x, y, len, file)
     
-    real, allocatable, intent(in)    :: x(:), y(:)
+    real*8, allocatable, intent(in)    :: x(:), y(:)
     integer,           intent(in)    :: len
     CHARACTER(LEN=*),  intent(in)    :: file    !< Filename.
     
@@ -217,14 +219,14 @@ module profiles
   !> Determine the derivative of a profile.
   recursive subroutine derivProf(x, y, len, yd)
   
-    real, allocatable, intent(in)    :: x(:), y(:)
-    real, allocatable, intent(inout) :: yd(:)
+    real*8, allocatable, intent(in)    :: x(:), y(:)
+    real*8, allocatable, intent(inout) :: yd(:)
     integer,           intent(inout) :: len
     
     integer :: i       ! Point index of profile.
-    real    :: d(-2:4) ! Distances between points.
-    real    :: f(-2:4) ! Function values.
-    real    :: c(-2:4) ! Coefficients for function values.
+    real*8  :: d(-2:4) ! Distances between points.
+    real*8  :: f(-2:4) ! Function values.
+    real*8  :: c(-2:4) ! Coefficients for function values.
     
     ! The derivatives will be determined at the same x-positions as the profile.
     if ( allocated(yd) ) call tr_deallocate(yd,"yd",CAT_GRID)
@@ -281,8 +283,8 @@ module profiles
   ! Construct a profile.
   recursive subroutine constructProfNeo(x1, x2, x3, len)
 
-    real, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
-    integer,           intent(inout) :: len
+    real*8, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
+    integer,             intent(inout) :: len
     
     call destructProfNeo(x1, x2, x3, len)
     
@@ -297,14 +299,14 @@ module profiles
   ! Change the size of a profile.
   recursive subroutine resizeProfNeo(x1, x2, x3, len, newLen, keep)
 
-    real, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
-    integer,           intent(inout) :: len
-    integer,           intent(in)    :: newLen
-    logical,           intent(in)    :: keep !< Keep the data in the x1, x2, x3 arrays?
+    real*8, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
+    integer,           intent(inout)   :: len
+    integer,           intent(in)      :: newLen
+    logical,           intent(in)      :: keep !< Keep the data in the x1, x2, x3 arrays?
     
-    real, ALLOCATABLE            :: px1(:) ! copy of x1 (in case keep=.TRUE.)
-    real, ALLOCATABLE            :: px2(:) ! copy of x2 (in case keep=.TRUE.)
-    real, ALLOCATABLE            :: px3(:) ! copy of x3 (in case keep=.TRUE.)
+    real*8, ALLOCATABLE          :: px1(:) ! copy of x1 (in case keep=.TRUE.)
+    real*8, ALLOCATABLE          :: px2(:) ! copy of x2 (in case keep=.TRUE.)
+    real*8, ALLOCATABLE          :: px3(:) ! copy of x3 (in case keep=.TRUE.)
     
     ! --- Recursive call with newLen=1 if newLen < 1.
     if ( newLen < 1 ) then
@@ -359,7 +361,7 @@ module profiles
   ! Destroy a profile.
   recursive subroutine destructProfNeo(x1, x2, x3, len)
 
-    real, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
+    real*8, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
     integer,           intent(inout) :: len
     
     if ( allocated(x1) ) call tr_deallocate(x1,"x1",CAT_GRID)
@@ -373,13 +375,13 @@ module profiles
   ! Read a profile from a file.
   recursive subroutine readProfNeo(x1, x2, x3, len, file)
     
-    real, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
-    integer,           intent(inout) :: len
-    CHARACTER(LEN=*),  intent(in)    :: file    ! Filename.
+    real*8, allocatable, intent(inout) :: x1(:), x2(:), x3(:)
+    integer,           intent(inout)   :: len
+    CHARACTER(LEN=*),  intent(in)      :: file    ! Filename.
     
     integer :: err
     integer :: usedLen
-    real    :: xx1, xx2, xx3
+    real*8  :: xx1, xx2, xx3
 
    
     call destructProfNeo(x1, x2, x3, len)

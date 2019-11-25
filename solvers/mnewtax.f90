@@ -4,26 +4,9 @@ subroutine mnewtax(node_list,element_list,i_elm, r, s, errx, errf, ifail)
 ! LU decomposition replaced by explicit solution of 2x2 matrix.
 !-------------------------------------------------------------------------
 use data_structure
+use mod_interp, only: interp
 implicit none
 
-interface
-  subroutine interp(node_list,element_list,i_elm,i_var,i_harm,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
-    use data_structure
-    type (type_node_list),    intent(in)  :: node_list
-    type (type_element_list), intent(in)  :: element_list
-    integer,                  intent(in)  :: i_elm
-    integer,                  intent(in)  :: i_var
-    integer,                  intent(in)  :: i_harm
-    real*8,                   intent(in)  :: s
-    real*8,                   intent(in)  :: t
-    real*8,                   intent(out) :: P
-    real*8,                   intent(out) :: P_s
-    real*8,                   intent(out) :: P_t
-    real*8,                   intent(out) :: P_st
-    real*8,                   intent(out) :: P_ss
-    real*8,                   intent(out) :: P_tt
-  end subroutine interp
-end interface
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 
@@ -74,12 +57,12 @@ do k=1,ntrial
 
   errx=abs(p(1)) + abs(p(2))
 
-  p = min(p,+0.5d0)
-  p = max(p,-0.5d0)
+  p = min(p,+0.25d0)
+  p = max(p,-0.25d0)
 
   x = x + p
 
-  x = max(x,-1.d0)
+  x = max(x, 0.d0)
   x = min(x,+1.d0)
 
   if (errx .le. tolx) then

@@ -6,6 +6,7 @@ subroutine create_new_node(node_list, element_list, newnode_list, index, i2, j2,
 use tr_module 
 use data_structure
 use grid_xpoint_data
+use mod_interp
 
 implicit none
 

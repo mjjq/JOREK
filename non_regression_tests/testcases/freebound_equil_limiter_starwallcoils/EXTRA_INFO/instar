@@ -28,7 +28,7 @@
   iwall      = 1,
   
   ! Description of poloidal field coils
-  polcoil_file = 'polcoils_limiter.nml'
+  pol_coil_file = 'polcoils_limiter.nml'
 /
 
 

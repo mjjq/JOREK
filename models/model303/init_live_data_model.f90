@@ -1,4 +1,4 @@
-!> Model-specific part of the routine init_live_data in ommunication/mod_live_data.f90
+!> Model-specific part of the routine init_live_data in communication/mod_live_data.f90
 !!
 !! Writes all input profiles to 'macroscopic_vars.dat'.
 subroutine init_live_data_model(file_handle)
@@ -16,7 +16,11 @@ subroutine init_live_data_model(file_handle)
   
   write(file_handle,'(A,I5)') '@n_input_profiles: ', 10
   write(file_handle,'(A)') '@input_profiles_xlabel: Psi_{normalized}'
+  write(file_handle,'(A)') '@input_profiles_xlabel_si: Psi_{normalized}'
   write(file_handle,'(A)') '@input_profiles_ylabel: input profiles'
+  write(file_handle,'(A)') '@input_profiles_ylabel_si: input profiles'
+  write(file_handle,'(A,5ES17.9)') '@input_profiles_x2si: ', 1.0
+  write(file_handle,'(A,5ES17.9)') '@input_profiles_y2si: ', 1.0
   write(file_handle,'(A)') '@input_profiles_logy: 0'
   write(file_handle,'(A)') '@input_profiles: %"psin"       "FF''"    "dFF''/dpsin"'             // &
     '    "rho"    "drho/dpsin"   "T"      "dT/dpsin"    "S_rho"     "S_T"        "D_perp"'      // &
@@ -33,7 +37,7 @@ subroutine init_live_data_model(file_handle)
     d_perp  = get_dperp (psin)
     zk_perp = get_zkperp(psin)
     
-    write(file_handle,'(a,20es12.4)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens, dn_dpsi,    &
+    write(file_handle,'(a,20es13.4e3)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens, dn_dpsi,    &
       temp, dT_dpsi, S_rho, S_T, d_perp, zk_perp
     
   end do

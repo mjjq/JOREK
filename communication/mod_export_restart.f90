@@ -15,7 +15,7 @@ subroutine export_restart(node_list,element_list,filename)
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
-  character*(*)          , intent(in) :: filename
+  character(len=*)       , intent(in) :: filename
 
   character*17 :: fileout
 
@@ -41,6 +41,9 @@ subroutine export_binary_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_neutral_source
+#endif
   use vacuum, only: export_restart_vacuum
 
   implicit none
@@ -50,11 +53,19 @@ subroutine export_binary_restart(node_list,element_list,filename)
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
   type(type_element_list), intent(in) :: element_list
-  character*(*),           intent(in) :: filename
+  character(len=*),        intent(in) :: filename
 
   ! --- Local variables
   integer :: i
   character*50 :: version_control
+  real*8, allocatable :: spi_R_arr (:)
+  real*8, allocatable :: spi_Z_arr (:)
+  real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_Vel_R_arr (:)
+  real*8, allocatable :: spi_Vel_Z_arr (:)
+  real*8, allocatable :: spi_Vel_RxZ_arr (:)
+  real*8, allocatable :: spi_radius_arr (:)
+  real*8, allocatable :: spi_abl_arr (:)
 
   ! -> Write binary restart file
   open(21, file=filename, form='unformatted', status='replace', action='write')
@@ -87,12 +98,6 @@ subroutine export_binary_restart(node_list,element_list,filename)
   write(21) index_now
   write(21) t_now
 
-#ifdef USE_HDF5
-  if (rst_format > 1 ) then
-    write(21) h5_nbsave_all
-  end if
-#endif
-
   if (index_now .gt. 0) then
      write(21) xtime(1:index_now)
      write(21) energies(:,:,1:index_now)
@@ -118,6 +123,60 @@ subroutine export_binary_restart(node_list,element_list,filename)
      write(21) pellet_particles, pellet_R, pellet_Z
   endif
 
+
+  ! Dynamically allocate memeries for temporary arrays in order to export
+  if (using_spi .and. n_spi >= 1) then
+
+    if (index_now .gt. 0) then
+      write(21) xtime_spi_ablation(:,1:index_now)
+      write(21) xtime_spi_ablation_rate(:,1:index_now)
+    endif
+
+    write(21) n_spi
+
+    allocate (spi_R_arr(n_spi))  
+    allocate (spi_Z_arr(n_spi))     
+    allocate (spi_phi_arr(n_spi)) 
+    allocate (spi_Vel_R_arr(n_spi)) 
+    allocate (spi_Vel_Z_arr(n_spi)) 
+    allocate (spi_Vel_RxZ_arr(n_spi)) 
+    allocate (spi_radius_arr(n_spi)) 
+    allocate (spi_abl_arr(n_spi))
+
+    do i=1, n_spi
+      spi_R_arr(i)       = pellets(i)%spi_R
+      spi_Z_arr(i)       = pellets(i)%spi_Z
+      spi_phi_arr(i)     = pellets(i)%spi_phi
+      spi_Vel_R_arr(i)   = pellets(i)%spi_Vel_R
+      spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
+      spi_Vel_RxZ_arr(i) = pellets(i)%spi_Vel_RxZ
+      spi_radius_arr(i)  = pellets(i)%spi_radius
+      spi_abl_arr(i)     = pellets(i)%spi_abl
+    end do
+
+    write(21) spi_R_arr(1:n_spi)
+    write(21) spi_Z_arr(1:n_spi)
+    write(21) spi_phi_arr(1:n_spi)
+    write(21) spi_Vel_R_arr(1:n_spi)
+    write(21) spi_Vel_Z_arr(1:n_spi)
+    write(21) spi_Vel_RxZ_arr(1:n_spi)
+    write(21) spi_radius_arr(1:n_spi)
+    write(21) spi_abl_arr(1:n_spi)
+
+    deallocate (spi_R_arr)
+    deallocate (spi_Z_arr)
+    deallocate (spi_phi_arr)
+    deallocate (spi_Vel_R_arr)
+    deallocate (spi_Vel_Z_arr)
+    deallocate (spi_Vel_RxZ_arr)
+    deallocate (spi_radius_arr)
+    deallocate (spi_abl_arr)
+
+    if (spi_tor_rot) then
+      write(21) ns_phi_rotate
+    end if
+
+  end if
    
   ! save Revision control
   write(version_control,'(A)') trim(adjustl(RCS_VERSION))
@@ -152,6 +211,9 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_neutral_source
+#endif
   use vacuum, only : export_HDF5_restart_vacuum
   
 #ifdef USE_HDF5
@@ -172,7 +234,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   ! --- Local variables
   integer :: i
-  character*50             :: version_control
+  character(len=50)        :: version_control
 
 #ifdef USE_HDF5
   integer(HID_T)     :: file_id
@@ -204,6 +266,16 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   integer,     allocatable :: t_sons(:,:)                  ! 4
   integer,     allocatable :: t_contain_node(:,:)          ! 5
   integer,     allocatable :: t_nref(:)
+
+  ! local variables
+  real*8, allocatable :: spi_R_arr (:)
+  real*8, allocatable :: spi_Z_arr (:)
+  real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_Vel_R_arr (:)
+  real*8, allocatable :: spi_Vel_Z_arr (:)
+  real*8, allocatable :: spi_Vel_RxZ_arr (:)
+  real*8, allocatable :: spi_radius_arr (:)
+  real*8, allocatable :: spi_abl_arr (:)
 
   ! index_now+nstep
   real(RKIND), allocatable :: t_xtime(:)                   ! nstep
@@ -243,18 +315,14 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call tr_allocate(t_constrained,1,node_list%n_nodes,"constrained",CAT_UNKNOWN)
 
   ! element_list%n_elements
-  call tr_allocate(t_vertex,1,element_list%n_elements,1,n_vertex_max, &
-       "vertex",CAT_UNKNOWN)
-  call tr_allocate(t_neighbours,1,element_list%n_elements,1,n_vertex_max, &
-       "neighbours",CAT_UNKNOWN)
-  call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_order+1, &
-       "size",CAT_UNKNOWN)
+  call tr_allocate(t_vertex,1,element_list%n_elements,1,n_vertex_max,"vertex",CAT_UNKNOWN)
+  call tr_allocate(t_neighbours,1,element_list%n_elements,1,n_vertex_max,"neighbours",CAT_UNKNOWN)
+  call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_order+1,"size",CAT_UNKNOWN)
   call tr_allocate(t_father,1,element_list%n_elements,"father",CAT_UNKNOWN)
   call tr_allocate(t_n_sons,1,element_list%n_elements,"n_sons",CAT_UNKNOWN)
   call tr_allocate(t_n_gen,1,element_list%n_elements,"n_gen",CAT_UNKNOWN)
   call tr_allocate(t_sons,1,element_list%n_elements,1,4,"sons",CAT_UNKNOWN)
-  call tr_allocate(t_contain_node,1,element_list%n_elements,1,5, &
-       "contain_node",CAT_UNKNOWN)
+  call tr_allocate(t_contain_node,1,element_list%n_elements,1,5,"contain_node",CAT_UNKNOWN)
   call tr_allocate(t_nref,1,element_list%n_elements,"nref",CAT_UNKNOWN)
 
   ! index_now+nstep
@@ -264,29 +332,25 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
      t_xtime(:) = xtime(1:index_now)
 
      if (allocated(t_energies)) call tr_deallocate(t_energies,"energies",CAT_UNKNOWN)
-     call tr_allocate(t_energies,1,n_tor,1,2,1,index_now, &
-          "energies",CAT_UNKNOWN)
+     call tr_allocate(t_energies,1,n_tor,1,2,1,index_now,"energies",CAT_UNKNOWN)
      t_energies(:,:,:) = energies(:,:,1:index_now)
-#ifdef JECCD                   
-     if (allocated(t_energies2)) call tr_deallocate(t_energies2,"energies2",CAT_UNKNOWN)     
-     call tr_allocate(t_energies2,1,n_tor,1,2,1,index_now, &
-          "energies2",CAT_UNKNOWN)
+#ifdef JECCD
+     if (allocated(t_energies2)) call tr_deallocate(t_energies2,"energies2",CAT_UNKNOWN)
+     call tr_allocate(t_energies2,1,n_tor,1,2,1,index_now,"energies2",CAT_UNKNOWN)
      t_energies2(:,:,:) = t_energies2(:,:,1:index_now)
 
      if (allocated(t_energies3)) call tr_deallocate(t_energies3,"energies3",CAT_UNKNOWN)
-     call tr_allocate(t_energies3,1,n_tor,1,2,1,index_now, &
-          "energies3",CAT_UNKNOWN)
+     call tr_allocate(t_energies3,1,n_tor,1,2,1,index_now, "energies3",CAT_UNKNOWN)
      t_energies3(:,:,:) = t_energies3(:,:,1:index_now)
 
 #ifdef JEC2DIAG
      if (allocated(t_energies4)) call tr_deallocate(t_energies4,"energies4",CAT_UNKNOWN)
-     call tr_allocate(t_energies4,1,n_tor,1,2,1,index_now, &
-          "energies4",CAT_UNKNOWN)
+     call tr_allocate(t_energies4,1,n_tor,1,2,1,index_now, "energies4",CAT_UNKNOWN)
      t_energies4(:,:,:) = t_energies4(:,:,1:index_now)
 #endif
 #endif
 
-end if
+  end if
 
   !
   do i=1,node_list%n_nodes
@@ -334,27 +398,37 @@ end if
           ' ==> error for opening of HDF5 file',filename
   end if
   
+  ! Store the hdf5 restart file version
+  write(*,*) 'Exporting HDF5 restart file with rst_hdf5_version=', rst_hdf5_version
+  if ( rst_hdf5_version > rst_hdf5_version_supported ) then
+    write(*,*) 'ERROR: Cannot write HDF5 restart file with rst_hdf5_version=', rst_hdf5_version
+    write(*,*) '  This code version supports rst_hdf5_version_supported=', rst_hdf5_version_supported
+    write(*,*) '  Please select an appropriate value in the namelist or use the default value.'
+    stop
+  end if
+  call HDF5_integer_saving(file_id,rst_hdf5_version,'rst_hdf5_version'//char(0)) 
+
   ! -> Save version of revision control system
   write(version_control,'(A)') trim(adjustl(RCS_VERSION))
   version_control = trim(adjustl(version_control))
   call HDF5_char_saving(file_id,version_control,"RCS_version"//char(0))
 
   ! -> Save parameters
-  call HDF5_integer_saving(file_id,jorek_model,'jorek_model'//char(0)) 
-  call HDF5_integer_saving(file_id,n_var,'n_var'//char(0)) 
-  call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0)) 
-  call HDF5_integer_saving(file_id,n_order,'n_order'//char(0)) 
-  call HDF5_integer_saving(file_id,n_tor,'n_tor'//char(0)) 
-  call HDF5_integer_saving(file_id,n_period,'n_period'//char(0)) 
-  call HDF5_integer_saving(file_id,n_plane,'n_plane'//char(0)) 
-  call HDF5_integer_saving(file_id,n_vertex_max,'n_vertex_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_nodes_max,'n_nodes_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_elements_max,'n_elements_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_boundary_max,'n_boundary_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_pieces_max,'n_pieces_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_degrees,'n_degrees'//char(0)) 
-  call HDF5_integer_saving(file_id,nref_max,'nref_max'//char(0)) 
-  call HDF5_integer_saving(file_id,n_ref_list,'n_ref_list'//char(0)) 
+  call HDF5_integer_saving(file_id,jorek_model,'jorek_model'//char(0))
+  call HDF5_integer_saving(file_id,n_var,'n_var'//char(0))
+  call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0))
+  call HDF5_integer_saving(file_id,n_order,'n_order'//char(0))
+  call HDF5_integer_saving(file_id,n_tor,'n_tor'//char(0))
+  call HDF5_integer_saving(file_id,n_period,'n_period'//char(0))
+  call HDF5_integer_saving(file_id,n_plane,'n_plane'//char(0))
+  call HDF5_integer_saving(file_id,n_vertex_max,'n_vertex_max'//char(0))
+  call HDF5_integer_saving(file_id,n_nodes_max,'n_nodes_max'//char(0))
+  call HDF5_integer_saving(file_id,n_elements_max,'n_elements_max'//char(0))
+  call HDF5_integer_saving(file_id,n_boundary_max,'n_boundary_max'//char(0))
+  call HDF5_integer_saving(file_id,n_pieces_max,'n_pieces_max'//char(0))
+  call HDF5_integer_saving(file_id,n_degrees,'n_degrees'//char(0))
+  call HDF5_integer_saving(file_id,nref_max,'nref_max'//char(0))
+  call HDF5_integer_saving(file_id,n_ref_list,'n_ref_list'//char(0))
 
   ! -> 
   call HDF5_integer_saving(file_id,node_list%n_nodes,'n_nodes'//char(0))
@@ -417,7 +491,12 @@ end if
   call HDF5_real_saving(file_id,visco_par,'visco_par'//char(0))
   call HDF5_integer_saving(file_id,index_now,'index_now'//char(0)) 
   call HDF5_real_saving(file_id,t_now,'t_now'//char(0))
-  call HDF5_integer_saving(file_id,h5_nbsave_all,'h5_nbsave_all'//char(0))
+  call HDF5_real_saving(file_id,central_density,'central_density'//char(0))
+  call HDF5_real_saving(file_id,central_mass,'central_mass'//char(0))
+  call HDF5_real_saving(file_id,F0,'F0'//char(0))
+  call HDF5_real_saving(file_id,sqrt_mu0_rho0,'sqrt_mu0_rho0'//char(0))
+  call HDF5_real_saving(file_id,sqrt_mu0_rho0,'t_norm'//char(0))
+  call HDF5_real_saving(file_id,sqrt_mu0_over_rho0,'sqrt_mu0_over_rho0'//char(0))
 
   if (index_now .gt. 0) then
      call HDF5_array1D_saving(file_id,t_xtime,index_now,'xtime'//char(0))
@@ -438,8 +517,37 @@ end if
      call HDF5_array1D_saving(file_id,pressure_out_t(1:index_now),index_now,'pressure_out_t'//char(0))
      call HDF5_array1D_saving(file_id,heat_src_in_t(1:index_now),index_now,'heat_src_in_t'//char(0))
      call HDF5_array1D_saving(file_id,heat_src_out_t(1:index_now),index_now,'heat_src_out_t'//char(0))
+     call HDF5_array1D_saving(file_id,heat_src_tot_t(1:index_now),index_now,'heat_src_tot_t'//char(0))
      call HDF5_array1D_saving(file_id,part_src_in_t(1:index_now),index_now,'part_src_in_t'//char(0))
      call HDF5_array1D_saving(file_id,part_src_out_t(1:index_now),index_now,'part_src_out_t'//char(0))
+     call HDF5_array1D_saving(file_id,part_src_tot_t(1:index_now),index_now,'part_src_tot_t'//char(0))
+
+     call HDF5_array1D_saving(file_id,E_tot_t(1:index_now),index_now,'E_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,helicity_tot_t(1:index_now),index_now,'helicity_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,Ip_tot_t(1:index_now),index_now,'Ip_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,thermal_tot_t(1:index_now),index_now,'thermal_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,kin_par_tot_t(1:index_now),index_now,'kin_par_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,kin_perp_tot_t(1:index_now),index_now,'kin_perp_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,Wmag_tot_t(1:index_now),index_now,'Wmag_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,ohmic_tot_t(1:index_now),index_now,'ohmic_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,Magwork_tot_t(1:index_now),index_now,'Magwork_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,flux_qpar_t(1:index_now),index_now,'flux_qpar_t'//char(0))
+     call HDF5_array1D_saving(file_id,flux_qperp_t(1:index_now),index_now,'flux_qperp_t'//char(0))
+     call HDF5_array1D_saving(file_id,flux_kinpar_t(1:index_now),index_now,'flux_kinpar_t'//char(0))
+     call HDF5_array1D_saving(file_id,flux_pvn_t(1:index_now),index_now,'flux_Pvn_t'//char(0))
+     call HDF5_array1D_saving(file_id,dE_tot_dt(1:index_now),index_now,'dE_tot_dt'//char(0))
+     call HDF5_array1D_saving(file_id,dWmag_tot_dt(1:index_now),index_now,'dWmag_tot_dt'//char(0))
+     call HDF5_array1D_saving(file_id,dthermal_tot_dt(1:index_now),index_now,'dthermal_tot_dt'//char(0))
+     call HDF5_array1D_saving(file_id,dkinpar_tot_dt(1:index_now),index_now,'dkinpar_tot_dt'//char(0))
+     call HDF5_array1D_saving(file_id,dkinperp_tot_dt(1:index_now),index_now,'dkinperp_tot_dt'//char(0))
+     call HDF5_array1D_saving(file_id,thmwork_tot_t(1:index_now),index_now,'thmwork_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,viscopar_dissip_tot_t(1:index_now),index_now,'viscopar_dissip_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,viscopar_flux_t(1:index_now),index_now,'viscopar_flux_t'//char(0))
+     call HDF5_array1D_saving(file_id,li3_t(1:index_now),index_now,'li3_t'//char(0))
+     call HDF5_array1D_saving(file_id,li3_tot_t(1:index_now),index_now,'li3_tot_t'//char(0))
+     call HDF5_array1D_saving(file_id,area_t(1:index_now),index_now,'area_t'//char(0))
+     call HDF5_array1D_saving(file_id,volume_t(1:index_now),index_now,'volume_t'//char(0))
+     call HDF5_array1D_saving(file_id,mag_ener_src_tot(1:index_now),index_now,'mag_ener_src_tot'//char(0))
 
 #ifdef JECCD                   
      call HDF5_array3D_saving(file_id,t_energies2, &
@@ -474,6 +582,72 @@ end if
      call HDF5_real_saving(file_id,pellet_Z,"pellet_Z"//char(0))
   end if
 
+
+  ! Dynamically allocate memeries for temporary arrays in order to export
+  if (using_spi .and. n_spi>=1) then
+    if (index_now .gt. 0) then
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation, &
+             n_spi,index_now,'xtime_spi_ablation'//char(0))
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation_rate, &
+             n_spi,index_now,'xtime_spi_ablation_rate'//char(0))
+    end if
+
+    call HDF5_integer_saving(file_id,n_spi,"n_spi"//char(0))
+
+    allocate (spi_R_arr(n_spi))
+    allocate (spi_Z_arr(n_spi))
+    allocate (spi_phi_arr(n_spi))
+    allocate (spi_Vel_R_arr(n_spi))
+    allocate (spi_Vel_Z_arr(n_spi))
+    allocate (spi_Vel_RxZ_arr(n_spi))
+    allocate (spi_radius_arr(n_spi))
+    allocate (spi_abl_arr(n_spi))
+
+    do i=1, n_spi
+      spi_R_arr(i)       = pellets(i)%spi_R
+      spi_Z_arr(i)       = pellets(i)%spi_Z
+      spi_phi_arr(i)     = pellets(i)%spi_phi
+      spi_Vel_R_arr(i)   = pellets(i)%spi_Vel_R
+      spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
+      spi_Vel_RxZ_arr(i) = pellets(i)%spi_Vel_RxZ
+      spi_radius_arr(i)  = pellets(i)%spi_radius
+      spi_abl_arr(i)     = pellets(i)%spi_abl
+    end do
+
+    call HDF5_array1D_saving(file_id,spi_R_arr, &
+             n_spi,'spi_R_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Z_arr, &
+             n_spi,'spi_Z_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_phi_arr, &
+             n_spi,'spi_phi_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_R_arr, &
+             n_spi,'spi_Vel_R_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_Z_arr, &
+             n_spi,'spi_Vel_Z_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_RxZ_arr, &
+             n_spi,'spi_Vel_RxZ_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_radius_arr, &
+             n_spi,'spi_radius_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_abl_arr, &
+             n_spi,'spi_abl_arr'//char(0))
+
+    deallocate (spi_R_arr)
+    deallocate (spi_Z_arr)
+    deallocate (spi_phi_arr)
+    deallocate (spi_Vel_R_arr)
+    deallocate (spi_Vel_Z_arr)
+    deallocate (spi_Vel_RxZ_arr)
+    deallocate (spi_radius_arr)
+    deallocate (spi_abl_arr)
+
+    if (spi_tor_rot) then
+      call HDF5_real_saving(file_id,ns_phi_rotate,"ns_phi_rotate"//char(0))  
+    end if
+
+  else
+    n_spi = 0
+    call HDF5_integer_saving(file_id,n_spi,"n_spi"//char(0))
+  end if
 
   ! Export restart vacuum 
   call export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)

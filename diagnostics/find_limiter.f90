@@ -10,6 +10,7 @@ use phys_module, only: n_limiter, R_limiter, Z_limiter, FF_0
 use data_structure
 use gauss
 use basis_at_gaussian
+use mod_interp
 
 implicit none
 
@@ -111,14 +112,14 @@ if (FF_0 .gt. 0.d0) then
     RM  =  node_list%node(n1)%x(1,1)	 * bnd_elm_list%bnd_element(i_min)%size(1,1)		  
     RMR =  node_list%node(n1)%x(idir1,1) * bnd_elm_list%bnd_element(i_min)%size(1,2) * 3.d0/2.d0  
     RP  =  node_list%node(n2)%x(1,1)	 * bnd_elm_list%bnd_element(i_min)%size(2,1)		  
-    RPR =  node_list%node(n2)%x(idir2,1) * bnd_elm_list%bnd_element(i_min)%size(2,2) * 3.d0/2.d0 
+    RPR =  - node_list%node(n2)%x(idir2,1) * bnd_elm_list%bnd_element(i_min)%size(2,2) * 3.d0/2.d0 
 
     call CUB1D(RM,RMR,RP,RPR,r_min,R_lim,DUMMY)
 
     ZM  =  node_list%node(n1)%x(1,2)	 * bnd_elm_list%bnd_element(i_min)%size(1,1)		  
     ZMR =  node_list%node(n1)%x(idir1,2) * bnd_elm_list%bnd_element(i_min)%size(1,2) * 3.d0/2.d0  
     ZP  =  node_list%node(n2)%x(1,2)	 * bnd_elm_list%bnd_element(i_min)%size(2,1)		  
-    ZPR =  node_list%node(n2)%x(idir2,2) * bnd_elm_list%bnd_element(i_min)%size(2,2) * 3.d0/2.d0 
+    ZPR =  - node_list%node(n2)%x(idir2,2) * bnd_elm_list%bnd_element(i_min)%size(2,2) * 3.d0/2.d0 
     
     call CUB1D(ZM,ZMR,ZP,ZPR,r_min,Z_lim,DUMMY)
     
@@ -141,14 +142,14 @@ else
     RM  =  node_list%node(n1)%x(1,1)	 * bnd_elm_list%bnd_element(i_max)%size(1,1)		  
     RMR =  node_list%node(n1)%x(idir1,1) * bnd_elm_list%bnd_element(i_max)%size(1,2) * 3.d0/2.d0  
     RP  =  node_list%node(n2)%x(1,1)	 * bnd_elm_list%bnd_element(i_max)%size(2,1)		  
-    RPR =  node_list%node(n2)%x(idir2,1) * bnd_elm_list%bnd_element(i_max)%size(2,2) * 3.d0/2.d0 
+    RPR =  - node_list%node(n2)%x(idir2,1) * bnd_elm_list%bnd_element(i_max)%size(2,2) * 3.d0/2.d0 
 
     call CUB1D(RM,RMR,RP,RPR,r_max,R_lim,DUMMY)
 
     ZM  =  node_list%node(n1)%x(1,2)	 * bnd_elm_list%bnd_element(i_max)%size(1,1)		  
     ZMR =  node_list%node(n1)%x(idir1,2) * bnd_elm_list%bnd_element(i_max)%size(1,2) * 3.d0/2.d0  
     ZP  =  node_list%node(n2)%x(1,2)	 * bnd_elm_list%bnd_element(i_max)%size(2,1)		  
-    ZPR =  node_list%node(n2)%x(idir2,2) * bnd_elm_list%bnd_element(i_max)%size(2,2) * 3.d0/2.d0 
+    ZPR =  - node_list%node(n2)%x(idir2,2) * bnd_elm_list%bnd_element(i_max)%size(2,2) * 3.d0/2.d0 
     
     call CUB1D(ZM,ZMR,ZP,ZPR,r_max,Z_lim,DUMMY)
     

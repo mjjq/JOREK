@@ -5,6 +5,7 @@ subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_el
 use data_structure
 use phys_module
 use mod_poiss
+use mod_interp, only: interp
 implicit none
 
 type (type_node_list)        :: node_list
@@ -52,6 +53,11 @@ if (my_id .eq. 0) then
     endif
     if(xcase2 .eq. 1) Z_xpoint(2) = +99.d0
     if(xcase2 .eq. 2) Z_xpoint(1) = -99.d0
+  endif
+  
+  call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+  if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
+    psi_bnd = min(psi_lim,psi_bnd)
   endif
 
   if(xcase2 .eq. 1) write(*,'(A,3f10.5,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail

@@ -18,7 +18,6 @@ contains
     use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh
     USE data_structure,           only : type_element, type_node, type_node_list, thread_struct
     use mod_boundary_matrix_open, only : boundary_matrix_open
-    use mod_boundary_matrix,      only : boundary_matrix
     use mod_elt_matrix,           only : element_matrix
     use mod_elt_matrix_fft,       only : element_matrix_fft
     use mod_locate_irn_jcn

@@ -148,23 +148,33 @@ if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
                                      + dV_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
                                      + dV_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2) 
    else
-     node_list%node(i)%values(1,1,7) = 2.d0 * PI * R**2 / F0 * Omega
-     node_list%node(i)%values(1,2,7) = 2.d0 * PI / F0 * (  2.d0 * R * node_list%node(i)%x(2,1) * Omega               &
-                                                           + R**2 * dOmega_dpsi  * node_list%node(i)%values(1,2,1)   &
-                                                           + R**2 * dOmega_dz * node_list%node(i)%x(2,2)           ) 
-     node_list%node(i)%values(1,3,7) = 2.d0 * PI / F0 * (  2.d0 * R * node_list%node(i)%x(3,1) * Omega               &
-                                                           + R**2 * dOmega_dpsi  * node_list%node(i)%values(1,3,1)   &
-                                                           + R**2 * dOmega_dz * node_list%node(i)%x(3,2)           )
-     node_list%node(i)%values(1,4,7) = 2.d0 * PI / F0 * (  2.d0 * ( node_list%node(i)%x(2,1) * node_list%node(i)%x(3,1) + R * node_list%node(i)%x(4,1) ) * Omega &
-                                                        + 2.d0 * R * ( dOmega_dpsi * ( node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,1)         &
-                                                                                     + node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,1) )       &
-                                                                      + dOmega_dz  * ( node_list%node(i)%x(2,1) * node_list%node(i)%x(3,2)                &
-                                                                                     + node_list%node(i)%x(2,2) * node_list%node(i)%x(3,1)        )  )    &
-                                                        + R**2 * ( dOmega_dpsi * node_list%node(i)%values(1,4,1) + dOmega_dz * node_list%node(i)%x(4,2) ) &
-                                                        + R**2 * ( dOmega_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)       &
-                                                                 + dOmega_dz2 * node_list%node(i)%x(2,2) * node_list%node(i)%x(3,2)                  )    &
-                                                        + R**2 * ( dOmega_dpsi_dz * ( node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2)          &
-                                                                                    + node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)     )  ) )
+     node_list%node(i)%values(1,1,7) = R**2 * Omega
+     node_list%node(i)%values(1,2,7) = 2.d0 * R * node_list%node(i)%x(2,1) * Omega               &
+                                       + R**2 * dOmega_dpsi  * node_list%node(i)%values(1,2,1)   &
+                                       + R**2 * dOmega_dz    * node_list%node(i)%x(2,2)
+     node_list%node(i)%values(1,3,7) = 2.d0 * R * node_list%node(i)%x(3,1) * Omega               &
+                                       + R**2 * dOmega_dpsi  * node_list%node(i)%values(1,3,1)   &
+                                       + R**2 * dOmega_dz * node_list%node(i)%x(3,2)
+
+     node_list%node(i)%values(1,4,7) =   2.d0 *     node_list%node(i)%x(2,1)**2  * Omega &
+                                       + 2.d0 * R * node_list%node(i)%x(4,1)     * Omega &
+                                       + 2.d0 * R * node_list%node(i)%x(2,1)     * dOmega_dpsi  * node_list%node(i)%values(1,3,1) &
+                                       + 2.d0 * R * node_list%node(i)%x(2,1)     * dOmega_dz * node_list%node(i)%x(3,2) 
+     node_list%node(i)%values(1,4,7) = node_list%node(i)%values(1,4,7) &
+                                       + 2.d0 * R * node_list%node(i)%x(3,1) * dOmega_dpsi  * node_list%node(i)%values(1,2,1)        &
+                                       + R**2 * dOmega_dpsi2   * node_list%node(i)%values(1,3,1) * node_list%node(i)%values(1,2,1)   &
+                                       + R**2 * dOmega_dpsi_dz * node_list%node(i)%x(3,2)        * node_list%node(i)%values(1,2,1)   &
+                                       + R**2 * dOmega_dpsi    * node_list%node(i)%values(1,4,1)
+     node_list%node(i)%values(1,4,7) = node_list%node(i)%values(1,4,7) &
+                                       + 2.d0 * R * node_list%node(i)%x(3,1) * dOmega_dz    * node_list%node(i)%x(2,2)      &
+                                       + R**2 * dOmega_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(3,2) &
+                                       + R**2 * dOmega_dz2     * node_list%node(i)%x(3,2)        * node_list%node(i)%x(3,2) &
+                                       + R**2 * dOmega_dz * node_list%node(i)%x(4,2)
+
+     node_list%node(i)%values(1,1,7) = 2.d0 * PI / F0 * node_list%node(i)%values(1,1,7)
+     node_list%node(i)%values(1,2,7) = 2.d0 * PI / F0 * node_list%node(i)%values(1,2,7)
+     node_list%node(i)%values(1,3,7) = 2.d0 * PI / F0 * node_list%node(i)%values(1,3,7)
+     node_list%node(i)%values(1,4,7) = 2.d0 * PI / F0 * node_list%node(i)%values(1,4,7)
    endif
 endif
 !=================================parallel velocity

@@ -730,7 +730,6 @@ enddo
 !*     define the new nodes and finite elements    (nodes first)       *
 !***********************************************************************
 
-!write(*,*)'before',6
 ! --- Allocate data structures for new nodes and elements and initialize them.
 allocate(newnode_list)
 call tr_register_mem(sizeof(newnode_list),"newnode_list",CAT_GRID)
@@ -763,7 +762,6 @@ do i = 1, n_elements_max
   newelement_list%element(i)%nref         = 0
 end do
 
-!write(*,*)'before',7
 do i=1,n_flux-1                 !------------------------ the closed field lines
   do j=1, n_tht-1
 
@@ -811,7 +809,6 @@ do i=1,n_flux-1                 !------------------------ the closed field lines
 enddo
 newnode_list%n_nodes = node
 
-!write(*,*)'before',8
 !----------------------------------------- add multiple nodes at the x-point
 index_xpoint = newnode_list%n_nodes + 1
 
@@ -871,7 +868,6 @@ newnode_list%n_nodes = newnode_list%n_nodes + n_xpoint
 
 index = newnode_list%n_nodes
 
-!write(*,*)'before',9
 do i=n_flux,n_flux+n_open           !--------------------------- nodes on the open field lines
 
   j_start = 1; j_end = n_tht   ! skip first and last point on separatrix (x-points already added)
@@ -928,7 +924,6 @@ newnode_list%n_nodes = newnode_list%n_nodes + (n_open+1) * n_tht - 2
 
 index = newnode_list%n_nodes
 
-!write(*,*)'before',10
 do j=1, n_leg                         !--------------------------- nodes on right leg
 
   do k=1,n_open+n_private+1           !--------------------------- nodes on right leg

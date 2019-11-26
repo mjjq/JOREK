@@ -29,7 +29,7 @@ type (type_element_list), pointer :: newelement_list
 
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
-real*8              :: s_find(8), t_find(8), st_find(8), tht_x, theta, delta, ss, tmp1, tmp2
+real*8              :: s_find(18), t_find(18), st_find(18), tht_x, theta, delta, ss, tmp1, tmp2
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
@@ -347,6 +347,7 @@ do j=1,n_tht_2
       Z_max(j) = Z_sep(j) + (ZL9 - Z_xpoint(1)) * ((Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
     endif
     
+write(*,*)'before',1
     call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)
 
     call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),RRg1,ZZg1)
@@ -408,6 +409,7 @@ do j=1,n_leg_2
 
   R_min(n_tht_2 + j) = RL2 + (RL5-RL2) * s_tmp(j)
 
+write(*,*)'before',2
   call find_R_surface(node_list,element_list,flux_list,n_psi_2-1,R_min(n_tht_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
@@ -426,6 +428,7 @@ do j=1,n_leg_2
 
   R_min(n_tht_2 + n_leg_2 + j) = RL3 + (RL5-RL3) * s_tmp(j)
 
+write(*,*)'before',3
   call find_R_surface(node_list,element_list,flux_list,n_psi_2-1,R_min(n_tht_2+n_leg_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
@@ -445,6 +448,7 @@ do j=1,n_leg_2
 
   Z_max(n_tht_2 + j) = ZL1 + (Z_max(n_tht_2) -ZL1) * s_tmp(j)
 
+write(*,*)'before',4
   call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(n_tht_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
@@ -464,6 +468,7 @@ do j=1,n_leg_2
 
   Z_max(n_tht_2 + n_leg_2 + j) = ZL4 + (Z_max(1) - ZL4) * s_tmp(j)
 
+write(*,*)'before',5
   call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(n_tht_2+n_leg_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
@@ -483,6 +488,7 @@ R_max(n_tht_2+2*n_leg_2) = R_max(1)   ! this one is known
 do j=1,n_leg_2                        ! inside leg
 
   R_sep(n_tht_2 + j) = RL6 + (R_xpoint(1) - RL6) * s_tmp(j)
+write(*,*)'before',6
   call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
@@ -502,6 +508,7 @@ do j=1,n_leg_2
 
   R_sep(n_tht_2 + n_leg_2 + j) = RL7 + (R_xpoint(1) - RL7) * s_tmp(j)
 
+write(*,*)'before',7
   call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht_2+n_leg_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find

@@ -21,7 +21,7 @@ real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dps
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
 real*8     :: R_axis, Z_axis, s_axis, t_axis, R, Z, BigR, T0, BigR_s, T0_s
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi
-real*8     :: zp, dp_dpsi, dp_dpsi2, dp_dz, dp_dz2, P_ss, P_st, P_tt, R_out,Z_out,s_out,t_out
+real*8     :: zp, dp_dpsi, dp_dpsi2, dp_dz, dp_dz2, dp_dpsi_dz, P_ss, P_st, P_tt, R_out,Z_out,s_out,t_out
 real*8     :: psi_n, psi_bnd,psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2),psi_lim,R_lim,Z_lim
 real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t,R_s, R_t, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 logical    :: xpoint2
@@ -93,11 +93,12 @@ if (my_id .eq. 0) then
     endif
 !============================MB
 							       
-    zp       = zn * zT
-    dp_dpsi  = zn * dT_dpsi + dn_dpsi * zT
-    dp_dpsi2 = zn * dT_dpsi2 + 2.d0 * dn_dpsi * dT_dpsi + dn_dpsi2 * zT
-    dp_dz    = zn * dT_dz + dn_dz * zT
-    dp_dz2   = zn * dT_dz2 + 2.d0 * dn_dz * dT_dz + dn_dz2 * zT 							       
+    zp         = zn * zT
+    dp_dpsi    = zn * dT_dpsi + dn_dpsi * zT
+    dp_dpsi2   = zn * dT_dpsi2 + 2.d0 * dn_dpsi * dT_dpsi + dn_dpsi2 * zT
+    dp_dz      = zn * dT_dz + dn_dz * zT
+    dp_dz2     = zn * dT_dz2 + 2.d0 * dn_dz * dT_dz + dn_dz2 * zT 							       
+    dp_dpsi_dz = zn * dT_dpsi_dz + dn_dz * dT_dpsi + dn_dpsi * dT_dz + dn_dpsi_dz * zT
 
     node_list%node(i)%values(1,1,5) = zn
     node_list%node(i)%values(1,2,5) = dn_dpsi    * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(2,2)
@@ -120,9 +121,11 @@ if (my_id .eq. 0) then
     node_list%node(i)%values(1,1,2) = - tauIC * zp 
     node_list%node(i)%values(1,2,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,2,1) + dp_dz * node_list%node(i)%x(2,2))
     node_list%node(i)%values(1,3,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,3,1) + dp_dz * node_list%node(i)%x(3,2))
-    node_list%node(i)%values(1,4,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,4,1) + dp_dz * node_list%node(i)%x(4,2) &
-                                    + dp_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dp_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2) )
+    node_list%node(i)%values(1,4,2) = - tauIC * (dP_dpsi    * node_list%node(i)%values(1,4,1) + dP_dz * node_list%node(i)%x(4,2) &
+                                    + dP_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dP_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
+                                    + dP_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
+                                    + dP_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2) )
  
     node_list%node(i)%values(1,:,4) = 0.d0        ! vorticity (will be filled just below with inverse Poisson)
 
@@ -139,9 +142,11 @@ if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
      node_list%node(i)%values(1,1,7) = zV
      node_list%node(i)%values(1,2,7) = dV_dpsi  * node_list%node(i)%values(1,2,1) + dV_dz * node_list%node(i)%x(2,2)
      node_list%node(i)%values(1,3,7) = dV_dpsi  * node_list%node(i)%values(1,3,1) + dV_dz * node_list%node(i)%x(3,2)
-     node_list%node(i)%values(1,4,7) = dV_dpsi  * node_list%node(i)%values(1,4,1) + dV_dz * node_list%node(i)%x(4,2) &
-                                     + dV_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                     + dV_dz2   * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)
+     node_list%node(i)%values(1,4,7) = dV_dpsi    * node_list%node(i)%values(1,4,1) + dV_dz * node_list%node(i)%x(4,2) &
+                                     + dV_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                     + dV_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
+                                     + dV_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(2,2)         &
+                                     + dV_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(3,2) 
    else
      node_list%node(i)%values(1,1,7) = 2.d0 * PI * R**2 / F0 * Omega
      node_list%node(i)%values(1,2,7) = 2.d0 * PI / F0 * (  2.d0 * R * node_list%node(i)%x(2,1) * Omega               &

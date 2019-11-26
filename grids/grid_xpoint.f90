@@ -730,7 +730,7 @@ enddo
 !*     define the new nodes and finite elements    (nodes first)       *
 !***********************************************************************
 
-write(*,*)'before',6
+!write(*,*)'before',6
 ! --- Allocate data structures for new nodes and elements and initialize them.
 allocate(newnode_list)
 call tr_register_mem(sizeof(newnode_list),"newnode_list",CAT_GRID)
@@ -763,7 +763,7 @@ do i = 1, n_elements_max
   newelement_list%element(i)%nref         = 0
 end do
 
-write(*,*)'before',7
+!write(*,*)'before',7
 do i=1,n_flux-1                 !------------------------ the closed field lines
   do j=1, n_tht-1
 
@@ -811,7 +811,7 @@ do i=1,n_flux-1                 !------------------------ the closed field lines
 enddo
 newnode_list%n_nodes = node
 
-write(*,*)'before',8
+!write(*,*)'before',8
 !----------------------------------------- add multiple nodes at the x-point
 index_xpoint = newnode_list%n_nodes + 1
 
@@ -871,7 +871,7 @@ newnode_list%n_nodes = newnode_list%n_nodes + n_xpoint
 
 index = newnode_list%n_nodes
 
-write(*,*)'before',9
+!write(*,*)'before',9
 do i=n_flux,n_flux+n_open           !--------------------------- nodes on the open field lines
 
   j_start = 1; j_end = n_tht   ! skip first and last point on separatrix (x-points already added)
@@ -928,7 +928,7 @@ newnode_list%n_nodes = newnode_list%n_nodes + (n_open+1) * n_tht - 2
 
 index = newnode_list%n_nodes
 
-write(*,*)'before',10
+!write(*,*)'before',10
 do j=1, n_leg                         !--------------------------- nodes on right leg
 
   do k=1,n_open+n_private+1           !--------------------------- nodes on right leg
@@ -982,7 +982,6 @@ do j=1, n_leg                         !--------------------------- nodes on righ
   enddo
 enddo
 
-!write(*,*)'before',11
 do l=1, n_leg-1                       !--------------------------- nodes on left leg
 
   j = n_leg - l
@@ -1042,7 +1041,6 @@ call nframe(11,11,1,2.0,3.0,-2.0,-1.0,' ',1,'R',1,'Z',1)
 call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
 
 
-!write(*,*)'before',12
 call tr_allocate(xp,1,index,"xp",CAT_GRID)
 call tr_allocate(yp,1,index,"yp",CAT_GRID)
 
@@ -1063,7 +1061,6 @@ call tr_deallocate(yp,"yp",CAT_GRID)
 
 call tr_allocate(keep,1,n_psi*n_tht*2,1,4,1,2,"keep",CAT_GRID)
 
-!write(*,*)'before',13
 do i=1,n_flux-1
 
   do j=1, n_tht-1
@@ -1105,7 +1102,6 @@ do i=1,n_flux-1
 
 enddo
 
-!write(*,*)'before',14
 newelement_list%n_elements = (n_flux - 1)*(n_tht - 1)
 
 if ( newnode_list%n_nodes > n_nodes_max ) then
@@ -1154,7 +1150,6 @@ do i=1,n_open
 
 enddo
 
-!write(*,*)'before',15
 newelement_list%n_elements = newelement_list%n_elements + (n_open) * (n_tht-1)
 
 if ( newnode_list%n_nodes > n_nodes_max ) then
@@ -1260,7 +1255,6 @@ do i=1, n_open+n_private
 
 enddo
 
-!write(*,*)'before',16
 newelement_list%n_elements = newelement_list%n_elements + (n_open+n_private)*(2*n_leg-2)
 
 if ( newnode_list%n_nodes > n_nodes_max ) then
@@ -1300,7 +1294,6 @@ end if
 !***********************************************************************
 
 
-!write(*,*)'before',17
 do k=1, newelement_list%n_elements   ! fill in the size of the elements
 
   do iv = 1, 4                    ! over 4 sides of an element
@@ -1374,7 +1367,6 @@ enddo
 
 !call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
 
-!write(*,*)'before',18
 !***********************************************************************
 !*             fill in the values into the new grid                    *
 !***********************************************************************
@@ -1423,7 +1415,6 @@ do i=1,newnode_list%n_nodes
   newnode_list%node(i)%constrained = .false.
 enddo
 
-!write(*,*)'before',19
 do i=1,newnode_list%n_nodes
 
   R1 = newnode_list%node(i)%x(1,1)
@@ -1458,7 +1449,6 @@ do j=1,n_tht - 1
   newnode_list%node(i)%values(1,2:4,1) = 0.d0
 enddo
 
-!write(*,*)'before',20
 !----------------------------- empty old nodes/elements
 do i=1,node_list%n_nodes
   node_list%node(i)%x        = 0.d0
@@ -1494,7 +1484,6 @@ deallocate(newnode_list)
 call tr_unregister_mem(sizeof(newelement_list),"newelement_list",CAT_GRID)
 deallocate(newelement_list)
 
-!write(*,*)'before',21
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
 call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
@@ -1520,8 +1509,6 @@ call tr_deallocate(ielm_flux,"ielm_flux",CAT_GRID)
 call tr_deallocate(keep,"keep",CAT_GRID)
 call tr_deallocate(k_cross,"k_cross",CAT_GRID)
 
-!write(*,*)'before',22
 call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
-!write(*,*)'before',23
 return
 end subroutine grid_xpoint

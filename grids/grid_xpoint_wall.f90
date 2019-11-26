@@ -334,11 +334,11 @@ do i=1, n_open + n_private + 1
 
     if (R_wall(k) .eq. R_wall(k+1)) then
 
-      call find_R_surface(node_list,element_list,flux_list,i_flux,Rw,i_elm_find,s_find,t_find,i_find)
+      call find_R_surface(node_list,element_list,flux_list,i_flux,Rw,i_elm_find,s_find,t_find,st_find,i_find)
 
     elseif (Z_wall(k) .eq. Z_wall(k+1)) then
 
-      call find_Z_surface(node_list,element_list,flux_list,i_flux,Rw,i_elm_find,s_find,t_find,i_find)
+      call find_Z_surface(node_list,element_list,flux_list,i_flux,Rw,i_elm_find,s_find,t_find,st_find,i_find)
 
     else
 

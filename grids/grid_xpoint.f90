@@ -657,13 +657,11 @@ enddo
 !call tr_allocate(k_cross,1,n_flux_2+n_open_2+n_private_2+1,1,n_tht_2+2*n_leg_2,"k_cross",CAT_GRID)
 allocate(k_cross(n_flux_2+n_open_2+n_private_2+1,n_tht_2+2*n_leg_2))
 
-!write(*,*)'before',3
 k_cross = 0
 
 !k_cross(1,:) = 1
 k_cross(1,1:n_tht_2+2*n_leg_2) = 1
 
-!write(*,*)'before',4
 do i=1,n_flux_2+n_open_2
 
   do j=1, n_tht_2

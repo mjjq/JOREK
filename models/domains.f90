@@ -51,7 +51,7 @@ module domains
     real*8,  intent(in) :: psi_axis      !< psi-value at axis
     
     real*8 :: sign_corr
-    
+
     if ( .not. axis_is_min_initialized ) then
       axis_is_min = axis_is_psi_minimum(node_list, element_list, R_axis, Z_axis, psi_axis)
       axis_is_min_initialized = .true.
@@ -62,7 +62,7 @@ module domains
     else
       sign_corr = -1.
     end if
-    
+ 
     if ( xpoint ) then
       
       if ( xcase == LOWER_XPOINT ) then
@@ -113,8 +113,7 @@ module domains
     
   end function which_domain
   
-  
-  
+
   !> Determine if a position is located inside the plasma
   logical function in_plasma(node_list, element_list, R, Z, psi, xpoint, xcase, R_xpoint, Z_xpoint,&
     psi_xpoint, psi_limit, R_axis, Z_axis, psi_axis)
@@ -137,12 +136,12 @@ module domains
     real*8,  intent(in) :: psi_axis      !< psi-value at axis
     
     integer :: domain
-    
+
     domain = which_domain(node_list,element_list,R,Z,psi,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,&
       psi_limit,R_axis,Z_axis,psi_axis)
-    
+
     in_plasma = ( domain==DOMAIN_PLASMA )
-  
+ 
   end function in_plasma
   
   

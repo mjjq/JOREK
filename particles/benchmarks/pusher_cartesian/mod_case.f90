@@ -13,7 +13,7 @@ module mod_case
     procedure(field), nopass, public, deferred :: E
     procedure(field), nopass, public, deferred :: B
     procedure(initialize), deferred, pass, public :: initialize
-    procedure(calc_error), deferred, pass, private :: calc_error
+    procedure(calc_error), deferred, pass, public :: calc_error
   end type
   interface
     pure function field(x, t)

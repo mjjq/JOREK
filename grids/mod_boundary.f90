@@ -119,6 +119,11 @@ module mod_boundary
     call add_bnd_node( i_elem, iv2, inode2, iside, b2, ib2, bnd_node_list )
 
     bnd_elm_list%n_bnd_elements = bnd_elm_list%n_bnd_elements + 1
+    
+    if ( bnd_elm_list%n_bnd_elements > n_boundary_max ) then
+      write(*,*) 'ERROR in mod_boundary:boundary_from_grid: hard-coded parameter n_boundary_max is too small'
+      stop
+    end if
 
     ! --- Store vertex indices belonging to the boundary element.
     bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%vertex = (/ inode1, inode2 /)

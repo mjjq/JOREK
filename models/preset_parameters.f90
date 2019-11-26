@@ -6,7 +6,7 @@
 subroutine preset_parameters
   
   use phys_module
-  use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering
+  use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
   use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
   use wsmp_module,   only: use_wsmp
   
@@ -14,7 +14,7 @@ subroutine preset_parameters
   
   time_evol_scheme = 'Crank-Nicholson'
   
-  n_tor_fft_thresh = 5
+  n_tor_fft_thresh = 2
   if(jorek_model == 305 .or. jorek_model == 306) n_tor_fft_thresh = 99
   
   ! --- DoubleNull flag
@@ -175,6 +175,7 @@ subroutine preset_parameters
   visco_par_num = 0.d0
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
+  Dn_perp_num   = 0.d0
 
   heatsource          = 1.e-7
   heatsource_psin     = 1.0d0
@@ -307,8 +308,11 @@ subroutine preset_parameters
   no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
 
   mumps_ordering     = 7                    ! MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
-  use_mumps_BLR      = .false.              ! Use MUMPS solver with Block-low-rank (BLR) compression
-  mumps_BLR_eps      = 0                    ! Accuracy of MUMPS BLR approximations (0 = full precision)
+  use_BLR_compression = .false.             ! Use MUMPS / PaStiX 6 solver with Block-low-rank (BLR) compression
+  pastix_blr_abs_tol = .true.               ! Use absolute tolerance
+  epsilon_BLR        = 0.                   ! Accuracy of BLR compression (0. = lossless)
+  just_in_time_BLR   = .true.               ! Use Just-in-time strategy for BLR compression (.false. = memory-optimal)
+
   
 !==== RMP parameters =====
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)
@@ -348,30 +352,45 @@ subroutine preset_parameters
   V_coef(1:5) = (/ 0.d0, 0.d0, 0.d0, 0.1d0, 1.0d0 /)
 !======================MB
 
-!======================AF Massive Gas Injection Parameters
-  JET_MGI   = .false.
+  JET_MGI = .false.
   ASDEX_MGI = .false.
-  mgi_amplitude = 0.d0  ! 0.007d0
-  mgi_R      = 3.2d0
-  mgi_Z      =  1.5d0
-  mgi_phi    = 1.57d0
-  mgi_radius =   0.08d0
-  mgi_sig    =  0.05
-  mgi_deltaphi =  0.5
-  mgi_tor_norm = 1.
-  ksi_ion     = 1.84d-24
+  ns_amplitude = 0.d0
+  ns_R      = 3.2d0
+  ns_Z      =  1.5d0
+  ns_phi    = 1.57d0
+  ns_radius =   0.08d0
+  ns_sig    =  0.05
+  ns_deltaphi =  0.5
+  ns_tor_norm = 1.
+  ksi_ion = 1.84d-24
   D_neutral_x = 1.d-5
   D_neutral_y = 1.d-5
   D_neutral_p = 1.d-5
-  !====== JET DMV-2 parameters
-  L_tube      = 2.d0
-  K_Dmv       = 4.d-2
-  A_Dmv       = 1.77d-2
-  t_mgi       = 2.d3
-  !=====
   delta_n_convection = 0
   nimp_bg = 0.
-!======================AF
+  !====== JET DMV-2 parameters
+  L_tube = 2.d0
+  K_Dmv = 4.d-2
+  A_Dmv = 1.77d-2
+  t_ns  = 2.d3
+  !======= Additional parameters for SPI =======
+  spi_Vel_Rref    = 0.0d0
+  spi_Vel_Zref    = 0.0d0
+  spi_Vel_RxZref  = 0.0d0
+  spi_quantity    = 0.0
+  ng_radius_ratio = 1.4d0
+  ng_radius_min   = 8.d-2
+  spi_Vel_diff    = 0.0
+  spi_angle       = 0.0
+  spi_L_inj       = 0.25
+  ns_phi_rotate   = 0.0
+  tor_frequency   = 0.0
+  n_spi           = 1
+  spi_rnd_seed    = 0
+  spi_abl_model   = 0
+  spi_shard_file  = 'none'
+  spi_tor_rot     = .false.
+  using_spi       = .false.
 
 !======================JP ECCD injection parameters
   nu_jec_fast=1.d1

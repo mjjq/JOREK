@@ -605,6 +605,13 @@ module mod_expression
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
 #if JOREK_MODEL == 500
           rn0 = 0.d0
+          rn0_s = 0.0
+          rn0_t = 0.0
+          rn0_ss = 0.0
+          rn0_tt = 0.0
+          rn0_st = 0.0
+          rn0_p = 0.0
+          rn0_pp = 0.0
 #endif
           
           ! --- Reconstruct variables

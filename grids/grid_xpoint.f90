@@ -524,7 +524,6 @@ call lplot6(1,1,R_sep,Z_sep,-(n_tht_2+2*n_leg_2),' ')
 
 
 
-write(*,*)'before',1
 !------------------------------ interpolation points are known, construct polar coordinate lines
 n_pieces=3
 call tr_allocate(R_polar,1,n_pieces,1,4,1,n_tht_2+2*n_leg_2,"R_polar",CAT_GRID)
@@ -608,7 +607,6 @@ do j=1,2*n_leg_2
 enddo
 
 
-write(*,*)'before',2
 call lincol(3)
 
 npl = 11
@@ -644,7 +642,6 @@ call tr_deallocate(xp,"xp",CAT_GRID)
 call tr_deallocate(yp,"yp",CAT_GRID)
 !----------------------------------- find grid_points from crossing of coordinate lines
 
-write(*,*)'before',3
 do j=1, n_tht_2          ! the magnetic axis
 
   RR_new(1,j)    = R_axis
@@ -663,7 +660,7 @@ k_cross = 0
 
 k_cross(1,:) = 1
 
-!write(*,*)'before',4
+write(*,*)'before',4
 do i=1,n_flux_2+n_open_2
 
   do j=1, n_tht_2

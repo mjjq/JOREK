@@ -36,7 +36,7 @@ contains
     use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
        RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min, &
-       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum
+       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks
     USE tr_module
     use mpi_mod
 
@@ -170,10 +170,12 @@ contains
 ! apply fixed bc for variables k=1,2,3,4
 ! apply v_par = cs for k=7
 !========================================================================
-                   if     ((node_list%node(inode)%boundary .eq. 1) &
-                      .or. (node_list%node(inode)%boundary .eq. 4) &
-                      .or. (node_list%node(inode)%boundary .eq. 9) &
-                      .or. (node_list%node(inode)%boundary .eq. 3)) then
+                   if     ((node_list%node(inode)%boundary .eq.  1) &
+                      .or. (node_list%node(inode)%boundary .eq. 11) &
+                      .or. (node_list%node(inode)%boundary .eq.  9) &
+                      .or. (node_list%node(inode)%boundary .eq. 19) &
+                      .or. (node_list%node(inode)%boundary .eq.  3) &
+                      .or. (node_list%node(inode)%boundary .eq.  4)) then
 
 !====================================== beginning RMPs at boundary ======================================================
 !================================== type 1 - boundary: only depends on 's'
@@ -328,6 +330,15 @@ contains
                             else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
                               direction = +1.
                             end if
+                            
+                            ! --- Special field direction for grid patches
+                            ! --- (hopefully temporary until Vpar is treated in boundary_matrix_open)
+                            if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then
+                              direction = 1
+                              if (node_list%node(inode)%boundary .eq. 11) direction = -direction
+                              if (node_list%node(inode)%boundary .eq. 19) direction = -direction
+                            endif
+                            
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
@@ -446,8 +457,93 @@ contains
                       ! apply fixed bc for variables k=1,2,3,4
                       ! apply v_par = cs for k=7
                       !========================================================================
-                      if    ((node_list%node(inode)%boundary .eq. 5) &
-                           .or. (node_list%node(inode)%boundary .eq. 9)) then
+                      if    ((node_list%node(inode)%boundary .eq.     5) &
+                           .or. (node_list%node(inode)%boundary .eq. 15) &
+                           .or. (node_list%node(inode)%boundary .eq.  9) &
+                           .or. (node_list%node(inode)%boundary .eq. 19)) then
+
+!====================================== begining RMPs at boundary ======================================================
+!================================== type 2 - boundary: only depends on 't'
+! ======================================================================================================================
+                       
+                       if (RMP_on ) then
+                          do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
+
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) .and. (.not. freeboundary)) then
+                             ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
+                             ! in .eq. RMP_har_sin   corresponds to sin(n_perturbation)
+               
+
+                                       
+                             kp=1    ! variable psi
+                             kv=1    ! equation for psi
+                          
+                             index_node = node_list%node(inode)%index(1)  ! index in RHS (or matrix A not compressed)
+                                                
+                             Rnode     = node_list%node(inode)%x(1,1) 
+                             dRnode_dt = node_list%node(inode)%x(3,1) 
+                             Znode     = node_list%node(inode)%x(1,2) 
+                             dZnode_dt = node_list%node(inode)%x(3,2) 
+                          
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+
+                                if (node_list%node(inode)%boundary_index == 1 ) then
+                                   write (*,*) 'type2_bnd: my_id, psi_RMP_cos1, Rnode, Znode, in'
+                                   write (*,*) my_id, delta_psi_rmp, Rnode, Znode,in
+                                   write (*,*) 'delta_psi_rmp_dR, delta_psi_rmp_dZ'      
+                                   write (*,*) delta_psi_rmp_dR, delta_psi_rmp_dZ
+                                endif
+                             else 
+                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+
+                             endif
+
+                             delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+
+                                if (node_list%node(inode)%boundary_index == 1 ) then
+                                   write (*,*) 'delta_psi_rmp_dt', delta_psi_rmp_dt
+                                   write (*,*) 'delta_psi_rmp_ds', delta_psi_rmp_ds
+                                endif
+                             endif
+
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, kv, in,                &
+                                  index_node, kp, in,                &
+                                  zbig, solve_only, gmres,           &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_min, index_max)
+
+                             if (.not. only_count) then
+                                call boundary_conditions_add_RHS(  &
+                                     index_node, kv, in,           &
+                                     index_min, index_max,         &
+                                     RHS_loc, ZBIG * delta_psi_rmp)
+                             endif
+                             
+                             index_node2 = node_list%node(inode)%index(3)
+
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node2, kp, in,               &
+                                  zbig, solve_only, gmres,           &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_min, index_max)
+                             if (.not. only_count) then
+                                call boundary_conditions_add_RHS(       &
+                                     index_node2, kv, in,               &
+                                     index_min, index_max,              &
+                                     RHS_loc, ZBIG * delta_psi_rmp_dt)
+                             endif
+                          endif
+                        enddo        !(end RMP harmonics)
+                        endif        !(end RMPs on)  ==================================
+!======================================= end RMPs ==================================
 
 
                          if (      apply_psi_BC      &
@@ -525,6 +621,14 @@ contains
                                  - (node_list%node(inode)%x(1,2)-Z_inside)*R_t)
                             direction = direction / abs(direction)
 
+                            ! --- Special field direction for grid patches
+                            ! --- (hopefully temporary until Vpar is treated in boundary_matrix_open)
+                            if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then
+                              direction = 1
+                              if (node_list%node(inode)%boundary .eq. 15) direction = -direction
+                              if (node_list%node(inode)%boundary .eq. 19) direction = -direction
+                            endif
+                            
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
@@ -626,7 +730,9 @@ contains
 
 
                     !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
-                    if ((node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3)) then
+                    if    ((node_list%node(inode)%boundary .eq.  2) &
+                      .or. (node_list%node(inode)%boundary .eq. 12) &
+                      .or. (node_list%node(inode)%boundary .eq.  3)) then
 
 !====================================== begining RMPs at boundary ======================================================
 !================================== type 2 - boundary: only depends on 't'
@@ -669,6 +775,127 @@ contains
 
                              endif
 
+                             delta_psi_rmp_ds = delta_psi_rmp_dR * dRnode_ds + delta_psi_rmp_dZ * dZnode_ds
+                             delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+
+                                if (node_list%node(inode)%boundary_index == 1 ) then
+                                   write (*,*) 'delta_psi_rmp_dt', delta_psi_rmp_dt
+                                   write (*,*) 'delta_psi_rmp_ds', delta_psi_rmp_ds
+                                endif
+                             endif
+
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, kv, in,                &
+                                  index_node, kp, in,                &
+                                  zbig, solve_only, gmres,           &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_min, index_max)
+
+                             if (.not. only_count) then
+                                call boundary_conditions_add_RHS(  &
+                                     index_node, kv, in,           &
+                                     index_min, index_max,         &
+                                     RHS_loc, ZBIG * delta_psi_rmp)
+                             endif
+                             
+                             index_node2 = node_list%node(inode)%index(3)
+                             ! --- special case for grid with patches
+                             if (node_list%node(inode)%boundary .eq. 12) then
+                               index_node2 = node_list%node(inode)%index(2)
+                               delta_psi_rmp_dt = delta_psi_rmp_ds
+                             endif
+
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node2, kp, in,               &
+                                  zbig, solve_only, gmres,           &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_min, index_max)
+                             if (.not. only_count) then
+                                call boundary_conditions_add_RHS(       &
+                                     index_node2, kv, in,               &
+                                     index_min, index_max,              &
+                                     RHS_loc, ZBIG * delta_psi_rmp_dt)
+                             endif
+                          endif
+                        enddo        !(end RMP harmonics)
+                        endif        !(end RMPs on)  ==================================
+!======================================= end RMPs ==================================
+
+                       ! decides when the boundary conditions should be applied (for freeboundary and RMP cases)
+                        if (       apply_psi_BC                   &
+                              .or. apply_current_BC               &
+                              .or. (( k /= 1 ) .and. ( k /= 3 ))  ) then
+
+                          index_node = node_list%node(inode)%index(1)
+
+                          call boundary_conditions_add_one_entry( &
+                               index_node,  k,  in,               &
+                               index_node,  k,  in,               &
+                               zbig, solve_only, gmres,           &
+                               cnt, cnt_prod, only_count,         &
+                               index_min, index_max)
+
+                          index_node = node_list%node(inode)%index(3)
+
+                          call boundary_conditions_add_one_entry( &
+                               index_node,  k,  in,               &
+                               index_node,  k,  in,               &
+                               zbig, solve_only, gmres,           &
+                               cnt, cnt_prod, only_count,         &
+                               index_min, index_max)
+
+                       endif
+
+                    endif
+
+                    !------------------------------------ Special corners (only for grid with patches)
+                    if    ((node_list%node(inode)%boundary .eq. 21) &
+                      .or. (node_list%node(inode)%boundary .eq. 20)) then
+
+!====================================== begining RMPs at boundary ======================================================
+!================================== type 2 - boundary: only depends on 't'
+! ======================================================================================================================
+                       
+                       if (RMP_on ) then
+                          do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
+
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) .and. (.not. freeboundary)) then
+                             ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
+                             ! in .eq. RMP_har_sin   corresponds to sin(n_perturbation)
+               
+
+                                       
+                             kp=1    ! variable psi
+                             kv=1    ! equation for psi
+                          
+                             index_node = node_list%node(inode)%index(1)  ! index in RHS (or matrix A not compressed)
+                                                
+                             Rnode     = node_list%node(inode)%x(1,1) 
+                             dRnode_dt = node_list%node(inode)%x(3,1) 
+                             Znode     = node_list%node(inode)%x(1,2) 
+                             dZnode_dt = node_list%node(inode)%x(3,2) 
+                          
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+
+                                if (node_list%node(inode)%boundary_index == 1 ) then
+                                   write (*,*) 'type2_bnd: my_id, psi_RMP_cos1, Rnode, Znode, in'
+                                   write (*,*) my_id, delta_psi_rmp, Rnode, Znode,in
+                                   write (*,*) 'delta_psi_rmp_dR, delta_psi_rmp_dZ'      
+                                   write (*,*) delta_psi_rmp_dR, delta_psi_rmp_dZ
+                                endif
+                             else 
+                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+
+                             endif
+
+                             delta_psi_rmp_ds = delta_psi_rmp_dR * dRnode_ds + delta_psi_rmp_dZ * dZnode_ds
                              delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
                              if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
 
@@ -706,9 +933,26 @@ contains
                                      index_min, index_max,              &
                                      RHS_loc, ZBIG * delta_psi_rmp_dt)
                              endif
+                             
+                             index_node2 = node_list%node(inode)%index(2)
+
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node2, kp, in,               &
+                                  zbig, solve_only, gmres,           &
+                                  cnt, cnt_prod, only_count,         &
+                                  index_min, index_max)
+                             if (.not. only_count) then
+                                call boundary_conditions_add_RHS(       &
+                                     index_node2, kv, in,               &
+                                     index_min, index_max,              &
+                                     RHS_loc, ZBIG * delta_psi_rmp_ds)
+                             endif
+                             
                           endif
                         enddo        !(end RMP harmonics)
                         endif        !(end RMPs on)  ==================================
+!======================================= end RMPs ==================================
 
                        ! decides when the boundary conditions should be applied (for freeboundary and RMP cases)
                         if (       apply_psi_BC                   &

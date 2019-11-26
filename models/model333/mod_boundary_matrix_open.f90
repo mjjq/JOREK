@@ -211,17 +211,17 @@ do ms=1, n_gauss
 
           rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * normal_sign3 * tstep   ! right hand side equation 6
           
-          rhs_ij_7 = - v * (vpar0 * Btot * normal_sign - cs0 * factor) * Zbig
+          !rhs_ij_7 = - v * (vpar0 * Btot * normal_sign - cs0 * factor) * Zbig
 
 
           ij5 = index_ij + 4*n_tor                                          ! local index in element matrix
           ij6 = index_ij + 5*n_tor                                          ! local index in element matrix
-          ij7 = index_ij + 6*n_tor                                          ! local index in element matrix
+          !ij7 = index_ij + 6*n_tor                                          ! local index in element matrix
 
 
           RHS(ij5) = RHS(ij5) + rhs_ij_5 * ws                               ! add to element RHS
           RHS(ij6) = RHS(ij6) + rhs_ij_6 * ws                               ! add to element RHS
-          RHS(ij7) = RHS(ij7) + rhs_ij_7 * ws                               ! add to element RHS
+          !RHS(ij7) = RHS(ij7) + rhs_ij_7 * ws                               ! add to element RHS
                    
           do k=1,2                                                          ! loop over nodes
 
@@ -260,9 +260,9 @@ do ms=1, n_gauss
                 amat_66 = + v * (gamma_sheath-1.d0) * r0  * T  * vpar0 * ps0_s * normal_sign3 * theta * tstep 
                 amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * normal_sign3 * theta * tstep 
 
-                amat_71 =   v * (vpar0 * Btot_psi * normal_sign) * Zbig
-                amat_76 =   v * ( - cs_T) * factor               * Zbig
-                amat_77 =   v * (vpar  * Btot     * normal_sign) * Zbig
+                !amat_71 =   v * (vpar0 * Btot_psi * normal_sign) * Zbig
+                !amat_76 =   v * ( - cs_T) * factor               * Zbig
+                !amat_77 =   v * (vpar  * Btot     * normal_sign) * Zbig
 
 
                 index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix
@@ -281,9 +281,9 @@ do ms=1, n_gauss
                 ELM(ij6,kl6) =  ELM(ij6,kl6) + ws * amat_66
                 ELM(ij6,kl7) =  ELM(ij6,kl7) + ws * amat_67
 
-                ELM(ij7,kl1) =  ELM(ij7,kl1) + ws * amat_71
-                ELM(ij7,kl6) =  ELM(ij7,kl6) + ws * amat_76
-                ELM(ij7,kl7) =  ELM(ij7,kl7) + ws * amat_77
+                !ELM(ij7,kl1) =  ELM(ij7,kl1) + ws * amat_71
+                !ELM(ij7,kl6) =  ELM(ij7,kl6) + ws * amat_76
+                !ELM(ij7,kl7) =  ELM(ij7,kl7) + ws * amat_77
 
               enddo
             enddo

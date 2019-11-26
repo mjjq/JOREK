@@ -15,7 +15,7 @@ contains
 
     ! --- Modules
     use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order
-    use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh
+    use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks
     USE data_structure,           only : type_element, type_node, type_node_list, thread_struct
     use mod_boundary_matrix_open, only : boundary_matrix_open
     use mod_elt_matrix,           only : element_matrix
@@ -42,7 +42,7 @@ contains
     
     ! -- internal parameters
     integer :: iv, iv2, iv3, iv4, inode1, inode2, inode3, inode4, i, j
-    integer :: vertex(2), direction(2), bnd1, bnd2
+    integer :: vertex(2), direction(2), bnd1, bnd2, side1, side2
 
 #ifdef COMPARE_ELEMENT_MATRIX
     integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
@@ -94,27 +94,50 @@ contains
         nodes(4) = node_list%node(inode4)
         vertex    = (/ iv, iv2 /)
         
-        ! --- The target has boundary 1 or 3
-        if (     (  ((bnd1 .eq. 1) .or. (bnd1 .eq. 3)) .and. ((bnd2 .eq. 1) .or. (bnd2 .eq. 3))  ) &
-            .or. (  ((bnd1 .eq. 1) .or. (bnd1 .eq. 9)) .and. ((bnd2 .eq. 1) .or. (bnd2 .eq. 9))  ) &
-            .or. (  ((bnd1 .eq. 4) .or. (bnd1 .eq. 9)) .and. ((bnd2 .eq. 4) .or. (bnd2 .eq. 9))  ) &
-            .or. (  ((bnd1 .eq. 1) .or. (bnd1 .eq. 4)) .and. ((bnd2 .eq. 4) .or. (bnd2 .eq. 1))  ) ) then
-          
-          direction = (/  1, 2  /)
-          
-        elseif (  ((bnd1 .eq. 5) .or. (bnd1 .eq. 9)) .and. ((bnd2 .eq. 5) .or. (bnd2 .eq. 9)) ) then
-          
-          direction = (/  1, 3  /)
-          
-        elseif (  ((bnd1 .eq. 2) .or. (bnd1 .eq. 3)) .and. ((bnd2 .eq. 2) .or. (bnd2 .eq. 3)) ) then
-          
-          direction = (/  1, 3  /)
-          cycle
-          
+        if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then
+          side1 = 0                  ; side2 = 0
+          if (bnd1 .eq. 1) side1 = 2 ; if (bnd2 .eq. 1) side2 = 2
+          if (bnd1 .eq.11) side1 = 2 ; if (bnd2 .eq.11) side2 = 2
+          if (bnd1 .eq. 5) side1 = 3 ; if (bnd2 .eq. 5) side2 = 3
+          if (bnd1 .eq.15) side1 = 3 ; if (bnd2 .eq.15) side2 = 3
+          if (bnd1 .eq. 2) side1 = 3 ; if (bnd2 .eq. 2) side2 = 3
+          if (bnd1 .eq.12) side1 = 2 ; if (bnd2 .eq.12) side2 = 2
+          if (bnd1 .eq. 4) side1 = 2 ; if (bnd2 .eq. 4) side2 = 2
+          if     ( (side1 .eq. 2) .or. (side2 .eq. 2) ) then
+            direction = (/  1, 2  /)
+          elseif ( (side1 .eq. 3) .or. (side2 .eq. 3) ) then
+            direction = (/  1, 3  /)
+          endif
+          ! --- This should never happen, but just in case...
+          if (     ((side1 .eq. 2) .and. (side2 .eq. 3)) &
+              .or. ((side1 .eq. 3) .and. (side2 .eq. 2)) ) then
+            write(*,'(A,4i8)') 'WARNING: boundary_matrix_open, boundary element incoherent ',&
+                               inode1,node_list%node(inode1)%boundary,inode2,node_list%node(inode2)%boundary  
+            cycle
+          endif
         else
-          write(*,'(A,4i8)') 'WARNING: boundary_matrix_open, boundary element not included ',&
-                             inode1,node_list%node(inode1)%boundary,inode2,node_list%node(inode2)%boundary  
-          cycle
+          ! --- The target has boundary 1 or 3
+          if (     (  ((bnd1 .eq. 1) .or. (bnd1 .eq. 3)) .and. ((bnd2 .eq. 1) .or. (bnd2 .eq. 3))  ) &
+              .or. (  ((bnd1 .eq. 1) .or. (bnd1 .eq. 9)) .and. ((bnd2 .eq. 1) .or. (bnd2 .eq. 9))  ) &
+              .or. (  ((bnd1 .eq. 4) .or. (bnd1 .eq. 9)) .and. ((bnd2 .eq. 4) .or. (bnd2 .eq. 9))  ) &
+              .or. (  ((bnd1 .eq. 1) .or. (bnd1 .eq. 4)) .and. ((bnd2 .eq. 4) .or. (bnd2 .eq. 1))  ) ) then
+            
+            direction = (/  1, 2  /)
+            
+          elseif (  ((bnd1 .eq. 5) .or. (bnd1 .eq. 9)) .and. ((bnd2 .eq. 5) .or. (bnd2 .eq. 9)) ) then
+            
+            direction = (/  1, 3  /)
+            
+          elseif (  ((bnd1 .eq. 2) .or. (bnd1 .eq. 3)) .and. ((bnd2 .eq. 2) .or. (bnd2 .eq. 3)) ) then
+            
+            direction = (/  1, 3  /)
+            cycle
+            
+          else
+            write(*,'(A,4i8)') 'WARNING: boundary_matrix_open, boundary element not included ',&
+                               inode1,node_list%node(inode1)%boundary,inode2,node_list%node(inode2)%boundary  
+            cycle
+          endif
         endif
           
         call boundary_matrix_open(vertex, direction, element, nodes, &

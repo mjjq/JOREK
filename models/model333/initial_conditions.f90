@@ -264,7 +264,8 @@ do i=1,node_list%n_nodes
     direction = + ps0_x / abs(ps0_x)           ! temporary solution for lower x-point only
     if (xcase2 .eq. 2) direction = -direction
     if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
-    if (n_wall_blocks .eq. 0) direction = 0.d0
+    if ( (grid_to_wall) .and. (n_wall_blocks .ne. 0) ) direction = 0.d0
+
 
     BigR = node_list%node(i)%x(1,1)
     Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
@@ -308,7 +309,7 @@ do i=1,node_list%n_nodes
     direction = + ps0_x / abs(ps0_x)           ! temporary solution for lower x-point only
     if (xcase2 .eq. 2) direction = -direction
     if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
-    if (n_wall_blocks .eq. 0) direction = 0.d0
+    if ( (grid_to_wall) .and. (n_wall_blocks .ne. 0) ) direction = 0.d0
 
 
     BigR = node_list%node(i)%x(1,1)

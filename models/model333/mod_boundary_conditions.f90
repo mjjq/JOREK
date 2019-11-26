@@ -178,13 +178,22 @@ contains
                 ! --------------------------------------------------------------------------------------------------------------
                 ! ------------------------------------ the targets (in case of x-point grid) -----------------------------------
                 ! --------------------------------------------------------------------------------------------------------------
-                if    ((node_list%node(inode)%boundary .eq. 1) &
-                  .or. (node_list%node(inode)%boundary .eq. 3) &
-                  .or. (node_list%node(inode)%boundary .eq. 4) &
-                  .or. (node_list%node(inode)%boundary .eq. 9)) then
+                if    ((node_list%node(inode)%boundary .eq.  1) &
+                  .or. (node_list%node(inode)%boundary .eq. 11) &
+                  .or. (node_list%node(inode)%boundary .eq.  9) &
+                  .or. (node_list%node(inode)%boundary .eq. 19) &
+                  .or. (node_list%node(inode)%boundary .eq.  3) &
+                  .or. (node_list%node(inode)%boundary .eq.  4)) then
                       
                   ! --- Which side is this? 2 => d/ds, 3 => d/dt
                   side = 2
+
+                  ! --- Field direction
+                  if (grid_to_wall) then
+                    direction = 1
+                    if (node_list%node(inode)%boundary .eq. 11) direction = -direction
+                    if (node_list%node(inode)%boundary .eq. 19) direction = -direction
+                  endif
 
                   ! ---------------------------------------------
                   ! --- Apply RMP on target (only depends on 's')
@@ -227,6 +236,13 @@ contains
                   ! --- Apply Dirichlet if required
                   if (apply_dirichlet) then
                     call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                  endif
+
+                  ! --------------
+                  ! --- Mach-1 BCs
+                  if (k_var .eq. k_Vpar) then
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
                   endif
 
                 endif
@@ -235,12 +251,21 @@ contains
                 ! --------------------------------------------------------------------------------------------------------------
                 ! ------------------------- the non-targets open field-lines (for grid_xpoint_wall) ----------------------------
                 ! --------------------------------------------------------------------------------------------------------------
-                if    ((node_list%node(inode)%boundary .eq. 5) &
-                  .or. (node_list%node(inode)%boundary .eq. 9)) then
+                if    ((node_list%node(inode)%boundary .eq.  5) &
+                  .or. (node_list%node(inode)%boundary .eq. 15) &
+                  .or. (node_list%node(inode)%boundary .eq.  9) &
+                  .or. (node_list%node(inode)%boundary .eq. 19)) then
 
                   ! --- Which side is this? 2 => d/ds, 3 => d/dt
                   side = 3
                   
+                  ! --- Field direction
+                  if (grid_to_wall) then
+                    direction = 1
+                    if (node_list%node(inode)%boundary .eq. 15) direction = -direction
+                    if (node_list%node(inode)%boundary .eq. 19) direction = -direction
+                  endif
+
                   ! ---------------------------------------------
                   ! --- Apply RMP on target (only depends on 's')
                   if (      RMP_on                                                      &
@@ -284,17 +309,26 @@ contains
                     call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
                   endif
 
+                  ! --------------
+                  ! --- Mach-1 BCs
+                  if (k_var .eq. k_Vpar) then
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                  endif
+
                 endif
 
                 
                 ! ----------------------------------------------------------------------------------------------------
                 ! ------------------------------------ the flux-surface boundaries -----------------------------------
                 ! ----------------------------------------------------------------------------------------------------
-                if ( (node_list%node(inode)%boundary .eq. 2) .or. (node_list%node(inode)%boundary .eq. 3) ) then
+                if    ((node_list%node(inode)%boundary .eq.  2) &
+                  .or. (node_list%node(inode)%boundary .eq. 12) &
+                  .or. (node_list%node(inode)%boundary .eq.  3)) then
 
                   ! --- Which side is this? 2 => d/ds, 3 => d/dt
                   side = 3
-                  !if (node_list%node(inode)%boundary .eq. 4) side = 2
+                  if (node_list%node(inode)%boundary .eq. 12) side = 2
                   
                   ! ---------------------------------------------
                   ! --- Apply RMP on target (only depends on 't')
@@ -361,6 +395,23 @@ contains
 
                 endif
 
+                ! ----------------------------------------------------------------------------------------------------
+                ! ------------------------------------ the special corners -------------------------------------------
+                ! ----------------------------------------------------------------------------------------------------
+                if (node_list%node(inode)%boundary .eq. 21) then
+                  if ( (k_var .eq. k_Ti) .or. (k_var .eq. k_Vpar) ) then
+                    side = 2
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    side = 3
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                  endif
+                endif
+                if (node_list%node(inode)%boundary .eq. 20) then
+                  side = 2
+                  call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                  side = 3
+                  call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                endif
               enddo
 
             enddo
@@ -389,7 +440,7 @@ contains
     use data_structure
     use phys_module, only: F0, FF_0, xpoint, xcase, tokamak_device,    &
                            central_mass, mass_proton, central_density, &
-			   mu_zero, tauIC, renormalise
+			   mu_zero, tauIC, renormalise, grid_to_wall
     use corr_neg
     
     implicit none
@@ -448,30 +499,32 @@ contains
     Vpar0_t   = node%values(1,3,k_Vpar)
 
     ! --- Define direction of Vpar on target. Careful, using ps0_x/abs(ps0_x) can be treacherous.
-    if (tokamak_device(1:4) .eq. 'MAST') then
-      if ( (R .gt. (R_xpoint(1)+R_xpoint(2))/2.d0) ) then
-        direction = 1.d0
+    if (.not. grid_to_wall) then
+      if (tokamak_device(1:4) .eq. 'MAST') then
+        if ( (R .gt. (R_xpoint(1)+R_xpoint(2))/2.d0) ) then
+          direction = 1.d0
+        else
+          direction = -1.d0
+        endif
       else
-        direction = -1.d0
+        !direction = + ps0_x / abs(ps0_x)
+        alpha = (Z_axis - Z_xpoint(1))/(R_axis - R_xpoint(1))
+        R_inside = alpha*(Z-Z_xpoint(1)) + R + alpha**2 * R_xpoint(1)
+        R_inside = R_inside / (1.d0 + alpha**2)
+        Z_inside = alpha * (R_inside - R_xpoint(1)) + Z_xpoint(1)
+        R_inside = min(max(R_inside,R_xpoint(1)),R_axis)
+        Z_inside = min(max(Z_inside,Z_xpoint(1)),Z_axis)
+        direction = ps0_s * ( (R-R_inside)*Z_s - (Z-Z_inside)*R_s )
+        direction = direction / abs(direction)
       endif
-    else
-      !direction = + ps0_x / abs(ps0_x)
-      alpha = (Z_axis - Z_xpoint(1))/(R_axis - R_xpoint(1))
-      R_inside = alpha*(Z-Z_xpoint(1)) + R + alpha**2 * R_xpoint(1)
-      R_inside = R_inside / (1.d0 + alpha**2)
-      Z_inside = alpha * (R_inside - R_xpoint(1)) + Z_xpoint(1)
-      R_inside = min(max(R_inside,R_xpoint(1)),R_axis)
-      Z_inside = min(max(Z_inside,Z_xpoint(1)),Z_axis)
-      direction = ps0_s * ( (R-R_inside)*Z_s - (Z-Z_inside)*R_s )
-      direction = direction / abs(direction)
+      if (xcase .eq. 2) then
+        direction = -direction
+      else if ((xcase .eq. 3).and.(Z .gt. Z_axis +0.1) .and. ( R .gt.R_xpoint(2))) then
+        direction = -1.
+      else if ((xcase .eq. 3) .and. (Z .gt. Z_axis +0.1) .and. (R .lt. R_xpoint(2))) then
+        direction = +1.
+      end if
     endif
-    if (xcase .eq. 2) then
-      direction = -direction
-    else if ((xcase .eq. 3).and.(Z .gt. Z_axis +0.1) .and. ( R .gt.R_xpoint(2))) then
-      direction = -1.
-    else if ((xcase .eq. 3) .and. (Z .gt. Z_axis +0.1) .and. (R .lt. R_xpoint(2))) then
-      direction = +1.
-    end if
 
     ! --- Diamagnetic term
     tau_IC = tauIC

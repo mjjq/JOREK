@@ -29,7 +29,7 @@ type (type_element_list), pointer :: newelement_list
 
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
-real*8              :: s_find(18), t_find(18), st_find(18), tht_x, theta, delta, ss, tmp1, tmp2
+real*8              :: s_find(8), t_find(8), st_find(8), tht_x, theta, delta, ss, tmp1, tmp2
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss

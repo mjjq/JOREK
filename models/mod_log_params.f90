@@ -284,11 +284,17 @@ if (my_id == 0) then
     do i=1,n_wall_blocks
       write(*,INTG_FMT) 'Wall Patch number:    ', i
       write(*,INTG_FMT) 'n_block_points_left   ', n_block_points_left(i)
-      write(*,REAL_FMT) 'R_block_points_left   ', R_block_points_left(i)
-      write(*,REAL_FMT) 'Z_block_points_left   ', Z_block_points_left(i)
+      do j=1,n_block_points_left(i)
+        write(*,INTG_FMT) 'Patch left  point:    ', j
+        write(*,REAL_FMT) 'R_block_points_left   ', R_block_points_left(i,j)
+        write(*,REAL_FMT) 'Z_block_points_left   ', Z_block_points_left(i,j)
+      enddo
       write(*,INTG_FMT) 'n_block_points_right  ', n_block_points_right(i)
-      write(*,REAL_FMT) 'R_block_points_right  ', R_block_points_right(i)
-      write(*,REAL_FMT) 'Z_block_points_right  ', Z_block_points_right(i)
+      do j=1,n_block_points_right(i)
+        write(*,INTG_FMT) 'Patch right point:    ', j
+        write(*,REAL_FMT) 'R_block_points_right  ', R_block_points_right(i,j)
+        write(*,REAL_FMT) 'Z_block_points_right  ', Z_block_points_right(i,j)
+      enddo
     enddo
   endif
 

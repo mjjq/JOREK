@@ -1265,7 +1265,7 @@ endif
   if (my_id .eq. 0)  then
     fileout = 'jorek_restart'
     call export_restart(node_list, element_list, fileout)
-    if (write_ps .eq. .true.) then
+    if ( write_ps ) then
       if (.not. bench_without_plot) then
         do ivar=1,n_var
           call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))

@@ -250,12 +250,14 @@ if (my_id == 0) then
     write(*,INTG_FMT) 'n_open                ', n_open
     write(*,INTG_FMT) 'n_private             ', n_private
     write(*,INTG_FMT) 'n_leg                 ', n_leg
+    write(*,INTG_FMT) 'n_leg_out             ', n_leg_out
     write(*,INTG_FMT) 'n_ext                 ', n_ext
     write(*,INTG_FMT) 'n_outer               ', n_outer
     write(*,INTG_FMT) 'n_inner               ', n_inner
     write(*,LOGI_FMT) 'force_horizontal_xline', force_horizontal_xline
     write(*,INTG_FMT) 'n_up_priv             ', n_up_priv
     write(*,INTG_FMT) 'n_up_leg              ', n_up_leg
+    write(*,INTG_FMT) 'n_up_leg_out          ', n_up_leg_out
     write(*,REAL_FMT) 'SIG_closed            ', SIG_closed
     write(*,REAL_FMT) 'SIG_open              ', SIG_open
     write(*,REAL_FMT) 'SIG_private           ', SIG_private
@@ -275,6 +277,20 @@ if (my_id == 0) then
     write(*,INTG_FMT) 'first_target_point    ', first_target_point
     write(*,INTG_FMT) 'last_target_point     ', last_target_point
   end if
+
+  if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then
+    write(*,LOGI_FMT) 'RZ_grid_inside_wall   ', RZ_grid_inside_wall
+    write(*,INTG_FMT) 'n_wall_blocks         ', n_wall_blocks
+    do i=1,n_wall_blocks
+      write(*,INTG_FMT) 'Wall Patch number:    ', i
+      write(*,INTG_FMT) 'n_block_points_left   ', n_block_points_left(i)
+      write(*,REAL_FMT) 'R_block_points_left   ', R_block_points_left(i)
+      write(*,REAL_FMT) 'Z_block_points_left   ', Z_block_points_left(i)
+      write(*,INTG_FMT) 'n_block_points_right  ', n_block_points_right(i)
+      write(*,REAL_FMT) 'R_block_points_right  ', R_block_points_right(i)
+      write(*,REAL_FMT) 'Z_block_points_right  ', Z_block_points_right(i)
+    enddo
+  endif
 
   write(*,INTG_FMT) 'nout                  ', nout
   write(*,REAL_FMT) 'xr1                   ', xr1

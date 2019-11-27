@@ -430,18 +430,18 @@ required = 0
     if (regrid) then
       if (xpoint)  then
         if ( (xcase .ge. 2) .or. (RZ_grid_inside_wall) ) then
-	  if (grid_to_wall) then
-	    call grid_double_xpoint_inside_wall(node_list, element_list)
-	  else
-	    call grid_double_xpoint(node_list, element_list)
-	  endif
+          if (grid_to_wall) then
+            call grid_double_xpoint_inside_wall(node_list, element_list)
+          else
+            call grid_double_xpoint(node_list, element_list)
+          endif
         else
-	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-        		   SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
+          call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+                           SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
         endif
       else
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
-          sig1, xr2, sig2, refinement)
+                               sig1, xr2, sig2, refinement)
       end if
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
     end if
@@ -555,7 +555,6 @@ required = 0
         
         if (xpoint)  then
 
-!         if (.not. grid_to_wall) then
           if ( (xcase .ge. 2) .or. (RZ_grid_inside_wall) ) then
             if (grid_to_wall) then
               call grid_double_xpoint_inside_wall(node_list, element_list)

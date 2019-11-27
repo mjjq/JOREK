@@ -64,11 +64,12 @@ contains
     use data_structure
     use global_distributed_matrix
     use vacuum, ONLY: is_freebound
-    use phys_module, only: F0, GAMMA, freeboundary, tokamak_device, U_sheath, grid_to_wall, &
+    use phys_module, only: F0, GAMMA, freeboundary, tokamak_device, U_sheath,               &
                            RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ,           &
                            psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ,                   &
                            t_now, RMP_growth_rate, RMP_ramp_up_time,                        &
-                           RMP_start_time, tstep, RMP_har_cos, RMP_har_sin
+                           RMP_start_time, tstep, RMP_har_cos, RMP_har_sin,                 &
+                           grid_to_wall, n_wall_blocks
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
@@ -189,7 +190,7 @@ contains
                   side = 2
 
                   ! --- Field direction
-                  if (grid_to_wall) then
+                  if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then
                     direction = 1
                     if (node_list%node(inode)%boundary .eq. 11) direction = -direction
                     if (node_list%node(inode)%boundary .eq. 19) direction = -direction
@@ -260,7 +261,7 @@ contains
                   side = 3
                   
                   ! --- Field direction
-                  if (grid_to_wall) then
+                  if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then
                     direction = 1
                     if (node_list%node(inode)%boundary .eq. 15) direction = -direction
                     if (node_list%node(inode)%boundary .eq. 19) direction = -direction
@@ -301,7 +302,6 @@ contains
                       .or. apply_on_current                             &
                       .or.( (k_var .eq. 2) .and. (.not. U_sheath) )     &
                       .or.  (k_var .eq. 4)                              &
-                      !.or.  (k_var .eq. 7)                              &
                       ) apply_dirichlet = .true.
 
                   ! --- Apply Dirichlet if required
@@ -440,7 +440,7 @@ contains
     use data_structure
     use phys_module, only: F0, FF_0, xpoint, xcase, tokamak_device,    &
                            central_mass, mass_proton, central_density, &
-			   mu_zero, tauIC, renormalise, grid_to_wall
+			   mu_zero, tauIC, renormalise, grid_to_wall, n_wall_blocks
     use corr_neg
     
     implicit none
@@ -499,7 +499,7 @@ contains
     Vpar0_t   = node%values(1,3,k_Vpar)
 
     ! --- Define direction of Vpar on target. Careful, using ps0_x/abs(ps0_x) can be treacherous.
-    if (.not. grid_to_wall) then
+    if ( (.not. grid_to_wall) .or. (n_wall_blocks .eq. 0) ) then
       if (tokamak_device(1:4) .eq. 'MAST') then
         if ( (R .gt. (R_xpoint(1)+R_xpoint(2))/2.d0) ) then
           direction = 1.d0

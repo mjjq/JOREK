@@ -339,6 +339,7 @@ subroutine preset_parameters
   Z_limiter = 0.d0
   
   n_wall_blocks        = 0
+  n_ext_block          = 0
   n_block_points_left  = 0
   R_block_points_left  = 0.d0
   Z_block_points_left  = 0.d0

@@ -239,7 +239,6 @@ do in=2,n_tor
 enddo
 
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)
-if (.false.) then
 do i=1,node_list%n_nodes
 
 #ifdef altcs
@@ -337,7 +336,6 @@ do i=1,node_list%n_nodes
     enddo
   endif
 enddo
-endif
 
 !call add_pellet(node_list,element_list,5.,0.08,0.03,R_geo-0.78,Z_geo)
 !call add_pellet(node_list,element_list,25.,0.08,0.03,R_geo+0.85,Z_geo)

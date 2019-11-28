@@ -1417,7 +1417,7 @@ endif
         end if
       endif
       call finplt 					 ! close plot file
-    endif
+    endif !  write_ps
 !  cll export_POV(node_list,element_list,3,1)	       ! export to POVray native bezier patch format
 #ifdef fullmhd
     write(*,*) ' '

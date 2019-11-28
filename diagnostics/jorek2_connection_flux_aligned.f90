@@ -16,61 +16,60 @@ program jorek2_connection_flux_aligned
   include 'mpif.h'
   
   ! --- Poincare data
-  real*8,allocatable	:: rp(:), zp(:), R_all(:), Z_all(:), psi_all(:), C_all(:), C_minus(:), C_plus(:)
-  real*4,allocatable	:: C_all_4(:)
-  real*4,allocatable	:: R_strike(:),  Z_strike(:), P_strike(:)                             ! position of strike points
-  real*8,allocatable	:: C_strike(:),  B_strike(:)		                                      ! connection length, boundary type at strike points
-  real*8,allocatable	:: T0_strike(:), T_strike(:)		                                      ! temperature at start and end of fieldline
-  real*8,allocatable	:: ZN0_strike(:), ZN_strike(:)		                                    ! density at start and end of fieldline
-  real*8,allocatable	:: PS0_strike(:)  			                                              ! flux at starting point
-  real*8,allocatable	:: R_turn(:,:), Z_turn(:,:), C_turn(:,:), C_turn_tmp(:,:)             ! position, and connection length of field line after each turn
-  real*8,allocatable	:: T_turn(:,:), PSI_turn(:,:), ZN_turn(:,:)                           ! physical parameters of field line after each turn
+  real*8,allocatable  :: rp(:), zp(:), R_all(:), Z_all(:), psi_all(:), C_all(:), C_minus(:), C_plus(:)  ! arrays for position, and connection length for all lines
+  real*4,allocatable  :: C_all_4(:)
+  real*4,allocatable  :: R_strike(:),  Z_strike(:), P_strike(:)                                         ! position of strike points
+  real*8,allocatable  :: C_strike(:),  B_strike(:)                                                      ! connection length, boundary type at strike points
+  real*8,allocatable  :: T0_strike(:), T_strike(:)                                                      ! temperature at start and end of fieldline
+  real*8,allocatable  :: ZN0_strike(:), ZN_strike(:)                                                    ! density at start and end of fieldline
+  real*8,allocatable  :: PS0_strike(:)                                                                  ! flux at starting point
+  real*8,allocatable  :: R_turn(:,:), Z_turn(:,:), C_turn(:,:), C_turn_tmp(:,:)                         ! position, and connection length of field line after each turn
+  real*8,allocatable  :: T_turn(:,:), PSI_turn(:,:), ZN_turn(:,:)                                       ! physical parameters of field line after each turn
   
   ! --- Extra data
   integer   :: ntheta, npsin
-  integer		:: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, i_line0
-  integer		:: thetas_per_cpu, local_theta_start, local_theta_end
-  integer		:: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
-  integer		:: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_dir, k, m
-  integer		:: i_elm, i_elm_start, ifail, i_phi, n_phi, i_turn, n_turns, i_elm_out, i_elm_prev, i_steps, n_turn_max(2)
+  integer   :: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, i_line0
+  integer   :: thetas_per_cpu, local_theta_start, local_theta_end
+  integer   :: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
+  integer   :: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_dir, k, m
+  integer   :: i_elm, i_elm_start, ifail, i_phi, n_phi, i_turn, n_turns, i_elm_out, i_elm_prev, i_steps, n_turn_max(2)
   real*8    :: delta_theta, delta_psin
-  real*8		:: R_start, Z_start, P_start
-  real*8		:: R_line, Z_line, s_line, t_line, p_line
-  real*8		:: Zjac
-  real*8		:: s_mid, t_mid, p_mid
-  real*8		:: s_ini, t_ini
-  real*8		:: s_out, t_out
-  real*8		:: R, R_s, R_t, R_st, R_ss, R_tt, R_in, R_keep, Rmid, Rmid_s, Rmid_t
-  real*8		:: Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, Z_in, Z_keep, Zmid, Zmid_s, Zmid_t
-  real*8		:: P, P_s, P_t, P_st, P_ss, P_tt
-  real*8		:: tol, psi_s, psi_t
-  real*8		:: Rmin, Rmax
-  real*8		:: Zmin, Zmax
-  real*8		:: delta_phi, delta_phi_local, delta_phi_step, total_phi
-  real*8		:: delta_s, small_delta_s
-  real*8		:: delta_t, small_delta_t
-  real*8		:: small_delta, dl2, total_length, length_max
-  real*8		:: zl1, zl2, partial(2)
-  integer		:: i_elm_xpoint,i_elm_axis
-  real*8		:: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_bnd, psi_bnd2
-  real*8		:: psi_axis,R_axis,Z_axis,s_axis,t_axis
-  integer		:: bnd_tmp, bnd_tmp_opp
-  real*8		:: s_tmp,   s_tmp_opp
-  real*8		:: t_tmp,   t_tmp_opp
-  real*8		:: value_out
-  real*4,allocatable	:: RZkeep(:,:),scalars(:,:)
-  real*4		:: ZERO
-  integer		:: status(MPI_STATUS_SIZE)
-  character		:: buffer*80, lf*1, str1*12, str2*12
-  character*12, allocatable :: scalar_names(:)
-  integer		:: count_lines, count_lines_tot
-  real*8		:: C_average,   C_average_tot
-  real*8		:: small_r, theta_pol
-  logical, parameter	:: Rtheta_plot = .true.
-  integer		:: n_points_max
-  real*8		:: R_tmp,Z_tmp
-  real*8		:: psi_tmp,P0_s,P0_t,P0_st,P0_ss,P0_tt
-  integer		:: ielm_tmp
+  real*8    :: R_start, Z_start, phi_start
+  real*8    :: R_line, Z_line, s_line, t_line, p_line
+  real*8    :: Zjac
+  real*8    :: s_mid, t_mid, p_mid
+  real*8    :: s_ini, t_ini
+  real*8    :: s_out, t_out
+  real*8    :: R, R_s, R_t, R_st, R_ss, R_tt, R_in, R_keep, Rmid, Rmid_s, Rmid_t
+  real*8    :: Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, Z_in, Z_keep, Zmid, Zmid_s, Zmid_t
+  real*8    :: P, P_s, P_t, P_st, P_ss, P_tt
+  real*8    :: tol, psi_s, psi_t
+  real*8    :: Rmin, Rmax
+  real*8    :: Zmin, Zmax
+  real*8    :: delta_phi, delta_phi_local, delta_phi_step, total_phi
+  real*8    :: delta_s, small_delta_s
+  real*8    :: delta_t, small_delta_t
+  real*8    :: small_delta, dl2, total_length, length_max
+  real*8    :: zl1, zl2, partial(2)
+  integer   :: i_elm_xpoint,i_elm_axis
+  real*8    :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_bnd, psi_bnd2
+  real*8    :: psi_axis,R_axis,Z_axis,s_axis,t_axis
+  integer   :: bnd_tmp, bnd_tmp_opp
+  real*8    :: s_tmp,   s_tmp_opp
+  real*8    :: t_tmp,   t_tmp_opp
+  real*8    :: value_out
+  real*4,allocatable  :: RZkeep(:,:),scalars(:,:)
+  real*4    :: ZERO
+  integer   :: status(MPI_STATUS_SIZE)
+  character   :: buffer*80, lf*1, str1*12, str2*12
+  integer   :: count_lines, count_lines_tot
+  real*8    :: C_average,   C_average_tot
+  real*8    :: small_r, theta_pol
+  logical, parameter  :: Rtheta_plot = .true.
+  integer   :: n_points_max
+  real*8    :: R_tmp,Z_tmp
+  real*8    :: psi_tmp,P0_s,P0_t,P0_st,P0_ss,P0_tt
+  integer   :: ielm_tmp
 
   ! Data for find starting point routine
   real*8  :: theta_start, psin_start, previous_r_lower, previous_r_upper                                    
@@ -78,17 +77,16 @@ program jorek2_connection_flux_aligned
   ! -------------------------------------------------------------------------------------------------
   ! --- First part: Initialisation
   ! -------------------------------------------------------------------------------------------------
-  
+  namelist /connect_params/ n_turns, n_phi, ntheta, npsin, phi_start, tol
+
   ! --- MPI initilisation
   call MPI_INIT(IERR)
-  !required=MPI_THREAD_MULTIPLE
-  !call MPI_Init_thread(required,provided,StatInfo)
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)             ! id of each MPI proc
   call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)             ! number of MPI procs
   
   if (my_id .eq. 0) then
     write(*,*) '***************************************'
-    write(*,*) '* JOREK2_connection            		    *'
+    write(*,*) '* JOREK2_connection_flux_aligned      *'
     write(*,*) '***************************************'
     write(*,*) 'WARNING: This program is still in development'
   endif
@@ -119,23 +117,25 @@ program jorek2_connection_flux_aligned
     enddo
   enddo
   
-  ! --- Initialise variables
+  ! --- Initialise constants
   n_scalars = 4
-  ZERO      = 0.
-  i_var_psi = 1					! the index of the magnetic flux variable
-  allocate(scalar_names(n_scalars))
-  scalar_names  = (/ 'length_tot  ','length_min  ','psi_start   ','T_start     '/)
+  i_var_psi = 1                             ! the index of the magnetic flux variable
   
-  ! --- Initialise toroidal variables
-  n_turns   = 500    !500		  		  ! number of toroidal turns to follow a fieldline
-  n_phi     = 1000   !1000  	  		! number of steps per toroidal turn
-  tol	    = 1.d-6    !1.d-8				  ! tolerance when stepping from element to element
-    
-  ! --- How many starting points
-  ntheta      = 500              ! number of poloidal starting points on each flux surface
-  npsin       = 25               ! number of radial starting points on each flux surface
-  n_lines = 2 * ntheta * npsin   ! number of starting points to allocate
-  
+  ! --- Preset parameters and read inputs from file if provided
+  n_turns     = 500                         ! number of toroidal turns to follow a fieldline
+  n_phi       = 1000                        ! number of steps per toroidal turn
+  tol         = 1.d-6                       ! tolerance when stepping from element to element
+  phi_start   = PI/4.                       ! starting toroidal angle
+  ntheta      = 500                         ! number of poloidal starting points on each flux surface
+  npsin       = 25                          ! number of radial starting points on each flux surface
+  open(42, file='connect.nml', action='read', status='old', iostat=ierr)
+  if ( ierr == 0 ) then
+    if (my_id .eq. 0 ) write(*,*) 'Reading parameters from connecvtk.nml namelist.'
+    read(42,connect_params)
+    close(42)
+  end if
+  n_lines = 2 * ntheta * npsin              ! number of starting points to allocate
+
   ! --- Allocate data
   allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines),B_strike(n_lines))
   allocate(T0_strike(n_lines),T_strike(n_lines),ZN0_strike(n_lines),ZN_strike(n_lines),PS0_strike(n_lines))
@@ -147,11 +147,11 @@ program jorek2_connection_flux_aligned
   allocate(RZkeep(2,n_points_max),scalars(n_points_max,n_scalars))
 
   ! --- Initialise allocated data
-  R_all     = 0.d0; Z_all     = 0.d0; psi_all=0.d0; C_all	= 0.d0;  C_all_4    = 0.d0
+  R_all     = 0.d0; Z_all     = 0.d0; psi_all=0.d0; C_all = 0.d0;  C_all_4    = 0.d0
   C_minus   = 0.d0; C_plus    = 0.d0
   R_strike  = 0.d0; Z_strike  = 0.d0; P_strike  = 0.d0;  C_strike   = 0.d0
   T0_strike = 0.d0; T_strike  = 0.d0; ZN0_strike = 0.d0; ZN_strike  = 0.d0; PS0_strike = 0.d0
-  R_turn    = 0.d0; Z_turn    = 0.d0; C_turn	= 0.d0;  C_turn_tmp = 0.d0
+  R_turn    = 0.d0; Z_turn    = 0.d0; C_turn  = 0.d0;  C_turn_tmp = 0.d0
   
   ! --- Get domain limits
   Rmin = 1.d20; Rmax = -1.d20; Zmin = 1.d20; Zmax=-1.d20
@@ -217,7 +217,6 @@ program jorek2_connection_flux_aligned
       ! Get starting R, Z, phi - phi is set arbitrarily
       psin_start = j * delta_psin
       call find_starting_element(i_elm_start, psin_start, psi_axis, psi_bnd, theta_start, R_axis, Z_axis, Z_xpoint, s_ini, t_ini, previous_r_lower, previous_r_upper, R_start, Z_start)
-      P_start = PI/4.!0.d0
 
       ! ----------------------
       ! --- We have a new line
@@ -245,21 +244,21 @@ program jorek2_connection_flux_aligned
         ! --- Record the first point
         R_all(i_line) = R_start
         Z_all(i_line) = Z_start
-        call var_value(i_elm, 1, s_line, t_line, P_start, psi_all(i_line))
+        call var_value(i_elm, 1, s_line, t_line, phi_start, psi_all(i_line))
     
         R_turn(1,(i_dir+1)/2+1) = R_start
         Z_turn(1,(i_dir+1)/2+1) = Z_start
         C_turn(1,(i_dir+1)/2+1) = 0.d0
     
         ! --- Get variables at start
-        call var_value(i_elm, 6, s_line,t_line,P_start, T_turn  (1,(i_dir+1)/2+1) )
+        call var_value(i_elm, 6, s_line,t_line,phi_start, T_turn  (1,(i_dir+1)/2+1) )
         PSI_turn(1,(i_dir+1)/2+1) = psi_all(i_line)
-        call var_value(i_elm, 5, s_line,t_line,P_start, ZN_turn (1,(i_dir+1)/2+1) )
+        call var_value(i_elm, 5, s_line,t_line,phi_start, ZN_turn (1,(i_dir+1)/2+1) )
         
         ! --- Starting location
         R_line = R_start
         Z_line = Z_start
-        p_line = P_start
+        p_line = phi_start
     
         ! --- We assume this line will give a strike on the target
         i_strike = i_strike + 1
@@ -304,7 +303,7 @@ program jorek2_connection_flux_aligned
               ! --- Do we require a smaller step (< 1.0) 
               small_delta = min(small_delta_s, small_delta_t)
     
-              if (small_delta .lt. 1.d0)  then	     ! this step is crossing the boundary
+              if (small_delta .lt. 1.d0)  then       ! this step is crossing the boundary
                 s_mid = s_line + 0.5d0 * small_delta * delta_s
                 t_mid = t_line + 0.5d0 * small_delta * delta_t
                 p_mid = p_line + 0.5d0 * small_delta * delta_phi_step
@@ -412,7 +411,7 @@ program jorek2_connection_flux_aligned
           R_strike(i_strike) = R_in
           Z_strike(i_strike) = Z_in
           P_strike(i_strike) = p_line
-          C_strike(i_strike) = 0.d0	       ! to be done (total_length needs correction)
+          C_strike(i_strike) = 0.d0        ! to be done (total_length needs correction)
           B_strike(i_strike) = 0
           call var_value(i_elm,6,s_line,t_line,p_line,T_strike(i_strike))
           call var_value(i_elm,5,s_line,t_line,p_line,ZN_strike(i_strike))
@@ -448,7 +447,7 @@ program jorek2_connection_flux_aligned
       if ( (PSI_turn(1,1) .lt. psi_bnd2) &
         .and. (    ((n_turn_max(1) .lt. n_turns) .and. (n_turn_max(2) .lt. n_turns)) &
             .or. Rtheta_plot ) &
-        .and. (	( (xcase .eq. 1) .and. (Z_turn(1,1) .gt. Z_xpoint(1)) ) &
+        .and. ( ( (xcase .eq. 1) .and. (Z_turn(1,1) .gt. Z_xpoint(1)) ) &
           .or.( (xcase .eq. 2) .and. (Z_turn(1,1) .lt. Z_xpoint(2)) ) &
           .or.( (xcase .eq. 3) .and. (Z_turn(1,1) .gt. Z_xpoint(1)) .and. (Z_turn(1,1) .lt. Z_xpoint(2)) ) ) ) then
 
@@ -477,11 +476,11 @@ program jorek2_connection_flux_aligned
                 if (Rtheta_plot) then
                   call find_RZ(node_list,element_list,R_turn(i_turn,i_dir),Z_turn(i_turn,i_dir),R_tmp,Z_tmp,ielm_tmp,s_tmp,t_tmp,ifail)
                   call interp(node_list,element_list,ielm_tmp,1,1,s_tmp,t_tmp,psi_tmp,P0_s,P0_t,P0_st,P0_ss,P0_tt)
-                  RZkeep(1,ikeep)	     = (psi_tmp-psi_axis)/(psi_bnd-psi_axis)!small_r
-                  RZkeep(2,ikeep)	     = theta_pol / (2.d0*PI)
+                  RZkeep(1,ikeep)      = (psi_tmp-psi_axis)/(psi_bnd-psi_axis)!small_r
+                  RZkeep(2,ikeep)      = theta_pol / (2.d0*PI)
                 else
-                  RZkeep(1,ikeep)	     = R_turn(i_turn,i_dir)
-                  RZkeep(2,ikeep)	     = Z_turn(i_turn,i_dir)
+                  RZkeep(1,ikeep)      = R_turn(i_turn,i_dir)
+                  RZkeep(2,ikeep)      = Z_turn(i_turn,i_dir)
                 endif
                 !scalars(ikeep,1:n_scalars) = (/ min(zl1,zl2),T_turn(1,i_dir) /)
                 !scalars(ikeep,1:n_scalars) = (/ C_all_4(i_line),C_minus(i_line),C_plus(i_line),T_turn(1,i_dir) /)
@@ -539,7 +538,7 @@ program jorek2_connection_flux_aligned
         call mpi_recv(C_all,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
         write(23,'(4e16.8)') ( (/R_all(i), Z_all(i), psi_all(i), C_all(i) /),i=1,i_line)
       endif
-      write(*, *) 'Received CPU: ', j
+      write(*, *) 'Received MPI task: ', j
     enddo
   else
     ! --- If this is not mpi_0, we send data to the main MPI 0
@@ -554,7 +553,7 @@ program jorek2_connection_flux_aligned
   endif
   close(23)
 
-  deallocate(RZkeep,scalars,scalar_names)
+  deallocate(RZkeep,scalars)
 
   call MPI_FINALIZE(IERR)                                ! clean up MPI
 

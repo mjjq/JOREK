@@ -1815,11 +1815,46 @@ do i=1,element_list%n_elements
 enddo
 
 !---------------------------- copy new grid into nodes/elements
-node_list%n_nodes = newnode_list%n_nodes
-node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
-
 element_list%n_elements = newelement_list%n_elements
 element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
+
+! --- This is the old way
+!node_list%n_nodes = newnode_list%n_nodes
+!node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+
+! --- Now, we define only the nodes that belong to elements! (this gets rid of potential orphan nodes, which the matrix doesn't like, obviously...)
+node_list%n_nodes = 4
+node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+if (xcase .eq. 3) then
+  node_list%n_nodes = 8
+  node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+endif
+do i_elm1 = 1,element_list%n_elements
+  do i_vertex1 = 1,n_vertex_max
+    i_node1 = newelement_list%element(i_elm1)%vertex(i_vertex1)
+    if ( ((i_node1.gt.8).and.(xcase.eq.3)) .or. ((i_node1.gt.4).and.(xcase.ne.3)) ) then
+      i_node_save = 0
+      do i_elm2 = 1,i_elm1-1
+        do i_vertex2 = 1,n_vertex_max
+          i_node2 = newelement_list%element(i_elm2)%vertex(i_vertex2)
+          if (i_node2 .eq. i_node1) then
+            i_node_save = i_node1
+            exit
+          endif
+        enddo
+        if (i_node_save .ne. 0) exit
+      enddo
+      if (i_node_save .eq. 0) then
+        node_list%n_nodes = node_list%n_nodes + 1
+        node_list%node(node_list%n_nodes) = newnode_list%node(i_node1)
+        newnode_list%node(i_node1)%boundary = node_list%n_nodes ! using "boundary" to save new node index, since newnode_list will be scrapped
+        element_list%element(i_elm1)%vertex(i_vertex1) = node_list%n_nodes
+      else
+        element_list%element(i_elm1)%vertex(i_vertex1) = newnode_list%node(i_node_save)%boundary
+      endif
+    endif
+  enddo
+enddo
 
 if ( newnode_list%n_nodes > n_nodes_max ) then
   write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'

@@ -20,17 +20,9 @@ module data_structure
     real*8     :: psi_eq(n_order+1)               !< equilibrium flux at the nodes
 #endif
     integer    :: index(n_order+1)                !< index in the main matrix
-    integer    :: boundary                        !< = 1, 2 or 3 for boundary nodes
-                                                  !< For wall-aligned grids, the above are still true, but there are a lot more types:
-                                                  !< 1: Non-corner target, with tangent on vector 2
-                                                  !< 2: Non-corner flux-aligned boundary, with tangent on vector 3
-                                                  !< 3: Corner between type-1 and type-2
-                                                  !< 4: Same as type-1
-                                                  !< 5: Non-corner target, with tangent on vector 3
-                                                  !< 6: NOT USED Non-corner flux-aligned boundary, with tangent on vector 2
-                                                  !< 8: NOT USED Corner between type-2 and type-6
-                                                  !< 9: Corner between type-4 and type-5
-                                                  !<11: NOT USED Corner between type-5 and type-6
+    integer    :: boundary                        !< = 1, 2 or 3 for boundary nodes.
+                                                  !< For wall-aligned grids, check routine update_boundary_types_final
+                                                  !< in grids/grid_utils/update_boundary_types.f90
     integer    :: boundary_index                  !< index of the boundary node 
     integer    :: parents(2)                      !< Parent nodes (used if node is constrained)"refinement"
     integer    :: parent_elem                     !< which element do parent nodes belong to ? "refinement"

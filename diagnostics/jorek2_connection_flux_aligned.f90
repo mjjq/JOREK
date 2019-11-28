@@ -46,6 +46,7 @@ program jorek2_connection_flux_aligned
   real*8    :: Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, Z_in, Z_keep, Zmid, Zmid_s, Zmid_t
   real*8    :: P, P_s, P_t, P_st, P_ss, P_tt
   real*8    :: tol, psi_s, psi_t
+  real*8    :: psin_range_min, psin_range_max
   real*8    :: Rmin, Rmax
   real*8    :: Zmin, Zmax
   real*8    :: delta_phi, delta_phi_local, delta_phi_step, total_phi
@@ -79,7 +80,7 @@ program jorek2_connection_flux_aligned
   ! -------------------------------------------------------------------------------------------------
   ! --- First part: Initialisation
   ! -------------------------------------------------------------------------------------------------
-  namelist /connect_params/ n_turns, n_phi, ntheta, npsin, phi_start, tol
+  namelist /connect_params/ n_turns, n_phi, ntheta, npsin, phi_start, tol, psin_range_min, psin_range_max
 
   ! --- MPI initilisation
   call MPI_INIT(IERR)
@@ -141,6 +142,8 @@ program jorek2_connection_flux_aligned
   phi_start   = PI/4.                       ! starting toroidal angle
   ntheta      = 500                         ! number of poloidal starting points on each flux surface
   npsin       = 25                          ! number of radial starting points on each flux surface
+  psin_range_min = 0.d0
+  psin_range_max = 0.995
   open(42, file='connect.nml', action='read', status='old', iostat=ierr)
   if ( ierr == 0 ) then
     if (my_id .eq. 0 ) write(*,*) 'Reading parameters from connecvtk.nml namelist.'
@@ -148,6 +151,10 @@ program jorek2_connection_flux_aligned
     close(42)
   end if
   n_lines = 2 * ntheta * npsin              ! number of starting points to allocate
+  if (psin_range_max .gt. 0.999) then
+    write(*, *) 'Maximum psi normalised cannot be greater than 1. The input value is: ', psin_range_max
+    stop
+  end if
 
   ! --- Allocate data
   allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines),B_strike(n_lines))
@@ -200,7 +207,7 @@ program jorek2_connection_flux_aligned
   
   ! --- Some info print outs
   delta_theta = 2.d0 * PI / ntheta
-  delta_psin = 0.995d0 / npsin
+  delta_psin = (psin_range_max - psin_range_min) / npsin
   write(*,*) ' Local MPI poloidal angles (mpi_id, theta_start, theta_end) : ', my_id, local_theta_start * delta_theta, local_theta_end * delta_theta
   
   ! --- Initialise counters
@@ -228,7 +235,7 @@ program jorek2_connection_flux_aligned
     ! Loop over radial locations
     do j=1, npsin
       ! Get starting R, Z, phi - phi is set arbitrarily
-      psin_start = j * delta_psin
+      psin_start = psin_range_min + j * delta_psin
       call find_starting_element(i_elm_start, psin_start, psi_axis, psi_bnd, theta_start, R_axis, Z_axis, Z_xpoint, s_ini, t_ini, previous_r_lower, previous_r_upper, R_start, Z_start)
 
       ! ----------------------

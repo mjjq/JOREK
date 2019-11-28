@@ -31,8 +31,10 @@ program jorek2_connection_flux_aligned
   integer   :: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, i_line0
   integer   :: thetas_per_cpu, local_theta_start, local_theta_end
   integer   :: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
-  integer   :: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_dir, k, m
+  integer   :: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_var_n, i_var_T, i_dir, k, m
   integer   :: i_elm, i_elm_start, ifail, i_phi, n_phi, i_turn, n_turns, i_elm_out, i_elm_prev, i_steps, n_turn_max(2)
+  integer   :: v_s0_t0, v_s1_t0, v_s1_t1, v_s0_t1                                                        ! vertex indices for local element vertices
+  integer   :: e_splus, e_sminus, e_tplus, e_tminus                                                      ! edge indices for local element neighbours
   real*8    :: delta_theta, delta_psin
   real*8    :: R_start, Z_start, phi_start
   real*8    :: R_line, Z_line, s_line, t_line, p_line
@@ -119,8 +121,19 @@ program jorek2_connection_flux_aligned
   
   ! --- Initialise constants
   n_scalars = 4
-  i_var_psi = 1                             ! the index of the magnetic flux variable
+  i_var_psi = 1                             ! magnetic flux index
+  i_var_n   = 1                             ! number density index
+  i_var_T   = 6                             ! temperature index
   
+  v_s0_t0   = 1                             ! the vertex and edge indices follow and anti-clockwise convention
+  v_s1_t0   = 2                             ! around the element: https://www.jorek.eu/wiki/doku.php?id=grids
+  v_s1_t1   = 3
+  v_s0_t1   = 4
+  e_splus   = 2
+  e_sminus  = 4
+  e_tplus   = 3
+  e_tminus  = 1
+
   ! --- Preset parameters and read inputs from file if provided
   n_turns     = 500                         ! number of toroidal turns to follow a fieldline
   n_phi       = 1000                        ! number of steps per toroidal turn
@@ -244,16 +257,16 @@ program jorek2_connection_flux_aligned
         ! --- Record the first point
         R_all(i_line) = R_start
         Z_all(i_line) = Z_start
-        call var_value(i_elm, 1, s_line, t_line, phi_start, psi_all(i_line))
+        call var_value(i_elm, i_var_psi, s_line, t_line, phi_start, psi_all(i_line))
     
         R_turn(1,(i_dir+1)/2+1) = R_start
         Z_turn(1,(i_dir+1)/2+1) = Z_start
         C_turn(1,(i_dir+1)/2+1) = 0.d0
     
         ! --- Get variables at start
-        call var_value(i_elm, 6, s_line,t_line,phi_start, T_turn  (1,(i_dir+1)/2+1) )
+        call var_value(i_elm, i_var_T, s_line,t_line,phi_start, T_turn  (1,(i_dir+1)/2+1) )
         PSI_turn(1,(i_dir+1)/2+1) = psi_all(i_line)
-        call var_value(i_elm, 5, s_line,t_line,phi_start, ZN_turn (1,(i_dir+1)/2+1) )
+        call var_value(i_elm, i_var_n, s_line,t_line,phi_start, ZN_turn (1,(i_dir+1)/2+1) )
         
         ! --- Starting location
         R_line = R_start
@@ -320,7 +333,7 @@ program jorek2_connection_flux_aligned
                                           Rmid, Rmid_s, Rmid_t, Zmid_s, Zmid_t, &
                                           total_length, &
                                           s_line, t_line, p_line, small_delta, delta_s, delta_t, delta_phi_step, &
-                                          2, 4, 2, 3, &
+                                          e_splus, e_sminus, v_s1_t0, v_s1_t1, &
                                           dl2)
                   
                   elseif (s_line + delta_s .lt. 0.d0) then ! crossing boundary 2 or 4 at s=0
@@ -331,7 +344,7 @@ program jorek2_connection_flux_aligned
                                           Rmid, Rmid_s, Rmid_t, Zmid_s, Zmid_t, &
                                           total_length, &
                                           s_line, t_line, p_line, small_delta, delta_s, delta_t, delta_phi_step, &
-                                          4, 2, 4, 1, &
+                                          e_sminus, e_splus, v_s0_t1, v_s0_t0, &
                                           dl2)
                   endif
                 else
@@ -343,7 +356,7 @@ program jorek2_connection_flux_aligned
                                           Rmid, Rmid_s, Rmid_t, Zmid_s, Zmid_t, &
                                           total_length, &
                                           s_line, t_line, p_line, small_delta, delta_s, delta_t, delta_phi_step, &
-                                          3, 1, 3, 4, &
+                                          e_tplus, e_tminus, v_s1_t1, v_s0_t1, &
                                           dl2)
                   
                   elseif (t_line + delta_t .lt. 0.d0) then  ! crossing boundary 1 or 3 at t=0
@@ -354,7 +367,7 @@ program jorek2_connection_flux_aligned
                                           Rmid, Rmid_s, Rmid_t, Zmid_s, Zmid_t, &
                                           total_length, &
                                           s_line, t_line, p_line, small_delta, delta_s, delta_t, delta_phi_step, &
-                                          1, 3, 1, 2, &
+                                          e_tminus, e_tplus, v_s0_t0, v_s0_t1, &
                                           dl2)
                   endif
                 endif
@@ -400,9 +413,9 @@ program jorek2_connection_flux_aligned
           R_turn(i_turn+1,(i_dir+1)/2+1) = R_in
           Z_turn(i_turn+1,(i_dir+1)/2+1) = Z_in
           C_turn_tmp(i_turn+1,(i_dir+1)/2+1) = total_length
-          call var_value(i_elm, 6, s_line,t_line,p_line, T_turn  (i_turn+1,(i_dir+1)/2+1) )
-          call var_value(i_elm, 1, s_line,t_line,p_line, PSI_turn(i_turn+1,(i_dir+1)/2+1) )
-          call var_value(i_elm, 5, s_line,t_line,p_line, ZN_turn (i_turn+1,(i_dir+1)/2+1) )
+          call var_value(i_elm, i_var_T, s_line,t_line,p_line, T_turn  (i_turn+1,(i_dir+1)/2+1) )
+          call var_value(i_elm, i_var_psi, s_line,t_line,p_line, PSI_turn(i_turn+1,(i_dir+1)/2+1) )
+          call var_value(i_elm, i_var_n, s_line,t_line,p_line, ZN_turn (i_turn+1,(i_dir+1)/2+1) )
     
         enddo  ! end of loop over toroidal turns
     
@@ -413,8 +426,8 @@ program jorek2_connection_flux_aligned
           P_strike(i_strike) = p_line
           C_strike(i_strike) = 0.d0        ! to be done (total_length needs correction)
           B_strike(i_strike) = 0
-          call var_value(i_elm,6,s_line,t_line,p_line,T_strike(i_strike))
-          call var_value(i_elm,5,s_line,t_line,p_line,ZN_strike(i_strike))
+          call var_value(i_elm,i_var_T,s_line,t_line,p_line,T_strike(i_strike))
+          call var_value(i_elm,i_var_n,s_line,t_line,p_line,ZN_strike(i_strike))
         endif
     
         ! --- Record connection length
@@ -433,7 +446,7 @@ program jorek2_connection_flux_aligned
       enddo  ! end of two directions
 
       ! -----------------------------------
-      ! --- Record what we want in vtk file
+      ! --- Record turn based data --------
       ! -----------------------------------
 
       ! --- Reverse connection length (not from plasma to position, but from target to position)
@@ -491,8 +504,8 @@ program jorek2_connection_flux_aligned
             endif
           enddo  
         enddo ! end recording in both directions
-      endif  
-    enddo    ! end over loop over radial coordinate
+      endif
+    enddo ! end over loop over radial coordinate
   enddo ! end of loop over poloidal coordinate
   write(*,*)'Finished loop for MPI task: ', my_id
   
@@ -769,6 +782,7 @@ subroutine find_new_element(s_bnd, i_elm, i_elm_prev, &
   real*8                  :: Z_in, Z_out, Z_s, Z_t, Z_st, Z_ss, Z_tt                                  ! Variables for interpolation of Z
   integer                 :: i_elm_tmp                                                                ! Temporary element to check neighbour element orientation is consistent
   integer                 :: inode1, inode2                                                           ! Nodes corresponding to boundary edge
+  integer                 :: i_var_n=5, i_var_T=6;                                                    ! Indices of number density and temperature
 
   if (s_bnd) then
     t_line = t_line + small_delta * delta_t
@@ -807,8 +821,8 @@ subroutine find_new_element(s_bnd, i_elm, i_elm_prev, &
     P_strike = p_line
     C_strike = total_length + sqrt(abs(dl2))
 
-    call var_value(i_elm_prev,6,s_line,t_line,p_line,T_strike)
-    call var_value(i_elm_prev,5,s_line,t_line,p_line,ZN_strike)
+    call var_value(i_elm_prev,i_var_T,s_line,t_line,p_line,T_strike)
+    call var_value(i_elm_prev,i_var_n,s_line,t_line,p_line,ZN_strike)
     
     inode1 = element_list%element(i_elm_prev)%vertex(vertex_1)
     inode2 = element_list%element(i_elm_prev)%vertex(vertex_2)

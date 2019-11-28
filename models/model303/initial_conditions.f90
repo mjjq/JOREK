@@ -266,22 +266,27 @@ do i=1,node_list%n_nodes
     Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
     BigR_s = node_list%node(i)%x(2,1)
 
-    T0   = node_list%node(i)%values(1,1,6)
-    node_list%node(i)%values(1,1,n_var) = direction / Btot * sqrt(GAMMA * T0)
+    do in=1,n_tor
 
-    T0_s   = node_list%node(i)%values(1,2,6)
-    node_list%node(i)%values(1,2,n_var) = BigR_s / (BigR*Btot) * sqrt(GAMMA * T0) + 0.5d0 / Btot * sqrt(GAMMA / T0) * T0_s
-    node_list%node(i)%values(1,2,n_var) = direction *  node_list%node(i)%values(1,2,n_var)
+      T0   = node_list%node(i)%values(in,1,6)
+      if (T0 .eq. 0.d0) T0 = 1.d-12
+      node_list%node(i)%values(in,1,n_var) = direction / Btot * sqrt(GAMMA * T0)
 
-    if(xcase2 .eq. 1) then
-      write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,psi_xpoint(1),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
-                          node_list%node(i)%values(1,1,n_var),BigR/F0 * sqrt(GAMMA*T0)
-    endif
-    if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-      write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,psi_xpoint(2),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
-                          node_list%node(i)%values(1,1,n_var),BigR/F0 * sqrt(GAMMA*T0)
-    endif
+      T0_s   = node_list%node(i)%values(in,2,6)
+      if (T0_s .eq. 0.d0) T0_s = 1.d-12
+      node_list%node(i)%values(in,2,n_var) = BigR_s / (BigR*Btot) * sqrt(GAMMA * T0) + 0.5d0 / Btot * sqrt(GAMMA / T0) * T0_s
+      node_list%node(i)%values(in,2,n_var) = direction *  node_list%node(i)%values(in,2,n_var)
 
+      if(xcase2 .eq. 1) then
+        write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,psi_xpoint(1),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
+			    node_list%node(i)%values(in,1,n_var),BigR/F0 * sqrt(GAMMA*T0)
+      endif
+      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+        write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,psi_xpoint(2),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
+			    node_list%node(i)%values(in,1,n_var),BigR/F0 * sqrt(GAMMA*T0)
+      endif
+
+    enddo
   endif
 enddo
 

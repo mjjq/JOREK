@@ -63,6 +63,8 @@ real*8              :: t2, t3, t_delta, t_total
 logical             :: xpoint, extend
 real*8,external     :: root, spwert
 character*4         :: label
+integer             :: i_elm1, i_vertex1, i_node1, i_node_save
+integer             :: i_elm2, i_vertex2, i_node2
 
 xpoint = .true.
 extend = .true.;   if (n_ext .lt. 1) extend = .false.

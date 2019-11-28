@@ -16,7 +16,7 @@ program jorek2_connection_flux_aligned
   include 'mpif.h'
   
   ! --- Poincare data
-  real*8,allocatable  :: rp(:), zp(:), R_all(:), Z_all(:), psi_all(:), C_all(:), C_minus(:), C_plus(:)  ! arrays for position, and connection length for all lines
+  real*8,allocatable  :: rp(:), zp(:), R_all(:), Z_all(:), psin_all(:), C_all(:), C_minus(:), C_plus(:)  ! arrays for position variables, and connection length for all lines
   real*4,allocatable  :: C_all_4(:)
   real*4,allocatable  :: R_strike(:),  Z_strike(:), P_strike(:)                                         ! position of strike points
   real*8,allocatable  :: C_strike(:),  B_strike(:)                                                      ! connection length, boundary type at strike points
@@ -81,6 +81,8 @@ program jorek2_connection_flux_aligned
   ! --- First part: Initialisation
   ! -------------------------------------------------------------------------------------------------
   namelist /connect_params/ n_turns, n_phi, ntheta, npsin, phi_start, tol, psin_range_min, psin_range_max
+
+#define DEBUG
 
   ! --- MPI initilisation
   call MPI_INIT(IERR)
@@ -159,7 +161,7 @@ program jorek2_connection_flux_aligned
   ! --- Allocate data
   allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines),B_strike(n_lines))
   allocate(T0_strike(n_lines),T_strike(n_lines),ZN0_strike(n_lines),ZN_strike(n_lines),PS0_strike(n_lines))
-  allocate(R_all(n_lines),Z_all(n_lines),psi_all(n_lines),C_all(n_lines),C_minus(n_lines),C_plus(n_lines))
+  allocate(R_all(n_lines),Z_all(n_lines),psin_all(n_lines),C_all(n_lines),C_minus(n_lines),C_plus(n_lines))
   allocate(C_all_4(n_lines))
   allocate(R_turn(n_turns+1,2),Z_turn(n_turns+1,2),C_turn(n_turns+1,2),C_turn_tmp(n_turns+1,2))
   allocate(T_turn(n_turns+1,2),PSI_turn(n_turns+1,2),ZN_turn(n_turns+1,2))
@@ -167,7 +169,7 @@ program jorek2_connection_flux_aligned
   allocate(RZkeep(2,n_points_max),scalars(n_points_max,n_scalars))
 
   ! --- Initialise allocated data
-  R_all     = 0.d0; Z_all     = 0.d0; psi_all=0.d0; C_all = 0.d0;  C_all_4    = 0.d0
+  R_all     = 0.d0; Z_all     = 0.d0; psin_all=0.d0; C_all = 0.d0;  C_all_4    = 0.d0
   C_minus   = 0.d0; C_plus    = 0.d0
   R_strike  = 0.d0; Z_strike  = 0.d0; P_strike  = 0.d0;  C_strike   = 0.d0
   T0_strike = 0.d0; T_strike  = 0.d0; ZN0_strike = 0.d0; ZN_strike  = 0.d0; PS0_strike = 0.d0
@@ -264,15 +266,16 @@ program jorek2_connection_flux_aligned
         ! --- Record the first point
         R_all(i_line) = R_start
         Z_all(i_line) = Z_start
-        call var_value(i_elm, i_var_psi, s_line, t_line, phi_start, psi_all(i_line))
-    
+        call var_value(i_elm, i_var_psi, s_line, t_line, phi_start, psin_all(i_line))
+        psin_all(i_line) = (psin_all(i_line) - psi_axis) / (psi_bnd - psi_axis)  
+
         R_turn(1,(i_dir+1)/2+1) = R_start
         Z_turn(1,(i_dir+1)/2+1) = Z_start
         C_turn(1,(i_dir+1)/2+1) = 0.d0
     
         ! --- Get variables at start
         call var_value(i_elm, i_var_T, s_line,t_line,phi_start, T_turn  (1,(i_dir+1)/2+1) )
-        PSI_turn(1,(i_dir+1)/2+1) = psi_all(i_line)
+        PSI_turn(1,(i_dir+1)/2+1) = psin_all(i_line)
         call var_value(i_elm, i_var_n, s_line,t_line,phi_start, ZN_turn (1,(i_dir+1)/2+1) )
         
         ! --- Starting location
@@ -384,10 +387,12 @@ program jorek2_connection_flux_aligned
                 p_line = p_line + delta_phi_step
           
                 dl2 = (Rmid_s**2 + Zmid_s**2)*delta_s**2 + (Rmid_t**2 + Zmid_t**2)*delta_t**2 + Rmid**2 * delta_phi_step**2
+#ifdef DEBUG
                 if (dl2 .ne. dl2) then
                   write(*, *) 'NaN detected in dl2!', Rmid_s, Zmid_s, delta_s, Rmid_t, Zmid_t, delta_t, Rmid, delta_phi_step
                   stop
                 end if
+#endif
 
                 small_delta = 1.d0
     
@@ -542,7 +547,7 @@ program jorek2_connection_flux_aligned
 
   ! --- Write points for local MPI (id=0)
   if (my_id .eq. 0) then
-    write(23,'(4e16.8)') ( (/ R_all(i), Z_all(i), psi_all(i), C_all(i) /),i=1,i_line0)
+    write(23,'(4e16.8)') ( (/ R_all(i), Z_all(i), psin_all(i), C_all(i) /),i=1,i_line0)
   endif
   
   ! --- Write points for all other MPIs
@@ -554,9 +559,9 @@ program jorek2_connection_flux_aligned
         nrecv = i_line
         call mpi_recv(R_all,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
         call mpi_recv(Z_all,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
-        call mpi_recv(psi_all,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(psin_all,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
         call mpi_recv(C_all,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
-        write(23,'(4e16.8)') ( (/R_all(i), Z_all(i), psi_all(i), C_all(i) /),i=1,i_line)
+        write(23,'(4e16.8)') ( (/R_all(i), Z_all(i), psin_all(i), C_all(i) /),i=1,i_line)
       endif
       write(*, *) 'Received MPI task: ', j
     enddo
@@ -567,7 +572,7 @@ program jorek2_connection_flux_aligned
       nsend = i_line
       call mpi_send(R_all, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
       call mpi_send(Z_all, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
-      call mpi_send(psi_all, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+      call mpi_send(psin_all, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
       call mpi_send(C_all, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
     endif
   endif
@@ -864,10 +869,12 @@ subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t
   call interp_RZ(node_list,element_list,i_elm,s_in,t_in,R,R_s,R_t,Z,Z_s,Z_t)
   
   Zjac = (R_s * Z_t - R_t * Z_s)
+#ifdef DEBUG
   if (Zjac .eq. 0.0) then
     write(*, *) 'Jacobian is zero!', i_elm, s_in, t_in, R, R_s, R_t, Z, Z_s, Z_t
     stop
   end if
+#endif
 
   call interp(node_list,element_list,i_elm,i_var_psi,1,s_in,t_in,P0,P0_s,P0_t,P0_st,P0_ss,P0_tt)
   

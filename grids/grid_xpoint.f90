@@ -1461,10 +1461,11 @@ element_list%n_elements = newelement_list%n_elements
 element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
 
 ! --- This is the old way
-!node_list%n_nodes = newnode_list%n_nodes
-!node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+node_list%n_nodes = newnode_list%n_nodes
+node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 
 ! --- Now, we define only the nodes that belong to elements! (this gets rid of potential orphan nodes, which the matrix doesn't like, obviously...)
+if (.false.) then
 node_list%n_nodes = 4
 node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 if (xcase .eq. 3) then
@@ -1497,6 +1498,7 @@ do i_elm1 = 1,element_list%n_elements
     endif
   enddo
 enddo
+endif
 
 !----temporary, needs to be completed, neighbour information
 do i=1, element_list%n_elements

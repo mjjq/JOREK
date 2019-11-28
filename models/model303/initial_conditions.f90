@@ -282,7 +282,6 @@ do i=1,node_list%n_nodes
                           node_list%node(i)%values(1,1,n_var),BigR/F0 * sqrt(GAMMA*T0)
     endif
 
-    enddo
   endif
 enddo
 

@@ -783,7 +783,7 @@ do i=1, n_flux + n_open - 1
                    Z_polar(k,4,j), 3.d0/2.d0 *(Z_polar(k,4,j)-Z_polar(k,3,j)) /)
 
       call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-                       RR_new(i+1,j),ZZ_new(i+1,j),ielm_flux(i+1,j),s_flux(i+1,j),t_flux(i+1,j),t_tht(i+1,j),ifail)
+                       RR_new(i+1,j),ZZ_new(i+1,j),ielm_flux(i+1,j),s_flux(i+1,j),t_flux(i+1,j),t_tht(i+1,j),ifail,.false.)
 
       call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i+1,j),tmp1, dR_dt)
       call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i+1,j),tmp2, dZ_dt)
@@ -815,7 +815,7 @@ do i=n_flux-1, n_flux - 1  + n_open + n_private
                    Z_polar(k,4,j), 3.d0/2.d0 *(Z_polar(k,4,j)-Z_polar(k,3,j)) /)
 
       call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-                         RR_new(i+1,j),ZZ_new(i+1,j),ielm_flux(i+1,j),s_flux(i+1,j),t_flux(i+1,j),t_tht(i+1,j),ifail)
+                         RR_new(i+1,j),ZZ_new(i+1,j),ielm_flux(i+1,j),s_flux(i+1,j),t_flux(i+1,j),t_tht(i+1,j),ifail,.false.)
 
       if (ifail .eq. 0) then
         call interp(node_list,element_list,ielm_flux(i+1,j),1,1,s_flux(i+1,j),t_flux(i+1,j),&

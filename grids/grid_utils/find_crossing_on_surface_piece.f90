@@ -1,5 +1,5 @@
 subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, R_c,Z_c, &
-                                          R_out,Z_out, r_flux,s_flux, t_tht,ifail, go_fast)
+                                          R_out,Z_out, r_flux,s_flux, t_tht,ifail, gofast)
   !-------------------------------------------------------------------------
   ! solves two non-linear equations using Newtons method (from numerical recipes)
   ! LU decomposition replaced by explicit solution of 2x2 matrix.
@@ -21,7 +21,7 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
   real*8,                   intent(inout)       :: R_out,    Z_out
   real*8,                   intent(inout)       :: r_flux,s_flux,t_tht
   integer,                  intent(inout)       :: ifail
-  logical,                  optional            :: go_fast
+  logical,                  intent(in)          :: gofast
 
   ! --- Local variables
   integer :: i, ntrial, istart
@@ -38,10 +38,7 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
   real*8  :: tolx, tolf, errx, errf, temp, dis, max_step, tol_far
   real*8  :: RR_mid, ZZ_mid
   real*8  :: RR_mid_surf, ZZ_mid_surf
-  logical :: gofast
 
-  gofast = .false.
-  if (present(go_fast)) gofast = go_fast
   tol_far = 0.2 * R_geo
 
   x_previous = 0.d0
@@ -212,6 +209,7 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
   
       temp = p(1)
       dis  =  fjac(2,2)*fjac(1,1)-fjac(1,2)*fjac(2,1)
+      if (dis .eq. 0.d0) dis = 1.d-10
       p(1) = (fjac(2,2)*p(1)     -fjac(1,2)*p(2)     )/dis
       p(2) = (fjac(1,1)*p(2)     -fjac(2,1)*temp     )/dis
   

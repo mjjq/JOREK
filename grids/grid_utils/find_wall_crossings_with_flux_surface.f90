@@ -364,7 +364,7 @@ subroutine find_wall_crossings_with_flux_surface(node_list, element_list, surfac
       R_cub1d(2) = (R_cub1d(3)-R_cub1d(1))/2.d0   ;	  Z_cub1d(2) = (Z_cub1d(3)-Z_cub1d(1))/2.d0
       R_cub1d(4) = (R_cub1d(3)-R_cub1d(1))/2.d0   ;	  Z_cub1d(4) = (Z_cub1d(3)-Z_cub1d(1))/2.d0
       call find_crossing_on_surface_piece(node_list,element_list,surface,j,R_cub1d,Z_cub1d, &
-    					  R_tmp,Z_tmp,ss_int,tt_int,dl_int,ifail)
+    					  R_tmp,Z_tmp,ss_int,tt_int,dl_int,ifail,.false.)
       if (ifail .eq. 0) then
         n_int = n_int + 1
         index_int(n_int,2) = j
@@ -382,7 +382,7 @@ subroutine find_wall_crossings_with_flux_surface(node_list, element_list, surfac
         R_cub1d(2) = (R_cub1d(3)-R_cub1d(1))/2.d0   ;	    Z_cub1d(2) = (Z_cub1d(3)-Z_cub1d(1))/2.d0
         R_cub1d(4) = (R_cub1d(3)-R_cub1d(1))/2.d0   ;	    Z_cub1d(4) = (Z_cub1d(3)-Z_cub1d(1))/2.d0
         call find_crossing_on_surface_piece(node_list,element_list,surface,j,R_cub1d,Z_cub1d, &
-        				    R_tmp,Z_tmp,ss_int,tt_int,dl_int,ifail)
+        				    R_tmp,Z_tmp,ss_int,tt_int,dl_int,ifail,.false.)
         if (ifail .eq. 0) then
           n_int = n_int + 1
           index_int(n_int,2) = j
@@ -564,7 +564,7 @@ subroutine find_wall_crossings_with_flux_surface_old(node_list, element_list, su
             R_cub1d(2) = (R_cub1d(3)-R_cub1d(1))/2.d0	;   	Z_cub1d(2) = (Z_cub1d(3)-Z_cub1d(1))/2.d0
             R_cub1d(4) = (R_cub1d(3)-R_cub1d(1))/2.d0	;   	Z_cub1d(4) = (Z_cub1d(3)-Z_cub1d(1))/2.d0
             call find_crossing_on_surface_piece(node_list,element_list,surface,j,R_cub1d,Z_cub1d, &
-        	                                R_tmp,Z_tmp,ss_int,tt_int,dl_int,ifail)
+        	                                R_tmp,Z_tmp,ss_int,tt_int,dl_int,ifail,.false.)
             if (ifail .eq. 0) then
 	      R_mid = (R + R_save) / 2.d0
 	      Z_mid = (Z + Z_save) / 2.d0

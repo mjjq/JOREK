@@ -1216,7 +1216,7 @@ do i=1,n_flux+n_open
         	   nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
       call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-        	      nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+        	      nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
       ! --- Readjust to make sure we are inside element.
       if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
         if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1273,7 +1273,7 @@ if (xcase .eq. 3) then
   		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
   	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-  			nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+  			nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1322,7 +1322,7 @@ if(xcase .ne. 3) then
     		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
     	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1376,7 +1376,7 @@ else
     		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
     	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1415,7 +1415,7 @@ else
     		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
     	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1460,7 +1460,7 @@ else
     		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
     	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1505,7 +1505,7 @@ else
     		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
     	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail)
+    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0

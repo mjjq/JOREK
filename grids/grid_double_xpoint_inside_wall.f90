@@ -103,6 +103,20 @@ endif
 if ( (xcase .eq. 3) .and. (mod(n_tht,2) .ne. 0) )  n_tht = n_tht + 1
 if ( (xcase .ne. 3) .and. (mod(n_tht,2) .eq. 0) )  n_tht = n_tht + 1
 
+!-------------------------------- Check consistency of grid inputs
+if (xcase .eq. 3) then
+  if ( (n_outer .le. 1) .or. (n_inner .le. 1) .or. (n_private .le. 1) .or. (n_up_priv .le. 1) ) then
+    write(*,'(A)')'Unfortunately, there are minimal requirements for some of the grid inputs.'
+    write(*,'(A)')'These are as follows:'
+    write(*,'(A)')'n_outer   > 1'
+    write(*,'(A)')'n_inner   > 1'
+    write(*,'(A)')'n_private > 1'
+    write(*,'(A)')'n_up_priv > 1'
+    write(*,'(A)')'Please changes accordingly. Aborting...'
+    stop
+  endif
+endif
+
 !-------------------------------- Build up some arrays to send as routine parameters (avoid long lists...)
 sigmas(1)  = SIG_closed  ; sigmas(2)  = SIG_theta
 sigmas(3)  = SIG_open    ; sigmas(4)  = SIG_outer   ; sigmas(5)  = SIG_inner

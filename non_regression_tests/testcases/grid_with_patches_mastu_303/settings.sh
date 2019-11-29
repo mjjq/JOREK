@@ -4,8 +4,8 @@ description="Fixed boundary MAST-U equilibrium with wall-extended grid, model$jo
 mpitasks=1
 binaries="jorek_model${jorekmodel}_1"
 binaries_initial=""
-requiredfiles="input eqdsk.file"
-extra_remote_files=""
+requiredfiles="input"
+extra_remote_files="eqdsk.dat"
 
 
 # --- Compile the code for the test case
@@ -25,7 +25,6 @@ function initial_run () {
 # --- Carry out the test case
 function restart_run () {
   ${codedir}/util/setinput.sh input restart=.f. nstep_n=0                            || exit 1
-  mv eqdsk.file eqdsk.dat
   $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee logfile               || exit 1
 }
 

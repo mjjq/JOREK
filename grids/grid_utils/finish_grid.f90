@@ -6,7 +6,7 @@ subroutine finish_grid(node_list, element_list, newnode_list, newelement_list, n
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only: xcase
+use phys_module, only: xcase, RZ_grid_inside_wall
 use mod_eqdsk_tools
 use mod_interp, only: interp_RZ, interp
 
@@ -125,17 +125,19 @@ enddo
 !--------------------------- Fill in the values into the new grid --------------------------!
 !-------------------------------------------------------------------------------------------!
 write(*,*) '                 Fill in psi-values '
-
-call get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
-if (ier .ne. 0) then
-  write(*,*)'Problem reading eqdsk file',eqdsk_filename
-  write(*,*)'Aborting...'
-  stop
-endif
-call get_eqdsk_dimensions(normal_eqdsk, nR_eqdsk, nZ_eqdsk, n_wall, ier)
-if (ier .eq. 0) then
-  allocate(R_eqdsk(nR_eqdsk), Z_eqdsk(nZ_eqdsk), psi_eqdsk(nR_eqdsk,nZ_eqdsk))
-  call get_data_from_eqdsk(normal_eqdsk, normal_eqdsk_wall, nR_eqdsk, nZ_eqdsk, R_eqdsk, Z_eqdsk, psi_eqdsk, n_wall, R_wall(1:n_wall), Z_wall(1:n_wall), ier)
+ier = 0
+if (RZ_grid_inside_wall) then
+  call get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
+  if (ier .ne. 0) then
+    write(*,*)'Problem reading eqdsk file',eqdsk_filename
+    write(*,*)'Aborting...'
+    stop
+  endif
+  call get_eqdsk_dimensions(normal_eqdsk, nR_eqdsk, nZ_eqdsk, n_wall, ier)
+  if (ier .eq. 0) then
+    allocate(R_eqdsk(nR_eqdsk), Z_eqdsk(nZ_eqdsk), psi_eqdsk(nR_eqdsk,nZ_eqdsk))
+    call get_data_from_eqdsk(normal_eqdsk, normal_eqdsk_wall, nR_eqdsk, nZ_eqdsk, R_eqdsk, Z_eqdsk, psi_eqdsk, n_wall, R_wall(1:n_wall), Z_wall(1:n_wall), ier)
+  endif
 endif
 
 do i=1,newnode_list%n_nodes
@@ -146,7 +148,7 @@ do i=1,newnode_list%n_nodes
   call find_RZ(node_list,element_list,R1,Z1,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 
   if (ifail .ne. 0) then
-    if (ier .eq. 0) then
+    if ( (RZ_grid_inside_wall) .and. (ier .eq. 0) ) then
       ! --- psi values from eqdsk
       call interpolate_psi_from_eqdsk_grid(nR_eqdsk, nZ_eqdsk, R_eqdsk, Z_eqdsk, psi_eqdsk, R1, Z1, psi, psi_R, psi_Z)
     else
@@ -405,7 +407,7 @@ if (plot_grid) then
   close(101)
 endif
 
-deallocate(R_eqdsk, Z_eqdsk, psi_eqdsk)
+if (RZ_grid_inside_wall) deallocate(R_eqdsk, Z_eqdsk, psi_eqdsk)
 
 
 

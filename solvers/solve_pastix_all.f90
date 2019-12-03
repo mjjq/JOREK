@@ -11,16 +11,16 @@ use global_distributed_matrix
 use mpi_mod
 use mod_clock
 use mod_coicsr
-use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR
+use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR, pastix_blr_abs_tol
 
 !$ use omp_lib
 
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
-use iso_c_binding
-use pastixf
-use pastix_enums
-use spmf
+  use iso_c_binding
+  use pastix_enums
+  use spmf
+  use pastixf
 #endif
  
 implicit none
@@ -34,19 +34,20 @@ implicit none
 #endif
 
 
-integer                  :: n_cpu, index_min, index_max       ! global index_min, index_max for this cpu
-real*8,allocatable       :: column_local(:)
-type(clcktype)           :: t_itstart, t0, t1, t2, t3
-real*8                   :: tsecond
-integer                  :: i, k, j, ierr, my_id, m_loc
-integer,allocatable      :: counts(:), displacements(:)
+  integer                  :: n_cpu, index_min, index_max       ! global index_min, index_max for this cpu
+  real*8,allocatable       :: column_local(:)
+  type(clcktype)           :: t_itstart, t0, t1, t2, t3
+  real*8                   :: tsecond
+  integer                  :: i, k, j, ierr, my_id, m_loc
+  integer,allocatable      :: counts(:), displacements(:)
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
-integer(c_int)     :: pastix_info
-type(c_ptr)        :: pastix_rhs_ptr
-integer(kind=spm_int_t), dimension(:), pointer       :: pastix_colptr
-integer(kind=spm_int_t), dimension(:), pointer       :: pastix_rowptr
-real(kind=c_double)    , dimension(:), pointer       :: pastix_values
+  integer(c_int)     :: pastix_info
+  type(c_ptr)        :: pastix_rhs_ptr
+
+  integer(kind=spm_int_t), dimension(:), pointer       :: pastix_colptr
+  integer(kind=spm_int_t), dimension(:), pointer       :: pastix_rowptr
+  real(kind=c_double)    , dimension(:), pointer       :: pastix_values
 #endif
 
 

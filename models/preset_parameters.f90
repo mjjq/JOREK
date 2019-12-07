@@ -373,7 +373,7 @@ subroutine preset_parameters
      L_tube = 2.d0
      K_Dmv = 4.d-2
      A_Dmv = 1.77d-2
-     t_mgi = 2.d3
+     t_mgi = 0.0
     !=====
      delta_n_convection = 0
      nimp_bg = 0.

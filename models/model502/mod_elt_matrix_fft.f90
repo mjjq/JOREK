@@ -1072,7 +1072,7 @@ do ms=1, n_gauss
 
            n_spi_tmp = 0
            do i_inj = 1, n_inj
-             n_spi_tmp = n_spi_tmp + n_spi(i)
+             n_spi_tmp = n_spi_tmp + n_spi(i_inj)
              if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
            end do
 

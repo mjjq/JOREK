@@ -51,7 +51,7 @@ ifeq ($(COMPILER_FAMILY), gnu)
     FLAGS  += -g -Og -ggdb -fno-lto
     FLAGS  += -Wunused-variable
     FFLAGS += -fcheck=all
-    FLAGS  += -ffpe-trap=invalid,zero,overflow
+    FLAGS  += -ffpe-trap=invalid,zero,overflow,denormal
     FFLAGS += -ftrapv
     FFLAGS += -finit-real=snan -finit-integer=12345678
     FFLAGS += -Wconversion
@@ -177,6 +177,12 @@ ifeq (1, $(USE_PASTIX))
 else
   # This is a hack to remove the linking problems that otherwise arise
   DEFINES += -Dpastix_fortran=fake_pastix_fortran
+endif
+
+ifeq (1, $(USE_PASTIX6))
+  DEFINES  := $(DEFINES) -DUSE_PASTIX6
+  LIBS     := $(LIBS) $(LIB_PASTIX6) $(LIB_PASTIX6_BLAS)
+  INCLUDES := $(INCLUDES) $(INC_PASTIX6)
 endif
 
 ifeq (1, $(USE_WSMP))

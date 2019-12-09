@@ -440,8 +440,15 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     deta_dTe   = 0.d0
     d2eta_d2Te = 0.d0
   end if
+
+   
+  ! -------------------------
+  ! --- Eta for ohmic heating
+  ! -------------------------
+  eta_Te_ohm   = (eta_Te/eta)  * eta_ohmic
+  deta_dTe_ohm = (deta_dTe/eta) * eta_ohmic
   
-  
+
   ! -----------------------------------
   ! --- Temperature dependent viscosity
   ! -----------------------------------

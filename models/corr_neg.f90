@@ -3,12 +3,26 @@ module corr_neg
 implicit none
 
   interface corr_neg_dens
-    module procedure corr_neg_dens1, corr_neg_dens2
+    module procedure corr_neg_dens1, corr_neg_dens2, corr_neg_dens3
+  end interface
+
+  interface dcorr_neg_dens_drho
+    module procedure dcorr_neg_dens_drho1, dcorr_neg_dens_drho2, dcorr_neg_dens_drho3
   end interface
       
   interface corr_neg_temp
-    module procedure corr_neg_temp1, corr_neg_temp2
+    module procedure corr_neg_temp1, corr_neg_temp2, corr_neg_temp3
   end interface
+
+  interface dcorr_neg_temp_dT
+    module procedure dcorr_neg_temp_dT1, dcorr_neg_temp_dT2, dcorr_neg_temp_dT3
+  end interface
+
+  interface d2corr_neg_temp_dT2
+    module procedure d2corr_neg_temp_dT21, d2corr_neg_temp_dT22, d2corr_neg_temp_dT23
+  end interface
+
+
 contains
 
 ! Source code moved to an include file to be able to inline function calls into the loops

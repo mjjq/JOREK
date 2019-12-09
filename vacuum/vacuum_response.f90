@@ -10,7 +10,6 @@
 !!
 !! @note The variable s in a boundary element may correspond to s or t of the respective
 !! 2D element depending on element orientation.
-#include "pastix_fortran.h"
 module vacuum_response
   
   use vacuum
@@ -619,15 +618,6 @@ module vacuum_response
     sr%a_ye%loc_mat(:,:) = sr%a_ye%loc_mat(:,:) * 2.d0*PI
     if ( vacuum_debug .and. (my_id==0) ) write(*,*) 'Applied import normalization.'
 
-    ! --- STARWALL Cartesian coordinates -> JOREK Cartesian coordinates (replace y <-> z)
-    if (my_id==0) then
-      allocate( tmp(sr%npot_w) )
-      tmp(:)           = sr%xyzpot_w(:,2)
-      sr%xyzpot_w(:,2) = sr%xyzpot_w(:,3)
-      sr%xyzpot_w(:,3) = tmp(:)
-      deallocate( tmp )
-    end if
-
     ! --- Compute ideal-wall and no-wall response matrices.
     
     call  alloc_distr(my_id, sr%a_nw,(/sr%nd_bez, sr%nd_bez/), .true.)
@@ -1132,8 +1122,6 @@ module vacuum_response
     character(len=18)   :: filename
     real*8, allocatable :: tripot_w(:)
     integer :: ierr
-
-    call MPI_BCAST(nout,1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
     if ( mod(index,nout) /= 0 ) return
 

@@ -55,8 +55,9 @@ real*8     :: u, u_x, u_y, u_p, u_s, u_t, w, w_x, w_y, w_p, w_s, w_t, w_xx, w_yy
 real*8     :: rho, rho_x, rho_y, rho_s, rho_t, rho_p, rho_hat, rho_x_hat, rho_y_hat, T, T_x, T_y, T_s, T_t, T_p
 real*8     :: w0_xs, w0_xt, w0_ys, w0_yt, w0_xx, w0_yy, w0_xy, w0_ss, w0_tt, w0_st, P0, P0_s, P0_t, P0_x, P0_y
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT
+real*8     :: eta_T_ohm, deta_dT_ohm
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
-real*8     :: amat_51, amat_52, amat_55, amat_61, amat_62, amat_66, amat_16, amat_13
+real*8     :: amat_51, amat_52, amat_55, amat_61, amat_62, amat_63, amat_66, amat_16, amat_13
 real*8     :: amat_12_n, amat_23_n, amat_51_k, amat_55_kn, amat_55_k, amat_55_n, amat_61_k, amat_66_kn, amat_66_k, amat_66_n
 real*8     :: amat_stab_11, amat_stab_12, amat_stab_13, amat_stab_14 ,amat_stab_21,amat_stab_22, amat_stab_23, amat_stab_24
 real*8     :: amat_stab_31, amat_stab_32, amat_stab_33, amat_stab_34 ,amat_stab_41,amat_stab_42, amat_stab_43, amat_stab_44
@@ -285,6 +286,10 @@ do ms=1, n_gauss
        deta_dT   = 0.d0
        d2eta_d2T = 0.d0
      end if
+
+     ! --- Eta for ohmic heating
+     eta_T_ohm   = (eta_T/eta)  * eta_ohmic
+     deta_dT_ohm = (deta_dT/eta) * eta_ohmic
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
@@ -386,7 +391,8 @@ do ms=1, n_gauss
                     + v * 2.d0* (GAMMA-1.d0) * BigR * T0 * u0_y                   * xjac * tstep &
                     - (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T      * xjac * tstep &
                     - ZK_prof * BigR * (v_x*T0_x + v_y*T0_y                     ) * xjac * tstep &
-                    + zeta * v * delta_g(mp,6,ms,mt) * BigR                       * xjac 
+                    + zeta * v * delta_g(mp,6,ms,mt) * BigR                       * xjac         &
+                    + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0    * BigR * xjac * tstep
 
          rhs_ij_6_k = - (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T * xjac * tstep &
                       - ZK_prof * BigR * (                + v_p*T0_p /BigR**2 )  * xjac * tstep
@@ -543,11 +549,14 @@ do ms=1, n_gauss
              amat_62 = - v * BigR**2 * ( T0_s * u_t - T0_t * u_s)                    * theta * tstep &
                        - v * 2.d0* (GAMMA-1.d0) * BigR * T0 * u_y             * xjac * theta * tstep
 
+             amat_63 = - v * (gamma-1.d0) * eta_T_ohm * 2.d0 * zj * zj0/(BigR**2.d0) * BigR * xjac * theta * tstep
+
              amat_66 =   v * T   * BigR * xjac * (1.d0 + zeta)                                           &
                        - v * BigR**2 * ( T_s * u0_t - T_t * u0_s)                        * theta * tstep &
                        - v * 2.d0* (GAMMA-1.d0) * BigR * T * u0_y                 * xjac * theta * tstep &
                        + (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T_T * xjac * theta * tstep &
-                       + ZK_prof * BigR * ( v_x*T_x + v_y*T_y )                   * xjac * theta * tstep
+                       + ZK_prof * BigR * ( v_x*T_x + v_y*T_y )                   * xjac * theta * tstep &
+                       - v * T * (gamma-1.d0) * deta_dT_ohm * (zj0 / BigR)**2.d0  * BigR * xjac  * theta * tstep
 
              amat_66_k = + (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T_T    * xjac * theta * tstep
              amat_66_n = + (ZK_par-ZK_prof) * BigR / BB2 * Bgrad_T_star   * Bgrad_T_T_n  * xjac * theta * tstep
@@ -603,6 +612,7 @@ do ms=1, n_gauss
              ELM_k(mp,ij6,kl1)  =  ELM_k(mp,ij6,kl1)  + wst * amat_61_k
 
              ELM_p(mp,ij6,kl2)  =  ELM_p(mp,ij6,kl2)  + wst * amat_62
+             ELM_p(mp,ij6,kl3)  =  ELM_p(mp,ij6,kl3)  + wst * amat_63
 
              ELM_p(mp,ij6,kl6)  =  ELM_p(mp,ij6,kl6)  + wst * amat_66
              ELM_k(mp,ij6,kl6)  =  ELM_k(mp,ij6,kl6)  + wst * amat_66_k

@@ -67,7 +67,7 @@ real*8                :: Jb,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
-logical               :: include_bootstrap, include_psi_norm, include_electric_field, include_Jpol 
+logical               :: include_bootstrap, include_psi_norm, include_electric_field, include_Jpol, RphiZ_coords
 real*8                :: toroidal_angle
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
@@ -83,6 +83,14 @@ real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 real*8                :: T_corr, T_rad, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: T_real8
+
+!====================== --- Variables related to neutral density evolution (model 500 or 555)
+logical               :: include_neutral_dens
+integer               :: n_rn0, s_rn0
+real*8                :: r0_corr, rn0_corr
+real*8                :: r0_real8, rn0_real8
+real*8                :: IonN, RecN, AblN, coef_rec_1, Srec_T
+
 #ifdef fullmhd
 !====================== --- Variables related to full mhd 
 integer               :: n_fullmhd,s_fullmhd
@@ -96,7 +104,7 @@ real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
-                      include_bootstrap, include_psi_norm, include_electric_field, include_Jpol
+                      include_bootstrap, include_psi_norm, include_electric_field, include_Jpol, RphiZ_coords
 
 
 write(*,*) '***************************************'
@@ -139,9 +147,11 @@ include_electric_field = .false. ! include vector of E-field (or not), evaluated
 include_Jpol           = .false. ! include poloidal current vector (J_phi=0 for visualization)
 include_bootstrap      = .false. ! include bootstrap current and averaged current
 include_psi_norm       = .false. ! include normalized flux
+RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,Z,0)
 
 #if (JOREK_MODEL == 500)
 include_radiation = .true.
+include_neutral_dens = .true.
 #endif
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
@@ -244,6 +254,15 @@ endif
     s_radiation = n_scalars
     n_scalars   = n_scalars + n_radiation
  endif
+
+    n_rn0 = 0
+ if (include_neutral_dens) then
+    n_rn0       = 2
+    s_rn0       = n_scalars
+    n_scalars   = n_scalars + n_rn0
+ endif
+
+
 #endif
 
 #if fullmhd
@@ -325,9 +344,16 @@ endif
 
 #if (JOREK_MODEL == 500)
  if (include_radiation) then
-     scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
+   scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
                   = (/ 'Ionis_Wm-3  ', 'Lin_radWm-3 ', 'Brems_Wm-3  ', 'Joule_Wm-3  ', 'Imp_bg_Wm-3 '/)
  endif
+
+ if (include_neutral_dens) then
+   scalar_names(s_rn0+1:s_rn0+n_rn0)&
+                  = (/ 'IonN_s-1     ', 'RecN_s-1     '/)
+
+ endif
+
 #endif
 
 #ifdef fullmhd
@@ -410,9 +436,12 @@ do i=1,element_list%n_elements
               + R_st*(Z_t*R_s + Z_s*R_t) + Z_ss*R_t**2 - R_ss*Z_t*R_t) / xjac
 
       inode = inode+1
-
-      xyz(1:3,inode) = (/ R, Z, 0.d0/)
-
+      
+      if (RphiZ_coords) then
+        xyz(1:3,inode) = (/ R, 0.d0,    Z /)
+      else
+        xyz(1:3,inode) = (/ R,    Z, 0.d0 /)
+      endif
       !====================== --- specific for axisymmetric quantities
       ! Put here all quantities that are axisymmetric (n=0 mode only) and should not be summed
       ! over all harmonics: for instance, to compute Vtheta, Er, Vneo, etc.
@@ -901,6 +930,8 @@ enddo  ! n_elements
 
     T_real8 = scalars(i,6)
 
+    T_corr = corr_neg_temp(T_real8)
+
     Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
 
     T_rad = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
@@ -943,6 +974,47 @@ enddo  ! n_elements
 
    enddo
   endif
+
+ if (include_neutral_dens) then
+
+   coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density * 1.d20)**(1.5d0)
+
+   coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
+   coef_ion_2 = 0.232d0
+   coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
+   S_ion_puiss = 3.9d-1
+
+   do i=1,nnos
+
+     T_real8 = scalars(i,6)
+
+     T_corr = corr_neg_temp(T_real8)
+
+
+     Srec_T    = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T_corr/(2.d0))**(-0.5d0)
+
+     Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
+ 
+     Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
+
+
+     r0_real8  = scalars(i,5)
+     rn0_real8 = scalars(i,8)
+
+     r0_corr   = corr_neg_dens(r0_real8)
+     rn0_corr  = corr_neg_dens(rn0_real8, (/ 0.d-5, 1.d-5 /))
+
+     IonN      = -(r0_corr) * (rn0_corr) * Sion_T
+     RecN      = (r0_corr)**2 * Srec_T 
+
+     scalars(i,s_rn0+1) = IonN
+     scalars(i,s_rn0+2) = RecN
+
+
+   end do
+ end if
+
+
 #endif /*(JOREK_MODEL == 500)*/
 
 

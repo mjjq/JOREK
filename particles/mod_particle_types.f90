@@ -5,8 +5,9 @@
 module mod_particle_types
   implicit none
   private
-  public particle_base, particle_kinetic, particle_kinetic_leapfrog, particle_gc, particle_fieldline, copy_particle_base
+  public particle_base, particle_kinetic, particle_kinetic_leapfrog, particle_gc, particle_fieldline
   public particle_get_q
+  public copy_particle
 
   !> The base type for all other particles. Includes only the position and weight elements
   !> Integration in a 2D finite element method is included in the form of 2 coordinates
@@ -16,6 +17,9 @@ module mod_particle_types
     real*8    :: st(2)            !< particle position in the element
     real*4    :: weight = 1.0     !< weight (i.e. number of particles)
     integer*4 :: i_elm            !< index in element_list
+  contains
+    procedure :: copy => copy_particle
+    generic :: assignment(=) => copy
   end type particle_base
 
   !> A simple type just for fieldline tracing in two-step methods (Adams Bashforth) or for forward euler
@@ -46,16 +50,6 @@ module mod_particle_types
   end type particle_kinetic_leapfrog
 
 contains
-  !> Copy the base variables from one particle of class(particle_base) to another
-  pure subroutine copy_particle_base(in, out)
-    class(particle_base), intent(in)    :: in
-    class(particle_base), intent(inout) :: out
-    out%x      = in%x
-    out%st     = in%st
-    out%weight = in%weight
-    out%i_elm  = in%i_elm
-  end subroutine copy_particle_base
-
   !> Convenience function to obtain q if it exists, or 0 otherwise
   !> Here also because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82064
   !> which means that we cannot use the same derived type in too many modules which will be
@@ -74,4 +68,65 @@ contains
       q = 0
     end select
   end function particle_get_q
+
+  !> Copy a descendant of particle_base into another descendant of particle_base
+  !> as requested by the types of the input and output parameters.
+  !> We do not transform any of the quantities between eachother, just copy them
+  !> if the particles are of the same type.
+  !> To do a proper transform we typically need additional parameters, like the
+  !> mass or magnetic field. See [[mod_boris.f90]] for some examples.
+  !> See https://stackoverflow.com/a/19082934
+  subroutine copy_particle(particle_out, particle_in)
+    class(particle_base), intent(out) :: particle_out !< Particle to copy attributes into
+    class(particle_base), intent(in)  :: particle_in  !< Particle to copy attributes from
+
+    particle_out%x      = particle_in%x
+    particle_out%st     = particle_in%st
+    particle_out%weight = particle_in%weight
+    particle_out%i_elm  = particle_in%i_elm
+
+    select type (p_out => particle_out)
+    type is (particle_fieldline)
+      select type (p_in => particle_in)
+      type is (particle_fieldline) ! this is a straight copy, simple
+        p_out%B_hat_prev = p_in%B_hat_prev
+        p_out%v = p_in%v
+      class default
+        ! Maybe we should warn here instead of just putting zeros,
+        ! or put nothing so the compiler can catch the uninitialized value
+        p_out%B_hat_prev = [0.d0, 0.d0, 0.d0]
+        p_out%v = 0.d0
+      end select
+    type is (particle_gc)
+      select type (p_in => particle_in)
+      type is (particle_gc)
+        p_out%E  = p_in%E
+        p_out%mu = p_in%mu
+        p_out%q  = p_in%q
+      class default
+        p_out%E  = 0.d0
+        p_out%mu = 0.d0
+        p_out%q  = 0
+      end select
+    type is (particle_kinetic)
+      select type (p_in => particle_in)
+      type is (particle_kinetic)
+        p_out%v  = p_in%v
+        p_out%q  = p_in%q
+      class default
+        p_out%v  = [0.d0, 0.d0, 0.d0]
+        p_out%q  = 0
+      end select
+    type is (particle_kinetic_leapfrog)
+      select type (p_in => particle_in)
+      type is (particle_kinetic_leapfrog)
+        p_out%v  = p_in%v
+        p_out%q  = p_in%q
+      class default
+        ! the transformation from kinetic to kinetic_leapfrog could be done with a small error here
+        p_out%v  = [0.d0, 0.d0, 0.d0]
+        p_out%q  = 0
+      end select
+    end select
+  end subroutine copy_particle
 end module mod_particle_types

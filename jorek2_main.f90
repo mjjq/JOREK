@@ -65,8 +65,8 @@ program JOREK2
 #endif
   use mpi_mod
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-  use mgi_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_neutral_source
 #endif
 
   use, intrinsic :: iso_c_binding
@@ -169,7 +169,7 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
-
+ 
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
   res = 0.d0   
@@ -246,11 +246,39 @@ required = 0
   
   ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)
-  
+ 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  
+
   ! --- Some checks not to waste any cpu time
-  if (required .ne. provided) then
+  if ( (n_tor < 1) .or. (mod(n_tor,2) == 0) ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_tor has an illegal value', n_tor
+    call MPI_Abort(MPI_COMM_WORLD, 23, ierr)
+    stop
+  else if ( n_period<1 ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_period has an illegal value', n_period
+    call MPI_Abort(MPI_COMM_WORLD, 24, ierr)
+    stop
+  else if ( n_elements_max<1 ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_elements_max has an illegal value', n_elements_max
+    call MPI_Abort(MPI_COMM_WORLD, 25, ierr)
+    stop
+  else if ( n_nodes_max<1 ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_nodes_max has an illegal value', n_nodes_max
+    call MPI_Abort(MPI_COMM_WORLD, 25, ierr)
+    stop
+  else if ( n_boundary_max<1 ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_boundary_max has an illegal value', n_boundary_max
+    call MPI_Abort(MPI_COMM_WORLD, 25, ierr)
+    stop
+  else if ( n_pieces_max<1 ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_pieces_max has an illegal value', n_pieces_max
+    call MPI_Abort(MPI_COMM_WORLD, 25, ierr)
+    stop
+  else if ( n_vertex_max/=4 ) then
+    write(*,*) 'WARNING : hard-coded parameter n_vertex_max /= 4', n_vertex_max
+    call MPI_Abort(MPI_COMM_WORLD, 25, ierr)
+    stop
+  else if (required .ne. provided) then
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
     call MPI_Abort(MPI_COMM_WORLD, 2, ierr)
     stop
@@ -289,10 +317,16 @@ required = 0
     stop
 #endif
   else if ( use_pastix ) then
-#ifndef USE_PASTIX
-     write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 in Makefile.inc'
-     call MPI_Abort(MPI_COMM_WORLD, 8, ierr)
-     stop
+#if !( defined(USE_PASTIX)  ^  defined(USE_PASTIX6) ) 
+    write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 xor USE_PASTIX6 = 1 in Makefile.inc'
+    call MPI_Abort(MPI_COMM_WORLD, 8, ierr)
+    stop
+#endif
+#ifdef USE_PASTIX6
+    if (n_cpu /= ((n_tor-1)/2+1)) then
+      write(*,*) 'FATAL : Pastix6 is not yet MPI parallelised (Pastix 6.0)! Please use #procs = (n_tor+1)/2.'
+      call MPI_Abort(MPI_COMM_WORLD, 6, ierr)
+    endif
 #endif
   else if ( use_wsmp ) then
 #ifndef USE_WSMP
@@ -325,6 +359,13 @@ required = 0
     write(*,*) '  Consider testing, whether you get better performance by increasing the number'
     write(*,*) '  of MPI tasks and reducing the number of OpenMP threads in the jobscript.'
   end if
+  if ((jorek_model==199) .or. (jorek_model==303)) then
+    if (abs(eta-eta_ohmic)/(eta+eta_ohmic) > 1.d-6) then
+      write(*,*) 'WARNING: The resistivity eta and the resistivity used for Ohmic heating '
+      write(*,*) '  eta_ohm are not the same. No problem if you know what you are doing,  ' 
+      write(*,*) '  but with this setup you are not conserving energy.   '
+    endif
+  endif
 #ifndef USE_BLOCK
   write(*,*) 'WARNING: You are not using USE_BLOCK=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_BLOCK=1 in your Makefile.inc'
@@ -333,14 +374,20 @@ required = 0
   write(*,*) 'WARNING: You are not using USE_FFTW=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_FFTW=1 in your Makefile.inc'
 #endif
+#ifndef USE_PASTIX6
+  if (use_pastix .and. use_BLR_compression) then
+    write(*,*) 'WARNING: PaStiX versions before 6.x do not support BLR compression.'
+    write(*,*) '  No compression will be used in this run.'
+  endif
+#endif
   
   ! --- Initialize live data file which will be filled during the code run
   if ( my_id == 0 ) call init_live_data()
 #ifdef JECCD
-  if ( my_id == 0) ) call init_live_data2()
-  if ( my_id == 0) ) call init_live_data3()
+  if ( my_id == 0 ) call init_live_data2()
+  if ( my_id == 0 ) call init_live_data3()
 #ifdef JEC2DIAG
-   if ( my_id == 0 ) call init_live_data4()
+  if ( my_id == 0 ) call init_live_data4()
 #endif
 #endif
   
@@ -585,9 +632,11 @@ required = 0
     mumps_par%JOB = -2
     if (my_id == 0) call DMUMPS(mumps_par)
 #endif
+#ifndef USE_PASTIX6
+    ! -- For PaStiX solver before version 6.x
     if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
     if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
-  
+#endif
   end if if_not_restart
   
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -938,8 +987,12 @@ required = 0
        endif
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-       call update_mgi(my_id,node_list,element_list)
+       call total_neutrals(my_id,node_list,element_list)
+       if (using_spi .and. t_now >= t_ns) then
+         call update_spi(my_id,node_list,element_list)
+       end if
 #endif
+
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)
@@ -1132,6 +1185,8 @@ endif
 #endif
 
     elseif (use_pastix) then
+#ifndef USE_PASTIX6
+      ! -- For PaStiX solver before version 6.x
       pastix_iparm(2)     = 7                       ! Clean-up
       pastix_iparm(3)     = 7
 
@@ -1143,6 +1198,12 @@ endif
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
       endif
+#else
+      ! -- For PaStiX solver version 6.x
+      if (.not. gmres .or. ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) ) then
+        call pastixFinalize(pastix_data)
+      endif
+#endif
 
     elseif (use_wsmp) then
 

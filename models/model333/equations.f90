@@ -657,7 +657,10 @@ subroutine ELM_main_rhs_6(rhs,rhs_k)
              - K_prof * R * (v_x*T0_x + v_y*T0_y )                                      * xjac * tstep  &
              ! --- Numerical conductivity
              - K_perp_numm * (v_xx  + v_x /R + v_yy )                                                   &
-                           * (T0_xx + T0_x/R + T0_yy) * R                               * xjac * tstep  
+                           * (T0_xx + T0_x/R + T0_yy) * R                               * xjac * tstep  &
+             ! --- Ohmic heating
+             + v * (gamma-1.d0) * eta_T_ohm * (zj0 / R)**2.d0 * R                       * xjac  * tstep
+             
 
   rhs_k(6) = - (K_par-K_prof) * R / BB2 * Bgrad_T_k_star * Bgrad_T                      * xjac * tstep  &
              - K_prof * R * ( v_p*T0_p /R**2 )                                          * xjac * tstep 
@@ -708,6 +711,8 @@ subroutine ELM_main_lhs_6(amat, amat_k, amat_n, amat_kn)
                  - v * T0 * R**2 * ( r0_x * u_y - r0_y * u_x)                                           * xjac * theta * tstep  &
                  - v * 2.d0 * GAMMA * r0 * R * T0 * u_y                                                 * xjac * theta * tstep 
 
+  amat(6,3)   = - v * (gamma-1.d0) * eta_T_ohm * 2.d0 * zj * zj0/(R**2.d0) * R                          * xjac * theta * tstep
+
   amat(6,5)    = + v * rho * T0_corr * R                                                                * xjac * (1.d0 + zeta)  &
                  - v * rho * R**2    * (T0_x  * u0_y  - T0_y  * u0_x )                                  * xjac * theta * tstep  &
                  - v * T0  * R**2    * (rho_x * u0_y  - rho_y * u0_x )                                  * xjac * theta * tstep  &
@@ -733,7 +738,8 @@ subroutine ELM_main_lhs_6(amat, amat_k, amat_n, amat_kn)
                  + dK_par * T     * R / BB2 * Bgrad_T_star * Bgrad_T                                    * xjac * theta * tstep  &
                  + K_prof * R * (v_x*T_x + v_y*T_y )                                                    * xjac * theta * tstep  & 
                  + K_perp_numm * (v_xx + v_x/R + v_yy)                                                                          &
-                               * (T_xx + T_x/R + T_yy) * R                                              * xjac * theta * tstep
+                               * (T_xx + T_x/R + T_yy) * R                                              * xjac * theta * tstep  &
+                 - v * T * (gamma-1.d0) * deta_dT_ohm * (zj0 / R)**2.d0 * R                             * xjac * theta * tstep
   
   amat_k(6,6)  = + (K_par-K_prof) * R / BB2 * Bgrad_T_k_star * Bgrad_T_T                                * xjac * theta * tstep  &
                  + dK_par * T     * R / BB2 * Bgrad_T_k_star * Bgrad_T                                  * xjac * theta * tstep 

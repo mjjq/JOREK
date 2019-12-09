@@ -392,7 +392,7 @@ required = 0
 #endif
   
   ! --- Initialise ppplib plotting library
-  if (my_id == 0)  call begplt('jorek2.ps')
+  if (my_id == 0 .and. write_ps)  call begplt('jorek2.ps')
   
   ! --- Define the basis functions at the Gaussian points
   call initialise_basis()
@@ -1232,82 +1232,81 @@ endif
   if (my_id .eq. 0)  then
     fileout = 'jorek_restart'
     call export_restart(node_list, element_list, fileout)
+    if ( write_ps ) then
+      if (.not. bench_without_plot) then
+        do ivar=1,n_var
+          call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
+        enddo
 
-    if (.not. bench_without_plot) then
-       
-       do ivar=1,n_var
-    	  call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
-       enddo
-
-       do i=1,n_tor,2
+        do i=1,n_tor,2
           write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
 
-    	  do ivar=1,n_var
-          if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
-             call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
+          do ivar=1,n_var
+            if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
+              call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
+            endif
+          enddo
+
+        enddo
+      endif
+
+      if (index_now .gt. 1) then
+
+        E_min =  1.d20
+        E_max = -1.d20
+        E_max = max(E_max,maxval(energies(1,2,1:index_now)))
+        E_min = min(E_min,minval(energies(1,2,1:index_now)))
+        do i=2,n_tor
+          E_max = max(E_max,maxval(energies(i,1,1:index_now)))
+          E_min = min(E_min,minval(energies(i,1,1:index_now)))
+          E_max = max(E_max,maxval(energies(i,2,1:index_now)))
+          E_min = min(E_min,minval(energies(i,2,1:index_now)))
+        enddo
+
+        call nframe(1,1,2,xtime(1),xtime(index_now),E_min,E_max,'energies',7,'time',4,' ',1)
+
+        do i=1,n_tor
+          if (mod(i,2) .eq. 0) then
+            call lincol(mod(i/2,10))
+          else
+            call lincol(mod((i-1)/2,10))
           endif
-    	  enddo
-
-       enddo
-    endif
-
-    if (index_now .gt. 1) then
-
-       E_min =  1.d20
-       E_max = -1.d20
-       E_max = max(E_max,maxval(energies(1,2,1:index_now)))
-       E_min = min(E_min,minval(energies(1,2,1:index_now)))
-       do i=2,n_tor
-    	  E_max = max(E_max,maxval(energies(i,1,1:index_now)))
-    	  E_min = min(E_min,minval(energies(i,1,1:index_now)))
-    	  E_max = max(E_max,maxval(energies(i,2,1:index_now)))
-    	  E_min = min(E_min,minval(energies(i,2,1:index_now)))
-       enddo
-
-       call nframe(1,1,2,xtime(1),xtime(index_now),E_min,E_max,'energies',7,'time',4,' ',1)
-
-       do i=1,n_tor
-	 if (mod(i,2) .eq. 0) then
-	   call lincol(mod(i/2,10))
-	 else
-	   call lincol(mod((i-1)/2,10))
-	 endif
-    	  call lplot(1,1,2,xtime(1:index_now),energies(i,1,1:index_now),-index_now,1,'Magnetic Energie',16,'time',4,'Emag',4)
-    	  call lincol(4)
-    	  if (n_tor .eq. 3) call lincol(2)
-    	  call lplot(1,1,2,xtime(1:index_now),energies(i,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
-       enddo
-       call lincol(3)
-       call lplot(1,1,2,xtime(1:index_now),energies(1,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
-       call lincol(0)
-    endif
+          call lplot(1,1,2,xtime(1:index_now),energies(i,1,1:index_now),-index_now,1,'Magnetic Energie',16,'time',4,'Emag',4)
+          call lincol(4)
+          if (n_tor .eq. 3) call lincol(2)
+          call lplot(1,1,2,xtime(1:index_now),energies(i,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
+        enddo
+        call lincol(3)
+        call lplot(1,1,2,xtime(1:index_now),energies(1,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
+        call lincol(0)
+      endif
 
 !---------------------------------------------- plot equilibrium current profile (to be removed)
 
-    nplot = 501
-    call tr_allocate(xp,1,nplot,"xp",CAT_GRID)
-    call tr_allocate(yp1,1,nplot,"yp1",CAT_GRID)
-    call tr_allocate(yp2,1,nplot,"yp2",CAT_GRID)
-    call tr_allocate(yp3,1,nplot,"yp3",CAT_GRID)
-! ---- plot neoclassical coefficients -----
-    if (NEO) then
-       call tr_allocate(mu_neo,1,nplot,"mu_neo",CAT_GRID)
-       call tr_allocate(ki_neo,1,nplot,"ki_neo",CAT_GRID)
-    endif
-    iplot = 0
+      nplot = 501
+      call tr_allocate(xp,1,nplot,"xp",CAT_GRID)
+      call tr_allocate(yp1,1,nplot,"yp1",CAT_GRID)
+      call tr_allocate(yp2,1,nplot,"yp2",CAT_GRID)
+      call tr_allocate(yp3,1,nplot,"yp3",CAT_GRID)
+      ! ---- plot neoclassical coefficients -----
+      if (NEO) then
+        call tr_allocate(mu_neo,1,nplot,"mu_neo",CAT_GRID)
+        call tr_allocate(ki_neo,1,nplot,"ki_neo",CAT_GRID)
+      endif
+      iplot = 0
 
-    Rp_start = ES%R_axis - amin*2.d0
-    Rp_end   = ES%R_axis + amin*2.d0
+      Rp_start = ES%R_axis - amin*2.d0
+      Rp_end   = ES%R_axis + amin*2.d0
 
-    Zp = ES%Z_axis
+      Zp = ES%Z_axis
 
-    do i=1,nplot
+      do i=1,nplot
 
-       Rp =  Rp_start + float(i-1)/float(nplot-1) * (Rp_end - Rp_start)
+        Rp =  Rp_start + float(i-1)/float(nplot-1) * (Rp_end - Rp_start)
 
-       call find_RZ(node_list,element_list,Rp,Zp,R_out,Z_out,i_elm,s_out,t_out,ifail)
+        call find_RZ(node_list,element_list,Rp,Zp,R_out,Z_out,i_elm,s_out,t_out,ifail)
 
-       if (ifail .eq. 0) then
+        if (ifail .eq. 0) then
 
     	  call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
 
@@ -1318,60 +1317,59 @@ endif
     			     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
     	    call temperature_e(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
     	     zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)	     
-      zT = zTi + zTe
+            zT = zTi + zTe
     	    dT_dpsi = dTi_dpsi + dTe_dpsi	    
     	  else
-      call temperature(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
+            call temperature(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
     		   zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
     	  endif
     	  call FFprime(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
     	       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
 
-       if (NEO) then
-          if (num_neo_file) then
-             call neo_coef (xpoint, xcase, Zp, ES%Z_xpoint, psi, ES%psi_axis,ES%psi_bnd, &
+          if (NEO) then
+            if (num_neo_file) then
+              call neo_coef (xpoint, xcase, Zp, ES%Z_xpoint, psi, ES%psi_axis,ES%psi_bnd, &
                   amu_neo_node, aki_neo_node)
+            endif
           endif
-       endif
 
-    	  zjz	= (zFFprime - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT)) / Rp
+          zjz	= (zFFprime - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT)) / Rp
 
-    	  iplot = iplot + 1
+          iplot = iplot + 1
 
-    	  xp(iplot)  = Rp
-    	  yp1(iplot) = zFFprime / Rp
-    	  yp2(iplot) = zjz
-    	  yp3(iplot) = - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT) / Rp
+          xp(iplot)  = Rp
+          yp1(iplot) = zFFprime / Rp
+          yp2(iplot) = zjz
+          yp3(iplot) = - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT) / Rp
 
-    	  !	 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,ES%psi_axis,ES%psi_bnd,yp2(iplot),yp1(iplot),yp3(iplot)
-           if (NEO) then
-              if ( num_neo_file) then
-                 mu_neo(iplot) = amu_neo_node
-                 ki_neo(iplot) = aki_neo_node
-                 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,ES%psi_axis,ES%psi_xpoint,mu_neo(iplot),ki_neo(iplot)
-              endif
-           endif
+          if (NEO) then
+            if ( num_neo_file) then
+              mu_neo(iplot) = amu_neo_node
+              ki_neo(iplot) = aki_neo_node
+              write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,ES%psi_axis,ES%psi_xpoint,mu_neo(iplot),ki_neo(iplot)
+            endif
+          endif
 
         endif
 
-    enddo
+      enddo
 
-    call lplot6(1,1,xp,yp2,iplot,' ')
-    call lincol(1)
-    call lplot6(1,1,xp,yp1,-iplot,' ')
-    call lincol(2)
-    call lplot6(1,1,xp,yp3,-iplot,' ')
-    call lincol(0)
-    if (NEO) then
-       if ( num_neo_file) then
+      call lplot6(1,1,xp,yp2,iplot,' ')
+      call lincol(1)
+      call lplot6(1,1,xp,yp1,-iplot,' ')
+      call lincol(2)
+      call lplot6(1,1,xp,yp3,-iplot,' ')
+      call lincol(0)
+      if (NEO) then
+        if ( num_neo_file) then
           call lplot6(1,1,xp,mu_neo,iplot,' ')
           call lincol(1)
           call lplot6(1,1,xp,ki_neo,iplot,' ')
           call lincol(0)
-       end if
-    endif
-    call finplt 					 ! close plot file
-
+        end if
+      endif
+      call finplt 					 ! close plot file
+    endif !  write_ps
 !  cll export_POV(node_list,element_list,3,1)	       ! export to POVray native bezier patch format
 #ifdef fullmhd
     write(*,*) ' '

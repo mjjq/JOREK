@@ -8,6 +8,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
+use phys_module, only: write_ps
 
 implicit none
 
@@ -439,7 +440,7 @@ write(*,*) '                 Definition of nodes complete : '
 write(*,*) '                     number of nodes = ',newnode_list%n_nodes
 
 !-------------------------------- Plot all the nodes
-if (plot_grid) then
+if (plot_grid .and. write_ps) then
   call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
   call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
   call tr_allocate(xp,1,index,"xp")
@@ -454,7 +455,7 @@ if (plot_grid) then
 endif
 
 !-------------------------------- Plot the boundary nodes only
-if (plot_grid) then
+if (plot_grid .and. write_ps) then
   call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
   call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
   index=0
@@ -479,7 +480,7 @@ if (plot_grid) then
 endif
 
 !-------------------------------- Plot the divertor nodes only
-if (plot_grid) then
+if (plot_grid .and. write_ps) then
   call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
   call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
   index=0
@@ -504,7 +505,7 @@ if (plot_grid) then
 endif
 
 !-------------------------------- Plot the open flux surface nodes only
-if (plot_grid) then
+if (plot_grid .and. write_ps ) then
   call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
   call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
   index=0
@@ -529,7 +530,7 @@ if (plot_grid) then
 endif
 
 !-------------------------------- Plot the corner nodes only
-if (plot_grid) then
+if (plot_grid .and. write_ps ) then
   call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
   call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
   index=0
@@ -984,7 +985,7 @@ write(*,*) '                 Definition of elements complete : '
 write(*,*) '                     number of elements = ',newelement_list%n_elements
 
 !-------------------------------- Plot the elements' nodes
-if (plot_grid) then
+if (plot_grid .and. write_ps ) then
   call nframe(21,11,1,1.0,5.0,-1.8,2.2,' ',1,'R',1,'Z',1)
   call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
   k = 4*index
@@ -1004,7 +1005,7 @@ if (plot_grid) then
 endif
 
 !----------------------------------- Print a python file that plots a cross with the 4 nodes of each element
-if (plot_grid) then
+if (plot_grid .and. write_ps) then
   n_loop = newelement_list%n_elements
   open(101,file='plot_elements.py')
     write(101,'(A)')	    '#!/usr/bin/env python'

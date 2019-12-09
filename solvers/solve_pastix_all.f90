@@ -17,10 +17,10 @@ use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR, pasti
 
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
+use pastixf
 use iso_c_binding
 use pastix_enums
 use spmf
-use pastixf
 #endif
  
 implicit none
@@ -44,7 +44,6 @@ integer,allocatable      :: counts(:), displacements(:)
 ! -- For PaStiX solver version 6.x
 integer(c_int)     :: pastix_info
 type(c_ptr)        :: pastix_rhs_ptr
-
 integer(kind=spm_int_t), dimension(:), pointer       :: pastix_colptr
 integer(kind=spm_int_t), dimension(:), pointer       :: pastix_rowptr
 real(kind=c_double)    , dimension(:), pointer       :: pastix_values

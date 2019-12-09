@@ -47,12 +47,12 @@ ymin = minval(xp(:,2))
 xmin  = 1.1 * xmin - 0.1 * xmax
 ymin  = 1.1 * ymin - 0.1 * ymax
 
-if (frame .and. write_ps ) call nframe(21,11,1,xmin,xmax,ymin,ymax,'Bezier grid',11,'X',1,'Y',1)
-if ( write_ps ) call lplot(21,11,461,xp(:,1),xp(:,2),-node_list%n_nodes,1,'Nodes',5,'X',1,'Y',1)
+if ( write_ps ) then
+  if (frame) call nframe(21,11,1,xmin,xmax,ymin,ymax,'Bezier grid',11,'X',1,'Y',1)
+  call lplot(21,11,461,xp(:,1),xp(:,2),-node_list%n_nodes,1,'Nodes',5,'X',1,'Y',1)
 
 !---------------------------------------------- plot unit vectors
 
-if ( write_ps ) then
   call lincol(2)
   do i=1,node_list%n_nodes
 
@@ -184,19 +184,18 @@ if ( write_ps ) then
 
       call bezier_1d(n_dim, s, xb, xp(j,:))
     enddo
-    
+
     call lplot6(1,1,xp(1:np,1),xp(1:np,2),-np,' ')
    
   enddo
 
   call lincol(0)
-endif
-call tr_deallocate(xp,"xp",CAT_GRID)
 
-if (.not. bezier) return
+  call tr_deallocate(xp,"xp",CAT_GRID)
 
-!------------------------------ plot the Bezier points
-if ( write_ps ) then
+  if (.not. bezier) return
+
+  !------------------------------ plot the Bezier points
   call tr_allocate(xp,1,12*element_list%n_elements,1,n_dim,"xp",CAT_GRID)
 
   iplot = 0
@@ -225,9 +224,9 @@ if ( write_ps ) then
   call lincol(1)
   !call lplot(11,11,461,xp(:,1),xp(:,2),-iplot,1,' ',1,' ',1,' ',1)
   call pplot(11,11,xp(:,1),xp(:,2),iplot,1)
-
-  call tr_deallocate(xp,"xp",CAT_GRID)
 endif
+call tr_deallocate(xp,"xp",CAT_GRID)
+
 
 return
 end

@@ -60,7 +60,7 @@ do i=1,node_list%n_nodes
   Z_max = max(Z_max,node_list%node(i)%x(1,2))
 enddo
 
-if (frame .and. write_ps ) CALL NFRAME(21,11,1,R_min,R_max,Z_min,Z_max,LABEL,13,'R [m]',5,'Z [m]',5)
+if (frame) CALL NFRAME(21,11,1,R_min,R_max,Z_min,Z_max,LABEL,13,'R [m]',5,'Z [m]',5)
 
 !call plot_grid(node_list,element_list,.true.,.false.)                               ! plot the grid
 

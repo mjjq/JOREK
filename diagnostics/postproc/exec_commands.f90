@@ -1297,8 +1297,8 @@ module exec_commands
       
     comment = 'Output produced by jorek2_postproc command "rectangular_torus"'
     
-    call eval_expr(eq, units, expr_list,                                                           &
-       pol_pos(node_list,element_list,eq,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
+    call eval_expr(ES, units, expr_list,                                                           &
+       pol_pos(node_list,element_list,ES,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
        tor_pos(phistart=phimin, phiend=phimax, nphi=nphi), result, ierr)
     
     call write_hdf5_3d(ierr, expr_list, result, trim(filename), comment=trim(comment))

@@ -163,6 +163,8 @@ module exec_commands
           call tor_line(command, first_step, ierr)
         case ( 'rectangle' )
           call rectangle(command, first_step, ierr)
+        case ( 'rectangular_torus' )
+          call rectangular_torus(command, first_step, ierr)
         case ( 'mark_coords' )
           call mark_coords(command, ierr)
         case ( 'midplane' )
@@ -207,7 +209,7 @@ module exec_commands
         case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane', 'average', 'point',      &
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
           'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
-          'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'energy_spectrum', 'average_h5', &
+          'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'rectangular_torus', 'energy_spectrum', 'average_h5', &
           'I_halo_TPF', 'spi-state')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
@@ -1257,7 +1259,7 @@ module exec_commands
        tor_pos(phi=phi), result, ierr)
     
     call reduce_result_to_2d(ierr, result, res2d, i1=1)
-    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename))
+    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename), comment=trim(comment))
     
     if ( allocated(result) ) deallocate(result)
     if ( allocated(res2d ) ) deallocate(res2d )
@@ -1267,7 +1269,62 @@ module exec_commands
   
   
   
-  
+
+  !> Expressions in a rectangular area.
+  subroutine rectangular_torus(command, first_step, ierr)
+    
+    use mod_position, only: pol_pos, tor_pos
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8  :: Rmin, Rmax, Zmin, Zmax, phimin, phimax
+    integer :: nR, nZ, nphi, units
+    character(len=1024) :: filename, comment
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,9);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    
+    ! --- Preparation
+    Rmin      = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    Rmax      = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    nR        = to_int  (command%args(3), ierr); if ( ierr /= 0 ) return
+    Zmin      = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
+    Zmax      = to_float(command%args(5), ierr); if ( ierr /= 0 ) return
+    nZ        = to_int  (command%args(6), ierr); if ( ierr /= 0 ) return
+    phimin    = to_float(command%args(7), ierr); if ( ierr /= 0 ) return
+    phimax    = to_float(command%args(8), ierr); if ( ierr /= 0 ) return
+    nphi      = to_float(command%args(9), ierr); if ( ierr /= 0 ) return
+    units     = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
+    
+    write(filename,'(15a)') DIR, 'exprs_Rmin', trim(real2str(Rmin)), '_Rmax', trim(real2str(Rmax)),&
+                                      '_Zmin', trim(real2str(Zmin)), '_Zmax', trim(real2str(Zmax)),&
+                              '_phimin', trim(real2str(phimin)), '_phimax', trim(real2str(phimax)),&
+      trim(step_range_string(index_now,index_now)), '.h5'
+      
+    comment = 'Output produced by jorek2_postproc command "rectangular_torus"'
+    
+    call eval_expr(eq, units, expr_list,                                                           &
+       pol_pos(node_list,element_list,eq,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
+       tor_pos(phistart=phimin, phiend=phimax, nphi=nphi), result, ierr)
+    
+    call write_hdf5_3d(ierr, expr_list, result, trim(filename), comment=trim(comment))
+    
+    if ( allocated(result) ) deallocate(result)
+    
+  end subroutine rectangular_torus
+
+
+
+
+
   !> Toroidally and poloidally averaged expressions.
   subroutine average(command, first_step, ierr)
     

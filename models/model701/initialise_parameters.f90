@@ -3,7 +3,7 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering
+use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, &
     pastix_maxthrd
 use vacuum
@@ -21,7 +21,7 @@ integer :: ierr
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
-                restart, regrid,                                    &
+                restart, regrid, write_ps,                          &
                 force_horizontal_Xline,                             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
@@ -55,7 +55,8 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
                 freeboundary, resistive_wall, freeb_change_indices, &
                 wall_resistivity, wall_resistivity_fact,            &
-                use_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering, &
+                use_mumps, mumps_ordering,                          &
+                use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
                 pastix_smp_only, refinement, force_central_node,    &
                 grid_to_wall,                                       &

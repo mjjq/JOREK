@@ -263,7 +263,35 @@ required = 0
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   ! --- Some checks not to waste any cpu time
-  if (required .ne. provided) then
+  if ( (n_tor < 1) .or. (mod(n_tor,2) == 0) ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_tor has an illegal value', n_tor
+    call MPI_Abort(MPI_COMM_WORLD, 23, ierr)
+    stop
+  else if ( n_period<1 ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_period has an illegal value', n_period
+    call MPI_Abort(MPI_COMM_WORLD, 24, ierr)
+    stop
+  else if ( n_elements_max<1 ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_elements_max has an illegal value', n_elements_max
+    call MPI_Abort(MPI_COMM_WORLD, 25, ierr)
+    stop
+  else if ( n_nodes_max<1 ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_nodes_max has an illegal value', n_nodes_max
+    call MPI_Abort(MPI_COMM_WORLD, 25, ierr)
+    stop
+  else if ( n_boundary_max<1 ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_boundary_max has an illegal value', n_boundary_max
+    call MPI_Abort(MPI_COMM_WORLD, 25, ierr)
+    stop
+  else if ( n_pieces_max<1 ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_pieces_max has an illegal value', n_pieces_max
+    call MPI_Abort(MPI_COMM_WORLD, 25, ierr)
+    stop
+  else if ( n_vertex_max/=4 ) then
+    write(*,*) 'WARNING : hard-coded parameter n_vertex_max /= 4', n_vertex_max
+    call MPI_Abort(MPI_COMM_WORLD, 25, ierr)
+    stop
+  else if (required .ne. provided) then
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
     call MPI_Abort(MPI_COMM_WORLD, 2, ierr)
     stop
@@ -302,10 +330,16 @@ required = 0
     stop
 #endif
   else if ( use_pastix ) then
-#ifndef USE_PASTIX
-     write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 in Makefile.inc'
-     call MPI_Abort(MPI_COMM_WORLD, 8, ierr)
-     stop
+#if !( defined(USE_PASTIX)  ^  defined(USE_PASTIX6) ) 
+    write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 xor USE_PASTIX6 = 1 in Makefile.inc'
+    call MPI_Abort(MPI_COMM_WORLD, 8, ierr)
+    stop
+#endif
+#ifdef USE_PASTIX6
+    if (n_cpu /= ((n_tor-1)/2+1)) then
+      write(*,*) 'FATAL : Pastix6 is not yet MPI parallelised (Pastix 6.0)! Please use #procs = (n_tor+1)/2.'
+      call MPI_Abort(MPI_COMM_WORLD, 6, ierr)
+    endif
 #endif
   else if ( use_wsmp ) then
 #ifndef USE_WSMP
@@ -353,6 +387,12 @@ required = 0
   write(*,*) 'WARNING: You are not using USE_FFTW=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_FFTW=1 in your Makefile.inc'
 #endif
+#ifndef USE_PASTIX6
+  if (use_pastix .and. use_BLR_compression) then
+    write(*,*) 'WARNING: PaStiX versions before 6.x do not support BLR compression.'
+    write(*,*) '  No compression will be used in this run.'
+  endif
+#endif
   
   ! --- Initialize live data file which will be filled during the code run
   if ( my_id == 0 ) call init_live_data()
@@ -365,7 +405,7 @@ required = 0
 #endif
   
   ! --- Initialise ppplib plotting library
-  if (my_id == 0)  call begplt('jorek2.ps')
+  if (my_id == 0 .and. write_ps)  call begplt('jorek2.ps')
   
   ! --- Define the basis functions at the Gaussian points
   call initialise_basis()
@@ -602,9 +642,11 @@ required = 0
     mumps_par%JOB = -2
     if (my_id == 0) call DMUMPS(mumps_par)
 #endif
+#ifndef USE_PASTIX6
+    ! -- For PaStiX solver before version 6.x
     if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
     if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
-  
+#endif
   end if if_not_restart
   
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -1205,6 +1247,8 @@ endif
 #endif
 
     elseif (use_pastix) then
+#ifndef USE_PASTIX6
+      ! -- For PaStiX solver before version 6.x
       pastix_iparm(2)     = 7                       ! Clean-up
       pastix_iparm(3)     = 7
 
@@ -1216,6 +1260,12 @@ endif
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
       endif
+#else
+      ! -- For PaStiX solver version 6.x
+      if (.not. gmres .or. ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) ) then
+        call pastixFinalize(pastix_data)
+      endif
+#endif
 
     elseif (use_wsmp) then
 
@@ -1244,160 +1294,159 @@ endif
   if (my_id .eq. 0)  then
     fileout = 'jorek_restart'
     call export_restart(node_list, element_list, fileout)
+    if ( write_ps ) then
+      if (.not. bench_without_plot) then
+        do ivar=1,n_var
+          call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
+        enddo
 
-    if (.not. bench_without_plot) then
-       
-       do ivar=1,n_var
-    	  call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
-       enddo
-
-       do i=1,n_tor,2
+        do i=1,n_tor,2
           write(label,'(A4,i3,A1)') '(n =',((i-1)/2)*n_period,')'
 
-    	  do ivar=1,n_var
-          if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
-             call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
-          endif
-    	  enddo
+          do ivar=1,n_var
+            if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
+              call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
+            endif
+          enddo
 
-       enddo
-    endif
-
-    if (index_now .gt. 1) then
-
-       E_min =  1.d20
-       E_max = -1.d20
-       E_max = max(E_max,maxval(energies(1,2,1:index_now)))
-       E_min = min(E_min,minval(energies(1,2,1:index_now)))
-       do i=2,n_tor
-    	  E_max = max(E_max,maxval(energies(i,1,1:index_now)))
-    	  E_min = min(E_min,minval(energies(i,1,1:index_now)))
-    	  E_max = max(E_max,maxval(energies(i,2,1:index_now)))
-    	  E_min = min(E_min,minval(energies(i,2,1:index_now)))
-       enddo
-
-       call nframe(1,1,2,xtime(1),xtime(index_now),E_min,E_max,'energies',7,'time',4,' ',1)
-
-       do i=1,n_tor
-	 if (mod(i,2) .eq. 0) then
-	   call lincol(mod(i/2,10))
-	 else
-	   call lincol(mod((i-1)/2,10))
-	 endif
-    	  call lplot(1,1,2,xtime(1:index_now),energies(i,1,1:index_now),-index_now,1,'Magnetic Energie',16,'time',4,'Emag',4)
-    	  call lincol(4)
-    	  if (n_tor .eq. 3) call lincol(2)
-    	  call lplot(1,1,2,xtime(1:index_now),energies(i,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
-       enddo
-       call lincol(3)
-       call lplot(1,1,2,xtime(1:index_now),energies(1,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
-       call lincol(0)
-    endif
-
-!---------------------------------------------- plot equilibrium current profile (to be removed)
-    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis, ifail)
-
-    nplot = 501
-    call tr_allocate(xp,1,nplot,"xp",CAT_GRID)
-    call tr_allocate(yp1,1,nplot,"yp1",CAT_GRID)
-    call tr_allocate(yp2,1,nplot,"yp2",CAT_GRID)
-    call tr_allocate(yp3,1,nplot,"yp3",CAT_GRID)
-! ---- plot neoclassical coefficients -----
-    if (NEO) then
-       call tr_allocate(mu_neo,1,nplot,"mu_neo",CAT_GRID)
-       call tr_allocate(ki_neo,1,nplot,"ki_neo",CAT_GRID)
-    endif
-    iplot = 0
-
-    psi_bnd = 0.d0
-    if (xpoint) then
-      call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,		  &
-    	i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
-      psi_bnd  = psi_xpoint(1)
-      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    	psi_bnd = psi_xpoint(2)
+        enddo
       endif
-    else
-      call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
-      psi_bnd = psi_lim
-    end if
 
-    Rp_start = R_axis - amin*2.d0
-    Rp_end   = R_axis + amin*2.d0
+      if (index_now .gt. 1) then
 
-    Zp = Z_axis
+        E_min =  1.d20
+        E_max = -1.d20
+        E_max = max(E_max,maxval(energies(1,2,1:index_now)))
+        E_min = min(E_min,minval(energies(1,2,1:index_now)))
+        do i=2,n_tor
+          E_max = max(E_max,maxval(energies(i,1,1:index_now)))
+          E_min = min(E_min,minval(energies(i,1,1:index_now)))
+          E_max = max(E_max,maxval(energies(i,2,1:index_now)))
+          E_min = min(E_min,minval(energies(i,2,1:index_now)))
+        enddo
 
-    do i=1,nplot
+        call nframe(1,1,2,xtime(1),xtime(index_now),E_min,E_max,'energies',7,'time',4,' ',1)
 
-       Rp =  Rp_start + float(i-1)/float(nplot-1) * (Rp_end - Rp_start)
-
-       call find_RZ(node_list,element_list,Rp,Zp,R_out,Z_out,i_elm,s_out,t_out,ifail)
-
-       if (ifail .eq. 0) then
-
-    	  call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
-
-    	  call density(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,	       &
-    	       zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-    	  if (jorek_model .eq. 400) then	     
-    	    call temperature_i(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
-    			     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
-    	    call temperature_e(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
-    	     zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)	     
-      zT = zTi + zTe
-    	    dT_dpsi = dTi_dpsi + dTe_dpsi	    
-    	  else
-      call temperature(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
-    		   zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
-    	  endif
-    	  call FFprime(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,	       &
-    	       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
-
-       if (NEO) then
-          if (num_neo_file) then
-             call neo_coef (xpoint, xcase, Zp, Z_xpoint, psi, psi_axis,psi_bnd, &
-                  amu_neo_node, aki_neo_node)
+        do i=1,n_tor
+          if (mod(i,2) .eq. 0) then
+            call lincol(mod(i/2,10))
+          else
+            call lincol(mod((i-1)/2,10))
           endif
-       endif
+          call lplot(1,1,2,xtime(1:index_now),energies(i,1,1:index_now),-index_now,1,'Magnetic Energie',16,'time',4,'Emag',4)
+          call lincol(4)
+          if (n_tor .eq. 3) call lincol(2)
+          call lplot(1,1,2,xtime(1:index_now),energies(i,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
+        enddo
+        call lincol(3)
+        call lplot(1,1,2,xtime(1:index_now),energies(1,2,1:index_now),-index_now,1,'Kinetic Energie',15,'time',4,'Ekin',4)
+        call lincol(0)
+      endif
 
-    	  zjz	= (zFFprime - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT)) / Rp
+      !---------------------------------------------- plot equilibrium current profile (to be removed)
+      call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis, ifail)
 
-    	  iplot = iplot + 1
+      nplot = 501
+      call tr_allocate(xp,1,nplot,"xp",CAT_GRID)
+      call tr_allocate(yp1,1,nplot,"yp1",CAT_GRID)
+      call tr_allocate(yp2,1,nplot,"yp2",CAT_GRID)
+      call tr_allocate(yp3,1,nplot,"yp3",CAT_GRID)
+      ! ---- plot neoclassical coefficients -----
+      if (NEO) then
+        call tr_allocate(mu_neo,1,nplot,"mu_neo",CAT_GRID)
+        call tr_allocate(ki_neo,1,nplot,"ki_neo",CAT_GRID)
+      endif
+      iplot = 0
 
-    	  xp(iplot)  = Rp
-    	  yp1(iplot) = zFFprime / Rp
-    	  yp2(iplot) = zjz
-    	  yp3(iplot) = - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT) / Rp
+      psi_bnd = 0.d0
+      if (xpoint) then
+        call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,		  &
+            i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
+        psi_bnd  = psi_xpoint(1)
+        if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+          psi_bnd = psi_xpoint(2)
+        endif
+      else
+        call find_limiter(99, node_list, element_list, bnd_elm_list, psi_lim, R_lim, Z_lim)
+        psi_bnd = psi_lim
+      end if
 
-    	  !	 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_bnd,yp2(iplot),yp1(iplot),yp3(iplot)
-           if (NEO) then
-              if ( num_neo_file) then
-                 mu_neo(iplot) = amu_neo_node
-                 ki_neo(iplot) = aki_neo_node
-                 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_xpoint,mu_neo(iplot),ki_neo(iplot)
-              endif
-           endif
+      Rp_start = R_axis - amin*2.d0
+      Rp_end   = R_axis + amin*2.d0
+
+      Zp = Z_axis
+
+      do i=1,nplot
+
+        Rp =  Rp_start + float(i-1)/float(nplot-1) * (Rp_end - Rp_start)
+
+        call find_RZ(node_list,element_list,Rp,Zp,R_out,Z_out,i_elm,s_out,t_out,ifail)
+
+        if (ifail .eq. 0) then
+
+          call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
+
+          call density(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,	       &
+              zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
+          if (jorek_model .eq. 400) then	     
+            call temperature_i(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
+                zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
+            call temperature_e(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
+                zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)	     
+            zT = zTi + zTe
+            dT_dpsi = dTi_dpsi + dTe_dpsi	    
+          else
+            call temperature(xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd, &
+                zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+          endif
+          call FFprime(    xpoint,xcase, Zp, Z_xpoint, psi,psi_axis,psi_bnd,	       &
+              zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
+
+          if (NEO) then
+            if (num_neo_file) then
+              call neo_coef (xpoint, xcase, Zp, Z_xpoint, psi, psi_axis,psi_bnd, &
+                  amu_neo_node, aki_neo_node)
+            endif
+          endif
+
+          zjz	= (zFFprime - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT)) / Rp
+
+          iplot = iplot + 1
+
+          xp(iplot)  = Rp
+          yp1(iplot) = zFFprime / Rp
+          yp2(iplot) = zjz
+          yp3(iplot) = - Rp*Rp * (zn * dT_dpsi + dn_dpsi * zT) / Rp
+
+          !	 write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_bnd,yp2(iplot),yp1(iplot),yp3(iplot)
+          if (NEO) then
+            if ( num_neo_file) then
+              mu_neo(iplot) = amu_neo_node
+              ki_neo(iplot) = aki_neo_node
+              write(*,'(A,8e16.8)') ' profiles : ',xp(iplot),psi,psi_axis,psi_xpoint,mu_neo(iplot),ki_neo(iplot)
+            endif
+          endif
 
         endif
 
-    enddo
+      enddo
 
-    call lplot6(1,1,xp,yp2,iplot,' ')
-    call lincol(1)
-    call lplot6(1,1,xp,yp1,-iplot,' ')
-    call lincol(2)
-    call lplot6(1,1,xp,yp3,-iplot,' ')
-    call lincol(0)
-    if (NEO) then
-       if ( num_neo_file) then
+      call lplot6(1,1,xp,yp2,iplot,' ')
+      call lincol(1)
+      call lplot6(1,1,xp,yp1,-iplot,' ')
+      call lincol(2)
+      call lplot6(1,1,xp,yp3,-iplot,' ')
+      call lincol(0)
+      if (NEO) then
+        if ( num_neo_file) then
           call lplot6(1,1,xp,mu_neo,iplot,' ')
           call lincol(1)
           call lplot6(1,1,xp,ki_neo,iplot,' ')
           call lincol(0)
-       end if
-    endif
-    call finplt 					 ! close plot file
-
+        end if
+      endif
+      call finplt 					 ! close plot file
+    endif !  write_ps
 !  cll export_POV(node_list,element_list,3,1)	       ! export to POVray native bezier patch format
 #ifdef fullmhd
     write(*,*) ' '

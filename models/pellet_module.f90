@@ -199,7 +199,6 @@ use phys_module, only: pellets, gas_type, central_density, central_mass, spi_abl
                        index_now, xtime_spi_ablation, xtime_spi_ablation_bg, xtime_spi_ablation_rate,&
                        xtime_spi_ablation_bg_rate, F0, R_geo, imp_cor
 use mpi_mod
-use mgi_module
 use corr_neg
 
 implicit none
@@ -560,9 +559,6 @@ end subroutine update_spi
                            spi_rnd_seed, spi_angle, xtime_spi_ablation, xtime_spi_ablation_bg, xtime_spi_ablation_rate,&
                            xtime_spi_ablation_bg_rate, nstep, spi_shard_file, spi_abl_model, n_spi_tot
     use mpi_mod
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
-    use mgi_module
-#endif
     use corr_neg
     
     implicit none

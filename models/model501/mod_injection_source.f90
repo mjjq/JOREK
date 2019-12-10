@@ -28,7 +28,7 @@ module mgi_module
 
 
 
-  subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,  &
+  subroutine inj_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,  &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,                  &
                         JET_MGI,ASDEX_MGI,central_density,central_mass)
 
@@ -114,7 +114,7 @@ module mgi_module
         mass_gas = A_gas*MASS_PROTON
         c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(5.d0/3.d0))
       case default
-        write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
+        write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
         write(*,*) '=> We assume the gas is D2.'
         n_gas  = 5
         A_gas  = 4.
@@ -259,7 +259,7 @@ module mgi_module
 
 
   return
-  end subroutine mgi_source
+  end subroutine inj_source
 
 
   subroutine update_mgi(my_id,node_list,element_list)

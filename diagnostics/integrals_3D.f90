@@ -390,7 +390,7 @@ do ife = ife_min, ife_max
        case('Ne')
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
        case default
-         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
+         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
          m_i_over_m_imp = central_mass/2.
      end select

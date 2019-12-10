@@ -713,7 +713,7 @@ do ms=1, n_gauss
        case('Ne')
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
        case default
-         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
+         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
          m_i_over_m_imp = central_mass/2.
      end select
@@ -963,7 +963,7 @@ do ms=1, n_gauss
 
 !============================================================!
 ! Important note: in order to implementing more complicated  !
-!    model, we should add more arguments to mgi_source       !
+!    model, we should add more arguments to inj_source       !
 !============================================================!
 
      if (using_spi) then
@@ -990,7 +990,7 @@ do ms=1, n_gauss
              ng_radius = ng_radius_min
            end if
 
-           call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
+           call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
                          mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,0.,x_g(ms,mt),y_g(ms,mt),    &
                          phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
          end if
@@ -1003,7 +1003,7 @@ do ms=1, n_gauss
 
      else
 
-       call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
+       call inj_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_imp,t_now,  &
                      JET_MGI,ASDEX_MGI,central_density,central_mass)
 

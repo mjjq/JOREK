@@ -13,9 +13,14 @@ use corr_neg
 use mod_import_restart
 use mod_log_params
 use mod_vtk
-use mgi_module
 use mod_interp
 use mod_poloidal_currents
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+  use mod_neutral_source
+#endif
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
+#endif
 
 implicit none
 

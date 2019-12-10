@@ -12,9 +12,13 @@ use basis_at_gaussian
 use pellet_module
 use mpi_mod
 use mod_import_restart
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
-use mgi_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+  use mod_neutral_source
 #endif
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
+#endif
+
 implicit none
 
 type (type_node_list)    :: node_list

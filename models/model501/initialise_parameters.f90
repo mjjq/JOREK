@@ -12,7 +12,7 @@ use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pi
     pastix_maxthrd
 use vacuum
 use wsmp_module,   only: use_wsmp
-use mgi_module,    only: total_n_particles_inj_all
+use mod_injection_source,    only: total_n_particles_inj_all
 use pellet_module
 
 implicit none
@@ -116,14 +116,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
-                mgi_sig, mgi_deltaphi, ksi_ion, spi_rnd_seed,       &
-                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
+                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
+                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
-                spi_quantity_bg, pellet_density_bg,                 &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
-                spi_Vel_diff, t_mgi, JET_MGI, ASDEX_MGI,            &
+                spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 gas_type, delta_n_convection, nimp_bg,              &
                 flag_adas, adas_dir, output_rad_phi,                &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
@@ -139,7 +138,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-		eta_ohmic 
+                eta_ohmic 
 
  if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.

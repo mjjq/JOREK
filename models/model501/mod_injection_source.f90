@@ -1,4 +1,4 @@
-module mgi_module
+module mod_injection_source
 
   use constants
 
@@ -415,4 +415,4 @@ module mgi_module
 
   end subroutine radiation_function
 
-end module mgi_module
+end module mod_injection_source

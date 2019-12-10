@@ -18,7 +18,7 @@ use phys_module
 use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
-use mgi_module
+use mod_injection_source
 use mod_coronal
 use vacuum, only: freeb_fact
 use mod_bootstrap_functions

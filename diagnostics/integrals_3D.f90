@@ -12,9 +12,13 @@ use mpi_mod
 use domains
 use corr_neg
 !$ use omp_lib
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mod_neutral_source
 #endif
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
+#endif
+
 
 implicit none
 
@@ -52,7 +56,14 @@ real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
 real*8  :: source_volume, source_pellet, eta_T, eta_Sp
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0, rn0_corr
+real*8  :: local_n_particles_inj, local_n_particles, rn0, rn0_corr
+
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+real*8  :: source_neutral
+#endif
+#if (JOREK_MODEL == 501)
+real*8  :: source_bg, source_imp, source_tmp
+#endif
 
 ! Additional diagnostic variables for impurity model
 #if (JOREK_MODEL == 501)
@@ -193,8 +204,13 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
-!$omp           rn0, rn0_corr, source_neutral,                                                 &
+!$omp           rn0, rn0_corr,                                                                 &
+#endif
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+!$omp           source_neutral,                                                                &
+#endif
 #if (JOREK_MODEL == 501)
+!$omp           source_bg, source_imp, source_tmp,                                             &
 !$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
 !$omp           T_rad, T_rad_real, ne_rad, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,         &
 #endif
@@ -478,7 +494,7 @@ do ife = ife_min, ife_max
         endif
 #endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
         !--- Calculate the neutral injection rate and the number of neutrals in the plasma
 
         source_neutral = 0.d0
@@ -508,6 +524,50 @@ do ife = ife_min, ife_max
         end if
 
         local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_neutral * bigR * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
+        local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
+
+#endif
+#if (JOREK_MODEL == 501)
+        !--- Calculate the neutral injection rate and the number of neutrals in the plasma
+
+        source_imp = 0.d0
+        source_bg  = 0.d0
+
+        if (using_spi) then
+
+          do spi_i = 1, n_spi
+
+            source_tmp = 0.d0
+
+            ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+
+            if (ng_radius < ng_radius_min) then
+              ng_radius = ng_radius_min
+            end if
+
+            call inj_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
+                                  ng_radius,ns_sig,ns_deltaphi,     &
+                                  ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),     &
+                                  phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+            ! Converting number density into mass density for each species respectively
+            source_bg  = source_bg + source_tmp * ( 1. - pellets(spi_i)%spi_species)
+            source_imp = source_imp + source_tmp * pellets(spi_i)%spi_species / m_i_over_m_imp
+
+          end do
+
+        else
+
+          call inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm,        &
+                                A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_tmp,t_now, &
+                                JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+          ! Converting number density into mass density for each species respectively
+          source_imp = source_imp / m_i_over_m_imp
+
+        end if
+
+        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_imp * bigR * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
         local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
 
 #endif

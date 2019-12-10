@@ -9,8 +9,11 @@ use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pi
 use wsmp_module,   only: use_wsmp
 use vacuum
 use mpi_mod
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mod_neutral_source
+#endif
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
 #endif
 use pellet_module
 

@@ -65,9 +65,13 @@ program JOREK2
 #endif
   use mpi_mod
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mod_neutral_source
 #endif
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
+#endif
+
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &

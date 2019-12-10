@@ -7,7 +7,7 @@ use data_structure
 use constants
 use mpi_mod
 use corr_neg
-use mumps_module,  only: use_mumps, no_zeros_mumps
+use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
 use vacuum
@@ -49,7 +49,7 @@ real*8, allocatable :: shard_size(:)               !The shard size array
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
-                restart, rst_format, regrid, bootstrap,             &                
+                restart, rst_format, regrid, bootstrap, write_ps,   &                
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
@@ -88,7 +88,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
-                use_mumps, use_pastix,                              &
+                use_mumps, mumps_ordering, use_pastix,              &
+                use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_wsmp, n_tor_fft_thresh,                         &
                 pastix_smp_only, refinement, force_central_node,    &
                 grid_to_wall,                                       &
@@ -111,7 +112,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                toroidal_rotation, tor_frequency,                   &
+                spi_tor_rot, tor_frequency,                         &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &

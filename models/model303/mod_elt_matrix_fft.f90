@@ -1834,7 +1834,7 @@ do i=1,n_vertex_max
                     index_kl =       n_var*(n_order+1)*(k-1) +       n_var*(l-1) + 1
                   else
                     !index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor*n_var*(l-1) + in
-                    index_kl = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(k-1) + (n_tor_end - n_tor_start +1)*n_var*(l-1) + in - n_tor_end +1
+                    index_kl = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(k-1) + (n_tor_end - n_tor_start +1)*n_var*(l-1) + in - n_tor_start +1
                   endif
 
                   ! --- Fill up the matrix

@@ -982,6 +982,11 @@ required = 0
     ! Build the harmonic matrix 
 
 
+!IF (.False.) THEN
+!    call distribute_nodes_elements_harmonic(my_id,m_cpu,n_cpu,node_list,element_list,local_elms_harm,	  &
+!    	 n_local_elms_harm,index_min_harm,index_max_harm)
+!END IF
+
 !begin Harmonic Construction
 #ifndef COMMUNICATION
     if(n_tor.gt.1) then

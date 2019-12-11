@@ -980,6 +980,10 @@ required = 0
 
 !#ifdef PSV        
     ! Build the harmonic matrix 
+
+
+!begin Harmonic Construction
+#ifndef COMMUNICATION
     if(n_tor.gt.1) then
 
       call clck_time_barrier(t0)
@@ -1013,6 +1017,7 @@ required = 0
        call clck_ldiff(t0,t1,tsecond)
       write(*,FMT_TIMING) my_id, '# Elapsed time construct_harmonic_matrix :',tsecond
     endif     
+
 
 
 #ifdef PSV
@@ -1106,7 +1111,8 @@ required = 0
 #endif
  
     endif
-
+#endif
+!end Harmonic Construction
 
     ! Ici c'est OK
     !CALL MPI_Abort(MPI_COMM_WORLD, 1, ierr)
@@ -1122,18 +1128,26 @@ required = 0
           call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
        endif
 
-    else
-      ! call clck_time(t0)
-      ! if (.not. solve_only) then
-      !    call distribute_harmonics(my_id,my_id_n,n_cpu)
-      ! else
-      !    call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
-      ! endif
-      ! call clck_time_barrier(t1)
-      ! call clck_ldiff(t0,t1,tsecond)
-      ! if (my_id .eq. 0) then
-      !    write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
-      ! end if
+    else 
+
+!IF (.False.) THEN
+!          call distribute_harmonics(my_id,my_id_n,n_cpu)
+!          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)   
+!END IF
+
+#ifdef COMMUNICATION
+       call clck_time(t0)
+       if (.not. solve_only) then
+          call distribute_harmonics(my_id,my_id_n,n_cpu)
+       else
+          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
+       endif
+       call clck_time_barrier(t1)
+       call clck_ldiff(t0,t1,tsecond)
+       if (my_id .eq. 0) then
+          write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
+       end if
+#endif
 
 #ifdef PSV        
   

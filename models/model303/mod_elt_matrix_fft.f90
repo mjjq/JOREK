@@ -2242,8 +2242,8 @@ do i=1,n_vertex_max
   enddo ! j loop (n_order+1)
 enddo ! i loop (n_vertex)
 
-!if (.NOT. use_fft) return
-if (n_tor .le. n_tor_fft_thresh) return
+if (.NOT. use_fft) return
+!if (n_tor .le. n_tor_fft_thresh) return
 ELM = 0.5d0 * ELM
 
 do j=1, n_vertex_max*n_var*(n_order+1)

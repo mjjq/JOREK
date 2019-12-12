@@ -4,7 +4,7 @@ description="Fixed boundary MAST-U equilibrium with wall-extended grid, model$jo
 mpitasks=1
 binaries="jorek_model${jorekmodel}_1"
 binaries_initial=""
-requiredfiles="input"
+requiredfiles="input eqdsk.dat"
 extra_remote_files="eqdsk.dat"
 
 

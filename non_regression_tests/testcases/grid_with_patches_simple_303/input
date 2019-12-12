@@ -137,7 +137,7 @@
  R_boundary(  99) = +4.040389, Z_boundary(  99) = -0.076150, psi_boundary(  99) = -2.028930
  R_boundary( 100) = +4.045000, Z_boundary( 100) = +0.050000, psi_boundary( 100) = -2.007777
  
- n_limiter =  500
+ n_limiter =  100
  R_limiter(   1) = +4.045000, Z_limiter(   1) = +0.050000
  R_limiter(   2) = +4.045000, Z_limiter(   2) = +0.176150
  R_limiter(   3) = +4.044999, Z_limiter(   3) = +0.301792

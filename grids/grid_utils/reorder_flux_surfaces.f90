@@ -16,33 +16,33 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
   implicit none
   
   ! --- Routine parameters
-  type (type_node_list),    intent(in)		:: node_list
-  type (type_element_list), intent(in)		:: element_list
-  type (type_surface_list), intent(inout)	:: surface_list
-  integer,                  intent(inout)	:: ier
+  type (type_node_list),    intent(in)          :: node_list
+  type (type_element_list), intent(in)          :: element_list
+  type (type_surface_list), intent(inout)       :: surface_list
+  integer,                  intent(inout)       :: ier
   
   ! --- Local variables
-  integer	:: i_surf, i, j, nStart
-  integer	:: i_piece, i_piece2, i_piece3
-  integer	:: found,   found2,   found3
-  integer	:: index1, index2, index_save
-  integer	:: n_parts, parts_index(n_parts_max)
-  integer	:: n_edge_pieces,     index_edge_pieces(2*n_parts_max)
-  integer	:: n_isolated_pieces, index_isolated_pieces(2*n_parts_max)
-  logical	:: invert, debug, finished, respline
-  integer	:: i_elm
-  integer	:: i_elm2
-  real*8	:: rr,    ss
-  real*8	:: rr2,   ss2
-  real*8	:: R, dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
-  real*8	:: R2,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss
-  real*8	:: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
-  real*8	:: Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss
-  real*8	:: R1, Z1
-  real*8	:: R3, Z3
-  real*8	:: distance
+  integer       :: i_surf, i, j, nStart
+  integer       :: i_piece, i_piece2, i_piece3
+  integer       :: found,   found2,   found3
+  integer       :: index1, index2, index_save
+  integer       :: n_parts, parts_index(n_parts_max)
+  integer       :: n_edge_pieces,     index_edge_pieces(2*n_parts_max)
+  integer       :: n_isolated_pieces, index_isolated_pieces(2*n_parts_max)
+  logical       :: invert, debug, finished, respline
+  integer       :: i_elm
+  integer       :: i_elm2
+  real*8        :: rr,    ss
+  real*8        :: rr2,   ss2
+  real*8        :: R, dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
+  real*8        :: R2,dRR2_dr,dRR2_ds,dRR2_drs,dRR2_drr,dRR2_dss
+  real*8        :: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
+  real*8        :: Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss
+  real*8        :: R1, Z1
+  real*8        :: R3, Z3
+  real*8        :: distance
   real*8        :: progress
-  character*256	:: filename
+  character*256 :: filename
   
   write(*,*) '***********************************'
   write(*,*) '*     reorder_flux_surfaces       *'
@@ -84,7 +84,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
       index2 = index_isolated_pieces(i)
       call swap_surface_pieces(surface_list%flux_surfaces(i_surf), index1, index2, invert, &
                                n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces)
-      n_parts	     = i
+      n_parts        = i
       parts_index(i) = i
     enddo
     
@@ -103,17 +103,17 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
       finished = .false.
       do while(.not. finished)
         ! --- Loop over all remaining pieces
-	do i_piece = nStart, surface_list%flux_surfaces(i_surf)%n_pieces - 1
-	  if (i_piece .eq. surface_list%flux_surfaces(i_surf)%n_pieces - 1) finished = .true.
+        do i_piece = nStart, surface_list%flux_surfaces(i_surf)%n_pieces - 1
+          if (i_piece .eq. surface_list%flux_surfaces(i_surf)%n_pieces - 1) finished = .true.
           call get_next_surface_piece(node_list, element_list, surface_list%flux_surfaces(i_surf), i_piece, &
-        			      n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces, found)
-      	  ! --- If we didn't find the next piece, this means there could be another closed surface (unlikely but try once at least)
-      	  if (found .eq. 0) then
-    	    rr    = surface_list%flux_surfaces(i_surf)%s(3,i_piece)
-    	    ss    = surface_list%flux_surfaces(i_surf)%t(3,i_piece)
-    	    i_elm = surface_list%flux_surfaces(i_surf)%elm(i_piece)
-    	    call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
-	    
+                                      n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces, found)
+          ! --- If we didn't find the next piece, this means there could be another closed surface (unlikely but try once at least)
+          if (found .eq. 0) then
+            rr    = surface_list%flux_surfaces(i_surf)%s(3,i_piece)
+            ss    = surface_list%flux_surfaces(i_surf)%t(3,i_piece)
+            i_elm = surface_list%flux_surfaces(i_surf)%elm(i_piece)
+            call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
+            
             rr2    = surface_list%flux_surfaces(i_surf)%s(1,parts_index(n_parts))
             ss2    = surface_list%flux_surfaces(i_surf)%t(1,parts_index(n_parts))
             i_elm2 = surface_list%flux_surfaces(i_surf)%elm(parts_index(n_parts))
@@ -121,17 +121,17 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
             
             distance = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
             if (distance .lt. accuracy) then
-      	      found = j
-	      nStart = i_piece + 1
+              found = j
+              nStart = i_piece + 1
               n_parts = n_parts + 1
               parts_index(n_parts) = nStart
-      	      exit
+              exit
             else
-      	      write(*,'(A,1i4,1e16.8)') 'Warning! Failed to find parts of the surface',i_surf,distance
-      	      ier = 1
-	    endif
-      	  endif
-	  
+              write(*,'(A,1i4,1e16.8)') 'Warning! Failed to find parts of the surface',i_surf,distance
+              ier = 1
+            endif
+          endif
+          
         enddo
       enddo
     
@@ -141,8 +141,8 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
     else
       if (mod(n_edge_pieces,2) .ne. 0) then
         write(*,'(A,1i4)') 'Warning! There are an odd number of edge pieces for surface',i_surf
-	ier = 3
-	return
+        ier = 3
+        return
       endif
       
       ! --- Start at first piece (check if there are isolated pieces before)
@@ -155,88 +155,88 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
       finished = .true.
       do i=1,n_edge_pieces/2
         
-	! --- First swap piece so that it's at the begining of our new part.
+        ! --- First swap piece so that it's at the begining of our new part.
         invert = .false.
         index1 = index_edge_pieces(i)
         index2 = nStart
         call swap_surface_pieces(surface_list%flux_surfaces(i_surf), index1, index2, invert, &
                                  n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces)
         
-	! --- Loop over all remaining pieces
+        ! --- Loop over all remaining pieces
         do i_piece = nStart, surface_list%flux_surfaces(i_surf)%n_pieces - 1
           
-	  call get_next_surface_piece(node_list, element_list, surface_list%flux_surfaces(i_surf), i_piece, &
+          call get_next_surface_piece(node_list, element_list, surface_list%flux_surfaces(i_surf), i_piece, &
                                       n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces, found)
-	  
-	  ! --- If we didn't find the next piece, check if this should be the end
-	  if (found .eq. 0) then
-	    
-	    ! --- Make sure that if this piece is an edge piece, its index is > n_edge_pieces/2
+          
+          ! --- If we didn't find the next piece, check if this should be the end
+          if (found .eq. 0) then
+            
+            ! --- Make sure that if this piece is an edge piece, its index is > n_edge_pieces/2
             do j=1,n_edge_pieces
               if (index_edge_pieces(j) .eq. i_piece) then
                 index_save = index_edge_pieces(j)
-	        index_edge_pieces(j) = index_edge_pieces(n_edge_pieces/2+i)
-	        index_edge_pieces(n_edge_pieces/2+i) = index_save
+                index_edge_pieces(j) = index_edge_pieces(n_edge_pieces/2+i)
+                index_edge_pieces(n_edge_pieces/2+i) = index_save
                 exit
               endif
             enddo
-	    
-	    ! --- Let's get to the next surface part
-	    if (i .ne. n_edge_pieces/2) then
+            
+            ! --- Let's get to the next surface part
+            if (i .ne. n_edge_pieces/2) then
               n_parts = n_parts + 1
               parts_index(n_parts) = i_piece + 1
-	      exit
-	    else
-	    ! --- We ran out of edge pieces but there is more, meaning that there is probably a closed surface as well
-	      if (i_piece .ne. surface_list%flux_surfaces(i_surf)%n_pieces-1) then
-	        finished = .false.
+              exit
+            else
+            ! --- We ran out of edge pieces but there is more, meaning that there is probably a closed surface as well
+              if (i_piece .ne. surface_list%flux_surfaces(i_surf)%n_pieces-1) then
+                finished = .false.
                 nStart   = i_piece + 1
                 n_parts  = n_parts + 1
                 parts_index(n_parts) = i_piece + 1
-	      endif
-	    endif
+              endif
+            endif
     
-	  endif
-	    
+          endif
+            
         enddo
-	nStart = parts_index(n_parts)
+        nStart = parts_index(n_parts)
       
         if (.not. finished) then
           ! --- There might be several closed surfaces
           do while(.not. finished)
             ! --- Loop over all remaining pieces
             do i_piece = nStart, surface_list%flux_surfaces(i_surf)%n_pieces - 1
-      	      if (i_piece .eq. surface_list%flux_surfaces(i_surf)%n_pieces - 1) finished = .true.
+              if (i_piece .eq. surface_list%flux_surfaces(i_surf)%n_pieces - 1) finished = .true.
               call get_next_surface_piece(node_list, element_list, surface_list%flux_surfaces(i_surf), i_piece, &
-          				  n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces, found)
+                                          n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces, found)
               ! --- If we didn't find the next piece, this means there could be another closed surface (unlikely but try once at least)
               if (found .eq. 0) then
-      	  	rr    = surface_list%flux_surfaces(i_surf)%s(3,i_piece)
-      	  	ss    = surface_list%flux_surfaces(i_surf)%t(3,i_piece)
-      	  	i_elm = surface_list%flux_surfaces(i_surf)%elm(i_piece)
-      	  	call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
-      	  	
-          	rr2    = surface_list%flux_surfaces(i_surf)%s(1,parts_index(n_parts))
-          	ss2    = surface_list%flux_surfaces(i_surf)%t(1,parts_index(n_parts))
-          	i_elm2 = surface_list%flux_surfaces(i_surf)%elm(parts_index(n_parts))
-          	call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,Z2)
-          	
-          	distance = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
-          	if (distance .lt. accuracy) then
-          	  found = j
-      	  	  nStart = i_piece + 1
-          	  n_parts = n_parts + 1
-          	  parts_index(n_parts) = nStart
-          	  exit
-          	else
-          	  write(*,'(A,1i4,1e16.8)') 'Warning! Failed to find parts of the surface',i_surf,distance
-          	  ier = 1
-      	  	endif
+                rr    = surface_list%flux_surfaces(i_surf)%s(3,i_piece)
+                ss    = surface_list%flux_surfaces(i_surf)%t(3,i_piece)
+                i_elm = surface_list%flux_surfaces(i_surf)%elm(i_piece)
+                call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
+                
+                rr2    = surface_list%flux_surfaces(i_surf)%s(1,parts_index(n_parts))
+                ss2    = surface_list%flux_surfaces(i_surf)%t(1,parts_index(n_parts))
+                i_elm2 = surface_list%flux_surfaces(i_surf)%elm(parts_index(n_parts))
+                call interp_RZ(node_list,element_list,i_elm2,rr2,ss2,R2,Z2)
+                
+                distance = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
+                if (distance .lt. accuracy) then
+                  found = j
+                  nStart = i_piece + 1
+                  n_parts = n_parts + 1
+                  parts_index(n_parts) = nStart
+                  exit
+                else
+                  write(*,'(A,1i4,1e16.8)') 'Warning! Failed to find parts of the surface',i_surf,distance
+                  ier = 1
+                endif
               endif
-      	      
+              
             enddo
           enddo
-	  
+          
         endif
       
       enddo
@@ -295,6 +295,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
                                                            Z2,dZZ2_dr,dZZ2_ds,dZZ2_drs,dZZ2_drr,dZZ2_dss)
       
       i_piece = surface_list%flux_surfaces(i_surf)%parts_index(i+1) - 2
+      i_piece = max(1,i_piece)
       rr2    = surface_list%flux_surfaces(i_surf)%s(3,i_piece)
       ss2    = surface_list%flux_surfaces(i_surf)%t(3,i_piece)
       i_elm2 = surface_list%flux_surfaces(i_surf)%elm(i_piece)
@@ -339,30 +340,30 @@ subroutine get_next_surface_piece(node_list, element_list, surface, i_piece, &
   implicit none
   
   ! --- Routine parameters
-  type (type_node_list),    intent(in)		:: node_list
-  type (type_element_list), intent(in)		:: element_list
-  type (type_surface),      intent(inout)	:: surface
-  integer,                  intent(in)		:: i_piece
-  integer,                  intent(inout)	:: found
-  integer,                  intent(inout)	:: n_edge_pieces,     index_edge_pieces(2*n_parts_max)
-  integer,                  intent(inout)	:: n_isolated_pieces, index_isolated_pieces(2*n_parts_max)
+  type (type_node_list),    intent(in)          :: node_list
+  type (type_element_list), intent(in)          :: element_list
+  type (type_surface),      intent(inout)       :: surface
+  integer,                  intent(in)          :: i_piece
+  integer,                  intent(inout)       :: found
+  integer,                  intent(inout)       :: n_edge_pieces,     index_edge_pieces(2*n_parts_max)
+  integer,                  intent(inout)       :: n_isolated_pieces, index_isolated_pieces(2*n_parts_max)
   
   ! --- Internal parameters
-  integer	:: i, j, k
-  integer	:: index1, index2
-  logical	:: invert
-  integer	:: i_elm
-  integer	:: i_elm2
-  real*8	:: rr,    ss
-  real*8	:: rr2,   ss2
-  real*8	:: R, R2, Z, Z2
-  real*8	:: distance
+  integer       :: i, j, k
+  integer       :: index1, index2
+  logical       :: invert
+  integer       :: i_elm
+  integer       :: i_elm2
+  real*8        :: rr,    ss
+  real*8        :: rr2,   ss2
+  real*8        :: R, R2, Z, Z2
+  real*8        :: distance
   
   found = 0
   
   ! --- Get last point of that surface piece
-  rr	= surface%s(3,i_piece)
-  ss	= surface%t(3,i_piece)
+  rr    = surface%s(3,i_piece)
+  ss    = surface%t(3,i_piece)
   i_elm = surface%elm(i_piece)
   call interp_RZ(node_list,element_list,i_elm,rr,ss,R,Z)
 
@@ -379,8 +380,8 @@ subroutine get_next_surface_piece(node_list, element_list, surface, i_piece, &
       
       distance = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
       if (distance .lt. accuracy) then
-    	found = j
-    	exit
+        found = j
+        exit
       endif
     enddo
   
@@ -398,7 +399,7 @@ subroutine get_next_surface_piece(node_list, element_list, surface, i_piece, &
             if (index_edge_pieces(k) .eq. i) then
               call swap_surface_pieces(surface, index2, index2, invert, n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces)
               exit
-      	    endif
+            endif
           enddo
         endif
       endif
@@ -431,16 +432,16 @@ subroutine swap_surface_pieces(surface, index1, index2, invert, n_edge_pieces, i
   implicit none
   
   ! --- Routine parameters
-  type (type_surface),      intent(inout)	:: surface
-  integer,                  intent(in)		:: index1, index2
-  logical,                  intent(in)		:: invert
-  integer,                  intent(inout)	:: n_edge_pieces,     index_edge_pieces(2*n_parts_max)
-  integer,                  intent(inout)	:: n_isolated_pieces, index_isolated_pieces(2*n_parts_max)
+  type (type_surface),      intent(inout)       :: surface
+  integer,                  intent(in)          :: index1, index2
+  logical,                  intent(in)          :: invert
+  integer,                  intent(inout)       :: n_edge_pieces,     index_edge_pieces(2*n_parts_max)
+  integer,                  intent(inout)       :: n_isolated_pieces, index_isolated_pieces(2*n_parts_max)
   
   ! --- Internal parameters
-  integer	:: i
-  integer	:: elm_save
-  real*8	:: s_save(4), t_save(4)
+  integer       :: i
+  integer       :: elm_save
+  real*8        :: s_save(4), t_save(4)
   
   ! --- Save firsy piece
   elm_save  = surface%elm(index1)
@@ -488,7 +489,7 @@ subroutine swap_surface_pieces(surface, index1, index2, invert, n_edge_pieces, i
     do i=1,n_edge_pieces
       if (index_edge_pieces(i) .eq. index1) then
         index_edge_pieces(i) = index2
-	cycle
+        cycle
       endif
       if (index_edge_pieces(i) .eq. index2) then
         index_edge_pieces(i) = index1
@@ -540,22 +541,22 @@ subroutine find_all_edge_pieces(node_list, element_list, surface, n_edge_pieces,
   implicit none
   
   ! --- Routine parameters
-  type (type_node_list),    intent(in)		:: node_list
-  type (type_element_list), intent(in)		:: element_list
-  type (type_surface),      intent(inout)	:: surface
-  integer,                  intent(inout)	:: n_edge_pieces,     index_edge_pieces(2*n_parts_max)
-  integer,                  intent(inout)	:: n_isolated_pieces, index_isolated_pieces(2*n_parts_max)
+  type (type_node_list),    intent(in)          :: node_list
+  type (type_element_list), intent(in)          :: element_list
+  type (type_surface),      intent(inout)       :: surface
+  integer,                  intent(inout)       :: n_edge_pieces,     index_edge_pieces(2*n_parts_max)
+  integer,                  intent(inout)       :: n_isolated_pieces, index_isolated_pieces(2*n_parts_max)
   
   ! --- Internal parameters
-  integer	:: i1, i2
-  integer	:: k1, k2
-  logical	:: found(2), invert
-  integer	:: i_elm
-  integer	:: i_elm2
-  real*8	:: rr,    ss
-  real*8	:: rr2,   ss2
-  real*8	:: R,R2,Z,Z2
-  real*8	:: distance
+  integer       :: i1, i2
+  integer       :: k1, k2
+  logical       :: found(2), invert
+  integer       :: i_elm
+  integer       :: i_elm2
+  real*8        :: rr,    ss
+  real*8        :: rr2,   ss2
+  real*8        :: R,R2,Z,Z2
+  real*8        :: distance
   
   n_isolated_pieces = 0
   n_edge_pieces     = 0
@@ -576,7 +577,7 @@ subroutine find_all_edge_pieces(node_list, element_list, surface, n_edge_pieces,
       do i2=1,surface%n_pieces
         if (i2 .ne. i1) then
           
-	  ! --- Check both sides of the piece
+          ! --- Check both sides of the piece
           do k2=1,3,2
             rr2    = surface%s(k2,i2)
             ss2    = surface%t(k2,i2)
@@ -591,10 +592,10 @@ subroutine find_all_edge_pieces(node_list, element_list, surface, n_edge_pieces,
               exit
             endif
           enddo
-	  
-	  if ( (k1 .eq. 1) .and. (found(1)) ) exit
-	  if ( (k1 .eq. 3) .and. (found(2)) ) exit
-	  
+          
+          if ( (k1 .eq. 1) .and. (found(1)) ) exit
+          if ( (k1 .eq. 3) .and. (found(2)) ) exit
+          
         endif
       enddo
       
@@ -613,7 +614,7 @@ subroutine find_all_edge_pieces(node_list, element_list, surface, n_edge_pieces,
         ! --- The edge pieces need to start at the edge. Invert the piece with itself if needed
         if (.not. found(2)) then
           invert = .true.
-	  call swap_surface_pieces(surface, i1, i1, invert, n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces)
+          call swap_surface_pieces(surface, i1, i1, invert, n_edge_pieces, index_edge_pieces, n_isolated_pieces, index_isolated_pieces)
         endif
       endif
     endif
@@ -653,22 +654,22 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   implicit none
   
   ! --- Routine parameters
-  type (type_node_list),        intent(in)	:: node_list
-  type (type_element_list),     intent(in)	:: element_list
-  type (type_surface_list),     intent(inout)	:: flux_list
-  integer,                      intent(in)	:: n_grids(10) 
-  real*8,                       intent(in)	:: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
+  type (type_node_list),        intent(in)      :: node_list
+  type (type_element_list),     intent(in)      :: element_list
+  type (type_surface_list),     intent(inout)   :: flux_list
+  integer,                      intent(in)      :: n_grids(10) 
+  real*8,                       intent(in)      :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
   
   ! --- Internal parameters
   type (type_surface_list) :: sep_list
-  type (type_surface)	:: surface
-  integer		:: location, ifail
-  integer		:: n_flux,   n_open,   n_outer,   n_inner,   n_private,   n_up_priv  
-  integer		:: i_surf, i_part, i_piece, i_part_save, i_pieces_max
-  integer		:: i_elm, inside, inside2, count
-  real*8		:: rr,    ss
-  real*8		:: R,dR_dr, dR_ds, dR_drs, dR_drr, dR_dss
-  real*8		:: Z,dZ_dr, dZ_ds, dZ_drs, dZ_drr, dZ_dss
+  type (type_surface)   :: surface
+  integer               :: location, ifail
+  integer               :: n_flux,   n_open,   n_outer,   n_inner,   n_private,   n_up_priv  
+  integer               :: i_surf, i_part, i_piece, i_part_save, i_pieces_max
+  integer               :: i_elm, inside, inside2, count
+  real*8                :: rr,    ss
+  real*8                :: R,dR_dr, dR_ds, dR_drs, dR_drr, dR_dss
+  real*8                :: Z,dZ_dr, dZ_ds, dZ_drs, dZ_drr, dZ_dss
   character*256         :: filename
   character*1           :: colour
   logical               :: dashed
@@ -1113,18 +1114,18 @@ subroutine clean_single_surface(node_list,element_list,surface,location,psi_xpoi
   implicit none
   
   ! --- Routine parameters
-  type (type_node_list),        intent(in)	:: node_list
-  type (type_element_list),     intent(in)	:: element_list
-  type (type_surface),          intent(inout)	:: surface
-  integer,                      intent(in)	:: location
-  real*8,                       intent(in)	:: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
+  type (type_node_list),        intent(in)      :: node_list
+  type (type_element_list),     intent(in)      :: element_list
+  type (type_surface),          intent(inout)   :: surface
+  integer,                      intent(in)      :: location
+  real*8,                       intent(in)      :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
   
   ! --- Internal parameters
-  type (type_surface)	:: surface_tmp
-  integer		:: i
-  integer		:: i_elm
-  real*8		:: rr, ss
-  real*8		:: R, Z
+  type (type_surface)   :: surface_tmp
+  integer               :: i
+  integer               :: i_elm
+  real*8                :: rr, ss
+  real*8                :: R, Z
   
   surface_tmp%n_pieces = 0
   ! --- Check each piece
@@ -1190,7 +1191,7 @@ subroutine clean_single_surface(node_list,element_list,surface,location,psi_xpoi
         surface_tmp%t(:,surface_tmp%n_pieces) = surface%t(:,i)
       endif
     endif
-    	  
+          
     ! --- Inner region (ie. not outer parts)
     if (location .eq. inner) then
       if (R .lt. max(R_xpoint(1),R_xpoint(2))) then
@@ -1200,20 +1201,20 @@ subroutine clean_single_surface(node_list,element_list,surface,location,psi_xpoi
         surface_tmp%t(:,surface_tmp%n_pieces) = surface%t(:,i)
       endif
     endif
-    	  
+          
     ! --- Private region (ie. not core parts)
     if (location .eq. private) then
       if ( (xcase .ne. 2) .and. (Z .lt. Z_xpoint(1)) ) then
-  	surface_tmp%n_pieces = surface_tmp%n_pieces + 1
-  	surface_tmp%elm(surface_tmp%n_pieces) = surface%elm(i)
-  	surface_tmp%s(:,surface_tmp%n_pieces) = surface%s(:,i)
-  	surface_tmp%t(:,surface_tmp%n_pieces) = surface%t(:,i)
+        surface_tmp%n_pieces = surface_tmp%n_pieces + 1
+        surface_tmp%elm(surface_tmp%n_pieces) = surface%elm(i)
+        surface_tmp%s(:,surface_tmp%n_pieces) = surface%s(:,i)
+        surface_tmp%t(:,surface_tmp%n_pieces) = surface%t(:,i)
       endif
       if ( (xcase .eq. 2) .and. (Z .gt. Z_xpoint(2)) ) then
-  	surface_tmp%n_pieces = surface_tmp%n_pieces + 1
-  	surface_tmp%elm(surface_tmp%n_pieces) = surface%elm(i)
-  	surface_tmp%s(:,surface_tmp%n_pieces) = surface%s(:,i)
-  	surface_tmp%t(:,surface_tmp%n_pieces) = surface%t(:,i)
+        surface_tmp%n_pieces = surface_tmp%n_pieces + 1
+        surface_tmp%elm(surface_tmp%n_pieces) = surface%elm(i)
+        surface_tmp%s(:,surface_tmp%n_pieces) = surface%s(:,i)
+        surface_tmp%t(:,surface_tmp%n_pieces) = surface%t(:,i)
       endif
     endif
     

@@ -9,6 +9,7 @@ use grid_xpoint_data
 use phys_module, only: xcase, RZ_grid_inside_wall
 use mod_eqdsk_tools
 use mod_interp, only: interp_RZ, interp
+use mod_element_rtree
 
 implicit none
 
@@ -220,12 +221,23 @@ do i=1,element_list%n_elements
 enddo
 
 !---------------------------- copy new grid into nodes/elements
-element_list%n_elements = newelement_list%n_elements
-element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
 
 ! --- This is the old way
+element_list%n_elements = newelement_list%n_elements
+element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
 !node_list%n_nodes = newnode_list%n_nodes
 !node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+
+! --- Make sure we copy only elements that have nodes
+element_list%n_elements = 0
+do i_elm1 = 1,newelement_list%n_elements
+  if (newelement_list%element(i_elm1)%vertex(1) .eq. 0) cycle
+  if (newelement_list%element(i_elm1)%vertex(2) .eq. 0) cycle
+  if (newelement_list%element(i_elm1)%vertex(3) .eq. 0) cycle
+  if (newelement_list%element(i_elm1)%vertex(4) .eq. 0) cycle
+  element_list%n_elements = element_list%n_elements + 1
+  element_list%element(element_list%n_elements) = newelement_list%element(i_elm1)
+enddo
 
 ! --- Now, we define only the nodes that belong to elements! (this gets rid of potential orphan nodes, which the matrix doesn't like, obviously...)
 node_list%n_nodes = 4
@@ -260,6 +272,8 @@ do i_elm1 = 1,element_list%n_elements
     endif
   enddo
 enddo
+rtree_initialized = .false.
+call populate_element_rtree(node_list, element_list)
 
 !-------------------------------------------------------------------------------------------!
 !------------------------------ Define nodes index in the matrix ---------------------------!

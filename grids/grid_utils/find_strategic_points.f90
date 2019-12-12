@@ -49,35 +49,35 @@ write(*,*) '****************************************'
 !-------------------------------- Define all strategic points -------------------------------
 !--------------------------------------------------------------------------------------------
 if(xcase .eq. 2) then
-  stpts%RLeftCorn_LowerInnerLeg  = 0.d0;    stpts%ZLeftCorn_LowerInnerLeg  = 0.d0	   
-  stpts%RRightCorn_LowerInnerLeg = 0.d0;    stpts%ZRightCorn_LowerInnerLeg = 0.d0	   
-  stpts%RLeftCorn_LowerOuterLeg  = 0.d0;    stpts%ZLeftCorn_LowerOuterLeg  = 0.d0	   
-  stpts%RRightCorn_LowerOuterLeg = 0.d0;    stpts%ZRightCorn_LowerOuterLeg = 0.d0	   
-  stpts%RStrike_LowerInnerLeg	 = 0.d0;    stpts%ZStrike_LowerInnerLeg    = 0.d0 	     
-  stpts%RStrike_LowerOuterLeg	 = 0.d0;    stpts%ZStrike_LowerOuterLeg    = 0.d0 	     
+  stpts%RLeftCorn_LowerInnerLeg  = 0.d0;    stpts%ZLeftCorn_LowerInnerLeg  = 0.d0
+  stpts%RRightCorn_LowerInnerLeg = 0.d0;    stpts%ZRightCorn_LowerInnerLeg = 0.d0
+  stpts%RLeftCorn_LowerOuterLeg  = 0.d0;    stpts%ZLeftCorn_LowerOuterLeg  = 0.d0
+  stpts%RRightCorn_LowerOuterLeg = 0.d0;    stpts%ZRightCorn_LowerOuterLeg = 0.d0
+  stpts%RStrike_LowerInnerLeg    = 0.d0;    stpts%ZStrike_LowerInnerLeg    = 0.d0
+  stpts%RStrike_LowerOuterLeg    = 0.d0;    stpts%ZStrike_LowerOuterLeg    = 0.d0
 else
-  stpts%RLeftCorn_LowerInnerLeg  = 999.d0;  stpts%ZLeftCorn_LowerInnerLeg  = 1.d10	
-  stpts%RRightCorn_LowerInnerLeg = 1.d10;   stpts%ZRightCorn_LowerInnerLeg = 999.d0	
-  stpts%RLeftCorn_LowerOuterLeg  = -1.d10;  stpts%ZLeftCorn_LowerOuterLeg  = 999.d0	
-  stpts%RRightCorn_LowerOuterLeg = -1.d10;  stpts%ZRightCorn_LowerOuterLeg = 1.d10	
-  stpts%RStrike_LowerInnerLeg	 = 999.d0;  stpts%ZStrike_LowerInnerLeg    = 1.d10	
-  stpts%RStrike_LowerOuterLeg	 = 999.d0;  stpts%ZStrike_LowerOuterLeg    = 1.d10	
+  stpts%RLeftCorn_LowerInnerLeg  = 999.d0;  stpts%ZLeftCorn_LowerInnerLeg  = 1.d10
+  stpts%RRightCorn_LowerInnerLeg = 1.d10;   stpts%ZRightCorn_LowerInnerLeg = 999.d0
+  stpts%RLeftCorn_LowerOuterLeg  = -1.d10;  stpts%ZLeftCorn_LowerOuterLeg  = 999.d0
+  stpts%RRightCorn_LowerOuterLeg = -1.d10;  stpts%ZRightCorn_LowerOuterLeg = 1.d10
+  stpts%RStrike_LowerInnerLeg    = 999.d0;  stpts%ZStrike_LowerInnerLeg    = 1.d10
+  stpts%RStrike_LowerOuterLeg    = 999.d0;  stpts%ZStrike_LowerOuterLeg    = 1.d10
 endif
 
 if(xcase .eq. 1) then
-  stpts%RLeftCorn_UpperInnerLeg  = 0.d0;    stpts%ZLeftCorn_UpperInnerLeg  = 0.d0	   
-  stpts%RRightCorn_UpperInnerLeg = 0.d0;    stpts%ZRightCorn_UpperInnerLeg = 0.d0	   
-  stpts%RLeftCorn_UpperOuterLeg  = 0.d0;    stpts%ZLeftCorn_UpperOuterLeg  = 0.d0	   
-  stpts%RRightCorn_UpperOuterLeg = 0.d0;    stpts%ZRightCorn_UpperOuterLeg = 0.d0	   
-  stpts%RStrike_UpperInnerLeg	 = 0.d0;    stpts%ZStrike_UpperInnerLeg    = 0.d0 	
-  stpts%RStrike_UpperOuterLeg	 = 0.d0;    stpts%ZStrike_UpperOuterLeg    = 0.d0 	
+  stpts%RLeftCorn_UpperInnerLeg  = 0.d0;    stpts%ZLeftCorn_UpperInnerLeg  = 0.d0
+  stpts%RRightCorn_UpperInnerLeg = 0.d0;    stpts%ZRightCorn_UpperInnerLeg = 0.d0
+  stpts%RLeftCorn_UpperOuterLeg  = 0.d0;    stpts%ZLeftCorn_UpperOuterLeg  = 0.d0
+  stpts%RRightCorn_UpperOuterLeg = 0.d0;    stpts%ZRightCorn_UpperOuterLeg = 0.d0
+  stpts%RStrike_UpperInnerLeg    = 0.d0;    stpts%ZStrike_UpperInnerLeg    = 0.d0
+  stpts%RStrike_UpperOuterLeg    = 0.d0;    stpts%ZStrike_UpperOuterLeg    = 0.d0
 else
   stpts%RLeftCorn_UpperInnerLeg  = 999.d0;  stpts%ZLeftCorn_UpperInnerLeg  = -1.d10
   stpts%RRightCorn_UpperInnerLeg = 1.d10;   stpts%ZRightCorn_UpperInnerLeg = 999.d0
   stpts%RLeftCorn_UpperOuterLeg  = -1.d10;  stpts%ZLeftCorn_UpperOuterLeg  = 999.d0
   stpts%RRightCorn_UpperOuterLeg = -1.d10;  stpts%ZRightCorn_UpperOuterLeg = -1.d10
-  stpts%RStrike_UpperInnerLeg	 = 999.d0;  stpts%ZStrike_UpperInnerLeg    = -1.d10
-  stpts%RStrike_UpperOuterLeg	 = 999.d0;  stpts%ZStrike_UpperOuterLeg    = -1.d10
+  stpts%RStrike_UpperInnerLeg    = 999.d0;  stpts%ZStrike_UpperInnerLeg    = -1.d10
+  stpts%RStrike_UpperOuterLeg    = 999.d0;  stpts%ZStrike_UpperOuterLeg    = -1.d10
 endif
 
 if(xcase .ne. 3) then
@@ -95,8 +95,8 @@ else
   stpts%ZLimit_LowerMastWall = -1.5d0
 endif
 
-stpts%RMiddle_LowerPrivate	 = 999.d0;  stpts%ZMiddle_LowerPrivate	   = 1.d10
-stpts%RMiddle_UpperPrivate	 = 999.d0;  stpts%ZMiddle_UpperPrivate	   = -1.d1
+stpts%RMiddle_LowerPrivate       = 999.d0;  stpts%ZMiddle_LowerPrivate     = 1.d10
+stpts%RMiddle_UpperPrivate       = 999.d0;  stpts%ZMiddle_UpperPrivate     = -1.d1
 
 
 
@@ -115,7 +115,7 @@ if (xcase .ne. 3) then
       i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-        						  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if (xcase .eq. 1) then
         if ((ZZg1 .lt. stpts%ZLeftCorn_LowerInnerLeg) .and. (RRg1 .lt. R_xpoint(1))) then
@@ -151,7 +151,7 @@ else
       i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-        						  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if(tokamak_device(1:4) .ne. 'MAST') then
         if ((ZZg1 .lt. stpts%ZRightCorn_LowerOuterLeg) .and. (RRg1 .gt. R_xpoint(1))) then
@@ -186,7 +186,7 @@ else
       i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-        						  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if ((ZZg1 .lt. stpts%ZLeftCorn_LowerInnerLeg) .and. (RRg1 .lt. R_xpoint(1))) then
         stpts%RLeftCorn_LowerInnerLeg = RRg1
@@ -212,15 +212,15 @@ if (xcase .ne. 2) then
       i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  	  						  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if ((RRg1 .lt. stpts%RRightCorn_LowerInnerLeg) .and. (ZZg1 .lt. Z_xpoint(1))) then
-    	stpts%RRightCorn_LowerInnerLeg = RRg1
-    	stpts%ZRightCorn_LowerInnerLeg = ZZg1
+        stpts%RRightCorn_LowerInnerLeg = RRg1
+        stpts%ZRightCorn_LowerInnerLeg = ZZg1
       endif
       if ((RRg1 .gt. stpts%RLeftCorn_LowerOuterLeg) .and. (ZZg1 .lt. Z_xpoint(1))) then
-    	stpts%RLeftCorn_LowerOuterLeg = RRg1
-    	stpts%ZLeftCorn_LowerOuterLeg = ZZg1
+        stpts%RLeftCorn_LowerOuterLeg = RRg1
+        stpts%ZLeftCorn_LowerOuterLeg = ZZg1
       endif
     
     enddo
@@ -238,7 +238,7 @@ if (xcase .ne. 1) then
       i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-        						  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if ((RRg1 .lt. stpts%RRightCorn_UpperInnerLeg) .and. (ZZg1 .gt. Z_xpoint(2))) then
         stpts%RRightCorn_UpperInnerLeg = RRg1
@@ -300,15 +300,15 @@ if (xcase .ne. 2) then
       i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-    							  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if ((ZZg1 .lt. stpts%ZStrike_LowerInnerLeg) .and. (RRg1 .lt. R_xpoint(1))) then
-    	stpts%RStrike_LowerInnerLeg = RRg1
-    	stpts%ZStrike_LowerInnerLeg = ZZg1
+        stpts%RStrike_LowerInnerLeg = RRg1
+        stpts%ZStrike_LowerInnerLeg = ZZg1
       endif
       if ((ZZg1 .lt. stpts%ZStrike_LowerOuterLeg) .and. (RRg1 .gt. R_xpoint(1))) then
-    	stpts%RStrike_LowerOuterLeg = RRg1
-    	stpts%ZStrike_LowerOuterLeg = ZZg1
+        stpts%RStrike_LowerOuterLeg = RRg1
+        stpts%ZStrike_LowerOuterLeg = ZZg1
       endif
 
     enddo
@@ -330,15 +330,15 @@ if (xcase .ne. 1) then
       i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  							  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if ((ZZg1 .gt. stpts%ZStrike_UpperInnerLeg) .and. (RRg1 .lt. R_xpoint(2))) then
-  	stpts%RStrike_UpperInnerLeg = RRg1
-  	stpts%ZStrike_UpperInnerLeg = ZZg1
+        stpts%RStrike_UpperInnerLeg = RRg1
+        stpts%ZStrike_UpperInnerLeg = ZZg1
       endif
       if ((ZZg1 .gt. stpts%ZStrike_UpperOuterLeg) .and. (RRg1 .gt. R_xpoint(2))) then
-  	stpts%RStrike_UpperOuterLeg = RRg1
-  	stpts%ZStrike_UpperOuterLeg = ZZg1
+        stpts%RStrike_UpperOuterLeg = RRg1
+        stpts%ZStrike_UpperOuterLeg = ZZg1
       endif
 
     enddo
@@ -356,25 +356,25 @@ if (xcase .eq. 3) then
       i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
 
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  							  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if (psi_xpoint(1) .lt. psi_xpoint(2)) then
         if ((ZZg1 .lt. stpts%ZSecondStrike_InnerLeg) .and. (RRg1 .lt. R_xpoint(1))) then
-     	  stpts%RSecondStrike_InnerLeg = RRg1
-     	  stpts%ZSecondStrike_InnerLeg = ZZg1
+          stpts%RSecondStrike_InnerLeg = RRg1
+          stpts%ZSecondStrike_InnerLeg = ZZg1
         endif
         if ((ZZg1 .lt. stpts%ZSecondStrike_OuterLeg) .and. (RRg1 .gt. R_xpoint(1))) then
-     	  stpts%RSecondStrike_OuterLeg = RRg1
-     	  stpts%ZSecondStrike_OuterLeg = ZZg1
+          stpts%RSecondStrike_OuterLeg = RRg1
+          stpts%ZSecondStrike_OuterLeg = ZZg1
         endif
       else
         if ((ZZg1 .gt. stpts%ZSecondStrike_InnerLeg) .and. (RRg1 .lt. R_xpoint(2))) then
-     	  stpts%RSecondStrike_InnerLeg = RRg1
-     	  stpts%ZSecondStrike_InnerLeg = ZZg1
+          stpts%RSecondStrike_InnerLeg = RRg1
+          stpts%ZSecondStrike_InnerLeg = ZZg1
         endif
         if ((ZZg1 .gt. stpts%ZSecondStrike_OuterLeg) .and. (RRg1 .gt. R_xpoint(2))) then
-     	  stpts%RSecondStrike_OuterLeg = RRg1
-     	  stpts%ZSecondStrike_OuterLeg = ZZg1
+          stpts%RSecondStrike_OuterLeg = RRg1
+          stpts%ZSecondStrike_OuterLeg = ZZg1
         endif
       endif
       
@@ -499,20 +499,20 @@ if( (tokamak_device(1:4) .eq. 'MAST') .and. (xcase .eq. 3) ) then
   do i=n_flux+n_open, n_flux+n_open+n_outer 
     do k=1,flux_list%flux_surfaces(i)%n_pieces    
       do l=1,3,2
-  	
-  	rr1   = flux_list%flux_surfaces(i)%s(l,k)
-  	ss1   = flux_list%flux_surfaces(i)%t(l,k)
-  	i_elm = flux_list%flux_surfaces(i)%elm(k)
+        
+        rr1   = flux_list%flux_surfaces(i)%s(l,k)
+        ss1   = flux_list%flux_surfaces(i)%t(l,k)
+        i_elm = flux_list%flux_surfaces(i)%elm(k)
 
-  	call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  							    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+        call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+                                                            ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-  	if ((ZZg1 .lt. stpts%ZLimit_LowerMastWall) .and. (RRg1 .gt. R_wall_max)) then
-  	  stpts%RLimit_LowerMastWall = RRg1
-  	  stpts%ZLimit_LowerMastWall = ZZg1
+        if ((ZZg1 .lt. stpts%ZLimit_LowerMastWall) .and. (RRg1 .gt. R_wall_max)) then
+          stpts%RLimit_LowerMastWall = RRg1
+          stpts%ZLimit_LowerMastWall = ZZg1
           ifound = 1
-  	endif
-  	
+        endif
+        
       enddo
     enddo
     stpts%i_surf_wall_low = i 
@@ -525,20 +525,20 @@ if( (tokamak_device(1:4) .eq. 'MAST') .and. (xcase .eq. 3) ) then
   do i=n_flux+n_open, n_flux+n_open+n_outer 
     do k=1,flux_list%flux_surfaces(i)%n_pieces    
       do l=1,3,2
-  	
-  	rr1   = flux_list%flux_surfaces(i)%s(l,k)
-  	ss1   = flux_list%flux_surfaces(i)%t(l,k)
-  	i_elm = flux_list%flux_surfaces(i)%elm(k)
+        
+        rr1   = flux_list%flux_surfaces(i)%s(l,k)
+        ss1   = flux_list%flux_surfaces(i)%t(l,k)
+        i_elm = flux_list%flux_surfaces(i)%elm(k)
 
-  	call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  							    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+        call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+                                                            ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-  	if ((ZZg1 .gt. stpts%ZLimit_UpperMastWall) .and. (RRg1 .gt. R_wall_max)) then
-  	  stpts%RLimit_UpperMastWall = RRg1
-  	  stpts%ZLimit_UpperMastWall = ZZg1
+        if ((ZZg1 .gt. stpts%ZLimit_UpperMastWall) .and. (RRg1 .gt. R_wall_max)) then
+          stpts%RLimit_UpperMastWall = RRg1
+          stpts%ZLimit_UpperMastWall = ZZg1
           ifound = 1
-  	endif
-  	
+        endif
+        
       enddo
     enddo
     stpts%i_surf_wall_up = i 
@@ -549,8 +549,8 @@ if( (tokamak_device(1:4) .eq. 'MAST') .and. (xcase .eq. 3) ) then
   call find_theta_surface(node_list,element_list,flux_list,stpts%i_surf_wall_low,stpts%angle_LowerRight,R_xpoint(1),Z_xpoint(1),i_elm_find,s_find,t_find,i_find)
   if(i_find .eq. 0) return
   call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-  		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-  		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
   stpts%RLimit_LowerMastWallBox = RRg1
   stpts%ZLimit_LowerMastWallBox = ZZg1
@@ -559,8 +559,8 @@ if( (tokamak_device(1:4) .eq. 'MAST') .and. (xcase .eq. 3) ) then
   call find_theta_surface(node_list,element_list,flux_list,stpts%i_surf_wall_up,stpts%angle_UpperRight,R_xpoint(2),Z_xpoint(2),i_elm_find,s_find,t_find,i_find)
   if(i_find .eq. 0) return
   call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-        	 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-        	 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
   stpts%RLimit_UpperMastWallBox = RRg1
   stpts%ZLimit_UpperMastWallBox = ZZg1
@@ -575,8 +575,8 @@ endif
 
 write(*,'(A)')                  ' _________________________________________________________'
 write(*,'(A)')                  '|                                                         |'
-write(*,'(A)')  		'| LEG POINTS (R,Z)                                        |'
-write(*,'(A)')  		'|_________________________________________________________|'
+write(*,'(A)')                  '| LEG POINTS (R,Z)                                        |'
+write(*,'(A)')                  '|_________________________________________________________|'
 write(*,'(A)')                  '|                                                         |'
 
 if (xcase .ne. 2) then
@@ -697,6 +697,9 @@ logical, parameter :: debug = .false.
 n_flux    = n_grids(1)
 n_open    = n_grids(3); n_outer   = n_grids(4); n_inner = n_grids(5)
 n_private = n_grids(6); n_up_priv = n_grids(7)
+tht_x  = 0.d0
+tht_x1 = 0.d0
+tht_x2 = 0.d0
 
 write(*,*) '****************************************'
 write(*,*) '* X-point grid : Find strategic points *'
@@ -708,54 +711,54 @@ write(*,*) '****************************************'
 !-------------------------------- Define all strategic points -------------------------------
 !--------------------------------------------------------------------------------------------
 if(xcase .eq. 2) then
-  stpts%RLeftCorn_LowerInnerLeg  = 0.d0;    stpts%ZLeftCorn_LowerInnerLeg  = 0.d0	   
-  stpts%RRightCorn_LowerInnerLeg = 0.d0;    stpts%ZRightCorn_LowerInnerLeg = 0.d0	   
-  stpts%RLeftCorn_LowerOuterLeg  = 0.d0;    stpts%ZLeftCorn_LowerOuterLeg  = 0.d0	   
-  stpts%RRightCorn_LowerOuterLeg = 0.d0;    stpts%ZRightCorn_LowerOuterLeg = 0.d0	   
-  stpts%RStrike_LowerInnerLeg	 = 0.d0;    stpts%ZStrike_LowerInnerLeg    = 0.d0 	     
-  stpts%RStrike_LowerOuterLeg	 = 0.d0;    stpts%ZStrike_LowerOuterLeg    = 0.d0 	     
+  stpts%RLeftCorn_LowerInnerLeg  = 0.d0;    stpts%ZLeftCorn_LowerInnerLeg  = 0.d0
+  stpts%RRightCorn_LowerInnerLeg = 0.d0;    stpts%ZRightCorn_LowerInnerLeg = 0.d0
+  stpts%RLeftCorn_LowerOuterLeg  = 0.d0;    stpts%ZLeftCorn_LowerOuterLeg  = 0.d0
+  stpts%RRightCorn_LowerOuterLeg = 0.d0;    stpts%ZRightCorn_LowerOuterLeg = 0.d0
+  stpts%RStrike_LowerInnerLeg    = 0.d0;    stpts%ZStrike_LowerInnerLeg    = 0.d0
+  stpts%RStrike_LowerOuterLeg    = 0.d0;    stpts%ZStrike_LowerOuterLeg    = 0.d0
 else
-  stpts%RLeftCorn_LowerInnerLeg  = 999.d0;  stpts%ZLeftCorn_LowerInnerLeg  = 1.d10	
-  stpts%RRightCorn_LowerInnerLeg = 1.d10;   stpts%ZRightCorn_LowerInnerLeg = 999.d0	
-  stpts%RLeftCorn_LowerOuterLeg  = -1.d10;  stpts%ZLeftCorn_LowerOuterLeg  = 999.d0	
-  stpts%RRightCorn_LowerOuterLeg = -1.d10;  stpts%ZRightCorn_LowerOuterLeg = 1.d10	
-  stpts%RStrike_LowerInnerLeg	 = 999.d0;  stpts%ZStrike_LowerInnerLeg    = 1.d10	
-  stpts%RStrike_LowerOuterLeg	 = 999.d0;  stpts%ZStrike_LowerOuterLeg    = 1.d10	
+  stpts%RLeftCorn_LowerInnerLeg  = 999.d0;  stpts%ZLeftCorn_LowerInnerLeg  = 1.d10
+  stpts%RRightCorn_LowerInnerLeg = 1.d10;   stpts%ZRightCorn_LowerInnerLeg = 999.d0
+  stpts%RLeftCorn_LowerOuterLeg  = -1.d10;  stpts%ZLeftCorn_LowerOuterLeg  = 999.d0
+  stpts%RRightCorn_LowerOuterLeg = -1.d10;  stpts%ZRightCorn_LowerOuterLeg = 1.d10
+  stpts%RStrike_LowerInnerLeg    = 999.d0;  stpts%ZStrike_LowerInnerLeg    = 1.d10
+  stpts%RStrike_LowerOuterLeg    = 999.d0;  stpts%ZStrike_LowerOuterLeg    = 1.d10
 endif
 
 if(xcase .eq. 1) then
-  stpts%RLeftCorn_UpperInnerLeg  = 0.d0;    stpts%ZLeftCorn_UpperInnerLeg  = 0.d0	   
-  stpts%RRightCorn_UpperInnerLeg = 0.d0;    stpts%ZRightCorn_UpperInnerLeg = 0.d0	   
-  stpts%RLeftCorn_UpperOuterLeg  = 0.d0;    stpts%ZLeftCorn_UpperOuterLeg  = 0.d0	   
-  stpts%RRightCorn_UpperOuterLeg = 0.d0;    stpts%ZRightCorn_UpperOuterLeg = 0.d0	   
-  stpts%RStrike_UpperInnerLeg	 = 0.d0;    stpts%ZStrike_UpperInnerLeg    = 0.d0 	
-  stpts%RStrike_UpperOuterLeg	 = 0.d0;    stpts%ZStrike_UpperOuterLeg    = 0.d0 	
+  stpts%RLeftCorn_UpperInnerLeg  = 0.d0;    stpts%ZLeftCorn_UpperInnerLeg  = 0.d0
+  stpts%RRightCorn_UpperInnerLeg = 0.d0;    stpts%ZRightCorn_UpperInnerLeg = 0.d0
+  stpts%RLeftCorn_UpperOuterLeg  = 0.d0;    stpts%ZLeftCorn_UpperOuterLeg  = 0.d0
+  stpts%RRightCorn_UpperOuterLeg = 0.d0;    stpts%ZRightCorn_UpperOuterLeg = 0.d0
+  stpts%RStrike_UpperInnerLeg    = 0.d0;    stpts%ZStrike_UpperInnerLeg    = 0.d0
+  stpts%RStrike_UpperOuterLeg    = 0.d0;    stpts%ZStrike_UpperOuterLeg    = 0.d0
 else
   stpts%RLeftCorn_UpperInnerLeg  = 999.d0;  stpts%ZLeftCorn_UpperInnerLeg  = -1.d10
   stpts%RRightCorn_UpperInnerLeg = 1.d10;   stpts%ZRightCorn_UpperInnerLeg = 999.d0
   stpts%RLeftCorn_UpperOuterLeg  = -1.d10;  stpts%ZLeftCorn_UpperOuterLeg  = 999.d0
   stpts%RRightCorn_UpperOuterLeg = -1.d10;  stpts%ZRightCorn_UpperOuterLeg = -1.d10
-  stpts%RStrike_UpperInnerLeg	 = 999.d0;  stpts%ZStrike_UpperInnerLeg    = -1.d10
-  stpts%RStrike_UpperOuterLeg	 = 999.d0;  stpts%ZStrike_UpperOuterLeg    = -1.d10
+  stpts%RStrike_UpperInnerLeg    = 999.d0;  stpts%ZStrike_UpperInnerLeg    = -1.d10
+  stpts%RStrike_UpperOuterLeg    = 999.d0;  stpts%ZStrike_UpperOuterLeg    = -1.d10
 endif
 
 if(xcase .ne. 3) then
-  stpts%RSecondStrike_InnerLeg   = 0.d0;    stpts%ZSecondStrike_InnerLeg   = 0.d0       
-  stpts%RSecondStrike_OuterLeg   = 0.d0;    stpts%ZSecondStrike_OuterLeg   = 0.d0       
+  stpts%RSecondStrike_InnerLeg   = 0.d0;    stpts%ZSecondStrike_InnerLeg   = 0.d0
+  stpts%RSecondStrike_OuterLeg   = 0.d0;    stpts%ZSecondStrike_OuterLeg   = 0.d0
 else
   if (psi_xpoint(1) .lt. psi_xpoint(2)) then
-    stpts%RSecondStrike_InnerLeg = 999.d0;  stpts%ZSecondStrike_InnerLeg   = 1.d10   
-    stpts%RSecondStrike_OuterLeg = 999.d0;  stpts%ZSecondStrike_OuterLeg   = 1.d10   
+    stpts%RSecondStrike_InnerLeg = 999.d0;  stpts%ZSecondStrike_InnerLeg   = 1.d10
+    stpts%RSecondStrike_OuterLeg = 999.d0;  stpts%ZSecondStrike_OuterLeg   = 1.d10
   else
     stpts%RSecondStrike_InnerLeg = 999.d0;  stpts%ZSecondStrike_InnerLeg   = -1.d10
-    stpts%RSecondStrike_OuterLeg = 999.d0;  stpts%ZSecondStrike_OuterLeg   = -1.d10  
+    stpts%RSecondStrike_OuterLeg = 999.d0;  stpts%ZSecondStrike_OuterLeg   = -1.d10
   endif
   stpts%ZLimit_UpperMastWall =  1.5d0 
   stpts%ZLimit_LowerMastWall = -1.5d0
 endif
 
-stpts%RMiddle_LowerPrivate	 = 999.d0;  stpts%ZMiddle_LowerPrivate	   = 1.d10
-stpts%RMiddle_UpperPrivate	 = 999.d0;  stpts%ZMiddle_UpperPrivate	   = -1.d1
+stpts%RMiddle_LowerPrivate       = 999.d0;  stpts%ZMiddle_LowerPrivate     = 1.d10
+stpts%RMiddle_UpperPrivate       = 999.d0;  stpts%ZMiddle_UpperPrivate     = -1.d1
 
 
 
@@ -780,7 +783,7 @@ if ( (xcase .eq. 3) .and. (psi_xpoint(1) .eq. psi_xpoint(2)) ) then
       ss1   = flux_list%flux_surfaces(i_surf)%t(edge_side(l),edge_piece(l))
       i_elm = flux_list%flux_surfaces(i_surf)%elm(edge_piece(l))
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-    							  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
       if (ZZg1 .lt. Z_axis) then
         count_lower = count_lower + 1
         R_tmp(count_lower) = RRg1
@@ -839,40 +842,40 @@ else
       ss1   = flux_list%flux_surfaces(i_surf)%t(edge_side(l),edge_piece(l))
       i_elm = flux_list%flux_surfaces(i_surf)%elm(edge_piece(l))
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-    							  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
       if ( (xcase .eq. 1) .and. (ZZg1 .lt. Z_axis)) then
-    	count = count + 1
-    	R_tmp(count) = RRg1
-    	Z_tmp(count) = ZZg1
+        count = count + 1
+        R_tmp(count) = RRg1
+        Z_tmp(count) = ZZg1
       endif
       if ( (xcase .eq. 2) .and. (ZZg1 .gt. Z_axis)) then
-    	count = count + 1
-    	R_tmp(count) = RRg1
-    	Z_tmp(count) = ZZg1
+        count = count + 1
+        R_tmp(count) = RRg1
+        Z_tmp(count) = ZZg1
       endif
       if (xcase .eq. 3) then
-    	if ( (psi_xpoint(1) .lt. psi_xpoint(2)) .and. (ZZg1 .lt. Z_axis) ) then
-    	  count = count + 1
-    	  R_tmp(count) = RRg1
-    	  Z_tmp(count) = ZZg1
-    	endif
-    	if ( (psi_xpoint(2) .lt. psi_xpoint(1)) .and. (ZZg1 .gt. Z_axis) ) then
-    	  count = count + 1
-    	  R_tmp(count) = RRg1
-    	  Z_tmp(count) = ZZg1
-    	endif
+        if ( (psi_xpoint(1) .lt. psi_xpoint(2)) .and. (ZZg1 .lt. Z_axis) ) then
+          count = count + 1
+          R_tmp(count) = RRg1
+          Z_tmp(count) = ZZg1
+        endif
+        if ( (psi_xpoint(2) .lt. psi_xpoint(1)) .and. (ZZg1 .gt. Z_axis) ) then
+          count = count + 1
+          R_tmp(count) = RRg1
+          Z_tmp(count) = ZZg1
+        endif
       endif
     enddo
     !if ( (xcase .eq. 1) .and. ( (count .eq. 2) .or. (count .eq. 4) ) ) then
     !  if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(1)) .and. (R_tmp(count-1) .gt. R_xpoint(1))) &
-    !		 .or. ((R_tmp(count-1) .lt. R_xpoint(1)) .and. (R_tmp(count  ) .gt. R_xpoint(1))) ) ) then
-    !	count = count - 2
+    !            .or. ((R_tmp(count-1) .lt. R_xpoint(1)) .and. (R_tmp(count  ) .gt. R_xpoint(1))) ) ) then
+    !   count = count - 2
     !  endif
     !endif
     !if ( (xcase .eq. 2) .and. ( (count .eq. 2) .or. (count .eq. 4) ) ) then
     !  if (.not. (     ((R_tmp(count  ) .lt. R_xpoint(2)) .and. (R_tmp(count-1) .gt. R_xpoint(2))) &
-    !		 .or. ((R_tmp(count-1) .lt. R_xpoint(2)) .and. (R_tmp(count  ) .gt. R_xpoint(2))) ) ) then
-    !	count = count - 2
+    !            .or. ((R_tmp(count-1) .lt. R_xpoint(2)) .and. (R_tmp(count  ) .gt. R_xpoint(2))) ) ) then
+    !   count = count - 2
     !  endif
     !endif
   enddo
@@ -1008,7 +1011,7 @@ if ( (xcase .eq. 3) .and. (psi_xpoint(1) .ne. psi_xpoint(2)) ) then
       ss1   = flux_list%flux_surfaces(i_surf)%t(edge_side(l),edge_piece(l))
       i_elm = flux_list%flux_surfaces(i_surf)%elm(edge_piece(l))
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  							  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
       if ( (psi_xpoint(1) .lt. psi_xpoint(2)) .and. (ZZg1 .lt. Z_axis) ) then
         count = count + 1
         R_tmp(count) = RRg1
@@ -1054,10 +1057,10 @@ if (xcase .eq. 3) then
       ss1   = flux_list%flux_surfaces(i_surf)%t(1,k)
       i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-							  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
       if ( (RRg1 .gt. R_axis) .and. (abs(ZZg1-Z_axis) .lt. distance_min) ) then
         distance_min = abs(ZZg1-Z_axis)
-	i_part = i
+        i_part = i
       endif
     enddo
   enddo
@@ -1070,7 +1073,7 @@ if (xcase .eq. 3) then
     ss1   = flux_list%flux_surfaces(i_surf)%t(edge_side(l),edge_piece(l))
     i_elm = flux_list%flux_surfaces(i_surf)%elm(edge_piece(l))
     call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-							ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                        ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
     if (ZZg1 .gt. Z_axis) then
       stpts%RRightCorn_UpperOuterLeg = RRg1
       stpts%ZRightCorn_UpperOuterLeg = ZZg1
@@ -1095,10 +1098,10 @@ if (xcase .eq. 3) then
       ss1   = flux_list%flux_surfaces(i_surf)%t(1,k)
       i_elm = flux_list%flux_surfaces(i_surf)%elm(k)
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-							  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
       if ( (RRg1 .lt. R_axis) .and. (abs(ZZg1-Z_axis) .lt. distance_min) ) then
         distance_min = abs(ZZg1-Z_axis)
-	i_part = i
+        i_part = i
       endif
     enddo
   enddo
@@ -1111,7 +1114,7 @@ if (xcase .eq. 3) then
     ss1   = flux_list%flux_surfaces(i_surf)%t(edge_side(l),edge_piece(l))
     i_elm = flux_list%flux_surfaces(i_surf)%elm(edge_piece(l))
     call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-							ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                        ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
     if (ZZg1 .gt. Z_axis) then
       stpts%RLeftCorn_UpperInnerLeg = RRg1
       stpts%ZLeftCorn_UpperInnerLeg = ZZg1
@@ -1141,7 +1144,7 @@ if (xcase .ne. 3) then
       ss1   = flux_list%flux_surfaces(i_surf)%t(edge_side(l),edge_piece(l))
       i_elm = flux_list%flux_surfaces(i_surf)%elm(edge_piece(l))
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  							  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
       if ( (xcase .eq. 1) .and. (ZZg1 .lt. Z_axis) ) then
         count = count + 1
         R_tmp(count) = RRg1
@@ -1220,7 +1223,7 @@ if (xcase .ne. 2) then
       ss1   = flux_list%flux_surfaces(i_surf)%t(edge_side(l),edge_piece(l))
       i_elm = flux_list%flux_surfaces(i_surf)%elm(edge_piece(l))
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  							  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
       if (ZZg1 .lt. Z_axis) then
         count = count + 1
         R_tmp(count) = RRg1
@@ -1274,7 +1277,7 @@ if (xcase .ne. 1) then
       ss1   = flux_list%flux_surfaces(i_surf)%t(edge_side(l),edge_piece(l))
       i_elm = flux_list%flux_surfaces(i_surf)%elm(edge_piece(l))
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  							  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                          ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
       if (ZZg1 .gt. Z_axis) then
         count = count + 1
         R_tmp(count) = RRg1
@@ -1470,8 +1473,8 @@ endif
 
 write(*,'(A)')                  ' _________________________________________________________'
 write(*,'(A)')                  '|                                                         |'
-write(*,'(A)')  		'| LEG POINTS (R,Z)                                        |'
-write(*,'(A)')  		'|_________________________________________________________|'
+write(*,'(A)')                  '| LEG POINTS (R,Z)                                        |'
+write(*,'(A)')                  '|_________________________________________________________|'
 write(*,'(A)')                  '|                                                         |'
 
 if (xcase .ne. 2) then

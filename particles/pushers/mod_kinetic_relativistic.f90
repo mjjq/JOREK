@@ -5,7 +5,7 @@
 module mod_kinetic_relativistic
 use mod_particle_types
 ! use electric charge, atomic mass unit and speed of ligth
-use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGTH
+use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
 
 implicit none
 
@@ -41,20 +41,20 @@ pure subroutine volume_preserving_push_cartesian(particle,mass,E,B,dt)
   real(kind=8) :: scaling_factor !< scaling factor [s^2*C/(kg*m)]
 
   ! compute the dimensional q
-  scaling_factor = 5.d-1*dt*particle%q*EL_CHG/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGTH)
+  scaling_factor = 5.d-1*dt*particle%q*EL_CHG/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT)
 
   ! compute dimensionless momenta
-  particle%p = particle%p/(mass*SPEED_OF_LIGTH)
+  particle%p = particle%p/(mass*SPEED_OF_LIGHT)
 
   ! compute position at t_(i+1/2)
-  particle%x = particle%x + (5.d-1*dt*SPEED_OF_LIGTH*particle%p)/&
+  particle%x = particle%x + (5.d-1*dt*SPEED_OF_LIGHT*particle%p)/&
     (sqrt(1.d0+dot_product(particle%p,particle%p)))
   
   ! compute the momenta at t_(i+1/2)
   particle%p = particle%p + scaling_factor*E
   
   ! rotate the momenta with respect to the magnetic field
-  particle%p = matmul(cayley_transform(SPEED_OF_LIGTH*scaling_factor/&
+  particle%p = matmul(cayley_transform(SPEED_OF_LIGHT*scaling_factor/&
     (sqrt(1.d0+dot_product(particle%p,particle%p))),&
     B),particle%p)
 
@@ -62,11 +62,11 @@ pure subroutine volume_preserving_push_cartesian(particle,mass,E,B,dt)
   particle%p = particle%p + scaling_factor*E
 
   ! update particle position at t_(i+1)
-  particle%x = particle%x + (5.d-1*dt*SPEED_OF_LIGTH*particle%p)/&
+  particle%x = particle%x + (5.d-1*dt*SPEED_OF_LIGHT*particle%p)/&
     (sqrt(1.d0+dot_product(particle%p,particle%p)))
 
   ! compute dimensional momenta
-  particle%p = particle%p*mass*SPEED_OF_LIGTH
+  particle%p = particle%p*mass*SPEED_OF_LIGHT
   
 end subroutine volume_preserving_push_cartesian
 
@@ -111,11 +111,11 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
   p_par = dot_product(in%p,B_hat_cart)
 
   ! compute the guiding center total energy in [eV]
-  out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*&
-  sqrt((mass*SPEED_OF_LIGTH)*(mass*SPEED_OF_LIGTH)+dot_product(in%p,in%p))
+  out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*&
+  sqrt((mass*SPEED_OF_LIGHT)*(mass*SPEED_OF_LIGHT)+dot_product(in%p,in%p))
   ! compute the magnetic moment p_perp^2/(2*B) in [eV/T]
   ! the sign is given by the particle parallel momentum 
-  out%mu = sign((ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*dot_product(in%p-p_par*B_hat_cart,&
+  out%mu = sign((ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*dot_product(in%p-p_par*B_hat_cart,&
   in%p-p_par*B_hat_cart))/(2.d0*B_norm*mass*EL_CHG),p_par)
 
   ! check whether the particle is not a field line
@@ -176,8 +176,8 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,chi,B,mass) result
   p_perp = (EL_CHG*2.d0*mass*B_norm*sign(in%mu,1.d0))/ATOMIC_MASS_UNIT
   ! compute the parallel momentum in (AMU*m/s)
   p_par = sign(sqrt((((in%E*EL_CHG)*(in%E*EL_CHG))/&
-  ((ATOMIC_MASS_UNIT*SPEED_OF_LIGTH)*(ATOMIC_MASS_UNIT*SPEED_OF_LIGTH)))-&
-  (mass*SPEED_OF_LIGTH)*(mass*SPEED_OF_LIGTH)-p_perp),in%mu)
+  ((ATOMIC_MASS_UNIT*SPEED_OF_LIGHT)*(ATOMIC_MASS_UNIT*SPEED_OF_LIGHT)))-&
+  (mass*SPEED_OF_LIGHT)*(mass*SPEED_OF_LIGHT)-p_perp),in%mu)
   ! compute the perpendicular momentum in (AMU*m/s)
   p_perp = sqrt(p_perp)
 

@@ -75,7 +75,7 @@ end function boris_kinetic_energy
 !> outputs:
 !>   energy: (real8) the particle kinetic energy in eV
 impure elemental function particle_relativistic_kinetic_energy(particle,mass) result(energy)
-  use constants, only: SPEED_OF_LIGTH,ATOMIC_MASS_UNIT,EL_CHG
+  use constants, only: SPEED_OF_LIGHT,ATOMIC_MASS_UNIT,EL_CHG
   ! declare input variables
   class(particle_kinetic_relativistic),intent(in) :: particle !< relativistic particle
   real(kind=8),intent(in) :: mass !< particle mass
@@ -83,9 +83,9 @@ impure elemental function particle_relativistic_kinetic_energy(particle,mass) re
   real(kind=8) :: energy !< particle kinetic energy
 
   ! compute the relativistic particle kinetic energy
-  energy = ATOMIC_MASS_UNIT*SPEED_OF_LIGTH*(sqrt((mass*SPEED_OF_LIGTH)&
-  *(mass*SPEED_OF_LIGTH)+dot_product(particle%p,particle%p))-&
-  mass*SPEED_OF_LIGTH)/EL_CHG  
+  energy = ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*(sqrt((mass*SPEED_OF_LIGHT)&
+  *(mass*SPEED_OF_LIGHT)+dot_product(particle%p,particle%p))-&
+  mass*SPEED_OF_LIGHT)/EL_CHG  
 
 end function
 

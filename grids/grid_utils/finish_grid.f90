@@ -27,12 +27,12 @@ integer             :: i_elm2, i_vertex2, i_node2
 integer             :: i_elm_xpoint(2), i_elm_axis
 integer             :: n_loop, n_loop2, n_start_connect
 integer             :: n_psi, n_tht_mid, n_tht_mid2
-integer	            :: n_flux, n_tht,   n_open,   n_outer,   n_inner    
-integer	            :: n_private,   n_up_priv,   n_leg,   n_up_leg
-integer	            :: index
-integer	            :: n_start_open, n_start_outer, n_start_inner
-integer	            :: n_start_private, n_start_up_priv
-integer	            :: n_xpoint_1, n_xpoint_2, n_xpoint_3, n_jump
+integer             :: n_flux, n_tht,   n_open,   n_outer,   n_inner    
+integer             :: n_private,   n_up_priv,   n_leg,   n_up_leg
+integer             :: index
+integer             :: n_start_open, n_start_outer, n_start_inner
+integer             :: n_start_private, n_start_up_priv
+integer             :: n_xpoint_1, n_xpoint_2, n_xpoint_3, n_jump
 integer             :: iv, ivp, node_iv, node_ivp, ielm_out
 real*8, allocatable :: xp(:),yp(:)
 integer             :: i_save, j_save, ii, jj, count

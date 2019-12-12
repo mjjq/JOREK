@@ -1518,4 +1518,4 @@ end subroutine find_strategic_points_advanced
 
 
 
-	
+

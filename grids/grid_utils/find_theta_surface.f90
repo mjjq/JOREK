@@ -111,20 +111,20 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
         call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
 
         call interp_RZ(node_list,element_list,i_elm,ri,si,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-        					      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
         tht_out = atan2(ZZg1-Z_axis,RRg1-R_axis)
         if (tht_out .lt. 0.d0) tht_out = tht_out + 2.d0 * PI
 
 !        write(*,'(A,3e16.8)') ' find_theta check : ',tht_out,theta,(RRg1-R_axis)*sin(theta)-(ZZg1-Z_axis)*cos(theta)
 
-	if (abs(tht_in - tht_out) .lt. 1.D-4) then
+        if (abs(tht_in - tht_out) .lt. 1.D-4) then
 
           s_find(i_find+1)     = ri
           t_find(i_find+1)     = si
           i_elm_find(i_find+1) = i_elm
-          i_find	       = i_find + 1
-	  exit
+          i_find               = i_find + 1
+          exit
 
         endif
 

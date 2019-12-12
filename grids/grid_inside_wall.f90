@@ -11,24 +11,24 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   implicit none
   
   ! --- Routine parameters
-  integer,		   intent(in)	 :: n_R 	    !< Number of horizontal nodes (square grid)
-  integer,		   intent(in)	 :: n_Z 	    !< Number of vertical nodes (square grid)
-  real*8,		   intent(in)	 :: R_begin	   !< R-min (square grid)
-  real*8,		   intent(in)	 :: R_end	   !< R-max (square grid)
-  real*8,		   intent(in)	 :: Z_begin	   !< Z-min (square grid)
-  real*8,		   intent(in)	 :: Z_end	   !< Z-max (square grid)
-  logical,		   intent(in)	 :: boundary	   !< Fill boundary information?
-  type(type_node_list),    intent(inout) :: node_list	   !< list of grid nodes
+  integer,                 intent(in)    :: n_R             !< Number of horizontal nodes (square grid)
+  integer,                 intent(in)    :: n_Z             !< Number of vertical nodes (square grid)
+  real*8,                  intent(in)    :: R_begin        !< R-min (square grid)
+  real*8,                  intent(in)    :: R_end          !< R-max (square grid)
+  real*8,                  intent(in)    :: Z_begin        !< Z-min (square grid)
+  real*8,                  intent(in)    :: Z_end          !< Z-max (square grid)
+  logical,                 intent(in)    :: boundary       !< Fill boundary information?
+  type(type_node_list),    intent(inout) :: node_list      !< list of grid nodes
   type(type_element_list), intent(inout) :: element_list   !< list of finite elements
   
   ! --- Local variables
-  integer		   :: m, n, i, j, k, jp1, ii, jj, iv, inode_0, inode_p, inode, n_elements, i_element, ip, iuv, n_loop, index
-  integer		   :: n_element_start, n_node_start, n_index_start
-  real*8		   :: xx_0(n_dim),xx_p(n_dim),uv_0(n_dim),uv_p(n_dim)
-  real*8, external	   :: dlength, ddot
+  integer                  :: m, n, i, j, k, jp1, ii, jj, iv, inode_0, inode_p, inode, n_elements, i_element, ip, iuv, n_loop, index
+  integer                  :: n_element_start, n_node_start, n_index_start
+  real*8                   :: xx_0(n_dim),xx_p(n_dim),uv_0(n_dim),uv_p(n_dim)
+  real*8, external         :: dlength, ddot
   
   ! --- eqdsk variables
-  integer	   :: nR_eqdsk, nZ_eqdsk, ier
+  integer          :: nR_eqdsk, nZ_eqdsk, ier
   real,allocatable :: R_eqdsk(:),Z_eqdsk(:),psi_eqdsk(:,:)
   logical          :: normal_eqdsk, normal_eqdsk_wall
   
@@ -48,7 +48,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   
   
   write(*,*) '*************************************'
-  write(*,*) '*       grid_inside_wall  	  *'
+  write(*,*) '*       grid_inside_wall            *'
   write(*,*) '*************************************'
   write(*,*) ' creating a rectangular grid inside wall:  n_R, n_Z = ',n_R,n_Z
   
@@ -223,9 +223,9 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
 
 
   do k=1, element_list%n_elements   ! fill in the size of the elements
-    do iv=1,4			    ! loop over the vertices
+    do iv=1,4                       ! loop over the vertices
 
-      iuv = mod(iv+1,2)+1	    ! the direction vector corresponding to this edge (i)
+      iuv = mod(iv+1,2)+1           ! the direction vector corresponding to this edge (i)
 
       inode_0 = element_list%element(k)%vertex(iv)
       xx_0    = node_list%node(inode_0)%x(1,:)
@@ -259,22 +259,22 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
     do inode=1, node_list%n_nodes
       if ( (node_list%node(inode)%boundary .gt. 0) .and. (node_list%node(inode)%x(1,1) .lt. 0.37) ) then
       !if ( (node_list%node(inode)%boundary .gt. 0) .and. (abs(node_list%node(inode)%x(1,2)) .le. 1.2) ) then
-  	Zmin  = -1.1!-0.7
+        Zmin  = -1.1!-0.7
         z_min = -0.3!-0.4
-  	Zmax  = +1.1!+0.7
+        Zmax  = +1.1!+0.7
         z_max = +0.3!+0.4
-  	R_elm = node_list%node(inode)%x(1,1)
-  	Z_elm = node_list%node(inode)%x(1,2)
-  	diff  = xshift
-  	if ( (Z_elm .le. z_min) .and. (Z_elm .ge. Zmin) ) then
-  	  diff = (Z_elm-Zmin)/(z_min-Zmin)*diff
+        R_elm = node_list%node(inode)%x(1,1)
+        Z_elm = node_list%node(inode)%x(1,2)
+        diff  = xshift
+        if ( (Z_elm .le. z_min) .and. (Z_elm .ge. Zmin) ) then
+          diff = (Z_elm-Zmin)/(z_min-Zmin)*diff
         elseif ( (Z_elm .ge. z_max) .and. (Z_elm .le. Zmax) ) then
-  	  diff = (Z_elm-Zmax)/(z_max-Zmax)*diff
+          diff = (Z_elm-Zmax)/(z_max-Zmax)*diff
         endif
-  	if ( (Z_elm .lt. Zmin) .or. (Z_elm .gt. Zmax) ) then
-  	  diff = 0.d0
+        if ( (Z_elm .lt. Zmin) .or. (Z_elm .gt. Zmax) ) then
+          diff = 0.d0
         endif
-  	node_list%node(inode)%values(1,1,1) = node_list%node(inode)%values(1,1,1) + diff * node_list%node(inode)%values(1,1,1)
+        node_list%node(inode)%values(1,1,1) = node_list%node(inode)%values(1,1,1) + diff * node_list%node(inode)%values(1,1,1)
       endif
     enddo
   endif
@@ -327,7 +327,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   endif
 
   return
- 
+
 end subroutine grid_inside_wall
   
 
@@ -401,13 +401,13 @@ subroutine RintersectPolygon(N, rpol, zpol, Rmin, Rmax, Z, accuracy, new_Rmin, n
     r_tmp = R_iter(i)
     if (insidePolygon(N, rpol, zpol, r_tmp, z_tmp) .eq. 1) then
       if (inside .eq. 0) then
-  	i1 = i
+        i1 = i
         inside = 1
       endif
     endif
     if (insidePolygon(N, rpol, zpol, r_tmp, z_tmp) .eq. 0) then
       if (inside .eq. 1) then
-  	i2 = i
+        i2 = i
         exit
       endif
     endif
@@ -479,13 +479,13 @@ subroutine RintersectPolygon(N, rpol, zpol, Rmin, Rmax, Z, accuracy, new_Rmin, n
     r_tmp = R_iter(i)
     if (insidePolygon(N, rpol, zpol, r_tmp, z_tmp) .eq. 1) then
       if (inside .eq. 0) then
-  	i1 = i
+        i1 = i
         inside = 1
       endif
     endif
     if (insidePolygon(N, rpol, zpol, r_tmp, z_tmp) .eq. 0) then
       if (inside .eq. 1) then
-  	i2 = i
+        i2 = i
         exit
       endif
     endif
@@ -581,9 +581,9 @@ integer function insidePolygon(N, rpol, zpol, r, z)
     z2 = zpol(i)
     if ( (z .ge. min(z1,z2)) .and. (z .le. max(z1,z2)) .and. (r .lt. max(r1,r2)) ) then
       if (z1 .ne. z2) then
-    	xinters = (z-z1)*(r2-r1)/(z2-z1) + r1
-    	if ((r .lt. xinters) .and. (z .ne. z2)) then
-	  counter = counter + 1
+        xinters = (z-z1)*(r2-r1)/(z2-z1) + r1
+        if ((r .lt. xinters) .and. (z .ne. z2)) then
+          counter = counter + 1
         endif
       endif
     endif

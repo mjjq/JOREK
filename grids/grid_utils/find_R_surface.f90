@@ -94,19 +94,19 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
         call CUB1D(ss1, dss1, ss2, dss2, t, si, dsi)
 
         call interp_RZ(node_list,element_list,i_elm,ri,si,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-        					      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
 
 !        write(*,'(A,2i8,4e16.8)') ' find_R check 2 : ',i_find+1,i_elm,ZZg1,t,RRg1,RRg1 - R_find
 
-	if (abs(R_find - RRg1) .lt. 1.D-6) then
+        if (abs(R_find - RRg1) .lt. 1.D-6) then
           s_find(i_find+1) = ri
           t_find(i_find+1) = si
           i_elm_find(i_find+1) = i_elm
           st_find(i_find+1) = t
           i_find = i_find + 1
-	  exit
-	endif
+          exit
+        endif
 
       endif
     enddo

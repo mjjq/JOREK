@@ -5,14 +5,14 @@ subroutine check_point_is_inside_wall(R, Z, inside)
   implicit none
   
   ! --- Routine parameters
-  real*8,  intent(in)		:: R, Z
-  integer, intent(inout)	:: inside
+  real*8,  intent(in)           :: R, Z
+  integer, intent(inout)        :: inside
   
   ! --- Local variables
-  integer	:: i, count
-  real*8	:: R_int
-  real*8	:: R_tmp1, Z_tmp1
-  real*8	:: R_tmp2, Z_tmp2
+  integer       :: i, count
+  real*8        :: R_int
+  real*8        :: R_tmp1, Z_tmp1
+  real*8        :: R_tmp2, Z_tmp2
   
   R_tmp1 = R_limiter(n_limiter)
   Z_tmp1 = Z_limiter(n_limiter)
@@ -26,7 +26,7 @@ subroutine check_point_is_inside_wall(R, Z, inside)
     if ( (Z .ge. min(Z_tmp1,Z_tmp2)) .and. (Z .le. max(Z_tmp1,Z_tmp2)) .and. (R .lt. max(R_tmp1, R_tmp2)) ) then
       if (Z_tmp1 .ne. Z_tmp2) then
         R_int = (Z-Z_tmp1) * (R_tmp2-R_tmp1) / (Z_tmp2-Z_tmp1) + R_tmp1
-	if ( (R .lt. R_int) .and. (Z .ne. Z_tmp2) ) count = count + 1
+        if ( (R .lt. R_int) .and. (Z .ne. Z_tmp2) ) count = count + 1
       endif
     endif
     
@@ -55,16 +55,16 @@ subroutine check_point_is_inside_contour(R, Z, n_ctr, R_ctr, Z_ctr, inside)
   implicit none
   
   ! --- Routine parameters
-  real*8,  intent(in)		:: R, Z
-  integer, intent(inout)	:: n_ctr
-  real*8,  intent(in)		:: R_ctr(n_ctr), Z_ctr(n_ctr)
-  integer, intent(inout)	:: inside
+  real*8,  intent(in)           :: R, Z
+  integer, intent(inout)        :: n_ctr
+  real*8,  intent(in)           :: R_ctr(n_ctr), Z_ctr(n_ctr)
+  integer, intent(inout)        :: inside
   
   ! --- Local variables
-  integer	:: i, count
-  real*8	:: R_int
-  real*8	:: R_tmp1, Z_tmp1
-  real*8	:: R_tmp2, Z_tmp2
+  integer       :: i, count
+  real*8        :: R_int
+  real*8        :: R_tmp1, Z_tmp1
+  real*8        :: R_tmp2, Z_tmp2
   
   R_tmp1 = R_ctr(n_ctr)
   Z_tmp1 = Z_ctr(n_ctr)
@@ -78,7 +78,7 @@ subroutine check_point_is_inside_contour(R, Z, n_ctr, R_ctr, Z_ctr, inside)
     if ( (Z .ge. min(Z_tmp1,Z_tmp2)) .and. (Z .le. max(Z_tmp1,Z_tmp2)) .and. (R .lt. max(R_tmp1, R_tmp2)) ) then
       if (Z_tmp1 .ne. Z_tmp2) then
         R_int = (Z-Z_tmp1) * (R_tmp2-R_tmp1) / (Z_tmp2-Z_tmp1) + R_tmp1
-	if ( (R .lt. R_int) .and. (Z .ne. Z_tmp2) ) count = count + 1
+        if ( (R .lt. R_int) .and. (Z .ne. Z_tmp2) ) count = count + 1
       endif
     endif
     

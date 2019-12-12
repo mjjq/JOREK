@@ -58,9 +58,9 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
   i_elm = surface%elm(piece)
 
   call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-        					      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                                                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
   call interp_RZ(node_list,element_list,i_elm,rr2,ss2,RRg2,dRRg2_dr,dRRg2_ds,dRRg2_drs,dRRg2_drr,dRRg2_dss, &
-        					      ZZg2,dZZg2_dr,dZZg2_ds,dZZg2_drs,dZZg2_drr,dZZg2_dss)
+                                                      ZZg2,dZZg2_dr,dZZg2_ds,dZZg2_drs,dZZg2_drr,dZZg2_dss)
   dRRg1_dt = dRRg1_dr * drr1 + dRRg1_ds * dss1
   dZZg1_dt = dZZg1_dr * drr1 + dZZg1_ds * dss1
   dRRg2_dt = dRRg2_dr * drr2 + dRRg2_ds * dss2
@@ -177,8 +177,8 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
       call CUB1D(R_c(1), R_c(2), R_c(3), R_c(4), t_tht, RR_tht, dRR_tht)
       call CUB1D(Z_c(1), Z_c(2), Z_c(3), Z_c(4), t_tht, ZZ_tht, dZZ_tht)
   
-      FVEC(1)	= RR_tht - RR_flux
-      FVEC(2)	= ZZ_tht - ZZ_flux
+      FVEC(1)   = RR_tht - RR_flux
+      FVEC(2)   = ZZ_tht - ZZ_flux
       FJAC(1,1) = - dRR_flux
       FJAC(1,2) =   dRR_tht
       FJAC(2,1) = - dZZ_flux
@@ -196,8 +196,8 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
         call CUB1D(rr1, drr1, rr2, drr2, t_flux, r_flux, dr_flux)
         call CUB1D(ss1, dss1, ss2, dss2, t_flux, s_flux, ds_flux)
   
-        R_out	  = 0.5d0*(RR_tht + RR_flux)
-        Z_out	  = 0.5d0*(ZZ_tht + ZZ_flux)
+        R_out     = 0.5d0*(RR_tht + RR_flux)
+        Z_out     = 0.5d0*(ZZ_tht + ZZ_flux)
   
         !write(*,'(A,i3,4e16.8)') ' newton (1) : ',i,errf,errx,x
 
@@ -237,8 +237,8 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
         call CUB1D(rr1, drr1, rr2, drr2, t_flux, r_flux, dr_flux)
         call CUB1D(ss1, dss1, ss2, dss2, t_flux, s_flux, ds_flux)
   
-        R_out	  = 0.5d0*(RR_tht + RR_flux)
-        Z_out	  = 0.5d0*(ZZ_tht + ZZ_flux)
+        R_out     = 0.5d0*(RR_tht + RR_flux)
+        Z_out     = 0.5d0*(ZZ_tht + ZZ_flux)
   
         !write(*,'(A,i3,4e16.8)') ' newton (2) : ',i,errf,errx,x
   

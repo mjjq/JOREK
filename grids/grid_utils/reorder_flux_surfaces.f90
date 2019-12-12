@@ -1,6 +1,6 @@
 module reorder_surfaces_parameters
-  real*8, parameter	:: accuracy = 1.d-8
-  integer, parameter	:: n_parts_max = 10
+  real*8, parameter     :: accuracy = 1.d-8
+  integer, parameter    :: n_parts_max = 10
 end module reorder_surfaces_parameters
 
 

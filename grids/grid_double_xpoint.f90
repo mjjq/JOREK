@@ -11,10 +11,10 @@ use grid_xpoint_data
 use mod_neighbours, only: update_neighbours
 
 ! --- Input parameters
-use phys_module, only:     n_flux, n_open, n_tht, n_outer, n_inner, n_private, n_leg, n_up_priv, n_up_leg, 	&
-                           SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv,	&
-                           SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1,                               	&
-                           dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv,                  	&
+use phys_module, only:     n_flux, n_open, n_tht, n_outer, n_inner, n_private, n_leg, n_up_priv, n_up_leg,      &
+                           SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv,     &
+                           SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1,                                    &
+                           dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv,                       &
                            xcase, force_horizontal_Xline
 
 implicit none
@@ -129,7 +129,7 @@ endif
 !-------------------------------------------------------------------------------------------!
 
 !-------------------------------- Define number of psi values and allocate flux_list structure
-n_psi	        = n_flux   + n_open   + n_outer   + n_inner   + n_private   + n_up_priv + 1   ! this includes the magnetic axis
+n_psi           = n_flux   + n_open   + n_outer   + n_inner   + n_private   + n_up_priv + 1   ! this includes the magnetic axis
 flux_list%n_psi = n_psi - 1
 call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
 
@@ -177,7 +177,7 @@ call define_new_grid_points(node_list, element_list, flux_list, &
 
 !-------------------------------- Call the routine
 call define_final_grid(node_list, element_list, flux_list, &
-		       xcase, n_grids, stpts, nwpts)
+                       xcase, n_grids, stpts, nwpts)
 
 
 !-------------------------------- Deallocate data

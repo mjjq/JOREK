@@ -28,8 +28,8 @@ real*8, allocatable :: xp(:),yp(:)
 integer             :: i, j, k, m, i_elm_find(8), i_find, i_elm_axis
 integer             :: i_sep1, i_sep2, i_max, n_loop, n_start, i_surf
 integer             :: n_psi, n_tht_2, n_tht_mid, n_tht_mid2
-integer	            :: n_flux, n_tht,   n_open,   n_outer,   n_inner    
-integer	            :: n_private,   n_up_priv,   n_leg,   n_up_leg
+integer             :: n_flux, n_tht,   n_open,   n_outer,   n_inner    
+integer             :: n_private,   n_up_priv,   n_leg,   n_up_leg
 integer             :: npl, ifail, my_id
 real*8              :: delta, ss, tmp1, tmp2
 real*8              :: R_cub1d(4), Z_cub1d(4)
@@ -64,7 +64,7 @@ SIG_up_leg_0 = sigmas(10); SIG_up_leg_1 = sigmas(11)
 n_flux    = n_grids(1); n_tht     = n_grids(2)
 n_open    = n_grids(3); n_outer   = n_grids(4); n_inner = n_grids(5)
 n_private = n_grids(6); n_up_priv = n_grids(7)
-n_leg	  = n_grids(8); n_up_leg  = n_grids(9)
+n_leg     = n_grids(8); n_up_leg  = n_grids(9)
 
 nwpts%k_cross = 0
 
@@ -191,8 +191,8 @@ if (xcase .ne. 3) then
                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
     if( ((ZZg1 .lt. Z_xpoint(1)) .and. (xcase .eq. 1)) .or. ((ZZg1 .gt. Z_xpoint(2)) .and. (xcase .eq. 2)) ) then
       call interp_RZ(node_list,element_list,i_elm_find(2),s_find(2),t_find(2),&
-    		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
-    		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
+                     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
     endif
 
     nwpts%R_sep(j) = RRg1
@@ -210,15 +210,15 @@ else
         if(i_find .eq. 0) return
 
         call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-        	       RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,	&
-        	       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                       RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
         if(ZZg1 .lt. Z_xpoint(1)) then
           call interp_RZ(node_list,element_list,i_elm_find(2),s_find(2),t_find(2),&
-        	         RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,	&
-        	         ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-	endif
+                         RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
+                         ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+        endif
         
-	nwpts%R_sep(j) = RRg1
+        nwpts%R_sep(j) = RRg1
         nwpts%Z_sep(j) = ZZg1
       else
         if (psi_xpoint(1) .le. psi_xpoint(2)) then
@@ -229,15 +229,15 @@ else
         if(i_find .eq. 0) return
 
         call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-        	       RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,	&
-        	       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                       RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
         if(ZZg1 .gt. Z_xpoint(2)) then
           call interp_RZ(node_list,element_list,i_elm_find(2),s_find(2),t_find(2),&
-        	         RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,	&
-        	         ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-	endif
+                         RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,  &
+                         ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+        endif
 
-	nwpts%R_sep(j) = RRg1
+        nwpts%R_sep(j) = RRg1
         nwpts%Z_sep(j) = ZZg1    
       endif
     endif
@@ -245,21 +245,21 @@ else
 endif
 
 if (xcase .eq. 1) then
-  nwpts%R_sep(1)	     = R_xpoint(1) ! this one is known - safer...
-  nwpts%Z_sep(1)	     = Z_xpoint(1) ! this one is known - safer...
+  nwpts%R_sep(1)             = R_xpoint(1) ! this one is known - safer...
+  nwpts%Z_sep(1)             = Z_xpoint(1) ! this one is known - safer...
   nwpts%R_sep(n_tht)         = R_xpoint(1) ! this one is known - safer...
   nwpts%Z_sep(n_tht)         = Z_xpoint(1) ! this one is known - safer...
 endif
 if (xcase .eq. 2) then
-  nwpts%R_sep(1)	     = R_xpoint(2) ! this one is known - safer...
-  nwpts%Z_sep(1)	     = Z_xpoint(2) ! this one is known - safer...
+  nwpts%R_sep(1)             = R_xpoint(2) ! this one is known - safer...
+  nwpts%Z_sep(1)             = Z_xpoint(2) ! this one is known - safer...
   nwpts%R_sep(n_tht)         = R_xpoint(2) ! this one is known - safer...
   nwpts%Z_sep(n_tht)         = Z_xpoint(2) ! this one is known - safer...
 endif
 if (xcase .eq. 3) then
   if (psi_xpoint(1) .le. psi_xpoint(2)) then
-    nwpts%R_sep(1)	     = R_xpoint(1) ! this one is known - safer...
-    nwpts%Z_sep(1)	     = Z_xpoint(1) ! this one is known - safer...
+    nwpts%R_sep(1)           = R_xpoint(1) ! this one is known - safer...
+    nwpts%Z_sep(1)           = Z_xpoint(1) ! this one is known - safer...
     nwpts%R_sep(n_tht)       = R_xpoint(1) ! this one is known - safer...
     nwpts%Z_sep(n_tht)       = Z_xpoint(1) ! this one is known - safer...
     nwpts%R_sep(n_tht_mid)   = R_xpoint(2) ! this one is known - safer...
@@ -267,8 +267,8 @@ if (xcase .eq. 3) then
     nwpts%R_sep(n_tht_mid+1) = R_xpoint(2) ! this one is known - safer...
     nwpts%Z_sep(n_tht_mid+1) = Z_xpoint(2) ! this one is known - safer...
   else
-    nwpts%R_sep(1)	     = R_xpoint(2) ! this one is known - safer...
-    nwpts%Z_sep(1)	     = Z_xpoint(2) ! this one is known - safer...
+    nwpts%R_sep(1)           = R_xpoint(2) ! this one is known - safer...
+    nwpts%Z_sep(1)           = Z_xpoint(2) ! this one is known - safer...
     nwpts%R_sep(n_tht)       = R_xpoint(2) ! this one is known - safer...
     nwpts%Z_sep(n_tht)       = Z_xpoint(2) ! this one is known - safer...
     nwpts%R_sep(n_tht_mid)   = R_xpoint(1) ! this one is known - safer...
@@ -286,19 +286,19 @@ do j=1,n_tht
     if ( (xcase .eq. 1) .or. ((xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2))) ) then        
       if (j .gt. n_tht_mid) then
         nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerInnerLeg - Z_xpoint(1)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
-	i_max = n_flux + n_open + n_outer + n_inner
+        i_max = n_flux + n_open + n_outer + n_inner
       else
         nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerOuterLeg - Z_xpoint(1)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
-	i_max = n_flux + n_open + n_outer
+        i_max = n_flux + n_open + n_outer
       endif      
       call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)    
     elseif ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) then      
       if (j .gt. n_tht_mid) then
         nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerOuterLeg - Z_xpoint(1)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
-	i_max = n_flux + n_open + n_outer
+        i_max = n_flux + n_open + n_outer
       else
         nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerInnerLeg - Z_xpoint(1)) * ((nwpts%Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
-	i_max = n_flux + n_open + n_outer + n_inner
+        i_max = n_flux + n_open + n_outer + n_inner
       endif      
       call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)    
     else    
@@ -313,8 +313,8 @@ do j=1,n_tht
     if (t_find(1) .gt. 1.d0) t_find(1) = 1.d0
       
     call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1), &
-        	   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-        	   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
     if(    (xcase .eq. 2)                                                                             &
       .or. (     ( (xcase .eq. 1) .or. ((xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) ) &
@@ -324,8 +324,8 @@ do j=1,n_tht
            .and. (    ( (RRg1 .lt. R_xpoint(1)) .and. (j.le.n_tht_mid) ) &
                  .or. ( (RRg1 .gt. R_xpoint(1)) .and. (j.gt.n_tht_mid) ) )                            ) ) then
 
-      nwpts%R_max(j)  	         = RRg1
-      nwpts%Z_max(j)  	         = ZZg1
+      nwpts%R_max(j)             = RRg1
+      nwpts%Z_max(j)             = ZZg1
       nwpts%RR_new(i_max+1,j)    = RRg1
       nwpts%ZZ_new(i_max+1,j)    = ZZg1
       nwpts%ielm_flux(i_max+1,j) = i_elm_find(1)
@@ -343,10 +343,10 @@ do j=1,n_tht
       if (t_find(2) .gt. 1.d0) t_find(2) = 1.d0
       
       call interp_RZ(node_list,element_list,i_elm_find(2),s_find(2),t_find(2),&
-    		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-    		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-      nwpts%R_max(j)  	         = RRg1
-      nwpts%Z_max(j)  	         = ZZg1
+                     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+      nwpts%R_max(j)             = RRg1
+      nwpts%Z_max(j)             = ZZg1
       nwpts%RR_new(i_max+1,j)    = RRg1
       nwpts%ZZ_new(i_max+1,j)    = ZZg1
       nwpts%ielm_flux(i_max+1,j) = i_elm_find(2)
@@ -359,23 +359,23 @@ do j=1,n_tht
     
     if (     ( (xcase .eq. 1) .or. ((xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) ) &
        .and. ((j .eq. 1) .or. (j .eq. n_tht))                                                   ) then
-      nwpts%R_max(1)  	          = stpts%RLimit_LowerOuterLeg ! this one is known - safer...
-      nwpts%Z_max(1)  	          = stpts%ZLimit_LowerOuterLeg ! this one is known - safer...
+      nwpts%R_max(1)              = stpts%RLimit_LowerOuterLeg ! this one is known - safer...
+      nwpts%Z_max(1)              = stpts%ZLimit_LowerOuterLeg ! this one is known - safer...
       nwpts%RR_new(i_max+1,1)     = stpts%RLimit_LowerOuterLeg ! this one is known - safer...
       nwpts%ZZ_new(i_max+1,1)     = stpts%ZLimit_LowerOuterLeg ! this one is known - safer...
-      nwpts%R_max(n_tht)	  = stpts%RLimit_LowerInnerLeg ! this one is known - safer...
-      nwpts%Z_max(n_tht)	  = stpts%ZLimit_LowerInnerLeg ! this one is known - safer...
+      nwpts%R_max(n_tht)          = stpts%RLimit_LowerInnerLeg ! this one is known - safer...
+      nwpts%Z_max(n_tht)          = stpts%ZLimit_LowerInnerLeg ! this one is known - safer...
       nwpts%RR_new(i_max+1,n_tht) = stpts%RLimit_LowerInnerLeg ! this one is known - safer...
       nwpts%ZZ_new(i_max+1,n_tht) = stpts%ZLimit_LowerInnerLeg ! this one is known - safer...
     endif
     if (     ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) )  &
        .and. ((j .eq. 1) .or. (j .eq. n_tht))                            ) then
-      nwpts%R_max(n_tht_mid)	        = stpts%RLimit_LowerInnerLeg ! this one is known - safer...
-      nwpts%Z_max(n_tht_mid)	        = stpts%ZLimit_LowerInnerLeg ! this one is known - safer...
+      nwpts%R_max(n_tht_mid)            = stpts%RLimit_LowerInnerLeg ! this one is known - safer...
+      nwpts%Z_max(n_tht_mid)            = stpts%ZLimit_LowerInnerLeg ! this one is known - safer...
       nwpts%RR_new(i_max+1,n_tht_mid)   = stpts%RLimit_LowerInnerLeg ! this one is known - safer...
       nwpts%ZZ_new(i_max+1,n_tht_mid)   = stpts%ZLimit_LowerInnerLeg ! this one is known - safer...
-      nwpts%R_max(n_tht_mid+1)  	= stpts%RLimit_LowerOuterLeg ! this one is known - safer...
-      nwpts%Z_max(n_tht_mid+1)  	= stpts%ZLimit_LowerOuterLeg ! this one is known - safer...
+      nwpts%R_max(n_tht_mid+1)          = stpts%RLimit_LowerOuterLeg ! this one is known - safer...
+      nwpts%Z_max(n_tht_mid+1)          = stpts%ZLimit_LowerOuterLeg ! this one is known - safer...
       nwpts%RR_new(i_max+1,n_tht_mid+1) = stpts%RLimit_LowerOuterLeg ! this one is known - safer...
       nwpts%ZZ_new(i_max+1,n_tht_mid+1) = stpts%ZLimit_LowerOuterLeg ! this one is known - safer...
     endif
@@ -407,8 +407,8 @@ do j=1,n_tht
     if (t_find(1) .gt. 1.d0) t_find(1) = 1.d0
       
     call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),&
-    		   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-    		   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                   RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                   ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
 
     if(    (xcase .eq. 1)                                                                              &
@@ -417,10 +417,10 @@ do j=1,n_tht
                  .or. ( (RRg1 .lt. R_xpoint(2)) .and. (j .gt. n_tht_mid) )   )                     ) &
       .or. (     ( (xcase .eq. 2) .or. ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) )   &
            .and. (    ( (RRg1 .ge. R_xpoint(2)) .and. (j .gt. n_tht_mid) ) &
-                 .or. ( (RRg1 .lt. R_xpoint(2)) .and. (j .lt. n_tht_mid) ) ) 			       ) ) then
+                 .or. ( (RRg1 .lt. R_xpoint(2)) .and. (j .lt. n_tht_mid) ) )                           ) ) then
 
-      nwpts%R_max(j)  	         = RRg1
-      nwpts%Z_max(j)  	         = ZZg1
+      nwpts%R_max(j)             = RRg1
+      nwpts%Z_max(j)             = ZZg1
       nwpts%RR_new(i_max+1,j)    = RRg1
       nwpts%ZZ_new(i_max+1,j)    = ZZg1
       nwpts%ielm_flux(i_max+1,j) = i_elm_find(1)
@@ -438,10 +438,10 @@ do j=1,n_tht
       if (t_find(2) .gt. 1.d0) t_find(2) = 1.d0
       
       call interp_RZ(node_list,element_list,i_elm_find(2),s_find(2),t_find(2),&
-    		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-    		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-      nwpts%R_max(j)  	         = RRg1
-      nwpts%Z_max(j)  	         = ZZg1
+                     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+      nwpts%R_max(j)             = RRg1
+      nwpts%Z_max(j)             = ZZg1
       nwpts%RR_new(i_max+1,j)    = RRg1
       nwpts%ZZ_new(i_max+1,j)    = ZZg1
       nwpts%ielm_flux(i_max+1,j) = i_elm_find(2)
@@ -454,24 +454,24 @@ do j=1,n_tht
     
     if (     ( (xcase .eq. 2) .or. ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) ) & 
        .and. ( (j .eq. 1) .or. (j .eq. n_tht_2) )                                                ) then
-      nwpts%R_max(n_tht)	    = stpts%RLimit_UpperOuterLeg ! this one is known - safer...
-      nwpts%Z_max(n_tht)	    = stpts%ZLimit_UpperOuterLeg ! this one is known - safer...
+      nwpts%R_max(n_tht)            = stpts%RLimit_UpperOuterLeg ! this one is known - safer...
+      nwpts%Z_max(n_tht)            = stpts%ZLimit_UpperOuterLeg ! this one is known - safer...
       nwpts%RR_new(i_max+1,n_tht)   = stpts%RLimit_UpperOuterLeg ! this one is known - safer...
       nwpts%ZZ_new(i_max+1,n_tht)   = stpts%ZLimit_UpperOuterLeg ! this one is known - safer...
-      nwpts%R_max(1)  	            = stpts%RLimit_UpperInnerLeg ! this one is known - safer...
-      nwpts%Z_max(1)  	            = stpts%ZLimit_UpperInnerLeg ! this one is known - safer...
+      nwpts%R_max(1)                = stpts%RLimit_UpperInnerLeg ! this one is known - safer...
+      nwpts%Z_max(1)                = stpts%ZLimit_UpperInnerLeg ! this one is known - safer...
       nwpts%RR_new(i_max+1,1)       = stpts%RLimit_UpperInnerLeg ! this one is known - safer...
       nwpts%ZZ_new(i_max+1,1)       = stpts%ZLimit_UpperInnerLeg ! this one is known - safer...
     endif
     
     if (     ( (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) & 
        .and. ( (j .eq. n_tht_mid) .or. (j .eq. n_tht_mid+1) )            ) then
-      nwpts%R_max(n_tht_mid)	        = stpts%RLimit_UpperOuterLeg ! this one is known - safer...
-      nwpts%Z_max(n_tht_mid)	        = stpts%ZLimit_UpperOuterLeg ! this one is known - safer...
+      nwpts%R_max(n_tht_mid)            = stpts%RLimit_UpperOuterLeg ! this one is known - safer...
+      nwpts%Z_max(n_tht_mid)            = stpts%ZLimit_UpperOuterLeg ! this one is known - safer...
       nwpts%RR_new(i_max+1,n_tht_mid)   = stpts%RLimit_UpperOuterLeg ! this one is known - safer...
       nwpts%ZZ_new(i_max+1,n_tht_mid)   = stpts%ZLimit_UpperOuterLeg ! this one is known - safer...
-      nwpts%R_max(n_tht_mid+1)	        = stpts%RLimit_UpperInnerLeg ! this one is known - safer...
-      nwpts%Z_max(n_tht_mid+1)	        = stpts%ZLimit_UpperInnerLeg ! this one is known - safer...
+      nwpts%R_max(n_tht_mid+1)          = stpts%RLimit_UpperInnerLeg ! this one is known - safer...
+      nwpts%Z_max(n_tht_mid+1)          = stpts%ZLimit_UpperInnerLeg ! this one is known - safer...
       nwpts%RR_new(i_max+1,n_tht_mid+1) = stpts%RLimit_UpperInnerLeg ! this one is known - safer...
       nwpts%ZZ_new(i_max+1,n_tht_mid+1) = stpts%ZLimit_UpperInnerLeg ! this one is known - safer...
     endif
@@ -568,7 +568,7 @@ do i=1,4
     call find_R_surface(node_list,element_list,flux_list,i_surf,nwpts%R_min(n_start+j),i_elm_find,s_find,t_find,st_find,i_find)
 
     do k=1,i_find
-
+ 
       ! --- Readjust s,t (sometimes outside element after find_Z_surface and find_R_surface...)
       if (s_find(k) .lt. 0.d0) s_find(k) = 0.d0
       if (s_find(k) .gt. 1.d0) s_find(k) = 1.d0
@@ -576,8 +576,8 @@ do i=1,4
       if (t_find(k) .gt. 1.d0) t_find(k) = 1.d0
       
       call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k),&
-    		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-    		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if ( (xcase .eq. 1) .and. (ZZg1 .le. Z_xpoint(1)) ) exit
       if ( (xcase .eq. 2) .and. (ZZg1 .ge. Z_xpoint(2)) ) exit
@@ -632,12 +632,12 @@ if(tokamak_device(1:4) .eq. 'MAST') then
 
       do k=1,i_find
 
-  	call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k),&
-  		       RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,	&
-  		       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+        call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k),&
+                       RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                       ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-  	if ( (i .eq. 1) .and. (RRg1 .gt. R_xpoint(1)) ) exit
-  	if ( (i .eq. 2) .and. (RRg1 .gt. R_xpoint(2)) ) exit
+        if ( (i .eq. 1) .and. (RRg1 .gt. R_xpoint(1)) ) exit
+        if ( (i .eq. 2) .and. (RRg1 .gt. R_xpoint(2)) ) exit
 
       enddo
 
@@ -696,10 +696,10 @@ do i=1,4
         if(tokamak_device(1:4) .eq. 'MAST') then
           R_beg   = stpts%RRightCorn_UpperOuterLeg
           R_end   = stpts%RLimit_UpperOuterLeg
-	else
+        else
           Z_beg   = stpts%ZRightCorn_UpperOuterLeg
           Z_end   = stpts%ZLimit_UpperOuterLeg
-	endif
+        endif
         SIG_0   = SIG_up_leg_0
         SIG_1   = SIG_up_leg_1
       else
@@ -752,8 +752,8 @@ do i=1,4
       if (t_find(k) .gt. 1.d0) t_find(k) = 1.d0
       
       call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k),&
-    		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-    		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if   ( (xcase .eq. 2) .and. (i .eq. 1) .and. (RRg1 .le. R_xpoint(2)) ) exit
       if   ( (xcase .eq. 2) .and. (i .eq. 2) .and. (RRg1 .ge. R_xpoint(2)) ) exit
@@ -886,8 +886,8 @@ do i=1,4
       if (t_find(k) .gt. 1.d0) t_find(k) = 1.d0
       
       call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k),&
-    		     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-    		     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                     RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                     ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
       
       if ( (xcase .eq. 1) .and. (ZZg1 .le. Z_xpoint(1)) ) exit
       if ( (xcase .eq. 2) .and. (ZZg1 .ge. Z_xpoint(2)) ) exit
@@ -987,22 +987,22 @@ if(xcase .ne. 2) then
     if ( (j .le. n_leg) .or. (tokamak_device(1:4) .ne. 'MAST') ) then
       nwpts%R_polar(1,1,n_start+j) = nwpts%R_min(n_start+j)
       nwpts%R_polar(1,4,n_start+j) = delta * nwpts%R_min(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +	      nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +         nwpts%R_polar(1,4,n_start+j) ) / 3.d0
       nwpts%R_polar(1,3,n_start+j) = (        nwpts%R_polar(1,1,n_start+j)  +  2.d0 * nwpts%R_polar(1,4,n_start+j) ) / 3.d0
 
       nwpts%Z_polar(1,1,n_start+j) = nwpts%Z_min(n_start+j)
       nwpts%Z_polar(1,4,n_start+j) = delta * nwpts%Z_min(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +	      nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +         nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
       nwpts%Z_polar(1,3,n_start+j) = (        nwpts%Z_polar(1,1,n_start+j)  +  2.d0 * nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
 
       nwpts%R_polar(3,1,n_start+j) = nwpts%R_max(n_start+j)
       nwpts%R_polar(3,4,n_start+j) = delta * nwpts%R_max(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +	      nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +         nwpts%R_polar(3,4,n_start+j) ) / 3.d0
       nwpts%R_polar(3,3,n_start+j) = (        nwpts%R_polar(3,1,n_start+j)  +  2.d0 * nwpts%R_polar(3,4,n_start+j) ) / 3.d0
 
       nwpts%Z_polar(3,1,n_start+j) = nwpts%Z_max(n_start+j)
       nwpts%Z_polar(3,4,n_start+j) = delta * nwpts%Z_max(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +	      nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +         nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
       nwpts%Z_polar(3,3,n_start+j) = (        nwpts%Z_polar(3,1,n_start+j)  +  2.d0 * nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
 
       nwpts%R_polar(2,1,n_start+j) = nwpts%R_polar(1,4,n_start+j)
@@ -1017,22 +1017,22 @@ if(xcase .ne. 2) then
     else
       nwpts%R_polar(1,1,n_start+j) = nwpts%R_min(n_start+j)
       nwpts%R_polar(1,4,n_start+j) = delta * nwpts%R_min(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +	     nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +        nwpts%R_polar(1,4,n_start+j) ) / 3.d0
       nwpts%R_polar(1,3,n_start+j) = (        nwpts%R_polar(1,1,n_start+j)  +  2.d0 * nwpts%R_polar(1,4,n_start+j) ) / 3.d0
 
       nwpts%Z_polar(1,1,n_start+j) = nwpts%Z_min(n_start+j)
       nwpts%Z_polar(1,4,n_start+j) = delta * nwpts%Z_min(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +	     nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +        nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
       nwpts%Z_polar(1,3,n_start+j) = (        nwpts%Z_polar(1,1,n_start+j)  +  2.d0 * nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
 
       nwpts%R_polar(3,1,n_start+j) = nwpts%R_wall(j-n_leg)
       nwpts%R_polar(3,4,n_start+j) = delta * nwpts%R_wall(j-n_leg) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +	     nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +        nwpts%R_polar(3,4,n_start+j) ) / 3.d0
       nwpts%R_polar(3,3,n_start+j) = (        nwpts%R_polar(3,1,n_start+j)  +  2.d0 * nwpts%R_polar(3,4,n_start+j) ) / 3.d0
 
       nwpts%Z_polar(3,1,n_start+j) = nwpts%Z_wall(j-n_leg)
       nwpts%Z_polar(3,4,n_start+j) = delta * nwpts%Z_wall(j-n_leg) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +	     nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +        nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
       nwpts%Z_polar(3,3,n_start+j) = (        nwpts%Z_polar(3,1,n_start+j)  +  2.d0 * nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
 
       nwpts%R_polar(2,1,n_start+j) = nwpts%R_polar(1,4,n_start+j)
@@ -1043,16 +1043,16 @@ if(xcase .ne. 2) then
       nwpts%Z_polar(2,1,n_start+j) = nwpts%Z_polar(1,4,n_start+j)
       nwpts%Z_polar(2,4,n_start+j) = nwpts%Z_polar(3,4,n_start+j)
       nwpts%Z_polar(2,2,n_start+j) = ( nwpts%Z_polar(2,1,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0
-      nwpts%Z_polar(2,3,n_start+j) = ( nwpts%Z_polar(2,4,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0	 
+      nwpts%Z_polar(2,3,n_start+j) = ( nwpts%Z_polar(2,4,n_start+j) +  2.d0 * nwpts%Z_sep(n_start+j) ) / 3.d0    
 
       nwpts%R_polar(4,1,n_start+j) = nwpts%R_max(n_start+j)
       nwpts%R_polar(4,4,n_start+j) = nwpts%R_wall(j-n_leg)
-      nwpts%R_polar(4,2,n_start+j) = ( 2.d0 * nwpts%R_polar(4,1,n_start+j)  +	     nwpts%R_polar(4,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(4,2,n_start+j) = ( 2.d0 * nwpts%R_polar(4,1,n_start+j)  +        nwpts%R_polar(4,4,n_start+j) ) / 3.d0
       nwpts%R_polar(4,3,n_start+j) = (        nwpts%R_polar(4,1,n_start+j)  +  2.d0 * nwpts%R_polar(4,4,n_start+j) ) / 3.d0
 
       nwpts%Z_polar(4,1,n_start+j) = nwpts%Z_max(n_start+j)
       nwpts%Z_polar(4,4,n_start+j) = nwpts%Z_wall(j-n_leg)
-      nwpts%Z_polar(4,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(4,1,n_start+j)  +	     nwpts%Z_polar(4,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(4,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(4,1,n_start+j)  +        nwpts%Z_polar(4,4,n_start+j) ) / 3.d0
       nwpts%Z_polar(4,3,n_start+j) = (        nwpts%Z_polar(4,1,n_start+j)  +  2.d0 * nwpts%Z_polar(4,4,n_start+j) ) / 3.d0
     endif
 
@@ -1072,22 +1072,22 @@ if(xcase .ne. 1) then
     if ( (j .le. n_up_leg) .or. (tokamak_device(1:4) .ne. 'MAST') ) then
       nwpts%R_polar(1,1,n_start+j) = nwpts%R_min(n_start+j)
       nwpts%R_polar(1,4,n_start+j) = delta * nwpts%R_min(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +	      nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +         nwpts%R_polar(1,4,n_start+j) ) / 3.d0
       nwpts%R_polar(1,3,n_start+j) = (        nwpts%R_polar(1,1,n_start+j)  +  2.d0 * nwpts%R_polar(1,4,n_start+j) ) / 3.d0
 
       nwpts%Z_polar(1,1,n_start+j) = nwpts%Z_min(n_start+j)
       nwpts%Z_polar(1,4,n_start+j) = delta * nwpts%Z_min(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +	      nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +         nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
       nwpts%Z_polar(1,3,n_start+j) = (        nwpts%Z_polar(1,1,n_start+j)  +  2.d0 * nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
 
       nwpts%R_polar(3,1,n_start+j) = nwpts%R_max(n_start+j)
       nwpts%R_polar(3,4,n_start+j) = delta * nwpts%R_max(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +	      nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +         nwpts%R_polar(3,4,n_start+j) ) / 3.d0
       nwpts%R_polar(3,3,n_start+j) = (        nwpts%R_polar(3,1,n_start+j)  +  2.d0 * nwpts%R_polar(3,4,n_start+j) ) / 3.d0
 
       nwpts%Z_polar(3,1,n_start+j) = nwpts%Z_max(n_start+j)
       nwpts%Z_polar(3,4,n_start+j) = delta * nwpts%Z_max(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +	      nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +         nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
       nwpts%Z_polar(3,3,n_start+j) = (        nwpts%Z_polar(3,1,n_start+j)  +  2.d0 * nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
 
       nwpts%R_polar(2,1,n_start+j) = nwpts%R_polar(1,4,n_start+j)
@@ -1102,22 +1102,22 @@ if(xcase .ne. 1) then
     else
       nwpts%R_polar(1,1,n_start+j) = nwpts%R_min(n_start+j)
       nwpts%R_polar(1,4,n_start+j) = delta * nwpts%R_min(n_start+j) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +	      nwpts%R_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(1,2,n_start+j) = ( 2.d0 * nwpts%R_polar(1,1,n_start+j)  +         nwpts%R_polar(1,4,n_start+j) ) / 3.d0
       nwpts%R_polar(1,3,n_start+j) = (        nwpts%R_polar(1,1,n_start+j)  +  2.d0 * nwpts%R_polar(1,4,n_start+j) ) / 3.d0
 
       nwpts%Z_polar(1,1,n_start+j) = nwpts%Z_min(n_start+j)
       nwpts%Z_polar(1,4,n_start+j) = delta * nwpts%Z_min(n_start+j) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +	      nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(1,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(1,1,n_start+j)  +         nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
       nwpts%Z_polar(1,3,n_start+j) = (        nwpts%Z_polar(1,1,n_start+j)  +  2.d0 * nwpts%Z_polar(1,4,n_start+j) ) / 3.d0
 
       nwpts%R_polar(3,1,n_start+j) = nwpts%R_wall(j-n_up_leg+n_leg)
       nwpts%R_polar(3,4,n_start+j) = delta * nwpts%R_wall(j-n_up_leg+n_leg) + (1.d0 - delta) * nwpts%R_sep(n_start+j)
-      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +	      nwpts%R_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(3,2,n_start+j) = ( 2.d0 * nwpts%R_polar(3,1,n_start+j)  +         nwpts%R_polar(3,4,n_start+j) ) / 3.d0
       nwpts%R_polar(3,3,n_start+j) = (        nwpts%R_polar(3,1,n_start+j)  +  2.d0 * nwpts%R_polar(3,4,n_start+j) ) / 3.d0
 
       nwpts%Z_polar(3,1,n_start+j) = nwpts%Z_wall(j-n_up_leg+n_leg)
       nwpts%Z_polar(3,4,n_start+j) = delta * nwpts%Z_wall(j-n_up_leg+n_leg) + (1.d0 - delta) * nwpts%Z_sep(n_start+j)
-      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +	      nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(3,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(3,1,n_start+j)  +         nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
       nwpts%Z_polar(3,3,n_start+j) = (        nwpts%Z_polar(3,1,n_start+j)  +  2.d0 * nwpts%Z_polar(3,4,n_start+j) ) / 3.d0
 
       nwpts%R_polar(2,1,n_start+j) = nwpts%R_polar(1,4,n_start+j)
@@ -1132,12 +1132,12 @@ if(xcase .ne. 1) then
 
       nwpts%R_polar(4,1,n_start+j) = nwpts%R_max(n_start+j)
       nwpts%R_polar(4,4,n_start+j) = nwpts%R_wall(j-n_up_leg+n_leg)
-      nwpts%R_polar(4,2,n_start+j) = ( 2.d0 * nwpts%R_polar(4,1,n_start+j)  +	      nwpts%R_polar(4,4,n_start+j) ) / 3.d0
+      nwpts%R_polar(4,2,n_start+j) = ( 2.d0 * nwpts%R_polar(4,1,n_start+j)  +         nwpts%R_polar(4,4,n_start+j) ) / 3.d0
       nwpts%R_polar(4,3,n_start+j) = (        nwpts%R_polar(4,1,n_start+j)  +  2.d0 * nwpts%R_polar(4,4,n_start+j) ) / 3.d0
 
       nwpts%Z_polar(4,1,n_start+j) = nwpts%Z_max(n_start+j)
       nwpts%Z_polar(4,4,n_start+j) = nwpts%Z_wall(j-n_up_leg+n_leg)
-      nwpts%Z_polar(4,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(4,1,n_start+j)  +	      nwpts%Z_polar(4,4,n_start+j) ) / 3.d0
+      nwpts%Z_polar(4,2,n_start+j) = ( 2.d0 * nwpts%Z_polar(4,1,n_start+j)  +         nwpts%Z_polar(4,4,n_start+j) ) / 3.d0
       nwpts%Z_polar(4,3,n_start+j) = (        nwpts%Z_polar(4,1,n_start+j)  +  2.d0 * nwpts%Z_polar(4,4,n_start+j) ) / 3.d0
     endif
 
@@ -1208,15 +1208,15 @@ nwpts%k_cross(1,:) = 1
 do i=1,n_flux+n_open
   do j=1, n_tht
     
-    do k=1,3	 ! 3 line pieces per coordinate line
+    do k=1,3     ! 3 line pieces per coordinate line
 
       R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
-        	   nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
+                   nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
       Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
-        	   nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
+                   nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
       call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-        	      nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
+                      nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
       ! --- Readjust to make sure we are inside element.
       if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
         if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1227,7 +1227,7 @@ do i=1,n_flux+n_open
                        RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
                        ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
         nwpts%RR_new(i+1,j) = RRg1
-	nwpts%ZZ_new(i+1,j) = ZZg1
+        nwpts%ZZ_new(i+1,j) = ZZg1
       endif
       
       if (ifail .eq. 0) then
@@ -1265,15 +1265,15 @@ if (xcase .eq. 3) then
     endif
     do j=n_start, n_loop
       
-      do k=1,3	   ! 3 line pieces per coordinate line
+      do k=1,3     ! 3 line pieces per coordinate line
 
-  	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
-  		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
-  	Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
-  		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
+        R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
+                     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
+        Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
+                     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
-  	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-  			nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
+        call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
+                        nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1281,16 +1281,16 @@ if (xcase .eq. 3) then
           if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
           if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
           call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
-        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                         RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                         ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
           nwpts%RR_new(i+1,j) = RRg1
-      	  nwpts%ZZ_new(i+1,j) = ZZg1
+          nwpts%ZZ_new(i+1,j) = ZZg1
         endif
 
-  	if (ifail .eq. 0) then
-  	  nwpts%k_cross(i+1,j) = k
-  	  exit
-  	endif
+        if (ifail .eq. 0) then
+          nwpts%k_cross(i+1,j) = k
+          exit
+        endif
 
       enddo
 
@@ -1305,7 +1305,7 @@ if (xcase .eq. 3) then
           write(*,'(A,I6,I6,I6,F20.10)') ' WARNING node not found for central grid (without legs) : ',ifail,i,j,theta_sep(j)
         endif
       endif
-  	
+        
     enddo
   enddo
 endif
@@ -1314,15 +1314,15 @@ endif
 if(xcase .ne. 3) then
   do i=n_flux,n_psi-1          ! With the private parts
     do j=n_tht+1, n_tht_2
-      do k=1,4	    ! 3 line pieces per coordinate line (4 for MAST)
+      do k=1,4      ! 3 line pieces per coordinate line (4 for MAST)
 
-    	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
-    		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
-    	Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
-    		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
+        R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
+                     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
+        Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
+                     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
-    	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
+        call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
+                           nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1330,16 +1330,16 @@ if(xcase .ne. 3) then
           if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
           if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
           call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
-        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                         RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                         ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
           nwpts%RR_new(i+1,j) = RRg1
-      	  nwpts%ZZ_new(i+1,j) = ZZg1
+          nwpts%ZZ_new(i+1,j) = ZZg1
         endif
 
-    	if (ifail .eq. 0) then
-    	  nwpts%k_cross(i+1,j) = k
-    	  exit
-    	endif
+        if (ifail .eq. 0) then
+          nwpts%k_cross(i+1,j) = k
+          exit
+        endif
 
       enddo
 
@@ -1368,15 +1368,15 @@ else
       n_loop  = n_tht_2-2*n_up_leg
     endif
     do j=n_start,n_loop
-      do k=1,4	    ! 3 line pieces per coordinate line (4 for MAST)
+      do k=1,4      ! 3 line pieces per coordinate line (4 for MAST)
 
-    	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
-    		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
-    	Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
-    		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
+        R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
+                     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
+        Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
+                     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
-    	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
+        call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
+                           nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1384,16 +1384,16 @@ else
           if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
           if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
           call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
-        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                         RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                         ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
           nwpts%RR_new(i+1,j) = RRg1
-      	  nwpts%ZZ_new(i+1,j) = ZZg1
+          nwpts%ZZ_new(i+1,j) = ZZg1
         endif
 
-    	if (ifail .eq. 0) then
-    	  nwpts%k_cross(i+1,j) = k
-    	  exit
-    	endif
+        if (ifail .eq. 0) then
+          nwpts%k_cross(i+1,j) = k
+          exit
+        endif
 
       enddo
 
@@ -1404,18 +1404,18 @@ else
   do i=n_flux+n_open,n_psi-n_private-n_up_priv-1          ! Outer/Inner parts
     do j=n_tht+1, n_tht_2
       if (      (i .gt. n_flux+n_open+n_outer) .and. (i .gt. n_flux+n_open)                                             &
-          .and. ( (j .gt. n_tht+2*n_leg+n_up_leg) .or. ( (j .gt. n_tht+n_leg)   .and. (j .le. n_tht+2*n_leg) )	        ) ) cycle
+          .and. ( (j .gt. n_tht+2*n_leg+n_up_leg) .or. ( (j .gt. n_tht+n_leg)   .and. (j .le. n_tht+2*n_leg) )          ) ) cycle
       if (       (i .le. n_flux+n_open+n_outer) .and. (i .gt. n_flux+n_open)                                            &
-          .and. ( (j .le. n_tht+n_leg)	          .or. ( (j .gt. n_tht+2*n_leg) .and. (j .le. n_tht+2*n_leg+n_up_leg) ) ) ) cycle
-      do k=1,4	    ! 3 line pieces per coordinate line (4 for MAST)
+          .and. ( (j .le. n_tht+n_leg)            .or. ( (j .gt. n_tht+2*n_leg) .and. (j .le. n_tht+2*n_leg+n_up_leg) ) ) ) cycle
+      do k=1,4      ! 3 line pieces per coordinate line (4 for MAST)
 
-    	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
-    		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
-    	Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
-    		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
+        R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
+                     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
+        Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
+                     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
-    	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
+        call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
+                           nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1423,16 +1423,16 @@ else
           if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
           if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
           call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
-        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                         RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                         ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
           nwpts%RR_new(i+1,j) = RRg1
-      	  nwpts%ZZ_new(i+1,j) = ZZg1
+          nwpts%ZZ_new(i+1,j) = ZZg1
         endif
 
-    	if (ifail .eq. 0) then
-    	  nwpts%k_cross(i+1,j) = k
-    	  exit
-    	endif
+        if (ifail .eq. 0) then
+          nwpts%k_cross(i+1,j) = k
+          exit
+        endif
 
       enddo
 
@@ -1452,15 +1452,15 @@ else
   enddo
   do i=n_psi-n_private-n_up_priv,n_psi-n_up_priv-1          ! Lower private
     do j=n_tht+1, n_tht_2-2*n_up_leg
-      do k=1,4	    ! 3 line pieces per coordinate line (4 for MAST)
+      do k=1,4      ! 3 line pieces per coordinate line (4 for MAST)
 
-    	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
-    		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
-    	Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
-    		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
+        R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
+                     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
+        Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
+                     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
-    	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
+        call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
+                           nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1468,16 +1468,16 @@ else
           if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
           if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
           call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
-        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                         RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                         ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
           nwpts%RR_new(i+1,j) = RRg1
-      	  nwpts%ZZ_new(i+1,j) = ZZg1
+          nwpts%ZZ_new(i+1,j) = ZZg1
         endif
 
-    	if (ifail .eq. 0) then
-    	  nwpts%k_cross(i+1,j) = k
-    	  exit
-    	endif
+        if (ifail .eq. 0) then
+          nwpts%k_cross(i+1,j) = k
+          exit
+        endif
 
       enddo
 
@@ -1497,15 +1497,15 @@ else
   enddo
   do i=n_psi-n_up_priv,n_psi-1          !Upper private 
     do j=n_tht+2*n_leg+1, n_tht_2
-      do k=1,4	    ! 3 line pieces per coordinate line (4 for MAST)
+      do k=1,4      ! 3 line pieces per coordinate line (4 for MAST)
 
-    	R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
-    		     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
-    	Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
-    		     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
+        R_cub1d = (/ nwpts%R_polar(k,1,j), 3.d0/2.d0 *(nwpts%R_polar(k,2,j)-nwpts%R_polar(k,1,j)), &
+                     nwpts%R_polar(k,4,j), 3.d0/2.d0 *(nwpts%R_polar(k,4,j)-nwpts%R_polar(k,3,j))  /)
+        Z_cub1d = (/ nwpts%Z_polar(k,1,j), 3.d0/2.d0 *(nwpts%Z_polar(k,2,j)-nwpts%Z_polar(k,1,j)), &
+                     nwpts%Z_polar(k,4,j), 3.d0/2.d0 *(nwpts%Z_polar(k,4,j)-nwpts%Z_polar(k,3,j)) /)
 
-    	call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-    			   nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
+        call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
+                           nwpts%RR_new(i+1,j),nwpts%ZZ_new(i+1,j),nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),nwpts%t_tht(i+1,j),ifail,.false.)
         ! --- Readjust to make sure we are inside element.
         if ( (nwpts%s_flux(i+1,j) .lt. 0.d0) .or. (nwpts%s_flux(i+1,j) .gt. 1.d0) .or. (nwpts%t_flux(i+1,j) .lt. 0.d0) .or. (nwpts%t_flux(i+1,j) .gt. 1.d0) ) then
           if (nwpts%s_flux(i+1,j) .lt. 0.d0) nwpts%s_flux(i+1,j) = 0.d0
@@ -1513,16 +1513,16 @@ else
           if (nwpts%t_flux(i+1,j) .lt. 0.d0) nwpts%t_flux(i+1,j) = 0.d0
           if (nwpts%t_flux(i+1,j) .gt. 1.d0) nwpts%t_flux(i+1,j) = 1.d0
           call interp_RZ(node_list,element_list,nwpts%ielm_flux(i+1,j),nwpts%s_flux(i+1,j),nwpts%t_flux(i+1,j),&
-        		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
-        		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                         RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
+                         ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
           nwpts%RR_new(i+1,j) = RRg1
-      	  nwpts%ZZ_new(i+1,j) = ZZg1
+          nwpts%ZZ_new(i+1,j) = ZZg1
         endif
 
-    	if (ifail .eq. 0) then
-    	  nwpts%k_cross(i+1,j) = k
-    	  exit
-    	endif
+        if (ifail .eq. 0) then
+          nwpts%k_cross(i+1,j) = k
+          exit
+        endif
 
       enddo
 
@@ -1548,10 +1548,10 @@ endif
 !----------------------------------- Print a python file that plots the bound points
 if (plot_grid) then
   open(100,file='plot_bound_points.py')
-    write(100,'(A)')	     '#!/usr/bin/env python'
-    write(100,'(A)')	     'import numpy as N'
-    write(100,'(A)')	     'import pylab'
-    write(100,'(A)')	     'def main():'
+    write(100,'(A)')         '#!/usr/bin/env python'
+    write(100,'(A)')         'import numpy as N'
+    write(100,'(A)')         'import pylab'
+    write(100,'(A)')         'def main():'
     write(100,'(A,i6,A)')     ' r = N.zeros(',2*n_tht_2+2*n_leg+2*n_up_leg,')'
     write(100,'(A,i6,A)')     ' z = N.zeros(',2*n_tht_2+2*n_leg+2*n_up_leg,')'
     do j=1,n_tht_2
@@ -1571,21 +1571,21 @@ if (plot_grid) then
       write(100,'(A,i6,A,f15.4)') ' z[',2*n_tht_2+2*n_leg+j-1,'] = ',nwpts%Z_min(2*n_leg+j)
     enddo
     write(100,'(A,i6,A)')     ' for i in range (0,',2*n_tht_2+2*n_leg+2*n_up_leg,'):'
-    write(100,'(A)')	     '  pylab.plot(r[i:i+1],z[i:i+1], "r.")'
-    write(100,'(A)')	     ' pylab.axis("equal")'
-    write(100,'(A)')	     ' pylab.show()'
-    write(100,'(A)')	     ' '
-    write(100,'(A)')	     'main()'
+    write(100,'(A)')         '  pylab.plot(r[i:i+1],z[i:i+1], "r.")'
+    write(100,'(A)')         ' pylab.axis("equal")'
+    write(100,'(A)')         ' pylab.show()'
+    write(100,'(A)')         ' '
+    write(100,'(A)')         'main()'
   close(100)
 endif
 
 !----------------------------------- Print a python file that plots the extrapolation points
 if (plot_grid) then
   open(101,file='plot_extra_points.py')
-    write(101,'(A)')	     '#!/usr/bin/env python'
-    write(101,'(A)')	     'import numpy as N'
-    write(101,'(A)')	     'import pylab'
-    write(101,'(A)')	     'def main():'
+    write(101,'(A)')         '#!/usr/bin/env python'
+    write(101,'(A)')         'import numpy as N'
+    write(101,'(A)')         'import pylab'
+    write(101,'(A)')         'def main():'
     write(101,'(A,i6,A)')     ' r = N.zeros(',3*n_tht_2,')'
     write(101,'(A,i6,A)')     ' z = N.zeros(',3*n_tht_2,')'
     do j=1,n_tht
@@ -1605,22 +1605,22 @@ if (plot_grid) then
       write(101,'(A,i6,A,f15.4)') ' z[',3*(j-1)+2,'] = ',nwpts%Z_max(j)
     enddo
     write(101,'(A,i6,A)')     ' for i in range (0,',n_tht_2,'):'
-    write(101,'(A)')	     '  pylab.plot(r[3*i:3*i+3],z[3*i:3*i+3], "r")'
-    write(101,'(A)')	     '  pylab.plot(r[3*i:3*i+3],z[3*i:3*i+3], "r+")'
-    write(101,'(A)')	     ' pylab.axis("equal")'
-    write(101,'(A)')	     ' pylab.show()'
-    write(101,'(A)')	     ' '
-    write(101,'(A)')	     'main()'
+    write(101,'(A)')         '  pylab.plot(r[3*i:3*i+3],z[3*i:3*i+3], "r")'
+    write(101,'(A)')         '  pylab.plot(r[3*i:3*i+3],z[3*i:3*i+3], "r+")'
+    write(101,'(A)')         ' pylab.axis("equal")'
+    write(101,'(A)')         ' pylab.show()'
+    write(101,'(A)')         ' '
+    write(101,'(A)')         'main()'
   close(101)
 endif
 
 !----------------------------------- Print a python file that plots the new grid points
 if (plot_grid) then
   open(102,file='plot_new_points.py')
-    write(102,'(A)')	    '#!/usr/bin/env python'
-    write(102,'(A)')	    'import numpy as N'
-    write(102,'(A)')	    'import pylab'
-    write(102,'(A)')	    'def main():'
+    write(102,'(A)')        '#!/usr/bin/env python'
+    write(102,'(A)')        'import numpy as N'
+    write(102,'(A)')        'import pylab'
+    write(102,'(A)')        'def main():'
     write(102,'(A,i6,A)')     ' r = N.zeros(',(n_psi)*n_tht_2,')'
     write(102,'(A,i6,A)')     ' z = N.zeros(',(n_psi)*n_tht_2,')'
     do i=1,n_psi
@@ -1630,10 +1630,10 @@ if (plot_grid) then
       enddo
     enddo
     write(102,'(A,i6,A,i6,A)')' pylab.plot(r[0:',(n_psi)*n_tht_2,'],z[0:',(n_psi)*n_tht_2,'], "r.")'
-    write(102,'(A)')	    ' pylab.axis("equal")'
-    write(102,'(A)')	    ' pylab.show()'
-    write(102,'(A)')	    ' '
-    write(102,'(A)')	    'main()'
+    write(102,'(A)')        ' pylab.axis("equal")'
+    write(102,'(A)')        ' pylab.show()'
+    write(102,'(A)')        ' '
+    write(102,'(A)')        'main()'
   close(102)
 endif
 

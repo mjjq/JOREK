@@ -97,7 +97,7 @@ SIG_up_leg_0 = sigmas(10); SIG_up_leg_1 = sigmas(11)
 n_flux    = n_grids(1);  n_tht        = n_grids(2)
 n_open    = n_grids(3);  n_outer      = n_grids(4); n_inner = n_grids(5)
 n_private = n_grids(6);  n_up_priv    = n_grids(7)
-n_leg	  = n_grids(8);  n_up_leg     = n_grids(9)
+n_leg     = n_grids(8);  n_up_leg     = n_grids(9)
 n_leg_out = n_grids(10); n_up_leg_out = n_grids(11)
 
 nwpts%k_cross = 0
@@ -600,7 +600,7 @@ do i=1,n_surf_tot
       nwpts%R_polar(k,1:4,j) = R_polar_smooth(k,1:4,j)
       nwpts%Z_polar(k,1:4,j) = Z_polar_smooth(k,1:4,j)
     enddo
-    do k=1,3	 ! 3 line pieces per coordinate line
+    do k=1,3     ! 3 line pieces per coordinate line
 
       call from_polar_to_cubic(R_polar_smooth(k,1:4,j),R_cub1d)
       call from_polar_to_cubic(Z_polar_smooth(k,1:4,j),Z_cub1d)
@@ -720,25 +720,25 @@ write(*,*) '                 Defining new nodes'
 ! THIS ADDS FOUR NODES AT EACH XPOINTS, PLEASE SEE create_x_node FOR MORE DETAILS
 if (xcase .eq. 1) then
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
 endif 
 if (xcase .eq. 2) then
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
 endif 
 if ( (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) then ! Put lower Xpoint first
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
 endif 
 if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) then ! Put upper Xpoint first
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
 endif 
-index = newnode_list%n_nodes	     
+index = newnode_list%n_nodes
 
 
 

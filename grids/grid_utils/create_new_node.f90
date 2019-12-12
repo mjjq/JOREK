@@ -28,19 +28,19 @@ real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
   m = nwpts%k_cross(i2,j2)
   
   R_cub1d = (/ nwpts%R_polar(m,1,j2), 3.d0/2.d0 *(nwpts%R_polar(m,2,j2)-nwpts%R_polar(m,1,j2)), &
-  	       nwpts%R_polar(m,4,j2), 3.d0/2.d0 *(nwpts%R_polar(m,4,j2)-nwpts%R_polar(m,3,j2))  /)
+               nwpts%R_polar(m,4,j2), 3.d0/2.d0 *(nwpts%R_polar(m,4,j2)-nwpts%R_polar(m,3,j2))  /)
   Z_cub1d = (/ nwpts%Z_polar(m,1,j2), 3.d0/2.d0 *(nwpts%Z_polar(m,2,j2)-nwpts%Z_polar(m,1,j2)), &
-  	       nwpts%Z_polar(m,4,j2), 3.d0/2.d0 *(nwpts%Z_polar(m,4,j2)-nwpts%Z_polar(m,3,j2)) /)
+               nwpts%Z_polar(m,4,j2), 3.d0/2.d0 *(nwpts%Z_polar(m,4,j2)-nwpts%Z_polar(m,3,j2)) /)
   
   call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),nwpts%t_tht(i2,j2),tmp1, dR_dt)
   call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),nwpts%t_tht(i2,j2),tmp2, dZ_dt)
 
   call interp_RZ(node_list,element_list,nwpts%ielm_flux(i2,j2),nwpts%s_flux(i2,j2),nwpts%t_flux(i2,j2), &
-  		 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
-  		 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
+                 RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
+                 ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
   call interp(node_list,element_list,nwpts%ielm_flux(i2,j2),1,1,nwpts%s_flux(i2,j2),nwpts%t_flux(i2,j2),&
-  		 PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
+                 PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
 
   RZ_jac  = DRRg1_dr * dZZg1_ds - dRRg1_ds * dZZg1_dr
   

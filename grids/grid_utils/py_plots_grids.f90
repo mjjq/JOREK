@@ -53,13 +53,13 @@ subroutine print_py_plot_prepare_plot(filename)
   implicit none
   
   ! --- Routine parameters
-  character*256,            intent(in)		:: filename
+  character*256,            intent(in)          :: filename
   
   open(101,file=filename)
-    write(101,'(A)')			      '#!/usr/bin/env python'
-    write(101,'(A)')			      'import numpy as N'
-    write(101,'(A)')			      'import pylab'
-    write(101,'(A)')			      'def main():'
+    write(101,'(A)')                          '#!/usr/bin/env python'
+    write(101,'(A)')                          'import numpy as N'
+    write(101,'(A)')                          'import pylab'
+    write(101,'(A)')                          'def main():'
   close(101)
 
 
@@ -94,13 +94,13 @@ subroutine print_py_plot_finish_plot(filename)
   implicit none
   
   ! --- Routine parameters
-  character*256,            intent(in)		:: filename
+  character*256,            intent(in)          :: filename
   
   open(101,file=filename,position='append')
-    write(101,'(A)')			      ' pylab.axis("equal")'
-    write(101,'(A)')			      ' pylab.show()'
-    write(101,'(A)')			      ' '
-    write(101,'(A)')			      'main()'
+    write(101,'(A)')                          ' pylab.axis("equal")'
+    write(101,'(A)')                          ' pylab.show()'
+    write(101,'(A)')                          ' '
+    write(101,'(A)')                          'main()'
   close(101)
 
 
@@ -143,12 +143,12 @@ subroutine print_py_plot_unordered_flux_surfaces(filename, node_list, element_li
   integer,                  intent(in) :: i_surf
   
   ! --- Internal variables
-  integer	:: i, j, k, n_sub
-  integer	:: i_elm
-  integer	:: i_start, i_stop
-  real*8	:: rr,    ss
-  real*8	:: R, dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
-  real*8	:: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
+  integer       :: i, j, k, n_sub
+  integer       :: i_elm
+  integer       :: i_start, i_stop
+  real*8        :: rr,    ss
+  real*8        :: R, dRR_dr, dRR_ds, dRR_drs, dRR_drr, dRR_dss
+  real*8        :: Z, dZZ_dr, dZZ_ds, dZZ_drs, dZZ_drr, dZZ_dss
   real*8        :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2
   real*8        :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
   real*8        :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
@@ -185,16 +185,16 @@ subroutine print_py_plot_unordered_flux_surfaces(filename, node_list, element_li
         dZZg1_dt = dZZg1_dr * drr1 + dZZg1_ds * dss1
         dRRg2_dt = dRRg2_dr * drr2 + dRRg2_ds * dss2
         dZZg2_dt = dZZg2_dr * drr2 + dZZg2_ds * dss2
-  	  
+          
         do k=1,n_sub
           rr = 2.d0 * real(k-1)/real(n_sub-1) - 1.d0
           call CUB1D(RRg1, dRRg1_dt, RRg2, dRRg2_dt, rr, R, dRR_dr)
           call CUB1D(ZZg1, dZZg1_dt, ZZg2, dZZg2_dt, rr, Z, dZZ_dr)
           
-  	  write(101,'(A,i2,A,f15.4)')         ' rplot[',k-1,'] = ',R
-  	  write(101,'(A,i2,A,f15.4)')         ' zplot[',k-1,'] = ',Z
+          write(101,'(A,i2,A,f15.4)')         ' rplot[',k-1,'] = ',R
+          write(101,'(A,i2,A,f15.4)')         ' zplot[',k-1,'] = ',Z
         enddo
-  	write(101,'(A)')                      ' pylab.plot(rplot,zplot, "r")'
+        write(101,'(A)')                      ' pylab.plot(rplot,zplot, "r")'
       enddo
     enddo
   close(101)
@@ -232,18 +232,18 @@ subroutine print_py_plot_ordered_flux_surfaces(filename, node_list, element_list
   implicit none
   
   ! --- Routine parameters
-  character*256,            intent(in)		:: filename
-  type (type_node_list),    intent(in)		:: node_list
-  type (type_element_list), intent(in)		:: element_list
-  type (type_surface_list), intent(in)		:: surface_list
-  character*1,              intent(in)		:: colour
-  logical,                  intent(in)		:: dashed
+  character*256,            intent(in)          :: filename
+  type (type_node_list),    intent(in)          :: node_list
+  type (type_element_list), intent(in)          :: element_list
+  type (type_surface_list), intent(in)          :: surface_list
+  character*1,              intent(in)          :: colour
+  logical,                  intent(in)          :: dashed
   
   ! --- Internal variables
-  integer	:: i, j, k, l, n_sub, count
-  integer	:: i_elm
-  real*8	:: st, rr, ss, dr_flux, ds_flux
-  real*8	:: R, Z
+  integer       :: i, j, k, l, n_sub, count
+  integer       :: i_elm
+  real*8        :: st, rr, ss, dr_flux, ds_flux
+  real*8        :: R, Z
   real*8        :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2
   
   n_sub = 2 ! minimum 2
@@ -316,10 +316,10 @@ subroutine print_py_plot_wall(filename)
   implicit none
   
   ! --- Routine parameters
-  character*256,            intent(in)		:: filename
+  character*256,            intent(in)          :: filename
   
   ! --- Internal variables
-  integer	:: i
+  integer       :: i
   
   open(101,file=filename,position='append')
     write  (101,'(A,i8,A)')                                             ' r_points = N.zeros(',n_limiter,')'
@@ -369,18 +369,18 @@ subroutine print_py_plot_points(filename, n_points, R_points, Z_points)
   implicit none
   
   ! --- Routine parameters
-  character*256,            intent(in)		:: filename
-  integer,                  intent(in)		:: n_points
-  real*8,                   intent(in)		:: R_points(n_points), Z_points(n_points)
+  character*256,            intent(in)          :: filename
+  integer,                  intent(in)          :: n_points
+  real*8,                   intent(in)          :: R_points(n_points), Z_points(n_points)
   
   ! --- Internal variables
-  integer	:: i
+  integer       :: i
   
   open(101,file=filename,position='append')
     do i=1,n_points
-      write(101,'(A,f15.4)')						' r_points = ',R_points(i)
-      write(101,'(A,f15.4)')						' z_points = ',Z_points(i)
-      write(101,'(A)')							' pylab.plot(r_points,z_points, "xk", markersize=10)'
+      write(101,'(A,f15.4)')                                            ' r_points = ',R_points(i)
+      write(101,'(A,f15.4)')                                            ' z_points = ',Z_points(i)
+      write(101,'(A)')                                                  ' pylab.plot(r_points,z_points, "xk", markersize=10)'
     enddo
   close(101)
 

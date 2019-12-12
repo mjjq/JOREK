@@ -18,7 +18,7 @@ subroutine update_boundary_types(element_list,node_list, across_xpoint)
   implicit none
   
   ! --- Routine variables
-  type(type_node_list),    intent(inout) :: node_list	   !< list of grid nodes
+  type(type_node_list),    intent(inout) :: node_list      !< list of grid nodes
   type(type_element_list), intent(inout) :: element_list   !< list of finite elements
   integer,                 intent(in)    :: across_xpoint  !< 0=no xpoint at all, 1=we have 4 xpoint nodes, 2=only two
                                                            ! eg, you go from 1 to 4, or you go from 1 to 2 (see create_x_node.f90)
@@ -300,7 +300,7 @@ subroutine adjacent_elements(element_list,node_list,i_elm,i_vertex,side_max, elm
   implicit none
   
   ! --- Routine variables
-  type(type_node_list),    intent(in)  :: node_list	   !< list of grid nodes
+  type(type_node_list),    intent(in)  :: node_list        !< list of grid nodes
   type(type_element_list), intent(in)  :: element_list   !< list of finite elements
   integer,                 intent(in)  :: i_elm,i_vertex,side_max
   integer,                 intent(out) :: elm_sum
@@ -315,8 +315,8 @@ subroutine adjacent_elements(element_list,node_list,i_elm,i_vertex,side_max, elm
     do i_vertex2=1,4
       i_node2 = element_list%element(i_elm2)%vertex(i_vertex2)
       if (i_node2 .eq. i_node) then
-    	elm_sum = elm_sum + 1
-    	exit
+        elm_sum = elm_sum + 1
+        exit
       endif
     enddo
     if (elm_sum .eq. side_max) exit
@@ -342,7 +342,7 @@ subroutine update_boundary_types_final(element_list,node_list)
   implicit none
   
   ! --- Routine variables
-  type(type_node_list),    intent(inout) :: node_list	   !< list of grid nodes
+  type(type_node_list),    intent(inout) :: node_list      !< list of grid nodes
   type(type_element_list), intent(inout) :: element_list   !< list of finite elements
   
   type (type_bnd_node_list)    :: bnd_node_list
@@ -700,7 +700,7 @@ subroutine update_boundary_types_final_old(element_list,node_list)
   implicit none
   
   ! --- Routine variables
-  type(type_node_list),    intent(inout) :: node_list	   !< list of grid nodes
+  type(type_node_list),    intent(inout) :: node_list      !< list of grid nodes
   type(type_element_list), intent(inout) :: element_list   !< list of finite elements
   
   type (type_bnd_node_list)    :: bnd_node_list

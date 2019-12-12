@@ -218,41 +218,41 @@ contains
                              endif
                              
                              delta_psi_rmp_ds = delta_psi_rmp_dR * dRnode_ds + delta_psi_rmp_dZ * dZnode_ds
-                             call boundary_conditions_add_one_entry( &
-                                  index_node, kv, in,                &
-                                  index_node, kp, in,                &
-                                  zbig, solve_only, gmres,           &
-                                  cnt, cnt_prod, only_count,         &
+                             call boundary_conditions_add_one_entry(   &
+                                  index_node, kv, in,                  &
+                                  index_node, kp, in,                  &
+                                  zbig, solve_only, gmres,             &
+                                  cnt, cnt_prod, only_count,           &
                                   index_min, index_max,                & 
                                   ijA_index, ijA_size, irn_jcn,        & 
                                   irn_glob, jcn_glob, A_glob,          & 
                                   i_tor_min, i_tor_max)
 
                              if (.not. only_count) then
-                                call boundary_conditions_add_RHS(  &
-                                     index_node, kv, in,           &
-                                     index_min, index_max,         &
-                                     RHS_loc, ZBIG * delta_psi_rmp,                 &
-                                  i_tor_min, i_tor_max)
+                                call boundary_conditions_add_RHS(      &
+                                     index_node, kv, in,               &
+                                     index_min, index_max,             &
+                                     RHS_loc, ZBIG * delta_psi_rmp,    &
+                                     i_tor_min, i_tor_max)
                              endif
                              
                              index_node2 = node_list%node(inode)%index(2)
 
-                             call boundary_conditions_add_one_entry( &
-                                  index_node2, kv, in,               &
-                                  index_node2, kp, in,               &
-                                  zbig, solve_only, gmres,           &
-                                  cnt, cnt_prod, only_count,         &
+                             call boundary_conditions_add_one_entry(   &
+                                  index_node2, kv, in,                 &
+                                  index_node2, kp, in,                 &
+                                  zbig, solve_only, gmres,             &
+                                  cnt, cnt_prod, only_count,           &
                                   index_min, index_max,                & 
                                   ijA_index, ijA_size, irn_jcn,        & 
                                   irn_glob, jcn_glob, A_glob,          & 
                                   i_tor_min, i_tor_max)
                              if (.not. only_count) then
-                                call boundary_conditions_add_RHS(       &
-                                     index_node2, kv, in,               &
-                                     index_min, index_max,              &
-                                     RHS_loc, ZBIG * delta_psi_rmp_ds,                 &
-                                  i_tor_min, i_tor_max)
+                                call boundary_conditions_add_RHS(      &
+                                     index_node2, kv, in,              &
+                                     index_min, index_max,             &
+                                     RHS_loc, ZBIG * delta_psi_rmp_ds, &
+                                     i_tor_min, i_tor_max)
                              endif
                           endif
 
@@ -273,27 +273,27 @@ contains
 
                             index_node = node_list%node(inode)%index(1)
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node, k, in,                 &
-                                 index_node, k, in,                 &
-                                 zbig, solve_only, gmres,           &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node, k, in,                   &
+                                 index_node, k, in,                   &
+                                 zbig, solve_only, gmres,             &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
                             index_node = node_list%node(inode)%index(2)
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node, k, in,                 &
-                                 index_node, k, in,                 &
-                                 zbig, solve_only, gmres,           &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node, k, in,                   &
+                                 index_node, k, in,                   &
+                                 zbig, solve_only, gmres,             &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
                          endif
 
@@ -363,60 +363,60 @@ contains
                             ku = 2
                             kv = 7
                             kT = 6
-                            call boundary_conditions_add_one_entry( &
-                                 index_node, kv, in,                &
-                                 index_node, kv, in,                &
-                                 zbig, solve_only, gmres,           &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node, kv, in,                  &
+                                 index_node, kv, in,                  &
+                                 zbig, solve_only, gmres,             &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
 
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node, kv, in,                &
-                                 index_node, kT, in,                &
-                                 - zbig / Btot * 0.5d0 * GAMMA      &
-                                 / sqrt(GAMMA*T0) * direction       &
-                                 , solve_only, gmres,               &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node, kv, in,                  &
+                                 index_node, kT, in,                  &
+                                 - zbig / Btot * 0.5d0 * GAMMA        &
+                                 / sqrt(GAMMA*T0) * direction         &
+                                 , solve_only, gmres,                 &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
 
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node,  kv, in,               &
-                                 index_node2, ku, in,               &
-                                 - zbig * BigR**2 / ps0_s,          &
-                                 solve_only, gmres,                 &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node,  kv, in,                 &
+                                 index_node2, ku, in,                 &
+                                 - zbig * BigR**2 / ps0_s,            &
+                                 solve_only, gmres,                   &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 !***psv
                             if (.not. only_count) then
                                if (in .eq. 1) then
-                                  call boundary_conditions_add_RHS(       &
-                                       index_node, kv, in,                &
-                                       index_min, index_max,              &
-                                       RHS_loc,                           &
-                                       Zbig * (-Vpar0 + BigR**2 * U0_s/ps0_s +& 
+                                  call boundary_conditions_add_RHS(              &
+                                       index_node, kv, in,                       &
+                                       index_min, index_max,                     &
+                                       RHS_loc,                                  &
+                                       Zbig * (-Vpar0 + BigR**2 * U0_s/ps0_s +   & 
                                               direction * sqrt(GAMMA*T0) / Btot),& !),&!*U0_s /ps0_s + direction*sqrt(GAMMA*T0)/ Btot),& !( - Vpar0 + BigR**2 *       &
                                        !U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot),                 &
-                                  i_tor_min, i_tor_max)
+                                       i_tor_min, i_tor_max)
 !***psv
                                else
-                                  call boundary_conditions_add_RHS(       &
-                                       index_node, kv, in,                &
-                                       index_min, index_max,              &
-                                       RHS_loc, 0.d0,                 &
-                                  i_tor_min, i_tor_max)
+                                  call boundary_conditions_add_RHS(              &
+                                       index_node, kv, in,                       &
+                                       index_min, index_max,                     &
+                                       RHS_loc, 0.d0,                            &
+                                       i_tor_min, i_tor_max)
 
                                endif
                             endif
@@ -425,60 +425,60 @@ contains
                             kv = 7
                             kT = 6
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node2, kv, in,                &
-                                 index_node2, kv, in,                &
-                                 zbig, solve_only, gmres,           &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node2, kv, in,                 &
+                                 index_node2, kv, in,                 &
+                                 zbig, solve_only, gmres,             &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
 
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node2, kv, in,               &
-                                 index_node2, kT, in,               &
-                                 - zbig / Btot * 0.5d0 * GAMMA      &
-                                 / sqrt(GAMMA*T0) * direction,      &
-                                 solve_only, gmres,                 &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node2, kv, in,                 &
+                                 index_node2, kT, in,                 &
+                                 - zbig / Btot * 0.5d0 * GAMMA        &
+                                 / sqrt(GAMMA*T0) * direction,        &
+                                 solve_only, gmres,                   &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
 
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node2,  kv, in,               &
-                                 index_node,   kT, in,              &
-                                 + zbig / Btot * 0.25d0 * GAMMA**2  &
-                                 / (GAMMA*T0)**(3/2) * dT0_ds *     &
-                                 direction,                         &
-                                 solve_only, gmres,                 &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node2,  kv, in,                &
+                                 index_node,   kT, in,                &
+                                 + zbig / Btot * 0.25d0 * GAMMA**2    &
+                                 / (GAMMA*T0)**(3/2) * dT0_ds *       &
+                                 direction,                           &
+                                 solve_only, gmres,                   &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
                             if (.not. only_count) then
                                if (in .eq. 1) then
-                                  call boundary_conditions_add_RHS(       &
-                                       index_node2, kv, in,               &
-                                       index_min, index_max,              &
-                                       RHS_loc,                           &
-                                       Zbig*(-dVpar0_ds +  0.5d0 / Btot * &
-                                       GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction),                 &
-                                  i_tor_min, i_tor_max)
+                                  call boundary_conditions_add_RHS(                  &
+                                       index_node2, kv, in,                          &
+                                       index_min, index_max,                         &
+                                       RHS_loc,                                      &
+                                       Zbig*(-dVpar0_ds +  0.5d0 / Btot *            &
+                                       GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction), &
+                                       i_tor_min, i_tor_max)
                                else
-                                  call boundary_conditions_add_RHS(       &
-                                       index_node2, kv, in,               &
-                                       index_min, index_max,              &
-                                       RHS_loc, 0.d0,                 &
-                                  i_tor_min, i_tor_max)
+                                  call boundary_conditions_add_RHS(                  &
+                                       index_node2, kv, in,                          &
+                                       index_min, index_max,                         &
+                                       RHS_loc, 0.d0,                                &
+                                       i_tor_min, i_tor_max)
 
                                endif
                             endif
@@ -507,27 +507,27 @@ contains
 
                             index_node = node_list%node(inode)%index(1)
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node,  k, in,                &
-                                 index_node,  k, in,                &
-                                 zbig, solve_only, gmres,           &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node,  k, in,                  &
+                                 index_node,  k, in,                  &
+                                 zbig, solve_only, gmres,             &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
 
                             index_node = node_list%node(inode)%index(3)
-                            call boundary_conditions_add_one_entry( &
-                                 index_node,  k, in,                &
-                                 index_node,  k, in,                &
-                                 zbig, solve_only, gmres,           &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node,  k, in,                  &
+                                 index_node,  k, in,                  &
+                                 zbig, solve_only, gmres,             &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
                          endif
 
@@ -583,38 +583,38 @@ contains
                             ku = 2
                             kv = 7
                             kT = 6
-                            call boundary_conditions_add_one_entry( &
-                                 index_node, kv, in,                &
-                                 index_node, kv, in,                &
-                                 zbig, solve_only, gmres,           &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node, kv, in,                  &
+                                 index_node, kv, in,                  &
+                                 zbig, solve_only, gmres,             &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node, kv, in,                &
-                                 index_node, kT, in,                &
-                                 - zbig / Btot * 0.5d0 * GAMMA /    &
-                                 sqrt(GAMMA*T0) * direction,        &
-                                 solve_only, gmres,                 &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node, kv, in,                  &
+                                 index_node, kT, in,                  &
+                                 - zbig / Btot * 0.5d0 * GAMMA /      &
+                                 sqrt(GAMMA*T0) * direction,          &
+                                 solve_only, gmres,                   &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node,  kv, in,               &
-                                 index_node2, ku, in,               &
-                                 - zbig * BigR**2 / ps0_t,          &
-                                 solve_only, gmres,                 &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node,  kv, in,                 &
+                                 index_node2, ku, in,                 &
+                                 - zbig * BigR**2 / ps0_t,            &
+                                 solve_only, gmres,                   &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
                             if (.not. only_count) then
                                if (in .eq. 1) then
@@ -625,13 +625,13 @@ contains
                                        Zbig * ( - Vpar0 + BigR**2 * U0_t  &
                                        /ps0_t + direction*sqrt(GAMMA*T0)  &
                                        / Btot),                 &
-                                  i_tor_min, i_tor_max)
+                                       i_tor_min, i_tor_max)
                                else
                                   call boundary_conditions_add_RHS(       &
                                        index_node, kv, in,                &
                                        index_min, index_max,              &
                                        RHS_loc, 0.d0,                 &
-                                  i_tor_min, i_tor_max)
+                                       i_tor_min, i_tor_max)
 
                                endif
                             endif
@@ -641,53 +641,53 @@ contains
                             kv = 7
                             kT = 6
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node2, kv, in,               &
-                                 index_node2, kv, in,               &
-                                 zbig, solve_only, gmres,           &
-                                 cnt, cnt_prod, only_count,         &
+                            call boundary_conditions_add_one_entry(   &
+                                 index_node2, kv, in,                 &
+                                 index_node2, kv, in,                 &
+                                 zbig, solve_only, gmres,             &
+                                 cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 ijA_index, ijA_size, irn_jcn,        & 
+                                 irn_glob, jcn_glob, A_glob,          & 
+                                 i_tor_min, i_tor_max)
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node2, kv, in,               &
-                                 index_node2, kT, in,               &
+                            call boundary_conditions_add_one_entry(                          &
+                                 index_node2, kv, in,                                        &
+                                 index_node2, kT, in,                                        &
                                  - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction, &
-                                 solve_only, gmres,                 &
-                                 cnt, cnt_prod, only_count,         &
-                                 index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 solve_only, gmres,                                          &
+                                 cnt, cnt_prod, only_count,                                  &
+                                 index_min, index_max,                                       & 
+                                 ijA_index, ijA_size, irn_jcn,                               & 
+                                 irn_glob, jcn_glob, A_glob,                                 & 
+                                 i_tor_min, i_tor_max)
 
-                            call boundary_conditions_add_one_entry( &
-                                 index_node2, kv, in,               &
-                                 index_node,  kT, in,               &
+                            call boundary_conditions_add_one_entry(                                          &
+                                 index_node2, kv, in,                                                        &
+                                 index_node,  kT, in,                                                        &
                                  + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_dt * direction, &
-                                 solve_only, gmres,                 &
-                                 cnt, cnt_prod, only_count,         &
-                                 index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                 solve_only, gmres,                                                          &
+                                 cnt, cnt_prod, only_count,                                                  &
+                                 index_min, index_max,                                                       & 
+                                 ijA_index, ijA_size, irn_jcn,                                               & 
+                                 irn_glob, jcn_glob, A_glob,                                                 & 
+                                 i_tor_min, i_tor_max)
 
                             if (.not. only_count) then
                                if (in .eq. 1) then
-                                  call boundary_conditions_add_RHS(       &
-                                       index_node2, kv, in,               &
-                                       index_min, index_max,              &
-                                       RHS_loc,                           &
-                                       Zbig*(-dVpar0_dt +  0.5d0 / Btot * &
-                                       GAMMA / sqrt(GAMMA*T0) * dT0_dt * direction),                 &
-                                  i_tor_min, i_tor_max)
+                                  call boundary_conditions_add_RHS(                  &
+                                       index_node2, kv, in,                          &
+                                       index_min, index_max,                         &
+                                       RHS_loc,                                      &
+                                       Zbig*(-dVpar0_dt +  0.5d0 / Btot *            &
+                                       GAMMA / sqrt(GAMMA*T0) * dT0_dt * direction), &
+                                       i_tor_min, i_tor_max)
                                else
-                                  call boundary_conditions_add_RHS(       &
-                                       index_node2, kv, in,               &
-                                       index_min, index_max,              &
-                                       RHS_loc, 0.d0,                 &
-                                  i_tor_min, i_tor_max)
+                                  call boundary_conditions_add_RHS(                  &
+                                       index_node2, kv, in,                          &
+                                       index_min, index_max,                         &
+                                       RHS_loc, 0.d0,                                &
+                                       i_tor_min, i_tor_max)
 
                                endif
                             endif
@@ -751,41 +751,41 @@ contains
                                 endif
                              endif
 
-                             call boundary_conditions_add_one_entry( &
-                                  index_node, kv, in,                &
-                                  index_node, kp, in,                &
-                                  zbig, solve_only, gmres,           &
-                                  cnt, cnt_prod, only_count,         &
+                             call boundary_conditions_add_one_entry(   &
+                                  index_node, kv, in,                  &
+                                  index_node, kp, in,                  &
+                                  zbig, solve_only, gmres,             &
+                                  cnt, cnt_prod, only_count,           &
                                   index_min, index_max,                & 
                                   ijA_index, ijA_size, irn_jcn,        & 
                                   irn_glob, jcn_glob, A_glob,          & 
                                   i_tor_min, i_tor_max)
 
                              if (.not. only_count) then
-                                call boundary_conditions_add_RHS(  &
-                                     index_node, kv, in,           &
-                                     index_min, index_max,         &
-                                     RHS_loc, ZBIG * delta_psi_rmp,                 &
-                                  i_tor_min, i_tor_max)
+                                call boundary_conditions_add_RHS(      &
+                                     index_node, kv, in,               &
+                                     index_min, index_max,             &
+                                     RHS_loc, ZBIG * delta_psi_rmp,    &
+                                     i_tor_min, i_tor_max)
                              endif
                              
                              index_node2 = node_list%node(inode)%index(3)
 
-                             call boundary_conditions_add_one_entry( &
-                                  index_node2, kv, in,               &
-                                  index_node2, kp, in,               &
-                                  zbig, solve_only, gmres,           &
-                                  cnt, cnt_prod, only_count,         &
+                             call boundary_conditions_add_one_entry(   &
+                                  index_node2, kv, in,                 &
+                                  index_node2, kp, in,                 &
+                                  zbig, solve_only, gmres,             &
+                                  cnt, cnt_prod, only_count,           &
                                   index_min, index_max,                & 
                                   ijA_index, ijA_size, irn_jcn,        & 
                                   irn_glob, jcn_glob, A_glob,          & 
                                   i_tor_min, i_tor_max)
                              if (.not. only_count) then
-                                call boundary_conditions_add_RHS(       &
-                                     index_node2, kv, in,               &
-                                     index_min, index_max,              &
-                                     RHS_loc, ZBIG * delta_psi_rmp_dt,                 &
-                                  i_tor_min, i_tor_max)
+                                call boundary_conditions_add_RHS(      &
+                                     index_node2, kv, in,              &
+                                     index_min, index_max,             &
+                                     RHS_loc, ZBIG * delta_psi_rmp_dt, &
+                                     i_tor_min, i_tor_max)
                              endif
                           endif
                         enddo        !(end RMP harmonics)
@@ -798,27 +798,27 @@ contains
 
                           index_node = node_list%node(inode)%index(1)
 
-                          call boundary_conditions_add_one_entry( &
-                               index_node,  k,  in,               &
-                               index_node,  k,  in,               &
-                               zbig, solve_only, gmres,           &
-                               cnt, cnt_prod, only_count,         &
+                          call boundary_conditions_add_one_entry(   &
+                               index_node,  k,  in,                 &
+                               index_node,  k,  in,                 &
+                               zbig, solve_only, gmres,             &
+                               cnt, cnt_prod, only_count,           &
                                index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                               ijA_index, ijA_size, irn_jcn,        & 
+                               irn_glob, jcn_glob, A_glob,          & 
+                               i_tor_min, i_tor_max)
 
                           index_node = node_list%node(inode)%index(3)
 
-                          call boundary_conditions_add_one_entry( &
-                               index_node,  k,  in,               &
-                               index_node,  k,  in,               &
-                               zbig, solve_only, gmres,           &
-                               cnt, cnt_prod, only_count,         &
+                          call boundary_conditions_add_one_entry(   &
+                               index_node,  k,  in,                 &
+                               index_node,  k,  in,                 &
+                               zbig, solve_only, gmres,             &
+                               cnt, cnt_prod, only_count,           &
                                index_min, index_max,                & 
-                                  ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                               ijA_index, ijA_size, irn_jcn,        & 
+                               irn_glob, jcn_glob, A_glob,          & 
+                               i_tor_min, i_tor_max)
 
                        endif
 
@@ -849,6 +849,5 @@ contains
     return
   end subroutine boundary_conditions 
 
-!***psv test subroutine 
 
 end module mod_boundary_conditions

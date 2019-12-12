@@ -83,6 +83,15 @@ enddo
 node_list%n_nodes = nR*nZ
 
 n_elements = (nR-1)*(nZ-1)
+
+if ( node_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_bezier_square: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_bezier_square: hard-coded parameter n_elements_max is too small'
+  stop
+end if
+
 i_element  = 0
 do n=1,nZ-1
   do m=1,nR-1                        ! define connectivity of finite element mesh

@@ -1,6 +1,7 @@
 subroutine plot_coils(frame)
 
 use vacuum_response
+use phys_module, only: write_ps
 
 implicit none
 
@@ -11,6 +12,10 @@ logical, intent(in) :: frame
 real*8  :: rp(5),zp(5), r_min, r_max, z_min, z_max
 integer :: i
 
+if ( .not. write_ps  ) then
+  write(*,*) 'Jorek2postscript deactivated. Skipping plot_coils'
+  return
+endif
 write(*,*) '*************************************'
 write(*,*) '*         plot coils                *'
 write(*,*) '*************************************'

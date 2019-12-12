@@ -1045,11 +1045,10 @@ module mod_expression
           
           ln_Lambda = 18. ! approximate value for Coulomb logarithm
           
-          E_par = - F0 / R * ( eta_T * zj0 / R**2                                                  &
-                             + tauIC / r0 * ( (P0_R * Ps0_Z - P0_Z * Ps0_R) / R )                  &
-                             + F0 * P0_p / R**2 )
+          E_par = - R * ( eta_T * zj0 / R**2                                                       &
+                        + tauIC / r0 * ( (P0_R * Ps0_Z - P0_Z * Ps0_R) / R + F0 * P0_p / R**2 ) )
           
-          E_crit = C_LIGHT**2 * EL_CHG**3 * ln_Lambda * MU_ZERO**2.5 ** rho_0**1.5 * r0 / ( 4 * PI * MASS_ELECTRON * MASS_PROTON * central_mass )
+          E_crit = C_LIGHT**2 * EL_CHG**3 * ln_Lambda * MU_ZERO**2.5 * (central_density*1.d20*central_mass*MASS_PROTON)**1.5 * r0 / ( 4 * PI * MASS_ELECTRON * MASS_PROTON * central_mass )
           
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
           call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &

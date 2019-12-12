@@ -14,6 +14,7 @@ module mod_expression
   
   
   
+  use constants
   use mod_parameters
   use mod_position
   use phys_module
@@ -151,6 +152,8 @@ module mod_expression
     call add(exprs_all, 'mu_neo      ', 'Neoclassical Friction Coefficient                     ')
     call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
     call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
+    call add(exprs_all, 'E_||        ', 'E_|| for RE acceleration                              ')
+    call add(exprs_all, 'E_crit      ', 'E_crit for RE acceleration                            ')
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
@@ -479,7 +482,7 @@ module mod_expression
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z, Btheta, psi_abs
+      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z, Btheta, psi_abs, E_par, E_crit, ln_Lambda
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
@@ -1040,6 +1043,14 @@ module mod_expression
             end if
           end if
           
+          ln_Lambda = 18. ! approximate value for Coulomb logarithm
+          
+          E_par = - F0 / R * ( eta_T * zj0 / R**2                                                  &
+                             + tauIC / r0 * ( (P0_R * Ps0_Z - P0_Z * Ps0_R) / R )                  &
+                             + F0 * P0_p / R**2 )
+          
+          E_crit = C_LIGHT**2 * EL_CHG**3 * ln_Lambda * MU_ZERO**2.5 ** rho_0**1.5 * r0 / ( 4 * PI * MASS_ELECTRON * MASS_PROTON * central_mass )
+          
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
           call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
             ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
@@ -1270,6 +1281,12 @@ module mod_expression
                 
               case ( 'T_i' )
                 res = Ti0 * fact_T
+                
+              case ( 'E_||' )
+                res = E_par / fact_time
+                
+              case ( 'E_crit' )
+                res = E_crit / fact_time
                 
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
               case ( 'J_bootstrap' )

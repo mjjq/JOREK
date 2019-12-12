@@ -168,6 +168,7 @@ do i_limiter = 1, n_limiter
   Zp = Z_limiter(i_limiter)
   
   call find_RZ(node_list, element_list, Rp, Zp, R_out, Z_out, i_elm, s_out, t_out, ifail)
+  if (ifail .ne. 0) cycle
   call interp(node_list, element_list, i_elm, 1, 1, s_out, t_out, psi, psi_s, psi_t, psi_st,       &
     psi_ss, psi_tt)
   

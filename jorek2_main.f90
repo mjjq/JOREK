@@ -988,7 +988,7 @@ required = 0
 !END IF
 
 !begin Harmonic Construction
-#ifndef COMMUNICATION
+#ifdef DIRECT_CONSTRUCTION
     if(n_tor.gt.1) then
 
       call clck_time_barrier(t0)
@@ -1140,7 +1140,7 @@ required = 0
 !          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)   
 !END IF
 
-#ifdef COMMUNICATION
+#ifndef DIRECT_CONSTRUCTION
        call clck_time(t0)
        if (.not. solve_only) then
           call distribute_harmonics(my_id,my_id_n,n_cpu)

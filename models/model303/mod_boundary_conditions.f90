@@ -24,13 +24,13 @@ contains
 !*   solve_only   - Indicate if we want to perform only solve                  *
 !*                                                                             *
 !*******************************************************************************
-  subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms, & 
-                                  n_local_elms, index_min, index_max, rhs_loc, xpoint2,&
-                                  xcase2, R_axis, Z_axis, psi_axis, psi_bnd,&
-                                  R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only,& 
-                                     ijA_index, ijA_size, irn_jcn,& 
-                                     irn_glob, jcn_glob, A_glob,& 
-                                     i_tor_min, i_tor_max )
+  subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,& 
+                                  n_local_elms, index_min, index_max, rhs_loc, xpoint2,     &
+                                  xcase2, R_axis, Z_axis, psi_axis, psi_bnd,                &
+                                  R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only,        & 
+                                  ijA_index, ijA_size, irn_jcn,                             & 
+                                  irn_glob, jcn_glob, A_glob,                               & 
+                                  i_tor_min, i_tor_max )
 
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     use data_structure
@@ -64,6 +64,10 @@ contains
   logical                  :: gmres
   logical                  :: solve_only
   real*8                   :: rhs_loc(*)
+  integer                  :: irn_glob(:), jcn_glob(:) 
+  real*8                   :: A_glob(:) 
+  integer,   intent(in)    :: i_tor_min, i_tor_max
+  integer,   allocatable   :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
 
   ! Internal parameters
   real*8  :: zbig,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
@@ -85,10 +89,6 @@ contains
   integer :: ilarge_vp, ilarge_vp2
   integer :: kp, j, err, itest 
   integer :: n_rmp_harm, N_rmp_har_block_size 
-  integer, intent(in)    :: i_tor_min, i_tor_max
-  integer, allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-  integer :: irn_glob(:), jcn_glob(:) 
-  real*8  :: A_glob(:) 
 
   RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
   

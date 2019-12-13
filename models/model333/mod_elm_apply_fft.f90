@@ -9,7 +9,7 @@ contains
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------------------------------
-subroutine ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, tid)
+subroutine ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, tid, i_tor_min, i_tor_max)
 !DEC$ ATTRIBUTES FORCEINLINE :: ELM_apply_fft
 
   ! --- Modules
@@ -21,6 +21,7 @@ subroutine ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, ti
   
   ! --- Matrix elements and toroidal functions
   integer, intent(in)	      :: tid
+  integer, intent(in)         :: i_tor_min, i_tor_max
   real*8, dimension (:,:)     :: ELM
   real*8, dimension (:)       :: RHS
   real*8, dimension(:,:,:)    :: ELM_p, ELM_n, ELM_k, ELM_kn

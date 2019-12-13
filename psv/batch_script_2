@@ -1,0 +1,18 @@
+#!/bin/bash
+## Submit via: sbatch submit_marconi.slurm
+## Check job via squeue | grep username
+#SBATCH -J  pellet_303_aug_comm           # job name
+#SBATCH --time=00:20:00      # walltime
+#SBATCH --nodes=1           # Total number of nodes
+#SBATCH --ntasks-per-node=2 # MPI tasks (A3: max 48, A2: max 68)
+#SBATCH --mem=175GB          # for A2 (KNL) #SBATCH --mem=86000
+#SBATCH -e %x.%j.out         # std-error file %x-job number %j job name
+#SBATCH -o %x.%j.out         # std-output file
+#SBATCH -p skl_fua_prod      # partition: see sinfo -d (skl_fua_prod, skl_fua_dbg, knl_fua_prod)
+##SBATCH --qos=skl_qos_fuabprod  #  (skl_qos_fuabprod, skl_qos_fualowprio, knl_qos_fuabprod, etc)
+#SBATCH -A FUSIO_HLST_1      # account: see  "saldo -b --knl" (A2), or "saldo -b --skl" (A3)
+#SBATCH --mail-type=END      # can be used "END", "BEGIN", "ALL"
+#SBATCH --mail-user=psv@ipp.mpg.de #your email
+##SBATCH --dependency=singleton 
+export OMP_NUM_THREADS=24
+../non_regression_tests/run_test.sh -k pellet_303_aug #tear_circ_303_fft #tear_circ_303

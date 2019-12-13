@@ -30,10 +30,9 @@ type (type_node)      :: nodes(n_vertex_max)
 #define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
 
 real*8, dimension (DIM0,DIM0)  :: ELM
-real*8, dimension (DIM0) :: RHS
-integer, intent(in) :: tid
-!integer, OPTIONAL, intent(in) :: i_tor_min, i_tor_max
-integer, intent(in) :: i_tor_min, i_tor_max
+real*8, dimension (DIM0)       :: RHS
+integer, intent(in)            :: tid
+integer, intent(in)            :: i_tor_min, i_tor_max
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
 integer    :: n_tor_start, n_tor_end

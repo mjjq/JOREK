@@ -59,7 +59,8 @@ contains
                                  xpoint2, xcase2,                                         &
                                  R_axis, Z_axis, psi_axis,                                &
                                  psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,                 &
-                                 gmres, solve_only )
+                                 gmres, solve_only, ijA_index, ijA_size, irn_jcn,         & 
+                                 irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
 
     use data_structure
     use global_distributed_matrix
@@ -97,6 +98,10 @@ contains
     real*8,                    intent(in)    :: psi_xpoint(2)
     logical,                   intent(in)    :: gmres
     logical,                   intent(in)    :: solve_only
+    integer                                  :: irn_glob(:), jcn_glob(:) 
+    real*8                                   :: A_glob(:) 
+    integer,                   intent(in)    :: i_tor_min, i_tor_max
+    integer,                   allocatable   :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
 
     ! --- Internal parameters
     real*8  :: mach1, dmach1, d2mach1_dTi, d2mach1_dTe, mach_u, dmach_u, dmach_rho

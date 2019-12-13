@@ -24,10 +24,12 @@ contains
   !*                                                                             *
   !*******************************************************************************
 
-  subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,    & 
-       n_local_elms, index_min, index_max, rhs_loc, xpoint2,   &
-       xcase2, R_axis, Z_axis, psi_axis, psi_bnd,              &
-       R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
+  subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,& 
+                                   n_local_elms, index_min, index_max, rhs_loc, xpoint2,    &
+                                   xcase2, R_axis, Z_axis, psi_axis, psi_bnd,               &
+                                   R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only,       & 
+                                   ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob,& 
+                                   i_tor_min, i_tor_max )
     use data_structure
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, freeboundary
@@ -53,6 +55,10 @@ contains
     logical                  :: gmres
     logical                  :: solve_only
     real*8                   :: rhs_loc(*)
+    integer                  :: irn_glob(:), jcn_glob(:) 
+    real*8                   :: A_glob(:) 
+    integer, intent(in)      :: i_tor_min, i_tor_max
+    integer, allocatable     :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
 
     ! Internal parameters
     real*8  :: zbig
@@ -106,7 +112,7 @@ contains
                          index_node = node_list%node(inode)%index(1)
                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                            call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                            call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
                             index_large_i = n_tor * n_var * (index_node - 1)
 
@@ -121,7 +127,7 @@ contains
                          index_node = node_list%node(inode)%index(2)
                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                            call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                            call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
                             index_large_i = n_tor * n_var * (index_node - 1)
 
@@ -203,8 +209,8 @@ contains
 
                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                            call locate_irn_jcn(index_node,index_node, index_min,index_max,ijA_position)
-                            call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2)
+                            call locate_irn_jcn(index_node,index_node, index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                            call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
                             index_large_i = n_tor * n_var * (index_node - 1)
 
@@ -240,8 +246,8 @@ contains
                          kT = 6
                          if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
 
-                            call locate_irn_jcn(index_node2,index_node,index_min,index_max,ijA_position)
-                            call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
+                            call locate_irn_jcn(index_node2,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                            call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
                             index_large_i = n_tor * n_var * (index_node2 - 1)
 
@@ -302,7 +308,7 @@ contains
 
                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                            call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                            call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
                             index_large_i = n_tor * n_var * (index_node - 1)
 
@@ -317,7 +323,7 @@ contains
 
                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                            call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                            call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
                             index_large_i = n_tor * n_var * (index_node - 1)
 

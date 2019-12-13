@@ -1290,6 +1290,9 @@ module mod_expression
               case ( 'E_crit' )
                 res = E_crit / fact_time
                 
+              case ( 'E_dreicer' )
+                res = E_dreicer / fact_time
+                
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
               case ( 'J_bootstrap' )
                 res = J_boot ! ### check if no normalization needed

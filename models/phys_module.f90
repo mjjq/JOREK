@@ -62,6 +62,7 @@ module phys_module
   real*8  :: epsilon_BLR          !< Accuracy of BLR compression
   logical :: just_in_time_BLR     !< Use Just-in-time strategy for BLR compression (speed optimized)
   logical :: pastix_blr_abs_tol   !< Use absolute tolerance for BLR
+  logical :: write_ps             !< Write postscript file at the end of the run
 
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"

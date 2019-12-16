@@ -11,14 +11,14 @@ use global_distributed_matrix
 use mpi_mod
 use mod_clock
 use mod_coicsr
-use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR
+use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR, pastix_blr_abs_tol
 
 !$ use omp_lib
 
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
-use iso_c_binding
 use pastixf
+use iso_c_binding
 use pastix_enums
 use spmf
 #endif

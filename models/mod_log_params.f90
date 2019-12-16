@@ -227,6 +227,7 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'rst_hdf5              ', rst_hdf5
   write(*,INTG_FMT) 'rst_hdf5_version      ', rst_hdf5_version
   write(*,LOGI_FMT) 'regrid                ', regrid
+  write(*,LOGI_FMT) 'write_ps              ', write_ps
   write(*,INTG_FMT) 'n_R                   ', n_R
   write(*,INTG_FMT) 'n_Z                   ', n_Z
   write(*,INTG_FMT) 'n_radial              ', n_radial

@@ -6,7 +6,7 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only: tokamak_device
+use phys_module, only: tokamak_device, write_ps
 use mod_interp
 
 implicit none
@@ -905,11 +905,12 @@ do i=1,4
   if   (xcase .eq. 2)                    nwpts%Z_sep(n_start+n_loop) = Z_xpoint(2) ! this one is known - safer...
 enddo
 
-!call lincol(2)
-!call lplot6(1,1,nwpts%R_max,nwpts%Z_max,-(n_tht_3),' ')
-!call lincol(0)
-!call lplot6(1,1,nwpts%R_sep,nwpts%Z_sep,-(n_tht_3),' ')
-
+!if ( write_ps ) then
+!  call lincol(2)
+!  call lplot6(1,1,nwpts%R_max,nwpts%Z_max,-(n_tht_3),' ')
+!  call lincol(0)
+!  call lplot6(1,1,nwpts%R_sep,nwpts%Z_sep,-(n_tht_3),' ')
+!endif
 
 
 
@@ -1146,43 +1147,44 @@ endif
 
 
 !------------------------------ Plot coordinate lines
-call lincol(3)
-npl = 11
-call tr_allocate(xp,1,npl,"xp",CAT_GRID)
-call tr_allocate(yp,1,npl,"yp",CAT_GRID)
-do j=1,n_tht_2
+if ( write_ps ) then
+  call lincol(3)
+  npl = 11
+  call tr_allocate(xp,1,npl,"xp",CAT_GRID)
+  call tr_allocate(yp,1,npl,"yp",CAT_GRID)
+  do j=1,n_tht_2
 
-  n_loop = 3
-  if(tokamak_device(1:4) .eq. 'MAST') then
-    if ((j .gt. n_tht+n_leg) .and. (j .le. n_tht+2*n_leg)) n_loop = 4
-    if ((j .gt. n_tht+2*n_leg+n_up_leg) .and. (j .le. n_tht+2*n_leg+2*n_up_leg)) n_loop = 4
-  endif
-  do m=1,n_loop
+    n_loop = 3
+    if(tokamak_device(1:4) .eq. 'MAST') then
+      if ((j .gt. n_tht+n_leg) .and. (j .le. n_tht+2*n_leg)) n_loop = 4
+      if ((j .gt. n_tht+2*n_leg+n_up_leg) .and. (j .le. n_tht+2*n_leg+2*n_up_leg)) n_loop = 4
+    endif
+    do m=1,n_loop
 
-    do k=1,npl
-      ss = -1. + 2.*float(k-1)/float(npl-1)
+      do k=1,npl
+        ss = -1. + 2.*float(k-1)/float(npl-1)
 
-      R_cub1d = (/ nwpts%R_polar(m,1,j), 3.d0/2.d0 *(nwpts%R_polar(m,2,j)-nwpts%R_polar(m,1,j)), &
-                   nwpts%R_polar(m,4,j), 3.d0/2.d0 *(nwpts%R_polar(m,4,j)-nwpts%R_polar(m,3,j))  /)
-      Z_cub1d = (/ nwpts%Z_polar(m,1,j), 3.d0/2.d0 *(nwpts%Z_polar(m,2,j)-nwpts%Z_polar(m,1,j)), &
-                   nwpts%Z_polar(m,4,j), 3.d0/2.d0 *(nwpts%Z_polar(m,4,j)-nwpts%Z_polar(m,3,j)) /)
+        R_cub1d = (/ nwpts%R_polar(m,1,j), 3.d0/2.d0 *(nwpts%R_polar(m,2,j)-nwpts%R_polar(m,1,j)), &
+            nwpts%R_polar(m,4,j), 3.d0/2.d0 *(nwpts%R_polar(m,4,j)-nwpts%R_polar(m,3,j))  /)
+        Z_cub1d = (/ nwpts%Z_polar(m,1,j), 3.d0/2.d0 *(nwpts%Z_polar(m,2,j)-nwpts%Z_polar(m,1,j)), &
+            nwpts%Z_polar(m,4,j), 3.d0/2.d0 *(nwpts%Z_polar(m,4,j)-nwpts%Z_polar(m,3,j)) /)
 
-      call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),ss,xp(k), tmp1)
-      call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),ss,yp(k), tmp2)
+        call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),ss,xp(k), tmp1)
+        call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),ss,yp(k), tmp2)
+      enddo
+      call lincol(3)
+      write(51,*) ' .1 setlinewidth'
+      call lplot6(1,1,xp,yp,-npl,' ')
+      write(51,*) ' stroke'
+
     enddo
-    call lincol(3)
-    write(51,*) ' .1 setlinewidth'
-    call lplot6(1,1,xp,yp,-npl,' ')
-    write(51,*) ' stroke'
+
+    call lincol(0)
 
   enddo
-
-  call lincol(0)
-
-enddo
-call tr_deallocate(xp,"xp",CAT_GRID)
-call tr_deallocate(yp,"yp",CAT_GRID)
-
+  call tr_deallocate(xp,"xp",CAT_GRID)
+  call tr_deallocate(yp,"yp",CAT_GRID)
+endif
 
 
 

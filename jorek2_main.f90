@@ -764,26 +764,26 @@ required = 0
 
        N_masters = (n_tor+1)/2
        if (MOD(n_cpu, N_masters) == 0) then
-    	  M_cpu = n_cpu / (N_masters)
+    	  m_cpu = n_cpu / (N_masters)
        else
-    	  M_cpu = (n_cpu - MOD(n_cpu, N_masters))/N_masters +1
+    	  m_cpu = (n_cpu - MOD(n_cpu, N_masters))/N_masters +1
        end if
 
        call tr_allocate(i_tor,1,n_cpu,"i_tor",CAT_UNKNOWN)
        
        do i = 1, n_cpu 
-    	  i_tor(i) =  MOD(i-1, M_cpu)+1
+    	  i_tor(i) =  MOD(i-1, m_cpu)+1
        end do
        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_TRANS,ierr)
 
        do i=1,n_cpu
-    	  i_tor(i) = ((i-1) - MOD(i-1, M_cpu))/ M_cpu  + 1
+    	  i_tor(i) = ((i-1) - MOD(i-1, m_cpu))/ m_cpu  + 1
        enddo
 
        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_N,ierr)
        
        do i=1,N_masters
-    	  i_rank(i) = (i-1) * M_cpu
+    	  i_rank(i) = (i-1) * m_cpu
        enddo
  
        call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)

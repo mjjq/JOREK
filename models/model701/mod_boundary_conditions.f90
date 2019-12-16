@@ -30,7 +30,7 @@ contains
        R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
     use data_structure
     use global_distributed_matrix
-    use phys_module, only: F0, GAMMA, freeboundary
+    use phys_module, only: F0, GAMMA, freeboundary, linear_run
     use mpi_mod
     use mod_locate_irn_jcn
 
@@ -55,7 +55,7 @@ contains
     real*8                   :: rhs_loc(*)
 
     ! Internal parameters
-    real*8  :: zbig
+    real*8  :: zbig, zbig_backup
     integer :: i, in, iv, inode, k
     integer :: index_large_i, index_node, ielm
     integer :: ijA_position, ilarge2
@@ -75,6 +75,7 @@ contains
     integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT
 
     zbig = 1.d10
+    zbig_backup
     do i=1, n_local_elms
 
        ielm = local_elms(i)
@@ -86,6 +87,11 @@ contains
           if (node_list%node(inode)%boundary .ne. 0) then
 
              do in=first_tor, last_tor
+               if (linear_run .and. in .eq. 1) then
+                 zbig = 10.d40
+               else
+                 zbig = zbig_backup
+               end if
 
                 do k=1, n_var
 

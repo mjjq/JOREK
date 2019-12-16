@@ -32,7 +32,7 @@ contains
 
     use data_structure
     use global_distributed_matrix
-    use phys_module, only: F0, GAMMA, n_pol, n_tht
+    use phys_module, only: F0, GAMMA, n_pol, n_tht, linear_run
     use vacuum, only: is_freebound
     use mpi_mod
     use mod_locate_irn_jcn
@@ -62,7 +62,7 @@ contains
     real*8                   :: rhs_loc(*)
 
     ! Internal parameters
-    real*8  :: zbig
+    real*8  :: zbig, zbig_backup
     integer :: i, in, iv, inode, k
     integer :: index_large_i, index_node, ielm
     integer :: ijA_position, ilarge2
@@ -72,7 +72,7 @@ contains
     logical :: is_local, only_count
 
     zbig = 1.d12
-
+    zbig_backup = zbig
        do i=1, n_local_elms
 
           ielm = local_elms(i)
@@ -85,9 +85,14 @@ contains
              ! A crude way of imposing partial regularity at the grid axis
              ! May be improved upon in the future ( see forthcoming paper on full MHD JOREK )
              !---------------------------------------------------------------------------------------------
-             do in=1, n_tor      
-                do k=1, n_var
-
+             do in=1, n_tor
+               if (linear_run  .and.  in .eq. 1 ) then
+                 zbig = 1.d40
+               else
+                 zbig = zbig_backup
+               endif
+                 do k=1, n_var
+                  
                    ! Restrain the coefficients of the 3rd basis functions on axis from changing
                    if ( ( inode <= n_tht .or. ( n_tht < 1 .and. inode <= n_pol ) ) .and. 1==1 ) then
                       index_node = node_list%node(inode)%index(3)

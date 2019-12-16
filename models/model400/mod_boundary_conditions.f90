@@ -8,7 +8,7 @@ module mod_boundary_conditions
   ! --- R,Z variables
   real*8			:: R, R_s, R_t
   real*8			:: Z, Z_s, Z_t
-  real*8			:: xjac
+  real*8			:: xjac, zbig_backup
   ! --- Variable numbers
   integer, parameter		:: k_psi  = 1
   integer, parameter		:: k_u    = 2
@@ -63,7 +63,8 @@ contains
                            RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ,    &
                            psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ,            &
                            t_now, RMP_start_time, tstep, RMP_har_cos, RMP_har_sin,   &
-                           RMP_growth_rate, RMP_ramp_up_time, T_min, grid_to_wall, n_wall_blocks
+                           RMP_growth_rate, RMP_ramp_up_time, T_min, grid_to_wall,   &
+                           n_wall_blocks, linear_run
     use mpi_mod
     use mod_locate_irn_jcn
 
@@ -111,6 +112,7 @@ contains
     integer             :: ilarge_vp, ilarge_vp2
     integer             :: j, err, itest 
     
+    zbig_backup = zbig
     ! -------------------------
     ! --- Retrieve RMP profiles
     if (RMP_on .and. (n_tor .ge. 3)) then
@@ -158,6 +160,11 @@ contains
             call construct_variables(node_list%node(inode), R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
             
             do i_tor=1, n_tor
+              if (linear_run  .and.  i_tor .eq. 1 ) then
+                zbig = 1.d40
+              else
+                zbig = zbig_backup
+              endif
 
               do k_var=1, n_var
 

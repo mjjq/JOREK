@@ -31,7 +31,7 @@ contains
     use global_distributed_matrix
     use phys_module, only: F0, GAMMA, n_pol, n_tht, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
          psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
-         RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, grid_to_wall, n_wall_blocks
+         RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, grid_to_wall, n_wall_blocks, linear_run
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
@@ -64,7 +64,7 @@ contains
     logical,                   intent(in)    :: solve_only
 
     ! Internal parameters
-    real*8  :: zbig,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
+    real*8  :: zbig, zbig_backup,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
     real*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
     real*8  :: Btot, alpha, dT0_dt, dVpar0_dt, dBigR_dt, R_inside, Z_inside
     real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y
@@ -129,6 +129,7 @@ contains
     !=============== RMP ==============
 
     zbig = 1.d12
+    zbig_backup = zbig
        do i=1, n_local_elms
 
           ielm = local_elms(i)
@@ -143,6 +144,11 @@ contains
              ! MHD JOREK )
              !---------------------------------------------------------------------------------------------
              do in=1, n_tor
+               if (linear_run  .and.  in .eq. 1 ) then
+                 zbig = 1.d40
+               else
+                 zbig = zbig_backup
+               endif
                 do k=1, n_var
                    ! Restrain the coefficients of the 2nd, 3rd, 4th basis functions
                    ! on axis from changing
@@ -175,6 +181,11 @@ contains
              if (node_list%node(inode)%boundary .ne. 0) then
 
                 do in=1, n_tor
+               if (linear_run  .and.  in .eq. 1 ) then
+                 zbig = 1.d40
+               else
+                 zbig = zbig_backup
+               endif
 
                    do k=1, n_var
 

@@ -578,12 +578,16 @@ contains
     	 index_node, k_psi, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
     if (.not. only_count) then
       call boundary_conditions_add_RHS(     &
     	   index_node, k_psi, i_tor, 	    &
     	   index_min, index_max,	    &
-    	   RHS_loc, rhs_tmp)
+    	   RHS_loc, rhs_tmp,                &
+           i_tor_min, i_tor_max)
     endif
     
     ! --- Condition between nodes (d/ds or d/dt)
@@ -595,12 +599,16 @@ contains
     	 index_node2, k_psi, i_tor,         &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
     if (.not. only_count) then
       call boundary_conditions_add_RHS(     &
     	   index_node2, k_psi, i_tor,	    &
     	   index_min, index_max,	    &
-    	   RHS_loc, rhs_tmp)
+    	   RHS_loc, rhs_tmp,                &
+           i_tor_min, i_tor_max)
     endif
   
     return
@@ -756,7 +764,10 @@ contains
     	 index_node, k_Vpar, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dpsis
     call boundary_conditions_add_one_entry( &
@@ -764,7 +775,10 @@ contains
     	 index_node2, k_psi,  i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dus
     call boundary_conditions_add_one_entry( &
@@ -772,7 +786,10 @@ contains
     	 index_node2, k_u,    i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_drho
     call boundary_conditions_add_one_entry( &
@@ -780,7 +797,10 @@ contains
     	 index_node,  k_rho,  i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_drhos
     call boundary_conditions_add_one_entry( &
@@ -788,7 +808,10 @@ contains
     	 index_node2, k_rho,  i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dTi
     call boundary_conditions_add_one_entry( &
@@ -796,7 +819,10 @@ contains
     	 index_node,  k_Ti,   i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dTis
     call boundary_conditions_add_one_entry( &
@@ -804,7 +830,10 @@ contains
     	 index_node2, k_Ti,   i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     if (.not. only_count) then
       if (i_tor .eq. 1) then
@@ -815,7 +844,8 @@ contains
       call boundary_conditions_add_RHS(       &
     	   index_node, k_Vpar, i_tor,	      &
     	   index_min, index_max,	      &
-    	   RHS_loc, rhs_tmp)
+    	   RHS_loc, rhs_tmp,                  &
+           i_tor_min, i_tor_max)
     endif
     
     ! --- Condition between nodes (d/ds or d/dt)
@@ -825,7 +855,10 @@ contains
     	 index_node2, k_Vpar, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     lhs_tmp = mach1_ds_Ti
     call boundary_conditions_add_one_entry( &
@@ -833,7 +866,10 @@ contains
     	 index_node,  k_Ti,   i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     lhs_tmp = mach1_ds_Tis
     call boundary_conditions_add_one_entry( &
@@ -841,7 +877,10 @@ contains
     	 index_node2, k_Ti,   i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     if (.not. only_count) then
       if (i_tor .eq. 1) then
@@ -852,7 +891,8 @@ contains
       call boundary_conditions_add_RHS(       &
     	   index_node2, k_Vpar, i_tor,	      &
     	   index_min, index_max,	      &
-    	   RHS_loc, rhs_tmp)
+    	   RHS_loc, rhs_tmp,                  &
+           i_tor_min, i_tor_max)
     endif
   
     return
@@ -933,7 +973,10 @@ contains
     	 index_node, k_u, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     lhs_tmp = dsheath_T
     call boundary_conditions_add_one_entry( &
@@ -941,7 +984,10 @@ contains
     	 index_node, k_Ti, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     if (.not. only_count) then
       if (i_tor .eq. 1) then
@@ -952,7 +998,8 @@ contains
       call boundary_conditions_add_RHS(       &
     	   index_node, k_u, i_tor,	      &
     	   index_min, index_max,	      &
-    	   RHS_loc, rhs_tmp)
+    	   RHS_loc, rhs_tmp,                  &
+           i_tor_min, i_tor_max)
     endif
       
     ! --- Condition between nodes
@@ -962,7 +1009,10 @@ contains
     	 index_node2, k_u, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     lhs_tmp = dsheath_ds_Ts
     call boundary_conditions_add_one_entry( &
@@ -970,7 +1020,10 @@ contains
     	 index_node2, k_Ti, i_tor,	    &
     	 lhs_tmp, solve_only, gmres,	    &
     	 cnt, cnt_prod, only_count,	    &
-    	 index_min, index_max)
+    	 index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     if (.not. only_count) then
       if (i_tor .eq. 1) then
@@ -981,7 +1034,8 @@ contains
       call boundary_conditions_add_RHS(       &
     	   index_node2, k_u, i_tor,	      &
     	   index_min, index_max,	      &
-    	   RHS_loc, rhs_tmp)
+    	   RHS_loc, rhs_tmp,                  &
+           i_tor_min, i_tor_max)
     endif
   
     return

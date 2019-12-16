@@ -201,7 +201,8 @@ contains
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          solve_only, gmres,	     				&
-    	                                 cnt, cnt_prod, only_count, index_min,index_max)
+    	                                 cnt, cnt_prod, only_count, index_min, index_max,       &
+                                         i_tor_min, i_tor_max)
 
                   endif
                   
@@ -230,14 +231,18 @@ contains
 
 		  ! --- Apply Dirichlet if required
 		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min, &
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
                   endif
 
                   ! --------------
 		  ! --- Mach-1 BCs
                   if (k_var .eq. 7) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
-                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min, &
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
+                       index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min,&
+                       i_tor_max)
                   endif
 
                 endif
@@ -263,7 +268,8 @@ contains
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          solve_only, gmres,	     				&
-    	                                 cnt, cnt_prod, only_count, index_min,index_max)
+    	                                 cnt, cnt_prod, only_count, index_min, index_max,       &
+                                         i_tor_min, i_tor_max)
 
                   endif
                   
@@ -292,14 +298,18 @@ contains
 
 		  ! --- Apply Dirichlet if required
 		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
                   endif
 
                   ! --------------
 		  ! --- Mach-1 BCs
                   if (k_var .eq. 7) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
-                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,   &
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
+                      index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, &
+                      i_tor_max)
                   endif
 
                 endif
@@ -324,7 +334,8 @@ contains
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          solve_only, gmres,	     				&
-    	                                 cnt, cnt_prod, only_count, index_min,index_max)
+    	                                 cnt, cnt_prod, only_count, index_min, index_max,       &
+                                         i_tor_min, i_tor_max)
 
                   endif
                   
@@ -373,8 +384,11 @@ contains
                       ) apply_dirichlet = .true.
 
 		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
-		    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+		    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
+                      index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, &
+                      i_tor_max)
                   endif
 
                 endif
@@ -523,7 +537,8 @@ contains
 		           psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		           psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                            solve_only, gmres,	     				&
-    	                   cnt, cnt_prod, only_count, index_min,index_max)
+    	                   cnt, cnt_prod, only_count, index_min, index_max,     &
+                           i_tor_min, i_tor_max)
   
     use mod_parameters
     use data_structure
@@ -544,6 +559,7 @@ contains
     integer,            intent(inout) :: cnt, cnt_prod
     logical,            intent(inout) :: only_count
     integer,		intent(in)    :: index_min, index_max
+    integer,            intent(in)    :: i_tor_min, i_tor_max
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -623,7 +639,8 @@ contains
   !***************** Routine to apply Dirichlet boundary conditions *************
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+  subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only, &
+    only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
   
     use mod_parameters
     use data_structure
@@ -641,6 +658,7 @@ contains
     integer,		intent(in)    :: index_min, index_max
     logical,		intent(in)    :: gmres, solve_only, only_count
     integer,		intent(inout) :: cnt, cnt_prod
+    integer,		intent(in)    :: i_tor_min, i_tor_max
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -657,7 +675,10 @@ contains
          index_node, k_var, i_tor,          &
          lhs_tmp, solve_only, gmres,        &
          cnt, cnt_prod, only_count,         &
-         index_min, index_max)
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
 
     ! --- Condition between nodes (d/ds or d/dt)
     call boundary_conditions_add_one_entry( &
@@ -665,7 +686,10 @@ contains
          index_node2, k_var, i_tor,         &
          lhs_tmp, solve_only, gmres,        &
          cnt, cnt_prod, only_count,         &
-         index_min, index_max)
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob,        &
+         i_tor_min, i_tor_max)
     
     return
   end subroutine apply_Dirichlet_BCs
@@ -679,7 +703,8 @@ contains
   !****************** Routine to apply Mach-1 boundary conditions ***************
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+  subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only,   &
+    only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
   
     use mod_parameters
     use data_structure
@@ -697,6 +722,7 @@ contains
     integer,		intent(in)    :: index_min, index_max
     logical,		intent(in)    :: gmres, solve_only, only_count
     integer,		intent(inout) :: cnt, cnt_prod
+    integer,		intent(in)    :: i_tor_min, i_tor_max
     
     ! --- Internal variables
     integer			      :: index_node,   index_node2
@@ -912,7 +938,8 @@ contains
   !****************** Routine to apply STANGEBY boundary conditions on U ********
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_U_sheath(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+  subroutine apply_U_sheath(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only,    &
+    only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
   
     use mod_parameters
     use data_structure
@@ -930,6 +957,7 @@ contains
     integer,		intent(in)    :: index_min, index_max
     logical,		intent(in)    :: gmres, solve_only, only_count
     integer,		intent(inout) :: cnt, cnt_prod
+    integer,		intent(in)    :: i_tor_min, i_tor_max
     
     ! --- Internal variables
     integer				:: index_node,   index_node2

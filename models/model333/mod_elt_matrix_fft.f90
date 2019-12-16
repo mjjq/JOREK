@@ -276,7 +276,7 @@ contains
     !!!!!!!!!! Apply FFT !!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if (n_tor .gt. 3) then
-      call ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, tid)
+      call ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, tid, i_tor_min, i_tor_max)
     endif
     
     return

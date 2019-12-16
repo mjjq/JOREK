@@ -30,7 +30,6 @@ contains
                                   A_glob, i_tor_min, i_tor_max )
 
     use data_structure
-    use global_distributed_matrix
     use phys_module, only: F0, GAMMA, n_pol, n_tht, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
          psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
        RMP_start_time, tstep, RMP_har_cos, RMP_har_sin

@@ -31,7 +31,6 @@ contains
 
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     use data_structure
-    use global_distributed_matrix
     use phys_module, only: F0, GAMMA, freeboundary
     use mpi_mod
     use mod_locate_irn_jcn

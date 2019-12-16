@@ -63,7 +63,6 @@ contains
                                  irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
 
     use data_structure
-    use global_distributed_matrix
     use vacuum, ONLY: is_freebound
     use phys_module, only: F0, GAMMA, freeboundary, tokamak_device, U_sheath,        &
                            RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ,    &

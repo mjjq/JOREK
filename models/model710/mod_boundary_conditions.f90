@@ -32,7 +32,6 @@ contains
                                   ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max )
 
     use data_structure
-    use global_distributed_matrix
     use phys_module, only: F0, GAMMA, n_pol, n_tht
     use vacuum, only: is_freebound
     use mpi_mod

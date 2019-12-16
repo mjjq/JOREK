@@ -1,4 +1,4 @@
-subroutine distribute_nodes_elements(my_id,n_cpu,node_list,element_list, &
+subroutine distribute_nodes_elements(my_id,m_cpu,n_cpu,node_list,element_list, direct_construction, &
                                     local_elms, n_local_elms, n_dof, index_min, index_max)
 !---------------------------------------------------------------------------------------------
 ! subroutine divides the nodes (not their individual dof) over n_cpu equal parts
@@ -14,10 +14,10 @@ type (type_element_list) :: element_list
 type (type_surface_list) :: flux_list
 
 integer :: local_elms(*)
-integer :: my_id, n_cpu, n_dof, n_local_elms, index_total, inode
+integer :: my_id, n_cpu, m_cpu, n_dof, n_local_elms, index_total, inode
 integer :: index_min(*), index_max(*), index_part, inext, i,j, k, iv,index1
 
-logical :: elm_is_local
+logical :: elm_is_local, direct_construction
 !integer, dimension(node_list%n_nodes) :: active_node
 !integer                               :: n_active_nodes
 if (my_id .eq.0) then
@@ -25,7 +25,6 @@ if (my_id .eq.0) then
   write(*,*) '*     distributing nodes           *'
   write(*,*) '************************************'
 endif
-
  
  !call  Ref_Active_node( element_list,node_list ,active_node,n_active_nodes)
  !index_total = -1
@@ -47,17 +46,34 @@ index_min(1:n_cpu) = 0
 index_max(1:n_cpu) = 0
 
 !----------------------------- must really take into account the number of elements contributing to each node
-index_min(1) = 1
-do i=1,n_cpu
-  index_max(i) = (i * index_total) / n_cpu
-enddo
-do i=2,n_cpu
-  index_min(i) = index_max(i-1) + 1
-enddo
-if (my_id .eq. n_cpu-1) index_max(my_id+1) = index_total
 
-!write(*,'(A,3i6)') ' index_min,index_max : ',my_id,index_min(my_id+1),index_max(my_id+1)
-!write(*,'(A,3i6)') ' index_part          : ',my_id,index_part
+!----------------------------- This portion is for the global matrix ----------
+if(.NOT.direct_construction) then
+  index_min(1) = 1
+  do i=1,n_cpu
+    index_max(i) = (i * index_total) / n_cpu
+  enddo
+  do i=2,n_cpu
+    index_min(i) = index_max(i-1) + 1
+  enddo
+  if (my_id .eq. n_cpu-1) index_max(my_id+1) = index_total
+
+!----------------------------- This portion is for the harmonic matrix ----------
+else 
+   if(MOD(my_id,m_cpu).eq.0) index_min(my_id+1) = 1
+   do i=1,n_cpu
+     index_max(i) = ((MOD(i-1,m_cpu)+1) * index_total) / m_cpu
+   enddo
+   do i=2,n_cpu
+      if(MOD(i-1,m_cpu).ne.0) then
+       index_min(i) = index_max(i-1) + 1
+      endif
+   enddo
+   if(mod(my_id+1,m_cpu).eq.0) index_max(my_id+1) = index_total
+   write(*,'(A,3i6)') ' index_min,index_max:',my_id,index_min(my_id+1),index_max(my_id+1)
+
+end if 
+!----------------------------- This portion is for the harmonic matrix ----------
 
 n_dof           = index_total * n_tor * n_var
 

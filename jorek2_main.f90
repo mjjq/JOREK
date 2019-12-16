@@ -154,7 +154,7 @@ program JOREK2
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   real*8,allocatable       :: res(:) 
   integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev
-  logical                  :: is_local, file_exists
+  logical                  :: is_local, file_exists, direct_construction
   integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
   integer                  :: index_size, id_elements
@@ -822,13 +822,14 @@ required = 0
     call tr_allocate(local_index_start,1,n_cpu,"local_index_start",CAT_FEM)
     call tr_allocate(local_index_end,1,n_cpu,"local_index_end",CAT_FEM)
 
+    direct_construction = .false.
     !
     ! Construct index_min, index_max and local_elems
     !
-    call distribute_nodes_elements(id_elements,index_size,node_list,element_list,local_elms,	  &
-    	 n_local_elms,ndof_glob,index_min,index_max)
+    call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,direct_construction,local_elms,  &
+    	                            n_local_elms,ndof_glob,index_min,index_max)
 
-    node_list%n_dof = ndof_glob
+    node_list%n_dof   = ndof_glob
     local_index_start = index_min
     local_index_end   = index_max
     ! Build ijA_index, ijA_size and irn_jcn
@@ -989,6 +990,8 @@ required = 0
 
 !begin Harmonic Construction
 #ifdef DIRECT_CONSTRUCTION
+  direct_construction = .true.
+  if(direct_construction) then
     if(n_tor.gt.1) then
 
       call clck_time_barrier(t0)
@@ -1002,26 +1005,27 @@ required = 0
       endif
 
  
-    call distribute_nodes_elements_harmonic(my_id,m_cpu,n_cpu,node_list,element_list,local_elms_harm,	  &
-    	 n_local_elms_harm,index_min_harm,index_max_harm)
+      call distribute_nodes_elements(my_id,m_cpu,n_cpu,node_list,element_list, direct_construction, & 
+                                     local_elms_harm, n_local_elms_harm, ndof_glob, index_min_harm,index_max_harm)
 
-    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
-                                 local_elms_harm,n_local_elms_harm,index_min_harm(id_elements+1),& 
-                                 index_max_harm(id_elements+1), ijA_index_harm, ijA_size_harm,   &
-                                 irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, i_tor_max,& 
-                                 n_glob_harm, nz_glob_harm, n_matrix_block_size_harm)
+      call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary, &
+                                   local_elms_harm,n_local_elms_harm,index_min_harm(id_elements+1), & 
+                                   index_max_harm(id_elements+1), ijA_index_harm, ijA_size_harm,    &
+                                   irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, i_tor_max,& 
+                                   n_glob_harm, nz_glob_harm, n_matrix_block_size_harm)
     
 
-     call construct_harmonic_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms_harm, n_local_elms_harm,& 
-                                    index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint, xcase, R_axis, Z_axis,&
-                                     psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm)
+      call construct_harmonic_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms_harm, n_local_elms_harm, & 
+                                     index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint, xcase,  & 
+                                     R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
+                                     i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm)
 
-     call clck_time_barrier(t1) 
+      call clck_time_barrier(t1) 
 
-    if (my_id .eq. 0) then
-       call clck_ldiff(t0,t1,tsecond)
-      write(*,FMT_TIMING) my_id, '# Elapsed time construct_harmonic_matrix :',tsecond
-    endif     
+      if (my_id .eq. 0) then
+         call clck_ldiff(t0,t1,tsecond)
+         write(*,FMT_TIMING) my_id, '# Elapsed time construct_harmonic_matrix :',tsecond
+      endif     
 
 
 
@@ -1116,6 +1120,7 @@ required = 0
 #endif
  
     endif
+  endif
 #endif
 !end Harmonic Construction
 

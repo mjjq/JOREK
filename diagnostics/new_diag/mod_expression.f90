@@ -483,11 +483,12 @@ module mod_expression
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z, Btheta, psi_abs, E_par, E_crit, E_dreicer, ln_Lambda
+      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z, Btheta, psi_abs, E_par, E_crit, E_dreicer
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
-      Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot 
+      Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
+      ne0_20, ln_Lambda
     real*8 :: FFprime_loc, Jpol
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
@@ -1044,7 +1045,11 @@ module mod_expression
             end if
           end if
           
-          ln_Lambda = 18. ! approximate value for Coulomb logarithm
+          ! --- Coulomb logarithm calculated according to Ref. [L. Hesselow et al, J Plasma Phys 84,
+          !     p. 905840605 (2018); doi:10.1017/S0022377818001113] Eq. (2.9):
+          Te0_eV = Te0 / ( EL_CHG * MU_ZERO * central_density * 1.d20 )
+          ne0_20 = r0 * central_density
+          ln_Lambda = 14.6 + 0.5 * log( Te0_eV / ne0_20 )
           
           E_par = - R * ( eta_T * zj0 / R**2                                                       &
                         + tauIC / r0 * ( (P0_R * Ps0_Z - P0_Z * Ps0_R) / R + F0 * P0_p / R**2 ) )

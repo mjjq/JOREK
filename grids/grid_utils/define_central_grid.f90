@@ -396,12 +396,6 @@ do j=1,n_tht
     endif
 
     do k=1,i_find
-      ! --- Readjust s,t (sometimes outside element after find_Z_surface and find_R_surface...)
-      if (s_find(k) .lt. 0.d0) s_find(k) = 0.d0
-      if (s_find(k) .gt. 1.d0) s_find(k) = 1.d0
-      if (t_find(k) .lt. 0.d0) t_find(k) = 0.d0
-      if (t_find(k) .gt. 1.d0) t_find(k) = 1.d0
-        
       call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k), &
                      RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
@@ -476,12 +470,6 @@ do j=1,n_tht
     endif
 
     do k=1,i_find
-      ! --- Readjust s,t (sometimes outside element after find_Z_surface and find_R_surface...)
-      if (s_find(1) .lt. 0.d0) s_find(1) = 0.d0
-      if (s_find(1) .gt. 1.d0) s_find(1) = 1.d0
-      if (t_find(1) .lt. 0.d0) t_find(1) = 0.d0
-      if (t_find(1) .gt. 1.d0) t_find(1) = 1.d0
-        
       call interp_RZ(node_list,element_list,i_elm_find(k),s_find(k),t_find(k),&
                      RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss,    &
                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)

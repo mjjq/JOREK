@@ -49,6 +49,7 @@ end subroutine check_point_is_inside_wall
   
 
 !> Same thing but for a random contour --- outside(=0), inside(=1)
+! algorithm is originally from W. Randolph Franklin (I think)
 subroutine check_point_is_inside_contour(R, Z, n_ctr, R_ctr, Z_ctr, inside)
 
   use phys_module

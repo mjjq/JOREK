@@ -135,6 +135,8 @@ end do
 !------- Extrapolation points ----------!
 !---------------------------------------!
 
+! --- This determines the background of the radial distribution of points (in meshac2 routine)
+! --- we use 999. because we want the concentration only on the side of the grid that the patch attaches to
 bgd_radial  = 0.6d0
 sig_radial1 = 999.!0.3
 

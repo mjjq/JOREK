@@ -6,7 +6,7 @@ subroutine finish_grid(node_list, element_list, newnode_list, newelement_list, n
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only: xcase, RZ_grid_inside_wall
+use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node
 use mod_eqdsk_tools
 use mod_interp, only: interp_RZ, interp
 use mod_element_rtree
@@ -294,15 +294,17 @@ do i=1,node_list%n_nodes
     node_list%node(i)%index(k) = index
 
     ! Remove all but one node at axis
-    if (xcase .ne. 3) then
-      if ((i .gt. 5) .and. (i .le. 4+n_tht) .and. (k.eq.1)) then
-        node_list%node(i)%index(k) = node_list%node(5)%index(1)
-        index = index - 1
-      endif
-    else
-      if ((i .gt. 9) .and. (i .le. 8+n_tht-1) .and. (k.eq.1)) then
-        node_list%node(i)%index(k) = node_list%node(9)%index(1)
-        index = index - 1
+    if (force_central_node) then
+      if (xcase .ne. 3) then
+        if ((i .gt. 5) .and. (i .le. 4+n_tht) .and. (k.eq.1)) then
+          node_list%node(i)%index(k) = node_list%node(5)%index(1)
+          index = index - 1
+        endif
+      else
+        if ((i .gt. 9) .and. (i .le. 8+n_tht-1) .and. (k.eq.1)) then
+          node_list%node(i)%index(k) = node_list%node(9)%index(1)
+          index = index - 1
+        endif
       endif
     endif
     

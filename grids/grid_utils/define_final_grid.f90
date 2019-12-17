@@ -8,7 +8,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only: write_ps
+use phys_module, only: write_ps, force_central_node
 
 implicit none
 
@@ -1236,15 +1236,17 @@ do i=1,newnode_list%n_nodes
     node_list%node(i)%index(k) = index
 
     ! Remove all but one node at axis
-    if (xcase .ne. 3) then
-      if ((i .gt. 5) .and. (i .le. 4+n_tht) .and. (k.eq.1)) then
-        node_list%node(i)%index(k) = node_list%node(5)%index(1)
-        index = index - 1
-      endif
-    else
-      if ((i .gt. 9) .and. (i .le. 8+n_tht-1) .and. (k.eq.1)) then
-        node_list%node(i)%index(k) = node_list%node(9)%index(1)
-        index = index - 1
+    if (force_central_node) then
+      if (xcase .ne. 3) then
+        if ((i .gt. 5) .and. (i .le. 4+n_tht) .and. (k.eq.1)) then
+          node_list%node(i)%index(k) = node_list%node(5)%index(1)
+          index = index - 1
+        endif
+      else
+        if ((i .gt. 9) .and. (i .le. 8+n_tht-1) .and. (k.eq.1)) then
+          node_list%node(i)%index(k) = node_list%node(9)%index(1)
+          index = index - 1
+        endif
       endif
     endif
     

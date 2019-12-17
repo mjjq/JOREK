@@ -43,7 +43,8 @@ function usage () {
   echo "  -time <time>-<dtime>-<time> Selects time step within given time range with given interval"
   echo "  -dtime <dtime>              Equivalent to -time 0-<dtime>-infinity"
   echo "  -ms                         -time is given in milliseconds instead of in JOREK-units"
-  echo "  -l                          Creates a file containing all selected timesteps and times (default:off)"
+  echo "  -l                          Creates a file containing all selected timesteps and times,"
+  echo "                              if parameter -(d)time is used (default:off)"
   echo "  -zip                        Compress the .dat files using gzip"
   echo "  -stpts                      Filename of startpoints [default:stpts]"
   echo ""
@@ -205,8 +206,21 @@ while [ $# -gt 1 ]; do
   fi
 done
 
+
+
+# --- Some parameter checks
 if [ $# -lt 2 ]; then
   echo "ERROR: Not enough parameters."
+  usage
+  exit 1
+fi
+if [ ! -z "$select_arguments" ] && [[ $select_arguments != *"time"* ]]; then
+  echo "WARNING: -l and -ms parameters will be ignored, if -(d)time is not set."
+  select_arguments=""
+fi
+regexp_steps="^[0-9]{1,5}(-[0-9]{1,5}){0,2}(,[0-9]{1,5}(-[0-9]{1,5}){0,2})*$"
+if [[ ! "$selected_steps" =~ $regexp_steps   ]]; then
+  echo "ERROR: -(d)only-parameter given in wrong format."
   usage
   exit 1
 fi
@@ -304,7 +318,9 @@ else
     echo ""
     echo "ABORTING"
     echo ""
-    rm -rf $local_tmp_dir
+    if [ ! -z "$local_tmp_dir" ]; then
+      rm -rf $local_tmp_dir
+    fi
     exit 0
   fi
 fi

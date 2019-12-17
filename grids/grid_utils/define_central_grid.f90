@@ -191,8 +191,11 @@ else
   
   ! Spread out points evenly (outer angle between tht_x1 and tht_x2 is usually bigger than inner angle)
   if (psi_xpoint(1) .le. psi_xpoint(2)) then
+    ! n_tht_mid corresponds to the secondary X-point
     n_tht_mid = int(n_tht * (2.d0*PI - (tht_x1 - tht_x2)) / (2.d0*PI))
     ! Make sure n_tht_mid is odd and save it to n_grids for later use
+    ! it needs to be odd, because we go through each Xpoint twice:
+    ! from 1 to n_tht_mid, and then from n_tht_mid+1 to n_tht
     if(mod(n_tht_mid,2) .eq. 0) n_tht_mid = n_tht_mid + 1
     
     call meshac2(n_tht_mid,s_tmp, 0.d0,1.d0,SIG_theta,SIG_theta,bgf_tht,1.0d0)

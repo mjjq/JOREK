@@ -1,4 +1,11 @@
-!> Program to convert a JOREK2 restart file into binary VTK format
+!> Program to find the new patch connection points on a new grid.
+!> this is useful for example if you have a grid with extension patches,
+!> and you decide to change slightly the equilibrium. This will change
+!> the initial grid (without patches) and therefore the patches points
+!> will not be connected to actual grid points of the first grid.
+!> The routine simply looks for the closest boundary nodes on the initial grid.
+!> hence, you first need to run the grid with n_wall_blocks=0
+!> and then change n_wall_blocks back to the value you need before running this code.
 program jorek2_get_new_extension_patch_connections
 
 use mod_parameters, only: n_var, variable_names

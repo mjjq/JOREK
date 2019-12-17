@@ -285,6 +285,7 @@ if (my_id == 0) then
     write(*,INTG_FMT) 'n_wall_blocks         ', n_wall_blocks
     do i=1,n_wall_blocks
       write(*,INTG_FMT) 'Wall Patch number:    ', i
+      write(*,INTG_FMT) 'resolution of block:  ', n_ext_block(i)
       write(*,INTG_FMT) 'n_block_points_left   ', n_block_points_left(i)
       do j=1,n_block_points_left(i)
         write(*,INTG_FMT) 'Patch left  point:    ', j

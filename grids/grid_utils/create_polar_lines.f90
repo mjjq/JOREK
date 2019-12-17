@@ -1,4 +1,7 @@
 subroutine create_polar_lines(n_polar, R_beg, Z_beg, R_mid, Z_mid, R_end, Z_end, delta, R_polar, Z_polar)
+! --- This routine creates a cubic spline for the polar lines (the ones that are
+! --- across flux surfaces). They have 3 control points, two at the end, and one
+! --- in the middle, at the turning point, typically the separatrix
 
   implicit none
   

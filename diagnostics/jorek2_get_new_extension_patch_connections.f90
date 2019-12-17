@@ -20,9 +20,9 @@ integer :: i_bnd_beg, i_bnd_end
 real*8  :: diff_min_beg, diff_min_end, diff
 
 
-write(*,*) '***************************************'
-write(*,*) '*       jorek2vtk                     *'
-write(*,*) '***************************************'
+write(*,*) '************************************************'
+write(*,*) '* jorek2_get_new_extension_patch_connections   *'
+write(*,*) '************************************************'
 
 allocate(node_list)
 allocate(element_list)

@@ -1,6 +1,7 @@
 subroutine create_new_node(node_list, element_list, newnode_list, index, i2, j2, nwpts)
 !------------------------------------------------------------------------------------------
-! subroutine defines a new node with the given index
+! subroutine defines a new node with the given index, the node is the
+! intersection between a flux surface and a polar line, at indices i2 and j2 respectively
 !------------------------------------------------------------------------------------------
 
 use tr_module 
@@ -63,7 +64,8 @@ end subroutine create_new_node
 
 subroutine create_new_node_polar(newnode_list, index, n_seg, n_nodes, i1, i2, R_polar1, Z_polar1, R_polar2, Z_polar2, R_point, Z_point)
 !------------------------------------------------------------------------------------------
-! Same thing, but using two pairs of polar lines, instead of a polar line and a surface
+! subroutine defines a new node with the given index, the node is the
+! intersection between two polar lines, at indices i2 and j2 respectively
 !------------------------------------------------------------------------------------------
 
 use tr_module 

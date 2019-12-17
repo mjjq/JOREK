@@ -102,6 +102,10 @@ do k=1,surface_list%flux_surfaces(j_surf)%n_pieces
         if (abs(R_find - RRg1) .lt. 1.D-6) then
           s_find(i_find+1) = ri
           t_find(i_find+1) = si
+          if (s_find(i_find+1) .lt. 0.d0) s_find(i_find+1) = 0.d0
+          if (s_find(i_find+1) .gt. 1.d0) s_find(i_find+1) = 1.d0
+          if (t_find(i_find+1) .lt. 0.d0) t_find(i_find+1) = 0.d0
+          if (t_find(i_find+1) .gt. 1.d0) t_find(i_find+1) = 1.d0
           i_elm_find(i_find+1) = i_elm
           st_find(i_find+1) = t
           i_find = i_find + 1

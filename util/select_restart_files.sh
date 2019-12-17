@@ -24,7 +24,8 @@ function usage() {
   echo "  -dtime <dtime>              Equivalent to -time 0-<dtime>-infinity"
   echo "  -ms                         -time is given in milli seconds instead of in JOREK-units"
   echo "  -s                          Prints only the selected stepnumbers, otherwise the full paths (default)"
-  echo "  -l                          Creates a file listing all selected timesteps and times (default:off)"
+  echo "  -l                          Creates a file containing all selected timesteps and times,"
+  echo "                              if parameter -(d)time is used (default:off)"
   echo ""
   echo "Remarks:"
   echo "  * Option -only will only select those restart files,"
@@ -76,6 +77,28 @@ while [ $# -gt 0 ]; do
     break
   fi
 done
+
+
+
+# --- Some parameter checks
+if [ -z "$selected_times" ] && ( [ $ms -eq 1 ] || [ $list -eq 1 ] ); then
+  echo "WARNING: -l and -ms parameters will be ignored, if -(d)time is not set."
+fi
+regexp_steps="^[0-9]{1,5}(-[0-9]{1,5}){0,2}(,[0-9]{1,5}(-[0-9]{1,5}){0,2})*$"
+if [[ ! "$selected_steps" =~ $regexp_steps   ]]; then
+  echo "ERROR: -(d)only-parameter given in wrong format."
+  stop
+fi
+if [ ! -z $selected_times ]; then
+  rfloat="[0-9]*(\.)?[0-9]*" #regexp for an integer or real
+  regexp_times="^"$rfloat"(-"$rfloat"-("$rfloat"|infinity))?(,"$rfloat"(-"$rfloat"-("$rfloat"|infinity))?)*$"
+  if [[ ! "$selected_times" =~ $regexp_times ]]; then
+    echo "ERROR: -(d)time-parameter given in wrong format."
+    stop
+  fi
+fi
+
+
 
 SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 export sourceDir=`readlink -f .`
@@ -135,7 +158,7 @@ else
          [[ ${#step_numbers[*]} -eq 3 && ${step_numbers[0]} -le $step_number && $(($step_number % ${step_numbers[1]})) -eq 0 && ${step_numbers[2]} -ge $step_number ]] ; then
 
         # --- Prints list of absolute paths of the selected restart files or only their step numbers
-        if [ $full_path ] ; then
+        if [ $full_path -eq 1 ] ; then
           echo "$sourceDir/jorek$avail_step.${RST_TYPE}"
         else
           echo $avail_step

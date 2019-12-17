@@ -170,7 +170,10 @@ do i=1,newnode_list%n_nodes
   newnode_list%node(i)%values(1,1,1) = psi
   newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(2,1) + PSI_Z * newnode_list%node(i)%x(2,2)
   newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(3,1) + PSI_Z * newnode_list%node(i)%x(3,2)
-  newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(4,1) + PSI_Z * newnode_list%node(i)%x(4,2)
+  newnode_list%node(i)%values(1,4,1) = 0.d0 !PSI_R * newnode_list%node(i)%x(4,1) + PSI_Z * newnode_list%node(i)%x(4,2)
+  ! note that the 4th one does not really matter because it is properly solved
+  ! for in the GS equilibrium afterwards. Even for boundary nodes, only the 1st, 2nd and 3rd 
+  ! values are fixed, not the 4th...
 
   !if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0 ! this is ok only if bnd 2 is aligned to surface!
 

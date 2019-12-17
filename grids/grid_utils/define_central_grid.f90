@@ -561,6 +561,9 @@ allocate (R_beg (n_tht),Z_beg (n_tht))
 allocate (delta1(n_tht),delta2(n_tht))
 allocate (R_polar(5,4,n_tht),Z_polar(5,4,n_tht))
 
+! --- These deltas determine how close to the mid-point you place your two middle control points, 10% by default.
+! --- But for example, close to the X-point, you want them to be very close to the X-lines, so you go to a smaller values.
+! --- On the X-lines themselves, of course you want the polar lines to be exactly on the X-point, and so it needs to be zero.
 delta1 = 0.1
 delta2 = 0.1
 delta2(1) = 0.d0   ; delta2(n_tht  ) = 0.d0

@@ -171,6 +171,8 @@ if (xcase .ne. 3) then
   if (xcase .eq. 2) tht_x1 = atan2(Z_xpoint(2)-Z_axis,R_xpoint(2)-R_axis)
   n_tht_mid = n_tht/2
   
+  ! s_tmp is for the separatrix, where we focus grid-points near the X-points
+  ! s_tmp2 is for the grid centre, which we want to be equidistant (ie. not focused at the X-points)
   call meshac2(n_tht,s_tmp, 0.d0,1.d0,SIG_theta,SIG_theta,bgf_tht,1.0d0)
   call meshac2(n_tht,s_tmp2,0.d0,1.d0,999.0,    999.0,    bgf_tht,1.0d0)
   do j=1,n_tht

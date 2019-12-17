@@ -13,8 +13,8 @@ implicit none
 integer,                  intent(in)     :: my_id        !< MPI proc number
 logical,                  intent(in)     :: xpoint
 integer,                  intent(in)     :: xcase
-type (type_node_list)   , intent(in)	 :: node_list
-type (type_element_list), intent(in)	 :: element_list
+type (type_node_list)   , intent(in)     :: node_list
+type (type_element_list), intent(in)     :: element_list
 type (type_surface_list), intent(inout)  :: surface_list
 
 ! --- Local variables
@@ -141,37 +141,37 @@ do i=1, element_list%n_elements
       ! --- Normally this should not really happen, but it does, ie. one of the end points is on a corner...
       ! --- Or the surface is tangential to the edge of the element
       if (ifound .eq. 3) then
-	do k=1,3
-	  call interp_RZ(node_list,element_list,i,r_psi(k),s_psi(k),RRg(k),ZZg(k))
+        do k=1,3
+          call interp_RZ(node_list,element_list,i,r_psi(k),s_psi(k),RRg(k),ZZg(k))
           dpsi_dr_copy(k) = dpsi_dr(k)
-	  dpsi_ds_copy(k) = dpsi_ds(k)
+          dpsi_ds_copy(k) = dpsi_ds(k)
           r_psi_copy(k)   = r_psi(k)  
-	  s_psi_copy(k)   = s_psi(k)  
-	  tht_copy(k)     = tht(k)    
-	enddo
-	distance_max = 0.d0
-	do k=1,3
-	  kp1 = mod(k,3)+1
-	  distance = sqrt( (RRg(k)-RRg(kp1))**2 + (ZZg(k)-ZZg(kp1))**2 )
-	  if (distance .gt. distance_max) then
-	    distance_max = distance
-	    k_keep = k
-	  endif
-	enddo
-	k = k_keep
-	kp1 = mod(k,3)+1
+          s_psi_copy(k)   = s_psi(k)  
+          tht_copy(k)     = tht(k)    
+        enddo
+        distance_max = 0.d0
+        do k=1,3
+          kp1 = mod(k,3)+1
+          distance = sqrt( (RRg(k)-RRg(kp1))**2 + (ZZg(k)-ZZg(kp1))**2 )
+          if (distance .gt. distance_max) then
+            distance_max = distance
+            k_keep = k
+          endif
+        enddo
+        k = k_keep
+        kp1 = mod(k,3)+1
         dpsi_dr(1) = dpsi_dr_copy(k) ; dpsi_dr(2) = dpsi_dr_copy(kp1) 
-	dpsi_ds(1) = dpsi_ds_copy(k) ; dpsi_ds(2) = dpsi_ds_copy(kp1) 
+        dpsi_ds(1) = dpsi_ds_copy(k) ; dpsi_ds(2) = dpsi_ds_copy(kp1) 
         r_psi(1)   = r_psi_copy(k)   ; r_psi(2)   = r_psi_copy(kp1)   
-	s_psi(1)   = s_psi_copy(k)   ; s_psi(2)   = s_psi_copy(kp1)   
-	tht(1)     = tht_copy(k)     ; tht(2)	  = tht_copy(kp1)     
-	ifound = 2
+        s_psi(1)   = s_psi_copy(k)   ; s_psi(2)   = s_psi_copy(kp1)   
+        tht(1)     = tht_copy(k)     ; tht(2)     = tht_copy(kp1)     
+        ifound = 2
       endif
       
       if (ifound .eq. 2) then
 
         call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(1:2),s_psi(1:2),dpsi_dr(1:2),dpsi_ds(1:2))
-	
+
       elseif (ifound .eq. 4) then
       
 ! complicated : 2 line pieces but which point belongs to which line piece?
@@ -184,32 +184,32 @@ do i=1, element_list%n_elements
         where (tht .lt. 0.d0) tht = tht + 2.d0*PI
 
         itht(1)= 1; itht(2) = 2; itht(3) = 3; itht(4) = 4
-	
-	if (tht(2) .lt. tht(1)) then
-	  itmp = itht(1); itht(1) = itht(2) ; itht(2) = itmp;
-	endif
-	if (tht(4) .lt. tht(3)) then
-	  itmp = itht(3); itht(3) = itht(4) ; itht(4) = itmp;
-	endif
-	if (tht(itht(3)) .lt. tht(itht(2))) then
-	  itmp = itht(2); itht(2) = itht(3) ; itht(3) = itmp;
-	endif
-	if (tht(itht(2)) .lt. tht(itht(1))) then
-	  itmp = itht(1); itht(1) = itht(2) ; itht(2) = itmp;
-	endif
-	if (tht(itht(4)) .lt. tht(itht(3))) then
-	  itmp = itht(3); itht(3) = itht(4) ; itht(4) = itmp;
-	endif
+
+        if (tht(2) .lt. tht(1)) then
+          itmp = itht(1); itht(1) = itht(2) ; itht(2) = itmp;
+        endif
+        if (tht(4) .lt. tht(3)) then
+          itmp = itht(3); itht(3) = itht(4) ; itht(4) = itmp;
+        endif
+        if (tht(itht(3)) .lt. tht(itht(2))) then
+          itmp = itht(2); itht(2) = itht(3) ; itht(3) = itmp;
+        endif
+        if (tht(itht(2)) .lt. tht(itht(1))) then
+          itmp = itht(1); itht(1) = itht(2) ; itht(2) = itmp;
+        endif
+        if (tht(itht(4)) .lt. tht(itht(3))) then
+          itmp = itht(3); itht(3) = itht(4) ; itht(4) = itmp;
+        endif
         if (tht(itht(3)) .lt. tht(itht(2))) then
           itmp = itht(2); itht(2) = itht(3) ; itht(3) = itmp;
         endif
         
-	
-        if ((xpoint) .and. (     ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2) .and. (surface_list%psi_values(j) .eq. psi_xpoint(1)) )  &
-	                    .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1) .and. (surface_list%psi_values(j) .eq. psi_xpoint(2)) )  ) ) then
 
-	  call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(1:3:2)), &
-          	   s_psi(itht(1:3:2)),dpsi_dr(itht(1:3:2)),dpsi_ds(itht(1:3:2)))
+        if ((xpoint) .and. (     ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2) .and. (surface_list%psi_values(j) .eq. psi_xpoint(1)) )  &
+                            .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1) .and. (surface_list%psi_values(j) .eq. psi_xpoint(2)) )  ) ) then
+
+          call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(1:3:2)), &
+                   s_psi(itht(1:3:2)),dpsi_dr(itht(1:3:2)),dpsi_ds(itht(1:3:2)))
           call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(2:4:2)), &
                                 s_psi(itht(2:4:2)),dpsi_dr(itht(2:4:2)),dpsi_ds(itht(2:4:2)))
           ! --- Because of the saddle, near the Xpoint, the derivatives of the spline can be very noisy
@@ -231,100 +231,100 @@ do i=1, element_list%n_elements
         else
 
           ! This is a little tricky, we look if the element is a neighbour of one of the Xpoints
-	  Xneigh = 0
-	  do k=1,4
-	    i_neigh = element_list%element(i)%neighbours(k)
-	    if( (xcase .ne. 2) .and. (i_neigh .eq. i_elm_xpoint(1)) ) then
-	      Xneigh = 1
-	      exit
-	    endif
-	    if( (xcase .ne. 1) .and. (i_neigh .eq. i_elm_xpoint(2)) ) then
-	      Xneigh = 2
-	      exit
-	    endif
-	  enddo
+          Xneigh = 0
+          do k=1,4
+            i_neigh = element_list%element(i)%neighbours(k)
+            if( (xcase .ne. 2) .and. (i_neigh .eq. i_elm_xpoint(1)) ) then
+              Xneigh = 1
+              exit
+            endif
+            if( (xcase .ne. 1) .and. (i_neigh .eq. i_elm_xpoint(2)) ) then
+              Xneigh = 2
+              exit
+            endif
+          enddo
           ! If it is a neighbour, then record all four intersections (also do that for cases where
-	  ! the element is i_elm_xpoint, but the flux surface is not the LCFS)
-	  if( (Xneigh .gt. 0) &
-	    .or. ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2)) & 
-	    .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1)) ) then
-	    do k=1,4
-	      call interp_RZ(node_list,element_list,i,r_psi(k),s_psi(k),RRg(k),ZZg(k))
-	    enddo
-	  endif
+          ! the element is i_elm_xpoint, but the flux surface is not the LCFS)
+          if( (Xneigh .gt. 0) &
+            .or. ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2)) & 
+            .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1)) ) then
+            do k=1,4
+              call interp_RZ(node_list,element_list,i,r_psi(k),s_psi(k),RRg(k),ZZg(k))
+            enddo
+          endif
           ! Then, look if the element is above/below or right/left of i_elm_xpoint, 
-	  ! and then reorder the points 1,2,3,4 so that 1,2 are always right/above Xpoint,
-	  ! and 3,4 are always left/below Xpoint
-	  if(Xneigh .gt. 0) then
-	    if( (maxval(RRg) .gt. R_xpoint(Xneigh)) .and. (minval(RRg) .lt. R_xpoint(Xneigh)) ) then
-	      icount = 0
-	      do k=1,4
-	        if(RRg(k) .gt. R_xpoint(Xneigh)) then
-	          icount = icount + 1
-	          itht(icount) = k
-	        endif
-	      enddo
-	      do k=1,4
-	        if(RRg(k) .lt. R_xpoint(Xneigh)) then
-	          icount = icount + 1
-	          itht(icount) = k
-	        endif
-	      enddo
-	    else
-	      icount = 0
-	      do k=1,4
-	        if(ZZg(k) .gt. Z_xpoint(Xneigh)) then
-	          icount = icount + 1
-	          itht(icount) = k
-	        endif
-	      enddo
-	      do k=1,4
-	        if(ZZg(k) .lt. Z_xpoint(Xneigh)) then
-	          icount = icount + 1
-	          itht(icount) = k
-	        endif
-	      enddo
-	    endif
-	  endif
+          ! and then reorder the points 1,2,3,4 so that 1,2 are always right/above Xpoint,
+          ! and 3,4 are always left/below Xpoint
+          if(Xneigh .gt. 0) then
+            if( (maxval(RRg) .gt. R_xpoint(Xneigh)) .and. (minval(RRg) .lt. R_xpoint(Xneigh)) ) then
+              icount = 0
+              do k=1,4
+                if(RRg(k) .gt. R_xpoint(Xneigh)) then
+                  icount = icount + 1
+                  itht(icount) = k
+                endif
+              enddo
+              do k=1,4
+                if(RRg(k) .lt. R_xpoint(Xneigh)) then
+                  icount = icount + 1
+                  itht(icount) = k
+                endif
+              enddo
+            else
+              icount = 0
+              do k=1,4
+                if(ZZg(k) .gt. Z_xpoint(Xneigh)) then
+                  icount = icount + 1
+                  itht(icount) = k
+                endif
+              enddo
+              do k=1,4
+                if(ZZg(k) .lt. Z_xpoint(Xneigh)) then
+                  icount = icount + 1
+                  itht(icount) = k
+                endif
+              enddo
+            endif
+          endif
           
-	  ! In the case where the element actually is i_elm_xpoint, 
-	  ! but the flux surface is not the LCFS, we need to check if the line is right&left
-	  ! or above&below the Xpoint
-	  if( (Xneigh .eq. 0) &
-	    .and. (    ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2)) &
-	          .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1)) ) ) then
-	    if(i .eq. i_elm_xpoint(1)) Xneigh = 1
-	    if(i .eq. i_elm_xpoint(2)) Xneigh = 2
-	    if(surface_list%psi_values(j) .gt. psi_xpoint(Xneigh)) then
-	      icount = 0
-	      do k=1,4
-	        if(RRg(k) .gt. R_xpoint(Xneigh)) then
-	          icount = icount + 1
-	          itht(icount) = k
-	        endif
-	      enddo
-	      do k=1,4
-	        if(RRg(k) .lt. R_xpoint(Xneigh)) then
-	          icount = icount + 1
-	          itht(icount) = k
-	        endif
-	      enddo
-	    else
-	      icount = 0
-	      do k=1,4
-	        if(ZZg(k) .gt. Z_xpoint(Xneigh)) then
-	          icount = icount + 1
-	          itht(icount) = k
-	        endif
-	      enddo
-	      do k=1,4
-	        if(ZZg(k) .lt. Z_xpoint(Xneigh)) then
-	          icount = icount + 1
-	          itht(icount) = k
-	        endif
-	      enddo
-	    endif
-	  endif
+          ! In the case where the element actually is i_elm_xpoint, 
+          ! but the flux surface is not the LCFS, we need to check if the line is right&left
+          ! or above&below the Xpoint
+          if( (Xneigh .eq. 0) &
+            .and. (    ((i .eq. i_elm_xpoint(1)) .and. (xcase .ne. 2)) &
+                  .or. ((i .eq. i_elm_xpoint(2)) .and. (xcase .ne. 1)) ) ) then
+            if(i .eq. i_elm_xpoint(1)) Xneigh = 1
+            if(i .eq. i_elm_xpoint(2)) Xneigh = 2
+            if(surface_list%psi_values(j) .gt. psi_xpoint(Xneigh)) then
+              icount = 0
+              do k=1,4
+                if(RRg(k) .gt. R_xpoint(Xneigh)) then
+                  icount = icount + 1
+                  itht(icount) = k
+                endif
+              enddo
+              do k=1,4
+                if(RRg(k) .lt. R_xpoint(Xneigh)) then
+                  icount = icount + 1
+                  itht(icount) = k
+                endif
+              enddo
+            else
+              icount = 0
+              do k=1,4
+                if(ZZg(k) .gt. Z_xpoint(Xneigh)) then
+                  icount = icount + 1
+                  itht(icount) = k
+                endif
+              enddo
+              do k=1,4
+                if(ZZg(k) .lt. Z_xpoint(Xneigh)) then
+                  icount = icount + 1
+                  itht(icount) = k
+                endif
+              enddo
+            endif
+          endif
 
           ! Then add the lines
           call flux_surface_add_line(node_list,element_list,surface_list,i,j,r_psi(itht(1:2)), &

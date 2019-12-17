@@ -835,7 +835,7 @@ contains
                               if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then                         
                                  call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
                                  ilarge_vp2  = ijA_position2  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
-                                 Rhs_loc(n_tor*n_var * (index_node2-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp_dt
+                                 Rhs_loc(n_tor*n_var * (index_node2-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp_ds
                                  irn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
                                  jcn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kp-1)*n_tor + in
                                  A_glob(ilarge_vp2)   = ZBIG

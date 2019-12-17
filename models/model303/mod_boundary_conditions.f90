@@ -855,7 +855,7 @@ contains
                       .or. (node_list%node(inode)%boundary .eq. 20)) then
 
 !====================================== begining RMPs at boundary ======================================================
-!================================== type 2 - boundary: only depends on 't'
+!================================== type 20-21 - boundary: corners apply on 's' and 't'
 ! ======================================================================================================================
                        
                        if (RMP_on ) then
@@ -952,7 +952,7 @@ contains
                           endif
                         enddo        !(end RMP harmonics)
                         endif        !(end RMPs on)  ==================================
-!======================================= end RMPs ==================================
+                        !======================================= end RMPs ==================================
 
                        ! decides when the boundary conditions should be applied (for freeboundary and RMP cases)
                         if (       apply_psi_BC                   &
@@ -960,6 +960,15 @@ contains
                               .or. (( k /= 1 ) .and. ( k /= 3 ))  ) then
 
                           index_node = node_list%node(inode)%index(1)
+
+                          call boundary_conditions_add_one_entry( &
+                               index_node,  k,  in,               &
+                               index_node,  k,  in,               &
+                               zbig, solve_only, gmres,           &
+                               cnt, cnt_prod, only_count,         &
+                               index_min, index_max)
+
+                          index_node = node_list%node(inode)%index(2)
 
                           call boundary_conditions_add_one_entry( &
                                index_node,  k,  in,               &

@@ -97,6 +97,7 @@ n_leg     = n_grids(8); n_up_leg  = n_grids(9)
 
 nwpts%k_cross = 0
 
+! this is the background of the distribution for the theta grid-points
 bgf_tht  = 0.8d0!0.97d0
 
 

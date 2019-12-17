@@ -15,7 +15,7 @@ use phys_module, only:     n_flux, n_open, n_tht, n_outer, n_inner, n_private, n
                            SIG_closed, SIG_theta, SIG_open, SIG_outer, SIG_inner, SIG_private, SIG_up_priv,     &
                            SIG_leg_0, SIG_leg_1, SIG_up_leg_0, SIG_up_leg_1,                                    &
                            dPSI_open, dPSI_outer, dPSI_inner, dPSI_private, dPSI_up_priv,                       &
-                           xcase, force_horizontal_Xline
+                           xcase, force_horizontal_Xline, SDN_threshold
 
 implicit none
 
@@ -112,7 +112,7 @@ if(xcase .eq. 3) then
     psi_bnd2 = psi_xpoint(2)  
   endif
   ! If we have a symmetric double-null, force the single separatrix
-  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. symmetric_threshold) then
+  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
     psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
     psi_xpoint(2) = psi_xpoint(1)
     psi_bnd  = psi_xpoint(1)

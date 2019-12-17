@@ -6,7 +6,7 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only:   tokamak_device, n_tht_equidistant
+use phys_module, only:   tokamak_device, n_tht_equidistant, SDN_threshold
 use mod_interp, only: interp_RZ
 
 implicit none
@@ -78,7 +78,7 @@ if(xcase .eq. 3) then
     psi_bnd  = psi_xpoint(1)
   endif
   ! If we have a symmetric double-null, force the single separatrix
-  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. symmetric_threshold) then
+  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
     psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
     psi_xpoint(2) = psi_xpoint(1)
     psi_bnd  = psi_xpoint(1)

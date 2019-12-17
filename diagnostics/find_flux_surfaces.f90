@@ -6,6 +6,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
+use phys_module, only:   SDN_threshold
 
 implicit none
 
@@ -63,7 +64,7 @@ if (xpoint) then
   call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
   ! if we have a symmetric double-null, force the single separatrix
-  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. symmetric_threshold) then
+  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
     psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
     psi_xpoint(2) = psi_xpoint(1)
   endif

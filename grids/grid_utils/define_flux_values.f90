@@ -9,6 +9,7 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, &
   use data_structure
   use grid_xpoint_data
   use mod_interp
+  use phys_module, only:   SDN_threshold
   
   implicit none
   
@@ -73,7 +74,7 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, &
       psi_bnd2 = psi_xpoint(2)  
     endif
     ! If we have a symmetric double-null, force the single separatrix
-    if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. symmetric_threshold) then
+    if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
       psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
       psi_xpoint(2) = psi_xpoint(1)
       psi_bnd  = psi_xpoint(1)

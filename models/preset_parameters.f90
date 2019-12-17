@@ -107,6 +107,8 @@ subroutine preset_parameters
   dPSI_private = 0.03
   dPSI_up_priv = 0.03
   
+  SDN_threshold = 1.d-4
+  
   R_geo     = 10.d0
   Z_geo     = 0.d0
   amin      = 1.d0

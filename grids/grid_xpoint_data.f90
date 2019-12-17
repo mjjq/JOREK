@@ -1,9 +1,9 @@
+
 !> Definitions of all structures used during the construction of the Xpoint grid
 
 module grid_xpoint_data
   implicit none
   
-  real*8,  parameter :: symmetric_threshold = 1.d-4
   integer, parameter :: n_flux_max          = 1024
   integer, parameter :: n_tht_max           = 2048
   integer, parameter :: n_pieces_polar      = 1000!5

@@ -6,7 +6,7 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only:   tokamak_device
+use phys_module, only:   tokamak_device, SDN_threshold
 use py_plots_grids
 use mod_interp, only: interp_RZ
 
@@ -83,7 +83,7 @@ call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_
 call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 if(xcase .eq. 3) then
   ! If we have a symmetric double-null, force the single separatrix
-  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. symmetric_threshold) then
+  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
     psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
     psi_xpoint(2) = psi_xpoint(1)
   endif

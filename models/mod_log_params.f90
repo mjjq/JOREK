@@ -277,6 +277,7 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'dPSI_up_priv          ', dPSI_up_priv
     write(*,INTG_FMT) 'first_target_point    ', first_target_point
     write(*,INTG_FMT) 'last_target_point     ', last_target_point
+    write(*,REAL_FMT) 'SDN_threshold         ', SDN_threshold
   end if
 
   if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then

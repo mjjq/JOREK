@@ -132,10 +132,12 @@ if (mf .le. 0) then
   call TB15A(n_bnd,tht_tmp,r_tmp,dr_tmp,work,6)           ! periodic spline of the radius
   call TB15A(n_bnd,tht_tmp,psi_tmp,dpsi_tmp,work,6)       ! periodic spline of flux
 
-  call lplot6(1,1,tht_tmp,psi_tmp,n_bnd,'psi at boundary')
-  call lincol(1)
-  call lplot6(1,1,tht_tmp,psi_boundary,-n_bnd,'psi at boundary')
-  call lincol(0)
+  if ( write_ps ) then
+    call lplot6(1,1,tht_tmp,psi_tmp,n_bnd,'psi at boundary')
+    call lincol(1)
+    call lplot6(1,1,tht_tmp,psi_boundary,-n_bnd,'psi at boundary')
+    call lincol(0)
+  endif
 
   call tr_deallocate(work,"work",CAT_GRID)
 

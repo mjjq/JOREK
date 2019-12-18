@@ -59,6 +59,7 @@ function usage () {
   echo "  -Vfield                     Include vector of velocity field [default: off] (2D VTK ONLY)"
   echo "  -[no]psiN                   Include normalized poloidal flux or not [default: on] (2D VTK ONLY)"
   echo "  -bootstrap                  Include bootstrap current decomposition [default: off] (2D VTK ONLY)"
+  echo "  -RphiZ_coords               (R,phi,Z) coordinate system instead of (R,Z,phi) in the VTK file"
   echo ""
   echo "  binary                      executable (jorek2vtk, jorek2vtk_3d, jorek2_target2vtk)"
   echo "  infile                      Input file of the corresponding JOREK run"
@@ -194,6 +195,7 @@ include_electric_field="" # include vector of electric field (or not)
 include_Jpol=""           # include vector of poloidal currents (or not)
 include_bootstrap=""      # include bootstrap current and averaged current
 include_psi_norm=".true." # include normalized flux
+RphiZ_coords=".false."    # use (R,0,Z) xyz coordinates instead of (R,Z,0)
 while [ $# -gt 1 ]; do
   if [ "$1" == "-j" ]; then
     nthreads="$2"
@@ -277,6 +279,10 @@ while [ $# -gt 1 ]; do
     writenml="yes"
   elif [ "$1" == "-nopsiN" ] || [ "$1" == "-nopsi_norm" ]; then
     include_psi_norm=".false."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-RphiZ_coords" ] || [ "$1" == "-RphiZ" ]; then
+    RphiZ_coords=".true."
     shift 1
     writenml="yes"
   elif [ "$1" == "-h" ] || [ "$1" = "--help" ]; then
@@ -494,6 +500,9 @@ if [ "$writenml" == "yes" ]; then
   fi
   if [ ! -z "$include_psi_norm" ]; then
     echo "  include_psi_norm = $include_psi_norm" >> $vtk_nml
+  fi
+  if [ ! -z "$RphiZ_coords" ]; then
+    echo "  RphiZ_coords = $RphiZ_coords" >> $vtk_nml
   fi
   echo "/"                        >> $vtk_nml
   copyfiles="$copyfiles $vtk_nml"

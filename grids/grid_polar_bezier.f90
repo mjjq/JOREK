@@ -189,6 +189,15 @@ enddo
 element_list%n_elements  = n_element_start  + (nr-1)*np
 node_list%n_nodes        = n_node_start     + nr*np
 
+if ( node_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_polar_bezier: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( element_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_polar_bezier: hard-coded parameter n_elements_max is too small'
+  stop
+end if
+
+
 do i=1,nr-1
 
  do j=1,np

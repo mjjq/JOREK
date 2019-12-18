@@ -1049,7 +1049,7 @@ module mod_expression
           !     p. 905840605 (2018); doi:10.1017/S0022377818001113] Eq. (2.7) and (2.9):
           Te0_eV     = Te0 / ( EL_CHG * MU_ZERO * central_density * 1.d20 )
           ne0_20     = r0 * central_density
-          ln_Lambda0 = 14.9 - 0.5 * log( ne0_20 ) + log( Te0_eV * 1000.d0 ) ! Eq. (2.7) at thermal speeds
+          ln_Lambda0 = 14.9 - 0.5 * log( ne0_20 ) + log( Te0_eV / 1000.d0 ) ! Eq. (2.7) at thermal speeds
           ln_Lambda  = 14.6 + 0.5 * log( Te0_eV / ne0_20 )                  ! Eq. (2.9) at relativistic energies
           
           E_par = - R * ( eta_T * zj0 / R**2                                                       &

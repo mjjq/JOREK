@@ -10,6 +10,7 @@
 #
 
 function usage() {
+  echo ""
   echo "Choose JOREK restart files for given step numbers or times"
   echo ""
   echo "Usage: `basename $0` [options]"
@@ -42,10 +43,7 @@ full_path=1
 ms=0
 list=0
 while [ $# -gt 0 ]; do
-  if [ "$1" == "-j" ]; then
-    nthreads="$2"
-    shift 2
-  elif [ "$1" == "-only" ]; then
+  if [ "$1" == "-only" ]; then
     selected_steps="$2"
     shift 2
   elif [ "$1" == "-donly" ]; then
@@ -81,20 +79,27 @@ done
 
 
 # --- Some parameter checks
+if [ $# -gt 0 ]; then
+  echo "ERROR: Unkown paramaters given."
+  usage
+  exit 1
+fi
 if [ -z "$selected_times" ] && ( [ $ms -eq 1 ] || [ $list -eq 1 ] ); then
   echo "WARNING: -l and -ms parameters will be ignored, if -(d)time is not set."
 fi
 regexp_steps="^[0-9]{1,5}(-[0-9]{1,5}){0,2}(,[0-9]{1,5}(-[0-9]{1,5}){0,2})*$"
 if [[ ! "$selected_steps" =~ $regexp_steps   ]]; then
   echo "ERROR: -(d)only-parameter given in wrong format."
-  stop
+  usage
+  exit 1
 fi
 if [ ! -z $selected_times ]; then
   rfloat="[0-9]*(\.)?[0-9]*" #regexp for an integer or real
   regexp_times="^"$rfloat"(-"$rfloat"-("$rfloat"|infinity))?(,"$rfloat"(-"$rfloat"-("$rfloat"|infinity))?)*$"
   if [[ ! "$selected_times" =~ $regexp_times ]]; then
     echo "ERROR: -(d)time-parameter given in wrong format."
-    stop
+    usage
+    exit 1
   fi
 fi
 
@@ -110,7 +115,8 @@ if [ -z $RST_TYPE ] ; then
   . ${SCRIPTDIR}/detect_rst_type.sh > /dev/null 2>&1
   if [ "$RST_TYPE" != "h5" ] && [ "$RST_TYPE" != "rst" ]; then
     echo "ERROR: RST_TYPE not detected properly: $RST_TYPE"
-    stop
+    usage
+    exit 1
   fi
 fi
 
@@ -126,7 +132,8 @@ sort -n |  sed  -e "s/\.\/jorek\([0-9]*\)\.h5/\1/g" `
 #     and if macroscopic_vars are present, if time points are selected
 if  [ -z "$avail_steps" ] || ( [ ! -f "./macroscopic_vars.dat" ] && [ ! -z $selected_times ] ) ; then
   echo "ERROR: No restart files or macroscopic_vars.dat could be detected."
-  exit 0
+  usage
+  exit 1
 fi
 
 

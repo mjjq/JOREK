@@ -10,7 +10,7 @@ use data_structure
 use tr_module 
 use gauss
 use basis_at_gaussian
-use phys_module, only:   n_limiter, R_limiter, Z_limiter
+use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps
 use mod_neighbours, only: update_neighbours
 use mod_interp
 
@@ -153,10 +153,11 @@ call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
 
 call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
 
-call lincol(3)
-call lplot6(21,11,R_wall,Z_wall,-n_wall,'first wall')
-call lincol(0)
-
+if ( write_ps ) then 
+  call lincol(3)
+  call lplot6(21,11,R_wall,Z_wall,-n_wall,'first wall')
+  call lincol(0)
+endif
 
 
 
@@ -232,9 +233,11 @@ Z_sep(1) = Z_xpoint(1)
 R_sep(n_tht) = R_xpoint(1)
 Z_sep(n_tht) = Z_xpoint(1)
 
-call lincol(2)
-call lplot6(21,11,R_sep,Z_sep,-n_tht,' ')
-call lincol(0)
+if ( write_ps ) then
+  call lincol(2)
+  call lplot6(21,11,R_sep,Z_sep,-n_tht,' ')
+  call lincol(0)
+endif
 
 !------------------------------------ find crossing with the first wall
 allocate(R_wall_max(n_tht+2*n_leg),Z_wall_max(n_tht+2*n_leg),T_wall_par(n_tht+2*n_leg))
@@ -275,9 +278,11 @@ Z_wall_max(n_tht) = ZL8
 T_wall_par(1)     = angle_L9 + PI/2.d0
 T_wall_par(n_tht) = angle_L8 + PI/2.d0
 
-call lincol(6)  
-call lplot6(21,11,R_wall_max,Z_wall_max,-n_tht,' ')
-call lincol(0)
+if ( write_ps ) then
+  call lincol(6)  
+  call lplot6(21,11,R_wall_max,Z_wall_max,-n_tht,' ')
+  call lincol(0)
+endif
 
 !------------------------------------ find crossing of last fluxsurface
 n_tht_3 = n_tht + 2*n_leg
@@ -370,11 +375,13 @@ do i=1, n_open + n_private + 1
   enddo
 enddo
 
-call lincol(2)
-call lplot(1,1,461,R_strike(:,1),Z_strike(:,1),-(n_open+n_private+1),1,'Nodes',5,'X',1,'Y',1)
-call lincol(3)
-call lplot(1,1,461,R_strike(:,2),Z_strike(:,2),-(n_open+n_private+1),1,'Nodes',5,'X',1,'Y',1)
-call lincol(0)
+if ( write_ps ) then
+  call lincol(2)
+  call lplot(1,1,461,R_strike(:,1),Z_strike(:,1),-(n_open+n_private+1),1,'Nodes',5,'X',1,'Y',1)
+  call lincol(3)
+  call lplot(1,1,461,R_strike(:,2),Z_strike(:,2),-(n_open+n_private+1),1,'Nodes',5,'X',1,'Y',1)
+  call lincol(0)
+endif
 
 deallocate(s_tmp); allocate(s_tmp(n_leg))
 s_tmp = 0
@@ -526,17 +533,19 @@ enddo
 
 call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
 
-call lincol(3)
-call lplot6(21,11,R_wall,Z_wall,-n_wall,'first wall')
-call lincol(0)
+if ( write_ps ) then
+  call lincol(3)
+  call lplot6(21,11,R_wall,Z_wall,-n_wall,'first wall')
+  call lincol(0)
 
-call lincol(2)
-call lplot6(1,1,R_max,Z_max,-(n_tht+2*n_leg),' ')
-call lincol(5)
-call lplot6(1,1,R_min(n_tht+1),Z_min(n_tht+1),-(2*n_leg),' ')
-call lincol(4)
-call lplot6(1,1,R_sep,Z_sep,-(n_tht+2*n_leg),' ')
-call lincol(0)
+  call lincol(2)
+  call lplot6(1,1,R_max,Z_max,-(n_tht+2*n_leg),' ')
+  call lincol(5)
+  call lplot6(1,1,R_min(n_tht+1),Z_min(n_tht+1),-(2*n_leg),' ')
+  call lincol(4)
+  call lplot6(1,1,R_sep,Z_sep,-(n_tht+2*n_leg),' ')
+  call lincol(0)
+endif
 
 !do i=1,n_tht+2*n_leg
 !  write(*,'(A,i4,6f10.6)') ' R_max,Z_max : ',i,R_max(i),Z_max(i),R_sep(i),Z_sep(i),R_min(i),Z_min(i)
@@ -714,37 +723,38 @@ Z_polar(2,3,n_tht+2) = 2.d0 * Z_polar(2,4,n_tht+2) - Z_polar(3,3,n_tht+2)
 R_polar(2,3,n_tht+2) = 2.d0 * R_polar(2,4,n_tht+2) - R_polar(3,3,n_tht+2)  
 #endif
 
-call lincol(3)
+if ( write_ps ) then
+  call lincol(3)
 
-npl = 11
-allocate(xout(2),xp(npl),yp(npl))
-do j=1,n_tht+2*n_leg
+  npl = 11
+  allocate(xout(2),xp(npl),yp(npl))
+  do j=1,n_tht+2*n_leg
 
-  do m=1,n_pieces
+    do m=1,n_pieces
+      
+      do k=1,npl
+        ss = -1. + 2.*float(k-1)/float(npl-1)
 
-    do k=1,npl
-      ss = -1. + 2.*float(k-1)/float(npl-1)
-
-      R_cub1d = (/ R_polar(m,1,j), 3.d0/2.d0 *(R_polar(m,2,j)-R_polar(m,1,j)), &
-                   R_polar(m,4,j), 3.d0/2.d0 *(R_polar(m,4,j)-R_polar(m,3,j))  /)
-      Z_cub1d = (/ Z_polar(m,1,j), 3.d0/2.d0 *(Z_polar(m,2,j)-Z_polar(m,1,j)), &
-                   Z_polar(m,4,j), 3.d0/2.d0 *(Z_polar(m,4,j)-Z_polar(m,3,j)) /)
-
-      call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),ss,xp(k), tmp1)
-      call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),ss,yp(k), tmp2)
+        R_cub1d = (/ R_polar(m,1,j), 3.d0/2.d0 *(R_polar(m,2,j)-R_polar(m,1,j)), &
+            R_polar(m,4,j), 3.d0/2.d0 *(R_polar(m,4,j)-R_polar(m,3,j))  /)
+        Z_cub1d = (/ Z_polar(m,1,j), 3.d0/2.d0 *(Z_polar(m,2,j)-Z_polar(m,1,j)), &
+            Z_polar(m,4,j), 3.d0/2.d0 *(Z_polar(m,4,j)-Z_polar(m,3,j)) /)
+        
+        call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),ss,xp(k), tmp1)
+        call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),ss,yp(k), tmp2)
+      enddo
+      call lincol(m)
+      write(51,*) ' .1 setlinewidth'
+      call lplot6(1,1,xp,yp,-npl,' ')
+      write(51,*) ' stroke'
+      
     enddo
-    call lincol(m)
-    write(51,*) ' .1 setlinewidth'
-    call lplot6(1,1,xp,yp,-npl,' ')
-    write(51,*) ' stroke'
-
+    
+    call lincol(0)
+    
   enddo
-
-  call lincol(0)
-
-enddo
-deallocate(xp,yp)
-
+  deallocate(xp,yp)
+endif
 
 !----------------------------------- find grid_points from crossing of coordinate lines
 RR_new = 0.d0
@@ -1340,17 +1350,18 @@ endif
 
 write(*,*) ' definition of nodes completed ',newnode_list%n_nodes
 
-!call nframe(11,11,1,2.5,3.5,-2.0,-1.0,' ',1,'R',1,'Z',1)
-!call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
-!
-!allocate(xp(index),yp(index))
-!do i=1,newnode_list%n_nodes
-!  xp(i) = newnode_list%node(i)%x(1,1)
-!  yp(i) = newnode_list%node(i)%x(1,2)
-!enddo
-!call lplot(1,1,421,xp,yp,-newnode_list%n_nodes,1,'R',1,'Z',1,'nodes',5)
-!deallocate(xp,yp)
-
+!if ( write_ps ) then
+  !call nframe(11,11,1,2.5,3.5,-2.0,-1.0,' ',1,'R',1,'Z',1)
+  !call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
+  !
+  !allocate(xp(index),yp(index))
+  !do i=1,newnode_list%n_nodes
+  !  xp(i) = newnode_list%node(i)%x(1,1)
+  !  yp(i) = newnode_list%node(i)%x(1,2)
+  !enddo
+  !call lplot(1,1,421,xp,yp,-newnode_list%n_nodes,1,'R',1,'Z',1,'nodes',5)
+  !deallocate(xp,yp)
+!endif
 
 !***********************************************************************
 !*                   define the new elements                           *
@@ -1396,6 +1407,14 @@ enddo
 
 newelement_list%n_elements = (n_flux - 1)*(n_tht - 1)
 
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
+
 node_start = (n_flux-1) * (n_tht-1) + n_xpoint
 
 do i=1,n_open
@@ -1432,6 +1451,14 @@ do i=1,n_open
 enddo
 
 newelement_list%n_elements = newelement_list%n_elements + (n_open) * (n_tht-1)
+
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 node_start   = (n_flux-1)*(n_tht-1) + 4 + (n_open+1) * n_tht - 2
 
@@ -1615,11 +1642,27 @@ if (extend) then
   enddo
 
   newelement_list%n_elements = newelement_list%n_elements + n_ext * (n_tht-1) + 2*n_ext*(n_leg-1)
+  
+  if ( newnode_list%n_nodes > n_nodes_max ) then
+    write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'
+    stop
+  else if ( newelement_list%n_elements > n_elements_max ) then
+    write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+    stop
+  end if
 
 endif
 
 !newelement_list%n_elements = newelement_list%n_elements + (n_open+n_private)*(2*n_leg-2)
 newelement_list%n_elements = index
+
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 write(*,*) ' definition of elements completed'
 
@@ -1789,6 +1832,13 @@ node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 element_list%n_elements = newelement_list%n_elements
 element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
 
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( element_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 !----temporary, needs to be completed, neighbour information
 do i=1, element_list%n_elements

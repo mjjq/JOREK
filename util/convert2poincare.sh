@@ -20,7 +20,7 @@ function cleanup () {
   echo "Waiting for threads to finish..."
   wait
   if [ ! -z "$local_tmp_dir" ]; then
-    rm -rf $local_tmp_dir
+    rm -rf "$local_tmp_dir"
   fi
   echo "...done."
   exit $1
@@ -78,7 +78,7 @@ function get_available_thread () {
     for i in `seq $nthreads`; do
       if [ `is_running $i` == 'no' ]; then
         echo "$i"
-	return
+        return
       fi
     done
     sleep 1
@@ -214,7 +214,7 @@ if [ $# -lt 2 ]; then
   usage
   exit 1
 fi
-if [ ! -z "$select_arguments" ] && [[ $select_arguments != *"time"* ]]; then
+if [ ! -z "$select_arguments" ] && [[ "$select_arguments" != *"time"* ]]; then
   echo "WARNING: -l and -ms parameters will be ignored, if -(d)time is not set."
   select_arguments=""
 fi
@@ -250,7 +250,6 @@ if [ ! -z "$customdir" ]; then
 else
   dir="./poincare"
 fi
-echo "Writing files to dir='$dir'."
 
 
 
@@ -275,7 +274,32 @@ fi
 
 
 
-# --- Create directory for poinc files
+# ---- Detect restart file type
+. ${SCRIPTDIR}/detect_rst_type.sh
+if [ "$RST_TYPE" != "h5" ] && [ "$RST_TYPE" != "rst" ]; then
+  echo "ERROR: RST_TYPE not detected properly: $RST_TYPE"
+  usage
+  exit 1
+fi
+
+
+
+# --- Select files for conversion
+if [ -z "$select_arguments" ]; then
+  files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
+else
+  files=`${SCRIPTDIR}/select_restart_files.sh $select_arguments`
+  if [ "${files:0:5}" == "ERROR" ] ; then
+    echo "$files" | head -1
+    usage
+    exit 1
+  fi
+fi
+
+
+
+# --- Create directory for poincare files
+echo "Writing files to dir='$dir'."
 startDir=`pwd`
 mkdir -p $dir || exit 1
 targetDir=`readlink -f $dir`
@@ -298,32 +322,8 @@ done
 
 
 
-. ${SCRIPTDIR}/detect_rst_type.sh
-if [ "$RST_TYPE" != "h5" ] && [ "$RST_TYPE" != "rst" ]; then
-  echo "ERROR: RST_TYPE not detected properly: $RST_TYPE"
-  exit 0
-fi
-
-
-
 # --- Parallel file conversion
 echo ""
-#Select files later of -only option is used, since this is more efficient
-if [ -z "$select_arguments" ]; then
-  files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
-else
-  files=`${SCRIPTDIR}/select_restart_files.sh $select_arguments`
-  if [ "${files:0:5}" == "ERROR" ] ; then
-    echo $files
-    echo ""
-    echo "ABORTING"
-    echo ""
-    if [ ! -z "$local_tmp_dir" ]; then
-      rm -rf $local_tmp_dir
-    fi
-    exit 0
-  fi
-fi
 for file in $files; do
   if [ -f "$ERROR_STOP_FILE" ]; then cleanup; fi
   ithread=`get_available_thread`

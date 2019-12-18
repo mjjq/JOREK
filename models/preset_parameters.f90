@@ -6,7 +6,7 @@
 subroutine preset_parameters
   
   use phys_module
-  use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering
+  use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
   use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
   use wsmp_module,   only: use_wsmp
   
@@ -14,7 +14,7 @@ subroutine preset_parameters
   
   time_evol_scheme = 'Crank-Nicholson'
   
-  n_tor_fft_thresh = 5
+  n_tor_fft_thresh = 2
   if(jorek_model == 305 .or. jorek_model == 306) n_tor_fft_thresh = 99
   
   ! --- DoubleNull flag
@@ -42,7 +42,8 @@ subroutine preset_parameters
   import_equil = .false.
   regrid       = .false.
   rst_format   = 0             ! use 'old' format for restart import
-
+  write_ps     = .true.           ! write postscript file at the end of the run 
+  
   freeboundary_equil = .false. ! use free or fixed boundary equilibrium
   freeboundary       = .false. ! use free or fixed boundary?
   resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
@@ -304,8 +305,11 @@ subroutine preset_parameters
   no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
 
   mumps_ordering     = 7                    ! MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
-  use_mumps_BLR      = .false.              ! Use MUMPS solver with Block-low-rank (BLR) compression
-  mumps_BLR_eps      = 0                    ! Accuracy of MUMPS BLR approximations (0 = full precision)
+  use_BLR_compression = .false.             ! Use MUMPS / PaStiX 6 solver with Block-low-rank (BLR) compression
+  pastix_blr_abs_tol = .true.               ! Use absolute tolerance
+  epsilon_BLR        = 0.                   ! Accuracy of BLR compression (0. = lossless)
+  just_in_time_BLR   = .true.               ! Use Just-in-time strategy for BLR compression (.false. = memory-optimal)
+
   
 !==== RMP parameters =====
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)

@@ -488,7 +488,7 @@ module mod_expression
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
-      ne0_20, ln_Lambda
+      ne0_20, ln_Lambda, ln_Lambda0
     real*8 :: FFprime_loc, Jpol
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
@@ -1045,18 +1045,19 @@ module mod_expression
             end if
           end if
           
-          ! --- Coulomb logarithm calculated according to Ref. [L. Hesselow et al, J Plasma Phys 84,
-          !     p. 905840605 (2018); doi:10.1017/S0022377818001113] Eq. (2.9):
-          Te0_eV = Te0 / ( EL_CHG * MU_ZERO * central_density * 1.d20 )
-          ne0_20 = r0 * central_density
-          ln_Lambda = 14.6 + 0.5 * log( Te0_eV / ne0_20 )
+          ! --- Coulomb logarithms calculated according to Ref. [L. Hesselow et al, J Plasma Phys 84,
+          !     p. 905840605 (2018); doi:10.1017/S0022377818001113] Eq. (2.7) and (2.9):
+          Te0_eV     = Te0 / ( EL_CHG * MU_ZERO * central_density * 1.d20 )
+          ne0_20     = r0 * central_density
+          ln_Lambda0 = 14.9 - 0.5 * log( ne0_20 ) + log( Te0_eV * 1000.d0 ) ! Eq. (2.7) at thermal speeds
+          ln_Lambda  = 14.6 + 0.5 * log( Te0_eV / ne0_20 )                  ! Eq. (2.9) at relativistic energies
           
           E_par = - R * ( eta_T * zj0 / R**2                                                       &
                         + tauIC / r0 * ( (P0_R * Ps0_Z - P0_Z * Ps0_R) / R + F0 * P0_p / R**2 ) )
           
           E_crit = C_LIGHT**2 * EL_CHG**3 * ln_Lambda * MU_ZERO**2.5 * (central_density*1.d20*central_mass*MASS_PROTON)**1.5 * r0 / ( 4 * PI * MASS_ELECTRON * MASS_PROTON * central_mass )
           
-          E_dreicer = EL_CHG**3 * ln_Lambda * MU_ZERO**1.5 * (central_density*1.d20*central_mass*MASS_PROTON)**2.5 * r0 / ( 2.d0 * PI * EPS_ZERO**2 * (MASS_PROTON*central_mass)**2 * T0 )
+          E_dreicer = EL_CHG**3 * ln_Lambda0 * MU_ZERO**1.5 * (central_density*1.d20*central_mass*MASS_PROTON)**2.5 * r0 / ( 2.d0 * PI * EPS_ZERO**2 * (MASS_PROTON*central_mass)**2 * T0 )
           
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
           call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &

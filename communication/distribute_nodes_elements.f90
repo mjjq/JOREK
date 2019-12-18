@@ -20,10 +20,17 @@ integer :: index_min(*), index_max(*), index_part, inext, i,j, k, iv,index1
 logical :: elm_is_local, direct_construction
 !integer, dimension(node_list%n_nodes) :: active_node
 !integer                               :: n_active_nodes
-if (my_id .eq.0) then
-  write(*,*) '************************************'
-  write(*,*) '*     distributing nodes           *'
-  write(*,*) '************************************'
+
+if (my_id .eq.0) then 
+  if(.NOT.direct_construction) then
+    write(*,*) '************************************'
+    write(*,*) '* distributing nodes global matrix *'
+    write(*,*) '************************************'
+  else
+    write(*,*) '**************************************'
+    write(*,*) '* distributing nodes harmonic matrix *'
+    write(*,*) '**************************************'
+  endif
 endif
  
  !call  Ref_Active_node( element_list,node_list ,active_node,n_active_nodes)

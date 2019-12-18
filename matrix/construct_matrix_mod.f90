@@ -193,9 +193,14 @@ contains
 !! The element contributions are determined by element_matrix(_fft). Additional
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
-subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_max, xpoint2, xcase2,&
-                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max)
+
+!subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_max, xpoint2, xcase2,&
+!                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max)
+subroutine construct_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms, n_local_elms, index_min, index_max,      & 
+                            xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
+                            i_tor_min, i_tor_max, n_glob1, nz_glob1, direct_construction)
   
+  use mumps_module 
   use tr_module 
   use mod_parameters
   use data_structure
@@ -219,10 +224,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Routine parameters
   integer, intent(in) :: my_id
+  integer, intent(in) :: my_id_n         
+  integer, intent(in) :: n_cpu         
+  integer, intent(in) :: m_cpu         
   integer, intent(in) :: local_elms(*)
   integer, intent(in) :: n_local_elms
-  integer, intent(in) :: i_tor_min
-  integer, intent(in) :: i_tor_max
   integer, intent(in) :: index_min
   integer, intent(in) :: index_max
   integer, intent(in) :: xcase2
@@ -234,6 +240,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   real*8,  intent(in) :: Z_xpoint(2)
   real*8,  intent(in) :: psi_xpoint(2)
   logical, intent(in) :: xpoint2
+  integer, intent(in) :: i_tor_min
+  integer, intent(in) :: i_tor_max
+  integer, intent(in) :: n_glob1  
+  integer, intent(in) :: nz_glob1 
+  logical, intent(in) :: direct_construction
 
   !--- Internal variables
   type (type_element)               :: element
@@ -258,9 +269,15 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Printout
   if (my_id .eq. 0) then
-    write(*,*) '****************************************'
-    write(*,*) '*  construct matrix           *'
-    write(*,*) '****************************************'
+    if(.NOT.direct_construction) then
+      write(*,*) '****************************************'
+      write(*,*) '*  construct matrix                    *'
+      write(*,*) '****************************************'
+    else
+      write(*,*) '****************************************'
+      write(*,*) '*  construct harmonic matrix           *'
+      write(*,*) '****************************************'
+    endif
     ! write(*,*) ' n_elements (local)      : ',my_id,n_local_elms
     ! write(*,*) ' index_min,index_max      : ',my_id,index_min,index_max
   endif
@@ -269,6 +286,9 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   call tr_print_memsize("DebConstM")
   
   ! --- Local min-max indices for the nodes of our local elements (local in the MPI sense)
+
+if(.not. direct_construction) then
+
   i_bnd = 0
   do i=1, n_local_elms
 
@@ -311,18 +331,46 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   rhs_problem(:)   = .false.
   elm_problem(:,:) = .false.
 
+else
+
+  mumps_par%nz = nz_glob1  
+  mumps_par%n  = n_glob1
+
+  if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"dh_mumps_par%A",CAT_DMATRIX)
+  if (associated(mumps_par%irn))  call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
+  if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
+
+  call tr_allocatep(mumps_par%A,1,mumps_par%nz,"dh_mumps_par%A",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
+
+  if (associated(mumps_par%rhs))  call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"dh_mumps_par%rhs",CAT_DMATRIX)
+
+
+  ! --- Initialise internal variables
+  mumps_par%A   = 0.d0
+  mumps_par%rhs = 0.d0
+  mumps_par%irn = 0
+  mumps_par%jcn = 0
+
+endif
+
+
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,          &
-  !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,       &
+  !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,direct_construction,       &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
-  !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn) &
+  !$omp          ijA_index_harm, ijA_size_harm, irn_jcn_harm, &
+  !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, mumps_par, ijA_index, ijA_size, irn_jcn) &
   !$omp   private(ife,ielm,iv,inode,element,nodes,i,inode1,i_order,index_node1,          &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,          &
   !$omp           ivar, itor, jvertex, jorder, jvar, jtor, random_element, n_var_reduced, v1, v2, im,      &
   !$omp           index_ij_model400_e, index_kl_model400_e,  tmp_rhs, tmp_elm, tmp_elm_v2_8        )
+
 
 ! --- omp id
 #ifdef _OPENMP
@@ -342,8 +390,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
     element = element_list%element(ielm)
     
     ! --- Define nodes (this depends on whether our element has been refined)
-    if (refinement) then
-      
+    if (refinement .and. .not. direct_construction) then
       i_father = element_list%element(ielm)%father
 
       if (i_father .ne. 0) then
@@ -352,8 +399,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
         inode_father=element_father%vertex(iv)
         nodes_father(iv) = node_list%node(inode_father)
       enddo
-      endif
-  
+     endif
+
     else
        
       do iv = 1, n_vertex_max
@@ -367,6 +414,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
          &                       Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
          &                       omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
     
+if (.not. direct_construction) then
 #ifdef PRINT_ELM_RHS
     ! --- Write out rhs and elm for one element to compare models.
     !     Switch this on by adding -DPRINT_ELM_RHS as compiler flag.
@@ -478,9 +526,9 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
     end if ! i_elm
     ! --- end: Write out rhs and elm for one element to compare models.
 #endif
-    
+endif    
     ! --- Define element nodes (depends if it's refined)
-    if (refinement) then   
+    if (refinement .and. .not. direct_construction) then   
       call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father, &
               thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS,node_out)
     else
@@ -508,9 +556,17 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
               index_ij = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) + (i_tor_max - i_tor_min + 1) * n_var * (i_order-1) + j   ! index in the ELM matrix
 
+              if(.not. direct_construction) then
               !$omp atomic
-              rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij)
+                 rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
               !$omp end atomic
+              
+              else
+
+              !$omp atomic
+                 mumps_par%rhs(index_large_i+j) = mumps_par%rhs(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
+              !$omp end atomic
+              endif
 
             end do
 
@@ -523,9 +579,12 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
                   index_node2 = node_list%node(knode)%index(k_order)
 
                   index_large_k = (i_tor_max - i_tor_min + 1) * n_var * (index_node2 - 1)
-
-                  call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,& 
-                                    ijA_index, ijA_size, irn_jcn)
+                  if(.not. direct_construction) then
+                   call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                  else
+                   call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
+                                       ijA_index_harm, ijA_size_harm, irn_jcn_harm)
+                  endif
 
                 thread_struct(omp_tid)%synch_buff(:) = 0.d0
                 do j = 1, n_var * (i_tor_max - i_tor_min + 1)
@@ -537,8 +596,13 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var*(i_tor_max - i_tor_min + 1) + l
 
-                    irn_glob(ilarge2) = index_large_i	+ j
-                    jcn_glob(ilarge2) = index_large_k	+ l
+                    if(.not. direct_construction) then
+                      irn_glob(ilarge2) = index_large_i	+ j
+                      jcn_glob(ilarge2) = index_large_k	+ l
+                    else
+                      mumps_par%irn(ilarge2) = index_large_i + j
+                      mumps_par%jcn(ilarge2) = index_large_k + l
+                    endif
                     
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
@@ -547,11 +611,19 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
                 enddo ! n_order+1
 
-                !$omp critical
-                A_glob(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
-                  A_glob(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
-                  thread_struct(omp_tid)%synch_buff(:)
-                !$omp end critical
+                if(.not. direct_construction) then
+                   !$omp critical
+                   A_glob(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
+                     A_glob(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
+                     thread_struct(omp_tid)%synch_buff(:)
+                   !$omp end critical 
+                else 
+                   !$omp critical
+                   mumps_par%A(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
+                     mumps_par%A(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
+                     thread_struct(omp_tid)%synch_buff(:) 
+                   !$omp end critical                 
+                endif
 
               enddo ! n_vertex_max
             enddo ! n_var * (i_tor_max - i_tor_min + 1)
@@ -567,6 +639,27 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   end do
   !$omp end do
   !$omp end parallel
+
+
+
+if(direct_construction) then
+ 
+  ! --- Memory tracking
+  call tr_vnorms("cm_A_bef_bc",mumps_par%A,mumps_par%nz)
+
+  
+  ! --- Apply boundary conditions.
+  call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,            &
+                           index_min, index_max,  mumps_par%rhs, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd,  &
+                           R_xpoint, Z_xpoint, psi_xpoint, .false., .false.,                & 
+       &   ijA_index_harm, ijA_size_harm, irn_jcn_harm,        & 
+       &   mumps_par%irn, mumps_par%jcn, mumps_par%A,          & 
+       &   i_tor_min, i_tor_max )
+
+  ! --- Memory tracking
+  call tr_vnorms("cm_A_aft_bc",mumps_par%A,mumps_par%nz)
+
+else
 
   ! --- Add vacuum response (boundary integral) for free boundary computations
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
@@ -598,6 +691,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_glob,nz_glob)
+
+
+
+
 
   ! --- Form a global rhs from the rhss of the individual mpi threads.
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
@@ -650,7 +747,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   if ( difference_found ) stop
 #endif
-  
+endif 
+ 
 end subroutine construct_matrix
 
 

@@ -28,7 +28,7 @@ program JOREK2
   use mod_parameters
   use mod_log_params
   use global_distributed_matrix
-  use harmonic_distributed_matrix!, only: ijA_size_harm, ijA_index_harm, irn_jcn_harm
+!  use harmonic_distributed_matrix!, only: ijA_size_harm, ijA_index_harm, irn_jcn_harm
   use nodes_elements
   use pellet_module
   use equil_info
@@ -39,7 +39,7 @@ program JOREK2
   use live_data
   use mod_bootstrap_functions
   use construct_matrix_mod, only : construct_matrix
-  use construct_harmonic_matrix_mod                !*psv
+!  use construct_harmonic_matrix_mod                !*psv
   use mod_global_matrix_structure
   use mod_import_restart
   use mod_export_restart
@@ -964,17 +964,17 @@ required = 0
       call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
-    
+    direct_construction = .false. 
     i_tor_min = 1
     i_tor_max = n_tor
-    call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),                  &
-      index_max(my_id+1), xpoint, xcase, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint,   &
-      Z_xpoint, psi_xpoint, i_tor_min, i_tor_max)
+    call construct_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms, n_local_ELms, index_min(my_id+1), index_max(my_id+1),& 
+                          xpoint, xcase, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,              & 
+                          i_tor_min, i_tor_max, n_glob, nz_glob, direct_construction)
 
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
        call clck_ldiff(t0,t1,tsecond)
-      write(*,FMT_TIMING) my_id, '# Elapsed time construct_matrix :',tsecond
+      write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
     endif     
 
 
@@ -1015,16 +1015,16 @@ required = 0
                                    n_glob_harm, nz_glob_harm, n_matrix_block_size_harm)
     
 
-      call construct_harmonic_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms_harm, n_local_elms_harm, & 
-                                     index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint, xcase,  & 
-                                     R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
-                                     i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm)
+      call construct_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms_harm, n_local_elms_harm, & 
+                            index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint, xcase,  & 
+                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
+                            i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm, direct_construction)
 
       call clck_time_barrier(t1) 
 
       if (my_id .eq. 0) then
          call clck_ldiff(t0,t1,tsecond)
-         write(*,FMT_TIMING) my_id, '# Elapsed time construct_harmonic_matrix :',tsecond
+         write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
       endif     
 
 

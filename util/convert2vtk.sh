@@ -19,7 +19,7 @@ function cleanup () {
   echo "Waiting for threads to finish..."
   wait
   if [ ! -z "$local_tmp_dir" ]; then
-    rm -rf $local_tmp_dir
+    rm -rf "$local_tmp_dir"
   fi
   echo "...done."
   exit $1
@@ -40,9 +40,10 @@ function usage () {
   echo "  -donly <dstep>              Equivalent to -only 0-<dstep>-99999"
   echo "  -time <time>,<time>         Selects time step roughly at <time> (default in JOREK-units)"
   echo "  -time <time>-<dtime>-<time> Selects time step within given time range with given interval"
-  echo "  -dtime <dtime>              Equivalent to -time 0-<dtime>-inf"
-  echo "  -sec                        -time is given in seconds instead of in JOREK-units"
-  echo "  -l                          Creates a file containing all selected timesteps and times (default:off)"
+  echo "  -dtime <dtime>              Equivalent to -time 0-<dtime>-infinity"
+  echo "  -ms                         -time is given in milliseconds instead of in JOREK-units"
+  echo "  -l                          Creates a file containing all selected timesteps and times,"
+  echo "                              if parameter -(d)time is used (default:off)"
   echo "  -zip                        Compress the .vtk files using gzip"
   echo ""
   echo "Options passed to the binary via namelist input (source code for details):"
@@ -98,7 +99,7 @@ function get_available_thread () {
     for i in `seq $nthreads`; do
       if [ `is_running $i` == 'no' ]; then
         echo "$i"
-	return
+        return
       fi
     done
     sleep 1
@@ -208,7 +209,7 @@ while [ $# -gt 1 ]; do
   elif ( [ "$1" == "-time" ] || [ "$1" == "-dtime" ] ) ; then
     select_arguments="$select_arguments $1 $2"
     shift 2
-  elif [ "$1" == "-sec" ]; then
+  elif [ "$1" == "-ms" ]; then
     select_arguments="$select_arguments $1"
     shift 1
   elif [ "$1" == "-l" ]; then
@@ -296,11 +297,26 @@ while [ $# -gt 1 ]; do
   fi
 done
 
+
+
+# --- Some parameter checks
 if [ $# -lt 2 ]; then
   echo "ERROR: Not enough parameters."
   usage
   exit 1
 fi
+if [ ! -z "$select_arguments" ] && [[ "$select_arguments" != *"time"* ]]; then
+  echo "WARNING: -l and -ms parameters will be ignored, if -(d)time is not set."
+  select_arguments=""
+fi
+regexp_steps="^[0-9]{1,5}(-[0-9]{1,5}){0,2}(,[0-9]{1,5}(-[0-9]{1,5}){0,2})*$"
+if [[ ! "$selected_steps" =~ $regexp_steps   ]]; then
+  echo "ERROR: -(d)only-parameter given in wrong format."
+  usage
+  exit 1
+fi
+
+
 
 binary=`readlink -f $1`
 shift
@@ -399,7 +415,6 @@ else
     dir="${dir}_si"
   fi
 fi
-echo "Writing files to dir='$dir'."
 
 
 
@@ -424,7 +439,31 @@ fi
 
 
 
+# ---- Detect restart file type
+. ${SCRIPTDIR}/detect_rst_type.sh
+if [ "$RST_TYPE" != "h5" ] && [ "$RST_TYPE" != "rst" ]; then
+  echo "ERROR: RST_TYPE not detected properly: $RST_TYPE"
+  usage
+  exit 1
+fi
+
+
+
+# --- Select files for conversion
+if [ -z "$select_arguments" ]; then
+  files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
+else
+  files=`${SCRIPTDIR}/select_restart_files.sh $select_arguments`
+  if [ "${files:0:5}" == "ERROR" ] ; then
+    echo "$files" | head -1
+    usage
+    exit 1
+  fi
+fi
+
+
 # --- Create directory for vtk files
+echo "Writing files to dir='$dir'."
 startDir=`pwd`
 mkdir -p $dir || exit 1
 targetDir=`readlink -f $dir`
@@ -506,29 +545,8 @@ done
 
 
 
-. ${SCRIPTDIR}/detect_rst_type.sh
-if [ "$RST_TYPE" != "h5" ] && [ "$RST_TYPE" != "rst" ]; then
-  echo "ERROR: RST_TYPE not detected properly: $RST_TYPE"
-  exit 0
-fi
-
-
-
 # --- Parallel file conversion
 echo ""
-if [ -z "$select_arguments" ]; then
-  files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
-else
-  files=`${SCRIPTDIR}/select_restart_files.sh $select_arguments`
-  if [ "${files:0:5}" == "ERROR" ] ; then
-    echo $files
-    echo ""
-    echo "ABORTING"
-    echo ""
-    rm -rf $local_tmp_dir
-    exit 0
-  fi
-fi
 for file in $files; do
   if [ -f "$ERROR_STOP_FILE" ]; then cleanup; fi
   ithread=`get_available_thread`

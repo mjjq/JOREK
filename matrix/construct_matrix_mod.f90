@@ -10,8 +10,8 @@ contains
 
   !> subroutine that will construct elementary matrices
   subroutine elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis,         &
-       &                             Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
-       &                             omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
+                                   & Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
+                                   & omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
 
     ! --- Modules
     use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order
@@ -58,17 +58,18 @@ contains
     ! --- Call element_matrix
 !    if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
     if (i_tor_min .eq. 1 .and. i_tor_max .eq. n_tor .and. n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700) then
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
-        thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid, &
-        thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn, &
-        thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k,  thread_struct(omp_tid)%eq_g, thread_struct(omp_tid)%eq_s, &
-        thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, &
-        thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, &
-       thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max)
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,         &
+                              thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid, thread_struct(omp_tid)%ELM_p, & 
+                              thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn,     &
+                              thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k,  thread_struct(omp_tid)%eq_g,      & 
+                              thread_struct(omp_tid)%eq_s, thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p,         & 
+                              thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, thread_struct(omp_tid)%eq_tt,      & 
+                              thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, thread_struct(omp_tid)%delta_t,& 
+                              i_tor_min, i_tor_max)
       !  for toroidal integration
     else
       call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
-        thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid, i_tor_min, i_tor_max)	   ! use direct integration
+                              thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid, i_tor_min, i_tor_max)   ! use direct integration
     endif
 
     ! --- Apply sheath boundary conditions at the targets
@@ -117,7 +118,7 @@ contains
         vertex    = (/ iv, iv2 /)
         direction = (/  1, 2   /)
 
-          ! --- Build matrix elements for boundary
+        ! --- Build matrix elements for boundary
         !call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
       endif
        
@@ -130,15 +131,16 @@ contains
     if (ife .eq. n_local_elms/2) then
       
       ! --- Call both routines
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
-        thread_struct(omp_tid)%ELM2, thread_struct(omp_tid)%RHS2, omp_tid, &
-        thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn, &
-        thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k,  thread_struct(omp_tid)%eq_g, thread_struct(omp_tid)%eq_s, &
-        thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, &
-        thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, &
-        thread_struct(omp_tid)%delta_t)
-      call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
-        thread_struct(omp_tid)%ELM,  thread_struct(omp_tid)%RHS,  omp_tid)
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,           &
+                              thread_struct(omp_tid)%ELM2, thread_struct(omp_tid)%RHS2, omp_tid, thread_struct(omp_tid)%ELM_p, &
+                              thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn,       &
+                              thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k,  thread_struct(omp_tid)%eq_g,        & 
+                              thread_struct(omp_tid)%eq_s, thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p,           & 
+                              thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, thread_struct(omp_tid)%eq_tt,        & 
+                              thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, thread_struct(omp_tid)%delta_t) 
+
+      call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,           &
+                              thread_struct(omp_tid)%ELM,  thread_struct(omp_tid)%RHS,  omp_tid)
       
       ! --- Compare right hand side
       write(*,*)
@@ -271,15 +273,13 @@ subroutine construct_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms, n_local_el
   if (my_id .eq. 0) then
     if(.NOT.direct_construction) then
       write(*,*) '****************************************'
-      write(*,*) '*  construct matrix                    *'
+      write(*,*) '*  construct global matrix             *'
       write(*,*) '****************************************'
     else
       write(*,*) '****************************************'
       write(*,*) '*  construct harmonic matrix           *'
       write(*,*) '****************************************'
     endif
-    ! write(*,*) ' n_elements (local)      : ',my_id,n_local_elms
-    ! write(*,*) ' index_min,index_max      : ',my_id,index_min,index_max
   endif
   
   ! --- Memory tracking
@@ -410,9 +410,9 @@ endif
 
     endif
 
-    call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, &
-         &                       Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
-         &                       omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
+    call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd,& 
+                                 R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list,         & 
+                                 i_tor_min, i_tor_max)
     
 if (.not. direct_construction) then
 #ifdef PRINT_ELM_RHS
@@ -646,15 +646,13 @@ if(direct_construction) then
  
   ! --- Memory tracking
   call tr_vnorms("cm_A_bef_bc",mumps_par%A,mumps_par%nz)
-
   
   ! --- Apply boundary conditions.
-  call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,            &
-                           index_min, index_max,  mumps_par%rhs, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd,  &
-                           R_xpoint, Z_xpoint, psi_xpoint, .false., .false.,                & 
-       &   ijA_index_harm, ijA_size_harm, irn_jcn_harm,        & 
-       &   mumps_par%irn, mumps_par%jcn, mumps_par%A,          & 
-       &   i_tor_min, i_tor_max )
+  call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,  &
+                           index_min, index_max,  mumps_par%rhs, xpoint2, xcase2, R_axis, Z_axis,    & 
+                           psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false.,      & 
+                           ijA_index_harm, ijA_size_harm, irn_jcn_harm, mumps_par%irn, mumps_par%jcn,& 
+                           mumps_par%A, i_tor_min, i_tor_max )
 
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",mumps_par%A,mumps_par%nz)
@@ -663,10 +661,9 @@ else
 
   ! --- Add vacuum response (boundary integral) for free boundary computations
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
-    call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list,                   &
-      freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, tstep, index_now)
+    call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
+                                  resistive_wall, index_min, index_max, rhs_loc, tstep, index_now)
   end if
-
 
 #ifdef NORMTRACE
   ! --- For debugging purpose
@@ -682,19 +679,13 @@ else
   call tr_vnorms("cm_A_bef_bc",A_glob,nz_glob)
 
   ! --- Apply boundary conditions.
-  call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,            &
-                           index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd,  &
-                           R_xpoint, Z_xpoint, psi_xpoint, .false., .false.,                & 
-       &   ijA_index, ijA_size, irn_jcn,        & 
-       &   irn_glob, jcn_glob, A_glob,          & 
-       &   i_tor_min, i_tor_max )
+  call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms, &
+                           index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis,& 
+                           psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false., ijA_index,    & 
+                           ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max )
 
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_glob,nz_glob)
-
-
-
-
 
   ! --- Form a global rhs from the rhss of the individual mpi threads.
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)

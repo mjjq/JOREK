@@ -28,7 +28,6 @@ program JOREK2
   use mod_parameters
   use mod_log_params
   use global_distributed_matrix
-!  use harmonic_distributed_matrix!, only: ijA_size_harm, ijA_index_harm, irn_jcn_harm
   use nodes_elements
   use pellet_module
   use equil_info
@@ -39,7 +38,6 @@ program JOREK2
   use live_data
   use mod_bootstrap_functions
   use construct_matrix_mod, only : construct_matrix
-!  use construct_harmonic_matrix_mod                !*psv
   use mod_global_matrix_structure
   use mod_import_restart
   use mod_export_restart
@@ -172,6 +170,8 @@ program JOREK2
 #endif
 
 #ifdef PSV
+  !---- Part of the code under the flag PSV is just for debugging and will be
+  !removed at some point.
 ! =================== PSV TEST VARIABLES ==================
   real*8,allocatable       :: A(:), rhs(:)
   integer,allocatable      :: irn(:), jcn(:)
@@ -443,11 +443,12 @@ required = 0
 	  call grid_double_xpoint(node_list, element_list)
         else
 	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-        		   SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
+        		   SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,& 
+                           dPSI_open,dPSI_private, xcase)
         endif
       else
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
-          sig1, xr2, sig2, refinement)
+                               sig1, xr2, sig2, refinement)
       end if
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
     end if
@@ -479,17 +480,17 @@ required = 0
       if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
         
         call grid_bezier_square_polar(n_R, n_Z, n_radial, R_begin, R_end, Z_begin, Z_end, R_geo,   &
-          Z_geo, amin, fbnd, fpsi, mf, .true., node_list, element_list)
+                                      Z_geo, amin, fbnd, fpsi, mf, .true., node_list, element_list)
         
       else if ((n_R > 0) .and. (n_Z > 0) ) then
         
         call grid_bezier_square(n_R, n_Z, R_begin, R_end, Z_begin, Z_end, .true., node_list,       &
-          element_list)
+                                element_list)
         
       else if ((n_radial > 0) .and. (n_pol > 0) ) then
         
         call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
-          node_list, element_list)
+                               node_list, element_list)
         
       else
         write(*,*) ' FATAL : no valid combination of grid-sizes specified'
@@ -517,7 +518,7 @@ required = 0
     ! --- Fill the vacuum response matrices for freeboundary computations
     if ( freeboundary_equil .and. (n_flux .eq. 0)) then
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
-        resistive_wall)
+                               resistive_wall)
       call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
       call import_external_fields('coil_field.dat', my_id)
       call set_coil_curr_time_trace()
@@ -564,7 +565,8 @@ required = 0
    
             if (.not. grid_to_wall) then
               call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-                               SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
+                               SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,& 
+                               dPSI_open,dPSI_private, xcase)
             else
 !!! works only for ITER wall for the moment
  !            write(*,*) 'ITER wall started'
@@ -604,7 +606,7 @@ required = 0
       if ( freeb_equil2) then
         freeboundary_equil = .true.
         call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
-          resistive_wall)
+                                 resistive_wall)
         call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
         call import_external_fields('coil_field.dat', my_id)
         call set_coil_curr_time_trace()
@@ -658,7 +660,7 @@ required = 0
   ! --- Fill the vacuum response matrices for freeboundary computations
   if ( freeboundary ) then
     call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
-      resistive_wall)
+                             resistive_wall)
     call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()
@@ -740,7 +742,7 @@ required = 0
     psi_bnd = 0.d0
     if (xpoint) then
       call find_xpoint(my_id,node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint,             &
-        i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
+                       i_elm_xpoint, s_xpoint, t_xpoint, xcase, ifail)
       psi_bnd  = psi_xpoint(1)
       if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
         psi_bnd = psi_xpoint(2)
@@ -826,21 +828,24 @@ required = 0
     !
     ! Construct index_min, index_max and local_elems
     !
-    call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,direct_construction,local_elms,  &
-    	                            n_local_elms,ndof_glob,index_min,index_max)
+    call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,direct_construction,& 
+                                   local_elms, n_local_elms,ndof_glob,index_min,index_max)
 
     node_list%n_dof   = ndof_glob
     local_index_start = index_min
     local_index_end   = index_max
     ! Build ijA_index, ijA_size and irn_jcn
 
-         i_tor_min = 1
-         i_tor_max = n_tor
-    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
-         local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),& 
-                          ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max,&
-                          n_glob, nz_glob, n_matrix_block_size)
+    i_tor_min = 1
+    i_tor_max = n_tor
+
+    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,          &
+                                 local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),& 
+                                 ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max,   &
+                                 n_glob, nz_glob, n_matrix_block_size)
+
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
       call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1)) 
     endif
@@ -964,9 +969,13 @@ required = 0
       call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
+
+    !--------- Constructing Global Matrix
     direct_construction = .false. 
+    
     i_tor_min = 1
     i_tor_max = n_tor
+
     call construct_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms, n_local_ELms, index_min(my_id+1), index_max(my_id+1),& 
                           xpoint, xcase, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,              & 
                           i_tor_min, i_tor_max, n_glob, nz_glob, direct_construction)
@@ -976,7 +985,6 @@ required = 0
        call clck_ldiff(t0,t1,tsecond)
       write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
     endif     
-
 
 
 !#ifdef PSV        
@@ -990,6 +998,7 @@ required = 0
 
 !begin Harmonic Construction
 #ifdef DIRECT_CONSTRUCTION
+  !--------- Constructing Harmonic Matrix directly from elementary matrix
   direct_construction = .true.
   if(direct_construction) then
     if(n_tor.gt.1) then
@@ -1030,7 +1039,8 @@ required = 0
 
 
 #ifdef PSV
-
+    !---- Part of the code under the flag PSV is just for debugging and will be
+    !removed at some point.
     if (my_id .eq. 1) then
      write(200,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
      write(200,*) 'i, rhs_construct ' 
@@ -1146,6 +1156,7 @@ required = 0
 !END IF
 
 #ifndef DIRECT_CONSTRUCTION
+       !--------- Constructing Harmonic Matrix via MPI all-to-all communication
        call clck_time(t0)
        if (.not. solve_only) then
           call distribute_harmonics(my_id,my_id_n,n_cpu)
@@ -1160,7 +1171,8 @@ required = 0
 #endif
 
 #ifdef PSV        
-  
+    !---- Part of the code under the flag PSV is just for debugging and will be
+    !removed at some point.
     if (my_id .eq. 1) then
      write(201,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
      write(201,*) 'i, rhs_distributed ' 
@@ -1173,7 +1185,7 @@ required = 0
     if ((my_id .eq. 1)) then
           
        write(202,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
-      write(202,*) 'i, rhs_distributed, rhs_construct' 
+       write(202,*) 'i, rhs_distributed, rhs_construct' 
        do i = 1, mumps_par%n
          if(abs(mumps_par%rhs(i)-rhs(i))/mumps_par%rhs(i).gt.1E-3)  write(202,*) i, mumps_par%rhs(i), rhs(i) 
        enddo
@@ -1682,6 +1694,8 @@ endif
   endif
  
 #ifdef PSV 
+   !---- Part of the code under the flag PSV is just for debugging and will be
+   !removed at some point.
    deallocate(A)
    deallocate(irn)
    deallocate(jcn)

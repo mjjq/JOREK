@@ -31,11 +31,15 @@ module exec_commands
   character(len=11), parameter, private :: DIR = './postproc/' !< Output goes into this directory!
   
   integer, parameter :: NORMAL_MODE = 1 !< Normal mode
-  integer, parameter :: LOOP_MODE   = 2 !< Mode started by 'for' and ended by 'done' commands
-  integer :: exec_mode = NORMAL_MODE    !< Current operation mode (NORMAL_MODE or LOOP_MODE)
+  integer, parameter :: LOOP_S_MODE = 2 !< Mode started by 'for step' and ended by 'done' commands
+  integer, parameter :: LOOP_T_MODE = 3 !< Mode started by 'for time' and ended by 'done' commands
+  integer :: exec_mode = NORMAL_MODE    !< Current operation mode (NORMAL_MODE or LOOP_X_MODE)
   integer :: loop_min_step              !< Smallest timestep index of for loop
   integer :: loop_max_step              !< Largest timestep index of for loop
   integer :: loop_inc_step              !< Timestep index step width of for loop
+  real*8  :: loop_min_time              !< Smallest time of for loop
+  real*8  :: loop_max_time              !< Largest time of for loop
+  real*8  :: loop_inc_time              !< Timestep time interval width of for loop
   
   integer, parameter :: MAX_QUEUE_LENGTH  = 9999         !< Maximum length of command queue
   integer            :: n_queued_commands = 0            !< Number of commands in the queue
@@ -154,6 +158,8 @@ module exec_commands
           call jnorm_bnd_RZ(command, ierr)
         case ( 'jorek-units' )
           call select_jorek_units(command, ierr)
+        case ( 'for-jorek-units' )
+          call select_loop_jorek_units(command, ierr)
         case ( 'pol_line' )
           call pol_line(command, first_step, ierr)
         case ( 'int_along_pol_line' )
@@ -184,6 +190,8 @@ module exec_commands
           call set(command, ierr)
         case ( 'si-units' )
           call select_si_units(command, ierr)
+        case ( 'for-si-units' )
+          call select_loop_si_units(command, ierr)
         case ( 'spi-state' )
           call spi_state(command, first_step, ierr)
         case ( 'timesteps' )
@@ -194,7 +202,7 @@ module exec_commands
       end select
       
     ! --- In loop mode, commands are queued and afterwards executed for each timestep separately
-    else if ( exec_mode == LOOP_MODE ) then
+    else if (( exec_mode == LOOP_S_MODE ) .or. ( exec_mode == LOOP_T_MODE )) then
       
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane', 'average', 'point',      &
@@ -273,6 +281,7 @@ module exec_commands
     end if
     if ( .not. file_exists ) then
       ierr = 42
+      write(*,'(a,i5.5,a)') 'Restart file for step ', istep,' does not exist.'
       return
     end if
     
@@ -319,76 +328,145 @@ module exec_commands
     
     ! --- Some checks.
     call check_args(command%n_args,ierr,3,5,7);  if ( ierr /= 0 ) return
+
+    ! --- loop through steps
+    if ( trim(command%args(1)) == 'step' ) then
+
+      loop_min_step = to_int(command%args(2),ierr)
+      if ( ierr /= 0 ) then
+        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+        call specific_help('for')
+        return
+      end if
+
+      if ( command%n_args == 3 ) then ! for step <XXX> do
+        if ( trim(command%args(3)) /= 'do' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_max_step = loop_min_step
+        loop_inc_step = 1
+      else if ( command%n_args == 5 ) then! for step <XXX> to <YYY> do
+        if ( trim(command%args(3)) /= 'to' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_max_step = to_int(command%args(4),ierr)
+        if ( ierr /= 0 ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        if ( trim(command%args(5)) /= 'do' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_inc_step = 1
+      else if ( command%n_args == 7 ) then! for step <XXX> to <YYY> by <ZZZ> do
+        if ( trim(command%args(3)) /= 'to' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_max_step = to_int(command%args(4),ierr)
+        if ( ierr /= 0 ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        if ( trim(command%args(5)) /= 'by' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_inc_step = to_int(command%args(6),ierr)
+        if ( ierr /= 0 ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        if ( trim(command%args(7)) /= 'do' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+      end if
     
-    if ( trim(command%args(1)) /= 'step' ) then
+      exec_mode = LOOP_S_MODE
+
+    else if ( trim(command%args(1)) == 'time' ) then
+
+      loop_min_time = to_float(command%args(2),ierr)
+      if ( ierr /= 0 ) then
+        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+        call specific_help('for')
+        return
+      end if
+
+      if ( command%n_args == 3 ) then ! for time <XXX> do
+        if ( trim(command%args(3)) /= 'do' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_max_time = loop_min_time
+        loop_inc_time = 1.d0
+      else if ( command%n_args == 5 ) then
+        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+        write(*,*) '       "time" mode needs one or three arguments.'
+        call specific_help('for')
+        return
+      else if ( command%n_args == 7 ) then! for step <XXX> to <YYY> by <ZZZ> do
+        if ( trim(command%args(3)) /= 'to' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_max_time = to_float(command%args(4),ierr)
+        if ( ierr /= 0 ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        if ( trim(command%args(5)) /= 'by' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_inc_time = to_float(command%args(6),ierr)
+        if ( ierr /= 0 ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        if ( trim(command%args(7)) /= 'do' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+      end if
+
+      ! --- Check if values are okay
+      if ( loop_max_time .lt. loop_min_time ) then
+        write(*,*) 'ERROR: Minimum value has to be larger than maximum value.'
+        call specific_help('for')
+        return
+      end if
+      if ( loop_inc_time .lt. 0.d0 ) then
+        write(*,*) 'ERROR: Increment needs to be a positive value.'
+        call specific_help('for')
+        return
+      end if
+
+      exec_mode = LOOP_T_MODE
+
+    else
       call report_error('for', 'Wrong syntax.', command)
       return
     end if
-    
-    loop_min_step = to_int(command%args(2),ierr)
-    if ( ierr /= 0 ) then
-      write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-      call specific_help('for')
-      return
-    end if
-    
-    if ( command%n_args == 3 ) then ! for step <XXX> do
-      if ( trim(command%args(3)) /= 'do' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      loop_max_step = loop_min_step
-      loop_inc_step = 1
-    else if ( command%n_args == 5 ) then! for step <XXX> to <YYY> do
-      if ( trim(command%args(3)) /= 'to' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      loop_max_step = to_int(command%args(4),ierr)
-      if ( ierr /= 0 ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      if ( trim(command%args(5)) /= 'do' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      loop_inc_step = 1
-    else if ( command%n_args == 7 ) then! for step <XXX> to <YYY> by <ZZZ> do
-      if ( trim(command%args(3)) /= 'to' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      loop_max_step = to_int(command%args(4),ierr)
-      if ( ierr /= 0 ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      if ( trim(command%args(5)) /= 'by' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      loop_inc_step = to_int(command%args(6),ierr)
-      if ( ierr /= 0 ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      if ( trim(command%args(7)) /= 'do' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-    end if
-    
-    exec_mode = LOOP_MODE
     
   end subroutine loop_start
   
@@ -406,37 +484,149 @@ module exec_commands
     integer,            intent(out)    :: ierr    !< Error flag
     
     ! --- Local variables
-    integer :: jcmd, istep, load_error
-    logical :: first_step ! Is true for the first timestep loaded in the for-loop
+    integer              :: jcmd, istep, load_error, n_avail, itime, n_time, iavail, n_select, & 
+                            temp_select, loop_unit
+    logical              :: first_step, file_exists   ! Is true for the first timestep loaded in the for-loop
+    real*8               :: time_loop, rho_norm, loop_fact_time
+    character(len=64)    :: file_name
+    integer, allocatable :: selected_steps(:)
+    real*8 , allocatable :: selected_times(:)
+    integer, allocatable :: available_steps(:)
     
     ierr = 0
-    exec_mode = NORMAL_MODE    
     
     if ( n_queued_commands == 0 ) then
       write(*,*) 'WARNING: No commands in for-loop.'
+      exec_mode = NORMAL_MODE
       return
     end if
     
     first_step = .true.
-    do istep = loop_min_step, loop_max_step, loop_inc_step
-      call load_step(istep, load_error)
-      if ( load_error /= 0 ) cycle
+    if ( exec_mode == LOOP_S_MODE ) then
+      exec_mode = NORMAL_MODE
+      do istep = loop_min_step, loop_max_step, loop_inc_step
+        write(*,*) istep
+        call load_step(istep, load_error)
+        if ( load_error /= 0 ) cycle
       
-      do jcmd = 1, n_queued_commands
+        do jcmd = 1, n_queued_commands
         
-        call exec_command(command_queue(jcmd), first_step, ierr)  
-        if ( ierr /= 0 ) then
-          write(*,*) 'ERROR executing the following command (ignoring it):'
-          call print_command(command_queue(jcmd))
-          call specific_help(command_queue(jcmd)%args(0))
-          ierr = 0
-        end if
+          call exec_command(command_queue(jcmd), first_step, ierr)  
+          if ( ierr /= 0 ) then
+            write(*,*) 'ERROR executing the following command (ignoring it):'
+            call print_command(command_queue(jcmd))
+            call specific_help(command_queue(jcmd)%args(0))
+            ierr = 0
+          end if
         
+        end do
+      
+        first_step = .false.
       end do
+    else		
+      exec_mode = NORMAL_MODE
+      write(*,*) '--------------------------------------------------'
+      write(*,*) '   Selects restart files for choosen time points'
+      write(*,*) '--------------------------------------------------'
+
+      ! --- Get list of available restart files
+      n_avail=0
+      allocate(available_steps(100000))
+      do istep = 0, 99999
+        if ( rst_hdf5 .ne. 0 ) then
+          write (file_name,'(a, i5.5, a)') 'jorek', istep, '.h5'
+          inquire (file=file_name, exist=file_exists)
+        else
+          write (file_name,'(a, i5.5, a)') 'jorek', istep, '.rst'
+          inquire (file=file_name, exist=file_exists)
+        end if
+
+        if ( file_exists ) then
+          n_avail=n_avail+1					
+          available_steps(n_avail) = istep
+        end if
+      end do
+
+      ! --- Get xtime from the restart file with the highest step number
+      write (file_name,'(a, i5.5)') 'jorek', available_steps(n_avail)
+      call import_restart(node_list, element_list, file_name, rst_format, ierr, .true.)
+      if ( ierr /= 0 ) return
+
+      ! --- Set time unit correctly
+      loop_unit = get_int_setting('loop_unit', ierr)
+      rho_norm       = central_density *1.d20 * central_mass * mass_proton   ! rho_0 = central mass density
+      loop_fact_time = sqrt(MU_zero*rho_norm)
+      if ( loop_unit .eq. SI_UNITS ) then
+        loop_min_time  = loop_min_time/loop_fact_time
+        loop_max_time  = loop_max_time/loop_fact_time
+        loop_inc_time  = loop_inc_time/loop_fact_time
+      end if
+
+      ! --- Find for each selected time a corresponding step number
+      if (loop_max_time .gt. xtime(index_start)) then
+        loop_max_time = xtime(index_start)
+      end if
+      if (loop_min_time .gt. xtime(index_start)) then
+        loop_min_time = xtime(index_start)
+      end if
+      n_time   = int(((loop_max_time-loop_min_time)/loop_inc_time))+1
+      n_select = 0 
+      allocate(selected_steps(n_time))
+      do itime = 1,n_time
+        time_loop = loop_min_time+loop_inc_time*(itime-1) ! requested time
+        ! --- Go through list of available restart files
+        !     and compare their xtime with time_loop
+        do iavail = 1, n_avail
+          if ( iavail .gt. 1 ) then
+            if ( abs(xtime(available_steps(iavail)) - time_loop) .gt.  &
+                 abs(xtime(temp_select)             - time_loop)) then
+              exit
+            end if
+          end if
+          temp_select = available_steps(iavail)
+        end do
+        write(*,'(a,f13.6,a,f13.6,a)') 'Requested time point: ', time_loop,' (',time_loop*loop_fact_Time*1000,' ms)'
+
+        if ( n_select .gt. 0 .and. ANY( selected_steps .eq. temp_select )) then
+          write(*,*) 'Ignored, Step number already selected!'
+        else
+          n_select                 = n_select+1
+          selected_steps(n_select) = temp_select
+
+          write(*,'(a, i5.5, a,f13.6)') 'Selected Step: ', selected_steps(n_select),&
+          ' at t=',xtime(selected_steps(n_select))
+          write(*,'(a,f13.6,a)') '                        (=',xtime(selected_steps(n_select))*loop_fact_Time*1000,' ms)'
+        end if
+
+        write(*,*) '****************************'
+      end do
+
+      loop_min_step=selected_steps(1)
+      loop_max_step=selected_steps(n_select)
+
+      write(*,*) '--------------------------------------------------'
+
+      do istep = 1, n_select
+        call load_step( selected_steps(istep), load_error)
+        if ( load_error /= 0 ) cycle
       
-      first_step = .false.
-    end do
-    
+        do jcmd = 1, n_queued_commands
+        
+          call exec_command(command_queue(jcmd), first_step, ierr)  
+          if ( ierr /= 0 ) then
+            write(*,*) 'ERROR executing the following command (ignoring it):'
+            call print_command(command_queue(jcmd))
+            call specific_help(command_queue(jcmd)%args(0))
+            ierr = 0
+          end if
+        
+        end do
+      
+        first_step = .false.
+      end do
+    end if 
+
+
     do jcmd = 1, n_queued_commands
       call finalize_command(command_queue(jcmd), first_step, ierr)
     end do
@@ -778,15 +968,22 @@ module exec_commands
   
   !> Auxilliary routine for file name construction.
   character(len=64) function step_range_string(min_step, max_step)
-    
+
     integer, intent(in) :: min_step, max_step
-    
-    if ( min_step /= max_step ) then
-      write(step_range_string,'(a,i5.5,a,i5.5)') '_s', min_step, '..', max_step
+    character(len=2)     :: prefix
+
+    if ( exec_mode .eq. LOOP_S_MODE )  then 
+      prefix='_s'
     else
-      write(step_range_string,'(a,i5.5)') '_s', min_step
+      prefix='_t'
     end if
-    
+
+    if ( min_step /= max_step ) then
+      write(step_range_string,'(a,i5.5,a,i5.5)') prefix, min_step, '..', max_step
+    else
+      write(step_range_string,'(a,i5.5)') prefix, min_step
+    end if
+
   end function step_range_string
   
   
@@ -2218,6 +2415,46 @@ module exec_commands
     call set_setting('units', '1', ierr)
     
   end subroutine select_si_units
+  
+  
+  
+  
+  
+  !> Select JOREK normalized units in for time loop.
+  subroutine select_loop_jorek_units(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0); if ( ierr /= 0 ) return
+    
+    call set_setting('loop_unit', '0', ierr)
+    
+  end subroutine select_loop_jorek_units
+  
+  
+  
+  
+  
+  !> Select SI units in for time loop.
+  subroutine select_loop_si_units(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0); if ( ierr /= 0 ) return
+    
+    call set_setting('loop_unit', '1', ierr)
+    
+  end subroutine select_loop_si_units
   
   
   

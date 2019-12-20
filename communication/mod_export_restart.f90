@@ -55,14 +55,6 @@ subroutine export_binary_restart(node_list,element_list,filename)
   ! --- Local variables
   integer :: i
   character*50 :: version_control
-  real*8, allocatable :: spi_R_arr (:)
-  real*8, allocatable :: spi_Z_arr (:)
-  real*8, allocatable :: spi_phi_arr (:)
-  real*8, allocatable :: spi_Vel_R_arr (:)
-  real*8, allocatable :: spi_Vel_Z_arr (:)
-  real*8, allocatable :: spi_Vel_RxZ_arr (:)
-  real*8, allocatable :: spi_radius_arr (:)
-  real*8, allocatable :: spi_abl_arr (:)
 
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)

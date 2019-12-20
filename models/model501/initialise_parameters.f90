@@ -167,7 +167,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   endif
 
   ! --- Calculate normalisation factor for MGI source (related to its toroidal shape)
-  mgi_tor_norm = mgi_deltaphi * PI**0.5 * ERF(PI/mgi_deltaphi)
+  ns_tor_norm = ns_deltaphi * PI**0.5 * ERF(PI/ns_deltaphi)
 
    if (trim(R_Z_psi_bnd_file) .ne. 'none') then
 
@@ -344,9 +344,9 @@ call derive_num_profiles(my_id)
 !spi_Z = mgi_Z
 
 if ( my_id == 0 ) then
-  if (2*PI/(n_tor*n_period) >= mgi_deltaphi .and. my_id == 0) then
-    write(*,*) "WARNING! mgi_deltaphi too small for the n_tor, BEWARE!"
-    if (t_now > t_mgi) then
+  if (2*PI/(n_tor*n_period) >= ns_deltaphi .and. my_id == 0) then
+    write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
+    if (t_now > t_ns) then
       write(*,*) "EXITING NOW!!!"
       stop
     end if

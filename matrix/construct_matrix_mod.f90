@@ -318,7 +318,6 @@ if(.not. direct_construction) then
 
   ! --- Memory allocation
   if (.not. allocated(A_glob))    call tr_allocate(A_glob,  1,nz_glob,"A_glob",  CAT_DMATRIX)
-
   if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocate (rhs_glob,1,ndof_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocatep(rhs_loc, 1,ndof_glob,"rhs_loc", CAT_DMATRIX)
@@ -332,28 +331,20 @@ if(.not. direct_construction) then
   elm_problem(:,:) = .false.
 
 else
+  ! --- Memory allocation
+  if (allocated(A_glob_harm))        call tr_deallocate(A_glob_harm,"A_glob_harm",CAT_DMATRIX)
+  call tr_allocate(A_glob_harm,  1,nz_glob1,"A_glob_harm",  CAT_DMATRIX)
+  if (allocated(irn_glob_harm))        call tr_deallocate(irn_glob_harm,"irn_glob_harm",CAT_DMATRIX)
+  call tr_allocate(irn_glob_harm,  1,nz_glob1,"irn_glob_harm",  CAT_DMATRIX)
+  if (allocated(jcn_glob_harm))        call tr_deallocate(jcn_glob_harm,"jcn_glob_harm",CAT_DMATRIX)
+  call tr_allocate(jcn_glob_harm,  1,nz_glob1,"jcn_glob_harm",  CAT_DMATRIX)
+  if (allocated(rhs_glob_harm))        call tr_deallocate(rhs_glob_harm,"rhs_glob_harm",CAT_DMATRIX)
+  call tr_allocate (rhs_glob_harm,1,n_glob1,"rhs_glob_harm",CAT_DMATRIX)
 
-  mumps_par%nz = nz_glob1  
-  mumps_par%n  = n_glob1
-
-  if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"dh_mumps_par%A",CAT_DMATRIX)
-  if (associated(mumps_par%irn))  call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
-  if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
-
-  call tr_allocatep(mumps_par%A,1,mumps_par%nz,"dh_mumps_par%A",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
-
-  if (associated(mumps_par%rhs))  call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"dh_mumps_par%rhs",CAT_DMATRIX)
-
-
-  ! --- Initialise internal variables
-  mumps_par%A   = 0.d0
-  mumps_par%rhs = 0.d0
-  mumps_par%irn = 0
-  mumps_par%jcn = 0
-
+  A_glob_harm     = 0.d0
+  irn_glob_harm   = 0
+  jcn_glob_harm   = 0
+  rhs_glob_harm   = 0.d0
 endif
 
 
@@ -361,6 +352,7 @@ endif
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,          &
   !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,direct_construction,       &
+  !$omp          A_glob_harm, irn_glob_harm, jcn_glob_harm, rhs_glob_harm,       &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
   !$omp          ijA_index_harm, ijA_size_harm, irn_jcn_harm, &
   !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, mumps_par, ijA_index, ijA_size, irn_jcn) &
@@ -564,7 +556,7 @@ endif
               else
 
               !$omp atomic
-                 mumps_par%rhs(index_large_i+j) = mumps_par%rhs(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
+                 rhs_glob_harm(index_large_i+j) = rhs_glob_harm(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
               !$omp end atomic
               endif
 
@@ -600,8 +592,8 @@ endif
                       irn_glob(ilarge2) = index_large_i	+ j
                       jcn_glob(ilarge2) = index_large_k	+ l
                     else
-                      mumps_par%irn(ilarge2) = index_large_i + j
-                      mumps_par%jcn(ilarge2) = index_large_k + l
+                      irn_glob_harm(ilarge2) = index_large_i + j
+                      jcn_glob_harm(ilarge2) = index_large_k + l
                     endif
                     
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) = &
@@ -619,8 +611,8 @@ endif
                    !$omp end critical 
                 else 
                    !$omp critical
-                   mumps_par%A(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
-                     mumps_par%A(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
+                   A_glob_harm(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
+                     A_glob_harm(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
                      thread_struct(omp_tid)%synch_buff(:) 
                    !$omp end critical                 
                 endif
@@ -644,6 +636,28 @@ endif
 
 if(direct_construction) then
  
+  mumps_par%nz = nz_glob1  
+  mumps_par%n  = n_glob1
+
+  if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"dh_mumps_par%A",CAT_DMATRIX)
+  if (associated(mumps_par%irn))  call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
+  if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
+
+  call tr_allocatep(mumps_par%A,1,mumps_par%nz,"dh_mumps_par%A",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
+
+  if (associated(mumps_par%rhs))  call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"dh_mumps_par%rhs",CAT_DMATRIX)
+
+
+  ! --- Initialise internal variables
+  mumps_par%A   = A_glob_harm
+  mumps_par%rhs = rhs_glob_harm
+  mumps_par%irn = irn_glob_harm
+  mumps_par%jcn = jcn_glob_harm
+
+
   ! --- Memory tracking
   call tr_vnorms("cm_A_bef_bc",mumps_par%A,mumps_par%nz)
   

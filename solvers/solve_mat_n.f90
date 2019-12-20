@@ -55,7 +55,7 @@ contains
     use global_distributed_matrix
     use mpi_mod 
     use mod_clock
-    use phys_module, only : index_now, use_BLR_compression, epsilon_BLR, just_in_time_BLR
+    use phys_module, only : index_now, use_BLR_compression, epsilon_BLR, just_in_time_BLR, pastix_blr_abs_tol
     use mod_coicsr
  
 #ifdef USE_PASTIX6

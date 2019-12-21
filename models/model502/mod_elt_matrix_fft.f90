@@ -1154,7 +1154,7 @@ do ms=1, n_gauss
     nu_e_imp = nu_e_imp * t_norm
     nu_e_bg  = nu_e_bg * t_norm
 
-    dTe_i    = (nu_e_imp + nu_e_bg) * (Ti0 - Te0)
+    dTe_i    = (nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr)
     dTi_e    = -dTe_i * (r0_corr + alpha_e*rn0_corr) / (r0_corr + alpha_i*rn0_corr)
 
     !Calculating the density and temperature derivative for amats
@@ -1176,10 +1176,10 @@ do ms=1, n_gauss
       dnu_e_bg_drho  = nu_e_imp * dr0_corr_dn / (r0_corr-rn0_corr)
     end if
 
-    ddTe_i_dTi      = (dnu_e_imp_dTi + dnu_e_bg_dTi) * (Ti0 - Te0) + nu_e_imp + nu_e_bg
-    ddTe_i_dTe      = (dnu_e_imp_dTe + dnu_e_bg_dTe) * (Ti0 - Te0) - nu_e_imp - nu_e_bg
-    ddTe_i_drhon    = (dnu_e_imp_drhon + dnu_e_bg_drhon) * (Ti0 - Te0)
-    ddTe_i_drho     = (dnu_e_imp_drho + dnu_e_bg_drho) * (Ti0 - Te0)
+    ddTe_i_dTi      = (dnu_e_imp_dTi + dnu_e_bg_dTi) * (Ti0_corr - Te0_corr) + nu_e_imp + nu_e_bg
+    ddTe_i_dTe      = (dnu_e_imp_dTe + dnu_e_bg_dTe) * (Ti0_corr - Te0_corr) - nu_e_imp - nu_e_bg
+    ddTe_i_drhon    = (dnu_e_imp_drhon + dnu_e_bg_drhon) * (Ti0_corr - Te0_corr)
+    ddTe_i_drho     = (dnu_e_imp_drho + dnu_e_bg_drho) * (Ti0_corr - Te0_corr)
 
     ddTi_e_dTi      = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_dTi / (r0_corr+alpha_i*rn0_corr)
     ddTi_e_dTe      = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_dTi / (r0_corr+alpha_i*rn0_corr) &

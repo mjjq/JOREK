@@ -16,7 +16,13 @@ module mod_integrals3D
   use mod_expression
   use mod_resistivity
   use corr_neg
- 
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+  use mod_neutral_source
+#endif
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
+#endif
+
   implicit none
   
   private
@@ -103,6 +109,38 @@ real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt
 real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, T0_corr
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3, betap
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
+real*8  :: rn0, rn0_corr
+
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+real*8  :: source_neutral
+#endif
+#if (JOREK_MODEL == 501)
+real*8  :: source_bg, source_imp, source_tmp
+#endif
+
+! Additional diagnostic variables for impurity model
+#if (JOREK_MODEL == 501)
+real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion
+real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
+! Atomic physics coefficients:
+!   -Mass ratio between main ions and impurites (m_i/m_imp)
+real*8  :: m_i_over_m_imp
+!   -Mean impurity ionization state
+real*8  :: Z_imp, T0_Zimp, alpha_Zimp
+!   -Coefficients related to Z_imp
+real*8  :: alpha_imp, beta_imp
+!   -Corrected plasma temperature and density for radiation calculation
+real*8  :: T_rad, ne_rad, T_rad_real
+!   -Temporary variable for charge state distribution
+real*8, allocatable :: P_imp(:)
+real*8     :: E_ion, Lrad, E_ion_bg
+integer*8  :: ion_i, ion_k, i_phi
+
+#endif
+
+integer    :: spi_i
+real*8     :: ng_radius
+
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 
@@ -168,6 +206,12 @@ local_pellet_volume    = 0.d0
 local_n_particles_inj = 0.d0
 local_n_particles     = 0.d0
 
+#if (JOREK_MODEL == 501)
+local_radiation       = 0.d0
+local_E_ion           = 0.d0
+local_radiation_phi   = 0.d0
+#endif
+
 delta_phi     = 2.d0 * PI / float(n_plane) / float(n_period)
 
 ! --- find axis, x-point and psi_bnd. This should be done in equil_info before calling int3D
@@ -198,11 +242,18 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, thm_wk_tot,                   &
 !$omp          mag_wk_tot, vpar_disp_tot, area1, mag_src_tot,  &
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
-!$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm,                            &
-!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,            &
-!$omp          central_mass,                                                                   &
+!$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,               &
+!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
+!$omp          central_mass, pellets, tor_frequency,                                           &
+!$omp          n_spi, using_spi,                                                               &
+!$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
+#endif
+#if (JOREK_MODEL == 501)
+!$omp          local_radiation, local_E_ion, gas_type, flag_adas,                              &
+!$omp          local_radiation_phi,                                                            &
+!$omp          imp_cor, imp_adas,                                                              &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -216,9 +267,18 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, &
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp           rn0, source_ns,                                                               &
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+!$omp           rn0, rn0_corr,                                                                 &
 #endif
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+!$omp           source_neutral,                                                                &
+#endif
+#if (JOREK_MODEL == 501)
+!$omp           source_bg, source_imp, source_tmp,                                             &
+!$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
+!$omp           T_rad, T_rad_real, ne_rad, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,         &
+#endif
+
 !$omp           omp_nthreads,omp_tid)
 
 
@@ -231,8 +291,11 @@ omp_tid      = 0
 #endif
 
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
+#endif
+#if (JOREK_MODEL == 501)
+!$omp                local_radiation,  local_E_ion, local_radiation_phi,                      &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
@@ -329,7 +392,9 @@ do ife = ife_min, ife_max
         BigR = x_g(ms,mt)
 
         r0     = eq_g(mp,5,ms,mt)
+        r0_corr = corr_neg_dens(r0,(/1.d-8,1.d-5/),1.d-3) ! Correction for negative r0 ...
         T0     = eq_g(mp,6,ms,mt)
+        T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/))
         T0e    = eq_g(mp,6,ms,mt) /2.d0
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
@@ -351,8 +416,9 @@ do ife = ife_min, ife_max
         vpar_t   = 0.d0
 #endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
         rn0    = eq_g(mp,8,ms,mt)
+        rn0_corr = corr_neg_dens(rn0, (/ 1.d-12, 1.d-5 /),1.d-3) ! Correction for negative rn0 ...
 #endif
 
         T0_corr = corr_neg_temp(T0)

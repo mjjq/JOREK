@@ -64,13 +64,13 @@ module equil_info
     real*8           :: t_xpoint(2)              !< t coordinate of X-point within element.
     integer          :: ifail_xpoint             !< Error code for X-point determination.
     
-    ! --- Boundary point (point defining plasma LCFS)
+    ! --- Boundary point (point defining the plasma LCFS, either the active limiter point or X-point)
     real*8           :: R_bnd                    !< R coordinate of boundary point.
     real*8           :: Z_bnd                    !< Z coordinate of boundary point.
-    real*8           :: Psi_bnd                  !< Psi of limiting surface or separatrix.
-    integer          :: i_elm_bnd                !< Index of element containing limiter point.
-    real*8           :: s_bnd                    !< s coordinate of limiter point within element.
-    real*8           :: t_bnd                    !< t coordinate of limiter point within element.
+    real*8           :: Psi_bnd                  !< Psi of the boundary point (Psi of the LCFS)
+    integer          :: i_elm_bnd                !< Index of element containing the boundary point
+    real*8           :: s_bnd                    !< s coordinate of the boundary point within element.
+    real*8           :: t_bnd                    !< t coordinate of the boundary point within element.
     integer          :: ifail_bnd                !< Error code for determination of boundary point
     
     ! --- Strike Point(s) derived from axisymmetric field component.
@@ -114,7 +114,7 @@ module equil_info
     call find_axis(my_id, node_list, element_list, ES%psi_axis, ES%R_axis, ES%Z_axis,              &
       ES%i_elm_axis, ES%s_axis, ES%t_axis, ES%ifail_axis)
       
-    ! --- Estimate if the axis is a minimum or maximum of flux (not completely general yet, but is required for find_limiter)    
+    ! --- Find out if the axis is a minimum or a maximum of the poloidal flux (required for find_limiter)    
     if (.not. ES%initialized) call is_axis_psi_mininum(node_list, element_list, bnd_elm_list)
         
     ! --- Find the X-point(s).
@@ -300,7 +300,7 @@ module equil_info
     call find_RZ(node_list, element_list, R2, Z2, R_out, Z_out, i_elm_out, s_out, t_out, ifail)    
     call interp(node_list, element_list, i_elm_out, 1, 1, s_out, t_out, P, P_s, P_t, P_st, P_ss, P_tt)
     
-    ! --- Decide is axis is psi minimum
+    ! --- Decide whether the axis is a minimum of psi
     if ( (P - psi_axis) > 0.d0 ) then
       ES%axis_is_psi_minimum = .true.
     else 
@@ -308,7 +308,7 @@ module equil_info
     endif
     
     if (ifail /= 0) then   ! if the reference point was not found, use FF_0 instead
-      write(*,*) ' WARNING: is_axis_psi_minimum is failing (no intermidiate point found)'
+      write(*,*) ' WARNING: is_axis_psi_minimum is failing (no intermediate point found)'
       write(*,*) ' Deciding if axis is minimum using the sign of FF_0'
       ES%axis_is_psi_minimum = .false.
       if (FF_0 >= 0.d0)  ES%axis_is_psi_minimum = .true.

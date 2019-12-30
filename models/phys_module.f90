@@ -274,7 +274,7 @@ module phys_module
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor
   real*8  :: equil_accuracy    !< Tolerance of the convergence for the fix-boundary equilibrium
-  real*8  :: axis_srch_radius  !< Magnetic axis will be searched with a disk with this radius
+  real*8  :: axis_srch_radius  !< Magnetic axis will be searched inside a circle with this radius
  
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).

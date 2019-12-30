@@ -19,7 +19,6 @@ use basis_at_gaussian
 use phys_module
 use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
-use corr_neg    
 use equil_info, only : get_psi_n
 use vacuum, only: freeb_fact
 use mod_bootstrap_functions

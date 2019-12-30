@@ -676,7 +676,11 @@ required = 0
   call populate_element_rtree(node_list, element_list)
 
   call broadcast_phys(my_id)                                  ! physics parameters
+
+  ! --- Broadcast equil_state: This is needed because find_axis depends on the axis
+  ! --- from the previous time-step, which is only read by my_id=0 from the restart file
   call broadcast_equil_state(my_id)                           ! equil_state
+
   if ( freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
   n_AA = 0  
   do inode = 1, node_list%n_nodes  

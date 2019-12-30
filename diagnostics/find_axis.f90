@@ -39,7 +39,7 @@ real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s,
 integer :: ij_axis(2), i, iv, ms, mt, kf, kv, i_tries, n_tries, i_elm_axis_init, min_indices(3)
 real*8  :: x(2), s, t, xerr, ferr, s_axis_init, t_axis_init
 real*8  :: R0, Z0, search_radius
-logical :: found_axis, inside_search_region, axis_in_rst_file
+logical :: found_axis, axis_in_rst_file
 real*8,  allocatable :: grad_psi(:,:,:)
 logical, allocatable :: include_pt(:,:,:)
 
@@ -122,12 +122,9 @@ do i=1,element_list%n_elements   ! --- loop over elements
       ps_y = (- ps_s * R_t + ps_t * R_s)/ xjac
 
       grad_psi(i,ms,mt) = sqrt(ps_x*ps_x + ps_y*ps_y)
-
-      inside_search_region = sqrt( (R-R0)**2.d0 + (Z-Z0)**2.d0 ) < search_radius
       
-      if ( inside_search_region ) then
-        include_pt(i,ms,mt) = .true.                      ! --- only include points within given geometrical limits
-      endif
+      ! --- include points if they are within the search region
+      include_pt(i,ms,mt) = sqrt( (R-R0)**2.d0 + (Z-Z0)**2.d0 ) < search_radius
           
     enddo
   enddo

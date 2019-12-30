@@ -426,6 +426,18 @@ module equil_info
         end if
       end if
     end if
+
+    ! --- Boundary point (point defining LCFS)
+    write(*,*) '--- Boundary point (point defining LCFS) -------------------------'
+    write(*,102) 'R_bnd              =', ES%R_bnd
+    write(*,102) 'Z_bnd              =', ES%Z_bnd
+    write(*,102) 'Psi_bnd            =', ES%Psi_bnd
+    if ( verbose ) then
+      write(*,103) 'i_elm_bnd          =', ES%i_elm_bnd
+      write(*,102) 's_bnd              =', ES%s_bnd
+      write(*,102) 't_bnd              =', ES%t_bnd
+      write(*,103) 'ifail_bnd          =', ES%ifail_bnd
+    end if
     
     ! --- Strike points.
     if ( verbose ) then
@@ -503,6 +515,11 @@ module equil_info
         write(ifile,*)
       end if
     end if
+
+    write(ifile,*) '# Boundary point (point defining LCFS)'
+    write(ifile,*) ES%R_bnd, ES%Z_bnd
+    write(ifile,*)
+    write(ifile,*)
     
     do i = 1, ES%num_strike
       write(ifile,*) '# Strike point', i

@@ -135,6 +135,9 @@ use data_structure
 use phys_module
 use mpi_mod
 use mod_interp, only: interp
+use mod_integrals3D
+use mod_expression, only: exprs_all_int, init_expr
+
 implicit none
 
 
@@ -145,12 +148,17 @@ real*8  :: psi_axis, psi_bnd
 integer :: my_id, ierr
 real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
 
-real*8 :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
+real*8  :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
 integer :: i_elm, ifail
+real*8,allocatable       :: res(:)
+
+call init_expr()
+allocate(res(exprs_all_int%n_expr+1))
+res = 0.d0
 
 if (pellet_amplitude .gt. 0) return
 
-call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
+call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
 
 V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
 

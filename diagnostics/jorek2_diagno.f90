@@ -18,6 +18,8 @@ use mod_import_restart
 #if (JOREK_MODEL == 501)
   use mod_injection_source
 #endif
+use mod_integrals3D
+use mod_expression, only: exprs_all_int, init_expr
 
 implicit none
 
@@ -31,10 +33,17 @@ integer :: ifail, my_id, ierr, i_elm_axis
 integer :: required, provided, StatInfo
 real*8  :: spi_abl_rate_tot, spi_abl_tot
 real*8  :: spi_abl_bg_rate_tot, spi_abl_bg_tot
+real*8,allocatable       :: res(:)
+
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_diagno                       *'
 write(*,*) '***************************************'
+
+call init_expr()
+allocate(res(exprs_all_int%n_expr+1))
+res = 0.d0
+
 
 my_id=0
 
@@ -140,8 +149,9 @@ endif
   if (flag_adas) then
     call init_imp_adas(my_id)
 
-    if (output_rad_phi) call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,&
-                                                pressure,pressure_in,pressure_out)
+    if (output_rad_phi)     call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, &
+                                           exprs_all_int, res, 1)
+    
   end if
 #endif
 !if (use_pellet) then

@@ -148,6 +148,8 @@ module mod_neutral_source
     use data_structure
     use phys_module
     use mpi_mod
+    use mod_integrals3D
+    use mod_expression, only: exprs_all_int, init_expr
 
     implicit none
 
@@ -160,7 +162,11 @@ module mod_neutral_source
     integer :: ierr
     real*8  :: density, density_in, density_out, pressure, pressure_in,pressure_out
 
-    call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
+    call init_expr()
+    allocate(res(exprs_all_int%n_expr+1))
+    res = 0.d0
+
+    call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
 
     total_n_particles_inj_all = total_n_particles_inj_all + total_n_particles_inj*tstep*sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
 

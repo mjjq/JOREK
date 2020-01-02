@@ -18,6 +18,9 @@ use diagnostics, only: axis_is_psi_minimum
 
 use mod_element_rtree
 
+use mod_integrals3D
+use mod_expression, only: exprs_all_int, init_expr
+
 implicit none
 
 type (type_node_list)    :: node_list
@@ -31,6 +34,7 @@ integer :: ifail, my_id, ierr, i_elm_axis
 integer :: required, provided, StatInfo
 integer :: rank, comm_size, n_cpu
 integer :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
+real*8,allocatable       :: res(:)
 
   interface
     subroutine distribute_vector(my_id,rhs,rhs_dis,again)
@@ -80,6 +84,10 @@ logical, save :: axis_is_min
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_diagno                       *'
 write(*,*) '***************************************'
+
+call init_expr()
+allocate(res(exprs_all_int%n_expr+1))
+res = 0.d0
 
 !my_id=0
 
@@ -217,8 +225,8 @@ endif
 
 !call populate_element_rtree(node_list, element_list)
 
-call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
-
+call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, &
+                                           exprs_all_int, res, 1)
 !if (use_pellet) then
 !   pellet_volume = total_pellet_volume
 !   call update_pellet(my_id,node_list,element_list)

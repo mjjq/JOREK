@@ -387,7 +387,6 @@ xyz     = 0
 ien     = 0
 
 call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
-call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
 
 minRad = 0.0
 if (bootstrap) then

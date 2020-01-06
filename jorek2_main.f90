@@ -1044,7 +1044,7 @@ required = 0
 
        endif
 
-#if (JOREK_MODEL == 500)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
        call total_neutrals(my_id,node_list,element_list)
 #endif
 

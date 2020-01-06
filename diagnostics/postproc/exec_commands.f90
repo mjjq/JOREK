@@ -17,7 +17,6 @@ module exec_commands
   use postproc_help
   use mod_log_params
   use mod_import_restart
-  use mgi_module
   use mod_interp
   use mod_poloidal_currents 
   

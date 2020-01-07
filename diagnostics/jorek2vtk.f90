@@ -116,8 +116,6 @@ integer*8  :: ion_i, ion_k
 !====================== --- Variables related to neutral density evolution (model 500 or 555)
 logical               :: include_neutral_dens
 integer               :: n_rn0, s_rn0
-real*8                :: r0_corr, rn0_corr
-real*8                :: r0_real8, rn0_real8
 real*8                :: IonN, RecN, AblN, coef_rec_1, Srec_T
 
 

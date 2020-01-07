@@ -227,9 +227,9 @@ if (my_id .eq. 0) then
 
 !===============================End of SPI model===============================================
 
-
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
   call MPI_PACK(total_n_particles_inj_all,1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-
+#endif
   call MPI_PACK(nimp_bg,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(gmres_4,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -736,9 +736,9 @@ if (my_id .ne. 0) then
   end if
 
 !===============================End of SPI model===============================================
-
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
   call MPI_UNPACK(buffer,bufsize,position,total_n_particles_inj_all,1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-
+#endif
   call MPI_UNPACK(buffer,bufsize,position,nimp_bg,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,gmres_4,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)

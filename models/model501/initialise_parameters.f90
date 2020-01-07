@@ -12,7 +12,6 @@ use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pi
     pastix_maxthrd
 use vacuum
 use wsmp_module,   only: use_wsmp
-use mod_injection_source,    only: total_n_particles_inj_all
 use pellet_module
 
 implicit none
@@ -149,9 +148,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   ! --- Model-specific presets
   particlesource_psin = 100.d0
 
-  ! --- Initialize diagnostic paremeters
-  total_n_particles_inj_all = 0.0;
-  
   ! --- Read input parameters from namelist.
   if (trim(filename) .ne. "__NO_FILENAME__" ) then
      open(42, file=filename, status='old', action='read', iostat=ierr)

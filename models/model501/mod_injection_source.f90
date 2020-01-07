@@ -2,9 +2,9 @@ module mod_injection_source
 
   use constants
 
-  real*8 :: total_n_particles_inj
-  real*8 :: total_n_particles
-  real*8 :: total_n_particles_inj_all
+  real*8 :: total_n_particles_inj     = 0.
+  real*8 :: total_n_particles         = 0.
+  real*8 :: total_n_particles_inj_all = 0.
 
   contains 
 

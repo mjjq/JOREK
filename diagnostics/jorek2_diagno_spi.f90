@@ -225,8 +225,10 @@ endif
 
 !call populate_element_rtree(node_list, element_list)
 
-call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, &
-                                           exprs_all_int, res, 1)
+! --- Determine boundary information from the grid
+call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+
+call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
 !if (use_pellet) then
 !   pellet_volume = total_pellet_volume
 !   call update_pellet(my_id,node_list,element_list)

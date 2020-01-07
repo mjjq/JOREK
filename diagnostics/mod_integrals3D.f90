@@ -94,7 +94,7 @@ real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, source_ns, pellet_volume
+real*8  :: local_n_particles_inj, local_n_particles, pellet_volume
 real*8  :: total_pellet_particles, total_plasma_particles, total_pellet_volume
 real*8  :: total_n_particles_inj, total_n_particles
 real*8  :: E_tot, Zkpar_T, D_prof, ZK_prof
@@ -576,7 +576,7 @@ do ife = ife_min, ife_max
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
         !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
 
-        source_ns = 0.d0
+        source_neutral = 0.d0
 
         if (using_spi) then
 
@@ -602,7 +602,7 @@ do ife = ife_min, ife_max
 
         end if
 
-        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_ns * bigR *&
+        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_neutral * bigR *&
                                  xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
         local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
 #endif

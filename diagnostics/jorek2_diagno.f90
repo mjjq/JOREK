@@ -25,6 +25,8 @@ implicit none
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
+
+
 integer :: i, in, i_tor, i_spi
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
 real*8  :: Rplot(2), Zplot(2)
@@ -149,9 +151,12 @@ endif
   if (flag_adas) then
     call init_imp_adas(my_id)
 
-    if (output_rad_phi)     call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, &
-                                           exprs_all_int, res, 1)
-    
+    if (output_rad_phi) then
+      ! --- Determine boundary information from the grid
+      call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+
+      call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
+    endif
   end if
 #endif
 !if (use_pellet) then

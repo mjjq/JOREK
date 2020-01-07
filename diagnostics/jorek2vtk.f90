@@ -192,13 +192,15 @@ RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
 include_radiation = .true.
+include_neutral_dens = .true.
+#endif
+#if (JOREK_MODEL == 501)
 ! --- Read ADAS data and generate coronal equilibrium is needed
-
 if (flag_adas) then
   call init_imp_adas(my_id)
 end if
-include_neutral_dens = .true.
 #endif
+
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)

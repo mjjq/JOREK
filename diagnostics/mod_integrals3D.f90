@@ -8,7 +8,6 @@ module mod_integrals3D
   use basis_at_gaussian
   use tr_module
   use phys_module
-  use pellet_module
   use mod_interp
   use convert_character
   use mpi_mod
@@ -16,12 +15,6 @@ module mod_integrals3D
   use mod_expression
   use mod_resistivity
   use corr_neg
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-  use mod_neutral_source
-#endif
-#if (JOREK_MODEL == 501)
-  use mod_injection_source
-#endif
 
   implicit none
   
@@ -96,7 +89,9 @@ real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, source_ns, rn0
+real*8  :: local_n_particles_inj, local_n_particles, source_ns, pellet_volume
+real*8  :: total_pellet_particles, total_plasma_particles, total_pellet_volume
+real*8  :: total_n_particles_inj, total_n_particles
 real*8  :: E_tot, Zkpar_T, D_prof, ZK_prof
 real*8  :: fact_mu0, fact_flux
 real*8  :: hel1, heli, helicity_tot, psi_off, curr, Ip, vn_p0, qn, pflow, kinflow, cond_par, cond_perp
@@ -109,7 +104,7 @@ real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt
 real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, T0_corr
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3, betap
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
-real*8  :: rn0, rn0_corr
+real*8  :: rn0, rn0_corr, r0_corr
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
 real*8  :: source_neutral
@@ -259,7 +254,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
-!$omp           dpdx, dpdy, phi,                                                               &
+!$omp           dpdx, dpdy, phi, r0_corr,                                                      &
 !$omp           source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,                      &
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &

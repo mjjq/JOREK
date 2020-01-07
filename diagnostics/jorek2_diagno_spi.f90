@@ -40,7 +40,6 @@ integer :: ifail, my_id, ierr, i_elm_axis
 integer :: required, provided, StatInfo
 integer :: rank, comm_size, n_cpu
 integer :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
-real*8,allocatable       :: res(:)
 
   interface
     subroutine distribute_vector(my_id,rhs,rhs_dis,again)

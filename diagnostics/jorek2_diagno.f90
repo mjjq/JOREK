@@ -40,7 +40,6 @@ integer :: ifail, my_id, ierr, i_elm_axis
 integer :: required, provided, StatInfo
 real*8  :: spi_abl_rate_tot, spi_abl_tot
 real*8  :: spi_abl_bg_rate_tot, spi_abl_bg_tot
-real*8,allocatable       :: res(:)
 
 
 write(*,*) '***************************************'

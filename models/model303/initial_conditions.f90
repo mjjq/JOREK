@@ -260,11 +260,11 @@ do i=1,node_list%n_nodes
 
     if(xcase2 .eq. 1) then
       write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,ES%psi_xpoint(1),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
-      		    node_list%node(i)%values(in,1,n_var),BigR/F0 * sqrt(GAMMA*T0)
+      		    node_list%node(i)%values(1,1,n_var),BigR/F0 * sqrt(GAMMA*T0)
     endif
     if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (ES%psi_xpoint(2) .lt. ES%psi_xpoint(1))) ) then
       write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,ES%psi_xpoint(2),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
-      		    node_list%node(i)%values(in,1,n_var),BigR/F0 * sqrt(GAMMA*T0)
+      		    node_list%node(i)%values(1,1,n_var),BigR/F0 * sqrt(GAMMA*T0)
     endif
 
   endif

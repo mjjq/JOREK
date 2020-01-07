@@ -11,6 +11,7 @@ use phys_module
 use basis_at_gaussian
 use pellet_module
 use mpi_mod
+use mod_boundary, only: boundary_from_grid 
 use mod_import_restart
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mod_neutral_source

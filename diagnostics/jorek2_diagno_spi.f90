@@ -15,7 +15,7 @@ use mod_import_restart
 use domains
 use mod_log_params
 use diagnostics, only: axis_is_psi_minimum
-
+use mod_boundary, only: boundary_from_grid
 use mod_element_rtree
 
 use mod_integrals3D

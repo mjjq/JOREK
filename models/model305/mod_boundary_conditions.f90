@@ -872,31 +872,34 @@ contains
                              ) then
 
                           index_node = node_list%node(inode)%index(1)
-
-                          call boundary_conditions_add_one_entry( &
-                               index_node,  k,  in,               &
-                               index_node,  k,  in,               &
-                               zbig, solve_only, gmres,           &
-                               cnt, cnt_prod, only_count,         &
-                               index_min, index_max)
-
+                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                            call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                            index_large_i = n_tor * n_var * (index_node - 1)
+                            ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
+                            irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                            jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                            A_glob(ilarge2)   = zbig
+                          endif
+                          
                           index_node = node_list%node(inode)%index(2)
-
-                          call boundary_conditions_add_one_entry( &
-                               index_node,  k,  in,               &
-                               index_node,  k,  in,               &
-                               zbig, solve_only, gmres,           &
-                               cnt, cnt_prod, only_count,         &
-                               index_min, index_max)
+                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                            call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                            index_large_i = n_tor * n_var * (index_node - 1)
+                            ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
+                            irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                            jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                            A_glob(ilarge2)    = zbig
+                          endif
 
                           index_node = node_list%node(inode)%index(3)
-
-                          call boundary_conditions_add_one_entry( &
-                               index_node,  k,  in,               &
-                               index_node,  k,  in,               &
-                               zbig, solve_only, gmres,           &
-                               cnt, cnt_prod, only_count,         &
-                               index_min, index_max)
+                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                            call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                            index_large_i = n_tor * n_var * (index_node - 1)
+                            ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
+                            irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                            jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                            A_glob(ilarge2)    = zbig
+                          endif
 
                         endif
 

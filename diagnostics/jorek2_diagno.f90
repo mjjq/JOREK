@@ -19,12 +19,17 @@ use mod_import_restart
   use mod_injection_source
 #endif
 use mod_integrals3D
-use mod_expression, only: exprs_all_int, init_expr
+use mod_expression, only: exprs_all_int, init_expr, t_expr_list
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+type (type_node_list)        :: node_list
+type (type_element_list)     :: element_list
+type (type_bnd_node_list)    :: bnd_node_list
+type (type_bnd_element_list) :: bnd_elm_list
+type (t_expr_list)           :: expr_list
+real*8                       :: res(:)
+integer                      :: units
 
 
 integer :: i, in, i_tor, i_spi

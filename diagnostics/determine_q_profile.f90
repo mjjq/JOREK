@@ -71,7 +71,7 @@ do i=2, surface_list%n_psi
       call interp_RZ(node_list,element_list,i_elm,ri,si,RRgi,dRRgi_dr,dRRgi_ds,dRRgi_drs,dRRgi_drr,dRRgi_dss, &
                                                         ZZgi,dZZgi_dr,dZZgi_ds,dZZgi_drs,dZZgi_drr,dZZgi_dss)
                                                         
-      ! --- Ignore open field line regions
+      ! --- Ignore open and private field line regions
       if ( get_psi_n(PSgi, ZZgi) > 1.d0 ) cycle
 
       dRRgi_dt = dRRgi_dr * dri + dRRgi_ds * dsi

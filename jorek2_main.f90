@@ -254,7 +254,7 @@ required = 0
     gmres     = .false.
   end if
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 501)
   ! --- Read ADAS data and generate coronal equilibrium is needed
   if (flag_adas) then
     call init_imp_adas(my_id)

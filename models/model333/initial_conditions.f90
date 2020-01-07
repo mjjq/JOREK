@@ -291,7 +291,7 @@ do i=1,node_list%n_nodes
 
     direction = + ps0_x / abs(ps0_x)           ! temporary solution for lower x-point only
     if (xcase2 .eq. 2) direction = -direction
-    if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) ) direction = -direction
+    if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (ES%Z_xpoint(1)+ES%Z_xpoint(2))/2.d0) ) direction = -direction
     if ( (grid_to_wall) .and. (n_wall_blocks .ne. 0) ) direction = 0.d0
 
 
@@ -307,11 +307,11 @@ do i=1,node_list%n_nodes
     node_list%node(i)%values(1,3,7) = direction *  node_list%node(i)%values(1,3,7)
 
     if(xcase2 .eq. 1) then
-      write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,psi_xpoint(1),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
+      write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,ES%psi_xpoint(1),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
                           node_list%node(i)%values(1,1,7),BigR/F0 * sqrt(GAMMA*T0)
     endif
-    if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-      write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,psi_xpoint(2),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
+    if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (ES%psi_xpoint(2) .lt. ES%psi_xpoint(1))) ) then
+      write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,ES%psi_xpoint(2),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
                           node_list%node(i)%values(1,1,7),BigR/F0 * sqrt(GAMMA*T0)
     endif
 

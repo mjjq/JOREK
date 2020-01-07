@@ -89,7 +89,7 @@ real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, source_ns, rn0
+real*8  :: local_n_particles_inj, local_n_particles, source_ns, pellet_volume
 real*8  :: total_pellet_particles, total_plasma_particles, total_pellet_volume
 real*8  :: total_n_particles_inj, total_n_particles
 real*8  :: E_tot, Zkpar_T, D_prof, ZK_prof
@@ -104,7 +104,7 @@ real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt
 real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, T0_corr
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3, betap
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
-real*8  :: rn0, rn0_corr
+real*8  :: rn0, rn0_corr, r0_corr
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
 real*8  :: source_neutral

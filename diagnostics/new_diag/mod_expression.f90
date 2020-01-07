@@ -22,15 +22,10 @@ module mod_expression
   use corr_neg
   use mod_basisfunctions
   use mod_bootstrap_functions
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-  use mod_neutral_source
-#endif
-#if (JOREK_MODEL == 501)
-  use mod_injection_source
-  use mod_coronal
-#endif
   use mod_poloidal_currents
-  
+#if (JOREK_MODEL == 501)
+  use mod_injection_source, only: radiation_function
+#endif
   
   
   implicit none

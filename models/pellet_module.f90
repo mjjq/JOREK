@@ -15,8 +15,6 @@ real*8 :: pellet_atomic            !< atomic number of pellet mass
 
 real*8 :: phys_ablation            !< physical ablation rate (non normalised)
 
-
-
 real*8, allocatable  :: xtime_pellet_R(:)
 real*8, allocatable  :: xtime_pellet_Z(:)
 real*8, allocatable  :: xtime_pellet_psi(:)
@@ -135,30 +133,21 @@ use data_structure
 use phys_module
 use mpi_mod
 use mod_interp, only: interp
-use mod_integrals3D
-use mod_expression, only: exprs_all_int, init_expr
 
 implicit none
 
-
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+integer,                      intent(in)    :: my_id
+type (type_node_list),        intent(in)    :: node_list
+type (type_element_list),     intent(in)    :: element_list
 
 real*8  :: psi_axis, psi_bnd
-integer :: my_id, ierr
+integer :: ierr
 real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
 
 real*8  :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
 integer :: i_elm, ifail
-real*8,allocatable       :: res(:)
-
-call init_expr()
-allocate(res(exprs_all_int%n_expr+1))
-res = 0.d0
 
 if (pellet_amplitude .gt. 0) return
-
-call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
 
 V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
 

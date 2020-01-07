@@ -15,6 +15,14 @@ module mod_integrals3D
   use mod_expression
   use mod_resistivity
   use corr_neg
+  use pellet_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+  use mod_neutral_source, only: neutral_source
+#endif
+#if (JOREK_MODEL == 501)
+  use mod_injection_source, only: inj_source, radiation_function
+#endif
+
 
   implicit none
   
@@ -28,9 +36,6 @@ module mod_integrals3D
 subroutine int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)
 
 !$ use omp_lib
-#if (JOREK_MODEL == 500)
-  use mod_neutral_source
-#endif
  
 implicit none
 

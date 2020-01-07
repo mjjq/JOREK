@@ -1044,10 +1044,6 @@ required = 0
 
        endif
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
-       call total_neutrals(my_id,node_list,element_list)
-#endif
-
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
        if (using_spi .and. t_now >= t_ns) then

@@ -28,7 +28,7 @@ type (type_element_list)     :: element_list
 type (type_bnd_node_list)    :: bnd_node_list
 type (type_bnd_element_list) :: bnd_elm_list
 type (t_expr_list)           :: expr_list
-real*8                       :: res(:)
+real*8, allocatable          :: res(:)
 integer                      :: units
 
 

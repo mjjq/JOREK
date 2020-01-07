@@ -12,11 +12,11 @@ module mod_integrals3D
   use mod_interp
   use convert_character
   use mpi_mod
-  use domains
   use mod_expression
   use mod_resistivity
   use corr_neg
- 
+  use equil_info, only : get_psi_n, ES
+
   implicit none
   
   private
@@ -170,17 +170,9 @@ local_n_particles     = 0.d0
 
 delta_phi     = 2.d0 * PI / float(n_plane) / float(n_period)
 
-! --- find axis, x-point and psi_bnd. This should be done in equil_info before calling int3D
-call find_axis(99,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-if (xpoint) then
-  call find_xpoint(99,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-  psi_bnd  = psi_xpoint(1)
-  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    psi_bnd = psi_xpoint(2)
-  endif
-else
-  psi_bnd = 0.d0
-endif
+psi_axis   = ES%psi_axis;        R_axis = ES%R_axis;        Z_axis = ES%Z_axis
+psi_xpoint = ES%psi_xpoint;    R_xpoint = ES%R_xpoint;    Z_xpoint = ES%Z_xpoint 
+psi_bnd    = ES%psi_bnd
 
 ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
@@ -435,7 +427,7 @@ do ife = ife_min, ife_max
         local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
 #endif
 
-        if (in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_bnd,R_axis,Z_axis,psi_axis)) then
+        if ( get_psi_n(ps0, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
           C_intern = C_intern + zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
@@ -607,16 +599,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       dPdx   = r0 * dTdx + T0 * drhodx
       dPdy   = r0 * dTdy + T0 * drhody
 
-      ! --- get normalized flux (this should be done in equil_info)
-      psi_n = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-      if (xpoint) then
-        if ((psi_n .lt. 1.d0) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
-          psi_n = 2.d0 - psi_n
-        endif
-        if ((psi_n .lt. 1.d0) .and. (Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) then
-          psi_n = 2.d0 - psi_n
-        endif
-      endif
+      ! --- get normalized flux 
+      psi_n = get_psi_n(ps0,Z)
  
       ! --- get resistivity and diffusion coefficients
       T0_corr = corr_neg_temp(T0)

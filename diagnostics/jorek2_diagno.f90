@@ -11,6 +11,7 @@ use phys_module
 use basis_at_gaussian
 use pellet_module
 use mpi_mod
+use mod_boundary, only: boundary_from_grid 
 use mod_import_restart
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mod_neutral_source
@@ -150,18 +151,19 @@ if (using_spi) then
 
 endif
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 501)
   ! --- Read ADAS data and generate coronal equilibrium is needed
   if (flag_adas) then
     call init_imp_adas(my_id)
-
-    if (output_rad_phi) then
-      ! --- Determine boundary information from the grid
-      call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
-
-      call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
-    endif
   end if
+#endif
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  if (output_rad_phi) then
+    ! --- Determine boundary information from the grid
+    call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+
+    call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
+  endif
 #endif
 !if (use_pellet) then
 !   pellet_volume = total_pellet_volume

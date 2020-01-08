@@ -176,7 +176,7 @@ module exec_commands
           call midplane(command, first_step, ierr)
         case ( 'namelist' )
           call load_namelist(command, ierr)
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 501)
           my_id = 0
           ! --- Read ADAS data and generate coronal equilibrium is needed
           if (flag_adas) then

@@ -27,6 +27,10 @@ index1_local = index_node1 - index_min + 1
 
 !write(*,'(A,8i8)') ' LOCATE : ',index_node1,index_min,index_max,index1_local
 
+!!----add by PSV 
+!if (ijA_size(index1_local) .eq. 0) ijA_size(index1_local) = 1
+!!----add by PSV 
+
 do i=1,ijA_size(index1_local)           ! replace by binary search?
 
   if (irn_jcn(index1_local,i) .eq. index_node2) then
@@ -39,11 +43,14 @@ enddo
 
 if (.not.found_index) then
 
-  write(*,*) ' FATAL locate_irn_jcn : index not found ',index_node1,index_node2
+  !write(*,*) ' FATAL locate_irn_jcn : index not found ',index_node1,index_node2
+  write(*,*) ' FATAL locate_irn_jcn : index not found '!,index_node1,index_node2
+  write(*,*) 'my_id, index_node1, index_node2, index_min', my_id, index_node1,index_node2, index_min
+  write(*,*) 'my_id, ijA_size(index1_local), irn_jcn(index1_local,i)', my_id, ijA_size(index1_local), irn_jcn(index1_local,1)  
 
   do i=1,ijA_size(index1_local)           ! replace by binary search?
 
-    write(*,*) i,irn_jcn(index1_local,i)
+    write(*,*) 'my_id, i,irn_jcn(index1_local,i)', my_id, i,irn_jcn(index1_local,i)
  stop
   enddo
 

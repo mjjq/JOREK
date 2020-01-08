@@ -275,6 +275,8 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   jcn_glob = 0
 
   write(*,'(2i6,a,2i12)') my_id, my_id_n, ' size matrices : n, nz = ', n_glob, nz_glob
+  write(*,'(2i6,a,2i12)') my_id, my_id_n, ' index_min, index_max = ', index_min, index_max
+  write(*,'(2i6,a,2i12)') my_id, my_id_n, ' n_local_elms = ', n_local_elms
 
   return
 end subroutine global_matrix_structure

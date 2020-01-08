@@ -198,7 +198,7 @@ contains
 
 !subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_max, xpoint2, xcase2,&
 !                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max)
-subroutine construct_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms, n_local_elms, index_min, index_max,      & 
+subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,      & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
                             i_tor_min, i_tor_max, n_glob1, nz_glob1, direct_construction)
   
@@ -226,9 +226,12 @@ subroutine construct_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms, n_local_el
 
   ! --- Routine parameters
   integer, intent(in) :: my_id
+  integer, intent(in) :: MPI_COMM_N
   integer, intent(in) :: my_id_n         
-  integer, intent(in) :: n_cpu         
-  integer, intent(in) :: m_cpu         
+  integer, intent(in) :: MPI_COMM_MASTER 
+  integer, intent(in) :: my_id_master         
+!  integer, intent(in) :: n_cpu         
+!  integer, intent(in) :: m_cpu         
   integer, intent(in) :: local_elms(*)
   integer, intent(in) :: n_local_elms
   integer, intent(in) :: index_min
@@ -286,6 +289,8 @@ subroutine construct_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms, n_local_el
   call tr_print_memsize("DebConstM")
   
   ! --- Local min-max indices for the nodes of our local elements (local in the MPI sense)
+
+!write(*,*) 'construct_matrix: my_id, n_local_elms', my_id, n_local_elms
 
 if(.not. direct_construction) then
 
@@ -372,7 +377,7 @@ endif
   omp_nthreads = 1
   omp_tid      = 1
 #endif
-
+  
 ! --- Loop over local elements
   !$omp do schedule(runtime)
   do ife =1, n_local_elms
@@ -635,6 +640,8 @@ endif
 
 
 if(direct_construction) then
+
+  print*, 'my_id, my_id_n, my_id_master :', my_id, my_id_n, my_id_master
  
   mumps_par%nz = nz_glob1  
   mumps_par%n  = n_glob1

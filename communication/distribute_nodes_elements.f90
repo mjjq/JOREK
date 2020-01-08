@@ -64,6 +64,7 @@ if(.NOT.direct_construction) then
     index_min(i) = index_max(i-1) + 1
   enddo
   if (my_id .eq. n_cpu-1) index_max(my_id+1) = index_total
+   write(*,'(A,3i6)') ' index_min,index_max:',my_id,index_min(my_id+1),index_max(my_id+1)
 
 !----------------------------- This portion is for the harmonic matrix ----------
 else 
@@ -129,7 +130,7 @@ enddo
 
 n_local_ELMs = inext
 
-!write(*,'(i4,A,20i8)') my_id,' n_local_elms  : ',n_local_elms,element_list%n_elements
+write(*,'(i4,A,20i8)') my_id,' n_local_elms  : ',n_local_elms,element_list%n_elements
 
 
 return

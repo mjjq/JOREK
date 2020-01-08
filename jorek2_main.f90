@@ -976,7 +976,7 @@ required = 0
     i_tor_min = 1
     i_tor_max = n_tor
 
-    call construct_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms, n_local_ELms, index_min(my_id+1), index_max(my_id+1),& 
+    call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_ELms, index_min(my_id+1), index_max(my_id+1),& 
                           xpoint, xcase, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,              & 
                           i_tor_min, i_tor_max, n_glob, nz_glob, direct_construction)
 
@@ -996,7 +996,7 @@ required = 0
 !    	 n_local_elms_harm,index_min_harm,index_max_harm)
 !END IF
 
-!begin Harmonic Construction
+!begin Harmonic Matrix Construction
 #ifdef DIRECT_CONSTRUCTION
   !--------- Constructing Harmonic Matrix directly from elementary matrix
   direct_construction = .true.
@@ -1012,7 +1012,6 @@ required = 0
        i_tor_min = 2*(my_id - MOD(my_id, m_cpu))/m_cpu
        i_tor_max = i_tor_min + 1
       endif
-
  
       call distribute_nodes_elements(my_id,m_cpu,n_cpu,node_list,element_list, direct_construction, & 
                                      local_elms_harm, n_local_elms_harm, ndof_glob, index_min_harm,index_max_harm)
@@ -1024,7 +1023,7 @@ required = 0
                                    n_glob_harm, nz_glob_harm, n_matrix_block_size_harm)
     
 
-      call construct_matrix(my_id, my_id_n, n_cpu, m_cpu, local_elms_harm, n_local_elms_harm, & 
+      call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms_harm, n_local_elms_harm, & 
                             index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint, xcase,  & 
                             R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
                             i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm, direct_construction)
@@ -1035,8 +1034,8 @@ required = 0
          call clck_ldiff(t0,t1,tsecond)
          write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
       endif     
-
-
+      !---- for debuging
+      !call MPI_Abort(MPI_COMM_WORLD, 30, ierr)
 
 #ifdef PSV
     !---- Part of the code under the flag PSV is just for debugging and will be
@@ -1132,7 +1131,7 @@ required = 0
     endif
   endif
 #endif
-!end Harmonic Construction
+!end Harmonic Matrix Construction
 
     ! Ici c'est OK
     !CALL MPI_Abort(MPI_COMM_WORLD, 1, ierr)

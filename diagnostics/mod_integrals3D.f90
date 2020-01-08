@@ -22,6 +22,7 @@ module mod_integrals3D
   use mod_injection_source, only: inj_source, radiation_function
 #endif
   use equil_info, only : get_psi_n, ES
+  use domains
 
   implicit none
   

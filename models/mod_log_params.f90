@@ -472,7 +472,7 @@ if (my_id == 0) then
   
   write(*,REAL_FMT) 'amix                  ', amix
   write(*,REAL_FMT) 'equil_accuracy        ', equil_accuracy
-  write(*,REAL_FMT) 'Zaxis_find_limit      ', Zaxis_find_limit
+  write(*,REAL_FMT) 'axis_srch_radius      ', axis_srch_radius
   
   if (freeboundary_equil) then
     write(*,LOGI_FMT) 'starwall_equil_coils  ', starwall_equil_coils

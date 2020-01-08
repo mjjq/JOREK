@@ -15,7 +15,9 @@ use gauss
 use constants
 use diffusivities, only: get_dperp, get_zkperp
 use mod_import_restart
+use equil_info, only : get_psi_n
 use mod_interp
+
 implicit none
 
 type (type_node_list)    :: node_list
@@ -23,10 +25,9 @@ type (type_element_list) :: element_list
 
 integer :: inode, ielm, my_id
 integer :: i, j, k, m, i_tor, index, index_node, n_points, ms
-integer :: n_bnd, iv, iv1, iv2, inode1, inode2, ierr, i_elm_xpoint(2), ifail, i_elm_axis
+integer :: n_bnd, iv, iv1, iv2, inode1, inode2, ierr
 real*8  :: sg, tg, wg, phi, angle, delta_angle, BB2
-real*8  :: psi_axis, R_axis, Z_axis, psi_bnd, BigR, xjac, s_axis, t_axis, psi_norm
-real*8  :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
+real*8  :: BigR, xjac, psi_norm
 real*8  :: R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
 real*8  :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt, RH,RH_s,RH_t,RH_st, RH_ss, RH_tt
 real*8  :: TT,TT_s,TT_t, TT_st, TT_ss, TT_tt, VP,VP_s,VP_t,VP_st,VP_ss,VP_tt
@@ -64,18 +65,6 @@ enddo
 call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
-
-call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
-if (xpoint) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-  psi_bnd = psi_xpoint(1)
-  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    psi_bnd = psi_xpoint(2)
-  endif
-else
-  psi_bnd = 0.d0
-endif
 
 Kpar_div_in  = 0.d0; Kpar_div_out  = 0.d0; Kpar_wall_in  = 0.d0; Kpar_wall_out  = 0.d0
 nTV_div_in   = 0.d0; nTV_div_out   = 0.d0; nTV_wall_in   = 0.d0; nTV_wall_out   = 0.d0
@@ -200,15 +189,7 @@ do m=1, n_plane
 
           enddo
 
-          psi_norm = (psi - psi_axis)/(psi_bnd - psi_axis)
-          if (xpoint) then
-            if ((psi_norm .lt. 1.d0) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
-              psi_norm = 2.d0 - psi_norm
-            endif
-            if ((psi_norm .lt. 1.d0) .and. (Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) then
-              psi_norm = 2.d0 - psi_norm
-            endif
-          endif
+          psi_norm = get_psi_n(psi, Z)          
 
           D_prof  = get_dperp (psi_norm)
           ZK_prof = get_zkperp(psi_norm)

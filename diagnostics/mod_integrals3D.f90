@@ -22,7 +22,6 @@ module mod_integrals3D
   use mod_injection_source, only: inj_source, radiation_function
 #endif
   use equil_info, only : get_psi_n, ES
-  use domains
 
   implicit none
   
@@ -473,18 +472,18 @@ do ife = ife_min, ife_max
         ! Atomic physics parameters for Impurities
         !-------------------------------------------
 
-     select case ( trim(gas_type) )
-       case('D2')
-         m_i_over_m_imp = central_mass/2.
-       case('Ar')
-         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
-       case('Ne')
-         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
-       case default
-         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
-         write(*,*) '=> We assume the gas is D2.'
-         m_i_over_m_imp = central_mass/2.
-     end select
+        select case ( trim(gas_type) )
+          case('D2')
+            m_i_over_m_imp = central_mass/2.
+          case('Ar')
+            m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
+          case('Ne')
+            m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
+          case default
+            write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
+            write(*,*) '=> We assume the gas is D2.'
+            m_i_over_m_imp = central_mass/2.
+        end select
 
         ! Te in eV:
         T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
@@ -642,7 +641,6 @@ do ife = ife_min, ife_max
         local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
 
 #endif
-        if (in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_bnd,R_axis,Z_axis,psi_axis)) then
         if ( get_psi_n(ps0, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi

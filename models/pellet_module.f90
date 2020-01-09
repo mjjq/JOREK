@@ -537,7 +537,7 @@ end subroutine update_spi
     real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Representing the shattering point of the pellet
                                                        !The apex of the
                                                        !spreading cone
-    real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_radius_tmp, spi_density_tmp
+    real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_density_tmp
     real*8  :: sign_corr
     real*8, allocatable :: rnd(:)                      !The random number array 
     real*8, allocatable :: shard_size(:)               !The shard size array
@@ -588,7 +588,16 @@ end subroutine update_spi
         else
           shard_size = 1.
         end if
- 
+
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+        do i = 1, n_spi
+          N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * pellet_density * 1.d20
+        end do
+
+        size_beta    = (spi_quantity / N_shard_norm) ** (-1./3.)
+        write(*,*) "Characteristic shard size (m):", 1./size_beta
+#endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502) 
         ! Determine approximately how many fragments are of the impurity, how
         ! much are of the background species. 
 
@@ -604,7 +613,6 @@ end subroutine update_spi
           write(*,*) "WARNING!!! Something is wrong in the injection quantity or pellet density, exiting."
           stop
         end if
-
 
         select case ( trim(gas_type) ) 
           case('D2')
@@ -659,17 +667,16 @@ end subroutine update_spi
             write(*,*) "Injection of D2 species should be done by spi_qiantity_bg, please revise input file accordingly."
             stop
         end select
-    
+
         size_beta    = ((spi_quantity+spi_quantity_bg) / N_shard_norm) ** (-1./3.)
         real_spi_quantity(1) = real_spi_quantity(1) / size_beta**3
         real_spi_quantity(2) = real_spi_quantity(2) / size_beta**3
         write(*,*) "Characteristic shard size (m):", 1./size_beta
         write(*,*) "Real injection quantity (atom):", real_spi_quantity(1), real_spi_quantity(2)
-  
+#endif  
         ! Initialize shard radius
         do i = 1, n_spi 
-          spi_radius_tmp = shard_size(i)/size_beta
-          pellets(i)%spi_radius  = spi_radius_tmp
+          pellets(i)%spi_radius  = shard_size(i)/size_beta
         end do
   
   !===================Determine the rotational transform of coordinate===============
@@ -774,7 +781,7 @@ end subroutine update_spi
         if (allocated(xtime_spi_ablation_rate)) &
         call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
         if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi,1,nstep,"xtime_spi_ablation_rate")
- 
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502) 
         if (allocated(xtime_spi_ablation_bg)) &
         call tr_deallocate(xtime_spi_ablation_bg,"xtime_spi_ablation_bg",CAT_UNKNOWN)
         if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg,1,n_spi,1,nstep,"xtime_spi_ablation_bg")
@@ -782,7 +789,7 @@ end subroutine update_spi
         if (allocated(xtime_spi_ablation_bg_rate)) &
         call tr_deallocate(xtime_spi_ablation_bg_rate,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
         if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi,1,nstep,"xtime_spi_ablation_bg_rate")
-
+#endif
  
       else
         write(*,*) "...... Seriously!? Double check the input file"

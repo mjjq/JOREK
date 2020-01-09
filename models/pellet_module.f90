@@ -591,6 +591,7 @@ end subroutine update_spi
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
         do i = 1, n_spi
+          pellets(i)%spi_species = 0.
           N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * pellet_density * 1.d20
         end do
 

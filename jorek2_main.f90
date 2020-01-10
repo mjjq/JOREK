@@ -842,7 +842,7 @@ required = 0
     call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,          &
                                  local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),& 
                                  ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max,   &
-                                 n_glob, nz_glob, n_matrix_block_size)
+                                 n_glob, nz_glob, ndof_glob, n_matrix_block_size)
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
@@ -976,9 +976,16 @@ required = 0
     i_tor_min = 1
     i_tor_max = n_tor
 
-    call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_ELms, index_min(my_id+1), index_max(my_id+1),& 
-                          xpoint, xcase, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,              & 
-                          i_tor_min, i_tor_max, n_glob, nz_glob, direct_construction)
+    ! --- Memory allocation
+    if (allocated(A_glob))    call tr_deallocate(A_glob,"A_glob",CAT_DMATRIX) 
+    call tr_allocate(A_glob,1,nz_glob,"A_glob",  CAT_DMATRIX)
+    A_glob = 0.0d0
+
+    call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_ELms, & 
+                          index_min(my_id+1), index_max(my_id+1), xpoint, xcase, R_axis, Z_axis, psi_axis,     & 
+                          psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max, n_glob, nz_glob,      & 
+                          ndof_glob, A_glob, irn_glob, jcn_glob, direct_construction)
+
 
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
@@ -1020,13 +1027,28 @@ required = 0
                                    local_elms_harm,n_local_elms_harm,index_min_harm(id_elements+1), & 
                                    index_max_harm(id_elements+1), ijA_index_harm, ijA_size_harm,    &
                                    irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, i_tor_max,& 
-                                   n_glob_harm, nz_glob_harm, n_matrix_block_size_harm)
-    
+                                   n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm)
+        
+      ! --- Memory allocation
+      if (allocated(A_glob_harm))    call tr_deallocate(A_glob_harm,"A_glob_harm",CAT_DMATRIX) 
+      call tr_allocate(A_glob_harm,1,nz_glob_harm,"A_glob_harm",  CAT_DMATRIX)
+
+      if (allocated(irn_glob_harm))        call tr_deallocate(irn_glob_harm,"irn_glob_harm",CAT_DMATRIX)
+      call tr_allocate(irn_glob_harm,  1,nz_glob_harm,"irn_glob_harm",  CAT_DMATRIX)
+ 
+      if (allocated(jcn_glob_harm))        call tr_deallocate(jcn_glob_harm,"jcn_glob_harm",CAT_DMATRIX)
+      call tr_allocate(jcn_glob_harm,  1,nz_glob_harm,"jcn_glob_harm",  CAT_DMATRIX) 
+
+      A_glob_harm = 0.0d0 
+      irn_glob_harm   = 0
+      jcn_glob_harm   = 0
 
       call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms_harm, n_local_elms_harm, & 
-                            index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint, xcase,  & 
-                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
-                            i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm, direct_construction)
+                            index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint, xcase, R_axis, Z_axis, psi_axis,     & 
+                            psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm,      & 
+                            ndof_glob_harm, A_glob_harm, irn_glob_harm, jcn_glob_harm, direct_construction)
+
+
 
       call clck_time_barrier(t1) 
 

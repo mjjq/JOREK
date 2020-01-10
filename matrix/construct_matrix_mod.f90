@@ -200,7 +200,7 @@ contains
 !                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max)
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,      & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
-                            i_tor_min, i_tor_max, n_glob1, nz_glob1, direct_construction)
+                            i_tor_min, i_tor_max, n_glob1, nz_glob1, ndof, A_local, irn_local, jcn_local, direct_construction)
   
   use mumps_module 
   use tr_module 
@@ -249,7 +249,11 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer, intent(in) :: i_tor_max
   integer, intent(in) :: n_glob1  
   integer, intent(in) :: nz_glob1 
+  integer, intent(in) :: ndof 
   logical, intent(in) :: direct_construction
+  real*8, allocatable :: A_local(:)
+  integer, allocatable :: irn_local(:)
+  integer, allocatable :: jcn_local(:)
 
   !--- Internal variables
   type (type_element)               :: element
@@ -322,13 +326,11 @@ if(.not. direct_construction) then
   enddo
 
   ! --- Memory allocation
-  if (.not. allocated(A_glob))    call tr_allocate(A_glob,  1,nz_glob,"A_glob",  CAT_DMATRIX)
   if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
-  call tr_allocate (rhs_glob,1,ndof_glob,"rhs_glob",CAT_DMATRIX)
-  call tr_allocatep(rhs_loc, 1,ndof_glob,"rhs_loc", CAT_DMATRIX)
+  call tr_allocate (rhs_glob,1,ndof,"rhs_glob",CAT_DMATRIX)
+  call tr_allocatep(rhs_loc, 1,ndof,"rhs_loc", CAT_DMATRIX)
 
   ! --- Initialise internal variables
-  A_glob   = 0.d0
   RHS_glob = 0.d0
   RHS_loc  = 0.d0
   difference_found = .false.
@@ -337,31 +339,36 @@ if(.not. direct_construction) then
 
 else
   ! --- Memory allocation
-  if (allocated(A_glob_harm))        call tr_deallocate(A_glob_harm,"A_glob_harm",CAT_DMATRIX)
-  call tr_allocate(A_glob_harm,  1,nz_glob1,"A_glob_harm",  CAT_DMATRIX)
-  if (allocated(irn_glob_harm))        call tr_deallocate(irn_glob_harm,"irn_glob_harm",CAT_DMATRIX)
-  call tr_allocate(irn_glob_harm,  1,nz_glob1,"irn_glob_harm",  CAT_DMATRIX)
-  if (allocated(jcn_glob_harm))        call tr_deallocate(jcn_glob_harm,"jcn_glob_harm",CAT_DMATRIX)
-  call tr_allocate(jcn_glob_harm,  1,nz_glob1,"jcn_glob_harm",  CAT_DMATRIX)
   if (allocated(rhs_glob_harm))        call tr_deallocate(rhs_glob_harm,"rhs_glob_harm",CAT_DMATRIX)
-  call tr_allocate (rhs_glob_harm,1,n_glob1,"rhs_glob_harm",CAT_DMATRIX)
+  call tr_allocate (rhs_glob_harm,1,ndof,"rhs_glob_harm",CAT_DMATRIX)
+  !--- for debugging 
+  write(*,*) 'my_id, n_glob, ndof :', my_id, n_glob1, ndof
 
-  A_glob_harm     = 0.d0
-  irn_glob_harm   = 0
-  jcn_glob_harm   = 0
   rhs_glob_harm   = 0.d0
 endif
 
+  if (allocated(A_local))        call tr_deallocate(A_local,"A_local",CAT_DMATRIX)
+  call tr_allocate(A_local,  1,nz_glob1,"A_local",  CAT_DMATRIX)
 
+  if (allocated(irn_local))        call tr_deallocate(irn_local,"irn_local",CAT_DMATRIX)
+  call tr_allocate(irn_local,  1,nz_glob1,"irn_local",  CAT_DMATRIX)
+
+  if (allocated(jcn_local))        call tr_deallocate(jcn_local,"jcn_local",CAT_DMATRIX)
+  call tr_allocate(jcn_local,  1,nz_glob1,"jcn_local",  CAT_DMATRIX) 
+
+  A_local = 0.0d0 
+  irn_local = 0
+  jcn_local = 0
+  
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,          &
   !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,direct_construction,       &
-  !$omp          A_glob_harm, irn_glob_harm, jcn_glob_harm, rhs_glob_harm,       &
+  !$omp          A_glob_harm, irn_glob_harm, jcn_glob_harm, rhs_glob_harm, A_local, irn_local, jcn_local,      &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
   !$omp          ijA_index_harm, ijA_size_harm, irn_jcn_harm, &
   !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, mumps_par, ijA_index, ijA_size, irn_jcn) &
-  !$omp   private(ife,ielm,iv,inode,element,nodes,i,inode1,i_order,index_node1,          &
+  !$omp   private(ife,ielm,iv,inode,element,nodes,i,inode1,i_order,index_node1,           &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,          &
@@ -593,34 +600,21 @@ endif
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var*(i_tor_max - i_tor_min + 1) + l
 
-                    if(.not. direct_construction) then
-                      irn_glob(ilarge2) = index_large_i	+ j
-                      jcn_glob(ilarge2) = index_large_k	+ l
-                    else
-                      irn_glob_harm(ilarge2) = index_large_i + j
-                      jcn_glob_harm(ilarge2) = index_large_k + l
-                    endif
-                    
+                    irn_local(ilarge2) = index_large_i	+ j
+                    jcn_local(ilarge2) = index_large_k	+ l
+
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
 
                   enddo
 
                 enddo ! n_order+1
-
-                if(.not. direct_construction) then
-                   !$omp critical
-                   A_glob(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
-                     A_glob(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
-                     thread_struct(omp_tid)%synch_buff(:)
-                   !$omp end critical 
-                else 
-                   !$omp critical
-                   A_glob_harm(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
-                     A_glob_harm(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
-                     thread_struct(omp_tid)%synch_buff(:) 
-                   !$omp end critical                 
-                endif
+               
+                !$omp critical
+                A_local(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
+                  A_local(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
+                  thread_struct(omp_tid)%synch_buff(:)
+                !$omp end critical 
 
               enddo ! n_vertex_max
             enddo ! n_var * (i_tor_max - i_tor_min + 1)
@@ -644,7 +638,7 @@ if(direct_construction) then
   print*, 'my_id, my_id_n, my_id_master :', my_id, my_id_n, my_id_master
  
   mumps_par%nz = nz_glob1  
-  mumps_par%n  = n_glob1
+  mumps_par%n  = ndof
 
   if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"dh_mumps_par%A",CAT_DMATRIX)
   if (associated(mumps_par%irn))  call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
@@ -659,10 +653,10 @@ if(direct_construction) then
 
 
   ! --- Initialise internal variables
-  mumps_par%A   = A_glob_harm
+  mumps_par%A   = A_local
   mumps_par%rhs = rhs_glob_harm
-  mumps_par%irn = irn_glob_harm
-  mumps_par%jcn = jcn_glob_harm
+  mumps_par%irn = irn_local
+  mumps_par%jcn = jcn_local
 
 
   ! --- Memory tracking
@@ -688,40 +682,40 @@ else
 
 #ifdef NORMTRACE
   ! --- For debugging purpose
-  call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-  call tr_locvnorms("cm_Rhs",RHS_glob,ndof_glob)
+  call MPI_Reduce(RHS_loc,RHS_glob,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+  call tr_locvnorms("cm_Rhs",RHS_glob,ndof)
   if (my_id .eq. 0) then
      write(fname,'(A,I6.6)')"rhs",index_now
-     call tr_vdump(fname,RHS_glob,ndof_glob)
+     call tr_vdump(fname,RHS_glob,ndof)
   end if
 #endif
 
   ! --- Memory tracking
-  call tr_vnorms("cm_A_bef_bc",A_glob,nz_glob)
+  call tr_vnorms("cm_A_bef_bc",A_local,nz_glob1)
 
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms, &
                            index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis,& 
                            psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false., ijA_index,    & 
-                           ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max )
+                           ijA_size, irn_jcn, irn_local, jcn_local, A_local, i_tor_min, i_tor_max )
 
   ! --- Memory tracking
-  call tr_vnorms("cm_A_aft_bc",A_glob,nz_glob)
+  call tr_vnorms("cm_A_aft_bc",A_local,nz_glob1)
 
   ! --- Form a global rhs from the rhss of the individual mpi threads.
-  call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+  call MPI_Reduce(RHS_loc,RHS_glob,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
 
   call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
 
   ! --- For debugging purpose
 !  if (my_id .eq. 0) then
 !     write(fname,'(A,I6.6)')"rhsbc",index_now
-!     call tr_vdump(fname,RHS_glob,ndof_glob)
+!     call tr_vdump(fname,RHS_glob,ndof)
 !  end if
 
   ! --- Memory tracking
-  call tr_locvnorms("cm_BCRhs",RHS_glob,ndof_glob)
-  call tr_debug_writei("ndof_glob",ndof_glob)
+  call tr_locvnorms("cm_BCRhs",RHS_glob,ndof)
+  call tr_debug_writei("ndof",ndof)
   !write(string, '(A8,I2.2,A1)') "matrice_",my_id,"\0"
   !open(unit=9, file=string, STATUS='replace')
   !do k = 1, nz_glob

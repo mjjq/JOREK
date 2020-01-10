@@ -1,14 +1,14 @@
 module mod_global_matrix_structure
 contains
 subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max,& 
-                          ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max, n_glob, nz_glob, n_matrix_block_size)
+                          ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max, n_glob, nz_glob, ndof, n_matrix_block_size)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
   !* matrix                                                              *
   !***********************************************************************
   use tr_module
   use data_structure
-!  use global_distributed_matrix, only:ndof_glob!, n_glob, nz_glob, n_matrix_block_size 
+!  use global_distributed_matrix, only:ndof!, n_glob, nz_glob, n_matrix_block_size 
   use mod_ch_node_struct
   use vacuum, only: sr
 
@@ -24,7 +24,7 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   integer :: local_elms(*), index_min, index_max, my_id, my_id_n, n_local_elms
   integer :: i, ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2, index1, index2, index1_local, index2_local
   integer :: j_larger, j, ibase, n_max
-  integer :: inode,i_father,maxsize,i_tor_min, i_tor_max, n_glob, nz_glob, n_matrix_block_size, ndof_glob
+  integer :: inode,i_father,maxsize,i_tor_min, i_tor_max, n_glob, nz_glob, n_matrix_block_size, ndof
   integer, dimension(n_vertex_max) ::  node_out
   logical :: freeboundary
   integer, allocatable :: tmp(:,:)
@@ -39,11 +39,11 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   
   n_matrix_block_size = (i_tor_max - i_tor_min +1)*n_var
 
-  ndof_glob = -1
+  ndof = -1
   do inode1=1,node_list%n_nodes
-     ndof_glob = max(ndof_glob,maxval(node_list%node(inode1)%index))
+     ndof = max(ndof,maxval(node_list%node(inode1)%index))
   enddo
-  ndof_glob = ndof_glob * (i_tor_max - i_tor_min +1)*n_var
+  ndof = ndof * (i_tor_max - i_tor_min +1)*n_var
 
   n_max = 8192
 
@@ -275,6 +275,7 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   jcn_glob = 0
 
   write(*,'(2i6,a,2i12)') my_id, my_id_n, ' size matrices : n, nz = ', n_glob, nz_glob
+  write(*,'(2i6,a,2i12)') my_id, my_id_n, ' ndof = ', ndof
   write(*,'(2i6,a,2i12)') my_id, my_id_n, ' index_min, index_max = ', index_min, index_max
   write(*,'(2i6,a,2i12)') my_id, my_id_n, ' n_local_elms = ', n_local_elms
 

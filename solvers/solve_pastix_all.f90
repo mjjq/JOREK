@@ -69,17 +69,26 @@ call tr_allocate(column_scaling,1,mumps_par%N,"column_scaling",CAT_DMATRIX)
 call tr_allocate(column_local,1,mumps_par%N,"column_local",CAT_DMATRIX)
 
 column_local = 1.d-20;   column_scaling = 1.d-20
+print*, 'my_id, nz_glob, mumps_par%N', my_id, nz_glob, mumps_par%N
+print*, '---------------------------------'
 do k=1,nz_glob
   j = jcn_glob(k)
-  column_local(j) = max(column_local(j),abs(A_glob(k)))
+!  print*, 'my_id, j, k', my_id, j, k!, column_local(j)
+  column_local(j) = max(column_local(j),abs(A_glob(k))) 
+  !print*, 'my_id, k, j, column_local(j)', my_id, k, j, column_local(j)
+  !print*, 'j, column_local(j)', j, column_local(j)!, column_local(j)
+  !print*, 'k, j', k, j!, column_local(j)
 enddo
+print*, 'psv0---------------------------------'
 
 call MPI_AllReduce(column_local,column_scaling,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
+print*, 'psv1---------------------------------'
 
 do k = 1, nz_glob
   j = jcn_glob(k)
-  A_glob(k) = A_glob(k) / column_scaling(j)
+  A_glob(k) = A_glob(k) / column_scaling(j) 
 enddo
+print*, 'psv2---------------------------------'
 
 call clck_time(t1)
 call clck_ldiff(t0,t1,tsecond)

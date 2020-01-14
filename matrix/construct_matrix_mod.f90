@@ -599,9 +599,22 @@ endif
                     index_kl = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (k-1) + (i_tor_max - i_tor_min + 1) * n_var * (k_order-1) + l   ! index in the ELM matrix
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var*(i_tor_max - i_tor_min + 1) + l
+                    !!---- for debugging 
+                    !if (my_id .eq. 0) then  
+                    !    print*, 'ilarge2, ijA_position', ilarge2, ijA_position 
+                    !endif 
 
                     irn_local(ilarge2) = index_large_i	+ j
                     jcn_local(ilarge2) = index_large_k	+ l
+
+                    !---- for debugging 
+                    !if (my_id .eq. 0) then  
+                        !print*, 'ilarge2, ijA_position', ilarge2, ijA_position !jcn_local(ilarge2) !index_large_k,  l, index_large_k+l 
+                        !print*, 'index_large_k,  l, index_large_k+l',index_large_k,  l, index_large_k+l 
+                        !print*, 'ijA_position, ilarge2', ijA_position, ilarge2 !index_large_k,  l, index_large_k+l 
+                        !print*, 'ilarge2, jcn_local(ilarge2)', ilarge2, jcn_local(ilarge2) !index_large_k,  l, index_large_k+l 
+                        !print*, 'ilarge2, l, index_large_k,  index_large_k  + l', ilarge2, l, index_large_k,  index_large_k  + l
+                    !endif 
 
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
@@ -631,7 +644,13 @@ endif
   !$omp end do
   !$omp end parallel
 
-
+    !!---- for debugging 
+    !if (my_id .eq. 0) then  
+    ! do i = 1, nz_glob1 
+    !    print*, 'i, jcn_glob(i), irn_glob(i)', i, jcn_local(i), irn_local(i) 
+    ! enddo
+    !endif 
+ 
 
 if(direct_construction) then
 

@@ -992,7 +992,13 @@ required = 0
        call clck_ldiff(t0,t1,tsecond)
       write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
     endif     
-
+    !---- for debugging 
+    !if (my_id .eq. 0) then  
+    ! do i = 1, nz_glob 
+    !    print*, i, jcn_glob(i) 
+    ! enddo
+    !endif 
+  
 
 !#ifdef PSV        
     ! Build the harmonic matrix 

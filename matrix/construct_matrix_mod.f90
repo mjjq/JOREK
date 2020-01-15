@@ -251,7 +251,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer, intent(in) :: nz_glob1 
   integer, intent(in) :: ndof 
   logical, intent(in) :: direct_construction
-  real*8, allocatable :: A_local(:)
+  real*8,  intent(in), pointer :: A_local(:)
   integer, intent(in), pointer :: irn_local(:)
   integer, intent(in), pointer :: jcn_local(:)
 
@@ -347,8 +347,8 @@ else
   rhs_glob_harm   = 0.d0
 endif
 
-  if (allocated(A_local))        call tr_deallocate(A_local,"A_local",CAT_DMATRIX)
-  call tr_allocate(A_local,  1,nz_glob1,"A_local",  CAT_DMATRIX)
+  !if (allocated(A_local))        call tr_deallocate(A_local,"A_local",CAT_DMATRIX)
+  !call tr_allocate(A_local,  1,nz_glob1,"A_local",  CAT_DMATRIX)
 
   !if (allocated(irn_local))        call tr_deallocate(irn_local,"irn_local",CAT_DMATRIX)
   !call tr_allocate(irn_local,  1,nz_glob1,"irn_local",  CAT_DMATRIX)
@@ -356,7 +356,7 @@ endif
   !if (allocated(jcn_local))        call tr_deallocate(jcn_local,"jcn_local",CAT_DMATRIX)
   !call tr_allocate(jcn_local,  1,nz_glob1,"jcn_local",  CAT_DMATRIX) 
 
-  A_local = 0.0d0 
+  !A_local = 0.0d0 
   !irn_local = 0
   !jcn_local = 0
   

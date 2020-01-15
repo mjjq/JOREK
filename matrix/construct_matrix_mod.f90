@@ -295,7 +295,6 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   
   ! --- Local min-max indices for the nodes of our local elements (local in the MPI sense)
 
-!write(*,*) 'construct_matrix: my_id, n_local_elms', my_id, n_local_elms
 
 if(.not. direct_construction) then
 
@@ -329,40 +328,17 @@ if(.not. direct_construction) then
   ! --- Memory allocation
   if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocate (rhs_glob,1,ndof,"rhs_glob",CAT_DMATRIX)
-  !call tr_allocatep(rhs_loc, 1,ndof,"rhs_loc", CAT_DMATRIX)
 
   ! --- Initialise internal variables
   RHS_glob = 0.d0
-  !RHS_loc  = 0.d0
   difference_found = .false.
   rhs_problem(:)   = .false.
   elm_problem(:,:) = .false.
 
 endif
-  !! --- Memory allocation
-  !if (allocated(rhs_glob_harm))        call tr_deallocate(rhs_glob_harm,"rhs_glob_harm",CAT_DMATRIX)
-  !call tr_allocate (rhs_glob_harm,1,ndof,"rhs_glob_harm",CAT_DMATRIX)
-  !!--- for debugging 
-
-  !rhs_glob_harm   = 0.d0
 
   write(*,*) 'my_id, n_glob, ndof :', my_id, n_glob1, ndof
-
-  !call tr_allocatep(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
-  !rhs_local = 0.d0
-
-  !if (allocated(A_local))        call tr_deallocate(A_local,"A_local",CAT_DMATRIX)
-  !call tr_allocate(A_local,  1,nz_glob1,"A_local",  CAT_DMATRIX)
-
-  !if (allocated(irn_local))        call tr_deallocate(irn_local,"irn_local",CAT_DMATRIX)
-  !call tr_allocate(irn_local,  1,nz_glob1,"irn_local",  CAT_DMATRIX)
-
-  !if (allocated(jcn_local))        call tr_deallocate(jcn_local,"jcn_local",CAT_DMATRIX)
-  !call tr_allocate(jcn_local,  1,nz_glob1,"jcn_local",  CAT_DMATRIX) 
-
-  !A_local = 0.0d0 
-  !irn_local = 0
-  !jcn_local = 0
+  
   
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
@@ -423,6 +399,7 @@ endif
                                  i_tor_min, i_tor_max)
     
 if (.not. direct_construction) then
+    
 #ifdef PRINT_ELM_RHS
     ! --- Write out rhs and elm for one element to compare models.
     !     Switch this on by adding -DPRINT_ELM_RHS as compiler flag.
@@ -564,19 +541,7 @@ endif
 
               index_ij = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) + (i_tor_max - i_tor_min + 1) * n_var * (i_order-1) + j   ! index in the ELM matrix
 
-                 rhs_local(index_large_i+j) = rhs_local(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
-
-              !if(.not. direct_construction) then
-              !!$omp atomic
-              !   rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
-              !!$omp end atomic
-              
-              !else
-
-              !!$omp atomic
-              !   rhs_glob_harm(index_large_i+j) = rhs_glob_harm(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
-              !!$omp end atomic
-              !endif
+              rhs_local(index_large_i+j) = rhs_local(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
 
             end do
 
@@ -590,7 +555,8 @@ endif
 
                   index_large_k = (i_tor_max - i_tor_min + 1) * n_var * (index_node2 - 1)
                   if(.not. direct_construction) then
-                   call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                   call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
+                                       ijA_index, ijA_size, irn_jcn)
                   else
                    call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
                                        ijA_index_harm, ijA_size_harm, irn_jcn_harm)
@@ -605,22 +571,9 @@ endif
                     index_kl = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (k-1) + (i_tor_max - i_tor_min + 1) * n_var * (k_order-1) + l   ! index in the ELM matrix
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var*(i_tor_max - i_tor_min + 1) + l
-                    !!---- for debugging 
-                    !if (my_id .eq. 0) then  
-                    !    print*, 'ilarge2, ijA_position', ilarge2, ijA_position 
-                    !endif 
 
                     irn_local(ilarge2) = index_large_i	+ j
                     jcn_local(ilarge2) = index_large_k	+ l
-
-                    !---- for debugging 
-                    !if (my_id .eq. 0) then  
-                        !print*, 'ilarge2, ijA_position', ilarge2, ijA_position !jcn_local(ilarge2) !index_large_k,  l, index_large_k+l 
-                        !print*, 'index_large_k,  l, index_large_k+l',index_large_k,  l, index_large_k+l 
-                        !print*, 'ijA_position, ilarge2', ijA_position, ilarge2 !index_large_k,  l, index_large_k+l 
-                        !print*, 'ilarge2, jcn_local(ilarge2)', ilarge2, jcn_local(ilarge2) !index_large_k,  l, index_large_k+l 
-                        !print*, 'ilarge2, l, index_large_k,  index_large_k  + l', ilarge2, l, index_large_k,  index_large_k  + l
-                    !endif 
 
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
@@ -650,13 +603,6 @@ endif
   !$omp end do
   !$omp end parallel
 
-    !!---- for debugging 
-    !if (my_id .eq. 0) then  
-    ! do i = 1, nz_glob1 
-    !    print*, 'i, jcn_glob(i), irn_glob(i)', i, jcn_local(i), irn_local(i) 
-    ! enddo
-    !endif 
- 
 
 if(direct_construction) then
 

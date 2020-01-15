@@ -979,12 +979,17 @@ required = 0
     ! --- Memory allocation
     if (allocated(A_glob))    call tr_deallocate(A_glob,"A_glob",CAT_DMATRIX) 
     call tr_allocate(A_glob,1,nz_glob,"A_glob",  CAT_DMATRIX)
+
+    if (allocated(rhs_loc))    call tr_deallocate(rhs_loc,"rhs_loc",CAT_DMATRIX) 
+    call tr_allocate(rhs_loc, 1,ndof_glob,"rhs_loc", CAT_DMATRIX)
+
     A_glob = 0.0d0
+    rhs_loc = 0.0d0 
 
     call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_ELms, & 
                           index_min(my_id+1), index_max(my_id+1), xpoint, xcase, R_axis, Z_axis, psi_axis,     & 
                           psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max, n_glob, nz_glob,      & 
-                          ndof_glob, A_glob, irn_glob, jcn_glob, direct_construction)
+                          ndof_glob, A_glob, rhs_loc, irn_glob, jcn_glob, direct_construction)
 
 
     call clck_time_barrier(t1)
@@ -1039,20 +1044,26 @@ required = 0
       if (allocated(A_glob_harm))    call tr_deallocate(A_glob_harm,"A_glob_harm",CAT_DMATRIX) 
       call tr_allocate(A_glob_harm,1,nz_glob_harm,"A_glob_harm",  CAT_DMATRIX)
 
-      if (allocated(irn_glob_harm))        call tr_deallocate(irn_glob_harm,"irn_glob_harm",CAT_DMATRIX)
-      call tr_allocate(irn_glob_harm,  1,nz_glob_harm,"irn_glob_harm",  CAT_DMATRIX)
+      if (allocated(irn_glob_harm))  call tr_deallocate(irn_glob_harm,"irn_glob_harm",CAT_DMATRIX)
+      call tr_allocate(irn_glob_harm,1,nz_glob_harm,"irn_glob_harm",  CAT_DMATRIX)
  
-      if (allocated(jcn_glob_harm))        call tr_deallocate(jcn_glob_harm,"jcn_glob_harm",CAT_DMATRIX)
-      call tr_allocate(jcn_glob_harm,  1,nz_glob_harm,"jcn_glob_harm",  CAT_DMATRIX) 
+      if (allocated(jcn_glob_harm))  call tr_deallocate(jcn_glob_harm,"jcn_glob_harm",CAT_DMATRIX)
+      call tr_allocate(jcn_glob_harm,1,nz_glob_harm,"jcn_glob_harm",  CAT_DMATRIX) 
+
+      ! --- Memory allocation
+      if (allocated(rhs_glob_harm))  call tr_deallocate(rhs_glob_harm,"rhs_glob_harm",CAT_DMATRIX)
+      call tr_allocate (rhs_glob_harm,1,ndof_glob_harm,"rhs_glob_harm",CAT_DMATRIX)
+
 
       A_glob_harm = 0.0d0 
+      rhs_glob_harm = 0.0d0 
       irn_glob_harm   = 0
       jcn_glob_harm   = 0
 
       call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms_harm, n_local_elms_harm, & 
                             index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint, xcase, R_axis, Z_axis, psi_axis,     & 
                             psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm,      & 
-                            ndof_glob_harm, A_glob_harm, irn_glob_harm, jcn_glob_harm, direct_construction)
+                            ndof_glob_harm, A_glob_harm, rhs_glob_harm, irn_glob_harm, jcn_glob_harm, direct_construction)
 
 
 

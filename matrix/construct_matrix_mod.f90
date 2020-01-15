@@ -200,7 +200,7 @@ contains
 !                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max)
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,      & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
-                            i_tor_min, i_tor_max, n_glob1, nz_glob1, ndof, A_local, irn_local, jcn_local, direct_construction)
+                            i_tor_min, i_tor_max, n_glob1, nz_glob1, ndof, A_local, rhs_local, irn_local, jcn_local, direct_construction)
   
   use mumps_module 
   use tr_module 
@@ -252,6 +252,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer, intent(in) :: ndof 
   logical, intent(in) :: direct_construction
   real*8,  intent(in), pointer :: A_local(:)
+  real*8,  intent(in), pointer :: rhs_local(:)
   integer, intent(in), pointer :: irn_local(:)
   integer, intent(in), pointer :: jcn_local(:)
 
@@ -260,7 +261,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   type (type_node)                  :: nodes(n_vertex_max)
   type (type_element)               :: element_father
   type (type_node)                  :: nodes_father(n_vertex_max)
-  real*8,                  pointer  :: rhs_loc(:)
+  !real*8,                  pointer  :: rhs_loc(:)
   integer                           :: i_bnd, i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
   integer                           :: index_node1, index_node2, i_order, k_order, ielm, ierr
   integer                           :: ijA_position, index_min_loc, index_max_loc
@@ -328,24 +329,27 @@ if(.not. direct_construction) then
   ! --- Memory allocation
   if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
   call tr_allocate (rhs_glob,1,ndof,"rhs_glob",CAT_DMATRIX)
-  call tr_allocatep(rhs_loc, 1,ndof,"rhs_loc", CAT_DMATRIX)
+  !call tr_allocatep(rhs_loc, 1,ndof,"rhs_loc", CAT_DMATRIX)
 
   ! --- Initialise internal variables
   RHS_glob = 0.d0
-  RHS_loc  = 0.d0
+  !RHS_loc  = 0.d0
   difference_found = .false.
   rhs_problem(:)   = .false.
   elm_problem(:,:) = .false.
 
-else
-  ! --- Memory allocation
-  if (allocated(rhs_glob_harm))        call tr_deallocate(rhs_glob_harm,"rhs_glob_harm",CAT_DMATRIX)
-  call tr_allocate (rhs_glob_harm,1,ndof,"rhs_glob_harm",CAT_DMATRIX)
-  !--- for debugging 
+endif
+  !! --- Memory allocation
+  !if (allocated(rhs_glob_harm))        call tr_deallocate(rhs_glob_harm,"rhs_glob_harm",CAT_DMATRIX)
+  !call tr_allocate (rhs_glob_harm,1,ndof,"rhs_glob_harm",CAT_DMATRIX)
+  !!--- for debugging 
+
+  !rhs_glob_harm   = 0.d0
+
   write(*,*) 'my_id, n_glob, ndof :', my_id, n_glob1, ndof
 
-  rhs_glob_harm   = 0.d0
-endif
+  !call tr_allocatep(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
+  !rhs_local = 0.d0
 
   !if (allocated(A_local))        call tr_deallocate(A_local,"A_local",CAT_DMATRIX)
   !call tr_allocate(A_local,  1,nz_glob1,"A_local",  CAT_DMATRIX)
@@ -362,9 +366,9 @@ endif
   
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
-  !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,RHS_loc,local_elms,element_list,node_list,          &
+  !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,local_elms,element_list,node_list,          &
   !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,direct_construction,       &
-  !$omp          A_glob_harm, irn_glob_harm, jcn_glob_harm, rhs_glob_harm, A_local, irn_local, jcn_local,      &
+  !$omp          A_glob_harm, irn_glob_harm, jcn_glob_harm, rhs_glob_harm, A_local, rhs_local, irn_local, jcn_local,      &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
   !$omp          ijA_index_harm, ijA_size_harm, irn_jcn_harm, &
   !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, mumps_par, ijA_index, ijA_size, irn_jcn) &
@@ -560,17 +564,19 @@ endif
 
               index_ij = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) + (i_tor_max - i_tor_min + 1) * n_var * (i_order-1) + j   ! index in the ELM matrix
 
-              if(.not. direct_construction) then
-              !$omp atomic
-                 rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
-              !$omp end atomic
-              
-              else
+                 rhs_local(index_large_i+j) = rhs_local(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
 
-              !$omp atomic
-                 rhs_glob_harm(index_large_i+j) = rhs_glob_harm(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
-              !$omp end atomic
-              endif
+              !if(.not. direct_construction) then
+              !!$omp atomic
+              !   rhs_loc(index_large_i+j) = rhs_loc(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
+              !!$omp end atomic
+              
+              !else
+
+              !!$omp atomic
+              !   rhs_glob_harm(index_large_i+j) = rhs_glob_harm(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
+              !!$omp end atomic
+              !endif
 
             end do
 
@@ -673,7 +679,7 @@ if(direct_construction) then
 
   ! --- Initialise internal variables
   mumps_par%A   = A_local
-  mumps_par%rhs = rhs_glob_harm
+  mumps_par%rhs = rhs_local
   mumps_par%irn = irn_local
   mumps_par%jcn = jcn_local
 
@@ -696,12 +702,12 @@ else
   ! --- Add vacuum response (boundary integral) for free boundary computations
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
     call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
-                                  resistive_wall, index_min, index_max, rhs_loc, tstep, index_now)
+                                  resistive_wall, index_min, index_max, rhs_local, tstep, index_now)
   end if
 
 #ifdef NORMTRACE
   ! --- For debugging purpose
-  call MPI_Reduce(RHS_loc,RHS_glob,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+  call MPI_Reduce(RHS_local,RHS_glob,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
   call tr_locvnorms("cm_Rhs",RHS_glob,ndof)
   if (my_id .eq. 0) then
      write(fname,'(A,I6.6)')"rhs",index_now
@@ -714,7 +720,7 @@ else
 
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms, &
-                           index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis,& 
+                           index_min, index_max, rhs_local, xpoint2, xcase2, R_axis, Z_axis, psi_axis,& 
                            psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false., ijA_index,    & 
                            ijA_size, irn_jcn, irn_local, jcn_local, A_local, i_tor_min, i_tor_max )
 
@@ -722,9 +728,9 @@ else
   call tr_vnorms("cm_A_aft_bc",A_local,nz_glob1)
 
   ! --- Form a global rhs from the rhss of the individual mpi threads.
-  call MPI_Reduce(RHS_loc,RHS_glob,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+  call MPI_Reduce(RHS_local,RHS_glob,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
 
-  call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
+  call tr_deallocatep(RHS_local,"RHS_local",CAT_DMATRIX)
 
   ! --- For debugging purpose
 !  if (my_id .eq. 0) then

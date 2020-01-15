@@ -22,8 +22,8 @@ module global_distributed_matrix
   integer, allocatable          :: ijA_index_harm(:,:), ijA_size_harm(:), irn_jcn_harm(:,:) !< contains the structure of the sparse matrix (to fill in CSR format)
   real*8,  allocatable, target  :: A_glob_harm(:)    !< Distributed global matrix
   real*8,  allocatable, target  :: rhs_glob_harm(:)  !< Distributed global right hand side
-  integer, allocatable          :: irn_glob_harm(:)  !< Row indices for coordinate format sparse matrix (or CSR)
-  integer, allocatable          :: jcn_glob_harm(:)  !< Column indices for coordinate format sparse matrix (or CSR)
+  integer, allocatable, target  :: irn_glob_harm(:)  !< Row indices for coordinate format sparse matrix (or CSR)
+  integer, allocatable, target  :: jcn_glob_harm(:)  !< Column indices for coordinate format sparse matrix (or CSR)
   integer                       :: n_matrix_block_size_harm                       !< Size of a matrix block (n_var x n_tor)
   integer                       :: ndof_glob_harm, n_glob_harm, nz_glob_harm                       !< Size of a matrix block (n_var x n_tor)
 !#endif  

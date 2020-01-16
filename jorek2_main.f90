@@ -1066,6 +1066,30 @@ required = 0
          call clck_ldiff(t0,t1,tsecond)
          write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
       endif     
+
+ 
+      mumps_par%nz = nz_glob_harm  
+      mumps_par%n  = ndof_glob_harm
+
+      if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"dh_mumps_par%A",CAT_DMATRIX)
+      if (associated(mumps_par%irn))  call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
+      if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
+
+      call tr_allocatep(mumps_par%A,1,mumps_par%nz,"dh_mumps_par%A",CAT_DMATRIX)
+      call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
+      call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
+
+      if (associated(mumps_par%rhs))  call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
+      call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"dh_mumps_par%rhs",CAT_DMATRIX)
+
+
+      ! --- Initialise internal variables
+      mumps_par%A   = A_glob_harm
+      mumps_par%rhs = rhs_glob_harm
+      mumps_par%irn = irn_glob_harm
+      mumps_par%jcn = jcn_glob_harm
+
+
       !---- for debuging
       !call MPI_Abort(MPI_COMM_WORLD, 30, ierr)
 

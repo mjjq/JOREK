@@ -608,40 +608,19 @@ if(direct_construction) then
 
   print*, 'my_id, my_id_n, my_id_master :', my_id, my_id_n, my_id_master
  
-  mumps_par%nz = nz_glob1  
-  mumps_par%n  = ndof
-
-  if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"dh_mumps_par%A",CAT_DMATRIX)
-  if (associated(mumps_par%irn))  call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
-  if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
-
-  call tr_allocatep(mumps_par%A,1,mumps_par%nz,"dh_mumps_par%A",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
-
-  if (associated(mumps_par%rhs))  call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"dh_mumps_par%rhs",CAT_DMATRIX)
-
-
-  ! --- Initialise internal variables
-  mumps_par%A   = A_local
-  mumps_par%rhs = rhs_local
-  mumps_par%irn = irn_local
-  mumps_par%jcn = jcn_local
-
-
+  
   ! --- Memory tracking
-  call tr_vnorms("cm_A_bef_bc",mumps_par%A,mumps_par%nz)
+  call tr_vnorms("cm_A_bef_bc",A_local,nz_glob1)
   
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,  &
-                           index_min, index_max,  mumps_par%rhs, xpoint2, xcase2, R_axis, Z_axis,    & 
+                           index_min, index_max,  rhs_local, xpoint2, xcase2, R_axis, Z_axis,    & 
                            psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false.,      & 
-                           ijA_index_harm, ijA_size_harm, irn_jcn_harm, mumps_par%irn, mumps_par%jcn,& 
-                           mumps_par%A, i_tor_min, i_tor_max )
+                           ijA_index_harm, ijA_size_harm, irn_jcn_harm, irn_local, jcn_local,& 
+                           A_local, i_tor_min, i_tor_max )
 
   ! --- Memory tracking
-  call tr_vnorms("cm_A_aft_bc",mumps_par%A,mumps_par%nz)
+  call tr_vnorms("cm_A_aft_bc",A_local,nz_glob1)
 
 else
 

@@ -39,7 +39,7 @@ integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_el
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid, i_inj
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor
-real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, r0_corr, T0, T0_corr, T0e, Vol, Volume, Area, Bgeo, psi_limit
+real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, r0_corr, T0, T0_corr, T0e, T0i, Vol, Volume, Area, Bgeo, psi_limit
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, P_max, delta_phi, phi, P_tot, D_tot
 real*8  :: VP_int, VP_ext, VK_int, VK_ext, vpar0, BB2, VP_tot, VK_tot
@@ -184,7 +184,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          wgauss_copy)                                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
-!$omp           wst, BigR, r0, r0_corr, T0, T0_corr, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
+!$omp           wst, BigR, r0, r0_corr, T0, T0_corr, T0e, T0i, zj0, ps0, dTdx, dTdy, drhodx,   &
+!$omp           drhody, dpsidx, dpsidy, dudx, dudy,  &
 !$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi,        &
 !$omp           P_max, source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2, eta_T, eta_Sp,&
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
@@ -311,8 +312,13 @@ do ife = ife_min, ife_max
         r0     = eq_g(mp,5,ms,mt)
 	r0_corr = corr_neg_dens(r0,(/1.d-8,1.d-5/),1.d-3) ! Correction for negative r0 ...
         T0     = eq_g(mp,6,ms,mt)
+#if (JOREK_MODEL == 502)
+        T0i    = eq_g(mp,6,ms,mt)
+#else
         T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/))
         T0e    = eq_g(mp,6,ms,mt) /2.d0
+        T0i    = T0e
+#endif
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
 
@@ -326,6 +332,11 @@ do ife = ife_min, ife_max
         rn0    = eq_g(mp,8,ms,mt)
 		rn0_corr = corr_neg_dens(rn0, (/ 1.d-12, 1.d-5 /),1.d-3) ! Correction for negative rn0 ...
 #endif
+#if (JOREK_MODEL == 502)
+        T0e    = eq_g(mp,9,ms,mt)
+        T0_corr = corr_neg_temp(T0e,(/5.d-1,5.d-1/))
+#endif
+
 
         eta_T  = eta * (T0_corr/T_0)**(-1.5d0)
 

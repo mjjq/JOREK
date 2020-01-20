@@ -159,6 +159,9 @@ program JOREK2
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
   REAL*8                   :: max_time, min_time, tsecond
   integer, allocatable     :: tab_n_local_elems(:)
+  integer, allocatable     :: nz_array(:)  !---- psv
+  integer, allocatable     :: disp_array(:)  !---- psv
+  integer                  :: nz_total     !---- psv
   real*8                   :: t_this, sum_deltas
 ! =================== plot NEO coeffs ==================
   real*8                   :: amu_neo_node, aki_neo_node
@@ -1066,9 +1069,28 @@ required = 0
          call clck_ldiff(t0,t1,tsecond)
          write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
       endif     
-
+      
+      !----- collecting distributed matrix on a single MPI process
+      if (.not.allocated(nz_array)) allocate(nz_array(n_cpu_n)) 
+      if (.not.allocated(disp_array)) allocate(disp_array(n_cpu_n))
  
-      mumps_par%nz = nz_glob_harm  
+      call MPI_GATHER(nz_glob_harm, 1, MPI_INTEGER, nz_array, 1, MPI_INTEGER, 0, MPI_COMM_N, ierr) 
+
+      disp_array = 0 
+      nz_total   = 0
+      if(my_id_n .eq. 0) then
+        do i = 2, n_cpu_n  
+           disp_array(i) = disp_array(i-1) + nz_array(i-1)
+        enddo  
+      nz_total = disp_array(n_cpu_n) + nz_array(n_cpu_n) 
+      endif 
+
+      !--- for debugging
+      !if(my_id_n .eq.0) print*, 'my_id, my_id_n, nz_array', my_id, my_id_n, nz_array  
+      !if(my_id_n .eq.0) print*, 'my_id, my_id_n, disp_array', my_id, my_id_n, disp_array  
+      !if(my_id_n .eq.0) print*, 'my_id, my_id_n, nz_total', my_id, my_id_n, nz_total  
+ 
+      mumps_par%nz = nz_total ! nz_glob_harm ! 
       mumps_par%n  = ndof_glob_harm
 
       if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"dh_mumps_par%A",CAT_DMATRIX)
@@ -1082,12 +1104,19 @@ required = 0
       if (associated(mumps_par%rhs))  call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
       call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"dh_mumps_par%rhs",CAT_DMATRIX)
 
-
       ! --- Initialise internal variables
-      mumps_par%A   = A_glob_harm
-      mumps_par%rhs = rhs_glob_harm
-      mumps_par%irn = irn_glob_harm
-      mumps_par%jcn = jcn_glob_harm
+      !mumps_par%A   = A_glob_harm
+      !mumps_par%rhs = rhs_glob_harm
+      !mumps_par%irn = irn_glob_harm
+      !mumps_par%jcn = jcn_glob_harm
+
+      call MPI_GATHERV(A_glob_harm, nz_glob_harm, MPI_DOUBLE_PRECISION, mumps_par%A, nz_array, disp_array,&
+                       MPI_DOUBLE_PRECISION, 0, MPI_COMM_N, ierr)
+      call MPI_GATHERV(irn_glob_harm, nz_glob_harm, MPI_INTEGER, mumps_par%irn, nz_array, disp_array,&
+                       MPI_INTEGER, 0, MPI_COMM_N, ierr)
+      call MPI_GATHERV(jcn_glob_harm, nz_glob_harm, MPI_INTEGER, mumps_par%jcn, nz_array, disp_array,&
+                       MPI_INTEGER, 0, MPI_COMM_N, ierr)
+      call MPI_Reduce(rhs_glob_harm,mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_N,ierr)
 
 
       !---- for debuging
@@ -1756,6 +1785,8 @@ endif
    deallocate(rhs)
 #endif
 
+   deallocate(nz_array) !-- psv
+   deallocate(disp_array) !-- psv
 
  
 #ifdef USE_FFTW

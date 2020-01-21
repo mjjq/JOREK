@@ -28,7 +28,8 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   integer, dimension(n_vertex_max) ::  node_out
   logical :: freeboundary
   integer, allocatable :: tmp(:,:)
-  integer, allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:), irn_glob(:), jcn_glob(:)
+  integer, allocatable, target :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+  integer, allocatable :: irn_glob(:), jcn_glob(:)
 
   if ( my_id == 0 ) then
     write(*,*) '**********************************'

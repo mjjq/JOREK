@@ -92,7 +92,7 @@ contains
     logical,                   intent(in)    :: gmres
     logical,                   intent(in)    :: solve_only
     integer,                   intent(in)    :: i_tor_min, i_tor_max
-    integer, allocatable                     :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    integer,          intent(in), pointer    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
     integer                                  :: irn_glob(:), jcn_glob(:) 
     real*8                                   :: A_glob(:) 
 

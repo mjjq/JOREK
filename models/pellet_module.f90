@@ -196,8 +196,8 @@ subroutine update_spi(my_id,node_List,element_list,&
 
 use constants
 use data_structure
-use phys_module, only: pellets, gas_type, central_density, central_mass, spi_abl_model, flag_adas, toroidal_rotation,&
-                       mgi_phi_rotate, tor_frequency, tstep, pellet_density, pellet_density_bg,                      &
+use phys_module, only: pellets, gas_type, central_density, central_mass, spi_abl_model, flag_adas, spi_tor_rot,      &
+                       ns_phi_rotate, tor_frequency, tstep, pellet_density, pellet_density_bg,                       &
                        index_now, xtime_spi_ablation, xtime_spi_ablation_bg, xtime_spi_ablation_rate,&
                        xtime_spi_ablation_bg_rate, F0, R_geo, imp_cor
 use mpi_mod
@@ -812,7 +812,7 @@ end subroutine update_spi
 
         spi_R_tmp       = spi_R_inj + spi_L_inj * (spi_Vel_R_tmp/spi_Vel_totref)
         spi_Z_tmp       = spi_Z_inj + spi_L_inj * (spi_Vel_Z_tmp/spi_Vel_totref)
-        spi_phi_tmp     = spi_phi_inj + spi_L_inj * (spi_Vel_RxZ_tmp/spi_Vel_totref)/mgi_R
+        spi_phi_tmp     = spi_phi_inj + spi_L_inj * (spi_Vel_RxZ_tmp/spi_Vel_totref)/ns_R
 
         pellets(i_p)%spi_R       = spi_R_tmp
         pellets(i_p)%spi_Z       = spi_Z_tmp

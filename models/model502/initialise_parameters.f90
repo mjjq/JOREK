@@ -12,7 +12,6 @@ use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pi
     pastix_maxthrd
 use vacuum
 use wsmp_module,   only: use_wsmp
-use mgi_module,    only: total_n_particles_inj_all
 use pellet_module
 
 implicit none
@@ -115,18 +114,18 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                toroidal_rotation, tor_frequency,                   &
+                spi_tor_rot, tor_frequency,                         &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
-                mgi_sig, mgi_deltaphi, ksi_ion, spi_rnd_seed,       &
-                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
+                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,       &
+                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,   &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
                 spi_quantity_bg, pellet_density_bg,                 &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
-                spi_Vel_diff, t_mgi, JET_MGI, ASDEX_MGI,            &
+                spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,            &
                 gas_type, delta_n_convection, nimp_bg,              &
                 flag_adas, adas_dir, output_rad_phi,                &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
@@ -152,9 +151,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   ! --- Model-specific presets
   particlesource_psin = 100.d0
 
-  ! --- Initialize diagnostic paremeters
-  total_n_particles_inj_all = 0.0;
-  
   ! --- Read input parameters from namelist.
   if (trim(filename) .ne. "__NO_FILENAME__" ) then
      open(42, file=filename, status='old', action='read', iostat=ierr)
@@ -170,7 +166,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   endif
 
   ! --- Calculate normalisation factor for MGI source (related to its toroidal shape)
-  mgi_tor_norm = mgi_deltaphi * PI**0.5 * ERF(PI/mgi_deltaphi)
+  ns_tor_norm = ns_deltaphi * PI**0.5 * ERF(PI/ns_deltaphi)
 
    if (trim(R_Z_psi_bnd_file) .ne. 'none') then
 
@@ -343,13 +339,10 @@ call read_num_profiles(my_id)
 call derive_num_profiles(my_id)
 
 ! --- Initialize the shattered pellet position
-!spi_R = mgi_R
-!spi_Z = mgi_Z
-
 if ( my_id == 0 ) then
-  if (2*PI/(n_tor*n_period) >= mgi_deltaphi .and. my_id == 0) then
-    write(*,*) "WARNING! mgi_deltaphi too small for the n_tor, BEWARE!"
-    if (t_now > minval(t_mgi)) then
+  if (2*PI/(n_tor*n_period) >= ns_deltaphi .and. my_id == 0) then
+    write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
+    if (t_now > minval(t_ns)) then
       write(*,*) "EXITING NOW!!!"
       stop
     end if
@@ -392,7 +385,7 @@ if ( my_id == 0 ) then
       else      !< Do one initialization for each injection location
         n_spi_begin = 1
         do i = 1, n_inj
-          call init_spi(mgi_R(i),mgi_Z(i),mgi_phi(i),mgi_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
+          call init_spi(ns_R(i),ns_Z(i),ns_phi(i),ns_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
                         spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),n_spi(i),n_spi_begin)
           n_spi_begin = n_spi_begin + n_spi(i)
         end do

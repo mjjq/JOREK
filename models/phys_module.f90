@@ -263,7 +263,7 @@ module phys_module
 
   real*8  :: spi_Vel_diff(10)   !< The reference veolocity difference from the reference velocity
   real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
-  real*8  :: spi_L_inj(10)      !< Distance between SPI nozzle and mgi_R, mgi_Z, mgi_phi
+  real*8  :: spi_L_inj(10)      !< Distance between SPI nozzle and ns_R, ns_Z, ns_phi
   real*8  :: ns_phi_rotate      !< The toroidal position of rotated injection point
   real*8  :: tor_frequency      !< The rigid body rotation frequency
 

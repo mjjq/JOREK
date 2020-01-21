@@ -28,15 +28,15 @@ module mod_injection_source
 
 
 
-  subroutine inj_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,  &
-                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,                  &
+  subroutine inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm,  &
+                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,rhon_source,t_now,                  &
                         JET_MGI,ASDEX_MGI,central_density,central_mass)
 
   !=================================================================================
   !  This subroutine computes the neutral density source for a realistic Deuterium
-  !  MGI in JET (if mgi_timedependent is .t.).
-  !  If mgi_timedependent is .f., this routine computes a constant source in time
-  !  where the main parameter is mgi_amplitude
+  !  MGI in JET (if ns_timedependent is .t.).
+  !  If ns_timedependent is .f., this routine computes a constant source in time
+  !  where the main parameter is ns_amplitude
   !  More details in the JOREK wiki or by asking A.Fil or E.Nardon
   !=================================================================================
 
@@ -50,14 +50,14 @@ module mod_injection_source
     real*8 :: mass_gas                 ! Mass of a gas particles
     real*8 :: mol_atom                 ! Number of atoms in a molecular
     real*8 :: radius
-    real*8 :: mgi_tor_shape
-    real*8 :: mgi_pol_shape
+    real*8 :: ns_tor_shape
+    real*8 :: ns_pol_shape
     real*8 :: dphi
-    real*8 :: V_mgi
+    real*8 :: V_ns
     real*8 :: f_Nbar
     real*8 :: f_dNbar_dt
-    real*8 :: mgi_dNinj_dt
-    real*8 :: mgi_drhon_dt
+    real*8 :: ns_dNinj_dt
+    real*8 :: ns_drhon_dt
     real*8 :: t_loc
     real*8 :: t_norm
     real*8 :: prof_temp
@@ -77,14 +77,14 @@ module mod_injection_source
     real*8, intent(in)  :: V_Dmv
     real*8, intent(in)  :: P_Dmv
     real*8, intent(in)  :: t_now
-    real*8, intent(in)  :: t_mgi
-    real*8, intent(in)  :: mgi_amplitude
-    real*8, intent(in)  :: mgi_R
-    real*8, intent(in)  :: mgi_Z
-    real*8, intent(in)  :: mgi_phi
-    real*8, intent(in)  :: mgi_radius
-    real*8, intent(in)  :: mgi_sig
-    real*8, intent(in)  :: mgi_deltaphi
+    real*8, intent(in)  :: t_ns
+    real*8, intent(in)  :: ns_amplitude
+    real*8, intent(in)  :: ns_R
+    real*8, intent(in)  :: ns_Z
+    real*8, intent(in)  :: ns_phi
+    real*8, intent(in)  :: ns_radius
+    real*8, intent(in)  :: ns_sig
+    real*8, intent(in)  :: ns_deltaphi
     real*8, intent(in)  :: L_tube
     real*8, intent(in)  :: central_density
     real*8, intent(in)  :: central_mass
@@ -92,7 +92,7 @@ module mod_injection_source
     logical, intent(in) :: JET_MGI
     logical, intent(in) :: ASDEX_MGI
     real*8, intent(out) :: rhon_source  ! This is in number desntiy
-    real*8, intent(in)  :: mgi_tor_norm
+    real*8, intent(in)  :: ns_tor_norm
 
     select case ( trim(gas_type) )
       case('D2')
@@ -127,24 +127,24 @@ module mod_injection_source
     ! Parameters related to the spatial distribution of the gas source:
 
     ! A gaussian shape is chosen poloidally
-    radius = sqrt((R-mgi_R)**2 + (Z-mgi_Z)**2)
-    mgi_pol_shape = exp(-(radius/mgi_radius)**2.d0)  
+    radius = sqrt((R-ns_R)**2 + (Z-ns_Z)**2)
+    ns_pol_shape = exp(-(radius/ns_radius)**2.d0)  
 
     ! A gaussian shape is chosen toroidally
-    dphi = abs(phi - mgi_phi)
+    dphi = abs(phi - ns_phi)
     if (dphi .gt. PI) dphi = 2*PI - dphi  
-    mgi_tor_shape = exp(-(dphi/mgi_deltaphi)**2.d0)
+    ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
 
     ! Volume used for normalization, which corresponds to the integration in space 
     ! of the product of the above shape functions
-    V_mgi  = PI * mgi_R * mgi_tor_norm * mgi_radius**2.d0
+    V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
     ! ===================================================================
 
    !==================================================================================================
-   ! A shifted time is used in order to start injected gas as soon as t_now = t_mgi 
+   ! A shifted time is used in order to start injected gas as soon as t_now = t_ns 
    ! (note: L_tube/3c0 is the time needed for the gas to propagate in the injection tube).
     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
-    t_loc = (t_now-t_mgi) * t_norm + L_tube/(3.d0 * c0_gas)
+    t_loc = (t_now-t_ns) * t_norm + L_tube/(3.d0 * c0_gas)
    !==================================================================================================
 
     if (t_loc .gt. 0.) then
@@ -187,13 +187,13 @@ module mod_injection_source
        ! endif
 
         ! Number of injected particles per unit time, normalized to reservoir content:
-        mgi_dNinj_dt = A_Dmv * K_Dmv * L_tube / V_Dmv * f_dNbar_dt
+        ns_dNinj_dt = A_Dmv * K_Dmv * L_tube / V_Dmv * f_dNbar_dt
 
         ! Mass density injected per unit time (SI units):
-        mgi_drhon_dt = mgi_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * mass_gas
+        ns_drhon_dt = ns_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * mass_gas
     
         ! Distribute gas source in space
-        rhon_source = mgi_drhon_dt * mgi_pol_shape * mgi_tor_shape / V_mgi
+        rhon_source = ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
 
         ! Apply JOREK normalization
         rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * rhon_source
@@ -221,29 +221,29 @@ module mod_injection_source
 
           prof_temp = - exp(-t_loc*t_loc/2.d0/dt_open*gam)
 
-          mgi_dNinj_dt = - prof_temp*t_loc*V_Dmv*1.d3*gam*P_Dmv*N_barlitre/dt_open ! Number of injected particles per unit time (not normalised)
+          ns_dNinj_dt = - prof_temp*t_loc*V_Dmv*1.d3*gam*P_Dmv*N_barlitre/dt_open ! Number of injected particles per unit time (not normalised)
 
         else
 
           prof_temp = - exp(-(t_loc-dt_open)*gam)*exp(-dt_open/(2*gam))
 
-          mgi_dNinj_dt = - prof_temp*gam*V_Dmv*1.d3*P_Dmv*N_barlitre ! Number of injected particles per unit time (not normalised)
+          ns_dNinj_dt = - prof_temp*gam*V_Dmv*1.d3*P_Dmv*N_barlitre ! Number of injected particles per unit time (not normalised)
     
         endif
 
-        mgi_drhon_dt =  mgi_dNinj_dt * mass_gas ! Mass density injected per unit time
+        ns_drhon_dt =  ns_dNinj_dt * mass_gas ! Mass density injected per unit time
     
         ! Inverse of the number of particles still in the reservoir, formulae given by G. Pautasso (ASDEX-U)
 
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*mgi_drhon_dt * mgi_pol_shape  * mgi_tor_shape / V_mgi
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*ns_drhon_dt * ns_pol_shape  * ns_tor_shape / V_ns
 
         ! Converting mass density into number density
         rhon_source = rhon_source * (central_mass * MASS_PROTON / mass_gas)
 
       else 
 
-        rhon_source = mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
-                      /  (V_mgi * 1.d20 * central_density)
+        rhon_source = ns_amplitude * ns_pol_shape * ns_tor_shape * t_norm &
+                      /  (V_ns * 1.d20 * central_density)
 
       endif
 

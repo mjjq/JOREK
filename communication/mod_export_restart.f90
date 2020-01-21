@@ -185,8 +185,8 @@ subroutine export_binary_restart(node_list,element_list,filename)
     deallocate (spi_abl_arr)
     deallocate (spi_species_arr)
 
-    if (toroidal_rotation) then
-      write(21) mgi_phi_rotate
+    if (spi_tor_rot) then
+      write(21) ns_phi_rotate
     end if
 
   end if
@@ -671,10 +671,76 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
     deallocate (spi_abl_arr)
     deallocate (spi_species_arr)
 
-    if (toroidal_rotation) then
-      call HDF5_real_saving(file_id,mgi_phi_rotate,"mgi_phi_rotate"//char(0))  
+    if (spi_tor_rot) then
+      call HDF5_real_saving(file_id,ns_phi_rotate,"ns_phi_rotate"//char(0))  
     end if
 
+  end if
+
+  ! Dynamically allocate memeries for temporary arrays in order to export
+  if (using_spi .and. n_spi>=1) then
+    if (index_now .gt. 0) then
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation, &
+             n_spi,index_now,'xtime_spi_ablation'//char(0))
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation_rate, &
+             n_spi,index_now,'xtime_spi_ablation_rate'//char(0))
+    end if
+
+    call HDF5_integer_saving(file_id,n_spi,"n_spi"//char(0))
+
+    allocate (spi_R_arr(n_spi))
+    allocate (spi_Z_arr(n_spi))
+    allocate (spi_phi_arr(n_spi))
+    allocate (spi_Vel_R_arr(n_spi))
+    allocate (spi_Vel_Z_arr(n_spi))
+    allocate (spi_Vel_RxZ_arr(n_spi))
+    allocate (spi_radius_arr(n_spi))
+    allocate (spi_abl_arr(n_spi))
+
+    do i=1, n_spi
+      spi_R_arr(i)       = pellets(i)%spi_R
+      spi_Z_arr(i)       = pellets(i)%spi_Z
+      spi_phi_arr(i)     = pellets(i)%spi_phi
+      spi_Vel_R_arr(i)   = pellets(i)%spi_Vel_R
+      spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
+      spi_Vel_RxZ_arr(i) = pellets(i)%spi_Vel_RxZ
+      spi_radius_arr(i)  = pellets(i)%spi_radius
+      spi_abl_arr(i)     = pellets(i)%spi_abl
+    end do
+
+    call HDF5_array1D_saving(file_id,spi_R_arr, &
+             n_spi,'spi_R_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Z_arr, &
+             n_spi,'spi_Z_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_phi_arr, &
+             n_spi,'spi_phi_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_R_arr, &
+             n_spi,'spi_Vel_R_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_Z_arr, &
+             n_spi,'spi_Vel_Z_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_Vel_RxZ_arr, &
+             n_spi,'spi_Vel_RxZ_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_radius_arr, &
+             n_spi,'spi_radius_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_abl_arr, &
+             n_spi,'spi_abl_arr'//char(0))
+
+    deallocate (spi_R_arr)
+    deallocate (spi_Z_arr)
+    deallocate (spi_phi_arr)
+    deallocate (spi_Vel_R_arr)
+    deallocate (spi_Vel_Z_arr)
+    deallocate (spi_Vel_RxZ_arr)
+    deallocate (spi_radius_arr)
+    deallocate (spi_abl_arr)
+
+    if (spi_tor_rot) then
+      call HDF5_real_saving(file_id,ns_phi_rotate,"ns_phi_rotate"//char(0))  
+    end if
+
+  else
+    n_spi = 0
+    call HDF5_integer_saving(file_id,n_spi,"n_spi"//char(0))
   end if
 
   ! Export restart vacuum 

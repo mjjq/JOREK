@@ -5,7 +5,8 @@ subroutine find_axis(my_id, node_list, element_list, psi_axis, R_axis, Z_axis, i
 use data_structure
 use gauss
 use basis_at_gaussian
-use phys_module, only: R_geo, tokamak_device, Zaxis_find_limit  
+use equil_info,  only: ES
+use phys_module, only: R_geo, Z_geo, axis_srch_radius, R_axis_t, Z_axis_t, index_start  
 use mod_interp
 
 implicit none
@@ -37,7 +38,8 @@ real*8  :: ps_x, ps_y, ps_s, ps_t, xjac
 real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
 integer :: ij_axis(2), i, iv, ms, mt, kf, kv, i_tries, n_tries, i_elm_axis_init, min_indices(3)
 real*8  :: x(2), s, t, xerr, ferr, s_axis_init, t_axis_init
-logical :: found_axis
+real*8  :: R0, Z0, search_radius
+logical :: found_axis, axis_in_rst_file
 real*8,  allocatable :: grad_psi(:,:,:)
 logical, allocatable :: include_pt(:,:,:)
 
@@ -60,7 +62,26 @@ ij_axis      = 1
 psi_axis     = 1.d20
 
 ! --- define geometrical limits to search for the axis
-if( Zaxis_find_limit .gt. 50.d0)  Zaxis_find_limit = 0.1d0 * R_geo
+search_radius = axis_srch_radius
+if (axis_srch_radius > 50.d0) search_radius = 0.2d0 * R_geo
+
+! --- if restarting, check that the previous axis is in the restart file 
+axis_in_rst_file = .false.
+if( (index_start /= 0) .and. allocated(R_axis_t)) then
+  if (R_axis_t(index_start) /= 0.d0) axis_in_rst_file = .true.  
+endif
+
+if (ES%initialized) then
+  R0 = ES%R_axis
+  Z0 = ES%Z_axis
+else if ((.not. ES%initialized) .and. (index_start > 0) .and. axis_in_rst_file) then
+  R0 = R_axis_t(index_start)
+  Z0 = Z_axis_t(index_start)
+else 
+  R0 = R_geo
+  Z0 = Z_geo
+endif
+
 
 ! save |grad_psi| at gaussian points of all elements
 do i=1,element_list%n_elements   ! --- loop over elements
@@ -101,11 +122,9 @@ do i=1,element_list%n_elements   ! --- loop over elements
       ps_y = (- ps_s * R_t + ps_t * R_s)/ xjac
 
       grad_psi(i,ms,mt) = sqrt(ps_x*ps_x + ps_y*ps_y)
-
-      if (     ((tokamak_device(1:4) .ne. 'MAST') .and. (abs(Z) .lt. Zaxis_find_limit)) &
-            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. ((abs(Z) .lt. 0.2d0) .and. (R .lt. 1.d0))) ) then
-        include_pt(i,ms,mt) = .true.                      ! --- only include points within given geometrical limits
-      endif
+      
+      ! --- include points if they are within the search region
+      include_pt(i,ms,mt) = sqrt( (R-R0)**2.d0 + (Z-Z0)**2.d0 ) < search_radius
           
     enddo
   enddo
@@ -117,6 +136,7 @@ do i_tries=1,  n_tries  ! --- start attempts to find the axis
 
   ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
   min_indices(:) = minloc(grad_psi, mask=include_pt)  ! --- find minimum of |grad_psi|
+  if (.not. any(include_pt)) min_indices = 0
   
   if ((min_indices(1) == 0) .and. (i_tries == 1)) then     ! --- if all elements are initially excluded, stop search and initialize values
     found_axis = .false.
@@ -163,7 +183,15 @@ call interp(node_list,element_list,i_elm_axis,1,1,s_axis,t_axis,psi_axis,P_s,P_t
 
 call interp_RZ(node_list,element_list,i_elm_axis,s_axis,t_axis,R_axis,Z_axis)
 
-if (.not. found_axis) write(*,*) 'WARNING: axis was not properly found after ', n_tries, ' attempts'
+if ((.not. found_axis) .and. (ES%initialized)) then
+  write(*,*) '  WARNING: axis was not properly found after ', n_tries, ' attempts'
+  write(*,*) '  Please check that you have set axis_srch_radius correctly in the input file.'
+  write(*,*) '  If the expected magnetic axis lies outside the circle with radius'
+  write(*,*) '  axis_srch_radius and center(R_geo,Z_geo) or previous axis (if defined),'
+  write(*,*) '  you must increase axis_srch_radius. Now you are using:'
+  write(*,*) '    axis_srch_radius = ',  search_radius
+  write(*,*) '    R_geo, Z_geo     = ',  R_geo, Z_geo
+endif
 if (my_id .eq. 0) write(*,'(A,i6,4f14.8)') ' magnetic axis : ',i_elm_axis,R_axis,Z_axis,psi_axis
 
 deallocate(include_pt, grad_psi)

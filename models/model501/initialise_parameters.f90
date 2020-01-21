@@ -7,12 +7,11 @@ use data_structure
 use constants
 use mpi_mod
 use corr_neg
-use mumps_module,  only: use_mumps, no_zeros_mumps
+use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
 use vacuum
 use wsmp_module,   only: use_wsmp
-use mgi_module,    only: total_n_particles_inj_all
 use pellet_module
 
 implicit none
@@ -49,7 +48,7 @@ real*8, allocatable :: shard_size(:)               !The shard size array
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
-                restart, rst_format, regrid, bootstrap,             &                
+                restart, rst_format, regrid, bootstrap, write_ps,   &                
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
@@ -88,7 +87,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
-                use_mumps, use_pastix,                              &
+                use_mumps, mumps_ordering, use_pastix,              &
+                use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_wsmp, n_tor_fft_thresh,                         &
                 pastix_smp_only, refinement, force_central_node,    &
                 grid_to_wall,                                       &
@@ -111,18 +111,17 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                toroidal_rotation, tor_frequency,                   &
+                spi_tor_rot, tor_frequency,                         &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
-                mgi_sig, mgi_deltaphi, ksi_ion, spi_rnd_seed,       &
-                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
+                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
+                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
-                spi_quantity_bg, pellet_density_bg,                 &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
-                spi_Vel_diff, t_mgi, JET_MGI, ASDEX_MGI,            &
+                spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 gas_type, delta_n_convection, nimp_bg,              &
                 flag_adas, adas_dir, output_rad_phi,                &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
@@ -134,10 +133,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_pf_coils, pf_coils,                 &
-                Zaxis_find_limit, PF_pert_start_time,               &
+                axis_srch_radius, PF_pert_start_time,               &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
-                voltage_coils, vert_FB_amp, find_pf_coil_currents 
+                voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
+                eta_ohmic 
 
  if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
@@ -148,9 +148,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   ! --- Model-specific presets
   particlesource_psin = 100.d0
 
-  ! --- Initialize diagnostic paremeters
-  total_n_particles_inj_all = 0.0;
-  
   ! --- Read input parameters from namelist.
   if (trim(filename) .ne. "__NO_FILENAME__" ) then
      open(42, file=filename, status='old', action='read', iostat=ierr)
@@ -166,7 +163,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   endif
 
   ! --- Calculate normalisation factor for MGI source (related to its toroidal shape)
-  mgi_tor_norm = mgi_deltaphi * PI**0.5 * ERF(PI/mgi_deltaphi)
+  ns_tor_norm = ns_deltaphi * PI**0.5 * ERF(PI/ns_deltaphi)
 
    if (trim(R_Z_psi_bnd_file) .ne. 'none') then
 
@@ -343,9 +340,9 @@ call derive_num_profiles(my_id)
 !spi_Z = mgi_Z
 
 if ( my_id == 0 ) then
-  if (2*PI/(n_tor*n_period) >= mgi_deltaphi .and. my_id == 0) then
-    write(*,*) "WARNING! mgi_deltaphi too small for the n_tor, BEWARE!"
-    if (t_now > t_mgi) then
+  if (2*PI/(n_tor*n_period) >= ns_deltaphi .and. my_id == 0) then
+    write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
+    if (t_now > t_ns) then
       write(*,*) "EXITING NOW!!!"
       stop
     end if

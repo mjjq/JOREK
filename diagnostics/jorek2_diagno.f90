@@ -11,14 +11,28 @@ use phys_module
 use basis_at_gaussian
 use pellet_module
 use mpi_mod
+use mod_boundary, only: boundary_from_grid 
 use mod_import_restart
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
-use mgi_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+  use mod_neutral_source
 #endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+  use mod_injection_source
+#endif
+use mod_integrals3D
+use mod_expression, only: exprs_all_int, init_expr, t_expr_list
+
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+type (type_node_list)        :: node_list
+type (type_element_list)     :: element_list
+type (type_bnd_node_list)    :: bnd_node_list
+type (type_bnd_element_list) :: bnd_elm_list
+type (t_expr_list)           :: expr_list
+real*8, allocatable          :: res(:)
+integer                      :: units
+
+
 integer :: i, in, i_tor, i_spi
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
 real*8  :: Rplot(2), Zplot(2)
@@ -28,9 +42,15 @@ integer :: required, provided, StatInfo
 real*8  :: spi_abl_rate_tot, spi_abl_tot
 real*8  :: spi_abl_bg_rate_tot, spi_abl_bg_tot
 
+
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_diagno                       *'
 write(*,*) '***************************************'
+
+call init_expr()
+allocate(res(exprs_all_int%n_expr+1))
+res = 0.d0
+
 
 my_id=0
 
@@ -131,14 +151,19 @@ if (using_spi) then
 
 endif
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   ! --- Read ADAS data and generate coronal equilibrium is needed
   if (flag_adas) then
     call init_imp_adas(my_id)
-
-    if (output_rad_phi) call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,&
-                                                pressure,pressure_in,pressure_out)
   end if
+#endif
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
+  if (output_rad_phi) then
+    ! --- Determine boundary information from the grid
+    call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+
+    call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
+  endif
 #endif
 !if (use_pellet) then
 !   pellet_volume = total_pellet_volume

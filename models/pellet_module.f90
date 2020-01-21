@@ -1,16 +1,19 @@
 module pellet_module
 
-real*8 :: total_pellet_particles   !< the (total) pellet particles added in this timestep
-real*8 :: total_plasma_particles   !< the total plasma density (before this timestep)
-real*8 :: total_pellet_volume      !< the volume of the simulated pellet in this timestep
+use constants
+use data_structure
+use phys_module
+
+
+real*8 :: total_pellet_particles = 0.   !< the (total) pellet particles added in this timestep
+real*8 :: total_plasma_particles = 0.   !< the total plasma density (before this timestep)
+real*8 :: total_pellet_volume    = 0.   !< the volume of the simulated pellet in this timestep
 
 real*8 :: phys_pellet_volume       !< the physical pellet radius (in m^3)
 real*8 :: pellet_volume            !< approximated value of simulated pellet volume
 real*8 :: pellet_atomic            !< atomic number of pellet mass
 
 real*8 :: phys_ablation            !< physical ablation rate (non normalised)
-
-
 
 real*8, allocatable  :: xtime_pellet_R(:)
 real*8, allocatable  :: xtime_pellet_Z(:)
@@ -133,22 +136,21 @@ use data_structure
 use phys_module
 use mpi_mod
 use mod_interp, only: interp
+
 implicit none
 
-
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+integer,                      intent(in)    :: my_id
+type (type_node_list),        intent(in)    :: node_list
+type (type_element_list),     intent(in)    :: element_list
 
 real*8  :: psi_axis, psi_bnd
-integer :: my_id, ierr
+integer :: ierr
 real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
 
-real*8 :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
+real*8  :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
 integer :: i_elm, ifail
 
 if (pellet_amplitude .gt. 0) return
-
-call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 
 V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
 
@@ -185,7 +187,7 @@ return
 end subroutine update_pellet
 
 subroutine update_spi(my_id,node_List,element_list,&
-                      mgi_R,mgi_Z,mgi_phi,mgi_amplitude,spi_Vel_Rref,spi_Vel_Zref,spi_Vel_RxZref,&
+                      ns_R,ns_Z,ns_phi,ns_amplitude,spi_Vel_Rref,spi_Vel_Zref,spi_Vel_RxZref,&
                       spi_quantity,spi_quantity_bg,spi_Vel_diff,spi_L_inj,n_spi,n_spi_begin)
 !******************************************************************************
 ! routine updates the shattered pellet position and the size of the simulated *
@@ -227,11 +229,11 @@ implicit none
   
   !   -Mean impurity ionization state and related quantities
   real*8     :: Z_imp, beta_imp, mu_imp
-  
-  real*8, intent(in)  :: mgi_R
-  real*8, intent(in)  :: mgi_Z
-  real*8, intent(in)  :: mgi_phi
-  real*8, intent(in)  :: mgi_amplitude
+
+  real*8, intent(in)  :: ns_R
+  real*8, intent(in)  :: ns_Z
+  real*8, intent(in)  :: ns_phi
+  real*8, intent(in)  :: ns_amplitude
   real*8, intent(in)  :: spi_Vel_Rref
   real*8, intent(in)  :: spi_Vel_Zref
   real*8, intent(in)  :: spi_Vel_RxZref
@@ -243,18 +245,17 @@ implicit none
   integer, intent(in) :: n_spi
   integer, intent(in) :: n_spi_begin
 
-
   spi_delta_phi   = 0.
   spi_Vel_R_tmp   = 0.
   spi_Vel_phi_tmp = 0.
-  spi_phi_inj     = mgi_phi
+  spi_phi_inj     = ns_phi
 
   V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
   t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
   spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
     
-  spi_phi_inj     = mgi_phi + mgi_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/mgi_R
+  spi_phi_inj     = ns_phi + ns_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
 
   if (spi_phi_inj >= 2.*PI) then
     spi_phi_inj   = mod(spi_phi_inj,2.*PI)
@@ -277,7 +278,7 @@ implicit none
     pellets(i_p)%spi_Z       = pellets(i_p)%spi_Z + pellets(i_p)%spi_Vel_Z * tstep / V_normalisation
     pellets(i_p)%spi_phi     = pellets(i_p)%spi_phi + spi_Vel_phi_tmp * tstep / V_normalisation
 
-    if (toroidal_rotation) then
+    if (spi_tor_rot) then
       pellets(i_p)%spi_phi   = pellets(i_p)%spi_phi + tor_frequency * 2. * PI * tstep / V_normalisation
     end if
 
@@ -327,7 +328,7 @@ implicit none
     end if
 
     if (spi_abl_model == 0) then
-      pellets(i_p)%spi_abl   = mgi_amplitude
+      pellets(i_p)%spi_abl   = ns_amplitude
     elseif (spi_abl_model >= 1) then
 
       call find_RZ(node_list,element_list,pellets(i_p)%spi_R,pellets(i_p)%spi_Z,&
@@ -524,8 +525,8 @@ implicit none
 
   end do
 
-  if (toroidal_rotation) then
-    mgi_phi_rotate  = mgi_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
+  if (spi_tor_rot) then
+    ns_phi_rotate  = ns_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
   end if
 
   if (my_id == 0 .and. mod(index_now,20) == 0) then
@@ -549,7 +550,7 @@ return
 end subroutine update_spi
 
   !> Initializes the shattered pellet position, velocity and size
-  subroutine init_spi(mgi_R,mgi_Z,mgi_phi,mgi_amplitude,spi_Vel_Rref,spi_Vel_Zref,spi_Vel_RxZref,&
+  subroutine init_spi(ns_R,ns_Z,ns_phi,ns_amplitude,spi_Vel_Rref,spi_Vel_Zref,spi_Vel_RxZref,&
                       spi_quantity,spi_quantity_bg,spi_Vel_diff,spi_L_inj,n_spi,n_spi_begin)
   
     use constants
@@ -575,7 +576,7 @@ end subroutine update_spi
     real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Representing the shattering point of the pellet
                                                        !The apex of the
                                                        !spreading cone
-    real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_radius_tmp, spi_density_tmp
+    real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_density_tmp
     real*8  :: sign_corr
     real*8, allocatable :: rnd(:)                      !The random number array 
     real*8, allocatable :: shard_size(:)               !The shard size array
@@ -585,10 +586,10 @@ end subroutine update_spi
     real*8  :: mix_ratio                               ! Volume mixture ratio of the mixed pellet 
     real*8  :: real_spi_quantity(2)                    ! Final injection quantity
 
-    real*8, intent(in)  :: mgi_R
-    real*8, intent(in)  :: mgi_Z
-    real*8, intent(in)  :: mgi_phi
-    real*8, intent(in)  :: mgi_amplitude
+    real*8, intent(in)  :: ns_R
+    real*8, intent(in)  :: ns_Z
+    real*8, intent(in)  :: ns_phi
+    real*8, intent(in)  :: ns_amplitude
     real*8, intent(in)  :: spi_Vel_Rref
     real*8, intent(in)  :: spi_Vel_Zref
     real*8, intent(in)  :: spi_Vel_RxZref
@@ -633,6 +634,16 @@ end subroutine update_spi
         shard_size = 1.
       end if
 
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+      do i = 1, n_spi
+        pellets(i)%spi_species = 0.
+        N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * pellet_density * 1.d20
+      end do
+
+      size_beta    = (spi_quantity / N_shard_norm) ** (-1./3.)
+      write(*,*) "Characteristic shard size (m):", 1./size_beta
+#endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
       ! Determine approximately how many fragments are of the impurity, how
       ! much are of the background species. 
 
@@ -713,12 +724,11 @@ end subroutine update_spi
       real_spi_quantity(2) = real_spi_quantity(2) / size_beta**3
       write(*,*) "Characteristic shard size (m):", 1./size_beta
       write(*,*) "Real injection quantity (atom):", real_spi_quantity(1), real_spi_quantity(2)
-
+#endif
       ! Initialize shard radius
       do i = 1, n_spi
         i_p = i - 1 + n_spi_begin 
-        spi_radius_tmp = shard_size(i)/size_beta
-        pellets(i_p)%spi_radius  = spi_radius_tmp
+        pellets(i_p)%spi_radius  = shard_size(i)/size_beta !Here we are using exactly the same distribution for each injector
       end do
 
 !===================Determine the rotational transform of coordinate===============
@@ -736,9 +746,9 @@ end subroutine update_spi
 
       spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
 
-      spi_R_inj       = mgi_R - spi_L_inj * (spi_Vel_Rref/spi_Vel_totref)
-      spi_Z_inj       = mgi_Z - spi_L_inj * (spi_Vel_Zref/spi_Vel_totref)
-      spi_phi_inj     = mgi_phi - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/mgi_R
+      spi_R_inj       = ns_R - spi_L_inj * (spi_Vel_Rref/spi_Vel_totref)
+      spi_Z_inj       = ns_Z - spi_L_inj * (spi_Vel_Zref/spi_Vel_totref)
+      spi_phi_inj     = ns_phi - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
 
       spi_rotation_01 = asin(spi_Vel_Zref/spi_Vel_totref)
       if (cos(spi_rotation_01) == 0.) then
@@ -824,7 +834,7 @@ end subroutine update_spi
       if (allocated(xtime_spi_ablation_rate)) &
       call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi_tot,1,nstep,"xtime_spi_ablation_rate")
-
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
       if (allocated(xtime_spi_ablation_bg)) &
       call tr_deallocate(xtime_spi_ablation_bg,"xtime_spi_ablation_bg",CAT_UNKNOWN)
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg,1,n_spi_tot,1,nstep,"xtime_spi_ablation_bg")
@@ -832,7 +842,7 @@ end subroutine update_spi
       if (allocated(xtime_spi_ablation_bg_rate)) &
       call tr_deallocate(xtime_spi_ablation_bg_rate,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi_tot,1,nstep,"xtime_spi_ablation_bg_rate")
-
+#endif
 
     else
       write(*,*) "...... Seriously!? Double check the input file"

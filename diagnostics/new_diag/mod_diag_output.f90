@@ -539,4 +539,72 @@ module mod_diag_output
   
   
   
+  !> Write diagnostic output to an hdf5 file.
+  subroutine write_hdf5_3d(ierr, expr_list, res3d, filename, comment)
+  
+#ifdef USE_HDF5
+    use hdf5
+    use hdf5_io_module
+    use tr_module
+#endif
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':write_hdf5_3d'
+    
+    ! --- Routine parameters.
+    integer,                    intent(inout) :: ierr
+    type(t_expr_list),          intent(in)    :: expr_list
+    real*8, allocatable,        intent(in)    :: res3d(:,:,:,:)
+    character(len=*),           intent(in)    :: filename
+    character(len=*), optional, intent(in)    :: comment
+    
+#ifdef USE_HDF5
+    ! --- Local variables.
+    integer(HID_T) :: i_file
+    character(len=1), allocatable :: varnames(:) !#####################
+    integer :: n(4), i
+    
+    ierr = 0
+    
+    if ( .not. allocated(res3d) ) then
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': array res3d not allocated.'
+      ierr = 103
+      return
+    end if
+    n(:) = (/ size(res3d,1), size(res3d,2), size(res3d,3), size(res3d,4) /)
+    
+    call HDF5_create(trim(filename),i_file,ierr)
+    if (ierr /= 0) then
+      write(*,*) 'Could not create HDF5 file.'
+      stop
+    end if
+    
+    allocate( varnames(expr_list%n_expr) )
+    do i = 1, expr_list%n_expr
+      varnames(i) = expr_list%expr(i)%name
+    end do
+    
+    call HDF5_char_saving(i_file,'Diagnostic export from JOREK','description'//char(0))
+    if ( present(comment) ) call HDF5_char_saving(i_file,trim(adjustl(comment)),'comment'//char(0))
+    call HDF5_real_saving(i_file,t_now,'t_now'//char(0))
+    call HDF5_integer_saving(i_file,index_now,'index_now'//char(0))
+    call HDF5_integer_saving(i_file,3,'ndim'//char(0))
+    call HDF5_array1D_saving_int(i_file,n(1:3),3,'dim'//char(0))
+    call HDF5_integer_saving(i_file,expr_list%n_expr,'n_var'//char(0))
+    call HDF5_array1D_saving_char(i_file,varnames,expr_list%n_expr,'variables'//char(0))
+    call HDF5_array4D_saving(i_file,res3d(:,:,:,:),n(1),n(2),n(3),n(4),'values'//char(0))
+    
+    call HDF5_close(i_file)
+    
+    deallocate(varnames)
+#else
+    write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': Code was not compiled with HDF5.'
+    ierr = 999
+#endif
+    
+  end subroutine write_hdf5_3d
+
+
+
+
+
 end module mod_diag_output

@@ -10,6 +10,9 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr, n
   use data_structure
   use phys_module
   use pellet_module
+  use equil_info
+  use mod_boundary
+  use basis_at_gaussian
 
   implicit none
   
@@ -20,6 +23,10 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr, n
   integer,                 intent(out)   :: ierr
   integer,                 intent(in)    :: format_rst  ! format of restart file 
   logical, optional,       intent(in)    :: no_perturbations ! don't initialize new harmonics
+ 
+  ! --- Local parameters
+  type (type_bnd_element_list)           :: bnd_elm_list    
+  type (type_bnd_node_list)              :: bnd_node_list 
 
   if ( rst_hdf5 == 0 ) then
     write(*,*) " Restart from BINARY file " // trim(filename) // '.rst'
@@ -30,6 +37,13 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr, n
     call import_hdf5_restart(node_list, element_list, trim(filename)//'.h5', &
             format_rst,ierr, no_perturbations)
   end if
+  
+  ! --- Required initializations to update equilibrium state
+  call initialise_basis
+  call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+  write(*,*) " "
+  write(*,*) " The equilibrium state has been updated "
   
 end subroutine import_restart
 
@@ -393,8 +407,8 @@ endif
         pellets(i)%spi_abl     = spi_abl_arr(i)
         pellets(i)%spi_species = spi_species_arr(i)
 
-        write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
-                              pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
+        write(*,'(A,I5,6ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+                        pellets(i)%spi_phi, pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
       end do
 
       deallocate (spi_R_arr)
@@ -407,8 +421,8 @@ endif
       deallocate (spi_abl_arr)
       deallocate (spi_species_arr)
 
-      if (toroidal_rotation) then
-        read(21,err=999, end=999) mgi_phi_rotate 
+      if (spi_tor_rot) then
+        read(21,err=999, end=999) ns_phi_rotate 
       end if
 
     end if
@@ -918,7 +932,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_array2D_reading_int(file_id,t_sons,        'sons')
   call HDF5_array2D_reading_int(file_id,t_contain_node,'contain_node')
   call HDF5_array1D_reading_int(file_id,t_nref,        'nref')
- 
+
   do i=1,element_list%n_elements
     element_list%element(i)%vertex	 = t_vertex(i,:)
     element_list%element(i)%neighbours   = t_neighbours(i,:)
@@ -1039,7 +1053,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
     part_src_out_t = 0.d0
     call HDF5_array1D_reading(file_id,part_src_out_t,'part_src_out_t')
-
+  
     if (allocated(E_tot_t)) call tr_deallocate(E_tot_t,"E_tot_t",CAT_UNKNOWN)
     call tr_allocate(E_tot_t,1,index_start+nstep,"E_tot_t",CAT_UNKNOWN)
     E_tot_t = 0.d0
@@ -1180,7 +1194,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     mag_ener_src_tot = 0.d0
     call HDF5_array1D_reading(file_id,mag_ener_src_tot,'mag_ener_src_tot')
 
-
 #ifdef JECCD                   
     if (allocated(t_energies2))   call tr_deallocate(t_energies2,"t_energies2",CAT_UNKNOWN)
     call tr_allocate(t_energies2,1,n_tor_tmp,1,2,1,index_start+nstep, "t_energies2",CAT_UNKNOWN)
@@ -1286,7 +1299,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     if (n_spi_tot >= 1) then
 
       if (index_start >= 1) then
-
         if (allocated(xtime_spi_ablation)) &
           call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
         call tr_allocate(xtime_spi_ablation,1,n_spi_tot,1,index_start+nstep,"xtime_spi_ablation",CAT_UNKNOWN)
@@ -1390,8 +1402,8 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         pellets(i)%spi_abl     = spi_abl_arr(i)
         pellets(i)%spi_species = spi_species_arr(i)
 
-        write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
-                              pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
+        write(*,'(A,I5,6ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
+                        pellets(i)%spi_phi, pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
       end do
 
       deallocate (spi_R_arr)
@@ -1405,14 +1417,13 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       deallocate (spi_species_arr)
       if (allocated(spi_species_arr_old)) deallocate (spi_species_arr_old)
 
-      if (toroidal_rotation) then
-        call HDF5_real_reading(file_id,mgi_phi_rotate,"mgi_phi_rotate")
+      if (spi_tor_rot) then
+        call HDF5_real_reading(file_id,ns_phi_rotate,"ns_phi_rotate")
       end if
 
 
     end if
   end if
-
 
   call HDF5_close(file_id)
  

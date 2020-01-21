@@ -17,7 +17,6 @@ module exec_commands
   use postproc_help
   use mod_log_params
   use mod_import_restart
-  use mgi_module
   use mod_interp
   use mod_poloidal_currents 
   
@@ -31,11 +30,15 @@ module exec_commands
   character(len=11), parameter, private :: DIR = './postproc/' !< Output goes into this directory!
   
   integer, parameter :: NORMAL_MODE = 1 !< Normal mode
-  integer, parameter :: LOOP_MODE   = 2 !< Mode started by 'for' and ended by 'done' commands
-  integer :: exec_mode = NORMAL_MODE    !< Current operation mode (NORMAL_MODE or LOOP_MODE)
+  integer, parameter :: LOOP_S_MODE = 2 !< Mode started by 'for step' and ended by 'done' commands
+  integer, parameter :: LOOP_T_MODE = 3 !< Mode started by 'for time' and ended by 'done' commands
+  integer :: exec_mode = NORMAL_MODE    !< Current operation mode (NORMAL_MODE or LOOP_X_MODE)
   integer :: loop_min_step              !< Smallest timestep index of for loop
   integer :: loop_max_step              !< Largest timestep index of for loop
   integer :: loop_inc_step              !< Timestep index step width of for loop
+  real*8  :: loop_min_time              !< Smallest time of for loop
+  real*8  :: loop_max_time              !< Largest time of for loop
+  real*8  :: loop_inc_time              !< Timestep time interval width of for loop
   
   integer, parameter :: MAX_QUEUE_LENGTH  = 9999         !< Maximum length of command queue
   integer            :: n_queued_commands = 0            !< Number of commands in the queue
@@ -46,7 +49,6 @@ module exec_commands
   logical,             private, save :: dir_created   = .false. !< Postproc directory created?
   logical,             private, save :: verbose
   logical,             private, save :: debug
-  type(t_equil_state), private, save :: eq !< Equilibrium state; updated when time step is loaded
   type(t_expr_list),   private, save :: expr_list
   real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:), sum(:)
   complex*16, allocatable, private, save :: cp(:,:,:,:)
@@ -155,6 +157,8 @@ module exec_commands
           call jnorm_bnd_RZ(command, ierr)
         case ( 'jorek-units' )
           call select_jorek_units(command, ierr)
+        case ( 'for-jorek-units' )
+          call select_loop_jorek_units(command, ierr)
         case ( 'pol_line' )
           call pol_line(command, first_step, ierr)
         case ( 'int_along_pol_line' )
@@ -163,13 +167,15 @@ module exec_commands
           call tor_line(command, first_step, ierr)
         case ( 'rectangle' )
           call rectangle(command, first_step, ierr)
+        case ( 'rectangular_torus' )
+          call rectangular_torus(command, first_step, ierr)
         case ( 'mark_coords' )
           call mark_coords(command, ierr)
         case ( 'midplane' )
           call midplane(command, first_step, ierr)
         case ( 'namelist' )
           call load_namelist(command, ierr)
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
           my_id = 0
           ! --- Read ADAS data and generate coronal equilibrium is needed
           if (flag_adas) then
@@ -191,6 +197,10 @@ module exec_commands
           call set(command, ierr)
         case ( 'si-units' )
           call select_si_units(command, ierr)
+        case ( 'for-si-units' )
+          call select_loop_si_units(command, ierr)
+        case ( 'spi-state' )
+          call spi_state(command, first_step, ierr)
         case ( 'timesteps' )
           call timesteps 
         case default
@@ -199,14 +209,14 @@ module exec_commands
       end select
       
     ! --- In loop mode, commands are queued and afterwards executed for each timestep separately
-    else if ( exec_mode == LOOP_MODE ) then
+    else if (( exec_mode == LOOP_S_MODE ) .or. ( exec_mode == LOOP_T_MODE )) then
       
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane', 'average', 'point',      &
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
           'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
-          'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'energy_spectrum', 'average_h5', &
-          'I_halo_TPF')
+          'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'rectangular_torus', 'energy_spectrum', 'average_h5', &
+          'I_halo_TPF', 'spi-state')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -278,6 +288,7 @@ module exec_commands
     end if
     if ( .not. file_exists ) then
       ierr = 42
+      write(*,'(a,i5.5,a)') 'Restart file for step ', istep,' does not exist.'
       return
     end if
     
@@ -291,15 +302,15 @@ module exec_commands
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
     
     ! --- Locate magnetic axis and X-point.
-    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, eq)
+    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
     
     t_now         = t_start
     index_now     = index_start
     step_imported = .true.
     
     ! (not elegant, admittedly... but guarantees consistent time normalization:)
-    call eval_expr(eq, get_int_setting('units', ierr), exprs('t',1),                               &
-      pol_pos(node_list,element_list,eq,R=eq%R_axis,Z=eq%Z_axis), tor_pos(phi=0.d0), result, ierr)
+    call eval_expr(ES, get_int_setting('units', ierr), exprs('t',1),                               &
+      pol_pos(node_list,element_list,ES,R=ES%R_axis,Z=ES%Z_axis), tor_pos(phi=0.d0), result, ierr)
     time_now = result(1,1,1,1)
     
   end subroutine load_step
@@ -324,76 +335,145 @@ module exec_commands
     
     ! --- Some checks.
     call check_args(command%n_args,ierr,3,5,7);  if ( ierr /= 0 ) return
+
+    ! --- loop through steps
+    if ( trim(command%args(1)) == 'step' ) then
+
+      loop_min_step = to_int(command%args(2),ierr)
+      if ( ierr /= 0 ) then
+        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+        call specific_help('for')
+        return
+      end if
+
+      if ( command%n_args == 3 ) then ! for step <XXX> do
+        if ( trim(command%args(3)) /= 'do' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_max_step = loop_min_step
+        loop_inc_step = 1
+      else if ( command%n_args == 5 ) then! for step <XXX> to <YYY> do
+        if ( trim(command%args(3)) /= 'to' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_max_step = to_int(command%args(4),ierr)
+        if ( ierr /= 0 ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        if ( trim(command%args(5)) /= 'do' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_inc_step = 1
+      else if ( command%n_args == 7 ) then! for step <XXX> to <YYY> by <ZZZ> do
+        if ( trim(command%args(3)) /= 'to' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_max_step = to_int(command%args(4),ierr)
+        if ( ierr /= 0 ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        if ( trim(command%args(5)) /= 'by' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_inc_step = to_int(command%args(6),ierr)
+        if ( ierr /= 0 ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        if ( trim(command%args(7)) /= 'do' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+      end if
     
-    if ( trim(command%args(1)) /= 'step' ) then
+      exec_mode = LOOP_S_MODE
+
+    else if ( trim(command%args(1)) == 'time' ) then
+
+      loop_min_time = to_float(command%args(2),ierr)
+      if ( ierr /= 0 ) then
+        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+        call specific_help('for')
+        return
+      end if
+
+      if ( command%n_args == 3 ) then ! for time <XXX> do
+        if ( trim(command%args(3)) /= 'do' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_max_time = loop_min_time
+        loop_inc_time = 1.d0
+      else if ( command%n_args == 5 ) then
+        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+        write(*,*) '       "time" mode needs one or three arguments.'
+        call specific_help('for')
+        return
+      else if ( command%n_args == 7 ) then! for step <XXX> to <YYY> by <ZZZ> do
+        if ( trim(command%args(3)) /= 'to' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_max_time = to_float(command%args(4),ierr)
+        if ( ierr /= 0 ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        if ( trim(command%args(5)) /= 'by' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        loop_inc_time = to_float(command%args(6),ierr)
+        if ( ierr /= 0 ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+        if ( trim(command%args(7)) /= 'do' ) then
+          write(*,*) 'ERROR: Wrong syntax for "for" statement.'
+          call specific_help('for')
+          return
+        end if
+      end if
+
+      ! --- Check if values are okay
+      if ( loop_max_time .lt. loop_min_time ) then
+        write(*,*) 'ERROR: Minimum value has to be larger than maximum value.'
+        call specific_help('for')
+        return
+      end if
+      if ( loop_inc_time .lt. 0.d0 ) then
+        write(*,*) 'ERROR: Increment needs to be a positive value.'
+        call specific_help('for')
+        return
+      end if
+
+      exec_mode = LOOP_T_MODE
+
+    else
       call report_error('for', 'Wrong syntax.', command)
       return
     end if
-    
-    loop_min_step = to_int(command%args(2),ierr)
-    if ( ierr /= 0 ) then
-      write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-      call specific_help('for')
-      return
-    end if
-    
-    if ( command%n_args == 3 ) then ! for step <XXX> do
-      if ( trim(command%args(3)) /= 'do' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      loop_max_step = loop_min_step
-      loop_inc_step = 1
-    else if ( command%n_args == 5 ) then! for step <XXX> to <YYY> do
-      if ( trim(command%args(3)) /= 'to' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      loop_max_step = to_int(command%args(4),ierr)
-      if ( ierr /= 0 ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      if ( trim(command%args(5)) /= 'do' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      loop_inc_step = 1
-    else if ( command%n_args == 7 ) then! for step <XXX> to <YYY> by <ZZZ> do
-      if ( trim(command%args(3)) /= 'to' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      loop_max_step = to_int(command%args(4),ierr)
-      if ( ierr /= 0 ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      if ( trim(command%args(5)) /= 'by' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      loop_inc_step = to_int(command%args(6),ierr)
-      if ( ierr /= 0 ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-      if ( trim(command%args(7)) /= 'do' ) then
-        write(*,*) 'ERROR: Wrong syntax for "for" statement.'
-        call specific_help('for')
-        return
-      end if
-    end if
-    
-    exec_mode = LOOP_MODE
     
   end subroutine loop_start
   
@@ -411,37 +491,149 @@ module exec_commands
     integer,            intent(out)    :: ierr    !< Error flag
     
     ! --- Local variables
-    integer :: jcmd, istep, load_error
-    logical :: first_step ! Is true for the first timestep loaded in the for-loop
+    integer              :: jcmd, istep, load_error, n_avail, itime, n_time, iavail, n_select, & 
+                            temp_select, loop_unit
+    logical              :: first_step, file_exists   ! Is true for the first timestep loaded in the for-loop
+    real*8               :: time_loop, rho_norm, loop_fact_time
+    character(len=64)    :: file_name
+    integer, allocatable :: selected_steps(:)
+    real*8 , allocatable :: selected_times(:)
+    integer, allocatable :: available_steps(:)
     
     ierr = 0
-    exec_mode = NORMAL_MODE    
     
     if ( n_queued_commands == 0 ) then
       write(*,*) 'WARNING: No commands in for-loop.'
+      exec_mode = NORMAL_MODE
       return
     end if
     
     first_step = .true.
-    do istep = loop_min_step, loop_max_step, loop_inc_step
-      call load_step(istep, load_error)
-      if ( load_error /= 0 ) cycle
+    if ( exec_mode == LOOP_S_MODE ) then
+      exec_mode = NORMAL_MODE
+      do istep = loop_min_step, loop_max_step, loop_inc_step
+        write(*,*) istep
+        call load_step(istep, load_error)
+        if ( load_error /= 0 ) cycle
       
-      do jcmd = 1, n_queued_commands
+        do jcmd = 1, n_queued_commands
         
-        call exec_command(command_queue(jcmd), first_step, ierr)  
-        if ( ierr /= 0 ) then
-          write(*,*) 'ERROR executing the following command (ignoring it):'
-          call print_command(command_queue(jcmd))
-          call specific_help(command_queue(jcmd)%args(0))
-          ierr = 0
-        end if
+          call exec_command(command_queue(jcmd), first_step, ierr)  
+          if ( ierr /= 0 ) then
+            write(*,*) 'ERROR executing the following command (ignoring it):'
+            call print_command(command_queue(jcmd))
+            call specific_help(command_queue(jcmd)%args(0))
+            ierr = 0
+          end if
         
+        end do
+      
+        first_step = .false.
       end do
+    else		
+      exec_mode = NORMAL_MODE
+      write(*,*) '--------------------------------------------------'
+      write(*,*) '   Selects restart files for choosen time points'
+      write(*,*) '--------------------------------------------------'
+
+      ! --- Get list of available restart files
+      n_avail=0
+      allocate(available_steps(100000))
+      do istep = 0, 99999
+        if ( rst_hdf5 .ne. 0 ) then
+          write (file_name,'(a, i5.5, a)') 'jorek', istep, '.h5'
+          inquire (file=file_name, exist=file_exists)
+        else
+          write (file_name,'(a, i5.5, a)') 'jorek', istep, '.rst'
+          inquire (file=file_name, exist=file_exists)
+        end if
+
+        if ( file_exists ) then
+          n_avail=n_avail+1					
+          available_steps(n_avail) = istep
+        end if
+      end do
+
+      ! --- Get xtime from the restart file with the highest step number
+      write (file_name,'(a, i5.5)') 'jorek', available_steps(n_avail)
+      call import_restart(node_list, element_list, file_name, rst_format, ierr, .true.)
+      if ( ierr /= 0 ) return
+
+      ! --- Set time unit correctly
+      loop_unit = get_int_setting('loop_unit', ierr)
+      rho_norm       = central_density *1.d20 * central_mass * mass_proton   ! rho_0 = central mass density
+      loop_fact_time = sqrt(MU_zero*rho_norm)
+      if ( loop_unit .eq. SI_UNITS ) then
+        loop_min_time  = loop_min_time/loop_fact_time
+        loop_max_time  = loop_max_time/loop_fact_time
+        loop_inc_time  = loop_inc_time/loop_fact_time
+      end if
+
+      ! --- Find for each selected time a corresponding step number
+      if (loop_max_time .gt. xtime(index_start)) then
+        loop_max_time = xtime(index_start)
+      end if
+      if (loop_min_time .gt. xtime(index_start)) then
+        loop_min_time = xtime(index_start)
+      end if
+      n_time   = int(((loop_max_time-loop_min_time)/loop_inc_time))+1
+      n_select = 0 
+      allocate(selected_steps(n_time))
+      do itime = 1,n_time
+        time_loop = loop_min_time+loop_inc_time*(itime-1) ! requested time
+        ! --- Go through list of available restart files
+        !     and compare their xtime with time_loop
+        do iavail = 1, n_avail
+          if ( iavail .gt. 1 ) then
+            if ( abs(xtime(available_steps(iavail)) - time_loop) .gt.  &
+                 abs(xtime(temp_select)             - time_loop)) then
+              exit
+            end if
+          end if
+          temp_select = available_steps(iavail)
+        end do
+        write(*,'(a,f13.6,a,f13.6,a)') 'Requested time point: ', time_loop,' (',time_loop*loop_fact_Time*1000,' ms)'
+
+        if ( n_select .gt. 0 .and. ANY( selected_steps .eq. temp_select )) then
+          write(*,*) 'Ignored, Step number already selected!'
+        else
+          n_select                 = n_select+1
+          selected_steps(n_select) = temp_select
+
+          write(*,'(a, i5.5, a,f13.6)') 'Selected Step: ', selected_steps(n_select),&
+          ' at t=',xtime(selected_steps(n_select))
+          write(*,'(a,f13.6,a)') '                        (=',xtime(selected_steps(n_select))*loop_fact_Time*1000,' ms)'
+        end if
+
+        write(*,*) '****************************'
+      end do
+
+      loop_min_step=selected_steps(1)
+      loop_max_step=selected_steps(n_select)
+
+      write(*,*) '--------------------------------------------------'
+
+      do istep = 1, n_select
+        call load_step( selected_steps(istep), load_error)
+        if ( load_error /= 0 ) cycle
       
-      first_step = .false.
-    end do
-    
+        do jcmd = 1, n_queued_commands
+        
+          call exec_command(command_queue(jcmd), first_step, ierr)  
+          if ( ierr /= 0 ) then
+            write(*,*) 'ERROR executing the following command (ignoring it):'
+            call print_command(command_queue(jcmd))
+            call specific_help(command_queue(jcmd)%args(0))
+            ierr = 0
+          end if
+        
+        end do
+      
+        first_step = .false.
+      end do
+    end if 
+
+
     do jcmd = 1, n_queued_commands
       call finalize_command(command_queue(jcmd), first_step, ierr)
     end do
@@ -783,15 +975,22 @@ module exec_commands
   
   !> Auxilliary routine for file name construction.
   character(len=64) function step_range_string(min_step, max_step)
-    
+
     integer, intent(in) :: min_step, max_step
-    
-    if ( min_step /= max_step ) then
-      write(step_range_string,'(a,i5.5,a,i5.5)') '_s', min_step, '..', max_step
+    character(len=2)     :: prefix
+
+    if ( exec_mode .eq. LOOP_S_MODE )  then 
+      prefix='_s'
     else
-      write(step_range_string,'(a,i5.5)') '_s', min_step
+      prefix='_t'
     end if
-    
+
+    if ( min_step /= max_step ) then
+      write(step_range_string,'(a,i5.5,a,i5.5)') prefix, min_step, '..', max_step
+    else
+      write(step_range_string,'(a,i5.5)') prefix, min_step
+    end if
+
   end function step_range_string
   
   
@@ -1004,7 +1203,7 @@ module exec_commands
       write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',  &
         trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
       
-      call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),             &
+      call eval_expr(ES, units, expr_list, pol_pos(node_list,element_list,ES,R=R,Z=Z),             &
         tor_pos(phi=phi), result, ierr)
       
       call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
@@ -1014,7 +1213,7 @@ module exec_commands
       write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)),        &
         '_toroidally-averaged', trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
       
-      call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),             &
+      call eval_expr(ES, units, expr_list, pol_pos(node_list,element_list,ES,R=R,Z=Z),             &
         tor_pos(nphi=4*n_plane), result, ierr)
       
       call apply_four_filter(result, simple_filter(n=0), expr_list%n_coord, ierr)
@@ -1022,7 +1221,7 @@ module exec_commands
       
     end if
     
-    call write_ascii_0d(ierr, eq, expr_list, res0d, FORM_TABLE, header=first_step,                 &
+    call write_ascii_0d(ierr, ES, expr_list, res0d, FORM_TABLE, header=first_step,                 &
       filename=trim(filename), append=(.not.first_step), blanks=.false.)
     
   end subroutine point
@@ -1073,7 +1272,7 @@ module exec_commands
     
     write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call midplane_profile(node_list, element_list, eq, units, expr_list, res1d, side, npts,        &
+    call midplane_profile(node_list, element_list, ES, units, expr_list, res1d, side, npts,        &
       ierr, filename=trim(filename), append=(.not.first_step), comment=trim(comment) )
     
   end subroutine midplane
@@ -1117,7 +1316,7 @@ module exec_commands
     
     write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call pol_lineout(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart, Zstart,    &
+    call pol_lineout(node_list, element_list, ES, units, expr_list, res1d, phi, Rstart, Zstart,    &
       Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
     
   end subroutine pol_line
@@ -1161,7 +1360,7 @@ module exec_commands
 
     write(comment,'(a,i6.6)') 'time step #', index_now
 
-    call int_along_pol_lineout(node_list, element_list, eq, units, expr_list, sum, phi, Rstart, Zstart,    &
+    call int_along_pol_lineout(node_list, element_list, ES, units, expr_list, sum, phi, Rstart, Zstart,    &
       Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
 
   end subroutine int_along_pol_line
@@ -1203,7 +1402,7 @@ module exec_commands
     
     write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call tor_lineout(node_list, element_list, eq, units, expr_list, res1d, phi_start, phi_end, R,  &
+    call tor_lineout(node_list, element_list, ES, units, expr_list, res1d, phi_start, phi_end, R,  &
       Z, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
     
   end subroutine tor_line
@@ -1250,12 +1449,12 @@ module exec_commands
       
     comment = 'Output produced by jorek2_postproc command "rectangle"'
     
-    call eval_expr(eq, units, expr_list,                                                           &
-       pol_pos(node_list,element_list,eq,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
+    call eval_expr(ES, units, expr_list,                                                           &
+       pol_pos(node_list,element_list,ES,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
        tor_pos(phi=phi), result, ierr)
     
     call reduce_result_to_2d(ierr, result, res2d, i1=1)
-    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename))
+    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename), comment=trim(comment))
     
     if ( allocated(result) ) deallocate(result)
     if ( allocated(res2d ) ) deallocate(res2d )
@@ -1265,7 +1464,62 @@ module exec_commands
   
   
   
-  
+
+  !> Expressions in a rectangular area.
+  subroutine rectangular_torus(command, first_step, ierr)
+    
+    use mod_position, only: pol_pos, tor_pos
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8  :: Rmin, Rmax, Zmin, Zmax, phimin, phimax
+    integer :: nR, nZ, nphi, units
+    character(len=1024) :: filename, comment
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,9);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    
+    ! --- Preparation
+    Rmin      = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    Rmax      = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
+    nR        = to_int  (command%args(3), ierr); if ( ierr /= 0 ) return
+    Zmin      = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
+    Zmax      = to_float(command%args(5), ierr); if ( ierr /= 0 ) return
+    nZ        = to_int  (command%args(6), ierr); if ( ierr /= 0 ) return
+    phimin    = to_float(command%args(7), ierr); if ( ierr /= 0 ) return
+    phimax    = to_float(command%args(8), ierr); if ( ierr /= 0 ) return
+    nphi      = to_float(command%args(9), ierr); if ( ierr /= 0 ) return
+    units     = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
+    
+    write(filename,'(15a)') DIR, 'exprs_Rmin', trim(real2str(Rmin)), '_Rmax', trim(real2str(Rmax)),&
+                                      '_Zmin', trim(real2str(Zmin)), '_Zmax', trim(real2str(Zmax)),&
+                              '_phimin', trim(real2str(phimin)), '_phimax', trim(real2str(phimax)),&
+      trim(step_range_string(index_now,index_now)), '.h5'
+      
+    comment = 'Output produced by jorek2_postproc command "rectangular_torus"'
+    
+    call eval_expr(ES, units, expr_list,                                                           &
+       pol_pos(node_list,element_list,ES,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
+       tor_pos(phistart=phimin, phiend=phimax, nphi=nphi), result, ierr)
+    
+    call write_hdf5_3d(ierr, expr_list, result, trim(filename), comment=trim(comment))
+    
+    if ( allocated(result) ) deallocate(result)
+    
+  end subroutine rectangular_torus
+
+
+
+
+
   !> Toroidally and poloidally averaged expressions.
   subroutine average(command, first_step, ierr)
     
@@ -1295,17 +1549,17 @@ module exec_commands
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     ! ### is nTht and nphi really chosen well???
-    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=max(150,6*n_plane),                &
+    pol_pos_list = pol_pos(node_list, element_list, ES, nPsiN=npts, nTht=max(150,6*n_plane),                &
       nsmallsteps=nsmall)
     tor_pos_list = tor_pos(nphi=max(n_plane,2))
     
-    call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    call eval_expr(ES, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)
     call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
     
     write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                     &
+    call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,                     &
       filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
     
   end subroutine average
@@ -1354,13 +1608,90 @@ module exec_commands
         'Z_lim               Psi_lim             Psi_bnd'
     end if
     
-    write(i_file,'(es20.13,33f20.16)') time_now, eq%R_axis, eq%Z_axis, eq%Psi_axis, eq%R_xpoint(1),&
-      eq%Z_xpoint(1), eq%Psi_xpoint(1), eq%R_xpoint(2), eq%Z_xpoint(2), eq%Psi_xpoint(2), eq%R_lim,&
-      eq%Z_lim, eq%Psi_lim, eq%Psi_bnd
+    write(i_file,'(es20.13,33f20.16)') time_now, ES%R_axis, ES%Z_axis, ES%Psi_axis, ES%R_xpoint(1),&
+      ES%Z_xpoint(1), ES%Psi_xpoint(1), ES%R_xpoint(2), ES%Z_xpoint(2), ES%Psi_xpoint(2), ES%R_lim,&
+      ES%Z_lim, ES%Psi_lim, ES%Psi_bnd
     
     close(i_file)
     
   end subroutine equil_params
+
+
+
+
+  
+  !> Write out SPI related information
+  subroutine spi_state(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: units, i_file, i
+    character(len=1024) :: filename, status, access
+    real*8 :: R_av, Z_av, phi_av, shard_atoms_left, atoms_left, abl_tot, xx, yy, zz
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    
+    write(filename,'(4a)') DIR, 'spi', trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=133
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    xx         = 0.d0
+    yy         = 0.d0
+    zz         = 0.d0
+    atoms_left = 0.d0
+    abl_tot    = 0.d0
+    
+    do i = 1, n_SPI
+      shard_atoms_left = 4./3.*PI*pellets(i)%spi_radius**3 * pellet_density * 1.d20
+      
+      atoms_left = atoms_left + shard_atoms_left
+      
+      xx = xx + pellets(i)%spi_R * cos(pellets(i)%spi_phi) * shard_atoms_left
+      yy = yy - pellets(i)%spi_R * sin(pellets(i)%spi_phi) * shard_atoms_left
+      zz = zz + pellets(i)%spi_Z                           * shard_atoms_left
+      
+      abl_tot = abl_tot + pellets(i)%spi_abl
+    end do
+    
+    if ( atoms_left /= 0.d0 ) then
+      R_av   = sqrt( xx**2 + yy**2 ) / atoms_left
+      Z_av   = Z_av                  / atoms_left
+      phi_av = -atan2( yy, xx )      / atoms_left
+      if ( phi_av < 0.d0 ) phi_av = phi_av + 2.d0*PI
+    else
+      R_av   = 0.d0
+      Z_av   = 0.d0
+      phi_av = 0.d0
+    end if
+    
+    if ( first_step ) then
+      write(i_file,'(a)') '# time                R_average           Z_average           '//       &
+        'phi_average         atoms_left          ablation_rate'
+    end if
+    
+    write(i_file,'(es20.13,3f20.16,3es20.12)') time_now, R_av, Z_av, phi_av, atoms_left, abl_tot
+    
+    close(i_file)
+    
+  end subroutine spi_state
 
 
 
@@ -1467,8 +1798,8 @@ module exec_commands
       fact_ne      = 1.d0
     end if
     
-    call integrals(node_list, element_list, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint,        &
-      eq%Z_xpoint, eq%psi_xpoint, eq%psi_lim, aminor, Bgeo, current, beta_p, beta_t, beta_n,       &
+    call integrals(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint,        &
+      ES%Z_xpoint, ES%psi_xpoint, ES%psi_lim, aminor, Bgeo, current, beta_p, beta_t, beta_n,       &
       density, density_in, density_out, pressure, pressure_in, pressure_out, heat_src_in,          &
       heat_src_out, part_src_in, part_src_out)
     
@@ -1550,14 +1881,11 @@ module exec_commands
  
    call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)        
 
-   call write_ascii_0d(ierr, eq, expr_list, res, FORM_TABLE, header=.false.,                   &
+   call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
      filename=filename, append=.true., blanks=.false.)
    
   end subroutine int3D
   
-  
- 
-
 
   !> Output current density normal to the jorek boundary as a function of Rbnd
   !! and Zbnd
@@ -1631,11 +1959,11 @@ module exec_commands
     surface_list%n_psi = npts
     allocate( surface_list%psi_values(npts), q(npts), rad(npts) )
     do k = 1, npts
-      surface_list%psi_values(k) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * real(k-1)/real(npts-1)
+      surface_list%psi_values(k) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * real(k-1)/real(npts-1)
     end do
     call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
-    call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
-      eq%Z_xpoint, q, rad)
+    call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
+      ES%Z_xpoint, q, rad)
     
     ! --- Write out q-profile versus Psi_n
     tmp_expr_list%n_expr = 0
@@ -1645,10 +1973,10 @@ module exec_commands
     allocate(res1d(npts-2,2))
     do k2 = 1, npts-2
       k = k2 + 1 ! to avoid first and last point of q-profile which often is bad
-      res1d(k2,:) = (/ get_psi_n(eq, surface_list%psi_values(k)), q(k) /)
+      res1d(k2,:) = (/ get_psi_n(surface_list%psi_values(k)) , q(k) /)
     end do
     
-    call write_ascii_1d(ierr, eq, tmp_expr_list, res1d, FORM_TABLE, header=.true.,                 &
+    call write_ascii_1d(ierr, ES, tmp_expr_list, res1d, FORM_TABLE, header=.true.,                 &
       filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
     
     ! --- Clean up.
@@ -1707,12 +2035,12 @@ module exec_commands
     ! --- Find flux surfaces and determine q-profile
     surface_list%n_psi = 2 
     allocate( surface_list%psi_values(2) )
-    surface_list%psi_values(1) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * 0.2d0
-    surface_list%psi_values(2) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * psin
+    surface_list%psi_values(1) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.2d0
+    surface_list%psi_values(2) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * psin
 
     call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
-    call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
-      eq%Z_xpoint, q_psin, rad)
+    call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
+      ES%Z_xpoint, q_psin, rad)
     
     write(i_file,'(2es20.13)') time_now, q_psin(2) 
     
@@ -1860,7 +2188,7 @@ module exec_commands
     npts = 1
     surface_list%n_psi = 1
     allocate( surface_list%psi_values(1) )
-    surface_list%psi_values(1) = eq%psi_bnd
+    surface_list%psi_values(1) = ES%psi_bnd
     call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     
     ! --- Write out flux surfaces
@@ -1957,7 +2285,7 @@ module exec_commands
     write(*,*) 'rad_range    =', radial_range
     write(*,*) 'n_thetastar  =', n_thetastar
     
-    call fourier_analysis(node_list, element_list, eq, units, expr_list, cp, npts, ierr,           &
+    call fourier_analysis(node_list, element_list, ES, units, expr_list, cp, npts, ierr,           &
       filename_start, OUTP_ABS_VALUE, nsmallsteps=nsmall, nmaxsteps=nmaxstep, deltaphi=delta_phi,  &
       rad_range=radial_range, nTht=n_thetastar)
     
@@ -2018,12 +2346,12 @@ module exec_commands
     
     ! --- Calculate field components.
     if ( first_step ) then ! (Positions remain unchanged for all time steps, compute only once)
-      call create_pol_pos(pol_pos_list, ierr, node_list, element_list, eq, Rmin=R_min, Rmax=R_max2,&
+      call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, Rmin=R_min, Rmax=R_max2,&
         nR=n_R, Zmin=Z_min, Zmax=Z_max2, nZ=n_Z)
       tor_pos_list  = tor_pos(phistart=0.d0, phiend=phi_max2, nphi=n_phi)
       tmp_expr_list = exprs((/'B_tor', 'B_R  ', 'B_Z  '/), 3)
     end if
-    call eval_expr(eq, JOREK_UNITS, tmp_expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    call eval_expr(ES, JOREK_UNITS, tmp_expr_list, pol_pos_list, tor_pos_list, result, ierr)
     if ( fact_btor /= 1.d0 ) result(:,:,:,1  ) = result(:,:,:,1  ) * fact_btor
     if ( fact_bpol /= 1.d0 ) result(:,:,:,2:3) = result(:,:,:,2:3) * fact_bpol
     allocate(field(3,0:n_R-1,0:n_Z-1,0:n_phi-1))
@@ -2094,6 +2422,46 @@ module exec_commands
     call set_setting('units', '1', ierr)
     
   end subroutine select_si_units
+  
+  
+  
+  
+  
+  !> Select JOREK normalized units in for time loop.
+  subroutine select_loop_jorek_units(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0); if ( ierr /= 0 ) return
+    
+    call set_setting('loop_unit', '0', ierr)
+    
+  end subroutine select_loop_jorek_units
+  
+  
+  
+  
+  
+  !> Select SI units in for time loop.
+  subroutine select_loop_si_units(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0); if ( ierr /= 0 ) return
+    
+    call set_setting('loop_unit', '1', ierr)
+    
+  end subroutine select_loop_si_units
   
   
   

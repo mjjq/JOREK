@@ -1,10 +1,10 @@
-module mgi_module
+module mod_injection_source
 
   use constants
 
-  real*8 :: total_n_particles_inj
-  real*8 :: total_n_particles
-  real*8 :: total_n_particles_inj_all
+  real*8 :: total_n_particles_inj     = 0.
+  real*8 :: total_n_particles         = 0.
+  real*8 :: total_n_particles_inj_all = 0.
 
   contains 
 
@@ -28,7 +28,7 @@ module mgi_module
 
 
 
-  subroutine mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,  &
+  subroutine inj_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,  &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,                  &
                         JET_MGI,ASDEX_MGI,central_density,central_mass)
 
@@ -114,7 +114,7 @@ module mgi_module
         mass_gas = A_gas*MASS_PROTON
         c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(5.d0/3.d0))
       case default
-        write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
+        write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
         write(*,*) '=> We assume the gas is D2.'
         n_gas  = 5
         A_gas  = 4.
@@ -259,41 +259,7 @@ module mgi_module
 
 
   return
-  end subroutine mgi_source
-
-
-  subroutine update_mgi(my_id,node_list,element_list)
-
-  !=================================================================================================
-  ! This routine is used to calculate the total number of neutral particles injected (in nb part/s)
-  ! from the start of the simulation and for each timestep.
-  ! It also calculate to total number of neutral particles in the plasma.
-  !=================================================================================================
-    use data_structure
-    use phys_module
-    use mpi_mod
-
-    implicit none
-
-    type (type_node_list), intent(in)    :: node_list
-    type (type_element_list), intent(in) :: element_list
-
-    integer, intent(in) :: my_id 
-    integer :: ierr
-    real*8  :: density, density_in, density_out, pressure, pressure_in,pressure_out
-
-    call Integrals_3D(my_id, node_list, element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
-
-    total_n_particles_inj_all = total_n_particles_inj_all + total_n_particles_inj*tstep*sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
-
-    if (my_id .eq. 0) then
-      write(*,*) 'total neutrals particles injected per second =', total_n_particles_inj
-      write(*,*) 'total neutrals particles into the plasma =', total_n_particles
-      write(*,*) 'total neutrals particles injected since the start of the simulation = ', total_n_particles_inj_all
-      !write(*,*) 'Check of density conservation'
-    endif
-
-  end subroutine update_mgi
+  end subroutine inj_source
 
   subroutine init_imp_adas(my_id)
 
@@ -415,4 +381,4 @@ module mgi_module
 
   end subroutine radiation_function
 
-end module mgi_module
+end module mod_injection_source

@@ -200,7 +200,7 @@ contains
 !                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max)
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,      & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
-                            i_tor_min, i_tor_max, n_glob1, nz_glob1, ndof, A_local, rhs_local, irn_local, jcn_local, & 
+                            i_tor_min, i_tor_max, n_glob1, nz_glob1, ndof, A_local, rhs_glob_tmp, irn_local, jcn_local, & 
                             ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, direct_construction)
   
   use mumps_module 
@@ -253,7 +253,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer, intent(in) :: ndof 
   logical, intent(in) :: direct_construction
   real*8,  intent(in), pointer :: A_local(:)
-  real*8,  intent(in), pointer :: rhs_local(:)
+  real*8,  intent(in), pointer :: rhs_glob_tmp(:)
   integer, intent(in), pointer :: irn_local(:)
   integer, intent(in), pointer :: jcn_local(:)
   integer, intent(in), pointer :: ijA_index_tmp(:,:), ijA_size_tmp(:), irn_jcn_tmp(:,:)
@@ -262,7 +262,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   type (type_node)                  :: nodes(n_vertex_max)
   type (type_element)               :: element_father
   type (type_node)                  :: nodes_father(n_vertex_max)
-  !real*8,                  pointer  :: rhs_loc(:)
+  real*8,                  pointer  :: rhs_local(:)
   integer                           :: i_bnd, i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
   integer                           :: index_node1, index_node2, i_order, k_order, ielm, ierr
   integer                           :: ijA_position, index_min_loc, index_max_loc
@@ -327,17 +327,18 @@ if(.not. direct_construction) then
   enddo
 
   ! --- Memory allocation
-  if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
-  call tr_allocate (rhs_glob,1,ndof,"rhs_glob",CAT_DMATRIX)
+  !if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
+  !call tr_allocate (rhs_glob,1,ndof,"rhs_glob",CAT_DMATRIX)
 
   ! --- Initialise internal variables
-  RHS_glob = 0.d0
+  !RHS_glob = 0.d0
   difference_found = .false.
   rhs_problem(:)   = .false.
   elm_problem(:,:) = .false.
 
 endif
-
+ call tr_allocatep(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
+ rhs_local  = 0.d0
   write(*,*) 'my_id, n_glob, ndof :', my_id, n_glob1, ndof
   
   
@@ -345,7 +346,7 @@ endif
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,local_elms,element_list,node_list,          &
   !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,direct_construction,       &
-  !$omp          A_glob_harm, irn_glob_harm, jcn_glob_harm, rhs_glob_harm, A_local, rhs_local, irn_local, jcn_local,      &
+  !$omp          A_glob_harm, irn_glob_harm, jcn_glob_harm, rhs_glob_harm, A_local, rhs_local, rhs_glob_tmp, irn_local, jcn_local,      &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
   !$omp          ijA_index_harm, ijA_size_harm, irn_jcn_harm, ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, &
   !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, mumps_par, ijA_index, ijA_size, irn_jcn) &
@@ -629,42 +630,6 @@ if(.not.direct_construction) then
     call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
                                   resistive_wall, index_min, index_max, rhs_local, tstep, index_now)
   end if
-
-#ifdef NORMTRACE
-  ! --- For debugging purpose
-  call MPI_Reduce(RHS_local,RHS_glob,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-  call tr_locvnorms("cm_Rhs",RHS_glob,ndof)
-  if (my_id .eq. 0) then
-     write(fname,'(A,I6.6)')"rhs",index_now
-     call tr_vdump(fname,RHS_glob,ndof)
-  end if
-#endif
-
-  ! --- Form a global rhs from the rhss of the individual mpi threads.
-  call MPI_Reduce(RHS_local,RHS_glob,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-
-  call tr_deallocatep(RHS_local,"RHS_local",CAT_DMATRIX)
-
-  ! --- For debugging purpose
-!  if (my_id .eq. 0) then
-!     write(fname,'(A,I6.6)')"rhsbc",index_now
-!     call tr_vdump(fname,RHS_glob,ndof)
-!  end if
-
-  ! --- Memory tracking
-  call tr_locvnorms("cm_BCRhs",RHS_glob,ndof)
-  call tr_debug_writei("ndof",ndof)
-  !write(string, '(A8,I2.2,A1)') "matrice_",my_id,"\0"
-  !open(unit=9, file=string, STATUS='replace')
-  !do k = 1, nz_glob
-  !   if (A_glob(k) /= 0.0_8) &
-  !        write(9, '(I8.8,1X,I8.8,1X,E20.12)'), jcn_glob(k), irn_glob(k), A_glob(k)
-  !end do
-  !close(unit=9)
-
-  ! --- Timing
-  call r3_info_end(r3_info_index_0)
-  call tr_print_memsize("EndConstM")
   
 ! --- Summarise element_matrix comparison
 #ifdef COMPARE_ELEMENT_MATRIX
@@ -691,8 +656,48 @@ if(.not.direct_construction) then
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   if ( difference_found ) stop
 #endif
+
+#ifdef NORMTRACE
+  ! --- For debugging purpose
+  call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+  call tr_locvnorms("cm_Rhs",RHS_glob_tmp,ndof)
+  if (my_id .eq. 0) then
+     write(fname,'(A,I6.6)')"rhs",index_now
+     call tr_vdump(fname,RHS_glob_tmp,ndof)
+  end if
+#endif
+  call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+
+else 
+  ! --- Form a global rhs from the rhss of the individual mpi threads.
+  call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_N,ierr)
+
 endif 
- 
+
+  call tr_deallocatep(RHS_local,"RHS_local",CAT_DMATRIX)
+
+  ! --- For debugging purpose
+!  if (my_id .eq. 0) then
+!     write(fname,'(A,I6.6)')"rhsbc",index_now
+!     call tr_vdump(fname,RHS_glob,ndof)
+!  end if
+
+  ! --- Memory tracking
+  call tr_locvnorms("cm_BCRhs",RHS_glob_tmp,ndof)
+  call tr_debug_writei("ndof",ndof)
+  !write(string, '(A8,I2.2,A1)') "matrice_",my_id,"\0"
+  !open(unit=9, file=string, STATUS='replace')
+  !do k = 1, nz_glob
+  !   if (A_glob(k) /= 0.0_8) &
+  !        write(9, '(I8.8,1X,I8.8,1X,E20.12)'), jcn_glob(k), irn_glob(k), A_glob(k)
+  !end do
+  !close(unit=9)
+
+  ! --- Timing
+  call r3_info_end(r3_info_index_0)
+  call tr_print_memsize("EndConstM")
+
+
 end subroutine construct_matrix
 
 

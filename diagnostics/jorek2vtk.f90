@@ -1231,7 +1231,6 @@ enddo  ! n_elements
 
 
 #endif /*(JOREK_MODEL == 500)*/
->>>>>>> origin/feature/SPImodel501
 
 
 if (SI_units) then
@@ -1300,69 +1299,69 @@ if (SI_units) then
 
 #if (JOREK_MODEL == 500)
 
-  if (include_radiation) then
-
-    coef_ion_3 = 27.2d0*EL_CHG*MU_zero*central_density*1.d20
-    coef_ion_2 = 0.232d0
-    coef_ion_1 = 0.2917d-13 !(MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
-    S_ion_puiss = 3.9d-1
-
-    ksiion = ksi_ion * central_density * 1.d20
-
-    T_real8 = scalars(i,6)*1.e3*2.*EL_CHG*MU_zero*(central_density * 1.d20)
-    ! ======= T_real8 in JOREK units
-
-    Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
-
-    T_rad = corr_neg_temp(T_real8,(/1.d-2,1.d-1/))/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
-
-    Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
-
-    coef_rad_1 = 1.d0 !2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
-
-    LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
-
-    LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0))  &
-                                      -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                      -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
-
-    eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0)
-
-       scalars(i,s_radiation+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
-                                           * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T
-
-       scalars(i,s_radiation+2) = scalars(i,5)* 1.d20 * scalars(i,8) * 1.d20 * LradDrays_T
-
-       scalars(i,s_radiation+3) = LradDcont_T * (scalars(i,5)*1.d20)**2.d0
-
-       scalars(i,s_radiation+4) = eta_Sp * (1.d6*scalars(i,3))**2.d0
-
- !--------------------------------------------------------
-   ! --- Radiation from background impurity
+    if (include_radiation) then
+  
+      coef_ion_3 = 27.2d0*EL_CHG*MU_zero*central_density*1.d20
+      coef_ion_2 = 0.232d0
+      coef_ion_1 = 0.2917d-13 !(MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
+      S_ion_puiss = 3.9d-1
+  
+      ksiion = ksi_ion * central_density * 1.d20
+  
+      T_real8 = scalars(i,6)*1.e3*2.*EL_CHG*MU_zero*(central_density * 1.d20)
+      ! ======= T_real8 in JOREK units
+  
+      Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
+  
+      T_rad = corr_neg_temp(T_real8,(/1.d-2,1.d-1/))/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
+  
+      Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
+  
+      coef_rad_1 = 1.d0 !2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
+  
+      LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
+  
+      LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0))  &
+                                        -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                        -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+  
+      eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0)
+  
+         scalars(i,s_radiation+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
+                                             * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T
+  
+         scalars(i,s_radiation+2) = scalars(i,5)* 1.d20 * scalars(i,8) * 1.d20 * LradDrays_T
+  
+         scalars(i,s_radiation+3) = LradDcont_T * (scalars(i,5)*1.d20)**2.d0
+  
+         scalars(i,s_radiation+4) = eta_Sp * (1.d6*scalars(i,3))**2.d0
+  
    !--------------------------------------------------------
-
-    Arad_bg = 2.4d-31
-    Brad_bg = 20.
-    Crad_bg = 0.8
-
-    frad_bg = nimp_bg * Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
-    dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
-                   *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
-                   *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
-    scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * frad_bg
-
-  endif
+     ! --- Radiation from background impurity
+     !--------------------------------------------------------
+  
+      Arad_bg = 2.4d-31
+      Brad_bg = 20.
+      Crad_bg = 0.8
+  
+      frad_bg = nimp_bg * Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+  
+      dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
+                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
+                     *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+  
+      scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * frad_bg
+  
+    endif
 #endif
 
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
-  if (include_radiation) then
-   scalars(i,s_radiation+1) = scalars(i,s_radiation+1)/(K_BOLTZ*MU_ZERO)
-   scalars(i,s_radiation+2) = scalars(i,s_radiation+2)/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)
-   scalars(i,s_radiation+3) = scalars(i,s_radiation+3)/(2.d0/3.d0*((central_mass*MASS_PROTON*central_density*1.d20)**0.5)*(MU_ZERO**1.5)) 
-   scalars(i,s_radiation+4) = scalars(i,s_radiation+4)
-  end if
+    if (include_radiation) then
+     scalars(i,s_radiation+1) = scalars(i,s_radiation+1)/(K_BOLTZ*MU_ZERO)
+     scalars(i,s_radiation+2) = scalars(i,s_radiation+2)/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)
+     scalars(i,s_radiation+3) = scalars(i,s_radiation+3)/(2.d0/3.d0*((central_mass*MASS_PROTON*central_density*1.d20)**0.5)*(MU_ZERO**1.5)) 
+     scalars(i,s_radiation+4) = scalars(i,s_radiation+4)
+    end if
 #endif /*(JOREK_MODEL >= 500)*/
 
   enddo  ! nnos

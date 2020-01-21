@@ -256,7 +256,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   real*8,  intent(in), pointer :: rhs_local(:)
   integer, intent(in), pointer :: irn_local(:)
   integer, intent(in), pointer :: jcn_local(:)
-  integer, intent(in), pointer  :: ijA_index_tmp(:,:), ijA_size_tmp(:), irn_jcn_tmp(:,:)
+  integer, intent(in), pointer :: ijA_index_tmp(:,:), ijA_size_tmp(:), irn_jcn_tmp(:,:)
   !--- Internal variables
   type (type_element)               :: element
   type (type_node)                  :: nodes(n_vertex_max)
@@ -544,36 +544,31 @@ endif
 
               rhs_local(index_large_i+j) = rhs_local(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
 
-            end do
+            enddo
 
-              do k=1,n_vertex_max
+            do k=1,n_vertex_max
 
-                knode = node_out(k)
+              knode = node_out(k)
 
-                do k_order = 1, n_order+1
+              do k_order = 1, n_order+1
 
-                  index_node2 = node_list%node(knode)%index(k_order)
+                index_node2 = node_list%node(knode)%index(k_order)
 
-                  index_large_k = (i_tor_max - i_tor_min + 1) * n_var * (index_node2 - 1)
+                index_large_k = (i_tor_max - i_tor_min + 1) * n_var * (index_node2 - 1)
    
-                 call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
+                call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
                                        ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp)
    
-                  !if(.not. direct_construction) then
-                  ! call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
-                  !                     ijA_index, ijA_size, irn_jcn)
-                  !else
-                  ! call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
-                  !                     ijA_index_harm, ijA_size_harm, irn_jcn_harm)
-                  !endif
 
                 thread_struct(omp_tid)%synch_buff(:) = 0.d0
                 do j = 1, n_var * (i_tor_max - i_tor_min + 1)
-                  index_ij = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) + (i_tor_max - i_tor_min + 1) * n_var * (i_order-1) + j   ! index in the ELM matrix
+                  index_ij = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) +   & 
+                              (i_tor_max - i_tor_min + 1) * n_var * (i_order-1) + j   ! index in the ELM matrix
 
                   do l = 1, n_var * (i_tor_max - i_tor_min + 1)
 
-                    index_kl = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (k-1) + (i_tor_max - i_tor_min + 1) * n_var * (k_order-1) + l   ! index in the ELM matrix
+                    index_kl = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (k-1) + &  
+                               (i_tor_max - i_tor_min + 1) * n_var * (k_order-1) + l   ! index in the ELM matrix
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var*(i_tor_max - i_tor_min + 1) + l
 
@@ -609,7 +604,6 @@ endif
   !$omp end parallel
 
 
-if(direct_construction) then
 
   print*, 'my_id, my_id_n, my_id_master :', my_id, my_id_n, my_id_master
  
@@ -627,7 +621,8 @@ if(direct_construction) then
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_local,nz_glob1)
 
-else
+
+if(.not.direct_construction) then 
 
   ! --- Add vacuum response (boundary integral) for free boundary computations
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
@@ -644,18 +639,6 @@ else
      call tr_vdump(fname,RHS_glob,ndof)
   end if
 #endif
-
-  ! --- Memory tracking
-  call tr_vnorms("cm_A_bef_bc",A_local,nz_glob1)
-
-  ! --- Apply boundary conditions.
-  call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms, &
-                           index_min, index_max, rhs_local, xpoint2, xcase2, R_axis, Z_axis, psi_axis,& 
-                           psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false., ijA_index_tmp,    & 
-                           ijA_size_tmp, irn_jcn_tmp, irn_local, jcn_local, A_local, i_tor_min, i_tor_max )
-
-  ! --- Memory tracking
-  call tr_vnorms("cm_A_aft_bc",A_local,nz_glob1)
 
   ! --- Form a global rhs from the rhss of the individual mpi threads.
   call MPI_Reduce(RHS_local,RHS_glob,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)

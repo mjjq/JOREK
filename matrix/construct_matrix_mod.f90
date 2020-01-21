@@ -200,7 +200,8 @@ contains
 !                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max)
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,      & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
-                            i_tor_min, i_tor_max, n_glob1, nz_glob1, ndof, A_local, rhs_local, irn_local, jcn_local, direct_construction)
+                            i_tor_min, i_tor_max, n_glob1, nz_glob1, ndof, A_local, rhs_local, irn_local, jcn_local, & 
+                            ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, direct_construction)
   
   use mumps_module 
   use tr_module 
@@ -255,7 +256,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   real*8,  intent(in), pointer :: rhs_local(:)
   integer, intent(in), pointer :: irn_local(:)
   integer, intent(in), pointer :: jcn_local(:)
-
+  integer, intent(in), pointer  :: ijA_index_tmp(:,:), ijA_size_tmp(:), irn_jcn_tmp(:,:)
   !--- Internal variables
   type (type_element)               :: element
   type (type_node)                  :: nodes(n_vertex_max)
@@ -346,7 +347,7 @@ endif
   !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,direct_construction,       &
   !$omp          A_glob_harm, irn_glob_harm, jcn_glob_harm, rhs_glob_harm, A_local, rhs_local, irn_local, jcn_local,      &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
-  !$omp          ijA_index_harm, ijA_size_harm, irn_jcn_harm, &
+  !$omp          ijA_index_harm, ijA_size_harm, irn_jcn_harm, ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, &
   !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, mumps_par, ijA_index, ijA_size, irn_jcn) &
   !$omp   private(ife,ielm,iv,inode,element,nodes,i,inode1,i_order,index_node1,           &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
@@ -554,13 +555,17 @@ endif
                   index_node2 = node_list%node(knode)%index(k_order)
 
                   index_large_k = (i_tor_max - i_tor_min + 1) * n_var * (index_node2 - 1)
-                  if(.not. direct_construction) then
-                   call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
-                                       ijA_index, ijA_size, irn_jcn)
-                  else
-                   call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
-                                       ijA_index_harm, ijA_size_harm, irn_jcn_harm)
-                  endif
+   
+                 call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
+                                       ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp)
+   
+                  !if(.not. direct_construction) then
+                  ! call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
+                  !                     ijA_index, ijA_size, irn_jcn)
+                  !else
+                  ! call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
+                  !                     ijA_index_harm, ijA_size_harm, irn_jcn_harm)
+                  !endif
 
                 thread_struct(omp_tid)%synch_buff(:) = 0.d0
                 do j = 1, n_var * (i_tor_max - i_tor_min + 1)
@@ -616,7 +621,7 @@ if(direct_construction) then
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,  &
                            index_min, index_max,  rhs_local, xpoint2, xcase2, R_axis, Z_axis,    & 
                            psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false.,      & 
-                           ijA_index_harm, ijA_size_harm, irn_jcn_harm, irn_local, jcn_local,& 
+                           ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, irn_local, jcn_local,& 
                            A_local, i_tor_min, i_tor_max )
 
   ! --- Memory tracking
@@ -646,8 +651,8 @@ else
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms, &
                            index_min, index_max, rhs_local, xpoint2, xcase2, R_axis, Z_axis, psi_axis,& 
-                           psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false., ijA_index,    & 
-                           ijA_size, irn_jcn, irn_local, jcn_local, A_local, i_tor_min, i_tor_max )
+                           psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false., ijA_index_tmp,    & 
+                           ijA_size_tmp, irn_jcn_tmp, irn_local, jcn_local, A_local, i_tor_min, i_tor_max )
 
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_local,nz_glob1)

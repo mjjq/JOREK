@@ -10,6 +10,7 @@ use phys_module
 use pellet_module
 use mpi_mod
 use domains
+use corr_neg
 use equil_info, only : get_psi_n, ES
 !$ use omp_lib
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
@@ -254,7 +255,9 @@ do ife = ife_min, ife_max
         BigR = x_g(ms,mt)
 
         r0     = eq_g(mp,5,ms,mt)
+        r0     = corr_neg_dens1(r0)
         T0     = eq_g(mp,6,ms,mt)
+        T0     = corr_neg_temp1(T0)
         T0e    = eq_g(mp,6,ms,mt) /2.d0
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
@@ -319,7 +322,7 @@ do ife = ife_min, ife_max
 
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                               pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-                              x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt), eq_zTe(ms,mt), central_density, &
+                              x_g(ms,mt),y_g(ms,mt), ps0, phi, r0, T0/2.d0, central_density, &
                               pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)
 
           local_pellet_particles = local_pellet_particles + source_pellet * bigR * xjac * wst * delta_phi

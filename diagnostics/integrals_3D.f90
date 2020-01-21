@@ -149,8 +149,9 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
+!$omp           r0_corr, T0_corr,                                                              &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp           rn0, source_neutral, r0_corr, T0_corr,                                         &
+!$omp           rn0, source_neutral,                                                           &
 #endif
 !$omp           omp_nthreads,omp_tid)
 

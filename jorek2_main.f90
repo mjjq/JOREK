@@ -1086,11 +1086,6 @@ required = 0
         enddo  
       nz_total = disp_array(n_cpu_n) + nz_array(n_cpu_n) 
       endif 
-
-      !--- for debugging
-      !if(my_id_n .eq.0) print*, 'my_id, my_id_n, nz_array', my_id, my_id_n, nz_array  
-      !if(my_id_n .eq.0) print*, 'my_id, my_id_n, disp_array', my_id, my_id_n, disp_array  
-      !if(my_id_n .eq.0) print*, 'my_id, my_id_n, nz_total', my_id, my_id_n, nz_total  
  
       mumps_par%nz = nz_total ! nz_glob_harm ! 
       mumps_par%n  = ndof_glob_harm
@@ -1106,19 +1101,13 @@ required = 0
       if (associated(mumps_par%rhs))  call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
       call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"dh_mumps_par%rhs",CAT_DMATRIX)
 
-      ! --- Initialise internal variables
-      !mumps_par%A   = A_glob_harm
-      !mumps_par%rhs = rhs_glob_harm
-      !mumps_par%irn = irn_glob_harm
-      !mumps_par%jcn = jcn_glob_harm
-
       call MPI_GATHERV(A_glob_harm, nz_glob_harm, MPI_DOUBLE_PRECISION, mumps_par%A, nz_array, disp_array,&
                        MPI_DOUBLE_PRECISION, 0, MPI_COMM_N, ierr)
       call MPI_GATHERV(irn_glob_harm, nz_glob_harm, MPI_INTEGER, mumps_par%irn, nz_array, disp_array,&
                        MPI_INTEGER, 0, MPI_COMM_N, ierr)
       call MPI_GATHERV(jcn_glob_harm, nz_glob_harm, MPI_INTEGER, mumps_par%jcn, nz_array, disp_array,&
                        MPI_INTEGER, 0, MPI_COMM_N, ierr)
-      !call MPI_Reduce(rhs_glob_harm,mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_N,ierr)
+      
       mumps_par%rhs = rhs_glob_harm
 
       !---- for debuging

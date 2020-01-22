@@ -1787,8 +1787,8 @@ endif
    deallocate(rhs)
 #endif
 
-   deallocate(nz_array) !-- psv
-   deallocate(disp_array) !-- psv
+   if ( allocated(nz_array) )   deallocate(nz_array) !-- psv
+   if ( allocated(disp_array) ) deallocate(disp_array) !-- psv
 
  
 #ifdef USE_FFTW

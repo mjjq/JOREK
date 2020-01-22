@@ -10,7 +10,7 @@ module global_distributed_matrix
   
   real*8,  allocatable, target  :: A_glob(:)    !< Distributed global matrix
   real*8,  allocatable, target  :: rhs_glob(:)  !< Distributed global right hand side
-  real*8,  allocatable, target  :: rhs_loc_glob(:)  !< Distributed global right hand side
+ ! real*8,  allocatable, target  :: rhs_loc_glob(:)  !< Distributed global right hand side
   integer, allocatable, target  :: irn_glob(:)  !< Row indices for coordinate format sparse matrix (or CSR)
   integer, allocatable, target  :: jcn_glob(:)  !< Column indices for coordinate format sparse matrix (or CSR)
   integer, allocatable, target  :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) !< contains the structure of the sparse matrix (to fill in CSR format)

@@ -1,4 +1,5 @@
-!> Program to convert a JOREK2 restart file into binary VTK format
+!> Program to find PF coil currents given a coil geometry file (coils_geo.txt) 
+!> The found Icoils try to match the external field of the jorek_restart.h5 plasma
 program jorek2_find_Icoils
 
 use mod_parameters, only: n_var, variable_names
@@ -50,13 +51,10 @@ call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .f
 call read_coils(coils, 'coils_geo.txt')
 
 ! --- Find PF coils currents
-if (find_pf_coil_currents) then
-  if (tokamak_device == 'JET') then
-    call find_Icoils_JET(node_list,element_list,bnd_node_list,bnd_elm_list, coils)
-  else
-    call find_Icoils(node_list,element_list,bnd_node_list,bnd_elm_list, coils)
-  endif
-  stop
+if (tokamak_device == 'JET') then
+  call find_Icoils_JET(node_list,element_list,bnd_node_list,bnd_elm_list, coils)
+else
+  call find_Icoils(node_list,element_list,bnd_node_list,bnd_elm_list, coils)
 endif
 
 end program jorek2_find_Icoils

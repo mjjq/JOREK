@@ -1,4 +1,8 @@
-!> Program to convert a JOREK2 restart file into binary VTK format
+!> Program to calculate psi in an arbitrary set of (R,Z) points
+!> Useful to calculate psi outside the JOREK's domain
+!> It needs a coil geometry file with the proper PF coil currents in
+!> the input file (pf_coils(:)%current)
+!> If you don't know the coil currents use jorek2_find_Icoils
 program jorek2_psi_at_RZ
 
 use mod_parameters, only: n_var, variable_names

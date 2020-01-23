@@ -516,6 +516,16 @@ module mod_plasma_response
 
    call dgesv( numb_coils, 1, A_mat_min, numb_coils, ipiv, RHS_min, numb_coils, info )
    write(*,*) 'info = ', info
+
+   write(*,*) ' '
+   write(*,*) ' Found total coil currents (stored in Icoils_found.txt) '
+
+   open(26,file='Icoils_found.txt',status="replace", position="append", action="write")
+   do i=1, numb_coils
+     write(26,'(1ES18.10)')   RHS_min(i) 
+     write(*, '(1ES18.10)')   RHS_min(i) 
+   enddo
+   close(26)
    
    !----- Compare given and calculated currents
    write(*,*) ' '
@@ -687,13 +697,6 @@ module mod_plasma_response
     B_ext(:,:)  = B_all(:,:) - B_p(:,:) 
     Btan_ext(:) = B_ext(:,1)*v_tan(:,1) +  B_ext(:,2)*v_tan(:,2)  
     
-    !--- Check coils initial guess
-    open(25,file='B_ext.txt',status="replace", position="append", action="write")
-    do i = 1, n_points
-      write(25,'(5ES14.6)') R_vec(i), Z_vec(i), Btan_ext(i), sum(coeff(i,:) * pf_coils(:)%current)
-    enddo
-    close(25)
-    
     Bmax = maxval(abs(Btan_ext))
     !--- Calculate weights for each point
     do i = 1, n_points
@@ -772,30 +775,37 @@ module mod_plasma_response
       enddo
     enddo
 
+   ! --- Solve linear system of equations for minimization 
    call dgesv( n_eq, 1, A_mat_min, n_eq, ipiv, RHS_min, n_eq, info )
    write(*,*) 'info = ', info
    
-   !----- Compare given and calculated currents
+   ! --- Write out found currents
    write(*,*) ' '
-   write(*,*) ' Found circuit currents '
+   write(*,*) ' Found circuit currents (stored in Icircuits_found.txt) '
+
+   open(25,file='Icircuits_found.txt',status="replace", position="append", action="write")
    do i=1, n_eq
-     write(*,'(1ES14.6)') RHS_min(i)
+     write(25,'(1ES18.10)') RHS_min(i)
+     write(*, '(1ES18.10)') RHS_min(i)
    enddo
-   
-   
+   close(25)
+      
    write(*,*) ' '
-   write(*,*) ' Found total coil currents '
+   write(*,*) ' Found total coil currents (stored in Icoils_found.txt) '
+
+   open(26,file='Icoils_found.txt',status="replace", position="append", action="write")
    do i=1, numb_coils
-     I_coils(i) =  sum( alpha(:,i) * RHS_min(:) )
-     write(*,*) I_coils(i)
+     write(26,'(1ES18.10)')sum( alpha(:,i) * RHS_min(:) )
+     write(*, '(1ES18.10)')sum( alpha(:,i) * RHS_min(:) )
    enddo
-   
+   close(26)
+  
    !--- Check coils initial guess
-    open(25,file='B_ext_new.txt',status="replace", position="append", action="write")
-    do i = 1, n_points
-      write(25,'(4ES14.6)') R_vec(i), Z_vec(i), Btan_ext(i),  sum(coeff(i,:) * pf_coils(:)%current) 
-    enddo
-    close(25)
+   open(27,file='B_ext_new.txt',status="replace", position="append", action="write")
+   do i = 1, n_points
+     write(27,'(4ES14.6)') R_vec(i), Z_vec(i), Btan_ext(i),  sum(coeff(i,:) * pf_coils(:)%current) 
+   enddo
+   close(27)
 
   end subroutine find_Icoils_JET
   

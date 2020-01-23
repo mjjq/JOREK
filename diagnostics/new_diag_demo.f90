@@ -8,6 +8,7 @@ program demo
   use mod_new_diag
   use basis_at_gaussian
   use mod_import_restart
+  use equil_info
   
   implicit none
   
@@ -15,7 +16,6 @@ program demo
   type(type_element_list),      pointer :: element_list
   type (type_bnd_element_list), pointer :: bnd_elm_list
   type (type_bnd_node_list),    pointer :: bnd_node_list
-  type(t_equil_state)  :: equil_state
   type(t_pol_pos_list) :: pol_pos_list
   type(t_tor_pos_list) :: tor_pos_list
   type(t_four_filter)  :: filter
@@ -89,13 +89,13 @@ program demo
   my_id = 0
   call initialise_parameters(my_id, "__NO_FILENAME__")
   call det_modes()
-  call import_restart(node_list, element_list, 'jorek_restart',  rst_format, ierr)
+  call import_restart(node_list, element_list, 'jorek_restart',  rst_format, ierr, .true.)
   call initialise_basis()
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
   
   ! --- Initialize the plasma equilibrium data structure
-  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, equil_state)
-  call print_equil_state(equil_state, .false.)
+  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+  call print_equil_state(.false.)
   
   ! --- Initialize the new_diag framework and print some information (.true.)
   call init_new_diag(.true.)
@@ -103,12 +103,12 @@ program demo
   
   
 !  expr_list = exprs((/'R    ', 'Z    ', 'B_R  ', 'B_Z  ', 'B_tor', 'B_abs', 'zj' /), 7, 2)
-!  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state, Rmin=1., Rmax=2.5, nR=20, Zmin=-1.25, Zmax=1.25, &
+!  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, Rmin=1., Rmax=2.5, nR=20, Zmin=-1.25, Zmax=1.25, &
 !    nZ=20)
 !  
 !  call create_tor_pos(tor_pos_list, ierr, nphi=16)
 !  
-!  call eval_expr(equil_state, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+!  call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
 !  
 !  call reduce_result_to_2d(ierr, result, res2d, i1=1)
 !  call write_vtk_2d(ierr, expr_list, res2d, 'test1.vtk', (/1,2/))
@@ -121,10 +121,10 @@ program demo
   
   expr_list = exprs((/'r_minor   ', 'theta_star', 'R         ', 'Z         ', 'B_R       ', &
     'B_Z       ', 'B_tor     ', 'B_abs     '/), 8, 4)
-  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state, nPsiN=60, nTht=120)
+  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, nPsiN=60, nTht=120)
   call create_tor_pos(tor_pos_list, ierr, nphi=16)
   
-  call eval_expr(equil_state, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+  call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
   
   call reduce_result_to_2d(ierr, result, res2d, i1=1)
   call write_vtk_2d(ierr, expr_list, res2d, 'test_all.vtk', (/3,4/), close1=.true.)
@@ -167,51 +167,51 @@ program demo
 !  
 !  
 !  ! --- Evaluate several expressions at one single position.
-!  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state, R=3., Z=0.1)
+!  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, R=3., Z=0.1)
 !  call create_tor_pos(tor_pos_list, ierr, phi=0.)
 !  expr_list = exprs((/'B_R ', 'xjac', 'T   ', 'rho ', 'zj  '/), 5)
-!  call eval_expr(equil_state, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+!  call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
 !  
 !  
 !  
 !  ! --- Print results in two different ways to the screen
 !  call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
-!  call write_ascii_0d(ierr, equil_state, expr_list, res0d, FORM_TABLE, header=.true.)
-!  call write_ascii_0d(ierr, equil_state, expr_list, res0d, FORM_LIST)
+!  call write_ascii_0d(ierr, ES, expr_list, res0d, FORM_TABLE, header=.true.)
+!  call write_ascii_0d(ierr, ES, expr_list, res0d, FORM_LIST)
 !  
 !  
 !  
 !  ! --- Or as a single call:
-!  call eval_expr(equil_state, JOREK_UNITS, exprs((/'B_R ', 'xjac', 'T   ', 'rho ', &
+!  call eval_expr(ES, JOREK_UNITS, exprs((/'B_R ', 'xjac', 'T   ', 'rho ', &
 !       'zj  '/), 5),          &
-!    pol_pos(node_list,element_list,equil_state,R=3.,Z=0.1), tor_pos(phi=0.), result, ierr)
+!    pol_pos(node_list,element_list,ES,R=3.,Z=0.1), tor_pos(phi=0.), result, ierr)
 !  
 !  
 !  
 !  ! --- Evaluate several expressions on the outboard midplane and write to file.
 !  expr_list = exprs((/'R    ', 'Z    ', 'Psi_N', 'Psi  ', 'theta', 'x    ', 'y    ', &
 !       'phi  ', 'B_R  ', 'xjac ', 'T    ', 'rho  ', 'zj   ', 'omega', 'u    '/), 15)
-!  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state,                    &
-!      Rstart=equil_state%R_axis, Rend=equil_state%R_midpl(2)-1.d-3, Zstart=equil_state%Z_axis,     &
-!      Zend=equil_state%Z_axis, n=500)
-!  call eval_expr(equil_state, JOREK_UNITS, expr_list, pol_pos_list, tor_pos(phi=0.), result, ierr)
+!  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES,                    &
+!      Rstart=ES%R_axis, Rend=ES%R_midpl(2)-1.d-3, Zstart=ES%Z_axis,     &
+!      Zend=ES%Z_axis, n=500)
+!  call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos(phi=0.), result, ierr)
 !  call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
-!  call write_ascii_1d(ierr, equil_state, expr_list, res1d, FORM_TABLE, header=.true.,              &
+!  call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,              &
 !    filename='midplane_profiles.dat', append=.false., comment='Various profiles')
 !  
 !  
 !  
 !  ! --- Evaluate expressions along toroidal direction.
-!  call eval_expr(equil_state, JOREK_UNITS, expr_list,                                              &
-!    pol_pos(node_list,element_list,equil_state,R=3.,Z=0.1), tor_pos(nphi=128), result, ierr)
+!  call eval_expr(ES, JOREK_UNITS, expr_list,                                              &
+!    pol_pos(node_list,element_list,ES,R=3.,Z=0.1), tor_pos(nphi=128), result, ierr)
 !  
 !  
 !  
 !  ! --- Evaluate expressions on flux surfaces using straight field line theta.
-!  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state, PsiNmin=0.01,      &
+!  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, PsiNmin=0.01,      &
 !    PsiNmax=0.99, nPsiN=16, nTht=64)
 !  call create_tor_pos(tor_pos_list, ierr, nphi=8)
-!  call eval_expr(equil_state, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+!  call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
 !  
 !  
 !  
@@ -263,19 +263,19 @@ program demo
 !  
 !  ! --- Write result to a file = poloidally and toroidally averaged profiles
 !  call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
-!  call write_ascii_1d(ierr, equil_state, expr_list, res1d, FORM_TABLE, header=.true.,              &
+!  call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,              &
 !    filename='average_profiles_1.dat')
 !  
 !  
 !  
 !  ! --- Toroidally averaged expressions on the outboard midplane.
-!  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, equil_state,                    &
-!      Rstart=equil_state%R_axis+1d-3, Rend=equil_state%R_midpl(2)-1d-3, Zstart=equil_state%Z_axis, &
-!      Zend=equil_state%Z_axis, n=200)
-!  call eval_expr(equil_state, JOREK_UNITS, expr_list, pol_pos_list, tor_pos(nphi=16), result, ierr)
+!  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES,                    &
+!      Rstart=ES%R_axis+1d-3, Rend=ES%R_midpl(2)-1d-3, Zstart=ES%Z_axis, &
+!      Zend=ES%Z_axis, n=200)
+!  call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos(nphi=16), result, ierr)
 !  call transform_and_filter(result, simple_filter(n=0), ierr)
 !  call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
-!  call write_ascii_1d(ierr, equil_state, expr_list, res1d, FORM_TABLE, header=.true.,              &
+!  call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,              &
 !    filename='toroidally_averaged_midplane_profiles.dat', append=.false.)
   
 end program demo

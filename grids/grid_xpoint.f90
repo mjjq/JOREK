@@ -10,7 +10,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
-use phys_module, only: force_central_node
+use phys_module, only: force_central_node, write_ps
 
 implicit none
 
@@ -517,11 +517,12 @@ do j=1,n_leg_2
 enddo
 Z_sep(n_tht_2+2*n_leg_2) = Z_xpoint(1) ! this one is known
 
-call lincol(2)
-call lplot6(1,1,R_max,Z_max,-(n_tht_2+2*n_leg_2),' ')
-call lincol(0)
-call lplot6(1,1,R_sep,Z_sep,-(n_tht_2+2*n_leg_2),' ')
-
+if ( write_ps ) then
+  call lincol(2)
+  call lplot6(1,1,R_max,Z_max,-(n_tht_2+2*n_leg_2),' ')
+  call lincol(0)
+  call lplot6(1,1,R_sep,Z_sep,-(n_tht_2+2*n_leg_2),' ')
+endif
 
 
 !------------------------------ interpolation points are known, construct polar coordinate lines
@@ -606,40 +607,42 @@ do j=1,2*n_leg_2
 
 enddo
 
+if ( write_ps ) then
+  call lincol(3)
 
-call lincol(3)
+  npl = 11
+  call tr_allocate(xout,1,2,"xout",CAT_GRID)
+  call tr_allocate(xp,1,npl,"xp",CAT_GRID)
+  call tr_allocate(yp,1,npl,"yp",CAT_GRID)
+  do j=1,n_tht_2+2*n_leg_2
+    
+    do m=1,n_pieces
 
-npl = 11
-call tr_allocate(xout,1,2,"xout",CAT_GRID)
-call tr_allocate(xp,1,npl,"xp",CAT_GRID)
-call tr_allocate(yp,1,npl,"yp",CAT_GRID)
-do j=1,n_tht_2+2*n_leg_2
+      do k=1,npl
+        ss = -1. + 2.*float(k-1)/float(npl-1)
 
-  do m=1,n_pieces
-
-    do k=1,npl
-      ss = -1. + 2.*float(k-1)/float(npl-1)
-
-      R_cub1d = (/ R_polar(m,1,j), 3.d0/2.d0 *(R_polar(m,2,j)-R_polar(m,1,j)), &
+        R_cub1d = (/ R_polar(m,1,j), 3.d0/2.d0 *(R_polar(m,2,j)-R_polar(m,1,j)), &
                    R_polar(m,4,j), 3.d0/2.d0 *(R_polar(m,4,j)-R_polar(m,3,j))  /)
-      Z_cub1d = (/ Z_polar(m,1,j), 3.d0/2.d0 *(Z_polar(m,2,j)-Z_polar(m,1,j)), &
+        Z_cub1d = (/ Z_polar(m,1,j), 3.d0/2.d0 *(Z_polar(m,2,j)-Z_polar(m,1,j)), &
                    Z_polar(m,4,j), 3.d0/2.d0 *(Z_polar(m,4,j)-Z_polar(m,3,j)) /)
 
-      call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),ss,xp(k), tmp1)
-      call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),ss,yp(k), tmp2)
+        call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),ss,xp(k), tmp1)
+        call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),ss,yp(k), tmp2)
+      enddo
+      call lincol(3)
+      write(51,*) ' .1 setlinewidth'
+      call lplot6(1,1,xp,yp,-npl,' ')
+      write(51,*) ' stroke'
+
     enddo
-    call lincol(3)
-    write(51,*) ' .1 setlinewidth'
-    call lplot6(1,1,xp,yp,-npl,' ')
-    write(51,*) ' stroke'
+
+    call lincol(0)
 
   enddo
-
-  call lincol(0)
-
-enddo
-call tr_deallocate(xp,"xp",CAT_GRID)
-call tr_deallocate(yp,"yp",CAT_GRID)
+  call tr_deallocate(xout,"xout",CAT_GRID)
+  call tr_deallocate(xp,"xp",CAT_GRID)
+  call tr_deallocate(yp,"yp",CAT_GRID)
+endif
 !----------------------------------- find grid_points from crossing of coordinate lines
 
 do j=1, n_tht_2          ! the magnetic axis
@@ -1027,7 +1030,7 @@ newnode_list%n_nodes = index
 
 write(*,*) ' definition of nodes completed ',newnode_list%n_nodes
 
-call nframe(11,11,1,2.0,3.0,-2.0,-1.0,' ',1,'R',1,'Z',1)
+if ( write_ps ) call nframe(11,11,1,2.0,3.0,-2.0,-1.0,' ',1,'R',1,'Z',1)
 call plot_flux_surfaces(node_list,element_list,flux_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
 
 
@@ -1041,7 +1044,7 @@ do i=1,newnode_list%n_nodes
 !  call dlch(int(90.+900.*(xp(i)-2.5)/1.),int(77.+645.*(yp(i)+1.71)/0.71),label,4,1)
 enddo
 
-call lplot(1,1,421,xp,yp,-newnode_list%n_nodes,1,'R',1,'Z',1,'nodes',5)
+if ( write_ps ) call lplot(1,1,421,xp,yp,-newnode_list%n_nodes,1,'R',1,'Z',1,'nodes',5)
 call tr_deallocate(xp,"xp",CAT_GRID)
 call tr_deallocate(yp,"yp",CAT_GRID)
 
@@ -1094,6 +1097,14 @@ enddo
 
 newelement_list%n_elements = (n_flux - 1)*(n_tht - 1)
 
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_elements_max is too small'
+  stop
+end if
+
 node_start = (n_flux-1) * (n_tht-1) + n_xpoint
 
 do i=1,n_open
@@ -1133,6 +1144,14 @@ do i=1,n_open
 enddo
 
 newelement_list%n_elements = newelement_list%n_elements + (n_open) * (n_tht-1)
+
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
 node_start   = (n_flux-1)*(n_tht-1) + 4 + (n_open+1) * n_tht - 2
 
@@ -1231,29 +1250,38 @@ enddo
 
 newelement_list%n_elements = newelement_list%n_elements + (n_open+n_private)*(2*n_leg-2)
 
-!allocate(xp(index),yp(index))
+if ( newnode_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( newelement_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_xpoint: hard-coded parameter n_elements_max is too small'
+  stop
+end if
 
-!call lincol(0)
-!do i=1,newelement_list%n_elements
+!if ( write_ps ) then
+!  allocate(xp(index),yp(index))
 
-!  xp(i) = 0.
-!  yp(i) = 0.
+!  call lincol(0)
+!  do i=1,newelement_list%n_elements
 
-!  do k=1,4
-!    iv= newelement_list%element(i)%vertex(k)
+!    xp(i) = 0.
+!    yp(i) = 0.
 
-!    xp(i) = xp(i) +  newnode_list%node(iv)%x(1,1) /4.
-!    yp(i) = yp(i) +  newnode_list%node(iv)%x(1,2) /4.
+!    do k=1,4
+!      iv= newelement_list%element(i)%vertex(k)
+
+!      xp(i) = xp(i) +  newnode_list%node(iv)%x(1,1) /4.
+!      yp(i) = yp(i) +  newnode_list%node(iv)%x(1,2) /4.
+!    enddo
+
+!    write(label,'(i4)') i
+
+!    call dlch(int(90.+900.*(xp(i)-2.5)/1.),int(77.+645.*(yp(i)+1.71)/0.71),label,4,1)
+
 !  enddo
 
-!  write(label,'(i4)') i
-
-!  call dlch(int(90.+900.*(xp(i)-2.5)/1.),int(77.+645.*(yp(i)+1.71)/0.71),label,4,1)
-
-!enddo
-
-!deallocate(xp,yp)
-
+!  deallocate(xp,yp)
+!endif
 
 !***********************************************************************
 !*             adjust size of elements to get better match             *
@@ -1465,7 +1493,6 @@ call tr_deallocate(Z_min,"Z_min",CAT_GRID)
 call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 call tr_deallocate(R_polar,"R_polar",CAT_GRID)
 call tr_deallocate(Z_polar,"Z_polar",CAT_GRID)
-call tr_deallocate(xout,"xout",CAT_GRID)
 call tr_deallocate(RR_new,"RR_new",CAT_GRID)
 call tr_deallocate(ZZ_new,"ZZ_new",CAT_GRID)
 call tr_deallocate(s_flux,"s_flux",CAT_GRID)

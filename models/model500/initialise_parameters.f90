@@ -3,11 +3,11 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps
-use murge_module,  only: use_murge, use_murge_element
+use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
 use vacuum
+use pellet_module
 use wsmp_module,   only: use_wsmp
 
 implicit none
@@ -24,7 +24,7 @@ integer :: ierr,err,i
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
-                restart, rst_format, regrid, bootstrap,             &
+                restart, rst_format, regrid, bootstrap, write_ps,   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
@@ -48,7 +48,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_par, ZK_par_max, ZK_perp, D_par, D_perp,         &
                 particlesource, heatsource, tauIC,                  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
-                ZK_perp_num, time_evol_scheme,                      &
+                ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
@@ -63,8 +63,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
-                use_mumps, use_pastix, use_murge, use_murge_element,&
-                use_wsmp, n_tor_fft_thresh,                         &
+                use_mumps, mumps_ordering,                          &
+                use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
+                use_pastix, use_murge, use_murge_element, use_wsmp, &
+                n_tor_fft_thresh,                                   &
                 pastix_smp_only, refinement, force_central_node,    &
                 grid_to_wall,                                       &
                 adaptive_time, equil, bench_without_plot,           &
@@ -85,15 +87,19 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
+                spi_tor_rot, tor_frequency,                         &
                 D_prof_neg, ZK_prof_neg,                            &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
-                mgi_sig, mgi_deltaphi, ksi_ion,                     &
-                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
-                K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi,          &
-                JET_MGI, ASDEX_MGI,                                 &
+                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
+                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
+                spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
+                spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
+                ng_radius_ratio, ng_radius_min, spi_angle,          &
+                spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
+                spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 delta_n_convection, nimp_bg,                        &
-                RMP_on, RMP_har_cos,RMP_har_sin,                    &
+                RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 amix, amix_freeb, equil_accuracy,                   &
@@ -102,13 +108,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_pf_coils, pf_coils,                 &
-                Zaxis_find_limit, PF_pert_start_time,               &
+                axis_srch_radius, PF_pert_start_time,               &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd
+                pastix_maxthrd, eta_ohmic
 
- if (my_id .eq. 0) then
+if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
@@ -130,10 +136,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   else
 
     read(5,in1)
- endif
+  endif
 
   ! --- Calculate normalisation factor for MGI source (related to its toroidal shape)
-  mgi_tor_norm = mgi_deltaphi * PI**0.5 * ERF(PI/mgi_deltaphi)
+  ns_tor_norm = ns_deltaphi * PI**0.5 * ERF(PI/ns_deltaphi)
 
    if (trim(R_Z_psi_bnd_file) .ne. 'none') then
 
@@ -211,13 +217,123 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   
   if (allocated(part_src_out_t)) call tr_deallocate(part_src_out_t,"part_src_out_t",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
+
+  if (allocated(E_tot_t)) call tr_deallocate(E_tot_t,"E_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(E_tot_t,1,index_start+nstep,"E_tot_t",CAT_UNKNOWN)
+
+  if (allocated(helicity_tot_t)) call tr_deallocate(helicity_tot_t,"helicity_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(helicity_tot_t,1,index_start+nstep,"helicity_tot_t",CAT_UNKNOWN)
+
+  if (allocated(kin_perp_tot_t)) call tr_deallocate(kin_perp_tot_t,"kin_perp_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(kin_perp_tot_t,1,index_start+nstep,"kin_perp_tot_t",CAT_UNKNOWN)
+
+  if (allocated(kin_par_tot_t)) call tr_deallocate(kin_par_tot_t,"kin_par_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(kin_par_tot_t,1,index_start+nstep,"kin_par_tot_t",CAT_UNKNOWN)
+
+  if (allocated(thermal_tot_t)) call tr_deallocate(thermal_tot_t,"thermal_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(thermal_tot_t,1,index_start+nstep,"thermal_tot_t",CAT_UNKNOWN)
+
+  if (allocated(Wmag_tot_t)) call tr_deallocate(Wmag_tot_t,"Wmag_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(Wmag_tot_t,1,index_start+nstep,"Wmag_tot_t",CAT_UNKNOWN)
+
+  if (allocated(ohmic_tot_t)) call tr_deallocate(ohmic_tot_t,"ohmic_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(ohmic_tot_t,1,index_start+nstep,"ohmic_tot_t",CAT_UNKNOWN)
+
+  if (allocated(Magwork_tot_t)) call tr_deallocate(Magwork_tot_t,"Magwork_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(Magwork_tot_t,1,index_start+nstep,"Magwork_tot_t",CAT_UNKNOWN)
+
+  if (allocated(Ip_tot_t)) call tr_deallocate(Ip_tot_t,"Ip_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(Ip_tot_t,1,index_start+nstep,"Ip_tot_t",CAT_UNKNOWN)
+
+  if (allocated(flux_Pvn_t)) call tr_deallocate(flux_Pvn_t,"flux_Pvn_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(flux_Pvn_t,1,index_start+nstep,"flux_Pvn_t",CAT_UNKNOWN)
+
+  if (allocated(flux_qpar_t)) call tr_deallocate(flux_qpar_t,"flux_qpar_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(flux_qpar_t,1,index_start+nstep,"flux_qpar_t",CAT_UNKNOWN)
+
+  if (allocated(flux_qperp_t)) call tr_deallocate(flux_qperp_t,"flux_qperp_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(flux_qperp_t,1,index_start+nstep,"flux_qperp_t",CAT_UNKNOWN)
+
+  if (allocated(flux_kinpar_t)) call tr_deallocate(flux_kinpar_t,"flux_kinpar_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(flux_kinpar_t,1,index_start+nstep,"flux_kinpar_t",CAT_UNKNOWN)
+
+  if (allocated(dE_tot_dt)) call tr_deallocate(dE_tot_dt,"dE_tot_dt",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(dE_tot_dt,1,index_start+nstep,"dE_tot_dt",CAT_UNKNOWN)
+
+  if (allocated(dWmag_tot_dt)) call tr_deallocate(dWmag_tot_dt,"dWmag_tot_dt",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(dWmag_tot_dt,1,index_start+nstep,"dWmag_tot_dt",CAT_UNKNOWN)
+
+  if (allocated(dthermal_tot_dt)) call tr_deallocate(dthermal_tot_dt,"dthermal_tot_dt",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(dthermal_tot_dt,1,index_start+nstep,"dthermal_tot_dt",CAT_UNKNOWN)
+
+  if (allocated(dkinperp_tot_dt)) call tr_deallocate(dkinperp_tot_dt,"dkinperp_tot_dt",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(dkinperp_tot_dt,1,index_start+nstep,"dkinperp_tot_dt",CAT_UNKNOWN)
+
+  if (allocated(dkinpar_tot_dt)) call tr_deallocate(dkinpar_tot_dt,"dkinpar_tot_dt",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(dkinpar_tot_dt,1,index_start+nstep,"dkinpar_tot_dt",CAT_UNKNOWN)
+
+  if (allocated(thmwork_tot_t)) call tr_deallocate(thmwork_tot_t,"thmwork_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(thmwork_tot_t,1,index_start+nstep,"thmwork_tot_t",CAT_UNKNOWN)
+
+  if (allocated(viscopar_dissip_tot_t)) call tr_deallocate(viscopar_dissip_tot_t,"viscopar_dissip_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(viscopar_dissip_tot_t,1,index_start+nstep,"viscopar_dissip_tot_t",CAT_UNKNOWN)
+
+  if (allocated(viscopar_flux_t)) call tr_deallocate(viscopar_flux_t,"viscopar_flux_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(viscopar_flux_t,1,index_start+nstep,"viscopar_flux_t",CAT_UNKNOWN)
+
+  if (allocated(li3_t)) call tr_deallocate(li3_t,"li3_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(li3_t,1,index_start+nstep,"li3_t",CAT_UNKNOWN)
+
+  if (allocated(li3_tot_t)) call tr_deallocate(li3_tot_t,"li3_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(li3_tot_t,1,index_start+nstep,"li3_tot_t",CAT_UNKNOWN)
+
+  if (allocated(part_src_tot_t)) call tr_deallocate(part_src_tot_t,"part_src_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(part_src_tot_t,1,index_start+nstep,"part_src_tot_t",CAT_UNKNOWN)
+
+  if (allocated(heat_src_tot_t)) call tr_deallocate(heat_src_tot_t,"heat_src_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(heat_src_tot_t,1,index_start+nstep,"heat_src_tot_t",CAT_UNKNOWN)
+
+  if (allocated(volume_t)) call tr_deallocate(volume_t,"volume_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(volume_t,1,index_start+nstep,"volume_t",CAT_UNKNOWN)
+
+  if (allocated(area_t)) call tr_deallocate(area_t,"area_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(area_t,1,index_start+nstep,"area_t",CAT_UNKNOWN)
+
+  if (allocated(mag_ener_src_tot)) call tr_deallocate(mag_ener_src_tot,"mag_ener_src_tot",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(mag_ener_src_tot,1,index_start+nstep,"mag_ener_src_tot",CAT_UNKNOWN)
+
+
 endif
+
 
 ! --- Read numerical profiles for rho, T, and ff'.
 call read_num_profiles(my_id)
 
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
-  
+
+! --- Initialize the shattered pellet position
+
+if ( my_id == 0 ) then
+  if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
+    write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
+    if (t_now > t_ns) then
+      write(*,*) "EXITING NOW!!!"
+      stop
+    end if
+  end if
+
+  if (using_spi) then
+    if (JET_MGI .or. ASDEX_MGI) then
+      write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
+      write(*,*) "JET_MGI:", JET_MGI
+      write(*,*) "ASDEX_MGI:", ASDEX_MGI
+      stop
+    else 
+      call init_spi()
+    end if
+  end if
+end if
+
 return
 end subroutine initialise_parameters

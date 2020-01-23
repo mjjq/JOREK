@@ -9,14 +9,19 @@
 
 function usage() {
   echo ""
-  echo "Usage: `basename $0` [-h -f <file> -l -q <qtty> -ps -(no)log]"
+  echo "Usage: `basename $0` [-h -f <file> -l -q <qtty> -ps -(no)log -title <title>]"
   echo ""
-  echo "  -h         Print this usage information"
-  echo "  -f <file>  Take data from <file> instead of 'macroscopic_vars.dat'"
-  echo "  -l         List plottable quantities"
-  echo "  -q <qtty>  Plot the given quantity (default: '-q energies')"
-  echo "  -ps        Plot to .ps files (default: plot to screen)"
-  echo "  -(no)log   (Non-)Logarithmic y-axis (default: '-log')"
+  echo "  -h                 Print this usage information"
+  echo "  -f <file>          Take data from <file> instead of 'macroscopic_vars.dat'"
+  echo "  -l                 List plottable quantities"
+  echo "  -q <qtty>          Plot the given quantity (default: '-q energies')"
+  echo "  -ps                Plot to .ps files (default: plot to screen)"
+  echo "  -si                Plot with si units"
+  echo "  -no0               Plot without the n=0 mode"
+  echo "  -(no)log           (Non-)Logarithmic y-axis (default: '-log')"
+  echo "  -title <title>     Add this to title (after given quantity)"
+  echo "  -xrange <x0>:<xf>  X range for plotting."
+  echo "  -yrange <y0>:<yf>  Y range for plotting."
   echo ""
   echo "Remarks:"
   echo "  * The beginning of a quantity name is sufficient, e.g., the command"
@@ -51,8 +56,12 @@ fi
 # --- Evaluate command line parameters
 ps=0
 qtty="energies"
+si=0
+no0=0
 logy2=""
 file="macroscopic_vars.dat"
+title=""
+xrange="[:]";  yrange="[:]"
 while [ $# -gt 0 ]; do
   if [ "$1" == "-ps" ]; then
     ps=1
@@ -63,6 +72,26 @@ while [ $# -gt 0 ]; do
   elif [ "$1" == "-q" ]; then
     qtty="$2"
     shift 2
+  elif [ "$1" == "-title" ] || [ "$1" == '-t' ]; then
+    title="$2"
+    shift 2
+  elif [ "$1" == "-xrange" ]; then
+    if [[ $2 = *":"* ]]; then xrange="[$2]"
+    else echo "Wrong format for range. Should be #:#"; exit 1; fi
+    shift 2
+  elif [ "$1" == "-yrange" ]; then
+    if [[ $2 = *":"* ]]; then yrange="[$2]"
+    else echo "Wrong format for range. Should be #:#"; exit 1; fi
+    shift 2
+  elif [ "$1" == "-si" ]; then
+    si=1
+    shift
+  elif [ "$1" == "-nosi" ]; then
+    si=0
+    shift
+  elif [ "$1" == "-no0" ]; then
+    no0=1
+    shift
   elif [ "$1" == "-log" ]; then
     logy2=1
     shift
@@ -101,13 +130,27 @@ if [ $is_plottable -eq 0 ]; then
   echo "Plottable quantities are: $plottable"
   usage
   exit 1
+elif [ $no0 -eq 1 ] && (! [[ $qtty =~ "energies"  ]] && ! [[ $qtty =~ "growth_rates" ]]); then
+  #elif [ $no0 -eq 1 ] && ([ "$qtty" != *"energies"* ] && [ "$qtty" != *"growth_rates"* ]); then
+  echo ""
+  echo "ERROR: -no0 flag can only be used with energies and growth_rates (kinetic and magnetic)."
+  exit 1
 fi
 
 # --- Extract necessary data from macroscopic_vars.dat
 n_tor=`$extract_live_data n_tor -f $file`
 ncols=`$extract_live_data n_${qtty} -f $file`
-xlabel=`$extract_live_data ${qtty}_xlabel -f $file`
-ylabel=`$extract_live_data ${qtty}_ylabel -f $file`
+if [ $si -eq 1 ]; then
+  xlabel=`$extract_live_data ${qtty}_xlabel_si -f $file`
+  ylabel=`$extract_live_data ${qtty}_ylabel_si -f $file`
+  qtty_x2si=`$extract_live_data ${qtty}_x2si -f $file`
+  qtty_y2si=`$extract_live_data ${qtty}_y2si -f $file`
+else
+  xlabel=`$extract_live_data ${qtty}_xlabel -f $file`
+  ylabel=`$extract_live_data ${qtty}_ylabel -f $file`
+  qtty_x2si=1
+  qtty_y2si=1
+fi
 logy=`$extract_live_data ${qtty}_logy -f $file`
 if [ -n "$logy2" ]; then
   logy=$logy2
@@ -119,9 +162,12 @@ $extract_live_data ${qtty} ${qtty}.dat -f $file
 
 # --- Plot the quantity
 cat $SCRIPTDIR/plot_live_data.gnuplot                                                     \
-  | sed -e "s/<ncols>/$ncols/" -e "s/<ps>/$ps/" -e "s/<qtty>/$qtty/" -e "s/<logy>/$logy/" \
-        -e "s/<xlabel>/$xlabel/" -e "s/<ylabel>/$ylabel/"                                 \
-  > local_plot.gnuplot
+  | sed -e "s|<ncols>|$ncols|"         -e "s|<ps>|$ps|"         -e "s|<qtty>|$qtty|"      \
+        -e "s|<title>|$title|"         -e "s|<no0>|$no0|"       -e "s|<logy>|$logy|"      \
+        -e "s|<qtty_x2si>|$qtty_x2si|" -e "s|<ylabel>|$ylabel|" -e "s|<xlabel>|$xlabel|"  \
+        -e "s|<qtty_y2si>|$qtty_y2si|" -e "s|<xrange>|$xrange|" -e "s|<yrange>|$yrange|"  \
+                                                                       > local_plot.gnuplot
+
 gnuplot local_plot.gnuplot &
 gnuplot_pid=$!
 

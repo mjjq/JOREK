@@ -19,7 +19,7 @@ function cleanup () {
   echo "Waiting for threads to finish..."
   wait
   if [ ! -z "$local_tmp_dir" ]; then
-    rm -rf $local_tmp_dir
+    rm -rf "$local_tmp_dir"
   fi
   echo "...done."
   exit $1
@@ -37,6 +37,13 @@ function usage () {
   echo "  -only <step>,<step>         Convert only listed time steps"
   echo "  -only <step>-<step>         Convert only time steps in the given range"
   echo "  -only <step>-<dstep>-<step> Convert only time steps in the given range with given interval"
+  echo "  -donly <dstep>              Equivalent to -only 0-<dstep>-99999"
+  echo "  -time <time>,<time>         Selects time step roughly at <time> (default in JOREK-units)"
+  echo "  -time <time>-<dtime>-<time> Selects time step within given time range with given interval"
+  echo "  -dtime <dtime>              Equivalent to -time 0-<dtime>-infinity"
+  echo "  -ms                         -time is given in milliseconds instead of in JOREK-units"
+  echo "  -l                          Creates a file containing all selected timesteps and times,"
+  echo "                              if parameter -(d)time is used (default:off)"
   echo "  -zip                        Compress the .vtk files using gzip"
   echo ""
   echo "Options passed to the binary via namelist input (source code for details):"
@@ -52,6 +59,7 @@ function usage () {
   echo "  -Vfield                     Include vector of velocity field [default: off] (2D VTK ONLY)"
   echo "  -[no]psiN                   Include normalized poloidal flux or not [default: on] (2D VTK ONLY)"
   echo "  -bootstrap                  Include bootstrap current decomposition [default: off] (2D VTK ONLY)"
+  echo "  -RphiZ_coords               (R,phi,Z) coordinate system instead of (R,Z,phi) in the VTK file"
   echo ""
   echo "  binary                      executable (jorek2vtk, jorek2vtk_3d, jorek2_target2vtk)"
   echo "  infile                      Input file of the corresponding JOREK run"
@@ -91,7 +99,7 @@ function get_available_thread () {
     for i in `seq $nthreads`; do
       if [ `is_running $i` == 'no' ]; then
         echo "$i"
-	return
+        return
       fi
     done
     sleep 1
@@ -120,15 +128,16 @@ function do_convert () {
   
   cd ${tmpdir[$ithread]}
   
-  targetFile=${file##*/} # Remove directory from filename
-  stepnum=${targetFile:5:5}
-  targetFile="jorek.${targetFile:5:5}.vtk" # Target filename with same number as source
+  stepnum=${file##*/} # Remove directory from filename
+  stepnum=${stepnum:5:5}
+  targetFile="jorek.$stepnum.vtk" # Target filename with same number as source
   targetFile="$targetDir/$targetFile" # Target filename with full path
-  
+
   # Convert only new, selected restart files
+  #   If -only flag is used, $select_arguments is empty and selection of steps is carried out below via 'is_selected'.
+  #   If -time flag is used, selection of steps has happened before by python and every incoming step is accepted here.
   if ( [ ! -e $targetFile ] || [ "$file" -nt "$targetFile" ] ) \
-    && [ `is_selected $stepnum` == "yes" ]; then
-    
+    &&  ( [ ! -z "$select_arguments" ] || [ `is_selected $stepnum` == "yes" ] ) ; then
     rm -f jorek_restart.${RST_TYPE}
     ln -s $file jorek_restart.${RST_TYPE}
     for copyfile in $copyfiles; do
@@ -169,6 +178,7 @@ SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 # --- Process command line parameters
 nthreads="1"
 selected_steps="0-99999"
+select_arguments=""
 customdir=""
 nsub=""
 i_tor=""
@@ -181,8 +191,11 @@ include_fluxes=""         # include energy and density fluxes (or not)
 include_neo=""            # include neoclassical and more terms (or not)
 include_magnetic_field="" # include vector of magnetic field (or not)
 include_velocity_field="" # include vector of velocity field (or not)
+include_electric_field="" # include vector of electric field (or not)
+include_Jpol=""           # include vector of poloidal currents (or not)
 include_bootstrap=""      # include bootstrap current and averaged current
 include_psi_norm=".true." # include normalized flux
+RphiZ_coords=".false."    # use (R,0,Z) xyz coordinates instead of (R,Z,0)
 while [ $# -gt 1 ]; do
   if [ "$1" == "-j" ]; then
     nthreads="$2"
@@ -190,6 +203,18 @@ while [ $# -gt 1 ]; do
   elif [ "$1" == "-only" ]; then
     selected_steps="$2"
     shift 2
+  elif [ "$1" == "-donly" ]; then
+    selected_steps="0-$2-99999"
+    shift 2
+  elif ( [ "$1" == "-time" ] || [ "$1" == "-dtime" ] ) ; then
+    select_arguments="$select_arguments $1 $2"
+    shift 2
+  elif [ "$1" == "-ms" ]; then
+    select_arguments="$select_arguments $1"
+    shift 1
+  elif [ "$1" == "-l" ]; then
+    select_arguments="$select_arguments $1"
+    shift 1
   elif [ "$1" == "-dir" ]; then
     customdir="$2"
     shift 2
@@ -240,12 +265,24 @@ while [ $# -gt 1 ]; do
     include_velocity_field=".true."
     shift 1
     writenml="yes"
+  elif [ "$1" == "-Efield" ] || [ "$1" == "-electric_field" ]; then
+    include_electric_field=".true."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-Jpol" ] || [ "$1" == "-poloidal_currents" ]; then
+    include_Jpol =".true."
+    shift 1
+    writenml="yes"
   elif [ "$1" == "-bootstrap" ]; then
     include_bootstrap=".true."
     shift 1
     writenml="yes"
   elif [ "$1" == "-nopsiN" ] || [ "$1" == "-nopsi_norm" ]; then
     include_psi_norm=".false."
+    shift 1
+    writenml="yes"
+  elif [ "$1" == "-RphiZ_coords" ] || [ "$1" == "-RphiZ" ]; then
+    RphiZ_coords=".true."
     shift 1
     writenml="yes"
   elif [ "$1" == "-h" ] || [ "$1" = "--help" ]; then
@@ -260,18 +297,33 @@ while [ $# -gt 1 ]; do
   fi
 done
 
+
+
+# --- Some parameter checks
 if [ $# -lt 2 ]; then
   echo "ERROR: Not enough parameters."
   usage
   exit 1
 fi
+if [ ! -z "$select_arguments" ] && [[ "$select_arguments" != *"time"* ]]; then
+  echo "WARNING: -l and -ms parameters will be ignored, if -(d)time is not set."
+  select_arguments=""
+fi
+regexp_steps="^[0-9]{1,5}(-[0-9]{1,5}){0,2}(,[0-9]{1,5}(-[0-9]{1,5}){0,2})*$"
+if [[ ! "$selected_steps" =~ $regexp_steps   ]]; then
+  echo "ERROR: -(d)only-parameter given in wrong format."
+  usage
+  exit 1
+fi
+
+
 
 binary=`readlink -f $1`
 shift
 infile=`readlink -f $1`
 shift
 sourceDir=`readlink -f .`
-copyfiles=`grep _file $infile | grep -v '^ *!' | sed -e "s/^.*= *[\"']\(.*\)[\"'].*$/\1/"`
+copyfiles=`grep _file $infile | grep -v '^ *!' | sed -e "s/^.*= *[\"']\(.*\)[\"'].*$/\1/" | grep -v 'none'`
 copyfiles="$copyfiles $@"
 for copyfile in $copyfiles; do
   if [ ! -f "$copyfile" ]; then
@@ -363,7 +415,6 @@ else
     dir="${dir}_si"
   fi
 fi
-echo "Writing files to dir='$dir'."
 
 
 
@@ -388,7 +439,31 @@ fi
 
 
 
+# ---- Detect restart file type
+. ${SCRIPTDIR}/detect_rst_type.sh
+if [ "$RST_TYPE" != "h5" ] && [ "$RST_TYPE" != "rst" ]; then
+  echo "ERROR: RST_TYPE not detected properly: $RST_TYPE"
+  usage
+  exit 1
+fi
+
+
+
+# --- Select files for conversion
+if [ -z "$select_arguments" ]; then
+  files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
+else
+  files=`${SCRIPTDIR}/select_restart_files.sh $select_arguments`
+  if [ "${files:0:5}" == "ERROR" ] ; then
+    echo "$files" | head -1
+    usage
+    exit 1
+  fi
+fi
+
+
 # --- Create directory for vtk files
+echo "Writing files to dir='$dir'."
 startDir=`pwd`
 mkdir -p $dir || exit 1
 targetDir=`readlink -f $dir`
@@ -437,11 +512,20 @@ if [ "$writenml" == "yes" ]; then
   if [ ! -z "$include_velocity_field" ]; then
     echo "  include_velocity_field = $include_velocity_field" >> $vtk_nml
   fi
+  if [ ! -z "$include_electric_field" ]; then
+    echo "  include_electric_field = $include_electric_field" >> $vtk_nml
+  fi
+   if [ ! -z "$include_Jpol" ]; then
+    echo "  include_Jpol = $include_Jpol" >> $vtk_nml
+  fi
   if [ ! -z "$include_bootstrap" ]; then
     echo "  include_bootstrap = $include_bootstrap" >> $vtk_nml
   fi
   if [ ! -z "$include_psi_norm" ]; then
     echo "  include_psi_norm = $include_psi_norm" >> $vtk_nml
+  fi
+  if [ ! -z "$RphiZ_coords" ]; then
+    echo "  RphiZ_coords = $RphiZ_coords" >> $vtk_nml
   fi
   echo "/"                        >> $vtk_nml
   copyfiles="$copyfiles $vtk_nml"
@@ -461,14 +545,8 @@ done
 
 
 
-. ${SCRIPTDIR}/detect_rst_type.sh
-if [ "$RST_TYPE" != "h5" ] && [ "$RST_TYPE" != "rst" ]; then
-  echo "ERROR: RST_TYPE not detected properly: $RST_TYPE"
-  stop
-fi
 # --- Parallel file conversion
 echo ""
-files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
 for file in $files; do
   if [ -f "$ERROR_STOP_FILE" ]; then cleanup; fi
   ithread=`get_available_thread`
@@ -477,6 +555,7 @@ for file in $files; do
     do_convert $file $ithread &
   fi
 done
+
 
 
 sleep 1

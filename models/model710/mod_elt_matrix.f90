@@ -2,7 +2,7 @@ module mod_elt_matrix
   implicit none
 contains
 
-subroutine element_matrix(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
+subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
 
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
@@ -29,6 +29,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
+use equil_info, only : get_psi_n
 
 
 implicit none
@@ -46,7 +47,7 @@ integer    :: i, j, k, l, index_ij, index_kl, index, xcase2, inode
 integer    :: in, im, ij, kl, ivar, kvar, ms, mt, mp
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_R, xjac_Z, xjac3, BigR, phi
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss), source_pellet
-real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
+real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
 
 real*8     :: uR0, uR0_R, uR0_Z, uR0_p, uR0_s, uR0_t, uR0_ss, uR0_st, uR0_tt, uR0_RR, uR0_ZZ, uR0_RZ, uR0_pp
 real*8     :: uZ0, uZ0_R, uZ0_Z, uZ0_p, uZ0_s, uZ0_t, uZ0_ss, uZ0_st, uZ0_tt, uZ0_RR, uZ0_ZZ, uZ0_RZ, uZ0_pp
@@ -428,9 +429,9 @@ endif
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Diffusivities
 
-     psi_norm = (A30 - psi_axis) / (psi_bnd - psi_axis)
-     D_prof  = D_perp(1)  * ((1.d0- D_perp(2)) + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4) )))
-     ZK_prof = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4))))
+     psi_norm = get_psi_n(A30, y_g(ms,mt))
+     D_prof   = D_perp(1)  * ((1.d0- D_perp(2)) + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4) )))
+     ZK_prof  = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4))))
 
 
      ! --- Temperature dependent resistivity

@@ -10,6 +10,7 @@ use phys_module
 use mod_poiss
 use mod_iterate2area
 use mod_plasma_response
+use equil_info
 use vacuum
 use mpi_mod
 use mod_interp, only: interp
@@ -34,6 +35,7 @@ real*8     :: zn,  dn_dpsi,  dn_dpsi2,  dn_dz,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3, 
 real*8     :: zT,  dT_dpsi,  dT_dpsi2,  dT_dz,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi2_dz,  dT_dpsi_dz2
 real*8     :: zTi, dTi_dpsi, dTi_dpsi2, dTi_dz, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi2_dz, dTi_dpsi_dz2
 real*8     :: zTe, dTe_dpsi, dTe_dpsi2, dTe_dz, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi2_dz, dTe_dpsi_dz2
+real*8     :: Ti_prof, Te_prof
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
 real*8     :: F_prof, dF_dpsi, dF_dz, dF_dpsi2, dF_dz2, dF_dpsi_dz
 real*8     :: xx, x_s, x_t, x_st, x_ss, x_tt, yy, y_s, y_t, y_st, y_ss, y_tt
@@ -109,7 +111,7 @@ if (my_id == 0) then
     if (.not. xpoint) then
       call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
       if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
-        if ((psi_lim .lt. psi_bnd) .and. (n_limiter /= 0)) then
+        if (n_limiter /= 0) then   ! else n_limiter = 0 and psi_bnd is set to 0
           psi_bnd = psi_lim
           write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
         endif
@@ -230,18 +232,24 @@ if (freeboundary_equil) then
         endif
       endif
   
-      call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
-      if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
-        psi_bnd = min(psi_lim,psi_bnd)
-        write(*,'(A,4f8.3)') ' LIMITER PLASMA ',psi_lim, psi_bnd, R_lim,Z_lim
+      if (.not. xpoint2) then
+        call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+        if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
+          call is_axis_psi_mininum(node_list, element_list, bnd_elm_list)
+          if (ES%axis_is_psi_minimum) then
+            psi_bnd = min(psi_lim,psi_bnd)
+          else
+            psi_bnd = max(psi_lim,psi_bnd)
+          endif
+          write(*,'(A,4f8.3)') ' LIMITER PLASMA ',psi_lim, psi_bnd, R_lim,Z_lim
+        endif
       endif
       
       if (freeb_equil_iterate_area .and. (.not. xpoint2)) then
         call iterate2area(node_list,element_list, psi_axis, psi_lim, xpoint2, xcase2, area_ref, psi_bnd)
       endif
-         
-      if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(1),ifail
-      if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND : ',psi_axis,psi_bnd,Z_xpoint(2),ifail
+      
+      write(*,'(A,1f8.3)') ' Psi_bnd = ', psi_bnd   
   
       !Vertical feedback - needed for vertically unstable plasmas        
       Z_axis_int = Z_axis_int + (Z_axis - Z_axis_ref)
@@ -490,6 +498,8 @@ if (my_id == 0) then
   endif
   
   if (nice_q) then
+    ES%psi_bnd  = psi_bnd
+    ES%psi_axis = psi_axis
     call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,psi_xpoint,Z_xpoint)
   endif
   
@@ -500,14 +510,33 @@ if (my_id == 0) then
   call tr_allocate(density_profile,1,surface_list%n_psi,"density_profile",CAT_GRID)
   
   do i=2,surface_list%n_psi
-     psi= surface_list%psi_values(i)
-     call temperature(.false.,xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,T_prof,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
-          dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
-     call density( .false., xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,density_prof,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+    psi= surface_list%psi_values(i)
+    
+    if (jorek_model .eq. 400) then
+      call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+           Ti_prof,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
+  
+      call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+           Te_prof,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
+      T_prof      = Ti_prof      + Te_prof
+      dT_dpsi     = dTi_dpsi     + dTe_dpsi
+      dT_dpsi2    = dTi_dpsi2    + dTe_dpsi2
+      dT_dpsi3    = dTi_dpsi3    + dTe_dpsi3
+      dT_dz       = dTi_dz       + dTe_dz
+      dT_dz2      = dTi_dz2      + dTe_dz2
+      dT_dpsi_dz  = dTi_dpsi_dz  + dTe_dpsi_dz
+      dT_dpsi2_dz = dTi_dpsi2_dz + dTe_dpsi2_dz
+      dT_dpsi_dz2 = dTi_dpsi_dz2 + dTe_dpsi_dz2 
+    else
+      call temperature(.false.,xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,T_prof,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
+        dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+    endif
+
+    call density( .false., xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,density_prof,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
           dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
   
-     T_profile(i)=T_prof
-     density_profile(i)=density_prof
+    T_profile(i)=T_prof
+    density_profile(i)=density_prof
   end do
   
   write(*,*) '***************************************'
@@ -530,7 +559,11 @@ if (my_id == 0) then
   
 end if ! my_id == 0
 
-if (freeboundary_equil) call boundary_check(my_id)
-
+if (freeboundary_equil) then
+  call broadcast_elements(my_id, element_list)
+  call broadcast_nodes(my_id, node_list)  !--- This is required for boundary_check
+  call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list)
+  call boundary_check(my_id)
+endif
 return
 end subroutine equilibrium

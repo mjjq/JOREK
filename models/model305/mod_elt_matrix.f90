@@ -4,7 +4,7 @@ module mod_elt_matrix
 
 contains
 
-subroutine element_matrix(element, nodes, xpoint2, xcase2, minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM,RHS, tid)
+subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM,RHS, tid)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 ! using the equations for model305, which is the same as model303, but solves
@@ -23,6 +23,7 @@ use phys_module
 use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use vacuum, only: freeb_fact
+use equil_info, only : get_psi_n
 
 implicit none
 
@@ -38,7 +39,7 @@ integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)
 real*8     :: source_volume, source_pellet, source_pellet2
-real*8     :: minRad, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
+real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
 real*8     :: rhs_ij_1,   rhs_ij_2,   rhs_ij_3,   rhs_ij_4,   rhs_ij_5,   rhs_ij_6, rhs_ij_7
@@ -570,15 +571,7 @@ do ms=1, n_gauss
      eta_num_T   = eta_num                                           ! hyperresistivity
      visco_num_T = visco_num                                         ! hyperviscosity
 
-     psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-     if (xpoint2) then
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
-         psi_norm = 2.d0 - psi_norm
-       endif
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
-         psi_norm = 2.d0 - psi_norm
-       endif
-     endif
+     psi_norm = get_psi_n(ps0, y_g(ms,mt))
 
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)

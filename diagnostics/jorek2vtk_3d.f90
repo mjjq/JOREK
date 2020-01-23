@@ -28,9 +28,9 @@ real*8                :: U,U_s,U_t,U_st,U_ss,U_tt, RHO,RH_s,RH_t,RH_st,RH_ss,RH_
 real*8                :: u0_x, u0_y, xjac, v_perp, Psi_J, R_p, error, zj_x, zj_y, ps_x, ps_y
 logical               :: periodic, density_only
 integer               :: ierr, my_id
-logical               :: without_n0_mode
+logical               :: without_n0_mode, RphiZ_coords
 
-namelist /vtk_params/ nsub, without_n0_mode, periodic
+namelist /vtk_params/ nsub, without_n0_mode, periodic, RphiZ_coords
 
 write(*,*) 'jorek2vtk_3d'
 
@@ -44,6 +44,7 @@ without_n0_mode = .false.  		! If true, do not include the n=0 mode (i_tor=1)
 periodic        = .true.		! Are we doing the whole tor?
 density_only    = .false.		! Write density only (for smaller vtk file)
 n_toroidal      = 200 !n_plane 		! Number of toroidal snapshots
+RphiZ_coords    = .false.               ! use xyz transformation from JOREK wiki 
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -73,7 +74,7 @@ do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
 enddo
 
-call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 nnos = n_toroidal * nsub*nsub*node_list%n_nodes
 
 allocate(xyz(3,nnos), scalars(nnos,1:n_scalars), scalar_names(n_scalars))
@@ -140,10 +141,13 @@ do m=1, n_toroidal
         xjac  = R_s * Z_t - R_t * Z_s
         if ( xjac == 0.d0 ) xjac = 1.d-8 ! (workaround to avoid floating invalid)
 
-
         inode = inode+1
 
-        xyz(1:3,inode) = (/ R * cos(angle), Z, R*sin(angle) /)
+        if (RphiZ_coords) then
+          xyz(1:3,inode) = (/ R * cos(angle), -R*sin(angle), Z /)   !from the JOREK wiki
+        else
+          xyz(1:3,inode) = (/ R * cos(angle), Z, R*sin(angle) /)
+        endif
 
         do i_tor = 1,n_tor
 

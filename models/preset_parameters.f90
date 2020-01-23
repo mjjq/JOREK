@@ -6,8 +6,7 @@
 subroutine preset_parameters
   
   use phys_module
-  use mumps_module,  only: use_mumps, no_zeros_mumps
-  use murge_module,  only: use_murge, use_murge_element
+  use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
   use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
   use wsmp_module,   only: use_wsmp
   
@@ -15,7 +14,7 @@ subroutine preset_parameters
   
   time_evol_scheme = 'Crank-Nicholson'
   
-  n_tor_fft_thresh = 5
+  n_tor_fft_thresh = 2
   if(jorek_model == 305 .or. jorek_model == 306) n_tor_fft_thresh = 99
   
   ! --- DoubleNull flag
@@ -30,7 +29,8 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
-  eta   = 1.d-5
+  eta       = 1.d-5
+  eta_ohmic = 0.d0
   visco = 1.d-5
   visco_par = 1.d-5
   visco2    = 0.d0
@@ -42,7 +42,8 @@ subroutine preset_parameters
   import_equil = .false.
   regrid       = .false.
   rst_format   = 0             ! use 'old' format for restart import
-
+  write_ps     = .true.           ! write postscript file at the end of the run 
+  
   freeboundary_equil = .false. ! use free or fixed boundary equilibrium
   freeboundary       = .false. ! use free or fixed boundary?
   resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
@@ -58,7 +59,7 @@ subroutine preset_parameters
   amix_freeb           = 0.85d0
   equil_accuracy       = 1.d-6
   equil_accuracy_freeb = 1.d-6
-  Zaxis_find_limit     = 99.d0
+  axis_srch_radius     = 99.d0
   
   n_R       = 0
   n_Z       = 0
@@ -111,7 +112,7 @@ subroutine preset_parameters
   GAMMA     = 5.d0 / 3.d0
 
   mf        = 2
-  fbnd      = 0.d0; fbnd(1) =2.d0
+  fbnd      = 0.d0;   fbnd(1)  = 2.d0
 
   R_boundary   = 0.d0
   Z_boundary   = 0.d0
@@ -140,7 +141,6 @@ subroutine preset_parameters
   xshift = 0.d0
   xleft  = 0.d0
   xpoint = .false.
-  xcase  = 1
   force_horizontal_Xline = .false.
 
   xr1  = 9999.d0
@@ -153,13 +153,11 @@ subroutine preset_parameters
   Z_begin = -0.1d0
   Z_end   = 0.1d0
   
-  ZK_perp(:) = 0.d0
-  ZK_perp(1) = 1.d-5; ZK_perp(2) = 0.d0; ZK_perp(3)= 0.d0; ZK_perp(4)= 99.d0; ZK_perp(5) = 99.d0
-  ZK_par     = 1.d0
-  ZK_par_max = 1.d20
-  D_perp(:)  = 0.d0
-  D_perp(1)  = 1.d-5; D_perp(2) = 0.d0; D_perp(3)= 0.d0; D_perp(4)= 99.d0; D_perp(5) = 99.d0
-  D_par      = 0.d0
+  ZK_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_par       = 1.d0
+  ZK_par_max   = 1.d20
+  D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  D_par        = 0.d0
   
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
@@ -175,6 +173,7 @@ subroutine preset_parameters
   visco_par_num = 0.d0
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
+  Dn_perp_num   = 0.d0
 
   heatsource          = 1.e-7
   heatsource_psin     = 1.0d0
@@ -197,11 +196,26 @@ subroutine preset_parameters
   tauIC = 0.d0
   Wdia  = .false.
 
-  zjz_0 =  0.1173d0;   T_0   =  1.d-6  ;   rho_0 =  1.d0   ;   FF_0  =  1.d0
-  zjz_1 =  0.0d0   ;   T_1   =  1.d-8  ;   rho_1 =  1.d0   ;   FF_1  =  0.d0
+  zjz_0 =  0.1173d0   
+  zjz_1 =  0.0d0   
 
+  T_0   =  1.d-6  
+  Ti_0  =  5.d-7
+  Te_0  =  5.d-7
+
+  T_1   =  1.d-8  
+  Te_1  =  5.d-9
+  Ti_1  =  5.d-9
+
+  rho_0 =  1.d0   
+  rho_1 =  1.d0   
+  FF_0  =  1.d0
+  FF_1  =  0.d0
+  
   zj_coef     = 0.d0;  zj_coef(1)  = -1.d0
   T_coef      = 0.d0;  T_coef(1)   = -1.d0
+  Te_coef     = 0.d0;  Te_coef(1)  = -1.d0
+  Ti_coef     = 0.d0;  Ti_coef(1)  = -1.d0
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
 
@@ -229,6 +243,7 @@ subroutine preset_parameters
   nout = 9999999
 
   rst_hdf5 = 1   ! =0,restart with binary files; =1, with HDF5 files
+
   !> Write out newest HDF5 restart file version this code supports, writing
   !! out an older version is possible by changing rst_hdf5_verison via the
   !! namelist input file
@@ -262,6 +277,11 @@ subroutine preset_parameters
   gmres_4            = 1.d3                 ! error estimate GMRES (ratio preconditioned versus non-preconditioned error
   gmres_m            = 20                   ! gmres restart parameter
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
+  
+  ! --- deprecated, code will stop if these parameters are set to .true. ---
+  use_murge          = .false.
+  use_murge_element  = .false.
+  ! ------------------------------------------------------------------------
 
   tgnum              = 0.d0                 ! Taylor-Galerkin Stabilisation coefficients (0.d0 == TG not used)
 
@@ -269,8 +289,6 @@ subroutine preset_parameters
   
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver
-  use_murge          = .false.              ! Use MURGE interface to PASTIX solver
-  use_murge_element  = .false.              ! Build the matrix through murge, not with a CSC.
   use_wsmp           = .false.              ! Use WSMP solver (use with care, still in development!)
   
   refinement         = .false.              ! enable mesh refinement
@@ -285,6 +303,13 @@ subroutine preset_parameters
   bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
   no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
   no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
+
+  mumps_ordering     = 7                    ! MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
+  use_BLR_compression = .false.             ! Use MUMPS / PaStiX 6 solver with Block-low-rank (BLR) compression
+  pastix_blr_abs_tol = .true.               ! Use absolute tolerance
+  epsilon_BLR        = 0.                   ! Accuracy of BLR compression (0. = lossless)
+  just_in_time_BLR   = .true.               ! Use Just-in-time strategy for BLR compression (.false. = memory-optimal)
+
   
 !==== RMP parameters =====
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)
@@ -293,13 +318,11 @@ subroutine preset_parameters
   RMP_growth_rate    = 0.011 ! RMP_growth_rate * RMP_ramp_up_time must be ~cst
   RMP_ramp_up_time   = 1000  ! in JOREK times
   output_bnd_elements = .false.  ! writes bnd nodes and elements in output files (boundary_nodes.dat and boundary_elements.dat)
-  RMP_har_cos=2
-  RMP_har_sin=3
-  Number_RMP_harmonics=1
-  RMP_har_cos_spectrum(:)=0
-  RMP_har_cos_spectrum(1)=RMP_har_cos ! =2 if only one harmonic (ntor=3) and this harmonic is RMP 
-  RMP_har_sin_spectrum(:)=0
-  RMP_har_sin_spectrum(1)=RMP_har_sin ! =3 if only one harmonic (ntor=3) and this harmonic is RMP 
+  RMP_har_cos = 2
+  RMP_har_sin = 3
+  Number_RMP_harmonics = 1
+  RMP_har_cos_spectrum(1) = RMP_har_cos ! 2 if only one harmonic (ntor=3) and this harmonic is RMP 
+  RMP_har_sin_spectrum(1) = RMP_har_sin ! 3 if only one harmonic (ntor=3) and this harmonic is RMP 
 
 ! ===== Neoclassical parameters ======
   NEO = .false.
@@ -313,55 +336,65 @@ subroutine preset_parameters
   Z_limiter = 0.d0
   
  !======================MB rotation profile
-  V_0=0.d0
-  V_1=0.d0
-  V_coef=0.d0
-  V_coef(1)=0.d0
-  V_coef(4)=0.1
-  V_coef(5)=1.
+  V_0 = 0.d0
+  V_1 = 0.d0
+  V_coef(1:5) = (/ 0.d0, 0.d0, 0.d0, 0.1d0, 1.0d0 /)
 !======================MB
 
-!======================AF Massive Gas Injection Parameters
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-    JET_MGI = .false.
-    ASDEX_MGI = .false.
-    mgi_amplitude = 0.d0  ! 0.007d0
-    mgi_R      = 3.2d0
-    mgi_Z      =  1.5d0
-    mgi_phi    = 1.57d0
-    mgi_radius =   0.08d0
-    mgi_sig    =  0.05
-    mgi_deltaphi =  0.5
-    mgi_tor_norm = 1.
-    ksi_ion = 1.84d-24
-    D_neutral_x = 1.d-5
-    D_neutral_y = 1.d-5
-    D_neutral_p = 1.d-5
-    !====== JET DMV-2 parameters
-     L_tube = 2.d0
-     K_Dmv = 4.d-2
-     A_Dmv = 1.77d-2
-     t_mgi = 2.d3
-    !=====
-     delta_n_convection = 0
-     nimp_bg = 0.
-#endif
-!======================AF
+  JET_MGI = .false.
+  ASDEX_MGI = .false.
+  ns_amplitude = 0.d0
+  ns_R      = 3.2d0
+  ns_Z      =  1.5d0
+  ns_phi    = 1.57d0
+  ns_radius =   0.08d0
+  ns_sig    =  0.05
+  ns_deltaphi =  0.5
+  ns_tor_norm = 1.
+  ksi_ion = 1.84d-24
+  D_neutral_x = 1.d-5
+  D_neutral_y = 1.d-5
+  D_neutral_p = 1.d-5
+  delta_n_convection = 0
+  nimp_bg = 0.
+  !====== JET DMV-2 parameters
+  L_tube = 2.d0
+  K_Dmv = 4.d-2
+  A_Dmv = 1.77d-2
+  t_ns  = 2.d3
+  !======= Additional parameters for SPI =======
+  spi_Vel_Rref    = 0.0d0
+  spi_Vel_Zref    = 0.0d0
+  spi_Vel_RxZref  = 0.0d0
+  spi_quantity    = 0.0
+  ng_radius_ratio = 1.4d0
+  ng_radius_min   = 8.d-2
+  spi_Vel_diff    = 0.0
+  spi_angle       = 0.0
+  spi_L_inj       = 0.25
+  ns_phi_rotate   = 0.0
+  tor_frequency   = 0.0
+  n_spi           = 1
+  spi_rnd_seed    = 0
+  spi_abl_model   = 0
+  spi_shard_file  = 'none'
+  spi_tor_rot     = .false.
+  using_spi       = .false.
 
 !======================JP ECCD injection parameters
- nu_jec_fast=1.d1
- nu_jec1_fast=1.d1
- nu_jec2_fast=1.d1
- JJ_par=0.d1
- jecamp=1.d1
- jec_pos1=0.6d0
- jec_pos2=0.6d0
- jec_pos3=0.6d0
- jec_pos4=0.6d0
- jec_width=0.5d0
- jec_width2=0.5d0
- jw1=5.d-1 ! inner cut-off
- jw2=1.d0  ! outer cut-off
- jw3=1.d0  ! outer cut-off
+  nu_jec_fast=1.d1
+  nu_jec1_fast=1.d1
+  nu_jec2_fast=1.d1
+  JJ_par=0.d1
+  jecamp=1.d1
+  jec_pos1=0.6d0
+  jec_pos2=0.6d0
+  jec_pos3=0.6d0
+  jec_pos4=0.6d0
+  jec_width=0.5d0
+  jec_width2=0.5d0
+  jw1=5.d-1 ! inner cut-off
+  jw2=1.d0  ! outer cut-off
+  jw3=1.d0  ! outer cut-off
 
 end subroutine preset_parameters

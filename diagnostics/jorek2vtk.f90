@@ -11,14 +11,18 @@ use mpi_mod
 use mod_bootstrap_functions
 use corr_neg
 use mod_import_restart
+use equil_info
+use mod_boundary
 use mod_vtk
 use mod_interp
+use mod_poloidal_currents
 
 implicit none
 
 type (type_node_list)   ,     pointer :: node_list
 type (type_element_list),     pointer :: element_list
 type (type_bnd_element_list), pointer :: bnd_elm_list    
+type (type_bnd_node_list),    pointer :: bnd_node_list 
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
@@ -40,6 +44,8 @@ real*8                :: T0,  T0_s,  T0_t,  T0_st,  T0_ss,  T0_tt,  TT,  TT_s, T
 real*8                :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti,  Ti_s, Ti_t, Ti_st, Ti_ss, Ti_tt
 real*8                :: Te0, Te0_s, Te0_t, Te0_st, Te0_ss, Te0_tt, Te, Te_s,  Te_t, Te_st, Te_ss, Te_tt
 real*8                :: V0,  V0_s,  V0_t,  V0_st,  V0_ss,  V0_tt,  V, V_s, V_t, V_st, V_ss, V_tt
+real*8                :: dPsi, dPs_s, dPs_t, dPs_st, dPs_ss, dPs_tt
+real*8                :: dU,    dU_s,  dU_t,  dU_st,  dU_ss,  dU_tt
 real*8                :: ps0_x, ps0_y, psi_sum, ps_x, ps_y, ps_p
 real*8                :: u0_x,  u0_y,  u_sum,   u_x,  u_y,  u_p
 real*8                :: zj0_x, zj0_y, zj_sum,  zj_x, zj_y, zj_p
@@ -49,18 +55,19 @@ real*8                :: T0_x,  T0_y,  T_sum,   TT_x, TT_y, TT_p
 real*8                :: Ti0_x, Ti0_y, Ti_sum,  Ti_x, Ti_y, Ti_p
 real*8                :: Te0_x, Te0_y, Te_sum,  Te_x, Te_y, Te_p
 real*8                :: AR_Z, AR_p, AZ_R, AZ_p, A3_R, A3_Z, Fprof
-real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
-real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8                :: psi_norm, psi_bnd, grad_psi
+real*8                :: E_phi, E_R, E_Z, dU_x, dU_y, Jpol_R, Jpol_Z, FFp
 real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
-integer               :: n_fluxes, n_neo, n_bfield, n_vfield,n_pellet,n_bootstrap, n_psi_norm
-integer               :: s_fluxes, s_neo, s_bfield, s_vfield,s_pellet,s_bootstrap, s_psi_norm
-real*8                :: Jb, minRad,rho_norm,t_norm
+integer               :: n_fluxes, n_neo, n_bfield, n_vfield,n_pellet,n_bootstrap, n_psi_norm, n_Efield
+integer               :: n_Jpol
+integer               :: s_fluxes, s_neo, s_bfield, s_vfield,s_pellet,s_bootstrap, s_psi_norm, s_Efield
+integer               :: s_Jpol
+real*8                :: Jb,rho_norm,t_norm
 integer               :: i_elm_axis, i_elm_xpoint(2), k_tor, ifail, ierr
 logical               :: without_n0_mode, SI_units
 logical               :: include_fluxes, include_neo, include_magnetic_field, include_velocity_field
-logical               :: include_bootstrap, include_psi_norm
+logical               :: include_bootstrap, include_psi_norm, include_electric_field, include_Jpol, RphiZ_coords
 real*8                :: toroidal_angle
 !====================== --- add the diagnostics Er, Vtheta and Vneo
 real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound, Vneo
@@ -76,6 +83,14 @@ real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 real*8                :: T_corr, T_rad, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: T_real8
+
+!====================== --- Variables related to neutral density evolution (model 500 or 555)
+logical               :: include_neutral_dens
+integer               :: n_rn0, s_rn0
+real*8                :: r0_corr, rn0_corr
+real*8                :: r0_real8, rn0_real8
+real*8                :: IonN, RecN, AblN, coef_rec_1, Srec_T
+
 #ifdef fullmhd
 !====================== --- Variables related to full mhd 
 integer               :: n_fullmhd,s_fullmhd
@@ -89,8 +104,7 @@ real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
-                      include_bootstrap, include_psi_norm
-
+                      include_bootstrap, include_psi_norm, include_electric_field, include_Jpol, RphiZ_coords
 
 
 write(*,*) '***************************************'
@@ -102,6 +116,8 @@ write(*,*) '   -include_fluxes'
 write(*,*) '   -include_neo'
 write(*,*) '   -include_magnetic_field'
 write(*,*) '   -include_velocity_field'
+write(*,*) '   -include_electric_field'
+write(*,*) '   -include_Jpol'
 write(*,*) '   -include_bootstrap'
 write(*,*) '   -include_psi_norm'
 write(*,*) '***************************************'
@@ -111,6 +127,7 @@ call flush_it(6)
 allocate(node_list)
 allocate(element_list)
 allocate(bnd_elm_list)
+allocate(bnd_node_list)
 
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
@@ -126,11 +143,15 @@ include_fluxes         = .false. ! include energy and density fluxes (or not)
 include_neo            = .false. ! include neoclassical and more terms (or not)
 include_magnetic_field = .false. ! include vector of magnetic field (or not)
 include_velocity_field = .false. ! include vector of velocity field (or not)
+include_electric_field = .false. ! include vector of E-field (or not), evaluated at t-dt/2 
+include_Jpol           = .false. ! include poloidal current vector (J_phi=0 for visualization)
 include_bootstrap      = .false. ! include bootstrap current and averaged current
-include_psi_norm       = .false.  ! include normalized flux
+include_psi_norm       = .true.  ! include normalized flux
+RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,Z,0)
 
 #if (JOREK_MODEL == 500)
 include_radiation = .true.
+include_neutral_dens = .true.
 #endif
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
@@ -153,8 +174,11 @@ write(*,*) 'include_fluxes  =', include_fluxes
 write(*,*) 'include_neo     =', include_neo
 write(*,*) 'include_magnetic_field =',include_magnetic_field
 write(*,*) 'include_velocity_field =',include_velocity_field
-write(*,*) 'include_bootstrap =',include_bootstrap
-write(*,*) 'include_psi_norm =', include_psi_norm
+write(*,*) 'include_electric_field =',include_electric_field
+write(*,*) 'include_Jpol      =', include_Jpol
+write(*,*) 'include_bootstrap =', include_bootstrap
+write(*,*) 'include_psi_norm  =', include_psi_norm
+
 
 write(*,*) '-----------'
 write(*,*) 'n_tor           =', n_tor
@@ -171,6 +195,8 @@ n_fluxes    = 0
 n_neo       = 0
 n_bfield    = 0
 n_vfield    = 0
+n_Efield    = 0
+n_Jpol      = 0
 n_pellet    = 0
 n_bootstrap = 0
 n_psi_norm  = 0
@@ -195,6 +221,16 @@ if (include_velocity_field) then
   s_vfield  = n_vectors
   n_vectors = n_vectors + n_vfield
 endif
+if (include_electric_field) then
+  n_Efield  = 1
+  s_Efield  = n_vectors
+  n_vectors = n_vectors + n_Efield
+endif
+if (include_Jpol) then
+  n_Jpol    = 1
+  s_Jpol    = n_vectors
+  n_vectors = n_vectors + n_Jpol
+endif
 if (use_pellet) then
   n_pellet  = 2  ! pellet and pressuren
   s_pellet  = n_scalars
@@ -218,6 +254,15 @@ endif
     s_radiation = n_scalars
     n_scalars   = n_scalars + n_radiation
  endif
+
+    n_rn0 = 0
+ if (include_neutral_dens) then
+    n_rn0       = 2
+    s_rn0       = n_scalars
+    n_scalars   = n_scalars + n_rn0
+ endif
+
+
 #endif
 
 #if fullmhd
@@ -265,6 +310,8 @@ if ( SI_units ) then
      scalar_names(s_bootstrap+1:s_bootstrap+n_bootstrap) = (/'j_b_MA/m2   ', 'j_av_MA/m2  '/)
   endif
 
+  if (include_Jpol)  vector_names(s_Jpol  +1:s_Jpol  +n_Jpol  ) = 'Jpol (MA/m2)'
+
 else
 
   if (include_fluxes) then
@@ -282,6 +329,9 @@ else
       if (.not. bootstrap) write(*,*)'VTK WARNING: if you want the bootstrap, please set bootstrap=.t. in your input file!'
       scalar_names(s_bootstrap+1:s_bootstrap+n_bootstrap) = (/ 'j_bootstrap ', 'j_averaged  ' /)
    endif
+
+   if (include_Jpol)  vector_names(s_Jpol  +1:s_Jpol  +n_Jpol  ) = 'Jpol'
+
 !======================end SI units
 endif
 
@@ -294,23 +344,31 @@ endif
 
 #if (JOREK_MODEL == 500)
  if (include_radiation) then
-     scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
+   scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
                   = (/ 'Ionis_Wm-3  ', 'Lin_radWm-3 ', 'Brems_Wm-3  ', 'Joule_Wm-3  ', 'Imp_bg_Wm-3 '/)
  endif
+
+ if (include_neutral_dens) then
+   scalar_names(s_rn0+1:s_rn0+n_rn0)&
+                  = (/ 'IonN_s-1     ', 'RecN_s-1     '/)
+
+ endif
+
 #endif
 
 #ifdef fullmhd
 scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_phi       ', 'B_R         ', 'B_Z         '/)
 #endif /*fullmhd*/
 
-if (include_magnetic_field)  vector_names(s_bfield+1:s_bfield+n_bfield) = (/ 'B_R     ','B_Z     ','B_phi   '/)
-if (include_velocity_field)  vector_names(s_vfield+1:s_vfield+n_vfield) = (/ 'V_R     ','V_Z     ','V_phi   '/)
+if (include_magnetic_field)  vector_names(s_bfield+1:s_bfield+n_bfield) = 'B_field' 
+if (include_velocity_field)  vector_names(s_vfield+1:s_vfield+n_vfield) = 'v_field'
+if (include_electric_field)  vector_names(s_Efield+1:s_Efield+n_Efield) = 'E_field_tmid'
 
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
 enddo
 
-call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
@@ -328,23 +386,13 @@ vectors = 0.d0
 xyz     = 0
 ien     = 0
 
-call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
-if (xpoint) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-  psi_bnd  = psi_xpoint(1)
-  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    psi_bnd = psi_xpoint(2)
-  endif
-else
-  psi_bnd = 0.d0
-endif
+call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 
 minRad = 0.0
 if (bootstrap) then
-  call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd, minRad)
-  call bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
-  call bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
+  call bootstrap_find_minRad(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd)
+  call bootstrap_get_q_and_ft_splines(node_list, element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
+  call bootstrap_get_averaged_j_spline(node_list, element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
 endif
 
 ! --- You may choose to print your poloidal snapshot at a different toroidal angle
@@ -387,9 +435,12 @@ do i=1,element_list%n_elements
               + R_st*(Z_t*R_s + Z_s*R_t) + Z_ss*R_t**2 - R_ss*Z_t*R_t) / xjac
 
       inode = inode+1
-
-      xyz(1:3,inode) = (/ R, Z, 0.d0/)
-
+      
+      if (RphiZ_coords) then
+        xyz(1:3,inode) = (/ R, 0.d0,    Z /)
+      else
+        xyz(1:3,inode) = (/ R,    Z, 0.d0 /)
+      endif
       !====================== --- specific for axisymmetric quantities
       ! Put here all quantities that are axisymmetric (n=0 mode only) and should not be summed
       ! over all harmonics: for instance, to compute Vtheta, Er, Vneo, etc.
@@ -457,7 +508,7 @@ do i=1,element_list%n_elements
               if (num_neo_file) then
 !                  write(*,*) 'neo_file=',neo_file
 !                  write(*,*) 'using ki and mui profiles from file "'//trim(neo_file)//'"'
-                call neo_coef( xpoint, xcase, Z, Z_xpoint, Ps0 ,psi_axis, psi_bnd, &
+                call neo_coef( xpoint, xcase, Z, ES%Z_xpoint, Ps0 ,ES%psi_axis, ES%psi_bnd, &
                                amu_neo_node, aki_neo_node)
                 Vneo   = aki_neo_node / Btheta*tauIC  * (ps0_x*T0_x + ps0_y*T0_y)
               else
@@ -561,10 +612,6 @@ do i=1,element_list%n_elements
            !*** compute diagnostics ***
           v_perp  = R * sqrt(u_x*u_x + u_y*u_y)
 
-              !  vectors(inode,:,1) = (/ - R * u0_y ,+ R * u0_x ,   0.d0 /)
-              !  vectors(inode,:,2) = (/ + ps_y /R * V, - ps_x /R * V, F0/R * V /)
-              !  vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * V, + R * u0_x - ps_x /R * V, F0/R * V /)
-
           psi_J = (Ps_s * ZJ_t - PS_t * ZJ_s ) / xjac
           R_p   = (2.d0 * R * (R_s * (RHO_t * TT + RHO * TT_t) - R_t * (RHO_s * TT + RHO * TT_s) )) / xjac
           error = psi_J - R_p  ! "error" in Grad_Shafranov equilibrium force balance
@@ -607,6 +654,8 @@ do i=1,element_list%n_elements
         Ti_sum  = 0.d0; Ti_x = 0.d0; Ti_y = 0.d0; Ti_p = 0.d0
         Te_sum  = 0.d0; Te_x = 0.d0; Te_y = 0.d0; Te_p = 0.d0
         w_sum   = 0.d0; w_x  = 0.d0; w_y  = 0.d0; w_p  = 0.d0; w_xx = 0.d0; w_yy = 0.d0
+        E_R     = 0.d0; E_z  = 0.d0; E_phi= 0.d0
+        dU_x    = 0.d0; dU_y = 0.d0
 
 #ifdef fullmhd
         !reinitialize Bphi,BR,B_Z for loop over all modes
@@ -614,7 +663,7 @@ do i=1,element_list%n_elements
         scalars(inode,s_fullmhd+2) = 0.  
         scalars(inode,s_fullmhd+3) = 0.  
 #endif /*fullmhd*/
-
+        
         do i_tor = 1, n_tor
 
           if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
@@ -623,6 +672,9 @@ do i=1,element_list%n_elements
              call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
              scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
           enddo
+          
+          call interp_delta(node_list,element_list,i,1,i_tor,s,t,dpsi,dPs_s, dPs_t, dPs_st, dPs_ss, dPs_tt)
+          call interp_delta(node_list,element_list,i,2,i_tor,s,t,dU,dU_s, dU_t, dU_st, dU_ss, dU_tt)         
 
           call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s, Ps_t, Ps_st, Ps_ss, Ps_tt)
           call interp(node_list,element_list,i,2,i_tor,s,t,U  ,U_s,  U_t,  U_st,  U_ss,  U_tt)
@@ -630,6 +682,7 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,4,i_tor,s,t,W  ,W_s,  W_t,  W_st,  W_ss,  W_tt)
           call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
           call interp(node_list,element_list,i,6,i_tor,s,t,TT ,TT_s, TT_t, TT_st, TT_ss, TT_tt)
+         
           if ( jorek_model >= 300 ) then
              call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
           else
@@ -685,6 +738,9 @@ do i=1,element_list%n_elements
              u_x  = u_x   + (   Z_t * U_s - Z_s * U_t )     / xjac * HZ(i_tor,i_plane)
              u_y  = u_y   + ( - R_t * U_s + R_s * U_t )     / xjac * HZ(i_tor,i_plane)
 
+             du_x = du_x  + (   Z_t * dU_s - Z_s * dU_t )   / xjac * HZ(i_tor,i_plane)
+             du_y = du_y  + ( - R_t * dU_s + R_s * dU_t )   / xjac * HZ(i_tor,i_plane)
+
              ps_x  = ps_x + (   Z_t * PS_s - Z_s * PS_t )   / xjac * HZ(i_tor,i_plane)
              ps_y  = ps_y + ( - R_t * PS_s + R_s * PS_t )   / xjac * HZ(i_tor,i_plane)
 
@@ -728,6 +784,11 @@ do i=1,element_list%n_elements
                   + w_t * (R_st*R_s - R_ss*R_t ) )       / xjac**2                      &
                   - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
 
+            ! --- Full toroidal electric field evaluated at t_now - dt/2
+            E_R   = E_R   - F0*(U_x-0.5d0*dU_x)*HZ(i_tor,i_plane)
+            E_Z   = E_Z   - F0*(U_y-0.5d0*dU_y)*HZ(i_tor,i_plane) 
+            E_phi = E_phi - dpsi/tstep * HZ(i_tor,i_plane)/BigR - F0*(U-0.5d0*dU)*HZ_p(i_tor,i_plane)/BigR 
+
           endif ! xjac
 
         enddo  ! end loop toroidal harmonics
@@ -737,17 +798,11 @@ do i=1,element_list%n_elements
            call interp(node_list,element_list,i,1,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
            Psi_tot = Psi_tot + P * HZ(i_tor,i_plane)
         enddo
-
-        psi_norm = (Psi_tot - psi_axis)/(psi_bnd - psi_axis)
-        if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
-           psi_norm = 2.d0 - psi_norm
-        endif
-        if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) then
-           psi_norm = 2.d0 - psi_norm
-        endif
+ 
+        psi_norm = get_psi_n(Psi_tot, Z)
 
         if (include_bootstrap) then
-          call bootstrap_current(minRad, R, Z, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+          call bootstrap_current(R, Z, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint, ES%psi_bnd, psi_norm,&
                                  psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,      &
                                  Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb   )
           scalars(inode,s_bootstrap+1) = Jb
@@ -755,7 +810,7 @@ do i=1,element_list%n_elements
           ! --- The JOREK bootstrap is not constant on flux surface
           ! --- Because J_jorek = R*J_physical, and the physical bootstrap is constant on a surface
           ! --- Hence, it makes more sense to look at R*j_average to compare with the bootstrap...
-          scalars(inode,s_bootstrap+2) = R* scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) / R_axis
+          scalars(inode,s_bootstrap+2) = R* scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) / ES%R_axis
         else
           Jb = 0.d0
         endif
@@ -798,6 +853,23 @@ do i=1,element_list%n_elements
           endif ! grad_psi
         endif ! include_fluxes
 
+        if (include_magnetic_field) then
+          vectors(inode,:,s_Bfield + 1) = (/ ps_y/BigR, -ps_x/BigR, F0/BigR /)          
+        endif
+
+        if (include_velocity_field) then
+          vectors(inode,:,s_vfield + 1) = (/ -BigR*u_y + V/BigR*ps_y, BigR*u_x - V/BigR*ps_x, V*F0/BigR /)          
+        endif
+
+        if (include_electric_field) then
+          vectors(inode,:,s_Efield + 1) =  (/ E_R, E_Z, E_phi /)
+        endif
+
+        if (include_Jpol) then
+          call J_pol(node_list, element_list, i, s, t, i_plane,.false., Jpol_R, Jpol_Z, FFp)
+          vectors(inode,:, s_Jpol  + 1) =  (/ Jpol_R, Jpol_Z, 0.d0 /)
+        endif
+        
         if (include_psi_norm) then
            scalars(inode,s_psi_norm+1) = psi_norm
         endif
@@ -857,6 +929,8 @@ enddo  ! n_elements
 
     T_real8 = scalars(i,6)
 
+    T_corr = corr_neg_temp(T_real8)
+
     Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
 
     T_rad = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
@@ -899,6 +973,47 @@ enddo  ! n_elements
 
    enddo
   endif
+
+ if (include_neutral_dens) then
+
+   coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density * 1.d20)**(1.5d0)
+
+   coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
+   coef_ion_2 = 0.232d0
+   coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
+   S_ion_puiss = 3.9d-1
+
+   do i=1,nnos
+
+     T_real8 = scalars(i,6)
+
+     T_corr = corr_neg_temp(T_real8)
+
+
+     Srec_T    = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T_corr/(2.d0))**(-0.5d0)
+
+     Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
+ 
+     Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
+
+
+     r0_real8  = scalars(i,5)
+     rn0_real8 = scalars(i,8)
+
+     r0_corr   = corr_neg_dens(r0_real8)
+     rn0_corr  = corr_neg_dens(rn0_real8, (/ 0.d-5, 1.d-5 /))
+
+     IonN      = -(r0_corr) * (rn0_corr) * Sion_T
+     RecN      = (r0_corr)**2 * Srec_T 
+
+     scalars(i,s_rn0+1) = IonN
+     scalars(i,s_rn0+2) = RecN
+
+
+   end do
+ end if
+
+
 #endif /*(JOREK_MODEL == 500)*/
 
 
@@ -950,6 +1065,16 @@ if (SI_units) then
     scalars(i,s_bootstrap+1)=scalars(i,s_bootstrap+1)/MU_zero*1.e-6
     scalars(i,s_bootstrap+2)=scalars(i,s_bootstrap+2)/MU_zero*1.e-6
     endif
+    if (include_velocity_field) then 
+      vectors(i,:,s_vfield + 1) = vectors(i,:,s_vfield + 1)/t_norm
+    endif
+    if (include_electric_field) then 
+      vectors(i,:,s_Efield + 1) = vectors(i,:,s_Efield + 1)/t_norm
+    endif
+    if (include_Jpol) then
+      vectors(i,:, s_Jpol  + 1) = vectors(i,:,s_Jpol   + 1)/MU_zero*1e-6
+    endif
+ 
   !========================================================
 
 #if (JOREK_MODEL == 500)

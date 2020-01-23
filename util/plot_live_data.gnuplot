@@ -7,21 +7,31 @@
 # Author: Matthias Hoelzl, IPP Garching
 #
 
+no0=<no0>
 ps=<ps>
 qtty="<qtty>"
+title="<title>"
+ncols0=2+no0
 ncols=<ncols>
 logy=<logy>
 xlabel="<xlabel>"
 ylabel="<ylabel>"
+x_toSI=<qtty_x2si>
+y_toSI=<qtty_y2si>
 
 if ( ps==1 ) set term postscript enhanced color
 if ( ps==1 ) set output qtty.'.ps'
 if ( logy==1 ) set log y
 set key outside
-set title qtty
+set title qtty.' '.title
 set xlabel xlabel
 set ylabel ylabel
-plot for [i=2:ncols+1] qtty.'.dat' u 1:i w lp t columnhead(i)
+set xrange <xrange>
+set yrange <yrange>
+set format y "%g"
+set format x "%g"
+
+plot for [i=ncols0:ncols+1] qtty.'.dat' u ($1*x_toSI):(column(i)*y_toSI) w lp lc i t columnhead(i)
 
 if ( ps==0 ) print ''
 if ( ps==0 ) print 'Hints:'

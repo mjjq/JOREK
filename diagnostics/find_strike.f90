@@ -1,7 +1,7 @@
 !> Locate the position of the strike points.
 !!
 !! Note: The routine assumes that psi_bnd in the equilibrium datastructure ES is updated already.
-subroutine find_strike(node_list, bnd_elm_list, ES)
+subroutine find_strike(node_list, bnd_elm_list)
   
   use data_structure
   use gauss
@@ -13,7 +13,6 @@ subroutine find_strike(node_list, bnd_elm_list, ES)
   ! --- Routine parameters
   type(type_node_list),        intent(in)    :: node_list    !< List of grid nodes
   type(type_bnd_element_list), intent(in)    :: bnd_elm_list !< List of grid boundary elements
-  type(t_equil_state),         intent(inout) :: ES           !< Equilibrium state data structure.
   
   ! --- Local variables
   integer :: ibndelm, iv1, iv2

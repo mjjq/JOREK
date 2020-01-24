@@ -10,6 +10,7 @@ use phys_module
 use pellet_module
 use mpi_mod
 use domains
+use equil_info, only : get_psi_n, ES
 !$ use omp_lib
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
   use mod_neutral_source
@@ -23,7 +24,6 @@ type (type_element_list) :: element_list
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 
-real*8  :: psi_axis, psi_bnd
 real*8  :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
 real*8  :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss)
 real*8  :: eq_g(n_plane,n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gauss)
@@ -35,9 +35,8 @@ real*8  :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
 real*8  :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz
 real*8  :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz
 
-integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_elm_xpoint(2), ifail
+integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, ifail
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
-real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor
 real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, psi_limit
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
@@ -46,7 +45,6 @@ real*8  :: VP_int, VP_ext, VK_int, VK_ext, vpar0, BB2, VP_tot, VK_tot
 real*8  :: kin_par_in, kin_par_out, kin_par_tot, kin_perp_in, kin_perp_out, kin_perp_tot
 real*8  :: VM_int, VM_ext, VM_tot, mag_in, mag_out, mag_tot, J2_int, J2_ext, J2_tot, ohm_in, ohm_tot, ohm_out
 real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, source_out
-real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: grad_psi, grad_P, grad_P_psi, gradP_psi_max, gradP_max
 real*8  :: source_volume, source_pellet, eta_T
@@ -116,18 +114,7 @@ P_max         = 0.d0
 gradP_max     = 0.d0
 gradP_psi_max = 0.d0
 
-call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
-if (xpoint) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-  psi_bnd  = psi_xpoint(1)
-  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    psi_bnd = psi_xpoint(2)
-  endif
-else
-  psi_bnd = 0.d0
-endif
-psi_limit = psi_bnd
+psi_limit = ES%psi_bnd
 
 ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
@@ -135,10 +122,10 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
 !$omp parallel default(none)                                                                   &
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
-!$omp          R_xpoint, Z_xpoint, my_id, use_pellet, psi_limit, delta_phi, R_axis, Z_axis, psi_axis, psi_bnd, &
+!$omp          ES, my_id, use_pellet, psi_limit, delta_phi,                                    &
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
-!$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0,                    &
+!$omp          H_int, H_ext, S_int, S_ext, F0, VP_tot,eta, T_0,                                &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
@@ -241,10 +228,10 @@ do ife = ife_min, ife_max
   do ms=1, n_gauss
     do mt=1, n_gauss
 
-      call density(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
+      call density(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt),ES%psi_axis,ES%psi_bnd,eq_zne(ms,mt), &
                    dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-      call temperature(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
+      call temperature(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt),ES%psi_axis,ES%psi_bnd,eq_zTe(ms,mt), &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 
     enddo
@@ -306,15 +293,15 @@ do ife = ife_min, ife_max
         grad_P_psi = (dPdx * dpsidx + dPdy * dpsidy)/grad_psi
 
 #if (JOREK_MODEL == 400)
-        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_limit, &
+        call sources(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, ps0, ES%psi_axis, psi_limit, &
                      particle_source,heat_source_i,heat_source_e)
 		     heat_source = heat_source_i + heat_source_e
 #else
-        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_limit, &
+        call sources(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, ps0, ES%psi_axis, psi_limit, &
                      particle_source,heat_source)
 #endif
-        call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), Z_xpoint, ps0,&
-                     psi_axis,psi_limit,current_source)
+        call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), ES%Z_xpoint, ps0,&
+                     ES%psi_axis,psi_limit,current_source)
 
         P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
         D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
@@ -375,7 +362,7 @@ do ife = ife_min, ife_max
 
 #endif
 
-        if (in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis)) then
+        if (in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,ES%R_xpoint,ES%Z_xpoint,ES%psi_xpoint,psi_limit,ES%R_axis, ES%Z_axis,ES%psi_axis)) then
 
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi

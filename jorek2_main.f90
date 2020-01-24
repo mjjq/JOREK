@@ -1003,14 +1003,6 @@ required = 0
     endif     
   
 
-!#ifdef PSV        
-    ! Build the harmonic matrix 
-
-
-!IF (.False.) THEN
-!    call distribute_nodes_elements_harmonic(my_id,m_cpu,n_cpu,node_list,element_list,local_elms_harm,	  &
-!    	 n_local_elms_harm,index_min_harm,index_max_harm)
-!END IF
 
 !begin Harmonic Matrix Construction
 #ifdef DIRECT_CONSTRUCTION
@@ -1072,6 +1064,8 @@ required = 0
          write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
       endif     
       
+      call clck_time_barrier(t0) 
+
       !----- collecting distributed matrix on a single MPI process
       if (.not.allocated(nz_array)) allocate(nz_array(n_cpu_n)) 
       if (.not.allocated(disp_array)) allocate(disp_array(n_cpu_n))
@@ -1110,107 +1104,21 @@ required = 0
       
       mumps_par%rhs = rhs_glob_harm
 
+      call clck_time_barrier(t1) 
+
+      if (my_id .eq. 0) then
+         call clck_ldiff(t0,t1,tsecond)
+         write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
+      endif     
+
       !---- for debuging
       !call MPI_Abort(MPI_COMM_WORLD, 30, ierr)
-
-#ifdef PSV
-    !---- Part of the code under the flag PSV is just for debugging and will be
-    !removed at some point.
-    if (my_id .eq. 1) then
-     write(200,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
-     write(200,*) 'i, rhs_construct ' 
-     do i = 1, mumps_par%n
-     write(200,*) i, mumps_par%rhs(i) 
-     enddo
-    endif
-
-
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-    write(*,*) 'psv1, my_id =', my_id, mumps_par%n, mumps_par%nz
-   
-    if (my_id .eq. 0) then
-      write(100,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
-      write(100,*) 'i, irn, jcn, A' 
-     do i = 1, mumps_par%nz
-     write(100,*) i, mumps_par%irn(i),mumps_par%jcn(i),mumps_par%A(i) 
-     enddo 
-      write(101,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
-      write(101,*) 'i, rhs ' 
-     do i = 1, mumps_par%n
-     write(101,*) i, mumps_par%rhs(i) 
-     enddo
-    endif     
-
-    write(*,*) 'psv2, my_id =', my_id, mumps_par%n, mumps_par%nz
-   
-    if (my_id .eq. 1) then
-      write(200,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
-      write(200,*) 'i, irn, jcn, A' 
-     do i = 1, mumps_par%nz
-      write(200,*) i, mumps_par%irn(i),mumps_par%jcn(i),mumps_par%A(i) 
-     enddo 
-      write(201,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
-      write(201,*) 'i, rhs ' 
-     do i = 1, mumps_par%n
-     write(201,*) i, mumps_par%rhs(i) 
-     enddo
-    endif     
-
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
-   
-    write(*,*) 'psv3, my_id =', my_id, mumps_par%n, mumps_par%nz
-   
-    if (my_id .eq. 2) then
-      write(300,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
-      write(300,*) 'i, irn, jcn, A' 
-     do i = 1, mumps_par%nz
-      write(300,*) i, mumps_par%irn(i),mumps_par%jcn(i),mumps_par%A(i) 
-     enddo 
-      write(301,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
-      write(301,*) 'i, rhs ' 
-     do i = 1, mumps_par%n
-     write(301,*) i, mumps_par%rhs(i) 
-     enddo
-    endif     
-
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
-   
-    write(*,*) 'psv4, my_id =', my_id, mumps_par%n, mumps_par%nz
-    if (my_id .eq. 3) then
-      write(400,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
-      write(400,*) 'i, irn, jcn, A' 
-     do i = 1, mumps_par%nz
-      write(400,*) i, mumps_par%irn(i),mumps_par%jcn(i),mumps_par%A(i) 
-     enddo 
-      write(401,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
-      write(401,*) 'i, rhs ' 
-     do i = 1, mumps_par%n
-     write(401,*) i, mumps_par%rhs(i) 
-     enddo
-    endif     
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-
-    allocate(A(mumps_par%nz))
-    allocate(irn(mumps_par%nz))
-    allocate(jcn(mumps_par%nz))
-    allocate(rhs(mumps_par%n))
-
-    A   = mumps_par%A
-    irn = mumps_par%irn
-    jcn = mumps_par%jcn
-    rhs = mumps_par%rhs
-
-#endif
  
     endif
   endif
 #endif
 !end Harmonic Matrix Construction
 
-    ! Ici c'est OK
-    !CALL MPI_Abort(MPI_COMM_WORLD, 1, ierr)
 
     ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
     call del_thread_buffers()
@@ -1225,10 +1133,6 @@ required = 0
 
     else 
 
-!IF (.False.) THEN
-!          call distribute_harmonics(my_id,my_id_n,n_cpu)
-!          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)   
-!END IF
 
 #ifndef DIRECT_CONSTRUCTION
        !--------- Constructing Harmonic Matrix via MPI all-to-all communication
@@ -1244,70 +1148,6 @@ required = 0
           write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
        end if
 #endif
-
-#ifdef PSV        
-    !---- Part of the code under the flag PSV is just for debugging and will be
-    !removed at some point.
-    if (my_id .eq. 1) then
-     write(201,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
-     write(201,*) 'i, rhs_distributed ' 
-     do i = 1, mumps_par%n
-     write(201,*) i, mumps_par%rhs(i) 
-     enddo
-    endif
-
-  
-    if ((my_id .eq. 1)) then
-          
-       write(202,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
-       write(202,*) 'i, rhs_distributed, rhs_construct' 
-       do i = 1, mumps_par%n
-         if(abs(mumps_par%rhs(i)-rhs(i))/mumps_par%rhs(i).gt.1E-3)  write(202,*) i, mumps_par%rhs(i), rhs(i) 
-       enddo
-
-    endif     
-
-  
-    if ((my_id .eq. 0)) then
-      write(200,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
-      write(200,*) 'i, irn_distributed, irn_construct, irn_distributed-irn_construct' 
-     do i = 1, mumps_par%nz
-      if(mumps_par%irn(i).ne.irn(i))  write(200,*) i, mumps_par%irn(i), irn(i), mumps_par%irn(i)-irn(i) 
-     enddo 
-      write(201,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
-       write(201,*) 'i, jcn_distributed, jcn_construct, jcn_distributed-jcn_construct' 
-      do i = 1, mumps_par%nz
-      if(mumps_par%jcn(i).ne.jcn(i))  write(201,*) i, mumps_par%jcn(i), jcn(i), mumps_par%jcn(i) - jcn(i) 
-       enddo
-    
-       write(202,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
-      write(202,*) 'i, rhs_distributed, rhs_construct' 
-       do i = 1, mumps_par%n
-         if(abs(mumps_par%rhs(i)-rhs(i))/mumps_par%rhs(i).gt.1E-3)  write(202,*) i, mumps_par%rhs(i), rhs(i) 
-       enddo
-
-      write(203,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
-      write(203,*) 'i, A_distributed, A_construct' 
-     do i = 1, mumps_par%nz
-      if(abs(mumps_par%A(i)-A(i))/mumps_par%A(i).gt.1E-3)  write(203,*) i, mumps_par%A(i), A(i)!, mumps_par%A(i)-A(i) 
-    enddo 
-
-    endif     
-
-#endif
-   
-!    if (my_id .eq. 0) then
-!      write(200,*) 'i_tor_min, i_tor_max, mumps_par%nz =', i_tor_min, i_tor_max, mumps_par%nz 
-!      write(200,*) 'i, irn, jcn, A' 
-!     do i = 1, mumps_par%nz
-!      write(200,*) i, mumps_par%irn(i),mumps_par%jcn(i),mumps_par%A(i) 
-!    enddo 
-!      write(201,*) 'i_tor_min, i_tor_max, mumps_par%n =', i_tor_min, i_tor_max, mumps_par%n 
-!      write(201,*) 'i, rhs ' 
-!     do i = 1, mumps_par%n
-!      write(201,*) i, mumps_par%rhs(i) 
-!     enddo
-!    endif     
 
 
        call clck_time(t0)

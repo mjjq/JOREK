@@ -30,6 +30,7 @@ program jorek2_postproc
   
   ! --- Preset some parameters
   call set_setting('units',           '0',     ierr) ! JOREK units ("set units 1" for SI-units)
+  call set_setting('loop_units',      '0',     ierr) ! JOREK units ("set units 1" for SI-units)
   call set_setting('linepoints',      '200',   ierr)
   call set_setting('tor_points',      '50',    ierr)
   call set_setting('surfaces',        '100',   ierr)

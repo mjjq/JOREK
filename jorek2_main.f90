@@ -45,7 +45,8 @@ program JOREK2
   use mod_interp
   use basis_at_gaussian, only: initialise_basis
   use mod_expression, only: exprs_all_int, init_expr
-  use mod_integrals3D
+  use mod_integrals3D 
+  use direct_construction_mod
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -983,22 +984,34 @@ required = 0
 
       call clck_time_barrier(t0)
 
-      if(my_id .lt. m_cpu)  then
-       i_tor_min = 1
-       i_tor_max = 1
-      else
-       i_tor_min = 2*(my_id - MOD(my_id, m_cpu))/m_cpu
-       i_tor_max = i_tor_min + 1
-      endif
+      !if(my_id .lt. m_cpu)  then
+      ! i_tor_min = 1
+      ! i_tor_max = 1
+      !else
+      ! i_tor_min = 2*(my_id - MOD(my_id, m_cpu))/m_cpu
+      ! i_tor_max = i_tor_min + 1
+      !endif
  
-      call distribute_nodes_elements(my_id,m_cpu,n_cpu,node_list,element_list, direct_construction, & 
-                                     local_elms_harm, n_local_elms_harm, ndof_glob, index_min_harm,index_max_harm)
+      !call distribute_nodes_elements(my_id,m_cpu,n_cpu,node_list,element_list, direct_construction, & 
+      !                               local_elms_harm, n_local_elms_harm, ndof_glob, index_min_harm,index_max_harm)
 
-      call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary, &
-                                   local_elms_harm,n_local_elms_harm,index_min_harm(id_elements+1), & 
-                                   index_max_harm(id_elements+1), ijA_index_harm, ijA_size_harm,    &
-                                   irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, i_tor_max,& 
-                                   n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm)
+
+
+      !call direct_construction_harmonic(my_id, m_cpu, n_cpu, node_list, element_list, i_tor_min, i_tor_max, index_min_harm, index_max_harm, & 
+      !                         local_elms_harm, n_local_elms_harm, direct_construction)
+
+
+      call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, node_list, element_list, index_min_harm, index_max_harm, &
+                                        local_elms_harm, n_local_elms_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, i_tor_max,&
+                                        n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm, direct_construction)
+
+
+
+      !call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary, &
+      !                             local_elms_harm,n_local_elms_harm,index_min_harm(id_elements+1), & 
+      !                             index_max_harm(id_elements+1), ijA_index_harm, ijA_size_harm,    &
+      !                             irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, i_tor_max,& 
+      !                             n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm)
         
       ! --- Memory allocation
       if (allocated(A_glob_harm))    call tr_deallocate(A_glob_harm,"A_glob_harm",CAT_DMATRIX) 
@@ -1092,6 +1105,8 @@ required = 0
     ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
     call del_thread_buffers()
 
+
+
     if (.not. gmres) then
 
        if (use_mumps) then
@@ -1101,6 +1116,11 @@ required = 0
        endif
 
     else 
+
+!IF (.False.) THEN
+!          call distribute_harmonics(my_id,my_id_n,n_cpu)
+!          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)   
+!END IF
 
 
 #ifndef DIRECT_CONSTRUCTION

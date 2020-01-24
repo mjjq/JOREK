@@ -10,6 +10,9 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr, n
   use data_structure
   use phys_module
   use pellet_module
+  use equil_info
+  use mod_boundary
+  use basis_at_gaussian
 
   implicit none
   
@@ -20,6 +23,10 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr, n
   integer,                 intent(out)   :: ierr
   integer,                 intent(in)    :: format_rst  ! format of restart file 
   logical, optional,       intent(in)    :: no_perturbations ! don't initialize new harmonics
+ 
+  ! --- Local parameters
+  type (type_bnd_element_list)           :: bnd_elm_list    
+  type (type_bnd_node_list)              :: bnd_node_list 
 
   if ( rst_hdf5 == 0 ) then
     write(*,*) " Restart from BINARY file " // trim(filename) // '.rst'
@@ -30,6 +37,13 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr, n
     call import_hdf5_restart(node_list, element_list, trim(filename)//'.h5', &
             format_rst,ierr, no_perturbations)
   end if
+  
+  ! --- Required initializations to update equilibrium state
+  call initialise_basis
+  call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+  write(*,*) " "
+  write(*,*) " The equilibrium state has been updated "
   
 end subroutine import_restart
 

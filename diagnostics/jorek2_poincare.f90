@@ -8,6 +8,7 @@ use elements_nodes_neighbours
 use mod_neighbours
 use mod_import_restart
 use mod_log_params
+use equil_info, only : get_psi_n, ES
 use mod_interp
 
 implicit none
@@ -24,9 +25,9 @@ real*8, allocatable :: R_start(:), Z_start(:), P_start(:)
 real*8  :: R, Z, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, Rmax, Zmin, Zmax, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step
-real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, atmp, cur_pert
-real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_bnd, psi_out
-integer :: i_elm_axis, i_elm_xpoint(2), ierr
+real*8  :: atmp, cur_pert
+real*8  :: psi_out
+integer :: ierr
 
 
 write(*,*) '***************************************'
@@ -176,13 +177,6 @@ enddo
 write(*,*) ' modes   : ',mode
 write(*,*) ' nperiod : ',n_period
 
-call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
-psi_bnd = 0.d0
-if ( xpoint ) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-  psi_bnd = psi_xpoint(1)
-end if
   
 call begplt('poincare.ps')
 
@@ -413,8 +407,8 @@ L_IL: do i_lines=1,n_lines
 
     Rp(ip) = R_line
     Zp(ip) = Z_line
-    Tp(ip)  = atan2( Z_line - Z_axis, R_line - R_axis)
-    Pp(ip)  = (psi_out - psi_axis)/(psi_bnd - psi_axis)
+    Tp(ip)  = atan2( Z_line - ES%Z_axis, R_line - ES%R_axis)
+    Pp(ip)  = get_psi_n(psi_out, Z_line)
 
     if (i_elm .eq. 0) exit
      

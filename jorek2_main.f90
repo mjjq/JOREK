@@ -984,60 +984,12 @@ required = 0
 
       call clck_time_barrier(t0)
 
-      !if(my_id .lt. m_cpu)  then
-      ! i_tor_min = 1
-      ! i_tor_max = 1
-      !else
-      ! i_tor_min = 2*(my_id - MOD(my_id, m_cpu))/m_cpu
-      ! i_tor_max = i_tor_min + 1
-      !endif
- 
-      !call distribute_nodes_elements(my_id,m_cpu,n_cpu,node_list,element_list, direct_construction, & 
-      !                               local_elms_harm, n_local_elms_harm, ndof_glob, index_min_harm,index_max_harm)
 
-
-
-      !call direct_construction_harmonic(my_id, m_cpu, n_cpu, node_list, element_list, i_tor_min, i_tor_max, index_min_harm, index_max_harm, & 
-      !                         local_elms_harm, n_local_elms_harm, direct_construction)
-
-
-      call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, node_list, element_list, index_min_harm, index_max_harm, &
-                                        local_elms_harm, n_local_elms_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, i_tor_max,&
-                                        n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm, direct_construction)
-
-
-
-      !call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary, &
-      !                             local_elms_harm,n_local_elms_harm,index_min_harm(id_elements+1), & 
-      !                             index_max_harm(id_elements+1), ijA_index_harm, ijA_size_harm,    &
-      !                             irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, i_tor_max,& 
-      !                             n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm)
-        
-      ! --- Memory allocation
-      if (allocated(A_glob_harm))    call tr_deallocate(A_glob_harm,"A_glob_harm",CAT_DMATRIX) 
-      call tr_allocate(A_glob_harm,1,nz_glob_harm,"A_glob_harm",  CAT_DMATRIX)
-
-      if (allocated(irn_glob_harm))  call tr_deallocate(irn_glob_harm,"irn_glob_harm",CAT_DMATRIX)
-      call tr_allocate(irn_glob_harm,1,nz_glob_harm,"irn_glob_harm",  CAT_DMATRIX)
- 
-      if (allocated(jcn_glob_harm))  call tr_deallocate(jcn_glob_harm,"jcn_glob_harm",CAT_DMATRIX)
-      call tr_allocate(jcn_glob_harm,1,nz_glob_harm,"jcn_glob_harm",  CAT_DMATRIX) 
-
-      if (allocated(rhs_glob_harm))  call tr_deallocate(rhs_glob_harm,"rhs_glob_harm",CAT_DMATRIX)
-      call tr_allocate (rhs_glob_harm,1,ndof_glob_harm,"rhs_glob_harm",CAT_DMATRIX)
-
-
-      A_glob_harm = 0.0d0 
-      rhs_glob_harm = 0.0d0 
-      irn_glob_harm   = 0
-      jcn_glob_harm   = 0
-
-      call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master,             &
-      local_elms_harm, n_local_elms_harm, index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint,&
-      xcase, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint,              &
-      ES%psi_xpoint, i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm, ndof_glob_harm, A_glob_harm, &
-      rhs_glob_harm, irn_glob_harm, jcn_glob_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm,    &
-      direct_construction)
+      call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, node_list,  & 
+                                        element_list, index_min_harm, index_max_harm, local_elms_harm, n_local_elms_harm,     & 
+                                        ijA_index_harm, ijA_size_harm, irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, & 
+                                        i_tor_max, n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm,       & 
+                                        direct_construction)
 
       call clck_time_barrier(t1) 
 

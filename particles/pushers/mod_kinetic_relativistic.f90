@@ -16,6 +16,42 @@ public gc_to_relativistic_kinetic
 contains
 
 !---------------------------------------------------------------------------
+!> This subroutine computes the first steo of the JOREK specific 
+!> Volume preserving algorithm
+!> inputs:
+!>   particle: (particle_kinetic_relativistic) relativistic particle type
+!>   mass:     (real8) particle mass in [AMU]
+!>   dt:       (real8) time step in [s]
+!> outputs:
+!>   scaling_factor: (real8) scaling factor
+!>   half_position:  (real8)(2) particle position after half time step 
+!>			        in cartesian coordinates
+pure subroutine volume_preserving_half_step_jorek(particle,mass,dt,&
+scaling_factor,half_position)
+! load functions
+use mod_pusher_tools, only: coordinate_transfrom_RZPHI_to_XYZ
+! input variables
+class(particle_kinetic_relativistic), intent(in) :: particle !< relativistic particle
+real(kind=8), intent(in) :: mass, dt !< mass and time step
+! output variables
+real(kind=8), intent(out) :: scaling_factor
+real(kind=8),dimension(2),intent(out) :: half_position
+
+  ! compute the dimensional q
+  scaling_factor = 5.d-1*dt*particle%q*EL_CHG/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT)
+  ! compute dimensionless momenta
+  particle%p = particle%p/(mass*SPEED_OF_LIGHT)
+  ! transform particle coordinates from cylindrical to cartesian  
+  half_position = coordinate_transfrom_RZPHI_to_XYZ(particle%x)
+  ! compute coordinates at half step
+  half_position%x = half_position%x + (5.d-1*dt*SPEED_OF_LIGHT*particle%p)/&
+    (sqrt(1.d0+dot_product(particle%p,particle%p)))
+
+
+end subroutine volume_preserving_half_step_jorek
+
+
+!---------------------------------------------------------------------------
 !> This subroutine implements a test version of the volume preserving 
 !> algorithm: described in R. Zhang, Phys. of Plasmas, vol.22, p.044501, 2015.
 !> using the complete Cayley transform in cartesian coordinates.
@@ -24,7 +60,7 @@ contains
 !> uniform E and B.
 !> inputs:
 !>   particle: (particle_kinetic_relativistic) relativistic particle type
-!>   mass:        (real8) particle mass in [AMU]
+!>   mass:     (real8) particle mass in [AMU]
 !>   E:        (real8)(3) electric field in [V/m]
 !>   B:        (real8)(3) magnetic field in [T]
 !>   dt:       (real8) time step in [s]

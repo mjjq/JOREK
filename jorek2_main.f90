@@ -975,54 +975,6 @@ required = 0
     endif     
   
 
-
-!begin Harmonic Matrix Construction
-#ifdef DIRECT_CONSTRUCTION
-  !--------- Constructing Harmonic Matrix directly from elementary matrix
-  direct_construction = .true.
-  if(direct_construction) then
-    if(n_tor.gt.1) then
-
-      call clck_time_barrier(t0)
-
-
-      call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, node_list,  & 
-                                        element_list, index_min_harm, index_max_harm, local_elms_harm, n_local_elms_harm,     & 
-                                        ijA_index_harm, ijA_size_harm, irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, & 
-                                        i_tor_max, n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm,       & 
-                                        direct_construction)
-
-      call clck_time_barrier(t1) 
-
-      if (my_id .eq. 0) then
-         call clck_ldiff(t0,t1,tsecond)
-         write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
-      endif     
-
-
-      
-      call clck_time_barrier(t0) 
- 
-      call centralization_harmonic(my_id_n, n_cpu_n, MPI_COMM_N)
-
-      call clck_time_barrier(t1) 
-
-      if (my_id .eq. 0) then
-         call clck_ldiff(t0,t1,tsecond)
-         write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
-      endif     
- 
-    endif
-  endif
-#endif
-!end Harmonic Matrix Construction
-
-
-    ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
-    call del_thread_buffers()
-
-
-
     if (.not. gmres) then
 
        if (use_mumps) then
@@ -1033,27 +985,54 @@ required = 0
 
     else 
 
-!IF (.False.) THEN
-!          call distribute_harmonics(my_id,my_id_n,n_cpu)
-!          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)   
-!END IF
 
+       !--------- Constructing Harmonic Matrix via MPI all-to-all communication
+       if (.not. solve_only) then
 
 #ifndef DIRECT_CONSTRUCTION
-       !--------- Constructing Harmonic Matrix via MPI all-to-all communication
-       call clck_time(t0)
-       if (.not. solve_only) then
+          call clck_time(t0)
           call distribute_harmonics(my_id,my_id_n,n_cpu)
        else
           call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
-       endif
-       call clck_time_barrier(t1)
-       call clck_ldiff(t0,t1,tsecond)
-       if (my_id .eq. 0) then
-          write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
-       end if
-#endif
+          call clck_time_barrier(t1)
+          call clck_ldiff(t0,t1,tsecond)
+          if (my_id .eq. 0) then
+             write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
+          end if
 
+#else 
+         direct_construction = .true.
+
+         call clck_time_barrier(t0) 
+         !--------- Constructing Harmonic Matrix directly from elementary matrix
+         call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, node_list,  & 
+                                           element_list, index_min_harm, index_max_harm, local_elms_harm, n_local_elms_harm,     & 
+                                           ijA_index_harm, ijA_size_harm, irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, & 
+                                           i_tor_max, n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm,       & 
+                                           direct_construction)
+         call clck_time_barrier(t1) 
+
+         if (my_id .eq. 0) then
+            call clck_ldiff(t0,t1,tsecond)
+            write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
+         endif     
+
+      
+         call clck_time_barrier(t0) 
+         !--------- Centralizing Harmonic Matrix 
+         call centralization_harmonic(my_id_n, n_cpu_n, MPI_COMM_N)
+         call clck_time_barrier(t1) 
+
+         if (my_id .eq. 0) then
+            call clck_ldiff(t0,t1,tsecond)
+            write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
+         endif     
+
+#endif
+       endif
+
+       ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
+       call del_thread_buffers()
 
        call clck_time(t0)
        call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices

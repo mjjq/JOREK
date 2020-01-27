@@ -18,6 +18,7 @@ USE_PASTIX_MURGE = 0
 USE_MUMPS        = 1
 USE_FFTW         = 1
 USE_HDF5         = 1
+DEFINES          = -DDIRECT_CONSTRUCTION
 
 # Directory containing the user-compiled libraries (e.g., MUMPS, PASTIX, ...)
 LIBDIR = $(HOME)/lib

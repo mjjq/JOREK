@@ -992,8 +992,6 @@ required = 0
 #ifndef DIRECT_CONSTRUCTION
           call clck_time(t0)
           call distribute_harmonics(my_id,my_id_n,n_cpu)
-       else
-          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
           call clck_time_barrier(t1)
           call clck_ldiff(t0,t1,tsecond)
           if (my_id .eq. 0) then
@@ -1029,6 +1027,11 @@ required = 0
          endif     
 
 #endif
+
+       else
+          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
+
+
        endif
 
        ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
@@ -1476,18 +1479,6 @@ endif
 #endif
   endif
  
-#ifdef PSV 
-   !---- Part of the code under the flag PSV is just for debugging and will be
-   !removed at some point.
-   deallocate(A)
-   deallocate(irn)
-   deallocate(jcn)
-   deallocate(rhs)
-#endif
-
-   !if ( allocated(nz_array) )   deallocate(nz_array) !-- psv
-   !if ( allocated(disp_array) ) deallocate(disp_array) !-- psv
-
  
 #ifdef USE_FFTW
   call dfftw_destroy_plan(fftw_plan)

@@ -10,7 +10,7 @@ public get_orthonormals
 public left_handed_cross_product, right_handed_cross_product
 public vector_transform_RZPHI_to_XYZ,vector_transform_XYZ_to_RZPHI
 public cayley_transform,approximated_cayley_transform
-public coordinate_transfrom_RZPHI_to_XYZ,coordinate_transfrom_XYZ_to_RZPHI
+public coordinate_transform_RZPHI_to_XYZ, coordinate_transform_XYZ_to_RZPHI
 contains
 
 !---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ end function right_handed_cross_product
 !>   a: (real8)(3) position in \{R,Z,\phi\} coordinates 
 !> outputs:
 !>   b: (real8)(3) position in \{X,Y,Z} coordinates
-pure function coordinate_transfrom_RZPHI_to_XYZ(a) result(b)
+pure function coordinate_transform_RZPHI_to_XYZ(a) result(b)
   ! declare input variables
   real(kind=8),dimension(3),intent(in) :: a
   ! declare output variables
@@ -80,7 +80,7 @@ pure function coordinate_transfrom_RZPHI_to_XYZ(a) result(b)
   b(2) = -1.d0*a(1)*sin(a(3)) !< negative sign: clockwise -> counter-clockwise
   b(3) = a(2)
 
-end function coordinate_transfrom_RZPHI_to_XYZ
+end function coordinate_transform_RZPHI_to_XYZ
 
 !---------------------------------------------------------------------------
 
@@ -92,7 +92,7 @@ end function coordinate_transfrom_RZPHI_to_XYZ
 !>   a: (real8)(3) position in \{X,Y,Z} coordinates 
 !> outputs:
 !>   b: (real8)(3) position in \{R,Z,\phi\} coordinates
-pure function coordinate_transfrom_XYZ_to_RZPHI(a) result(b)
+pure function coordinate_transform_XYZ_to_RZPHI(a) result(b)
   ! declare input variables
   real(kind=8),dimension(3),intent(in) :: a
   ! declare output variables
@@ -102,7 +102,7 @@ pure function coordinate_transfrom_XYZ_to_RZPHI(a) result(b)
   b(2) = a(3)
   b(3) = atan2(-a(2),a(1)) !< negative sign: counter-clockwise -> clockwise
 
-end function coordinate_transfrom_XYZ_to_RZPHI
+end function coordinate_transform_XYZ_to_RZPHI
 
 !---------------------------------------------------------------------------
 

@@ -9,6 +9,7 @@ module mod_particle_types
   public particle_kinetic_relativistic
   public particle_get_q
   public copy_particle
+  public update_particle_position
 
   !> The base type for all other particles. Includes only the position and weight elements
   !> Integration in a 2D finite element method is included in the form of 2 coordinates
@@ -152,7 +153,7 @@ contains
   ! inputs:
   !   particle: (particle_base) the particle to be updates
   !   position: (real8)(3) new particle position in RZPHI
-  pure subroutine update_particle_position(particle,position)
+  subroutine update_particle_position(particle,position)
     ! delcare input/output variables
     class(particle_base),intent(inout) :: particle
     ! declare input variables

@@ -9,11 +9,11 @@ real*8 :: total_pellet_particles = 0.   !< the (total) pellet particles added in
 real*8 :: total_plasma_particles = 0.   !< the total plasma density (before this timestep)
 real*8 :: total_pellet_volume    = 0.   !< the volume of the simulated pellet in this timestep
 
-real*8 :: phys_pellet_volume       !< the physical pellet radius (in m^3)
+real*8 :: phys_pellet_volume       !< the physical pellet volume (in m^3)
 real*8 :: pellet_volume            !< approximated value of simulated pellet volume
 real*8 :: pellet_atomic            !< atomic number of pellet mass
 
-real*8 :: phys_ablation            !< physical ablation rate (non normalised)
+real*8 :: phys_ablation            !< physical ablation rate (not normalised)
 
 real*8, allocatable  :: xtime_pellet_R(:)
 real*8, allocatable  :: xtime_pellet_Z(:)
@@ -21,40 +21,44 @@ real*8, allocatable  :: xtime_pellet_psi(:)
 real*8, allocatable  :: xtime_pellet_particles(:)
 real*8, allocatable  :: xtime_phys_ablation(:)
 
+
+
 contains
 
-subroutine pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
-                          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-                          R,Z,psi,phi, r0, T0, central_density, pellet_particles, pellet_density, pellet_volume, &
-                          particle_source, volume_source)
+
+
+!> Calculate the source from the pellet shards
+subroutine pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, pellet_radius,&
+  pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, R, Z, psi,phi, r0,   &
+  T0, central_density, pellet_particles, pellet_density, pellet_volume, particle_source,          &
+  volume_source)
 
 implicit none
 #if _OPENMP >= 201511
-!$omp declare simd uniform(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
-!$omp                           pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-!$omp                          R,Z, r0, T0, central_density, pellet_particles, pellet_density, pellet_volume)
+!$omp declare simd uniform(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,              &
+!$omp pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,   &
+!$omp R, Z, r0, T0, central_density, pellet_particles, pellet_density, pellet_volume)
 #endif
-!input variables
-real*8 :: R, Z, psi, phi            ! position whereh the particle source will be calculated
-real*8 :: T0, r0                    ! local temperature and mass density (JOREK normalised)
-real*8 :: central_density           !< central plasma density (in units 10^20 m^-3)
-real*8 :: pellet_particles          !< total number of particles in the pellet
-real*8 :: pellet_density            !< pellet density (units 10^20 m^-3)
-real*8 :: pellet_amplitude          !< amplitude of paricle source (when not using ablation model)
-real*8 :: pellet_R, pellet_Z        !< position of the pellet (phi=0)
-real*8 :: pellet_phi                !< length of pellet in toroidal direction
-real*8 :: pellet_radius             !< pellet size (radius) in poloidal plane
-real*8 :: pellet_sig, pellet_length !< sigmas of pellet source in poloidal and toroidal direction
-real*8 :: pellet_ellipse            !< ellipticity of the pellet source in the poloidal plane
-real*8 :: pellet_theta              !< orientation of the pellet ellipse in the poloidal plane
-real*8 :: pellet_psi, pellet_delta_psi
-real*8 :: pellet_volume
 
-!output variables
-real*8 :: particle_source           !< particle source (JOREK normalised units)
-real*8 :: volume_source             !< volume of the pellet source (variable used to integrate total pellet volume)
+real*8, intent(in)  :: R, Z, psi                 ! position where the particle source is calculated
+real*8, intent(inout) :: phi                     ! toroidal position
+real*8, intent(in)  :: T0, r0                    ! local temperature and mass density (JOREK normalised)
+real*8, intent(in)  :: central_density           !< central plasma density (in units 10^20 m^-3)
+real*8, intent(inout)  :: pellet_particles       !< total number of particles in the pellet
+real*8, intent(in)  :: pellet_density            !< pellet density (units 10^20 m^-3)
+real*8, intent(in)  :: pellet_amplitude          !< amplitude of paricle source (when not using ablation model)
+real*8, intent(in)  :: pellet_R, pellet_Z        !< position of the pellet in R,Z
+real*8, intent(in)  :: pellet_phi                !< toroidal position of the pellet
+real*8, intent(in)  :: pellet_radius             !< pellet size (radius) in poloidal plane
+real*8, intent(in)  :: pellet_sig, pellet_length !< sigmas of pellet source in poloidal and toroidal direction
+real*8, intent(in)  :: pellet_ellipse            !< ellipticity of the pellet source in the poloidal plane
+real*8, intent(in)  :: pellet_theta              !< orientation of the pellet ellipse in the poloidal plane
+real*8, intent(in)  :: pellet_psi, pellet_delta_psi
+real*8, intent(in)  :: pellet_volume
+real*8, intent(out) :: particle_source           !< particle source (JOREK normalised units)
+real*8, intent(out) :: volume_source             !< volume of the pellet source (variable used to integrate total pellet volume)
 
-!local variables
+! --- local variables
 real*8  :: radius, atn, atn_psi, atn_phi, atomic_mass, ablation_rate
 
 particle_source = 0.d0
@@ -122,11 +126,11 @@ end if
 return
 end subroutine pellet_source2
 
+
+
+!> Update the pellet position and  size of the simulated and physical pellet
+!! (from the integral of the pellet particle source)
 subroutine update_pellet(my_id,node_List,element_list)
-!******************************************************************************
-! routine updates the pellet position and the size of the simulated           *
-! and physical pellet sizes (from the integral of the pellet particle source) *
-!******************************************************************************
 
 use constants
 use data_structure
@@ -142,14 +146,14 @@ type (type_element_list),     intent(in)    :: element_list
 
 real*8  :: psi_axis, psi_bnd
 integer :: ierr
-real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
+real*8  :: V_normalisation, density, density_in, density_out, pressure, pressure_in, pressure_out
 
 real*8  :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
 integer :: i_elm, ifail
 
 if (pellet_amplitude .gt. 0) return
 
-V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
+V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO)
 
 pellet_R = pellet_R + pellet_velocity_R * tstep / V_normalisation
 pellet_Z = pellet_Z + pellet_velocity_Z * tstep / V_normalisation
@@ -183,11 +187,11 @@ return
  
 end subroutine update_pellet
 
+
+
+!> Update the shattered pellet position and the simulated and physical pellet sizes
+!! (from the integral of the pellet particle source)
 subroutine update_spi(my_id,node_List,element_list)
-!******************************************************************************
-! routine updates the shattered pellet position and the size of the simulated *
-! and physical pellet sizes (from the integral of the pellet particle source) *
-!******************************************************************************
 
 use constants
 use data_structure
@@ -197,28 +201,22 @@ use corr_neg
 
 implicit none
 
-
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+integer,                  intent(in) :: my_id
+type (type_node_list),    intent(in) :: node_list
+type (type_element_list), intent(in) :: element_list
 
 ! --- Local variables
-integer :: my_id, ierr
 real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
 
 real*8  :: R_out, Z_out
-integer :: i_elm, ifail
-
-integer :: i
-
+integer :: i_elm, ifail, i, ierr
 real*8, dimension(3) :: P, P_s, P_t, P_phi
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: s_out,t_out
-
 real*8  :: n_SI, T_eV, n_corr, T_corr, n_imp_SI, ne_SI
 real*8  :: t_norm, spi_Vel_totref, B0, nu
 real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
 real*8  :: spi_density_tmp
-
 !   -Mean impurity ionization state and related quantities
 real*8     :: Z_imp, beta_imp, mu_imp
 
@@ -227,7 +225,7 @@ real*8     :: Z_imp, beta_imp, mu_imp
   spi_Vel_phi_tmp = 0.
   spi_phi_inj     = ns_phi
 
-  V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
+  V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO)
   t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 
   spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
@@ -240,8 +238,9 @@ real*8     :: Z_imp, beta_imp, mu_imp
     spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
   end if
 
-  do i=1, n_spi
+  loop_over_shards: do i = 1, n_spi
 
+    ! -- Update position     
     spi_delta_phi          = pellets(i)%spi_phi - spi_phi_inj
     spi_Vel_R_tmp          = pellets(i)%spi_Vel_R * cos(spi_delta_phi) &
                              + pellets(i)%spi_Vel_RxZ * sin(spi_delta_phi)
@@ -257,10 +256,6 @@ real*8     :: Z_imp, beta_imp, mu_imp
       pellets(i)%spi_phi     = pellets(i)%spi_phi + tor_frequency * 2. * PI * tstep / V_normalisation
     end if
 
-    pellets(i)%spi_Vel_R   = pellets(i)%spi_Vel_R
-    pellets(i)%spi_Vel_Z   = pellets(i)%spi_Vel_Z
-    pellets(i)%spi_Vel_RxZ = pellets(i)%spi_Vel_RxZ
-
     if (pellets(i)%spi_phi >= 2.*PI) then
       pellets(i)%spi_phi   = mod(pellets(i)%spi_phi,2.*PI)
     else if (pellets(i)%spi_phi < 0.) then
@@ -275,22 +270,23 @@ real*8     :: Z_imp, beta_imp, mu_imp
       else if (pellet_density_bg > 0. .and. pellet_density > 0.) then
         spi_density_tmp = 1./((1.-pellets(i)%spi_species)/pellet_density_bg + pellets(i)%spi_species/pellet_density)
       else
-        write(*,*) "Something is wrong when determining the pellet species, exiting"
+        write(*,*) "ERROR: Something is wrong when determining the pellet species, exiting"
         stop
       end if
 
-      if (spi_density_tmp == 0. .or. spi_density_tmp /= spi_density_tmp) write(*,*) "Wrong spi_density!", spi_density_tmp
+      if ( (spi_density_tmp <=0.d0) .or. (spi_density_tmp /= spi_density_tmp) ) then
+        write(*,*) "ERROR: Problem calculating spi_density!", spi_density_tmp
+        stop
+      end if
 
       pellets(i)%spi_radius = pellets(i)%spi_radius - t_norm * tstep * &
                               (pellets(i)%spi_abl / (4.d0 * PI * pellets(i)%spi_radius**2.d0 *    &
                               spi_density_tmp * 1.d20))
 
-      if (pellets(i)%spi_radius < 0.d0) then
-        pellets(i)%spi_radius = 0.d0
-      end if
+      if (pellets(i)%spi_radius < 0.d0) pellets(i)%spi_radius = 0.d0
     end if
 
-    if (my_id == 0.) then
+    if (my_id == 0) then
       if (index_now > 1) then
         xtime_spi_ablation(i,index_now)    = xtime_spi_ablation(i,index_now-1) &
                                              + t_norm * tstep * pellets(i)%spi_abl * pellets(i)%spi_species
@@ -314,7 +310,7 @@ real*8     :: Z_imp, beta_imp, mu_imp
         pellets(i)%spi_abl = 0.
         cycle
       else if (ifail /= 0) then
-        write(*,*) "Something Wrong in find_RZ!! my_id = ", my_id, i_elm, ifail
+        write(*,*) "Something wrong in find_RZ!! my_id = ", my_id, i_elm, ifail
         stop
       end if
 
@@ -323,15 +319,7 @@ real*8     :: Z_imp, beta_imp, mu_imp
 
       ! Now, P(1) represents mass density and P(2) represents temperature, P(3)
       ! is the impurity density
-      ! Correct any possible negative values!
-
-      !n_corr         = corr_neg_dens(P(1))
-      !T_corr         = corr_neg_temp(P(2))
-
-      ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e
-      ! = T_i
-      !n_SI           = n_corr * 1.d20 * central_density
-      !T_eV           = T_corr / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
+      ! Reminder, temperature should be divided by 2 since T = T_e + T_i and T_e = T_i
       
       n_SI           = P(1) * 1.d20 * central_density
       if (n_SI < 0.) n_SI = 0.
@@ -339,18 +327,16 @@ real*8     :: Z_imp, beta_imp, mu_imp
       T_eV           = P(2) / (2.d0* EL_CHG * MU_ZERO * central_density * 1.d20)
       if (T_eV < 0.) T_eV = 0.
 
-      ! This is only used for 501 as impurity density, 500 don't use this
-      ! variable
+      ! This is only used for 501 as impurity density, 500 don't use this variable
       n_imp_SI           = P(3) * 1.d20 * central_density
       if (n_imp_SI < 0.) n_imp_SI = 0.      
 
-      ! NGS model
+      ! --- NGS model
       if (spi_abl_model == 1) then
-        pellets(i)%spi_abl    = 4.12d16 * (pellets(i)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
-                               (T_eV**1.64)
-        if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
-          write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
-        end if
+        pellets(i)%spi_abl = 4.12d16 * pellets(i)%spi_radius**(4./3.) * n_SI**(1./3.) * T_eV**1.6
+        !if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
+        !  write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
+        !end if
       else if (spi_abl_model == 2) then
         select case ( trim(gas_type) )
           case('D2')
@@ -412,9 +398,9 @@ real*8     :: Z_imp, beta_imp, mu_imp
             pellets(i)%spi_abl = 3.9d14 * ((pellets(i)%spi_radius*1.d2)**1.455) &
                                  * ((n_SI*1.d-6)**0.455) * (T_eV**1.679)
         end select
-        if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
-          write(*,*) "Check Point, ne_SI, T_eV = ", ne_SI, T_eV
-        end if
+        !if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
+        !  write(*,*) "Check Point, ne_SI, T_eV = ", ne_SI, T_eV
+        !end if
       else if (spi_abl_model == 3) then
         select case ( trim(gas_type) )
           case('D2') ! We temporarily wusing D2 ablation rate for H2 ablation here
@@ -477,9 +463,9 @@ real*8     :: Z_imp, beta_imp, mu_imp
         write(*,*) "Unknown ablation model, terminating now!"
         stop
       end if
-      if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
-        write(*,*) "Check Point, ne_SI, T_eV = ", ne_SI, T_eV
-      end if
+      !if (my_id == 0 .and. pellets(i)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
+      !  write(*,*) "Check Point, ne_SI, T_eV = ", ne_SI, T_eV
+      !end if
     else
       pellets(i)%spi_abl    = 0.d0
     end if
@@ -489,7 +475,7 @@ real*8     :: Z_imp, beta_imp, mu_imp
       xtime_spi_ablation_bg_rate(i,index_now) = pellets(i)%spi_abl * (1. - pellets(i)%spi_species)
     end if
 
-  end do
+  end do loop_over_shards
 
   if (spi_tor_rot) then
     ns_phi_rotate  = ns_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
@@ -509,10 +495,9 @@ real*8     :: Z_imp, beta_imp, mu_imp
     end do
   end if
 
-
-return 
- 
 end subroutine update_spi
+
+
 
   !> Initializes the shattered pellet position, velocity and size
   subroutine init_spi
@@ -526,7 +511,6 @@ end subroutine update_spi
     implicit none
     
     integer             :: ierr,err,i,i_surface
-    integer             :: err_alloc=0, err_alloc_rnd=0    
     logical             :: ferr
     
     real*8  :: n_SI, T_eV, n_corr, T_corr
@@ -547,27 +531,14 @@ end subroutine update_spi
     real*8  :: mix_ratio                               ! Volume mixture ratio of the mixed pellet 
     real*8  :: real_spi_quantity(2)                    ! Final injection quantity
 
-    if (allocated(pellets)) then
-      deallocate(pellets)
-    end if
+    if (allocated(pellets)) deallocate(pellets)
+    allocate (pellets(n_spi))
   
-    allocate (pellets(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for pellets
-  
-    if (err_alloc /= 0) then
-      write(*,*) "Error when trying to dynamically allocate memeries for pellets, exiting."
-      stop
-    else
       if (n_spi >= 1) then
   
         if (allocated(shard_size)) deallocate(shard_size)
-        allocate (shard_size(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for shard sizes
-        if (err_alloc /= 0) then
-          write(*,*) "Error when trying to dynamically allocate memeries for shard size, exiting."
-          deallocate(pellets)
-          stop
-        else
-          shard_size = 0.0
-        end if
+        allocate (shard_size(n_spi))
+        shard_size = 0.0
   
         size_beta    = 0.0
         N_shard_norm = 0.0
@@ -582,7 +553,7 @@ end subroutine update_spi
             read(42,*)  shard_size(1:n_spi)
             close(42)
           else
-            write(*,*) "WARNING!!! Shard size file does not exist, exiting now"
+            write(*,*) "ERROR: Shard size file does not exist, exiting now"
             stop
           end if
         else
@@ -715,14 +686,7 @@ end subroutine update_spi
         ! numbers uniquely define a random velocity of the shard, which is then transformed into
         ! the R, Z, RxZ space.
         if (allocated(rnd)) deallocate(rnd)
-        allocate (rnd(3*n_spi),stat=err_alloc_rnd)  !< Dynamically allocate memeries for randoms
-  
-        if (err_alloc_rnd /= 0) then
-          write(*,*) "Error when trying to dynamically allocate memeries for randoms."
-          deallocate(pellets)
-          deallocate(shard_size)
-          stop
-        end if
+        allocate (rnd(3*n_spi))
  
         CALL random_seed(put=spi_rnd_seed) 
         CALL random_number(rnd)
@@ -740,7 +704,6 @@ end subroutine update_spi
           spi_gd_angle_01 = rnd(3 * i - 2) * spi_angle / 2.0
           spi_gd_angle_02 = rnd(3 * i - 1) * 2. * PI
           spi_Vel_i       = (rnd(3*i)-0.5) * spi_Vel_diff + spi_Vel_totref
-  
   
           !write(*,*) "Random angle:", i, spi_gd_angle_01, spi_gd_angle_02
   
@@ -793,14 +756,13 @@ end subroutine update_spi
 #endif
  
       else
-        write(*,*) "...... Seriously!? Double check the input file"
+        write(*,*) "ERROR: n_spi<1"
         stop
       end if
-    end if
 
-
-    return
   end subroutine init_spi
+
+
 
 !> This function creates a derived MPI type for the pellets and returns it (in honor of Daan)
 !! If it already exists the old handle is returned
@@ -849,6 +811,8 @@ function get_pellet_derived_type() result(dtype_out)
   return
 end function get_pellet_derived_type
 
+
+
 subroutine pellet_source(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, &
                          R,Z,psi,phi,particle_source)
@@ -873,6 +837,7 @@ atn_phi = (0.5d0 - 0.5d0*tanh((phi- pellet_phi)/pellet_length))
 
 particle_source = pellet_amplitude * atn * atn_phi * atn_psi
 
-return
 end subroutine pellet_source
+
+
 end module pellet_module

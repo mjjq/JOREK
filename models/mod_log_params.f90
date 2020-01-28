@@ -404,7 +404,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
   write(*,REAL_FMT) 'D_prof_neg_thresh     ', D_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
-  write(*,REAL_FMT) 'ZK_par_neg           ', ZK_par_neg
+  write(*,REAL_FMT) 'ZK_par_neg            ', ZK_par_neg
   write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
   write(*,LOGI_FMT) 'use_pellet            ', use_pellet
@@ -631,8 +631,8 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref
      write(*,REAL_FMT) 'spi_quantity        ',  spi_quantity
      write(*,REAL_FMT) 'spi_quantity_bg     ',  spi_quantity_bg
-     write(*,REAL_FMT) 'pellet_density      ', pellet_density
-     write(*,REAL_FMT) 'pellet_density_bg   ', pellet_density_bg
+     write(*,REAL_FMT) 'pellet_density      ',  pellet_density
+     write(*,REAL_FMT) 'pellet_density_bg   ',  pellet_density_bg
      write(*,REAL_FMT) 'spi_angle           ',  spi_angle
      write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
      write(*,REAL_FMT) 'tor_frequency       ',  tor_frequency

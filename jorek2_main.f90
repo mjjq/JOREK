@@ -174,9 +174,6 @@ program JOREK2
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
 
-  integer :: holder
-  integer :: getpid
-
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
   res = 0.d0   
@@ -238,7 +235,7 @@ required = 0
   ! --- Preset some solver variables
   pastix_initialised = .false.
   pastix_analysed    = .false.
-
+  
   ! --- Preset input parameters to reasonable defaults, then read the input file.
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
   
@@ -253,9 +250,7 @@ required = 0
 
 #if (JOREK_MODEL == 501)
   ! --- Read ADAS data and generate coronal equilibrium is needed
-  if (flag_adas) then
-    call init_imp_adas(my_id)
-  end if
+  if (flag_adas) call init_imp_adas(my_id)
 #endif
   
   ! --- Write out all parameters defined in parameters and the namelist input file.
@@ -926,20 +921,9 @@ required = 0
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
+      !call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
-
-    ! --- The following is for parallel debugging only
-
-    !holder = 0;
-    !write(*,*) "my_id", my_id, "PID", getpid(), "Host", name
-
-    !do while (holder == 0)
-    !  call sleep(5)
-    !end do
-
-    ! --- End of parallel debugging section 
-
     
     call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),                  &
          index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, ES%R_xpoint,   &
@@ -1015,13 +999,11 @@ required = 0
 
        endif
 
-
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
        if (using_spi .and. t_now >= t_ns) then
          call update_spi(my_id,node_list,element_list)
        end if
 #endif
-
 
        call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
        call update_deltas(my_id,node_list)

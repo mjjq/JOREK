@@ -3,6 +3,8 @@
 ! little program to construct an input file for jorek out of data
 ! in a eqdsk file
 !                         Guido Huysmans,          date : 14-12-2010
+!
+! Some documentation can be found here: https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
 !--------------------------------------------------------------------
 implicit none
 
@@ -26,9 +28,6 @@ integer            :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt,nx,ny, i1, j1
 integer            :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext
 character          :: AA*52, tokamak_name*50
 
-integer          :: err_alloc
-logical          :: ferr
-real*8,allocatable :: ne_spline(:)
 
 
 !----------------------------- read eqdsk file -----------
@@ -102,19 +101,20 @@ if (tokamak_name == 'ITER') then
   a0     = 2.25 
   
   !-------------------- contour outside ITER wall
-  !ellip  = 2.1
-  !tria_u = 0.58
-  !tria_l = 0.65
-  !quad_u = -0.12
-  !quad_l = -0.
-  !n_tht   = 257
-  !r0     = 6.2
-  !z0     = -0.05
-  !a0     = 2.34 
+  ellip  = 2.1
+  tria_u = 0.58
+  tria_l = 0.65
+  quad_u = -0.12
+  quad_l = -0.
+  n_tht   = 257
+  r0     = 6.2
+  z0     = -0.05
+  a0     = 2.34 
 
 else if (tokamak_name == 'JET') then
   
   !-------------------- contour outside JET wall
+  ! blue contour in https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
   ellip  = 1.85
   tria_u = 0.4
   tria_l = 0.4
@@ -125,6 +125,17 @@ else if (tokamak_name == 'JET') then
   z0     = 0.1
   a0     = 1.08
 
+  !-------------------- contour to avoid too long divertor legs
+  ! red contour in https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
+  ellip  = 1.7
+  tria_u = 0.4
+  tria_l = 0.4
+  quad_u = -0.4
+  quad_l = -0.2
+  n_tht   = 257
+  r0     = 2.85
+  z0     = 0.15
+  a0     = 1.1
 else if (tokamak_name == 'DIII-D') then
   
   !-------------------- contour outside DIII-D wall
@@ -138,17 +149,16 @@ else if (tokamak_name == 'DIII-D') then
   z0     = 0.
   a0     = 0.7
 
-  !-------------------- longer contour outside DIII-D wall to avoid the wall
-  !being too close to the x-point
-  !ellip  = 1.75
-  !tria_u = 0.4
-  !tria_l = 0.4
-  !quad_u = -0.4
-  !quad_l = -0.4
-  !n_tht   = 257
-  !r0     = 1.68
-  !z0     = -0.00
-  !a0     = 0.72
+  !-------------------- Atomic physics JOREK/NIMROD/M3D-C1 benchmark case (paper by B. Lyons)
+  ellip  = 1.35/0.7
+  tria_u = 0.3
+  tria_l = 0.3
+  quad_u = 0.
+  quad_l = 0.
+  n_tht   = 257
+  r0     = 1.7
+  z0     = 0.
+  a0     = 0.7
 
 
 else
@@ -244,32 +254,11 @@ call lplot6(3,3,psi,q,n_psi,'q')
 
 
 !---------------------------- write JOREK input files
-n_sol = (n_psi-1)/5
+n_sol = (n_psi-1)/2
 n_ext = n_psi + n_sol
 
 write(*,*) ' n_psi, n_sol, n_ext : ',n_psi, n_sol, n_ext
 
-!===================== Read Spline Fitted Ne profile==============
-
-if (allocated(ne_spline)) then
-  deallocate(ne_spline)
-end if
-allocate (ne_spline(n_ext),stat=err_alloc)  !< Dynamically allocate memeries forshard sizes
-if (err_alloc /= 0) then
-  write(*,*) "Error when trying to dynamically allocate memeries for ne_spline."
-else
-  inquire(file="ne_spline_only.dat", exist=ferr) ! Check if the file exist
-  if (ferr) then
-    open(42,file="ne_spline_only.dat",status="OLD",action="READ")
-    read(42,*)  ne_spline(1:n_ext)
-    close(42)
-  else
-    write(*,*) "WARNING!!! ne_spline file does not exist!"
-    deallocate(ne_spline)
-  end if
-end if
-
-!=====================End of Ne profile===========================
 
 
 allocate(df2_ext(n_ext),rho_ext(n_ext),T_ext(n_ext),psi_ext(n_ext),p_ext(n_ext))
@@ -282,12 +271,12 @@ df2_ext(n_psi-1:n_ext) = df2_ext(n_psi-2)
 rho_ext(n_psi-1:n_ext) = rho_ext(n_psi-2)
 T_ext(n_psi-1:n_ext)   = T_ext(n_psi-2)
 
-psi_sep = 0.98!1.d0
+psi_sep = 1.d0
 sig_sep = 0.02
 
 psi_ext(1:n_psi) = psi(1:n_psi)
 do i=n_psi+1,n_ext
-  psi_ext(i) = 1.d0 + 0.2 * float(i-n_psi)/float(n_sol)
+  psi_ext(i) = 1.d0 + 0.5 * float(i-n_psi)/float(n_sol)
 enddo
 
 zmu0 = 4.d-7 * PI
@@ -295,25 +284,11 @@ zmu0 = 4.d-7 * PI
 do i=1,n_ext
   tanh1 = tanh((psi_ext(i) - psi_sep)/sig_sep)
   df2_ext(i) = df2_ext(i) * (0.5d0 - 0.5d0*tanh1)
-  !rho_ext(i) = rho_ext(i) * (0.5d0 - 0.5d0*tanh1)
-  if (allocated(ne_spline)) then
-    rho_ext(i) = rho_ext(i) * ne_spline(i)
-    !rho_ext(i) = rho_ext(i) * ne_spline(i) * (0.5d0 - 0.5d0*tanh1) + 1.d-2 * (0.5 + 0.5*tanh1)
-  else
-    rho_ext(i) = rho_ext(i) * (0.5d0 - 0.5d0*tanh1) + 1.d-2 * (0.5 + 0.5*tanh1)
-  end if
-  !T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0 
-  if (allocated(ne_spline)) then
-    T_ext(i)   = T_ext(i) * zmu0 * (0.5d0 - 0.5d0*tanh1) / rho_ext(i) + 1.d-4 * (0.5 + 0.5*tanh1)
-  else
-    T_ext(i)   = T_ext(i) * zmu0 * (0.5d0 - 0.5d0*tanh1) + 1.d-4 * (0.5 + 0.5*tanh1)
-  end if
+  rho_ext(i) = rho_ext(i) * (0.5d0 - 0.5d0*tanh1)
+  T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0 
   p_ext(i)   = rho_ext(i) * T_ext(i)
 enddo
 
-if (allocated(ne_spline)) then
-  deallocate(ne_spline)
-end if
 
 call lplot6(2,2,psi_ext,df2_ext,n_ext,'df2')
 call lplot6(3,2,psi_ext,p_ext,n_ext,'pressure')
@@ -325,8 +300,7 @@ call lplot6(2,2,psi,df2,-n_psi,'df2')
 call lplot6(3,2,psi,p,-n_psi,'pressure')
 
 open(21,file='jorek_ffprime')
-! We change or not the sign of ff' depending on the sign of Ip because (we
-! assume that) in EQDSK files,
+! We change or not the sign of ff' depending on the sign of Ip because (we assume that) in EQDSK files, 
 ! psi_axis is always < psi_boundary, whatever the direction of Ip.
 if (xip>0) then
   do i=1,n_ext
@@ -337,8 +311,8 @@ else
     write(21,*) psi_ext(i),df2_ext(i)
   enddo
 end if
-
 close(21)
+
 open(21,file='jorek_density')
 do i=1,n_ext
   write(21,*) psi_ext(i),rho_ext(i)

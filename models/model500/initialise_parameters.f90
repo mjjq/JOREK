@@ -65,8 +65,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 bc_natural_open,                                    &
                 use_mumps, mumps_ordering,                          &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
-                use_pastix, use_murge, use_murge_element, use_wsmp, &
-                n_tor_fft_thresh,                                   &
+                use_pastix, use_wsmp,                               &
                 pastix_smp_only, refinement, force_central_node,    &
                 grid_to_wall,                                       &
                 adaptive_time, equil, bench_without_plot,           &
@@ -305,14 +304,11 @@ if (my_id .eq. 0) then
 
 endif
 
-
 ! --- Read numerical profiles for rho, T, and ff'.
 call read_num_profiles(my_id)
 
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
-
-! --- Initialize the shattered pellet position
 
 if ( my_id == 0 ) then
   if (2*PI/(n_tor*n_period) >= ns_deltaphi) then

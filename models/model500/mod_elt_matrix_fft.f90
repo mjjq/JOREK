@@ -163,7 +163,6 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_p
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_ss, eq_st, eq_tt
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: delta_g, delta_s, delta_t
 
-
 ELM_p = 0.d0
 ELM_n = 0.d0
 ELM_k = 0.d0
@@ -236,7 +235,6 @@ do i=1,n_vertex_max
          do k=1,n_var
 
            do in=1,n_tor
-
 
              eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ(in,mp)
              eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
@@ -1255,7 +1253,6 @@ do ms=1, n_gauss
              Bgrad_rho_rho_n    = ( F0 / BigR * rho_p ) / BigR
              BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
-
              amat_51 = - (D_par-D_prof) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_star     * Bgrad_rho     * xjac * theta * tstep &
                        + (D_par-D_prof) * BigR / BB2             * Bgrad_rho_star_psi * Bgrad_rho     * xjac * theta * tstep &
                        + (D_par-D_prof) * BigR / BB2             * Bgrad_rho_star     * Bgrad_rho_psi * xjac * theta * tstep &
@@ -1269,14 +1266,12 @@ do ms=1, n_gauss
                                  * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                                      &
                                  * ( v_x * psi_y -  v_y * psi_x                   ) * xjac * theta * tstep * tstep
 
-
              amat_51_k = - (D_par-D_prof) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_k_star * Bgrad_rho     * xjac * theta * tstep &
                          + (D_par-D_prof) * BigR / BB2             * Bgrad_rho_k_star * Bgrad_rho_psi * xjac * theta * tstep &
 
                          + TG_num5 * 0.25d0 / BigR * vpar0**2                                                            &
                                  * (r0_x * psi_y - r0_y * psi_x)                                                         &
                                  * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep
-
 
              amat_51_n =  0.d0
 

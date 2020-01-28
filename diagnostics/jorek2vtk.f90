@@ -119,10 +119,6 @@ logical               :: include_neutral_dens
 integer               :: n_rn0, s_rn0
 real*8                :: IonN, RecN, AblN, coef_rec_1, Srec_T
 
-
-! MPI arguments
-integer    :: required,provided,StatInfo
-
 #ifdef fullmhd
 !====================== --- Variables related to full mhd 
 integer               :: n_fullmhd,s_fullmhd
@@ -161,17 +157,6 @@ allocate(element_list)
 allocate(bnd_elm_list)
 allocate(bnd_node_list)
 
-  ! --- Initialise MPI / threaded MPI
-!#ifdef FUNNELED
-!required = MPI_THREAD_FUNNELED
-!#else
-!required = MPI_THREAD_MULTIPLE
-!#endif
-!#ifdef STAN_FLAG
-!required = 0
-!#endif
-!call MPI_Init_thread(required, provided, StatInfo)
-
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
@@ -198,9 +183,7 @@ include_neutral_dens = .true.
 #endif
 #if (JOREK_MODEL == 501)
 ! --- Read ADAS data and generate coronal equilibrium is needed
-if (flag_adas) then
-  call init_imp_adas(my_id)
-end if
+if (flag_adas) call init_imp_adas(my_id)
 #endif
 
 
@@ -315,7 +298,7 @@ endif
 
 #endif
 #if (JOREK_MODEL == 501)
-    n_radiation = 0
+ n_radiation = 0
  if (include_radiation) then
     n_radiation = 5
     s_radiation = n_scalars
@@ -345,7 +328,7 @@ if ( SI_units ) then
    endif
    scalar_names(7)='Vpar_km/s   '
 
-#if (JOREK_MODEL >= 500)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
    scalar_names(8)='N_dens_1d20  '
 #endif
 
@@ -1356,7 +1339,7 @@ if (SI_units) then
    scalars(i,s_radiation+3) = scalars(i,s_radiation+3)/(2.d0/3.d0*((central_mass*MASS_PROTON*central_density*1.d20)**0.5)*(MU_ZERO**1.5)) 
    scalars(i,s_radiation+4) = scalars(i,s_radiation+4)
   end if
-#endif /*(JOREK_MODEL >= 500)*/
+#endif /*(JOREK_MODEL == 501)*/
 
   enddo  ! nnos
 
@@ -1366,8 +1349,6 @@ endif ! SI_UNITS
 etype = 9  ! for vtk_quad
 
 call write_vtk('jorek_tmp.vtk',xyz,ien,etype,scalar_names,scalars,vector_names,vectors)
-
-!call MPI_FINALIZE(IERR)                                ! clean up MPI
 
 write(*,*) 'done.'
 

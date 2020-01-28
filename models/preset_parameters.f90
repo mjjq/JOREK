@@ -29,10 +29,10 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
-  eta_num_T_dependent = .false.
+  eta_num_T_dependent   = .false.
   visco_num_T_dependent = .false.
 
-  eta   = 1.d-5
+  eta       = 1.d-5
   T_eta_thres = 1.d0
   eta_ohmic = 0.d0
   visco = 1.d-5
@@ -391,9 +391,7 @@ subroutine preset_parameters
   flag_adas       = .false.
   output_rad_phi  = .false.
   n_adas          = 0
-
   adas_dir        = ''
-
 
 !======================JP ECCD injection parameters
   nu_jec_fast=1.d1

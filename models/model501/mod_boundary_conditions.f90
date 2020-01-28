@@ -160,26 +160,6 @@ contains
                       !---------------------------------------------------------------------------------------------------
 
 
-                      !-----(General for all bnd types)
-                      !------------ Decide when Psi or Current need BCs
-                      !--------------------------------------------------                      
-                      !----Psi
-                      apply_psi_BC = .false.
-                      if (k == 1) then                        
-                        if ( (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1)) )   apply_psi_BC = .true.
-                        if ( (RMP_on) .and. (in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)) )   apply_psi_BC = .true.
-                        if ( (.not. RMP_on) .and. (in .ge. 2)              ) apply_psi_BC = .true.
-                        if (              in .eq. 1                        ) apply_psi_BC = .true.
-                        if (           is_freebound(in,k)                  ) apply_psi_BC = .false.                     
-                      endif
-                      
-                      !----Current
-                      apply_current_BC = .false.
-                      if (k == 3) then
-                        if ( .not. is_freebound(in,k) )   apply_current_BC = .true.
-                      endif
-                      !---------------------------------------------------------------------------------------------------
-
 
                       !========================================================================
                       ! conditions for direction 1 (s), i.e. boundary types 1, 3, 4, 9
@@ -355,6 +335,7 @@ contains
                             else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis+0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
                               direction = +1.
                             end if
+
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR

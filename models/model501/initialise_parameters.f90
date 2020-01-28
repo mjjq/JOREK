@@ -87,9 +87,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
-                use_mumps, mumps_ordering, use_pastix,              &
+                use_mumps, mumps_ordering,                          &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
-                use_wsmp, n_tor_fft_thresh,                         &
+                use_pastix, use_wsmp, n_tor_fft_thresh,             &
                 pastix_smp_only, refinement, force_central_node,    &
                 grid_to_wall,                                       &
                 adaptive_time, equil, bench_without_plot,           &
@@ -106,7 +106,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
-                tgnum,  pastix_pivot, pastix_maxthrd,               &
+                tgnum,  pastix_pivot,                               &
                 linear_run, export_for_nemec,                       &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
@@ -137,7 +137,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                eta_ohmic 
+                pastix_maxthrd, eta_ohmic
 
  if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
@@ -335,12 +335,8 @@ call read_num_profiles(my_id)
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
 
-! --- Initialize the shattered pellet position
-!spi_R = mgi_R
-!spi_Z = mgi_Z
-
 if ( my_id == 0 ) then
-  if (2*PI/(n_tor*n_period) >= ns_deltaphi .and. my_id == 0) then
+  if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
     write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
     if (t_now > t_ns) then
       write(*,*) "EXITING NOW!!!"
@@ -348,8 +344,6 @@ if ( my_id == 0 ) then
     end if
   end if
   
-  
-  !if (using_spi) call init_spi()
   if (using_spi) then
     if (JET_MGI .or. ASDEX_MGI) then
       write(*,*) "WARNING: Using SPI, conflicting with MGI settings"

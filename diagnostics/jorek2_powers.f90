@@ -77,13 +77,13 @@ area_div_in  = 0.d0; area_div_out  = 0.d0; area_wall_in  = 0.d0; area_wall_out  
 Q_div_in     = 0.d0; Q_div_out     = 0.d0; Q_wall_in     = 0.d0; Q_wall_out     = 0.d0
 L_div_in     = 0.d0; L_div_out     = 0.d0; L_wall_in     = 0.d0; L_wall_out     = 0.d0
 
-R_in_out   = 5.d0    ! ITER divertor
-Z_wall_out = -3.2350
-Z_wall_in  = -2.5674 
+!R_in_out   = 5.d0    ! ITER divertor
+!Z_wall_out = -3.2350
+!Z_wall_in  = -2.5674 
 
-!R_in_out   = 2.55
-!Z_wall_out = -1.5
-!Z_wall_in  = -1.5
+R_in_out   = 3.03
+Z_wall_out = -1.6!-1.9858 
+Z_wall_in  = -1.619!-1.9736
 
 do m=1, n_plane
 

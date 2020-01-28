@@ -113,21 +113,20 @@ module data_structure
      real*8, dimension(:), allocatable  :: synch_buff
   END TYPE type_thread_buffer
 
-! This type is added to represent the properties of shattered pellets 
-  type type_SPI                                   !< type definition for one shattered pellet
-    real*8  :: spi_R                              !< R coordinate of pellet (m)
-    real*8  :: spi_Z                              !< Z coordinate of pellet (m)
-    real*8  :: spi_phi                            !< Phi coordinate of pellet (degree)
-    real*8  :: spi_Vel_R                          !< Velocity of pellet along R direction (m/s)
-    real*8  :: spi_Vel_Z                          !< Velocity of pellet along Z direction (m/s)
-    real*8  :: spi_Vel_RxZ                        !< Velocity of pellet along RxZ direction (m/s)
-    real*8  :: spi_radius                         !< Radisu of pellet assuming spherical pellet (m)
-    real*8  :: spi_abl                            !< Pellet ablation rate (atom/s)
-    real*8  :: spi_species                        !< Species mixture ratio in atom number for pellets. 
-                                                  !< 0 for pure background species and 1 for pure impurities. 
-                                                  !< Only necessary for model 501.
+  !> One shard of a shattered pellet (or the pellet if unshattered)
+  type type_SPI
+    real*8  :: spi_R                 !< R coordinate of shard (m)
+    real*8  :: spi_Z                 !< Z coordinate of shard (m)
+    real*8  :: spi_phi               !< Phi coordinate of shard (degree)
+    real*8  :: spi_Vel_R             !< Velocity in R direction (m/s)
+    real*8  :: spi_Vel_Z             !< Velocity in Z direction (m/s)
+    real*8  :: spi_Vel_RxZ           !< Velocity in RxZ direction (m/s)
+    real*8  :: spi_radius            !< Shard radius of pellet assuming spherical pellet (m)
+    real*8  :: spi_abl               !< Pellet ablation rate (atom/s)
+    real*8  :: spi_species           !< Fraction of impurity atoms of the total number of atoms (model501)
+                                     !! 0: pure background species
+                                     !! 1: pure impurity shard
   end type type_SPI
-! End of shattered pellet type
   
   integer                                         , public :: nbthreads
   TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()

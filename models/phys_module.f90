@@ -285,8 +285,8 @@ module phys_module
 
   character(len=256) :: spi_shard_file !< The name of the shard size file
 
-  logical :: flag_adas          !< Flag for whether to use adas data calculating coronal equilibriam
-  logical :: output_rad_phi     !< Out put the radiation asymmetry into a file using integras_3D
+  logical :: flag_adas          !< Flag for whether to use adas data calculating coronal equilibrium
+  logical :: output_rad_phi     !< Output the radiation asymmetry into a file using integrals_3D
   integer :: n_adas             !< Number of species to be traced by adas, for future development only
 
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
@@ -294,9 +294,8 @@ module phys_module
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
 
   character(len=512)            :: adas_dir    !< The directory of adas data file to be read
-
-  type (adf11_all), allocatable :: imp_adas(:)    !< The ADAS data for impurities
-  type (coronal), allocatable   :: imp_cor(:)     !< The coronal equilibrium distribution of impurities
+  type (adf11_all), allocatable :: imp_adas(:) !< The ADAS data for impurities
+  type (coronal), allocatable   :: imp_cor(:)  !< The coronal equilibrium distribution of impurities
 
   
   !> @name Fix boundary equilibrium parameters
@@ -569,8 +568,8 @@ module phys_module
   !> @name Numerical parameters
   real*8              :: D_prof_neg         !< Particle diffusion coefficient in regions with negative density
   real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if rho < D_prof_neg_thresh
-  real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature
-  real*8              :: ZK_par_neg    !< Parallel diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_prof_neg        !< Perp. heat diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_par_neg         !< Parallel diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
   real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.)
   integer             :: n_tor_fft_thresh   !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used

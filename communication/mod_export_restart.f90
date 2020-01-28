@@ -66,9 +66,6 @@ subroutine export_binary_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_abl_arr (:)
   real*8, allocatable :: spi_species_arr (:)
 
-  integer :: err_alloc
-
-
   ! -> Write binary restart file
   open(21, file=filename, form='unformatted', status='replace', action='write')
 
@@ -142,15 +139,14 @@ subroutine export_binary_restart(node_list,element_list,filename)
 
     write(21) n_spi
 
-    allocate (spi_R_arr(n_spi),stat=err_alloc)  
-    allocate (spi_Z_arr(n_spi),stat=err_alloc)     
-    allocate (spi_phi_arr(n_spi),stat=err_alloc) 
-    allocate (spi_Vel_R_arr(n_spi),stat=err_alloc) 
-    allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc) 
-    allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc) 
-    allocate (spi_radius_arr(n_spi),stat=err_alloc) 
-    allocate (spi_abl_arr(n_spi),stat=err_alloc)
-    allocate (spi_species_arr(n_spi),stat=err_alloc)
+    allocate (spi_R_arr(n_spi))  
+    allocate (spi_Z_arr(n_spi))     
+    allocate (spi_phi_arr(n_spi)) 
+    allocate (spi_Vel_R_arr(n_spi)) 
+    allocate (spi_Vel_Z_arr(n_spi)) 
+    allocate (spi_Vel_RxZ_arr(n_spi)) 
+    allocate (spi_radius_arr(n_spi)) 
+    allocate (spi_abl_arr(n_spi))
 
     do i=1, n_spi
       spi_R_arr(i)       = pellets(i)%spi_R
@@ -286,8 +282,6 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
   real*8, allocatable :: spi_species_arr (:)
-
-  integer :: err_alloc
 
   ! index_now+nstep
   real(RKIND), allocatable :: t_xtime(:)                   ! nstep
@@ -618,15 +612,15 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
     call HDF5_integer_saving(file_id,n_spi,"n_spi"//char(0))
 
-    allocate (spi_R_arr(n_spi),stat=err_alloc)
-    allocate (spi_Z_arr(n_spi),stat=err_alloc)
-    allocate (spi_phi_arr(n_spi),stat=err_alloc)
-    allocate (spi_Vel_R_arr(n_spi),stat=err_alloc)
-    allocate (spi_Vel_Z_arr(n_spi),stat=err_alloc)
-    allocate (spi_Vel_RxZ_arr(n_spi),stat=err_alloc)
-    allocate (spi_radius_arr(n_spi),stat=err_alloc)
-    allocate (spi_abl_arr(n_spi),stat=err_alloc)
-    allocate (spi_species_arr(n_spi),stat=err_alloc)
+    allocate (spi_R_arr(n_spi))
+    allocate (spi_Z_arr(n_spi))
+    allocate (spi_phi_arr(n_spi))
+    allocate (spi_Vel_R_arr(n_spi))
+    allocate (spi_Vel_Z_arr(n_spi))
+    allocate (spi_Vel_RxZ_arr(n_spi))
+    allocate (spi_radius_arr(n_spi))
+    allocate (spi_abl_arr(n_spi))
+    allocate (spi_species_arr(n_spi))
 
     do i=1, n_spi
       spi_R_arr(i)       = pellets(i)%spi_R

@@ -241,7 +241,6 @@ contains
                        endif !(end RMP)
 !======================================= end RMPs ==================================
 
-
                          if (      apply_psi_BC      &
                               .or. apply_current_BC  &
                               .or. (k .eq. 2)        &
@@ -366,7 +365,6 @@ contains
                                ilarge_vus = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku-1)*n_tor + in
                                ilarge_vn  = ijA_position - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kn-1)*n_tor + in
 
-
                                irn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
                                jcn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
                                A_glob(ilarge_vv)   =  zbig
@@ -440,7 +438,6 @@ contains
                       !========================================================================
                       if    ((node_list%node(inode)%boundary .eq. 5) &
                            .or. (node_list%node(inode)%boundary .eq. 9)) then
-
 
                          if (      apply_psi_BC      &
                               .or. apply_current_BC  &

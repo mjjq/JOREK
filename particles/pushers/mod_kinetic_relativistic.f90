@@ -94,7 +94,7 @@ end subroutine volume_preserving_second_half_step_jorek
 subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail)
   ! load functions
   use mod_pusher_tools, only: coordinate_transform_XYZ_to_RZPHI
-  use mod_pusher_tools, only: coordinate_transfrom_RZPHI_to_XYZ
+  use mod_pusher_tools, only: coordinate_transform_RZPHI_to_XYZ
   use mod_pusher_tools, only: vector_transform_RZPHI_to_XYZ
   use mod_fields
   use mod_find_rz_nearby

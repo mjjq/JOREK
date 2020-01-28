@@ -147,4 +147,18 @@ contains
       end select
     end select
   end subroutine copy_particle
+
+  ! This method updates a particle RZPHI position
+  ! inputs:
+  !   particle: (particle_base) the particle to be updates
+  !   position: (real8)(3) new particle position in RZPHI
+  pure subroutine update_particle_position(particle,position)
+    ! delcare input/output variables
+    class(particle_base),intent(inout) :: particle
+    ! declare input variables
+    real(kind=8),dimension(3),intent(in) :: position
+    ! copy the new position in particle
+    particle%x = position
+  end subroutine update_particle_position
+
 end module mod_particle_types

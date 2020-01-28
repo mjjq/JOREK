@@ -10,7 +10,8 @@ use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
 implicit none
 
 private
-public volume_preserving_push_cartesian,relativistic_kinetic_to_gc
+public volume_preserving_push_cartesian,volume_preserving_push_jorek
+public relativistic_kinetic_to_gc
 public gc_to_relativistic_kinetic
 
 contains
@@ -23,19 +24,19 @@ contains
 !>   mass:     (real8) particle mass in [AMU]
 !>   dt:       (real8) time step in [s]
 !> outputs:
-!>   scaling_factor: (real8) scaling factor
+!>   scaling_factor: (real8)(3) scaling factor
 !>   half_position:  (real8)(2) particle position after half time step 
 !>			        in cartesian coordinates
-pure subroutine volume_preserving_half_step_jorek(particle,mass,dt,&
+pure subroutine volume_preserving_first_half_step_jorek(particle,mass,dt,&
 scaling_factor,half_position)
-! load functions
-use mod_pusher_tools, only: coordinate_transfrom_RZPHI_to_XYZ
-! input variables
-class(particle_kinetic_relativistic), intent(in) :: particle !< relativistic particle
-real(kind=8), intent(in) :: mass, dt !< mass and time step
-! output variables
-real(kind=8), intent(out) :: scaling_factor
-real(kind=8),dimension(2),intent(out) :: half_position
+  ! load functions
+  use mod_pusher_tools, only: coordinate_transfrom_RZPHI_to_XYZ
+  ! input variables
+  class(particle_kinetic_relativistic), intent(in) :: particle !< relativistic particle
+  real(kind=8), intent(in) :: mass, dt !< mass and time step
+  ! output variables
+  real(kind=8), intent(out) :: scaling_factor
+  real(kind=8),dimension(3),intent(out) :: half_position
 
   ! compute the dimensional q
   scaling_factor = 5.d-1*dt*particle%q*EL_CHG/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT)
@@ -47,9 +48,104 @@ real(kind=8),dimension(2),intent(out) :: half_position
   half_position%x = half_position%x + (5.d-1*dt*SPEED_OF_LIGHT*particle%p)/&
     (sqrt(1.d0+dot_product(particle%p,particle%p)))
 
+end subroutine volume_preserving_first_half_step_jorek
 
-end subroutine volume_preserving_half_step_jorek
+!---------------------------------------------------------------------------
+!> This subroutine computes the second half-step of the volume preserving 
+!> scheme for jorek like fields
+!> inputs:
+!>   particle:       (particle_kinetic_relativistic) relativistic particle type
+!>   half_position:  (real8)(2) half-position in cartesian coordinates
+!>   scaling_factor: (real8) scaling factor for computing momenta
+!>   B:		     (real8)(3) magnetic field in cartesian coordinates
+!>   E:		     (real8)(3) electric field in cartesian coordinates
+!>   mass:	     (real8) particle mass in AMU
+!>   dt:	     (real8) time step
+!> outputs:
+!>   particle: (particle_kinetic_relativistic) relativistic particle type
+pure subroutine volume_preserving_second_half_step_jorek(particle,&
+half_position,scaling_factor,B,E,mass,dt)
+  ! load methods
+  use mod_pusher_tools, only: cayley_transform !< use full Cayley transform
+  use mod_pusher_tools, only: coordinate_transfrom_XYZ_to_RZPHI
+  ! define input/output variables
+  class(particle_kinetic_relativistic), intent(inout) :: particle !< relativistic particle
+  ! define input variables
+  real(kind=8),dimension(3),intent(in) :: half_position,B,E
+  real(kind=8),intent(in) :: scaling_factor,mass,dt
 
+  ! compute the momenta at t_(i+1/2)
+  particle%p = particle%p + scaling_factor*E
+  ! rotate the momenta with respect to the magnetic field
+  particle%p = matmul(cayley_transform(SPEED_OF_LIGHT*scaling_factor/&
+    (sqrt(1.d0+dot_product(particle%p,particle%p))),B),particle%p)
+  ! update compute momenta at t_(i+1)
+  particle%p = particle%p + scaling_factor*E
+  ! update particle position at t_(i+1)
+  half_position = half_position + (5.d-1*dt*SPEED_OF_LIGHT*particle%p)/&
+    (sqrt(1.d0+dot_product(particle%p,particle%p)))
+  ! compute dimensional momenta
+  particle%p = particle%p*mass*SPEED_OF_LIGHT
+
+  ! transform particle position from cartesian to cylindrical
+  particle%x = coordinate_transfrom_XYZ_to_RZPHI(half_position)
+
+end subroutine volume_preserving_second_half_step_jorek
+
+!---------------------------------------------------------------------------
+!> This method integrate a relativistic particle trajectory in jorek
+!> MHD fields using the Volume Preserving Scheme
+pure subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail)
+  ! load functions
+  use mod_pusher_tools, only: vector_transform_XYZ_to_RZPHI
+  use mod_fields
+  use mod_find_rz_nearby
+  ! declare input/output variables
+  integer(kind=4),intent(inout) :: ifail
+  class(particle_kinetic_relativistic), intent(inout) :: particle !< relativistic particle
+  ! declare input variables
+  real(kind=8),intent(in) :: mass,time,timestep
+  ! declare internal variables
+  real(kind=8) :: psi,U
+  real(kind=8),dimension(3) :: B,E
+  ! half_position coordinates: 1:x,2:y,3:z,4:R,5:Z,6:phi 
+  real(kind=8),dimension(6) :: half_position
+  real(kind=8) :: scaling_factor !< scaling factor [s^2*C/(kg*m)]
+
+  ! chack if the particle is valid
+  if(particle%i_elm.eq.0) exit
+  ! compute first half step
+  call volume_preserving_first_half_step_jorek(particle,mass,timestep,&
+       scaling_factor,half_position(1:3))
+  ! transform back the half position from cartesian to cylindrical coordinares
+  half_position(4:6) = coordinate_transform_XYZ_to_RZPHI(half_position(1:3))
+  ! call find RZ for identifting the new local particle position
+  call find_RZ_nearby(fields%node_list,fields%element_list,particle%x(1),&
+       particle%x(2),particle%st(1),particle%st(2),particle%i_elm,&
+       half_position(4),half_position(5),particle%st(1),particle%st(2),&
+       particle%i_elm,ifail)
+  ! check if the particle is lost exit if it is the case
+  if(paritcle%i_elm.eq.0) exit
+  ! copy RZPHI coordinates in particles
+  call update_particle_position(particle,half_position(4:6))
+  ! compute magnetic and electric field
+  call fields%calc_EBpsiU(time+5.d-1*timestep,particle%i_elm,&
+       particle%st,particle%x(3),E,B,psi,U)
+  ! compute the second half-step
+  call volume_preserving_second_half_step_jorek(particle,half_position(1:3),&
+       scaling_factor,E,B,mass,timestep)
+  ! transform back from cartisian to cylindrical coordinates
+  half_position(4:6) = coordinate_transform_XYZ_to_RZPHI(half_position(1:3))
+  ! call the find RZ for tracking the paritcle in local coordinates
+  call find_RZ_nearby(fields%node_list,fields%element_list,particle%x(1),&
+       particle%x(2),particle%st(1),particle%st(2),particle%i_elm,&
+       half_position(4),half_position(5),particle%st(1),particle%st(2),&
+       particle%i_elm,ifail)
+  ! copy new RZPHI position into particle
+  call update_particle_position(particle,half_position(4:6))
+
+
+end subroutine volume_preserving_push_jorek
 
 !---------------------------------------------------------------------------
 !> This subroutine implements a test version of the volume preserving 

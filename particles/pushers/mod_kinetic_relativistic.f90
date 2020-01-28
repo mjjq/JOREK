@@ -63,7 +63,7 @@ end subroutine volume_preserving_first_half_step_jorek
 !> outputs:
 !>   particle: (particle_kinetic_relativistic) relativistic particle type
 pure subroutine volume_preserving_second_half_step_jorek(particle,&
-half_position,scaling_factor,B,E,mass,dt)
+half_position,scaling_factor,E,B,mass,dt)
   ! load methods
   use mod_pusher_tools, only: cayley_transform !< use full Cayley transform
   ! define input/output variables

@@ -489,7 +489,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
         ! compute the toroidal canonical momentum P_phi for a kinetic relativistic particles
         ! with momentum expressed in Cartesian coordinates p_phi = -p_x*cos(phi)-p_y*sin(phi)
         real_stats_tmp(6) = real(particle_in%q,8)*EL_CHG*psi - ATOMIC_MASS_UNIT*particle_in%x(1)*&
-        (particle_in%p(1)*cos(particle_in%x(3))+particle_in%p(2)*sin(particle_in%x(3)))
+        (particle_in%p(1)*sin(particle_in%x(3))+particle_in%p(2)*cos(particle_in%x(3)))
 	! transform a relativistic kinetic particle into gc
         particle = relativistic_kinetic_to_gc(fields%node_list,fields%element_list,particle_in,B,mass)
       class default

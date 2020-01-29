@@ -501,7 +501,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
       ! Calculate output variables (see var_names on top of the module for ordering)
 
       ! Total energy (including electric potential at this charge state) at kinetic or GC position
-      real_stats_tmp(1) = particle%E + particle%q * U ! E in [eV] + q [e] * U [V]
+      real_stats_tmp(1) = particle%E + particle%q * F0 * U ! E in [eV] + q [e] * U [V]
       ! Kinetic energy
       real_stats_tmp(2) = particle%E    
       ! Magnetic moment

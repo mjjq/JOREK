@@ -16,7 +16,7 @@ integer, parameter :: n_var = 12
 character(len=7)  :: var_names(n_var) = ["e      ", "k      ", "mu     ", &
   "psi_n  ", "psi_bar", "p_phi  ", "weight ", "lost   ", "q      ", "region ", &
   "theta  ", "phi    "]
-integer, parameter :: var_types(n_var) = [REAL4, REAL8, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4]
+integer, parameter :: var_types(n_var) = [REAL8, REAL8, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4]
 integer, parameter :: n_real8_var      = count(var_types .eq. REAL8)
 integer, parameter :: n_real4_var      = count(var_types .eq. REAL4)
 integer, parameter :: n_int4_var       = count(var_types .eq. INT4)
@@ -503,7 +503,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
       ! Total energy (including electric potential at this charge state) at kinetic or GC position
       real_stats_tmp(1) = particle%E + particle%q * U ! E in [eV] + q [e] * U [V]
       ! Kinetic energy
-      real_stats_tmp(2) = particle%E
+      real_stats_tmp(2) = particle%E    
       ! Magnetic moment
       real_stats_tmp(3) = particle%mu
       ! Psi_n (normalized psi, at kinetic position)

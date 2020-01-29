@@ -603,6 +603,37 @@ endif
   end do
   !$omp end do
   !$omp end parallel
+ 
+    ! !!!------ for debugging
+    ! if(direct_construction) then 
+    !   if(my_id.eq.0) then
+    !    do i = 1, ndof!nz_glob1 
+    !      print*, 'i, mumps_par%rhs =', i, rhs_local(i)
+    ! !     print*, 'i, mumps_par%jcn =', i, jcn_local(i)
+    !    enddo 
+    !   endif 
+    ! !  !------ for debugging
+    ! !  !------ for debugging
+    ! endif
+    !   call MPI_Barrier(MPI_COMM_WORLD, ierr)
+    ! !!!------ for debugging
+
+
+
+ 
+     !!!------ for debugging
+     !if(direct_construction) then 
+     !  if(my_id.eq.0) then
+     !   do i = 1, nz_glob1 
+     !     !print*, 'i, mumps_par%rhs =', i, mumps_par%rhs(i)
+     !     print*, 'i, mumps_par%jcn =', i, jcn_local(i)
+     !   enddo 
+     !  endif 
+     !  !------ for debugging
+     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)
+     !  !------ for debugging
+     !endif
+     !!------ for debugging
 
 
 
@@ -621,6 +652,21 @@ endif
 
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_local,nz_glob1)
+
+ 
+     !!!!------ for debugging
+     !if(direct_construction) then 
+     !  if(my_id.eq.0) then
+     !   do i = 1, ndof!nz_glob1 
+     !     print*, 'i, mumps_par%rhs =', i, rhs_local(i)
+     !!     print*, 'i, mumps_par%jcn =', i, jcn_local(i)
+     !   enddo 
+     !  endif 
+     !!  !------ for debugging
+     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)
+     !!  !------ for debugging
+     !!endif
+     !!!!------ for debugging
 
 
 if(.not.direct_construction) then 
@@ -675,6 +721,21 @@ else
 endif 
 
   call tr_deallocatep(RHS_local,"RHS_local",CAT_DMATRIX)
+ 
+     !!!!------ for debugging
+     !if(direct_construction) then 
+     !  if(my_id.eq.0) then
+     !   do i = 1, ndof!nz_glob1 
+     !     print*, 'i, mumps_par%rhs =', i, rhs_glob(i)
+     !!     print*, 'i, mumps_par%jcn =', i, jcn_local(i)
+     !   enddo 
+     !  endif 
+     !!  !------ for debugging
+     !!  !------ for debugging
+     !endif
+     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)
+     !!!!------ for debugging
+
 
   ! --- For debugging purpose
 !  if (my_id .eq. 0) then

@@ -1015,10 +1015,10 @@ required = 0
             write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
          endif     
 
-      
+         !print*, 'my_id, my_id_n:', my_id, my_id_n 
          call clck_time_barrier(t0) 
          !--------- Centralizing Harmonic Matrix 
-         call centralization_harmonic(my_id_n, n_cpu_n, MPI_COMM_N)
+         call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
          call clck_time_barrier(t1) 
 
          if (my_id .eq. 0) then
@@ -1031,8 +1031,9 @@ required = 0
        else
           call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
 
-
        endif
+
+
 
        ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
        call del_thread_buffers()

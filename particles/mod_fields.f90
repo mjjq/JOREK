@@ -14,9 +14,11 @@ public fields_base
 type, abstract :: fields_base
   type(type_node_list), allocatable    :: node_list !< Current node list
   type(type_element_list), allocatable :: element_list !< Current element list
+  logical(kind=1) :: flag_zero_dpsidt=.false. !< if true, P_time(1) = dpsi/dt = 0
   contains
     procedure(interp_PRZ), deferred       :: interp_PRZ
     procedure :: calc_EBpsiU
+    procedure :: set_flag_dpsidt
 end type fields_base
 
 interface
@@ -82,6 +84,8 @@ U_phi    = P_phi(2)
 psi = P(1)
 U   = P(2)/t_norm
 
+if(fields%flag_zero_dpsidt) P_time(1) = 0.d0
+
 ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
 B     = [+psi_Z, -psi_R, F0] * R_inv
 ! The local electric field, obtained from E=-Grad (u F0)-\partial_t A
@@ -89,4 +93,13 @@ B     = [+psi_Z, -psi_R, F0] * R_inv
 E     = [-F0*U_R, -F0*U_Z, -F0*U_phi*R_inv]/t_norm
 E(3)  = E(3) - R*P_time(1) ! because this is not normalized with t_norm
 end subroutine calc_EBpsiU
+
+pure subroutine set_flag_dpsidt(this,flag_dpsidt_to_zero)
+  class(fields_base),intent(inout) :: this
+  logical(kind=1),intent(in) :: flag_dpsidt_to_zero
+
+  this%flag_zero_dpsidt = flag_dpsidt_to_zero
+  
+end subroutine set_flag_dpsidt
+
 end module mod_fields

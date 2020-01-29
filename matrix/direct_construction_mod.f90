@@ -9,7 +9,8 @@ subroutine direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N
   use global_distributed_matrix
   use mod_global_matrix_structure
   use equil_info
-  use construct_matrix_mod, only : construct_matrix
+  use construct_matrix_mod, only : construct_matrix 
+  use mpi_mod
   implicit none
 
 type (type_node_list)        :: node_list
@@ -32,7 +33,7 @@ integer,  allocatable        :: ijA_index_loc(:,:), ijA_size_loc(:), irn_jcn_loc
 integer,  allocatable        :: irn_glob_loc(:), jcn_glob_loc(:)
 logical                      :: freeboundary
 integer                      :: n_glob_loc, nz_glob_loc, ndof_glob_loc, n_matrix_block_size_loc
-integer                      :: xcase2
+integer                      :: xcase2, i, ierr
 logical                      :: xpoint2
  
 
@@ -54,6 +55,7 @@ logical                      :: xpoint2
                                    irn_jcn_loc, irn_glob_loc, jcn_glob_loc, i_tor_min, i_tor_max,   & 
                                    n_glob_loc, nz_glob_loc, ndof_glob_loc, n_matrix_block_size_loc)
  
+
       ! --- Memory allocation
       if (allocated(A_glob_harm))    call tr_deallocate(A_glob_harm,"A_glob_harm",CAT_DMATRIX) 
       call tr_allocate(A_glob_harm,1,nz_glob_harm,"A_glob_harm",  CAT_DMATRIX)

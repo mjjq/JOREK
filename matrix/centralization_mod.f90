@@ -32,8 +32,10 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
   integer, allocatable         :: disp_array(:)  
   integer                      :: nz_total, i, ierr     
 
-  if (.not.allocated(nz_array))   allocate(nz_array(n_cpu_n)) 
-  if (.not.allocated(disp_array)) allocate(disp_array(n_cpu_n))
+!  if (allocated(nz_array)) deallocate(nz_array)
+  allocate(nz_array(n_cpu_n)) 
+!  if (allocated(disp_array)) deallocate(disp_array)
+  allocate(disp_array(n_cpu_n))
   
   if (n_cpu_n > 1) then
    
@@ -41,11 +43,12 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
     
     disp_array = 0 
     nz_total   = 0
+    !if (my_id_n .eq. 0) nz_total = sum(nz_array(1:n_cpu_n)
     if (my_id_n .eq. 0) then
       do i = 2, n_cpu_n  
          disp_array(i) = disp_array(i-1) + nz_array(i-1)
       enddo  
-    nz_total = disp_array(n_cpu_n) + nz_array(n_cpu_n) 
+      nz_total = disp_array(n_cpu_n) + nz_array(n_cpu_n) 
     endif 
     
     mumps_par%nz = nz_total  !nz_glob_harm 

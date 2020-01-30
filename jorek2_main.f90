@@ -1010,6 +1010,14 @@ required = 0
                                            direct_construction)
          call clck_time_barrier(t1) 
 
+      ! if(my_id .eq. 0) then
+      !   do i = 1, n_glob_harm !mumps_par%n 
+      !      print*, 'i, mumps_par%rhs:', i, mumps_par%rhs(i)
+      !   enddo 
+      ! endif
+      ! call MPI_Barrier(MPI_COMM_WORLD, ierr)  
+
+
          if (my_id .eq. 0) then
             call clck_ldiff(t0,t1,tsecond)
             write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
@@ -1033,7 +1041,12 @@ required = 0
 
        endif
 
-
+       !if(my_id .eq. 0) then
+       !  do i = 1, mumps_par%n 
+       !     print*, 'i, mumps_par%rhs:', i, mumps_par%rhs(i)
+       !  enddo 
+       !endif
+       !call MPI_Barrier(MPI_COMM_WORLD, ierr)  
 
        ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
        call del_thread_buffers()

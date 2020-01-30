@@ -635,6 +635,15 @@ endif
      !endif
      !!------ for debugging
 
+     !if(direct_construction) then 
+     !  if(my_id .eq. 0) then
+     !    do i = 1, ndof !mumps_par%n 
+     !       print*, 'i, mumps_par%rhs:', i, rhs_local(i)
+     !    enddo 
+     !  endif
+     !endif
+     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)  
+
 
 
   print*, 'my_id, my_id_n, my_id_master :', my_id, my_id_n, my_id_master
@@ -667,6 +676,18 @@ endif
      !!  !------ for debugging
      !!endif
      !!!!------ for debugging
+
+     !if(direct_construction) then 
+     !  if(my_id .eq. 0) then
+     !    do i = 1, ndof !mumps_par%n 
+     !       print*, 'i, mumps_par%rhs:', i, rhs_local(i)
+     !    enddo 
+     !  endif
+     !endif
+     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)  
+
+
+
 
 
 if(.not.direct_construction) then 

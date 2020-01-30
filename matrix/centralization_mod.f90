@@ -26,7 +26,8 @@ integer                      :: nz_total, i, ierr
       if (.not.allocated(nz_array))   allocate(nz_array(n_cpu_n)) 
       if (.not.allocated(disp_array)) allocate(disp_array(n_cpu_n))
 
-     
+    if(n_cpu_n .ge. 2) then
+ 
       call MPI_GATHER(nz_glob_harm, 1, MPI_INTEGER, nz_array, 1, MPI_INTEGER, 0, MPI_COMM_N, ierr) 
       
       disp_array = 0 
@@ -40,7 +41,10 @@ integer                      :: nz_total, i, ierr
  
       mumps_par%nz = nz_total  !nz_glob_harm 
       mumps_par%n  = ndof_glob_harm 
-    
+   else
+     mumps_par%nz  = nz_glob_harm
+     mumps_par%n   = ndof_glob_harm
+   endif 
      
       if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"dh_mumps_par%A",CAT_DMATRIX)
       if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
@@ -53,13 +57,18 @@ integer                      :: nz_total, i, ierr
       if (associated(mumps_par%rhs))  call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
       call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"dh_mumps_par%rhs",CAT_DMATRIX)
 
+    if(n_cpu_n .ge. 2) then
       call MPI_GATHERV(A_glob_harm, nz_glob_harm, MPI_DOUBLE_PRECISION, mumps_par%A, nz_array, disp_array,&
                        MPI_DOUBLE_PRECISION, 0, MPI_COMM_N, ierr)
       call MPI_GATHERV(irn_glob_harm, nz_glob_harm, MPI_INTEGER, mumps_par%irn, nz_array, disp_array,&
                        MPI_INTEGER, 0, MPI_COMM_N, ierr)
       call MPI_GATHERV(jcn_glob_harm, nz_glob_harm, MPI_INTEGER, mumps_par%jcn, nz_array, disp_array,&
                        MPI_INTEGER, 0, MPI_COMM_N, ierr)
-      
+   else 
+      mumps_par%A   = A_glob_harm 
+      mumps_par%irn = irn_glob_harm
+      mumps_par%jcn = jcn_glob_harm
+   endif       
       mumps_par%rhs = rhs_glob_harm  
 
       if ( allocated(nz_array) )   deallocate(nz_array) 

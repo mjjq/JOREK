@@ -6,9 +6,11 @@ implicit none
 
 
 
-contains  
+contains
 
-!> Collect a distributed matrix on a single MPI process
+
+
+!> Collect a distributed matrix on a single MPI process (the master task of the MPI group)
 subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
   use data_structure 
   use global_distributed_matrix
@@ -21,39 +23,38 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
   integer, intent(in)          :: my_id, my_id_n, n_cpu_n, MPI_COMM_N
   
   ! --- Local variables
-  type (type_node_list)        :: node_list
-  type (type_element_list)     :: element_list
-  type (type_bnd_element_list) :: bnd_elm_list
-  type (type_surface_list)     :: flux_list
-  type (type_element)          :: element
-  type (type_node)             :: nodes(n_vertex_max)
+  integer, allocatable         :: nz_array(:), disp_array(:)
+  integer                      :: nz_total, i, ierr
 
-  integer, allocatable         :: nz_array(:)  
-  integer, allocatable         :: disp_array(:)  
-  integer                      :: nz_total, i, ierr     
-
-!  if (allocated(nz_array)) deallocate(nz_array)
-  allocate(nz_array(n_cpu_n)) 
-!  if (allocated(disp_array)) deallocate(disp_array)
+    write(*,*) my_id, my_id_n, '###A0'
+    call system ('sleep 5s')
+    
+  allocate(nz_array  (n_cpu_n))
   allocate(disp_array(n_cpu_n))
   
-  if (n_cpu_n > 1) then
-   
-    call MPI_GATHER(nz_glob_harm, 1, MPI_INTEGER, nz_array, 1, MPI_INTEGER, 0, MPI_COMM_N, ierr) 
+    write(*,*) my_id, my_id_n, '###A1'
+    call system ('sleep 5s')
     
+  ! --- Determine matrix dimension n and number of nonzeros nz
+  if (n_cpu_n > 1) then
+    write(*,*) my_id, my_id_n, '###A2'
+    call system ('sleep 5s')
+    
+    call MPI_GATHER(nz_glob_harm, 1, MPI_INTEGER, nz_array, 1, MPI_INTEGER, 0, MPI_COMM_N, ierr) 
     disp_array = 0 
     nz_total   = 0
-    !if (my_id_n .eq. 0) nz_total = sum(nz_array(1:n_cpu_n)
     if (my_id_n .eq. 0) then
       do i = 2, n_cpu_n  
          disp_array(i) = disp_array(i-1) + nz_array(i-1)
       enddo  
       nz_total = disp_array(n_cpu_n) + nz_array(n_cpu_n) 
     endif 
-    
-    mumps_par%nz = nz_total  !nz_glob_harm 
-    mumps_par%n  = ndof_glob_harm 
+    mumps_par%nz  = nz_total  !nz_glob_harm 
+    mumps_par%n   = ndof_glob_harm 
   else
+    write(*,*) my_id, my_id_n, '###A3'
+    call system ('sleep 5s')
+    
     mumps_par%nz  = nz_glob_harm
     mumps_par%n   = ndof_glob_harm
   endif 
@@ -68,6 +69,7 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
     write(*,*) my_id, my_id_n, '###A'
     call system ('sleep 5s')
     
+  ! --- Allocate arrays for centralized matrix
   if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,  "dh_mumps_par%A",  CAT_DMATRIX)
   if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
   if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
@@ -84,6 +86,7 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
     write(*,*) my_id, my_id_n, '###C'
     call system ('sleep 5s')
     
+  ! --- Centralize matrix (if it was not distributed, copy it into the right data structure)
   if (n_cpu_n > 1) then
     write(*,*) my_id, my_id_n, '###D'
     call system ('sleep 5s')

@@ -161,7 +161,7 @@ contains
 
             call construct_variables(node_list%node(inode), R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
 	    
-	    do i_tor=1, n_tor
+	    do i_tor=i_tor_min, i_tor_max!1, n_tor
 
               do k_var=1, n_var
 
@@ -186,7 +186,7 @@ contains
 		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,	&
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                                         index_min,index_max)
+                                         index_min,index_max,i_tor_min,i_tor_max)
 
                   endif
                   
@@ -215,13 +215,15 @@ contains
 
 		  ! --- Apply Dirichlet if required
 		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, & 
+                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
                   endif
 
                   ! --------------
 		  ! --- Mach-1 BCs
                   if (k_var .eq. 7) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, & 
+                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
                   endif
 
                 endif
@@ -246,7 +248,7 @@ contains
 		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,	&
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                                         index_min,index_max)
+                                         index_min,index_max,i_tor_min,i_tor_max)
 
                   endif
                   
@@ -275,13 +277,15 @@ contains
 
 		  ! --- Apply Dirichlet if required
 		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only,& 
+                                              only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
                   endif
 
                   ! --------------
 		  ! --- Mach-1 BCs
                   if (k_var .eq. 7) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only,& 
+                                              only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
                   endif
 
                 endif
@@ -305,7 +309,7 @@ contains
 		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,	&
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                                         index_min,index_max)
+                                         index_min,index_max,i_tor_min,i_tor_max)
 
                   endif
                   
@@ -355,7 +359,8 @@ contains
                       ) apply_dirichlet = .true.
 
 		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, & 
+                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
                   endif
 
                 endif
@@ -481,7 +486,7 @@ contains
   subroutine apply_RMP_BCs(rhs_loc, node, side, i_tor, 				&
 		           psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		           psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                           index_min,index_max)
+                           index_min,index_max,i_tor_min, i_tor_max)
   
     use mod_parameters
     use data_structure
@@ -499,6 +504,7 @@ contains
     real*8,		intent(in)    :: psi_RMP_cos1(*), dpsi_RMP_cos_dR1(*), dpsi_RMP_cos_dZ1(*)
     real*8,		intent(in)    :: psi_RMP_sin1(*), dpsi_RMP_sin_dR1(*), dpsi_RMP_sin_dZ1(*)
     integer,		intent(in)    :: index_min, index_max
+    integer,            intent(in)    :: i_tor_min, i_tor_max
     
     ! --- Internal variables
     integer				:: index_node,   index_node2, index_tmp
@@ -529,13 +535,14 @@ contains
     ! --- Condition on nodes
     if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
       call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-      ilarge_vp  = ijA_position  - 1 + ((k_psi-1)*n_tor + i_tor-1) * n_var*n_tor + (k_psi-1)*n_tor + i_tor
+      ilarge_vp  = ijA_position  - 1 + ((k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       
-      irn_glob(ilarge_vp) = n_tor * n_var * (index_node-1) + (k_psi-1)*n_tor + i_tor
-      jcn_glob(ilarge_vp) = n_tor * n_var * (index_node-1) + (k_psi-1)*n_tor + i_tor
+      irn_glob(ilarge_vp) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge_vp) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge_vp)   = ZBIG
       
-      index_tmp = n_tor*n_var * (index_node-1) + (k_psi-1)*n_tor + i_tor
+      index_tmp = (i_tor_max - i_tor_min +1)*n_var * (index_node-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       Rhs_loc(index_tmp) = ZBIG * delta_psi_rmp
     endif
     
@@ -543,13 +550,14 @@ contains
     if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then			      
       call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
       
-      ilarge_vp2  = ijA_position2 - 1 + ((k_psi-1)*n_tor + i_tor-1) * n_var*n_tor + (k_psi-1)*n_tor + i_tor
+      ilarge_vp2  = ijA_position2 - 1 + ((k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
 
-      irn_glob(ilarge_vp2) = n_tor * n_var * (index_node2-1) + (k_psi-1)*n_tor + i_tor
-      jcn_glob(ilarge_vp2) = n_tor * n_var * (index_node2-1) + (k_psi-1)*n_tor + i_tor
+      irn_glob(ilarge_vp2) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge_vp2) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge_vp2)   = ZBIG
       
-      index_tmp = n_tor*n_var * (index_node2-1) + (k_psi-1)*n_tor + i_tor
+      index_tmp = (i_tor_max - i_tor_min +1)*n_var * (index_node2-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       Rhs_loc(index_tmp) = ZBIG * delta_psi_rmp_dl
     endif
   
@@ -565,7 +573,7 @@ contains
   !***************** Routine to apply Dirichlet boundary conditions *************
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+  subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
   
     use mod_parameters
     use data_structure
@@ -583,6 +591,7 @@ contains
     integer,		intent(in)    :: index_min, index_max
     logical,		intent(in)    :: gmres, solve_only, only_count
     integer,		intent(inout) :: cnt, cnt_prod
+    integer,            intent(in)    :: i_tor_min, i_tor_max
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -597,19 +606,21 @@ contains
     ! --- Condition on nodes
     if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
       call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-      ilarge = ijA_position - 1 + ((k_var-1)*n_tor + i_tor-1) * n_var*n_tor + (k_var-1)*n_tor + i_tor
+      ilarge = ijA_position - 1 + ((k_var-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
 
-      irn_glob(ilarge) = n_tor * n_var * (index_node-1) + (k_var-1)*n_tor + i_tor
-      jcn_glob(ilarge) = n_tor * n_var * (index_node-1) + (k_var-1)*n_tor + i_tor
+      irn_glob(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge)   = zbig
     endif
     ! --- Condition between nodes (d/ds)
     if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
       call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-      ilarge = ijA_position - 1 + ((k_var-1)*n_tor + i_tor-1) * n_var*n_tor + (k_var-1)*n_tor + i_tor
+      ilarge = ijA_position - 1 + ((k_var-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
 
-      irn_glob(ilarge) = n_tor * n_var * (index_node2-1) + (k_var-1)*n_tor + i_tor
-      jcn_glob(ilarge) = n_tor * n_var * (index_node2-1) + (k_var-1)*n_tor + i_tor
+      irn_glob(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge)   = zbig
     endif
   
@@ -625,7 +636,7 @@ contains
   !****************** Routine to apply Mach-1 boundary conditions ***************
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+  subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
   
     use mod_parameters
     use data_structure
@@ -643,6 +654,7 @@ contains
     integer,		intent(in)    :: index_min, index_max
     logical,		intent(in)    :: gmres, solve_only, only_count
     integer,		intent(inout) :: cnt, cnt_prod
+    integer,            intent(in)    :: i_tor_min, i_tor_max
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -658,8 +670,8 @@ contains
     ! --- Define node indices
     index_node  = node%index(1) 	    ! position of value
     index_node2 = node%index(side) 	    ! position of first deriative
-    index_rhs   = n_tor*n_var*(index_node-1 ) + (k_Vpar-1)*n_tor + i_tor
-    index_rhs2  = n_tor*n_var*(index_node2-1) + (k_Vpar-1)*n_tor + i_tor
+    index_rhs   = (i_tor_max - i_tor_min +1)*n_var*(index_node-1 ) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+    index_rhs2  = (i_tor_max - i_tor_min +1)*n_var*(index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
 
     ! --- Define equations before MURGE and non-MURGE fork
     mach1       = - zbig / Btot * direction                     * sqrt(GAMMA*(Ti0 + Te0))	     
@@ -689,21 +701,24 @@ contains
       call locate_irn_jcn(index_node,index_node, index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
       call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
-      ilarge_vv  = ijA_position  - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_Vpar-1)*n_tor + i_tor
-      ilarge_vTi = ijA_position  - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_Ti  -1)*n_tor + i_tor
-      ilarge_vTe = ijA_position  - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_Te  -1)*n_tor + i_tor
+      ilarge_vv  = ijA_position  - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge_vTi = ijA_position  - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge_vTe = ijA_position  - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       !ilarge_vus = ijA_position2 - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_u   -1)*n_tor + i_tor
 
-      irn_glob(ilarge_vv)  = n_tor * n_var * (index_node-1) + (k_Vpar-1)*n_tor + i_tor
-      jcn_glob(ilarge_vv)  = n_tor * n_var * (index_node-1) + (k_Vpar-1)*n_tor + i_tor
+      irn_glob(ilarge_vv)  = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge_vv)  = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge_vv)    = zbig
 
-      irn_glob(ilarge_vTi) = n_tor * n_var * (index_node-1) + (k_Vpar-1)*n_tor + i_tor
-      jcn_glob(ilarge_vTi) = n_tor * n_var * (index_node-1) + (k_Ti  -1)*n_tor + i_tor
+      irn_glob(ilarge_vTi) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge_vTi) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge_vTi)   = dmach1
 
-      irn_glob(ilarge_vTe) = n_tor * n_var * (index_node-1) + (k_Vpar-1)*n_tor + i_tor
-      jcn_glob(ilarge_vTe) = n_tor * n_var * (index_node-1) + (k_Te  -1)*n_tor + i_tor
+      irn_glob(ilarge_vTe) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge_vTe) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge_vTe)   = dmach1
 
       !irn_glob(ilarge_vus) = n_tor * n_var * (index_node -1) + (k_Vpar-1)*n_tor + i_tor
@@ -723,30 +738,35 @@ contains
       call locate_irn_jcn(index_node2,index_node, index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
       call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
-      ilarge_vsvs  = ijA_position2 - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_Vpar-1)*n_tor + i_tor
-      ilarge_vsTis = ijA_position2 - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_Ti  -1)*n_tor + i_tor
-      ilarge_vsTes = ijA_position2 - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_Te  -1)*n_tor + i_tor
-      ilarge_vsTi  = ijA_position  - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_Ti  -1)*n_tor + i_tor
-      ilarge_vsTe  = ijA_position  - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_Te  -1)*n_tor + i_tor
+      ilarge_vsvs  = ijA_position2 - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge_vsTis = ijA_position2 - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge_vsTes = ijA_position2 - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge_vsTi  = ijA_position  - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge_vsTe  = ijA_position  - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
+                   (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
 
-      irn_glob(ilarge_vsvs)  = n_tor * n_var * (index_node2-1) + (k_Vpar-1)*n_tor + i_tor
-      jcn_glob(ilarge_vsvs)  = n_tor * n_var * (index_node2-1) + (k_Vpar-1)*n_tor + i_tor
+      irn_glob(ilarge_vsvs)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge_vsvs)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge_vsvs)    = zbig
 
-      irn_glob(ilarge_vsTis) = n_tor * n_var * (index_node2-1) + (k_Vpar-1)*n_tor + i_tor
-      jcn_glob(ilarge_vsTis) = n_tor * n_var * (index_node2-1) + (k_Ti  -1)*n_tor + i_tor
+      irn_glob(ilarge_vsTis) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge_vsTis) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge_vsTis)   = dmach1
 
-      irn_glob(ilarge_vsTes) = n_tor * n_var * (index_node2-1) + (k_Vpar-1)*n_tor + i_tor
-      jcn_glob(ilarge_vsTes) = n_tor * n_var * (index_node2-1) + (k_Te  -1)*n_tor + i_tor
+      irn_glob(ilarge_vsTes) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge_vsTes) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge_vsTes)   = dmach1
 
-      irn_glob(ilarge_vsTi)  = n_tor * n_var * (index_node2-1) + (k_Vpar-1)*n_tor + i_tor
-      jcn_glob(ilarge_vsTi)  = n_tor * n_var * (index_node -1) + (k_Ti  -1)*n_tor + i_tor
+      irn_glob(ilarge_vsTi)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge_vsTi)  = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge_vsTi)    = d2mach1_dTi
 
-      irn_glob(ilarge_vsTe)  = n_tor * n_var * (index_node2-1) + (k_Vpar-1)*n_tor + i_tor
-      jcn_glob(ilarge_vsTe)  = n_tor * n_var * (index_node -1) + (k_Te  -1)*n_tor + i_tor
+      irn_glob(ilarge_vsTe)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn_glob(ilarge_vsTe)  = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       A_glob(ilarge_vsTe)    = d2mach1_dTe
 
       if (i_tor .eq. 1) then
@@ -762,9 +782,6 @@ contains
   
     return
   end subroutine apply_Mach1_BCs
-  
-  
-  
   
   
 end module mod_boundary_conditions

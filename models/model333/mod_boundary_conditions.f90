@@ -175,7 +175,7 @@ contains
 
             call construct_variables(node_list%node(inode), R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
 	    
-	    do i_tor=1, n_tor
+	    do i_tor=i_tor_min, i_tor_max!1, n_tor
 
               do k_var=1, n_var
 
@@ -232,7 +232,8 @@ contains
 		  ! --- Apply Dirichlet if required
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min, &
-                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
                   endif
 
                   ! --------------
@@ -299,7 +300,8 @@ contains
 		  ! --- Apply Dirichlet if required
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
-                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
                   endif
 
                   ! --------------
@@ -385,7 +387,8 @@ contains
 
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
-                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
 		    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
                       index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, &
                       i_tor_max)
@@ -640,11 +643,12 @@ contains
   !******************************************************************************
   !******************************************************************************
   subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only, &
-    only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+    only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
+         irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
   
     use mod_parameters
     use data_structure
-    use global_distributed_matrix
+    !use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     
@@ -659,7 +663,9 @@ contains
     logical,		intent(in)    :: gmres, solve_only, only_count
     integer,		intent(inout) :: cnt, cnt_prod
     integer,		intent(in)    :: i_tor_min, i_tor_max
-    
+    integer, intent(in), pointer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    integer :: irn_glob(:), jcn_glob(:)
+    real*8  :: A_glob(:) 
     ! --- Internal variables
     integer				:: index_node,   index_node2
     

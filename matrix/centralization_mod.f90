@@ -105,13 +105,13 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
   else 
     write(*,*) my_id, my_id_n, '###E1', size(mumps_par%irn,1), size(irn_glob_harm,1)
     call system ('sleep 5s')
-    mumps_par%irn = irn_glob_harm
+    mumps_par%irn(1:mumps_par%nz) = irn_glob_harm(1:mumps_par%nz)
     write(*,*) my_id, my_id_n, '###E2', size(mumps_par%jcn,1), size(jcn_glob_harm,1)
     call system ('sleep 5s')
-    mumps_par%jcn = jcn_glob_harm
-   write(*,*) my_id, my_id_n, '###E', size(mumps_par%A,1), size(A_glob_harm,1)
+    mumps_par%jcn(1:mumps_par%nz) = jcn_glob_harm(1:mumps_par%nz)
+    write(*,*) my_id, my_id_n, '###E', size(mumps_par%A,1), size(A_glob_harm,1)
     call system ('sleep 5s')
-    mumps_par%A   = A_glob_harm
+    mumps_par%A(1:mumps_par%nz)   = A_glob_harm(1:mumps_par%nz)
   endif
   
     write(*,*) my_id, my_id_n, '###F'

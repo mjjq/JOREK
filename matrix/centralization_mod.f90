@@ -106,6 +106,9 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
     call MPI_GATHERV(jcn_glob_harm, nz_glob_harm, MPI_INTEGER, mumps_par%jcn, nz_array, disp_array,&
                      MPI_INTEGER, 0, MPI_COMM_N, ierr)
   else 
+    irn_glob_harm = 33
+    jcn_glob_harm = 34
+    A_glob_harm = 35.d0
     write(*,*) my_id, my_id_n, '###E1', size(mumps_par%irn,1), size(irn_glob_harm,1)
     call system ('sleep 5s')
     mumps_par%irn(1:mumps_par%nz) = irn_glob_harm(1:mumps_par%nz)

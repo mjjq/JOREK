@@ -88,6 +88,9 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
   call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
   call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
   call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
+  mumps_par%a = 42.d0 !###
+  mumps_par%irn = 43  !###
+  mumps_par%jcn = 44  !###
 
     write(*,*) my_id, my_id_n, '###C'
     call system ('sleep 5s')

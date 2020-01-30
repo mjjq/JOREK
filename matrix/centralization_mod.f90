@@ -26,10 +26,14 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
   integer, allocatable         :: nz_array(:), disp_array(:)
   integer                      :: nz_total, i, ierr
 
-    write(*,*) my_id, my_id_n, '###A0'
+    write(*,*) my_id, my_id_n, '###A0', n_cpu_n
+    write(*,*) my_id, my_id_n, '###A0', allocated(nz_array), allocated(disp_array)
     call system ('sleep 5s')
     
   allocate(nz_array  (n_cpu_n))
+    write(*,*) my_id, my_id_n, '###A0b'
+    call system ('sleep 5s')
+    
   allocate(disp_array(n_cpu_n))
   
     write(*,*) my_id, my_id_n, '###A1'
@@ -75,7 +79,7 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
   if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
   if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
 
-    write(*,*) my_id, my_id_n, '###B'
+    write(*,*) my_id, my_id_n, '###B', mumps_par%n, mumps_par%nz
     call system ('sleep 5s')
     
   call tr_allocatep(mumps_par%A,  1,mumps_par%nz,"dh_mumps_par%A",  CAT_DMATRIX)

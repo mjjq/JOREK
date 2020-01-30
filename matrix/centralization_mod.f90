@@ -26,6 +26,8 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
   integer, allocatable         :: nz_array(:), disp_array(:)
   integer                      :: nz_total, i, ierr
 
+  call MPI_Barrier(MPI_COMM_WORLD,ierr) !###
+
     write(*,*) my_id, my_id_n, '###A0', n_cpu_n
     write(*,*) my_id, my_id_n, '###A0', allocated(nz_array), allocated(disp_array)
     call system ('sleep 5s')

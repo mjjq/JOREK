@@ -11,6 +11,8 @@ use mpi_mod
 use mod_bootstrap_functions
 use corr_neg
 use mod_import_restart
+use equil_info
+use mod_boundary
 use mod_vtk
 use mod_interp
 use mod_poloidal_currents
@@ -20,6 +22,7 @@ implicit none
 type (type_node_list)   ,     pointer :: node_list
 type (type_element_list),     pointer :: element_list
 type (type_bnd_element_list), pointer :: bnd_elm_list    
+type (type_bnd_node_list),    pointer :: bnd_node_list 
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
 real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
@@ -52,8 +55,6 @@ real*8                :: T0_x,  T0_y,  T_sum,   TT_x, TT_y, TT_p
 real*8                :: Ti0_x, Ti0_y, Ti_sum,  Ti_x, Ti_y, Ti_p
 real*8                :: Te0_x, Te0_y, Te_sum,  Te_x, Te_y, Te_p
 real*8                :: AR_Z, AR_p, AZ_R, AZ_p, A3_R, A3_Z, Fprof
-real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
-real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8                :: psi_norm, psi_bnd, grad_psi
 real*8                :: E_phi, E_R, E_Z, dU_x, dU_y, Jpol_R, Jpol_Z, FFp
 real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
@@ -126,6 +127,7 @@ call flush_it(6)
 allocate(node_list)
 allocate(element_list)
 allocate(bnd_elm_list)
+allocate(bnd_node_list)
 
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
@@ -384,23 +386,13 @@ vectors = 0.d0
 xyz     = 0
 ien     = 0
 
-call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
-if (xpoint) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-  psi_bnd  = psi_xpoint(1)
-  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    psi_bnd = psi_xpoint(2)
-  endif
-else
-  psi_bnd = 0.d0
-endif
+call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 
 minRad = 0.0
 if (bootstrap) then
-  call bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd)
-  call bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
-  call bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
+  call bootstrap_find_minRad(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd)
+  call bootstrap_get_q_and_ft_splines(node_list, element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
+  call bootstrap_get_averaged_j_spline(node_list, element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
 endif
 
 ! --- You may choose to print your poloidal snapshot at a different toroidal angle
@@ -516,7 +508,7 @@ do i=1,element_list%n_elements
               if (num_neo_file) then
 !                  write(*,*) 'neo_file=',neo_file
 !                  write(*,*) 'using ki and mui profiles from file "'//trim(neo_file)//'"'
-                call neo_coef( xpoint, xcase, Z, Z_xpoint, Ps0 ,psi_axis, psi_bnd, &
+                call neo_coef( xpoint, xcase, Z, ES%Z_xpoint, Ps0 ,ES%psi_axis, ES%psi_bnd, &
                                amu_neo_node, aki_neo_node)
                 Vneo   = aki_neo_node / Btheta*tauIC  * (ps0_x*T0_x + ps0_y*T0_y)
               else
@@ -806,17 +798,11 @@ do i=1,element_list%n_elements
            call interp(node_list,element_list,i,1,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
            Psi_tot = Psi_tot + P * HZ(i_tor,i_plane)
         enddo
-
-        psi_norm = (Psi_tot - psi_axis)/(psi_bnd - psi_axis)
-        if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
-           psi_norm = 2.d0 - psi_norm
-        endif
-        if ((psi_norm .lt. 1.d0) .and. (xpoint) .and. (Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) then
-           psi_norm = 2.d0 - psi_norm
-        endif
+ 
+        psi_norm = get_psi_n(Psi_tot, Z)
 
         if (include_bootstrap) then
-          call bootstrap_current(R, Z, R_axis, Z_axis, psi_axis, R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+          call bootstrap_current(R, Z, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint, ES%psi_bnd, psi_norm,&
                                  psi_sum, ps_x, ps_y, zn_sum,  zn_x, zn_y,      &
                                  Ti_sum,  Ti_x, Ti_y, Te_sum,  Te_x, Te_y, Jb   )
           scalars(inode,s_bootstrap+1) = Jb
@@ -824,7 +810,7 @@ do i=1,element_list%n_elements
           ! --- The JOREK bootstrap is not constant on flux surface
           ! --- Because J_jorek = R*J_physical, and the physical bootstrap is constant on a surface
           ! --- Hence, it makes more sense to look at R*j_average to compare with the bootstrap...
-          scalars(inode,s_bootstrap+2) = R* scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) / R_axis
+          scalars(inode,s_bootstrap+2) = R* scalars(inode,n_var+2+n_fluxes+n_neo+n_pellet) / ES%R_axis
         else
           Jb = 0.d0
         endif

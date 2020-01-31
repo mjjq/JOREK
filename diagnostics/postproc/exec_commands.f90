@@ -50,7 +50,6 @@ module exec_commands
   logical,             private, save :: dir_created   = .false. !< Postproc directory created?
   logical,             private, save :: verbose
   logical,             private, save :: debug
-  type(t_equil_state), private, save :: eq !< Equilibrium state; updated when time step is loaded
   type(t_expr_list),   private, save :: expr_list
   real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:), sum(:)
   complex*16, allocatable, private, save :: cp(:,:,:,:)
@@ -295,15 +294,15 @@ module exec_commands
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
     
     ! --- Locate magnetic axis and X-point.
-    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, eq)
+    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
     
     t_now         = t_start
     index_now     = index_start
     step_imported = .true.
     
     ! (not elegant, admittedly... but guarantees consistent time normalization:)
-    call eval_expr(eq, get_int_setting('units', ierr), exprs('t',1),                               &
-      pol_pos(node_list,element_list,eq,R=eq%R_axis,Z=eq%Z_axis), tor_pos(phi=0.d0), result, ierr)
+    call eval_expr(ES, get_int_setting('units', ierr), exprs('t',1),                               &
+      pol_pos(node_list,element_list,ES,R=ES%R_axis,Z=ES%Z_axis), tor_pos(phi=0.d0), result, ierr)
     time_now = result(1,1,1,1)
     
   end subroutine load_step
@@ -1196,7 +1195,7 @@ module exec_commands
       write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',  &
         trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
       
-      call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),             &
+      call eval_expr(ES, units, expr_list, pol_pos(node_list,element_list,ES,R=R,Z=Z),             &
         tor_pos(phi=phi), result, ierr)
       
       call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
@@ -1206,7 +1205,7 @@ module exec_commands
       write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)),        &
         '_toroidally-averaged', trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
       
-      call eval_expr(eq, units, expr_list, pol_pos(node_list,element_list,eq,R=R,Z=Z),             &
+      call eval_expr(ES, units, expr_list, pol_pos(node_list,element_list,ES,R=R,Z=Z),             &
         tor_pos(nphi=4*n_plane), result, ierr)
       
       call apply_four_filter(result, simple_filter(n=0), expr_list%n_coord, ierr)
@@ -1214,7 +1213,7 @@ module exec_commands
       
     end if
     
-    call write_ascii_0d(ierr, eq, expr_list, res0d, FORM_TABLE, header=first_step,                 &
+    call write_ascii_0d(ierr, ES, expr_list, res0d, FORM_TABLE, header=first_step,                 &
       filename=trim(filename), append=(.not.first_step), blanks=.false.)
     
   end subroutine point
@@ -1265,7 +1264,7 @@ module exec_commands
     
     write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call midplane_profile(node_list, element_list, eq, units, expr_list, res1d, side, npts,        &
+    call midplane_profile(node_list, element_list, ES, units, expr_list, res1d, side, npts,        &
       ierr, filename=trim(filename), append=(.not.first_step), comment=trim(comment) )
     
   end subroutine midplane
@@ -1309,7 +1308,7 @@ module exec_commands
     
     write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call pol_lineout(node_list, element_list, eq, units, expr_list, res1d, phi, Rstart, Zstart,    &
+    call pol_lineout(node_list, element_list, ES, units, expr_list, res1d, phi, Rstart, Zstart,    &
       Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
     
   end subroutine pol_line
@@ -1349,7 +1348,7 @@ module exec_commands
 
     write(comment,'(a,i6.6)') 'time step #', index_now
 
-    call int_along_pol_lineout(node_list, element_list, eq, units, expr_list, sum, phi, Rstart, Zstart,    &
+    call int_along_pol_lineout(node_list, element_list, ES, units, expr_list, sum, phi, Rstart, Zstart,    &
       Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
 
   end subroutine int_along_pol_line
@@ -1391,7 +1390,7 @@ module exec_commands
     
     write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call tor_lineout(node_list, element_list, eq, units, expr_list, res1d, phi_start, phi_end, R,  &
+    call tor_lineout(node_list, element_list, ES, units, expr_list, res1d, phi_start, phi_end, R,  &
       Z, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
     
   end subroutine tor_line
@@ -1438,8 +1437,8 @@ module exec_commands
       
     comment = 'Output produced by jorek2_postproc command "rectangle"'
     
-    call eval_expr(eq, units, expr_list,                                                           &
-       pol_pos(node_list,element_list,eq,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
+    call eval_expr(ES, units, expr_list,                                                           &
+       pol_pos(node_list,element_list,ES,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
        tor_pos(phi=phi), result, ierr)
     
     call reduce_result_to_2d(ierr, result, res2d, i1=1)
@@ -1495,8 +1494,8 @@ module exec_commands
       
     comment = 'Output produced by jorek2_postproc command "rectangular_torus"'
     
-    call eval_expr(eq, units, expr_list,                                                           &
-       pol_pos(node_list,element_list,eq,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
+    call eval_expr(ES, units, expr_list,                                                           &
+       pol_pos(node_list,element_list,ES,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
        tor_pos(phistart=phimin, phiend=phimax, nphi=nphi), result, ierr)
     
     call write_hdf5_3d(ierr, expr_list, result, trim(filename), comment=trim(comment))
@@ -1538,17 +1537,17 @@ module exec_commands
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     ! ### is nTht and nphi really chosen well???
-    pol_pos_list = pol_pos(node_list, element_list, eq, nPsiN=npts, nTht=max(150,6*n_plane),                &
+    pol_pos_list = pol_pos(node_list, element_list, ES, nPsiN=npts, nTht=max(150,6*n_plane),                &
       nsmallsteps=nsmall)
     tor_pos_list = tor_pos(nphi=max(n_plane,2))
     
-    call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    call eval_expr(ES, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)
     call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
     
     write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call write_ascii_1d(ierr, eq, expr_list, res1d, FORM_TABLE, header=.true.,                     &
+    call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,                     &
       filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
     
   end subroutine average
@@ -1597,9 +1596,9 @@ module exec_commands
         'Z_lim               Psi_lim             Psi_bnd'
     end if
     
-    write(i_file,'(es20.13,33f20.16)') time_now, eq%R_axis, eq%Z_axis, eq%Psi_axis, eq%R_xpoint(1),&
-      eq%Z_xpoint(1), eq%Psi_xpoint(1), eq%R_xpoint(2), eq%Z_xpoint(2), eq%Psi_xpoint(2), eq%R_lim,&
-      eq%Z_lim, eq%Psi_lim, eq%Psi_bnd
+    write(i_file,'(es20.13,33f20.16)') time_now, ES%R_axis, ES%Z_axis, ES%Psi_axis, ES%R_xpoint(1),&
+      ES%Z_xpoint(1), ES%Psi_xpoint(1), ES%R_xpoint(2), ES%Z_xpoint(2), ES%Psi_xpoint(2), ES%R_lim,&
+      ES%Z_lim, ES%Psi_lim, ES%Psi_bnd
     
     close(i_file)
     
@@ -1787,8 +1786,8 @@ module exec_commands
       fact_ne      = 1.d0
     end if
     
-    call integrals(node_list, element_list, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint,        &
-      eq%Z_xpoint, eq%psi_xpoint, eq%psi_lim, aminor, Bgeo, current, beta_p, beta_t, beta_n,       &
+    call integrals(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint,        &
+      ES%Z_xpoint, ES%psi_xpoint, ES%psi_lim, aminor, Bgeo, current, beta_p, beta_t, beta_n,       &
       density, density_in, density_out, pressure, pressure_in, pressure_out, heat_src_in,          &
       heat_src_out, part_src_in, part_src_out)
     
@@ -1870,7 +1869,7 @@ module exec_commands
  
    call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)        
 
-   call write_ascii_0d(ierr, eq, expr_list, res, FORM_TABLE, header=.false.,                   &
+   call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
      filename=filename, append=.true., blanks=.false.)
    
   end subroutine int3D
@@ -1952,11 +1951,11 @@ module exec_commands
     surface_list%n_psi = npts
     allocate( surface_list%psi_values(npts), q(npts), rad(npts) )
     do k = 1, npts
-      surface_list%psi_values(k) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * real(k-1)/real(npts-1)
+      surface_list%psi_values(k) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * real(k-1)/real(npts-1)
     end do
     call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
-    call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
-      eq%Z_xpoint, q, rad)
+    call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
+      ES%Z_xpoint, q, rad)
     
     ! --- Write out q-profile versus Psi_n
     tmp_expr_list%n_expr = 0
@@ -1966,10 +1965,10 @@ module exec_commands
     allocate(res1d(npts-2,2))
     do k2 = 1, npts-2
       k = k2 + 1 ! to avoid first and last point of q-profile which often is bad
-      res1d(k2,:) = (/ get_psi_n(eq, surface_list%psi_values(k)), q(k) /)
+      res1d(k2,:) = (/ get_psi_n(surface_list%psi_values(k)) , q(k) /)
     end do
     
-    call write_ascii_1d(ierr, eq, tmp_expr_list, res1d, FORM_TABLE, header=.true.,                 &
+    call write_ascii_1d(ierr, ES, tmp_expr_list, res1d, FORM_TABLE, header=.true.,                 &
       filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
     
     ! --- Clean up.
@@ -2028,12 +2027,12 @@ module exec_commands
     ! --- Find flux surfaces and determine q-profile
     surface_list%n_psi = 2 
     allocate( surface_list%psi_values(2) )
-    surface_list%psi_values(1) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * 0.2d0
-    surface_list%psi_values(2) = eq%psi_axis + (eq%psi_bnd - eq%psi_axis) * psin
+    surface_list%psi_values(1) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.2d0
+    surface_list%psi_values(2) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * psin
 
     call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
-    call determine_q_profile(node_list, element_list, surface_list, eq%psi_axis, eq%psi_xpoint,    &
-      eq%Z_xpoint, q_psin, rad)
+    call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
+      ES%Z_xpoint, q_psin, rad)
     
     write(i_file,'(2es20.13)') time_now, q_psin(2) 
     
@@ -2181,7 +2180,7 @@ module exec_commands
     npts = 1
     surface_list%n_psi = 1
     allocate( surface_list%psi_values(1) )
-    surface_list%psi_values(1) = eq%psi_bnd
+    surface_list%psi_values(1) = ES%psi_bnd
     call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     
     ! --- Write out flux surfaces
@@ -2278,7 +2277,7 @@ module exec_commands
     write(*,*) 'rad_range    =', radial_range
     write(*,*) 'n_thetastar  =', n_thetastar
     
-    call fourier_analysis(node_list, element_list, eq, units, expr_list, cp, npts, ierr,           &
+    call fourier_analysis(node_list, element_list, ES, units, expr_list, cp, npts, ierr,           &
       filename_start, OUTP_ABS_VALUE, nsmallsteps=nsmall, nmaxsteps=nmaxstep, deltaphi=delta_phi,  &
       rad_range=radial_range, nTht=n_thetastar)
     
@@ -2339,12 +2338,12 @@ module exec_commands
     
     ! --- Calculate field components.
     if ( first_step ) then ! (Positions remain unchanged for all time steps, compute only once)
-      call create_pol_pos(pol_pos_list, ierr, node_list, element_list, eq, Rmin=R_min, Rmax=R_max2,&
+      call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, Rmin=R_min, Rmax=R_max2,&
         nR=n_R, Zmin=Z_min, Zmax=Z_max2, nZ=n_Z)
       tor_pos_list  = tor_pos(phistart=0.d0, phiend=phi_max2, nphi=n_phi)
       tmp_expr_list = exprs((/'B_tor', 'B_R  ', 'B_Z  '/), 3)
     end if
-    call eval_expr(eq, JOREK_UNITS, tmp_expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    call eval_expr(ES, JOREK_UNITS, tmp_expr_list, pol_pos_list, tor_pos_list, result, ierr)
     if ( fact_btor /= 1.d0 ) result(:,:,:,1  ) = result(:,:,:,1  ) * fact_btor
     if ( fact_bpol /= 1.d0 ) result(:,:,:,2:3) = result(:,:,:,2:3) * fact_bpol
     allocate(field(3,0:n_R-1,0:n_Z-1,0:n_phi-1))

@@ -946,7 +946,7 @@ module mod_expression
           B_R      = + ps0_Z / BigR
           B_Z      = - ps0_R / BigR
           B_tor    = + F0    / BigR
-          psi_norm = get_psi_n(eq, ps0)
+          psi_norm = get_psi_n(ps0, Z)
           Btheta  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z) / BigR
           psi_abs = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z)
 

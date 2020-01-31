@@ -12,11 +12,11 @@ module mod_integrals3D
   use mod_interp
   use convert_character
   use mpi_mod
-  use domains
   use mod_expression
   use mod_resistivity
   use corr_neg
- 
+  use equil_info, only : get_psi_n, ES
+
   implicit none
   
   private
@@ -78,6 +78,7 @@ real*8  :: dt_back, dt_now, r_dt, r_dt2
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor
 real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, area1
+real*8  :: r0_corr, T0_corr
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, delta_phi, phi, P_tot, D_tot
 real*8  :: VP_int, VP_ext, VK_int, VK_ext, vpar0, BB2, VP_tot, VK_tot
@@ -100,7 +101,7 @@ real*8  :: RH,RH_s,RH_t,RH_st,RH_ss,RH_tt
 real*8  :: TT,TT_s,TT_t,TT_st,TT_ss,TT_tt 
 real*8  :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt 
 real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt 
-real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, T0_corr
+real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3, betap
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 
@@ -170,17 +171,9 @@ local_n_particles     = 0.d0
 
 delta_phi     = 2.d0 * PI / float(n_plane) / float(n_period)
 
-! --- find axis, x-point and psi_bnd. This should be done in equil_info before calling int3D
-call find_axis(99,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-if (xpoint) then
-  call find_xpoint(99,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-  psi_bnd  = psi_xpoint(1)
-  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    psi_bnd = psi_xpoint(2)
-  endif
-else
-  psi_bnd = 0.d0
-endif
+psi_axis   = ES%psi_axis;        R_axis = ES%R_axis;        Z_axis = ES%Z_axis
+psi_xpoint = ES%psi_xpoint;    R_xpoint = ES%R_xpoint;    Z_xpoint = ES%Z_xpoint 
+psi_bnd    = ES%psi_bnd
 
 ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
@@ -214,7 +207,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
-!$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, &
+!$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, r0_corr, &
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
 !$omp           rn0, source_ns,                                                               &
@@ -329,7 +322,9 @@ do ife = ife_min, ife_max
         BigR = x_g(ms,mt)
 
         r0     = eq_g(mp,5,ms,mt)
+        r0_corr = corr_neg_dens1(r0)
         T0     = eq_g(mp,6,ms,mt)
+        T0_corr = corr_neg_temp1(T0)
         T0e    = eq_g(mp,6,ms,mt) /2.d0
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
@@ -355,7 +350,6 @@ do ife = ife_min, ife_max
         rn0    = eq_g(mp,8,ms,mt)
 #endif
 
-        T0_corr = corr_neg_temp(T0)
         eta_T   = resistivity(T0_corr)  
 
         dTdx   = (   y_t(ms,mt) * eq_s(mp,6,ms,mt) - y_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
@@ -414,7 +408,7 @@ do ife = ife_min, ife_max
         if (use_pellet) then
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                               pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-                              x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt), eq_zTe(ms,mt), central_density, &
+                              x_g(ms,mt),y_g(ms,mt), ps0, phi, r0_corr, T0_corr/2.d0, central_density, &
                               pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)
 
           local_pellet_particles = local_pellet_particles + source_pellet * bigR * xjac * wst * delta_phi
@@ -435,7 +429,7 @@ do ife = ife_min, ife_max
         local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
 #endif
 
-        if (in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_bnd,R_axis,Z_axis,psi_axis)) then
+        if ( get_psi_n(ps0, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
           C_intern = C_intern + zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
@@ -607,16 +601,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       dPdx   = r0 * dTdx + T0 * drhodx
       dPdy   = r0 * dTdy + T0 * drhody
 
-      ! --- get normalized flux (this should be done in equil_info)
-      psi_n = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-      if (xpoint) then
-        if ((psi_n .lt. 1.d0) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
-          psi_n = 2.d0 - psi_n
-        endif
-        if ((psi_n .lt. 1.d0) .and. (Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) then
-          psi_n = 2.d0 - psi_n
-        endif
-      endif
+      ! --- get normalized flux 
+      psi_n = get_psi_n(ps0,Z)
  
       ! --- get resistivity and diffusion coefficients
       T0_corr = corr_neg_temp(T0)

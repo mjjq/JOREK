@@ -55,10 +55,11 @@
   n_feedback_current   = 1
   n_feedback_vertical  = 1
   n_iter_freeb         = 10000 
-  equil_accuracy_freeb = 1.d-5
-  
-  current_ref          = 5.703d5
-  Z_axis_ref           = -0.04d0
+  equil_accuracy_freeb = 1.d-7
+  axis_srch_radius     = 0.3  
+
+  current_ref          = 5.8d5        
+  Z_axis_ref           = -0.041d0
  
   !_____________________________________grid parameters
   n_R      = 0

@@ -274,8 +274,8 @@ module phys_module
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor
   real*8  :: equil_accuracy    !< Tolerance of the convergence for the fix-boundary equilibrium
-  real*8  :: Zaxis_find_limit  !< Magnetic axis will be searched between Z=0 and Z=abs(Zaxis_find_limit)
-  
+  real*8  :: axis_srch_radius  !< Magnetic axis will be searched inside a circle with this radius
+ 
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).
   logical :: freeboundary_equil      !< use a free or fixed boundary equilibrium? ([[jorek-starwall|JOREK-STARWALL]])

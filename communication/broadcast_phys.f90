@@ -316,7 +316,7 @@ if (my_id .eq. 0) then
   call MPI_PACK (FB_Zaxis_position,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (FB_Zaxis_derivative,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (FB_Zaxis_integral,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK (Zaxis_find_limit ,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK (axis_srch_radius ,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (PF_pert_start_time ,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   
   call MPI_PACK (start_VFB,             1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -420,6 +420,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(ZKpar_T_dependent,      1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(restart,                1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(regrid,                 1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(write_ps,               1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(import_equil,           1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(xpoint,                 1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(bootstrap,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -805,7 +806,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,FB_Zaxis_position ,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,FB_Zaxis_derivative ,   1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,FB_Zaxis_integral ,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,Zaxis_find_limit ,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,axis_srch_radius ,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,PF_pert_start_time ,    1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   
   call MPI_UNPACK(buffer,bufsize,position,start_VFB,              1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
@@ -911,6 +912,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,ZKpar_T_dependent,      1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,restart,                1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,regrid,                 1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,write_ps,               1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,import_equil,           1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,xpoint,                 1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,bootstrap,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)

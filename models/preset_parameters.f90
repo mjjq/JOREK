@@ -42,7 +42,8 @@ subroutine preset_parameters
   import_equil = .false.
   regrid       = .false.
   rst_format   = 0             ! use 'old' format for restart import
-
+  write_ps     = .true.           ! write postscript file at the end of the run 
+  
   freeboundary_equil = .false. ! use free or fixed boundary equilibrium
   freeboundary       = .false. ! use free or fixed boundary?
   resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
@@ -58,7 +59,7 @@ subroutine preset_parameters
   amix_freeb           = 0.85d0
   equil_accuracy       = 1.d-6
   equil_accuracy_freeb = 1.d-6
-  Zaxis_find_limit     = 99.d0
+  axis_srch_radius     = 99.d0
   
   n_R       = 0
   n_Z       = 0

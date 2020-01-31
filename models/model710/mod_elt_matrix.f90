@@ -30,6 +30,7 @@ use gauss
 use basis_at_gaussian
 use phys_module
 use diffusivities, only: get_dperp, get_zkperp, get_dzkperp
+use equil_info, only : get_psi_n
 
 implicit none
 
@@ -82,7 +83,7 @@ real*8     :: u0grad_uR0, u0grad_uZ0, u0grad_up0
 
 real*8     :: divu, divu_uR, divu_uZ, divu_up, divru, divru_uR, divru_uZ, divru_up, divru_r
 
-real*8     :: ZK_prof, D_prof, psi_norm, theta, zeta, tht, factor
+real*8     :: ZK_prof, D_prof, psi_norm, theta, zeta, tht
 
 real*8     :: Fprof, psieq_R, psieq_Z
 
@@ -441,20 +442,7 @@ do ms=1, n_gauss
      p0_t  = r0_t * T0 + r0 * T0_t
      p0_p  = r0_p * T0 + r0 * T0_p
 
-     psi_norm = (A30 - psi_axis) / (psi_bnd - psi_axis)
-
-     factor = 1.d0
-
-     if (xpoint2) then
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
-         psi_norm = 2.d0 - psi_norm
-         factor = -1.d0
-       endif
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
-         psi_norm = 2.d0 - psi_norm
-         factor = -1.d0
-       endif
-     endif
+     psi_norm = get_psi_n(A30, y_g(ms,mt))
 
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)

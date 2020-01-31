@@ -21,7 +21,7 @@ integer :: ierr
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
-                restart, regrid,                                    &
+                restart, regrid, write_ps,                          &
                 force_horizontal_Xline,                             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
@@ -77,7 +77,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_pf_coils, pf_coils,                 &
-                Zaxis_find_limit, PF_pert_start_time,               &
+                axis_srch_radius, PF_pert_start_time,               &
                 first_target_point, last_target_point,	            &
                 n_limiter, R_limiter, Z_limiter,                    &
                 starwall_equil_coils, freeb_equil_iterate_area,     &

@@ -62,6 +62,7 @@ module phys_module
   real*8  :: epsilon_BLR          !< Accuracy of BLR compression
   logical :: just_in_time_BLR     !< Use Just-in-time strategy for BLR compression (speed optimized)
   logical :: pastix_blr_abs_tol   !< Use absolute tolerance for BLR
+  logical :: write_ps             !< Write postscript file at the end of the run
 
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"
@@ -273,8 +274,8 @@ module phys_module
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor
   real*8  :: equil_accuracy    !< Tolerance of the convergence for the fix-boundary equilibrium
-  real*8  :: Zaxis_find_limit  !< Magnetic axis will be searched between Z=0 and Z=abs(Zaxis_find_limit)
-  
+  real*8  :: axis_srch_radius  !< Magnetic axis will be searched inside a circle with this radius
+ 
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).
   logical :: freeboundary_equil      !< use a free or fixed boundary equilibrium? ([[jorek-starwall|JOREK-STARWALL]])

@@ -227,6 +227,7 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'rst_hdf5              ', rst_hdf5
   write(*,INTG_FMT) 'rst_hdf5_version      ', rst_hdf5_version
   write(*,LOGI_FMT) 'regrid                ', regrid
+  write(*,LOGI_FMT) 'write_ps              ', write_ps
   write(*,INTG_FMT) 'n_R                   ', n_R
   write(*,INTG_FMT) 'n_Z                   ', n_Z
   write(*,INTG_FMT) 'n_radial              ', n_radial
@@ -466,7 +467,7 @@ if (my_id == 0) then
   
   write(*,REAL_FMT) 'amix                  ', amix
   write(*,REAL_FMT) 'equil_accuracy        ', equil_accuracy
-  write(*,REAL_FMT) 'Zaxis_find_limit      ', Zaxis_find_limit
+  write(*,REAL_FMT) 'axis_srch_radius      ', axis_srch_radius
   
   if (freeboundary_equil) then
     write(*,LOGI_FMT) 'starwall_equil_coils  ', starwall_equil_coils

@@ -177,7 +177,7 @@ while [ $# -gt 1 ]; do
     selected_steps="0-$2-99999"
     shift 2
   elif ( [ "$1" == "-time" ] || [ "$1" == "-dtime" ] ) ; then
-    select_arguments="$1 $2"
+    select_arguments="$select_arguments $1 $2"
     shift 2
   elif [ "$1" == "-ms" ]; then
     select_arguments="$select_arguments $1"

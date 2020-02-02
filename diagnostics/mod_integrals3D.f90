@@ -238,7 +238,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,               &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
 !$omp          central_mass, pellets, tor_frequency,                                           &
-!$omp          n_spi, using_spi,                                                               &
+!$omp          n_spi, using_spi, n_spi_tot, n_inj,                                             &
 !$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
 #endif
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
@@ -262,7 +262,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           rn0, rn0_corr,                                                                 &
 #endif
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp           source_neutral,                                                                &
+!$omp           source_neutral, source_tmp, n_spi_tmp,                                         &
 #endif
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
 !$omp           source_bg, source_imp, source_tmp,                                             &

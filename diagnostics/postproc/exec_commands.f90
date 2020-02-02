@@ -1659,7 +1659,7 @@ module exec_commands
     atoms_left = 0.d0
     abl_tot    = 0.d0
     
-    do i = 1, n_SPI
+    do i = 1, n_spi_tot
       shard_atoms_left = 4./3.*PI*pellets(i)%spi_radius**3 * pellet_density * 1.d20
       
       atoms_left = atoms_left + shard_atoms_left

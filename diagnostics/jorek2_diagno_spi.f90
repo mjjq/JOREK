@@ -218,7 +218,7 @@ if (using_spi) then
   do i=1,index_start
     spi_abl_rate_tot = 0.0
     spi_abl_tot = 0.0
-    do i_spi = 1, n_spi
+    do i_spi = 1, n_spi_tot
       spi_abl_rate_tot = spi_abl_rate_tot + xtime_spi_ablation_rate(i_spi,i)
       spi_abl_tot = spi_abl_tot + xtime_spi_ablation(i_spi,i)
     end do

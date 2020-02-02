@@ -701,10 +701,17 @@ do ms=1, n_gauss
              ng_radius = ng_radius_min
            end if
 
+           n_spi_tmp = 0
+           do i_inj = 1, n_inj
+             n_spi_tmp = n_spi_tmp + n_spi(i_inj)
+             if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
+           end do
+
            call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
                          ng_radius,ns_sig,ns_deltaphi,&
-                         ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,0.,x_g(ms,mt),y_g(ms,mt),     &
+                         ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0.,x_g(ms,mt),y_g(ms,mt),     &
                          phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+
          end if
 
          source_neutral = source_neutral + source_neutral_tmp
@@ -713,9 +720,13 @@ do ms=1, n_gauss
 
      else
 
-       call neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
-                     JET_MGI,ASDEX_MGI,central_density,central_mass)
+       do i_inj = 1, n_inj
+         call neutral_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj), &
+                       ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
+                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
+                       JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+       source_neutral = source_neutral + source_neutral_tmp
 
      end if
     

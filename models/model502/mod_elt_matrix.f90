@@ -1069,6 +1069,7 @@ do ms=1, n_gauss
      else
 
        do i_inj = 1, n_inj
+         source_tmp = 0.d0
          call inj_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),   &
                          ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
                          A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_imp,t_now,  &

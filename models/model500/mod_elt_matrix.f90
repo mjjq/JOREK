@@ -721,12 +721,13 @@ do ms=1, n_gauss
      else
 
        do i_inj = 1, n_inj
+         source_neutral_tmp = 0.d0
          call neutral_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj), &
                        ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
                        JET_MGI,ASDEX_MGI,central_density,central_mass)
 
-       source_neutral = source_neutral + source_neutral_tmp
+         source_neutral = source_neutral + source_neutral_tmp
 
        end do
      end if

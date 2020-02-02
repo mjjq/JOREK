@@ -137,7 +137,7 @@ integer*8  :: ion_i, ion_k, i_phi
 
 #endif
 
-integer    :: spi_i
+integer    :: spi_i, i_inj, n_spi_tmp
 real*8     :: ng_radius
 
 
@@ -673,7 +673,9 @@ do ife = ife_min, ife_max
 
         if (using_spi) then
 
-          do spi_i = 1, n_spi
+          do spi_i = 1, n_spi_tot
+
+            source_tmp = 0.d0
 
             ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
@@ -681,18 +683,32 @@ do ife = ife_min, ife_max
               ng_radius = ng_radius_min
             end if
 
+            n_spi_tmp = 0
+            do i_inj = 1, n_inj
+              n_spi_tmp = n_spi_tmp + n_spi(i_inj)
+              if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
+            end do
+ 
             call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
                                   ng_radius,ns_sig,ns_deltaphi,     &
-                                  ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),     &
-                                  phi,source_neutral,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+                                  ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),     &
+                                  phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+            source_neutral = source_neutral + source_tmp
+
           end do
 
         else
 
-          call neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm,        &
-                                A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
-                                JET_MGI,ASDEX_MGI,central_density,central_mass)
-
+          do i_inj = 1, n_inj
+            source_tmp = 0.d0
+            call neutral_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),&
+                                  ns_radius,ns_sig,ns_deltaphi,ns_tor_norm,        &
+                                  A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_tmp,t_now, &
+                                  JET_MGI,ASDEX_MGI,central_density,central_mass)
+  
+            source_neutral = source_neutral + source_tmp
+          end do
         end if
 
         local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_neutral * bigR *&
@@ -707,7 +723,7 @@ do ife = ife_min, ife_max
 
         if (using_spi) then
 
-          do spi_i = 1, n_spi
+          do spi_i = 1, n_spi_tot
 
             source_tmp = 0.d0
 
@@ -716,6 +732,12 @@ do ife = ife_min, ife_max
             if (ng_radius < ng_radius_min) then
               ng_radius = ng_radius_min
             end if
+
+            n_spi_tmp = 0
+            do i_inj = 1, n_inj
+              n_spi_tmp = n_spi_tmp + n_spi(i_inj)
+              if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
+            end do
 
             call inj_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
                                   ng_radius,ns_sig,ns_deltaphi,     &
@@ -730,13 +752,19 @@ do ife = ife_min, ife_max
 
         else
 
-          call inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm,        &
-                                A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_tmp,t_now, &
-                                JET_MGI,ASDEX_MGI,central_density,central_mass)
+          do i_inj = 1, n_inj
+            source_tmp = 0.d0
+   
+            call inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm,        &
+                                  A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_tmp,t_now, &
+                                  JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+            source_imp = source_imp + source_tmp
+          end do
 
           ! Converting number density into mass density for each species respectively
           source_imp = source_imp / m_i_over_m_imp
-
+  
         end if
 
         local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_imp * bigR * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)

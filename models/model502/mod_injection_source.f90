@@ -33,7 +33,7 @@ module mod_injection_source
                         JET_MGI,ASDEX_MGI,central_density,central_mass)
 
   !=================================================================================
-  !  This subroutine computes the neutral density source for a realistic Deuterium
+  !  This subroutine computes the atom/ion number density source for a realistic Deuterium
   !  MGI in JET (if ns_timedependent is .t.).
   !  If ns_timedependent is .f., this routine computes a constant source in time
   !  where the main parameter is ns_amplitude

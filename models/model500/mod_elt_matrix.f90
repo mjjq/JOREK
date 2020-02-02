@@ -31,7 +31,7 @@ real*8, dimension (:,:), allocatable  :: ELM
 real*8, dimension (:)  , allocatable  :: RHS
 integer, intent(in) :: tid
 
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2, i_inj, n_spi_tmp
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)

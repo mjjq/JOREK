@@ -111,7 +111,7 @@ real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 real*8  :: rn0, rn0_corr, r0_corr
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-real*8  :: source_neutral
+real*8  :: source_neutral, source_tmp
 #endif
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
 real*8  :: source_bg, source_imp, source_tmp

@@ -728,6 +728,7 @@ do ms=1, n_gauss
 
        source_neutral = source_neutral + source_neutral_tmp
 
+       end do
      end if
     
      source_neutral = max(source_neutral,0.)

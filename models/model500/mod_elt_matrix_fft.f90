@@ -750,6 +750,7 @@ do ms=1, n_gauss
                        ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
                        JET_MGI,ASDEX_MGI,central_density,central_mass)
+       end do
 
        source_neutral = source_neutral + source_neutral_tmp
 

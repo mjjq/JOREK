@@ -111,7 +111,7 @@ real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 real*8  :: rn0, rn0_corr, r0_corr
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-real*8  :: source_neutral
+real*8  :: source_neutral, source_tmp
 #endif
 #if (JOREK_MODEL == 501)
 real*8  :: source_bg, source_imp, source_tmp
@@ -262,7 +262,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           rn0, rn0_corr,                                                                 &
 #endif
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp           source_neutral,                                                                &
+!$omp           source_neutral, source_tmp,                                                    &
 #endif
 #if (JOREK_MODEL == 501)
 !$omp           source_bg, source_imp, source_tmp,                                             &
@@ -573,6 +573,8 @@ do ife = ife_min, ife_max
 
           do spi_i = 1, n_spi
 
+            source_tmp = 0.d0
+
             ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
             if (ng_radius < ng_radius_min) then
@@ -582,7 +584,8 @@ do ife = ife_min, ife_max
             call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
                                   ng_radius,ns_sig,ns_deltaphi,     &
                                   ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),     &
-                                  phi,source_neutral,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+                                  phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+            source_neutral = source_neutral + source_tmp
           end do
 
         else

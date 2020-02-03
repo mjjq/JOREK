@@ -104,13 +104,13 @@ end subroutine calc_EBpsiU
 !                        set to zero
 ! outputs:
 !   this: (fields_base) object of class field
-pure function set_flag_dpsidt(this,flag_dpsidt_to_zero)
+pure subroutine set_flag_dpsidt(this,flag_dpsidt_to_zero)
   class(fields_base),intent(inout) :: this !< fields object
   logical(kind=1),intent(in) :: flag_dpsidt_to_zero !< flag to set
 
   ! set the flag_zero_dpsidt flag of this
   this%flag_zero_dpsidt = flag_dpsidt_to_zero
   
-end function set_flag_dpsidt
+end subroutine set_flag_dpsidt
 
 end module mod_fields

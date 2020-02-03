@@ -926,6 +926,7 @@ required = 0
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
+      call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
 

@@ -9,11 +9,11 @@ real*8 :: total_pellet_particles = 0.   !< the (total) pellet particles added in
 real*8 :: total_plasma_particles = 0.   !< the total plasma density (before this timestep)
 real*8 :: total_pellet_volume    = 0.   !< the volume of the simulated pellet in this timestep
 
-real*8 :: phys_pellet_volume       !< the physical pellet radius (in m^3)
-real*8 :: pellet_volume            !< approximated value of simulated pellet volume
-real*8 :: pellet_atomic            !< atomic number of pellet mass
+real*8 :: phys_pellet_volume     = 0.   !< the physical pellet radius (in m^3)
+real*8 :: pellet_volume          = 0.   !< approximated value of simulated pellet volume
+real*8 :: pellet_atomic                 !< atomic number of pellet mass
 
-real*8 :: phys_ablation            !< physical ablation rate (non normalised)
+real*8 :: phys_ablation          = 0.   !< physical ablation rate (non normalised)
 
 real*8, allocatable  :: xtime_pellet_R(:)
 real*8, allocatable  :: xtime_pellet_Z(:)

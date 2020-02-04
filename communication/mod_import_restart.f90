@@ -1333,8 +1333,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
           write(*,*) "Inconsistency in n_spi_tot detected, exiting!"
           stop
         end if
-      else
+      else if (n_spi_tot == n_spi(1)) then
         write(*,*)"Backward Compatibility: No n_spi_tot information found, assuming consistent."
+      else
+        write(*,*)"Backward Compatibility: No n_spi_tot information found, but n_spi_tot is not equal to n_spi(1)."
+        stop
       end if
 
       call H5Lexists_f(file_id,"n_inj",flag_exists,err_exists) !Backward compatibility
@@ -1344,8 +1347,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
           write(*,*) "Inconsistency in n_inj detected, exiting!"
           stop
         end if
-      else
+      else if (n_inj == 1) then
         write(*,*)"Backward Compatibility: No n_inj information found, assuming consistent."
+      else 
+        write(*,*)"Backward Compatibility: No n_inj information found, but n_inj larger than 1, aborting."
+        stop
       end if
       
 

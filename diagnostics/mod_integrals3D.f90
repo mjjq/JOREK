@@ -16,10 +16,11 @@ module mod_integrals3D
   use corr_neg
   use pellet_module
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-  use mod_neutral_source, only: neutral_source
+  use mod_neutral_source, only: neutral_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all 
 #endif
 #if (JOREK_MODEL == 501)
-  use mod_injection_source, only: inj_source, radiation_function
+  use mod_injection_source, only: inj_source, radiation_function, total_n_particles, total_n_particles_inj, &
+                                  total_n_particles_inj_all 
 #endif
   use equil_info, only : get_psi_n, ES
 

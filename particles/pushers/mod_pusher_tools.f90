@@ -62,179 +62,143 @@ end function right_handed_cross_product
 
 !---------------------------------------------------------------------------
 
-!> This function computes the cartesian coordinate position
-!> \{X,Y,Z\} from cylindrical one \{R,Z,\phi\}.
-!> Be careful: positive angle in \{X,Y,Z\} are counter-clockwise
-!> while in \{R,Z,\phi\} are clockwise hence -phi is used.
-!> inputs:
-!>   a: (real8)(3) position in \{R,Z,\phi\} coordinates 
-!> outputs:
-!>   b: (real8)(3) position in \{X,Y,Z} coordinates
+!> This function computes the cartesian coordinates \{X,Y,Z\} 
+!> from cylindrical ones \{R,Z,\phi\}.
+!> Note: \phi increases clockwise when looking from the top.
 pure function coordinate_transform_RZPHI_to_XYZ(a) result(b)
   ! declare input variables
-  real(kind=8),dimension(3),intent(in) :: a
+  real(kind=8),dimension(3),intent(in) :: a !> \{R,Z,\phi\} coordinates
   ! declare output variables
-  real(kind=8),dimension(3) :: b
+  real(kind=8),dimension(3) :: b !> \{X,Y,Z} coordinates
 
   b(1) = a(1)*cos(a(3))
-  b(2) = -1.d0*a(1)*sin(a(3)) !< negative sign: clockwise -> counter-clockwise
+  b(2) = -1.d0*a(1)*sin(a(3))
   b(3) = a(2)
-
 end function coordinate_transform_RZPHI_to_XYZ
 
 !---------------------------------------------------------------------------
 
-!> This function computes the cartesian coordinate position
-!> \{R,Z,\phi\} from cylindrical one \{X,Y,Z}.
-!> Be careful: positive angle in \{X,Y,Z\} are counter-clockwise
-!> while in \{R,Z,\phi\} are clockwise hence -phi is used.
-!> inputs:
-!>   a: (real8)(3) position in \{X,Y,Z} coordinates 
-!> outputs:
-!>   b: (real8)(3) position in \{R,Z,\phi\} coordinates
+!> This function computes the cylindrical coordinates \{R,Z,\phi\} 
+!> from cartesian ones \{X,Y,Z}.
+!> Note: \phi increases clockwise when looking from the top.
 pure function coordinate_transform_XYZ_to_RZPHI(a) result(b)
   ! declare input variables
-  real(kind=8),dimension(3),intent(in) :: a
+  real(kind=8),dimension(3),intent(in) :: a !> \{X,Y,Z} coordinates
   ! declare output variables
-  real(kind=8),dimension(3) :: b
+  real(kind=8),dimension(3) :: b !> \{R,Z,\phi\} coordinates
 
   b(1) = sqrt(a(1)*a(1)+a(2)*a(2))
   b(2) = a(3)
-  b(3) = atan2(-a(2),a(1)) !< negative sign: counter-clockwise -> clockwise
-
+  b(3) = atan2(-a(2),a(1))
 end function coordinate_transform_XYZ_to_RZPHI
 
 !---------------------------------------------------------------------------
 
-!> This function rotates a vector from a \{R,Z,\phi\} basis to a \{X,Y,Z\}
-!> This is done performing a first swap and reflaction of the Y axis
-!> and then, a rotation of angle phi (clockwise)
-!> inputs:
-!>   phi: (real8) angle positive-clockwise
-!>   a:   (real8)(3) vector in the reference \{R,Z,\phi\} 
-!> outputs:
-!>   b: (real8)(3) vector in the reference \{X,Y,Z\}
+!> This function rotates a vector from a \{R,Z,\phi\} basis to a \{X,Y,Z\} one.
+!> Note: \phi increases clockwise when looking from the top.
 pure function vector_transform_RZPHI_to_XYZ(phi,a) result(b)
   ! declare input variables
   real(kind=8), intent(in) :: phi
-  real(kind=8), dimension(3), intent(in) :: a
+  real(kind=8), dimension(3), intent(in) :: a !> vector in \{R,Z,\phi\} basis
   ! declare output variables
-  real(kind=8), dimension(3) :: b
+  real(kind=8), dimension(3) :: b !> vector in \{X,Y,Z\} basis
   ! declare internal variables
   real(kind=8),dimension(2) :: sincosphi
 
-  ! computing sinus and cosinus
+  ! computing sine and cosine
   sincosphi = (/sin(phi),cos(phi)/)
 
   b(1) = a(1)*sincosphi(2) - a(3)*sincosphi(1) 
   b(2) = -1.d0*(a(1)*sincosphi(1) + a(3)*sincosphi(2))
   b(3) = a(2)
-
 end function vector_transform_RZPHI_to_XYZ
 
 !---------------------------------------------------------------------------
 
-!> This function rotates a vector from a \{X,Y,Z\} basis to a \{R,Z,\phi\}
-!> inputs:
-!>   phi: (real8) angle positive-clockwise
-!>   a:   (real8)(3) vector in the reference \{X,Y,Z\} 
-!> outputs:
-!>   b: (real8)(3) vector in the reference \{R,Z,\phi\}
+!> This function rotates a vector from a \{X,Y,Z\} basis to a \{R,Z,\phi\} one.
+!> Note: \phi increases clockwise when looking from the top.
 pure function vector_transform_XYZ_to_RZPHI(phi,a) result(b)
   ! declare input variables
   real(kind=8), intent(in) :: phi
-  real(kind=8), dimension(3), intent(in) :: a
+  real(kind=8), dimension(3), intent(in) :: a !> vector in \{X,Y,Z\} basis
   ! declare output variables
-  real(kind=8), dimension(3) :: b
+  real(kind=8), dimension(3) :: b !> vector in \{R,Z,\phi\} basis
   ! declare internal variables
   real(kind=8),dimension(2) :: sincosphi
 
-  ! computing sinus and cosinus
+  ! computing sine and cosine
   sincosphi = (/sin(phi),cos(phi)/)
 
   b(1) = a(1)*sincosphi(2) - a(2)*sincosphi(1) 
   b(2) = a(3)
   b(3) = -1.d0*(a(1)*sincosphi(1) + a(2)*sincosphi(2))
-
 end function vector_transform_XYZ_to_RZPHI
 
 !---------------------------------------------------------------------------
 
-!> This function computes the right handed Cayley transform of a vector vec multiplied 
-!> by a constant \alpha. The Cayley transform is defined as:
-!> cayley(alpha\cdot B) = \(I-\alpha \cdot B\\)^\{-1\} \cdot \(I+\alpha \cdot b\)
-!> Where B is the vector product skew symmetric matrix of the vector B,
-!> \alpha is a constant and I is the identity matrix.
-!> inputs:
-!>   alpha: (real8) multiplicative constant
-!>   vec:     (real8)(3) vector to be transformed
-!> outputs:
-!>   cayley_transofrm: (real8)(3,3) the Cayley transfrom of vec
+!> This function computes the right-handed Cayley transform of a vector vec multiplied 
+!> by a scalar alpha. The Cayley transform is defined as:
+!> cayley(alpha*B) = (I-alpha*B)^(-1) * (I+alpha*B)
+!> where B is the vector product skew symmetric matrix of the vector vec
+!> and I is the identity matrix.
 pure function cayley_transform(alpha,vec)
-! defining input variables
-real(kind=8),intent(in) :: alpha !< multiplicative constant
-real(kind=8),dimension(3),intent(in) :: vec !< vector to be transformed
-! defining output variables
-real(kind=8),dimension(3,3) :: cayley_transform !< Cayley transform of vec
-! defining internal variables
-real(kind=8),dimension(3,3) :: A,B !< \(I-\alpha \cdot B\\)^\{-1\} and \(I+\alpha \cdot b\)
+  ! defining input variables
+  real(kind=8),intent(in) :: alpha !< multiplicative constant
+  real(kind=8),dimension(3),intent(in) :: vec !< vector to be transformed
+  ! defining output variables
+  real(kind=8),dimension(3,3) :: cayley_transform !< Cayley transform of vec
+  ! defining internal variables
+  real(kind=8),dimension(3,3) :: A,B !< (I-alpha*B)^(-1) and (I+alpha*B)
 
-! computing \(I+\alpha \cdot b\)
- B(1:3,1) = (/1.d0,(-alpha*vec(3)),alpha*vec(2)/)
- B(1:3,2) = (/alpha*vec(3),1.d0,(-alpha*vec(1))/)
- B(1:3,3) = (/(-alpha*vec(2)),alpha*vec(1),1.d0/)
+! computing (I+alpha*B)
+  B(1:3,1) = (/1.d0,(-alpha*vec(3)),alpha*vec(2)/)
+  B(1:3,2) = (/alpha*vec(3),1.d0,(-alpha*vec(1))/)
+  B(1:3,3) = (/(-alpha*vec(2)),alpha*vec(1),1.d0/)
 
-!computing \(I-\alpha \cdot B\\)^\{-1\}
- A(1:3,1) = (/(1.0 + alpha*alpha*vec(1)*vec(1)),(alpha*(alpha*vec(1)*vec(2) - vec(3))),&
+! computing (I-alpha*B)^(-1)
+  A(1:3,1) = (/(1.0 + alpha*alpha*vec(1)*vec(1)),(alpha*(alpha*vec(1)*vec(2) - vec(3))),&
             (alpha*(alpha*vec(3)*vec(1) + vec(2)))/)
- A(1:3,2) = (/(alpha*(alpha*vec(2)*vec(1) + vec(3))),(1.0 + alpha*alpha*vec(2)*vec(2)),&
+  A(1:3,2) = (/(alpha*(alpha*vec(2)*vec(1) + vec(3))),(1.0 + alpha*alpha*vec(2)*vec(2)),&
             (alpha*(alpha*vec(3)*vec(2) - vec(1)))/)
- A(1:3,3) = (/(alpha*(alpha*vec(3)*vec(1) - vec(2))),(alpha*(alpha*vec(2)*vec(3) + vec(1))),&
+  A(1:3,3) = (/(alpha*(alpha*vec(3)*vec(1) - vec(2))),(alpha*(alpha*vec(2)*vec(3) + vec(1))),&
             (1.0 + alpha*alpha*vec(3)*vec(3))/)
 
 ! computing the Cayley transform
-cayley_transform = (matmul(A,B))/(1.d0 + alpha*alpha*(dot_product(vec,vec)))
+  cayley_transform = (matmul(A,B))/(1.d0 + alpha*alpha*(dot_product(vec,vec)))
 
 end function cayley_transform
 
 !---------------------------------------------------------------------------
 
 !> This function computes the approximated Cayley transform a vector vec 
-!> multiplied by a constant \alpha as reported in R. Zhang, Phys. of Plasmas,
-!> vol.22, p.044501, 2015.
-!> inputs:
-!>   alpha: (real8) multiplicative constant
-!>   vec:     (real8)(3) vector to be transformed
-!> outputs:
-!>   approximated_cayley_transofrm: (real8)(3,3) the approximated Cayley 
-!>                                               transfrom of vec
+!> multiplied by a constant alpha as reported in R. Zhang et al., Phys. Plasmas 22 (2015) 044501.
 pure function approximated_cayley_transform(alpha,vec)
-! defining input variables
-real(kind=8),intent(in) :: alpha !< multiplicative constant
-real(kind=8),dimension(3),intent(in) :: vec !< vector to be transformed
-! defining output variables
-real(kind=8),dimension(3,3) :: approximated_cayley_transform !< approximated Cayley transform of V
-! internal variables
-real(kind=8) :: coefficient
+  ! defining input variables
+  real(kind=8),intent(in) :: alpha !< multiplicative constant
+  real(kind=8),dimension(3),intent(in) :: vec !< vector to be transformed
+  ! defining output variables
+  real(kind=8),dimension(3,3) :: approximated_cayley_transform !< approximated Cayley transform of V
+  ! internal variables
+  real(kind=8) :: coefficient
 
-! compute the approximated transfrom coefficient
-coefficient = (2.0*alpha)/(1.0 + alpha*alpha*(dot_product(vec,vec)))
+  ! compute the approximated transfrom coefficient
+  coefficient = (2.0*alpha)/(1.0 + alpha*alpha*(dot_product(vec,vec)))
 
-! compute the approximated Cayley transform
-approximated_cayley_transform(1:3,1) = &
-  (/1.0-coefficient*alpha*(vec(3)*vec(3) + vec(2)*vec(2)),&
-  coefficient*(vec(3) + alpha*vec(2)*vec(1)),&
-  coefficient*(alpha*vec(3)*vec(1) - vec(2))/)
-approximated_cayley_transform(1:3,2) = &
-  (/coefficient*(alpha*vec(1)*vec(2) - vec(3)),&
-  1.0-coefficient*alpha*(vec(3)*vec(3) + vec(1)*vec(1)),&
-  coefficient*(alpha*vec(3)*vec(2) + vec(1))/)
-approximated_cayley_transform(1:3,3) = &
-  (/coefficient*(alpha*vec(1)*vec(3) + vec(2)),&
-  coefficient*(alpha*vec(2)*vec(3) - vec(1)),1.0-&
-  coefficient*alpha*(vec(2)*vec(2) + vec(1)*vec(1))/)
-
+  ! compute the approximated Cayley transform
+  approximated_cayley_transform(1:3,1) = &
+    (/1.0-coefficient*alpha*(vec(3)*vec(3) + vec(2)*vec(2)),&
+    coefficient*(vec(3) + alpha*vec(2)*vec(1)),&
+    coefficient*(alpha*vec(3)*vec(1) - vec(2))/)
+  approximated_cayley_transform(1:3,2) = &
+    (/coefficient*(alpha*vec(1)*vec(2) - vec(3)),&
+    1.0-coefficient*alpha*(vec(3)*vec(3) + vec(1)*vec(1)),&
+    coefficient*(alpha*vec(3)*vec(2) + vec(1))/)
+  approximated_cayley_transform(1:3,3) = &
+    (/coefficient*(alpha*vec(1)*vec(3) + vec(2)),&
+    coefficient*(alpha*vec(2)*vec(3) - vec(1)),1.0-&
+    coefficient*alpha*(vec(2)*vec(2) + vec(1)*vec(1))/)
 end function approximated_cayley_transform
+
 !---------------------------------------------------------------------------
 
 end module mod_pusher_tools

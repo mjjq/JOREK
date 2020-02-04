@@ -1393,8 +1393,14 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
           stop
         end if
       else
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
         spi_species_arr = 1.0
         write(*,*)"Backward Compatibility: No species information found, assuming full impurity."
+#endif
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+        spi_species_arr = 0.0
+        write(*,*)"Backward Compatibility: No species information found, assuming pure deuterium."
+#endif
       end if
 
       do i=1, n_spi_tot

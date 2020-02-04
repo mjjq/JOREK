@@ -84,7 +84,7 @@ U_phi    = P_phi(2)
 psi = P(1)
 U   = P(2)/t_norm
 
-! set the poloidal magnetic flux time derivative to zero if true
+! Set dpsi/dt to 0 if flag is true
 if(fields%flag_zero_dpsidt) P_time(1) = 0.d0
 
 ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
@@ -95,20 +95,11 @@ E     = [-F0*U_R, -F0*U_Z, -F0*U_phi*R_inv]/t_norm
 E(3)  = E(3) - R*P_time(1) ! because this is not normalized with t_norm
 end subroutine calc_EBpsiU
 
-! This procedure set a flag for setting to zero the poloidal
-! magneticflux time derivative
-! inputs:
-!   this: (fields_base) object of class field
-!   flag_dpsidt_to_zero: (logical1) if true  the poloidal
-!                        magnetic flux time derivative is
-!                        set to zero
-! outputs:
-!   this: (fields_base) object of class field
+! This subroutine sets a flag to force dpsi/dt to 0
 pure subroutine set_flag_dpsidt(this,flag_dpsidt_to_zero)
   class(fields_base),intent(inout) :: this !< fields object
-  logical(kind=1),intent(in) :: flag_dpsidt_to_zero !< flag to set
+  logical(kind=1),intent(in) :: flag_dpsidt_to_zero !< flag value
 
-  ! set the flag_zero_dpsidt flag of this
   this%flag_zero_dpsidt = flag_dpsidt_to_zero
   
 end subroutine set_flag_dpsidt

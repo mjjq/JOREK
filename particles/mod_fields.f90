@@ -95,20 +95,57 @@ E     = [-F0*U_R, -F0*U_Z, -F0*U_phi*R_inv]/t_norm
 E(3)  = E(3) - R*P_time(1) ! because this is not normalized with t_norm
 end subroutine calc_EBpsiU
 
-! This procedure set a flag for setting to zero the poloidal
-! magneticflux time derivative
-! inputs:
-!   this: (fields_base) object of class field
-!   flag_dpsidt_to_zero: (logical1) if true  the poloidal
-!                        magnetic flux time derivative is
-!                        set to zero
-! outputs:
-!   this: (fields_base) object of class field
+!> This procedure computes the fields required for resolving
+!> the guiding center equations of motions
+!> inputs:
+!>   fields: (field_base) structure containing methods for computing EM fields
+!>   time:   (real8) particle time
+!>   i_elm:  (integer) particle mesh element index
+!>   st:     (real8) particle position in local mesh coordinates
+!>   phi:    (real8) particle toroidal angle
+!> outputs:
+!>   E:      (real8)(3) electric field in V/m
+!>   b:      (real8)(3) magnetic field direction
+!>   normB:  (real8)(3) magnetic field intensity in T
+!>   gradB:  (real8)(3) gradient of the magnetic field intensity in T/m
+!>   curlb:  (real8)(3) curl of the magnetic field direction in 1/m
+!>   dbdt:   (real8)(3) magnetic field direction time derivative 1/s
+pure subroutine calc_EBNormBGradBCurlbDbdt(fields,time,i_elm,st,phi,E,b,&
+     normB,gradB,curlb,dbdt)
+  !> load modules
+  use phys_module, only: F0, mode, central_mass, central_density
+  use constants, only: mu_zero,mass_proton
+  use mod_pusher_tools, only: transform_derivatives_st_to_RZ
+  implicit none
+
+  !> declare input variables
+  class(fields_base),intent(in) :: fields
+  real(kind=8),intent(in) :: time
+  integer,intent(in) :: i_elm
+  real(kind=8),dimension(2),intent(in) :: st
+  real(kind=8),intent(in) :: phi
+  !> declare output variables
+  real(kind=8),intent(out) :: normB
+  real(kind=8),dimension(3),intent(out) :: E,b,gradB,curlb,dbdt
+  !> declare parameters
+  real(kind=8),parameter :: t_norm=sqrt(mu_zero*mass_proton*central_mass*central_density*1.d20)
+  
+end subroutine calc_EBGradBNormBCurlbDbdt
+
+!> This procedure set a flag for setting to zero the poloidal
+!> magneticflux time derivative
+!> inputs:
+!>   this: (fields_base) object of class field
+!>   flag_dpsidt_to_zero: (logical1) if true  the poloidal
+!>                        magnetic flux time derivative is
+!>                        set to zero
+!> outputs:
+!>   this: (fields_base) object of class field
 pure subroutine set_flag_dpsidt(this,flag_dpsidt_to_zero)
   class(fields_base),intent(inout) :: this !< fields object
   logical(kind=1),intent(in) :: flag_dpsidt_to_zero !< flag to set
 
-  ! set the flag_zero_dpsidt flag of this
+  !> set the flag_zero_dpsidt flag of this
   this%flag_zero_dpsidt = flag_dpsidt_to_zero
   
 end subroutine set_flag_dpsidt

@@ -60,6 +60,12 @@ type, extends(fields_base) :: jorek_fields_interp_hermite_birkhoff
     procedure, nopass :: mask !< Map number to 1..NL
     procedure :: ind !< Return (array of) indices into 1..NL (start+i etc)
 end type jorek_fields_interp_hermite_birkhoff
+ 
+!> overload the procedure do_interp_PRZ
+interface do_interp_PRZ
+   module procedure do_interp_2_time_0,do_interp_2_partial_time_1
+end interface do_interp_PRZ
+ 
 contains
 !> The correct indexing operation for our ring buffer
 pure function mask(i)
@@ -77,7 +83,7 @@ end function ind
 
 
 !> Interpolate a variable at a specific position (with phi), with first derivatives only
-pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
+pure subroutine do_interp_PRZ_1_time_0(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
   class(jorek_fields_interp_hermite_birkhoff),  intent(in)  :: this
   real*8,                   intent(in)  :: time !< Time at which to calculate this variable
   integer,                  intent(in)  :: i_elm
@@ -114,8 +120,77 @@ pure subroutine do_interp_PRZ(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, P_
   call HB_interp(this%t(i1), this%t(i2), n_v, V(:,3,1), V(:,3,2), V(:,3,3), V(:,3,4), time, P_t)
   call HB_interp(this%t(i1), this%t(i2), n_v, V(:,4,1), V(:,4,2), V(:,4,3), V(:,4,4), time, P_phi)
   call HB_interp_dt(this%t(i1), this%t(i2), n_v, V(:,1,1), V(:,1,2), V(:,1,3), V(:,1,4), time, P_time)
-end subroutine do_interp_PRZ
+end subroutine do_interp_PRZ_1_time_0
 
+!> This procedure interpolates a variable, its first and second order derivatives in space
+!> and first order derivatives in time. The only first order spatial derivatives in
+!> s and t are also derived in time.
+!> inputs:
+!>   this:    (jorek_fiels_interp_hermite_birkhoff) interpolation class
+!>   time:    (real8) time coordinate
+!>   i_elm:   (integer) element index
+!>   i_v:     (integer)(n_v) array of jorek field indices
+!>   n_v:     (integer) number of jorek fields to interpolate
+!>   s,t,phi: (real8) interpolation position in local (s,t) coordinates and
+!>            toroidal angle (phi)
+!> outputs:
+!>  P:               (real8)(n_v) interpolate quantities
+!>  P_s,P_t,P_time:  (real8)(n_v) interpolated quantity first order derivatives
+!>  P_ss,P_st,P_tt:  (real8)(n_v) interpolate quantity second order derivatives
+!>  P_sphi,P_tphi:   (real8)(n_v) interpolate quantitiy second order derivatives
+!>  P_stime,P_ttime: (real8)(n_v) interpolate quantity cross time-space derivatives
+!>  R,Z:             (real8) radial and vertical position
+!>  R_s,R_t,Z_s,Z_t: (real8) radial and vertical position first order derivatives
+!>  R_ss,R_st,R_tt:  (real8) radial second order derivatives
+!>  Z_ss,Z_st,Z_tt:  (real8) vertical coordinate second order derivatives
+pure subroutine do_interp_PRZ_2_partial_time_1(this,time,i_elm,i_v,n_v,s,t,phi,&
+     P,P_s,P_t,P_phi,P_time,P_ss,P_st,P_tt,P_sphi,P_tphi,P_stime,P_ttime,&
+     R,R_s,R_t,R_ss,R_st,R_tt,Z_ss,Z_st,Z_tt)
+  implicit none
+  !> declare input variables
+  class(jorek_fields_interp_hermite_birkhoff),intent(in) :: this
+  real(kind=8),intent(in) :: time,s,t,phi
+  integer,intent(in) :: i_elm,n_v
+  integer,dimension(n_v),intent(in) :: i_v
+  !> declare output variables
+  real(kind=8),intent(out) :: R,R_s,R_t,R_ss,R_st,R_tt,Z_ss,Z_st,Z_tt
+  real(kind=8),dimension(n_v),intent(out) :: P,P_s,P_t,P_phi,P_time
+  real(kind=8),dimension(n_v),intent(out) :: P_ss,P_st,P_tt,P_sphi,P_tphi
+  real(kind=8),dimension(n_v),intent(out) :: P_stime,P_ttime
+  !> declare internal variables
+  !> values array: first index: jorek field to interpolate
+  !>   second index: (P,P_s,P_t,P_phi,P_st,P_ss,P_tt,P_sphi,P_tphi,P_phiphi)
+  !>   third index:  (value_restart_1,value_restart_2,deltas_1,deltas_2)
+  real(kind=8),dimension(n_v,10,4) :: values
+  integer :: i1,i2,j
+
+  !> Determine between which sets of restart ther interpolation occur
+  !> selection: t_i <= t_now and taking the last true and first false values.
+  do j=1,this%len
+     if(this%(this%ind(j)).gt.time) exit !< found the larest time
+  enddo
+  i1 = this%ind(j-1) !< earlier restart
+  i2 = this%ind(j)   !< later restart
+#ifdef DEBUG
+    if(j.eq.this%len) i2=9999999 !< intentional segfault for debugging
+#endif
+
+    !> field spatial interpolation
+    call interp_PRZ(this%node_lists(i1),this%element_lists(i1),i_elm,i_v,n_v,&
+         s,t,phi,values(:,1,1),values(:,2,1),values(:,3,1),values(:,4,1),&
+         values(:,5,1),values(:,6,1),values(:,7,1),values(:,8,1),&
+         values(:,9,1),values(:,10,1),R,R_s,R_t,R_st,R_ss,R_tt,&
+         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.false.) !< first restart values
+    call interp_PRZ(this%node_lists(i2),this%element_lists(i2),i_elm,i_v,n_v,&
+         s,t,phi,values(:,1,2),values(:,2,2),values(:,3,2),values(:,4,2),&
+         values(:,5,2),values(:,6,2),values(:,7,2),values(:,8,2),&
+         values(:,9,2),values(:,10,2),R,R_s,R_t,R_ss,R_tt,&
+         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.false.) !< second restart values
+   
+  
+  
+  
+end subroutine do_interp_PRZ_2_partial_time_1
 
 !> Constructor to allow for optional and default variables
 function new_read_jorek_fields_interp_hermite_birkhoff(basename, i, rst_format, stop_at_end) result(new)

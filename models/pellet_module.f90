@@ -5,9 +5,9 @@ use data_structure
 use phys_module
 
 
-real*8 :: total_pellet_particles = 0.   !< the (total) pellet particles added in this timestep
-real*8 :: total_plasma_particles = 0.   !< the total plasma density (before this timestep)
-real*8 :: total_pellet_volume    = 0.   !< the volume of the simulated pellet in this timestep
+real*8 :: total_pellet_particles   !< the (total) pellet particles added in this timestep
+real*8 :: total_plasma_particles   !< the total plasma density (before this timestep)
+real*8 :: total_pellet_volume      !< the volume of the simulated pellet in this timestep
 
 real*8 :: phys_pellet_volume       !< the physical pellet volume (in m^3)
 real*8 :: pellet_volume            !< approximated value of simulated pellet volume

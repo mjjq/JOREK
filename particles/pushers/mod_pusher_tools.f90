@@ -11,7 +11,7 @@ public left_handed_cross_product, right_handed_cross_product
 public vector_transform_RZPHI_to_XYZ,vector_transform_XYZ_to_RZPHI
 public cayley_transform,approximated_cayley_transform
 public coordinate_transform_RZPHI_to_XYZ, coordinate_transform_XYZ_to_RZPHI
-public transform_derivatives_st_to_RZ
+public transform_derivatives_st_to_RZ,transform_derivatives_RZ_to_st
 
 !> interfaces
 
@@ -21,8 +21,14 @@ interface transform_derivatives_st_to_RZ
         transform_second_derivatives_st_to_RZ
 end interface transform_derivatives_st_to_RZ
 
-contains
+!> overload transfrom derivatives from global to local coorsinates
+interface transform_derivatives_RZ_to_st
+   module procedure transform_first_derivatives_RZ_to_st,&
+        transform_second_derivatives_RZ_to_st
+end interface transform_derivatives_RZ_to_st
   
+contains
+
 !---------------------------------------------------------------------------
 
 !> Get two vectors orthogonal to a given vector.
@@ -361,5 +367,68 @@ pure subroutine transform_second_derivatives_st_to_RZ(P_RR,P_RZ,P_ZZ,n_v,&
        RHS_ZZ)*transformation_matrix(10) !< ZZ
   
 end subroutine transform_second_derivatives_st_to_RZ
+
+!---------------------------------------------------------------------------------------
+
+!> This procedure transform back the first order derivatives from global RZ coordinates
+!> to local s,t coordinates. This method is used mainly for testing.
+!> inputs:
+!>   P_R,P_Z: (real8)(n_v) physcial quantity first derivatives in R and t
+!>   R_s,R_t: (real8) major radius first derivative in s and t
+!>   Z_s,Z_t: (real) vertical position first and second order derivatives in s and t
+!> outputs:
+!>   P_s,P_t: (real8)(n_v) physical quantitiy first derivatives in s and t
+pure subroutine transform_first_derivatives_RZ_to_st(P_s,P_t,n_v,P_R,P_Z,&
+     R_s,R_t,Z_s,Z_t)
+  implicit none
+  !> define input variables
+  integer,intent(in) :: n_v
+  real(kind=8),dimension(n_v),intent(in) :: P_R,P_Z
+  real(kind=8),intent(in) :: R_s,R_t,Z_s,Z_t
+  !> define output varibales
+  real(kind=8),dimension(n_v),intent(out) :: P_s,P_t
+
+  !> compute derivatives
+  P_s = P_R*R_s + P_Z*Z_s !< ds
+  P_t = P_R*R_t + P_Z*Z_t !< dt
+  
+end subroutine transform_first_derivatives_RZ_to_st
+!---------------------------------------------------------------------------------------
+
+!> This procedure transform back the second order derivatives from globa RZ coordinates
+!> to local s,t coordinates. This method is used mainly for testing.
+!> inputs:
+!>   n_v:            (integer) number fo physical quantities
+!>   P_R,P_Z:        (real8)(n_v) physical quantitiy first derivatives
+!>                   in R and Z
+!>   P_RR,P_RZ,P_ZZ: (real8)(n_v) physical quantitiy second and cross
+!>                   dervatives in R and Z
+!>   R_s,R_t:        (real8) major radius first derivative in s and t
+!>   Z_s,Z_t:        (real8) vertical position first derivatives in s and t
+!>   R_ss,R_st,R_tt: (real8) major radius second and cross derivatives in s and t
+!>   Z_ss,Z_st,Z_tt: (real8) vertical position second and cross derivatives in s and t
+!> outputs:
+!>   P_ss,P_st,P_tt: (real)(n_v) physical quantity second and cross
+!>                   derivatives in s and t
+pure subroutine transform_second_derivatives_RZ_to_st(P_ss,P_st,P_tt,n_v,P_R,P_Z,&
+     P_RR,P_RZ,P_ZZ,R_s,R_t,R_ss,R_st,R_tt,Z_s,Z_t,Z_ss,Z_st,Z_tt)
+  implicit none
+  !> declare input variables
+  integer,intent(in) :: n_v
+  real(kind=8),dimension(n_v),intent(in) :: P_RR,P_RZ,P_ZZ,P_R,P_Z
+  real(kind=8),intent(in) :: R_s,R_t,R_ss,R_st,R_tt
+  real(kind=8),intent(in) :: Z_s,Z_t,Z_ss,Z_st,Z_tt
+  !> delcare output varibales
+  real(kind=8),dimension(n_v),intent(out) :: P_ss,P_st,P_tt
+
+  !> compute second order derivatives
+  P_ss = P_RR*R_s*R_s + 2.d0*P_RZ*R_s*Z_s + P_ZZ*Z_s*Z_s + P_R*R_ss + P_Z*Z_ss !< dsds
+  P_st = P_RR*R_t*R_s + P_RZ*(Z_t*R_s+R_t*Z_s) + P_ZZ*Z_t*Z_s + P_R*R_st + P_Z*Z_st !<dsdt
+  P_tt = P_RR*R_t*R_t + 2.d0*P_RZ*R_t*Z_t + P_ZZ*Z_t*Z_t + P_R*R_tt + P_Z*Z_tt !< dtdt
+  
+end subroutine transform_second_derivatives_RZ_to_st
+
+
+!---------------------------------------------------------------------------------------
 
 end module mod_pusher_tools

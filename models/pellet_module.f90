@@ -5,15 +5,15 @@ use data_structure
 use phys_module
 
 
-real*8 :: total_pellet_particles = 0.   !< the (total) pellet particles added in this timestep
-real*8 :: total_plasma_particles = 0.   !< the total plasma density (before this timestep)
-real*8 :: total_pellet_volume    = 0.   !< the volume of the simulated pellet in this timestep
+real*8 :: total_pellet_particles    !< the (total) pellet particles added in this timestep
+real*8 :: total_plasma_particles    !< the total plasma density (before this timestep)
+real*8 :: total_pellet_volume       !< the volume of the simulated pellet in this timestep
 
-real*8 :: phys_pellet_volume     = 0.   !< the physical pellet radius (in m^3)
-real*8 :: pellet_volume          = 0.   !< approximated value of simulated pellet volume
-real*8 :: pellet_atomic                 !< atomic number of pellet mass
+real*8 :: phys_pellet_volume        !< the physical pellet radius (in m^3)
+real*8 :: pellet_volume             !< approximated value of simulated pellet volume
+real*8 :: pellet_atomic             !< atomic number of pellet mass
 
-real*8 :: phys_ablation          = 0.   !< physical ablation rate (non normalised)
+real*8 :: phys_ablation             !< physical ablation rate (non normalised)
 
 real*8, allocatable  :: xtime_pellet_R(:)
 real*8, allocatable  :: xtime_pellet_Z(:)
@@ -51,7 +51,7 @@ real*8 :: pellet_sig, pellet_length !< sigmas of pellet source in poloidal and t
 real*8 :: pellet_ellipse            !< ellipticity of the pellet source in the poloidal plane
 real*8 :: pellet_theta              !< orientation of the pellet ellipse in the poloidal plane
 real*8 :: pellet_psi, pellet_delta_psi
-real*8 :: pellet_volume
+real*8, intent(in) :: pellet_volume
 
 !output variables
 real*8 :: particle_source           !< particle source (JOREK normalised units)
@@ -106,7 +106,6 @@ else if (pellet_particles .gt. 0.) then
   ablation_rate = 2.01d4 * central_density**(-0.81) * max(T0,0.d0)**(1.64) * max(r0,0.d0)**(0.33) * phys_pellet_volume**(0.44) * pellet_atomic**0.5
 
 ! particle source in JOREK normalisation
-
   particle_source = ablation_rate / central_density  * atn * atn_phi / pellet_volume
 
   volume_source   = atn * atn_phi

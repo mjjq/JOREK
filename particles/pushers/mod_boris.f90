@@ -260,7 +260,7 @@ function kinetic_to_gc(node_list, element_list, in, B, mass) result(out)
   v_par = dot_product(in%v,B_hat)
   v2    = dot_product(in%v,in%v)
   ! Calculate GC position
-  if (out%q .ne. 0) then !< bugfix electrons have negative charge!
+  if (out%q .ne. 0) then
     out%x = in%x + (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(in%v,B_hat))/(in%q*EL_CHG*B_norm)
   else
     out%x = in%x
@@ -310,7 +310,7 @@ function gc_to_kinetic(node_list, element_list, in, chi, B, mass) result(out)
   call get_orthonormals(B_hat, e1, e2)
   out%v  = v_par * B_hat + v_perp * (cos(chi) * e1 + sin(chi) * e2)
 
-  if (out%q .ne. 0) then !< bugfix electrons have negative charge!
+  if (out%q .ne. 0) then
     out%x = in%x - (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(out%v,B_hat))/(real(out%q,8)*EL_CHG*B_norm)
   else
     out%x = in%x

@@ -484,7 +484,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
       type is (particle_fieldline)
         particle = particle_in
         real_stats_tmp(6) = 0.d0 ! Since there is no momentum defined for this we just use 0
-      type is (particle_kinetic_relativistic
+      type is (particle_kinetic_relativistic)
         real_stats_tmp(6) = real(particle_in%q,8)*EL_CHG*psi - ATOMIC_MASS_UNIT*particle_in%x(1) &
 	                    *(particle_in%p(1)*sin(particle_in%x(3))+particle_in%p(2)*cos(particle_in%x(3)))
 	! transform a relativistic kinetic particle into gc (to get E and mu)

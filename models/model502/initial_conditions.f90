@@ -157,7 +157,7 @@ do in=2,n_tor
 
       psi = node_list%node(i)%values(1,1,1)
       Z   = node_list%node(i)%x(1,2)
-      psi_n = (psi - ES%psi_axis)/(psi_bnd - ES%psi_axis)
+      psi_n = (psi - ES%psi_axis)/(ES%psi_bnd - ES%psi_axis)
 
       node_list%node(i)%values(in,1,4) = amplitude * psi_n * (1.d0 -psi_n)
       node_list%node(i)%values(in,2,4) = amplitude * (1. - 2.d0 * psi_n)/(ES%psi_bnd - ES%psi_axis) * node_list%node(i)%values(1,2,1)

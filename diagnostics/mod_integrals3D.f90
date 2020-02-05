@@ -232,7 +232,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          R_xpoint, Z_xpoint, my_id, use_pellet, delta_phi, R_axis, Z_axis, psi_axis, psi_bnd, &
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
-!$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0,                    &
+!$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0, Te_0,              &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
@@ -271,11 +271,16 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           source_neutral, source_tmp, n_spi_tmp,                                         &
 #endif
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
-!$omp           source_bg, source_imp, source_tmp,                                             &
-!$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
+!$omp           source_bg, source_imp, source_tmp, n_spi_tmp,                                  &
+!$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp,                                    &
 !$omp           T_rad, T_rad_real, ne_rad, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,         &
 #endif
-
+#if (JOREK_MODEL == 502)
+!$omp           alpha_i, alpha_e,                                                              &
+#endif
+#if (JOREK_MODEL == 501)
+!$omp           alpha_imp, beta_imp,                                                           &
+#endif
 !$omp           omp_nthreads,omp_tid)
 
 

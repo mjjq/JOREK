@@ -748,7 +748,7 @@ do i=1,n_vertex_max
 
             call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                                 pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-                                x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt),eq_zTe(ms,mt), &
+                                x_g(ms,mt),y_g(ms,mt), ps0, phi, r0_corr, T0_corr/2.d0, &
                                 central_density, pellet_particles, pellet_density, total_pellet_volume, &
                                 source_pellet, source_volume)
           endif

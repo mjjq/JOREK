@@ -32,7 +32,7 @@ sim%groups(1)%mass = 5.4857990907016d-4 ! particle mass in AMU
 sim%time = 1.d-7 
 
 ! Set up the diagnostics output
-diag = write_particle_diagnostics(filename='diag.h5',only=[1,2,6]) ! store total and kinetic energies and p_phi only
+diag = write_particle_diagnostics(filename='diag.h5',only=[1,2,6,12,13,14]) ! store total and kinetic energies, p_phi, phi, R, Z
 
 ! Set events to write output data and stop the simulation.
 ! One can use read_jorek_fields_interp_linear or read_jorek_fields_interp_hermite_birkhoff,
@@ -60,9 +60,6 @@ end select
 ! Set dpsi/dt=0 (useful e.g. to check the conservation of the total particle energy) 
 call sim%fields%set_flag_dpsidt(.true.)
 
-! Open a file where to write the particle position
-open(21,file='ex6_jorek_out.dat')
-
 ! Open a file where to write some fields at a given position to test time interpolation routines
 open(22,file='field_vs_t.dat')
 
@@ -89,8 +86,7 @@ do while (.not. sim%stop_now)
 	  sim%time = sim%time + timesteps(i)
           call volume_preserving_push_jorek(particles(j),sim%fields,sim%groups(i)%mass,sim%time,timesteps(i),ifail)
 	!  if (modulo(k-1,10000)==0) then	                
-	!    write(21,'(4e18.8)') t, particles(j)%x(1), particles(j)%x(2), particles(j)%x(3)
-	!    call sim%fields%interp_PRZ(sim%time, 1000, [1], 1, 0.5, 0.5, 0.5, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)	   
+	!    call sim%fields%interp_PRZ(sim%time, 1000, [1], 1, 0.5, 0.5, 0.5, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)	 
 	!    write(22,'(7e26.16)') sim%time, P, P_time, R, Z
 	!  end if
 	  if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1	

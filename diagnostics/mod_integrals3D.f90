@@ -126,16 +126,22 @@ real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 real*8  :: m_i_over_m_imp
 !   -Mean impurity ionization state
 real*8  :: Z_imp, T0_Zimp, alpha_Zimp
-!   -Coefficients related to Z_imp
-real*8  :: alpha_imp, beta_imp
 !   -Corrected plasma temperature and density for radiation calculation
 real*8  :: T_rad, ne_rad, T_rad_real
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
 integer*8  :: ion_i, ion_k, i_phi
-
 #endif
+#if (JOREK_MODEL == 502)
+!   -Coefficients related to Z_imp
+real*8  :: alpha_imp, beta_imp
+#endif
+#if (JOREK_MODEL == 502)
+!   -Coefficients related to Z_imp
+real*8  :: alpha_i, alpha_e
+#endif
+
 
 integer    :: spi_i, i_inj, n_spi_tmp
 real*8     :: ng_radius
@@ -741,7 +747,7 @@ do ife = ife_min, ife_max
 
             call inj_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
                                   ng_radius,ns_sig,ns_deltaphi,     &
-                                  ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),     &
+                                  ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),     &
                                   phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
 
             ! Converting number density into mass density for each species respectively
@@ -754,11 +760,12 @@ do ife = ife_min, ife_max
 
           do i_inj = 1, n_inj
             source_tmp = 0.d0
-   
-            call inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm,        &
-                                  A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_tmp,t_now, &
-                                  JET_MGI,ASDEX_MGI,central_density,central_mass)
 
+            call inj_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),   &
+                            ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
+                            A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_imp,t_now,  &
+                            JET_MGI,ASDEX_MGI,central_density,central_mass)
+  
             source_imp = source_imp + source_tmp
           end do
 

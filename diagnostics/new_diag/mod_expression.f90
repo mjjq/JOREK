@@ -23,7 +23,7 @@ module mod_expression
   use mod_basisfunctions
   use mod_bootstrap_functions
   use mod_poloidal_currents
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   use mod_injection_source, only: radiation_function
 #endif
   

@@ -14,7 +14,7 @@ public fields_base
 type, abstract :: fields_base
   type(type_node_list), allocatable    :: node_list !< Current node list
   type(type_element_list), allocatable :: element_list !< Current element list
-  logical(kind=1) :: flag_zero_dpsidt=.false. !< if true, P_time(1) = dpsi/dt = 0
+  logical                              :: flag_zero_dpsidt=.false. !< if true, P_time(1) = dpsi/dt = 0
   contains
     procedure(interp_PRZ), deferred       :: interp_PRZ
     procedure :: calc_EBpsiU
@@ -98,7 +98,7 @@ end subroutine calc_EBpsiU
 ! This subroutine sets a flag to force dpsi/dt to 0
 pure subroutine set_flag_dpsidt(this,flag_dpsidt_to_zero)
   class(fields_base),intent(inout) :: this !< fields object
-  logical(kind=1),intent(in) :: flag_dpsidt_to_zero !< flag value
+  logical,intent(in)               :: flag_dpsidt_to_zero !< flag value
 
   this%flag_zero_dpsidt = flag_dpsidt_to_zero
   

@@ -65,7 +65,7 @@ contains
 pure subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
 use phys_module, only: F0, mode, central_mass, central_density
 use constants, only: mu_zero, mass_proton
-
+use mod_pusher_tools, only: transform_derivatives_st_to_RZ
 ! Routine parameters
 class(fields_base), intent(in) :: fields
 real*8, intent(in)  :: time
@@ -83,24 +83,17 @@ real*8             :: P(2), P_s(2), P_t(2), P_phi(2), P_time(2) ! Placeholder fo
 ! Values
 real*8             :: R, R_s, R_t, Z, Z_s, Z_t
 ! Others
-real*8             :: inv_st_jac, R_inv
-real*8             :: psi_R, psi_Z, U_R, U_Z, U_phi, t_norm
+real*8             :: R_inv,t_norm
 
 t_norm  = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
 ! Interpolate the fields to get psi and U at the current position (and the
 ! changes u_n - u(n-1))
 call fields%interp_PRZ(time, i_elm, i_var, 2, st(1), st(2), phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
-
 R_inv = 1.d0/R
-inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
 
-! Calculate the derivatives to R and Z
-psi_R    = (  P_s(1) * Z_t - P_t(1) * Z_s ) * inv_st_jac
-psi_Z    = (- P_s(1) * R_t + P_t(1) * R_s ) * inv_st_jac
-U_R      = (  P_s(2) * Z_t - P_t(2) * Z_s ) * inv_st_jac
-U_Z      = (- P_s(2) * R_t + P_t(2) * R_s ) * inv_st_jac
-U_phi    = P_phi(2)
+! calculate the derivatives to R and Z
+call transform_derivatives_st_to_RZ(P_s,P_t,2,P_s,P_t,R_s,R_t,Z_s,Z_t)
 
 ! Update psi and U
 psi = P(1)
@@ -110,11 +103,12 @@ U   = P(2)/t_norm
 if(fields%flag_zero_dpsidt) P_time(1) = 0.d0
 
 ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
-B     = [+psi_Z, -psi_R, F0] * R_inv
+B     = [P_t(1), -P_s(1), F0] * R_inv
 ! The local electric field, obtained from E=-Grad (u F0)-\partial_t A
 ! See http://jorek.eu/wiki/doku.php?id=u_phi
-E     = [-F0*U_R, -F0*U_Z, -F0*U_phi*R_inv]/t_norm
+E     = -F0*[P_s(2),P_t(2),P_phi(2)*R_inv]/t_norm
 E(3)  = E(3) - R_inv*P_time(1) ! because this is not normalized with t_norm
+
 end subroutine calc_EBpsiU
 
 !> This procedure computes the fields required for resolving

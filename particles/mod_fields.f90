@@ -17,7 +17,7 @@ type, abstract :: fields_base
   logical(kind=1) :: flag_zero_dpsidt=.false. !< if true, P_time(1) = dpsi/dt = 0
   contains
     procedure(interp_PRZ),deferred,public   :: interp_PRZ
-    procedure(interp_PRZ_2),deferred,public :: interp_PRZ_e
+    procedure(interp_PRZ_2),deferred,public :: interp_PRZ_2
     procedure :: calc_EBpsiU
     procedure :: set_flag_dpsidt !< set the flag_zero_dpsidt
 end type fields_base

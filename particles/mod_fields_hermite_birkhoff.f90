@@ -119,10 +119,10 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
 end subroutine do_interp_PRZ_1
 
 !> This procedure interpolates a variable, its first and second order derivatives in space
-!> and first order derivatives in time. The only first order spatial derivatives in
+!> and first order derivatives in time. Only first order spatial derivatives in
 !> s and t are also derived in time.
 !> inputs:
-!>   this:    (jorek_fiels_interp_hermite_birkhoff) interpolation class
+!>   this:    (jorek_fields_interp_hermite_birkhoff) interpolation class
 !>   time:    (real8) time coordinate
 !>   i_elm:   (integer) element index
 !>   i_v:     (integer)(n_v) array of jorek field indices
@@ -149,8 +149,8 @@ pure subroutine do_interp_PRZ_2(this,time,i_elm,i_v,n_v,s,t,phi,&
   integer,intent(in) :: i_elm,n_v
   integer,dimension(n_v),intent(in) :: i_v
   !> declare output variables
-  real(kind=8),intent(out) :: R,R_s,R_t,R_ss,R_st,R_tt,
-  real(kind=8),intent(out) :: Z_ss,Z_st,Z_tt
+  real(kind=8),intent(out) :: R,R_s,R_t,R_ss,R_st,R_tt
+  real(kind=8),intent(out) :: Z,Z_s,Z_t,Z_ss,Z_st,Z_tt
   real(kind=8),dimension(n_v),intent(out) :: P,P_s,P_t,P_phi,P_time
   real(kind=8),dimension(n_v),intent(out) :: P_ss,P_st,P_tt,P_sphi,P_tphi
   real(kind=8),dimension(n_v),intent(out) :: P_stime,P_ttime
@@ -188,10 +188,10 @@ pure subroutine do_interp_PRZ_2(this,time,i_elm,i_v,n_v,s,t,phi,&
          values(:,5,3),values(:,6,3),values(:,7,3),values(:,8,3),&
          values(:,9,3),values(:,10,3),R,R_s,R_t,R_st,R_ss,R_tt,&
          Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< first restart derivatives
-    call interp_PRZ(this%node_list(i2),this%element_list(i2),i_elm,i_v,n_v,&
+    call interp_PRZ(this%node_lists(i2),this%element_lists(i2),i_elm,i_v,n_v,&
          s,t,phi,values(:,1,4),values(:,2,4),values(:,3,4),values(:,4,4),&
          values(:,5,4),values(:,6,4),values(:,7,4),values(:,8,4),&
-         values(:,9,4),values9(:,10,4),R,R_s,R_t,R_st,R_ss,R_tt,&
+         values(:,9,4),values(:,10,4),R,R_s,R_t,R_st,R_ss,R_tt,&
          Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< second restart derivatives
    
     !> compute field time interpolations

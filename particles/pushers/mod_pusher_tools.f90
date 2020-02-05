@@ -12,12 +12,13 @@ public vector_transform_RZPHI_to_XYZ,vector_transform_XYZ_to_RZPHI
 public cayley_transform,approximated_cayley_transform
 public coordinate_transform_RZPHI_to_XYZ, coordinate_transform_XYZ_to_RZPHI
 public transform_derivatives_st_to_RZ,transform_derivatives_RZ_to_st
-
+public transform_first_derivatives_st_to_RZ
+public transform_second_derivatives_st_to_RZ
 !> interfaces
 
 !> overload transform derivatives from local to global coordinates
 interface transform_derivatives_st_to_RZ
-   module procedure transform_first_derivatives_st_to_RZ,&
+   module procedure transform_first_derivatives_st_to_RZ ,&
         transform_second_derivatives_st_to_RZ
 end interface transform_derivatives_st_to_RZ
 

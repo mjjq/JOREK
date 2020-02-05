@@ -36,7 +36,7 @@ contains
   !>   inverse_dt: (real8)(n) inverse fo the interval size
   !> outputs:
   !>   dydt:       (real8)(n) linear interpolation derivatives
-  pure function linear_interp_differential_dt(n,dy_new,inverse_dt)&
+  pure function linear_interp_differentials_dt(n,dy_new,inverse_dt)&
        result(dydt)
     !> declare input variables
     integer,intent(in) :: n
@@ -48,6 +48,6 @@ contains
     !> compute derivatives
     dydt = dy_new*inverse_dt
     
-  end function linear_interp_differential_dt
+  end function linear_interp_differentials_dt
   
 end module mod_linear

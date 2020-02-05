@@ -46,6 +46,8 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
   use mod_interp
   use constants, only: mu_zero, mass_proton
   use phys_module, only: tstep, central_mass, central_density
+  use mod_linear, only: linear_interp_differentials
+  use mod_linear, only: linear_interp_differentials_dt
   class(jorek_fields_interp_linear),  intent(in)  :: this
   real*8,                   intent(in)  :: time !< Time at which to calculate this variable
   integer,                  intent(in)  :: i_elm
@@ -56,27 +58,33 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
 
   real*8 :: df, dt !< result = (1-df)*values_now - df*deltas, df = 1-f
   real*8, dimension(n_v) :: Pd, Pd_s, Pd_t, Pd_phi
-  real*8 :: t_norm
-  t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
-
+  real*8 :: t_jorek
+  t_jorek = tstep*sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time step with time unit in seconds
+  P_time = 0.d0!< initialise P_time to zero
+  !> interpolate values
   call interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-  if (abs(this%time_prev-this%time_now) .gt. 1d-10 .and. .not. this%static) then
-    dt = 1.d0/(this%time_now - this%time_prev)
-    df = (this%time_now - time)*dt
-    call interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
-    P      = P     - df*Pd
-    P_s    = P_s   - df*Pd_s
-    P_t    = P_t   - df*Pd_t
-    P_phi  = P_phi - df*Pd_phi
-    P_time = Pd*dt
-  else
-    if (tstep*t_norm .gt. 0) then
-      call interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
-      P_time = Pd/(tstep*t_norm)
+  !> check for non zero time derivatives
+  if(t_jorek .gt. 0.d0) then
+    !> interpolate differentials
+    call interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,&
+         Pd,Pd_s,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
+    !> check if linear interpolations has to be performed
+    if((this%time_now-this%time_prev) .gt. 1d-10 .and. .not. this%static)
+      !> compute inverse time interval
+      dt = 1.d0/(this%time_now - this%_time_prev)
+      !> compute time fraction
+      df = (this%time_now - time)*dt
+      !> apply linear interpolation
+      P     = linear_interp_differentials(n_v,P,Pd,df)
+      P_s   = linear_interp_differentials(n_v,P_s,Pd_s,df)
+      P_t   = linear_interp_differentials(n_v,P_t,Pd_t,dt)
+      P_phi = linear_interp_differentials(n_v,P_phi,Pd_phi,df)
     else
-      P_time = 0.d0
-    end if
-  end if
+      dt = 1.d0/t_jorek!< compute time interval
+    endif
+    !> compute time derivative
+    P_time = linear_interp_differentials_dt(n_v,Pd,dt) 
+  endif
 
 end subroutine do_interp_PRZ_1
 

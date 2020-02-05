@@ -17,9 +17,10 @@ use phys_module
 use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
-use mgi_module
+use mod_neutral_source
 use vacuum, only: freeb_fact
 use mod_bootstrap_functions
+use equil_info, only : get_psi_n
 
 implicit none
 
@@ -30,7 +31,7 @@ real*8, dimension (:,:), allocatable  :: ELM
 real*8, dimension (:)  , allocatable  :: RHS
 integer, intent(in) :: tid
 
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2, i_inj, n_spi_tmp
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)
@@ -62,7 +63,8 @@ real*8     :: Ti0, Ti0_x, Ti0_y, Te0, Te0_x, Te0_y
 real*8     :: zTi, zTi_x, zTi_y, zTe, zTe_x, zTe_y, zn_x, zn_y
 real*8	   :: Jb_0 , Jb
 real*8     :: P0, P0_x, P0_y, P0_s, P0_t, P0_ss, P0_st, P0_tt, P0_p, P0_xx, P0_xy, P0_yy
-real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T, eta_Sp, detaSp_dT
+real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T
+real*8     :: eta_T_ohm, deta_dT_ohm
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
 real*8     :: amat_51, amat_52, amat_55, amat_56, amat_57, amat_61, amat_62, amat_63, amat_65, amat_66, amat_67, amat_16, amat_13
 real*8     :: amat_71, amat_72, amat_75, amat_76, amat_77, amat_15
@@ -96,8 +98,8 @@ real*8     :: rhon, rhon_x, rhon_y, rhon_s, rhon_t, rhon_p, rhon_ss, rhon_st, rh
 real*8     :: rn0_xx, rn0_yy, rhon_xx, rhon_yy
 
 ! Neutral source
-real*8     :: source_mgi
-real*8     :: source_mgi_tmp
+real*8     :: source_neutral
+real*8     :: source_neutral_tmp
 
 ! time normalization
 real*8     :: t_norm
@@ -105,15 +107,7 @@ real*8     :: t_norm
 ! Temporary variables serving the SPI module
 integer    :: spi_i
 
-real*8     :: spi_R_tmp
-real*8     :: spi_Z_tmp
-real*8     :: spi_phi_tmp
-real*8     :: spi_abl_tmp
 real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
-! Additional variables reserved for future implementation
-!real*8     :: spi_Vel_R_tmp
-!real*8     :: spi_Vel_Z_tmp
-!real*8     :: spi_Vel_phi_tmp
 
 
 ! Neutral diffusion coefficients
@@ -246,8 +240,6 @@ do ms=1, n_gauss
 
        call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
       
-            !current_source(ms,mt) = 0.d0
-
        call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                     dn_dpsi(ms,mt),dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
@@ -359,25 +351,6 @@ do ms=1, n_gauss
             + rn0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                              &
             + rn0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2            &
             - xjac_y * (- rn0_s * x_t(ms,mt) + rn0_t * x_s(ms,mt) )  / xjac**2
-
-
-!===================================Buffer======================================
-!
-!     r0_x  = (   y_t(ms,mt) * eq_s(mp,5,ms,mt) - y_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
-!     r0_y  = ( - x_t(ms,mt) * eq_s(mp,5,ms,mt) + x_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
-!
-!
-!     r0_xx = (r0_ss * y_t(ms,mt)**2 - 2.d0*r0_st * y_s(ms,mt)*y_t(ms,mt) + r0_tt * y_s(ms,mt)**2     &
-!            + r0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &
-!            + r0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2               &
-!            - xjac_x * (r0_s* y_t(ms,mt) - r0_t * y_s(ms,mt))  / xjac**2
-!
-!     r0_yy = (r0_ss * x_t(ms,mt)**2 - 2.d0*r0_st * x_s(ms,mt)*x_t(ms,mt) + r0_tt * x_s(ms,mt)**2     &
-!            + r0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                              &
-!            + r0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2            &  
-!            - xjac_y * (- r0_s * x_t(ms,mt) + r0_t * x_s(ms,mt) )  / xjac**2
-!
-!======================================Buffer end======================================
 
      rn0_hat   = BigR**2 * abs(rn0)                                                        
      rn0_x_hat = 2.d0 * BigR * BigR_x  * rn0 + BigR**2 * rn0_x                             
@@ -534,18 +507,14 @@ do ms=1, n_gauss
      if ( eta_T_dependent ) then
        eta_T     = eta   * (T_corr/T_0)**(-1.5d0)
        deta_dT   = - eta   * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0) * dT_corr_dT
-       d2eta_d2T =   eta   * (3.75d0) * T_corr**(-3.5d0) * T_0**(1.5d0) * (dT_corr_dT**2.0) !Incomplete yet
      else
        eta_T     = eta
        deta_dT   = 0.d0
-       d2eta_d2T = 0.d0
      end if
 
-     eta_Sp = 1.65d-9*17*(1.d-3*T_corr/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
-                               *sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) 
-     
-     detaSp_dT = -1.65d-9*17 * (1.5d0) * T_corr**(-2.5d0) * (1.d-3/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
-                      * sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) * dT_corr_dT
+     ! --- Eta for ohmic heating
+     eta_T_ohm   = (eta_T/eta)  * eta_ohmic
+     deta_dT_ohm = (deta_dT/eta) * eta_ohmic
 
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then       
@@ -572,16 +541,8 @@ do ms=1, n_gauss
      eta_num_T   = eta_num                         ! hyperresistivity
      visco_num_T = visco_num                       ! hyperviscosity
 
-     psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-     if (xpoint2) then
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
-         psi_norm = 2.d0 - psi_norm
-       endif
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
-         psi_norm = 2.d0 - psi_norm
-       endif
-     endif
-     
+     psi_norm = get_psi_n(ps0, y_g(ms,mt))
+
      ! --- Bootstrap current 
 
      if (bootstrap) then
@@ -721,33 +682,18 @@ do ms=1, n_gauss
     dSrec_dT  = - 0.5d0 * (1.d0/2.d0) * coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(0.5d0) * (T_corr/(2.d0))**(-1.5d0) * dT_corr_dT
 
    !--------------------------------------------------------
-   ! --- Source of neutrals from Massive Gas Injection (MGI)
+   ! --- Source of neutrals, e.g. from MGI/SPI
    !--------------------------------------------------------
 
-     source_mgi = 0.d0                    
+     source_neutral = 0.d0                    
 
-!============================================================!
-! Important note: in order to implementing more complicated  !
-!    model, we should add more arguments to mgi_source       !
-!============================================================!
-
-     if (using_spi == .true.) then
-
-       if (JET_MGI == .true. .or. ASDEX_MGI == .true.) then
-         write(*,*) "WARNING: Using SPI, disabling MGI settings"
-         JET_MGI = .false.
-         ASDEX_MGI = .false.
-       end if
+     if (using_spi) then
 
        do spi_i=1, n_spi_tot
 
-         source_mgi_tmp = 0.d0
+         source_neutral_tmp = 0.d0
 
          if (pellets(spi_i)%spi_radius > 0.0) then
-           spi_R_tmp   = pellets(spi_i)%spi_R
-           spi_Z_tmp   = pellets(spi_i)%spi_Z
-           spi_phi_tmp = pellets(spi_i)%spi_phi
-           spi_abl_tmp = pellets(spi_i)%spi_abl
 
            ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
@@ -755,31 +701,38 @@ do ms=1, n_gauss
              ng_radius = ng_radius_min
            end if
 
-           call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
-                         mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),     &
-                         phi,source_mgi_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+           n_spi_tmp = 0
+           do i_inj = 1, n_inj
+             n_spi_tmp = n_spi_tmp + n_spi(i_inj)
+             if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
+           end do
+
+           call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
+                         ng_radius,ns_sig,ns_deltaphi,&
+                         ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0.,x_g(ms,mt),y_g(ms,mt),     &
+                         phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+
          end if
 
-         source_mgi = source_mgi + source_mgi_tmp
+         source_neutral = source_neutral + source_neutral_tmp
 
        end do
 
      else
 
-       call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now, &
-                     JET_MGI,ASDEX_MGI,central_density,central_mass)
+       do i_inj = 1, n_inj
+         source_neutral_tmp = 0.d0
+         call neutral_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj), &
+                       ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
+                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
+                       JET_MGI,ASDEX_MGI,central_density,central_mass)
 
+         source_neutral = source_neutral + source_neutral_tmp
+
+       end do
      end if
-
-     if (source_mgi /= source_mgi) then
-       write(*,*) "WARNING: source_mgi = ", source_mgi
-     end if
-
-     if (source_mgi .lt. 0.d0) then
-      source_mgi = 0.d0
-     endif
-
+    
+     source_neutral = max(source_neutral,0.)
 
    !--------------------------------------------------------
    ! --- Radiation from background impurity
@@ -849,7 +802,7 @@ do ms=1, n_gauss
 !#  equation 1   (induction equation)                                                              #
 !###################################################################################################
 
-              rhs_ij_1 =   v * (eta_T  * (zj0 - current_source(ms,mt)) - Jb)/ BigR  * xjac * tstep &
+         rhs_ij_1 =   v * (eta_T  * (zj0-current_source(ms,mt) - Jb))/ BigR    * xjac * tstep &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                        * tstep &
                       - v * eps_cyl * F0 / BigR  * u0_p                   * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)           * xjac * tstep &
@@ -979,7 +932,7 @@ do ms=1, n_gauss
 
                     - v * BigR * ksiion * r0_corr * rn0_corr * Sion_T                  * xjac * tstep         &
 
-                    + v * BigR * (2/(3 * BigR**2)) * eta_Sp * zj0**2                    * xjac * tstep  &
+                    + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR  * xjac * tstep  &
                     - v * BigR * r0_corr * rn0_corr * LradDrays_T                       * xjac * tstep  &
                     - v * BigR * r0_corr * r0_corr  * LradDcont_T                       * xjac * tstep  &
                     - v * BigR * r0_corr * frad_bg                                      * xjac * tstep
@@ -1039,7 +992,7 @@ do ms=1, n_gauss
 
 	              - BigR * v * r0_corr * rn0_corr * Sion_T                                                    * xjac * tstep &  
 		      + BigR * v * r0_corr * r0_corr * Srec_T                                                     * xjac * tstep &
-                      + BigR * v * source_mgi                                                                     * xjac * tstep &
+                      + BigR * v * source_neutral                                                                     * xjac * tstep &
                       + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta                                                             &                      
                       - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy) * BigR * xjac * tstep
 
@@ -1406,8 +1359,8 @@ do ms=1, n_gauss
                            + TG_num6 * 0.25d0 * BigR**2 * r0* (T0_x * u0_y - T0_y * u0_x)     &
                                      * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
 
-                amat_63 = - v * BigR * zj * (4/(3 * BigR**2)) * eta_Sp * zj0                      * xjac * theta * tstep
 
+                amat_63 = - v * (gamma-1.d0) * eta_T_ohm * 2.d0 * zj * zj0 / (BigR**2)   * BigR * xjac * theta * tstep
 
                 amat_65 =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)    &
 
@@ -1484,7 +1437,7 @@ do ms=1, n_gauss
 
 			   + v * BigR * r0_corr * rn0_corr * ksiion * dSion_dT * T          * xjac * theta * tstep &
 
-                           - v * BigR * T * ((2d0)/(3*BigR**2)) * detaSp_dT * zj0**2        * xjac * theta * tstep  &
+                           - v * T * (gamma-1.d0) * deta_dT_ohm * (zj0 / BigR)**2.d0 * BigR * xjac * theta * tstep  &
                            + v * BigR * T * r0_corr * rn0_corr * dLradDrays_dT              * xjac * theta * tstep  &
                            + v * BigR * T * r0_corr * r0_corr  * dLradDcont_dT              * xjac * theta * tstep  &
                            + v * BigR * T * r0_corr * dfrad_bg_dT                           * xjac * theta * tstep

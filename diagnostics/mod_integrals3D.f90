@@ -8,15 +8,22 @@ module mod_integrals3D
   use basis_at_gaussian
   use tr_module
   use phys_module
-  use pellet_module
   use mod_interp
   use convert_character
   use mpi_mod
-  use domains
   use mod_expression
   use mod_resistivity
   use corr_neg
- 
+  use pellet_module
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+  use mod_neutral_source, only: neutral_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all 
+#endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+  use mod_injection_source, only: inj_source, radiation_function, total_n_particles, total_n_particles_inj, &
+                                  total_n_particles_inj_all
+#endif
+  use equil_info, only : get_psi_n, ES
+
   implicit none
   
   private
@@ -29,9 +36,6 @@ module mod_integrals3D
 subroutine int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)
 
 !$ use omp_lib
-#if (JOREK_MODEL == 500)
-use mgi_module
-#endif
  
 implicit none
 
@@ -77,7 +81,8 @@ real*8  :: dt_back, dt_now, r_dt, r_dt2
 
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor
-real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, area1
+real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, T0i, Vol, Volume, Area, Bgeo, area1
+real*8  :: r0_corr, T0_corr
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, delta_phi, phi, P_tot, D_tot
 real*8  :: VP_int, VP_ext, VK_int, VK_ext, vpar0, BB2, VP_tot, VK_tot
@@ -90,7 +95,7 @@ real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, source_mgi, rn0
+real*8  :: local_n_particles_inj, local_n_particles
 real*8  :: E_tot, Zkpar_T, D_prof, ZK_prof
 real*8  :: fact_mu0, fact_flux
 real*8  :: hel1, heli, helicity_tot, psi_off, curr, Ip, vn_p0, qn, pflow, kinflow, cond_par, cond_perp
@@ -100,9 +105,41 @@ real*8  :: RH,RH_s,RH_t,RH_st,RH_ss,RH_tt
 real*8  :: TT,TT_s,TT_t,TT_st,TT_ss,TT_tt 
 real*8  :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt 
 real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt 
-real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, T0_corr
+real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3, betap
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
+real*8  :: rn0, rn0_corr
+
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+real*8  :: source_neutral, source_tmp
+#endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+real*8  :: source_bg, source_imp, source_tmp
+#endif
+
+! Additional diagnostic variables for impurity model
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion
+real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
+! Atomic physics coefficients:
+!   -Mass ratio between main ions and impurites (m_i/m_imp)
+real*8  :: m_i_over_m_imp
+!   -Mean impurity ionization state
+real*8  :: Z_imp, T0_Zimp, alpha_Zimp
+!   -Coefficients related to Z_imp
+real*8  :: alpha_imp, beta_imp
+!   -Corrected plasma temperature and density for radiation calculation
+real*8  :: T_rad, ne_rad, T_rad_real
+!   -Temporary variable for charge state distribution
+real*8, allocatable :: P_imp(:)
+real*8     :: E_ion, Lrad, E_ion_bg
+integer*8  :: ion_i, ion_k, i_phi
+
+#endif
+
+integer    :: spi_i, i_inj, n_spi_tmp
+real*8     :: ng_radius
+
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 
@@ -168,19 +205,17 @@ local_pellet_volume    = 0.d0
 local_n_particles_inj = 0.d0
 local_n_particles     = 0.d0
 
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+local_radiation       = 0.d0
+local_E_ion           = 0.d0
+local_radiation_phi   = 0.d0
+#endif
+
 delta_phi     = 2.d0 * PI / float(n_plane) / float(n_period)
 
-! --- find axis, x-point and psi_bnd. This should be done in equil_info before calling int3D
-call find_axis(99,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-if (xpoint) then
-  call find_xpoint(99,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-  psi_bnd  = psi_xpoint(1)
-  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    psi_bnd = psi_xpoint(2)
-  endif
-else
-  psi_bnd = 0.d0
-endif
+psi_axis   = ES%psi_axis;        R_axis = ES%R_axis;        Z_axis = ES%Z_axis
+psi_xpoint = ES%psi_xpoint;    R_xpoint = ES%R_xpoint;    Z_xpoint = ES%Z_xpoint 
+psi_bnd    = ES%psi_bnd
 
 ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
@@ -198,27 +233,43 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, thm_wk_tot,                   &
 !$omp          mag_wk_tot, vpar_disp_tot, area1, mag_src_tot,  &
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp          local_n_particles_inj, local_n_particles, mgi_amplitude, mgi_R, mgi_Z,          &
-!$omp          mgi_phi, mgi_radius, mgi_sig, mgi_deltaphi, mgi_tor_norm,                       &
-!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_mgi, L_tube, JET_MGI,ASDEX_MGI,            &
-!$omp          central_mass,                                                                   &
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
+!$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
+!$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,               &
+!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
+!$omp          central_mass, pellets, tor_frequency,                                           &
+!$omp          n_spi, using_spi, n_spi_tot, n_inj,                                             &
+!$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
+#endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+!$omp          local_radiation, local_E_ion, gas_type, flag_adas,                              &
+!$omp          local_radiation_phi,                                                            &
+!$omp          imp_cor, imp_adas,                                                              &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
-!$omp           dpdx, dpdy, phi,                                                               &
+!$omp           dpdx, dpdy, phi, r0_corr, T0i,                                                 &
 !$omp           source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,                      &
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
-!$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, &
+!$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr,                               &
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp           rn0, source_mgi,                                                               &
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
+!$omp           rn0, rn0_corr,                                                                 &
 #endif
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+!$omp           source_neutral, source_tmp, n_spi_tmp,                                         &
+#endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+!$omp           source_bg, source_imp, source_tmp,                                             &
+!$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
+!$omp           T_rad, T_rad_real, ne_rad, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,         &
+#endif
+
 !$omp           omp_nthreads,omp_tid)
 
 
@@ -231,8 +282,11 @@ omp_tid      = 0
 #endif
 
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
+#endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+!$omp                local_radiation,  local_E_ion, local_radiation_phi,                      &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
@@ -336,8 +390,13 @@ do ife = ife_min, ife_max
         BigR = x_g(ms,mt)
 
         r0     = eq_g(mp,5,ms,mt)
+        r0_corr = corr_neg_dens1(r0)
         T0     = eq_g(mp,6,ms,mt)
+#if (JOREK_MODEL == 502)
+        T0i    = eq_g(mp,6,ms,mt)
+#else
         T0e    = eq_g(mp,6,ms,mt) /2.d0
+#endif
         zj0    = eq_g(mp,3,ms,mt)
         ps0    = eq_g(mp,1,ms,mt)
         ps0_s  = eq_s(mp,1,ms,mt) 
@@ -358,13 +417,18 @@ do ife = ife_min, ife_max
         vpar_t   = 0.d0
 #endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
         rn0    = eq_g(mp,8,ms,mt)
+        rn0_corr = corr_neg_dens(rn0, (/ 1.d-12, 1.d-5 /),1.d-3) ! Correction for negative rn0 ...
 #endif
-
-        T0_corr = corr_neg_temp(T0)
+#if (JOREK_MODEL == 502)
+        T0e     = eq_g(mp,9,ms,mt)
+        T0_corr = corr_neg_temp1(T0e)
+        eta_T   = eta * (T0_corr/Te_0)**(-1.5d0)
+#else
+        T0_corr = corr_neg_temp1(T0)
         eta_T   = resistivity(T0_corr)  
-
+#endif
         dTdx   = (   y_t(ms,mt) * eq_s(mp,6,ms,mt) - y_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
         dTdy   = ( - x_t(ms,mt) * eq_s(mp,6,ms,mt) + x_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
         drhodx = (   y_t(ms,mt) * eq_s(mp,5,ms,mt) - y_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
@@ -418,10 +482,183 @@ do ife = ife_min, ife_max
         thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
         vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi 
 
+#if (JOREK_MODEL == 501)
+        !-------------------------------------------
+        ! Atomic physics parameters for Impurities
+        !-------------------------------------------
+
+        select case ( trim(gas_type) )
+          case('D2')
+            m_i_over_m_imp = central_mass/2.
+          case('Ar')
+            m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
+          case('Ne')
+            m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
+          case default
+            write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
+            write(*,*) '=> We assume the gas is D2.'
+            m_i_over_m_imp = central_mass/2.
+        end select
+
+        ! Te in eV:
+        T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        if (flag_adas) then
+   
+          if (allocated(imp_adas(1)%ionisation_energy)) then
+   
+            if (allocated(P_imp)) deallocate(P_imp)
+   
+            allocate(P_imp(0:imp_adas(1)%n_Z))
+   
+            call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                          p_out=P_imp,z_eff=Z_imp)
+   
+            ! Calculate the ionization potential energy and it's time gradient
+            E_ion     = 0.
+            E_ion_bg  = 13.6
+            do ion_i=1, imp_adas(1)%n_Z
+              do ion_k=1, ion_i
+                E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+              end do
+            end do
+            ! Convert from eV to SI unit
+            E_ion     = E_ion * EL_CHG
+            E_ion_bg  = E_ion_bg * EL_CHG
+          else
+            call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+            E_ion     = 0.
+            E_ion_bg  = 0.
+          end if
+        else
+          T0_Zimp        = 437.  ! eV
+          alpha_Zimp     = 0.415
+          Z_imp     = 10. !18.*tanh((T_rad/T0_Zimp)**alpha_Zimp)
+          E_ion     = 0.
+          E_ion_bg  = 0.
+        end if
+        alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+        beta_imp     = m_i_over_m_imp*Z_imp - 1.
+        ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
+  
+        P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
+        P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
+
+        if (flag_adas .and. ne_rad > 1.d16 .and. T_rad_real > 3. .and. rn0 > 0.) then
+          Lrad = 0.0
+          ! Here we are temperarily only considering one impurity species, in the
+          ! future maybe a do loop will is needed
+          call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad)
+          if (Lrad < 0.) Lrad = 0.
+        else
+          Lrad = 0.
+          E_ion = 0.
+        end if
+
+        Lrad = Lrad * m_i_over_m_imp
+        E_ion = E_ion * m_i_over_m_imp
+
+        local_radiation_phi(mp) = local_radiation_phi(mp) + ne_rad * rn0_corr * central_density * 1.d20 * Lrad &
+                          * bigR * xjac * wst * delta_phi        
+        local_radiation = local_radiation + ne_rad * rn0_corr * central_density * 1.d20 * Lrad &
+                          * bigR * xjac * wst * delta_phi 
+        local_E_ion     = local_E_ion + rn0 * central_density * 1.d20 * E_ion             &
+                          * bigR * xjac * wst * delta_phi
+        local_E_ion     = local_E_ion + (r0 - rn0) * central_density * 1.d20 * E_ion_bg   &
+                          * bigR * xjac * wst * delta_phi
+#endif
+#if (JOREK_MODEL == 502)
+        !-------------------------------------------
+        ! Atomic physics parameters for Impurities
+        !-------------------------------------------
+
+     select case ( trim(gas_type) )
+       case('D2')
+         m_i_over_m_imp = central_mass/2.
+       case('Ar')
+         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
+       case('Ne')
+         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
+       case default
+         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in inj_source.f90) !!'
+         write(*,*) '=> We assume the gas is D2.'
+         m_i_over_m_imp = central_mass/2.
+     end select
+
+        ! Te in eV:
+        T_rad = T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+        T_rad_real = T0/(EL_CHG*MU_ZERO*central_density*1.d20)
+        if (flag_adas) then
+   
+          if (allocated(imp_adas(1)%ionisation_energy)) then
+   
+            if (allocated(P_imp)) deallocate(P_imp)
+   
+            allocate(P_imp(0:imp_adas(1)%n_Z))
+   
+            call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                          p_out=P_imp,z_eff=Z_imp)
+   
+            ! Calculate the ionization potential energy and it's time gradient
+            E_ion     = 0.
+            E_ion_bg  = 13.6
+            do ion_i=1, imp_adas(1)%n_Z
+              do ion_k=1, ion_i
+                E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+              end do
+            end do
+            ! Convert from eV to SI unit
+            E_ion     = E_ion * EL_CHG
+            E_ion_bg  = E_ion_bg * EL_CHG
+          else
+            call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+            E_ion     = 0.
+            E_ion_bg  = 0.
+          end if
+        else
+          T0_Zimp        = 437.  ! eV
+          alpha_Zimp     = 0.415
+          Z_imp     = 10. !18.*tanh((T_rad/T0_Zimp)**alpha_Zimp)
+          E_ion     = 0.
+          E_ion_bg  = 0.
+        end if
+
+        alpha_i       = m_i_over_m_imp - 1.
+        alpha_e       = m_i_over_m_imp*Z_imp - 1.
+
+        ne_rad       = (r0_corr + alpha_e * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+
+        P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
+        P_tot  = P_tot  + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi &
+                        + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
+
+        if (flag_adas .and. ne_rad > 1.d16 .and. T_rad_real > 3. .and. rn0 > 0.) then
+          Lrad = 0.0
+          ! Here we are temperarily only considering one impurity species, in the
+          ! future maybe a do loop will is needed
+          call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad)
+          if (Lrad < 0.) Lrad = 0.
+        else
+          Lrad = 0.
+          E_ion = 0.
+        end if
+
+        Lrad = Lrad * m_i_over_m_imp
+        E_ion = E_ion * m_i_over_m_imp
+
+        local_radiation_phi(mp) = local_radiation_phi(mp) + ne_rad * rn0_corr * central_density * 1.d20 * Lrad &
+                          * bigR * xjac * wst * delta_phi        
+        local_radiation = local_radiation + ne_rad * rn0_corr * central_density * 1.d20 * Lrad &
+                          * bigR * xjac * wst * delta_phi 
+        local_E_ion     = local_E_ion + rn0 * central_density * 1.d20 * E_ion             &
+                          * bigR * xjac * wst * delta_phi
+        local_E_ion     = local_E_ion + (r0 - rn0) * central_density * 1.d20 * E_ion_bg   &
+                          * bigR * xjac * wst * delta_phi
+#endif
         if (use_pellet) then
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                               pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-                              x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt), eq_zTe(ms,mt), central_density, &
+                              x_g(ms,mt),y_g(ms,mt), ps0, phi, r0_corr, T0_corr/2.d0, central_density, &
                               pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)
 
           local_pellet_particles = local_pellet_particles + source_pellet * bigR * xjac * wst * delta_phi
@@ -430,19 +667,111 @@ do ife = ife_min, ife_max
         endif
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-        source_mgi = 0.d0
-
-        call mgi_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_mgi,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
-
         !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
 
-        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_mgi * bigR *&
+        source_neutral = 0.d0
+
+        if (using_spi) then
+
+          do spi_i = 1, n_spi_tot
+
+            source_tmp = 0.d0
+
+            ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+
+            if (ng_radius < ng_radius_min) then
+              ng_radius = ng_radius_min
+            end if
+
+            n_spi_tmp = 0
+            do i_inj = 1, n_inj
+              n_spi_tmp = n_spi_tmp + n_spi(i_inj)
+              if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
+            end do
+ 
+            call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
+                                  ng_radius,ns_sig,ns_deltaphi,     &
+                                  ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),     &
+                                  phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+            source_neutral = source_neutral + source_tmp
+
+          end do
+
+        else
+
+          do i_inj = 1, n_inj
+            source_tmp = 0.d0
+            call neutral_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),&
+                                  ns_radius,ns_sig,ns_deltaphi,ns_tor_norm,        &
+                                  A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_tmp,t_now, &
+                                  JET_MGI,ASDEX_MGI,central_density,central_mass)
+  
+            source_neutral = source_neutral + source_tmp
+          end do
+        end if
+
+        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_neutral * bigR *&
                                  xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
         local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
 #endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+        !--- Calculate the neutral injection rate and the number of neutrals in the plasma
 
-        if (in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_bnd,R_axis,Z_axis,psi_axis)) then
+        source_imp = 0.d0
+        source_bg  = 0.d0
+
+        if (using_spi) then
+
+          do spi_i = 1, n_spi_tot
+
+            source_tmp = 0.d0
+
+            ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+
+            if (ng_radius < ng_radius_min) then
+              ng_radius = ng_radius_min
+            end if
+
+            n_spi_tmp = 0
+            do i_inj = 1, n_inj
+              n_spi_tmp = n_spi_tmp + n_spi(i_inj)
+              if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
+            end do
+
+            call inj_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
+                                  ng_radius,ns_sig,ns_deltaphi,     &
+                                  ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),     &
+                                  phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+            ! Converting number density into mass density for each species respectively
+            source_bg  = source_bg + source_tmp * ( 1. - pellets(spi_i)%spi_species)
+            source_imp = source_imp + source_tmp * pellets(spi_i)%spi_species / m_i_over_m_imp
+
+          end do
+
+        else
+
+          do i_inj = 1, n_inj
+            source_tmp = 0.d0
+   
+            call inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm,        &
+                                  A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_tmp,t_now, &
+                                  JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+            source_imp = source_imp + source_tmp
+          end do
+
+          ! Converting number density into mass density for each species respectively
+          source_imp = source_imp / m_i_over_m_imp
+  
+        end if
+
+        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_imp * bigR * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
+        local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
+
+#endif
+        if ( get_psi_n(ps0, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
           C_intern = C_intern + zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
@@ -454,6 +783,10 @@ do ife = ife_min, ife_max
           VK_int = VK_int + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_int = VM_int + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
           J2_int = J2_int + eta_T * (ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
+#if (JOREK_MODEL == 501)
+          P_int = P_int - r0 * T0   * xjac * BigR * wst * delta_phi
+          P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
+#endif
         else
           D_ext = D_ext + r0         * xjac * BigR * wst * delta_phi
           P_ext = P_ext + r0   * T0  * xjac * BigR * wst * delta_phi
@@ -464,6 +797,10 @@ do ife = ife_min, ife_max
           VK_ext = VK_ext + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_ext = VM_ext + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
           J2_ext = J2_ext + eta_T * (ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
+#if (JOREK_MODEL == 501)
+          P_int = P_int - r0 * T0   * xjac * BigR * wst * delta_phi
+          P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
+#endif
         endif
 
       enddo
@@ -614,16 +951,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       dPdx   = r0 * dTdx + T0 * drhodx
       dPdy   = r0 * dTdy + T0 * drhody
 
-      ! --- get normalized flux (this should be done in equil_info)
-      psi_n = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-      if (xpoint) then
-        if ((psi_n .lt. 1.d0) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
-          psi_n = 2.d0 - psi_n
-        endif
-        if ((psi_n .lt. 1.d0) .and. (Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) then
-          psi_n = 2.d0 - psi_n
-        endif
-      endif
+      ! --- get normalized flux 
+      psi_n = get_psi_n(ps0,Z)
  
       ! --- get resistivity and diffusion coefficients
       T0_corr = corr_neg_temp(T0)
@@ -695,15 +1024,22 @@ call MPI_AllReduce(mag_src_tot, mag_source_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MP
 call MPI_AllReduce(varmin,V_min,n_var,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(varmax,V_max,n_var,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
 
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+call MPI_AllReduce(local_radiation, total_radiation,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(local_E_ion, total_E_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(local_radiation_phi, total_radiation_phi,n_plane,&
+                   MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+#endif
+
 if (use_pellet) then
   call MPI_AllReduce(local_pellet_particles,total_pellet_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_plasma_particles,total_plasma_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_pellet_volume,total_pellet_volume,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-  call MPI_AllReduce(local_n_particles_inj, total_n_particles_inj,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_AllReduce(local_n_particles, total_n_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
+call MPI_AllReduce(local_n_particles_inj, total_n_particles_inj,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(local_n_particles, total_n_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 #endif
 
 ! --- Normalization factors
@@ -752,6 +1088,12 @@ viscopar_dissip_tot  = n_period * viscopar_dissip_tot * fact_flux
 mag_source_tot       = n_period * mag_source_tot      * fact_flux
 volume               = n_period * volume
 area                 = n_period * area / (2.d0 * PI)
+
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+total_radiation     = n_period * total_radiation
+total_radiation_phi = n_period * total_radiation_phi
+total_E_ion         = n_period * total_E_ion
+#endif
 
 ! --- Boundary integrals
 vn_p0                =  n_period * vn_p0          * fact_flux 
@@ -883,8 +1225,28 @@ if (my_id .eq. 0) then
   write(*,'(A,20es14.6)')  ' sum ',xt,density_tot,pressure/1.d6,kin_par_tot/1.d6,kin_perp_tot/1.d6,mag_tot/1.d6, &
                                  Ohm_tot/1.d6,heating_in/1d6+heating_out/1.d6 ,source_in+source_out
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
   write(*,'(A,4es14.6)')   ' Integrals_3D, MGI               : ', total_n_particles_inj, total_n_particles
+#endif
+
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+  write(*,'(A,1e14.6,A)') 'Radiation power          : ', total_radiation/1.d6, ' [MW]'
+  write(*,'(A,1e14.6,A)') 'Ionization potential E   : ', total_E_ion/1.d6, ' [MJ]'
+  write(*,'(A,1e14.6,A)') 'Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
+  if (flag_adas) then
+    if (index_now > 1) then
+      xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation
+    else
+      xtime_radiation(index_now) = t_norm * tstep * total_radiation
+    end if
+  end if 
+  if (output_rad_phi) then
+    open(20,file="rad_asymmetry.dat")
+    do i_phi = 1, n_plane
+      write(20,'(1e14.6)') total_radiation_phi(i_phi)/1.d6
+    end do
+    close (20)
+  end if
 #endif
 
   do k = 1, n_var

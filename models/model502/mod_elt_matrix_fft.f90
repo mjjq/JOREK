@@ -18,10 +18,11 @@ use phys_module
 use pellet_module
 use diffusivities, only: get_dperp, get_zk_eperp, get_zk_iperp
 use corr_neg
-use mgi_module
+use mod_injection_source
 use mod_coronal
 use vacuum, only: freeb_fact
 use mod_bootstrap_functions
+use equil_info, only : get_psi_n
 
 implicit none
 
@@ -707,15 +708,7 @@ do ms=1, n_gauss
      !eta_num_T   = eta_num                         ! hyperresistivity
      !visco_num_T = visco_num                       ! hyperviscosity
 
-     psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-     if (xpoint2) then
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
-         psi_norm = 2.d0 - psi_norm
-       endif
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
-         psi_norm = 2.d0 - psi_norm
-       endif
-     endif
+     psi_norm = get_psi_n(ps0, y_g(ms,mt))
 
      ! --- Bootstrap current 
      if (bootstrap) then
@@ -797,7 +790,7 @@ do ms=1, n_gauss
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
          m_imp          = 20.
        case default
-         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mgi_source.f90) !!'
+         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in inj_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
          m_i_over_m_imp = central_mass/2.
          m_imp          = 2.
@@ -1043,7 +1036,7 @@ do ms=1, n_gauss
 
 !============================================================!
 ! Important note: in order to implementing more complicated  !
-!    model, we should add more arguments to mgi_source       !
+!    model, we should add more arguments to inj_source       !
 !============================================================!
 
      if (using_spi) then
@@ -1076,8 +1069,8 @@ do ms=1, n_gauss
              if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
            end do
 
-           call mgi_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,mgi_sig,mgi_deltaphi,&
-                         mgi_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi(i_inj),0.,x_g(ms,mt),y_g(ms,mt),    &
+           call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,ns_sig,ns_deltaphi,&
+                         ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0.,x_g(ms,mt),y_g(ms,mt),    &
                          phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
          end if
 
@@ -1090,10 +1083,12 @@ do ms=1, n_gauss
      else
 
        do i_inj = 1, n_inj
-         call mgi_source(mgi_amplitude(i_inj),mgi_R(i_inj),mgi_Z(i_inj),mgi_phi(i_inj),&
-                         mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm, &
-                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi(i),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_tmp,t_now,  &
+         source_tmp = 0.d0
+         call inj_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),   &
+                         ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
+                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_imp,t_now,  &
                          JET_MGI,ASDEX_MGI,central_density,central_mass)
+
          source_imp = source_imp + source_tmp
        end do
 

@@ -35,7 +35,7 @@ real*8,allocatable :: ne_spline(:)
 
 write(*,*) ' EQDSK to JOREK2 '
 
-tokamak_name = 'DIII-D' ! 'JET' 'ITER'
+tokamak_name = 'DIII-D' ! 'ITER' 'DIII-D' 'JET' 
 
 write(*,*) 'Tokamak = ', tokamak_name
 
@@ -66,7 +66,6 @@ read(5,'(5e16.9)') (p(i),i=1,n_psi)
 read(5,'(5e16.9)') (df2(i),i=1,n_psi)
 read(5,'(5e16.9)') (dpr(i),i=1,n_psi)
 read(5,'(5e16.9)') ((psirz(i,j),i=1,nr),j=1,nz)
-
 read(5,'(5e16.9)') (q(i),i=1,n_psi)
 
 write(*,*) ' reading limiter'
@@ -173,12 +172,11 @@ yb = yy(1)
 ye = yy(nz)
 kx = 3
 ky = 3
-!beware, the smoothing parameter smth can strongly affect the interpolation routine and it should always be checked that the resulting interpolation along the JOREK boundary is smooth enough
-!refer to the "Hard-coded parameters" section of the wikipage https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
-!smth = 1.d-6 !this value can give a non-smooth interpolation close to the X-point, resulting in artifacts in the flux-aligned mesh computed by JOREK
-smth = 3.d-3 ! this is usually the best trade-off for good results both at and away from the Xpoint
-nxest = nr-5
-nyest = nz-5
+smth = 1.d-6 ! Controls the tradeoff between closeness of fit and smoothness of fit. When too small, can lead to noise pick-up. When too large, can lead to inaccurate fit.
+             ! May need hand tuning, based on a visual inspection of the output.
+             ! For more details, see the documentation of regrid.f in libdierckx or the "Hard-coded parameters" section of the Wiki page https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90. 
+nxest = 3*nr/4 ! Upper bound for the number of knots used for the splines. We set it a bit smaller than nr to test the quality of the fit.
+nyest = 3*nz/4
 lwrk  = 4+nxest*(my+2*kx+5)+nyest*(2*ky+5)+mx*(kx+1)+my*(ky+1)+my+nxest
 kwrk  = 3+mx+my+nxest+nyest
 
@@ -186,9 +184,17 @@ allocate(tx(nxest),ty(nyest),c(nxest,nyest),wrk(lwrk),iwrk(kwrk))
 
 call regrid(iopt,mx,xx,my,yy,transpose(psirz),xb,xe,yb,ye,kx,ky,smth,nxest,nyest,nx,tx,ny,ty,c,fp,wrk,lwrk,iwrk,kwrk,ier)
 
+if (ier > 0) then
+  write(*,*) '!!!!! WARNING: Problem with the Dierckx spline interpolation !!!!!'
+  write(*,*) '!!!!! You may need to tune smth and/or nxest and nyest.      !!!!!'
+end if 
 write(*,*) ' Dierckx ier   : ',ier
 write(*,*) ' Dierckx fp    : ',fp
 write(*,*) ' Dierckx nx,ny : ',nx,ny
+if (ier > 0) then
+  write(*,*) '!!!!! Exiting                                                !!!!!'
+  stop
+end if 
 
 lwrk = mx*(kx+1)+my*(ky+1)
 kwrk = mx+my

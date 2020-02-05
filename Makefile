@@ -123,6 +123,7 @@ all: $(basename $(notdir $(PROGRAM_SOURCES)))
 most: jorek2_connection2 \
       jorek2_connection_stan \
       jorek2_diagno \
+      jorek2_diagno_spi \
       jorek2_fieldlines_vtk \
       jorek2_four \
       jorek2_poincare \

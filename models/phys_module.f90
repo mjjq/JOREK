@@ -16,13 +16,11 @@ module phys_module
                                   !< beyond which the resistivity is truncated.
   real*8  :: eta_ohmic            !< Resistivity at core for the ohmic heating term
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant.
-  real*8  :: visco                !< Viscosity
 
-  ! varivale needed by rst_bin2hdf5 and rst_hdf52bin
-  real*8  :: visco_rst
-  real*8  :: visco_par_rst
-  real*8  :: eta_rst
-  !
+  real*8  :: visco                !< Viscosity at plasma center (normalized)
+  real*8  :: visco_rst            !< visco value from restart file
+  real*8  :: visco_par_rst        !< visco_par value from restart file
+  real*8  :: eta_rst              !< eta value from restart file
 
   ! Temperature dependence of the hyper-resistivity and hyper-viscosity
   logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature, otherwise constant
@@ -70,6 +68,11 @@ module phys_module
   logical :: export_for_nemec     !< Export equilibrium information for the NEMEC code?
   logical :: use_murge            !< (Deprecated, Cannot be used any more)
   logical :: use_murge_element    !< (Deprecated, Cannot be used any more)
+  logical :: use_BLR_compression  !< Use Block-Low-Rank (BLR) compression in MUMPS / PaStiX 6 solvers
+  real*8  :: epsilon_BLR          !< Accuracy of BLR compression
+  logical :: just_in_time_BLR     !< Use Just-in-time strategy for BLR compression (speed optimized)
+  logical :: pastix_blr_abs_tol   !< Use absolute tolerance for BLR
+  logical :: write_ps             !< Write postscript file at the end of the run
 
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"
@@ -217,21 +220,21 @@ module phys_module
   real*8  :: pellet_delta_psi  !< width of smoothing in poloidal flux
   real*8  :: pellet_velocity_R !< pellet velocity component radial direction
   real*8  :: pellet_velocity_Z !< pellet velocity component Z direction
-  real*8  :: pellet_density    !< working pellet atom number density (in units 10^20 m^-3)
+  real*8  :: pellet_density    !< pellet atom number density (in units \f$10^{20} m^{-3}\f$)
   real*8  :: pellet_density_bg !< background species pellet atom number density (in units 10^20 m^-3)
-  real*8  :: pellet_particles  !< the number of particles in the pellet (in units of 10^20)
+  real*8  :: pellet_particles  !< the number of particles in the pellet (in units of \f$10^{20}\f$)
   logical :: use_pellet
-  
+
   !> @name Massive gas injection-related input parameters
-  real*8  :: t_mgi(10)         !< MGI onset time (JOREK units)
-  real*8  :: mgi_amplitude(10) !< Amplitude of gas source
-  real*8  :: mgi_R(10)         !< R position of gas source
-  real*8  :: mgi_Z(10)         !< Z position of gas source
-  real*8  :: mgi_phi(10)       !< Phi position of gas source
-  real*8  :: mgi_radius        !< Poloidal radius of gas source
-  real*8  :: mgi_sig           !< Obsolete (still in the code but not used)
-  real*8  :: mgi_deltaphi      !< Toroidal extension of gas source
-  real*8  :: mgi_tor_norm      !< Gas source normalization factor related to its toroidal shape
+  real*8  :: t_ns(10)          !< MGI onset time (JOREK units)
+  real*8  :: ns_amplitude(10)  !< Amplitude of gas source
+  real*8  :: ns_R(10)          !< R position of gas source
+  real*8  :: ns_Z(10)          !< Z position of gas source
+  real*8  :: ns_phi(10)        !< Phi position of gas source
+  real*8  :: ns_radius         !< Poloidal radius of gas source
+  real*8  :: ns_sig            !< Obsolete (still in the code but not used)
+  real*8  :: ns_deltaphi       !< Toroidal extension of gas source
+  real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
   logical :: JET_MGI           !< Switch to use a JET-like MGI
   logical :: ASDEX_MGI         !< Switch to use an ASDEX-like MGI
   real*8  :: V_Dmv             !< Volume of the DMV reservoir
@@ -239,32 +242,35 @@ module phys_module
   real*8  :: A_Dmv             !< Cross sectional area of DMV (Disruption mitigation valve) pipe
   real*8  :: K_Dmv             !< Correction parameter describing the gas expansion near the pipe orifice
   real*8  :: L_tube            !< Pipe length
+  real*8  :: ksi_ion            !< Energy cost of each ionization
+  real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
+  real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
+
   character(len=80) :: gas_type !< Type of gas used in MGI: Argon, D2, ...
 
   !> @name Shattered pellet injection-related input parameters
-  ! Note that the SPI share many of the MGI parameters. The code should return
-  ! to simple MGI upon using_spi = false
-  ! The reference spactial coordinate for shattered pellets are calculated using
-  ! mgi_R etc...... 
+  ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
+  ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
+  ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
+  logical :: using_spi          !< This determines whether to use SPI or traditional MGI; see [[spi_tutorial|SPI Tutorial]]
   real*8  :: spi_Vel_Rref(10)   !< Reference velocity of pellet center along R upon injection
   real*8  :: spi_Vel_Zref(10)   !< Reference velocity of pellet center along Z upon injection
   real*8  :: spi_Vel_RxZref(10) !< Reference velocity of pellet center along RxZ direction upon injection
   real*8  :: spi_quantity(10)   !< Total injected atom number for impurity SPI
   real*8  :: spi_quantity_bg(10)!< Total injected atom number for background species SPI
-  real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds 
+  real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds
                                 !< and that of shattered pellets
 
   real*8  :: spi_Vel_diff(10)   !< The reference veolocity difference from the reference velocity
   real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
-  real*8  :: spi_L_inj(10)      !< Distance between SPI nozzle and mgi_R, mgi_Z, mgi_phi
-  real*8  :: mgi_phi_rotate     !< The toroidal position of rotated injection point
+  real*8  :: spi_L_inj(10)      !< Distance between SPI nozzle and ns_R, ns_Z, ns_phi
+  real*8  :: ns_phi_rotate      !< The toroidal position of rotated injection point
   real*8  :: tor_frequency      !< The rigid body rotation frequency
 
-  real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud 
-                                !< with regard to the simulation resolution 
+  real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud for numerical reasons (in m)
 
-  real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation for working species
-  real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate for working speacies
+  real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
+  real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
   real*8, allocatable  :: xtime_spi_ablation_bg(:,:) ! The time history of spi ablation for background species
   real*8, allocatable  :: xtime_spi_ablation_bg_rate(:,:) ! The time history of spi ablation rate for bg species
 
@@ -276,34 +282,28 @@ module phys_module
   integer :: spi_abl_model      !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model,
                                 !< 2 for Sergeev formula, 3 for Parks formula.
-  integer :: spi_rnd_seed(40)   !< Random seed array
+  integer :: spi_rnd_seed(40)   !< Random seed array used for the generation of the SPI velocity spread
 
-  character(len=80) :: spi_shard_file !< The name of the shard size file
-
-  logical :: using_spi          !< This determines whether to use SPI or traditional MGI
-  logical :: toroidal_rotation  !< Flag to turn on a rigid body toroidal plasma rotation for SPI
+  character(len=256) :: spi_shard_file !< The name of the shard size file
 
   logical :: flag_adas          !< Flag for whether to use adas data calculating coronal equilibriam
   logical :: output_rad_phi     !< Out put the radiation asymmetry into a file using integras_3D
   integer :: n_adas             !< Number of species to be traced by adas, for future development only
 
-  type (type_SPI), allocatable  :: pellets(:)     !< Each element corresponds to one injected pellet 
+  logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
+
+  type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
 
   character(len=512)            :: adas_dir    !< The directory of adas data file to be read
-
 
   type (adf11_all), allocatable :: imp_adas(:)    !< The ADAS data for impurities
   type (coronal), allocatable   :: imp_cor(:)     !< The coronal equilibrium distribution of impurities
 
-  real*8  :: ksi_ion           !< Energy cost of each ionization
-  real*8  :: delta_n_convection!< Switch to activate the convection term for neutrals (at the plasma velocity)  
-  real*8  :: nimp_bg           !< Density of background impurity (in \f$m^{-3}\f$)
-  
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor
   real*8  :: equil_accuracy    !< Tolerance of the convergence for the fix-boundary equilibrium
-  real*8  :: Zaxis_find_limit  !< Magnetic axis will be searched between Z=0 and Z=abs(Zaxis_find_limit)
-  
+  real*8  :: axis_srch_radius  !< Magnetic axis will be searched inside a circle with this radius
+ 
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).
   logical :: freeboundary_equil      !< use a free or fixed boundary equilibrium? ([[jorek-starwall|JOREK-STARWALL]])

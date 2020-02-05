@@ -3,10 +3,11 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering
+use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
 use vacuum
+use pellet_module
 use wsmp_module,   only: use_wsmp
 
 implicit none
@@ -17,13 +18,13 @@ character(len=*),             intent(in) :: filename
 real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
-integer :: ierr,err,i
+integer :: ierr,err,i, err_alloc, n_spi_begin
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
-                restart, rst_format, regrid, bootstrap,             &
+                restart, rst_format, regrid, bootstrap, write_ps,   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_ext,                    &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
@@ -47,7 +48,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_par, ZK_par_max, ZK_perp, D_par, D_perp,         &
                 particlesource, heatsource, tauIC,                  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
-                ZK_perp_num, time_evol_scheme,                      &
+                ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
@@ -62,7 +63,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
-                use_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering, &
+                use_mumps, mumps_ordering,                          &
+                use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
                 n_tor_fft_thresh,                                   &
                 pastix_smp_only, refinement, force_central_node,    &
@@ -85,15 +87,19 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
+                spi_tor_rot, tor_frequency,                         &
                 D_prof_neg, ZK_prof_neg,                            &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
-                mgi_sig, mgi_deltaphi, ksi_ion,                     &
-                mgi_amplitude, mgi_R, mgi_Z, mgi_phi, mgi_radius,   &
-                K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv, t_mgi,          &
-                JET_MGI, ASDEX_MGI,                                 &
+                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
+                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
+                spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
+                spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
+                ng_radius_ratio, ng_radius_min, spi_angle,          &
+                spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
+                spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 delta_n_convection, nimp_bg,                        &
-                RMP_on, RMP_har_cos,RMP_har_sin,                    &
+                RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 amix, amix_freeb, equil_accuracy,                   &
@@ -102,13 +108,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_pf_coils, pf_coils,                 &
-                Zaxis_find_limit, PF_pert_start_time,               &
+                axis_srch_radius, PF_pert_start_time,               &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd
+                pastix_maxthrd, eta_ohmic
 
- if (my_id .eq. 0) then
+if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
@@ -130,10 +136,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   else
 
     read(5,in1)
- endif
+  endif
 
   ! --- Calculate normalisation factor for MGI source (related to its toroidal shape)
-  mgi_tor_norm = mgi_deltaphi * PI**0.5 * ERF(PI/mgi_deltaphi)
+  ns_tor_norm = ns_deltaphi * PI**0.5 * ERF(PI/ns_deltaphi)
 
    if (trim(R_Z_psi_bnd_file) .ne. 'none') then
 
@@ -299,11 +305,57 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 
 endif
 
+
 ! --- Read numerical profiles for rho, T, and ff'.
 call read_num_profiles(my_id)
 
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
-  
+
+! --- Initialize the shattered pellet position
+
+if ( my_id == 0 ) then
+  if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
+    write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
+    if (t_now > minval(t_ns)) then
+      write(*,*) "EXITING NOW!!!"
+      stop
+    end if
+  end if
+
+  if (using_spi) then
+    n_spi_tot = 0
+    do i = 1, n_inj
+      n_spi_tot = n_spi_tot + n_spi(i)
+    end do
+
+    if (allocated(pellets)) then
+      deallocate(pellets)
+    end if
+
+    allocate (pellets(n_spi_tot),stat=err_alloc)  !< Dynamically allocate memeries for pellets
+
+    if (err_alloc /= 0) then
+      write(*,*) "Error when trying to dynamically allocate memeries for pellets, exiting."
+      stop
+    else
+      if (JET_MGI .or. ASDEX_MGI) then
+        write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
+        write(*,*) "JET_MGI:", JET_MGI
+        write(*,*) "ASDEX_MGI:", ASDEX_MGI
+        stop
+      else      !< Do one initialization for each injection location
+        n_spi_begin = 1
+        do i = 1, n_inj
+          call init_spi(ns_R(i),ns_Z(i),ns_phi(i),ns_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
+                        spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),n_spi(i),n_spi_begin)
+          n_spi_begin = n_spi_begin + n_spi(i)
+        end do
+      end if
+    end if
+  end if
+
+end if
+
 return
 end subroutine initialise_parameters

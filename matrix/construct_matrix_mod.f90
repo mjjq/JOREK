@@ -5,7 +5,6 @@ implicit none
 
 logical  :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
 
-
 contains
 
   !> subroutine that will construct elementary matrices
@@ -40,16 +39,14 @@ contains
     integer,                          intent(in)     :: n_local_elms
     TYPE (type_node_list),            intent(in)     :: node_list
     
-#ifdef COMPARE_ELEMENT_MATRIX
-    integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
-    integer  :: my_id, rank, ierr
-#endif
-    
     ! -- internal parameters
     integer iv, iv2, inode1, inode2, i, j
     integer vertex(2), direction(2)
 
 #ifdef COMPARE_ELEMENT_MATRIX
+    integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
+    integer  :: my_id, rank, ierr
+
     ! --- Determine ID of each MPI proc
     call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
     my_id = rank
@@ -121,8 +118,6 @@ contains
        
       enddo
     endif
-    
-    
     
     ! --- Compare the two element_matrix routines (error thresholds might need to be adapted!)
 #ifdef COMPARE_ELEMENT_MATRIX
@@ -330,8 +325,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   omp_nthreads = 1
   omp_tid      = 1
 #endif
-  
-  ! --- Loop over local elements
+
+! --- Loop over local elements
   !$omp do schedule(runtime)
   do ife =1, n_local_elms
     
@@ -413,11 +408,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
                       !--- RHS: simple output of vector element
                       if ( (k==1) .and. (l==1) .and. (v2==1) .and. (in==1) ) then
                         
-                        tmp_rhs = RHS(index_ij)
+                        tmp_rhs = thread_struct(omp_tid)%RHS(index_ij)
                         
 #if (JOREK_MODEL == 400)
                           !--- RHS: for model400, add T_e (v1=8) to T_i (v1=6)
-                          if (v1 == 6) tmp_rhs = tmp_rhs + RHS(index_ij_model400_e)
+                          if (v1 == 6) tmp_rhs = tmp_rhs + thread_struct(omp_tid)%RHS(index_ij_model400_e)
 #endif
                         
                         write(388, "( E18.6, 4I4 )" ) tmp_rhs, v1, i, j, im
@@ -426,7 +421,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
 
                       ! --- ELM: simple output of matrix element
-                      tmp_elm   = ELM(index_ij,index_kl)
+                      tmp_elm   = thread_struct(omp_tid)%ELM(index_ij,index_kl)
 
                       ! --- ELM: additional output for comparison with model400, output as v2=8, below v2=6
                       ! --- for model != model400: duplicate of ELM(v1, v2=6)
@@ -437,14 +432,14 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
 #if (JOREK_MODEL == 400)
                         if (v2 == 6 ) then
-                          tmp_elm_v2_8 = ELM(index_ij, index_kl_model400_e)
+                          tmp_elm_v2_8 = thread_struct(omp_tid)%ELM(index_ij, index_kl_model400_e)
                           if (v1 == 6) then
-                            tmp_elm_v2_8 = tmp_elm_v2_8 + ELM(index_ij_model400_e, index_kl_model400_e)
+                            tmp_elm_v2_8 = tmp_elm_v2_8 + thread_struct(omp_tid)%ELM(index_ij_model400_e, index_kl_model400_e)
                           end if
                         end if
                       
                         if (v1 == 6) then
-                          tmp_elm = tmp_elm + ELM(index_ij_model400_e, index_kl)
+                          tmp_elm = tmp_elm + thread_struct(omp_tid)%ELM(index_ij_model400_e, index_kl)
                         end if
 #endif
 
@@ -592,9 +587,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
 
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_glob,nz_glob)
- 
+
   ! --- Form a global rhs from the rhss of the individual mpi threads.
   call MPI_Reduce(RHS_loc,RHS_glob,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+
   call tr_deallocatep(RHS_loc,"RHS_loc",CAT_DMATRIX)
 
   ! --- For debugging purpose

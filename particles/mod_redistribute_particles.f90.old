@@ -150,10 +150,10 @@ subroutine resize_particle_array(particles, n)
     type is particle_kinetic_leapfrog
       do i=1,n_cp; p2(i) = p1(i); end do
     end select type
-  type is (particle_kinetic_relativistic) !< if the first particle is a relativistic type
-    select type (p2 => particles) !< select a second particle from particles
-    type is (particle_kinetic_relativistic) !< as relativistic particle
-      do i=1,n_cp; p2(i) = p1(i); end do !< copy all fields
+  type is (particle_kinetic_relativistic)
+    select type (p2 => particles)
+    type is (particle_kinetic_relativistic)
+      do i=1,n_cp; p2(i) = p1(i); end do
     end select type
   class default
     write(*,*) "ERROR: unknown type for resize_particle_array"

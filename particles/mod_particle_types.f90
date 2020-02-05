@@ -54,9 +54,10 @@ module mod_particle_types
   !> This particle type is used for computing the full orbit trajectory
   !> of a relativistic particle. Final particle positions and momenta are given at time \(t\) 
   type, extends(particle_base) :: particle_kinetic_relativistic
-    real(kind=8),dimension(3) :: p !< Momentum in Cartesian coordinates (p_x,p_y,p_z) in [AMU*m/s]
+    real(kind=8),dimension(3) :: p !< momentum in cartesian coordinates (p_x,p_y,p_z) in [AMU*m/s]
     integer(kind=1)           :: q !< charge [e]
   end type particle_kinetic_relativistic
+
 contains
   !> Convenience function to obtain q if it exists, or 0 otherwise
   !> Here also because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82064
@@ -150,14 +151,11 @@ contains
   end subroutine copy_particle
 
   ! This method updates a particle RZPHI position
-  ! inputs:
-  !   particle: (particle_base) the particle to be updates
-  !   position: (real8)(3) new particle position in RZPHI
   subroutine update_particle_position(particle,position)
-    ! delcare input/output variables
-    class(particle_base),intent(inout) :: particle
+    ! declare input/output variables
+    class(particle_base),intent(inout) :: particle ! the particle to be updated
     ! declare input variables
-    real(kind=8),dimension(3),intent(in) :: position
+    real(kind=8),dimension(3),intent(in) :: position ! new particle position in RZPHI
     ! copy the new position in particle
     particle%x = position
   end subroutine update_particle_position

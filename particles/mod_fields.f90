@@ -16,7 +16,8 @@ type, abstract :: fields_base
   type(type_element_list), allocatable :: element_list !< Current element list
   logical(kind=1) :: flag_zero_dpsidt=.false. !< if true, P_time(1) = dpsi/dt = 0
   contains
-    procedure(interp_PRZ), deferred       :: interp_PRZ
+    procedure(interp_PRZ),deferred,public   :: interp_PRZ
+    procedure(interp_PRZ_2),deferred,public :: interp_PRZ_e
     procedure :: calc_EBpsiU
     procedure :: set_flag_dpsidt !< set the flag_zero_dpsidt
 end type fields_base
@@ -35,6 +36,27 @@ interface
     real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
     real*8,                   intent(out) :: P_phi(n_v)
   end subroutine interp_PRZ
+  !> interface for interpolation routine returning value, first and second order
+  !> derivatives of a variable (excluded second derivatives of phi).
+  !> Time derivatives are calculated only for variables and their first order
+  !> derivatives on s and t. Values, first and second order derivatives of
+  !> the global coordinates R,Z are also returned.
+  pure subroutine interp_PRZ_2(this,time,i_elm,i_v,n_v,s,t,phi,P,P_s,P_t,P_phi,&
+       P_time,P_ss,P_st,P_tt,P_sphi,P_tphi,P_stime,P_ttime,&
+       R,R_s,R_t,R_ss,R_st,R_tt,Z,Z_s,Z_t,Z_ss,Z_st,Z_tt)
+    import fields_base
+    !> declare input variables
+    class(fields_base), intent(in) :: this
+    real(kind=8),intent(in) :: time,s,t,phi
+    integer,intent(in) :: i_elm,n_v
+    integer,dimension(n_v),intent(in) :: i_v
+    !> declare ourput variables
+    real(kind=8),intent(out) :: R,R_s,R_t,R_ss,R_st,R_tt
+    real(kind=8),intent(out) :: Z,Z_s,Z_t,Z_ss,Z_st,Z_tt
+    real(kind=8),dimension(n_v),intent(out) :: P,P_s,P_t,P_phi,P_time
+    real(kind=8),dimension(n_v),intent(out) :: P_ss,P_st,P_tt,P_sphi,P_tphi
+    real(kind=8),dimension(n_v),intent(out) :: P_stime,P_ttime
+  end subroutine interp_PRZ_2
 end interface
 
 contains
@@ -128,9 +150,21 @@ pure subroutine calc_EBNormBGradBCurlbDbdt(fields,time,i_elm,st,phi,E,b,&
   real(kind=8),intent(out) :: normB
   real(kind=8),dimension(3),intent(out) :: E,b,gradB,curlb,dbdt
   !> declare parameters
-  real(kind=8),parameter :: t_norm=sqrt(mu_zero*mass_proton*central_mass*central_density*1.d20)
+  !> declare internal variables
+  real(kind=8) :: t_norm
+
+  !> compute normalisation time
+  t_norm = sqrt(mu_zero*mass_proton*central_mass*central_density*1.d20)
+
+  !> TODO write proper equations for fields
+  normB = 0.d0
+  E = [0.d0,0.d0,0.d0]
+  b = [0.d0,0.d0,0.d0]
+  gradB = [0.d0,0.d0,0.d0]
+  curlb = [0.d0,0.d0,0.d0]
+  dbdt  = [0.d0,0.d0,0.d0]
   
-end subroutine calc_EBGradBNormBCurlbDbdt
+end subroutine calc_EBNormBGradBCurlbDbdt
 
 !> This procedure set a flag for setting to zero the poloidal
 !> magneticflux time derivative

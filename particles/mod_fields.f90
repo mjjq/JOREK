@@ -79,21 +79,22 @@ real*8, intent(out) :: u !< velocity stream function in m/s
 
 ! Internal parameters
 integer, parameter :: i_var(2) = [1,2]
-real*8             :: P(2), P_s(2), P_t(2), P_phi(2), P_time(2) ! Placeholder for evaluating variables and derivatives locally
+real*8             :: P(2), P_s(2), P_t(2), P_phi(2), P_R(2), P_Z(2), P_time(2)
 ! Values
 real*8             :: R, R_s, R_t, Z, Z_s, Z_t
 ! Others
-real*8             :: R_inv,t_norm
+real*8             :: R_inv, t_norm
 
 t_norm  = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
 ! Interpolate the fields to get psi and U at the current position (and the
 ! changes u_n - u(n-1))
 call fields%interp_PRZ(time, i_elm, i_var, 2, st(1), st(2), phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
+
 R_inv = 1.d0/R
 
-! calculate the derivatives to R and Z
-call transform_derivatives_st_to_RZ(P_s,P_t,2,P_s,P_t,R_s,R_t,Z_s,Z_t)
+! Calculate the derivatives wrt. R and Z
+call transform_derivatives_st_to_RZ(P_R,P_Z,2,P_s,P_t,R_s,R_t,Z_s,Z_t)
 
 ! Update psi and U
 psi = P(1)
@@ -103,10 +104,10 @@ U   = P(2)/t_norm
 if(fields%flag_zero_dpsidt) P_time(1) = 0.d0
 
 ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
-B     = [P_t(1), -P_s(1), F0] * R_inv
+B     = [P_Z(1), -P_R(1), F0] * R_inv
 ! The local electric field, obtained from E=-Grad (u F0)-\partial_t A
 ! See http://jorek.eu/wiki/doku.php?id=u_phi
-E     = -F0*[P_s(2),P_t(2),P_phi(2)*R_inv]/t_norm
+E     = -F0 * [P_R(2), P_Z(2), P_phi(2)*R_inv] / t_norm
 E(3)  = E(3) - R_inv*P_time(1) ! because this is not normalized with t_norm
 
 end subroutine calc_EBpsiU

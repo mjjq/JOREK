@@ -8,7 +8,6 @@ private
 !> public procedures
 public get_orthonormals
 public left_handed_cross_product, right_handed_cross_product
-public vector_transform_RZPHI_to_XYZ,vector_transform_XYZ_to_RZPHI
 public cayley_transform,approximated_cayley_transform
 contains
 
@@ -58,48 +57,6 @@ pure function right_handed_cross_product(a, b)
   right_handed_cross_product(2) = a(3) * b(1) - a(1) * b(3)
   right_handed_cross_product(3) = a(1) * b(2) - a(2) * b(1)
 end function right_handed_cross_product
-
-!---------------------------------------------------------------------------
-
-!> This function rotates a vector from a \{R,Z,\phi\} basis to a \{X,Y,Z\} one.
-!> Note: \phi increases clockwise when looking from the top.
-pure function vector_transform_RZPHI_to_XYZ(phi,a) result(b)
-  ! declare input variables
-  real(kind=8), intent(in) :: phi
-  real(kind=8), dimension(3), intent(in) :: a !> vector in \{R,Z,\phi\} basis
-  ! declare output variables
-  real(kind=8), dimension(3) :: b !> vector in \{X,Y,Z\} basis
-  ! declare internal variables
-  real(kind=8),dimension(2) :: sincosphi
-
-  ! computing sine and cosine
-  sincosphi = (/sin(phi),cos(phi)/)
-
-  b(1) = a(1)*sincosphi(2) - a(3)*sincosphi(1) 
-  b(2) = -1.d0*(a(1)*sincosphi(1) + a(3)*sincosphi(2))
-  b(3) = a(2)
-end function vector_transform_RZPHI_to_XYZ
-
-!---------------------------------------------------------------------------
-
-!> This function rotates a vector from a \{X,Y,Z\} basis to a \{R,Z,\phi\} one.
-!> Note: \phi increases clockwise when looking from the top.
-pure function vector_transform_XYZ_to_RZPHI(phi,a) result(b)
-  ! declare input variables
-  real(kind=8), intent(in) :: phi
-  real(kind=8), dimension(3), intent(in) :: a !> vector in \{X,Y,Z\} basis
-  ! declare output variables
-  real(kind=8), dimension(3) :: b !> vector in \{R,Z,\phi\} basis
-  ! declare internal variables
-  real(kind=8),dimension(2) :: sincosphi
-
-  ! computing sine and cosine
-  sincosphi = (/sin(phi),cos(phi)/)
-
-  b(1) = a(1)*sincosphi(2) - a(2)*sincosphi(1) 
-  b(2) = a(3)
-  b(3) = -1.d0*(a(1)*sincosphi(1) + a(2)*sincosphi(2))
-end function vector_transform_XYZ_to_RZPHI
 
 !---------------------------------------------------------------------------
 

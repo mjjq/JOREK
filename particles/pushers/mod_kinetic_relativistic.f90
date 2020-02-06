@@ -87,7 +87,6 @@ end subroutine volume_preserving_second_half_step_jorek
 subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail)
   ! load functions
   use mod_coordinate_transforms
-  use mod_pusher_tools, only: vector_transform_RZPHI_to_XYZ
   use mod_fields
   use mod_find_rz_nearby
   ! declare input/output variables
@@ -125,8 +124,8 @@ subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail
   call fields%calc_EBpsiU(time+5.d-1*timestep,particle%i_elm,&
        particle%st,particle%x(3),E,B,psi,U)
   ! get B and E fields in cartesian coordinates
-  B = vector_transform_RZPHI_to_XYZ(particle%x(3),B)
-  E = vector_transform_RZPHI_to_XYZ(particle%x(3),E)
+  B = vector_cylindrical_to_cartesian(particle%x(3),B)
+  E = vector_cylindrical_to_cartesian(particle%x(3),E)
   ! compute the second half-step  
   call volume_preserving_second_half_step_jorek(particle,half_position(1:3),&
        scaling_factor,E,B,mass,timestep)
@@ -196,7 +195,7 @@ end subroutine volume_preserving_push_cartesian
 !> in guiding center position, energy in [eV] and magnetic moment in [eV/T]
 function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out)
   use data_structure
-  use mod_pusher_tools, only: vector_transform_RZPHI_to_XYZ
+  use mod_coordinate_transforms
   ! declare input variables
   type(type_node_list),intent(in) :: node_list
   type(type_element_list),intent(in) :: element_list
@@ -216,7 +215,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
 
   ! compute magnetic field intensity and direction
   B_norm = norm2(B) !< intensity
-  B_hat_cart = vector_transform_RZPHI_to_XYZ(in%x(3),B)/B_norm  !< direction
+  B_hat_cart = vector_cylindrical_to_cartesian(in%x(3),B)/B_norm  !< direction
   ! compute the parallel momentum
   p_par = dot_product(in%p,B_hat_cart)
 
@@ -242,7 +241,8 @@ end function relativistic_kinetic_to_gc
 !> and [eV/T] for the magnetic moment.
 function gc_to_relativistic_kinetic(node_list,element_list,in,chi,B,mass) result(out)
   use data_structure
-  use mod_pusher_tools, only: vector_transform_RZPHI_to_XYZ,get_orthonormals
+  use mod_pusher_tools, only: get_orthonormals
+  use mod_coordinate_transforms
   ! declare input variables
   type(type_node_list),intent(in) :: node_list
   type(type_element_list),intent(in) :: element_list
@@ -266,9 +266,9 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,chi,B,mass) result
   ! compute a B-field-aligned orthonormal vector basis
   call get_orthonormals(B_hat_cart,e1_cart,e2_cart)
   ! rotate the basis to a XYZ reference
-  B_hat_cart = vector_transform_RZPHI_to_XYZ(in%x(3),B_hat_cart)
-  e1_cart = vector_transform_RZPHI_to_XYZ(in%x(3),e1_cart)
-  e2_cart = vector_transform_RZPHI_to_XYZ(in%x(3),e2_cart)
+  B_hat_cart = vector_cylindrical_to_cartesian(in%x(3),B_hat_cart)
+  e1_cart = vector_cylindrical_to_cartesian(in%x(3),e1_cart)
+  e2_cart = vector_cylindrical_to_cartesian(in%x(3),e2_cart)
 
   ! compute the perpendicular momentum *squared* in (AMU*m/s)^2
   p_perp = (EL_CHG*2.d0*mass*B_norm*sign(in%mu,1.d0))/ATOMIC_MASS_UNIT

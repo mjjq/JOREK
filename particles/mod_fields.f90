@@ -65,7 +65,7 @@ contains
 pure subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
 use phys_module, only: F0, mode, central_mass, central_density
 use constants, only: mu_zero, mass_proton
-use mod_pusher_tools, only: transform_derivatives_st_to_RZ
+use mod_coordinate_transforms, only: transform_derivatives_st_to_RZ
 ! Routine parameters
 class(fields_base), intent(in) :: fields
 real*8, intent(in)  :: time
@@ -133,8 +133,8 @@ pure subroutine calc_EBNormBGradBCurlbDbdt(fields,time,i_elm,st,phi,E,b,&
   use phys_module, only: F0, mode, central_mass, central_density
   use constants, only: mu_zero,mass_proton
   use mod_pusher_tools, only: right_handed_cross_product 
-  use mod_pusher_tools, only: transform_first_derivatives_st_to_RZ
-  use mod_pusher_tools, only: transform_second_derivatives_st_to_RZ
+  use mod_coordinate_transforms, only: transform_first_derivatives_st_to_RZ
+  use mod_coordinate_transforms, only: transform_second_derivatives_st_to_RZ
   implicit none
 
   !> declare input variables

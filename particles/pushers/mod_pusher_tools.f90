@@ -7,7 +7,6 @@ implicit none
 private
 !> public procedures
 public get_orthonormals
-public left_handed_cross_product, right_handed_cross_product
 public cayley_transform,approximated_cayley_transform
  
 contains
@@ -17,6 +16,9 @@ contains
 !> Get two vectors orthogonal to a given vector.
 !> This is the RZPhi-version, the right-handed version will have different directions but will also work.
 pure subroutine get_orthonormals(b, e1, e2)
+  use mod_math_operators, only: cross_product
+  implicit none
+
   real*8, dimension(3), intent(in)  :: b !< Does not need to be normalized
   real*8, dimension(3), intent(out) :: e1, e2
 
@@ -25,39 +27,15 @@ pure subroutine get_orthonormals(b, e1, e2)
     e1 = [0.d0, 1.d0, 0.d0]
     e2 = [0.d0, 0.d0, 1.d0]
   else
-    e1 = left_handed_cross_product(b, [1.d0, 0.d0, 0.d0])
+    e1 = cross_product(b, [1.d0, 0.d0, 0.d0])
     ! Normalize
     e1 = e1/norm2(e1)
     ! Obtain a second reference vector
-    e2 = left_handed_cross_product(b, e1)
+    e2 = cross_product(b, e1)
     ! Normalize
     e2 = e2/norm2(e2)
   end if
 end subroutine get_orthonormals
-
-!---------------------------------------------------------------------------
-
-!> The cross product in a left-handed coordinate system (e.g. RZPhi)
-pure function left_handed_cross_product(a, b)
-  real*8, dimension(3) :: left_handed_cross_product
-  real*8, dimension(3), intent(in) :: a, b
-
-  left_handed_cross_product(1) = a(2) * b(3) - a(3) * b(2)
-  left_handed_cross_product(2) = a(3) * b(1) - a(1) * b(3)
-  left_handed_cross_product(3) = a(1) * b(2) - a(2) * b(1)
-end function left_handed_cross_product
-
-!---------------------------------------------------------------------------
-
-!> The cross product in a right-handed coordinate system (e.g. XYZ or RPhiZ)
-pure function right_handed_cross_product(a, b)
-  real*8, dimension(3) :: right_handed_cross_product
-  real*8, dimension(3), intent(in) :: a, b
-
-  right_handed_cross_product(1) = a(2) * b(3) - a(3) * b(2)
-  right_handed_cross_product(2) = a(3) * b(1) - a(1) * b(3)
-  right_handed_cross_product(3) = a(1) * b(2) - a(2) * b(1)
-end function right_handed_cross_product
 
 !---------------------------------------------------------------------------
 

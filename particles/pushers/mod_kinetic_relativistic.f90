@@ -351,7 +351,7 @@ end function  gc_to_relativistic_kinetic
 subroutine relativistic_kinetic_position_to_gc(node_list,element_list,&
 x_in,st_in,i_elm_in,p_in,q_in,B_hat_cart,B_norm,x_gc_out,st_gc_out,i_elm_out)
   use data_structure
-  use mod_pusher_tools, only: right_handed_cross_product
+  use mod_math_operators, only: cross_product
   use mod_coordinate_transforms, only: cylindrical_to_cartesian
   use mod_coordinate_transforms, only: cartesian_to_cylindrical
   use mod_find_rz_nearby
@@ -373,7 +373,7 @@ x_in,st_in,i_elm_in,p_in,q_in,B_hat_cart,B_norm,x_gc_out,st_gc_out,i_elm_out)
 
   ! compute the guiding center position in cartesian reference
   x_gc_out = cylindrical_to_cartesian(x_in)+&
-  (ATOMIC_MASS_UNIT*right_handed_cross_product(p_in,B_hat_cart))/&
+  (ATOMIC_MASS_UNIT*cross_product(p_in,B_hat_cart))/&
   (EL_CHG*real(q_in,8)*B_norm)
 
   ! transform back from a cartesian to a cylindrical coordinate system
@@ -406,7 +406,7 @@ end subroutine relativistic_kinetic_position_to_gc
 subroutine gc_position_to_relativistic_particle(node_list,element_list,&
 x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat_cart,B_norm,x_out,st_out,i_elm_out)
   use data_structure
-  use mod_pusher_tools, only: right_handed_cross_product
+  use mod_math_operators, only: cross_product
   use mod_coordinate_transforms, only: cylindrical_to_cartesian
   use mod_coordinate_transforms, only: cartesian_to_cylindrical
   use mod_find_rz_nearby
@@ -428,7 +428,7 @@ x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat_cart,B_norm,x_out,st_out,i_elm_o
 
   ! compute the particle position in cartesian coordinates
   x_out = cylindrical_to_cartesian(x_gc_in)+&
-  (ATOMIC_MASS_UNIT*right_handed_cross_product(B_hat_cart,p_gc_in))/&
+  (ATOMIC_MASS_UNIT*cross_product(B_hat_cart,p_gc_in))/&
   (EL_CHG*real(q_gc_in,8)*B_norm)
 
   ! transform the particle coordinates from cartesian to cylindrical coordinates

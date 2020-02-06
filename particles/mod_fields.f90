@@ -78,23 +78,21 @@ real*8, intent(out) :: psi !< psi in JOREK units
 real*8, intent(out) :: u !< velocity stream function in m/s
 
 ! Internal parameters
-integer, parameter :: i_var(2) = [1,2]
 real*8             :: P(2), P_s(2), P_t(2), P_phi(2), P_R(2), P_Z(2), P_time(2)
-! Values
-real*8             :: R, R_s, R_t, Z, Z_s, Z_t
+real*8             :: RZ(6) !<1:R,2:R_s,3:R_t,4:Z,5:Z_s,6:Z_t
 ! Others
 real*8             :: R_inv, t_norm
 
 t_norm  = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
-! Interpolate the fields to get psi and U at the current position (and the
+! Interpolate the fields to get psi (i_v=1) and U(i_v=2) at the current position (and the
 ! changes u_n - u(n-1))
-call fields%interp_PRZ(time, i_elm, i_var, 2, st(1), st(2), phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
+call fields%interp_PRZ(time, i_elm, [1,2], 2, st(1), st(2), phi, P, P_s, P_t, P_phi, P_time, RZ(1), RZ(2), RZ(3), RZ(4), RZ(5), RZ(6))
 
-R_inv = 1.d0/R
+R_inv = 1.d0/RZ(1)
 
 ! Calculate the derivatives wrt. R and Z
-call transform_derivatives_st_to_RZ(P_R,P_Z,2,P_s,P_t,R_s,R_t,Z_s,Z_t)
+call transform_derivatives_st_to_RZ(P_R,P_Z,2,P_s,P_t,RZ(2),RZ(3),RZ(5),RZ(6))
 
 ! Update psi and U
 psi = P(1)
@@ -132,7 +130,7 @@ pure subroutine calc_EBNormBGradBCurlbDbdt(fields,time,i_elm,st,phi,E,b,&
   !> load modules
   use phys_module, only: F0, mode, central_mass, central_density
   use constants, only: mu_zero,mass_proton
-  use mod_pusher_tools, only: right_handed_cross_product 
+  use mod_math_operators, only: cross_product 
   use mod_coordinate_transforms, only: transform_first_derivatives_st_to_RZ
   use mod_coordinate_transforms, only: transform_second_derivatives_st_to_RZ
   implicit none
@@ -149,62 +147,73 @@ pure subroutine calc_EBNormBGradBCurlbDbdt(fields,time,i_elm,st,phi,E,b,&
   !> declare parameters
   !> declare internal variables
   real(kind=8) :: R_inv,normB_inv
-  real(kind=8) :: R,R_s,R_t,R_ss,R_st,R_tt
-  real(kind=8) :: Z,Z_s,Z_t,Z_ss,Z_st,Z_tt
+  real(kind=8),dimension(2) :: U_RZ !< 1:U_R,2:U_Z
+  !> global coordinates and derivatives: 1:R,2:R_s,3:R_t,4:R_ss,5:R_st,6:R_tt,
+  !> 7:Z,8:Z_s,9:Z_t,10:Z_ss,11:Z_st,12:Z_tt
+  real(kind=8),dimension(12) :: RZ
   real(kind=8),dimension(5) :: U !< stream funciton: [U,U_R,U_Z,U_phi,U_time]
-  !> poloidal flux: psi,psi_R,psi_Z,psi_phi,psi_time,psi_RR,psi_RZ,psi_ZZ,
-  !>   psi_Rphi, psi_Zphi, psi_Rtime,psi_Ztime
+  !> psi derivatives in global coordinates: 1:psi_R,2:psi_Z,3:psi_RR,
+  !> 4:psi_RZ,5:psi_ZZ,6:psi_Rphi,7:psi_Zphi,8:psi_Rtime,9:psi_Ztime
+  real(kind=8),dimension(9) :: psi_RZ
+  !> poloidal flux: psi,psi_s,psi_t,psi_phi,psi_time,psi_ss,psi_st,psi_tt,
+  !>   psi_sphi, psi_tphi, psi_stime,psi_ttime
   real(kind=8),dimension(12) :: psi 
 
   !> interpolate the stream function
   call fields%interp_PRZ(time,i_elm,[2],1,st(1),st(2),phi,U(1),U(2),U(3),&
-       U(4),U(5),R,R_s,R_t,Z,Z_s,Z_t)
+       U(4),U(5),RZ(1),RZ(2),RZ(3),RZ(7),RZ(8),RZ(9))
   !> normalise the electric field in SI units
   U = F0*U/sqrt(mu_zero*mass_proton*central_mass*central_density*1.d20)
   !> transform first U derivatives from st to RZ
-  call transform_first_derivatives_st_to_RZ(U(2),U(3),1,[U(2)],[U(3)],R_s,R_t,Z_s,Z_t)
+  call transform_first_derivatives_st_to_RZ(U_RZ(1),U_RZ(2),1,U(2),U(3),&
+       RZ(2),RZ(3),RZ(8),RZ(9))
   
   !> interpolate the poloidal flux
   call fields%interp_PRZ_2(time,i_elm,[1],1,st(1),st(2),phi,psi(1),psi(2),&
        psi(3),psi(4),psi(5),psi(6),psi(7),psi(8),psi(9),psi(10),psi(11),&
-       psi(12),R,R_s,R_t,R_ss,R_st,R_tt,Z,Z_s,Z_t,Z_ss,Z_st,Z_tt)
+       psi(12),RZ(1),RZ(2),RZ(3),RZ(4),RZ(5),RZ(6),RZ(7),RZ(8),RZ(9),&
+       RZ(10),RZ(11),RZ(12))
   !> set dpsidt to zero if needed
   if(fields%flag_zero_dpsidt) then
      psi(5)  = 0.d0 !< psi_time
      psi(11) = 0.d0 !< psi_stime
      psi(12) = 0.d0 !< psi_ttime
   endif
-  R_inv = 1.d0/R !< compute the inverse of R
-  !> transform first order psi derivatives from st to RZ
-  call transform_first_derivatives_st_to_RZ(psi(2),psi(3),1,psi(2),psi(3),R_s,R_t,Z_s,Z_t)
-  call transform_first_derivatives_st_to_RZ(psi(9),psi(10),1,psi(9),psi(10),R_s,R_t,Z_s,Z_t)
-  call transform_first_derivatives_st_to_RZ(psi(11),psi(12),1,psi(11),psi(12),R_s,R_t,Z_s,Z_t)
-  !> transform second order psi derivatives from st to RZ
-  call transform_second_derivatives_st_to_RZ(psi(6),psi(7),psi(8),1,psi(6),psi(7),psi(8),&
-       psi(2),psi(3),R_s,R_t,R_ss,R_st,R_tt,Z_s,Z_t,Z_ss,Z_st,Z_tt)
+  R_inv = 1.d0/RZ(1) !< compute the inverse of R
+  !> transform first and second order psi derivatives from st to RZ
+  call transform_first_derivatives_st_to_RZ(psi_RZ(1),psi_RZ(2),1,psi(2),psi(3),&
+       RZ(2),RZ(3),RZ(8),RZ(9))
+  call transform_second_derivatives_st_to_RZ(psi_RZ(3),psi_RZ(4),psi_RZ(5),1,&
+       psi(6),psi(7),psi(8),psi_RZ(1),psi_RZ(2),RZ(2),RZ(3),RZ(4),RZ(5),RZ(6),&
+       RZ(8),RZ(9),RZ(10),RZ(11),RZ(12))
+  call transform_first_derivatives_st_to_RZ(psi_RZ(6),psi_RZ(17),1,psi(9),psi(10),&
+       RZ(2),RZ(3),RZ(8),RZ(9))
+  call transform_first_derivatives_st_to_RZ(psi_RZ(8),psi_RZ(9),1,psi(11),psi(12),&
+       RZ(2),RZ(3),RZ(8),RZ(9))
   
   !> compute the electric field
-  E = -[U(2),U(3),R_inv*(U(4)+psi(5))] !< V/m
+  E = -[U_RZ(1),U_RZ(2),R_inv*(U(4)+psi(5))] !< V/m
   !> compute the magnetic field
-  b = [psi(3),-psi(2),F0]*R_inv !< magnetic field T
+  b = [psi_RZ(2),-psi_RZ(1),F0]*R_inv !< magnetic field T
   normB = sqrt(b(1)*b(1)+b(2)*b(2)+b(3)*b(3)) !< B field intensity
   normB_inv = 1.d0/normB !< inverse of the B field intensity
   !< direction of the magnetic field
   b = b/normB
 
-  !> compute the dbdt field
-  dbdt = ((b(2)*psi(11)-b(1)*psi(12))*b +&
-       [psi(12),-psi(11),0.d0])*normb_inv*R_inv
-
   !> compute the gradB field
-  gradB = [psi(2)*psi(6)+psi(3)*psi(7),&
-       psi(2)*psi(7)+psi(3)*psi(8),&
-       R_inv*(psi(2)*psi(9)+psi(3)*psi(10))]*R_inv*R_inv*normB_inv
+  gradB = [psi_RZ(1)*psi_RZ(3)+psi_RZ(2)*psi_RZ(4),&
+       psi_RZ(1)*psi_RZ(4)+psi_RZ(2)*psi_RZ(5),&
+       R_inv*(psi_RZ(1)*psi_RZ(6)+psi_RZ(2)*psi_RZ(7))]*R_inv*R_inv*normB_inv
   gradB(1) = gradB(1)-normB*R_inv
   
   !> TODO compute the curlb field
-  curlb = normB_inv*(right_handed_cross_product(b,gradB) + &
-       R_inv*[R_inv*psi(9),R_inv*psi(10),R_inv*psi(2)-psi(6)-psi(8)])
+  curlb = normB_inv*(cross_product(b,gradB) + &
+       R_inv*[R_inv*psi_RZ(6),R_inv*psi_RZ(7),&
+       R_inv*psi_RZ(1)-psi_RZ(3)-psi_RZ(5)])
+
+  !> compute the dbdt field
+  dbdt = ((b(2)*psi_RZ(8)-b(1)*psi_RZ(9))*b + &
+       [psi_RZ(9),-psi_RZ(8),0.d0])*normB_inv*R_inv
   
 end subroutine calc_EBNormBGradBCurlbDbdt
 

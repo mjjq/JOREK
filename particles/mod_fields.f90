@@ -92,7 +92,7 @@ B     = [+psi_Z, -psi_R, F0] * R_inv
 ! The local electric field, obtained from E=-Grad (u F0)-\partial_t A
 ! See http://jorek.eu/wiki/doku.php?id=u_phi
 E     = [-F0*U_R, -F0*U_Z, -F0*U_phi*R_inv]/t_norm
-E(3)  = E(3) - R*P_time(1) ! because this is not normalized with t_norm
+E(3)  = E(3) - R_inv*P_time(1) ! because this is not normalized with t_norm
 end subroutine calc_EBpsiU
 
 ! This subroutine sets a flag to force dpsi/dt to 0

@@ -10,7 +10,6 @@ public get_orthonormals
 public left_handed_cross_product, right_handed_cross_product
 public vector_transform_RZPHI_to_XYZ,vector_transform_XYZ_to_RZPHI
 public cayley_transform,approximated_cayley_transform
-public coordinate_transform_RZPHI_to_XYZ, coordinate_transform_XYZ_to_RZPHI
 contains
 
 !---------------------------------------------------------------------------
@@ -59,38 +58,6 @@ pure function right_handed_cross_product(a, b)
   right_handed_cross_product(2) = a(3) * b(1) - a(1) * b(3)
   right_handed_cross_product(3) = a(1) * b(2) - a(2) * b(1)
 end function right_handed_cross_product
-
-!---------------------------------------------------------------------------
-
-!> This function computes the cartesian coordinates \{X,Y,Z\} 
-!> from cylindrical ones \{R,Z,\phi\}.
-!> Note: \phi increases clockwise when looking from the top.
-pure function coordinate_transform_RZPHI_to_XYZ(a) result(b)
-  ! declare input variables
-  real(kind=8),dimension(3),intent(in) :: a !> \{R,Z,\phi\} coordinates
-  ! declare output variables
-  real(kind=8),dimension(3) :: b !> \{X,Y,Z} coordinates
-
-  b(1) = a(1)*cos(a(3))
-  b(2) = -1.d0*a(1)*sin(a(3))
-  b(3) = a(2)
-end function coordinate_transform_RZPHI_to_XYZ
-
-!---------------------------------------------------------------------------
-
-!> This function computes the cylindrical coordinates \{R,Z,\phi\} 
-!> from cartesian ones \{X,Y,Z}.
-!> Note: \phi increases clockwise when looking from the top.
-pure function coordinate_transform_XYZ_to_RZPHI(a) result(b)
-  ! declare input variables
-  real(kind=8),dimension(3),intent(in) :: a !> \{X,Y,Z} coordinates
-  ! declare output variables
-  real(kind=8),dimension(3) :: b !> \{R,Z,\phi\} coordinates
-
-  b(1) = sqrt(a(1)*a(1)+a(2)*a(2))
-  b(2) = a(3)
-  b(3) = atan2(-a(2),a(1))
-end function coordinate_transform_XYZ_to_RZPHI
 
 !---------------------------------------------------------------------------
 

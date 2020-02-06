@@ -86,8 +86,7 @@ end subroutine volume_preserving_second_half_step_jorek
 !> fields using the Volume Preserving Algorithm (VPA)
 subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail)
   ! load functions
-  use mod_pusher_tools, only: coordinate_transform_XYZ_to_RZPHI
-  use mod_pusher_tools, only: coordinate_transform_RZPHI_to_XYZ
+  use mod_coordinate_transforms
   use mod_pusher_tools, only: vector_transform_RZPHI_to_XYZ
   use mod_fields
   use mod_find_rz_nearby
@@ -107,12 +106,12 @@ subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail
   ! check if the particle is valid
   if(particle%i_elm.eq.0) return
   ! transform the particle position from cylindrical to cartesian coordinates
-  half_position(1:3) = coordinate_transform_RZPHI_to_XYZ(particle%x)
+  half_position(1:3) = cylindrical_to_cartesian(particle%x)
   ! compute first half-step
   call volume_preserving_first_half_step_jorek(particle,half_position(1:3),&
        mass,timestep,scaling_factor)
   ! calculate cylindrical coordinates from cartesian ones
-  half_position(4:6) = coordinate_transform_XYZ_to_RZPHI(half_position(1:3))
+  half_position(4:6) = cartesian_to_cylindrical(half_position(1:3))
   ! find the (i_elm,s,t) coordinates
   call find_RZ_nearby(fields%node_list,fields%element_list,particle%x(1),&
        particle%x(2),particle%st(1),particle%st(2),particle%i_elm,&
@@ -132,7 +131,7 @@ subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail
   call volume_preserving_second_half_step_jorek(particle,half_position(1:3),&
        scaling_factor,E,B,mass,timestep)
   ! calculate cylindrical coordinates from cartesian ones
-  half_position(4:6) = coordinate_transform_XYZ_to_RZPHI(half_position(1:3))
+  half_position(4:6) = cartesian_to_cylindrical(half_position(1:3))
   ! find the (i_elm,s,t) coordinates
   call find_RZ_nearby(fields%node_list,fields%element_list,particle%x(1),&
        particle%x(2),particle%st(1),particle%st(2),particle%i_elm,&
@@ -298,8 +297,7 @@ subroutine relativistic_kinetic_position_to_gc(node_list,element_list,&
 x_in,st_in,i_elm_in,p_in,q_in,B_hat_cart,B_norm,x_gc_out,st_gc_out,i_elm_out)
   use data_structure
   use mod_pusher_tools, only: right_handed_cross_product
-  use mod_pusher_tools, only: coordinate_transform_RZPHI_to_XYZ
-  use mod_pusher_tools, only: coordinate_transform_XYZ_to_RZPHI
+  use mod_coordinate_transforms
   use mod_find_rz_nearby
   ! declare input variables
   type(type_node_list),intent(in) :: node_list
@@ -318,12 +316,12 @@ x_in,st_in,i_elm_in,p_in,q_in,B_hat_cart,B_norm,x_gc_out,st_gc_out,i_elm_out)
   integer :: ifail !< ifail kind not defined in find_RZ_nearby
 
   ! compute the guiding center position in XYZ
-  x_gc_out = coordinate_transform_RZPHI_to_XYZ(x_in) +              &
+  x_gc_out = cylindrical_to_cartesian(x_in) +              &
     (ATOMIC_MASS_UNIT*right_handed_cross_product(p_in,B_hat_cart))/ &
     (EL_CHG*real(q_in,8)*B_norm)
 
   ! transform from XYZ to RZPHI
-  x_gc_out = coordinate_transform_XYZ_to_RZPHI(x_gc_out)  
+  x_gc_out = cartesian_to_cylindrical(x_gc_out)  
 
   ! find the local coordinates
   call find_RZ_nearby(node_list,element_list,x_in(1),x_in(2),&
@@ -338,8 +336,7 @@ subroutine gc_position_to_relativistic_particle(node_list,element_list,&
 x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat_cart,B_norm,x_out,st_out,i_elm_out)
   use data_structure
   use mod_pusher_tools, only: right_handed_cross_product
-  use mod_pusher_tools, only: coordinate_transform_RZPHI_to_XYZ
-  use mod_pusher_tools, only: coordinate_transform_XYZ_to_RZPHI
+  use mod_coordinate_transforms
   use mod_find_rz_nearby
   ! declare input variables
   type(type_node_list),intent(in) :: node_list
@@ -358,12 +355,12 @@ x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat_cart,B_norm,x_out,st_out,i_elm_o
   integer :: ifail !< ifail kind not defined in find_RZ_nearby
 
   ! compute the particle position in XYZ
-  x_out = coordinate_transform_RZPHI_to_XYZ(x_gc_in) + &
+  x_out = cylindrical_to_cartesian(x_gc_in) + &
     (ATOMIC_MASS_UNIT*right_handed_cross_product(B_hat_cart,p_gc_in))/ &
     (EL_CHG*real(q_gc_in,8)*B_norm)
 
   ! transform from XYZ to RZPHI
-  x_out = coordinate_transform_XYZ_to_RZPHI(x_out)
+  x_out = cartesian_to_cylindrical(x_out)
 
   ! find the local coordinates
   call find_RZ_nearby(node_list,element_list,x_gc_in(1),x_gc_in(2),&

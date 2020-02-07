@@ -128,7 +128,7 @@ subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail
   ! check if the particle is lost, exit if it is the case
   if(particle%i_elm.eq.0) return
   ! copy RZPHI coordinates in particles
-  call update_particle_position(particle,half_position(4:6))
+  particle%x = half_position(4:6)
   ! compute magnetic and electric field
   call fields%calc_EBpsiU(time+5.d-1*timestep,particle%i_elm,&
        particle%st,particle%x(3),E,B,psi,U)
@@ -146,7 +146,7 @@ subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail
        half_position(4),half_position(5),particle%st(1),particle%st(2),&
        particle%i_elm,ifail)
   ! copy new RZPHI position into particle
-  call update_particle_position(particle,half_position(4:6))
+  particle%x = half_position(4:6)
 
 end subroutine volume_preserving_push_jorek
 

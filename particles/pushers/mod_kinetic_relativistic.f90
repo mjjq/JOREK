@@ -250,7 +250,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,B,mass) result(out
   sqrt((mass*SPEED_OF_LIGHT)*(mass*SPEED_OF_LIGHT)+dot_product(in%p,in%p))/EL_CHG
   ! compute the magnetic moment p_perp^2/(2*B) in [eV/T]
   ! the sign is given by the particle parallel momentum 
-  out%mu = sign((ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*dot_product(in%p-p_par*B_hat_cart,&
+  out%mu = sign((ATOMIC_MASS_UNIT*dot_product(in%p-p_par*B_hat_cart,&
   in%p-p_par*B_hat_cart))/(2.d0*B_norm*mass*EL_CHG),p_par)
 
   ! check whether the particle is not a field line
@@ -309,7 +309,7 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,chi,B,mass) result
   e2_cart = vector_cylindrical_to_cartesian(in%x(3),e2_cart)
 
   ! compute the perpendicular momentum squared in (AMU*m/s)^2
-  p_perp = (EL_CHG*2.d0*mass*B_norm*sign(in%mu,1.d0))/ATOMIC_MASS_UNIT
+  p_perp = (EL_CHG*2.d0*mass*B_norm*abs(in%mu))/ATOMIC_MASS_UNIT
   ! compute the parallel momentum in (AMU*m/s)
   p_par = sign(sqrt((((in%E*EL_CHG)*(in%E*EL_CHG))/&
   ((ATOMIC_MASS_UNIT*SPEED_OF_LIGHT)*(ATOMIC_MASS_UNIT*SPEED_OF_LIGHT)))-&

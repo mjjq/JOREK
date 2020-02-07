@@ -537,6 +537,11 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
 
+  if (jorek_model .eq. 710) then
+    write(*,LOGI_FMT) 'parallel_projection ', parallel_projection
+    write(*,LOGI_FMT) 'Mach1_openBC        ', Mach1_openBC
+  endif
+
   if (use_mumps) then
     write(*,INTG_FMT) 'mumps_ordering        ', mumps_ordering
   endif

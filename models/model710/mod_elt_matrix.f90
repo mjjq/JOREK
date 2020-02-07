@@ -1,8 +1,79 @@
+! This module contains nothing (just a wrapper) but it is needed by construct_matrix for the other models.
+! Can be removed once the other models have also combined element_matrix and element_matrix_fft.
 module mod_elt_matrix
+contains
+
+  subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
+  !--------------------------------------------------------------------------
+  ! This is just a wrapper to the real routine since I combined both into one
+  !--------------------------------------------------------------------------
+
+    use data_structure
+    use mod_elt_matrix_fft
+
+    implicit none
+
+    type (type_element) 	      :: element
+    type (type_node)		      :: nodes(n_vertex_max)
+
+    integer    :: xcase2
+    logical    :: xpoint2
+    real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
+    real*8, dimension (:,:), allocatable  :: ELM
+    real*8, dimension (:)  , allocatable  :: RHS
+    integer, intent(in) 	      :: tid
+
+    call element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
+      thread_struct(tid)%ELM_p, thread_struct(tid)%ELM_n, thread_struct(tid)%ELM_k, thread_struct(tid)%ELM_kn, &
+      thread_struct(tid)%RHS_p, thread_struct(tid)%RHS_k,  thread_struct(tid)%eq_g, thread_struct(tid)%eq_s, &
+      thread_struct(tid)%eq_t, thread_struct(tid)%eq_p, thread_struct(tid)%eq_ss, thread_struct(tid)%eq_st, &
+      thread_struct(tid)%eq_tt, thread_struct(tid)%delta_g, thread_struct(tid)%delta_s, thread_struct(tid)%delta_t)
+
+    return
+
+  end subroutine element_matrix
+
+end module mod_elt_matrix
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+! --- Stan Pamela Feb-2020
+! This is the old routine.
+! The combined mod_elt_matrix has everything.
+! It is only here for backwards compatibility.
+! Note, there are a few minor corrections compare to the actual old routine, eg.
+! - consistency of parallel_projection if-statements (including for VMS)
+! - corrected the sign for half of the convection term rho*(VGradV) in VZ equation
+! (hopefully that will help ;)
+
+
+module mod_elt_matrix_old
   implicit none
 contains
 
-subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
+subroutine element_matrix_old(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
 
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
@@ -30,7 +101,6 @@ use gauss
 use basis_at_gaussian
 use phys_module
 use diffusivities, only: get_dperp, get_zkperp, get_dzkperp
-use equil_info, only : get_psi_n
 
 implicit none
 
@@ -83,7 +153,7 @@ real*8     :: u0grad_uR0, u0grad_uZ0, u0grad_up0
 
 real*8     :: divu, divu_uR, divu_uZ, divu_up, divru, divru_uR, divru_uZ, divru_up, divru_r
 
-real*8     :: ZK_prof, D_prof, psi_norm, theta, zeta, tht
+real*8     :: ZK_prof, D_prof, psi_norm, theta, zeta, tht, factor
 
 real*8     :: Fprof, psieq_R, psieq_Z
 
@@ -107,7 +177,7 @@ real*8     :: QviscT0, Qvisc_T ,  Qvisc_T_uR,  Qvisc_T_uZ,  Qvisc_T_up,  Qvisc_T
 
 
 
-logical    :: xpoint2, viscores_heating, primitive, parallel_projection, offset_current, offset_current2
+logical    :: xpoint2, viscores_heating, primitive, offset_current, offset_current2
 
 real*8, dimension(3          )        :: Vpar, Vperp
 real*8, dimension(n_var      )        :: rhs_ij, Pvec_prev, Qvec, Vms, TG_NUM=0.0
@@ -140,6 +210,19 @@ real*8, dimension(n_var,n_var)        :: QvmsAd, QvmsF
 integer :: VmsType=0, ViscType=0
 
 logical test, test2
+
+REAL*8 :: Coef_DivA 
+real*8 :: visco2
+
+
+! --- Controls
+visco2    = 0.d-0 ! viscosity to force div(V)=0
+Coef_DivA = 0.d-0 ! viscosity to force div(A)=0
+CoefAdv   = 0.d-0 ! VMS parameter
+
+
+
+
 
 test = .false.
 test2 = .false.
@@ -442,7 +525,20 @@ do ms=1, n_gauss
      p0_t  = r0_t * T0 + r0 * T0_t
      p0_p  = r0_p * T0 + r0 * T0_p
 
-     psi_norm = get_psi_n(A30, y_g(ms,mt))
+     psi_norm = (A30 - psi_axis) / (psi_bnd - psi_axis)
+
+     factor = 1.d0
+
+     if (xpoint2) then
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
+         psi_norm = 2.d0 - psi_norm
+         factor = -1.d0
+       endif
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
+         psi_norm = 2.d0 - psi_norm
+         factor = -1.d0
+       endif
+     endif
 
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
@@ -644,7 +740,7 @@ do ms=1, n_gauss
            DivePMVi        = v_p / BigR
 
            Qconv_uR        = - v * ( r0  * ( u0grad_uR0 - up0**2 / BigR ) + uR0 * divru  )
-           Qconv_uZ        = - v * ( r0  * u0grad_uZ0 - uZ0 * divru  ) 
+           Qconv_uZ        = - v * ( r0  * u0grad_uZ0 + uZ0 * divru  ) 
            Qconv_up        = - v * ( r0  * ( u0grad_up0 + uR0 * up0 / BigR ) + up0 * divru  )
            
            JxB_uR          = -  BR0 * B0grad_vstar -  Bp0**2 * v / BigR  &
@@ -810,15 +906,6 @@ do ms=1, n_gauss
 !###################################################################################################
 !#  equation 6 (Phi component momentum equation)                                                   #
 !###################################################################################################
-
-
-            Pvec_prev(var_up) =   v * r0 * delta_g(mp,var_up,ms,mt) &
-                 &              + v * delta_g(mp,var_r,ms,mt) * up0
-            
-            Qvec(var_up)      = Qconv_up +  ( v_p/ BigR ) * ( p0) + JxB_up + visco_T * Qvisc_up &
-            !Qvec(var_up)      = Qconv_up -  v * ( p0_p/BigR) + JxB_up + visco_T * Qvisc_up &
-                 &             - viscoB * divu * v_p/ BigR 
-
              ! adding the stabilization contribution
              ! --------------------------------------------------------------------------------------
              
@@ -829,7 +916,20 @@ do ms=1, n_gauss
              
              Vms(var_up)      = r0 * ( CvGradup0 * CvGradVi  + VbGradup0 * VbGradVi )
              
-             
+ 
+            if (.not. parallel_projection) then
+
+            Pvec_prev(var_up) =   v * r0 * delta_g(mp,var_up,ms,mt) &
+                 &              + v * delta_g(mp,var_r,ms,mt) * up0
+            
+            Qvec(var_up)      = Qconv_up +  ( v_p/ BigR ) * ( p0) + JxB_up + visco_T * Qvisc_up &
+            !Qvec(var_up)      = Qconv_up -  v * ( p0_p/BigR) + JxB_up + visco_T * Qvisc_up &
+                 &             - viscoB * divu * v_p/ BigR 
+
+              Qvec(var_Up) = Qvec(var_Up) - TG_NUM_Eq*TG_NUM(var_Up) * CoefAdv * VMS(var_Up)
+
+            else ! parallel_projection
+
              Pvec_prev(var_up) = + v * r0 * BR0 * delta_g(mp,var_uR,ms,mt) &
                   &              + v * r0 * BZ0 * delta_g(mp,var_uZ,ms,mt) &
                   &              + v * r0 * BP0 * delta_g(mp,var_up,ms,mt) &
@@ -843,6 +943,7 @@ do ms=1, n_gauss
             
             Qvec(var_up)      =  Qvec(var_up)  - TG_NUM_Eq * TG_NUM(var_up) * CoefAdv * ( &
                  &               BR0*Vms(var_uR) + BZ0*Vms(var_uZ) + Bp0*Vms(var_up) )
+              endif
 
 
               
@@ -1419,6 +1520,42 @@ do ms=1, n_gauss
 !###################################################################################################
 !#  equation 6   (Phi component momentum equation)                                                 #
 !###################################################################################################
+                   ! Stabilization 
+                   ! -----------------------------------------------------------------------------
+                   SELECT CASE(VmsType)
+                      
+                   CASE(10)
+                      QvmsAd(var_up,var_r ) = 0.0  ! to be completed  !$BNK
+                      
+                      QvmsAd(var_up,var_uR) =  -  ( r0 * CvGradVj + CvGradr0 * uR ) *   Cvp0 * v / BigR              &
+                           &                   +  ( r0 * Cvp0 * uR / BigR         ) * ( CvGradVi + CvR0 * v /BigR )  &
+                           &                   -  ( r0 * VbGradVj + VbGradr0 * uR ) *   Vbp0 * v / BigR              &
+                           &                   +  ( r0 * Vbp0 * uR / BigR         ) * ( VbGradVi + VbR0 * v /BigR )  
+                      
+                      QvmsAd(var_up,var_up) =  - ( - r0 * Cvp0 * up / BigR        ) *   Cvp0 * v / BigR              &
+                           &                   + ( r0 * CvGradVj + up * CvGradr0  ) * ( CvGradVi + CvR0 * v /BigR )  &
+                           &                   - ( - r0 * Vbp0 * up / BigR        ) *   Vbp0 * v / BigR              &
+                           &                   + ( r0 * VbGradVj + up * VbGradr0  ) * ( VbGradVi + VbR0 * v /BigR )
+                      
+                      ! acoustic  waves
+                      ! ------------------------------
+                      QvmsF(var_up,var_r  )  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DivePMVi
+                      
+                      QvmsF(var_up,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj + uR * r0_R        ) * DivePMVi
+                      QvmsF(var_up,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj + uZ * r0_Z        ) * DivePMVi
+                      QvmsF(var_up,var_up )  =  VmsCoefF * ( r0 * DivePMVj + up * r0_p/BigR   ) * DivePMVi
+                      
+                   CASE DEFAULT
+                      ! acoustic  waves, stationnary  density
+                      ! --------------------------------------
+                      QvmsF(var_up,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj   ) * DivePMVi
+                      QvmsF(var_up,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj   ) * DivePMVi
+                      QvmsF(var_up,var_up )  =  VmsCoefF * ( r0 * DivePMVj   ) * DivePMVi
+                      
+                   END SELECT
+
+                 if (.not. parallel_projection) then
+
                  Pjac(var_up,var_up)      =   v * r0 * up
                  Pjac(var_up,var_r)       =   v * r  * up0
 
@@ -1448,43 +1585,16 @@ do ms=1, n_gauss
                       &                 + dvisco_dT * T * Qvisc_up &
                       &                 - dviscoB_dT * T * divu * v_p/ BigR
 
-                   ! Stabilization
-                   ! -----------------------------------------------------------------------------
                    SELECT CASE(VmsType)
                       
                    CASE(10)
-                      QvmsAd(var_up,var_r ) = 0.0  ! to be completed  !$BNK
-                      
-                      QvmsAd(var_up,var_uR) =  -  ( r0 * CvGradVj + CvGradr0 * uR ) *   Cvp0 * v / BigR              &
-                           &                   +  ( r0 * Cvp0 * uR / BigR         ) * ( CvGradVi + CvR0 * v /BigR )  &
-                           &                   -  ( r0 * VbGradVj + VbGradr0 * uR ) *   Vbp0 * v / BigR              &
-                           &                   +  ( r0 * Vbp0 * uR / BigR         ) * ( VbGradVi + VbR0 * v /BigR )  
-                      
-                      QvmsAd(var_up,var_up) =  - ( - r0 * Cvp0 * up / BigR        ) *   Cvp0 * v / BigR              &
-                           &                   + ( r0 * CvGradVj + up * CvGradr0  ) * ( CvGradVi + CvR0 * v /BigR )  &
-                           &                   - ( - r0 * Vbp0 * up / BigR        ) *   Vbp0 * v / BigR              &
-                           &                   + ( r0 * VbGradVj + up * VbGradr0  ) * ( VbGradVi + VbR0 * v /BigR )
-                      
-                      ! acoustic  waves
-                      ! ------------------------------
-                      QvmsF(var_up,var_r  )  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DivePMVi
-                      
-                      QvmsF(var_up,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj + uR * r0_R        ) * DivePMVi
-                      QvmsF(var_up,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj + uZ * r0_Z        ) * DivePMVi
-                      QvmsF(var_up,var_up )  =  VmsCoefF * ( r0 * DivePMVj + up * r0_p/BigR   ) * DivePMVi
-                      
                       Qjac(var_up, :) = Qjac(var_up, :) - TG_NUM(var_up) * ( CoefAdv * QvmsAd(var_up, :) + QvmsF(var_up, :) )
                       
                    CASE DEFAULT
-                      ! acoustic  waves, stationnary  density
-                      ! --------------------------------------
-                      QvmsF(var_up,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj   ) * DivePMVi
-                      QvmsF(var_up,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj   ) * DivePMVi
-                      QvmsF(var_up,var_up )  =  VmsCoefF * ( r0 * DivePMVj   ) * DivePMVi
-                      
                       Qjac(var_up, :) = Qjac(var_up, :) - TG_NUM(var_up) * QvmsF(var_up, :) 
-
                    END SELECT
+
+                 else ! parallel_projection
 
                  Pjac(var_up,var_uR)      =   v * BR0 * r0 * uR
                  Pjac(var_up,var_uZ)      =   v * BZ0 * r0 * uZ
@@ -1538,10 +1648,21 @@ do ms=1, n_gauss
                       &                + r0 * T * B0grad_vstar                            &
                       &                - dviscoB_dT * T * divu * B0grad_vstar
                  
+                   SELECT CASE(VmsType)
+                      
+                   CASE(10)
+                 Qjac(var_up, :)     = Qjac(var_up, :) - TG_NUM(var_up) *  (              &
+                      &                                         BR0 *( CoefAdv * QvmsAd(var_uR, :) + QvmsF(var_uR, :) ) &        
+                      &                                       + BZ0 *( CoefAdv * QvmsAd(var_uZ, :) + QvmsF(var_uZ, :) ) &        
+                      &                                       + Bp0 *( CoefAdv * QvmsAd(var_up, :) + QvmsF(var_up, :) ) )        
+                      
+                   CASE DEFAULT
                  Qjac(var_up, :)     = Qjac(var_up, :) - TG_NUM(var_up) *  (              &
                       &                                         BR0 *( QvmsF(var_uR, :) ) &        
                       &                                       + BZ0 *( QvmsF(var_uZ, :) ) &        
                       &                                       + Bp0 *( QvmsF(var_up, :) ) )        
+                   END SELECT
+                 endif !parallel_projection
 
                    
 !###################################################################################################
@@ -1693,8 +1814,6 @@ enddo
 CONTAINS
   
   SUBROUTINE Add_RHS_DivA()
-    REAL*8       :: Coef_DivA = 0.0d0 ! 1.0d-08
-    
     DivA         =  Coef_DivA*( AR0_R + AR0 / BigR + AZ0_Z + A30_p / (BigR**2) )
     
     Qvec(var_AR) = Qvec(var_AR) - DivA * ( v_R + v / BigR )
@@ -1704,8 +1823,6 @@ CONTAINS
   END SUBROUTINE Add_RHS_DivA
 
   SUBROUTINE Add_Jac_DivA()
-    REAL*8       :: Coef_DivA = 0.0d0 ! 1.0d-08
-    
     DivA_AR         =  Coef_DivA*( AR_R + AR / BigR )
     DivA_AZ         =  Coef_DivA*( AZ_Z  )
     DivA_A3         =  Coef_DivA*( A3_p / (BigR**2) )
@@ -1724,6 +1841,6 @@ CONTAINS
 
   END SUBROUTINE Add_Jac_DivA
 
-end subroutine element_matrix
+end subroutine element_matrix_old
 
-end module mod_elt_matrix
+end module mod_elt_matrix_old

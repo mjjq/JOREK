@@ -56,7 +56,6 @@
 
  eta   = 1.d-5
  visco = 0.d-6
- visco2= 0.d0
 
  eta_T_dependent = .false.
  visco_T_dependent = .false.

@@ -127,11 +127,11 @@ if (my_id .eq. 0) then
 endif
 
 
+
+
 !---------------------------- initialise perturbations
 amplitude = 1.d-12
 mm = 2
-
-
 
 do in=2,n_tor
 
@@ -167,8 +167,6 @@ do in=2,n_tor
 
   endif
 
-  call Poisson(my_id,1,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               4,2,in, ES%psi_axis,ES%psi_bnd,xpoint2, xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)
 enddo
 
 

@@ -32,7 +32,7 @@ contains
 
     use data_structure
     use global_distributed_matrix
-    use phys_module, only: F0, GAMMA, n_pol, n_tht, Mach1_openBC
+    use phys_module, only: F0, GAMMA, n_pol, n_tht, Mach1_openBC, fix_axis_nodes
     use vacuum, only: is_freebound
     use mpi_mod
     use mod_locate_irn_jcn
@@ -121,7 +121,7 @@ contains
           do k=1, n_var
 
             ! Restrain the coefficients of the 3rd basis functions on axis from changing
-            if ( ( inode <= n_tht .or. ( n_tht < 1 .and. inode <= n_pol ) ) .and. 1==1 ) then
+            if ( ( inode <= n_tht .or. ( n_tht < 1 .and. inode <= n_pol ) ) .and. (fix_axis_nodes) ) then
 
               index_node = node_list%node(inode)%index(3)
               if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then

@@ -23,7 +23,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 restart, regrid, write_ps, time_evol_theta,         &
                 time_evol_zeta, force_horizontal_Xline,             &
                 parallel_projection, Mach1_openBC,                  &
-                n_tor_fft_thresh,                                   &
+                n_tor_fft_thresh, fix_axis_nodes,                   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg,                           &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &

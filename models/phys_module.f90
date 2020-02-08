@@ -52,6 +52,7 @@ module phys_module
   logical :: equil                !< compute equilibrium
   logical :: parallel_projection  !< Full-MHD: use B-projection instead of Phi-projection for 3rd Mom.equation (on Up)
   logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+  logical :: fix_axis_nodes       !< Fix t-derivative on axis to avoid noise)
   logical :: bench_without_plot   !< if .true., do not produce certain output plots (e.g., for benchmarking)
   logical :: gmres                !< Use iterative GMRES solver
   integer :: gmres_max_iter       !< Maximum number of GMRES iterations

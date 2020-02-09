@@ -183,7 +183,7 @@ call interp(node_list,element_list,i_elm_axis,1,1,s_axis,t_axis,psi_axis,P_s,P_t
 
 call interp_RZ(node_list,element_list,i_elm_axis,s_axis,t_axis,R_axis,Z_axis)
 
-if ((.not. found_axis) .and. (ES%initialized)) then
+if ((.not. found_axis) .and. (my_id .eq. 0) .and. (ES%initialized)) then
   write(*,*) '  WARNING: axis was not properly found after ', n_tries, ' attempts'
   write(*,*) '  Please check that you have set axis_srch_radius correctly in the input file.'
   write(*,*) '  If the expected magnetic axis lies outside the circle with radius'

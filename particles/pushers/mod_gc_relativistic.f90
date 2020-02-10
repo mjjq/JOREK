@@ -23,7 +23,7 @@ contains
   !>   B:               (real8)(3) magnetic field 
   !> outputs:
   !>   particle_out: (particle_base) the output particle
-  pure subroutine relativistic_gc_particle(node_list,element_list,&
+  subroutine relativistic_gc_to_particle(node_list,element_list,&
        relativistic_gc,particle_out,time,mass,B)
     !> load modules
     use data_structure
@@ -43,7 +43,7 @@ contains
        particle_out = relativistic_gc_to_gc(relativistic_gc,time,mass,B)
     end select
     
-  end subroutine relativistic_gc_particle
+  end subroutine relativistic_gc_to_particle
 
   !> This procedure transform a relativistic_gs to a particle_gc
   !> inputs:
@@ -109,9 +109,9 @@ contains
     !> copy particle element
     relativistic_gc%i_elm = gc_in%i_elm
     !> copy local coordinates
-    relativisti_gc%st = gc_in%st
+    relativistic_gc%st = gc_in%st
     !> initialise magnetic moment
-    relativistic_gc%p(2) = abs(EL_CHG*gi_in%mu/ATOMIC_MASS_UNIT)
+    relativistic_gc%p(2) = abs(EL_CHG*gc_in%mu/ATOMIC_MASS_UNIT)
     !> check if the magnetic field is present
     !> initialise parallel momentum
     relativistic_gc%p(1) = sign(sqrt(((gc_in%E*gc_in%E*EL_CHG*EL_CHG)/&

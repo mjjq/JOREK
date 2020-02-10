@@ -186,7 +186,7 @@ pure subroutine calc_EBNormBGradBCurlbDbdt(fields,time,i_elm,st,phi,E,b,&
   call transform_second_derivatives_st_to_RZ(psi_RZ(3),psi_RZ(4),psi_RZ(5),1,&
        psi(6),psi(7),psi(8),psi_RZ(1),psi_RZ(2),RZ(2),RZ(3),RZ(4),RZ(5),RZ(6),&
        RZ(8),RZ(9),RZ(10),RZ(11),RZ(12))
-  call transform_first_derivatives_st_to_RZ(psi_RZ(6),psi_RZ(17),1,psi(9),psi(10),&
+  call transform_first_derivatives_st_to_RZ(psi_RZ(6),psi_RZ(7),1,psi(9),psi(10),&
        RZ(2),RZ(3),RZ(8),RZ(9))
   call transform_first_derivatives_st_to_RZ(psi_RZ(8),psi_RZ(9),1,psi(11),psi(12),&
        RZ(2),RZ(3),RZ(8),RZ(9))

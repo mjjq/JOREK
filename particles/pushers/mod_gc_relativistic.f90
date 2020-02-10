@@ -31,7 +31,7 @@ contains
     !> declare input variables
     type(type_node_list),intent(in) :: node_list
     type(type_element_list),intent(in) :: element_list
-    class(particle_gc_relativistic),intent(in) :: relativistic_gc
+    type(particle_gc_relativistic),intent(in) :: relativistic_gc
     real(kind=8),intent(in) :: time,mass
     real(kind=8),dimension(3),intent(in) :: B
     !> delcare outpur variables
@@ -59,7 +59,7 @@ contains
     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
     implicit none
     !> declare inputs:
-    class(particle_gc_relativistic),intent(in) :: relativistic_gc
+    type(particle_gc_relativistic),intent(in) :: relativistic_gc
     real(kind=8),intent(in) :: time,mass
     real(kind=8),dimension(3),intent(in) :: B
     !> dclare output variable
@@ -96,11 +96,11 @@ contains
     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
     implicit none
     !> declare input variables
-    class(particle_gc),intent(in) :: gc_in
+    type(particle_gc),intent(in) :: gc_in
     real(kind=8),intent(in) :: time,mass
     real(kind=8),dimension(3),intent(in) :: B
     !> declare output variables
-    class(particle_gc_relativistic) :: relativistic_gc
+    type(particle_gc_relativistic) :: relativistic_gc
     
     !> copy gc position
     relativistic_gc%x = gc_in%x
@@ -115,7 +115,7 @@ contains
     !> check if the magnetic field is present
     !> initialise parallel momentum
     relativistic_gc%p(1) = sign(sqrt(((gc_in%E*gc_in%E*EL_CHG*EL_CHG)/&
-         (ATOMIC_MASS_UNIT*ATOMIC_MASS_INIT*SPEED_OF_LIGHT*SPEED_OF_LIGHT))-&
+         (ATOMIC_MASS_UNIT*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*SPEED_OF_LIGHT))-&
          mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT-&
          2.d0*mass*norm2(B)*relativistic_gc%p(2)),&
          gc_in%mu)

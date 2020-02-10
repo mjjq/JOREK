@@ -236,6 +236,7 @@ end subroutine relativistic_kinetic_to_particle
 function relativistic_kinetic_to_gc(node_list,element_list,in,time,mass,B) result(out)
   use data_structure
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  use mod_pusher_tools, only: particle_position_to_gc
   ! declare input variables
   type(type_node_list),intent(in) :: node_list
   type(type_element_list),intent(in) :: element_list
@@ -269,7 +270,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,time,mass,B) resul
 
   ! compute the gc position
   if(out%q.ne.0) then 
-    call relativistic_kinetic_position_to_gc(node_list,element_list,&
+    call particle_position_to_gc(node_list,element_list,&
     in%x,in%st,in%i_elm,in%p,in%q,B_hat_cart,B_norm,out%x,out%st,out%i_elm)
   endif  
 end function relativistic_kinetic_to_gc
@@ -293,6 +294,7 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) r
   use data_structure
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   use mod_pusher_tools, only: get_orthonormals
+  use mod_pusher_tools, only: gc_position_to_particle
   ! declare input variables
   type(type_node_list),intent(in) :: node_list
   type(type_element_list),intent(in) :: element_list
@@ -334,92 +336,11 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) r
 
   ! compute the particle position in R,Z,Phi coordinates
   if(out%q.ne.0) then
-    call gc_position_to_relativistic_particle(node_list,element_list,&
+    call gc_position_to_particle(node_list,element_list,&
     in%x,in%st,in%i_elm,out%p,in%q,B_hat_cart,B_norm,out%x,out%st,out%i_elm)
   endif  
 end function gc_to_relativistic_kinetic
 
-!---------------------------------------------------------------------------
 
-!> This subroutine computes the relativistic guiding centre coordinates
-!> from the particle position and momentum
-subroutine relativistic_kinetic_position_to_gc(node_list,element_list,&
-x_in,st_in,i_elm_in,p_in,q_in,B_hat_cart,B_norm,x_gc_out,st_gc_out,i_elm_out)
-  use data_structure
-  use mod_math_operators, only: cross_product
-  use mod_coordinate_transforms, only: cylindrical_to_cartesian
-  use mod_coordinate_transforms, only: cartesian_to_cylindrical
-  use mod_find_rz_nearby
-  ! declare input variables
-  type(type_node_list),intent(in) :: node_list
-  type(type_element_list),intent(in) :: element_list
-  integer(kind=1),intent(in) :: q_in !< particle charge
-  integer(kind=4),intent(in) :: i_elm_in !< particle element
-  real(kind=8),dimension(3),intent(in) :: x_in, p_in !< particle position and momentum
-  real(kind=8),dimension(2),intent(in) :: st_in !< particle local coordinates
-  real(kind=8),dimension(3),intent(in) :: B_hat_cart !< Magnetic field direction B/B_norm
-  real(kind=8),intent(in) :: B_norm !< magnetic field intensity in [T]
-  ! declare output variables
-  integer(kind=4),intent(out) :: i_elm_out !< gc element
-  real(kind=8),dimension(2),intent(out) :: st_gc_out !< local gc position s,t
-  real(kind=8),dimension(3),intent(out) :: x_gc_out  !< global position in R,Z,phi
-  ! declare internal variables
-  integer :: ifail !< ifail kind not defined in find_RZ_nearby
-
-  ! compute the guiding center position in cartesian reference
-  x_gc_out = cylindrical_to_cartesian(x_in)+&
-  (ATOMIC_MASS_UNIT*cross_product(p_in,B_hat_cart))/&
-  (EL_CHG*real(q_in,8)*B_norm)
-
-  ! transform back from a cartesian to a cylindrical coordinate system
-  x_gc_out = cartesian_to_cylindrical(x_gc_out)  
-
-  ! find the local coordinates
-  call find_RZ_nearby(node_list,element_list,x_in(1),x_in(2),&
-  st_in(1),st_in(2),i_elm_in,x_gc_out(1),x_gc_out(2),&
-  st_gc_out(1),st_gc_out(2),i_elm_out,ifail)
-end subroutine relativistic_kinetic_position_to_gc
-
-!---------------------------------------------------------------------------
-!> This subroutine computes the relativistic particle coordinates
-!> from relativistic gc particle type
-subroutine gc_position_to_relativistic_particle(node_list,element_list,&
-x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat_cart,B_norm,x_out,st_out,i_elm_out)
-  use data_structure
-  use mod_math_operators, only: cross_product
-  use mod_coordinate_transforms, only: cylindrical_to_cartesian
-  use mod_coordinate_transforms, only: cartesian_to_cylindrical
-  use mod_find_rz_nearby
-  ! declare input variables
-  type(type_node_list),intent(in) :: node_list
-  type(type_element_list),intent(in) :: element_list
-  integer(kind=1),intent(in) :: q_gc_in !< gc charge
-  integer(kind=4),intent(in) :: i_elm_in !< gc element
-  real(kind=8),dimension(3),intent(in) :: x_gc_in,p_gc_in !< gc position and momentum
-  real(kind=8),dimension(2),intent(in) :: st_gc_in !< gc local coordinates
-  real(kind=8),dimension(3),intent(in) :: B_hat_cart !< Magnetic field direction B/B_norm
-  real(kind=8),intent(in) :: B_norm !< magnetic field intensity in [T]
-  ! declare output variables
-  integer(kind=4),intent(out) :: i_elm_out !< particle element
-  real(kind=8),dimension(2),intent(out) :: st_out !< local particle position s,t
-  real(kind=8),dimension(3),intent(out) :: x_out  !< global position in R,Z,phi
-  ! declare internal variables
-  integer :: ifail !< ifail kind not defined in find_RZ_nearby
-
-  ! compute the particle position in cartesian coordinates
-  x_out = cylindrical_to_cartesian(x_gc_in)+&
-  (ATOMIC_MASS_UNIT*cross_product(B_hat_cart,p_gc_in))/&
-  (EL_CHG*real(q_gc_in,8)*B_norm)
-
-  ! transform the particle coordinates from cartesian to cylindrical coordinates
-  x_out = cartesian_to_cylindrical(x_out)
-
-  ! find the local coordinates
-  call find_RZ_nearby(node_list,element_list,x_gc_in(1),x_gc_in(2),&
-  st_gc_in(1),st_gc_in(2),i_elm_in,x_out(1),x_out(2),&
-  st_out(1),st_out(2),i_elm_out,ifail)
-end subroutine gc_position_to_relativistic_particle
-
-!---------------------------------------------------------------------------
 
 end module mod_kinetic_relativistic

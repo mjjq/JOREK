@@ -107,7 +107,7 @@ end function approximated_cayley_transform
 !> This subroutine computes the guiding centre coordinates
 !> from the particle position and momentum
 subroutine particle_position_to_gc(node_list,element_list,&
-x_in,st_in,i_elm_in,p_in,q_in,B_hat_cart,B_norm,x_gc_out,st_gc_out,i_elm_out)
+x_in,st_in,i_elm_in,p_in,q_in,B_hat,B_norm,x_gc_out,st_gc_out,i_elm_out)
   use data_structure
   use constants, only: ATOMIC_MASS_UNIT,EL_CHG
   use mod_math_operators, only: cross_product
@@ -119,7 +119,7 @@ x_in,st_in,i_elm_in,p_in,q_in,B_hat_cart,B_norm,x_gc_out,st_gc_out,i_elm_out)
   integer(kind=4),intent(in) :: i_elm_in !< particle element
   real(kind=8),dimension(3),intent(in) :: x_in, p_in !< particle position and momentum
   real(kind=8),dimension(2),intent(in) :: st_in !< particle local coordinates
-  real(kind=8),dimension(3),intent(in) :: B_hat_cart !< Magnetic field direction B/B_norm
+  real(kind=8),dimension(3),intent(in) :: B_hat !< Magnetic field direction B/B_norm
   real(kind=8),intent(in) :: B_norm !< magnetic field intensity in [T]
   ! declare output variables
   integer(kind=4),intent(out) :: i_elm_out !< gc element
@@ -130,7 +130,7 @@ x_in,st_in,i_elm_in,p_in,q_in,B_hat_cart,B_norm,x_gc_out,st_gc_out,i_elm_out)
 
   ! compute the guiding center position in cartesian reference
   x_gc_out = x_in+&
-  (ATOMIC_MASS_UNIT*cross_product(p_in,B_hat_cart))/&
+  (ATOMIC_MASS_UNIT*cross_product(p_in,B_hat))/&
   (EL_CHG*real(q_in,8)*B_norm)  
 
   ! find the local coordinates
@@ -142,7 +142,7 @@ end subroutine particle_position_to_gc
 !---------------------------------------------------------------------------
 !> This subroutine computes the particle coordinates from gc
 subroutine gc_position_to_particle(node_list,element_list,&
-x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat_cart,B_norm,x_out,st_out,i_elm_out)
+x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat,B_norm,x_out,st_out,i_elm_out)
   use data_structure
   use constants, only: ATOMIC_MASS_UNIT,EL_CHG
   use mod_math_operators, only: cross_product
@@ -154,7 +154,7 @@ x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat_cart,B_norm,x_out,st_out,i_elm_o
   integer(kind=4),intent(in) :: i_elm_in !< gc element
   real(kind=8),dimension(3),intent(in) :: x_gc_in,p_gc_in !< gc position and momentum
   real(kind=8),dimension(2),intent(in) :: st_gc_in !< gc local coordinates
-  real(kind=8),dimension(3),intent(in) :: B_hat_cart !< Magnetic field direction B/B_norm
+  real(kind=8),dimension(3),intent(in) :: B_hat !< Magnetic field direction B/B_norm
   real(kind=8),intent(in) :: B_norm !< magnetic field intensity in [T]
   ! declare output variables
   integer(kind=4),intent(out) :: i_elm_out !< particle element
@@ -165,7 +165,7 @@ x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat_cart,B_norm,x_out,st_out,i_elm_o
 
   ! compute the particle position in cartesian coordinates
   x_out = x_gc_in+&
-  (ATOMIC_MASS_UNIT*cross_product(B_hat_cart,p_gc_in))/&
+  (ATOMIC_MASS_UNIT*cross_product(B_hat,p_gc_in))/&
   (EL_CHG*real(q_gc_in,8)*B_norm)
 
   ! find the local coordinates

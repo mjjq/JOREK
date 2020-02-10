@@ -49,7 +49,7 @@ contains
     type is (particle_gc)
        particle_out = relativistic_gc_to_gc(relativistic_gc,mass,B)
     type is (particle_kinetic_relativistic)
-       particle_out = relativistic_gc_to_relativistic_particle(&
+       particle_out = relativistic_gc_to_relativistic_kinetic(&
             node_list,element_list,relativistic_gc,mass,B,gyro_angle)
     end select
     
@@ -67,7 +67,7 @@ contains
   !> outputs:
   !>   relativistic_particle: (particle_kinetic_relativistic) a
   !>                           relativistic kinetic particle
-  function relativistic_gc_to_relativistic_particle(node_list,element_list,&
+  function relativistic_gc_to_relativistic_kinetic(node_list,element_list,&
        in,mass,B,gyro_angle) result(out)
     !> load module
     use data_structure
@@ -84,30 +84,29 @@ contains
     type(particle_kinetic_relativistic) :: out
     !> delcare internal varibales
     real(kind=8) :: B_norm,p_perp
-    real(kind=8),dimension(3) :: B_hat_cart,e1_cart,e2_cart
+    real(kind=8),dimension(3) :: B_hat,e1,e2
     
     out = in !< copy the default particle type
     out%q = in%q !< copy the charge
     
     !> compute the magnetic field intensity and direction
     B_norm = norm2(B)
-    B_hat_cart = B/B_norm
+    B_hat = B/B_norm
     !> construct orthogonal basis
-    call get_orthonormals(B_hat_cart,e1_cart,e2_cart)
+    call get_orthonormals(B_hat,e1,e2)
     !> compute the perpendicular momentum
     p_perp = sqrt(2.d0*mass*B_norm*in%p(2))
     !> compute particle momenta
-    out%p = in%p(1)*B_hat_cart + p_perp*(e1_cart*cos(gyro_angle)+&
-         e2_cart*sin(gyro_angle))
+    out%p = in%p(1)*B_hat + p_perp*(e1*cos(gyro_angle)+e2*sin(gyro_angle))
     !> check if the particle is valid
     if(out%q.ne.0) then
        call gc_position_to_particle(node_list,element_list,in%x,&
-            in%st,in%i_elm,out%p,out%q,B_hat_cart,B_norm,out%x,&
+            in%st,in%i_elm,out%p,out%q,B_hat,B_norm,out%x,&
             out%st,out%i_elm)
     endif
     !> transform the momenta in cartesian coordinates
     out%p = vector_cylindrical_to_cartesian(out%x(3),out%p)
-  end function relativistic_gc_to_relativistic_particle 
+  end function relativistic_gc_to_relativistic_kinetic 
 
   !> This procedure transform a relativistic_gc to a particle_gc
   !> inputs:

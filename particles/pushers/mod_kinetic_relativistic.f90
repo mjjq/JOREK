@@ -221,9 +221,66 @@ subroutine relativistic_kinetic_to_particle(node_list,element_list,particle_in,&
   type is (particle_gc)
      particle_out = relativistic_kinetic_to_gc(node_list,element_list,&
           particle_in,mass,B)
+  type is (particle_gc_relativistic)
+     particle_out = relativistic_kinetic_to_relativistic_gc(node_list,&
+          element_list,particle_in,mass,B)
   end select
   
 end subroutine relativistic_kinetic_to_particle
+
+!--------------------------------------------------------------------------
+
+!> This procedure transform a relativistic particle into a relativistic
+!> a relativistic particle gc.
+!> inputs:
+!>   node_list:    (type_node_list) jorek nodes
+!>   element_list: (type_element_list) jorek mesh elements
+!>   in:           (particle_kinetic_relativistic) relativistic particle
+!>   mass:         (real8) particle mass
+!>   B:            (real8)(3) magnetic field
+!> outputs:
+!>   out: (particle_gc_relativistic) a relativistic gc 
+function relativistic_kinetic_to_relativistic_gc(node_list,element_list,&
+     in,mass,B) result(out)
+  use data_structure
+  use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
+  use mod_pusher_tools, only: particle_position_to_gc
+  implicit none
+  !> declare input variables
+  type(type_node_list),intent(in) :: node_list
+  type(type_element_list),intent(in) :: element_list
+  type(particle_kinetic_relativistic),intent(in) :: in
+  real(kind=8),intent(in) :: mass
+  real(kind=8),dimension(3),intent(in) :: B
+  !> declare output variables
+  type(particle_gc_relativistic) :: out
+  !> delcare internal variables
+  real(kind=8) :: norm_B
+  real(kind=8),dimension(3) :: B_hat,p_perp
+
+  !> compute magnetic field direction and intensity
+  norm_B = norm2(B)
+  B_hat = B/norm_B
+  !> copy base particle
+  out = in
+  !> coupy charge
+  out%q = in%q
+  !> extract mementa in cylindrical coordinates
+  p_perp = vector_cartesian_to_cylindrical(in%x(3),in%p)
+  !> compute perpendicular momentum
+  out%p(1) = dot_product(p_perp,B_hat)
+  !> compute perpendicular momenta
+  p_perp = p_perp - out%p(1)*B_hat
+  !> compute magnetic moment
+  out%p(2) = dot_product(p_perp,p_perp)/(2.d0*norm_B*mass)
+  !> check particle validity
+  if(out%q.ne.0) then
+     call particle_position_to_gc(node_list,element_list,in%x,&
+          in%st,in%i_elm,vector_cartesian_to_cylindrical(in%x(3),in%p),&
+          in%q,B_hat,norm_B,out%x,out%st,out%i_elm)
+  endif
+  
+end function relativistic_kinetic_to_relativistic_gc
 
 !---------------------------------------------------------------------------
 
@@ -252,7 +309,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out
   type(particle_gc) :: out
   ! declare internal variables
   real(kind=8) :: B_norm, p_par !< magnetic intensity, parallel momentum
-  real(kind=8),dimension(3) :: B_hat_cart !< magnetic field direction
+  real(kind=8),dimension(3) :: B_hat !< magnetic field direction
 
   ! initialise default variables for particle_gc
   out = in
@@ -261,24 +318,24 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out
 
   ! compute magnetic field intensity and direction
   B_norm = norm2(B) !< intensity
-  B_hat_cart = B/B_norm  !< direction
+  B_hat = B/B_norm  !< direction
   ! compute the parallel momentum
-  p_par = dot_product(vector_cartesian_to_cylindrical(in%x(3),in%p),B_hat_cart)
+  p_par = dot_product(vector_cartesian_to_cylindrical(in%x(3),in%p),B_hat)
 
   ! compute the guiding center total (i.e. rest+kinetic) energy in [eV]
   out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGHT* &
     sqrt((mass*SPEED_OF_LIGHT)*(mass*SPEED_OF_LIGHT)+dot_product(in%p,in%p))/EL_CHG
   ! compute the magnetic moment p_perp^2/(2*B) in [eV/T]
   ! the sign is given by the particle parallel momentum 
-  out%mu = sign((ATOMIC_MASS_UNIT*dot_product(in%p-p_par*B_hat_cart,&
-  in%p-p_par*B_hat_cart))/(2.d0*B_norm*mass*EL_CHG),p_par)
+  out%mu = sign((ATOMIC_MASS_UNIT*dot_product(in%p-p_par*B_hat,&
+  in%p-p_par*B_hat))/(2.d0*B_norm*mass*EL_CHG),p_par)
 
   ! compute the gc position
   if(out%q.ne.0) then 
     call particle_position_to_gc(node_list,element_list,&
          in%x,in%st,in%i_elm,&
          vector_cartesian_to_cylindrical(in%x(3),in%p),in%q,&
-         B_hat_cart,B_norm,out%x,out%st,out%i_elm)
+         B_hat,B_norm,out%x,out%st,out%i_elm)
   endif  
 end function relativistic_kinetic_to_gc
 
@@ -312,7 +369,7 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) r
   type(particle_kinetic_relativistic) :: out
   ! declare internal variables
   real(kind=8) :: B_norm, p_perp, p_par   !< magnetic intensity, perpendicular/parallel momenta
-  real(kind=8),dimension(3) :: B_hat_cart, e1_cart, e2_cart !< B-field-aligned cartesian vector basis
+  real(kind=8),dimension(3) :: B_hat, e1, e2 !< B-field-aligned cartesian vector basis
 
   ! copy the default particle datatype
   out = in
@@ -321,9 +378,9 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) r
   
   ! compute the magnetic field intensity and direction
   B_norm = norm2(B)
-  B_hat_cart = B/B_norm
+  B_hat = B/B_norm
   ! compute a B-field-aligned orthonormal vector basis
-  call get_orthonormals(B_hat_cart,e1_cart,e2_cart)
+  call get_orthonormals(B_hat,e1,e2)
 
   ! compute the perpendicular momentum squared in (AMU*m/s)^2
   p_perp = (EL_CHG*2.d0*mass*B_norm*abs(in%mu))/ATOMIC_MASS_UNIT
@@ -335,12 +392,12 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) r
   p_perp = sqrt(p_perp)
 
   ! computing the particle momentum
-  out%p = p_par*B_hat_cart + p_perp*(e1_cart*cos(chi)+e2_cart*sin(chi)) 
+  out%p = p_par*B_hat + p_perp*(e1*cos(chi)+e2*sin(chi)) 
 
   ! compute the particle position in R,Z,Phi coordinates
   if(out%q.ne.0) then
     call gc_position_to_particle(node_list,element_list,in%x,in%st,&
-         in%i_elm,out%p,in%q,B_hat_cart,B_norm,out%x,out%st,out%i_elm)
+         in%i_elm,out%p,in%q,B_hat,B_norm,out%x,out%st,out%i_elm)
  endif
  !> transform the momentum in cartesian coodinates
  out%p = vector_cylindrical_to_cartesian(out%x(3),out%p)

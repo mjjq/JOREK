@@ -211,27 +211,25 @@ end subroutine volume_preserving_push_cartesian
 !> particle type
 !> inputs:
 !> outputs:
-subroutine relativistic_kinetic_to_particle(fields,particle_in,&
+subroutine relativistic_kinetic_to_particle(node_list,element_list,particle_in,&
      particle_out,time,mass,B)
   !> load modules
-  use mod_fields, only: fields_base
+  use data_structure
   implicit none
   !> declare input variables
-  class(fields_base),intent(in) :: fields
+  type(type_node_list),intent(in) :: node_list
+  type(type_element_list),intent(in) :: element_list
   type(particle_kinetic_relativistic),intent(in) :: particle_in
   real(kind=8),intent(in) :: time,mass
-  real(kind=8),dimension(3),intent(in),optional :: B
+  real(kind=8),dimension(3),intent(in) :: B
   !> declare outpur variables
   class(particle_base),intent(out) :: particle_out
 
   !> select the type of paritcle out
   select type (particle_out)
   type is (particle_gc)
-     if(present(B)) then
-        particle_out = relativistic_kinetic_to_gc(fields,particle_in,time,mass,B)
-     else
-        particle_out = relativistic_kinetic_to_gc(fields,particle_in,time,mass)
-     endif
+     particle_out = relativistic_kinetic_to_gc(node_list,element_list,&
+          particle_in,time,mass,B)
   end select
   
 end subroutine relativistic_kinetic_to_particle
@@ -242,43 +240,37 @@ end subroutine relativistic_kinetic_to_particle
 !> particle gc datatype. Phase space particle coordinates are transformed
 !> in guiding center position, energy in [eV] and magnetic moment in [eV/T]
 !> inputs:
-!>   fields: (fields_base) jorek field type
-!>   in:     (particle_relativistic_kinetic) a relativistic particle
-!>   time:   (real8) time coordinate
-!>   mass:   (real8) particle mass in AMU
-!>   B:      (real8)(3)(optional) magnetic field [T]
+!>   node_list:    (type_node_list) node list
+!>   element_list: (type_element_list) element list
+!>   in:           (particle_relativistic_kinetic) a relativistic particle
+!>   time:         (real8) time coordinate
+!>   mass:         (real8) particle mass in AMU
+!>   B:            (real8)(3)(optional) magnetic field [T]
 !> outputs:
 !>   out: (particle_gc) a guiding center particle
-function relativistic_kinetic_to_gc(fields,in,time,mass,B) result(out)
-  use mod_fields, only: fields_base
+function relativistic_kinetic_to_gc(node_list,element_list,in,time,mass,B) result(out)
+  use data_structure
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   ! declare input variables
-  class(fields_base),intent(in) :: fields
+  type(type_node_list),intent(in) :: node_list
+  type(type_element_list),intent(in) :: element_list
   type(particle_kinetic_relativistic),intent(in) :: in ! input kinetic particle
   real(kind=8),intent(in) :: time,mass !< particle time and mass in AMU
-  real(kind=8),dimension(3),intent(in),optional :: B !< mass in AMU magnetic field in [T]
+  real(kind=8),dimension(3),intent(in) :: B !< mass in AMU magnetic field in [T]
   ! delcare output variables
   type(particle_gc) :: out ! output particle guiding center
   ! declare internal variable
   real(kind=8) :: B_norm,p_par !< magnetic intensity, parallel momentum
-  real(kind=8) :: psi_local,U_local
-  real(kind=8),dimension(3) :: B_local,E_local,B_hat_cart !< magnetic field direction
+  real(kind=8),dimension(3) :: B_hat_cart !< magnetic field direction
 
   ! initialise default variable for particle gc
   out = in
   ! initialise the electric charge
   out%q = in%q
-  !> check if the magnetic field is present
-  if(present(B)) then
-     B_local = B
-  else
-     !> compute the magnetic field
-     call fields%calc_EBpsiU(time,in%i_elm,in%st,in%x(3),E_local,B_local,psi_local,U_local)
-  endif
-  
+
   ! compute magnetic field intensity and direction
-  B_norm = norm2(B_local) !< intensity
-  B_hat_cart = vector_cylindrical_to_cartesian(in%x(3),B_local)/B_norm  !< direction
+  B_norm = norm2(B) !< intensity
+  B_hat_cart = vector_cylindrical_to_cartesian(in%x(3),B)/B_norm  !< direction
   ! compute the parallel momentum
   p_par = dot_product(in%p,B_hat_cart)
 
@@ -293,7 +285,7 @@ function relativistic_kinetic_to_gc(fields,in,time,mass,B) result(out)
   ! check whether the particle is not a field line
   if(out%q.ne.0) then
     ! compute the gc position
-    call relativistic_kinetic_position_to_gc(fields%node_list,fields%element_list,&
+    call relativistic_kinetic_position_to_gc(node_list,element_list,&
     in%x,in%st,in%i_elm,in%p,in%q,B_hat_cart,B_norm,out%x,out%st,out%i_elm)
   endif
   
@@ -305,45 +297,40 @@ end function relativistic_kinetic_to_gc
 !> data type. The gc phase space coordinates have to be provided
 !> respectively in [eV] for the energy and [eV/T] for the magnetic moment.
 !> inputs:
-!>   fields: (fields_base) jorek fields
-!>   in:     (particle_gc) a guiding center particle
-!>   chi:    (real8) gyro-angle in [rad]
-!>   time:   (real8) particle time
-!>   mass:   (real8) particle mass
-!>   B:	     (real8)(3)(optional) magnetic field [T]
+!>   node_list:    (type_node_list) node list
+!>   element_list: (type_element_list) element list
+!>   in:           (particle_gc) a guiding center particle
+!>   chi:          (real8) gyro-angle in [rad]
+!>   time:         (real8) particle time
+!>   mass:         (real8) particle mass
+!>   B:	           (real8)(3)(optional) magnetic field [T]
 !> outputs:
 !>   out: (particle_kinetic_relativistic) a kinetic relativistic particle
-function gc_to_relativistic_kinetic(fields,in,time,mass,chi,B) result(out)
-  use mod_fields, only: fields_base
+function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) result(out)
+  use data_structure
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   use mod_pusher_tools, only: get_orthonormals
   ! declare input variables
-  class(fields_base),intent(in) :: fields
+  type(type_node_list),intent(in) :: node_list
+  type(type_element_list),intent(in) :: element_list
   type(particle_gc),intent(in) :: in
   real(kind=8),intent(in) :: time,mass,chi !< time,particle mass [AMU], gyroangle [rad]
-  real(kind=8),dimension(3),intent(in),optional :: B !< mass in AMU magnetic field in [T]
+  real(kind=8),dimension(3),intent(in) :: B !< mass in AMU magnetic field in [T]
   ! declare output variables
   type(particle_kinetic_relativistic) :: out ! output particle guiding center
   ! declare internal variables
   ! magnetic intensity, perpendicular/parallel momenta
-  real(kind=8) :: B_norm,p_perp,p_par,psi_local,U_local
-  real(kind=8),dimension(3) :: B_local,E_local
+  real(kind=8) :: B_norm,p_perp,p_par
   real(kind=8),dimension(3) :: B_hat_cart,e1_cart,e2_cart !< magnetic field reference
 
   ! copy the default particle datatype
   out = in
   ! copy the particle charge
   out%q = in%q
-  !> check if the magnetic field is given as input:
-  if(present(B)) then
-     B_local = B
-  else
-     call fields%calc_EBpsiU(time,in%i_elm,in%st,in%x(3),E_local,B_local,psi_local,U_local)
-  endif
   
   ! compute the magnetic field intensity and direction
-  B_norm = norm2(B_local)
-  B_hat_cart = B_local/B_norm
+  B_norm = norm2(B)
+  B_hat_cart = B/B_norm
   ! compute an orthonormal magnetic reference
   call get_orthonormals(B_hat_cart,e1_cart,e2_cart)
   ! rotate the basis to a XYZ reference
@@ -366,7 +353,7 @@ function gc_to_relativistic_kinetic(fields,in,time,mass,chi,B) result(out)
   ! check whether the particle is not a field line
   if(out%q.ne.0) then
     ! compute the particle position in R,Z,Phi coordinates
-    call gc_position_to_relativistic_particle(fields%node_list,fields%element_list,&
+    call gc_position_to_relativistic_particle(node_list,element_list,&
     in%x,in%st,in%i_elm,out%p,in%q,B_hat_cart,B_norm,out%x,out%st,out%i_elm)
   endif  
 

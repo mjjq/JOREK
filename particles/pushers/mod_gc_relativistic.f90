@@ -20,11 +20,13 @@ contains
   !>   relativsitci_gc: (particle_gc_relativistic) a particle gc relativistic
   !>   time:            (real8) particle time
   !>   mass:            (real8) paritcle mass
-  !>   B:               (real8)(3) magnetic field 
+  !>   B:               (real8)(3) magnetic field
+  !>   gyro_angle:      (real8)(optional) the gyro_angle defaut=0
   !> outputs:
   !>   particle_out: (particle_base) the output particle
+  !>   gyro_angle:   (real8)(optiona) the gyro_angle default=0
   subroutine relativistic_gc_to_particle(node_list,element_list,&
-       relativistic_gc,particle_out,mass,B)
+       relativistic_gc,particle_out,mass,B,gyro_angle)
     !> load modules
     use data_structure
     implicit none
@@ -36,11 +38,19 @@ contains
     real(kind=8),dimension(3),intent(in) :: B
     !> delcare outpur variables
     class(particle_base),intent(out) :: particle_out
+    !> delcare input output variables
+    real(kind=8),intent(inout),optional :: gyro_angle
 
+    !< if the gyroangle is not present set it to zero
+    if(.not.present(gyro_angle)) gyro_angle = 0.d0
+    
     !> select particle type
     select type (particle_out)
     type is (particle_gc)
        particle_out = relativistic_gc_to_gc(relativistic_gc,mass,B)
+    type is (particle_kinetic_relativistic)
+       particle_out = relativistic_gc_to_relativistic_particle(&
+            node_list,element_list,relativistic_gc,mass,B,gyro_angle)
     end select
     
   end subroutine relativistic_gc_to_particle
@@ -48,6 +58,8 @@ contains
   !> This procedure transfrom a relativistic gc to a relativistic
   !> particle type.
   !> inputs:
+  !>   node_list:       (type_node_list) jorek node list
+  !>   element_list:    (type_element_list) jorek element list
   !>   relativistic_gc: (particle_gc_relativistic) a relativistic gc
   !>   mass:            (real8) particle mass 
   !>   B:               (real8)(3) magnetic field
@@ -55,18 +67,46 @@ contains
   !> outputs:
   !>   relativistic_particle: (particle_kinetic_relativistic) a
   !>                           relativistic kinetic particle
-  function relativistic_gc_to_relativistic_particle(relativistic_gc,&
-       mass,B,gyro_angle) result(relativistic_particle)
+  function relativistic_gc_to_relativistic_particle(node_list,element_list,&
+       in,mass,B,gyro_angle) result(out)
     !> load module
-    use mod_pusher_tools, only: gc_position_to_particle
+    use data_structure
+    use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+    use mod_pusher_tools, only: gc_position_to_particle,get_orthonormals
     implicit none
     !> declare input varibales
-    type(particle_gc_relativistic),intent(in) :: relativistic_gc
+    type(type_node_list),intent(in) :: node_list
+    type(type_element_list),intent(in) :: element_list
+    type(particle_gc_relativistic),intent(in) :: in
     real(kind=8),intent(in) :: mass,gyro_angle
     real(kind=8),dimension(3),intent(in) :: B
     !> delcare output variables
-    type(particle_kinetic_relativistic) :: relativistic_particle
+    type(particle_kinetic_relativistic) :: out
     !> delcare internal varibales
+    real(kind=8) :: B_norm,p_perp
+    real(kind=8),dimension(3) :: B_hat_cart,e1_cart,e2_cart
+    
+    out = in !< copy the default particle type
+    out%q = in%q !< copy the charge
+    
+    !> compute the magnetic field intensity and direction
+    B_norm = norm2(B)
+    B_hat_cart = B/B_norm
+    !> construct orthogonal basis
+    call get_orthonormals(B_hat_cart,e1_cart,e2_cart)
+    !> compute the perpendicular momentum
+    p_perp = sqrt(2.d0*mass*B_norm*in%p(2))
+    !> compute particle momenta
+    out%p = in%p(1)*B_hat_cart + p_perp*(e1_cart*cos(gyro_angle)+&
+         e2_cart*sin(gyro_angle))
+    !> check if the particle is valid
+    if(out%q.ne.0) then
+       call gc_position_to_particle(node_list,element_list,in%x,&
+            in%st,in%i_elm,out%p,out%q,B_hat_cart,B_norm,out%x,&
+            out%st,out%i_elm)
+    endif
+    !> transform the momenta in cartesian coordinates
+    out%p = vector_cylindrical_to_cartesian(out%x(3),out%p)
   end function relativistic_gc_to_relativistic_particle 
 
   !> This procedure transform a relativistic_gc to a particle_gc

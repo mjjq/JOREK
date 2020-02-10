@@ -240,7 +240,6 @@ end subroutine relativistic_kinetic_to_particle
 !>   out: (particle_gc) a guiding center particle
 function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out)
   use data_structure
-  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
   use mod_pusher_tools, only: particle_position_to_gc
   ! declare input variables
@@ -262,9 +261,9 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out
 
   ! compute magnetic field intensity and direction
   B_norm = norm2(B) !< intensity
-  B_hat_cart = vector_cylindrical_to_cartesian(in%x(3),B)/B_norm  !< direction
+  B_hat_cart = B/B_norm  !< direction
   ! compute the parallel momentum
-  p_par = dot_product(in%p,B_hat_cart)
+  p_par = dot_product(vector_cartesian_to_cylindrical(in%x(3),in%p),B_hat_cart)
 
   ! compute the guiding center total (i.e. rest+kinetic) energy in [eV]
   out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGHT* &
@@ -279,8 +278,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out
     call particle_position_to_gc(node_list,element_list,&
          in%x,in%st,in%i_elm,&
          vector_cartesian_to_cylindrical(in%x(3),in%p),in%q,&
-         vector_cartesian_to_cylindrical(in%x(3),B_hat_cart),&
-         B_norm,out%x,out%st,out%i_elm)
+         B_hat_cart,B_norm,out%x,out%st,out%i_elm)
   endif  
 end function relativistic_kinetic_to_gc
 
@@ -302,7 +300,6 @@ end function relativistic_kinetic_to_gc
 function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) result(out)
   use data_structure
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
-  use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
   use mod_pusher_tools, only: get_orthonormals
   use mod_pusher_tools, only: gc_position_to_particle
   ! declare input variables
@@ -327,10 +324,6 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) r
   B_hat_cart = B/B_norm
   ! compute a B-field-aligned orthonormal vector basis
   call get_orthonormals(B_hat_cart,e1_cart,e2_cart)
-  ! rotate the basis to a XYZ reference
-  B_hat_cart = vector_cylindrical_to_cartesian(in%x(3),B_hat_cart)
-  e1_cart = vector_cylindrical_to_cartesian(in%x(3),e1_cart)
-  e2_cart = vector_cylindrical_to_cartesian(in%x(3),e2_cart)
 
   ! compute the perpendicular momentum squared in (AMU*m/s)^2
   p_perp = (EL_CHG*2.d0*mass*B_norm*abs(in%mu))/ATOMIC_MASS_UNIT
@@ -347,10 +340,10 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) r
   ! compute the particle position in R,Z,Phi coordinates
   if(out%q.ne.0) then
     call gc_position_to_particle(node_list,element_list,in%x,in%st,&
-         in%i_elm,vector_cartesian_to_cylindrical(in%x(3),out%p),in%q,&
-         vector_cartesian_to_cylindrical(in%x(3),B_hat_cart),&
-         B_norm,out%x,out%st,out%i_elm)
-  endif  
+         in%i_elm,out%p,in%q,B_hat_cart,B_norm,out%x,out%st,out%i_elm)
+ endif
+ !> transform the momentum in cartesian coodinates
+ out%p = vector_cylindrical_to_cartesian(out%x(3),out%p)
 end function gc_to_relativistic_kinetic
 
 

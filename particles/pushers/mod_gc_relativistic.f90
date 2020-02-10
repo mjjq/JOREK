@@ -63,7 +63,7 @@ contains
     real(kind=8),intent(in) :: time,mass
     real(kind=8),dimension(3),intent(in) :: B
     !> dclare output variable
-    type(paricle_gc) :: particle_out
+    type(particle_gc) :: particle_out
 
     !> copy the position
     particle_out%x = relativistic_gc%x
@@ -79,7 +79,7 @@ contains
     !> compute the guiding ceneter energy
     particle_out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*(&
          mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT* + &
-         realtivistic_gc%p(1)*relativistic_gc%p(2) + &
+         relativistic_gc%p(1)*relativistic_gc%p(2) + &
          2.d0*mass*norm2(B)*relativistic_gc%p(2))/EL_CHG
   end function relativistic_gc_to_gc
   

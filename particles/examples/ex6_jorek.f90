@@ -103,9 +103,9 @@ do while (.not. sim%stop_now)
     select type (particles => sim%groups(i)%particles)
     type is (particle_kinetic_relativistic)	
       ! Loop on particles whithin the i-th group
-      !$omp parallel do default(private) &
-      !$omp shared (i, n_steps, timesteps, sim) &
-      !$omp reduction(+:n_lost)	
+!      !$omp parallel do default(private) &
+!      !$omp shared (i, n_steps, timesteps, sim) &
+!      !$omp reduction(+:n_lost)	
       do j=1,size(particles,1)
         do k=1,n_steps
           if (particles(j)%i_elm .eq. 0) exit
@@ -135,7 +135,9 @@ enddo
 call cpu_time(t1)
 write(*,*) 'CPU time: ', t1-t0
 
-call write_simulation_hdf5(sim, 'part_restart.h5')
+! Print final particle information
+!write(*,*) 'Final x,y,z: ', sim%groups(1)%particles(1)%x(1), sim%groups(1)%particles(1)%x(2), sim%groups(1)%particles(1)%x(3)
+!call print_kinetic_energy%do(sim,events(1))  !< print particle kinetic energy
 
 ! Finalize the simulation
 call sim%finalize

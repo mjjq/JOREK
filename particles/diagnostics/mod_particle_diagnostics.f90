@@ -12,11 +12,11 @@ public write_particle_diagnostics, calculate_particle_diagnostics
 !> Cannot use HDF5 types here because these are invalid before h5open_f is called
 !> (I think, did not take the chance)
 integer, parameter :: REAL4 = 1, INT4 = 2, REAL8 = 3
-integer, parameter :: n_var = 12
+integer, parameter :: n_var = 14
 character(len=7)  :: var_names(n_var) = ["e      ", "k      ", "mu     ", &
   "psi_n  ", "psi_bar", "p_phi  ", "weight ", "lost   ", "q      ", "region ", &
-  "theta  ", "phi    "]
-integer, parameter :: var_types(n_var) = [REAL8, REAL8, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4]
+  "theta  ", "phi    ", "R      ", "Z      "]
+integer, parameter :: var_types(n_var) = [REAL8, REAL8, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4, REAL4, REAL4]
 integer, parameter :: n_real8_var      = count(var_types .eq. REAL8)
 integer, parameter :: n_real4_var      = count(var_types .eq. REAL4)
 integer, parameter :: n_int4_var       = count(var_types .eq. INT4)
@@ -483,7 +483,6 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
       type is (particle_gc)
         v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
         particle = particle_in
-
         real_stats_tmp(6) = real(particle%q,8) * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle%x(1) * v_par * B(3)/norm2(B)
       type is (particle_fieldline)
         particle = particle_in
@@ -530,6 +529,10 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
       real_stats_tmp(8) = atan2(particles(i)%x(2)-Z_axis, particles(i)%x(1)-R_axis)
       ! phi
       real_stats_tmp(9) = particles(i)%x(3)
+      ! R
+      real_stats_tmp(10) = particles(i)%x(1)
+      ! Z
+      real_stats_tmp(11) = particles(i)%x(2)           
 
       ! 1. lost (boolean)
       int_stats(i,1) = 0

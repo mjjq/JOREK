@@ -59,7 +59,7 @@ contains
     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
     implicit none
     !> declare inputs:
-    class(particle_gc_realtivistic),intent(in) :: relativistic_gc
+    class(particle_gc_relativistic),intent(in) :: relativistic_gc
     real(kind=8),intent(in) :: time,mass
     real(kind=8),dimension(3),intent(in) :: B
     !> dclare output variable

@@ -2,9 +2,9 @@ module direct_construction_mod
   implicit none
 contains  
 subroutine direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, node_list, element_list, & 
-                                        index_min_loc, index_max_loc, local_elms_loc, n_local_elms_loc, ijA_index_loc, ijA_size_loc,       & 
-                                        irn_jcn_loc, irn_glob_loc, jcn_glob_loc, i_tor_min, i_tor_max, n_glob_loc, nz_glob_loc,            & 
-                                        ndof_glob_loc, n_matrix_block_size_loc, direct_construction)
+                                        index_min_loc, index_max_loc, xpoint2, xcase2, local_elms_loc, n_local_elms_loc,                   & 
+                                        ijA_index_loc, ijA_size_loc, irn_jcn_loc, irn_glob_loc, jcn_glob_loc, i_tor_min, i_tor_max,        & 
+                                        n_glob_loc, nz_glob_loc, ndof_glob_loc, n_matrix_block_size_loc, direct_construction)
   use data_structure 
   use global_distributed_matrix
   use mod_global_matrix_structure

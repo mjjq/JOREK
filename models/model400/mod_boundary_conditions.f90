@@ -183,10 +183,11 @@ contains
 		      .and. ((i_tor.eq.RMP_har_cos) .or. (i_tor.eq.RMP_har_sin))	&
 		      .and. (.not. freeboundary)					) then
                         		 
-		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,	&
+		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,	        &
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                                         index_min,index_max,i_tor_min,i_tor_max)
+                                         index_min,index_max,i_tor_min,i_tor_max,               & 
+                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
 
                   endif
                   
@@ -245,10 +246,11 @@ contains
 		      .and. ((i_tor.eq.RMP_har_cos) .or. (i_tor.eq.RMP_har_sin))	&
 		      .and. (.not. freeboundary)					) then
                         		 
-		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,	&
+		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,	        &
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                                         index_min,index_max,i_tor_min,i_tor_max)
+                                         index_min,index_max,i_tor_min,i_tor_max,               & 
+                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
 
                   endif
                   
@@ -306,10 +308,11 @@ contains
 		      .and. ((i_tor.eq.RMP_har_cos) .or. (i_tor.eq.RMP_har_sin))	&
 		      .and. (.not. freeboundary) 					) then
                         		 
-		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,	&
+		      call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,	        &
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                                         index_min,index_max,i_tor_min,i_tor_max)
+                                         index_min,index_max,i_tor_min,i_tor_max,               & 
+                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
 
                   endif
                   
@@ -486,11 +489,12 @@ contains
   subroutine apply_RMP_BCs(rhs_loc, node, side, i_tor, 				&
 		           psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		           psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                           index_min,index_max,i_tor_min, i_tor_max)
+                           index_min,index_max,i_tor_min, i_tor_max,            & 
+                           ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
   
     use mod_parameters
     use data_structure
-    use global_distributed_matrix
+    !use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
     use mod_locate_irn_jcn
     
@@ -505,6 +509,9 @@ contains
     real*8,		intent(in)    :: psi_RMP_sin1(*), dpsi_RMP_sin_dR1(*), dpsi_RMP_sin_dZ1(*)
     integer,		intent(in)    :: index_min, index_max
     integer,            intent(in)    :: i_tor_min, i_tor_max
+    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    integer                           :: irn_glob(:), jcn_glob(:)
+    real*8                            :: A_glob(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2, index_tmp

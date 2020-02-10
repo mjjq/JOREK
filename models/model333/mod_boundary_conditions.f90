@@ -663,11 +663,11 @@ contains
     logical,		intent(in)    :: gmres, solve_only, only_count
     integer,		intent(inout) :: cnt, cnt_prod
     integer,		intent(in)    :: i_tor_min, i_tor_max
-    integer, intent(in), pointer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer :: irn_glob(:), jcn_glob(:)
-    real*8  :: A_glob(:) 
+    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    integer                           :: irn_glob(:), jcn_glob(:)
+    real*8                            :: A_glob(:) 
     ! --- Internal variables
-    integer				:: index_node,   index_node2
+    integer			      :: index_node,   index_node2
     
     ! --- Get nodes index
     index_node  = node%index(1)

@@ -1003,10 +1003,10 @@ required = 0
 
          call clck_time_barrier(t0) 
          !--------- Constructing Harmonic Matrix directly from elementary matrix
-         call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, node_list,  & 
-                                           element_list, index_min_harm, index_max_harm, local_elms_harm, n_local_elms_harm,     & 
-                                           ijA_index_harm, ijA_size_harm, irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, & 
-                                           i_tor_max, n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm,       & 
+         call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, node_list,         & 
+                                           element_list, index_min_harm, index_max_harm, xpoint, xcase, local_elms_harm,                & 
+                                           n_local_elms_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm, irn_glob_harm, jcn_glob_harm,& 
+                                           i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm,   & 
                                            direct_construction)
          call clck_time_barrier(t1) 
 

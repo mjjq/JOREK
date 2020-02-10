@@ -8,6 +8,7 @@
 
  nout = 1
  linear_run = .true.
+ fix_axis_nodes = .t.
 
  time_evol_scheme ='Crank-Nicholson'
 

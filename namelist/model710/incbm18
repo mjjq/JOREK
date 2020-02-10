@@ -11,6 +11,7 @@
  linear_run = .f. ! you cannot run cbm18 with linear_run only, not without first evolving with n=0 for a bit
  static_run = .f. ! you can use this if you want to evolve the equilibrium with n=0 velocities before switching modes on
  parallel_projection = .t. ! cbm18 seems to explode without this option, no matter what...
+ fix_axis_nodes = .t.
 
  fbnd(1)   = 2.
  fbnd(2:4) = 0.

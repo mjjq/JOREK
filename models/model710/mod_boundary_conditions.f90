@@ -123,18 +123,28 @@ contains
             ! Restrain the coefficients of the 3rd basis functions on axis from changing
             if ( ( inode <= n_tht .or. ( n_tht < 1 .and. inode <= n_pol ) ) .and. (fix_axis_nodes) ) then
 
+              ! --- For t-derivative
               index_node = node_list%node(inode)%index(3)
               if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-
                 call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
                 index_large_i = n_tor * n_var * (index_node - 1)
                 ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-
                 irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
                 jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
                 A_glob(ilarge2)    = zbig
-
               end if
+
+              ! --- For cross-derivative
+              index_node = node_list%node(inode)%index(4)
+              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                index_large_i = n_tor * n_var * (index_node - 1)
+                ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
+                irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
+                A_glob(ilarge2)    = zbig
+              end if
+
             endif
 
           enddo

@@ -24,7 +24,7 @@ contains
   !> outputs:
   !>   particle_out: (particle_base) the output particle
   subroutine relativistic_gc_to_particle(node_list,element_list,&
-       relativistic_gc,particle_out,time,mass,B)
+       relativistic_gc,particle_out,mass,B)
     !> load modules
     use data_structure
     implicit none
@@ -32,7 +32,7 @@ contains
     type(type_node_list),intent(in) :: node_list
     type(type_element_list),intent(in) :: element_list
     type(particle_gc_relativistic),intent(in) :: relativistic_gc
-    real(kind=8),intent(in) :: time,mass
+    real(kind=8),intent(in) :: mass
     real(kind=8),dimension(3),intent(in) :: B
     !> delcare outpur variables
     class(particle_base),intent(out) :: particle_out
@@ -45,22 +45,29 @@ contains
     
   end subroutine relativistic_gc_to_particle
 
-  !> This procedure transform a relativistic_gs to a particle_gc
+  !> This procedure transfrom a relativistic gc to a relativistic
+  !> particle type.
+  !> inputs:
+  !> relativistic_gc: (particle_gc_relativistic) a relativistic gc
+  !> outputs:
+  !> relativistic_particle: (particle_kinetic_relativistic) a
+  !>                        relativistic kinetic particle
+
+  !> This procedure transform a relativistic_gc to a particle_gc
   !> inputs:
   !>   relativistic_gc: (particle_gc_relativistic) relativistic gc
-  !>   time:            (real8) particle time
   !>   mass:            (real8) particle mass
   !>   B:               (real8)(3) magnetic field
   !> outputs:
   !>   paericle_out:    (particle_gc) gc in energy and magnetic moment
-  pure function relativistic_gc_to_gc(relativistic_gc,time,mass,B) &
+  pure function relativistic_gc_to_gc(relativistic_gc,mass,B) &
        result(particle_out)
     !> load modules
     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
     implicit none
     !> declare inputs:
     type(particle_gc_relativistic),intent(in) :: relativistic_gc
-    real(kind=8),intent(in) :: time,mass
+    real(kind=8),intent(in) :: mass
     real(kind=8),dimension(3),intent(in) :: B
     !> dclare output variable
     type(particle_gc) :: particle_out
@@ -86,18 +93,17 @@ contains
   !> This procedure transform a particle_gc to relativistic_particle
   !> inputs:
   !>   gc_in: (particle_gc) guiding ceneter in energy momentum
-  !>   time:  (real8) particle time
   !>   mass:  (real8) particle mass
   !>   B:     (real8)(3) magnetic field
   !> outputs:
   !>   relativistic_gc: (particle_gc_relativistic) relativistic gc
-  pure function gc_to_relativistic_gc(gc_in,time,mass,B) result(relativistic_gc)
+  pure function gc_to_relativistic_gc(gc_in,mass,B) result(relativistic_gc)
     !> load modules
     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
     implicit none
     !> declare input variables
     type(particle_gc),intent(in) :: gc_in
-    real(kind=8),intent(in) :: time,mass
+    real(kind=8),intent(in) :: mass
     real(kind=8),dimension(3),intent(in) :: B
     !> declare output variables
     type(particle_gc_relativistic) :: relativistic_gc

@@ -195,9 +195,15 @@ end subroutine volume_preserving_push_cartesian
 !> This procedure transform a kinetic relativistic particle into a different
 !> particle type
 !> inputs:
+!>   node_list:    (type_node_list) a jorek node list
+!>   element_list: (type_element_list) a jorek element list
+!>   particle_in:  (particle_kinetic_relativistic) a relativistic particle
+!>   mass:
+!>   B:            (real8)(3) magnetic field
 !> outputs:
+!>   particle_out: (particle_base) output particle
 subroutine relativistic_kinetic_to_particle(node_list,element_list,particle_in,&
-     particle_out,time,mass,B)
+     particle_out,mass,B)
   !> load modules
   use data_structure
   implicit none
@@ -205,7 +211,7 @@ subroutine relativistic_kinetic_to_particle(node_list,element_list,particle_in,&
   type(type_node_list),intent(in) :: node_list
   type(type_element_list),intent(in) :: element_list
   type(particle_kinetic_relativistic),intent(in) :: particle_in
-  real(kind=8),intent(in) :: time,mass
+  real(kind=8),intent(in) :: mass
   real(kind=8),dimension(3),intent(in) :: B
   !> declare outpur variables
   class(particle_base),intent(out) :: particle_out
@@ -228,12 +234,11 @@ end subroutine relativistic_kinetic_to_particle
 !>   node_list:    (type_node_list) node list
 !>   element_list: (type_element_list) element list
 !>   in:           (particle_relativistic_kinetic) a relativistic particle
-!>   time:         (real8) time coordinate
 !>   mass:         (real8) particle mass in AMU
 !>   B:            (real8)(3)(optional) magnetic field [T]
 !> outputs:
 !>   out: (particle_gc) a guiding center particle
-function relativistic_kinetic_to_gc(node_list,element_list,in,time,mass,B) result(out)
+function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out)
   use data_structure
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   use mod_pusher_tools, only: particle_position_to_gc
@@ -241,7 +246,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,time,mass,B) resul
   type(type_node_list),intent(in) :: node_list
   type(type_element_list),intent(in) :: element_list
   type(particle_kinetic_relativistic),intent(in) :: in ! input kinetic particle
-  real(kind=8),intent(in) :: time,mass !< particle time and mass in AMU
+  real(kind=8),intent(in) :: mass !< particle time and mass in AMU
   real(kind=8),dimension(3),intent(in) :: B !< mass in AMU magnetic field in [T]
   ! delcare output variables
   type(particle_gc) :: out

@@ -220,7 +220,7 @@ subroutine relativistic_kinetic_to_particle(node_list,element_list,particle_in,&
   select type (particle_out)
   type is (particle_gc)
      particle_out = relativistic_kinetic_to_gc(node_list,element_list,&
-          particle_in,time,mass,B)
+          particle_in,mass,B)
   end select
   
 end subroutine relativistic_kinetic_to_particle

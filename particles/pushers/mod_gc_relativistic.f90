@@ -40,7 +40,7 @@ contains
     !> select particle type
     select type (particle_out)
     type is (particle_gc)
-       particle_out = relativistic_gc_to_gc(relativistic_gc,time,mass,B)
+       particle_out = relativistic_gc_to_gc(relativistic_gc,mass,B)
     end select
     
   end subroutine relativistic_gc_to_particle
@@ -48,10 +48,13 @@ contains
   !> This procedure transfrom a relativistic gc to a relativistic
   !> particle type.
   !> inputs:
-  !> relativistic_gc: (particle_gc_relativistic) a relativistic gc
+  !>   relativistic_gc: (particle_gc_relativistic) a relativistic gc
+  !>   mass:            (real8) particle mass 
+  !>   B:               (real8)(3) magnetic field
+  !>   gyro_angle:      (real8) gyro angle for initialising a particle
   !> outputs:
-  !> relativistic_particle: (particle_kinetic_relativistic) a
-  !>                        relativistic kinetic particle
+  !>   relativistic_particle: (particle_kinetic_relativistic) a
+  !>                           relativistic kinetic particle
 
   !> This procedure transform a relativistic_gc to a particle_gc
   !> inputs:

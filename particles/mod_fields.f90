@@ -14,7 +14,7 @@ public fields_base
 type, abstract :: fields_base
   type(type_node_list), allocatable    :: node_list !< Current node list
   type(type_element_list), allocatable :: element_list !< Current element list
-  logical                              :: flag_zero_dpsidt=.false. !< if true, P_time(1) = dpsi/dt = 0
+  logical(kind=1) :: flag_zero_dpsidt=.false. !< if true, P_time(1) = dpsi/dt = 0
   contains
     procedure(interp_PRZ),deferred,public   :: interp_PRZ
     procedure(interp_PRZ_2),deferred,public :: interp_PRZ_2
@@ -98,7 +98,7 @@ call transform_derivatives_st_to_RZ(P_R,P_Z,2,P_s,P_t,RZ(2),RZ(3),RZ(5),RZ(6))
 psi = P(1)
 U   = P(2)/t_norm
 
-! Set dpsi/dt to 0 if flag is true
+! set the poloidal magnetic flux time derivative to zero if true
 if(fields%flag_zero_dpsidt) P_time(1) = 0.d0
 
 ! Calculate the magnetic field (see http://jorek.eu/wiki/doku.php?id=reduced_mhd)
@@ -217,10 +217,18 @@ pure subroutine calc_EBNormBGradBCurlbDbdt(fields,time,i_elm,st,phi,E,b,&
   
 end subroutine calc_EBNormBGradBCurlbDbdt
 
-! This subroutine sets a flag to force dpsi/dt to 0
+!> This procedure set a flag for setting to zero the poloidal
+!> magneticflux time derivative
+!> inputs:
+!>   this: (fields_base) object of class field
+!>   flag_dpsidt_to_zero: (logical1) if true  the poloidal
+!>                        magnetic flux time derivative is
+!>                        set to zero
+!> outputs:
+!>   this: (fields_base) object of class field
 pure subroutine set_flag_dpsidt(this,flag_dpsidt_to_zero)
   class(fields_base),intent(inout) :: this !< fields object
-  logical,intent(in)               :: flag_dpsidt_to_zero !< flag value
+  logical(kind=1),intent(in) :: flag_dpsidt_to_zero !< flag to set
 
   !> set the flag_zero_dpsidt flag of this
   this%flag_zero_dpsidt = flag_dpsidt_to_zero

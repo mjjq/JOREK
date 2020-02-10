@@ -86,7 +86,6 @@ end subroutine volume_preserving_second_half_step_jorek
 !> fields using the Volume Preserving Algorithm (VPA)
 subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail)
   ! load functions
-<<<<<<< HEAD
   use mod_coordinate_transforms, only: cartesian_to_cylindrical
   use mod_coordinate_transforms, only: cylindrical_to_cartesian
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian

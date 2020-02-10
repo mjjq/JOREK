@@ -55,6 +55,19 @@ contains
   !> outputs:
   !>   relativistic_particle: (particle_kinetic_relativistic) a
   !>                           relativistic kinetic particle
+  function relativistic_gc_to_relativistic_particle(relativistic_gc,&
+       mass,B,gyro_angle) result(relativistic_particle)
+    !> load module
+    use mod_pusher_tools, only: gc_position_to_particle
+    implicit none
+    !> declare input varibales
+    type(particle_gc_relativistic),intent(in) :: relativistic_gc
+    real(kind=8),intent(in) :: mass,gyro_angle
+    real(kind=8),dimension(3),intent(in) :: B
+    !> delcare output variables
+    type(particle_kinetic_relativistic) :: relativistic_particle
+    !> delcare internal varibales
+  end function relativistic_gc_to_relativistic_particle 
 
   !> This procedure transform a relativistic_gc to a particle_gc
   !> inputs:

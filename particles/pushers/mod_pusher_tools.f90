@@ -111,8 +111,6 @@ x_in,st_in,i_elm_in,p_in,q_in,B_hat_cart,B_norm,x_gc_out,st_gc_out,i_elm_out)
   use data_structure
   use constants, only: ATOMIC_MASS_UNIT,EL_CHG
   use mod_math_operators, only: cross_product
-  use mod_coordinate_transforms, only: cylindrical_to_cartesian
-  use mod_coordinate_transforms, only: cartesian_to_cylindrical
   use mod_find_rz_nearby
   ! declare input variables
   type(type_node_list),intent(in) :: node_list
@@ -131,12 +129,9 @@ x_in,st_in,i_elm_in,p_in,q_in,B_hat_cart,B_norm,x_gc_out,st_gc_out,i_elm_out)
   integer :: ifail !< ifail kind not defined in find_RZ_nearby
 
   ! compute the guiding center position in cartesian reference
-  x_gc_out = cylindrical_to_cartesian(x_in)+&
+  x_gc_out = x_in+&
   (ATOMIC_MASS_UNIT*cross_product(p_in,B_hat_cart))/&
-  (EL_CHG*real(q_in,8)*B_norm)
-
-  ! transform back from a cartesian to a cylindrical coordinate system
-  x_gc_out = cartesian_to_cylindrical(x_gc_out)  
+  (EL_CHG*real(q_in,8)*B_norm)  
 
   ! find the local coordinates
   call find_RZ_nearby(node_list,element_list,x_in(1),x_in(2),&
@@ -151,8 +146,6 @@ x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat_cart,B_norm,x_out,st_out,i_elm_o
   use data_structure
   use constants, only: ATOMIC_MASS_UNIT,EL_CHG
   use mod_math_operators, only: cross_product
-  use mod_coordinate_transforms, only: cylindrical_to_cartesian
-  use mod_coordinate_transforms, only: cartesian_to_cylindrical
   use mod_find_rz_nearby
   ! declare input variables
   type(type_node_list),intent(in) :: node_list
@@ -171,12 +164,9 @@ x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat_cart,B_norm,x_out,st_out,i_elm_o
   integer :: ifail !< ifail kind not defined in find_RZ_nearby
 
   ! compute the particle position in cartesian coordinates
-  x_out = cylindrical_to_cartesian(x_gc_in)+&
+  x_out = x_gc_in+&
   (ATOMIC_MASS_UNIT*cross_product(B_hat_cart,p_gc_in))/&
   (EL_CHG*real(q_gc_in,8)*B_norm)
-
-  ! transform the particle coordinates from cartesian to cylindrical coordinates
-  x_out = cartesian_to_cylindrical(x_out)
 
   ! find the local coordinates
   call find_RZ_nearby(node_list,element_list,x_gc_in(1),x_gc_in(2),&

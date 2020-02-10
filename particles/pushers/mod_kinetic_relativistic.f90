@@ -241,6 +241,7 @@ end subroutine relativistic_kinetic_to_particle
 function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out)
   use data_structure
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
   use mod_pusher_tools, only: particle_position_to_gc
   ! declare input variables
   type(type_node_list),intent(in) :: node_list
@@ -276,7 +277,10 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out
   ! compute the gc position
   if(out%q.ne.0) then 
     call particle_position_to_gc(node_list,element_list,&
-    in%x,in%st,in%i_elm,in%p,in%q,B_hat_cart,B_norm,out%x,out%st,out%i_elm)
+         in%x,in%st,in%i_elm,&
+         vector_cartesian_to_cylindrical(in%x(3),in%p),in%q,&
+         vector_cartesian_to_cylindrical(in%x(3),B_hat_cart),&
+         B_norm,out%x,out%st,out%i_elm)
   endif  
 end function relativistic_kinetic_to_gc
 
@@ -298,6 +302,7 @@ end function relativistic_kinetic_to_gc
 function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) result(out)
   use data_structure
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
   use mod_pusher_tools, only: get_orthonormals
   use mod_pusher_tools, only: gc_position_to_particle
   ! declare input variables
@@ -341,8 +346,10 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) r
 
   ! compute the particle position in R,Z,Phi coordinates
   if(out%q.ne.0) then
-    call gc_position_to_particle(node_list,element_list,&
-    in%x,in%st,in%i_elm,out%p,in%q,B_hat_cart,B_norm,out%x,out%st,out%i_elm)
+    call gc_position_to_particle(node_list,element_list,in%x,in%st,&
+         in%i_elm,vector_cartesian_to_cylindrical(in%x(3),out%p),in%q,&
+         vector_cartesian_to_cylindrical(in%x(3),B_hat_cart),&
+         B_norm,out%x,out%st,out%i_elm)
   endif  
 end function gc_to_relativistic_kinetic
 

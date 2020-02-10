@@ -26,16 +26,16 @@ contains
   pure subroutine relativistic_gc_particle(node_list,element_list,&
        relativistic_gc,particle_out,time,mass,B)
     !> load modules
-    use mod_fields, only: field_base
+    use data_structure
     implicit none
     !> declare input variables
     type(type_node_list),intent(in) :: node_list
     type(type_element_list),intent(in) :: element_list
     type(particle_gc_relativistic),intent(in) :: relativistic_gc
-    real(kid=8),intent(in) :: time,mass
+    real(kind=8),intent(in) :: time,mass
     real(kind=8),dimension(3),intent(in) :: B
     !> delcare outpur variables
-    class(particle_base),inent(out) :: particle_out
+    class(particle_base),intent(out) :: particle_out
 
     !> select particle type
     select type (particle_out)
@@ -59,20 +59,20 @@ contains
     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
     implicit none
     !> declare inputs:
-    type(particle_gc),intent(in) :: relativistic_gc
+    type(particle_gc_realtivistic),intent(in) :: relativistic_gc
     real(kind=8),intent(in) :: time,mass
     real(kind=8),dimension(3),intent(in) :: B
     !> dclare output variable
-    type(paricle_gc_relativistic) :: particle_out
+    type(paricle_gc) :: particle_out
 
     !> copy the position
-    particle_gc%x = relativistic_gc%x
+    particle_out%x = relativistic_gc%x
     !> copy the charge
-    particle_gc%q = relativistic_gc%q
+    particle_out%q = relativistic_gc%q
     !> copy mesh element
-    particle_gc%i_elm = relativistic_gc%i_elm
+    particle_out%i_elm = relativistic_gc%i_elm
     !> copy local particle coordinates
-    particle_gc%st = relativistic_gc%st
+    particle_out%st = relativistic_gc%st
     !> copy the magnetic moment in eV with p_parallel sign
     particle_out%mu = sign(ATOMIC_MASS_UNIT*relativistic_gc%p(2)/EL_CHG,&
          relativistic_gc%p(1))
@@ -100,7 +100,7 @@ contains
     real(kind=8),intent(in) :: time,mass
     real(kind=8),dimension(3),intent(in) :: B
     !> declare output variables
-    type(particle_gc_relativistic) :: relativistic _gc
+    type(particle_gc_relativistic) :: relativistic_gc
     
     !> copy gc position
     relativistic_gc%x = gc_in%x

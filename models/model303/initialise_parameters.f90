@@ -26,8 +26,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 restart, rst_format, regrid, bootstrap, write_ps,   &
                 force_horizontal_Xline,                             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open, n_private, n_leg, n_ext,                    &
-                n_outer, n_inner, n_up_priv, n_up_leg,              &
+                n_open, n_private, n_leg, n_leg_out, n_ext,         &
+                n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
+                n_tht_equidistant,                                  &
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
@@ -41,6 +42,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 n_pfc, n_tor_fft_thresh,                            &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
+                grid_to_wall, RZ_grid_inside_wall,                  &
+                n_wall_blocks, n_ext_block,                         &
+                n_block_points_left,  n_block_points_right,         &
+                R_block_points_left,  R_block_points_right,         &
+                Z_block_points_left,  Z_block_points_right,         &
                 tokamak_device,                                     &
                 F0, gamma_sheath, density_reflection,               &
                 zjz_0, zjz_1, zj_coef,                              &
@@ -60,7 +66,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 		pellet_particles, use_pellet,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                xcase, D_perp_file, ZK_perp_file,                   &
+                xcase, SDN_threshold, D_perp_file, ZK_perp_file,    &
                 rho_file, T_file, ffprime_file, rot_file,           &
                 normalized_velocity_profile,                        &
                 freeboundary_equil, freeboundary,  freeb_change_indices, &
@@ -71,7 +77,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
                 pastix_smp_only, refinement, force_central_node,    &
-                grid_to_wall,                                       &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &

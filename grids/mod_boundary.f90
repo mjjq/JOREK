@@ -367,13 +367,13 @@ module mod_boundary
 
     implicit none
 
-    type(type_bnd_element), intent(in) :: bnd_elem
+    type(type_bnd_element), intent(inout) :: bnd_elem
 
     type(type_bnd_element) :: reversed_elem
 
-    write(*,*) '############################################################################'
+    !write(*,*) '############################################################################'
     write(*,*) 'REVERSE_ELEM'
-    write(*,*) '############################################################################'
+    !write(*,*) '############################################################################'
 
     reversed_elem%vertex(1) = bnd_elem%vertex(2)
     reversed_elem%vertex(2) = bnd_elem%vertex(1)
@@ -386,6 +386,8 @@ module mod_boundary
 
     reversed_elem%size(1,:) = bnd_elem%size(2,:)
     reversed_elem%size(2,:) = bnd_elem%size(1,:)
+    
+    bnd_elem = reversed_elem
 
   end subroutine reverse_elem
 

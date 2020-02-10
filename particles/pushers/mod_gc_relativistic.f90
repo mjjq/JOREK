@@ -31,7 +31,7 @@ contains
     !> declare input variables
     type(type_node_list),intent(in) :: node_list
     type(type_element_list),intent(in) :: element_list
-    type(particle_gc_relativistic),intent(in) :: relativistic_gc
+    class(particle_gc_relativistic),intent(in) :: relativistic_gc
     real(kind=8),intent(in) :: time,mass
     real(kind=8),dimension(3),intent(in) :: B
     !> delcare outpur variables
@@ -59,7 +59,7 @@ contains
     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
     implicit none
     !> declare inputs:
-    type(particle_gc_realtivistic),intent(in) :: relativistic_gc
+    class(particle_gc_realtivistic),intent(in) :: relativistic_gc
     real(kind=8),intent(in) :: time,mass
     real(kind=8),dimension(3),intent(in) :: B
     !> dclare output variable
@@ -96,11 +96,11 @@ contains
     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
     implicit none
     !> declare input variables
-    type(particle_gc),intent(in) :: gc_in
+    class(particle_gc),intent(in) :: gc_in
     real(kind=8),intent(in) :: time,mass
     real(kind=8),dimension(3),intent(in) :: B
     !> declare output variables
-    type(particle_gc_relativistic) :: relativistic_gc
+    class(particle_gc_relativistic) :: relativistic_gc
     
     !> copy gc position
     relativistic_gc%x = gc_in%x

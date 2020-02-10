@@ -494,14 +494,14 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
         (particle_in%p(1)*sin(particle_in%x(3))+particle_in%p(2)*cos(particle_in%x(3)))
 	! transform a relativistic kinetic particle into gc
         call relativistic_kinetic_to_particle(fields%node_list,fields%element_list,&
-             particle_in,particle,time,mass,B)
+             particle_in,particle,mass,B)
        type is (particle_gc_relativistic)
          !> compute the toroidal canonical momentum for a relativistic GC
           real_stats_tmp(6) = EL_CHG*particle_in%q*psi + ATOMIC_MASS_UNIT*particle_in%x(1)*&
                particle_in%p(1)*B(3)/norm2(B)
          !> transform a particle_relativistic_GC into particle_gc
           call  relativistic_gc_to_particle(fields%node_list,fields%element_list,&
-               particle_in,particle,time,mass,B) 
+               particle_in,particle,mass,B) 
       class default
         write(*,*) "ERROR: calculate_particle_diagnostics not implemented for this particle type"
         cycle ! skip this iteration

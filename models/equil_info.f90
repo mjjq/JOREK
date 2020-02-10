@@ -613,7 +613,6 @@ module equil_info
     ! --- Limiter Point
     call MPI_BCAST(ES%R_lim,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(ES%Z_lim,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%R_lim,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(ES%Psi_lim,    1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(ES%s_lim,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(ES%t_lim,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)

@@ -120,7 +120,11 @@ do ms=1, n_gauss
      T0    = eq_g(mp,6,ms)
      Vpar0 = eq_g(mp,7,ms)
 
-     normal = (Vpar0 * ps0_s) / abs(Vpar0 * ps0_s)
+     if (abs(Vpar0) .gt. 1.d-15) then
+       normal = (Vpar0 * ps0_s) / abs(Vpar0 * ps0_s)
+     else
+       normal = 0.d0
+     endif
 
      do i=1,2                ! loop over nodes
 

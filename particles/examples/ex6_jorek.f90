@@ -2,7 +2,9 @@
 !>
 !> Compile with `make ex6_jorek`
 !> Run with `./ex6_jorek < JOREK_namelist`
+
 program ex6_jorek
+
 use particle_tracer
 use mod_particle_io
 use mod_particle_diagnostics
@@ -118,7 +120,7 @@ do while (.not. sim%stop_now)
 	  if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1	
         end do !< time steps
       end do !< particles
-      !$omp end parallel do
+!      !$omp end parallel do
     end select
     write(*,*) "number of lost particles: ", n_lost	  
   end do !< groups
@@ -134,10 +136,8 @@ enddo
 
 call cpu_time(t1)
 write(*,*) 'CPU time: ', t1-t0
-
-! Print final particle information
-!write(*,*) 'Final x,y,z: ', sim%groups(1)%particles(1)%x(1), sim%groups(1)%particles(1)%x(2), sim%groups(1)%particles(1)%x(3)
-!call print_kinetic_energy%do(sim,events(1))  !< print particle kinetic energy
+ 
+call write_simulation_hdf5(sim, 'part_restart.h5')
 
 ! Finalize the simulation
 call sim%finalize

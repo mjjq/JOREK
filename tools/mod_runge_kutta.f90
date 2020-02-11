@@ -28,20 +28,20 @@ module mod_runge_kutta
      !>   n_variables:  (integer) number of variables
      !>   t:            (real8) integration coordinate
      !>   solution_old: (real8)(n_variables) old solution
-     !>   deltas:       (real8)(n_variables) sum of previous satages
+     !>   solution:     (real8)(n_variables) solution at a give stage
      !>   fields:       (field_base)(optional) fields for particle pushing
      !> outputs
      !>   derivatives:  (real8)(n_variables) new derivatives
      !>   ifail:        (integer) if 0 derivative calculation failed
      subroutine compute_derivtives_runge_kutta(fields,n_variables,t,&
-          solution_old,deltas,derivatives,ifail)
+          solution_old,solution,derivatives,ifail)
        !> load module
        use mod_fields, only: fields_base
        implicit none
        !> declare input variables
        integer,intent(in) :: n_variables
        real(kind=8),intent(in) :: t
-       real(kind=8),dimension(n_variables),intent(in) :: solution_old,deltas
+       real(kind=8),dimension(n_variables),intent(in) :: solution_old,solution
        class(fields_base),intent(in) :: fields
        !> declare output variables
        integer,intent(out) :: ifail
@@ -105,7 +105,8 @@ contains
        counter = counter + i !< update counter
        !> computing the new derivatives
        call compute_derivatives_runge_kutta(fields,n_variables,t_new,solution_old,&
-            dt*deltas,differentials(i*n_variables+1:(i+1)*n_variables),ifail)
+            solution_old+dt*deltas,differentials(i*n_variables+1:(i+1)*n_variables),&
+            ifail)
        deltas = 0.d0 !< re-initialise the deltas variable
     enddo
     differentials = dt*differentials !< comute differentials from derivatives

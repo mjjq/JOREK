@@ -59,7 +59,7 @@ contains
   subroutine compute_runge_kutta_differentials(n_variables,&
        t,dt,solution_old,differentials,ifail)
     !> step coefficients
-    real(kind=8),dimension(6),parameter :: A_vect=[2.d-1,3.d-1,6.d-1,1.d0,8.75d-1]
+    real(kind=8),dimension(5),parameter :: A_vect=[2.d-1,3.d-1,6.d-1,1.d0,8.75d-1]
     !> derivatives coefficients
     real(kind=8),dimension(15),parameter :: B_vect=[2.d-1,7.5d-2,2.25d-1,3.d-1,&
          -9.d-1,1.2d0,-2.037037037037037d-1,2.5d0,-2.592592592592593d0,&
@@ -144,7 +144,7 @@ contains
     do i=1,n_stages
        !> compute solutions
        solution_1 = solution_1 + &
-            C_vect(i)*differentials(n_variabls*(i-1)+1:i*n_variables)
+            C_vect(i)*differentials(n_variables*(i-1)+1:i*n_variables)
        solution_2 = solution_2 + &
             C_vect(n_stages+i)*differentials(n_variables*(i-1)+1:i*n_variables)
        solution_3 = solution_3 + &
@@ -188,7 +188,7 @@ contains
     solution_2 = solution_old
     
     !> loop on the number of stages
-    do i=1:n_stages
+    do i=1,n_stages
        !> compute solution
        solution_1 = solution_1 + &
             C_vect(i)*differentials(n_variables*(i-1)+1:i*n_variables)
@@ -209,7 +209,7 @@ contains
   pure subroutine compute_runge_kutta_solution_1(n_variables,solution_old,&
        differentials,solution)
     !> coefficients for computing solutions
-    real(kind=6),dimension(6),parameter :: C_vect=[9.788359788359788d-2,&
+    real(kind=8),dimension(6),parameter :: C_vect=[9.788359788359788d-2,&
          0.d0,4.025764895330113d-1,2.104377104377105d-01,0.d0,2.891022021456804d-1]
     !> declare input variables
     integer,intent(in) :: n_variables
@@ -222,7 +222,7 @@ contains
     
     solution = solution_old !< initialise solution
     !> loop on the stages
-    do i=1:n_stages
+    do i=1,n_stages
        solution = solution + C_vect(i)*differentials(n_variables*(i-1)+1:i*n_variables)
     enddo
        

@@ -6,7 +6,7 @@ module mod_runge_kutta
 
   private !< set all as private
   public n_stages
-  public compute_runge_kutta_derivatives
+  public compute_runge_kutta_differentials
   public compute_runge_kutta_solution
 
   !> declare module parameters
@@ -56,7 +56,7 @@ contains
   !> outputs:
   !>   differentials: (real8)(n_varibales*(n_stages+1)) differentials
   !>   ifail:               (integer) if 0 integration failed
-  subroutine compute_runge_kutta_derivatives(n_variables,&
+  subroutine compute_runge_kutta_differentials(n_variables,&
        t,dt,solution_old,differentials,ifail)
     !> step coefficients
     real(kind=8),dimension(6),parameter :: A_vect=[2.d-1,3.d-1,6.d-1,1.d0,8.75d-1]
@@ -99,7 +99,7 @@ contains
        deltas = 0.d0 !< re-initialise the deltas variable
     enddo
     differentials = dt*differentials !< comute differentials from derivatives
-  subroutine compute_runge_kutta_differentials
+  end subroutine compute_runge_kutta_differentials
 
   !> This procedure computes the runge kutta solution of five different orders
   !> for embedded runge-kutta. This procedure allows to control both
@@ -212,7 +212,7 @@ contains
     real(kind=6),dimension(6),parameter :: C_vect=[9.788359788359788d-2,&
          0.d0,4.025764895330113d-1,2.104377104377105d-01,0.d0,2.891022021456804d-1]
     !> declare input variables
-    integer,intent(in) :: n_variables    integer,intent(in) :: n_variables
+    integer,intent(in) :: n_variables
     real(kind=8),dimension(n_variables),intent(in) :: solution_old
     real(kind=8),dimension(n_stages*n_variables),intent(in) :: differentials
     !> declare output variables

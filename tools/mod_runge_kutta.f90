@@ -56,7 +56,7 @@ contains
   !> outputs:
   !>   differentials: (real8)(n_varibales*(n_stages+1)) differentials
   !>   ifail:               (integer) if 0 integration failed
-  pure subroutine compute_runge_kutta_derivatives(n_variables,&
+  subroutine compute_runge_kutta_derivatives(n_variables,&
        t,dt,solution_old,differentials,ifail)
     !> step coefficients
     real(kind=8),dimension(6),parameter :: A_vect=[2.d-1,3.d-1,6.d-1,1.d0,8.75d-1]
@@ -76,8 +76,9 @@ contains
     integer :: i,j !< indexes
     integer :: counter=0 !< stage counter
     real(kind=8) :: t_new !< new coordinate
-    real(kind=8),dimension(n_variables) :: deltas=0.d0 !< reduction of derivative stages
-    
+    real(kind=8),dimension(n_variables) :: deltas !< reduction of derivative stages
+
+    deltas = 0.d0 !< initialise deltas to zero
     !> compute the first derivatives
     call compute_derivatives_runge_kutta(n_variables,t,solution_old,&
          deltas,differentials(1:n_variables),ifail)
@@ -98,7 +99,7 @@ contains
        deltas = 0.d0 !< re-initialise the deltas variable
     enddo
     differentials = dt*differentials !< comute differentials from derivatives
-  end subroutine compute_runge_kutta_differentials
+  subroutine compute_runge_kutta_differentials
 
   !> This procedure computes the runge kutta solution of five different orders
   !> for embedded runge-kutta. This procedure allows to control both
@@ -113,7 +114,7 @@ contains
   !>   solution_3: (real8)(n_variables) middle order solution
   !>   solution_4: (real8)(n_variables) middle-low order solution
   !>   solution_5: (real8)(n_variables) lowest order solution
-  pure function compute_runge_kutta_solution_5(n_variables,solution_old,&
+  pure subroutine compute_runge_kutta_solution_5(n_variables,solution_old,&
        differentials,solution_1,solution_2,solution_3,solution_4,solution_5)
     !> coefficients for computing solutions
     real(kind=8),dimension(30),parameter :: C_vect=[9.788359788359788d-2,&
@@ -154,7 +155,7 @@ contains
             C_vect(4*n_stages+1)*differentials(n_variables*(i-1)+1:i*n_variables)
     enddo
     
-  end function compute_runge_kutta_solution_5
+  end subroutine compute_runge_kutta_solution_5
 
   !> This procedure computes the runge kutta solution for two different orders
   !> for embedded runge-kutta. This procedure allows integration step control.
@@ -166,7 +167,7 @@ contains
   !> outputs:
   !>   solution_1: (real8)(n_variables) highest order solution
   !>   solution_2: (real8)(n_variables) lowest order solution
-  pure function compute_runge_kutta_solution_2(n_variables,solution_old,&
+  pure subroutine compute_runge_kutta_solution_2(n_variables,solution_old,&
        differentials,solution_1,solution_2)
     !> coefficients for computing solutions
     real(kind=8),dimension(12),parameter :: C_vect=[9.788359788359788d-2,&
@@ -195,7 +196,7 @@ contains
             C_vect(n_stages+1)*differentials(n_variables*(i-1)+1:i*n_variables)
     enddo
     
-  end function compute_runge_kutta_solution_2
+  end subroutine compute_runge_kutta_solution_2
   
   !> This procedure computes the runge kutta solution for one specific order.
   !> Default: runge-kutta 4(5) cash-karp
@@ -205,7 +206,7 @@ contains
   !>   differentials: (real8)(n_variables*(n_stages+1)) differentials
   !> outputs:
   !>   solution: (real8)(n_variables) runge-kutta solution
-  pure function compute_runge_kutta_solution_1(n_variables,solution_old,&
+  pure subroutine compute_runge_kutta_solution_1(n_variables,solution_old,&
        differentials,solution)
     !> coefficients for computing solutions
     real(kind=6),dimension(6),parameter :: C_vect=[9.788359788359788d-2,&
@@ -225,7 +226,7 @@ contains
        solution = solution + C_vect(i)*differentials(n_variables*(i-1)+1:i*n_variables)
     enddo
        
-  end function compute_runge_kutta_solution_1
+  end subroutine compute_runge_kutta_solution_1
   
 end module mod_runge_kutta
 

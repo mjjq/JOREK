@@ -143,7 +143,7 @@ contains
     particle_out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGHT          &
          * sqrt(mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT +     &
                 relativistic_gc%p(1)*relativistic_gc%p(1) +   &
-                2.d0*mass*norm2(B)*relativistic_gc%p(2))) /EL_CHG
+                2.d0*mass*norm2(B)*relativistic_gc%p(2)) /EL_CHG
   end function relativistic_gc_to_gc
   
   !> This procedure transforms a particle_gc into particle_gc_relativistic

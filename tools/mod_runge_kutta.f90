@@ -33,7 +33,7 @@ module mod_runge_kutta
      !> outputs
      !>   derivatives:  (real8)(n_variables) new derivatives
      !>   ifail:        (integer) if 0 derivative calculation failed
-     subroutine compute_derivtives_runge_kutta(field,n_variables,t,&
+     subroutine compute_derivtives_runge_kutta(fields,n_variables,t,&
           solution_old,deltas,derivatives,ifail)
        !> load module
        use mod_fields, only: fields_base
@@ -63,7 +63,7 @@ contains
   !>   differentials: (real8)(n_varibales*(n_stages+1)) differentials
   !>   ifail:               (integer) if 0 integration failed
   subroutine compute_runge_kutta_differentials(fields,n_variables,&
-       t,dt,solution_old,differentials,ifail,fields)
+       t,dt,solution_old,differentials,ifail)
     !> load module
     use mod_fields, only: fields_base
     implicit none

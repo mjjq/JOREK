@@ -25,23 +25,31 @@ module mod_runge_kutta
      !> This is the interface for procedures computing the ODE
      !> right hanf side to be used in compute_runge_kutta_derivatives
      !> inputs:
-     !>   n_variables:  (integer) number of variables
-     !>   t:            (real8) integration coordinate
-     !>   solution_old: (real8)(n_variables) old solution
-     !>   solution:     (real8)(n_variables) solution at a give stage
-     !>   fields:       (field_base)(optional) fields for particle pushing
+     !>   n_variables:       (integer) number of variables
+     !>   n_int_parameters:  (integer) number of integer parameters
+     !>   n_real_parameters: (integer) number of real parameters
+     !>   t:                 (real8) integration coordinate
+     !>   solution_old:      (real8)(n_variables) old solution
+     !>   solution:          (real8)(n_variables) solution at a give stage
+     !>   int_parameters:    (integer)(n_int_parameters) integer parameters
+     !>   real_parameters:   (real8)(n_real_parameters) real parameters
+     !>   fields:            (field_base)(optional) fields for particle pushing
      !> outputs
      !>   derivatives:  (real8)(n_variables) new derivatives
      !>   ifail:        (integer) if 0 derivative calculation failed
-     subroutine compute_derivtives_runge_kutta(fields,n_variables,t,&
-          solution_old,solution,derivatives,ifail)
+     subroutine compute_derivtives_runge_kutta(fields,n_variables,&
+          n_int_parameters,n_real_parameters,t,solution_old,&
+          solution,int_parameters,real_parameters,&
+          derivatives,ifail)
        !> load module
        use mod_fields, only: fields_base
        implicit none
        !> declare input variables
-       integer,intent(in) :: n_variables
+       integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
+       integer,dimension(n_int_parameters),intent(in) :: int_parameters
        real(kind=8),intent(in) :: t
        real(kind=8),dimension(n_variables),intent(in) :: solution_old,solution
+       real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
        class(fields_base),intent(in) :: fields
        !> declare output variables
        integer,intent(out) :: ifail
@@ -55,15 +63,20 @@ contains
   !> for each stage. Default Runge-Kutta: Cash-Karp 4(5)
   !> inputs:
   !>   n_variables:         (integer) number of variables (ODEs)
+  !>   n_int_parameters:    (integer) number of integer parameters
+  !>   n_real_parameters:   (integer) number of real parameters
   !>   t:                   (real8) coordinate of solution old
   !>   dt:                  (real8) integration step 
   !>   solution_old:        (real8)(n_variables) initial solution
+  !>   int_parameters:      (integer)(n_int_parameters) integer parameters
+  !>   real_parameters:     (real8)(n_real_parameters) real parameters
   !>   fields:              (fields_base) fields for particle tracking
   !> outputs:
   !>   differentials: (real8)(n_varibales*(n_stages+1)) differentials
   !>   ifail:               (integer) if 0 integration failed
   subroutine compute_runge_kutta_differentials(fields,n_variables,&
-       t,dt,solution_old,differentials,ifail)
+       n_int_parameters,n_real_parameters,t,dt,solution_old,&
+       int_parameters,real_parametersdifferentials,ifail)
     !> load module
     use mod_fields, only: fields_base
     implicit none
@@ -75,9 +88,11 @@ contains
          1.296296296296296d0,2.949580439814815d-2,3.41796875d-1,4.159432870370371d-2,&
          4.003454137731481d-1,6.1767578125d-2]
     !> declare input variables
-    integer,intent(in) :: n_variables
+    integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
+    integer,dimension(n_integer_parameters),intent(in) :: int_parameters
     real(kind=8),intent(in) :: t,dt
     real(kind=8),dimension(n_variables),intent(in) :: solution_old
+    real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
     class(fields_base),intent(in) :: fields
     !> declare output variable
     integer,intent(out) :: ifail
@@ -90,8 +105,9 @@ contains
 
     deltas = 0.d0 !< initialise deltas to zero
     !> compute the first derivatives
-    call compute_derivatives_runge_kutta(fields,n_variables,t,solution_old,&
-         deltas,differentials(1:n_variables),ifail)
+    call compute_derivatives_runge_kutta(fields,n_variables,n_int_parameters,&
+         n_real_parameters,t,solution_old,solution_old,int_parameters,&
+         real_parameters,differentials(1:n_variables),ifail)
     
     !> loop on the number of stages 
     do i=1,n_stages-1
@@ -104,9 +120,10 @@ contains
        enddo
        counter = counter + i !< update counter
        !> computing the new derivatives
-       call compute_derivatives_runge_kutta(fields,n_variables,t_new,solution_old,&
-            solution_old+dt*deltas,differentials(i*n_variables+1:(i+1)*n_variables),&
-            ifail)
+       call compute_derivatives_runge_kutta(fields,n_variables,n_int_parameters,&
+            n_real_parameters,t_new,solution_old,solution_old+dt*deltas,&
+            int_parameters,real_parameters,&
+            differentials(i*n_variables+1:(i+1)*n_variables),ifail)
        deltas = 0.d0 !< re-initialise the deltas variable
     enddo
     differentials = dt*differentials !< comute differentials from derivatives

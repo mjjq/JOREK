@@ -90,8 +90,8 @@ contains
 
     deltas = 0.d0 !< initialise deltas to zero
     !> compute the first derivatives
-    call compute_derivatives_runge_kutta(n_variables,t,solution_old,&
-         deltas,differentials(1:n_variables),ifail,fields)
+    call compute_derivatives_runge_kutta(fields,n_variables,t,solution_old,&
+         deltas,differentials(1:n_variables),ifail)
     
     !> loop on the number of stages 
     do i=1,n_stages-1

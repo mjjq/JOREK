@@ -22,8 +22,8 @@ type (type_node)             :: nodes(n_vertex_max)
 
 
 
-integer, intent(in)          :: my_id, my_id_n, n_cpu, m_cpu,  MPI_COMM_N,  MPI_COMM_MASTER, my_id_master
-logical, intent(in)          :: direct_construction
+integer, intent(in)          :: my_id, my_id_n, n_cpu, m_cpu,  MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, xcase2
+logical, intent(in)          :: direct_construction, xpoint2
 integer, intent(out)         :: index_min_loc(*), index_max_loc(*)
 integer                      :: i_tor_min, i_tor_max 
 integer                      :: local_elms_loc(*)
@@ -33,8 +33,7 @@ integer,  allocatable        :: ijA_index_loc(:,:), ijA_size_loc(:), irn_jcn_loc
 integer,  allocatable        :: irn_glob_loc(:), jcn_glob_loc(:)
 logical                      :: freeboundary
 integer                      :: n_glob_loc, nz_glob_loc, ndof_glob_loc, n_matrix_block_size_loc
-integer                      :: xcase2, i, ierr
-logical                      :: xpoint2
+integer                      :: i, ierr
  
 
 

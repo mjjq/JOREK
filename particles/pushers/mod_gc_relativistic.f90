@@ -20,7 +20,7 @@ contains
   !>   fields:
   !>   n_variables:       (integer) number of variables=4:
   !>   n_int_parameters:  (integer) number of integer parameters=2
-  !>   n_real_parameters: (integer) number of real parameters
+  !>   n_real_parameters: (integer) number of real parameters=4
   !>   t:
   !>   solution_old:     (real8)(n_variables) initial solution:
   !>                     1:R, 2:Z, 3:phi, 4:parallel momentum
@@ -28,14 +28,68 @@ contains
   !>   int_parameters:   (integer)(n_int_parameters) integer parameters
   !>                     1:old i_elm, 2: charge
   !>   real_parameters:  (real8)(n_real_parameters) real parameters:
-  !>                     1:mass 2:magnetic moment
+  !>                     1:s_old, 2:t_old, 3:mass 4:magnetic moment
   !>   derivatives:      (real8)(n_variables) runge-kutta derivatives
   !>   ifail:            (integer) if 0 calculation failed
   subroutine compute_derivatives_runge_kutta(fields,n_variables,&
        n_int_parameters,n_real_parameters,t,solution_old,solution,&
        int_parameters,real_parameters,derivatives,ifail)
+    !> load modules
+    use constants, only: SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
+    use mod_fields, only: fields_base
+    use mod_math_operators, only: cross_product
+    use mod_find_rz_nearby
+    implicit none
     !> declare input variables
+    class(fields_base),intent(in) :: fields
+    integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
+    integer,dimension(n_variables),intent(in) :: int_parameters
+    real(kind=8),intent(in) :: t
+    real(kind=8),dimension(n_variables),intent(in) :: solution,solution_old
+    real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
+    !> declare output variables
+    integer,intent(out) :: ifail
+    real(kind=8),dimension(n_variables),intent(out) :: derivatives
+    !> internal variables
+    integer :: ierr !< error for find_rz nearby
+    real(kind=8) :: normB,gamma !< magnetic field intensity and relativistic factor
+    real(kind=8),dimension(2) :: st_new !< local postion particle at stage
+    !> define guiding center fields
+    real(kind=8),dimension(3) :: E,b,gradB,curlb,dbdt,B_star
+
+    !> find the gc at stage local position
+    call find_RZ_nearby(fields%node_list,fields%_element_list,solution_old(1),&
+         solution_old(2),real_parameters(1),real_parameters(2),&
+         int_parameters(1),solution(1),solution(2),st_new(1),&
+         st_new(2),ifail,ierr)
+
+    !> compute the guiding center fields
+    if(ifail.ne.0) call fields%calc_EBNormBGradBcurlbDbdt(t,ifail,st_new,&
+         solution(3),E,b,normB,gradB,curlb,dbdt)
+
+    !> normalise normB fields
+    normB = normB/ATOMIC_MASS_UNIT
     
+    !> compute the relativistic factor
+    gamma = sqrt(real_parameters(3)*real_parameters(3)*&
+         SPEED_OF_LIGHT*SPEED_OF_LIGHT + solution(4)*solution(4)+&
+         2.d0*mass*normB*real_parameters(4))/&
+         (real_parameters(3)*SPEED_OF_LIGHT)
+
+    !> normalise fields
+    normB = normB*EL_CHG*real(int_parameters(2),kind=8) !< qB ATOMIC_MASS_UNITS/s
+    E = EL_CHG*real(int_parameters(2),kind=8)*E/ATOMIC_MASS_UNIT
+
+    !> compute B_star and E_star
+    B_star = solution(4)*curlb + normB*b !< B_star
+    E = E - solution(4)*dbdt - &
+         ((EL_CHG*real_parameters(4)*gradB)/(gamma*ATOMIC_MASS_UNIT)) !< E_star
+    
+    !> compute the guiding center position derivatives
+    derivatives(1:3) = (cross_product(E,b) +((solution(4)*B_star)/(mass*gamma)))
+    derivatives(3) = derivatives(3)/solution(3)
+    derivatives(4) = B_star(1)*E(1)+B_star(2)*E(2)+B_star(3)*E(3)
+    derivatives = derivatives/(B_star(1)*b(1)+B_star(2)*b(2)+B_star(3)*b(3))
     
   end subroutine compute_derivatives_runge_kutta
   

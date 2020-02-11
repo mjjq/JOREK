@@ -1,7 +1,7 @@
 !> Push relativistic guiding centre(s) in JOREK fields
 !>
-!> Compile with `make ex6_jorek`
-!> Run with `./ex6_jorek < JOREK_namelist`
+!> Compile with `make ex7_jorek`
+!> Run with `./ex7_jorek < JOREK_namelist`
 
 program ex7_jorek
 
@@ -9,16 +9,25 @@ use particle_tracer
 use mod_particle_io
 use mod_particle_diagnostics
 use mod_fields_linear   
-use mod_fields_hermite_birkhoff                  
+use mod_fields_hermite_birkhoff
+use mod_gc_relativistic
+                  
 implicit none
 
 ! Set up the simulation variables
 real(kind=8)                      :: timesteps(1) = [3.5723d-13]
 real(kind=8)                      :: target_time, t
+real*8                            :: energy !< Initial kinetic energy in eV
+real*8                            :: ksi    !< Initial cosine of pitch-angle
 integer(kind=4)                   :: n_part, i, j, k, n_steps, ifail, n_lost
 logical                           :: restart
 type(diag_print_kinetic_energy)   :: print_kinetic_energy
 type(write_particle_diagnostics)  :: diag
+type(particle_gc_relativistic)    :: particle_in, particle_out
+type(particle_gc)                 :: particle_out_gc
+real(kind=8)                      :: psi, U, gyro_angle
+real(kind=8),dimension(3)         :: E, B
+
 
 call sim%initialize(num_groups=1)
 
@@ -40,7 +49,7 @@ if (.not. restart) then
   ! and i=-1 (to read jorek_restart.h5 and keep this field at all time) or i=last_file_before_time(sim%time)
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
   events = [event(read_jorek_fields_interp_linear(i=-1)), & 
-            event(diag,start=sim%time,step=1d-8),         &
+            !event(diag,start=sim%time,step=1d-8),         &
             event(stop_action(),start=sim%time+5.d-8)]
 
   ! Run first event to read the JOREK fields
@@ -48,12 +57,18 @@ if (.not. restart) then
 
   select type (p=>sim%groups(1)%particles(1))
   type is (particle_gc_relativistic)
+    p%q = -1
     p%x = [3.d0,0.d0,0.d0]
     call find_RZ(sim%fields%node_list, sim%fields%element_list, &
                  p%x(1), p%x(2), & ! inputs
                  p%x(1), p%x(2), p%i_elm, p%st(1), p%st(2), ifail) ! outputs
-    p%p = [1.6d6,0.]
-    p%q = -1
+    !p%p = [1.6d6,0.]
+    energy = 1.d7
+    ksi    = 1.d0
+    particle_in = p
+    particle_out = relativistic_gc_momenta_from_E_cospitch(particle_in,energy,ksi,sim%groups(1)%mass,sim%fields,sim%time)
+    p%p = particle_out%p
+    write(*,*) 'p(1), p(2)', p%p(1), p%p(2)
   end select
 else
   write(*,*) '*******************************'
@@ -111,9 +126,17 @@ do while (.not. sim%stop_now)
 enddo !< event
 
 ! Print particle information
-write(*,*) 'Final x,y,z: ', sim%groups(1)%particles(1)%x(1), sim%groups(1)%particles(1)%x(2), sim%groups(1)%particles(1)%x(3)
+write(*,*) 'Final R, Z, phi: ', sim%groups(1)%particles(1)%x(1), sim%groups(1)%particles(1)%x(2), sim%groups(1)%particles(1)%x(3)
 
-call print_kinetic_energy%do(sim,events(1))  !< print particle kinetic energy
+! Convert particle
+gyro_angle = 0.
+call sim%fields%calc_EBpsiU(sim%time, sim%groups(1)%particles(1)%i_elm, sim%groups(1)%particles(1)%st, &              
+                            sim%groups(1)%particles(1)%x(3), E, B, psi, U)
+particle_in = sim%groups(1)%particles(1)
+call relativistic_gc_to_particle(sim%fields%node_list, sim%fields%element_list, &
+                                 particle_in, particle_out_gc, sim%groups(1)%mass, &
+				 B, gyro_angle)
+write(*,*) 'Final E (eV), mu (eV/T): ', particle_out_gc%E, particle_out_gc%mu
 
 call write_simulation_hdf5(sim, 'part_restart.h5')
 

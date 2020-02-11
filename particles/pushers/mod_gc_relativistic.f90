@@ -10,6 +10,7 @@ module mod_gc_relativistic
   private
   !> declare public procedures and variables
   public relativistic_gc_to_particle, gc_to_relativistic_gc
+  public relativistic_gc_momenta_from_E_cospitch
 
 contains
 
@@ -82,7 +83,7 @@ contains
     real(kind=8), dimension(3), intent(in)     :: B
     !> declare output variables
     type(particle_kinetic_relativistic)        :: out
-    !> declare internal varibales
+    !> declare internal variables
     real(kind=8)                               :: B_norm, p_perp
     real(kind=8), dimension(3)                 :: B_hat, e1, e2
     
@@ -180,5 +181,56 @@ contains
          mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT -                             &
          2.d0*mass*norm2(B)*relativistic_gc%p(2)),gc_in%mu)
   end function gc_to_relativistic_gc
+
+  !> This function fills in the p(1) and p(2) fields of a particle_gc_relativistic
+  !> from its energy and (cosine of) pitch-angle
+  function relativistic_gc_momenta_from_E_cospitch(rel_gc_in,energy,ksi,mass,fields,time) result(rel_gc_out)
+
+    use constants, only: ATOMIC_MASS_UNIT, EL_CHG, SPEED_OF_LIGHT
+    use mod_fields
+
+    implicit none
+
+    !> input variables
+    type(particle_gc_relativistic), intent(in) :: rel_gc_in
+    real*8, intent(in)                         :: energy !< Particle energy in eV
+    real*8, intent(in)                         :: ksi    !< Cosine of particle pitch-angle 
+    real*8, intent(in)                         :: mass   !< Particle mass in AMU
+    class(fields_base), intent(in)             :: fields
+    real*8, intent(in)                         :: time
+
+    !> output variables
+    type(particle_gc_relativistic) :: rel_gc_out
+
+    !> internal variables
+    real*8               :: p_norm_sq, energy_at_rest
+    real*8               :: psi, U, B_norm
+    real*8, dimension(3) :: E, B
+
+    !> Copy existing fields from input to output
+    rel_gc_out%q     = rel_gc_in%q
+    rel_gc_out%x     = rel_gc_in%x
+    rel_gc_out%i_elm = rel_gc_in%i_elm
+    rel_gc_out%st    = rel_gc_in%st
+    
+    if (abs(ksi)>1) then
+      write(*,*) 'Error in relativistic_gc_momenta_from_E_cospitch: abs(cos(pitch-angle)) should be <1, exiting'
+      stop
+    end if
+    
+    energy_at_rest = ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2
+    
+    p_norm_sq = ((energy*EL_CHG)**2-energy_at_rest**2)/SPEED_OF_LIGHT**2
+
+    !> mu [AMU (m/s)**2 /T]
+    call fields%calc_EBpsiU(time, rel_gc_out%i_elm, rel_gc_out%st, rel_gc_out%x(3), E, B, psi, U)
+    B_norm = norm2(B)
+    rel_gc_out%p(2) = p_norm_sq*(1.d0-ksi**2)/(2.d0*B_norm*mass*ATOMIC_MASS_UNIT**2)
+
+    !> Parallel momentum [AMU m/s]
+    rel_gc_out%p(1) = sqrt(p_norm_sq)*ksi/ATOMIC_MASS_UNIT		       
+
+  end function relativistic_gc_momenta_from_E_cospitch
+
 end module mod_gc_relativistic
 

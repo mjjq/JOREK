@@ -13,6 +13,31 @@ module mod_gc_relativistic
 
 contains
 
+  !> This procedure computes the guiding ceneter derivatives required
+  !> for the runge_kutta integration.
+  !> inputs:
+  !>   fields:
+  !>   n_variables:       (integer) number of variables=4:
+  !>   n_int_parameters:  (integer) number of integer parameters=2
+  !>   n_real_parameters: (integer) number of real parameters
+  !>   t:
+  !>   solution_old:     (real8)(n_variables) initial solution:
+  !>                     1:R, 2:Z, 3:phi, 4:parallel momentum
+  !>   solution:         (real8)(n_variables) solution at a runge-kutta stage
+  !>   int_parameters:   (integer)(n_int_parameters) integer parameters
+  !>                     1:old i_elm, 2: charge
+  !>   real_parameters:  (real8)(n_real_parameters) real parameters:
+  !>                     1:mass 2:magnetic moment
+  !>   derivatives:      (real8)(n_variables) runge-kutta derivatives
+  !>   ifail:            (integer) if 0 calculation failed
+  subroutine compute_derivatives_runge_kutta(fields,n_variables,&
+       n_int_parameters,n_real_parameters,t,solution_old,solution,&
+       int_parameters,real_parameters,derivatives,ifail)
+    !> declare input variables
+    
+    
+  end subroutine compute_derivatives_runge_kutta
+  
   !> This procedure transforms a relativistic gc particle into a different type
   !> inputs:
   !>   node_list:       (type_node_list) jorek node list

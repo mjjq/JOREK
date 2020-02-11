@@ -76,7 +76,7 @@ contains
   !>   ifail:               (integer) if 0 integration failed
   subroutine compute_runge_kutta_differentials(fields,n_variables,&
        n_int_parameters,n_real_parameters,t,dt,solution_old,&
-       int_parameters,real_parametersdifferentials,ifail)
+       int_parameters,real_parameters,differentials,ifail)
     !> load module
     use mod_fields, only: fields_base
     implicit none
@@ -89,7 +89,7 @@ contains
          4.003454137731481d-1,6.1767578125d-2]
     !> declare input variables
     integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
-    integer,dimension(n_integer_parameters),intent(in) :: int_parameters
+    integer,dimension(n_int_parameters),intent(in) :: int_parameters
     real(kind=8),intent(in) :: t,dt
     real(kind=8),dimension(n_variables),intent(in) :: solution_old
     real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters

@@ -104,7 +104,7 @@ impure elemental function gc_relativistic_kinetic_energy(particle,mass,fields,ti
 
   call fields%calc_EBpsiU(time, particle%i_elm, particle%st, particle%x(3), E, B, psi, U)
 
-  B_norm = sqrt(dot_product(B,B))
+  B_norm = norm2(B)
 
   gamma = sqrt(1.d0 + (particle%p(1)/(mass*SPEED_OF_LIGHT))**2 + 2.d0*particle%p(2)/(mass*SPEED_OF_LIGHT**2))
 

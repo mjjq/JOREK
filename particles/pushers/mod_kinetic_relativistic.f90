@@ -192,7 +192,7 @@ end subroutine volume_preserving_push_cartesian
 
 !--------------------------------------------------------------------------
 
-!> This procedure transform a kinetic relativistic particle into a different
+!> This procedure transforms a particle_kinetic_relativistic into a different
 !> particle type
 !> inputs:
 !>   node_list:    (type_node_list) a jorek node list
@@ -208,21 +208,21 @@ subroutine relativistic_kinetic_to_particle(node_list,element_list,particle_in,&
   use data_structure
   implicit none
   !> declare input variables
-  type(type_node_list),intent(in) :: node_list
-  type(type_element_list),intent(in) :: element_list
-  type(particle_kinetic_relativistic),intent(in) :: particle_in
-  real(kind=8),intent(in) :: mass
-  real(kind=8),dimension(3),intent(in) :: B
-  !> declare outpur variables
-  class(particle_base),intent(out) :: particle_out
+  type(type_node_list), intent(in)                :: node_list
+  type(type_element_list), intent(in)             :: element_list
+  type(particle_kinetic_relativistic), intent(in) :: particle_in
+  real(kind=8), intent(in)                        :: mass
+  real(kind=8), dimension(3), intent(in)          :: B
+  !> declare output variables
+  class(particle_base), intent(out)               :: particle_out
 
-  !> select the type of paritcle out
+  !> select the type of particle out
   select type (particle_out)
   type is (particle_gc)
-     particle_out = relativistic_kinetic_to_gc(node_list,element_list,&
+     particle_out = relativistic_kinetic_to_gc(node_list,element_list, &
           particle_in,mass,B)
   type is (particle_gc_relativistic)
-     particle_out = relativistic_kinetic_to_relativistic_gc(node_list,&
+     particle_out = relativistic_kinetic_to_relativistic_gc(node_list, &
           element_list,particle_in,mass,B)
   end select
   
@@ -230,8 +230,8 @@ end subroutine relativistic_kinetic_to_particle
 
 !--------------------------------------------------------------------------
 
-!> This procedure transform a relativistic particle into a relativistic
-!> a relativistic particle gc.
+!> This procedure transforms a particle_kinetic_relativistic 
+!> into a particle_gc_relativistic
 !> inputs:
 !>   node_list:    (type_node_list) jorek nodes
 !>   element_list: (type_element_list) jorek mesh elements
@@ -247,25 +247,25 @@ function relativistic_kinetic_to_relativistic_gc(node_list,element_list,&
   use mod_pusher_tools, only: particle_position_to_gc
   implicit none
   !> declare input variables
-  type(type_node_list),intent(in) :: node_list
-  type(type_element_list),intent(in) :: element_list
-  type(particle_kinetic_relativistic),intent(in) :: in
-  real(kind=8),intent(in) :: mass
-  real(kind=8),dimension(3),intent(in) :: B
+  type(type_node_list), intent(in)                :: node_list
+  type(type_element_list), intent(in)             :: element_list
+  type(particle_kinetic_relativistic), intent(in) :: in
+  real(kind=8), intent(in)                        :: mass
+  real(kind=8), dimension(3), intent(in)          :: B
   !> declare output variables
-  type(particle_gc_relativistic) :: out
+  type(particle_gc_relativistic)                  :: out
   !> delcare internal variables
-  real(kind=8) :: norm_B
-  real(kind=8),dimension(3) :: B_hat,p_perp
+  real(kind=8)                                    :: norm_B
+  real(kind=8), dimension(3)                      :: B_hat, p_perp
 
   !> compute magnetic field direction and intensity
   norm_B = norm2(B)
   B_hat = B/norm_B
   !> copy base particle
   out = in
-  !> coupy charge
+  !> copy charge
   out%q = in%q
-  !> extract mementa in cylindrical coordinates
+  !> extract momenta in cylindrical coordinates
   p_perp = vector_cartesian_to_cylindrical(in%x(3),in%p)
   !> compute perpendicular momentum
   out%p(1) = dot_product(p_perp,B_hat)

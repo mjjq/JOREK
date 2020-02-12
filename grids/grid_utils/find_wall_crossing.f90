@@ -10,7 +10,7 @@ subroutine find_wall_crossing(R_wall,Z_wall,n_wall,Rp,Zp,tht_p,Rw,Zw,Tw)
   
   ! --- input/output variables
   real*8,  intent(in)  :: R_wall(*), Z_wall(*)
-  real*8	       :: Rp,        Zp,       tht_p
+  real*8               :: Rp,        Zp,       tht_p
   real*8,  intent(out) :: Rw,        Zw,       Tw
   integer, intent(in)  :: n_wall
   
@@ -21,7 +21,7 @@ subroutine find_wall_crossing(R_wall,Z_wall,n_wall,Rp,Zp,tht_p,Rw,Zw,Tw)
   
   tan_p  = tan(tht_p)
   HALFPI = asin(1.d0)
-  PI	 = 2.d0 * HALFPI
+  PI     = 2.d0 * HALFPI
   TWOPI  = 2.d0 * PI
   my_id  = 0
   

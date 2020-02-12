@@ -33,6 +33,7 @@ module exec_commands
   integer, parameter :: LOOP_S_MODE = 2 !< Mode started by 'for step' and ended by 'done' commands
   integer, parameter :: LOOP_T_MODE = 3 !< Mode started by 'for time' and ended by 'done' commands
   integer :: exec_mode = NORMAL_MODE    !< Current operation mode (NORMAL_MODE or LOOP_X_MODE)
+  integer :: loop_mode                  !< Current loop mode (LOOP_S_MODE oder LOOP_T_MODE)
   integer :: loop_min_step              !< Smallest timestep index of for loop
   integer :: loop_max_step              !< Largest timestep index of for loop
   integer :: loop_inc_step              !< Timestep index step width of for loop
@@ -209,7 +210,7 @@ module exec_commands
       end select
       
     ! --- In loop mode, commands are queued and afterwards executed for each timestep separately
-    else if (( exec_mode == LOOP_S_MODE ) .or. ( exec_mode == LOOP_T_MODE )) then
+    else
       
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane', 'average', 'point',      &
@@ -276,7 +277,6 @@ module exec_commands
     
     character(len=64) :: file_name
     logical           :: file_exists
-    integer           :: ifail
     
     ierr = 0
     
@@ -288,7 +288,6 @@ module exec_commands
     end if
     if ( .not. file_exists ) then
       ierr = 42
-      write(*,'(a,i5.5,a)') 'Restart file for step ', istep,' does not exist.'
       return
     end if
     
@@ -321,7 +320,7 @@ module exec_commands
   
   !> Is called at the start of a for loop.
   !!
-  !! It switches the module behaviour (exec_mode) to LOOP_MODE, i.e., all commands inside the for
+  !! It switches the module behaviour (exec_mode) to LOOP_X_MODE, i.e., all commands inside the for
   !! loop are not executed immediately but collected in a command queue. All commands of the
   !! command queue are executed for each time step after the 'done' command of the for loop
   !! has been entered.
@@ -501,21 +500,20 @@ module exec_commands
     integer, allocatable :: available_steps(:)
     
     ierr = 0
-    
+    loop_mode = exec_mode
+    exec_mode = NORMAL_MODE
+		
     if ( n_queued_commands == 0 ) then
       write(*,*) 'WARNING: No commands in for-loop.'
-      exec_mode = NORMAL_MODE
       return
     end if
     
     first_step = .true.
-    if ( exec_mode == LOOP_S_MODE ) then
-      exec_mode = NORMAL_MODE
+    if ( loop_mode == LOOP_S_MODE ) then
       do istep = loop_min_step, loop_max_step, loop_inc_step
-        write(*,*) istep
         call load_step(istep, load_error)
         if ( load_error /= 0 ) cycle
-      
+
         do jcmd = 1, n_queued_commands
         
           call exec_command(command_queue(jcmd), first_step, ierr)  
@@ -531,7 +529,6 @@ module exec_commands
         first_step = .false.
       end do
     else		
-      exec_mode = NORMAL_MODE
       write(*,*) '--------------------------------------------------'
       write(*,*) '   Selects restart files for choosen time points'
       write(*,*) '--------------------------------------------------'
@@ -632,7 +629,6 @@ module exec_commands
         first_step = .false.
       end do
     end if 
-
 
     do jcmd = 1, n_queued_commands
       call finalize_command(command_queue(jcmd), first_step, ierr)
@@ -977,9 +973,9 @@ module exec_commands
   character(len=64) function step_range_string(min_step, max_step)
 
     integer, intent(in) :: min_step, max_step
-    character(len=2)     :: prefix
+    character(len=2)    :: prefix
 
-    if ( exec_mode .eq. LOOP_S_MODE )  then 
+    if ( loop_mode .eq. LOOP_S_MODE )  then 
       prefix='_s'
     else
       prefix='_t'

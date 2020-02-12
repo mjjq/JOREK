@@ -59,7 +59,22 @@ contains
   !> this subroutine implement a runge kutta integrator with
   !> fixed integration step
   !> inputs:
+  !>   compute_rhs:       (procedure) subroutine for computing
+  !>                      the ODE(s) right hand side
+  !>   fields:            (fields_base) jorek fields structure
+  !>   n_variables:       (integer) number of varibales
+  !>   n_int_parameters:  (integer) number of integer parameters
+  !>   n_real_parameters: (integer) number of real parameters
+  !>   t:                 (real8) integration variables
+  !>   dt:                (real8) integration step
+  !>   solution_old:      (real8)(n_variables) old solution
+  !>   int_parameters:    (integer)(n_integer_parameters)
+  !>                      integer parameters
+  !>   real_parameters:   (real8)(n_real_parameters)
+  !>                      real parameters
   !> outputs:
+  !>   solution: (n_variables) runge kutta step solution
+  !>   ifail:    (integer) if 0 the integration failed
   subroutine runge_kutta_fixed_dt(compute_rhs,fields,n_variables,&
        n_int_parameters,n_real_parameters,t,dt,solution_old,&
        int_parameters,real_parameters,solution,ifail)

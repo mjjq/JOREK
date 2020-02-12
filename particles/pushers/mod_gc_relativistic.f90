@@ -11,9 +11,63 @@ module mod_gc_relativistic
   !> declare public procedures and variables
   public relativistic_gc_to_particle, gc_to_relativistic_gc
   public relativistic_gc_momenta_from_E_cospitch
+  public runge_kutta_fixed_dt_gc_push_jorek
 
 contains
 
+  !> This procedure push a relativistic guiding center particle in JOREK
+  !> fields using standard runge kutta integrator withou time step control
+  !> inputs:
+  !>   fields:   (fields_base) jorek fields
+  !>   t:        (real8) simulation time
+  !>   dt:       (real8) simulation time step
+  !>   charge:   (integer) the gc charge number
+  !>   mass:     (real8) the gc mass in AMU
+  !>   particle: (particle_gc_relativistic) the gc to integrate
+  !> outputs:
+  !>   particle: (particle_gc_relativistic) the integrated gc
+  subroutine runge_kutta_fixed_dt_gc_push_jorek(fields,t,dt,&
+       charge,mass,particle)
+    !> load modules
+    use mod_fields, only: fields_base
+    use mod_find_rz_nearby
+    use mod_runge_kutta, only: runge_kutta_fixed_dt
+    implicit none
+    !> declare input output variables
+    type(particle_gc_relativistic),intent(inout) :: particle
+    !> declare input variables
+    class(fields_base),intent(in) :: fields
+    real(kind=8),intent(in) :: t,dt,mass
+    integer,intent(in) :: charge
+    !> internal variables
+    integer :: ifail,i_elm_new !< particle new element
+    !> new particle local coordinates: 1:s,2:t
+    real(kind=8),dimension(2) :: st_new
+    !> integrate global coordinates: 1:R, 2:Z, 3:phi, 4:p_parallel
+    real(kind=8),dimension(4) :: solution_new
+
+
+    !> compute runge kutta differentials
+    call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives_jorek,&
+         fields,4,2,4,t,dt,[particle%x(1),particle%x(2),particle%x(3),&
+         particle%p(1)],[particle%i_elm,charge],[particle%st(1),particle%st(2),&
+         mass,particle%p(2)],solution_new,i_elm_new)
+    
+    !> compute the new local coordinates
+    if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list,&
+         fields%element_list,particle%x(1),particle%x(2),&
+         particle%st(1),particle%st(2),particle%i_elm,&
+         solution_new(1),solution_new(2),st_new(1),st_new(2),&
+         i_elm_new,ifail)
+    
+    !> overwrite particle fields
+    particle%x = solution_new(1:3)
+    particle%p(1) = solution_new(4)
+    particle%st = st_new
+    particle%i_elm = i_elm_new
+    
+  end subroutine runge_kutta_fixed_dt_gc_push_jorek
+  
   !> This procedure computes the guiding ceneter derivatives required
   !> for the runge_kutta integration.
   !> inputs:
@@ -31,7 +85,7 @@ contains
   !>                     1:s_old, 2:t_old, 3:mass 4:magnetic moment
   !>   derivatives:      (real8)(n_variables) runge-kutta derivatives
   !>   ifail:            (integer) if 0 calculation failed
-  subroutine compute_derivatives_runge_kutta(fields,n_variables,&
+  subroutine compute_relativistic_gc_derivatives_jorek(fields,n_variables,&
        n_int_parameters,n_real_parameters,t,solution_old,solution,&
        int_parameters,real_parameters,derivatives,ifail)
     !> load modules
@@ -89,7 +143,7 @@ contains
     derivatives(4) = B_star(1)*E(1)+B_star(2)*E(2)+B_star(3)*E(3)
     derivatives = derivatives/(B_star(1)*b(1)+B_star(2)*b(2)+B_star(3)*b(3))
     
-  end subroutine compute_derivatives_runge_kutta
+  end subroutine compute_relativistic_gc_derivatives_jorek
   
   !> This procedure transforms a relativistic gc particle into a different type
   !> inputs:

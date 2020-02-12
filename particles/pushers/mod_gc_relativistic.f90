@@ -58,35 +58,33 @@ contains
     real(kind=8),dimension(3) :: E,b,gradB,curlb,dbdt,B_star
 
     !> find the gc at stage local position
-    call find_RZ_nearby(fields%node_list,fields%_element_list,solution_old(1),&
+    call find_RZ_nearby(fields%node_list,fields%element_list,solution_old(1),&
          solution_old(2),real_parameters(1),real_parameters(2),&
          int_parameters(1),solution(1),solution(2),st_new(1),&
          st_new(2),ifail,ierr)
 
     !> compute the guiding center fields
-    if(ifail.ne.0) call fields%calc_EBNormBGradBcurlbDbdt(t,ifail,st_new,&
+    if(ifail.ne.0) call fields%calc_EBNormBGradBCurlbDbdt(t,ifail,st_new,&
          solution(3),E,b,normB,gradB,curlb,dbdt)
-
-    !> normalise normB fields
-    normB = normB/ATOMIC_MASS_UNIT
     
     !> compute the relativistic factor
     gamma = sqrt(real_parameters(3)*real_parameters(3)*&
          SPEED_OF_LIGHT*SPEED_OF_LIGHT + solution(4)*solution(4)+&
-         2.d0*mass*normB*real_parameters(4))/&
+         2.d0*real_parameters(3)*normB*real_parameters(4))/&
          (real_parameters(3)*SPEED_OF_LIGHT)
 
     !> normalise fields
-    normB = normB*EL_CHG*real(int_parameters(2),kind=8) !< qB ATOMIC_MASS_UNITS/s
+    normB = normB*EL_CHG*real(int_parameters(2),kind=8)/ATOMIC_MASS_UNIT
     E = EL_CHG*real(int_parameters(2),kind=8)*E/ATOMIC_MASS_UNIT
 
     !> compute B_star and E_star
     B_star = solution(4)*curlb + normB*b !< B_star
     E = E - solution(4)*dbdt - &
-         ((EL_CHG*real_parameters(4)*gradB)/(gamma*ATOMIC_MASS_UNIT)) !< E_star
+         ((real_parameters(4)*gradB)/gamma) !< E_star
     
     !> compute the guiding center position derivatives
-    derivatives(1:3) = (cross_product(E,b) +((solution(4)*B_star)/(mass*gamma)))
+    derivatives(1:3) = (cross_product(E,b) +&
+         ((solution(4)*B_star)/(real_parameters(3)*gamma)))
     derivatives(3) = derivatives(3)/solution(3)
     derivatives(4) = B_star(1)*E(1)+B_star(2)*E(2)+B_star(3)*E(3)
     derivatives = derivatives/(B_star(1)*b(1)+B_star(2)*b(2)+B_star(3)*b(3))

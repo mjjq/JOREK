@@ -18,8 +18,9 @@ type, abstract :: fields_base
   contains
     procedure(interp_PRZ),deferred,public   :: interp_PRZ
     procedure(interp_PRZ_2),deferred,public :: interp_PRZ_2
-    procedure :: calc_EBpsiU
-    procedure :: set_flag_dpsidt !< set the flag_zero_dpsidt
+    procedure,public :: calc_EBpsiU
+    procedure,public :: calc_EBNormBGradBCurlbDbdt
+    procedure,public :: set_flag_dpsidt !< set the flag_zero_dpsidt
 end type fields_base
 
 interface

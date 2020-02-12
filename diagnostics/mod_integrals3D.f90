@@ -434,10 +434,10 @@ do ife = ife_min, ife_max
 #endif
 #if (JOREK_MODEL == 502)
         T0e     = eq_g(mp,9,ms,mt)
-        T0_corr = corr_neg_temp1(T0e)
+        T0_corr = corr_neg_temp(T0e,(/5.d-1,5.d-1/),T_min)
         eta_T   = eta * (T0_corr/Te_0)**(-1.5d0)
 #else
-        T0_corr = corr_neg_temp1(T0)
+        T0_corr = corr_neg_temp(T0e,(/5.d-1,5.d-1/),T_min)
         eta_T   = resistivity(T0_corr)  
 #endif
         dTdx   = (   y_t(ms,mt) * eq_s(mp,6,ms,mt) - y_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac

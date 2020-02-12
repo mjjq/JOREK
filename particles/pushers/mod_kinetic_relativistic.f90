@@ -259,7 +259,7 @@ function relativistic_kinetic_to_relativistic_gc(node_list,element_list,&
   real(kind=8), dimension(3)                      :: B_hat, p_perp
 
   !> compute magnetic field direction and intensity
-  norm_B = norm2(B)
+  norm_B = sqrt(B(1)*B(1)+B(2)*B(2)+B(3)*B(3))
   B_hat = B/norm_B
   !> copy base particle
   out = in
@@ -268,11 +268,12 @@ function relativistic_kinetic_to_relativistic_gc(node_list,element_list,&
   !> extract momenta in cylindrical coordinates
   p_perp = vector_cartesian_to_cylindrical(in%x(3),in%p)
   !> compute perpendicular momentum
-  out%p(1) = dot_product(p_perp,B_hat)
+  out%p(1) = p_perp(1)*B_hat(1)+p_perp(2)*B_hat(2)+p_perp(3)*B_hat(3)
   !> compute perpendicular momenta
   p_perp = p_perp - out%p(1)*B_hat
   !> compute magnetic moment
-  out%p(2) = dot_product(p_perp,p_perp)/(2.d0*norm_B*mass)
+  out%p(2) = (p_perp(1)*p_perp(1)+p_perp(2)*p_perp(2)+&
+       p_perp(3)*p_perp(3))/(2.d0*norm_B*mass)
   !> check particle validity
   if(out%q.ne.0) then
      call particle_position_to_gc(node_list,element_list,in%x,&
@@ -309,26 +310,31 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out
   type(particle_gc) :: out
   ! declare internal variables
   real(kind=8) :: B_norm, p_par !< magnetic intensity, parallel momentum
-  real(kind=8),dimension(3) :: B_hat !< magnetic field direction
+  real(kind=8),dimension(3) :: p_perp,B_hat !< magnetic field direction
 
   ! initialise default variables for particle_gc
   out = in
   ! initialise the electric charge
   out%q = in%q
 
-  ! compute magnetic field intensity and direction
-  B_norm = norm2(B) !< intensity
-  B_hat = B/B_norm  !< direction
-  ! compute the parallel momentum
-  p_par = dot_product(vector_cartesian_to_cylindrical(in%x(3),in%p),B_hat)
-
   ! compute the guiding center total (i.e. rest+kinetic) energy in [eV]
   out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGHT* &
-    sqrt((mass*SPEED_OF_LIGHT)*(mass*SPEED_OF_LIGHT)+dot_product(in%p,in%p))/EL_CHG
+       sqrt((mass*SPEED_OF_LIGHT)*(mass*SPEED_OF_LIGHT)+&
+       (in%p(1)*in%p(1)+in%p(2)*in%p(2)+in%p(3)*in%p(3)))/EL_CHG  
+
+  ! compute magnetic field intensity and direction
+  B_norm = sqrt(B(1)*B(1)+B(2)*B(2)+B(3)*B(3)) !< intensity
+  B_hat = B/B_norm  !< direction
+  ! compute the parallel and perpendicular momenta
+  p_perp = vector_cartesian_to_cylindrical(in%x(3),in%p)
+  p_par = p_perp(1)*B_hat(1)+p_perp(2)*B_hat(2)+p_perp(3)*B_hat(3)
+  p_perp = p_perp - p_par*B_hat
+
   ! compute the magnetic moment p_perp^2/(2*B) in [eV/T]
   ! the sign is given by the particle parallel momentum 
-  out%mu = sign((ATOMIC_MASS_UNIT*dot_product(in%p-p_par*B_hat,&
-  in%p-p_par*B_hat))/(2.d0*B_norm*mass*EL_CHG),p_par)
+  out%mu = sign((ATOMIC_MASS_UNIT*(p_perp(1)*p_perp(1)+&
+       p_perp(2)*p_perp(2)+p_perp(3)*p_perp(3))/&
+       (2.d0*B_norm*mass*EL_CHG)),p_par)
 
   ! compute the gc position
   if(out%q.ne.0) then 

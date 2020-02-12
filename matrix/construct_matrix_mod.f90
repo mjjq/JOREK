@@ -542,9 +542,10 @@ endif
             do j = 1, n_var * (i_tor_max - i_tor_min + 1)
 
               index_ij = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) + (i_tor_max - i_tor_min + 1) * n_var * (i_order-1) + j   ! index in the ELM matrix
-
+             
+              !$omp atomic
               rhs_local(index_large_i+j) = rhs_local(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
-
+              !$omp end atomic
             enddo
 
             do k=1,n_vertex_max

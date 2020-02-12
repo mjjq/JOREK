@@ -83,6 +83,7 @@ contains
   !>                     1:old i_elm, 2: charge
   !>   real_parameters:  (real8)(n_real_parameters) real parameters:
   !>                     1:s_old, 2:t_old, 3:mass 4:magnetic moment
+  !> outputs:
   !>   derivatives:      (real8)(n_variables) runge-kutta derivatives
   !>   ifail:            (integer) if 0 calculation failed
   subroutine compute_relativistic_gc_derivatives_jorek(fields,n_variables,&
@@ -120,30 +121,53 @@ contains
     !> compute the guiding center fields
     if(ifail.ne.0) call fields%calc_EBNormBGradBCurlbDbdt(t,ifail,st_new,&
          solution(3),E,b,normB,gradB,curlb,dbdt)
-    
-    !> compute the relativistic factor
-    gamma = sqrt(real_parameters(3)*real_parameters(3)*&
-         SPEED_OF_LIGHT*SPEED_OF_LIGHT + solution(4)*solution(4)+&
-         2.d0*real_parameters(3)*normB*real_parameters(4))/&
-         (real_parameters(3)*SPEED_OF_LIGHT)
 
-    !> normalise fields
-    normB = normB*EL_CHG*real(int_parameters(2),kind=8)/ATOMIC_MASS_UNIT
-    E = EL_CHG*real(int_parameters(2),kind=8)*E/ATOMIC_MASS_UNIT
+    !> compute the guiding center rhs
+    derivatives = compute_relativistic_gc_rhs(int_parameters(2),&
+         real_parameters(3),real_parameters(4),solution(1),&
+         solution(4),normB,E,b,gradB,curlb,dbdt)
+  end subroutine compute_relativistic_gc_derivatives_jorek
+  
+  !> This procedure computes the guiding center equaction right hand side
+  !> as reported in J.R Cary, A.J. Brizard, Rev. Mod. Phys, vol.81, p.693 ,2009
+  !> inputs:
+  !> outputs:
+  !>   derivatives: (real8)(4) gc right hand side: 1:R_dot,2:Z_dot,
+  !>   3:phi_dot,4:p_parallel_dot
+  pure function compute_relativistic_gc_rhs(charge,mass,magnetic_moment,&
+       R,p_parallel,normB,E,b,gradB,curlb,dbdt) result(derivatives)
+    use constants, only: EL_CHG,SPEED_OF_LIGHT,ATOMIC_MASS_UNIT
+    use mod_math_operators, only: cross_product
+    implicit none
+    !> declare input variables
+    integer,intent(in) :: charge
+    real(kind=8),intent(in) :: mass,R,p_parallel,magnetic_moment,normB
+    real(kind=8),dimension(3),intent(in) ::b,E,gradB,curlb,dbdt
+    !> declare output variable
+    real(kind=8),dimension(4) :: derivatives
+    !> declare input variables
+    real(kind=8) :: gamma !< relativistic factor
+    real(kind=8),dimension(3) :: B_star,E_star
+
+    !> compute the relativistic factor
+    gamma = sqrt(mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT + &
+         p_parallel*p_parallel+2.d0*mass*normB*magnetic_moment)/&
+         (mass*SPEED_OF_LIGHT)
 
     !> compute B_star and E_star
-    B_star = solution(4)*curlb + normB*b !< B_star
-    E = E - solution(4)*dbdt - &
-         ((real_parameters(4)*gradB)/gamma) !< E_star
+    B_star = p_parallel*curlb + &
+         ((EL_CHG*real(charge,kind=8)*normB)/ATOMIC_MASS_UNIT)*b !< B_star
+    E_star = (EL_CHG*real(charge,kind=8)*E/ATOMIC_MASS_UNIT) - &
+         p_parallel*dbdt - ((magnetic_moment*gradB)/gamma) !< E_star
     
     !> compute the guiding center position derivatives
-    derivatives(1:3) = (cross_product(E,b) +&
-         ((solution(4)*B_star)/(real_parameters(3)*gamma)))
-    derivatives(3) = derivatives(3)/solution(3)
-    derivatives(4) = B_star(1)*E(1)+B_star(2)*E(2)+B_star(3)*E(3)
+    derivatives(1:3) = (cross_product(E_star,b) +&
+         ((p_parallel*B_star)/(mass*gamma)))
+    derivatives(3) = derivatives(3)/R
+    derivatives(4) = B_star(1)*E_star(1)+B_star(2)*E_star(2)+B_star(3)*E_star(3)
     derivatives = derivatives/(B_star(1)*b(1)+B_star(2)*b(2)+B_star(3)*b(3))
     
-  end subroutine compute_relativistic_gc_derivatives_jorek
+  end function compute_relativistic_gc_rhs
   
   !> This procedure transforms a relativistic gc particle into a different type
   !> inputs:

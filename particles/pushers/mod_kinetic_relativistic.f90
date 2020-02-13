@@ -13,6 +13,8 @@ public volume_preserving_push_cartesian,volume_preserving_push_jorek
 public relativistic_kinetic_to_particle
 public gc_to_relativistic_kinetic
 public relativistic_kinetic_to_relativistic_gc
+public runge_kutta_fixed_dt_relativistic_particle_push
+public runge_kutta_fixed_dt_relativistic_particle_push_jorek
 
 contains
 
@@ -190,6 +192,248 @@ pure subroutine volume_preserving_push_cartesian(particle,mass,E,B,dt)
   ! compute dimensional momentum
   particle%p = particle%p*mass*SPEED_OF_LIGHT  
 end subroutine volume_preserving_push_cartesian
+
+!----------------------------------------------------------------------
+
+!> This subroutine integrates a relativistic particle trajectory
+!> in jorek fields using the runge kutta integrator
+!> inputs
+!>  fields:    (fields_base) jorek field
+!>  t:         (real8) integration time
+!>  dt:        (real8) time step
+!>  mass:      (real8) particle mass
+!>  particle:  (particle_kinetic_relativistic) particle to integrate
+!> outputs:
+!>   particle: (particle_kinetic_relativistic) integrated particle
+subroutine runge_kutta_fixed_dt_relativistic_particle_push_jorek(&
+     fields,t,dt,mass,particle)
+  !> load modules
+  use mod_find_rz_nearby
+  use mod_fields, only: fields_base
+  use mod_runge_kutta, only: runge_kutta_fixed_dt
+  implicit none
+  !> declare input/output variables
+  type(particle_kinetic_relativistic),intent(inout) :: particle
+  !> declare input variables
+  class(fields_base),intent(in) :: fields
+  real(kind=8),intent(in) :: t,dt,mass
+  !> declare internal variables
+  integer :: i_elm_new,ifail
+  real(kind=8),dimension(2) :: st_new
+  real(kind=8),dimension(6) :: solution_new
+
+
+  !> apply the runge kutta scheme
+  call runge_kutta_fixed_dt(&
+       compute_relativistic_particle_derivatives_jorek,fields,&
+       6,2,3,t,dt,[particle%x(1),particle%x(2),particle%x(3),&
+       particle%p(1),particle%p(2),particle%p(3)],[particle%i_elm,&
+       int(particle%p)],[particle%st(1),particle%st(2),mass],&
+       solution_new,i_elm_new)
+  
+  !> find the particle in jorek mesh in case of success
+  if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list,&
+       fields%element_list,particle%x(1),particle%x(2),&
+       particle%st(1),particle%st(2),particle%i_elm,solution_new(1),&
+       solution_new(2),st_new(1),st_new(2),i_elm_new,ifail)
+
+  !> overwrite particle state
+  particle%x = solution_new(1:3)
+  particle%p = solution_new(4:6)
+  particle%st = st_new
+  particle%i_elm = i_elm_new
+  
+end subroutine runge_kutta_fixed_dt_relativistic_particle_push_jorek
+
+!-----------------------------------------------------------------------
+
+!> This subroutine integrates a relativistic particle trajectory
+!> in analytical fields using the runge kutta
+!> inputs:
+!>   fields:   (fields_base) jorek fields
+!>   t:        (real8) integration time  
+!>   dt:       (real8) time step
+!>   mass:     (real8) particle mass
+!>   particle: (particle_kinetic_relativistic) particle to integrate
+!> outputs:
+!>   particle: (particle_kinetic_relativistic) integrated particle
+subroutine runge_kutta_fixed_dt_relativistic_particle_push(fields,t,dt,&
+     mass,particle)
+  !> load modules
+  use mod_fields, only: fields_base
+  use mod_runge_kutta, only: runge_kutta_fixed_dt
+  implicit none
+  !> declare input/output variables
+  type(particle_kinetic_relativistic),intent(inout) :: particle
+  !> delcare input variables
+  class(fields_base),intent(in) :: fields
+  real(kind=8),intent(in) :: t,dt,mass
+  !> declare internal variables
+  integer :: ifail
+  real(kind=8),dimension(6) :: solution_new
+
+  call runge_kutta_fixed_dt(compute_relativistic_particle_derivatives,&
+       fields,6,1,1,t,dt,[particle%x(1),particle%x(2),particle%x(3),&
+       particle%p(1),particle%p(2),particle%p(3)],[int(particle%q)],&
+       [mass],solution_new,ifail)
+
+  !> overwrite paritcle status
+  particle%x = solution_new(1:3)
+  particle%p = solution_new(4:6)
+  
+end subroutine runge_kutta_fixed_dt_relativistic_particle_push
+
+!-----------------------------------------------------------------------
+
+!> This procedure computes derivatives for the full orbit particles
+!> to be used with the runge kutta integrator using jorek fields
+!> inputs:
+!>   fields:            (fields_base) jorek fields
+!>   n_variables:       (integer) number of vaiables=6
+!>   n_int_parameters:  (integer) number of integer parameters=2
+!>   n_real_parameters: (integer) number of real parameters=3
+!>   t:                 (real8) time 
+!>   solution_old:      (real8)(n_varibales) old solution
+!>   solution:          (real8)(n_variables) new solution
+!>   int_parameters:    (integer)(n_int_parameters) parameters:
+!>                      1:i_elm old 2:charge
+!>   real_parameters:   (real8)(n_real_parameters) parameter
+!>                      1:s old, 2:t old, 3:mass
+!> outputs:
+!>   derivatives: (real8)(6) derivatives for runge kutta integrator
+!>   ifail:       (integer) if 0 integration failed
+subroutine compute_relativistic_particle_derivatives_jorek(fields,&
+     n_variables,n_int_parameters,n_real_parameters,t,solution_old,&
+     solution,int_parameters,real_parameters,derivatives,ifail)
+  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  use mod_find_rz_nearby
+  use mod_fields, only: fields_base
+  implicit none
+  !> declare input variables
+  class(fields_base),intent(in) :: fields
+  integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
+  real(kind=8),intent(in) :: t
+  real(kind=8),dimension(n_variables),intent(in) :: solution_old,solution
+  integer,dimension(n_int_parameters),intent(in) :: int_parameters
+  real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
+  !> declare outputs
+  real(kind=8),dimension(n_variables),intent(out) :: derivatives
+  integer,intent(out) :: ifail
+  !> internal variables
+  integer :: ierr
+  real(kind=8) :: psi,U
+  real(kind=8),dimension(2) :: st_new !< new local coordinates
+  real(kind=8),dimension(3) :: B,E
+
+  !> find the particle local position at stage
+  call find_rz_nearby(fields%node_list,fields%element_list,solution_old(1),&
+       solution_old(2),real_parameters(1),real_parameters(2),&
+       int_parameters(1),solution(1),solution(2),st_new(1),&
+       st_new(2),ifail,ierr)
+  !> compute the electromagnetic fields
+  if(ifail.ne.0) call fields%calc_EBpsiU(t,ifail,st_new,solution(3),&
+       E,B,psi,U)
+  !> compute runge kutta relativistic
+  derivatives = compute_relativistic_particle_rhs(int_parameters(2),&
+       real_parameters(3),solution,&
+       vector_cylindrical_to_cartesian(solution(3),E),&
+       vector_cylindrical_to_cartesian(solution(3),B))
+  
+end subroutine compute_relativistic_particle_derivatives_jorek
+
+!------------------------------------------------------------------------
+
+!> This procedure computes derivatives for the runge kutta integrator
+!> of relativistic full orbit paritlce in analytical fields.
+!> inputs:
+!>   fields:
+!>   n_variables:      (integer) number of variables=6
+!>   n_int_parameters: (integer) number of integer parameters=1
+!>   n_real_paramters: (integer) number of real parameters=1
+!>   t:                (real8) integration
+!>   solution_old:     (real8)(n_variables) old solution:
+!>                     1:x,2:y,3:z,4:px,5:py,6:pz
+!>   solution:         (real8)(n_variables) solution
+!>   int_parameters:   (integer)(n_int_parameters) integer parameters
+!>                     1:charge
+!>   real_parameters:  (real8)(n_real_parameters) real parameters
+!>                     1:mass
+!> outputs:
+!>   derivatives:      (real8)(n_variables) solution derivatives
+!>   ifail:            (integer) if 0 integration failed
+subroutine  compute_relativistic_particle_derivatives(fields,n_variables,&
+     n_int_parameters,n_real_parameters,t,solution_old,solution,&
+     int_parameters,real_parameters,derivatives,ifail)
+  !> load module
+  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  use mod_fields, only: fields_base
+  implicit none
+  !> declare input variables
+  class(fields_base),intent(in) :: fields
+  integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
+  real(kind=8),intent(in) :: t
+  real(kind=8),dimension(n_variables),intent(in) :: solution,solution_old
+  integer,dimension(n_int_parameters),intent(in) :: int_parameters
+  real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
+  !> declare output variables
+  real(kind=8),dimension(n_variables),intent(out) :: derivatives
+  integer,intent(out) :: ifail
+  !> internal variables
+  real(kind=8) :: psi,U
+  real(kind=8),dimension(3) :: E,B
+
+  !> compute the new electromagnetic fields
+  call fields%calc_analytical_EBpsiU(solution(1:2),E,B,psi,U)
+  !> compute field derivatives
+  derivatives = compute_relativistic_particle_rhs(int_parameters(1),&
+       real_parameters(1),solution,&
+       vector_cylindrical_to_cartesian(solution(3),E),&
+       vector_cylindrical_to_cartesian(solution(3),B))
+  ifail = 1 !< set ifail to true
+  
+end subroutine compute_relativistic_particle_derivatives
+
+!-------------------------------------------------------------------------
+
+!> This procedure computes the right hand side of the full orbit equations
+!> inputs:
+!>   charge:    (integer) particle charge
+!>   mass:      (real8) particle mass
+!>   solutions: (real8)(6) particle solution
+!>   E:         (real8)(3) electric field [V/m]
+!>   B:         (real8)(3) magnetic field (T)
+!> outputs:
+!>   rhs: (real8)(6) right hand side full orbit equation
+pure function compute_relativistic_particle_rhs(charge,mass,solution,E,B) &
+     result(rhs)
+  !> load modules
+  use constants, only: EL_CHG,SPEED_OF_LIGHT,ATOMIC_MASS_UNIT
+  use mod_math_operators, only: cross_product
+  use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
+  implicit none
+  !> delcare intput variables
+  integer,intent(in) :: charge
+  real(kind=8),intent(in) :: mass
+  real(kind=8),dimension(6),intent(in) :: solution
+  real(kind=8),dimension(3),intent(in) :: E,B
+  !> delcare outputs
+  real(kind=8),dimension(6) :: rhs
+  !> internal variables
+  real(kind=8) :: gamma !< relativistic factor
+
+  !> compute the relativistic factor
+  gamma = sqrt(mass*mass + ((solution(4)*solution(4) + &
+       solution(5)*solution(5)+solution(6)*solution(6))/&
+       (SPEED_OF_LIGHT*SPEED_OF_LIGHT)))
+  !> compute the spatial derivatives
+  rhs(1:3) = vector_cartesian_to_cylindrical(solution(3),solution(4:6))/gamma
+  rhs(3) = rhs(3)/solution(1)
+  !> compute the momenta derivatives
+  rhs(4:6) = EL_CHG*real(charge,kind=8)*(&
+       E + cross_product(solution(4:6),B)/gamma)/&
+       ATOMIC_MASS_UNIT
+  
+end function compute_relativistic_particle_rhs
 
 !--------------------------------------------------------------------------
 

@@ -246,8 +246,8 @@ contains
          p_parallel*dbdt - ((magnetic_moment*gradB)/gamma)
     
     !> compute the guiding center position derivatives
-    derivatives(1:3) = (cross_product(E_star,b) + &
-         ((p_parallel*B_star)/(mass*gamma)))
+    derivatives(1:3) = cross_product(E_star,b) + &
+         ((p_parallel*B_star)/(mass*gamma))
     derivatives(3) = derivatives(3)/R
     derivatives(4) = B_star(1)*E_star(1)+B_star(2)*E_star(2)+B_star(3)*E_star(3)
     derivatives = derivatives/(B_star(1)*b(1)+B_star(2)*b(2)+B_star(3)*b(3))

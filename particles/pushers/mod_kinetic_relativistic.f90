@@ -12,6 +12,7 @@ private
 public volume_preserving_push_cartesian,volume_preserving_push_jorek
 public relativistic_kinetic_to_particle
 public gc_to_relativistic_kinetic
+public relativistic_kinetic_to_relativistic_gc
 
 contains
 
@@ -303,8 +304,8 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out
   type(type_node_list),intent(in) :: node_list
   type(type_element_list),intent(in) :: element_list
   type(particle_kinetic_relativistic),intent(in) :: in ! input kinetic particle
-  real(kind=8),intent(in) :: mass !< particle time and mass in AMU
-  real(kind=8),dimension(3),intent(in) :: B !< mass in AMU magnetic field in [T]
+  real(kind=8),intent(in) :: mass !< particle mass in AMU
+  real(kind=8),dimension(3),intent(in) :: B !< magnetic field in [T]
   ! delcare output variables
   type(particle_gc) :: out
   ! declare internal variables

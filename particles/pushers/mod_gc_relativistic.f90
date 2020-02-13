@@ -10,6 +10,7 @@ module mod_gc_relativistic
   private
   !> declare public procedures and variables
   public relativistic_gc_to_particle, gc_to_relativistic_gc
+  public relativistic_gc_to_relativistic_kinetic
   public relativistic_gc_momenta_from_E_cospitch
 
 contains
@@ -183,7 +184,7 @@ contains
   end function gc_to_relativistic_gc
 
   !> This function fills in the p(1) and p(2) fields of a particle_gc_relativistic
-  !> from its energy and (cosine of) pitch-angle
+  !> particle from its energy and (cosine of) pitch-angle
   function relativistic_gc_momenta_from_E_cospitch(rel_gc_in,energy,ksi,mass,fields,time) result(rel_gc_out)
 
     use constants, only: ATOMIC_MASS_UNIT, EL_CHG, SPEED_OF_LIGHT

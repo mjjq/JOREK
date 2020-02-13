@@ -717,7 +717,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,n_spi,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,spi_rnd_seed,          40,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,spi_abl_model,          1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,spi_shard_file,        80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,spi_shard_file,       256,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,using_spi,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,flag_adas,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   if (using_spi) then

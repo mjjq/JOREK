@@ -82,7 +82,7 @@ else
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
   events = [event(read_jorek_fields_interp_linear(i=-1)), & 
             event(diag,start=sim%time,step=1d-8),         &
-	    event(stop_action(),start=sim%time+5.d-8)]
+	    event(stop_action(),start=sim%time+1.d-8)]
 
   ! Run first event to read the JOREK fields
   call with(sim, events, at=0.d0)   
@@ -115,6 +115,8 @@ do while (.not. sim%stop_now)
                sim%groups(i)%mass,particles(j)) !< push in analytical fields
 !         call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,t,timesteps(i),
 !              sim%groups(i)%mass,particles(j)) !< push in jorek fields
+          write(*,*), t,particles(j)%x(1),particles(j)%x(2),&
+               particles(j)%x(3),particles(j)%p(2)
           if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1		
         end do !< time steps
       end do !< particles

@@ -155,7 +155,7 @@ contains
     real(kind=8),dimension(n_variables) :: deltas !< reduction of derivative stages
     !> interface of the subroutine compute derivatives
 
-    counter = 0.d0 !< initialise counter to 0    
+    counter = 0 !< initialise counter to 0    
     deltas = 0.d0  !< initialise deltas to zero
 
     !> compute the first derivatives

@@ -17,8 +17,8 @@ module mod_gc_relativistic
 
 contains
 
-  !> This procedure push a relativistic guiding center particle in JOREK
-  !> fields using standard runge kutta integrator withou time step control
+  !> This procedure pushes a relativistic guiding center in JOREK fields
+  !> using standard Runge-Kutta integrator without time step control
   !> inputs:
   !>   fields:   (fields_base) jorek fields
   !>   t:        (real8) simulation time
@@ -35,19 +35,18 @@ contains
     use mod_runge_kutta, only: runge_kutta_fixed_dt
     implicit none
     !> declare input output variables
-    type(particle_gc_relativistic),intent(inout) :: particle
+    type(particle_gc_relativistic), intent(inout) :: particle
     !> declare input variables
-    class(fields_base),intent(in) :: fields
-    real(kind=8),intent(in) :: t,dt,mass
+    class(fields_base), intent(in) :: fields
+    real(kind=8), intent(in)       :: t, dt, mass
     !> internal variables
-    integer :: ifail,i_elm_new !< particle new element
-    !> new particle local coordinates: 1:s,2:t
-    real(kind=8),dimension(2) :: st_new
+    integer :: ifail, i_elm_new !< particle new element
+    !> new particle local coordinates: 1:s, 2:t
+    real(kind=8), dimension(2) :: st_new
     !> integrate global coordinates: 1:R, 2:Z, 3:phi, 4:p_parallel
     real(kind=8),dimension(4) :: solution_new
 
-
-    !> compute runge kutta differentials
+    !> compute Runge-Kutta differentials
     call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives_jorek,&
          fields,4,2,4,t,dt,[particle%x(1),particle%x(2),particle%x(3),&
          particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
@@ -68,13 +67,13 @@ contains
     
   end subroutine runge_kutta_fixed_dt_gc_push_jorek
 
-  !> This subroutine integrates a relativistic gc using fixed time step runge
-  !> kutta method on analytical fields.
+  !> This procedure pushes a relativistic guiding center in analytical fields
+  !> using standard Runge-Kutta integrator without time step control
   !> inputs:
-  !>   fields:   (fields_base) jorke fields
+  !>   fields:   (fields_base) analytical fields
   !>   t:        (real8) integration time
   !>   dt:       (real8) time step
-  !>   mass:     (real8) particle am
+  !>   mass:     (real8) particle mass in AMU
   !>   particle: (particle_gc_relativistic) particle to push
   !> outputs:
   !>   particle: (particle_gc_relativistic) pushed particle
@@ -83,37 +82,38 @@ contains
     use mod_fields, only: fields_base
     use mod_runge_kutta, only: runge_kutta_fixed_dt
     implicit none
-    !> declare input output varibales
-    type(particle_gc_relativistic),intent(inout) :: particle
-    !> delcare input variables
-    class(fields_base),intent(in) :: fields
-    real(kind=8),intent(in) :: t,dt,mass
-    !> delcare internal variables
-    integer :: ifail
-    real(kind=8),dimension(4) :: solution_new
+    !> declare input/output varibales
+    type(particle_gc_relativistic), intent(inout) :: particle
+    !> declare input variables
+    class(fields_base), intent(in) :: fields
+    real(kind=8), intent(in)       :: t, dt, mass
+    !> declare internal variables
+    integer                    :: ifail
+    real(kind=8), dimension(4) :: solution_new
 
     !> integrate particle trajectory
     call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives,&
          fields,4,1,2,t,dt,[particle%x(1),particle%x(2),particle%x(3),&
          particle%p(1)],[int(particle%q)],[mass,particle%p(2)],&
          solution_new,ifail)
+	 
     !> overwrite the new particle position
     particle%x = solution_new(1:3)
     particle%p(1) = solution_new(4)
     
   end subroutine runge_kutta_fixed_dt_gc_push
   
-  !> This procedure computes the guiding ceneter derivatives required
-  !> for the runge_kutta integration.
+  !> This procedure computes the derivatives required for the Runge-Kutta 
+  !> integration of a relativistic guiding center in JOREK fields.
   !> inputs:
   !>   fields:
-  !>   n_variables:       (integer) number of variables=4:
+  !>   n_variables:       (integer) number of variables=4
   !>   n_int_parameters:  (integer) number of integer parameters=2
   !>   n_real_parameters: (integer) number of real parameters=4
   !>   t:
   !>   solution_old:     (real8)(n_variables) initial solution:
   !>                     1:R, 2:Z, 3:phi, 4:parallel momentum
-  !>   solution:         (real8)(n_variables) solution at a runge-kutta stage
+  !>   solution:         (real8)(n_variables) solution at a Runge-Kutta stage
   !>   int_parameters:   (integer)(n_int_parameters) integer parameters
   !>                     1:old i_elm, 2: charge
   !>   real_parameters:  (real8)(n_real_parameters) real parameters:
@@ -131,21 +131,21 @@ contains
     use mod_find_rz_nearby
     implicit none
     !> declare input variables
-    class(fields_base),intent(in) :: fields
-    integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
-    integer,dimension(n_variables),intent(in) :: int_parameters
-    real(kind=8),intent(in) :: t
-    real(kind=8),dimension(n_variables),intent(in) :: solution,solution_old
-    real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
+    class(fields_base), intent(in)                         :: fields
+    integer, intent(in)                                    :: n_variables, n_int_parameters, n_real_parameters
+    integer, dimension(n_variables), intent(in)            :: int_parameters
+    real(kind=8), intent(in)                               :: t
+    real(kind=8), dimension(n_variables), intent(in)       :: solution, solution_old
+    real(kind=8), dimension(n_real_parameters), intent(in) :: real_parameters
     !> declare output variables
-    integer,intent(out) :: ifail
-    real(kind=8),dimension(n_variables),intent(out) :: derivatives
+    integer, intent(out)                              :: ifail
+    real(kind=8), dimension(n_variables), intent(out) :: derivatives
     !> internal variables
-    integer :: ierr !< error for find_rz nearby
-    real(kind=8) :: normB,gamma !< magnetic field intensity and relativistic factor
-    real(kind=8),dimension(2) :: st_new !< local postion particle at stage
+    integer                    :: ierr !< error for find_rz nearby
+    real(kind=8)               :: normB, gamma !< magnetic field intensity and relativistic factor
+    real(kind=8), dimension(2) :: st_new !< local postion particle at stage
     !> define guiding center fields
-    real(kind=8),dimension(3) :: E,b,gradB,curlb,dbdt,B_star
+    real(kind=8),dimension(3) :: E, b, gradB, curlb, dbdt, B_star
 
     !> find the gc at stage local position
     call find_RZ_nearby(fields%node_list,fields%element_list,solution_old(1),&
@@ -161,10 +161,12 @@ contains
     derivatives = compute_relativistic_gc_rhs(int_parameters(2),&
          real_parameters(3),real_parameters(4),solution(1),&
          solution(4),normB,E,b,gradB,curlb,dbdt)
+
   end subroutine compute_relativistic_gc_derivatives_jorek
 
-  !> This procedure compute the guiding center derivatives in analytical
-  !> fields. This is mainly used for testing models.
+  !> This procedure computes the derivatives required for the Runge-Kutta 
+  !> integration of a relativistic guiding center in analytical fields.
+  !> This is mainly used for testing models.
   !> inputs:
   !>   fields:            (fields_base) jorek fields
   !>   n_variables:       (n_variables) number of variables
@@ -184,33 +186,35 @@ contains
     !> load modules
     use mod_fields, only: fields_base
     implicit none
-    !> declare input varibales
-    class(fields_base),intent(in) :: fields
-    integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
-    real(kind=8),intent(in) :: t
-    real(kind=8),dimension(n_variables),intent(in) :: solution_old,solution
-    integer,dimension(n_int_parameters),intent(in) :: int_parameters
-    real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
+    !> declare input variables
+    class(fields_base), intent(in)                         :: fields
+    integer, intent(in)                                    :: n_variables, n_int_parameters, n_real_parameters
+    real(kind=8), intent(in)                               :: t
+    real(kind=8), dimension(n_variables), intent(in)       :: solution_old, solution
+    integer, dimension(n_int_parameters), intent(in)       :: int_parameters
+    real(kind=8), dimension(n_real_parameters), intent(in) :: real_parameters
     !> declare output variables
-    integer,intent(out) :: ifail
-    real(kind=8),dimension(n_variables),intent(out) :: derivatives
+    integer, intent(out)                              :: ifail
+    real(kind=8), dimension(n_variables), intent(out) :: derivatives
     !> internal variables
-    real(kind=8) :: normB
-    real(kind=8),dimension(3) :: E,b,gradB,curlb,dbdt
+    real(kind=8)               :: normB
+    real(kind=8), dimension(3) :: E, b, gradB, curlb, dbdt
 
     !> compute the new electromagnetic fields
     call fields%calc_analytical_EBNormBGradBCurlbDbdt(solution(1:2),E,b,normB,&
          gradB,curlb,dbdt)
+	 
     !> compute gc right hand side
     derivatives = compute_relativistic_gc_rhs(int_parameters(1),real_parameters(1),&
          real_parameters(2),solution(1),solution(4),normB,E,b,gradB,curlb,dbdt)
+
     !> set ifail to true
     ifail = 1
     
   end subroutine compute_relativistic_gc_derivatives
   
-  !> This procedure computes the guiding center equaction right hand side
-  !> as reported in J.R Cary, A.J. Brizard, Rev. Mod. Phys, vol.81, p.693 ,2009
+  !> This procedure computes the guiding center equation right hand side
+  !> as reported in J.R Cary, A.J. Brizard, Rev. Mod. Phys, vol.81, p.693, 2009
   !> inputs:
   !> outputs:
   !>   derivatives: (real8)(4) gc right hand side: 1:R_dot,2:Z_dot,
@@ -221,28 +225,28 @@ contains
     use mod_math_operators, only: cross_product
     implicit none
     !> declare input variables
-    integer,intent(in) :: charge
-    real(kind=8),intent(in) :: mass,R,p_parallel,magnetic_moment,normB
-    real(kind=8),dimension(3),intent(in) ::b,E,gradB,curlb,dbdt
+    integer,intent(in)                     :: charge
+    real(kind=8),intent(in)                :: mass, R, p_parallel, magnetic_moment, normB
+    real(kind=8), dimension(3), intent(in) :: b, E, gradB, curlb, dbdt
     !> declare output variable
-    real(kind=8),dimension(4) :: derivatives
+    real(kind=8), dimension(4) :: derivatives
     !> declare input variables
-    real(kind=8) :: gamma !< relativistic factor
-    real(kind=8),dimension(3) :: B_star,E_star
+    real(kind=8)               :: gamma !< relativistic factor
+    real(kind=8), dimension(3) :: B_star,E_star
 
     !> compute the relativistic factor
-    gamma = sqrt(mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT + &
-         p_parallel*p_parallel+2.d0*mass*normB*magnetic_moment)/&
+    gamma = sqrt(mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT +       &
+         p_parallel*p_parallel+2.d0*mass*normB*magnetic_moment)/ &
          (mass*SPEED_OF_LIGHT)
 
     !> compute B_star and E_star
     B_star = p_parallel*curlb + &
-         ((EL_CHG*real(charge,kind=8)*normB)/ATOMIC_MASS_UNIT)*b !< B_star
+         ((EL_CHG*real(charge,kind=8)*normB)/ATOMIC_MASS_UNIT)*b
     E_star = (EL_CHG*real(charge,kind=8)*E/ATOMIC_MASS_UNIT) - &
-         p_parallel*dbdt - ((magnetic_moment*gradB)/gamma) !< E_star
+         p_parallel*dbdt - ((magnetic_moment*gradB)/gamma)
     
     !> compute the guiding center position derivatives
-    derivatives(1:3) = (cross_product(E_star,b) +&
+    derivatives(1:3) = (cross_product(E_star,b) + &
          ((p_parallel*B_star)/(mass*gamma)))
     derivatives(3) = derivatives(3)/R
     derivatives(4) = B_star(1)*E_star(1)+B_star(2)*E_star(2)+B_star(3)*E_star(3)

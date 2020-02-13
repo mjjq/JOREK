@@ -60,7 +60,7 @@ module mod_particle_types
  !> This particle type is used for computing the guiding center trajectory of a
  !> realtivistic particle. Final GC position and momenta are given at the time (\t\)
  type, extends(particle_base) :: particle_gc_relativistic
-    !> 1:gc parallel momentum [AMU m/s] and magnetic moment [(AMU*m*2)/(T*s**2)]
+    !> 1:gc parallel momentum [AMU m/s] and magnetic moment [(AMU*m**2)/(T*s**2)]
     real(kind=8),dimension(2) :: p
     integer(kind=1) :: q !< charge [e]
  end type particle_gc_relativistic

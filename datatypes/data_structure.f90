@@ -20,7 +20,9 @@ module data_structure
     real*8     :: psi_eq(n_order+1)               !< equilibrium flux at the nodes
 #endif
     integer    :: index(n_order+1)                !< index in the main matrix
-    integer    :: boundary                        !< = 1, 2 or 3 for boundary nodes
+    integer    :: boundary                        !< = 1, 2 or 3 for boundary nodes.
+                                                  !< For wall-aligned grids, check routine update_boundary_types_final
+                                                  !< in grids/grid_utils/update_boundary_types.f90
     integer    :: boundary_index                  !< index of the boundary node 
     integer    :: parents(2)                      !< Parent nodes (used if node is constrained)"refinement"
     integer    :: parent_elem                     !< which element do parent nodes belong to ? "refinement"

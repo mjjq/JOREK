@@ -13,6 +13,7 @@ module mod_gc_relativistic
   public relativistic_gc_to_relativistic_kinetic
   public relativistic_gc_momenta_from_E_cospitch
   public runge_kutta_fixed_dt_gc_push_jorek
+  public runge_kutta_fixed_dt_gc_push
 
 contains
 
@@ -22,13 +23,12 @@ contains
   !>   fields:   (fields_base) jorek fields
   !>   t:        (real8) simulation time
   !>   dt:       (real8) simulation time step
-  !>   charge:   (integer) the gc charge number
   !>   mass:     (real8) the gc mass in AMU
   !>   particle: (particle_gc_relativistic) the gc to integrate
   !> outputs:
   !>   particle: (particle_gc_relativistic) the integrated gc
   subroutine runge_kutta_fixed_dt_gc_push_jorek(fields,t,dt,&
-       charge,mass,particle)
+       mass,particle)
     !> load modules
     use mod_fields, only: fields_base
     use mod_find_rz_nearby
@@ -39,7 +39,6 @@ contains
     !> declare input variables
     class(fields_base),intent(in) :: fields
     real(kind=8),intent(in) :: t,dt,mass
-    integer,intent(in) :: charge
     !> internal variables
     integer :: ifail,i_elm_new !< particle new element
     !> new particle local coordinates: 1:s,2:t
@@ -51,8 +50,8 @@ contains
     !> compute runge kutta differentials
     call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives_jorek,&
          fields,4,2,4,t,dt,[particle%x(1),particle%x(2),particle%x(3),&
-         particle%p(1)],[particle%i_elm,charge],[particle%st(1),particle%st(2),&
-         mass,particle%p(2)],solution_new,i_elm_new)
+         particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
+         particle%st(2),mass,particle%p(2)],solution_new,i_elm_new)
     
     !> compute the new local coordinates
     if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list,&
@@ -68,6 +67,41 @@ contains
     particle%i_elm = i_elm_new
     
   end subroutine runge_kutta_fixed_dt_gc_push_jorek
+
+  !> This subroutine integrates a relativistic gc using fixed time step runge
+  !> kutta method on analytical fields.
+  !> inputs:
+  !>   fields:   (fields_base) jorke fields
+  !>   t:        (real8) integration time
+  !>   dt:       (real8) time step
+  !>   mass:     (real8) particle am
+  !>   particle: (particle_gc_relativistic) particle to push
+  !> outputs:
+  !>   particle: (particle_gc_relativistic) pushed particle
+  subroutine runge_kutta_fixed_dt_gc_push(fields,t,dt,mass,particle)
+    !> load modules
+    use mod_fields, only: fields_base
+    use mod_runge_kutta, only: runge_kutta_fixed_dt
+    implicit none
+    !> declare input output varibales
+    type(particle_gc_relativistic),intent(inout) :: particle
+    !> delcare input variables
+    class(fields_base),intent(in) :: fields
+    real(kind=8),intent(in) :: t,dt,mass
+    !> delcare internal variables
+    integer :: ifail
+    real(kind=8),dimension(4) :: solution_new
+
+    !> integrate particle trajectory
+    call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives,&
+         fields,4,1,2,t,dt,[particle%x(1),particle%x(2),particle%x(3),&
+         particle%p(1)],[int(particle%q)],[mass,particle%p(2)],&
+         solution_new,ifail)
+    !> overwrite the new particle position
+    particle%x = solution_new(1:3)
+    particle%p(1) = solution_new(4)
+    
+  end subroutine runge_kutta_fixed_dt_gc_push
   
   !> This procedure computes the guiding ceneter derivatives required
   !> for the runge_kutta integration.
@@ -128,6 +162,52 @@ contains
          real_parameters(3),real_parameters(4),solution(1),&
          solution(4),normB,E,b,gradB,curlb,dbdt)
   end subroutine compute_relativistic_gc_derivatives_jorek
+
+  !> This procedure compute the guiding center derivatives in analytical
+  !> fields. This is mainly used for testing models.
+  !> inputs:
+  !>   fields:            (fields_base) jorek fields
+  !>   n_variables:       (n_variables) number of variables
+  !>   n_int_parameters:  (integer) number of integer parameters = 1
+  !>   n_real_parameters: (integer) number of real parameters = 2
+  !>   t:                 (real8) time at stage
+  !>   solution_old:      (real8)(n_variables) old particle state
+  !>   solution:          (real8)(n_variables) new particle state at stage
+  !>   int_parameters:    (integer)(n_int_parameters) 1: charge
+  !>   real_parameters:   (real8)(n_real_parameters) 1:mass, 2:magnetic moment
+  !> outputs:
+  !>   ifail:       (integer) if 0 the integration failed
+  !>   derivatives: (real8)(n_variables) guiding center right field side
+  pure subroutine compute_relativistic_gc_derivatives(fields,n_variables,&
+       n_int_parameters,n_real_parameters,t,solution_old,solution,&
+       int_parameters,real_parameters,derivatives,ifail)
+    !> load modules
+    use mod_fields, only: fields_base
+    implicit none
+    !> declare input varibales
+    class(fields_base),intent(in) :: fields
+    integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
+    real(kind=8),intent(in) :: t
+    real(kind=8),dimension(n_variables),intent(in) :: solution_old,solution
+    integer,dimension(n_int_parameters),intent(in) :: int_parameters
+    real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
+    !> declare output variables
+    integer,intent(out) :: ifail
+    real(kind=8),dimension(n_variables),intent(out) :: derivatives
+    !> internal variables
+    real(kind=8) :: normB
+    real(kind=8),dimension(3) :: E,b,gradB,curlb,dbdt
+
+    !> compute the new electromagnetic fields
+    call fields%calc_analytical_EBNormBGradBCurlbDbdt(solution(1:2),E,b,normB,&
+         gradB,curlb,dbdt)
+    !> compute gc right hand side
+    derivatives = compute_relativistic_gc_rhs(int_parameters(1),real_parameters(1),&
+         real_parameters(2),solution(1),solution(4),normB,E,b,gradB,curlb,dbdt)
+    !> set ifail to true
+    ifail = 1
+    
+  end subroutine compute_relativistic_gc_derivatives
   
   !> This procedure computes the guiding center equaction right hand side
   !> as reported in J.R Cary, A.J. Brizard, Rev. Mod. Phys, vol.81, p.693 ,2009

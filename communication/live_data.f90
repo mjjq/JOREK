@@ -533,7 +533,9 @@ module live_data
       if ( .not. header_written ) then
         write(LIVE_DATA_HANDLE,'(A,I5)') '@n_diag_coil_curr: ', size(diag_coil_curr,2)
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_xlabel: normalized time'
+        write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_xlabel_si: time [ms]'
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_ylabel: Diagnostic coil current'
+        write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_ylabel_si: Diagnostic coil current [A]'
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@diag_coil_curr_x2si: ', sqrt_mu0_rho0*1.e3
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@diag_coil_curr_y2si: ', 1./mu_zero
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_logy: 0'

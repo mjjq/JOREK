@@ -2130,7 +2130,6 @@ module vacuum_response
         do k = 1, sr%n_diag_coils
           k2 = k + sr%ind_start_diag_coils - 1
           if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
-            write(*,*) my_id, sr%s_ww%ind_start 
             global_index = my_id*sr%s_ww%step
             diag_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
           endif

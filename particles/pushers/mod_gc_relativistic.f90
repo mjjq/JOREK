@@ -9,7 +9,8 @@ module mod_gc_relativistic
   !> declare default private
   private
   !> declare public procedures and variables
-  public relativistic_gc_to_particle, gc_to_relativistic_gc
+  public relativistic_gc_to_particle
+  public gc_to_relativistic_gc
   public relativistic_gc_to_relativistic_kinetic
   public relativistic_gc_momenta_from_E_cospitch
   public runge_kutta_fixed_dt_gc_push_jorek
@@ -265,7 +266,7 @@ contains
   !>   gyro_angle:      (real8)(optional) the gyro-angle, defaut=0
   !> outputs:
   !>   particle_out: (particle_base) the output particle
-  !>   gyro_angle:   (real8)(optiona) the gyro-angle, default=0
+  !>   gyro_angle:   (real8)(optional) the gyro-angle, default=0
   subroutine relativistic_gc_to_particle(node_list,element_list,&
        relativistic_gc,particle_out,mass,B,gyro_angle)
     !> load modules
@@ -277,21 +278,22 @@ contains
     type(particle_gc_relativistic), intent(in) :: relativistic_gc
     real(kind=8), intent(in)                   :: mass
     real(kind=8), dimension(3), intent(in)     :: B
+    real(kind=8), intent(in), optional         :: gyro_angle
     !> declare output variables
     class(particle_base), intent(out)          :: particle_out
-    !> declare input output variables
-    real(kind=8), intent(inout), optional      :: gyro_angle
+    !> declare internal variables
+    real(kind=8)                               :: gyro_angle_local
 
-    !< if the gyroangle is not present set it to zero
-    if(.not.present(gyro_angle)) gyro_angle = 0.d0
-    
+    gyro_angle_local = 0.d0
+    if(present(gyro_angle)) gyro_angle_local = gyro_angle
+        
     !> select particle type
     select type (particle_out)
     type is (particle_gc)
        particle_out = relativistic_gc_to_gc(relativistic_gc,mass,B)
     type is (particle_kinetic_relativistic)
        particle_out = relativistic_gc_to_relativistic_kinetic(&
-            node_list,element_list,relativistic_gc,mass,B,gyro_angle)
+            node_list,element_list,relativistic_gc,mass,B,gyro_angle_local)
     end select
     
   end subroutine relativistic_gc_to_particle

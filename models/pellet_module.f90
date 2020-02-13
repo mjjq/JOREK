@@ -137,7 +137,7 @@ use data_structure
 use phys_module
 use mpi_mod
 use mod_interp, only: interp
-use mod_integrals3D
+!use mod_integrals3D
 
 implicit none
 

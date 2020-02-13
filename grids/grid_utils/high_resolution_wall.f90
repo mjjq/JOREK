@@ -1,8 +1,8 @@
 module high_resolution_wall
-  real*8,  parameter	:: wall_accuracy = 1.d-3
-  integer		:: n_wall_HR
-  real*8,  allocatable	:: R_wall_HR(:), Z_wall_HR(:), psi_wall_HR(:)
-  integer, allocatable	:: initial_wall_piece(:)
+  real*8,  parameter    :: wall_accuracy = 1.d-3
+  integer               :: n_wall_HR
+  real*8,  allocatable  :: R_wall_HR(:), Z_wall_HR(:), psi_wall_HR(:)
+  integer, allocatable  :: initial_wall_piece(:)
 
   contains  
 
@@ -16,19 +16,19 @@ module high_resolution_wall
     implicit none
     
     ! --- Routine variables
-    type (type_node_list),    intent(in)	:: node_list
-    type (type_element_list), intent(in)	:: element_list
+    type (type_node_list),    intent(in)        :: node_list
+    type (type_element_list), intent(in)        :: element_list
     
     ! --- Internal variables
-    integer			:: i, j
-    integer			:: n_wall_tmp, n_tmp
-    real*8,  allocatable	:: R_wall_tmp(:), Z_wall_tmp(:)
-    integer, allocatable	:: initial_wall_piece_tmp(:)
-    real*8			:: total_length, length
-    real*8			:: R_out, Z_out
-    real*8			:: s_out, t_out
-    real*8			:: P_s,P_t,P_st,P_ss,P_tt
-    integer			:: i_elm_out,ier
+    integer                     :: i, j
+    integer                     :: n_wall_tmp, n_tmp
+    real*8,  allocatable        :: R_wall_tmp(:), Z_wall_tmp(:)
+    integer, allocatable        :: initial_wall_piece_tmp(:)
+    real*8                      :: total_length, length
+    real*8                      :: R_out, Z_out
+    real*8                      :: s_out, t_out
+    real*8                      :: P_s,P_t,P_st,P_ss,P_tt
+    integer                     :: i_elm_out,ier
     
     ! --- Initialise
     n_wall_HR = 0
@@ -50,13 +50,13 @@ module high_resolution_wall
       n_tmp = min(1, n_tmp)
       do j=1,n_tmp
         n_wall_HR = n_wall_HR + 1
-	if (n_wall_HR .gt. n_wall_tmp) then
-	  write(*,*)'Warning! Stepping off array in get_high_resolution_wall, aborting...'
-	  return
-	endif
-	R_wall_tmp(n_wall_HR) = R_limiter(i) + (R_limiter(i+1) - R_limiter(i)) * real(j-1)/real(n_tmp)
-	Z_wall_tmp(n_wall_HR) = Z_limiter(i) + (Z_limiter(i+1) - Z_limiter(i)) * real(j-1)/real(n_tmp)
-	initial_wall_piece_tmp(n_wall_HR) = i
+        if (n_wall_HR .gt. n_wall_tmp) then
+          write(*,*)'Warning! Stepping off array in get_high_resolution_wall, aborting...'
+          return
+        endif
+        R_wall_tmp(n_wall_HR) = R_limiter(i) + (R_limiter(i+1) - R_limiter(i)) * real(j-1)/real(n_tmp)
+        Z_wall_tmp(n_wall_HR) = Z_limiter(i) + (Z_limiter(i+1) - Z_limiter(i)) * real(j-1)/real(n_tmp)
+        initial_wall_piece_tmp(n_wall_HR) = i
       enddo
     enddo
     

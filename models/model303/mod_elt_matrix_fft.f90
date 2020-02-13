@@ -168,14 +168,14 @@ theta = time_evol_theta
 zeta  = time_evol_zeta
 
 ! --- If we're doing the fft, don't loop...
-if (n_tor .gt. n_tor_fft_thresh) then
+if (n_tor .ge. n_tor_fft_thresh) then
   n_tor_loop  = 1
 else
   n_tor_loop  = n_tor
 endif
 
 ! --- Toroidal functions            
-if (n_tor .gt. n_tor_fft_thresh) then
+if (n_tor .ge. n_tor_fft_thresh) then
   HHZ    = 1.d0
   HHZ_p  = 1.d0
   HHZ_pp = 1.d0
@@ -748,7 +748,7 @@ do i=1,n_vertex_max
 
             call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                                 pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-                                x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt),eq_zTe(ms,mt), &
+                                x_g(ms,mt),y_g(ms,mt), ps0, phi, r0_corr, T0_corr/2.d0, &
                                 central_density, pellet_particles, pellet_density, total_pellet_volume, &
                                 source_pellet, source_volume)
           endif
@@ -1006,7 +1006,7 @@ do i=1,n_vertex_max
             !#  RHS equations end                                                                                  #
             !###################################################################################################
 
-            if (n_tor .gt. n_tor_fft_thresh) then
+            if (n_tor .ge. n_tor_fft_thresh) then
               index_ij =       n_var*(n_order+1)*(i-1) +       n_var*(j-1) + 1
             else
               index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor*n_var*(j-1) + im
@@ -1014,7 +1014,7 @@ do i=1,n_vertex_max
 
 
             ! --- Fill up the matrix
-            if (n_tor .gt. n_tor_fft_thresh) then
+            if (n_tor .ge. n_tor_fft_thresh) then
               ij1 = index_ij
               ij2 = index_ij + 1
               ij3 = index_ij + 2
@@ -1787,14 +1787,14 @@ do i=1,n_vertex_max
                   !# end equation 7                                                                                  #
                   !###################################################################################################
 
-                  if (n_tor .gt. n_tor_fft_thresh) then
+                  if (n_tor .ge. n_tor_fft_thresh) then
                     index_kl =       n_var*(n_order+1)*(k-1) +       n_var*(l-1) + 1
                   else
                     index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor*n_var*(l-1) + in
                   endif
 
                   ! --- Fill up the matrix
-                  if (n_tor .gt. n_tor_fft_thresh) then
+                  if (n_tor .ge. n_tor_fft_thresh) then
                     kl1 = index_kl
                     kl2 = index_kl + 1
                     kl3 = index_kl + 2
@@ -1979,7 +1979,7 @@ do i=1,n_vertex_max
     enddo ! mt loop
 
 
-    if (n_tor .gt. n_tor_fft_thresh) then
+    if (n_tor .ge. n_tor_fft_thresh) then
 
       do i_v = 1, n_var
         do j_loc=1, n_vertex_max*n_var*(n_order+1)
@@ -2198,7 +2198,7 @@ do i=1,n_vertex_max
   enddo ! j loop (n_order+1)
 enddo ! i loop (n_vertex)
 
-if (n_tor .le. n_tor_fft_thresh) return
+if (n_tor .lt. n_tor_fft_thresh) return
 
 ELM = 0.5d0 * ELM
 

@@ -15,6 +15,7 @@ public gc_to_relativistic_kinetic
 public relativistic_kinetic_to_relativistic_gc
 public runge_kutta_fixed_dt_relativistic_particle_push
 public runge_kutta_fixed_dt_relativistic_particle_push_jorek
+public volume_preserving_push_analytical
 
 contains
 
@@ -128,12 +129,12 @@ subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail
   ! compute magnetic and electric field
   call fields%calc_EBpsiU(time+5.d-1*timestep,particle%i_elm,&
        particle%st,particle%x(3),E,B,psi,U)
-  ! get B and E fields in Cartesian coordinates
-  B = vector_cylindrical_to_cartesian(particle%x(3),B)
-  E = vector_cylindrical_to_cartesian(particle%x(3),E)
   ! compute the second half-step  
-  call volume_preserving_second_half_step_jorek(particle,half_position(1:3),&
-       scaling_factor,E,B,mass,timestep)
+  call volume_preserving_second_half_step_jorek(particle,&
+       half_position(1:3),scaling_factor,&
+       vector_cylindrical_to_cartesian(particle%x(3),E),&
+       vector_cylindrical_to_cartesian(particle%x(3),B),&
+       mass,timestep)
   ! transform back from cartisian to cylindrical coordinates
   half_position(4:6) = cartesian_to_cylindrical(half_position(1:3))
   ! call the find RZ for tracking the paritcle in local coordinates
@@ -145,7 +146,56 @@ subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail
   particle%x = half_position(4:6)
 end subroutine volume_preserving_push_jorek
 
+!--------------------------------------------------------------------------
+
+!> This procedure implement a test version of the VPA for analytical
+!> magnetic and electric fields. Not for production.
+!> inputs:
+!>   particle: (particle_kinetic_relativistic) particle to integrate
+!>   fields:   (fields_base) jorek fields
+!>   mass:     (real8) particle mass
+!>   time:     (real8) time integration 
+!>   timestep: (real8) time step
+!> outputs:
+!>   particle: (particle_kinetic_relativistic) integrated particle
+pure subroutine volume_preserving_push_analytical(particle,fields,&
+     mass,time,timestep)
+  use mod_fields
+  use mod_coordinate_transforms, only: cartesian_to_cylindrical
+  use mod_coordinate_transforms, only: cylindrical_to_cartesian
+  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  implicit none
+  !> declare input/output varibales
+  type(particle_kinetic_relativistic),intent(inout) :: particle
+  !> declare inputs
+  class(fields_base),intent(in) :: fields
+  real(kind=8),intent(in) :: mass,time,timestep
+  !> declare variables
+  real(kind=8) :: scaling_factor,psi,U
+  real(kind=8),dimension(3) :: half_position,E,B
+
+  !> transform the particle position from cylindrical to cartesian
+  half_position = cylindrical_to_cartesian(particle%x)
+  !> apply the first vpa time step
+  call volume_preserving_first_half_step_jorek(particle,half_position,&
+       mass,timestep,scaling_factor)
+  !> convert back the position to cylindrical coordinates
+  particle%x = cartesian_to_cylindrical(half_position)
+  !> compute the analytical electromagnetic fields
+  call fields%calc_analytical_EBpsiU(particle%x(1:2),E,B,psi,U)
+  !> apply the secon VPA step
+  call volume_preserving_second_half_step_jorek(particle,&
+       half_position,scaling_factor,&
+       vector_cylindrical_to_cartesian(particle%x(3),E),&
+       vector_cylindrical_to_cartesian(particle%x(3),B),&
+       mass,timestep)
+  !> convert back the position to cylindrical coordinates
+  particle%x = cartesian_to_cylindrical(half_position)
+  
+end subroutine volume_preserving_push_analytical
+
 !---------------------------------------------------------------------------
+
 !> This subroutine implements a test version of the VPA assuming uniform B and E.
 !> This subroutine is to be used for tests and comparisons, not for production.
 !> inputs:

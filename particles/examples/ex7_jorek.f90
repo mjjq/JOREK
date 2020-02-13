@@ -49,8 +49,8 @@ if (.not. restart) then
   ! and i=-1 (to read jorek_restart.h5 and keep this field at all time) or i=last_file_before_time(sim%time)
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
   events = [event(read_jorek_fields_interp_linear(i=-1)), & 
-            event(diag,start=sim%time,step=1d-8),         &
-            event(stop_action(),start=sim%time+5.d-8)]
+            event(diag,start=sim%time,step=1d-9),         &
+            event(stop_action(),start=sim%time+2.d-9)]
 
   ! Run first event to read the JOREK fields
   call with(sim, events, at=0.d0)
@@ -63,12 +63,12 @@ if (.not. restart) then
                  p%x(1), p%x(2), & ! inputs
                  p%x(1), p%x(2), p%i_elm, p%st(1), p%st(2), ifail) ! outputs
     !p%p = [1.6d6,0.]
-    energy = 1.d7
-    ksi    = 1.d0
+    energy = 1.d7 ! !!! AT PRESENT, MUST INCLUDE REST ENERGY (FIX THIS) !!!
+    ksi    = 1.d0 ! Cosine of pitch-angle
     particle_in = p
     particle_out = relativistic_gc_momenta_from_E_cospitch(particle_in,energy,ksi,sim%groups(1)%mass,sim%fields,sim%time)
     p%p = particle_out%p
-    write(*,*) 'p(1), p(2)', p%p(1), p%p(2)
+    write(*,*) 'Initial p(1), p(2)', p%p(1), p%p(2)
   end select
 else
   write(*,*) '*******************************'
@@ -110,11 +110,15 @@ do while (.not. sim%stop_now)
       do j=1,size(particles,1)
         do k=1,n_steps
           if (particles(j)%i_elm .eq. 0) exit
-          t = sim%time + k*timesteps(i)
-          call runge_kutta_fixed_dt_gc_push(sim%fields,t,timesteps(i),&
+	  sim%time = sim%time + timesteps(i)
+          call runge_kutta_fixed_dt_gc_push(sim%fields,sim%time,timesteps(i), &
                sim%groups(i)%mass,particles(j)) !< push in analytical fields
-!         call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,t,timesteps(i),
+!          call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time,timesteps(i), &
 !              sim%groups(i)%mass,particles(j)) !< push in jorek fields
+
+!          write(*,*) 'Particle position: ', particles(j)%x(1), particles(j)%x(2), particles(j)%x(3)
+!          write(*,*) 'Particle momenta: ', particles(j)%p(1), particles(j)%p(2)
+
           if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1		
         end do !< time steps
       end do !< particles

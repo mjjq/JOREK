@@ -150,12 +150,15 @@ contains
     real(kind=8),dimension(n_variables*n_stages),intent(out) :: differentials
     !> declare internal variables
     integer :: i,j !< indexes
-    integer :: counter=0 !< stage counter
+    integer :: counter !< stage counter
     real(kind=8) :: t_new !< new coordinate
     real(kind=8),dimension(n_variables) :: deltas !< reduction of derivative stages
     !> interface of the subroutine compute derivatives
+
+    counter = 0.d0
     
     deltas = 0.d0 !< initialise deltas to zero
+
     !> compute the first derivatives
     call compute_rhs(fields,n_variables,n_int_parameters,n_real_parameters,&
          t,solution_old,solution_old,int_parameters,real_parameters,&
@@ -172,6 +175,7 @@ contains
        enddo
        counter = counter + i !< update counter
        !> computing the new derivatives
+
        call compute_rhs(fields,n_variables,n_int_parameters,&
             n_real_parameters,t_new,solution_old,solution_old+dt*deltas,&
             int_parameters,real_parameters,&
@@ -179,6 +183,7 @@ contains
        deltas = 0.d0 !< re-initialise the deltas variable
     enddo
     differentials = dt*differentials !< comute differentials from derivatives
+
   end subroutine compute_runge_kutta_differentials
 
   !> This procedure computes the runge kutta solution of five different orders

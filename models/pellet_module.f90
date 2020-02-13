@@ -137,6 +137,7 @@ use data_structure
 use phys_module
 use mpi_mod
 use mod_interp, only: interp
+use mod_integrals3D
 
 implicit none
 
@@ -145,14 +146,14 @@ type (type_node_list),        intent(in)    :: node_list
 type (type_element_list),     intent(in)    :: element_list
 
 real*8  :: psi_axis, psi_bnd
-integer :: ierr
+integer             :: ierr, i_elm, ifail
 real*8  :: V_normalisation, density, density_in, density_out, pressure, pressure_in, pressure_out
 
 real*8  :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
-integer :: i_elm, ifail
 
 if (pellet_amplitude .gt. 0) return
 
+!call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
 V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO)
 
 pellet_R = pellet_R + pellet_velocity_R * tstep / V_normalisation

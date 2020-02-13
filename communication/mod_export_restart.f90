@@ -123,9 +123,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   endif
 
   ! Impurity radiation history
-  if (flag_adas) then
-    if (index_now .gt. 0) write(21) xtime_radiation(1:index_now)
-  end if
+  if ( (flag_adas) .and. (index_now .gt. 0) ) write(21) xtime_radiation(1:index_now)
 
   ! Dynamically allocate memeries for temporary arrays in order to export
   if (using_spi .and. n_spi >= 1) then
@@ -589,12 +587,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   end if
 
   ! Impurity radiation history
-  if (flag_adas) then
-    if (index_now .gt. 0) then
-      call HDF5_array1D_saving(file_id,xtime_radiation, &
-             index_now,'xtime_radiation'//char(0))
-    end if
-  end if  
+  if ( (flag_adas) .and. (index_now .gt. 0) ) &
+    call HDF5_array1D_saving(file_id,xtime_radiation, index_now,'xtime_radiation'//char(0))
 
   ! Dynamically allocate memeries for temporary arrays in order to export
   if (using_spi .and. n_spi>=1) then
@@ -663,9 +657,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
     deallocate (spi_abl_arr)
     deallocate (spi_species_arr)
 
-    if (spi_tor_rot) then
-      call HDF5_real_saving(file_id,ns_phi_rotate,"ns_phi_rotate"//char(0))  
-    end if
+    if (spi_tor_rot) call HDF5_real_saving(file_id,ns_phi_rotate,"ns_phi_rotate"//char(0)) 
 
   end if
 

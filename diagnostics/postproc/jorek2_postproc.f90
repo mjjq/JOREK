@@ -9,9 +9,6 @@ program jorek2_postproc
   use parse_commands, only: read_command, type_command
   use exec_commands,  only: exec_command, specific_help
   use settings,       only: set_setting
-#if JOREK_MODEL == 501
-  use mpi_mod
-#endif  
   use basis_at_gaussian, only: initialise_basis
   
   implicit none
@@ -19,28 +16,6 @@ program jorek2_postproc
   type(type_command) :: command
   integer            :: ierr
 
-#if JOREK_MODEL == 501
-  integer            :: required,provided,StatInfo
-
-  !***********************************************************************
-  !*                  intialisation                                      *
-  !***********************************************************************
-  ! --- Initialize OpenMP threads before MPI_init
-  !call init_threads()
-
-  ! --- Initialise MPI / threaded MPI
-#ifdef FUNNELED
-  required = MPI_THREAD_FUNNELED
-#else
-  required = MPI_THREAD_MULTIPLE
-#endif
-#ifdef STAN_FLAG
-required = 0
-#endif
-  call MPI_Init_thread(required, provided, StatInfo)
-
-  call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread
-#endif
   
   ! --- Initialize mode and mode_type arrays
   call det_modes()

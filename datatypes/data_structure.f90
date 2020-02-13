@@ -115,7 +115,7 @@ module data_structure
      real*8, dimension(:), allocatable  :: synch_buff
   END TYPE type_thread_buffer
 
-  !> One shard of a shattered pellet (or the pellet if unshattered)
+  !> One shard of a shattered pellet (or the complete pellet if unshattered)
   type type_SPI
     real*8  :: spi_R                 !< R coordinate of shard (m)
     real*8  :: spi_Z                 !< Z coordinate of shard (m)
@@ -125,9 +125,9 @@ module data_structure
     real*8  :: spi_Vel_RxZ           !< Velocity in RxZ direction (m/s)
     real*8  :: spi_radius            !< Shard radius of pellet assuming spherical pellet (m)
     real*8  :: spi_abl               !< Pellet ablation rate (atom/s)
-    real*8  :: spi_species           !< Fraction of impurity atoms of the total number of atoms (model501)
-                                     !! 0: pure background species
-                                     !! 1: pure impurity shard
+    real*8  :: spi_species           !< Fraction of impurity atoms relative to the total number of atoms (model501)
+                                     !! 0.: pure background species
+                                     !! 1.: pure impurity shard
   end type type_SPI
   
   integer                                         , public :: nbthreads

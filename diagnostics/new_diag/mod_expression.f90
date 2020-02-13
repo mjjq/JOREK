@@ -560,9 +560,8 @@ module mod_expression
        case('Ne')
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
        case default
-         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
-         write(*,*) '=> We assume the gas is D2.'
-         m_i_over_m_imp = central_mass/2.
+         write(*,*) 'ERROR: Unknown gas_type.'
+         stop
      end select
 #endif
     
@@ -1170,7 +1169,7 @@ module mod_expression
             Lrad = 0.
           end if
 		  
-		  ne_rad = ne_rad / 1.d20 / central_density ! Put ne_rad back to JOREK units to have consistent fact_ne factor with other models (see below)
+	  ne_rad = ne_rad / 1.d20 / central_density ! Put ne_rad back to JOREK units to have consistent fact_ne factor with other models (see below)
 		  
 #endif
 

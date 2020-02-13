@@ -177,10 +177,7 @@ module exec_commands
           call load_namelist(command, ierr)
 #if (JOREK_MODEL == 501)
           ! --- Read ADAS data and generate coronal equilibrium is needed
-          if (flag_adas) then
-            write(*,*) "CHECK POINT MPI"
-            call init_imp_adas(0)
-          end if
+          if (flag_adas) call init_imp_adas(0)
 #endif
         case ( 'params' )
           call log_parameters(0, .false.)
@@ -1323,14 +1320,14 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
 
     ! --- Local variables
-    real*8  :: Rstart, Zstart, Rend, Zend, phi, arr_id
+    real*8  :: Rstart, Zstart, Rend, Zend, phi
     integer :: units, npts
     character(len=1024) :: filename, comment
 
     ierr = 0
 
     ! --- Some checks
-    call check_args(command%n_args,ierr,6);  if ( ierr /= 0 ) return
+    call check_args(command%n_args,ierr,5);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);          if ( ierr /= 0 ) return
     call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
 
@@ -1340,16 +1337,12 @@ module exec_commands
     Rend   = to_float(command%args(3), ierr); if ( ierr /= 0 ) return
     Zend   = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
     phi    = to_float(command%args(5), ierr); if ( ierr /= 0 ) return
-    arr_id = to_float(command%args(6), ierr); if ( ierr /= 0 ) return
     units  = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
     npts   = get_int_setting('linepoints', ierr); if ( ierr /= 0 ) return
 
-    !write(filename,'(15a)') DIR, 'integrate_exprs_along_line_R', trim(real2str(Rstart)), '..',             &
-    !  trim(real2str(Rend)), '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p',                &
-    !  trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
-
-    write(filename,'(15a)') DIR, 'integrate_exprs_along_line_R', trim(real2str(arr_id)), &
-      '_p', trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    write(filename,'(15a)') DIR, 'integrate_exprs_along_line_R', trim(real2str(Rstart)), '..',             &
+      trim(real2str(Rend)), '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p',                &
+      trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
 
     write(comment,'(a,i6.6)') 'time step #', index_now
 

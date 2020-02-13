@@ -268,7 +268,7 @@ function relativistic_kinetic_to_relativistic_gc(node_list,element_list,&
   out%q = in%q
   !> extract momenta in cylindrical coordinates
   p_perp = vector_cartesian_to_cylindrical(in%x(3),in%p)
-  !> compute perpendicular momentum
+  !> compute parallel momentum
   out%p(1) = p_perp(1)*B_hat(1)+p_perp(2)*B_hat(2)+p_perp(3)*B_hat(3)
   !> compute perpendicular momenta
   p_perp = p_perp - out%p(1)*B_hat

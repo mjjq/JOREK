@@ -128,7 +128,7 @@ enddo !< event
 ! Print particle information
 write(*,*) 'Final R, Z, phi: ', sim%groups(1)%particles(1)%x(1), sim%groups(1)%particles(1)%x(2), sim%groups(1)%particles(1)%x(3)
 
-! Convert particle
+! Convert particle to particle_gc to get energy and mu
 gyro_angle = 0.
 call sim%fields%calc_EBpsiU(sim%time, sim%groups(1)%particles(1)%i_elm, sim%groups(1)%particles(1)%st, &              
                             sim%groups(1)%particles(1)%x(3), E, B, psi, U)

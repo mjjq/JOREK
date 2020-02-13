@@ -2082,7 +2082,7 @@ module vacuum_response
     real*8,  intent(in) :: dpsibnd_vec(n_dof_starwall) !< Vector of deltaPsi boundary values
     
     ! --- Local variables
-    integer              :: k, k2
+    integer              :: k, k2, global_index
     integer              :: ierr
     real *8, allocatable :: dwall_curr_2(:)   
 
@@ -2129,11 +2129,16 @@ module vacuum_response
       if (index_now>0) then
         do k = 1, sr%n_diag_coils
           k2 = k + sr%ind_start_diag_coils - 1
-          diag_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2,:) * wall_curr(:))
+          if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
+            write(*,*) my_id, sr%s_ww%ind_start 
+            global_index = my_id*sr%s_ww%step
+            diag_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
+          endif
         end do
       endif
+      call MPI_ALLReduce(MPI_IN_PLACE, diag_coil_curr,size(diag_coil_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
     end if
-    
+
     if ( vacuum_debug .and. (my_id ==0) ) write(*,*) 'wall_curr(after)', sum(abs(wall_curr)), sum(wall_curr)
     
   end subroutine evolve_wall_currents

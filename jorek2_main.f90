@@ -129,7 +129,7 @@ program JOREK2
   real*8                   :: mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
   integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint(2)
-  integer                  :: n_local_ELMs, n_local_elms_harm
+  integer                  :: n_local_ELMs!, n_local_elms_harm
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
   integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
@@ -137,7 +137,7 @@ program JOREK2
   character*14             :: fileout
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
-  integer, allocatable     :: local_elms_harm(:), index_min_harm(:), index_max_harm(:)
+  !integer, allocatable     :: local_elms_harm(:), index_min_harm(:), index_max_harm(:)
   real*8                   :: zjz, E_min, E_max
   logical                  :: solve_only, to_quit, freeb_equil2
   integer*4                :: rank, comm_size 
@@ -808,10 +808,6 @@ required = 0
     id_elements = my_id
 
 
-    call tr_allocate(local_elms_harm,1,element_list%n_elements,"local_elms_harm",CAT_FEM)
-    call tr_allocate(index_min_harm,1,index_size,"index_min_harm",CAT_FEM)
-    call tr_allocate(index_max_harm,1,index_size,"index_max_harm",CAT_FEM) 
-
     call tr_allocate(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
     call tr_allocate(index_min,1,index_size,"index_min",CAT_FEM)
     call tr_allocate(index_max,1,index_size,"index_max",CAT_FEM)
@@ -1003,11 +999,8 @@ required = 0
 
          call clck_time_barrier(t0) 
          !--------- Constructing Harmonic Matrix directly from elementary matrix
-         call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, node_list,         & 
-                                           element_list, index_min_harm, index_max_harm, xpoint, xcase, local_elms_harm,                & 
-                                           n_local_elms_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm, irn_glob_harm, jcn_glob_harm,& 
-                                           i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm,   & 
-                                           direct_construction)
+         call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
+                                           node_list, element_list, xpoint, xcase, freeboundary, direct_construction)
          call clck_time_barrier(t1) 
 
       ! if(my_id .eq. 0) then

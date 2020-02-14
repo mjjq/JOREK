@@ -1019,7 +1019,27 @@ required = 0
          !print*, 'my_id, my_id_n:', my_id, my_id_n 
          call clck_time_barrier(t0) 
          !--------- Centralizing Harmonic Matrix 
-         call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
+         !call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
+  
+    mumps_par%nz  = nz_glob_harm
+    mumps_par%n   = ndof_glob_harm
+  
+  ! --- Allocate arrays for centralized matrix
+  if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,  "dh_mumps_par%A",  CAT_DMATRIX)
+  if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
+  if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
+  if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%A,  1,mumps_par%nz,"dh_mumps_par%A",  CAT_DMATRIX)
+  call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
+  
+    mumps_par%irn(1:mumps_par%nz) = irn_glob_harm(1:mumps_par%nz)
+    mumps_par%jcn(1:mumps_par%nz) = jcn_glob_harm(1:mumps_par%nz)
+    mumps_par%A(1:mumps_par%nz)   = A_glob_harm(1:mumps_par%nz)
+    mumps_par%rhs = rhs_glob_harm
+ 
+
          call clck_time_barrier(t1) 
 
          if (my_id .eq. 0) then

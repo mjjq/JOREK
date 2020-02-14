@@ -15,7 +15,7 @@ use mod_gc_relativistic
 implicit none
 
 ! Set up the simulation variables
-real(kind=8)                      :: timesteps(1) = [3.5723d-13]
+real(kind=8)                      :: timesteps(1) = [1.d-10] ![3.5723d-13]
 real(kind=8)                      :: target_time, t
 real*8                            :: energy !< Initial kinetic energy in eV
 real*8                            :: ksi    !< Initial cosine of pitch-angle
@@ -49,8 +49,8 @@ if (.not. restart) then
   ! and i=-1 (to read jorek_restart.h5 and keep this field at all time) or i=last_file_before_time(sim%time)
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
   events = [event(read_jorek_fields_interp_linear(i=-1)), & 
-            event(diag,start=sim%time,step=1d-9),         &
-            event(stop_action(),start=sim%time+2.d-9)]
+            event(diag,start=sim%time,step=1d-7),         &
+            event(stop_action(),start=sim%time+1.d-5)]
 
   ! Run first event to read the JOREK fields
   call with(sim, events, at=0.d0)
@@ -58,12 +58,12 @@ if (.not. restart) then
   select type (p=>sim%groups(1)%particles(1))
   type is (particle_gc_relativistic)
     p%q = -1
-    p%x = [3.d0,0.d0,0.d0]
+    p%x = [3.6d0,0.d0,0.d0]
     call find_RZ(sim%fields%node_list, sim%fields%element_list, &
                  p%x(1), p%x(2), & ! inputs
                  p%x(1), p%x(2), p%i_elm, p%st(1), p%st(2), ifail) ! outputs
-    !p%p = [1.6d6,0.]
-    energy = 1.d7 ! !!! AT PRESENT, MUST INCLUDE REST ENERGY (FIX THIS) !!!
+    !p%p = [1.d7,0.]
+    energy = 5.12d5 ! !!! AT PRESENT, MUST INCLUDE REST ENERGY (FIX THIS) !!!
     ksi    = 1.d0 ! Cosine of pitch-angle
     particle_in = p
     particle_out = relativistic_gc_momenta_from_E_cospitch(particle_in,energy,ksi,sim%groups(1)%mass,sim%fields,sim%time)
@@ -111,10 +111,10 @@ do while (.not. sim%stop_now)
         do k=1,n_steps
           if (particles(j)%i_elm .eq. 0) exit
 	  sim%time = sim%time + timesteps(i)
-          call runge_kutta_fixed_dt_gc_push(sim%fields,sim%time,timesteps(i), &
-               sim%groups(i)%mass,particles(j)) !< push in analytical fields
-!          call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time,timesteps(i), &
-!              sim%groups(i)%mass,particles(j)) !< push in jorek fields
+!          call runge_kutta_fixed_dt_gc_push(sim%fields,sim%time,timesteps(i), &
+!               sim%groups(i)%mass,particles(j)) !< push in analytical fields
+          call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time,timesteps(i), &
+              sim%groups(i)%mass,particles(j)) !< push in jorek fields
 !          write(*,*) 'Particle position: ', particles(j)%x(1), particles(j)%x(2), particles(j)%x(3)
 !          write(*,*) 'Particle momenta: ', particles(j)%p(1), particles(j)%p(2)
           if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1		

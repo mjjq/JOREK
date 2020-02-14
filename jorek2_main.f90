@@ -1034,9 +1034,9 @@ required = 0
   call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
   call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
   
-    mumps_par%irn(1:mumps_par%nz) = irn_glob_harm(1:mumps_par%nz)
-    mumps_par%jcn(1:mumps_par%nz) = jcn_glob_harm(1:mumps_par%nz)
-    mumps_par%A(1:mumps_par%nz)   = A_glob_harm(1:mumps_par%nz)
+    mumps_par%A   = A_glob_harm
+    mumps_par%irn = irn_glob_harm
+    mumps_par%jcn = jcn_glob_harm
     mumps_par%rhs = rhs_glob_harm
  
 

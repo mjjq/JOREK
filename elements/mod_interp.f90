@@ -110,7 +110,7 @@ real*8  :: sizes(n_order+1), v, vp
 logical :: my_deltas
 
 ! 7% exec time
-call basisfunctions_2D_1_T(s,t,H,H_s,H_t)
+call basisfunctions_T(s,t,H,H_s,H_t)
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_phi = 0.d0
 
@@ -191,7 +191,7 @@ real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp, vpp
 logical :: my_deltas
 
-call basisfunctions(s,t,H,H_s,H_t,H_st,H_ss,H_tt)
+call basisfunctions_T(s,t,H,H_s,H_t,H_st,H_ss,H_tt)
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
 P_sphi = 0.d0; P_tphi = 0.d0; P_phiphi = 0.d0
@@ -535,7 +535,7 @@ integer :: kv, iv
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1)
 
-call basisfunctions_2D_1_T(s,t,H,H_s,H_t)
+call basisfunctions_T(s,t,H,H_s,H_t)
 
 ! Preload values and premultiply with sizes(:,kv)
 do kv = 1,n_vertex_max  ! 4 vertices

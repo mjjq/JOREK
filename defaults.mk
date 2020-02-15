@@ -1,4 +1,4 @@
-DEBUG ?= 0 # Build in release mode by default
+DEBUG:=0 # Build in release mode by default
 
 # To use the default compiler flags, set $(COMPILER_FAMILY)
 # If you do not want to do this, be sure to set OUTPUT_MODULE_COMMAND to the correct
@@ -78,15 +78,18 @@ ifeq ($(COMPILER_FAMILY), intel)
   FFLAGS += -warn nounused
   FFLAGS += -fpp
   FFLAGS += -r8
+  FFLAGS += -O0 -g -xHost
   F77FLAGS += -warn nodeclarations
+  CXXFLAGS += -std=c++14 -qopenmp -O0 -g -DNDEBUG  
+
   ifeq ($(DEBUG), 1)
     # Debug flags for ifort, see http://www.nas.nasa.gov/hecc/support/kb/recommended-intel-compiler-debugging-options_92.html
-    FLAGS += -O0 -g -traceback
+    FLAGS += -g -O0 -traceback #-qopt-report=5 -ipo
     FLAGS += -ftrapuv
     FLAGS += -debug all -debug-parameters
     FLAGS += -fstack-security-check
     FLAGS += -fpe0
-    FFLAGS += -check all,noarg_temp_created
+    #FFLAGS += -check all,noarg_temp_created
     FFLAGS += -check bounds
     FFLAGS += -check uninit
     FFLAGS += -init=snan -init=zero
@@ -165,7 +168,7 @@ ifeq (1, $(USE_PASTIX_MURGE))
 endif
 
 ifeq (1, $(USE_PASTIX))
-  DEFINES  := $(DEFINES) -DUSE_PASTIX
+  DEFINES  := $(DEFINES) -DUSE_PASTIX -DFUNNELED
   ifeq (0, $(USE_PASTIX_MURGE))
     LIBS     := $(LIBS) $(LIB_PASTIX) $(LIB_PASTIX_BLAS)
     INCLUDES := $(INCLUDES) $(INC_PASTIX)
@@ -181,7 +184,7 @@ endif
 
 ifeq (1, $(USE_PASTIX6))
   DEFINES  := $(DEFINES) -DUSE_PASTIX6
-  LIBS     := $(LIBS) $(LIB_PASTIX6) $(LIB_PASTIX6_BLAS)
+  LIBS     := $(LIBS) $(LIB_PASTIX6)
   INCLUDES := $(INCLUDES) $(INC_PASTIX6)
 endif
 
@@ -212,6 +215,13 @@ endif
 
 ifeq (1, $(USE_BLOCK))
   DEFINES := $(DEFINES) -DUSE_BLOCK
+endif
+
+ifeq (1, $(USE_STRUMPACK))
+  DEFINES  := $(DEFINES) -DUSE_STRUMPACK -DFUNNELED
+  LIBS     := $(LIBS) $(STRUMPACKLIB)
+  INCLUDES := $(INCLUDES) $(STRUMPACKINC)
+  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++
 endif
 
 

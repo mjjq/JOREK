@@ -9,6 +9,7 @@ use wsmp_module
 use global_distributed_matrix
 use mpi_mod
 use mod_clock
+use phys_module, only: use_pastix, use_mumps, use_strumpack
 
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
@@ -26,6 +27,9 @@ use spmf
 #endif
 #endif
 
+#ifdef USE_STRUMPACK
+    use spk_module
+#endif
 
 implicit none
 
@@ -42,6 +46,7 @@ integer             :: ibuf_size, status(MPI_STATUS_SIZE)
 
 real*8  :: DUMMY_REAL(1:1)
 integer :: DUMMY_INT (1:1)
+
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
 integer(c_int)     :: pastix_info
@@ -184,6 +189,7 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
       pastix_iparm(IPARM_AMALGAMATION_LVLCBLK)  = pastix_amalg
 #endif
 
+
      
 #ifndef USE_PASTIX6
       ! -- For PaStiX solver before version 6.x
@@ -208,12 +214,15 @@ elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) 
 
 #endif
 
-
-   elseif (use_wsmp) then
 #ifdef USE_WSMP
+   elseif (use_wsmp) then
      call PWGSMP__back_substitution(mumps_par%rhs, my_id_n)
 #endif
-   end if
+#ifdef USE_STRUMPACK
+   elseif (use_strumpack) then
+     call f2spk(ifactor*n_loc_n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%A,mumps_par%rhs,MPI_COMM_N,2)
+#endif           
+   endif
 
 endif
 
@@ -229,10 +238,12 @@ endif
 
 if (my_id_n .eq. 0) then
 
+#ifndef USE_STRUMPACK
 !------------------------------------------ undo column scaling
    do k=1,mumps_par%n
      mumps_par%rhs(k) =  mumps_par%rhs(k) / column_scaling(k)
    enddo
+#endif
 
   call tr_allocate(y_tmp,1,n_dof,"y_tmp",CAT_GMRES,.false.)
   call tr_allocate(recv_counts,1,n_cpu/M_cpu,"recv_counts",CAT_GMRES)

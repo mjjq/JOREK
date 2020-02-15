@@ -6,8 +6,8 @@
 subroutine preset_parameters
   
   use phys_module
-  use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
-  use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
+  use mumps_module,  only: no_zeros_mumps, mumps_ordering
+  use pastix_module, only: no_zeros_pastix, pastix_smp_only
   use wsmp_module,   only: use_wsmp
   
   implicit none
@@ -294,6 +294,7 @@ subroutine preset_parameters
   
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver
+  use_strumpack      = .false.              ! Use STRUMPACK solver  
   use_wsmp           = .false.              ! Use WSMP solver (use with care, still in development!)
   
   refinement         = .false.              ! enable mesh refinement

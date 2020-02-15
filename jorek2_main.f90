@@ -46,6 +46,9 @@ program JOREK2
   use basis_at_gaussian, only: initialise_basis
   use mod_expression, only: exprs_all_int, init_expr
   use mod_integrals3D
+#ifdef USE_STRUMPACK
+  use spk_module
+#endif
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -231,6 +234,10 @@ required = 0
   ! --- Preset some solver variables
   pastix_initialised = .false.
   pastix_analysed    = .false.
+#ifdef USE_STRUMPACK  
+  spss_initialized = .false.
+  spss_analyzed    = .false.
+#endif  
   
   ! --- Preset input parameters to reasonable defaults, then read the input file.
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
@@ -282,7 +289,7 @@ required = 0
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
     call MPI_Abort(MPI_COMM_WORLD, 2, ierr)
     stop
-  else if ( (.not. use_mumps) .and. (.not. use_pastix) .and. (.not. use_wsmp) ) then
+  else if ((.not. use_mumps).and.(.not. use_pastix).and.(.not. use_wsmp).and.(.not. use_strumpack)) then
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
@@ -946,8 +953,13 @@ required = 0
 
        if (use_mumps) then
     	  call solve_mumps_all(my_id)
-       else
+#ifdef USE_STRUMPACK        
+       elseif (use_strumpack) then
+          call solve_spk_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+#endif
+       elseif (use_pastix) then
           call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+
        endif
 
     else
@@ -964,7 +976,16 @@ required = 0
        end if
 
        call clck_time(t0)
-       call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+#ifdef USE_STRUMPACK
+      if (use_strumpack) then
+        call solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+      else
+        call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+      endif
+#else
+      call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+#endif       
+
        call clck_time_barrier(t1)
        call clck_ldiff(t0,t1,tsecond)
        if (my_id .eq. 0) then
@@ -1197,6 +1218,10 @@ endif
 #ifdef USE_MUMPS
       mumps_par%JOB = -2                            ! clean up this instance of mumps
       call DMUMPS(mumps_par)
+#endif
+#ifdef USE_STRUMPACK
+    elseif (use_strumpack) then
+     call f2spk_finalize(MPI_COMM_WORLD)
 #endif
 
     elseif (use_pastix) then

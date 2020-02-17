@@ -76,7 +76,7 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
       !> apply linear interpolation
       P     = linear_interp_differentials(n_v,P,Pd,df)
       P_s   = linear_interp_differentials(n_v,P_s,Pd_s,df)
-      P_t   = linear_interp_differentials(n_v,P_t,Pd_t,dt)
+      P_t   = linear_interp_differentials(n_v,P_t,Pd_t,df)
       P_phi = linear_interp_differentials(n_v,P_phi,Pd_phi,df)
     else
       dt = 1.d0/t_jorek!< compute time interval

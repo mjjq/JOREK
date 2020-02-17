@@ -14,6 +14,7 @@ public fields_base
 type, abstract :: fields_base
   type(type_node_list), allocatable    :: node_list !< Current node list
   type(type_element_list), allocatable :: element_list !< Current element list
+  logical                              :: static=.false. !< if true do not time interpolate
   logical                              :: flag_zero_dpsidt=.false. !< if true, P_time(1) = dpsi/dt = 0
   contains
     procedure(interp_PRZ),deferred,public   :: interp_PRZ

@@ -34,7 +34,6 @@ end interface read_jorek_fields_interp_linear
 type, extends(fields_base) :: jorek_fields_interp_linear
   real*8 :: time_now  = 0.d0 !< Time of current restart file (SI units)
   real*8 :: time_prev = 0.d0!< Time of previous restart file (SI units)
-  logical :: static = .false. !< If true do not do time interpolation
   contains
     procedure :: interp_PRZ => do_interp_PRZ_1
     procedure :: interp_PRZ_2 => do_interp_PRZ_2

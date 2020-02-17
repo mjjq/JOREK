@@ -91,6 +91,9 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
   real*8, dimension(n_v,4,4) :: V !< n_var, (P, P_s, P_t, P_phi), (interp, interp, delta, delta)
   integer :: i1, i2, j
 
+  !> initialise deltas to zero
+  V(:,:,3:4) = 0.d0
+
   ! Determine between which sets to interpolate by selecting
   ! t_i <= t_now and taking the last true and first false value.
   do j=1,this%len
@@ -105,11 +108,14 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
   call interp_PRZ(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
     V(:,1,1), V(:,2,1), V(:,3,1), V(:,4,1),   R,R_s,R_t,Z,Z_s,Z_t)
   call interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
-    V(:,1,2), V(:,2,2), V(:,3,2), V(:,4,2),   R,R_s,R_t,Z,Z_s,Z_t)
-  call interp_PRZ(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
-    V(:,1,3), V(:,2,3), V(:,3,3), V(:,4,3),   R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
-  call interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
-    V(:,1,4), V(:,2,4), V(:,3,4), V(:,4,4),   R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
+       V(:,1,2), V(:,2,2), V(:,3,2), V(:,4,2),   R,R_s,R_t,Z,Z_s,Z_t)
+  !> do not interpolate deltas if on restart is used
+  if(this%static) then
+    call interp_PRZ(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
+      V(:,1,3), V(:,2,3), V(:,3,3), V(:,4,3),   R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
+    call interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
+      V(:,1,4), V(:,2,4), V(:,3,4), V(:,4,4),   R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
+  end if
 
   call HB_interp(this%t(i1), this%t(i2), n_v, V(:,1,1), V(:,1,2), V(:,1,3), V(:,1,4), time, P)
   call HB_interp(this%t(i1), this%t(i2), n_v, V(:,2,1), V(:,2,2), V(:,2,3), V(:,2,4), time, P_s)
@@ -161,6 +167,9 @@ pure subroutine do_interp_PRZ_2(this,time,i_elm,i_v,n_v,s,t,phi,&
   real(kind=8),dimension(n_v,10,4) :: values
   integer :: i1,i2,j
 
+  !> initialise deltas to zero
+  values(:,:,3:4) = 0.d0
+
   !> Determine between which sets of restart ther interpolation occur
   !> selection: t_i <= t_now and taking the last true and first false values.
   do j=1,this%len
@@ -177,23 +186,26 @@ pure subroutine do_interp_PRZ_2(this,time,i_elm,i_v,n_v,s,t,phi,&
          s,t,phi,values(:,1,1),values(:,2,1),values(:,3,1),values(:,4,1),&
          values(:,5,1),values(:,6,1),values(:,7,1),values(:,8,1),&
          values(:,9,1),values(:,10,1),R,R_s,R_t,R_st,R_ss,R_tt,&
-         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.false.) !< first restart values
+         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt) !< first restart values
     call interp_PRZ(this%node_lists(i2),this%element_lists(i2),i_elm,i_v,n_v,&
          s,t,phi,values(:,1,2),values(:,2,2),values(:,3,2),values(:,4,2),&
          values(:,5,2),values(:,6,2),values(:,7,2),values(:,8,2),&
          values(:,9,2),values(:,10,2),R,R_s,R_t,R_st,R_ss,R_tt,&
-         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.false.) !< second restart values
-    call interp_PRZ(this%node_lists(i1),this%element_lists(i1),i_elm,i_v,n_v,&
-         s,t,phi,values(:,1,3),values(:,2,3),values(:,3,3),values(:,4,3),&
-         values(:,5,3),values(:,6,3),values(:,7,3),values(:,8,3),&
-         values(:,9,3),values(:,10,3),R,R_s,R_t,R_st,R_ss,R_tt,&
-         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< first restart derivatives
-    call interp_PRZ(this%node_lists(i2),this%element_lists(i2),i_elm,i_v,n_v,&
-         s,t,phi,values(:,1,4),values(:,2,4),values(:,3,4),values(:,4,4),&
-         values(:,5,4),values(:,6,4),values(:,7,4),values(:,8,4),&
-         values(:,9,4),values(:,10,4),R,R_s,R_t,R_st,R_ss,R_tt,&
-         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< second restart derivatives
-   
+         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt) !< second restart values
+    !> do not interpolate deltas if one restart is used
+    if(this%static) then
+      call interp_PRZ(this%node_lists(i1),this%element_lists(i1),i_elm,i_v,n_v,&
+           s,t,phi,values(:,1,3),values(:,2,3),values(:,3,3),values(:,4,3),&
+           values(:,5,3),values(:,6,3),values(:,7,3),values(:,8,3),&
+           values(:,9,3),values(:,10,3),R,R_s,R_t,R_st,R_ss,R_tt,&
+           Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< first restart derivatives
+      call interp_PRZ(this%node_lists(i2),this%element_lists(i2),i_elm,i_v,n_v,&
+           s,t,phi,values(:,1,4),values(:,2,4),values(:,3,4),values(:,4,4),&
+           values(:,5,4),values(:,6,4),values(:,7,4),values(:,8,4),&
+           values(:,9,4),values(:,10,4),R,R_s,R_t,R_st,R_ss,R_tt,&
+           Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< second restart derivatives
+    endif
+ 
     !> compute field time interpolations
     call HB_interp(this%t(i1),this%t(i2),n_v,values(:,1,1),values(:,1,2),&
          values(:,1,3),values(:,1,4),time,P)
@@ -293,6 +305,9 @@ subroutine do_read(this, sim, ev)
   if (.not. allocated(sim%fields%node_list)) allocate(sim%fields%node_list)
   if (.not. allocated(sim%fields%element_list)) allocate(sim%fields%element_list)
 
+  !> check if a static (oner restart) field has to be used
+  if(i.lt.0) sim%fields%static=.true.
+  
   ! Continue for jorek_fields_interp_hermite_birkhoff
   select type (f => sim%fields)
   type is (jorek_fields_interp_hermite_birkhoff)
@@ -329,10 +344,12 @@ subroutine do_read(this, sim, ev)
       ! Now we have 3 or 4 time points in our list
 
       ! Finally we need to calculate the derivatives of the middle points (1 or
-      ! 2 points)
-      do j=2,f%len-1
-        call interp_derivatives(f, j)
-      end do
+      ! 2 points) if more than one restart is used (non static fields)
+      if(i.ge.0) then
+        do j=2,f%len-1
+          call interp_derivatives(f, j)
+        end do
+      endif
 
       ! Now we can remove the first element
       f%start = f%ind(2)
@@ -365,9 +382,12 @@ subroutine do_read(this, sim, ev)
         ! note that t_start is set in import_hdf5_restart instead of t_now
       this%i=i ! set index of last-read file
 
-      do j=2,f%len-1
-        call interp_derivatives(f, j)
-      end do
+      !> interpolate fields with midpoint rule if more than one restart is used
+      if(i.ge.0) then
+        do j=2,f%len-1
+          call interp_derivatives(f, j)
+        end do
+      endif
 
       ! set the time to run this event at next
       if (my_id .eq. 0) write(*,"(A,f9.8,A)") " Read next restart file, values until t=", f%t(f%ind(f%len-1)), " [s]"

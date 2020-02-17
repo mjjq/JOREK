@@ -133,7 +133,7 @@ real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
 integer*8  :: ion_i, ion_k, i_phi
 #endif
-#if (JOREK_MODEL == 502)
+#if (JOREK_MODEL == 501)
 !   -Coefficients related to Z_imp
 real*8  :: alpha_imp, beta_imp
 #endif

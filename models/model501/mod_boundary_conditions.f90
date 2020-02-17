@@ -730,7 +730,7 @@ contains
                              endif
                           endif
                        endif
-
+                      endif
                       !------------------------------------ Special corners (only for grid with patches)
                       if    ((node_list%node(inode)%boundary .eq. 21) &
                         .or. (node_list%node(inode)%boundary .eq. 20)) then

@@ -1,16 +1,14 @@
 
  &in1
 
- restart = .t.
+ restart = .f.
  tstep_n = 1.0
  nstep_n = 500
 
- nout    = 10
+ linear_run = .t.
  time_evol_scheme ='Gears'
-
- linear_run = .f. ! you cannot run cbm18 with linear_run only, not without first evolving with n=0 for a bit
- static_run = .f. ! you can use this if you want to evolve the equilibrium with n=0 velocities before switching modes on
- parallel_projection = .t. ! cbm18 seems to explode without this option, no matter what...
+ nout = 10
+ parallel_projection = .t.
  fix_axis_nodes = .t.
 
  fbnd(1)   = 2.
@@ -546,11 +544,11 @@
 
  n_R      = 0
  n_Z      = 0
- n_radial = 110!101
- n_pol    = 140!96 
-                
- n_flux   = 100!51
- n_tht    = 120!65 
+ n_radial  = 210!60!
+ n_pol     = 240!71!
+                 
+ n_flux    = 200!51!
+ n_tht     = 220!65!
  n_open   = 0
  n_leg    = 0 
  n_private = 0
@@ -563,7 +561,6 @@
 
  eta   = 1.d-6
  visco = 0.d-6
- visco_par = 0.d-6 ! not used in 710, but just in case you benchmark with 303 using this file...
 
  tauIC=0.00
  
@@ -578,24 +575,32 @@
  D_perp(5) = 99.d0
  D_perp(6) = 1.d-6 
 
- ZK_par  = 1.d0
- ZK_perp(1) = 1.0d-6
+ ! --- Careful with K, in full-MHD, the conduction includes a (gamma-1) factor (normally 1.5)
+ ZK_par  = 1.5d0
+ ZK_perp(1) = 1.50d-6
  ZK_perp(2) = 0.d0
  ZK_perp(3) = 0.d0
  ZK_perp(4) = 99.d0
  ZK_perp(5) = 99.d0
- ZK_perp(6) = 1.d-6
+ ZK_perp(6) = 1.5d-6
 
- FF_0 = 3.28
- FF_1 = 0.
- FF_coef(1)  = -0.328
- FF_coef(2)  = -2.924
- FF_coef(3)  =  2.297
- FF_coef(4)  = 0.1895
- FF_coef(5)  = 0.5149
- FF_coef(6)  =-1.226d0
- FF_coef(7)  = 0.5974d0
- FF_coef(8)  = 0.0424d0
+ ! --- Careful with FF', in full-MHD, we use the real FF', whereas model303 uses -FF' as a convention.
+ ! --- This means you need to reverse FF_0, FF_1 and FF_coef(6) if you want to compare to model303.
+ ! --- In addition, in Full-MHD, we need to integrate the FF' profile, and the tanh cut-off at FF_coef(5)
+ ! --- makes it impossible to integrate the function analytically. However, since this function is
+ ! --- normally used as a cut-off at the plasma edge (beyond which F is constant and FF' is zero)
+ ! --- we integrate the F-profile without this tanh, and then just force F to be constant beyond FF_coef(5)
+ ! --- This is why this FF' profile is different from the original one in namelist/model302...
+ FF_0        = -3.28
+ FF_1        =  0.
+ FF_coef(1)  = -0.2
+ FF_coef(2)  = -5.2
+ FF_coef(3)  =  4.97
+ FF_coef(4)  =  0.00001
+ FF_coef(5)  =  0.7
+ FF_coef(6)  =  0.36
+ FF_coef(7)  =  0.59
+ FF_coef(8)  =  0.0424
 
  heatsource     = 0.d-7
  particlesource = 0.d-6

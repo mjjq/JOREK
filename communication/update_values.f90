@@ -4,7 +4,7 @@ subroutine update_values(my_id,element_list,node_list,RHS)
 !-----------------------------------------------------------------------
 
 use data_structure
-use phys_module, only: linear_run, static_run
+use phys_module, only: linear_run
 use mod_basisfunctions
 
 implicit none
@@ -61,11 +61,6 @@ if (my_id .eq. 0) then
 #else
       do k=1,n_var
         do in=i_tor_min,n_tor
-#if (JOREK_MODEL == 710)
-          if (      (static_run) .and. ( (k.eq.var_UR) .or. (k.eq.var_UZ) .or. (k.eq.var_Up) ) ) cycle
-#elif (JOREK_MODEL == 303)
-          if (      (static_run) .and. ( (k.eq.2) .or. (k.eq.4) .or. (k.eq.7) ) ) cycle
-#endif
           index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
           if (index .gt. 0) then
             node_list%node(i)%values(in,j,k) = node_list%node(i)%values(in,j,k) + RHS(index)

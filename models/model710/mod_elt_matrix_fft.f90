@@ -54,9 +54,14 @@ real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),h
 real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
-real*8     :: Fprof, TG_NUM_Eq, CoefAdv=0.0, rho_min = 0.005
+real*8     :: TG_NUM_Eq, CoefAdv=0.0, rho_min = 0.005
 logical    :: old_710_routine
 real*8     :: Coef_DivA, Coef_DivV
+real*8     :: Fprof,dF_dpsi,dF_dz
+real*8     :: dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz
+real*8     :: zFFprime    ,dFFprime_dpsi,dFFprime_dz
+real*8     :: dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz
+
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t, x_ss, x_st, x_tt
 real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t, y_ss, y_st, y_tt
@@ -411,7 +416,17 @@ do i=1,n_vertex_max
         R = x_g(ms,mt)
         Z = y_g(ms,mt)
 
-        Fprof = Fprofile(ms,mt)
+        ! --- The F-profile
+        if (old_710_routine) then
+          Fprof = Fprofile(ms,mt)
+        else
+          call F_profile(xpoint2, xcase2, Z, Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd, &
+                         Fprof,dF_dpsi,dF_dz, &
+                         dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz , &
+                         zFFprime    ,dFFprime_dpsi,dFFprime_dz, &
+                         dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
+        endif
+
 
 #if _OPENMP >= 201511
 !!!#if 1 >= 2
@@ -927,7 +942,6 @@ do i=1,n_vertex_max
 
             Qvec_p(var_UZ)  =  Qconv_UZ + v_Z * p0 + JxB_UZ__p + visco_T * Qvisc_UZ__p
             Qvec_k(var_UZ)  =                      + JxB_UZ__k + visco_T * Qvisc_UZ__k
-
                            
             !###################################################################################################
             !#  equation 6 (Phi component momentum equation)                                                   #
@@ -956,8 +970,6 @@ do i=1,n_vertex_max
               Qvec_p(var_Up)      = Qconv_Up    +  JxB_Up__p  +  visco_T * Qvisc_Up__p
               Qvec_k(var_Up)      = v_p/R * p0  +  JxB_Up__k  +  visco_T * Qvisc_Up__k
             endif
-
-
                
             !###################################################################################################
             !#  equation 7 (Density equation)                                                                  #

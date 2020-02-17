@@ -71,7 +71,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 edgeparticlesource_sig,                             &
                 produce_live_data, gmres, gmres_max_iter,           &
                 iter_precon, gmres_4, gmres_m, gmres_tol,           &
-                linear_run, static_run, export_for_nemec,           &
+                linear_run, export_for_nemec,                       &
                 output_bnd_elements,                                &
                 wall_file,                                          &
                 first_target_point, last_target_point,              &

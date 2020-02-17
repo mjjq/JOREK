@@ -541,7 +541,6 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'produce_live_data     ', produce_live_data
   write(*,LOGI_FMT) 'export_for_nemec      ', export_for_nemec
   write(*,LOGI_FMT) 'linear_run            ', linear_run
-  write(*,LOGI_FMT) 'static_run            ', static_run
   write(*,LOGI_FMT) 'gmres                 ', gmres
   write(*,INTG_FMT) 'gmres_max_iter        ', gmres_max_iter
   write(*,REAL_FMT) 'gmres tolerance       ', gmres_tol

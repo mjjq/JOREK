@@ -50,18 +50,28 @@ real*8                :: ps0_x, ps0_y, psi_sum, ps_x, ps_y, ps_p
 real*8                :: u0_x,  u0_y,  u_sum,   u_x,  u_y,  u_p
 real*8                :: zj0_x, zj0_y, zj_sum,  zj_x, zj_y, zj_p
 real*8                :: w0_x,  w0_y,  w_sum,   w0_xx, w0_yy, w_x, w_y, w_p, w_xx, w_yy
-real*8                :: zn0_x, zn0_y, zn_sum,  zn_x, zn_y, zn_p
+real*8                :: zn0_x, zn0_y, zn_sum,  zn_x, zn_y, zn_p, rho_x, rho_y, rho_p
 real*8                :: T0_x,  T0_y,  T_sum,   TT_x, TT_y, TT_p
 real*8                :: Ti0_x, Ti0_y, Ti_sum,  Ti_x, Ti_y, Ti_p
 real*8                :: Te0_x, Te0_y, Te_sum,  Te_x, Te_y, Te_p
-real*8                :: AR,  AR_s,  AR_t,  AR_st,  AR_ss,  AR_tt, AR_R, AR_Z, AR_p
-real*8                :: AZ,  AZ_s,  AZ_t,  AZ_st,  AZ_ss,  AZ_tt, AZ_R, AZ_Z, AZ_p
-real*8                :: A3,  A3_s,  A3_t,  A3_st,  A3_ss,  A3_tt, A3_R, A3_Z, A3_p
+real*8                :: AR0, AR0_s, AR0_t, AR0_st, AR0_ss, AR0_tt
+real*8                :: AZ0, AZ0_s, AZ0_t, AZ0_st, AZ0_ss, AZ0_tt
+real*8                :: A30, A30_s, A30_t, A30_st, A30_ss, A30_tt
+real*8                :: AR,  AR_s,  AR_t,  AR_st,  AR_ss,  AR_tt, AR_R, AR_Z, AR_p, AR_RR, AR_ZZ, AR_RZ, AR_Rp, AR_Zp, AR_pp
+real*8                :: AZ,  AZ_s,  AZ_t,  AZ_st,  AZ_ss,  AZ_tt, AZ_R, AZ_Z, AZ_p, AZ_RR, AZ_ZZ, AZ_RZ, AZ_Rp, AZ_Zp, AZ_pp
+real*8                :: A3,  A3_s,  A3_t,  A3_st,  A3_ss,  A3_tt, A3_R, A3_Z, A3_p, A3_RR, A3_ZZ, A3_RZ, A3_Rp, A3_Zp, A3_pp
+real*8                :: VR0, VR0_s, VR0_t, VR0_st, VR0_ss, VR0_tt
+real*8                :: VZ0, VZ0_s, VZ0_t, VZ0_st, VZ0_ss, VZ0_tt
+real*8                :: VP0, VP0_s, VP0_t, VP0_st, VP0_ss, VP0_tt
 real*8                :: VR,  VR_s,  VR_t,  VR_st,  VR_ss,  VR_tt
 real*8                :: VZ,  VZ_s,  VZ_t,  VZ_st,  VZ_ss,  VZ_tt
 real*8                :: VP,  VP_s,  VP_t,  VP_st,  VP_ss,  VP_tt
 real*8                :: Fprof
-real*8                :: T_R, T_Z, T_P, BR, BZ, BP
+real*8                :: BR, BR_R, BR_Z, BR_p
+real*8                :: BZ, BZ_R, BZ_Z, BZ_p
+real*8                :: BP, BP_R, BP_Z, BP_p
+real*8                :: JxB_R,   JxB_Z,   JxB_p,   JxB_pol
+real*8                :: GradP_R, GradP_Z, GradP_p, GradP_pol
 real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
 real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8                :: psi_norm, psi_bnd, grad_psi
@@ -91,6 +101,12 @@ real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 real*8                :: T_corr, T_rad, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: T_real8
+
+real*8                :: F_prof  ,dF_dpsi      ,dF_dz     
+real*8                :: dF_dpsi2      ,dF_dz2       ,dF_dpsi_dz
+real*8                :: zFFprime      ,dFFprime_dpsi,dFFprime_dz
+real*8                :: dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz
+
 
 !====================== --- Variables related to neutral density evolution (model 500 or 555)
 logical               :: include_neutral_dens
@@ -274,7 +290,7 @@ endif
 #endif
 
 #if fullmhd
- n_fullmhd = 5
+ n_fullmhd = 8
  s_fullmhd = n_scalars
  n_scalars = n_scalars + n_fullmhd
 #endif /*fullmhd*/
@@ -365,7 +381,9 @@ endif
 #endif
 
 #ifdef fullmhd
-scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_phi       ', 'B_R         ', 'B_Z         ','K_par       ','V_par       '/)
+scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_phi       ', 'B_R         ', 'B_Z         ', &
+                                                    'K_par       ', 'V_par       ', 'FFprime     ', &
+                                                    'Grad_P      ', 'JxB         '/)
 #endif /*fullmhd*/
 
 if (include_magnetic_field)  vector_names(s_bfield+1:s_bfield+n_bfield) = 'B_field' 
@@ -669,12 +687,15 @@ do i=1,element_list%n_elements
 
         scalars(inode,s_fullmhd+1:s_fullmhd+n_fullmhd) = 0.d0
         
-        BR  = 0.d0
-        BZ  = 0.d0
-        BP  = 0.d0
-        T_R = 0.d0
-        T_Z = 0.d0
-        T_P = 0.d0
+        A3_R  = 0.d0  ;  AR_R  = 0.d0  ;  AZ_R  = 0.d0  ;  rho   = 0.d0  ;  TT    = 0.d0
+        A3_Z  = 0.d0  ;  AR_Z  = 0.d0  ;  AZ_Z  = 0.d0  ;  rho_x = 0.d0  ;  TT_x  = 0.d0
+        A3_RR = 0.d0  ;  AR_RR = 0.d0  ;  AZ_RR = 0.d0  ;  rho_y = 0.d0  ;  TT_y  = 0.d0
+        A3_ZZ = 0.d0  ;  AR_ZZ = 0.d0  ;  AZ_ZZ = 0.d0  ;  rho_p = 0.d0  ;  TT_p  = 0.d0
+        A3_RZ = 0.d0  ;  AR_RZ = 0.d0  ;  AZ_RZ = 0.d0
+        A3_p  = 0.d0  ;  AR_p  = 0.d0  ;  AZ_p  = 0.d0
+        A3_Rp = 0.d0  ;  AR_Rp = 0.d0  ;  AZ_Rp = 0.d0
+        A3_Zp = 0.d0  ;  AR_Zp = 0.d0  ;  AZ_Zp = 0.d0
+        A3_pp = 0.d0  ;  AR_pp = 0.d0  ;  AZ_pp = 0.d0
 
 #endif /*fullmhd*/
         
@@ -722,47 +743,105 @@ do i=1,element_list%n_elements
 
 #ifdef fullmhd
 
-          call interp(node_list,element_list,i,var_AR,i_tor,s,t,AR,AR_s,AR_t,AR_st,AR_ss,AR_tt)
-          call interp(node_list,element_list,i,var_AZ,i_tor,s,t,AZ,AZ_s,AZ_t,AZ_st,AZ_ss,AZ_tt)
-          call interp(node_list,element_list,i,var_A3,i_tor,s,t,A3,A3_s,A3_t,A3_st,A3_ss,A3_tt)
-          call interp(node_list,element_list,i,var_uR,i_tor,s,t,VR,VR_s,VR_t,VR_st,VR_ss,VR_tt)
-          call interp(node_list,element_list,i,var_uZ,i_tor,s,t,VZ,VZ_s,VZ_t,VZ_st,VZ_ss,VZ_tt)
-          call interp(node_list,element_list,i,var_uP,i_tor,s,t,VP,VP_s,VP_t,VP_st,VP_ss,VP_tt)
-          call interp(node_list,element_list,i,var_T,i_tor,s,t,TT ,TT_s, TT_t, TT_st, TT_ss, TT_tt)
-          call interp(node_list,element_list,i,var_r,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
-
-
-          AR_Z = ( - R_t * AR_s + R_s * AR_t ) / xjac
-          AZ_R = (   Z_t * AZ_s - Z_s * AZ_t ) / xjac
-          A3_R = (   Z_t * A3_s - Z_s * A3_t ) / xjac
-          A3_Z = ( - R_t * A3_s + R_s * A3_t ) / xjac
-
-          AR_p = AR * HZ_p(i_tor,i_plane)
-          AZ_p = AZ * HZ_p(i_tor,i_plane)
+          call interp(node_list,element_list,i,var_AR, i_tor,s,t,AR0,AR0_s,AR0_t,AR0_st,AR0_ss,AR0_tt)
+          call interp(node_list,element_list,i,var_AZ, i_tor,s,t,AZ0,AZ0_s,AZ0_t,AZ0_st,AZ0_ss,AZ0_tt)
+          call interp(node_list,element_list,i,var_A3, i_tor,s,t,A30,A30_s,A30_t,A30_st,A30_ss,A30_tt)
+          call interp(node_list,element_list,i,var_uR, i_tor,s,t,VR0,VR0_s,VR0_t,VR0_st,VR0_ss,VR0_tt)
+          call interp(node_list,element_list,i,var_uZ, i_tor,s,t,VZ0,VZ0_s,VZ0_t,VZ0_st,VZ0_ss,VZ0_tt)
+          call interp(node_list,element_list,i,var_uP, i_tor,s,t,VP0,VP0_s,VP0_t,VP0_st,VP0_ss,VP0_tt)
+          call interp(node_list,element_list,i,var_T,  i_tor,s,t,T0 ,T0_s, T0_t, T0_st, T0_ss, T0_tt)
+          call interp(node_list,element_list,i,var_rho,i_tor,s,t,ZN0,ZN0_s,ZN0_t,ZN0_st,ZN0_ss,ZN0_tt)
 
           if (i_tor == 1) then
-            call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
-            scalars(inode,s_fullmhd+1) = scalars(inode,n_var+1) + ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
-          else
-            scalars(inode,s_fullmhd+1) = scalars(inode,n_var+1) + ( AZ_R - AR_Z )     * HZ(i_tor,i_plane)
+            !call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
+            call F_profile(xpoint, xcase, Z, ES%Z_xpoint, A30, ES%psi_axis, ES%psi_bnd, &
+                           F_prof        ,dF_dpsi      ,dF_dz      , &
+                           dF_dpsi2      ,dF_dz2       ,dF_dpsi_dz , &
+                           zFFprime      ,dFFprime_dpsi,dFFprime_dz, &
+                           dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
+            ! --- Uncomment if you want to compare with the old FF'...
+            !call FFprime(  xpoint, xcase, Z, ES%Z_xpoint, A30, ES%psi_axis, ES%psi_bnd, &
+            !               zFFprime,      dFFprime_dpsi,dFFprime_dz, &
+            !               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
           endif
 
-          scalars(inode,s_fullmhd+2) = scalars(inode,n_var+2) + ( A3_Z - AZ_p )/ BigR * HZ(i_tor,i_plane)  ! B_R
-          scalars(inode,s_fullmhd+3) = scalars(inode,n_var+3) + ( AR_p - A3_R )/ BigR * HZ(i_tor,i_plane)  ! B_Z
-          
-          ZKpar_T = ZK_par * ((max(TT, T_min ))/T_0)**2.5
-            
-          T_R  = T_R + (   Z_t * TT_s - Z_s * TT_t )   / xjac * HZ(i_tor,i_plane)
-          T_Z  = T_Z + ( - R_t * TT_s + R_s * TT_t )   / xjac * HZ(i_tor,i_plane)
-          T_P  = TT * HZ_p(i_tor,i_plane)
+          AR_p  = AR_p  + AR0 * HZ_p(i_tor,i_plane)
+          AR_pp = AR_pp + AR0 * HZ_pp(i_tor,i_plane)
 
-          BR = ( A3_Z - AZ_p )/ BigR
-          BZ = ( AR_p - A3_R )/ BigR 
-          BP = ( AZ_R - AR_Z )       + Fprof/ BigR
+          AZ_p  = AZ_p  + AZ0 * HZ_p(i_tor,i_plane)
+          AZ_pp = AZ_pp + AZ0 * HZ_pp(i_tor,i_plane)
 
-          scalars(inode,s_fullmhd+4) = ZKpar_T * ( BR * T_R + BZ * T_Z + BP * T_P / BigR) 
+          A3_p  = A3_p  + A30 * HZ_p(i_tor,i_plane)
+          A3_pp = A3_pp + A30 * HZ_pp(i_tor,i_plane)
 
-          scalars(inode,s_fullmhd+5) = rho * TT * (VR * BR + VZ * BZ + VP * BP / BigR)
+          TT    = TT   + T0 * HZ(i_tor,i_plane)
+          TT_p  = TT_p + T0 * HZ_p(i_tor,i_plane)
+
+          rho   = rho   + zn0* HZ(i_tor,i_plane)
+          rho_p = rho_p + zn0* HZ_p(i_tor,i_plane)
+
+          if ((xjac .gt. 1.d-6)) then  ! avoid the axis
+
+            AR_R  = AR_R  + (   Z_t * AR0_s - Z_s * AR0_t ) / xjac * HZ(i_tor,i_plane)
+            AR_Z  = AR_Z  + ( - R_t * AR0_s + R_s * AR0_t ) / xjac * HZ(i_tor,i_plane)
+            AR_RR = AR_RR + ( (AR0_ss * Z_t**2 - 2.d0*AR0_st * Z_s*Z_t + AR0_tt * Z_s**2  &
+                             + AR0_s * (Z_st*Z_t - Z_tt*Z_s )                             &
+                             + AR0_t * (Z_st*Z_s - Z_ss*Z_t ) )    / xjac**2              &
+                             - xjac_x * (AR0_s* Z_t - AR0_t * Z_s)  / xjac**2             ) * HZ(i_tor,i_plane)
+            AR_ZZ = AR_ZZ + ( (AR0_ss * R_t**2 - 2.d0*AR0_st * R_s*R_t + AR0_tt * R_s**2  &
+                             + AR0_s * (R_st*R_t - R_tt*R_s )                             &
+                             + AR0_t * (R_st*R_s - R_ss*R_t ) )    / xjac**2              &
+                             - xjac_y * (- AR0_s * R_t + AR0_t * R_s )  / xjac**2         ) * HZ(i_tor,i_plane)
+            AR_RZ = AR_RZ + ( (- AR0_ss * Z_t*R_t - AR0_tt * R_s*Z_s                        &
+                               + AR0_st * (Z_s*R_t  + Z_t*R_s  )                            &
+                               - AR0_s  * (R_st*Z_t - R_tt*Z_s )                            &
+                               - AR0_t * (R_st*Z_s  - R_ss*Z_t ) )  / xjac**2               &
+                               - xjac_x * (- AR0_s * R_t + AR0_t * R_s )   / xjac**2        ) * HZ(i_tor,i_plane)
+            AR_Rp = AR_Rp + (   Z_t * AR0_s - Z_s * AR0_t ) / xjac * HZ_p(i_tor,i_plane)
+            AR_Zp = AR_Zp + ( - R_t * AR0_s + R_s * AR0_t ) / xjac * HZ_p(i_tor,i_plane)
+
+            AZ_R  = AZ_R  + (   Z_t * AZ0_s - Z_s * AZ0_t ) / xjac * HZ(i_tor,i_plane)
+            AZ_Z  = AZ_Z  + ( - R_t * AZ0_s + R_s * AZ0_t ) / xjac * HZ(i_tor,i_plane)
+            AZ_RR = AZ_RR + ( (AZ0_ss * Z_t**2 - 2.d0*AZ0_st * Z_s*Z_t + AZ0_tt * Z_s**2  &
+                             + AZ0_s * (Z_st*Z_t - Z_tt*Z_s )                             &
+                             + AZ0_t * (Z_st*Z_s - Z_ss*Z_t ) )    / xjac**2              &
+                             - xjac_x * (AZ0_s* Z_t - AZ0_t * Z_s)  / xjac**2             ) * HZ(i_tor,i_plane)
+            AZ_ZZ = AZ_ZZ + ( (AZ0_ss * R_t**2 - 2.d0*AZ0_st * R_s*R_t + AZ0_tt * R_s**2  &
+                             + AZ0_s * (R_st*R_t - R_tt*R_s )                             &
+                             + AZ0_t * (R_st*R_s - R_ss*R_t ) )    / xjac**2              &
+                             - xjac_y * (- AZ0_s * R_t + AZ0_t * R_s )  / xjac**2         ) * HZ(i_tor,i_plane)
+            AZ_RZ = AZ_RZ + ( (- AZ0_ss * Z_t*R_t - AZ0_tt * R_s*Z_s                        &
+                               + AZ0_st * (Z_s*R_t  + Z_t*R_s  )                            &
+                               - AZ0_s  * (R_st*Z_t - R_tt*Z_s )                            &
+                               - AZ0_t * (R_st*Z_s  - R_ss*Z_t ) )  / xjac**2               &
+                               - xjac_x * (- AZ0_s * R_t + AZ0_t * R_s )   / xjac**2        ) * HZ(i_tor,i_plane)
+            AZ_Rp = AZ_Rp + (   Z_t * AZ0_s - Z_s * AZ0_t ) / xjac * HZ_p(i_tor,i_plane)
+            AZ_Zp = AZ_Zp + ( - R_t * AZ0_s + R_s * AZ0_t ) / xjac * HZ_p(i_tor,i_plane)
+
+            A3_R  = A3_R  + (   Z_t * A30_s - Z_s * A30_t ) / xjac * HZ(i_tor,i_plane)
+            A3_Z  = A3_Z  + ( - R_t * A30_s + R_s * A30_t ) / xjac * HZ(i_tor,i_plane)
+            A3_RR = A3_RR + ( (A30_ss * Z_t**2 - 2.d0*A30_st * Z_s*Z_t + A30_tt * Z_s**2  &
+                             + A30_s * (Z_st*Z_t - Z_tt*Z_s )                             &
+                             + A30_t * (Z_st*Z_s - Z_ss*Z_t ) )    / xjac**2              &
+                             - xjac_x * (A30_s* Z_t - A30_t * Z_s)  / xjac**2             ) * HZ(i_tor,i_plane)
+            A3_ZZ = A3_ZZ + ( (A30_ss * R_t**2 - 2.d0*A30_st * R_s*R_t + A30_tt * R_s**2  &
+                             + A30_s * (R_st*R_t - R_tt*R_s )                             &
+                             + A30_t * (R_st*R_s - R_ss*R_t ) )    / xjac**2              &
+                             - xjac_y * (- A30_s * R_t + A30_t * R_s )  / xjac**2         ) * HZ(i_tor,i_plane)
+            A3_RZ = A3_RZ + ( (- A30_ss * Z_t*R_t - A30_tt * R_s*Z_s                        &
+                               + A30_st * (Z_s*R_t  + Z_t*R_s  )                            &
+                               - A30_s  * (R_st*Z_t - R_tt*Z_s )                            &
+                               - A30_t * (R_st*Z_s  - R_ss*Z_t ) )  / xjac**2               &
+                               - xjac_x * (- A30_s * R_t + A30_t * R_s )   / xjac**2        ) * HZ(i_tor,i_plane)
+            A3_Rp = A3_Rp + (   Z_t * A30_s - Z_s * A30_t ) / xjac * HZ_p(i_tor,i_plane)
+            A3_Zp = A3_Zp + ( - R_t * A30_s + R_s * A30_t ) / xjac * HZ_p(i_tor,i_plane)
+
+            TT_x  = TT_x + (   Z_t * T0_s - Z_s * T0_t )   / xjac * HZ(i_tor,i_plane)
+            TT_y  = TT_y + ( - R_t * T0_s + R_s * T0_t )   / xjac * HZ(i_tor,i_plane)
+
+            rho_x = rho_x  + (   Z_t * ZN0_s - Z_s * ZN0_t ) / xjac * HZ(i_tor,i_plane)
+            rho_y = rho_y  + ( - R_t * ZN0_s + R_s * ZN0_t ) / xjac * HZ(i_tor,i_plane)
+          endif
 
 #endif /*fullmhd*/
 
@@ -886,8 +965,51 @@ do i=1,element_list%n_elements
           endif ! grad_psi
         endif ! include_fluxes
 
+#ifdef fullmhd
+
+        BR = ( A3_Z - AZ_p )/ R
+        BZ = ( AR_p - A3_R )/ R 
+        BP = ( AZ_R - AR_Z )    + F_prof/ R
+
+        ZKpar_T = ZK_par * ((max(TT, T_min ))/T_0)**2.5
+
+        scalars(inode,s_fullmhd+1) = BP
+        scalars(inode,s_fullmhd+2) = BR
+        scalars(inode,s_fullmhd+3) = BZ
+        scalars(inode,s_fullmhd+4) = ZKpar_T * ( BR * TT_x + BZ * TT_y + BP * TT_P / R)
+        scalars(inode,s_fullmhd+5) = rho * TT * (VR * BR + VZ * BZ + VP * BP / R)
+        scalars(inode,s_fullmhd+6) = zFFprime 
+        
+        BR_R = -1/R**2 * ( A3_Z - AZ_p ) + ( A3_RZ - AZ_Rp )/R
+        BR_Z = ( A3_ZZ - AZ_Zp )/R
+        BR_p = ( A3_Zp - AZ_pp )/R
+        BZ_R = -1/R**2 * ( AR_p - A3_R ) + ( AR_Rp - A3_RR )/R
+        BZ_Z = ( AR_Zp - A3_RZ )/R
+        BZ_p = ( AR_pp - A3_Rp )/R
+        BP_R = ( AZ_RR - AR_RZ ) + dF_dpsi*A3_R/R - F_prof/R**2
+        BP_Z = ( AZ_RZ - AR_ZZ ) + dF_dpsi*A3_Z/R
+        BP_p = ( AZ_Rp - AR_Zp )
+
+        JxB_R      = - Bp*BP_R - BP**2/R - BZ*BZ_R + BZ*BR_Z + Bp*BR_p/R
+        JxB_Z      = + BR*BZ_R           - BR*BR_Z - BP*BP_Z + BP*BZ_p/R
+        JxB_p      = + BR*BP_R + BZ*BP_Z - BR*BP/R - BR*BR_p/R - BZ*BZ_p/R
+        JxB_pol    = (JxB_R**2 + JxB_Z**2)**0.5
+        GradP_R    = rho_x*TT + rho*TT_x
+        GradP_Z    = rho_y*TT + rho*TT_y
+        GradP_p    = rho_p*TT + rho*TT_p
+        GradP_pol  = (GradP_R**2 + GradP_Z**2)**0.5
+        
+        ! --- Choose which direction
+        scalars(inode,s_fullmhd+7) = GradP_pol ! GradP_p ! GradP_Z  ! GradP_R !
+        scalars(inode,s_fullmhd+8) = JxB_pol   ! JxB_p   ! JxB_Z    ! JxB_R   !
+
+#endif /*fullmhd*/
+
         if (include_magnetic_field) then
           vectors(inode,:,s_Bfield + 1) = (/ ps_y/BigR, -ps_x/BigR, F0/BigR /)          
+#ifdef fullmhd
+          vectors(inode,:,s_Bfield + 1) = (/ BR, BZ, 0.d0 /)          
+#endif
         endif
 
         if (include_velocity_field) then

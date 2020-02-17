@@ -1024,7 +1024,7 @@ required = 0
     mumps_par%nz  = nz_glob_harm
     mumps_par%n   = ndof_glob_harm
   
-  ! --- Allocate arrays for centralized matrix
+  ! --- Allocate arrays for centralized matrix: 
   if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,  "dh_mumps_par%A",  CAT_DMATRIX)
   if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
   if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
@@ -1033,11 +1033,25 @@ required = 0
   call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
   call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
   call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
-  
-    mumps_par%A   = A_glob_harm
-    mumps_par%irn = irn_glob_harm
-    mumps_par%jcn = jcn_glob_harm
-    mumps_par%rhs = rhs_glob_harm
+    
+       !if(my_id .eq. 0) then
+       !  do i = 1, nz_glob_harm !n_glob_harm !mumps_par%n 
+       !     write(100, "(I8, 2x, ES15.3)") i, A_glob_harm(i)
+       !  enddo 
+       !endif
+ 
+    mumps_par%A(1:mumps_par%nz)   = A_glob_harm(1:mumps_par%nz)
+    mumps_par%irn(1:mumps_par%nz) = irn_glob_harm(1:mumps_par%nz)
+    mumps_par%jcn(1:mumps_par%nz) = jcn_glob_harm(1:mumps_par%nz)
+    mumps_par%rhs(1:mumps_par%n)  = rhs_glob_harm(1:mumps_par%n)
+   
+       !if(my_id .eq. 0) then
+       !  do i = 1, mumps_par%nz !nz_glob_harm !n_glob_harm !mumps_par%n 
+       !     write(101, "(I8, 2x, ES15.3)") i, mumps_par%A(i)  
+       !     !print*, 'i, A(i):', i, A_glob_harm(i)
+       !     !print*, 'i, mumps_par%rhs:', i, mumps_par%rhs(i)
+       !  enddo 
+       !endif
  
 
          call clck_time_barrier(t1) 

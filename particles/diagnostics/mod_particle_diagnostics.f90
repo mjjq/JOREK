@@ -251,7 +251,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
             case (REAL4)
               call h5dcreate_f(this%file_id, dataset_name, H5T_IEEE_F32LE, dspace, dset, ierr, plist)
             case (INT4)
-              call h5dcreate_f(this%file_id, dataset_name, H5T_STD_I8LE, dspace, dset, ierr, plist)
+              call h5dcreate_f(this%file_id, dataset_name, H5T_STD_I32LE, dspace, dset, ierr, plist)
             case DEFAULT
               write(*,*) "Unknown variable type for diagnostics"
               call MPI_ABORT(MPI_COMM_WORLD, -1, ierr)

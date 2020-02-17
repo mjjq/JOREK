@@ -110,7 +110,7 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
   call interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
        V(:,1,2), V(:,2,2), V(:,3,2), V(:,4,2),   R,R_s,R_t,Z,Z_s,Z_t)
   !> do not interpolate deltas if on restart is used
-  if(this%static) then
+  if(.not.this%static) then
     call interp_PRZ(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
       V(:,1,3), V(:,2,3), V(:,3,3), V(:,4,3),   R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
     call interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
@@ -193,7 +193,7 @@ pure subroutine do_interp_PRZ_2(this,time,i_elm,i_v,n_v,s,t,phi,&
          values(:,9,2),values(:,10,2),R,R_s,R_t,R_st,R_ss,R_tt,&
          Z,Z_s,Z_t,Z_st,Z_ss,Z_tt) !< second restart values
     !> do not interpolate deltas if one restart is used
-    if(this%static) then
+    if(.not.this%static) then
       call interp_PRZ(this%node_lists(i1),this%element_lists(i1),i_elm,i_v,n_v,&
            s,t,phi,values(:,1,3),values(:,2,3),values(:,3,3),values(:,4,3),&
            values(:,5,3),values(:,6,3),values(:,7,3),values(:,8,3),&

@@ -86,7 +86,8 @@ module vacuum
   real*8, allocatable :: dR_coils(:), dZ_coils(:)        ! ### old
   real*8, allocatable :: coil_voltages(:)                !< Coil voltages (not ready yet)
   real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
-  real*8, allocatable :: diag_coil_curr(:,:)
+  real*8, allocatable :: diag_coil_curr(:,:), pf_coil_curr(:,:), rmp_coil_curr(:,:)
+  real*8, allocatable :: net_tor_wall_curr(:)            !< Time trace of net toroidal wall current (live data)
   
   type :: t_starwall_response
     integer :: file_version           = 9999
@@ -513,10 +514,11 @@ module vacuum
 #ifdef USE_HDF5
     ! --- Local variables
     logical   :: freeboundary_rst, resistive_wall_rst
-    integer   :: n_diag_coil = 0
+    integer   :: n_diag_coil = 0, n_pf_coil = 0, n_rmp_coil = 0
     character :: t_freeboundary, t_resistive_wall
-    real*8, allocatable :: t_diag_coil_curr(:,:)
-    
+    real*8, allocatable :: t_diag_coil_curr(:,:), t_pf_coil_curr(:,:), t_rmp_coil_curr(:,:)
+    real*8, allocatable :: t_net_tor_wall_curr(:)   
+ 
     call HDF5_char_reading(file_id,t_freeboundary,"freeboundary")
     freeboundary_rst = (t_freeboundary == "T")
     
@@ -553,6 +555,7 @@ module vacuum
         call HDF5_array1D_reading(file_id,old_dpsibnd_vec,"old_dpsibnd_vec")
         
         if ( index_start > 1 ) then
+
           if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
           call HDF5_integer_reading(file_id,n_diag_coil,"n_diag_coil")
           allocate( t_diag_coil_curr(index_start,n_diag_coil) )
@@ -560,6 +563,30 @@ module vacuum
           allocate( diag_coil_curr(index_start+nstep,n_diag_coil) )
           diag_coil_curr(1:index_start,:) = t_diag_coil_curr(1:index_start,:)
           deallocate(t_diag_coil_curr)
+
+          if ( allocated(pf_coil_curr) ) deallocate(pf_coil_curr)
+          call HDF5_integer_reading(file_id,n_pf_coil,"n_pf_coil")
+          allocate( t_pf_coil_curr(index_start,n_pf_coil) )
+          call HDF5_array2D_reading(file_id,t_pf_coil_curr,"pf_coil_curr")
+          allocate( pf_coil_curr(index_start+nstep,n_pf_coil) )
+          pf_coil_curr(1:index_start,:) = t_pf_coil_curr(1:index_start,:)
+          deallocate(t_pf_coil_curr)
+
+          if ( allocated(rmp_coil_curr) ) deallocate(rmp_coil_curr)
+          call HDF5_integer_reading(file_id,n_rmp_coil,"n_rmp_coil")
+          allocate( t_rmp_coil_curr(index_start,n_rmp_coil) )
+          call HDF5_array2D_reading(file_id,t_rmp_coil_curr,"rmp_coil_curr")
+          allocate( rmp_coil_curr(index_start+nstep,n_rmp_coil) )
+          rmp_coil_curr(1:index_start,:) = t_rmp_coil_curr(1:index_start,:)
+          deallocate(t_rmp_coil_curr)
+
+          if ( allocated(net_tor_wall_curr) ) deallocate(net_tor_wall_curr)
+          allocate( t_net_tor_wall_curr(index_start) )
+          call HDF5_array1D_reading(file_id,t_net_tor_wall_curr,"net_tor_wall_curr")
+          allocate( net_tor_wall_curr(index_start+nstep) )
+          net_tor_wall_curr(1:index_start) = t_net_tor_wall_curr(1:index_start)
+          deallocate(t_net_tor_wall_curr)
+ 
         end if
         
         if ( vacuum_debug .and. resistive_wall ) then
@@ -669,7 +696,8 @@ module vacuum
 #ifdef USE_HDF5
     ! --- Local variables
     character           :: t_freeboundary, t_resistive_wall
-    real*8, allocatable :: t_diag_coil_curr(:,:)
+    real*8, allocatable :: t_diag_coil_curr(:,:), t_pf_coil_curr(:,:), t_rmp_coil_curr(:,:)
+    real*8, allocatable :: t_net_tor_wall_curr(:)
 
     t_freeboundary = "F"
     if (freeboundary) t_freeboundary = "T"
@@ -692,14 +720,41 @@ module vacuum
         call HDF5_array1D_saving(file_id,wall_curr,n_wall_curr,"wall_curr"//char(0))
         call HDF5_array1D_saving(file_id,dwall_curr,n_wall_curr,"dwall_curr"//char(0))
         call HDF5_integer_saving(file_id,sr%n_diag_coils,"n_diag_coil"//char(0))
-        
-        if ( (index_now > 0) .and. (sr%n_diag_coils > 0) ) then
-          allocate(t_diag_coil_curr(index_now,sr%n_diag_coils))
-          t_diag_coil_curr(1:index_now,:) = diag_coil_curr(1:index_now,:)
-          call HDF5_array2D_saving(file_id,t_diag_coil_curr,index_now,sr%n_diag_coils,"diag_coil_curr"//char(0))
-          deallocate(t_diag_coil_curr)
-        end if
-      end if
+        call HDF5_integer_saving(file_id,sr%n_pol_coils,"n_pf_coil"//char(0))
+        call HDF5_integer_saving(file_id,sr%n_rmp_coils,"n_rmp_coil"//char(0))
+
+
+        if ( index_now > 0) then        
+
+          allocate(t_net_tor_wall_curr(index_now))
+          t_net_tor_wall_curr(1:index_now) = net_tor_wall_curr(1:index_now)
+          call HDF5_array1D_saving(file_id,t_net_tor_wall_curr,index_now,"net_tor_wall_curr"//char(0))
+          deallocate(t_net_tor_wall_curr)
+
+          if ( sr%n_diag_coils > 0 ) then
+            allocate(t_diag_coil_curr(index_now,sr%n_diag_coils))
+            t_diag_coil_curr(1:index_now,:) = diag_coil_curr(1:index_now,:)
+            call HDF5_array2D_saving(file_id,t_diag_coil_curr,index_now,sr%n_diag_coils,"diag_coil_curr"//char(0))
+            deallocate(t_diag_coil_curr)
+          end if
+
+          if ( sr%n_pol_coils > 0 ) then
+            allocate(t_pf_coil_curr(index_now,sr%n_pol_coils))
+            t_pf_coil_curr(1:index_now,:) = pf_coil_curr(1:index_now,:)
+            call HDF5_array2D_saving(file_id,t_pf_coil_curr,index_now,sr%n_pol_coils,"pf_coil_curr"//char(0))
+            deallocate(t_pf_coil_curr)
+          end if
+
+          if ( sr%n_rmp_coils > 0 ) then
+            allocate(t_rmp_coil_curr(index_now,sr%n_rmp_coils))
+            t_rmp_coil_curr(1:index_now,:) = rmp_coil_curr(1:index_now,:)
+            call HDF5_array2D_saving(file_id,t_rmp_coil_curr,index_now,sr%n_rmp_coils,"rmp_coil_curr"//char(0))
+            deallocate(t_rmp_coil_curr)
+          end if
+
+        end if !--- index now
+
+     end if !--- resistive wall
 
       call HDF5_array1D_saving(file_id,old_dpsibnd_vec,n_dof_starwall,"old_dpsibnd_vec"//char(0))
       
@@ -734,10 +789,14 @@ module vacuum
     logical, intent(in) :: resistive_wall
     
     ! --- Local variables
-    integer :: ierr, sz(2)
+    integer :: ierr, sz_diag(2), sz_pol(2), sz_rmp(2), sz_net
 
     call MPI_BCAST(n_dof_starwall,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     
+    sz_diag(:) = 0
+    sz_pol(:)  = 0
+    sz_rmp(:)  = 0
+
     if ( resistive_wall ) then
       
       call MPI_BCAST(n_wall_curr,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
@@ -745,14 +804,23 @@ module vacuum
       if ( n_wall_curr == 0 ) return
       
       if ( my_id == 0 ) then
+        if ( allocated(net_tor_wall_curr) ) then
+          sz_net = size(net_tor_wall_curr)
+        end if
         if ( allocated(diag_coil_curr) ) then
-          sz(:) = (/ size(diag_coil_curr,1), size(diag_coil_curr,2) /)
-        else
-          sz(:) = 0
+          sz_diag(:) = (/ size(diag_coil_curr,1), size(diag_coil_curr,2) /)
+        end if
+        if ( allocated(pf_coil_curr) ) then
+          sz_pol(:) = (/ size(pf_coil_curr,1), size(pf_coil_curr,2) /)
+        end if
+        if ( allocated(rmp_coil_curr) ) then
+          sz_rmp(:) = (/ size(rmp_coil_curr,1), size(rmp_coil_curr,2) /)
         end if
       end if
-      call MPI_BCAST(sz,2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-      
+      call MPI_BCAST( sz_net,  1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(sz_diag,  2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST( sz_pol,  2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST( sz_rmp,  2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       
       if ( my_id /= 0 ) then
         if ( allocated(wall_curr) ) deallocate(wall_curr)
@@ -764,20 +832,24 @@ module vacuum
         if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
         allocate( old_dpsibnd_vec(n_dof_starwall) )
         
-      else
-      end if
-
-      if ( my_id /= 0 ) then
-        if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
-        if ( minval(sz) > 0 ) allocate( diag_coil_curr(sz(1),sz(2)) )
+        if ( allocated(net_tor_wall_curr) ) deallocate(net_tor_wall_curr)
+        if ( allocated(diag_coil_curr) )    deallocate(diag_coil_curr)
+        if ( allocated(pf_coil_curr  ) )    deallocate(pf_coil_curr)
+        if ( allocated(rmp_coil_curr ) )    deallocate(pf_coil_curr)
+        if (         sz_net  > 0 ) allocate( net_tor_wall_curr(sz_net) )
+        if ( minval(sz_diag) > 0 ) allocate( diag_coil_curr(sz_diag(1), sz_diag(2)) )
+        if ( minval(sz_pol)  > 0 ) allocate(   pf_coil_curr( sz_pol(1),  sz_pol(2)) )
+        if ( minval(sz_rmp)  > 0 ) allocate(  rmp_coil_curr( sz_rmp(1),  sz_rmp(2)) )
       end if
 
       call MPI_BCAST(wall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(dwall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(old_dpsibnd_vec,n_dof_starwall,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 
       call MPI_BCAST(wall_curr_initialized,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
-      if ( minval(sz) > 0 ) call MPI_BCAST(diag_coil_curr,sz(1)*sz(2),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-      
+      if (         sz_net  > 0 ) call MPI_BCAST(net_tor_wall_curr,            sz_net,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+      if ( minval(sz_diag) > 0 ) call MPI_BCAST(diag_coil_curr,sz_diag(1)*sz_diag(2),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+      if ( minval( sz_pol) > 0 ) call MPI_BCAST(  pf_coil_curr, sz_pol(1)*sz_pol(2) ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)      
+      if ( minval( sz_rmp) > 0 ) call MPI_BCAST( rmp_coil_curr, sz_rmp(1)*sz_rmp(2) ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     end if
     
     call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)

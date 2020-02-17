@@ -3,7 +3,7 @@
 // phase indicates the step (solver initialization, 
 // reordering and factorization, solving, and finalizing)
 // I. Holod 31/01/2020
-
+#ifdef USE_STRUMPACK
 #include <iostream>
 #include <string>
 #include "hdf5.h"
@@ -258,5 +258,4 @@ int* distribute(int n, int P){
     }
     return dist;
 }
-
-
+#endif

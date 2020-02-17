@@ -1033,7 +1033,18 @@ required = 0
   call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
   call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
   call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
-    
+
+
+
+  !if (allocated(mumps_par%A)) deallocate(mumps_par%A)     
+  !if (allocated(mumps_par%irn)) deallocate(mumps_par%irn)     
+  !if (allocated(mumps_par%jcn)) deallocate(mumps_par%jcn)     
+  !if (allocated(mumps_par%rhs)) deallocate(mumps_par%rhs) 
+
+  !allocate(mumps_par%A(1:mumps_par%nz))     
+  !allocate(mumps_par%irn(1:mumps_par%nz))     
+  !allocate(mumps_par%jcn(1:mumps_par%nz))     
+  !allocate(mumps_par%rhs(1:mumps_par%n))     
        !if(my_id .eq. 0) then
        !  do i = 1, nz_glob_harm !n_glob_harm !mumps_par%n 
        !     write(100, "(I8, 2x, ES15.3)") i, A_glob_harm(i)

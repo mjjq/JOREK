@@ -216,16 +216,16 @@ contains
 
 		  ! --- Apply Dirichlet if required
 		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, & 
-                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max,               & 
-                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max,    & 
+                                             gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
+                                             ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
 
                   ! --------------
 		  ! --- Mach-1 BCs
                   if (k_var .eq. 7) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, & 
-                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max,               & 
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, & 
+                                         gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
                                          ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
 
@@ -281,16 +281,16 @@ contains
 
 		  ! --- Apply Dirichlet if required
 		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only,& 
-                                              only_count,cnt, cnt_prod, i_tor_min, i_tor_max,               & 
-                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max,    & 
+                                             gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
+                                             ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
 
                   ! --------------
 		  ! --- Mach-1 BCs
                   if (k_var .eq. 7) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only,& 
-                                              only_count,cnt, cnt_prod, i_tor_min, i_tor_max,               & 
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, & 
+                                         gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
                                          ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
 
@@ -366,9 +366,9 @@ contains
                       ) apply_dirichlet = .true.
 
 		  if (apply_dirichlet) then
-		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, & 
-                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max,               & 
-                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max,    & 
+                                             gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
+                                             ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
 
                 endif
@@ -499,7 +499,6 @@ contains
   
     use mod_parameters
     use data_structure
-    !use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
     use mod_locate_irn_jcn
     
@@ -591,7 +590,6 @@ contains
   
     use mod_parameters
     use data_structure
-    !use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
     use mod_locate_irn_jcn
     
@@ -660,7 +658,6 @@ contains
   
     use mod_parameters
     use data_structure
-    !use global_distributed_matrix
     use phys_module, only: GAMMA
     use mod_locate_irn_jcn
     

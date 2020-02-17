@@ -12,11 +12,11 @@ public write_particle_diagnostics, calculate_particle_diagnostics
 !> Cannot use HDF5 types here because these are invalid before h5open_f is called
 !> (I think, did not take the chance)
 integer, parameter :: REAL4 = 1, INT4 = 2, REAL8 = 3
-integer, parameter :: n_var = 14
+integer, parameter :: n_var = 15
 character(len=7)  :: var_names(n_var) = ["e      ", "k      ", "mu     ", &
   "psi_n  ", "psi_bar", "p_phi  ", "weight ", "lost   ", "q      ", "region ", &
-  "theta  ", "phi    ", "R      ", "Z      "]
-integer, parameter :: var_types(n_var) = [REAL8, REAL8, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4, REAL4, REAL4]
+  "i_elm  ","theta  ", "phi    ", "R      ", "Z      "]
+integer, parameter :: var_types(n_var) = [REAL8, REAL8, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, INT4, REAL4, REAL4, REAL4, REAL4]
 integer, parameter :: n_real8_var      = count(var_types .eq. REAL8)
 integer, parameter :: n_real4_var      = count(var_types .eq. REAL4)
 integer, parameter :: n_int4_var       = count(var_types .eq. INT4)
@@ -251,7 +251,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
             case (REAL4)
               call h5dcreate_f(this%file_id, dataset_name, H5T_IEEE_F32LE, dspace, dset, ierr, plist)
             case (INT4)
-              call h5dcreate_f(this%file_id, dataset_name, H5T_STD_I8LE, dspace, dset, ierr, plist)
+              call h5dcreate_f(this%file_id, dataset_name, H5T_STD_I32LE, dspace, dset, ierr, plist)
             case DEFAULT
               write(*,*) "Unknown variable type for diagnostics"
               call MPI_ABORT(MPI_COMM_WORLD, -1, ierr)
@@ -447,6 +447,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
   !$omp xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, R_axis, Z_axis, psi_axis) &
   !$omp private(E, B, psi, U, particle, v_par, domain, particle_centered, real_stats_tmp, i_real8, i_real4, i_tmp, j)
   do i=1,size(particles,1)
+    int_stats(i,4) = particles(i)%i_elm
     if (particles(i)%i_elm .lt. 1) then
       if (present(mask)) mask(i) = .false.
       int_stats(i,1) = 1 ! lost

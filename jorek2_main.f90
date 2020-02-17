@@ -1050,12 +1050,24 @@ required = 0
        !     write(100, "(I8, 2x, ES15.3)") i, A_glob_harm(i)
        !  enddo 
        !endif
- 
-    mumps_par%A(1:mumps_par%nz)   = A_glob_harm(1:mumps_par%nz)
-    mumps_par%irn(1:mumps_par%nz) = irn_glob_harm(1:mumps_par%nz)
-    mumps_par%jcn(1:mumps_par%nz) = jcn_glob_harm(1:mumps_par%nz)
-    mumps_par%rhs(1:mumps_par%n)  = rhs_glob_harm(1:mumps_par%n)
+
+   do i = 1, mumps_par%n
+       mumps_par%rhs(i) = rhs_glob_harm(i)
+   enddo
    
+   
+   do i = 1, mumps_par%nz
+       mumps_par%A(i) = A_glob_harm(i)
+       mumps_par%irn(i) = irn_glob_harm(i)
+       mumps_par%jcn(i) = jcn_glob_harm(i)
+   enddo
+ 
+    !mumps_par%A(1:mumps_par%nz)   = A_glob_harm(1:mumps_par%nz)
+    !mumps_par%irn(1:mumps_par%nz) = irn_glob_harm(1:mumps_par%nz)
+    !mumps_par%jcn(1:mumps_par%nz) = jcn_glob_harm(1:mumps_par%nz)
+    !mumps_par%rhs(1:mumps_par%n)  = rhs_glob_harm(1:mumps_par%n)
+   
+
        !if(my_id .eq. 0) then
        !  do i = 1, mumps_par%nz !nz_glob_harm !n_glob_harm !mumps_par%n 
        !     write(101, "(I8, 2x, ES15.3)") i, mumps_par%A(i)  

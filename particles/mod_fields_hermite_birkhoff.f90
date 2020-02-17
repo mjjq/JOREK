@@ -304,15 +304,26 @@ subroutine do_read(this, sim, ev)
   end if
   if (.not. allocated(sim%fields%node_list)) allocate(sim%fields%node_list)
   if (.not. allocated(sim%fields%element_list)) allocate(sim%fields%element_list)
-
-  !> check if a static (oner restart) field has to be used
-  if(i.lt.0) sim%fields%static=.true.
   
   ! Continue for jorek_fields_interp_hermite_birkhoff
   select type (f => sim%fields)
   type is (jorek_fields_interp_hermite_birkhoff)
     if (.not. allocated(f%node_lists)) allocate(f%node_lists(NL))
     if (.not. allocated(f%element_lists)) allocate(f%element_lists(NL))
+
+    !> check if a static (oner restart) field has to be used
+    if(this%i.lt.0) then
+      !< read only on jorke restart
+      call read_one_file(this,f,ierr)
+      call update_neighbours(f%node_list, f%element_list)
+      call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
+        tstep*t_norm, from_deltas=.true.) !< first value
+      call append_to_fields(f, f%node_list, f%element_list, (t_start+tstep)*t_norm, &
+        tstep*t_norm, from_deltas=.true.) !< second value with dummy time for constant tests
+      !< set static to true
+      f%static = .true. !< set static to true
+      return !< exti function
+    endif
 
     ! If nothing has been loaded load the initial file
     if (f%len .eq. 0) then
@@ -344,12 +355,10 @@ subroutine do_read(this, sim, ev)
       ! Now we have 3 or 4 time points in our list
 
       ! Finally we need to calculate the derivatives of the middle points (1 or
-      ! 2 points) if more than one restart is used (non static fields)
-      if(i.ge.0) then
-        do j=2,f%len-1
-          call interp_derivatives(f, j)
-        end do
-      endif
+      ! 2 points)
+      do j=2,f%len-1
+        call interp_derivatives(f, j)
+      end do
 
       ! Now we can remove the first element
       f%start = f%ind(2)
@@ -383,11 +392,9 @@ subroutine do_read(this, sim, ev)
       this%i=i ! set index of last-read file
 
       !> interpolate fields with midpoint rule if more than one restart is used
-      if(i.ge.0) then
-        do j=2,f%len-1
-          call interp_derivatives(f, j)
-        end do
-      endif
+      do j=2,f%len-1
+        call interp_derivatives(f, j)
+      end do
 
       ! set the time to run this event at next
       if (my_id .eq. 0) write(*,"(A,f9.8,A)") " Read next restart file, values until t=", f%t(f%ind(f%len-1)), " [s]"
@@ -402,6 +409,74 @@ subroutine do_read(this, sim, ev)
   end select
 end subroutine do_read
 
+!> read only one restart file in case of static fields
+!> Performs MPI communication to get values from root process to
+!> every other process.
+!> inputs:
+!>   this: (read_jorek_fields_interp_hermite_birkhoff) method for reading HB fields
+!>   f:    (jorek_fields_interp_hermite_birkhoff) fields interpolation via HB
+!> outputs
+!>   this:    (read_jorek_fields_interp_hermite_birkhoff) method for reading HB fields
+!>   f:       (jorek_fields_interp_hermite_birkhoff) fields interpolation via HB
+!>   i_found: (integer) check if the file has been found
+subroutine read_one_file(this,f,i_found)
+  !> load modules
+  use mod_import_restart
+  use phys_module
+  use mpi
+  implicit none
+  !> declare input/output variables
+  class(read_jorek_fields_interp_hermite_birkhoff), intent(inout) :: this
+  class(jorek_fields_interp_hermite_birkhoff), intent(inout) :: f
+  !> declare output varibales
+  integer, intent(out) :: i_found
+  !> declare internal variables
+  character(len=80) :: restart_file
+  integer :: ierr, my_id
+  logical :: file_exists
+
+  !> retrive comunicator data
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+
+  !> only master task
+  if(my_id.eq.0) then
+    !> check if -1 is given
+    if(this%i .eq. -1 ) then
+      write(restart_file,'(A,A)') trim(this%basename), '_restart.h5'
+    else
+      write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
+    endif
+    !< check the file extistance
+    inquire(file=trim(restart_file), exist=file_exists)
+    if (file_exists) then
+      call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,ierr)
+      f%static = .true.
+    else
+      write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
+      call exit(1)
+    endif
+    if(file_exists.and.(ierr.eq.0)) then
+      i_found = 1
+    else
+      i_found = 0
+    endif
+  endif
+
+  !< broadcast i_found
+  call MPI_Bcast(i_found, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+
+  !> check if the file has been read
+  if(i_found .eq. 1) then
+    !> broadcast all data
+    call broadcast_elements(my_id, f%element_list)
+    call broadcast_nodes(my_id, f%node_list)
+    call broadcast_phys(my_id) ! we only really use tstep and t_start but this is simpler to write
+  else
+    write(*,*) "ERROR: load restart file failed: STOP"
+    call MPI_Abort(MPI_COMM_WORLD, 1, ierr) !< stop program
+  endif
+
+end subroutine read_one_file
 
 !> Starting from i+2 (if prefer_plus_2=.true.), i+1, i+N search for a next file and read it into
 !> f%node_list, f%element_list.
@@ -420,9 +495,6 @@ subroutine read_next_file(this, f, i_found, prefer_plus_2)
   character(len=80) :: restart_file
   integer :: i, j, k, di, ierr, my_id
   logical :: file_exists, next_file_found, flip_i12 = .false.
-
-  real*8 :: t_norm, invdet
-  t_norm = sqrt(mu_zero * mass_proton * central_mass * central_density * 1.d20) ! 1 jorek time unit in seconds
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   if (present(prefer_plus_2)) then

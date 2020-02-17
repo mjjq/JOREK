@@ -68,7 +68,7 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
     call interp_PRZ(this%node_list,this%element_list,i_elm,i_v,n_v,s,t,phi,&
          Pd,Pd_s,Pd_t,Pd_phi,R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
     !> check if linear interpolations has to be performed
-    if((this%time_now-this%time_prev) .gt. 1d-10 .and. .not. this%static) then
+    if(abs(this%time_now-this%time_prev) .gt. 1d-10 .and. .not. this%static) then
       !> compute inverse time interval
       dt = 1.d0/(this%time_now - this%time_prev)
       !> compute time fraction
@@ -76,7 +76,7 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
       !> apply linear interpolation
       P     = linear_interp_differentials(n_v,P,Pd,df)
       P_s   = linear_interp_differentials(n_v,P_s,Pd_s,df)
-      P_t   = linear_interp_differentials(n_v,P_t,Pd_t,dt)
+      P_t   = linear_interp_differentials(n_v,P_t,Pd_t,df)
       P_phi = linear_interp_differentials(n_v,P_phi,Pd_phi,df)
     else
       dt = 1.d0/t_jorek!< compute time interval

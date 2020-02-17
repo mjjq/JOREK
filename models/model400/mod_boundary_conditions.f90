@@ -217,14 +217,16 @@ contains
 		  ! --- Apply Dirichlet if required
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, & 
-                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max,               & 
+                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
 
                   ! --------------
 		  ! --- Mach-1 BCs
                   if (k_var .eq. 7) then
                     call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, & 
-                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max,               & 
+                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
 
                 endif
@@ -280,14 +282,16 @@ contains
 		  ! --- Apply Dirichlet if required
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only,& 
-                                              only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                                              only_count,cnt, cnt_prod, i_tor_min, i_tor_max,               & 
+                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
 
                   ! --------------
 		  ! --- Mach-1 BCs
                   if (k_var .eq. 7) then
                     call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only,& 
-                                              only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                                              only_count,cnt, cnt_prod, i_tor_min, i_tor_max,               & 
+                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
 
                 endif
@@ -363,7 +367,8 @@ contains
 
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, & 
-                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                                             only_count,cnt, cnt_prod, i_tor_min, i_tor_max,               & 
+                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
 
                 endif
@@ -580,7 +585,9 @@ contains
   !***************** Routine to apply Dirichlet boundary conditions *************
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+  subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres,       & 
+                                 solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
+                                 ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
   
     use mod_parameters
     use data_structure
@@ -599,6 +606,9 @@ contains
     logical,		intent(in)    :: gmres, solve_only, only_count
     integer,		intent(inout) :: cnt, cnt_prod
     integer,            intent(in)    :: i_tor_min, i_tor_max
+    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    integer                           :: irn_glob(:), jcn_glob(:)
+    real*8                            :: A_glob(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -643,7 +653,10 @@ contains
   !****************** Routine to apply Mach-1 boundary conditions ***************
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+  subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres,    & 
+                             solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,&
+                             ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+  
   
     use mod_parameters
     use data_structure
@@ -662,6 +675,9 @@ contains
     logical,		intent(in)    :: gmres, solve_only, only_count
     integer,		intent(inout) :: cnt, cnt_prod
     integer,            intent(in)    :: i_tor_min, i_tor_max
+    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    integer                           :: irn_glob(:), jcn_glob(:)
+    real*8                            :: A_glob(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2

@@ -614,7 +614,7 @@ contains
                                        Zbig * ( - Vpar0 + BigR**2 * U0_t /ps0_t + direction*sqrt(GAMMA*T0) / Btot)
 
                                else
-                                  RHS_loc((i_tor_max - i_tor_min +1)*n_var * (index_node-1) + (kv-1)*(i_tor_max - i_tor_min +1) + in) = 0.d0
+                                  RHS_loc((i_tor_max - i_tor_min +1)*n_var * (index_node-1) + (kv-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1) = 0.d0
                                endif
                                !         write(*,'(A,i6,3e16.8)') ' bc5:',inode, Vpar0,direction*sqrt(GAMMA*T0) / Btot, Vpar0-direction*sqrt(GAMMA*T0) / Btot
 

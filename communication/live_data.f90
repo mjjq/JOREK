@@ -31,7 +31,7 @@ module live_data
   subroutine init_live_data()
     
     use mod_parameters,    only: n_tor, n_plane, n_period, jorek_model, variable_names
-    use phys_module,   only: produce_live_data, mode, mode_type, xpoint, xcase, central_density, sqrt_mu0_rho0, sqrt_mu0_over_rho0
+    use phys_module,   only: produce_live_data, mode, mode_type, xpoint, xcase, central_density, sqrt_mu0_rho0, sqrt_mu0_over_rho0, mu_zero
     
     implicit none
     
@@ -58,6 +58,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_period: ', n_period
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@sqrt_mu0_rho0: ', sqrt_mu0_rho0 
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@sqrt_mu0_over_rho0: ', sqrt_mu0_over_rho0
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@mu_zero: ', mu_zero
     write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies magnetic_energies kinetic_energies growth_rates magnetic_growth_rates  &
                                     kinetic_growth_rates times input_profiles axis current betas particlecontent thermalenergy & 
                                     heatingpower particlesource diag_coil_curr integrated_energies bnd_fluxes dEdt helicity    &
@@ -519,7 +520,7 @@ module live_data
   
   subroutine write_live_data_vacuum(index, diag_coil_curr)
     
-    use phys_module, only: xtime
+    use phys_module, only: xtime, mu_zero, sqrt_mu0_rho0
     
     integer,             intent(in) :: index
     real*8, allocatable, intent(in) :: diag_coil_curr(:,:)
@@ -532,7 +533,11 @@ module live_data
       if ( .not. header_written ) then
         write(LIVE_DATA_HANDLE,'(A,I5)') '@n_diag_coil_curr: ', size(diag_coil_curr,2)
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_xlabel: normalized time'
+        write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_xlabel_si: time [ms]'
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_ylabel: Diagnostic coil current'
+        write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_ylabel_si: Diagnostic coil current [A]'
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@diag_coil_curr_x2si: ', sqrt_mu0_rho0*1.e3
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@diag_coil_curr_y2si: ', 1./mu_zero
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_logy: 0'
         write(LIVE_DATA_HANDLE,*)
         header_written = .true.

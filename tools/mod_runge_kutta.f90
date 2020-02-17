@@ -52,6 +52,38 @@ module mod_runge_kutta
        integer,intent(out) :: ifail
        real(kind=8),dimension(n_variables),intent(out) :: derivatives
      end subroutine compute_runge_kutta_rhs
+
+     !> interface of the function computing time steps from
+     !> user defined errors.
+     !> inputs:
+     !>   n_variables:       (integer) number of variables
+     !>   n_int_parameters:  (integer) number of integer parameters
+     !>   n_real_parameters: (integer) number of real parameters
+     !>   t:                 (real8) integration coordinate
+     !>   solution_1:        (real8)(n_variables) old / low-order solution
+     !>   solution_2:        (real8)(n_variables) new / high-order solution
+     !>   int_parameters:    (integer)(n_int_parameters) integer parameters
+     !>   real_parameters:   (real8)(n_real_parameters) real parameters
+     !>   fields:            (field_base)(optional) fields for particle pushing
+     !> outputs:
+     !>   maximum_norm_error: (real8) maximum normalised error error/tolerance
+     function compute_user_error(fields,n_variales,n_int_parameters,&
+          n_real_parameters,t,solution_1,solution_2,int_parameters,&
+          real_parameters) result(maximum_norm_error)
+       !> load modules
+       use mod_fields, only: fields_base
+       implicit none
+       !> declare inputs
+       class(fields_base),intent(in) :: fields
+       integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
+       real(kind=8),intent(in) :: t
+       real(kind=8),dimension(n_variables),intent(in) :: solution_1,solution_2
+       integer,dimension(n_int_parameters),intent(in) :: int_parameters
+       real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
+       !> declare outputs
+       real(kind=8) :: maximum_norm_error
+     end function compute_user_error
+     
   end interface
   
 contains
@@ -67,27 +99,44 @@ contains
   !>   n_int_parameters:  (integer) number of integer parameters
   !>   n_real_parameters: (integer) number of real parameters
   !>   t:                 (real8) integration variables
+  !>   t_stop:            (real8) ccomputation stop time
   !>   dt:                (real8) integration step
   !>   solution_old:      (real8)(n_variables) old solution
   !>   int_parameters:    (integer)(n_integer_parameters)
   !>                      integer parameters
   !>   real_parameters:   (real8)(n_real_parameters)
   !>                      real parameters
+  !>   tolerances:        (real8)(n_variables) base error tolerances
+  !>   compute_user_err:  (real8)(n_errors)(optional) external function
+  !>                       allowing the user to compute an error based
+  !>                       on case specific error
   !> outputs:
+  !>   dt:       real(8) new time step
   !>   solution: (n_variables) runge kutta step solution
   !>   ifail:    (integer) if 0 the integration failed
   subroutine runge_kutta_variable_dt_order_error(compute_rhs,fields,n_variables,&
-       n_int_parameters,n_real_parameters,t,dt,solution_old,&
-       int_parameters,real_parameters,solution,ifail)
+       n_int_parameters,n_real_parameters,t,t_stop,dt,solution_old,&
+       int_parameters,real_parameters,tolerances,solution,ifail,compute_user_err)
     !> load modules
     use mod_fields, only: fields_base
     implicit none
+    !> declare parameters
+    integer,parameter :: maximum_iteration=100
+    !> shampine error estimate parameters:
+    !>   1: safety factor
+    !>   2: time step reduction
+    !>   3: time step increment
+    real(kind=8),dimension(3),parameter :: error_parameters=[&
+         9.d-1,1.d0/4.d0,1.d0/5.d0]
+    !> delcare input / outputs
+    real(kind=8),intent(inout) :: dt
     !> delcare inputs
     procedure(compute_runge_kutta_rhs) :: compute_rhs
+    procedure(compute_user_error) :: compute_user_err
     class(fields_base),intent(in) :: fields
     integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
-    real(kind=8),intent(in) :: t,dt
-    real(kind=8),dimension(n_variables),intent(in) :: solution_old
+    real(kind=8),intent(in) :: t,t_stop
+    real(kind=8),dimension(n_variables),intent(in) :: solution_old,tolerances
     integer,dimension(n_int_parameters),intent(in) :: int_parameters
     real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
     !> declare outputs
@@ -95,7 +144,61 @@ contains
     real(kind=8),dimension(n_variables),intent(out) :: solution
     !> declare internal variables
     real(kind=8),dimension(n_variables*n_stages) :: differentials
+    !> internal variables
+    integer :: iteration !< number of iterations
+    real(kind=8) :: error,dt_new !< error and new time step
+    real(kind=8),dimension(n_variables) :: solution_low_order
 
+    !> initialise counter to zero, error to 2 and copy time step
+    iteration = 0
+    dt_new = dt
+
+    !> compute first step
+    !> compute runge-kutta differential
+    call compute_runge_kutta_differentials(compute_rhs,fields,n_variables,&
+         n_int_parameters,n_real_parameters,t,dt,solution_old,&
+         int_parameters,real_parameters,differentials,ifail)
+    !> compute solution
+    call compute_runge_kutta_solution(n_variables,solution_old,&
+       differentials,solution,solution_low_order)
+    !> compute error
+    error = compute_base_error(n_variables,tolerances,&
+         solution,solution_low_order)!< base error
+    !> check if a user selected method has to be used
+    if(present(compute_user_err)) error = max(error,&
+         abs(compute_user_error(fields,n_variales,n_int_parameters,&
+         n_real_parameters,t,solution,solution_low_order,&
+         int_parameters,real_parameters)))
+    !> if good error compute larger time step
+    if(error.lt.1.d0) call compute_time_step_shampine(dt_new,&
+         error,[error_parameters(1),error_parameters(3)])
+
+    !> loop on the error control
+    do while(error.ge.1.d0 .and. iteration.le.maximum_iteration)
+       !> compute runge-kutta differentials
+       call compute_runge_kutta_differentials(compute_rhs,fields,n_variables,&
+            n_int_parameters,n_real_parameters,t,dt,solution_old,&
+            int_parameters,real_parameters,differentials,ifail)
+       !> compute solution
+       call compute_runge_kutta_solution(n_variables,solution_old,&
+          differentials,solution,solution_low_order)
+       !> compute error
+       error = compute_base_error(n_variables,tolerances,&
+            solution,solution_low_order)!< base error
+       !> check if a user selected method has to be used
+       if(present(compute_user_err)) error = max(error,&
+            abs(compute_user_error(fields,n_variales,n_int_parameters,&
+            n_real_parameters,t,solution,solution_low_order,&
+            int_parameters,real_parameters)))
+       !> compute new time step
+       call compute_time_step_shampine(dt_new,error,&
+              error_parameters(1:2))
+    enddo
+
+    !> check of the time step is larger than the stop time
+    if((t+dt_new).gt.t_stop) dt_new = t_stop-t
+    !> overwrite time step
+    dt = dt_new
 
   end subroutine runge_kutta_variable_dt_order_error
   
@@ -355,6 +458,48 @@ contains
     enddo
        
   end subroutine compute_runge_kutta_solution_1
+
+  !> This procedure compute the base error between two solutions as
+  !> max(abs). WARNING: tolerance must have the size of the variables
+  !> inputs:
+  !>   n_variables: (integer) number of variables
+  !>   tolerances:  (real8)(n_variables) tolerances
+  !>   solution_1:  (real8)(n_variables) first solution
+  !>   solution_2:  (real8)(n_variables) second solution
+  !> outputs:
+  !>   error: (real8) error estimate
+  pure function compute_base_error(n_variables,tolerances,solution_1,&
+       solution_2) result(error)
+    !> declare intput varibales
+    integer,intent(in) :: n_variables
+    real(kind=8),dimension(n_variables),intent(in) :: solution_1,solution_2
+    real(kind=8),dimension(n_variables),intent(in) :: tolerances
+    !> declare output_variables
+    real(kind=8) :: error
+
+    !> compute the error in infinite norm (most restrictive)
+    error = max(abs((solution_1,solution_2)/tolerances))
+    
+  end function compute_base_error
+  
+  !> This procedure estimate the new time step using the shimpine method
+  !> inputs:
+  !>   dt:         (real8) old time step
+  !>   error:      (real8) integration error
+  !<   parameters: (real8)(2) 1:safety factor, 2:exponent
+  !> outputs:
+  !>   dt: (real8) new time step
+  pure subroutine compute_time_step_shampine(dt,error,parameters)
+    !> declare input/ourputs
+    real(kind=8),intent(inout) :: dt
+    !> declare inputs:
+    real(kind=8),intent(in) :: error
+    real(kind=8),dimesnion(2),intent(in) :: error
+
+    !> compute new time step
+    dt = dt*parameters(1)*(error**(-1.d0*parameeters(2)))
+    
+  end subroutine compute_time_step_shampine
   
 end module mod_runge_kutta
 

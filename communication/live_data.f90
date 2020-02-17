@@ -64,7 +64,7 @@ module live_data
                                     heatingpower particlesource diag_coil_curr pf_coil_curr rmp_coil_curr integrated_energies  &
                                     bnd_fluxes dEdt helicity    &
                                     dissipative_terms work_terms             &
-                                    area volume li3 energy_conservation'
+                                    area volume li3 energy_conservation net_tor_wall_curr'
     write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names
     
     ! --- Write file headers indicating what data is in the files.
@@ -529,7 +529,7 @@ module live_data
     
     logical, save :: header_written_diag = .false., header_written_pf = .false., header_written_rmp = .false., &
                      header_written_net  = .false.
-    
+    integer :: n
     open(LIVE_DATA_HANDLE, file=LIVE_DATA_FILE, status='OLD', position='APPEND', action='WRITE')
     
     if ( allocated(diag_coil_curr) ) then
@@ -542,6 +542,10 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@diag_coil_curr_x2si: ', sqrt_mu0_rho0*1.e3
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@diag_coil_curr_y2si: ', 1./mu_zero
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_logy: 0'
+        write(LIVE_DATA_HANDLE,'(A)',advance='no') '@diag_coil_curr: %"time"           '
+        do n = 1,size(diag_coil_curr,2)
+          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"Diag_{', n, '}"'
+        end do
         write(LIVE_DATA_HANDLE,*)
         header_written_diag = .true.
       end if
@@ -558,6 +562,10 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@pf_coil_curr_x2si: ', sqrt_mu0_rho0*1.e3
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@pf_coil_curr_y2si: ', 1./mu_zero
         write(LIVE_DATA_HANDLE,'(A)') '@pf_coil_curr_logy: 0'
+        write(LIVE_DATA_HANDLE,'(A)',advance='no') '@pf_coil_curr: %"time"           '
+        do n = 1,size(pf_coil_curr,2)
+          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"PF_{', n, '}"'
+        end do
         write(LIVE_DATA_HANDLE,*)
         header_written_pf = .true.
       end if
@@ -575,6 +583,10 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@rmp_coil_curr_y2si: ', 1./mu_zero
         write(LIVE_DATA_HANDLE,'(A)') '@rmp_coil_curr_logy: 0'
         write(LIVE_DATA_HANDLE,*)
+        write(LIVE_DATA_HANDLE,'(A)',advance='no') '@RMP_coil_curr: %"time"           '
+        do n = 1,size(rmp_coil_curr,2)
+          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"RMP_{', n, '}"'
+        end do
         header_written_rmp = .true.
       end if
       write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@rmp_coil_curr: ', xtime(index), rmp_coil_curr(index,:)
@@ -590,6 +602,7 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@net_tor_wall_curr_x2si: ', sqrt_mu0_rho0*1.e3
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@net_tor_wall_curr_y2si: ', 1./mu_zero
         write(LIVE_DATA_HANDLE,'(A)') '@net_tor_wall_curr_logy: 0'
+        write(LIVE_DATA_HANDLE,'(A)',advance='no') '@net_tor_wall_curr: %"time"           "I_{tor,wall}"'
         write(LIVE_DATA_HANDLE,*)
         header_written_net = .true.
       end if

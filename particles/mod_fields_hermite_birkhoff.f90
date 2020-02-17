@@ -306,7 +306,7 @@ subroutine do_read(this, sim, ev)
   if (.not. allocated(sim%fields%element_list)) allocate(sim%fields%element_list)
 
   !> check if a static (oner restart) field has to be used
-  if(i.lt.0) sim%fields%static=.true.
+  if(this%i.lt.0) sim%fields%static=.true.
   
   ! Continue for jorek_fields_interp_hermite_birkhoff
   select type (f => sim%fields)
@@ -344,12 +344,10 @@ subroutine do_read(this, sim, ev)
       ! Now we have 3 or 4 time points in our list
 
       ! Finally we need to calculate the derivatives of the middle points (1 or
-      ! 2 points) if more than one restart is used (non static fields)
-      if(i.ge.0) then
-        do j=2,f%len-1
-          call interp_derivatives(f, j)
-        end do
-      endif
+      ! 2 points)
+      do j=2,f%len-1
+        call interp_derivatives(f, j)
+      end do
 
       ! Now we can remove the first element
       f%start = f%ind(2)
@@ -383,11 +381,9 @@ subroutine do_read(this, sim, ev)
       this%i=i ! set index of last-read file
 
       !> interpolate fields with midpoint rule if more than one restart is used
-      if(i.ge.0) then
-        do j=2,f%len-1
-          call interp_derivatives(f, j)
-        end do
-      endif
+      do j=2,f%len-1
+        call interp_derivatives(f, j)
+      end do
 
       ! set the time to run this event at next
       if (my_id .eq. 0) write(*,"(A,f9.8,A)") " Read next restart file, values until t=", f%t(f%ind(f%len-1)), " [s]"

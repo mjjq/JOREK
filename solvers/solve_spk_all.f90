@@ -1,5 +1,5 @@
+#ifdef USE_STRUMPACK      
 subroutine solve_spk_all(n_cpu,my_id,index_min,index_max)
-#ifdef USE_STRUMPACK        
 !---------------------------------------------------------------------
 ! subroutine solves the complete system of equation using STRUMPACK
 !---------------------------------------------------------------------
@@ -110,5 +110,5 @@ subroutine solve_spk_all(n_cpu,my_id,index_min,index_max)
   if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
 
   return
-#endif  
 end subroutine solve_spk_all
+#endif  

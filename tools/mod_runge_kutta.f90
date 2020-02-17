@@ -5,7 +5,7 @@
 module mod_runge_kutta
 
   private !< set all as private
-  public runge_kutta_fixed_dt
+  public runge_kutta_fixed_dt,runge_kutta_variable_dt_order_error
 
   !> declare module parameters
   integer,parameter :: n_stages=6 !< number of stages
@@ -56,6 +56,50 @@ module mod_runge_kutta
   
 contains
 
+  !> this procedure implement a runge-kutta integrator with
+  !> time step control with error estimated from multiple
+  !> orders.
+  !> inputs:
+  !>   compute_rhs:       (procedure) subroutine for computing
+  !>                      the ODE(s) right hand side
+  !>   fields:            (fields_base) jorek fields structure
+  !>   n_variables:       (integer) number of varibales
+  !>   n_int_parameters:  (integer) number of integer parameters
+  !>   n_real_parameters: (integer) number of real parameters
+  !>   t:                 (real8) integration variables
+  !>   dt:                (real8) integration step
+  !>   solution_old:      (real8)(n_variables) old solution
+  !>   int_parameters:    (integer)(n_integer_parameters)
+  !>                      integer parameters
+  !>   real_parameters:   (real8)(n_real_parameters)
+  !>                      real parameters
+  !> outputs:
+  !>   solution: (n_variables) runge kutta step solution
+  !>   ifail:    (integer) if 0 the integration failed
+  subroutine runge_kutta_variable_dt_order_error(compute_rhs,fields,n_variables,&
+       n_int_parameters,n_real_parameters,t,dt,solution_old,&
+       int_parameters,real_parameters,solution,ifail)
+    !> load modules
+    use mod_fields, only: fields_base
+    implicit none
+    !> delcare inputs
+    procedure(compute_runge_kutta_rhs) :: compute_rhs
+    class(fields_base),intent(in) :: fields
+    integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
+    real(kind=8),intent(in) :: t,dt
+    real(kind=8),dimension(n_variables),intent(in) :: solution_old
+    integer,dimension(n_int_parameters),intent(in) :: int_parameters
+    real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
+    !> declare outputs
+    integer,intent(out) :: ifail
+    real(kind=8),dimension(n_variables),intent(out) :: solution
+    !> declare internal variables
+    real(kind=8),dimension(n_variables*n_stages) :: differentials
+
+
+  end subroutine runge_kutta_variable_dt_order_error
+  
+  
   !> this subroutine implement a runge kutta integrator with
   !> fixed integration step
   !> inputs:

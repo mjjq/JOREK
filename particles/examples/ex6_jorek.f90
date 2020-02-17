@@ -56,9 +56,9 @@ if (.not. restart) then
   ! One can use read_jorek_fields_interp_linear or read_jorek_fields_interp_hermite_birkhoff,
   ! and i=-1 (to read jorek_restart.h5 and keep this field at all time) or i=last_file_before_time(sim%time)
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
-  events = [event(read_jorek_fields_interp_linear(i=-1)), & 
-            event(diag,start=sim%time,step=1d-9),         &
-	    event(stop_action(),start=sim%time+2.d-9)]
+  events = [event(read_jorek_fields_interp_linear(i=last_file_before_time(sim%time))), & 
+            event(diag,start=sim%time,step=1d-8),         &
+	    event(stop_action(),start=sim%time+1.d-6)]
 
   ! Run first event to read the JOREK fields
   call with(sim, events, at=0.d0)
@@ -71,24 +71,22 @@ if (.not. restart) then
 
       p%q = -1
 
-      p%x = [3.6d0,0.20d0,0.d0] ! in (R,Z,phi) coordinates
+      p%x = [3.6d0,0.d0,0.d0] ! in (R,Z,phi) coordinates
 
       call find_RZ(sim%fields%node_list, sim%fields%element_list,    &
                    p%x(1), p%x(2),                                   & ! inputs
                    p%x(1), p%x(2), p%i_elm, p%st(1), p%st(2), ifail)   ! outputs
 
-      !p%p = [0.d0,-3.37886d+6,0.d0] ! in (X,Y,Z) coordinates
+      !p%p = [0.d0,1.d+7,0.d0] ! in (X,Y,Z) coordinates
 
       ! Initializing momentum from energy, cosine of pitch-angle and gyro-angle
       ! To do this, we will convert the particle from particle_kinetic_relativistic
       ! into particle_gc_relativistic, then set the p_parallel and mu fields for the latter,
       ! and then convert it back into particle_kinetic_relativistic
 
-      energy     = 5.12d5 ! !!! AT PRESENT, MUST INCLUDE REST ENERGY (FIX THIS) !!!
-      ksi        = 0. !1.d0 ! Cosine of pitch-angle
+      energy     = 1.d7 !5.12d5 ! !!! AT PRESENT, MUST INCLUDE REST ENERGY (FIX THIS) !!!
+      ksi        = 1.d0 ! Cosine of pitch-angle
       gyro_angle = 0.
-
-      !particle_kin_rel = p
 
       call sim%fields%calc_EBpsiU(sim%time, p%i_elm, p%st, p%x(3), E, B, psi, U)
       
@@ -146,7 +144,7 @@ call check_and_fix_timesteps(timesteps, events)
 call sim%fields%set_flag_dpsidt(.true.)
 
 ! Open a file where to write some fields at a given position to test time interpolation routines
-!open(22,file='field_vs_t.dat')
+open(22,file='field_vs_t.dat')
 
 ! Loop until the simulation is stopped
 do while (.not. sim%stop_now)
@@ -168,11 +166,15 @@ do while (.not. sim%stop_now)
         do k=1,n_steps
           if (particles(j)%i_elm .eq. 0) exit
 	  sim%time = sim%time + timesteps(i)
+
+          !call volume_preserving_push_analytical(particles(j),sim%fields,sim%groups(i)%mass,sim%time,timesteps(i))
           call volume_preserving_push_jorek(particles(j),sim%fields,sim%groups(i)%mass,sim%time,timesteps(i),ifail)
-	!  if (modulo(k-1,10000)==0) then	                
-	!    call sim%fields%interp_PRZ(sim%time, 1000, [1], 1, 0.5, 0.5, 0.5, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)	 
-	!    write(22,'(7e26.16)') sim%time, P, P_time, R, Z
-	!  end if
+
+	  if (modulo(k-1,10000)==0) then	                
+	    call sim%fields%interp_PRZ(sim%time, 1000, [1], 1, 0.5, 0.5, 0.5, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)	
+	    write(22,'(7e26.16)') sim%time, P, P_time, R, Z
+	  end if
+
 	  if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1	
         end do !< time steps
       end do !< particles

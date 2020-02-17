@@ -1,4 +1,5 @@
 module spk_module
+#ifdef USE_STRUMPACK        
      
   use iso_c_binding
   use mpi
@@ -84,6 +85,6 @@ module spk_module
             return
     end subroutine getptr
 
-
+#endif
 end module spk_module
 

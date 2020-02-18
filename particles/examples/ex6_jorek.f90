@@ -40,13 +40,13 @@ call cpu_time(t0)
 call sim%initialize(num_groups=1)
   
 ! Set up the diagnostics output
-diag = write_particle_diagnostics(filename='diag.h5',only=[1,2,6,12,13,14]) ! store total and kinetic energies, p_phi, phi, R, Z
+diag = write_particle_diagnostics(filename='diag.h5',only=[1,2,6,12,13,14,15]) ! store total and kinetic energies, p_phi, phi, R, Z
 
 restart = .false. !
 
 if (.not. restart) then
 
-  sim%time = 1.d-7  ! start time 
+  sim%time = 2.5d-3 !1.d-7  ! start time 
 
   n_part = 1
   allocate(particle_kinetic_relativistic::sim%groups(1)%particles(n_part))
@@ -57,8 +57,8 @@ if (.not. restart) then
   ! and i=-1 (to read jorek_restart.h5 and keep this field at all time) or i=last_file_before_time(sim%time)
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
   events = [event(read_jorek_fields_interp_linear(i=last_file_before_time(sim%time))), & 
-            event(diag,start=sim%time,step=1d-8),         &
-	    event(stop_action(),start=sim%time+1.d-6)]
+            event(diag,start=sim%time,step=1d-7),         &
+	    event(stop_action(),start=sim%time+3.d-6)]
 
   ! Run first event to read the JOREK fields
   call with(sim, events, at=0.d0)
@@ -71,7 +71,7 @@ if (.not. restart) then
 
       p%q = -1
 
-      p%x = [3.6d0,0.d0,0.d0] ! in (R,Z,phi) coordinates
+      p%x = [3.68d0,0.d0,0.d0] ! in (R,Z,phi) coordinates
 
       call find_RZ(sim%fields%node_list, sim%fields%element_list,    &
                    p%x(1), p%x(2),                                   & ! inputs
@@ -84,7 +84,7 @@ if (.not. restart) then
       ! into particle_gc_relativistic, then set the p_parallel and mu fields for the latter,
       ! and then convert it back into particle_kinetic_relativistic
 
-      energy     = 1.d7 !5.12d5 ! !!! AT PRESENT, MUST INCLUDE REST ENERGY (FIX THIS) !!!
+      energy     = 5.12d5 ! 1.d7 ! !!! AT PRESENT, MUST INCLUDE REST ENERGY (FIX THIS) !!!
       ksi        = 1.d0 ! Cosine of pitch-angle
       gyro_angle = 0.
 

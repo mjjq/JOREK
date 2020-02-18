@@ -97,7 +97,7 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
   ! Determine between which sets to interpolate by selecting
   ! t_i <= t_now and taking the last true and first false value.
   do j=1,this%len
-    if (this%t(this%ind(j)) .gt. time) exit ! the loop
+    if ((this%t(this%ind(j)) .gt. time) .and. (.not. this%static)) exit ! the loop
   end do
   i1 = this%ind(j-1)
   i2 = this%ind(j)
@@ -313,17 +313,13 @@ subroutine do_read(this, sim, ev)
 
     !> check if a static (oner restart) field has to be used
     if(this%i.lt.0) then
-      f%start = 0 !< set start to 0
       !< read only on jorke restart
       call read_one_file(this,f,ierr)
       call update_neighbours(f%node_list, f%element_list)
-      f%len = 0 !< set length to zero
       call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
         tstep*t_norm, from_deltas=.false.) !< first value
-      f%len = 1 !< we now have 1 restart
       call append_to_fields(f, f%node_list, f%element_list, (t_start+tstep)*t_norm, &
         tstep*t_norm, from_deltas=.false.) !< second value with dummy time for constant tests
-      f%len = 2 !< we now have two restarts
       !> set static to true
       f%static = .true. !< set static to true
       return !< exti function

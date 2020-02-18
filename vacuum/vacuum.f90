@@ -16,7 +16,7 @@ module vacuum
   real*8              :: freeb_fact                      !< Switches on free-boundary terms in elt_matrix when =1.
   
   !> @name Resistive wall only
-  real*8              :: wall_resistivity_fact           !< Scaling factor for the wall resistivity specified in STARWALL
+  real*8              :: wall_resistivity_fact           !< Scaling factor for the wall and coil resistivities specified in STARWALL
   real*8              :: wall_resistivity                !< Resistivity of the external wall
   logical             :: wall_curr_initialized = .false. !< Have the wall currents been initialized?
   integer             :: n_wall_curr                     !< Number of wall current potentials.

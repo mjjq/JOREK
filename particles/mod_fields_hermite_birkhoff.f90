@@ -317,9 +317,9 @@ subroutine do_read(this, sim, ev)
       call read_one_file(this,f,ierr)
       call update_neighbours(f%node_list, f%element_list)
       call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
-        tstep*t_norm, from_deltas=.true.) !< first value
+        tstep*t_norm, from_deltas=.false.) !< first value
       call append_to_fields(f, f%node_list, f%element_list, (t_start+tstep)*t_norm, &
-        tstep*t_norm, from_deltas=.true.) !< second value with dummy time for constant tests
+        tstep*t_norm, from_deltas=.false.) !< second value with dummy time for constant tests
       !< set static to true
       f%static = .true. !< set static to true
       return !< exti function

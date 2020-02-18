@@ -115,7 +115,7 @@ E(3)  = E(3) - R_inv*P_time(1) ! because this is not normalized with t_norm
 end subroutine calc_EBpsiU
 
 !> This procedure computes the fields required for resolving
-!> the guiding center equations of motions
+!> the guiding center equations of motion
 !> inputs:
 !>   fields: (field_base) structure containing methods for computing EM fields
 !>   time:   (real8) particle time
@@ -140,28 +140,27 @@ pure subroutine calc_EBNormBGradBCurlbDbdt(fields,time,i_elm,st,phi,E,b,&
   implicit none
 
   !> declare input variables
-  class(fields_base),intent(in) :: fields
-  real(kind=8),intent(in) :: time
-  integer,intent(in) :: i_elm
-  real(kind=8),dimension(2),intent(in) :: st
-  real(kind=8),intent(in) :: phi
+  class(fields_base), intent(in)         :: fields
+  real(kind=8), intent(in)               :: time
+  integer, intent(in)                    :: i_elm
+  real(kind=8), dimension(2), intent(in) :: st
+  real(kind=8), intent(in)               :: phi
   !> declare output variables
-  real(kind=8),intent(out) :: normB
-  real(kind=8),dimension(3),intent(out) :: E,b,gradB,curlb,dbdt
-  !> declare parameters
+  real(kind=8), intent(out)               :: normB
+  real(kind=8), dimension(3), intent(out) :: E, b, gradB, curlb, dbdt
   !> declare internal variables
-  real(kind=8) :: R_inv,normB_inv
-  real(kind=8),dimension(2) :: U_RZ !< 1:U_R,2:U_Z
-  !> global coordinates and derivatives: 1:R,2:R_s,3:R_t,4:R_ss,5:R_st,6:R_tt,
-  !> 7:Z,8:Z_s,9:Z_t,10:Z_ss,11:Z_st,12:Z_tt
-  real(kind=8),dimension(12) :: RZ
-  real(kind=8),dimension(5) :: U !< stream funciton: [U,U_R,U_Z,U_phi,U_time]
-  !> psi derivatives in global coordinates: 1:psi_R,2:psi_Z,3:psi_RR,
-  !> 4:psi_RZ,5:psi_ZZ,6:psi_Rphi,7:psi_Zphi,8:psi_Rtime,9:psi_Ztime
-  real(kind=8),dimension(9) :: psi_RZ
-  !> poloidal flux: psi,psi_s,psi_t,psi_phi,psi_time,psi_ss,psi_st,psi_tt,
-  !>   psi_sphi, psi_tphi, psi_stime,psi_ttime
-  real(kind=8),dimension(12) :: psi 
+  real(kind=8)               :: R_inv, normB_inv
+  real(kind=8), dimension(2) :: U_RZ !< 1:U_R, 2:U_Z
+  !> global coordinates and derivatives: 1:R, 2:R_s, 3:R_t, 4:R_ss, 5:R_st, 6:R_tt,
+  !> 7:Z, 8:Z_s, 9:Z_t, 10:Z_ss, 11:Z_st, 12:Z_tt
+  real(kind=8), dimension(12) :: RZ
+  real(kind=8), dimension(5)  :: U !< stream function: [U,U_R,U_Z,U_phi,U_time]
+  !> psi derivatives in global coordinates: 1:psi_R, 2:psi_Z, 3:psi_RR,
+  !> 4:psi_RZ, 5:psi_ZZ, 6:psi_Rphi, 7:psi_Zphi, 8:psi_Rtime, 9:psi_Ztime
+  real(kind=8), dimension(9) :: psi_RZ
+  !> poloidal flux: psi, psi_s, psi_t, psi_phi, psi_time, psi_ss, psi_st, psi_tt,
+  !>   psi_sphi, psi_tphi, psi_stime, psi_ttime
+  real(kind=8), dimension(12) :: psi 
 
   !> interpolate the stream function
   call fields%interp_PRZ(time,i_elm,[2],1,st(1),st(2),phi,U(1),U(2),U(3),&
@@ -177,6 +176,7 @@ pure subroutine calc_EBNormBGradBCurlbDbdt(fields,time,i_elm,st,phi,E,b,&
        psi(3),psi(4),psi(5),psi(6),psi(7),psi(8),psi(9),psi(10),psi(11),&
        psi(12),RZ(1),RZ(2),RZ(3),RZ(4),RZ(5),RZ(6),RZ(7),RZ(8),RZ(9),&
        RZ(10),RZ(11),RZ(12))
+
   !> set dpsidt to zero if needed
   if(fields%flag_zero_dpsidt) then
      psi(5)  = 0.d0 !< psi_time
@@ -199,7 +199,9 @@ pure subroutine calc_EBNormBGradBCurlbDbdt(fields,time,i_elm,st,phi,E,b,&
   E = -[U_RZ(1),U_RZ(2),R_inv*(U(4)+psi(5))] !< V/m
   !> compute the magnetic field
   b = [psi_RZ(2),-psi_RZ(1),F0]*R_inv !< magnetic field T
+
   normB = sqrt(b(1)*b(1)+b(2)*b(2)+b(3)*b(3)) !< B field intensity
+
   normB_inv = 1.d0/normB !< inverse of the B field intensity
   !< direction of the magnetic field
   b = b/normB

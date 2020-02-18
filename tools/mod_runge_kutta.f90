@@ -5,7 +5,8 @@
 module mod_runge_kutta
 
   private !< set all as private
-  public runge_kutta_fixed_dt,runge_kutta_variable_dt_order_error
+  public runge_kutta_fixed_dt,runge_kutta_order_error_control_dt
+  public runge_kutta_adaptative_dt
 
   !> declare module parameters
   integer,parameter :: n_stages=6 !< number of stages
@@ -53,9 +54,9 @@ module mod_runge_kutta
        real(kind=8),dimension(n_variables),intent(out) :: derivatives
      end subroutine compute_runge_kutta_rhs
 
-     !> interface of the function computing time steps from
-     !> user defined errors.
+     !> interface of the function computing user defined errors
      !> inputs:
+     !>   fields:            (field_base)(optional) fields for particle pushing
      !>   n_variables:       (integer) number of variables
      !>   n_int_parameters:  (integer) number of integer parameters
      !>   n_real_parameters: (integer) number of real parameters
@@ -64,7 +65,6 @@ module mod_runge_kutta
      !>   solution_2:        (real8)(n_variables) new / high-order solution
      !>   int_parameters:    (integer)(n_int_parameters) integer parameters
      !>   real_parameters:   (real8)(n_real_parameters) real parameters
-     !>   fields:            (field_base)(optional) fields for particle pushing
      !> outputs:
      !>   maximum_norm_error: (real8) maximum normalised error error/tolerance
      function compute_user_error(fields,n_variables,n_int_parameters,&
@@ -83,14 +83,45 @@ module mod_runge_kutta
        !> declare outputs
        real(kind=8) :: maximum_norm_error
      end function compute_user_error
-     
+
+     !> interface of the function adapting time steps using
+     !> user defined rules.
+     !> inputs:
+     !>   fields:            (field_base)(optional) fields for particle pushing
+     !>   n_variables:       (integer) number of variables
+     !>   n_int_parameters:  (integer) number of integer parameters
+     !>   n_real_parameters: (integer) number of real parameters
+     !>   t:                 (real8) integration coordinate
+     !>   dt:                (real8) old time step
+     !>   solution:        (real8)(n_variables) solution
+     !>   int_parameters:    (integer)(n_int_parameters) integer parameters
+     !>   real_parameters:   (real8)(n_real_parameters) real parameters
+     !> outputs:
+     !>   dt_new: (real8) new time step
+     function adapt_time_step(fields,n_variables,n_int_parameters,&
+          n_real_parameters,t,dt,solution,int_parameters,&
+          real_parameters) result(dt_new)
+       !> load modules
+       use mod_fields, only: fields_base
+       implicit none
+       !> declare inputs
+       class(fields_base),intent(in) :: fields
+       integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
+       real(kind=8),intent(in) :: t,dt
+       real(kind=8),dimension(n_variables),intent(in) :: solution
+       integer,dimension(n_int_parameters),intent(in) :: int_parameters
+       real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
+       !> declare outputs
+       real(kind=8) :: dt_new
+     end function adapt_time_step   
   end interface
   
 contains
 
   !> this procedure implement a runge-kutta integrator with
   !> time step control with error estimated from multiple
-  !> orders.
+  !> orders.This is basically a feedback integration step
+  !> cotroller.
   !> inputs:
   !>   compute_rhs:       (procedure) subroutine for computing
   !>                      the ODE(s) right hand side
@@ -114,7 +145,7 @@ contains
   !>   dt:       real(8) new time step
   !>   solution: (n_variables) runge kutta step solution
   !>   ifail:    (integer) if 0 the integration failed
-  subroutine runge_kutta_variable_dt_order_error(compute_rhs,fields,n_variables,&
+  subroutine runge_kutta_order_error_control_dt(compute_rhs,fields,n_variables,&
        n_int_parameters,n_real_parameters,t,t_stop,dt,solution_old,&
        int_parameters,real_parameters,tolerances,solution,ifail,compute_user_err)
     !> load modules
@@ -200,8 +231,75 @@ contains
     !> overwrite time step
     dt = dt_new
 
-  end subroutine runge_kutta_variable_dt_order_error
-  
+  end subroutine runge_kutta_order_error_control_dt
+
+  !> this subroutine implement a runge kutta integrator with
+  !> adaptative integration step. Rules for adaptation step
+  !> integration has to be provided by the user. This is
+  !> basically a feed-forward integration step controller.
+  !> inputs:
+  !>   compute_rhs:       (procedure) subroutine for computing
+  !>                      the ODE(s) right hand side
+  !>   compute_dt:        (procedure) function for computing
+  !>                      the new time step
+  !>   fields:            (fields_base) jorek fields structure
+  !>   n_variables:       (integer) number of varibales
+  !>   n_int_parameters:  (integer) number of integer parameters
+  !>   n_real_parameters: (integer) number of real parameters
+  !>   t:                 (real8) integration variables
+  !>   t_stop:            (real8) stop time
+  !>   dt:                (real8) integration step
+  !>   solution_old:      (real8)(n_variables) old solution
+  !>   int_parameters:    (integer)(n_integer_parameters)
+  !>                      integer parameters
+  !>   real_parameters:   (real8)(n_real_parameters)
+  !>                      real parameters
+  !> outputs:
+  !>   dt:       (real8) new integration step
+  !>   solution: (n_variables) runge kutta step solution
+  !>   ifail:    (integer) if 0 the integration failed
+  subroutine runge_kutta_adaptative_dt(compute_rhs,compute_dt,&
+       fields,n_variables,n_int_parameters,n_real_parameters,&
+       t,t_stop,dt,solution_old,int_parameters,real_parameters,&
+       solution,ifail)
+    !> load modules
+    use mod_fields, only: fields_base
+    implicit none
+    !> declare input-output variables
+    real(kind=8),intent(inout) :: dt
+    !> delcare inputs
+    procedure(compute_runge_kutta_rhs) :: compute_rhs
+    procedure(adapt_time_step) :: compute_dt
+    class(fields_base),intent(in) :: fields
+    integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
+    real(kind=8),intent(in) :: t,t_stop
+    real(kind=8),dimension(n_variables),intent(in) :: solution_old
+    integer,dimension(n_int_parameters),intent(in) :: int_parameters
+    real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
+    !> declare outputs
+    integer,intent(out) :: ifail
+    real(kind=8),dimension(n_variables),intent(out) :: solution
+    !> declare internal variables
+    real(kind=8),dimension(n_variables*n_stages) :: differentials
+
+    !> compute the new time step
+    dt = compute_dt(fields,n_variables,n_int_parameters,&
+          n_real_parameters,t,dt,solution,int_parameters,&
+          real_parameters)
+
+    !> check if the time step is not too large
+    if((t+dt) .gt. t_stop) dt = t_stop - dt
+
+    !> compute runge-kutta differentials
+    call compute_runge_kutta_differentials(compute_rhs,fields,n_variables,&
+         n_int_parameters,n_real_parameters,t,dt,solution_old,&
+         int_parameters,real_parameters,differentials,ifail)
+
+    !> compute runge-kutta solutions
+    call compute_runge_kutta_solution(n_variables,solution_old,&
+         differentials,solution)
+
+  end subroutine runge_kutta_adaptative_dt  
   
   !> this subroutine implement a runge kutta integrator with
   !> fixed integration step

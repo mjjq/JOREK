@@ -97,7 +97,7 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
   ! Determine between which sets to interpolate by selecting
   ! t_i <= t_now and taking the last true and first false value.
   do j=1,this%len
-    if ((this%t(this%ind(j)) .gt. time) .and. (.not. this%static)) exit ! the loop
+    if (this%t(this%ind(j)) .gt. time) exit ! the loop
   end do
   i1 = this%ind(j-1)
   i2 = this%ind(j)
@@ -109,13 +109,10 @@ pure subroutine do_interp_PRZ_1(this, time, i_elm, i_v, n_v, s, t, phi, P, P_s, 
     V(:,1,1), V(:,2,1), V(:,3,1), V(:,4,1),   R,R_s,R_t,Z,Z_s,Z_t)
   call interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
        V(:,1,2), V(:,2,2), V(:,3,2), V(:,4,2),   R,R_s,R_t,Z,Z_s,Z_t)
-  !> do not interpolate deltas if on restart is used
-  if(.not.this%static) then
-    call interp_PRZ(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
-      V(:,1,3), V(:,2,3), V(:,3,3), V(:,4,3),   R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
-    call interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
-      V(:,1,4), V(:,2,4), V(:,3,4), V(:,4,4),   R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
-  end if
+  call interp_PRZ(this%node_lists(i1),  this%element_lists(i1),  i_elm,i_v,n_v,s,t,phi, &
+    V(:,1,3), V(:,2,3), V(:,3,3), V(:,4,3),   R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
+  call interp_PRZ(this%node_lists(i2),  this%element_lists(i2),  i_elm,i_v,n_v,s,t,phi, &
+    V(:,1,4), V(:,2,4), V(:,3,4), V(:,4,4),   R,R_s,R_t,Z,Z_s,Z_t,deltas=.true.)
 
   call HB_interp(this%t(i1), this%t(i2), n_v, V(:,1,1), V(:,1,2), V(:,1,3), V(:,1,4), time, P)
   call HB_interp(this%t(i1), this%t(i2), n_v, V(:,2,1), V(:,2,2), V(:,2,3), V(:,2,4), time, P_s)
@@ -192,19 +189,16 @@ pure subroutine do_interp_PRZ_2(this,time,i_elm,i_v,n_v,s,t,phi,&
          values(:,5,2),values(:,6,2),values(:,7,2),values(:,8,2),&
          values(:,9,2),values(:,10,2),R,R_s,R_t,R_st,R_ss,R_tt,&
          Z,Z_s,Z_t,Z_st,Z_ss,Z_tt) !< second restart values
-    !> do not interpolate deltas if one restart is used
-    if(.not.this%static) then
-      call interp_PRZ(this%node_lists(i1),this%element_lists(i1),i_elm,i_v,n_v,&
-           s,t,phi,values(:,1,3),values(:,2,3),values(:,3,3),values(:,4,3),&
-           values(:,5,3),values(:,6,3),values(:,7,3),values(:,8,3),&
-           values(:,9,3),values(:,10,3),R,R_s,R_t,R_st,R_ss,R_tt,&
-           Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< first restart derivatives
-      call interp_PRZ(this%node_lists(i2),this%element_lists(i2),i_elm,i_v,n_v,&
-           s,t,phi,values(:,1,4),values(:,2,4),values(:,3,4),values(:,4,4),&
-           values(:,5,4),values(:,6,4),values(:,7,4),values(:,8,4),&
-           values(:,9,4),values(:,10,4),R,R_s,R_t,R_st,R_ss,R_tt,&
-           Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< second restart derivatives
-    endif
+    call interp_PRZ(this%node_lists(i1),this%element_lists(i1),i_elm,i_v,n_v,&
+         s,t,phi,values(:,1,3),values(:,2,3),values(:,3,3),values(:,4,3),&
+         values(:,5,3),values(:,6,3),values(:,7,3),values(:,8,3),&
+         values(:,9,3),values(:,10,3),R,R_s,R_t,R_st,R_ss,R_tt,&
+         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< first restart derivatives
+    call interp_PRZ(this%node_lists(i2),this%element_lists(i2),i_elm,i_v,n_v,&
+         s,t,phi,values(:,1,4),values(:,2,4),values(:,3,4),values(:,4,4),&
+         values(:,5,4),values(:,6,4),values(:,7,4),values(:,8,4),&
+         values(:,9,4),values(:,10,4),R,R_s,R_t,R_st,R_ss,R_tt,&
+         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< second restart derivatives
  
     !> compute field time interpolations
     call HB_interp(this%t(i1),this%t(i2),n_v,values(:,1,1),values(:,1,2),&
@@ -249,9 +243,13 @@ function new_read_jorek_fields_interp_hermite_birkhoff(basename, i, rst_format, 
   if (present(stop_at_end)) new%stop_at_end = stop_at_end
   new%name = "ReadJorekFieldsInterpHermiteBirkhoff"
   new%log = .true.
+  !< check if one restart is required and exit the program
+  if(i.eq.(-1)) then 
+    write(*,*) "ERROR: Hermite-Birkhoff interpolation requires time-varying fields"
+    write(*,*) "for static fields use linear interpolation"
+    stop
+  endif
 end function new_read_jorek_fields_interp_hermite_birkhoff
-
-
 
 !> Read jorek fields from the next restart file.
 !>
@@ -310,20 +308,6 @@ subroutine do_read(this, sim, ev)
   type is (jorek_fields_interp_hermite_birkhoff)
     if (.not. allocated(f%node_lists)) allocate(f%node_lists(NL))
     if (.not. allocated(f%element_lists)) allocate(f%element_lists(NL))
-
-    !> check if a static (oner restart) field has to be used
-    if(this%i.lt.0) then
-      !< read only on jorke restart
-      call read_one_file(this,f,ierr)
-      call update_neighbours(f%node_list, f%element_list)
-      call append_to_fields(f, f%node_list, f%element_list, t_start*t_norm, &
-        tstep*t_norm, from_deltas=.false.) !< first value
-      call append_to_fields(f, f%node_list, f%element_list, (t_start+tstep)*t_norm, &
-        tstep*t_norm, from_deltas=.false.) !< second value with dummy time for constant tests
-      !> set static to true
-      f%static = .true. !< set static to true
-      return !< exti function
-    endif
 
     ! If nothing has been loaded load the initial file
     if (f%len .eq. 0) then
@@ -408,75 +392,6 @@ subroutine do_read(this, sim, ev)
     if (my_id .eq. 0) write(*,*) "ERROR, do_read called with wrong sim%fields"
   end select
 end subroutine do_read
-
-!> read only one restart file in case of static fields
-!> Performs MPI communication to get values from root process to
-!> every other process.
-!> inputs:
-!>   this: (read_jorek_fields_interp_hermite_birkhoff) method for reading HB fields
-!>   f:    (jorek_fields_interp_hermite_birkhoff) fields interpolation via HB
-!> outputs
-!>   this:    (read_jorek_fields_interp_hermite_birkhoff) method for reading HB fields
-!>   f:       (jorek_fields_interp_hermite_birkhoff) fields interpolation via HB
-!>   i_found: (integer) check if the file has been found
-subroutine read_one_file(this,f,i_found)
-  !> load modules
-  use mod_import_restart
-  use phys_module
-  use mpi
-  implicit none
-  !> declare input/output variables
-  class(read_jorek_fields_interp_hermite_birkhoff), intent(inout) :: this
-  class(jorek_fields_interp_hermite_birkhoff), intent(inout) :: f
-  !> declare output varibales
-  integer, intent(out) :: i_found
-  !> declare internal variables
-  character(len=80) :: restart_file
-  integer :: ierr, my_id
-  logical :: file_exists
-
-  !> retrive comunicator data
-  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
-
-  !> only master task
-  if(my_id.eq.0) then
-    !> check if -1 is given
-    if(this%i .eq. -1 ) then
-      write(restart_file,'(A,A)') trim(this%basename), '_restart.h5'
-    else
-      write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
-    endif
-    !< check the file extistance
-    inquire(file=trim(restart_file), exist=file_exists)
-    if (file_exists) then
-      call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,ierr)
-      f%static = .true.
-    else
-      write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
-      call exit(1)
-    endif
-    if(file_exists.and.(ierr.eq.0)) then
-      i_found = 1
-    else
-      i_found = 0
-    endif
-  endif
-
-  !< broadcast i_found
-  call MPI_Bcast(i_found, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-
-  !> check if the file has been read
-  if(i_found .eq. 1) then
-    !> broadcast all data
-    call broadcast_elements(my_id, f%element_list)
-    call broadcast_nodes(my_id, f%node_list)
-    call broadcast_phys(my_id) ! we only really use tstep and t_start but this is simpler to write
-  else
-    write(*,*) "ERROR: load restart file failed: STOP"
-    call MPI_Abort(MPI_COMM_WORLD, 1, ierr) !< stop program
-  endif
-
-end subroutine read_one_file
 
 !> Starting from i+2 (if prefer_plus_2=.true.), i+1, i+N search for a next file and read it into
 !> f%node_list, f%element_list.

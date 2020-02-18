@@ -56,7 +56,7 @@ pure function cayley_transform(alpha,vec)
 ! computing (I+alpha*B)
   B(1:3,1) = (/1.d0,-alpha*vec(3),alpha*vec(2)/)
   B(1:3,2) = (/alpha*vec(3),1.d0,-alpha*vec(1)/)
-  B(1:3,3) = (/-alpha*vec(2),-alpha*vec(1),1.d0/)
+  B(1:3,3) = (/-alpha*vec(2),alpha*vec(1),1.d0/)
 
 ! computing (I-alpha*B)^(-1)
   A(1:3,1) = (/(1.0 + alpha*alpha*vec(1)*vec(1)),(alpha*(alpha*vec(1)*vec(2) - vec(3))),&

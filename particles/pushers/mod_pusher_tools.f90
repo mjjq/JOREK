@@ -54,20 +54,20 @@ pure function cayley_transform(alpha,vec)
   real(kind=8),dimension(3,3) :: A,B !< (I-alpha*B)^(-1) and (I+alpha*B)
 
 ! computing (I+alpha*B)
-  B(1:3,1) = (/1.d0,(-alpha*vec(3)),alpha*vec(2)/)
-  B(1:3,2) = (/alpha*vec(3),1.d0,(-alpha*vec(1))/)
-  B(1:3,3) = (/(-alpha*vec(2)),alpha*vec(1),1.d0/)
+  B(1:3,1) = (/1.d0,alpha*vec(3),-alpha*vec(2)/)
+  B(1:3,2) = (/-alpha*vec(3),1.d0,alpha*vec(1)/)
+  B(1:3,3) = (/alpha*vec(2),-alpha*vec(1),1.d0/)
 
 ! computing (I-alpha*B)^(-1)
-  A(1:3,1) = (/(1.0 + alpha*alpha*vec(1)*vec(1)),(alpha*(alpha*vec(1)*vec(2) - vec(3))),&
-            (alpha*(alpha*vec(3)*vec(1) + vec(2)))/)
-  A(1:3,2) = (/(alpha*(alpha*vec(2)*vec(1) + vec(3))),(1.0 + alpha*alpha*vec(2)*vec(2)),&
-            (alpha*(alpha*vec(3)*vec(2) - vec(1)))/)
-  A(1:3,3) = (/(alpha*(alpha*vec(3)*vec(1) - vec(2))),(alpha*(alpha*vec(2)*vec(3) + vec(1))),&
+  A(1:3,1) = (/(1.0 + alpha*alpha*vec(1)*vec(1)),(alpha*(alpha*vec(1)*vec(2) + vec(3))),&
+            (alpha*(alpha*vec(3)*vec(1) - vec(2)))/)
+  A(1:3,2) = (/(alpha*(alpha*vec(2)*vec(1) - vec(3))),(1.0 + alpha*alpha*vec(2)*vec(2)),&
+            (alpha*(alpha*vec(3)*vec(2) + vec(1)))/)
+  A(1:3,3) = (/(alpha*(alpha*vec(3)*vec(1) + vec(2))),(alpha*(alpha*vec(2)*vec(3) - vec(1))),&
             (1.0 + alpha*alpha*vec(3)*vec(3))/)
 
 ! computing the Cayley transform
-  cayley_transform = (matmul(A,B))/(1.d0 + alpha*alpha*(dot_product(vec,vec)))
+  cayley_transform = (matmul(A,B))/(1.d0 + alpha*alpha*(vec(1)*vec(1)+vec(2)*vec(2)+vec(3)*vec(3)))
 
 end function cayley_transform
 

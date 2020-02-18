@@ -67,7 +67,7 @@ module mod_runge_kutta
      !>   fields:            (field_base)(optional) fields for particle pushing
      !> outputs:
      !>   maximum_norm_error: (real8) maximum normalised error error/tolerance
-     function compute_user_error(fields,n_variales,n_int_parameters,&
+     function compute_user_error(fields,n_variables,n_int_parameters,&
           n_real_parameters,t,solution_1,solution_2,int_parameters,&
           real_parameters) result(maximum_norm_error)
        !> load modules
@@ -132,7 +132,7 @@ contains
     real(kind=8),intent(inout) :: dt
     !> delcare inputs
     procedure(compute_runge_kutta_rhs) :: compute_rhs
-    procedure(compute_user_error) :: compute_user_err
+    procedure(compute_user_error),optional :: compute_user_err
     class(fields_base),intent(in) :: fields
     integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
     real(kind=8),intent(in) :: t,t_stop
@@ -166,7 +166,7 @@ contains
          solution,solution_low_order)!< base error
     !> check if a user selected method has to be used
     if(present(compute_user_err)) error = max(error,&
-         abs(compute_user_error(fields,n_variales,n_int_parameters,&
+         abs(compute_user_err(fields,n_variables,n_int_parameters,&
          n_real_parameters,t,solution,solution_low_order,&
          int_parameters,real_parameters)))
     !> if good error compute larger time step
@@ -187,7 +187,7 @@ contains
             solution,solution_low_order)!< base error
        !> check if a user selected method has to be used
        if(present(compute_user_err)) error = max(error,&
-            abs(compute_user_error(fields,n_variales,n_int_parameters,&
+            abs(compute_user_err(fields,n_variables,n_int_parameters,&
             n_real_parameters,t,solution,solution_low_order,&
             int_parameters,real_parameters)))
        !> compute new time step
@@ -478,7 +478,7 @@ contains
     real(kind=8) :: error
 
     !> compute the error in infinite norm (most restrictive)
-    error = max(abs((solution_1,solution_2)/tolerances))
+    error = maxval(abs((solution_1-solution_2)/tolerances))
     
   end function compute_base_error
   
@@ -494,10 +494,10 @@ contains
     real(kind=8),intent(inout) :: dt
     !> declare inputs:
     real(kind=8),intent(in) :: error
-    real(kind=8),dimesnion(2),intent(in) :: error
+    real(kind=8),dimension(2),intent(in) :: parameters
 
     !> compute new time step
-    dt = dt*parameters(1)*(error**(-1.d0*parameeters(2)))
+    dt = dt*parameters(1)*(error**(-1.d0*parameters(2)))
     
   end subroutine compute_time_step_shampine
   

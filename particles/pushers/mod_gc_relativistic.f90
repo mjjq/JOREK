@@ -34,11 +34,11 @@ contains
    !>                      4: magnetic moment
    !> outputs:
    !>   dt_new: (real8) new time step
-   pure function adapt_time_step_gradB_curlb(fields,n_variables,n_int_parameters,&
-        n_real_parameters,t,dt,solution,int_parameters,&
+  pure function adapt_time_step_gradB_curlb_dbdt(fields,n_variables,&
+       n_int_parameters, n_real_parameters,t,dt,solution,int_parameters,&
         real_parameters) result(dt_new)
      !> load modules
-     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,TWOPI
+     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,TWOPI,SPEED_OF_LIGHT
      use mod_fields, only: fields_base
      implicit none
      !> parameters
@@ -54,16 +54,34 @@ contains
      !> declare outputs
      real(kind=8) :: dt_new
      !> declare internal variables
-     real(kind=8) :: velocity_max,normB
+     real(kind=8) :: velocity,relativistic_factor,normB
      real(kind=8),dimension(3) :: E,b,gradB,curlb,dbdt 
 
      !> compute fields
      call fields%calc_EBNormBGradBCurlbDbdt(t,int_parameters(1),&
           real_parameters(1:2),solution(3),E,b,normB,gradB,curlb,dbdt)
      
-     
+     !> computing the particle velocity
+     velocity = (solution(4)*solution(4) + &
+          2.d0*real_parameters(3)*real_parameters(4)*normB)/&
+          (real_parameters(3)*real_parameters(3))
+     relativistic_factor = sqrt(1.d0 + velocity/(&
+          SPEED_OF_LIGHT*SPEED_OF_LIGHT))
+     velocity = sqrt(velocity)/relativistic_factor
+     !> compute the characteristic times
+     gradB = normB/(velocity*gradB)
+     curlb = 1.d0/(velocity*curlb)
+     dbdt = 1.d0/dbdt
+     !> compute the new time step
+     dt_new = inv_number_steps*minval(abs([gradB(1),gradB(2),gradB(3),&
+          curlb(1),curlb(2),curlb(3),dbdt(1),dbdt(2),dbdt(3)]))
+     !> limit the time step at a fixed number of gyroperiod
+     dt_new = max(dt_new,&
+          minimum_n_gyroperiod*TWOPI*abs((real_parameters(3)*&
+          ATOMIC_MASS_UNIT*relativistic_factor)/&
+          (real(int_parameters(2),kind=8)*normB)))
 
-   end function adapt_time_step_gradB_curlb
+   end function adapt_time_step_gradB_curlb_dbdt
 
   !> This procedure pushes a relativistic guiding center in JOREK fields
   !> using standard Runge-Kutta integrator without time step control

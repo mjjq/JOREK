@@ -19,17 +19,17 @@ module mod_gc_relativistic
 contains
 
   !> This procedure pushes a relativistic guiding center in JOREK fields
-  !> using standard Runge-Kutta integrator without time step control
+  !> using a standard Runge-Kutta integrator without time step control
   !> inputs:
-  !>   fields:   (fields_base) jorek fields
-  !>   t:        (real8) simulation time
-  !>   dt:       (real8) simulation time step
-  !>   mass:     (real8) the gc mass in AMU
-  !>   particle: (particle_gc_relativistic) the gc to integrate
+  !>   fields:   (fields_base) JOREK fields
+  !>   t:        (real8) current time
+  !>   dt:       (real8) time step
+  !>   mass:     (real8) GC mass in AMU
+  !>   particle: (particle_gc_relativistic) GC to be pushed
   !> outputs:
-  !>   particle: (particle_gc_relativistic) the integrated gc
-  subroutine runge_kutta_fixed_dt_gc_push_jorek(fields,t,dt,&
-       mass,particle)
+  !>   particle: (particle_gc_relativistic) pushed GC
+  subroutine runge_kutta_fixed_dt_gc_push_jorek(fields,t,dt, &
+    mass,particle)
     !> load modules
     use mod_fields, only: fields_base
     use mod_find_rz_nearby
@@ -44,40 +44,40 @@ contains
     integer :: ifail, i_elm_new !< particle new element
     !> new particle local coordinates: 1:s, 2:t
     real(kind=8), dimension(2) :: st_new
-    !> integrate global coordinates: 1:R, 2:Z, 3:phi, 4:p_parallel
-    real(kind=8),dimension(4) :: solution_new
+    !> global coordinates used during RK integration: 1:R, 2:Z, 3:phi, 4:p_parallel
+    real(kind=8), dimension(4) :: solution_new
 
     !> compute Runge-Kutta differentials
-    call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives_jorek,&
-         fields,4,2,4,t,dt,[particle%x(1),particle%x(2),particle%x(3),&
-         particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
-         particle%st(2),mass,particle%p(2)],solution_new,i_elm_new)
+    call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives_jorek, &
+      fields,4,2,4,t,dt,[particle%x(1),particle%x(2),particle%x(3),      &
+      particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),   &
+      particle%st(2),mass,particle%p(2)],solution_new,i_elm_new)
     
     !> compute the new local coordinates
-    if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list,&
-         fields%element_list,particle%x(1),particle%x(2),&
-         particle%st(1),particle%st(2),particle%i_elm,&
-         solution_new(1),solution_new(2),st_new(1),st_new(2),&
-         i_elm_new,ifail)
+    if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list, &
+      fields%element_list,particle%x(1),particle%x(2),       &
+      particle%st(1),particle%st(2),particle%i_elm,          &
+      solution_new(1),solution_new(2),st_new(1),st_new(2),   &
+      i_elm_new,ifail)
     
-    !> overwrite particle fields
-    particle%x = solution_new(1:3)
-    particle%p(1) = solution_new(4)
-    particle%st = st_new
+    !> overwrite GC fields
+    particle%x     = solution_new(1:3)
+    particle%p(1)  = solution_new(4)
+    particle%st    = st_new
     particle%i_elm = i_elm_new
     
   end subroutine runge_kutta_fixed_dt_gc_push_jorek
 
   !> This procedure pushes a relativistic guiding center in analytical fields
-  !> using standard Runge-Kutta integrator without time step control
+  !> using a standard Runge-Kutta integrator without time step control
   !> inputs:
   !>   fields:   (fields_base) analytical fields
-  !>   t:        (real8) integration time
+  !>   t:        (real8) current time
   !>   dt:       (real8) time step
   !>   mass:     (real8) particle mass in AMU
-  !>   particle: (particle_gc_relativistic) particle to push
+  !>   particle: (particle_gc_relativistic) GC to be pushed
   !> outputs:
-  !>   particle: (particle_gc_relativistic) pushed particle
+  !>   particle: (particle_gc_relativistic) pushed GC
   subroutine runge_kutta_fixed_dt_gc_push(fields,t,dt,mass,particle)
     !> load modules
     use mod_fields, only: fields_base
@@ -92,41 +92,41 @@ contains
     integer                    :: ifail
     real(kind=8), dimension(4) :: solution_new
 
-    !> integrate particle trajectory
+    !> push GC
     call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives,&
          fields,4,1,2,t,dt,[particle%x(1),particle%x(2),particle%x(3),&
          particle%p(1)],[int(particle%q)],[mass,particle%p(2)],&
          solution_new,ifail)
 	 
-    !> overwrite the new particle position
-    particle%x = solution_new(1:3)
+    !> overwrite GC fields
+    particle%x    = solution_new(1:3)
     particle%p(1) = solution_new(4)
     
   end subroutine runge_kutta_fixed_dt_gc_push
   
-  !> This procedure computes the derivatives required for the Runge-Kutta 
-  !> integration of a relativistic guiding center in JOREK fields.
+  !> This procedure computes the derivatives at a given Runge-Kutta step required  
+  !> for the Runge-Kutta integration of a relativistic guiding center in JOREK fields.
   !> inputs:
-  !>   fields:
-  !>   n_variables:       (integer) number of variables=4
-  !>   n_int_parameters:  (integer) number of integer parameters=2
-  !>   n_real_parameters: (integer) number of real parameters=4
-  !>   t:
-  !>   solution_old:     (real8)(n_variables) initial solution:
+  !>   fields:            (fields_base) JOREK fields
+  !>   n_variables:       (integer) number of variables describing the GC = 4
+  !>   n_int_parameters:  (integer) number of integer parameters = 2
+  !>   n_real_parameters: (integer) number of real parameters = 4
+  !>   t:                 (real8) time at the current RK step
+  !>   solution_old:     (real8)(n_variables) GC at previous time step:
   !>                     1:R, 2:Z, 3:phi, 4:parallel momentum
-  !>   solution:         (real8)(n_variables) solution at a Runge-Kutta stage
+  !>   solution:         (real8)(n_variables) GC at current Runge-Kutta step
   !>   int_parameters:   (integer)(n_int_parameters) integer parameters
-  !>                     1:old i_elm, 2: charge
+  !>                     1:old i_elm, 2:charge
   !>   real_parameters:  (real8)(n_real_parameters) real parameters:
-  !>                     1:s_old, 2:t_old, 3:mass 4:magnetic moment
+  !>                     1:s_old, 2:t_old, 3:mass, 4:magnetic moment
   !> outputs:
-  !>   derivatives:      (real8)(n_variables) runge-kutta derivatives
+  !>   derivatives:      (real8)(n_variables) Runge-Kutta derivatives
   !>   ifail:            (integer) if 0 calculation failed
-  subroutine compute_relativistic_gc_derivatives_jorek(fields,n_variables,&
-       n_int_parameters,n_real_parameters,t,solution_old,solution,&
-       int_parameters,real_parameters,derivatives,ifail)
+  subroutine compute_relativistic_gc_derivatives_jorek(fields,n_variables, &
+    n_int_parameters,n_real_parameters,t,solution_old,solution,            &
+    int_parameters,real_parameters,derivatives,ifail)
     !> load modules
-    use constants, only: SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
+    use constants, only: SPEED_OF_LIGHT, EL_CHG, ATOMIC_MASS_UNIT
     use mod_fields, only: fields_base
     use mod_math_operators, only: cross_product
     use mod_find_rz_nearby
@@ -144,46 +144,46 @@ contains
     !> internal variables
     integer                    :: ierr !< error for find_rz nearby
     real(kind=8)               :: normB, gamma !< magnetic field intensity and relativistic factor
-    real(kind=8), dimension(2) :: st_new !< local postion particle at stage
-    !> define guiding center fields
-    real(kind=8),dimension(3) :: E, b, gradB, curlb, dbdt, B_star
+    real(kind=8), dimension(2) :: st_new !< local GC postion at current RK step
+    !> fields required to push the relativistic GC
+    real(kind=8), dimension(3) :: E, b, gradB, curlb, dbdt, B_star
 
-    !> find the gc at stage local position
-    call find_RZ_nearby(fields%node_list,fields%element_list,solution_old(1),&
-         solution_old(2),real_parameters(1),real_parameters(2),&
-         int_parameters(1),solution(1),solution(2),st_new(1),&
-         st_new(2),ifail,ierr)
+    !> find GC at current RK step
+    call find_RZ_nearby(fields%node_list,fields%element_list,solution_old(1), &
+      solution_old(2),real_parameters(1),real_parameters(2),                  &
+      int_parameters(1),solution(1),solution(2),st_new(1),                    &
+      st_new(2),ifail,ierr)
 
-    !> compute the guiding center fields
-    if(ifail.ne.0) call fields%calc_EBNormBGradBCurlbDbdt(t,ifail,st_new,&
-         solution(3),E,b,normB,gradB,curlb,dbdt)
+    !> compute required fields at GC position
+    if(ifail.ne.0) call fields%calc_EBNormBGradBCurlbDbdt(t,ifail,st_new, &
+      solution(3),E,b,normB,gradB,curlb,dbdt)
 
-    !> compute the guiding center rhs
-    derivatives = compute_relativistic_gc_rhs(int_parameters(2),&
-         real_parameters(3),real_parameters(4),solution(1),&
-         solution(4),normB,E,b,gradB,curlb,dbdt)
+    !> compute RHS of GC evolution (Cary-Brizard) equations
+    derivatives = compute_relativistic_gc_rhs(int_parameters(2), &
+      real_parameters(3),real_parameters(4),solution(1),         &
+      solution(4),normB,E,b,gradB,curlb,dbdt)
 
   end subroutine compute_relativistic_gc_derivatives_jorek
 
-  !> This procedure computes the derivatives required for the Runge-Kutta 
-  !> integration of a relativistic guiding center in analytical fields.
+  !> This procedure computes the derivatives at a given Runge-Kutta step required  
+  !> for the Runge-Kutta integration of a relativistic guiding center in analytical fields.
   !> This is mainly used for testing models.
   !> inputs:
-  !>   fields:            (fields_base) jorek fields
-  !>   n_variables:       (n_variables) number of variables
+  !>   fields:            (fields_base) analytical fields
+  !>   n_variables:       (n_variables) number of variables describing the GC
   !>   n_int_parameters:  (integer) number of integer parameters = 1
   !>   n_real_parameters: (integer) number of real parameters = 2
-  !>   t:                 (real8) time at stage
-  !>   solution_old:      (real8)(n_variables) old particle state
-  !>   solution:          (real8)(n_variables) new particle state at stage
+  !>   t:                 (real8) time at the current RK step
+  !>   solution_old:      (real8)(n_variables) GC at previous time step
+  !>   solution:          (real8)(n_variables) GC at current Runge-Kutta step
   !>   int_parameters:    (integer)(n_int_parameters) 1: charge
   !>   real_parameters:   (real8)(n_real_parameters) 1:mass, 2:magnetic moment
   !> outputs:
   !>   ifail:       (integer) if 0 the integration failed
-  !>   derivatives: (real8)(n_variables) guiding center right field side
-  pure subroutine compute_relativistic_gc_derivatives(fields,n_variables,&
-       n_int_parameters,n_real_parameters,t,solution_old,solution,&
-       int_parameters,real_parameters,derivatives,ifail)
+  !>   derivatives: (real8)(n_variables) Runge-Kutta derivatives
+  pure subroutine compute_relativistic_gc_derivatives(fields,n_variables, &
+    n_int_parameters,n_real_parameters,t,solution_old,solution,           &
+    int_parameters,real_parameters,derivatives,ifail)
     !> load modules
     use mod_fields, only: fields_base
     implicit none
@@ -201,12 +201,12 @@ contains
     real(kind=8)               :: normB
     real(kind=8), dimension(3) :: E, b, gradB, curlb, dbdt
 
-    !> compute the new electromagnetic fields
-    call fields%calc_analytical_EBNormBGradBCurlbDbdt(solution(1:2),E,b,normB,&
+    !> compute required fields at GC position
+    call fields%calc_analytical_EBNormBGradBCurlbDbdt(solution(1:2),E,b,normB, &
          gradB,curlb,dbdt)
 	 
-    !> compute gc right hand side
-    derivatives = compute_relativistic_gc_rhs(int_parameters(1),real_parameters(1),&
+    !> compute RHS of GC evolution (Cary-Brizard) equations
+    derivatives = compute_relativistic_gc_rhs(int_parameters(1),real_parameters(1), &
          real_parameters(2),solution(1),solution(4),normB,E,b,gradB,curlb,dbdt)
 
     !> set ifail to true
@@ -214,15 +214,15 @@ contains
     
   end subroutine compute_relativistic_gc_derivatives
   
-  !> This procedure computes the guiding center equation right hand side
-  !> as reported in J.R Cary, A.J. Brizard, Rev. Mod. Phys, vol.81, p.693, 2009
+  !> This procedure computes the RHS of the relativistic GC evolution equations 
+  !> as given in J.R Cary, A.J. Brizard, Rev. Mod. Phys, vol.81, p.693, 2009
   !> inputs:
   !> outputs:
-  !>   derivatives: (real8)(4) gc right hand side: 1:R_dot,2:Z_dot,
-  !>   3:phi_dot,4:p_parallel_dot
-  pure function compute_relativistic_gc_rhs(charge,mass,magnetic_moment,&
-       R,p_parallel,normB,E,b,gradB,curlb,dbdt) result(derivatives)
-    use constants, only: EL_CHG,SPEED_OF_LIGHT,ATOMIC_MASS_UNIT
+  !>   derivatives: (real8)(4) gc right hand side: 1:R_dot, 2:Z_dot,
+  !>   3:phi_dot, 4:p_parallel_dot
+  pure function compute_relativistic_gc_rhs(charge,mass,magnetic_moment, &
+    R,p_parallel,normB,E,b,gradB,curlb,dbdt) result(derivatives)
+    use constants, only: EL_CHG, SPEED_OF_LIGHT, ATOMIC_MASS_UNIT
     use mod_math_operators, only: cross_product
     implicit none
     !> declare input variables
@@ -233,42 +233,39 @@ contains
     real(kind=8), dimension(4) :: derivatives
     !> declare input variables
     real(kind=8)               :: gamma !< relativistic factor
-    real(kind=8), dimension(3) :: B_star,E_star
+    real(kind=8), dimension(3) :: B_star, E_star
 
-    !> compute the relativistic factor
-    gamma = sqrt(mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT +       &
-         p_parallel*p_parallel+2.d0*mass*normB*magnetic_moment)/ &
-         (mass*SPEED_OF_LIGHT)
+    gamma = sqrt(mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT +    &
+      p_parallel*p_parallel+2.d0*mass*normB*magnetic_moment)/ &
+      (mass*SPEED_OF_LIGHT)
 
-    !> compute B_star and E_star
-    B_star = p_parallel*curlb + &
-         ((EL_CHG*real(charge,kind=8)*normB)/ATOMIC_MASS_UNIT)*b
+    B_star = p_parallel*curlb +                               &
+      ((EL_CHG*real(charge,kind=8)*normB)/ATOMIC_MASS_UNIT)*b
+
     E_star = (EL_CHG*real(charge,kind=8)*E/ATOMIC_MASS_UNIT) - &
-         p_parallel*dbdt - ((magnetic_moment*gradB)/gamma)
+      p_parallel*dbdt - ((magnetic_moment*gradB)/gamma)
     
-    !> compute the guiding center position derivatives
-    derivatives(1:3) = cross_product(E_star,b) + &
-         ((p_parallel*B_star)/(mass*gamma))
+    derivatives(1:3) = cross_product(E_star,b) + ((p_parallel*B_star)/(mass*gamma))
     derivatives(3) = derivatives(3)/R
-    derivatives(4) = B_star(1)*E_star(1)+B_star(2)*E_star(2)+B_star(3)*E_star(3)
+    derivatives(4) = B_star(1)*E_star(1) + B_star(2)*E_star(2) + B_star(3)*E_star(3)
     derivatives = derivatives/(B_star(1)*b(1)+B_star(2)*b(2)+B_star(3)*b(3))
     
   end function compute_relativistic_gc_rhs
   
-  !> This procedure transforms a relativistic gc particle into a different type
+  !> This procedure transforms a relativistic GC into a different type
   !> inputs:
-  !>   node_list:       (type_node_list) jorek node list
-  !>   element_list:    (type_element_list) jorek element list  
-  !>   relativistic_gc: (particle_gc_relativistic) a particle gc relativistic
-  !>   time:            (real8) particle time
+  !>   node_list:       (type_node_list) JOREK node list
+  !>   element_list:    (type_element_list) JOREK element list  
+  !>   relativistic_gc: (particle_gc_relativistic) a relativistic GC
+  !>   time:            (real8) current time
   !>   mass:            (real8) particle mass
   !>   B:               (real8)(3) magnetic field
   !>   gyro_angle:      (real8)(optional) the gyro-angle, defaut=0
   !> outputs:
   !>   particle_out: (particle_base) the output particle
   !>   gyro_angle:   (real8)(optional) the gyro-angle, default=0
-  subroutine relativistic_gc_to_particle(node_list,element_list,&
-       relativistic_gc,particle_out,mass,B,gyro_angle)
+  subroutine relativistic_gc_to_particle(node_list,element_list, &
+    relativistic_gc,particle_out,mass,B,gyro_angle)
     !> load modules
     use data_structure
     implicit none
@@ -292,8 +289,8 @@ contains
     type is (particle_gc)
        particle_out = relativistic_gc_to_gc(relativistic_gc,mass,B)
     type is (particle_kinetic_relativistic)
-       particle_out = relativistic_gc_to_relativistic_kinetic(&
-            node_list,element_list,relativistic_gc,mass,B,gyro_angle_local)
+       particle_out = relativistic_gc_to_relativistic_kinetic(              &
+          node_list,element_list,relativistic_gc,mass,B,gyro_angle_local)
     end select
     
   end subroutine relativistic_gc_to_particle
@@ -301,17 +298,16 @@ contains
   !> This procedure transforms a particle_gc_relativistic 
   !> into a particle_kinetic_relativistic
   !> inputs:
-  !>   node_list:       (type_node_list) jorek node list
-  !>   element_list:    (type_element_list) jorek element list
-  !>   relativistic_gc: (particle_gc_relativistic) a relativistic gc
+  !>   node_list:       (type_node_list) JOREK node list
+  !>   element_list:    (type_element_list) JOREK element list
+  !>   relativistic_gc: (particle_gc_relativistic) a relativistic GC
   !>   mass:            (real8) particle mass 
   !>   B:               (real8)(3) magnetic field
-  !>   gyro_angle:      (real8) gyro-angle for initialising a particle
+  !>   gyro_angle:      (real8) gyro-angle for initialising the particle
   !> outputs:
-  !>   relativistic_particle: (particle_kinetic_relativistic) a
-  !>                           relativistic kinetic particle
+  !>   relativistic_particle: (particle_kinetic_relativistic) a relativistic kinetic particle
   function relativistic_gc_to_relativistic_kinetic(node_list,element_list, &
-       in,mass,B,gyro_angle) result(out)
+    in,mass,B,gyro_angle) result(out)
     !> load modules
     use data_structure
     use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
@@ -329,7 +325,7 @@ contains
     real(kind=8)                               :: B_norm, p_perp
     real(kind=8), dimension(3)                 :: B_hat, e1, e2
     
-    out = in !< copy the default particle type
+    out = in !< copy fields common to both particle types
     out%q = in%q !< copy the charge
     
     !> compute the magnetic field intensity and direction
@@ -341,26 +337,24 @@ contains
     p_perp = sqrt(2.d0*mass*B_norm*in%p(2))
     !> compute particle momenta
     out%p = in%p(1)*B_hat + p_perp*(e1*cos(gyro_angle)+e2*sin(gyro_angle))
-    !> check if the particle is valid
     if(out%q.ne.0) then
-       call gc_position_to_particle(node_list,element_list,in%x,&
-            in%st,in%i_elm,out%p,out%q,B_hat,B_norm,out%x,&
-            out%st,out%i_elm)
+       call gc_position_to_particle(node_list,element_list,in%x, &
+         in%st,in%i_elm,out%p,out%q,B_hat,B_norm,out%x,          &
+         out%st,out%i_elm)
     endif
     !> transform the momenta to cartesian coordinates
     out%p = vector_cylindrical_to_cartesian(out%x(3),out%p)
   end function relativistic_gc_to_relativistic_kinetic 
 
-  !> This procedure transforms a particle_gc_relativistic
-  !> into a particle_gc
+  !> This procedure transforms a particle_gc_relativistic into a particle_gc
   !> inputs:
-  !>   relativistic_gc: (particle_gc_relativistic) relativistic gc
+  !>   relativistic_gc: (particle_gc_relativistic) relativistic GC
   !>   mass:            (real8) particle mass
   !>   B:               (real8)(3) magnetic field
   !> outputs:
-  !>   particle_out:    (particle_gc) gc in energy and magnetic moment
+  !>   particle_out:    (particle_gc) GC
   pure function relativistic_gc_to_gc(relativistic_gc,mass,B) &
-       result(particle_out)
+    result(particle_out)
     !> load modules
     use constants, only: EL_CHG, ATOMIC_MASS_UNIT, SPEED_OF_LIGHT
     implicit none
@@ -371,17 +365,15 @@ contains
     !> declare output variable
     type(particle_gc)                          :: particle_out
 
-    !> copy the position
     particle_out%x = relativistic_gc%x
-    !> copy the charge
     particle_out%q = relativistic_gc%q
-    !> copy mesh element
     particle_out%i_elm = relativistic_gc%i_elm
-    !> copy local particle coordinates
     particle_out%st = relativistic_gc%st
+    
     !> copy the magnetic moment in eV/T with p_parallel sign
     particle_out%mu = sign(ATOMIC_MASS_UNIT*relativistic_gc%p(2)/EL_CHG, &
          relativistic_gc%p(1))
+	 
     !> compute the guiding center energy in eV
     particle_out%E = ATOMIC_MASS_UNIT*SPEED_OF_LIGHT          &
          * sqrt(mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT +     &
@@ -391,7 +383,7 @@ contains
   
   !> This procedure transforms a particle_gc into particle_gc_relativistic
   !> inputs:
-  !>   gc_in: (particle_gc) guiding center in energy momentum
+  !>   gc_in: (particle_gc) GC
   !>   mass:  (real8) particle mass
   !>   B:     (real8)(3) magnetic field
   !> outputs:
@@ -407,17 +399,11 @@ contains
     !> declare output variables
     type(particle_gc_relativistic)         :: relativistic_gc
     
-    !> copy gc position
     relativistic_gc%x = gc_in%x
-    !> copy gc charge
     relativistic_gc%q = gc_in%q
-    !> copy particle element
     relativistic_gc%i_elm = gc_in%i_elm
-    !> copy local coordinates
     relativistic_gc%st = gc_in%st
-    !> initialise magnetic moment
     relativistic_gc%p(2) = abs(EL_CHG*gc_in%mu/ATOMIC_MASS_UNIT)
-    !> initialise parallel momentum
     relativistic_gc%p(1) = sign(sqrt(((gc_in%E*gc_in%E*EL_CHG*EL_CHG)/         &
          (ATOMIC_MASS_UNIT*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*SPEED_OF_LIGHT)) -  &
          mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT -                             &
@@ -425,9 +411,8 @@ contains
   end function gc_to_relativistic_gc
 
   !> This function fills in the p(1) and p(2) fields of a particle_gc_relativistic
-  !> particle from its energy and (cosine of) pitch-angle
+  !> from its energy and (cosine of) pitch-angle
   function relativistic_gc_momenta_from_E_cospitch(rel_gc_in,energy,ksi,mass,fields,time) result(rel_gc_out)
-
     use constants, only: ATOMIC_MASS_UNIT, EL_CHG, SPEED_OF_LIGHT
     use mod_fields
 
@@ -456,7 +441,8 @@ contains
     rel_gc_out%st    = rel_gc_in%st
     
     if (abs(ksi)>1) then
-      write(*,*) 'Error in relativistic_gc_momenta_from_E_cospitch: abs(cos(pitch-angle)) should be <1, exiting'
+      write(*,*) 'Error in relativistic_gc_momenta_from_E_cospitch: &
+        abs(cos(pitch-angle)) should be <1, exiting'
       stop
     end if
     
@@ -471,7 +457,6 @@ contains
 
     !> Parallel momentum [AMU m/s]
     rel_gc_out%p(1) = sqrt(p_norm_sq)*ksi/ATOMIC_MASS_UNIT		       
-
   end function relativistic_gc_momenta_from_E_cospitch
 
 end module mod_gc_relativistic

@@ -7,21 +7,21 @@ module mod_coordinate_transforms
   public vector_cartesian_to_cylindrical
   public vector_cylindrical_to_cartesian
   public vector_rotation
-  public transform_derivatives_st_to_RZ,transform_derivatives_RZ_to_st
+  public transform_derivatives_st_to_RZ, transform_derivatives_RZ_to_st
   public transform_first_derivatives_st_to_RZ
   public transform_second_derivatives_st_to_RZ
   !> interfaces
 
   !> overload transform derivatives from local to global coordinates
   interface transform_derivatives_st_to_RZ
-     module procedure transform_first_derivatives_st_to_RZ ,&
-          transform_second_derivatives_st_to_RZ
+     module procedure transform_first_derivatives_st_to_RZ, &
+       transform_second_derivatives_st_to_RZ
   end interface transform_derivatives_st_to_RZ
 
   !> overload transfrom derivatives from global to local coorsinates
   interface transform_derivatives_RZ_to_st
-     module procedure transform_first_derivatives_RZ_to_st,&
-          transform_second_derivatives_RZ_to_st
+     module procedure transform_first_derivatives_RZ_to_st, &
+       transform_second_derivatives_RZ_to_st
   end interface transform_derivatives_RZ_to_st
 
 contains
@@ -89,174 +89,174 @@ contains
 !> to the global (R,Z) reference system.
 !> inputs:
 !>   n_v: (integer) number of physical quantities
-!>   P_s: (real8)(n_v) physcial quantitiy first derivative in s
-!>   P_t: (real8)(n_v) physcial quantity first derivatives in t
+!>   P_s: (real8)(n_v) physical quantities first derivative in s
+!>   P_t: (real8)(n_v) physical quantities first derivatives in t
 !>   R_s: (real8) major radius first derivative in s
 !>   R_z: (real8) major radius first derivative in t
 !>   Z_s: (real8) vertical position first derivative in s
 !>   Z_t: (real8) vertical position first derivative in t
 !> outputs:
-!>   P_R: (real8)(n_v) physical quantity first derivative in R
-!>   P_Z: (real8)(n_v) physcial quantity first derivative in Z
-pure subroutine transform_first_derivatives_st_to_RZ(P_R,P_Z,n_v,&
-     P_s,P_t,R_s,R_t,Z_s,Z_t)
+!>   P_R: (real8)(n_v) physical quantities first derivative in R
+!>   P_Z: (real8)(n_v) physcial quantities first derivative in Z
+pure subroutine transform_first_derivatives_st_to_RZ(P_R,P_Z,n_v, &
+  P_s,P_t,R_s,R_t,Z_s,Z_t)
   implicit none
-  !> define input variables
-  integer,intent(in) :: n_v
-  real(kind=8),dimension(n_v),intent(in) :: P_s,P_t
-  real(kind=8),intent(in) :: R_s,R_t,Z_s,Z_t
-  !> define output variables
-  real(kind=8),dimension(n_v),intent(out) :: P_R,P_Z
+  !> input variables
+  integer, intent(in)                      :: n_v
+  real(kind=8), dimension(n_v), intent(in) :: P_s, P_t
+  real(kind=8), intent(in)                 :: R_s, R_t, Z_s, Z_t
+  !> output variables
+  real(kind=8), dimension(n_v), intent(out) :: P_R, P_Z
   !> internal variables
   real(kind=8) :: inverse_jacobian
 
-  !> compute the inverse of the matrix jacobian
+  !> compute the inverse of the jacobian
   inverse_jacobian = 1.d0/(R_s*Z_t-R_t*Z_s)
-  !> compute transform derivatives in global coordinates
-  P_R = (P_s*Z_t-P_t*Z_s)*inverse_jacobian!< R
-  P_Z = (P_t*R_s-P_s*R_t)*inverse_jacobian!< Z
+
+  !> compute derivatives wrt. R and Z
+  P_R = (P_s*Z_t-P_t*Z_s)*inverse_jacobian
+  P_Z = (P_t*R_s-P_s*R_t)*inverse_jacobian
   
 end subroutine transform_first_derivatives_st_to_RZ
 
 !---------------------------------------------------------------------------
 
 !> This procedure expresses second order derivatives from the local (s,t)
-!> to the global (R,Z) reference system. Functions are assumed to be Hessian
+!> to the global (R,Z) reference system. Functions are assumed to be Hessian.
 !> inputs:
 !>   n_v:  (integer) number of physical quantities
-!>   P_ss: (real8)(n_v) physical quantity second derivatives in s
-!>   P_st: (real8)(n_v) physcal quanitiy cross derivatives in s,t
-!>   P_tt: (real8)(n_v) physical quantitiy second derivative in t
-!>   P_R:  (real8)(n_v) physcal quantitiy first derivative in R
-!>   P_Z:  (real8)(n_v) phyisical quantitiy first derivative in Z
+!>   P_ss: (real8)(n_v) physical quantities second derivatives in s
+!>   P_st: (real8)(n_v) physical quantities cross derivatives in s,t
+!>   P_tt: (real8)(n_v) physical quantities second derivative in t
+!>   P_R:  (real8)(n_v) physical quantities first derivative in R
+!>   P_Z:  (real8)(n_v) physical quantities first derivative in Z
 !>   R_s:  (real8) major radius first derivative in s
 !>   R_t:  (real8) major radius first derivative in t
 !>   R_ss: (real8) major radius second derivative in s
 !>   R_st: (real8) major radius cross derivative in s,t
-!>   R_tt: (real8) major radius second derivative in t)
+!>   R_tt: (real8) major radius second derivative in t
 !>   Z_s:  (real8) vertical position first derivative in s
 !>   Z_t:  (real8) vertical position first derivative in t
 !>   Z_ss: (real8) vertical position second derivative in s
 !>   Z_st: (real8) vertical position cross derivative in s,t
 !>   Z_tt: (real8) vertical position second derivative in t
 !> outputs:
-!>   P_RR: (real8)(n_v) physical quantitiy second derivatives in R
-!>   P_RZ: (real8)(n_v) physical quantity cross derivatives in R,Z
-!>   P_ZZ: (real8)(n_v) physical quantitiy second derivatives in Z
-pure subroutine transform_second_derivatives_st_to_RZ(P_RR,P_RZ,P_ZZ,n_v,&
-     P_ss,P_st,P_tt,P_R,P_Z,R_s,R_t,R_ss,R_st,R_tt,Z_s,Z_t,Z_ss,Z_st,Z_tt)
+!>   P_RR: (real8)(n_v) physical quantities second derivatives in R
+!>   P_RZ: (real8)(n_v) physical quantities cross derivatives in R,Z
+!>   P_ZZ: (real8)(n_v) physical quantities second derivatives in Z
+pure subroutine transform_second_derivatives_st_to_RZ(P_RR,P_RZ,P_ZZ,n_v, &
+  P_ss,P_st,P_tt,P_R,P_Z,R_s,R_t,R_ss,R_st,R_tt,Z_s,Z_t,Z_ss,Z_st,Z_tt)
   implicit none
-  !> declare input variables
-  integer,intent(in) :: n_v
-  real(kind=8),dimension(n_v),intent(in) :: P_ss,P_st,P_tt,P_R,P_Z
-  real(kind=8),intent(in) :: R_s,R_t,R_ss,R_st,R_tt
-  real(kind=8),intent(in) :: Z_s,Z_t,Z_ss,Z_st,Z_tt
-  !> declare output variables
-  real(kind=8),dimension(n_v),intent(out) :: P_RR,P_RZ,P_ZZ
-  !> declare input variables
-  integer :: i !< index
-  real(kind=8),dimension(10) :: transformation_matrix !< 10:jacobian
-  real(kind=8),dimension(n_v) :: RHS_RR,RHS_RZ,RHS_ZZ
+  !> input variables
+  integer, intent(in) :: n_v
+  real(kind=8), dimension(n_v), intent(in) :: P_ss, P_st, P_tt, P_R, P_Z
+  real(kind=8), intent(in) :: R_s, R_t, R_ss, R_st, R_tt
+  real(kind=8), intent(in) :: Z_s, Z_t, Z_ss, Z_st, Z_tt
+  !> output variables
+  real(kind=8), dimension(n_v), intent(out) :: P_RR, P_RZ, P_ZZ
+  !> internal variables
+  integer                      :: i
+  real(kind=8), dimension(10)  :: transformation_matrix !< 10:jacobian
+  real(kind=8), dimension(n_v) :: RHS_RR, RHS_RZ, RHS_ZZ
 
   !< compute matrix elements
-  transformation_matrix(1:9) = [R_s*R_s,2.d0*R_s*Z_s,Z_s*Z_s,&
-       R_t*R_s,R_s*Z_t+Z_s*R_t,Z_s*Z_t,R_t*R_t,&
-       2.d0*R_t*Z_t,Z_t*Z_t]
+  transformation_matrix(1:9) = [R_s*R_s,2.d0*R_s*Z_s,Z_s*Z_s, &
+     R_t*R_s,R_s*Z_t+Z_s*R_t,Z_s*Z_t,R_t*R_t,                 &
+     2.d0*R_t*Z_t,Z_t*Z_t]
+
   !< compute the inverse of the matrix jacobian
-  transformation_matrix(10) = 1.d0/(transformation_matrix(1)*(&
-       transformation_matrix(5)*transformation_matrix(9)-&
-       transformation_matrix(8)*transformation_matrix(6))+&
-       transformation_matrix(2)*(transformation_matrix(7)*&
-       transformation_matrix(6)-transformation_matrix(4)*&
-       transformation_matrix(9))+transformation_matrix(3)*(&
-       transformation_matrix(4)*transformation_matrix(8)-&
-       transformation_matrix(5)*transformation_matrix(7)))
+  transformation_matrix(10) = 1.d0/(transformation_matrix(1)*( &
+    transformation_matrix(5)*transformation_matrix(9)-         &
+    transformation_matrix(8)*transformation_matrix(6))+        &
+    transformation_matrix(2)*(transformation_matrix(7)*        &
+    transformation_matrix(6)-transformation_matrix(4)*         &
+    transformation_matrix(9))+transformation_matrix(3)*(       &
+    transformation_matrix(4)*transformation_matrix(8)-         &
+    transformation_matrix(5)*transformation_matrix(7)))
+    
   !> compute RHS
-  RHS_RR = P_ss - R_ss*P_R - Z_ss*P_Z !< RR
-  RHS_RZ = P_st - R_st*P_R - Z_st*P_Z !< RZ
-  RHS_ZZ = P_tt - R_tt*P_R - Z_tt*P_Z !< ZZ
+  RHS_RR = P_ss - R_ss*P_R - Z_ss*P_Z
+  RHS_RZ = P_st - R_st*P_R - Z_st*P_Z
+  RHS_ZZ = P_tt - R_tt*P_R - Z_tt*P_Z
+  
   !> compute second order derivatives
-  P_RR = ((transformation_matrix(5)*transformation_matrix(9)-&
-       transformation_matrix(8)*transformation_matrix(6))*RHS_RR +&
-       (transformation_matrix(8)*transformation_matrix(3)-&
-       transformation_matrix(2)*transformation_matrix(9))*RHS_RZ +&
-       (transformation_matrix(2)*transformation_matrix(6)-&
-       transformation_matrix(5)*transformation_matrix(3))*&
-       RHS_ZZ)*transformation_matrix(10) !< RR
-  P_RZ = ((transformation_matrix(7)*transformation_matrix(6)-&
-       transformation_matrix(4)*transformation_matrix(9))*RHS_RR +&
-       (transformation_matrix(1)*transformation_matrix(9)-&
-       transformation_matrix(7)*transformation_matrix(3))*RHS_RZ +&
-       (transformation_matrix(4)*transformation_matrix(3)-&
-       transformation_matrix(1)*transformation_matrix(6))*&
-       RHS_ZZ)*transformation_matrix(10) !< RZ
-  P_ZZ = ((transformation_matrix(4)*transformation_matrix(8)-&
-       transformation_matrix(5)*transformation_matrix(7))*RHS_RR +&
-       (transformation_matrix(2)*transformation_matrix(7)-&
-       transformation_matrix(1)*transformation_matrix(8))*RHS_RZ +&
-       (transformation_matrix(1)*transformation_matrix(5)-&
-       transformation_matrix(2)*transformation_matrix(4))*&
-       RHS_ZZ)*transformation_matrix(10) !< ZZ
+  P_RR = ((transformation_matrix(5)*transformation_matrix(9)-   &
+    transformation_matrix(8)*transformation_matrix(6))*RHS_RR + &
+    (transformation_matrix(8)*transformation_matrix(3)-         &
+    transformation_matrix(2)*transformation_matrix(9))*RHS_RZ + &
+    (transformation_matrix(2)*transformation_matrix(6)-         &
+    transformation_matrix(5)*transformation_matrix(3))*         &
+    RHS_ZZ)*transformation_matrix(10)
+  P_RZ = ((transformation_matrix(7)*transformation_matrix(6)-   &
+    transformation_matrix(4)*transformation_matrix(9))*RHS_RR + &
+    (transformation_matrix(1)*transformation_matrix(9)-         &
+    transformation_matrix(7)*transformation_matrix(3))*RHS_RZ + &
+    (transformation_matrix(4)*transformation_matrix(3)-         &
+    transformation_matrix(1)*transformation_matrix(6))*         &
+    RHS_ZZ)*transformation_matrix(10)
+  P_ZZ = ((transformation_matrix(4)*transformation_matrix(8)-   &
+    transformation_matrix(5)*transformation_matrix(7))*RHS_RR+  &
+    (transformation_matrix(2)*transformation_matrix(7)-         &
+    transformation_matrix(1)*transformation_matrix(8))*RHS_RZ+  &
+    (transformation_matrix(1)*transformation_matrix(5)-         &
+    transformation_matrix(2)*transformation_matrix(4))*         &
+    RHS_ZZ)*transformation_matrix(10) 
   
 end subroutine transform_second_derivatives_st_to_RZ
 
 !---------------------------------------------------------------------------------------
 
-!> This procedure transform back the first order derivatives from global RZ coordinates
-!> to local s,t coordinates. This method is used mainly for testing.
+!> This procedure transforms back the first order derivatives from global RZ coordinates
+!> to local s,t coordinates. This method is used mainly for tests.
 !> inputs:
-!>   P_R,P_Z: (real8)(n_v) physcial quantity first derivatives in R and t
-!>   R_s,R_t: (real8) major radius first derivative in s and t
-!>   Z_s,Z_t: (real) vertical position first and second order derivatives in s and t
+!>   n_v:  (integer) number of physical quantities
+!>   P_R,P_Z: (real8)(n_v) physical quantities first derivatives in R and Z
+!>   R_s,R_t: (real8) major radius first derivatives in s and t
+!>   Z_s,Z_t: (real) vertical position first derivatives in s and t
 !> outputs:
-!>   P_s,P_t: (real8)(n_v) physical quantitiy first derivatives in s and t
-pure subroutine transform_first_derivatives_RZ_to_st(P_s,P_t,n_v,P_R,P_Z,&
-     R_s,R_t,Z_s,Z_t)
+!>   P_s,P_t: (real8)(n_v) physical quantities first derivatives in s and t
+pure subroutine transform_first_derivatives_RZ_to_st(P_s,P_t,n_v,P_R,P_Z, &
+  R_s,R_t,Z_s,Z_t)
   implicit none
-  !> define input variables
-  integer,intent(in) :: n_v
-  real(kind=8),dimension(n_v),intent(in) :: P_R,P_Z
-  real(kind=8),intent(in) :: R_s,R_t,Z_s,Z_t
-  !> define output varibales
-  real(kind=8),dimension(n_v),intent(out) :: P_s,P_t
+  !> input variables
+  integer, intent(in)                      :: n_v
+  real(kind=8), dimension(n_v), intent(in) :: P_R, P_Z
+  real(kind=8), intent(in)                 :: R_s, R_t, Z_s, Z_t
+  !> output varibales
+  real(kind=8), dimension(n_v), intent(out) :: P_s, P_t
 
-  !> compute derivatives
-  P_s = P_R*R_s + P_Z*Z_s !< ds
-  P_t = P_R*R_t + P_Z*Z_t !< dt
+  P_s = P_R*R_s + P_Z*Z_s
+  P_t = P_R*R_t + P_Z*Z_t
   
 end subroutine transform_first_derivatives_RZ_to_st
 !---------------------------------------------------------------------------------------
 
-!> This procedure transform back the second order derivatives from globa RZ coordinates
-!> to local s,t coordinates. This method is used mainly for testing.
+!> This procedure transforms back the second order derivatives from global RZ coordinates
+!> to local s,t coordinates. This method is used mainly for tests.
 !> inputs:
-!>   n_v:            (integer) number fo physical quantities
-!>   P_R,P_Z:        (real8)(n_v) physical quantitiy first derivatives
-!>                   in R and Z
-!>   P_RR,P_RZ,P_ZZ: (real8)(n_v) physical quantitiy second and cross
-!>                   dervatives in R and Z
-!>   R_s,R_t:        (real8) major radius first derivative in s and t
+!>   n_v:            (integer) number of physical quantities
+!>   P_R,P_Z:        (real8)(n_v) physical quantities first derivatives in R and Z
+!>   P_RR,P_RZ,P_ZZ: (real8)(n_v) physical quantities second and cross derivatives in R and Z
+!>   R_s,R_t:        (real8) major radius first derivatives in s and t
 !>   Z_s,Z_t:        (real8) vertical position first derivatives in s and t
 !>   R_ss,R_st,R_tt: (real8) major radius second and cross derivatives in s and t
 !>   Z_ss,Z_st,Z_tt: (real8) vertical position second and cross derivatives in s and t
 !> outputs:
-!>   P_ss,P_st,P_tt: (real)(n_v) physical quantity second and cross
-!>                   derivatives in s and t
-pure subroutine transform_second_derivatives_RZ_to_st(P_ss,P_st,P_tt,n_v,P_R,P_Z,&
-     P_RR,P_RZ,P_ZZ,R_s,R_t,R_ss,R_st,R_tt,Z_s,Z_t,Z_ss,Z_st,Z_tt)
+!>   P_ss,P_st,P_tt: (real)(n_v) physical quantities second and cross derivatives in s and t
+pure subroutine transform_second_derivatives_RZ_to_st(P_ss,P_st,P_tt,n_v,P_R,P_Z, &
+  P_RR,P_RZ,P_ZZ,R_s,R_t,R_ss,R_st,R_tt,Z_s,Z_t,Z_ss,Z_st,Z_tt)
   implicit none
-  !> declare input variables
-  integer,intent(in) :: n_v
-  real(kind=8),dimension(n_v),intent(in) :: P_RR,P_RZ,P_ZZ,P_R,P_Z
-  real(kind=8),intent(in) :: R_s,R_t,R_ss,R_st,R_tt
-  real(kind=8),intent(in) :: Z_s,Z_t,Z_ss,Z_st,Z_tt
-  !> delcare output varibales
-  real(kind=8),dimension(n_v),intent(out) :: P_ss,P_st,P_tt
+  !> input variables
+  integer, intent(in)                      :: n_v
+  real(kind=8), dimension(n_v), intent(in) :: P_RR, P_RZ, P_ZZ, P_R, P_Z
+  real(kind=8), intent(in)                 :: R_s, R_t, R_ss, R_st, R_tt
+  real(kind=8), intent(in)                 :: Z_s, Z_t, Z_ss, Z_st, Z_tt
+  !> output varibales
+  real(kind=8), dimension(n_v), intent(out) :: P_ss, P_st, P_tt
 
-  !> compute second order derivatives
-  P_ss = P_RR*R_s*R_s + 2.d0*P_RZ*R_s*Z_s + P_ZZ*Z_s*Z_s + P_R*R_ss + P_Z*Z_ss !< dsds
-  P_st = P_RR*R_t*R_s + P_RZ*(Z_t*R_s+R_t*Z_s) + P_ZZ*Z_t*Z_s + P_R*R_st + P_Z*Z_st !<dsdt
-  P_tt = P_RR*R_t*R_t + 2.d0*P_RZ*R_t*Z_t + P_ZZ*Z_t*Z_t + P_R*R_tt + P_Z*Z_tt !< dtdt
+  P_ss = P_RR*R_s*R_s + 2.d0*P_RZ*R_s*Z_s + P_ZZ*Z_s*Z_s + P_R*R_ss + P_Z*Z_ss 
+  P_st = P_RR*R_t*R_s + P_RZ*(Z_t*R_s+R_t*Z_s) + P_ZZ*Z_t*Z_s + P_R*R_st + P_Z*Z_st 
+  P_tt = P_RR*R_t*R_t + 2.d0*P_RZ*R_t*Z_t + P_ZZ*Z_t*Z_t + P_R*R_tt + P_Z*Z_tt 
   
 end subroutine transform_second_derivatives_RZ_to_st
 

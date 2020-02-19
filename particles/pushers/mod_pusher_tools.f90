@@ -7,8 +7,8 @@ implicit none
 private
 !> public procedures
 public get_orthonormals
-public cayley_transform,approximated_cayley_transform
-public gc_position_to_particle,particle_position_to_gc
+public cayley_transform, approximated_cayley_transform
+public gc_position_to_particle, particle_position_to_gc
 contains
 
 !---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ end subroutine get_orthonormals
 !> by a scalar alpha. The Cayley transform is defined as:
 !> cayley(alpha*B) = (I-alpha*B)^(-1) * (I+alpha*B)
 !> where B is the vector product skew symmetric matrix of the vector vec
-!> and I is the
+!> and I is the identity matrix.
 pure function cayley_transform(alpha,vec)
   ! defining input variables
   real(kind=8),intent(in) :: alpha !< multiplicative constant
@@ -104,74 +104,70 @@ end function approximated_cayley_transform
 
 !---------------------------------------------------------------------------
 
-!> This subroutine computes the guiding centre coordinates
+!> This subroutine computes the guiding center position
 !> from the particle position and momentum
 subroutine particle_position_to_gc(node_list,element_list,&
-x_in,st_in,i_elm_in,p_in,q_in,B_hat,B_norm,x_gc_out,st_gc_out,i_elm_out)
+  x_in,st_in,i_elm_in,p_in,q_in,B_hat,B_norm,x_gc_out,st_gc_out,i_elm_out)
   use data_structure
   use constants, only: ATOMIC_MASS_UNIT,EL_CHG
   use mod_math_operators, only: cross_product
   use mod_find_rz_nearby
   ! declare input variables
-  type(type_node_list),intent(in) :: node_list
-  type(type_element_list),intent(in) :: element_list
-  integer(kind=1),intent(in) :: q_in !< particle charge
-  integer(kind=4),intent(in) :: i_elm_in !< particle element
-  real(kind=8),dimension(3),intent(in) :: x_in, p_in !< particle position and momentum
-  real(kind=8),dimension(2),intent(in) :: st_in !< particle local coordinates
-  real(kind=8),dimension(3),intent(in) :: B_hat !< Magnetic field direction B/B_norm
-  real(kind=8),intent(in) :: B_norm !< magnetic field intensity in [T]
+  type(type_node_list), intent(in)       :: node_list
+  type(type_element_list), intent(in)    :: element_list
+  integer(kind=1), intent(in)            :: q_in !< particle charge
+  integer(kind=4), intent(in)            :: i_elm_in !< particle element
+  real(kind=8), dimension(3), intent(in) :: x_in, p_in !< particle position and momentum
+  real(kind=8), dimension(2), intent(in) :: st_in !< particle local coordinates
+  real(kind=8), dimension(3), intent(in) :: B_hat !< Magnetic field direction B/B_norm
+  real(kind=8), intent(in)               :: B_norm !< magnetic field intensity in [T]
   ! declare output variables
-  integer(kind=4),intent(out) :: i_elm_out !< gc element
-  real(kind=8),dimension(2),intent(out) :: st_gc_out !< local gc position s,t
-  real(kind=8),dimension(3),intent(out) :: x_gc_out  !< global position in R,Z,phi
+  integer(kind=4), intent(out)            :: i_elm_out !< gc element
+  real(kind=8), dimension(2), intent(out) :: st_gc_out !< local gc position s,t
+  real(kind=8), dimension(3), intent(out) :: x_gc_out  !< global position in R,Z,phi
   ! declare internal variables
-  integer :: ifail !< ifail kind not defined in find_RZ_nearby
+  integer :: ifail
 
-  ! compute the guiding center position in cartesian reference
-  x_gc_out = x_in+&
-  (ATOMIC_MASS_UNIT*cross_product(p_in,B_hat))/&
-  (EL_CHG*real(q_in,8)*B_norm)  
+  ! compute the guiding center position in cartesian coordinates
+  x_gc_out = x_in + (ATOMIC_MASS_UNIT*cross_product(p_in,B_hat))/(EL_CHG*real(q_in,8)*B_norm)  
 
   ! find the local coordinates
-  call find_RZ_nearby(node_list,element_list,x_in(1),x_in(2),&
-  st_in(1),st_in(2),i_elm_in,x_gc_out(1),x_gc_out(2),&
-  st_gc_out(1),st_gc_out(2),i_elm_out,ifail)
+  call find_RZ_nearby(node_list,element_list,x_in(1),x_in(2), &
+    st_in(1),st_in(2),i_elm_in,x_gc_out(1),x_gc_out(2),       &
+    st_gc_out(1),st_gc_out(2),i_elm_out,ifail)
 end subroutine particle_position_to_gc
 
 !---------------------------------------------------------------------------
-!> This subroutine computes the particle coordinates from gc
-subroutine gc_position_to_particle(node_list,element_list,&
-x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat,B_norm,x_out,st_out,i_elm_out)
+!> This subroutine computes the particle position from the guding center position
+subroutine gc_position_to_particle(node_list,element_list, &
+  x_gc_in,st_gc_in,i_elm_in,p_gc_in,q_gc_in,B_hat,B_norm,x_out,st_out,i_elm_out)
   use data_structure
   use constants, only: ATOMIC_MASS_UNIT,EL_CHG
   use mod_math_operators, only: cross_product
   use mod_find_rz_nearby
   ! declare input variables
-  type(type_node_list),intent(in) :: node_list
-  type(type_element_list),intent(in) :: element_list
-  integer(kind=1),intent(in) :: q_gc_in !< gc charge
-  integer(kind=4),intent(in) :: i_elm_in !< gc element
-  real(kind=8),dimension(3),intent(in) :: x_gc_in,p_gc_in !< gc position and momentum
-  real(kind=8),dimension(2),intent(in) :: st_gc_in !< gc local coordinates
-  real(kind=8),dimension(3),intent(in) :: B_hat !< Magnetic field direction B/B_norm
-  real(kind=8),intent(in) :: B_norm !< magnetic field intensity in [T]
+  type(type_node_list), intent(in)       :: node_list
+  type(type_element_list), intent(in)    :: element_list
+  integer(kind=1), intent(in)            :: q_gc_in !< gc charge
+  integer(kind=4), intent(in)            :: i_elm_in !< gc element
+  real(kind=8), dimension(3), intent(in) :: x_gc_in,p_gc_in !< gc position and momentum
+  real(kind=8), dimension(2), intent(in) :: st_gc_in !< gc local coordinates
+  real(kind=8), dimension(3), intent(in) :: B_hat !< Magnetic field direction B/B_norm
+  real(kind=8), intent(in)               :: B_norm !< magnetic field intensity in [T]
   ! declare output variables
-  integer(kind=4),intent(out) :: i_elm_out !< particle element
-  real(kind=8),dimension(2),intent(out) :: st_out !< local particle position s,t
-  real(kind=8),dimension(3),intent(out) :: x_out  !< global position in R,Z,phi
+  integer(kind=4), intent(out)            :: i_elm_out !< particle element
+  real(kind=8), dimension(2), intent(out) :: st_out !< local particle position s,t
+  real(kind=8), dimension(3), intent(out) :: x_out  !< global oarticle position in R, Z, phi
   ! declare internal variables
-  integer :: ifail !< ifail kind not defined in find_RZ_nearby
+  integer :: ifail
 
   ! compute the particle position in cartesian coordinates
-  x_out = x_gc_in+&
-  (ATOMIC_MASS_UNIT*cross_product(B_hat,p_gc_in))/&
-  (EL_CHG*real(q_gc_in,8)*B_norm)
+  x_out = x_gc_in + (ATOMIC_MASS_UNIT*cross_product(B_hat,p_gc_in))/(EL_CHG*real(q_gc_in,8)*B_norm)
 
   ! find the local coordinates
-  call find_RZ_nearby(node_list,element_list,x_gc_in(1),x_gc_in(2),&
-  st_gc_in(1),st_gc_in(2),i_elm_in,x_out(1),x_out(2),&
-  st_out(1),st_out(2),i_elm_out,ifail)
+  call find_RZ_nearby(node_list,element_list,x_gc_in(1),x_gc_in(2), &
+    st_gc_in(1),st_gc_in(2),i_elm_in,x_out(1),x_out(2),             &
+    st_out(1),st_out(2),i_elm_out,ifail)
 end subroutine gc_position_to_particle
 
 !---------------------------------------------------------------------------

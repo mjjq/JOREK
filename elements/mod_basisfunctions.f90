@@ -484,7 +484,7 @@ H_ss(4,4)=-18.d0*(-2.d0 + 3.d0*s)*(-1.d0 + t)*t**2
 H_tt(4,4)=18.d0*(-1.d0 + s)**2*s*(1.d0 - 3.d0*t)
 end subroutine basisfunctions_2D_2
 
-!> Basisfunctions with second derivatives in 2D and transpose matrix for 
+!> Basisfunctions with second derivatives in 2D and transposed matrix for 
 !> better vectorisation
 pure subroutine basisfunctions_2D_2_T(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
 implicit none

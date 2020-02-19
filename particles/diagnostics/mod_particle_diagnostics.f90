@@ -489,20 +489,19 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
         particle = particle_in
         real_stats_tmp(6) = 0.d0 ! Since there is no momentum defined for this we just use 0
       type is (particle_kinetic_relativistic)
-        ! compute the toroidal canonical momentum P_phi for a kinetic relativistic particles
-        ! with momentum expressed in Cartesian coordinates p_phi = -p_x*cos(phi)-p_y*sin(phi)
-        real_stats_tmp(6) = real(particle_in%q,8)*EL_CHG*psi - ATOMIC_MASS_UNIT*particle_in%x(1)*&
-        (particle_in%p(1)*sin(particle_in%x(3))+particle_in%p(2)*cos(particle_in%x(3)))
-	! transform a relativistic kinetic particle into gc
+        ! compute the canonical toroidal momentum P_phi
+        real_stats_tmp(6) = real(particle_in%q,8)*EL_CHG*psi - ATOMIC_MASS_UNIT*particle_in%x(1)* &
+          (particle_in%p(1)*sin(particle_in%x(3))+particle_in%p(2)*cos(particle_in%x(3)))
+	! transform the particle into a gc to get E and mu
         call relativistic_kinetic_to_particle(fields%node_list,fields%element_list,&
              particle_in,particle,mass,B)
        type is (particle_gc_relativistic)
-         !> compute the toroidal canonical momentum for a relativistic GC
-          real_stats_tmp(6) = EL_CHG*particle_in%q*psi + ATOMIC_MASS_UNIT*particle_in%x(1)*&
-               particle_in%p(1)*B(3)/norm2(B)
-         !> transform a particle_relativistic_GC into particle_gc
-          call  relativistic_gc_to_particle(fields%node_list,fields%element_list,&
-               particle_in,particle,mass,B) 
+         ! compute the canonical toroidal momentum P_phi
+          real_stats_tmp(6) = EL_CHG*particle_in%q*psi + ATOMIC_MASS_UNIT*particle_in%x(1)* &
+            particle_in%p(1)*B(3)/norm2(B)
+         ! transform the particle into a gc to get E and mu
+          call relativistic_gc_to_particle(fields%node_list,fields%element_list, &
+            particle_in,particle,mass,B) 
       class default
         write(*,*) "ERROR: calculate_particle_diagnostics not implemented for this particle type"
         cycle ! skip this iteration

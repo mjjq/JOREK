@@ -296,7 +296,7 @@ contains
           real_parameters)
 
     !> check if the time step is not too large
-    if((t+dt) .gt. t_stop) dt = t_stop - dt
+    if((t+dt) .gt. t_stop) dt = t_stop - t
 
     !> compute runge-kutta differentials
     call compute_runge_kutta_differentials(compute_rhs,fields,n_variables,&

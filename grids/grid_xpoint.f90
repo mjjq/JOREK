@@ -1370,8 +1370,8 @@ enddo
 index = 0
 do i=1,newnode_list%n_nodes
 
-  node_list%node(i)%axis_node = .false.
-  if (i .le. n_tht) node_list%node(i)%axis_node = .true.
+  newnode_list%node(i)%axis_node = .false.
+  if (i .le. n_tht) newnode_list%node(i)%axis_node = .true.
 
   do k=1,n_order+1
 

@@ -12,7 +12,7 @@ module diffusivities
   
   
   private
-  public get_dperp, get_zkperp, get_zk_iperp, get_zk_eperp, get_dzkperp
+  public get_dperp, get_zkperp, get_zk_iperp, get_zk_eperp
   
   
   interface get_dperp
@@ -24,10 +24,6 @@ module diffusivities
     module procedure get_zkperp1
     module procedure get_zkperp2
   end interface get_zkperp
-  
-  interface get_dzkperp
-    module procedure get_dzkperp1
-  end interface get_dzkperp
   
   interface get_zk_iperp
     module procedure get_zk_iperp1
@@ -103,29 +99,6 @@ module diffusivities
     end if
     
   end function get_zkperp1
-  
-  real*8 function get_dzkperp1(psin)
-    
-    implicit none
-    
-    real*8, intent(in) :: psin
-    
-    if ( num_zk_perp ) then
-      
-      get_dzkperp1 = 0.d0
-      
-    else
-      
-      get_dzkPerp1 = - ZK_perp(1) * ZK_perp(2) / (cosh(2.d0*((psin-ZK_perp(5))/ZK_perp(4))) + 1.d0) / ZK_perp(4)
-      
-      if ( jorek_model >= 300 ) then
-
-        get_dzkperp1 = get_dzkperp1 + ZK_perp(6)*ZK_perp(2) / (cosh(2.d0*((-psin+ZK_perp(5)+ZK_perp(3))/ZK_perp(4))) + 1.d0) / ZK_perp(4)
-
-      end if
-    end if
-      
-  end function get_dzkperp1
 	
    !> Determine perpendicular heat diffusivity, ZK_perp, as a function of Psi_N, for ions
   real*8 function get_zk_iperp1(psin)

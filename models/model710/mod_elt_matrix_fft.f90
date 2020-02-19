@@ -11,7 +11,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use diffusivities, only: get_dperp, get_zkperp, get_dzkperp
+use diffusivities, only: get_dperp, get_zkperp
 use equil_info, only : get_psi_n
 
 implicit none

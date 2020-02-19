@@ -382,7 +382,7 @@ endif
 
 #ifdef fullmhd
 scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_phi       ', 'B_R         ', 'B_Z         ', &
-                                                    'K_par       ', 'V_par       ', 'FFprime     ', &
+                                                    'Q_par       ', 'V_par       ', 'FFprime     ', &
                                                     'Grad_P      ', 'JxB         '/)
 #endif /*fullmhd*/
 
@@ -976,8 +976,8 @@ do i=1,element_list%n_elements
         scalars(inode,s_fullmhd+1) = BP
         scalars(inode,s_fullmhd+2) = BR
         scalars(inode,s_fullmhd+3) = BZ
-        scalars(inode,s_fullmhd+4) = ZKpar_T * ( BR * TT_x + BZ * TT_y + BP * TT_P / R)
-        scalars(inode,s_fullmhd+5) = rho * TT * (VR * BR + VZ * BZ + VP * BP / R)
+        scalars(inode,s_fullmhd+4) = ZKpar_T * ( BR * TT_x + BZ * TT_y + BP * TT_P / R) / sqrt(BR**2 + BZ**2 + Bp**2)
+        scalars(inode,s_fullmhd+5) = rho * TT * (VR * BR + VZ * BZ + VP * BP) / sqrt(BR**2 + BZ**2 + Bp**2)
         scalars(inode,s_fullmhd+6) = zFFprime 
         
         BR_R = -1/R**2 * ( A3_Z - AZ_p ) + ( A3_RZ - AZ_Rp )/R

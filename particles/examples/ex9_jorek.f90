@@ -49,9 +49,12 @@ if (.not. restart) then
   ! One can use read_jorek_fields_interp_linear or read_jorek_fields_interp_hermite_birkhoff,
   ! and i=-1 (to read jorek_restart.h5 and keep this field at all time) or i=last_file_before_time(sim%time)
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
-  events = [event(read_jorek_fields_interp_linear(i=last_file_before_time(sim%time))), & 
-            event(diag,start=sim%time,step=1d-7),         &
-            event(stop_action(),start=sim%time+3.d-6)]
+  !events = [event(read_jorek_fields_interp_linear(i=last_file_before_time(sim%time))), & 
+  !          event(diag,start=sim%time,step=1d-7),         &
+  !          event(stop_action(),start=sim%time+3.d-6)]
+  events = [event(read_jorek_fields_interp_linear(i=-1)),&
+       event(diag,start=sim%time,step=1.d-7),&
+       event(stop_action(),start=sim%time+3.d-6)]
 
   ! Run first event to read the JOREK fields
   call with(sim, events, at=0.d0)
@@ -83,7 +86,7 @@ else
   ! One can use read_jorek_fields_interp_linear or read_jorek_fields_interp_hermite_birkhoff,
   ! and i=-1 (to read jorek_restart.h5 and keep this field at all time) or i=last_file_before_time(sim%time)
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
-  events = [event(read_jorek_fields_interp_hermite_birkhoff(i=-1)), & 
+  events = [event(read_jorek_fields_interp_linear(i=-1)), & 
             event(diag,start=sim%time,step=1d-8),         &
 	    event(stop_action(),start=sim%time+1.d-8)]
 
@@ -117,8 +120,7 @@ do while (.not. sim%stop_now)
        do j=1,size(particles,1)
           time_local = sim%time !< copy simulation time in local variable
           dt_local = timesteps(i)!< time step in local variable
-        do while(sim%time .lt. target_time) !< continue until we reach the target time
-          if (particles(j)%i_elm .eq. 0) exit
+        do while((time_local .lt. target_time) .and. (particles(j)%i_elm .ne. 0)) !< continue until we reach the target time
           call runge_kutta_adapt_dt_gc_push_jorek(sim%fields,time_local,&
                dt_local,target_time,sim%groups(i)%mass,particles(j)) !< push in jorek fields
 

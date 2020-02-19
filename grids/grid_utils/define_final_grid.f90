@@ -1251,6 +1251,18 @@ enddo
 ! --- Note: it's very important that we do this after copying the nodes and after eliminating the orphan nodes!
 index = 0
 do i=1,newnode_list%n_nodes
+
+  node_list%node(i)%axis_node = .false.
+  if (xcase .ne. 3) then
+    if ((i .gt. 5) .and. (i .le. 4+n_tht)) then
+      node_list%node(i)%axis_node = .true.
+    endif
+  else
+    if ((i .gt. 9) .and. (i .le. 8+n_tht-1)) then
+      node_list%node(i)%axis_node = .true.
+    endif
+  endif
+
   do k=1,n_order+1
 
     index = index + 1

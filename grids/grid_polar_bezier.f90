@@ -294,6 +294,8 @@ do i=1,nr
 
    node_list%node(index)%boundary = 0
    if (i .eq. nr) node_list%node(index)%boundary = 2
+   node_list%node(index)%axis_node = .false.
+   if (i .eq. 1) node_list%node(index)%axis_node = .true.
 
    do k=1,n_order+1
      node_list%node(index)%index(k) = n_index_start + (n_order+1)*(index0-1)+k

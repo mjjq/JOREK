@@ -37,7 +37,7 @@ contains
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
        RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min, &
        Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, &
-       n_pol,n_tht, fix_axis_nodes, grid_to_wall, n_wall_blocks
+       grid_to_wall, n_wall_blocks
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
@@ -139,43 +139,6 @@ contains
         do iv=1, n_vertex_max !==========================do vertex
 
            inode = element_list%element(ielm)%vertex(iv)
-
-           ! A crude way of imposing partial regularity at the grid axis
-           !---------------------------------------------------------------------------------------------
-           do in=1, n_tor
-             do k=1, n_var
-           
-               ! Restrain the coefficients of the 3rd basis functions on axis from changing
-               if ( ( inode <= n_tht .or. ( n_tht < 1 .and. inode <= n_pol ) ) .and. (fix_axis_nodes) ) then
-           
-                 ! --- For t-derivative
-                 index_node = node_list%node(inode)%index(3)
-                 if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-                   call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-                   index_large_i = n_tor * n_var * (index_node - 1)
-                   ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-                   irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                   jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                   A_glob(ilarge2)    = zbig
-                 end if
-
-                 ! --- For cross-derivative
-                 index_node = node_list%node(inode)%index(4)
-                 if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-                   call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-                   index_large_i = n_tor * n_var * (index_node - 1)
-                   ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-                   irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                   jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                   A_glob(ilarge2)    = zbig
-                 end if
-
-               endif
-           
-             enddo
-           enddo
-           !---------------------------------------------------------------------------------------------
-
 
            if (node_list%node(inode)%boundary .ne. 0) then !==================if boundary nodes
 

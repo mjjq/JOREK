@@ -441,6 +441,8 @@ do i=1,nrnew
     node_list%node(index)%values(1,4,1) = PSInew(4,index0) * 4.d0/9.d0
 
     if (i .eq. nrnew) node_list%node(index)%boundary = 2
+    node_list%node(index)%axis_node = .false.
+    if (i .eq. 1) node_list%node(index)%axis_node = .true.
 
     if (.not. refinement) then       ! keep original formulation if not using refinement
    

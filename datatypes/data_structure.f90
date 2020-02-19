@@ -21,6 +21,7 @@ module data_structure
 #endif
     integer    :: index(n_order+1)                !< index in the main matrix
     integer    :: boundary                        !< = 1, 2 or 3 for boundary nodes.
+    logical    :: axis_node                       !< Flag nodes that are on the axis (and can/need-to-be be stabilised)
                                                   !< For wall-aligned grids, check routine update_boundary_types_final
                                                   !< in grids/grid_utils/update_boundary_types.f90
     integer    :: boundary_index                  !< index of the boundary node 

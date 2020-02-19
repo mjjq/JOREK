@@ -191,7 +191,7 @@ contains
     !> compute first step
     !> compute runge-kutta differential
     call compute_runge_kutta_differentials(compute_rhs,fields,n_variables,&
-         n_int_parameters,n_real_parameters,t,dt,solution_old,&
+         n_int_parameters,n_real_parameters,t,dt_new,solution_old,&
          int_parameters,real_parameters,differentials,ifail)
     !> compute solution
     call compute_runge_kutta_solution(n_variables,solution_old,&
@@ -199,16 +199,17 @@ contains
     !> compute error
     error = compute_base_error(n_variables,tolerances,&
          solution,solution_low_order)!< base error
-    t_new = t + dt !< compute new variable
+    t_new = t + dt_new !< compute new variable
     !> check if a user selected method has to be used
     if(present(compute_user_err)) error = max(error,&
          abs(compute_user_err(fields,n_variables,n_int_parameters,&
          n_real_parameters,t_new,solution,solution_low_order,&
          int_parameters,real_parameters)))
     !> if good error compute larger time step and update time
-    if(error.lt.1.d0) call compute_time_step_shampine(dt_new,&
+    if((error.lt.1.d0).and.(error.ne.0.d0)) &
+         call compute_time_step_shampine(dt_new,&
          error,[error_parameters(1),error_parameters(3)])
-
+    
     !> loop on the error control
     do while(error.ge.1.d0 .and. iteration.le.maximum_iteration)
        !> compute new time step

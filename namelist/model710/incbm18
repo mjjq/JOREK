@@ -8,8 +8,10 @@
  linear_run = .t.
  time_evol_scheme ='Gears'
  nout = 10
- parallel_projection = .t.
  fix_axis_nodes = .t.
+
+ ! MODEL710 ONLY: TO BE REMOVED FOR BENCHMARKS WITH MODEL303
+ parallel_projection = .t.
 
  fbnd(1)   = 2.
  fbnd(2:4) = 0.
@@ -576,13 +578,14 @@
  D_perp(6) = 1.d-6 
 
  ! --- Careful with K, in full-MHD, the conduction includes a (gamma-1) factor (normally 1.5)
- ZK_par  = 1.5d0
- ZK_perp(1) = 1.50d-6
- ZK_perp(2) = 0.d0
- ZK_perp(3) = 0.d0
- ZK_perp(4) = 99.d0
- ZK_perp(5) = 99.d0
- ZK_perp(6) = 1.5d-6
+ !            MODEL710       MODEL303
+ ZK_par     = 1.5d0         !1.0d0  
+ ZK_perp(1) = 1.50d-6       !1.00d-6
+ ZK_perp(2) = 0.d0          !0.d0   
+ ZK_perp(3) = 0.d0          !0.d0   
+ ZK_perp(4) = 99.d0         !99.d0  
+ ZK_perp(5) = 99.d0         !99.d0  
+ ZK_perp(6) = 1.5d-6        !1.0d-6 
 
  ! --- Careful with FF', in full-MHD, we use the real FF', whereas model303 uses -FF' as a convention.
  ! --- This means you need to reverse FF_0, FF_1 and FF_coef(6) if you want to compare to model303.
@@ -591,16 +594,17 @@
  ! --- normally used as a cut-off at the plasma edge (beyond which F is constant and FF' is zero)
  ! --- we integrate the F-profile without this tanh, and then just force F to be constant beyond FF_coef(5)
  ! --- This is why this FF' profile is different from the original one in namelist/model302...
- FF_0        = -3.28
- FF_1        =  0.
- FF_coef(1)  = -0.2
- FF_coef(2)  = -5.2
- FF_coef(3)  =  4.97
- FF_coef(4)  =  0.00001
- FF_coef(5)  =  0.7
- FF_coef(6)  =  0.36
- FF_coef(7)  =  0.59
- FF_coef(8)  =  0.0424
+ !             MODEL710      MODEL303
+ FF_0        = -3.28        !+3.28   
+ FF_1        =  0.          ! 0.     
+ FF_coef(1)  = -0.2         !-0.2    
+ FF_coef(2)  = -5.2         !-5.2    
+ FF_coef(3)  =  4.97        ! 4.97   
+ FF_coef(4)  =  0.00001     ! 0.00001
+ FF_coef(5)  =  0.7         ! 0.7    
+ FF_coef(6)  =  0.36        !-0.36   
+ FF_coef(7)  =  0.59        ! 0.59   
+ FF_coef(8)  =  0.0424      ! 0.0424 
 
  heatsource     = 0.d-7
  particlesource = 0.d-6

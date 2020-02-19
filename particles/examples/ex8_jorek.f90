@@ -15,23 +15,22 @@ use mod_gc_relativistic
 implicit none
 
 ! Set up the simulation variables
+logical,parameter                   :: write_timestep=.true.
 !> error control runge kutta error tolerances: 1:R, 2:Z, 3:phi, 4:p_parallel
-real(kind=8),dimension(4),parameter :: tolerances = [1.d-6,1.d-6,1.d-6,1.d-1] 
-real(kind=8)                      :: timesteps(1) = [3.5723d-13] ! [1.d-10] !
-real(kind=8)                      :: target_time, t
-real*8                            :: energy !< Initial kinetic energy in eV
-real*8                            :: ksi    !< Initial cosine of pitch-angle
-integer(kind=4)                   :: n_part, i, j, k, n_steps, ifail, n_lost
-logical                           :: restart
-type(diag_print_kinetic_energy)   :: print_kinetic_energy
-type(write_particle_diagnostics)  :: diag
-type(particle_gc_relativistic)    :: particle_in, particle_out
-type(particle_gc)                 :: particle_out_gc
-real(kind=8)                      :: psi, U, gyro_angle
-real(kind=8),dimension(3)         :: E, B
-! For interp_PRZ
-real*8 :: P(1), P_s(1), P_t(1), P_phi(1), P_time(1)
-real*8 :: R, R_s, R_t, Z, Z_s, Z_t
+real(kind=8),dimension(4),parameter :: tolerances = [1.d-6,1.d-6,1.d-6,1.d-1]
+real(kind=8)                        :: timesteps(1) = [3.5723d-13] ! [1.d-10] !
+real(kind=8)                        :: target_time, t
+real(kind=8)                        :: energy !< Initial kinetic energy in eV
+real(kind=8)                        :: ksi    !< Initial cosine of pitch-angle
+real(kind=8)                        :: time_local,dt_local !< local time and time step
+integer(kind=4)                     :: n_part, i, j, k, n_steps, ifail, n_lost
+logical                             :: restart
+type(diag_print_kinetic_energy)     :: print_kinetic_energy
+type(write_particle_diagnostics)    :: diag
+type(particle_gc_relativistic)      :: particle_in, particle_out
+type(particle_gc)                   :: particle_out_gc
+real(kind=8)                        :: psi, U, gyro_angle
+real(kind=8),dimension(3)           :: E, B
 
 call sim%initialize(num_groups=1)
 
@@ -102,7 +101,7 @@ call check_and_fix_timesteps(timesteps, events)
 call sim%fields%set_flag_dpsidt(.true.)
 
 ! Open a file where to write some fields at a given position to test time interpolation routines
-open(22,file='field_vs_t.dat')
+open(22,file='timestep_vs_time.dat')
 
 ! Loop until the simulation is stopped
 do while (.not. sim%stop_now)
@@ -117,25 +116,22 @@ do while (.not. sim%stop_now)
 !      !$omp parallel do default(private) &
 !      !$omp shared (i, n_steps, timesteps, sim) &
 !      !$omp reduction(+:n_lost)	
-      do j=1,size(particles,1)
+       do j=1,size(particles,1)
+          time_local = sim%time !< copy simulation time in local variable
+          dt_local = timesteps(i)!< time step in local variable
         do while(sim%time .lt. target_time) !< continue until we reach the target time
           if (particles(j)%i_elm .eq. 0) exit
-!          call runge_kutta_fixed_dt_gc_push(sim%fields,sim%time,timesteps(i), &
-!               sim%groups(i)%mass,particles(j)) !< push in analytical fields
           call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,tolerances,&
-               sim%time,timesteps(i),target_time,sim%groups(i)%mass,particles(j)) !< push in jorek fields
+               time_local,dt_local,target_time,sim%groups(i)%mass,particles(j)) !< push in jorek fields
 
 !          write(*,*) 'Particle position: ', particles(j)%x(1), particles(j)%x(2), particles(j)%x(3)
 !          write(*,*) 'Particle momenta: ', particles(j)%p(1), particles(j)%p(2)
 
-          !> write field values in a file
-	  if (modulo(k-1,10000)==0) then	                
-	    call sim%fields%interp_PRZ(sim%time, 1000, [1], 1, 0.5, 0.5, 0.5, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)	
-	    write(22,'(7e26.16)') sim%time, P, P_time, R, Z
-	  end if
-
+          !> write time step profile if enables
+          if(write_timestep) write(22,'(i6,2e26.16)') j,time_local,dt_local
           if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1		
-        end do !< time steps
+       end do !< time steps
+       !< overwrite simu
       end do !< particles
 !      !$omp end parallel do
     end select

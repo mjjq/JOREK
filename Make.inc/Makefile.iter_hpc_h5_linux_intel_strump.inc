@@ -12,7 +12,7 @@ CXX = mpiicpc
 
 # Solvers dependencies
 USE_HIPS         = 0
-USE_PASTIX       = 1
+USE_PASTIX       = 0
 USE_BLOCK        = 0
 USE_MUMPS        = 1
 USE_STRUMPACK    = 1
@@ -21,6 +21,18 @@ USE_HDF5         = 1
 
 # Directory containing the user-compiled libraries (e.g., MUMPS, PASTIX, ...)
 LIBDIR = $(HOME)/lib
+
+#Scotch library
+SCOTCH_HOME ?=  $(LIBDIR)/scotch/scotch_5.1
+LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lptscotch -lptscotcherr -lscotch
+INC_SCOTCH   = -I$(SCOTCH_HOME)/include
+
+# MUMPS
+MUMPS_HOME ?=  $(LIBDIR)/MUMPS_4.8.3
+ORDLIB      = -L$(METIS_HOME)/lib -lpord -lmetis -lparmetis
+LIB_MUMPS   = $(LIB_SCOTCH) -L$(MUMPS_HOME)/lib/ -ldmumps -lmumps_common -lesmumps $(LIB_SCOTCH) $(ORDLIB)
+LIB_ZMUMPS  = -lzmumps
+INC_MUMPS   =  $(MUMPS_HOME)/include/
 
 #Strumpack library
 STRUMPACK_HOME=/u/iholod/bin/STRUMPACK-3.2.0/build

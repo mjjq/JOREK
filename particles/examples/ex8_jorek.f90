@@ -1,7 +1,7 @@
-!> Push relativistic guiding centre(s) in JOREK fields
+!> Push relativistic guiding centre(s) with error control in JOREK fields
 !>
-!> Compile with `make ex7_jorek`
-!> Run with `./ex7_jorek < JOREK_namelist`
+!> Compile with `make ex8_jorek`
+!> Run with `./ex8_jorek < JOREK_namelist`
 
 program ex8_jorek
 
@@ -123,10 +123,6 @@ do while (.not. sim%stop_now)
           if (particles(j)%i_elm .eq. 0) exit
           call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,tolerances,&
                time_local,dt_local,target_time,sim%groups(i)%mass,particles(j)) !< push in jorek fields
-
-!          write(*,*) 'Particle position: ', particles(j)%x(1), particles(j)%x(2), particles(j)%x(3)
-!          write(*,*) 'Particle momenta: ', particles(j)%p(1), particles(j)%p(2)
-
           !> write time step profile if enables
           if(write_timestep) write(22,'(i6,2e26.16)') j,time_local,dt_local
           if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1		

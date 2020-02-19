@@ -6,7 +6,7 @@ module purge
 module use /work/imas/etc/modules/all
 
 module load cURL/7.58.0-GCCcore-6.4.0
-#module load MUMPS/5.1.2-intel-2018a-metis
+module load MUMPS/5.1.2-intel-2018a-metis
 #module load PaStiX/5.2.3-intel-2018a
 module load FFTW/3.3.7-intel-2018a
 module load HDF5/1.10.1-intel-2018a

@@ -121,7 +121,6 @@ do while (.not. sim%stop_now)
       do j=1,size(particles,1)
         do k=1,n_steps
           if (particles(j)%i_elm .eq. 0) exit
-	  sim%time = sim%time + timesteps(i)
 !          call runge_kutta_fixed_dt_gc_push(sim%fields,sim%time,timesteps(i), &
 !               sim%groups(i)%mass,particles(j)) !< push in analytical fields
           call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time,timesteps(i), &

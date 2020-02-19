@@ -18,6 +18,53 @@ module mod_gc_relativistic
 
 contains
 
+   !> This function adapts a time step as a function as a function of the
+   !> gradient and curvature length
+   !> inputs:
+   !>   fields:            (field_base)(optional) fields for particle pushing
+   !>   n_variables:       (integer) number of variables=4
+   !>   n_int_parameters:  (integer) number of integer parameters=2
+   !>   n_real_parameters: (integer) number of real parameters=4
+   !>   t:                 (real8) time
+   !>   dt:                (real8) old time step
+   !>   solution:          (real8)(n_variables) solution 1:R, 2:Z, 3:phi
+   !>                      4: p parallel
+   !>   int_parameters:    (integer)(2) integer parameters 1:i_elm, 2:q
+   !>   real_parameters:   (real8)(4) real parameters 1:s,2:t,3:mass,
+   !>                      4: magnetic moment
+   !> outputs:
+   !>   dt_new: (real8) new time step
+   pure function adapt_time_step_gradB_curlb(fields,n_variables,n_int_parameters,&
+        n_real_parameters,t,dt,solution,int_parameters,&
+        real_parameters) result(dt_new)
+     !> load modules
+     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,TWOPI
+     use mod_fields, only: fields_base
+     implicit none
+     !> parameters
+     real(kind=8),parameter :: inv_number_steps=0.1 !< 10 steps per characteristic time
+     real(kind=8),parameter :: minimum_n_gyroperiod=1.d0
+     !> declare inputs
+     class(fields_base),intent(in) :: fields
+     integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
+     real(kind=8),intent(in) :: t,dt
+     real(kind=8),dimension(n_variables),intent(in) :: solution
+     integer,dimension(n_int_parameters),intent(in) :: int_parameters
+     real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
+     !> declare outputs
+     real(kind=8) :: dt_new
+     !> declare internal variables
+     real(kind=8) :: velocity_max,normB
+     real(kind=8),dimension(3) :: E,b,gradB,curlb,dbdt 
+
+     !> compute fields
+     call fields%calc_EBNormBGradBCurlbDbdt(t,int_parameters(1),&
+          real_parameters(1:2),solution(3),E,b,normB,gradB,curlb,dbdt)
+     
+     
+
+   end function adapt_time_step_gradB_curlb
+
   !> This procedure pushes a relativistic guiding center in JOREK fields
   !> using standard Runge-Kutta integrator without time step control
   !> inputs:
@@ -27,6 +74,7 @@ contains
   !>   mass:     (real8) the gc mass in AMU
   !>   particle: (particle_gc_relativistic) the gc to integrate
   !> outputs:
+  !>   t:        (real8) new time 
   !>   particle: (particle_gc_relativistic) the integrated gc
   subroutine runge_kutta_fixed_dt_gc_push_jorek(fields,t,dt,&
        mass,particle)
@@ -37,9 +85,10 @@ contains
     implicit none
     !> declare input output variables
     type(particle_gc_relativistic), intent(inout) :: particle
+    real(kind=8),intent(inout) :: t
     !> declare input variables
     class(fields_base), intent(in) :: fields
-    real(kind=8), intent(in)       :: t, dt, mass
+    real(kind=8), intent(in)       :: dt, mass
     !> internal variables
     integer :: ifail, i_elm_new !< particle new element
     !> new particle local coordinates: 1:s, 2:t
@@ -77,6 +126,7 @@ contains
   !>   mass:     (real8) particle mass in AMU
   !>   particle: (particle_gc_relativistic) particle to push
   !> outputs:
+  !>   t:        (real8) updated time
   !>   particle: (particle_gc_relativistic) pushed particle
   subroutine runge_kutta_fixed_dt_gc_push(fields,t,dt,mass,particle)
     !> load modules
@@ -84,10 +134,11 @@ contains
     use mod_runge_kutta, only: runge_kutta_fixed_dt
     implicit none
     !> declare input/output varibales
+    real(kind=8),intent(inout) :: t
     type(particle_gc_relativistic), intent(inout) :: particle
     !> declare input variables
     class(fields_base), intent(in) :: fields
-    real(kind=8), intent(in)       :: t, dt, mass
+    real(kind=8), intent(in)       :: dt, mass
     !> declare internal variables
     integer                    :: ifail
     real(kind=8), dimension(4) :: solution_new

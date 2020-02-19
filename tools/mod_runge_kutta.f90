@@ -159,7 +159,7 @@ contains
     !>   2: time step reduction
     !>   3: time step increment
     real(kind=8),dimension(3),parameter :: error_parameters=[&
-         9.d-1,1.d0/4.d0,1.d0/5.d0]
+         9.d-1,2.5d-1,2.0d-1]
     !> delcare input / outputs
     real(kind=8),intent(inout) :: dt,t
     !> delcare inputs
@@ -208,7 +208,7 @@ contains
     !> if good error compute larger time step and update time
     if((error.lt.1.d0).and.(error.ne.0.d0)) &
          call compute_time_step_shampine(dt_new,&
-         error,[error_parameters(1),error_parameters(3)])
+         error,[1.d0,error_parameters(3)])
     
     !> loop on the error control
     do while(error.ge.1.d0 .and. iteration.le.maximum_iteration)

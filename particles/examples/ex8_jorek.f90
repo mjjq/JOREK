@@ -17,7 +17,7 @@ implicit none
 ! Set up the simulation variables
 logical,parameter                   :: write_timestep=.true.
 !> error control runge kutta error tolerances: 1:R, 2:Z, 3:phi, 4:p_parallel
-real(kind=8),dimension(4),parameter :: tolerances = [1.d-3,1.d-3,1.d-3,1.d3]
+real(kind=8),dimension(4),parameter :: tolerances = [1.d-2,1.d-2,1.d-2,1.d3]
 real(kind=8)                        :: timesteps(1) = [3.5723d-3]
 real(kind=8)                        :: target_time, t
 real(kind=8)                        :: energy !< Initial kinetic energy in eV

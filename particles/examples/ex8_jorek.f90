@@ -17,8 +17,8 @@ implicit none
 ! Set up the simulation variables
 logical,parameter                   :: write_timestep=.true.
 !> error control runge kutta error tolerances: 1:R, 2:Z, 3:phi, 4:p_parallel
-real(kind=8),dimension(4),parameter :: tolerances = [1.d-6,1.d-6,1.d-6,1.d-1]
-real(kind=8)                        :: timesteps(1) = [3.5723d-3] ! [1.d-10] !
+real(kind=8),dimension(4),parameter :: tolerances = [1.d-3,1.d-3,1.d-3,1.d3]
+real(kind=8)                        :: timesteps(1) = [3.5723d-3]
 real(kind=8)                        :: target_time, t
 real(kind=8)                        :: energy !< Initial kinetic energy in eV
 real(kind=8)                        :: ksi    !< Initial cosine of pitch-angle
@@ -57,7 +57,7 @@ if (.not. restart) then
 
   events = [event(read_jorek_fields_interp_linear(i=-1)),&
        event(diag,start=sim%time,step=1d-7),&
-       event(stop_action(),start=sim%time+5d-7)]
+       event(stop_action(),start=sim%time+5d-6)]
 
   ! Run first event to read the JOREK fields
   call with(sim, events, at=0.d0)
@@ -65,13 +65,13 @@ if (.not. restart) then
   select type (p=>sim%groups(1)%particles(1))
   type is (particle_gc_relativistic)
     p%q = -1
-    p%x = [3.68d0,0.d0,0.d0]
+    p%x = [3.1d0,0.d0,0.d0]
     call find_RZ(sim%fields%node_list, sim%fields%element_list, &
                  p%x(1), p%x(2), & ! inputs
                  p%x(1), p%x(2), p%i_elm, p%st(1), p%st(2), ifail) ! outputs
     !p%p = [1.d7,0.]
     energy = 5.12d5 ! 1.d7 ! !!! AT PRESENT, MUST INCLUDE REST ENERGY (FIX THIS) !!!
-    ksi    = 1.d0 ! Cosine of pitch-angle
+    ksi    = cos(0.785398) ! Cosine of pitch-angle
     particle_in = p
     particle_out = relativistic_gc_momenta_from_E_cospitch(particle_in,energy,ksi,sim%groups(1)%mass,sim%fields,sim%time)
     p%p = particle_out%p

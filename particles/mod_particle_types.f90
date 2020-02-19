@@ -51,17 +51,16 @@ module mod_particle_types
   end type particle_kinetic_leapfrog
 
   !> This particle type is used for computing the full orbit trajectory
-  !> of a relativistic particle. Final particle positions and momenta are given at time \(t\)
+  !> of a relativistic particle. Particle position and momentum are given at time \(t\)
  type, extends(particle_base) :: particle_kinetic_relativistic
     real(kind=8),dimension(3) :: p !< Momentum in Cartesian coordinates (p_x,p_y,p_z) in [AMU*m/s]
     integer(kind=1)           :: q !< charge [e]
  end type particle_kinetic_relativistic
 
  !> This particle type is used for computing the guiding center trajectory of a
- !> realtivistic particle. Final GC position and momenta are given at the time (\t\)
+ !> relativistic particle. GC position and momentum are given at the time (\t\)
  type, extends(particle_base) :: particle_gc_relativistic
-    !> 1:gc parallel momentum [AMU m/s] and magnetic moment [(AMU*m**2)/(T*s**2)]
-    real(kind=8),dimension(2) :: p
+    real(kind=8), dimension(2) :: p  !< 1: parallel momentum [AMU m/s], 2: magnetic moment [(AMU*m**2)/(T*s**2)]
     integer(kind=1) :: q !< charge [e]
  end type particle_gc_relativistic
 contains

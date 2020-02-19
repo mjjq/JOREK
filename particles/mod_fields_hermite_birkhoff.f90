@@ -126,51 +126,51 @@ end subroutine do_interp_PRZ_1
 !> s and t are also derived in time.
 !> inputs:
 !>   this:    (jorek_fields_interp_hermite_birkhoff) interpolation class
-!>   time:    (real8) time coordinate
+!>   time:    (real8) current time
 !>   i_elm:   (integer) element index
 !>   i_v:     (integer)(n_v) array of jorek field indices
 !>   n_v:     (integer) number of jorek fields to interpolate
 !>   s,t,phi: (real8) interpolation position in local (s,t) coordinates and
 !>            toroidal angle (phi)
 !> outputs:
-!>  P:               (real8)(n_v) interpolate quantities
+!>  P:               (real8)(n_v) interpolated quantities
 !>  P_s,P_t,P_time:  (real8)(n_v) interpolated quantity first order derivatives
-!>  P_ss,P_st,P_tt:  (real8)(n_v) interpolate quantity second order derivatives
-!>  P_sphi,P_tphi:   (real8)(n_v) interpolate quantitiy second order derivatives
-!>  P_stime,P_ttime: (real8)(n_v) interpolate quantity cross time-space derivatives
+!>  P_ss,P_st,P_tt:  (real8)(n_v) interpolated quantity second order derivatives
+!>  P_sphi,P_tphi:   (real8)(n_v) interpolated quantitiy second order derivatives
+!>  P_stime,P_ttime: (real8)(n_v) interpolated quantity cross time-space derivatives
 !>  R,Z:             (real8) radial and vertical position
 !>  R_s,R_t,Z_s,Z_t: (real8) radial and vertical position first order derivatives
-!>  R_ss,R_st,R_tt:  (real8) radial second order derivatives
-!>  Z_ss,Z_st,Z_tt:  (real8) vertical coordinate second order derivatives
-pure subroutine do_interp_PRZ_2(this,time,i_elm,i_v,n_v,s,t,phi,&
-     P,P_s,P_t,P_phi,P_time,P_ss,P_st,P_tt,P_sphi,P_tphi,P_stime,P_ttime,&
-     R,R_s,R_t,R_ss,R_st,R_tt,Z,Z_s,Z_t,Z_ss,Z_st,Z_tt)
+!>  R_ss,R_st,R_tt:  (real8) R second order derivatives
+!>  Z_ss,Z_st,Z_tt:  (real8) Z second order derivatives
+pure subroutine do_interp_PRZ_2(this,time,i_elm,i_v,n_v,s,t,phi,       &
+  P,P_s,P_t,P_phi,P_time,P_ss,P_st,P_tt,P_sphi,P_tphi,P_stime,P_ttime, &
+  R,R_s,R_t,R_ss,R_st,R_tt,Z,Z_s,Z_t,Z_ss,Z_st,Z_tt)
   implicit none
   !> declare input variables
-  class(jorek_fields_interp_hermite_birkhoff),intent(in) :: this
-  real(kind=8),intent(in) :: time,s,t,phi
-  integer,intent(in) :: i_elm,n_v
-  integer,dimension(n_v),intent(in) :: i_v
+  class(jorek_fields_interp_hermite_birkhoff), intent(in) :: this
+  real(kind=8), intent(in)                                :: time, s, t, phi
+  integer, intent(in)                                     :: i_elm,n_v
+  integer, dimension(n_v), intent(in)                     :: i_v
   !> declare output variables
-  real(kind=8),intent(out) :: R,R_s,R_t,R_ss,R_st,R_tt
-  real(kind=8),intent(out) :: Z,Z_s,Z_t,Z_ss,Z_st,Z_tt
-  real(kind=8),dimension(n_v),intent(out) :: P,P_s,P_t,P_phi,P_time
-  real(kind=8),dimension(n_v),intent(out) :: P_ss,P_st,P_tt,P_sphi,P_tphi
-  real(kind=8),dimension(n_v),intent(out) :: P_stime,P_ttime
+  real(kind=8), intent(out) :: R, R_s, R_t, R_ss, R_st, R_tt
+  real(kind=8), intent(out) :: Z, Z_s, Z_t, Z_ss, Z_st, Z_tt
+  real(kind=8), dimension(n_v), intent(out) :: P, P_s, P_t, P_phi, P_time
+  real(kind=8), dimension(n_v), intent(out) :: P_ss, P_st, P_tt, P_sphi, P_tphi
+  real(kind=8), dimension(n_v), intent(out) :: P_stime, P_ttime
   !> declare internal variables
   !> values array: first index: jorek field to interpolate
-  !>   second index: (P,P_s,P_t,P_phi,P_st,P_ss,P_tt,P_sphi,P_tphi,P_phiphi)
-  !>   third index:  (value_restart_1,value_restart_2,deltas_1,deltas_2)
-  real(kind=8),dimension(n_v,10,4) :: values
-  integer :: i1,i2,j
+  !>               second index: (P,P_s,P_t,P_phi,P_st,P_ss,P_tt,P_sphi,P_tphi,P_phiphi)
+  !>               third index:  (value_restart_1,value_restart_2,deltas_1,deltas_2)
+  real(kind=8), dimension(n_v,10,4) :: values
+  integer                           :: i1,i2,j
 
   !> initialise deltas to zero
   values(:,:,3:4) = 0.d0
 
-  !> Determine between which sets of restart ther interpolation occur
+  !> Determine between which restart files the interpolation occurs
   !> selection: t_i <= t_now and taking the last true and first false values.
   do j=1,this%len
-     if(this%t(this%ind(j)).gt.time) exit !< found the larest time
+     if(this%t(this%ind(j)).gt.time) exit !< found the first restart after time
   enddo
   i1 = this%ind(j-1) !< earlier restart
   i2 = this%ind(j)   !< later restart
@@ -179,58 +179,62 @@ pure subroutine do_interp_PRZ_2(this,time,i_elm,i_v,n_v,s,t,phi,&
 #endif
 
     !> field spatial interpolation
-    call interp_PRZ(this%node_lists(i1),this%element_lists(i1),i_elm,i_v,n_v,&
-         s,t,phi,values(:,1,1),values(:,2,1),values(:,3,1),values(:,4,1),&
-         values(:,5,1),values(:,6,1),values(:,7,1),values(:,8,1),&
-         values(:,9,1),values(:,10,1),R,R_s,R_t,R_st,R_ss,R_tt,&
-         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt) !< first restart values
-    call interp_PRZ(this%node_lists(i2),this%element_lists(i2),i_elm,i_v,n_v,&
-         s,t,phi,values(:,1,2),values(:,2,2),values(:,3,2),values(:,4,2),&
-         values(:,5,2),values(:,6,2),values(:,7,2),values(:,8,2),&
-         values(:,9,2),values(:,10,2),R,R_s,R_t,R_st,R_ss,R_tt,&
-         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt) !< second restart values
-    call interp_PRZ(this%node_lists(i1),this%element_lists(i1),i_elm,i_v,n_v,&
-         s,t,phi,values(:,1,3),values(:,2,3),values(:,3,3),values(:,4,3),&
-         values(:,5,3),values(:,6,3),values(:,7,3),values(:,8,3),&
-         values(:,9,3),values(:,10,3),R,R_s,R_t,R_st,R_ss,R_tt,&
-         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< first restart derivatives
-    call interp_PRZ(this%node_lists(i2),this%element_lists(i2),i_elm,i_v,n_v,&
-         s,t,phi,values(:,1,4),values(:,2,4),values(:,3,4),values(:,4,4),&
-         values(:,5,4),values(:,6,4),values(:,7,4),values(:,8,4),&
-         values(:,9,4),values(:,10,4),R,R_s,R_t,R_st,R_ss,R_tt,&
-         Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) !< second restart derivatives
+    !>   first restart values
+    call interp_PRZ(this%node_lists(i1),this%element_lists(i1),i_elm,i_v,n_v, &
+      s,t,phi,values(:,1,1),values(:,2,1),values(:,3,1),values(:,4,1),        &
+      values(:,5,1),values(:,6,1),values(:,7,1),values(:,8,1),                &
+      values(:,9,1),values(:,10,1),R,R_s,R_t,R_st,R_ss,R_tt,                  &
+      Z,Z_s,Z_t,Z_st,Z_ss,Z_tt) 
+    !>   second restart values                                     
+    call interp_PRZ(this%node_lists(i2),this%element_lists(i2),i_elm,i_v,n_v, &
+      s,t,phi,values(:,1,2),values(:,2,2),values(:,3,2),values(:,4,2),        &
+      values(:,5,2),values(:,6,2),values(:,7,2),values(:,8,2),                &
+      values(:,9,2),values(:,10,2),R,R_s,R_t,R_st,R_ss,R_tt,                  &
+      Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)  
+    !> first restart derivatives                                    
+    call interp_PRZ(this%node_lists(i1),this%element_lists(i1),i_elm,i_v,n_v, &
+      s,t,phi,values(:,1,3),values(:,2,3),values(:,3,3),values(:,4,3),        &
+      values(:,5,3),values(:,6,3),values(:,7,3),values(:,8,3),                &
+      values(:,9,3),values(:,10,3),R,R_s,R_t,R_st,R_ss,R_tt,                  &
+      Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.)
+    !> second restart derivatives
+    call interp_PRZ(this%node_lists(i2),this%element_lists(i2),i_elm,i_v,n_v, &
+      s,t,phi,values(:,1,4),values(:,2,4),values(:,3,4),values(:,4,4),        &
+      values(:,5,4),values(:,6,4),values(:,7,4),values(:,8,4),                &
+      values(:,9,4),values(:,10,4),R,R_s,R_t,R_st,R_ss,R_tt,                  &
+      Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,deltas=.true.) 
  
     !> compute field time interpolations
-    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,1,1),values(:,1,2),&
-         values(:,1,3),values(:,1,4),time,P)
-    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,2,1),values(:,2,2),&
-         values(:,2,3),values(:,2,4),time,P_s)
-    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,3,1),values(:,3,2),&
-         values(:,3,3),values(:,3,4),time,P_t)
-    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,4,1),values(:,4,2),&
-         values(:,4,3),values(:,4,4),time,P_phi)
-    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,5,1),values(:,5,2),&
-         values(:,5,3),values(:,5,4),time,P_st)
-    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,6,1),values(:,6,2),&
-         values(:,6,3),values(:,6,4),time,P_ss)
-    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,7,1),values(:,7,2),&
-         values(:,7,3),values(:,7,4),time,P_tt)
-    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,8,1),values(:,8,2),&
-         values(:,8,3),values(:,8,4),time,P_sphi)
-    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,9,1),values(:,9,2),&
-         values(:,9,3),values(:,9,4),time,P_tphi)
+    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,1,1),values(:,1,2), &
+      values(:,1,3),values(:,1,4),time,P)
+    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,2,1),values(:,2,2), &
+      values(:,2,3),values(:,2,4),time,P_s)
+    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,3,1),values(:,3,2), &
+      values(:,3,3),values(:,3,4),time,P_t)
+    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,4,1),values(:,4,2), &
+      values(:,4,3),values(:,4,4),time,P_phi)
+    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,5,1),values(:,5,2), &
+      values(:,5,3),values(:,5,4),time,P_st)
+    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,6,1),values(:,6,2), &
+      values(:,6,3),values(:,6,4),time,P_ss)
+    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,7,1),values(:,7,2), &
+      values(:,7,3),values(:,7,4),time,P_tt)
+    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,8,1),values(:,8,2), &
+      values(:,8,3),values(:,8,4),time,P_sphi)
+    call HB_interp(this%t(i1),this%t(i2),n_v,values(:,9,1),values(:,9,2), &
+      values(:,9,3),values(:,9,4),time,P_tphi)
     
     !> compute field time derivatives
-    call HB_interp_dt(this%t(i1),this%t(i2),n_v,values(:,1,1),values(:,1,2),&
-         values(:,1,3),values(:,1,4),time,P_time)
-    call HB_interp_dt(this%t(i1),this%t(i2),n_v,values(:,2,1),values(:,2,2),&
-         values(:,2,3),values(:,2,4),time,P_stime)
-    call HB_interp_dt(this%t(i1),this%t(i2),n_v,values(:,3,1),values(:,3,2),&
-         values(:,3,3),values(:,4,3),time,P_ttime)
+    call HB_interp_dt(this%t(i1),this%t(i2),n_v,values(:,1,1),values(:,1,2), &
+      values(:,1,3),values(:,1,4),time,P_time)
+    call HB_interp_dt(this%t(i1),this%t(i2),n_v,values(:,2,1),values(:,2,2), &
+      values(:,2,3),values(:,2,4),time,P_stime)
+    call HB_interp_dt(this%t(i1),this%t(i2),n_v,values(:,3,1),values(:,3,2), &
+      values(:,3,3),values(:,4,3),time,P_ttime)
     
 end subroutine do_interp_PRZ_2
 
-!> Constructor to allow for optional and default variables
+!> Constructor to allow for optional variables
 function new_read_jorek_fields_interp_hermite_birkhoff(basename, i, rst_format, stop_at_end) result(new)
   character(len=*), intent(in), optional :: basename
   integer, intent(in), optional :: i
@@ -243,10 +247,10 @@ function new_read_jorek_fields_interp_hermite_birkhoff(basename, i, rst_format, 
   if (present(stop_at_end)) new%stop_at_end = stop_at_end
   new%name = "ReadJorekFieldsInterpHermiteBirkhoff"
   new%log = .true.
-  !< check if one restart is required and exit the program
+  !< check if a single restart is required and exit the program if this is the case
   if(i.eq.(-1)) then 
-    write(*,*) "ERROR: Hermite-Birkhoff interpolation requires time-varying fields"
-    write(*,*) "for static fields use linear interpolation"
+    write(*,*) "ERROR: Hermite-Birkhoff interpolation requires several restart files."
+    write(*,*) "For a single restart file, use the linear interpolation."
     stop
   endif
 end function new_read_jorek_fields_interp_hermite_birkhoff

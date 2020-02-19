@@ -14,6 +14,7 @@ module mod_integrals3D
   use mpi_mod
   use mod_expression
   use mod_resistivity
+  use mod_poloidal_currents, only : integrated_normal_bnd_curr 
   use corr_neg
   use equil_info, only : get_psi_n, ES
 
@@ -47,6 +48,7 @@ integer,                      intent(in)    :: units
 type (type_element)      :: element, elm_k
 type (type_node)         :: nodes(n_vertex_max), node_k
 type (type_bnd_element)  :: bndelem
+type (type_surface_list) :: surface_list
 
 real*8  :: psi_axis, psi_bnd
 real*8  :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
@@ -74,9 +76,11 @@ real*8  :: R_c, Z_c, vec_inside(2), grad_t(2)
 real*8  :: k_size, k_size_perp
 real*8  :: G(4,4), sign_out, psi_n, ps0_sbnd
 real*8  :: dt_back, dt_now, r_dt, r_dt2
+real*8  :: I_halo, TPF, q0, q95, q99
+real*8, allocatable :: qval(:), radav(:)
 
 real*8  :: R_axis,Z_axis,s_axis,t_axis
-real*8  :: current_tot, beta_p, beta_n, beta_t, aminor
+real*8  :: current_tot, beta_p, beta_n, beta_t, aminor, current_MA
 real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, area1
 real*8  :: r0_corr, T0_corr
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
@@ -92,7 +96,7 @@ real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, source_ns, rn0
-real*8  :: E_tot, Zkpar_T, D_prof, ZK_prof
+real*8  :: E_tot, E_in, E_out, Zkpar_T, D_prof, ZK_prof, gamma_sheath_stangeby, sheath_heatflux
 real*8  :: fact_mu0, fact_flux
 real*8  :: hel1, heli, helicity_tot, psi_off, curr, Ip, vn_p0, qn, pflow, kinflow, cond_par, cond_perp
 real*8  :: kinpar_flux, qn_par, qn_perp, etajxb, eta_JxB, mag_work_tot, mag_src_tot, mag_source_tot
@@ -102,7 +106,7 @@ real*8  :: TT,TT_s,TT_t,TT_st,TT_ss,TT_tt
 real*8  :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt 
 real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt 
 real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p
-real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3, betap
+real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
@@ -174,6 +178,8 @@ delta_phi     = 2.d0 * PI / float(n_plane) / float(n_period)
 psi_axis   = ES%psi_axis;        R_axis = ES%R_axis;        Z_axis = ES%Z_axis
 psi_xpoint = ES%psi_xpoint;    R_xpoint = ES%R_xpoint;    Z_xpoint = ES%Z_xpoint 
 psi_bnd    = ES%psi_bnd
+
+gamma_sheath_stangeby = 2.d0 * ( gamma_sheath/(gamma-1.d0) + 1.d0 )
 
 ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
@@ -738,15 +744,44 @@ qn_par               =  n_period * qn_par         * fact_flux
 qn_perp              =  n_period * qn_perp        * fact_flux 
 kinpar_flux          =  n_period * kinpar_flux    * fact_flux  
 viscopar_flux        =  n_period * viscopar_flux  * fact_flux
+sheath_heatflux      =  gamma_sheath_stangeby * (gamma-1)/(2.d0*gamma) * vn_p0
 
 ! --- Derived quantities
-E_tot        = mag_tot + pressure + kin_par_tot + kin_perp_tot 
+E_tot        = mag_tot + pressure     + kin_par_tot + kin_perp_tot 
+E_in         = mag_in  + pressure_in  + kin_par_in  + kin_perp_in 
+E_out        = mag_out + pressure_out + kin_par_out + kin_perp_out 
 current_tot  = current_in + current_out
 heating_tot  = heating_in + heating_out
 source_tot   = source_in  + source_out
-betap        = 4.d0 * pressure_in*(GAMMA-1.d0)/(R_geo * current_in**2 * MU_zero)
-li3          = 2.d0 * mag_in /0.5  /( current_in**2 * R_geo * MU_zero)
-li3_tot      = 2.d0 * mag_tot/0.5  /(current_tot**2 * R_geo * MU_zero)
+Bgeo         = F0 / R_geo
+current_MA   = current_in * 1.d-6 * (1.d0/fact_mu0) * (1/mu_zero)
+beta_p       = 4.d0 * pressure_in/(R_geo * current_in**2 )     * (GAMMA-1)*fact_mu0
+beta_t       = 2.d0 * pressure_in / volume / Bgeo**2           * (GAMMA-1)/fact_mu0
+beta_n       = 100.d0 * beta_t * Bgeo/current_MA * sqrt(area/PI)
+li3          = 2.d0 * mag_in /0.5  /( current_in**2 * R_geo ) * fact_mu0
+li3_tot      = 2.d0 * mag_tot/0.5  /(current_tot**2 * R_geo ) * fact_mu0
+
+! --- Externally calculated quantities
+! --- Halo currents
+call integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF)
+
+! --- Safety factor at important locations
+surface_list%n_psi = 4 
+allocate( surface_list%psi_values(surface_list%n_psi) )
+allocate( qval(surface_list%n_psi), radav(surface_list%n_psi) )
+surface_list%psi_values(1) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.01d0
+surface_list%psi_values(2) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.02d0
+surface_list%psi_values(3) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.95d0 
+surface_list%psi_values(4) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.99d0
+
+call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
+call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
+     ES%Z_xpoint, qval, radav)
+
+q0  = qval(2)
+q95 = qval(3)
+q99 = qval(4) 
+
 
 if (my_id .eq. 0) then 
 
@@ -762,38 +797,120 @@ if (my_id .eq. 0) then
   loop_expr: do iexpr = 1, expr_list%n_expr
             
     select case ( trim(expr_list%expr(iexpr)%name) )
-      case ( 'Wmag_tot' )
-        res(iexpr+1) = mag_tot 
-     
-      case ( 'Ohmic_tot' )
-        res(iexpr+1) = ohm_tot 
 
-      case ( 'Thermal_tot' )
-        res(iexpr+1) = pressure 
+      case ( 'psi_axis' )
+        res(iexpr+1) = ES%psi_axis 
 
-      case ( 'Viscpar_dis' )
-        res(iexpr+1) = viscopar_dissip_tot
+      case ( 'R_axis' )
+        res(iexpr+1) = ES%R_axis 
 
-      case ( 'Helicity_tot' )
-        res(iexpr+1) = helicity_tot 
+      case ( 'Z_axis' )
+        res(iexpr+1) = ES%Z_axis
 
-      case ( 'Ip_tot' )
-        res(iexpr+1) = current_tot 
+      case ( 'psi_bnd' )
+        res(iexpr+1) = ES%psi_bnd 
 
-      case ( 'Kin_perp_tot' )
-        res(iexpr+1) = kin_perp_tot 
+      case ( 'R_bnd' )
+        res(iexpr+1) = ES%R_bnd 
 
-      case ( 'Kin_par_tot' )
-        res(iexpr+1) = kin_par_tot 
+      case ( 'Z_bnd' )
+        res(iexpr+1) = ES%Z_bnd
 
       case ( 'E_tot' )
         res(iexpr+1) = E_tot 
 
+      case ( 'E_in' )
+        res(iexpr+1) = E_in 
+
+      case ( 'E_out' )
+        res(iexpr+1) = E_out
+
+      case ( 'Wmag_tot' )
+        res(iexpr+1) = mag_tot 
+
+      case ( 'Wmag_in' )
+        res(iexpr+1) = mag_in 
+
+      case ( 'Wmag_out' )
+        res(iexpr+1) = mag_out 
+     
+      case ( 'Thermal_tot' )
+        res(iexpr+1) = pressure 
+
+      case ( 'Thermal_in' )
+        res(iexpr+1) = pressure_in 
+
+      case ( 'Thermal_out' )
+        res(iexpr+1) = pressure_out 
+
+      case ( 'Kin_par_tot' )
+        res(iexpr+1) = kin_par_tot 
+
+      case ( 'Kin_par_in' )
+        res(iexpr+1) = kin_par_in 
+
+      case ( 'Kin_par_out' )
+        res(iexpr+1) = kin_par_out 
+
+      case ( 'Kin_perp_tot' )
+        res(iexpr+1) = kin_perp_tot 
+
+      case ( 'Kin_perp_in' )
+        res(iexpr+1) = kin_perp_in 
+
+      case ( 'Kin_perp_out' )
+        res(iexpr+1) = kin_perp_out 
+
+      case ( 'Part_tot' ) 
+        res(iexpr+1) = density_tot 
+
+      case ( 'Part_in' ) 
+        res(iexpr+1) = density_in 
+
+      case ( 'Part_out' ) 
+        res(iexpr+1) = density_out 
+
+      case ( 'Helicity_tot' )
+        res(iexpr+1) = helicity_tot 
+
       case ( 'Mag_work_tot' )
         res(iexpr+1) = mag_work_tot
 
-      case ( 'Thermal_work_tot' )
+      case ( 'Thm_work_tot' )
         res(iexpr+1) = thermal_work_tot
+
+      case ( 'Part_src_tot' )
+        res(iexpr+1) = source_tot
+
+      case ( 'Part_src_in' )
+        res(iexpr+1) = source_in
+
+      case ( 'Part_src_out' )
+        res(iexpr+1) = source_out
+
+      case ( 'Heat_src_tot' )
+        res(iexpr+1) = heating_tot
+
+      case ( 'Heat_src_in' )
+        res(iexpr+1) = heating_in
+
+      case ( 'Heat_src_out' )
+        res(iexpr+1) = heating_out
+
+      case ( 'Viscpar_diss' )
+        res(iexpr+1) = viscopar_dissip_tot
+
+      case ( 'Wmag_src_tot' )
+        res(iexpr+1) = mag_source_tot 
+
+      case ( 'Ohmic_tot' )
+        res(iexpr+1) = ohm_tot 
+
+      case ( 'Ohmic_in' )
+        res(iexpr+1) = ohm_in 
+
+      case ( 'Ohmic_out' )
+        res(iexpr+1) = ohm_out 
 
       case ( 'P_vn' )
         res(iexpr+1) = vn_p0 
@@ -804,8 +921,23 @@ if (my_id .eq. 0) then
       case ( 'qn_perp' )
         res(iexpr+1) = qn_perp
 
+      case ( 'sheath_heat' )
+        res(iexpr+1) = sheath_heatflux 
+
       case ( 'kinpar_flux' )
         res(iexpr+1) = kinpar_flux
+
+      case ( 'vispar_flux' )
+        res(iexpr+1) = viscopar_flux
+
+      case ( 'Ip_tot' )
+        res(iexpr+1) = current_tot 
+
+      case ( 'Ip_in' )
+        res(iexpr+1) = current_in 
+
+      case ( 'Ip_out' )
+        res(iexpr+1) = current_out 
 
       case ( 'li3' )
         res(iexpr+1) = li3
@@ -813,17 +945,14 @@ if (my_id .eq. 0) then
       case ( 'li3_tot' )
         res(iexpr+1) = li3_tot
 
-      case ( 'betap' )
-        res(iexpr+1) = betap
+      case ( 'beta_p' )
+        res(iexpr+1) = beta_p 
 
-      case ( 'viscopar_flux' )
-        res(iexpr+1) = viscopar_flux
+      case ( 'beta_t' )
+        res(iexpr+1) = beta_t 
 
-      case ( 'particle_source_tot' )
-        res(iexpr+1) = source_tot
-
-      case ( 'heating_source_tot' )
-        res(iexpr+1) = heating_tot
+      case ( 'beta_n' )
+        res(iexpr+1) = beta_n 
 
       case ( 'area' )
         res(iexpr+1) = area 
@@ -831,8 +960,21 @@ if (my_id .eq. 0) then
       case ( 'volume' )
         res(iexpr+1) = volume
 
-      case ( 'Wmag_src_tot' )
-        res(iexpr+1) = mag_source_tot 
+      case ( 'q0' )
+        res(iexpr+1) = q0 
+
+      case ( 'q95' )
+        res(iexpr+1) = q95 
+
+      case ( 'q99' )
+        res(iexpr+1) = q99 
+
+      case ( 'I_halo' )
+        res(iexpr+1) = I_halo 
+
+      case ( 'TPF_halo' )
+        res(iexpr+1) = TPF 
+
 
     end select
             
@@ -855,7 +997,7 @@ if (my_id .eq. 0) then
   write(*,'(A,4es14.6,A)') ' Ohmic    (in/out)               : ',xt,Ohm_tot/1.d6, Ohm_in/1.d6, Ohm_out/1.d6,' [MW]'
 
   write(*,'(A,2es14.6)')   ' li(3)                           : ',xt, li3 
-  write(*,'(A,2es14.6)')   ' betap(1)                        : ',xt, betap
+  write(*,'(A,2es14.6)')   ' betap(1)                        : ',xt, beta_p
 
   write(*,'(A)')           ' sum ,time ,density_tot, pressure, Wkin_par, Wkin_perp, Wmag, Ohm, heating, source'
 

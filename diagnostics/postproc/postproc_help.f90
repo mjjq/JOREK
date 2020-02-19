@@ -35,6 +35,7 @@ module postproc_help
     write(*,*) '  I_halo_TPF            Export integral poloidal halo current & TPF (see help)'
     write(*,*) '  int2d                 Calculate various 2D integrals'
     write(*,*) '  int3d                 Calculate various 3D integrals (also bnd integrals)'
+    write(*,*) '  zeroD_quantities      Prints a long list of 0D quatities, beta, Ip, etc'
     write(*,*) '  int_along_pol_line    Integrate expr. on line from (R0,Z0,phi) to (R1,Z1,phi)'
     write(*,*) '  jnorm_bnd_curr        Exports normal current density to the boundary R,Z pts'
     write(*,*) '  jorek-units           Switch to JOREK normalized units'
@@ -331,7 +332,17 @@ module postproc_help
         write(*,*) 'Examples:'
         write(*,*) '  expressions_int Wmag Ohmic'
         write(*,*) '  int3d'
-      case ( 'int_along_pol_line' )
+     case ( 'zeroD_quantities' ) 
+        write(*,*) 'Usage:'
+        write(*,*) '  zeroD_quantities'
+        write(*,*) ''
+        write(*,*) 'Prints a file with many 0D quantities over time'
+        write(*,*) 'A list with column numbers and corresponding quantities'
+        write(*,*) 'is given in 0D_quantities_list.txt'
+        write(*,*) ''
+        write(*,*) 'Examples:'
+        write(*,*) '  zeroD_quantities'
+     case ( 'int_along_pol_line' )
         write(*,*) 'Usage:'
         write(*,*) '  int_along_pol_line R0 Z0 R1 Z1 phi'
         write(*,*) ''

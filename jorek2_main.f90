@@ -798,7 +798,8 @@ required = 0
        endif
     else
        my_id_n = my_id
-       MPI_COMM_N = MPI_COMM_WORLD
+       MPI_COMM_N = MPI_COMM_WORLD 
+       m_cpu = n_cpu
     endif
 
     !***********************************************************************
@@ -1003,12 +1004,6 @@ required = 0
                                            node_list, element_list, xpoint, xcase, freeboundary, direct_construction)
          call clck_time_barrier(t1) 
 
-      ! if(my_id .eq. 0) then
-      !   do i = 1, n_glob_harm !mumps_par%n 
-      !      print*, 'i, mumps_par%rhs:', i, mumps_par%rhs(i)
-      !   enddo 
-      ! endif
-      ! call MPI_Barrier(MPI_COMM_WORLD, ierr)  
 
 
          if (my_id .eq. 0) then
@@ -1016,7 +1011,6 @@ required = 0
             write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
          endif     
 
-         !print*, 'my_id, my_id_n:', my_id, my_id_n 
          call clck_time_barrier(t0) 
          !--------- Centralizing Harmonic Matrix 
          call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
@@ -1035,12 +1029,6 @@ required = 0
 
        endif
 
-       !if(my_id .eq. 0) then
-       !  do i = 1, mumps_par%n 
-       !     print*, 'i, mumps_par%rhs:', i, mumps_par%rhs(i)
-       !  enddo 
-       !endif
-       !call MPI_Barrier(MPI_COMM_WORLD, ierr)  
 
        ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
        call del_thread_buffers()

@@ -3,7 +3,7 @@ module mod_boundary_matrix_open
 contains
 
 subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, &
-                                psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
+                                psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, i_tor_min, i_tor_max)
 !---------------------------------------------------------------------
 ! calculates the matrix contribution of the boundaries of one element
 ! implements the natural boundary conditions
@@ -28,6 +28,8 @@ real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
 real*8, dimension (:,:), allocatable  :: ELM
 real*8, dimension (:)  , allocatable  :: RHS
+integer,               intent(in)     :: i_tor_min   !*psv!
+integer,               intent(in)     :: i_tor_max   !*psv!
 
 integer    :: vertex(2), direction(2), i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
@@ -41,6 +43,7 @@ real*8     :: ps0, ps0_s, Vpar0, r0, T0
 real*8     :: psi, psi_s, vpar, rho,  T   
 real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67, element_size_ij, element_size_kl
 logical    :: xpoint2
+
 
 theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
 !theta = 1.0d0  ; zeta = 0.0d0       ! Euler scheme 
@@ -122,9 +125,9 @@ do ms=1, n_gauss
      
          element_size_ij = element%size(vertex(i),direction(j))
 
-         do im=1,n_tor
+         do im=i_tor_min, i_tor_max !1,n_tor
 
-           index_ij = n_tor*n_var*(n_order+1)*(vertex(i)-1) + n_tor * n_var * (j-1) + im   ! index in the ELM matrix
+           index_ij = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(vertex(i)-1) + (i_tor_max - i_tor_min + 1) * n_var * (j-1) + im - i_tor_min + 1  ! index in the ELM matrix
 
            v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)         ! test function
 
@@ -132,8 +135,8 @@ do ms=1, n_gauss
 
            rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * tstep     ! right hand side equation 6
 
-           ij5 = index_ij + 4*n_tor                                          ! local index in element matrix
-           ij6 = index_ij + 5*n_tor                                          ! local index in element matrix
+           ij5 = index_ij + 4*(i_tor_max - i_tor_min + 1)                                          ! local index in element matrix
+           ij6 = index_ij + 5*(i_tor_max - i_tor_min + 1)                                          ! local index in element matrix
 
            RHS(ij5) = RHS(ij5) + rhs_ij_5 * ws                               ! add to element RHS
            RHS(ij6) = RHS(ij6) + rhs_ij_6 * ws                               ! add to element RHS
@@ -144,7 +147,7 @@ do ms=1, n_gauss
      
                element_size_kl = element%size(vertex(k),direction(l))
 
-               do in = 1, n_tor                                              ! loop over toroidal harmonics
+               do in = i_tor_min, i_tor_max !1, n_tor                                              ! loop over toroidal harmonics
 
                  psi   = H1(k,l,ms)   * element_size_kl * HZ(in,mp)
 
@@ -161,12 +164,12 @@ do ms=1, n_gauss
                  amat_66 = + v * (gamma_sheath-1.d0) * r0  * T  * vpar0 * ps0_s * theta * tstep 
                  amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * theta * tstep 
 
-                 index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l-1) + in   ! index in the ELM matrix
+                 index_kl = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(vertex(k)-1) + (i_tor_max - i_tor_min + 1) * n_var * (l-1) + in - i_tor_min + 1  ! index in the ELM matrix
                  
                  kl1 = index_kl
-                 kl5 = index_kl + 4*n_tor
-                 kl6 = index_kl + 5*n_tor
-                 kl7 = index_kl + 6*n_tor
+                 kl5 = index_kl + 4*(i_tor_max - i_tor_min + 1)
+                 kl6 = index_kl + 5*(i_tor_max - i_tor_min + 1)
+                 kl7 = index_kl + 6*(i_tor_max - i_tor_min + 1)
 
                  ELM(ij5,kl1) =  ELM(ij5,kl1) + ws * amat_51
                  ELM(ij5,kl5) =  ELM(ij5,kl5) + ws * amat_55

@@ -93,7 +93,7 @@ contains
 
           ! --- Build matrix elements for boundary
     	  call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, &
-    	      R_xpoint, Z_xpoint, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS)
+    	                            R_xpoint, Z_xpoint, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
     	endif
        
       enddo
@@ -196,8 +196,6 @@ contains
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
 
-!subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_max, xpoint2, xcase2,&
-!                            R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max)
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,      & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
                             i_tor_min, i_tor_max, n_glob1, nz_glob1, ndof, A_local, rhs_glob_tmp, irn_local, jcn_local, & 
@@ -326,12 +324,7 @@ if(.not. direct_construction) then
 
   enddo
 
-  ! --- Memory allocation
-  !if (allocated(rhs_glob))        call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX)
-  !call tr_allocate (rhs_glob,1,ndof,"rhs_glob",CAT_DMATRIX)
-
   ! --- Initialise internal variables
-  !RHS_glob = 0.d0
   difference_found = .false.
   rhs_problem(:)   = .false.
   elm_problem(:,:) = .false.
@@ -543,6 +536,7 @@ endif
 
               index_ij = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) + (i_tor_max - i_tor_min + 1) * n_var * (i_order-1) + j   ! index in the ELM matrix
              
+ 
               !$omp atomic
               rhs_local(index_large_i+j) = rhs_local(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
               !$omp end atomic
@@ -579,7 +573,7 @@ endif
 
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
-
+                     
                   enddo
 
                 enddo ! n_order+1
@@ -605,46 +599,24 @@ endif
   !$omp end do
   !$omp end parallel
  
-    ! !!!------ for debugging
-    ! if(direct_construction) then 
-    !   if(my_id.eq.0) then
-    !    do i = 1, ndof!nz_glob1 
-    !      print*, 'i, mumps_par%rhs =', i, rhs_local(i)
-    ! !     print*, 'i, mumps_par%jcn =', i, jcn_local(i)
-    !    enddo 
-    !   endif 
-    ! !  !------ for debugging
-    ! !  !------ for debugging
-    ! endif
-    !   call MPI_Barrier(MPI_COMM_WORLD, ierr)
-    ! !!!------ for debugging
-
-
-
- 
-     !!!------ for debugging
+     !---- for debugging
      !if(direct_construction) then 
-     !  if(my_id.eq.0) then
-     !   do i = 1, nz_glob1 
-     !     !print*, 'i, mumps_par%rhs =', i, mumps_par%rhs(i)
-     !     print*, 'i, mumps_par%jcn =', i, jcn_local(i)
-     !   enddo 
-     !  endif 
-     !  !------ for debugging
-     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)
-     !  !------ for debugging
-     !endif
-     !!------ for debugging
 
-     !if(direct_construction) then 
      !  if(my_id .eq. 0) then
-     !    do i = 1, ndof !mumps_par%n 
-     !       print*, 'i, mumps_par%rhs:', i, rhs_local(i)
+     !    do i = 1, ndof 
+     !       write(100,'(I8, 2x, ES15.3)') i, rhs_local(i)
      !    enddo 
-     !  endif
-     !endif
+     !  endif  
      !  call MPI_Barrier(MPI_COMM_WORLD, ierr)  
 
+     !  if(my_id .eq. 0) then
+     !    do i = 1, nz_glob1 
+     !       write(200,'(I8, 2x, I8, 2x, I8, 2x, ES15.3)') i, irn_local(i), jcn_local(i), A_local(i)
+     !    enddo 
+     !  endif 
+     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)  
+
+     !endif
 
 
   print*, 'my_id, my_id_n, my_id_master :', my_id, my_id_n, my_id_master
@@ -663,33 +635,7 @@ endif
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_local,nz_glob1)
 
- 
-     !!!!------ for debugging
-     !if(direct_construction) then 
-     !  if(my_id.eq.0) then
-     !   do i = 1, ndof!nz_glob1 
-     !     print*, 'i, mumps_par%rhs =', i, rhs_local(i)
-     !!     print*, 'i, mumps_par%jcn =', i, jcn_local(i)
-     !   enddo 
-     !  endif 
-     !!  !------ for debugging
-     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)
-     !!  !------ for debugging
-     !!endif
-     !!!!------ for debugging
-
-     !if(direct_construction) then 
-     !  if(my_id .eq. 0) then
-     !    do i = 1, ndof !mumps_par%n 
-     !       print*, 'i, mumps_par%rhs:', i, rhs_local(i)
-     !    enddo 
-     !  endif
-     !endif
-     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)  
-
-
-
-
+  
 
 if(.not.direct_construction) then 
 

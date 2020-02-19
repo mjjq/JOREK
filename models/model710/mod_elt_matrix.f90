@@ -504,10 +504,10 @@ do ms=1, n_gauss
      A30_R = (   y_t(ms,mt) * A30_s  - y_s(ms,mt) * A30_t ) / xjac
      A30_Z = ( - x_t(ms,mt) * A30_s  + x_s(ms,mt) * A30_t ) / xjac
     
-     r0    = eq_g(mp,var_r,ms,mt)
-     r0_p  = eq_p(mp,var_r,ms,mt)
-     r0_s  = eq_s(mp,var_r,ms,mt)
-     r0_t  = eq_t(mp,var_r,ms,mt)
+     r0    = eq_g(mp,var_rho,ms,mt)
+     r0_p  = eq_p(mp,var_rho,ms,mt)
+     r0_s  = eq_s(mp,var_rho,ms,mt)
+     r0_t  = eq_t(mp,var_rho,ms,mt)
      r0_R  = (   y_t(ms,mt) * r0_s  - y_s(ms,mt) * r0_t ) / xjac
      r0_Z  = ( - x_t(ms,mt) * r0_s  + x_s(ms,mt) * r0_t ) / xjac
 
@@ -872,7 +872,7 @@ do ms=1, n_gauss
 !###################################################################################################
 
            Pvec_prev(var_uR) =   v * r0 * delta_g(mp,var_uR,ms,mt)   &
-                               + v * delta_g(mp,var_r,ms,mt) * uR0
+                               + v * delta_g(mp,var_rho,ms,mt) * uR0
                      
            Qvec(var_uR)   =  Qconv_uR +  ( v_R + v / BigR ) * p0 + JxB_uR + visco_T * Qvisc_uR &
            !Qvec(var_uR)   =  Qconv_uR -  v * p0_R + JxB_uR + visco_T * Qvisc_uR &     
@@ -890,7 +890,7 @@ do ms=1, n_gauss
 !###################################################################################################
 
              Pvec_prev(var_uZ) =   v * r0 * delta_g(mp,var_uZ,ms,mt) &
-                                 + v * delta_g(mp,var_r,ms,mt) * uZ0
+                                 + v * delta_g(mp,var_rho,ms,mt) * uZ0
 
              Qvec(var_uZ)  =  Qconv_uZ + v_Z * p0 + JxB_uz + visco_T * Qvisc_uZ        &
              !Qvec(var_uZ)  =  Qconv_uZ - v * p0_Z + JxB_uz + visco_T * Qvisc_uZ        &
@@ -920,7 +920,7 @@ do ms=1, n_gauss
             if (.not. parallel_projection) then
 
             Pvec_prev(var_up) =   v * r0 * delta_g(mp,var_up,ms,mt) &
-                 &              + v * delta_g(mp,var_r,ms,mt) * up0
+                 &              + v * delta_g(mp,var_rho,ms,mt) * up0
             
             Qvec(var_up)      = Qconv_up +  ( v_p/ BigR ) * ( p0) + JxB_up + visco_T * Qvisc_up &
             !Qvec(var_up)      = Qconv_up -  v * ( p0_p/BigR) + JxB_up + visco_T * Qvisc_up &
@@ -933,7 +933,7 @@ do ms=1, n_gauss
              Pvec_prev(var_up) = + v * r0 * BR0 * delta_g(mp,var_uR,ms,mt) &
                   &              + v * r0 * BZ0 * delta_g(mp,var_uZ,ms,mt) &
                   &              + v * r0 * BP0 * delta_g(mp,var_up,ms,mt) &
-                  &              + v * delta_g(mp,var_r,ms,mt) * ( uR0*BR0 + uZ0*BZ0 + up0*Bp0 )
+                  &              + v * delta_g(mp,var_rho,ms,mt) * ( uR0*BR0 + uZ0*BZ0 + up0*Bp0 )
             
              Qvec(var_up)      = + BR0*(Qconv_uR + visco_T * Qvisc_uR)           &
                  &               + BZ0*(Qconv_uZ + visco_T * Qvisc_uZ)           &
@@ -951,20 +951,20 @@ do ms=1, n_gauss
 !#  equation 7 (Density equation)                                                                  #
 !###################################################################################################
 
-           Pvec_prev(var_r) =   v * delta_g(mp,var_r,ms,mt)
+           Pvec_prev(var_rho) =   v * delta_g(mp,var_rho,ms,mt)
 
 
-           Qvec(var_r) = - v * ( r0 * divu + uR0 * r0_R + uZ0 * r0_Z + up0 * r0_p / BigR ) &
-                         - D_prof * gradr0grad_vstar                        &
-                         - (D_par-D_prof) * B0grad_vstar * B0grad_r0 / BB2  &
-                         + v * particle_source(ms,mt)
+           Qvec(var_rho) = - v * ( r0 * divu + uR0 * r0_R + uZ0 * r0_Z + up0 * r0_p / BigR ) &
+                           - D_prof * gradr0grad_vstar                        &
+                           - (D_par-D_prof) * B0grad_vstar * B0grad_r0 / BB2  &
+                           + v * particle_source(ms,mt)
 
 
            ! adding the stabilization contribution
            ! --------------------------------------------------------------------------------------
-           Vms(var_r)  =  CvGradr0 * CvGradVi    +  VbGradr0 * VbGradVi
+           Vms(var_rho)  =  CvGradr0 * CvGradVi    +  VbGradr0 * VbGradVi
 
-           Qvec(var_r) =  Qvec(var_r)  - TG_NUM_Eq*TG_NUM(var_r) * CoefAdv * Vms(var_r)
+           Qvec(var_rho) =  Qvec(var_rho)  - TG_NUM_Eq*TG_NUM(var_rho) * CoefAdv * Vms(var_rho)
 
 !###################################################################################################
 !#  equation 8 (Pressure equation)                                                                 #
@@ -972,7 +972,7 @@ do ms=1, n_gauss
 ! NB: Excludes resistive heating
 
            Pvec_prev(var_T) =   v * r0 * delta_g(mp,var_T,ms,mt)        &
-                              + v * delta_g(mp,var_r,ms,mt) * T0
+                              + v * delta_g(mp,var_rho,ms,mt) * T0
 
 
            Qvec(var_T) =   v * ( - r0 * u0grad_T0 - T0 * u0grad_r0 - gamma * p0 * divu ) + v * heat_source(ms,mt)  &
@@ -1285,7 +1285,7 @@ do ms=1, n_gauss
 
                 Qjac(var_AR,var_up) = - up * BZ0 * v                      
 
-                Qjac(var_AR,var_r ) =   0.d0
+                Qjac(var_AR,var_rho)=   0.d0
 
                 Qjac(var_AR,var_T ) = - deta_dT * T * ( v_p * BZ0 / BigR - v_Z * Bp0 )               &
                                       + v * ( d2eta_d2T * T0_Z * T + deta_dT * T_Z ) * Bp0           &
@@ -1325,7 +1325,7 @@ do ms=1, n_gauss
 
                 Qjac(var_AZ,var_up) =   up * BR0 * v  
                 
-                Qjac(var_AZ,var_r) =    0.d0
+                Qjac(var_AZ,var_rho)=    0.d0
 
                 Qjac(var_AZ,var_T) = - deta_dT * T * ( - v_p * BR0 / BigR + v_R * Bp0 )               &
                                      + v * ( d2eta_d2T * T0_p * T + deta_dT * T_p ) * BR0 / BigR      &
@@ -1363,7 +1363,7 @@ do ms=1, n_gauss
 
                 Qjac(var_A3,var_up) =   0.d0 
 
-                Qjac(var_A3,var_r ) =   0.d0
+                Qjac(var_A3,var_rho)=   0.d0
 
                 Qjac(var_A3,var_T ) = - deta_dT * T * ( BigR * v_Z * BR0 - ( 2.d0 * v + BigR * v_R ) * BZ0 &
                                                         + v * current_source(ms,mt) )                      &
@@ -1390,7 +1390,7 @@ do ms=1, n_gauss
 
                 
                  Pjac(var_uR,var_uR)      =   v * r0 * uR
-                 Pjac(var_uR,var_r)       =   v * r  * uR0
+                 Pjac(var_uR,var_rho)     =   v * r  * uR0
 
                  Qjac(var_uR,var_AR) = JxB_uR_AR 
 
@@ -1408,8 +1408,8 @@ do ms=1, n_gauss
                  Qjac(var_uR,var_up) =   Qconv_uR_up + visco_T * Qvisc_uR_up                 &
                                        - viscoB * divu_up * ( v_R + v / BigR )
 
-                 Qjac(var_uR,var_r)  =   Qconv_uR_r +  ( v_R + v / BigR ) * ( r * T0)
-                 !Qjac(var_uR,var_r)  =   Qconv_uR_r - v * ( r * T0_R + r_R * T0)                                                                     
+                 Qjac(var_uR,var_rho)=   Qconv_uR_r +  ( v_R + v / BigR ) * ( r * T0)
+                 !Qjac(var_uR,var_rho)=   Qconv_uR_r - v * ( r * T0_R + r_R * T0)                                                                     
 
                  Qjac(var_uR,var_T)  =   Qconv_uR_T +  ( v_R + v / BigR ) * ( r0 * T) &
                  !Qjac(var_uR,var_T)  =   Qconv_uR_T -  v * ( r0 * T_R + r0_R * T )  &                   
@@ -1421,7 +1421,7 @@ do ms=1, n_gauss
               SELECT CASE(VmsType)
                  
               CASE(10)
-                 QvmsAd(var_uR,var_r ) =  0.0  ! to be completed  !$BNK
+                 QvmsAd(var_uR,var_rho) =  0.0  ! to be completed  !$BNK
                  
                  QvmsAd(var_uR,var_uR) =   ( r0 * CvGradVj + CvGradr0 * uR  ) *   CvGradVi         &
                       &                  + ( r0 * Cvp0 * uR / BigR          ) * ( Cvp0 * v /BigR ) &
@@ -1434,7 +1434,7 @@ do ms=1, n_gauss
                       &                  + (   r0 * VbGradVj + VbGradr0 * up  ) * ( Vbp0 * v /BigR )
                  ! acoustic  waves
                  ! ------------------------------
-                 QvmsF(var_uR,var_r  )  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DiveRMVi
+                 QvmsF(var_uR,var_rho)  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DiveRMVi
                  
                  QvmsF(var_uR,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj + uR * r0_R        ) * DiveRMVi
                  QvmsF(var_uR,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj + uZ * r0_Z        ) * DiveRMVi
@@ -1456,7 +1456,7 @@ do ms=1, n_gauss
 !###################################################################################################
 
                  Pjac(var_uZ,var_uZ)      =   v * r0 * uZ
-                 Pjac(var_uZ,var_r)       =   v * r  * uZ0
+                 Pjac(var_uZ,var_rho)     =   v * r  * uZ0
 
 
                  Qjac(var_uZ,var_AR) = JxB_uZ_AR
@@ -1477,8 +1477,8 @@ do ms=1, n_gauss
                                        - viscoB * divu_up * v_Z 
 
 
-                 Qjac(var_uZ,var_r)  =  Qconv_uZ_r +  v_Z * ( r * T0)
-                 !Qjac(var_uZ,var_r)  =  Qconv_uZ_r -  v * ( r * T0_Z + r_Z * T0)
+                 Qjac(var_uZ,var_rho)=  Qconv_uZ_r +  v_Z * ( r * T0)
+                 !Qjac(var_uZ,var_rho)=  Qconv_uZ_r -  v * ( r * T0_Z + r_Z * T0)
 
 
                  Qjac(var_uZ,var_T)  =  Qconv_uZ_T + v_Z * ( r0 * T)          &
@@ -1490,14 +1490,14 @@ do ms=1, n_gauss
                  SELECT CASE(VmsType)
                     
                  CASE(10)
-                    QvmsAd(var_uZ,var_r ) =  0.0 ! to be completed  !$BNK
+                    QvmsAd(var_uZ,var_rho)=  0.0 ! to be completed  !$BNK
                     
                     QvmsAd(var_uZ,var_uZ) =   ( r0 * CvGradVj + CvGradr0 * uZ )  * CvGradVi  &
                          &                  + ( r0 * VbGradVj + VbGradr0 * uZ )  * VbGradVi
                     
                     ! acoustic  waves
                     ! ------------------------------
-                    QvmsF(var_uZ,var_r  )  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DiveZMVi
+                    QvmsF(var_uZ,var_rho)  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DiveZMVi
                     
                     QvmsF(var_uZ,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj + uR * r0_R        ) * DiveZMVi
                     QvmsF(var_uZ,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj + uZ * r0_Z        ) * DiveZMVi
@@ -1525,7 +1525,7 @@ do ms=1, n_gauss
                    SELECT CASE(VmsType)
                       
                    CASE(10)
-                      QvmsAd(var_up,var_r ) = 0.0  ! to be completed  !$BNK
+                      QvmsAd(var_up,var_rho)= 0.0  ! to be completed  !$BNK
                       
                       QvmsAd(var_up,var_uR) =  -  ( r0 * CvGradVj + CvGradr0 * uR ) *   Cvp0 * v / BigR              &
                            &                   +  ( r0 * Cvp0 * uR / BigR         ) * ( CvGradVi + CvR0 * v /BigR )  &
@@ -1539,7 +1539,7 @@ do ms=1, n_gauss
                       
                       ! acoustic  waves
                       ! ------------------------------
-                      QvmsF(var_up,var_r  )  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DivePMVi
+                      QvmsF(var_up,var_rho)  =  VmsCoefF * ( u0grad_bf     + r * divu         ) * DivePMVi
                       
                       QvmsF(var_up,var_uR )  =  VmsCoefF * ( r0 * DiveRMVj + uR * r0_R        ) * DivePMVi
                       QvmsF(var_up,var_uZ )  =  VmsCoefF * ( r0 * DiveZMVj + uZ * r0_Z        ) * DivePMVi
@@ -1557,7 +1557,7 @@ do ms=1, n_gauss
                  if (.not. parallel_projection) then
 
                  Pjac(var_up,var_up)      =   v * r0 * up
-                 Pjac(var_up,var_r)       =   v * r  * up0
+                 Pjac(var_up,var_rho)     =   v * r  * up0
 
                  
                  Qjac(var_up,var_AR) = JxB_up_AR
@@ -1577,8 +1577,8 @@ do ms=1, n_gauss
                                        - viscoB * divu_up * v_p/ BigR
                  
 
-                 Qjac(var_up,var_r)  =  Qconv_up_r + ( v_p/ BigR ) * ( r * T0)
-                 !Qjac(var_up,var_r)  =  Qconv_up_r - v * ( r * T0_p + r_p * T0)  
+                 Qjac(var_up,var_rho)=  Qconv_up_r + ( v_p/ BigR ) * ( r * T0)
+                 !Qjac(var_up,var_rho)=  Qconv_up_r - v * ( r * T0_p + r_p * T0)  
                  
                  Qjac(var_up,var_T)  =  Qconv_up_T + ( v_p/ BigR ) * ( r0 * T) &
                  !Qjac(var_up,var_T)  =  Qconv_up_T - v * ( r0 * T_p + r0_p * T) &
@@ -1599,7 +1599,7 @@ do ms=1, n_gauss
                  Pjac(var_up,var_uR)      =   v * BR0 * r0 * uR
                  Pjac(var_up,var_uZ)      =   v * BZ0 * r0 * uZ
                  Pjac(var_up,var_up)      =   v * Bp0 * r0 * up 
-                 Pjac(var_up,var_r)       =   v * r   * ( uR0*BR0 + uZ0*BZ0 + up0*Bp0 )
+                 Pjac(var_up,var_rho)     =   v * r   * ( uR0*BR0 + uZ0*BZ0 + up0*Bp0 )
                  
 
                  
@@ -1638,7 +1638,7 @@ do ms=1, n_gauss
                       &                + Bp0*(Qconv_up_up + visco_T * Qvisc_up_up)        &
                       &                - viscoB * divu_up * B0grad_vstar
                  
-                 Qjac(var_up,var_r)  = + BR0*(Qconv_uR_r )           &
+                 Qjac(var_up,var_rho)= + BR0*(Qconv_uR_r )           &
                       &                + BZ0*(Qconv_uZ_r )           &
                       &                + Bp0*(Qconv_up_r )  + r * T0 * B0grad_vstar
                  
@@ -1670,35 +1670,35 @@ do ms=1, n_gauss
 !###################################################################################################
 
 
-                 Pjac(var_r,var_r)      =   v * r
+                 Pjac(var_rho,var_rho)  =   v * r
         
                  
-                 Qjac(var_r,var_AR) = -((D_par - D_prof) / BB2) *                                    & 
-                                        ( B0grad_vstar_AR * B0grad_r0  + B0grad_vstar * B0grad_r0_AR &
-                                          - BB2_AR * B0grad_r0 * B0grad_vstar / BB2 )
+                 Qjac(var_rho,var_AR) = -((D_par - D_prof) / BB2) *                                    & 
+                                          ( B0grad_vstar_AR * B0grad_r0  + B0grad_vstar * B0grad_r0_AR &
+                                            - BB2_AR * B0grad_r0 * B0grad_vstar / BB2 )
 
-                 Qjac(var_r,var_AZ) = -((D_par - D_prof) / BB2) *                                    & 
-                                        ( B0grad_vstar_AZ * B0grad_r0  + B0grad_vstar * B0grad_r0_AZ &
-                                          - BB2_AZ * B0grad_r0 * B0grad_vstar / BB2 )
+                 Qjac(var_rho,var_AZ) = -((D_par - D_prof) / BB2) *                                    & 
+                                          ( B0grad_vstar_AZ * B0grad_r0  + B0grad_vstar * B0grad_r0_AZ &
+                                            - BB2_AZ * B0grad_r0 * B0grad_vstar / BB2 )
 
                  ! psi-dependence D_prof and mass source not yet properly taken into account
-                 Qjac(var_r,var_A3) = -((D_par - D_prof) / BB2) *                                    & 
-                                        ( B0grad_vstar_A3 * B0grad_r0  + B0grad_vstar * B0grad_r0_A3 &
-                                          - BB2_A3 * B0grad_r0 * B0grad_vstar / BB2 )
+                 Qjac(var_rho,var_A3) = -((D_par - D_prof) / BB2) *                                    & 
+                                          ( B0grad_vstar_A3 * B0grad_r0  + B0grad_vstar * B0grad_r0_A3 &
+                                            - BB2_A3 * B0grad_r0 * B0grad_vstar / BB2 )
 
     
-                   Qjac(var_r,var_uR) =   - v * ( r0 * divu_uR + uR * r0_R )
+                   Qjac(var_rho,var_uR) =   - v * ( r0 * divu_uR + uR * r0_R )
                  
-                   Qjac(var_r,var_uZ) =   - v * ( r0 * divu_uZ + uZ * r0_Z )
+                   Qjac(var_rho,var_uZ) =   - v * ( r0 * divu_uZ + uZ * r0_Z )
 
-                   Qjac(var_r,var_up) =   - v * ( r0 * divu_up + up * r0_p / BigR )
+                   Qjac(var_rho,var_up) =   - v * ( r0 * divu_up + up * r0_p / BigR )
 
-                   Qjac(var_r,var_r)  = - v * ( r * divu + uR0 * r_R + uZ0 * r_Z + up0 * r_p / BigR )  &
+                   Qjac(var_rho,var_rho)= - v * ( r * divu + uR0 * r_R + uZ0 * r_Z + up0 * r_p / BigR )  &
                                         - D_prof * gradbfgrad_vstar                                    &
                                         - (D_par-D_prof) * B0grad_vstar * B0grad_bf / BB2
 
     
-                 Qjac(var_r,var_T)  =   0.
+                 Qjac(var_rho,var_T)  =   0.
 
                  
                  ! Stabilization
@@ -1706,9 +1706,9 @@ do ms=1, n_gauss
                  SELECT CASE(VmsType)
                     
                  CASE(10)
-                    QvmsAd(var_r,var_r) =  CvGradVj * CvGradVi  + VbGradVi * VbGradVj
+                    QvmsAd(var_rho,var_rho) =  CvGradVj * CvGradVi  + VbGradVi * VbGradVj
                     
-                    Qjac(var_r, :)      =  Qjac(var_r, :)  - TG_NUM(var_r) *  CoefAdv * QvmsAd(var_r, :)
+                    Qjac(var_rho, :)      =  Qjac(var_rho, :)  - TG_NUM(var_rho) *  CoefAdv * QvmsAd(var_rho, :)
                  END SELECT
 !###################################################################################################
 !#  equation 8   (Temperature  equation)                                                           #
@@ -1716,7 +1716,7 @@ do ms=1, n_gauss
 
 
                 Pjac(var_T,var_T)      =   v * r0 * T
-                Pjac(var_T,var_r)      =   v * r  * T0
+                Pjac(var_T,var_rho)    =   v * r  * T0
 
                 
                 Qjac(var_T,var_AR) = - (gamma - 1.d0 ) * ((ZKpar_T - ZK_prof) / BB2) *               & 
@@ -1743,7 +1743,7 @@ do ms=1, n_gauss
                   Qjac(var_T,var_up) = v * ( - r0 * up * T0_p / BigR - T0 * up * r0_p / BigR - gamma * p0 * divu_up)      &
                        &              + v * (gamma-1.d0) * Qvisc_T_up 
 
-                  Qjac(var_T,var_r)  = v * ( -  r * u0grad_T0 - T0 * u0grad_bf - gamma * r * T0 * divu ) 
+                  Qjac(var_T,var_rho)= v * ( -  r * u0grad_T0 - T0 * u0grad_bf - gamma * r * T0 * divu ) 
 
                   Qjac(var_T,var_T)  = v * ( -  r0 * u0grad_bf - T * u0grad_r0 - gamma * r0 * T * divu )        &
                        &             + v * (gamma-1.d0) * Qvisc_T_T&
@@ -1756,8 +1756,8 @@ do ms=1, n_gauss
                SELECT CASE(VmsType)
                   
                CASE(10)
-                  QvmsAd(var_T,var_r) =   ( T0 * CvGradVj  + r * CvGradT0 ) * CvGradVi   &
-                       &                + ( T0 * VbGradVj  + r * VbGradT0 ) * VbGradVi   
+                  QvmsAd(var_T,var_rho) =   ( T0 * CvGradVj  + r * CvGradT0 ) * CvGradVi   &
+                       &                  + ( T0 * VbGradVj  + r * VbGradT0 ) * VbGradVi   
                   
                   
                   QvmsAd(var_T,var_T) =   ( r0 * CvGradVj  + T * CvGradr0 ) * CvGradVi   &
@@ -1766,7 +1766,7 @@ do ms=1, n_gauss
                   
                   ! acoustic  waves
                   ! ------------------------------
-                  QvmsF(var_T,var_r  )  =  VmsCoefF_T * ( T0*gradbfgrad_vstar + gradT0grad_vstar * r )
+                  QvmsF(var_T,var_rho)  =  VmsCoefF_T * ( T0*gradbfgrad_vstar + gradT0grad_vstar * r )
                   QvmsF(var_T,var_T  )  =  VmsCoefF_T * ( r0*gradbfgrad_vstar + gradR0grad_vstar * T )
                   
                   

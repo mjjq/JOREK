@@ -172,7 +172,7 @@ do ms=1, n_gauss
 
   do mp = 1, n_plane
 
-    r0    = eq_g(mp,var_r,ms)
+    r0    = eq_g(mp,var_rho,ms)
     uR0   = eq_g(mp,var_uR,ms)
     uZ0   = eq_g(mp,var_uZ,ms)
     up0   = eq_g(mp,var_up,ms)
@@ -325,9 +325,9 @@ do ms=1, n_gauss
                 endif
 
 
-                Qjac(var_T, var_r)  = + v * gg * rho* T0 * c_s  * abs(B_dot_n) / sqrt(BB2) * tstep
-                Qjac(var_T, var_T)  = + v * gg * r0 * T0 * cs_T * abs(B_dot_n) / sqrt(BB2) * tstep &
-                                      + v * gg * r0 * T  * c_s  * abs(B_dot_n) / sqrt(BB2) * tstep
+                Qjac(var_T, var_rho)  = + v * gg * rho* T0 * c_s  * abs(B_dot_n) / sqrt(BB2) * tstep
+                Qjac(var_T, var_T)    = + v * gg * r0 * T0 * cs_T * abs(B_dot_n) / sqrt(BB2) * tstep &
+                                        + v * gg * r0 * T  * c_s  * abs(B_dot_n) / sqrt(BB2) * tstep
 
 
                 index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix 

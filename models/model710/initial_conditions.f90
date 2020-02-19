@@ -70,14 +70,14 @@ if (my_id .eq. 0) then
     node_list%node(i)%values(1,:,var_AR) = 0.d0    
     node_list%node(i)%values(1,:,var_AZ) = 0.d0
 
-    node_list%node(i)%values(1,1,var_r) = zn
-    node_list%node(i)%values(1,2,var_r) = dn_dpsi  * node_list%node(i)%values(1,2,var_A3) + dn_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,var_r) = dn_dpsi  * node_list%node(i)%values(1,3,var_A3) + dn_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,var_r) = dn_dpsi  * node_list%node(i)%values(1,4,var_A3) + dn_dz * node_list%node(i)%x(4,2) &
-                                      + dn_dpsi2   * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
-                                      + dn_dz2     * node_list%node(i)%x(2,2)             * node_list%node(i)%x(3,2)         &
-                                      + dn_dpsi_dz * node_list%node(i)%values(1,3,var_A3) * node_list%node(i)%x(2,2)         &
-                                      + dn_dpsi_dz * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%x(3,2)      
+    node_list%node(i)%values(1,1,var_rho) = zn
+    node_list%node(i)%values(1,2,var_rho) = dn_dpsi    * node_list%node(i)%values(1,2,var_A3) + dn_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%values(1,3,var_rho) = dn_dpsi    * node_list%node(i)%values(1,3,var_A3) + dn_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,4,var_rho) = dn_dpsi    * node_list%node(i)%values(1,4,var_A3) + dn_dz * node_list%node(i)%x(4,2) &
+                                          + dn_dpsi2   * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
+                                          + dn_dz2     * node_list%node(i)%x(2,2)             * node_list%node(i)%x(3,2)         &
+                                          + dn_dpsi_dz * node_list%node(i)%values(1,3,var_A3) * node_list%node(i)%x(2,2)         &
+                                          + dn_dpsi_dz * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%x(3,2)      
 
 
     node_list%node(i)%values(1,1,var_T) = zT

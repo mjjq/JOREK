@@ -12,7 +12,7 @@ CXX = mpiicpc
 
 # Solvers dependencies
 USE_HIPS         = 0
-USE_PASTIX       = 0
+USE_PASTIX       = 1
 USE_BLOCK        = 0
 USE_MUMPS        = 1
 USE_STRUMPACK    = 1

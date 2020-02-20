@@ -61,9 +61,10 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@mu_zero: ', mu_zero
     write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies magnetic_energies kinetic_energies growth_rates magnetic_growth_rates  &
                                     kinetic_growth_rates times input_profiles axis current betas particlecontent thermalenergy & 
-                                    heatingpower particlesource diag_coil_curr integrated_energies bnd_fluxes dEdt helicity    &
+                                    heatingpower particlesource diag_coil_curr pf_coil_curr rmp_coil_curr integrated_energies  &
+                                    bnd_fluxes dEdt helicity    &
                                     dissipative_terms work_terms             &
-                                    area volume li3 energy_conservation'
+                                    area volume li3 energy_conservation net_tor_wall_curr'
     write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names
     
     ! --- Write file headers indicating what data is in the files.
@@ -518,19 +519,21 @@ module live_data
   
   
   
-  subroutine write_live_data_vacuum(index, diag_coil_curr)
+  subroutine write_live_data_vacuum(index, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
     
     use phys_module, only: xtime, mu_zero, sqrt_mu0_rho0
     
     integer,             intent(in) :: index
-    real*8, allocatable, intent(in) :: diag_coil_curr(:,:)
+    real*8, allocatable, intent(in) :: diag_coil_curr(:,:), pf_coil_curr(:,:), rmp_coil_curr(:,:), &
+                                       net_tor_wall_curr(:)
     
-    logical, save :: header_written = .false.
-    
+    logical, save :: header_written_diag = .false., header_written_pf = .false., header_written_rmp = .false., &
+                     header_written_net  = .false.
+    integer :: n
     open(LIVE_DATA_HANDLE, file=LIVE_DATA_FILE, status='OLD', position='APPEND', action='WRITE')
     
     if ( allocated(diag_coil_curr) ) then
-      if ( .not. header_written ) then
+      if ( .not. header_written_diag ) then
         write(LIVE_DATA_HANDLE,'(A,I5)') '@n_diag_coil_curr: ', size(diag_coil_curr,2)
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_xlabel: normalized time'
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_xlabel_si: time [ms]'
@@ -539,12 +542,73 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@diag_coil_curr_x2si: ', sqrt_mu0_rho0*1.e3
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@diag_coil_curr_y2si: ', 1./mu_zero
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_logy: 0'
+        write(LIVE_DATA_HANDLE,'(A)',advance='no') '@diag_coil_curr: %"time"           '
+        do n = 1,size(diag_coil_curr,2)
+          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"Diag_{', n, '}"'
+        end do
         write(LIVE_DATA_HANDLE,*)
-        header_written = .true.
+        header_written_diag = .true.
       end if
       write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@diag_coil_curr: ', xtime(index), diag_coil_curr(index,:)
     end if
-    
+
+    if ( allocated(pf_coil_curr) ) then
+      if ( .not. header_written_pf ) then
+        write(LIVE_DATA_HANDLE,'(A,I5)') '@n_pf_coil_curr: ', size(pf_coil_curr,2)
+        write(LIVE_DATA_HANDLE,'(A)') '@pf_coil_curr_xlabel: normalized time'
+        write(LIVE_DATA_HANDLE,'(A)') '@pf_coil_curr_xlabel_si: time [ms]'
+        write(LIVE_DATA_HANDLE,'(A)') '@pf_coil_curr_ylabel: PF coil current'
+        write(LIVE_DATA_HANDLE,'(A)') '@pf_coil_curr_ylabel_si: PF coil current [A]'
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@pf_coil_curr_x2si: ', sqrt_mu0_rho0*1.e3
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@pf_coil_curr_y2si: ', 1./mu_zero
+        write(LIVE_DATA_HANDLE,'(A)') '@pf_coil_curr_logy: 0'
+        write(LIVE_DATA_HANDLE,'(A)',advance='no') '@pf_coil_curr: %"time"           '
+        do n = 1,size(pf_coil_curr,2)
+          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"PF_{', n, '}"'
+        end do
+        write(LIVE_DATA_HANDLE,*)
+        header_written_pf = .true.
+      end if
+      write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@pf_coil_curr: ', xtime(index), pf_coil_curr(index,:)
+    end if
+
+    if ( allocated(rmp_coil_curr) ) then
+      if ( .not. header_written_rmp ) then
+        write(LIVE_DATA_HANDLE,'(A,I5)') '@n_rmp_coil_curr: ', size(rmp_coil_curr,2)
+        write(LIVE_DATA_HANDLE,'(A)') '@rmp_coil_curr_xlabel: normalized time'
+        write(LIVE_DATA_HANDLE,'(A)') '@rmp_coil_curr_xlabel_si: time [ms]'
+        write(LIVE_DATA_HANDLE,'(A)') '@rmp_coil_curr_ylabel: RMP coil current'
+        write(LIVE_DATA_HANDLE,'(A)') '@rmp_coil_curr_ylabel_si: RMP coil current [A]'
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@rmp_coil_curr_x2si: ', sqrt_mu0_rho0*1.e3
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@rmp_coil_curr_y2si: ', 1./mu_zero
+        write(LIVE_DATA_HANDLE,'(A)') '@rmp_coil_curr_logy: 0'
+        write(LIVE_DATA_HANDLE,*)
+        write(LIVE_DATA_HANDLE,'(A)',advance='no') '@RMP_coil_curr: %"time"           '
+        do n = 1,size(rmp_coil_curr,2)
+          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"RMP_{', n, '}"'
+        end do
+        header_written_rmp = .true.
+      end if
+      write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@rmp_coil_curr: ', xtime(index), rmp_coil_curr(index,:)
+    end if
+
+    if ( allocated(net_tor_wall_curr) ) then
+      if ( .not. header_written_net ) then
+        write(LIVE_DATA_HANDLE,'(A,I5)') '@n_net_tor_wall_curr: ', size(net_tor_wall_curr)
+        write(LIVE_DATA_HANDLE,'(A)') '@net_tor_wall_curr_xlabel: normalized time'
+        write(LIVE_DATA_HANDLE,'(A)') '@net_tor_wall_curr_xlabel_si: time [ms]'
+        write(LIVE_DATA_HANDLE,'(A)') '@net_tor_wall_curr_ylabel: Net toroidal wall current'
+        write(LIVE_DATA_HANDLE,'(A)') '@net_tor_wall_curr_ylabel_si: Net toroidal wall current [A]'
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@net_tor_wall_curr_x2si: ', sqrt_mu0_rho0*1.e3
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@net_tor_wall_curr_y2si: ', 1./mu_zero
+        write(LIVE_DATA_HANDLE,'(A)') '@net_tor_wall_curr_logy: 0'
+        write(LIVE_DATA_HANDLE,'(A)',advance='no') '@net_tor_wall_curr: %"time"           "I_{tor,wall}"'
+        write(LIVE_DATA_HANDLE,*)
+        header_written_net = .true.
+      end if
+      write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@net_tor_wall_curr: ', xtime(index), net_tor_wall_curr(index)
+    end if
+   
     close(LIVE_DATA_HANDLE)
     
   end subroutine write_live_data_vacuum

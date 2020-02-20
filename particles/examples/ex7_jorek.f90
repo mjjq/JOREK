@@ -50,7 +50,7 @@ if (.not. restart) then
   ! One can use read_jorek_fields_interp_linear or read_jorek_fields_interp_hermite_birkhoff,
   ! and i=-1 (to read jorek_restart.h5 and keep this field at all time) or i=last_file_before_time(sim%time)
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
-  events = [event(read_jorek_fields_interp_linear(i=last_file_before_time(sim%time))), & 
+  events = [event(read_jorek_fields_interp_linear(i=-1)), & 
             event(diag,start=sim%time,step=1d-7),         &
             event(stop_action(),start=sim%time+3.d-6)]
 
@@ -84,7 +84,7 @@ else
   ! One can use read_jorek_fields_interp_linear or read_jorek_fields_interp_hermite_birkhoff,
   ! and i=-1 (to read jorek_restart.h5 and keep this field at all time) or i=last_file_before_time(sim%time)
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
-  events = [event(read_jorek_fields_interp_hermite_birkhoff(i=-1)), & 
+  events = [event(read_jorek_fields_interp_linear(i=-1)), & 
             event(diag,start=sim%time,step=1d-8),         &
 	    event(stop_action(),start=sim%time+1.d-8)]
 

@@ -629,9 +629,9 @@ do ms=1, n_gauss
 
        do j=1,n_order+1
 
-         do im=1,n_tor
+         do im=i_tor_min, i_tor_max
 
-           index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor * n_var * (j-1) + im   ! index in the ELM matrix
+           index_ij = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(i-1) + (i_tor_max - i_tor_min + 1) * n_var * (j-1) + im - i_tor_min + 1  ! index in the ELM matrix
 
            v   =  H(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
            v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac * HZ(im,mp)
@@ -880,14 +880,14 @@ do ms=1, n_gauss
 !###################################################################################################
 
            ij1 = index_ij
-           ij2 = index_ij + 1*n_tor
-           ij3 = index_ij + 2*n_tor
-           ij4 = index_ij + 3*n_tor
-           ij5 = index_ij + 4*n_tor
-           ij6 = index_ij + 5*n_tor
-           ij7 = index_ij + 6*n_tor
-           ij8 = index_ij + 7*n_tor
-           ij9 = index_ij + 8*n_tor
+           ij2 = index_ij + 1*(i_tor_max - i_tor_min + 1)
+           ij3 = index_ij + 2*(i_tor_max - i_tor_min + 1)
+           ij4 = index_ij + 3*(i_tor_max - i_tor_min + 1)
+           ij5 = index_ij + 4*(i_tor_max - i_tor_min + 1)
+           ij6 = index_ij + 5*(i_tor_max - i_tor_min + 1)
+           ij7 = index_ij + 6*(i_tor_max - i_tor_min + 1)
+           ij8 = index_ij + 7*(i_tor_max - i_tor_min + 1)
+           ij9 = index_ij + 8*(i_tor_max - i_tor_min + 1)
 
            RHS(ij1) = RHS(ij1) + rhs_ij_1 * wst
            RHS(ij2) = RHS(ij2) + rhs_ij_2 * wst
@@ -903,7 +903,7 @@ do ms=1, n_gauss
 
              do l=1,n_order+1
 
-               do in = 1, n_tor
+               do in = i_tor_min, i_tor_max
 
                  psi   = H(k,l,ms,mt) * element%size(k,l) * HZ(in,mp)
 
@@ -976,7 +976,7 @@ jec2_t = psi_t
                  rho_y_hat = BigR**2 * rho_y
                   Btheta2_psi  = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
-                 index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor * n_var * (l-1) + in   ! index in the ELM matrix
+                 index_kl = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(k-1) + (i_tor_max - i_tor_min + 1) * n_var * (l-1) + in - i_tor_min + 1  ! index in the ELM matrix
 
 !###################################################################################################
 !#  equation 1   (induction equation)                                                              #
@@ -1536,14 +1536,14 @@ jec2_t = psi_t
 
 
                  kl1 = index_kl
-                 kl2 = index_kl + 1*n_tor
-                 kl3 = index_kl + 2*n_tor
-                 kl4 = index_kl + 3*n_tor
-                 kl5 = index_kl + 4*n_tor
-                 kl6 = index_kl + 5*n_tor
-                 kl7 = index_kl + 6*n_tor
-                 kl8 = index_kl + 7*n_tor
-                 kl9 = index_kl + 8*n_tor
+                 kl2 = index_kl + 1*(i_tor_max - i_tor_min + 1)
+                 kl3 = index_kl + 2*(i_tor_max - i_tor_min + 1)
+                 kl4 = index_kl + 3*(i_tor_max - i_tor_min + 1)
+                 kl5 = index_kl + 4*(i_tor_max - i_tor_min + 1)
+                 kl6 = index_kl + 5*(i_tor_max - i_tor_min + 1)
+                 kl7 = index_kl + 6*(i_tor_max - i_tor_min + 1)
+                 kl8 = index_kl + 7*(i_tor_max - i_tor_min + 1)
+                 kl9 = index_kl + 8*(i_tor_max - i_tor_min + 1)
 
                  ELM(ij1,kl1) =  ELM(ij1,kl1) + wst * amat_11
                  ELM(ij1,kl2) =  ELM(ij1,kl2) + wst * amat_12

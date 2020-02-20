@@ -505,7 +505,7 @@ endif
        do j=1,n_order+1
 
 
-         do im=1,n_tor
+         do im=i_tor_min, i_tor_max
 
            v   = H(i,j,ms,mt)   * element%size(i,j) * HZ(im,mp)
            v_s = H_s(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
@@ -755,10 +755,10 @@ endif
 !#  equations end                                                                                  #
 !###################################################################################################
 
-           index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor * n_var * (j-1) + im   ! index in the ELM matrix
+           index_ij = (i_tor_max - i_tor_min +1)*n_var*(n_order+1)*(i-1) + (i_tor_max - i_tor_min +1) * n_var * (j-1) + im - i_tor_min +1  ! index in the ELM matrix
 
            do ivar= 1,n_var
-             ij = index_ij + (ivar-1)*n_tor
+             ij = index_ij + (ivar-1)*(i_tor_max - i_tor_min +1)
 
              RHS_ij(ivar) = tstep * Qvec(ivar) + zeta * Pvec_prev(ivar)
              RHS(ij) =  RHS(ij) + wst * rhs_ij(ivar) * BigR * xjac
@@ -771,7 +771,7 @@ endif
              do l=1,n_order+1
 
 
-               do in = 1, n_tor
+               do in = i_tor_min, i_tor_max
 
                  bf    = H(k,l,ms,mt)   * element%size(k,l) * HZ(in,mp)
                  bf_p  = H(k,l,ms,mt)   * element%size(k,l) * HZ_p(in,mp)
@@ -1293,13 +1293,13 @@ endif
 !###################################################################################################
 
 
-                 index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor * n_var * (l-1) + in   ! index in the ELM matrix 
+                 index_kl = (i_tor_max - i_tor_min +1)*n_var*(n_order+1)*(k-1) + (i_tor_max - i_tor_min +1) * n_var * (l-1) + in - i_tor_min +1  ! index in the ELM matrix 
 
 
                  do ivar= 1,n_var
                    do kvar= 1,n_var
-                     ij = index_ij + (ivar-1)*n_tor
-                     kl = index_kl + (kvar-1)*n_tor
+                     ij = index_ij + (ivar-1)*(i_tor_max - i_tor_min +1)
+                     kl = index_kl + (kvar-1)*(i_tor_max - i_tor_min +1)
 
                      amat(ivar,kvar) = (1.d0+zeta)*Pjac(ivar,kvar) - tstep * theta * Qjac(ivar,kvar)
 

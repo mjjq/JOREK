@@ -40,7 +40,7 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
       enddo  
       nz_total = disp_array(n_cpu_n) + nz_array(n_cpu_n) 
     endif 
-    mumps_par%nz  = nz_total  !nz_glob_harm 
+    mumps_par%nz  = nz_total   
     mumps_par%n   = ndof_glob_harm 
   else
    mumps_par%nz  = nz_glob_harm
@@ -75,15 +75,10 @@ subroutine centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
  
   endif
 
-   ! mumps_par%irn(1:mumps_par%nz) = irn_glob_harm(1:mumps_par%nz)
-   ! mumps_par%jcn(1:mumps_par%nz) = jcn_glob_harm(1:mumps_par%nz)
-   ! mumps_par%A(1:mumps_par%nz)   = A_glob_harm(1:mumps_par%nz)
-
   do i = 1, mumps_par%n
     mumps_par%rhs(i) = rhs_glob_harm(i)
   enddo
 
-  !mumps_par%rhs = rhs_glob_harm
   
   if ( allocated(nz_array) )   deallocate(nz_array)
   if ( allocated(disp_array) ) deallocate(disp_array)

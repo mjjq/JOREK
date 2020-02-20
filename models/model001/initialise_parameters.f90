@@ -57,7 +57,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
                 n_tor_fft_thresh,                                   &
                 pastix_smp_only, refinement, force_central_node,    &
-                grid_to_wall, ise_strumpack,                        &
+                grid_to_wall, use_strumpack,                        &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &

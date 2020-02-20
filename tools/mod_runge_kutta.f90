@@ -226,10 +226,12 @@ contains
          n_real_parameters,t_new,solution,solution_low_order,&
          int_parameters,real_parameters)))
     !> if good error compute larger time step and update time
-    if((error.lt.1.d0).and.(error.ne.0.d0)) &
+    if((error.lt.1.d0).and.(error.ne.0.d0)) then
+         dt_new = dt
          call compute_time_step_shampine(dt_new,&
          error,error_parameters(3:4))
          return
+    endif
     
     !> loop on the error control
     do while(error.ge.1.d0 .and. iteration.le.maximum_iteration)

@@ -130,14 +130,13 @@ do while (.not. sim%stop_now)
 #else   
           call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,tolerances,&
                time_local,dt_local,target_time,sim%groups(i)%mass,dt_try,particles(j)) !< push in jorek fields
-
 #endif
           time_local = time_local + dt_local !< time update
           !> write time step profile if enables
 #ifdef TEST
-          if(write_timestep) write(22,'(i6,3e26.16)') j,time_local,dt_local,dt_try,error
+          if(write_timestep) write(22,'(i6,4e26.16)') j,time_local,dt_local,dt_try,error
 #else
-          if(write_timestep) write(22,'(i6,2e26.16)') j,time_local,dt_local,dt_try
+          if(write_timestep) write(22,'(i6,3e26.16)') j,time_local,dt_local,dt_try
 #endif
           dt_local = dt_try !< update the time step
 

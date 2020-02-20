@@ -85,13 +85,6 @@ integer                      :: i, ierr
       rhs_glob_harm, irn_glob_harm, jcn_glob_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm,     &
       direct_construction)
 
-      ! if(my_id .eq. 0) then
-      !   do i = 1, ndof_glob_loc !mumps_par%n 
-      !      print*, 'i, mumps_par%rhs:', i, rhs_glob_harm(i)
-      !   enddo 
-      ! endif
-      ! call MPI_Barrier(MPI_COMM_WORLD, ierr)  
-
 
 
 end subroutine direct_construction_harmonic

@@ -76,7 +76,7 @@ real*8  :: R_c, Z_c, vec_inside(2), grad_t(2)
 real*8  :: k_size, k_size_perp
 real*8  :: G(4,4), sign_out, psi_n, ps0_sbnd
 real*8  :: dt_back, dt_now, r_dt, r_dt2
-real*8  :: I_halo, TPF, q0, q95, q99
+real*8  :: I_halo, TPF, q02, q95, q99
 real*8, allocatable :: qval(:), radav(:)
 
 real*8  :: R_axis,Z_axis,s_axis,t_axis
@@ -778,7 +778,7 @@ call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
 call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
      ES%Z_xpoint, qval, radav)
 
-q0  = qval(2)
+q02 = qval(2)
 q95 = qval(3)
 q99 = qval(4) 
 
@@ -960,8 +960,8 @@ if (my_id .eq. 0) then
       case ( 'volume' )
         res(iexpr+1) = volume
 
-      case ( 'q0' )
-        res(iexpr+1) = q0 
+      case ( 'q02' )
+        res(iexpr+1) = q02 
 
       case ( 'q95' )
         res(iexpr+1) = q95 

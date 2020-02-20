@@ -217,7 +217,7 @@ module mod_expression
     call add(exprs_all_int, 'beta_n      ', 'Normalized beta, of the plasma inside LCFS            ')
     call add(exprs_all_int, 'area        ', 'Poloidal cross section area inside LCFS               ')
     call add(exprs_all_int, 'volume      ', 'Plasma volume, inside LCFS                            ')
-    call add(exprs_all_int, 'q0          ', 'Safety factor at axis                                 ')
+    call add(exprs_all_int, 'q02         ', 'Safety factor at psin=0.02                            ')
     call add(exprs_all_int, 'q95         ', 'Safety factor at psin=0.95                            ')
     call add(exprs_all_int, 'q99         ', 'Safety factor at psin=0.99                            ')
     call add(exprs_all_int, 'I_halo      ', 'Total poloidal halo currents                          ') 
@@ -1096,8 +1096,10 @@ module mod_expression
           E_dreicer = EL_CHG**3 * ln_Lambda0 * MU_ZERO**1.5 * (central_density*1.d20*central_mass*MASS_PROTON)**2.5 * r0 / ( 2.d0 * PI * EPS_ZERO**2 * (MASS_PROTON*central_mass)**2 * T0 )
           
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
-          call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
-            ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
+          if (bootstrap) then
+            call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
+              ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
+          endif
 #else
           J_boot = 0.d0
 #endif

@@ -1815,7 +1815,6 @@ module exec_commands
     
     ! --- Local variables
     integer :: i_file, i, units, my_id
-    integer :: required, provided, StatInfo
     character(len=1024) :: filename, status, access
     real*8, allocatable :: res(:)
     character(len=23)   :: s
@@ -1823,15 +1822,6 @@ module exec_commands
     ierr = 0
     my_id=0
 
-    ! --- Initialize MPI
-#ifdef FUNNELED
-    required = MPI_THREAD_FUNNELED
-#else
-    required = MPI_THREAD_MULTIPLE
-#endif
-
-    if (first_step)  call MPI_Init_thread(required, provided, StatInfo)
-   
     ! --- Some checks
     call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);            if ( ierr /= 0 ) return
@@ -2049,7 +2039,7 @@ module exec_commands
   subroutine zeroD_quantities(command, first_step, ierr)
 
     use mod_integrals3D
-    use mpi_mod
+!    use mpi_mod
 
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
@@ -2058,7 +2048,6 @@ module exec_commands
     
     ! --- Local variables
     integer :: i_file, i, units, my_id
-    integer :: required, provided, StatInfo
     character(len=1024) :: filename, status, access
     real*8, allocatable :: res(:)
     character(len=23)   :: s
@@ -2067,15 +2056,6 @@ module exec_commands
     ierr = 0
     my_id=0
 
-    ! --- Initialize MPI
-#ifdef FUNNELED
-    required = MPI_THREAD_FUNNELED
-#else
-    required = MPI_THREAD_MULTIPLE
-#endif
-
-    if (first_step)  call MPI_Init_thread(required, provided, StatInfo)
-   
     ! --- Some checks
     call check_step_imported(ierr);            if ( ierr /= 0 ) return
     units = get_int_setting('units', ierr)

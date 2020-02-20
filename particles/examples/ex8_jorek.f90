@@ -29,7 +29,7 @@ type(diag_print_kinetic_energy)     :: print_kinetic_energy
 type(write_particle_diagnostics)    :: diag
 type(particle_gc_relativistic)      :: particle_in, particle_out
 type(particle_gc)                   :: particle_out_gc
-real(kind=8)                        :: psi, U, gyro_angle
+real(kind=8)                        :: psi, U, gyro_angle,error
 real(kind=8),dimension(3)           :: E, B
 
 call sim%initialize(num_groups=1)
@@ -123,11 +123,20 @@ do while (.not. sim%stop_now)
        do j=1,size(particles,1)
           time_local = sim%time !< copy simulation time in local variable
           dt_local = timesteps(i)!< time step in local variable
-          do while((time_local.lt.target_time) .and. (particles(j)%i_elm.ne.0)) !< continue until we reach the target time   
+          do while((time_local.lt.target_time) .and. (particles(j)%i_elm.ne.0)) !< continue until we reach the target time
+#ifdef TEST
+          call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,tolerances,&
+               time_local,dt_local,target_time,sim%groups(i)%mass,particles(j),error) !< push in jorek 
+#else   
           call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,tolerances,&
                time_local,dt_local,target_time,sim%groups(i)%mass,particles(j)) !< push in jorek fields
+#endif
           !> write time step profile if enables
+#ifdef TEST
+          if(write_timestep) write(22,'(i6,3e26.16)') j,time_local,dt_local,error
+#else
           if(write_timestep) write(22,'(i6,2e26.16)') j,time_local,dt_local
+#endif
           if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1		
        end do !< time steps
       end do !< particles

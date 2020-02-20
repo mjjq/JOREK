@@ -38,8 +38,14 @@ contains
   !>   t:        (real8) new time
   !>   dt:       (real8) new time step
   !>   particle: (particle_gc_relativistic) the integrated gc
+  !>   error:    (real8) final runge-kutta error (if defined TEST only)
+#ifdef TEST
+  subroutine runge_kutta_error_control_dt_gc_push_jorek(fields,tolerances,&
+       t,dt,t_stop,mass,particle,error)
+#else
   subroutine runge_kutta_error_control_dt_gc_push_jorek(fields,tolerances,&
        t,dt,t_stop,mass,particle)
+#endif
     !> load modules
     use mod_fields, only: fields_base
     use mod_find_rz_nearby
@@ -52,6 +58,10 @@ contains
     class(fields_base), intent(in) :: fields
     real(kind=8), intent(in)       :: t_stop,mass
     real(kind=8),dimension(4),intent(in) :: tolerances
+    !> declare output variables
+#ifdef TEST
+    real(kind=8),intent(out) :: error
+#endif
     !> internal variables
     integer :: ifail, i_elm_new !< particle new element
     !> new particle local coordinates: 1:s, 2:t
@@ -59,12 +69,25 @@ contains
     !> integrate global coordinates: 1:R, 2:Z, 3:phi, 4:p_parallel
     real(kind=8),dimension(4) :: solution_new
 
+#ifdef TEST
+
+    !> compute Runge-Kutta solution and new time step
+    call runge_kutta_order_error_control_dt(compute_relativistic_gc_derivatives_jorek,&
+         fields,4,2,4,t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),&
+         particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
+         particle%st(2),mass,particle%p(2)],&
+         tolerances,solution_new,i_elm_new,error)
+
+#else
+
     !> compute Runge-Kutta solution and new time step
     call runge_kutta_order_error_control_dt(compute_relativistic_gc_derivatives_jorek,&
          fields,4,2,4,t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),&
          particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
          particle%st(2),mass,particle%p(2)],&
          tolerances,solution_new,i_elm_new)
+
+#endif
 
     !> compute the new local coordinates
     if(i_elm_new.gt.0) then 

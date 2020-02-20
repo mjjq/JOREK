@@ -147,9 +147,17 @@ contains
   !>   solution: (n_variables) runge kutta step solution
   !>   ifail:    (integer) =0 if the integration failed
   !>             -1 = if the integration is not performed
+  !>   error:    (real8) final runge-kutta error (if defined TEST only)
+#ifdef TEST
+  subroutine runge_kutta_order_error_control_dt(compute_rhs,fields,n_variables,&
+       n_int_parameters,n_real_parameters,t,t_stop,dt,solution_old,&
+       int_parameters,real_parameters,tolerances,solution,ifail,error,&
+       compute_user_err)
+#else
   subroutine runge_kutta_order_error_control_dt(compute_rhs,fields,n_variables,&
        n_int_parameters,n_real_parameters,t,t_stop,dt,solution_old,&
        int_parameters,real_parameters,tolerances,solution,ifail,compute_user_err)
+#endif
     !> load modules
     use mod_fields, only: fields_base
     implicit none
@@ -179,8 +187,13 @@ contains
     real(kind=8),dimension(n_variables*n_stages) :: differentials
     !> internal variables
     integer :: iteration !< number of iterations
-    real(kind=8) :: error,dt_new,t_new !< error and new time step
+    real(kind=8) :: dt_new,t_new !< error and new time step
     real(kind=8),dimension(n_variables) :: solution_low_order
+#ifdef TEST
+    real(kind=8),intent(out) :: error
+#else
+    real(kind=8) :: error
+#endif
 
 
     !> initialise counter to zero, error to 2 and copy time step

@@ -763,7 +763,7 @@ li3_tot      = 2.d0 * mag_tot/0.5  /(current_tot**2 * R_geo ) * fact_mu0
 
 ! --- Externally calculated quantities
 ! --- Halo currents
-call integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF)
+call integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF, .false.)
 
 ! --- Safety factor at important locations
 surface_list%n_psi = 4 

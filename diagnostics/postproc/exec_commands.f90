@@ -1721,7 +1721,7 @@ module exec_commands
       write(i_file,'(a)') '#               time            I_halo [MA]             TPF'
     end if
     
-    call integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF)
+    call integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF, .true.)
  
     write(i_file,'(3es20.9)') time_now, I_halo, TPF 
     

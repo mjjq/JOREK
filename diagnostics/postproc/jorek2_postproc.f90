@@ -36,6 +36,12 @@ required = 0
   ! --- Determine number of MPI procs
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
   n_cpu = comm_size
+
+  ! --- jorek2_postproc is not ready yet for MPI
+  if (n_cpu /= 1) then
+    write(*,*) "Please execute with mpirun -n 1 ./jorek2_postproc, multi MPI is not ready yet"
+    stop
+  endif
   
   ! --- Determine ID of each MPI proc
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)

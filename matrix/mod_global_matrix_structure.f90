@@ -8,7 +8,6 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   !***********************************************************************
   use tr_module
   use data_structure
-!  use global_distributed_matrix, only:ndof!, n_glob, nz_glob, n_matrix_block_size 
   use mod_ch_node_struct
   use vacuum, only: sr
 
@@ -29,7 +28,6 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   logical :: freeboundary
   integer, allocatable :: tmp(:,:)
   integer, allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-  !integer, allocatable, target :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
   integer, allocatable :: irn_glob(:), jcn_glob(:)
 
   if ( my_id == 0 ) then
@@ -276,9 +274,10 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   irn_glob = 0
   jcn_glob = 0
 
+  !---- for debugging purpose
   write(*,'(2i6,a,2i12)') my_id, my_id_n, ' size matrices : n, nz = ', n_glob, nz_glob
-  write(*,'(2i6,a,2i12)') my_id, my_id_n, ' ndof = ', ndof
-  write(*,'(2i6,a,2i12)') my_id, my_id_n, ' index_min, index_max = ', index_min, index_max
+  !write(*,'(2i6,a,2i12)') my_id, my_id_n, ' ndof = ', ndof
+  !write(*,'(2i6,a,2i12)') my_id, my_id_n, ' index_min, index_max = ', index_min, index_max
   write(*,'(2i6,a,2i12)') my_id, my_id_n, ' n_local_elms = ', n_local_elms
 
   return

@@ -124,6 +124,8 @@ module exec_commands
       end if
       
       select case ( trim(command%args(0)) )
+        case ( 'average' )           
+          call average(command, first_step, ierr)
         case ( 'zeroD_quantities' )
           call zeroD_quantities(command, first_step, ierr) 
         case ( 'average_h5' )
@@ -2060,6 +2062,7 @@ module exec_commands
     character(len=1024) :: filename, status, access
     real*8, allocatable :: res(:)
     character(len=23)   :: s
+    character(len=54)   :: desc
 
     ierr = 0
     my_id=0
@@ -2114,11 +2117,13 @@ module exec_commands
         iostat=ierr)
     
     if ( first_step ) then
-      write(i_file,'(a)') '#     column |  quantity'
-      write(i_file,'(I,2a)') 1,' :  ' ,"Time"
+      write(i_file,'(a)') 'Column |  Quantity                | Description'
+      write(i_file,'(a)') '-------------------------------------------------------------------------------------'
+      write(i_file,'(1I6,2a)') 1,' |  ' ,'Time                    | Time'
       do i = 1, exprs_all_int%n_expr
-        s = trim(exprs_all_int%expr(i)%name)
-        write(i_file,'(I,2a)') i+1,' :  ' ,s
+        s    = trim(exprs_all_int%expr(i)%name)
+        desc = trim(exprs_all_int%expr(i)%descr)
+        write(i_file,'(1I6,4a)') i+1,' |  ' ,s, ' | ', desc
       end do
     end if
     close(i_file)

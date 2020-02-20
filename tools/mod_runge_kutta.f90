@@ -198,7 +198,7 @@ contains
 
     !> initialise counter to zero, error to 2 and copy time step
     iteration = 0
-
+    dt_new = dt
     !> check if the dt is too big
     if((t+dt) .gt. t_stop) dt = t_stop - t
     !> check if the dt is equal to zero and get out if it is the case

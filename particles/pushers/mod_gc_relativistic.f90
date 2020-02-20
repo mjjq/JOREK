@@ -65,19 +65,24 @@ contains
          particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
          particle%st(2),mass,particle%p(2)],&
          tolerances,solution_new,i_elm_new)
-    
+
     !> compute the new local coordinates
-    if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list,&
+    if(i_elm_new.gt.0) then 
+      call find_rz_nearby(fields%node_list,&
          fields%element_list,particle%x(1),particle%x(2),&
          particle%st(1),particle%st(2),particle%i_elm,&
          solution_new(1),solution_new(2),st_new(1),st_new(2),&
          i_elm_new,ifail)
-    
+      particle%st = st_new
+      particle%i_elm = i_elm_new      
+    endif
+
+    !> set the particle as dead
+    if(i_elm_new.eq.0) particle%i_elm = i_elm_new
+
     !> overwrite particle fields
     particle%x = solution_new(1:3)
     particle%p(1) = solution_new(4)
-    particle%st = st_new
-    particle%i_elm = i_elm_new
     
   end subroutine runge_kutta_error_control_dt_gc_push_jorek
 

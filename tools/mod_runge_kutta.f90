@@ -145,7 +145,8 @@ contains
   !>   t:        (real8) new integration variable
   !>   dt:       (real8) new integration step
   !>   solution: (n_variables) runge kutta step solution
-  !>   ifail:    (integer) if 0 the integration failed
+  !>   ifail:    (integer) =0 if the integration failed
+  !>             -1 = if the integration is not performed
   subroutine runge_kutta_order_error_control_dt(compute_rhs,fields,n_variables,&
        n_int_parameters,n_real_parameters,t,t_stop,dt,solution_old,&
        int_parameters,real_parameters,tolerances,solution,ifail,compute_user_err)
@@ -181,12 +182,20 @@ contains
     real(kind=8) :: error,dt_new,t_new !< error and new time step
     real(kind=8),dimension(n_variables) :: solution_low_order
 
-    !> check if the dt is too big
-    if((t+dt) .gt. t_stop) dt = t_stop - t
-    
+
     !> initialise counter to zero, error to 2 and copy time step
     iteration = 0
     dt_new = dt
+
+    !> check if the dt is too big
+    if((t+dt_new) .gt. t_stop) dt_new = t_stop - t
+    !> check if the dt is equal to zero and get out if it is the case
+    if(dt_new.le.0.d0) then
+      ifail = -1
+      solution = solution_old
+      t = t_stop
+      return
+    endif
 
     !> compute first step
     !> compute runge-kutta differential

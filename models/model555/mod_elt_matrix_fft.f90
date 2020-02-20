@@ -69,7 +69,8 @@ contains
     integer    :: j_order,  j_vertex, j_tor
     integer    :: n_tor_loop, n_tor_loop2
     integer    :: index_ij, index_kl
-    
+    logical    :: use_fft
+    integer    :: n_tor_start, n_tor_end 
     ! --- Routine variables (Xpoint and axis)
     logical    :: xpoint2
     integer    :: xcase2
@@ -100,14 +101,24 @@ contains
     eps_cyl = 1.d0
 
     ! --- If we're doing the fft, don't loop...
-    if (n_tor .gt. 3) then
-      n_tor_loop  = 1
-      n_tor_loop2 = 1
+    use_fft = n_tor .gt. 3
+    if(i_tor_min .eq. 1 .and. i_tor_max .eq. n_tor) then
+       if (use_fft) then
+          n_tor_start = 1
+          n_tor_end   = 1
+        use_fft = .true.
+       else
+        n_tor_start = 1
+        n_tor_end   = n_tor
+        use_fft = .false.
+       endif
     else
-      n_tor_loop  = n_tor
-      n_tor_loop2 = n_tor
+        n_tor_start = i_tor_min
+        n_tor_end   = i_tor_max!n_tor 
+        use_fft = .false.
     endif
-    	      
+
+
 
 
 
@@ -133,13 +144,13 @@ contains
 
     	    do i_order =1,n_order+1
 
-    	      do i_tor =1,n_tor_loop
+    	      do i_tor =n_tor_start, n_tor_end
 
     		! --- Index in the ELM matrix	    
-    		if (n_tor .gt. 3) then
+    		if (use_fft) then
     		  index_ij =       n_var*(n_order+1)*(i_vertex-1) +       n_var*(i_order-1) + 1
     		else
-    		  index_ij = n_tor*n_var*(n_order+1)*(i_vertex-1) + n_tor*n_var*(i_order-1) + i_tor
+    		  index_ij = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(i_vertex-1) + (n_tor_end - n_tor_start +1)*n_var*(i_order-1) + i_tor - n_tor_start +1
     		endif
 		
 	        ! --- Build test functions (which we choose to be the basis functions)
@@ -168,15 +179,15 @@ contains
     		
 
     		! --- Fill up the matrix
-    		if (n_tor .gt. 3) then
+    		if (use_fft) then
     		  do i_ij =1,n_var
-		    ij_tmp = index_ij + (i_ij-1)*n_tor_loop
+		    ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start +1)
 		    RHS_p(i_plane,ij_tmp) = RHS_p(i_plane,ij_tmp) + rhs_tmp  (i_ij) * wst
 		    RHS_k(i_plane,ij_tmp) = RHS_k(i_plane,ij_tmp) + rhs_k_tmp(i_ij) * wst
 		  enddo
     		else
     		  do i_ij =1,n_var
-		    ij_tmp = index_ij + (i_ij-1)*n_tor_loop
+		    ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start +1)
     		    RHS(ij_tmp) = RHS(ij_tmp) + (rhs_tmp(i_ij) + rhs_k_tmp(i_ij)) * wst
 		  enddo
     		endif
@@ -189,10 +200,10 @@ contains
     		    do j_tor =1,n_tor_loop2
 
     		      ! --- Index in the ELM matrix
-    		      if (n_tor .gt. 3) then
+    		      if (use_fft) then
     			index_kl =       n_var*(n_order+1)*(j_vertex-1) +       n_var*(j_order-1) + 1
     		      else
-    			index_kl = n_tor*n_var*(n_order+1)*(j_vertex-1) + n_tor*n_var*(j_order-1) + j_tor
+    			index_kl = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(j_vertex-1) + (n_tor_end - n_tor_start +1)*n_var*(j_order-1) + j_tor - n_tor_start +1
     		      endif
 
 		      ! --- Build basis functions
@@ -248,11 +259,11 @@ contains
     		      call ELM_main_lhs_7_numm(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
 		      
     		      ! --- Fill up the matrix
-    		      if (n_tor .gt. 3) then
+    		      if (use_fft) then
     		  	do i_ij =1,n_var
-		  	  ij_tmp = index_ij + (i_ij-1)*n_tor_loop
+		  	  ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start +1)
     		  	  do i_kl =1,n_var
-		  	    kl_tmp = index_kl + (i_kl-1)*n_tor_loop
+		  	    kl_tmp = index_kl + (i_kl-1)*(n_tor_end - n_tor_start +1)
     			    ELM_p (i_plane,ij_tmp,kl_tmp) = ELM_p (i_plane,ij_tmp,kl_tmp) + wst * amat_tmp   (i_ij,i_kl)
     			    ELM_k (i_plane,ij_tmp,kl_tmp) = ELM_k (i_plane,ij_tmp,kl_tmp) + wst * amat_k_tmp (i_ij,i_kl)
     			    ELM_n (i_plane,ij_tmp,kl_tmp) = ELM_n (i_plane,ij_tmp,kl_tmp) + wst * amat_n_tmp (i_ij,i_kl)
@@ -261,9 +272,9 @@ contains
 		  	enddo
     		      else
     		  	do i_ij =1,n_var
-		  	  ij_tmp = index_ij + (i_ij-1)*n_tor_loop
+		  	  ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start +1)
     		  	  do i_kl =1,n_var
-		  	    kl_tmp = index_kl + (i_kl-1)*n_tor_loop
+		  	    kl_tmp = index_kl + (i_kl-1)*(n_tor_end - n_tor_start +1)
     			    ELM(ij_tmp,kl_tmp) = ELM(ij_tmp,kl_tmp) + (amat_tmp(i_ij,i_kl) + amat_k_tmp(i_ij,i_kl) + amat_n_tmp(i_ij,i_kl) + amat_kn_tmp(i_ij,i_kl)) * wst
 		  	  enddo
 		  	enddo
@@ -290,7 +301,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!! Apply FFT !!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    if (n_tor .gt. 3) then
+    if (use_fft) then
       call ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, tid)
     endif
     

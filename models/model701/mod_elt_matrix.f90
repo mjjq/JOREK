@@ -254,9 +254,9 @@ do ms=1, n_gauss
 
        do j=1,n_order+1
 
-         do im=1,n_tor
+         do im=i_tor_min, i_tor_max
 
-           index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor * n_var * (j-1) + im   ! index in the ELM matrix
+           index_ij = (i_tor_max - i_tor_min +1)*n_var*(n_order+1)*(i-1) + (i_tor_max - i_tor_min +1) * n_var * (j-1) + im - i_tor_min +1  ! index in the ELM matrix
 
            v   =  H(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
            v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac * HZ(im,mp)
@@ -367,7 +367,7 @@ do ms=1, n_gauss
 !###################################################################################################
 
            do ivar=1,n_var
-             ij = index_ij + (ivar-1)*n_tor
+             ij = index_ij + (ivar-1)*(i_tor_max - i_tor_min +1)
              RHS(ij) =  RHS(ij) + wst * rhs_ij(ivar)
            enddo
 
@@ -375,7 +375,7 @@ do ms=1, n_gauss
 
              do l=1,n_order+1
 
-               do in = 1, n_tor
+               do in = i_tor_min, i_tor_max
 
                  bf   = H(k,l,ms,mt) * element%size(k,l) * HZ(in,mp)
 
@@ -452,7 +452,7 @@ do ms=1, n_gauss
                  Ugrad_vstar_UZ = UZ * v_y 
                  Ugrad_vstar_UP = UP * v_p / BigR
 
-                 index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor * n_var * (l-1) + in   ! index in the ELM matrix
+                 index_kl = (i_tor_max - i_tor_min +1)*n_var*(n_order+1)*(k-1) + (i_tor_max - i_tor_min +1) * n_var * (l-1) + in - i_tor_min +1  ! index in the ELM matrix
 
 !###################################################################################################
 !#  equation 1   (R component momentum equation)                                                   #
@@ -637,18 +637,18 @@ do ms=1, n_gauss
 
 
                  kl1 = index_kl
-                 kl2 = index_kl + 1*n_tor
-                 kl3 = index_kl + 2*n_tor
-                 kl4 = index_kl + 3*n_tor
-                 kl5 = index_kl + 4*n_tor
-                 kl6 = index_kl + 5*n_tor
-                 kl7 = index_kl + 6*n_tor
+                 kl2 = index_kl + 1*(i_tor_max - i_tor_min +1)
+                 kl3 = index_kl + 2*(i_tor_max - i_tor_min +1)
+                 kl4 = index_kl + 3*(i_tor_max - i_tor_min +1)
+                 kl5 = index_kl + 4*(i_tor_max - i_tor_min +1)
+                 kl6 = index_kl + 5*(i_tor_max - i_tor_min +1)
+                 kl7 = index_kl + 6*(i_tor_max - i_tor_min +1)
 
                  do ivar=1,n_var
 	           do kvar=1, n_var
 
-	             ij = index_ij + (ivar-1)*n_tor
-		     kl = index_kl + (kvar-1)*n_tor
+	             ij = index_ij + (ivar-1)*(i_tor_max - i_tor_min +1)
+		     kl = index_kl + (kvar-1)*(i_tor_max - i_tor_min +1)
 
                      ELM(ij,kl) =  ELM(ij,kl) + wst * amat(ivar,kvar)
 		   enddo

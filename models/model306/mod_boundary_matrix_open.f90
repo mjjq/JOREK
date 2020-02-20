@@ -129,9 +129,9 @@ do ms=1, n_gauss
          j2 = direction(j)
          element_size_ij = element%size(vertex(i),j2)
 
-         do im=1,n_tor
+         do im=i_tor_min, i_tor_max
 
-           index_ij = n_tor*n_var*(n_order+1)*(vertex(i)-1) + n_tor * n_var * (j2-1) + im   ! index in the ELM matrix
+           index_ij = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(vertex(i)-1) + (i_tor_max - i_tor_min + 1) * n_var * (j2-1) + im - i_tor_min + 1   ! index in the ELM matrix
 
            v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)         ! test function
 
@@ -140,8 +140,8 @@ do ms=1, n_gauss
 
            rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * normal * tstep  ! right hand side equation 6
 
-           ij5 = index_ij + 4*n_tor                                          ! local index in element matrix
-           ij6 = index_ij + 5*n_tor                                          ! local index in element matrix
+           ij5 = index_ij + 4*(i_tor_max - i_tor_min + 1)                                          ! local index in element matrix
+           ij6 = index_ij + 5*(i_tor_max - i_tor_min + 1)                                          ! local index in element matrix
 
            RHS(ij5) = RHS(ij5) + rhs_ij_5 * ws                               ! add to element RHS
            RHS(ij6) = RHS(ij6) + rhs_ij_6 * ws                               ! add to element RHS
@@ -153,7 +153,7 @@ do ms=1, n_gauss
                l2 = direction(l)
                element_size_kl = element%size(vertex(k),l2)
 
-               do in = 1, n_tor                                              ! loop over toroidal harmonics
+               do in = i_tor_min, i_tor_max                                              ! loop over toroidal harmonics
 
                  psi   = H1(k,l,ms)   * element_size_kl * HZ(in,mp)
 
@@ -175,12 +175,12 @@ do ms=1, n_gauss
 
                  amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * normal * theta * tstep 
 
-                 index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix
+                 index_kl = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(vertex(k)-1) + (i_tor_max - i_tor_min + 1) * n_var * (l2-1) + in  - i_tor_min + 1  ! index in the ELM matrix
 
                  kl1 = index_kl
-                 kl5 = index_kl + 4*n_tor
-                 kl6 = index_kl + 5*n_tor
-                 kl7 = index_kl + 6*n_tor
+                 kl5 = index_kl + 4*(i_tor_max - i_tor_min + 1)
+                 kl6 = index_kl + 5*(i_tor_max - i_tor_min + 1)
+                 kl7 = index_kl + 6*(i_tor_max - i_tor_min + 1)
 
                  ELM(ij5,kl1) =  ELM(ij5,kl1) + ws * amat_51
                  ELM(ij5,kl5) =  ELM(ij5,kl5) + ws * amat_55

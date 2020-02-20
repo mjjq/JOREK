@@ -170,13 +170,8 @@ theta = time_evol_theta
 zeta  = time_evol_zeta
 
 ! --- If we're doing the fft, don't loop... 
-!if(present(i_tor_min).and.present(i_tor_max)) then 
-!   n_tor_start = i_tor_min 
-!   n_tor_end   = i_tor_max
-!use_fft = n_tor .gt. n_tor_fft_thresh .and. i_tor_min .eq. 1 .and. i_tor_max .eq. n_tor!.FALSE. 
-use_fft = n_tor .gt. n_tor_fft_thresh !.and. i_tor_min .eq. 1 .and. i_tor_max .eq. n_tor!.FALSE. 
+use_fft = n_tor .gt. n_tor_fft_thresh  
 
-!if(use_fft) then  
 if(i_tor_min .eq. 1 .and. i_tor_max .eq. n_tor) then 
    if (use_fft) then
       n_tor_start = 1
@@ -193,19 +188,6 @@ else
     use_fft = .false. 
 endif
 
-!if(present(i_tor_min).and.present(i_tor_max)) then 
-!   n_tor_start = i_tor_min 
-!   n_tor_end   = i_tor_max
-!   use_fft = .FALSE. 
-!else if(n_tor .gt. n_tor_fft_thresh) then 
-!    n_tor_start = 1
-!    n_tor_end   = 1 
-!    use_fft     = .TRUE.
-!else 
-!    n_tor_start = 1
-!!    n_tor_end   = n_tor 
-!    use_fft = .FALSE. 
-!endif
 
 ! --- Toroidal functions            
 if (use_fft) then
@@ -786,9 +768,7 @@ do i=1,n_vertex_max
                                 source_pellet, source_volume)
           endif
 
-          !n_tor_start = i_tor_min 
-          !n_tor_end   = i_tor_max
-          do im=n_tor_start, n_tor_end!1,n_tor_loop
+          do im=n_tor_start, n_tor_end
 
             v   =  H(i,j,ms,mt) * element%size(i,j) * HHZ(im,mp)
             v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac * HHZ(im,mp)
@@ -1825,7 +1805,6 @@ do i=1,n_vertex_max
                   if (use_fft) then
                     index_kl =       n_var*(n_order+1)*(k-1) +       n_var*(l-1) + 1
                   else
-                    !index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor*n_var*(l-1) + in
                     index_kl = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(k-1) + (n_tor_end - n_tor_start +1)*n_var*(l-1) + in - n_tor_start +1
                   endif
 
@@ -2235,7 +2214,6 @@ do i=1,n_vertex_max
 enddo ! i loop (n_vertex)
 
 if (.NOT. use_fft) return
-!if (n_tor .le. n_tor_fft_thresh) return
 ELM = 0.5d0 * ELM
 
 do j=1, n_vertex_max*n_var*(n_order+1)

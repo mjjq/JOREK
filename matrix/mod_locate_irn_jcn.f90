@@ -9,16 +9,14 @@ subroutine locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_positi
 !                                                                         *
 ! search to be replaced by binary search                                  *
 !**************************************************************************
-!use global_distributed_matrix
 use mpi_mod
 integer :: index_node1, index_node2, index_min, index_max, ijA_position, i, index1_local
 logical :: found_index
 integer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-integer :: my_id, rank, ierr
+integer :: my_id, ierr
 
 
-    call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
-    my_id = rank
+call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
 
 found_index = .false.
@@ -26,10 +24,6 @@ found_index = .false.
 index1_local = index_node1 - index_min + 1
 
 !write(*,'(A,8i8)') ' LOCATE : ',index_node1,index_min,index_max,index1_local
-
-!!----add by PSV 
-!if (ijA_size(index1_local) .eq. 0) ijA_size(index1_local) = 1
-!!----add by PSV 
 
 do i=1,ijA_size(index1_local)           ! replace by binary search?
 
@@ -43,10 +37,7 @@ enddo
 
 if (.not.found_index) then
 
-  !write(*,*) ' FATAL locate_irn_jcn : index not found ',index_node1,index_node2
-  write(*,*) ' FATAL locate_irn_jcn : index not found '!,index_node1,index_node2
-  write(*,*) 'my_id, index_node1, index_node2, index_min', my_id, index_node1,index_node2, index_min
-  write(*,*) 'my_id, ijA_size(index1_local), irn_jcn(index1_local,i)', my_id, ijA_size(index1_local), irn_jcn(index1_local,1)  
+  write(*,*) ' FATAL locate_irn_jcn : index not found ',index_node1,index_node2
 
   do i=1,ijA_size(index1_local)           ! replace by binary search?
 

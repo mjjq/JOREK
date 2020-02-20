@@ -123,6 +123,9 @@ do while (.not. sim%stop_now)
         do while((time_local .lt. target_time) .and. (particles(j)%i_elm .ne. 0)) !< continue until we reach the target time
           call runge_kutta_adapt_dt_gc_push_jorek(sim%fields,time_local,&
                dt_local,target_time,sim%groups(i)%mass,particles(j)) !< push in jorek fields
+
+          time_local = time_local + dt_local
+
           !> write time step profile if enables
           if(write_timestep) write(22,'(i6,2e26.16)') j,time_local,dt_local
           if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1		

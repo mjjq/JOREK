@@ -29,7 +29,7 @@ type(diag_print_kinetic_energy)     :: print_kinetic_energy
 type(write_particle_diagnostics)    :: diag
 type(particle_gc_relativistic)      :: particle_in, particle_out
 type(particle_gc)                   :: particle_out_gc
-real(kind=8)                        :: psi, U, gyro_angle,error
+real(kind=8)                        :: psi, U, gyro_angle,error,dt_try
 real(kind=8),dimension(3)           :: E, B
 
 call sim%initialize(num_groups=1)
@@ -126,10 +126,13 @@ do while (.not. sim%stop_now)
           do while((time_local.lt.target_time) .and. (particles(j)%i_elm.ne.0)) !< continue until we reach the target time
 #ifdef TEST
           call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,tolerances,&
-               time_local,dt_local,target_time,sim%groups(i)%mass,particles(j),error) !< push in jorek 
+               time_local,dt_local,target_time,sim%groups(i)%mass,dt_try,particles(j),error) !< push in jorek 
 #else   
           call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,tolerances,&
-               time_local,dt_local,target_time,sim%groups(i)%mass,particles(j)) !< push in jorek fields
+               time_local,dt_local,target_time,sim%groups(i)%mass,dt_try,particles(j)) !< push in jorek fields
+
+          time_local = time_local + dt_local
+          dt_local = dt_try
 #endif
           !> write time step profile if enables
 #ifdef TEST

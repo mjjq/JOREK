@@ -126,6 +126,8 @@ do while (.not. sim%stop_now)
           call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time,timesteps(i), &
               sim%groups(i)%mass,particles(j)) !< push in jorek fields
 
+          t = t + timesteps(i) !< update time
+
 !          write(*,*) 'Particle position: ', particles(j)%x(1), particles(j)%x(2), particles(j)%x(3)
 !          write(*,*) 'Particle momenta: ', particles(j)%p(1), particles(j)%p(2)
 

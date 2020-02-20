@@ -35,16 +35,16 @@ contains
   !>   mass:       (real8) the gc mass in AMU
   !>   particle:   (particle_gc_relativistic) the gc to integrate
   !> outputs:
-  !>   t:        (real8) new time
   !>   dt:       (real8) new time step
+  !>   dt_new:   (real8) proposed integration time step
   !>   particle: (particle_gc_relativistic) the integrated gc
   !>   error:    (real8) final runge-kutta error (if defined TEST only)
 #ifdef TEST
   subroutine runge_kutta_error_control_dt_gc_push_jorek(fields,tolerances,&
-       t,dt,t_stop,mass,particle,error)
+       t,dt,t_stop,mass,dt_new,particle,error)
 #else
   subroutine runge_kutta_error_control_dt_gc_push_jorek(fields,tolerances,&
-       t,dt,t_stop,mass,particle)
+       t,dt,t_stop,mass,dt_new,particle)
 #endif
     !> load modules
     use mod_fields, only: fields_base
@@ -53,12 +53,13 @@ contains
     implicit none
     !> declare input output variables
     type(particle_gc_relativistic), intent(inout) :: particle
-    real(kind=8),intent(inout) :: t,dt
+    real(kind=8),intent(inout) :: dt
     !> declare input variables
     class(fields_base), intent(in) :: fields
-    real(kind=8), intent(in)       :: t_stop,mass
+    real(kind=8), intent(in)       :: t,t_stop,mass
     real(kind=8),dimension(4),intent(in) :: tolerances
     !> declare output variables
+    real(kind=8),intent(out) :: dt_new
 #ifdef TEST
     real(kind=8),intent(out) :: error
 #endif
@@ -76,7 +77,7 @@ contains
          fields,4,2,4,t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),&
          particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
          particle%st(2),mass,particle%p(2)],&
-         tolerances,solution_new,i_elm_new,error)
+         tolerances,dt_new,solution_new,i_elm_new,error)
 
 #else
 
@@ -85,7 +86,7 @@ contains
          fields,4,2,4,t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),&
          particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
          particle%st(2),mass,particle%p(2)],&
-         tolerances,solution_new,i_elm_new)
+         tolerances,dt_new,solution_new,i_elm_new)
 
 #endif
 

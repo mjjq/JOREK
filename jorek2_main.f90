@@ -799,6 +799,7 @@ required = 0
     else
        my_id_n = my_id
        MPI_COMM_N = MPI_COMM_WORLD 
+       !--- for debugging purpose
        m_cpu = n_cpu
     endif
 

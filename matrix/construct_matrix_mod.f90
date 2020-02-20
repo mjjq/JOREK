@@ -229,8 +229,6 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer, intent(in) :: my_id_n         
   integer, intent(in) :: MPI_COMM_MASTER 
   integer, intent(in) :: my_id_master         
-!  integer, intent(in) :: n_cpu         
-!  integer, intent(in) :: m_cpu         
   integer, intent(in) :: local_elms(*)
   integer, intent(in) :: n_local_elms
   integer, intent(in) :: index_min
@@ -337,12 +335,12 @@ endif
   
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
-  !$omp   shared(n_local_elms,irn_glob,jcn_glob,A_glob,local_elms,element_list,node_list,          &
+  !$omp   shared(n_local_elms,local_elms,element_list,node_list,          &
   !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,direct_construction,       &
-  !$omp          A_glob_harm, irn_glob_harm, jcn_glob_harm, rhs_glob_harm, A_local, rhs_local, rhs_glob_tmp, irn_local, jcn_local,      &
+  !$omp          A_local, rhs_local, rhs_glob_tmp, irn_local, jcn_local,      &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
-  !$omp          ijA_index_harm, ijA_size_harm, irn_jcn_harm, ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, &
-  !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, mumps_par, ijA_index, ijA_size, irn_jcn) &
+  !$omp          ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, &
+  !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn) &
   !$omp   private(ife,ielm,iv,inode,element,nodes,i,inode1,i_order,index_node1,           &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
@@ -390,8 +388,7 @@ endif
     endif
 
     call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd,& 
-                                 R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list,         & 
-                                 i_tor_min, i_tor_max)
+                                 R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
     
 if (.not. direct_construction) then
     
@@ -599,28 +596,6 @@ endif
   !$omp end do
   !$omp end parallel
  
-     !---- for debugging
-     !if(direct_construction) then 
-
-     !  if(my_id .eq. 0) then
-     !    do i = 1, ndof 
-     !       write(100,'(I8, 2x, ES15.3)') i, rhs_local(i)
-     !    enddo 
-     !  endif  
-     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)  
-
-     !  if(my_id .eq. 0) then
-     !    do i = 1, nz_glob1 
-     !       write(200,'(I8, 2x, I8, 2x, I8, 2x, ES15.3)') i, irn_local(i), jcn_local(i), A_local(i)
-     !    enddo 
-     !  endif 
-     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)  
-
-     !endif
-
-
-  print*, 'my_id, my_id_n, my_id_master :', my_id, my_id_n, my_id_master
- 
   
   ! --- Memory tracking
   call tr_vnorms("cm_A_bef_bc",A_local,nz_glob1)
@@ -690,27 +665,7 @@ endif
 
   call tr_deallocatep(RHS_local,"RHS_local",CAT_DMATRIX)
  
-     !!!!------ for debugging
-     !if(direct_construction) then 
-     !  if(my_id.eq.0) then
-     !   do i = 1, ndof!nz_glob1 
-     !     print*, 'i, mumps_par%rhs =', i, rhs_glob(i)
-     !!     print*, 'i, mumps_par%jcn =', i, jcn_local(i)
-     !   enddo 
-     !  endif 
-     !!  !------ for debugging
-     !!  !------ for debugging
-     !endif
-     !  call MPI_Barrier(MPI_COMM_WORLD, ierr)
-     !!!!------ for debugging
-
-
-  ! --- For debugging purpose
-!  if (my_id .eq. 0) then
-!     write(fname,'(A,I6.6)')"rhsbc",index_now
-!     call tr_vdump(fname,RHS_glob,ndof)
-!  end if
-
+     
   ! --- Memory tracking
   call tr_locvnorms("cm_BCRhs",RHS_glob_tmp,ndof)
   call tr_debug_writei("ndof",ndof)

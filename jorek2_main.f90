@@ -129,7 +129,7 @@ program JOREK2
   real*8                   :: mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
   integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint(2)
-  integer                  :: n_local_ELMs!, n_local_elms_harm
+  integer                  :: n_local_ELMs
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
   integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
@@ -137,7 +137,6 @@ program JOREK2
   character*14             :: fileout
   integer                  :: required,provided,StatInfo
   integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
-  !integer, allocatable     :: local_elms_harm(:), index_min_harm(:), index_max_harm(:)
   real*8                   :: zjz, E_min, E_max
   logical                  :: solve_only, to_quit, freeb_equil2
   integer*4                :: rank, comm_size 
@@ -158,9 +157,6 @@ program JOREK2
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
   REAL*8                   :: max_time, min_time, tsecond
   integer, allocatable     :: tab_n_local_elems(:)
-  integer, allocatable     :: nz_array(:)  !---- psv
-  integer, allocatable     :: disp_array(:)  !---- psv
-  integer                  :: nz_total     !---- psv
   real*8                   :: t_this, sum_deltas
 ! =================== plot NEO coeffs ==================
   real*8                   :: amu_neo_node, aki_neo_node
@@ -171,14 +167,6 @@ program JOREK2
   complex*16 :: out_fft(1:n_plane)
 #endif
 
-#ifdef PSV
-  !---- Part of the code under the flag PSV is just for debugging and will be
-  !removed at some point.
-! =================== PSV TEST VARIABLES ==================
-  real*8,allocatable       :: A(:), rhs(:)
-  integer,allocatable      :: irn(:), jcn(:)
-! ======================================================
-#endif
 
   real*8  :: DUMMY_REAL(1:1)
   integer :: DUMMY_INT (1:1)

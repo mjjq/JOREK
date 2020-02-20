@@ -75,6 +75,7 @@ real*8                :: GradP_R, GradP_Z, GradP_p, GradP_pol
 real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
 real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8                :: psi_norm, psi_bnd, grad_psi
+real*8                :: J_phi, J_R, J_Z, eta_T
 real*8                :: E_phi, E_R, E_Z, dU_x, dU_y, Jpol_R, Jpol_Z, FFp
 real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
 real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
@@ -162,14 +163,14 @@ nsub                   = 5       ! Number of subdivisions of the cubic finite el
 i_tor                  = -1      ! If i_tor > 0, only this mode will be included in the vtk file...
 i_plane                = 1       ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 without_n0_mode        = .false. ! If true, do not include the n=0 mode (i_tor=1)
-SI_units               = .false. ! when true, write variables in SI units
-include_fluxes         = .false. ! include energy and density fluxes (or not)
+SI_units               = .true. ! when true, write variables in SI units
+include_fluxes         = .true. ! include energy and density fluxes (or not)
 include_neo            = .false. ! include neoclassical and more terms (or not)
-include_magnetic_field = .false. ! include vector of magnetic field (or not)
-include_velocity_field = .false. ! include vector of velocity field (or not)
-include_electric_field = .false. ! include vector of E-field (or not), evaluated at t-dt/2 
-include_Jpol           = .false. ! include poloidal current vector (J_phi=0 for visualization)
-include_bootstrap      = .false. ! include bootstrap current and averaged current
+include_magnetic_field = .true. ! include vector of magnetic field (or not)
+include_velocity_field = .true. ! include vector of velocity field (or not)
+include_electric_field = .true. ! include vector of E-field (or not), evaluated at t-dt/2 
+include_Jpol           = .true. ! include poloidal current vector (J_phi=0 for visualization)
+include_bootstrap      = .true. ! include bootstrap current and averaged current
 include_psi_norm       = .true.  ! include normalized flux
 RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,Z,0)
 
@@ -290,7 +291,7 @@ endif
 #endif
 
 #if fullmhd
- n_fullmhd = 8
+ n_fullmhd = 9
  s_fullmhd = n_scalars
  n_scalars = n_scalars + n_fullmhd
 #endif /*fullmhd*/
@@ -301,6 +302,13 @@ grad_psi = 0.d0
 
 scalar_names(1:n_var) = variable_names(1:n_var)
 if ( SI_units ) then
+#ifdef fullmhd
+   scalar_names(var_rho)='n_e20m-3    '
+   scalar_names(var_T  )='Te_keV      '
+   scalar_names(var_UR )='VR_km/s     '
+   scalar_names(var_UZ )='VZ_km/s     '
+   scalar_names(var_Up )='Vp_km/s     '
+#else
    scalar_names(3)='j_MA/m2     '
    scalar_names(5)='n_e20m-3    '
    if (jorek_model .eq. 400) then
@@ -310,6 +318,7 @@ if ( SI_units ) then
       scalar_names(6)='Te_keV      '
    endif
    scalar_names(7)='Vpar_km/s   '
+#endif
 
 #if (JOREK_MODEL == 500)
    scalar_names(8)='N_dens_1d20  '
@@ -381,8 +390,8 @@ endif
 #endif
 
 #ifdef fullmhd
-scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_phi       ', 'B_R         ', 'B_Z         ', &
-                                                    'Q_par       ', 'V_par       ', 'FFprime     ', &
+scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_R         ', 'B_Z         ', 'B_phi       ', &
+                                                    'J_R         ', 'J_Z         ', 'J_phi       ', 'FFprime     ', &
                                                     'Grad_P      ', 'JxB         '/)
 #endif /*fullmhd*/
 
@@ -508,6 +517,20 @@ do i=1,element_list%n_elements
 
         if (include_neo) then
 
+#ifdef fullmhd
+          ! not yet implemented in model710
+          scalars(inode,s_neo+1) = Er
+          scalars(inode,s_neo+2) = Vtheta
+          scalars(inode,s_neo+3) = Mach_par
+          scalars(inode,s_neo+4) = Mach_pol
+          scalars(inode,s_neo+5) = Vsound
+          scalars(inode,s_neo+6) = Btot
+          scalars(inode,s_neo+7) = Vneo
+          scalars(inode,s_neo+8) = Vperp_e
+          scalars(inode,s_neo+9) = aki_neo_node
+          scalars(inode,s_neo+10) = amu_neo_node
+#else /* not full-MHD */
+
             !*** compute diagnostics ***
           psi_abs = sqrt(ps0_x*ps0_x + ps0_y * ps0_y)
           Btheta  = (psi_abs/R)
@@ -572,30 +595,11 @@ do i=1,element_list%n_elements
             endif   ! NEO
 
           endif     ! grad_psi
+#endif /* non-full-MHD part */
 
         endif       ! include_neo
 
       endif         ! xjac
-
-#ifdef fullmhd
-      ! Magnetic field components
-      call interp(node_list,element_list,i,var_AR,i_tor,s,t,U0,U0_s,U0_t,U0_st,U0_ss,U0_tt)
-      call interp(node_list,element_list,i,var_AZ,i_tor,s,t,V0,V0_s,V0_t,V0_st,V0_ss,V0_tt)
-      call interp(node_list,element_list,i,var_A3,i_tor,s,t,W0,W0_s,W0_t,W0_st,W0_ss,W0_tt)
-
-      AR_Z = ( - R_t * U0_s + R_s * U0_t ) / xjac
-      AZ_R = (   Z_t * V0_s - Z_s * V0_t ) / xjac
-      A3_R = (   Z_t * W0_s - Z_s * W0_t ) / xjac
-      A3_Z = ( - R_t * W0_s + R_s * W0_t ) / xjac
-      AR_p = 0.d0 ; AZ_p = 0.d0
-
-      call interp(node_list,element_list,i,456,i_tor,s,t,W0,W0_s,W0_t,W0_st,W0_ss,W0_tt)
-      Fprof = W
-
-      scalars(inode,s_fullmhd+1) = ( AZ_R - AR_Z )+ Fprof / R ! B_phi
-      scalars(inode,s_fullmhd+2) = ( A3_Z - AZ_p )/ BigR      ! B_R
-      scalars(inode,s_fullmhd+3) = ( AR_p - A3_R )/ BigR      ! B_Z
-#endif /*fullmhd*/
 
       ! old values back to normal
       i_tor = i_tor_old
@@ -644,49 +648,13 @@ do i=1,element_list%n_elements
 
         endif  ! xjac check
 
-#ifdef fullmhd
-        ! Magnetic field components
-        call interp(node_list,element_list,i,var_AR,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
-        call interp(node_list,element_list,i,var_AZ,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
-        call interp(node_list,element_list,i,var_A3,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
-
-        AR_Z = ( - R_t * U_s + R_s * U_t ) / xjac
-        AZ_R = (   Z_t * V_s - Z_s * V_t ) / xjac
-        A3_R = (   Z_t * W_s - Z_s * W_t ) / xjac
-        A3_Z = ( - R_t * W_s + R_s * W_t ) / xjac
-
-        call interp(node_list,element_list,i,var_AR,i_tor+1,s,t,U,U_s,U_t,U_st,U_ss,U_tt) ! sine
-        call interp(node_list,element_list,i,var_AZ,i_tor+1,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
-        AR_p = U  * HZ_p(i_tor,i_plane)
-        AZ_p = V  * HZ_p(i_tor,i_plane)
-
-        if (i_tor == 1) then
-          call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
-          scalars(inode,s_fullmhd+1) = ( AZ_R - AR_Z )  + Fprof / R  ! B_phi
-        else
-          scalars(inode,s_fullmhd+1) = ( AZ_R - AR_Z )
-        endif
-        scalars(inode,s_fullmhd+2) = ( A3_Z - AZ_p )/ BigR  ! B_R
-        scalars(inode,s_fullmhd+3) = ( AR_p - A3_R )/ BigR  ! B_Z
-#endif /*fullmhd*/
-
       else  ! i_tor
-
-        u_sum   = 0.d0; u_x  = 0.d0; u_y  = 0.d0; u_p  = 0.d0
-        psi_sum = 0.d0; ps_x = 0.d0; ps_y = 0.d0; ps_p = 0.d0
-        zj_sum  = 0.d0; zj_x = 0.d0; zj_y = 0.d0; zj_p = 0.d0
-        T_sum   = 0.d0; TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0
-        zn_sum  = 0.d0; zn_x = 0.d0; zn_y = 0.d0; zn_p = 0.d0;
-        Ti_sum  = 0.d0; Ti_x = 0.d0; Ti_y = 0.d0; Ti_p = 0.d0
-        Te_sum  = 0.d0; Te_x = 0.d0; Te_y = 0.d0; Te_p = 0.d0
-        w_sum   = 0.d0; w_x  = 0.d0; w_y  = 0.d0; w_p  = 0.d0; w_xx = 0.d0; w_yy = 0.d0
-        E_R     = 0.d0; E_z  = 0.d0; E_phi= 0.d0
-        dU_x    = 0.d0; dU_y = 0.d0
 
 #ifdef fullmhd
 
         scalars(inode,s_fullmhd+1:s_fullmhd+n_fullmhd) = 0.d0
         
+        A3    = 0.d0
         A3_R  = 0.d0  ;  AR_R  = 0.d0  ;  AZ_R  = 0.d0  ;  rho   = 0.d0  ;  TT    = 0.d0
         A3_Z  = 0.d0  ;  AR_Z  = 0.d0  ;  AZ_Z  = 0.d0  ;  rho_x = 0.d0  ;  TT_x  = 0.d0
         A3_RR = 0.d0  ;  AR_RR = 0.d0  ;  AZ_RR = 0.d0  ;  rho_y = 0.d0  ;  TT_y  = 0.d0
@@ -697,8 +665,8 @@ do i=1,element_list%n_elements
         A3_Zp = 0.d0  ;  AR_Zp = 0.d0  ;  AZ_Zp = 0.d0
         A3_pp = 0.d0  ;  AR_pp = 0.d0  ;  AZ_pp = 0.d0
 
-#endif /*fullmhd*/
-        
+        VR    = 0.d0  ;  VZ    = 0.d0  ;  Vp    = 0.d0
+
         do i_tor = 1, n_tor
 
           if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
@@ -708,41 +676,6 @@ do i=1,element_list%n_elements
              scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
           enddo
           
-          call interp_delta(node_list,element_list,i,1,i_tor,s,t,dpsi,dPs_s, dPs_t, dPs_st, dPs_ss, dPs_tt)
-          call interp_delta(node_list,element_list,i,2,i_tor,s,t,dU,dU_s, dU_t, dU_st, dU_ss, dU_tt)         
-
-          call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s, Ps_t, Ps_st, Ps_ss, Ps_tt)
-          call interp(node_list,element_list,i,2,i_tor,s,t,U  ,U_s,  U_t,  U_st,  U_ss,  U_tt)
-          call interp(node_list,element_list,i,3,i_tor,s,t,ZJ ,ZJ_s, ZJ_t, ZJ_st, ZJ_ss, ZJ_tt)
-          call interp(node_list,element_list,i,4,i_tor,s,t,W  ,W_s,  W_t,  W_st,  W_ss,  W_tt)
-          call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
-          call interp(node_list,element_list,i,6,i_tor,s,t,TT ,TT_s, TT_t, TT_st, TT_ss, TT_tt)
-         
-          if ( jorek_model >= 300 ) then
-             call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
-          else
-             V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
-          endif
-          if ( jorek_model .eq. 400 ) then
-             call interp(node_list,element_list,i,6,i_tor,s,t,Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt)
-             call interp(node_list,element_list,i,8,i_tor,s,t,Te,Te_s,Te_t,Te_st,Te_ss,Te_tt)
-          endif
-
-          psi_sum = psi_sum + psi * HZ(i_tor,i_plane)
-          zj_sum  = zj_sum  + zj  * HZ(i_tor,i_plane)
-          u_sum   = u_sum   + U   * HZ(i_tor,i_plane)
-          w_sum   = w_sum   + w   * HZ(i_tor,i_plane)
-          zn_sum  = zn_sum  + RHO * HZ(i_tor,i_plane)
-          if ( jorek_model .eq. 400 ) then
-            Ti_sum  = Ti_sum + Ti * HZ(i_tor,i_plane)
-            Te_sum  = Te_sum + Te * HZ(i_tor,i_plane)
-          else
-            Ti_sum  = Ti_sum + 0.5d0*TT * HZ(i_tor,i_plane)
-            Te_sum  = Te_sum + 0.5d0*TT * HZ(i_tor,i_plane)
-          endif
-
-#ifdef fullmhd
-
           call interp(node_list,element_list,i,var_AR, i_tor,s,t,AR0,AR0_s,AR0_t,AR0_st,AR0_ss,AR0_tt)
           call interp(node_list,element_list,i,var_AZ, i_tor,s,t,AZ0,AZ0_s,AZ0_t,AZ0_st,AZ0_ss,AZ0_tt)
           call interp(node_list,element_list,i,var_A3, i_tor,s,t,A30,A30_s,A30_t,A30_st,A30_ss,A30_tt)
@@ -771,8 +704,13 @@ do i=1,element_list%n_elements
           AZ_p  = AZ_p  + AZ0 * HZ_p(i_tor,i_plane)
           AZ_pp = AZ_pp + AZ0 * HZ_pp(i_tor,i_plane)
 
+          A3    = A3    + A30 * HZ(i_tor,i_plane)
           A3_p  = A3_p  + A30 * HZ_p(i_tor,i_plane)
           A3_pp = A3_pp + A30 * HZ_pp(i_tor,i_plane)
+
+          VR    = VR   + VR0 * HZ(i_tor,i_plane)
+          VZ    = VZ   + VZ0 * HZ(i_tor,i_plane)
+          Vp    = Vp   + Vp0 * HZ(i_tor,i_plane)
 
           TT    = TT   + T0 * HZ(i_tor,i_plane)
           TT_p  = TT_p + T0 * HZ_p(i_tor,i_plane)
@@ -843,7 +781,174 @@ do i=1,element_list%n_elements
             rho_y = rho_y  + ( - R_t * ZN0_s + R_s * ZN0_t ) / xjac * HZ(i_tor,i_plane)
           endif
 
-#endif /*fullmhd*/
+        enddo  ! end loop toroidal harmonics
+
+        BR = ( A3_Z - AZ_p )/ R
+        BZ = ( AR_p - A3_R )/ R 
+        BP = ( AZ_R - AR_Z )    + F_prof/ R
+
+        ZKpar_T = ZK_par * ((max(TT, T_min ))/T_0)**2.5
+
+        BR_R = -1/R**2 * ( A3_Z - AZ_p ) + ( A3_RZ - AZ_Rp )/R
+        BR_Z = ( A3_ZZ - AZ_Zp )/R
+        BR_p = ( A3_Zp - AZ_pp )/R
+        BZ_R = -1/R**2 * ( AR_p - A3_R ) + ( AR_Rp - A3_RR )/R
+        BZ_Z = ( AR_Zp - A3_RZ )/R
+        BZ_p = ( AR_pp - A3_Rp )/R
+        BP_R = ( AZ_RR - AR_RZ ) + dF_dpsi*A3_R/R - F_prof/R**2
+        BP_Z = ( AZ_RZ - AR_ZZ ) + dF_dpsi*A3_Z/R
+        BP_p = ( AZ_Rp - AR_Zp )
+
+        J_R   = (R*BP_Z - BZ_p) / R
+        J_Z   = (BR_p - R*BP_R - BP) / R
+        J_phi = (BZ_R - BR_Z) ! defined as the physical component J_phi * e_phi, like Bp and Vp
+
+        JxB_R      = J_Z  *BP - J_phi*BZ
+        JxB_Z      = J_phi*BR - J_R  *BP
+        JxB_p      = J_R  *BZ - J_Z  *BR
+        JxB_pol    = (JxB_R**2 + JxB_Z**2)**0.5
+        GradP_R    = rho_x*TT + rho*TT_x
+        GradP_Z    = rho_y*TT + rho*TT_y
+        GradP_p    = rho_p*TT + rho*TT_p
+        GradP_pol  = (GradP_R**2 + GradP_Z**2)**0.5
+        
+        scalars(inode,s_fullmhd+1) = BR
+        scalars(inode,s_fullmhd+2) = BZ
+        scalars(inode,s_fullmhd+3) = BP
+        scalars(inode,s_fullmhd+4) = J_R
+        scalars(inode,s_fullmhd+5) = J_Z
+        scalars(inode,s_fullmhd+6) = J_phi
+        scalars(inode,s_fullmhd+7) = zFFprime 
+        
+        ! --- Choose which direction
+        scalars(inode,s_fullmhd+8) = GradP_pol ! GradP_p ! GradP_Z  ! GradP_R !
+        scalars(inode,s_fullmhd+9) = JxB_pol   ! JxB_p   ! JxB_Z    ! JxB_R   !
+
+        psi_norm = get_psi_n(A3, Z)
+
+        grad_psi = sqrt(A3_R**2 + A3_Z**2)
+
+        D_prof  = get_dperp (psi_norm)
+        ZK_prof = get_zkperp(psi_norm)
+
+        if ( eta_T_dependent ) then
+          eta_T = eta * (max(TT,0.d0)/T_0)**(-1.5d0)
+        else
+          eta_T = eta
+        end if
+
+        if (include_bootstrap) then
+          call bootstrap_current(R, Z, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint, ES%psi_bnd, psi_norm,&
+                                 A3,     A3_R, A3_Z, rho, rho_x, rho_y,      &
+                                 TT/2.0, TT_x/2.0, TT_y/2.0, TT/2.0, TT_x/2.0, TT_y/2.0, Jb   )
+          scalars(inode,s_bootstrap+1) = Jb
+          scalars(inode,s_bootstrap+2) = J_phi * R ! to compare against the RMHD-303 current that has a factor R in it
+        else
+          Jb = 0.d0
+        endif
+
+        if (include_fluxes) then
+
+          scalars(inode,s_fluxes+1)   = scalars(inode,var_rho) * scalars(inode,var_T)
+
+          if (grad_psi .ne. 0.d0) then
+
+            scalars(inode,s_fluxes+2)  = ZKpar_T * ( BR * TT_x + BZ * TT_y + BP * TT_P / R) / sqrt(BR**2 + BZ**2 + Bp**2)
+
+            scalars(inode,s_fluxes+3)  = ZK_prof * (TT_x * A3_R + TT_y * A3_Z) / grad_psi
+
+            scalars(inode,s_fluxes+4)  = rho * TT * (VR * BR + VZ * BZ + VP * BP) / sqrt(BR**2 + BZ**2 + Bp**2)
+
+            scalars(inode,s_fluxes+5)  = ( (VZ*Bp-Vp*BZ)**2 + (Vp*BR-VR*Bp)**2 + (VR*BZ-VZ*BR)**2 ) **0.5
+            scalars(inode,s_fluxes+5)  = rho * TT * scalars(inode,s_fluxes+5) / sqrt(BR**2 + BZ**2 + Bp**2)
+
+            scalars(inode,s_fluxes+6)  = D_prof * (rho_x * A3_R + rho_y * A3_Z) / grad_psi
+
+            scalars(inode,s_fluxes+7)  = rho * (VR * BR + VZ * BZ + VP * BP) / sqrt(BR**2 + BZ**2 + Bp**2)
+
+            scalars(inode,s_fluxes+8)  = ( (VZ*Bp-Vp*BZ)**2 + (Vp*BR-VR*Bp)**2 + (VR*BZ-VZ*BR)**2 ) **0.5
+            scalars(inode,s_fluxes+8)  = rho * scalars(inode,s_fluxes+8) / sqrt(BR**2 + BZ**2 + Bp**2)
+
+          endif ! grad_psi
+        endif ! include_fluxes
+
+        if (include_psi_norm) then
+          scalars(inode,s_psi_norm+1) = psi_norm
+        endif
+
+        if (include_magnetic_field) then
+          vectors(inode,:,s_Bfield + 1) = (/ BR, BZ, Bp /)
+        endif
+
+        if (include_velocity_field) then
+          vectors(inode,:,s_vfield + 1) = (/ VR, VZ, Vp /)
+        endif
+
+        if (include_electric_field) then
+          E_R   = - (VZ*BP - VP*BZ) + eta_T * J_R
+          E_Z   = - (VP*BR - VR*BP) + eta_T * J_Z
+          E_phi = - (VR*BZ - VZ*BR) + eta_T * J_phi
+          vectors(inode,:,s_Efield + 1) =  (/ E_R, E_Z, E_phi /)
+        endif
+
+        if (include_Jpol) then
+          vectors(inode,:, s_Jpol  + 1) =  (/ J_R, J_Z, J_phi /)
+        endif
+
+#else /* not fullmhd */ 
+
+        u_sum   = 0.d0; u_x  = 0.d0; u_y  = 0.d0; u_p  = 0.d0
+        psi_sum = 0.d0; ps_x = 0.d0; ps_y = 0.d0; ps_p = 0.d0
+        zj_sum  = 0.d0; zj_x = 0.d0; zj_y = 0.d0; zj_p = 0.d0
+        T_sum   = 0.d0; TT_x = 0.d0; TT_y = 0.d0; TT_p = 0.d0
+        zn_sum  = 0.d0; zn_x = 0.d0; zn_y = 0.d0; zn_p = 0.d0;
+        Ti_sum  = 0.d0; Ti_x = 0.d0; Ti_y = 0.d0; Ti_p = 0.d0
+        Te_sum  = 0.d0; Te_x = 0.d0; Te_y = 0.d0; Te_p = 0.d0
+        w_sum   = 0.d0; w_x  = 0.d0; w_y  = 0.d0; w_p  = 0.d0; w_xx = 0.d0; w_yy = 0.d0
+        E_R     = 0.d0; E_z  = 0.d0; E_phi= 0.d0
+        dU_x    = 0.d0; dU_y = 0.d0
+
+        do i_tor = 1, n_tor
+
+          if ( ( i_tor == 1 ) .and. ( without_n0_mode ) ) cycle ! Do not include the n=0 mode
+
+          do m=1,n_var
+             call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+             scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
+          enddo
+          
+          call interp_delta(node_list,element_list,i,1,i_tor,s,t,dpsi,dPs_s, dPs_t, dPs_st, dPs_ss, dPs_tt)
+          call interp_delta(node_list,element_list,i,2,i_tor,s,t,dU,dU_s, dU_t, dU_st, dU_ss, dU_tt)         
+
+          call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s, Ps_t, Ps_st, Ps_ss, Ps_tt)
+          call interp(node_list,element_list,i,2,i_tor,s,t,U  ,U_s,  U_t,  U_st,  U_ss,  U_tt)
+          call interp(node_list,element_list,i,3,i_tor,s,t,ZJ ,ZJ_s, ZJ_t, ZJ_st, ZJ_ss, ZJ_tt)
+          call interp(node_list,element_list,i,4,i_tor,s,t,W  ,W_s,  W_t,  W_st,  W_ss,  W_tt)
+          call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
+          call interp(node_list,element_list,i,6,i_tor,s,t,TT ,TT_s, TT_t, TT_st, TT_ss, TT_tt)
+         
+          if ( jorek_model >= 300 ) then
+             call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+          else
+             V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
+          endif
+          if ( jorek_model .eq. 400 ) then
+             call interp(node_list,element_list,i,6,i_tor,s,t,Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt)
+             call interp(node_list,element_list,i,8,i_tor,s,t,Te,Te_s,Te_t,Te_st,Te_ss,Te_tt)
+          endif
+
+          psi_sum = psi_sum + psi * HZ(i_tor,i_plane)
+          zj_sum  = zj_sum  + zj  * HZ(i_tor,i_plane)
+          u_sum   = u_sum   + U   * HZ(i_tor,i_plane)
+          w_sum   = w_sum   + w   * HZ(i_tor,i_plane)
+          zn_sum  = zn_sum  + RHO * HZ(i_tor,i_plane)
+          if ( jorek_model .eq. 400 ) then
+            Ti_sum  = Ti_sum + Ti * HZ(i_tor,i_plane)
+            Te_sum  = Te_sum + Te * HZ(i_tor,i_plane)
+          else
+            Ti_sum  = Ti_sum + 0.5d0*TT * HZ(i_tor,i_plane)
+            Te_sum  = Te_sum + 0.5d0*TT * HZ(i_tor,i_plane)
+          endif
 
           if ((xjac .gt. 1.d-6)) then  ! avoid the axis
 
@@ -965,51 +1070,8 @@ do i=1,element_list%n_elements
           endif ! grad_psi
         endif ! include_fluxes
 
-#ifdef fullmhd
-
-        BR = ( A3_Z - AZ_p )/ R
-        BZ = ( AR_p - A3_R )/ R 
-        BP = ( AZ_R - AR_Z )    + F_prof/ R
-
-        ZKpar_T = ZK_par * ((max(TT, T_min ))/T_0)**2.5
-
-        scalars(inode,s_fullmhd+1) = BP
-        scalars(inode,s_fullmhd+2) = BR
-        scalars(inode,s_fullmhd+3) = BZ
-        scalars(inode,s_fullmhd+4) = ZKpar_T * ( BR * TT_x + BZ * TT_y + BP * TT_P / R) / sqrt(BR**2 + BZ**2 + Bp**2)
-        scalars(inode,s_fullmhd+5) = rho * TT * (VR * BR + VZ * BZ + VP * BP) / sqrt(BR**2 + BZ**2 + Bp**2)
-        scalars(inode,s_fullmhd+6) = zFFprime 
-        
-        BR_R = -1/R**2 * ( A3_Z - AZ_p ) + ( A3_RZ - AZ_Rp )/R
-        BR_Z = ( A3_ZZ - AZ_Zp )/R
-        BR_p = ( A3_Zp - AZ_pp )/R
-        BZ_R = -1/R**2 * ( AR_p - A3_R ) + ( AR_Rp - A3_RR )/R
-        BZ_Z = ( AR_Zp - A3_RZ )/R
-        BZ_p = ( AR_pp - A3_Rp )/R
-        BP_R = ( AZ_RR - AR_RZ ) + dF_dpsi*A3_R/R - F_prof/R**2
-        BP_Z = ( AZ_RZ - AR_ZZ ) + dF_dpsi*A3_Z/R
-        BP_p = ( AZ_Rp - AR_Zp )
-
-        JxB_R      = - Bp*BP_R - BP**2/R - BZ*BZ_R + BZ*BR_Z + Bp*BR_p/R
-        JxB_Z      = + BR*BZ_R           - BR*BR_Z - BP*BP_Z + BP*BZ_p/R
-        JxB_p      = + BR*BP_R + BZ*BP_Z - BR*BP/R - BR*BR_p/R - BZ*BZ_p/R
-        JxB_pol    = (JxB_R**2 + JxB_Z**2)**0.5
-        GradP_R    = rho_x*TT + rho*TT_x
-        GradP_Z    = rho_y*TT + rho*TT_y
-        GradP_p    = rho_p*TT + rho*TT_p
-        GradP_pol  = (GradP_R**2 + GradP_Z**2)**0.5
-        
-        ! --- Choose which direction
-        scalars(inode,s_fullmhd+7) = GradP_pol ! GradP_p ! GradP_Z  ! GradP_R !
-        scalars(inode,s_fullmhd+8) = JxB_pol   ! JxB_p   ! JxB_Z    ! JxB_R   !
-
-#endif /*fullmhd*/
-
         if (include_magnetic_field) then
           vectors(inode,:,s_Bfield + 1) = (/ ps_y/BigR, -ps_x/BigR, F0/BigR /)          
-#ifdef fullmhd
-          vectors(inode,:,s_Bfield + 1) = (/ BR, BZ, 0.d0 /)          
-#endif
         endif
 
         if (include_velocity_field) then
@@ -1048,127 +1110,116 @@ do i=1,element_list%n_elements
            scalars(inode,n_var+n_fluxes+n_neo+n_pellet) = local_source
         endif ! use_pellet
 
-        !	 vectors(inode,:,1) = (/ - R * u0_y ,	+ R * u0_x ,   0.d0 /)
-        !	 vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot
-        !	 vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * scalars(inode,7) * Btot, + R * u0_x - ps_x /R * scalars(inode,7) * Btot, 0.d0 /)
+        ! vectors(inode,:,1) = (/ - R * u0_y ,   + R * u0_x ,   0.d0 /)
+        ! vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot
+        ! vectors(inode,:,3) = (/ - R * u0_y + ps_y /R * scalars(inode,7) * Btot, + R * u0_x - ps_x /R * scalars(inode,7) * Btot, 0.d0 /)
 
-     endif ! i_tor from 1 to n_tor
+#endif /* end of non-full-MHD part */
 
-  enddo  ! nsub
-enddo     ! nsub
+      endif ! i_tor from 1 to n_tor
 
-do j=1,nsub-1
-   do k=1,nsub-1
+    enddo  ! nsub
+  enddo     ! nsub
+
+  do j=1,nsub-1
+    do k=1,nsub-1
       ielm	  = ielm+1
       ien(1,ielm) = inode - nsub*nsub + nsub*(j-1) + k-1       ! 0 based indices for VTK
       ien(2,ielm) = inode - nsub*nsub + nsub*(j  ) + k-1
       ien(3,ielm) = inode - nsub*nsub + nsub*(j  ) + k
       ien(4,ielm) = inode - nsub*nsub + nsub*(j-1) + k
-   enddo
-enddo
+    enddo
+  enddo
 
 enddo  ! n_elements
 
 #if (JOREK_MODEL == 500)
+  if (include_radiation) then
+    do i=1,nnos
 
- if (include_radiation) then
+      coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
+      coef_ion_2 = 0.232d0
+      coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
+      S_ion_puiss = 3.9d-1
 
-   do i=1,nnos
+      ksiion = ksi_ion * central_density * 1.d20
+
+      T_real8 = scalars(i,6)
+      T_corr  = corr_neg_temp(T_real8)
+      Tion    = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
+      T_rad   = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+
+      Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
+
+      coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
+
+      LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
+
+      LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+                                       -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                       -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+
+      eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0) &
+                              *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
+
+      scalars(i,s_radiation+1) = ksiion * scalars(i,5) * scalars(i,8) * Sion_T
+      scalars(i,s_radiation+2) = scalars(i,5) * scalars(i,8) * LradDrays_T
+      scalars(i,s_radiation+3) = LradDcont_T * scalars(i,5)**2.d0
+      scalars(i,s_radiation+4) = (2/(3 * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
+
+      !--------------------------------------------------------
+      ! --- Radiation from background impurity
+      !--------------------------------------------------------
+
+      Arad_bg = 2.4d-31
+      Brad_bg = 20.
+      Crad_bg = 0.8
+
+      frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))                               &
+                 *((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0)) &
+                 *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+
+      dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
+                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
+                     *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+
+      scalars(i,s_radiation+5) = scalars(i,5) * frad_bg
+
+    enddo
+  endif
+
+  if (include_neutral_dens) then
+
+    coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density * 1.d20)**(1.5d0)
 
     coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
     coef_ion_2 = 0.232d0
     coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
     S_ion_puiss = 3.9d-1
 
-    ksiion = ksi_ion * central_density * 1.d20
+    do i=1,nnos
 
-    T_real8 = scalars(i,6)
+      T_real8 = scalars(i,6)
+      T_corr  = corr_neg_temp(T_real8)
+      Tion    = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
 
-    T_corr = corr_neg_temp(T_real8)
+      Srec_T = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T_corr/(2.d0))**(-0.5d0)
+      Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
 
-    Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
+      r0_real8  = scalars(i,5)
+      rn0_real8 = scalars(i,8)
 
-    T_rad = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+      r0_corr   = corr_neg_dens(r0_real8)
+      rn0_corr  = corr_neg_dens(rn0_real8, (/ 0.d-5, 1.d-5 /))
 
-    Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
+      IonN      = -(r0_corr) * (rn0_corr) * Sion_T
+      RecN      = (r0_corr)**2 * Srec_T 
 
-    coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
+      scalars(i,s_rn0+1) = IonN
+      scalars(i,s_rn0+2) = RecN
 
-    LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
-
-    LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                     -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                     -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
-
-    eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0) &
-                            *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
-
-    scalars(i,s_radiation+1) = ksiion * scalars(i,5) * scalars(i,8) * Sion_T
-    scalars(i,s_radiation+2) = scalars(i,5) * scalars(i,8) * LradDrays_T
-    scalars(i,s_radiation+3) = LradDcont_T * scalars(i,5)**2.d0
-    scalars(i,s_radiation+4) = (2/(3 * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
-
- !--------------------------------------------------------
-   ! --- Radiation from background impurity
-   !--------------------------------------------------------
-
-    Arad_bg = 2.4d-31
-    Brad_bg = 20.
-    Crad_bg = 0.8
-
-    frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))                               &
-               *((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0)) &
-               *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
-    dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
-                   *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
-                   *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
-    scalars(i,s_radiation+5) = scalars(i,5) * frad_bg
-
-   enddo
-  endif
-
- if (include_neutral_dens) then
-
-   coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density * 1.d20)**(1.5d0)
-
-   coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
-   coef_ion_2 = 0.232d0
-   coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
-   S_ion_puiss = 3.9d-1
-
-   do i=1,nnos
-
-     T_real8 = scalars(i,6)
-
-     T_corr = corr_neg_temp(T_real8)
-
-
-     Srec_T    = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T_corr/(2.d0))**(-0.5d0)
-
-     Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
- 
-     Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
-
-
-     r0_real8  = scalars(i,5)
-     rn0_real8 = scalars(i,8)
-
-     r0_corr   = corr_neg_dens(r0_real8)
-     rn0_corr  = corr_neg_dens(rn0_real8, (/ 0.d-5, 1.d-5 /))
-
-     IonN      = -(r0_corr) * (rn0_corr) * Sion_T
-     RecN      = (r0_corr)**2 * Srec_T 
-
-     scalars(i,s_rn0+1) = IonN
-     scalars(i,s_rn0+2) = RecN
-
-
-   end do
- end if
-
-
+    end do
+  end if
 #endif /*(JOREK_MODEL == 500)*/
 
 
@@ -1180,6 +1231,50 @@ if (SI_units) then
 
   !=================================================real values============
   do i=1,nnos
+
+#ifdef fullmhd
+    !===========================================density in 1e20m-3
+    scalars(i,var_rho) = scalars(i,var_rho) * central_density
+    !===========================================electron temperature in keV
+    scalars(i,var_T  ) = scalars(i,var_T)   / MU_zero / (central_density * 1d20) / EL_CHG /2./1.e3 !(assumes Te=Ti=T/2)
+    !===========================================Velocity
+    scalars(i,var_UR) = scalars(i,var_UR) /t_norm/1.e3
+    scalars(i,var_UZ) = scalars(i,var_UZ) /t_norm/1.e3
+    scalars(i,var_Up) = scalars(i,var_Up) /t_norm/1.e3
+    !=====================Pressure in kPa
+    if (include_fluxes) scalars(i,s_fluxes+1) = scalars(i,s_fluxes+1) / MU_zero/1.e3
+    ! not yet implemented
+    !if (include_neo) then
+    !  !============================Er in kV/m
+    !  scalars(i,s_neo+ 1) = F0*scalars(i,s_neo+ 1) / t_norm/1.e3
+    !  !====================================Vtheta km/s
+    !  scalars(i,s_neo+ 2) =    scalars(i,s_neo+ 2) / t_norm/1.e3
+    !  !===================================Vsound in km/s
+    !  scalars(i,s_neo+ 5) =    scalars(i,s_neo+ 5) / t_norm/1.e3
+    !  !===================================Vneo in km/s
+    !  scalars(i,s_neo+ 7) =    scalars(i,s_neo+ 7) / t_norm/1.e3
+    !  !===================================Vperp_e in km/s
+    !  scalars(i,s_neo+ 8) =    scalars(i,s_neo+ 8) / t_norm/1.e3
+    !  ! ===================================mu_neo in SI units
+    !  scalars(i,s_neo+10) =    scalars(i,s_neo+10) / sqrt(rho_norm*MU_zero)
+    !endif
+    !============================================j_bootstrap, javeraged in MA/m2
+    if (include_bootstrap) then
+    scalars(i,s_bootstrap+1)=scalars(i,s_bootstrap+1)/MU_zero*1.e-6
+    scalars(i,s_bootstrap+2)=scalars(i,s_bootstrap+2)/MU_zero*1.e-6
+    endif
+    if (include_velocity_field) then 
+      vectors(i,:,s_vfield + 1) = vectors(i,:,s_vfield + 1)/t_norm
+    endif
+    if (include_electric_field) then 
+      vectors(i,:,s_Efield + 1) = vectors(i,:,s_Efield + 1)/t_norm
+    endif
+    if (include_Jpol) then
+      vectors(i,:, s_Jpol  + 1) = vectors(i,:,s_Jpol   + 1)/MU_zero*1e-6
+    endif
+
+#else /* not full-MHD */
+
     !============================================j_phi in MA/m2
     scalars(i,3) = scalars(i,3)/ MU_zero*1.e-6
     !============================================density in 1e20m-3
@@ -1230,66 +1325,66 @@ if (SI_units) then
       vectors(i,:, s_Jpol  + 1) = vectors(i,:,s_Jpol   + 1)/MU_zero*1e-6
     endif
  
-  !========================================================
+    !========================================================
 
 #if (JOREK_MODEL == 500)
+    if (include_radiation) then
 
- if (include_radiation) then
+      coef_ion_3 = 27.2d0*EL_CHG*MU_zero*central_density*1.d20
+      coef_ion_2 = 0.232d0
+      coef_ion_1 = 0.2917d-13 !(MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
+      S_ion_puiss = 3.9d-1
 
-    coef_ion_3 = 27.2d0*EL_CHG*MU_zero*central_density*1.d20
-    coef_ion_2 = 0.232d0
-    coef_ion_1 = 0.2917d-13 !(MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
-    S_ion_puiss = 3.9d-1
+      ksiion = ksi_ion * central_density * 1.d20
 
-    ksiion = ksi_ion * central_density * 1.d20
+      T_real8 = scalars(i,6)*1.e3*2.*EL_CHG*MU_zero*(central_density * 1.d20)
+      ! ======= T_real8 in JOREK units
 
-    T_real8 = scalars(i,6)*1.e3*2.*EL_CHG*MU_zero*(central_density * 1.d20)
-    ! ======= T_real8 in JOREK units
+      Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
 
-    Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
+      T_rad = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
 
-    T_rad = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
+      Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
 
-    Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
+      coef_rad_1 = 1.d0 !2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
 
-    coef_rad_1 = 1.d0 !2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
+      LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
 
-    LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
+      LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0))  &
+                                        -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                        -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
 
-    LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0))  &
-                                      -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                      -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+      eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0)
 
-    eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0)
+      scalars(i,s_radiation+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
+                                          * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T
 
-       scalars(i,s_radiation+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
-                                           * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T
+      scalars(i,s_radiation+2) = scalars(i,5)* 1.d20 * scalars(i,8) * 1.d20 * LradDrays_T
 
-       scalars(i,s_radiation+2) = scalars(i,5)* 1.d20 * scalars(i,8) * 1.d20 * LradDrays_T
+      scalars(i,s_radiation+3) = LradDcont_T * (scalars(i,5)*1.d20)**2.d0
 
-       scalars(i,s_radiation+3) = LradDcont_T * (scalars(i,5)*1.d20)**2.d0
+      scalars(i,s_radiation+4) = eta_Sp * (1.d6*scalars(i,3))**2.d0
 
-       scalars(i,s_radiation+4) = eta_Sp * (1.d6*scalars(i,3))**2.d0
+      !--------------------------------------------------------
+      ! --- Radiation from background impurity
+      !--------------------------------------------------------
 
- !--------------------------------------------------------
-   ! --- Radiation from background impurity
-   !--------------------------------------------------------
+      Arad_bg = 2.4d-31
+      Brad_bg = 20.
+      Crad_bg = 0.8
 
-    Arad_bg = 2.4d-31
-    Brad_bg = 20.
-    Crad_bg = 0.8
+      frad_bg = nimp_bg * Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
 
-    frad_bg = nimp_bg * Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+      dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
+                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
+                     *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
 
-    dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
-                   *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
-                   *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+      scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * frad_bg
 
-    scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * frad_bg
-
- endif
-
+    endif
 #endif /*(JOREK_MODEL == 500)*/
+
+#endif /* end of non-full-MHD part*/
 
   enddo  ! nnos
 

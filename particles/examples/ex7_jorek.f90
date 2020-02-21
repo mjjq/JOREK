@@ -84,7 +84,7 @@ else
   ! One can use read_jorek_fields_interp_linear or read_jorek_fields_interp_hermite_birkhoff,
   ! and i=-1 (to read jorek_restart.h5 and keep this field at all time) or i=last_file_before_time(sim%time)
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
-  events = [event(read_jorek_fields_interp_hermite_birkhoff(i=-1)), & 
+  events = [event(read_jorek_fields_interp_linear(i=-1)), & 
             event(diag,start=sim%time,step=1d-8),         &
 	    event(stop_action(),start=sim%time+1.d-8)]
 
@@ -121,7 +121,9 @@ do while (.not. sim%stop_now)
       do j=1,size(particles,1)
         do k=1,n_steps
           if (particles(j)%i_elm .eq. 0) exit
+
 	  sim%time = sim%time + timesteps(i)
+	  
 !          call runge_kutta_fixed_dt_gc_push(sim%fields,sim%time,timesteps(i), &
 !               sim%groups(i)%mass,particles(j)) !< push in analytical fields
           call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time,timesteps(i), &
@@ -131,7 +133,8 @@ do while (.not. sim%stop_now)
 !          write(*,*) 'Particle momenta: ', particles(j)%p(1), particles(j)%p(2)
 
 !	  if (modulo(k-1,10000)==0) then	                
-!	    call sim%fields%interp_PRZ(sim%time, 1000, [1], 1, 0.5, 0.5, 0.5, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)	!	    write(22,'(7e26.16)') sim%time, P, P_time, R, Z
+!	    call sim%fields%interp_PRZ(sim%time, 1000, [1], 1, 0.5, 0.5, 0.5, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)	
+!	    write(22,'(7e26.16)') sim%time, P, P_time, R, Z
 !	  end if
 
           if (particles(j)%i_elm .eq. 0) then

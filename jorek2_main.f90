@@ -172,6 +172,8 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
+  integer :: nsolvers = 0
+  logical :: solvers(4)
  
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
@@ -288,13 +290,18 @@ required = 0
     stop
   endif
 #endif
+  
+  ! --- Check solver consistency
+  solvers = (/use_mumps,use_pastix,use_wsmp,use_strumpack/)
+  do i=1,size(solvers)
+    if (solvers(i)) nsolvers = nsolvers + 1
+  enddo
 
-  if (.not. any((/use_mumps,use_pastix,use_wsmp,use_strumpack/))) then
+  if (nsolvers==0) then
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
-    stop
-  elseif ((findloc(array=(/use_mumps,use_pastix,use_wsmp,use_strumpack/),value=.true.,dim=1))&
-      .ne.(findloc(array=(/use_mumps,use_pastix,use_wsmp,use_strumpack/),value=.true.,dim=1,back=.true.))) then
+    stop          
+  elseif (nsolvers>1) then
     write(*,*) ' FATAL : specify only one solver'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop

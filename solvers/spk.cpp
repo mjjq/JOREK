@@ -16,7 +16,7 @@
 
 using namespace strumpack;
 
-void convert2csr(int n, int* nnz, int *irn, int *jcn, double **val, int **rowptr, int **colind);
+void convert2csr(int indx, int n, int* nnz, int *irn, int **jcn, double **val, int **rowptr);
 int* distribute(int n, int P);
 
 extern "C" void printptr(void** ptr){
@@ -91,9 +91,10 @@ extern "C" void spk(int* n_,int* nnz_,int** irn_,int** jcn_,double** val_,double
   if (*phase==1){
     if (!rank) std::cout<<"n = "<< n <<" nnz = "<< nnz << " irn[nnz] = "<< irn[nnz-1] << std::endl;  
   
-    int *rowptr, *colind;
+    int *rowptr;
+    int indx = 1; // Fortran indexing
   
-    convert2csr(n, &nnz, irn, jcn, &val, &rowptr, &colind);
+    convert2csr(indx, n, &nnz, irn, &jcn, &val, &rowptr);
   
   // splitting the matrix
     int rowstart, rowend;
@@ -101,29 +102,36 @@ extern "C" void spk(int* n_,int* nnz_,int** irn_,int** jcn_,double** val_,double
     int* ptrloc; // local row pointer
     int* indloc; // local column index
     double* valloc;
+
+// distribute if nMPI processes >1
+    if (P>1){    
+      rowstart = dist[rank];
+      rowend = dist[rank+1]-1;
+      nnzloc=rowptr[rowend+1]-rowptr[rowstart];  
+      ptrloc = new int[n_local+1];
+      indloc = new int[nnzloc];  
+      valloc = new double[nnzloc];
   
-    rowstart = dist[rank];
-    rowend = dist[rank+1]-1;
-    nnzloc=rowptr[rowend+1]-rowptr[rowstart];  
-    ptrloc = new int[n_local+1];
-    indloc = new int[nnzloc];  
-    valloc = new double[nnzloc];
+      i0 = rowptr[rowstart]; // total number of nnz values before me
+      ptrloc[0] = 0;
+      for (int i=0; i<n_local; i++){
+        ptrloc[i+1]=rowptr[rowstart+1+i] - i0;
+      }
   
-    i0 = rowptr[rowstart]; // total number of nnz values before me
-    ptrloc[0] = 0;
-    for (int i=0; i<n_local; i++){
-      ptrloc[i+1]=rowptr[rowstart+1+i] - i0;
-    }
-  
-    for (int i=0; i<nnzloc; i++){
-      indloc[i]=colind[i+i0];	  
-      valloc[i]=val[i+i0];
+      for (int i=0; i<nnzloc; i++){
+        indloc[i]=jcn[i+i0];	  
+        valloc[i]=val[i+i0];
+      }
+    }else{
+      ptrloc = rowptr;
+      indloc = jcn;
+      valloc = val;	    
     }
   
     spss->set_distributed_csr_matrix(n_local, ptrloc, indloc, valloc, dist);
     
-    delete ptrloc, indloc, valloc, rowptr, colind;
-  
+    delete ptrloc, indloc, valloc, rowptr;
+ 
   // Reordering	
     t0 = std::chrono::steady_clock::now();    
     spss->reorder();
@@ -195,11 +203,10 @@ extern "C" void spk_finalize(StrumpackSparseSolverMPIDist<double,int>** spss_,MP
 	return;
 }  
 //==========================================================================================//
-void convert2csr(int n, int* nnz_, int *irn, int *jcn, double **val, int** rowptr, int** colind)
+void convert2csr(int indx, int n, int* nnz_, int *irn, int **jcn, double **val, int** rowptr)
 {
-  int  *rowptrB, *rowptrE, *cind;
+  int  *rowptrB, *rowptrE;
   int nnz=*nnz_;
-  int indx = 1; // 1 for Fortran one-based indexing
 
   sparse_index_base_t    indexing;  
   sparse_matrix_t cooA;
@@ -207,14 +214,18 @@ void convert2csr(int n, int* nnz_, int *irn, int *jcn, double **val, int** rowpt
   sparse_status_t stat;  
 
 // create mkl coordinate sparse matrix
-  mkl_sparse_d_create_coo(&cooA, SPARSE_INDEX_BASE_ONE, n, n, nnz, irn, jcn, *val);  // change to ONE for Fortran
+  if (indx==1){
+    mkl_sparse_d_create_coo(&cooA, SPARSE_INDEX_BASE_ONE, n, n, nnz, irn, *jcn, *val);  // change to ONE for Fortran
+  } else {
+    mkl_sparse_d_create_coo(&cooA, SPARSE_INDEX_BASE_ZERO, n, n, nnz, irn, *jcn, *val);  // change to ONE for Fortran
+  }
 
 // convert to csr format  
   mkl_sparse_convert_csr(cooA, SPARSE_OPERATION_NON_TRANSPOSE, &csrA);
   mkl_sparse_order(csrA); // important
 
 // export csr values, rowptr (Begin and End counting) and colind
-  mkl_sparse_d_export_csr(csrA, &indexing, &n, &n, &rowptrB, &rowptrE, &cind, val);
+  mkl_sparse_d_export_csr(csrA, &indexing, &n, &n, &rowptrB, &rowptrE, jcn, val);
 
   nnz = rowptrE[n-1] - indx; 
   if (nnz!=(*nnz_)) 
@@ -222,7 +233,6 @@ void convert2csr(int n, int* nnz_, int *irn, int *jcn, double **val, int** rowpt
   *nnz_ = nnz;
 
   *rowptr = new int[n+1];
-  *colind = new int[nnz];
 
   for (int i=0; i<n; i++)
 	  (*rowptr)[i]=rowptrB[i] - indx;
@@ -230,8 +240,9 @@ void convert2csr(int n, int* nnz_, int *irn, int *jcn, double **val, int** rowpt
   (*rowptr)[n]=rowptrE[n-1] - indx;
 
   for (int i=0; i<nnz; i++){
-	  (*colind)[i]=cind[i] - indx;
-  }
+	  (*jcn)[i] -= indx;
+  }  
+
   return;
 }
 //=========================================================================================//

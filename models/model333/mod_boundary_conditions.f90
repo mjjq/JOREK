@@ -430,16 +430,24 @@ contains
                 if (node_list%node(inode)%boundary .eq. 21) then
                   if ( (k_var .eq. k_Ti) .or. (k_var .eq. k_Vpar) ) then
                     side = 2
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
+                      irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
                     side = 3
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
+                      irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
                   endif
                 endif
                 if (node_list%node(inode)%boundary .eq. 20) then
                   side = 2
-                  call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                  call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
+                      irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
                   side = 3
-                  call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                  call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
+                      irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
                 endif
               enddo
 

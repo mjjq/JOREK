@@ -8,7 +8,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only: write_ps
+use phys_module, only: write_ps, force_central_node, SDN_threshold
 
 implicit none
 
@@ -26,15 +26,17 @@ type (type_node_list),    pointer :: newnode_list
 type (type_element_list), pointer :: newelement_list
 
 integer             :: i, j, j2, k, l, my_id, ifail, n_tmp
+integer             :: i_elm1, i_vertex1, i_node1, i_node_save
+integer             :: i_elm2, i_vertex2, i_node2
 integer             :: i_elm_xpoint(2), i_elm_axis
 integer             :: n_loop, n_loop2, n_start_connect
 integer             :: n_psi, n_tht_mid, n_tht_mid2
-integer	            :: n_flux, n_tht,   n_open,   n_outer,   n_inner    
-integer	            :: n_private,   n_up_priv,   n_leg,   n_up_leg
-integer	            :: index
-integer	            :: n_start_open, n_start_outer, n_start_inner
-integer	            :: n_start_private, n_start_up_priv
-integer	            :: n_xpoint_1, n_xpoint_2, n_xpoint_3, n_jump
+integer             :: n_flux, n_tht,   n_open,   n_outer,   n_inner    
+integer             :: n_private,   n_up_priv,   n_leg,   n_up_leg
+integer             :: index
+integer             :: n_start_open, n_start_outer, n_start_inner
+integer             :: n_start_private, n_start_up_priv
+integer             :: n_xpoint_1, n_xpoint_2, n_xpoint_3, n_jump
 integer             :: iv, ivp, node_iv, node_ivp, ielm_out
 real*8, allocatable :: xp(:),yp(:)
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
@@ -42,7 +44,7 @@ real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
 real*8              :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis
-real*8              :: R1, Z1, s_out, t_out, R_out, Z_out, RZ_jac, PSI_R, PSI_Z
+real*8              :: R1, Z1, s_out, t_out, R_out, Z_out, RZ_jac, dRZ_jac_dR, dRZ_jac_dZ, PSI_R, PSI_Z, PSI_RR, PSI_ZZ, PSI_RZ
 real*8              :: R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
 character*4         :: label
 logical, parameter  :: plot_grid = .true.
@@ -52,10 +54,10 @@ write(*,*) '*****************************************'
 write(*,*) '* X-point grid : Define the final grid  *'
 write(*,*) '*****************************************'
 
-n_flux     = n_grids(1); n_tht	   = n_grids(2)
+n_flux     = n_grids(1); n_tht     = n_grids(2)
 n_open     = n_grids(3); n_outer   = n_grids(4); n_inner = n_grids(5)
 n_private  = n_grids(6); n_up_priv = n_grids(7)
-n_leg	   = n_grids(8); n_up_leg  = n_grids(9)
+n_leg      = n_grids(8); n_up_leg  = n_grids(9)
 n_tht_mid  = n_grids(10)
 n_tht_mid2 = n_tht-n_tht_mid
 
@@ -64,7 +66,7 @@ call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_
 call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 
 ! If we have a symmetric double-null, force the single separatrix
-if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. symmetric_threshold) then
+if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
   psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
   psi_xpoint(2) = psi_xpoint(1)
 endif
@@ -109,25 +111,25 @@ end do
 ! THIS ADDS FOUR NODES AT EACH XPOINTS, PLEASE SEE create_x_node FOR MORE DETAILS
 if (xcase .eq. 1) then
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
 endif 
 if (xcase .eq. 2) then
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
 endif 
 if ( (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) then ! Put lower Xpoint first
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
 endif 
 if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) then ! Put upper Xpoint first
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
-  		     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
+                     1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
 endif 
-index = newnode_list%n_nodes	     
+index = newnode_list%n_nodes
 
 
 
@@ -182,7 +184,7 @@ if (psi_xpoint(1) .ne. psi_xpoint(2)) then ! ignore if symmetric double-null
   
   do i=n_flux+1,n_loop2
     
-    do l=1,n_loop		  
+    do l=1,n_loop                 
     
       !-------------------------------- CASE 1 : Lower Xpoint is the main one
       if ( (xcase .eq. 1) .or. ( (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) ) then
@@ -192,17 +194,17 @@ if (psi_xpoint(1) .ne. psi_xpoint(2)) then ! ignore if symmetric double-null
           j = n_tht + n_leg + l
           index = index + 1
           call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)
-        endif	 
+        endif    
         
         !---- Second part : around the main plasma
-        if ( (l .gt. n_leg-1) .and. (l .le. (n_leg-1)+n_tmp) ) then	 
+        if ( (l .gt. n_leg-1) .and. (l .le. (n_leg-1)+n_tmp) ) then      
           j = l-(n_leg-1)
           if ( ((j .gt. 1) .and. (j .lt. n_tmp)) .or. (i .ne. n_flux+1) ) then ! Don't put the Xpoint twice
             if ( (xcase .eq. 3) .and. (j .gt. n_tht_mid) ) j = j+1  ! n_tht_mid and n_tht_mid+1 are the same for double null
             index = index + 1
-	    call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
+            call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
           endif    
-        endif	 
+        endif    
         
         !---- Third part : left lower strike line
         if (l .gt. (n_leg-1)+n_tmp) then      
@@ -210,7 +212,7 @@ if (psi_xpoint(1) .ne. psi_xpoint(2)) then ! ignore if symmetric double-null
           j = n_tht + n_leg - j
           index = index + 1
           call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
-	endif
+        endif
         
       endif
 
@@ -219,11 +221,11 @@ if (psi_xpoint(1) .ne. psi_xpoint(2)) then ! ignore if symmetric double-null
       if ( (xcase .eq. 2) .or. ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) ) then
         
         !---- First part : left upper strike line
-        if (l .le. n_up_leg-1) then	 
+        if (l .le. n_up_leg-1) then      
           j = n_tht + 2*n_leg + l
           index = index + 1
           call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)
-        endif	 
+        endif    
         
         !---- Second part : around the main plasma
         if ( (l .gt. n_up_leg-1) .and. (l .le. (n_up_leg-1)+n_tmp) ) then    
@@ -233,20 +235,20 @@ if (psi_xpoint(1) .ne. psi_xpoint(2)) then ! ignore if symmetric double-null
             index = index + 1
             call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts) 
           endif   
-        endif	 
+        endif    
         
         !---- Third part : right upper strike line
-        if (l .gt. (n_up_leg-1)+n_tmp) then	 
+        if (l .gt. (n_up_leg-1)+n_tmp) then      
           j = l-(n_up_leg-1)-n_tmp
           j = n_tht + 2*n_leg + 2*n_up_leg - j
           index = index + 1
           call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
-        endif	 
+        endif    
         
       endif
       
       if ( (xcase .ne. 3) .and. (i .eq. n_loop2) ) newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
-      if ( (l .eq. 1) .or. (l .eq. n_loop) )	   newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
+      if ( (l .eq. 1) .or. (l .eq. n_loop) )       newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
       
     enddo
   enddo
@@ -267,7 +269,7 @@ if (xcase .eq. 3) then
   if (psi_xpoint(2) .lt. psi_xpoint(1)) n_tmp = n_tht_mid2
   n_loop = (n_leg-1) + (n_up_leg-1) + n_tmp
   do i=n_flux+n_open+1,n_flux+n_open+n_outer+1                
-    do l=1,n_loop		  
+    do l=1,n_loop                 
     
       !---- First part : right lower strike line
       if (l .le. n_leg-1) then 
@@ -277,15 +279,15 @@ if (xcase .eq. 3) then
       endif    
 
       !---- Second part : along the outer side of the separatrix
-      if ( (l .gt. n_leg-1) .and. (l .le. (n_leg-1)+n_tmp) ) then	 
+      if ( (l .gt. n_leg-1) .and. (l .le. (n_leg-1)+n_tmp) ) then        
         j = l-(n_leg-1)
         if (psi_xpoint(1) .le. psi_xpoint(2)) then 
-	  if ( (j .lt. n_tmp) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
+          if ( (j .lt. n_tmp) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
             index = index + 1
             call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)
-	  endif    
+          endif    
         else 
-	  if ( (j .gt. 1) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
+          if ( (j .gt. 1) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
             j = j+n_tht_mid
             index = index + 1
             call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
@@ -300,7 +302,7 @@ if (xcase .eq. 3) then
         index = index + 1
         call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
       endif    
-    	  
+          
       if ( (i .eq. n_flux+n_open+n_outer+1) ) newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
       if ( (l .eq. 1) .or. (l .eq. n_loop) )  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
         
@@ -323,7 +325,7 @@ if (xcase .eq. 3) then
   if (psi_xpoint(2) .lt. psi_xpoint(1)) n_tmp = n_tht_mid
   n_loop = (n_leg-1) + (n_up_leg-1) + n_tmp
   do k=n_flux+n_open+n_outer+1,n_flux+n_open+n_outer+n_inner+1                
-    do l=1,n_loop		  
+    do l=1,n_loop                 
     
       i = k
       if (i .eq. n_flux+n_open+n_outer+1) i = n_flux+n_open+1  !Doing the second separatrix first
@@ -336,21 +338,21 @@ if (xcase .eq. 3) then
       endif    
 
       !---- Second part : along the outer side of the separatrix
-      if ( (l .gt. n_up_leg-1) .and. (l .le. (n_up_leg-1)+n_tmp) ) then 	 
+      if ( (l .gt. n_up_leg-1) .and. (l .le. (n_up_leg-1)+n_tmp) ) then          
         j = l-(n_up_leg-1)
         if (psi_xpoint(1) .le. psi_xpoint(2)) then
-	  if ( (j .gt. 1) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
+          if ( (j .gt. 1) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
             j = j+n_tht_mid
             index = index + 1
             call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
           endif  
         else
-	  if ( (j .lt. n_tmp) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
+          if ( (j .lt. n_tmp) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
             index = index + 1
             call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
           endif  
         endif  
-      endif	     
+      endif          
       
       !---- Third part : left lower strike line
       if (l .gt. (n_up_leg-1)+n_tmp) then      
@@ -359,7 +361,7 @@ if (xcase .eq. 3) then
         index = index + 1
         call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
       endif    
-    	  
+          
       if ( (i .eq. n_flux+n_open+n_outer+n_inner+1) ) newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
       if ( (l .eq. 1) .or. (l .eq. n_loop) )          newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
         
@@ -380,22 +382,22 @@ endif
 n_start_private = newnode_list%n_nodes + 1
 if(xcase .ne. 2) then
   index = newnode_list%n_nodes
-  do i=n_flux+n_open+n_outer+n_inner+1+1,n_flux+n_open+n_outer+n_inner+n_private+1		
+  do i=n_flux+n_open+n_outer+n_inner+1+1,n_flux+n_open+n_outer+n_inner+n_private+1              
     do k=1,2  ! Two loops for the two legs
       do l=1, n_leg                         
 
-    	if (k .eq. 1) j = n_tht + n_leg + l
-    	if (k .eq. 2) j = n_tht + n_leg - l + 1
+        if (k .eq. 1) j = n_tht + n_leg + l
+        if (k .eq. 2) j = n_tht + n_leg - l + 1
 
-    	if ( (k .ne. 2) .or. (l .ne. 1) ) then   ! Do the middle line only once
+        if ( (k .ne. 2) .or. (l .ne. 1) ) then   ! Do the middle line only once
 
-    	  index = index + 1
-    	  call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
+          index = index + 1
+          call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
 
-    	  if (i .eq. n_flux+n_open+n_outer+n_inner+n_private+1)    newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
-    	  if ( (l .eq. 1) .or. ((l .eq. n_leg) .and. (k .eq. 2)) ) newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
-	
-	endif
+          if (i .eq. n_flux+n_open+n_outer+n_inner+n_private+1)    newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
+          if ( (l .eq. 1) .or. ((l .eq. n_leg) .and. (k .eq. 2)) ) newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
+
+        endif
 
       enddo
     enddo
@@ -407,22 +409,22 @@ newnode_list%n_nodes = index
 n_start_up_priv = newnode_list%n_nodes + 1
 if(xcase .ne. 1) then
   index = newnode_list%n_nodes
-  do i=n_flux+n_open+n_outer+n_inner+n_private+1+1,n_flux+n_open+n_outer+n_inner+n_private+n_up_priv+1		
+  do i=n_flux+n_open+n_outer+n_inner+n_private+1+1,n_flux+n_open+n_outer+n_inner+n_private+n_up_priv+1
     do k=1,2  ! Two loops for the two legs
       do l=1, n_up_leg                         
 
-    	if (k .eq. 1) j = n_tht + 2*n_leg + l
-    	if (k .eq. 2) j = n_tht + 2*n_leg + 2*n_up_leg - l + 1
+        if (k .eq. 1) j = n_tht + 2*n_leg + l
+        if (k .eq. 2) j = n_tht + 2*n_leg + 2*n_up_leg - l + 1
 
-    	if ( (k .ne. 2) .or. (l .ne. 1) ) then   ! Do the middle line only once
+        if ( (k .ne. 2) .or. (l .ne. 1) ) then   ! Do the middle line only once
 
-    	  index = index + 1
-    	  call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
+          index = index + 1
+          call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)    
 
-    	  if (i .eq. n_flux+n_open+n_outer+n_inner+n_private+n_up_priv+1)  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
-    	  if ( (l .eq. 1) .or. ((l .eq. n_up_leg) .and. (k .eq. 2)) )	   newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
-	
-	endif
+          if (i .eq. n_flux+n_open+n_outer+n_inner+n_private+n_up_priv+1)  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
+          if ( (l .eq. 1) .or. ((l .eq. n_up_leg) .and. (k .eq. 2)) )      newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
+
+        endif
 
       enddo
     enddo
@@ -644,7 +646,7 @@ do i=1,n_flux
       if   (psi_xpoint(1) .eq. psi_xpoint(2)) n_xpoint_1 = n_start_outer + n_leg-1
       if ( (psi_xpoint(1) .eq. psi_xpoint(2)) .and. (l .gt. n_tht_mid-1) ) then
         n_xpoint_1 = n_start_inner + n_up_leg-1 -1
-	j = j - n_tht_mid+1
+        j = j - n_tht_mid+1
       endif
       newelement_list%element(index)%vertex(2) = n_xpoint_1 + j - 1 
       newelement_list%element(index)%vertex(3) = n_xpoint_1 + j
@@ -712,16 +714,16 @@ if (psi_xpoint(1) .ne. psi_xpoint(2)) then ! ignore if symmetric double-null
       
       ! Connect with closed region
       if (i .eq. 1) then
-  	if (l .gt. n_xpoint_1) j = j-1 ! First time through Xpoint
-  	if (l .gt. n_xpoint_2) j = j-1 ! Second time through Xpoint
-  	newelement_list%element(index)%vertex(1) = n_start_open + j - 1
-  	newelement_list%element(index)%vertex(4) = n_start_open + j
-  	if ( (l .eq. n_xpoint_1) .or. (l .eq. n_xpoint_2) ) then ! Special case for element arriving at Xpoint
-  	  newelement_list%element(index)%vertex(4) = 4 ! We need to arrive at NODE8=NODE4 of the lower Xpoint (or NODE4 of the upper Xpoint)
-  	endif
-  	if ( (l .eq. n_xpoint_1+1) .or. (l .eq. n_xpoint_2+1) ) then ! Special case for element leaving Xpoint
-  	  newelement_list%element(index)%vertex(1) = 1 ! We need to leave at NODE1 of the lower Xpoint (or NODE5=NODE1 of the upper Xpoint)
-  	endif
+        if (l .gt. n_xpoint_1) j = j-1 ! First time through Xpoint
+        if (l .gt. n_xpoint_2) j = j-1 ! Second time through Xpoint
+        newelement_list%element(index)%vertex(1) = n_start_open + j - 1
+        newelement_list%element(index)%vertex(4) = n_start_open + j
+        if ( (l .eq. n_xpoint_1) .or. (l .eq. n_xpoint_2) ) then ! Special case for element arriving at Xpoint
+          newelement_list%element(index)%vertex(4) = 4 ! We need to arrive at NODE8=NODE4 of the lower Xpoint (or NODE4 of the upper Xpoint)
+        endif
+        if ( (l .eq. n_xpoint_1+1) .or. (l .eq. n_xpoint_2+1) ) then ! Special case for element leaving Xpoint
+          newelement_list%element(index)%vertex(1) = 1 ! We need to leave at NODE1 of the lower Xpoint (or NODE5=NODE1 of the upper Xpoint)
+        endif
       endif
 
       ! Connect with outer and inner regions
@@ -791,21 +793,21 @@ if (xcase .eq. 3) then
       
       ! Connect with open region (or closed and private for symmetric double-null)
       if (i .eq. 1) then
-    	if (j .gt. n_xpoint_1) j = j-1
-    	newelement_list%element(index)%vertex(1) = n_start_outer + j - 1
-    	newelement_list%element(index)%vertex(4) = n_start_outer + j
-    	if (l .eq. n_xpoint_1)   then ! Special case for element arriving at second Xpoint
-    	  newelement_list%element(index)%vertex(4) = 8 ! We need to arrive at NODE8=NODE4 of the second Xpoint
-	endif
-    	if (l .eq. n_xpoint_1+1) then ! Special case for element leaving second Xpoint
-    	  newelement_list%element(index)%vertex(1) = 5 ! We need to leave at NODE1 of the second Xpoint
-	endif
-    	if ( (l .eq. n_xpoint_2)   .and. (psi_xpoint(1) .eq. psi_xpoint(2)) ) then ! Special case for element arriving at first Xpoint of symmetric double-null
-    	  newelement_list%element(index)%vertex(4) = 4 ! We need to arrive at NODE8=NODE4 of the first Xpoint
-	endif
-    	if ( (l .eq. n_xpoint_2+1) .and. (psi_xpoint(1) .eq. psi_xpoint(2)) ) then ! Special case for element leaving first Xpoint of symmetric double-null
-    	  newelement_list%element(index)%vertex(1) = 1 ! We need to leave at NODE1 of the first Xpoint
-	endif
+        if (j .gt. n_xpoint_1) j = j-1
+        newelement_list%element(index)%vertex(1) = n_start_outer + j - 1
+        newelement_list%element(index)%vertex(4) = n_start_outer + j
+        if (l .eq. n_xpoint_1)   then ! Special case for element arriving at second Xpoint
+          newelement_list%element(index)%vertex(4) = 8 ! We need to arrive at NODE8=NODE4 of the second Xpoint
+        endif
+        if (l .eq. n_xpoint_1+1) then ! Special case for element leaving second Xpoint
+          newelement_list%element(index)%vertex(1) = 5 ! We need to leave at NODE1 of the second Xpoint
+        endif
+        if ( (l .eq. n_xpoint_2)   .and. (psi_xpoint(1) .eq. psi_xpoint(2)) ) then ! Special case for element arriving at first Xpoint of symmetric double-null
+          newelement_list%element(index)%vertex(4) = 4 ! We need to arrive at NODE8=NODE4 of the first Xpoint
+        endif
+        if ( (l .eq. n_xpoint_2+1) .and. (psi_xpoint(1) .eq. psi_xpoint(2)) ) then ! Special case for element leaving first Xpoint of symmetric double-null
+          newelement_list%element(index)%vertex(1) = 1 ! We need to leave at NODE1 of the first Xpoint
+        endif
       endif
 
     enddo
@@ -846,21 +848,21 @@ if (xcase .eq. 3) then
       
       ! Connect with open region
       if (i .eq. 1) then
-    	if (j .gt. n_xpoint_1) j = j-1
-    	newelement_list%element(index)%vertex(1) = n_start_inner + j - 1
-    	newelement_list%element(index)%vertex(4) = n_start_inner + j
-    	if (l .eq. n_xpoint_1) then ! Special case for element arriving at second Xpoint
-    	  newelement_list%element(index)%vertex(4) = 8 ! We need to arrive at NODE4 of the second Xpoint
-	endif
-    	if (l .eq. n_xpoint_1+1) then! Special case for element leaving second Xpoint
-    	  newelement_list%element(index)%vertex(1) = 5 ! We need to leave at NODE5=NODE1 of the second Xpoint
-	endif
-    	if ( (l .eq. n_xpoint_2)   .and. (psi_xpoint(1) .eq. psi_xpoint(2)) ) then ! Special case for element arriving at first Xpoint of symmetric double-null
-    	  newelement_list%element(index)%vertex(4) = 4 ! We need to arrive at NODE4 of the first Xpoint
-	endif
-    	if ( (l .eq. n_xpoint_2+1) .and. (psi_xpoint(1) .eq. psi_xpoint(2)) ) then ! Special case for element leaving first Xpoint of symmetric double-null
-    	  newelement_list%element(index)%vertex(1) = 1 ! We need to leave at NODE5=NODE1 of the first Xpoint
-	endif
+        if (j .gt. n_xpoint_1) j = j-1
+        newelement_list%element(index)%vertex(1) = n_start_inner + j - 1
+        newelement_list%element(index)%vertex(4) = n_start_inner + j
+        if (l .eq. n_xpoint_1) then ! Special case for element arriving at second Xpoint
+          newelement_list%element(index)%vertex(4) = 8 ! We need to arrive at NODE4 of the second Xpoint
+        endif
+        if (l .eq. n_xpoint_1+1) then! Special case for element leaving second Xpoint
+          newelement_list%element(index)%vertex(1) = 5 ! We need to leave at NODE5=NODE1 of the second Xpoint
+        endif
+        if ( (l .eq. n_xpoint_2)   .and. (psi_xpoint(1) .eq. psi_xpoint(2)) ) then ! Special case for element arriving at first Xpoint of symmetric double-null
+          newelement_list%element(index)%vertex(4) = 4 ! We need to arrive at NODE4 of the first Xpoint
+        endif
+        if ( (l .eq. n_xpoint_2+1) .and. (psi_xpoint(1) .eq. psi_xpoint(2)) ) then ! Special case for element leaving first Xpoint of symmetric double-null
+          newelement_list%element(index)%vertex(1) = 1 ! We need to leave at NODE5=NODE1 of the first Xpoint
+        endif
       endif
 
     enddo
@@ -904,17 +906,17 @@ if (xcase .ne. 2) then
       
       ! Connect with open (or outer and inner) region
       if (i .eq. 1) then
-    	if (l .gt. n_xpoint_1) j = j+n_jump
-    	newelement_list%element(index)%vertex(2) = n_start_connect + j - 1
-    	newelement_list%element(index)%vertex(3) = n_start_connect + j
-    	if (l .eq. n_xpoint_1) then ! Special case for element arriving at lower Xpoint
-    	  newelement_list%element(index)%vertex(3) = 3 ! We need to arrive at NODE7=NODE3 of the Xpoint
-	  if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) newelement_list%element(index)%vertex(3) = 7 
-	endif
-    	if (l .eq. n_xpoint_1+1) then! Special case for element leaving lower Xpoint
-    	  newelement_list%element(index)%vertex(2) = 2 ! We need to leave at NODE6=NODE2 of the Xpoint
-	  if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) newelement_list%element(index)%vertex(2) = 6 
-	endif
+        if (l .gt. n_xpoint_1) j = j+n_jump
+        newelement_list%element(index)%vertex(2) = n_start_connect + j - 1
+        newelement_list%element(index)%vertex(3) = n_start_connect + j
+        if (l .eq. n_xpoint_1) then ! Special case for element arriving at lower Xpoint
+          newelement_list%element(index)%vertex(3) = 3 ! We need to arrive at NODE7=NODE3 of the Xpoint
+          if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) newelement_list%element(index)%vertex(3) = 7 
+        endif
+        if (l .eq. n_xpoint_1+1) then! Special case for element leaving lower Xpoint
+          newelement_list%element(index)%vertex(2) = 2 ! We need to leave at NODE6=NODE2 of the Xpoint
+          if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) newelement_list%element(index)%vertex(2) = 6 
+        endif
       endif
 
     enddo
@@ -954,17 +956,17 @@ if (xcase .ne. 1) then
       
       ! Connect with open (or outer and inner) region
       if (i .eq. 1) then
-    	if (l .gt. n_xpoint_1) j = j+n_jump
-    	newelement_list%element(index)%vertex(2) = n_start_connect + j - 1
-    	newelement_list%element(index)%vertex(3) = n_start_connect + j
-    	if (l .eq. n_xpoint_1) then ! Special case for element arriving at upper Xpoint
-    	  newelement_list%element(index)%vertex(3) = 3 ! We need to arrive at NODE3 of the Xpoint
-	  if ( (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) newelement_list%element(index)%vertex(3) = 7 
-	endif
-    	if (l .eq. n_xpoint_1+1) then! Special case for element leaving upper Xpoint
-    	  newelement_list%element(index)%vertex(2) = 2 ! We need to leave at NODE2 of the Xpoint
-	  if ( (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) newelement_list%element(index)%vertex(2) = 6 
-	endif
+        if (l .gt. n_xpoint_1) j = j+n_jump
+        newelement_list%element(index)%vertex(2) = n_start_connect + j - 1
+        newelement_list%element(index)%vertex(3) = n_start_connect + j
+        if (l .eq. n_xpoint_1) then ! Special case for element arriving at upper Xpoint
+          newelement_list%element(index)%vertex(3) = 3 ! We need to arrive at NODE3 of the Xpoint
+          if ( (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) newelement_list%element(index)%vertex(3) = 7 
+        endif
+        if (l .eq. n_xpoint_1+1) then! Special case for element leaving upper Xpoint
+          newelement_list%element(index)%vertex(2) = 2 ! We need to leave at NODE2 of the Xpoint
+          if ( (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) newelement_list%element(index)%vertex(2) = 6 
+        endif
       endif
 
     enddo
@@ -1008,37 +1010,37 @@ endif
 if (plot_grid .and. write_ps) then
   n_loop = newelement_list%n_elements
   open(101,file='plot_elements.py')
-    write(101,'(A)')	    '#!/usr/bin/env python'
-    write(101,'(A)')	    'import numpy as N'
-    write(101,'(A)')	    'import pylab'
-    write(101,'(A)')	    'def main():'
+    write(101,'(A)')        '#!/usr/bin/env python'
+    write(101,'(A)')        'import numpy as N'
+    write(101,'(A)')        'import pylab'
+    write(101,'(A)')        'def main():'
     write(101,'(A,i6,A)')    ' r = N.zeros(',4*n_loop,')'
     write(101,'(A,i6,A)')    ' z = N.zeros(',4*n_loop,')'
     do j=1,n_loop
       do i=1,2
- 	index = newelement_list%element(j)%vertex(i)
- 	write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,1)
- 	write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,2)
- 	index = newelement_list%element(j)%vertex(i+2)
- 	write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,1)
- 	write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,2)
+        index = newelement_list%element(j)%vertex(i)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,2)
+        index = newelement_list%element(j)%vertex(i+2)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,2)
       enddo
     enddo
     write(101,'(A,i6,A)')    ' for i in range (0,',n_loop*2,'):'
-    write(101,'(A)')	    '  pylab.plot(r[2*i:2*i+2],z[2*i:2*i+2], "r")'
+    write(101,'(A)')        '  pylab.plot(r[2*i:2*i+2],z[2*i:2*i+2], "r")'
     do j=1,n_loop
       do i=1,4
- 	index = newelement_list%element(j)%vertex(i)
- 	write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,1)
- 	write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,2)
+        index = newelement_list%element(j)%vertex(i)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,2)
       enddo
     enddo
     write(101,'(A,i6,A)')    ' for i in range (0,',n_loop,'):'
-    write(101,'(A)')	    '  pylab.plot(r[4*i:4*i+4],z[4*i:4*i+4], "b")'
-    write(101,'(A)')	    ' pylab.axis("equal")'
-    write(101,'(A)')	    ' pylab.show()'
-    write(101,'(A)')	    ' '
-    write(101,'(A)')	    'main()'
+    write(101,'(A)')        '  pylab.plot(r[4*i:4*i+4],z[4*i:4*i+4], "b")'
+    write(101,'(A)')        ' pylab.axis("equal")'
+    write(101,'(A)')        ' pylab.show()'
+    write(101,'(A)')        ' '
+    write(101,'(A)')        'main()'
   close(101)
 endif
 
@@ -1108,93 +1110,6 @@ enddo
 !-------------------------------------------------------------------------------------------!
 
 
-!-------------------------------- Combine multiple nodes at axis and Xpoints
-index = 0
-do i=1,newnode_list%n_nodes
-  do k=1,n_order+1
-
-    index = index + 1
-    newnode_list%node(i)%index(k) = index
-
-    ! Remove all but one node at axis
-    if (xcase .ne. 3) then
-      if ((i .gt. 5) .and. (i .le. 4+n_tht) .and. (k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(1)
-        index = index - 1
-      endif
-    else
-      if ((i .gt. 9) .and. (i .le. 8+n_tht-1) .and. (k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(9)%index(1)
-        index = index - 1
-      endif
-    endif
-    
-    ! Remove all but one node at first Xpoint
-    if ((i .eq. 2).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 2).and.(k.eq.3)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 3).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 3).and.(k.eq.2)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(2)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.2)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.3)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(3)%index(k)
-      index = index - 1
-    endif
-  
-    ! Remove all but one node at second Xpoint
-    if (xcase .eq. 3) then
-      if ((i .eq. 6).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 6).and.(k.eq.3)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 7).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 7).and.(k.eq.2)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(6)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 8).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 8).and.(k.eq.2)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 8).and.(k.eq.3)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(7)%index(k)
-        index = index - 1
-      endif
-    endif
-  
-  enddo  
-  newnode_list%node(i)%constrained = .false.
-enddo
-
 !-------------------------------- Fill in PSI-values at each node
 do i=1,newnode_list%n_nodes
 
@@ -1203,20 +1118,50 @@ do i=1,newnode_list%n_nodes
 
   call find_RZ(node_list,element_list,R1,Z1,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 
+  if (ifail .ne. 0) then
+    write(*,'(A,2f15.4)')'Warning! did not find node one previous grid!',R1,Z1
+    write(*,*)'Unable to extract psi information, the grid might be flawed.'
+  endif
+  
   call interp_RZ(node_list,element_list,ielm_out,s_out,t_out, &
                  RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                  ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
   call interp(node_list,element_list,ielm_out,1,1,s_out,t_out,PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
 
-  RZ_jac  = dRRg1_dr * dZZg1_ds - dRRg1_ds * dZZg1_dr
+  RZ_jac     = dRRg1_dr * dZZg1_ds - dRRg1_ds * dZZg1_dr
+  dRZ_jac_dR = (dRRg1_drr* dZZg1_ds**2 - dZZg1_drr*dRRg1_ds*dZZg1_ds - 2.d0*dRRg1_drs*dZZg1_dr*dZZg1_ds   &
+              + dZZg1_drs*(dRRg1_dr*dZZg1_ds + dRRg1_ds*dZZg1_dr)                                         &
+              + dRRg1_dss* dZZg1_dr**2 - dZZg1_dss*dRRg1_dr*dZZg1_dr) / RZ_jac
+  dRZ_jac_dZ = (dZZg1_dss* dRRg1_dr**2 - dRRg1_dss*dZZg1_dr*dRRg1_dr - 2.d0*dZZg1_drs*dRRg1_ds*dRRg1_dr   &
+              + dRRg1_drs*(dZZg1_ds*dRRg1_dr + dZZg1_dr*dRRg1_ds)                                         &
+              + dZZg1_drr* dRRg1_ds**2 - dRRg1_drr*dZZg1_ds*dRRg1_ds) / RZ_jac
+
   PSI_R  = (   dZZg1_ds * dPSg1_dr - dZZg1_dr * dPSg1_ds ) / RZ_jac
   PSI_Z  = ( - dRRg1_ds * dPSg1_dr + dRRg1_dr * dPSg1_ds ) / RZ_jac
+  PSI_RR = (dPSg1_drr * dZZg1_ds**2 - 2.d0*dPSg1_drs * dZZg1_dr*dZZg1_ds + dPSg1_dss * dZZg1_dr**2     &
+           + dPSg1_dr * (dZZg1_drs*dZZg1_ds - dZZg1_dss*dZZg1_dr )                                     &
+           + dPSg1_ds * (dZZg1_drs*dZZg1_dr - dZZg1_drr*dZZg1_ds ) )  / RZ_jac**2                      &
+           - dRZ_jac_dR * (dPSg1_dr * dZZg1_ds - dPSg1_ds * dZZg1_dr) / RZ_jac**2
+  PSI_ZZ = (dPSg1_drr * dRRg1_ds**2 - 2.d0*dPSg1_drs * dRRg1_dr*dRRg1_ds + dPSg1_dss * dRRg1_dr**2     &
+           + dPSg1_dr * (dRRg1_drs*dRRg1_ds - dRRg1_dss*dRRg1_dr )                                     &
+           + dPSg1_ds * (dRRg1_drs*dRRg1_dr - dRRg1_drr*dRRg1_ds ) )     / RZ_jac**2                   &
+           - dRZ_jac_dZ * (- dPSg1_dr * dRRg1_ds + dPSg1_ds * dRRg1_dr ) / RZ_jac**2
+  PSI_RZ = (- dPSg1_drr * dZZg1_ds*dRRg1_ds - dPSg1_dss * dRRg1_dr*dZZg1_dr                  &
+           + dPSg1_drs * (dZZg1_dr*dRRg1_ds  + dZZg1_ds*dRRg1_dr  )                          &
+           - dPSg1_dr  * (dRRg1_drs*dZZg1_ds - dRRg1_dss*dZZg1_dr )                          &
+           - dPSg1_ds  * (dRRg1_drs*dZZg1_dr - dRRg1_drr*dZZg1_ds )  )     / RZ_jac**2       &
+           - dRZ_jac_dR * (- dPSg1_dr * dRRg1_ds + dPSg1_ds * dRRg1_dr )   / RZ_jac**2
 
   newnode_list%node(i)%values(1,1,1) = PSg1
   newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(2,1) + PSI_Z * newnode_list%node(i)%x(2,2)
   newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(3,1) + PSI_Z * newnode_list%node(i)%x(3,2)
-  newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(4,1) + PSI_Z * newnode_list%node(i)%x(4,2)
+  newnode_list%node(i)%values(1,4,1) = PSI_RR * newnode_list%node(i)%x(2,1) * newnode_list%node(i)%x(3,1) &
+                                     + PSI_RZ * newnode_list%node(i)%x(2,1) * newnode_list%node(i)%x(3,2) &
+                                     + PSI_RZ * newnode_list%node(i)%x(3,1) * newnode_list%node(i)%x(2,2) &
+                                     + PSI_ZZ * newnode_list%node(i)%x(2,2) * newnode_list%node(i)%x(3,2) &
+                                     + PSI_R  * newnode_list%node(i)%x(4,1)                               &
+                                     + PSI_Z  * newnode_list%node(i)%x(4,2)
 
   if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0
 
@@ -1261,11 +1206,137 @@ do i=1,element_list%n_elements
 enddo
 
 !---------------------------- copy new grid into nodes/elements
-node_list%n_nodes = newnode_list%n_nodes
-node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
-
 element_list%n_elements = newelement_list%n_elements
 element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
+
+! --- This is the old way
+!node_list%n_nodes = newnode_list%n_nodes
+!node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+
+! --- Now, we define only the nodes that belong to elements! (this gets rid of potential orphan nodes, which the matrix doesn't like, obviously...)
+node_list%n_nodes = 4
+node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+if (xcase .eq. 3) then
+  node_list%n_nodes = 8
+  node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+endif
+do i_elm1 = 1,element_list%n_elements
+  do i_vertex1 = 1,n_vertex_max
+    i_node1 = newelement_list%element(i_elm1)%vertex(i_vertex1)
+    if ( ((i_node1.gt.8).and.(xcase.eq.3)) .or. ((i_node1.gt.4).and.(xcase.ne.3)) ) then
+      i_node_save = 0
+      do i_elm2 = 1,i_elm1-1
+        do i_vertex2 = 1,n_vertex_max
+          i_node2 = newelement_list%element(i_elm2)%vertex(i_vertex2)
+          if (i_node2 .eq. i_node1) then
+            i_node_save = i_node1
+            exit
+          endif
+        enddo
+        if (i_node_save .ne. 0) exit
+      enddo
+      if (i_node_save .eq. 0) then
+        node_list%n_nodes = node_list%n_nodes + 1
+        node_list%node(node_list%n_nodes) = newnode_list%node(i_node1)
+        newnode_list%node(i_node1)%boundary = node_list%n_nodes ! using "boundary" to save new node index, since newnode_list will be scrapped
+        element_list%element(i_elm1)%vertex(i_vertex1) = node_list%n_nodes
+      else
+        element_list%element(i_elm1)%vertex(i_vertex1) = newnode_list%node(i_node_save)%boundary
+      endif
+    endif
+  enddo
+enddo
+
+!-------------------------------- Combine multiple nodes at axis and Xpoints
+! --- Note: it's very important that we do this after copying the nodes and after eliminating the orphan nodes!
+index = 0
+do i=1,newnode_list%n_nodes
+  do k=1,n_order+1
+
+    index = index + 1
+    node_list%node(i)%index(k) = index
+
+    ! Remove all but one node at axis
+    if (force_central_node) then
+      if (xcase .ne. 3) then
+        if ((i .gt. 5) .and. (i .le. 4+n_tht) .and. (k.eq.1)) then
+          node_list%node(i)%index(k) = node_list%node(5)%index(1)
+          index = index - 1
+        endif
+      else
+        if ((i .gt. 9) .and. (i .le. 8+n_tht-1) .and. (k.eq.1)) then
+          node_list%node(i)%index(k) = node_list%node(9)%index(1)
+          index = index - 1
+        endif
+      endif
+    endif
+    
+    ! Remove all but one node at first Xpoint
+    if ((i .eq. 2).and.(k.eq.1)) then
+      node_list%node(i)%index(k) = node_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 2).and.(k.eq.3)) then
+      node_list%node(i)%index(k) = node_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 3).and.(k.eq.1)) then
+      node_list%node(i)%index(k) = node_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 3).and.(k.eq.2)) then
+      node_list%node(i)%index(k) = node_list%node(2)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 4).and.(k.eq.1)) then
+      node_list%node(i)%index(k) = node_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 4).and.(k.eq.2)) then
+      node_list%node(i)%index(k) = node_list%node(1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. 4).and.(k.eq.3)) then
+      node_list%node(i)%index(k) = node_list%node(3)%index(k)
+      index = index - 1
+    endif
+  
+    ! Remove all but one node at second Xpoint
+    if (xcase .eq. 3) then
+      if ((i .eq. 6).and.(k.eq.1)) then
+        node_list%node(i)%index(k) = node_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 6).and.(k.eq.3)) then
+        node_list%node(i)%index(k) = node_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 7).and.(k.eq.1)) then
+        node_list%node(i)%index(k) = node_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 7).and.(k.eq.2)) then
+        node_list%node(i)%index(k) = node_list%node(6)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 8).and.(k.eq.1)) then
+        node_list%node(i)%index(k) = node_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 8).and.(k.eq.2)) then
+        node_list%node(i)%index(k) = node_list%node(5)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. 8).and.(k.eq.3)) then
+        node_list%node(i)%index(k) = node_list%node(7)%index(k)
+        index = index - 1
+      endif
+    endif
+  
+  enddo  
+  node_list%node(i)%constrained = .false.
+enddo
+
 
 
 !----temporary, needs to be completed, neighbour information

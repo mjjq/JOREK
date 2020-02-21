@@ -14,6 +14,7 @@ module constants
   real*8,  parameter :: MASS_PROTON   = 1.67262178d-27           !< proton mass [kg]
   real*8,  parameter :: ATOMIC_MASS_UNIT = 1.660539040d-27       !< standardized mass unit [kg]
   real*8,  parameter :: MASS_ELECTRON = 9.10938291d-31           !< electron mass [kg]
+  real*8,  parameter :: SPEED_OF_LIGHT = 2.997924580105029d+8    !< speed of light in (m/s)
   real*8,  parameter :: MOLE_NUMBER   = 6.02214076d23            !< The Avogadro constant
 
   !> @name Constants which describe the domain of a certain position (used by function which_domain)

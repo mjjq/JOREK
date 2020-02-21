@@ -415,7 +415,7 @@ required = 0
     if ( .not. bench_without_plot ) then
       do index_now = 1, index_start
         call write_live_data(index_now)
-        call write_live_data_vacuum(index_now, diag_coil_curr)
+        call write_live_data_vacuum(index_now, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
 #ifdef JECCD
         call write_live_data2(index_now)
         call write_live_data3(index_now)
@@ -429,12 +429,17 @@ required = 0
     ! --- Optional: Redo flux aligned grid (DOES NOT WORK CURRENTLY)
     if (regrid) then
       if (xpoint)  then
-        if (xcase .ge. 2) then
-	  call grid_double_xpoint(node_list, element_list)
+        if ( (xcase .ge. 2) .or. (RZ_grid_inside_wall) ) then
+          if (grid_to_wall) then
+            call grid_double_xpoint_inside_wall(node_list, element_list)
+          else
+            call grid_double_xpoint(node_list, element_list)
+          endif
         else
 	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
         		   SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,& 
                            dPSI_open,dPSI_private, xcase)
+
         endif
       else
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
@@ -467,7 +472,11 @@ required = 0
       ! --- Define the boundary of the initial grid
       call define_boundary()
       
-      if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
+      if ((n_R > 0) .and. (n_Z > 0) .and. RZ_grid_inside_wall) then
+        
+        call grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,fbnd,node_list,element_list)
+        
+      else if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
         
         call grid_bezier_square_polar(n_R, n_Z, n_radial, R_begin, R_end, Z_begin, Z_end, R_geo,   &
                                       Z_geo, amin, fbnd, fpsi, mf, .true., node_list, element_list)
@@ -548,9 +557,12 @@ required = 0
         
         if (xpoint)  then
 
-!         if (.not. grid_to_wall) then
-          if (xcase .ge. 2) then
-            call grid_double_xpoint(node_list, element_list)
+          if ( (xcase .ge. 2) .or. (grid_to_wall .and. (n_wall_blocks .gt. 0)) ) then
+            if (grid_to_wall) then
+              call grid_double_xpoint_inside_wall(node_list, element_list)
+            else
+              call grid_double_xpoint(node_list, element_list)
+            endif
           else
    
             if (.not. grid_to_wall) then
@@ -1173,7 +1185,7 @@ required = 0
     if (my_id .eq. 0 ) then
       ! --- Output energies and growth_rates to text files during the code run
       call write_live_data(index_now)
-      call write_live_data_vacuum(index_now, diag_coil_curr)
+      call write_live_data_vacuum(index_now, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
 
 #ifdef JECCD
       call write_live_data2(index_now)

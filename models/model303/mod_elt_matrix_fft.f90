@@ -186,11 +186,13 @@ else
     n_tor_start = i_tor_min
     n_tor_end   = i_tor_max!n_tor 
     use_fft = .false. 
+
 endif
 
 
 ! --- Toroidal functions            
 if (use_fft) then
+
   HHZ    = 1.d0
   HHZ_p  = 1.d0
   HHZ_pp = 1.d0
@@ -763,7 +765,7 @@ do i=1,n_vertex_max
 
             call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                                 pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-                                x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt),eq_zTe(ms,mt), &
+                                x_g(ms,mt),y_g(ms,mt), ps0, phi, r0_corr, T0_corr/2.d0, &
                                 central_density, pellet_particles, pellet_density, total_pellet_volume, &
                                 source_pellet, source_volume)
           endif
@@ -1022,6 +1024,7 @@ do i=1,n_vertex_max
             !###################################################################################################
 
             if (use_fft) then
+
               index_ij =       n_var*(n_order+1)*(i-1) +       n_var*(j-1) + 1
             else
               index_ij = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(i-1) + (n_tor_end - n_tor_start +1) * n_var * (j-1) + im - n_tor_start +1 
@@ -1030,6 +1033,7 @@ do i=1,n_vertex_max
 
             ! --- Fill up the matrix
             if (use_fft) then
+
               ij1 = index_ij
               ij2 = index_ij + 1
               ij3 = index_ij + 2
@@ -1803,6 +1807,7 @@ do i=1,n_vertex_max
                   !###################################################################################################
 
                   if (use_fft) then
+
                     index_kl =       n_var*(n_order+1)*(k-1) +       n_var*(l-1) + 1
                   else
                     index_kl = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(k-1) + (n_tor_end - n_tor_start +1)*n_var*(l-1) + in - n_tor_start +1
@@ -1810,6 +1815,7 @@ do i=1,n_vertex_max
 
                   ! --- Fill up the matrix
                   if (use_fft) then
+
                     kl1 = index_kl
                     kl2 = index_kl + 1
                     kl3 = index_kl + 2
@@ -2214,6 +2220,7 @@ do i=1,n_vertex_max
 enddo ! i loop (n_vertex)
 
 if (.NOT. use_fft) return
+
 ELM = 0.5d0 * ELM
 
 do j=1, n_vertex_max*n_var*(n_order+1)

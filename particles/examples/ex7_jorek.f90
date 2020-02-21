@@ -100,7 +100,7 @@ call check_and_fix_timesteps(timesteps, events)
 call sim%fields%set_flag_dpsidt(.true.)
 
 ! Open a file where to write some fields at a given position to test time interpolation routines
-open(22,file='field_vs_t.dat')
+!open(22,file='field_vs_t.dat')
 
 ! Loop until the simulation is stopped
 do while (.not. sim%stop_now)
@@ -121,20 +121,21 @@ do while (.not. sim%stop_now)
       do j=1,size(particles,1)
         do k=1,n_steps
           if (particles(j)%i_elm .eq. 0) exit
+
+	  sim%time = sim%time + timesteps(i)
+	  
 !          call runge_kutta_fixed_dt_gc_push(sim%fields,sim%time,timesteps(i), &
 !               sim%groups(i)%mass,particles(j)) !< push in analytical fields
           call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time,timesteps(i), &
               sim%groups(i)%mass,particles(j)) !< push in jorek fields
 
-          t = t + timesteps(i) !< update time
-
 !          write(*,*) 'Particle position: ', particles(j)%x(1), particles(j)%x(2), particles(j)%x(3)
 !          write(*,*) 'Particle momenta: ', particles(j)%p(1), particles(j)%p(2)
 
-	  if (modulo(k-1,10000)==0) then	                
-	    call sim%fields%interp_PRZ(sim%time, 1000, [1], 1, 0.5, 0.5, 0.5, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)	
-	    write(22,'(7e26.16)') sim%time, P, P_time, R, Z
-	  end if
+!	  if (modulo(k-1,10000)==0) then	                
+!	    call sim%fields%interp_PRZ(sim%time, 1000, [1], 1, 0.5, 0.5, 0.5, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)	
+!	    write(22,'(7e26.16)') sim%time, P, P_time, R, Z
+!	  end if
 
           if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1		
         end do !< time steps

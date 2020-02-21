@@ -293,8 +293,8 @@ required = 0
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
-  elseif ((findloc((/use_mumps,use_pastix,use_wsmp,use_strumpack/),value=.true.,dim=1))&
-      .ne.(findloc((/use_mumps,use_pastix,use_wsmp,use_strumpack/),value=.true.,dim=1,back=.true.))) then
+  elseif ((findloc(array=(/use_mumps,use_pastix,use_wsmp,use_strumpack/),value=.true.,dim=1))&
+      .ne.(findloc(array=(/use_mumps,use_pastix,use_wsmp,use_strumpack/),value=.true.,dim=1,back=.true.))) then
     write(*,*) ' FATAL : specify only one solver'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop

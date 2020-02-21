@@ -504,8 +504,7 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
 #endif
       call tr_print_memsize("PASTIX_For_Poisson")
     endif ! use_pastix
-#endif
-! defined(USE_PASTIX) || defined(USE_PASTIX6)
+#endif /* defined(USE_PASTIX) || defined(USE_PASTIX6) */
     
     call tr_debug_write("mumps_par%N",int(mumps_par%N))
     call tr_debug_write("mumps_par%NZ",int(mumps_par%NZ))

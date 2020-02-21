@@ -8,7 +8,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only: write_ps, force_central_node, SDN_threshold
+use phys_module, only: write_ps, force_central_node, SDN_threshold, fix_axis_nodes
 
 implicit none
 
@@ -1214,16 +1214,16 @@ element_list%element(1:element_list%n_elements) = newelement_list%element(1:elem
 !node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 
 ! --- Now, we define only the nodes that belong to elements! (this gets rid of potential orphan nodes, which the matrix doesn't like, obviously...)
-node_list%n_nodes = 4
+node_list%n_nodes = 4+n_tht-1
 node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 if (xcase .eq. 3) then
-  node_list%n_nodes = 8
+  node_list%n_nodes = 8+n_tht-2
   node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 endif
 do i_elm1 = 1,element_list%n_elements
   do i_vertex1 = 1,n_vertex_max
     i_node1 = newelement_list%element(i_elm1)%vertex(i_vertex1)
-    if ( ((i_node1.gt.8).and.(xcase.eq.3)) .or. ((i_node1.gt.4).and.(xcase.ne.3)) ) then
+    if ( ((i_node1.gt.8+n_tht-2).and.(xcase.eq.3)) .or. ((i_node1.gt.4+n_tht-1).and.(xcase.ne.3)) ) then
       i_node_save = 0
       do i_elm2 = 1,i_elm1-1
         do i_vertex2 = 1,n_vertex_max
@@ -1253,13 +1253,23 @@ index = 0
 do i=1,newnode_list%n_nodes
 
   node_list%node(i)%axis_node = .false.
-  if (xcase .ne. 3) then
-    if ((i .gt. 5) .and. (i .le. 4+n_tht)) then
-      node_list%node(i)%axis_node = .true.
-    endif
-  else
-    if ((i .gt. 9) .and. (i .le. 8+n_tht-1)) then
-      node_list%node(i)%axis_node = .true.
+  if (fix_axis_nodes) then
+    ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
+    ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
+    ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
+    ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
+    if (xcase .ne. 3) then
+      if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) then
+        node_list%node(i)%axis_node = .true.
+        node_list%node(i)%x(3,1) = +node_list%node(i)%x(2,2)
+        node_list%node(i)%x(3,2) = -node_list%node(i)%x(2,1)
+      endif
+    else
+      if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) then
+        node_list%node(i)%axis_node = .true.
+        node_list%node(i)%x(3,1) = +node_list%node(i)%x(2,2)
+        node_list%node(i)%x(3,2) = -node_list%node(i)%x(2,1)
+      endif
     endif
   endif
 
@@ -1271,12 +1281,12 @@ do i=1,newnode_list%n_nodes
     ! Remove all but one node at axis
     if (force_central_node) then
       if (xcase .ne. 3) then
-        if ((i .gt. 5) .and. (i .le. 4+n_tht) .and. (k.eq.1)) then
+        if ((i .ge. 5) .and. (i .le. 4+n_tht-1) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(5)%index(1)
           index = index - 1
         endif
       else
-        if ((i .gt. 9) .and. (i .le. 8+n_tht-1) .and. (k.eq.1)) then
+        if ((i .ge. 9) .and. (i .le. 8+n_tht-2) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(9)%index(1)
           index = index - 1
         endif
@@ -1348,6 +1358,19 @@ do i=1,newnode_list%n_nodes
   enddo  
   node_list%node(i)%constrained = .false.
 enddo
+
+if (fix_axis_nodes) then
+  do k=1, element_list%n_elements
+    do iv=1,4
+      j = element_list%element(k)%vertex(iv)
+      if (node_list%node(j)%axis_node) then
+        element_list%element(k)%size(iv,3) = 0.d0
+        element_list%element(k)%size(iv,4) = 0.d0
+      endif
+    enddo
+  enddo
+endif
+
 
 
 

@@ -7,7 +7,7 @@ use tr_module
 use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
-use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht
+use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes
 
 implicit none
 
@@ -294,14 +294,36 @@ do i=1,nr
 
    node_list%node(index)%boundary = 0
    if (i .eq. nr) node_list%node(index)%boundary = 2
+
    node_list%node(index)%axis_node = .false.
-   if (i .eq. 1) node_list%node(index)%axis_node = .true.
+   ! --- CAREFUL!!!
+   ! --- I decide to put this here, just in case, but the reversal of 2nd and 3rd direction
+   ! --- compared to other grids makes it dangerous: what if someone decides to use this grid
+   ! --- to do some physics, using fix_axis_nodes? Then we need to implement a mod_fix_axis_nodes.90 that
+   ! --- fixes either the 2nd or 3rd order depending on the grids... Too complicated, I prefer
+   ! --- to decide that fix_axis will not be available for this grid
+   ! --- (which should not be used for physics anyway, or should it???)
+   !if (fix_axis_nodes) then
+   !   if (i .eq. 1) then
+   !     node_list%node(index)%axis_node = .true.
+   !     ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
+   !     ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
+   !     ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
+   !     ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
+   !     ! --- CAREFUL CAREFUL CAREFUL!!!
+   !     ! --- In most grids, the 2nd vector is radial, and the 3rd is poloidal
+   !     ! --- But with this routine, it's the opposite!!!
+   !     node_list%node(index)%x(2,1) = +node_list%node(index)%x(3,2)
+   !     node_list%node(index)%x(2,2) = -node_list%node(index)%x(3,1)
+   !   endif
+   !endif
 
    do k=1,n_order+1
      node_list%node(index)%index(k) = n_index_start + (n_order+1)*(index0-1)+k
    enddo
   
    node_list%node(index)%constrained=.false.
+   node_list%node(index)%axis_node=.false.
  enddo
 
 enddo
@@ -356,6 +378,20 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
    element_list%element(k)%size(iv,2) = dir_2
    element_list%element(k)%size(iv,3) = dir_3
    element_list%element(k)%size(iv,4) = element_list%element(k)%size(iv,2) * element_list%element(k)%size(iv,3)
+   ! --- CAREFUL!!!
+   ! --- I decide to put this here, just in case, but the reversal of 2nd and 3rd direction
+   ! --- compared to other grids makes it dangerous: what if someone decides to use this grid
+   ! --- to do some physics, using fix_axis_nodes? Then we need to implement a mod_fix_axis_nodes.90 that
+   ! --- fixes either the 2nd or 3rd order depending on the grids... Too complicated, I prefer
+   ! --- to decide that fix_axis will not be available for this grid
+   ! --- (which should not be used for physics anyway, or should it???)
+   !if (fix_axis_nodes) then
+   !   j = element_list%element(k)%vertex(iv)
+   !   if (node_list%node(j)%axis_node) then
+   !     element_list%element(k)%size(iv,2) = 0.d0
+   !     element_list%element(k)%size(iv,4) = 0.d0
+   !   endif
+   !endif
 
 !   if ((RR(2,node_iv)**2 + ZZ(2,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,2) = dir_2
 !   if ((RR(3,node_iv)**2 + ZZ(3,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,3) = dir_3

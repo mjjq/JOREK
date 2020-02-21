@@ -20,128 +20,117 @@ module mod_gc_relativistic
 
 contains
 
-  !> This procedure pushes a relativistic guiding center in JOREK fields
-  !> using Runge-Kutta integrator with control of the integration error.
-  !> At the moment, no user's set error metric is used but it can be
-  !> easily added as last argument to the procedure:
-  !> "runge_kutta_order_error_control_dt"
+  !> This subroutine pushes a relativistic guiding center in JOREK fields
+  !> using a Runge-Kutta integrator in which the time step is adjusted to control 
+  !> the integration error. At the moment, the error metric is hard-coded, 
+  !> but a user-defined metric can be easily added as last argument to the 
+  !> procedure runge_kutta_order_error_control_dt.
   !> inputs:
-  !>   fields:     (fields_base) jorek fields
-  !>   tolerances: (real8)(4) set of tolerances for time step control
-  !>               1:R, 2:Z, 3:phi, 4:p_parallel
-  !>   t:          (real8) simulation time
-  !>   dt:         (real8) simulation time step
-  !>   t_stop:     (real8) next event stop time
-  !>   mass:       (real8) the gc mass in AMU
-  !>   particle:   (particle_gc_relativistic) the gc to integrate
+  !>   fields:     (fields_base) JOREK fields
+  !>   tolerances: (real8)(4) tolerances on the integration error for
+  !>                          1:R, 2:Z, 3:phi, 4:p_parallel
+  !>   t:          (real8) current time
+  !>   dt:         (real8) first time step that will be tried
+  !>   t_stop:     (real8) time of next event
+  !>   mass:       (real8) particle mass in AMU
+  !>   particle:   (particle_gc_relativistic) GC to be pushed
   !> outputs:
-  !>   dt:       (real8) new time step
-  !>   dt_new:   (real8) proposed integration time step
-  !>   particle: (particle_gc_relativistic) the integrated gc
-  !>   error:    (real8) final runge-kutta error (if defined TEST only)
+  !>   dt:       (real8) time step used for push
+  !>   dt_new:   (real8) time step suggested for the next push
+  !>   particle: (particle_gc_relativistic) pushed GC
+  !>   error:    (real8) final Runge-Kutta error (if defined TEST only)
 #ifdef TEST
-  subroutine runge_kutta_error_control_dt_gc_push_jorek(fields,tolerances,&
-       t,dt,t_stop,mass,dt_new,particle,error)
+  subroutine runge_kutta_error_control_dt_gc_push_jorek(fields,tolerances, &
+    t,dt,t_stop,mass,dt_new,particle,error)
 #else
-  subroutine runge_kutta_error_control_dt_gc_push_jorek(fields,tolerances,&
-       t,dt,t_stop,mass,dt_new,particle)
+  subroutine runge_kutta_error_control_dt_gc_push_jorek(fields,tolerances, &
+    t,dt,t_stop,mass,dt_new,particle)
 #endif
-    !> load modules
+    !> modules
     use mod_fields, only: fields_base
     use mod_find_rz_nearby
     use mod_runge_kutta, only: runge_kutta_order_error_control_dt
     implicit none
-    !> declare input output variables
+    !> input/output variables
     type(particle_gc_relativistic), intent(inout) :: particle
-    real(kind=8),intent(inout) :: dt
-    !> declare input variables
-    class(fields_base), intent(in) :: fields
-    real(kind=8), intent(in)       :: t,t_stop,mass
-    real(kind=8),dimension(4),intent(in) :: tolerances
-    !> declare output variables
-    real(kind=8),intent(out) :: dt_new
+    real(kind=8), intent(inout)                   :: dt
+    !> input variables
+    class(fields_base), intent(in)         :: fields
+    real(kind=8), intent(in)               :: t, t_stop, mass
+    real(kind=8), dimension(4), intent(in) :: tolerances
+    !> output variables
+    real(kind=8), intent(out) :: dt_new
 #ifdef TEST
-    real(kind=8),intent(out) :: error
+    real(kind=8), intent(out) :: error
 #endif
     !> internal variables
-    integer :: ifail, i_elm_new !< particle new element
-    !> new particle local coordinates: 1:s, 2:t
+    integer :: ifail, i_elm_new
     real(kind=8), dimension(2) :: st_new
-    !> integrate global coordinates: 1:R, 2:Z, 3:phi, 4:p_parallel
-    real(kind=8),dimension(4) :: solution_new
+    real(kind=8), dimension(4) :: solution_new
 
+    !> compute Runge-Kutta solution and new time step
 #ifdef TEST
-
-    !> compute Runge-Kutta solution and new time step
-    call runge_kutta_order_error_control_dt(compute_relativistic_gc_derivatives_jorek,&
-         fields,4,2,4,t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),&
-         particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
-         particle%st(2),mass,particle%p(2)],&
-         tolerances,dt_new,solution_new,i_elm_new,error)
-
+    call runge_kutta_order_error_control_dt(compute_relativistic_gc_derivatives_jorek, &
+      fields,4,2,4,t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),             &
+      particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),                 &
+      particle%st(2),mass,particle%p(2)],                                              &
+      tolerances,dt_new,solution_new,i_elm_new,error)
 #else
-
-    !> compute Runge-Kutta solution and new time step
-    call runge_kutta_order_error_control_dt(compute_relativistic_gc_derivatives_jorek,&
-         fields,4,2,4,t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),&
-         particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
-         particle%st(2),mass,particle%p(2)],&
-         tolerances,dt_new,solution_new,i_elm_new)
-
+    call runge_kutta_order_error_control_dt(compute_relativistic_gc_derivatives_jorek, &
+      fields,4,2,4,t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),             &
+      particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),                 &
+      particle%st(2),mass,particle%p(2)],                                              &
+      tolerances,dt_new,solution_new,i_elm_new)
 #endif
 
     !> compute the new local coordinates
+    particle%i_elm = i_elm_new
     if(i_elm_new.gt.0) then 
-      call find_rz_nearby(fields%node_list,&
-         fields%element_list,particle%x(1),particle%x(2),&
-         particle%st(1),particle%st(2),particle%i_elm,&
-         solution_new(1),solution_new(2),st_new(1),st_new(2),&
-         i_elm_new,ifail)
-      particle%st = st_new
-      particle%i_elm = i_elm_new      
+      call find_rz_nearby(fields%node_list,                  &
+        fields%element_list,particle%x(1),particle%x(2),     &
+        particle%st(1),particle%st(2),particle%i_elm,        &
+        solution_new(1),solution_new(2),st_new(1),st_new(2), &
+        i_elm_new,ifail)
+      particle%st = st_new       
     endif
 
-    !> set the particle as dead
-    if(i_elm_new.eq.0) particle%i_elm = i_elm_new
-
     !> overwrite particle fields
-    particle%x = solution_new(1:3)
+    particle%x    = solution_new(1:3)
     particle%p(1) = solution_new(4)
     
   end subroutine runge_kutta_error_control_dt_gc_push_jorek
 
-  !> This procedure pushes a relativistic guiding center in JOREK fields
-  !> using Runge-Kutta integrator with time adaptation strategy
+  !> This subroutine pushes a relativistic guiding center in JOREK fields
+  !> using a Runge-Kutta integrator with an adaptation of the time step
+  !> before the push based on local gradients.
   !> inputs:
-  !>   fields:   (fields_base) jorek fields
-  !>   t:        (real8) simulation time
-  !>   dt:       (real8) simulation time step
-  !>   t_stop:   (real8) next event stop time
-  !>   mass:     (real8) the gc mass in AMU
-  !>   particle: (particle_gc_relativistic) the gc to integrate
+  !>   fields:   (fields_base) JOREK fields
+  !>   t:        (real8) current time
+  !>   dt:       (real8) "suggested" time step
+  !>   t_stop:   (real8) time of next event
+  !>   mass:     (real8) particle mass in AMU
+  !>   particle: (particle_gc_relativistic) GC to be pushed
   !> outputs:
   !>   t:        (real8) new time
-  !>   dt:       (real8) new time step
-  !>   particle: (particle_gc_relativistic) the integrated gc
-  subroutine runge_kutta_adapt_dt_gc_push_jorek(fields,t,dt,&
-       t_stop,mass,particle)
-    !> load modules
+  !>   dt:       (real8) time step used for push
+  !>   particle: (particle_gc_relativistic) pushed GC
+  subroutine runge_kutta_adapt_dt_gc_push_jorek(fields,t,dt, &
+    t_stop,mass,particle)
+    !> modules
     use mod_fields, only: fields_base
     use mod_find_rz_nearby
     use mod_runge_kutta, only: runge_kutta_adaptative_dt
     implicit none
-    !> declare input output variables
+    !> input/output variables
     type(particle_gc_relativistic), intent(inout) :: particle
-    real(kind=8),intent(inout) :: t,dt
-    !> declare input variables
+    real(kind=8), intent(inout) :: t, dt
+    !> input variables
     class(fields_base), intent(in) :: fields
     real(kind=8), intent(in)       :: t_stop,mass
     !> internal variables
-    integer :: ifail, i_elm_new !< particle new element
-    !> new particle local coordinates: 1:s, 2:t
+    integer :: ifail, i_elm_new
     real(kind=8), dimension(2) :: st_new
-    !> integrate global coordinates: 1:R, 2:Z, 3:phi, 4:p_parallel
-    real(kind=8),dimension(4) :: solution_new
+    real(kind=8), dimension(4) :: solution_new
 
     !> compute Runge-Kutta solution and new time step
     call runge_kutta_adaptative_dt(compute_relativistic_gc_derivatives_jorek,&
@@ -149,9 +138,8 @@ contains
          t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),&
          particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
          particle%st(2),mass,particle%p(2)],solution_new,i_elm_new)
-
     
-    !> compute the new local coordinates
+    !> compute new local coordinates
     if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list,&
          fields%element_list,particle%x(1),particle%x(2),&
          particle%st(1),particle%st(2),particle%i_elm,&
@@ -159,79 +147,80 @@ contains
          i_elm_new,ifail)
     
     !> overwrite particle fields
-    particle%x = solution_new(1:3)
-    particle%p(1) = solution_new(4)
-    particle%st = st_new
+    particle%x     = solution_new(1:3)
+    particle%p(1)  = solution_new(4)
+    particle%st    = st_new
     particle%i_elm = i_elm_new
     
   end subroutine runge_kutta_adapt_dt_gc_push_jorek
 
 
-   !> This function adapts a time step as a function as a function of the
+   !> This function adapts the time step as a function as a function of the
    !> gradient and curvature length
    !> inputs:
    !>   fields:            (field_base)(optional) fields for particle pushing
-   !>   n_variables:       (integer) number of variables=4
-   !>   n_int_parameters:  (integer) number of integer parameters=2
-   !>   n_real_parameters: (integer) number of real parameters=4
+   !>   n_variables:       (integer) number of variables describing the particle = 4
+   !>   n_int_parameters:  (integer) number of integer parameters = 2
+   !>   n_real_parameters: (integer) number of real parameters = 4
    !>   t:                 (real8) time
-   !>   dt:                (real8) old time step
-   !>   solution:          (real8)(n_variables) solution 1:R, 2:Z, 3:phi
-   !>                      4: p parallel
+   !>   dt:                (real8) "suggested" time step
+   !>   solution:          (real8)(n_variables) solution 1:R, 2:Z, 3:phi, 4:p_parallel
    !>   int_parameters:    (integer)(2) integer parameters 1:i_elm, 2:q
-   !>   real_parameters:   (real8)(4) real parameters 1:s,2:t,3:mass,
-   !>                      4: magnetic moment
+   !>   real_parameters:   (real8)(4) real parameters 1:s, 2:t, 3:mass, 4:magnetic moment
    !> outputs:
-   !>   dt_new: (real8) new time step
-  pure function adapt_time_step_gradB_curlb_dbdt(fields,n_variables,&
-       n_int_parameters, n_real_parameters,t,dt,solution,int_parameters,&
-        real_parameters) result(dt_new)
-     !> load modules
-     use constants, only: EL_CHG,ATOMIC_MASS_UNIT,TWOPI,SPEED_OF_LIGHT
+   !>   dt_new: (real8) adapted time step
+  pure function adapt_time_step_gradB_curlb_dbdt(fields,n_variables,  &
+    n_int_parameters, n_real_parameters,t,dt,solution,int_parameters, &
+    real_parameters) result(dt_new)
+     !> modules
+     use constants, only: EL_CHG, ATOMIC_MASS_UNIT, TWOPI, SPEED_OF_LIGHT
      use mod_fields, only: fields_base
      implicit none
      !> parameters
-     real(kind=8),parameter :: inv_number_steps=0.1 !< 10 steps per characteristic time
-     real(kind=8),parameter :: minimum_n_gyroperiod=1.d0
-     !> declare inputs
-     class(fields_base),intent(in) :: fields
-     integer,intent(in) :: n_variables,n_int_parameters,n_real_parameters
-     real(kind=8),intent(in) :: t,dt
-     real(kind=8),dimension(n_variables),intent(in) :: solution
-     integer,dimension(n_int_parameters),intent(in) :: int_parameters
-     real(kind=8),dimension(n_real_parameters),intent(in) :: real_parameters
-     !> declare outputs
+     real(kind=8), parameter :: inv_number_steps=0.1 !< 10 steps per characteristic time
+     real(kind=8), parameter :: minimum_n_gyroperiod=1.d0
+     !> input variables
+     class(fields_base), intent(in)                         :: fields
+     integer, intent(in)                                    :: n_variables, n_int_parameters, n_real_parameters
+     real(kind=8), intent(in)                               :: t, dt
+     real(kind=8), dimension(n_variables), intent(in)       :: solution
+     integer, dimension(n_int_parameters), intent(in)       :: int_parameters
+     real(kind=8), dimension(n_real_parameters), intent(in) :: real_parameters
+     !> output variables
      real(kind=8) :: dt_new
-     !> declare internal variables
-     real(kind=8) :: velocity,relativistic_factor,normB
-     real(kind=8),dimension(3) :: E,b,gradB,curlb,dbdt 
+     !> internal variables
+     real(kind=8)               :: velocity, relativistic_factor, normB
+     real(kind=8), dimension(3) :: E, b, gradB, curlb, dbdt 
 
      !> compute fields
-     call fields%calc_EBNormBGradBCurlbDbdt(t,int_parameters(1),&
-          real_parameters(1:2),solution(3),E,b,normB,gradB,curlb,dbdt)
+     call fields%calc_EBNormBGradBCurlbDbdt(t,int_parameters(1),    &
+       real_parameters(1:2),solution(3),E,b,normB,gradB,curlb,dbdt)
      
      !> computing the particle velocity
-     velocity = (solution(4)*solution(4) + &
-          2.d0*real_parameters(3)*real_parameters(4)*normB)/&
-          (real_parameters(3)*real_parameters(3))
-     relativistic_factor = sqrt(1.d0 + velocity/(&
-          SPEED_OF_LIGHT*SPEED_OF_LIGHT))
+     velocity = (solution(4)*solution(4) +                &
+       2.d0*real_parameters(3)*real_parameters(4)*normB)/ &
+       (real_parameters(3)*real_parameters(3))
+     relativistic_factor = sqrt(1.d0 + velocity/(SPEED_OF_LIGHT*SPEED_OF_LIGHT))
      velocity = sqrt(velocity)/relativistic_factor
+
      !> compute the characteristic times
      gradB = normB/(velocity*gradB)
      curlb = 1.d0/(velocity*curlb)
      dbdt = 1.d0/dbdt
-     !> compute the new time step
-     dt_new = inv_number_steps*minval(abs([gradB(1),gradB(2),gradB(3),&
-          curlb(1),curlb(2),curlb(3),dbdt(1),dbdt(2),dbdt(3)]))
-     !> limit the time step at a fixed number of gyroperiod
-     dt_new = max(dt_new,&
-          minimum_n_gyroperiod*TWOPI*abs((real_parameters(3)*&
-          ATOMIC_MASS_UNIT*relativistic_factor)/&
-          (real(int_parameters(2),kind=8)*normB)))
+
+     !> compute the adapted time step
+     dt_new = inv_number_steps*minval(abs([gradB(1),gradB(2),gradB(3), &
+       curlb(1),curlb(2),curlb(3),dbdt(1),dbdt(2),dbdt(3)]))
+
+     !> limit the time step to a fixed number of gyroperiods
+     dt_new = max(dt_new,                                  &
+       minimum_n_gyroperiod*TWOPI*abs((real_parameters(3)* &
+       ATOMIC_MASS_UNIT*relativistic_factor)/              &
+       (real(int_parameters(2),kind=8)*normB)))
 
    end function adapt_time_step_gradB_curlb_dbdt
 
+  !> This subroutine pushes a relativistic guiding center in JOREK fields
   !> using a standard Runge-Kutta integrator without time step control
   !> inputs:
   !>   fields:   (fields_base) JOREK fields
@@ -241,23 +230,22 @@ contains
   !>   particle: (particle_gc_relativistic) GC to be pushed
   !> outputs:
   !>   t:        (real8) new time 
-  !>   particle: (particle_gc_relativistic) the integrated gc
-  subroutine runge_kutta_fixed_dt_gc_push_jorek(fields,t,dt,&
-       mass,particle)
-    !> load modules
+  !>   particle: (particle_gc_relativistic) pushed GC
+  subroutine runge_kutta_fixed_dt_gc_push_jorek(fields,t,dt, &
+    mass,particle)
+    !> modules
     use mod_fields, only: fields_base
     use mod_find_rz_nearby
     use mod_runge_kutta, only: runge_kutta_fixed_dt
     implicit none
-    !> declare input output variables
+    !> input/output variables
     type(particle_gc_relativistic), intent(inout) :: particle
-    real(kind=8),intent(inout) :: t
-    !> declare input variables
+    real(kind=8), intent(inout)                   :: t
+    !> input variables
     class(fields_base), intent(in) :: fields
     real(kind=8), intent(in)       :: dt, mass
     !> internal variables
-    integer :: ifail, i_elm_new !< particle new element
-    !> new particle local coordinates: 1:s, 2:t
+    integer                    :: ifail, i_elm_new 
     real(kind=8), dimension(2) :: st_new
     !> global coordinates used during RK integration: 1:R, 2:Z, 3:phi, 4:p_parallel
     real(kind=8), dimension(4) :: solution_new

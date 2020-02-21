@@ -259,7 +259,7 @@ required = 0
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 
-#if (!defined (USE_PASTIX))||(!defined (USE_PASTIX6))
+#if (!defined (USE_PASTIX))&&(!defined (USE_PASTIX6))
   if (use_pastix) then
     write(*,*) ' FATAL : use_pastix requires defined USE_PASTIX or USE_PASTIX6'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)

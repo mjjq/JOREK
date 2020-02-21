@@ -8,7 +8,6 @@ use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
 use vacuum
 use pellet_module
-use wsmp_module,   only: use_wsmp
 
 implicit none
 

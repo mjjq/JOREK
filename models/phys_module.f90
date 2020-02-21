@@ -68,6 +68,7 @@ module phys_module
   logical :: use_mumps            !< Use Mumps solver
   logical :: use_pastix           !< Use Pastix solver
   logical :: use_strumpack        !< Use Strumpack solver
+  logical :: use_wsmp             !< Use WSMP solver
 
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"

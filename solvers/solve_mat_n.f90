@@ -1,5 +1,5 @@
 module solve_mat_n
-  use phys_module, only: use_mumps, use_pastix, use_strumpack
+  use phys_module, only: use_mumps, use_pastix, use_strumpack, use_wsmp
   implicit none        
 
 contains
@@ -673,7 +673,8 @@ contains
     return
   end subroutine solve_matrix_n
   
-!======================================================================================================!
+
+
 #ifdef USE_STRUMPACK  
 subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     use tr_module

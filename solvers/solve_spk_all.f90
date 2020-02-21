@@ -1,8 +1,6 @@
 #ifdef USE_STRUMPACK      
+!> subroutine solves the complete system of equation using STRUMPACK
 subroutine solve_spk_all(n_cpu,my_id,index_min,index_max)
-!---------------------------------------------------------------------
-! subroutine solves the complete system of equation using STRUMPACK
-!---------------------------------------------------------------------
   use spk_module
 
   use tr_module 
@@ -16,10 +14,13 @@ subroutine solve_spk_all(n_cpu,my_id,index_min,index_max)
 
   implicit none
 
-  integer                  :: n_cpu, index_min, index_max       ! global index_min, index_max for this cpu
-    type(clcktype)           :: t_itstart, t0, t1, t2, t3
+! --- Routine parameters
+  integer, intent(in)      :: n_cpu, my_id, index_min, index_max
+
+! --- Local variables
+  type(clcktype)           :: t_itstart, t0, t1, t2, t3
   real*8                   :: tsecond
-  integer                  :: i, k, j, ierr, my_id, m_loc
+  integer                  :: i, k, j, ierr, m_loc
   integer,allocatable      :: counts(:), displacements(:)
   
   integer(kind=C_INT) :: n, nnz

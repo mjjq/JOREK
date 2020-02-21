@@ -249,26 +249,24 @@ end subroutine volume_preserving_push_cartesian
 !> in JOREK fields using the Runge-Kutta integrator
 !> inputs
 !>  fields:    (fields_base) JOREK fields
-!>  t:         (real8) time of the current RK step
+!>  t:         (real8) current time
 !>  dt:        (real8) time step
 !>  mass:      (real8) particle mass
 !>  particle:  (particle_kinetic_relativistic) particle to be pushed
 !> outputs:
-!>   t:        (real8) new time
-!>   particle: (particle_kinetic_relativistic) integrated particle
-subroutine runge_kutta_fixed_dt_relativistic_particle_push_jorek(&
-     fields,t,dt,mass,particle)
+!>   particle: (particle_kinetic_relativistic) pushed particle
+subroutine runge_kutta_fixed_dt_relativistic_particle_push_jorek( &
+  fields,t,dt,mass,particle)
   !> load modules
   use mod_find_rz_nearby
   use mod_fields, only: fields_base
   use mod_runge_kutta, only: runge_kutta_fixed_dt
   implicit none
   !> declare input/output variables
-  type(particle_kinetic_relativistic),intent(inout) :: particle
-  real(kind=8),intent(inout) :: t
+  type(particle_kinetic_relativistic), intent(inout) :: particle
   !> declare input variables
-  class(fields_base),intent(in) :: fields
-  real(kind=8),intent(in) :: dt,mass
+  class(fields_base), intent(in) :: fields
+  real(kind=8), intent(in)       :: t, dt, mass
   !> declare internal variables
   integer                    :: i_elm_new, ifail
   real(kind=8), dimension(2) :: st_new
@@ -302,25 +300,24 @@ end subroutine runge_kutta_fixed_dt_relativistic_particle_push_jorek
 !> in analytical fields using the Runge-Kutta integrator
 !> inputs:
 !>   fields:   (fields_base) analytical fields
-!>   t:        (real8) time of the current RK step
+!>   t:        (real8) current time
 !>   dt:       (real8) time step
 !>   mass:     (real8) particle mass
 !>   particle: (particle_kinetic_relativistic) particle to be pushed
 !> outputs:
 !>   t:        (real8) new time
-!>   particle: (particle_kinetic_relativistic) integrated particle
-subroutine runge_kutta_fixed_dt_relativistic_particle_push(fields,t,dt,&
-     mass,particle)
+!>   particle: (particle_kinetic_relativistic) pushed particle
+subroutine runge_kutta_fixed_dt_relativistic_particle_push(fields,t,dt, &
+  mass,particle)
   !> load modules
   use mod_fields, only: fields_base
   use mod_runge_kutta, only: runge_kutta_fixed_dt
   implicit none
   !> declare input/output variables
-  real(kind=8),intent(inout) :: t
   type(particle_kinetic_relativistic),intent(inout) :: particle
   !> delcare input variables
-  class(fields_base),intent(in) :: fields
-  real(kind=8),intent(in) :: dt,mass
+  class(fields_base), intent(in) :: fields
+  real(kind=8), intent(in)       :: t, dt, mass
   !> declare internal variables
   integer                    :: ifail
   real(kind=8), dimension(6) :: solution_new

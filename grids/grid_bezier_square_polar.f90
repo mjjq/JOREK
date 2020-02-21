@@ -379,7 +379,6 @@ do i=1,n_polar
   node_list%node(i)%values(1,1,1) = node_list%node(n_polar+1)%values(1,1,1)
 enddo
 
-node_list%n_nodes = nR*nZ
 do i=1,node_list%n_nodes
   node_list%node(i)%axis_node = .false.
 enddo

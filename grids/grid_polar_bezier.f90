@@ -323,7 +323,6 @@ do i=1,nr
    enddo
   
    node_list%node(index)%constrained=.false.
-   node_list%node(index)%axis_node=.false.
  enddo
 
 enddo

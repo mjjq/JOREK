@@ -213,8 +213,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 #endif
     endif
   endif ! use_pastix
-#endif
-! defined(USE_PASTIX)||defined(USE_PASTIX6)
+#endif /* defined(USE_PASTIX)||defined(USE_PASTIX6) */
 
 #ifdef USE_WSMP
   if (use_wsmp) then
@@ -225,7 +224,6 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 #ifdef USE_STRUMPACK
   if (use_strumpack) then
     if (.not. associated(mumps_par%rhs)) then
-       !    write(*,*) ' gmres: RHS not allocated!',my_id, my_id_n
        call tr_allocatep(mumps_par%rhs,1,ifactor*n_loc_n,"mumps_par%rhs",CAT_DMATRIX)
     endif
    

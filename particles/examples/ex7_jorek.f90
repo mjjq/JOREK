@@ -15,7 +15,7 @@ use mod_gc_relativistic
 implicit none
 
 ! Set up the simulation variables
-real(kind=8)                      :: timesteps(1) = [3.5723d-13] ! [1.d-10] !
+real(kind=8)                      :: timesteps(1) = [1.d-10] ![3.5723d-13] ! 
 real(kind=8)                      :: target_time, t
 real*8                            :: energy !< Initial kinetic energy in eV
 real*8                            :: ksi    !< Initial cosine of pitch-angle
@@ -51,8 +51,8 @@ if (.not. restart) then
   ! and i=-1 (to read jorek_restart.h5 and keep this field at all time) or i=last_file_before_time(sim%time)
   ! (to read a sequel of jorekXXXXX.h5 files and use time-evolving fields)
   events = [event(read_jorek_fields_interp_linear(i=last_file_before_time(sim%time))), & 
-            event(diag,start=sim%time,step=1d-7),         &
-            event(stop_action(),start=sim%time+3.d-6)]
+            event(diag,start=sim%time,step=1.d-7),         &
+            event(stop_action(),start=sim%time+1.d-6)]
 
   ! Run first event to read the JOREK fields
   call with(sim, events, at=0.d0)
@@ -65,8 +65,8 @@ if (.not. restart) then
                  p%x(1), p%x(2), & ! inputs
                  p%x(1), p%x(2), p%i_elm, p%st(1), p%st(2), ifail) ! outputs
     !p%p = [1.d7,0.]
-    energy = 5.12d5 ! 1.d7 ! !!! AT PRESENT, MUST INCLUDE REST ENERGY (FIX THIS) !!!
-    ksi    = 1.d0 ! Cosine of pitch-angle
+    energy = 1.d7 ! 5.12d5 ! !!! AT PRESENT, MUST INCLUDE REST ENERGY (FIX THIS) !!!
+    ksi    = 0. !1.d0 ! Cosine of pitch-angle
     particle_in = p
     particle_out = relativistic_gc_momenta_from_E_cospitch(particle_in,energy,ksi,sim%groups(1)%mass,sim%fields,sim%time)
     p%p = particle_out%p
@@ -97,10 +97,10 @@ endif
 call check_and_fix_timesteps(timesteps, events)
 
 ! Set dpsi/dt=0 (useful e.g. to check the conservation of the total particle energy) 
-call sim%fields%set_flag_dpsidt(.true.)
+!call sim%fields%set_flag_dpsidt(.true.)
 
 ! Open a file where to write some fields at a given position to test time interpolation routines
-open(22,file='field_vs_t.dat')
+!open(22,file='field_vs_t.dat')
 
 ! Loop until the simulation is stopped
 do while (.not. sim%stop_now)
@@ -130,12 +130,15 @@ do while (.not. sim%stop_now)
 !          write(*,*) 'Particle position: ', particles(j)%x(1), particles(j)%x(2), particles(j)%x(3)
 !          write(*,*) 'Particle momenta: ', particles(j)%p(1), particles(j)%p(2)
 
-	  if (modulo(k-1,10000)==0) then	                
-	    call sim%fields%interp_PRZ(sim%time, 1000, [1], 1, 0.5, 0.5, 0.5, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)	
-	    write(22,'(7e26.16)') sim%time, P, P_time, R, Z
-	  end if
+!	  if (modulo(k-1,10000)==0) then	                
+!	    call sim%fields%interp_PRZ(sim%time, 1000, [1], 1, 0.5, 0.5, 0.5, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)	!	    write(22,'(7e26.16)') sim%time, P, P_time, R, Z
+!	  end if
 
-          if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1		
+          if (particles(j)%i_elm .eq. 0) then
+	    n_lost = n_lost + 1
+	    write(*,*) 'PARTICLE IS LOST, STOPPING'
+	    stop
+	  end if 		
         end do !< time steps
       end do !< particles
 !      !$omp end parallel do

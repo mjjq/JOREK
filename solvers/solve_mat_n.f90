@@ -733,13 +733,6 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     nnz = mumps_par%nz
     
     if (.not. solve_only) then
-      if (my_id_n .eq. 0) then
-        if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
-        call tr_allocate(column_scaling,1,n,"column_scaling",CAT_DMATRIX)
-        column_scaling = 1.0
-        
-!        call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a)
-      endif
         
       if (my_id_n.gt.0) then
         if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
@@ -757,16 +750,6 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       call split_broadcast(type,MPI_COMM_N)
       type='double'
       call split_broadcast(type,MPI_COMM_N)
-
-! temporary for testing      
-!      fname1 = "input/test01.h5"
-!      call read_matrix_h5(fname1,n,nnz,irn1,jcn1,val1,rhs1)
-!      call f2spk(n,nnz,irn1,jcn1,val1,rhs1,sol1,MPI_COMM_N,0)
-!      call f2spk(n,nnz,irn1,jcn1,val1,rhs1,sol1,MPI_COMM_N,1)
-!      call f2spk(n,nnz,irn1,jcn1,val1,rhs1,sol1,MPI_COMM_N,2)            
-!      call exit(1)
-
-
 
       if (.not. spss_initialized) then
         call f2spk(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_N,0)

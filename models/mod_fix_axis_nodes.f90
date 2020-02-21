@@ -1,22 +1,8 @@
+!> Add condition for the axis directly in the matrix.
+!> This is aimed at stabilising numerical noise on the axis.
 module mod_fix_axis_nodes
 contains
 
-!*******************************************************************************
-!* Subroutine: fix_axis_nodes                                                  *
-!*******************************************************************************
-!*                                                                             *
-!* Add condition for the axis directly in the matrix.                          *
-!* This is aimed at stabilising numerical noise on the axis.                   *
-!*                                                                             *
-!* Parameters:                                                                 *
-!*   node_list    - List of nodes                                              *
-!*   element_list - List of all elements                                       *
-!*   local_elms   - List of local elements                                     *
-!*   n_local_elms - Number of local elements                                   *
-!*   index_min    - Minimal index of local elements                            *
-!*   index_max    - Maximal index of local elements (                          *
-!*                                                                             *
-!*******************************************************************************
 subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max)
 
   use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
@@ -27,11 +13,11 @@ subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, 
   implicit none
 
   ! Subroutine parameters
-  integer                  :: local_elms(*)
-  integer                  :: n_local_elms
-  integer                  :: index_min, index_max
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
+  integer                  :: local_elms(*)         !< List of local elements
+  integer                  :: n_local_elms          !< Number of local elements
+  integer                  :: index_min, index_max  !< Min/max index of local elements
+  type (type_node_list)    :: node_list             !< List of nodes
+  type (type_element_list) :: element_list          !< List of all elements
 
   ! Internal parameters
   real*8  :: zbig

@@ -1598,13 +1598,13 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         do m=2,n_tor
           if ( new_mode(m) .eq. 1 ) then
           node_list%node(i)%values(m,:,:) = 0.d0
-          node_list%node(i)%values(m,:,5)   = amplitude * node_list%node(i)%values(1,:,5)
-          node_list%node(i)%values(m,:,6)   = amplitude * node_list%node(i)%values(1,:,6)
+          node_list%node(i)%values(m,:,5) = amplitude * node_list%node(i)%values(1,:,5)
+          node_list%node(i)%values(m,:,6) = amplitude * node_list%node(i)%values(1,:,6)
 #if (JOREK_MODEL == 400)
-          node_list%node(i)%values(j,:,8)= amplitude * node_list%node(i)%values(1,:,8)
+          node_list%node(i)%values(m,:,8) = amplitude * node_list%node(i)%values(1,:,8)
 #endif
 #if (JOREK_MODEL == 502)
-          node_list%node(i)%values(j,:,9)= amplitude * node_list%node(i)%values(1,:,9)
+          node_list%node(i)%values(m,:,9) = amplitude * node_list%node(i)%values(1,:,9)
 #endif
           end if
         end do

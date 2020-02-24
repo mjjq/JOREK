@@ -13,11 +13,11 @@ subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, 
   implicit none
 
   ! Subroutine parameters
-  integer                  :: local_elms(*)         !< List of local elements
-  integer                  :: n_local_elms          !< Number of local elements
-  integer                  :: index_min, index_max  !< Min/max index of local elements
-  type (type_node_list)    :: node_list             !< List of nodes
-  type (type_element_list) :: element_list          !< List of all elements
+  integer                 , intent(in) :: local_elms(*)         !< List of local elements
+  integer                 , intent(in) :: n_local_elms          !< Number of local elements
+  integer                 , intent(in) :: index_min, index_max  !< Min/max index of local elements
+  type (type_node_list)   , intent(in) :: node_list             !< List of nodes
+  type (type_element_list), intent(in) :: element_list          !< List of all elements
 
   ! Internal parameters
   real*8  :: zbig

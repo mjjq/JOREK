@@ -6,7 +6,7 @@ subroutine finish_grid(node_list, element_list, newnode_list, newelement_list, n
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node
+use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node, fix_axis_nodes
 use mod_eqdsk_tools
 use mod_interp, only: interp_RZ, interp
 use mod_element_rtree
@@ -248,8 +248,8 @@ enddo
 !---------------------------- copy new grid into nodes/elements
 
 ! --- This is the old way
-element_list%n_elements = newelement_list%n_elements
-element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
+!element_list%n_elements = newelement_list%n_elements
+!element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
 !node_list%n_nodes = newnode_list%n_nodes
 !node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 
@@ -310,6 +310,29 @@ write(*,*) '                 Definition of nodes index '
 !-------------------------------- Combine multiple nodes at axis and Xpoints
 index = 0
 do i=1,node_list%n_nodes
+
+  node_list%node(i)%axis_node = .false.
+  if (fix_axis_nodes) then
+    ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
+    ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
+    ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
+    ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
+    if (xcase .ne. 3) then
+      if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) then
+        node_list%node(i)%axis_node = .true.
+        node_list%node(i)%x(3,1) = +node_list%node(i)%x(2,2)
+        node_list%node(i)%x(3,2) = -node_list%node(i)%x(2,1)
+      endif
+    else
+      if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) then
+        node_list%node(i)%axis_node = .true.
+        node_list%node(i)%x(3,1) = +node_list%node(i)%x(2,2)
+        node_list%node(i)%x(3,2) = -node_list%node(i)%x(2,1)
+      endif
+    endif
+  endif
+
+
   do k=1,n_order+1
 
     index = index + 1
@@ -395,6 +418,19 @@ do i=1,node_list%n_nodes
   enddo  
   node_list%node(i)%constrained = .false.
 enddo
+
+if (fix_axis_nodes) then
+  do k=1, element_list%n_elements
+    do iv=1,4
+      j = element_list%element(k)%vertex(iv)
+      if (node_list%node(j)%axis_node) then
+        element_list%element(k)%size(iv,3) = 0.d0
+        element_list%element(k)%size(iv,4) = 0.d0
+      endif
+    enddo
+  enddo
+endif
+
 
 
 !----temporary, needs to be completed, neighbour and boundary information

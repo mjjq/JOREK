@@ -265,16 +265,16 @@ do i_elm1 = 1,newelement_list%n_elements
 enddo
 
 ! --- Now, we define only the nodes that belong to elements! (this gets rid of potential orphan nodes, which the matrix doesn't like, obviously...)
-node_list%n_nodes = 4
+node_list%n_nodes = 4+n_tht-1
 node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 if (xcase .eq. 3) then
-  node_list%n_nodes = 8
+  node_list%n_nodes = 8+n_tht-2
   node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 endif
 do i_elm1 = 1,element_list%n_elements
   do i_vertex1 = 1,n_vertex_max
     i_node1 = newelement_list%element(i_elm1)%vertex(i_vertex1)
-    if ( ((i_node1.gt.8).and.(xcase.eq.3)) .or. ((i_node1.gt.4).and.(xcase.ne.3)) ) then
+    if ( ((i_node1.gt.8+n_tht-2).and.(xcase.eq.3)) .or. ((i_node1.gt.4+n_tht-1).and.(xcase.ne.3)) ) then
       i_node_save = 0
       do i_elm2 = 1,i_elm1-1
         do i_vertex2 = 1,n_vertex_max
@@ -318,12 +318,12 @@ do i=1,node_list%n_nodes
     ! Remove all but one node at axis
     if (force_central_node) then
       if (xcase .ne. 3) then
-        if ((i .gt. 5) .and. (i .le. 4+n_tht) .and. (k.eq.1)) then
+        if ((i .ge. 5) .and. (i .le. 4+n_tht-1) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(5)%index(1)
           index = index - 1
         endif
       else
-        if ((i .gt. 9) .and. (i .le. 8+n_tht-1) .and. (k.eq.1)) then
+        if ((i .ge. 9) .and. (i .le. 8+n_tht-2) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(9)%index(1)
           index = index - 1
         endif

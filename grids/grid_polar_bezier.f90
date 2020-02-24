@@ -7,7 +7,7 @@ use tr_module
 use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
-use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht
+use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes
 
 implicit none
 
@@ -215,37 +215,37 @@ do i=1,nr-1
 
            !Neighbours of the element (refinement procedure)
 
-	    if(i==1) then	        
-	         element_list%element(Index)%neighbours(4) = 0    
-              else		 
+            if(i==1) then               
+                 element_list%element(Index)%neighbours(4) = 0    
+              else               
                  element_list%element(Index)%neighbours(4) = Index - np 
-	    end if 	 
-	    
-	    if(j==np) then
-	    	 element_list%element(Index)%neighbours(3) = Index - np + 1  
-	      else
-	    	 element_list%element(Index)%neighbours(3) = Index + 1       
-	    end if	  	    
-	    
-	    if(i==nr-1) then
-	    	 element_list%element(Index)%neighbours(2) = 0   
-	      else   
-	    	 element_list%element(Index)%neighbours(2) = Index + np 
-	    end if 
-	        
-	    if(j==1) then
-	    	 element_list%element(Index)%neighbours(1) = Index + np -1 
-	      else   
-	    	 element_list%element(Index)%neighbours(1) = Index -1       
-	    end if     
-	  
+            end if       
+            
+            if(j==np) then
+                 element_list%element(Index)%neighbours(3) = Index - np + 1  
+              else
+                 element_list%element(Index)%neighbours(3) = Index + 1       
+            end if                  
+            
+            if(i==nr-1) then
+                 element_list%element(Index)%neighbours(2) = 0   
+              else   
+                 element_list%element(Index)%neighbours(2) = Index + np 
+            end if 
+                
+            if(j==1) then
+                 element_list%element(Index)%neighbours(1) = Index + np -1 
+              else   
+                 element_list%element(Index)%neighbours(1) = Index -1       
+            end if     
+          
             ! Initialization of the genealogy  (refinement procedure)
 
             element_list%element(Index)%father = 0
-	    element_list%element(Index)%n_sons = 0
-	    do i_sons = 1, 4
-	         element_list%element(Index)%sons(i_sons) = 0
-	    end do 
+            element_list%element(Index)%n_sons = 0
+            do i_sons = 1, 4
+                 element_list%element(Index)%sons(i_sons) = 0
+            end do 
             
   enddo
 enddo
@@ -294,6 +294,19 @@ do i=1,nr
 
    node_list%node(index)%boundary = 0
    if (i .eq. nr) node_list%node(index)%boundary = 2
+
+   node_list%node(index)%axis_node = .false.
+   if (fix_axis_nodes) then
+      if (i .eq. 1) then
+        node_list%node(index)%axis_node = .true.
+        ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
+        ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
+        ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
+        ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
+        node_list%node(index)%x(3,1) = +node_list%node(index)%x(2,2)
+        node_list%node(index)%x(3,2) = -node_list%node(index)%x(2,1)
+      endif
+   endif
 
    do k=1,n_order+1
      node_list%node(index)%index(k) = n_index_start + (n_order+1)*(index0-1)+k
@@ -354,6 +367,13 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
    element_list%element(k)%size(iv,2) = dir_2
    element_list%element(k)%size(iv,3) = dir_3
    element_list%element(k)%size(iv,4) = element_list%element(k)%size(iv,2) * element_list%element(k)%size(iv,3)
+   if (fix_axis_nodes) then
+      j = element_list%element(k)%vertex(iv)
+      if (node_list%node(j)%axis_node) then
+        element_list%element(k)%size(iv,3) = 0.d0
+        element_list%element(k)%size(iv,4) = 0.d0
+      endif
+   endif
 
 !   if ((RR(2,node_iv)**2 + ZZ(2,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,2) = dir_2
 !   if ((RR(3,node_iv)**2 + ZZ(3,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,3) = dir_3

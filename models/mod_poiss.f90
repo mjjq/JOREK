@@ -335,10 +335,10 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
   
 #ifdef USE_STRUMPACK
     if (use_strumpack) then
-      call f2spk(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_SELF,0)
+      call f2spk(mumps_par%n,mumps_par%nz,null(),null(),null(),mumps_par%rhs,MPI_COMM_SELF,0)
       call f2spk(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_SELF,1)
-      call f2spk(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_SELF,2)
-      call f2spk(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_SELF,3)
+      call f2spk(mumps_par%n,mumps_par%nz,null(),null(),null(),mumps_par%rhs,MPI_COMM_SELF,2)
+      call f2spk(mumps_par%n,mumps_par%nz,null(),null(),null(),mumps_par%rhs,MPI_COMM_SELF,3)
       call f2spk_finalize(MPI_COMM_SELF)
     endif  
 #endif

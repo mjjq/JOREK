@@ -754,7 +754,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       call split_broadcast(type,MPI_COMM_N)
 
       if (.not. spss_initialized) then
-        call f2spk(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_N,0)
+        call f2spk(n,nnz,null(),null(),null(),null(),MPI_COMM_N,0)
         spss_initialized = .true.
       endif
 
@@ -763,7 +763,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
         call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
         call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-        call f2spk(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_N,2)
+        call f2spk(n,nnz,null(),null(),null(),mumps_par%rhs,MPI_COMM_N,2)
         spss_analyzed = .true.
       endif
     endif ! .not. solve_only
@@ -784,7 +784,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 !    msg = "Before solve"
 !    call fprintmem(my_id,msg)
     
-    call f2spk(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_N,3)
+    call f2spk(n,nnz,null(),null(),null(),mumps_par%rhs,MPI_COMM_N,3)
     call MPI_Barrier(MPI_COMM_N,ierr)
     
     if (my_id_n .eq.0) then                            ! elapsed time solve end

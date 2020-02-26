@@ -57,9 +57,9 @@ module spk_module
 
         integer comm,ierr
         integer(kind=C_INT), intent(in) :: phase
-        integer(kind=C_INT), dimension(:), pointer, intent(in) :: irn,jcn
-        real(kind=C_DOUBLE),  dimension(:), pointer, intent(in) :: val
-        real(kind=C_DOUBLE),  dimension(:), pointer, intent(inout) :: rhs        
+        integer(kind=C_INT), dimension(:), pointer :: irn,jcn
+        real(kind=C_DOUBLE),  dimension(:), pointer :: val
+        real(kind=C_DOUBLE),  dimension(:), pointer :: rhs        
         integer(kind=C_INT), intent(in) :: n
         integer(kind=C_INT), intent(inout) :: nnz           
         type(C_PTR) :: rhsc

@@ -992,10 +992,10 @@ do i=1,n_vertex_max
             Qvec_p(var_T) = + v * ( - rho0 * UgradT  -  T0 * UgradRho  -  gamma * p0 * divU ) &
                             + v * heat_source(ms,mt)                                          &
                             + v * (gamma-1.d0) * Qvisc_T                                      &
-                            - (gamma-1.d0) * ZK_prof * gradT_gradVstar__p                     &
-                            - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p * BgradT / BB2
-            Qvec_k(var_T) = - (gamma-1.d0) * ZK_prof * gradT_gradVstar__k                     &
-                            - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k * BgradT / BB2
+                            - ZK_prof * gradT_gradVstar__p                                    &
+                            - (ZKpar_T-ZK_prof) * BgradVstar__p * BgradT / BB2
+            Qvec_k(var_T) = - ZK_prof * gradT_gradVstar__k                                    &
+                            - (ZKpar_T-ZK_prof) * BgradVstar__k * BgradT / BB2
 
 
             !###################################################################################################
@@ -1871,36 +1871,36 @@ do i=1,n_vertex_max
                   Pjac(var_T,var_T)      =   v * rho0 * T
                   Pjac(var_T,var_rho)    =   v * rho  * T0
 
-                  Qjac_p (var_T,var_AR)  = - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar_AR__p * BgradT       / BB2 &
-                                           - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AR__p / BB2 &
-                                           + (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AR__p
-                  Qjac_n (var_T,var_AR)  = - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar_AR__n * BgradT       / BB2 &
-                                           - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AR__n / BB2 &
-                                           + (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AR__n
-                  Qjac_k (var_T,var_AR)  = - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar_AR__k * BgradT       / BB2 &
-                                           - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AR__p / BB2 &
-                                           + (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AR__p
-                  Qjac_kn(var_T,var_AR)  = - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AR__n / BB2 &
-                                           + (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AR__n
+                  Qjac_p (var_T,var_AR)  = - (ZKpar_T-ZK_prof) * BgradVstar_AR__p * BgradT       / BB2                &
+                                           - (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AR__p / BB2                &
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AR__p
+                  Qjac_n (var_T,var_AR)  = - (ZKpar_T-ZK_prof) * BgradVstar_AR__n * BgradT       / BB2                &
+                                           - (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AR__n / BB2                &
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AR__n
+                  Qjac_k (var_T,var_AR)  = - (ZKpar_T-ZK_prof) * BgradVstar_AR__k * BgradT       / BB2                &
+                                           - (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AR__p / BB2                &
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AR__p
+                  Qjac_kn(var_T,var_AR)  = - (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AR__n / BB2                &
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AR__n
 
-                  Qjac_p (var_T,var_AZ)  = - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar_AZ__p * BgradT       / BB2 &
-                                           - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AZ__p / BB2 &
-                                           + (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AZ__p
-                  Qjac_n (var_T,var_AZ)  = - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar_AZ__n * BgradT       / BB2 &
-                                           - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AZ__n / BB2 &
-                                           + (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AZ__n
-                  Qjac_k (var_T,var_AZ)  = - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar_AZ__k * BgradT       / BB2 &
-                                           - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AZ__p / BB2 &
-                                           + (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AZ__p
-                  Qjac_kn(var_T,var_AZ)  = - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AZ__n / BB2 &
-                                           + (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AZ__n
+                  Qjac_p (var_T,var_AZ)  = - (ZKpar_T-ZK_prof) * BgradVstar_AZ__p * BgradT       / BB2                &
+                                           - (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AZ__p / BB2                &
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AZ__p
+                  Qjac_n (var_T,var_AZ)  = - (ZKpar_T-ZK_prof) * BgradVstar_AZ__n * BgradT       / BB2                &
+                                           - (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AZ__n / BB2                &
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AZ__n
+                  Qjac_k (var_T,var_AZ)  = - (ZKpar_T-ZK_prof) * BgradVstar_AZ__k * BgradT       / BB2                &
+                                           - (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AZ__p / BB2                &
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AZ__p
+                  Qjac_kn(var_T,var_AZ)  = - (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AZ__n / BB2                &
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AZ__n
 
-                  Qjac_p (var_T,var_A3)  = - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar_A3__p * BgradT    / BB2 &
-                                           - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_A3 / BB2 &
-                                           + (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT    / BB2**2 * BB2_A3
-                  Qjac_k (var_T,var_A3)  = - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar_A3__k * BgradT    / BB2 &
-                                           - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_A3 / BB2 &
-                                           + (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT    / BB2**2 * BB2_A3
+                  Qjac_p (var_T,var_A3)  = - (ZKpar_T-ZK_prof) * BgradVstar_A3__p * BgradT    / BB2             &
+                                           - (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_A3 / BB2             &
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT    / BB2**2 * BB2_A3
+                  Qjac_k (var_T,var_A3)  = - (ZKpar_T-ZK_prof) * BgradVstar_A3__k * BgradT    / BB2             &
+                                           - (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_A3 / BB2             &
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT    / BB2**2 * BB2_A3
 
                   Qjac_p (var_T,var_UR)  = + v * ( - rho0 * UgradT_UR  -  T0 * UgradRho_UR  -  gamma * p0 * divU_UR ) &
                                            + v * (gamma-1.d0) * Qvisc_T_UR__p
@@ -1920,16 +1920,16 @@ do i=1,n_vertex_max
 
                   Qjac_p (var_T,var_T )  = + v * ( - rho0 * UgradT_T__p  -  T * UgradRho  -  gamma * (rho0*T) * divU ) &
                                            + v * (gamma-1.d0) * Qvisc_T_T__p                                           &
-                                           - (gamma-1.d0) * ZK_prof * gradT_gradVstar_T__p                             &
-                                           - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p * BgradT_T__p / BB2      &
-                                           - (gamma-1.d0) * (dZKpar_dT*T    ) * BgradVstar__p * BgradT      / BB2
+                                           - ZK_prof * gradT_gradVstar_T__p                                            &
+                                           - (ZKpar_T-ZK_prof) * BgradVstar__p * BgradT_T__p / BB2                     &
+                                           - (dZKpar_dT*T    ) * BgradVstar__p * BgradT      / BB2
                   Qjac_n (var_T,var_T )  = + v * ( - rho0 * UgradT_T__n                                              ) &
                                            + v * (gamma-1.d0) * Qvisc_T_T__n                                           &
-                                           - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__p * BgradT_T__n / BB2
-                  Qjac_k (var_T,var_T )  = - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k * BgradT_T__p / BB2 &
-                                           - (gamma-1.d0) * (dZKpar_dT*T    ) * BgradVstar__k * BgradT      / BB2
-                  Qjac_kn(var_T,var_T )  = - (gamma-1.d0) * ZK_prof * gradT_gradVstar_T__kn                       &
-                                           - (gamma-1.d0) * (ZKpar_T-ZK_prof) * BgradVstar__k * BgradT_T__n / BB2
+                                           - (ZKpar_T-ZK_prof) * BgradVstar__p * BgradT_T__n / BB2
+                  Qjac_k (var_T,var_T )  = - (ZKpar_T-ZK_prof) * BgradVstar__k * BgradT_T__p / BB2                     &
+                                           - (dZKpar_dT*T    ) * BgradVstar__k * BgradT      / BB2
+                  Qjac_kn(var_T,var_T )  = - ZK_prof * gradT_gradVstar_T__kn                                           &
+                                           - (ZKpar_T-ZK_prof) * BgradVstar__k * BgradT_T__n / BB2
 
                   !###################################################################################################
                   !#  VMS STABILISATION                                                                              #

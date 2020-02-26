@@ -577,15 +577,13 @@
  D_perp(5) = 99.d0
  D_perp(6) = 1.d-6 
 
- ! --- Careful with K, in full-MHD, the conduction includes a (gamma-1) factor (normally 1.5)
- !            MODEL710       MODEL303
- ZK_par     = 1.5d0         !1.0d0  
- ZK_perp(1) = 1.50d-6       !1.00d-6
- ZK_perp(2) = 0.d0          !0.d0   
- ZK_perp(3) = 0.d0          !0.d0   
- ZK_perp(4) = 99.d0         !99.d0  
- ZK_perp(5) = 99.d0         !99.d0  
- ZK_perp(6) = 1.5d-6        !1.0d-6 
+ ZK_par     = 1.0d0  
+ ZK_perp(1) = 1.00d-6
+ ZK_perp(2) = 0.d0   
+ ZK_perp(3) = 0.d0   
+ ZK_perp(4) = 99.d0  
+ ZK_perp(5) = 99.d0  
+ ZK_perp(6) = 1.0d-6 
 
  FF_0        = +3.28   
  FF_1        =  0.     

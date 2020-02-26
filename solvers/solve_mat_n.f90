@@ -781,8 +781,8 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
    endif    
     
     call MPI_Barrier(MPI_COMM_N,ierr)
-    msg = "Before solve"
-    call fprintmem(my_id,msg)
+!    msg = "Before solve"
+!    call fprintmem(my_id,msg)
     
     call f2spk(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_N,3)
     call MPI_Barrier(MPI_COMM_N,ierr)

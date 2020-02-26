@@ -9,7 +9,7 @@ module spk_module
   logical :: spss_initialized, spss_analyzed
 
   private
-  public :: f2spk, f2spk_finalize, getptr, spss_initialized, spss_analyzed
+  public :: f2spk, f2spk_finalize, getptr, fprintmem, spss_initialized, spss_analyzed
 
   interface
     subroutine spk(n,nnz,irn,jcn,val,rhsc,spss,comm,phase) bind(C)
@@ -39,7 +39,13 @@ module spk_module
       implicit none
       type(C_PTR) cptr
     end subroutine printptr
-   
+
+    subroutine printmem(rank,cstr) bind(C)
+      use iso_c_binding
+      implicit none
+      integer(kind=C_INT) :: rank
+      type(C_PTR) :: cstr
+    end subroutine printmem    
 
   end interface  
 
@@ -79,11 +85,30 @@ module spk_module
     end subroutine f2spk_finalize    
 
     subroutine getptr() bind(C)
-            use, intrinsic :: iso_c_binding
+        use, intrinsic :: iso_c_binding
 
-            call printptr(spss)
-            return
+        call printptr(spss)
+        return
     end subroutine getptr
+
+    subroutine fprintmem(rank,msg)
+        use iso_c_binding
+        implicit none
+        integer(kind=C_INT) :: rank
+        character(len=24), target :: msg
+        character(len=24), pointer :: fstr
+        type(C_PTR) :: cstr
+        integer :: i, mlen
+        
+        mlen = len(trim(msg))
+        allocate(fstr)
+        fstr=>msg(1:mlen)
+        cstr = c_loc(fstr)
+        call printmem(rank,cstr)
+        deallocate(fstr)
+
+        return
+    end subroutine fprintmem
 
 #endif
 end module spk_module

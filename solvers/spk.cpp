@@ -14,9 +14,12 @@
 #include "sparse/CSRMatrix.hpp"
 #include <chrono>
 
+#include <sys/sysinfo.h>
+#include <unistd.h>
 using namespace strumpack;
 
-void convert2csr(int indx, int n, int* nnz, int *irn, int **jcn, double **val, int **rowptr);
+//void printmem(int rank, std::string str);
+void convert2csr(int indx, int n, int *nnz, int **irn, int **jcn, double **val);
 int* distribute(int n, int P);
 
 extern "C" void printptr(void** ptr){
@@ -91,46 +94,54 @@ extern "C" void spk(int* n_,int* nnz_,int** irn_,int** jcn_,double** val_,double
   if (*phase==1){
     if (!rank) std::cout<<"n = "<< n <<" nnz = "<< nnz << " irn[nnz] = "<< irn[nnz-1] << std::endl;  
   
-    int *rowptr;
+
     int indx = 1; // Fortran indexing
   
-    convert2csr(indx, n, &nnz, irn, &jcn, &val, &rowptr);
+    convert2csr(indx, n, &nnz, &irn, &jcn, &val);
   
   // splitting the matrix
+    //printmem(rank,"Before distribution");
     int rowstart, rowend;
     int nnzloc,i0;
-    int* ptrloc; // local row pointer
-    int* indloc; // local column index
-    double* valloc;
 
-// distribute if nMPI processes >1
     if (P>1){    
       rowstart = dist[rank];
       rowend = dist[rank+1]-1;
-      nnzloc=rowptr[rowend+1]-rowptr[rowstart];  
-      ptrloc = new int[n_local+1];
-      indloc = new int[nnzloc];  
-      valloc = new double[nnzloc];
+      nnzloc=irn[rowend+1]-irn[rowstart];
   
-      i0 = rowptr[rowstart]; // total number of nnz values before me
+      int *ptrloc = new int[n_local+1];
+      int *indloc = new int[nnzloc];  
+      double *valloc = new double[nnzloc];
+  
+      i0 = irn[rowstart]; // total number of nnz values before me
       ptrloc[0] = 0;
       for (int i=0; i<n_local; i++){
-        ptrloc[i+1]=rowptr[rowstart+1+i] - i0;
+        ptrloc[i+1]=irn[rowstart+1+i] - i0;
       }
   
       for (int i=0; i<nnzloc; i++){
         indloc[i]=jcn[i+i0];	  
         valloc[i]=val[i+i0];
       }
-    }else{
-      ptrloc = rowptr;
-      indloc = jcn;
-      valloc = val;	    
+      if (rank==0){
+        std::cout<<"ptrloc: "<<ptrloc[0]<<" "<<ptrloc[n_local]<<std::endl;  
+        std::cout<<"indloc: "<<indloc[0]<<" "<<indloc[nnzloc-1]<<std::endl;  
+        std::cout<<"valloc: "<<valloc[0]<<" "<<valloc[nnzloc-1]<<std::endl;
     }
   
     spss->set_distributed_csr_matrix(n_local, ptrloc, indloc, valloc, dist);
     
-    delete ptrloc, indloc, valloc, rowptr;
+      delete ptrloc, indloc, valloc;
+    }
+    else
+    {
+      spss->set_distributed_csr_matrix(n_local, irn, jcn, val, dist);
+    }
+    //printmem(rank,"After distribution");
+    return;
+  }
+  if (*phase==2){
+    //printmem(rank,"Before factorization");
  
   // Reordering	
     t0 = std::chrono::steady_clock::now();    
@@ -152,7 +163,7 @@ extern "C" void spk(int* n_,int* nnz_,int** irn_,int** jcn_,double** val_,double
   }
 
 // set RHS and solve  
-  if (*phase==2){  
+  if (*phase==3){  
   // set local RHS    
     std::vector<double> b(n_local), x(n_local);
   
@@ -203,7 +214,7 @@ extern "C" void spk_finalize(StrumpackSparseSolverMPIDist<double,int>** spss_,MP
 	return;
 }  
 //==========================================================================================//
-void convert2csr(int indx, int n, int* nnz_, int *irn, int **jcn, double **val, int** rowptr)
+void convert2csr(int indx, int n, int *nnz_, int **irn, int **jcn, double **val)
 {
   int  *rowptrB, *rowptrE;
   int nnz=*nnz_;
@@ -215,13 +226,14 @@ void convert2csr(int indx, int n, int* nnz_, int *irn, int **jcn, double **val, 
 
 // create mkl coordinate sparse matrix
   if (indx==1){
-    mkl_sparse_d_create_coo(&cooA, SPARSE_INDEX_BASE_ONE, n, n, nnz, irn, *jcn, *val);  // change to ONE for Fortran
+    mkl_sparse_d_create_coo(&cooA, SPARSE_INDEX_BASE_ONE, n, n, nnz, *irn, *jcn, *val);  
   } else {
-    mkl_sparse_d_create_coo(&cooA, SPARSE_INDEX_BASE_ZERO, n, n, nnz, irn, *jcn, *val);  // change to ONE for Fortran
+    mkl_sparse_d_create_coo(&cooA, SPARSE_INDEX_BASE_ZERO, n, n, nnz, *irn, *jcn, *val);
   }
 
 // convert to csr format  
   mkl_sparse_convert_csr(cooA, SPARSE_OPERATION_NON_TRANSPOSE, &csrA);
+  mkl_sparse_destroy(cooA);
   mkl_sparse_order(csrA); // important
 
 // export csr values, rowptr (Begin and End counting) and colind
@@ -232,12 +244,11 @@ void convert2csr(int indx, int n, int* nnz_, int *irn, int **jcn, double **val, 
 	  std::cout<<"New nnz: "<<nnz<<" Old nnz "<< *nnz_<<std::endl;    
   *nnz_ = nnz;
 
-  *rowptr = new int[n+1];
+  for (int i=0; i<n; i++){
+	  (*irn)[i]=rowptrB[i]- indx;
+  }
 
-  for (int i=0; i<n; i++)
-	  (*rowptr)[i]=rowptrB[i] - indx;
-
-  (*rowptr)[n]=rowptrE[n-1] - indx;
+  (*irn)[n]=rowptrE[n-1] - indx;
 
   for (int i=0; i<nnz; i++){
 	  (*jcn)[i] -= indx;
@@ -266,4 +277,17 @@ int* distribute(int n, int P){
     }
     return dist;
 }
+//=========================================================================================//
+extern "C" void printmem(int *rank_, char **msg_){
+    int rank=*rank_;
+    char *msg=*msg_;
+    long avpg = sysconf(_SC_AVPHYS_PAGES);
+    long ppg = sysconf(_SC_PHYS_PAGES);
+    long pgsize = sysconf(_SC_PAGESIZE);
+
+    std::cout<<rank<<": "<<msg<<" Available (GB): "<<avpg*pgsize/1e9<<" Total (GB) "<<ppg*pgsize/1e9<<std::endl;
+    return;
+}
+
 #endif
+

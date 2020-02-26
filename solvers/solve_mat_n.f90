@@ -704,6 +704,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     real*8, allocatable :: RHS_tmp(:)
     !Split broadcast
     character*8 :: type
+    character(24) :: msg
     
     integer(kind=C_INT) :: n, nnz
 
@@ -759,6 +760,10 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
       if (.not. spss_analyzed) then
         call f2spk(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_N,1)
+        call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+        call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+        call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+        call f2spk(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_N,2)
         spss_analyzed = .true.
       endif
     endif ! .not. solve_only
@@ -776,7 +781,10 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
    endif    
     
     call MPI_Barrier(MPI_COMM_N,ierr)
-    call f2spk(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_N,2)
+    msg = "Before solve"
+    call fprintmem(my_id,msg)
+    
+    call f2spk(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs,MPI_COMM_N,3)
     call MPI_Barrier(MPI_COMM_N,ierr)
     
     if (my_id_n .eq.0) then                            ! elapsed time solve end

@@ -58,10 +58,10 @@ extern "C" void spk(int* n_,int* nnz_,int** irn_,int** jcn_,double** val_,double
 	spss = *spss_;
 
 	spss->options().set_matching(MatchingJob::MAX_DIAGONAL_PRODUCT_SCALING);
-	spss->options().set_reordering_method(ReorderingStrategy::METIS);    
-	spss->options().enable_METIS_NodeNDP();
+//	spss->options().set_reordering_method(ReorderingStrategy::METIS);    
+//	spss->options().enable_METIS_NodeNDP();
 
-//	spss->options().set_reordering_method(ReorderingStrategy::PARMETIS);
+	spss->options().set_reordering_method(ReorderingStrategy::PARMETIS);
 //	spss->options().set_reordering_method(ReorderingStrategy::SCOTCH);    
 //
 //	spss->options().set_Krylov_solver(KrylovSolver::PREC_GMRES);
@@ -141,8 +141,6 @@ extern "C" void spk(int* n_,int* nnz_,int** irn_,int** jcn_,double** val_,double
     return;
   }
   if (*phase==2){
-    //printmem(rank,"Before factorization");
- 
   // Reordering	
     t0 = std::chrono::steady_clock::now();    
     spss->reorder();

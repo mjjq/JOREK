@@ -146,6 +146,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     allocate (spi_Vel_RxZ_arr(n_spi)) 
     allocate (spi_radius_arr(n_spi)) 
     allocate (spi_abl_arr(n_spi))
+    allocate (spi_species_arr(n_spi))
 
     do i=1, n_spi
       spi_R_arr(i)       = pellets(i)%spi_R

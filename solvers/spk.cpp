@@ -21,6 +21,7 @@ using namespace strumpack;
 //void printmem(int rank, std::string str);
 void convert2csr(int indx, int n, int *nnz, int **irn, int **jcn, double **val);
 int* distribute(int n, int P);
+void printmem(int rank, char *msg);
 extern "C" void spk(void) {}
 
 //===============================================================================//
@@ -141,7 +142,6 @@ extern "C" void spk_set_mat(int* n_,int* nnz_,int** irn_,int** jcn_,double** val
 extern "C" void spk_fact(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fint* comm_) {
 // factorize (distributed) matrix
 
-
   StrumpackSparseSolverMPIDist<double,int>* spss= *spss_;   
 
   MPI_Comm comm=MPI_Comm_f2c(*comm_);
@@ -150,6 +150,7 @@ extern "C" void spk_fact(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fi
   MPI_Comm_size(comm, &P);	
   std::chrono::steady_clock::time_point t0, t1;  
 
+  printmem(rank,"Before reordering");
   // Reordering	
   t0 = std::chrono::steady_clock::now();    
   spss->reorder();
@@ -158,6 +159,7 @@ extern "C" void spk_fact(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fi
     std::cout<<"Reorder Time (s) = "<< std::chrono::duration_cast<
     std::chrono::microseconds>(t1 - t0).count()*1e-6 << std::endl;  
   
+  printmem(rank,"Before factorization");
   // Factorization	
   t0 = std::chrono::steady_clock::now();  
   spss->factor();	    
@@ -299,9 +301,7 @@ int* distribute(int n, int P){
     return dist;
 }
 //=========================================================================================//
-extern "C" void printmem(int *rank_, char **msg_){
-    int rank=*rank_;
-    char *msg=*msg_;
+void printmem(int rank, char *msg){
     long avpg = sysconf(_SC_AVPHYS_PAGES);
     long ppg = sysconf(_SC_PHYS_PAGES);
     long pgsize = sysconf(_SC_PAGESIZE);

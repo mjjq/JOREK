@@ -101,6 +101,7 @@ real*8  :: fact_mu0, fact_flux, fact_part
 real*8  :: hel1, heli, helicity_tot, psi_off, curr, Ip, vn_p0, qn, pflow, kinflow, cond_par, cond_perp
 real*8  :: kinpar_flux, qn_par, qn_perp, etajxb, eta_JxB, mag_work_tot, mag_src_tot, mag_source_tot
 real*8  :: vpar_part_flux, vperp_part_flux, Dperp_part_flux, Dpar_part_flux, neut_part_flux
+real*8  :: vpar_part_flow, vperp_part_flow, Dperp_part_flow, Dpar_part_flow, neut_part_flow
 real*8  :: s_or_t,sg,tg,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
 real*8  :: RH,RH_s,RH_t,RH_st,RH_ss,RH_tt
 real*8  :: TT,TT_s,TT_t,TT_st,TT_ss,TT_tt 
@@ -167,6 +168,12 @@ mag_wk_tot   = 0.d0
 mag_src_tot  = 0.d0
 varmin   = +1.d99
 varmax   = -1.d99
+
+Dpar_part_flux   = 0.d0 
+Dperp_part_flux  = 0.d0
+vpar_part_flux   = 0.d0
+vperp_part_flux  = 0.d0
+neut_part_flux   = 0.d0
 
 local_pellet_particles = 0.d0
 local_plasma_particles = 0.d0
@@ -653,14 +660,14 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       cond_perp   = - ZK_prof *( dTdx*grad_t(1) + dTdy*grad_t(2)) * BigR               * sign_out / (gamma-1.d0) &
                     - ZK_prof *( dTdx * dpsidy  - dTdy * dpsidx ) /BigR/BB2 * ps0_sbnd * sign_out / (gamma-1.d0) 
 
-      Dpar_part_flux    =   D_par  * (drhodx*dpsidy    - drhody*dpsidx    )/BigR/BB2 * ps0_sbnd * sign_out 
-      Dperp_part_flux   = - D_prof * (drhodx*grad_t(1) + drhody*grad_t(2) ) * BigR              * sign_out &                               
+      Dpar_part_flow    =   D_par  * (drhodx*dpsidy    - drhody*dpsidx    )/BigR/BB2 * ps0_sbnd * sign_out 
+      Dperp_part_flow   = - D_prof * (drhodx*grad_t(1) + drhody*grad_t(2) ) * BigR              * sign_out &                               
                           - D_prof * (drhodx*dpsidy    - drhody*dpsidx    )/BigR/BB2 * ps0_sbnd * sign_out
 
-      vpar_part_flux    =  - r0 *  vpar0     * ps0_sbnd * sign_out 
-      vperp_part_flux   =    r0 * BigR**2.d0 * u0_sbnd  * sign_out 
+      vpar_part_flow    =  - r0 *  vpar0     * ps0_sbnd * sign_out 
+      vperp_part_flow   =    r0 * BigR**2.d0 * u0_sbnd  * sign_out 
 
-      neut_part_flux    = - (D_neutral_x*drhondx*grad_t(1) + D_neutral_y*drhondy*grad_t(2)) * BigR  * sign_out
+      neut_part_flow    = - (D_neutral_x*drhondx*grad_t(1) + D_neutral_y*drhondy*grad_t(2)) * BigR  * sign_out
 
       viscopar_f  = visco_par * (F0/BigR)**2.d0 *  (vpar_x*grad_t(1) + vpar_y *grad_t(2) ) &
                   * sign_out  * BigR * vpar0
@@ -669,6 +676,13 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       kinpar_flux   = kinpar_flux    + kinflow      * wgauss(ms) * delta_phi 
       qn_par        = qn_par         + cond_par     * wgauss(ms) * delta_phi 
       qn_perp       = qn_perp        + cond_perp    * wgauss(ms) * delta_phi 
+
+      Dpar_part_flux   =  Dpar_part_flux     + Dpar_part_flow    * wgauss(ms) * delta_phi 
+      Dperp_part_flux  =  Dperp_part_flux    + Dperp_part_flow   * wgauss(ms) * delta_phi 
+      vpar_part_flux   =  vpar_part_flux     + vpar_part_flow    * wgauss(ms) * delta_phi 
+      vperp_part_flux  =  vperp_part_flux    + vperp_part_flow   * wgauss(ms) * delta_phi  
+      neut_part_flux   =  neut_part_flux     + neut_part_flow    * wgauss(ms) * delta_phi 
+
       viscopar_flux = viscopar_flux  +  viscopar_f  * wgauss(ms) * delta_phi
 
     enddo

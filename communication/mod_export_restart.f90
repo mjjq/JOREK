@@ -85,6 +85,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
 #endif
      write(21) node_list%node(i)%index
      write(21) node_list%node(i)%boundary
+     write(21) node_list%node(i)%axis_node
      write(21) node_list%node(i)%parents
      write(21) node_list%node(i)%parent_elem
      write(21) node_list%node(i)%ref_lambda
@@ -253,6 +254,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   integer,     allocatable :: t_index(:,:)                 ! n_order+1
   integer,     allocatable :: t_boundary(:)                ! 
+  character,   allocatable :: t_axis_node(:)     
   integer,     allocatable :: t_parents(:,:)               ! 2
   integer,     allocatable :: t_parent_elem(:)             ! 
   real(RKIND), allocatable :: t_ref_lambda(:)
@@ -312,6 +314,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   call tr_allocate(t_index,1,node_list%n_nodes,1,n_order+1,"index",CAT_UNKNOWN)
   call tr_allocate(t_boundary,1,node_list%n_nodes,"boundary",CAT_UNKNOWN)
+  call tr_allocate(t_axis_node,1,node_list%n_nodes,"axis_node",CAT_UNKNOWN)
   call tr_allocate(t_parents,1,node_list%n_nodes,1,2,"parent",CAT_UNKNOWN)
   call tr_allocate(t_parent_elem,1,node_list%n_nodes,"parent_elem",CAT_UNKNOWN)
   call tr_allocate(t_ref_lambda,1,node_list%n_nodes,"ref_lambade",CAT_UNKNOWN)
@@ -371,6 +374,11 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
      t_index(i,:)      = node_list%node(i)%index
      t_boundary(i)     = node_list%node(i)%boundary
+     if (node_list%node(i)%axis_node) then
+        t_axis_node(i)  = 'T'
+     else
+        t_axis_node(i)  = 'F'
+     end if
      t_parents(i,:)    = node_list%node(i)%parents(1:2)
      t_parent_elem(i)  = node_list%node(i)%parent_elem
      t_ref_lambda(i)   = node_list%node(i)%ref_lambda
@@ -460,6 +468,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
        node_list%n_nodes,n_order+1,'index'//char(0))
   call HDF5_array1D_saving_int(file_id,t_boundary, &
        node_list%n_nodes,'boundary'//char(0))
+  call HDF5_array1D_saving_char(file_id,t_axis_node, &
+       node_list%n_nodes,'axis_node'//char(0))
   call HDF5_array2D_saving_int(file_id,t_parents, &
        node_list%n_nodes,2,'parents'//char(0))
   call HDF5_array1D_saving_int(file_id,t_parent_elem, &
@@ -745,6 +755,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 #endif
   call tr_deallocate(t_index,"index",CAT_UNKNOWN)
   call tr_deallocate(t_boundary,"boundary",CAT_UNKNOWN)
+  call tr_deallocate(t_axis_node,"axis_node",CAT_UNKNOWN)
   call tr_deallocate(t_parents,"parents",CAT_UNKNOWN)
   call tr_deallocate(t_parent_elem,"parent_elem",CAT_UNKNOWN)
   call tr_deallocate(t_ref_lambda,"ref_lambda",CAT_UNKNOWN)

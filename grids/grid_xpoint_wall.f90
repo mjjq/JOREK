@@ -10,7 +10,7 @@ use data_structure
 use tr_module 
 use gauss
 use basis_at_gaussian
-use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps
+use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes
 use mod_neighbours, only: update_neighbours
 use mod_interp
 
@@ -1730,6 +1730,20 @@ call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_x
 
 index = 0
 do i=1,newnode_list%n_nodes
+
+  newnode_list%node(i)%axis_node = .false.
+  if (fix_axis_nodes) then
+    if (i .le. n_tht) then
+      newnode_list%node(i)%axis_node = .true.
+      ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
+      ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
+      ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
+      ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
+      newnode_list%node(i)%x(3,1) = +newnode_list%node(i)%x(2,2)
+      newnode_list%node(i)%x(3,2) = -newnode_list%node(i)%x(2,1)
+    endif
+  endif
+
   do k=1,n_order+1
 
     index = index + 1
@@ -1771,6 +1785,18 @@ do i=1,newnode_list%n_nodes
 
   newnode_list%node(i)%constrained = .false.
 enddo
+
+if (fix_axis_nodes) then
+  do k=1, newelement_list%n_elements
+    do iv=1,4
+      j = newelement_list%element(k)%vertex(iv)
+      if (newnode_list%node(j)%axis_node) then
+        newelement_list%element(k)%size(iv,3) = 0.d0
+        newelement_list%element(k)%size(iv,4) = 0.d0
+      endif
+    enddo
+  enddo
+endif
 
 do i=1,newnode_list%n_nodes
 

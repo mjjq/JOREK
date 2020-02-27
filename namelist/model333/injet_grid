@@ -377,7 +377,7 @@
  n_wall_blocks              = 11
  
  ! --- First block (SOL 1 - anti-clockwise)
- n_ext               ( 1)    = 40
+ n_ext_block         ( 1)    = 40
  n_block_points_left ( 1)    =  3
  R_block_points_left ( 1,1)  = +2.7321
  Z_block_points_left ( 1,1)  = -1.6475
@@ -392,7 +392,7 @@
  Z_block_points_right( 1,2)  = -1.3350
  
  ! --- Second block (SOL 2)
- n_ext               ( 2)    = 25
+ n_ext_block         ( 2)    = 25
  n_block_points_left ( 2)    =  2
  R_block_points_left ( 2,1)  = +2.8564
  Z_block_points_left ( 2,1)  = -1.2069
@@ -405,7 +405,7 @@
  Z_block_points_right( 2,2)  = +1.3330
  
  ! --- Third block (SOL 3)
- n_ext               ( 3)    = 25
+ n_ext_block         ( 3)    = 25
  n_block_points_left ( 3)    =  2
  R_block_points_left ( 3,1)  = +3.5408
  Z_block_points_left ( 3,1)  = +1.1843
@@ -418,7 +418,7 @@
  Z_block_points_right( 3,2)  = +1.8210
  
  ! --- Fourth block (SOL 4)
- n_ext               ( 4)    = 25
+ n_ext_block         ( 4)    = 25
  n_block_points_left ( 4)    =  2
  R_block_points_left ( 4,1)  = +2.3538
  Z_block_points_left ( 4,1)  = +1.5364
@@ -431,7 +431,7 @@
  Z_block_points_right( 4,2)  = -0.6070
  
  ! --- Fifth block (SOL 5)
- n_ext               ( 5)    = 25
+ n_ext_block         ( 5)    = 25
  n_block_points_left ( 5)    =  2
  R_block_points_left ( 5,1)  = +2.1263
  Z_block_points_left ( 5,1)  = -0.5568
@@ -446,7 +446,7 @@
  Z_block_points_right( 5,3)  = -1.3150
  
  ! --- Sixth block (SOL 6)
- n_ext               ( 6)    = 25
+ n_ext_block         ( 6)    = 25
  n_block_points_left ( 6)    =  2
  R_block_points_left ( 6,1)  = +2.4316
  Z_block_points_left ( 6,1)  = -1.3562
@@ -459,7 +459,7 @@
  Z_block_points_right( 6,2)  = -1.5165
  
  ! --- Seventh block (private 1)
- n_ext               ( 7)    =  8
+ n_ext_block         ( 7)    =  8
  n_block_points_left ( 7)    =  3
  R_block_points_left ( 7,1)  = +2.4201
  Z_block_points_left ( 7,1)  = -1.6325
@@ -482,7 +482,7 @@
  Z_block_points_right( 7,6)  = -1.7100
  
  ! --- Eigth block (private 2)
- n_ext               ( 8)    =  8
+ n_ext_block         ( 8)    =  8
  n_block_points_left ( 8)    =  2
  R_block_points_left ( 8,1)  = +2.5777
  Z_block_points_left ( 8,1)  = -1.5618
@@ -495,20 +495,20 @@
  Z_block_points_right( 8,2)  = -1.6240
  
  ! --- Ninth block (private extension left)
- n_ext               (9)     =  13
- n_block_points_left (9)     =  2
- R_block_points_left (9,1)   = +2.405
- Z_block_points_left (9,1)   = -1.695
- R_block_points_left (9,2)   = +2.315
- Z_block_points_left (9,2)   = -1.739
- n_block_points_right(9)     =  2
- R_block_points_right(9,1)   = +2.402
- Z_block_points_right(9,1)   = -1.724
- R_block_points_right(9,2)   = +2.354
- Z_block_points_right(9,2)   = -1.739
+ n_ext_block         ( 9)    =  13
+ n_block_points_left ( 9)    =  2
+ R_block_points_left ( 9,1)  = +2.405
+ Z_block_points_left ( 9,1)  = -1.695
+ R_block_points_left ( 9,2)  = +2.315
+ Z_block_points_left ( 9,2)  = -1.739
+ n_block_points_right( 9)    =  2
+ R_block_points_right( 9,1)  = +2.402
+ Z_block_points_right( 9,1)  = -1.724
+ R_block_points_right( 9,2)  = +2.354
+ Z_block_points_right( 9,2)  = -1.739
 
  ! --- Tenth block (private extension right-1)
- n_ext               (10)    =  8
+ n_ext_block         (10)    =  8
  n_block_points_left (10)    =  4
  R_block_points_left (10,1)  = +2.806
  Z_block_points_left (10,1)  = -1.670
@@ -525,7 +525,7 @@
  Z_block_points_right(10,2)  = -1.723
 
  ! --- Eleventh block (private extension right-2)
- n_ext               (11)    =  23
+ n_ext_block         (11)    =  23
  n_block_points_left (11)    =  3
  R_block_points_left (11,1)  =  2.894
  Z_block_points_left (11,1)  = -1.723

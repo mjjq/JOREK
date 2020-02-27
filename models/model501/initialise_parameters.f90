@@ -98,6 +98,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_wsmp, n_tor_fft_thresh,                         &
                 pastix_smp_only, refinement, force_central_node,    &
+                fix_axis_nodes,                                     &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &

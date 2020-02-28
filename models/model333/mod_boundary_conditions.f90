@@ -4,7 +4,7 @@ module mod_boundary_conditions
   !************ Define global variables for all internal routines ****************
   !*******************************************************************************
   ! --- ZBIG parameter to make equations "more important" than element_matrix equations
-  real*8, parameter		:: zbig = 1.d10
+  real*8  		:: zbig = 1.d10
   ! --- R,Z variables
   real*8			:: R, R_s, R_t, R_inside
   real*8			:: Z, Z_s, Z_t, Z_inside

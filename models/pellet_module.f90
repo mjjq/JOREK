@@ -204,18 +204,15 @@ use corr_neg
 
 implicit none
 
+  integer,                  intent(in) :: my_id
+  type (type_node_list),    intent(in) :: node_list
+  type (type_element_list), intent(in) :: element_list
 
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-  
   ! --- Local variables
-  integer :: my_id, ierr
   real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
   
   real*8  :: R_out, Z_out
-  integer :: i_elm, ifail
-  
-  integer :: i, i_p
+  integer :: i_elm, ifail, i, ierr, i_p
   
   real*8, dimension(3) :: P, P_s, P_t, P_phi
   real*8  :: R, R_s, R_t, Z, Z_s, Z_t

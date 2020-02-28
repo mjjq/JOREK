@@ -7,7 +7,7 @@ use data_structure
 use constants
 use mpi_mod
 use corr_neg
-use mumps_module,  only: use_mumps, no_zeros_mumps
+use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
 use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
 use vacuum
@@ -49,7 +49,7 @@ integer :: err_alloc=0
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
-                restart, rst_format, regrid, bootstrap,             &                
+                restart, rst_format, regrid, bootstrap, write_ps,   &                
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_leg_out, n_ext,         &
                 n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
@@ -83,7 +83,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_i_perp, ZK_e_perp, D_par, D_perp,                &
                 particlesource, heatsource_i, heatsource_e, tauIC,  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
-                ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
+                ZK_perp_num, Dn_perp_num,                           &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
@@ -98,8 +98,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 resistive_wall, SDN_threshold,                      &
                 wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
-                use_mumps, use_pastix,                              &
-                use_wsmp, n_tor_fft_thresh,                         &
+                use_mumps, mumps_ordering,                          &
+                use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
+                use_pastix, use_wsmp, n_tor_fft_thresh,             &
                 pastix_smp_only, refinement, force_central_node,    &
                 fix_axis_nodes,                                     &
                 adaptive_time, equil, bench_without_plot,           &
@@ -116,7 +117,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
-                tgnum,  pastix_pivot, pastix_maxthrd,               &
+                tgnum,  pastix_pivot,                               &
                 linear_run, export_for_nemec,                       &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
@@ -125,14 +126,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
-                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,       &
-                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,   &
+                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
+                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
                 spi_quantity_bg, pellet_density_bg,                 &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
-                spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,            &
+                spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 gas_type, delta_n_convection, nimp_bg,              &
                 flag_adas, adas_dir, output_rad_phi,                &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
@@ -147,7 +148,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 axis_srch_radius, PF_pert_start_time,               &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
-                voltage_coils, vert_FB_amp, find_pf_coil_currents 
+                voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
+                pastix_maxthrd, eta_ohmic 
 
  if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.

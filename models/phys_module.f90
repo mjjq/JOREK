@@ -46,6 +46,7 @@ module phys_module
   real*8  :: minRad               !< Approximation of minor radius for bootstrap current calculation
   logical :: refinement           !< Use mesh refinement? (not presently available)
   logical :: force_central_node   !< Force all nodes in the center to have the same values in flux aligned grids or independent values?
+  logical :: fix_axis_nodes       !< Fix t-derivative and cross st-derivative on axis to avoid noise
   logical :: bc_natural_flux      !< boundary conditions for flux surface boundaries (2 and 3)
   logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines
   logical :: produce_live_data    !< Write data 'macroscopic_vars.dat' during the code run allowing to use plot_live_data.sh?

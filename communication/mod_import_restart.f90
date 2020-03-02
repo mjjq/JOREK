@@ -169,6 +169,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
 #endif
     read(21) node_list%node(i)%index
     read(21) node_list%node(i)%boundary
+    read(21) node_list%node(i)%axis_node
     read(21) node_list%node(i)%parents
     read(21) node_list%node(i)%parent_elem
     read(21) node_list%node(i)%ref_lambda
@@ -607,6 +608,7 @@ endif
 #endif
    	read(21) node_list_perturbation%node(i)%index
    	read(21) node_list_perturbation%node(i)%boundary
+   	read(21) node_list_perturbation%node(i)%axis_node
    	read(21) node_list_perturbation%node(i)%parents
    	read(21) node_list_perturbation%node(i)%parent_elem
    	read(21) node_list_perturbation%node(i)%ref_lambda
@@ -752,6 +754,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   integer,     allocatable :: t_index(:,:)
   integer,     allocatable :: t_boundary(:)
+  character,   allocatable :: t_axis_node(:)     
   integer,     allocatable :: t_parents(:,:)
   integer,     allocatable :: t_parent_elem(:)
   real(RKIND), allocatable :: t_ref_lambda(:)
@@ -909,6 +912,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
  
   call tr_allocate(t_index,      1,node_list%n_nodes,1,n_order+1,"index",      CAT_UNKNOWN)
   call tr_allocate(t_boundary,   1,node_list%n_nodes,            "boundary",   CAT_UNKNOWN)
+  call tr_allocate(t_axis_node,  1,node_list%n_nodes,            "axis_node",  CAT_UNKNOWN)
   call tr_allocate(t_parents,    1,node_list%n_nodes,1,2,        "parent",     CAT_UNKNOWN)
   call tr_allocate(t_parent_elem,1,node_list%n_nodes,            "parent_elem",CAT_UNKNOWN)
   call tr_allocate(t_ref_lambda, 1,node_list%n_nodes,            "ref_lambda" ,CAT_UNKNOWN)
@@ -939,6 +943,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   call HDF5_array2D_reading_int (file_id,t_index,       'index')
   call HDF5_array1D_reading_int (file_id,t_boundary,    'boundary')
+  call HDF5_array1D_reading_char(file_id,t_axis_node,   'axis_node')
   call HDF5_array2D_reading_int (file_id,t_parents,     'parents')
   call HDF5_array1D_reading_int (file_id,t_parent_elem, 'parent_elem')
   call HDF5_array1D_reading     (file_id,t_ref_lambda,  'ref_lambda')
@@ -1004,6 +1009,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
     node_list%node(i)%index = t_index(i,:)
     node_list%node(i)%boundary = t_boundary(i)
+    if (t_axis_node(i) == 'T') then
+       node_list%node(i)%axis_node = .true.
+    else
+       node_list%node(i)%axis_node = .false.
+    end if
     node_list%node(i)%parents = t_parents(i,:)
     node_list%node(i)%parent_elem = t_parent_elem(i)
     node_list%node(i)%ref_lambda = t_ref_lambda(i)
@@ -1576,6 +1586,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
  
   call tr_deallocate(t_index,"index",CAT_UNKNOWN)
   call tr_deallocate(t_boundary,"boundary",CAT_UNKNOWN)
+  call tr_deallocate(t_axis_node,"axis_node",CAT_UNKNOWN)
   call tr_deallocate(t_parents,"parents",CAT_UNKNOWN)
   call tr_deallocate(t_parent_elem,"parent_elem",CAT_UNKNOWN)
   call tr_deallocate(t_ref_lambda,"ref_lambda",CAT_UNKNOWN)

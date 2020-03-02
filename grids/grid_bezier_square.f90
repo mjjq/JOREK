@@ -81,6 +81,9 @@ do j=1,nZ
 enddo
 
 node_list%n_nodes = nR*nZ
+do i=1,node_list%n_nodes
+  node_list%node(i)%axis_node = .false.
+enddo
 
 n_elements = (nR-1)*(nZ-1)
 

@@ -55,7 +55,6 @@ real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
 real*8     :: TG_NUM_Eq, CoefAdv=0.0, rho_min = 0.005
-logical    :: old_710_routine
 real*8     :: Coef_DivA, Coef_DivV
 real*8     :: Fprof,dF_dpsi,dF_dz
 real*8     :: dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz
@@ -210,10 +209,6 @@ real*8, dimension(n_var,n_var)   :: QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, Qvm
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k
 real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 
-! --- This is the master switch:
-! --- = .true. will set Up everything in the same fashion as the old routines
-old_710_routine = .false.
-
 ! --- Main switches
 Coef_DivA = 0.0d0 ! this is a stabilisation term !
 Coef_DivV = 0.0d0 ! this is a stabilisation term !
@@ -227,16 +222,15 @@ CoefAdv   = 0.d0  ! this is a stabilisation term (part of VMS) !
 ! --- =15 : Mock-up of reduced-MHD resistivity (from B.Nkonga)
 ! --- =20 : Viscous terms as implemented by W.Haverkort
 
-! --- Don't touch!!!
-! --- Overwrite viscous terms (this needs to be cleaned Up!!!)
-if (old_710_routine) then
-  parallel_projection = .true.
-  Coef_DivV           = 0.0d0 ! =0 means visco_divV=visco_T, otherwise visco_divV=visco_T+Coef_DivV
-  Coef_DivA           = 0.0d0
-  ViscType            = 0
-  VmsType             = 0
-  CoefAdv             = 0.0
-endif
+
+! --- The settings that will reproduce the old 710 set-up (assuming you are also
+! --- changing the F-profile to be wrong, which I have not done here obviously)
+!parallel_projection = .true.
+!Coef_DivV           = 0.0d0 ! =0 means visco_divV=visco_T, otherwise visco_divV=visco_T+Coef_DivV
+!Coef_DivA           = 0.0d0
+!ViscType            = 0
+!VmsType             = 0
+!CoefAdv             = 0.0
 
 
 ! --- Initialise
@@ -423,15 +417,11 @@ do i=1,n_vertex_max
         Z = y_g(ms,mt)
 
         ! --- The F-profile
-        if (old_710_routine) then
-          Fprof = Fprofile(ms,mt)
-        else
-          call F_profile(xpoint2, xcase2, Z, Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd, &
-                         Fprof,dF_dpsi,dF_dz, &
-                         dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz , &
-                         zFFprime    ,dFFprime_dpsi,dFFprime_dz, &
-                         dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
-        endif
+        call F_profile(xpoint2, xcase2, Z, Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd, &
+                       Fprof,dF_dpsi,dF_dz, &
+                       dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz , &
+                       zFFprime    ,dFFprime_dpsi,dFFprime_dz, &
+                       dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
 
 
 #if _OPENMP >= 201511

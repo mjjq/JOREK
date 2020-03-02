@@ -10,9 +10,6 @@
  nout = 10
  fix_axis_nodes = .t.
 
- ! MODEL710 ONLY: TO BE REMOVED FOR BENCHMARKS WITH MODEL303
- parallel_projection = .t.
-
  fbnd(1)   = 2.
  fbnd(2:4) = 0.
  mf        = 0

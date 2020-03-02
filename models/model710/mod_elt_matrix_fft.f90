@@ -215,11 +215,17 @@ real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 old_710_routine = .false.
 
 ! --- Main switches
-Coef_DivA = 0.0d0
-Coef_DivV = 0.0d0
+Coef_DivA = 0.0d0 ! this is a stabilisation term !
+Coef_DivV = 0.0d0 ! this is a stabilisation term !
 ViscType  = 20
-VmsType   = -1
-CoefAdv   = 0.d0
+VmsType   = -1    ! this is a stabilisation term if >=0 !
+CoefAdv   = 0.d0  ! this is a stabilisation term (part of VMS) !
+
+! --- Info about ViscType:
+! --- =0  : Full-MHD resistivity
+! --- =10 : Generic form of the full viscous tensor (from B.Nkonga and A.Bhole)
+! --- =15 : Mock-up of reduced-MHD resistivity (from B.Nkonga)
+! --- =20 : Viscous terms as implemented by W.Haverkort
 
 ! --- Don't touch!!!
 ! --- Overwrite viscous terms (this needs to be cleaned Up!!!)
@@ -560,7 +566,10 @@ do i=1,n_vertex_max
           AZ0_R = (   y_t(ms,mt) * AZ0_s  - y_s(ms,mt) * AZ0_t ) / xjac
           AZ0_Z = ( - x_t(ms,mt) * AZ0_s  + x_s(ms,mt) * AZ0_t ) / xjac
 
-          ! --- A3 ==psi is defined as: A = .. + A03 * grad(phi)
+          ! --- A3:=psi is defined as: A = ... + A03 * grad(phi)
+          ! --- as opposed to the magnetic and velocity fieds that are defined as
+          ! --- B = ... + Bp * e_phi             and     V = ... + Vp * e_phi       ie.
+          ! --- B = ... + Bp * R * grad(phi)     and     V = ... + Vp * R * grad(phi)
           A30   = eq_g(mp,var_A3,ms,mt)
           A30_p = eq_p(mp,var_A3,ms,mt)
           A30_s = eq_s(mp,var_A3,ms,mt)
@@ -823,19 +832,18 @@ do i=1,n_vertex_max
             Qvisc_Up__p = 0.d0 ; Qvisc_Up__k = 0.d0
             Qvisc_T     = 0.d0
             select case(ViscType)
-            case(0)           
+            case(0) ! --- Full-MHD viscosity          
               Qvisc_UR__p = - (v_R * UR0_R + v_Z * UR0_Z) - v * ( UR0 / R**2 + 2.d0 * Up0_p / R**2 ) 
               Qvisc_UR__k = - (v_p * UR0_p / R**2)
               Qvisc_UZ__p = - (v_R * UZ0_R + v_Z * UZ0_Z)
               Qvisc_UZ__k = - (v_p * UZ0_p / R**2)
               Qvisc_Up__p = - (v_R * UP0_R + v_Z * UP0_Z) - v * ( Up0 / R**2 - 2.d0 * UR0_p / R**2 )
               Qvisc_Up__k = - (v_p * uP0_p / R**2)
-            case(15)
+            case(15) ! --- Mock-up of reduced-MHD viscosity
               Qvisc_UR__p = + ( UZ0_R - UR0_Z ) * v_Z
               Qvisc_UZ__p = - ( UZ0_R - UR0_Z ) * v_R
               Qvisc_Up__p = - ( Up0_R + Up0/R ) * ( v_R + v/R ) - Up0_z * v_z 
-            case(10)
-              ! ----------------------------------- General viscosity form
+            case(10) ! --- Generic form of full viscosity tensor (from B.Nkonga and A.Bhole)
               Qvisc_UR__p = - ( v_R * UR0_R + v_Z * UR0_Z )   &
                             - ( v_R * UR0_R + v_Z * UZ0_R )   &
                             - ( v * UR0  + v *  Up0_p )/ R**2 &
@@ -871,7 +879,7 @@ do i=1,n_vertex_max
                              + ( Up0_R * Up0 +  Up0 * Up0_R )/ R
 
               Qvisc_T     = visco_divV * divU**2 - visco_T * QviscT0
-            case(20)
+            case(20) ! --- Viscosity as implemented by W.Haverkort
               Qvisc_UR__p = - (2.d0 * Up0_p * v / R**2 + 2.d0 * UR0_R * v_R + (UR0_Z + UZ0_R ) * v_Z )
               Qvisc_UR__k = - ((UR0_p + R * Up0_R - Up0) * v_p / R**2)
 
@@ -890,9 +898,9 @@ do i=1,n_vertex_max
             rhs_k_ij  = 0.d0
             VMS__p    = 0.d0
             VMS__k    = 0.d0
-            Pvec_prev = 0.d0
-            Qvec_p    = 0.d0
-            Qvec_k    = 0.d0
+            Pvec_prev = 0.d0 ! The time derivative part
+            Qvec_p    = 0.d0 ! The rest of the RHS (poloidal part)
+            Qvec_k    = 0.d0 ! The rest of the RHS (toroidal part that has phi-derivatives of the test-function)
 
             !###################################################################################################
             !#  equation 1 (R component induction equation)                                                    #
@@ -1079,7 +1087,7 @@ do i=1,n_vertex_max
 
 
 
-            ! --- Fill Up the matrix
+            ! --- Fill Up the RHS
             if (n_tor .gt. n_tor_fft_thresh) then
               index_ij =       n_var*(n_order+1)*(i-1) +       n_var*(j-1) + 1
               do ivar= 1,n_var
@@ -1342,7 +1350,7 @@ do i=1,n_vertex_max
                   Qvisc_T_Up__p  = 0.d0 ; Qvisc_T_Up__n  = 0.d0
                   Qvisc_T_T__p   = 0.d0 ; Qvisc_T_T__n   = 0.d0
                   select case(ViscType)
-                  case(0)
+                  case(0) ! --- Full-MHD viscosity
                     Qvisc_UR_UR__p  = - (v_R * UR_R + v_Z * UR_Z) - v * ( UR / R**2 ) 
                     Qvisc_UR_Up__n  = - v * (+ 2.d0 * Up_p / R**2 ) 
                     Qvisc_UR_UR__kn = - (v_p * UR_p / R**2)
@@ -1351,14 +1359,13 @@ do i=1,n_vertex_max
                     Qvisc_Up_Up__p  = - (v_R * UP_R + v_Z * UP_Z) - v * ( Up / R**2 )
                     Qvisc_Up_UR__n  = - v * ( - 2.d0 * UR_p / R**2 )
                     Qvisc_Up_Up__kn = - (v_p * uP_p / R**2)
-                  case(15)
+                  case(15) ! --- Mock-up of reduced-MHD viscosity
                     Qvisc_UR_UR__p = + ( - UR_Z ) * v_Z
                     Qvisc_UR_UZ__p = + (   UZ_R ) * v_Z
                     Qvisc_UZ_UR__p = - ( - UR_Z ) * v_R
                     Qvisc_UZ_UZ__p = - (   UZ_R ) * v_R
                     Qvisc_Up_Up__p = - ( Up_R + Up/R ) * ( v_R + v/R ) - Up_z * v_z 
-                  case(10)
-                    ! ----------------------------------- General viscosity form
+                  case(10) ! --- Generic form of full viscosity tensor (from B.Nkonga and A.Bhole)
                     Qvisc_UR_UR__p  = - ( v_R * UR_R + v_Z * UR_Z )      &
                                       - ( v_R * UR_R              )      &
                                       - v * UR / R**2                    &
@@ -1431,7 +1438,7 @@ do i=1,n_vertex_max
 
                     Qvisc_T_Up__p   =                                  - visco_T * QviscT0_Up__p
                     Qvisc_T_Up__n   = visco_divV * 2.0*divU*divU_Up__n - visco_T * QviscT0_Up__n
-                  case (20)
+                  case (20) ! --- Viscosity as implemented by W.Haverkort
                     Qvisc_UR_UR__p  = - (2.d0 * UR_R * v_R + (UR_Z ) * v_Z )
                     Qvisc_UR_UZ__p  = - ( (UZ_R ) * v_Z )
                     Qvisc_UR_Up__n  = - (2.d0 * Up_p * v / R**2 )
@@ -1459,12 +1466,12 @@ do i=1,n_vertex_max
                   end select
 
                   amat      = 0.d0
-                  Pjac      = 0.d0
-                  Qjac_p    = 0.d0
-                  Qjac_k    = 0.d0
-                  Qjac_n    = 0.d0
-                  Qjac_kn   = 0.d0
-                  QvmsF_p   = 0.d0
+                  Pjac      = 0.d0 ! time derivative part
+                  Qjac_p    = 0.d0 ! rest of the LHS (poloidal part)
+                  Qjac_k    = 0.d0 ! rest of the LHS (toroidal part with phi-derivatives of the test-function)
+                  Qjac_n    = 0.d0 ! rest of the LHS (toroidal part with phi-derivatives of the basis-functions)
+                  Qjac_kn   = 0.d0 ! rest of the LHS (toroidal part with phi-derivatives of the basis-functions and the test-functions)
+                  QvmsF_p   = 0.d0 ! VMS terms
                   QvmsF_n   = 0.d0
                   QvmsF_k   = 0.d0
                   QvmsF_kn  = 0.d0
@@ -1472,7 +1479,6 @@ do i=1,n_vertex_max
                   QvmsAd_n  = 0.d0
                   QvmsAd_k  = 0.d0
                   QvmsAd_kn = 0.d0
-                  Pvec_prev = 0.d0
 
                   !###################################################################################################
                   !#  equation 1   (R component induction equation)                                                  #

@@ -1066,7 +1066,7 @@ do i=1,n_vertex_max
 
 
             !###################################################################################################
-            !#  Div(V) VISCOSITY                                                                               #
+            !#  Div(V) STABILISATION                                                                           #
             !###################################################################################################
             Qvec_p(var_UR)   = Qvec_p(var_UR) - visco_divV * divU * ( v_R + v / R )
             Qvec_p(var_UZ)   = Qvec_p(var_UZ) - visco_divV * divU * v_Z 
@@ -2206,7 +2206,7 @@ do i=1,n_vertex_max
 
 
                   !###################################################################################################
-                  !#  Div(V) VISCOSITY                                                                               #
+                  !#  Div(V) STABILISATION                                                                           #
                   !###################################################################################################
                   Qjac_p (var_UR,var_UR) = Qjac_p (var_UR,var_UR) -  visco_divV * divU_UR     * ( v_R + v / R )
                   Qjac_p (var_UR,var_UZ) = Qjac_p (var_UR,var_UZ) -  visco_divV * divU_UZ     * ( v_R + v / R )

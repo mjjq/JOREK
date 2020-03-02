@@ -163,14 +163,14 @@ nsub                   = 5       ! Number of subdivisions of the cubic finite el
 i_tor                  = -1      ! If i_tor > 0, only this mode will be included in the vtk file...
 i_plane                = 1       ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 without_n0_mode        = .false. ! If true, do not include the n=0 mode (i_tor=1)
-SI_units               = .true. ! when true, write variables in SI units
-include_fluxes         = .true. ! include energy and density fluxes (or not)
+SI_units               = .false. ! when true, write variables in SI units
+include_fluxes         = .false. ! include energy and density fluxes (or not)
 include_neo            = .false. ! include neoclassical and more terms (or not)
-include_magnetic_field = .true. ! include vector of magnetic field (or not)
-include_velocity_field = .true. ! include vector of velocity field (or not)
-include_electric_field = .true. ! include vector of E-field (or not), evaluated at t-dt/2 
-include_Jpol           = .true. ! include poloidal current vector (J_phi=0 for visualization)
-include_bootstrap      = .true. ! include bootstrap current and averaged current
+include_magnetic_field = .false. ! include vector of magnetic field (or not)
+include_velocity_field = .false. ! include vector of velocity field (or not)
+include_electric_field = .false. ! include vector of E-field (or not), evaluated at t-dt/2 
+include_Jpol           = .false. ! include poloidal current vector (J_phi=0 for visualization)
+include_bootstrap      = .false. ! include bootstrap current and averaged current
 include_psi_norm       = .true.  ! include normalized flux
 RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,Z,0)
 

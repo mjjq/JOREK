@@ -385,8 +385,11 @@ particle_source = 0.d0
 heat_source     = 0.d0
 do ms=1, n_gauss
   do mt=1, n_gauss
-    if (keep_current_prof) &
+    if (keep_current_prof) then
       call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+      ! --- Historically JOREK uses a negative current, so we need to reverse it.
+      current_source(ms,mt) = - current_source(ms,mt)
+    endif
     call sources(xpoint2, xcase2, y_g(ms,mt)           , Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
   enddo
 enddo
@@ -920,7 +923,7 @@ do i=1,n_vertex_max
             Qvec_p(var_A3) = + R * v * (UR0 * BZ0 - UZ0 * BR0)      &
                              - eta_T * v_Z * R                * BR0 &
                              + eta_T * ( 2.d0 * v + R * v_R ) * BZ0 &
-                             - eta_T * v * current_source(ms,mt)    &
+                             + eta_T * v * current_source(ms,mt)    &
                              + R * v * (eta_R * BZ0 - eta_Z * BR0)
 
             !###################################################################################################
@@ -1559,7 +1562,7 @@ do i=1,n_vertex_max
 
                   Qjac_p (var_A3,var_T ) = - eta_T_T * v_Z * R                * BR0 &
                                            + eta_T_T * ( 2.d0 * v + R * v_R ) * BZ0 &
-                                           - eta_T_T * v * current_source(ms,mt)    &
+                                           + eta_T_T * v * current_source(ms,mt)    &
                                            + R * v * (eta_R_T * BZ0 - eta_Z_T * BR0)
 
                   !###################################################################################################

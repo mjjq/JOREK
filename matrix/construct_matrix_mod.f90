@@ -260,7 +260,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   use mod_elt_matrix_fft
   use mpi_mod
   use mod_boundary_conditions, only : boundary_conditions
-  use mod_fix_axis_nodes, only : fix_nodes_on_axis
   use mod_locate_irn_jcn
   !$ use omp_lib
   implicit none
@@ -639,10 +638,6 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,            &
                            index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd,  &
                            R_xpoint, Z_xpoint, psi_xpoint, .false., .false.)
-
-  if (fix_axis_nodes) then
-    call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max)
-  endif
 
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_glob,nz_glob)

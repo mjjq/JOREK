@@ -1,4 +1,6 @@
-!> Calculates 3D integrals and boundary fluxes 
+!> Calculates 3D integrals and boundary fluxes.
+!! The NOMPIVERSION preprocessor flag is needed for mod_integrals3D_nompi, a version of this subroutine not requiring MPI.
+#ifndef NOMPIVERSION
 module mod_integrals3D
 
   use constants
@@ -17,6 +19,7 @@ module mod_integrals3D
   use mod_poloidal_currents, only : integrated_normal_bnd_curr 
   use corr_neg
   use equil_info, only : get_psi_n, ES
+#endif
 
   implicit none
   
@@ -112,9 +115,12 @@ real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, 
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 
+#ifndef NOMPIVERSION
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
-
 n_cpu = max(n_cpu,1)
+#else
+n_cpu = 1
+#endif
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
@@ -691,6 +697,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 enddo !--- bnd elements, end of calculation of boundary fluxes
 
 ! --- gather contribution from all MPI processes
+#ifndef NOMPIVERSION
 call MPI_AllReduce(D_int,density_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(D_ext,density_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(P_int,pressure_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -724,17 +731,63 @@ call MPI_AllReduce(vpar_disp_tot, viscopar_dissip_tot,1,MPI_DOUBLE_PRECISION,MPI
 call MPI_AllReduce(mag_src_tot, mag_source_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(varmin,V_min,n_var,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(varmax,V_max,n_var,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
+#else /* NOMPIVERSION */
+density_in           = D_int
+density_out          = D_ext
+pressure_in          = P_int
+pressure_out         = P_ext
+current_in           = C_intern
+current_out          = C_ext
+Volume               = Vol
+area                 = area1
+density_tot          = D_tot
+pressure             = P_tot
+heating_out          = H_ext
+heating_in           = H_int
+source_out           = S_ext
+source_in            = S_int
+kin_par_in           = VP_int
+kin_par_out          = VP_ext
+kin_par_tot          = VP_tot
+kin_perp_in          = VK_int
+kin_perp_out         = VK_ext
+kin_perp_tot         = VK_tot
+mag_in               = VM_int
+mag_out              = VM_ext
+mag_tot              = VM_tot
+ohm_in               = J2_int
+ohm_out              = J2_ext
+ohm_tot              = J2_tot
+helicity_tot         = heli_tot
+thermal_work_tot     = thm_wk_tot
+mag_work_tot         = mag_wk_tot
+viscopar_dissip_tot  = vpar_disp_tot
+mag_source_tot       = mag_src_tot
+V_min                = varmin
+V_max                = varmax
+#endif /* NOMPIVERSION */
 
 if (use_pellet) then
+#ifndef NOMPIVERSION
   call MPI_AllReduce(local_pellet_particles,total_pellet_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_plasma_particles,total_plasma_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_pellet_volume,total_pellet_volume,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+#else /* NOMPIVERSION */
+  total_pellet_particles = local_pellet_particles
+  total_plasma_particles = local_plasma_particles
+  total_pellet_volume    = local_pellet_volume
+#endif /* NOMPIVERSION */
 endif
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#ifndef NOMPIVERSION
   call MPI_AllReduce(local_n_particles_inj, total_n_particles_inj,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_n_particles, total_n_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-  neut_particles_tot = total_n_particles
+#else /* NOMPIVERSION */
+  total_n_particles_inj = local_n_particles_inj
+  total_n_particles     = local_n_particles
+#endif /* NOMPIVERSION */
+  neut_particles_tot    = total_n_particles
 #else
   neut_particles_tot = 0.d0
 #endif
@@ -1166,4 +1219,6 @@ endif !--- my_id
 
 end subroutine int3d_new
   
+#ifndef NOMPIVERSION
 end module mod_integrals3D
+#endif

@@ -15,7 +15,7 @@ contains
 
     ! --- Modules
     use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order
-    use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks,  linear_run
+    use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks, linear_run
     USE data_structure,           only : type_element, type_node, type_node_list, thread_struct
     use mod_boundary_matrix_open, only : boundary_matrix_open
     use mod_elt_matrix,           only : element_matrix
@@ -43,7 +43,7 @@ contains
     ! -- internal parameters
     integer :: iv, iv2, iv3, iv4, inode1, inode2, inode3, inode4, i, j
     integer :: vertex(2), direction(2), bnd1, bnd2, side1, side2
-    integer i_max   ! for linear_run max index which should be updated
+    integer :: i_max   ! for linear_run max index which should be updated
 
 
 #ifdef COMPARE_ELEMENT_MATRIX
@@ -175,18 +175,18 @@ contains
       enddo
     endif
 
-! If linear_run then the n0 component should be frozen = diagonal entries high
-i_max =  n_order*n_vertex_max*n_var*n_tor
+    ! If linear_run then the n0 component should be frozen = diagonal entries high
+    i_max =  n_order*n_vertex_max*n_var*n_tor
 #ifdef JECCD
-! n0 component of eccd current should not be frozen when linear_run=.t. (last variable)
-i_max =  n_order*n_vertex_max*(n_var-1)*n_tor
+    ! n0 component of eccd current should not be frozen when linear_run=.t. (last variable)
+    i_max =  n_order*n_vertex_max*(n_var-1)*n_tor
 #endif
 
-if ( linear_run ) then
-  do i = 1, i_max, n_tor
-    thread_struct(omp_tid)%ELM(i,i) = 10.d40
-  enddo
-endif
+    if ( linear_run ) then
+      do i = 1, i_max, n_tor
+        thread_struct(omp_tid)%ELM(i,i) = 1.d40
+      enddo
+    endif
     
     
     

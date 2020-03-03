@@ -88,7 +88,7 @@ contains
 
              do in=first_tor, last_tor
                if (linear_run .and. in .eq. 1) then
-                 zbig = 10.d40
+                 zbig = 1.d15
                else
                  zbig = zbig_backup
                end if

@@ -161,7 +161,7 @@ contains
             
             do i_tor=1, n_tor
               if (linear_run  .and.  i_tor .eq. 1 ) then
-                zbig = 1.d40
+                zbig = 1.d15
               else
                 zbig = zbig_backup
               endif

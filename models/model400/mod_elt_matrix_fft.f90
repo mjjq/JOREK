@@ -30,7 +30,6 @@ contains
     use mod_elm_apply_fft
     use corr_neg
     use mod_bootstrap_functions
-    use vacuum, only: freeb_fact
 
     implicit none
     

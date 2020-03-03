@@ -19,7 +19,6 @@ use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
 use mod_neutral_source
-use vacuum, only: freeb_fact
 use mod_bootstrap_functions
 use equil_info, only : get_psi_n
 
@@ -864,13 +863,13 @@ do ms=1, n_gauss
 !#  equation 3   (current definition)                                                              #
 !###################################################################################################
 
-         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * freeb_fact
+         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac
 
 !###################################################################################################
 !#  equation 4   (vorticity definition)                                                            #
 !###################################################################################################
 
-         rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
+         rhs_ij_4 = - ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
 
 !###################################################################################################
 !#  equation 5   (density equation)                                                                #

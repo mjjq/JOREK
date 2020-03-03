@@ -19,7 +19,7 @@ use corr_neg
 use equil_info, only : get_psi_n, ES
 
 #define NOMPIVERSION=1
-#include 'mod_integrals3D.f90'
+#include "mod_integrals3D.f90"
 #undef NOMPIVERSION
 
 

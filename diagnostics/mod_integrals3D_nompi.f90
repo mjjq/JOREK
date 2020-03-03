@@ -17,6 +17,9 @@ use mod_resistivity
 use mod_poloidal_currents, only : integrated_normal_bnd_curr 
 use corr_neg
 use equil_info, only : get_psi_n, ES
+#if (JOREK_MODEL == 500)
+use mod_neutral_source
+#endif
 
 #define NOMPIVERSION=1
 #include "mod_integrals3D.f90"

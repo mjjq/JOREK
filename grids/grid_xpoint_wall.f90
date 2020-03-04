@@ -10,7 +10,7 @@ use data_structure
 use tr_module 
 use gauss
 use basis_at_gaussian
-use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes
+use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes, force_central_node
 use mod_neighbours, only: update_neighbours
 use mod_interp
 

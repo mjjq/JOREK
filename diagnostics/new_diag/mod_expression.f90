@@ -100,6 +100,7 @@ module mod_expression
     
     exprs_all%n_expr     = 0
     exprs_all_int%n_expr = 0
+    call add(exprs_all, 'index_now   ', 'Restart file index (or number of run tsteps)          ')
     call add(exprs_all, 'R           ', 'Cylindrical Coordinate R (== Major Radius)            ')
     call add(exprs_all, 'Z           ', 'Cylindrical Coordinate Z                              ')
     call add(exprs_all, 'phi         ', 'Cylindrical Coordinate phi                            ')
@@ -1182,6 +1183,10 @@ module mod_expression
           loop_expr: do iexpr = 1, expr_list%n_expr
             
             select case ( trim(expr_list%expr(iexpr)%name) )
+
+              case ( 'index_now' )
+                res = real(index_now)
+
               case ( 'R' )
                 res = R
                 

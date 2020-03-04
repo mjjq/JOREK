@@ -208,12 +208,12 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_bnd_particle_fluxes: ', 5 
     write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes_xlabel_si: time [ms]'
-    write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes_ylabel: Total partilce boundary fluxes [particles/s]'
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes_ylabel: Total particle boundary fluxes [particles/s]'
     write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes_ylabel_si: Total particle boundary fluxes [particles/s]'
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@bnd_particle_fluxes_x2si: ', sqrt_mu0_rho0*1.e3
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@bnd_particle_fluxes_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes_logy: 0'
-    write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes: %"time"    "Dpar-flux"  "Dperp-flux"    "Vpar-flux"    "Vperp-flux"  "-neutral-flux"   '
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes: %"time"    "Dpar-flux"  "Dperp-flux"    "Vpar-flux"    "Vperp-flux"  "neutral-flux"   '
     write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_current: ', 3 
@@ -352,7 +352,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent_x2si: ', sqrt_mu0_rho0*1.e3
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_logy: 0'
-    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent: %"time"  "Total ions" "Ions in LCFS"  "Ions outside LCFS" "Total neutrals"'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent: %"time"  "Total ions" "Ions inside LCFS"  "Ions outside LCFS" "Total neutrals"'
     write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_thermalenergy: ', 2 

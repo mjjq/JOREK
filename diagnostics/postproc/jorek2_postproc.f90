@@ -15,7 +15,6 @@ program jorek2_postproc
   
   type(type_command) :: command
   integer            :: ierr
-  integer            :: i_file, i, units
   
   ! --- Initialize mode and mode_type arrays
   call det_modes()

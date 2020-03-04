@@ -184,7 +184,7 @@ contains
 
     if ( keep_n0_const ) then
       do i = 1, i_max, n_tor
-        thread_struct(omp_tid)%ELM(i,i) = 1.d40
+        thread_struct(omp_tid)%ELM(i,i) = 1.d15
       enddo
     endif
     

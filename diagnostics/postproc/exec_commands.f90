@@ -1813,13 +1813,12 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer :: i_file, i, units, my_id
+    integer :: i_file, i, units
     character(len=1024) :: filename, status, access
     real*8, allocatable :: res(:)
     character(len=23)   :: s
 
     ierr = 0
-    my_id=0
 
     ! --- Some checks
     call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
@@ -1854,7 +1853,7 @@ module exec_commands
     end if
     close(i_file)
  
-   call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)        
+   call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)        
 
    call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
      filename=filename, append=.true., blanks=.false.)
@@ -2045,14 +2044,13 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer :: i_file, i, units, my_id
+    integer :: i_file, i, units
     character(len=1024) :: filename, status, access
     real*8, allocatable :: res(:)
     character(len=23)   :: s
     character(len=54)   :: desc
 
     ierr = 0
-    my_id=0
 
     ! --- Some checks
     call check_step_imported(ierr);            if ( ierr /= 0 ) return
@@ -2085,7 +2083,7 @@ module exec_commands
     end if
     close(i_file)
  
-   call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, units)        
+   call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, units)        
 
    call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
      filename=filename, append=.true., blanks=.false.)

@@ -273,6 +273,7 @@ subroutine preset_parameters
   produce_live_data  = .true.
   
   keep_n0_const      = .false.
+  linear_run         = .false.
   
   export_for_nemec   = .false.
   

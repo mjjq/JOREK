@@ -88,7 +88,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_gauss_psin, heatsource_gauss_sig,        &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
-                keep_n0_const, export_for_nemec,                    &
+                keep_n0_const, linear_run, export_for_nemec,        &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 gmres_m, gmres_tol, tgnum,                          &
                 RMP_on, RMP_har_cos,RMP_har_sin,                    &
@@ -118,6 +118,7 @@ if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
+  keep_n0_const  = ( keep_n0_const .or. linear_run )
   
   ! --- Model-specific presets
   Te_file        = 'none'

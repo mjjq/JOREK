@@ -39,6 +39,7 @@ real*8, allocatable :: S1(:), S2(:), SP1(:), SP2(:), SP3(:), SP4(:)
 real*8, allocatable :: T1(:), T2(:), TP1(:), TP2(:), TP3(:), TP4(:)
 real*8, external    :: spwert
 logical             :: skip_update_neighbours
+logical             :: doing_polar_square
 
 
 call tr_allocate(RR,1,4,1,nr*np,"RR",CAT_GRID)
@@ -70,6 +71,8 @@ n_index_start = 0
 do i=1,n_node_start
   n_index_start = max(n_index_start,maxval(node_list%node(i)%index(:)))
 enddo
+doing_polar_square = .false.
+if (n_index_start .gt. 0) doing_polar_square = .true.
 
 write(*,*) '*************************************'
 write(*,*) '*        grid_polar_bezier          *'
@@ -296,9 +299,9 @@ do i=1,nr
    if (i .eq. nr) node_list%node(index)%boundary = 2
 
    node_list%node(index)%axis_node = .false.
-   if ( fix_axis_nodes .and.  (i .eq. 1) ) node_list%node(index)%axis_node = .true.
+   if ( fix_axis_nodes .and. (.not. doing_polar_square) .and. (i .eq. 1) ) node_list%node(index)%axis_node = .true.
 
-   if ( fix_axis_nodes .and. (i .eq. 1) ) then
+   if ( fix_axis_nodes .and. (.not. doing_polar_square) .and. (i .eq. 1) ) then
      if (force_central_node) then
        node_list%node(index)%index(1) = 1
        if (j.eq.1) n_index_start = n_index_start + 1
@@ -312,7 +315,7 @@ do i=1,nr
        enddo
        n_index_start = n_index_start + 2 ! we only want 1 and 2 since 3,4 are poloidal
      endif
-   else if (force_central_node .and. (.not. fix_axis_nodes) .and. (i.eq.1)) then
+   else if (force_central_node .and. (.not. doing_polar_square) .and. (.not. fix_axis_nodes) .and. (i.eq.1)) then
 
      node_list%node(index)%index(1) = 1
 

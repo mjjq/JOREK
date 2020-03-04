@@ -19,9 +19,11 @@ module exec_commands
   use mod_import_restart
   use mod_interp
   use mod_poloidal_currents 
-  
-  
-  
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
+#endif
+
+ 
   implicit none
   
   

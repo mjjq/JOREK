@@ -329,12 +329,12 @@ do i=1,node_list%n_nodes
     ! Remove all but one node at axis
     if (force_central_node) then
       if (xcase .ne. 3) then
-        if ((i .ge. 5) .and. (i .le. 4+n_tht-1) .and. (k.eq.1)) then
+        if ((i .gt. 5) .and. (i .le. 4+n_tht-1) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(5)%index(1)
           index = index - 1
         endif
       else
-        if ((i .ge. 9) .and. (i .le. 8+n_tht-2) .and. (k.eq.1)) then
+        if ((i .gt. 9) .and. (i .le. 8+n_tht-2) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(9)%index(1)
           index = index - 1
         endif
@@ -347,8 +347,8 @@ do i=1,node_list%n_nodes
         if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) then
           if (force_central_node) then
             if (k.eq.1) then
-              node_list%node(index)%index(1) = node_list%node(5)%index(1)
-              if (i.gt.1) index = index - 1
+              if (i.gt.5) node_list%node(i)%index(1) = node_list%node(5)%index(1)
+              if (i.gt.5) index = index - 1
             else
               if (k.ge.3) index = index - 1 ! we only want 1 and 2 since 3,4 are poloidal
             endif
@@ -360,8 +360,8 @@ do i=1,node_list%n_nodes
         if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) then
           if (force_central_node) then
             if (k.eq.1) then
-              node_list%node(index)%index(1) = node_list%node(9)%index(1)
-              if (i.gt.1) index = index - 1
+              if (i.gt.9) node_list%node(i)%index(1) = node_list%node(9)%index(1)
+              if (i.gt.9) index = index - 1
             else
               if (k.ge.3) index = index - 1 ! we only want 1 and 2 since 3,4 are poloidal
             endif

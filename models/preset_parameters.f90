@@ -298,7 +298,7 @@ subroutine preset_parameters
   
   refinement         = .false.              ! enable mesh refinement
   force_central_node = .true.               ! force all nodes in the grid center to have the same values in flux surface aligned grids
-  fix_axis_nodes     = .true.              ! Fix t-derivative and cross st-derivative on axis to avoid noise
+  fix_axis_nodes     = .false.              ! Fix t-derivative and cross st-derivative on axis to avoid noise
   
   grid_to_wall       = .false.              ! extend the grid to a physical wall
   RZ_grid_inside_wall= .false.              ! build the rectangular grid inside first wall

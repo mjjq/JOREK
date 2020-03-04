@@ -1806,7 +1806,6 @@ module exec_commands
   subroutine int3D(command, first_step, ierr)
     
     use mod_integrals3D_nompi
-!    use mpi_mod
 
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
@@ -2039,7 +2038,6 @@ module exec_commands
   subroutine zeroD_quantities(command, first_step, ierr)
 
     use mod_integrals3D_nompi
-!    use mpi_mod
 
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed

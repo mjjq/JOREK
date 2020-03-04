@@ -10,45 +10,15 @@ program jorek2_postproc
   use exec_commands,  only: exec_command, specific_help
   use settings,       only: set_setting
   use basis_at_gaussian, only: initialise_basis
-  !use mpi_mod
   
   implicit none
   
   type(type_command) :: command
   integer            :: ierr
-  integer            :: i_file, i, units, my_id, n_cpu
+  integer            :: i_file, i, units
   integer            :: required, provided, StatInfo
   integer*4          :: rank, comm_size 
-
-  ! --- Initialise MPI / threaded MPI
-!#ifdef FUNNELED
-!  required = MPI_THREAD_FUNNELED
-!#else
-!  required = MPI_THREAD_MULTIPLE
-!#endif
-!#ifdef STAN_FLAG
-!required = 0
-!#endif
-!  call MPI_Init_thread(required, provided, StatInfo)
-!
-!  call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread
-!  
-!  ! --- Determine number of MPI procs
-!  call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
-!  n_cpu = comm_size
-n_cpu = 1
-
-!  ! --- jorek2_postproc is not ready yet for MPI
-!  if (n_cpu /= 1) then
-!    write(*,*) "Please execute with mpirun -n 1 ./jorek2_postproc, multi MPI is not ready yet"
-!    stop
-!  endif
-!  
-!  ! --- Determine ID of each MPI proc
-!  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
-!  my_id = rank
-my_id = 0
- 
+  
   ! --- Initialize mode and mode_type arrays
   call det_modes()
   

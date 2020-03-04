@@ -7,7 +7,7 @@ use tr_module
 use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
-use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes
+use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes, force_central_node
 
 implicit none
 
@@ -298,9 +298,37 @@ do i=1,nr
    node_list%node(index)%axis_node = .false.
    if ( fix_axis_nodes .and.  (i .eq. 1) ) node_list%node(index)%axis_node = .true.
 
-   do k=1,n_order+1
-     node_list%node(index)%index(k) = n_index_start + (n_order+1)*(index0-1)+k
-   enddo
+   if ( fix_axis_nodes .and. (i .eq. 1) ) then
+     if (force_central_node) then
+       node_list%node(index)%index(1) = 1
+       if (j.eq.1) n_index_start = n_index_start + 1
+       node_list%node(index)%index(2) = n_index_start + 1
+       node_list%node(index)%index(3) = n_index_start + 2
+       node_list%node(index)%index(4) = n_index_start + 3
+       n_index_start = n_index_start + 1 ! we only want 1 and 2 since 3,4 are poloidal
+     else
+       do k=1,n_order+1
+         node_list%node(index)%index(k) = n_index_start + k
+       enddo
+       n_index_start = n_index_start + 2 ! we only want 1 and 2 since 3,4 are poloidal
+     endif
+   else if (force_central_node .and. (.not. fix_axis_nodes) .and. (i.eq.1)) then
+
+     node_list%node(index)%index(1) = 1
+
+     if (j.eq.1) n_index_start = n_index_start + 1
+
+     node_list%node(index)%index(2) = n_index_start + 1
+     node_list%node(index)%index(3) = n_index_start + 2
+     node_list%node(index)%index(4) = n_index_start + 3
+     n_index_start = n_index_start + n_order
+
+   else
+     do k=1,n_order+1
+       node_list%node(index)%index(k) = n_index_start + k
+     enddo
+     n_index_start = n_index_start + n_order+1
+   endif
   
    node_list%node(index)%constrained=.false.
  enddo

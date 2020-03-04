@@ -1378,9 +1378,21 @@ do i=1,newnode_list%n_nodes
     index = index + 1
     newnode_list%node(i)%index(k) = index
 
-    if ((force_central_node) .and. (i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
+    if ((force_central_node) .and. (.not. fix_axis_nodes) .and. (i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
       newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
       index = index - 1
+    endif
+    if ( fix_axis_nodes .and. (i .ge. 1)  .and. (i .le. n_tht) ) then
+      if (force_central_node) then
+        if (k.eq.1) then
+          node_list%node(index)%index(1) = 1
+          if (i.gt.1) index = index - 1
+        else
+          if (k.ge.3) index = index - 1 ! we only want 1 and 2 since 3,4 are poloidal
+        endif
+      else
+        if (k.ge.3) index = index - 1 ! we only want 1 and 2 since 3,4 are poloidal
+      endif
     endif
     if ((i .eq. index_xpoint+1).and.(k.eq.1)) then
       newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)

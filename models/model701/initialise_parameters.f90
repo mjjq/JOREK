@@ -91,7 +91,6 @@ if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
-  keep_n0_const  = ( keep_n0_const .or. linear_run )
   
   ! --- Model-specific presets
   ! -none-
@@ -291,6 +290,7 @@ if (my_id .eq. 0) then
 
 endif
 
+keep_n0_const  = ( keep_n0_const .or. linear_run )
 ! --- Read numerical profiles for rho, T, and ff'.
 call read_num_profiles(my_id)
 

@@ -70,7 +70,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 wall_file,                                          &
                 n_limiter, R_limiter, Z_limiter,                    &
                 first_target_point, last_target_point,		    &
-                linear_run, export_for_nemec,                       &
+                keep_n0_const, export_for_nemec,                    &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &

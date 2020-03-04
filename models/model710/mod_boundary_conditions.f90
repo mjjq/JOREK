@@ -32,7 +32,7 @@ contains
 
     use data_structure
     use global_distributed_matrix
-    use phys_module, only: F0, GAMMA, n_pol, n_tht, linear_run
+    use phys_module, only: F0, GAMMA, n_pol, n_tht, keep_n0_const
     use vacuum, only: is_freebound
     use mpi_mod
     use mod_locate_irn_jcn
@@ -86,7 +86,7 @@ contains
              ! May be improved upon in the future ( see forthcoming paper on full MHD JOREK )
              !---------------------------------------------------------------------------------------------
              do in=1, n_tor
-               if (linear_run  .and.  in .eq. 1 ) then
+               if (keep_n0_const  .and.  in .eq. 1 ) then
                  zbig = 1.d15
                else
                  zbig = zbig_backup

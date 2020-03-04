@@ -67,7 +67,7 @@ namelist /in1/  tstep, nstep, eta, visco, visco_par,                &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 produce_live_data, gmres, gmres_max_iter,           &
-                linear_run, export_for_nemec,                       &
+                keep_n0_const, export_for_nemec,                    &
                 output_bnd_elements,                                &
                 wall_file,                                          &
                 first_target_point, last_target_point,              &

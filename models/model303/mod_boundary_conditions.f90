@@ -36,7 +36,7 @@ contains
     use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
        RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min, &
-       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, linear_run
+       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const
     USE tr_module
     use mpi_mod
 
@@ -63,7 +63,7 @@ contains
   real*8                   :: rhs_loc(*)
 
   ! Internal parameters
-  real*8  :: zbig, zbig_backup,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
+  real*8  :: zbig, zbig_backup, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
   real*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
   real*8  :: Btot, alpha, dT0_dt, dVpar0_dt, dBigR_dt, R_inside, Z_inside
   real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y
@@ -142,7 +142,7 @@ contains
            if (node_list%node(inode)%boundary .ne. 0) then !==================if boundary nodes
 
               do in=1, n_tor  !========================do n_tor
-                if (linear_run  .and.  in .eq. 1 ) then
+                if (keep_n0_const  .and.  in .eq. 1 ) then
                   zbig = 1.d15
                 else
                   zbig = zbig_backup

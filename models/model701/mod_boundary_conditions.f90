@@ -30,7 +30,7 @@ contains
        R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
     use data_structure
     use global_distributed_matrix
-    use phys_module, only: F0, GAMMA, freeboundary, linear_run
+    use phys_module, only: F0, GAMMA, freeboundary, keep_n0_const
     use mpi_mod
     use mod_locate_irn_jcn
 
@@ -87,7 +87,7 @@ contains
           if (node_list%node(inode)%boundary .ne. 0) then
 
              do in=first_tor, last_tor
-               if (linear_run .and. in .eq. 1) then
+               if (keep_n0_const .and. in .eq. 1) then
                  zbig = 1.d15
                else
                  zbig = zbig_backup

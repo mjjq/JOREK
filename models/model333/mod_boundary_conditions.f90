@@ -4,7 +4,7 @@ module mod_boundary_conditions
   !************ Define global variables for all internal routines ****************
   !*******************************************************************************
   ! --- ZBIG parameter to make equations "more important" than element_matrix equations
-  real*8  		:: zbig = 1.d10
+  real*8  		        :: zbig = 1.d10
   ! --- R,Z variables
   real*8			:: R, R_s, R_t, R_inside
   real*8			:: Z, Z_s, Z_t, Z_inside
@@ -69,7 +69,7 @@ contains
                            psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ,                   &
                            t_now, RMP_growth_rate, RMP_ramp_up_time,                        &
                            RMP_start_time, tstep, RMP_har_cos, RMP_har_sin,                 &
-                           grid_to_wall, n_wall_blocks, linear_run
+                           grid_to_wall, n_wall_blocks, keep_n0_const
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
@@ -174,7 +174,7 @@ contains
             call construct_variables(node_list%node(inode), R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
             
             do i_tor=1, n_tor
-              if (linear_run  .and.  i_tor .eq. 1 ) then
+              if (keep_n0_const  .and.  i_tor .eq. 1 ) then
                  zbig = 1.d15
                else
                  zbig = zbig_backup

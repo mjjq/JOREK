@@ -33,7 +33,7 @@ contains
     use phys_module, only: F0, GAMMA, freeboundary, tstep, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_start_time, RMP_har_cos, RMP_har_sin,            &
        RMP_growth_rate, RMP_ramp_up_time, Number_RMP_harmonics, RMP_har_cos_spectrum, RMP_har_sin_spectrum, T_min,&
-       grid_to_wall, n_wall_blocks, linear_run
+       grid_to_wall, n_wall_blocks, keep_n0_const
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
@@ -141,7 +141,7 @@ contains
              if (node_list%node(inode)%boundary .ne. 0) then
 
                 do in=1, n_tor
-                  if (linear_run  .and.  in .eq. 1 ) then
+                  if (keep_n0_const  .and.  in .eq. 1 ) then
                     zbig = 1.d15
                   else
                     zbig = zbig_backup

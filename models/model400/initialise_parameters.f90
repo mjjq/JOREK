@@ -89,7 +89,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_gauss_psin, heatsource_gauss_sig,        &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data,                                  &
-                linear_run, export_for_nemec,                       &
+                keep_n0_const, export_for_nemec,                    &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 gmres, gmres_max_iter,                              &
                 gmres_m, gmres_4, gmres_tol, iter_precon, tgnum,    &

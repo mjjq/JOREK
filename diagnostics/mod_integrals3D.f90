@@ -902,7 +902,7 @@ if (my_id .eq. 0) then
   endif
 
   ! --- Export or save quantities
-  res(1)  =  xt*t_norm
+  res(1)  =  xt*t_norm2
   loop_expr: do iexpr = 1, expr_list%n_expr
             
     select case ( trim(expr_list%expr(iexpr)%name) )
@@ -1213,6 +1213,30 @@ if (my_id .eq. 0) then
         -(1.d0-r_dt2)*npart_tot_t(index_now-1))  / (dt_now + dt_back*r_dt2) / t_norm
 
     endif
+
+    !--- Estimate time derivatives for 1st tstep (1st order accuracy)
+    if (index_now == 2) then
+      dt_now    = xtime(index_now) - xtime(index_now - 1)
+
+      dE_tot_dt(index_now-1)       = (E_tot_t(index_now)-E_tot_t(index_now-1))               / dt_now / t_norm
+
+      dWmag_tot_dt(index_now-1)    = (Wmag_tot_t(index_now)-Wmag_tot_t(index_now-1))         / dt_now / t_norm
+
+      dthermal_tot_dt(index_now-1) = (thermal_tot_t(index_now)-thermal_tot_t(index_now-1))   / dt_now / t_norm
+
+      dkinperp_tot_dt(index_now-1) = (kin_perp_tot_t(index_now)-kin_perp_tot_t(index_now-1)) / dt_now / t_norm
+
+      dkinpar_tot_dt(index_now-1)  = (kin_par_tot_t(index_now) - kin_par_tot_t(index_now-1)) / dt_now / t_norm
+
+      dpart_tot_dt(index_now-1)    = (density_tot_t(index_now)-density_tot_t(index_now-1))   / dt_now / t_norm
+
+      dnpart_tot_dt(index_now-1)   = (npart_tot_t(index_now)-npart_tot_t(index_now-1))       / dt_now / t_norm
+
+    endif
+
+
+
+
   endif
 
 endif !--- my_id

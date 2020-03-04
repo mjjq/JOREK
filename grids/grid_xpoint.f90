@@ -1382,10 +1382,10 @@ do i=1,newnode_list%n_nodes
       newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
       index = index - 1
     endif
-    if ( fix_axis_nodes .and. (i .ge. 1)  .and. (i .le. n_tht) ) then
+    if ( fix_axis_nodes .and. (i .le. n_tht) ) then
       if (force_central_node) then
         if (k.eq.1) then
-          node_list%node(index)%index(1) = 1
+          newnode_list%node(index)%index(1) = 1
           if (i.gt.1) index = index - 1
         else
           if (k.ge.3) index = index - 1 ! we only want 1 and 2 since 3,4 are poloidal

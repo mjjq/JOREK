@@ -342,7 +342,7 @@ do i=1,node_list%n_nodes
     endif
     
     ! Remove orders 3,4 to fix axis node poloidally
-    if ( fix_axis_nodes .and. (i .ge. 1)  .and. (i .le. n_tht) ) then
+    if (fix_axis_nodes) then
       if (xcase .ne. 3) then
         if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) then
           if (force_central_node) then

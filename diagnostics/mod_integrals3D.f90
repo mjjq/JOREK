@@ -907,6 +907,9 @@ if (my_id .eq. 0) then
             
     select case ( trim(expr_list%expr(iexpr)%name) )
 
+      case ( 'index_now' )
+        res(iexpr+1) = real(index_now) 
+
       case ( 'psi_axis' )
         res(iexpr+1) = ES%psi_axis 
 

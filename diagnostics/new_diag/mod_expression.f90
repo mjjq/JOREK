@@ -163,6 +163,7 @@ module mod_expression
     call add(exprs_all, 'brem        ', 'Brem terms for bolometry diagnostic                   ')
 #endif
     ! --- List of volume and boundary integrals
+    call add(exprs_all_int, 'index_now   ', 'Restart file index (or number of run tsteps)          ')
     call add(exprs_all_int, 'psi_axis    ', 'psi at magnetic axis                                  ')
     call add(exprs_all_int, 'R_axis      ', 'R of magnetic axis                                    ')
     call add(exprs_all_int, 'Z_axis      ', 'Z of magnetic axis                                    ')

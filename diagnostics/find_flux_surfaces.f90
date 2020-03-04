@@ -87,7 +87,7 @@ do i=1, element_list%n_elements
         n1 = element_list%element(i)%vertex(iv)
         n2 = element_list%element(i)%vertex(im)
 
-        if (node_list%node(n1)%axis_nodes .and. node_list%node(n2)%axis_nodes) cycle
+        if (node_list%node(n1)%axis_node .and. node_list%node(n2)%axis_node) cycle
 
         is = mod(iv+1,2) + 2
 

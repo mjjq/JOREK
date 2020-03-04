@@ -2,6 +2,7 @@
 !! The NOMPIVERSION preprocessor flag is needed for mod_integrals3D_nompi, a version of this subroutine not requiring MPI.
 #ifndef NOMPIVERSION
 module mod_integrals3D
+#endif
 
   use constants
   use mod_parameters
@@ -19,7 +20,6 @@ module mod_integrals3D
   use mod_poloidal_currents, only : integrated_normal_bnd_curr 
   use corr_neg
   use equil_info, only : get_psi_n, ES
-#endif
 
   implicit none
   

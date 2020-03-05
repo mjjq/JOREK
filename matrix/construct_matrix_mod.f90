@@ -606,10 +606,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
                     
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
+                    
+                  enddo ! n_var * n_tor
 
-                  enddo
-
-                enddo ! n_order+1
+                enddo ! n_var * n_tor
 
                 !$omp critical
                 A_glob(ijA_position : ijA_position + n_var*n_tor*n_var*n_tor - 1) = &
@@ -617,8 +617,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
                   thread_struct(omp_tid)%synch_buff(:)
                 !$omp end critical
 
-              enddo ! n_vertex_max
-            enddo ! n_var * n_tor
+              enddo ! n_order+1
+            enddo ! n_vertex_max
 
           endif ! index_min < index < index_max
 

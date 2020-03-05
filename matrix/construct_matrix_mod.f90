@@ -176,10 +176,10 @@ contains
     endif
 
     ! If keep_n0_const then the n0 component should be frozen = diagonal entries high
-    i_max =  n_order*n_vertex_max*n_var*n_tor
+    i_max =  (n_order+1)*n_vertex_max*n_var*n_tor
 #ifdef JECCD
     ! n0 component of eccd current should not be frozen when keep_n0_const=.t. (last variable)
-    i_max =  n_order*n_vertex_max*(n_var-1)*n_tor
+    i_max = (n_order+1)*n_vertex_max*(n_var-1)*n_tor
 #endif
 
     if ( keep_n0_const ) then

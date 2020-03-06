@@ -445,7 +445,7 @@ required = 0
     if ( .not. bench_without_plot ) then
       do index_now = 1, index_start
         call write_live_data(index_now)
-        call write_live_data_vacuum(index_now, diag_coil_curr)
+        call write_live_data_vacuum(index_now, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
 #ifdef JECCD
         call write_live_data2(index_now)
         call write_live_data3(index_now)
@@ -1098,12 +1098,7 @@ required = 0
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
        call energy(node_list,element_list,W_mag,W_kin)
-       call integrals(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint,       &
-         ES%psi_xpoint, ES%psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
-         beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),           &
-         density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                         &
-         pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),           &
-         part_src_in_t(index_now), part_src_out_t(index_now))
+
        R_axis_t(index_now)   = ES%R_axis
        Z_axis_t(index_now)   = ES%Z_axis
        psi_axis_t(index_now) = ES%psi_axis
@@ -1162,7 +1157,7 @@ required = 0
     if (my_id .eq. 0 ) then
       ! --- Output energies and growth_rates to text files during the code run
       call write_live_data(index_now)
-      call write_live_data_vacuum(index_now, diag_coil_curr)
+      call write_live_data_vacuum(index_now, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
 
 #ifdef JECCD
       call write_live_data2(index_now)

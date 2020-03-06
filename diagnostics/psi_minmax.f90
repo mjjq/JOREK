@@ -27,16 +27,16 @@ do iv= 1, n_vertex_max
   if ((iv .eq. 1) .or. (iv .eq. 3)) THEN
 
     PSIM  =  node_list%node(n1)%values(1,1,1) * element_list%element(i_elm)%size(iv,1)             ! PSI(1,n1)
-    PSIMR =  node_list%node(n1)%values(1,2,1) * element_list%element(i_elm)%size(iv,2) * 3.d0/2.d0 ! PSI(3,n1)
-    PSIP  =  node_list%node(n2)%values(1,1,1) * element_list%element(i_elm)%size(iv,1)             ! PSI(1,n2)
-    PSIPR =  node_list%node(n2)%values(1,2,1) * element_list%element(i_elm)%size(iv,2) * 3.d0/2.d0 ! PSI(3,n2)
+    PSIMR =  node_list%node(n1)%values(1,2,1) * element_list%element(i_elm)%size(iv,2) * 3.d0/2.d0 ! PSI(2,n1)
+    PSIP  =  node_list%node(n2)%values(1,1,1) * element_list%element(i_elm)%size(im,1)             ! PSI(1,n2)
+    PSIPR = -node_list%node(n2)%values(1,2,1) * element_list%element(i_elm)%size(im,2) * 3.d0/2.d0 ! PSI(2,n2)
 
   elseif ((iv .eq. 2) .or. (iv .eq. 4)) then
 
     PSIM  =   node_list%node(n1)%values(1,1,1) * element_list%element(i_elm)%size(iv,1)             ! PSI(1,n1)
-    PSIMR =   node_list%node(n1)%values(1,3,1) * element_list%element(i_elm)%size(iv,3) * 3.d0/2.d0 ! PSI(2,n1)
-    PSIP  =   node_list%node(n2)%values(1,1,1) * element_list%element(i_elm)%size(iv,1)             ! PSI(1,n2)
-    PSIPR =   node_list%node(n2)%values(1,3,1) * element_list%element(i_elm)%size(iv,3) * 3.d0/2.d0 ! PSI(2,n2)
+    PSIMR =   node_list%node(n1)%values(1,3,1) * element_list%element(i_elm)%size(iv,3) * 3.d0/2.d0 ! PSI(3,n1)
+    PSIP  =   node_list%node(n2)%values(1,1,1) * element_list%element(i_elm)%size(im,1)             ! PSI(1,n2)
+    PSIPR = - node_list%node(n2)%values(1,3,1) * element_list%element(i_elm)%size(im,3) * 3.d0/2.d0 ! PSI(3,n2)
 
   endif
 

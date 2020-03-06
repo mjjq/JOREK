@@ -86,6 +86,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
 #endif
      write(21) node_list%node(i)%index
      write(21) node_list%node(i)%boundary
+     write(21) node_list%node(i)%axis_node
      write(21) node_list%node(i)%parents
      write(21) node_list%node(i)%parent_elem
      write(21) node_list%node(i)%ref_lambda
@@ -250,6 +251,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   integer,     allocatable :: t_index(:,:)                 ! n_order+1
   integer,     allocatable :: t_boundary(:)                ! 
+  character,   allocatable :: t_axis_node(:)     
   integer,     allocatable :: t_parents(:,:)               ! 2
   integer,     allocatable :: t_parent_elem(:)             ! 
   real(RKIND), allocatable :: t_ref_lambda(:)
@@ -308,6 +310,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   call tr_allocate(t_index,1,node_list%n_nodes,1,n_order+1,"index",CAT_UNKNOWN)
   call tr_allocate(t_boundary,1,node_list%n_nodes,"boundary",CAT_UNKNOWN)
+  call tr_allocate(t_axis_node,1,node_list%n_nodes,"axis_node",CAT_UNKNOWN)
   call tr_allocate(t_parents,1,node_list%n_nodes,1,2,"parent",CAT_UNKNOWN)
   call tr_allocate(t_parent_elem,1,node_list%n_nodes,"parent_elem",CAT_UNKNOWN)
   call tr_allocate(t_ref_lambda,1,node_list%n_nodes,"ref_lambade",CAT_UNKNOWN)
@@ -367,6 +370,11 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
      t_index(i,:)      = node_list%node(i)%index
      t_boundary(i)     = node_list%node(i)%boundary
+     if (node_list%node(i)%axis_node) then
+        t_axis_node(i)  = 'T'
+     else
+        t_axis_node(i)  = 'F'
+     end if
      t_parents(i,:)    = node_list%node(i)%parents(1:2)
      t_parent_elem(i)  = node_list%node(i)%parent_elem
      t_ref_lambda(i)   = node_list%node(i)%ref_lambda
@@ -456,6 +464,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
        node_list%n_nodes,n_order+1,'index'//char(0))
   call HDF5_array1D_saving_int(file_id,t_boundary, &
        node_list%n_nodes,'boundary'//char(0))
+  call HDF5_array1D_saving_char(file_id,t_axis_node, &
+       node_list%n_nodes,'axis_node'//char(0))
   call HDF5_array2D_saving_int(file_id,t_parents, &
        node_list%n_nodes,2,'parents'//char(0))
   call HDF5_array1D_saving_int(file_id,t_parent_elem, &
@@ -511,6 +521,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
      call HDF5_array1D_saving(file_id,beta_p_t(1:index_now),index_now,'beta_p_t'//char(0))
      call HDF5_array1D_saving(file_id,beta_t_t(1:index_now),index_now,'beta_t_t'//char(0))
      call HDF5_array1D_saving(file_id,beta_n_t(1:index_now),index_now,'beta_n_t'//char(0))
+     call HDF5_array1D_saving(file_id,density_tot_t(1:index_now),index_now,'density_tot_t'//char(0))
      call HDF5_array1D_saving(file_id,density_in_t(1:index_now),index_now,'density_in_t'//char(0))
      call HDF5_array1D_saving(file_id,density_out_t(1:index_now),index_now,'density_out_t'//char(0))
      call HDF5_array1D_saving(file_id,pressure_in_t(1:index_now),index_now,'pressure_in_t'//char(0))
@@ -535,6 +546,14 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
      call HDF5_array1D_saving(file_id,flux_qperp_t(1:index_now),index_now,'flux_qperp_t'//char(0))
      call HDF5_array1D_saving(file_id,flux_kinpar_t(1:index_now),index_now,'flux_kinpar_t'//char(0))
      call HDF5_array1D_saving(file_id,flux_pvn_t(1:index_now),index_now,'flux_Pvn_t'//char(0))
+     call HDF5_array1D_saving(file_id,part_flux_Dpar_t(1:index_now),index_now,'part_flux_Dpar_t'//char(0))
+     call HDF5_array1D_saving(file_id,part_flux_Dperp_t(1:index_now),index_now,'part_flux_Dperp_t'//char(0))
+     call HDF5_array1D_saving(file_id,part_flux_Vpar_t(1:index_now),index_now,'part_flux_Vpar_t'//char(0))
+     call HDF5_array1D_saving(file_id,part_flux_Vperp_t(1:index_now),index_now,'part_flux_Vperp_t'//char(0))
+     call HDF5_array1D_saving(file_id,npart_flux_t(1:index_now),index_now,'npart_flux_t'//char(0))
+     call HDF5_array1D_saving(file_id,dpart_tot_dt(1:index_now),index_now,'dpart_tot_dt'//char(0))
+     call HDF5_array1D_saving(file_id,dnpart_tot_dt(1:index_now),index_now,'dnpart_tot_dt'//char(0))
+     call HDF5_array1D_saving(file_id,npart_tot_t(1:index_now),index_now,'npart_tot_t'//char(0))
      call HDF5_array1D_saving(file_id,dE_tot_dt(1:index_now),index_now,'dE_tot_dt'//char(0))
      call HDF5_array1D_saving(file_id,dWmag_tot_dt(1:index_now),index_now,'dWmag_tot_dt'//char(0))
      call HDF5_array1D_saving(file_id,dthermal_tot_dt(1:index_now),index_now,'dthermal_tot_dt'//char(0))
@@ -667,6 +686,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 #endif
   call tr_deallocate(t_index,"index",CAT_UNKNOWN)
   call tr_deallocate(t_boundary,"boundary",CAT_UNKNOWN)
+  call tr_deallocate(t_axis_node,"axis_node",CAT_UNKNOWN)
   call tr_deallocate(t_parents,"parents",CAT_UNKNOWN)
   call tr_deallocate(t_parent_elem,"parent_elem",CAT_UNKNOWN)
   call tr_deallocate(t_ref_lambda,"ref_lambda",CAT_UNKNOWN)

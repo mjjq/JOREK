@@ -301,21 +301,7 @@ do i=1,nr
    node_list%node(index)%axis_node = .false.
    if ( fix_axis_nodes .and. (.not. doing_polar_square) .and. (i .eq. 1) ) node_list%node(index)%axis_node = .true.
 
-   if ( fix_axis_nodes .and. (.not. doing_polar_square) .and. (i .eq. 1) ) then
-     if (force_central_node) then
-       node_list%node(index)%index(1) = 1
-       if (j.eq.1) n_index_start = n_index_start + 1
-       node_list%node(index)%index(2) = n_index_start + 1
-       node_list%node(index)%index(3) = n_index_start + 2
-       node_list%node(index)%index(4) = n_index_start + 3
-       n_index_start = n_index_start + 1 ! we only want 1 and 2 since 3,4 are poloidal
-     else
-       do k=1,n_order+1
-         node_list%node(index)%index(k) = n_index_start + k
-       enddo
-       n_index_start = n_index_start + 2 ! we only want 1 and 2 since 3,4 are poloidal
-     endif
-   else if (force_central_node .and. (.not. doing_polar_square) .and. (.not. fix_axis_nodes) .and. (i.eq.1)) then
+   if (force_central_node .and. (.not. doing_polar_square) .and. (i.eq.1)) then
 
      node_list%node(index)%index(1) = 1
 

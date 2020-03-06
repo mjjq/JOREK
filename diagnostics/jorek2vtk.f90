@@ -294,9 +294,8 @@ endif
     s_rn0       = n_scalars
     n_scalars   = n_scalars + n_rn0
  endif
-
-
 #endif
+
 #if (JOREK_MODEL == 501)
  n_radiation = 0
  if (include_radiation) then
@@ -1020,9 +1019,10 @@ enddo  ! n_elements
 
    enddo
   endif
-#endif /*(JOREK_MODEL==500)
+#endif /*(JOREK_MODEL==500)*/
 
 #if (JOREK_MODEL == 501)
+
  if (include_radiation) then
 
   !-------------------------------------------
@@ -1166,6 +1166,7 @@ enddo  ! n_elements
    end do
  endif
 #endif /*(JOREK_MODEL == 501)*/
+
 #if (JOREK_MODEL == 500)
  if (include_neutral_dens) then
 
@@ -1202,10 +1203,8 @@ enddo  ! n_elements
      scalars(i,s_rn0+1) = IonN
      scalars(i,s_rn0+2) = RecN
 
-
    end do
  end if
-
 
 #endif /*(JOREK_MODEL == 500)*/
 
@@ -1236,6 +1235,7 @@ if (SI_units) then
     !===================================== Neutral density in 1e20m-3
     scalars(i,8) = scalars(i,8) * central_density
 #endif
+
 #if (JOREK_MODEL == 501)
     !===================================== Impurity density in 1e20m-3
     scalars(i,8) = scalars(i,8) * central_density * m_i_over_m_imp

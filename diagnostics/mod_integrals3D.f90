@@ -940,7 +940,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       vpar0    = 0.d0
 #endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
       rn0      = eq_g_1D(mp,8,ms)
 #else
       rn0      = 0.d0 
@@ -976,7 +976,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         vpar_t = 0.d0
 #endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
         call interp(node_list,element_list,m_elm,8,in,sg,tg,rn,rn_s,rn_t,rn_st,rn_ss,rn_tt)
         rhon_s = rhon_s + rn_s * HZ(in,mp)
         rhon_t = rhon_t + rn_t * HZ(in,mp)

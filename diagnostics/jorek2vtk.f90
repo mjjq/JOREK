@@ -1037,7 +1037,7 @@ enddo  ! n_elements
 
    enddo
   endif
-#endif /*(JOREK_MODEL==500)
+#endif /*(JOREK_MODEL==500)*/
 
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
  if (include_radiation) then
@@ -1362,7 +1362,7 @@ if (SI_units) then
      scalars(i,s_radiation+3) = scalars(i,s_radiation+3)/(2.d0/3.d0*((central_mass*MASS_PROTON*central_density*1.d20)**0.5)*(MU_ZERO**1.5)) 
      scalars(i,s_radiation+4) = scalars(i,s_radiation+4)
     end if
-#endif /*(JOREK_MODEL >= 500)*/
+#endif /*(JOREK_MODEL = 501 || JOREK_MODEL == 502)*/
 
   enddo  ! nnos
 

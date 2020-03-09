@@ -199,6 +199,8 @@ module exec_commands
           call select_loop_si_units(command, ierr)
         case ( 'spi-state' )
           call spi_state(command, first_step, ierr)
+	case ( 'shards' )
+	  call shards(command, ierr)
         case ( 'timesteps' )
           call timesteps 
         case default
@@ -214,7 +216,7 @@ module exec_commands
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
           'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
           'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'rectangular_torus', 'energy_spectrum', 'average_h5', &
-          'I_halo_TPF', 'spi-state')
+          'I_halo_TPF', 'spi-state', 'shards')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -1682,7 +1684,37 @@ module exec_commands
   end subroutine spi_state
 
 
+  !> Write out SPI shards characteristics
+  subroutine shards(command, ierr)
 
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer             :: i_file, i_spi
+    character(len=1024) :: filename, status, access
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    write(filename,'(4a)') DIR, 'shards', trim(step_range_string(index_start,index_start)), '.txt'
+
+    i_file = 133
+
+    call open_ascii_file(ierr, i_file, filename, .false.)
+
+    do i_spi = 1, n_spi
+      write(i_file,'(i7,3f12.3,es10.4)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
+        pellets(i_spi)%spi_radius
+    enddo
+    
+    close(i_file)
+
+  end subroutine shards
 
   
   !> Output integrated poloidal current that is normal to the boudary and

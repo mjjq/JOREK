@@ -26,6 +26,7 @@ real*8  :: prof0,     dprof0_dpsi,     dprof0_dpsi2,     dprof0_dpsi3
 real*8  :: poly,      dpoly_dpsi,      dpoly_dpsi2,      dpoly_dpsi3
 real*8  :: pert,      dpert_dpsi,      dpert_dpsi2,      dpert_dpsi3
 real*8  :: sqrt_term, dsqrt_term_dpsi, dsqrt_term_dpsi2, dsqrt_term_dpsi3
+real*8  :: no_delta_psi
 
 ! --- Jorek uses -FF' as a convention, so we need to reverse the profile before integrating
 real*8  :: myFF_0, myFF_1, myFF_coef(8)
@@ -60,6 +61,8 @@ if (xpoint2) then
   endif
 endif
 delta_psi = (psi_bnd - psi_axis)  ! abs(psi_bnd - psi_axis)
+no_delta_psi = 1.d0
+if (FF_coef(9) .eq. 1.d0) no_delta_psi = delta_psi
 
 ! --- Polynomial part
 poly        = ( psi_n  + myFF_coef(1)/2.d0 * psi_n**2 + myFF_coef(2)/3.d0 * psi_n**3 + myFF_coef(3)/4.d0 * psi_n**4 ) * delta_psi
@@ -68,18 +71,18 @@ dpoly_dpsi2 = (          myFF_coef(1)                 + myFF_coef(2)*2.0  * psi_
 dpoly_dpsi3 = (                                       + myFF_coef(2)*2.0             + myFF_coef(3)*6.0  * psi_n    ) / delta_psi**2
 
 ! --- Perturbation part
-pert        = + myFF_coef(6) * tanh((psi_n - myFF_coef(7))/myFF_coef(8))    / 2.d0
-dpert_dpsi  = + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**2 / (2.d0 * myFF_coef(8)) / delta_psi
-dpert_dpsi2 = - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**2       / delta_psi**2 &
+pert        = + myFF_coef(6) * tanh((psi_n - myFF_coef(7))/myFF_coef(8))    / 2.d0                                 * no_delta_psi
+dpert_dpsi  = + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**2 / (2.d0 * myFF_coef(8)) / delta_psi    * no_delta_psi
+dpert_dpsi2 = - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**2       / delta_psi**2 * no_delta_psi &
                              * sinh((psi_n - myFF_coef(7))/myFF_coef(8))
-dpert_dpsi2 = + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**4 / myFF_coef(8)**3 * 3.0 / delta_psi**3 &
-                             * sinh((psi_n - myFF_coef(7))/myFF_coef(8))**2                                        &
-              - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**2 / myFF_coef(8)**3       / delta_psi**3
-dpert_dpsi3 = - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**5 / myFF_coef(8)**4 *12.0 / delta_psi**4 &
-                             * sinh((psi_n - myFF_coef(7))/myFF_coef(8))**3                                        &
-              + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**4 * 3.0 / delta_psi**4 &
-                       * 2.0 * sinh((psi_n - myFF_coef(7))/myFF_coef(8))                                           &
-              + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**4 * 2.0 / delta_psi**4 &
+dpert_dpsi2 = + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**4 / myFF_coef(8)**3 * 3.0 / delta_psi**3 * no_delta_psi &
+                             * sinh((psi_n - myFF_coef(7))/myFF_coef(8))**2                                                       &
+              - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**2 / myFF_coef(8)**3       / delta_psi**3 * no_delta_psi
+dpert_dpsi3 = - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**5 / myFF_coef(8)**4 *12.0 / delta_psi**4 * no_delta_psi &
+                             * sinh((psi_n - myFF_coef(7))/myFF_coef(8))**3                                                       &
+              + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**4 * 3.0 / delta_psi**4 * no_delta_psi &
+                       * 2.0 * sinh((psi_n - myFF_coef(7))/myFF_coef(8))                                                          &
+              + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**4 * 2.0 / delta_psi**4 * no_delta_psi &
                              * sinh((psi_n - myFF_coef(7))/myFF_coef(8))
 
 ! --- Value of F at the edge

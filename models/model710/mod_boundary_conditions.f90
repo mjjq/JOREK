@@ -86,7 +86,7 @@ contains
     real*8  :: A30, A30_s, A30_t, A30_p, A30_R, A30_Z
     real*8  :: Fprofile, BR0, BZ0, Bp0, BB2, B_dot_n
 
-    real*8  :: normal(2), normal_direction(2)
+    real*8  :: normal(2), normal_direction(2), cs_direction
     real*8  :: grad_s(2), grad_t(2)
 
     real*8  :: Cs,   Cs_T,   Cs_s,   Cs_s_T,   Cs_s_Ts
@@ -211,19 +211,22 @@ contains
                     normal = normal / norm2(normal)
 
                     B_dot_n = (BR0 * normal(1) + BZ0 * normal(2))
+                    cs_direction = B_dot_n / abs(B_dot_n)
+
+                    ! Important: we assume that B is ~constant.
                     Cs = (gamma * T0_corr)**0.5
-                    beta = Cs * B_dot_n / BB2
+                    beta = Cs * cs_direction / sqrt(BB2)
                     
                     Cs_T = 0.5 * gamma * (gamma * T0_corr)**(-0.5)
-                    beta_T   = Cs_T * B_dot_n / BB2
+                    beta_T   = Cs_T * cs_direction / sqrt(BB2)
 
                     Cs_s = 0.5 * gamma * T0_s * (gamma * T0_corr)**(-0.5)
-                    beta_s = Cs_s * B_dot_n / BB2
+                    beta_s = Cs_s * cs_direction / sqrt(BB2)
                     
                     Cs_s_T  = - 0.25 * gamma**2 * T0_s * (gamma * T0_corr)**(-1.5)
                     Cs_s_Ts = 0.5 * gamma * (gamma * T0_corr)**(-0.5)
-                    beta_s_T  = Cs_s_T  * B_dot_n / BB2
-                    beta_s_Ts = Cs_s_Ts * B_dot_n / BB2
+                    beta_s_T  = Cs_s_T  * cs_direction / sqrt(BB2)
+                    beta_s_Ts = Cs_s_Ts * cs_direction / sqrt(BB2)
 
                     if (k == var_uR) Mach1      = uR0 - beta      * BR0
                     if (k == var_uZ) Mach1      = uZ0 - beta      * BZ0

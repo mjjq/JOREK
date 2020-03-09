@@ -291,7 +291,7 @@ endif
 #endif
 
 #if fullmhd
- n_fullmhd = 9
+ n_fullmhd = 10
  s_fullmhd = n_scalars
  n_scalars = n_scalars + n_fullmhd
 #endif /*fullmhd*/
@@ -392,7 +392,10 @@ endif
 #ifdef fullmhd
 scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_R         ', 'B_Z         ', 'B_phi       ', &
                                                     'J_R         ', 'J_Z         ', 'J_phi       ', 'FFprime     ', &
-                                                    'Grad_P      ', 'JxB         '/)
+                                                    'Grad_P      ', 'JxB         ', 'V_parallel  '/)
+if ( SI_units ) then
+scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = 'V_par_km/s  '
+endif
 #endif /*fullmhd*/
 
 if (include_magnetic_field)  vector_names(s_bfield+1:s_bfield+n_bfield) = 'B_field' 
@@ -824,6 +827,9 @@ do i=1,element_list%n_elements
         scalars(inode,s_fullmhd+8) = GradP_pol ! GradP_p ! GradP_Z  ! GradP_R !
         scalars(inode,s_fullmhd+9) = JxB_pol   ! JxB_p   ! JxB_Z    ! JxB_R   !
 
+        ! --- V_parallel
+        scalars(inode,s_fullmhd+10)= (VR*BR + VZ*BZ + Vp*Bp)  / sqrt(BR**2 + BZ**2 + Bp**2)
+
         psi_norm = get_psi_n(A3, Z)
 
         grad_psi = sqrt(A3_R**2 + A3_Z**2)
@@ -1241,6 +1247,7 @@ if (SI_units) then
     scalars(i,var_UR) = scalars(i,var_UR) /t_norm/1.e3
     scalars(i,var_UZ) = scalars(i,var_UZ) /t_norm/1.e3
     scalars(i,var_Up) = scalars(i,var_Up) /t_norm/1.e3
+    scalars(i,s_fullmhd+10) = scalars(i,s_fullmhd+10) /t_norm/1.e3 ! V_parallel
     !=====================Pressure in kPa
     if (include_fluxes) scalars(i,s_fluxes+1) = scalars(i,s_fluxes+1) / MU_zero/1.e3
     ! not yet implemented

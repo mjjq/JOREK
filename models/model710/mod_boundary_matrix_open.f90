@@ -61,7 +61,7 @@ real*8     :: BR0, BR0_AR, BR0_AZ, BR0_A3
 real*8     :: BZ0, BZ0_AR, BZ0_AZ, BZ0_A3
 real*8     :: Bp0, Bp0_AR, Bp0_AZ, Bp0_A3
 
-real*8     :: B_dot_n,B_dot_n_AR, B_dot_n_AZ, B_dot_n_A3
+real*8     :: B_dot_n,B_dot_n_AR, B_dot_n_AZ, B_dot_n_A3, cs_direction
 real*8     :: ZKpar_T, gg
 
 real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
@@ -217,6 +217,7 @@ do ms=1, n_gauss
     BB2 = BR0*BR0 + BZ0*BZ0 + Bp0*Bp0
 
     B_dot_n = BR0 * normal(1) + BZ0 * normal(2)
+    cs_direction = B_dot_n / abs(B_dot_n)
 
     T0_corr = max(T0,1.d-10) !abs(T0) is not a good idea (it can be quite large)
     c_s = sqrt(gamma * abs(T0_corr))
@@ -232,14 +233,14 @@ do ms=1, n_gauss
 
           v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)         ! test function
 
-          Qbnd(var_uR)   = Mach1 * zbig * v * ( UR0  - c_s * BR0 * B_dot_n / BB2 )
+          Qbnd(var_uR)   = Mach1 * zbig * v * ( UR0  - c_s * BR0 * cs_direction / sqrt(BB2) )
 
-          Qbnd(var_uZ)   = Mach1 * zbig * v * ( UZ0  - c_s * BZ0 * B_dot_n / BB2 )
+          Qbnd(var_uZ)   = Mach1 * zbig * v * ( UZ0  - c_s * BZ0 * cs_direction / sqrt(BB2) )
 
           if (parallel_projection) then
-            Qbnd(var_up) = Mach1 * zbig * v * ( BR0 * UR0 + BZ0 * UZ0 + Bp0 * Up0 - c_s * B_dot_n )
+            Qbnd(var_up) = Mach1 * zbig * v * ( BR0 * UR0 + BZ0 * UZ0 + Bp0 * Up0 - c_s * cs_direction * sqrt(BB2) )
           else
-            Qbnd(var_up) = Mach1 * zbig * v * ( Up0  - c_s * Bp0 * B_dot_n / BB2 )
+            Qbnd(var_up) = Mach1 * zbig * v * ( Up0  - c_s * Bp0 * cs_direction / sqrt(BB2) )
           endif
 
           Qbnd(var_T) = - v * gg * r0 * T0 * c_s * abs(B_dot_n) / sqrt(BB2)
@@ -299,52 +300,31 @@ do ms=1, n_gauss
 
 
                 Qjac(var_uR,var_uR) = - Mach1 * zbig * v * UR
-                Qjac(var_uR,var_AR) = - Mach1 * zbig * v * c_s * ( - BR0_AR * B_dot_n    / BB2 &
-                                                                   - BR0    * B_dot_n_AR / BB2 &
-                                                                   + BR0    * B_dot_n    / BB2**2 * BB2_AR )
-                Qjac(var_uR,var_AZ) = - Mach1 * zbig * v * c_s * ( - BR0_AZ * B_dot_n    / BB2 &
-                                                                   - BR0    * B_dot_n_AZ / BB2 &
-                                                                   + BR0    * B_dot_n    / BB2**2 * BB2_AZ )
-                Qjac(var_uR,var_A3) = - Mach1 * zbig * v * c_s * ( - BR0_A3 * B_dot_n    / BB2 &
-                                                                   - BR0    * B_dot_n_A3 / BB2 &
-                                                                   + BR0    * B_dot_n    / BB2**2 * BB2_A3 )
-                Qjac(var_uR,var_T)  = - Mach1 * zbig * v * ( - cs_T * BR0 * B_dot_n / BB2 )
-
+                Qjac(var_uR,var_AR) = - Mach1 * zbig * v * c_s * cs_direction * ( - BR0_AR / sqrt(BB2) + 0.5 * BR0 * BB2_AR / BB2**1.5 )
+                Qjac(var_uR,var_AZ) = - Mach1 * zbig * v * c_s * cs_direction * ( - BR0_AZ / sqrt(BB2) + 0.5 * BR0 * BB2_AZ / BB2**1.5 )
+                Qjac(var_uR,var_A3) = - Mach1 * zbig * v * c_s * cs_direction * ( - BR0_A3 / sqrt(BB2) + 0.5 * BR0 * BB2_A3 / BB2**1.5 )
+                Qjac(var_uR,var_T)  = - Mach1 * zbig * v * ( - cs_T * BR0 * cs_direction / sqrt(BB2) )
 
                 Qjac(var_uZ,var_uZ) = - Mach1 * zbig * v * UZ
-                Qjac(var_uZ,var_AR) = - Mach1 * zbig * v * c_s * ( - BZ0_AR * B_dot_n    / BB2 &
-                                                                   - BZ0    * B_dot_n_AR / BB2 &
-                                                                   + BZ0    * B_dot_n    / BB2**2 * BB2_AR )
-                Qjac(var_uZ,var_AZ) = - Mach1 * zbig * v * c_s * ( - BZ0_AZ * B_dot_n    / BB2 &
-                                                                   - BZ0    * B_dot_n_AZ / BB2 &
-                                                                   + BZ0    * B_dot_n    / BB2**2 * BB2_AZ )
-                Qjac(var_uZ,var_A3) = - Mach1 * zbig * v * c_s * ( - BZ0_A3 * B_dot_n    / BB2 &
-                                                                   - BZ0    * B_dot_n_A3 / BB2 &
-                                                                   + BZ0    * B_dot_n    / BB2**2 * BB2_A3 )
-                Qjac(var_uZ,var_T)  = - Mach1 * zbig * v * ( - cs_T * BZ0 * B_dot_n / BB2 )
-
-
+                Qjac(var_uZ,var_AR) = - Mach1 * zbig * v * c_s * cs_direction * ( - BZ0_AR / sqrt(BB2) + 0.5 * BZ0 * BB2_AR / BB2**1.5 )
+                Qjac(var_uZ,var_AZ) = - Mach1 * zbig * v * c_s * cs_direction * ( - BZ0_AZ / sqrt(BB2) + 0.5 * BZ0 * BB2_AZ / BB2**1.5 )
+                Qjac(var_uZ,var_A3) = - Mach1 * zbig * v * c_s * cs_direction * ( - BZ0_A3 / sqrt(BB2) + 0.5 * BZ0 * BB2_A3 / BB2**1.5 )
+                Qjac(var_uZ,var_T)  = - Mach1 * zbig * v * ( - cs_T * BZ0 * cs_direction / sqrt(BB2) )
 
                 if (parallel_projection) then
                   Qjac(var_up,var_uR) = - Mach1 * zbig * v * BR0 * UR
                   Qjac(var_up,var_uZ) = - Mach1 * zbig * v * BZ0 * UZ
                   Qjac(var_up,var_up) = - Mach1 * zbig * v * Bp0 * Up
-                  Qjac(var_up,var_AR) = - Mach1 * zbig * v * ( BR0_AR * UR0 + BZ0_AR * UZ0 + Bp0_AR * Up0 - c_s * B_dot_n_AR )
-                  Qjac(var_up,var_AZ) = - Mach1 * zbig * v * ( BR0_AZ * UR0 + BZ0_AZ * UZ0 + Bp0_AZ * Up0 - c_s * B_dot_n_AZ )
-                  Qjac(var_up,var_A3) = - Mach1 * zbig * v * ( BR0_A3 * UR0 + BZ0_A3 * UZ0 + Bp0_A3 * Up0 - c_s * B_dot_n_A3 )
-                  Qjac(var_up,var_T)  = - Mach1 * zbig * v * ( - cs_T * B_dot_n )
+                  Qjac(var_up,var_AR) = - Mach1 * zbig * v * ( - c_s  * cs_direction * 0.5 * BB2_AR / sqrt(BB2) )
+                  Qjac(var_up,var_AZ) = - Mach1 * zbig * v * ( - c_s  * cs_direction * 0.5 * BB2_AZ / sqrt(BB2) )
+                  Qjac(var_up,var_A3) = - Mach1 * zbig * v * ( - c_s  * cs_direction * 0.5 * BB2_A3 / sqrt(BB2) )
+                  Qjac(var_up,var_T)  = - Mach1 * zbig * v * ( - cs_T * cs_direction * sqrt(BB2) )
                 else
                   Qjac(var_up,var_up) = - Mach1 * zbig * v * Up
-                  Qjac(var_up,var_AR) = - Mach1 * zbig * v * c_s * ( - Bp0_AR * B_dot_n    / BB2 &
-                                                                     - Bp0    * B_dot_n_AR / BB2 &
-                                                                     + Bp0    * B_dot_n    / BB2**2 * BB2_AR )
-                  Qjac(var_up,var_AZ) = - Mach1 * zbig * v * c_s * ( - Bp0_AZ * B_dot_n    / BB2 &
-                                                                     - Bp0    * B_dot_n_AZ / BB2 &
-                                                                     + Bp0    * B_dot_n    / BB2**2 * BB2_AZ )
-                  Qjac(var_up,var_A3) = - Mach1 * zbig * v * c_s * ( - Bp0_A3 * B_dot_n    / BB2 &
-                                                                     - Bp0    * B_dot_n_A3 / BB2 &
-                                                                     + Bp0    * B_dot_n    / BB2**2 * BB2_A3 )
-                  Qjac(var_up,var_T)  = - Mach1 * zbig * v * ( - cs_T * Bp0 * B_dot_n / BB2 )
+                  Qjac(var_up,var_AR) = - Mach1 * zbig * v * c_s * cs_direction * ( - Bp0_AR / sqrt(BB2) + 0.5 * Bp0 * BB2_AR / BB2**1.5 )
+                  Qjac(var_up,var_AZ) = - Mach1 * zbig * v * c_s * cs_direction * ( - Bp0_AZ / sqrt(BB2) + 0.5 * Bp0 * BB2_AZ / BB2**1.5 )
+                  Qjac(var_up,var_A3) = - Mach1 * zbig * v * c_s * cs_direction * ( - Bp0_A3 / sqrt(BB2) + 0.5 * Bp0 * BB2_A3 / BB2**1.5 )
+                  Qjac(var_up,var_T)  = - Mach1 * zbig * v * ( - cs_T * Bp0 * cs_direction / sqrt(BB2) )
                 endif
 
 

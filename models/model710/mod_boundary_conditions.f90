@@ -32,7 +32,7 @@ contains
 
     use data_structure
     use global_distributed_matrix
-    use phys_module, only: F0, GAMMA, n_pol, n_tht, Mach1_openBC, fix_axis_nodes
+    use phys_module, only: F0, GAMMA, n_pol, n_tht, Mach1_openBC, bc_natural_open
     use vacuum, only: is_freebound
     use mpi_mod
     use mod_locate_irn_jcn
@@ -153,7 +153,7 @@ contains
 
                 endif
 
-                        ! --- Mach-1 BCs
+                ! --- Mach-1 BCs
                 if (.not. Mach1_openBC) then 
                   if ( (k == var_uR) .or. (k == var_uZ) .or. (k == var_up) ) then 
                     
@@ -202,8 +202,8 @@ contains
                     
                     BR0 = ( A30_Z - AZ0_p )/ R
                     BZ0 = ( AR0_p - A30_R )/ R
-                    Bp0 = ( AZ0_R - AR0_Z )* R  +  Fprofile
-                    BB2 = (BR0*BR0 + BZ0*BZ0 + Bp0*Bp0 / R**2)
+                    Bp0 = ( AZ0_R - AR0_Z )  +  Fprofile/ R
+                    BB2 = (BR0*BR0 + BZ0*BZ0 + Bp0*Bp0)
                     
                     grad_s = (/   Z_t, - R_t /) / xjac
                     grad_t = (/ - Z_s,   R_s /) / xjac
@@ -299,6 +299,14 @@ contains
 
                     endif
                   
+                  endif
+                else
+                  if (.not. bc_natural_open) then
+                    write(*,*)'*** MODEL710 WARNING ***'
+                    write(*,*)'*** YOU ARE NOT USING ANY DIVERTOR BOUNDARY CONDITIONS!!!'
+                    write(*,*)'*** YOU NEED TO USE EITHER Mach1_openBC=.f. OR bc_natural_open=.t.'
+                    write(*,*)'*** ABORTING...'
+                    stop
                   endif
                 endif
 

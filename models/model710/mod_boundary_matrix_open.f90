@@ -19,8 +19,8 @@ implicit none
 type (type_element)   :: element
 type (type_node)      :: nodes(4)        ! the two nodes containing the boundary nodes
 
-real*8, dimension (:,:), allocatable  :: ELM
-real*8, dimension (:)  , allocatable  :: RHS
+real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
+real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
 integer    :: vertex(2), direction(2), xcase2
 real*8     :: psi_axis, R_axis, Z_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
@@ -111,7 +111,12 @@ do i=1,2        ! loop over nodes
     element_size_ij = element%size(vertex(i),j2)
 
     j3 = direction_perp(j)
-    element_size_perp = - element%size(vertex(i),direction_perp(1)) * 3.d0
+    !element_size_perp = - element%size(vertex(i),direction_perp(1)) * 3.d0
+    if(vertex(1) == 1)then
+      element_size_perp = element%size(vertex(i),j3) * 3.d0
+    elseif(vertex(1)==3)then
+      element_size_perp = - element%size(vertex(i),j3) * 3.d0
+    endif
 
     do ms=1, n_gauss
 
@@ -225,28 +230,24 @@ do ms=1, n_gauss
 
         do im=1,n_tor
 
-          index_ij = n_tor*n_var*(n_order+1)*(vertex(i)-1) + n_tor * n_var * (j2-1) + im   ! index in the ELM matrix
-
           v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)         ! test function
 
-          Qbnd(var_uR)   = Mach1 * zbig * v * ( UR0  - BR0 /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n) )
+          Qbnd(var_uR)   = Mach1 * zbig * v * ( UR0  - c_s * BR0 * B_dot_n / BB2 )
 
-          Qbnd(var_uZ)   = Mach1 * zbig * v * ( UZ0  - BZ0 /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n) )
+          Qbnd(var_uZ)   = Mach1 * zbig * v * ( UZ0  - c_s * BZ0 * B_dot_n / BB2 )
 
           if (parallel_projection) then
-            Qbnd(var_up) = Mach1 * zbig * v * ( BR0 * UR0 + BZ0 * UZ0 + Bp0 * Up0 - sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n) )
+            Qbnd(var_up) = Mach1 * zbig * v * ( BR0 * UR0 + BZ0 * UZ0 + Bp0 * Up0 - c_s * B_dot_n )
           else
-            Qbnd(var_up) = Mach1 * zbig * v * ( Up0  - Bp0 /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n) )
+            Qbnd(var_up) = Mach1 * zbig * v * ( Up0  - c_s * Bp0 * B_dot_n / BB2 )
           endif
 
-          Qbnd(var_T) = - v * gg * r0 * T0 * c_s * abs(B_dot_n) / sqrt(BB2) * tstep
+          Qbnd(var_T) = - v * gg * r0 * T0 * c_s * abs(B_dot_n) / sqrt(BB2)
 
+          index_ij = n_tor*n_var*(n_order+1)*(vertex(i)-1) + n_tor * n_var * (j2-1) + im   ! index in the ELM matrix
           do ivar= 1,n_var
-            
             ij = index_ij + (ivar-1)*n_tor
-          
-            RHS(ij) =  RHS(ij) + ws * Qbnd(ivar) * BigR * DL
-
+            RHS(ij) =  RHS(ij) + ws * Qbnd(ivar) * BigR * DL * tstep
           enddo
 
           do k=1,2                                                          ! loop over nodes
@@ -256,9 +257,12 @@ do ms=1, n_gauss
               l2 = direction(l)
 
               element_size_kl   = element%size(vertex(k),l2)
-
               element_size_perp = - element%size(vertex(k),direction_perp(1)) * 3.d0
-
+              if(vertex(1) == 1)then
+                element_size_perp = element%size(vertex(k),direction_perp(l)) * 3.d0
+              elseif(vertex(1)==3)then
+                element_size_perp = - element%size(vertex(k),direction_perp(l)) * 3.d0
+              endif
 
               do in = 1, n_tor                                              ! loop over toroidal harmonics
     
@@ -294,53 +298,67 @@ do ms=1, n_gauss
                 cs_T = gamma * T / (2.d0 * c_s)
 
 
-                Qjac(var_uR,var_uR) = - Mach1 * zbig * v * uR 
-                Qjac(var_uR,var_T)  =   Mach1 * zbig * v * BR0 /sqrt(BB2) * cs_T * B_dot_n / abs(B_dot_n) 
-                Qjac(var_uR,var_AR) =   Mach1 * zbig * v * BR0_AR /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n)
-                Qjac(var_uR,var_AZ) =   Mach1 * zbig * v * BR0_AZ /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n)
-                Qjac(var_uR,var_A3) =   Mach1 * zbig * v * BR0_A3 /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n) 
+                Qjac(var_uR,var_uR) = - Mach1 * zbig * v * UR
+                Qjac(var_uR,var_AR) = - Mach1 * zbig * v * c_s * ( - BR0_AR * B_dot_n    / BB2 &
+                                                                   - BR0    * B_dot_n_AR / BB2 &
+                                                                   + BR0    * B_dot_n    / BB2**2 * BB2_AR )
+                Qjac(var_uR,var_AZ) = - Mach1 * zbig * v * c_s * ( - BR0_AZ * B_dot_n    / BB2 &
+                                                                   - BR0    * B_dot_n_AZ / BB2 &
+                                                                   + BR0    * B_dot_n    / BB2**2 * BB2_AZ )
+                Qjac(var_uR,var_A3) = - Mach1 * zbig * v * c_s * ( - BR0_A3 * B_dot_n    / BB2 &
+                                                                   - BR0    * B_dot_n_A3 / BB2 &
+                                                                   + BR0    * B_dot_n    / BB2**2 * BB2_A3 )
+                Qjac(var_uR,var_T)  = - Mach1 * zbig * v * ( - cs_T * BR0 * B_dot_n / BB2 )
 
 
-                Qjac(var_uZ,var_uZ) = - Mach1 * zbig * v * uZ
-                Qjac(var_uZ,var_T)  =   Mach1 * zbig * v * BZ0 /sqrt(BB2) * cs_T * B_dot_n / abs(B_dot_n) 
-                Qjac(var_uZ,var_AR) =   Mach1 * zbig * v * BZ0_AR /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n)
-                Qjac(var_uZ,var_AZ) =   Mach1 * zbig * v * BZ0_AZ /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n)
-                Qjac(var_uZ,var_A3) =   Mach1 * zbig * v * BZ0_A3 /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n) 
+                Qjac(var_uZ,var_uZ) = - Mach1 * zbig * v * UZ
+                Qjac(var_uZ,var_AR) = - Mach1 * zbig * v * c_s * ( - BZ0_AR * B_dot_n    / BB2 &
+                                                                   - BZ0    * B_dot_n_AR / BB2 &
+                                                                   + BZ0    * B_dot_n    / BB2**2 * BB2_AR )
+                Qjac(var_uZ,var_AZ) = - Mach1 * zbig * v * c_s * ( - BZ0_AZ * B_dot_n    / BB2 &
+                                                                   - BZ0    * B_dot_n_AZ / BB2 &
+                                                                   + BZ0    * B_dot_n    / BB2**2 * BB2_AZ )
+                Qjac(var_uZ,var_A3) = - Mach1 * zbig * v * c_s * ( - BZ0_A3 * B_dot_n    / BB2 &
+                                                                   - BZ0    * B_dot_n_A3 / BB2 &
+                                                                   + BZ0    * B_dot_n    / BB2**2 * BB2_A3 )
+                Qjac(var_uZ,var_T)  = - Mach1 * zbig * v * ( - cs_T * BZ0 * B_dot_n / BB2 )
+
 
 
                 if (parallel_projection) then
-                  Qjac(var_up,var_uR) = - Mach1 * zbig * v * BR0 * uR 
-                  Qjac(var_up,var_uZ) = - Mach1 * zbig * v * BZ0 * uZ 
-                  Qjac(var_up,var_up) = - Mach1 * zbig * v * Bp0 * up 
-                  Qjac(var_up,var_T)  =   Mach1 * zbig * v * sqrt(BB2) * cs_T * B_dot_n / abs(B_dot_n) 
-                  Qjac(var_up,var_AR) = - Mach1 * zbig * v * ( BR0_AR * UR0 + BZ0_AR * UZ0 + Bp0_AR * Up0) 
-                  Qjac(var_up,var_AZ) = - Mach1 * zbig * v * ( BR0_AZ * UR0 + BZ0_AZ * UZ0 + Bp0_AZ * Up0) 
-                  Qjac(var_up,var_A3) = - Mach1 * zbig * v * ( BR0_A3 * UR0 + BZ0_A3 * UZ0 + Bp0_A3 * Up0) 
+                  Qjac(var_up,var_uR) = - Mach1 * zbig * v * BR0 * UR
+                  Qjac(var_up,var_uZ) = - Mach1 * zbig * v * BZ0 * UZ
+                  Qjac(var_up,var_up) = - Mach1 * zbig * v * Bp0 * Up
+                  Qjac(var_up,var_AR) = - Mach1 * zbig * v * ( BR0_AR * UR0 + BZ0_AR * UZ0 + Bp0_AR * Up0 - c_s * B_dot_n_AR )
+                  Qjac(var_up,var_AZ) = - Mach1 * zbig * v * ( BR0_AZ * UR0 + BZ0_AZ * UZ0 + Bp0_AZ * Up0 - c_s * B_dot_n_AZ )
+                  Qjac(var_up,var_A3) = - Mach1 * zbig * v * ( BR0_A3 * UR0 + BZ0_A3 * UZ0 + Bp0_A3 * Up0 - c_s * B_dot_n_A3 )
+                  Qjac(var_up,var_T)  = - Mach1 * zbig * v * ( - cs_T * B_dot_n )
                 else
-                  Qjac(var_up,var_up) = - Mach1 * zbig * v * up
-                  Qjac(var_up,var_T)  =   Mach1 * zbig * v * Bp0 /sqrt(BB2) * cs_T * B_dot_n / abs(B_dot_n) 
-                  Qjac(var_up,var_AR) =   Mach1 * zbig * v * Bp0_AR /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n)
-                  Qjac(var_up,var_AZ) =   Mach1 * zbig * v * Bp0_AZ /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n)
-                  Qjac(var_up,var_A3) =   Mach1 * zbig * v * Bp0_A3 /sqrt(BB2) * c_s * B_dot_n / abs(B_dot_n) 
+                  Qjac(var_up,var_up) = - Mach1 * zbig * v * Up
+                  Qjac(var_up,var_AR) = - Mach1 * zbig * v * c_s * ( - Bp0_AR * B_dot_n    / BB2 &
+                                                                     - Bp0    * B_dot_n_AR / BB2 &
+                                                                     + Bp0    * B_dot_n    / BB2**2 * BB2_AR )
+                  Qjac(var_up,var_AZ) = - Mach1 * zbig * v * c_s * ( - Bp0_AZ * B_dot_n    / BB2 &
+                                                                     - Bp0    * B_dot_n_AZ / BB2 &
+                                                                     + Bp0    * B_dot_n    / BB2**2 * BB2_AZ )
+                  Qjac(var_up,var_A3) = - Mach1 * zbig * v * c_s * ( - Bp0_A3 * B_dot_n    / BB2 &
+                                                                     - Bp0    * B_dot_n_A3 / BB2 &
+                                                                     + Bp0    * B_dot_n    / BB2**2 * BB2_A3 )
+                  Qjac(var_up,var_T)  = - Mach1 * zbig * v * ( - cs_T * Bp0 * B_dot_n / BB2 )
                 endif
 
 
-                Qjac(var_T, var_rho)  = + v * gg * rho* T0 * c_s  * abs(B_dot_n) / sqrt(BB2) * tstep
-                Qjac(var_T, var_T)    = + v * gg * r0 * T0 * cs_T * abs(B_dot_n) / sqrt(BB2) * tstep &
-                                        + v * gg * r0 * T  * c_s  * abs(B_dot_n) / sqrt(BB2) * tstep
+                Qjac(var_T, var_rho)  = + v * gg * rho* T0 * c_s  * abs(B_dot_n) / sqrt(BB2)
+                Qjac(var_T, var_T)    = + v * gg * r0 * T0 * cs_T * abs(B_dot_n) / sqrt(BB2) &
+                                        + v * gg * r0 * T  * c_s  * abs(B_dot_n) / sqrt(BB2)
 
-
-                index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix 
-
+                ! index in the ELM matrix 
+                index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in
                 do ivar= 1,n_var
-                  
                   do kvar= 1,n_var
-
                     ij = index_ij + (ivar-1)*n_tor
                     kl = index_kl + (kvar-1)*n_tor
-
-                    ELM(ij,kl) =  ELM(ij,kl) + ws * theta * Qjac(ivar,kvar) * BigR * DL
-
+                    ELM(ij,kl) =  ELM(ij,kl) + ws * theta * Qjac(ivar,kvar) * BigR * DL * tstep
                   enddo
                 enddo
 

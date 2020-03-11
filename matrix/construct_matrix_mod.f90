@@ -14,7 +14,7 @@ contains
 
     ! --- Modules
     use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order
-    use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks
+    use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks, keep_n0_const
     USE data_structure,           only : type_element, type_node, type_node_list, thread_struct
     use mod_boundary_matrix_open, only : boundary_matrix_open
     use mod_elt_matrix,           only : element_matrix
@@ -42,6 +42,8 @@ contains
     ! -- internal parameters
     integer :: iv, iv2, iv3, iv4, inode1, inode2, inode3, inode4, i, j
     integer :: vertex(2), direction(2), bnd1, bnd2, side1, side2
+    integer :: i_max   ! for keep_n0_const max index which should be updated
+
 
 #ifdef COMPARE_ELEMENT_MATRIX
     integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
@@ -170,6 +172,21 @@ contains
        
       enddo
     endif
+
+    ! If keep_n0_const then the n0 component should be frozen = diagonal entries high
+    i_max =  (n_order+1)*n_vertex_max*n_var*n_tor
+#ifdef JECCD
+    ! n0 component of eccd current should not be frozen when keep_n0_const=.t. (last variable)
+    i_max = (n_order+1)*n_vertex_max*(n_var-1)*n_tor
+#endif
+
+    if ( keep_n0_const ) then
+      do i = 1, i_max, n_tor
+        thread_struct(omp_tid)%ELM(i,i) = 1.d15
+      enddo
+    endif
+    
+    
     
     ! --- Compare the two element_matrix routines (error thresholds might need to be adapted!)
 #ifdef COMPARE_ELEMENT_MATRIX
@@ -587,10 +604,10 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
                     
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
+                    
+                  enddo ! n_var * n_tor
 
-                  enddo
-
-                enddo ! n_order+1
+                enddo ! n_var * n_tor
 
                 !$omp critical
                 A_glob(ijA_position : ijA_position + n_var*n_tor*n_var*n_tor - 1) = &
@@ -598,8 +615,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, index_min, index_ma
                   thread_struct(omp_tid)%synch_buff(:)
                 !$omp end critical
 
-              enddo ! n_vertex_max
-            enddo ! n_var * n_tor
+              enddo ! n_order+1
+            enddo ! n_vertex_max
 
           endif ! index_min < index < index_max
 

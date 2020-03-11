@@ -101,6 +101,7 @@ module mod_expression
     
     exprs_all%n_expr     = 0
     exprs_all_int%n_expr = 0
+    call add(exprs_all, 'index_now   ', 'Restart file index (or number of run tsteps)          ')
     call add(exprs_all, 'R           ', 'Cylindrical Coordinate R (== Major Radius)            ')
     call add(exprs_all, 'Z           ', 'Cylindrical Coordinate Z                              ')
     call add(exprs_all, 'phi         ', 'Cylindrical Coordinate phi                            ')
@@ -166,30 +167,73 @@ module mod_expression
     call add(exprs_all, 'brem        ', 'Brem terms for bolometry diagnostic                   ')
 #endif
     ! --- List of volume and boundary integrals
+    call add(exprs_all_int, 'index_now   ', 'Restart file index (or number of run tsteps)          ')
+    call add(exprs_all_int, 'psi_axis    ', 'psi at magnetic axis                                  ')
+    call add(exprs_all_int, 'R_axis      ', 'R of magnetic axis                                    ')
+    call add(exprs_all_int, 'Z_axis      ', 'Z of magnetic axis                                    ')
+    call add(exprs_all_int, 'psi_bnd     ', 'psi at boundary point (defining LCFS)                 ')
+    call add(exprs_all_int, 'R_bnd       ', 'R of boundary point                                   ')
+    call add(exprs_all_int, 'Z_bnd       ', 'Z of boundary point                                   ')
     call add(exprs_all_int, 'E_tot       ', 'Total energy                                          ')
+    call add(exprs_all_int, 'E_in        ', 'Energy (inside  LCFS)                                 ')
+    call add(exprs_all_int, 'E_out       ', 'Energy (outside LCFS)                                 ')
     call add(exprs_all_int, 'Wmag_tot    ', 'Total magnetic energy                                 ')
-    call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')
+    call add(exprs_all_int, 'Wmag_in     ', 'Magnetic energy (inside  LCFS)                        ')
+    call add(exprs_all_int, 'Wmag_out    ', 'Magnetic energy (outside LCFS)                        ')
     call add(exprs_all_int, 'Thermal_tot ', 'Total thermal energy                                  ')
-    call add(exprs_all_int, 'Helicity_tot', 'Total magnetic helicity                               ')
-    call add(exprs_all_int, 'Ip_tot      ', 'Total toroidal plasma current                         ')
+    call add(exprs_all_int, 'Thermal_in  ', 'Thermal energy (inside  LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_out ', 'Thermal energy (outside LCFS)                         ')
     call add(exprs_all_int, 'Kin_par_tot ', 'Total parallel kinetic energy                         ')
+    call add(exprs_all_int, 'Kin_par_in  ', 'Parallel kinetic energy (inside  LCFS)                ')
+    call add(exprs_all_int, 'Kin_par_out ', 'Parallel kinetic energy (outside LCFS)                ')
     call add(exprs_all_int, 'Kin_perp_tot', 'Total perpendicular kinetic energy                    ')
+    call add(exprs_all_int, 'Kin_perp_in ', 'Perpendicular kinetic energy (inside  LCFS)           ')
+    call add(exprs_all_int, 'Kin_perp_out', 'Perpendicular kinetic energy (outside LCFS)           ')
+    call add(exprs_all_int, 'Part_tot    ', 'Total number of ions                                  ')
+    call add(exprs_all_int, 'Part_in     ', 'Number of ions  (inside  LCFS)                        ')
+    call add(exprs_all_int, 'Part_out    ', 'Number of ions  (outside LCFS)                        ') 
+    call add(exprs_all_int, 'NPart_tot   ', 'Total number of neutral particles                     ') 
+    call add(exprs_all_int, 'Helicity_tot', 'Total magnetic helicity                               ')
     call add(exprs_all_int, 'Mag_work_tot', 'Total magnetic work = -\int v\cdot(JxB) dV            ')
     call add(exprs_all_int, 'Thm_work_tot', 'Total thermal work  = \int vpar\cdot\nabla p dV       ')
     call add(exprs_all_int, 'Part_src_tot', 'Total particle source                                 ')
+    call add(exprs_all_int, 'Part_src_in ', 'Particle source (inside  LCFS)                        ')
+    call add(exprs_all_int, 'Part_src_out', 'Particle source (outside LCFS)                        ')
     call add(exprs_all_int, 'Heat_src_tot', 'Total heat source                                     ')
+    call add(exprs_all_int, 'Heat_src_in ', 'Heat source (inside  LCFS)                            ')
+    call add(exprs_all_int, 'Heat_src_out', 'Heat source (outside LCFS)                            ')
     call add(exprs_all_int, 'Viscpar_diss', 'Total parallel viscosity dissipation                  ')
     call add(exprs_all_int, 'Wmag_src_tot', 'Total magnetic energy source (from current source)    ')
-    call add(exprs_all_int, 'li3         ', 'Internal inductance inside LCFS, li(3)                ')
-    call add(exprs_all_int, 'li3_tot     ', 'Internal inductance inside grid, li(3)                ')
-    call add(exprs_all_int, 'betap       ', 'Poloidal beta, of the plasma inside LCFS              ')
-    call add(exprs_all_int, 'area        ', 'Poloidal cross section area inside LCFS               ')
-    call add(exprs_all_int, 'volume      ', 'Plasma volume, inside LCFS                            ')
+    call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')
+    call add(exprs_all_int, 'Ohmic_in    ', 'Ohmic heating (inside  LCFS)                          ')
+    call add(exprs_all_int, 'Ohmic_out   ', 'Ohmic heating (outside LCFS)                          ')
     call add(exprs_all_int, 'P_vn        ', 'Boundary flux of outgoing pressure                    ')
     call add(exprs_all_int, 'qn_par      ', 'Boundary flux of the parallel thermal conduction      ')
     call add(exprs_all_int, 'qn_perp     ', 'Boundary flux of the perpendicular thermal conduction ')
+    call add(exprs_all_int, 'sheath_heat ', 'Total heat flux (imposed by sheath BCs)               ')
     call add(exprs_all_int, 'kinpar_flux ', 'Boundary flux of parallel kinetic energy              ')
- 
+    call add(exprs_all_int, 'vispar_flux ', 'Boundary flux of parallel viscous energy              ')
+    call add(exprs_all_int, 'Dpar_pt_flx ', 'Boundary flux of parallel particle diffusion          ')
+    call add(exprs_all_int, 'Dperp_pt_flx', 'Boundary flux of perpendicular particle diffusion     ')
+    call add(exprs_all_int, 'vpar_pt_flx ', 'Boundary flux of parallel particle convection         ')
+    call add(exprs_all_int, 'vperp_pt_flx', 'Boundary flux of perpendicular particle convection    ')
+    call add(exprs_all_int, 'neut_pt_flx ', 'Boundary flux of neutral particles                    ')
+    call add(exprs_all_int, 'Ip_tot      ', 'Total toroidal plasma current                         ')
+    call add(exprs_all_int, 'Ip_in       ', 'Toroidal plasma current (inside  LCFS)                ')
+    call add(exprs_all_int, 'Ip_out      ', 'Toroidal plasma current (outside LCFS)                ')
+    call add(exprs_all_int, 'li3         ', 'Internal inductance inside LCFS, li(3)                ')
+    call add(exprs_all_int, 'li3_tot     ', 'Internal inductance inside grid, li(3)                ')
+    call add(exprs_all_int, 'beta_p      ', 'Poloidal beta, of the plasma inside LCFS              ')
+    call add(exprs_all_int, 'beta_t      ', 'Toroidal beta, of the plasma inside LCFS              ')
+    call add(exprs_all_int, 'beta_n      ', 'Normalized beta, of the plasma inside LCFS            ')
+    call add(exprs_all_int, 'area        ', 'Poloidal cross section area inside LCFS               ')
+    call add(exprs_all_int, 'volume      ', 'Plasma volume, inside LCFS                            ')
+    call add(exprs_all_int, 'q02         ', 'Safety factor at psin=0.02                            ')
+    call add(exprs_all_int, 'q95         ', 'Safety factor at psin=0.95                            ')
+    call add(exprs_all_int, 'q99         ', 'Safety factor at psin=0.99                            ')
+    call add(exprs_all_int, 'I_halo      ', 'Total poloidal halo currents                          ') 
+    call add(exprs_all_int, 'TPF_halo    ', 'Toroidal peaking factor of the poloidal halos         ')
+
   end subroutine init_expr
   
   
@@ -1098,8 +1142,10 @@ module mod_expression
           E_dreicer = EL_CHG**3 * ln_Lambda0 * MU_ZERO**1.5 * (central_density*1.d20*central_mass*MASS_PROTON)**2.5 * r0 / ( 2.d0 * PI * EPS_ZERO**2 * (MASS_PROTON*central_mass)**2 * T0 )
           
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
-          call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
-            ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
+          if (bootstrap) then
+            call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
+              ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
+          endif
 #else
           J_boot = 0.d0
 #endif
@@ -1205,6 +1251,10 @@ module mod_expression
           loop_expr: do iexpr = 1, expr_list%n_expr
             
             select case ( trim(expr_list%expr(iexpr)%name) )
+
+              case ( 'index_now' )
+                res = real(index_now)
+
               case ( 'R' )
                 res = R
                 

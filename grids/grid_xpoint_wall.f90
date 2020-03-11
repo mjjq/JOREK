@@ -57,7 +57,7 @@ real*8              :: RL5, RL8, RL9, RL10, RL11, ZL5, ZL8, ZL9, ZL10, ZL11, ang
 real*8,allocatable  :: psi_gaussians(:,:), angle_gaussians(:,:), s_equidistant(:)
 real*8,allocatable  :: Aspline(:), Bspline(:), Cspline(:), Dspline(:)
 real*8              :: x_g(n_gauss,n_gauss), y_g(n_gauss,n_gauss), psi_g(n_gauss,n_gauss), xmin(2), xmax(2)
-real*8              :: abltg(3), t_node
+real*8              :: abltg(3), t_node, sign_psi
 real*8              :: Rtmp, Ztmp, dRtmp, dZtmp, Rtmp2, Ztmp2, dRtmp2, dZtmp2, Rtmp3, Ztmp3, dRtmp3, dZtmp3
 real*8              :: t2, t3, t_delta, t_total
 logical             :: xpoint, extend
@@ -1154,6 +1154,9 @@ if (extend) then
 
   index_ext2 = index + 1
 
+  sign_psi = 1.d0
+  if (psi_axis .gt. psi_xpoint(1)) sign_psi = -1.d0
+
   do i=1,n_ext
     do j=1,n_tht
 
@@ -1194,7 +1197,9 @@ if (extend) then
       call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4), t_node, Rtmp, dR_dt)
       call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4), t_node, Ztmp, dZ_dt)
 
-      tht_bnd = atan2(newnode_list%node(index_ext1-n_tht+j)%x(3,2),newnode_list%node(index_ext1-n_tht+j)%x(3,1))
+      tht_bnd = atan2(sign_psi*newnode_list%node(index_ext1-n_tht+j)%x(3,2),&
+                      sign_psi*newnode_list%node(index_ext1-n_tht+j)%x(3,1))
+
 
       if (T_wall_par(j) .gt. PI)            T_wall_par(j) = T_wall_par(j) - 2.d0*PI
       if (T_wall_par(j) - tht_bnd .gt. PI)  T_wall_par(j) = T_wall_par(j) - 2.d0*PI

@@ -1057,12 +1057,7 @@ required = 0
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
        call energy(node_list,element_list,W_mag,W_kin)
-       call integrals(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint,       &
-         ES%psi_xpoint, ES%psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
-         beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),           &
-         density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                         &
-         pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),           &
-         part_src_in_t(index_now), part_src_out_t(index_now))
+
        R_axis_t(index_now)   = ES%R_axis
        Z_axis_t(index_now)   = ES%Z_axis
        psi_axis_t(index_now) = ES%psi_axis

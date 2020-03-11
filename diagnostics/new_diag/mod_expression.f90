@@ -534,7 +534,7 @@ module mod_expression
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
       ne0_20, ln_Lambda, ln_Lambda0
     real*8 :: FFprime_loc, Jpol
-    real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(n_var)
+    real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
@@ -680,109 +680,110 @@ module mod_expression
                 hhz    = HZ   (i_tor)
                 hhz_p  = HZ_p (i_tor)
                 hhz_pp = HZ_pp(i_tor)
-                vv(:)  = nodes(i)%values(i_tor,j,:)
+		vv(:)  = 0.d0
+                vv(1:)  = nodes(i)%values(i_tor,j,:)
                 
                 ! --- Poloidal Flux
-                ps0      = ps0      + vv(1) * sz * hh    * hhz
-                ps0_s    = ps0_s    + vv(1) * sz * hh_s  * hhz
-                ps0_t    = ps0_t    + vv(1) * sz * hh_t  * hhz
-                ps0_ss   = ps0_ss   + vv(1) * sz * hh_ss * hhz
-                ps0_tt   = ps0_tt   + vv(1) * sz * hh_tt * hhz
-                ps0_st   = ps0_st   + vv(1) * sz * hh_st * hhz
-                ps0_p    = ps0_p    + vv(1) * sz * hh    * hhz_p
-                ps0_pp   = ps0_pp   + vv(1) * sz * hh    * hhz_pp
+                ps0      = ps0      + vv(var_psi) * sz * hh    * hhz
+                ps0_s    = ps0_s    + vv(var_psi) * sz * hh_s  * hhz
+                ps0_t    = ps0_t    + vv(var_psi) * sz * hh_t  * hhz
+                ps0_ss   = ps0_ss   + vv(var_psi) * sz * hh_ss * hhz
+                ps0_tt   = ps0_tt   + vv(var_psi) * sz * hh_tt * hhz
+                ps0_st   = ps0_st   + vv(var_psi) * sz * hh_st * hhz
+                ps0_p    = ps0_p    + vv(var_psi) * sz * hh    * hhz_p
+                ps0_pp   = ps0_pp   + vv(var_psi) * sz * hh    * hhz_pp
                 
                 ! --- Stream Function
-                u0       = u0       + vv(2) * sz * hh    * hhz
-                u0_s     = u0_s     + vv(2) * sz * hh_s  * hhz
-                u0_t     = u0_t     + vv(2) * sz * hh_t  * hhz
-                u0_ss    = u0_ss    + vv(2) * sz * hh_ss * hhz
-                u0_tt    = u0_tt    + vv(2) * sz * hh_tt * hhz
-                u0_st    = u0_st    + vv(2) * sz * hh_st * hhz
-                u0_p     = u0_p     + vv(2) * sz * hh    * hhz_p
-                u0_pp    = u0_pp    + vv(2) * sz * hh    * hhz_pp
+                u0       = u0       + vv(var_u) * sz * hh    * hhz
+                u0_s     = u0_s     + vv(var_u) * sz * hh_s  * hhz
+                u0_t     = u0_t     + vv(var_u) * sz * hh_t  * hhz
+                u0_ss    = u0_ss    + vv(var_u) * sz * hh_ss * hhz
+                u0_tt    = u0_tt    + vv(var_u) * sz * hh_tt * hhz
+                u0_st    = u0_st    + vv(var_u) * sz * hh_st * hhz
+                u0_p     = u0_p     + vv(var_u) * sz * hh    * hhz_p
+                u0_pp    = u0_pp    + vv(var_u) * sz * hh    * hhz_pp
                 
                 ! --- Current
-                zj0      = zj0      + vv(3) * sz * hh    * hhz
-                zj0_s    = zj0_s    + vv(3) * sz * hh_s  * hhz
-                zj0_t    = zj0_t    + vv(3) * sz * hh_t  * hhz
-                zj0_ss   = zj0_ss   + vv(3) * sz * hh_ss * hhz
-                zj0_tt   = zj0_tt   + vv(3) * sz * hh_tt * hhz
-                zj0_st   = zj0_st   + vv(3) * sz * hh_st * hhz
-                zj0_p    = zj0_p    + vv(3) * sz * hh    * hhz_p
-                zj0_pp   = zj0_pp   + vv(3) * sz * hh    * hhz_pp
+                zj0      = zj0      + vv(var_zj) * sz * hh    * hhz
+                zj0_s    = zj0_s    + vv(var_zj) * sz * hh_s  * hhz
+                zj0_t    = zj0_t    + vv(var_zj) * sz * hh_t  * hhz
+                zj0_ss   = zj0_ss   + vv(var_zj) * sz * hh_ss * hhz
+                zj0_tt   = zj0_tt   + vv(var_zj) * sz * hh_tt * hhz
+                zj0_st   = zj0_st   + vv(var_zj) * sz * hh_st * hhz
+                zj0_p    = zj0_p    + vv(var_zj) * sz * hh    * hhz_p
+                zj0_pp   = zj0_pp   + vv(var_zj) * sz * hh    * hhz_pp
                 
                 ! --- Vorticity
-                w0       = w0       + vv(4) * sz * hh    * hhz
-                w0_s     = w0_s     + vv(4) * sz * hh_s  * hhz
-                w0_t     = w0_t     + vv(4) * sz * hh_t  * hhz
-                w0_ss    = w0_ss    + vv(4) * sz * hh_ss * hhz
-                w0_tt    = w0_tt    + vv(4) * sz * hh_tt * hhz
-                w0_st    = w0_st    + vv(4) * sz * hh_st * hhz
-                w0_p     = w0_p     + vv(4) * sz * hh    * hhz_p
-                w0_pp    = w0_pp    + vv(4) * sz * hh    * hhz_pp
+                w0       = w0       + vv(var_w) * sz * hh    * hhz
+                w0_s     = w0_s     + vv(var_w) * sz * hh_s  * hhz
+                w0_t     = w0_t     + vv(var_w) * sz * hh_t  * hhz
+                w0_ss    = w0_ss    + vv(var_w) * sz * hh_ss * hhz
+                w0_tt    = w0_tt    + vv(var_w) * sz * hh_tt * hhz
+                w0_st    = w0_st    + vv(var_w) * sz * hh_st * hhz
+                w0_p     = w0_p     + vv(var_w) * sz * hh    * hhz_p
+                w0_pp    = w0_pp    + vv(var_w) * sz * hh    * hhz_pp
                 
                 ! --- Density
-                r0       = r0       + vv(5) * sz * hh    * hhz
-                r0_s     = r0_s     + vv(5) * sz * hh_s  * hhz
-                r0_t     = r0_t     + vv(5) * sz * hh_t  * hhz
-                r0_ss    = r0_ss    + vv(5) * sz * hh_ss * hhz
-                r0_tt    = r0_tt    + vv(5) * sz * hh_tt * hhz
-                r0_st    = r0_st    + vv(5) * sz * hh_st * hhz
-                r0_p     = r0_p     + vv(5) * sz * hh    * hhz_p
-                r0_pp    = r0_pp    + vv(5) * sz * hh    * hhz_pp
+                r0       = r0       + vv(var_rho) * sz * hh    * hhz
+                r0_s     = r0_s     + vv(var_rho) * sz * hh_s  * hhz
+                r0_t     = r0_t     + vv(var_rho) * sz * hh_t  * hhz
+                r0_ss    = r0_ss    + vv(var_rho) * sz * hh_ss * hhz
+                r0_tt    = r0_tt    + vv(var_rho) * sz * hh_tt * hhz
+                r0_st    = r0_st    + vv(var_rho) * sz * hh_st * hhz
+                r0_p     = r0_p     + vv(var_rho) * sz * hh    * hhz_p
+                r0_pp    = r0_pp    + vv(var_rho) * sz * hh    * hhz_pp
                 
 #if JOREK_MODEL == 400
                 ! --- Ion temperature
-                Ti0       = Ti0       + vv(6) * sz * hh    * hhz
-                Ti0_s     = Ti0_s     + vv(6) * sz * hh_s  * hhz
-                Ti0_t     = Ti0_t     + vv(6) * sz * hh_t  * hhz
-                Ti0_ss    = Ti0_ss    + vv(6) * sz * hh_ss * hhz
-                Ti0_tt    = Ti0_tt    + vv(6) * sz * hh_tt * hhz
-                Ti0_st    = Ti0_st    + vv(6) * sz * hh_st * hhz
-                Ti0_p     = Ti0_p     + vv(6) * sz * hh    * hhz_p
-                Ti0_pp    = Ti0_pp    + vv(6) * sz * hh    * hhz_pp
+                Ti0       = Ti0       + vv(var_Ti) * sz * hh    * hhz
+                Ti0_s     = Ti0_s     + vv(var_Ti) * sz * hh_s  * hhz
+                Ti0_t     = Ti0_t     + vv(var_Ti) * sz * hh_t  * hhz
+                Ti0_ss    = Ti0_ss    + vv(var_Ti) * sz * hh_ss * hhz
+                Ti0_tt    = Ti0_tt    + vv(var_Ti) * sz * hh_tt * hhz
+                Ti0_st    = Ti0_st    + vv(var_Ti) * sz * hh_st * hhz
+                Ti0_p     = Ti0_p     + vv(var_Ti) * sz * hh    * hhz_p
+                Ti0_pp    = Ti0_pp    + vv(var_Ti) * sz * hh    * hhz_pp
                 
                 ! --- Electron temperature
-                Te0       = Te0       + vv(8) * sz * hh    * hhz
-                Te0_s     = Te0_s     + vv(8) * sz * hh_s  * hhz
-                Te0_t     = Te0_t     + vv(8) * sz * hh_t  * hhz
-                Te0_ss    = Te0_ss    + vv(8) * sz * hh_ss * hhz
-                Te0_tt    = Te0_tt    + vv(8) * sz * hh_tt * hhz
-                Te0_st    = Te0_st    + vv(8) * sz * hh_st * hhz
-                Te0_p     = Te0_p     + vv(8) * sz * hh    * hhz_p
-                Te0_pp    = Te0_pp    + vv(8) * sz * hh    * hhz_pp
+                Te0       = Te0       + vv(var_Te) * sz * hh    * hhz
+                Te0_s     = Te0_s     + vv(var_Te) * sz * hh_s  * hhz
+                Te0_t     = Te0_t     + vv(var_Te) * sz * hh_t  * hhz
+                Te0_ss    = Te0_ss    + vv(var_Te) * sz * hh_ss * hhz
+                Te0_tt    = Te0_tt    + vv(var_Te) * sz * hh_tt * hhz
+                Te0_st    = Te0_st    + vv(var_Te) * sz * hh_st * hhz
+                Te0_p     = Te0_p     + vv(var_Te) * sz * hh    * hhz_p
+                Te0_pp    = Te0_pp    + vv(var_Te) * sz * hh    * hhz_pp
 #else
                 ! --- Temperature (ion + electron) in models .ne. 400
-                T0       = T0       + vv(6) * sz * hh    * hhz
-                T0_s     = T0_s     + vv(6) * sz * hh_s  * hhz
-                T0_t     = T0_t     + vv(6) * sz * hh_t  * hhz
-                T0_ss    = T0_ss    + vv(6) * sz * hh_ss * hhz
-                T0_tt    = T0_tt    + vv(6) * sz * hh_tt * hhz
-                T0_st    = T0_st    + vv(6) * sz * hh_st * hhz
-                T0_p     = T0_p     + vv(6) * sz * hh    * hhz_p
-                T0_pp    = T0_pp    + vv(6) * sz * hh    * hhz_pp
+                T0       = T0       + vv(var_T) * sz * hh    * hhz
+                T0_s     = T0_s     + vv(var_T) * sz * hh_s  * hhz
+                T0_t     = T0_t     + vv(var_T) * sz * hh_t  * hhz
+                T0_ss    = T0_ss    + vv(var_T) * sz * hh_ss * hhz
+                T0_tt    = T0_tt    + vv(var_T) * sz * hh_tt * hhz
+                T0_st    = T0_st    + vv(var_T) * sz * hh_st * hhz
+                T0_p     = T0_p     + vv(var_T) * sz * hh    * hhz_p
+                T0_pp    = T0_pp    + vv(var_T) * sz * hh    * hhz_pp
 #endif
                 ! --- Parallel Velocity
 #if JOREK_MODEL >= 300
-                Vpar0    = Vpar0    + vv(7) * sz * hh    * hhz
-                Vpar0_s  = Vpar0_s  + vv(7) * sz * hh_s  * hhz
-                Vpar0_t  = Vpar0_t  + vv(7) * sz * hh_t  * hhz
-                Vpar0_ss = Vpar0_ss + vv(7) * sz * hh_ss * hhz
-                Vpar0_tt = Vpar0_tt + vv(7) * sz * hh_tt * hhz
-                Vpar0_st = Vpar0_st + vv(7) * sz * hh_st * hhz
-                Vpar0_p  = Vpar0_p  + vv(7) * sz * hh    * hhz_p
-                Vpar0_pp = Vpar0_pp + vv(7) * sz * hh    * hhz_pp
+                Vpar0    = Vpar0    + vv(var_Vpar) * sz * hh    * hhz
+                Vpar0_s  = Vpar0_s  + vv(var_Vpar) * sz * hh_s  * hhz
+                Vpar0_t  = Vpar0_t  + vv(var_Vpar) * sz * hh_t  * hhz
+                Vpar0_ss = Vpar0_ss + vv(var_Vpar) * sz * hh_ss * hhz
+                Vpar0_tt = Vpar0_tt + vv(var_Vpar) * sz * hh_tt * hhz
+                Vpar0_st = Vpar0_st + vv(var_Vpar) * sz * hh_st * hhz
+                Vpar0_p  = Vpar0_p  + vv(var_Vpar) * sz * hh    * hhz_p
+                Vpar0_pp = Vpar0_pp + vv(var_Vpar) * sz * hh    * hhz_pp
 #endif
 #if JOREK_MODEL == 500
-                rn0       = rn0       + vv(8) * sz * hh    * hhz
-                rn0_s     = rn0_s     + vv(8) * sz * hh_s  * hhz
-                rn0_t     = rn0_t     + vv(8) * sz * hh_t  * hhz
-                rn0_ss    = rn0_ss    + vv(8) * sz * hh_ss * hhz
-                rn0_tt    = rn0_tt    + vv(8) * sz * hh_tt * hhz
-                rn0_st    = rn0_st    + vv(8) * sz * hh_st * hhz
-                rn0_p     = rn0_p     + vv(8) * sz * hh    * hhz_p
-                rn0_pp    = rn0_pp    + vv(8) * sz * hh    * hhz_pp
+                rn0       = rn0       + vv(var_rn) * sz * hh    * hhz
+                rn0_s     = rn0_s     + vv(var_rn) * sz * hh_s  * hhz
+                rn0_t     = rn0_t     + vv(var_rn) * sz * hh_t  * hhz
+                rn0_ss    = rn0_ss    + vv(var_rn) * sz * hh_ss * hhz
+                rn0_tt    = rn0_tt    + vv(var_rn) * sz * hh_tt * hhz
+                rn0_st    = rn0_st    + vv(var_rn) * sz * hh_st * hhz
+                rn0_p     = rn0_p     + vv(var_rn) * sz * hh    * hhz_p
+                rn0_pp    = rn0_pp    + vv(var_rn) * sz * hh    * hhz_pp
 #endif
 
                 ! --- Deltas

@@ -20,7 +20,7 @@ use mod_poloidal_currents
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mod_neutral_source
 #endif
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   use mod_injection_source
 #endif
 
@@ -196,7 +196,7 @@ RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,
 include_radiation = .true.
 include_neutral_dens = .true.
 #endif
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
 ! --- Read ADAS data and generate coronal equilibrium is needed
 if (flag_adas) then
   call init_imp_adas(my_id)
@@ -345,8 +345,13 @@ if ( SI_units ) then
    endif
    scalar_names(7)='Vpar_km/s   '
 
-#if (JOREK_MODEL >= 500)
-   scalar_names(8)='N_dens_1d20  '
+
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+   scalar_names(8)='N_dens_1d20 '
+#endif
+
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+   scalar_names(8)='N_imp_1d20  '
 #endif
 
 endif
@@ -416,7 +421,7 @@ endif
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
  if (include_radiation) then
      scalar_names(s_radiation+1:s_radiation+n_radiation) &
-                  = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp ', 'Z_eff '/)
+                  = (/ 'Ionis_Wm-3  ', 'Cor_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp       ', 'Z_eff       '/)
  endif
 #endif
 

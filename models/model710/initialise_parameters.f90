@@ -68,7 +68,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 edgeparticlesource, edgeparticlesource_psin,        &
                 edgeparticlesource_sig,                             &
                 produce_live_data, gmres, gmres_max_iter,           &
-                linear_run, export_for_nemec,                       &
+                keep_n0_const, linear_run, export_for_nemec,        &
                 output_bnd_elements,                                &
                 wall_file,                                          &
                 first_target_point, last_target_point,              &
@@ -316,6 +316,7 @@ if (my_id .eq. 0) then
 
 endif
 
+keep_n0_const  = ( keep_n0_const .or. linear_run )
 ! --- Read numerical profiles for rho, T, and ff'.
 call read_num_profiles(my_id)
 

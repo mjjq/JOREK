@@ -67,7 +67,8 @@ module phys_module
   logical :: bench_without_plot   !< if .true., do not produce certain output plots (e.g., for benchmarking)
   logical :: gmres                !< Use iterative GMRES solver
   integer :: gmres_max_iter       !< Maximum number of GMRES iterations
-  logical :: linear_run           !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
+  logical :: keep_n0_const        !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
+  logical :: linear_run           !< Same as keep_n0_const, to be replaced soon by true linear run where modes are independent
   logical :: export_for_nemec     !< Export equilibrium information for the NEMEC code?
   logical :: use_murge            !< (Deprecated, Cannot be used any more)
   logical :: use_murge_element    !< (Deprecated, Cannot be used any more)

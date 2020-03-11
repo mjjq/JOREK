@@ -60,11 +60,10 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@sqrt_mu0_over_rho0: ', sqrt_mu0_over_rho0
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@mu_zero: ', mu_zero
     write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies magnetic_energies kinetic_energies growth_rates magnetic_growth_rates  &
-                                    kinetic_growth_rates times input_profiles axis current betas particlecontent thermalenergy & 
+                                    kinetic_growth_rates times input_profiles axis current betas particlecontent thermalenergy &
                                     heatingpower particlesource diag_coil_curr pf_coil_curr rmp_coil_curr integrated_energies  &
-                                    bnd_fluxes dEdt helicity    &
-                                    dissipative_terms work_terms             &
-                                    area volume li3 energy_conservation net_tor_wall_curr'
+                                    bnd_fluxes dEdt helicity dissipative_terms work_terms &
+                                    area volume li3 energy_conservation net_tor_wall_curr dparticles_dt bnd_particle_fluxes'
     write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names
     
     ! --- Write file headers indicating what data is in the files.
@@ -205,6 +204,17 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@bnd_fluxes_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@bnd_fluxes: %"time"       "p vn"  "kinpar-flux"    "qn-par"    "qn-perp"   '
     write(LIVE_DATA_HANDLE,*)
+
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_bnd_particle_fluxes: ', 5 
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes_ylabel: Total particle boundary fluxes [particles/s]'
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes_ylabel_si: Total particle boundary fluxes [particles/s]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@bnd_particle_fluxes_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@bnd_particle_fluxes_y2si: ', 1.0
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_particle_fluxes: %"time"    "Dpar-flux"  "Dperp-flux"    "Vpar-flux"    "Vperp-flux"  "neutral-flux"   '
+    write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_current: ', 3 
     write(LIVE_DATA_HANDLE,'(A)') '@current_xlabel: normalized time'
@@ -311,6 +321,17 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@dEdt_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@dEdt: %"time"    "Etot"  "Wmagtot"  "thermaltot"   "kinperptot"  "kinpartot"      '
     write(LIVE_DATA_HANDLE,*)
+
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dparticles_dt: ', 3 
+    write(LIVE_DATA_HANDLE,'(A)') '@dparticles_dt_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@dparticles_dt_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@dparticles_dt_ylabel: dparticlesdt [1/s]'
+    write(LIVE_DATA_HANDLE,'(A)') '@dparticles_dt_ylabel_si: dparticlesdt [1/s]'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dparticles_dt_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dparticles_dt_y2si: ', 1.0
+    write(LIVE_DATA_HANDLE,'(A)') '@dparticles_dt_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@dparticles_dt: %"time"  "Total"  "Ions" "Neutrals"     '
+    write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_betas: ', 3
     write(LIVE_DATA_HANDLE,'(A)') '@betas_xlabel: normalized time'
@@ -323,24 +344,24 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@betas: %"time"           "beta poloidal"       "beta toroidal"       "beta normalized"'
     write(LIVE_DATA_HANDLE,*)
     
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_particlecontent: ', 2
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_particlecontent: ', 4 
     write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_xlabel_si: time [ms]'
-    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_ylabel: normalized particle content'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_ylabel: particle content'
     write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_ylabel_si: particle content'
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent_x2si: ', sqrt_mu0_rho0*1.e3
-    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent_y2si: ', 1.e20 * central_density
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_logy: 0'
-    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent: %"time"           "inside separatrix"   "outside separatrix"'
+    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent: %"time"  "Total ions" "Ions inside LCFS"  "Ions outside LCFS" "Total neutrals"'
     write(LIVE_DATA_HANDLE,*)
     
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_thermalenergy: ', 2
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_thermalenergy: ', 2 
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_xlabel_si: time [ms]'
-    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_ylabel: normalized thermal energy'
+    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_ylabel: Thermal energy [MJ]'
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_ylabel_si: thermal energy [MJ]'
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@thermalenergy_x2si: ', sqrt_mu0_rho0*1.e3
-    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@thermalenergy_y2si: ', 1.e-6/(sqrt_mu0_rho0 * sqrt_mu0_over_rho0)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@thermalenergy_y2si: ', 1.e-6
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy: %"time"   "inside separatrix"   "outside separatrix"'
     write(LIVE_DATA_HANDLE,*)
@@ -387,7 +408,9 @@ module live_data
       Wmag_tot_t, Ip_tot_t, flux_pvn_t, flux_qpar_t, flux_qperp_t, flux_kinpar_t, dE_tot_dt, &
       dWmag_tot_dt, dthermal_tot_dt, dkinpar_tot_dt, dkinperp_tot_dt,  Magwork_tot_t,   &
       thmwork_tot_t, viscopar_dissip_tot_t, viscopar_flux_t, li3_t,      &
-      li3_tot_t, part_src_tot_t, heat_src_tot_t, volume_t, area_t, mag_ener_src_tot, eta_ohmic, eta 
+      li3_tot_t, part_src_tot_t, heat_src_tot_t, volume_t, area_t, mag_ener_src_tot, eta_ohmic, eta, &
+      dpart_tot_dt, part_flux_Dpar_t, part_flux_Dperp_t, part_flux_vpar_t, part_flux_vperp_t, &
+      dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t 
 
 
     implicit none
@@ -466,7 +489,8 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@axis: ', xtime(index), R_axis_t(index), Z_axis_t(index), Psi_axis_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@current: ', xtime(index), Ip_tot_t(index), current_t(index), Ip_tot_t(index)-current_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@betas: ', xtime(index), beta_p_t(index), beta_t_t(index), beta_n_t(index)
-    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent: ', xtime(index), density_in_t(index), density_out_t(index)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent: ', xtime(index),density_tot_t(index), density_in_t(index), density_out_t(index), &
+                                                                npart_tot_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@thermalenergy: ', xtime(index), pressure_in_t(index), pressure_out_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@heatingpower: ', xtime(index), heat_src_tot_t(index), heat_src_in_t(index), heat_src_out_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlesource: ', xtime(index), part_src_tot_t(index), part_src_in_t(index), part_src_out_t(index)
@@ -482,11 +506,15 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@work_terms: ', xtime(index), Magwork_tot_t(index), thmwork_tot_t(index)
     write(LIVE_DATA_HANDLE,'(A,7ES17.9)') '@bnd_fluxes: ', xtime(index), flux_Pvn_t(index), flux_kinpar_t(index), &
                                            flux_qpar_t(index), flux_qperp_t(index)
+    write(LIVE_DATA_HANDLE,'(A,7ES17.9)') '@bnd_particle_fluxes: ', xtime(index), part_flux_Dpar_t(index), part_flux_Dperp_t(index), &
+                                           part_flux_vpar_t(index), part_flux_vperp_t(index), -npart_flux_t(index)
 
    if(index>1) then
        write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dEdt: ', xtime(index-1), -dE_tot_dt(index-1), -dWmag_tot_dt(index-1), &
                                             -dthermal_tot_dt(index-1),-dkinperp_tot_dt(index-1),-dkinpar_tot_dt(index-1)
-   
+       write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dparticles_dt: ', xtime(index-1), dpart_tot_dt(index-1) + dnpart_tot_dt(index-1), &
+                                                                      dpart_tot_dt(index-1), dnpart_tot_dt(index-1) 
+
        sum_fluxes_dissip = flux_Pvn_t(index-1)  + flux_kinpar_t(index-1) + flux_qpar_t(index-1) + flux_qperp_t(index-1) &
                          + viscopar_dissip_tot_t(index-1) - heat_src_tot_t(index-1)  &
                          + ohmic_tot_t(index-1)*(1.d0 - eta_ohmic/eta) - mag_ener_src_tot(index-1)
@@ -496,6 +524,7 @@ module live_data
     else
       write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dEdt: ', xtime(index), 0.d0, 0.d0, 0.d0, 0.d0, 0.d0
       write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@energy_conservation: ', xtime(index), 0.d0, 0.d0 
+      write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dparticles_dt: ', xtime(index), 0.d0, 0.d0, 0.d0 
     endif
  
     close(LIVE_DATA_HANDLE)

@@ -32,7 +32,7 @@ contains
 
     use data_structure
     use global_distributed_matrix
-    use phys_module, only: F0, GAMMA, n_pol, n_tht, Mach1_openBC, bc_natural_open
+    use phys_module, only: F0, GAMMA, Mach1_openBC, bc_natural_open, keep_n0_const
     use vacuum, only: is_freebound
     use mpi_mod
     use mod_locate_irn_jcn
@@ -62,7 +62,7 @@ contains
     real*8                   :: rhs_loc(*)
 
     ! Internal parameters
-    real*8  :: zbig
+    real*8  :: zbig, zbig_backup
     integer :: i, in, iv, inode, k
     integer :: index_large_i, index_node, index_node2, ielm
     integer :: ijA_position, ijA_position2, ilarge2
@@ -95,6 +95,7 @@ contains
     real*8  :: Mach1, Mach1_U, Mach1_T, Mach1_s, Mach1_s_Us, Mach1_s_T, Mach1_s_Ts
 
     zbig = 1.d12
+    zbig_backup = zbig
 
     do i=1, n_local_elms
       ielm = local_elms(i)
@@ -118,6 +119,11 @@ contains
         if (node_list%node(inode)%boundary .ne. 0) then
 
           do in=1, n_tor
+            if (keep_n0_const  .and.  in .eq. 1 ) then
+              zbig = 1.d15
+            else
+              zbig = zbig_backup
+            endif
             do k=1, n_var
 
               !------------------------------------ the open field lines (in case of x-point grid)

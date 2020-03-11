@@ -55,7 +55,7 @@ real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
 real*8     :: TG_NUM_Eq, CoefAdv=0.0, rho_min = 0.005
-real*8     :: Coef_DivA, Coef_DivV
+real*8     :: Coef_DivV
 real*8     :: Fprof,dF_dpsi,dF_dz
 real*8     :: dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz
 real*8     :: zFFprime    ,dFFprime_dpsi,dFFprime_dz
@@ -165,8 +165,6 @@ real*8     :: JxB_UR_A3__p, JxB_UR_A3__k, JxB_UR_A3__n, JxB_UR_A3__kn
 real*8     :: JxB_UZ_A3__p, JxB_UZ_A3__k, JxB_UZ_A3__n, JxB_UZ_A3__kn
 real*8     :: JxB_Up_A3__p, JxB_Up_A3__k, JxB_Up_A3__n, JxB_Up_A3__kn
 
-real*8     :: DivA, DivA_AR, DivA_AZ, DivA_A3__n
-
 real*8     :: Qvisc_UR__p, Qvisc_UR__k
 real*8     :: Qvisc_UR_UR__p, Qvisc_UR_UR__k, Qvisc_UR_UR__n, Qvisc_UR_UR__kn
 real*8     :: Qvisc_UR_UZ__p, Qvisc_UR_UZ__k, Qvisc_UR_UZ__n, Qvisc_UR_UZ__kn
@@ -210,7 +208,6 @@ real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_
 real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 
 ! --- Main switches
-Coef_DivA = 0.0d0 ! this is a stabilisation term !
 Coef_DivV = 0.0d0 ! this is a stabilisation term !
 ViscType  = 20
 VmsType   = -1    ! this is a stabilisation term if >=0 !
@@ -227,7 +224,6 @@ CoefAdv   = 0.d0  ! this is a stabilisation term (part of VMS) !
 ! --- changing the F-profile to be wrong, which I have not done here obviously)
 !parallel_projection = .true.
 !Coef_DivV           = 0.0d0 ! =0 means visco_divV=visco_T, otherwise visco_divV=visco_T+Coef_DivV
-!Coef_DivA           = 0.0d0
 !ViscType            = 0
 !VmsType             = 0
 !CoefAdv             = 0.0
@@ -507,7 +503,6 @@ do i=1,n_vertex_max
 !$OMP  JxB_UR_A3__p, JxB_UR_A3__k, JxB_UR_A3__n, JxB_UR_A3__kn, &
 !$OMP  JxB_UZ_A3__p, JxB_UZ_A3__k, JxB_UZ_A3__n, JxB_UZ_A3__kn, &
 !$OMP  JxB_Up_A3__p, JxB_Up_A3__k, JxB_Up_A3__n, JxB_Up_A3__kn, &
-!$OMP  DivA, DivA_AR, DivA_AZ, DivA_A3__n, &
 !$OMP  Qvisc_UR__p, Qvisc_UR__k, &
 !$OMP  Qvisc_UR_UR__p, Qvisc_UR_UR__k, Qvisc_UR_UR__n, Qvisc_UR_UR__kn, &
 !$OMP  Qvisc_UR_UZ__p, Qvisc_UR_UZ__k, Qvisc_UR_UZ__n, Qvisc_UR_UZ__kn, &
@@ -751,9 +746,6 @@ do i=1,n_vertex_max
           VmsCoefF_T      = gamma * T0 
           VmsCoefF_T      = 0.0d0
 
-          ! --- Force Div(A)=0
-          DivA =  Coef_DivA*( AR0_R + AR0 / R + AZ0_Z + A30_p / (R**2) )
-          
           ! --- Force Div(V)=0
           visco_divV      = 0.d0
           dvisco_divV_dT  = 0.d0
@@ -1070,13 +1062,6 @@ do i=1,n_vertex_max
               Qvec_k(var_Up) = Qvec_k(var_Up) - visco_divV * divU * v_p/ R 
             endif
 
-            !###################################################################################################
-            !#  Div(A) STABILISATIONS                                                                          #
-            !###################################################################################################
-            Qvec_p(var_AR)   = Qvec_p(var_AR) - DivA * ( v_R + v / R )
-            Qvec_p(var_AZ)   = Qvec_p(var_AZ) - DivA * v_Z
-            Qvec_k(var_A3)   = Qvec_k(var_A3) - DivA * ( v_p/ R ) 
-
 
 
 
@@ -1323,10 +1308,6 @@ do i=1,n_vertex_max
                   DiveRMVj    = bf_R + bf / R
                   DiveZMVj    = bf_z
                   DivePMVj__n = bf_p / R
-
-                  DivA_AR    =  Coef_DivA*( AR_R + AR / R )
-                  DivA_AZ    =  Coef_DivA*( AZ_Z  )
-                  DivA_A3__n =  Coef_DivA*( A3_p / (R**2) )
 
                   ! --- Viscous terms
                   Qvisc_UR_UR__p = 0.d0 ; Qvisc_UR_UR__n = 0.d0 ; Qvisc_UR_UR__k = 0.d0 ; Qvisc_UR_UR__kn = 0.d0
@@ -2237,21 +2218,6 @@ do i=1,n_vertex_max
                     Qjac_kn(var_Up,var_Up) = Qjac_kn(var_Up,var_Up) -  visco_divV * divU_Up__n  * v_p/ R
                     Qjac_k (var_Up,var_T ) = Qjac_k (var_Up,var_T ) - dvisco_divV_dT * T * divU * v_p/ R
                   endif
-
-                  !###################################################################################################
-                  !#  Div(A) STABILISATION                                                                           #
-                  !###################################################################################################
-                  Qjac_p (var_AR,var_AR) = Qjac_p (var_AR,var_AR) -  DivA_AR    * ( v_R + v / R )
-                  Qjac_p (var_AR,var_AZ) = Qjac_p (var_AR,var_AZ) -  DivA_AZ    * ( v_R + v / R )
-                  Qjac_n (var_AR,var_A3) = Qjac_n (var_AR,var_A3) -  DivA_A3__n * ( v_R + v / R )
-
-                  Qjac_p (var_AZ,var_AR) = Qjac_p (var_AZ,var_AR) -  DivA_AR    * ( v_Z )
-                  Qjac_p (var_AZ,var_AZ) = Qjac_p (var_AZ,var_AZ) -  DivA_AZ    * ( v_Z )
-                  Qjac_n (var_AZ,var_A3) = Qjac_n (var_AZ,var_A3) -  DivA_A3__n * ( v_Z )
-
-                  Qjac_k (var_A3,var_AR) = Qjac_k (var_A3,var_AR) -  DivA_AR    * ( v_p / R )
-                  Qjac_k (var_A3,var_AZ) = Qjac_k (var_A3,var_AZ) -  DivA_AZ    * ( v_p / R )
-                  Qjac_kn(var_A3,var_A3) = Qjac_kn(var_A3,var_A3) -  DivA_A3__n * ( v_p / R )
 
                   if (n_tor .gt. n_tor_fft_thresh) then
                     index_kl =       n_var*(n_order+1)*(k-1) +       n_var*(l-1) + 1

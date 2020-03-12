@@ -107,18 +107,14 @@ if (use_pellet) then
 
 endif
 
-if (flag_adas) then
+open(20,file="rad_history.dat")
 
-  open(20,file="rad_history.dat")
+write(20,'(2A20)') 'time', 'total_radiation (MJ)'
 
-  write(20,'(2A20)') 'time', 'total_radiation (MJ)'
-
-  do i=1,index_start
-    write(20,'(i7,f12.3,1e14.6)') i,xtime(i), xtime_radiation(i)/1.d6
-  enddo
-  close(20)
-
-end if
+do i=1,index_start
+  write(20,'(i7,f12.3,1e14.6)') i,xtime(i), xtime_radiation(i)/1.d6
+enddo
+close(20)
 
 if (using_spi) then
 
@@ -153,9 +149,7 @@ endif
 
 #if (JOREK_MODEL == 501)
   ! --- Read ADAS data and generate coronal equilibrium is needed
-  if (flag_adas) then
-    call init_imp_adas(my_id)
-  end if
+  call init_imp_adas(my_id)
 #endif
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
   if (output_rad_phi) then

@@ -181,7 +181,7 @@ module exec_commands
           call load_namelist(command, ierr)
 #if (JOREK_MODEL == 501)
           ! --- Read ADAS data and generate coronal equilibrium is needed
-          if (flag_adas) call init_imp_adas(0)
+          call init_imp_adas(0)
 #endif
         case ( 'params' )
           call log_parameters(0, .false.)

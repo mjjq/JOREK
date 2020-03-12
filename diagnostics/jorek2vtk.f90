@@ -183,7 +183,7 @@ include_neutral_dens = .true.
 #endif
 #if (JOREK_MODEL == 501)
 ! --- Read ADAS data and generate coronal equilibrium is needed
-if (flag_adas) call init_imp_adas(my_id)
+call init_imp_adas(my_id)
 #endif
 
 
@@ -1058,36 +1058,27 @@ enddo  ! n_elements
 
      ! We estimate the effective charge by a test density 10^20/m^3
      ! Later maybe we should implement a iterative method
-     if (flag_adas) then
 
-       if (allocated(imp_adas(1)%ionisation_energy)) then
+     if (allocated(imp_adas(1)%ionisation_energy)) then
 
-         if (allocated(P_imp)) deallocate(P_imp)
-         allocate(P_imp(0:imp_adas(1)%n_Z))
+       if (allocated(P_imp)) deallocate(P_imp)
+       allocate(P_imp(0:imp_adas(1)%n_Z))
 
-         call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
-                                       p_out=P_imp,z_eff=Z_imp)
+       call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                     p_out=P_imp,z_eff=Z_imp)
 
        ! Calculate the ionization potential energy and it's time gradient
-         E_ion     = 0.
+       E_ion     = 0.
 
-         do ion_i=1, imp_adas(1)%n_Z
-           do ion_k=1, ion_i
-             E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
-           end do
+       do ion_i=1, imp_adas(1)%n_Z
+         do ion_k=1, ion_i
+           E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
          end do
-       ! Convert from eV to JOREK unit
-         E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
-       else
-         call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
-         E_ion     = 0.
-       end if
+       end do
+     ! Convert from eV to JOREK unit
+       E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
      else
-
-       T0_Zimp        = 437.  ! eV
-       alpha_Zimp     = 0.415
-
-       Z_imp     = 10. !18.*tanh((T_rad/T0_Zimp)**alpha_Zimp)
+       call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
        E_ion     = 0.
      end if
 
@@ -1112,7 +1103,7 @@ enddo  ! n_elements
      eta_Sp       = eta_Sp * eta_coef
 
   !-------------------------------------------
-  ! --- Radiative function, if flag_adas is enabled use interpolation, if not use simple model
+  ! --- Radiative function, using interpolation
   ! ------------------------------------------
 
      ! Normalization coefficient for radiation rate from SI units (W.m^3) to
@@ -1120,7 +1111,7 @@ enddo  ! n_elements
      coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
-     if (flag_adas .and. ne_rad > 1.d18 .and. T_rad_real > 5. .and. rn0_real8 > 1.d-8) then
+     if (ne_rad > 1.d18 .and. T_rad_real > 5. .and. rn0_real8 > 1.d-8) then
 
        Lrad = 0.0
        
@@ -1130,31 +1121,9 @@ enddo  ! n_elements
 
        Lrad = Lrad * coef_rad_1
 
-     else if (flag_adas) then
+     else
        Lrad = 0.
        E_ion = 0.
-     else
-  !-------------------------------------------
-  ! --- Radiative cooling rate for Argon (approximate fit of cooling rate at
-  ! coronal equilibrium)
-  ! ------------------------------------------
-
-  !   if (T_rad .gt. 5.) then
-  
-       A0_rad   = 2.8*1.d-33    ! W.m^3
-       A1_rad   = 2.335*1.d-31  ! W.m^3
-       T1_rad   = 23.           ! eV
-       sig1_rad = 14.           ! eV
-       A2_rad   = 3.846*1.d-32  ! W.m^3
-       T2_rad   = 236.          ! eV
-       sig2_rad = 150.          ! eV
-  
-  !     Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.)
-  !     + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
-       !Lrad     = (1./2.)*coef_rad_1*5.d-32 *
-       !(tanh((T_rad-20.)/10.)-tanh(-20./10.))
-       Lrad      = 0. ! For Test
-  
      end if
 
      scalars(i,s_radiation+1) = (2./3.) * scalars(i,8) * E_ion

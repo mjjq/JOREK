@@ -250,7 +250,7 @@ required = 0
 
 #if (JOREK_MODEL == 501)
   ! --- Read ADAS data and generate coronal equilibrium is needed
-  if (flag_adas) call init_imp_adas(my_id)
+  call init_imp_adas(my_id)
 #endif
   
   ! --- Write out all parameters defined in parameters and the namelist input file.

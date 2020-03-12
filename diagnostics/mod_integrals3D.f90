@@ -262,7 +262,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
 #endif
 #if (JOREK_MODEL == 501)
-!$omp          local_radiation, local_E_ion, gas_type, flag_adas,                              &
+!$omp          local_radiation, local_E_ion, gas_type,                                         &
 !$omp          local_radiation_phi,                                                            &
 !$omp          imp_cor, imp_adas,                                                              &
 #endif
@@ -508,40 +508,33 @@ do ife = ife_min, ife_max
         ! Te in eV:
         T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
         T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-        if (flag_adas) then
    
-          if (allocated(imp_adas(1)%ionisation_energy)) then
+        if (allocated(imp_adas(1)%ionisation_energy)) then
    
-            if (allocated(P_imp)) deallocate(P_imp)
+          if (allocated(P_imp)) deallocate(P_imp)
    
-            allocate(P_imp(0:imp_adas(1)%n_Z))
+          allocate(P_imp(0:imp_adas(1)%n_Z))
    
-            call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
-                                          p_out=P_imp,z_eff=Z_imp)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                        p_out=P_imp,z_eff=Z_imp)
    
-            ! Calculate the ionization potential energy and it's time gradient
-            E_ion     = 0.
-            E_ion_bg  = 13.6
-            do ion_i=1, imp_adas(1)%n_Z
-              do ion_k=1, ion_i
-                E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
-              end do
+          ! Calculate the ionization potential energy and it's time gradient
+          E_ion     = 0.
+          E_ion_bg  = 13.6
+          do ion_i=1, imp_adas(1)%n_Z
+            do ion_k=1, ion_i
+              E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
             end do
-            ! Convert from eV to SI unit
-            E_ion     = E_ion * EL_CHG
-            E_ion_bg  = E_ion_bg * EL_CHG
-          else
-            call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
-            E_ion     = 0.
-            E_ion_bg  = 0.
-          end if
+          end do
+          ! Convert from eV to SI unit
+          E_ion     = E_ion * EL_CHG
+          E_ion_bg  = E_ion_bg * EL_CHG
         else
-          T0_Zimp        = 437.  ! eV
-          alpha_Zimp     = 0.415
-          Z_imp     = 10. !18.*tanh((T_rad/T0_Zimp)**alpha_Zimp)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
           E_ion     = 0.
           E_ion_bg  = 0.
         end if
+
         alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
         beta_imp     = m_i_over_m_imp*Z_imp - 1.
         ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
@@ -549,7 +542,7 @@ do ife = ife_min, ife_max
         P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
         P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
 
-        if (flag_adas .and. ne_rad > 1.d16 .and. T_rad_real > 3. .and. rn0 > 0.) then
+        if (ne_rad > 1.d16 .and. T_rad_real > 3. .and. rn0 > 0.) then
           Lrad = 0.0
           ! Here we are temperarily only considering one impurity species, in the
           ! future maybe a do loop will is needed
@@ -1377,13 +1370,11 @@ if (my_id .eq. 0) then
   write(*,'(A,1e14.6,A)') 'Radiation power          : ', total_radiation/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') 'Ionization potential E   : ', total_E_ion/1.d6, ' [MJ]'
   write(*,'(A,1e14.6,A)') 'Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
-  if (flag_adas) then
-    if (index_now > 1) then
-      xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation
-    else
-      xtime_radiation(index_now) = t_norm * tstep * total_radiation
-    end if
-  end if 
+  if (index_now > 1) then
+    xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation
+  else
+    xtime_radiation(index_now) = t_norm * tstep * total_radiation
+  end if
   if (output_rad_phi) then
     open(20,file="rad_asymmetry.dat")
     do i_phi = 1, n_plane

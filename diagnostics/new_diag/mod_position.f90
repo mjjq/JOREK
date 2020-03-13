@@ -1,4 +1,4 @@
-!> This module contains datastructures describing lists of poloidal and toroidal positions.
+	!> This module contains datastructures describing lists of poloidal and toroidal positions.
 !! 
 !! Together with mod_expression, this provides a general diagnostic framework for many applications.
 module mod_position
@@ -50,6 +50,8 @@ module mod_position
     real*8             :: theta_star !< Straight field line angle (for flux surfaces)
     real*8             :: r_minor    !< Minor radius from A = r_minor^2 pi (for flux surfaces)
     real*8             :: length     !< Length along a line (for line)
+    ! --- Quantities related to boundary elements
+    real*8             :: bnd_normal(2) = 0.d0 !< Normal vector to the computational boundary (pointing outside)
   end type t_pol_pos
   
   !> Data structure for a list of poloidal positions
@@ -401,7 +403,93 @@ module mod_position
   
   
   
+
+
+  !> Function to generate positions on the boundary of the JOREK's domain 
+  function bnd_pos(node_list, element_list, bnd_node_list, bnd_elm_list, n_elm_pts) result(pos_list)
+
+    type(t_pol_pos_list), target :: pos_list
+    
+    ! --- Routine parameters
+    type(type_node_list),         intent(in)    :: node_list
+    type(type_element_list),      intent(in)    :: element_list
+    type(type_bnd_node_list),     intent(in)    :: bnd_node_list
+    type(type_bnd_element_list),  intent(in)    :: bnd_elm_list
+    integer,                      intent(in)    :: n_elm_pts
+
+    ! --- Local variables
+    integer                  :: i_bnd, m_bndelem, mv1, m_elm, m_pt
+    real*8                   :: s_or_t, s, t
+    real*8                   :: R, R_s, R_t, Z, Z_s, Z_t
+    real*8                   :: vec_out(2)
+    logical                  :: s_const
+    type(t_pol_pos), pointer :: pos
+
+    i_bnd = 0  ! index for bnd point
   
+    ! --- alllocate position list
+    call alloc_pol_pos(pos_list, (/1, n_elm_pts * bnd_elm_list%n_bnd_elements /))
+
+    ! --- For every boundary element do 
+    do m_bndelem = 1, bnd_elm_list%n_bnd_elements
+
+      mv1     = bnd_elm_list%bnd_element(m_bndelem)%side
+      m_elm   = bnd_elm_list%bnd_element(m_bndelem)%element
+
+      ! --- For every point in the element do
+      do m_pt = 1, n_elm_pts
+
+        i_bnd  = i_bnd + 1 
+        s_or_t = float(m_pt-1)/float(n_elm_pts)
+
+        ! --- Which s and t values correspond to the current point and is the
+        !     boundary element an s=const or t=const side of the 2D element?
+        select case (mv1)
+        case (1)
+          s = s_or_t;  t = 0.d0;    s_const = .false.
+        case (2)
+          s = 1.d0;    t = s_or_t;  s_const = .true.
+        case (3)
+          s = s_or_t;  t = 1.d0;    s_const = .false.
+        case (4)
+          s = 0.d0;    t = s_or_t;  s_const = .true.
+        end select
+
+        ! --- Fill in positions
+        pos   => pos_list%pos(1,i_bnd)
+        pos%ielm = m_elm
+        pos%s    = s
+        pos%t    = t
+        call fill_pol_pos(pos, node_list, element_list)
+
+        ! --- Normal vector to the boundary
+        if ( s_const ) then
+          pos%bnd_normal = (/ -pos%Z_t, pos%R_t /) / sqrt(pos%R_t**2.d0 + pos%Z_t**2.d0)  
+        else
+          pos%bnd_normal = (/ -pos%Z_s, pos%R_s /) / sqrt(pos%R_s**2.d0 + pos%Z_s**2.d0)
+        end if
+
+        ! --- Correct normal direction to point outwards 
+        ! --- Get point inside the element
+        if ( s_const ) then
+          call interp_RZ(node_list, element_list, m_elm, 0.5d0,     t, R, R_s, R_t, Z, Z_s, Z_t)
+        else
+          call interp_RZ(node_list, element_list, m_elm,     s, 0.5d0, R, R_s, R_t, Z, Z_s, Z_t)
+        endif
+        vec_out = (/  pos%R - R, pos%Z  - Z/)    ! vector pointing outside the domain
+
+        pos%bnd_normal = pos%bnd_normal*sign(1.d0, vec_out(1)*pos%bnd_normal(1)+vec_out(2)*pos%bnd_normal(2))
+
+      enddo
+
+    enddo 
+   
+  end function bnd_pos
+  
+
+
+
+
   
   !> Simple function to generate toroidal positions (wrapper for routine create_tor_pos).
   function tor_pos(phi, iplane, phistart, phiend, nphi) result(pos_list)
@@ -457,11 +545,16 @@ module mod_position
     else if ( present(phistart) .and. present(phiend) .and. present(nphi) ) then
       
       call alloc_tor_pos(pos_list, nphi)
-      do i = 1, nphi
-        pos     => pos_list%pos(i)
-        pos%phi = phistart + (phiend-phistart) * real(i-1)/real(nphi-1)
-      end do
-      
+      if (nphi==1) then
+        pos     => pos_list%pos(1)
+        pos%phi = phistart 
+      else
+        do i = 1, nphi
+          pos     => pos_list%pos(i)
+          pos%phi = phistart + (phiend-phistart) * real(i-1)/real(nphi-1)
+        end do
+      endif
+     
     else if ( present(nphi) ) then
       
       call alloc_tor_pos(pos_list, nphi)

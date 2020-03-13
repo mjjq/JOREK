@@ -42,6 +42,7 @@ program jorek2_postproc
   call set_setting('rad_range_min',   '0.001', ierr)
   call set_setting('rad_range_max',   '0.999', ierr)
   call set_setting('nTht',            '32',    ierr)
+  call set_setting('n_belm_pts',      '4',     ierr)
   
   ! --- Print getting started information
   call specific_help('getting_started')

@@ -168,7 +168,13 @@ contains
           vertex    = (/ iv, iv2 /)
           direction = (/  1, 2   /)
 
-            ! --- Build matrix elements for boundary
+          iv3 = mod(iv2, n_vertex_max) + 1
+          iv4 = mod(iv3, n_vertex_max) + 1
+
+          nodes(3) = node_list%node(element%vertex(iv3))
+          nodes(4) = node_list%node(element%vertex(iv4))
+
+          ! --- Build matrix elements for boundary
           !call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
         endif
        
@@ -194,8 +200,9 @@ contains
 #ifdef COMPARE_ELEMENT_MATRIX
     ! --- Comparison is performed only for one finite element
     if (ife .eq. n_local_elms/2) then
-      
+
       ! --- Call both routines
+      if ( (jorek_model .eq. 303) .or. (jorek_model .eq. 333) .or. (jorek_model .eq. 710) ) n_tor_fft_thresh = 1
       call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM2, thread_struct(omp_tid)%RHS2, omp_tid, &
         thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn, &
@@ -203,6 +210,7 @@ contains
         thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, &
         thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, &
         thread_struct(omp_tid)%delta_t)
+      if ( (jorek_model .eq. 303) .or. (jorek_model .eq. 333) .or. (jorek_model .eq. 710) ) n_tor_fft_thresh = 300
       call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM,  thread_struct(omp_tid)%RHS,  omp_tid)
       
@@ -210,14 +218,14 @@ contains
       write(*,*)
       write(*,*) 'Comparing rhs:'
       write(*,*)
-      write(*,'(A)') '  #    my_id   i ivertex  iorder    ivar    itor         RHS    ' //&
-      '   RHS2       RHS-RHS2'
+      write(*,'(A)') '  #    my_id       i    ivtx iodr itor         ivar' // &
+                     '                    RHS            RHS2        RHS-RHS2'
       do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
     	
     	if (abs(thread_struct(omp_tid)%RHS(i)-thread_struct(omp_tid)%RHS2(i)) / &
             (abs(thread_struct(omp_tid)%RHS(i))+abs(thread_struct(omp_tid)%RHS2(i))+1.d0) .gt. 1.d-12) then
-    	  call decrypt_index(i, ivertex, iorder, ivar, itor)
-    	  write(*,'(4x,6i8,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, thread_struct(omp_tid)%RHS(i), &
+    	  call decrypt_index(i, ivertex, iorder, itor, ivar)
+    	  write(*,'(4x,2i8,4x,3i4,7x,1i8,7x,3es16.8)') my_id, i, ivertex, iorder, ivar, itor, thread_struct(omp_tid)%RHS(i), &
     	      thread_struct(omp_tid)%RHS2(i), thread_struct(omp_tid)%RHS(i)-thread_struct(omp_tid)%RHS2(i)
     	  rhs_problem(ivar) = .true.
     	  difference_found  = .true.
@@ -229,8 +237,8 @@ contains
       write(*,*)
       write(*,*) 'Comparing elm:'
       write(*,*)
-      write(*,'(A)') '  #    my_id   i   j ivertex  iorder    ivar    itor jvertex  ' //  &
-      'jorder    jvar    jtor       ELM      ELM2        ELM-ELM2'
+      write(*,'(A)') '  #    my_id       i       j    ivtx iodr itor      ivar       jvtx jodr jtor      jvar' // &
+                     '                    ELM            ELM2        ELM-ELM2'
       do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
     	do j = 1, n_tor*n_vertex_max*(n_order+1)*n_var
     	  
@@ -238,8 +246,9 @@ contains
     	      (abs(thread_struct(omp_tid)%ELM(i,j))+abs(thread_struct(omp_tid)%ELM2(i,j))+1.d0) .gt. 1.d-10) then
     	    call decrypt_index(i, ivertex, iorder, ivar, itor)
     	    call decrypt_index(j, jvertex, jorder, jvar, jtor)
-    	    write(*,'(4x,11i8,3es16.8)') my_id, i, j, ivertex, iorder, ivar, itor, jvertex,	  &
-    	      jorder, jvar, jtor, thread_struct(omp_tid)%ELM(i,j), thread_struct(omp_tid)%ELM2(i,j), &
+    	    write(*,'(4x,3i8,4x,3i4,4x,1i8,7x,3i4,4x,1i8,7x,3es16.8)') my_id, i, j, ivertex, iorder, itor, ivar, &
+                                                                                    jvertex, jorder, jtor, jvar, &
+                                                                       thread_struct(omp_tid)%ELM(i,j), thread_struct(omp_tid)%ELM2(i,j), &
     	      thread_struct(omp_tid)%ELM(i,j)-thread_struct(omp_tid)%ELM2(i,j)
     	    elm_problem(ivar,jvar) = .true.
     	    difference_found	   = .true.

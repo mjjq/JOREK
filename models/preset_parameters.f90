@@ -33,7 +33,6 @@ subroutine preset_parameters
   eta_ohmic = 0.d0
   visco = 1.d-5
   visco_par = 1.d-5
-  visco2    = 0.d0
   
   central_density = 1.d0        ! the central density in units 10^20 m^-3
   central_mass    = 2.d0        ! the central average ion mass (D)
@@ -307,6 +306,11 @@ subroutine preset_parameters
   adaptive_time      = .false.              ! requires no_mpi for Pastix library
   
   equil              = .true.               ! compute equilibrium
+  
+  parallel_projection= .true.               ! Full-MHD: use B-projection instead of Phi-projection for 3rd Mom.equation (on Up)
+  Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+
+  fix_axis_nodes     = .false.              !< Fix t-derivative on axis to avoid noise)
   
   bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
   no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS

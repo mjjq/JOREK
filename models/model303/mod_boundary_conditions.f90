@@ -39,6 +39,7 @@ contains
        Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const
     USE tr_module
     use mpi_mod
+    use mod_locate_irn_jcn
 
     implicit none
 

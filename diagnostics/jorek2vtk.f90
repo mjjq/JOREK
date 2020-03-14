@@ -1588,14 +1588,14 @@ if (SI_units) then
   
       eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0)
   
-         scalars(i,s_radiation+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
-                                             * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T
+      scalars(i,s_radiation+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
+                                       * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T
   
-         scalars(i,s_radiation+2) = scalars(i,5)* 1.d20 * scalars(i,8) * 1.d20 * LradDrays_T
+      scalars(i,s_radiation+2) = scalars(i,5)* 1.d20 * scalars(i,8) * 1.d20 * LradDrays_T
   
-         scalars(i,s_radiation+3) = LradDcont_T * (scalars(i,5)*1.d20)**2.d0
+      scalars(i,s_radiation+3) = LradDcont_T * (scalars(i,5)*1.d20)**2.d0
   
-         scalars(i,s_radiation+4) = eta_Sp * (1.d6*scalars(i,3))**2.d0
+      scalars(i,s_radiation+4) = eta_Sp * (1.d6*scalars(i,3))**2.d0
   
    !--------------------------------------------------------
      ! --- Radiation from background impurity

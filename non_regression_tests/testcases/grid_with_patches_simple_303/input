@@ -302,8 +302,8 @@
  n_radial  = 020   
  n_pol     = 045   
 
- n_flux    = 011   
- n_tht     = 031   
+ n_flux    = 044   
+ n_tht     = 061   
  n_open    = 002   
  n_leg     = 003   
  n_private = 002   

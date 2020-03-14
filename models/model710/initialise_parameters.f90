@@ -22,6 +22,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 restart, regrid, write_ps, time_evol_theta,         &
                 time_evol_zeta, force_horizontal_Xline,             &
+                parallel_projection, Mach1_openBC,                  &
+                n_tor_fft_thresh, fix_axis_nodes,                   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg,                           &
                 n_outer, n_inner, n_up_priv, n_up_leg,              &
@@ -40,20 +42,22 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 F0, gamma,                                          &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
-                T_0,   T_1,   T_coef,                               &
+                T_0,   T_1,   T_coef, T_min,                        &
                 FF_0,  FF_1,  FF_coef,                              &
                 V_0, V_1, V_coef,                                   &
                 ZK_par, ZK_perp, D_par, D_perp,                     &
-                eta, visco, visco2, visco_par,                      &
+                eta, visco, visco_par,                              &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 particlesource, heatsource, tauIC,                  &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi,                       &
+                central_density, central_mass,                      &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, time_evol_scheme,                            &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
+                bc_natural_open, bc_natural_flux, gamma_sheath,     &
                 freeboundary, resistive_wall, freeb_change_indices, &
                 use_mumps, mumps_ordering,                          &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
@@ -62,12 +66,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 fix_axis_nodes,                                     &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
-                eta_T_dependent, visco_T_dependent,                 &
+                eta_T_dependent, visco_T_dependent,ZKpar_T_dependent,&
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
                 edgeparticlesource_sig,                             &
                 produce_live_data, gmres, gmres_max_iter,           &
+                iter_precon, gmres_4, gmres_m, gmres_tol,           &
                 keep_n0_const, linear_run, export_for_nemec,        &
                 output_bnd_elements,                                &
                 wall_file,                                          &

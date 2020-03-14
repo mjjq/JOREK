@@ -156,6 +156,35 @@ module mod_expression
     call add(exprs_all, 'E_||        ', 'E_|| for RE acceleration                              ')
     call add(exprs_all, 'E_crit      ', 'E_crit for RE avalanching (Connor-Hastie)             ')
     call add(exprs_all, 'E_dreicer   ', 'Electrical field for Dreicer RE primary source        ')
+    call add(exprs_all, 'theta_geo   ', 'Polar angle with respect to Rgeo, Zgeo                ')
+    call add(exprs_all, 'bnd_normal_R', 'R component of unit vector pointing outside JOREKs bnd')
+    call add(exprs_all, 'bnd_normal_Z', 'Z component of unit vector pointing outside JOREKs bnd')
+    call add(exprs_all, 'Bnorm       ', 'Normal     magnetic field to the JOREKs boundary      ')
+    call add(exprs_all, 'Btan        ', 'Tangential magnetic field to the JOREKs boundary      ')
+    call add(exprs_all, 'Jnorm       ', 'Normal current density to the JOREKs boundary         ')
+    call add(exprs_all, 'Jpar        ', 'Parallel current density to the magnetic field        ')
+    call add(exprs_all, 'Jpar_ionsat ', 'Parallel ion saturation current density               ')
+    call add(exprs_all, 'vpar_norm   ', 'Perpendicular velocity to the boundary (vpar contrib) ')
+    call add(exprs_all, 'vu_norm     ', 'Perpendicular velocity to the boundary (u contrib)    ')
+    call add(exprs_all, 'vtot_norm   ', 'Total perpendicular velocity to the JOREKs boundary   ')
+    call add(exprs_all, 'heatF_sheath', 'Sheath theory heatflux (gamma_sh nT vpar\cdot n)      ')
+    call add(exprs_all, 'heatF_par_cd', 'Conductive parallel heat flux (normal to the boundary)')
+    call add(exprs_all, 'heatF_prp_cd', 'Conductive perpend  heat flux (normal to the boundary)')
+    call add(exprs_all, 'heatF_tot_cd', 'Conductive total    heat flux (normal to the boundary)')
+    call add(exprs_all, 'heatF_par_cv', 'Convective parallel heat flux (normal to the boundary)')
+    call add(exprs_all, 'heatF_prp_cv', 'Convective perpend  heat flux (normal to the boundary)')
+    call add(exprs_all, 'heatF_tot_cv', 'Convective total    heat flux (normal to the boundary)')
+    call add(exprs_all, 'heatF_total ', 'Total heat flux (normal to the boundary)              ')
+    call add(exprs_all, 'kinEn_F_perp', 'Perpend kinetic energy flux (normal to the boundary)  ')
+    call add(exprs_all, 'kinEn_F_par ', 'Parall  kinetic energy flux (normal to the boundary)  ')
+    call add(exprs_all, 'kinEn_F_tot ', 'Total   kinetic energy flux (normal to the boundary)  ')
+    call add(exprs_all, 'partF_par_cd', 'Conductive parallel particle flux (normal to the bnd) ')
+    call add(exprs_all, 'partF_prp_cd', 'Conductive perpend  particle flux (normal to the bnd) ')
+    call add(exprs_all, 'partF_par_cv', 'Convective parallel particle flux (normal to the bnd) ')
+    call add(exprs_all, 'partF_prp_cv', 'Convective perpend  particle flux (normal to the bnd) ')
+    call add(exprs_all, 'partF_total ', 'Total particle flux (normal to the boundary)          ')
+    call add(exprs_all, 'npartF_total', 'Total neutral particle flux (normal to the boundary)  ')
+    call add(exprs_all, 'ExB_norm    ', 'EM energy flux, Poynting vector (normal to boundary)  ')
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
@@ -527,22 +556,26 @@ module mod_expression
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z, Btheta, psi_abs, E_par, E_crit, E_dreicer
+      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, BR, BZ, Btheta, psi_abs, E_par, E_crit, E_dreicer
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
       ne0_20, ln_Lambda, ln_Lambda0
-    real*8 :: FFprime_loc, Jpol
+    real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, c_sat, Bnorm, Btan
+    real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
+    ! --- Fluxes
+    real*8  ::  ZKpar_flux, ZKperp_flux, Dpar_flux, Dperp_flux, partF_cnv_par, partF_cnv_tot
+    real*8  ::  pres_flux_par, pres_flux_tot, kin_flux_par, kin_flux_tot, neut_part_flux, ExB_norm 
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
-      fact_resistiv, fact_Er
+      fact_resistiv, fact_Er, fact_flux
 #if JOREK_MODEL == 500
     real*8  :: coef_rad_1
     real*8  :: T_rad, LradDrays_T, LradDcont_T
-    real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp
+    real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 #endif
     
@@ -602,6 +635,8 @@ module mod_expression
         s    = pol_pos%s
         t    = pol_pos%t
         ielm = pol_pos%ielm
+        nmlR = pol_pos%bnd_normal(1)
+        nmlZ = pol_pos%bnd_normal(2)
         BigR   = R    ! Just two different names for R
         BigR_R = 1.d0 ! Trivial derivative
         call basisfunctions(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
@@ -609,6 +644,10 @@ module mod_expression
         ! --- Poloidal angle theta
         theta = atan2(Z-eq%Z_axis, R-eq%R_axis)
         if ( theta < 0.d0 ) theta = theta + 2.d0*PI
+
+        ! --- Geometrical poloidal angle
+        theta_geo = atan2(Z-Z_geo, R-R_geo)
+        if ( theta_geo < 0.d0 ) theta_geo = theta_geo + 2.d0*PI
         
         ! --- 2D Jacobian
         xjac   = R_s * Z_t - R_t * Z_s
@@ -984,22 +1023,42 @@ module mod_expression
           P0_RR    = r0_RR * T0 + r0 * T0_RR + 2.d0 * r0_R * T0_R
           P0_ZZ    = r0_ZZ * T0 + r0 * T0_ZZ + 2.d0 * r0_Z * T0_Z
           P0_RZ    = r0_RZ * T0 + r0 * T0_RZ + r0_R * T0_Z + r0_Z * T0_R
-          
+ 
+#if JOREK_MODEL == 500
+          rn0_R    = (   Z_t * rn0_s - Z_s * rn0_t ) / xjac
+          rn0_Z    = ( - R_t * rn0_s + R_s * rn0_t ) / xjac
+#endif         
           ! --- Some things related to the magnetic field
           BB2      = (F0*F0 + ps0_R * ps0_R + ps0_Z * ps0_Z ) / BigR**2
-          B_R      = + ps0_Z / BigR
-          B_Z      = - ps0_R / BigR
+          Btot     = sqrt(BB2)
+          BR       = + ps0_Z / BigR
+          BZ       = - ps0_R / BigR
           B_tor    = + F0    / BigR
+          Bnorm    = BR*nmlR + BZ*nmlZ
+          Btan     = BR*nmlZ - BZ*nmlR
           psi_norm = get_psi_n(ps0, Z)
-          Btheta  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z) / BigR
-          psi_abs = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z)
+          Btheta   = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z) / BigR
+          psi_abs  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z)
 
+          ! --- Current related quantities
           if (psi_abs > 1.d-6) then
             FFprime_loc = zj0 + (R**2.d0) * (ps0_R*P0_R + ps0_Z*P0_Z)/(psi_abs**2.d0)
           else
             FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
           endif
-          Jpol = FFprime_loc * Btheta
+          Jpol        = FFprime_loc * Btheta     / F0     !Jpol = F' Bpol
+          JpolR       = ( -zj0 * BR - R * P0_Z ) / F0
+          JpolZ       = ( -zj0 * BZ + R * P0_R ) / F0
+          Jpar        = (JpolR*BR + JpolZ*BZ - zj0/R *B_tor) / Btot
+          Jpar_ionsat = r0 * vpar0 * Btot 
+
+          ! --- Velocity
+          VR       = -R*u0_Z + vpar0*ps0_Z/R 
+          VZ       =  R*u0_R - vpar0*ps0_R/R
+          V_phi    =  F0 * vpar0/R
+          Vpar_tot =  (VR*BR + VZ*BZ + V_phi*B_tor) / Btot
+          VperpR   =  VR - Vpar_tot * BR / Btot
+          VperpZ   =  VZ - Vpar_tot * BZ / Btot
 
           ! --- Some input profiles
           if ( eta_T_dependent ) then
@@ -1034,7 +1093,35 @@ module mod_expression
           
           D_prof  = get_dperp (psi_norm)
           ZK_prof = get_zkperp(psi_norm)
-          
+
+          ! --- Fluxes 
+          pres_flux_par =  gamma/(gamma-1.d0) * r0 * T0 * Vpar_tot * Bnorm / Btot          !  p v_par·n
+          pres_flux_tot =  gamma/(gamma-1.d0) * r0 * T0 * (VR*nmlR + VZ*nmlZ)              !  p v·n
+
+          kin_flux_par  = 0.5d0*r0* (VR*VR + VZ*VZ + V_phi*V_phi)* Vpar_tot * Bnorm / Btot ! 0.5 nv^2 v_par·n
+          kin_flux_tot  = 0.5d0*r0* (VR*VR + VZ*VZ + V_phi*V_phi)* (VR*nmlR + VZ*nmlZ)     ! 0.5 nv^2 v·n 
+
+          ZKpar_flux    = - ZKpar_T *(BR*T0_R + BZ*T0_Z + B_tor*T0_p/R) * Bnorm / BB2 / (gamma-1.d0) ! q_par·n 
+          ZKperp_flux   = - ZK_prof *( T0_R*nmlR + T0_Z*nmlZ)        / (gamma-1.d0) &                ! q_perp·n
+                          + ZK_prof *(BR*T0_R + BZ*T0_Z + B_tor*T0_p/R) * Bnorm / BB2 / (gamma-1.d0) 
+    
+          Dpar_flux     = - D_par  * (BR*r0_R + BZ*T0_Z + B_tor*T0_p/R) * Bnorm / BB2
+          Dperp_flux    = - D_prof * ( r0_R*nmlR + T0_Z*nmlZ)                       &                              
+                          + D_prof * (BR*r0_R + BZ*T0_Z + B_tor*T0_p/R) * Bnorm / BB2 
+    
+          partF_cnv_par =   r0 * Vpar_tot * Bnorm / Btot                           !  p v_par·n
+          partF_cnv_tot =   r0 * ( VR * nmlR + VZ * nmlZ )                         !  n v·n
+    
+#if JOREK_MODEL == 500
+          neut_part_flux= D_neutral_x*rn0_R * nmlR + D_neutral_y * rn0_Z * nmlZ
+#else
+          neut_part_flux= 0.d0
+#endif    
+
+          ExB_norm      =   BB2 * (VperpR*nmlR + VperpZ*nmlZ)  &
+                        - eta_T * zj0 / (R**2.d0) * (ps0_R*nmlR + ps0_Z*nmlZ)
+
+         
           ! --- Other parameters (combination of the main variables)
           Er       = 0.d0
           Vtheta   = 0.d0
@@ -1168,7 +1255,8 @@ module mod_expression
              fact_vpar     = sqrt(BB2) / fact_time                                 ! factor for Vpar
              fact_resistiv = sqrt ( MU_zero / rho_norm )                           ! factor for eta == 1 / (factor for visco)
              fact_Er       = F0 / fact_time
-          else if ( units == JOREK_UNITS ) then
+             fact_flux     = 1.d0/(mu_zero*fact_time)  
+         else if ( units == JOREK_UNITS ) then
              fact_time     = 1.d0
              fact_mu_zero  = 1.d0
              fact_ne       = 1.d0
@@ -1177,8 +1265,12 @@ module mod_expression
              fact_vpar     = 1.d0
              fact_resistiv = 1.d0
              fact_Er       = 1.d0
+             fact_flux     = 1.d0 
           end if
           
+          ! --- factor to calculate ion saturation current in JOREK units
+          c_sat     = EL_CHG * 1.d20 * central_density * sqrt(MU_ZERO/rho_norm) 
+
           ! --- Now that everything is prepared, evaluate the requested expressions.
           loop_expr: do iexpr = 1, expr_list%n_expr
             
@@ -1277,11 +1369,11 @@ module mod_expression
               case ( 'B_tor' )
                 res = B_tor
                 
-              case ( 'B_R' )
-                res = B_R
+              case ( 'BR' )
+                res = BR
                 
-              case ( 'B_Z' )
-                res = B_Z
+              case ( 'BZ' )
+                res = BZ
                 
               case ( 'B_theta' )
                 res = Btheta
@@ -1348,7 +1440,94 @@ module mod_expression
                 
               case ( 'E_dreicer' )
                 res = E_dreicer / fact_time
-                
+
+              case ( 'theta_geo'    )
+                res = theta_geo
+
+              case ( 'bnd_normal_R' )
+                res = nmlR
+
+              case ( 'bnd_normal_Z' )
+                res = nmlZ
+
+              case ( 'Bnorm'        )
+                res = Bnorm 
+
+              case ( 'Btan'         )
+                res = Btan
+
+              case ( 'Jnorm'        )
+                res = (JpolR*nmlR + JpolZ*nmlZ) / fact_mu_zero
+
+              case ( 'Jpar'         )
+                res = Jpar/fact_mu_zero
+
+              case ( 'Jpar_ionsat'  )
+                res = Jpar_ionsat * c_sat / fact_mu_zero
+
+              case ( 'vpar_norm'    )
+                res = vpar0 * Bnorm / fact_time 
+
+              case ( 'vu_norm'   )
+                res = (VR*nmlR + VZ*nmlZ - vpar0*Bnorm) / fact_time
+
+              case ( 'vtot_norm'   )
+                res = (VR*nmlR + VZ*nmlZ) / fact_time
+
+              case ( 'heatF_sheath' )
+                res = (1.d0+gamma_sheath/(gamma-1.d0))*r0*T0*vpar0*Bnorm*fact_flux
+
+              case ( 'heatF_par_cd' )
+                res = ZKpar_flux * fact_flux
+
+              case ( 'heatF_prp_cd' )
+                res = ZKperp_flux * fact_flux
+
+              case ( 'heatF_tot_cd' )
+                res = (ZKperp_flux + ZKpar_flux) * fact_flux
+
+              case ( 'heatF_par_cv' )
+                res = pres_flux_par * fact_flux
+
+              case ( 'heatF_prp_cv' )
+                res = (pres_flux_tot-pres_flux_par) * fact_flux
+
+              case ( 'heatF_tot_cv' )
+                res = pres_flux_tot * fact_flux
+
+              case ( 'heatF_total'  )
+                res = (pres_flux_tot + ZKperp_flux + ZKpar_flux) * fact_flux
+
+              case ( 'kinEn_F_par' )
+                res = kin_flux_par * fact_flux
+
+              case ( 'kinEn_F_perp ' )
+                res = (kin_flux_tot-kin_flux_par) * fact_flux
+
+              case ( 'kinEn_F_tot ' )
+                res = kin_flux_tot * fact_flux
+
+              case ( 'partF_par_cd' )
+                res = Dpar_flux * fact_ne / fact_time
+
+              case ( 'partF_prp_cd' )
+                res = Dperp_flux * fact_ne / fact_time
+
+              case ( 'partF_par_cv' )
+                res = partF_cnv_par * fact_ne / fact_time
+
+              case ( 'partF_prp_cv' )
+                res = (partF_cnv_tot - partF_cnv_par) * fact_ne / fact_time
+
+              case ( 'partF_total'  )
+                res = partF_cnv_tot * fact_ne / fact_time
+
+              case ( 'npartF_total'  )
+                res = neut_part_flux * fact_ne / fact_time
+
+              case ( 'ExB_norm'  )
+                res = ExB_norm * fact_flux
+  
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
               case ( 'J_bootstrap' )
                 res = J_boot ! ### check if no normalization needed

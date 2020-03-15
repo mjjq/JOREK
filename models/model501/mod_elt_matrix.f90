@@ -712,80 +712,62 @@ do ms=1, n_gauss
 
      ! We estimate the effective charge by a test density 10^20/m^3
      ! Later maybe we should implement a iterative method
-     if (flag_adas) then
 
-       if (allocated(imp_adas(1)%ionisation_energy)) then
+     if (allocated(imp_adas(1)%ionisation_energy)) then
 
-         if (allocated(P_imp)) deallocate(P_imp)
-         if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+       if (allocated(P_imp)) deallocate(P_imp)
+       if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
 
-         allocate(P_imp(0:imp_adas(1)%n_Z))
-         allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+       allocate(P_imp(0:imp_adas(1)%n_Z))
+       allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
 
-         call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
-                                p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
-                                z_TeTe_out=d2Z_imp_dT2)
+       call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
+                              z_TeTe_out=d2Z_imp_dT2)
 
-         ! Calculate the ionization potential energy and its derivative wrt. temperature
-         E_ion     = 0.
-         dE_ion_dT = 0.
-         E_ion_bg  = 13.6 ! Hydrogen and deterium seem to have different ionization energy, 
-                          ! but the difference is of the next order.
+       ! Calculate the ionization potential energy and its derivative wrt. temperature
+       E_ion     = 0.
+       dE_ion_dT = 0.
+       E_ion_bg  = 13.6 ! Hydrogen and deterium seem to have different ionization energy, 
+                        ! but the difference is of the next order.
 
-         do ion_i=1, imp_adas(1)%n_Z
-           do ion_k=1, ion_i
-             E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
-             dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
-           end do
+       do ion_i=1, imp_adas(1)%n_Z
+         do ion_k=1, ion_i
+           E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+           dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
          end do
-         ! Convert from eV to JOREK unit
-         E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
-         dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
-         E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
-         ! Convert the gradient in K to gradient in JOREK unit
-         dE_ion_dT = dE_ion_dT * dT_rad_dT * EL_CHG / K_BOLTZ
-
-       else
-         call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
-                                            z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
-         E_ion     = 0.
-         dE_ion_dT = 0.
-         E_ion_bg  = 0.
-       end if
-
-       ! Convert gradient in T(K) in to gradient in T (eV)
-       dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
-       ! Derivative wrt to T, with T in JOREK units
-       dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-       dZ_imp_dT = dZ_imp_dT * dT0_corr_dT
-
-       if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
-        write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
-        write(*,*) "T_rad =", T_rad
-        stop
-       end if
-
-       if (dZ_imp_dT < 0) then
-         write(*,*) "WARNING, ERROR with dZ_imp_dT = ", dZ_imp_dT
-         write(*,*) "Z_imp, T_e", Z_imp, T_rad, T0
-         stop
-       end if
+       end do
+       ! Convert from eV to JOREK unit
+       E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
+       dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
+       E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
+       ! Convert the gradient in K to gradient in JOREK unit
+       dE_ion_dT = dE_ion_dT * dT_rad_dT * EL_CHG / K_BOLTZ
 
      else
-
-       T0_Zimp        = 437.  ! eV
-       alpha_Zimp     = 0.415
-
-       Z_imp     = 10. !18.*tanh((T_rad/T0_Zimp)**alpha_Zimp)
-     ! Derivative wrt to Te, with Te in eV
-       dZ_imp_dT = 0. !(18./T0_Zimp)*alpha_Zimp*((T_rad/T0_Zimp)**(alpha_Zimp-1))*(1.-(tanh(T_rad/T0_Zimp))**2.) * dT_rad_dT
-     ! Derivative wrt to T, with T in JOREK units
-       dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-
+       call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+                                            z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
        E_ion     = 0.
        dE_ion_dT = 0.
        E_ion_bg  = 0.
+     end if
 
+     ! Convert gradient in T(K) in to gradient in T (eV)
+     dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
+     ! Derivative wrt to T, with T in JOREK units
+     dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     dZ_imp_dT = dZ_imp_dT * dT0_corr_dT
+
+     if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
+      write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
+      write(*,*) "T_rad =", T_rad
+      stop
+     end if
+
+     if (dZ_imp_dT < 0) then
+       write(*,*) "WARNING, ERROR with dZ_imp_dT = ", dZ_imp_dT
+       write(*,*) "Z_imp, T_e", Z_imp, T_rad, T0
+       stop
      end if
 
      alpha_imp       = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
@@ -860,7 +842,7 @@ do ms=1, n_gauss
      deta_drn0_ohm = (deta_drn0/eta) * eta_ohmic
 
   !-------------------------------------------
-  ! --- Radiative function, if flag_adas is enabled use interpolation, if not use simple model
+  ! --- Radiative function, using interpolation
   ! ------------------------------------------
 
      ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
@@ -868,7 +850,7 @@ do ms=1, n_gauss
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
 
-     if (flag_adas .and. ne_rad > 1.d18 .and. T_rad_real > 5. .and. rn0 > 1.d-8) then
+     if (ne_rad > 1.d18 .and. T_rad_real > 5. .and. rn0 > 1.d-8) then
 
        Lrad = 0.0
        dLrad_dT = 0.0
@@ -890,40 +872,11 @@ do ms=1, n_gauss
          dLrad_dT = 0.
        end if
 
-
-     else if (flag_adas) then
+     else
        Lrad = 0.
        dLrad_dT = 0.
        !E_ion = 0.
        !dE_ion_dT = 0.
-     else
-
-  !-------------------------------------------
-  ! --- Radiative cooling rate for Argon (approximate fit of cooling rate at coronal equilibrium)
-  ! ------------------------------------------
-    
-!   if (T_rad .gt. 5.) then
-
-     A0_rad   = 2.8*1.d-33    ! W.m^3
-     A1_rad   = 2.335*1.d-31  ! W.m^3
-     T1_rad   = 23.           ! eV
-     sig1_rad = 14.           ! eV
-     A2_rad   = 3.846*1.d-32  ! W.m^3
-     T2_rad   = 236.          ! eV
-     sig2_rad = 150.          ! eV
-
-!     Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.) + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
-     !Lrad     = (1./2.)*coef_rad_1*5.d-32 * (tanh((T_rad-20.)/10.)-tanh(-20./10.))
-     Lrad      = 0. ! For Test
-
-     ! Derivative wrt to T, with T in JOREK units
-     !dLrad_dT = (1./2.)*coef_rad_1*5.d-32 * (1./10.) * dT_rad_dT * (1-tanh((T_rad-20.)/10.)**2) * dT0_corr_dT
-     dLrad_dT = 0. ! For Test
-
-!   else
-!     Lrad = 0.d0
-!     dLrad_dT = 0.d0
-!   endif
      end if
 
      ! This is to detect N/A

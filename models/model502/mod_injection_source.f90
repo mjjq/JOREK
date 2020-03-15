@@ -305,7 +305,7 @@ module mod_injection_source
         do i=1, n_adas
           select case ( trim(gas_type) )
             case('D2')
-              write(*,*) "Deuterium adas calculation unsupported for now, disable flag_adas."
+              write(*,*) "Deuterium adas calculation unsupported for now, terminating."
               adas_suffix = 'none'
               deallocate(imp_cor)
               deallocate(imp_adas)
@@ -315,7 +315,7 @@ module mod_injection_source
             case('Ne')
               adas_suffix = '96_ne'
             case default
-              write(*,*) "Unrecognized species, disable flag_adas."
+              write(*,*) "Unrecognized species, terminating."
               adas_suffix = 'none'
               deallocate(imp_cor)
               deallocate(imp_adas)

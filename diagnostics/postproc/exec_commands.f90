@@ -87,7 +87,6 @@ module exec_commands
     type(type_command), intent(in)  :: command     !< Command to be executed
     logical,            intent(in)  :: first_step  !< First time step of a for loop?
     integer,            intent(out) :: ierr        !< Error flag
-    integer                         :: my_id
     
     ierr = 0
     
@@ -179,12 +178,8 @@ module exec_commands
         case ( 'namelist' )
           call load_namelist(command, ierr)
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
-          my_id = 0
           ! --- Read ADAS data and generate coronal equilibrium is needed
-          if (flag_adas) then
-            write(*,*) "CHECK POINT MPI"
-            call init_imp_adas(my_id)
-          end if
+          call init_imp_adas(0)
 #endif
         case ( 'params' )
           call log_parameters(0, .false.)
@@ -776,7 +771,6 @@ module exec_commands
     ! --- Local variables
     character(len=1024) ::  filename
     logical             ::  file_exists
-    integer             ::  my_id
     
     ierr = 0
     

@@ -303,7 +303,6 @@ module phys_module
 
   character(len=256) :: spi_shard_file !< The name of the shard size file
 
-  logical :: flag_adas          !< Flag for whether to use adas data calculating coronal equilibriam
   logical :: output_rad_phi     !< Out put the radiation asymmetry into a file using integras_3D
   integer :: n_adas             !< Number of species to be traced by adas, for future development only
 

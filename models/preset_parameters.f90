@@ -421,7 +421,6 @@ subroutine preset_parameters
   spi_tor_rot     = .false.
   using_spi       = .false.
 
-  flag_adas       = .false.
   output_rad_phi  = .false.
   n_adas          = 0
 

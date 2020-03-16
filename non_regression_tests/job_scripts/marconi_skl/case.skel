@@ -14,9 +14,6 @@
 # to determine nb of nodes, MPI processes, and nb of threads
 ########################################################################
 
-# git is needed by default.mk, and not available by default on Marconi nodes
-module load git
-
 cd $PBS_O_WORKDIR
 
 ulimit -l unlimited

@@ -1371,7 +1371,17 @@ index = 0
 do i=1,newnode_list%n_nodes
 
   newnode_list%node(i)%axis_node = .false.
-  if ( fix_axis_nodes .and. (i .le. n_tht) ) newnode_list%node(i)%axis_node = .true.
+  if (fix_axis_nodes) then
+    if (i .le. n_tht) then
+      newnode_list%node(i)%axis_node = .true.
+      ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
+      ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
+      ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
+      ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
+      newnode_list%node(i)%x(3,1) = +newnode_list%node(i)%x(2,2)
+      newnode_list%node(i)%x(3,2) = -newnode_list%node(i)%x(2,1)
+    endif
+  endif
 
   do k=1,n_order+1
 

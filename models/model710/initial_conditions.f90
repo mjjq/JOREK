@@ -18,7 +18,7 @@ type (type_bnd_node_list)    :: bnd_node_list
 type (type_bnd_element_list) :: bnd_elm_list
 
 integer    :: my_id, i, in, mm, i_elm, ifail, xcase2
-integer    :: index0, index, n_node_start, n_index_start, j, k, ivar
+integer    :: index0, index, n_node_start, n_index_start, j, k, nr, np, ivar
 real*8     :: amplitude, psi, psi_n, theta
 real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
 real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
@@ -43,6 +43,15 @@ endif
 
 if (my_id .eq. 0) then
 
+  ! determine number of radial and poloidal elements
+  nr = 0 ; np = 0
+  if (n_flux > 1) then
+    nr = n_flux ; np = n_tht
+  elseif ( n_radial > 1 ) then
+    nr = n_radial ; np = n_pol
+  endif
+
+
   do i=1,node_list%n_nodes
 
     psi = node_list%node(i)%values(1,1,1)
@@ -61,14 +70,14 @@ if (my_id .eq. 0) then
     node_list%node(i)%values(1,:,var_AR) = 0.d0    
     node_list%node(i)%values(1,:,var_AZ) = 0.d0
 
-    node_list%node(i)%values(1,1,var_rho) = zn
-    node_list%node(i)%values(1,2,var_rho) = dn_dpsi    * node_list%node(i)%values(1,2,var_A3) + dn_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,var_rho) = dn_dpsi    * node_list%node(i)%values(1,3,var_A3) + dn_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,var_rho) = dn_dpsi    * node_list%node(i)%values(1,4,var_A3) + dn_dz * node_list%node(i)%x(4,2) &
-                                          + dn_dpsi2   * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
-                                          + dn_dz2     * node_list%node(i)%x(2,2)             * node_list%node(i)%x(3,2)         &
-                                          + dn_dpsi_dz * node_list%node(i)%values(1,3,var_A3) * node_list%node(i)%x(2,2)         &
-                                          + dn_dpsi_dz * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%x(3,2)      
+    node_list%node(i)%values(1,1,var_r) = zn
+    node_list%node(i)%values(1,2,var_r) = dn_dpsi  * node_list%node(i)%values(1,2,var_A3) + dn_dz * node_list%node(i)%x(2,2)
+    node_list%node(i)%values(1,3,var_r) = dn_dpsi  * node_list%node(i)%values(1,3,var_A3) + dn_dz * node_list%node(i)%x(3,2)
+    node_list%node(i)%values(1,4,var_r) = dn_dpsi  * node_list%node(i)%values(1,4,var_A3) + dn_dz * node_list%node(i)%x(4,2) &
+                                      + dn_dpsi2   * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
+                                      + dn_dz2     * node_list%node(i)%x(2,2)             * node_list%node(i)%x(3,2)         &
+                                      + dn_dpsi_dz * node_list%node(i)%values(1,3,var_A3) * node_list%node(i)%x(2,2)         &
+                                      + dn_dpsi_dz * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%x(3,2)      
 
 
     node_list%node(i)%values(1,1,var_T) = zT
@@ -82,6 +91,10 @@ if (my_id .eq. 0) then
     
     node_list%node(i)%values(1,:,var_up) = 0.d0
 
+    ! On the axis of a flux aligned grid grad(psi) = 0, so that all derivatives vanish there.
+    ! Making sure that this also holds exactly numerically was in certain cases found to improve axis stability
+    if ( i <= n_tht .and. n_tht > 1 ) node_list%node(i)%values(1,2:4,:) = 0.d0
+
     node_list%node(i)%deltas = 0.d0
 
 #ifdef fullmhd
@@ -94,8 +107,6 @@ if (my_id .eq. 0) then
 
     ! Fprof_eq was aleady initialised in equilibrium.f90. 
     ! Not sure if the above small change in psi on the grid axis of flux aligned grids matters, therefore Fprof_eq is reinitilised here. 
-
-
     node_list%node(i)%Fprof_eq(1) =   F_prof
     node_list%node(i)%Fprof_eq(2) =   dF_dpsi  * node_list%node(i)%values(1,2,var_A3) + dF_dz * node_list%node(i)%x(2,2)
     node_list%node(i)%Fprof_eq(3) =   dF_dpsi  * node_list%node(i)%values(1,3,var_A3) + dF_dz * node_list%node(i)%x(3,2)
@@ -114,11 +125,11 @@ if (my_id .eq. 0) then
 endif
 
 
-
-
 !---------------------------- initialise perturbations
 amplitude = 1.d-12
 mm = 2
+
+
 
 do in=2,n_tor
 
@@ -154,6 +165,8 @@ do in=2,n_tor
 
   endif
 
+  call Poisson(my_id,1,node_list,element_list,bnd_node_list,bnd_elm_list, &
+               4,2,in, ES%psi_axis,ES%psi_bnd,xpoint2, xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)
 enddo
 
 

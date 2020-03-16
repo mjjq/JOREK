@@ -422,7 +422,6 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
   write(*,LOGI_FMT) 'keep_current_prof     ', keep_current_prof
-  write(*,LOGI_FMT) 'linear_run            ', linear_run
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
   write(*,REAL_FMT) 'D_prof_neg_thresh     ', D_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
@@ -540,7 +539,7 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'bc_natural_open       ', bc_natural_open
   write(*,LOGI_FMT) 'produce_live_data     ', produce_live_data
   write(*,LOGI_FMT) 'export_for_nemec      ', export_for_nemec
-  write(*,LOGI_FMT) 'keep_n0_const         ', keep_n0_const
+  write(*,LOGI_FMT) 'linear_run            ', linear_run
   write(*,LOGI_FMT) 'gmres                 ', gmres
   write(*,INTG_FMT) 'gmres_max_iter        ', gmres_max_iter
   write(*,REAL_FMT) 'gmres tolerance       ', gmres_tol
@@ -563,13 +562,6 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
-
-  if (jorek_model .eq. 710) then
-    write(*,LOGI_FMT) 'parallel_projection   ', parallel_projection
-    write(*,LOGI_FMT) 'Mach1_openBC          ', Mach1_openBC
-  endif
-
-  write(*,LOGI_FMT) 'fix_axis_nodes        ',fix_axis_nodes 
 
   if (use_mumps) then
     write(*,INTG_FMT) 'mumps_ordering        ', mumps_ordering

@@ -443,11 +443,21 @@ do i=1,nrnew
     if (i .eq. nrnew) node_list%node(index)%boundary = 2
 
     node_list%node(index)%axis_node = .false.
-    if ( fix_axis_nodes .and. (i .eq. 1) ) node_list%node(index)%axis_node = .true.
+    if (fix_axis_nodes) then
+      if (i .eq. 1) then
+        node_list%node(index)%axis_node = .true.
+        ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
+        ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
+        ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
+        ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
+        node_list%node(index)%x(3,1) = +node_list%node(index)%x(2,2)
+        node_list%node(index)%x(3,2) = -node_list%node(index)%x(2,1)
+      endif
+    endif
 
     if (.not. refinement) then       ! keep original formulation if not using refinement
    
-      if (force_central_node .and. (i.eq.1)) then
+      if ((force_central_node) .and. (i.eq.1)) then
 
         node_list%node(index)%index(1) = 1
 

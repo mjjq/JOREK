@@ -89,7 +89,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &
-                keep_n0_const, linear_run, export_for_nemec,        &
+                linear_run, export_for_nemec,                       &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
@@ -338,7 +338,6 @@ if (my_id .eq. 0) then
 endif
 
 
-keep_n0_const  = ( keep_n0_const .or. linear_run )
 ! --- Read numerical profiles for rho, T, and ff'.
 call read_num_profiles(my_id)
 

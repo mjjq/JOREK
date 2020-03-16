@@ -99,6 +99,7 @@ module diffusivities
     end if
     
   end function get_zkperp1
+  
 	
    !> Determine perpendicular heat diffusivity, ZK_perp, as a function of Psi_N, for ions
   real*8 function get_zk_iperp1(psin)

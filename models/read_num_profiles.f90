@@ -59,12 +59,6 @@ subroutine read_num_profiles(my_id)
   end if
   
   num_ffprime = ( ffprime_file /= 'none' )
-  if ( num_ffprime .and. ( my_id == 0 ) .and. (jorek_model == 710) ) then
-    write(*,*)'*** WARNING ***'
-    write(*,*)'*** numerical FFprime profiles for model710 not yet implemented!'
-    write(*,*)'*** Aborting...'
-    stop
-  endif
   if ( num_ffprime .and. ( my_id == 0 ) ) then
     call readProf(num_ffprime_x, num_ffprime_y0, num_ffprime_len, ffprime_file)
     call check_num_prof(num_ffprime, num_ffprime_x, num_ffprime_y0, num_ffprime_len, 'ffprime',    &

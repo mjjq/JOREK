@@ -101,6 +101,7 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
     
     n_border = 0
     do i=1,node_list%n_nodes
+      if (node_list%node(i)%axis_node      ) n_border = n_border+2
       if (node_list%node(i)%boundary .eq. 1) n_border = n_border+2
       if (node_list%node(i)%boundary .eq. 2) n_border = n_border+2
       if (node_list%node(i)%boundary .eq. 3) n_border = n_border+3
@@ -258,6 +259,23 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
     if (my_id == 0 ) then
       do i=1,node_list%n_nodes
     
+        if (node_list%node(i)%axis_node) then
+      
+          index_i = node_list%node(i)%index(3)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+
+          index_i = node_list%node(i)%index(4)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+
+        endif
+
+
         if (node_list%node(i)%boundary .ne. 0) then
     
           index_i = node_list%node(i)%index(1)  ! base index in the main matrix
@@ -284,6 +302,7 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
             mumps_par%jcn(ilarge+1) = index_i
             mumps_par%A(ilarge+1)   = zbig
             ilarge = ilarge + 1
+
           endif
     
           if (     (node_list%node(i)%boundary .eq. 2) &
@@ -302,6 +321,7 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
             mumps_par%jcn(ilarge+1) = index_i
             mumps_par%A(ilarge+1)   = zbig
             ilarge = ilarge + 1
+        
           endif
     
         endif
@@ -381,6 +401,7 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
       if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
       if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
 
+ 
 #else
       ! -- For PaStiX solver version 6.x
       ! Initialise sparse matrix structure  
@@ -478,6 +499,7 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
       call pastixInit(pastix_data, 0, pastix_iparm, pastix_dparm)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
 #endif
    
+ 
       write(*,*) '***********************************'
       write(*,*) '* call PastiX                     *'
       write(*,*) '***********************************'
@@ -502,6 +524,7 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
       call pastixFinalize(pastix_data)
       call spmExit(pastix_spm)
       deallocate(pastix_spm)
+  
 #endif
       call tr_print_memsize("PASTIX_For_Poisson")
     endif ! use_pastix

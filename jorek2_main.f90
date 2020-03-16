@@ -47,7 +47,7 @@ program JOREK2
   use mod_expression, only: exprs_all_int, init_expr
   use mod_integrals3D
 #ifdef USE_STRUMPACK
-  use spk_module
+  use strumpack_module
 #endif
 
 ! these write additional live data (global data) used when an ECCD current is applied)
@@ -983,7 +983,7 @@ required = 0
 #endif
        elseif (use_strumpack) then
 #ifdef USE_STRUMPACK
-         call solve_spk_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+         call solve_strumpack_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
 #endif
        elseif (use_pastix) then
           call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
@@ -1244,7 +1244,7 @@ endif
 
 #ifdef USE_STRUMPACK
     if (use_strumpack) then
-      call f2spk_finalize(MPI_COMM_WORLD)
+      call strumpack_finalize(MPI_COMM_WORLD)
     endif
 #endif
 

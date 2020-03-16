@@ -218,7 +218,7 @@ ifeq (1, $(USE_STRUMPACK))
   DEFINES  := $(DEFINES) -DUSE_STRUMPACK -DFUNNELED
   LIBS     := $(LIBS) $(STRUMPACKLIB)
   INCLUDES := $(INCLUDES) $(STRUMPACKINC)
-  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14 -qopenmp -g
+  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14
 endif
 
 

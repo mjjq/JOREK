@@ -260,14 +260,6 @@ else        ! apply fixed boundary conditions
     do i=1,node_list%n_nodes
   
       if (node_list%node(i)%axis_node) then
-    
-        index_i = node_list%node(i)%index(3)  ! base index in the main matrix
-        mumps_par%irn(ilarge+1) = index_i
-        mumps_par%jcn(ilarge+1) = index_i
-        mumps_par%A(ilarge+1)   = zbig
-        ilarge = ilarge + 1
-
-      if (node_list%node(i)%axis_node) then
       
         index_i = node_list%node(i)%index(3)  ! base index in the main matrix
         mumps_par%irn(ilarge+1) = index_i

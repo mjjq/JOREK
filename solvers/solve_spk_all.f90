@@ -1,7 +1,7 @@
 #ifdef USE_STRUMPACK      
 !> subroutine solves the complete system of equation using STRUMPACK
 subroutine solve_spk_all(n_cpu,my_id,index_min,index_max)
-  use spk_module
+  use strumpack_module
 
   use tr_module 
   use mod_parameters
@@ -81,17 +81,17 @@ subroutine solve_spk_all(n_cpu,my_id,index_min,index_max)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
   
   if (.not. spss_initialized) then
-    call f2spk_init(MPI_COMM_WORLD)
+    call strumpack_init(MPI_COMM_WORLD)
     spss_initialized = .true.
   endif
 
   if (.not. spss_analyzed) then
     call clck_time(t0)
-    call f2spk_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_WORLD)
+    call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_WORLD)
     call tr_deallocatep(mumps_par%irn,"mumps_par%IRN",CAT_DMATRIX)
     call tr_deallocatep(mumps_par%jcn,"mumps_par%JCN",CAT_DMATRIX)
     call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-    call f2spk_fact(MPI_COMM_WORLD)    
+    call strumpack_factorize(MPI_COMM_WORLD)    
     spss_analyzed = .true.
 
     call clck_time(t1)
@@ -101,7 +101,7 @@ subroutine solve_spk_all(n_cpu,my_id,index_min,index_max)
   
   call clck_time(t0)
  
-  call f2spk_solve(n,mumps_par%rhs,MPI_COMM_WORLD)
+  call strumpack_solve(n,mumps_par%rhs,MPI_COMM_WORLD)
  
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)

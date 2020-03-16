@@ -24,7 +24,7 @@ use spmf
 #endif
 
 #ifdef USE_STRUMPACK
-use spk_module
+use strumpack_module
 #endif
 
 implicit none
@@ -354,11 +354,11 @@ if (my_id == 0) then
 
 #ifdef USE_STRUMPACK
   if (use_strumpack) then
-    call f2spk_init(MPI_COMM_SELF)
-    call f2spk_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_SELF)
-    call f2spk_fact(MPI_COMM_SELF)
-    call f2spk_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_SELF)
-    call f2spk_finalize(MPI_COMM_SELF)
+    call strumpack_init(MPI_COMM_SELF)
+    call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_SELF)
+    call strumpack_factorize(MPI_COMM_SELF)
+    call strumpack_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_SELF)
+    call strumpack_finalize(MPI_COMM_SELF)
   endif  
 #endif
 

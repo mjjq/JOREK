@@ -28,7 +28,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 #endif
 
 #ifdef USE_STRUMPACK
-  use spk_module
+  use strumpack_module
 #endif
 
   implicit none
@@ -228,7 +228,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
     endif
    
     call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)      
-    call f2spk_solve(ifactor*n_loc_n,mumps_par%rhs,MPI_COMM_N)
+    call strumpack_solve(ifactor*n_loc_n,mumps_par%rhs,MPI_COMM_N)
   endif  
 #endif 
 

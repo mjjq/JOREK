@@ -267,6 +267,14 @@ else        ! apply fixed boundary conditions
         mumps_par%A(ilarge+1)   = zbig
         ilarge = ilarge + 1
 
+      if (node_list%node(i)%axis_node) then
+      
+        index_i = node_list%node(i)%index(3)  ! base index in the main matrix
+        mumps_par%irn(ilarge+1) = index_i
+        mumps_par%jcn(ilarge+1) = index_i
+        mumps_par%A(ilarge+1)   = zbig
+        ilarge = ilarge + 1
+
         index_i = node_list%node(i)%index(4)  ! base index in the main matrix
         mumps_par%irn(ilarge+1) = index_i
         mumps_par%jcn(ilarge+1) = index_i
@@ -274,7 +282,6 @@ else        ! apply fixed boundary conditions
         ilarge = ilarge + 1
 
       endif
-
 
       if (node_list%node(i)%boundary .ne. 0) then
   

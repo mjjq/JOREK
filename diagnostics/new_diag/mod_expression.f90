@@ -134,10 +134,10 @@ module mod_expression
     call add(exprs_all, 'zkprof      ', 'Perpendicular Heat Diffusivity                        ')
     call add(exprs_all, 'pres        ', 'Total Pressure                                        ')
     call add(exprs_all, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
-    call add(exprs_all, 'B_tor       ', 'Toroidal Magnetic Field Component                     ')
-    call add(exprs_all, 'B_R         ', 'Magnetic Field Component Along R                      ')
-    call add(exprs_all, 'B_Z         ', 'Vertical Magnetic Field Component                     ')
-    call add(exprs_all, 'B_theta     ', 'Poloidal Magnetic Field Component                     ')
+    call add(exprs_all, 'Btor        ', 'Toroidal Magnetic Field Component                     ')
+    call add(exprs_all, 'BR          ', 'Magnetic Field Component Along R                      ')
+    call add(exprs_all, 'BZ          ', 'Vertical Magnetic Field Component                     ')
+    call add(exprs_all, 'Btheta      ', 'Poloidal Magnetic Field Component                     ')
     call add(exprs_all, 'Er          ', 'Radial Electric Field                                 ')
     call add(exprs_all, 'Vtheta_i    ', 'Ion Poloidal Velocity                                 ')
     call add(exprs_all, 'Mach_par    ', 'Parallel Mach Number                                  ')
@@ -556,7 +556,7 @@ module mod_expression
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, BR, BZ, Btheta, psi_abs, E_par, E_crit, E_dreicer
+      P0_RR, P0_ZZ, P0_RZ, BB2, Btor, BR, BZ, Btheta, psi_abs, E_par, E_crit, E_dreicer
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
@@ -1033,7 +1033,7 @@ module mod_expression
           Btot     = sqrt(BB2)
           BR       = + ps0_Z / BigR
           BZ       = - ps0_R / BigR
-          B_tor    = + F0    / BigR
+          Btor     = + F0    / BigR
           Bnorm    = BR*nmlR + BZ*nmlZ
           Btan     = BR*nmlZ - BZ*nmlR
           psi_norm = get_psi_n(ps0, Z)
@@ -1049,14 +1049,14 @@ module mod_expression
           Jpol        = FFprime_loc * Btheta     / F0     !Jpol = F' Bpol
           JpolR       = ( -zj0 * BR - R * P0_Z ) / F0
           JpolZ       = ( -zj0 * BZ + R * P0_R ) / F0
-          Jpar        = (JpolR*BR + JpolZ*BZ - zj0/R *B_tor) / Btot
+          Jpar        = (JpolR*BR + JpolZ*BZ - zj0/R *Btor) / Btot
           Jpar_ionsat = r0 * vpar0 * Btot 
 
           ! --- Velocity
           VR       = -R*u0_Z + vpar0*ps0_Z/R 
           VZ       =  R*u0_R - vpar0*ps0_R/R
           V_phi    =  F0 * vpar0/R
-          Vpar_tot =  (VR*BR + VZ*BZ + V_phi*B_tor) / Btot
+          Vpar_tot =  (VR*BR + VZ*BZ + V_phi*Btor) / Btot
           VperpR   =  VR - Vpar_tot * BR / Btot
           VperpZ   =  VZ - Vpar_tot * BZ / Btot
 
@@ -1101,19 +1101,19 @@ module mod_expression
           kin_flux_par  = 0.5d0*r0* (VR*VR + VZ*VZ + V_phi*V_phi)* Vpar_tot * Bnorm / Btot ! 0.5 nv^2 v_par·n
           kin_flux_tot  = 0.5d0*r0* (VR*VR + VZ*VZ + V_phi*V_phi)* (VR*nmlR + VZ*nmlZ)     ! 0.5 nv^2 v·n 
 
-          ZKpar_flux    = - ZKpar_T *(BR*T0_R + BZ*T0_Z + B_tor*T0_p/R) * Bnorm / BB2 / (gamma-1.d0) ! q_par·n 
+          ZKpar_flux    = - ZKpar_T *(BR*T0_R + BZ*T0_Z + Btor*T0_p/R) * Bnorm / BB2 / (gamma-1.d0) ! q_par·n 
           ZKperp_flux   = - ZK_prof *( T0_R*nmlR + T0_Z*nmlZ)        / (gamma-1.d0) &                ! q_perp·n
-                          + ZK_prof *(BR*T0_R + BZ*T0_Z + B_tor*T0_p/R) * Bnorm / BB2 / (gamma-1.d0) 
+                          + ZK_prof *(BR*T0_R + BZ*T0_Z + Btor*T0_p/R) * Bnorm / BB2 / (gamma-1.d0) 
     
-          Dpar_flux     = - D_par  * (BR*r0_R + BZ*T0_Z + B_tor*T0_p/R) * Bnorm / BB2
+          Dpar_flux     = - D_par  * (BR*r0_R + BZ*T0_Z + Btor*T0_p/R) * Bnorm / BB2
           Dperp_flux    = - D_prof * ( r0_R*nmlR + T0_Z*nmlZ)                       &                              
-                          + D_prof * (BR*r0_R + BZ*T0_Z + B_tor*T0_p/R) * Bnorm / BB2 
+                          + D_prof * (BR*r0_R + BZ*T0_Z + Btor*T0_p/R) * Bnorm / BB2 
     
           partF_cnv_par =   r0 * Vpar_tot * Bnorm / Btot                           !  p v_par·n
           partF_cnv_tot =   r0 * ( VR * nmlR + VZ * nmlZ )                         !  n v·n
     
 #if JOREK_MODEL == 500
-          neut_part_flux= D_neutral_x*rn0_R * nmlR + D_neutral_y * rn0_Z * nmlZ
+          neut_part_flux= -D_neutral_x*rn0_R * nmlR - D_neutral_y * rn0_Z * nmlZ
 #else
           neut_part_flux= 0.d0
 #endif    
@@ -1256,7 +1256,7 @@ module mod_expression
              fact_resistiv = sqrt ( MU_zero / rho_norm )                           ! factor for eta == 1 / (factor for visco)
              fact_Er       = F0 / fact_time
              fact_flux     = 1.d0/(mu_zero*fact_time)  
-         else if ( units == JOREK_UNITS ) then
+          else if ( units == JOREK_UNITS ) then
              fact_time     = 1.d0
              fact_mu_zero  = 1.d0
              fact_ne       = 1.d0
@@ -1366,8 +1366,8 @@ module mod_expression
               case ( 'B_abs' )
                 res = sqrt(BB2)
                 
-              case ( 'B_tor' )
-                res = B_tor
+              case ( 'Btor' )
+                res = Btor
                 
               case ( 'BR' )
                 res = BR
@@ -1375,7 +1375,7 @@ module mod_expression
               case ( 'BZ' )
                 res = BZ
                 
-              case ( 'B_theta' )
+              case ( 'Btheta' )
                 res = Btheta
                 
               case ( 'currdens' )

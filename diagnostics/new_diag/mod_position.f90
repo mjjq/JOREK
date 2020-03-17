@@ -1,4 +1,4 @@
-	!> This module contains datastructures describing lists of poloidal and toroidal positions.
+!> This module contains datastructures describing lists of poloidal and toroidal positions.
 !! 
 !! Together with mod_expression, this provides a general diagnostic framework for many applications.
 module mod_position

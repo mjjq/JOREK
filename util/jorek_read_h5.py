@@ -16,6 +16,7 @@ Calculation time is not really affected, render time maybe?
 """
 import h5py
 import numpy as np
+import vtk
 prec=np.float32
 vtk_prec=vtk.VTK_FLOAT
 
@@ -33,11 +34,16 @@ class fields(object):
     def read(self, filename, variables=[], file_prev=None, interp_fraction=None):
         self.vars = variables
         with h5py.File(filename, 'r') as hf:
+            print("Keys: %s" % hf.keys())
             self.n_var        = hf.get('n_var')[0]
             self.n_period     = hf.get('n_period')[0]
             self.n_tor        = hf.get('n_tor')[0]
             self.n_vertex_max = hf.get('n_vertex_max')[0]
             n_elements   = hf.get('n_elements')[0]
+
+            self.tstep = hf['tstep'][0]
+            self.t_now = hf['t_now'][0]
+
 
         # Assume the grid not to change. Important!
         if (not (hasattr(self, 'n_elements') and self.n_elements == n_elements)):
@@ -52,7 +58,7 @@ class fields(object):
                 if (self.n_elements != hf2.get('n_elements')[0]):
                     raise "Error: Files with different numbers of elements read! Refinement is not supported"
             # Interpolate before making grid etc
-            self.values = f*self.values + (1.0-f)*read_mmap_or_h5py(file_prev, 'values', type_out=prec)
+            self.values = interp_fraction*self.values + (1.0-interp_fraction)*read_mmap_or_h5py(file_prev, 'values', type_out=prec)
 
 
     """
@@ -66,7 +72,7 @@ class fields(object):
     returns:
         vtkUnstructuredGrid
     """
-    def to_vtk(self, n_sub=2, phi=[0,360], n_plane=8, without_n0_mode=False, 
+    def to_vtk(self, n_sub=2, phi=[0,360], n_plane=8, without_n0_mode=False,
                force_remake_grid=False, quadratic=True, output=None):
         import vtk
         from vtk.util import numpy_support as npvtk
@@ -109,6 +115,9 @@ class fields(object):
             self.cells = vtk.vtkCellArray()
             self.cells.SetCells(ien.shape[0], npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
 
+            self.xyz = xyz
+            self.ien = ien
+
         output.SetPoints(self.points)
 
         HZ = toroidal_basis(self.n_tor, self.n_period, phis, without_n0_mode)
@@ -120,7 +129,7 @@ class fields(object):
             tmp = npvtk.numpy_to_vtk(val[i,:], deep=True, array_type=vtk_prec)
             tmp.SetName(self.var_names[self.vars[i]])
             output.GetPointData().AddArray(tmp)
-
+            self.val = val
 
         if (quadratic):
             if (n_plane > 1):

@@ -32,6 +32,7 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
   ! --- Jorek uses -FF' as a convention, so we need to reverse the profile before integrating
   real*8  :: myFF_0, myFF_1, myFF_coef(8)
 
+  ! --- Because Jorek has a negative sign in front of its FFprime by convention
   myFF_0 = - FF_0
   myFF_1 = - FF_1
   myFF_coef(1:8) =   FF_coef(1:8)
@@ -257,12 +258,13 @@ subroutine integrate_F_profile(n_profile, F_profile)
   real*8  :: diff, reference, quad_tol_min, quad_tol_max
   real*8, allocatable  :: integral_large(:), psi_large(:)
 
+  ! --- Because Jorek has a negative sign in front of its FFprime by convention
   myFF_0 = - FF_0
   myFF_1 = - FF_1
   myFF_coef(1:9) =   FF_coef(1:9)
   myFF_coef(6)   = - FF_coef(6)
 
-  ! --- There are some rules when using FF_coefs with the F-profile in Full-MHD
+  ! --- There are some rules when using FF_coefs with the F-profile in Full-MHD (can be removed for numerical profiles)
   if (myFF_1 .ne. 0.d0) then
     write(*,*)'Full-MHD Warning!!! The F-profile does not like it if FF_1 is not zero !!!'
     write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
@@ -291,10 +293,10 @@ subroutine integrate_F_profile(n_profile, F_profile)
   psi  = psi_edge
   FFprime_prev = ffprime_internal(psi)
   
-  ! --- We start the integral at the plasma edge, where F should be F0
+  ! --- We start the integral at the plasma edge, where F should be F0 (squared because FF' = 1/2(F**2)' )
   integral = F0**2
 
-  ! --- The steps for integration. Assume the full profile will be large...
+  ! --- The steps for integration. Assume the full profile will be as large as minimal step
   step     = 1.d-5
   step_min = 1.d-7
   step_max = 1.d-3
@@ -328,7 +330,7 @@ subroutine integrate_F_profile(n_profile, F_profile)
       psi = psi - step
     endif
     
-    ! --- New step (we go from ~1.0 to 0.0)
+    ! --- Middle of step
     psi_mid = psi + 0.5*step
     
     ! --- FFprime at this psi and at mid-point
@@ -366,7 +368,7 @@ subroutine integrate_F_profile(n_profile, F_profile)
       stop
     endif
     
-    ! --- Save squared profile
+    ! --- Save squared profile (sqrt because FF' = 1/2(F**2)' )
     psi_large(i_step)      = psi
     integral_large(i_step) = integral**0.5
     psi_prev = psi
@@ -375,7 +377,8 @@ subroutine integrate_F_profile(n_profile, F_profile)
     if (psi .eq. 0.d0) exit
     
   enddo
-  
+
+  ! --- Now that we have our refined profile, interpolate with input n_profile from psi_n=[0.0,1.0]
   n_integral = i_step
   j_prev = n_integral-1
   do i_prof = 1,n_profile
@@ -390,11 +393,12 @@ subroutine integrate_F_profile(n_profile, F_profile)
           exit
         endif
       enddo
-    else
+    else ! outside plasma, F is just constant
       F_profile(i_prof) = integral_large(1)
     endif
   enddo
-  
+
+  ! --- Correct the sign of F-profile depending on F0
   if (F0 .lt. 0.d0) F_profile = - F_profile
   
   deallocate(integral_large)

@@ -1370,28 +1370,6 @@ enddo  ! n_elements
      else
        Lrad = 0.
        E_ion = 0.
-     else
-  !-------------------------------------------
-  ! --- Radiative cooling rate for Argon (approximate fit of cooling rate at
-  ! coronal equilibrium)
-  ! ------------------------------------------
-
-  !   if (T_rad .gt. 5.) then
-  
-       A0_rad   = 2.8*1.d-33    ! W.m^3
-       A1_rad   = 2.335*1.d-31  ! W.m^3
-       T1_rad   = 23.           ! eV
-       sig1_rad = 14.           ! eV
-       A2_rad   = 3.846*1.d-32  ! W.m^3
-       T2_rad   = 236.          ! eV
-       sig2_rad = 150.          ! eV
-  
-  !     Lrad     = coef_rad_1*(A0_rad + A1_rad*exp(-((T_rad-T1_rad)/sig1_rad)**4.)
-  !     + A2_rad*exp(-((T_rad-T2_rad)/sig2_rad)**2))
-       !Lrad     = (1./2.)*coef_rad_1*5.d-32 *
-       !(tanh((T_rad-20.)/10.)-tanh(-20./10.))
-       Lrad      = 0. ! For Test
-  
      end if
 
      scalars(i,s_radiation+1) = (2./3.) * scalars(i,8) * E_ion

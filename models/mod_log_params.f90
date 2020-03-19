@@ -634,6 +634,7 @@ if (my_id == 0) then
      write(*,REAL_FMT) 'ns_Z                ',  ns_Z
      write(*,REAL_FMT) 'ns_phi              ',  ns_phi
      write(*,REAL_FMT) 'ns_radius           ',  ns_radius
+     write(*,REAL_FMT) 'ng_radius_min       ',  ng_radius_min
      write(*,REAL_FMT) 'ns_sig              ',  ns_sig
      write(*,REAL_FMT) 'ns_deltaphi         ',  ns_deltaphi
      write(*,REAL_FMT) 'ns_tor_norm         ',  ns_tor_norm

@@ -37,7 +37,7 @@ integer :: i, in, i_tor, i_spi
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
 real*8  :: Rplot(2), Zplot(2)
 real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis
-integer :: ifail, my_id, ierr, i_elm_axis
+integer :: ifail, ierr, i_elm_axis
 integer :: required, provided, StatInfo
 real*8  :: spi_abl_rate_tot, spi_abl_tot
 real*8  :: spi_abl_bg_rate_tot, spi_abl_bg_tot
@@ -52,8 +52,6 @@ allocate(res(exprs_all_int%n_expr+1))
 res = 0.d0
 
 
-my_id=0
-
 #ifdef FUNNELED
   required = MPI_THREAD_FUNNELED
 #else
@@ -62,7 +60,7 @@ my_id=0
 call MPI_Init_thread(required, provided, StatInfo)
 
 
-call initialise_parameters(my_id, "__NO_FILENAME__")
+call initialise_parameters(0, "__NO_FILENAME__")
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
@@ -142,8 +140,8 @@ if (using_spi) then
   open(20,file="fragments_position.dat")
 
   do i_spi = 1, n_spi_tot
-    write(20,'(i7,2f12.3,e14.6,f12.3)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_radius,&
-                                            pellets(i_spi)%spi_species
+    write(20,'(i7,3f12.3,e14.6,f12.3)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi,&
+                                               pellets(i_spi)%spi_radius, pellets(i_spi)%spi_species
   end do
   close(20)
 
@@ -151,19 +149,19 @@ endif
 
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   ! --- Read ADAS data and generate coronal equilibrium is needed
-  call init_imp_adas(my_id)
+  call init_imp_adas(0)
 #endif
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502 || JOREK_MODEL == 555)
   if (output_rad_phi) then
     ! --- Determine boundary information from the grid
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 
-    call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
+    call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
   endif
 #endif
 !if (use_pellet) then
 !   pellet_volume = total_pellet_volume
-!   call update_pellet(my_id,node_list,element_list)
+!   call update_pellet(0d,node_list,element_list)
 !end if
 !------------------lowshape3bis outside
 !Rplot(1) = 3.0
@@ -189,7 +187,7 @@ endif
 !Zplot(1) = 0.07
 !Zplot(2) = 0.07
 
-!call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+!call find_axis(0,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
 !Rplot(1) = 1.0
 !Rplot(2) = 3.5

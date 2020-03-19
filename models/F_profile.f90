@@ -41,8 +41,12 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
   no_delta_psi = 1.d0
   if (FF_coef(9) .eq. 1.d0) no_delta_psi = delta_psi
 
+  ! --- Value of F at the edge should be F0 (NEEDS TO BE DECIDED!!!)
+  F_edge = F0
+
   ! --- Profile as a function of Psi_N.
-  if ( .not. num_Fprofile ) then
+  if (.false.) then 
+  !if ( .not. num_Fprofile ) then ! we should always use numerical profile! if not from user, then internal!
 
     ! --- Because Jorek has a negative sign in front of its FFprime by convention
     myFF_0 = - FF_0
@@ -172,7 +176,8 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
 
 
   ! --- Cut-off at plasma edge
-  if ( .not. num_Fprofile ) then
+  if (.false.) then 
+  !if ( .not. num_Fprofile ) then ! we should always use numerical profile! if not from user, then internal!
     sig_F     = myFF_coef(4)
 
     psi_star  = (psi_n-psi_edge)/sig_F
@@ -271,17 +276,13 @@ end
 
 
 ! --- This routine integrates the FFprime numerically.
-subroutine integrate_F_profile(xpoint2, psi_axis, psi_bnd, F0, FF_0, FF_1, FF_coef, n_profile, F_profile)
+subroutine integrate_F_profile()
+
+  use phys_module, only: xpoint, F0, FF_0, FF_1, FF_coef, n_Fprofile_internal, Fprofile_internal, Fprofile_psi_max, Fprofile_file
 
   implicit none
   
-  ! --- Routine variables
-  logical :: xpoint2
-  real*8  :: psi_axis, psi_bnd
-  real*8  :: F0, FF_0, FF_1, FF_coef(9)
-  integer :: n_profile
-  real*8  :: F_profile(n_profile)
-  
+  ! --- Internal variables
   integer :: i_prof, j, j_prev, i_step, n_integral, n_integral_max, stay_safe
   real*8  :: myFF_0, myFF_1, myFF_coef(9)
   real*8  :: no_delta_psi, delta_psi
@@ -289,7 +290,22 @@ subroutine integrate_F_profile(xpoint2, psi_axis, psi_bnd, F0, FF_0, FF_1, FF_co
   real*8  :: FFprime, FFprime_prev, FFprime_mid, ffprime_internal
   real*8  :: psi_edge, F_edge, psi_star, psi_mid, psi_prev
   real*8  :: diff, reference, quad_tol_min, quad_tol_max
+  real*8  :: psi_axis_fake, psi_bnd_fake
   real*8, allocatable  :: integral_large(:), psi_large(:)
+
+  ! --- Because when we integrate the F-profile, we don't know the plasma yet...
+  psi_axis_fake = 0.d0
+  psi_bnd_fake  = 1.d0
+
+  if ( (FF_coef(9) .ne. 1.d0) .and. (Fprofile_file .eq. 'none') ) then
+    write(*,*)'Full-MHD Warning!!! You have to use a denormalised edge perturbation for your'
+    write(*,*)'                    FFprime, or use a numerical FFprime !!!'
+    write(*,*)'                    ie. FF_coef(9) should be set to 1.d0, and FF_coef(6)'
+    write(*,*)'                    should be denormalised as '
+    write(*,*)'                    FF_coef(6) = FF_coef(6) * (psi_bnd-psi_axis)...'
+    write(*,*)'                    Aborting...'
+    stop
+  endif
 
   ! --- Because Jorek has a negative sign in front of its FFprime by convention
   myFF_0 = - FF_0
@@ -298,7 +314,7 @@ subroutine integrate_F_profile(xpoint2, psi_axis, psi_bnd, F0, FF_0, FF_1, FF_co
   myFF_coef(6)   = - FF_coef(6)
 
   ! --- The equilibrium psi amplitude
-  delta_psi = (psi_bnd - psi_axis)
+  delta_psi = (psi_bnd_fake - psi_axis_fake)
   no_delta_psi = 1.d0
   if (FF_coef(9) .eq. 1.d0) no_delta_psi = delta_psi
 
@@ -307,7 +323,7 @@ subroutine integrate_F_profile(xpoint2, psi_axis, psi_bnd, F0, FF_0, FF_1, FF_co
   ! --- To keep safe, for limiter plasma, the user might have non-zero FF' outside psi_n=1.0, because we
   ! --- simply don't solve this, so in this case, we use psi_n=1.0
   psi_edge  = 1.0
-  if (xpoint2) psi_edge  = max(1.0,myFF_coef(5) + 2.0 * myFF_coef(4))
+  if (xpoint) psi_edge  = max(1.0,myFF_coef(5) + 2.0 * myFF_coef(4))
 
   ! --- We need an idea of the amplitude of the FFprime (for the adaptive int-step)
   psi = 0.0
@@ -414,29 +430,28 @@ subroutine integrate_F_profile(xpoint2, psi_axis, psi_bnd, F0, FF_0, FF_1, FF_co
   integral_large = integral_large + diff
     
   ! --- Squared root profile (because FF' = 1/2(F**2)' )
-  integral_large = integral_large**0.5
+  integral_large(1:n_integral) = integral_large(1:n_integral)**0.5
   
-  ! --- Now that we have our refined profile, interpolate with input n_profile from psi_n=[0.0,1.0]
+  ! --- With refined profile, interpolate n_Fprofile_internal on interval psi_n=[0.0,Fprofile_psi_max]
   j_prev = 2
-  do i_prof = 1,n_profile
-    ! --- We make our profile go up to psi_n=1.2
-    psi = 1.2 * real(i_prof-1)/real(n_profile-1)
+  do i_prof = 1,n_Fprofile_internal
+    psi = Fprofile_psi_max * real(i_prof-1)/real(n_Fprofile_internal-1)
     if (psi .le. psi_large(n_integral)) then
       do j=j_prev,n_integral
         if (psi_large(j) .gt. psi) then
           j_prev = j
           diff = (psi_large(j)-psi) / (psi_large(j)-psi_large(j-1))
-          F_profile(i_prof) = integral_large(j) + (integral_large(j-1)-integral_large(j)) * diff
+          Fprofile_internal(i_prof) = integral_large(j) + (integral_large(j-1)-integral_large(j)) * diff
           exit
         endif
       enddo
     else ! outside plasma, F is just constant
-      F_profile(i_prof) = integral_large(n_integral)
+      Fprofile_internal(i_prof) = integral_large(n_integral)
     endif
   enddo
   
   ! --- Correct the sign of F-profile depending on F0
-  if (F0 .lt. 0.d0) F_profile = - F_profile
+  if (F0 .lt. 0.d0) Fprofile_internal = - Fprofile_internal
   
   deallocate(integral_large)
   deallocate(psi_large)
@@ -449,6 +464,58 @@ end subroutine integrate_F_profile
 
 
 
+! --- This routine checks that the numerically integrated F-profile is coherent with the input FFprime
+subroutine check_F_profile_accuracy()
+
+  use phys_module, only: n_Fprofile_internal, Fprofile_internal, Fprofile_psi_max, Fprofile_tolerance
+
+  implicit none
+
+  ! --- Internal variables
+  integer :: i_prof, n_prof_core
+  real*8  :: psi, psi_n(n_Fprofile_internal)
+  real*8  :: iff1(n_Fprofile_internal),ff1(n_Fprofile_internal),ff2,ff3,ff4,ff5,ff6
+  real*8  :: Z_fake, Z_xpoint_fake(2)
+  real*8  :: psi_axis_fake, psi_bnd_fake
+  real*8  :: accumulated_error, accumulated_profile, diff_average_percent
+
+  Z_fake        = 0.d0
+  Z_xpoint_fake = 0.d0
+  psi_axis_fake = 0.d0
+  psi_bnd_fake  = 1.d0
+
+  accumulated_error   = 0.d0
+  accumulated_profile = 0.d0
+  n_prof_core         = 0
+  do i_prof = 1,n_Fprofile_internal
+    psi_n(i_prof) = Fprofile_psi_max * real(i_prof-1)/real(n_Fprofile_internal-1)
+    psi   = psi_n(i_prof)
+    call FFprime  (.false.,0,Z_fake,Z_xpoint_fake,psi,psi_axis_fake, psi_bnd_fake,  ff1(i_prof),ff2,ff3,ff4,ff5,ff6, .false.)
+    call FFprime  (.false.,0,Z_fake,Z_xpoint_fake,psi,psi_axis_fake, psi_bnd_fake, iff1(i_prof),ff2,ff3,ff4,ff5,ff6, .true.)
+    ff1(i_prof) = -ff1(i_prof) ! because of old JOREK convention that ffprime has a negative sign in front of it.
+    accumulated_error   = accumulated_error   + abs(ff1(i_prof)-iff1(i_prof))
+    accumulated_profile = accumulated_profile + abs(ff1(i_prof))
+    if (psi_n(i_prof) .lt. 1.01) n_prof_core = n_prof_core + 1 ! count just the core (outside, FFprime should be zero)
+  enddo
+  accumulated_error    = accumulated_error   / real(n_prof_core)
+  accumulated_profile  = accumulated_profile / real(n_prof_core)
+  diff_average_percent = 100.0*accumulated_error/accumulated_profile
+
+
+  if (diff_average_percent .gt. Fprofile_tolerance) then
+    write(*,*)'*** WARNING ***'
+    write(*,*)'The FFprime could not be integrated accurately. Aborting...'
+    write(*,*)'Error on profile: psi_norm, input-FFprime, FFprime (from integrated F-profile), error'
+    do i_prof = 1,n_Fprofile_internal
+      write(*,'(A,4e15.7)')'error on profile:',psi_n(i_prof),ff1(i_prof),iff1(i_prof),abs(ff1(i_prof)-iff1(i_prof))
+    enddo
+    write(*,'(A,1e15.7)')'averaged error (%):',diff_average_percent
+    stop
+  endif
+
+  return
+end subroutine check_F_profile_accuracy
+
 
 
 
@@ -460,19 +527,20 @@ end subroutine integrate_F_profile
 ! --- We cannot call FFprime directly because in model710 it is just a wrapper of F_profile...
 real*8 function ffprime_internal(psi_n)
 
-  use equil_info, only: ES
-
   implicit none
 
   real*8  :: psi_n, psi
   real*8  :: ff1,ff2,ff3,ff4,ff5,ff6
   real*8  :: Z_fake, Z_xpoint_fake(2)
+  real*8  :: psi_axis_fake, psi_bnd_fake
 
-  Z_fake = 0.d0
+  Z_fake        = 0.d0
   Z_xpoint_fake = 0.d0
-  psi = psi_n * (ES%psi_bnd-ES%psi_axis) + ES%psi_axis
+  psi_axis_fake = 0.d0
+  psi_bnd_fake  = 1.d0
+  psi = psi_n
 
-  call FFprime(.false.,0,Z_fake,Z_xpoint_fake,psi,ES%psi_axis,ES%psi_bnd, ff1,ff2,ff3, ff4,ff5,ff6, .false.)
+  call FFprime(.false.,0,Z_fake,Z_xpoint_fake,psi,psi_axis_fake, psi_bnd_fake, ff1,ff2,ff3,ff4,ff5,ff6, .false.)
   ffprime_internal = ff1
   
 

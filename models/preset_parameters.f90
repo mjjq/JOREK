@@ -259,6 +259,7 @@ subroutine preset_parameters
   T_file             = 'none'
   Te_file            = 'none'
   Ti_file            = 'none'
+  Fprofile_file      = 'none'
   ffprime_file       = 'none'
   d_perp_file        = 'none'
   zk_perp_file       = 'none'
@@ -268,6 +269,10 @@ subroutine preset_parameters
   wall_file          = 'none'
   rot_file           = 'none'
   normalized_velocity_profile = .true.
+
+  n_Fprofile_internal = 300 ! model710 only
+  Fprofile_psi_max    = 1.5 ! model710 only
+  Fprofile_tolerance  = 1.0 ! model710 only
 
   produce_live_data  = .true.
   

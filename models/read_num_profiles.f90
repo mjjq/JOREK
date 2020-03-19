@@ -2,11 +2,12 @@
 subroutine read_num_profiles(my_id)
   
   use phys_module
-  use profiles, only: readProf, readProfNeo
+  use profiles, only: readProf, readProfNeo, derivProf
   
   implicit none
   
   integer, intent(in) :: my_id
+  integer             :: i
   
   num_rho = ( rho_file /= 'none' )
   if ( num_rho .and. ( my_id == 0 ) ) then
@@ -58,6 +59,8 @@ subroutine read_num_profiles(my_id)
     T_1 = Te_1 + Ti_1
   end if
   
+  ! --- Special case for F-profile in model710:
+  ! --- If there is no F-profile, we create one by integrating the FF' function numerically
   num_Fprofile = ( Fprofile_file /= 'none' )
   if ( num_Fprofile .and. ( my_id == 0 ) .and. (jorek_model /= 710) ) then
     write(*,*)'*** WARNING ***'
@@ -65,11 +68,31 @@ subroutine read_num_profiles(my_id)
     write(*,*)'*** Aborting...'
     stop
   endif
-  if ( num_Fprofile .and. ( my_id == 0 ) ) then
-    call readProf(num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, Fprofile_file)
-    call check_num_prof(num_Fprofile, num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, 'Fprofile',    &
-      check_positive=.false.)
-    !F0 = num_Fprofile_y0(1) ! this could be an option to enforce coherence ?
+  if ( ( my_id == 0 ) .and. (jorek_model == 710)  ) then
+    if ( .not. num_Fprofile ) then
+      ! --- Numerical integration of FFprime
+      call integrate_F_profile()
+      ! --- Copy profile from internal profile instead of reading it from file
+      num_Fprofile_len = n_Fprofile_internal
+      call tr_allocate(num_Fprofile_x ,1,n_Fprofile_internal,"num_Fprofile_x",CAT_GRID)
+      call tr_allocate(num_Fprofile_y0,1,n_Fprofile_internal,"num_Fprofile_y0",CAT_GRID)
+      call tr_allocate(num_Fprofile_y1,1,n_Fprofile_internal,"num_Fprofile_y1",CAT_GRID)
+      call tr_allocate(num_Fprofile_y2,1,n_Fprofile_internal,"num_Fprofile_y2",CAT_GRID)
+      call tr_allocate(num_Fprofile_y3,1,n_Fprofile_internal,"num_Fprofile_y3",CAT_GRID)
+      do i=1,n_Fprofile_internal
+        num_Fprofile_x (i) = Fprofile_psi_max * real(i-1)/real(n_Fprofile_internal-1)
+        num_Fprofile_y0(i) = Fprofile_internal(i)
+      enddo
+      call derivProf(num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, num_Fprofile_y1)
+      call derivProf(num_Fprofile_x, num_Fprofile_y1, num_Fprofile_len, num_Fprofile_y2)
+      call derivProf(num_Fprofile_x, num_Fprofile_y2, num_Fprofile_len, num_Fprofile_y3)
+      ! --- Check that new profile is accurate by deriving again and comparing against input FFprime
+      call check_F_profile_accuracy() ! this will abort if error is too large
+    else
+      call readProf(num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, Fprofile_file)
+      call check_num_prof(num_Fprofile, num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, 'Fprofile',    &
+        check_positive=.false.)
+    end if
   end if
   
   num_ffprime = ( ffprime_file /= 'none' )

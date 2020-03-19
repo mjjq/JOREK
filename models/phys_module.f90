@@ -474,14 +474,19 @@ module phys_module
   real*8, allocatable :: num_rhon_y3(:)   !< Third derivatives of neutral density profile (\f$ d^3\rhon/d\Psi_N^3 \f$)
   
   !> @name Numerical input profile for Fprofile
-  character(len=512)  :: Fprofile_file      !< ASCII file the F-profile is read from.
-  logical             :: num_Fprofile       !< is set true if Fprofile_file /= 'none'
-  integer             :: num_Fprofile_len   !< Number of points in profile
-  real*8, allocatable :: num_Fprofile_x(:)  !< Radial positions of profile points (PsiN values)
-  real*8, allocatable :: num_Fprofile_y0(:) !< Values of Fprofile profile
-  real*8, allocatable :: num_Fprofile_y1(:) !< First  derivatives of Fprofile profile (\f$ dFF'/d\Psi_N \f$)
-  real*8, allocatable :: num_Fprofile_y2(:) !< Second derivatives of Fprofile profile (\f$ d^2FF'/d\Psi_N^2 \f$)
-  real*8, allocatable :: num_Fprofile_y3(:) !< Second derivatives of Fprofile profile (\f$ d^2FF'/d\Psi_N^2 \f$)
+  integer, parameter  :: n_Fprofile_internal_max = 1000            !< INTERNAL Max Size of F-profile
+  integer             :: n_Fprofile_internal                       !< INTERNAL Size of F-profile
+  real*8              :: Fprofile_internal(n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration
+  real*8              :: Fprofile_psi_max                          !< INTERNAL max psi_norm of F-profile
+  real*8              :: Fprofile_tolerance                        !< INTERNAL tolerance (in %) for accuracy of F-profile compared to input FFprime
+  character(len=512)  :: Fprofile_file                             !< ASCII file the F-profile is read from.
+  logical             :: num_Fprofile                              !< is set true if Fprofile_file /= 'none'
+  integer             :: num_Fprofile_len                          !< Number of points in profile
+  real*8, allocatable :: num_Fprofile_x(:)                         !< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_Fprofile_y0(:)                        !< Values of Fprofile profile
+  real*8, allocatable :: num_Fprofile_y1(:)                        !< First  derivatives of Fprofile profile (\f$ dFF'/d\Psi_N \f$)
+  real*8, allocatable :: num_Fprofile_y2(:)                        !< Second derivatives of Fprofile profile (\f$ d^2FF'/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_Fprofile_y3(:)                        !< Second derivatives of Fprofile profile (\f$ d^2FF'/d\Psi_N^2 \f$)
 
   !> @name Analytical input profile for FFprime
   real*8  :: FF_0              !< FF' value in the plasma center

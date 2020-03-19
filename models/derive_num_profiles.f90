@@ -34,7 +34,8 @@ subroutine derive_num_profiles(my_id)
       call derivProf(num_Te_x, num_Te_y2, num_Te_len, num_Te_y3)
     end if
     
-    if ( num_Fprofile ) then
+    !if ( num_Fprofile ) then ! need to do this always for model710
+    if (jorek_model == 710) then
       call derivProf(num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, num_Fprofile_y1)
       call derivProf(num_Fprofile_x, num_Fprofile_y1, num_Fprofile_len, num_Fprofile_y2)
       call derivProf(num_Fprofile_x, num_Fprofile_y2, num_Fprofile_len, num_Fprofile_y3)

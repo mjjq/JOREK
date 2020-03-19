@@ -689,12 +689,12 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,var_rho,i_tor,s,t,ZN0,ZN0_s,ZN0_t,ZN0_st,ZN0_ss,ZN0_tt)
 
           if (i_tor == 1) then
-            !call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
-            call F_profile(xpoint, xcase, Z, ES%Z_xpoint, A30, ES%psi_axis, ES%psi_bnd, &
-                           F_prof        ,dF_dpsi      ,dF_dz      , &
-                           dF_dpsi2      ,dF_dz2       ,dF_dpsi_dz , &
-                           zFFprime      ,dFFprime_dpsi,dFFprime_dz, &
-                           dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
+            call interp(node_list,element_list,i,456,i_tor,s,t,F_prof,W_s,W_t,W_st,W_ss,W_tt)
+            !call F_profile(xpoint, xcase, Z, ES%Z_xpoint, A30, ES%psi_axis, ES%psi_bnd, &
+            !               F_prof        ,dF_dpsi      ,dF_dz      , &
+            !               dF_dpsi2      ,dF_dz2       ,dF_dpsi_dz , &
+            !               zFFprime      ,dFFprime_dpsi,dFFprime_dz, &
+            !               dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
             ! --- Uncomment if you want to compare with the old FF'...
             !call FFprime(  xpoint, xcase, Z, ES%Z_xpoint, A30, ES%psi_axis, ES%psi_bnd, &
             !               zFFprime,      dFFprime_dpsi,dFFprime_dz, &

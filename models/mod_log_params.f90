@@ -9,9 +9,8 @@ contains
 subroutine log_parameters(my_id, short)
 
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
-use wsmp_module,   only: use_wsmp
+use mumps_module,  only: no_zeros_mumps, mumps_ordering
+use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
 use vacuum
 use gauss, only: n_gauss
 
@@ -551,6 +550,7 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'use_mumps             ', use_mumps
   write(*,LOGI_FMT) 'use_wsmp              ', use_wsmp
   write(*,LOGI_FMT) 'use_pastix            ', use_pastix
+  write(*,LOGI_FMT) 'use_strumpack         ', use_strumpack  
   write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot
   write(*,INTG_FMT) 'pastix_maxthrd        ', pastix_maxthrd

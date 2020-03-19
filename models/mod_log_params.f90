@@ -376,6 +376,10 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'ZK_i_par               ', ZK_i_par
   end if
 
+  if ( num_Fprofile ) then
+    write(*,CHAR_FMT) 'Fprofile_file         ', trim(Fprofile_file)
+  end if
+
   if ( .not. num_ffprime ) then
     write(*,REAL_FMT) 'FF_0                  ', FF_0
     write(*,REAL_FMT) 'FF_1                  ', FF_1

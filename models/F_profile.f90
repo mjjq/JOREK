@@ -28,41 +28,12 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
   real*8  :: pert,      dpert_dpsi,      dpert_dpsi2,      dpert_dpsi3
   real*8  :: sqrt_term, dsqrt_term_dpsi, dsqrt_term_dpsi2, dsqrt_term_dpsi3
   real*8  :: no_delta_psi
+  ! for interpolating numerical profiles
+  integer :: left, right, mid
+  real*8  :: aux1, aux2
 
   ! --- Jorek uses -FF' as a convention, so we need to reverse the profile before integrating
   real*8  :: myFF_0, myFF_1, myFF_coef(8)
-
-  ! --- Because Jorek has a negative sign in front of its FFprime by convention
-  myFF_0 = - FF_0
-  myFF_1 = - FF_1
-  myFF_coef(1:8) =   FF_coef(1:8)
-  myFF_coef(6)   = - FF_coef(6)
-
-  ! --- Initialise
-  F_prof     = 0.d0
-  dF_dpsi    = 0.d0
-  dF_dz      = 0.d0
-  dF_dpsi2   = 0.d0
-  dF_dz2     = 0.d0
-  dF_dpsi_dz = 0.d0
-
-  ! --- There are some rules when using FF_coefs with the F-profile in Full-MHD
-  if (myFF_1 .ne. 0.d0) then
-    write(*,*)'Full-MHD Warning!!! The F-profile does not like it if FF_1 is not zero !!!'
-    write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
-  endif
-  if (myFF_coef(4) .gt. 0.01) then
-    write(*,*)'Full-MHD Warning!!! The tanh at FF_coef(5) with width FF_coef(4) is supposed to be a cut-off at the plasma edge !!!'
-    write(*,*)'                    ie. FF_coef(5) should be the edge of your plasma, and FF_coef(4) should be very small...'
-    write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
-  endif
-
-  ! --- The cutoff of the FFprime at the edge is traditionally the tanh at FF_coef(5), not at psi_n=1.0
-  ! --- However, F needs to be F0 outside the plasma, so we take a point far away.
-  ! --- To keep safe, for limiter plasma, the user might have non-zero FF' outside psi_n=1.0, because we
-  ! --- simply don't solve this, so in this case, we use psi_n=1.0
-  psi_edge  = 1.0
-  if (xpoint2) psi_edge  = max(1.0,myFF_coef(5) + 2.0 * myFF_coef(4))
 
   ! --- psi_norm
   psi_n = (psi - psi_axis)/(psi_bnd - psi_axis)
@@ -70,64 +41,124 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
   no_delta_psi = 1.d0
   if (FF_coef(9) .eq. 1.d0) no_delta_psi = delta_psi
 
-  ! --- Polynomial part
-  poly        = ( psi_n  + myFF_coef(1)/2.d0 * psi_n**2 + myFF_coef(2)/3.d0 * psi_n**3 + myFF_coef(3)/4.d0 * psi_n**4 ) * delta_psi
-  dpoly_dpsi  = ( 1.d0   + myFF_coef(1)      * psi_n    + myFF_coef(2)      * psi_n**2 + myFF_coef(3)      * psi_n**3 )
-  dpoly_dpsi2 = (          myFF_coef(1)                 + myFF_coef(2)*2.0  * psi_n    + myFF_coef(3)*3.0  * psi_n**2 ) / delta_psi
-  dpoly_dpsi3 = (                                       + myFF_coef(2)*2.0             + myFF_coef(3)*6.0  * psi_n    ) / delta_psi**2
+  ! --- Profile as a function of Psi_N.
+  if ( .not. num_Fprofile ) then
 
-  ! --- Perturbation part
-  pert        = + myFF_coef(6) * tanh((psi_n - myFF_coef(7))/myFF_coef(8))    / 2.d0                                 * no_delta_psi
-  dpert_dpsi  = + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**2 / (2.d0 * myFF_coef(8)) / delta_psi    * no_delta_psi
-  dpert_dpsi2 = - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**2       / delta_psi**2 * no_delta_psi &
-                               * sinh((psi_n - myFF_coef(7))/myFF_coef(8))
-  dpert_dpsi2 = + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**4 / myFF_coef(8)**3 * 3.0 / delta_psi**3 * no_delta_psi &
-                               * sinh((psi_n - myFF_coef(7))/myFF_coef(8))**2                                                       &
-                - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**2 / myFF_coef(8)**3       / delta_psi**3 * no_delta_psi
-  dpert_dpsi3 = - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**5 / myFF_coef(8)**4 *12.0 / delta_psi**4 * no_delta_psi &
-                               * sinh((psi_n - myFF_coef(7))/myFF_coef(8))**3                                                       &
-                + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**4 * 3.0 / delta_psi**4 * no_delta_psi &
-                         * 2.0 * sinh((psi_n - myFF_coef(7))/myFF_coef(8))                                                          &
-                + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**4 * 2.0 / delta_psi**4 * no_delta_psi &
-                               * sinh((psi_n - myFF_coef(7))/myFF_coef(8))
+    ! --- Because Jorek has a negative sign in front of its FFprime by convention
+    myFF_0 = - FF_0
+    myFF_1 = - FF_1
+    myFF_coef(1:8) =   FF_coef(1:8)
+    myFF_coef(6)   = - FF_coef(6)
 
-  ! --- Value of F at the edge should be F0
-  F_edge = F0
-  sqrt_edge =   2.0 * (myFF_0 - myFF_1) * (psi_edge + myFF_coef(1)/2.d0 * psi_edge**2 &
-                                                    + myFF_coef(2)/3.d0 * psi_edge**3 &
-                                                    + myFF_coef(3)/4.d0 * psi_edge**4 ) * delta_psi &
-              + 2.0 * myFF_coef(6) * tanh((psi_edge - myFF_coef(7))/myFF_coef(8)) / 2.d0 * no_delta_psi
-  F_constant  = F_edge**2 - sqrt_edge
+    ! --- Initialise
+    F_prof     = 0.d0
+    dF_dpsi    = 0.d0
+    dF_dz      = 0.d0
+    dF_dpsi2   = 0.d0
+    dF_dz2     = 0.d0
+    dF_dpsi_dz = 0.d0
 
-  ! --- sqrt part
-  sqrt_term        = 2.0 * (myFF_0 - myFF_1) * poly        + 2.0 * pert            + F_constant
-  dsqrt_term_dpsi  = 2.0 * (myFF_0 - myFF_1) * dpoly_dpsi  + 2.0 * dpert_dpsi 
-  dsqrt_term_dpsi2 = 2.0 * (myFF_0 - myFF_1) * dpoly_dpsi2 + 2.0 * dpert_dpsi2
-  dsqrt_term_dpsi3 = 2.0 * (myFF_0 - myFF_1) * dpoly_dpsi3 + 2.0 * dpert_dpsi3
+    ! --- There are some rules when using FF_coefs with the F-profile in Full-MHD
+    if (myFF_1 .ne. 0.d0) then
+      write(*,*)'Full-MHD Warning!!! The F-profile does not like it if FF_1 is not zero !!!'
+      write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
+    endif
+    if (myFF_coef(4) .gt. 0.01) then
+      write(*,*)'Full-MHD Warning!!! The tanh at FF_coef(5) with width FF_coef(4) is supposed to be a cut-off at the plasma edge !!!'
+      write(*,*)'                    ie. FF_coef(5) should be the edge of your plasma, and FF_coef(4) should be very small...'
+      write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
+    endif
 
-  ! --- Profile and derivatives
-  prof0           =          sqrt_term**(+0.5)
-  dprof0_dpsi     = + 0.5  * sqrt_term**(-0.5) * dsqrt_term_dpsi
-  dprof0_dpsi2    = - 0.25 * sqrt_term**(-1.5) * dsqrt_term_dpsi**2 + 0.5  * sqrt_term**(-0.5) * dsqrt_term_dpsi2
-  dprof0_dpsi3    = + 0.375* sqrt_term**(-2.5) * dsqrt_term_dpsi**3 &
-                    - 0.25 * sqrt_term**(-1.5) * dsqrt_term_dpsi * 2.0 * dsqrt_term_dpsi2 &
-                    - 0.25 * sqrt_term**(-1.5) * dsqrt_term_dpsi       * dsqrt_term_dpsi2 &
-                    + 0.5  * sqrt_term**(-0.5) * dsqrt_term_dpsi3
+    ! --- The cutoff of the FFprime at the edge is traditionally the tanh at FF_coef(5), not at psi_n=1.0
+    ! --- However, F needs to be F0 outside the plasma, so we take a point far away.
+    ! --- To keep safe, for limiter plasma, the user might have non-zero FF' outside psi_n=1.0, because we
+    ! --- simply don't solve this, so in this case, we use psi_n=1.0
+    psi_edge  = 1.0
+    if (xpoint2) psi_edge  = max(1.0,myFF_coef(5) + 2.0 * myFF_coef(4))
+
+    ! --- Polynomial part
+    poly        = ( psi_n  + myFF_coef(1)/2.d0 * psi_n**2 + myFF_coef(2)/3.d0 * psi_n**3 + myFF_coef(3)/4.d0 * psi_n**4 ) * delta_psi
+    dpoly_dpsi  = ( 1.d0   + myFF_coef(1)      * psi_n    + myFF_coef(2)      * psi_n**2 + myFF_coef(3)      * psi_n**3 )
+    dpoly_dpsi2 = (          myFF_coef(1)                 + myFF_coef(2)*2.0  * psi_n    + myFF_coef(3)*3.0  * psi_n**2 ) / delta_psi
+    dpoly_dpsi3 = (                                       + myFF_coef(2)*2.0             + myFF_coef(3)*6.0  * psi_n    ) / delta_psi**2
+
+    ! --- Perturbation part
+    pert        = + myFF_coef(6) * tanh((psi_n - myFF_coef(7))/myFF_coef(8))    / 2.d0                                 * no_delta_psi
+    dpert_dpsi  = + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**2 / (2.d0 * myFF_coef(8)) / delta_psi    * no_delta_psi
+    dpert_dpsi2 = - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**2       / delta_psi**2 * no_delta_psi &
+                                 * sinh((psi_n - myFF_coef(7))/myFF_coef(8))
+    dpert_dpsi2 = + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**4 / myFF_coef(8)**3 * 3.0 / delta_psi**3 * no_delta_psi &
+                                 * sinh((psi_n - myFF_coef(7))/myFF_coef(8))**2                                                       &
+                  - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**2 / myFF_coef(8)**3       / delta_psi**3 * no_delta_psi
+    dpert_dpsi3 = - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**5 / myFF_coef(8)**4 *12.0 / delta_psi**4 * no_delta_psi &
+                                 * sinh((psi_n - myFF_coef(7))/myFF_coef(8))**3                                                       &
+                  + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**4 * 3.0 / delta_psi**4 * no_delta_psi &
+                           * 2.0 * sinh((psi_n - myFF_coef(7))/myFF_coef(8))                                                          &
+                  + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**4 * 2.0 / delta_psi**4 * no_delta_psi &
+                                 * sinh((psi_n - myFF_coef(7))/myFF_coef(8))
+
+    ! --- Value of F at the edge should be F0
+    F_edge = F0
+    sqrt_edge =   2.0 * (myFF_0 - myFF_1) * (psi_edge + myFF_coef(1)/2.d0 * psi_edge**2 &
+                                                      + myFF_coef(2)/3.d0 * psi_edge**3 &
+                                                      + myFF_coef(3)/4.d0 * psi_edge**4 ) * delta_psi &
+                + 2.0 * myFF_coef(6) * tanh((psi_edge - myFF_coef(7))/myFF_coef(8)) / 2.d0 * no_delta_psi
+    F_constant  = F_edge**2 - sqrt_edge
+
+    ! --- sqrt part
+    sqrt_term        = 2.0 * (myFF_0 - myFF_1) * poly        + 2.0 * pert            + F_constant
+    dsqrt_term_dpsi  = 2.0 * (myFF_0 - myFF_1) * dpoly_dpsi  + 2.0 * dpert_dpsi 
+    dsqrt_term_dpsi2 = 2.0 * (myFF_0 - myFF_1) * dpoly_dpsi2 + 2.0 * dpert_dpsi2
+    dsqrt_term_dpsi3 = 2.0 * (myFF_0 - myFF_1) * dpoly_dpsi3 + 2.0 * dpert_dpsi3
+
+    ! --- Profile and derivatives
+    prof0           =          sqrt_term**(+0.5)
+    dprof0_dpsi     = + 0.5  * sqrt_term**(-0.5) * dsqrt_term_dpsi
+    dprof0_dpsi2    = - 0.25 * sqrt_term**(-1.5) * dsqrt_term_dpsi**2 + 0.5  * sqrt_term**(-0.5) * dsqrt_term_dpsi2
+    dprof0_dpsi3    = + 0.375* sqrt_term**(-2.5) * dsqrt_term_dpsi**3 &
+                      - 0.25 * sqrt_term**(-1.5) * dsqrt_term_dpsi * 2.0 * dsqrt_term_dpsi2 &
+                      - 0.25 * sqrt_term**(-1.5) * dsqrt_term_dpsi       * dsqrt_term_dpsi2 &
+                      + 0.5  * sqrt_term**(-0.5) * dsqrt_term_dpsi3
+
+    if (F0 .lt. 0.d0) then
+      prof0        = - prof0
+      dprof0_dpsi  = - dprof0_dpsi
+      dprof0_dpsi2 = - dprof0_dpsi2
+      dprof0_dpsi3 = - dprof0_dpsi3
+    endif
+
+  ! --- use numerical representation.
+  else
+  
+    ! --- Interpolate profile and derivatives to position psi_n by bisections.
+    left  = 1
+    right = num_Fprofile_len
+    do
+      if ( right == left + 1 ) exit
+      mid = (left + right) / 2
+      if ( num_Fprofile_x(mid) >= psi_n ) then
+        right = mid
+      else
+        left = mid
+      end if
+    end do
+    aux1 = (psi_n - num_Fprofile_x(left)) / (num_Fprofile_x(right) - num_Fprofile_x(left))
+    aux2 = (1. - aux1)
+    prof0        =   num_Fprofile_y0(left) * aux2 + num_Fprofile_y0(right) * aux1
+    dprof0_dpsi  = ( num_Fprofile_y1(left) * aux2 + num_Fprofile_y1(right) * aux1 ) / delta_psi
+    dprof0_dpsi2 = ( num_Fprofile_y2(left) * aux2 + num_Fprofile_y2(right) * aux1 ) / delta_psi**2
+    dprof0_dpsi3 = ( num_Fprofile_y3(left) * aux2 + num_Fprofile_y3(right) * aux1 ) / delta_psi**3
+  
+  endif ! end of numerical profile
+
 
 
 
   ! --- Save F-profile
-  if (F0 .lt. 0.d0) then
-    F_prof    = - prof0
-    dF_dpsi   = - dprof0_dpsi
-    dF_dpsi2  = - dprof0_dpsi2
-    dF_dpsi3  = - dprof0_dpsi3
-  else
-    F_prof    = + prof0
-    dF_dpsi   = + dprof0_dpsi
-    dF_dpsi2  = + dprof0_dpsi2
-    dF_dpsi3  = + dprof0_dpsi3
-  endif
+  F_prof    = + prof0
+  dF_dpsi   = + dprof0_dpsi
+  dF_dpsi2  = + dprof0_dpsi2
+  dF_dpsi3  = + dprof0_dpsi3
 
   ! --- Save FF'-profile
   FFprime_prof = F_prof * dF_dpsi
@@ -139,26 +170,29 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
 
 
 
+
   ! --- Cut-off at plasma edge
-  sig_F     = myFF_coef(4)
+  if ( .not. num_Fprofile ) then
+    sig_F     = myFF_coef(4)
 
-  psi_star  = (psi_n-psi_edge)/sig_F
-  psi_star  = min( max( psi_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+    psi_star  = (psi_n-psi_edge)/sig_F
+    psi_star  = min( max( psi_star, -40.d0), 40.d0) ! avoid floating-point exceptions
 
-  tanh2   = tanh(psi_star)
-  cosh3   = cosh(psi_star)
+    tanh2   = tanh(psi_star)
+    cosh3   = cosh(psi_star)
 
-  atn   = (0.5d0 - 0.5d0*tanh2)
-  datn  = -0.5d0/cosh3**2 / sig_F
-  d2atn =  1.0d0/cosh3**2 / sig_F**2 * tanh2
+    atn   = (0.5d0 - 0.5d0*tanh2)
+    datn  = -0.5d0/cosh3**2 / sig_F
+    d2atn =  1.0d0/cosh3**2 / sig_F**2 * tanh2
 
-  F_prof     = F_edge + (F_prof - F_edge) * atn
-  dF_dpsi    = dF_dpsi                    * atn + (F_prof - F_edge) *   datn
-  dF_dpsi2   = dF_dpsi2                   * atn + (F_prof - F_edge) *   d2atn + 2.0 * dF_dpsi * datn
+    F_prof     = F_edge + (F_prof - F_edge) * atn
+    dF_dpsi    = dF_dpsi                    * atn + (F_prof - F_edge) *   datn
+    dF_dpsi2   = dF_dpsi2                   * atn + (F_prof - F_edge) *   d2atn + 2.0 * dF_dpsi * datn
 
-  FFprime_prof = FFprime_prof * atn
-  dFF_dpsi     = dFF_dpsi     * atn + FFprime_prof * datn
-  dFF_dpsi2    = dFF_dpsi2    * atn + FFprime_prof * d2atn + 2.0 * dFF_dpsi * datn
+    FFprime_prof = FFprime_prof * atn
+    dFF_dpsi     = dFF_dpsi     * atn + FFprime_prof * datn
+    dFF_dpsi2    = dFF_dpsi2    * atn + FFprime_prof * d2atn + 2.0 * dFF_dpsi * datn
+  endif
 
 
 

@@ -58,13 +58,21 @@ subroutine read_num_profiles(my_id)
     T_1 = Te_1 + Ti_1
   end if
   
-  num_ffprime = ( ffprime_file /= 'none' )
-  if ( num_ffprime .and. ( my_id == 0 ) .and. (jorek_model == 710) ) then
+  num_Fprofile = ( Fprofile_file /= 'none' )
+  if ( num_Fprofile .and. ( my_id == 0 ) .and. (jorek_model /= 710) ) then
     write(*,*)'*** WARNING ***'
-    write(*,*)'*** numerical FFprime profiles for model710 not yet implemented!'
+    write(*,*)'*** numerical Fprofile profiles only implemented for model710!'
     write(*,*)'*** Aborting...'
     stop
   endif
+  if ( num_Fprofile .and. ( my_id == 0 ) ) then
+    call readProf(num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, Fprofile_file)
+    call check_num_prof(num_Fprofile, num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, 'Fprofile',    &
+      check_positive=.false.)
+    !F0 = num_Fprofile_y0(1) ! this could be an option to enforce coherence ?
+  end if
+  
+  num_ffprime = ( ffprime_file /= 'none' )
   if ( num_ffprime .and. ( my_id == 0 ) ) then
     call readProf(num_ffprime_x, num_ffprime_y0, num_ffprime_len, ffprime_file)
     call check_num_prof(num_ffprime, num_ffprime_x, num_ffprime_y0, num_ffprime_len, 'ffprime',    &

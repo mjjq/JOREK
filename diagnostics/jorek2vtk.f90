@@ -698,7 +698,7 @@ do i=1,element_list%n_elements
             ! --- Uncomment if you want to compare with the old FF'...
             !call FFprime(  xpoint, xcase, Z, ES%Z_xpoint, A30, ES%psi_axis, ES%psi_bnd, &
             !               zFFprime,      dFFprime_dpsi,dFFprime_dz, &
-            !               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+            !               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .false.)
           endif
 
           AR_p  = AR_p  + AR0 * HZ_p(i_tor,i_plane)

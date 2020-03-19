@@ -362,7 +362,7 @@ if (my_id == 0) then
                                       + dF_dz2   * node_list%node(i)%x(2,2) * node_list%node(i)%x(3,2)
 #else
     call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
-                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .true.)
 #endif
 
   

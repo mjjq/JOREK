@@ -48,7 +48,7 @@ if (my_id .eq. 0) then
                                                                dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 
     call FFprime(   xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
-                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .true.)
 							       
     zp       = zn * zT
     dp_dpsi  = zn * dT_dpsi + dn_dpsi * zT

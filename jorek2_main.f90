@@ -1334,7 +1334,7 @@ endif
     		   zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
     	  endif
     	  call FFprime(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
-    	       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
+    	       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz, .true.)
 
           if (NEO) then
             if (num_neo_file) then

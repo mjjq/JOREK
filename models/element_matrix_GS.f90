@@ -90,7 +90,7 @@ do ms=1, n_gauss
     endif
 
     call FFprime(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq2_g(ms,mt),psi_axis,psi_bnd, &
-                zFFprime, dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,ddFFprime_dpsi_dz)
+                zFFprime, dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,ddFFprime_dpsi_dz, .true.)
 
     wst = wgauss(ms)*wgauss(mt)
 

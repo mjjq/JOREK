@@ -226,7 +226,7 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
   
   end if
 
-  ! --- Nrmally not needed since we don't allow FF_1 with model710
+  ! --- Normally not needed since we don't allow FF_1 with model710
   FFprime_prof = FFprime_prof + FF_1
 
   return
@@ -237,18 +237,17 @@ end
 
 
 ! --- This routine integrates the FFprime numerically.
-subroutine integrate_F_profile(n_profile, F_profile)
-
-  use phys_module, only: xpoint, F0, FF_0, FF_1, FF_coef
-  use equil_info, only: ES
+subroutine integrate_F_profile(xpoint2, psi_axis, psi_bnd, F0, FF_0, FF_1, FF_coef, n_profile, F_profile)
 
   implicit none
   
   ! --- Routine variables
-  integer, intent(in)    :: n_profile
-  real*8,  intent(inout) :: F_profile(n_profile)
+  logical :: xpoint2
+  real*8  :: psi_axis, psi_bnd
+  real*8  :: F0, FF_0, FF_1, FF_coef(9)
+  integer :: n_profile
+  real*8  :: F_profile(n_profile)
   
-  ! --- Internal variables
   integer :: i_prof, j, j_prev, i_step, n_integral, n_integral_max, stay_safe
   real*8  :: myFF_0, myFF_1, myFF_coef(9)
   real*8  :: no_delta_psi, delta_psi
@@ -264,14 +263,8 @@ subroutine integrate_F_profile(n_profile, F_profile)
   myFF_coef(1:9) =   FF_coef(1:9)
   myFF_coef(6)   = - FF_coef(6)
 
-  ! --- There are some rules when using FF_coefs with the F-profile in Full-MHD (can be removed for numerical profiles)
-  if (myFF_1 .ne. 0.d0) then
-    write(*,*)'Full-MHD Warning!!! The F-profile does not like it if FF_1 is not zero !!!'
-    write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
-  endif
-
   ! --- The equilibrium psi amplitude
-  delta_psi = (ES%psi_bnd - ES%psi_axis)
+  delta_psi = (psi_bnd - psi_axis)
   no_delta_psi = 1.d0
   if (FF_coef(9) .eq. 1.d0) no_delta_psi = delta_psi
 
@@ -280,7 +273,7 @@ subroutine integrate_F_profile(n_profile, F_profile)
   ! --- To keep safe, for limiter plasma, the user might have non-zero FF' outside psi_n=1.0, because we
   ! --- simply don't solve this, so in this case, we use psi_n=1.0
   psi_edge  = 1.0
-  if (xpoint) psi_edge  = max(1.0,myFF_coef(5) + 2.0 * myFF_coef(4))
+  if (xpoint2) psi_edge  = max(1.0,myFF_coef(5) + 2.0 * myFF_coef(4))
 
   ! --- We need an idea of the amplitude of the FFprime (for the adaptive int-step)
   psi = 0.0
@@ -290,27 +283,29 @@ subroutine integrate_F_profile(n_profile, F_profile)
   reference = max(reference, 1.d-3)
 
   ! --- Compute initial FFprime
-  psi  = psi_edge
+  psi  = 0.d0
   FFprime_prev = ffprime_internal(psi)
   
-  ! --- We start the integral at the plasma edge, where F should be F0 (squared because FF' = 1/2(F**2)' )
+  ! --- We start the integral at the plasma core, where F should be close to F0
+  ! --- Note: we correct the F-profile integration constant at the end, this starting point really doesn't matter...
   integral = F0**2
 
   ! --- The steps for integration. Assume the full profile will be as large as minimal step
-  step     = 1.d-5
+  step     = 1.d-6
   step_min = 1.d-7
   step_max = 1.d-3
   n_integral_max = int(2*psi_edge/step_min)
   allocate(integral_large(n_integral_max))
   allocate(psi_large(n_integral_max))
+  integral_large = 0.d0
 
   ! --- Tollerance to deviate from straight line
   quad_tol_min = 1.d-6
   quad_tol_max = 0.005 ! 0.5% of FFprime amplitude should be enough...
 
   ! --- Start integral
-  psi_prev = psi
-  psi      = psi_edge + step
+  psi_prev = 0.d0
+  psi      = 0.d0
   i_step   = 0
   stay_safe= 0
   do while (.true.)
@@ -322,23 +317,23 @@ subroutine integrate_F_profile(n_profile, F_profile)
       stop
     endif
     
-    ! --- New step (we go from ~1.0 to 0.0)
-    if (psi-step .lt. 0.d0) then
-      step = psi
-      psi = 0.d0
+    ! --- New step (we go from 0.0 to ~1.0)
+    if (psi+step .gt. psi_edge) then
+      step = psi_edge - psi
+      psi  = psi_edge
     else
-      psi = psi - step
+      psi  = psi + step
     endif
     
     ! --- Middle of step
-    psi_mid = psi + 0.5*step
+    psi_mid = psi - 0.5*step
     
     ! --- FFprime at this psi and at mid-point
     FFprime     = ffprime_internal(psi)
     FFprime_mid = ffprime_internal(psi_mid)
     
     ! --- Check error from straight line
-    if (psi .gt. 0.d0) then
+    if (psi .lt. psi_edge) then
       diff = abs(FFprime_mid - (FFprime+FFprime_prev)/2.0)
       if (diff / reference .gt. quad_tol_max) then
         if (step / 2.0 .ge. step_min) then ! this is our threshold, otherwise continue...
@@ -358,46 +353,54 @@ subroutine integrate_F_profile(n_profile, F_profile)
     
     ! --- Take the contribution (factor two because FF' = 1/2(F**2)' )
     integrand = 2.0 * FFprime_mid
-    dx        = step * abs(delta_psi)
+    dx        = step * delta_psi
     integral  = integral + integrand * dx
     
     ! --- Check n_step
     i_step = i_step + 1
     if (i_step .eq. n_integral_max) then
       write(*,*)'Warning! F-profile not fully integrated!'
-      stop
+      exit
     endif
     
-    ! --- Save squared profile (sqrt because FF' = 1/2(F**2)' )
+    ! --- Save profile
     psi_large(i_step)      = psi
-    integral_large(i_step) = integral**0.5
+    integral_large(i_step) = integral
     psi_prev = psi
     FFprime_prev = FFprime
     
-    if (psi .eq. 0.d0) exit
+    if (psi .eq. psi_edge) exit
     
   enddo
-
-  ! --- Now that we have our refined profile, interpolate with input n_profile from psi_n=[0.0,1.0]
   n_integral = i_step
-  j_prev = n_integral-1
+  
+  ! --- WARNING! THIS IS WHERE WE DECIDE THE F-profile OFFSET! TO BE DISCUSSED/DECIDED!!!
+  ! --- Correct the offset to get F0 at the plasma edge (or at the core?)
+  diff = F0**2 - integral_large(n_integral)
+  integral_large = integral_large + diff
+    
+  ! --- Squared root profile (because FF' = 1/2(F**2)' )
+  integral_large = integral_large**0.5
+  
+  ! --- Now that we have our refined profile, interpolate with input n_profile from psi_n=[0.0,1.0]
+  j_prev = 2
   do i_prof = 1,n_profile
     ! --- We make our profile go up to psi_n=1.2
     psi = 1.2 * real(i_prof-1)/real(n_profile-1)
-    if (psi .le. psi_large(1)) then
-      do j=j_prev,1,-1
+    if (psi .le. psi_large(n_integral)) then
+      do j=j_prev,n_integral
         if (psi_large(j) .gt. psi) then
           j_prev = j
-          diff = (psi_large(j)-psi) / (psi_large(j)-psi_large(j+1))
-          F_profile(i_prof) = integral_large(j) + (integral_large(j+1)-integral_large(j)) * diff
+          diff = (psi_large(j)-psi) / (psi_large(j)-psi_large(j-1))
+          F_profile(i_prof) = integral_large(j) + (integral_large(j-1)-integral_large(j)) * diff
           exit
         endif
       enddo
     else ! outside plasma, F is just constant
-      F_profile(i_prof) = integral_large(1)
+      F_profile(i_prof) = integral_large(n_integral)
     endif
   enddo
-
+  
   ! --- Correct the sign of F-profile depending on F0
   if (F0 .lt. 0.d0) F_profile = - F_profile
   
@@ -409,34 +412,34 @@ subroutine integrate_F_profile(n_profile, F_profile)
 end subroutine integrate_F_profile
 
 
+
+
+
+
+
+
+
+
+
+
 ! --- This is just a copy from FFprime, without all the derivatives.
 ! --- We cannot call FFprime directly because in model710 it is just a wrapper of F_profile...
 real*8 function ffprime_internal(psi_n)
 
-  use phys_module, only: FF_0, FF_1, FF_coef
   use equil_info, only: ES
 
   implicit none
 
-  real*8  :: psi_n
-  real*8  :: dpoly_dpsi, dpert_dpsi, psi_star, atn
-  real*8  :: no_delta_psi, delta_psi
+  real*8  :: psi_n, psi
+  real*8  :: ff1,ff2,ff3,ff4,ff5,ff6
+  real*8  :: Z_fake, Z_xpoint_fake(2)
 
-  ! --- The equilibrium psi amplitude
-  delta_psi = (ES%psi_bnd - ES%psi_axis)
-  no_delta_psi = 1.d0
-  if (FF_coef(9) .eq. 1.d0) no_delta_psi = delta_psi
+  Z_fake = 0.d0
+  Z_xpoint_fake = 0.d0
+  psi = psi_n * (ES%psi_bnd-ES%psi_axis) + ES%psi_axis
 
-  ! --- Polynomial part
-  dpoly_dpsi  = (FF_0 - FF_1) * ( 1.d0 + FF_coef(1) * psi_n + FF_coef(2) * psi_n**2 + FF_coef(3) * psi_n**3 )
-  ! --- Perturbation part
-  dpert_dpsi  = + FF_coef(6) / cosh((psi_n - FF_coef(7))/FF_coef(8))**2 / (2.d0 * FF_coef(8)) / delta_psi * no_delta_psi
-  ! --- Edge cut-off tanh
-  psi_star = (psi_n - FF_coef(5))/FF_coef(4)
-  psi_star = min( max( psi_star, -40.d0), 40.d0) ! avoid floating-point exceptions
-  atn      = (0.5d0 - 0.5d0*tanh(psi_star))
-  ! --- Full FF' function
-  ffprime_internal = (dpoly_dpsi + dpert_dpsi) * atn + FF_1
+  call FFprime(.false.,0,Z_fake,Z_xpoint_fake,psi,ES%psi_axis,ES%psi_bnd, ff1,ff2,ff3, ff4,ff5,ff6, .false.)
+  ffprime_internal = ff1
   
 
 end function ffprime_internal

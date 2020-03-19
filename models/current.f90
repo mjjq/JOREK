@@ -51,7 +51,7 @@ else
 endif
 
 call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
-             zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+             zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .true.)
 
 zjz   = zFFprime - R*R * (zn * dT_dpsi + dn_dpsi * zT)
 

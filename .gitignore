@@ -17,7 +17,7 @@
 *.xml
 *.png
 *.csv
-*.inc
+Makefile.inc
 *.optrpt
 Makefile.inc
 j302_1

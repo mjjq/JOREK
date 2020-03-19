@@ -89,6 +89,11 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   integer              :: n_spi_check
   logical              :: modes_changed
  
+  real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
+  real*8, allocatable :: t_energies2(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
+  real*8, allocatable :: t_energies3(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
+  real*8, allocatable :: t_energies4(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
+
   ! --- Perturbation-Import variables
   type (type_node_list)   , pointer	:: node_list_perturbation
   type (type_element_list), pointer	:: element_list_perturbation
@@ -164,6 +169,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
 #endif
     read(21) node_list%node(i)%index
     read(21) node_list%node(i)%boundary
+    read(21) node_list%node(i)%axis_node
     read(21) node_list%node(i)%parents
     read(21) node_list%node(i)%parent_elem
     read(21) node_list%node(i)%ref_lambda
@@ -199,6 +205,10 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
 
     if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
     call tr_allocate(xtime,1,index_start+nstep,"xtime",CAT_UNKNOWN)
+    
+    if (allocated(t_energies))   call tr_deallocate(t_energies,"t_energies",CAT_UNKNOWN)
+    call tr_allocate(t_energies,1,n_tor_tmp,1,2,1,index_start+nstep,"t_energies",CAT_UNKNOWN)
+    t_energies = 0.d0
     
     if (allocated(energies)) call tr_deallocate(energies,"energies",CAT_UNKNOWN)
     call tr_allocate(energies,1,n_tor,1,2,1,index_start+nstep,"energies",CAT_UNKNOWN)
@@ -264,6 +274,118 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     call tr_allocate(part_src_out_t,1,index_start+nstep,"part_src_out_t",CAT_UNKNOWN)
     part_src_out_t = 0.d0
     
+    if (allocated(E_tot_t)) call tr_deallocate(E_tot_t,"E_tot_t",CAT_UNKNOWN)
+    call tr_allocate(E_tot_t,1,index_start+nstep,"E_tot_t",CAT_UNKNOWN)
+    E_tot_t = 0.d0
+
+    if (allocated(helicity_tot_t)) call tr_deallocate(helicity_tot_t,"helicity_tot_t",CAT_UNKNOWN)
+    call tr_allocate(helicity_tot_t,1,index_start+nstep,"helicity_tot_t",CAT_UNKNOWN)
+    helicity_tot_t = 0.d0
+
+    if (allocated(thermal_tot_t)) call tr_deallocate(thermal_tot_t,"thermal_tot_t",CAT_UNKNOWN)
+    call tr_allocate(thermal_tot_t,1,index_start+nstep,"thermal_tot_t",CAT_UNKNOWN)
+    thermal_tot_t = 0.d0
+
+    if (allocated(kin_par_tot_t)) call tr_deallocate(kin_par_tot_t,"kin_par_tot_t",CAT_UNKNOWN)
+    call tr_allocate(kin_par_tot_t,1,index_start+nstep,"kin_par_tot_t",CAT_UNKNOWN)
+    kin_par_tot_t = 0.d0
+
+    if (allocated(kin_perp_tot_t)) call tr_deallocate(kin_perp_tot_t,"kin_perp_tot_t",CAT_UNKNOWN)
+    call tr_allocate(kin_perp_tot_t,1,index_start+nstep,"kin_perp_tot_t",CAT_UNKNOWN)
+    kin_perp_tot_t = 0.d0
+
+    if (allocated(Ip_tot_t)) call tr_deallocate(Ip_tot_t,"Ip_tot_t",CAT_UNKNOWN)
+    call tr_allocate(Ip_tot_t,1,index_start+nstep,"Ip_tot_t",CAT_UNKNOWN)
+    Ip_tot_t = 0.d0
+
+    if (allocated(ohmic_tot_t)) call tr_deallocate(ohmic_tot_t,"ohmic_tot_t",CAT_UNKNOWN)
+    call tr_allocate(ohmic_tot_t,1,index_start+nstep,"ohmic_tot_t",CAT_UNKNOWN)
+    ohmic_tot_t = 0.d0
+
+    if (allocated(Wmag_tot_t)) call tr_deallocate(Wmag_tot_t,"Wmag_tot_t",CAT_UNKNOWN)
+    call tr_allocate(Wmag_tot_t,1,index_start+nstep,"Wmag_tot_t",CAT_UNKNOWN)
+    Wmag_tot_t = 0.d0
+
+    if (allocated(Magwork_tot_t)) call tr_deallocate(Magwork_tot_t,"Magwork_tot_t",CAT_UNKNOWN)
+    call tr_allocate(Magwork_tot_t,1,index_start+nstep,"Magwork_tot_t",CAT_UNKNOWN)
+    Magwork_tot_t = 0.d0
+
+    if (allocated(flux_qpar_t)) call tr_deallocate(flux_qpar_t,"flux_qpar_t",CAT_UNKNOWN)
+    call tr_allocate(flux_qpar_t,1,index_start+nstep,"flux_qpar_t",CAT_UNKNOWN)
+    flux_qpar_t = 0.d0
+
+    if (allocated(flux_qperp_t)) call tr_deallocate(flux_qperp_t,"flux_qperp_t",CAT_UNKNOWN)
+    call tr_allocate(flux_qperp_t,1,index_start+nstep,"flux_qperp_t",CAT_UNKNOWN)
+    flux_qperp_t = 0.d0
+
+    if (allocated(flux_kinpar_t)) call tr_deallocate(flux_kinpar_t,"flux_kinpar_t",CAT_UNKNOWN)
+    call tr_allocate(flux_kinpar_t,1,index_start+nstep,"flux_kinpar_t",CAT_UNKNOWN)
+    flux_kinpar_t = 0.d0
+
+    if (allocated(flux_Pvn_t)) call tr_deallocate(flux_Pvn_t,"flux_Pvn_t",CAT_UNKNOWN)
+    call tr_allocate(flux_Pvn_t,1,index_start+nstep,"flux_Pvn_t",CAT_UNKNOWN)
+    flux_Pvn_t = 0.d0
+
+    if (allocated(dE_tot_dt)) call tr_deallocate(dE_tot_dt,"dE_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dE_tot_dt,1,index_start+nstep,"dE_tot_dt",CAT_UNKNOWN)
+    dE_tot_dt = 0.d0
+
+    if (allocated(dWmag_tot_dt)) call tr_deallocate(dWmag_tot_dt,"dWmag_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dWmag_tot_dt,1,index_start+nstep,"dWmag_tot_dt",CAT_UNKNOWN)
+    dWmag_tot_dt = 0.d0
+
+    if (allocated(dthermal_tot_dt)) call tr_deallocate(dthermal_tot_dt,"dthermal_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dthermal_tot_dt,1,index_start+nstep,"dthermal_tot_dt",CAT_UNKNOWN)
+    dthermal_tot_dt = 0.d0
+
+    if (allocated(dkinperp_tot_dt)) call tr_deallocate(dkinperp_tot_dt,"dkinperp_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dkinperp_tot_dt,1,index_start+nstep,"dkinperp_tot_dt",CAT_UNKNOWN)
+    dkinperp_tot_dt = 0.d0
+
+    if (allocated(dkinpar_tot_dt)) call tr_deallocate(dkinpar_tot_dt,"dkinpar_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dkinpar_tot_dt,1,index_start+nstep,"dkinpar_tot_dt",CAT_UNKNOWN)
+    dkinpar_tot_dt = 0.d0
+
+    if (allocated(heat_src_tot_t)) call tr_deallocate(heat_src_tot_t,"heat_src_tot_t",CAT_UNKNOWN)
+    call tr_allocate(heat_src_tot_t,1,index_start+nstep,"heat_src_tot_t",CAT_UNKNOWN)
+    heat_src_tot_t = 0.d0
+
+    if (allocated(part_src_tot_t)) call tr_deallocate(part_src_tot_t,"part_src_tot_t",CAT_UNKNOWN)
+    call tr_allocate(part_src_tot_t,1,index_start+nstep,"part_src_tot_t",CAT_UNKNOWN)
+    part_src_tot_t = 0.d0
+
+    if (allocated(li3_tot_t)) call tr_deallocate(li3_tot_t,"li3_tot_t",CAT_UNKNOWN)
+    call tr_allocate(li3_tot_t,1,index_start+nstep,"li3_tot_t",CAT_UNKNOWN)
+    li3_tot_t = 0.d0
+
+    if (allocated(li3_t)) call tr_deallocate(li3_t,"li3_t",CAT_UNKNOWN)
+    call tr_allocate(li3_t,1,index_start+nstep,"li3_t",CAT_UNKNOWN)
+    li3_t = 0.d0
+
+    if (allocated(viscopar_flux_t)) call tr_deallocate(viscopar_flux_t,"viscopar_flux_t",CAT_UNKNOWN)
+    call tr_allocate(viscopar_flux_t,1,index_start+nstep,"viscopar_flux_t",CAT_UNKNOWN)
+    viscopar_flux_t = 0.d0
+
+    if (allocated(viscopar_dissip_tot_t)) call tr_deallocate(viscopar_dissip_tot_t,"viscopar_dissip_tot_t",CAT_UNKNOWN)
+    call tr_allocate(viscopar_dissip_tot_t,1,index_start+nstep,"viscopar_dissip_tot_t",CAT_UNKNOWN)
+    viscopar_dissip_tot_t = 0.d0
+
+    if (allocated(thmwork_tot_t)) call tr_deallocate(thmwork_tot_t,"thmwork_tot_t",CAT_UNKNOWN)
+    call tr_allocate(thmwork_tot_t,1,index_start+nstep,"thmwork_tot_t",CAT_UNKNOWN)
+    thmwork_tot_t = 0.d0
+
+    if (allocated(volume_t)) call tr_deallocate(volume_t,"volume_t",CAT_UNKNOWN)
+    call tr_allocate(volume_t,1,index_start+nstep,"volume_t",CAT_UNKNOWN)
+    volume_t = 0.d0
+
+    if (allocated(area_t)) call tr_deallocate(area_t,"area_t",CAT_UNKNOWN)
+    call tr_allocate(area_t,1,index_start+nstep,"area_t",CAT_UNKNOWN)
+    area_t = 0.d0
+
+    if (allocated(mag_ener_src_tot)) call tr_deallocate(mag_ener_src_tot,"mag_ener_src_tot",CAT_UNKNOWN)
+    call tr_allocate(mag_ener_src_tot,1,index_start+nstep,"mag_ener_src_tot",CAT_UNKNOWN)
+    mag_ener_src_tot = 0.d0
+
 #ifdef JECCD
     if (allocated(energies2)) call tr_deallocate(energies2,"energies2",CAT_UNKNOWN)
     call tr_allocate(energies2,1,n_tor,1,2,1,index_start+nstep,"energies2",CAT_UNKNOWN)
@@ -486,6 +608,7 @@ endif
 #endif
    	read(21) node_list_perturbation%node(i)%index
    	read(21) node_list_perturbation%node(i)%boundary
+   	read(21) node_list_perturbation%node(i)%axis_node
    	read(21) node_list_perturbation%node(i)%parents
    	read(21) node_list_perturbation%node(i)%parent_elem
    	read(21) node_list_perturbation%node(i)%ref_lambda
@@ -546,6 +669,11 @@ endif
           node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)
 #if (JOREK_MODEL == 400)
           node_list%node(i)%values(j,:,8)= amplitude * node_list%node(i)%values(1,:,8)
+#endif
+#if (JOREK_MODEL == 710)
+          node_list%node(i)%values(j,:,var_AR)= amplitude * node_list%node(i)%values(1,:,var_AR)
+          node_list%node(i)%values(j,:,var_AZ)= amplitude * node_list%node(i)%values(1,:,var_AZ)
+          node_list%node(i)%values(j,:,var_A3)= amplitude * node_list%node(i)%values(1,:,var_A3)
 #endif
         enddo
       enddo
@@ -631,6 +759,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   integer,     allocatable :: t_index(:,:)
   integer,     allocatable :: t_boundary(:)
+  character,   allocatable :: t_axis_node(:)     
   integer,     allocatable :: t_parents(:,:)
   integer,     allocatable :: t_parent_elem(:)
   real(RKIND), allocatable :: t_ref_lambda(:)
@@ -788,6 +917,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
  
   call tr_allocate(t_index,      1,node_list%n_nodes,1,n_order+1,"index",      CAT_UNKNOWN)
   call tr_allocate(t_boundary,   1,node_list%n_nodes,            "boundary",   CAT_UNKNOWN)
+  call tr_allocate(t_axis_node,  1,node_list%n_nodes,            "axis_node",  CAT_UNKNOWN)
   call tr_allocate(t_parents,    1,node_list%n_nodes,1,2,        "parent",     CAT_UNKNOWN)
   call tr_allocate(t_parent_elem,1,node_list%n_nodes,            "parent_elem",CAT_UNKNOWN)
   call tr_allocate(t_ref_lambda, 1,node_list%n_nodes,            "ref_lambda" ,CAT_UNKNOWN)
@@ -818,6 +948,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   call HDF5_array2D_reading_int (file_id,t_index,       'index')
   call HDF5_array1D_reading_int (file_id,t_boundary,    'boundary')
+  call HDF5_array1D_reading_char(file_id,t_axis_node,   'axis_node')
   call HDF5_array2D_reading_int (file_id,t_parents,     'parents')
   call HDF5_array1D_reading_int (file_id,t_parent_elem, 'parent_elem')
   call HDF5_array1D_reading     (file_id,t_ref_lambda,  'ref_lambda')
@@ -883,6 +1014,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
     node_list%node(i)%index = t_index(i,:)
     node_list%node(i)%boundary = t_boundary(i)
+    if (t_axis_node(i) == 'T') then
+       node_list%node(i)%axis_node = .true.
+    else
+       node_list%node(i)%axis_node = .false.
+    end if
     node_list%node(i)%parents = t_parents(i,:)
     node_list%node(i)%parent_elem = t_parent_elem(i)
     node_list%node(i)%ref_lambda = t_ref_lambda(i)
@@ -1090,7 +1226,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     flux_Pvn_t = 0.d0
     call HDF5_array1D_reading(file_id,flux_Pvn_t,'flux_Pvn_t')
 
-   if (allocated(dE_tot_dt)) call tr_deallocate(dE_tot_dt,"dE_tot_dt",CAT_UNKNOWN)
+    if (allocated(dE_tot_dt)) call tr_deallocate(dE_tot_dt,"dE_tot_dt",CAT_UNKNOWN)
     call tr_allocate(dE_tot_dt,1,index_start+nstep,"dE_tot_dt",CAT_UNKNOWN)
     dE_tot_dt = 0.d0
     call HDF5_array1D_reading(file_id,dE_tot_dt,'dE_tot_dt')
@@ -1164,6 +1300,51 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     call tr_allocate(mag_ener_src_tot,1,index_start+nstep,"mag_ener_src_tot",CAT_UNKNOWN)
     mag_ener_src_tot = 0.d0
     call HDF5_array1D_reading(file_id,mag_ener_src_tot,'mag_ener_src_tot')
+
+    if (allocated(part_flux_Dpar_t)) call tr_deallocate(part_flux_Dpar_t,"part_flux_Dpar_t",CAT_UNKNOWN)
+    call tr_allocate(part_flux_Dpar_t,1,index_start+nstep,"part_flux_Dpar_t",CAT_UNKNOWN)
+    part_flux_Dpar_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_flux_Dpar_t,'part_flux_Dpar_t')
+
+    if (allocated(part_flux_Dperp_t)) call tr_deallocate(part_flux_Dperp_t,"part_flux_Dperp_t",CAT_UNKNOWN)
+    call tr_allocate(part_flux_Dperp_t,1,index_start+nstep,"part_flux_Dperp_t",CAT_UNKNOWN)
+    part_flux_Dperp_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_flux_Dperp_t,'part_flux_Dperp_t')
+
+    if (allocated(part_flux_Vpar_t)) call tr_deallocate(part_flux_Vpar_t,"part_flux_Vpar_t",CAT_UNKNOWN)
+    call tr_allocate(part_flux_Vpar_t,1,index_start+nstep,"part_flux_Vpar_t",CAT_UNKNOWN)
+    part_flux_Vpar_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_flux_Vpar_t,'part_flux_Vpar_t')
+
+    if (allocated(part_flux_Vperp_t)) call tr_deallocate(part_flux_Vperp_t,"part_flux_Vperp_t",CAT_UNKNOWN)
+    call tr_allocate(part_flux_Vperp_t,1,index_start+nstep,"part_flux_Vperp_t",CAT_UNKNOWN)
+    part_flux_Vperp_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_flux_Vperp_t,'part_flux_Vperp_t')
+
+    if (allocated(npart_flux_t)) call tr_deallocate(npart_flux_t,"npart_flux_t",CAT_UNKNOWN)
+    call tr_allocate(npart_flux_t,1,index_start+nstep,"npart_flux_t",CAT_UNKNOWN)
+    npart_flux_t = 0.d0
+    call HDF5_array1D_reading(file_id,npart_flux_t,'npart_flux_t')
+
+    if (allocated(dpart_tot_dt)) call tr_deallocate(dpart_tot_dt,"dpart_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dpart_tot_dt,1,index_start+nstep,"dpart_tot_dt",CAT_UNKNOWN)
+    dpart_tot_dt = 0.d0
+    call HDF5_array1D_reading(file_id,dpart_tot_dt,'dpart_tot_dt')
+
+    if (allocated(dnpart_tot_dt)) call tr_deallocate(dnpart_tot_dt,"dnpart_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dnpart_tot_dt,1,index_start+nstep,"dnpart_tot_dt",CAT_UNKNOWN)
+    dnpart_tot_dt = 0.d0
+    call HDF5_array1D_reading(file_id,dnpart_tot_dt,'dnpart_tot_dt')
+
+    if (allocated(npart_tot_t)) call tr_deallocate(npart_tot_t,"npart_tot_t",CAT_UNKNOWN)
+    call tr_allocate(npart_tot_t,1,index_start+nstep,"npart_tot_t",CAT_UNKNOWN)
+    npart_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,npart_tot_t,'npart_tot_t')
+
+    if (allocated(density_tot_t)) call tr_deallocate(density_tot_t,"density_tot_t",CAT_UNKNOWN)
+    call tr_allocate(density_tot_t,1,index_start+nstep,"density_tot_t",CAT_UNKNOWN)
+    density_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,density_tot_t,'density_tot_t')
 
 #ifdef JECCD                   
     if (allocated(t_energies2))   call tr_deallocate(t_energies2,"t_energies2",CAT_UNKNOWN)
@@ -1376,6 +1557,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 #if (JOREK_MODEL == 400)
           node_list%node(i)%values(j,:,8)= amplitude * node_list%node(i)%values(1,:,8)
 #endif
+#if (JOREK_MODEL == 710)
+          node_list%node(i)%values(j,:,var_AR)= amplitude * node_list%node(i)%values(1,:,var_AR)
+          node_list%node(i)%values(j,:,var_AZ)= amplitude * node_list%node(i)%values(1,:,var_AZ)
+          node_list%node(i)%values(j,:,var_A3)= amplitude * node_list%node(i)%values(1,:,var_A3)
+#endif
           end if
         end do
       end do
@@ -1410,6 +1596,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
  
   call tr_deallocate(t_index,"index",CAT_UNKNOWN)
   call tr_deallocate(t_boundary,"boundary",CAT_UNKNOWN)
+  call tr_deallocate(t_axis_node,"axis_node",CAT_UNKNOWN)
   call tr_deallocate(t_parents,"parents",CAT_UNKNOWN)
   call tr_deallocate(t_parent_elem,"parent_elem",CAT_UNKNOWN)
   call tr_deallocate(t_ref_lambda,"ref_lambda",CAT_UNKNOWN)

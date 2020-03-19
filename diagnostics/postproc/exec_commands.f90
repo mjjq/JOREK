@@ -34,6 +34,7 @@ module exec_commands
   integer, parameter :: LOOP_S_MODE = 2 !< Mode started by 'for step' and ended by 'done' commands
   integer, parameter :: LOOP_T_MODE = 3 !< Mode started by 'for time' and ended by 'done' commands
   integer :: exec_mode = NORMAL_MODE    !< Current operation mode (NORMAL_MODE or LOOP_X_MODE)
+  integer :: loop_mode                  !< Current loop mode (LOOP_S_MODE oder LOOP_T_MODE)
   integer :: loop_min_step              !< Smallest timestep index of for loop
   integer :: loop_max_step              !< Largest timestep index of for loop
   integer :: loop_inc_step              !< Timestep index step width of for loop
@@ -123,8 +124,10 @@ module exec_commands
       end if
       
       select case ( trim(command%args(0)) )
-        case ( 'average' )
+        case ( 'average' )           
           call average(command, first_step, ierr)
+        case ( 'zeroD_quantities' )
+          call zeroD_quantities(command, first_step, ierr) 
         case ( 'average_h5' )
           call average_h5(command, first_step, ierr)
         case ( 'int2d' )
@@ -181,7 +184,7 @@ module exec_commands
           call point(command, first_step, ierr)
         case ( 'qprofile' )
           call qprofile(command, first_step, ierr)
-         case ( 'q_at_psin' )
+        case ( 'q_at_psin' )
           call q_at_given_psin(command, first_step, ierr)
         case ( 'separatrix' )
           call separatrix(command, ierr)
@@ -201,14 +204,14 @@ module exec_commands
       end select
       
     ! --- In loop mode, commands are queued and afterwards executed for each timestep separately
-    else if (( exec_mode == LOOP_S_MODE ) .or. ( exec_mode == LOOP_T_MODE )) then
+    else
       
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane', 'average', 'point',      &
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
           'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
           'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'rectangular_torus', 'energy_spectrum', 'average_h5', &
-          'I_halo_TPF', 'spi-state')
+          'I_halo_TPF', 'spi-state', 'zeroD_quantities')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -268,7 +271,6 @@ module exec_commands
     
     character(len=64) :: file_name
     logical           :: file_exists
-    integer           :: ifail
     
     ierr = 0
     
@@ -280,7 +282,6 @@ module exec_commands
     end if
     if ( .not. file_exists ) then
       ierr = 42
-      write(*,'(a,i5.5,a)') 'Restart file for step ', istep,' does not exist.'
       return
     end if
     
@@ -313,7 +314,7 @@ module exec_commands
   
   !> Is called at the start of a for loop.
   !!
-  !! It switches the module behaviour (exec_mode) to LOOP_MODE, i.e., all commands inside the for
+  !! It switches the module behaviour (exec_mode) to LOOP_X_MODE, i.e., all commands inside the for
   !! loop are not executed immediately but collected in a command queue. All commands of the
   !! command queue are executed for each time step after the 'done' command of the for loop
   !! has been entered.
@@ -493,21 +494,20 @@ module exec_commands
     integer, allocatable :: available_steps(:)
     
     ierr = 0
-    
+    loop_mode = exec_mode
+    exec_mode = NORMAL_MODE
+		
     if ( n_queued_commands == 0 ) then
       write(*,*) 'WARNING: No commands in for-loop.'
-      exec_mode = NORMAL_MODE
       return
     end if
     
     first_step = .true.
-    if ( exec_mode == LOOP_S_MODE ) then
-      exec_mode = NORMAL_MODE
+    if ( loop_mode == LOOP_S_MODE ) then
       do istep = loop_min_step, loop_max_step, loop_inc_step
-        write(*,*) istep
         call load_step(istep, load_error)
         if ( load_error /= 0 ) cycle
-      
+
         do jcmd = 1, n_queued_commands
         
           call exec_command(command_queue(jcmd), first_step, ierr)  
@@ -523,7 +523,6 @@ module exec_commands
         first_step = .false.
       end do
     else		
-      exec_mode = NORMAL_MODE
       write(*,*) '--------------------------------------------------'
       write(*,*) '   Selects restart files for choosen time points'
       write(*,*) '--------------------------------------------------'
@@ -624,7 +623,6 @@ module exec_commands
         first_step = .false.
       end do
     end if 
-
 
     do jcmd = 1, n_queued_commands
       call finalize_command(command_queue(jcmd), first_step, ierr)
@@ -969,9 +967,9 @@ module exec_commands
   character(len=64) function step_range_string(min_step, max_step)
 
     integer, intent(in) :: min_step, max_step
-    character(len=2)     :: prefix
+    character(len=2)    :: prefix
 
-    if ( exec_mode .eq. LOOP_S_MODE )  then 
+    if ( loop_mode .eq. LOOP_S_MODE )  then 
       prefix='_s'
     else
       prefix='_t'
@@ -1723,7 +1721,7 @@ module exec_commands
       write(i_file,'(a)') '#               time            I_halo [MA]             TPF'
     end if
     
-    call integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF)
+    call integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF, .true.)
  
     write(i_file,'(3es20.9)') time_now, I_halo, TPF 
     
@@ -1807,8 +1805,7 @@ module exec_commands
   !> Output 3d integrals.
   subroutine int3D(command, first_step, ierr)
     
-    use mod_integrals3D
-    use mpi_mod
+    use mod_integrals3D_nompi
 
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
@@ -1816,24 +1813,13 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer :: i_file, i, units, my_id
-    integer :: required, provided, StatInfo
+    integer :: i_file, i, units
     character(len=1024) :: filename, status, access
     real*8, allocatable :: res(:)
     character(len=23)   :: s
 
     ierr = 0
-    my_id=0
 
-    ! --- Initialize MPI
-#ifdef FUNNELED
-    required = MPI_THREAD_FUNNELED
-#else
-    required = MPI_THREAD_MULTIPLE
-#endif
-
-    if (first_step)  call MPI_Init_thread(required, provided, StatInfo)
-   
     ! --- Some checks
     call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);            if ( ierr /= 0 ) return
@@ -1867,7 +1853,7 @@ module exec_commands
     end if
     close(i_file)
  
-   call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)        
+   call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, expr_list, res, units)        
 
    call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
      filename=filename, append=.true., blanks=.false.)
@@ -2044,6 +2030,81 @@ module exec_commands
     
   end subroutine q_at_given_psin
   
+
+
+  
+
+  subroutine zeroD_quantities(command, first_step, ierr)
+
+    use mod_integrals3D_nompi
+
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: i_file, i, units
+    character(len=1024) :: filename, status, access
+    real*8, allocatable :: res(:)
+    character(len=23)   :: s
+    character(len=54)   :: desc
+
+    ierr = 0
+
+    ! --- Some checks
+    call check_step_imported(ierr);            if ( ierr /= 0 ) return
+    units = get_int_setting('units', ierr)
+
+    allocate(res(exprs_all_int%n_expr+1))
+    res = 0.d0   
+ 
+    write(filename,'(4a)') DIR, 'zeroD_quantities',  &
+       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    status = 'replace'
+    access = 'sequential'
+    if ( .not. first_step ) then
+      status = 'old'
+      access = 'append'
+    end if
+    i_file=1775
+
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)',advance='no') '# time                   '
+      do i = 1, exprs_all_int%n_expr
+        s = trim(exprs_all_int%expr(i)%name)
+        write(i_file,'(a)',advance='no') s
+      end do
+      write(i_file,'(a)')
+    end if
+    close(i_file)
+ 
+   call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, units)        
+
+   call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
+     filename=filename, append=.true., blanks=.false.)
+
+    i_file =1569    
+    open(i_file, file='0D_quantities_list.txt', form='formatted', status=trim(status), access=trim(access),  &
+        iostat=ierr)
+    
+    if ( first_step ) then
+      write(i_file,'(a)') 'Column |  Quantity                | Description'
+      write(i_file,'(a)') '-------------------------------------------------------------------------------------'
+      write(i_file,'(1I6,2a)') 1,' |  ' ,'Time                    | Time'
+      do i = 1, exprs_all_int%n_expr
+        s    = trim(exprs_all_int%expr(i)%name)
+        desc = trim(exprs_all_int%expr(i)%descr)
+        write(i_file,'(1I6,4a)') i+1,' |  ' ,s, ' | ', desc
+      end do
+    end if
+    close(i_file)
+ 
+  end subroutine zeroD_quantities 
   
   
 

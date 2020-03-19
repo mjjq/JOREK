@@ -16,7 +16,6 @@ module phys_module
   real*8  :: visco_rst            !< visco value from restart file
   real*8  :: visco_par_rst        !< visco_par value from restart file
   real*8  :: eta_rst              !< eta value from restart file
-  real*8  :: visco2               !< Second coefficient of viscosity
   logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
   real*8  :: visco_par            !< Parallel viscosity (normalized)
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
@@ -36,6 +35,7 @@ module phys_module
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
+  real*8  :: SDN_threshold        !< threshold, in absolute psi, for a symmetric-double-null grid construction
   integer :: rst_format           !< 0 == old format, 1 == new format for restart file
   logical :: restart              !< Restart a code run from the restart file jorek_restart.h5?
   logical :: regrid               !< Re-generate the flux-aligned grid (does not work currently)?
@@ -45,16 +45,21 @@ module phys_module
   real*8  :: minRad               !< Approximation of minor radius for bootstrap current calculation
   logical :: refinement           !< Use mesh refinement? (not presently available)
   logical :: force_central_node   !< Force all nodes in the center to have the same values in flux aligned grids or independent values?
+  logical :: fix_axis_nodes       !< Fix t-derivative and cross st-derivative on axis to avoid noise
   logical :: bc_natural_flux      !< boundary conditions for flux surface boundaries (2 and 3)
   logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines
   logical :: produce_live_data    !< Write data 'macroscopic_vars.dat' during the code run allowing to use plot_live_data.sh?
   logical :: grid_to_wall         !< extend the grid to a physical wall
+  logical :: RZ_grid_inside_wall  !< build the rectangular grid inside first wall
   logical :: adaptive_time        !< (presently not useful)
   logical :: equil                !< compute equilibrium
+  logical :: parallel_projection  !< Full-MHD: use B-projection instead of Phi-projection for 3rd Mom.equation (on Up)
+  logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
   logical :: bench_without_plot   !< if .true., do not produce certain output plots (e.g., for benchmarking)
   logical :: gmres                !< Use iterative GMRES solver
   integer :: gmres_max_iter       !< Maximum number of GMRES iterations
-  logical :: linear_run           !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
+  logical :: keep_n0_const        !< Perform a linear run where the equilibrium quantities (i_tor=1) do not change with time?
+  logical :: linear_run           !< Same as keep_n0_const, to be replaced soon by true linear run where modes are independent
   logical :: export_for_nemec     !< Export equilibrium information for the NEMEC code?
   logical :: use_murge            !< (Deprecated, Cannot be used any more)
   logical :: use_murge_element    !< (Deprecated, Cannot be used any more)
@@ -63,6 +68,10 @@ module phys_module
   logical :: just_in_time_BLR     !< Use Just-in-time strategy for BLR compression (speed optimized)
   logical :: pastix_blr_abs_tol   !< Use absolute tolerance for BLR
   logical :: write_ps             !< Write postscript file at the end of the run
+  logical :: use_mumps            !< Use Mumps solver
+  logical :: use_pastix           !< Use Pastix solver
+  logical :: use_strumpack        !< Use Strumpack solver
+  logical :: use_wsmp             !< Use WSMP solver
 
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"
@@ -83,6 +92,18 @@ module phys_module
   real*8  :: Z_limiter(max_limiter)        !< Z-positions of the limiter points
   integer :: first_target_point		   !< index of the first target point on the limiter (for xpoint_grid_wall)
   integer :: last_target_point		   !< index of the last  target point on the limiter (does NOT need to be > first_target_point)
+  
+  !> Points used as blocks to extend grid into complex wall structures
+  integer, parameter :: n_wall_blocks_max = 30                                  !< Maximum number of blocks (30 should be enough)
+  integer :: n_wall_blocks                                                      !< Number of blocks
+  integer, parameter :: n_wall_block_points_max = 20                            !< Max number of blocks points
+  integer :: n_ext_block(n_wall_blocks_max)                                     !< Number of 'radial' grid points from the outermost flux surface to wall)
+  integer :: n_block_points_left (n_wall_blocks_max)                            !< Number of points on left side of block
+  real*8  :: R_block_points_left (n_wall_blocks_max,n_wall_block_points_max)    !< R-positions of points on left side of block
+  real*8  :: Z_block_points_left (n_wall_blocks_max,n_wall_block_points_max)    !< Z-positions of points on left side of block
+  integer :: n_block_points_right(n_wall_blocks_max)                            !< Number of points on left side of block
+  real*8  :: R_block_points_right(n_wall_blocks_max,n_wall_block_points_max)    !< R-positions of points on left side of block
+  real*8  :: Z_block_points_right(n_wall_blocks_max,n_wall_block_points_max)    !< Z-positions of points on left side of block
   
   !> @name Define X-point geometry by geometrical properties
   !!
@@ -325,9 +346,12 @@ module phys_module
   integer :: n_inner           !< Number of 'radial' grid points in the open flux region on the inner side (HFS) if double-null
   integer :: n_private         !< Number of 'radial' grid points in the private flux region at the bottom
   integer :: n_leg             !< Number of 'poloidal' grid points along the divertor legs at the bottom
+  integer :: n_leg_out         !< Number of 'poloidal' grid points along the divertor legs at the bottom on the LFS
   integer :: n_up_priv         !< Number of 'radial' grid points in the private flux region at the top (upper Xpoint or double-null)
   integer :: n_up_leg          !< Number of 'poloidal' grid points along the divertor legs at the top (upper Xpoint or double-null)
+  integer :: n_up_leg_out      !< Number of 'poloidal' grid points along the divertor legs on the top on the LFS (upper Xpoint or double-null)
   integer :: n_ext             !< Number of 'radial' grid points from the outermost flux surface to wall)
+  logical :: n_tht_equidistant !< switch on to get an equidistant poloidal distribution of elements in the core of the grid (psi<0.5)
   real*8  :: SIG_closed        !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_open          !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_outer         !< Width with grid accumulation (for flux-aligned grid)
@@ -518,14 +542,16 @@ module phys_module
   
   !> @name Global quantities determined in each time step
   real*8, allocatable :: R_axis_t(:), Z_axis_t(:), psi_axis_t(:), current_t(:), beta_p_t(:),       &
-    beta_t_t(:), beta_n_t(:), density_in_t(:), density_out_t(:), pressure_in_t(:),                 &
+    beta_t_t(:), beta_n_t(:), density_in_t(:), density_out_t(:), pressure_in_t(:), &
     pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:),   &
     E_tot_t(:), Helicity_tot_t(:), Kin_perp_tot_t(:), thermal_tot_t(:), kin_par_tot_t(:), ohmic_tot_t(:),      &
     Wmag_tot_t(:), Ip_tot_t(:), flux_Pvn_t(:), flux_qpar_t(:), dE_tot_dt(:), flux_qperp_t(:), flux_kinpar_t(:), &
     dWmag_tot_dt(:), dthermal_tot_dt(:), dkinpar_tot_dt(:), dkinperp_tot_dt(:),                      &
     Magwork_tot_t(:), thmwork_tot_t(:), viscopar_dissip_tot_t(:), viscopar_flux_t(:), li3_t(:),      &
-    li3_tot_t(:), part_src_tot_t(:), heat_src_tot_t(:), volume_t(:), area_t(:), mag_ener_src_tot(:) 
-  
+    li3_tot_t(:), part_src_tot_t(:), heat_src_tot_t(:), volume_t(:), area_t(:), mag_ener_src_tot(:), &
+    dpart_tot_dt(:), part_flux_Dpar_t(:), part_flux_Dperp_t(:), part_flux_vpar_t(:), part_flux_vperp_t(:), & 
+    dnpart_tot_dt(:), npart_tot_t(:), npart_flux_t(:), density_tot_t(:)
+
   !> @name gmres parameters
   integer             :: iter_precon    !< whenever the number of gmres iterations exceeds iter_precon, the preconditioning matrix is updated
   integer             :: gmres_m        !< gmres restart parameter (dimension)

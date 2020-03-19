@@ -4,7 +4,7 @@ subroutine update_values(my_id,element_list,node_list,RHS)
 !-----------------------------------------------------------------------
 
 use data_structure
-use phys_module, only: linear_run
+use phys_module, only: keep_n0_const
 use mod_basisfunctions
 
 implicit none
@@ -27,7 +27,7 @@ integer :: index_elm,l,i_tor,ivar
 integer :: i, j, k, in, index_node, index, i_tor_min
 
 i_tor_min = 1
-if ( linear_run ) i_tor_min = 2 ! Keep equilibrium unchanged during the run
+if ( keep_n0_const ) i_tor_min = 2 ! Keep equilibrium unchanged during the run
 
 if (my_id .eq. 0) then
 
@@ -38,7 +38,7 @@ if (my_id .eq. 0) then
       index_node = node_list%node(i)%index(j)
 
 #ifdef JECCD
-! the n=0 component of eccd current should never be frozen when linear_run=true
+! the n=0 component of eccd current should never be frozen when keep_n0_const=true
       do k=1,n_var-1
         do in=i_tor_min,n_tor
           index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
@@ -96,7 +96,7 @@ if (my_id .eq. 0) then
 	     h_w =h_u*h_v 
 
 #ifdef JECCD
-! the n=0 component of eccd current should never be frozen when linear_run=true
+! the n=0 component of eccd current should never be frozen when keep_n0_const=true
 ! this bit of code separates out that final equation.
 ! update values and deltas for first n_var-1 variables normally
    do ivar=1,n_var-1

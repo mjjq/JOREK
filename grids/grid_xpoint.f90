@@ -10,7 +10,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
-use phys_module, only: force_central_node, write_ps
+use phys_module, only: force_central_node, write_ps, fix_axis_nodes
 
 implicit none
 
@@ -29,7 +29,7 @@ type (type_element_list), pointer :: newelement_list
 
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
-real*8              :: s_find(8), t_find(8), tht_x, theta, delta, ss, tmp1, tmp2
+real*8              :: s_find(8), t_find(8), st_find(8), tht_x, theta, delta, ss, tmp1, tmp2
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
@@ -51,6 +51,8 @@ real*8              :: angle_L1, angle_L8, angle_L9, rr1, ss1
 logical             :: xpoint
 real*8,external     :: root
 character*4         :: label
+integer             :: i_elm1, i_vertex1, i_node1, i_node_save
+integer             :: i_elm2, i_vertex2, i_node2
 
 xpoint = .true.
 my_id  = 0
@@ -347,7 +349,7 @@ do j=1,n_tht_2
       Z_max(j) = Z_sep(j) + (ZL9 - Z_xpoint(1)) * ((Z_sep(j) - Z_axis)/(Z_xpoint(1) - Z_axis))**2
     endif
     
-    call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(j),i_elm_find,s_find,t_find,i_find)
+    call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)
 
     call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),RRg1,ZZg1)
 
@@ -408,7 +410,7 @@ do j=1,n_leg_2
 
   R_min(n_tht_2 + j) = RL2 + (RL5-RL2) * s_tmp(j)
 
-  call find_R_surface(node_list,element_list,flux_list,n_psi_2-1,R_min(n_tht_2+j),i_elm_find,s_find,t_find,i_find)
+  call find_R_surface(node_list,element_list,flux_list,n_psi_2-1,R_min(n_tht_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 
@@ -426,7 +428,7 @@ do j=1,n_leg_2
 
   R_min(n_tht_2 + n_leg_2 + j) = RL3 + (RL5-RL3) * s_tmp(j)
 
-  call find_R_surface(node_list,element_list,flux_list,n_psi_2-1,R_min(n_tht_2+n_leg_2+j),i_elm_find,s_find,t_find,i_find)
+  call find_R_surface(node_list,element_list,flux_list,n_psi_2-1,R_min(n_tht_2+n_leg_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 
@@ -445,7 +447,7 @@ do j=1,n_leg_2
 
   Z_max(n_tht_2 + j) = ZL1 + (Z_max(n_tht_2) -ZL1) * s_tmp(j)
 
-  call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(n_tht_2+j),i_elm_find,s_find,t_find,i_find)
+  call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(n_tht_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 
@@ -464,7 +466,7 @@ do j=1,n_leg_2
 
   Z_max(n_tht_2 + n_leg_2 + j) = ZL4 + (Z_max(1) - ZL4) * s_tmp(j)
 
-  call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(n_tht_2+n_leg_2+j),i_elm_find,s_find,t_find,i_find)
+  call find_Z_surface(node_list,element_list,flux_list,i_max,Z_max(n_tht_2+n_leg_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 
@@ -483,7 +485,7 @@ R_max(n_tht_2+2*n_leg_2) = R_max(1)   ! this one is known
 do j=1,n_leg_2                        ! inside leg
 
   R_sep(n_tht_2 + j) = RL6 + (R_xpoint(1) - RL6) * s_tmp(j)
-  call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht_2+j),i_elm_find,s_find,t_find,i_find)
+  call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 
@@ -502,7 +504,7 @@ do j=1,n_leg_2
 
   R_sep(n_tht_2 + n_leg_2 + j) = RL7 + (R_xpoint(1) - RL7) * s_tmp(j)
 
-  call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht_2+n_leg_2+j),i_elm_find,s_find,t_find,i_find)
+  call find_R_surface(node_list,element_list,flux_list,i_sep,R_sep(n_tht_2+n_leg_2+j),i_elm_find,s_find,t_find,st_find,i_find)
 
   do i=1,i_find
 
@@ -675,7 +677,7 @@ do i=1,n_flux_2+n_open_2
                    Z_polar(k,4,j), 3.d0/2.d0 *(Z_polar(k,4,j)-Z_polar(k,3,j)) /)
 
       call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-                       RR_new(i+1,j),ZZ_new(i+1,j),ielm_flux(i+1,j),s_flux(i+1,j),t_flux(i+1,j),t_tht(i+1,j),ifail)
+                       RR_new(i+1,j),ZZ_new(i+1,j),ielm_flux(i+1,j),s_flux(i+1,j),t_flux(i+1,j),t_tht(i+1,j),ifail,.false.)
 
 
       if (ifail .eq. 0) then
@@ -706,7 +708,7 @@ do i=n_flux_2,n_flux_2+n_open_2+n_private_2
                    Z_polar(k,4,j), 3.d0/2.d0 *(Z_polar(k,4,j)-Z_polar(k,3,j)) /)
 
       call find_crossing(node_list,element_list,flux_list,i,R_cub1d,Z_cub1d, &
-                         RR_new(i+1,j),ZZ_new(i+1,j),ielm_flux(i+1,j),s_flux(i+1,j),t_flux(i+1,j),t_tht(i+1,j),ifail)
+                         RR_new(i+1,j),ZZ_new(i+1,j),ielm_flux(i+1,j),s_flux(i+1,j),t_flux(i+1,j),t_tht(i+1,j),ifail,.false.)
 
       if (ifail .eq. 0) then
         call interp(node_list,element_list,ielm_flux(i+1,j),1,1,s_flux(i+1,j),t_flux(i+1,j),&
@@ -1367,6 +1369,10 @@ enddo
 
 index = 0
 do i=1,newnode_list%n_nodes
+
+  newnode_list%node(i)%axis_node = .false.
+  if ( fix_axis_nodes .and. (i .le. n_tht) ) newnode_list%node(i)%axis_node = .true.
+
   do k=1,n_order+1
 
     index = index + 1
@@ -1408,6 +1414,18 @@ do i=1,newnode_list%n_nodes
   
   newnode_list%node(i)%constrained = .false.
 enddo
+
+if (fix_axis_nodes) then
+  do k=1, newelement_list%n_elements
+    do iv=1,4
+      j = newelement_list%element(k)%vertex(iv)
+      if (newnode_list%node(j)%axis_node) then
+        newelement_list%element(k)%size(iv,3) = 0.d0
+        newelement_list%element(k)%size(iv,4) = 0.d0
+      endif
+    enddo
+  enddo
+endif
 
 do i=1,newnode_list%n_nodes
 

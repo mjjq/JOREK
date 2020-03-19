@@ -5,7 +5,6 @@ module wsmp_module
   implicit none
   
   private
-  public use_wsmp
   public PWGSMP__allocate, PWGSMP__deallocate, PWGSMP__initialize_matrix,                          &
     PWGSMP__initialize_solver, PWGSMP__LU_factorization, PWGSMP__back_substitution
   
@@ -32,7 +31,6 @@ module wsmp_module
   end type PWGSMP_STRUCT
   
   type(PWGSMP_STRUCT)    :: PWGSMP__matrix  !< WSMP data structure
-  logical                :: use_wsmp        !< JOREK namelist input parameter
   integer                :: ierr            !< Error code
   
   

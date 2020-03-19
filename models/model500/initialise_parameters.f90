@@ -3,12 +3,11 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, &
+use mumps_module,  only: no_zeros_mumps, mumps_ordering
+use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
 use vacuum
 use pellet_module
-use wsmp_module,   only: use_wsmp
 
 implicit none
 
@@ -26,8 +25,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta, visco, visco_par,                              &
                 restart, rst_format, regrid, bootstrap, write_ps,   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open, n_private, n_leg, n_ext,                    &
-                n_outer, n_inner, n_up_priv, n_up_leg,              &
+                n_open, n_private, n_leg, n_leg_out, n_ext,         &
+                n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
+                n_tht_equidistant,                                  &
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
@@ -38,8 +38,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                n_pfc, tokamak_device,                              &
+                n_pfc,                                              &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
+                grid_to_wall, RZ_grid_inside_wall,                  &
+                n_wall_blocks, n_ext_block,                         &
+                n_block_points_left,  n_block_points_right,         &
+                R_block_points_left,  R_block_points_right,         &
+                Z_block_points_left,  Z_block_points_right,         &
+                tokamak_device,                                     &
                 F0, gamma_sheath, density_reflection,               &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
@@ -57,7 +63,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pellet_particles, use_pellet,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                xcase, D_perp_file, ZK_perp_file,                   &
+                xcase, SDN_threshold, D_perp_file, ZK_perp_file,    &
                 rho_file, T_file, ffprime_file,                     &
                 freeboundary_equil, freeboundary,  freeb_change_indices, &
                 resistive_wall,                                     &
@@ -66,9 +72,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_mumps, mumps_ordering,                          &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
-                n_tor_fft_thresh,                                   &
+                n_tor_fft_thresh, use_strumpack,                    &
                 pastix_smp_only, refinement, force_central_node,    &
-                grid_to_wall,                                       &
+                fix_axis_nodes,                                     &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
@@ -83,7 +89,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
                 tgnum,  pastix_pivot,                               &
-                linear_run, export_for_nemec,                       &
+                keep_n0_const, linear_run, export_for_nemec,        &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
@@ -302,10 +308,37 @@ if (my_id .eq. 0) then
   if (allocated(mag_ener_src_tot)) call tr_deallocate(mag_ener_src_tot,"mag_ener_src_tot",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(mag_ener_src_tot,1,index_start+nstep,"mag_ener_src_tot",CAT_UNKNOWN)
 
+  if (allocated(npart_tot_t)) call tr_deallocate(npart_tot_t,"npart_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(npart_tot_t,1,index_start+nstep,"npart_tot_t",CAT_UNKNOWN)
+
+  if (allocated(dnpart_tot_dt)) call tr_deallocate(dnpart_tot_dt,"dnpart_tot_dt",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(dnpart_tot_dt,1,index_start+nstep,"dnpart_tot_dt",CAT_UNKNOWN)
+
+  if (allocated(density_tot_t)) call tr_deallocate(density_tot_t,"density_tot_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(density_tot_t,1,index_start+nstep,"density_tot_t",CAT_UNKNOWN)
+
+  if (allocated(part_flux_Dpar_t)) call tr_deallocate(part_flux_Dpar_t,"part_flux_Dpar_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(part_flux_Dpar_t,1,index_start+nstep,"part_flux_Dpar_t",CAT_UNKNOWN)
+
+  if (allocated(part_flux_Dperp_t)) call tr_deallocate(part_flux_Dperp_t,"part_flux_Dperp_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(part_flux_Dperp_t,1,index_start+nstep,"part_flux_Dperp_t",CAT_UNKNOWN)
+  
+  if (allocated(part_flux_vpar_t)) call tr_deallocate(part_flux_vpar_t,"part_flux_vpar_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(part_flux_vpar_t,1,index_start+nstep,"part_flux_vpar_t",CAT_UNKNOWN)
+
+  if (allocated(part_flux_vperp_t)) call tr_deallocate(part_flux_vperp_t,"part_flux_vperp_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(part_flux_vperp_t,1,index_start+nstep,"part_flux_vperp_t",CAT_UNKNOWN)
+
+  if (allocated(npart_flux_t)) call tr_deallocate(npart_flux_t,"npart_flux_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(npart_flux_t,1,index_start+nstep,"npart_flux_t",CAT_UNKNOWN)
+
+  if (allocated(dpart_tot_dt)) call tr_deallocate(dpart_tot_dt,"dpart_tot_dt",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(dpart_tot_dt,1,index_start+nstep,"dpart_tot_dt",CAT_UNKNOWN)
 
 endif
 
 
+keep_n0_const  = ( keep_n0_const .or. linear_run )
 ! --- Read numerical profiles for rho, T, and ff'.
 call read_num_profiles(my_id)
 

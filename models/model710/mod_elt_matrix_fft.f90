@@ -56,10 +56,6 @@ complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
 real*8     :: TG_NUM_Eq, CoefAdv=0.0, rho_min = 0.005
 real*8     :: Coef_DivV
-real*8     :: Fprof,dF_dpsi,dF_dz
-real*8     :: dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz
-real*8     :: zFFprime    ,dFFprime_dpsi,dFFprime_dz
-real*8     :: dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz
 
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t, x_ss, x_st, x_tt
@@ -93,6 +89,7 @@ real*8     :: rho, rho_R, rho_Z, rho_p, rho_s, rho_t
 real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p
 real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ
 
+real*8     :: Fprof
 real*8     :: BR0, BR0_AR,    BR0_AZ__n, BR0_A3
 real*8     :: BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3
 real*8     :: Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3
@@ -415,14 +412,6 @@ do i=1,n_vertex_max
         R = x_g(ms,mt)
         Z = y_g(ms,mt)
 
-        ! --- The F-profile
-        call F_profile(xpoint2, xcase2, Z, Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd, &
-                       Fprof,dF_dpsi,dF_dz, &
-                       dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz , &
-                       zFFprime    ,dFFprime_dpsi,dFFprime_dz, &
-                       dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
-
-
 #if _OPENMP >= 201511
 !!!#if 1 >= 2
 ! Variables that are part of the PRIVATE clause are uninitialized at the beginnig of the
@@ -450,6 +439,7 @@ do i=1,n_vertex_max
 !$OMP  rho, rho_R, rho_Z, rho_p, rho_s, rho_t, &
 !$OMP  v,  v_R,  v_Z,  v_s,  v_t,  v_p, &
 !$OMP  bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ, &
+!$OMP  Fprof, &
 !$OMP  BR0, BR0_AR,    BR0_AZ__n, BR0_A3, &
 !$OMP  BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3, &
 !$OMP  Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3, &
@@ -695,6 +685,7 @@ do i=1,n_vertex_max
           endif
 
           ! --- Magnetic field
+          Fprof = Fprofile(ms,mt)
           BR0 = ( A30_Z - AZ0_p )/ R
           BZ0 = ( AR0_p - A30_R )/ R
           Bp0 = ( AZ0_R - AR0_Z )    + Fprof / R

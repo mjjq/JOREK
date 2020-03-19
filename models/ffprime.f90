@@ -6,6 +6,7 @@ recursive subroutine FFprime(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,FFpr
 !-----------------------------------------------------------------------
 use phys_module
 use vacuum, only: current_FB_fact
+use mod_F_profile
 
 implicit none
 

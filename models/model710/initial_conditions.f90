@@ -8,6 +8,7 @@ use phys_module
 use mod_poiss
 use equil_info
 use mod_interp, only: interp
+use mod_F_profile
 
 implicit none
 

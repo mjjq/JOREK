@@ -1,3 +1,8 @@
+module mod_F_profile
+
+contains
+
+
 subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
                      F_prof,dF_dpsi,dF_dz, dF_dpsi2,dF_dz2,dF_dpsi_dz, &
                      FFprime_prof,dFF_dpsi,dFF_dz, dFF_dpsi2,dFF_dz2,dFF_dpsi_dz)
@@ -269,7 +274,7 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
   FFprime_prof = FFprime_prof + FF_1
 
   return
-end
+end subroutine F_profile
 
 
 
@@ -287,7 +292,7 @@ subroutine integrate_F_profile()
   real*8  :: myFF_0, myFF_1, myFF_coef(9)
   real*8  :: no_delta_psi, delta_psi
   real*8  :: integral, integrand, dx, step, step_min, step_max, psi
-  real*8  :: FFprime, FFprime_prev, FFprime_mid, ffprime_internal
+  real*8  :: FFprime, FFprime_prev, FFprime_mid
   real*8  :: psi_edge, F_edge, psi_star, psi_mid, psi_prev
   real*8  :: diff, reference, quad_tol_min, quad_tol_max
   real*8  :: psi_axis_fake, psi_bnd_fake
@@ -327,14 +332,14 @@ subroutine integrate_F_profile()
 
   ! --- We need an idea of the amplitude of the FFprime (for the adaptive int-step)
   psi = 0.0
-  FFprime      = ffprime_internal(psi)
-  FFprime_prev = ffprime_internal(psi_edge)
+  call  ffprime_internal(psi, FFprime)
+  call  ffprime_internal(psi_edge, FFprime_prev)
   reference = abs(FFprime - FFprime_prev)
   reference = max(reference, 1.d-3)
 
   ! --- Compute initial FFprime
   psi  = 0.d0
-  FFprime_prev = ffprime_internal(psi)
+  call ffprime_internal(psi, FFprime_prev)
   
   ! --- We start the integral at the plasma core, where F should be close to F0
   ! --- Note: we correct the F-profile integration constant at the end, this starting point really doesn't matter...
@@ -379,8 +384,8 @@ subroutine integrate_F_profile()
     psi_mid = psi - 0.5*step
     
     ! --- FFprime at this psi and at mid-point
-    FFprime     = ffprime_internal(psi)
-    FFprime_mid = ffprime_internal(psi_mid)
+    call  ffprime_internal(psi, FFprime)
+    call  ffprime_internal(psi_mid, FFprime_mid)
     
     ! --- Check error from straight line
     if (psi .lt. psi_edge) then
@@ -525,11 +530,14 @@ end subroutine check_F_profile_accuracy
 
 ! --- This is just a copy from FFprime, without all the derivatives.
 ! --- We cannot call FFprime directly because in model710 it is just a wrapper of F_profile...
-real*8 function ffprime_internal(psi_n)
+subroutine ffprime_internal(psi_n, ffprime_out)
 
   implicit none
 
-  real*8  :: psi_n, psi
+  real*8, intent(in)  :: psi_n
+  real*8, intent(out) :: ffprime_out
+
+  real*8  :: psi
   real*8  :: ff1,ff2,ff3,ff4,ff5,ff6
   real*8  :: Z_fake, Z_xpoint_fake(2)
   real*8  :: psi_axis_fake, psi_bnd_fake
@@ -541,7 +549,12 @@ real*8 function ffprime_internal(psi_n)
   psi = psi_n
 
   call FFprime(.false.,0,Z_fake,Z_xpoint_fake,psi,psi_axis_fake, psi_bnd_fake, ff1,ff2,ff3,ff4,ff5,ff6, .false.)
-  ffprime_internal = ff1
+  ffprime_out = ff1
   
 
-end function ffprime_internal
+end subroutine ffprime_internal
+
+
+
+
+end module mod_F_profile

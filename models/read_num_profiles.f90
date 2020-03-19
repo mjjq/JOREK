@@ -3,6 +3,7 @@ subroutine read_num_profiles(my_id)
   
   use phys_module
   use profiles, only: readProf, readProfNeo, derivProf
+  use mod_F_profile
   
   implicit none
   

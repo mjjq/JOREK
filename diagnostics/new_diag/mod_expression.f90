@@ -138,6 +138,9 @@ module mod_expression
     call add(exprs_all, 'B_R         ', 'Magnetic Field Component Along R                      ')
     call add(exprs_all, 'B_Z         ', 'Vertical Magnetic Field Component                     ')
     call add(exprs_all, 'B_theta     ', 'Poloidal Magnetic Field Component                     ')
+    call add(exprs_all, 'A_R         ', 'Radial Component of Magnetic Vector Potential         ')
+    call add(exprs_all, 'A_Z         ', 'Vertical Component of Magnetic Vector Potential       ')
+    call add(exprs_all, 'A_3         ', 'Tor. Comp. of Magn. Vect. Pot. Multipled by R (==Psi) ')
     call add(exprs_all, 'Er          ', 'Radial Electric Field                                 ')
     call add(exprs_all, 'Vtheta_i    ', 'Ion Poloidal Velocity                                 ')
     call add(exprs_all, 'Mach_par    ', 'Parallel Mach Number                                  ')
@@ -522,12 +525,15 @@ module mod_expression
       u0_tt, u0_st, u0_p, u0_pp, zj0, zj0_s, zj0_t, zj0_ss, zj0_tt, zj0_st, zj0_p, zj0_pp, w0,     &
       w0_s, w0_t, w0_ss, w0_tt, w0_st, w0_p, w0_pp, r0, r0_s, r0_t, r0_ss, r0_tt, r0_st, r0_p,     &
       r0_pp, T0, T0_s, T0_t, T0_ss, T0_tt, T0_st, T0_p, T0_pp, Vpar0, Vpar0_s, Vpar0_t, Vpar0_ss,  &
-      Vpar0_tt, Vpar0_st, Vpar0_p, Vpar0_pp, psi_norm
+      Vpar0_tt, Vpar0_st, Vpar0_p, Vpar0_pp, psi_norm, AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp,   &
+      AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, A30, A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st,  &
+      Fprofile
     real*8  :: ps0_R, ps0_Z, ps0_RR, ps0_ZZ, ps0_RZ, u0_R, u0_Z, u0_RR, u0_ZZ, u0_RZ, vv2, zj0_R,  &
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z, Btheta, psi_abs, E_par, E_crit, E_dreicer
+      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z, Btheta, psi_abs, E_par, E_crit, E_dreicer, AR0_R, &
+      AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
@@ -651,6 +657,9 @@ module mod_expression
           Ti0   = 0.d0; Ti0_s   = 0.d0; Ti0_t   = 0.d0; Ti0_ss   = 0.d0; Ti0_tt   = 0.d0; Ti0_st   = 0.d0; Ti0_p   = 0.d0; Ti0_pp   = 0.d0
           Te0   = 0.d0; Te0_s   = 0.d0; Te0_t   = 0.d0; Te0_ss   = 0.d0; Te0_tt   = 0.d0; Te0_st   = 0.d0; Te0_p   = 0.d0; Te0_pp   = 0.d0
           Vpar0 = 0.d0; Vpar0_s = 0.d0; Vpar0_t = 0.d0; Vpar0_ss = 0.d0; Vpar0_tt = 0.d0; Vpar0_st = 0.d0; Vpar0_p = 0.d0; Vpar0_pp = 0.d0
+	  AR0   = 0.d0; AR0_s   = 0.d0; AR0_t   = 0.d0;                                                    AR0_p   = 0.d0;                 AR0_sp   = 0.d0; AR0_tp   = 0.d0
+	  AZ0   = 0.d0; AZ0_s   = 0.d0; AZ0_t   = 0.d0;                                                    AZ0_p   = 0.d0;                 AZ0_sp   = 0.d0; AZ0_tp   = 0.d0
+	  A30   = 0.d0; A30_s   = 0.d0; A30_t   = 0.d0; A30_ss   = 0.d0; A30_tt   = 0.d0; A30_st   = 0.d0; A30_p   = 0.d0
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
 #if JOREK_MODEL == 500
           rn0 = 0.d0
@@ -662,6 +671,7 @@ module mod_expression
           rn0_p = 0.0
           rn0_pp = 0.0
 #endif
+          Fprofile = 0.d0
           
           ! --- Reconstruct variables
           do i = 1, n_vertex_max
@@ -674,6 +684,10 @@ module mod_expression
               hh_ss = H_ss(i,j)
               hh_tt = H_tt(i,j)
               hh_st = H_st(i,j)
+	      
+#ifdef fullmhd
+              Fprofile = Fprofile + nodes(i)%Fprof_eq(j) * sz * hh  
+#endif
               
               do i_tor = 1, n_tor
                 
@@ -785,6 +799,31 @@ module mod_expression
                 rn0_p     = rn0_p     + vv(var_rn) * sz * hh    * hhz_p
                 rn0_pp    = rn0_pp    + vv(var_rn) * sz * hh    * hhz_pp
 #endif
+
+                ! --- AR
+                AR0      = AR0      + vv(var_AR) * sz * hh    * hhz
+		AR0_p    = AR0_p    + vv(var_AR) * sz * hh    * hhz_p
+                AR0_s    = AR0_s    + vv(var_AR) * sz * hh_s  * hhz
+                AR0_t    = AR0_t    + vv(var_AR) * sz * hh_t  * hhz
+		AR0_sp   = AR0_sp   + vv(var_AR) * sz * hh_s  * hhz_p
+                AR0_tp   = AR0_tp   + vv(var_AR) * sz * hh_t  * hhz_p
+
+                ! --- AZ
+                AZ0      = AZ0      + vv(var_AZ) * sz * hh    * hhz
+                AZ0_p    = AZ0_p    + vv(var_AZ) * sz * hh    * hhz_p
+                AZ0_s    = AZ0_s    + vv(var_AZ) * sz * hh_s  * hhz
+                AZ0_t    = AZ0_t    + vv(var_AZ) * sz * hh_t  * hhz
+                AZ0_sp   = AZ0_sp   + vv(var_AZ) * sz * hh_s  * hhz_p
+                AZ0_tp   = AZ0_tp   + vv(var_AZ) * sz * hh_t  * hhz_p
+		
+                ! --- A3
+                A30      = A30      + vv(var_A3) * sz * hh    * hhz
+                A30_p    = A30_p    + vv(var_A3) * sz * hh    * hhz_p
+                A30_s    = A30_s    + vv(var_A3) * sz * hh_s  * hhz
+                A30_t    = A30_t    + vv(var_A3) * sz * hh_t  * hhz
+		A30_ss   = A30_ss   + vv(var_A3) * sz * hh_ss * hhz
+		A30_tt   = A30_tt   + vv(var_A3) * sz * hh_tt * hhz
+		A30_st   = A30_st   + vv(var_A3) * sz * hh_st * hhz
 
                 ! --- Deltas
                 do k = 1, n_var
@@ -974,6 +1013,24 @@ module mod_expression
           !delta_ps_R = (   Z_t * delta_s(1) - Z_s * delta_t(1) ) / xjac
           !delta_ps_Z = ( - R_t * delta_s(1) + R_s * delta_t(1) ) / xjac
           
+	  AR0_R = (   Z_t * AR0_s  - Z_s * AR0_t ) / xjac
+          AR0_Z = ( - R_t * AR0_s  + R_s * AR0_t ) / xjac
+	  AZ0_R = (   Z_t * AZ0_s  - Z_s * AZ0_t ) / xjac
+          AZ0_Z = ( - R_t * AZ0_s  + R_s * AZ0_t ) / xjac
+	  A30_R = (   Z_t * A30_s  - Z_s * A30_t ) / xjac
+          A30_Z = ( - R_t * A30_s  + R_s * A30_t ) / xjac
+	  
+	  AR0_Rp = (   Z_t * AR0_sp  - Z_s * AR0_tp ) / xjac
+	  AZ0_Zp = ( - R_t * AZ0_sp  + R_s * AZ0_tp ) / xjac 
+	  A30_RR   = (A30_ss * Z_t**2 - 2.d0*A30_st * Z_s*Z_t + A30_tt * Z_s**2  &
+                      + A30_s * (Z_st*Z_t - Z_tt*Z_s )                           &
+                      + A30_t * (Z_st*Z_s - Z_ss*Z_t ) )       / xjac**2         &
+                    - xjac_R * (A30_s * Z_t - A30_t * Z_s)     / xjac**2
+          A30_ZZ   = (A30_ss * R_t**2 - 2.d0*A30_st * R_s*R_t + A30_tt * R_s**2  &
+                      + A30_s * (R_st*R_t - R_tt*R_s )                           &
+                      + A30_t * (R_st*R_s - R_ss*R_t ) )       / xjac**2         &
+                    - xjac_Z * (- A30_s * R_t + A30_t * R_s )  / xjac**2
+	  
           ! --- Pressure
           P0       = r0    * T0
           P0_R     = r0_R  * T0 + r0 * T0_R
@@ -987,12 +1044,22 @@ module mod_expression
           P0_RZ    = r0_RZ * T0 + r0 * T0_RZ + r0_R * T0_Z + r0_Z * T0_R
           
           ! --- Some things related to the magnetic field
+#ifdef fullmhd
+          B_R = ( A30_Z - AZ0_p )/ BigR
+          B_Z = ( AR0_p - A30_R )/ BigR
+          B_tor = ( AZ0_R - AR0_Z )    + Fprofile / BigR
+	  Btheta = sqrt( B_R*B_R + B_Z*B_Z )
+          BB2 = B_tor**2 + B_R**2 + B_Z**2
+	  zj0 = 0.d0
+	  zj0 = - AR0_Rp + AR0_p / BigR + A30_RR - 3.d0 * A30_R / BigR + 2.d0 * A30 / BigR**2 + A30_ZZ - AZ0_Zp 
+#else
           BB2      = (F0*F0 + ps0_R * ps0_R + ps0_Z * ps0_Z ) / BigR**2
           B_R      = + ps0_Z / BigR
           B_Z      = - ps0_R / BigR
           B_tor    = + F0    / BigR
+	  Btheta  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z) / BigR
+#endif
           psi_norm = get_psi_n(ps0, Z)
-          Btheta  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z) / BigR
           psi_abs = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z)
 
           if (psi_abs > 1.d-6) then
@@ -1286,7 +1353,16 @@ module mod_expression
                 
               case ( 'B_theta' )
                 res = Btheta
-                
+	      
+              case ( 'A_R' )
+                res = AR0
+	      
+	      case ( 'A_Z' )
+                res = AZ0  
+	      
+	      case ( 'A_3' )
+                res = A30
+              
               case ( 'currdens' )
                 res = zj0 / R / fact_mu_zero
 

@@ -54,16 +54,18 @@ type (type_bnd_element)  :: bndelem
 type (type_surface_list) :: surface_list
 
 real*8  :: psi_axis, psi_bnd
-real*8  :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
-real*8  :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss)
-real*8  :: eq_g(n_plane,n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gauss)
-real*8  :: eq_t(n_plane,n_var,n_gauss,n_gauss), eq_p(n_plane,n_var,n_gauss,n_gauss)
+real*8  :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss),        x_ss(n_gauss,n_gauss),        x_tt(n_gauss,n_gauss),        x_st(n_gauss,n_gauss)
+real*8  :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss),        y_ss(n_gauss,n_gauss),        y_tt(n_gauss,n_gauss),        y_st(n_gauss,n_gauss)
+real*8  :: eq_g(n_plane,0:n_var,n_gauss,n_gauss), eq_s(n_plane,0:n_var,n_gauss,n_gauss)
+real*8  :: eq_t(n_plane,0:n_var,n_gauss,n_gauss), eq_p(n_plane,0:n_var,n_gauss,n_gauss)
+real*8  :: eq_ss(n_plane,0:n_var,n_gauss,n_gauss), eq_tt(n_plane,0:n_var,n_gauss,n_gauss), eq_st(n_plane,0:n_var,n_gauss,n_gauss)
+real*8  :: eq_sp(n_plane,0:n_var,n_gauss,n_gauss), eq_tp(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: wgauss_copy(n_gauss)
 
 real*8  :: x_g_1D(n_gauss),  x_s_1D(n_gauss),   x_t_1D(n_gauss)
 real*8  :: y_g_1D(n_gauss),  y_s_1D(n_gauss),   y_t_1D(n_gauss)
-real*8  :: eq_g_1D(n_plane,n_var,n_gauss), eq_s_1D(n_plane,n_var,n_gauss)
-real*8  :: eq_t_1D(n_plane,n_var,n_gauss), eq_p_1D(n_plane,n_var,n_gauss)
+real*8  :: eq_g_1D(n_plane,0:n_var,n_gauss), eq_s_1D(n_plane,0:n_var,n_gauss)
+real*8  :: eq_t_1D(n_plane,0:n_var,n_gauss), eq_p_1D(n_plane,0:n_var,n_gauss)
 
 real*8  :: current_source, particle_source, heat_source, heat_source_i, heat_source_e, rotation_source
 real*8  :: xt, t_norm, rho_norm, t_norm2
@@ -84,7 +86,9 @@ real*8, allocatable :: qval(:), radav(:)
 
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor, current_MA
-real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, area1
+real*8  :: xjac, xjac_R, xjac_Z, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, area1
+real*8  :: AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30
+real*8  :: A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ
 real*8  :: r0_corr, T0_corr
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, delta_phi, phi, P_tot, D_tot
@@ -202,6 +206,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
 !$omp parallel default(none)                                                                   &
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
+!$omp          H_ss, H_tt, H_st,                                                               &
 !$omp          R_xpoint, Z_xpoint, my_id, use_pellet, delta_phi, R_axis, Z_axis, psi_axis, psi_bnd, &
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
@@ -220,7 +225,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
-!$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
+!$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, xjac_R, xjac_Z, eq_g, eq_s, eq_t, eq_p,    &
+!$omp           x_ss, x_tt, x_st, y_ss, y_tt, y_st, eq_ss, eq_tt, eq_st, eq_sp, eq_tp,         &
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
 !$omp           dpdx, dpdy, phi,                                                               &
 !$omp           source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,                      &
@@ -229,6 +235,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, r0_corr, &
+!$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
+!$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ,            &
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
 !$omp           rn0, source_ns,                                                               &
@@ -263,8 +271,8 @@ do ife = ife_min, ife_max
     nodes(iv) = node_list%node(inode)
   enddo
 
-  x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0;
-  y_g(:,:)    = 0.d0; y_s(:,:)    = 0.d0; y_t(:,:)    = 0.d0;
+  x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0; x_ss(:,:)    = 0.d0; x_tt(:,:)    = 0.d0; x_st(:,:)    = 0.d0;
+  y_g(:,:)    = 0.d0; y_s(:,:)    = 0.d0; y_t(:,:)    = 0.d0; y_ss(:,:)    = 0.d0; y_tt(:,:)    = 0.d0; y_st(:,:)    = 0.d0;
 
   do i=1,n_vertex_max
     do j=1,n_order+1
@@ -277,15 +285,23 @@ do ife = ife_min, ife_max
 
           x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
           x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
+	  x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
+	  x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
+	  x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_st(i,j,ms,mt)
+	  
           y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
           y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+	  y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
+	  y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
+	  y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
 
         enddo
       enddo
     enddo
   enddo
 
-  eq_g(:,:,:,:) = 0.d0; eq_s(:,:,:,:) = 0.d0; eq_t(:,:,:,:) = 0.d0; eq_p(:,:,:,:) = 0.d0;
+  eq_g(:,:,:,:) = 0.d0; eq_s(:,:,:,:) = 0.d0; eq_t(:,:,:,:) = 0.d0; eq_p(:,:,:,:) = 0.d0; eq_ss(:,:,:,:) = 0.d0; eq_tt(:,:,:,:) = 0.d0; eq_st(:,:,:,:) = 0.d0; 
+  eq_sp(:,:,:,:) = 0.d0; eq_tp(:,:,:,:) = 0.d0;
 
   do i=1,n_vertex_max
     do j=1,n_order+1
@@ -300,6 +316,11 @@ do ife = ife_min, ife_max
                 eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
                 eq_t(mp,k,ms,mt) = eq_t(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ(in,mp)
                 eq_p(mp,k,ms,mt) = eq_p(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ_p(in,mp)
+		eq_sp(mp,k,ms,mt) = eq_sp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ_p(in,mp)
+		eq_tp(mp,k,ms,mt) = eq_tp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ_p(in,mp)
+		eq_ss(mp,k,ms,mt) = eq_ss(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_ss(i,j,ms,mt)* HZ(in,mp)
+		eq_tt(mp,k,ms,mt) = eq_tt(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_tt(i,j,ms,mt)* HZ(in,mp)
+		eq_st(mp,k,ms,mt) = eq_st(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_st(i,j,ms,mt)* HZ(in,mp)
               enddo
             enddo
 
@@ -320,10 +341,10 @@ do ife = ife_min, ife_max
   
   do ms=1, n_gauss
     do mt=1, n_gauss
-      call density(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
+      call density(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                    dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-      call temperature(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
+      call temperature(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
     enddo
   enddo
@@ -340,49 +361,82 @@ do ife = ife_min, ife_max
         wst  = wgauss_copy(ms)*wgauss_copy(mt)
 
         xjac = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
+	xjac_R = ( x_ss(ms,mt) * y_t(ms,mt)**2 - 2*x_st(ms,mt) * y_s(ms,mt)*y_t(ms,mt) + x_tt(ms,mt) * y_s(ms,mt)**2 + x_s(ms,mt) * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )   &
+                 + x_t(ms,mt) * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) ) / xjac
+        xjac_Z = ( y_ss(ms,mt) * x_t(ms,mt)**2 - 2*y_st(ms,mt) * x_s(ms,mt)*x_t(ms,mt) + y_tt(ms,mt) * x_s(ms,mt)**2 + y_s(ms,mt) * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )   &
+                 + y_t(ms,mt) * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) ) / xjac
         BigR = x_g(ms,mt)
 
-        r0     = eq_g(mp,5,ms,mt)
+        r0     = eq_g(mp,var_rho,ms,mt)
         r0_corr = corr_neg_dens1(r0)
-        T0     = eq_g(mp,6,ms,mt)
+        T0     = eq_g(mp,var_T,ms,mt)
         T0_corr = corr_neg_temp1(T0)
-        T0e    = eq_g(mp,6,ms,mt) /2.d0
-        zj0    = eq_g(mp,3,ms,mt)
-        ps0    = eq_g(mp,1,ms,mt)
-        ps0_s  = eq_s(mp,1,ms,mt) 
-        ps0_t  = eq_t(mp,1,ms,mt)
-        u0_s   = eq_s(mp,2,ms,mt) 
-        u0_t   = eq_t(mp,2,ms,mt)
-        p0_s   = r0*eq_s(mp,6,ms,mt) + T0 * eq_s(mp,5,ms,mt) 
-        p0_t   = r0*eq_t(mp,6,ms,mt) + T0 * eq_t(mp,5,ms,mt) 
-        p0_p   = r0*eq_p(mp,6,ms,mt) + T0 * eq_p(mp,5,ms,mt) 
+        T0e    = eq_g(mp,var_T,ms,mt) /2.d0
+        zj0    = eq_g(mp,var_zj,ms,mt)
+        ps0    = eq_g(mp,var_psi,ms,mt)
+        ps0_s  = eq_s(mp,var_psi,ms,mt) 
+        ps0_t  = eq_t(mp,var_psi,ms,mt)
+        u0_s   = eq_s(mp,var_u,ms,mt) 
+        u0_t   = eq_t(mp,var_u,ms,mt)
+        p0_s   = r0*eq_s(mp,var_T,ms,mt) + T0 * eq_s(mp,var_rho,ms,mt) 
+        p0_t   = r0*eq_t(mp,var_T,ms,mt) + T0 * eq_t(mp,var_rho,ms,mt) 
+        p0_p   = r0*eq_p(mp,var_T,ms,mt) + T0 * eq_p(mp,var_rho,ms,mt) 
 
-#if (JOREK_MODEL > 299)
-        vpar0   = eq_g(mp,7,ms,mt)
-        vpar_s  = eq_s(mp,7,ms,mt)
-        vpar_t  = eq_t(mp,7,ms,mt)
-#else
-        vpar0    = 0.d0
-        vpar_s   = 0.d0
-        vpar_t   = 0.d0
-#endif
+        vpar0   = eq_g(mp,var_Vpar,ms,mt)
+        vpar_s  = eq_s(mp,var_Vpar,ms,mt)
+        vpar_t  = eq_t(mp,var_Vpar,ms,mt)
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-        rn0    = eq_g(mp,8,ms,mt)
+        rn0    = eq_g(mp,var_rn,ms,mt)
+#endif
+      
+#ifdef fullmhd
+      AR0      = eq_g(mp,var_AR,ms,mt)
+      AR0_p    = eq_p(mp,var_AR,ms,mt)
+      AR0_s    = eq_s(mp,var_AR,ms,mt)
+      AR0_t    = eq_t(mp,var_AR,ms,mt)
+      AR0_sp   = eq_sp(mp,var_AR,ms,mt)
+      AR0_tp   = eq_tp(mp,var_AR,ms,mt)
+      AR0_Rp   = (   y_t(ms,mt) * AR0_sp  - y_s(ms,mt) * AR0_tp ) / xjac
+      AZ0      = eq_g(mp,var_AZ,ms,mt)
+      AZ0_p    = eq_p(mp,var_AZ,ms,mt)
+      AZ0_s    = eq_s(mp,var_AZ,ms,mt)
+      AZ0_t    = eq_t(mp,var_AZ,ms,mt)
+      AZ0_sp   = eq_sp(mp,var_AZ,ms,mt)
+      AZ0_tp   = eq_tp(mp,var_AZ,ms,mt)
+      AZ0_Zp   = ( - x_t(ms,mt) * AZ0_sp  + x_s(ms,mt) * AZ0_tp ) / xjac
+      A30      = eq_g(mp,var_A3,ms,mt)
+      A30_p    = eq_p(mp,var_A3,ms,mt)
+      A30_s    = eq_s(mp,var_A3,ms,mt)
+      A30_t    = eq_t(mp,var_A3,ms,mt)
+      A30_ss   = eq_ss(mp,var_A3,ms,mt)
+      A30_tt   = eq_tt(mp,var_A3,ms,mt)
+      A30_st   = eq_st(mp,var_A3,ms,mt)
+      A30_R = (   y_t(ms,mt) * A30_s  - y_s(ms,mt) * A30_t ) / xjac
+      A30_RR   = (A30_ss * y_t(ms,mt)**2 - 2.d0*A30_st * y_s(ms,mt)*y_t(ms,mt) + A30_tt * y_s(ms,mt)**2  &
+                  + A30_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                           &
+                  + A30_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )       / xjac**2         &
+                  - xjac_R * (A30_s * y_t(ms,mt) - A30_t * y_s(ms,mt))     / xjac**2
+      A30_ZZ   = (A30_ss * x_t(ms,mt)**2 - 2.d0*A30_st * x_s(ms,mt)*x_t(ms,mt) + A30_tt * x_s(ms,mt)**2  &
+                  + A30_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                           &
+                  + A30_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2         &
+                  - xjac_Z * (- A30_s * x_t(ms,mt) + A30_t * x_s(ms,mt) )  / xjac**2
+      zj0   = 0.d0
+      zj0  = - AR0_Rp + AR0_p / BigR + A30_RR - 3.d0 * A30_R / BigR + 2.d0 * A30 / BigR**2 + A30_ZZ - AZ0_Zp
 #endif
 
         eta_T   = resistivity(T0_corr)  
 
-        dTdx   = (   y_t(ms,mt) * eq_s(mp,6,ms,mt) - y_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
-        dTdy   = ( - x_t(ms,mt) * eq_s(mp,6,ms,mt) + x_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
-        drhodx = (   y_t(ms,mt) * eq_s(mp,5,ms,mt) - y_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
-        drhody = ( - x_t(ms,mt) * eq_s(mp,5,ms,mt) + x_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
+        dTdx   = (   y_t(ms,mt) * eq_s(mp,var_T,ms,mt) - y_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
+        dTdy   = ( - x_t(ms,mt) * eq_s(mp,var_T,ms,mt) + x_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
+        drhodx = (   y_t(ms,mt) * eq_s(mp,var_rho,ms,mt) - y_s(ms,mt) * eq_t(mp,var_rho,ms,mt) ) / xjac
+        drhody = ( - x_t(ms,mt) * eq_s(mp,var_rho,ms,mt) + x_s(ms,mt) * eq_t(mp,var_rho,ms,mt) ) / xjac
 
-        dpsidx = (   y_t(ms,mt) * eq_s(mp,1,ms,mt) - y_s(ms,mt) * eq_t(mp,1,ms,mt) ) / xjac
-        dpsidy = ( - x_t(ms,mt) * eq_s(mp,1,ms,mt) + x_s(ms,mt) * eq_t(mp,1,ms,mt) ) / xjac
+        dpsidx = (   y_t(ms,mt) * eq_s(mp,var_psi,ms,mt) - y_s(ms,mt) * eq_t(mp,var_psi,ms,mt) ) / xjac
+        dpsidy = ( - x_t(ms,mt) * eq_s(mp,var_psi,ms,mt) + x_s(ms,mt) * eq_t(mp,var_psi,ms,mt) ) / xjac
 
-        dudx = (   y_t(ms,mt) * eq_s(mp,2,ms,mt) - y_s(ms,mt) * eq_t(mp,2,ms,mt) ) / xjac
-        dudy = ( - x_t(ms,mt) * eq_s(mp,2,ms,mt) + x_s(ms,mt) * eq_t(mp,2,ms,mt) ) / xjac
+        dudx = (   y_t(ms,mt) * eq_s(mp,var_u,ms,mt) - y_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
+        dudy = ( - x_t(ms,mt) * eq_s(mp,var_u,ms,mt) + x_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
 
         vpar_x = (   y_t(ms,mt) * vpar_s - y_s(ms,mt) * vpar_t ) / xjac
         vpar_y = ( - x_t(ms,mt) * vpar_s + x_s(ms,mt) * vpar_t ) / xjac

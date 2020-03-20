@@ -44,7 +44,7 @@ type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 real*8     :: x_g(n_gauss,n_gauss), x_s(n_gauss,n_gauss), x_t(n_gauss,n_gauss)
 real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
-real*8     :: eq_g(n_var,n_gauss,n_gauss), eq_s(n_var,n_gauss,n_gauss), eq_t(n_var,n_gauss,n_gauss)
+real*8     :: eq_g(0:n_var,n_gauss,n_gauss), eq_s(0:n_var,n_gauss,n_gauss), eq_t(0:n_var,n_gauss,n_gauss)
 integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
 real*8     :: xjac, BigR, wst, P_int, C_intern, ZJ_0, PS_0, Volume, Area
 real*8     :: rho_00, T_00, Ti_00, Te_00, current_in, current_out 
@@ -135,16 +135,16 @@ do ife =1, element_list%n_elements
       xjac = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
       BigR = x_g(ms,mt)
 
-      rho_00 = eq_g(5,ms,mt)
+      rho_00 = eq_g(var_rho,ms,mt)
       if (jorek_model .eq. 400) then
-        Ti_00 = eq_g(6,ms,mt)
-        Te_00 = eq_g(n_var,ms,mt)
+        Ti_00 = eq_g(var_Ti,ms,mt)
+        Te_00 = eq_g(var_Te,ms,mt)
         T_00  = Ti_00 + Te_00
       else
-        T_00  = eq_g(6,ms,mt)
+        T_00  = eq_g(var_T,ms,mt)
       endif
-      ZJ_0  = eq_g(3,ms,mt)
-      PS_0  = eq_g(1,ms,mt)
+      ZJ_0  = eq_g(var_zj,ms,mt)
+      PS_0  = eq_g(var_psi,ms,mt) 
       
       pressure = pressure + rho_00 * T_00 * xjac * 2.d0 * PI * BigR * wst
       density  = density  + rho_00       * xjac * 2.d0 * PI * BigR * wst
@@ -153,11 +153,11 @@ do ife =1, element_list%n_elements
         xcase,R_xpoint,Z_xpoint,psi_xpoint,psi_limit,R_axis,Z_axis,psi_axis) ) then
         
 #if JOREK_MODEL == 400
-        call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
+        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(var_psi,ms,mt), psi_axis, &
           psi_limit, part_src, heat_src_i, heat_src_e)
           heat_src = heat_src_i + heat_src_e
 #else
-        call sources(xpoint, xcase, eq_g(2,ms,mt), Z_xpoint, eq_g(1,ms,mt), psi_axis, &
+        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(var_psi,ms,mt), psi_axis, &
           psi_limit, part_src, heat_src)
 #endif
         

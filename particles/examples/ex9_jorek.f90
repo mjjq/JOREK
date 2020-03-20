@@ -67,8 +67,8 @@ if (.not. restart) then
                  p%x(1), p%x(2), & ! inputs
                  p%x(1), p%x(2), p%i_elm, p%st(1), p%st(2), ifail) ! outputs
     !p%p = [1.d7,0.]
-    energy = 5.12d5 ! 1.d7 ! !!! AT PRESENT, MUST INCLUDE REST ENERGY (FIX THIS) !!!
-    ksi    = 1.d0 ! Cosine of pitch-angle
+    energy = 5.12d5 ! 1.d7 ! Particle energy, including rest energy
+    ksi    = 1.d0          ! Cosine of pitch-angle
     particle_in = p
     particle_out = relativistic_gc_momenta_from_E_cospitch(particle_in,energy,ksi,sim%groups(1)%mass,sim%fields,sim%time)
     p%p = particle_out%p

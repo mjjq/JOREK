@@ -86,10 +86,10 @@ impure elemental function particle_relativistic_kinetic_energy(particle,mass) re
           - mass*SPEED_OF_LIGHT)/EL_CHG  
 end function particle_relativistic_kinetic_energy
 
-!> This function computes the (kinetic+rest) energy of a relativistic
+!> This function computes the kinetic energy of a relativistic
 !> guiding centre (first order in the guiding center expansion)
 !> in eV, which is equal to:
-!> E = E_{kin}+E_{rest} = gamma*m*c**2/e
+!> E_{kin} = E-E_{rest} = (gamma-1)*m*c**2/e
 !> with gamma = sqrt(1+(p_par/m/c)**2+(2*mu*B/m/c**2))
 !> and the rest energy E_{rest} = m*c**2
 !> where m: particle rest energy
@@ -116,7 +116,7 @@ impure elemental function gc_relativistic_kinetic_energy(particle,mass,fields,ti
 
   B_norm = sqrt(B(1)*B(1)+B(2)*B(2)+B(3)*B(3))
 
-  gamma = sqrt(1.d0 + (particle%p(1)/(mass*SPEED_OF_LIGHT))**2 + 2.d0*B_norm*particle%p(2)/(mass*SPEED_OF_LIGHT**2))
+  gamma = sqrt(1.d0 + (particle%p(1)/(mass*SPEED_OF_LIGHT))**2 + 2.d0*B_norm*particle%p(2)/(mass*SPEED_OF_LIGHT**2)) - 1.d0
 
   energy = (gamma * mass * ATOMIC_MASS_UNIT * SPEED_OF_LIGHT**2)/EL_CHG
 end function gc_relativistic_kinetic_energy

@@ -7,7 +7,7 @@ use tr_module
 use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
-use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht
+use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes, force_central_node
 
 implicit none
 
@@ -39,6 +39,7 @@ real*8, allocatable :: S1(:), S2(:), SP1(:), SP2(:), SP3(:), SP4(:)
 real*8, allocatable :: T1(:), T2(:), TP1(:), TP2(:), TP3(:), TP4(:)
 real*8, external    :: spwert
 logical             :: skip_update_neighbours
+logical             :: doing_polar_square
 
 
 call tr_allocate(RR,1,4,1,nr*np,"RR",CAT_GRID)
@@ -70,6 +71,8 @@ n_index_start = 0
 do i=1,n_node_start
   n_index_start = max(n_index_start,maxval(node_list%node(i)%index(:)))
 enddo
+doing_polar_square = .false.
+if (n_index_start .gt. 0) doing_polar_square = .true.
 
 write(*,*) '*************************************'
 write(*,*) '*        grid_polar_bezier          *'
@@ -215,37 +218,37 @@ do i=1,nr-1
 
            !Neighbours of the element (refinement procedure)
 
-	    if(i==1) then	        
-	         element_list%element(Index)%neighbours(4) = 0    
-              else		 
+            if(i==1) then               
+                 element_list%element(Index)%neighbours(4) = 0    
+              else               
                  element_list%element(Index)%neighbours(4) = Index - np 
-	    end if 	 
-	    
-	    if(j==np) then
-	    	 element_list%element(Index)%neighbours(3) = Index - np + 1  
-	      else
-	    	 element_list%element(Index)%neighbours(3) = Index + 1       
-	    end if	  	    
-	    
-	    if(i==nr-1) then
-	    	 element_list%element(Index)%neighbours(2) = 0   
-	      else   
-	    	 element_list%element(Index)%neighbours(2) = Index + np 
-	    end if 
-	        
-	    if(j==1) then
-	    	 element_list%element(Index)%neighbours(1) = Index + np -1 
-	      else   
-	    	 element_list%element(Index)%neighbours(1) = Index -1       
-	    end if     
-	  
+            end if       
+            
+            if(j==np) then
+                 element_list%element(Index)%neighbours(3) = Index - np + 1  
+              else
+                 element_list%element(Index)%neighbours(3) = Index + 1       
+            end if                  
+            
+            if(i==nr-1) then
+                 element_list%element(Index)%neighbours(2) = 0   
+              else   
+                 element_list%element(Index)%neighbours(2) = Index + np 
+            end if 
+                
+            if(j==1) then
+                 element_list%element(Index)%neighbours(1) = Index + np -1 
+              else   
+                 element_list%element(Index)%neighbours(1) = Index -1       
+            end if     
+          
             ! Initialization of the genealogy  (refinement procedure)
 
             element_list%element(Index)%father = 0
-	    element_list%element(Index)%n_sons = 0
-	    do i_sons = 1, 4
-	         element_list%element(Index)%sons(i_sons) = 0
-	    end do 
+            element_list%element(Index)%n_sons = 0
+            do i_sons = 1, 4
+                 element_list%element(Index)%sons(i_sons) = 0
+            end do 
             
   enddo
 enddo
@@ -295,9 +298,26 @@ do i=1,nr
    node_list%node(index)%boundary = 0
    if (i .eq. nr) node_list%node(index)%boundary = 2
 
-   do k=1,n_order+1
-     node_list%node(index)%index(k) = n_index_start + (n_order+1)*(index0-1)+k
-   enddo
+   node_list%node(index)%axis_node = .false.
+   if ( fix_axis_nodes .and. (.not. doing_polar_square) .and. (i .eq. 1) ) node_list%node(index)%axis_node = .true.
+
+   if (force_central_node .and. (.not. doing_polar_square) .and. (i.eq.1)) then
+
+     node_list%node(index)%index(1) = 1
+
+     if (j.eq.1) n_index_start = n_index_start + 1
+
+     node_list%node(index)%index(2) = n_index_start + 1
+     node_list%node(index)%index(3) = n_index_start + 2
+     node_list%node(index)%index(4) = n_index_start + 3
+     n_index_start = n_index_start + n_order
+
+   else
+     do k=1,n_order+1
+       node_list%node(index)%index(k) = n_index_start + k
+     enddo
+     n_index_start = n_index_start + n_order+1
+   endif
   
    node_list%node(index)%constrained=.false.
  enddo
@@ -354,6 +374,13 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
    element_list%element(k)%size(iv,2) = dir_2
    element_list%element(k)%size(iv,3) = dir_3
    element_list%element(k)%size(iv,4) = element_list%element(k)%size(iv,2) * element_list%element(k)%size(iv,3)
+   if (fix_axis_nodes) then
+      j = element_list%element(k)%vertex(iv)
+      if (node_list%node(j)%axis_node) then
+        element_list%element(k)%size(iv,3) = 0.d0
+        element_list%element(k)%size(iv,4) = 0.d0
+      endif
+   endif
 
 !   if ((RR(2,node_iv)**2 + ZZ(2,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,2) = dir_2
 !   if ((RR(3,node_iv)**2 + ZZ(3,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,3) = dir_3

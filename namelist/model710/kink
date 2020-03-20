@@ -8,6 +8,7 @@
 
  nout = 1
  linear_run = .true.
+ fix_axis_nodes = .t.
 
  time_evol_scheme ='Crank-Nicholson'
 
@@ -56,7 +57,6 @@
 
  eta   = 1.d-5
  visco = 0.d-6
- visco2= 0.d0
 
  eta_T_dependent = .false.
  visco_T_dependent = .false.

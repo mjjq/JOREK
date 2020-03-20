@@ -86,10 +86,20 @@ impure elemental function particle_relativistic_kinetic_energy(particle,mass) re
           - mass*SPEED_OF_LIGHT)/EL_CHG  
 end function particle_relativistic_kinetic_energy
 
-!> This function computes the kinetic energy of a relativistic
-!> guiding centre in eV, which is equal to:
-!> E_{kin} = gamma*m*c**2/e
+!> This function computes the (kinetic+rest) energy of a relativistic
+!> guiding centre (first order in the guiding center expansion)
+!> in eV, which is equal to:
+!> E = E_{kin}+E_{rest} = gamma*m*c**2/e
 !> with gamma = sqrt(1+(p_par/m/c)**2+(2*mu*B/m/c**2))
+!> and the rest energy E_{rest} = m*c**2
+!> where m: particle rest energy
+!>	 c: speed of light
+!>       p_par: GC parallel momentum
+!>	 mu: GC magnetic moment
+!>	 B: magnetic field intensity B=norm2(\vec{B})
+!> the parallel energy component is given by: (p_par/m/c)**2
+!> the perpendicular energy component is given by: (2*mu*B)/(m*c**2)
+!> ref.: X. Tao, A.A. Chan, A.J. Brizard, Phys. of Plasma, vol.14, p.092107, 2007
 impure elemental function gc_relativistic_kinetic_energy(particle,mass,fields,time) result(energy)
   use constants, only: SPEED_OF_LIGHT, ATOMIC_MASS_UNIT, EL_CHG
   use mod_fields

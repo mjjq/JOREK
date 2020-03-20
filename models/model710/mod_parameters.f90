@@ -11,7 +11,7 @@ module mod_parameters
   integer, parameter :: var_uR = 4                       ! place of variable velocity 1  (uR)
   integer, parameter :: var_uZ = 5                       ! place of variable velocity 2  (uZ)
   integer, parameter :: var_up = 6                       ! place of variable velocity 3  (up)
-  integer, parameter :: var_r  = 7                       ! place of variable density     (r)
+  integer, parameter :: var_rho= 7                       ! place of variable density     (r)
   integer, parameter :: var_T  = 8                       ! place of variable temperature (T)
 
   integer, parameter :: n_var          = 8         !< number of variables
@@ -21,8 +21,8 @@ module mod_parameters
   integer, parameter :: n_period       = 1         !< periodicity in toroidal direction
   integer, parameter :: n_plane        = 4         !< number of toroidal angles
   integer, parameter :: n_vertex_max   = 4         !< maximum number of corners of an element
-  integer, parameter :: n_nodes_max    = 20001     !< maximum number of nodes
-  integer, parameter :: n_elements_max = 20001     !< maximum number of elements
+  integer, parameter :: n_nodes_max    = 60001     !< maximum number of nodes
+  integer, parameter :: n_elements_max = 60001     !< maximum number of elements
   integer, parameter :: n_boundary_max = 1001      !< maximum number of boundary elements
   integer, parameter :: n_pieces_max   = 6001      !< maximum number of line pieces describing a flux surface
   integer, parameter :: n_degrees      = n_order+1 !< degrees of freedom per variable per node

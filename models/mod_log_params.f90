@@ -9,9 +9,8 @@ contains
 subroutine log_parameters(my_id, short)
 
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
-use wsmp_module,   only: use_wsmp
+use mumps_module,  only: no_zeros_mumps, mumps_ordering
+use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
 use vacuum
 use gauss, only: n_gauss
 
@@ -423,6 +422,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
   write(*,LOGI_FMT) 'keep_current_prof     ', keep_current_prof
+  write(*,LOGI_FMT) 'linear_run            ', linear_run
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
   write(*,REAL_FMT) 'D_prof_neg_thresh     ', D_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
@@ -540,7 +540,7 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'bc_natural_open       ', bc_natural_open
   write(*,LOGI_FMT) 'produce_live_data     ', produce_live_data
   write(*,LOGI_FMT) 'export_for_nemec      ', export_for_nemec
-  write(*,LOGI_FMT) 'linear_run            ', linear_run
+  write(*,LOGI_FMT) 'keep_n0_const         ', keep_n0_const
   write(*,LOGI_FMT) 'gmres                 ', gmres
   write(*,INTG_FMT) 'gmres_max_iter        ', gmres_max_iter
   write(*,REAL_FMT) 'gmres tolerance       ', gmres_tol
@@ -550,17 +550,26 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'use_mumps             ', use_mumps
   write(*,LOGI_FMT) 'use_wsmp              ', use_wsmp
   write(*,LOGI_FMT) 'use_pastix            ', use_pastix
+  write(*,LOGI_FMT) 'use_strumpack         ', use_strumpack  
   write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot
   write(*,INTG_FMT) 'pastix_maxthrd        ', pastix_maxthrd
   write(*,LOGI_FMT) 'refinement            ', refinement
   write(*,LOGI_FMT) 'force_central_node    ', force_central_node
+  write(*,LOGI_FMT) 'fix_axis_nodes        ', fix_axis_nodes
   write(*,LOGI_FMT) 'grid_to_wall          ', grid_to_wall
   write(*,LOGI_FMT) 'adaptive_time         ', adaptive_time
   write(*,LOGI_FMT) 'equil                 ', equil
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
+
+  if (jorek_model .eq. 710) then
+    write(*,LOGI_FMT) 'parallel_projection   ', parallel_projection
+    write(*,LOGI_FMT) 'Mach1_openBC          ', Mach1_openBC
+  endif
+
+  write(*,LOGI_FMT) 'fix_axis_nodes        ',fix_axis_nodes 
 
   if (use_mumps) then
     write(*,INTG_FMT) 'mumps_ordering        ', mumps_ordering

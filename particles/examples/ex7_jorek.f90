@@ -17,7 +17,7 @@ implicit none
 ! Set up the simulation variables
 real(kind=8)                      :: timesteps(1) = [1.d-10] ![3.5723d-13] ! 
 real(kind=8)                      :: target_time, t
-real*8                            :: energy !< Initial kinetic energy in eV
+real*8                            :: energy !< Initial energy in eV (including rest energy)
 real*8                            :: ksi    !< Initial cosine of pitch-angle
 integer(kind=4)                   :: n_part, i, j, k, n_steps, ifail, n_lost
 logical                           :: restart

@@ -625,7 +625,7 @@ contains
 
     !> input variables
     type(particle_gc_relativistic), intent(in) :: rel_gc_in
-    real*8, intent(in)                         :: energy !< Particle energy in eV
+    real*8, intent(in)                         :: energy !< Particle energy in eV (including rest energy)
     real*8, intent(in)                         :: ksi    !< Cosine of particle pitch-angle 
     real*8, intent(in)                         :: mass   !< Particle mass in AMU
     class(fields_base), intent(in)             :: fields

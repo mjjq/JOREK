@@ -20,7 +20,7 @@ logical,parameter                   :: write_timestep=.true.
 real(kind=8),dimension(4),parameter :: tolerances = [1.d-2,1.d-2,1.d-2,1.d3]
 real(kind=8)                        :: timesteps(1) = [3.5723d-3]
 real(kind=8)                        :: target_time, t
-real(kind=8)                        :: energy !< Initial kinetic energy in eV
+real(kind=8)                        :: energy !< Initial energy in eV (including rest energy)
 real(kind=8)                        :: ksi    !< Initial cosine of pitch-angle
 real(kind=8)                        :: time_local,dt_local !< local time and time step
 integer(kind=4)                     :: n_part, i, j, k, n_steps, ifail, n_lost

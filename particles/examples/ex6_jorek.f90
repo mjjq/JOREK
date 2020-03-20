@@ -18,7 +18,7 @@ implicit none
 ! Set up the simulation variables
 real*8                              :: timesteps(1) = [3.5723d-13]
 real*8                              :: target_time, t
-real*8                              :: energy     !< Initial kinetic energy in eV
+real*8                              :: energy     !< Initial energy in eV (including rest energy)
 real*8                              :: ksi        !< Initial cosine of pitch-angle
 real*8                              :: gyro_angle !< Initial gyro-angle
 real*8                              :: E(3), B(3), rz_old(2), st_old(2), psi, U

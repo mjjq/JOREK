@@ -11,7 +11,7 @@ module equil_info
   
   use constants,      only: LOWER_XPOINT, UPPER_XPOINT, DOUBLE_NULL
   use data_structure, only: type_node_list, type_element_list, type_bnd_element_list
-  use phys_module,    only: R_geo, Z_geo, FF_0
+  use phys_module,    only: R_geo, Z_geo, FF_0, psi_axis_t, psi_bnd_t, Z_xpoint_t, index_now
   use mod_interp
   
   
@@ -38,6 +38,7 @@ module equil_info
     real*8           :: R_axis                   !< R coordinate of axis.
     real*8           :: Z_axis                   !< Z coordinate of axis.
     real*8           :: Psi_axis                 !< Poloidal flux value at axis.
+    real*8           :: Psi_axis_init            !< Poloidal flux value at axis in GS-equilibrium at t=0.
     integer          :: i_elm_axis               !< Index of element containing the axis.
     real*8           :: s_axis                   !< s coordinate of axis within element.
     real*8           :: t_axis                   !< t coordinate of axis within element.
@@ -58,6 +59,7 @@ module equil_info
     integer          :: active_xpoint            !< Which X-point is active?
     real*8           :: R_xpoint(2)              !< R coordinate of X-point(s).
     real*8           :: Z_xpoint(2)              !< Z coordinate of X-point(s).
+    real*8           :: Z_xpoint_init(2)         !< Z coordinate of X-point(s) in GS-equilibrium at t=0.
     real*8           :: Psi_xpoint(2)            !< Poloidal flux value of X-point(s).
     integer          :: i_elm_xpoint(2)          !< Index of element containing the X-point.
     real*8           :: s_xpoint(2)              !< s coordinate of X-point within element.
@@ -68,6 +70,7 @@ module equil_info
     real*8           :: R_bnd                    !< R coordinate of boundary point.
     real*8           :: Z_bnd                    !< Z coordinate of boundary point.
     real*8           :: Psi_bnd                  !< Psi of the boundary point (Psi of the LCFS)
+    real*8           :: Psi_bnd_init             !< Psi of the boundary point (Psi of the LCFS) in GS-equilibrium at t=0
     integer          :: i_elm_bnd                !< Index of element containing the boundary point
     real*8           :: s_bnd                    !< s coordinate of the boundary point within element.
     real*8           :: t_bnd                    !< t coordinate of the boundary point within element.
@@ -94,9 +97,10 @@ module equil_info
   
   
   !> Re-calculate the equilibrium state.
-  subroutine update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+  subroutine update_equil_state(my_id, node_list, element_list, bnd_elm_list, xpoint, xcase)
     
     ! --- Routine parameters.
+    integer,                     intent(in)    :: my_id
     type(type_node_list),        intent(in)    :: node_list
     type(type_element_list),     intent(in)    :: element_list
     type(type_bnd_element_list), intent(in)    :: bnd_elm_list
@@ -104,14 +108,14 @@ module equil_info
     integer                                    :: xcase
     
     ! --- Local variables.
-    integer :: my_id, i_out, ifail, i, mv1
+    integer :: my_id_fake, i_out, ifail, i, mv1
     real*8  :: R_out, Z_out, s_out, t_out, R1, R2, dR, R_s, R_t, Z_s, Z_t
     real*8  :: P_s, P_t, P_st, P_ss, P_tt
     
-    my_id  = 9999
+    my_id_fake  = 9999
     
     ! --- Find the magnetic axis.
-    call find_axis(my_id, node_list, element_list, ES%psi_axis, ES%R_axis, ES%Z_axis,              &
+    call find_axis(my_id_fake, node_list, element_list, ES%psi_axis, ES%R_axis, ES%Z_axis,              &
       ES%i_elm_axis, ES%s_axis, ES%t_axis, ES%ifail_axis)
       
     ! --- Find out if the axis is a minimum or a maximum of the poloidal flux (required for find_limiter)    
@@ -121,12 +125,12 @@ module equil_info
     ES%xpoint       = xpoint
     ES%xcase        = xcase
     ES%ifail_xpoint = 0
-    if ( xpoint ) call find_xpoint(my_id, node_list, element_list, ES%psi_xpoint, ES%R_xpoint,     &
+    if ( xpoint ) call find_xpoint(my_id_fake, node_list, element_list, ES%psi_xpoint, ES%R_xpoint,     &
       ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint, ES%xcase, ES%ifail_xpoint)
     
     ! --- Find the limiter point.
     ES%ifail_lim = 0
-    call find_limiter(my_id, node_list, element_list, bnd_elm_list, ES%psi_lim, ES%R_lim, ES%Z_lim)
+    call find_limiter(my_id_fake, node_list, element_list, bnd_elm_list, ES%psi_lim, ES%R_lim, ES%Z_lim)
     call find_RZ(node_list, element_list, ES%R_lim, ES%Z_lim, R_out, Z_out, ES%i_elm_lim, ES%s_lim,&
       ES%t_lim, ES%ifail_lim)
     
@@ -256,6 +260,22 @@ module equil_info
       if ( abs(R2-R1) < 1.d-4 ) exit
     end do
     ES%R_midpl(2) = (R2+R1)/2.d0
+    
+    ! --- Save initial psi_axis and psi_bnd (at the moment only needed by model710)
+    ! --- Note: this needs to be on my_id=0, because live variables are only available on main MPI process
+    ! --- If we are not on my_id=0, it means this already happened at begining of run, and these were
+    ! --- already broadcasted so we are fine (since this never changes in time)
+    if (my_id .eq. 0) then
+      if (index_now .gt. 1) then
+        ES%psi_axis_init    = psi_axis_t(1)
+        ES%psi_bnd_init     = psi_bnd_t(1)
+        ES%Z_xpoint_init(:) = Z_xpoint_t(1,:)
+      else
+        ES%psi_axis_init    = ES%psi_axis
+        ES%psi_bnd_init     = ES%psi_bnd
+        ES%Z_xpoint_init(:) = ES%Z_xpoint(:)
+      endif
+    endif
     
     ES%initialized = .true.
     
@@ -601,13 +621,14 @@ module equil_info
     call MPI_BCAST(ES%axis_is_psi_minimum, 1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
         
     ! --- Magnetic Axis
-    call MPI_BCAST(ES%R_axis,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%Z_axis,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%Psi_axis,    1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%s_axis,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%t_axis,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%i_elm_axis,  1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%ifail_axis,  1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%R_axis,       1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%Z_axis,       1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%Psi_axis,     1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%Psi_axis_init,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%s_axis,       1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%t_axis,       1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%i_elm_axis,   1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%ifail_axis,   1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
     
     ! --- Limiter Point
@@ -625,6 +646,7 @@ module equil_info
     call MPI_BCAST(ES%active_xpoint,  1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(ES%R_xpoint,       2,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(ES%Z_xpoint,       2,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%Z_xpoint_init,  2,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(ES%Psi_xpoint,     2,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(ES%s_xpoint,       2,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(ES%t_xpoint,       2,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
@@ -632,14 +654,15 @@ module equil_info
     call MPI_BCAST(ES%ifail_xpoint,   1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     
     ! --- Boundary Point
-    call MPI_BCAST(ES%psi_bnd,    1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%R_bnd,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%Z_bnd,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%Psi_bnd,    1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%s_bnd,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%t_bnd,      1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%i_elm_bnd,  1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(ES%ifail_bnd,  1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr) 
+    call MPI_BCAST(ES%psi_bnd,     1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%R_bnd,       1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%Z_bnd,       1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%Psi_bnd,     1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%Psi_bnd_init,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%s_bnd,       1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%t_bnd,       1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%i_elm_bnd,   1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%ifail_bnd,   1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr) 
 
     ! --- Strike Point(s) derived from axisymmetric field component.
     call MPI_BCAST(ES%num_strike,          1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)

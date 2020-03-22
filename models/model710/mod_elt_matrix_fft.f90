@@ -12,7 +12,7 @@ use gauss
 use basis_at_gaussian
 use phys_module
 use diffusivities, only: get_dperp, get_zkperp
-use equil_info, only : get_psi_n
+use equil_info, only : get_psi_n, ES
 
 implicit none
 
@@ -64,7 +64,7 @@ real*8     :: dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t, x_ss, x_st, x_tt
 real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t, y_ss, y_st, y_tt
-real*8, dimension(n_gauss,n_gauss)    :: Fprofile, psieq, psieq_s, psieq_t
+real*8, dimension(n_gauss,n_gauss)    :: psieq, psieq_s, psieq_t
 real*8, dimension(n_var)              :: TG_NUM
 real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 
@@ -96,8 +96,9 @@ real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_Z
 real*8     :: BR0, BR0_AR,    BR0_AZ__n, BR0_A3
 real*8     :: BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3
 real*8     :: Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3
-
 real*8     :: BB2, BB2_AR__p, BB2_AR__n, BB2_AZ__p, BB2_AZ__n, BB2_A3
+
+real*8     :: current_source_JR, current_source_JZ
 
 real*8     :: BgradT, BgradT_AR__p, BgradT_AR__n, BgradT_AZ__p, BgradT_AZ__n, BgradT_A3, BgradT_T__p, BgradT_T__n
 
@@ -308,7 +309,6 @@ y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_ss = 0.d0; y_st = 0.d0; y_tt = 0.d0
 eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_p = 0.d0; eq_ss = 0.d0; eq_st = 0.d0; eq_tt = 0.d0
 psieq   = 0.d0; psieq_s = 0.d0; psieq_t = 0.d0
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
-Fprofile = 0.d0
 do i=1,n_vertex_max
   do j=1,n_order+1
 #if _OPENMP >= 201511
@@ -332,8 +332,6 @@ do i=1,n_vertex_max
         y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
         y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
         y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
-
-        Fprofile(ms,mt) = Fprofile(ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H(i,j,ms,mt)
 
         psieq(ms,mt)    = psieq(ms,mt)    + nodes(i)%psi_eq(j)   * element%size(i,j) * H(i,j,ms,mt)
         psieq_s(ms,mt)  = psieq_s(ms,mt)  + nodes(i)%psi_eq(j)   * element%size(i,j) * H_s(i,j,ms,mt)
@@ -416,11 +414,9 @@ do i=1,n_vertex_max
         Z = y_g(ms,mt)
 
         ! --- The F-profile
-        call F_profile(xpoint2, xcase2, Z, Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd, &
-                       Fprof,dF_dpsi,dF_dz, &
-                       dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz , &
-                       zFFprime    ,dFFprime_dpsi,dFFprime_dz, &
-                       dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
+        call F_profile(xpoint2, xcase2, Z, ES%Z_xpoint_init, psieq(ms,mt),ES%psi_axis_init,ES%psi_bnd_init, &
+                       Fprof   ,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz, &
+                       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
 
 
 #if _OPENMP >= 201511
@@ -454,6 +450,7 @@ do i=1,n_vertex_max
 !$OMP  BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3, &
 !$OMP  Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3, &
 !$OMP  BB2, BB2_AR__p, BB2_AR__n, BB2_AZ__p, BB2_AZ__n, BB2_A3, &
+!$OMP  current_source_JR, current_source_JZ, &
 !$OMP  BgradT, BgradT_AR__p, BgradT_AR__n, BgradT_AZ__p, BgradT_AZ__n, BgradT_A3, BgradT_T__p, BgradT_T__n, &
 !$OMP  BgradRho, BgradRho_AR__p, BgradRho_AR__n, BgradRho_AZ__p, BgradRho_AZ__n, BgradRho_A3, BgradRho_rho__p, BgradRho_rho__n, &
 !$OMP  BgradVstar__p, BgradVstar__k, &
@@ -694,6 +691,25 @@ do i=1,n_vertex_max
             dZKpar_dT = 0.d0
           endif
 
+          ! --- Current sources
+          ! --- The toroidal current source can be taken from the routine current.f90, as usual.
+          ! --- The JR and JZ current sources, however, need to be calculated using the initial Grad-Shafranov equilibrium
+          ! --- At t=0, with GS equilibrium, we have:
+          ! --- JR = + psi_Z * dF_dpsi / R = + (psi_bnd_init - psi_axis_init) * psi_norm_Z * dF_dpsi / R
+          ! --- JZ = - psi_R * dF_dpsi / R = - (psi_bnd_init - psi_axis_init) * psi_norm_R * dF_dpsi / R
+          ! --- Thus, these are our current sources as a funcion of psi_norm. Now, at any time, the psi-map will change
+          ! --- And so denormalising psi_norm again, we get:
+          ! --- JR = + (psi_bnd_init - psi_axis_init) / (psi_bnd - psi_axis) * psi_Z * dF_dpsi / R
+          ! --- JZ = - (psi_bnd_init - psi_axis_init) / (psi_bnd - psi_axis) * psi_R * dF_dpsi / R
+          if (keep_current_prof) then
+            current_source_JR = + (ES%psi_bnd_init - ES%psi_axis_init) / (ES%psi_bnd - ES%psi_axis) * A30_Z * dF_dpsi / R
+            current_source_JZ = - (ES%psi_bnd_init - ES%psi_axis_init) / (ES%psi_bnd - ES%psi_axis) * A30_R * dF_dpsi / R
+          else
+            current_source_JR = 0.d0
+            current_source_JZ = 0.d0
+          endif
+
+
           ! --- Magnetic field
           BR0 = ( A30_Z - AZ0_p )/ R
           BZ0 = ( AR0_p - A30_R )/ R
@@ -894,7 +910,8 @@ do i=1,n_vertex_max
 
             Qvec_p(var_AR) = + v * (UZ0 * Bp0 - Up0 * BZ0)          &
                              + v * (eta_Z * Bp0 - eta_p * BZ0 / R ) &
-                             - eta_T * ( - v_Z * Bp0 )
+                             - eta_T * ( - v_Z * Bp0 )              &
+                             + eta_T * v * current_source_JR
             Qvec_k(var_AR) = - eta_T * ( + v_p * BZ0 / R)
 
             !###################################################################################################
@@ -904,7 +921,8 @@ do i=1,n_vertex_max
 
             Qvec_p(var_AZ) = + v * (Up0 * BR0 - UR0 * Bp0)         &
                              + v * (eta_p / R * BR0 - eta_R * Bp0) &
-                             - eta_T * ( + v_R * Bp0 )
+                             - eta_T * ( + v_R * Bp0 )             &
+                             + eta_T * v * current_source_JZ
             Qvec_k(var_AZ) = - eta_T * ( - v_p * BR0 / R)
 
             !###################################################################################################
@@ -915,8 +933,8 @@ do i=1,n_vertex_max
             Qvec_p(var_A3) = + R * v * (UR0 * BZ0 - UZ0 * BR0)      &
                              - eta_T * v_Z * R                * BR0 &
                              + eta_T * ( 2.d0 * v + R * v_R ) * BZ0 &
-                             + eta_T * v * current_source(ms,mt)    &
-                             + R * v * (eta_R * BZ0 - eta_Z * BR0)
+                             + R * v * (eta_R * BZ0 - eta_Z * BR0)  &
+                             + eta_T * v * current_source(ms,mt)
 
             !###################################################################################################
             !#  equation 4   (R component momentum equation)                                                   #
@@ -1480,7 +1498,8 @@ do i=1,n_vertex_max
                   Qjac_p (var_AR,var_Up) = + v * (- Up * BZ0)
 
                   Qjac_p (var_AR,var_T ) = + v * (eta_Z_T * Bp0 - eta_p_T__p * BZ0 / R ) &
-                                           - eta_T_T * ( - v_Z * Bp0 )
+                                           - eta_T_T * ( - v_Z * Bp0 )                   &
+                                           + eta_T_T * v * current_source_JR
                   Qjac_n (var_AR,var_T ) = + v * (              - eta_p_T__n * BZ0 / R )
                   Qjac_k (var_AR,var_T ) = - eta_T_T * ( + v_p * BZ0 / R)
 
@@ -1510,7 +1529,8 @@ do i=1,n_vertex_max
                   Qjac_p (var_AZ,var_Up) = + v * (  Up * BR0)
 
                   Qjac_p (var_AZ,var_T ) = + v * (eta_p_T__p / R * BR0 - eta_R_T * Bp0) &
-                                           - eta_T_T * ( + v_R * Bp0 )
+                                           - eta_T_T * ( + v_R * Bp0 )                  &
+                                           + eta_T_T * v * current_source_JZ
                   Qjac_n (var_AZ,var_T ) = + v * (eta_p_T__n / R * BR0 )
                   Qjac_k (var_AZ,var_T ) = - eta_T_T * ( - v_p * BR0 / R)
 

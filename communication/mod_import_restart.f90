@@ -41,7 +41,7 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr, n
   ! --- Required initializations to update equilibrium state
   call initialise_basis
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
-  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+  call update_equil_state(0,node_list, element_list, bnd_elm_list, xpoint, xcase)
   write(*,*) " "
   write(*,*) " The equilibrium state has been updated "
   
@@ -225,6 +225,18 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     if (allocated(psi_axis_t)) call tr_deallocate(psi_axis_t,"psi_axis_t",CAT_UNKNOWN)
     call tr_allocate(psi_axis_t,1,index_start+nstep,"psi_axis_t",CAT_UNKNOWN)
     psi_axis_t = 0.d0
+    
+    if (allocated(R_xpoint_t)) call tr_deallocate(R_xpoint_t,"R_xpoint_t",CAT_UNKNOWN)
+    call tr_allocate(R_xpoint_t,1,index_start+nstep,1,2,"R_xpoint_t",CAT_UNKNOWN)
+    R_xpoint_t = 0.d0
+    
+    if (allocated(Z_xpoint_t)) call tr_deallocate(Z_xpoint_t,"Z_xpoint_t",CAT_UNKNOWN)
+    call tr_allocate(Z_xpoint_t,1,index_start+nstep,1,2,"Z_xpoint_t",CAT_UNKNOWN)
+    Z_xpoint_t = 0.d0
+    
+    if (allocated(psi_bnd_t)) call tr_deallocate(psi_bnd_t,"psi_bnd_t",CAT_UNKNOWN)
+    call tr_allocate(psi_bnd_t,1,index_start+nstep,"psi_bnd_t",CAT_UNKNOWN)
+    psi_bnd_t = 0.d0
     
     if (allocated(current_t)) call tr_deallocate(current_t,"current_t",CAT_UNKNOWN)
     call tr_allocate(current_t,1,index_start+nstep,"current_t",CAT_UNKNOWN)
@@ -1100,6 +1112,21 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     call tr_allocate(psi_axis_t,1,index_start+nstep,"psi_axis_t",CAT_UNKNOWN)
     psi_axis_t = 0.d0
     call HDF5_array1D_reading(file_id,psi_axis_t,'psi_axis_t')
+    
+    if (allocated(R_xpoint_t)) call tr_deallocate(R_xpoint_t,"R_xpoint_t",CAT_UNKNOWN)
+    call tr_allocate(R_xpoint_t,1,index_start+nstep,1,2,"R_xpoint_t",CAT_UNKNOWN)
+    R_xpoint_t = 0.d0
+    call HDF5_array2D_reading(file_id,R_xpoint_t,'R_xpoint_t')
+    
+    if (allocated(Z_xpoint_t)) call tr_deallocate(Z_xpoint_t,"Z_xpoint_t",CAT_UNKNOWN)
+    call tr_allocate(Z_xpoint_t,1,index_start+nstep,1,2,"Z_xpoint_t",CAT_UNKNOWN)
+    Z_xpoint_t = 0.d0
+    call HDF5_array2D_reading(file_id,Z_xpoint_t,'Z_xpoint_t')
+    
+    if (allocated(psi_bnd_t)) call tr_deallocate(psi_bnd_t,"psi_bnd_t",CAT_UNKNOWN)
+    call tr_allocate(psi_bnd_t,1,index_start+nstep,"psi_bnd_t",CAT_UNKNOWN)
+    psi_bnd_t = 0.d0
+    call HDF5_array1D_reading(file_id,psi_bnd_t,'psi_bnd_t')
     
     if (allocated(current_t)) call tr_deallocate(current_t,"current_t",CAT_UNKNOWN)
     call tr_allocate(current_t,1,index_start+nstep,"current_t",CAT_UNKNOWN)

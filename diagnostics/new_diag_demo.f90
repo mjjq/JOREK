@@ -94,7 +94,7 @@ program demo
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
   
   ! --- Initialize the plasma equilibrium data structure
-  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+  call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
   call print_equil_state(.false.)
   
   ! --- Initialize the new_diag framework and print some information (.true.)

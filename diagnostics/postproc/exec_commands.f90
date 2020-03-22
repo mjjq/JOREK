@@ -295,7 +295,7 @@ module exec_commands
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
     
     ! --- Locate magnetic axis and X-point.
-    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+    call update_equil_state(0,node_list, element_list, bnd_elm_list, xpoint, xcase)
     
     t_now         = t_start
     index_now     = index_start

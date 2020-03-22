@@ -650,7 +650,7 @@ required = 0
     if (my_id == 0) then
           
       ! --- Update the status of the equilibrium
-      call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+      call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
       
       ! --- Set initial conditions for time-evolution
       call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)
@@ -760,7 +760,7 @@ required = 0
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
-  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+  call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
   if ( my_id == 0 ) then
     call print_equil_state(.true.)
     call save_special_points('special_equilibrium_points.dat', .false., ierr)
@@ -925,7 +925,7 @@ required = 0
     ! --- n_plane, n_var have to remain the same until the end of the program.
     call new_thread_buffers()
     
-    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+    call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
     if ( my_id == 0 ) call print_equil_state(.false.)
 
     ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
@@ -1099,9 +1099,12 @@ required = 0
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
        call energy(node_list,element_list,W_mag,W_kin)
 
-       R_axis_t(index_now)   = ES%R_axis
-       Z_axis_t(index_now)   = ES%Z_axis
-       psi_axis_t(index_now) = ES%psi_axis
+       R_axis_t(index_now)     = ES%R_axis
+       Z_axis_t(index_now)     = ES%Z_axis
+       psi_axis_t(index_now)   = ES%psi_axis
+       psi_bnd_t(index_now)    = ES%psi_bnd
+       R_xpoint_t(index_now,:) = ES%R_xpoint(:)
+       Z_xpoint_t(index_now,:) = ES%Z_xpoint(:)
 
        xtime(index_now) = t_now
        energies(1:n_tor,1,index_now) = W_mag(1:n_tor)

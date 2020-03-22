@@ -46,6 +46,9 @@ program JOREK2
   use basis_at_gaussian, only: initialise_basis
   use mod_expression, only: exprs_all_int, init_expr
   use mod_integrals3D
+#ifdef USE_STRUMPACK
+  use strumpack_module
+#endif
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -173,7 +176,9 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
-
+  integer :: nsolvers = 0
+  logical :: solvers(4)
+  
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
   res = 0.d0   
@@ -235,6 +240,10 @@ required = 0
   ! --- Preset some solver variables
   pastix_initialised = .false.
   pastix_analysed    = .false.
+#ifdef USE_STRUMPACK  
+  spss_initialized = .false.
+  spss_analyzed    = .false.
+#endif  
   
   ! --- Preset input parameters to reasonable defaults, then read the input file.
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
@@ -257,6 +266,55 @@ required = 0
   call log_parameters(my_id)
  
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+
+#if (!defined (USE_PASTIX))&&(!defined (USE_PASTIX6))
+  if (use_pastix) then
+    write(*,*) ' FATAL : use_pastix requires defined USE_PASTIX or USE_PASTIX6'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
+#endif
+
+#ifndef USE_MUMPS
+  if (use_mumps) then
+    write(*,*) ' FATAL : use_mumps requires defined USE_MUMPS'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
+#endif
+
+#ifndef USE_WSMP
+  if (use_wsmp) then
+    write(*,*) ' FATAL : use_wsmp requires defined USE_WSMP'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
+#endif
+
+#ifndef USE_STRUMPACK
+  if (use_strumpack) then
+    write(*,*) ' FATAL : use_strumpack requires defined USE_STRUMPACK'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
+#endif
+  
+  ! --- Check solver consistency
+  solvers = (/use_mumps,use_pastix,use_wsmp,use_strumpack/)
+  do i=1,size(solvers)
+    if (solvers(i)) nsolvers = nsolvers + 1
+  enddo
+
+  if (nsolvers==0) then
+    write(*,*) ' FATAL : specify a valid solver'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop          
+  elseif (nsolvers>1) then
+    write(*,*) ' FATAL : specify only one solver'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
 
   ! --- Some checks not to waste any cpu time
   if ( (n_tor < 1) .or. (mod(n_tor,2) == 0) ) then
@@ -291,10 +349,6 @@ required = 0
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
     call MPI_Abort(MPI_COMM_WORLD, 2, ierr)
     stop
-  else if ( (.not. use_mumps) .and. (.not. use_pastix) .and. (.not. use_wsmp) ) then
-    write(*,*) ' FATAL : specify a valid solver'
-    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
-    stop
   else if ( mod(n_tor,2) == 0 ) then
     write(*,*) ' FATAL: n_tor must be an uneven number.'
     call MPI_Abort(MPI_COMM_WORLD, 4, ierr)
@@ -319,18 +373,7 @@ required = 0
       (n_tor-1)/2+1,' harmonics'
     call MPI_Abort(MPI_COMM_WORLD, 6, ierr)
     stop
-  else if ( use_mumps ) then
-#ifndef USE_MUMPS
-    write(*,*) 'FATAL : use_mumps=.true. requires USE_MUMPS=1 in Makefile.inc'
-    call MPI_Abort(MPI_COMM_WORLD, 7, ierr)
-    stop
-#endif
   else if ( use_pastix ) then
-#if !( defined(USE_PASTIX)  ^  defined(USE_PASTIX6) ) 
-    write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 xor USE_PASTIX6 = 1 in Makefile.inc'
-    call MPI_Abort(MPI_COMM_WORLD, 8, ierr)
-    stop
-#endif
 #ifdef USE_PASTIX6
     if (n_cpu /= ((n_tor-1)/2+1)) then
       write(*,*) 'FATAL : Pastix6 is not yet MPI parallelised (Pastix 6.0)! Please use #procs = (n_tor+1)/2.'
@@ -338,24 +381,14 @@ required = 0
     endif
 #endif
   else if ( use_wsmp ) then
-#ifndef USE_WSMP
-    write(*,*) 'FATAL : use_wsmp=.true. requires USE_WSMP=1 in Makefile.inc'
-    call MPI_Abort(MPI_COMM_WORLD, 10, ierr)
-    stop
-#endif
 #ifdef USE_BLOCK
     write(*,*) 'FATAL : USE_BLOCK=1 in Makefile.inc is currently not possible with use_wsmp'
     call MPI_Abort(MPI_COMM_WORLD, 11, ierr)
     stop
 #endif
-      if ( .not. restart ) then
+    if ( .not. restart ) then
       write(*,*) 'FATAL : use_wsmp is currently not supported for the equilibrium'
       call MPI_Abort(MPI_COMM_WORLD, 12, ierr)
-      stop
-    end if
-    if ( use_pastix ) then
-      write(*,*) 'FATAL : you should only select one of use_wsmp or use_pastix'
-      call MPI_Abort(MPI_COMM_WORLD, 13, ierr)
       stop
     end if
   end if
@@ -954,8 +987,14 @@ required = 0
     if (.not. gmres) then
 
        if (use_mumps) then
-    	  call solve_mumps_all(my_id)
-       else
+#ifdef USE_MUMPS
+         call solve_mumps_all(my_id)
+#endif
+       elseif (use_strumpack) then
+#ifdef USE_STRUMPACK
+         call solve_strumpack_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+#endif
+       elseif (use_pastix) then
           call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
        endif
 
@@ -973,7 +1012,16 @@ required = 0
        end if
 
        call clck_time(t0)
-       call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+
+      if (use_strumpack) then 
+#ifdef USE_STRUMPACK
+        call solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+#endif
+      else
+        call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
+      endif
+
+
        call clck_time_barrier(t1)
        call clck_ldiff(t0,t1,tsecond)
        if (my_id .eq. 0) then
@@ -1101,11 +1149,11 @@ required = 0
        write(*,131) 'W_mag,_kin      =', W_mag(1), W_mag(n_tor), W_kin(1), W_kin(n_tor)
        Growth_mag  = 0.d0; Growth_kin  = 0.d0; Growth_mag0 = 0.d0; Growth_kin0 = 0.d0
        if (index_now > index_start+1) then
-    	 Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
-    	 Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
-    	 Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
-    	 Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
-    	 write(*,131) 'Growth_mag,_kin =', Growth_mag0, Growth_mag, Growth_kin0, Growth_kin
+         Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
+         Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
+         Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
+         Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
+         write(*,131) 'Growth_mag,_kin =', Growth_mag0, Growth_mag, Growth_kin0, Growth_kin
        endif
        write(*,132)
        write(*,*)
@@ -1151,9 +1199,9 @@ endif
     inquire(file='STOP_NOW', exist=file_exists)
     if ( file_exists ) then
       if ( my_id == 0 ) then
-    	write(*,*)
-    	write(*,*) '>>>>> FOUND FILE STOP_NOW: EXITING THE CODE <<<<<'
-    	write(*,*)
+        write(*,*)
+        write(*,*) '>>>>> FOUND FILE STOP_NOW: EXITING THE CODE <<<<<'
+        write(*,*)
       end if
       exit jstep_loop
     end if
@@ -1173,9 +1221,9 @@ endif
     if ( allocated(deltas) ) then
       sum_deltas = sum(deltas)
       if ( sum_deltas /= sum_deltas ) then
-    	write(*,*)
-    	write(*,*) '>>>>> NaNs DETECTED: EXITING THE CODE <<<<<'
-    	write(*,*)
+        write(*,*)
+        write(*,*) '>>>>> NaNs DETECTED: EXITING THE CODE <<<<<'
+        write(*,*)
         exit jstep_loop
       end if
     end if
@@ -1194,14 +1242,21 @@ endif
   !***********************************************************************
 
   if (nstep .gt.0) then
-
-    if (use_mumps) then
 #ifdef USE_MUMPS
+    if (use_mumps) then
       mumps_par%JOB = -2                            ! clean up this instance of mumps
       call DMUMPS(mumps_par)
+    endif
 #endif
 
-    elseif (use_pastix) then
+#ifdef USE_STRUMPACK
+    if (use_strumpack) then
+      call strumpack_finalize(MPI_COMM_WORLD)
+    endif
+#endif
+
+#if defined(USE_PASTIX)||defined(USE_PASTIX6)
+    if (use_pastix) then
 #ifndef USE_PASTIX6
       ! -- For PaStiX solver before version 6.x
       pastix_iparm(2)     = 7                       ! Clean-up
@@ -1221,14 +1276,14 @@ endif
         call pastixFinalize(pastix_data)
       endif
 #endif
-
-    elseif (use_wsmp) then
-
-#ifdef USE_WSMP
-      call PWGSMP__deallocate()
+    endif
 #endif
 
+#ifdef USE_WSMP
+    if (use_wsmp) then
+      call PWGSMP__deallocate()
     endif
+#endif
     
   endif
   

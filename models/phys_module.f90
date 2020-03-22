@@ -78,6 +78,10 @@ module phys_module
   logical :: just_in_time_BLR     !< Use Just-in-time strategy for BLR compression (speed optimized)
   logical :: pastix_blr_abs_tol   !< Use absolute tolerance for BLR
   logical :: write_ps             !< Write postscript file at the end of the run
+  logical :: use_mumps            !< Use Mumps solver
+  logical :: use_pastix           !< Use Pastix solver
+  logical :: use_strumpack        !< Use Strumpack solver
+  logical :: use_wsmp             !< Use WSMP solver
 
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"

@@ -4,6 +4,7 @@ subroutine initialise_pastix
 !***********************************************************************
 use pastix_module
 use mumps_module
+use phys_module, only: use_pastix
 
 implicit none
 

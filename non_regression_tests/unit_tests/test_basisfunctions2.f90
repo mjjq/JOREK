@@ -55,7 +55,7 @@ subroutine test_basisfunctions_2D_vs_transpose
     do l=1,n_gauss
       t = xgauss(l)
       call basisfunctions(s,t,H, H_s, H_t)
-      call basisfunctions_2D_1_T(s,t,G, G_s, G_t)
+      call basisfunctions_T(s,t,G, G_s, G_t)
 
       do m=1,n_vertex_max
         do n=1,n_order+1

@@ -56,15 +56,11 @@ complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
 real*8     :: TG_NUM_Eq, CoefAdv=0.0, rho_min = 0.005
 real*8     :: Coef_DivV
-real*8     :: Fprof,dF_dpsi,dF_dz
-real*8     :: dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz
-real*8     :: zFFprime    ,dFFprime_dpsi,dFFprime_dz
-real*8     :: dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz
 
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t, x_ss, x_st, x_tt
 real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t, y_ss, y_st, y_tt
-real*8, dimension(n_gauss,n_gauss)    :: psieq, psieq_s, psieq_t
+real*8, dimension(n_gauss,n_gauss)    :: Fprofile, Fprofile_s, Fprofile_t, psieq, psieq_s, psieq_t
 real*8, dimension(n_var)              :: TG_NUM
 real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 
@@ -93,6 +89,7 @@ real*8     :: rho, rho_R, rho_Z, rho_p, rho_s, rho_t
 real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p
 real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ
 
+real*8     :: Fprof,dF_dpsi,dF_dZ, dF_dR
 real*8     :: BR0, BR0_AR,    BR0_AZ__n, BR0_A3
 real*8     :: BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3
 real*8     :: Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3
@@ -309,6 +306,7 @@ y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_ss = 0.d0; y_st = 0.d0; y_tt = 0.d0
 eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_p = 0.d0; eq_ss = 0.d0; eq_st = 0.d0; eq_tt = 0.d0
 psieq   = 0.d0; psieq_s = 0.d0; psieq_t = 0.d0
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
+Fprofile= 0.d0; Fprofile_s = 0.d0; Fprofile_t = 0.d0
 do i=1,n_vertex_max
   do j=1,n_order+1
 #if _OPENMP >= 201511
@@ -332,6 +330,10 @@ do i=1,n_vertex_max
         y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
         y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
         y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
+
+        Fprofile  (ms,mt) = Fprofile  (ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H  (i,j,ms,mt)
+        Fprofile_s(ms,mt) = Fprofile_s(ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H_s(i,j,ms,mt)
+        Fprofile_t(ms,mt) = Fprofile_t(ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H_t(i,j,ms,mt)
 
         psieq(ms,mt)    = psieq(ms,mt)    + nodes(i)%psi_eq(j)   * element%size(i,j) * H(i,j,ms,mt)
         psieq_s(ms,mt)  = psieq_s(ms,mt)  + nodes(i)%psi_eq(j)   * element%size(i,j) * H_s(i,j,ms,mt)
@@ -413,12 +415,6 @@ do i=1,n_vertex_max
         R = x_g(ms,mt)
         Z = y_g(ms,mt)
 
-        ! --- The F-profile
-        call F_profile(xpoint2, xcase2, Z, ES%Z_xpoint_init, psieq(ms,mt),ES%psi_axis_init,ES%psi_bnd_init, &
-                       Fprof   ,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz, &
-                       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
-
-
 #if _OPENMP >= 201511
 !!!#if 1 >= 2
 ! Variables that are part of the PRIVATE clause are uninitialized at the beginnig of the
@@ -446,6 +442,7 @@ do i=1,n_vertex_max
 !$OMP  rho, rho_R, rho_Z, rho_p, rho_s, rho_t, &
 !$OMP  v,  v_R,  v_Z,  v_s,  v_t,  v_p, &
 !$OMP  bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ, &
+!$OMP  Fprof,dF_dpsi,dF_dZ, dF_dR, &
 !$OMP  BR0, BR0_AR,    BR0_AZ__n, BR0_A3, &
 !$OMP  BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3, &
 !$OMP  Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3, &
@@ -690,6 +687,12 @@ do i=1,n_vertex_max
             ZKpar_T   = ZK_par
             dZKpar_dT = 0.d0
           endif
+
+          ! --- F_profile
+          Fprof = Fprofile(ms,mt)
+          dF_dR = (   y_t(ms,mt) * Fprofile_s(ms,mt)  - y_s(ms,mt) * Fprofile_t(ms,mt) ) / xjac
+          dF_dZ = ( - x_t(ms,mt) * Fprofile_s(ms,mt)  + x_s(ms,mt) * Fprofile_t(ms,mt) ) / xjac
+          dF_dpsi = (dF_dR*A30_R + dF_dZ*A30_Z) / max(1.d-10,(A30_R**2 + A30_Z**2))
 
           ! --- Current sources
           ! --- The toroidal current source can be taken from the routine current.f90, as usual.

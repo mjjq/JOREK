@@ -6,7 +6,7 @@ implicit none
 
 private
 public :: basisfunctions1, basisfunctions
-public :: basisfunctions_2D_1_T !< Transposed version, for faster interp_PRZ
+public :: basisfunctions_T !< Transposed version, for faster interp_PRZ
 public :: basisfunctions3
 
 !> One-dimensional basisfunctions with derivatives of order n
@@ -21,6 +21,14 @@ end interface basisfunctions1
 interface basisfunctions
   module procedure basisfunctions_2D_0, basisfunctions_2D_1, basisfunctions_2D_1p, basisfunctions_2D_2
 end interface basisfunctions
+
+!> Two dimensional basisfunction with derivatives of order n
+!> and transposed matrix for better vectorisation
+!> basisfunctions_2D_1_T: first order derivatives in s and t
+!> basisfunctions_2D_2_T: first and second order derivatives in s and t
+interface basisfunctions_T
+  module procedure basisfunctions_2D_1_T, basisfunctions_2D_2_T 
+end interface basisfunctions_T
 
 contains
 
@@ -247,7 +255,7 @@ end subroutine basisfunctions_2D_1_T
 
 
 !> Basisfunctions in 2D with first and cross-derivative
-subroutine basisfunctions_2D_1p(s,t,H,H_s,H_t,H_st)
+pure subroutine basisfunctions_2D_1p(s,t,H,H_s,H_t,H_st)
 implicit none
 real*8, intent(in)  :: s          !< s-coordinate in the element [0,1]
 real*8, intent(in)  :: t          !< t-coordinate in the element [0,1]
@@ -475,6 +483,90 @@ H_st(4,4)=-9.d0*(1.d0 - 4.d0*s + 3.d0*s**2)*t*(-2.d0 + 3.d0*t)
 H_ss(4,4)=-18.d0*(-2.d0 + 3.d0*s)*(-1.d0 + t)*t**2
 H_tt(4,4)=18.d0*(-1.d0 + s)**2*s*(1.d0 - 3.d0*t)
 end subroutine basisfunctions_2D_2
+
+!> Basisfunctions with second derivatives in 2D and transposed matrix for 
+!> better vectorisation
+pure subroutine basisfunctions_2D_2_T(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
+implicit none
+real*8, intent(in)  :: s          !< s-coordinate in the element [0,1]
+real*8, intent(in)  :: t          !< t-coordinate in the element [0,1]
+real*8, intent(out) :: H(4,4)     !< Basis functions
+real*8, intent(out) :: H_s(4,4)   !< Basis functions derived with respect to s
+real*8, intent(out) :: H_t(4,4)   !< Basis functions derived with respect to t
+real*8, intent(out) :: H_st(4,4)  !< Basis functions derived with respect to s and t
+real*8, intent(out) :: H_ss(4,4)  !< Basis functions derived two times with respect to s
+real*8, intent(out) :: H_tt(4,4)  !< Basis functions derived two times with respect to t
+
+call basisfunctions_2D_1_T(s, t, H, H_s, H_t)
+
+!---------------------------------------------------------- vertex (1)
+H_st(1,1)=36.d0*(-1.d0 + s)*s*(-1.d0 + t)*t
+H_ss(1,1)=6.d0*(-1.d0 + 2.d0*s)*(-1.d0 + t)**2*(1.d0 + 2.d0*t)
+H_tt(1,1)=6.d0*(-1.d0 + s)**2*(1.d0 + 2.d0*s)*(-1.d0 + 2.d0*t)
+
+H_st(2,1)=18.d0*(1.d0 - 4.d0*s + 3.d0*s**2)*(-1.d0 + t)*t
+H_ss(2,1)=6.d0*(-2.d0 + 3.d0*s)*(-1.d0 + t)**2*(1.d0 + 2.d0*t)
+H_tt(2,1)=18.d0*(-1.d0 + s)**2*s*(-1.d0 + 2.d0*t)
+
+H_st(3,1)=18.d0*(-1.d0 + s)*s*(1.d0 - 4.d0*t + 3.d0*t**2)
+H_ss(3,1)=18.d0*(-1.d0 + 2.d0*s)*(-1.d0 + t)**2*t
+H_tt(3,1)=6.d0*(-1.d0 + s)**2*(1.d0 + 2.d0*s)*(-2.d0 + 3.d0*t)
+
+H_st(4,1)=9.d0*(1.d0 - 4.d0*s + 3.d0*s**2)*(1.d0 - 4.d0*t + 3.d0*t**2)
+H_ss(4,1)=18.d0*(-2.d0 + 3.d0*s)*(-1.d0 + t)**2*t
+H_tt(4,1)=18.d0*(-1.d0 + s)**2*s*(-2.d0 + 3.d0*t)
+
+!---------------------------------------------------------- vertex (2)
+H_st(1,2)=-36.d0*(-1.d0 + s)*s*(-1.d0 + t)*t
+H_ss(1,2)=-6.d0*(-1.d0 + 2.d0*s)*(-1.d0 + t)**2*(1.d0 + 2.d0*t)
+H_tt(1,2)=-6.d0*s**2*(-3.d0 + 2.d0*s)*(-1.d0 + 2.d0*t)
+
+H_st(2,2)=-18.d0*s*(-2.d0 + 3.d0*s)*(-1.d0 + t)*t
+H_ss(2,2)=-6.d0*(-1.d0 + 3.d0*s)*(-1.d0 + t)**2*(1 + 2.d0*t)
+H_tt(2,2)=-18.d0*(-1.d0 + s)*s**2*(-1.d0 + 2.d0*t)
+
+H_st(3,2)=-18.d0*(-1.d0 + s)*s*(1.d0 - 4.d0*t + 3.d0*t**2)
+H_ss(3,2)=6.d0*(3.d0 - 6.d0*s)*(-1.d0 + t)**2*t
+H_tt(3,2)=-6.d0*s**2*(-3.d0 + 2.d0*s)*(-2.d0 + 3.d0*t)
+
+H_st(4,2)=-9.d0*s*(-2.d0 + 3.d0*s)*(1.d0 - 4.d0*t + 3.d0*t**2)
+H_ss(4,2)=18.d0*(1.d0 - 3.d0*s)*(-1.d0 + t)**2*t
+H_tt(4,2)=-18.d0*(-1.d0 + s)*s**2*(-2.d0 + 3.d0*t)
+
+!---------------------------------------------------------- vertex (3)
+H_st(1,3)=36.d0*(-1.d0 + s)*s*(-1.d0 + t)*t
+H_ss(1,3)=6.d0*(-1.d0 + 2*s)*t**2*(-3.d0 + 2.d0*t)
+H_tt(1,3)=6.d0*s**2*(-3.d0 + 2.d0*s)*(-1.d0 + 2.d0*t)
+
+H_st(2,3)=18.d0*s*(-2.d0 + 3.d0*s)*(-1.d0 + t)*t
+H_ss(2,3)=6.d0*(-1.d0 + 3.d0*s)*t**2*(-3.d0 + 2.d0*t)
+H_tt(2,3)=18.d0*(-1.d0 + s)*s**2*(-1.d0 + 2.d0*t)
+
+H_st(3,3)=18.d0*(-1.d0 + s)*s*t*(-2.d0 + 3.d0*t)
+H_ss(3,3)=18.d0*(-1.d0 + 2.d0*s)*(-1.d0 + t)*t**2
+H_tt(3,3)=6.d0*s**2*(-3.d0 + 2.d0*s)*(-1.d0 + 3.d0*t)
+
+H_st(4,3)=9.d0*s*(-2.d0 + 3.d0*s)*t*(-2.d0 + 3.d0*t)
+H_ss(4,3)=18.d0*(-1.d0 + 3.d0*s)*(-1.d0 + t)*t**2
+H_tt(4,3)=18.d0*(-1.d0 + s)*s**2*(-1.d0 + 3.d0*t)
+
+!---------------------------------------------------------- vertex (4)
+H_st(1,4)=-36.d0*(-1.d0 + s)*s*(-1.d0 + t)*t
+H_ss(1,4)=-6.d0*(-1.d0 + 2.d0*s)*t**2*(-3.d0 + 2.d0*t)
+H_tt(1,4)=-6.d0*(-1.d0 + s)**2*(1.d0 + 2.d0*s)*(-1.d0 + 2.d0*t)
+
+H_st(2,4)=-18.d0*(1.d0 - 4.d0*s + 3.d0*s**2)*(-1.d0 + t)*t
+H_ss(2,4)=-6.d0*(-2.d0 + 3.d0*s)*t**2*(-3.d0 + 2.d0*t)
+H_tt(2,4)=6.d0*(-1.d0 + s)**2*s*(3.d0 - 6.d0*t)
+
+H_st(3,4)=-18.d0*(-1.d0 + s)*s*t*(-2.d0 + 3.d0*t)
+H_ss(3,4)=-18.d0*(-1.d0 + 2.d0*s)*(-1.d0 + t)*t**2
+H_tt(3,4)=-6.d0*(-1.d0 + s)**2*(1.d0 + 2.d0*s)*(-1 + 3.d0*t)
+
+H_st(4,4)=-9.d0*(1.d0 - 4.d0*s + 3.d0*s**2)*t*(-2.d0 + 3.d0*t)
+H_ss(4,4)=-18.d0*(-2.d0 + 3.d0*s)*(-1.d0 + t)*t**2
+H_tt(4,4)=18.d0*(-1.d0 + s)**2*s*(1.d0 - 3.d0*t)
+end subroutine basisfunctions_2D_2_T
 
 pure subroutine basisfunctions3(s, t, H, H_s, H_t)
 implicit none

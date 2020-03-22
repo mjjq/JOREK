@@ -89,7 +89,7 @@ real*8     :: rho, rho_R, rho_Z, rho_p, rho_s, rho_t
 real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p
 real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ
 
-real*8     :: Fprof,dF_dpsi,dF_dZ, dF_dR
+real*8     :: Fprof, dF_dpsi, dF_dZ, dF_dR
 real*8     :: BR0, BR0_AR,    BR0_AZ__n, BR0_A3
 real*8     :: BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3
 real*8     :: Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3
@@ -442,7 +442,7 @@ do i=1,n_vertex_max
 !$OMP  rho, rho_R, rho_Z, rho_p, rho_s, rho_t, &
 !$OMP  v,  v_R,  v_Z,  v_s,  v_t,  v_p, &
 !$OMP  bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ, &
-!$OMP  Fprof,dF_dpsi,dF_dZ, dF_dR, &
+!$OMP  Fprof, dF_dpsi, dF_dZ, dF_dR, &
 !$OMP  BR0, BR0_AR,    BR0_AZ__n, BR0_A3, &
 !$OMP  BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3, &
 !$OMP  Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3, &
@@ -689,10 +689,12 @@ do i=1,n_vertex_max
           endif
 
           ! --- F_profile
-          Fprof = Fprofile(ms,mt)
-          dF_dR = (   y_t(ms,mt) * Fprofile_s(ms,mt)  - y_s(ms,mt) * Fprofile_t(ms,mt) ) / xjac
-          dF_dZ = ( - x_t(ms,mt) * Fprofile_s(ms,mt)  + x_s(ms,mt) * Fprofile_t(ms,mt) ) / xjac
-          dF_dpsi = (dF_dR*A30_R + dF_dZ*A30_Z) / max(1.d-10,(A30_R**2 + A30_Z**2))
+          Fprof   = Fprofile(ms,mt)
+          dF_dR   = (   y_t(ms,mt) * Fprofile_s(ms,mt)  - y_s(ms,mt) * Fprofile_t(ms,mt) ) / xjac
+          dF_dZ   = ( - x_t(ms,mt) * Fprofile_s(ms,mt)  + x_s(ms,mt) * Fprofile_t(ms,mt) ) / xjac
+          psieq_R = (   y_t(ms,mt) * psieq_s(ms,mt)     - y_s(ms,mt) * psieq_t(ms,mt)    ) / xjac
+          psieq_Z = ( - x_t(ms,mt) * psieq_s(ms,mt)     + x_s(ms,mt) * psieq_t(ms,mt)    ) / xjac
+          dF_dpsi = (dF_dR*psieq_R + dF_dZ*psieq_Z) / max(1.d-13,(psieq_R**2 + psieq_Z**2))
 
           ! --- Current sources
           ! --- The toroidal current source can be taken from the routine current.f90, as usual.

@@ -285,15 +285,15 @@ do ife = ife_min, ife_max
 
           x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
           x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
-	  x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
-	  x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
-	  x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_st(i,j,ms,mt)
-	  
+          x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
+          x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
+          x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_st(i,j,ms,mt)
+          
           y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
           y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
-	  y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
-	  y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
-	  y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
+          y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
+          y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
+          y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
 
         enddo
       enddo
@@ -316,11 +316,11 @@ do ife = ife_min, ife_max
                 eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
                 eq_t(mp,k,ms,mt) = eq_t(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ(in,mp)
                 eq_p(mp,k,ms,mt) = eq_p(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ_p(in,mp)
-		eq_sp(mp,k,ms,mt) = eq_sp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ_p(in,mp)
-		eq_tp(mp,k,ms,mt) = eq_tp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ_p(in,mp)
-		eq_ss(mp,k,ms,mt) = eq_ss(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_ss(i,j,ms,mt)* HZ(in,mp)
-		eq_tt(mp,k,ms,mt) = eq_tt(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_tt(i,j,ms,mt)* HZ(in,mp)
-		eq_st(mp,k,ms,mt) = eq_st(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_st(i,j,ms,mt)* HZ(in,mp)
+                eq_sp(mp,k,ms,mt) = eq_sp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ_p(in,mp)
+                eq_tp(mp,k,ms,mt) = eq_tp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ_p(in,mp)
+                eq_ss(mp,k,ms,mt) = eq_ss(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_ss(i,j,ms,mt)* HZ(in,mp)
+                eq_tt(mp,k,ms,mt) = eq_tt(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_tt(i,j,ms,mt)* HZ(in,mp)
+                eq_st(mp,k,ms,mt) = eq_st(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_st(i,j,ms,mt)* HZ(in,mp)
               enddo
             enddo
 
@@ -361,7 +361,7 @@ do ife = ife_min, ife_max
         wst  = wgauss_copy(ms)*wgauss_copy(mt)
 
         xjac = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
-	xjac_R = ( x_ss(ms,mt) * y_t(ms,mt)**2 - 2*x_st(ms,mt) * y_s(ms,mt)*y_t(ms,mt) + x_tt(ms,mt) * y_s(ms,mt)**2 + x_s(ms,mt) * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )   &
+        xjac_R = ( x_ss(ms,mt) * y_t(ms,mt)**2 - 2*x_st(ms,mt) * y_s(ms,mt)*y_t(ms,mt) + x_tt(ms,mt) * y_s(ms,mt)**2 + x_s(ms,mt) * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )   &
                  + x_t(ms,mt) * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) ) / xjac
         xjac_Z = ( y_ss(ms,mt) * x_t(ms,mt)**2 - 2*y_st(ms,mt) * x_s(ms,mt)*x_t(ms,mt) + y_tt(ms,mt) * x_s(ms,mt)**2 + y_s(ms,mt) * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )   &
                  + y_t(ms,mt) * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) ) / xjac
@@ -391,38 +391,38 @@ do ife = ife_min, ife_max
 #endif
       
 #ifdef fullmhd
-      AR0      = eq_g(mp,var_AR,ms,mt)
-      AR0_p    = eq_p(mp,var_AR,ms,mt)
-      AR0_s    = eq_s(mp,var_AR,ms,mt)
-      AR0_t    = eq_t(mp,var_AR,ms,mt)
-      AR0_sp   = eq_sp(mp,var_AR,ms,mt)
-      AR0_tp   = eq_tp(mp,var_AR,ms,mt)
-      AR0_Rp   = (   y_t(ms,mt) * AR0_sp  - y_s(ms,mt) * AR0_tp ) / xjac
-      AZ0      = eq_g(mp,var_AZ,ms,mt)
-      AZ0_p    = eq_p(mp,var_AZ,ms,mt)
-      AZ0_s    = eq_s(mp,var_AZ,ms,mt)
-      AZ0_t    = eq_t(mp,var_AZ,ms,mt)
-      AZ0_sp   = eq_sp(mp,var_AZ,ms,mt)
-      AZ0_tp   = eq_tp(mp,var_AZ,ms,mt)
-      AZ0_Zp   = ( - x_t(ms,mt) * AZ0_sp  + x_s(ms,mt) * AZ0_tp ) / xjac
-      A30      = eq_g(mp,var_A3,ms,mt)
-      A30_p    = eq_p(mp,var_A3,ms,mt)
-      A30_s    = eq_s(mp,var_A3,ms,mt)
-      A30_t    = eq_t(mp,var_A3,ms,mt)
-      A30_ss   = eq_ss(mp,var_A3,ms,mt)
-      A30_tt   = eq_tt(mp,var_A3,ms,mt)
-      A30_st   = eq_st(mp,var_A3,ms,mt)
-      A30_R = (   y_t(ms,mt) * A30_s  - y_s(ms,mt) * A30_t ) / xjac
-      A30_RR   = (A30_ss * y_t(ms,mt)**2 - 2.d0*A30_st * y_s(ms,mt)*y_t(ms,mt) + A30_tt * y_s(ms,mt)**2  &
-                  + A30_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                           &
-                  + A30_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )       / xjac**2         &
-                  - xjac_R * (A30_s * y_t(ms,mt) - A30_t * y_s(ms,mt))     / xjac**2
-      A30_ZZ   = (A30_ss * x_t(ms,mt)**2 - 2.d0*A30_st * x_s(ms,mt)*x_t(ms,mt) + A30_tt * x_s(ms,mt)**2  &
-                  + A30_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                           &
-                  + A30_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2         &
-                  - xjac_Z * (- A30_s * x_t(ms,mt) + A30_t * x_s(ms,mt) )  / xjac**2
-      zj0   = 0.d0
-      zj0  = - AR0_Rp + AR0_p / BigR + A30_RR - 3.d0 * A30_R / BigR + 2.d0 * A30 / BigR**2 + A30_ZZ - AZ0_Zp
+        AR0      = eq_g(mp,var_AR,ms,mt)
+        AR0_p    = eq_p(mp,var_AR,ms,mt)
+        AR0_s    = eq_s(mp,var_AR,ms,mt)
+        AR0_t    = eq_t(mp,var_AR,ms,mt)
+        AR0_sp   = eq_sp(mp,var_AR,ms,mt)
+        AR0_tp   = eq_tp(mp,var_AR,ms,mt)
+        AR0_Rp   = (   y_t(ms,mt) * AR0_sp  - y_s(ms,mt) * AR0_tp ) / xjac
+        AZ0      = eq_g(mp,var_AZ,ms,mt)
+        AZ0_p    = eq_p(mp,var_AZ,ms,mt)
+        AZ0_s    = eq_s(mp,var_AZ,ms,mt)
+        AZ0_t    = eq_t(mp,var_AZ,ms,mt)
+        AZ0_sp   = eq_sp(mp,var_AZ,ms,mt)
+        AZ0_tp   = eq_tp(mp,var_AZ,ms,mt)
+        AZ0_Zp   = ( - x_t(ms,mt) * AZ0_sp  + x_s(ms,mt) * AZ0_tp ) / xjac
+        A30      = eq_g(mp,var_A3,ms,mt)
+        A30_p    = eq_p(mp,var_A3,ms,mt)
+        A30_s    = eq_s(mp,var_A3,ms,mt)
+        A30_t    = eq_t(mp,var_A3,ms,mt)
+        A30_ss   = eq_ss(mp,var_A3,ms,mt)
+        A30_tt   = eq_tt(mp,var_A3,ms,mt)
+        A30_st   = eq_st(mp,var_A3,ms,mt)
+        A30_R = (   y_t(ms,mt) * A30_s  - y_s(ms,mt) * A30_t ) / xjac
+        A30_RR   = (A30_ss * y_t(ms,mt)**2 - 2.d0*A30_st * y_s(ms,mt)*y_t(ms,mt) + A30_tt * y_s(ms,mt)**2  &
+                    + A30_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                           &
+                    + A30_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )       / xjac**2         &
+                    - xjac_R * (A30_s * y_t(ms,mt) - A30_t * y_s(ms,mt))     / xjac**2
+        A30_ZZ   = (A30_ss * x_t(ms,mt)**2 - 2.d0*A30_st * x_s(ms,mt)*x_t(ms,mt) + A30_tt * x_s(ms,mt)**2  &
+                    + A30_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                           &
+                    + A30_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2         &
+                    - xjac_Z * (- A30_s * x_t(ms,mt) + A30_t * x_s(ms,mt) )  / xjac**2
+        zj0   = 0.d0
+        zj0  = - AR0_Rp + AR0_p / BigR + A30_RR - 3.d0 * A30_R / BigR + 2.d0 * A30 / BigR**2 + A30_ZZ - AZ0_Zp
 #endif
 
         eta_T   = resistivity(T0_corr)  

@@ -10,8 +10,8 @@ contains
 
   !> subroutine that will construct elementary matrices
   subroutine elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis,         &
-                                   & Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
-                                   & omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
+       &                             Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
+       &                             omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
 
     ! --- Modules
     use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order
@@ -38,8 +38,8 @@ contains
     integer,                          intent(in)     :: omp_tid
     integer,                          intent(in)     :: ife
     integer,                          intent(in)     :: n_local_elms
-    integer,                          intent(in)     :: i_tor_min   !*psv!
-    integer,                          intent(in)     :: i_tor_max   !*psv!
+    integer,                          intent(in)     :: i_tor_min   
+    integer,                          intent(in)     :: i_tor_max   
     TYPE (type_node_list),            intent(in)     :: node_list
     
     ! -- internal parameters
@@ -56,20 +56,19 @@ contains
 #endif
 
     ! --- Call element_matrix
-!    if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
     if (i_tor_min .eq. 1 .and. i_tor_max .eq. n_tor .and. n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700) then
-      call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,         &
-                              thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid, thread_struct(omp_tid)%ELM_p, & 
-                              thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn,     &
-                              thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k,  thread_struct(omp_tid)%eq_g,      & 
-                              thread_struct(omp_tid)%eq_s, thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p,         & 
-                              thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, thread_struct(omp_tid)%eq_tt,      & 
-                              thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, thread_struct(omp_tid)%delta_t,& 
-                              i_tor_min, i_tor_max)
+      call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
+        thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid, thread_struct(omp_tid)%ELM_p, & 
+        thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn, &
+        thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k,  thread_struct(omp_tid)%eq_g, & 
+        thread_struct(omp_tid)%eq_s, thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p, & 
+        thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, thread_struct(omp_tid)%eq_tt, & 
+        thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, & 
+        thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max)
       !  for toroidal integration
     else
       call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
-                              thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid, i_tor_min, i_tor_max)   ! use direct integration
+        thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid, i_tor_min, i_tor_max)   ! use direct integration
     endif
     
     ! --- Apply sheath boundary conditions at the targets
@@ -146,8 +145,9 @@ contains
           
 
         ! --- Build matrix elements for boundary
-    	call boundary_matrix_open(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, &
-    	                            R_xpoint, Z_xpoint, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
+    	call boundary_matrix_open(vertex, direction, element,nodes, & 
+                                  xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, & 
+                                  thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
        
 
       enddo

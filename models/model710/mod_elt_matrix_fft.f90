@@ -60,7 +60,7 @@ real*8     :: Coef_DivV
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t, x_ss, x_st, x_tt
 real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t, y_ss, y_st, y_tt
-real*8, dimension(n_gauss,n_gauss)    :: Fprofile, Fprofile_s, Fprofile_t, psieq, psieq_s, psieq_t
+real*8, dimension(n_gauss,n_gauss)    :: Fprofile, psieq
 real*8, dimension(n_var)              :: TG_NUM
 real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 
@@ -89,7 +89,9 @@ real*8     :: rho, rho_R, rho_Z, rho_p, rho_s, rho_t
 real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p
 real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ
 
-real*8     :: Fprof, dF_dpsi, dF_dZ, dF_dR
+real*8     :: Fprof
+real*8     :: Fprof_fake  ,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
+real*8     :: zFFprime    ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz
 real*8     :: BR0, BR0_AR,    BR0_AZ__n, BR0_A3
 real*8     :: BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3
 real*8     :: Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3
@@ -125,8 +127,6 @@ real*8     :: divU, divU_UR, divU_UZ, divU_Up__n
 real*8     :: divRhoU, divRhoU_UR, divRhoU_UZ, divRhoU_Up__p, divRhoU_Up__n, divRhoU_rho__p, divRhoU_rho__n
 
 real*8     :: ZK_prof, D_prof, psi_norm
-
-real*8     :: psieq_R, psieq_Z
 
 real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, visco_divV, dvisco_divV_dT
 real*8     :: eta_num_T, eta_R, eta_Z, eta_p, Zkpar_T, dZKpar_dt
@@ -304,9 +304,9 @@ TG_NUM    = 0.0
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_ss = 0.d0; x_st = 0.d0; x_tt = 0.d0 
 y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_ss = 0.d0; y_st = 0.d0; y_tt = 0.d0
 eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_p = 0.d0; eq_ss = 0.d0; eq_st = 0.d0; eq_tt = 0.d0
-psieq   = 0.d0; psieq_s = 0.d0; psieq_t = 0.d0
+psieq   = 0.d0
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
-Fprofile= 0.d0; Fprofile_s = 0.d0; Fprofile_t = 0.d0
+Fprofile= 0.d0
 do i=1,n_vertex_max
   do j=1,n_order+1
 #if _OPENMP >= 201511
@@ -332,12 +332,8 @@ do i=1,n_vertex_max
         y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
 
         Fprofile  (ms,mt) = Fprofile  (ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H  (i,j,ms,mt)
-        Fprofile_s(ms,mt) = Fprofile_s(ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H_s(i,j,ms,mt)
-        Fprofile_t(ms,mt) = Fprofile_t(ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H_t(i,j,ms,mt)
 
         psieq(ms,mt)    = psieq(ms,mt)    + nodes(i)%psi_eq(j)   * element%size(i,j) * H(i,j,ms,mt)
-        psieq_s(ms,mt)  = psieq_s(ms,mt)  + nodes(i)%psi_eq(j)   * element%size(i,j) * H_s(i,j,ms,mt)
-        psieq_t(ms,mt)  = psieq_t(ms,mt)  + nodes(i)%psi_eq(j)   * element%size(i,j) * H_t(i,j,ms,mt)
 
       end do
     end do
@@ -442,7 +438,9 @@ do i=1,n_vertex_max
 !$OMP  rho, rho_R, rho_Z, rho_p, rho_s, rho_t, &
 !$OMP  v,  v_R,  v_Z,  v_s,  v_t,  v_p, &
 !$OMP  bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ, &
-!$OMP  Fprof, dF_dpsi, dF_dZ, dF_dR, &
+!$OMP  Fprof, &
+!$OMP  Fprof_fake  ,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz, &
+!$OMP  zFFprime    ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz, &
 !$OMP  BR0, BR0_AR,    BR0_AZ__n, BR0_A3, &
 !$OMP  BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3, &
 !$OMP  Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3, &
@@ -466,7 +464,6 @@ do i=1,n_vertex_max
 !$OMP  divU, divU_UR, divU_UZ, divU_Up__n, &
 !$OMP  divRhoU, divRhoU_UR, divRhoU_UZ, divRhoU_Up__p, divRhoU_Up__n, divRhoU_rho__p, divRhoU_rho__n, &
 !$OMP  ZK_prof, D_prof, psi_norm, &
-!$OMP  psieq_R, psieq_Z, &
 !$OMP  eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, visco_divV, dvisco_divV_dT, &
 !$OMP  eta_num_T, eta_R, eta_Z, eta_p, Zkpar_T, dZKpar_dt, &
 !$OMP  eta_T_T, eta_R_T, eta_Z_T, eta_p_T__p, eta_p_T__n, &
@@ -688,14 +685,6 @@ do i=1,n_vertex_max
             dZKpar_dT = 0.d0
           endif
 
-          ! --- F_profile
-          Fprof   = Fprofile(ms,mt)
-          dF_dR   = (   y_t(ms,mt) * Fprofile_s(ms,mt)  - y_s(ms,mt) * Fprofile_t(ms,mt) ) / xjac
-          dF_dZ   = ( - x_t(ms,mt) * Fprofile_s(ms,mt)  + x_s(ms,mt) * Fprofile_t(ms,mt) ) / xjac
-          psieq_R = (   y_t(ms,mt) * psieq_s(ms,mt)     - y_s(ms,mt) * psieq_t(ms,mt)    ) / xjac
-          psieq_Z = ( - x_t(ms,mt) * psieq_s(ms,mt)     + x_s(ms,mt) * psieq_t(ms,mt)    ) / xjac
-          dF_dpsi = (dF_dR*psieq_R + dF_dZ*psieq_Z) / max(1.d-13,(psieq_R**2 + psieq_Z**2))
-
           ! --- Current sources
           ! --- The toroidal current source can be taken from the routine current.f90, as usual.
           ! --- The JR and JZ current sources, however, need to be calculated using the initial Grad-Shafranov equilibrium
@@ -706,14 +695,22 @@ do i=1,n_vertex_max
           ! --- And so denormalising psi_norm again, we get:
           ! --- JR = + (psi_bnd_init - psi_axis_init) / (psi_bnd - psi_axis) * psi_Z * dF_dpsi / R
           ! --- JZ = - (psi_bnd_init - psi_axis_init) / (psi_bnd - psi_axis) * psi_R * dF_dpsi / R
+
+          ! --- The dF_dpsi function calculated on time-dependent psi (for the JR,JZ current sources!)
+          ! --- Note: Fprof is be taken from the node values (cleaner)
+          call F_profile(xpoint2, xcase2, Z, Z_xpoint, A30, psi_axis, psi_bnd, &
+                         Fprof_fake,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz , &
+                         zFFprime  ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
           if (keep_current_prof) then
-            current_source_JR = + (ES%psi_bnd_init - ES%psi_axis_init) / (ES%psi_bnd - ES%psi_axis) * A30_Z * dF_dpsi / R
-            current_source_JZ = - (ES%psi_bnd_init - ES%psi_axis_init) / (ES%psi_bnd - ES%psi_axis) * A30_R * dF_dpsi / R
+            current_source_JR = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_Z * dF_dpsi / R
+            current_source_JZ = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_R * dF_dpsi / R
           else
             current_source_JR = 0.d0
             current_source_JZ = 0.d0
           endif
 
+          ! --- F_profile
+          Fprof   = Fprofile(ms,mt)
 
           ! --- Magnetic field
           BR0 = ( A30_Z - AZ0_p )/ R

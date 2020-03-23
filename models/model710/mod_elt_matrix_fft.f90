@@ -50,11 +50,15 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: delta_g, delt
 integer    :: i, j, index, index_k, index_m, n_tor_loop, i_v, j_loc, i_loc, m, ik
 integer    :: in, im, ivar, kvar, ms, mt, mp
 real*8     :: wst, xjac, xjac_R, xjac_Z, R, Z, theta, zeta
+real*8     :: current_source_JR(n_gauss,n_gauss), current_source_JZ(n_gauss,n_gauss), current_source_Jp(n_gauss,n_gauss)
+real*8     :: particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
 real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
 real*8     :: TG_NUM_Eq, CoefAdv=0.0, rho_min = 0.005
 real*8     :: Coef_DivV
+real*8     :: Fprof_fake  ,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
+real*8     :: zFFprime    ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz
 
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t, x_ss, x_st, x_tt
@@ -89,15 +93,10 @@ real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p
 real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ
 
 real*8     :: Fprof
-real*8     :: Fprof_fake  ,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
-real*8     :: zFFprime    ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz
 real*8     :: BR0, BR0_AR,    BR0_AZ__n, BR0_A3
 real*8     :: BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3
 real*8     :: Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3
 real*8     :: BB2, BB2_AR__p, BB2_AR__n, BB2_AZ__p, BB2_AZ__n, BB2_A3
-
-real*8     :: current_source_JR, current_source_JZ, current_source_Jp
-real*8     :: particle_source,heat_source
 
 real*8     :: BgradT, BgradT_AR__p, BgradT_AR__n, BgradT_AZ__p, BgradT_AZ__n, BgradT_A3, BgradT_T__p, BgradT_T__n
 
@@ -371,6 +370,50 @@ do i=1,n_vertex_max
   enddo
 enddo
 
+! --- Sources
+! --- Note about the current sources:
+! --- The toroidal current source can be taken from the routine current.f90, as usual.
+! --- The JR and JZ current sources, however, need to be calculated using the initial Grad-Shafranov equilibrium
+! --- At t=0, with GS equilibrium, we have:
+! --- JR = + psi_Z * dF_dpsi / R = + (psi_bnd_init - psi_axis_init) * psi_norm_Z * dF_dpsi / R
+! --- JZ = - psi_R * dF_dpsi / R = - (psi_bnd_init - psi_axis_init) * psi_norm_R * dF_dpsi / R
+! --- Thus, these are our current sources as a funcion of psi_norm. Now, at any time, the psi-map will change
+! --- And so denormalising psi_norm again, we get:
+! --- JR = + (psi_bnd_init - psi_axis_init) / (psi_bnd - psi_axis) * psi_Z * dF_dpsi / R
+! --- JZ = - (psi_bnd_init - psi_axis_init) / (psi_bnd - psi_axis) * psi_R * dF_dpsi / R
+current_source_JR = 0.d0
+current_source_JZ = 0.d0
+current_source_Jp = 0.d0
+particle_source   = 0.d0
+heat_source       = 0.d0
+do ms=1, n_gauss
+  do mt=1, n_gauss
+    ! --- These are just temporary, only for the sources (they are recalculated afterwards at each n_plane)
+    R     = x_g(ms,mt)
+    Z     = y_g(ms,mt)
+    xjac  = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
+    A30   = eq_g(1,var_A3,ms,mt)
+    A30_s = eq_s(1,var_AZ,ms,mt)
+    A30_t = eq_t(1,var_AZ,ms,mt)
+    A30_R = (   y_t(ms,mt) * A30_s  - y_s(ms,mt) * A30_t ) / xjac
+    A30_Z = ( - x_t(ms,mt) * A30_s  + x_s(ms,mt) * A30_t ) / xjac
+    if (keep_current_prof) then
+      ! --- The dF_dpsi function calculated on time-dependent psi_norm
+      ! --- Note: Fprof is be taken from the node values (cleaner)
+      call F_profile(xpoint2, xcase2, Z, Z_xpoint, A30, psi_axis, psi_bnd, &
+                     Fprof_fake,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz , &
+                     zFFprime  ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
+      ! --- Toroidal current source. Historically JOREK uses a negative current, so we need to reverse it.
+      call current(xpoint2, xcase2, R,Z, Z_xpoint, A30,psi_axis,psi_bnd,current_source_Jp(ms,mt))
+      current_source_Jp(ms,mt) = - current_source_Jp(ms,mt)
+      ! --- Poloidal current sources
+      current_source_JR(ms,mt) = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_Z * dF_dpsi / R
+      current_source_JZ(ms,mt) = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_R * dF_dpsi / R
+    endif
+    call sources(xpoint2, xcase2, Z, Z_xpoint, A30,psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
+  enddo
+enddo
+
 
 ! --- Main loops
 do i=1,n_vertex_max
@@ -424,14 +467,10 @@ do i=1,n_vertex_max
 !$OMP  v,  v_R,  v_Z,  v_s,  v_t,  v_p, &
 !$OMP  bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ, &
 !$OMP  Fprof, &
-!$OMP  Fprof_fake  ,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz, &
-!$OMP  zFFprime    ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz, &
 !$OMP  BR0, BR0_AR,    BR0_AZ__n, BR0_A3, &
 !$OMP  BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3, &
 !$OMP  Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3, &
 !$OMP  BB2, BB2_AR__p, BB2_AR__n, BB2_AZ__p, BB2_AZ__n, BB2_A3, &
-!$OMP  current_source_JR, current_source_JZ, current_source_Jp, &
-!$OMP  particle_source,heat_source, &
 !$OMP  BgradT, BgradT_AR__p, BgradT_AR__n, BgradT_AZ__p, BgradT_AZ__n, BgradT_A3, BgradT_T__p, BgradT_T__n, &
 !$OMP  BgradRho, BgradRho_AR__p, BgradRho_AR__n, BgradRho_AZ__p, BgradRho_AZ__n, BgradRho_A3, BgradRho_rho__p, BgradRho_rho__n, &
 !$OMP  BgradVstar__p, BgradVstar__k, &
@@ -671,36 +710,6 @@ do i=1,n_vertex_max
             dZKpar_dT = 0.d0
           endif
 
-          ! --- Current sources
-          ! --- The toroidal current source can be taken from the routine current.f90, as usual.
-          ! --- The JR and JZ current sources, however, need to be calculated using the initial Grad-Shafranov equilibrium
-          ! --- At t=0, with GS equilibrium, we have:
-          ! --- JR = + psi_Z * dF_dpsi / R = + (psi_bnd_init - psi_axis_init) * psi_norm_Z * dF_dpsi / R
-          ! --- JZ = - psi_R * dF_dpsi / R = - (psi_bnd_init - psi_axis_init) * psi_norm_R * dF_dpsi / R
-          ! --- Thus, these are our current sources as a funcion of psi_norm. Now, at any time, the psi-map will change
-          ! --- And so denormalising psi_norm again, we get:
-          ! --- JR = + (psi_bnd_init - psi_axis_init) / (psi_bnd - psi_axis) * psi_Z * dF_dpsi / R
-          ! --- JZ = - (psi_bnd_init - psi_axis_init) / (psi_bnd - psi_axis) * psi_R * dF_dpsi / R
-
-          ! --- The dF_dpsi function calculated on time-dependent psi (for the JR,JZ current sources!)
-          ! --- Note: Fprof is be taken from the node values (cleaner)
-          call F_profile(xpoint2, xcase2, Z, Z_xpoint, A30, psi_axis, psi_bnd, &
-                         Fprof_fake,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz , &
-                         zFFprime  ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
-          if (keep_current_prof) then
-            current_source_JR = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_Z * dF_dpsi / R
-            current_source_JZ = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_R * dF_dpsi / R
-            call current(xpoint2,xcase2,R,Z,Z_xpoint,A30,psi_axis,psi_bnd,current_source_Jp)
-            ! --- Historically JOREK uses a negative current, so we need to reverse it.
-            current_source_Jp = - current_source_Jp
-          else
-            current_source_JR = 0.d0
-            current_source_JZ = 0.d0
-          endif
-
-          ! --- Particle and heat sources
-          call sources(xpoint2,xcase2,Z,Z_xpoint,A30,psi_axis,psi_bnd,particle_source,heat_source)
-
           ! --- F_profile
           Fprof   = Fprofile(ms,mt)
 
@@ -905,7 +914,7 @@ do i=1,n_vertex_max
             Qvec_p(var_AR) = + v * (UZ0 * Bp0 - Up0 * BZ0)          &
                              + v * (eta_Z * Bp0 - eta_p * BZ0 / R ) &
                              - eta_T * ( - v_Z * Bp0 )              &
-                             + eta_T * v * current_source_JR
+                             + eta_T * v * current_source_JR(ms,mt)
             Qvec_k(var_AR) = - eta_T * ( + v_p * BZ0 / R)
 
             !###################################################################################################
@@ -916,7 +925,7 @@ do i=1,n_vertex_max
             Qvec_p(var_AZ) = + v * (Up0 * BR0 - UR0 * Bp0)         &
                              + v * (eta_p / R * BR0 - eta_R * Bp0) &
                              - eta_T * ( + v_R * Bp0 )             &
-                             + eta_T * v * current_source_JZ
+                             + eta_T * v * current_source_JZ(ms,mt)
             Qvec_k(var_AZ) = - eta_T * ( - v_p * BR0 / R)
 
             !###################################################################################################
@@ -928,7 +937,7 @@ do i=1,n_vertex_max
                              - eta_T * v_Z * R                * BR0 &
                              + eta_T * ( 2.d0 * v + R * v_R ) * BZ0 &
                              + R * v * (eta_R * BZ0 - eta_Z * BR0)  &
-                             + eta_T * v * current_source_Jp
+                             + eta_T * v * current_source_Jp(ms,mt)
 
             !###################################################################################################
             !#  equation 4   (R component momentum equation)                                                   #
@@ -984,7 +993,7 @@ do i=1,n_vertex_max
             Qvec_p(var_rho) = - v * ( rho0 * divU + UgradRho )                  &
                               - D_prof * gradRho_gradVstar__p                   &
                               - (D_par-D_prof) * BgradVstar__p * BgradRho / BB2 &
-                              + v * particle_source
+                              + v * particle_source(ms,mt)
             Qvec_k(var_rho) = - D_prof * gradRho_gradVstar__k                   &
                               - (D_par-D_prof) * BgradVstar__k * BgradRho / BB2
 
@@ -995,7 +1004,7 @@ do i=1,n_vertex_max
                                + v * T0   * delta_g(mp,var_rho,ms,mt)
 
             Qvec_p(var_T) = + v * ( - rho0 * UgradT  -  T0 * UgradRho  -  gamma * p0 * divU ) &
-                            + v * heat_source                                                 &
+                            + v * heat_source(ms,mt)                                          &
                             + v * (gamma-1.d0) * Qvisc_T                                      &
                             - ZK_prof * gradT_gradVstar__p                                    &
                             - (ZKpar_T-ZK_prof) * BgradVstar__p * BgradT / BB2
@@ -1493,7 +1502,7 @@ do i=1,n_vertex_max
 
                   Qjac_p (var_AR,var_T ) = + v * (eta_Z_T * Bp0 - eta_p_T__p * BZ0 / R ) &
                                            - eta_T_T * ( - v_Z * Bp0 )                   &
-                                           + eta_T_T * v * current_source_JR
+                                           + eta_T_T * v * current_source_JR(ms,mt)
                   Qjac_n (var_AR,var_T ) = + v * (              - eta_p_T__n * BZ0 / R )
                   Qjac_k (var_AR,var_T ) = - eta_T_T * ( + v_p * BZ0 / R)
 
@@ -1524,7 +1533,7 @@ do i=1,n_vertex_max
 
                   Qjac_p (var_AZ,var_T ) = + v * (eta_p_T__p / R * BR0 - eta_R_T * Bp0) &
                                            - eta_T_T * ( + v_R * Bp0 )                  &
-                                           + eta_T_T * v * current_source_JZ
+                                           + eta_T_T * v * current_source_JZ(ms,mt)
                   Qjac_n (var_AZ,var_T ) = + v * (eta_p_T__n / R * BR0 )
                   Qjac_k (var_AZ,var_T ) = - eta_T_T * ( - v_p * BR0 / R)
 
@@ -1557,7 +1566,7 @@ do i=1,n_vertex_max
 
                   Qjac_p (var_A3,var_T ) = - eta_T_T * v_Z * R                * BR0 &
                                            + eta_T_T * ( 2.d0 * v + R * v_R ) * BZ0 &
-                                           + eta_T_T * v * current_source_Jp        &
+                                           + eta_T_T * v * current_source_Jp(ms,mt) &
                                            + R * v * (eta_R_T * BZ0 - eta_Z_T * BR0)
 
                   !###################################################################################################

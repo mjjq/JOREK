@@ -436,14 +436,13 @@ required = 0
             call grid_double_xpoint(node_list, element_list)
           endif
         else
-	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, &
-            SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,             & 
-            dPSI_open,dPSI_private, xcase)
+	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,  &
+                           SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
 
         endif
       else
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
-          sig1, xr2, sig2, refinement)
+                               sig1, xr2, sig2, refinement)
       end if
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
     end if
@@ -567,12 +566,12 @@ required = 0
    
             if (.not. grid_to_wall) then
               call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
+                               SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
             else
 !!! works only for ITER wall for the moment
  !            write(*,*) 'ITER wall started'
               if(my_id == 0 ) call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
-                                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
+                                    SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
             endif !  if (.not. grid_to_wall) then
              
           endif !if (xcase .ge. 2) then
@@ -582,7 +581,7 @@ required = 0
         else ! (if xpoint)
           
           call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht,     &
-            xr1, sig1, xr2, sig2,refinement)
+                                 xr1, sig1, xr2, sig2,refinement)
           
           call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,'fluxsurface')
           
@@ -759,26 +758,26 @@ required = 0
 
        N_masters = (n_tor+1)/2
        if (MOD(n_cpu, N_masters) == 0) then
-    	  m_cpu = n_cpu / (N_masters)
+    	  M_cpu = n_cpu / (N_masters)
        else
-    	  m_cpu = (n_cpu - MOD(n_cpu, N_masters))/N_masters +1
+    	  M_cpu = (n_cpu - MOD(n_cpu, N_masters))/N_masters +1
        end if
 
        call tr_allocate(i_tor,1,n_cpu,"i_tor",CAT_UNKNOWN)
        
        do i = 1, n_cpu 
-    	  i_tor(i) =  MOD(i-1, m_cpu)+1
+    	  i_tor(i) =  MOD(i-1, M_cpu)+1
        end do
        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_TRANS,ierr)
 
        do i=1,n_cpu
-    	  i_tor(i) = ((i-1) - MOD(i-1, m_cpu))/ m_cpu  + 1
+    	  i_tor(i) = ((i-1) - MOD(i-1, M_cpu))/ M_cpu  + 1
        enddo
 
        call MPI_COMM_SPLIT(MPI_COMM_WORLD,i_tor(my_id+1),my_id,MPI_COMM_N,ierr)
        
        do i=1,N_masters
-    	  i_rank(i) = (i-1) * m_cpu
+    	  i_rank(i) = (i-1) * M_cpu
        enddo
  
        call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
@@ -798,7 +797,6 @@ required = 0
     else
        my_id_n = my_id
        MPI_COMM_N = MPI_COMM_WORLD 
-       !--- for debugging purpose
        m_cpu = n_cpu
     endif
 
@@ -819,10 +817,10 @@ required = 0
     !
     ! Construct index_min, index_max and local_elems
     !
-    call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,direct_construction, & 
-      local_elms, n_local_elms,ndof_glob,index_min,index_max)
+    call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,direct_construction,local_elms, & 
+         n_local_elms,ndof_glob,index_min,index_max)
 
-    node_list%n_dof   = ndof_glob
+    node_list%n_dof = ndof_glob
     local_index_start = index_min
     local_index_end   = index_max
     ! Build ijA_index, ijA_size and irn_jcn
@@ -830,10 +828,10 @@ required = 0
     i_tor_min = 1
     i_tor_max = n_tor
 
-    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary, &
-      local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),                  & 
-      ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max,                     &
-      n_glob, nz_glob, ndof_glob, n_matrix_block_size)
+    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
+         local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),              & 
+         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max,                 &
+         n_glob, nz_glob, ndof_glob, n_matrix_block_size)
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
@@ -960,10 +958,10 @@ required = 0
     rhs_glob = 0.0d0 
 
     call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms,   &
-      n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,   &
-      ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, i_tor_min, i_tor_max,      &
-      n_glob, nz_glob, ndof_glob, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,       &
-      irn_jcn, direct_construction)
+         n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,&
+         ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, i_tor_min, i_tor_max,   &
+         n_glob, nz_glob, ndof_glob, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
+         irn_jcn, direct_construction)
 
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
@@ -999,7 +997,7 @@ required = 0
          call clck_time_barrier(t0) 
          !--------- Constructing Harmonic Matrix directly from elementary matrix
          call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
-           node_list, element_list, xpoint, xcase, freeboundary, direct_construction)
+              node_list, element_list, xpoint, xcase, freeboundary, direct_construction)
          call clck_time_barrier(t1) 
 
          if (my_id .eq. 0) then

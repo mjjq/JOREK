@@ -393,8 +393,8 @@ do ms=1, n_gauss
     Z     = y_g(ms,mt)
     xjac  = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
     A30   = eq_g(1,var_A3,ms,mt)
-    A30_s = eq_s(1,var_AZ,ms,mt)
-    A30_t = eq_t(1,var_AZ,ms,mt)
+    A30_s = eq_s(1,var_A3,ms,mt)
+    A30_t = eq_t(1,var_A3,ms,mt)
     A30_R = (   y_t(ms,mt) * A30_s  - y_s(ms,mt) * A30_t ) / xjac
     A30_Z = ( - x_t(ms,mt) * A30_s  + x_s(ms,mt) * A30_t ) / xjac
     if (keep_current_prof) then

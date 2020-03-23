@@ -436,14 +436,14 @@ required = 0
             call grid_double_xpoint(node_list, element_list)
           endif
         else
-	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-        		   SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,& 
-                           dPSI_open,dPSI_private, xcase)
+	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, &
+            SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,             & 
+            dPSI_open,dPSI_private, xcase)
 
         endif
       else
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
-                               sig1, xr2, sig2, refinement)
+          sig1, xr2, sig2, refinement)
       end if
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
     end if
@@ -479,17 +479,17 @@ required = 0
       else if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
         
         call grid_bezier_square_polar(n_R, n_Z, n_radial, R_begin, R_end, Z_begin, Z_end, R_geo,   &
-                                      Z_geo, amin, fbnd, fpsi, mf, .true., node_list, element_list)
+          Z_geo, amin, fbnd, fpsi, mf, .true., node_list, element_list)
         
       else if ((n_R > 0) .and. (n_Z > 0) ) then
         
         call grid_bezier_square(n_R, n_Z, R_begin, R_end, Z_begin, Z_end, .true., node_list,       &
-                                element_list)
+          element_list)
         
       else if ((n_radial > 0) .and. (n_pol > 0) ) then
         
         call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
-                               node_list, element_list)
+          node_list, element_list)
         
       else
         write(*,*) ' FATAL : no valid combination of grid-sizes specified'
@@ -517,7 +517,7 @@ required = 0
     ! --- Fill the vacuum response matrices for freeboundary computations
     if ( freeboundary_equil .and. (n_flux .eq. 0)) then
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
-                               resistive_wall)
+        resistive_wall)
       call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
       call import_external_fields('coil_field.dat', my_id)
       call set_coil_curr_time_trace()
@@ -567,13 +567,12 @@ required = 0
    
             if (.not. grid_to_wall) then
               call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-                               SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,& 
-                               dPSI_open,dPSI_private, xcase)
+                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
             else
 !!! works only for ITER wall for the moment
  !            write(*,*) 'ITER wall started'
               if(my_id == 0 ) call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
-                                    SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
+                                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
             endif !  if (.not. grid_to_wall) then
              
           endif !if (xcase .ge. 2) then
@@ -583,7 +582,7 @@ required = 0
         else ! (if xpoint)
           
           call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht,     &
-                                 xr1, sig1, xr2, sig2,refinement)
+            xr1, sig1, xr2, sig2,refinement)
           
           call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,'fluxsurface')
           
@@ -608,7 +607,7 @@ required = 0
       if ( freeb_equil2) then
         freeboundary_equil = .true.
         call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
-                                 resistive_wall)
+          resistive_wall)
         call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
         call import_external_fields('coil_field.dat', my_id)
         call set_coil_curr_time_trace()
@@ -665,7 +664,7 @@ required = 0
   ! --- Fill the vacuum response matrices for freeboundary computations
   if ( freeboundary ) then
     call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
-                             resistive_wall)
+      resistive_wall)
     call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()
@@ -820,8 +819,8 @@ required = 0
     !
     ! Construct index_min, index_max and local_elems
     !
-    call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,direct_construction,& 
-                                   local_elms, n_local_elms,ndof_glob,index_min,index_max)
+    call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,direct_construction, & 
+      local_elms, n_local_elms,ndof_glob,index_min,index_max)
 
     node_list%n_dof   = ndof_glob
     local_index_start = index_min
@@ -831,10 +830,10 @@ required = 0
     i_tor_min = 1
     i_tor_max = n_tor
 
-    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,          &
-                                 local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),& 
-                                 ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max,   &
-                                 n_glob, nz_glob, ndof_glob, n_matrix_block_size)
+    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary, &
+      local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),                  & 
+      ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max,                     &
+      n_glob, nz_glob, ndof_glob, n_matrix_block_size)
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
@@ -976,40 +975,36 @@ required = 0
     if (.not. gmres) then
 
        if (use_mumps) then
-    	  call solve_mumps_all(my_id)
+         call solve_mumps_all(my_id)
        else
-          call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+         call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
        endif
 
     else 
-
 
        !--------- Constructing Harmonic Matrix via MPI all-to-all communication
        if (.not. solve_only) then
 
 #ifndef DIRECT_CONSTRUCTION
-          call clck_time(t0)
-          call distribute_harmonics(my_id,my_id_n,n_cpu)
-          call clck_time_barrier(t1)
-          call clck_ldiff(t0,t1,tsecond)
-          if (my_id .eq. 0) then
-             write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
-          end if
-
+         call clck_time(t0)
+         call distribute_harmonics(my_id,my_id_n,n_cpu)
+         call clck_time_barrier(t1)
+         call clck_ldiff(t0,t1,tsecond)
+         if (my_id .eq. 0) then
+           write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
+         end if
 #else 
          direct_construction = .true.
 
          call clck_time_barrier(t0) 
          !--------- Constructing Harmonic Matrix directly from elementary matrix
          call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
-                                           node_list, element_list, xpoint, xcase, freeboundary, direct_construction)
+           node_list, element_list, xpoint, xcase, freeboundary, direct_construction)
          call clck_time_barrier(t1) 
 
-
-
          if (my_id .eq. 0) then
-            call clck_ldiff(t0,t1,tsecond)
-            write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
+           call clck_ldiff(t0,t1,tsecond)
+           write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
          endif     
 
          call clck_time_barrier(t0) 
@@ -1019,17 +1014,15 @@ required = 0
          call clck_time_barrier(t1) 
 
          if (my_id .eq. 0) then
-            call clck_ldiff(t0,t1,tsecond)
-            write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
+           call clck_ldiff(t0,t1,tsecond)
+           write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
          endif     
 
 #endif
 
        else
-          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
-
+         call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
        endif
-
 
        ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
        call del_thread_buffers()
@@ -1039,7 +1032,7 @@ required = 0
        call clck_time_barrier(t1)
        call clck_ldiff(t0,t1,tsecond)
        if (my_id .eq. 0) then
-          write(*,FMT_TIMING) my_id, '# Elapsed time first solve :',tsecond
+         write(*,FMT_TIMING) my_id, '# Elapsed time first solve :',tsecond
        end if
     endif
 
@@ -1052,52 +1045,52 @@ required = 0
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) then
-       write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
+      write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
     end if
 
     call clck_time(t0)
     if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
 
-       if (use_pellet) then
-         pellet_volume = total_pellet_volume
-         call update_pellet(my_id,node_list,element_list)
+      if (use_pellet) then
+        pellet_volume = total_pellet_volume
+        call update_pellet(my_id,node_list,element_list)
 
-           if (my_id == 0) then
-            xtime_pellet_R(index_now)         = pellet_R
-            xtime_pellet_Z(index_now)         = pellet_Z
-            xtime_pellet_psi(index_now)       = pellet_psi
-            xtime_pellet_particles(index_now) = pellet_particles
-            xtime_phys_ablation(index_now)    = phys_ablation
-           endif
+        if (my_id == 0) then
+          xtime_pellet_R(index_now)         = pellet_R
+          xtime_pellet_Z(index_now)         = pellet_Z
+          xtime_pellet_psi(index_now)       = pellet_psi
+          xtime_pellet_particles(index_now) = pellet_particles
+          xtime_phys_ablation(index_now)    = phys_ablation
+        endif
 
-       endif
+      endif
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-       call total_neutrals(my_id,node_list,element_list)
-       if (using_spi .and. t_now >= t_ns) then
-         call update_spi(my_id,node_list,element_list)
-       end if
+      call total_neutrals(my_id,node_list,element_list)
+      if (using_spi .and. t_now >= t_ns) then
+        call update_spi(my_id,node_list,element_list)
+      end if
 #endif
 
 
-       call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
-       call update_deltas(my_id,node_list)
+      call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
+      call update_deltas(my_id,node_list)
  
-          t_now = t_now + tstep
+      t_now = t_now + tstep
 
-       else
-          if ( my_id == 0 ) then
-             write(*,*)
-             write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', iter_gmres, ' ITERATIONS. ABORTING <<<<<'
-             write(*,*)
-          end if
-          index_now = index_now - 1 ! Undo the time step
-          exit jstep_loop
-       end if
+    else
+      if ( my_id == 0 ) then
+        write(*,*)
+        write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', iter_gmres, ' ITERATIONS. ABORTING <<<<<'
+        write(*,*)
+      end if
+      index_now = index_now - 1 ! Undo the time step
+      exit jstep_loop
+    end if
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) then
-       write(*,FMT_TIMING)  my_id, '#  Elapsed time Final Update:',tsecond
+      write(*,FMT_TIMING)  my_id, '#  Elapsed time Final Update:',tsecond
     end if
 
     !-------------------------------------------------------- adapt time step (in progress...)
@@ -1120,16 +1113,16 @@ required = 0
 
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
-       call energy(node_list,element_list,W_mag,W_kin)
-       call integrals(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint,       &
-         ES%psi_xpoint, ES%psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now),               &
-         beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),           &
-         density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                         &
-         pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),           &
-         part_src_in_t(index_now), part_src_out_t(index_now))
-       R_axis_t(index_now)   = ES%R_axis
-       Z_axis_t(index_now)   = ES%Z_axis
-       psi_axis_t(index_now) = ES%psi_axis
+      call energy(node_list,element_list,W_mag,W_kin)
+      call integrals(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint, &
+        ES%psi_xpoint, ES%psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now),                  &
+        beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),                    &
+        density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                                  &
+        pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),                    &
+        part_src_in_t(index_now), part_src_out_t(index_now))
+      R_axis_t(index_now)   = ES%R_axis
+      Z_axis_t(index_now)   = ES%Z_axis
+      psi_axis_t(index_now) = ES%psi_axis
 
        xtime(index_now) = t_now
        energies(1:n_tor,1,index_now) = W_mag(1:n_tor)
@@ -1277,12 +1270,12 @@ endif
       pastix_iparm(3)     = 7
 
       if (.not. gmres) then
-         call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+        call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
+          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
       elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
-        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-             DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, &
+          DUMMY_INT,DUMMY_INT,DUMMY_REAL,                       &
+          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
       endif
 #else
       ! -- For PaStiX solver version 6.x
@@ -1397,25 +1390,25 @@ endif
     	  call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
 
     	  call density(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
-    	       zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
+    	     zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
     	  if (jorek_model .eq. 400) then	     
     	    call temperature_i(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
-    			     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
+    	      zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
     	    call temperature_e(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
-    	     zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)	     
+    	      zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)	     
             zT = zTi + zTe
     	    dT_dpsi = dTi_dpsi + dTe_dpsi	    
     	  else
             call temperature(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
-    		   zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+    	      zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
     	  endif
     	  call FFprime(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
-    	       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
+    	    zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
 
           if (NEO) then
             if (num_neo_file) then
               call neo_coef (xpoint, xcase, Zp, ES%Z_xpoint, psi, ES%psi_axis,ES%psi_bnd, &
-                  amu_neo_node, aki_neo_node)
+                amu_neo_node, aki_neo_node)
             endif
           endif
 
@@ -1475,7 +1468,6 @@ endif
 #endif
 #endif
   endif
- 
  
 #ifdef USE_FFTW
   call dfftw_destroy_plan(fftw_plan)

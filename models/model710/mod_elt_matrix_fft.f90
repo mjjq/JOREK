@@ -50,7 +50,6 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: delta_g, delt
 integer    :: i, j, index, index_k, index_m, n_tor_loop, i_v, j_loc, i_loc, m, ik
 integer    :: in, im, ivar, kvar, ms, mt, mp
 real*8     :: wst, xjac, xjac_R, xjac_Z, R, Z, theta, zeta
-real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss), source_pellet
 real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
@@ -97,7 +96,8 @@ real*8     :: BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3
 real*8     :: Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3
 real*8     :: BB2, BB2_AR__p, BB2_AR__n, BB2_AZ__p, BB2_AZ__n, BB2_A3
 
-real*8     :: current_source_JR, current_source_JZ
+real*8     :: current_source_JR, current_source_JZ, current_source_Jp
+real*8     :: particle_source,heat_source
 
 real*8     :: BgradT, BgradT_AR__p, BgradT_AR__n, BgradT_AZ__p, BgradT_AZ__n, BgradT_A3, BgradT_T__p, BgradT_T__n
 
@@ -371,21 +371,6 @@ do i=1,n_vertex_max
   enddo
 enddo
 
-! --- Sources
-current_source  = 0.d0
-particle_source = 0.d0
-heat_source     = 0.d0
-do ms=1, n_gauss
-  do mt=1, n_gauss
-    if (keep_current_prof) then
-      call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
-      ! --- Historically JOREK uses a negative current, so we need to reverse it.
-      current_source(ms,mt) = - current_source(ms,mt)
-    endif
-    call sources(xpoint2, xcase2, y_g(ms,mt)           , Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
-  enddo
-enddo
-
 
 ! --- Main loops
 do i=1,n_vertex_max
@@ -445,7 +430,8 @@ do i=1,n_vertex_max
 !$OMP  BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3, &
 !$OMP  Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3, &
 !$OMP  BB2, BB2_AR__p, BB2_AR__n, BB2_AZ__p, BB2_AZ__n, BB2_A3, &
-!$OMP  current_source_JR, current_source_JZ, &
+!$OMP  current_source_JR, current_source_JZ, current_source_Jp, &
+!$OMP  particle_source,heat_source, &
 !$OMP  BgradT, BgradT_AR__p, BgradT_AR__n, BgradT_AZ__p, BgradT_AZ__n, BgradT_A3, BgradT_T__p, BgradT_T__n, &
 !$OMP  BgradRho, BgradRho_AR__p, BgradRho_AR__n, BgradRho_AZ__p, BgradRho_AZ__n, BgradRho_A3, BgradRho_rho__p, BgradRho_rho__n, &
 !$OMP  BgradVstar__p, BgradVstar__k, &
@@ -704,10 +690,16 @@ do i=1,n_vertex_max
           if (keep_current_prof) then
             current_source_JR = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_Z * dF_dpsi / R
             current_source_JZ = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_R * dF_dpsi / R
+            call current(xpoint2,xcase2,R,Z,Z_xpoint,A30,psi_axis,psi_bnd,current_source_Jp)
+            ! --- Historically JOREK uses a negative current, so we need to reverse it.
+            current_source_Jp = - current_source_Jp
           else
             current_source_JR = 0.d0
             current_source_JZ = 0.d0
           endif
+
+          ! --- Particle and heat sources
+          call sources(xpoint2,xcase2,Z,Z_xpoint,A30,psi_axis,psi_bnd,particle_source,heat_source)
 
           ! --- F_profile
           Fprof   = Fprofile(ms,mt)
@@ -936,7 +928,7 @@ do i=1,n_vertex_max
                              - eta_T * v_Z * R                * BR0 &
                              + eta_T * ( 2.d0 * v + R * v_R ) * BZ0 &
                              + R * v * (eta_R * BZ0 - eta_Z * BR0)  &
-                             + eta_T * v * current_source(ms,mt)
+                             + eta_T * v * current_source_Jp
 
             !###################################################################################################
             !#  equation 4   (R component momentum equation)                                                   #
@@ -992,7 +984,7 @@ do i=1,n_vertex_max
             Qvec_p(var_rho) = - v * ( rho0 * divU + UgradRho )                  &
                               - D_prof * gradRho_gradVstar__p                   &
                               - (D_par-D_prof) * BgradVstar__p * BgradRho / BB2 &
-                              + v * particle_source(ms,mt)
+                              + v * particle_source
             Qvec_k(var_rho) = - D_prof * gradRho_gradVstar__k                   &
                               - (D_par-D_prof) * BgradVstar__k * BgradRho / BB2
 
@@ -1003,7 +995,7 @@ do i=1,n_vertex_max
                                + v * T0   * delta_g(mp,var_rho,ms,mt)
 
             Qvec_p(var_T) = + v * ( - rho0 * UgradT  -  T0 * UgradRho  -  gamma * p0 * divU ) &
-                            + v * heat_source(ms,mt)                                          &
+                            + v * heat_source                                                 &
                             + v * (gamma-1.d0) * Qvisc_T                                      &
                             - ZK_prof * gradT_gradVstar__p                                    &
                             - (ZKpar_T-ZK_prof) * BgradVstar__p * BgradT / BB2
@@ -1565,7 +1557,7 @@ do i=1,n_vertex_max
 
                   Qjac_p (var_A3,var_T ) = - eta_T_T * v_Z * R                * BR0 &
                                            + eta_T_T * ( 2.d0 * v + R * v_R ) * BZ0 &
-                                           + eta_T_T * v * current_source(ms,mt)    &
+                                           + eta_T_T * v * current_source_Jp        &
                                            + R * v * (eta_R_T * BZ0 - eta_Z_T * BR0)
 
                   !###################################################################################################

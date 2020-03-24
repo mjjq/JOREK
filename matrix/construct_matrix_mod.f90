@@ -631,8 +631,7 @@ endif
 
                 index_large_k = (i_tor_max - i_tor_min + 1) * n_var * (index_node2 - 1)
    
-                call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position, & 
-                                       ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp)
+                call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp)
 
                 thread_struct(omp_tid)%synch_buff(:) = 0.d0
                 do j = 1, n_var * (i_tor_max - i_tor_min + 1)
@@ -689,7 +688,8 @@ endif
                            A_local, i_tor_min, i_tor_max )
 
   if (fix_axis_nodes) then
-    call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max)
+    call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max, & 
+                           ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, i_tor_min, i_tor_max )
   endif
 
   ! --- Memory tracking

@@ -10,7 +10,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
-use phys_module, only: force_central_node, write_ps
+use phys_module, only: force_central_node, write_ps, fix_axis_nodes
 
 implicit none
 
@@ -1369,6 +1369,10 @@ enddo
 
 index = 0
 do i=1,newnode_list%n_nodes
+
+  newnode_list%node(i)%axis_node = .false.
+  if ( fix_axis_nodes .and. (i .le. n_tht) ) newnode_list%node(i)%axis_node = .true.
+
   do k=1,n_order+1
 
     index = index + 1
@@ -1410,6 +1414,18 @@ do i=1,newnode_list%n_nodes
   
   newnode_list%node(i)%constrained = .false.
 enddo
+
+if (fix_axis_nodes) then
+  do k=1, newelement_list%n_elements
+    do iv=1,4
+      j = newelement_list%element(k)%vertex(iv)
+      if (newnode_list%node(j)%axis_node) then
+        newelement_list%element(k)%size(iv,3) = 0.d0
+        newelement_list%element(k)%size(iv,4) = 0.d0
+      endif
+    enddo
+  enddo
+endif
 
 do i=1,newnode_list%n_nodes
 

@@ -4,7 +4,7 @@ module mod_boundary_conditions
   !************ Define global variables for all internal routines ****************
   !*******************************************************************************
   ! --- ZBIG parameter to make equations "more important" than element_matrix equations
-  real*8, parameter		:: zbig = 1.d10
+  real*8  		        :: zbig = 1.d10, zbig_backup
   ! --- R,Z variables
   real*8			:: R, R_s, R_t
   real*8			:: Z, Z_s, Z_t
@@ -63,7 +63,8 @@ contains
                            RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ,    &
                            psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ,            &
                            t_now, RMP_start_time, tstep, RMP_har_cos, RMP_har_sin,   &
-                           RMP_growth_rate, RMP_ramp_up_time, T_min, grid_to_wall, n_wall_blocks
+                           RMP_growth_rate, RMP_ramp_up_time, T_min, grid_to_wall,   &
+                           n_wall_blocks, keep_n0_const
     use mpi_mod
     use mod_locate_irn_jcn
 
@@ -115,6 +116,7 @@ contains
     integer             :: ilarge_vp, ilarge_vp2
     integer             :: j, err, itest 
     
+    zbig_backup = zbig
     ! -------------------------
     ! --- Retrieve RMP profiles
     if (RMP_on .and. (n_tor .ge. 3)) then
@@ -161,8 +163,12 @@ contains
 
             call construct_variables(node_list%node(inode), R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
 	    
-	    do i_tor=i_tor_min, i_tor_max!1, n_tor
-            
+	    do i_tor=i_tor_min, i_tor_max
+              if (keep_n0_const  .and.  i_tor .eq. 1 ) then
+                zbig = 1.d15
+              else
+                zbig = zbig_backup
+              endif
 
               do k_var=1, n_var
 

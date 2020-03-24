@@ -7,7 +7,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
-use phys_module, only: force_central_node
+use phys_module, only: force_central_node, fix_axis_nodes
 
 implicit none
 
@@ -442,9 +442,12 @@ do i=1,nrnew
 
     if (i .eq. nrnew) node_list%node(index)%boundary = 2
 
+    node_list%node(index)%axis_node = .false.
+    if ( fix_axis_nodes .and. (i .eq. 1) ) node_list%node(index)%axis_node = .true.
+
     if (.not. refinement) then       ! keep original formulation if not using refinement
    
-      if ((force_central_node) .and. (i.eq.1)) then
+      if (force_central_node .and. (i.eq.1)) then
 
         node_list%node(index)%index(1) = 1
 
@@ -555,6 +558,13 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
    element_list%element(k)%size(iv,2) = dir_2
    element_list%element(k)%size(iv,3) = dir_3
    element_list%element(k)%size(iv,4) = element_list%element(k)%size(iv,2) * element_list%element(k)%size(iv,3)
+   if (fix_axis_nodes) then
+      j = element_list%element(k)%vertex(iv)
+      if (node_list%node(j)%axis_node) then
+        element_list%element(k)%size(iv,3) = 0.d0
+        element_list%element(k)%size(iv,4) = 0.d0
+      endif
+   endif
 
 !   if ((RR(2,node_iv)**2 + ZZ(2,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,2) = dir_2
 !   if ((RR(3,node_iv)**2 + ZZ(3,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,3) = dir_3

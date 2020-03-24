@@ -12,21 +12,386 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
+use diffusivities, only: get_dperp, get_zkperp
 
 implicit none
 
 type (type_element)   :: element
-type (type_node)      :: nodes(2)        ! the two nodes containing the boundary nodes
+type (type_node)      :: nodes(4)        ! the two nodes containing the boundary nodes
 
-real*8, dimension (:,:), allocatable  :: ELM
-real*8, dimension (:)  , allocatable  :: RHS
+!real*8, dimension (:,:), allocatable  :: ELM
+!real*8, dimension (:)  , allocatable  :: RHS
 integer,               intent(in)     :: i_tor_min   !*psv!
 integer,               intent(in)     :: i_tor_max   !*psv!
+real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
+real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
 integer    :: vertex(2), direction(2), xcase2
 real*8     :: psi_axis, R_axis, Z_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 logical    :: xpoint2
+real*8     :: R_g(n_gauss), R_s(n_gauss), R_t(n_gauss)
+real*8     :: Z_g(n_gauss), Z_s(n_gauss), Z_t(n_gauss)
+
+real*8     :: eq_g(n_plane,n_var,n_gauss), eq_s(n_plane,n_var,n_gauss), eq_t(n_plane,n_var,n_gauss), eq_p(n_plane,n_var,n_gauss)
+real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss), delta_t(n_plane,n_var,n_gauss)
+real*8     :: Fprofile(n_gauss)
+
+real*8     :: Qbnd(n_var), Qjac(n_var,n_var)
+
+integer    :: i, j, j2, ms, mt, mp, k, l, l2, index_ij, index_kl, ij, kl
+integer    :: in, im, ivar, kvar
+integer    :: j3, direction_perp(2)
+real*8     :: ws, xjac,  BigR, phi, DL, Zbig
+real*8     :: R_mid, Z_mid, R_cnt, Z_cnt
+real*8     :: theta, zeta, psi_norm, ZK_prof, integrand
+
+real*8     :: T, r0, rho, c_s, cs_T
+real*8     :: AR0, AR0_p, AR0_s, AR0_t, AR0_R, AR0_Z
+real*8     :: AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_R, AZ0_Z     
+real*8     :: A30, A30_p, A30_s, A30_t, A30_R, A30_Z
+real*8     :: uR0, uR0_s, uR0_t, uR0_R, uR0_Z
+real*8     :: uZ0, uZ0_s, uZ0_t, uZ0_R, uZ0_Z
+real*8     :: UP0, Up
+real*8     :: T0, T0_p, T0_s, T0_t, T0_R, T0_Z, T0_corr
+real*8     :: AR, AR_p, AR_s, AR_t, AR_R, AR_Z
+real*8     :: AZ, AZ_p, AZ_s, AZ_t, AZ_R, AZ_Z     
+real*8     :: A3, A3_p, A3_s, A3_t, A3_R, A3_Z
+real*8     :: uR, uR_s, uR_t, uR_R, uR_Z
+real*8     :: uZ, uZ_s, uZ_t, uZ_R, uZ_Z
+real*8     :: bf, bf_s, bf_t, bf_p, bf_R, bf_Z
+
+real*8     :: BB2, BB2_AR, BB2_AZ, BB2_A3
+real*8     :: BR0, BR0_AR, BR0_AZ, BR0_A3
+real*8     :: BZ0, BZ0_AR, BZ0_AZ, BZ0_A3
+real*8     :: Bp0, Bp0_AR, Bp0_AZ, Bp0_A3
+
+real*8     :: B_dot_n, B_dot_n_AR, B_dot_n_AZ, B_dot_n_A3, cs_direction
+real*8     :: ZKpar_T
+
+real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
+real*8     :: element_size_ij, element_size_kl, element_size_perp
+real*8     :: normal(2), normal_direction(2)
+real*8     :: grad_s(2), grad_t(2)
+real*8     :: Mach1
+
+! --- Time integration parameters
+theta = time_evol_theta
+zeta  = time_evol_zeta
+
+! --- Flag to switch Mach-1 between boundary_conditions and boundary_matrix_open
+Mach1 = 0.d0
+if (Mach1_openBC) Mach1 = 1.d0
+
+! --- Penalisation cofficient to impose BCs
+zbig = 1.d11
+
+! --- Initialise variables before integration
+R_g     = 0.d0; R_s     = 0.d0; R_t     = 0.d0; 
+Z_g     = 0.d0; Z_s     = 0.d0; Z_t     = 0.d0;
+eq_g    = 0.d0; eq_s    = 0.d0; eq_t    = 0.d0; eq_p = 0.d0;
+delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0;
+Fprofile = 0.d0
+
+! --- Strategic points on elements to define normal vector properly
+R_mid = sum(nodes(1:2)%x(1,1)) / 2.d0     ! mid point on boundary (approx.)
+Z_mid = sum(nodes(1:2)%x(1,2)) / 2.d0
+R_cnt = sum(nodes(1:4)%x(1,1)) / 4.d0     ! center point within element (approx.)
+Z_cnt = sum(nodes(1:4)%x(1,2)) / 4.d0
+
+normal_direction = (/R_mid - R_cnt, Z_mid - Z_cnt /) / norm2((/R_mid - R_cnt, Z_mid - Z_cnt /))
+direction_perp(1) = 6 / direction(2)     ! =3 if direction(2)=2, =3 if direction(2)=3
+direction_perp(2) = 4
+
+! --- Loop over nodes
+do i=1,2
+  ! --- Loop over basis functions
+  do j=1,2
+
+    j2 = direction(j)
+    j3 = direction_perp(j)
+
+    element_size_ij = element%size(vertex(i),j2)
+    !element_size_perp = - element%size(vertex(i),direction_perp(1)) * 3.d0
+    if(vertex(1) == 1)then ! NEEDS TO BE CONFIRMED FOR WALL-GRIDS AND t-derivaties !
+      element_size_perp = + element%size(vertex(i),j3) * 3.d0
+    elseif(vertex(1)==3)then
+      element_size_perp = - element%size(vertex(i),j3) * 3.d0
+    endif
+
+    ! --- Gaussian integration
+    do ms=1, n_gauss
+
+      ! --- Pre-define R and Z
+      R_g(ms)  = R_g(ms)  + nodes(i)%x(j2,1) * element_size_ij * H1(i,j,ms)
+      R_s(ms)  = R_s(ms)  + nodes(i)%x(j2,1) * element_size_ij * H1_s(i,j,ms)
+      R_t(ms)  = R_t(ms)  + nodes(i)%x(j3,1) * element_size_ij * H1(i,j,ms)   * element_size_perp
+
+      Z_g(ms)  = Z_g(ms)  + nodes(i)%x(j2,2) * element_size_ij * H1(i,j,ms)
+      Z_s(ms)  = Z_s(ms)  + nodes(i)%x(j2,2) * element_size_ij * H1_s(i,j,ms)
+      Z_t(ms)  = Z_t(ms)  + nodes(i)%x(j3,2) * element_size_ij * H1(i,j,ms)   * element_size_perp
+
+      ! --- Pre-define F-profile from initial equilibrium
+      Fprofile(ms)   = Fprofile(ms)   + nodes(i)%Fprof_eq(j2)    * element_size_ij * H1(i,j,ms)
+
+      ! --- Toroidal integration for each variable
+      do mp=1,n_plane
+        do k=1,n_var
+          do in=1,n_tor
+
+            ! --- Save variables
+            eq_g(mp,k,ms)  = eq_g(mp,k,ms)  + nodes(i)%values(in,j2,k) * element_size_ij * H1(i,j,ms)   * HZ  (in,mp)
+            eq_s(mp,k,ms)  = eq_s(mp,k,ms)  + nodes(i)%values(in,j2,k) * element_size_ij * H1_s(i,j,ms) * HZ  (in,mp)
+            eq_t(mp,k,ms)  = eq_t(mp,k,ms)  + nodes(i)%values(in,j3,k) * element_size_ij * H1(i,j,ms)   * HZ  (in,mp) * element_size_perp
+            eq_p(mp,k,ms)  = eq_p(mp,k,ms)  + nodes(i)%values(in,j2,k) * element_size_ij * H1(i,j,ms)   * HZ_p(in,mp)
+
+            ! --- Save deltas
+            delta_g(mp,k,ms) = delta_g(mp,k,ms) + nodes(i)%deltas(in,j2,k) * element_size_ij * H1(i,j,ms)   * HZ(in,mp)
+            delta_s(mp,k,ms) = delta_s(mp,k,ms) + nodes(i)%deltas(in,j2,k) * element_size_ij * H1_s(i,j,ms) * HZ(in,mp)
+
+          enddo
+        enddo
+      enddo
+
+    enddo
+  enddo
+enddo
+
+! --- Gaussian integration
+do ms=1, n_gauss
+
+  ! --- Gaussian weight
+  ws = wgauss(ms)
+
+  ! --- Jacobian
+  xjac = R_s(ms) * Z_t(ms) - R_t(ms) * Z_s(ms)
+
+  ! --- Normal at target
+  grad_s = (/   Z_t(ms), - R_t(ms) /) / xjac
+  grad_t = (/ - Z_s(ms),   R_s(ms) /) / xjac
+  normal = dot_product(grad_t,normal_direction) * grad_t
+  normal = normal / norm2(normal)
+
+  ! --- Curve integrand
+  DL   = sqrt(R_s(ms)**2 + Z_s(ms)**2)
+  BigR = R_g(ms)
+  integrand = ws * BigR * DL ! IMPORTANT: is DL ignored in model303 ?
+
+  ! --- Intitilise RHS and LHS
+  Qbnd = 0.d0
+  Qjac = 0.d0
+
+  ! --- Toroidal integration
+  do mp = 1, n_plane
+
+    ! --- Density
+    r0    = eq_g(mp,var_rho,ms)
+    
+    ! --- Velocity
+    uR0   = eq_g(mp,var_uR,ms)
+    uZ0   = eq_g(mp,var_uZ,ms)
+    up0   = eq_g(mp,var_up,ms)
+
+    ! --- Temperature
+    T0    = eq_g(mp,var_T,ms)
+    T0_p  = eq_p(mp,var_T,ms)
+    T0_s  = eq_s(mp,var_T,ms)
+    T0_t  = eq_t(mp,var_T,ms)
+    T0_R  = (   Z_t(ms) * T0_s  - Z_s(ms) * T0_t ) / xjac
+    T0_Z  = ( - R_t(ms) * T0_s  + R_s(ms) * T0_t ) / xjac
+
+    ! --- AR
+    AR0   = eq_g(mp,var_AR,ms)
+    AR0_p = eq_p(mp,var_AR,ms)
+    AR0_s = eq_s(mp,var_AR,ms)
+    AR0_t = eq_t(mp,var_AR,ms)
+    AR0_R = (   Z_t(ms) * AR0_s  - Z_s(ms) * AR0_t ) / xjac
+    AR0_Z = ( - R_t(ms) * AR0_s  + R_s(ms) * AR0_t ) / xjac
+
+    ! --- AZ
+    AZ0   = eq_g(mp,var_AZ,ms)
+    AZ0_p = eq_p(mp,var_AZ,ms)
+    AZ0_s = eq_s(mp,var_AZ,ms)
+    AZ0_t = eq_t(mp,var_AZ,ms)
+    AZ0_R = (   Z_t(ms) * AZ0_s  - Z_s(ms) * AZ0_t ) / xjac
+    AZ0_Z = ( - R_t(ms) * AZ0_s  + R_s(ms) * AZ0_t ) / xjac
+
+    ! --- A3
+    A30   = eq_g(mp,var_A3,ms)
+    A30_p = eq_p(mp,var_A3,ms)
+    A30_s = eq_s(mp,var_A3,ms)
+    A30_t = eq_t(mp,var_A3,ms)
+    A30_R = (   Z_t(ms) * A30_s  - Z_s(ms) * A30_t ) / xjac
+    A30_Z = ( - R_t(ms) * A30_s  + R_s(ms) * A30_t ) / xjac
+
+    ! --- Magnetic field
+    BR0 = ( A30_Z - AZ0_p )/ BigR
+    BZ0 = ( AR0_p - A30_R )/ BigR
+    Bp0 = ( AZ0_R - AR0_Z )       +   Fprofile(ms) / BigR
+
+    BB2 = BR0*BR0 + BZ0*BZ0 + Bp0*Bp0
+
+    ! --- Magnetic field direction at target
+    B_dot_n = BR0 * normal(1) + BZ0 * normal(2)
+    cs_direction = B_dot_n / abs(B_dot_n)
+
+    T0_corr = max(T0,1.d-12) ! should we use corrected temperature ?
+    c_s = sqrt(gamma * T0_corr)
+
+    ! --- Loop over nodes
+    do i=1,2
+      ! --- Loop over basis functions
+      do j=1,2
+
+        j2 = direction(j)
+        element_size_ij = element%size(vertex(i),j2)
+
+        ! Loop over toroidal modes
+        do im=1,n_tor
+
+          ! --- Test function
+          v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)
+
+          ! --- VR-equation
+          Qbnd(var_uR)   = Mach1 * zbig * v * ( UR0  - c_s * BR0 * cs_direction / sqrt(BB2) )
+
+          ! --- VZ-equation
+          Qbnd(var_uZ)   = Mach1 * zbig * v * ( UZ0  - c_s * BZ0 * cs_direction / sqrt(BB2) )
+
+          ! --- Vp-equation
+          if (parallel_projection) then
+            Qbnd(var_up) = Mach1 * zbig * v * ( BR0 * UR0 + BZ0 * UZ0 + Bp0 * Up0 - c_s * cs_direction * sqrt(BB2) )
+          else
+            Qbnd(var_up) = Mach1 * zbig * v * ( Up0  - c_s * Bp0 * cs_direction / sqrt(BB2) )
+          endif
+
+          ! --- Sheath BC's
+          Qbnd(var_T) = - v * (gamma_sheath - 1.d0) * r0 * T0 * c_s * B_dot_n / sqrt(BB2)
+
+          ! --- Fill in RHS
+          index_ij = n_tor*n_var*(n_order+1)*(vertex(i)-1) + n_tor * n_var * (j2-1) + im   ! index in the ELM matrix
+          do ivar= 1,n_var
+            ij = index_ij + (ivar-1)*n_tor
+            RHS(ij) =  RHS(ij) + Qbnd(ivar) * integrand * tstep
+          enddo
+
+          ! --- loop over nodes
+          do k=1,2
+
+            ! --- loop over basis functions
+            do l=1,2
+
+              l2 = direction(l)
+
+              element_size_kl   = element%size(vertex(k),l2)
+              !element_size_perp = - element%size(vertex(k),direction_perp(1)) * 3.d0
+              if(vertex(1) == 1)then ! NEEDS TO BE CONFIRMED FOR WALL-GRIDS AND t-derivaties !
+                element_size_perp = + element%size(vertex(k),direction_perp(l)) * 3.d0
+              elseif(vertex(1)==3)then
+                element_size_perp = - element%size(vertex(k),direction_perp(l)) * 3.d0
+              endif
+
+              ! Loop over toroidal modes
+              do in = 1, n_tor                                              ! loop over toroidal harmonics
+
+                ! --- Basis functions
+                bf   = H1(k,l,ms)   * element_size_kl * HZ(in,mp)
+                bf_s = H1_s(k,l,ms) * element_size_kl * HZ(in,mp)   
+                bf_t = H1(k,l,ms)   * element_size_kl * HZ(in,mp) * element_size_perp
+                bf_R = (   Z_t(ms) * bf_s - Z_s(ms) * bf_t ) / xjac
+                bf_Z = ( - R_t(ms) * bf_s + R_s(ms) * bf_t ) / xjac
+
+                ! --- Copies of basis functions
+                T     = bf    ;  rho   = bf
+                uR    = bf    ;  uZ    = bf    ;  up    = bf
+                AR    = bf    ;  AZ    = bf    ;  A3    = bf   
+                AR_R  = bf_R  ;  AZ_R  = bf_R  ;  A3_R  = bf_R 
+                AR_Z  = bf_Z  ;  AZ_Z  = bf_Z  ;  A3_Z  = bf_Z 
+                AR_p  = bf_p  ;  AZ_p  = bf_p  ;  A3_p  = bf_p 
+                AR_s  = bf_s  ;  AZ_s  = bf_s  ;  A3_s  = bf_s 
+                AR_t  = bf_t  ;  AZ_t  = bf_t  ;  A3_t  = bf_t 
+
+                ! --- Magnetic field derivatives
+                BR0_AR =   0.d0        ; BR0_AZ = - AZ_p / BigR ; BR0_A3 =   A3_Z / BigR
+                BZ0_AR =   AR_p / BigR ; BZ0_AZ =   0.d0        ; BZ0_A3 = - A3_R / BigR
+                Bp0_AR = - AR_Z        ; Bp0_AZ =   AZ_R        ; Bp0_A3 =   0.d0
+
+                B_dot_n_AR = BR0_AR * normal(1) + BZ0_AR * normal(2)
+                B_dot_n_AZ = BR0_AZ * normal(1) + BZ0_AZ * normal(2)
+                B_dot_n_A3 = BR0_A3 * normal(1) + BZ0_A3 * normal(2)
+
+                BB2_AR = 2.d0*(BR0_AR * BR0 + BZ0_AR * BZ0 + Bp0_AR * Bp0 )
+                BB2_AZ = 2.d0*(BR0_AZ * BR0 + BZ0_AZ * BZ0 + Bp0_AZ * Bp0 )
+                BB2_A3 = 2.d0*(BR0_A3 * BR0 + BZ0_A3 * BZ0 + Bp0_A3 * Bp0 )
+
+                ! --- Mach-1 BC's
+                cs_T = gamma * T / (2.d0 * c_s)
+
+                ! --- VR-linearised equation
+                Qjac(var_uR,var_uR) = - Mach1 * zbig * v * UR
+                Qjac(var_uR,var_AR) = - Mach1 * zbig * v * c_s * cs_direction * ( - BR0_AR / sqrt(BB2) + 0.5 * BR0 * BB2_AR / BB2**1.5 )
+                Qjac(var_uR,var_AZ) = - Mach1 * zbig * v * c_s * cs_direction * ( - BR0_AZ / sqrt(BB2) + 0.5 * BR0 * BB2_AZ / BB2**1.5 )
+                Qjac(var_uR,var_A3) = - Mach1 * zbig * v * c_s * cs_direction * ( - BR0_A3 / sqrt(BB2) + 0.5 * BR0 * BB2_A3 / BB2**1.5 )
+                Qjac(var_uR,var_T)  = - Mach1 * zbig * v * ( - cs_T * BR0 * cs_direction / sqrt(BB2) )
+
+                ! --- VZ-linearised equation
+                Qjac(var_uZ,var_uZ) = - Mach1 * zbig * v * UZ
+                Qjac(var_uZ,var_AR) = - Mach1 * zbig * v * c_s * cs_direction * ( - BZ0_AR / sqrt(BB2) + 0.5 * BZ0 * BB2_AR / BB2**1.5 )
+                Qjac(var_uZ,var_AZ) = - Mach1 * zbig * v * c_s * cs_direction * ( - BZ0_AZ / sqrt(BB2) + 0.5 * BZ0 * BB2_AZ / BB2**1.5 )
+                Qjac(var_uZ,var_A3) = - Mach1 * zbig * v * c_s * cs_direction * ( - BZ0_A3 / sqrt(BB2) + 0.5 * BZ0 * BB2_A3 / BB2**1.5 )
+                Qjac(var_uZ,var_T)  = - Mach1 * zbig * v * ( - cs_T * BZ0 * cs_direction / sqrt(BB2) )
+
+                ! --- Vp-linearised equation
+                if (parallel_projection) then
+                  Qjac(var_up,var_uR) = - Mach1 * zbig * v * BR0 * UR
+                  Qjac(var_up,var_uZ) = - Mach1 * zbig * v * BZ0 * UZ
+                  Qjac(var_up,var_up) = - Mach1 * zbig * v * Bp0 * Up
+                  Qjac(var_up,var_AR) = - Mach1 * zbig * v * ( - c_s  * cs_direction * 0.5 * BB2_AR / sqrt(BB2) )
+                  Qjac(var_up,var_AZ) = - Mach1 * zbig * v * ( - c_s  * cs_direction * 0.5 * BB2_AZ / sqrt(BB2) )
+                  Qjac(var_up,var_A3) = - Mach1 * zbig * v * ( - c_s  * cs_direction * 0.5 * BB2_A3 / sqrt(BB2) )
+                  Qjac(var_up,var_T)  = - Mach1 * zbig * v * ( - cs_T * cs_direction * sqrt(BB2) )
+                else
+                  Qjac(var_up,var_up) = - Mach1 * zbig * v * Up
+                  Qjac(var_up,var_AR) = - Mach1 * zbig * v * c_s * cs_direction * ( - Bp0_AR / sqrt(BB2) + 0.5 * Bp0 * BB2_AR / BB2**1.5 )
+                  Qjac(var_up,var_AZ) = - Mach1 * zbig * v * c_s * cs_direction * ( - Bp0_AZ / sqrt(BB2) + 0.5 * Bp0 * BB2_AZ / BB2**1.5 )
+                  Qjac(var_up,var_A3) = - Mach1 * zbig * v * c_s * cs_direction * ( - Bp0_A3 / sqrt(BB2) + 0.5 * Bp0 * BB2_A3 / BB2**1.5 )
+                  Qjac(var_up,var_T)  = - Mach1 * zbig * v * ( - cs_T * Bp0 * cs_direction / sqrt(BB2) )
+                endif
+
+                ! --- Sheath-linearised energy equation
+                Qjac(var_T, var_AR )  = + v * (gamma_sheath - 1.d0) * r0  * T0 * c_s  * B_dot_n_AR / sqrt(BB2) &
+                                        - v * (gamma_sheath - 1.d0) * r0  * T0 * c_s  * B_dot_n    * 0.5 * BB2_AR / BB2**1.5
+                Qjac(var_T, var_AZ )  = + v * (gamma_sheath - 1.d0) * r0  * T0 * c_s  * B_dot_n_AZ / sqrt(BB2) &
+                                        - v * (gamma_sheath - 1.d0) * r0  * T0 * c_s  * B_dot_n    * 0.5 * BB2_AZ / BB2**1.5
+                Qjac(var_T, var_A3 )  = + v * (gamma_sheath - 1.d0) * r0  * T0 * c_s  * B_dot_n_A3 / sqrt(BB2) &
+                                        - v * (gamma_sheath - 1.d0) * r0  * T0 * c_s  * B_dot_n    * 0.5 * BB2_A3 / BB2**1.5
+                Qjac(var_T, var_rho)  = + v * (gamma_sheath - 1.d0) * rho * T0 * c_s  * B_dot_n    / sqrt(BB2)
+                Qjac(var_T, var_T)    = + v * (gamma_sheath - 1.d0) * r0  * T  * c_s  * B_dot_n    / sqrt(BB2) &
+                                        + v * (gamma_sheath - 1.d0) * r0  * T0 * cs_T * B_dot_n    / sqrt(BB2)
+
+                ! --- Fill-in Matrix
+                index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in ! index in the ELM matrix 
+                do ivar= 1,n_var
+                  do kvar= 1,n_var
+                    ij = index_ij + (ivar-1)*n_tor
+                    kl = index_kl + (kvar-1)*n_tor
+                    ELM(ij,kl) =  ELM(ij,kl) + Qjac(ivar,kvar) * integrand * theta * tstep
+                  enddo
+                enddo
+
+              enddo
+            enddo
+          enddo
+
+        enddo
+      enddo
+    enddo
+
+  enddo
+enddo
 
 return
+
 end subroutine boundary_matrix_open
 end module mod_boundary_matrix_open
+
+

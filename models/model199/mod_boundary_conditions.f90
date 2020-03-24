@@ -31,7 +31,7 @@ contains
                                   A_glob, i_tor_min, i_tor_max )
 
     use data_structure
-    use phys_module, only: F0, GAMMA
+    use phys_module, only: F0, GAMMA, keep_n0_const
     use vacuum, only: is_freebound
     use mpi_mod
     use mod_locate_irn_jcn
@@ -65,7 +65,7 @@ contains
     integer,          intent(in), pointer    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
 
     ! Internal parameters
-    real*8  :: zbig
+    real*8  :: zbig, zbig_backup
     integer :: i, in, iv, inode, k
     integer :: index_large_i, index_node, ielm
     integer :: ijA_position, ilarge2
@@ -75,7 +75,7 @@ contains
     logical :: is_local, only_count
 
     zbig = 1.d12
-
+    zbig_backup = zbig
        do i=1, n_local_elms
 
           ielm = local_elms(i)
@@ -86,7 +86,12 @@ contains
 
              if (node_list%node(inode)%boundary .ne. 0) then
 
-                do in=i_tor_min, i_tor_max !1, n_tor
+                do in=i_tor_min, i_tor_max 
+                  if (keep_n0_const  .and.  in .eq. 1 ) then
+                    zbig = 1.d15
+                  else
+                    zbig = zbig_backup
+                  endif
 
                    do k=1, n_var
 

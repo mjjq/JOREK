@@ -284,6 +284,10 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   deallocate(R_grid, Z_grid)
   deallocate(Zlines)
   
+  do inode=1, node_list%n_nodes
+    node_list%node(inode)%axis_node = .false.
+  enddo
+  
   ! --- This is just for debug, it could be removed (or not?)
   call export_restart(node_list, element_list, 'jorek_restart')
   

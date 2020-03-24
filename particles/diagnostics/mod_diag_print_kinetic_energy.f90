@@ -31,6 +31,8 @@ subroutine do_print_kinetic_energy(this, sim, ev)
       tmp = boris_kinetic_energy(p)
     type is (particle_kinetic_relativistic)
       tmp = particle_relativistic_kinetic_energy(p,sim%groups(i)%mass)
+    type is (particle_gc_relativistic)
+      tmp = gc_relativistic_kinetic_energy(p,sim%groups(i)%mass,sim%fields,sim%time)
     class default
       write(*,*) "do_print_kinetic_energy not implemented for this particle type"
       return
@@ -57,7 +59,7 @@ end function boris_kinetic_energy
 
 !> This function computes the kinetic energy of a relativistic
 !> particle in eV, which is equal to:
-!> E_{kin} = c*[sqrt{(mc)^2+p^2}-mc]/q_proton
+!> E_{kin} = c*[sqrt{(mc)^2+p^2}-mc]/e
 !>
 !> The impure elemental declaration is preserved for consistency with
 !> boris_kinetic_energy() function but this will probably not make any
@@ -82,8 +84,43 @@ impure elemental function particle_relativistic_kinetic_energy(particle,mass) re
   energy = ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*(sqrt((mass*SPEED_OF_LIGHT) &
           *(mass*SPEED_OF_LIGHT)+dot_product(particle%p,particle%p))   &
           - mass*SPEED_OF_LIGHT)/EL_CHG  
+end function particle_relativistic_kinetic_energy
 
-end function
+!> This function computes the kinetic energy of a relativistic
+!> guiding centre (first order in the guiding center expansion)
+!> in eV, which is equal to:
+!> E_{kin} = E-E_{rest} = (gamma-1)*m*c**2/e
+!> with gamma = sqrt(1+(p_par/m/c)**2+(2*mu*B/m/c**2))
+!> and the rest energy E_{rest} = m*c**2
+!> where m: particle rest energy
+!>	 c: speed of light
+!>       p_par: GC parallel momentum
+!>	 mu: GC magnetic moment
+!>	 B: magnetic field intensity B=norm2(\vec{B})
+!> the parallel energy component is given by: (p_par/m/c)**2
+!> the perpendicular energy component is given by: (2*mu*B)/(m*c**2)
+!> ref.: X. Tao, A.A. Chan, A.J. Brizard, Phys. of Plasma, vol.14, p.092107, 2007
+impure elemental function gc_relativistic_kinetic_energy(particle,mass,fields,time) result(energy)
+  use constants, only: SPEED_OF_LIGHT, ATOMIC_MASS_UNIT, EL_CHG
+  use mod_fields
+  class(particle_gc_relativistic), intent(in) :: particle  
+  real(kind=8), intent(in)                    :: mass !< in AMU
+  class(fields_base), intent(in)              :: fields
+  real(kind=8), intent(in)                    :: time 
+  real(kind=8)                                :: energy 
+  ! internal variables
+  real(kind=8) :: psi, U, B_norm, gamma
+  real(kind=8),dimension(3) :: E, B
+
+  call fields%calc_EBpsiU(time, particle%i_elm, particle%st, particle%x(3), E, B, psi, U)
+
+  B_norm = sqrt(B(1)*B(1)+B(2)*B(2)+B(3)*B(3))
+
+  gamma = sqrt(1.d0 + (particle%p(1)/(mass*SPEED_OF_LIGHT))**2 + 2.d0*B_norm*particle%p(2)/(mass*SPEED_OF_LIGHT**2)) - 1.d0
+
+  energy = (gamma * mass * ATOMIC_MASS_UNIT * SPEED_OF_LIGHT**2)/EL_CHG
+end function gc_relativistic_kinetic_energy
+
 
 end module mod_diag_print_kinetic_energy
 

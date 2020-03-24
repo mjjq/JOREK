@@ -521,7 +521,9 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, &
         end select
       else
         found(i) = .false.
-      end if
+     end if
+     !> check if a particle has been found and set it to dead otherwise
+     if(particles_tmp(i)%i_elm.le.0) found(i) = .false.
     end do
     !$omp end parallel do
 

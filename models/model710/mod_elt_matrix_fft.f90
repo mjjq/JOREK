@@ -57,8 +57,8 @@ complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
 real*8     :: TG_NUM_Eq, CoefAdv=0.0, rho_min = 0.005
 real*8     :: Coef_DivV
-real*8     :: Fprof_fake  ,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
-real*8     :: zFFprime    ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz
+real*8     :: Fprof_time_dep,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
+real*8     :: zFFprime      ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz
 
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t, x_ss, x_st, x_tt
@@ -401,8 +401,8 @@ do ms=1, n_gauss
       ! --- The dF_dpsi function calculated on time-dependent psi_norm
       ! --- Note: Fprof is be taken from the node values (cleaner)
       call F_profile(xpoint2, xcase2, Z, Z_xpoint, A30, psi_axis, psi_bnd, &
-                     Fprof_fake,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz , &
-                     zFFprime  ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
+                     Fprof_time_dep,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz , &
+                     zFFprime      ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
       ! --- Toroidal current source. Historically JOREK uses a negative current, so we need to reverse it.
       call current(xpoint2, xcase2, R,Z, Z_xpoint, A30,psi_axis,psi_bnd,current_source_Jp(ms,mt))
       current_source_Jp(ms,mt) = - current_source_Jp(ms,mt)

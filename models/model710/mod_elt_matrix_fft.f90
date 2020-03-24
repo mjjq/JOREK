@@ -23,7 +23,7 @@ include 'mpif.h'
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
 
-logical, intent(in)    :: xpoint2
+logical, intent(in)    :: xpoint2, use_fft
 integer, intent(in)    :: xcase2
 real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 
@@ -47,6 +47,7 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: eq_ss, eq_st,
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: delta_g, delta_s, delta_t
 
 ! --- Variables outside the OMP loop
+integer    :: n_tor_start, n_tor_end
 integer    :: i, j, index, index_k, index_m, n_tor_loop, i_v, j_loc, i_loc, m, ik
 integer    :: in, im, ivar, kvar, ms, mt, mp
 real*8     :: wst, xjac, xjac_R, xjac_Z, R, Z, theta, zeta
@@ -264,15 +265,27 @@ Qvec_k    = 0.d0
 theta = time_evol_theta
 zeta  = time_evol_zeta
 
-! --- If we're doing the fft, don't loop...
-if (n_tor .gt. n_tor_fft_thresh) then
-  n_tor_loop  = 1
-else
-  n_tor_loop  = n_tor
+! --- If we're doing the fft, don't loop... 
+use_fft = n_tor .gt. n_tor_fft_thresh  
+
+if(i_tor_min .eq. 1 .and. i_tor_max .eq. n_tor) then 
+  if (use_fft) then
+    n_tor_start = 1
+    n_tor_end   = 1 
+    use_fft = .true. 
+  else 
+    n_tor_start = 1
+    n_tor_end   = n_tor 
+    use_fft = .false. 
+  endif 
+else 
+  n_tor_start = i_tor_min
+  n_tor_end   = i_tor_max 
+  use_fft = .false. 
 endif
 
 ! --- Toroidal functions            
-if (n_tor .gt. n_tor_fft_thresh) then
+if (use_fft) then
   HHZ    = 1.d0
   HHZ_p  = 1.d0
   HHZ_pp = 1.d0
@@ -768,7 +781,7 @@ do i=1,n_vertex_max
             dvisco_divV_dT  =  0.0
           end select
 
-          do im=1,n_tor_loop
+          do im=n_tor_start, n_tor_end
 
             ! --- test functions (V*)
             v   = H(i,j,ms,mt)   * element%size(i,j) * HHZ(im,mp)
@@ -1067,7 +1080,7 @@ do i=1,n_vertex_max
 
 
             ! --- Fill Up the RHS
-            if (n_tor .gt. n_tor_fft_thresh) then
+            if (use_fft) then
               index_ij =       n_var*(n_order+1)*(i-1) +       n_var*(j-1) + 1
               do ivar= 1,n_var
                 RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar)
@@ -1078,12 +1091,12 @@ do i=1,n_vertex_max
                 RHS_k(mp,ij)   =  RHS_k(mp,ij) + RHS_k_ij(ivar) * wst * R * xjac
               enddo
             else
-              index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor*n_var*(j-1) + im
+              index_ij = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(i-1) + (n_tor_end - n_tor_start +1)*n_var*(j-1) + im - n_tor_start +1
               do ivar= 1,n_var
                 RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar)
                 RHS_k_ij(ivar) = tstep * Qvec_k(ivar)
 
-                ij = index_ij + (ivar-1)*n_tor_loop
+                ij = index_ij + (ivar-1)*(n_tor_end - n_tor_start +1)
                 RHS(ij)        =  RHS(ij) + (RHS_p_ij(ivar) + RHS_k_ij(ivar)) * wst * R * xjac
               enddo
             endif
@@ -1092,7 +1105,7 @@ do i=1,n_vertex_max
 
               do l=1,n_order+1
 
-                do in = 1, n_tor_loop
+                do in =  n_tor_start, n_tor_end
 
                   ! --- Basis functions
                   bf    = H(k,l,ms,mt)   * element%size(k,l) * HHZ(in,mp)
@@ -2226,7 +2239,7 @@ do i=1,n_vertex_max
                     Qjac_k (var_Up,var_T ) = Qjac_k (var_Up,var_T ) - dvisco_divV_dT * T * divU * v_p/ R
                   endif
 
-                  if (n_tor .gt. n_tor_fft_thresh) then
+                  if (use_fft) then
                     index_kl =       n_var*(n_order+1)*(k-1) +       n_var*(l-1) + 1
                     do ivar= 1,n_var
                       do kvar= 1,n_var
@@ -2247,11 +2260,11 @@ do i=1,n_vertex_max
                       enddo
                     enddo
                   else
-                    index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor*n_var*(l-1) + in
+                    index_kl = (n_tor_end - n_tor_start + 1)*n_var*(n_order+1)*(k-1) + (n_tor_end - n_tor_start + 1)*n_var*(l-1) + in - n_tor_start +1
                     do ivar= 1,n_var
                       do kvar= 1,n_var
-                        ij = index_ij + (ivar-1) * n_tor_loop
-                        kl = index_kl + (kvar-1) * n_tor_loop
+                        ij = index_ij + (ivar-1) * (n_tor_end - n_tor_start + 1)
+                        kl = index_kl + (kvar-1) * (n_tor_end - n_tor_start + 1)
 
                         amat(ivar,kvar) = (1.d0+zeta)*Pjac_p(ivar,kvar) - tstep * theta * Qjac_p(ivar,kvar)
                         ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac
@@ -2281,7 +2294,7 @@ do i=1,n_vertex_max
     enddo ! mt loop
 
 
-    if (n_tor .gt. n_tor_fft_thresh) then
+    if (use_fft) then
       do i_v = 1, n_var
         do j_loc=1, n_vertex_max*n_var*(n_order+1)
           i_loc = n_var*(n_order+1)*(i-1) + n_var * (j-1) + i_v 

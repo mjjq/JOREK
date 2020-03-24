@@ -981,15 +981,15 @@ required = 0
     i_tor_min = 1
     i_tor_max = n_tor
 
-    ! --- Memory allocation
-    if (allocated(A_glob))    call tr_deallocate(A_glob,"A_glob",CAT_DMATRIX) 
-    call tr_allocate(A_glob,1,nz_glob,"A_glob",  CAT_DMATRIX)
+    !! --- Memory allocation
+    !if (allocated(A_glob))    call tr_deallocate(A_glob,"A_glob",CAT_DMATRIX) 
+    !call tr_allocate(A_glob,1,nz_glob,"A_glob",  CAT_DMATRIX)
 
-    if (allocated(rhs_glob))    call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX) 
-    call tr_allocate(rhs_glob, 1,ndof_glob,"rhs_glob", CAT_DMATRIX)
+    !if (allocated(rhs_glob))    call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX) 
+    !call tr_allocate(rhs_glob, 1,ndof_glob,"rhs_glob", CAT_DMATRIX)
 
-    A_glob = 0.0d0
-    rhs_glob = 0.0d0 
+    !A_glob = 0.0d0
+    !rhs_glob = 0.0d0 
 
     call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms,   &
          n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,&

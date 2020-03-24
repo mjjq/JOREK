@@ -408,7 +408,18 @@ if(.not. direct_construction) then
   rhs_problem(:)   = .false.
   elm_problem(:,:) = .false.
 
+  ! --- Memory allocation
+  if (allocated(A_glob))    call tr_deallocate(A_glob,"A_glob",CAT_DMATRIX) 
+  call tr_allocate(A_glob,1,nz_glob1,"A_glob",  CAT_DMATRIX)
+
+  if (allocated(rhs_glob))    call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX) 
+  call tr_allocate(rhs_glob, 1,ndof,"rhs_glob", CAT_DMATRIX)
+
+  A_glob = 0.0d0
+  rhs_glob = 0.0d0 
+
 endif
+
  call tr_allocatep(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
  rhs_local  = 0.d0
   write(*,*) 'my_id, n_glob, ndof :', my_id, n_glob1, ndof

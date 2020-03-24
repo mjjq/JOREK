@@ -4,7 +4,7 @@ module mod_fix_axis_nodes
 contains
 
 subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max, & 
-  ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, i_tor_min, i_tor_max)
+  ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max )
 
   use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
   use data_structure
@@ -20,8 +20,9 @@ subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, 
   type (type_node_list)   , intent(in) :: node_list             !< List of nodes
   type (type_element_list), intent(in) :: element_list          !< List of all elements
   integer, intent(in), pointer :: ijA_index_tmp(:,:), ijA_size_tmp(:), irn_jcn_tmp(:,:)
-  integer, intent(in)          :: i_tor_min
-  integer, intent(in)          :: i_tor_max
+  integer,   intent(in)        :: i_tor_min, i_tor_max
+  integer                      :: irn_glob(:), jcn_glob(:) 
+  real*8                       :: A_glob(:) 
   ! Internal parameters
   real*8  :: zbig
   integer :: i, in, iv, inode, k

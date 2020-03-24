@@ -689,7 +689,8 @@ endif
 
   if (fix_axis_nodes) then
     call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max, & 
-                           ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, i_tor_min, i_tor_max )
+                           ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, irn_local, jcn_local,& 
+                           A_local, i_tor_min, i_tor_max )
   endif
 
   ! --- Memory tracking

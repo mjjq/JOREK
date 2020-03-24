@@ -33,21 +33,11 @@ if (my_id .eq.0) then
   endif
 endif
  
- !call  Ref_Active_node( element_list,node_list ,active_node,n_active_nodes)
- !index_total = -1
- !do i=1,n_active_nodes
-  !inode=active_node(i)
-  !index_total = max(index_total,maxval(node_list%node(inode)%index))
-! enddo
 
  index_total = -1
 do inode=1,node_list%n_nodes
   index_total = max(index_total,maxval(node_list%node(inode)%index))
 enddo
-!stop
-!write(*,*) ' n_elements  : ',my_id,element_list%n_elements
-!write(*,*) ' n_nodes     : ',my_id,node_list%n_nodes
-!write(*,*) ' index_total : ',my_id,index_total
 
 index_min(1:n_cpu) = 0
 index_max(1:n_cpu) = 0
@@ -64,24 +54,24 @@ if(.NOT.direct_construction) then
     index_min(i) = index_max(i-1) + 1
   enddo
   if (my_id .eq. n_cpu-1) index_max(my_id+1) = index_total
-   write(*,'(A,3i6)') ' index_min,index_max:',my_id,index_min(my_id+1),index_max(my_id+1)
+  !write(*,'(A,3i6)') ' index_min,index_max:',my_id,index_min(my_id+1),index_max(my_id+1)
 
 !----------------------------- This portion is for the harmonic matrix ----------
 else 
-   if(MOD(my_id,m_cpu).eq.0) index_min(my_id+1) = 1
-   do i=1,n_cpu
-     index_max(i) = ((MOD(i-1,m_cpu)+1) * index_total) / m_cpu
-   enddo
-   do i=2,n_cpu
-      if(MOD(i-1,m_cpu).ne.0) then
-       index_min(i) = index_max(i-1) + 1
-      endif
-   enddo
-   if(mod(my_id+1,m_cpu).eq.0) index_max(my_id+1) = index_total
-   write(*,'(A,3i6)') ' index_min,index_max:',my_id,index_min(my_id+1),index_max(my_id+1)
+
+  if(MOD(my_id,m_cpu).eq.0) index_min(my_id+1) = 1
+  do i=1,n_cpu
+    index_max(i) = ((MOD(i-1,m_cpu)+1) * index_total) / m_cpu
+  enddo
+  do i=2,n_cpu
+    if(MOD(i-1,m_cpu).ne.0) then
+      index_min(i) = index_max(i-1) + 1
+    endif
+  enddo
+  if(mod(my_id+1,m_cpu).eq.0) index_max(my_id+1) = index_total
+  !write(*,'(A,3i6)') ' index_min,index_max:',my_id,index_min(my_id+1),index_max(my_id+1)
 
 end if 
-!----------------------------- This portion is for the harmonic matrix ----------
 
 n_dof           = index_total * n_tor * n_var
 

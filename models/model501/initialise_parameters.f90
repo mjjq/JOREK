@@ -7,11 +7,10 @@ use data_structure
 use constants
 use mpi_mod
 use corr_neg
-use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, pastix_pivot, &
+use mumps_module,  only: no_zeros_mumps, mumps_ordering
+use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
 use vacuum
-use wsmp_module,   only: use_wsmp
 use pellet_module
 
 implicit none
@@ -98,7 +97,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_wsmp, n_tor_fft_thresh,             &
                 pastix_smp_only, refinement, force_central_node,    &
-                fix_axis_nodes,                                     &
+                fix_axis_nodes, use_strumpack,                      &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &

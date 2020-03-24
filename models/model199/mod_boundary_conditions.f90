@@ -111,7 +111,7 @@ contains
                                index_large_i = (i_tor_max - i_tor_min + 1) * n_var * (index_node - 1)
 
                                ilarge2 = ijA_position - 1 + ((k-1)*(i_tor_max - i_tor_min + 1) + in-i_tor_min) * n_var*(i_tor_max - i_tor_min + 1)  & 
-                                                          +  (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
+                                 +  (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
 
                                irn_glob(ilarge2) = (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
                                jcn_glob(ilarge2) = (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
@@ -128,7 +128,7 @@ contains
                                index_large_i = (i_tor_max - i_tor_min + 1) * n_var * (index_node - 1)
 
                                ilarge2 = ijA_position - 1 + ((k-1)*(i_tor_max - i_tor_min + 1) + in-i_tor_min) * n_var*(i_tor_max - i_tor_min + 1)   & 
-                                                          +  (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
+                                 +  (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
 
                                irn_glob(ilarge2) = (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
                                jcn_glob(ilarge2) = (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
@@ -154,7 +154,7 @@ contains
                                index_large_i = (i_tor_max - i_tor_min + 1) * n_var * (index_node - 1)
 
                                ilarge2 = ijA_position - 1 + ((k-1)*(i_tor_max - i_tor_min + 1) + in-i_tor_min) * n_var*(i_tor_max - i_tor_min + 1)   & 
-                                                          +  (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
+                                 +  (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
 
                                irn_glob(ilarge2) = (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
                                jcn_glob(ilarge2) = (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
@@ -171,7 +171,7 @@ contains
                                index_large_i = (i_tor_max - i_tor_min + 1) * n_var * (index_node - 1)
 
                                ilarge2 = ijA_position - 1 + ((k-1)*(i_tor_max - i_tor_min + 1) + in-i_tor_min) * n_var*(i_tor_max - i_tor_min + 1)   & 
-                                                          +  (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
+                                 +  (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
 
                                irn_glob(ilarge2) = (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
                                jcn_glob(ilarge2) = (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1

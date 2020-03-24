@@ -35,7 +35,6 @@ contains
        &   irn_glob, jcn_glob, A_glob,          & 
        &   i_tor_min, i_tor_max)
     use mod_parameters
-!    use global_distributed_matrix
     use mod_locate_irn_jcn
 
     integer, intent(in)    :: index_node,  k,  in

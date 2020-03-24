@@ -387,7 +387,7 @@ do ife = ife_min, ife_max
         vpar_t  = eq_t(mp,var_Vpar,ms,mt)
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-        rn0    = eq_g(mp,var_rn,ms,mt)
+        rn0    = eq_g(mp,var_rhon,ms,mt)
 #endif
       
 #ifdef fullmhd

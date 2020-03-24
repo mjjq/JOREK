@@ -18,7 +18,7 @@ module mod_parameters
   integer, parameter :: var_zj   = 3                       ! place of variable toroidal current density    (zj)
   integer, parameter :: var_w    = 4                       ! place of variable vorticity                   (w)
   integer, parameter :: var_Vpar = 7                       ! place of variable parallel velocity           (Vpar)
-  integer, parameter :: var_rn   = 0                       ! place of variable neutral or impurity density (rn)
+  integer, parameter :: var_rhon = 0                       ! place of variable neutral or impurity density (rn)
   integer, parameter :: var_Ti   = 6                       ! place of variable ion temperature             (Ti)
   integer, parameter :: var_Te   = 8                       ! place of variable electron temperature        (Te)
   integer, parameter :: var_jec  = 0                       ! place of variable ECCD current                (jec)

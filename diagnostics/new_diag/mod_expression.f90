@@ -790,14 +790,14 @@ module mod_expression
                 Vpar0_pp = Vpar0_pp + vv(var_Vpar) * sz * hh    * hhz_pp
 #endif
 #if JOREK_MODEL == 500
-                rn0       = rn0       + vv(var_rn) * sz * hh    * hhz
-                rn0_s     = rn0_s     + vv(var_rn) * sz * hh_s  * hhz
-                rn0_t     = rn0_t     + vv(var_rn) * sz * hh_t  * hhz
-                rn0_ss    = rn0_ss    + vv(var_rn) * sz * hh_ss * hhz
-                rn0_tt    = rn0_tt    + vv(var_rn) * sz * hh_tt * hhz
-                rn0_st    = rn0_st    + vv(var_rn) * sz * hh_st * hhz
-                rn0_p     = rn0_p     + vv(var_rn) * sz * hh    * hhz_p
-                rn0_pp    = rn0_pp    + vv(var_rn) * sz * hh    * hhz_pp
+                rn0       = rn0       + vv(var_rhon) * sz * hh    * hhz
+                rn0_s     = rn0_s     + vv(var_rhon) * sz * hh_s  * hhz
+                rn0_t     = rn0_t     + vv(var_rhon) * sz * hh_t  * hhz
+                rn0_ss    = rn0_ss    + vv(var_rhon) * sz * hh_ss * hhz
+                rn0_tt    = rn0_tt    + vv(var_rhon) * sz * hh_tt * hhz
+                rn0_st    = rn0_st    + vv(var_rhon) * sz * hh_st * hhz
+                rn0_p     = rn0_p     + vv(var_rhon) * sz * hh    * hhz_p
+                rn0_pp    = rn0_pp    + vv(var_rhon) * sz * hh    * hhz_pp
 #endif
 
                 ! --- AR

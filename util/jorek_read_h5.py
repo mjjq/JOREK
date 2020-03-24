@@ -67,7 +67,7 @@ class fields(object):
     returns:
         vtkUnstructuredGrid
     """
-    def to_vtk(self, n_sub=2, phi=[0,360], n_plane=8, without_n0_mode=False, 
+    def to_vtk(self, n_sub=2, phi=[0,360], n_plane=8, without_n0_mode=False,
                force_remake_grid=False, quadratic=True, output=None):
         import vtk
         from vtk.util import numpy_support as npvtk

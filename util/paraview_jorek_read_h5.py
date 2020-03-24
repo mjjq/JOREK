@@ -34,6 +34,7 @@ Properties = OrderedDict([
         ('number_of_subdivisions', dict(value=3, min=2, max=6)),
         ('quadratic', False),
         ('exclude_n0_mode', False),
+        ('smooth_time_interpolation', True),
     ])),
     ('toroidal_direction', PropertyGroup([
         ('number_of_planes', dict(value=1, min=1, max=360)),
@@ -118,7 +119,7 @@ def RequestData(self):
     # Read the h5 file
     if (not hasattr(self, 'f')):
         self.f = fields()
-    if (interp):
+    if (smooth_time_interpolation and interp):
         self.f.read(FileNames[index], variables=to_read, file_prev=FileNames[index-1],
                interp_fraction=interp_fraction)
     else:

@@ -111,7 +111,7 @@ def getArraySelectionXml(prop, propertyName):
   return '''
   <StringVectorProperty name="%s"
   command="SetParameter"
-  number_of_elements="%s" 
+  number_of_elements="%s"
   repeat_command="1" number_of_elements_per_command="2"
   element_types="2 0"
   default_values="%s"
@@ -222,16 +222,16 @@ def getFilterPropertiesXml(prop):
   for k in prop:
     v = prop[k]
     # bit hacky
-    if v.__class__.__name__ is 'PropertyGroup':
+    if v.__class__.__name__ == 'PropertyGroup':
       xml = [getFilterPropertyXml(v[name], name) for name in v]
       # Add properties
       all_xml += '\n\n'.join(xml)
       # Create a propertygroup
       all_xml += '\n\n' + getPropertyGroupXml(k, v.keys())
-    elif v.__class__.__name__ is 'ArraySelectionDomain':
+    elif v.__class__.__name__ == 'ArraySelectionDomain':
       all_xml += '\n\n' + getArraySelectionXml(v, propertyName=k)
     else:
-      all_xml += '\n\n' + getFilterPropertyXml(v, propertyName=k) 
+      all_xml += '\n\n' + getFilterPropertyXml(v, propertyName=k)
   return all_xml
 
 def getPropertyGroupXml(name, propnames):
@@ -324,7 +324,7 @@ def getFileReaderXml(info):
     name="FileNames"
     initial_string="FileNames"
     animateable="0"
-    number_of_elements="0" 
+    number_of_elements="0"
     command="AddParameter"
     clean_command="ClearParameter"
     repeat_command="1"
@@ -335,7 +335,7 @@ def getFileReaderXml(info):
     </Documentation>
     </StringVectorProperty>
 
-    <DoubleVectorProperty 
+    <DoubleVectorProperty
     name="TimestepValues"
     repeatable="1"
     information_only="1">
@@ -371,8 +371,7 @@ def generatePythonFilter(info):
   fileReaderProperties = getFileReaderXml(info)
 
   # Get paths to put in the file by default
-  # Disable this temporarily
-  pathProperty     = getPythonPathProperty([]) #info.get('PythonPaths',[]))
+  pathProperty     = getPythonPathProperty(info.get('PythonPaths',[]))
 
   outputXml = '''\
 <ServerManagerConfiguration>

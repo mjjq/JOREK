@@ -23,7 +23,7 @@ include 'mpif.h'
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
 
-logical, intent(in)    :: xpoint2, use_fft
+logical, intent(in)    :: xpoint2
 integer, intent(in)    :: xcase2
 real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 
@@ -48,7 +48,7 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: delta_g, delt
 
 ! --- Variables outside the OMP loop
 integer    :: n_tor_start, n_tor_end
-integer    :: i, j, index, index_k, index_m, n_tor_loop, i_v, j_loc, i_loc, m, ik
+integer    :: i, j, index, index_k, index_m, i_v, j_loc, i_loc, m, ik
 integer    :: in, im, ivar, kvar, ms, mt, mp
 real*8     :: wst, xjac, xjac_R, xjac_Z, R, Z, theta, zeta
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss), source_pellet
@@ -60,7 +60,8 @@ real*8     :: Coef_DivV
 real*8     :: Fprof,dF_dpsi,dF_dz
 real*8     :: dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz
 real*8     :: zFFprime    ,dFFprime_dpsi,dFFprime_dz
-real*8     :: dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz
+real*8     :: dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz 
+logical    :: use_fft
 
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t, x_ss, x_st, x_tt

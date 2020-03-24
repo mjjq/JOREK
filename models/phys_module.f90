@@ -541,7 +541,8 @@ module phys_module
   logical             :: normalized_velocity_profile !< if true, reads the normalized velocity profile as flux function, else Omega_tor is read as flux function. 
   
   !> @name Global quantities determined in each time step
-  real*8, allocatable :: R_axis_t(:), Z_axis_t(:), psi_axis_t(:), R_xpoint_t(:,:), Z_xpoint_t(:,:), psi_bnd_t(:), &
+  real*8, allocatable :: R_axis_t(:), Z_axis_t(:), psi_axis_t(:), R_xpoint_t(:,:), Z_xpoint_t(:,:),           &
+    psi_xpoint_t(:,:), R_bnd_t(:), Z_bnd_t(:), psi_bnd_t(:),                                                  &
     current_t(:), beta_p_t(:), beta_t_t(:), beta_n_t(:), density_in_t(:), density_out_t(:), pressure_in_t(:), &
     pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:),   &
     E_tot_t(:), Helicity_tot_t(:), Kin_perp_tot_t(:), thermal_tot_t(:), kin_par_tot_t(:), ohmic_tot_t(:),      &

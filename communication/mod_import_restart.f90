@@ -233,6 +233,18 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     if (allocated(Z_xpoint_t)) call tr_deallocate(Z_xpoint_t,"Z_xpoint_t",CAT_UNKNOWN)
     call tr_allocate(Z_xpoint_t,1,index_start+nstep,1,2,"Z_xpoint_t",CAT_UNKNOWN)
     Z_xpoint_t = 0.d0
+
+    if (allocated(psi_xpoint_t)) call tr_deallocate(psi_xpoint_t,"psi_xpoint_t",CAT_UNKNOWN)
+    call tr_allocate(psi_xpoint_t,1,index_start+nstep,1,2,"psi_xpoint_t",CAT_UNKNOWN)
+    psi_xpoint_t = 0.d0
+
+    if (allocated(R_bnd_t)) call tr_deallocate(R_bnd_t,"R_bnd_t",CAT_UNKNOWN)
+    call tr_allocate(R_bnd_t,1,index_start+nstep,"R_bnd_t",CAT_UNKNOWN)
+    R_bnd_t = 0.d0
+    
+    if (allocated(Z_bnd_t)) call tr_deallocate(Z_bnd_t,"Z_bnd_t",CAT_UNKNOWN)
+    call tr_allocate(Z_bnd_t,1,index_start+nstep,"Z_bnd_t",CAT_UNKNOWN)
+    Z_bnd_t = 0.d0
     
     if (allocated(psi_bnd_t)) call tr_deallocate(psi_bnd_t,"psi_bnd_t",CAT_UNKNOWN)
     call tr_allocate(psi_bnd_t,1,index_start+nstep,"psi_bnd_t",CAT_UNKNOWN)
@@ -1122,6 +1134,21 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     call tr_allocate(Z_xpoint_t,1,index_start+nstep,1,2,"Z_xpoint_t",CAT_UNKNOWN)
     Z_xpoint_t = 0.d0
     call HDF5_array2D_reading(file_id,Z_xpoint_t,'Z_xpoint_t')
+
+    if (allocated(psi_xpoint_t)) call tr_deallocate(psi_xpoint_t,"psi_xpoint_t",CAT_UNKNOWN)
+    call tr_allocate(psi_xpoint_t,1,index_start+nstep,1,2,"psi_xpoint_t",CAT_UNKNOWN)
+    psi_xpoint_t = 0.d0
+    call HDF5_array2D_reading(file_id,psi_xpoint_t,'psi_xpoint_t')
+
+    if (allocated(R_bnd_t)) call tr_deallocate(R_bnd_t,"R_bnd_t",CAT_UNKNOWN)
+    call tr_allocate(R_bnd_t,1,index_start+nstep,"R_bnd_t",CAT_UNKNOWN)
+    R_bnd_t = 0.d0
+    call HDF5_array1D_reading(file_id,R_bnd_t,'R_bnd_t')
+    
+    if (allocated(Z_bnd_t)) call tr_deallocate(Z_bnd_t,"Z_bnd_t",CAT_UNKNOWN)
+    call tr_allocate(Z_bnd_t,1,index_start+nstep,"Z_bnd_t",CAT_UNKNOWN)
+    Z_bnd_t = 0.d0
+    call HDF5_array1D_reading(file_id,Z_bnd_t,'Z_bnd_t')
     
     if (allocated(psi_bnd_t)) call tr_deallocate(psi_bnd_t,"psi_bnd_t",CAT_UNKNOWN)
     call tr_allocate(psi_bnd_t,1,index_start+nstep,"psi_bnd_t",CAT_UNKNOWN)

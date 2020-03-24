@@ -1099,12 +1099,15 @@ required = 0
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
        call energy(node_list,element_list,W_mag,W_kin)
 
-       R_axis_t(index_now)     = ES%R_axis
-       Z_axis_t(index_now)     = ES%Z_axis
-       psi_axis_t(index_now)   = ES%psi_axis
-       psi_bnd_t(index_now)    = ES%psi_bnd
-       R_xpoint_t(index_now,:) = ES%R_xpoint(:)
-       Z_xpoint_t(index_now,:) = ES%Z_xpoint(:)
+       R_axis_t(index_now)       = ES%R_axis
+       Z_axis_t(index_now)       = ES%Z_axis
+       psi_axis_t(index_now)     = ES%psi_axis
+       R_xpoint_t(index_now,:)   = ES%R_xpoint(:)
+       Z_xpoint_t(index_now,:)   = ES%Z_xpoint(:)
+       psi_xpoint_t(index_now,:) = ES%psi_xpoint(:)
+       R_bnd_t(index_now)        = ES%R_bnd
+       Z_bnd_t(index_now)        = ES%Z_bnd
+       psi_bnd_t(index_now)      = ES%psi_bnd
 
        xtime(index_now) = t_now
        energies(1:n_tor,1,index_now) = W_mag(1:n_tor)

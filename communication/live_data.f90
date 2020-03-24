@@ -74,7 +74,16 @@ module live_data
     
     if (allocated(Z_xpoint_t)) call tr_deallocate(Z_xpoint_t,"Z_xpoint_t",CAT_UNKNOWN)
     if (nstep .gt. 0) call tr_allocate(Z_xpoint_t,1,index_start+nstep,1,2,"Z_xpoint_t",CAT_UNKNOWN)
+
+    if (allocated(psi_xpoint_t)) call tr_deallocate(psi_xpoint_t,"psi_xpoint_t",CAT_UNKNOWN)
+    if (nstep .gt. 0) call tr_allocate(psi_xpoint_t,1,index_start+nstep,1,2,"psi_xpoint_t",CAT_UNKNOWN)
+
+    if (allocated(R_bnd_t)) call tr_deallocate(R_bnd_t,"R_bnd_t",CAT_UNKNOWN)
+    if (nstep .gt. 0) call tr_allocate(R_bnd_t,1,index_start+nstep,"R_bnd_t",CAT_UNKNOWN)
     
+    if (allocated(Z_bnd_t)) call tr_deallocate(Z_bnd_t,"Z_bnd_t",CAT_UNKNOWN)
+    if (nstep .gt. 0) call tr_allocate(Z_bnd_t,1,index_start+nstep,"Z_bnd_t",CAT_UNKNOWN)
+ 
     if (allocated(psi_bnd_t)) call tr_deallocate(psi_bnd_t,"psi_bnd_t",CAT_UNKNOWN)
     if (nstep .gt. 0) call tr_allocate(psi_bnd_t,1,index_start+nstep,"psi_bnd_t",CAT_UNKNOWN)
     
@@ -266,7 +275,8 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies magnetic_energies kinetic_energies growth_rates magnetic_growth_rates  &
                                     kinetic_growth_rates times input_profiles axis current betas particlecontent thermalenergy &
                                     heatingpower particlesource diag_coil_curr pf_coil_curr rmp_coil_curr integrated_energies  &
-                                    bnd_fluxes dEdt helicity dissipative_terms work_terms &
+                                    bnd_fluxes dEdt helicity dissipative_terms work_terms                                      &
+                                    Xpoint_up Xpoint_low bnd_point                                                             &
                                     area volume li3 energy_conservation net_tor_wall_curr dparticles_dt bnd_particle_fluxes'
     write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names
     
@@ -374,7 +384,6 @@ module live_data
     end do
     write(LIVE_DATA_HANDLE,*)
 
-
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_axis: ', 3
     write(LIVE_DATA_HANDLE,'(A)') '@axis_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@axis_xlabel_si: time [ms]'
@@ -384,6 +393,39 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@axis_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@axis_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@axis: %"time"           "R position"              "Z position"           "Psi on axis"'
+    write(LIVE_DATA_HANDLE,*)
+
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_Xpoint_low: ', 3
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_low_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_low_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_low_ylabel: Lower X-point properties'
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_low_ylabel_si: Lower X-point properties'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@Xpoint_low_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@Xpoint_low_y2si: ', 1.0
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_low_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_low: %"time"           "R position"              "Z position"           "Psi on lower X-point"'
+    write(LIVE_DATA_HANDLE,*)
+
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_Xpoint_up: ', 3
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_up_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_up_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_up_ylabel: Upper X-point properties'
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_up_ylabel_si: Upper X-point properties'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@Xpoint_up_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@Xpoint_up_y2si: ', 1.0
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_up_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@Xpoint_up: %"time"           "R position"              "Z position"           "Psi on upper X-point"'
+    write(LIVE_DATA_HANDLE,*)
+
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_bnd_point: ', 3
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_point_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_point_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_point_ylabel: Boundary point (defining LCFS) properties'
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_point_ylabel_si: Boundary point (defining LCFS) properties'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@bnd_point_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@bnd_point_y2si: ', 1.0
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_point_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@bnd_point: %"time"           "R position"              "Z position"           "Psi on boundary point"'
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_integrated_energies: ', 5 
@@ -606,7 +648,7 @@ module live_data
     
     use mod_parameters,  only: n_tor
     use phys_module, only: xtime, energies, produce_live_data, R_axis_t, Z_axis_t, Psi_axis_t,     &
-      R_xpoint_t, Z_xpoint_t, Psi_bnd_t,     &
+      R_xpoint_t, Z_xpoint_t, psi_xpoint_t, R_bnd_t, Z_bnd_t, Psi_bnd_t,     &
       current_t, beta_p_t, beta_t_t, beta_n_t, density_in_t, density_out_t, pressure_in_t,               &
       pressure_out_t, heat_src_in_t, heat_src_out_t, part_src_in_t, part_src_out_t, &
       E_tot_t, Helicity_tot_t, Kin_perp_tot_t, thermal_tot_t, kin_par_tot_t, ohmic_tot_t,      &
@@ -692,7 +734,10 @@ module live_data
     end if
     write(LIVE_DATA_HANDLE,*)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@axis: ', xtime(index), R_axis_t(index), Z_axis_t(index), Psi_axis_t(index)
-    write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@bnd: ', xtime(index), R_xpoint_t(index,:), Z_xpoint_t(index,:), Psi_bnd_t(index)
+    write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@Xpoint_low: ', xtime(index), R_xpoint_t(index,1), Z_xpoint_t(index,1), Psi_xpoint_t(index,1)
+    write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@Xpoint_up: ', xtime(index), R_xpoint_t(index,2), Z_xpoint_t(index,2), Psi_xpoint_t(index,2)
+    write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@bnd_point: ', xtime(index), R_bnd_t(index), Z_bnd_t(index), Psi_bnd_t(index)
+
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@current: ', xtime(index), Ip_tot_t(index), current_t(index), Ip_tot_t(index)-current_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@betas: ', xtime(index), beta_p_t(index), beta_t_t(index), beta_n_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent: ', xtime(index),density_tot_t(index), density_in_t(index), density_out_t(index), &

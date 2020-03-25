@@ -8,7 +8,6 @@ subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, 
 
   use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
   use data_structure
-  !use global_distributed_matrix
   use mod_locate_irn_jcn
 
   implicit none

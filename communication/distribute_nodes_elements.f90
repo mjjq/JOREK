@@ -120,7 +120,7 @@ enddo
 
 n_local_ELMs = inext
 
-write(*,'(i4,A,20i8)') my_id,' n_local_elms  : ',n_local_elms,element_list%n_elements
+!write(*,'(i4,A,20i8)') my_id,' n_local_elms  : ',n_local_elms,element_list%n_elements
 
 
 return

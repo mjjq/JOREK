@@ -71,14 +71,14 @@ call tr_allocate(column_local,1,mumps_par%N,"column_local",CAT_DMATRIX)
 column_local = 1.d-20;   column_scaling = 1.d-20
 do k=1,nz_glob
   j = jcn_glob(k)
-  column_local(j) = max(column_local(j),abs(A_glob(k))) 
+  column_local(j) = max(column_local(j),abs(A_glob(k)))
 enddo
 
 call MPI_AllReduce(column_local,column_scaling,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
 
 do k = 1, nz_glob
   j = jcn_glob(k)
-  A_glob(k) = A_glob(k) / column_scaling(j) 
+  A_glob(k) = A_glob(k) / column_scaling(j)
 enddo
 
 call clck_time(t1)

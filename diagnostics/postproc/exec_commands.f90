@@ -126,8 +126,8 @@ module exec_commands
       select case ( trim(command%args(0)) )
         case ( 'average' )           
           call average(command, first_step, ierr)
-        case ( 'boundary_expressions' )           
-          call boundary_expressions(command, first_step, ierr)
+        case ( 'boundary_quantities' )           
+          call boundary_quantities(command, first_step, ierr)
         case ( 'zeroD_quantities' )
           call zeroD_quantities(command, first_step, ierr) 
         case ( 'average_h5' )
@@ -213,7 +213,7 @@ module exec_commands
           'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
           'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
           'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'rectangular_torus', 'energy_spectrum', 'average_h5', &
-          'I_halo_TPF', 'spi-state', 'zeroD_quantities', 'boundary_expressions')
+          'I_halo_TPF', 'spi-state', 'zeroD_quantities', 'boundary_quantities')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -1509,7 +1509,7 @@ module exec_commands
 
 
   !> Expressions in the computational boundary
-  subroutine boundary_expressions(command, first_step, ierr)
+  subroutine boundary_quantities(command, first_step, ierr)
     
     use mod_position, only: bnd_pos, tor_pos
     
@@ -1537,9 +1537,9 @@ module exec_commands
     phimax    = to_float(command%args(2),     ierr); if ( ierr /= 0 ) return
     nphi      = to_int(command%args(3),       ierr); if ( ierr /= 0 ) return
     units     = get_int_setting('units',      ierr); if ( ierr /= 0 ) return 
-    n_elm_pts = get_int_setting('n_belm_pts', ierr); if ( ierr /= 0 ) return
+    n_elm_pts = get_int_setting('nsub_bnd', ierr); if ( ierr /= 0 ) return
 
-    write(filename,'(4a)') DIR, 'boundary_expressions',                                          &
+    write(filename,'(4a)') DIR, 'boundary_quantities',                                          &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     ! Create set of R, Z points on the boundary (including normals)
@@ -1570,7 +1570,7 @@ module exec_commands
     
     if ( allocated(result) ) deallocate(result)
     
-  end subroutine boundary_expressions 
+  end subroutine boundary_quantities 
 
 
 

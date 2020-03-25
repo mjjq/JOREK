@@ -562,7 +562,7 @@ module mod_expression
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
       ne0_20, ln_Lambda, ln_Lambda0
-    real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, c_sat, Bnorm, Btan
+    real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan
     real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
@@ -1269,7 +1269,7 @@ module mod_expression
           end if
           
           ! --- factor to calculate ion saturation current in JOREK units
-          c_sat     = EL_CHG * 1.d20 * central_density * sqrt(MU_ZERO/rho_norm) 
+          fact_jsat = EL_CHG * 1.d20 * central_density * sqrt(MU_ZERO/rho_norm) 
 
           ! --- Now that everything is prepared, evaluate the requested expressions.
           loop_expr: do iexpr = 1, expr_list%n_expr
@@ -1463,7 +1463,7 @@ module mod_expression
                 res = Jpar/fact_mu_zero
 
               case ( 'Jpar_ionsat'  )
-                res = Jpar_ionsat * c_sat / fact_mu_zero
+                res = Jpar_ionsat * fact_jsat / fact_mu_zero
 
               case ( 'vpar_norm'    )
                 res = vpar0 * Bnorm / fact_time 

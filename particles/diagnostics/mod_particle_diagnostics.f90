@@ -12,11 +12,11 @@ public write_particle_diagnostics, calculate_particle_diagnostics
 !> Cannot use HDF5 types here because these are invalid before h5open_f is called
 !> (I think, did not take the chance)
 integer, parameter :: REAL4 = 1, INT4 = 2, REAL8 = 3
-integer, parameter :: n_var = 14
+integer, parameter :: n_var = 15
 character(len=7)  :: var_names(n_var) = ["e      ", "k      ", "mu     ", &
   "psi_n  ", "psi_bar", "p_phi  ", "weight ", "lost   ", "q      ", "region ", &
-  "theta  ", "phi    ", "R      ", "Z      "]
-integer, parameter :: var_types(n_var) = [REAL8, REAL8, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4, REAL4, REAL4]
+  "theta  ", "phi    ", "R      ", "Z      ","i_elm  "]
+integer, parameter :: var_types(n_var) = [REAL8, REAL8, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4, REAL4, REAL4,INT4]
 integer, parameter :: n_real8_var      = count(var_types .eq. REAL8)
 integer, parameter :: n_real4_var      = count(var_types .eq. REAL4)
 integer, parameter :: n_int4_var       = count(var_types .eq. INT4)
@@ -251,7 +251,7 @@ subroutine do_write_particle_diagnostics(this, sim, ev)
             case (REAL4)
               call h5dcreate_f(this%file_id, dataset_name, H5T_IEEE_F32LE, dspace, dset, ierr, plist)
             case (INT4)
-              call h5dcreate_f(this%file_id, dataset_name, H5T_STD_I8LE, dspace, dset, ierr, plist)
+              call h5dcreate_f(this%file_id, dataset_name, H5T_STD_I32LE, dspace, dset, ierr, plist)
             case DEFAULT
               write(*,*) "Unknown variable type for diagnostics"
               call MPI_ABORT(MPI_COMM_WORLD, -1, ierr)
@@ -391,7 +391,8 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
   use phys_module, only: F0, xpoint, xcase
   use constants
   use mod_boris
-  use mod_kinetic_relativistic, only: relativistic_kinetic_to_gc
+  use mod_kinetic_relativistic, only: relativistic_kinetic_to_particle
+  use mod_gc_relativistic, only: relativistic_gc_to_particle
   use mod_fields_linear
   use domains
   class(fields_base), intent(in)                               :: fields
@@ -446,6 +447,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
   !$omp xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, R_axis, Z_axis, psi_axis) &
   !$omp private(E, B, psi, U, particle, v_par, domain, particle_centered, real_stats_tmp, i_real8, i_real4, i_tmp, j)
   do i=1,size(particles,1)
+    int_stats(i,4) = particles(i)%i_elm
     if (particles(i)%i_elm .lt. 1) then
       if (present(mask)) mask(i) = .false.
       int_stats(i,1) = 1 ! lost
@@ -457,6 +459,8 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
       type is (particle_gc)
         int_stats(i,2) = particle_in%q
       type is (particle_kinetic_relativistic)
+        int_stats(i,2) = particle_in%q
+     type is (particle_gc_relativistic)
         int_stats(i,2) = particle_in%q
       end select
     else
@@ -485,10 +489,19 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
         particle = particle_in
         real_stats_tmp(6) = 0.d0 ! Since there is no momentum defined for this we just use 0
       type is (particle_kinetic_relativistic)
-        real_stats_tmp(6) = real(particle_in%q,8)*EL_CHG*psi - ATOMIC_MASS_UNIT*particle_in%x(1) &
-	                    *(particle_in%p(1)*sin(particle_in%x(3))+particle_in%p(2)*cos(particle_in%x(3)))
-	! transform a relativistic kinetic particle into gc (to get E and mu)
-        particle = relativistic_kinetic_to_gc(fields%node_list,fields%element_list,particle_in,B,mass)
+        ! compute the canonical toroidal momentum P_phi
+        real_stats_tmp(6) = real(particle_in%q,8)*EL_CHG*psi - ATOMIC_MASS_UNIT*particle_in%x(1)* &
+          (particle_in%p(1)*sin(particle_in%x(3))+particle_in%p(2)*cos(particle_in%x(3)))
+	! transform the particle into a gc to get E and mu
+        call relativistic_kinetic_to_particle(fields%node_list,fields%element_list,&
+             particle_in,particle,mass,B)
+       type is (particle_gc_relativistic)
+         ! compute the canonical toroidal momentum P_phi
+          real_stats_tmp(6) = EL_CHG*particle_in%q*psi + ATOMIC_MASS_UNIT*particle_in%x(1)* &
+            particle_in%p(1)*B(3)/norm2(B)
+         ! transform the particle into a gc to get E and mu
+          call relativistic_gc_to_particle(fields%node_list,fields%element_list, &
+            particle_in,particle,mass,B) 
       class default
         write(*,*) "ERROR: calculate_particle_diagnostics not implemented for this particle type"
         cycle ! skip this iteration

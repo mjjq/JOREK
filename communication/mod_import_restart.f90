@@ -670,6 +670,11 @@ endif
 #if (JOREK_MODEL == 400)
           node_list%node(i)%values(j,:,8)= amplitude * node_list%node(i)%values(1,:,8)
 #endif
+#if (JOREK_MODEL == 710)
+          node_list%node(i)%values(j,:,var_AR)= amplitude * node_list%node(i)%values(1,:,var_AR)
+          node_list%node(i)%values(j,:,var_AZ)= amplitude * node_list%node(i)%values(1,:,var_AZ)
+          node_list%node(i)%values(j,:,var_A3)= amplitude * node_list%node(i)%values(1,:,var_A3)
+#endif
         enddo
       enddo
     endif
@@ -1296,6 +1301,51 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     mag_ener_src_tot = 0.d0
     call HDF5_array1D_reading(file_id,mag_ener_src_tot,'mag_ener_src_tot')
 
+    if (allocated(part_flux_Dpar_t)) call tr_deallocate(part_flux_Dpar_t,"part_flux_Dpar_t",CAT_UNKNOWN)
+    call tr_allocate(part_flux_Dpar_t,1,index_start+nstep,"part_flux_Dpar_t",CAT_UNKNOWN)
+    part_flux_Dpar_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_flux_Dpar_t,'part_flux_Dpar_t')
+
+    if (allocated(part_flux_Dperp_t)) call tr_deallocate(part_flux_Dperp_t,"part_flux_Dperp_t",CAT_UNKNOWN)
+    call tr_allocate(part_flux_Dperp_t,1,index_start+nstep,"part_flux_Dperp_t",CAT_UNKNOWN)
+    part_flux_Dperp_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_flux_Dperp_t,'part_flux_Dperp_t')
+
+    if (allocated(part_flux_Vpar_t)) call tr_deallocate(part_flux_Vpar_t,"part_flux_Vpar_t",CAT_UNKNOWN)
+    call tr_allocate(part_flux_Vpar_t,1,index_start+nstep,"part_flux_Vpar_t",CAT_UNKNOWN)
+    part_flux_Vpar_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_flux_Vpar_t,'part_flux_Vpar_t')
+
+    if (allocated(part_flux_Vperp_t)) call tr_deallocate(part_flux_Vperp_t,"part_flux_Vperp_t",CAT_UNKNOWN)
+    call tr_allocate(part_flux_Vperp_t,1,index_start+nstep,"part_flux_Vperp_t",CAT_UNKNOWN)
+    part_flux_Vperp_t = 0.d0
+    call HDF5_array1D_reading(file_id,part_flux_Vperp_t,'part_flux_Vperp_t')
+
+    if (allocated(npart_flux_t)) call tr_deallocate(npart_flux_t,"npart_flux_t",CAT_UNKNOWN)
+    call tr_allocate(npart_flux_t,1,index_start+nstep,"npart_flux_t",CAT_UNKNOWN)
+    npart_flux_t = 0.d0
+    call HDF5_array1D_reading(file_id,npart_flux_t,'npart_flux_t')
+
+    if (allocated(dpart_tot_dt)) call tr_deallocate(dpart_tot_dt,"dpart_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dpart_tot_dt,1,index_start+nstep,"dpart_tot_dt",CAT_UNKNOWN)
+    dpart_tot_dt = 0.d0
+    call HDF5_array1D_reading(file_id,dpart_tot_dt,'dpart_tot_dt')
+
+    if (allocated(dnpart_tot_dt)) call tr_deallocate(dnpart_tot_dt,"dnpart_tot_dt",CAT_UNKNOWN)
+    call tr_allocate(dnpart_tot_dt,1,index_start+nstep,"dnpart_tot_dt",CAT_UNKNOWN)
+    dnpart_tot_dt = 0.d0
+    call HDF5_array1D_reading(file_id,dnpart_tot_dt,'dnpart_tot_dt')
+
+    if (allocated(npart_tot_t)) call tr_deallocate(npart_tot_t,"npart_tot_t",CAT_UNKNOWN)
+    call tr_allocate(npart_tot_t,1,index_start+nstep,"npart_tot_t",CAT_UNKNOWN)
+    npart_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,npart_tot_t,'npart_tot_t')
+
+    if (allocated(density_tot_t)) call tr_deallocate(density_tot_t,"density_tot_t",CAT_UNKNOWN)
+    call tr_allocate(density_tot_t,1,index_start+nstep,"density_tot_t",CAT_UNKNOWN)
+    density_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,density_tot_t,'density_tot_t')
+
 #ifdef JECCD                   
     if (allocated(t_energies2))   call tr_deallocate(t_energies2,"t_energies2",CAT_UNKNOWN)
     call tr_allocate(t_energies2,1,n_tor_tmp,1,2,1,index_start+nstep, "t_energies2",CAT_UNKNOWN)
@@ -1506,6 +1556,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
           node_list%node(i)%values(m,:,6)   = amplitude * node_list%node(i)%values(1,:,6)
 #if (JOREK_MODEL == 400)
           node_list%node(i)%values(j,:,8)= amplitude * node_list%node(i)%values(1,:,8)
+#endif
+#if (JOREK_MODEL == 710)
+          node_list%node(i)%values(j,:,var_AR)= amplitude * node_list%node(i)%values(1,:,var_AR)
+          node_list%node(i)%values(j,:,var_AZ)= amplitude * node_list%node(i)%values(1,:,var_AZ)
+          node_list%node(i)%values(j,:,var_A3)= amplitude * node_list%node(i)%values(1,:,var_A3)
 #endif
           end if
         end do

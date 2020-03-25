@@ -170,7 +170,6 @@ program JOREK2
   complex*16 :: out_fft(1:n_plane)
 #endif
 
-
   real*8  :: DUMMY_REAL(1:1)
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
@@ -472,7 +471,6 @@ required = 0
         else
 	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,  &
                            SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
-
         endif
       else
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
@@ -830,7 +828,7 @@ required = 0
        endif
     else
        my_id_n = my_id
-       MPI_COMM_N = MPI_COMM_WORLD 
+       MPI_COMM_N = MPI_COMM_WORLD
        m_cpu = n_cpu
     endif
 
@@ -839,7 +837,6 @@ required = 0
     !***********************************************************************
     index_size  = n_cpu
     id_elements = my_id
-
 
     call tr_allocate(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
     call tr_allocate(index_min,1,index_size,"index_min",CAT_FEM)
@@ -868,7 +865,6 @@ required = 0
          n_glob, nz_glob, ndof_glob, n_matrix_block_size)
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
       call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1)) 
     endif
@@ -992,7 +988,6 @@ required = 0
        call clck_ldiff(t0,t1,tsecond)
       write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
     endif     
-  
 
     if (.not. gmres) then
 
@@ -1008,7 +1003,7 @@ required = 0
           call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
        endif
 
-    else 
+    else
 
        !--------- Constructing Harmonic Matrix via MPI all-to-all communication
        if (.not. solve_only) then

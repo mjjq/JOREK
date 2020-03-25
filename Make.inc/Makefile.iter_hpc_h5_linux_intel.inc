@@ -12,13 +12,12 @@ CXX = mpiicpc
 
 # Solvers dependencies
 USE_HIPS         = 0
-USE_PASTIX       = 0
-USE_BLOCK        = 0
+USE_PASTIX       = 1
+USE_BLOCK        = 1
+USE_PASTIX_MURGE = 0
 USE_MUMPS        = 1
-USE_STRUMPACK    = 1
 USE_FFTW         = 1
 USE_HDF5         = 1
-DEFINES          = -DDIRECT_CONSTRUCTION
 
 # Directory containing the user-compiled libraries (e.g., MUMPS, PASTIX, ...)
 LIBDIR = $(HOME)/lib
@@ -35,14 +34,16 @@ LIB_MUMPS   = $(LIB_SCOTCH) -L$(MUMPS_HOME)/lib/ -ldmumps -lmumps_common -lesmum
 LIB_ZMUMPS  = -lzmumps
 INC_MUMPS   =  $(MUMPS_HOME)/include/
 
-#Strumpack library
-STRUMPACK_HOME=/u/iholod/bin/STRUMPACK-3.2.0/build
-STRUMPACKINC = -I$(METIS_HOME)/include -I$(STRUMPACK_HOME)/include 
-STRUMPACKLIB = -L$(STRUMPACK_HOME)/lib/ -lstrumpack $(METIS_HOME)/lib/libmetis.a -lmpifort -lmpi -lmpigi -ldl -lrt -lpthread -lifport -lifcoremt -limf -lsvml -lm -lipgo -lirc -lpthread -lsvml -lc -lirc_s -ldl -lc
-MKLINC= -I${MKLROOT}/include
-MKLLIB= ${MKLROOT}/lib/intel64/libmkl_scalapack_lp64.a -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_intel_thread.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_blacs_intelmpi_lp64.a -Wl,--end-group -L${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -liomp5 -lpthread -lm -ldl
-STRUMPACKINC += $(MKLINC)
-STRUMPACKLIB += $(MKLLIB)
+# PASTIX
+PASTIX_HOME     ?=  $(LIBDIR)/pastix/install/
+LIB_PASTIX       = `pastix-conf --libs` #-L$(PASTIX_HOME)/lib/ -lpastix_murge -lpastix $(LIB_SCOTCH)
+LIB_PASTIX_MURGE = `pastix-conf --libs_murge` #-L$(PASTIX_HOME)/lib/ -lpastix_murge -lpastix $(LIB_SCOTCH)
+LIB_PASTIX_BLAS  = `pastix-conf --blas`
+INC_PASTIX       = `pastix-conf --incs` #-I$(PASTIX_HOME) $(INC_SCOTCH)
+
+#HIPS
+LIBHIPS   = -L$(HOME)/hips_trunk/trunk/LIB -lhips -lio $(LIBSCOTCH)
+INCHIPS   = -I$(HOME)/hips_trunk/trunk/LIB
 
 #FFTW
 LIBFFTW   = -L$(FFTWDIR)/lib -lfftw3

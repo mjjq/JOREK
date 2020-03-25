@@ -429,14 +429,9 @@ subroutine ELM_main_rhs_4(rhs,rhs_k)
   ! --- Routine variables
   real*8 :: rhs(n_var),rhs_k(n_var)
   
-  ! ----------------        
-  ! --- The RHS term        
-  !rhs(4) = 0.d0
-  
-  ! ----------------------------        
-  ! --- The RHS term (main part)        
+  ! --- The RHS term
   rhs(4) = rhs(4)                      &
-           - ( v_x * u0_x   + v_y * u0_y  + v*w0)                          * R * xjac 
+           - ( v_x * u0_x   + v_y * u0_y  + v*w0)                          * R * xjac
   
   ! -----------------------------------    
   ! --- The RHS term (diamagnetic part)        

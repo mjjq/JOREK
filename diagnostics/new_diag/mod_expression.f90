@@ -532,8 +532,8 @@ module mod_expression
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z, Btheta, psi_abs, E_par, E_crit, E_dreicer, AR0_R, &
-      AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ
+      P0_RR, P0_ZZ, P0_RZ, BB2, B_tor, B_R, B_Z, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,       &
+      E_dreicer, AR0_R, AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
@@ -1006,10 +1006,11 @@ module mod_expression
           B_R = ( A30_Z - AZ0_p )/ BigR
           B_Z = ( AR0_p - A30_R )/ BigR
           B_tor = ( AZ0_R - AR0_Z )    + Fprofile / BigR
+          BR_Z = ( A30_ZZ - AZ0_Zp )/ BigR
+          BZ_R = -1/BigR**2 * ( AR0_p - A30_R ) + ( AR0_Rp - A30_RR )/ BigR
           Btheta = sqrt( B_R*B_R + B_Z*B_Z )
           BB2 = B_tor**2 + B_R**2 + B_Z**2
-          zj0 = 0.d0
-          zj0 = - AR0_Rp + AR0_p / BigR + A30_RR - 3.d0 * A30_R / BigR + 2.d0 * A30 / BigR**2 + A30_ZZ - AZ0_Zp 
+          zj0 = - (BZ_R - BR_Z) * BigR
 #else
           BB2      = (F0*F0 + ps0_R * ps0_R + ps0_Z * ps0_Z ) / BigR**2
           B_R      = + ps0_Z / BigR

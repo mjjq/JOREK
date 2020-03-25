@@ -89,6 +89,7 @@ real*8  :: current_tot, beta_p, beta_n, beta_t, aminor, current_MA
 real*8  :: xjac, xjac_R, xjac_Z, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, area1
 real*8  :: AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30
 real*8  :: A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ
+real*8  :: BR_Z, BZ_R
 real*8  :: r0_corr, T0_corr
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, delta_phi, phi, P_tot, D_tot
@@ -236,7 +237,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, r0_corr, &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
-!$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ,            &
+!$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R &
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
 !$omp           rn0, source_ns,                                                               &
@@ -421,8 +422,9 @@ do ife = ife_min, ife_max
                     + A30_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                           &
                     + A30_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2         &
                     - xjac_Z * (- A30_s * x_t(ms,mt) + A30_t * x_s(ms,mt) )  / xjac**2
-        zj0   = 0.d0
-        zj0  = - AR0_Rp + AR0_p / BigR + A30_RR - 3.d0 * A30_R / BigR + 2.d0 * A30 / BigR**2 + A30_ZZ - AZ0_Zp
+        BR_Z = ( A30_ZZ - AZ0_Zp )/ BigR
+        BZ_R = -1/BigR**2 * ( AR0_p - A30_R ) + ( AR0_Rp - A30_RR )/ BigR
+        zj0 = - (BZ_R - BR_Z) * BigR
 #endif
 
         eta_T   = resistivity(T0_corr)  

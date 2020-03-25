@@ -20,8 +20,8 @@ use diffusivities, only: get_dperp, get_zkperp
 
 implicit none
 
-integer,               intent(in)     :: i_tor_min   !*psv!
-integer,               intent(in)     :: i_tor_max   !*psv!
+integer,               intent(in)     :: i_tor_min   
+integer,               intent(in)     :: i_tor_max   
 ! --- Routine variables
 type (type_element),    intent(in)    :: element
 type (type_node),       intent(inout) :: nodes(4)

@@ -21,8 +21,8 @@ type (type_node)      :: nodes(4)        ! the two nodes containing the boundary
 
 !real*8, dimension (:,:), allocatable  :: ELM
 !real*8, dimension (:)  , allocatable  :: RHS
-integer,               intent(in)     :: i_tor_min   !*psv!
-integer,               intent(in)     :: i_tor_max   !*psv!
+integer,               intent(in)     :: i_tor_min   
+integer,               intent(in)     :: i_tor_max   
 real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
 real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 

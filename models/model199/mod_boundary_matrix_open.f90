@@ -20,8 +20,8 @@ type (type_node)      :: nodes(2)        ! the two nodes containing the boundary
 
 real*8, dimension (:,:), allocatable  :: ELM
 real*8, dimension (:)  , allocatable  :: RHS
-integer,               intent(in)     :: i_tor_min   !*psv!
-integer,               intent(in)     :: i_tor_max   !*psv!
+integer,               intent(in)     :: i_tor_min   
+integer,               intent(in)     :: i_tor_max   
 
 integer    :: vertex(2), direction(2), xcase2
 real*8     :: psi_axis, R_axis, Z_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)

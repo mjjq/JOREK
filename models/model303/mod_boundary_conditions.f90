@@ -416,7 +416,7 @@ contains
                                  ijA_index, ijA_size, irn_jcn,        & 
                                  irn_glob, jcn_glob, A_glob,          & 
                                  i_tor_min, i_tor_max)
-!***psv
+
                             if (.not. only_count) then
                                if (in .eq. 1) then
                                   call boundary_conditions_add_RHS(              &
@@ -424,10 +424,9 @@ contains
                                        index_min, index_max,                     &
                                        RHS_loc,                                  &
                                        Zbig * (-Vpar0 + BigR**2 * U0_s/ps0_s +   & 
-                                              direction * sqrt(GAMMA*T0) / Btot),& !),&!*U0_s /ps0_s + direction*sqrt(GAMMA*T0)/ Btot),& !( - Vpar0 + BigR**2 *       &
-                                       !U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot),                 &
+                                              direction * sqrt(GAMMA*T0) / Btot),& 
                                        i_tor_min, i_tor_max)
-!***psv
+
                                else
                                   call boundary_conditions_add_RHS(              &
                                        index_node, kv, in,                       &

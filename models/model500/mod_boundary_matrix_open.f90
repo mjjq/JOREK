@@ -28,8 +28,8 @@ real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
 real*8, dimension (:,:), allocatable  :: ELM
 real*8, dimension (:)  , allocatable  :: RHS
-integer,               intent(in)     :: i_tor_min   !*psv!
-integer,               intent(in)     :: i_tor_max   !*psv!
+integer,               intent(in)     :: i_tor_min   
+integer,               intent(in)     :: i_tor_max   
 
 integer    :: vertex(2), direction(2), i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7

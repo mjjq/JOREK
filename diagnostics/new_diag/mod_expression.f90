@@ -747,39 +747,38 @@ module mod_expression
                 r0_p     = r0_p     + vv(var_rho) * sz * hh    * hhz_p
                 r0_pp    = r0_pp    + vv(var_rho) * sz * hh    * hhz_pp
                 
-#if JOREK_MODEL == 400
                 ! --- Ion temperature
-                Ti0       = Ti0       + vv(var_Ti) * sz * hh    * hhz
-                Ti0_s     = Ti0_s     + vv(var_Ti) * sz * hh_s  * hhz
-                Ti0_t     = Ti0_t     + vv(var_Ti) * sz * hh_t  * hhz
-                Ti0_ss    = Ti0_ss    + vv(var_Ti) * sz * hh_ss * hhz
-                Ti0_tt    = Ti0_tt    + vv(var_Ti) * sz * hh_tt * hhz
-                Ti0_st    = Ti0_st    + vv(var_Ti) * sz * hh_st * hhz
-                Ti0_p     = Ti0_p     + vv(var_Ti) * sz * hh    * hhz_p
-                Ti0_pp    = Ti0_pp    + vv(var_Ti) * sz * hh    * hhz_pp
+                Ti0       = Ti0       + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh    * hhz
+                Ti0_s     = Ti0_s     + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh_s  * hhz
+                Ti0_t     = Ti0_t     + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh_t  * hhz
+                Ti0_ss    = Ti0_ss    + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh_ss * hhz
+                Ti0_tt    = Ti0_tt    + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh_tt * hhz
+                Ti0_st    = Ti0_st    + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh_st * hhz
+                Ti0_p     = Ti0_p     + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh    * hhz_p
+                Ti0_pp    = Ti0_pp    + ( vv(var_Ti) + vv(var_T)/2.d0 ) * sz * hh    * hhz_pp
                 
                 ! --- Electron temperature
-                Te0       = Te0       + vv(var_Te) * sz * hh    * hhz
-                Te0_s     = Te0_s     + vv(var_Te) * sz * hh_s  * hhz
-                Te0_t     = Te0_t     + vv(var_Te) * sz * hh_t  * hhz
-                Te0_ss    = Te0_ss    + vv(var_Te) * sz * hh_ss * hhz
-                Te0_tt    = Te0_tt    + vv(var_Te) * sz * hh_tt * hhz
-                Te0_st    = Te0_st    + vv(var_Te) * sz * hh_st * hhz
-                Te0_p     = Te0_p     + vv(var_Te) * sz * hh    * hhz_p
-                Te0_pp    = Te0_pp    + vv(var_Te) * sz * hh    * hhz_pp
-#else
+                Te0       = Te0       + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz
+                Te0_s     = Te0_s     + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh_s  * hhz
+                Te0_t     = Te0_t     + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh_t  * hhz
+                Te0_ss    = Te0_ss    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh_ss * hhz
+                Te0_tt    = Te0_tt    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh_tt * hhz
+                Te0_st    = Te0_st    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh_st * hhz
+                Te0_p     = Te0_p     + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_p
+                Te0_pp    = Te0_pp    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_pp
+
                 ! --- Temperature (ion + electron) in models .ne. 400
-                T0       = T0       + vv(var_T) * sz * hh    * hhz
-                T0_s     = T0_s     + vv(var_T) * sz * hh_s  * hhz
-                T0_t     = T0_t     + vv(var_T) * sz * hh_t  * hhz
-                T0_ss    = T0_ss    + vv(var_T) * sz * hh_ss * hhz
-                T0_tt    = T0_tt    + vv(var_T) * sz * hh_tt * hhz
-                T0_st    = T0_st    + vv(var_T) * sz * hh_st * hhz
-                T0_p     = T0_p     + vv(var_T) * sz * hh    * hhz_p
-                T0_pp    = T0_pp    + vv(var_T) * sz * hh    * hhz_pp
-#endif
+                T0       = T0       + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz
+                T0_s     = T0_s     + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_s  * hhz
+                T0_t     = T0_t     + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_t  * hhz
+                T0_ss    = T0_ss    + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_ss * hhz
+                T0_tt    = T0_tt    + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_tt * hhz
+                T0_st    = T0_st    + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_st * hhz
+                T0_p     = T0_p     + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz_p
+                T0_pp    = T0_pp    + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz_pp
+
                 ! --- Parallel Velocity
-#if JOREK_MODEL >= 300
+
                 Vpar0    = Vpar0    + vv(var_Vpar) * sz * hh    * hhz
                 Vpar0_s  = Vpar0_s  + vv(var_Vpar) * sz * hh_s  * hhz
                 Vpar0_t  = Vpar0_t  + vv(var_Vpar) * sz * hh_t  * hhz
@@ -788,8 +787,7 @@ module mod_expression
                 Vpar0_st = Vpar0_st + vv(var_Vpar) * sz * hh_st * hhz
                 Vpar0_p  = Vpar0_p  + vv(var_Vpar) * sz * hh    * hhz_p
                 Vpar0_pp = Vpar0_pp + vv(var_Vpar) * sz * hh    * hhz_pp
-#endif
-#if JOREK_MODEL == 500
+
                 rn0       = rn0       + vv(var_rhon) * sz * hh    * hhz
                 rn0_s     = rn0_s     + vv(var_rhon) * sz * hh_s  * hhz
                 rn0_t     = rn0_t     + vv(var_rhon) * sz * hh_t  * hhz
@@ -798,7 +796,6 @@ module mod_expression
                 rn0_st    = rn0_st    + vv(var_rhon) * sz * hh_st * hhz
                 rn0_p     = rn0_p     + vv(var_rhon) * sz * hh    * hhz_p
                 rn0_pp    = rn0_pp    + vv(var_rhon) * sz * hh    * hhz_pp
-#endif
 
                 ! --- AR
                 AR0      = AR0      + vv(var_AR) * sz * hh    * hhz
@@ -835,18 +832,6 @@ module mod_expression
               end do
             end do
           end do
-          
-#if JOREK_MODEL == 400
-          ! --- Sum up electron and ion temperature for model400 (e.g., to calculate total pressure)
-          T0       = Ti0    + Te0   
-          T0_s     = Ti0_s  + Te0_s 
-          T0_t     = Ti0_t  + Te0_t 
-          T0_ss    = Ti0_ss + Te0_ss
-          T0_tt    = Ti0_tt + Te0_tt
-          T0_st    = Ti0_st + Te0_st
-          T0_p     = Ti0_p  + Te0_p 
-          T0_pp    = Ti0_pp + Te0_pp
-#endif
           
           ! --- Construct Cartesian Derivatives of Variables.
           ps0_R    = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac

@@ -1,7 +1,7 @@
 module mod_global_matrix_structure
 contains
 subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max,& 
-                          ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max, n_glob, nz_glob, ndof, n_matrix_block_size)
+  ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max, n_glob, nz_glob, ndof, n_matrix_block_size)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
   !* matrix                                                              *

@@ -1,23 +1,16 @@
 module mod_locate_irn_jcn
 implicit none
 contains
-subroutine locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,& 
-                          ijA_index, ijA_size, irn_jcn)
+subroutine locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 !**************************************************************************
 ! subroutine finds the position in the global matrix of the index of      *
 ! node1 and node2 (this is the index per block)                           *
 !                                                                         *
 ! search to be replaced by binary search                                  *
 !**************************************************************************
-use mpi_mod
 integer :: index_node1, index_node2, index_min, index_max, ijA_position, i, index1_local
 logical :: found_index
 integer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-integer :: my_id, ierr
-
-
-call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
-
 
 found_index = .false.
 
@@ -41,7 +34,7 @@ if (.not.found_index) then
 
   do i=1,ijA_size(index1_local)           ! replace by binary search?
 
-    write(*,*) 'my_id, i,irn_jcn(index1_local,i)', my_id, i,irn_jcn(index1_local,i)
+    write(*,*) i,irn_jcn(index1_local,i)
  stop
   enddo
 

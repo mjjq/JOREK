@@ -151,7 +151,6 @@ contains
                                   xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
                                   thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
        
-
       enddo
     endif
     
@@ -774,7 +773,6 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   ! --- Timing
   call r3_info_end(r3_info_index_0)
   call tr_print_memsize("EndConstM")
-
 
 end subroutine construct_matrix
 

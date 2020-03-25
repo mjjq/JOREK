@@ -147,8 +147,8 @@ contains
           
 
         ! --- Build matrix elements for boundary
-    	call boundary_matrix_open(vertex, direction, element,nodes, & 
-                                  xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, & 
+    	call boundary_matrix_open(vertex, direction, element, nodes, & 
+                                  xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
                                   thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
        
 
@@ -215,10 +215,10 @@ contains
         thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k,  thread_struct(omp_tid)%eq_g, thread_struct(omp_tid)%eq_s, &
         thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, &
         thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, &
-        thread_struct(omp_tid)%delta_t)
+        thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max)
       if ( (jorek_model .eq. 303) .or. (jorek_model .eq. 333) .or. (jorek_model .eq. 710) ) n_tor_fft_thresh = 300
       call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
-        thread_struct(omp_tid)%ELM,  thread_struct(omp_tid)%RHS,  omp_tid)
+        thread_struct(omp_tid)%ELM,  thread_struct(omp_tid)%RHS,  omp_tid, i_tor_min, i_tor_max)
       
       ! --- Compare right hand side
       write(*,*)
@@ -278,7 +278,7 @@ contains
 
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,      & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
-                            i_tor_min, i_tor_max, n_glob1, nz_glob1, ndof, A_local, rhs_glob_tmp, irn_local, jcn_local, & 
+                            i_tor_min, i_tor_max, n_tmp, nz_tmp, ndof, A_tmp, rhs_glob_tmp, irn_tmp, jcn_tmp, & 
                             ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, direct_construction)
   
   use mumps_module 
@@ -325,14 +325,14 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   logical, intent(in) :: xpoint2
   integer, intent(in) :: i_tor_min
   integer, intent(in) :: i_tor_max
-  integer, intent(in) :: n_glob1  
-  integer, intent(in) :: nz_glob1 
+  integer, intent(in) :: n_tmp  
+  integer, intent(in) :: nz_tmp 
   integer, intent(in) :: ndof 
   logical, intent(in) :: direct_construction
-  real*8,  intent(in), pointer :: A_local(:)
+  real*8,  intent(in), pointer :: A_tmp(:)
   real*8,  intent(in), pointer :: rhs_glob_tmp(:)
-  integer, intent(in), pointer :: irn_local(:)
-  integer, intent(in), pointer :: jcn_local(:)
+  integer, intent(in), pointer :: irn_tmp(:)
+  integer, intent(in), pointer :: jcn_tmp(:)
   integer, intent(in), pointer :: ijA_index_tmp(:,:), ijA_size_tmp(:), irn_jcn_tmp(:,:)
   !--- Internal variables
   type (type_element)               :: element
@@ -370,66 +370,61 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   
   ! --- Memory tracking
   call tr_print_memsize("DebConstM")
-  
-  ! --- Local min-max indices for the nodes of our local elements (local in the MPI sense)
 
+  if(.not. direct_construction) then
+    ! --- Local min-max indices for the nodes of our local elements (local in the MPI sense)
+    i_bnd = 0
+    do i=1, n_local_elms
 
-if(.not. direct_construction) then
+      ielm = local_elms(i)
 
-  i_bnd = 0
-  do i=1, n_local_elms
+      do iv=1,n_vertex_max
 
-    ielm = local_elms(i)
+        if (ielm > n_elements_max) then
+          write(*,*) "WARNING: ielm, n_elements_max = ", ielm, n_elements_max
+        end if
 
-    do iv=1,n_vertex_max
+        inode = element_list%element(ielm)%vertex(iv)
 
-      if (ielm > n_elements_max) then
-        write(*,*) "WARNING: ielm, n_elements_max = ", ielm, n_elements_max
-      end if
+        if (node_list%node(inode)%boundary .eq. 1) i_bnd = i_bnd + 1
+        if (node_list%node(inode)%boundary .eq. 2) i_bnd = i_bnd + 1
+        if (node_list%node(inode)%boundary .eq. 3) i_bnd = i_bnd + 2
+        if (i == 1 .and. iv == 1) then
+          index_min_loc = minval(node_list%node(iv)%index)
+          index_max_loc = maxval(node_list%node(iv)%index)
+        else
+          index_min_loc = min(index_min_loc, minval(node_list%node(iv)%index))
+          index_max_loc = max(index_max_loc, maxval(node_list%node(iv)%index))
+        end if
+      enddo
 
-      inode = element_list%element(ielm)%vertex(iv)
-
-      if (node_list%node(inode)%boundary .eq. 1) i_bnd = i_bnd + 1
-      if (node_list%node(inode)%boundary .eq. 2) i_bnd = i_bnd + 1
-      if (node_list%node(inode)%boundary .eq. 3) i_bnd = i_bnd + 2
-      if (i == 1 .and. iv == 1) then
-        index_min_loc = minval(node_list%node(iv)%index)
-        index_max_loc = maxval(node_list%node(iv)%index)
-      else
-        index_min_loc = min(index_min_loc, minval(node_list%node(iv)%index))
-        index_max_loc = max(index_max_loc, maxval(node_list%node(iv)%index))
-      end if
     enddo
 
-  enddo
+    ! --- Initialise internal variables
+    difference_found = .false.
+    rhs_problem(:)   = .false.
+    elm_problem(:,:) = .false.
 
-  ! --- Initialise internal variables
-  difference_found = .false.
-  rhs_problem(:)   = .false.
-  elm_problem(:,:) = .false.
+    ! --- Memory allocation
+    if (allocated(A_glob))    call tr_deallocate(A_glob,"A_glob",CAT_DMATRIX) 
+    call tr_allocate(A_glob,1,nz_tmp,"A_glob",  CAT_DMATRIX)
 
-  ! --- Memory allocation
-  if (allocated(A_glob))    call tr_deallocate(A_glob,"A_glob",CAT_DMATRIX) 
-  call tr_allocate(A_glob,1,nz_glob1,"A_glob",  CAT_DMATRIX)
+    if (allocated(rhs_glob))    call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX) 
+    call tr_allocate(rhs_glob, 1,ndof,"rhs_glob", CAT_DMATRIX)
 
-  if (allocated(rhs_glob))    call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX) 
-  call tr_allocate(rhs_glob, 1,ndof,"rhs_glob", CAT_DMATRIX)
+    A_glob = 0.0d0
+    rhs_glob = 0.0d0 
 
-  A_glob = 0.0d0
-  rhs_glob = 0.0d0 
+  endif
 
-endif
-
- call tr_allocatep(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
- rhs_local  = 0.d0
-  write(*,*) 'my_id, n_glob, ndof :', my_id, n_glob1, ndof
-  
+  call tr_allocatep(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
+  rhs_local  = 0.d0
   
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,local_elms,element_list,node_list,          &
   !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,direct_construction,       &
-  !$omp          A_local, rhs_local, rhs_glob_tmp, irn_local, jcn_local,      &
+  !$omp          A_tmp, rhs_local, rhs_glob_tmp, irn_tmp, jcn_tmp,      &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
   !$omp          ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, &
   !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn) &
@@ -460,6 +455,7 @@ endif
     
     ! --- Define nodes (this depends on whether our element has been refined)
     if (refinement .and. .not. direct_construction) then
+
       i_father = element_list%element(ielm)%father
 
       if (i_father .ne. 0) then
@@ -479,80 +475,81 @@ endif
 
     endif
 
-    call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd,& 
-                                 R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
+    call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, &
+         &                       Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,  & 
+         &                       omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
     
-if (.not. direct_construction) then
+    if (.not. direct_construction) then ! .not. direct_construction
     
 #ifdef PRINT_ELM_RHS
-    ! --- Write out rhs and elm for one element to compare models.
-    !     Switch this on by adding -DPRINT_ELM_RHS as compiler flag.
-    if (ielm == element_list%n_elements/2) then
+      ! --- Write out rhs and elm for one element to compare models.
+      !     Switch this on by adding -DPRINT_ELM_RHS as compiler flag.
+      if (ielm == element_list%n_elements/2) then
       
-      open(unit = 387, file = 'comp_matrix_elements_elm.dat', status='REPLACE', action='WRITE')
-      open(unit = 388, file = 'comp_matrix_elements_rhs.dat', status='REPLACE', action='WRITE')
-      write(387, "( '#', A17, 8A4)" ), 'ELM', 'v1', 'v2', 'i', 'k', 'j', 'l', 'im', 'in'
-      write(388, "( '#', A17, 4A4)" ), 'RHS', 'v1', 'i', 'j', 'im'
+        open(unit = 387, file = 'comp_matrix_elements_elm.dat', status='REPLACE', action='WRITE')
+        open(unit = 388, file = 'comp_matrix_elements_rhs.dat', status='REPLACE', action='WRITE')
+        write(387, "( '#', A17, 8A4)" ), 'ELM', 'v1', 'v2', 'i', 'k', 'j', 'l', 'im', 'in'
+        write(388, "( '#', A17, 4A4)" ), 'RHS', 'v1', 'i', 'j', 'im'
       
-      n_var_reduced = n_var
+        n_var_reduced = n_var
 #if (JOREK_MODEL == 400)
         n_var_reduced = 7
 #endif
       
-      do v1 = 1, n_var_reduced
+        do v1 = 1, n_var_reduced
         
-        do v2 = 1, n_var_reduced
+          do v2 = 1, n_var_reduced
           
-          do i = 1, n_vertex_max
+            do i = 1, n_vertex_max
             
-            do k = 1, n_vertex_max
+              do k = 1, n_vertex_max
               
-              do j = 1, n_order+1
+                do j = 1, n_order+1
                 
-                do l = 1, n_order+1
+                  do l = 1, n_order+1
                   
-                  do im = 1, (i_tor_max - i_tor_min + 1)
+                    do im = 1, (i_tor_max - i_tor_min + 1)
                     
                     
-                    do in = 1, (i_tor_max - i_tor_min + 1)
+                      do in = 1, (i_tor_max - i_tor_min + 1)
                       
-                      ! --- Indices for RHS (index_ij) and ELM matrix (index_ij, index_kl)
-                      index_ij            = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) &
-                                          + (i_tor_max - i_tor_min + 1) * n_var * (j-1) + (i_tor_max - i_tor_min + 1) * (v1-1) + im
+                        ! --- Indices for RHS (index_ij) and ELM matrix (index_ij, index_kl)
+                        index_ij            = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) &
+                                            + (i_tor_max - i_tor_min + 1) * n_var * (j-1) + (i_tor_max - i_tor_min + 1) * (v1-1) + im
                       
-                      index_kl            = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (k-1) &
-                                          + (i_tor_max - i_tor_min + 1) * n_var * (l-1) + (i_tor_max - i_tor_min + 1) * (v2-1) + in
+                        index_kl            = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (k-1) &
+                                            + (i_tor_max - i_tor_min + 1) * n_var * (l-1) + (i_tor_max - i_tor_min + 1) * (v2-1) + in
                       
-                      ! --- Indices for T_e (model400)
-                      index_ij_model400_e = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) &
-                                          + (i_tor_max - i_tor_min + 1) * n_var * (j-1) + (i_tor_max - i_tor_min + 1) * (8 -1) + im
-                      index_kl_model400_e = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (k-1) &
-                                          + (i_tor_max - i_tor_min + 1) * n_var * (l-1) + (i_tor_max - i_tor_min + 1) * (8 -1) + in
+                        ! --- Indices for T_e (model400)
+                        index_ij_model400_e = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) &
+                                            + (i_tor_max - i_tor_min + 1) * n_var * (j-1) + (i_tor_max - i_tor_min + 1) * (8 -1) + im
+                        index_kl_model400_e = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (k-1) &
+                                            + (i_tor_max - i_tor_min + 1) * n_var * (l-1) + (i_tor_max - i_tor_min + 1) * (8 -1) + in
 
-                      !--- RHS: simple output of vector element
-                      if ( (k==1) .and. (l==1) .and. (v2==1) .and. (in==1) ) then
+                        !--- RHS: simple output of vector element
+                        if ( (k==1) .and. (l==1) .and. (v2==1) .and. (in==1) ) then
                         
-                        tmp_rhs = thread_struct(omp_tid)%RHS(index_ij)
+                          tmp_rhs = thread_struct(omp_tid)%RHS(index_ij)
                         
 #if (JOREK_MODEL == 400)
                           !--- RHS: for model400, add T_e (v1=8) to T_i (v1=6)
                           if (v1 == 6) tmp_rhs = tmp_rhs + thread_struct(omp_tid)%RHS(index_ij_model400_e)
 #endif
                         
-                        write(388, "( E18.6, 4I4 )" ) tmp_rhs, v1, i, j, im
+                          write(388, "( E18.6, 4I4 )" ) tmp_rhs, v1, i, j, im
                       
-                      end if
+                        end if
 
 
-                      ! --- ELM: simple output of matrix element
-                      tmp_elm   = thread_struct(omp_tid)%ELM(index_ij,index_kl)
+                        ! --- ELM: simple output of matrix element
+                        tmp_elm   = thread_struct(omp_tid)%ELM(index_ij,index_kl)
 
-                      ! --- ELM: additional output for comparison with model400, output as v2=8, below v2=6
-                      ! --- for model != model400: duplicate of ELM(v1, v2=6)
-                      ! --- for model  = model400: contribution from ELM(v1, v2=8)
-                      tmp_elm_v2_8 = tmp_elm
+                        ! --- ELM: additional output for comparison with model400, output as v2=8, below v2=6
+                        ! --- for model != model400: duplicate of ELM(v1, v2=6)
+                        ! --- for model  = model400: contribution from ELM(v1, v2=8)
+                        tmp_elm_v2_8 = tmp_elm
 
-                      ! --- for model400, when v1==6, add the ELM(v1=8, v2) contribution to ELM(v1=6, v2), for both tmp_elm and tmp_elm_v2_8
+                        ! --- for model400, when v1==6, add the ELM(v1=8, v2) contribution to ELM(v1=6, v2), for both tmp_elm and tmp_elm_v2_8
 
 #if (JOREK_MODEL == 400)
                         if (v2 == 6 ) then
@@ -568,34 +565,35 @@ if (.not. direct_construction) then
 #endif
 
 
-                      write(387, "( E18.6, 8I4 )" )   tmp_elm,      v1, v2, i, k, j, l, im, in
+                        write(387, "( E18.6, 8I4 )" )   tmp_elm,      v1, v2, i, k, j, l, im, in
                       
-                      if (v2 == 6) then
-                        write(387, "( E18.6, 8I4 )" ) tmp_elm_v2_8, v1, 8,  i, k, j, l, im, in
-                      end if
+                        if (v2 == 6) then
+                          write(387, "( E18.6, 8I4 )" ) tmp_elm_v2_8, v1, 8,  i, k, j, l, im, in
+                        end if
                       
-                    end do ! (i_tor_max - i_tor_min + 1)
+                      end do ! (i_tor_max - i_tor_min + 1)
                     
-                  end do ! (i_tor_max - i_tor_min + 1)
+                    end do ! (i_tor_max - i_tor_min + 1)
                   
-                end do ! n_order+1
+                  end do ! n_order+1
                 
-              end do ! n_order+1
+                end do ! n_order+1
               
-            end do ! n_vertex_max
+              end do ! n_vertex_max
             
-          end do ! n_vertex_max
+            end do ! n_vertex_max
           
-        end do ! n_var_reduced
+          end do ! n_var_reduced
         
-      end do ! n_var_reduced
+        end do ! n_var_reduced
       
-      close(387)
-      close(388)
-    end if ! i_elm
+        close(387)
+        close(388)
+      end if ! i_elm
     ! --- end: Write out rhs and elm for one element to compare models.
 #endif
-endif    
+    endif ! .not. direct_construction  
+ 
     ! --- Define element nodes (depends if it's refined)
     if (refinement .and. .not. direct_construction) then   
       call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father, &
@@ -625,7 +623,6 @@ endif
 
               index_ij = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) + (i_tor_max - i_tor_min + 1) * n_var * (i_order-1) + j   ! index in the ELM matrix
              
- 
               !$omp atomic
               rhs_local(index_large_i+j) = rhs_local(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
               !$omp end atomic
@@ -656,8 +653,8 @@ endif
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var*(i_tor_max - i_tor_min + 1) + l
 
-                    irn_local(ilarge2) = index_large_i	+ j
-                    jcn_local(ilarge2) = index_large_k	+ l
+                    irn_tmp(ilarge2) = index_large_i	+ j
+                    jcn_tmp(ilarge2) = index_large_k	+ l
 
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
@@ -667,8 +664,8 @@ endif
                 enddo ! n_var * n_tor
 
                 !$omp critical
-                A_local(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
-                  A_local(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
+                A_tmp(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
+                  A_tmp(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
                   thread_struct(omp_tid)%synch_buff(:)
                 !$omp end critical 
 
@@ -689,76 +686,76 @@ endif
  
   
   ! --- Memory tracking
-  call tr_vnorms("cm_A_bef_bc",A_local,nz_glob1)
+  call tr_vnorms("cm_A_bef_bc",A_tmp,nz_tmp)
   
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,  &
                            index_min, index_max,  rhs_local, xpoint2, xcase2, R_axis, Z_axis,    & 
                            psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false.,      & 
-                           ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, irn_local, jcn_local,& 
-                           A_local, i_tor_min, i_tor_max )
+                           ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, irn_tmp, jcn_tmp,& 
+                           A_tmp, i_tor_min, i_tor_max )
 
   if (fix_axis_nodes) then
     call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max, & 
-                           ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, irn_local, jcn_local,& 
-                           A_local, i_tor_min, i_tor_max )
+                           ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, irn_tmp, jcn_tmp,& 
+                           A_tmp, i_tor_min, i_tor_max )
   endif
 
   ! --- Memory tracking
-  call tr_vnorms("cm_A_aft_bc",A_local,nz_glob1)
+  call tr_vnorms("cm_A_aft_bc",A_tmp,nz_tmp)
 
   
 
-if(.not.direct_construction) then 
+  if(.not.direct_construction) then 
 
-  ! --- Add vacuum response (boundary integral) for free boundary computations
-  if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
-    call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
+    ! --- Add vacuum response (boundary integral) for free boundary computations
+    if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
+      call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
                                   resistive_wall, index_min, index_max, rhs_local, tstep, index_now)
-  end if
+    end if
   
-! --- Summarise element_matrix comparison
+    ! --- Summarise element_matrix comparison
 #ifdef COMPARE_ELEMENT_MATRIX
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  if ( difference_found ) then
-    write(*,*)
-    write(*,'(i3,a)') my_id, ' ERROR: DIFFERENCES BETWEEN ELEMENT_MATRIX AND ELEMENT_MATRIX_FFT!'
-    do i = 1, n_var
-      if ( rhs_problem(i) ) write(*,'(i5," rhs_ij_",i1)') my_id, i
-    end do
-    write(*,*)
-    do i = 1, n_var
-      do j = 1, n_var
-        if ( elm_problem(i,j) ) write(*,'(i5," amat_",2i1)') my_id, i, j
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+    if ( difference_found ) then
+      write(*,*)
+      write(*,'(i3,a)') my_id, ' ERROR: DIFFERENCES BETWEEN ELEMENT_MATRIX AND ELEMENT_MATRIX_FFT!'
+      do i = 1, n_var
+        if ( rhs_problem(i) ) write(*,'(i5," rhs_ij_",i1)') my_id, i
       end do
-    end do
-    write(*,*)
-    write(*,*)
-  else
-    write(*,*)
-    write(*,'(i3,a)') my_id, ' BOTH ELEMENT_MATRIX ROUTINES SEEM TO BE CONSISTENT.'
-    write(*,*)
-  end if
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  if ( difference_found ) stop
+      write(*,*)
+      do i = 1, n_var
+        do j = 1, n_var
+          if ( elm_problem(i,j) ) write(*,'(i5," amat_",2i1)') my_id, i, j
+        end do
+      end do
+      write(*,*)
+      write(*,*)
+    else
+      write(*,*)
+      write(*,'(i3,a)') my_id, ' BOTH ELEMENT_MATRIX ROUTINES SEEM TO BE CONSISTENT.'
+      write(*,*)
+    end if
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+    if ( difference_found ) stop
 #endif
 
 #ifdef NORMTRACE
-  ! --- For debugging purpose
-  call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-  call tr_locvnorms("cm_Rhs",RHS_glob_tmp,ndof)
-  if (my_id .eq. 0) then
-     write(fname,'(A,I6.6)')"rhs",index_now
-     call tr_vdump(fname,RHS_glob_tmp,ndof)
-  end if
+    ! --- For debugging purpose
+    call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+    call tr_locvnorms("cm_Rhs",RHS_glob_tmp,ndof)
+    if (my_id .eq. 0) then
+      write(fname,'(A,I6.6)')"rhs",index_now
+      call tr_vdump(fname,RHS_glob_tmp,ndof)
+    end if
 #endif
-  call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+    call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
 
-else 
-  ! --- Form a global rhs from the rhss of the individual mpi threads.
-  call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_N,ierr)
+  else 
+    ! --- Form a global rhs from the rhss of the individual mpi threads.
+    call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_N,ierr)
 
-endif 
+  endif 
 
   call tr_deallocatep(RHS_local,"RHS_local",CAT_DMATRIX)
  

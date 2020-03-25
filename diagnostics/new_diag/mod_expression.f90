@@ -545,12 +545,10 @@ module mod_expression
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
       fact_resistiv, fact_Er
-#if JOREK_MODEL == 500
     real*8  :: coef_rad_1
     real*8  :: T_rad, LradDrays_T, LradDcont_T
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
-#endif
     
     ierr = 0
     
@@ -661,7 +659,6 @@ module mod_expression
           AZ0   = 0.d0; AZ0_s   = 0.d0; AZ0_t   = 0.d0;                                                    AZ0_p   = 0.d0;                 AZ0_sp   = 0.d0; AZ0_tp   = 0.d0
           A30   = 0.d0; A30_s   = 0.d0; A30_t   = 0.d0; A30_ss   = 0.d0; A30_tt   = 0.d0; A30_st   = 0.d0; A30_p   = 0.d0
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
-#if JOREK_MODEL == 500
           rn0 = 0.d0
           rn0_s = 0.0
           rn0_t = 0.0
@@ -670,7 +667,6 @@ module mod_expression
           rn0_st = 0.0
           rn0_p = 0.0
           rn0_pp = 0.0
-#endif
           Fprofile = 0.d0
           
           ! --- Reconstruct variables
@@ -928,35 +924,12 @@ module mod_expression
           
           T0_R     = (   Z_t * T0_s  - Z_s * T0_t ) / xjac
           T0_Z     = ( - R_t * T0_s  + R_s * T0_t ) / xjac
-#if JOREK_MODEL == 400
+
           Ti0_R     = (   Z_t * Ti0_s  - Z_s * Ti0_t ) / xjac
           Ti0_Z     = ( - R_t * Ti0_s  + R_s * Ti0_t ) / xjac
           Te0_R     = (   Z_t * Te0_s  - Z_s * Te0_t ) / xjac
           Te0_Z     = ( - R_t * Te0_s  + R_s * Te0_t ) / xjac
-#else
-          ! --- Set electron and ion temperatures to T/2 for diagnostic purposes
-          Te0     = T0     / 2.d0
-          Te0_s   = T0_s   / 2.d0
-          Te0_t   = T0_t   / 2.d0
-          Te0_st  = T0_st  / 2.d0
-          Te0_ss  = T0_ss  / 2.d0
-          Te0_tt  = T0_tt  / 2.d0
-          Te0_p   = T0_p   / 2.d0
-          Te0_pp  = T0_pp  / 2.d0
-          Te0_R   = T0_R   / 2.d0
-          Te0_Z   = T0_Z   / 2.d0
 
-          Ti0     = T0     / 2.d0
-          Ti0_s   = T0_s   / 2.d0
-          Ti0_t   = T0_t   / 2.d0
-          Ti0_st  = T0_st  / 2.d0
-          Ti0_ss  = T0_ss  / 2.d0
-          Ti0_tt  = T0_tt  / 2.d0
-          Ti0_p   = T0_p   / 2.d0
-          Ti0_pp  = T0_pp  / 2.d0
-          Ti0_R   = T0_R   / 2.d0
-          Ti0_Z   = T0_Z   / 2.d0
-#endif
           T0_RR    = (T0_ss * Z_t**2 - 2.d0*T0_st * Z_s*Z_t + T0_tt * Z_s**2 &
                       + T0_s * (Z_st*Z_t - Z_tt*Z_s )                                 &
                       + T0_t * (Z_st*Z_s - Z_ss*Z_t ) )        / xjac**2        &

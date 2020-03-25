@@ -237,7 +237,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, r0_corr, &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
-!$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R &
+!$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
 !$omp           rn0, source_ns,                                                               &

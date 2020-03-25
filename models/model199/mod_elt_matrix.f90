@@ -15,7 +15,6 @@ use phys_module
 use tr_module
 use diffusivities, only: get_dperp, get_zkperp    
 use corr_neg
-use vacuum, only: freeb_fact
 use equil_info, only : get_psi_n
 
 implicit none
@@ -352,8 +351,8 @@ do ms=1, n_gauss
                       - visco_num * (v_xx + v_x/Bigr + v_yy)*(w0_xx + w0_x/Bigr + w0_yy) * xjac * tstep &
                       - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac  
            
-           rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v * zj0 ) / BigR * xjac * freeb_fact
-           rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
+           rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v * zj0 ) / BigR * xjac
+           rhs_ij_4 = - ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
 
            rhs_ij_5 = v * BigR * particle_source(ms,mt)                                        * xjac * tstep &
                     + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep &

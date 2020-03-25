@@ -351,7 +351,6 @@ subroutine ELM_main_rhs_3(rhs,rhs_k)
   ! --- Modules
   use phys_module
   use equation_variables
-  use vacuum, only: freeb_fact
   
   implicit none
   

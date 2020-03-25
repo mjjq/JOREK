@@ -361,7 +361,6 @@ subroutine ELM_main_rhs_3(rhs,rhs_k)
   ! --- Modules
   use phys_module
   use equation_variables
-  use vacuum, only: freeb_fact
   
   implicit none
   
@@ -369,7 +368,7 @@ subroutine ELM_main_rhs_3(rhs,rhs_k)
   real*8 :: rhs(n_var),rhs_k(n_var)
   
   ! --- The RHS term        
-  rhs(3) = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / R * xjac * freeb_fact
+  rhs(3) = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / R * xjac
 
   
   return

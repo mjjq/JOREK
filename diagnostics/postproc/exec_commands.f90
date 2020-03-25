@@ -1528,14 +1528,21 @@ module exec_commands
     ierr = 0
     
     ! --- Some checks
-    call check_args(command%n_args,ierr,3);  if ( ierr /= 0 ) return
-    call check_step_imported(ierr);          if ( ierr /= 0 ) return
-    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    call check_args(command%n_args,ierr,0,3);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);            if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);           if ( ierr /= 0 ) return
     
     ! --- Preparation
-    phimin    = to_float(command%args(1),     ierr); if ( ierr /= 0 ) return
-    phimax    = to_float(command%args(2),     ierr); if ( ierr /= 0 ) return
-    nphi      = to_int(command%args(3),       ierr); if ( ierr /= 0 ) return
+    if (command%n_args == 3) then
+      phimin    = to_float(command%args(1),     ierr); if ( ierr /= 0 ) return
+      phimax    = to_float(command%args(2),     ierr); if ( ierr /= 0 ) return
+      nphi      = to_int(command%args(3),       ierr); if ( ierr /= 0 ) return
+    else
+      phimin    = 0.d0 
+      phimax    = 1.d0
+      nphi      = 1
+    endif
+
     units     = get_int_setting('units',      ierr); if ( ierr /= 0 ) return 
     n_elm_pts = get_int_setting('nsub_bnd', ierr); if ( ierr /= 0 ) return
 

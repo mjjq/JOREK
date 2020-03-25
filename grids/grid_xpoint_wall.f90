@@ -10,7 +10,7 @@ use data_structure
 use tr_module 
 use gauss
 use basis_at_gaussian
-use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes
+use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes, force_central_node
 use mod_neighbours, only: update_neighbours
 use mod_interp
 
@@ -1737,24 +1737,14 @@ index = 0
 do i=1,newnode_list%n_nodes
 
   newnode_list%node(i)%axis_node = .false.
-  if (fix_axis_nodes) then
-    if (i .le. n_tht) then
-      newnode_list%node(i)%axis_node = .true.
-      ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
-      ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
-      ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
-      ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
-      newnode_list%node(i)%x(3,1) = +newnode_list%node(i)%x(2,2)
-      newnode_list%node(i)%x(3,2) = -newnode_list%node(i)%x(2,1)
-    endif
-  endif
+  if ( fix_axis_nodes .and. (i .le. n_tht) ) newnode_list%node(i)%axis_node = .true.
 
   do k=1,n_order+1
 
     index = index + 1
     newnode_list%node(i)%index(k) = index
 
-    if ((i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
+    if ((force_central_node) .and. (i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
       newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
       index = index - 1
     endif

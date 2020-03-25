@@ -7,6 +7,7 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
 !
 !-----------------------------------------------------------------------
 use phys_module
+use vacuum, only: current_FB_fact
 
 implicit none
 
@@ -16,7 +17,9 @@ real*8  :: Fconst, profF, profF1, F_prof, dF_dpsi, dF_dz, dF_dpsi2, dF_dz2, dF_d
 real*8  :: FFprime_prof, profFF, profFF1, FF_prof, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz
 real*8  :: dF_dpsi3, psi_edge, F_edge, sqrt_edge
 real*8  :: Z, Z_xpoint(2), psi, psi_axis, psi_bnd,  psi_n, psi_barrier, sig_F, sigz, delta_psi
+real*8  :: psi_star
 real*8  :: atn, datn, d2atn, d3atn
+real*8  :: Z_star, Z_star_u
 real*8  :: atn_z,   datn_z,   d2atn_z
 real*8  :: atn_z_u, datn_z_u, d2atn_z_u
 real*8  :: d_0, d_pert, d2_pert, d3_pert
@@ -36,6 +39,14 @@ myFF_1 = - FF_1
 myFF_coef(1:8) =   FF_coef(1:8)
 myFF_coef(6)   = - FF_coef(6)
 
+! --- Initialise
+F_prof     = 0.d0
+dF_dpsi    = 0.d0
+dF_dz      = 0.d0
+dF_dpsi2   = 0.d0
+dF_dz2     = 0.d0
+dF_dpsi_dz = 0.d0
+
 ! --- There are some rules when using FF_coefs with the F-profile in Full-MHD
 if (myFF_1 .ne. 0.d0) then
   write(*,*)'Full-MHD Warning!!! The F-profile does not like it if FF_1 is not zero !!!'
@@ -52,15 +63,7 @@ psi_edge  = myFF_coef(5)
 
 ! --- psi_norm
 psi_n = (psi - psi_axis)/(psi_bnd - psi_axis)
-if (xpoint2) then
-  if ((psi_n .lt. 1.d0) .and. (Z .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
-    psi_n = 2.d0 - psi_n
-  endif
-  if ((psi_n .lt. 1.d0) .and. (Z .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
-    psi_n = 2.d0 - psi_n
-  endif
-endif
-delta_psi = (psi_bnd - psi_axis)  ! abs(psi_bnd - psi_axis)
+delta_psi = (psi_bnd - psi_axis)
 no_delta_psi = 1.d0
 if (FF_coef(9) .eq. 1.d0) no_delta_psi = delta_psi
 
@@ -125,26 +128,105 @@ dFF_dz       = 0.d0
 dFF_dz2      = 0.d0
 dFF_dpsi_dz  = 0.d0
 
-! --- Cut-off at the plasma edge (because the tanh part if not integrable...)
-if (psi_n .gt. psi_edge) then
-  F_prof   = F_edge
-  dF_dpsi  = 0
-  dF_dpsi2 = 0
-  dF_dpsi3 = 0
 
-  FFprime_prof = 0.d0
-  dFF_dpsi     = 0.d0
-  dFF_dpsi2    = 0.d0
-  dFF_dz       = 0.d0
-  dFF_dz2      = 0.d0
-  dFF_dpsi_dz  = 0.d0
+
+
+
+! --- Cut-off at plasma edge
+sig_F     = myFF_coef(4)
+
+psi_star  = (psi_n-psi_edge)/sig_F
+psi_star  = min( max( psi_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+
+tanh2   = tanh(psi_star)
+cosh3   = cosh(psi_star)
+
+atn   = (0.5d0 - 0.5d0*tanh2)
+datn  = -0.5d0/cosh3**2 / sig_F
+d2atn =  1.0d0/cosh3**2 / sig_F**2 * tanh2
+
+F_prof     = F_edge + (F_prof - F_edge) * atn
+dF_dpsi    = dF_dpsi                    * atn + (F_prof - F_edge) *   datn
+dF_dpsi2   = dF_dpsi2                   * atn + (F_prof - F_edge) *   d2atn + 2.0 * dF_dpsi * datn
+
+FFprime_prof = FFprime_prof * atn
+dFF_dpsi     = dFF_dpsi     * atn + FFprime_prof * datn
+dFF_dpsi2    = dFF_dpsi2    * atn + FFprime_prof * d2atn + 2.0 * dFF_dpsi * datn
+
+
+
+
+
+
+! --- Cut-off at X-points
+if ( xpoint2 ) then
+  
+  sigz = 0.1d0
+
+  if (xcase2 .eq. 1) then
+    atn_z_u   = 1.d0
+    datn_z_u  = 0.d0
+    d2atn_z_u = 0.d0
+  else
+    Z_star_u  = (Z-Z_xpoint(2))/sigz
+    Z_star_u  = min( max( Z_star_u, -40.d0), 40.d0) ! avoid floating-point exceptions
+    
+    tanh2_u   = tanh(Z_star_u)
+    cosh3_u   = cosh(Z_star_u)
+
+    atn_z_u   = (0.5d0 - 0.5d0*tanh2_u)
+    datn_z_u  = -0.5d0/cosh3_u**2 / sigz
+    d2atn_z_u =  1.0d0/cosh3_u**2 / sigz**2 * tanh2_u
+  endif
+  if (xcase2 .eq. 2) then
+    atn_z   = 1.d0
+    datn_z  = 0.d0
+    d2atn_z = 0.d0
+  else
+    Z_star  = (Z_xpoint(1)-Z)/sigz
+    Z_star  = min( max( Z_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+
+    tanh2   = tanh(Z_star)
+    cosh3   = cosh(Z_star)
+      
+    atn_z   = (0.5d0 - 0.5d0*tanh2)
+    datn_z  =  0.5d0/cosh3**2   / sigz
+    d2atn_z =  1.0d0/cosh3**2   / sigz**2 * tanh2
+  endif 
+  
+  F_prof     = F_edge + (F_prof - F_edge) *    atn_z * atn_z_u
+  dF_dpsi    = dF_dpsi                    *    atn_z * atn_z_u
+  dF_dpsi2   = dF_dpsi2                   *    atn_z * atn_z_u
+  dF_dz      = (F_prof - F_edge)          * ( datn_z * atn_z_u +         atn_z * datn_z_u)
+  dF_dz2     = (F_prof - F_edge)          * (d2atn_z * atn_z_u + 2.d0 * datn_z * datn_z_u  +  atn_z * d2atn_z_u)
+  dF_dpsi_dz = dF_dpsi                    * ( datn_z * atn_z_u +         atn_z * datn_z_u)
+ 
+  FFprime_prof = FFprime_prof *    atn_z * atn_z_u
+  dFF_dpsi     = dFF_dpsi     *    atn_z * atn_z_u
+  dFF_dpsi2    = dFF_dpsi2    *    atn_z * atn_z_u
+  dFF_dz       = FFprime_prof * ( datn_z * atn_z_u +         atn_z * datn_z_u)
+  dFF_dz2      = FFprime_prof * (d2atn_z * atn_z_u + 2.d0 * datn_z * datn_z_u  +  atn_z * d2atn_z_u) 
+  dFF_dpsi_dz  = dFF_dpsi     * ( datn_z * atn_z_u +         atn_z * datn_z_u)
+
 endif
 
-!--------------------------------
 
-!write(*,'(A,5e12.4)') ' F, FFprime new, old, diff : ',F0,F_profile,FFprime_profile, profFFp, FFprime_profile - profFFp
-!write(*,'(A,5e12.4)') ' F, dF_dpsi, dF_dpsi2 , FFprime: ',F_profile,dF_dpsi, dF_dpsi2, FFprime_profile
-!write(*,'(A,5e12.4)') ' dFFp_dpsi new, old, diff : ',dFF_dpsi, dprofFFp_dpsi, dFF_dpsi - dprofFFp_dpsi
+
+
+
+
+if (freeboundary_equil .and. num_ffprime) then            !if the ffprime profile is given in a file and freeboundary equilibrium is on,
+                                                         !the full profile is multiplied by a factor in order to iterate to a given current   
+   FFprime_prof  = FFprime_prof  * current_FB_fact
+   dFF_dpsi      = dFF_dpsi      * current_FB_fact
+   dFF_dpsi2     = dFF_dpsi2     * current_FB_fact
+   dFF_dz        = dFF_dz        * current_FB_fact
+   dFF_dz2       = dFF_dz2       * current_FB_fact
+   dFF_dpsi_dz   = dFF_dpsi_dz   * current_FB_fact
+
+end if
+
+FFprime_prof = FFprime_prof + FF_1
 
 
 return

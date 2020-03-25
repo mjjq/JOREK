@@ -21,7 +21,7 @@ contains
 !> See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details.
 !> This routine works in RZPhi coordinates
 pure subroutine boris_push_cylindrical(particle, m, E, B, dt)
-  use mod_pusher_tools, only: left_handed_cross_product
+  use mod_math_operators, only: cross_product
   type(particle_kinetic_leapfrog), intent(inout)  :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -43,7 +43,7 @@ pure subroutine boris_push_cylindrical(particle, m, E, B, dt)
   particle%v = particle%v + fE * E
   ! Calculate the rotation
   particle%v = (particle%v + 2.d0*fB/(1.d0+fB*fB*B2)*( &
-    left_handed_cross_product(particle%v,B) &
+    cross_product(particle%v,B) &
     - fB * particle%v * B2 &
     + fB * B * dot_product(particle%v,B)))
   ! Calculate the next electric field update (v+ -> v^n+1/2)
@@ -67,7 +67,7 @@ end subroutine boris_push_cylindrical
 !> See G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details
 !> This routine works in a left-handed cartesian coordinate system (XYZ)
 pure subroutine boris_push_cartesian(particle, m, E, B, dt)
-  use mod_pusher_tools, only: right_handed_cross_product
+  use mod_math_operators, only: cross_product
   class(particle_kinetic_leapfrog), intent(inout)  :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -88,7 +88,7 @@ pure subroutine boris_push_cartesian(particle, m, E, B, dt)
   particle%v = particle%v + fE * E
   ! Calculate the rotation
   particle%v = (particle%v + 2.d0*fB/(1.d0+fB*fB*B2)*( &
-    right_handed_cross_product(particle%v,B) &
+    cross_product(particle%v,B) &
     - fB * particle%v * B2 &
     + fB * B * dot_product(particle%v,B)))
   ! Calculate the next electric field update (v+ -> v^n+1/2)
@@ -102,7 +102,7 @@ end subroutine boris_push_cartesian
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
 pure subroutine boris_initial_half_step_backwards_XYZ(particle, m, E, B, dt)
   use constants, only: EL_CHG, ATOMIC_MASS_UNIT
-  use mod_pusher_tools, only: right_handed_cross_product
+  use mod_math_operators, only: cross_product
   class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -113,7 +113,7 @@ pure subroutine boris_initial_half_step_backwards_XYZ(particle, m, E, B, dt)
   B2 = dot_product(B, B)
   v = particle%v + f*E
   v = (v + 2.d0*f/(1.d0+f**2*B2) &
-      * (right_handed_cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
+      * (cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
   v = v + f*E
   particle%v = v
 end subroutine boris_initial_half_step_backwards_XYZ
@@ -123,7 +123,7 @@ end subroutine boris_initial_half_step_backwards_XYZ
 !> (see G.L. Delzanno, E. Camporeale / JCP 253 (2013) 259-277 for details)
 pure subroutine boris_initial_half_step_backwards_RZPhi(particle, m, E, B, dt)
   use constants, only: EL_CHG, ATOMIC_MASS_UNIT
-  use mod_pusher_tools, only: left_handed_cross_product
+  use mod_math_operators, only: cross_product
   class(particle_kinetic_leapfrog), intent(inout) :: particle
   real*8, intent(in) :: m
   real*8, dimension(3), intent(in) :: E, B
@@ -134,7 +134,7 @@ pure subroutine boris_initial_half_step_backwards_RZPhi(particle, m, E, B, dt)
   B2 = dot_product(B, B)
   v = particle%v + f*E
   v = (v + 2.d0*f/(1.d0+f**2*B2) &
-      * (left_handed_cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
+      * (cross_product(v, B) - f*v*B2 + f*B*dot_product(v,B)))
   v = v + f*E
   particle%v = v
 end subroutine boris_initial_half_step_backwards_RZPhi
@@ -241,7 +241,7 @@ end function kinetic_leapfrog_to_kinetic
 !> Which can easily be adjusted to obtain the gc position from a kinetic position and velocity.
 function kinetic_to_gc(node_list, element_list, in, B, mass) result(out)
   use data_structure
-  use mod_pusher_tools, only: left_handed_cross_product
+  use mod_math_operators, only: cross_product
   use mod_find_rz_nearby
   type(type_node_list), intent(in)            :: node_list
   type(type_element_list), intent(in)         :: element_list
@@ -261,7 +261,7 @@ function kinetic_to_gc(node_list, element_list, in, B, mass) result(out)
   v2    = dot_product(in%v,in%v)
   ! Calculate GC position
   if (out%q .ne. 0) then
-    out%x = in%x + (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(in%v,B_hat))/(in%q*EL_CHG*B_norm)
+    out%x = in%x + (mass*ATOMIC_MASS_UNIT*cross_product(in%v,B_hat))/(in%q*EL_CHG*B_norm)
   else
     out%x = in%x
   end if
@@ -285,7 +285,8 @@ end function kinetic_to_gc
 function gc_to_kinetic(node_list, element_list, in, chi, B, mass) result(out)
   use constants
   use data_structure
-  use mod_pusher_tools, only: get_orthonormals,left_handed_cross_product
+  use mod_pusher_tools, only: get_orthonormals
+  use mod_math_operators, only: cross_product
   use mod_find_rz_nearby
   type(type_node_list), intent(in)    :: node_list
   type(type_element_list), intent(in) :: element_list
@@ -311,7 +312,7 @@ function gc_to_kinetic(node_list, element_list, in, chi, B, mass) result(out)
   out%v  = v_par * B_hat + v_perp * (cos(chi) * e1 + sin(chi) * e2)
 
   if (out%q .ne. 0) then
-    out%x = in%x - (mass*ATOMIC_MASS_UNIT*left_handed_cross_product(out%v,B_hat))/(real(out%q,8)*EL_CHG*B_norm)
+    out%x = in%x - (mass*ATOMIC_MASS_UNIT*cross_product(out%v,B_hat))/(real(out%q,8)*EL_CHG*B_norm)
   else
     out%x = in%x
   end if

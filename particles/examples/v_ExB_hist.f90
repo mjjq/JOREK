@@ -16,7 +16,7 @@ use mod_sobseq_rng, only: sobseq_rng
 use mod_random_seed, only: random_seed
 use constants, only: TWOPI
 use mod_initialise_particles, only: domain_bounding_box
-use mod_pusher_tools, only: left_handed_cross_product
+use mod_math_operators, only: cross_product
 use domains
 !$ use omp_lib
 implicit none
@@ -77,7 +77,7 @@ do i=1,n_points
   ! Calculate E and B fields
   call sim%fields%calc_EBpsiU(sim%time, i_elm, [s, t], TWOPI*x(3), E, B, psi, U)
 
-  v = left_handed_cross_product(E, B)/dot_product(B,B) ! in RZPhi coordinates, m/s
+  v = cross_product(E, B)/dot_product(B,B) ! in RZPhi coordinates, m/s
 
   ! Calculate the normal vector to the flux surface, Grad Psi / |Grad Psi|
   ! Assume no variation of Psi in the toroidal direction

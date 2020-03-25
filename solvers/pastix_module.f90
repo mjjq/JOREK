@@ -19,7 +19,7 @@ module pastix_module             ! PastiX specific variables
   integer,allocatable   :: ihwb(:),iwk(:)
   integer               :: n_block, nnz_block, block_size, block_size2
 
-  logical               :: use_pastix, pastix_initialised, pastix_analysed, pastix_smp_only, no_zeros_pastix
+  logical               :: pastix_initialised, pastix_analysed, pastix_smp_only, no_zeros_pastix
 
 #ifndef USE_PASTIX6
   ! -- For PaStiX solver before version 6.x

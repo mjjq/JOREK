@@ -426,15 +426,15 @@ module mod_expression
     else
       
       900 format(1x,a)
-      901 format(1x,i6.6,' | ',a,' | ',a)
-      902 format(1x,80('-'))
+      901 format(1x,i3.3,' | ',a,' | ',a,' | ',a)
+      902 format(1x,85('-'))
       
       write(*,*)
       write(*,*) 'List of Diagnostic Expressions:'
       write(*,*)
       
       write(*,902)
-      write(*,900) 'Number | Name         | Description                                            | Domain'
+      write(*,900) 'Num | Name         | Description                                            | Domain'
       write(*,902)
       do i = 1, expr_list%n_expr
         write(*,901) i, expr_list%expr(i)%name, expr_list%expr(i)%descr, trim(expr_list%expr(i)%domain)
@@ -470,6 +470,9 @@ module mod_expression
   end function get_expr_num
   
   
+  
+  
+  
    !> Find out expression number in an expression list.
   integer function get_expr_num_int(expr_list, name) result(num)
     
@@ -489,6 +492,8 @@ module mod_expression
     end do
     
   end function get_expr_num_int
+  
+  
   
   
   

@@ -3,8 +3,8 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
-use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
-use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only, &
+use mumps_module,  only: no_zeros_mumps, mumps_ordering
+use pastix_module, only: no_zeros_pastix, pastix_smp_only, &
     pastix_maxthrd
 use vacuum
 
@@ -59,7 +59,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_file, T_file, ffprime_file, freeboundary_equil, &
                 bc_natural_open, bc_natural_flux, gamma_sheath,     &
                 freeboundary, resistive_wall, freeb_change_indices, &
-                use_mumps, mumps_ordering,                          &
+                use_mumps, mumps_ordering, use_strumpack,           &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element,           &
                 pastix_smp_only, refinement, grid_to_wall,          &

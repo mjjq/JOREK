@@ -1,4 +1,6 @@
 module solve_mat_n
+  use phys_module, only: use_mumps, use_pastix, use_strumpack, use_wsmp
+  implicit none        
 
 contains
 #ifndef USE_PASTIX6
@@ -9,7 +11,7 @@ contains
   subroutine pastix_bind_threads(my_id, thread_map)
 #endif
     use pastix_module
-    
+   
     implicit none
 
 #ifndef USE_PASTIX6
@@ -670,4 +672,163 @@ contains
     call r3_info_end (r3_info_index_0)         ! timing
     return
   end subroutine solve_matrix_n
+  
+
+
+#ifdef USE_STRUMPACK  
+subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+    use tr_module
+    use iso_c_binding
+    use mod_parameters
+    use mumps_module
+    use global_distributed_matrix
+    use mpi_mod 
+    use mod_clock
+    use phys_module, only : index_now
+
+    use strumpack_module
+  
+    implicit none
+
+#include "r3_info.h"
+
+    integer, intent(in) :: my_id
+    integer, dimension(:), intent(in) :: i_tor(:)
+    integer, intent(in) :: MPI_COMM_N, MPI_COMM_MASTER
+    logical, intent(in) :: solve_only
+
+    integer :: i, j, k, my_id_n, n_cpu_n, ierr, my_id_master, n_cpu_master
+    integer :: i_reduced, j_reduced, n_i, n_j
+    type(clcktype) :: t_itstart, t0, t1, t2, t3
+    real*8  :: tsecond
+    real*8, allocatable :: RHS_tmp(:)
+    !Split broadcast
+    character*8 :: type
+    character(24) :: msg
+    
+    integer(kind=C_INT) :: n, nnz
+
+    call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
+    call tr_print_memsize("BeforeSolveN")
+    call tr_debug_writei("smn_A_mumps_par%n",mumps_par%n)
+
+    if (my_id .eq. 0) then
+      write(*,*) my_id,'*********************************'
+      write(*,*) my_id,'*      solve local matrix  (n)  *'
+      write(*,*) my_id,'*********************************'
+      write(*,*) my_id,'*     using solver STRUMPACK    *'
+      write(*,*) my_id,'*********************************'
+    endif
+
+    call MPI_COMM_RANK(MPI_COMM_N, my_id_n, ierr)     ! the id of each cpu
+    call MPI_COMM_SIZE(MPI_COMM_N, n_cpu_n, ierr)     ! the number of cpus
+
+    if (my_id_n .eq. 0) then
+      call MPI_COMM_RANK(MPI_COMM_MASTER, my_id_master, ierr)     ! the id of each cpu
+      call MPI_COMM_SIZE(MPI_COMM_MASTER, n_cpu_master, ierr)     ! the number of cpus
+    endif
+
+    call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+    call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+    
+    n = mumps_par%n
+    nnz = mumps_par%nz
+    
+    if (.not. solve_only) then
+        
+      if (my_id_n.gt.0) then
+        if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+        if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+        if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+        call tr_allocatep(mumps_par%irn,1,nnz,"mumps_par%irn",CAT_DMATRIX)
+        call tr_allocatep(mumps_par%jcn,1,nnz,"mumps_par%jcn",CAT_DMATRIX)
+        call tr_allocatep(mumps_par%a,1,nnz,"mumps_par%a",CAT_DMATRIX)
+      endif  
+
+          ! Split MPI_BCAST if MPI buffer beyond 2Go
+      type='intIRN'
+      call split_broadcast(type,MPI_COMM_N)
+      type='intJCN'
+      call split_broadcast(type,MPI_COMM_N)
+      type='double'
+      call split_broadcast(type,MPI_COMM_N)
+
+      if (.not. spss_initialized) then
+        call strumpack_init(MPI_COMM_N)
+        spss_initialized = .true.
+      endif
+
+      if (.not. spss_analyzed) then
+        call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N)
+        call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+        call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+        call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+        call strumpack_factorize(MPI_COMM_N)
+        spss_analyzed = .true.
+      endif
+    endif ! .not. solve_only
+    
+    if (my_id_n.gt.0) then
+      if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
+      call tr_allocatep(mumps_par%rhs,1,n,"mumps_par%rhs",CAT_DMATRIX)
+    endif
+    
+    call MPI_BCAST(mumps_par%rhs,n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
+    
+   if (my_id_n .eq. 0) then                          ! elapsed time solve start
+      call MPI_Barrier(MPI_COMM_MASTER,ierr)
+      call clck_time(t0)
+   endif    
+    
+    call MPI_Barrier(MPI_COMM_N,ierr)
+!    msg = "Before solve"
+!    call fprintmem(my_id,msg)
+    
+    call strumpack_solve(n,mumps_par%rhs,MPI_COMM_N)
+    call MPI_Barrier(MPI_COMM_N,ierr)
+    
+    if (my_id_n .eq.0) then                            ! elapsed time solve end
+       call MPI_Barrier(MPI_COMM_MASTER,ierr)
+       call clck_time(t1)
+       call clck_ldiff(t0,t1,tsecond)
+       write(*, FMT_TIMING) my_id,' ## Elapsed time, solve :',tsecond
+       call clck_time(t0)
+    end if    
+
+    if (my_id_n .eq. 0) then
+
+      if (allocated(deltas)) call tr_deallocate(deltas,"deltas",CAT_PRECOND)
+      call tr_allocate(deltas,1,ndof_glob,"deltas",CAT_PRECOND)
+      deltas = 0.d0
+
+      call tr_allocate(rhs_tmp,1,ndof_glob,"rhs_tmp",CAT_PRECOND)
+
+      rhs_tmp = 0.d0
+
+      if (my_id .eq. 0 ) then
+        do i=0, n-1
+          rhs_tmp(1+i*n_tor)=mumps_par%rhs(1+i)
+        enddo
+      else
+        do i=0, n/2-1
+          rhs_tmp(2*i_tor(my_id+1)-2+i*n_tor) = mumps_par%rhs(1+i*2)
+          rhs_tmp(2*i_tor(my_id+1)-1+i*n_tor) = mumps_par%rhs(2+i*2)
+        enddo
+      endif
+
+      call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
+      call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)
+
+      call tr_locvnorms("smn_res",mumps_par%rhs,mumps_par%n)
+      call tr_locvnorms("smn_delta",deltas,ndof_glob)
+    endif  
+    
+    call tr_print_memsize("AfterSolveN")
+    call r3_info_end (r3_info_index_0)         ! timing
+
+    return
+
+  end subroutine solve_matrix_n_spk
+#endif     
+
 end module solve_mat_n

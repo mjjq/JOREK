@@ -1254,22 +1254,10 @@ do i=1,newnode_list%n_nodes
 
   node_list%node(i)%axis_node = .false.
   if (fix_axis_nodes) then
-    ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
-    ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
-    ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
-    ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
     if (xcase .ne. 3) then
-      if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) then
-        node_list%node(i)%axis_node = .true.
-        node_list%node(i)%x(3,1) = +node_list%node(i)%x(2,2)
-        node_list%node(i)%x(3,2) = -node_list%node(i)%x(2,1)
-      endif
+      if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) node_list%node(i)%axis_node = .true.
     else
-      if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) then
-        node_list%node(i)%axis_node = .true.
-        node_list%node(i)%x(3,1) = +node_list%node(i)%x(2,2)
-        node_list%node(i)%x(3,2) = -node_list%node(i)%x(2,1)
-      endif
+      if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) node_list%node(i)%axis_node = .true.
     endif
   endif
 
@@ -1281,12 +1269,12 @@ do i=1,newnode_list%n_nodes
     ! Remove all but one node at axis
     if (force_central_node) then
       if (xcase .ne. 3) then
-        if ((i .ge. 5) .and. (i .le. 4+n_tht-1) .and. (k.eq.1)) then
+        if ((i .gt. 5) .and. (i .le. 4+n_tht-1) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(5)%index(1)
           index = index - 1
         endif
       else
-        if ((i .ge. 9) .and. (i .le. 8+n_tht-2) .and. (k.eq.1)) then
+        if ((i .gt. 9) .and. (i .le. 8+n_tht-2) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(9)%index(1)
           index = index - 1
         endif

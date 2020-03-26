@@ -278,7 +278,7 @@ module mod_expression
     character(len=LEN_DOMAIN), optional, intent(in)    :: domain
     
     expr_list%n_expr = expr_list%n_expr + 1
-    expr_list%expr(expr_list%n_expr)%name    = name
+    expr_list%expr(expr_list%n_expr)%name     = name
     expr_list%expr(expr_list%n_expr)%descr    = descr
     expr_list%expr(expr_list%n_expr)%domain   = 'all'
     if ( present(domain) ) &

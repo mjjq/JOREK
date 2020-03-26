@@ -408,6 +408,14 @@ required = 0
       write(*,*) '  but with this setup you are not conserving energy.   '
     endif
   endif
+  if (jorek_model==501) then
+    if ( (T_eta_thresh < 1) .and. (eta_ohmic /= 0) ) then
+      write(*,*) 'WARNING: Using T_eta_thresh might lead to different values of eta and &
+        eta_ohmic in the plasma core, which breaks energy conservation. No problem if   &
+	you know what you are doing.'
+    end if
+  end
+
 #ifndef USE_BLOCK
   write(*,*) 'WARNING: You are not using USE_BLOCK=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_BLOCK=1 in your Makefile.inc'

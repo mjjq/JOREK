@@ -136,10 +136,10 @@ module mod_expression
     call add(exprs_all, 'zkprof      ', 'Perpendicular Heat Diffusivity                        ')
     call add(exprs_all, 'pres        ', 'Total Pressure                                        ')
     call add(exprs_all, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
-    call add(exprs_all, 'Btor       ', 'Toroidal Magnetic Field Component                     ')
-    call add(exprs_all, 'BR         ', 'Magnetic Field Component Along R                      ')
-    call add(exprs_all, 'BZ         ', 'Vertical Magnetic Field Component                     ')
-    call add(exprs_all, 'Btheta     ', 'Poloidal Magnetic Field Component                     ')
+    call add(exprs_all, 'Btor        ', 'Toroidal Magnetic Field Component                     ')
+    call add(exprs_all, 'BR          ', 'Magnetic Field Component Along R                      ')
+    call add(exprs_all, 'BZ          ', 'Vertical Magnetic Field Component                     ')
+    call add(exprs_all, 'Btheta      ', 'Poloidal Magnetic Field Component                     ')
     call add(exprs_all, 'A_R         ', 'Radial Component of Magnetic Vector Potential         ')
     call add(exprs_all, 'A_Z         ', 'Vertical Component of Magnetic Vector Potential       ')
     call add(exprs_all, 'A_3         ', 'Tor. Comp. of Magn. Vect. Pot. Multipled by R (==Psi) ')
@@ -572,7 +572,7 @@ module mod_expression
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,       &
+      P0_RR, P0_ZZ, P0_RZ, BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,          &
       E_dreicer, AR0_R, AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
@@ -1052,8 +1052,8 @@ module mod_expression
           P0_RZ    = r0_RZ * T0 + r0 * T0_RZ + r0_R * T0_Z + r0_Z * T0_R
  
           rn0_R    = (   Z_t * rn0_s - Z_s * rn0_t ) / xjac
-          rn0_Z    = ( - R_t * rn0_s + R_s * rn0_t ) / xjac  
-      
+          rn0_Z    = ( - R_t * rn0_s + R_s * rn0_t ) / xjac
+
           ! --- Some things related to the magnetic field
 #ifdef fullmhd
           BR = ( A30_Z - AZ0_p )/ BigR

@@ -483,7 +483,7 @@ psi_t = P0_t
   AR0_p = 0.d0
   AZ0_p = 0.d0
 
-  call interp(node_list,element_list,i_elm,710,1,s_in,t_in,P0,P0_s,P0_t,P0_st,P0_ss,P0_tt)
+  call interp(node_list,element_list,i_elm,456,1,s_in,t_in,P0,P0_s,P0_t,P0_st,P0_ss,P0_tt)
   Fprof = P0
 #endif
 

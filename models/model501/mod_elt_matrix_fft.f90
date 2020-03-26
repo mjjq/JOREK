@@ -434,7 +434,6 @@ do ms=1, n_gauss
        T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_min) ! For use in eta(T), visco(T), ...
        dT0_corr_dT = dcorr_neg_temp_dT(T0,(/5.d-1,5.d-1/),2.*T_min) ! Improve the correction
        d2T0_corr_dT2 = d2corr_neg_temp_dT2(T0,(/5.d-1,5.d-1/),2.*T_min)
-
      else
        T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_1) ! For use in eta(T), visco(T), ...
        dT0_corr_dT = dcorr_neg_temp_dT(T0,(/5.d-1,5.d-1/),2.*T_1) ! Improve the correction
@@ -570,6 +569,18 @@ do ms=1, n_gauss
        deta_dr0  = 0.
        deta_drn0 = 0.
      end if
+
+     if ( eta_T_dependent ) then
+       eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
+       deta_dT_ohm   = ( - eta_ohmic   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
+       deta_dr0_ohm  = 0.
+       deta_drn0_ohm = 0.       
+     else
+       eta_T_ohm      = eta_ohmic
+       deta_dT_ohm    = 0.d0
+       deta_dr0_ohm   = 0.
+       deta_drn0_ohm  = 0.     
+     end if     
 
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent .and. T0_corr <= T_eta_thres ) then       
@@ -831,19 +842,20 @@ do ms=1, n_gauss
      deta_coef_dZeff = deta_coef_dZeff / ((1.+1.198+0.222)/(1.+2.966+0.753))
 
      if ( eta_T_dependent ) then
+
        if (T0_corr <= T_eta_thres) then
          deta_dr0  = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
          deta_drn0 = eta_T * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
          deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT
        end if
        eta_T     = eta_T * eta_coef
-     end if
 
-     ! --- Eta for ohmic heating
-     eta_T_ohm     = (eta_T/eta)     * eta_ohmic
-     deta_dT_ohm   = (deta_dT/eta)   * eta_ohmic
-     deta_dr0_ohm  = (deta_dr0/eta)  * eta_ohmic
-     deta_drn0_ohm = (deta_drn0/eta) * eta_ohmic
+       deta_dr0_ohm  = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
+       deta_drn0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
+       deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT	   
+       eta_T_ohm     = eta_T_ohm * eta_coef
+
+     end if
 
   !-------------------------------------------
   ! --- Radiative function using interpolation
@@ -878,9 +890,6 @@ do ms=1, n_gauss
      else
        Lrad = 0.
        dLrad_dT = 0.
-
-       !E_ion = 0.
-       !dE_ion_dT = 0.
 
      end if
    

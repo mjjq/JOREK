@@ -44,6 +44,7 @@ module mod_expression
   character(len=14), parameter, private :: THIS_MOD_NAME = 'mod_expression'
   integer,           parameter, private :: LEN_NAME      = 12
   integer,           parameter, private :: LEN_DESCR     = 54
+  integer,           parameter, private :: LEN_DOMAIN    = 12
   integer,           parameter, private :: N_EXPR_MAX    = 2000
   !   --- Constants selecting a unit system for expression output
   integer,           parameter          :: JOREK_UNITS   = 0 !< Output expressions in JOREK units
@@ -67,8 +68,9 @@ module mod_expression
   
   !> Datatype containing information on a single expression.
   type :: t_expr
-    character(len=LEN_NAME)  :: name  !< Short name for the expression
-    character(len=LEN_DESCR) :: descr !< Brief explanation of the expression
+    character(len=LEN_NAME)   :: name  !< Short name for the expression
+    character(len=LEN_DESCR)  :: descr !< Brief explanation of the expression
+    character(len=LEN_DOMAIN) :: domain!< Domain where this expression is defined
   end type t_expr
   
   ! > List of expressions.
@@ -157,34 +159,34 @@ module mod_expression
     call add(exprs_all, 'E_crit      ', 'E_crit for RE avalanching (Connor-Hastie)             ')
     call add(exprs_all, 'E_dreicer   ', 'Electrical field for Dreicer RE primary source        ')
     call add(exprs_all, 'theta_geo   ', 'Polar angle with respect to Rgeo, Zgeo                ')
-    call add(exprs_all, 'bnd_normal_R', 'R component of unit vector pointing outside JOREKs bnd', 'boundary')
-    call add(exprs_all, 'bnd_normal_Z', 'Z component of unit vector pointing outside JOREKs bnd', 'boundary')
-    call add(exprs_all, 'Bnorm       ', 'Normal     magnetic field to the JOREKs boundary      ', 'boundary')
-    call add(exprs_all, 'Btan        ', 'Tangential magnetic field to the JOREKs boundary      ', 'boundary')
-    call add(exprs_all, 'Jnorm       ', 'Normal current density to the JOREKs boundary         ', 'boundary')
-    call add(exprs_all, 'Jpar        ', 'Parallel current density to the magnetic field        ', 'boundary')
-    call add(exprs_all, 'Jpar_ionsat ', 'Parallel ion saturation current density               ', 'boundary')
-    call add(exprs_all, 'vpar_norm   ', 'Perpendicular velocity to the boundary (vpar contrib) ', 'boundary')
-    call add(exprs_all, 'vu_norm     ', 'Perpendicular velocity to the boundary (u contrib)    ', 'boundary')
-    call add(exprs_all, 'vtot_norm   ', 'Total perpendicular velocity to the JOREKs boundary   ', 'boundary')
-    call add(exprs_all, 'heatF_sheath', 'Sheath theory heatflux (gamma_sh nT vpar\cdot n)      ', 'boundary')
-    call add(exprs_all, 'heatF_par_cd', 'Conductive parallel heat flux (normal to the boundary)', 'boundary')
-    call add(exprs_all, 'heatF_prp_cd', 'Conductive perpend  heat flux (normal to the boundary)', 'boundary')
-    call add(exprs_all, 'heatF_tot_cd', 'Conductive total    heat flux (normal to the boundary)', 'boundary')
-    call add(exprs_all, 'heatF_par_cv', 'Convective parallel heat flux (normal to the boundary)', 'boundary')
-    call add(exprs_all, 'heatF_prp_cv', 'Convective perpend  heat flux (normal to the boundary)', 'boundary')
-    call add(exprs_all, 'heatF_tot_cv', 'Convective total    heat flux (normal to the boundary)', 'boundary')
-    call add(exprs_all, 'heatF_total ', 'Total heat flux (normal to the boundary)              ', 'boundary')
-    call add(exprs_all, 'kinEn_F_perp', 'Perpend kinetic energy flux (normal to the boundary)  ', 'boundary')
-    call add(exprs_all, 'kinEn_F_par ', 'Parall  kinetic energy flux (normal to the boundary)  ', 'boundary')
-    call add(exprs_all, 'kinEn_F_tot ', 'Total   kinetic energy flux (normal to the boundary)  ', 'boundary')
-    call add(exprs_all, 'partF_par_cd', 'Conductive parallel particle flux (normal to the bnd) ', 'boundary')
-    call add(exprs_all, 'partF_prp_cd', 'Conductive perpend  particle flux (normal to the bnd) ', 'boundary')
-    call add(exprs_all, 'partF_par_cv', 'Convective parallel particle flux (normal to the bnd) ', 'boundary')
-    call add(exprs_all, 'partF_prp_cv', 'Convective perpend  particle flux (normal to the bnd) ', 'boundary')
-    call add(exprs_all, 'partF_total ', 'Total particle flux (normal to the boundary)          ', 'boundary')
-    call add(exprs_all, 'npartF_total', 'Total neutral particle flux (normal to the boundary)  ', 'boundary')
-    call add(exprs_all, 'ExB_norm    ', 'EM energy flux, Poynting vector (normal to boundary)  ', 'boundary')
+    call add(exprs_all, 'bnd_normal_R', 'R component of unit vector pointing outside JOREKs bnd', 'boundary    ')
+    call add(exprs_all, 'bnd_normal_Z', 'Z component of unit vector pointing outside JOREKs bnd', 'boundary    ')
+    call add(exprs_all, 'Bnorm       ', 'Normal     magnetic field to the JOREKs boundary      ', 'boundary    ')
+    call add(exprs_all, 'Btan        ', 'Tangential magnetic field to the JOREKs boundary      ', 'boundary    ')
+    call add(exprs_all, 'Jnorm       ', 'Normal current density to the JOREKs boundary         ', 'boundary    ')
+    call add(exprs_all, 'Jpar        ', 'Parallel current density to the magnetic field        ', 'boundary    ')
+    call add(exprs_all, 'Jpar_ionsat ', 'Parallel ion saturation current density               ', 'boundary    ')
+    call add(exprs_all, 'vpar_norm   ', 'Perpendicular velocity to the boundary (vpar contrib) ', 'boundary    ')
+    call add(exprs_all, 'vu_norm     ', 'Perpendicular velocity to the boundary (u contrib)    ', 'boundary    ')
+    call add(exprs_all, 'vtot_norm   ', 'Total perpendicular velocity to the JOREKs boundary   ', 'boundary    ')
+    call add(exprs_all, 'heatF_sheath', 'Sheath theory heatflux (gamma_sh nT vpar\cdot n)      ', 'boundary    ')
+    call add(exprs_all, 'heatF_par_cd', 'Conductive parallel heat flux (normal to the boundary)', 'boundary    ')
+    call add(exprs_all, 'heatF_prp_cd', 'Conductive perpend  heat flux (normal to the boundary)', 'boundary    ')
+    call add(exprs_all, 'heatF_tot_cd', 'Conductive total    heat flux (normal to the boundary)', 'boundary    ')
+    call add(exprs_all, 'heatF_par_cv', 'Convective parallel heat flux (normal to the boundary)', 'boundary    ')
+    call add(exprs_all, 'heatF_prp_cv', 'Convective perpend  heat flux (normal to the boundary)', 'boundary    ')
+    call add(exprs_all, 'heatF_tot_cv', 'Convective total    heat flux (normal to the boundary)', 'boundary    ')
+    call add(exprs_all, 'heatF_total ', 'Total heat flux (normal to the boundary)              ', 'boundary    ')
+    call add(exprs_all, 'kinEn_F_perp', 'Perpend kinetic energy flux (normal to the boundary)  ', 'boundary    ')
+    call add(exprs_all, 'kinEn_F_par ', 'Parall  kinetic energy flux (normal to the boundary)  ', 'boundary    ')
+    call add(exprs_all, 'kinEn_F_tot ', 'Total   kinetic energy flux (normal to the boundary)  ', 'boundary    ')
+    call add(exprs_all, 'partF_par_cd', 'Conductive parallel particle flux (normal to the bnd) ', 'boundary    ')
+    call add(exprs_all, 'partF_prp_cd', 'Conductive perpend  particle flux (normal to the bnd) ', 'boundary    ')
+    call add(exprs_all, 'partF_par_cv', 'Convective parallel particle flux (normal to the bnd) ', 'boundary    ')
+    call add(exprs_all, 'partF_prp_cv', 'Convective perpend  particle flux (normal to the bnd) ', 'boundary    ')
+    call add(exprs_all, 'partF_total ', 'Total particle flux (normal to the boundary)          ', 'boundary    ')
+    call add(exprs_all, 'npartF_total', 'Total neutral particle flux (normal to the boundary)  ', 'boundary    ')
+    call add(exprs_all, 'ExB_norm    ', 'EM energy flux, Poynting vector (normal to boundary)  ', 'boundary    ')
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
@@ -270,10 +272,10 @@ module mod_expression
   subroutine add(expr_list, name, descr, domain)
     
     ! --- Routine parameters
-    type(t_expr_list),                  intent(inout) :: expr_list
-    character(len=LEN_NAME),            intent(in)    :: name
-    character(len=LEN_DESCR),           intent(in)    :: descr
-    character(len=LEN_DESCR), optional, intent(in)    :: domain
+    type(t_expr_list),                   intent(inout) :: expr_list
+    character(len=LEN_NAME),             intent(in)    :: name
+    character(len=LEN_DESCR),            intent(in)    :: descr
+    character(len=LEN_DOMAIN), optional, intent(in)    :: domain
     
     expr_list%n_expr = expr_list%n_expr + 1
     expr_list%expr(expr_list%n_expr)%name    = name

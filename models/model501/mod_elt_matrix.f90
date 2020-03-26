@@ -2075,7 +2075,7 @@ do ms=1, n_gauss
                            + v * F0 / BigR *  T0_p * rn0 * T                    * alpha_imp_tri   * xjac * theta * tstep 
 
 
-                 amat_77 = v * Vpar * abs(r0) * F0**2 / BigR * xjac * (1.d0 + zeta) &
+                 amat_77 = v * Vpar * r0 * F0**2 / BigR * xjac * (1.d0 + zeta) &
                          + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR        * xjac  * theta * tstep &
 
                          ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation

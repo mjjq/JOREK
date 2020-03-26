@@ -1478,7 +1478,7 @@ do ms=1, n_gauss
                               * (     + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
 
-             amat_66 =   v * abs(r0) * T   * BigR * xjac * (1.d0 + zeta)     &
+             amat_66 =   v * r0 * T   * BigR * xjac * (1.d0 + zeta)     &
                        - v * r0 * BigR**2 * ( T_s  * u0_t - T_t  * u0_s)                        * theta * tstep &
 		       - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                        * theta * tstep &
 
@@ -1653,7 +1653,7 @@ do ms=1, n_gauss
 
              amat_76_n = + v * F0 / BigR * T_p * r0                              * xjac * theta * tstep
 
-             amat_77 = v * Vpar * abs(R0) * F0**2 / BigR * xjac * (1.d0 + zeta) &
+             amat_77 = v * Vpar * R0 * F0**2 / BigR * xjac * (1.d0 + zeta) &
                      + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR           * xjac * theta * tstep &
 
                      + v*(particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR * xjac * theta * tstep &

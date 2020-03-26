@@ -9,6 +9,7 @@ module settings
   type type_setting
     character(len=128)  :: name   !< Name of the setting, e.g., 'linepoints'
     character(len=1024) :: value  !< Value of the setting, e.g., '200'
+    character(len=1024) :: descr  !< Description
   end type type_setting
   
   integer, parameter :: n_max_settings = 100    !< Maximum number of settings
@@ -32,11 +33,12 @@ module settings
   
   
   !> Sets the value of the setting name to a given value
-  subroutine set_setting(name, value, error)
+  subroutine set_setting(name, value, error, descr)
     ! --- Routine parameters
-    integer,            intent(out)    :: error   !< Error flag
-    character(len=*),   intent(in)     :: name    !< Name of setting to be changed
-    character(len=*),   intent(in)     :: value   !< (New) value for the setting
+    integer,                     intent(out)    :: error   !< Error flag
+    character(len=*),            intent(in)     :: name    !< Name of setting to be changed
+    character(len=*),            intent(in)     :: value   !< (New) value for the setting
+    character(len=*), optional,  intent(in)     :: descr   !< (New) description for the setting
       
     ! --- Local variables
     integer     :: i
@@ -47,6 +49,7 @@ module settings
       if (setting(i)%name == name) then
         ! Entry already exists, change its value
         setting(i)%value = value
+        if ( present(descr) ) setting(i)%descr = descr
         return
       end if
     end do
@@ -61,6 +64,8 @@ module settings
     n_settings = n_settings + 1
     setting(n_settings)%name  = name
     setting(n_settings)%value = value
+    setting(n_settings)%descr = ''
+    if ( present(descr) ) setting(n_settings)%descr = descr
 
   end subroutine set_setting
   
@@ -146,7 +151,7 @@ module settings
     integer  :: i
     
     do i = 1, n_settings
-      write(*,*) trim(setting(i)%name), '=', trim(setting(i)%value)
+      write(*,'(1x,5a)') trim(setting(i)%name), '=', trim(setting(i)%value), '          !', trim(setting(i)%descr)
     end do
   
   end subroutine print_settings

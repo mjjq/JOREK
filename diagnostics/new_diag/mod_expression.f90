@@ -1541,7 +1541,7 @@ module mod_expression
   
 #if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
               case ( 'J_bootstrap' )
-                res = J_boot ! ### check if no normalization needed
+                res = J_boot / R / fact_mu_zero ! ### check if no normalization needed
 #endif
 
 #if JOREK_MODEL == 500

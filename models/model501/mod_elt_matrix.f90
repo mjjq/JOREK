@@ -553,11 +553,17 @@ do ms=1, n_gauss
        deta_drn0 = 0.
      end if
 
-     if ( eta_T_dependent ) then
+     if ( eta_T_dependent .and. T0_corr <= T_eta_thres_ohm ) then
        eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
        deta_dT_ohm   = ( - eta_ohmic   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
        deta_dr0_ohm  = 0.
-       deta_drn0_ohm = 0.       
+       deta_drn0_ohm = 0. 
+     else if (eta_T_dependent .and. T0_corr > T_eta_thres_ohm) then  
+       eta_T     = eta_ohmic   * (T_eta_thres_ohm/T_0)**(-1.5d0)
+       deta_dT   = 0.
+       d2eta_d2T = 0.
+       deta_dr0  = 0.
+       deta_drn0 = 0.         
      else
        eta_T_ohm      = eta_ohmic
        deta_dT_ohm    = 0.d0
@@ -847,10 +853,12 @@ do ms=1, n_gauss
        end if
        eta_T     = eta_T * eta_coef
 
-       deta_dr0_ohm  = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
-       deta_drn0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
-       deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT	   
-       eta_T_ohm     = eta_T_ohm * eta_coef
+       if (T0_corr <= T_eta_thres) then
+         deta_dr0_ohm  = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
+         deta_drn0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
+         deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT	   
+       end if
+       eta_T_ohm = eta_T_ohm * eta_coef
 
      end if
 	 

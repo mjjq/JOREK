@@ -409,10 +409,10 @@ required = 0
     endif
   endif
   if (jorek_model==501) then
-    if ( (T_eta_thres < 1) .and. (eta_ohmic /= 0) ) then
-      write(*,*) 'WARNING: Using T_eta_thres might lead to different values of eta and &
-        eta_ohmic in the plasma core, which breaks energy conservation. No problem if  &
-	you know what you are doing.'
+    if (abs(T_eta_thres-T_eta_thres_ohm)/(T_eta_thres+T_eta_thres_ohm) > 1.d-6) then
+      write(*,*) 'WARNING: T_eta_thres and T_eta_thres_ohm are not the same, which breaks  &
+        energy conservation. No problem if you know what you are doing (a good reason to   &
+	do this could be to avoid spurious Ohmic heating in the plasma core).'
     end if
   end
 

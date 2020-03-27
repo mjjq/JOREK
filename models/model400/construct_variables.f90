@@ -431,10 +431,14 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! -------------------------------------
   ! --- Temperature dependent resistivity
   ! -------------------------------------
-  if ( eta_T_dependent ) then
-    eta_Te       =   eta   * (Te0_corr / Te_0)**(-1.5d0)
-    deta_dTe     = - eta   * (1.5d0)  * Te0_corr **(-2.5d0) * Te_0**(1.5d0)
-    d2eta_d2Te   =   eta   * (3.75d0) * Te0_corr **(-3.5d0) * Te_0**(1.5d0)
+  if ( eta_T_dependent .and. 2.d0*Te0_corr <= T_eta_thres) then
+    eta_Te     =   eta   * (Te0_corr / Te_0)**(-1.5d0)
+    deta_dTe   = - eta	* (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
+    d2eta_d2Te =   eta	* (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0)
+  else if ( eta_T_dependent .and. 2.d0*Te0_corr > T_eta_thres) then
+     eta_Te     = eta   * ((T_eta_thres/2.d0)/Te_0)**(-1.5d0)
+     deta_dTe   = 0.
+     d2eta_d2Te = 0.     
   else
     eta_Te     = eta
     deta_dTe   = 0.d0
@@ -445,8 +449,16 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! -------------------------
   ! --- Eta for ohmic heating
   ! -------------------------
-  eta_Te_ohm   = (eta_Te/eta)  * eta_ohmic
-  deta_dTe_ohm = (deta_dTe/eta) * eta_ohmic
+  if ( eta_T_dependent .and. 2.d0*Te0_corr <= T_eta_thres_ohm) then
+    eta_Te_ohm     = eta_ohmic   * (Te0_corr/Te_0)**(-1.5d0)
+    deta_dTe_ohm   = - eta_ohmic   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
+  else if ( eta_T_dependent .and. 2.d0*Te0_corr > T_eta_thres_ohm) then
+    eta_Te_ohm     = eta_ohmic   * ((T_eta_thres_ohm/2.d0)/Te_0)**(-1.5d0)
+    deta_dTe_ohm   = 0.    
+  else
+    eta_Te_ohm     = eta_ohmic
+    deta_dTe_ohm   = 0.d0
+  end if  
   
 
   ! -----------------------------------

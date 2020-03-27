@@ -704,7 +704,6 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     real*8, allocatable :: RHS_tmp(:)
     !Split broadcast
     character*8 :: type
-    character(24) :: msg
     
     integer(kind=C_INT) :: n, nnz
 
@@ -758,14 +757,18 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         spss_initialized = .true.
       endif
 
+      call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,spss_analyzed)
+      call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+      call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+      call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+
       if (.not. spss_analyzed) then
-        call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N)
-        call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
-        call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
-        call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-        call strumpack_factorize(MPI_COMM_N)
+        call strumpack_analyze(MPI_COMM_N)
         spss_analyzed = .true.
       endif
+
+      call strumpack_factorize(MPI_COMM_N)
+
     endif ! .not. solve_only
     
     if (my_id_n.gt.0) then
@@ -781,8 +784,6 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
    endif    
     
     call MPI_Barrier(MPI_COMM_N,ierr)
-!    msg = "Before solve"
-!    call fprintmem(my_id,msg)
     
     call strumpack_solve(n,mumps_par%rhs,MPI_COMM_N)
     call MPI_Barrier(MPI_COMM_N,ierr)

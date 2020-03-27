@@ -153,7 +153,7 @@ program JOREK2
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   real*8,allocatable       :: res(:) 
   integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev
-  logical                  :: is_local, file_exists, direct_construction
+  logical                  :: is_local, file_exists
   integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
   integer                  :: index_size, id_elements
@@ -174,7 +174,6 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
-  integer ::  i_tor_min, i_tor_max 
   integer :: nsolvers = 0
   logical :: solvers(4)
  
@@ -844,11 +843,10 @@ required = 0
     call tr_allocate(local_index_start,1,n_cpu,"local_index_start",CAT_FEM)
     call tr_allocate(local_index_end,1,n_cpu,"local_index_end",CAT_FEM)
 
-    direct_construction = .false.
     !
     ! Construct index_min, index_max and local_elems
     !
-    call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,direct_construction,local_elms, & 
+    call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,.false.,local_elms, & 
          n_local_elms,ndof_glob,index_min,index_max)
 
     node_list%n_dof = ndof_glob
@@ -856,12 +854,9 @@ required = 0
     local_index_end   = index_max
     ! Build ijA_index, ijA_size and irn_jcn
 
-    i_tor_min = 1
-    i_tor_max = n_tor
-
     call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
          local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),              & 
-         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max,                 &
+         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, 1, n_tor,                 &
          n_glob, nz_glob, ndof_glob, n_matrix_block_size)
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -972,16 +967,11 @@ required = 0
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
 
     !--------- Constructing Global Matrix
-    direct_construction = .false. 
-    
-    i_tor_min = 1
-    i_tor_max = n_tor
-
     call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms,   &
          n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,&
-         ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, i_tor_min, i_tor_max,   &
+         ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, 1, n_tor,   &
          n_glob, nz_glob, ndof_glob, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
-         irn_jcn, direct_construction)
+         irn_jcn, .false.)
 
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
@@ -1017,12 +1007,11 @@ required = 0
            write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
          end if
 #else 
-         direct_construction = .true.
 
          call clck_time_barrier(t0) 
          !--------- Constructing Harmonic Matrix directly from elementary matrix
          call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
-              node_list, element_list, xpoint, xcase, freeboundary, direct_construction)
+              node_list, element_list, xpoint, xcase, freeboundary, .true.)
          call clck_time_barrier(t1) 
 
          if (my_id .eq. 0) then

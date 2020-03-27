@@ -356,6 +356,7 @@ if (my_id == 0) then
   if (use_strumpack) then
     call strumpack_init(MPI_COMM_SELF)
     call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_SELF)
+    call strumpack_analyze(MPI_COMM_SELF)    
     call strumpack_factorize(MPI_COMM_SELF)
     call strumpack_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_SELF)
     call strumpack_finalize(MPI_COMM_SELF)

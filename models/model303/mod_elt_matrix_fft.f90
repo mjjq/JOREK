@@ -619,11 +619,11 @@ do i=1,n_vertex_max
           delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,1,ms,mt) + x_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
 
           ! --- Temperature dependent resistivity
-          if ( eta_T_dependent .and. corr_neg_temp(T0) <= T_eta_thres) then
-            eta_T     = eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
-            deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
-            d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
-          else if ( eta_T_dependent .and. corr_neg_temp(T0) > T_eta_thres) then
+          if ( eta_T_dependent .and. corr_neg_temp1(T0) <= T_eta_thres) then
+            eta_T     = eta   * (corr_neg_temp1(T0)/T_0)**(-1.5d0)
+            deta_dT   = - eta   * (1.5d0)  * corr_neg_temp1(T0)**(-2.5d0) * T_0**(1.5d0)
+            d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp1(T0)**(-3.5d0) * T_0**(1.5d0)
+          else if ( eta_T_dependent .and. corr_neg_temp1(T0) > T_eta_thres) then
             eta_T     = eta   * (T_eta_thres/T_0)**(-1.5d0)
             deta_dT   = 0.
             d2eta_d2T = 0.     
@@ -640,10 +640,10 @@ do i=1,n_vertex_max
           end if
 
           ! --- Eta for ohmic heating
-          if ( eta_T_dependent .and. corr_neg_temp(T0) <= T_eta_thres_ohm) then
-            eta_T_ohm     = eta_ohmic   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
-            deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
-          else if ( eta_T_dependent .and. corr_neg_temp(T0) > T_eta_thres_ohm) then
+          if ( eta_T_dependent .and. corr_neg_temp1(T0) <= T_eta_thres_ohm) then
+            eta_T_ohm     = eta_ohmic   * (corr_neg_temp1(T0)/T_0)**(-1.5d0)
+            deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * corr_neg_temp1(T0)**(-2.5d0) * T_0**(1.5d0)
+          else if ( eta_T_dependent .and. corr_neg_temp1(T0) > T_eta_thres_ohm) then
             eta_T_ohm     = eta_ohmic   * (T_eta_thres_ohm/T_0)**(-1.5d0)
             deta_dT_ohm   = 0.    
           else

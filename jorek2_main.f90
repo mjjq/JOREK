@@ -399,6 +399,12 @@ required = 0
       write(*,*) '  but with this setup you are not conserving energy.   '
     endif
   endif
+  if (abs(T_eta_thres-T_eta_thres_ohm)/(T_eta_thres+T_eta_thres_ohm) > 1.d-6) then
+    write(*,*) 'WARNING: T_eta_thres and T_eta_thres_ohm are not the same, which breaks  &
+        energy conservation. No problem if you know what you are doing (a good reason to &
+	do this could be to avoid spurious Ohmic heating in the plasma core).'
+  end if
+
 #ifndef USE_BLOCK
   write(*,*) 'WARNING: You are not using USE_BLOCK=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_BLOCK=1 in your Makefile.inc'

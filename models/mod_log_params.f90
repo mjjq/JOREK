@@ -218,6 +218,8 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'eta_T_dependent       ', eta_T_dependent
   write(*,REAL_FMT) 'eta                   ', eta
   write(*,REAL_FMT) 'eta_ohmic             ', eta_ohmic
+  write(*,REAL_FMT) 'T_eta_thres           ', T_eta_thres
+  write(*,REAL_FMT) 'T_eta_thres_ohm       ', T_eta_thres_ohm  
   write(*,LOGI_FMT) 'visco_T_dependent     ', visco_T_dependent
   write(*,REAL_FMT) 'visco                 ', visco
   write(*,REAL_FMT) 'visco_par             ', visco_par

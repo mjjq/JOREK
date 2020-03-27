@@ -12,6 +12,9 @@ module phys_module
   real*8  :: eta_T_0              !< Initial resistivity
   real*8  :: eta_ohmic            !< Resistivity at core for the ohmic heating term
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant.
+  real*8  :: T_eta_thres          !< The temperature threshold for resistivity,
+                                  !< beyond which the resistivity is truncated.
+  real*8  :: T_eta_thres_ohm      !< Temp. threshold for resistivity used in ohmic heating term
   real*8  :: visco                !< Viscosity at plasma center (normalized)
   real*8  :: visco_rst            !< visco value from restart file
   real*8  :: visco_par_rst        !< visco_par value from restart file

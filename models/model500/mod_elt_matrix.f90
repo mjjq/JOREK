@@ -501,19 +501,30 @@ do ms=1, n_gauss
 
      delta_ps_x = (   y_t(ms,mt) * delta_s(mp,1,ms,mt) - y_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
      delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,1,ms,mt) + x_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
-     
+
      ! --- Temperature dependent resistivity
-     if ( eta_T_dependent ) then
+     if ( eta_T_dependent .and. T_corr <= T_eta_thres ) then
        eta_T     = eta   * (T_corr/T_0)**(-1.5d0)
        deta_dT   = - eta   * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0) * dT_corr_dT
+     else if ( eta_T_dependent .and. T_corr > T_eta_thres ) then
+       eta_T     = eta   * (T_eta_thres/T_0)**(-1.5d0)
+       deta_dT   = 0.d0
      else
        eta_T     = eta
        deta_dT   = 0.d0
      end if
 
      ! --- Eta for ohmic heating
-     eta_T_ohm   = (eta_T/eta)  * eta_ohmic
-     deta_dT_ohm = (deta_dT/eta) * eta_ohmic
+     if ( eta_T_dependent .and. T_corr <= T_eta_thres_ohm ) then
+       eta_T_ohm     = eta_ohmic   * (T_corr/T_0)**(-1.5d0)
+       deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0) * dT_corr_dT
+     else if ( eta_T_dependent .and. T_corr > T_eta_thres_ohm ) then
+       eta_T_ohm     = eta_ohmic   * (T_eta_thres_ohm/T_0)**(-1.5d0)
+       deta_dT_ohm   = 0.d0
+     else
+       eta_T_ohm     = eta_ohmic
+       deta_dT_ohm   = 0.d0
+     end if
 
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then       

@@ -123,8 +123,15 @@ module mod_expression
     call add(exprs_all, 'currdens    ', 'Physical Toroidal Current Density (== zj/R)           ')
     call add(exprs_all, 'JR          ', 'Physical current density (R component)                ')
     call add(exprs_all, 'JZ          ', 'Physical current density (Z component)                ')
+    call add(exprs_all, 'Jtor        ', 'Physical current density (phi component)              ')
     call add(exprs_all, 'Jpol        ', 'Poloidal current value in the poloidal field direction')
     call add(exprs_all, 'FFprime_loc ', 'Local FFprime value, calculated from 3D JxB=\grad p   ')
+    call add(exprs_all, 'JxB_R       ', 'JxB force (R component)                               ')
+    call add(exprs_all, 'JxB_Z       ', 'JxB force (Z component)                               ')
+    call add(exprs_all, 'JxB_phi     ', 'JxB force (phi component)                             ')
+    call add(exprs_all, 'gradP_R     ', 'Pressure gradient force (R component)                 ')
+    call add(exprs_all, 'gradP_Z     ', 'Pressure gradient force (Z component)                 ')
+    call add(exprs_all, 'gradP_phi   ', 'Pressure gradient force (phi component)               ')
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'ne          ', 'Electron Density                                      ')
@@ -583,7 +590,7 @@ module mod_expression
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
       ne0_20, ln_Lambda, ln_Lambda0
-    real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan
+    real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
     real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
@@ -1152,8 +1159,9 @@ module mod_expression
           endif
 #endif
 
+          Jtor        = -zj0/BigR
           Jpol        = FFprime_loc * Btheta     / F0     !Jpol = F' Bpol
-          Jpar        = (JpolR*BR + JpolZ*BZ - zj0/R *Btor) / Btot
+          Jpar        = (JpolR*BR + JpolZ*BZ + Jtor*Btor) / Btot
           Jpar_ionsat = r0 * vpar0 * Btot 
 
           ! --- Velocity
@@ -1500,12 +1508,33 @@ module mod_expression
               case ( 'JZ' )
                 res = JpolZ / fact_mu_zero
 
+              case ( 'Jtor' )
+                res = Jtor / fact_mu_zero
+
               case ( 'FFprime_loc' )
                 res = FFprime_loc
 
               case ( 'Jpol' )
                 res = Jpol / fact_mu_zero
                 
+              case ( 'JxB_R' )
+                res = (JpolZ*Btor-Jtor*BZ) / fact_mu_zero
+
+              case ( 'JxB_Z' )
+                res = (-JpolR*Btor+Jtor*BR) / fact_mu_zero
+
+              case ( 'JxB_phi' )
+                res = (JpolR*BZ-JpolZ*BR) / fact_mu_zero
+
+              case ( 'gradP_R' )
+                res = P0_R / fact_mu_zero
+                
+              case ( 'gradP_Z' )
+                res = P0_Z / fact_mu_zero
+ 
+              case ( 'gradP_phi' )
+                res = P0_p / BigR / fact_mu_zero
+ 
               case ( 'Er' )
                 res = Er * fact_Er
                 

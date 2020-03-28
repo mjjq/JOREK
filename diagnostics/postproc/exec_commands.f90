@@ -19,6 +19,7 @@ module exec_commands
   use mod_import_restart
   use mod_interp
   use mod_poloidal_currents 
+  use mod_bootstrap_functions
   
   
   
@@ -273,6 +274,7 @@ module exec_commands
     
     character(len=64) :: file_name
     logical           :: file_exists
+    real*8            :: minRad
     
     ierr = 0
     
@@ -298,6 +300,13 @@ module exec_commands
     
     ! --- Locate magnetic axis and X-point.
     call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+
+    ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
+    minRad = 0.0
+    if (bootstrap) then
+      call bootstrap_find_minRad(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd)
+      call bootstrap_get_q_and_ft_splines(node_list, element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
+    endif
     
     t_now         = t_start
     index_now     = index_start

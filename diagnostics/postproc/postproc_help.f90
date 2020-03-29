@@ -32,6 +32,7 @@ module postproc_help
     write(*,*) '  four2d                Perform a 2D Fourier analysis'
     write(*,*) '  gourdon               Export magnetic field for Gourdon'
     write(*,*) '  grid                  Output the grid'
+    write(*,*) '  grid_diagnostics      Output detailed info about the finite element grid'
     write(*,*) '  help                  Print interactive help information'
     write(*,*) '  I_halo_TPF            Export integral poloidal halo current & TPF (see help)'
     write(*,*) '  int2d                 Calculate various 2D integrals'
@@ -314,6 +315,15 @@ module postproc_help
         write(*,*) ''
         write(*,*) 'Examples:'
         write(*,*) '  grid'
+      case ( 'grid_diagnostics' ) 
+        write(*,*) 'Usage:'
+        write(*,*) '  grid_diagnostics'
+        write(*,*) ''
+        write(*,*) 'Detailed information about the computational grid printed to the screen'
+        write(*,*) 'and written to ascii files'
+        write(*,*) ''
+        write(*,*) 'Examples:'
+        write(*,*) '  grid_diagnostics'
       case ( 'help' ) 
         write(*,*) 'Usage:'
         write(*,*) '  help [command]'

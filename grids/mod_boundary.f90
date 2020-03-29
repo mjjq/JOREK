@@ -3,7 +3,7 @@ module mod_boundary
 
   implicit none
   private
-  public boundary_from_grid
+  public boundary_from_grid, log_bnd_info
 
   contains
   !> Routine extracts the boundary information (boundary element and node lists)

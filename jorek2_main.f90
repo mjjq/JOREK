@@ -414,7 +414,7 @@ required = 0
         energy conservation. No problem if you know what you are doing (a good reason to   &
 	do this could be to avoid spurious Ohmic heating in the plasma core).'
     end if
-  end
+  end if
 
 #ifndef USE_BLOCK
   write(*,*) 'WARNING: You are not using USE_BLOCK=1 which might be inefficient.'

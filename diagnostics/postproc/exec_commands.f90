@@ -2658,7 +2658,7 @@ module exec_commands
     
     write(*,*) '*** Boundary elements and nodes ***********************************************'
     write(*,*)
-    call log_bnd_info(.false., node_list, bnd_node_list, bnd_elm_list)
+    call log_bnd_info(.true., node_list, bnd_node_list, bnd_elm_list, DIR, trim(step_range_string(index_now,index_now))//'.dat')
     
     write(*,*) '*******************************************************************************'
     write(*,*) '*** End: Information about the computational grid *****************************'

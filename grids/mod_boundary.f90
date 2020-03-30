@@ -203,7 +203,7 @@ module mod_boundary
   end subroutine add_bnd_node
 
   !> Outputs information about the boundary elements and nodes.
-  subroutine log_bnd_info(verbose, node_list, bnd_node_list, bnd_elm_list)
+  subroutine log_bnd_info(verbose, node_list, bnd_node_list, bnd_elm_list, dir_in, filename_appendix_in)
 
     use data_structure
 
@@ -213,9 +213,12 @@ module mod_boundary
     type (type_node_list),        intent(in) :: node_list
     type (type_bnd_node_list),    intent(in) :: bnd_node_list
     type (type_bnd_element_list), intent(in) :: bnd_elm_list
+    character(len=*), optional,   intent(in) :: dir_in
+    character(len=*), optional,   intent(in) :: filename_appendix_in
 
     integer             :: i
     character(len=20)   :: s
+    character(len=1024) :: dir, filename_appendix
     
     120 format(3x,77('-'))
     121 format(3X,A,I10,A)
@@ -233,39 +236,46 @@ module mod_boundary
     write(*,120)
 
     if ( verbose ) then
-
-      write(*,*)
-      write(*,120)
-      write(*,141) 'BOUNDARY ELEMENTS:'
-      write(*,120)
-      do i = 1, bnd_elm_list%n_bnd_elements
-        write(s,*) i
-        write(*,161) '#'//trim(adjustl(s))//':'
-        write(*,182) 'vertex        =', bnd_elm_list%bnd_element(i)%vertex
-        write(*,182) 'bnd_vertex    =', bnd_elm_list%bnd_element(i)%bnd_vertex
-        write(*,182) 'direction     =', bnd_elm_list%bnd_element(i)%direction
-        write(*,182) 'element       =', bnd_elm_list%bnd_element(i)%element
-        write(*,182) 'side          =', bnd_elm_list%bnd_element(i)%side
-        write(*,183) 'size          =', bnd_elm_list%bnd_element(i)%size
-      end do
-      write(*,120)
-      write(*,*)
       
-      write(*,120)
-      write(*,141) 'BOUNDARY NODES:'
-      write(*,120)
-      do i = 1, bnd_node_list%n_bnd_nodes
-        write(s,*) i
-        write(*,161) '#'//trim(adjustl(s))//':'
-        write(*,182) 'index_jorek   =', bnd_node_list%bnd_node(i)%index_jorek
-        write(*,182) 'index_starwall=', bnd_node_list%bnd_node(i)%index_starwall
-        write(*,182) 'direction     =', bnd_node_list%bnd_node(i)%direction
-      end do
-      write(*,120)
+      dir               = './'
+      filename_appendix = '.dat'
+      if ( present(dir_in)               ) dir               = dir_in
+      if ( present(filename_appendix_in) ) filename_appendix = filename_appendix_in
+      
+!      write(*,*)
+!      write(*,120)
+!      write(*,141) 'BOUNDARY ELEMENTS:'
+!      write(*,120)
+!      do i = 1, bnd_elm_list%n_bnd_elements
+!        write(s,*) i
+!        write(*,161) '#'//trim(adjustl(s))//':'
+!        write(*,182) 'vertex        =', bnd_elm_list%bnd_element(i)%vertex
+!        write(*,182) 'bnd_vertex    =', bnd_elm_list%bnd_element(i)%bnd_vertex
+!        write(*,182) 'direction     =', bnd_elm_list%bnd_element(i)%direction
+!        write(*,182) 'element       =', bnd_elm_list%bnd_element(i)%element
+!        write(*,182) 'side          =', bnd_elm_list%bnd_element(i)%side
+!        write(*,183) 'size          =', bnd_elm_list%bnd_element(i)%size
+!      end do
+!      write(*,120)
+!      write(*,*)
+!      
+!      write(*,120)
+!      write(*,141) 'BOUNDARY NODES:'
+!      write(*,120)
+!      do i = 1, bnd_node_list%n_bnd_nodes
+!        write(s,*) i
+!        write(*,161) '#'//trim(adjustl(s))//':'
+!        write(*,182) 'index_jorek   =', bnd_node_list%bnd_node(i)%index_jorek
+!        write(*,182) 'index_starwall=', bnd_node_list%bnd_node(i)%index_starwall
+!        write(*,182) 'direction     =', bnd_node_list%bnd_node(i)%direction
+!      end do
+!      write(*,120)
+!      write(*,*)
+      
       write(*,*)
-
-      write(*,*) 'Writing boundary elements to "./boundary_elements.dat".'
-      open(42, file='./boundary_elements.dat', status='replace', action='write')
+      write(*,*) 'Writing boundary elements to the following file:'
+      write(*,*) trim(DIR) // '/boundary_element_nodes' // trim(filename_appendix)
+      open(42, file=trim(DIR) // '/boundary_element_nodes' // trim(filename_appendix), status='replace', action='write')
       do i = 1, bnd_elm_list%n_bnd_elements
         write(42,*) node_list%node( bnd_elm_list%bnd_element(i)%vertex(1) )%x(1,:)
         write(42,*) node_list%node( bnd_elm_list%bnd_element(i)%vertex(2) )%x(1,:)
@@ -273,14 +283,31 @@ module mod_boundary
         write(42,*)
       end do
       close(42)
-
-      write(*,*) 'Writing boundary nodes to "./boundary_nodes.dat".'
-      open(42, file='./boundary_nodes.dat', status='replace', action='write')
+      
+      write(*,*)
+      write(*,*) 'Writing boundary nodes to the following file:'
+      write(*,*) trim(DIR) // '/boundary_nodes' // trim(filename_appendix)
+      open(42, file=trim(DIR) // '/boundary_nodes' // trim(filename_appendix), status='replace', action='write')
       do i = 1, bnd_node_list%n_bnd_nodes
         write(42,*) node_list%node( bnd_node_list%bnd_node(i)%index_jorek )%x(1,:)
       end do
       close(42)
-
+      
+      write(*,*)
+      write(*,*) 'Writing boundary element details to the following file:'
+      write(*,*) trim(DIR) // '/boundary_element_details' // trim(filename_appendix)
+      open(42, file=trim(DIR) // '/boundary_element_details' // trim(filename_appendix), status='replace', action='write')
+      write(42,'(a)') '#       vertex1        vertex2    bnd_vertex1    bnd_vertex2   direction1,1   ' // &
+        'direction1,2   direction2,1   direction1,2        element          side      boundary1      boundary2'
+      do i = 1, bnd_elm_list%n_bnd_elements
+        777 format(20i15)
+        write(42,777) i, bnd_elm_list%bnd_element(i)%vertex(:), bnd_elm_list%bnd_element(i)%bnd_vertex(:),   &
+          bnd_elm_list%bnd_element(i)%direction(:,:), bnd_elm_list%bnd_element(i)%element,                   &
+          bnd_elm_list%bnd_element(i)%side, node_list%node(bnd_elm_list%bnd_element(i)%vertex(1))%boundary,  &
+          node_list%node(bnd_elm_list%bnd_element(i)%vertex(2))%boundary
+      end do
+      close(42)
+      
     end if
 
     write(*,*)

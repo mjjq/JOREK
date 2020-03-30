@@ -2650,10 +2650,10 @@ module exec_commands
     write(*,*) '*******************************************************************************'
     write(*,*) '*** Information about the computational grid **********************************'
     write(*,*) '*******************************************************************************'
+
+    call log_grid_info(.true., node_list, element_list, DIR, trim(step_range_string(index_now,index_now))//'.dat')
     
-    call log_grid_info(.true., node_list, element_list)
-    
-    ! --- Also write out the grid in the normal way
+    ! --- Also write out the grid in the same way as the "grid" postproc command does
     call grid(command,ierr)
     
     write(*,*) '*** Boundary elements and nodes ***********************************************'

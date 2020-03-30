@@ -4,8 +4,17 @@ module mod_boundary
   implicit none
   private
   public boundary_from_grid, log_bnd_info
-
+  
+  
+  
+  
+  
   contains
+  
+  
+  
+  
+  
   !> Routine extracts the boundary information (boundary element and node lists)
   !! from the information stored in the grid (element and node lists).
   !! 
@@ -93,7 +102,12 @@ module mod_boundary
     call log_bnd_info(infos, node_list, bnd_node_list, bnd_elm_list)
 
   end subroutine boundary_from_grid
-
+  
+  
+  
+  
+  
+  
   !> Adds a boundary element to the boundary element list.
   subroutine add_bnd_elem( i_elem, iv1, iv2, inode1, inode2, iside, b1, b2, &
     element_list, bnd_node_list, bnd_elm_list)
@@ -155,7 +169,12 @@ module mod_boundary
     bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%bnd_vertex(2) = ib2
 
   end subroutine add_bnd_elem
-
+  
+  
+  
+  
+  
+  
   !> Adds a node to the bnd_node_list avoiding duplicates (except for boundary=3)
   !! and returns the index of the node in the bnd_node_list as bnd_vertex.
   subroutine add_bnd_node(i_elem, iv, inode, iside, boundary, bnd_vertex, bnd_node_list)
@@ -201,7 +220,12 @@ module mod_boundary
     bnd_node_list%bnd_node(bnd_vertex)%direction(2) = idir
 
   end subroutine add_bnd_node
-
+  
+  
+  
+  
+  
+  
   !> Outputs information about the boundary elements and nodes.
   subroutine log_bnd_info(verbose, node_list, bnd_node_list, bnd_elm_list, dir_in, filename_appendix_in)
 
@@ -273,7 +297,7 @@ module mod_boundary
 !      write(*,*)
       
       write(*,*)
-      write(*,*) 'Writing boundary elements to the following file:'
+      write(*,*) 'Writing boundary element node coordinates to the following file:'
       write(*,*) trim(DIR) // '/boundary_element_nodes' // trim(filename_appendix)
       open(42, file=trim(DIR) // '/boundary_element_nodes' // trim(filename_appendix), status='replace', action='write')
       do i = 1, bnd_elm_list%n_bnd_elements
@@ -285,7 +309,7 @@ module mod_boundary
       close(42)
       
       write(*,*)
-      write(*,*) 'Writing boundary nodes to the following file:'
+      write(*,*) 'Writing boundary node coordinates to the following file:'
       write(*,*) trim(DIR) // '/boundary_nodes' // trim(filename_appendix)
       open(42, file=trim(DIR) // '/boundary_nodes' // trim(filename_appendix), status='replace', action='write')
       do i = 1, bnd_node_list%n_bnd_nodes
@@ -297,14 +321,17 @@ module mod_boundary
       write(*,*) 'Writing boundary element details to the following file:'
       write(*,*) trim(DIR) // '/boundary_element_details' // trim(filename_appendix)
       open(42, file=trim(DIR) // '/boundary_element_details' // trim(filename_appendix), status='replace', action='write')
-      write(42,'(a)') '#       vertex1        vertex2    bnd_vertex1    bnd_vertex2   direction1,1   ' // &
-        'direction1,2   direction2,1   direction1,2        element          side      boundary1      boundary2'
+      write(42,'(a)') '#   bnd_element        vertex1        vertex2    bnd_vertex1    bnd_vertex2   direction1,1   ' // &
+        'direction1,2   direction2,1   direction2,2        element           side      boundary1      boundary2     ' // &
+        '        R1             Z1             R2             Z2'
       do i = 1, bnd_elm_list%n_bnd_elements
-        777 format(20i15)
+        777 format(13i15,4f15.8)
         write(42,777) i, bnd_elm_list%bnd_element(i)%vertex(:), bnd_elm_list%bnd_element(i)%bnd_vertex(:),   &
           bnd_elm_list%bnd_element(i)%direction(:,:), bnd_elm_list%bnd_element(i)%element,                   &
           bnd_elm_list%bnd_element(i)%side, node_list%node(bnd_elm_list%bnd_element(i)%vertex(1))%boundary,  &
-          node_list%node(bnd_elm_list%bnd_element(i)%vertex(2))%boundary
+          node_list%node(bnd_elm_list%bnd_element(i)%vertex(2))%boundary,                                    &
+          node_list%node(bnd_elm_list%bnd_element(i)%vertex(1))%x(1,:),                                      &
+          node_list%node(bnd_elm_list%bnd_element(i)%vertex(1))%x(2,:)
       end do
       close(42)
       
@@ -313,7 +340,12 @@ module mod_boundary
     write(*,*)
 
   end subroutine log_bnd_info
-
+  
+  
+  
+  
+  
+  
   !> Sorts the boundary elements.
   subroutine sort_bnd_elements( bnd_elm_list )
 
@@ -368,7 +400,12 @@ module mod_boundary
     endif
 
   end subroutine sort_bnd_elements
-
+  
+  
+  
+  
+  
+  
   !> Add the given boundary element to the end of the sorted list.
   subroutine add_elem( bnd_elem, sorted_bnd_element_list )
 
@@ -386,7 +423,12 @@ module mod_boundary
     sorted_bnd_element_list%bnd_element(ibnd_elem) = bnd_elem
 
   end subroutine add_elem
-
+  
+  
+  
+  
+  
+  
   !> Reverse the given boundary element, i.e., exchange the nodes.
   subroutine reverse_elem( bnd_elem )
 
@@ -417,7 +459,12 @@ module mod_boundary
     bnd_elem = reversed_elem
 
   end subroutine reverse_elem
-
+  
+  
+  
+  
+  
+  
   !> Remove the ibnd_elem-th boundary element from bnd_elm_list.
   subroutine remove_elem( ibnd_elem, bnd_elm_list )
 

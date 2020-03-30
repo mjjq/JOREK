@@ -21,10 +21,6 @@ write(*,*)
 write(*,*) 'Number of grid nodes    / Max: ', node_list%n_nodes, size(node_list%node,1)
 write(*,*) 'Number of grid elements / Max: ', element_list%n_elements, size(element_list%element,1)
 write(*,*)
-if ( verbose ) then
-  write(*,*) 'Writing out grid node coordinates sorted by boundary type to fort.4?? files'
-  write(*,*)
-end if
 
 boundary_types(:) = 0
 Rmin = 1.d99
@@ -59,7 +55,6 @@ write(*,*) 'Number of nodes per boundary type:'
 do i = 0, maxbnd
   if (boundary_types(i)/=0) write(*,*) 'type', i,': ',boundary_types(i),' nodes'
 end do
-write(*,*)
 
 ! --- Write out nodes sorted by boundary types into ascii files (if verbose)
 if ( verbose ) then
@@ -67,7 +62,8 @@ if ( verbose ) then
   filename_appendix = '.dat'
   if ( present(dir_in)               ) dir               = dir_in
   if ( present(filename_appendix_in) ) filename_appendix = filename_appendix_in
-  write(*,*) 'Writing nodes sorted by boundary type into the following output files:'
+  write(*,*)
+  write(*,*) 'Writing node coordinates sorted by boundary type into the following output files:'
   write(*,*) trim(DIR) // '/nodes_by_boundary_type_*' // trim(filename_appendix)
   do i = 0, maxbnd
     if (boundary_types(i)/=0) then
@@ -85,7 +81,9 @@ end if
 
 ! --- Write out all nodes
 if ( verbose ) then
-  write(*,*) 'Writing out all nodes to ', trim(DIR) // '/nodes_*' // trim(filename_appendix)
+  write(*,*)
+  write(*,*) 'Writing out all node coordinates to:'
+  write(*,*) trim(DIR) // '/nodes_*' // trim(filename_appendix)
   write(filename,'(3a)') trim(DIR), '/nodes', trim(filename_appendix)
   open(400, file=filename, status='replace', form='formatted', action='write')
   do i = 1, node_list%n_nodes
@@ -98,7 +96,9 @@ end if
 
 ! --- Write out the "center" of all elements
 if ( verbose ) then
-  write(*,*) 'Writing out all element centers to ', trim(DIR) // '/element_centers' // trim(filename_appendix)
+  write(*,*)
+  write(*,*) 'Writing out all element center coordinates to:'
+  write(*,*) trim(DIR) // '/element_centers' // trim(filename_appendix)
   write(filename,'(3a)') trim(DIR), '/element_centers', trim(filename_appendix)
   open(400, file=filename, status='replace', form='formatted', action='write')
   do i = 1, element_list%n_elements
@@ -111,6 +111,7 @@ if ( verbose ) then
       write(400,*)
   end do
   close(400)
+  write(*,*)
 end if
 
 end subroutine log_grid_info

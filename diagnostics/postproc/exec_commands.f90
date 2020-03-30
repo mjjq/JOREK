@@ -2656,8 +2656,8 @@ module exec_commands
     ! --- Also write out the grid in the same way as the "grid" postproc command does
     call grid(command,ierr)
     
-    write(*,*) '*** Boundary elements and nodes ***********************************************'
     write(*,*)
+    write(*,*) '*** Boundary elements and nodes ***********************************************'
     call log_bnd_info(.true., node_list, bnd_node_list, bnd_elm_list, DIR, trim(step_range_string(index_now,index_now))//'.dat')
     
     write(*,*) '*******************************************************************************'

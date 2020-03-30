@@ -1710,7 +1710,7 @@ module exec_commands
     call open_ascii_file(ierr, i_file, filename, .false.)
 
     do i_spi = 1, n_spi
-      write(i_file,'(i7,3f12.3,es10.4)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
+      write(i_file,'(i7,3f12.3,1f12.6)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
         pellets(i_spi)%spi_radius
     enddo
     

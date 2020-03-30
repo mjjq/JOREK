@@ -6,7 +6,7 @@ contains
 
   !> Constructing harmonic matrix directly from the elementary matrix 
   subroutine direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, & 
-    node_list, element_list, xpoint2, xcase2, freeboundary, direct_construction)
+    node_list, element_list, bnd_elm_list, xpoint2, xcase2, freeboundary, direct_construction)
 
   use data_structure 
   use global_distributed_matrix
@@ -14,17 +14,17 @@ contains
   use equil_info
   use construct_matrix_mod, only : construct_matrix 
   use mpi_mod
+  
   implicit none
-
-  type (type_node_list)        :: node_list
-  type (type_element_list)     :: element_list
-  type (type_bnd_element_list) :: bnd_elm_list
-  type (type_surface_list)     :: flux_list
-  type (type_element)          :: element
-  type (type_node)             :: nodes(n_vertex_max)
-
-  integer, intent(in)          :: my_id, my_id_n, n_cpu, m_cpu,  MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, xcase2
-  logical, intent(in)          :: direct_construction, xpoint2, freeboundary
+  
+  ! --- Routine parameters
+  type (type_node_list),        intent(in) :: node_list
+  type (type_element_list),     intent(in) :: element_list
+  type (type_bnd_element_list), intent(in) :: bnd_elm_list
+  integer, intent(in) :: my_id, my_id_n, n_cpu, m_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, xcase2
+  logical, intent(in) :: direct_construction, xpoint2, freeboundary
+  
+  ! --- Local variables
   integer, allocatable         :: index_min_harm(:), index_max_harm(:)
   integer, allocatable         :: local_elms_harm(:)
   integer                      :: n_local_elms_harm

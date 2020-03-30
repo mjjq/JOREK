@@ -264,17 +264,17 @@ contains
       enddo
       
     endif
-#endif
-    ! --- End of element_matrix comparison
-    
+#endif /* End of element_matrix comparison */
     
   end subroutine elementary_matrix_build
+
+
+
 !> Construct the main matrix from the contributions of the Bezier elements.
 !!
 !! The element contributions are determined by element_matrix(_fft). Additional
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
-
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,      & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
                             i_tor_min, i_tor_max, n_tmp, nz_tmp, ndof, A_tmp, rhs_glob_tmp, irn_tmp, jcn_tmp, & 
@@ -703,8 +703,6 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_tmp,nz_tmp)
 
-  
-
   if(.not.direct_construction) then 
 
     ! --- Add vacuum response (boundary integral) for free boundary computations
@@ -757,7 +755,6 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   endif 
 
   call tr_deallocatep(RHS_local,"RHS_local",CAT_DMATRIX)
- 
      
   ! --- Memory tracking
   call tr_locvnorms("cm_BCRhs",RHS_glob_tmp,ndof)

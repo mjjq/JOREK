@@ -150,7 +150,7 @@ contains
 
     	    do i_order =1,n_order+1
 
-    	      do i_tor =n_tor_start, n_tor_end! 1,n_tor_loop
+    	      do i_tor =n_tor_start, n_tor_end
 
     		! --- Index in the ELM matrix	    
     		if (use_fft) then

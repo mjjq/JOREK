@@ -14,7 +14,6 @@ CXX = mpiicpc
 USE_HIPS         = 0
 USE_PASTIX       = 1
 USE_BLOCK        = 1
-USE_PASTIX_MURGE = 0
 USE_MUMPS        = 1
 USE_FFTW         = 1
 USE_HDF5         = 1
@@ -37,7 +36,6 @@ INC_MUMPS   =  $(MUMPS_HOME)/include/
 # PASTIX
 PASTIX_HOME     ?=  $(LIBDIR)/pastix/install/
 LIB_PASTIX       = `pastix-conf --libs` #-L$(PASTIX_HOME)/lib/ -lpastix_murge -lpastix $(LIB_SCOTCH)
-LIB_PASTIX_MURGE = `pastix-conf --libs_murge` #-L$(PASTIX_HOME)/lib/ -lpastix_murge -lpastix $(LIB_SCOTCH)
 LIB_PASTIX_BLAS  = `pastix-conf --blas`
 INC_PASTIX       = `pastix-conf --incs` #-I$(PASTIX_HOME) $(INC_SCOTCH)
 

@@ -296,7 +296,7 @@ contains
     !!!!!!!!!! Apply FFT !!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if (use_fft) then
-      call ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, tid, i_tor_min, i_tor_max)
+      call ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, tid)
     endif
     
     return

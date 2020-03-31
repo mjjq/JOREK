@@ -55,7 +55,7 @@ contains
                                   R_axis, Z_axis, psi_axis,                                &
                                   psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,                 &
                                   gmres, solve_only, ijA_index, ijA_size, irn_jcn,         & 
-                                  irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max )
+                                  irn, jcn, A_mat, i_tor_min, i_tor_max )
 
     use data_structure
     use vacuum, ONLY: is_freebound
@@ -94,8 +94,8 @@ contains
     logical,                   intent(in)    :: solve_only
     integer,                   intent(in)    :: i_tor_min, i_tor_max
     integer,          intent(in), pointer    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                                  :: irn_glob(:), jcn_glob(:) 
-    real*8                                   :: A_glob(:) 
+    integer                                  :: irn(:), jcn(:) 
+    real*8                                   :: A_mat(:) 
 
     ! --- Internal parameters
     real*8  :: mach1, dmach1, d2mach1_dTi, d2mach1_dTe, mach_u, dmach_u, dmach_rho
@@ -204,7 +204,7 @@ contains
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          index_min,index_max,i_tor_min,i_tor_max,               & 
-                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                         ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
 
                   endif
                   
@@ -235,7 +235,7 @@ contains
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max,    & 
                                              gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
-                                             ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                             ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
 
                   endif
 
@@ -244,7 +244,7 @@ contains
                   if (k_var .eq. 7) then
                     call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, & 
                                          gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
-                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                         ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
 
                 endif
@@ -280,7 +280,7 @@ contains
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          index_min,index_max,i_tor_min,i_tor_max,               & 
-                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                         ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
 
 
                   endif
@@ -312,7 +312,7 @@ contains
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max,    & 
                                              gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
-                                             ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                             ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
 
                   endif
 
@@ -321,7 +321,7 @@ contains
                   if (k_var .eq. 7) then
                     call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, & 
                                          gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
-                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                         ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
 
                 endif
@@ -348,7 +348,7 @@ contains
                                          psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,      &
                                          psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,      &
                                          index_min,index_max,i_tor_min,i_tor_max,               & 
-                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                         ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
 
                   endif
                   
@@ -400,7 +400,7 @@ contains
                   if (apply_dirichlet) then
                     call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, &
                                           gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
-                                             ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                             ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
 
                 endif
@@ -425,7 +425,7 @@ contains
 		                         psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          index_min,index_max,i_tor_min,i_tor_max,               & 
-                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                         ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   
                   endif
                   
@@ -477,7 +477,7 @@ contains
                   if (apply_dirichlet) then
                     call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, &
                                           gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
-                                             ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                             ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
 
                   ! --- We do both sides! 2 => d/ds, 3 => d/dt
@@ -494,7 +494,7 @@ contains
                                          psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,      &
                                          psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,      &
                                          index_min,index_max,i_tor_min,i_tor_max,               & 
-                                         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                         ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
                   
                   ! -----------------------------------------------
@@ -545,7 +545,7 @@ contains
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max,    & 
                                              gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
-                                             ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                             ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
 
                   endif
 
@@ -673,7 +673,7 @@ contains
 		           psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
 		           psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                            index_min,index_max,i_tor_min, i_tor_max,            & 
-                           ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                           ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
   
     use mod_parameters
     use data_structure
@@ -692,8 +692,8 @@ contains
     integer,		intent(in)    :: index_min, index_max
     integer,            intent(in)    :: i_tor_min, i_tor_max
     integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn_glob(:), jcn_glob(:)
-    real*8                            :: A_glob(:) 
+    integer                           :: irn(:), jcn(:)
+    real*8                            :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2, index_tmp
@@ -727,9 +727,9 @@ contains
       ilarge_vp  = ijA_position  - 1 + ((k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
                    (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       
-      irn_glob(ilarge_vp) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge_vp) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge_vp)   = ZBIG
+      irn(ilarge_vp) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge_vp) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge_vp)   = ZBIG
       
       index_tmp = (i_tor_max - i_tor_min +1)*n_var * (index_node-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       Rhs_loc(index_tmp) = ZBIG * delta_psi_rmp
@@ -742,9 +742,9 @@ contains
       ilarge_vp2  = ijA_position2 - 1 + ((k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
                    (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
 
-      irn_glob(ilarge_vp2) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge_vp2) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge_vp2)   = ZBIG
+      irn(ilarge_vp2) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge_vp2) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge_vp2)   = ZBIG
       
       index_tmp = (i_tor_max - i_tor_min +1)*n_var * (index_node2-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       Rhs_loc(index_tmp) = ZBIG * delta_psi_rmp_dl
@@ -764,7 +764,7 @@ contains
   !******************************************************************************
   subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres,       & 
                                  solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,& 
-                                 ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                 ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
   
     use mod_parameters
     use data_structure
@@ -783,8 +783,8 @@ contains
     integer,		intent(inout) :: cnt, cnt_prod
     integer,            intent(in)    :: i_tor_min, i_tor_max
     integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn_glob(:), jcn_glob(:)
-    real*8                            :: A_glob(:) 
+    integer                           :: irn(:), jcn(:)
+    real*8                            :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -802,9 +802,9 @@ contains
       ilarge = ijA_position - 1 + ((k_var-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
                    (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
 
-      irn_glob(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge)   = zbig
+      irn(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge)   = zbig
     endif
     ! --- Condition between nodes (d/ds)
     if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
@@ -812,9 +812,9 @@ contains
       ilarge = ijA_position - 1 + ((k_var-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
                    (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
 
-      irn_glob(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge)   = zbig
+      irn(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge)   = zbig
     endif
   
     return
@@ -831,7 +831,7 @@ contains
   !******************************************************************************
   subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres,    & 
                              solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max,&
-                             ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                             ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
   
   
     use mod_parameters
@@ -851,8 +851,8 @@ contains
     integer,		intent(inout) :: cnt, cnt_prod
     integer,            intent(in)    :: i_tor_min, i_tor_max
     integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn_glob(:), jcn_glob(:)
-    real*8                            :: A_glob(:) 
+    integer                           :: irn(:), jcn(:)
+    real*8                            :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -907,21 +907,21 @@ contains
                    (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
       !ilarge_vus = ijA_position2 - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_u   -1)*n_tor + i_tor
 
-      irn_glob(ilarge_vv)  = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge_vv)  = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge_vv)    = zbig
+      irn(ilarge_vv)  = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge_vv)  = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge_vv)    = zbig
 
-      irn_glob(ilarge_vTi) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge_vTi) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge_vTi)   = dmach1
+      irn(ilarge_vTi) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge_vTi) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge_vTi)   = dmach1
 
-      irn_glob(ilarge_vTe) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge_vTe) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge_vTe)   = dmach1
+      irn(ilarge_vTe) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge_vTe) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge_vTe)   = dmach1
 
-      !irn_glob(ilarge_vus) = n_tor * n_var * (index_node -1) + (k_Vpar-1)*n_tor + i_tor
-      !jcn_glob(ilarge_vus) = n_tor * n_var * (index_node2-1) + (k_u   -1)*n_tor + i_tor
-      !A_glob(ilarge_vus)   = dmach_u
+      !irn(ilarge_vus) = n_tor * n_var * (index_node -1) + (k_Vpar-1)*n_tor + i_tor
+      !jcn(ilarge_vus) = n_tor * n_var * (index_node2-1) + (k_u   -1)*n_tor + i_tor
+      !A_mat(ilarge_vus)   = dmach_u
 
       if (i_tor .eq. 1) then
         !RHS_loc(index_rhs) = - Zbig*Vpar0 - mach_u - mach1
@@ -947,25 +947,25 @@ contains
       ilarge_vsTe  = ijA_position  - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
                    (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
 
-      irn_glob(ilarge_vsvs)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge_vsvs)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge_vsvs)    = zbig
+      irn(ilarge_vsvs)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge_vsvs)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge_vsvs)    = zbig
 
-      irn_glob(ilarge_vsTis) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge_vsTis) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge_vsTis)   = dmach1
+      irn(ilarge_vsTis) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge_vsTis) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge_vsTis)   = dmach1
 
-      irn_glob(ilarge_vsTes) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge_vsTes) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge_vsTes)   = dmach1
+      irn(ilarge_vsTes) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge_vsTes) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge_vsTes)   = dmach1
 
-      irn_glob(ilarge_vsTi)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge_vsTi)  = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge_vsTi)    = d2mach1_dTi
+      irn(ilarge_vsTi)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge_vsTi)  = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge_vsTi)    = d2mach1_dTi
 
-      irn_glob(ilarge_vsTe)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn_glob(ilarge_vsTe)  = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      A_glob(ilarge_vsTe)    = d2mach1_dTe
+      irn(ilarge_vsTe)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      jcn(ilarge_vsTe)  = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      A_mat(ilarge_vsTe)    = d2mach1_dTe
 
       if (i_tor .eq. 1) then
         if (side .eq. 2) then

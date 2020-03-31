@@ -28,9 +28,7 @@ contains
                                   n_local_elms, index_min, index_max, rhs_loc, xpoint2,     &
                                   xcase2, R_axis, Z_axis, psi_axis, psi_bnd,                &
                                   R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only,        & 
-                                  ijA_index, ijA_size, irn_jcn,                             & 
-                                  irn_glob, jcn_glob, A_glob,                               & 
-                                  i_tor_min, i_tor_max )
+                                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
 
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     use data_structure
@@ -64,8 +62,8 @@ contains
   logical                  :: gmres
   logical                  :: solve_only
   real*8                   :: rhs_loc(*)
-  integer                  :: irn_glob(:), jcn_glob(:) 
-  real*8                   :: A_glob(:) 
+  integer                  :: irn(:), jcn(:) 
+  real*8                   :: A_mat(:) 
   integer,   intent(in)    :: i_tor_min, i_tor_max
   integer,   intent(in), pointer   :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
 
@@ -233,8 +231,7 @@ contains
                                   cnt, cnt_prod, only_count,           &
                                   index_min, index_max,                & 
                                   ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(      &
@@ -253,8 +250,7 @@ contains
                                   cnt, cnt_prod, only_count,           &
                                   index_min, index_max,                & 
                                   ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(      &
                                      index_node2, kv, in,              &
@@ -288,8 +284,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                             index_node = node_list%node(inode)%index(2)
 
@@ -300,8 +295,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                          endif
 
@@ -387,8 +381,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
 
 
@@ -401,8 +394,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
 
 
@@ -414,8 +406,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                             if (.not. only_count) then
                                if (in .eq. 1) then
@@ -448,8 +439,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
 
 
@@ -462,8 +452,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
 
 
@@ -477,8 +466,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                             if (.not. only_count) then
                                if (in .eq. 1) then
@@ -569,8 +557,7 @@ contains
                                   cnt, cnt_prod, only_count,         &
                                   index_min, index_max,              & 
                                   ijA_index, ijA_size, irn_jcn,      & 
-                                  irn_glob, jcn_glob, A_glob,        & 
-                                  i_tor_min, i_tor_max)
+                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(  &
@@ -589,8 +576,7 @@ contains
                                   cnt, cnt_prod, only_count,         &
                                   index_min, index_max,              & 
                                   ijA_index, ijA_size, irn_jcn,      & 
-                                  irn_glob, jcn_glob, A_glob,        & 
-                                  i_tor_min, i_tor_max)
+                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(       &
                                      index_node2, kv, in,               &
@@ -623,8 +609,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
 
                             index_node = node_list%node(inode)%index(3)
@@ -635,8 +620,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                          endif
 
@@ -707,8 +691,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                             call boundary_conditions_add_one_entry(   &
                                  index_node, kv, in,                  &
@@ -719,8 +702,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                             call boundary_conditions_add_one_entry(   &
                                  index_node,  kv, in,                 &
@@ -730,8 +712,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                             if (.not. only_count) then
                                if (in .eq. 1) then
@@ -765,8 +746,7 @@ contains
                                  cnt, cnt_prod, only_count,           &
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
-                                 irn_glob, jcn_glob, A_glob,          & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                             call boundary_conditions_add_one_entry(                          &
                                  index_node2, kv, in,                                        &
@@ -776,8 +756,7 @@ contains
                                  cnt, cnt_prod, only_count,                                  &
                                  index_min, index_max,                                       & 
                                  ijA_index, ijA_size, irn_jcn,                               & 
-                                 irn_glob, jcn_glob, A_glob,                                 & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                             call boundary_conditions_add_one_entry(                                          &
                                  index_node2, kv, in,                                                        &
@@ -787,8 +766,7 @@ contains
                                  cnt, cnt_prod, only_count,                                                  &
                                  index_min, index_max,                                                       & 
                                  ijA_index, ijA_size, irn_jcn,                                               & 
-                                 irn_glob, jcn_glob, A_glob,                                                 & 
-                                 i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                             if (.not. only_count) then
                                if (in .eq. 1) then
@@ -878,8 +856,7 @@ contains
                                   cnt, cnt_prod, only_count,         &
                                   index_min, index_max,              & 
                                   ijA_index, ijA_size, irn_jcn,      & 
-                                  irn_glob, jcn_glob, A_glob,        & 
-                                  i_tor_min, i_tor_max)
+                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(  &
@@ -903,8 +880,7 @@ contains
                                   cnt, cnt_prod, only_count,         &
                                   index_min, index_max,              & 
                                   ijA_index, ijA_size, irn_jcn,      & 
-                                  irn_glob, jcn_glob, A_glob,        & 
-                                  i_tor_min, i_tor_max)
+                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(       &
                                      index_node2, kv, in,               &
@@ -931,8 +907,7 @@ contains
                                cnt, cnt_prod, only_count,         &
                                index_min, index_max,              & 
                                ijA_index, ijA_size, irn_jcn,      & 
-                               irn_glob, jcn_glob, A_glob,        & 
-                               i_tor_min, i_tor_max)
+                               irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                           index_node = node_list%node(inode)%index(3)
 
@@ -943,8 +918,7 @@ contains
                                cnt, cnt_prod, only_count,         &
                                index_min, index_max,              & 
                                ijA_index, ijA_size, irn_jcn,      & 
-                               irn_glob, jcn_glob, A_glob,        & 
-                               i_tor_min, i_tor_max)
+                               irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                        endif
 
@@ -1012,8 +986,7 @@ contains
                                   cnt, cnt_prod, only_count,           &
                                   index_min, index_max,                & 
                                   ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(      &
@@ -1032,8 +1005,7 @@ contains
                                   cnt, cnt_prod, only_count,           &
                                   index_min, index_max,                & 
                                   ijA_index, ijA_size, irn_jcn,        & 
-                                  irn_glob, jcn_glob, A_glob,          & 
-                                  i_tor_min, i_tor_max)
+                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(      &
                                      index_node2, kv, in,              &
@@ -1051,8 +1023,7 @@ contains
                                   cnt, cnt_prod, only_count,         &
                                   index_min, index_max,              & 
                                   ijA_index, ijA_size, irn_jcn,      & 
-                                  irn_glob, jcn_glob, A_glob,        & 
-                                  i_tor_min, i_tor_max)
+                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
                              if (.not. only_count) then
                                 call boundary_conditions_add_RHS(       &
                                      index_node2, kv, in,               &
@@ -1080,8 +1051,7 @@ contains
                                cnt, cnt_prod, only_count,           &
                                index_min, index_max,                & 
                                ijA_index, ijA_size, irn_jcn,        & 
-                               irn_glob, jcn_glob, A_glob,          & 
-                               i_tor_min, i_tor_max)
+                               irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                           index_node = node_list%node(inode)%index(2)
 
@@ -1092,8 +1062,7 @@ contains
                                cnt, cnt_prod, only_count,         &
                                index_min, index_max,              & 
                                ijA_index, ijA_size, irn_jcn,      & 
-                               irn_glob, jcn_glob, A_glob,        & 
-                               i_tor_min, i_tor_max)
+                               irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                           index_node = node_list%node(inode)%index(3)
 
@@ -1104,8 +1073,7 @@ contains
                                cnt, cnt_prod, only_count,           &
                                index_min, index_max,                & 
                                ijA_index, ijA_size, irn_jcn,        & 
-                               irn_glob, jcn_glob, A_glob,          & 
-                               i_tor_min, i_tor_max)
+                               irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                        endif
 

@@ -60,7 +60,7 @@ contains
                                  R_axis, Z_axis, psi_axis,                                &
                                  psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,                 &
                                  gmres, solve_only, ijA_index, ijA_size, irn_jcn,         & 
-                                 irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     use data_structure
     use vacuum, ONLY: is_freebound
@@ -98,8 +98,8 @@ contains
     real*8,                    intent(in)    :: psi_xpoint(2)
     logical,                   intent(in)    :: gmres
     logical,                   intent(in)    :: solve_only
-    integer                                  :: irn_glob(:), jcn_glob(:) 
-    real*8                                   :: A_glob(:) 
+    integer                                  :: irn(:), jcn(:) 
+    real*8                                   :: A_mat(:) 
     integer,                   intent(in)    :: i_tor_min, i_tor_max
     integer,          intent(in), pointer    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
 
@@ -219,7 +219,7 @@ contains
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          solve_only, gmres,	     				&
     	                                 cnt, cnt_prod, only_count, index_min, index_max,       &
-                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
 
                   endif
                   
@@ -252,7 +252,7 @@ contains
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min, &
                       index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
-                      irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
+                      irn, jcn, A_mat, i_tor_min, i_tor_max)
                   endif
 
                   ! --------------
@@ -260,10 +260,10 @@ contains
                   if (k_var .eq. k_Vpar) then
                     call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min, &
                       index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max, &
-                      ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                      ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                     if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
                        index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min,&
-                       i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                       i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
 
                   endif
 
@@ -300,7 +300,7 @@ contains
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          solve_only, gmres,	     				&
     	                                 cnt, cnt_prod, only_count, index_min, index_max,       &
-                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
                   
                   ! -----------------------------------------------
@@ -331,7 +331,7 @@ contains
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
                       index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
-                      irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
+                      irn, jcn, A_mat, i_tor_min, i_tor_max)
                   endif
 
                   ! --------------
@@ -339,10 +339,10 @@ contains
                   if (k_var .eq. k_Vpar) then
                     call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,   &
                       index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max, &
-                      ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                      ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                     if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
                       index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, &
-                      i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                      i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
 
                   endif
 
@@ -373,7 +373,7 @@ contains
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          solve_only, gmres,	     				&
     	                                 cnt, cnt_prod, only_count, index_min, index_max,       &
-                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
                   
                   ! -----------------------------------------------
@@ -423,10 +423,10 @@ contains
 		  if (apply_dirichlet) then
 		    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
                       index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
-                      irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
+                      irn, jcn, A_mat, i_tor_min, i_tor_max)
 		    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
                       index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, &
-                      i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                      i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
 
                 endif
@@ -439,22 +439,22 @@ contains
                     side = 2
                     call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
                       index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
-                      irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
+                      irn, jcn, A_mat, i_tor_min, i_tor_max)
                     side = 3
                     call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
                       index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
-                      irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
+                      irn, jcn, A_mat, i_tor_min, i_tor_max)
                   endif
                 endif
                 if (node_list%node(inode)%boundary .eq. 20) then
                   side = 2
                   call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
                       index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
-                      irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
+                      irn, jcn, A_mat, i_tor_min, i_tor_max)
                   side = 3
                   call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
                       index_max, gmres, solve_only, only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
-                      irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
+                      irn, jcn, A_mat, i_tor_min, i_tor_max)
                 endif
               enddo
 
@@ -603,7 +603,7 @@ contains
 		           psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                            solve_only, gmres,	     				&
     	                   cnt, cnt_prod, only_count, index_min, index_max,     &
-                           i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+                           i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
   
     use mod_parameters
     use data_structure
@@ -625,8 +625,8 @@ contains
     integer,		intent(in)    :: index_min, index_max
     integer,            intent(in)    :: i_tor_min, i_tor_max
     integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn_glob(:), jcn_glob(:)
-    real*8                            :: A_glob(:) 
+    integer                           :: irn(:), jcn(:)
+    real*8                            :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -663,8 +663,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
     if (.not. only_count) then
       call boundary_conditions_add_RHS(     &
     	   index_node, k_psi, i_tor, 	    &
@@ -684,8 +683,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
     if (.not. only_count) then
       call boundary_conditions_add_RHS(     &
     	   index_node2, k_psi, i_tor,	    &
@@ -708,7 +706,7 @@ contains
   !******************************************************************************
   subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only, &
     only_count,cnt, cnt_prod, ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
   
     use mod_parameters
     use data_structure
@@ -727,8 +725,8 @@ contains
     integer,		intent(inout) :: cnt, cnt_prod
     integer,		intent(in)    :: i_tor_min, i_tor_max
     integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn_glob(:), jcn_glob(:)
-    real*8                            :: A_glob(:) 
+    integer                           :: irn(:), jcn(:)
+    real*8                            :: A_mat(:) 
     ! --- Internal variables
     integer			      :: index_node,   index_node2
     
@@ -746,8 +744,7 @@ contains
          cnt, cnt_prod, only_count,         &
          index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     ! --- Condition between nodes (d/ds or d/dt)
     call boundary_conditions_add_one_entry( &
@@ -757,8 +754,7 @@ contains
          cnt, cnt_prod, only_count,         &
          index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
     
     return
   end subroutine apply_Dirichlet_BCs
@@ -773,7 +769,7 @@ contains
   !******************************************************************************
   !******************************************************************************
   subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only,   &
-    only_count,cnt, cnt_prod, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+    only_count,cnt, cnt_prod, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
   
     use mod_parameters
     use data_structure
@@ -792,8 +788,8 @@ contains
     integer,		intent(inout) :: cnt, cnt_prod
     integer,		intent(in)    :: i_tor_min, i_tor_max
     integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn_glob(:), jcn_glob(:)
-    real*8                            :: A_glob(:) 
+    integer                           :: irn(:), jcn(:)
+    real*8                            :: A_mat(:) 
     
     ! --- Internal variables
     integer			      :: index_node,   index_node2
@@ -863,8 +859,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dpsis
     call boundary_conditions_add_one_entry( &
@@ -874,8 +869,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dus
     call boundary_conditions_add_one_entry( &
@@ -885,8 +879,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_drho
     call boundary_conditions_add_one_entry( &
@@ -896,8 +889,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_drhos
     call boundary_conditions_add_one_entry( &
@@ -907,8 +899,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dTi
     call boundary_conditions_add_one_entry( &
@@ -918,8 +909,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dTis
     call boundary_conditions_add_one_entry( &
@@ -929,8 +919,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     if (.not. only_count) then
       if (i_tor .eq. 1) then
@@ -954,8 +943,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = mach1_ds_Ti
     call boundary_conditions_add_one_entry( &
@@ -965,8 +953,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = mach1_ds_Tis
     call boundary_conditions_add_one_entry( &
@@ -976,8 +963,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     if (.not. only_count) then
       if (i_tor .eq. 1) then
@@ -1010,7 +996,7 @@ contains
   !******************************************************************************
   !******************************************************************************
   subroutine apply_U_sheath(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only,    &
-    only_count,cnt, cnt_prod, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
+    only_count,cnt, cnt_prod, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
   
     use mod_parameters
     use data_structure
@@ -1029,8 +1015,8 @@ contains
     integer,		intent(inout) :: cnt, cnt_prod
     integer,		intent(in)    :: i_tor_min, i_tor_max
     integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn_glob(:), jcn_glob(:)
-    real*8                            :: A_glob(:) 
+    integer                           :: irn(:), jcn(:)
+    real*8                            :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -1076,8 +1062,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dsheath_T
     call boundary_conditions_add_one_entry( &
@@ -1087,8 +1072,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     if (.not. only_count) then
       if (i_tor .eq. 1) then
@@ -1112,8 +1096,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dsheath_ds_Ts
     call boundary_conditions_add_one_entry( &
@@ -1123,8 +1106,7 @@ contains
     	 cnt, cnt_prod, only_count,	    &
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
-         irn_glob, jcn_glob, A_glob,        &
-         i_tor_min, i_tor_max)
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     if (.not. only_count) then
       if (i_tor .eq. 1) then

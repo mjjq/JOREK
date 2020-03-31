@@ -9,9 +9,9 @@ module strumpack_module
   logical :: spss_initialized, spss_analyzed
 
   private
-  public :: strumpack_init, strumpack_set_mat, strumpack_factorize
-  public :: strumpack_solve, strumpack_finalize
-  public :: spss_initialized, spss_analyzed
+  public :: strumpack_init, strumpack_set_mat, strumpack_analyze, &
+            strumpack_factorize, strumpack_solve, strumpack_finalize, &
+            spss_initialized, spss_analyzed
 
   interface
     subroutine spk() bind(C)
@@ -27,7 +27,7 @@ module strumpack_module
       integer, intent(in) :: comm
     end subroutine spk_init
     
-    subroutine spk_set_mat(n,nnz,irn,jcn,val,spss,comm) bind(C)
+    subroutine spk_set_mat(n,nnz,irn,jcn,val,spss,comm,upd) bind(C)
       use iso_c_binding
       use mpi            
       implicit none
@@ -38,7 +38,17 @@ module strumpack_module
       integer(kind=C_INT), intent(inout) :: nnz      
       integer, intent(in) :: comm
       type(c_ptr), intent(inout) :: spss
+      logical :: upd
     end subroutine spk_set_mat
+
+    subroutine spk_reord(spss,comm) bind(C)
+      use iso_c_binding
+      use mpi            
+      implicit none
+      
+      type(c_ptr), intent(inout) :: spss
+      integer, intent(in) :: comm
+    end subroutine spk_reord    
     
     subroutine spk_fact(spss,comm) bind(C)
       use iso_c_binding
@@ -68,7 +78,7 @@ module strumpack_module
       integer, intent(in) :: comm
     end subroutine spk_finalize
 
-  end interface  
+  end interface
 
   contains
     subroutine strumpack_init(comm) bind(C)
@@ -84,7 +94,7 @@ module strumpack_module
         return
     end subroutine strumpack_init
     
-    subroutine strumpack_set_mat(n,nnz,irn,jcn,val,comm) bind(C)
+    subroutine strumpack_set_mat(n,nnz,irn,jcn,val,comm,update) bind(C)
         use, intrinsic :: iso_c_binding
         use mpi
         implicit none
@@ -93,14 +103,32 @@ module strumpack_module
         integer(kind=C_INT), dimension(:), pointer :: irn,jcn
         real(kind=C_DOUBLE),  dimension(:), pointer :: val
         integer(kind=C_INT), intent(in) :: n
-        integer(kind=C_INT), intent(inout) :: nnz           
+        integer(kind=C_INT), intent(inout) :: nnz 
+        logical,intent(in),optional :: update
+        logical :: upd=.false.
 
-        call spk_set_mat(n,nnz,irn,jcn,val,spss,comm)
+        if(present(update)) upd=update
+        
+
+        call spk_set_mat(n,nnz,irn,jcn,val,spss,comm,upd)
         call MPI_Barrier(comm,ierr)
 
         return  
     end subroutine strumpack_set_mat
-    
+
+    subroutine strumpack_analyze(comm) bind(C)
+        use, intrinsic :: iso_c_binding
+        use mpi
+        implicit none
+        
+        integer comm,ierr
+        
+        call spk_reord(spss,comm)
+        call MPI_Barrier(comm,ierr)
+        
+        return
+    end subroutine strumpack_analyze
+
     subroutine strumpack_factorize(comm) bind(C)
         use, intrinsic :: iso_c_binding
         use mpi

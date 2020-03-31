@@ -265,31 +265,32 @@ Qvec_k    = 0.d0
 theta = time_evol_theta
 zeta  = time_evol_zeta
 
-! --- If we're doing the fft, don't loop... 
-use_fft = n_tor .gt. n_tor_fft_thresh  
+! --- Do we need to use the FFT or non-FFT version?
+if ( (i_tor_min == 1) .and. (i_tor_max == n_tor) ) then
+  ! In case of global matrix construction:
+  use_fft = n_tor > n_tor_fft_thresh
+else
+  ! In case of "direct construction" of harmonic matrix never FFT:
+  use_fft = .false.
+end if
 
-if(i_tor_min .eq. 1 .and. i_tor_max .eq. n_tor) then 
-  if (use_fft) then
-    n_tor_start = 1
-    n_tor_end   = 1 
-    use_fft = .true. 
-  else 
-    n_tor_start = 1
-    n_tor_end   = n_tor 
-    use_fft = .false. 
-  endif 
-else 
+if ( use_fft ) then
+  ! In case of FFT, don't loop over toroidal harmonics:
+  n_tor_start = 1
+  n_tor_end   = 1
+else
   n_tor_start = i_tor_min
-  n_tor_end   = i_tor_max 
-  use_fft = .false. 
-endif
+  n_tor_end   = i_tor_max
+end if
 
-! --- Toroidal functions            
+! --- Toroidal basis functions
 if (use_fft) then
+  ! --- Not needed in case of FFT
   HHZ    = 1.d0
   HHZ_p  = 1.d0
   HHZ_pp = 1.d0
 else
+  ! --- Needed in case of non-FFT
   do in = 1,n_tor
     do mp=1,n_plane
       HHZ   (in,mp) = HZ   (in,mp)

@@ -219,7 +219,7 @@ contains
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          solve_only, gmres,	     				&
     	                                 cnt, cnt_prod, only_count, index_min, index_max,       &
-                                         i_tor_min, i_tor_max)
+                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
 
                   endif
                   
@@ -259,7 +259,8 @@ contains
 		  ! --- Mach-1 BCs
                   if (k_var .eq. k_Vpar) then
                     call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min, &
-                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max, &
+                      ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                     if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
                        index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min,&
                        i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
@@ -299,7 +300,7 @@ contains
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          solve_only, gmres,	     				&
     	                                 cnt, cnt_prod, only_count, index_min, index_max,       &
-                                         i_tor_min, i_tor_max)
+                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
                   
                   ! -----------------------------------------------
@@ -337,7 +338,8 @@ contains
 		  ! --- Mach-1 BCs
                   if (k_var .eq. k_Vpar) then
                     call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,   &
-                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+                      index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max, &
+                      ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                     if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
                       index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, &
                       i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
@@ -371,7 +373,7 @@ contains
 		                         psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                                          solve_only, gmres,	     				&
     	                                 cnt, cnt_prod, only_count, index_min, index_max,       &
-                                         i_tor_min, i_tor_max)
+                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
                   
                   ! -----------------------------------------------
@@ -601,11 +603,10 @@ contains
 		           psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
                            solve_only, gmres,	     				&
     	                   cnt, cnt_prod, only_count, index_min, index_max,     &
-                           i_tor_min, i_tor_max)
+                           i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
   
     use mod_parameters
     use data_structure
-    use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     
@@ -623,6 +624,9 @@ contains
     logical,            intent(inout) :: only_count
     integer,		intent(in)    :: index_min, index_max
     integer,            intent(in)    :: i_tor_min, i_tor_max
+    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    integer                           :: irn_glob(:), jcn_glob(:)
+    real*8                            :: A_glob(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -708,7 +712,6 @@ contains
   
     use mod_parameters
     use data_structure
-    !use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     
@@ -774,7 +777,6 @@ contains
   
     use mod_parameters
     use data_structure
-    use global_distributed_matrix
     use phys_module, only: GAMMA, tauIC, central_density, mu_zero
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     
@@ -1012,7 +1014,6 @@ contains
   
     use mod_parameters
     use data_structure
-    use global_distributed_matrix
     use phys_module, only: GAMMA, tauIC, central_density, mu_zero, F0, FF_0
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     

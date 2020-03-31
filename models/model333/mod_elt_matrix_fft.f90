@@ -100,34 +100,23 @@ contains
     ! for cylinder geometry : epscyl = eps
     eps_cyl = 1.d0
 
-    ! --- If we're doing the fft, don't loop...
-    !if (n_tor .gt. 3) then
-    !  n_tor_loop  = 1
-    !  n_tor_loop2 = 1
-    !else
-    !  n_tor_loop  = n_tor
-    !  n_tor_loop2 = n_tor
-    !endif
-    !	      
-    use_fft = n_tor .gt. 3
-    if(i_tor_min .eq. 1 .and. i_tor_max .eq. n_tor) then
-       if (use_fft) then
-          n_tor_start = 1
-          n_tor_end   = 1
-        use_fft = .true.
-       else
-        n_tor_start = 1
-        n_tor_end   = n_tor
-        use_fft = .false.
-       endif
+    ! --- Do we need to use the FFT or non-FFT version?
+    if ( (i_tor_min == 1) .and. (i_tor_max == n_tor) ) then
+      ! In case of global matrix construction:
+      use_fft = n_tor > 3 
     else
-        n_tor_start = i_tor_min
-        n_tor_end   = i_tor_max!n_tor 
-        use_fft = .false.
-    endif
-
-
-
+      ! In case of "direct construction" of harmonic matrix never FFT:
+      use_fft = .false.
+    end if
+    
+    if ( use_fft ) then
+      ! In case of FFT, don't loop over toroidal harmonics:
+      n_tor_start = 1
+      n_tor_end   = 1
+    else
+      n_tor_start = i_tor_min
+      n_tor_end   = i_tor_max
+    end if
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!! Begin integration loop over Gaussian integration points !!!!!!!!!!!!

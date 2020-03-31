@@ -85,22 +85,23 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
     spss_initialized = .true.
   endif
 
+  call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_WORLD,spss_analyzed)
+  call tr_deallocatep(mumps_par%irn,"mumps_par%IRN",CAT_DMATRIX)
+  call tr_deallocatep(mumps_par%jcn,"mumps_par%JCN",CAT_DMATRIX)
+  call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+  
   if (.not. spss_analyzed) then
     call clck_time(t0)
-    call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_WORLD)
-    call tr_deallocatep(mumps_par%irn,"mumps_par%IRN",CAT_DMATRIX)
-    call tr_deallocatep(mumps_par%jcn,"mumps_par%JCN",CAT_DMATRIX)
-    call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-    call strumpack_factorize(MPI_COMM_WORLD)    
+    call strumpack_analyze(MPI_COMM_WORLD)    
     spss_analyzed = .true.
-
     call clck_time(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis :', tsecond    
   endif
   
   call clck_time(t0)
- 
+
+  call strumpack_factorize(MPI_COMM_WORLD)   
   call strumpack_solve(n,mumps_par%rhs,MPI_COMM_WORLD)
  
   call clck_time(t1)

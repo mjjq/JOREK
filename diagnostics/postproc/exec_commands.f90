@@ -19,6 +19,7 @@ module exec_commands
   use mod_import_restart
   use mod_interp
   use mod_poloidal_currents 
+  use mod_bootstrap_functions
   
   
   
@@ -126,6 +127,8 @@ module exec_commands
       select case ( trim(command%args(0)) )
         case ( 'average' )           
           call average(command, first_step, ierr)
+        case ( 'boundary_quantities' )           
+          call boundary_quantities(command, first_step, ierr)
         case ( 'zeroD_quantities' )
           call zeroD_quantities(command, first_step, ierr) 
         case ( 'average_h5' )
@@ -152,6 +155,8 @@ module exec_commands
           call gourdon(command, first_step, ierr)
         case ( 'grid' )
           call grid(command, ierr)
+        case ( 'grid_diagnostics' )
+          call grid_diagnostics(command, ierr)
         case ( 'help' )
           call help(command, ierr)
         case ( 'I_halo_TPF' )
@@ -207,11 +212,12 @@ module exec_commands
     else
       
       select case ( trim(command%args(0)) )
-        case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane', 'average', 'point',      &
-          'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
-          'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
-          'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'rectangular_torus', 'energy_spectrum', 'average_h5', &
-          'I_halo_TPF', 'spi-state', 'zeroD_quantities')
+        case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane',       &
+          'average', 'point', 'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params',        &
+          'qprofile', 'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon',       &
+          'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics', 'rectangle',    &
+          'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF', 'spi-state',         &
+          'zeroD_quantities', 'boundary_quantities')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -271,6 +277,7 @@ module exec_commands
     
     character(len=64) :: file_name
     logical           :: file_exists
+    real*8            :: minRad
     
     ierr = 0
     
@@ -296,6 +303,13 @@ module exec_commands
     
     ! --- Locate magnetic axis and X-point.
     call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+
+    ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
+    minRad = 0.0
+    if (bootstrap) then
+      call bootstrap_find_minRad(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd)
+      call bootstrap_get_q_and_ft_splines(node_list, element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
+    endif
     
     t_now         = t_start
     index_now     = index_start
@@ -1506,6 +1520,81 @@ module exec_commands
 
 
 
+  !> Expressions in the computational boundary
+  subroutine boundary_quantities(command, first_step, ierr)
+    
+    use mod_position, only: bnd_pos, tor_pos
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    real*8  :: phimin, phimax
+    integer :: nR, nZ, nphi, units, n_elm_pts, i_phi
+    type(t_pol_pos_list), save :: pol_pos_list
+    type(t_tor_pos_list), save :: tor_pos_list
+    character(len=1024) :: filename, comment
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0,3);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);            if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);           if ( ierr /= 0 ) return
+    
+    ! --- Preparation
+    if (command%n_args == 3) then
+      phimin    = to_float(command%args(1),     ierr); if ( ierr /= 0 ) return
+      phimax    = to_float(command%args(2),     ierr); if ( ierr /= 0 ) return
+      nphi      = to_int(command%args(3),       ierr); if ( ierr /= 0 ) return
+    else
+      phimin    = 0.d0 
+      phimax    = 1.d0
+      nphi      = 1
+    endif
+
+    units     = get_int_setting('units',      ierr); if ( ierr /= 0 ) return 
+    n_elm_pts = get_int_setting('nsub_bnd', ierr); if ( ierr /= 0 ) return
+
+    write(filename,'(4a)') DIR, 'boundary_quantities',                                          &
+      trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    ! Create set of R, Z points on the boundary (including normals)
+    pol_pos_list = bnd_pos(node_list, element_list, bnd_node_list, bnd_elm_list, n_elm_pts)
+    tor_pos_list = tor_pos(phistart=phimin, phiend=phimax, nphi=nphi)
+
+    ! Evaluate expressions 
+    call eval_expr(ES, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+
+    call reduce_result_to_2d(ierr, result, res2d, i2=1)  ! res2d(phi, i_bnd, expression)
+
+    if ( allocated(res1d) ) deallocate(res1d)   
+    allocate( res1d(size(res2d,2),size(res2d,3)) )
+
+    write(comment,'(a,i6.6, a, 1ES14.6)') 'time step #', index_now, ",  t_now = ", t_now 
+
+    ! --- Print every toroidal angle plane
+    do i_phi = 1, nphi
+      res1d = res2d(i_phi,:,:)
+      if ( i_phi==1 ) then
+        call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,           &
+         filename=trim(filename), append=(.not. first_step), blanks=.true., comment=trim(comment))
+      else
+        call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.false.,           &
+         filename=trim(filename), append=(.true.), blanks=.false.)
+      endif
+    enddo
+    
+    if ( allocated(result) ) deallocate(result)
+    
+  end subroutine boundary_quantities 
+
+
+
+
+
   !> Toroidally and poloidally averaged expressions.
   subroutine average(command, first_step, ierr)
     
@@ -2538,6 +2627,45 @@ module exec_commands
     call system('mv '//'grid_'//trim(step_range_string(index_now,index_now))//'.dat '//DIR)
     
   end subroutine grid
+  
+  
+  
+  
+  
+  !> Output detailed information about the computational grid.
+  subroutine grid_diagnostics(command, ierr)
+    
+    use mod_boundary, only: log_bnd_info
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0); if ( ierr /= 0 ) return
+    
+    write(*,*)
+    write(*,*) '*******************************************************************************'
+    write(*,*) '*** Information about the computational grid **********************************'
+    write(*,*) '*******************************************************************************'
+
+    call log_grid_info(.true., node_list, element_list, DIR, trim(step_range_string(index_now,index_now))//'.dat')
+    
+    ! --- Also write out the grid in the same way as the "grid" postproc command does
+    call grid(command,ierr)
+    
+    write(*,*)
+    write(*,*) '*** Boundary elements and nodes ***********************************************'
+    call log_bnd_info(.true., node_list, bnd_node_list, bnd_elm_list, DIR, trim(step_range_string(index_now,index_now))//'.dat')
+    
+    write(*,*) '*******************************************************************************'
+    write(*,*) '*** End: Information about the computational grid *****************************'
+    write(*,*) '*******************************************************************************'
+    write(*,*)
+    
+  end subroutine grid_diagnostics
   
   
   

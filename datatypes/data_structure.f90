@@ -173,36 +173,34 @@ contains
           thread_struct(i)%ELM     = 0.d0
           thread_struct(i)%RHS     = 0.d0
           thread_struct(i)%synch_buff     = 0.d0
-          if (jorek_model .ne. 400) then
-            call tr_allocate(thread_struct(i)%eq_g   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_g",CAT_MATELEM)
-            call tr_allocate(thread_struct(i)%eq_s   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_s",CAT_MATELEM)
-            call tr_allocate(thread_struct(i)%eq_t   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_t",CAT_MATELEM)
-            call tr_allocate(thread_struct(i)%eq_p   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_p",CAT_MATELEM)
-            call tr_allocate(thread_struct(i)%eq_ss  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_ss",CAT_MATELEM)
-            call tr_allocate(thread_struct(i)%eq_st  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_st",CAT_MATELEM)
-            call tr_allocate(thread_struct(i)%eq_tt  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_tt",CAT_MATELEM)
-            call tr_allocate(thread_struct(i)%eq_pp  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_pp",CAT_MATELEM) 
-            call tr_allocate(thread_struct(i)%delta_g,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_g",CAT_MATELEM) 
-            call tr_allocate(thread_struct(i)%delta_s,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_s",CAT_MATELEM)
-            call tr_allocate(thread_struct(i)%delta_t,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_t",CAT_MATELEM)
-            thread_struct(i)%eq_g    = 0.d0
-            thread_struct(i)%eq_s    = 0.d0
-            thread_struct(i)%eq_t    = 0.d0
-            thread_struct(i)%eq_p    = 0.d0
-            thread_struct(i)%eq_ss   = 0.d0
-            thread_struct(i)%eq_st   = 0.d0
-            thread_struct(i)%eq_tt   = 0.d0
-            thread_struct(i)%eq_pp   = 0.d0
-            thread_struct(i)%delta_g = 0.d0
-            thread_struct(i)%delta_s = 0.d0
-            thread_struct(i)%delta_t = 0.d0
+          call tr_allocate(thread_struct(i)%eq_g   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_g",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%eq_s   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_s",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%eq_t   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_t",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%eq_p   ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_p",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%eq_ss  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_ss",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%eq_st  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_st",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%eq_tt  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_tt",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%eq_pp  ,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"eq_pp",CAT_MATELEM) 
+          call tr_allocate(thread_struct(i)%delta_g,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_g",CAT_MATELEM) 
+          call tr_allocate(thread_struct(i)%delta_s,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_s",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%delta_t,1,n_plane,1,n_var,1,n_gauss,1,n_gauss,"delta_t",CAT_MATELEM)
+          thread_struct(i)%eq_g    = 0.d0
+          thread_struct(i)%eq_s    = 0.d0
+          thread_struct(i)%eq_t    = 0.d0
+          thread_struct(i)%eq_p    = 0.d0
+          thread_struct(i)%eq_ss   = 0.d0
+          thread_struct(i)%eq_st   = 0.d0
+          thread_struct(i)%eq_tt   = 0.d0
+          thread_struct(i)%eq_pp   = 0.d0
+          thread_struct(i)%delta_g = 0.d0
+          thread_struct(i)%delta_s = 0.d0
+          thread_struct(i)%delta_t = 0.d0
 #ifdef COMPARE_ELEMENT_MATRIX
-            call tr_allocate(thread_struct(i)%ELM2,  1,n_tor*n_vertex_max*(n_order+1)*n_var,1,n_tor*n_vertex_max*(n_order+1)*n_var,"ELM2",CAT_MATELEM)
-            call tr_allocate(thread_struct(i)%RHS2,  1,n_tor*n_vertex_max*(n_order+1)*n_var,"RHS2",CAT_MATELEM)
-            thread_struct(i)%ELM2    = 0.d0
-            thread_struct(i)%RHS2    = 0.d0
+          call tr_allocate(thread_struct(i)%ELM2,  1,n_tor*n_vertex_max*(n_order+1)*n_var,1,n_tor*n_vertex_max*(n_order+1)*n_var,"ELM2",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%RHS2,  1,n_tor*n_vertex_max*(n_order+1)*n_var,"RHS2",CAT_MATELEM)
+          thread_struct(i)%ELM2    = 0.d0
+          thread_struct(i)%RHS2    = 0.d0
 #endif
-	  endif
        end do
     end if
   end subroutine new_thread_buffers
@@ -219,23 +217,21 @@ contains
        call tr_deallocate(thread_struct(i)%ELM,"ELM",CAT_MATELEM)
        call tr_deallocate(thread_struct(i)%RHS,"RHS",CAT_MATELEM)
        call tr_deallocate(thread_struct(i)%synch_buff,"synch_buff",CAT_MATELEM)
-       if (jorek_model .ne. 400) then
-         call tr_deallocate(thread_struct(i)%eq_g   ,"eq_g",CAT_MATELEM)
-         call tr_deallocate(thread_struct(i)%eq_s   ,"eq_s",CAT_MATELEM)
-         call tr_deallocate(thread_struct(i)%eq_t   ,"eq_t",CAT_MATELEM)
-         call tr_deallocate(thread_struct(i)%eq_p   ,"eq_p",CAT_MATELEM)
-         call tr_deallocate(thread_struct(i)%eq_ss  ,"eq_ss",CAT_MATELEM)
-         call tr_deallocate(thread_struct(i)%eq_st  ,"eq_st",CAT_MATELEM)
-         call tr_deallocate(thread_struct(i)%eq_tt  ,"eq_tt",CAT_MATELEM)
-         call tr_deallocate(thread_struct(i)%eq_pp  ,"eq_pp",CAT_MATELEM) 
-         call tr_deallocate(thread_struct(i)%delta_g,"delta_g",CAT_MATELEM) 
-         call tr_deallocate(thread_struct(i)%delta_s,"delta_s",CAT_MATELEM)
-         call tr_deallocate(thread_struct(i)%delta_t,"delta_t",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%eq_g   ,"eq_g",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%eq_s   ,"eq_s",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%eq_t   ,"eq_t",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%eq_p   ,"eq_p",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%eq_ss  ,"eq_ss",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%eq_st  ,"eq_st",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%eq_tt  ,"eq_tt",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%eq_pp  ,"eq_pp",CAT_MATELEM) 
+       call tr_deallocate(thread_struct(i)%delta_g,"delta_g",CAT_MATELEM) 
+       call tr_deallocate(thread_struct(i)%delta_s,"delta_s",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%delta_t,"delta_t",CAT_MATELEM)
 #ifdef COMPARE_ELEMENT_MATRIX
-         call tr_deallocate(thread_struct(i)%ELM2,"ELM2",CAT_MATELEM)
-         call tr_deallocate(thread_struct(i)%RHS2,"RHS2",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%ELM2,"ELM2",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%RHS2,"RHS2",CAT_MATELEM)
 #endif
-       endif
     end do
     call tr_unregister_mem(sizeof(thread_struct),"thread_struct",CAT_MATELEM)
     deallocate(thread_struct)

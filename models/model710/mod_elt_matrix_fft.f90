@@ -207,7 +207,7 @@ real*8     :: VmsCoefF, VmsCoefF_T
 ! --- Matrix
 real*8, dimension(n_var,n_var)   :: QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, QvmsF_p, QvmsF_n, QvmsF_k, QvmsF_kn
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k
-real*8, dimension(n_var,n_var)   :: amat, Pjac_p, Pjac_n, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
+real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 
 ! --- Main switches
 Coef_DivV = 0.0d0 ! this is a stabilisation term !
@@ -244,8 +244,7 @@ RHS    = 0.d0
 rhs_p_ij  = 0.d0
 rhs_k_ij  = 0.d0
 amat      = 0.d0
-Pjac_p    = 0.d0
-Pjac_n    = 0.d0
+Pjac      = 0.d0
 Qjac_p    = 0.d0
 Qjac_k    = 0.d0
 Qjac_n    = 0.d0
@@ -549,7 +548,7 @@ do i=1,n_vertex_max
 !$OMP  VmsCoefF, VmsCoefF_T, &
 !$OMP  QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, QvmsF_p, QvmsF_n, QvmsF_k, QvmsF_kn, &
 !$OMP  rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k, &
-!$OMP  amat, Pjac_p, Pjac_n, Qjac_p, Qjac_k, Qjac_n, Qjac_kn)
+!$OMP  amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn)
 #endif
         do mp = 1, n_plane
 
@@ -1455,8 +1454,7 @@ do i=1,n_vertex_max
                   end select
 
                   amat      = 0.d0
-                  Pjac_p    = 0.d0 ! time derivative part (poloidal part)
-                  Pjac_n    = 0.d0 ! time derivative part (toroidal part with phi-derivatives of the test-function)
+                  Pjac      = 0.d0 ! time derivative part
                   Qjac_p    = 0.d0 ! rest of the LHS (poloidal part)
                   Qjac_k    = 0.d0 ! rest of the LHS (toroidal part with phi-derivatives of the test-function)
                   Qjac_n    = 0.d0 ! rest of the LHS (toroidal part with phi-derivatives of the basis-functions)
@@ -1473,7 +1471,7 @@ do i=1,n_vertex_max
                   !###################################################################################################
                   !#  equation 1   (R component induction equation)                                                  #
                   !###################################################################################################
-                  Pjac_p(var_AR,var_AR)  =   v * AR 
+                  Pjac   (var_AR,var_AR) =   v * AR 
 
                   Qjac_p (var_AR,var_AR) = + v * (UZ0   * Bp0_AR ) &
                                            + v * (eta_Z * Bp0_AR ) &
@@ -1503,7 +1501,7 @@ do i=1,n_vertex_max
                   !###################################################################################################
                   !#  equation 2   (Z component induction equation)                                                  #
                   !###################################################################################################
-                  Pjac_p(var_AZ,var_AZ)  =   v * AZ 
+                  Pjac   (var_AZ,var_AZ) =   v * AZ 
 
                   Qjac_p (var_AZ,var_AR) = + v * (Up0 * BR0_AR - UR0 * Bp0_AR)         &
                                            + v * (eta_p / R * BR0_AR - eta_R * Bp0_AR) &
@@ -1533,7 +1531,7 @@ do i=1,n_vertex_max
                   !###################################################################################################
                   !#  equation 3   (Phi component induction equation)                                                #
                   !###################################################################################################
-                  Pjac_p(var_A3,var_A3)  =   v * A3
+                  Pjac   (var_A3,var_A3) =   v * A3
 
                   Qjac_p (var_A3,var_AR) = + R * v * (- UZ0 * BR0_AR)                &
                                            - eta_T * v_Z * R                * BR0_AR &
@@ -1565,8 +1563,8 @@ do i=1,n_vertex_max
                   !###################################################################################################
                   !#  equation 4   (R component momentum equation)                                                   #
                   !###################################################################################################
-                  Pjac_p(var_UR,var_UR )  =   v * rho0 * UR
-                  Pjac_p(var_UR,var_rho)  =   v * rho  * UR0
+                  Pjac   (var_UR,var_UR ) =   v * rho0 * UR
+                  Pjac   (var_UR,var_rho) =   v * rho  * UR0
 
                   Qjac_p (var_UR,var_AR ) = + JxB_UR_AR__p
                   Qjac_n (var_UR,var_AR ) = + JxB_UR_AR__n
@@ -1607,8 +1605,8 @@ do i=1,n_vertex_max
                   !###################################################################################################
                   !#  equation 5   (Z component momentum equation)                                                   #
                   !###################################################################################################
-                  Pjac_p(var_UZ,var_UZ)    =   v * rho0 * UZ
-                  Pjac_p(var_UZ,var_rho)   =   v * rho  * UZ0
+                  Pjac   (var_UZ,var_UZ)   =   v * rho0 * UZ
+                  Pjac   (var_UZ,var_rho)  =   v * rho  * UZ0
 
                   Qjac_p (var_UZ,var_AR )  = + JxB_UZ_AR__p
                   Qjac_n (var_UZ,var_AR )  = + JxB_UZ_AR__n
@@ -1650,15 +1648,10 @@ do i=1,n_vertex_max
                   !#  equation 6   (Phi component momentum equation)                                                 #
                   !###################################################################################################
                   if (parallel_projection) then
-                    Pjac_p(var_Up,var_UR)   = v * BR0  * rho0 * UR
-                    Pjac_p(var_Up,var_UZ)   = v * BZ0  * rho0 * UZ
-                    Pjac_p(var_Up,var_Up)   = v * Bp0  * rho0 * Up 
-                    Pjac_p(var_Up,var_AR)   = v * rho0 * ( UR0*BR0_AR                    + Up0*Bp0_AR )
-                    Pjac_n(var_Up,var_AR)   = v * rho0 * (               + UZ0*BZ0_AR__n              )
-                    Pjac_p(var_Up,var_AZ)   = v * rho0 * (               + UZ0*BZ0_AZ    + Up0*Bp0_AZ )
-                    Pjac_n(var_Up,var_AZ)   = v * rho0 * ( UR0*BR0_AZ__n                              )
-                    Pjac_p(var_Up,var_A3)   = v * rho0 * ( UR0*BR0_A3    + UZ0*BZ0_A3    + Up0*Bp0_A3 )
-                    Pjac_p(var_Up,var_rho)  = v * rho  * ( UR0*BR0 + UZ0*BZ0 + Up0*Bp0 )
+                    Pjac   (var_Up,var_UR)  = v * BR0  * rho0 * UR
+                    Pjac   (var_Up,var_UZ)  = v * BZ0  * rho0 * UZ
+                    Pjac   (var_Up,var_Up)  = v * Bp0  * rho0 * Up 
+                    Pjac   (var_Up,var_rho) = v * rho  * ( UR0*BR0 + UZ0*BZ0 + Up0*Bp0 )
 
                     Qjac_p (var_Up,var_AR)  = + BR0_AR * Qconv_UR              &
                                               + Bp0_AR * Qconv_Up              &
@@ -1773,8 +1766,8 @@ do i=1,n_vertex_max
                                               + Bp0 * dvisco_dT * T * Qvisc_Up__k &
                                               + (rho0*T) * BgradVstar__k
                   else
-                    Pjac_p(var_Up,var_Up)   =   v * rho0 * Up
-                    Pjac_p(var_Up,var_rho)  =   v * rho  * Up0
+                    Pjac   (var_Up,var_Up)  =   v * rho0 * Up
+                    Pjac   (var_Up,var_rho) =   v * rho  * Up0
 
                     Qjac_p (var_Up,var_AR)  = JxB_Up_AR__p
                     Qjac_n (var_Up,var_AR)  = JxB_Up_AR__n
@@ -1817,7 +1810,7 @@ do i=1,n_vertex_max
                   !###################################################################################################
                   !#  equation 7   (Density equation)                                                                #
                   !###################################################################################################
-                  Pjac_p(var_rho,var_rho)  =   v * rho
+                  Pjac   (var_rho,var_rho) =   v * rho
 
                   Qjac_p (var_rho,var_AR)  = - (D_par-D_prof) * BgradVstar_AR__p * BgradRho       / BB2 &
                                              - (D_par-D_prof) * BgradVstar__p    * BgradRho_AR__p / BB2 &
@@ -1869,8 +1862,8 @@ do i=1,n_vertex_max
                   !###################################################################################################
                   !#  equation 8   (Temperature  equation)                                                           #
                   !###################################################################################################
-                  Pjac_p(var_T,var_T)    =   v * rho0 * T
-                  Pjac_p(var_T,var_rho)  =   v * rho  * T0
+                  Pjac   (var_T,var_T)   =   v * rho0 * T
+                  Pjac   (var_T,var_rho) =   v * rho  * T0
 
                   Qjac_p (var_T,var_AR)  = - (ZKpar_T-ZK_prof) * BgradVstar_AR__p * BgradT       / BB2                &
                                            - (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AR__p / BB2                &
@@ -2247,13 +2240,13 @@ do i=1,n_vertex_max
                         ij = ivar
                         kl = index_kl + (kvar-1)
 
-                        amat(ivar,kvar)  = (1.d0+zeta)*Pjac_p(ivar,kvar) - tstep * theta * Qjac_p(ivar,kvar)
+                        amat(ivar,kvar)  = (1.d0+zeta)*Pjac(ivar,kvar) - tstep * theta * Qjac_p(ivar,kvar)
                         ELM_p(mp,kl,ij)  = ELM_p(mp,kl,ij)  +  wst * amat(ivar,kvar) * R * xjac
 
                         amat(ivar,kvar)  = - tstep * theta * Qjac_k(ivar,kvar)
                         ELM_k(mp,kl,ij)  = ELM_k(mp,kl,ij)  +  wst * amat(ivar,kvar) * R * xjac
 
-                        amat(ivar,kvar)  = (1.d0+zeta)*Pjac_n(ivar,kvar) - tstep * theta * Qjac_n(ivar,kvar)
+                        amat(ivar,kvar)  = - tstep * theta * Qjac_n(ivar,kvar)
                         ELM_n(mp,kl,ij)  = ELM_n(mp,kl,ij)  +  wst * amat(ivar,kvar) * R * xjac
 
                         amat(ivar,kvar)  = - tstep * theta * Qjac_kn(ivar,kvar)
@@ -2267,13 +2260,13 @@ do i=1,n_vertex_max
                         ij = index_ij + (ivar-1) * (n_tor_end - n_tor_start + 1)
                         kl = index_kl + (kvar-1) * (n_tor_end - n_tor_start + 1)
 
-                        amat(ivar,kvar) = (1.d0+zeta)*Pjac_p(ivar,kvar) - tstep * theta * Qjac_p(ivar,kvar)
+                        amat(ivar,kvar) = (1.d0+zeta)*Pjac(ivar,kvar) - tstep * theta * Qjac_p(ivar,kvar)
                         ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac
 
                         amat(ivar,kvar) = - tstep * theta * Qjac_k(ivar,kvar)
                         ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac
 
-                        amat(ivar,kvar) = (1.d0+zeta)*Pjac_n(ivar,kvar) - tstep * theta * Qjac_n(ivar,kvar)
+                        amat(ivar,kvar) = - tstep * theta * Qjac_n(ivar,kvar)
                         ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac
 
                         amat(ivar,kvar) = - tstep * theta * Qjac_kn(ivar,kvar)

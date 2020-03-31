@@ -262,7 +262,7 @@ contains
                       index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
                     if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
                        index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min,&
-                       i_tor_max)
+                       i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
 
                   endif
 
@@ -340,7 +340,7 @@ contains
                       index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
                     if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
                       index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, &
-                      i_tor_max)
+                      i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
 
                   endif
 
@@ -424,7 +424,7 @@ contains
                       irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max)
 		    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
                       index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod, i_tor_min, &
-                      i_tor_max)
+                      i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
                   endif
 
                 endif
@@ -770,7 +770,7 @@ contains
   !******************************************************************************
   !******************************************************************************
   subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only,   &
-    only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+    only_count,cnt, cnt_prod, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
   
     use mod_parameters
     use data_structure
@@ -789,6 +789,9 @@ contains
     logical,		intent(in)    :: gmres, solve_only, only_count
     integer,		intent(inout) :: cnt, cnt_prod
     integer,		intent(in)    :: i_tor_min, i_tor_max
+    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    integer                           :: irn_glob(:), jcn_glob(:)
+    real*8                            :: A_glob(:) 
     
     ! --- Internal variables
     integer			      :: index_node,   index_node2
@@ -1005,7 +1008,7 @@ contains
   !******************************************************************************
   !******************************************************************************
   subroutine apply_U_sheath(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only,    &
-    only_count,cnt, cnt_prod, i_tor_min, i_tor_max)
+    only_count,cnt, cnt_prod, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob)
   
     use mod_parameters
     use data_structure
@@ -1024,6 +1027,9 @@ contains
     logical,		intent(in)    :: gmres, solve_only, only_count
     integer,		intent(inout) :: cnt, cnt_prod
     integer,		intent(in)    :: i_tor_min, i_tor_max
+    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    integer                           :: irn_glob(:), jcn_glob(:)
+    real*8                            :: A_glob(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2

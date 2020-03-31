@@ -55,32 +55,32 @@ contains
   call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary, &
     local_elms_harm,n_local_elms_harm,index_min_harm(my_id+1),                                  & 
     index_max_harm(my_id+1), ijA_index_harm, ijA_size_harm,                                     &
-    irn_jcn_harm, irn_glob_harm, jcn_glob_harm, i_tor_min, i_tor_max,                           &                         
-    n_glob_harm, nz_glob_harm, ndof_glob_harm, n_matrix_block_size_harm)
+    irn_jcn_harm, irn_harm, jcn_harm, i_tor_min, i_tor_max,                           &                         
+    n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm)
  
   ! --- Memory allocation
-  if (allocated(A_glob_harm))    call tr_deallocate(A_glob_harm,"A_glob_harm",CAT_DMATRIX) 
-  call tr_allocate(A_glob_harm,1,nz_glob_harm,"A_glob_harm",  CAT_DMATRIX)
+  if (allocated(A_harm))    call tr_deallocate(A_harm,"A_harm",CAT_DMATRIX) 
+  call tr_allocate(A_harm,1,nz_harm,"A_harm",  CAT_DMATRIX)
 
-  if (allocated(irn_glob_harm))  call tr_deallocate(irn_glob_harm,"irn_glob_harm",CAT_DMATRIX)
-  call tr_allocate(irn_glob_harm,1,nz_glob_harm,"irn_glob_harm",  CAT_DMATRIX)
+  if (allocated(irn_harm))  call tr_deallocate(irn_harm,"irn_harm",CAT_DMATRIX)
+  call tr_allocate(irn_harm,1,nz_harm,"irn_harm",  CAT_DMATRIX)
  
-  if (allocated(jcn_glob_harm))  call tr_deallocate(jcn_glob_harm,"jcn_glob_harm",CAT_DMATRIX)
-  call tr_allocate(jcn_glob_harm,1,nz_glob_harm,"jcn_glob_harm",  CAT_DMATRIX) 
+  if (allocated(jcn_harm))  call tr_deallocate(jcn_harm,"jcn_harm",CAT_DMATRIX)
+  call tr_allocate(jcn_harm,1,nz_harm,"jcn_harm",  CAT_DMATRIX) 
 
-  if (allocated(rhs_glob_harm))  call tr_deallocate(rhs_glob_harm,"rhs_glob_harm",CAT_DMATRIX)
-  call tr_allocate (rhs_glob_harm,1,ndof_glob_harm,"rhs_glob_harm",CAT_DMATRIX)
+  if (allocated(rhs_harm))  call tr_deallocate(rhs_harm,"rhs_harm",CAT_DMATRIX)
+  call tr_allocate (rhs_harm,1,ndof_harm,"rhs_harm",CAT_DMATRIX)
 
-  A_glob_harm     = 0.0d0 
-  rhs_glob_harm   = 0.0d0 
-  irn_glob_harm   = 0
-  jcn_glob_harm   = 0
+  A_harm     = 0.0d0 
+  rhs_harm   = 0.0d0 
+  irn_harm   = 0
+  jcn_harm   = 0
 
   call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master,                &
     local_elms_harm, n_local_elms_harm, index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint2,&
     xcase2, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint,              &
-    ES%psi_xpoint, i_tor_min, i_tor_max, n_glob_harm, nz_glob_harm, ndof_glob_harm, A_glob_harm,  &
-    rhs_glob_harm, irn_glob_harm, jcn_glob_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm,     &
+    ES%psi_xpoint, i_tor_min, i_tor_max, n_harm, nz_harm, ndof_harm, A_harm,  &
+    rhs_harm, irn_harm, jcn_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm,     &
     direct_construction)
 
   end subroutine direct_construction_harmonic

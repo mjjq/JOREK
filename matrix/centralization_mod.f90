@@ -26,7 +26,7 @@ contains
     
   ! --- Determine matrix dimension n and number of nonzeros nz
   if (n_cpu_n > 1) then
-    call MPI_GATHER(nz_glob_harm, 1, MPI_INTEGER, nz_array, 1, MPI_INTEGER, 0, MPI_COMM_N, ierr) 
+    call MPI_GATHER(nz_harm, 1, MPI_INTEGER, nz_array, 1, MPI_INTEGER, 0, MPI_COMM_N, ierr) 
     disp_array = 0 
     nz_total   = 0
     if (my_id_n .eq. 0) then
@@ -36,10 +36,10 @@ contains
       nz_total = disp_array(n_cpu_n) + nz_array(n_cpu_n) 
     endif 
     mumps_par%nz  = nz_total   
-    mumps_par%n   = ndof_glob_harm 
+    mumps_par%n   = ndof_harm 
   else
-    mumps_par%nz  = nz_glob_harm
-    mumps_par%n   = ndof_glob_harm
+    mumps_par%nz  = nz_harm
+    mumps_par%n   = ndof_harm
   endif 
  
   ! --- Allocate arrays for centralized matrix
@@ -54,26 +54,26 @@ contains
   
   ! --- Centralize matrix (if it was not distributed, copy it into the right data structure)
   if (n_cpu_n > 1) then
-    call MPI_GATHERV(A_glob_harm, nz_glob_harm, MPI_DOUBLE_PRECISION, mumps_par%A, nz_array, disp_array,&
+    call MPI_GATHERV(A_harm, nz_harm, MPI_DOUBLE_PRECISION, mumps_par%A, nz_array, disp_array,&
       MPI_DOUBLE_PRECISION, 0, MPI_COMM_N, ierr)
 
-    call MPI_GATHERV(irn_glob_harm, nz_glob_harm, MPI_INTEGER, mumps_par%irn, nz_array, disp_array,&
+    call MPI_GATHERV(irn_harm, nz_harm, MPI_INTEGER, mumps_par%irn, nz_array, disp_array,&
       MPI_INTEGER, 0, MPI_COMM_N, ierr)
 
-    call MPI_GATHERV(jcn_glob_harm, nz_glob_harm, MPI_INTEGER, mumps_par%jcn, nz_array, disp_array,&
+    call MPI_GATHERV(jcn_harm, nz_harm, MPI_INTEGER, mumps_par%jcn, nz_array, disp_array,&
       MPI_INTEGER, 0, MPI_COMM_N, ierr)
   else 
    
     do i = 1, mumps_par%nz
-      mumps_par%A(i)   = A_glob_harm(i)
-      mumps_par%irn(i) = irn_glob_harm(i)
-      mumps_par%jcn(i) = jcn_glob_harm(i)
+      mumps_par%A(i)   = A_harm(i)
+      mumps_par%irn(i) = irn_harm(i)
+      mumps_par%jcn(i) = jcn_harm(i)
     enddo
  
   endif
 
   do i = 1, mumps_par%n
-    mumps_par%rhs(i) = rhs_glob_harm(i)
+    mumps_par%rhs(i) = rhs_harm(i)
   enddo
   
   if ( allocated(nz_array) )   deallocate(nz_array)

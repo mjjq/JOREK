@@ -696,6 +696,9 @@ required = 0
 #endif
   end if if_not_restart
   
+  ! --- Print some grid information
+  if ( my_id == 0 ) call log_grid_info(.false., node_list, element_list)
+  
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   ! --- Determine boundary information from the grid

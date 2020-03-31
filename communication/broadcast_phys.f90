@@ -22,7 +22,7 @@ implicit none
 integer, intent(in) :: my_id
 
 ! --- internal variables
-integer                :: ierr, position, bufsize, i, n_tmp
+integer                :: ierr, position, bufsize, i, n_tmp, test_value
 logical                :: err_buff_too_small
 character, allocatable :: buffer(:)
 
@@ -554,6 +554,10 @@ if (my_id .eq. 0) then
   call MPI_PACK(RMP_har_sin_spectrum,   N_RMP_MAX,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(pastix_maxthrd,         1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(mumps_ordering,         1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  
+  ! --- Please leave this as last parameter
+  test_value = 42
+  call MPI_PACK(test_value,             1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   write(*,'(1x,a,i7,a,i7,a)') '  Buffer usage: ', position, ' of ', bufsize
   if ( position > bufsize ) then
@@ -1091,6 +1095,14 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position, RMP_har_sin_spectrum,  N_RMP_MAX,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,pastix_maxthrd,         1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,mumps_ordering,         1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  
+  ! --- Please leave this as last parameter
+  call MPI_UNPACK(buffer,bufsize,position,test_value,             1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  if ( test_value /= 42 ) then
+    write(*,*) 'FATAL ERROR in broadcast_phys: the test_value was not received correctly on my_id=', my_id
+    stop
+  end if
+  
 endif
 
 call tr_unregister_mem(bufsize,"bcastp_buffer")

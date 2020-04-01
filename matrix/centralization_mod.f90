@@ -42,18 +42,19 @@ contains
     mumps_par%n   = ndof_harm
   endif 
  
-  ! --- Allocate arrays for centralized matrix
-  if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,  "dh_mumps_par%A",  CAT_DMATRIX)
-  if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
-  if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
-  if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%A,  1,mumps_par%nz,"dh_mumps_par%A",  CAT_DMATRIX)
-  call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
-  
+    
   ! --- Centralize matrix (if it was not distributed, copy it into the right data structure)
-  if (n_cpu_n > 1) then
+  if (n_cpu_n > 1) then 
+    ! --- Allocate arrays for centralized matrix
+    if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,  "dh_mumps_par%A",  CAT_DMATRIX)
+    if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
+    if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
+    if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
+    call tr_allocatep(mumps_par%A,  1,mumps_par%nz,"dh_mumps_par%A",  CAT_DMATRIX)
+    call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
+    call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
+    call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
+  
     call MPI_GATHERV(A_harm, nz_harm, MPI_DOUBLE_PRECISION, mumps_par%A, nz_array, disp_array,&
       MPI_DOUBLE_PRECISION, 0, MPI_COMM_N, ierr)
 
@@ -63,18 +64,11 @@ contains
     call MPI_GATHERV(jcn_harm, nz_harm, MPI_INTEGER, mumps_par%jcn, nz_array, disp_array,&
       MPI_INTEGER, 0, MPI_COMM_N, ierr)
   else 
-   
-    do i = 1, mumps_par%nz
-      mumps_par%A(i)   = A_harm(i)
-      mumps_par%irn(i) = irn_harm(i)
-      mumps_par%jcn(i) = jcn_harm(i)
-    enddo
- 
+    mumps_par%A(1:mumps_par%nz) => A_harm(1:mumps_par%nz)
+    mumps_par%irn(1:mumps_par%nz) => irn_harm(1:mumps_par%nz)
+    mumps_par%jcn(1:mumps_par%nz) => jcn_harm(1:mumps_par%nz)
+    mumps_par%rhs(1:mumps_par%n) => rhs_harm(1:mumps_par%n)
   endif
-
-  do i = 1, mumps_par%n
-    mumps_par%rhs(i) = rhs_harm(i)
-  enddo
   
   if ( allocated(nz_array) )   deallocate(nz_array)
   if ( allocated(disp_array) ) deallocate(disp_array)

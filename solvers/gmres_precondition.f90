@@ -102,11 +102,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
     call tr_allocate(send_disp,1,1,"send_disp",CAT_GMRES)
   endif
 
-  if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
-
   if (my_id_n .eq. 0) then
-
-    call tr_allocatep(mumps_par%rhs,1,ifactor*n_loc_n,"mumps_par%rhs",CAT_DMATRIX)
 
     call mpi_scatterv(Rsnd_buffer,send_counts,send_disp,MPI_DOUBLE_PRECISION, &
                     mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_MASTER,ierr)

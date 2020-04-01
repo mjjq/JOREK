@@ -14,60 +14,120 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
+use corr_neg
+use mod_interp
+use diffusivities, only: get_dperp, get_zkperp
 
 implicit none
 
 type (type_element)   :: element
-type (type_node)      :: nodes(2)        ! the two nodes containing the boundary nodes
+type (type_node)      :: nodes(n_vertex_max)        ! the two nodes containing the boundary nodes
 
-real*8     :: x_g(n_gauss), x_s(n_gauss), x_ss(n_gauss)
-real*8     :: y_g(n_gauss), y_s(n_gauss), y_ss(n_gauss)
+real*8     :: x_g(n_gauss), x_s(n_gauss), x_t(n_gauss), x_ss(n_gauss)
+real*8     :: y_g(n_gauss), y_s(n_gauss), y_t(n_gauss), y_ss(n_gauss)
 
-real*8     :: eq_g(n_plane,n_var,n_gauss), eq_s(n_plane,n_var,n_gauss), eq_p(n_plane,n_var,n_gauss), eq_ss(n_plane,n_var,n_gauss)
+real*8     :: eq_g(n_plane,n_var,n_gauss), eq_s(n_plane,n_var,n_gauss), eq_p(n_plane,n_var,n_gauss)
+real*8     :: eq_t(n_plane,n_var,n_gauss), eq_ss(n_plane,n_var,n_gauss)
 real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
 real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
 real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
-integer    :: vertex(2), direction(2), i, j, j2, ms, mt, mp, k, l, l2, index_ij, index_kl, index, xcase2
+integer    :: vertex(2), direction(2), direction_perp(2)
+integer    :: i, j, j2, j3, ms, mt, mp, k, l, l2, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
-real*8     :: ws, xjac,  BigR, phi, eps_cyl
+real*8     :: ws, xjac,  dl, BigR, phi, eps_cyl, Btot
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 real*8     :: rhs_ij_5, rhs_ij_6, rhs_ij_7
-real*8     :: theta, zeta
+real*8     :: theta, zeta, Zbig, BB2, bdotn, factor
+real*8     :: R_inside, Z_inside, R_mid, Z_mid, R_cnt, Z_cnt, normal(2), normal1(2), normal_direction(2)
+real*8     :: normal_sign, normal_sign3
 
 real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
-real*8     :: ps0, ps0_s, Vpar0, r0, T0  
-real*8     :: psi, psi_s, vpar, rho,  T
-real*8     :: alpha, R_inside, Z_inside, normal, normal1, DL, Dwall, gas_puff
-real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67, element_size_ij, element_size_kl
+real*8     :: ps0, ps0_s, ps0_t, ps0_x, ps0_y, Vpar0, r0, T0, T0_corr, cs0  
+real*8     :: psi, psi_s, psi_t, vpar, rho,  T, cs_T
+real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67, amat_76, amat_77, element_size_ij, element_size_kl
+real*8     :: element_size_perp, grad_t(2), factor_cs_bnd_integral
 logical    :: xpoint2
+
+type (type_node)         :: tmp_node
 
 theta = time_evol_theta
 zeta  = time_evol_zeta
 
+Zbig = 1.d12
+
+!--------------------- reorder the nodes to have the same direction as full element (maybe not necesary)
+if ((vertex(1) .eq. 3) .and. (vertex(2) .eq. 4)) then
+  tmP_node = nodes(1)
+  nodes(1)  = nodes(2)
+  nodes(2)  = tmp_node
+  vertex(1) = 4
+  vertex(2) = 3
+endif
+if ((vertex(1) .eq. 4) .and. (vertex(2) .eq. 1)) then
+  tmP_node = nodes(1)
+  nodes(1)  = nodes(2)
+  nodes(2)  = tmp_node
+  vertex(1) = 1
+  vertex(2) = 4
+endif
+if ((vertex(1) .eq. 3) .and. (vertex(2) .eq. 2)) then
+  tmP_node = nodes(1)
+  nodes(1)  = nodes(2)
+  nodes(2)  = tmp_node
+  vertex(1) = 2
+  vertex(2) = 3
+endif
+if ((vertex(1) .eq. 2) .and. (vertex(2) .eq. 1)) then
+  tmP_node = nodes(1)
+  nodes(1)  = nodes(2)
+  nodes(2)  = tmp_node
+  vertex(1) = 1
+  vertex(2) = 2
+endif
+
+
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
-x_g  = 0.d0; x_s  = 0.d0;  x_ss  = 0.d0; 
-y_g  = 0.d0; y_s  = 0.d0;  y_ss  = 0.d0; 
-eq_g = 0.d0; eq_s = 0.d0;  eq_ss = 0.d0; eq_p = 0.d0;
+x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_ss  = 0.d0; 
+y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_ss  = 0.d0; 
+eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_ss = 0.d0; eq_p = 0.d0;
 
 delta_g = 0.d0; delta_s = 0.d0;
 
-do i=1,2
+direction_perp(1) = 6 / direction(2)     ! =3 if direction(2)=2, =2 if direction(2)=3
+direction_perp(2) = 4
 
-  do j=1,2
+R_mid = sum(nodes(1:2)%x(1,1)) / 2.d0     ! mid point on boundary (approx.)
+Z_mid = sum(nodes(1:2)%x(1,2)) / 2.d0
+R_cnt = sum(nodes(1:4)%x(1,1)) / 4.d0     ! center point within element (approx.)
+Z_cnt = sum(nodes(1:4)%x(1,2)) / 4.d0
+
+normal_direction = (/R_mid - R_cnt, Z_mid - Z_cnt /) / norm2((/R_mid - R_cnt, Z_mid - Z_cnt /))
+
+do i=1,2    ! sum over 2 verices
+  
+  do j=1,2  ! sum over two basis functions
 
     j2 = direction(j)
-
     element_size_ij = element%size(vertex(i),j2)
+
+    j3 = direction_perp(j)
+    element_size_perp = - element%size(vertex(i),direction_perp(1)) * 3.d0
+
+    if ((vertex(1)*vertex(2) .eq. 2)) then
+      element_size_perp = + element%size(vertex(i),direction_perp(1)) * 3.d0
+    endif
 
     do ms=1, n_gauss
 
       x_g(ms)  = x_g(ms)  + nodes(i)%x(j2,1) * element_size_ij * H1(i,j,ms)
       x_s(ms)  = x_s(ms)  + nodes(i)%x(j2,1) * element_size_ij * H1_s(i,j,ms)
+      x_t(ms)  = x_t(ms)  + nodes(i)%x(j3,1) * element_size_ij * H1(i,j,ms)   * element_size_perp
 
       y_g(ms)  = y_g(ms)  + nodes(i)%x(j2,2) * element_size_ij * H1(i,j,ms)
       y_s(ms)  = y_s(ms)  + nodes(i)%x(j2,2) * element_size_ij * H1_s(i,j,ms)
+      y_t(ms)  = y_t(ms)  + nodes(i)%x(j3,2) * element_size_ij * H1(i,j,ms)   * element_size_perp
 
       do mp=1,n_plane
 
@@ -77,6 +137,7 @@ do i=1,2
 
             eq_g(mp,k,ms)  = eq_g(mp,k,ms)  + nodes(i)%values(in,j2,k) * element_size_ij * H1(i,j,ms)   * HZ(in,mp)
             eq_s(mp,k,ms)  = eq_s(mp,k,ms)  + nodes(i)%values(in,j2,k) * element_size_ij * H1_s(i,j,ms) * HZ(in,mp)
+            eq_t(mp,k,ms)  = eq_t(mp,k,ms)  + nodes(i)%values(in,j3,k) * element_size_ij * H1(i,j,ms)   * HZ(in,mp) * element_size_perp
             eq_p(mp,k,ms)  = eq_p(mp,k,ms)  + nodes(i)%values(in,j2,k) * element_size_ij * H1(i,j,ms)   * HZ_p(in,mp)
             eq_ss(mp,k,ms) = eq_ss(mp,k,ms) + nodes(i)%values(in,j2,k) * element_size_ij * H1_ss(i,j,ms)* HZ(in,mp)
 
@@ -94,116 +155,140 @@ enddo
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss
 
-   ws = wgauss(ms)
+  ws = wgauss(ms)
 
-   alpha = (Z_axis - Z_xpoint(1))/(R_axis - R_xpoint(1))
+  dl   = sqrt(x_s(ms)**2 + y_s(ms)**2) 
+  xjac = x_s(ms)*y_t(ms) - x_t(ms)*y_s(ms)
+  BigR = x_g(ms)
 
-   R_inside = alpha * (y_g(ms)-Z_xpoint(1)) + x_g(ms) + alpha**2 * R_xpoint(1)
-   R_inside = R_inside / (1.d0 + alpha**2)
-   Z_inside = alpha * (R_inside - R_xpoint(1)) + Z_xpoint(1)
+  grad_t = (/ - y_s(ms),   x_s(ms) /) / xjac
 
-   R_inside = min(max(R_inside,R_xpoint(1)),R_axis)
-   Z_inside = min(max(Z_inside,Z_xpoint(1)),Z_axis)
+  normal_direction = (/R_mid - R_cnt, Z_mid - Z_cnt /) / norm2((/R_mid - R_cnt, Z_mid - Z_cnt /))
 
-   DL   = sqrt(x_s(ms)**2 + y_s(ms)**2)
-   BigR = x_g(ms)
+  normal = dot_product(grad_t,normal_direction) * grad_t      ! outward pointing normal
+  normal = normal / norm2(normal)
 
-   do mp = 1, n_plane
+  do mp = 1, n_plane
 
-     ps0   = eq_g(mp,1,ms)
-     ps0_s = eq_s(mp,1,ms)             ! why not absolute value for normal orientation?
+    ps0   = eq_g(mp,1,ms)
+    ps0_s = eq_s(mp,1,ms) 
+    ps0_t = eq_t(mp,1,ms)   
+    ps0_x = (   y_t(ms) * ps0_s - y_s(ms) * ps0_t ) / xjac
+    ps0_y = ( - x_t(ms) * ps0_s + x_s(ms) * ps0_t ) / xjac
 
-     normal1 = ps0_s * (  (x_g(ms)-R_inside)*y_s(ms) - (y_g(ms)-Z_inside)*x_s(ms))
-     normal1 = normal1 / abs(normal1)
+    normal1 = ps0_s * (  (x_g(ms)-R_inside)*y_s(ms) - (y_g(ms)-Z_inside)*x_s(ms))
+    normal1 = normal1 / abs(normal1)
 
-     r0    = eq_g(mp,5,ms)
-     T0    = eq_g(mp,6,ms)
-     Vpar0 = eq_g(mp,7,ms)
+    r0    = eq_g(mp,5,ms)
+    T0    = eq_g(mp,6,ms)
+    Vpar0 = eq_g(mp,7,ms)
 
-     if (abs(Vpar0) .gt. 1.d-15) then
-       normal = (Vpar0 * ps0_s) / abs(Vpar0 * ps0_s)
-     else
-       normal = 0.d0
-     endif
+    T0_corr = corr_neg_temp1(T0)
 
-     do i=1,2                ! loop over nodes
+    cs0   = sqrt(gamma*T0_corr)
 
-       do j=1,2              ! loop over basis functions
+    Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
 
-         j2 = direction(j)
-         element_size_ij = element%size(vertex(i),j2)
+    BB2 = Btot**2
 
-         do im=1,n_tor
+    bdotn = (+ ps0_y * normal(1) - ps0_x * normal(2)) / x_g(ms) / Btot
 
-           index_ij = n_tor*n_var*(n_order+1)*(vertex(i)-1) + n_tor * n_var * (j2-1) + im   ! index in the ELM matrix
+    normal_sign  = bdotn / abs(bdotn)
+    normal_sign3 = ps0_s / abs(ps0_s) * normal_sign
 
-           v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)         ! test function
+     factor = 1.d0
+!    factor = (0.5d0 + 0.5d0 * tanh((abs(bdotn) - 0.02d0)/0.016d0))**2
 
-!diffuse perp flux only (unless we change the integration by parts of the density equation)
-           rhs_ij_5 = + v * density_reflection * r0 * vpar0 * ps0_s * normal * tstep        ! right hand side equation 5
+    factor_cs_bnd_integral = 0.d0
+    if (mach_one_bnd_integral) factor_cs_bnd_integral = 1.d0
 
-           rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * normal * tstep  ! right hand side equation 6
+    do i=1,2                ! loop over nodes
 
-           ij5 = index_ij + 4*n_tor                                          ! local index in element matrix
-           ij6 = index_ij + 5*n_tor                                          ! local index in element matrix
+      do j=1,2              ! loop over basis functions
 
-           RHS(ij5) = RHS(ij5) + rhs_ij_5 * ws                               ! add to element RHS
-           RHS(ij6) = RHS(ij6) + rhs_ij_6 * ws                               ! add to element RHS
+        j2 = direction(j)
+        element_size_ij = element%size(vertex(i),j2)
 
-           do k=1,2                                                          ! loop over nodes
+        do im=1,n_tor
 
-             do l=1,2                                                        ! loop over basis functions
+          index_ij = n_tor*n_var*(n_order+1)*(vertex(i)-1) + n_tor * n_var * (j2-1) + im   ! index in the ELM matrix
 
-               l2 = direction(l)
-               element_size_kl = element%size(vertex(k),l2)
+          v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)         ! test function
 
-               do in = 1, n_tor                                              ! loop over toroidal harmonics
+          rhs_ij_5 = + v * density_reflection * r0 * vpar0 * ps0_s * normal_sign3 * tstep          ! right hand side equation 5
 
-                 psi   = H1(k,l,ms)   * element_size_kl * HZ(in,mp)
+          rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * normal_sign3 * tstep   ! right hand side equation 6
 
-                 psi_s = H1_s(k,l,ms) * element_size_kl * HZ(in,mp)
+          rhs_ij_7 = - v * (vpar0 * Btot * normal_sign - cs0 * factor) * Zbig                      ! right hand side equation 7
 
-                 rho   = psi    ;    T   = psi   ;    vpar   = psi
 
-!diffuse perp flux only (unless we change the integration by parts of the density equation)
+          ij5 = index_ij + 4*n_tor                                          ! local index in element matrix
+          ij6 = index_ij + 5*n_tor                                          ! local index in element matrix
+          ij7 = index_ij + 6*n_tor                                          ! local index in element matrix
 
-                 amat_51 = - v * density_reflection * r0  * vpar0 * psi_s * normal * theta * tstep
-                 amat_55 = - v * density_reflection * rho * vpar0 * ps0_s * normal * theta * tstep 
-                 amat_57 = - v * density_reflection * r0  * vpar  * ps0_s * normal * theta * tstep
+          RHS(ij5) = RHS(ij5) + rhs_ij_5 * ws                               ! add to element RHS
+          RHS(ij6) = RHS(ij6) + rhs_ij_6 * ws                               ! add to element RHS
+          RHS(ij7) = RHS(ij7) + rhs_ij_7 * ws * factor_cs_bnd_integral      ! add to element RHS
 
-                 amat_61 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar0 * psi_s * normal * theta * tstep
-                 amat_65 = + v * (gamma_sheath-1.d0) * rho * T0 * vpar0 * ps0_s * normal * theta * tstep &
-                           + v * (gamma_sheath-1.d0) * rho * T0 * 0.00  * DL    * normal * theta * tstep
-                 amat_66 = + v * (gamma_sheath-1.d0) * r0  * T  * vpar0 * ps0_s * normal * theta * tstep &
-                           + v * (gamma_sheath-1.d0) * r0  * T  * 0.00  * DL    * normal * theta * tstep
+          do k=1,2                                                          ! loop over nodes
 
-                 amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * normal * theta * tstep 
+            do l=1,2                                                        ! loop over basis functions
 
-                 index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix
+              l2 = direction(l)
+              element_size_kl = element%size(vertex(k),l2)
 
-                 kl1 = index_kl
-                 kl5 = index_kl + 4*n_tor
-                 kl6 = index_kl + 5*n_tor
-                 kl7 = index_kl + 6*n_tor
+              do in = 1, n_tor                                              ! loop over toroidal harmonics
 
-                 ELM(ij5,kl1) =  ELM(ij5,kl1) + ws * amat_51
-                 ELM(ij5,kl5) =  ELM(ij5,kl5) + ws * amat_55
-                 ELM(ij5,kl7) =  ELM(ij5,kl7) + ws * amat_57
+                psi    = H1(k,l,ms)   * element_size_kl * HZ(in,mp)
+                psi_s  = H1_s(k,l,ms) * element_size_kl * HZ(in,mp)
+                psi_t  = H1(k,l,ms)   * element_size_kl * HZ(in,mp) * element_size_perp
 
-                 ELM(ij6,kl1) =  ELM(ij6,kl1) + ws * amat_61
-                 ELM(ij6,kl5) =  ELM(ij6,kl5) + ws * amat_65
-                 ELM(ij6,kl6) =  ELM(ij6,kl6) + ws * amat_66
-                 ELM(ij6,kl7) =  ELM(ij6,kl7) + ws * amat_67
+                rho  = psi
+                T    = psi   
+                vpar = psi
 
-               enddo
-             enddo
-           enddo
+                cs_T  = gamma * T / (2.d0 * cs0)
 
-         enddo
-       enddo
-     enddo
+                amat_51 = - v * density_reflection * r0  * vpar0 * psi_s * normal_sign3 * theta * tstep 
+                amat_55 = - v * density_reflection * rho * vpar0 * ps0_s * normal_sign3 * theta * tstep 
+                amat_57 = - v * density_reflection * r0  * vpar  * ps0_s * normal_sign3 * theta * tstep 
 
-   enddo
+                amat_61 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar0 * psi_s * normal_sign3 * theta * tstep 
+                amat_65 = + v * (gamma_sheath-1.d0) * rho * T0 * vpar0 * ps0_s * normal_sign3 * theta * tstep 
+                amat_66 = + v * (gamma_sheath-1.d0) * r0  * T  * vpar0 * ps0_s * normal_sign3 * theta * tstep 
+                amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * normal_sign3 * theta * tstep 
+           
+                amat_76 =   v * ( - cs_T) * factor          * Zbig
+                amat_77 =   v * (vpar * Btot * normal_sign) * Zbig 
+
+                index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix
+
+                kl1 = index_kl
+                kl5 = index_kl + 4*n_tor
+                kl6 = index_kl + 5*n_tor
+                kl7 = index_kl + 6*n_tor
+
+                ELM(ij5,kl1) =  ELM(ij5,kl1) + ws * amat_51
+                ELM(ij5,kl5) =  ELM(ij5,kl5) + ws * amat_55
+                ELM(ij5,kl7) =  ELM(ij5,kl7) + ws * amat_57
+
+                ELM(ij6,kl1) =  ELM(ij6,kl1) + ws * amat_61
+                ELM(ij6,kl5) =  ELM(ij6,kl5) + ws * amat_65
+                ELM(ij6,kl6) =  ELM(ij6,kl6) + ws * amat_66
+                ELM(ij6,kl7) =  ELM(ij6,kl7) + ws * amat_67
+
+                ELM(ij7,kl6) =  ELM(ij7,kl6) + ws * amat_76 * factor_cs_bnd_integral
+                ELM(ij7,kl7) =  ELM(ij7,kl7) + ws * amat_77 * factor_cs_bnd_integral
+	
+              enddo
+            enddo
+          enddo
+
+        enddo
+      enddo
+    enddo
+
+  enddo
 enddo
 
 return

@@ -483,6 +483,8 @@ required = 0
   if(restart) then
     call MPI_BCAST(wall_curr_initialized, 1 , MPI_LOGICAl,          0, MPI_COMM_WORLD, ierr)
     call MPI_BCAST(tstep,                 1 , MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_BCAST(index_start,           1 , MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+    call MPI_BCAST(index_now,             1 , MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)      
   end if
   call populate_element_rtree(node_list, element_list)
   

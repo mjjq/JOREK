@@ -48,7 +48,7 @@ function setmodel() {
     model="model$model"
   elif [ ! ${#model} -eq 8 ] || [[ ! ${model:5:3} =~ ^[0-9]+$ ]]; then
     echo "ERROR: Illegal model specified: '$model'." >&2
-    exit
+    exit 1
   fi
   # --- Set model in makefile configuration files
   for file in $make_config_files; do

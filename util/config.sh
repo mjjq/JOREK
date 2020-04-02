@@ -44,10 +44,11 @@ function val() {
 function setmodel() {
   model=$1
   # --- Some checks
-  if [ ${#model} -eq 3 ]; then
+  if [ -e "models/model$model" ]; then
     model="model$model"
   elif [ ! ${#model} -eq 8 ] || [[ ! ${model:5:3} =~ ^[0-9]+$ ]]; then
     echo "ERROR: Illegal model specified: '$model'." >&2
+    exit
   fi
   # --- Set model in makefile configuration files
   for file in $make_config_files; do

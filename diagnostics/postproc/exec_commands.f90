@@ -155,6 +155,8 @@ module exec_commands
           call gourdon(command, first_step, ierr)
         case ( 'grid' )
           call grid(command, ierr)
+        case ( 'grid_diagnostics' )
+          call grid_diagnostics(command, ierr)
         case ( 'help' )
           call help(command, ierr)
         case ( 'I_halo_TPF' )
@@ -210,11 +212,12 @@ module exec_commands
     else
       
       select case ( trim(command%args(0)) )
-        case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane', 'average', 'point',      &
-          'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params', 'qprofile',        &
-          'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon', 'jorek-units',         & 
-          'jnorm_bnd_curr', 'si-units', 'grid', 'rectangle', 'rectangular_torus', 'energy_spectrum', 'average_h5', &
-          'I_halo_TPF', 'spi-state', 'zeroD_quantities', 'boundary_quantities')
+        case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane',       &
+          'average', 'point', 'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params',        &
+          'qprofile', 'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon',       &
+          'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics', 'rectangle',    &
+          'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF', 'spi-state',         &
+          'zeroD_quantities', 'boundary_quantities')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -2624,6 +2627,45 @@ module exec_commands
     call system('mv '//'grid_'//trim(step_range_string(index_now,index_now))//'.dat '//DIR)
     
   end subroutine grid
+  
+  
+  
+  
+  
+  !> Output detailed information about the computational grid.
+  subroutine grid_diagnostics(command, ierr)
+    
+    use mod_boundary, only: log_bnd_info
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0); if ( ierr /= 0 ) return
+    
+    write(*,*)
+    write(*,*) '*******************************************************************************'
+    write(*,*) '*** Information about the computational grid **********************************'
+    write(*,*) '*******************************************************************************'
+
+    call log_grid_info(.true., node_list, element_list, DIR, trim(step_range_string(index_now,index_now))//'.dat')
+    
+    ! --- Also write out the grid in the same way as the "grid" postproc command does
+    call grid(command,ierr)
+    
+    write(*,*)
+    write(*,*) '*** Boundary elements and nodes ***********************************************'
+    call log_bnd_info(.true., node_list, bnd_node_list, bnd_elm_list, DIR, trim(step_range_string(index_now,index_now))//'.dat')
+    
+    write(*,*) '*******************************************************************************'
+    write(*,*) '*** End: Information about the computational grid *****************************'
+    write(*,*) '*******************************************************************************'
+    write(*,*)
+    
+  end subroutine grid_diagnostics
   
   
   

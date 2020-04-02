@@ -56,7 +56,7 @@ contains
 #endif
 
     ! --- Call element_matrix
-    if ( n_tor .ge. n_tor_fft_thresh ) then
+    if ( (n_tor .ge. n_tor_fft_thresh) .or. (unified_element_matrix) ) then
       call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid, &
         thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn, &

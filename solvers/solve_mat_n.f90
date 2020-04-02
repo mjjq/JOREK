@@ -263,6 +263,16 @@ contains
           call MPI_BCAST(n_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
           call MPI_BCAST(nnz_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 #endif
+          if (my_id_n .gt. 0) then
+            if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+            if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+            if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+            if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
+            call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"mumps_par%irn",CAT_DMATRIX)
+            call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"mumps_par%jcn",CAT_DMATRIX)
+            call tr_allocatep(mumps_par%a,1,mumps_par%nz,"mumps_par%a",CAT_DMATRIX)
+            call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
+          endif
 
           ! Split MPI_BCAST if MPI buffer beyond 2Go
           type='intIRN'
@@ -567,6 +577,17 @@ contains
            call tr_debug_writei("smn_C_mumps_par%n",mumps_par%n)
            call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
         end if
+
+        if (n_cpu_n>1) then
+          if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+          if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+          if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+        else
+          mumps_par%A => null()
+          mumps_par%irn => null()
+          mumps_par%jcn => null()
+        endif
+
         call tr_locvnorms("smn_rhs",mumps_par%rhs,mumps_par%n)
 
 #ifndef USE_PASTIX6
@@ -654,17 +675,6 @@ contains
     call tr_set_precondmem(pastix_dparm(DPARM_MEM_MAX)) ! DPARM_MEM_MAX DEPRECATED IN PASTIX6: how to change this?
     ! ############### This should be looked at at some point
 #endif
-
-    if (n_cpu_n>1) then
-      call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
-      call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
-      call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-    else
-      mumps_par%a=>null()
-      mumps_par%irn=>null()
-      mumps_par%jcn=>null()
-    endif  
-
     call tr_print_memsize("AfterSolveN")
     call r3_info_end (r3_info_index_0)         ! timing
     return
@@ -755,9 +765,16 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       endif
 
       call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,spss_analyzed)
-      call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
-      call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
-      call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+
+      if (n_cpu_n>1) then
+        call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+        call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+        call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+      else
+        mumps_par%a => null()
+        mumps_par%irn => null()
+        mumps_par%jcn => null()
+      endif 
 
       if (.not. spss_analyzed) then
         call strumpack_analyze(MPI_COMM_N)

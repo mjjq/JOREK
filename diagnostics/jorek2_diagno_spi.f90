@@ -1,6 +1,13 @@
-!**********************************************************************
-!* program to extract data from a JOREK2 restart file                 *
-!**********************************************************************
+!************************************************************************************************
+!* program to extract data from a JOREK2 restart file                                           *
+!*                                                                                              *     
+!* To run this diagnostic on Marconi, you may need to book a debug node with a command          *
+!* of the type:                                                                                 *
+!* salloc --nodes=1 --time=01:00:00 --exclusive --account=FUA33_DISJOR --partition=skl_fua_dbg  *
+!* and run:                                                                                     *
+!* ulimit -s unlimited                                                                          *
+!* srun jorek2_diagno_spi < jorek_in                                                                *
+!************************************************************************************************
 
 program jorek2_diagno_spi
 !-----------------------------------------------------------------------

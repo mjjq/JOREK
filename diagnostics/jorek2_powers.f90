@@ -1,7 +1,14 @@
-!**********************************************************************
-!* program to calculate the density and power fluxes at the boudnary  *
-!* from a JOREK2 restart file                                         *
-!**********************************************************************
+!************************************************************************************************
+!* program to calculate the density and power fluxes at the boundary                            *
+!* from a JOREK2 restart file                                                                   *
+!*                                                                                              *
+!* To run this diagnostic on Marconi, you may need to book a debug node with a command          *
+!* of the type:                                                                                 *
+!* salloc --nodes=1 --time=01:00:00 --exclusive --account=FUA33_DISJOR --partition=skl_fua_dbg  *
+!* and run:                                                                                     *
+!* ulimit -s unlimited                                                                          *
+!* srun jorek2_powers < jorek_in                                                                *
+!************************************************************************************************
 
 program jorek_powers
 !-----------------------------------------------------------------------

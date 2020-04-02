@@ -26,6 +26,6 @@ module mod_parameters
        'Density    ','Ions_Temp  ','V_parallel ','N_density  '/)
   
   !> element_matrix and element_matrix_fft combined into a single one?
-  logical, parameter: unified_element_matrix = .true.
+  logical, parameter :: unified_element_matrix = .true.
 
 end module mod_parameters

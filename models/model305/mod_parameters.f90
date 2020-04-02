@@ -26,6 +26,6 @@ module mod_parameters
        Trim('Density    '),Trim('Temperature'),Trim('V_parallel '), Trim('J_ECCD    ') /)
   
   !> element_matrix and element_matrix_fft combined into a single one?
-  logical, parameter: unified_element_matrix = .false.
+  logical, parameter :: unified_element_matrix = .false.
 
 end module mod_parameters

@@ -14,7 +14,7 @@ contains
        &                             omp_tid, ife, n_local_elms, node_list)
 
     ! --- Modules
-    use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order
+    use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order, unified_element_matrix
     use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks, keep_n0_const
     USE data_structure,           only : type_element, type_node, type_node_list, thread_struct
     use mod_boundary_matrix_open, only : boundary_matrix_open

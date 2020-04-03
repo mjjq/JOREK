@@ -116,17 +116,16 @@ if (mf .le. 0) then
       endif
       
       ! --- Manipulate Psi boundary
-      do k = 1, n_boundary
-        do l = 1, 5
-          amp = manipulate_psi_map(l,1)
-          Rm  = manipulate_psi_map(l,2)
-          Zm  = manipulate_psi_map(l,3)
-          dRm = manipulate_psi_map(l,4)
-          dZm = manipulate_psi_map(l,5)
-          dPsi = dPsi + amp * exp(-(R_boundary(i)-Rm)**2/dRm**2-(Z_boundary(i)-Zm)**2/dZm**2)
-        end do
-        psi_tmp(k) = psi_tmp(k) + dPsi
+      dPsi = 0.d0
+      do l = 1, 5
+        amp = manipulate_psi_map(l,1)
+        Rm  = manipulate_psi_map(l,2)
+        Zm  = manipulate_psi_map(l,3)
+        dRm = manipulate_psi_map(l,4)
+        dZm = manipulate_psi_map(l,5)
+        dPsi = dPsi + amp * exp(-(R_boundary(i)-Rm)**2/dRm**2-(Z_boundary(i)-Zm)**2/dZm**2)
       end do
+      psi_tmp(i) = psi_tmp(i) + dPsi
     
     end do
 

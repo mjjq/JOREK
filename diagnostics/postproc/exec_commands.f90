@@ -191,6 +191,8 @@ module exec_commands
           call qprofile(command, first_step, ierr)
         case ( 'q_at_psin' )
           call q_at_given_psin(command, first_step, ierr)
+        case ( 'find_q_surface' )
+          call find_q_surface(command, first_step, ierr)
         case ( 'separatrix' )
           call separatrix(command, ierr)
         case ( 'set' )
@@ -217,7 +219,7 @@ module exec_commands
           'qprofile', 'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon',       &
           'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics', 'rectangle',    &
           'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF', 'spi-state',         &
-          'zeroD_quantities', 'boundary_quantities')
+          'zeroD_quantities', 'boundary_quantities', 'find_q_surface' )
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -2118,6 +2120,132 @@ module exec_commands
     if ( allocated(surface_list%flux_surfaces) ) deallocate(surface_list%flux_surfaces)
     
   end subroutine q_at_given_psin
+  
+
+
+  
+
+  !> Real-space location of a rational surface
+  subroutine find_q_surface(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: i_file, npts, npsi, i_elm, i, k, j, nplot, ip
+    character(len=1024) :: filename, status, access
+    real*8 :: t_norm, qvalue, ss1, dss1, ss2, dss2, tt1, dtt1, tt2, dtt2, u, si, dsi, ti, dti
+    real*8 :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
+    real*8, allocatable      :: q(:), rad(:), psi_values(:)
+    type (type_surface_list) :: surface_list
+ 
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    
+    qvalue  = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
+    
+    npts    = get_int_setting('surfaces', ierr)
+   
+    write(filename,'(5a)') DIR, 'q_surface_', trim(real2str(qvalue,'(f12.4)')), &
+       trim(step_range_string(index_start,index_start)), '.dat'    
+    status = 'replace'
+    access = 'sequential'
+    i_file=133
+
+    open(i_file, file=trim(filename), form='formatted', status=trim(status), access=trim(access),  &
+      iostat=ierr)
+    
+    ! --- Determine q-profile
+    surface_list%n_psi = npts
+    allocate( surface_list%psi_values(npts), q(npts), rad(npts), psi_values(npts) )
+    do k = 1, npts
+      surface_list%psi_values(k) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * real(k-1)/real(npts-1)
+    end do
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
+    call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
+      ES%Z_xpoint, q, rad)
+    
+    ! --- Find the PsiN locations
+    npsi = 0
+    do i = 1, npts-1
+      if ( (q(i)-qvalue)*(q(i+1)-qvalue) < 0.d0 ) then ! is it between these two points?
+        npsi = npsi + 1
+        psi_values(npsi) = surface_list%psi_values(i)
+        ! ### need to interpolate
+      end if
+    end do
+    
+    if ( npsi < 1 ) then
+      write(*,*)
+      write(*,*) 'WARNING: q_at_given_psin did not find a rational surface. Sign of q?'
+      return
+    end if
+    
+    ! --- Find flux surfaces and determine q-profile
+    surface_list%n_psi = max(2, npsi)
+    do i = 1, npsi
+      surface_list%psi_values(i) = psi_values(i)
+    end do
+
+    call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
+    
+    ! --- Write out flux surfaces
+    nplot  = 5
+    do i = 1, npsi
+      
+      ! --- Loop over all segments of this flux surface
+      do j=1,surface_list%flux_surfaces(i)%n_pieces
+        
+        ! --- Bezier element, in which the current flux surface segment is located
+        i_elm = surface_list%flux_surfaces(i)%elm(j)
+        ss1  = surface_list%flux_surfaces(i)%s(1,j)
+        dss1 = surface_list%flux_surfaces(i)%s(2,j)
+        ss2  = surface_list%flux_surfaces(i)%s(3,j)
+        dss2 = surface_list%flux_surfaces(i)%s(4,j)
+        
+        tt1  = surface_list%flux_surfaces(i)%t(1,j)
+        dtt1 = surface_list%flux_surfaces(i)%t(2,j)
+        tt2  = surface_list%flux_surfaces(i)%t(3,j)
+        dtt2 = surface_list%flux_surfaces(i)%t(4,j)
+        
+        ! --- Loop over nplot points in a flux surface segment
+        do ip = 1, nplot
+          u = -1. + 2.*float(ip-1)/float(nplot-1)
+          
+          ! --- Determine s and t values of the current point inside element i_elm
+          call CUB1D(ss1, dss1, ss2, dss2, u, si, dsi)
+          call CUB1D(tt1, dtt1, tt2, dtt2, u, ti, dti)
+          
+          ! --- Determine (R,Z)-coordinates of the current point on the current flux surface
+          call interp_RZ(node_list, element_list, i_elm, si, ti, R, R_s, R_t, R_st, R_ss, R_tt, &
+            Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
+            
+          ! --- Write out the (R,Z)-coordinates
+          write(i_file,'(2ES16.7)') R, Z
+        end do
+        
+        write(i_file,*)
+        write(i_file,*)
+      
+      end do
+      
+    end do
+    
+    close(i_file)
+
+    ! --- Clean up.
+    if ( allocated(psi_values)                 ) deallocate(psi_values)
+    if ( allocated(q)                          ) deallocate(q)
+    if ( allocated(rad)                        ) deallocate(rad)
+    if ( allocated(surface_list%psi_values)    ) deallocate(surface_list%psi_values)
+    if ( allocated(surface_list%flux_surfaces) ) deallocate(surface_list%flux_surfaces)
+    
+  end subroutine find_q_surface
   
 
 

@@ -1,5 +1,9 @@
 !**********************************************************************
 !* program to extract data from a JOREK2 restart file                 *
+!*                                                                    *
+!* This diagnostic has to be run with MPI (mpirun/mpiexec/srun        *
+!* depending on the system). For details, see:                        *
+!* https://www.jorek.eu/wiki/doku.php?id=diagnostics#diagnostics      *
 !**********************************************************************
 
 program jorek2_diagno_spi

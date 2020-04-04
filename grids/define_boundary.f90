@@ -74,6 +74,18 @@ if (mf .le. 0) then
         psi_tmp(i) = 0.d0
       endif
 
+      ! --- Manipulate Psi boundary
+      dPsi = 0.d0
+      do l = 1, 5
+        amp = manipulate_psi_map(l,1)
+        Rm  = manipulate_psi_map(l,2)
+        Zm  = manipulate_psi_map(l,3)
+        dRm = manipulate_psi_map(l,4)
+        dZm = manipulate_psi_map(l,5)
+        dPsi = dPsi + amp * exp(-(R_boundary(i)-Rm)**2/dRm**2-(Z_boundary(i)-Zm)**2/dZm**2)
+      end do
+      psi_tmp(i) = psi_tmp(i) + dPsi
+
     enddo
 
     r_tmp(n_bnd)   = r_tmp(1)

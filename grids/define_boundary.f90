@@ -82,7 +82,7 @@ if (mf .le. 0) then
         Zm  = manipulate_psi_map(l,3)
         dRm = manipulate_psi_map(l,4)
         dZm = manipulate_psi_map(l,5)
-        dPsi = dPsi + amp * exp(-(R_boundary(i)-Rm)**2/dRm**2-(Z_boundary(i)-Zm)**2/dZm**2)
+        dPsi = dPsi + amp * exp(-((Rp+R_geo)-Rm)**2/dRm**2-((Zp+Z_geo)-Zm)**2/dZm**2)
       end do
       psi_tmp(i) = psi_tmp(i) + dPsi
 

@@ -2164,19 +2164,31 @@ module exec_commands
     surface_list%n_psi = npts
     allocate( surface_list%psi_values(npts), q(npts), rad(npts), psi_values(npts) )
     do k = 1, npts
-      surface_list%psi_values(k) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * real(k-1)/real(npts-1)
+      surface_list%psi_values(k) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * real(k+1)/real(npts+2)
     end do
     call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
     call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
       ES%Z_xpoint, q, rad)
+    
+    ! --- Clean up q-profile from "jumps" -- TODO: a better solution is needed
+    do j = 1, 2
+    do k = 5, 1, -1
+    do i = k+1, npts-k
+      if ( abs(q(i+k)-q(i-k)) < abs(q(i)-0.5d0*(q(i+k)+q(i-k))) ) then
+        q(i) = q(i-k) + (q(i+k)-q(i-k)) * &
+          (surface_list%psi_values(i)  -surface_list%psi_values(i-k)) / &
+          (surface_list%psi_values(i+k)-surface_list%psi_values(i-k))
+      end if
+    end do
+    end do
+    end do
     
     ! --- Find the PsiN locations
     npsi = 0
     do i = 1, npts-1
       if ( (q(i)-qvalue)*(q(i+1)-qvalue) < 0.d0 ) then ! is it between these two points?
         npsi = npsi + 1
-        psi_values(npsi) = surface_list%psi_values(i)
-        ! ### need to interpolate
+        psi_values(npsi) = surface_list%psi_values(i) + ( surface_list%psi_values(i+1)-surface_list%psi_values(i) ) * (qvalue-q(i))/(q(i+1)-q(i))
       end if
     end do
     
@@ -2226,6 +2238,8 @@ module exec_commands
             Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
             
           ! --- Write out the (R,Z)-coordinates
+          if ( xpoint .and. ( xcase /= 2 ) .and. (Z < ES%Z_xpoint(1) ) ) cycle
+          if ( xpoint .and. ( xcase /= 1 ) .and. (Z > ES%Z_xpoint(2) ) ) cycle
           write(i_file,'(2ES16.7)') R, Z
         end do
         

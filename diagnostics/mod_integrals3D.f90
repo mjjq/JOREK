@@ -394,20 +394,18 @@ do ife = ife_min, ife_max
     do mt=1, n_gauss
       call density(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                    dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+
 #if (JOREK_MODEL == 400 || JOREK_MODEL == 502)
       call temperature_e(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 #else
-      call temperature(xpoint, xcase, y_g(ms,mt), Z_xpoint,eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
-                       dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+      call temperature(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
+                       dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+      eq_zTe(ms,mt) = eq_zTe(ms,mt) / 2.d0	! electron temperature
 #endif
     enddo
   enddo
-#if (JOREK_MODEL == 400 || JOREK_MODEL == 502)
-  eq_zTe = eq_zTe
-#else
-  eq_zTe = eq_zTe / 2.d0	! electron temperature
-#endif
+
   !--------------------------------------------------- sum over the Gaussian integration points
   do mp=1,n_plane
 

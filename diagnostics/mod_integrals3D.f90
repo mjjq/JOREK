@@ -127,6 +127,7 @@ real*8  :: source_bg, source_imp, source_tmp
 #endif
 
 ! Additional diagnostic variables for impurity model
+! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
 #if (JOREK_MODEL == 501)
 real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion
 real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
@@ -143,7 +144,6 @@ real*8  :: T_rad, ne_rad, T_rad_real
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
 integer*8  :: ion_i, ion_k, i_phi
-
 #endif
 
 integer    :: spi_i
@@ -408,7 +408,7 @@ do ife = ife_min, ife_max
         BigR = x_g(ms,mt)
 
         r0     = eq_g(mp,5,ms,mt)
-        r0_corr = corr_neg_dens(r0,(/1.d-8,1.d-5/),1.d-3) ! Correction for negative r0 ...
+        r0_corr = corr_neg_dens(r0,(/1.d-9,1.d-5/),1.d-3) ! Correction for negative r0 ...
         T0     = eq_g(mp,6,ms,mt)
         T0e    = eq_g(mp,6,ms,mt) /2.d0
         zj0    = eq_g(mp,3,ms,mt)
@@ -433,7 +433,7 @@ do ife = ife_min, ife_max
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
         rn0    = eq_g(mp,8,ms,mt)
-        rn0_corr = corr_neg_dens(rn0, (/ 1.d-12, 1.d-5 /),1.d-3) ! Correction for negative rn0 ...
+        rn0_corr = corr_neg_dens(rn0, (/ 1.d-9, 1.d-5 /),1.d-3) ! Correction for negative rn0 ...
 #endif
 
         T0_corr = corr_neg_temp(T0)
@@ -499,11 +499,11 @@ do ife = ife_min, ife_max
 
         select case ( trim(gas_type) )
           case('D2')
-            m_i_over_m_imp = central_mass/2.
+            m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
           case('Ar')
-            m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
+            m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u
           case('Ne')
-            m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
+            m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
           case default
             write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
             write(*,*) '=> We assume the gas is D2.'
@@ -523,7 +523,7 @@ do ife = ife_min, ife_max
           call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
                                         p_out=P_imp,z_eff=Z_imp)
    
-          ! Calculate the ionization potential energy and it's time gradient
+          ! Calculate the ionization potential energy and its derivative wrt. temperature
           E_ion     = 0.
           E_ion_bg  = 13.6
           do ion_i=1, imp_adas(1)%n_Z
@@ -547,10 +547,8 @@ do ife = ife_min, ife_max
         P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
         P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
 
-        if (ne_rad > 1.d16 .and. T_rad_real > 3. .and. rn0 > 0.) then
+        if (ne_rad > 1.d18 .and. T_rad_real > 5. .and. rn0 > 1.d-8) then
           Lrad = 0.0
-          ! Here we are temperarily only considering one impurity species, in the
-          ! future maybe a do loop will is needed
           call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad)
           if (Lrad < 0.) Lrad = 0.
         else

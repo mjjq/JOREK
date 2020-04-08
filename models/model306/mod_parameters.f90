@@ -44,5 +44,8 @@ module mod_parameters
   character(len=11) :: variable_names(n_var) =                       &
     (/ Trim('Flux       '),Trim('Potential  '),Trim('Current    '),Trim('Vorticity  '),      &
        Trim('Density    '),Trim('Temperature'),Trim('V_parallel '), Trim('J_EC1     '), Trim('J_EC2     ') /)
+  
+  !> element_matrix and element_matrix_fft combined into a single one?
+  logical, parameter :: unified_element_matrix = .false.
 
 end module mod_parameters

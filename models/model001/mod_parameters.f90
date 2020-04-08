@@ -42,5 +42,8 @@ module mod_parameters
  
   !> Names of the physical variables
   parameter (variable_names = (/ 'Potential  ','Vorticity  ' /))
+  
+  !> element_matrix and element_matrix_fft combined into a single one?
+  logical, parameter :: unified_element_matrix = .false.
 
 endmodule

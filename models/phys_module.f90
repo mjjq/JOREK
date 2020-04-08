@@ -16,17 +16,13 @@ module phys_module
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant.
   real*8  :: T_eta_thres          !< The temperature threshold for resistivity,
                                   !< beyond which the resistivity is truncated.
-  real*8  :: T_eta_thres_ohm      !< Temp. threshold for resistivity used in ohmic heating term
-
+  real*8  :: T_eta_thres_ohm      !< Temp. threshold for resistivity used in Ohmic heating term
   real*8  :: visco                !< Viscosity at plasma center (normalized)
   real*8  :: visco_rst            !< visco value from restart file
   real*8  :: visco_par_rst        !< visco_par value from restart file
   real*8  :: eta_rst              !< eta value from restart file
-
-  ! Temperature dependence of the hyper-resistivity and hyper-viscosity
-  logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature, otherwise constant
-  logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature, otherwise constant
-
+  logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature? Otherwise constant.
+  logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature? Otherwise constant.
   logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
   real*8  :: visco_par            !< Parallel viscosity (normalized)
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
@@ -269,9 +265,9 @@ module phys_module
   real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
   real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
 
-  character(len=80) :: gas_type !< Type of gas used in MGI: Argon, D2, ...
+  character(len=80) :: gas_type !< Type of gas used in material injection (MGI, SPI, ...): Argon, D2, ...
 
-  !> @name Shattered pellet injection-related input parameters
+  !> @name Shattered Pellet Injection related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
   ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
   ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
@@ -281,9 +277,9 @@ module phys_module
   real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection (in m/s)
   real*8  :: spi_quantity       !< Total number of injected atoms by SPI
   real*8  :: spi_quantity_bg    !< Total injected atom number for background species SPI
-  real*8  :: ng_radius_ratio    !! Ratio between the radius of neutral gas cloud and shard radius
-                                !! Assumed constant. If ng_radius_ratio times shard radius > ng_radius_min,
-                                !! this radius is used for neutral deposition, otherwise the ng_radius_min.
+  real*8  :: ng_radius_ratio    !< Ratio between the radius of neutral gas cloud and shard radius
+                                !< Assumed constant. If ng_radius_ratio times shard radius > ng_radius_min,
+                                !< this radius is used for neutral deposition, otherwise the ng_radius_min.
 
   real*8  :: spi_Vel_diff       !< The maximum speed difference from the reference speed
   real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
@@ -293,12 +289,12 @@ module phys_module
 
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud for numerical reasons (in m)
 
-  real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
-  real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
-  real*8, allocatable  :: xtime_spi_ablation_bg(:,:) ! The time history of spi ablation for background species
-  real*8, allocatable  :: xtime_spi_ablation_bg_rate(:,:) ! The time history of spi ablation rate for bg species
+  real*8, allocatable  :: xtime_spi_ablation(:,:)         !< The time history of SPI ablation
+  real*8, allocatable  :: xtime_spi_ablation_rate(:,:)    !< The time history of SPI ablation rate
+  real*8, allocatable  :: xtime_spi_ablation_bg(:,:)      !< The time history of SPI ablation for background species
+  real*8, allocatable  :: xtime_spi_ablation_bg_rate(:,:) ! <The time history of SPI ablation rate for bg species
 
-  real*8, allocatable  :: xtime_radiation(:)    ! The time history of radiated energy in SI unit
+  real*8, allocatable  :: xtime_radiation(:)    !< The time history of radiated energy in SI unit
 
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: spi_abl_model      !< Ablation model to be used. 0 for constant release rate, 1 for NGS model, 2 for Sergeev formula
@@ -308,13 +304,13 @@ module phys_module
   character(len=256) :: spi_shard_file !< The name of the shard size file
 
   logical :: output_rad_phi     !< Output the radiation asymmetry into a file using integrals_3D
-  integer :: n_adas             !< Number of species to be traced by adas, for future development only
+  integer :: n_adas             !< Number of species to be traced by ADAS, for future development only
 
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
 
-  character(len=512)            :: adas_dir    !< The directory of adas data file to be read
+  character(len=512)            :: adas_dir    !< The directory of ADAS data file to be read
   type (adf11_all), allocatable :: imp_adas(:) !< The ADAS data for impurities
   type (coronal), allocatable   :: imp_cor(:)  !< The coronal equilibrium distribution of impurities
 

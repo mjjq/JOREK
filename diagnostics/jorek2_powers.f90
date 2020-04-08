@@ -1,6 +1,10 @@
 !**********************************************************************
-!* program to calculate the density and power fluxes at the boudnary  *
+!* program to calculate the density and power fluxes at the boundary  *
 !* from a JOREK2 restart file                                         *
+!*                                                                    *
+!* This diagnostic has to be run with MPI (mpirun/mpiexec/srun        *
+!* depending on the system). For details, see:                        *
+!* https://www.jorek.eu/wiki/doku.php?id=diagnostics#diagnostics      *
 !**********************************************************************
 
 program jorek_powers

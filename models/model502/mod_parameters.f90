@@ -25,4 +25,7 @@ module mod_parameters
     (/ 'Flux       ','Potential  ','Current    ','Vorticity  ',      &
        'Density    ','Ions_Temp  ','V_parallel ','N_density  ','Elec_Temp  '/)
 
+  !> element_matrix and element_matrix_fft combined into a single one?
+  logical, parameter :: unified_element_matrix = .false.
+
 end module mod_parameters

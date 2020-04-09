@@ -275,10 +275,9 @@ contains
 !! The element contributions are determined by element_matrix(_fft). Additional
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
-subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,      & 
-                            xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,& 
-                            i_tor_min, i_tor_max, n_tmp, nz_tmp, ndof, A_tmp, rhs_glob_tmp, irn_tmp, jcn_tmp, & 
-                            ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, direct_construction)
+subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max, & 
+                            xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max,  &
+                            n, nz, ndof, A_mat, rhs_glob, irn, jcn, ijA_index, ijA_size, irn_jcn, direct_construction)
   
   use mumps_module 
   use tr_module 
@@ -324,15 +323,15 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   logical, intent(in) :: xpoint2
   integer, intent(in) :: i_tor_min
   integer, intent(in) :: i_tor_max
-  integer, intent(in) :: n_tmp  
-  integer, intent(in) :: nz_tmp 
+  integer, intent(in) :: n  
+  integer, intent(in) :: nz 
   integer, intent(in) :: ndof 
   logical, intent(in) :: direct_construction
-  real*8,  intent(in), pointer :: A_tmp(:)
-  real*8,  intent(in), pointer :: rhs_glob_tmp(:)
-  integer, intent(in), pointer :: irn_tmp(:)
-  integer, intent(in), pointer :: jcn_tmp(:)
-  integer, intent(in), pointer :: ijA_index_tmp(:,:), ijA_size_tmp(:), irn_jcn_tmp(:,:)
+  real*8,  intent(in), pointer :: A_mat(:)
+  real*8,  intent(in), pointer :: rhs_glob(:)
+  integer, intent(in), pointer :: irn(:)
+  integer, intent(in), pointer :: jcn(:)
+  integer, intent(in), pointer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
   !--- Internal variables
   type (type_element)               :: element
   type (type_node)                  :: nodes(n_vertex_max)
@@ -406,7 +405,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
     ! --- Memory allocation
     if (allocated(A_glob))    call tr_deallocate(A_glob,"A_glob",CAT_DMATRIX) 
-    call tr_allocate(A_glob,1,nz_tmp,"A_glob",  CAT_DMATRIX)
+    call tr_allocate(A_glob,1,nz,"A_glob",  CAT_DMATRIX)
 
     if (allocated(rhs_glob))    call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX) 
     call tr_allocate(rhs_glob, 1,ndof,"rhs_glob", CAT_DMATRIX)
@@ -423,9 +422,9 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,local_elms,element_list,node_list,          &
   !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,direct_construction,       &
-  !$omp          A_tmp, rhs_local, rhs_glob_tmp, irn_tmp, jcn_tmp,      &
+  !$omp          A_mat, rhs_local, rhs_glob, irn, jcn,      &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
-  !$omp          ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, &
+  !$omp          ijA_index, ijA_size, irn_jcn, &
   !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn) &
   !$omp   private(ife,ielm,iv,inode,element,nodes,i,inode1,i_order,index_node1,           &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
@@ -638,7 +637,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
                 index_large_k = (i_tor_max - i_tor_min + 1) * n_var * (index_node2 - 1)
    
-                call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp)
+                call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
                 thread_struct(omp_tid)%synch_buff(:) = 0.d0
                 do j = 1, n_var * (i_tor_max - i_tor_min + 1)
@@ -652,8 +651,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var*(i_tor_max - i_tor_min + 1) + l
 
-                    irn_tmp(ilarge2) = index_large_i	+ j
-                    jcn_tmp(ilarge2) = index_large_k	+ l
+                    irn(ilarge2) = index_large_i	+ j
+                    jcn(ilarge2) = index_large_k	+ l
 
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
@@ -663,8 +662,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
                 enddo ! n_var * n_tor
 
                 !$omp critical
-                A_tmp(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
-                  A_tmp(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
+                A_mat(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
+                  A_mat(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
                   thread_struct(omp_tid)%synch_buff(:)
                 !$omp end critical 
 
@@ -685,23 +684,21 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
  
   
   ! --- Memory tracking
-  call tr_vnorms("cm_A_bef_bc",A_tmp,nz_tmp)
+  call tr_vnorms("cm_A_bef_bc",A_mat,nz)
   
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,  &
-                           index_min, index_max,  rhs_local, xpoint2, xcase2, R_axis, Z_axis,    & 
+                           index_min, index_max,  rhs_local, xpoint2, xcase2, R_axis, Z_axis,        & 
                            psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false.,      & 
-                           ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, irn_tmp, jcn_tmp,& 
-                           A_tmp, i_tor_min, i_tor_max )
+                           ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
 
   if (fix_axis_nodes) then
     call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max, & 
-                           ijA_index_tmp, ijA_size_tmp, irn_jcn_tmp, irn_tmp, jcn_tmp,& 
-                           A_tmp, i_tor_min, i_tor_max )
+                           ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
   endif
 
   ! --- Memory tracking
-  call tr_vnorms("cm_A_aft_bc",A_tmp,nz_tmp)
+  call tr_vnorms("cm_A_aft_bc",A_mat,nz)
 
   if(.not.direct_construction) then 
 

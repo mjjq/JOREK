@@ -31,7 +31,7 @@ real*8  :: eq_g(n_plane,n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gau
 real*8  :: eq_t(n_plane,n_var,n_gauss,n_gauss), eq_p(n_plane,n_var,n_gauss,n_gauss)
 real*8  :: wgauss_copy(n_gauss)
 
-real*8  :: current_source, particle_source, heat_source, heat_source_i, heat_source_e, xt, t_norm, rho_norm, rotation_source
+real*8  :: particle_source, heat_source, heat_source_i, heat_source_e, xt, t_norm, rho_norm, rotation_source
 real*8  :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
 real*8  :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz
 real*8  :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz
@@ -147,7 +147,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
 !$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi,        &
 !$omp           P_max, source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2, eta_T_ohm,    &
-!$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
+!$omp           heat_source, heat_source_i, heat_source_e, particle_source, rotation_source,   &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           r0_corr, T0_corr,                                                              &
@@ -313,15 +313,13 @@ do ife = ife_min, ife_max
         call sources(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, ps0, ES%psi_axis, psi_limit, &
                      particle_source,heat_source)
 #endif
-        call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), ES%Z_xpoint, ps0,&
-                     ES%psi_axis,psi_limit,current_source)
 
         P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
         D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
         VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-        J2_tot = J2_tot + eta_T_ohm * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+        J2_tot = J2_tot + eta_T_ohm * (ZJ0/BigR)**2 * xjac * BigR * wst * delta_phi
 
         P_max = max(P_max,r0 * T0)
 
@@ -386,7 +384,7 @@ do ife = ife_min, ife_max
           VP_int = VP_int + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_int = VK_int + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_int = VM_int + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-          J2_int = J2_int + eta_T_ohm * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+          J2_int = J2_int + eta_T_ohm * (ZJ0/BigR)**2 * xjac * BigR * wst * delta_phi
 
         else
 
@@ -398,7 +396,7 @@ do ife = ife_min, ife_max
           VP_ext = VP_ext + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_ext = VK_ext + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_ext = VM_ext + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-          J2_ext = J2_ext + eta_T_ohm * ((ZJ0-current_source)/BigR)**2 * xjac * BigR * wst * delta_phi
+          J2_ext = J2_ext + eta_T_ohm * (ZJ0/BigR)**2 * xjac * BigR * wst * delta_phi
 
         endif
 

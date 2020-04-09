@@ -105,7 +105,7 @@ real*8  :: vpar_disp_tot, vpar_disp, viscopar_dissip_tot, source_tot, heating_to
 real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, source_out
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, drhondx, drhondy
-real*8  :: source_volume, source_pellet, eta_T
+real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, source_ns, neut_particles_tot
 real*8  :: E_tot, E_in, E_out, Zkpar_T, D_prof, ZK_prof, gamma_sheath_stangeby, sheath_heatflux
@@ -141,7 +141,7 @@ real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8  :: m_i_over_m_imp
 !   -Mean impurity ionization state
-real*8  :: Z_imp, T0_Zimp, alpha_Zimp
+real*8  :: Z_imp, T0_Zimp, alpha_Zimp, Z_eff, eta_coef, ne_JOREK
 !   -Coefficients related to Z_imp
 real*8  :: alpha_imp, beta_imp
 !   -Corrected plasma temperature and density for radiation calculation
@@ -152,7 +152,7 @@ real*8     :: E_ion, Lrad, E_ion_bg
 integer*8  :: ion_i, ion_k, i_phi
 #endif
 
-integer    :: spi_i
+integer    :: spi_i, ion_i
 real*8     :: ng_radius
 
 
@@ -496,6 +496,7 @@ do ife = ife_min, ife_max
 
         T0_corr = corr_neg_temp(T0)
         eta_T   = resistivity(T0_corr)  
+        eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
 
         dTdx   = (   y_t(ms,mt) * eq_s(mp,var_T,ms,mt) - y_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
         dTdy   = ( - x_t(ms,mt) * eq_s(mp,var_T,ms,mt) + x_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
@@ -535,20 +536,6 @@ do ife = ife_min, ife_max
         else
           current_source = 0.d0
         endif
- 
-        P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
-        D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
-        VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
-        VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
-        VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-        J2_tot = J2_tot + eta_T *(ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
-
-        mag_src_tot   = mag_src_tot + eta_T*ZJ0*current_source/(BigR**2) * xjac * BigR * wst * delta_phi
-
-        heli_tot      = heli_tot   + hel1         * BigR * xjac * wst * delta_phi
-        mag_wk_tot    = mag_wk_tot + mag_wk                     * wst * delta_phi
-        thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
-        vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi 
 
 #if (JOREK_MODEL == 501)
         !-------------------------------------------
@@ -601,7 +588,28 @@ do ife = ife_min, ife_max
         alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
         beta_imp     = m_i_over_m_imp*Z_imp - 1.
         ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
+        ne_JOREK     = r0_corr + beta_imp * rn0_corr ! Electron density in JOREK unit
+        ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
+                                                               ! Too small rho_1 will cause a problem
+
+        ! Calculate the effective charge of all species
+        Z_eff        = 0.
+   
+        ! First get the value of Z_eff
+        Z_eff        = r0_corr - rn0_corr
+        do ion_i=1, imp_adas(1)%n_Z
+          Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
+        end do
+        Z_eff        = Z_eff / ne_JOREK
   
+        if (Z_eff < 1) Z_eff = 1.
+   
+        ! This is to represent the dependence on Z_eff in resistivity
+        eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
+        eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
+        eta_T        = eta_T * eta_coef
+        eta_T_ohm    = eta_T_ohm * eta_coef
+
         P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
         P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
 
@@ -626,6 +634,20 @@ do ife = ife_min, ife_max
         local_E_ion     = local_E_ion + (r0 - rn0) * central_density * 1.d20 * E_ion_bg   &
                           * bigR * xjac * wst * delta_phi
 #endif
+
+        P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
+        D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
+        VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
+        VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
+        VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
+        J2_tot = J2_tot + eta_T *(ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
+
+        mag_src_tot   = mag_src_tot + eta_T*ZJ0*current_source/(BigR**2) * xjac * BigR * wst * delta_phi
+
+        heli_tot      = heli_tot   + hel1         * BigR * xjac * wst * delta_phi
+        mag_wk_tot    = mag_wk_tot + mag_wk                     * wst * delta_phi
+        thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
+        vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi 
 
         if (use_pellet) then
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
@@ -923,9 +945,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       ! --- get normalized flux 
       psi_n = get_psi_n(ps0,Z)
  
-      ! --- get resistivity and diffusion coefficients
-      T0_corr = corr_neg_temp(T0)
-      eta_T   = resistivity(T0_corr)  
+      ! --- get diffusion coefficients
       D_prof  = get_dperp (psi_n)
       ZK_prof = get_zkperp(psi_n)
  

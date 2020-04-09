@@ -98,9 +98,9 @@ contains
     integer, intent(in)    :: index_min, index_max
     integer, intent(in)    :: i_tor_min, i_tor_max 
     real*8,  intent(in)    :: val
-    real*8,  intent(inOUT) :: rhs_loc(*)
-
-    logical :: is_local, n_tor_local
+    real*8,  intent(inOUT) :: rhs_loc(*) 
+    integer                :: n_tor_local 
+    logical                :: is_local
 
     n_tor_local = i_tor_max - i_tor_min +1
     if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then

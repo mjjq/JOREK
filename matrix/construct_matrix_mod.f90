@@ -13,7 +13,7 @@ contains
        &                             omp_tid, ife, n_local_elms, node_list)
 
     ! --- Modules
-    use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order
+    use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order, unified_element_matrix
     use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks, keep_n0_const
     USE data_structure,           only : type_element, type_node, type_node_list, thread_struct
     use mod_boundary_matrix_open, only : boundary_matrix_open
@@ -54,7 +54,7 @@ contains
     my_id = rank
 #endif
     ! --- Call element_matrix
-    if ( n_tor .ge. n_tor_fft_thresh .and. jorek_model .lt. 700 ) then
+    if ( (n_tor .ge. n_tor_fft_thresh) .or. (unified_element_matrix) ) then
       call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid, &
         thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn, &

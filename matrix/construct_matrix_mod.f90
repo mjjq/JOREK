@@ -277,15 +277,14 @@ contains
 !! The element contributions are determined by element_matrix(_fft). Additional
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
-subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max, & 
-                            xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max,  &
+subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,& 
+                            xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,i_tor_min, i_tor_max,  &
                             n, nz, ndof, A_mat, rhs, irn, jcn, ijA_index, ijA_size, irn_jcn, harmonic_matrix)
   
   use mumps_module 
   use tr_module 
   use mod_parameters
   use data_structure
-  use global_distributed_matrix, only: A_glob, RHS_glob
   use phys_module
   use pellet_module
   use nodes_elements
@@ -325,16 +324,16 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   logical, intent(in) :: xpoint2
   integer, intent(in) :: i_tor_min
   integer, intent(in) :: i_tor_max
-  integer, intent(in) :: n  
-  integer, intent(in) :: nz 
-  integer, intent(in) :: ndof 
+  integer, intent(in) :: n
+  integer, intent(in) :: nz
+  integer, intent(in) :: ndof
   logical, intent(in) :: harmonic_matrix
   real*8,  intent(in), pointer :: A_mat(:)
   real*8,  intent(in), pointer :: rhs(:)
   integer, intent(in), pointer :: irn(:)
   integer, intent(in), pointer :: jcn(:)
   integer, intent(in), pointer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-
+  
   !--- Internal variables
   type (type_element)               :: element
   type (type_node)                  :: nodes(n_vertex_max)
@@ -405,29 +404,28 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
     rhs_problem(:)   = .false.
     elm_problem(:,:) = .false.
 
-    ! --- Memory allocation
-    if (allocated(A_glob))    call tr_deallocate(A_glob,"A_glob",CAT_DMATRIX) 
-    call tr_allocate(A_glob,1,nz,"A_glob",  CAT_DMATRIX)
-
-    if (allocated(rhs_glob)) call tr_deallocate(rhs_glob,"rhs_glob",CAT_DMATRIX) 
-    call tr_allocate(rhs_glob, 1,ndof,"rhs_glob", CAT_DMATRIX)
-    rhs_glob = 0.0d0 
-
   endif ! (.not. harmonic_matrix)
+    ! --- Memory allocation
+    if (associated(A_mat))   call tr_deallocatep(A_mat,"A_mat",CAT_DMATRIX) 
+    call tr_allocatep(A_mat,1,nz,"A_mat",  CAT_DMATRIX)
+    A_mat = 0.0d0
+
+    if (associated(rhs)) call tr_deallocatep(rhs,"rhs",CAT_DMATRIX) 
+    call tr_allocatep(rhs, 1,ndof,"rhs", CAT_DMATRIX)
+    rhs = 0.0d0 
+
 
   call tr_allocatep(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
- 
-  n_tor_local = i_tor_max - i_tor_min + 1
- 
+  
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,local_elms,element_list,node_list,          &
   !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,harmonic_matrix,       &
-  !$omp          A_mat, rhs_local, rhs_glob, irn, jcn,      &
+  !$omp          A_mat, rhs_local, rhs, irn, jcn,      &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
   !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn) &
-  !$omp   private(ife,ielm,iv,inode,element,nodes,i,inode1,i_order,index_node1, n_tor_local,          &
+  !$omp   private(ife,ielm,iv,inode,element,nodes,i,inode1,i_order,index_node1, n_tor_local,               &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,          &
@@ -443,6 +441,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   omp_tid      = 1
 #endif
   
+  n_tor_local = i_tor_max - i_tor_min + 1 
 ! --- Loop over local elements
   !$omp do schedule(runtime)
   do ife = 1, n_local_elms
@@ -633,7 +632,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
                 index_node2 = node_list%node(knode)%index(k_order)
 
                 index_large_k = n_tor_local * n_var * (index_node2 - 1)
-   
+
                 call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
                 thread_struct(omp_tid)%synch_buff(:) = 0.d0
@@ -642,7 +641,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
                   do l = 1, n_var * n_tor_local
 
-                    index_kl = n_tor_local * n_var * (n_order+1) * (k-1) + n_tor_local * n_var * (k_order-1) + l   ! index in the ELM matrix
+                    index_kl = n_tor_local * n_var * (n_order+1) * (k-1) +  n_tor_local * n_var * (k_order-1) + l   ! index in the ELM matrix
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var*n_tor_local + l
 
@@ -652,9 +651,9 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor_local+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor_local+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
                      
-                  enddo ! n_var * n_tor
+                  enddo ! n_var * n_tor_local
 
-                enddo ! n_var * n_tor
+                enddo ! n_var * n_tor_local
 
                 !$omp critical
                 A_mat(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) = &
@@ -751,7 +750,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   ! --- Memory tracking
   call tr_locvnorms("cm_BCRhs",RHS,ndof)
   call tr_debug_writei("ndof",ndof)
-
+  
   ! --- Timing
   call r3_info_end(r3_info_index_0)
   call tr_print_memsize("EndConstM")

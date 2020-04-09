@@ -92,10 +92,10 @@ contains
     real*8,                    intent(in)    :: psi_xpoint(2)
     logical,                   intent(in)    :: gmres
     logical,                   intent(in)    :: solve_only
-    integer,                   intent(in)    :: i_tor_min, i_tor_max
-    integer,          intent(in), pointer    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                                  :: irn(:), jcn(:) 
-    real*8                                   :: A_mat(:) 
+    integer, intent(in)                      :: i_tor_min, i_tor_max 
+    integer, intent(in), pointer             :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, intent(in), pointer             :: irn(:), jcn(:) 
+    real*8, intent(in), pointer              :: A_mat(:) 
 
     ! --- Internal parameters
     real*8  :: mach1, dmach1, d2mach1_dTi, d2mach1_dTe, mach_u, dmach_u, dmach_rho

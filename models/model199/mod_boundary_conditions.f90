@@ -59,10 +59,10 @@ contains
     real*8,                    intent(in)    :: psi_xpoint(2)
     logical,                   intent(in)    :: gmres
     logical,                   intent(in)    :: solve_only
-    integer                                  :: irn(:), jcn(:) 
-    real*8                                   :: A_mat(:) 
-    integer,                   intent(in)    :: i_tor_min, i_tor_max
-    integer,          intent(in), pointer    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    integer, intent(in)                      :: i_tor_min, i_tor_max 
+    integer, intent(in), pointer             :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, intent(in), pointer             :: irn(:), jcn(:) 
+    real*8, intent(in), pointer              :: A_mat(:) 
 
     ! Internal parameters
     real*8  :: zbig, zbig_backup

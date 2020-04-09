@@ -47,25 +47,25 @@ contains
 
 
   ! Subroutine parameters
-  integer                  :: my_id
-  integer                  :: local_elms(*)
-  integer                  :: n_local_elms
-  integer                  :: index_min, index_max
-  integer                  :: xcase2
-  type (type_node_list)    :: node_list
-  type (type_element_list) :: element_list
-  type (type_bnd_node_list):: bnd_node_list
-  logical                  :: xpoint2
-  real*8                   :: psi_axis, R_axis, Z_axis
-  real*8                   :: psi_bnd
-  real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
-  logical                  :: gmres
-  logical                  :: solve_only
-  real*8                   :: rhs_loc(*)
-  integer                  :: irn(:), jcn(:) 
-  real*8                   :: A_mat(:) 
-  integer,   intent(in)    :: i_tor_min, i_tor_max
-  integer,   intent(in), pointer   :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+  integer                      :: my_id
+  integer                      :: local_elms(*)
+  integer                      :: n_local_elms
+  integer                      :: index_min, index_max
+  integer                      :: xcase2
+  type (type_node_list)        :: node_list
+  type (type_element_list)     :: element_list
+  type (type_bnd_node_list)    :: bnd_node_list
+  logical                      :: xpoint2
+  real*8                       :: psi_axis, R_axis, Z_axis
+  real*8                       :: psi_bnd
+  real*8                       :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
+  logical                      :: gmres
+  logical                      :: solve_only
+  real*8                       :: rhs_loc(*)
+  integer, intent(in)          :: i_tor_min, i_tor_max 
+  integer, intent(in), pointer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+  integer, intent(in), pointer :: irn(:), jcn(:) 
+  real*8, intent(in), pointer  :: A_mat(:) 
 
   ! Internal parameters
   real*8  :: zbig, zbig_backup, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1

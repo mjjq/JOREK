@@ -40,30 +40,30 @@ contains
     implicit none
 
     ! Subroutine parameters
-    INTEGER                  :: my_id
-    INTEGER                  :: local_elms(*)
-    INTEGER                  :: n_local_elms
-    INTEGER                  :: index_min
-    INTEGER                  :: index_max
-    INTEGER                  :: xcase2
-    TYPE (type_node_list)    :: node_list
-    TYPE (type_element_list) :: element_list
-    TYPE (type_bnd_node_list):: bnd_node_list
-    logical                  :: xpoint2
-    REAL*8                   :: R_axis
-    REAL*8                   :: Z_axis
-    REAL*8                   :: psi_axis
-    REAL*8                   :: psi_bnd
-    REAL*8                   :: R_xpoint(2)
-    REAL*8                   :: Z_xpoint(2)
-    REAL*8                   :: psi_xpoint(2)
-    logical                  :: gmres
-    logical                  :: solve_only
-    real*8                   :: rhs_loc(*)
-    integer                  :: irn(:), jcn(:) 
-    real*8                   :: A_mat(:) 
-    integer,   intent(in)    :: i_tor_min, i_tor_max
-    integer, intent(in), pointer    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    INTEGER                      :: my_id
+    INTEGER                      :: local_elms(*)
+    INTEGER                      :: n_local_elms
+    INTEGER                      :: index_min
+    INTEGER                      :: index_max
+    INTEGER                      :: xcase2
+    TYPE (type_node_list)        :: node_list
+    TYPE (type_element_list)     :: element_list
+    TYPE (type_bnd_node_list)    :: bnd_node_list
+    logical                      :: xpoint2
+    REAL*8                       :: R_axis
+    REAL*8                       :: Z_axis
+    REAL*8                       :: psi_axis
+    REAL*8                       :: psi_bnd
+    REAL*8                       :: R_xpoint(2)
+    REAL*8                       :: Z_xpoint(2)
+    REAL*8                       :: psi_xpoint(2)
+    logical                      :: gmres
+    logical                      :: solve_only
+    real*8                       :: rhs_loc(*)
+    integer, intent(in)          :: i_tor_min, i_tor_max
+    integer, intent(in), pointer :: irn(:), jcn(:) 
+    integer, intent(in), pointer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    real*8,  intent(in), pointer :: A_mat(:) 
 
     ! Internal parameters
     real*8  :: zbig, zbig_backup

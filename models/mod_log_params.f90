@@ -492,10 +492,19 @@ if (my_id == 0) then
       write(*,REAL_FMT2) 'wall_resistivity      ', wall_resistivity, ' (used only if STARWALL response file_version==1)'
       write(*,REAL_FMT2) 'wall_resistivity_fact ', wall_resistivity_fact, ' (used only if STARWALL response file_version>=2)'
     end if
-
     write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time 
-       
   end if
+  
+  if ( manipulate_psi_map(1,1) /= 0.d0 ) &
+    write(*,REAL_FMT) 'manipulate_psi_map(1) ', manipulate_psi_map(1,:)
+  if ( manipulate_psi_map(2,1) /= 0.d0 ) &
+    write(*,REAL_FMT) 'manipulate_psi_map(2) ', manipulate_psi_map(2,:)
+  if ( manipulate_psi_map(3,1) /= 0.d0 ) &
+    write(*,REAL_FMT) 'manipulate_psi_map(3) ', manipulate_psi_map(3,:)
+  if ( manipulate_psi_map(4,1) /= 0.d0 ) &
+    write(*,REAL_FMT) 'manipulate_psi_map(4) ', manipulate_psi_map(4,:)
+  if ( manipulate_psi_map(5,1) /= 0.d0 ) &
+    write(*,REAL_FMT) 'manipulate_psi_map(5) ', manipulate_psi_map(5,:)
   
   write(*,REAL_FMT) 'amix                  ', amix
   write(*,REAL_FMT) 'equil_accuracy        ', equil_accuracy

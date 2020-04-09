@@ -21,6 +21,26 @@ contains
   integer, allocatable         :: nz_array(:), disp_array(:)
   integer                      :: nz_total, i, ierr
   
+ 
+#ifdef DISTRIBUTEDA
+! hijacking the subtoutine to assign distributed values to global
+  mumps_par%nz  = nz_harm
+  mumps_par%n   = ndof_harm
+  mumps_par%A   => A_harm(1:mumps_par%nz)   
+  mumps_par%irn => irn_harm(1:mumps_par%nz)
+  mumps_par%jcn => jcn_harm(1:mumps_par%nz)
+
+  if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
+
+  do i = 1, mumps_par%n
+    mumps_par%rhs(i) = rhs_harm(i)
+  enddo  
+  call MPI_Barrier(MPI_COMM_N,ierr)
+
+  return
+#endif
+
   allocate(nz_array  (n_cpu_n))
   allocate(disp_array(n_cpu_n))
     
@@ -48,6 +68,7 @@ contains
   
   ! --- Centralize matrix (if it was not distributed, copy it into the right data structure)
   if (n_cpu_n > 1) then
+    write(*,*) "before centralization", my_id, minval(irn_harm), maxval(irn_harm), minval(jcn_harm), maxval(jcn_harm)
     if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,  "dh_mumps_par%A",  CAT_DMATRIX)
     if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
     if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)

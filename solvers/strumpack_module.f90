@@ -153,7 +153,38 @@ module strumpack_module
           call convert2csr(indx,nloc,n,nnzloc,irnl,jcnl,vall)
           dist(:) = dist(:) - indx                           ! convert to c-indexing
           call spk_set_mat(nloc,dist,irnl,jcnl,vall,spss,comm,upd)
+#ifdef DISTRIBUTEDA
+        elseif (dflag.and.(ncpu>1)) then
+           ! get row distribution from irn
 
+          if (associated(dist)) dist=>null()
+          allocate(dist(ncpu+1))
+          dist(:) = 0
+          dist(rank+1) = minval(irn)
+          if (rank.eq.(ncpu-1)) dist(rank+2) = maxval(irn) + 1
+          call MPI_Allreduce(MPI_IN_PLACE,dist,ncpu+1,MPI_INTEGER,MPI_SUM,comm,ierr)
+
+          ! check for consistency
+          ierr = 0
+          if ((dist(1).ne.1)) ierr = 1
+          do i = 2, ncpu+1
+            if (.not.(dist(i)>dist(i-1))) ierr = 1
+          enddo
+         
+          if (ierr.ne.0) then
+            write(*,*) "Error in harmonic matrix distribution"
+            call exit(2)
+          endif
+
+          nloc = dist(rank+2) - dist(rank+1)
+          irn(:) = irn(:) - dist(rank+1) + 1 ! irn starts from 1
+
+          call convert2csr(indx,nloc,n,nnz,irn,jcn,val)          
+          dist(:) = dist(:) - indx
+        
+          call spk_set_mat(nloc,dist,irn,jcn,val,spss,comm,upd) !TODO: remove nloc as unnecessary
+      
+#endif
         else
 
           call distribute_rows(n,1)

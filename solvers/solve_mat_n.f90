@@ -741,7 +741,23 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     nnz = mumps_par%nz
     
     if (.not. solve_only) then
-        
+
+      if (.not. spss_initialized) then
+        call strumpack_init(MPI_COMM_N)
+        spss_initialized = .true.
+      endif     
+
+#ifdef DISTRIBUTEDA
+      ! nnz here is local
+      call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
+              UPDATE=spss_analyzed,DISTRIBUTED=.true.)
+      mumps_par%a => null()
+      mumps_par%irn => null()
+      mumps_par%jcn => null()
+
+#else
+
+      ! broadcast centralized matrix
       if (my_id_n.gt.0) then
         if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
         if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
@@ -759,11 +775,6 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       type='double'
       call split_broadcast(type,MPI_COMM_N)
 
-      if (.not. spss_initialized) then
-        call strumpack_init(MPI_COMM_N)
-        spss_initialized = .true.
-      endif
-
       call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
               UPDATE=spss_analyzed,DISTRIBUTED=.false.)
 
@@ -776,6 +787,8 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         mumps_par%irn => null()
         mumps_par%jcn => null()
       endif 
+
+#endif
 
       if (.not. spss_analyzed) then
         call strumpack_analyze(MPI_COMM_N)

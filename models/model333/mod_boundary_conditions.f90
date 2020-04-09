@@ -625,8 +625,8 @@ contains
     integer,		intent(in)    :: index_min, index_max
     integer,            intent(in)    :: i_tor_min, i_tor_max
     integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn(:), jcn(:)
-    real*8                            :: A_mat(:) 
+    integer, intent(in), pointer      :: irn(:), jcn(:) 
+    real*8, intent(in), pointer       :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -725,8 +725,8 @@ contains
     integer,		intent(inout) :: cnt, cnt_prod
     integer,		intent(in)    :: i_tor_min, i_tor_max
     integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn(:), jcn(:)
-    real*8                            :: A_mat(:) 
+    integer, intent(in), pointer      :: irn(:), jcn(:) 
+    real*8, intent(in), pointer       :: A_mat(:) 
     ! --- Internal variables
     integer			      :: index_node,   index_node2
     
@@ -788,8 +788,8 @@ contains
     integer,		intent(inout) :: cnt, cnt_prod
     integer,		intent(in)    :: i_tor_min, i_tor_max
     integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn(:), jcn(:)
-    real*8                            :: A_mat(:) 
+    integer, intent(in), pointer      :: irn(:), jcn(:) 
+    real*8, intent(in), pointer       :: A_mat(:) 
     
     ! --- Internal variables
     integer			      :: index_node,   index_node2
@@ -1015,8 +1015,8 @@ contains
     integer,		intent(inout) :: cnt, cnt_prod
     integer,		intent(in)    :: i_tor_min, i_tor_max
     integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn(:), jcn(:)
-    real*8                            :: A_mat(:) 
+    integer, intent(in), pointer      :: irn(:), jcn(:) 
+    real*8, intent(in), pointer       :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2

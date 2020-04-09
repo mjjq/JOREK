@@ -279,7 +279,7 @@ contains
 !! added by external routine calls.
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max, & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max,  &
-                            n, nz, ndof, A_mat, rhs_glob, irn, jcn, ijA_index, ijA_size, irn_jcn, direct_construction)
+                            n, nz, ndof, A_mat, rhs_glob, irn, jcn, ijA_index, ijA_size, irn_jcn, harmonic_matrix)
   
   use mumps_module 
   use tr_module 
@@ -328,7 +328,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer, intent(in) :: n  
   integer, intent(in) :: nz 
   integer, intent(in) :: ndof 
-  logical, intent(in) :: direct_construction
+  logical, intent(in) :: harmonic_matrix
   real*8,  intent(in), pointer :: A_mat(:)
   real*8,  intent(in), pointer :: rhs_glob(:)
   integer, intent(in), pointer :: irn(:)
@@ -358,7 +358,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
   ! --- Printout
   if (my_id .eq. 0) then
-    if(.NOT.direct_construction) then
+    if(.NOT.harmonic_matrix) then
       write(*,*) '****************************************'
       write(*,*) '*  construct global matrix             *'
       write(*,*) '****************************************'
@@ -372,7 +372,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   ! --- Memory tracking
   call tr_print_memsize("DebConstM")
 
-  if (.not. direct_construction) then
+  if (.not. harmonic_matrix) then
     
     ! --- Local min-max indices for the nodes of our local elements (local in the MPI sense)
     i_bnd = 0
@@ -413,7 +413,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
     call tr_allocate(rhs_glob, 1,ndof,"rhs_glob", CAT_DMATRIX)
     rhs_glob = 0.0d0 
 
-  endif ! (.not. direct_construction)
+  endif ! (.not. harmonic_matrix)
 
   call tr_allocatep(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
@@ -421,7 +421,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,local_elms,element_list,node_list,          &
-  !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,direct_construction,       &
+  !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,harmonic_matrix,       &
   !$omp          A_mat, rhs_local, rhs_glob, irn, jcn,      &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
   !$omp          ijA_index, ijA_size, irn_jcn, &
@@ -451,7 +451,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
     element = element_list%element(ielm)
     
     ! --- Define nodes (this depends on whether our element has been refined)
-    if (refinement .and. .not. direct_construction) then
+    if (refinement .and. .not. harmonic_matrix) then
 
       i_father = element_list%element(ielm)%father
 
@@ -476,7 +476,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
       psi_bnd, R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
     
 #ifdef PRINT_ELM_RHS
-    if (.not. direct_construction) then
+    if (.not. harmonic_matrix) then
       ! --- Write out rhs and elm for one element to compare models.
       !     Switch this on by adding -DPRINT_ELM_RHS as compiler flag.
       if (ielm == element_list%n_elements/2) then
@@ -586,11 +586,11 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
         close(388)
       end if ! i_elm
     ! --- end: Write out rhs and elm for one element to compare models.
-    endif ! .not. direct_construction  
+    endif ! .not. harmonic_matrix  
 #endif
  
     ! --- Define element nodes (depends if it's refined)
-    if (refinement .and. .not. direct_construction) then   
+    if (refinement .and. .not. harmonic_matrix) then   
       call ch_nod_rhs_elm(ielm,element,nodes,element_father,nodes_father, &
               thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS,node_out)
     else
@@ -695,7 +695,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_mat,nz)
 
-  if ( .not. direct_construction ) then 
+  if ( .not. harmonic_matrix ) then 
 
     ! --- Add vacuum response (boundary integral) for free boundary computations
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
@@ -740,7 +740,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 #endif
     call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
 
-  else ! ( if direct_construction)
+  else ! ( if harmonic_matrix)
   
     ! --- Form a global rhs from the rhss of the individual mpi threads.
     call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_N,ierr)

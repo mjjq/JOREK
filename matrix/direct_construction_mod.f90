@@ -6,7 +6,7 @@ contains
 
   !> Constructing harmonic matrix directly from the elementary matrix 
   subroutine direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, & 
-    node_list, element_list, bnd_elm_list, xpoint2, xcase2, freeboundary, direct_construction)
+    node_list, element_list, bnd_elm_list, xpoint2, xcase2, freeboundary, harmonic_matrix)
 
   use data_structure 
   use global_distributed_matrix
@@ -22,7 +22,7 @@ contains
   type (type_element_list),     intent(in) :: element_list
   type (type_bnd_element_list), intent(in) :: bnd_elm_list
   integer, intent(in) :: my_id, my_id_n, n_cpu, m_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, xcase2
-  logical, intent(in) :: direct_construction, xpoint2, freeboundary
+  logical, intent(in) :: harmonic_matrix, xpoint2, freeboundary
   
   ! --- Local variables
   integer, allocatable         :: index_min_harm(:), index_max_harm(:)
@@ -49,7 +49,7 @@ contains
     i_tor_max = i_tor_min + 1
   endif
  
-  call distribute_nodes_elements(my_id,m_cpu,n_cpu,node_list,element_list, direct_construction, & 
+  call distribute_nodes_elements(my_id,m_cpu,n_cpu,node_list,element_list, harmonic_matrix, & 
     local_elms_harm, n_local_elms_harm, ndof, index_min_harm,index_max_harm)
 
   call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary, &
@@ -79,9 +79,8 @@ contains
   call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master,                &
     local_elms_harm, n_local_elms_harm, index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint2,&
     xcase2, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint,              &
-    ES%psi_xpoint, i_tor_min, i_tor_max, n_harm, nz_harm, ndof_harm, A_harm,  &
-    rhs_harm, irn_harm, jcn_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm,     &
-    direct_construction)
+    ES%psi_xpoint, i_tor_min, i_tor_max, n_harm, nz_harm, ndof_harm, A_harm, rhs_harm,            & 
+    irn_harm, jcn_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm, harmonic_matrix)
 
   end subroutine direct_construction_harmonic
 

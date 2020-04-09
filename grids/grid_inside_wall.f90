@@ -4,7 +4,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   use mod_parameters
   use data_structure
   use mod_export_restart
-  use phys_module, only: xshift, n_limiter, R_limiter, Z_limiter, tokamak_device
+  use phys_module, only: xshift, n_limiter, R_limiter, Z_limiter, tokamak_device, manipulate_psi_map
   use grid_xpoint_data, only: n_wall, R_wall, Z_wall
   use mod_eqdsk_tools
 
@@ -45,6 +45,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   integer, allocatable :: nR_grid(:,:), node_index(:,:,:), elm_node_index(:,:)
   real*8,  allocatable :: R_grid(:,:), Z_grid(:,:), Zlines(:)
   logical, parameter  :: plot_grid = .true.
+  real*8  :: amp, Rm, Zm, dRm, dZm, dPsi, RR, ZZ
   
   
   write(*,*) '*************************************'
@@ -68,7 +69,24 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
     allocate(R_eqdsk(nR_eqdsk), Z_eqdsk(nZ_eqdsk), psi_eqdsk(nR_eqdsk,nZ_eqdsk))
     call get_data_from_eqdsk(normal_eqdsk, normal_eqdsk_wall, nR_eqdsk, nZ_eqdsk, R_eqdsk, Z_eqdsk, psi_eqdsk, n_wall, R_wall(1:n_wall), Z_wall(1:n_wall), ier)
   endif
-
+  
+  ! --- Manipulate the Psi from eqdsk
+  do i = 1, nR_eqdsk
+    RR = R_eqdsk(i)
+    do j = 1, nZ_eqdsk
+      ZZ = Z_eqdsk(j)
+      dPsi = 0.d0
+      do k = 1, 5
+        amp = manipulate_psi_map(k,1)
+        Rm  = manipulate_psi_map(k,2)
+        Zm  = manipulate_psi_map(k,3)
+        dRm = manipulate_psi_map(k,4)
+        dZm = manipulate_psi_map(k,5)
+        dPsi = dPsi + amp * exp(-(RR-Rm)**2/dRm**2-(ZZ-Zm)**2/dZm**2)
+      end do
+      psi_eqdsk(i,j) = psi_eqdsk(i,j) + dPsi
+    end do
+  end do
   
   ! --- We don't want to use the eqdsk wall, we want the user to be able to modify the wall
   ! --- eg. take pieces out if they are physically irrelevant...

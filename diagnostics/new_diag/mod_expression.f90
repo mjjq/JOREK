@@ -603,10 +603,10 @@ module mod_expression
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
       fact_resistiv, fact_Er, fact_flux, fact_rad
+    real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
 #if JOREK_MODEL == 500 || JOREK_MODEL == 501
     real*8  :: coef_rad_1
     real*8  :: T_rad, LradDrays_T, LradDcont_T, T_rad_real
-    real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 #endif
 #if JOREK_MODEL == 501
@@ -761,17 +761,6 @@ module mod_expression
           A30   = 0.d0; A30_s   = 0.d0; A30_t   = 0.d0; A30_ss   = 0.d0; A30_tt   = 0.d0; A30_st   = 0.d0; A30_p   = 0.d0; A30_pp   = 0.d0
           rn0   = 0.d0; rn0_s   = 0.d0; rn0_t   = 0.d0; rn0_ss   = 0.d0; rn0_tt   = 0.d0; rn0_st   = 0.d0; rn0_p   = 0.d0; rn0_pp   = 0.d0
 
-
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
-          rn0 = 0.d0
-          rn0_s = 0.0
-          rn0_t = 0.0
-          rn0_ss = 0.0
-          rn0_tt = 0.0
-          rn0_st = 0.0
-          rn0_p = 0.0
-          rn0_pp = 0.0
-#endif
 
           ! Extra derivatives for current density calculation
           AR0_sp   = 0.d0; AR0_tp   = 0.d0

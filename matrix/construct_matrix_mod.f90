@@ -751,13 +751,6 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   ! --- Memory tracking
   call tr_locvnorms("cm_BCRhs",RHS,ndof)
   call tr_debug_writei("ndof",ndof)
-  !write(string, '(A8,I2.2,A1)') "matrice_",my_id,"\0"
-  !open(unit=9, file=string, STATUS='replace')
-  !do k = 1, nz_glob
-  !   if (A_glob(k) /= 0.0_8) &
-  !        write(9, '(I8.8,1X,I8.8,1X,E20.12)'), jcn_glob(k), irn_glob(k), A_glob(k)
-  !end do
-  !close(unit=9)
 
   ! --- Timing
   call r3_info_end(r3_info_index_0)

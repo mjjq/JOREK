@@ -33,5 +33,8 @@ module mod_parameters
   character(len=11) :: variable_names(n_var) =                       &
     (/ 'A_3        ','A_R        ','A_Z        ','u_R        ',      &
        'u_Z        ','u_phi      ','Density    ','Temperature' /)
+  
+  !> element_matrix and element_matrix_fft combined into a single one?
+  logical, parameter :: unified_element_matrix = .true.
 
 end module mod_parameters

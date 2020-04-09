@@ -764,7 +764,8 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         spss_initialized = .true.
       endif
 
-      call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,spss_analyzed)
+      call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
+              UPDATE=spss_analyzed,DISTRIBUTED=.false.)
 
       if (n_cpu_n>1) then
         call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)

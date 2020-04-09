@@ -6,6 +6,7 @@ module strumpack_module
 
   implicit none
   type(C_PTR) :: spss ! STRUMPACK sparse solver
+  integer(kind=C_INT), dimension(:), pointer :: dist  ! row distribution
   logical :: spss_initialized, spss_analyzed
 
   private
@@ -26,21 +27,20 @@ module strumpack_module
       type(c_ptr), intent(inout) :: spss
       integer, intent(in) :: comm
     end subroutine spk_init
-    
-    subroutine spk_set_mat(n,nnz,irn,jcn,val,spss,comm,upd) bind(C)
+
+    subroutine spk_set_mat(n,dist,irn,jcn,val,spss,comm,upd) bind(C)
       use iso_c_binding
       use mpi            
       implicit none
       
-      integer(kind=C_INT), dimension(:), pointer, intent(in) :: irn,jcn
+      integer(kind=C_INT), dimension(:), pointer, intent(in) :: irn,jcn,dist
       real(kind=C_DOUBLE), dimension(:), pointer, intent(in) :: val
       integer(kind=C_INT), intent(in) :: n
-      integer(kind=C_INT), intent(inout) :: nnz      
       integer, intent(in) :: comm
       type(c_ptr), intent(inout) :: spss
       logical :: upd
-    end subroutine spk_set_mat
-
+    end subroutine spk_set_mat    
+    
     subroutine spk_reord(spss,comm) bind(C)
       use iso_c_binding
       use mpi            
@@ -59,12 +59,13 @@ module strumpack_module
       integer, intent(in) :: comm
     end subroutine spk_fact
     
-    subroutine spk_solve(n,rhsc,spss,comm) bind(C)
+    subroutine spk_solve(n,dist,rhsc,spss,comm) bind(C)
       use iso_c_binding
       use mpi            
       implicit none
       
       integer(kind=C_INT), intent(in) :: n
+      integer(kind=C_INT), dimension(:), pointer, intent(in) :: dist
       type(c_ptr), intent(inout) :: spss, rhsc      
       integer, intent(in) :: comm
     end subroutine spk_solve    
@@ -77,6 +78,15 @@ module strumpack_module
       type(c_ptr), intent(inout) :: spss
       integer, intent(in) :: comm
     end subroutine spk_finalize
+
+    subroutine convert2csr(indx, n, m, nnz, irn, jcn, val) bind(C)
+      use iso_c_binding
+      implicit none
+      integer(kind=C_INT), dimension(:), pointer, intent(in) :: irn,jcn
+      real(kind=C_DOUBLE), dimension(:), pointer, intent(in) :: val
+      integer(kind=C_INT), intent(in) :: n, m, indx
+      integer(kind=C_INT), intent(inout) :: nnz       
+    end subroutine convert2csr
 
   end interface
 
@@ -94,23 +104,65 @@ module strumpack_module
         return
     end subroutine strumpack_init
     
-    subroutine strumpack_set_mat(n,nnz,irn,jcn,val,comm,update) bind(C)
+    subroutine strumpack_set_mat(n,nnz,irn,jcn,val,comm,update,distributed) bind(C)
         use, intrinsic :: iso_c_binding
         use mpi
         implicit none
 
         integer comm,ierr
-        integer(kind=C_INT), dimension(:), pointer :: irn,jcn
-        real(kind=C_DOUBLE),  dimension(:), pointer :: val
+        integer(kind=C_INT), dimension(:), pointer :: irn, jcn, irnl, jcnl
+        real(kind=C_DOUBLE),  dimension(:), pointer :: val, vall
         integer(kind=C_INT), intent(in) :: n
         integer(kind=C_INT), intent(inout) :: nnz 
-        logical,intent(in),optional :: update
-        logical :: upd=.false.
+        logical,intent(in),optional :: update, distributed
+        integer(kind=C_INT), dimension(:), pointer :: myelm
+        logical :: upd=.false., dflag=.false.
 
-        if(present(update)) upd=update
+        integer :: rank, ncpu, nnzloc, nloc, i, j, indx=1
+
+        if(present(update)) upd = update
+        if(present(distributed)) dflag = distributed
+
+        call MPI_COMM_RANK(comm, rank, ierr)
+        call MPI_COMM_SIZE(comm, ncpu, ierr)
+
+        if ((.not. dflag).and.(ncpu>1)) then
+          call distribute_rows(n,ncpu)
+
+          allocate(myelm(nnz))
+          j = 1
+          do i=1, nnz
+            if ((irn(i)>= dist(rank+1)).and.(irn(i)<= (dist(rank+2)-1))) then
+              myelm(j) = i
+              j = j + 1
+            endif
+          enddo
         
+          nnzloc = j - 1 
+          nloc = dist(rank+2) - dist(rank+1)
 
-        call spk_set_mat(n,nnz,irn,jcn,val,spss,comm,upd)
+          allocate(irnl(nnzloc), jcnl(nnzloc), vall(nnzloc))
+
+          do i = 1, nnzloc
+            irnl(i) = irn(myelm(i)) - dist(rank+1) + 1       ! irn starts from 1
+            jcnl(i) = jcn(myelm(i))                          ! jcn remains the same
+            vall(i) = val(myelm(i))
+          enddo
+          deallocate(myelm)  
+
+          call convert2csr(indx,nloc,n,nnzloc,irnl,jcnl,vall)
+          dist(:) = dist(:) - indx                           ! convert to c-indexing
+          call spk_set_mat(nloc,dist,irnl,jcnl,vall,spss,comm,upd)
+
+        else
+
+          call distribute_rows(n,1)
+          dist(:) = dist(:) - indx
+          call convert2csr(indx,n,n,nnz,irn,jcn,val)
+          call spk_set_mat(n,dist,irn,jcn,val,spss,comm,upd)
+
+        endif
+  
         call MPI_Barrier(comm,ierr)
 
         return  
@@ -147,18 +199,23 @@ module strumpack_module
         use mpi
         implicit none
 
-        integer comm,ierr
         real(kind=C_DOUBLE),  dimension(:), pointer :: rhs        
         integer(kind=C_INT), intent(in) :: n
+        integer, intent(in) :: comm 
+        
+        integer :: rank, ncpu, ierr, nloc
         type(C_PTR) :: rhsc
+
+        call MPI_COMM_RANK(comm, rank, ierr)
+        call MPI_COMM_SIZE(comm, ncpu, ierr)
 
         rhsc = c_loc(rhs);        
 
-        call spk_solve(n,rhsc,spss,comm)
+        call spk_solve(n,dist,rhsc,spss,comm)
         call MPI_Barrier(comm,ierr)
 
         return  
-    end subroutine strumpack_solve    
+    end subroutine strumpack_solve      
     
     subroutine strumpack_finalize(comm) bind(C)
         use, intrinsic :: iso_c_binding
@@ -171,7 +228,37 @@ module strumpack_module
         call MPI_Barrier(comm,ierr);
         
         return
-    end subroutine strumpack_finalize    
+    end subroutine strumpack_finalize
+
+    subroutine distribute_rows(n,ncpu) bind(C)
+      !> Distribute rows between members of MPI group
+
+        use, intrinsic :: iso_c_binding
+        use mpi
+        implicit none
+
+        integer, intent(in) :: n, ncpu
+        integer(kind=C_INT), dimension(:), allocatable :: nl
+        integer :: ierr, i
+
+        if (associated(dist)) dist=>null()
+        allocate(dist(ncpu+1))
+        allocate(nl(ncpu))
+
+        do i=1, ncpu
+          nl(i) = n/ncpu
+          if (i<mod(n,ncpu)+1) nl(i) = nl(i) + 1
+        enddo
+
+        dist(1) = 1
+        do i=1, ncpu
+          dist(i+1)= dist(i) + nl(i)
+        enddo
+
+        deallocate(nl)
+
+        return
+    end subroutine distribute_rows
 
 #endif
 end module strumpack_module

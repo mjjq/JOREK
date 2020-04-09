@@ -405,15 +405,15 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
     elm_problem(:,:) = .false.
 
   endif ! (.not. harmonic_matrix)
-    ! --- Memory allocation
-    if (associated(A_mat))   call tr_deallocatep(A_mat,"A_mat",CAT_DMATRIX) 
-    call tr_allocatep(A_mat,1,nz,"A_mat",  CAT_DMATRIX)
-    A_mat = 0.0d0
 
-    if (associated(rhs)) call tr_deallocatep(rhs,"rhs",CAT_DMATRIX) 
-    call tr_allocatep(rhs, 1,ndof,"rhs", CAT_DMATRIX)
-    rhs = 0.0d0 
+  ! --- Memory allocation
+  if (associated(A_mat))   call tr_deallocatep(A_mat,"A_mat",CAT_DMATRIX) 
+  call tr_allocatep(A_mat,1,nz,"A_mat",  CAT_DMATRIX)
+  A_mat = 0.0d0
 
+  if (associated(rhs)) call tr_deallocatep(rhs,"rhs",CAT_DMATRIX) 
+  call tr_allocatep(rhs, 1,ndof,"rhs", CAT_DMATRIX)
+  rhs = 0.0d0 
 
   call tr_allocatep(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
@@ -643,7 +643,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
                     index_kl = n_tor_local * n_var * (n_order+1) * (k-1) +  n_tor_local * n_var * (k_order-1) + l   ! index in the ELM matrix
 
-                    ilarge2 = ijA_position - 1 + (j-1) * n_var*n_tor_local + l
+                    ilarge2 = ijA_position - 1 + (j-1) * n_var * n_tor_local + l
 
                     irn(ilarge2) = index_large_i	+ j
                     jcn(ilarge2) = index_large_k	+ l
@@ -740,7 +740,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
   else ! ( if harmonic_matrix)
   
-    ! --- Form a global rhs from the rhss of the individual mpi threads.
+    ! --- Form a global rhs from the rhss of the individual mpi tasks
     call MPI_Reduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_N,ierr)
 
   endif 

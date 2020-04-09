@@ -400,7 +400,7 @@ required = 0
     endif
   endif
   if (abs(T_max_eta-T_max_eta_ohm)/(T_max_eta+T_max_eta_ohm) > 1.d-6) then
-    write(*,*) 'WARNING: T_eta_thres and T_eta_thres_ohm are not the same, which breaks  &
+    write(*,*) 'WARNING: T_max_eta and T_max_eta_ohm are not the same, which breaks  &
         energy conservation. No problem if you know what you are doing (a good reason to &
 	do this could be to avoid spurious Ohmic heating in the plasma core).'
   end if

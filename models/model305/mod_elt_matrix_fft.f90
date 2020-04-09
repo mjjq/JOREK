@@ -410,12 +410,12 @@ do ms=1, n_gauss
      delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,1,ms,mt) + x_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
      
      ! --- Temperature dependent resistivity
-     if ( eta_T_dependent .and. T0 <= T_eta_thres) then
+     if ( eta_T_dependent .and. T0 <= T_max_eta) then
        eta_T     = eta   * (abs(T0)/T_0)**(-1.5d0)
        deta_dT   = - eta   * (1.5d0)  * abs(T0)**(-2.5d0) * T_0**(1.5d0)
        d2eta_d2T =   eta   * (3.75d0) * abs(T0)**(-3.5d0) * T_0**(1.5d0)
-     else if ( eta_T_dependent .and. T0 > T_eta_thres) then
-       eta_T     = eta   * (T_eta_thres/T_0)**(-1.5d0)
+     else if ( eta_T_dependent .and. T0 > T_max_eta) then
+       eta_T     = eta   * (T_max_eta/T_0)**(-1.5d0)
        deta_dT   = 0.
        d2eta_d2T = 0.     
      else

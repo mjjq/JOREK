@@ -28,10 +28,10 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
-  eta       = 1.d-5
-  T_eta_thres = 1.d3
-  eta_ohmic = 0.d0
-  T_eta_thres_ohm = 1.d3
+  eta           = 1.d-5
+  T_max_eta     = 1.d3
+  eta_ohmic     = 0.d0
+  T_max_eta_ohm = 1.d3
 
   visco = 1.d-5
   visco_par = 1.d-5

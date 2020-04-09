@@ -128,7 +128,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
 !$omp          H_int, H_ext, S_int, S_ext, F0, VP_tot, eta_ohmic, eta_T_dependent,             &
-!$omp          T_eta_thres_ohm, T_0,                                                           &
+!$omp          T_max_eta_ohm, T_0,                                                             &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
@@ -276,10 +276,10 @@ do ife = ife_min, ife_max
 #endif
 
         ! --- Eta for ohmic heating
-        if ( eta_T_dependent .and. T0_corr <= T_eta_thres_ohm ) then
+        if ( eta_T_dependent .and. T0_corr <= T_max_eta_ohm ) then
           eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
-        else if ( eta_T_dependent .and. T0_corr > T_eta_thres_ohm ) then
-          eta_T_ohm     = eta_ohmic   * (T_eta_thres_ohm/T_0)**(-1.5d0)
+        else if ( eta_T_dependent .and. T0_corr > T_max_eta_ohm ) then
+          eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
         else
           eta_T_ohm     = eta_ohmic
         end if

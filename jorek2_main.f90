@@ -399,7 +399,7 @@ required = 0
       write(*,*) '  but with this setup you are not conserving energy.   '
     endif
   endif
-  if (abs(T_eta_thres-T_eta_thres_ohm)/(T_eta_thres+T_eta_thres_ohm) > 1.d-6) then
+  if (abs(T_max_eta-T_max_eta_ohm)/(T_max_eta+T_max_eta_ohm) > 1.d-6) then
     write(*,*) 'WARNING: T_eta_thres and T_eta_thres_ohm are not the same, which breaks  &
         energy conservation. No problem if you know what you are doing (a good reason to &
 	do this could be to avoid spurious Ohmic heating in the plasma core).'

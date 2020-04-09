@@ -120,10 +120,10 @@ real*8  :: TT,TT_s,TT_t,TT_st,TT_ss,TT_tt
 real*8  :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt 
 real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt 
 real*8  :: rn,rn_s,rn_t,rn_st,rn_ss,rn_tt 
-real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, T0_corr, rhon_s, rhon_t
+real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
-real*8  :: rn0, rn0_corr, r0_corr
+real*8  :: rn0, rn0_corr
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
 real*8  :: source_neutral, source_tmp

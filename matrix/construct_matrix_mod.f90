@@ -279,13 +279,13 @@ contains
 !! added by external routine calls.
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max, & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max,  &
-                            n, nz, ndof, A_mat, rhs_glob, irn, jcn, ijA_index, ijA_size, irn_jcn, harmonic_matrix)
+                            n, nz, ndof, A_mat, rhs, irn, jcn, ijA_index, ijA_size, irn_jcn, harmonic_matrix)
   
   use mumps_module 
   use tr_module 
   use mod_parameters
   use data_structure
-  use global_distributed_matrix
+  use global_distributed_matrix, only: A_glob, RHS_glob
   use phys_module
   use pellet_module
   use nodes_elements
@@ -330,7 +330,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer, intent(in) :: ndof 
   logical, intent(in) :: harmonic_matrix
   real*8,  intent(in), pointer :: A_mat(:)
-  real*8,  intent(in), pointer :: rhs_glob(:)
+  real*8,  intent(in), pointer :: rhs(:)
   integer, intent(in), pointer :: irn(:)
   integer, intent(in), pointer :: jcn(:)
   integer, intent(in), pointer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
@@ -345,7 +345,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer                           :: index_node1, index_node2, i_order, k_order, ielm, ierr
   integer                           :: ijA_position, index_min_loc, index_max_loc
   integer                           :: index_large_i, index_large_k, ilarge2, vertex(2), direction(2)
-  integer                           :: omp_nthreads, omp_tid
+  integer                           :: omp_nthreads, omp_tid, n_tor_local
   integer                           :: node_out(n_vertex_max)
   integer                           :: i_father,INODE_FATHER, ios
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
@@ -417,16 +417,17 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
   call tr_allocatep(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
-  
+ 
+  n_tor_local = i_tor_max - i_tor_min + 1
+ 
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,local_elms,element_list,node_list,          &
   !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,harmonic_matrix,       &
   !$omp          A_mat, rhs_local, rhs_glob, irn, jcn,      &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh, &
-  !$omp          ijA_index, ijA_size, irn_jcn, &
   !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn) &
-  !$omp   private(ife,ielm,iv,inode,element,nodes,i,inode1,i_order,index_node1,           &
+  !$omp   private(ife,ielm,iv,inode,element,nodes,i,inode1,i_order,index_node1, n_tor_local,          &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,          &
@@ -503,23 +504,23 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
                 
                   do l = 1, n_order+1
                   
-                    do im = 1, (i_tor_max - i_tor_min + 1)
+                    do im = 1, n_tor_local
                     
                     
-                      do in = 1, (i_tor_max - i_tor_min + 1)
+                      do in = 1, n_tor_local
                       
                         ! --- Indices for RHS (index_ij) and ELM matrix (index_ij, index_kl)
-                        index_ij            = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) &
-                                            + (i_tor_max - i_tor_min + 1) * n_var * (j-1) + (i_tor_max - i_tor_min + 1) * (v1-1) + im
+                        index_ij            = n_tor_local * n_var * (n_order+1) * (i-1) &
+                                            + n_tor_local * n_var * (j-1) + n_tor_local * (v1-1) + im
                       
-                        index_kl            = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (k-1) &
-                                            + (i_tor_max - i_tor_min + 1) * n_var * (l-1) + (i_tor_max - i_tor_min + 1) * (v2-1) + in
+                        index_kl            = n_tor_local * n_var * (n_order+1) * (k-1) &
+                                            + n_tor_local * n_var * (l-1) + n_tor_local * (v2-1) + in
                       
                         ! --- Indices for T_e (model400)
-                        index_ij_model400_e = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) &
-                                            + (i_tor_max - i_tor_min + 1) * n_var * (j-1) + (i_tor_max - i_tor_min + 1) * (8 -1) + im
-                        index_kl_model400_e = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (k-1) &
-                                            + (i_tor_max - i_tor_min + 1) * n_var * (l-1) + (i_tor_max - i_tor_min + 1) * (8 -1) + in
+                        index_ij_model400_e = n_tor_local * n_var * (n_order+1) * (i-1) &
+                                            + n_tor_local * n_var * (j-1) + n_tor_local * (8 -1) + im
+                        index_kl_model400_e = n_tor_local * n_var * (n_order+1) * (k-1) &
+                                            + n_tor_local * n_var * (l-1) + n_tor_local * (8 -1) + in
 
                         !--- RHS: simple output of vector element
                         if ( (k==1) .and. (l==1) .and. (v2==1) .and. (in==1) ) then
@@ -566,9 +567,9 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
                           write(387, "( E18.6, 8I4 )" ) tmp_elm_v2_8, v1, 8,  i, k, j, l, im, in
                         end if
                       
-                      end do ! (i_tor_max - i_tor_min + 1)
+                      end do ! n_tor_local
                     
-                    end do ! (i_tor_max - i_tor_min + 1)
+                    end do ! n_tor_local
                   
                   end do ! n_order+1
                 
@@ -610,13 +611,13 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
           index_node1 = node_list%node(inode1)%index(i_order)
 
-          index_large_i = (i_tor_max - i_tor_min + 1) * n_var * (index_node1 - 1)
+          index_large_i = n_tor_local * n_var * (index_node1 - 1)
 
           if ((index_node1 .ge. index_min) .and. (index_node1 .le. index_max)) then
 
-            do j = 1, n_var * (i_tor_max - i_tor_min + 1)
+            do j = 1, n_var * n_tor_local
 
-              index_ij = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) + (i_tor_max - i_tor_min + 1) * n_var * (i_order-1) + j   ! index in the ELM matrix
+              index_ij = n_tor_local * n_var * (n_order+1) * (i-1) + n_tor_local * n_var * (i_order-1) + j   ! index in the ELM matrix
              
               !$omp atomic
               rhs_local(index_large_i+j) = rhs_local(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
@@ -631,35 +632,33 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
                 index_node2 = node_list%node(knode)%index(k_order)
 
-                index_large_k = (i_tor_max - i_tor_min + 1) * n_var * (index_node2 - 1)
+                index_large_k = n_tor_local * n_var * (index_node2 - 1)
    
                 call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
                 thread_struct(omp_tid)%synch_buff(:) = 0.d0
-                do j = 1, n_var * (i_tor_max - i_tor_min + 1)
-                  index_ij = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (i-1) +   & 
-                              (i_tor_max - i_tor_min + 1) * n_var * (i_order-1) + j   ! index in the ELM matrix
+                do j = 1, n_var * n_tor_local
+                  index_ij = n_tor_local * n_var * (n_order+1) * (i-1) + n_tor_local * n_var * (i_order-1) + j   ! index in the ELM matrix
 
-                  do l = 1, n_var * (i_tor_max - i_tor_min + 1)
+                  do l = 1, n_var * n_tor_local
 
-                    index_kl = (i_tor_max - i_tor_min + 1) * n_var * (n_order+1) * (k-1) + &  
-                               (i_tor_max - i_tor_min + 1) * n_var * (k_order-1) + l   ! index in the ELM matrix
+                    index_kl = n_tor_local * n_var * (n_order+1) * (k-1) + n_tor_local * n_var * (k_order-1) + l   ! index in the ELM matrix
 
-                    ilarge2 = ijA_position - 1 + (j-1) * n_var*(i_tor_max - i_tor_min + 1) + l
+                    ilarge2 = ijA_position - 1 + (j-1) * n_var*n_tor_local + l
 
                     irn(ilarge2) = index_large_i	+ j
                     jcn(ilarge2) = index_large_k	+ l
 
-                    thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) = &
-                      thread_struct(omp_tid)%synch_buff((j-1)*n_var*(i_tor_max - i_tor_min + 1)+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
+                    thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor_local+l) = &
+                      thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor_local+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
                      
                   enddo ! n_var * n_tor
 
                 enddo ! n_var * n_tor
 
                 !$omp critical
-                A_mat(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) = &
-                  A_mat(ijA_position : ijA_position + n_var*(i_tor_max - i_tor_min + 1)*n_var*(i_tor_max - i_tor_min + 1) - 1) +  &
+                A_mat(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) = &
+                  A_mat(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) +  &
                   thread_struct(omp_tid)%synch_buff(:)
                 !$omp end critical 
 
@@ -731,26 +730,26 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
 #ifdef NORMTRACE
     ! --- For debugging purpose
-    call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-    call tr_locvnorms("cm_Rhs",RHS_glob_tmp,ndof)
+    call MPI_Reduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+    call tr_locvnorms("cm_Rhs",RHS,ndof)
     if (my_id .eq. 0) then
       write(fname,'(A,I6.6)')"rhs",index_now
-      call tr_vdump(fname,RHS_glob_tmp,ndof)
+      call tr_vdump(fname,RHS,ndof)
     end if
 #endif
-    call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+    call MPI_Reduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
 
   else ! ( if harmonic_matrix)
   
     ! --- Form a global rhs from the rhss of the individual mpi threads.
-    call MPI_Reduce(RHS_local,RHS_glob_tmp,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_N,ierr)
+    call MPI_Reduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_N,ierr)
 
   endif 
 
   call tr_deallocatep(RHS_local,"RHS_local",CAT_DMATRIX)
      
   ! --- Memory tracking
-  call tr_locvnorms("cm_BCRhs",RHS_glob_tmp,ndof)
+  call tr_locvnorms("cm_BCRhs",RHS,ndof)
   call tr_debug_writei("ndof",ndof)
   !write(string, '(A8,I2.2,A1)') "matrice_",my_id,"\0"
   !open(unit=9, file=string, STATUS='replace')

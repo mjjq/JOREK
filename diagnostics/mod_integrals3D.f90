@@ -58,16 +58,18 @@ type (type_bnd_element)  :: bndelem
 type (type_surface_list) :: surface_list
 
 real*8  :: psi_axis, psi_bnd
-real*8  :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
-real*8  :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss)
-real*8  :: eq_g(n_plane,n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gauss)
-real*8  :: eq_t(n_plane,n_var,n_gauss,n_gauss), eq_p(n_plane,n_var,n_gauss,n_gauss)
+real*8  :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss),        x_ss(n_gauss,n_gauss),        x_tt(n_gauss,n_gauss),        x_st(n_gauss,n_gauss)
+real*8  :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss),        y_ss(n_gauss,n_gauss),        y_tt(n_gauss,n_gauss),        y_st(n_gauss,n_gauss)
+real*8  :: eq_g(n_plane,0:n_var,n_gauss,n_gauss), eq_s(n_plane,0:n_var,n_gauss,n_gauss)
+real*8  :: eq_t(n_plane,0:n_var,n_gauss,n_gauss), eq_p(n_plane,0:n_var,n_gauss,n_gauss)
+real*8  :: eq_ss(n_plane,0:n_var,n_gauss,n_gauss), eq_tt(n_plane,0:n_var,n_gauss,n_gauss), eq_st(n_plane,0:n_var,n_gauss,n_gauss)
+real*8  :: eq_sp(n_plane,0:n_var,n_gauss,n_gauss), eq_tp(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: wgauss_copy(n_gauss)
 
 real*8  :: x_g_1D(n_gauss),  x_s_1D(n_gauss),   x_t_1D(n_gauss)
 real*8  :: y_g_1D(n_gauss),  y_s_1D(n_gauss),   y_t_1D(n_gauss)
-real*8  :: eq_g_1D(n_plane,n_var,n_gauss), eq_s_1D(n_plane,n_var,n_gauss)
-real*8  :: eq_t_1D(n_plane,n_var,n_gauss), eq_p_1D(n_plane,n_var,n_gauss)
+real*8  :: eq_g_1D(n_plane,0:n_var,n_gauss), eq_s_1D(n_plane,0:n_var,n_gauss)
+real*8  :: eq_t_1D(n_plane,0:n_var,n_gauss), eq_p_1D(n_plane,0:n_var,n_gauss)
 
 real*8  :: current_source, particle_source, heat_source, heat_source_i, heat_source_e, rotation_source
 real*8  :: xt, t_norm, rho_norm, t_norm2
@@ -88,7 +90,11 @@ real*8, allocatable :: qval(:), radav(:)
 
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor, current_MA
-real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, area1
+real*8  :: xjac, xjac_R, xjac_Z, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, area1
+real*8  :: AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30
+real*8  :: A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ
+real*8  :: BR_Z, BZ_R
+real*8  :: r0_corr, T0_corr
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, delta_phi, phi, P_tot, D_tot
 real*8  :: VP_int, VP_ext, VK_int, VK_ext, vpar0, BB2, VP_tot, VK_tot
@@ -99,7 +105,7 @@ real*8  :: vpar_disp_tot, vpar_disp, viscopar_dissip_tot, source_tot, heating_to
 real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, source_out
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, drhondx, drhondy
-real*8  :: source_volume, source_pellet, eta_T
+real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, source_ns, neut_particles_tot
 real*8  :: E_tot, E_in, E_out, Zkpar_T, D_prof, ZK_prof, gamma_sheath_stangeby, sheath_heatflux
@@ -114,10 +120,10 @@ real*8  :: TT,TT_s,TT_t,TT_st,TT_ss,TT_tt
 real*8  :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt 
 real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt 
 real*8  :: rn,rn_s,rn_t,rn_st,rn_ss,rn_tt 
-real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, T0_corr, rhon_s, rhon_t
+real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
-real*8  :: rn0, rn0_corr, r0_corr
+real*8  :: rn0, rn0_corr
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
 real*8  :: source_neutral, source_tmp
@@ -135,7 +141,7 @@ real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8  :: m_i_over_m_imp
 !   -Mean impurity ionization state
-real*8  :: Z_imp, T0_Zimp, alpha_Zimp
+real*8  :: Z_imp, T0_Zimp, alpha_Zimp, Z_eff, eta_coef, ne_JOREK
 !   -Coefficients related to Z_imp
 real*8  :: alpha_imp, beta_imp
 !   -Corrected plasma temperature and density for radiation calculation
@@ -146,7 +152,7 @@ real*8     :: E_ion, Lrad, E_ion_bg
 integer*8  :: ion_i, ion_k, i_phi
 #endif
 
-integer    :: spi_i
+integer    :: spi_i, ion_i
 real*8     :: ng_radius
 
 
@@ -243,6 +249,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
 !$omp parallel default(none)                                                                   &
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
+!$omp          H_ss, H_tt, H_st,                                                               &
 !$omp          R_xpoint, Z_xpoint, my_id, use_pellet, delta_phi, R_axis, Z_axis, psi_axis, psi_bnd, &
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
@@ -268,15 +275,18 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
-!$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
+!$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, xjac_R, xjac_Z, eq_g, eq_s, eq_t, eq_p,    &
+!$omp           x_ss, x_tt, x_st, y_ss, y_tt, y_st, eq_ss, eq_tt, eq_st, eq_sp, eq_tp,         &
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
-!$omp           dpdx, dpdy, phi, r0_corr,                                                      &
+!$omp           dpdx, dpdy, phi,                                                               &
 !$omp           source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,                      &
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
-!$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, &
+!$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, r0_corr, &
+!$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
+!$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
 !$omp           rn0, rn0_corr,                                                                 &
@@ -323,8 +333,8 @@ do ife = ife_min, ife_max
     nodes(iv) = node_list%node(inode)
   enddo
 
-  x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0;
-  y_g(:,:)    = 0.d0; y_s(:,:)    = 0.d0; y_t(:,:)    = 0.d0;
+  x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0; x_ss(:,:)    = 0.d0; x_tt(:,:)    = 0.d0; x_st(:,:)    = 0.d0;
+  y_g(:,:)    = 0.d0; y_s(:,:)    = 0.d0; y_t(:,:)    = 0.d0; y_ss(:,:)    = 0.d0; y_tt(:,:)    = 0.d0; y_st(:,:)    = 0.d0;
 
   do i=1,n_vertex_max
     do j=1,n_order+1
@@ -337,15 +347,23 @@ do ife = ife_min, ife_max
 
           x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
           x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
+          x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
+          x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
+          x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_st(i,j,ms,mt)
+          
           y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
           y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+          y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
+          y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
+          y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
 
         enddo
       enddo
     enddo
   enddo
 
-  eq_g(:,:,:,:) = 0.d0; eq_s(:,:,:,:) = 0.d0; eq_t(:,:,:,:) = 0.d0; eq_p(:,:,:,:) = 0.d0;
+  eq_g(:,:,:,:) = 0.d0; eq_s(:,:,:,:) = 0.d0; eq_t(:,:,:,:) = 0.d0; eq_p(:,:,:,:) = 0.d0; eq_ss(:,:,:,:) = 0.d0; eq_tt(:,:,:,:) = 0.d0; eq_st(:,:,:,:) = 0.d0; 
+  eq_sp(:,:,:,:) = 0.d0; eq_tp(:,:,:,:) = 0.d0;
 
   do i=1,n_vertex_max
     do j=1,n_order+1
@@ -360,6 +378,11 @@ do ife = ife_min, ife_max
                 eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
                 eq_t(mp,k,ms,mt) = eq_t(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ(in,mp)
                 eq_p(mp,k,ms,mt) = eq_p(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ_p(in,mp)
+                eq_sp(mp,k,ms,mt) = eq_sp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ_p(in,mp)
+                eq_tp(mp,k,ms,mt) = eq_tp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ_p(in,mp)
+                eq_ss(mp,k,ms,mt) = eq_ss(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_ss(i,j,ms,mt)* HZ(in,mp)
+                eq_tt(mp,k,ms,mt) = eq_tt(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_tt(i,j,ms,mt)* HZ(in,mp)
+                eq_st(mp,k,ms,mt) = eq_st(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_st(i,j,ms,mt)* HZ(in,mp)
               enddo
             enddo
 
@@ -380,14 +403,14 @@ do ife = ife_min, ife_max
   
   do ms=1, n_gauss
     do mt=1, n_gauss
-      call density(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
+      call density(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                    dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
 #if JOREK_MODEL == 400
       call temperature_e(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 #else
-      call temperature(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
+      call temperature(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt),   &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
       eq_zTe(ms,mt) = eq_zTe(ms,mt) / 2.d0	! electron temperature
 #endif
@@ -405,50 +428,86 @@ do ife = ife_min, ife_max
         wst  = wgauss_copy(ms)*wgauss_copy(mt)
 
         xjac = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
+        xjac_R = ( x_ss(ms,mt) * y_t(ms,mt)**2 - 2*x_st(ms,mt) * y_s(ms,mt)*y_t(ms,mt) + x_tt(ms,mt) * y_s(ms,mt)**2 + x_s(ms,mt) * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )   &
+                 + x_t(ms,mt) * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) ) / xjac
+        xjac_Z = ( y_ss(ms,mt) * x_t(ms,mt)**2 - 2*y_st(ms,mt) * x_s(ms,mt)*x_t(ms,mt) + y_tt(ms,mt) * x_s(ms,mt)**2 + y_s(ms,mt) * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )   &
+                 + y_t(ms,mt) * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) ) / xjac
         BigR = x_g(ms,mt)
 
-        r0     = eq_g(mp,5,ms,mt)
-        r0_corr = corr_neg_dens(r0,(/1.d-9,1.d-5/),1.d-3) ! Correction for negative r0 ...
-        T0     = eq_g(mp,6,ms,mt)
-        T0e    = eq_g(mp,6,ms,mt) /2.d0
-        zj0    = eq_g(mp,3,ms,mt)
-        ps0    = eq_g(mp,1,ms,mt)
-        ps0_s  = eq_s(mp,1,ms,mt) 
-        ps0_t  = eq_t(mp,1,ms,mt)
-        u0_s   = eq_s(mp,2,ms,mt) 
-        u0_t   = eq_t(mp,2,ms,mt)
-        p0_s   = r0*eq_s(mp,6,ms,mt) + T0 * eq_s(mp,5,ms,mt) 
-        p0_t   = r0*eq_t(mp,6,ms,mt) + T0 * eq_t(mp,5,ms,mt) 
-        p0_p   = r0*eq_p(mp,6,ms,mt) + T0 * eq_p(mp,5,ms,mt) 
+        r0     = eq_g(mp,var_rho,ms,mt)
+        r0_corr = corr_neg_dens1(r0)
+        T0     = eq_g(mp,var_T,ms,mt)
+        T0_corr = corr_neg_temp1(T0)
+        T0e    = eq_g(mp,var_T,ms,mt) /2.d0 + eq_g(mp,var_Te,ms,mt)
+        zj0    = eq_g(mp,var_zj,ms,mt)
+        ps0    = eq_g(mp,var_psi,ms,mt)
+        ps0_s  = eq_s(mp,var_psi,ms,mt) 
+        ps0_t  = eq_t(mp,var_psi,ms,mt)
+        u0_s   = eq_s(mp,var_u,ms,mt) 
+        u0_t   = eq_t(mp,var_u,ms,mt)
+        p0_s   = r0*eq_s(mp,var_T,ms,mt) + T0 * eq_s(mp,var_rho,ms,mt) 
+        p0_t   = r0*eq_t(mp,var_T,ms,mt) + T0 * eq_t(mp,var_rho,ms,mt) 
+        p0_p   = r0*eq_p(mp,var_T,ms,mt) + T0 * eq_p(mp,var_rho,ms,mt) 
 
-#if (JOREK_MODEL > 299)
-        vpar0   = eq_g(mp,7,ms,mt)
-        vpar_s  = eq_s(mp,7,ms,mt)
-        vpar_t  = eq_t(mp,7,ms,mt)
-#else
-        vpar0    = 0.d0
-        vpar_s   = 0.d0
-        vpar_t   = 0.d0
-#endif
+        vpar0   = eq_g(mp,var_Vpar,ms,mt)
+        vpar_s  = eq_s(mp,var_Vpar,ms,mt)
+        vpar_t  = eq_t(mp,var_Vpar,ms,mt)
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
-        rn0    = eq_g(mp,8,ms,mt)
-        rn0_corr = corr_neg_dens(rn0, (/ 1.d-9, 1.d-5 /),1.d-3) ! Correction for negative rn0 ...
+        rn0    = eq_g(mp,var_rhon,ms,mt)
+        rn0_corr = corr_neg_dens1(rn0)
+#endif
+      
+#ifdef fullmhd
+        AR0      = eq_g(mp,var_AR,ms,mt)
+        AR0_p    = eq_p(mp,var_AR,ms,mt)
+        AR0_s    = eq_s(mp,var_AR,ms,mt)
+        AR0_t    = eq_t(mp,var_AR,ms,mt)
+        AR0_sp   = eq_sp(mp,var_AR,ms,mt)
+        AR0_tp   = eq_tp(mp,var_AR,ms,mt)
+        AR0_Rp   = (   y_t(ms,mt) * AR0_sp  - y_s(ms,mt) * AR0_tp ) / xjac
+        AZ0      = eq_g(mp,var_AZ,ms,mt)
+        AZ0_p    = eq_p(mp,var_AZ,ms,mt)
+        AZ0_s    = eq_s(mp,var_AZ,ms,mt)
+        AZ0_t    = eq_t(mp,var_AZ,ms,mt)
+        AZ0_sp   = eq_sp(mp,var_AZ,ms,mt)
+        AZ0_tp   = eq_tp(mp,var_AZ,ms,mt)
+        AZ0_Zp   = ( - x_t(ms,mt) * AZ0_sp  + x_s(ms,mt) * AZ0_tp ) / xjac
+        A30      = eq_g(mp,var_A3,ms,mt)
+        A30_p    = eq_p(mp,var_A3,ms,mt)
+        A30_s    = eq_s(mp,var_A3,ms,mt)
+        A30_t    = eq_t(mp,var_A3,ms,mt)
+        A30_ss   = eq_ss(mp,var_A3,ms,mt)
+        A30_tt   = eq_tt(mp,var_A3,ms,mt)
+        A30_st   = eq_st(mp,var_A3,ms,mt)
+        A30_R = (   y_t(ms,mt) * A30_s  - y_s(ms,mt) * A30_t ) / xjac
+        A30_RR   = (A30_ss * y_t(ms,mt)**2 - 2.d0*A30_st * y_s(ms,mt)*y_t(ms,mt) + A30_tt * y_s(ms,mt)**2  &
+                    + A30_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                           &
+                    + A30_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )       / xjac**2         &
+                    - xjac_R * (A30_s * y_t(ms,mt) - A30_t * y_s(ms,mt))     / xjac**2
+        A30_ZZ   = (A30_ss * x_t(ms,mt)**2 - 2.d0*A30_st * x_s(ms,mt)*x_t(ms,mt) + A30_tt * x_s(ms,mt)**2  &
+                    + A30_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                           &
+                    + A30_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2         &
+                    - xjac_Z * (- A30_s * x_t(ms,mt) + A30_t * x_s(ms,mt) )  / xjac**2
+        BR_Z = ( A30_ZZ - AZ0_Zp )/ BigR
+        BZ_R = -1/BigR**2 * ( AR0_p - A30_R ) + ( AR0_Rp - A30_RR )/ BigR
+        zj0 = - (BZ_R - BR_Z) * BigR
 #endif
 
         T0_corr = corr_neg_temp(T0)
         eta_T   = resistivity(T0_corr)  
+        eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
 
-        dTdx   = (   y_t(ms,mt) * eq_s(mp,6,ms,mt) - y_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
-        dTdy   = ( - x_t(ms,mt) * eq_s(mp,6,ms,mt) + x_s(ms,mt) * eq_t(mp,6,ms,mt) ) / xjac
-        drhodx = (   y_t(ms,mt) * eq_s(mp,5,ms,mt) - y_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
-        drhody = ( - x_t(ms,mt) * eq_s(mp,5,ms,mt) + x_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
+        dTdx   = (   y_t(ms,mt) * eq_s(mp,var_T,ms,mt) - y_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
+        dTdy   = ( - x_t(ms,mt) * eq_s(mp,var_T,ms,mt) + x_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
+        drhodx = (   y_t(ms,mt) * eq_s(mp,var_rho,ms,mt) - y_s(ms,mt) * eq_t(mp,var_rho,ms,mt) ) / xjac
+        drhody = ( - x_t(ms,mt) * eq_s(mp,var_rho,ms,mt) + x_s(ms,mt) * eq_t(mp,var_rho,ms,mt) ) / xjac
 
-        dpsidx = (   y_t(ms,mt) * eq_s(mp,1,ms,mt) - y_s(ms,mt) * eq_t(mp,1,ms,mt) ) / xjac
-        dpsidy = ( - x_t(ms,mt) * eq_s(mp,1,ms,mt) + x_s(ms,mt) * eq_t(mp,1,ms,mt) ) / xjac
+        dpsidx = (   y_t(ms,mt) * eq_s(mp,var_psi,ms,mt) - y_s(ms,mt) * eq_t(mp,var_psi,ms,mt) ) / xjac
+        dpsidy = ( - x_t(ms,mt) * eq_s(mp,var_psi,ms,mt) + x_s(ms,mt) * eq_t(mp,var_psi,ms,mt) ) / xjac
 
-        dudx = (   y_t(ms,mt) * eq_s(mp,2,ms,mt) - y_s(ms,mt) * eq_t(mp,2,ms,mt) ) / xjac
-        dudy = ( - x_t(ms,mt) * eq_s(mp,2,ms,mt) + x_s(ms,mt) * eq_t(mp,2,ms,mt) ) / xjac
+        dudx = (   y_t(ms,mt) * eq_s(mp,var_u,ms,mt) - y_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
+        dudy = ( - x_t(ms,mt) * eq_s(mp,var_u,ms,mt) + x_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
 
         vpar_x = (   y_t(ms,mt) * vpar_s - y_s(ms,mt) * vpar_t ) / xjac
         vpar_y = ( - x_t(ms,mt) * vpar_s + x_s(ms,mt) * vpar_t ) / xjac
@@ -477,20 +536,6 @@ do ife = ife_min, ife_max
         else
           current_source = 0.d0
         endif
- 
-        P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
-        D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
-        VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
-        VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
-        VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-        J2_tot = J2_tot + eta_T *(ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
-
-        mag_src_tot   = mag_src_tot + eta_T*ZJ0*current_source/(BigR**2) * xjac * BigR * wst * delta_phi
-
-        heli_tot      = heli_tot   + hel1         * BigR * xjac * wst * delta_phi
-        mag_wk_tot    = mag_wk_tot + mag_wk                     * wst * delta_phi
-        thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
-        vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi 
 
 #if (JOREK_MODEL == 501)
         !-------------------------------------------
@@ -543,7 +588,28 @@ do ife = ife_min, ife_max
         alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
         beta_imp     = m_i_over_m_imp*Z_imp - 1.
         ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
+        ne_JOREK     = r0_corr + beta_imp * rn0_corr ! Electron density in JOREK unit
+        ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
+                                                               ! Too small rho_1 will cause a problem
+
+        ! Calculate the effective charge of all species
+        Z_eff        = 0.
+   
+        ! First get the value of Z_eff
+        Z_eff        = r0_corr - rn0_corr
+        do ion_i=1, imp_adas(1)%n_Z
+          Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
+        end do
+        Z_eff        = Z_eff / ne_JOREK
   
+        if (Z_eff < 1) Z_eff = 1.
+   
+        ! This is to represent the dependence on Z_eff in resistivity
+        eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
+        eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
+        eta_T        = eta_T * eta_coef
+        eta_T_ohm    = eta_T_ohm * eta_coef
+
         P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
         P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
 
@@ -568,6 +634,20 @@ do ife = ife_min, ife_max
         local_E_ion     = local_E_ion + (r0 - rn0) * central_density * 1.d20 * E_ion_bg   &
                           * bigR * xjac * wst * delta_phi
 #endif
+
+        P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
+        D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
+        VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
+        VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
+        VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
+        J2_tot = J2_tot + eta_T *(ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
+
+        mag_src_tot   = mag_src_tot + eta_T*ZJ0*current_source/(BigR**2) * xjac * BigR * wst * delta_phi
+
+        heli_tot      = heli_tot   + hel1         * BigR * xjac * wst * delta_phi
+        mag_wk_tot    = mag_wk_tot + mag_wk                     * wst * delta_phi
+        thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
+        vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi 
 
         if (use_pellet) then
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
@@ -865,9 +945,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       ! --- get normalized flux 
       psi_n = get_psi_n(ps0,Z)
  
-      ! --- get resistivity and diffusion coefficients
-      T0_corr = corr_neg_temp(T0)
-      eta_T   = resistivity(T0_corr)  
+      ! --- get diffusion coefficients
       D_prof  = get_dperp (psi_n)
       ZK_prof = get_zkperp(psi_n)
  

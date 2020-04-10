@@ -575,11 +575,10 @@ do ms=1, n_gauss
        deta_dr0_ohm  = 0.
        deta_drn0_ohm = 0. 
      else if (eta_T_dependent .and. T0_corr > T_eta_thres_ohm) then  
-       eta_T     = eta_ohmic   * (T_eta_thres_ohm/T_0)**(-1.5d0)
-       deta_dT   = 0.
-       d2eta_d2T = 0.
-       deta_dr0  = 0.
-       deta_drn0 = 0.         
+       eta_T_ohm     = eta_ohmic   * (T_eta_thres_ohm/T_0)**(-1.5d0)
+       deta_dT_ohm   = 0.
+       deta_dr0_ohm  = 0.
+       deta_drn0_ohm = 0.         
      else
        eta_T_ohm      = eta_ohmic
        deta_dT_ohm    = 0.d0

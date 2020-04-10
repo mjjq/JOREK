@@ -642,13 +642,11 @@ contains
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
          irn, jcn, A_mat, i_tor_min, i_tor_max)
-    if (.not. only_count) then
       call boundary_conditions_add_RHS(     &
     	   index_node, k_psi, i_tor, 	    &
     	   index_min, index_max,	    &
     	   RHS_loc, rhs_tmp,                &
            i_tor_min, i_tor_max)
-    endif
     
     ! --- Condition between nodes (d/ds or d/dt)
     lhs_tmp = ZBIG
@@ -661,13 +659,11 @@ contains
     	 index_min, index_max,              &
          ijA_index, ijA_size, irn_jcn,      &
          irn, jcn, A_mat, i_tor_min, i_tor_max)
-    if (.not. only_count) then
       call boundary_conditions_add_RHS(     &
     	   index_node2, k_psi, i_tor,	    &
     	   index_min, index_max,	    &
     	   RHS_loc, rhs_tmp,                &
            i_tor_min, i_tor_max)
-    endif
   
     return
   end subroutine apply_RMP_BCs
@@ -886,7 +882,6 @@ contains
          ijA_index, ijA_size, irn_jcn,      &
          irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-    if (.not. only_count) then
       if (i_tor .eq. 1) then
         rhs_tmp = - mach1
       else
@@ -897,13 +892,7 @@ contains
     	   index_min, index_max,	      &
     	   RHS_loc, rhs_tmp,                  &
            i_tor_min, i_tor_max)
-    endif
 
-    call boundary_conditions_add_RHS(    &
-    	   index_node, k_Vpar, i_tor,	     &
-   	     index_min, index_max,	         &
-   	     RHS_loc, rhs_tmp)
-    
     ! --- Condition between nodes (d/ds or d/dt)
     lhs_tmp = mach1_ds_Vpars
     call boundary_conditions_add_one_entry( &
@@ -943,7 +932,6 @@ contains
     	   index_min, index_max,	      &
     	   RHS_loc, rhs_tmp,                  &
            i_tor_min, i_tor_max)
-    endif
   
     return
   end subroutine apply_Mach1_BCs
@@ -1038,7 +1026,6 @@ contains
          ijA_index, ijA_size, irn_jcn,      &
          irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-    if (.not. only_count) then
       if (i_tor .eq. 1) then
         rhs_tmp = - sheath_u
       else
@@ -1049,11 +1036,6 @@ contains
     	   index_min, index_max,	      &
     	   RHS_loc, rhs_tmp,                  &
            i_tor_min, i_tor_max)
-    endif
-    call boundary_conditions_add_RHS(      &
-    	   index_node, k_u, i_tor,	         &
-    	   index_min, index_max,	           &
-    	   RHS_loc, rhs_tmp)
       
     ! --- Condition between nodes
     lhs_tmp = dsheath_ds_us
@@ -1074,7 +1056,6 @@ contains
          ijA_index, ijA_size, irn_jcn,      &
          irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-    if (.not. only_count) then
       if (i_tor .eq. 1) then
         rhs_tmp = - sheath_ds
       else
@@ -1085,13 +1066,7 @@ contains
     	   index_min, index_max,	      &
     	   RHS_loc, rhs_tmp,                  &
            i_tor_min, i_tor_max)
-    endif
 
-    call boundary_conditions_add_RHS(       &
-      	   index_node2, k_u, i_tor,	        &
-      	   index_min, index_max,	          &
-      	   RHS_loc, rhs_tmp)
-  
     return
   end subroutine apply_U_sheath
   

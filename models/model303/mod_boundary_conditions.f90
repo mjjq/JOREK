@@ -231,13 +231,11 @@ contains
                                   ijA_index, ijA_size, irn_jcn,        & 
                                   irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                             if (.not. only_count) then
                                 call boundary_conditions_add_RHS(      &
                                      index_node, kv, in,               &
                                      index_min, index_max,             &
                                      RHS_loc, ZBIG * delta_psi_rmp,    &
                                      i_tor_min, i_tor_max)
-                             endif
                              
                              index_node2 = node_list%node(inode)%index(2)
 
@@ -248,13 +246,11 @@ contains
                                   index_min, index_max,                & 
                                   ijA_index, ijA_size, irn_jcn,        & 
                                   irn, jcn, A_mat, i_tor_min, i_tor_max)
-                             if (.not. only_count) then
                                 call boundary_conditions_add_RHS(      &
                                      index_node2, kv, in,              &
                                      index_min, index_max,             &
                                      RHS_loc, ZBIG * delta_psi_rmp_ds, &
                                      i_tor_min, i_tor_max)
-                             endif
                           endif
                        enddo  !(end RMP harmonics)   
                        endif !(end RMP)
@@ -398,7 +394,6 @@ contains
                                  ijA_index, ijA_size, irn_jcn,        & 
                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                            if (.not. only_count) then
                                if (in .eq. 1) then
                                   call boundary_conditions_add_RHS(              &
                                        index_node, kv, in,                       &
@@ -416,7 +411,6 @@ contains
                                        i_tor_min, i_tor_max)
 
                                endif
-                            endif
                             index_node  = node_list%node(inode)%index(1)
                             index_node2 = node_list%node(inode)%index(2)
                             kv = 7
@@ -455,7 +449,6 @@ contains
                                  ijA_index, ijA_size, irn_jcn,        & 
                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                            if (.not. only_count) then
                                if (in .eq. 1) then
                                   call boundary_conditions_add_RHS(                  &
                                        index_node2, kv, in,                          &
@@ -472,7 +465,6 @@ contains
                                        i_tor_min, i_tor_max)
 
                                endif
-                            endif
 
                          end if
 
@@ -546,13 +538,11 @@ contains
                                   ijA_index, ijA_size, irn_jcn,      & 
                                   irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                             if (.not. only_count) then
                                 call boundary_conditions_add_RHS(  &
                                      index_node, kv, in,           &
                                      index_min, index_max,         &
                                      RHS_loc, ZBIG * delta_psi_rmp,&
                                      i_tor_min, i_tor_max)
-                             endif
                              
                              index_node2 = node_list%node(inode)%index(3)
 
@@ -563,13 +553,11 @@ contains
                                   index_min, index_max,              & 
                                   ijA_index, ijA_size, irn_jcn,      & 
                                   irn, jcn, A_mat, i_tor_min, i_tor_max)
-                             if (.not. only_count) then
                                 call boundary_conditions_add_RHS(       &
                                      index_node2, kv, in,               &
                                      index_min, index_max,              &
                                      RHS_loc, ZBIG * delta_psi_rmp_dt,  &
                                      i_tor_min, i_tor_max)
-                             endif
                           endif
                         enddo        !(end RMP harmonics)
                         endif        !(end RMPs on)  ==================================
@@ -695,7 +683,6 @@ contains
                                  ijA_index, ijA_size, irn_jcn,        & 
                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                            if (.not. only_count) then
                                if (in .eq. 1) then
                                   call boundary_conditions_add_RHS(       &
                                        index_node, kv, in,                &
@@ -713,7 +700,6 @@ contains
                                        i_tor_min, i_tor_max)
 
                                endif
-                            endif
   
                             index_node  = node_list%node(inode)%index(1)
                             index_node2 = node_list%node(inode)%index(3)
@@ -746,7 +732,6 @@ contains
                                  ijA_index, ijA_size, irn_jcn,                                               & 
                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                            if (.not. only_count) then
                                if (in .eq. 1) then
                                   call boundary_conditions_add_RHS(                  &
                                        index_node2, kv, in,                          &
@@ -763,7 +748,6 @@ contains
                                        i_tor_min, i_tor_max)
 
                                endif
-                            endif
 
                        end if
 
@@ -835,13 +819,11 @@ contains
                                   ijA_index, ijA_size, irn_jcn,      & 
                                   irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                             if (.not. only_count) then
                                 call boundary_conditions_add_RHS(  &
                                      index_node, kv, in,           &
                                      index_min, index_max,         &
                                      RHS_loc, ZBIG * delta_psi_rmp,&
                                      i_tor_min, i_tor_max)
-                             endif
 
                              
                              index_node2 = node_list%node(inode)%index(3)
@@ -858,13 +840,11 @@ contains
                                   index_min, index_max,              & 
                                   ijA_index, ijA_size, irn_jcn,      & 
                                   irn, jcn, A_mat, i_tor_min, i_tor_max)
-                             if (.not. only_count) then
                                 call boundary_conditions_add_RHS(       &
                                      index_node2, kv, in,               &
                                      index_min, index_max,              &
                                      RHS_loc, ZBIG * delta_psi_rmp_dt,  &
                                      i_tor_min, i_tor_max)
-                             endif
                           endif
 
                         enddo        !(end RMP harmonics)
@@ -963,13 +943,11 @@ contains
                                   ijA_index, ijA_size, irn_jcn,        & 
                                   irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                             if (.not. only_count) then
                                 call boundary_conditions_add_RHS(      &
                                      index_node, kv, in,               &
                                      index_min, index_max,             &
                                      RHS_loc, ZBIG * delta_psi_rmp,    &
                                      i_tor_min, i_tor_max)
-                             endif
                              
                              index_node2 = node_list%node(inode)%index(3)
 
@@ -980,13 +958,11 @@ contains
                                   index_min, index_max,                & 
                                   ijA_index, ijA_size, irn_jcn,        & 
                                   irn, jcn, A_mat, i_tor_min, i_tor_max)
-                             if (.not. only_count) then
                                 call boundary_conditions_add_RHS(      &
                                      index_node2, kv, in,              &
                                      index_min, index_max,             &
                                      RHS_loc, ZBIG * delta_psi_rmp_dt, &
                                      i_tor_min, i_tor_max)
-                             endif
                              
                              index_node2 = node_list%node(inode)%index(2)
 
@@ -997,13 +973,11 @@ contains
                                   index_min, index_max,              & 
                                   ijA_index, ijA_size, irn_jcn,      & 
                                   irn, jcn, A_mat, i_tor_min, i_tor_max)
-                             if (.not. only_count) then
                                 call boundary_conditions_add_RHS(       &
                                      index_node2, kv, in,               &
                                      index_min, index_max,              &
                                      RHS_loc, ZBIG * delta_psi_rmp_ds,  &
                                      i_tor_min, i_tor_max)
-                             endif
                              
                           endif
                         enddo        !(end RMP harmonics)

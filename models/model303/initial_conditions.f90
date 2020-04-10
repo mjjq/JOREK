@@ -229,7 +229,8 @@ do i=1,node_list%n_nodes
     node_list%node(i)%psi_eq(:) = node_list%node(i)%values(1,:,1)
 #endif
 
-  if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
+!  if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
+  if (node_list%node(i)%boundary .eq. 1) then
 
     ps0_s     = node_list%node(i)%values(1,2,1)
     ps0_t     = node_list%node(i)%values(1,3,1)
@@ -245,7 +246,8 @@ do i=1,node_list%n_nodes
     direction = + ps0_x / abs(ps0_x)		 ! temporary solution for lower x-point only
     if (xcase2 .eq. 2) direction = -direction
     if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (ES%Z_xpoint(1)+ES%Z_xpoint(2))/2.d0) ) direction = -direction
-    if ( (grid_to_wall) .and. (n_wall_blocks .ne. 0) ) direction = 0.d0 ! everything to zero for grid with patches
+!    if ( (grid_to_wall) .and. (n_wall_blocks .ne. 0) ) direction = 0.d0 !everything to zero for grid with patches
+    if (grid_to_wall) direction = 0.d0 ! everything to zero for grid with patches
 
     BigR = node_list%node(i)%x(1,1)
     Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR

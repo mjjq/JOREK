@@ -80,9 +80,12 @@ contains
   real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
   real*8  :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
   real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
+  real*8  :: R_mid, Z_mid, R_center, Z_center, direction2, normal(2), normal_direction(2), grad_s(2), grad_t(2)
   integer :: ilarge_vp, ilarge_vp2
-  integer :: kp, j, err, itest 
+  integer :: kp, j, err, itest, i_mid
   integer :: n_rmp_harm, N_rmp_har_block_size
+
+  only_count = .false.
 
   RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
   
@@ -130,11 +133,30 @@ contains
 
   end if RMPspectrum
 
-  zbig = 1.d12
+  zbig = 1.d16
   zbig_backup = zbig
      do i=1, n_local_elms !===============================do elements
 
         ielm = local_elms(i)
+
+        i_mid = 0.d0; R_mid = 0.d0; Z_mid = 0.d0; R_center = 0.d0; Z_center = 0.d0
+
+        do iv=1, n_vertex_max !==========================do vertex
+          inode = element_list%element(ielm)%vertex(iv)
+          if (node_list%node(inode)%boundary .ne. 0) then
+            i_mid = i_mid + 1
+            R_mid = R_mid + node_list%node(inode)%x(1,1)     ! mid point on boundary (approx.)
+            Z_mid = Z_mid + node_list%node(inode)%x(1,2)     ! mid point on boundary (approx.)
+          endif
+          R_center = R_center + node_list%node(inode)%x(1,1)       ! center point within element (approx.)
+          Z_center = Z_center + node_list%node(inode)%x(1,2)       ! center point within element (approx.)
+        enddo
+        R_mid    = R_mid    / real(i_mid,8)
+        Z_mid    = Z_mid    / real(i_mid,8)
+        R_center = R_center / real(n_vertex_max,8)
+        Z_center = Z_center / real(n_vertex_max,8)
+         
+        normal_direction = (/R_mid - R_center, Z_mid - Z_center /) / norm2((/R_mid - R_center, Z_mid - Z_center /))
 
         do iv=1, n_vertex_max !==========================do vertex
 
@@ -144,7 +166,7 @@ contains
 
               do in=1, n_tor  !========================do n_tor
                 if (keep_n0_const  .and.  in .eq. 1 ) then
-                  zbig = 1.d15
+                  zbig = 1.d16
                 else
                   zbig = zbig_backup
                 endif
@@ -345,17 +367,22 @@ contains
                               if (node_list%node(inode)%boundary .eq. 11) direction = -direction
                               if (node_list%node(inode)%boundary .eq. 19) direction = -direction
                             endif
+
+                            grad_t = (/ -Z_s,   R_s /) / xjac
+                          
+                            normal     = dot_product(grad_t,normal_direction) * grad_t      ! outward pointing normal
+                            normal     = normal / norm2(normal)
+                            direction  = sign(1.d0,dot_product((/ps0_y,-ps0_x/),normal))
                             
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
 
-                            if (in .eq. 1) then
-
-                               !                write(*,'(A,3e14.6,A,e14.6)') ' Boundary : ',Vpar0, -BigR**2 * u0_s/ps0_s, direction*sqrt(GAMMA*T0)/Btot,&
-                               !                                              ' error : ',Vpar0 - BigR**2 * u0_s/ps0_s - direction*sqrt(GAMMA*T0)/Btot
-
-                            endif
+!                            if (in .eq. 1) then                              
+!                              write(*,'(i3,A,3e14.6,A,e14.6)') node_list%node(inode)%boundary, &
+!                                                              ' Boundary (s): ',Vpar0, -BigR**2 * u0_s/ps0_s, direction*sqrt(GAMMA*T0)/Btot, &
+!                                                              ' error : ',Vpar0 - BigR**2 * u0_s/ps0_s - direction*sqrt(GAMMA*T0)/Btot
+!                            endif
 
                             ku = 2
                             kv = 7
@@ -367,8 +394,6 @@ contains
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
-
-
                             call boundary_conditions_add_one_entry( &
                                  index_node, kv, in,                &
                                  index_node, kT, in,                &
@@ -377,8 +402,6 @@ contains
                                  , solve_only, gmres,               &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
-
-
 
                             call boundary_conditions_add_one_entry( &
                                  index_node,  kv, in,               &
@@ -416,8 +439,6 @@ contains
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
 
-
-
                             call boundary_conditions_add_one_entry( &
                                  index_node2, kv, in,               &
                                  index_node2, kT, in,               &
@@ -426,8 +447,6 @@ contains
                                  solve_only, gmres,                 &
                                  cnt, cnt_prod, only_count,         &
                                  index_min, index_max)
-
-
 
                             call boundary_conditions_add_one_entry( &
                                  index_node2,  kv, in,               &
@@ -479,9 +498,7 @@ contains
                           if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) .and. (.not. freeboundary)) then
                              ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
                              ! in .eq. RMP_har_sin   corresponds to sin(n_perturbation)
-               
-
-                                       
+                                                      
                              kp=1    ! variable psi
                              kv=1    ! equation for psi
                           
@@ -507,7 +524,6 @@ contains
                                 delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
                                 delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
                                 delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
-
                              endif
 
                              delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
@@ -635,10 +651,24 @@ contains
                               if (node_list%node(inode)%boundary .eq. 15) direction = -direction
                               if (node_list%node(inode)%boundary .eq. 19) direction = -direction
                             endif
+
+                            grad_s = (/  Z_t,  - R_t /) / xjac
+                          
+                            normal     = dot_product(grad_s,normal_direction) * grad_s      ! outward pointing normal
+                            normal     = normal / norm2(normal)
+                            direction  = sign(1.d0,dot_product((/ps0_y,-ps0_x/),normal))
                             
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
+
+                            if (in .eq. 1) then                              
+!                              write(139,'(i3,12f9.5)') node_list%node(inode)%boundary,node_list%node(inode)%x(1,:), normal_direction, ps0_y, -ps0_x, &
+!                                                   direction, direction2, direction-direction2, ps0_y*normal_direction(1)-ps0_x*normal_direction(2)
+                              write(*,'(i3,A,3e14.6,A,e14.6)') node_list%node(inode)%boundary, &
+                                                               ' Boundary (t): ',Vpar0, -BigR**2 * u0_t/ps0_t, direction*sqrt(GAMMA*T0)/Btot,&
+                                                               ' error : ',Vpar0 - BigR**2 * u0_t/ps0_t - direction*sqrt(GAMMA*T0)/Btot
+                            endif
 
                             ku = 2
                             kv = 7

@@ -55,7 +55,7 @@ type (type_node)         :: tmp_node
 theta = time_evol_theta
 zeta  = time_evol_zeta
 
-Zbig = 1.d12
+Zbig = 1.d16
 
 !--------------------- reorder the nodes to have the same direction as full element (maybe not necesary)
 if ((vertex(1) .eq. 3) .and. (vertex(2) .eq. 4)) then
@@ -185,7 +185,7 @@ do ms=1, n_gauss
 
     T0_corr = corr_neg_temp1(T0)
 
-    cs0   = sqrt(gamma*T0_corr)
+    cs0   = sqrt(gamma*max(T0,T_min))
 
     Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
 
@@ -193,14 +193,18 @@ do ms=1, n_gauss
 
     bdotn = (+ ps0_y * normal(1) - ps0_x * normal(2)) / x_g(ms) / Btot
 
-    normal_sign  = bdotn / abs(bdotn)
+    normal_sign  = sign(1.d0,bdotn)
     normal_sign3 = ps0_s / abs(ps0_s) * normal_sign
 
      factor = 1.d0
-!    factor = (0.5d0 + 0.5d0 * tanh((abs(bdotn) - 0.02d0)/0.016d0))**2
+!     factor = (0.5d0 + 0.5d0 * tanh((abs(bdotn) - 0.02d0)/0.016d0))**2
+!     factor = (0.5d0 + 0.5d0 * tanh((abs(bdotn) - 0.02d0)/0.03d0))**2
+!write(137,'(12e12.4)') x_g(ms),y_g(ms),bdotn,normal,normal_sign, cs0, vpar0 * Btot * normal_sign
 
     factor_cs_bnd_integral = 0.d0
     if (mach_one_bnd_integral) factor_cs_bnd_integral = 1.d0
+
+!    if (abs(bdotn) .lt. 0.02) factor_cs_bnd_integral = 0.d0
 
     do i=1,2                ! loop over nodes
 
@@ -220,7 +224,6 @@ do ms=1, n_gauss
           rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * normal_sign3 * tstep   ! right hand side equation 6
 
           rhs_ij_7 = - v * (vpar0 * Btot * normal_sign - cs0 * factor) * Zbig                      ! right hand side equation 7
-
 
           ij5 = index_ij + 4*n_tor                                          ! local index in element matrix
           ij6 = index_ij + 5*n_tor                                          ! local index in element matrix

@@ -165,6 +165,7 @@ module strumpack_module
           dist(:) = 0
           dist(rank+1) = minval(irn)
           if (rank.eq.(ncpu-1)) dist(rank+2) = maxval(irn) + 1
+
           call MPI_Allreduce(MPI_IN_PLACE,dist,ncpu+1,MPI_INTEGER,MPI_SUM,comm,ierr)
 
           ! check for consistency
@@ -185,8 +186,8 @@ module strumpack_module
           call convert2csr(indx,nloc,n,nnz,irn,jcn,val)          
           dist(:) = dist(:) - indx
         
-          call spk_set_mat(nloc,dist,irn,jcn,val,spss,comm,upd) !TODO: remove nloc as unnecessary
-      
+          call spk_set_mat(nloc,dist,irn,jcn,val,spss,comm,upd)
+
 #endif
         else
 

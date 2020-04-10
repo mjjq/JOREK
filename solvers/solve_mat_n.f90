@@ -734,8 +734,10 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       call MPI_COMM_SIZE(MPI_COMM_MASTER, n_cpu_master, ierr)     ! the number of cpus
     endif
 
+#ifndef DISTRIBUTEDA
     call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
     call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+#endif
     
     n = mumps_par%n
     nnz = mumps_par%nz
@@ -748,13 +750,11 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       endif     
 
 #ifdef DISTRIBUTEDA
-      ! nnz here is local
-      call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
+      call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
               UPDATE=spss_analyzed,DISTRIBUTED=.true.)
       mumps_par%a => null()
       mumps_par%irn => null()
       mumps_par%jcn => null()
-
 #else
 
       ! broadcast centralized matrix

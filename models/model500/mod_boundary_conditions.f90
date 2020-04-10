@@ -171,7 +171,7 @@ contains
     
                       !========================================================================
                       ! conditions for direction 1 (s), i.e. boundary types 1, 3, 4, 9
-                      ! apply fixed bc for variables k=1,2,3,4
+                      ! apply fixed bc for variables k=1,2,3,4,8
                       ! apply v_par = cs for k=7
                       !========================================================================
                       if     ((node_list%node(inode)%boundary .eq.  1) &
@@ -451,7 +451,7 @@ contains
 
                       !========================================================================
                       ! conditions for direction 2 (s), i.e. boundary types 5, 9
-                      ! apply fixed bc for variables k=1,2,3,4
+                      ! apply fixed bc for variables k=1,2,3,4,8
                       ! apply v_par = cs for k=7
                       !========================================================================
                       if    ((node_list%node(inode)%boundary .eq.     5) &

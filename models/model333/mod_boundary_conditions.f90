@@ -832,9 +832,9 @@ contains
       rhs_tmp = 0.d0
     endif
 
-    call boundary_conditions_add_RHS(       &
-    	   index_node, k_Vpar, i_tor,	      &
-   	     index_min, index_max,	      &
+    call boundary_conditions_add_RHS(    &
+    	   index_node, k_Vpar, i_tor,	     &
+   	     index_min, index_max,	         &
    	     RHS_loc, rhs_tmp)
     
     ! --- Condition between nodes (d/ds or d/dt)
@@ -869,7 +869,6 @@ contains
     	   index_node2, k_Vpar, i_tor,	      &
     	   index_min, index_max,	            &
     	   RHS_loc, rhs_tmp)
-    endif
   
     return
   end subroutine apply_Mach1_BCs
@@ -965,7 +964,6 @@ contains
     	   index_node, k_u, i_tor,	         &
     	   index_min, index_max,	           &
     	   RHS_loc, rhs_tmp)
-    endif
       
     ! --- Condition between nodes
     lhs_tmp = dsheath_ds_us
@@ -987,9 +985,10 @@ contains
     else
        rhs_tmp = 0.d0
     endif
-      call boundary_conditions_add_RHS(       &
-      	   index_node2, k_u, i_tor,	      &
-      	   index_min, index_max,	      &
+
+    call boundary_conditions_add_RHS(       &
+      	   index_node2, k_u, i_tor,	        &
+      	   index_min, index_max,	          &
       	   RHS_loc, rhs_tmp)
   
     return

@@ -304,6 +304,13 @@ subroutine preset_parameters
   grid_to_wall       = .false.              ! extend the grid to a physical wall
   RZ_grid_inside_wall= .false.              ! build the rectangular grid inside first wall
   
+  ! --- Option to manipulate psi_boundary, switched off by default
+  manipulate_psi_map(:,1) = 0.
+  manipulate_psi_map(:,2) = 99.
+  manipulate_psi_map(:,3) = 99.
+  manipulate_psi_map(:,4) = 0.1
+  manipulate_psi_map(:,5) = 0.1
+  
   adaptive_time      = .false.              ! requires no_mpi for Pastix library
   
   equil              = .true.               ! compute equilibrium

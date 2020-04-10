@@ -64,10 +64,7 @@ contains
     integer :: i, in, iv, inode, k
     integer :: index_large_i, index_node, ielm
     integer :: ijA_position, ilarge2
-
-    integer :: loop_nbr, loop, cnt, cnt_prod
     integer :: ierr
-    logical :: is_local, only_count
 
     zbig = 1.d12
     zbig_backup = zbig

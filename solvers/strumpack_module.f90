@@ -115,6 +115,7 @@ module strumpack_module
         integer(kind=C_INT), intent(in) :: n
         integer(kind=C_INT), intent(inout) :: nnz 
         logical,intent(in),optional :: update, distributed
+
         integer(kind=C_INT), dimension(:), pointer :: myelm
         logical :: upd=.false., dflag=.false.
 
@@ -127,6 +128,7 @@ module strumpack_module
         call MPI_COMM_SIZE(comm, ncpu, ierr)
 
         if ((.not. dflag).and.(ncpu>1)) then
+
           call distribute_rows(n,ncpu)
 
           allocate(myelm(nnz))
@@ -148,11 +150,12 @@ module strumpack_module
             jcnl(i) = jcn(myelm(i))                          ! jcn remains the same
             vall(i) = val(myelm(i))
           enddo
-          deallocate(myelm)  
 
           call convert2csr(indx,nloc,n,nnzloc,irnl,jcnl,vall)
           dist(:) = dist(:) - indx                           ! convert to c-indexing
           call spk_set_mat(nloc,dist,irnl,jcnl,vall,spss,comm,upd)
+          deallocate(myelm,irnl,jcnl,vall)
+
 #ifdef DISTRIBUTEDA
         elseif (dflag.and.(ncpu>1)) then
            ! get row distribution from irn
@@ -193,7 +196,7 @@ module strumpack_module
           call spk_set_mat(n,dist,irn,jcn,val,spss,comm,upd)
 
         endif
-  
+
         call MPI_Barrier(comm,ierr)
 
         return  

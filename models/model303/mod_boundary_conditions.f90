@@ -84,7 +84,6 @@ contains
   integer :: kp, j, err, itest, i_mid
   integer :: n_rmp_harm, N_rmp_har_block_size
 
-  only_count = .false.
 
   RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
   

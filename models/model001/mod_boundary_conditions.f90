@@ -72,9 +72,7 @@ contains
     integer :: index_large_i, index_node, index_node2, ielm
     integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, ilarge_vv, ilarge_vT, ilarge_vus
     integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT
-    integer :: loop_nbr, loop, cnt, cnt_prod
     integer :: first_tor, last_tor, ierr
-    logical :: is_local, only_count
 
     zbig = 1.d10
     zbig_backup = zbig

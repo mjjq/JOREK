@@ -77,9 +77,7 @@ contains
     integer :: index_large_i, index_node, index_node2, ielm
     integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, ilarge_vv, ilarge_vT, ilarge_vus
     integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT
-    integer :: loop_nbr, loop, cnt, cnt_prod
     integer :: ierr
-    logical :: is_local, only_count
 
 
     !=============== RMP ==============
@@ -920,7 +918,6 @@ contains
                                index_node,  k,  in,               &
                                index_node,  k,  in,               &
                                zbig, solve_only, gmres,           &
-                               cnt, cnt_prod, only_count,         &
                                index_min, index_max)
 
                           index_node = node_list%node(inode)%index(2)
@@ -929,7 +926,6 @@ contains
                                index_node,  k,  in,               &
                                index_node,  k,  in,               &
                                zbig, solve_only, gmres,           &
-                               cnt, cnt_prod, only_count,         &
                                index_min, index_max)
 
                           index_node = node_list%node(inode)%index(3)
@@ -938,7 +934,6 @@ contains
                                index_node,  k,  in,               &
                                index_node,  k,  in,               &
                                zbig, solve_only, gmres,           &
-                               cnt, cnt_prod, only_count,         &
                                index_min, index_max)
 
                         endif

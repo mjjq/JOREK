@@ -17,9 +17,6 @@ contains
   !! @param zbig        value
   !! @param solve_only  Do not add to harmonic matrix if .true.
   !! @param gmres       Do not add to product matrix if .false.
-  !! @param cnt         Entry counter for precond murge problem.
-  !! @param cnt_prod    Entry counter for product matrix.
-  !! @param only_count  Indicate if we do a count or a real assembly.
   !! @param use_murge   Use murge interface.
   !! @param use_murge_element Murge interface with elementary matrices.
   !! @param index_min   Minimal local element index
@@ -29,11 +26,9 @@ contains
        &   index_node,  k,  in,                 &
        &   index_node2, k2, in2,                &
        &   zbig, solve_only, gmres,             &
-       &   cnt, cnt_prod, only_count,           &
        &   index_min, index_max,                & 
        &   ijA_index, ijA_size, irn_jcn,        & 
-       &   irn, jcn, A_mat,          & 
-       &   i_tor_min, i_tor_max)
+       &   irn, jcn, A_mat, i_tor_min, i_tor_max)
     use mod_parameters
     use mod_locate_irn_jcn
 
@@ -41,8 +36,6 @@ contains
     integer, intent(in)          :: index_node2, k2, in2
     real*8,  intent(in)          :: zbig
     logical, intent(in)          :: solve_only, gmres
-    integer, intent(inout)       :: cnt, cnt_prod
-    logical, intent(in)          :: only_count
     integer, intent(in)          :: index_min, index_max
     integer, intent(in)          :: i_tor_min, i_tor_max 
     integer, intent(in), pointer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
@@ -82,9 +75,6 @@ contains
   !! @param zbig        value
   !! @param solve_only  Do not add to harmonic matrix if .true.
   !! @param gmres       Do not add to product matrix if .false.
-  !! @param cnt         Entry counter for precond murge problem.
-  !! @param cnt_prod    Entry counter for product matrix.
-  !! @param only_count  Indicate if we do a count or a real assembly.
   !! @param index_min   Minimal local element index
   !! @param index_max   Maximal local element index
   !!

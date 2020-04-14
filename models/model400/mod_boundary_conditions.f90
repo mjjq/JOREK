@@ -99,9 +99,7 @@ contains
     integer :: index_node, index_node2, ielm, index_tmp
     integer :: ijA_position,ijA_position2, ilarge2, ilarge_vv, ilarge_vTi, ilarge_vTe, ilarge_vus
     integer :: ilarge_vsvs, ilarge_vsTi, ilarge_vsTe, ilarge_vsTis, ilarge_vsTes
-    integer :: loop_nbr, loop, cnt, cnt_prod
     integer :: ierr
-    logical :: is_local, only_count
     logical :: apply_dirichlet, apply_on_psi, apply_on_current, on_private, on_inner, on_inner_or_private
 
     ! --- RMP parameters
@@ -228,13 +226,13 @@ contains
 
                   ! --- Apply Dirichlet if required
                   if (apply_dirichlet) then
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
                   endif
 
                   ! --------------
                   ! --- Mach-1 BCs
                   if (k_var .eq. 7) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only)
                   endif
 
                 endif
@@ -298,13 +296,13 @@ contains
 
                   ! --- Apply Dirichlet if required
                   if (apply_dirichlet) then
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
                   endif
 
                   ! --------------
                   ! --- Mach-1 BCs
                   if (k_var .eq. 7) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only)
                   endif
 
                 endif
@@ -380,7 +378,7 @@ contains
                       ) apply_dirichlet = .true.
 
                   if (apply_dirichlet) then
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
                   endif
 
                 endif
@@ -453,7 +451,7 @@ contains
                       ) apply_dirichlet = .true.
 
                   if (apply_dirichlet) then
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
                   endif
 
                   ! --- We do both sides! 2 => d/ds, 3 => d/dt
@@ -518,7 +516,7 @@ contains
                       ) apply_dirichlet = .true.
 
                   if (apply_dirichlet) then
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
                   endif
 
                 endif
@@ -728,7 +726,7 @@ contains
   !***************** Routine to apply Dirichlet boundary conditions *************
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+  subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only)
   
     use mod_parameters
     use data_structure
@@ -744,8 +742,7 @@ contains
     integer,		intent(in)    :: k_var
     integer,		intent(in)    :: i_tor
     integer,		intent(in)    :: index_min, index_max
-    logical,		intent(in)    :: gmres, solve_only, only_count
-    integer,		intent(inout) :: cnt, cnt_prod
+    logical,		intent(in)    :: gmres, solve_only
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -788,7 +785,7 @@ contains
   !****************** Routine to apply Mach-1 boundary conditions ***************
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only, only_count,cnt, cnt_prod)
+  subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only)
   
     use mod_parameters
     use data_structure
@@ -804,8 +801,7 @@ contains
     integer,		intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
     integer,		intent(in)    :: i_tor
     integer,		intent(in)    :: index_min, index_max
-    logical,		intent(in)    :: gmres, solve_only, only_count
-    integer,		intent(inout) :: cnt, cnt_prod
+    logical,		intent(in)    :: gmres, solve_only
     
     ! --- Internal variables
     integer				:: index_node,   index_node2

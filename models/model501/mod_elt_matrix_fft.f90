@@ -611,9 +611,9 @@ do ms=1, n_gauss
        dZKpar_dT = 0.d0
      endif
 
-     ! --- Temperature dependent hyper-resistivity resistivity, there is no
-     ! physical reason for this dependence whatsoever, just to keep a constant
-     ! ratio between the resistivity and hyper-resistivity
+     ! --- Temperature dependent hyper-resistivity. There is no physical
+     ! reason for this dependence whatsoever, this is just to keep a constant
+     ! ratio between the resistivity and hyper-resistivity.
      if ( eta_num_T_dependent .and. T0_corr <= T_eta_thres) then
        eta_num_T = eta_num * (T0_corr/T_0)**(-1.5d0)
        deta_num_dT = ( - eta_num * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
@@ -625,6 +625,7 @@ do ms=1, n_gauss
        deta_num_dT = 0.
      end if
 
+     ! --- Same for the hyper-viscosity.
      if ( visco_num_T_dependent .and. T0_corr <= T_eta_thres) then
        visco_num_T = visco_num * (T0_corr/T_0)**(-1.5d0)
        dvisco_num_dT = ( - visco_num * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
@@ -701,17 +702,13 @@ do ms=1, n_gauss
      Dn0y = D_neutral_y      
      Dn0p = D_neutral_p      
 
-  !-------------------------------------------
-  ! Atomic physics parameters for Argon
-  !-------------------------------------------
-
      select case ( trim(gas_type) )
        case('D2')
-         m_i_over_m_imp = central_mass/2.
+         m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
        case('Ar')
-         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
+         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u
        case('Ne')
-         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
+         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
        case default
          write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
@@ -723,12 +720,12 @@ do ms=1, n_gauss
      d2Z_imp_dT2 = 0.
 
      ! Te in eV:
-     T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-     dT_rad_dT = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     T_rad      = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     dT_rad_dT  = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
-     ! We estimate the effective charge by a test density 10^20/m^3
-     ! Later maybe we should implement a iterative method
+     ! We get the charge state distribution assuming n_e=10^20/m^3.
+     ! Later maybe we should implement an iterative method.
 
      if (allocated(imp_adas(1)%ionisation_energy)) then
 
@@ -738,28 +735,29 @@ do ms=1, n_gauss
        allocate(P_imp(0:imp_adas(1)%n_Z))
        allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
 
-       call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
-                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
+       call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),           &
+                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT, &
                               z_TeTe_out=d2Z_imp_dT2)
 
-
-       ! Calculate the ionization potential energy and its derivative wrt. temperature
+       ! Ionization potential energy
        E_ion     = 0.
        dE_ion_dT = 0.
-       E_ion_bg  = 13.6 ! Hydrogen and deterium seem to have different ionization energy, 
-                        ! but the difference is of the next order.
+       E_ion_bg  = 13.6 ! (Note: H and D have a different ionization energy, 
+                        !  but the difference is small.)
 
+       ! In eV
        do ion_i=1, imp_adas(1)%n_Z
          do ion_k=1, ion_i
            E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
            dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
          end do
        end do
-       ! Convert from eV to JOREK unit
+       
+       ! Convert from eV to JOREK units
        E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
        dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
        E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
-       ! Convert the gradient in K to gradient in JOREK unit
+       ! Convert E_ion gradient wrt. T from 1/K into 1/(JOREK units)
        dE_ion_dT = dE_ion_dT * dT_rad_dT * EL_CHG / K_BOLTZ
 
      else
@@ -771,9 +769,9 @@ do ms=1, n_gauss
        E_ion_bg  = 0.
      end if
 
-     ! Convert gradient in T(K) in to gradient in T (eV)
+     ! Convert Z_imp gradient wrt. T from 1/K into 1/eV
      dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
-     ! Derivative wrt to T, with T in JOREK units
+     ! ...and now from 1/eV into 1/(JOREK units)
      dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      dZ_imp_dT = dZ_imp_dT * dT0_corr_dT                      ! Account for the temperature correction
 
@@ -854,7 +852,7 @@ do ms=1, n_gauss
        end if
        eta_T     = eta_T * eta_coef
 
-       if (T0_corr <= T_eta_thres) then
+       if (T0_corr <= T_eta_thres_ohm) then
          deta_dr0_ohm  = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
          deta_drn0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
          deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT	   
@@ -876,15 +874,13 @@ do ms=1, n_gauss
        Lrad = 0.0
        dLrad_dT = 0.0
 
-       ! Here we are temperarily only considering one impurity species, in the
-       ! future maybe a do loop will is needed
        call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
 
        Lrad = Lrad * coef_rad_1
 
-       ! Convert gradient in T(K) in to gradient in T (eV)
+       ! Convert gradient wrt. to T from 1/K into 1/eV
        dLrad_dT = dLrad_dT * coef_rad_1 *  EL_CHG / K_BOLTZ 
-       ! Derivative wrt to T, with T in JOREK units
+       ! ...and now from 1/eV into 1/(JOREK units)
        dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
        dLrad_dT = dLrad_dT * dT0_corr_dT            
 
@@ -894,6 +890,7 @@ do ms=1, n_gauss
        end if
 
      else
+     
        Lrad = 0.
        dLrad_dT = 0.
 
@@ -908,16 +905,11 @@ do ms=1, n_gauss
 
 
    !--------------------------------------------------------
-   ! --- Source of neutrals from Massive Gas Injection (MGI)
+   ! --- Source of Impurities and Background species
    !--------------------------------------------------------
 
      source_imp = 0.d0
      source_bg  = 0.d0
-
-!============================================================!
-! Important note: in order to implementing more complicated  !
-!    model, we should add more arguments to inj_source       !
-!============================================================!
 
      if (using_spi) then
 
@@ -954,7 +946,7 @@ do ms=1, n_gauss
 
        end do
 
-     else
+     else ! if not using SPI
 
        call inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_imp,t_now,  &
@@ -976,6 +968,7 @@ do ms=1, n_gauss
      if (source_imp .lt. 0.d0) then
       source_imp = 0.d0
      endif
+     
      if (source_bg .lt. 0.d0) then
       source_bg = 0.d0
      endif

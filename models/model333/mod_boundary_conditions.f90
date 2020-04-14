@@ -98,10 +98,10 @@ contains
     real*8,                    intent(in)    :: psi_xpoint(2)
     logical,                   intent(in)    :: gmres
     logical,                   intent(in)    :: solve_only
-    integer, intent(in)                      :: i_tor_min, i_tor_max 
-    integer, intent(in), pointer             :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, intent(in), pointer             :: irn(:), jcn(:) 
-    real*8, intent(in), pointer              :: A_mat(:) 
+    integer,                   intent(in)    :: i_tor_min, i_tor_max 
+    integer, pointer,          intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, pointer,          intent(in)    :: irn(:), jcn(:) 
+    real*8, pointer,           intent(in)    :: A_mat(:) 
 
     ! --- Internal parameters
     real*8  :: mach1, dmach1, d2mach1_dTi, d2mach1_dTe, mach_u, dmach_u, dmach_rho
@@ -602,10 +602,10 @@ contains
     real*8,		intent(in)    :: psi_RMP_sin1(*), dpsi_RMP_sin_dR1(*), dpsi_RMP_sin_dZ1(*)
     logical,            intent(in)    :: solve_only, gmres
     integer,		intent(in)    :: index_min, index_max
-    integer,            intent(in)    :: i_tor_min, i_tor_max
-    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer, intent(in), pointer      :: irn(:), jcn(:) 
-    real*8, intent(in), pointer       :: A_mat(:) 
+    integer,            intent(in)    :: i_tor_min, i_tor_max 
+    integer, pointer,   intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, pointer,   intent(in)    :: irn(:), jcn(:) 
+    real*8, pointer,    intent(in)    :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -695,9 +695,9 @@ contains
     integer,		intent(in)    :: index_min, index_max
     logical,		intent(in)    :: gmres, solve_only
     integer,		intent(in)    :: i_tor_min, i_tor_max
-    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer, intent(in), pointer      :: irn(:), jcn(:) 
-    real*8, intent(in), pointer       :: A_mat(:) 
+    integer, pointer,   intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, pointer,   intent(in)    :: irn(:), jcn(:) 
+    real*8, pointer,    intent(in)    :: A_mat(:) 
     ! --- Internal variables
     integer			      :: index_node,   index_node2
     
@@ -755,9 +755,9 @@ contains
     integer,		intent(in)    :: index_min, index_max
     logical,		intent(in)    :: gmres, solve_only
     integer,		intent(in)    :: i_tor_min, i_tor_max
-    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer, intent(in), pointer      :: irn(:), jcn(:) 
-    real*8, intent(in), pointer       :: A_mat(:) 
+    integer, pointer,   intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, pointer,   intent(in)    :: irn(:), jcn(:) 
+    real*8, pointer,    intent(in)    :: A_mat(:) 
     
     ! --- Internal variables
     integer			      :: index_node,   index_node2
@@ -968,9 +968,9 @@ contains
     integer,		intent(in)    :: index_min, index_max
     logical,		intent(in)    :: gmres, solve_only
     integer,		intent(in)    :: i_tor_min, i_tor_max
-    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer, intent(in), pointer      :: irn(:), jcn(:) 
-    real*8, intent(in), pointer       :: A_mat(:) 
+    integer, pointer,   intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, pointer,   intent(in)    :: irn(:), jcn(:) 
+    real*8, pointer,    intent(in)    :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2

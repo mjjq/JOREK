@@ -67,10 +67,7 @@ contains
     integer :: index_large_i, index_node, index_node2, ielm
     integer :: ijA_position, ijA_position2, ilarge2
     integer :: ilarge_v(n_var), ilarge_vs(n_var)
-
-    integer :: loop_nbr, loop, cnt, cnt_prod
     integer :: ierr
-    logical :: is_local, only_count
 
     real*8  :: R, R_s, R_t, R_mid, R_cnt
     real*8  :: Z, Z_s, Z_t, Z_mid, Z_cnt

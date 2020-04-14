@@ -145,7 +145,7 @@ contains
 
            if (node_list%node(inode)%boundary .ne. 0) then !==================if boundary nodes
 
-              do in=i_tor_min, i_tor_max!1, n_tor  !========================do n_tor
+              do in=i_tor_min, i_tor_max  !========================do n_tor
                 if (keep_n0_const  .and.  in .eq. 1 ) then
                   zbig = 1.d15
                 else

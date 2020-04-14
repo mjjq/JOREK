@@ -125,7 +125,7 @@ do ms=1, n_gauss
      
          element_size_ij = element%size(vertex(i),direction(j))
 
-         do im=i_tor_min, i_tor_max !1,n_tor
+         do im=i_tor_min, i_tor_max
 
            index_ij = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(vertex(i)-1) + (i_tor_max - i_tor_min + 1) * n_var * (j-1) + im - i_tor_min + 1  ! index in the ELM matrix
 
@@ -147,7 +147,7 @@ do ms=1, n_gauss
      
                element_size_kl = element%size(vertex(k),direction(l))
 
-               do in = i_tor_min, i_tor_max !1, n_tor                                              ! loop over toroidal harmonics
+               do in = i_tor_min, i_tor_max                                              ! loop over toroidal harmonics
 
                  psi   = H1(k,l,ms)   * element_size_kl * HZ(in,mp)
 

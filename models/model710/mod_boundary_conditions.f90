@@ -41,7 +41,7 @@ contains
 
     ! Subroutine parameters
     INTEGER,                   intent(in)   :: my_id
-    INTEGER,                   intent(inout):: local_elms(*)
+    INTEGER,                   intent(in)   :: local_elms(*)
     INTEGER,                   intent(in)   :: n_local_elms
     INTEGER,                   intent(in)   :: index_min
     INTEGER,                   intent(in)   :: index_max
@@ -59,7 +59,7 @@ contains
     REAL*8,                    intent(in)   :: psi_xpoint(2)
     logical,                   intent(in)   :: gmres
     logical,                   intent(in)   :: solve_only
-    real*8,                    intent(in)   :: rhs_loc(*)
+    real*8,                    intent(inout):: rhs_loc(*)
     integer,                   intent(in)   :: i_tor_min, i_tor_max 
     integer, pointer,          intent(in)   :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
     integer, pointer,          intent(in)   :: irn(:), jcn(:) 

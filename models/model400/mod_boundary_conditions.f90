@@ -92,10 +92,10 @@ contains
     real*8,                    intent(in)    :: psi_xpoint(2)
     logical,                   intent(in)    :: gmres
     logical,                   intent(in)    :: solve_only
-    integer, intent(in)                      :: i_tor_min, i_tor_max 
-    integer, intent(in), pointer             :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, intent(in), pointer             :: irn(:), jcn(:) 
-    real*8, intent(in), pointer              :: A_mat(:) 
+    integer,                   intent(in)    :: i_tor_min, i_tor_max 
+    integer, pointer,          intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, pointer,          intent(in)    :: irn(:), jcn(:) 
+    real*8, pointer,           intent(in)    :: A_mat(:) 
 
     ! --- Internal parameters
     real*8  :: mach1, dmach1, d2mach1_dTi, d2mach1_dTe, mach_u, dmach_u, dmach_rho
@@ -678,17 +678,19 @@ contains
     real*8,		intent(in)    :: psi_RMP_cos1(*), dpsi_RMP_cos_dR1(*), dpsi_RMP_cos_dZ1(*)
     real*8,		intent(in)    :: psi_RMP_sin1(*), dpsi_RMP_sin_dR1(*), dpsi_RMP_sin_dZ1(*)
     integer,		intent(in)    :: index_min, index_max
-    integer,            intent(in)    :: i_tor_min, i_tor_max
-    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn(:), jcn(:)
-    real*8                            :: A_mat(:) 
+    integer,            intent(in)    :: i_tor_min, i_tor_max 
+    integer, pointer,   intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, pointer,   intent(in)    :: irn(:), jcn(:) 
+    real*8, pointer,    intent(in)    :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2, index_tmp
     integer				:: ijA_position, ijA_position2
     integer				:: ilarge_vp,    ilarge_vp2
     real*8				:: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_dl
+    integer				:: n_tor_local 
     
+    n_tor_local = i_tor_max - i_tor_min +1
     ! --- Get psi perturbation and its derivatives
     if (i_tor.eq.RMP_har_cos) then
       delta_psi_rmp    =  psi_RMP_cos1   (node%boundary_index)
@@ -712,14 +714,14 @@ contains
     ! --- Condition on nodes
     if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
       call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-      ilarge_vp  = ijA_position  - 1 + ((k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge_vp  = ijA_position  - 1 + ((k_psi-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_psi-1)*n_tor_local + i_tor -i_tor_min + 1
       
-      irn(ilarge_vp) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge_vp) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge_vp) = n_tor_local * n_var * (index_node-1) + (k_psi-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge_vp) = n_tor_local * n_var * (index_node-1) + (k_psi-1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge_vp)   = ZBIG
       
-      index_tmp = (i_tor_max - i_tor_min +1)*n_var * (index_node-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      index_tmp = n_tor_local*n_var * (index_node-1) + (k_psi-1)*n_tor_local + i_tor -i_tor_min + 1
       Rhs_loc(index_tmp) = ZBIG * delta_psi_rmp
     endif
     
@@ -727,14 +729,14 @@ contains
     if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then			      
       call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
       
-      ilarge_vp2  = ijA_position2 - 1 + ((k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge_vp2  = ijA_position2 - 1 + ((k_psi-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_psi-1)*n_tor_local + i_tor -i_tor_min + 1
 
-      irn(ilarge_vp2) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge_vp2) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge_vp2) = n_tor_local * n_var * (index_node2-1) + (k_psi-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge_vp2) = n_tor_local * n_var * (index_node2-1) + (k_psi-1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge_vp2)   = ZBIG
       
-      index_tmp = (i_tor_max - i_tor_min +1)*n_var * (index_node2-1) + (k_psi-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      index_tmp = n_tor_local*n_var * (index_node2-1) + (k_psi-1)*n_tor_local + i_tor -i_tor_min + 1
       Rhs_loc(index_tmp) = ZBIG * delta_psi_rmp_dl
     endif
   
@@ -767,17 +769,19 @@ contains
     integer,		intent(in)    :: i_tor
     integer,		intent(in)    :: index_min, index_max
     logical,		intent(in)    :: gmres, solve_only
-    integer,            intent(in)    :: i_tor_min, i_tor_max
-    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn(:), jcn(:)
-    real*8                            :: A_mat(:) 
+    integer,            intent(in)    :: i_tor_min, i_tor_max 
+    integer, pointer,   intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, pointer,   intent(in)    :: irn(:), jcn(:) 
+    real*8, pointer,    intent(in)    :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
     integer				:: ijA_position
     integer				:: ilarge
     logical				:: is_local
+    integer				:: n_tor_local 
     
+    n_tor_local = i_tor_max - i_tor_min +1
     ! --- Get nodes index
     index_node  = node%index(1)
     index_node2 = node%index(side)
@@ -785,21 +789,21 @@ contains
     ! --- Condition on nodes
     if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
       call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-      ilarge = ijA_position - 1 + ((k_var-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge = ijA_position - 1 + ((k_var-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_var-1)*n_tor_local + i_tor -i_tor_min + 1
 
-      irn(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge) = n_tor_local * n_var * (index_node-1) + (k_var-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge) = n_tor_local * n_var * (index_node-1) + (k_var-1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge)   = zbig
     endif
     ! --- Condition between nodes (d/ds)
     if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
       call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-      ilarge = ijA_position - 1 + ((k_var-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge = ijA_position - 1 + ((k_var-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_var-1)*n_tor_local + i_tor -i_tor_min + 1
 
-      irn(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_var-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge) = n_tor_local * n_var * (index_node2-1) + (k_var-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge) = n_tor_local * n_var * (index_node2-1) + (k_var-1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge)   = zbig
     endif
   
@@ -833,10 +837,10 @@ contains
     integer,		intent(in)    :: i_tor
     integer,		intent(in)    :: index_min, index_max
     logical,		intent(in)    :: gmres, solve_only
-    integer,            intent(in)    :: i_tor_min, i_tor_max
-    integer, intent(in), pointer      :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-    integer                           :: irn(:), jcn(:)
-    real*8                            :: A_mat(:) 
+    integer,            intent(in)    :: i_tor_min, i_tor_max 
+    integer, pointer,   intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, pointer,   intent(in)    :: irn(:), jcn(:) 
+    real*8, pointer,    intent(in)    :: A_mat(:) 
     
     ! --- Internal variables
     integer				:: index_node,   index_node2
@@ -848,12 +852,14 @@ contains
     real*8				:: mach_u, dmach_u, dmach_rho
     integer				:: ilarge_vv,   ilarge_vTi,   ilarge_vTe,   ilarge_vus
     integer				:: ilarge_vsvs, ilarge_vsTis, ilarge_vsTes, ilarge_vsTi, ilarge_vsTe
+    integer				:: n_tor_local 
     
+    n_tor_local = i_tor_max - i_tor_min +1
     ! --- Define node indices
     index_node  = node%index(1) 	    ! position of value
     index_node2 = node%index(side) 	    ! position of first deriative
-    index_rhs   = (i_tor_max - i_tor_min +1)*n_var*(index_node-1 ) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-    index_rhs2  = (i_tor_max - i_tor_min +1)*n_var*(index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+    index_rhs   = n_tor_local*n_var*(index_node-1 ) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
+    index_rhs2  = n_tor_local*n_var*(index_node2-1) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
 
     ! --- Define equations before MURGE and non-MURGE fork
     mach1       = - zbig / Btot * direction                     * sqrt(GAMMA*(Ti0 + Te0))	     
@@ -883,24 +889,24 @@ contains
       call locate_irn_jcn(index_node,index_node, index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
       call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
-      ilarge_vv  = ijA_position  - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      ilarge_vTi = ijA_position  - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      ilarge_vTe = ijA_position  - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge_vv  = ijA_position  - 1 + ((k_Vpar-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
+      ilarge_vTi = ijA_position  - 1 + ((k_Vpar-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_Ti  -1)*n_tor_local + i_tor -i_tor_min + 1
+      ilarge_vTe = ijA_position  - 1 + ((k_Vpar-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_Te  -1)*n_tor_local + i_tor -i_tor_min + 1
       !ilarge_vus = ijA_position2 - 1 + ((k_Vpar-1)*n_tor + i_tor-1) * n_var*n_tor + (k_u   -1)*n_tor + i_tor
 
-      irn(ilarge_vv)  = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge_vv)  = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge_vv)  = n_tor_local * n_var * (index_node-1) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge_vv)  = n_tor_local * n_var * (index_node-1) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge_vv)    = zbig
 
-      irn(ilarge_vTi) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge_vTi) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge_vTi) = n_tor_local * n_var * (index_node-1) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge_vTi) = n_tor_local * n_var * (index_node-1) + (k_Ti  -1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge_vTi)   = dmach1
 
-      irn(ilarge_vTe) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge_vTe) = (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge_vTe) = n_tor_local * n_var * (index_node-1) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge_vTe) = n_tor_local * n_var * (index_node-1) + (k_Te  -1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge_vTe)   = dmach1
 
       !irn(ilarge_vus) = n_tor * n_var * (index_node -1) + (k_Vpar-1)*n_tor + i_tor
@@ -920,35 +926,35 @@ contains
       call locate_irn_jcn(index_node2,index_node, index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
       call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
-      ilarge_vsvs  = ijA_position2 - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      ilarge_vsTis = ijA_position2 - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      ilarge_vsTes = ijA_position2 - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      ilarge_vsTi  = ijA_position  - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      ilarge_vsTe  = ijA_position  - 1 + ((k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) + & 
-                   (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      ilarge_vsvs  = ijA_position2 - 1 + ((k_Vpar-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
+      ilarge_vsTis = ijA_position2 - 1 + ((k_Vpar-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_Ti  -1)*n_tor_local + i_tor -i_tor_min + 1
+      ilarge_vsTes = ijA_position2 - 1 + ((k_Vpar-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_Te  -1)*n_tor_local + i_tor -i_tor_min + 1
+      ilarge_vsTi  = ijA_position  - 1 + ((k_Vpar-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_Ti  -1)*n_tor_local + i_tor -i_tor_min + 1
+      ilarge_vsTe  = ijA_position  - 1 + ((k_Vpar-1)*n_tor_local + i_tor-i_tor_min) * n_var*n_tor_local + & 
+        (k_Te  -1)*n_tor_local + i_tor -i_tor_min + 1
 
-      irn(ilarge_vsvs)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge_vsvs)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge_vsvs)  = n_tor_local * n_var * (index_node2-1) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge_vsvs)  = n_tor_local * n_var * (index_node2-1) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge_vsvs)    = zbig
 
-      irn(ilarge_vsTis) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge_vsTis) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge_vsTis) = n_tor_local * n_var * (index_node2-1) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge_vsTis) = n_tor_local * n_var * (index_node2-1) + (k_Ti  -1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge_vsTis)   = dmach1
 
-      irn(ilarge_vsTes) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge_vsTes) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge_vsTes) = n_tor_local * n_var * (index_node2-1) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge_vsTes) = n_tor_local * n_var * (index_node2-1) + (k_Te  -1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge_vsTes)   = dmach1
 
-      irn(ilarge_vsTi)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge_vsTi)  = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (k_Ti  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge_vsTi)  = n_tor_local * n_var * (index_node2-1) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge_vsTi)  = n_tor_local * n_var * (index_node -1) + (k_Ti  -1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge_vsTi)    = d2mach1_dTi
 
-      irn(ilarge_vsTe)  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k_Vpar-1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
-      jcn(ilarge_vsTe)  = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (k_Te  -1)*(i_tor_max - i_tor_min +1) + i_tor -i_tor_min + 1
+      irn(ilarge_vsTe)  = n_tor_local * n_var * (index_node2-1) + (k_Vpar-1)*n_tor_local + i_tor -i_tor_min + 1
+      jcn(ilarge_vsTe)  = n_tor_local * n_var * (index_node -1) + (k_Te  -1)*n_tor_local + i_tor -i_tor_min + 1
       A_mat(ilarge_vsTe)    = d2mach1_dTe
 
       if (i_tor .eq. 1) then

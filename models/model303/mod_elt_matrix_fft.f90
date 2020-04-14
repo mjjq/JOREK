@@ -35,7 +35,7 @@ integer, intent(in)            :: tid
 integer, intent(in)            :: i_tor_min, i_tor_max
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
-integer    :: n_tor_start, n_tor_end
+integer    :: n_tor_start, n_tor_end, n_tor_local
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
@@ -185,6 +185,7 @@ else
   n_tor_end   = i_tor_max
 end if
 
+n_tor_local = n_tor_end - n_tor_start + 1
 ! --- Toroidal basis functions
 if (use_fft) then
   ! --- Not needed in case of FFT
@@ -1023,7 +1024,7 @@ do i=1,n_vertex_max
 
               index_ij =       n_var*(n_order+1)*(i-1) +       n_var*(j-1) + 1
             else
-              index_ij = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(i-1) + (n_tor_end - n_tor_start +1) * n_var * (j-1) + im - n_tor_start +1 
+              index_ij = n_tor_local*n_var*(n_order+1)*(i-1) + n_tor_local * n_var * (j-1) + im - n_tor_start +1 
             endif
 
 
@@ -1806,7 +1807,7 @@ do i=1,n_vertex_max
 
                     index_kl =       n_var*(n_order+1)*(k-1) +       n_var*(l-1) + 1
                   else
-                    index_kl = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(k-1) + (n_tor_end - n_tor_start +1)*n_var*(l-1) + in - n_tor_start +1
+                    index_kl = n_tor_local*n_var*(n_order+1)*(k-1) + n_tor_local*n_var*(l-1) + in - n_tor_start +1
                   endif
 
                   ! --- Fill up the matrix

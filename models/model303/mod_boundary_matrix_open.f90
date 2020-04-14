@@ -44,7 +44,7 @@ real*8     :: R_inside, Z_inside, R_mid, Z_mid, R_cnt, Z_cnt, normal(2), normal1
 real*8     :: normal_sign, normal_sign3
 
 real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
-real*8     :: ps0, ps0_s, ps0_t, ps0_x, ps0_y, Vpar0, r0, T0, T0_corr, cs0  
+real*8     :: ps0, ps0_s, ps0_t, ps0_x, ps0_y, Vpar0, r0, T0, r0_corr, T0_corr, cs0  
 real*8     :: psi, psi_s, psi_t, vpar, rho,  T, cs_T
 real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67, amat_76, amat_77, element_size_ij, element_size_kl
 real*8     :: element_size_perp, grad_t(2), factor_cs_bnd_integral
@@ -184,8 +184,9 @@ do ms=1, n_gauss
     Vpar0 = eq_g(mp,7,ms)
 
     T0_corr = corr_neg_temp1(T0)
+    r0_corr = corr_neg_dens(r0)
 
-    cs0   = sqrt(gamma*max(T0,T_min))
+    cs0   = sqrt(gamma*T0_corr)
 
     Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
 
@@ -194,17 +195,13 @@ do ms=1, n_gauss
     bdotn = (+ ps0_y * normal(1) - ps0_x * normal(2)) / x_g(ms) / Btot
 
     normal_sign  = sign(1.d0,bdotn)
-    normal_sign3 = ps0_s / abs(ps0_s) * normal_sign
+    normal_sign3 = sign(1.d0,ps0_s) * normal_sign
 
      factor = 1.d0
 !     factor = (0.5d0 + 0.5d0 * tanh((abs(bdotn) - 0.02d0)/0.016d0))**2
-!     factor = (0.5d0 + 0.5d0 * tanh((abs(bdotn) - 0.02d0)/0.03d0))**2
-!write(137,'(12e12.4)') x_g(ms),y_g(ms),bdotn,normal,normal_sign, cs0, vpar0 * Btot * normal_sign
 
     factor_cs_bnd_integral = 0.d0
     if (mach_one_bnd_integral) factor_cs_bnd_integral = 1.d0
-
-!    if (abs(bdotn) .lt. 0.02) factor_cs_bnd_integral = 0.d0
 
     do i=1,2                ! loop over nodes
 
@@ -219,11 +216,11 @@ do ms=1, n_gauss
 
           v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)         ! test function
 
-          rhs_ij_5 = + v * density_reflection * r0 * vpar0 * ps0_s * normal_sign3 * tstep          ! right hand side equation 5
+          rhs_ij_5 = + v * density_reflection * r0_corr * vpar0 * ps0_s * normal_sign3 * tstep          ! right hand side equation 5
 
-          rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * normal_sign3 * tstep   ! right hand side equation 6
+          rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0_corr * T0_corr * vpar0 * ps0_s * normal_sign3 * tstep   ! right hand side equation 6
 
-          rhs_ij_7 = - v * (vpar0 * Btot * normal_sign - cs0 * factor) * Zbig                      ! right hand side equation 7
+          rhs_ij_7 = - v * (vpar0 * Btot * normal_sign - cs0 * factor) * dl * Zbig                      ! right hand side equation 7
 
           ij5 = index_ij + 4*n_tor                                          ! local index in element matrix
           ij6 = index_ij + 5*n_tor                                          ! local index in element matrix
@@ -252,17 +249,17 @@ do ms=1, n_gauss
 
                 cs_T  = gamma * T / (2.d0 * cs0)
 
-                amat_51 = - v * density_reflection * r0  * vpar0 * psi_s * normal_sign3 * theta * tstep 
-                amat_55 = - v * density_reflection * rho * vpar0 * ps0_s * normal_sign3 * theta * tstep 
-                amat_57 = - v * density_reflection * r0  * vpar  * ps0_s * normal_sign3 * theta * tstep 
+                amat_51 = - v * density_reflection * r0_corr  * vpar0 * psi_s * normal_sign3 * theta * tstep 
+                amat_55 = - v * density_reflection * rho      * vpar0 * ps0_s * normal_sign3 * theta * tstep 
+                amat_57 = - v * density_reflection * r0_corr  * vpar  * ps0_s * normal_sign3 * theta * tstep 
 
-                amat_61 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar0 * psi_s * normal_sign3 * theta * tstep 
-                amat_65 = + v * (gamma_sheath-1.d0) * rho * T0 * vpar0 * ps0_s * normal_sign3 * theta * tstep 
-                amat_66 = + v * (gamma_sheath-1.d0) * r0  * T  * vpar0 * ps0_s * normal_sign3 * theta * tstep 
-                amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * normal_sign3 * theta * tstep 
+                amat_61 = + v * (gamma_sheath-1.d0) * r0_corr  * T0_corr * vpar0 * psi_s * normal_sign3 * theta * tstep 
+                amat_65 = + v * (gamma_sheath-1.d0) * rho      * T0_corr * vpar0 * ps0_s * normal_sign3 * theta * tstep 
+                amat_66 = + v * (gamma_sheath-1.d0) * r0_corr  * T       * vpar0 * ps0_s * normal_sign3 * theta * tstep 
+                amat_67 = + v * (gamma_sheath-1.d0) * r0_corr  * T0_corr * vpar  * ps0_s * normal_sign3 * theta * tstep 
            
-                amat_76 =   v * ( - cs_T) * factor          * Zbig
-                amat_77 =   v * (vpar * Btot * normal_sign) * Zbig 
+                amat_76 =   v * ( - cs_T) * factor          * dl * Zbig
+                amat_77 =   v * (vpar * Btot * normal_sign) * dl * Zbig 
 
                 index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix
 

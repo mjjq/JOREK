@@ -42,7 +42,8 @@ real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
 real*8     :: ps0, ps0_s, Vpar0, r0, T0  
 real*8     :: psi, psi_s, vpar, rho,  T   
 real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67, element_size_ij, element_size_kl
-logical    :: xpoint2
+logical    :: xpoint2 
+integer    :: n_tor_local
 
 
 theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
@@ -95,6 +96,7 @@ do i=1,2
   enddo
 enddo
 
+n_tor_local = i_tor_max - i_tor_min + 1
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss
 
@@ -127,7 +129,7 @@ do ms=1, n_gauss
 
          do im=i_tor_min, i_tor_max
 
-           index_ij = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(vertex(i)-1) + (i_tor_max - i_tor_min + 1) * n_var * (j-1) + im - i_tor_min + 1  ! index in the ELM matrix
+           index_ij = n_tor_local*n_var*(n_order+1)*(vertex(i)-1) + n_tor_local * n_var * (j-1) + im - i_tor_min + 1  ! index in the ELM matrix
 
            v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)         ! test function
 
@@ -135,8 +137,8 @@ do ms=1, n_gauss
 
            rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * tstep     ! right hand side equation 6
 
-           ij5 = index_ij + 4*(i_tor_max - i_tor_min + 1)                                          ! local index in element matrix
-           ij6 = index_ij + 5*(i_tor_max - i_tor_min + 1)                                          ! local index in element matrix
+           ij5 = index_ij + 4*n_tor_local                                          ! local index in element matrix
+           ij6 = index_ij + 5*n_tor_local                                          ! local index in element matrix
 
            RHS(ij5) = RHS(ij5) + rhs_ij_5 * ws                               ! add to element RHS
            RHS(ij6) = RHS(ij6) + rhs_ij_6 * ws                               ! add to element RHS
@@ -164,12 +166,12 @@ do ms=1, n_gauss
                  amat_66 = + v * (gamma_sheath-1.d0) * r0  * T  * vpar0 * ps0_s * theta * tstep 
                  amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * theta * tstep 
 
-                 index_kl = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(vertex(k)-1) + (i_tor_max - i_tor_min + 1) * n_var * (l-1) + in - i_tor_min + 1  ! index in the ELM matrix
+                 index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l-1) + in - i_tor_min + 1  ! index in the ELM matrix
                  
                  kl1 = index_kl
-                 kl5 = index_kl + 4*(i_tor_max - i_tor_min + 1)
-                 kl6 = index_kl + 5*(i_tor_max - i_tor_min + 1)
-                 kl7 = index_kl + 6*(i_tor_max - i_tor_min + 1)
+                 kl5 = index_kl + 4*n_tor_local
+                 kl6 = index_kl + 5*n_tor_local
+                 kl7 = index_kl + 6*n_tor_local
 
                  ELM(ij5,kl1) =  ELM(ij5,kl1) + ws * amat_51
                  ELM(ij5,kl5) =  ELM(ij5,kl5) + ws * amat_55

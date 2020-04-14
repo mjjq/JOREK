@@ -4,7 +4,7 @@ module mod_fix_axis_nodes
 contains
 
 subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max, & 
-  ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, A_glob, i_tor_min, i_tor_max )
+  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
 
   use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
   use data_structure
@@ -20,8 +20,8 @@ subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, 
   type (type_element_list), intent(in) :: element_list          !< List of all elements
   integer, intent(in), pointer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
   integer,   intent(in)        :: i_tor_min, i_tor_max
-  integer                      :: irn_glob(:), jcn_glob(:) 
-  real*8                       :: A_glob(:) 
+  integer, intent(in), pointer :: irn(:), jcn(:) 
+  real*8, intent(in), pointer  :: A_mat(:) 
   ! Internal parameters
   real*8  :: zbig
   integer :: i, in, iv, inode, k
@@ -50,9 +50,9 @@ subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, 
               index_large_i = (i_tor_max - i_tor_min + 1) * n_var * (index_node - 1)
               ilarge2 = ijA_position - 1 + ((k-1)*(i_tor_max - i_tor_min + 1) + in-i_tor_min) * n_var*(i_tor_max - i_tor_min + 1) &
                 + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
-              irn_glob(ilarge2) =  (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
-              jcn_glob(ilarge2) =  (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
-              A_glob(ilarge2)   = zbig
+              irn(ilarge2) =  (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
+              jcn(ilarge2) =  (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
+              A_mat(ilarge2)   = zbig
             end if
 
             ! --- For cross st-derivative
@@ -62,9 +62,9 @@ subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, 
               index_large_i = (i_tor_max - i_tor_min + 1) * n_var * (index_node - 1)
               ilarge2 = ijA_position - 1 + ((k-1)*(i_tor_max - i_tor_min + 1) + in-i_tor_min) * n_var*(i_tor_max - i_tor_min + 1) &
                 + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
-              irn_glob(ilarge2) =  (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
-              jcn_glob(ilarge2) =  (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
-              A_glob(ilarge2)   = zbig
+              irn(ilarge2) =  (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
+              jcn(ilarge2) =  (i_tor_max - i_tor_min + 1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min + 1) + in - i_tor_min + 1
+              A_mat(ilarge2)   = zbig
             end if
 
           enddo

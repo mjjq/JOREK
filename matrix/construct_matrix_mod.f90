@@ -46,7 +46,7 @@ contains
     integer :: iv, iv2, iv3, iv4, inode1, inode2, inode3, inode4, i, j
     integer :: vertex(2), direction(2), bnd1, bnd2, side1, side2
     integer :: i_max   ! for keep_n0_const max index which should be updated
-
+    integer :: n_tor_local
 
 #ifdef COMPARE_ELEMENT_MATRIX
     integer  :: jvertex, jorder, jvar, jtor, ivertex, iorder, ivar, itor
@@ -190,15 +190,16 @@ contains
        
       enddo
     endif
-
+    
+    n_tor_local = i_tor_max - i_tor_min + 1
     ! --- If keep_n0_const then the n0 component should be frozen = diagonal entries high
     if ( keep_n0_const ) then
-      i_max =  (n_order+1)*n_vertex_max*n_var*n_tor
+      i_max =  (n_order+1)*n_vertex_max*n_var*n_tor_local
 #ifdef JECCD
       ! n0 component of eccd current should not be frozen when keep_n0_const=.t. (last variable)
-      i_max = (n_order+1)*n_vertex_max*(n_var-1)*n_tor
+      i_max = (n_order+1)*n_vertex_max*(n_var-1)*n_tor_local
 #endif
-      do i = 1, i_max, n_tor
+      do i = 1, i_max, n_tor_local
         thread_struct(omp_tid)%ELM(i,i) = 1.d15
       enddo
     endif
@@ -228,7 +229,7 @@ contains
 
       write(*,'(A)') '  #    my_id       i    ivtx iodr itor         ivar' // &
                      '                    RHS            RHS2        RHS-RHS2'
-      do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+      do i = 1, n_tor_local*n_vertex_max*(n_order+1)*n_var
     	
     	if (abs(thread_struct(omp_tid)%RHS(i)-thread_struct(omp_tid)%RHS2(i)) / &
             (abs(thread_struct(omp_tid)%RHS(i))+abs(thread_struct(omp_tid)%RHS2(i))+1.d0) .gt. 1.d-12) then
@@ -247,8 +248,8 @@ contains
       write(*,*)
       write(*,'(A)') '  #    my_id       i       j    ivtx iodr itor      ivar       jvtx jodr jtor      jvar' // &
                      '                    ELM            ELM2        ELM-ELM2'
-      do i = 1, n_tor*n_vertex_max*(n_order+1)*n_var
-    	do j = 1, n_tor*n_vertex_max*(n_order+1)*n_var
+      do i = 1, n_tor_local*n_vertex_max*(n_order+1)*n_var
+    	do j = 1, n_tor_local*n_vertex_max*(n_order+1)*n_var
     	  
     	  if (abs(thread_struct(omp_tid)%ELM(i,j)-thread_struct(omp_tid)%ELM2(i,j))/  &
     	      (abs(thread_struct(omp_tid)%ELM(i,j))+abs(thread_struct(omp_tid)%ELM2(i,j))+1.d0) .gt. 1.d-10) then

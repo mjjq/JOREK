@@ -5,7 +5,7 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only: tokamak_device, n_ext_block, n_wall_blocks, n_wall_block_points_max, &
+use phys_module, only: tokamak_device, n_ext_block, n_ext_equidistant, n_wall_blocks, n_wall_block_points_max, &
                        n_block_points_left, R_block_points_left, Z_block_points_left, &
                        n_block_points_right, R_block_points_right, Z_block_points_right, xcase, &
                        n_limiter, R_limiter, Z_limiter
@@ -54,7 +54,7 @@ real*8              :: bgd_radial, sig_radial1
 real*8              :: length_seg, length_tmp, length_sum, length_save
 real*8              :: length_left, length_right, length_find
 real*8              :: length_bottom, length_top, length_prev
-real*8              :: diff_min_beg, diff_min_end, diff, diff_min
+real*8              :: diff_min_beg, diff_min_end, diff, diff_with_grid, diff_min
 integer             :: i_elm_find(8), i_find
 real*8              :: s_find(8), t_find(8)
 integer             :: n_nodes, n_nodes_prev
@@ -371,29 +371,53 @@ if (far_from_wall) n_lim = 1
 ! --- Are we joining this block with the previous one?
 attached = .false.
 if (i_ext .gt. 1) then
+  ! --- Check difference with previous block
   diff = sqrt( (R_block_points_left(i_ext,1)-R_block_points_right(i_ext-1,1))**2 + (Z_block_points_left(i_ext,1)-Z_block_points_right(i_ext-1,1))**2 )
-  if (diff .lt. tolerance) then
+  ! --- Check difference with any existing grid
+  diff_min_beg = 1.d10
+  diff_min_end = 1.d10
+  do i_node = 1,node_list%n_nodes
+    if (node_list%node(i_node)%boundary .eq. 0) cycle
+    diff_with_grid = sqrt( (node_list%node(i_node)%x(1,1)-R_block_points_left(i_ext,1))**2 &
+                          +(node_list%node(i_node)%x(1,2)-Z_block_points_left(i_ext,1))**2 )
+    if (diff_with_grid .lt. diff_min_beg) then
+      diff_min_beg = diff_with_grid
+      i_bnd_beg_prev = i_node
+    endif
+    n_tmp = n_block_points_left(i_ext)
+    diff_with_grid = sqrt( (node_list%node(i_node)%x(1,1)-R_block_points_left(i_ext,n_tmp))**2 &
+                          +(node_list%node(i_node)%x(1,2)-Z_block_points_left(i_ext,n_tmp))**2 )
+    if (diff_with_grid .lt. diff_min_end) then
+      diff_min_end = diff_with_grid
+      i_bnd_end_prev = i_node
+    endif
+  enddo
+  diff_with_grid = diff_min_beg + diff_min_end
+  ! --- If we're attached, save connection nodes
+  if ( (diff .lt. tolerance) .or. (diff_with_grid .lt. tolerance) ) then
     attached = .true.
-    ! --- Determine which nodes are attached with previous block
+    ! --- Determine which nodes are attached with previous block (this was already done for diff_with_grid case)
     ! --- First, find out which bnd nodes are our starting/ending points for previous block
-    diff_min_beg = 1.d10
-    diff_min_end = 1.d10
-    do i_node = 1,node_list%n_nodes
-      if (node_list%node(i_node)%boundary .eq. 0) cycle
-      diff = sqrt( (node_list%node(i_node)%x(1,1)-R_block_points_right(i_ext-1,1))**2 &
-                  +(node_list%node(i_node)%x(1,2)-Z_block_points_right(i_ext-1,1))**2 )
-      if (diff .lt. diff_min_beg) then
-        diff_min_beg = diff
-        i_bnd_beg_prev = i_node
-      endif
-      n_tmp = n_block_points_right(i_ext-1)
-      diff = sqrt( (node_list%node(i_node)%x(1,1)-R_block_points_right(i_ext-1,n_tmp))**2 &
-                  +(node_list%node(i_node)%x(1,2)-Z_block_points_right(i_ext-1,n_tmp))**2 )
-      if (diff .lt. diff_min_end) then
-        diff_min_end = diff
-        i_bnd_end_prev = i_node
-      endif
-    enddo
+    if (diff_with_grid .gt. tolerance) then
+      diff_min_beg = 1.d10
+      diff_min_end = 1.d10
+      do i_node = 1,node_list%n_nodes
+        if (node_list%node(i_node)%boundary .eq. 0) cycle
+        diff = sqrt( (node_list%node(i_node)%x(1,1)-R_block_points_right(i_ext-1,1))**2 &
+                    +(node_list%node(i_node)%x(1,2)-Z_block_points_right(i_ext-1,1))**2 )
+        if (diff .lt. diff_min_beg) then
+          diff_min_beg = diff
+          i_bnd_beg_prev = i_node
+        endif
+        n_tmp = n_block_points_right(i_ext-1)
+        diff = sqrt( (node_list%node(i_node)%x(1,1)-R_block_points_right(i_ext-1,n_tmp))**2 &
+                    +(node_list%node(i_node)%x(1,2)-Z_block_points_right(i_ext-1,n_tmp))**2 )
+        if (diff .lt. diff_min_end) then
+          diff_min_end = diff
+          i_bnd_end_prev = i_node
+        endif
+      enddo
+    endif
     
     ! --- Now step along boundary between these two nodes
     call find_next_bnd_node(node_list,element_list,i_bnd_beg_prev,-1,i_node_prev)
@@ -445,28 +469,46 @@ if (i_ext .gt. 1) then
       enddo
       n_nodes_prev = count
     endif
+    if (diff_with_grid .lt. tolerance) n_seg_prev = n_nodes_prev
     if (n_nodes_prev .ne. n_seg_prev) then
       write(*,*)'Problem: number of common nodes between blocks does not match'
       stop
     endif
     
     ! ---  Which points were on previous block side?
-    n_tmp = n_block_points_right(i_ext-1)
-    call create_polar_lines_simple(n_tmp, R_block_points_right(i_ext-1,1:n_tmp), Z_block_points_right(i_ext-1,1:n_tmp), R_polar_right(1:n_tmp-1,1:4), Z_polar_right(1:n_tmp-1,1:4))
-    length_prev = 0.d0
-    do i=1,n_block_points_right(i_ext-1)-1
-      call from_polar_to_cubic(R_polar_right(i,1:4),R_cub1d)
-      call from_polar_to_cubic(Z_polar_right(i,1:4),Z_cub1d)
-      call curve_length(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4), &
-                        Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4), -1.d0, 1.d0, length)
-      length_prev = length_prev + length
-    enddo
-    allocate(R_seg_prev(n_seg_prev), Z_seg_prev(n_seg_prev))
-    do i=1,n_seg_prev
-      i_node = index_bnd_prev(i)
-      R_seg_prev(i) = node_list%node(i_node)%x(1,1)
-      Z_seg_prev(i) = node_list%node(i_node)%x(1,2)
-    enddo
+    if (diff_with_grid .gt. tolerance) then
+      n_tmp = n_block_points_right(i_ext-1)
+      call create_polar_lines_simple(n_tmp, R_block_points_right(i_ext-1,1:n_tmp), Z_block_points_right(i_ext-1,1:n_tmp), R_polar_right(1:n_tmp-1,1:4), Z_polar_right(1:n_tmp-1,1:4))
+      length_prev = 0.d0
+      do i=1,n_block_points_right(i_ext-1)-1
+        call from_polar_to_cubic(R_polar_right(i,1:4),R_cub1d)
+        call from_polar_to_cubic(Z_polar_right(i,1:4),Z_cub1d)
+        call curve_length(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4), &
+                          Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4), -1.d0, 1.d0, length)
+        length_prev = length_prev + length
+      enddo
+      allocate(R_seg_prev(n_seg_prev), Z_seg_prev(n_seg_prev))
+      do i=1,n_seg_prev
+        i_node = index_bnd_prev(i)
+        R_seg_prev(i) = node_list%node(i_node)%x(1,1)
+        Z_seg_prev(i) = node_list%node(i_node)%x(1,2)
+      enddo
+    else
+      allocate(R_seg_prev(n_seg_prev), Z_seg_prev(n_seg_prev))
+      do i=1,n_seg_prev
+        i_node = index_bnd_prev(i)
+        R_seg_prev(i) = node_list%node(i_node)%x(1,1)
+        Z_seg_prev(i) = node_list%node(i_node)%x(1,2)
+      enddo
+      length_prev = 0.d0
+      seg_prev(1) = 0.d0
+      do i=2,n_seg_prev
+        length = sqrt( (R_seg_prev(i)-R_seg_prev(i-1))**2 + (Z_seg_prev(i)-Z_seg_prev(i-1))**2 )
+        length_prev = length_prev + length
+        seg_prev(i) = length_prev
+      enddo
+      seg_prev(1:n_tmp) = seg_prev(1:n_tmp) / length_prev
+    endif
     
   endif
 endif
@@ -500,25 +542,29 @@ enddo
 if (.not. attached) then
   n_seg = n_ext_block(i_ext)
 else
-  if (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) then
-    if (n_ext_block(i_ext) .le. n_seg_prev+2) then 
-      length_tmp  = (1.d0 - seg_prev(n_seg_prev-1)) * length_prev
-      length_find = length_left - length_prev
-      n_seg = n_seg_prev + int(length_find/length_tmp) + 1
+  if (diff_with_grid .gt. tolerance) then
+    if (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) then
+      if (n_ext_block(i_ext) .le. n_seg_prev+2) then 
+        length_tmp  = (1.d0 - seg_prev(n_seg_prev-1)) * length_prev
+        length_find = length_left - length_prev
+        n_seg = n_seg_prev + int(length_find/length_tmp) + 1
+      else
+        n_seg = n_ext_block(i_ext)
+      endif
+    elseif (n_block_points_left(i_ext) .eq. n_block_points_right(i_ext-1)) then
+      n_seg = n_seg_prev
     else
-      n_seg = n_ext_block(i_ext)
+      ! ---  Which of these previous block points are we using?
+      count = 0
+      do i_seg = 1,n_seg_prev
+        length_find = seg_prev(i_seg) * length_prev
+        if (length_find .gt. length_left) exit
+        count = count + 1
+      enddo
+      n_seg = count
     endif
-  elseif (n_block_points_left(i_ext) .eq. n_block_points_right(i_ext-1)) then
-    n_seg = n_seg_prev
   else
-    ! ---  Which of these previous block points are we using?
-    count = 0
-    do i_seg = 1,n_seg_prev
-      length_find = seg_prev(i_seg) * length_prev
-      if (length_find .gt. length_left) exit
-      count = count + 1
-    enddo
-    n_seg = count
+    n_seg = n_seg_prev
   endif
 endif
 
@@ -537,7 +583,7 @@ allocate(R_polar_sides (n_seg-1  ,4,n_nodes),Z_polar_sides (n_seg-1  ,4,n_nodes)
 
 ! --- Segmentation in radial direction is the input
 if (attached) then
-  if (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) then
+  if ( (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) .and. (diff_with_grid .gt. tolerance) ) then
     do i_seg = 1,n_seg_prev
       seg(i_seg) = (seg_prev(i_seg) * length_prev) / length_left
     enddo
@@ -630,7 +676,7 @@ else
   Z_lim(2) = Z_block_points_right(i_ext,n_block_points_right(i_ext))
 endif
 ! --- Make sure we properly connect to the previous patch
-if (attached) then
+if ( (attached) .and. (diff_with_grid .gt. tolerance) ) then
   if (n_block_points_left(i_ext) .le. n_block_points_right(i_ext-1)) then
     R_lim(1) = R_seg_prev(n_seg)
     Z_lim(1) = Z_seg_prev(n_seg)
@@ -841,8 +887,13 @@ do i=2,n_nodes-1
     R_seg(i_seg,i) = R_seg(i_seg,1) + seg_bnd(i) * (R_seg(i_seg,n_nodes)-R_seg(i_seg,1))
     Z_seg(i_seg,i) = Z_seg(i_seg,1) + seg_bnd(i) * (Z_seg(i_seg,n_nodes)-Z_seg(i_seg,1))
     ! --- Plus the deviation
-    R_seg(i_seg,i) = R_seg(i_seg,i) + R_deviation(i_seg,i)
-    Z_seg(i_seg,i) = Z_seg(i_seg,i) + Z_deviation(i_seg,i)
+    if (.not. n_ext_equidistant(i_ext)) then
+      R_seg(i_seg,i) = R_seg(i_seg,i) + R_deviation(i_seg,i)
+      Z_seg(i_seg,i) = Z_seg(i_seg,i) + Z_deviation(i_seg,i)
+    else
+      R_seg(i_seg,i) = R_seg(i_seg,i) + 0.3*R_deviation(i_seg,i)
+      Z_seg(i_seg,i) = Z_seg(i_seg,i) + 0.3*Z_deviation(i_seg,i)
+    endif
   enddo
 enddo
 
@@ -988,36 +1039,38 @@ do i = i_start,n_nodes
   if (alpha .gt. 2.d0*PI) alpha = alpha - 2.d0 * PI
   ! --- In case we do not find good parameters, save an equidistant segmentation
   call meshac2(n_seg,seg_new,1.d0,9999.d0,9999.0,9999.d0,1.d0,1.0d0)
-  ! --- Then find the right segmentation to have a smooth transition
-  n_tmp    = 100 ! we try a few of them, and take the closest one
-  diff_min = 1.d10
-  sig_tmp  = 0.15d0 ! we take a transition 1/3 of the total length
-  if (attached) then
-    if (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) then
-      sig_tmp = (sig_tmp * length_prev) / polar_length ! special case
+  if (.not. n_ext_equidistant(i_ext)) then
+    ! --- Then find the right segmentation to have a smooth transition
+    n_tmp    = 100 ! we try a few of them, and take the closest one
+    diff_min = 1.d10
+    sig_tmp  = 0.15d0 ! we take a transition 1/3 of the total length
+    if (attached) then
+      if (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) then
+        sig_tmp = (sig_tmp * length_prev) / polar_length ! special case
+      endif
     endif
+    do j = 1,n_tmp
+      bgf_tmp = real(j)/real(n_tmp+1)
+      call meshac2(n_seg,seg_tmp,0.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
+      length_tmp = polar_length * seg_tmp(2) * abs(sin(alpha))
+      diff = abs(length_tmp-previous_length)
+      if (diff .lt. diff_min) then
+        diff_min = diff
+        call meshac2(n_seg,seg_new,0.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
+      endif
+    enddo
+    ! --- Try the other way around as well
+    do j = 1,n_tmp
+      bgf_tmp = real(j)/real(n_tmp+1)
+      call meshac2(n_seg,seg_tmp,1.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
+      length_tmp = polar_length * seg_tmp(2) * abs(sin(alpha))
+      diff = abs(length_tmp-previous_length)
+      if (diff .lt. diff_min) then
+        diff_min = diff
+        call meshac2(n_seg,seg_new,1.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
+      endif
+    enddo
   endif
-  do j = 1,n_tmp
-    bgf_tmp = real(j)/real(n_tmp+1)
-    call meshac2(n_seg,seg_tmp,0.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
-    length_tmp = polar_length * seg_tmp(2) * abs(sin(alpha))
-    diff = abs(length_tmp-previous_length)
-    if (diff .lt. diff_min) then
-      diff_min = diff
-      call meshac2(n_seg,seg_new,0.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
-    endif
-  enddo
-  ! --- Try the other way around as well
-  do j = 1,n_tmp
-    bgf_tmp = real(j)/real(n_tmp+1)
-    call meshac2(n_seg,seg_tmp,1.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
-    length_tmp = polar_length * seg_tmp(2) * abs(sin(alpha))
-    diff = abs(length_tmp-previous_length)
-    if (diff .lt. diff_min) then
-      diff_min = diff
-      call meshac2(n_seg,seg_new,1.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
-    endif
-  enddo
   ! --- In case you know you want a specific extension beyond the previous patch
   if (attached) then
     if ( (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) .and. (n_ext_block(i_ext) .gt. n_seg_prev+2) ) then

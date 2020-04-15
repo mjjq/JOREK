@@ -285,6 +285,7 @@ if (my_id == 0) then
     do i=1,n_wall_blocks
       write(*,INTG_FMT) 'Wall Patch number:    ', i
       write(*,INTG_FMT) 'resolution of block:  ', n_ext_block(i)
+      write(*,LOGI_FMT) 'n_ext_equidistant:    ', n_ext_equidistant(i)
       write(*,INTG_FMT) 'n_block_points_left   ', n_block_points_left(i)
       do j=1,n_block_points_left(i)
         write(*,INTG_FMT) 'Patch left  point:    ', j
@@ -298,6 +299,7 @@ if (my_id == 0) then
         write(*,REAL_FMT) 'Z_block_points_right  ', Z_block_points_right(i,j)
       enddo
     enddo
+    write(*,REAL_FMT) 'eqdsk_psi_fact:       ', eqdsk_psi_fact
   endif
 
   write(*,INTG_FMT) 'nout                  ', nout

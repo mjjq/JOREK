@@ -56,7 +56,7 @@ real*8              :: SIG_leg_0, SIG_leg_1
 real*8              :: SIG_up_leg_0, SIG_up_leg_1
 real*8              :: SIG_0, SIG_1
 real*8              :: bgf_tht
-real*8              :: Zbeg, Zend
+real*8              :: Zbeg, Zend, tht_SOL
 real*8              :: scale_out_points
 logical, parameter  :: plot_grid = .true.
 
@@ -380,22 +380,30 @@ do j=1,n_tht
     if (scale_out_points .gt. 1.d0) scale_out_points = 1.d0
     if ( (xcase .eq. 1) .or. ((xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2))) ) then        
       if (j .gt. n_tht_mid) then
-        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerInnerLeg - Z_xpoint(1)) * scale_out_points
+        tht_SOL = 1.0*PI + (stpts%angle_LowerLeft  - 1.0*PI) * scale_out_points
         i_max = n_flux + n_open + n_outer + n_inner
       else
-        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerOuterLeg - Z_xpoint(1)) * scale_out_points
+        if (stpts%angle_LowerRight .gt. PI) then
+          tht_SOL = 1.98*PI + (stpts%angle_LowerRight - 1.98*PI) * scale_out_points
+        else
+          tht_SOL = 0.02*PI + (stpts%angle_LowerRight - 0.02*PI) * scale_out_points
+        endif
         i_max = n_flux + n_open + n_outer
-      endif      
-      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)    
+      endif
+      call find_theta_surface(node_list,element_list,flux_list,i_max,tht_SOL,nwpts%R_sep(j),nwpts%Z_sep(j),i_elm_find,s_find,t_find,i_find)    
     elseif ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) then      
       if (j .gt. n_tht_mid) then
-        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerOuterLeg - Z_xpoint(1)) * scale_out_points
+        if (stpts%angle_LowerRight .gt. PI) then
+          tht_SOL = 1.98*PI + (stpts%angle_LowerRight - 1.98*PI) * scale_out_points
+        else
+          tht_SOL = 0.02*PI + (stpts%angle_LowerRight - 0.02*PI) * scale_out_points
+        endif
         i_max = n_flux + n_open + n_outer
       else
-        nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerInnerLeg - Z_xpoint(1)) * scale_out_points
+        tht_SOL = 1.0*PI + (stpts%angle_LowerLeft  - 1.0*PI) * scale_out_points
         i_max = n_flux + n_open + n_outer + n_inner
-      endif      
-      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)    
+      endif
+      call find_theta_surface(node_list,element_list,flux_list,i_max,tht_SOL,nwpts%R_sep(j),nwpts%Z_sep(j),i_elm_find,s_find,t_find,i_find)    
     else    
       i_max = n_flux + n_open
       call find_theta_surface(node_list,element_list,flux_list,i_max,theta_sep(j),R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)    
@@ -460,16 +468,20 @@ do j=1,n_tht
     if (    ( (j .gt. n_tht_mid) .and. (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) & 
        .or. ( (j .lt. n_tht_mid) .and. (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) & 
        .or. ( (j .lt. n_tht_mid) .and. (xcase .eq. 2) )                                          ) then
-      nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_UpperInnerLeg - Z_xpoint(2)) * scale_out_points
+      tht_SOL = 1.0*PI + (stpts%angle_UpperLeft  - 1.0*PI) * scale_out_points
       i_max = n_flux + n_open + n_outer + n_inner
-      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)
+      call find_theta_surface(node_list,element_list,flux_list,i_max,tht_SOL,nwpts%R_sep(j),nwpts%Z_sep(j),i_elm_find,s_find,t_find,i_find)    
     endif 
     if (    ( (j .le. n_tht_mid) .and. (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) &
        .or. ( (j .gt. n_tht_mid) .and. (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) & 
        .or. ( (j .gt. n_tht_mid) .and. (xcase .eq. 2) )                                          ) then
-      nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_UpperOuterLeg - Z_xpoint(2)) * scale_out_points
+      if (stpts%angle_UpperRight .gt. PI) then
+        tht_SOL = 1.98*PI + (stpts%angle_UpperRight - 1.98*PI) * scale_out_points
+      else
+        tht_SOL = 0.02*PI + (stpts%angle_UpperRight - 0.02*PI) * scale_out_points
+      endif
       i_max = n_flux + n_open + n_outer
-      call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)
+      call find_theta_surface(node_list,element_list,flux_list,i_max,tht_SOL,nwpts%R_sep(j),nwpts%Z_sep(j),i_elm_find,s_find,t_find,i_find)    
     endif
     if (xcase .eq. 1) then
       call find_theta_surface(node_list,element_list,flux_list,i_max,theta_sep(j),R_axis,Z_axis,i_elm_find,s_find,t_find,i_find)

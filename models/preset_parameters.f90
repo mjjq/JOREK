@@ -356,12 +356,14 @@ subroutine preset_parameters
   
   n_wall_blocks        = 0
   n_ext_block          = 0
+  n_ext_equidistant    = .false.
   n_block_points_left  = 0
   R_block_points_left  = 0.d0
   Z_block_points_left  = 0.d0
   n_block_points_right = 0
   R_block_points_right = 0.d0
   Z_block_points_right = 0.d0
+  eqdsk_psi_fact       = 1.d0
  
  !======================MB rotation profile
   V_0 = 0.d0

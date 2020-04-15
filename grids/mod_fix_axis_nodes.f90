@@ -20,8 +20,8 @@ subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, 
   type (type_element_list),  intent(in) :: element_list          !< List of all elements
   integer, pointer,          intent(in) :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
   integer,                   intent(in) :: i_tor_min, i_tor_max
-  integer, pointer           intent(in) :: irn(:), jcn(:)
-  real*8,  pointer           intent(in) :: A_mat(:)
+  integer, pointer,          intent(in) :: irn(:), jcn(:)
+  real*8,  pointer,          intent(in) :: A_mat(:)
   ! Internal parameters
   real*8  :: zbig
   integer :: i, in, iv, inode, k

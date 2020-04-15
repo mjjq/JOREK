@@ -21,8 +21,8 @@ logical :: elm_is_local, direct_construction
 !integer, dimension(node_list%n_nodes) :: active_node
 !integer                               :: n_active_nodes
 
-if (my_id .eq.0) then 
-  if(.NOT.direct_construction) then
+if (my_id .eq. 0) then 
+  if (.not. direct_construction) then
     write(*,*) '************************************'
     write(*,*) '* distributing nodes global matrix *'
     write(*,*) '************************************'
@@ -34,7 +34,7 @@ if (my_id .eq.0) then
 endif
  
 
- index_total = -1
+index_total = -1
 do inode=1,node_list%n_nodes
   index_total = max(index_total,maxval(node_list%node(inode)%index))
 enddo
@@ -44,8 +44,8 @@ index_max(1:n_cpu) = 0
 
 !----------------------------- must really take into account the number of elements contributing to each node
 
-!----------------------------- This portion is for the global matrix ----------
-if(.NOT.direct_construction) then
+if (.not. direct_construction) then ! global matrix construction
+  
   index_min(1) = 1
   do i=1,n_cpu
     index_max(i) = (i * index_total) / n_cpu
@@ -55,25 +55,24 @@ if(.NOT.direct_construction) then
   enddo
   if (my_id .eq. n_cpu-1) index_max(my_id+1) = index_total
   !write(*,'(A,3i6)') ' index_min,index_max:',my_id,index_min(my_id+1),index_max(my_id+1)
-
-!----------------------------- This portion is for the harmonic matrix ----------
-else 
-
-  if(MOD(my_id,m_cpu).eq.0) index_min(my_id+1) = 1
+  
+else ! harmonic matrix "direct" construction
+  
+  if (mod(my_id,m_cpu) .eq. 0) index_min(my_id+1) = 1
   do i=1,n_cpu
-    index_max(i) = ((MOD(i-1,m_cpu)+1) * index_total) / m_cpu
+    index_max(i) = ((mod(i-1,m_cpu)+1) * index_total) / m_cpu
   enddo
   do i=2,n_cpu
-    if(MOD(i-1,m_cpu).ne.0) then
+    if (mod(i-1,m_cpu) .ne. 0) then
       index_min(i) = index_max(i-1) + 1
     endif
   enddo
-  if(mod(my_id+1,m_cpu).eq.0) index_max(my_id+1) = index_total
+  if (mod(my_id+1,m_cpu) .eq. 0) index_max(my_id+1) = index_total
   !write(*,'(A,3i6)') ' index_min,index_max:',my_id,index_min(my_id+1),index_max(my_id+1)
-
+  
 end if 
 
-n_dof           = index_total * n_tor * n_var
+n_dof = index_total * n_tor * n_var
 
 !----------------------------------------------- find the elements that have a local node
 inext = 0

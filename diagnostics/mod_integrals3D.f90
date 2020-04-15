@@ -288,7 +288,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, r0_corr, &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
-!$omp           eta_T_ohm, ne_JOREK, &
+!$omp           eta_T_ohm, &
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
 !$omp           rn0, rn0_corr,                                                                 &
@@ -299,8 +299,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (JOREK_MODEL == 501)
 !$omp           source_bg, source_imp, source_tmp,                                             &
 !$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
-!$omp           T_rad, T_rad_real, ne_rad, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,         &
-!$omp           Z_eff, eta_coef, &
+!$omp           T_rad, T_rad_real, ne_rad, ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,      &
+!$omp           ion_k, Z_eff, eta_coef, &
 #endif
 
 !$omp           omp_nthreads,omp_tid)

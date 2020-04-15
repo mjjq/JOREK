@@ -746,7 +746,7 @@ do ife = ife_min, ife_max
         if ( get_psi_n(ps0, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
-          C_intern = C_intern + zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
+          C_intern = C_intern - zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
           area1    = area1    +  xjac * wst * delta_phi         
           Vol   = Vol   +             xjac * BigR * wst * delta_phi
           H_int = H_int + heat_source     * xjac * BigR * wst * delta_phi
@@ -762,7 +762,7 @@ do ife = ife_min, ife_max
         else
           D_ext = D_ext + r0         * xjac * BigR * wst * delta_phi
           P_ext = P_ext + r0   * T0  * xjac * BigR * wst * delta_phi
-          C_ext = C_ext + zj0 / BigR * xjac *        wst * delta_phi  ! 2D integral
+          C_ext = C_ext - zj0 / BigR * xjac *        wst * delta_phi  ! 2D integral
           H_ext = H_ext + heat_source     * xjac * BigR * wst * delta_phi
           S_ext = S_ext + particle_source * xjac * BigR * wst * delta_phi
           VP_ext = VP_ext + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi

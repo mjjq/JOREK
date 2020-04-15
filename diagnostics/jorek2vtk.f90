@@ -32,7 +32,7 @@ type (type_bnd_element_list), pointer :: bnd_elm_list
 type (type_bnd_node_list),    pointer :: bnd_node_list 
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
-real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
+real*4,allocatable    :: currdens(:), xyz (:,:), scalars(:,:), vectors(:,:,:)
 integer,allocatable   :: ien (:,:)
 integer, parameter    :: ivtk = 22 ! an arbitrary unit number for the VTK output file
 integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, i_tor_old, i_plane, index, index_node, my_id
@@ -458,7 +458,7 @@ call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
 nnos = nsub*nsub*element_list%n_elements
-allocate(xyz(3,nnos),scalars(nnos,1:n_scalars),vectors(nnos,3,1:n_vectors))
+allocate(currdens(nnos),xyz(3,nnos),scalars(nnos,1:n_scalars),vectors(nnos,3,1:n_vectors))
 
 nnoel = 4
 nel   = (nsub-1)*(nsub-1)*element_list%n_elements
@@ -1169,6 +1169,8 @@ do i=1,element_list%n_elements
 
 #endif /* end of non-full-MHD part */
 
+        currdens(inode) = -scalars(inode,3)/BigR
+
       endif ! i_tor from 1 to n_tor
 
     enddo  ! nsub
@@ -1451,7 +1453,7 @@ if (SI_units) then
 #else /* not full-MHD */
 
     !============================================j_phi in MA/m2
-    scalars(i,3) = scalars(i,3)/ MU_zero*1.e-6
+    scalars(i,3) = currdens(i) / MU_zero * 1.e-6
     !============================================density in 1e20m-3
     scalars(i,5) = scalars(i,5) * central_density
     if ( jorek_model .eq. 400 ) then

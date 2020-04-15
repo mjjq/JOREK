@@ -34,7 +34,7 @@ real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_ord
 real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
 integer    :: vertex(2), direction(2), i, j, j2, ms, mt, mp, k, l, l2, index_ij, index_kl, index, xcase2
-integer    :: in, im
+integer    :: in, im, n_tor_local
 integer    :: ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8
 integer    :: kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8
 real*8     :: ws, xjac,  BigR, Z, phi, eps_cyl
@@ -55,6 +55,8 @@ logical    :: xpoint2
 theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
 !theta = 1.0d0  ; zeta = 0.0d0       ! Euler scheme 
 !theta = 1.0d0   ; zeta = 0.5d0       ! BDF2 (Gears) scheme
+
+n_tor_local = i_tor_max - i_tor_min + 1
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0;  x_ss  = 0.d0; 
@@ -162,7 +164,7 @@ do ms=1, n_gauss
 
          do im= i_tor_min, i_tor_max
 
-           index_ij = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(vertex(i)-1) + (i_tor_max - i_tor_min + 1) * n_var * (j2-1) + im - i_tor_min + 1  ! index in the ELM matrix
+           index_ij = n_tor_local*n_var*(n_order+1)*(vertex(i)-1) + n_tor_local * n_var * (j2-1) + im - i_tor_min + 1  ! index in the ELM matrix
 
            v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)         ! test function
 
@@ -174,9 +176,9 @@ do ms=1, n_gauss
            rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * Ti0 * vpar0 * ps0_s * normal * tstep  ! right hand side equation 6
            rhs_ij_8 = - v * (gamma_sheath -1.d0) * r0 * Te0 * vpar0 * ps0_s * normal * tstep  ! right hand side equation 6
 
-           ij5 = index_ij + 4*(i_tor_max - i_tor_min + 1)                                          ! local index in element matrix
-           ij6 = index_ij + 5*(i_tor_max - i_tor_min + 1)                                          ! local index in element matrix
-           ij8 = index_ij + 7*(i_tor_max - i_tor_min + 1)                                          ! local index in element matrix
+           ij5 = index_ij + 4*n_tor_local                                          ! local index in element matrix
+           ij6 = index_ij + 5*n_tor_local                                          ! local index in element matrix
+           ij8 = index_ij + 7*n_tor_local                                          ! local index in element matrix
 
            RHS(ij5) = RHS(ij5) + rhs_ij_5 * ws                               ! add to element RHS
            RHS(ij6) = RHS(ij6) + rhs_ij_6 * ws                               ! add to element RHS
@@ -218,13 +220,13 @@ do ms=1, n_gauss
                            + v * (gamma_sheath-1.d0) * r0  * Te  * 0.00  * DL    * normal * theta * tstep 
                  amat_87 = + v * (gamma_sheath-1.d0) * r0  * Te0 * vpar  * ps0_s * normal * theta * tstep 
 
-                 index_kl = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(vertex(k)-1) + (i_tor_max - i_tor_min + 1) * n_var * (l2-1) + in - i_tor_min + 1  ! index in the ELM matrix
+                 index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l2-1) + in - i_tor_min + 1  ! index in the ELM matrix
 
                  kl1 = index_kl
-                 kl5 = index_kl + 4*(i_tor_max - i_tor_min + 1)
-                 kl6 = index_kl + 5*(i_tor_max - i_tor_min + 1)
-                 kl7 = index_kl + 6*(i_tor_max - i_tor_min + 1)
-                 kl8 = index_kl + 7*(i_tor_max - i_tor_min + 1)
+                 kl5 = index_kl + 4*n_tor_local
+                 kl6 = index_kl + 5*n_tor_local
+                 kl7 = index_kl + 6*n_tor_local
+                 kl8 = index_kl + 7*n_tor_local
 
                  ELM(ij5,kl1) =  ELM(ij5,kl1) + ws * amat_51
                  ELM(ij5,kl5) =  ELM(ij5,kl5) + ws * amat_55

@@ -55,7 +55,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_i_par, ZK_i_perp, ZK_e_par, ZK_e_perp,           &
-                D_par, D_perp,                                      &
+                D_par, D_perp, ZK_par_max,                          &
                 Q_bar, sigma, gamma_sheath,                         &
                 V_0,V_1,V_coef,                			    &
                 particlesource,                                     &

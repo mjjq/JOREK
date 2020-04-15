@@ -507,7 +507,7 @@ if (i_ext .gt. 1) then
         length_prev = length_prev + length
         seg_prev(i) = length_prev
       enddo
-      seg_prev(1:n_tmp) = seg_prev(1:n_tmp) / length_prev
+      seg_prev(1:n_seg_prev) = seg_prev(1:n_seg_prev) / length_prev
     endif
     
   endif

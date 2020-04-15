@@ -152,7 +152,7 @@ real*8     :: E_ion, Lrad, E_ion_bg
 integer*8  :: ion_i, ion_k, i_phi
 #endif
 
-integer    :: spi_i, ion_i
+integer    :: spi_i
 real*8     :: ng_radius
 
 

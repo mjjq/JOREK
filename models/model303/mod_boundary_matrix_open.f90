@@ -55,7 +55,7 @@ type (type_node)         :: tmp_node
 theta = time_evol_theta
 zeta  = time_evol_zeta
 
-Zbig = 1.d16
+Zbig = 1.d12
 
 !--------------------- reorder the nodes to have the same direction as full element (maybe not necesary)
 if ((vertex(1) .eq. 3) .and. (vertex(2) .eq. 4)) then

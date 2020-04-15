@@ -131,7 +131,7 @@ contains
 
   end if RMPspectrum
 
-  zbig = 1.d16
+  zbig = 1.d12
   zbig_backup = zbig
      do i=1, n_local_elms !===============================do elements
 
@@ -164,7 +164,7 @@ contains
 
               do in=1, n_tor  !========================do n_tor
                 if (keep_n0_const  .and.  in .eq. 1 ) then
-                  zbig = 1.d16
+                  zbig = 1.d12
                 else
                   zbig = zbig_backup
                 endif

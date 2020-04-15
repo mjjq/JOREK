@@ -229,8 +229,9 @@ do i=1,node_list%n_nodes
     node_list%node(i)%psi_eq(:) = node_list%node(i)%values(1,:,1)
 #endif
 
-!  if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
-  if (node_list%node(i)%boundary .eq. 1) then
+!return
+
+  if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
 
     ps0_s     = node_list%node(i)%values(1,2,1)
     ps0_t     = node_list%node(i)%values(1,3,1)

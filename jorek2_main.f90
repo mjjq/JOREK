@@ -393,7 +393,7 @@ required = 0
     write(*,*) '  of MPI tasks and reducing the number of OpenMP threads in the jobscript.'
   end if
   if ((jorek_model==199) .or. (jorek_model==303)) then
-    if (abs(eta-eta_ohmic)/(eta+eta_ohmic) > 1.d-6) then
+    if (abs(eta-eta_ohmic)/(eta+eta_ohmic+1.d-12) > 1.d-6) then
       write(*,*) 'WARNING: The resistivity eta and the resistivity used for Ohmic heating '
       write(*,*) '  eta_ohm are not the same. No problem if you know what you are doing,  ' 
       write(*,*) '  but with this setup you are not conserving energy.   '

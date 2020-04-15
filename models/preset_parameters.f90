@@ -396,6 +396,7 @@ subroutine preset_parameters
   L_tube = 2.d0
   K_Dmv = 4.d-2
   A_Dmv = 1.77d-2
+  V_DMV = 0.d0
   t_ns  = 2.d3
   !======= Additional parameters for SPI =======
   spi_Vel_Rref    = 0.0d0
@@ -420,6 +421,7 @@ subroutine preset_parameters
   output_rad_phi  = .false.
   n_adas          = 0
   adas_dir        = ''
+  gas_type        = ''
 
 !======================JP ECCD injection parameters
   nu_jec_fast=1.d1

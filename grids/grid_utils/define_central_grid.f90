@@ -175,10 +175,9 @@ if (xcase .ne. 3) then
   ! s_tmp is for the separatrix, where we focus grid-points near the X-points
   ! s_tmp2 is for the grid centre, which we want to be equidistant (ie. not focused at the X-points)
   call meshac2(n_tht,s_tmp, 0.d0,1.d0,SIG_theta,SIG_theta,bgf_tht,1.0d0)
-  call meshac2(n_tht,s_tmp2,0.d0,1.d0,999.0,    999.0,    bgf_tht,1.0d0)
   do j=1,n_tht
     theta_sep(j) = tht_x1 + 2.d0 * PI * s_tmp(j)
-    theta_beg(j) = tht_x1 + 2.d0 * PI * s_tmp2(j)
+    theta_beg(j) = tht_x1 + 2.d0 * PI * real(j-1)/real(n_tht-1)
   enddo
   
 else

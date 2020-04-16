@@ -220,6 +220,8 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'T_eta_thres           ', T_eta_thres
   write(*,REAL_FMT) 'T_eta_thres_ohm       ', T_eta_thres_ohm
   write(*,REAL_FMT) 'eta_ohmic             ', eta_ohmic
+  write(*,REAL_FMT) 'T_max_eta             ', T_max_eta
+  write(*,REAL_FMT) 'T_max_eta_ohm         ', T_max_eta_ohm  
   write(*,LOGI_FMT) 'visco_T_dependent     ', visco_T_dependent
   write(*,REAL_FMT) 'visco                 ', visco
   write(*,REAL_FMT) 'visco_par             ', visco_par

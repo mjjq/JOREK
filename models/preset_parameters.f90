@@ -31,10 +31,11 @@ subroutine preset_parameters
   eta_num_T_dependent   = .false.
   visco_num_T_dependent = .false.
 
-  eta       = 1.d-5
-  T_eta_thres = 1.d2
-  eta_ohmic = 0.d0
-  T_eta_thres_ohm = 1.d2
+  eta           = 1.d-5
+  T_max_eta     = 1.d3
+  eta_ohmic     = 0.d0
+  T_max_eta_ohm = 1.d3
+
   visco = 1.d-5
   visco_par = 1.d-5
   

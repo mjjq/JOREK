@@ -619,24 +619,37 @@ do i=1,n_vertex_max
           delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,1,ms,mt) + x_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
 
           ! --- Temperature dependent resistivity
-          if ( eta_T_dependent ) then
-            eta_T     = eta   * (T0_corr/T_0)**(-1.5d0)
-            deta_dT   = - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-            d2eta_d2T =   eta   * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
-            if ( xpoint2 .and. (T0 .lt. T_min) ) then
-              eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
-              deta_dT   = 0.d0
-              d2eta_d2T = 0.d0
-            endif
+          if ( eta_T_dependent .and. corr_neg_temp1(T0) <= T_max_eta) then
+            eta_T     = eta   * (corr_neg_temp1(T0)/T_0)**(-1.5d0)
+            deta_dT   = - eta   * (1.5d0)  * corr_neg_temp1(T0)**(-2.5d0) * T_0**(1.5d0)
+            d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp1(T0)**(-3.5d0) * T_0**(1.5d0)
+          else if ( eta_T_dependent .and. corr_neg_temp1(T0) > T_max_eta) then
+            eta_T     = eta   * (T_max_eta/T_0)**(-1.5d0)
+            deta_dT   = 0.
+            d2eta_d2T = 0.     
           else
             eta_T     = eta
             deta_dT   = 0.d0
             d2eta_d2T = 0.d0
           end if
 
+          if ( eta_T_dependent .and.  xpoint2 .and. (T0 .lt. T_min) ) then
+              eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
+              deta_dT   = 0.d0
+              d2eta_d2T = 0.d0
+          end if
+
           ! --- Eta for ohmic heating
-          eta_T_ohm   = (eta_T/eta)  * eta_ohmic
-          deta_dT_ohm = (deta_dT/eta) * eta_ohmic
+          if ( eta_T_dependent .and. corr_neg_temp1(T0) <= T_max_eta_ohm) then
+            eta_T_ohm     = eta_ohmic   * (corr_neg_temp1(T0)/T_0)**(-1.5d0)
+            deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * corr_neg_temp1(T0)**(-2.5d0) * T_0**(1.5d0)
+          else if ( eta_T_dependent .and. corr_neg_temp1(T0) > T_max_eta_ohm) then
+            eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
+            deta_dT_ohm   = 0.    
+          else
+            eta_T_ohm     = eta_ohmic
+            deta_dT_ohm   = 0.d0
+          end if
 
           ! --- Temperature dependent viscosity
           if ( visco_T_dependent ) then

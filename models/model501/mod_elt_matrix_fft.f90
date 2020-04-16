@@ -576,17 +576,17 @@ do ms=1, n_gauss
      end if
 
      if ( eta_T_dependent .and. T0_corr <= T_max_eta_ohm) then
-       eta_T_ohm     = eta   * (T0_corr/T_0)**(-1.5d0)
+       eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
        deta_dT_ohm   = ( - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
        deta_dr0_ohm  = 0.
        deta_drn0_ohm = 0.
      else if (eta_T_dependent .and. T0_corr > T_max_eta_ohm) then
-       eta_T_ohm     = eta_ohm   * (T_max_eta_ohm/T_0)**(-1.5d0)
+       eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
        deta_dT_ohm   = 0.
        deta_dr0_ohm  = 0.
        deta_drn0_ohm = 0.
      else
-       eta_T_ohm     = eta_ohm
+       eta_T_ohm     = eta_ohmic
        deta_dT_ohm   = 0.d0
        deta_dr0_ohm  = 0.
        deta_drn0_ohm = 0.
@@ -862,6 +862,14 @@ do ms=1, n_gauss
          deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT
        end if
        eta_T     = eta_T * eta_coef
+
+       if (T0_corr <= T_max_eta_ohm) then
+         deta_dr0_ohm  = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
+         deta_drn0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
+         deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT
+       end if
+       eta_T_ohm = eta_T_ohm * eta_coef
+       
      end if
 
 

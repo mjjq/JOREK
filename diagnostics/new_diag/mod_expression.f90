@@ -1569,7 +1569,7 @@ module mod_expression
                 res = A30
                 
               case ( 'currdens' )
-                res = zj0 / R / fact_mu_zero
+                res = -zj0 / R / fact_mu_zero
 
               case ( 'JR' )
                 res = JpolR / fact_mu_zero

@@ -40,7 +40,7 @@ real*8     :: ws, xjac,  dl, BigR, phi, eps_cyl, Btot
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 real*8     :: rhs_ij_5, rhs_ij_6, rhs_ij_7
 real*8     :: theta, zeta, Zbig, BB2, bdotn, factor
-real*8     :: R_inside, Z_inside, R_mid, Z_mid, R_cnt, Z_cnt, normal(2), normal1(2), normal_direction(2)
+real*8     :: R_inside, Z_inside, R_mid, Z_mid, R_cnt, Z_cnt, normal(2), normal_direction(2)
 real*8     :: normal_sign, normal_sign3
 
 real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
@@ -175,9 +175,6 @@ do ms=1, n_gauss
     ps0_t = eq_t(mp,1,ms)   
     ps0_x = (   y_t(ms) * ps0_s - y_s(ms) * ps0_t ) / xjac
     ps0_y = ( - x_t(ms) * ps0_s + x_s(ms) * ps0_t ) / xjac
-
-    normal1 = ps0_s * (  (x_g(ms)-R_inside)*y_s(ms) - (y_g(ms)-Z_inside)*x_s(ms))
-    normal1 = normal1 / abs(normal1)
 
     r0    = eq_g(mp,5,ms)
     T0    = eq_g(mp,6,ms)

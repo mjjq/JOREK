@@ -124,7 +124,7 @@ real*8     :: coef_rec_1                                      ! Recombination ra
 !   -Radiation from injected gas/impurities
 real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
-real*8     :: T_rad                                           ! Temperature used in radiation rate
+real*8     :: T0_corr_eV                                           ! Temperature used in radiation rate
 real*8     :: coef_rad_1                                      ! Radiation rate parameters
 !   -Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
@@ -636,7 +636,7 @@ do ms=1, n_gauss
   ! --- Radiative Power for neutral Deuterium
   ! ------------------------------------------
 
-   T_rad = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+   T0_corr_eV = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
    if (T0 .gt. 1.d-6) then
 
@@ -644,21 +644,21 @@ do ms=1, n_gauss
 
    coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
 
-   LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
+   LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T0_corr_eV) ! Only Bremsstrahlung contribution
 
-   dLradDcont_dT = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*(8*EL_CHG*MU_ZERO*central_density*1.d20*sqrt(T_rad))**(-1.d0) * dT_corr_dT
+   dLradDcont_dT = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*(8*EL_CHG*MU_ZERO*central_density*1.d20*sqrt(T0_corr_eV))**(-1.d0) * dT_corr_dT
 
 
-   LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                    -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                    -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+   LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T0_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+                                    -60.947d0*exp(-(log10(T0_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                    -24.067d0*exp(-(log10(T0_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
 
-   dLradDrays_dT = -coef_rad_1*(-29.440d0*(2.8428d0)**(-2.d0)*(log10(T_rad)-4.4283d0)/T_corr*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                -60.947d0*(0.9048d0)**(-2.d0)*(log10(T_rad)+2.0835d0)/T_corr*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                -24.067d0*(2.1700d0)**(-2.d0)*(log10(T_rad)+0.7363d0)/T_corr*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))&
-                                *(1.d1)**(-29.440d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0))) * dT_corr_dT
+   dLradDrays_dT = -coef_rad_1*(-29.440d0*(2.8428d0)**(-2.d0)*(log10(T0_corr_eV)-4.4283d0)/T_corr*exp(-(log10(T0_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+                                -60.947d0*(0.9048d0)**(-2.d0)*(log10(T0_corr_eV)+2.0835d0)/T_corr*exp(-(log10(T0_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                -24.067d0*(2.1700d0)**(-2.d0)*(log10(T0_corr_eV)+0.7363d0)/T_corr*exp(-(log10(T0_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))&
+                                *(1.d1)**(-29.440d0*exp(-(log10(T0_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+                                -60.947d0*exp(-(log10(T0_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                -24.067d0*exp(-(log10(T0_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0))) * dT_corr_dT
 
    else
 
@@ -742,10 +742,10 @@ do ms=1, n_gauss
     Crad_bg = 0.8
 
     frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                  *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                  *nimp_bg*Arad_bg*exp(-((log(T0_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
     dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
-                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T0_corr_eV)-log(Brad_bg))*(1./T0_corr_eV)*exp(-((log(T0_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
 !--------------------------------------------------------
 

@@ -606,7 +606,7 @@ module mod_expression
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
 #if JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502
     real*8  :: coef_rad_1
-    real*8  :: T_rad, LradDrays_T, LradDcont_T, T_rad_real
+    real*8  :: T0_corr_eV, LradDrays_T, LradDcont_T, T0_eV
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 #endif
 #if JOREK_MODEL == 501 || JOREK_MODEL == 502
@@ -621,7 +621,7 @@ module mod_expression
     real*8  :: beta_imp
     !   -Radiation from injected impurities
     real*8  :: Lrad, dLrad_dT                      ! Radiation rate and its derivative wrt. temperature
-    real*8  :: ne_rad                              ! Electron density used in radiation rate
+    real*8  :: ne_SI                              ! Electron density used in radiation rate
     real*8  :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
     real*8  :: A2_rad, T2_rad, sig2_rad
 	!   -Temporary variable for charge state distribution
@@ -1353,8 +1353,8 @@ module mod_expression
 
 #if JOREK_MODEL == 500
 
-  T_rad = corr_neg_temp(T0,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
-  T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+  T0_corr_eV = corr_neg_temp(T0,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+  T0_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
 
   if ( units == SI_UNITS ) then
     coef_rad_1 = 1.d0
@@ -1362,11 +1362,11 @@ module mod_expression
     coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density * 1.d20)**2.5d0
   endif
 
-  LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
+  LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T0_corr_eV) ! Only Bremsstrahlung contribution
 
-  LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                   -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                   -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+  LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T0_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+                                   -60.947d0*exp(-(log10(T0_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                   -24.067d0*exp(-(log10(T0_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
 
   !--------------------------------------------------------
   ! --- Radiation from background impurity
@@ -1377,9 +1377,9 @@ module mod_expression
   Crad_bg = 0.8
 
   if ( units == SI_UNITS ) then
-    frad_bg = nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+    frad_bg = nimp_bg*Arad_bg*exp(-((log(T0_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
   else if ( units == JOREK_UNITS ) then
-    frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))*nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+    frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))*nimp_bg*Arad_bg*exp(-((log(T0_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
   endif
   !--------------------------------------------------------
 
@@ -1388,31 +1388,31 @@ module mod_expression
 #if JOREK_MODEL == 501 || JOREK_MODEL == 502
 
           T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/))
-          T_rad   = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-          T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+          T0_corr_eV   = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          T0_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
   
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T0_corr_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
 	  
           alpha_imp = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
           beta_imp  = m_i_over_m_imp*Z_imp - 1.
                   
 		  r0_corr  = corr_neg_dens(r0,(/1.d-8,1.d-5/))
 		  rn0_corr = corr_neg_dens(rn0, (/ 1.d-12, 1.d-5 /))
-		  ne_rad   = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+		  ne_SI   = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
 		  
 		  ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
           coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
 		  
-          if (ne_rad > 1.d16 .and. T_rad_real > 3.) then
+          if (ne_SI > 1.d16 .and. T0_eV > 3.) then
             Lrad = 0.0
             dLrad_dT = 0.0
-            call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+            call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T0_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
             Lrad = Lrad * coef_rad_1
           else
             Lrad = 0.
           end if
 		  
-		  ne_rad = ne_rad / 1.d20 / central_density ! Put ne_rad back to JOREK units to have consistent fact_ne factor with other models (see below)
+		  ne_SI = ne_SI / 1.d20 / central_density ! Put ne_SI back to JOREK units to have consistent fact_ne factor with other models (see below)
 		  
 #endif
 
@@ -1513,7 +1513,7 @@ module mod_expression
                 
               case ( 'ne' )
 #if JOREK_MODEL == 501 || JOREK_MODEL == 502
-                res = ne_rad * fact_ne 
+                res = ne_SI * fact_ne 
 #else
                 res = r0 * fact_ne
 #endif

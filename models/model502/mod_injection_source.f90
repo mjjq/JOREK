@@ -277,7 +277,6 @@ module mod_injection_source
     ! Temporary variable for charge state distribution
     integer             :: i_T, i_ion
     real*8, allocatable :: dP_imp_dT(:), P_imp(:)
-    real*8              :: T_rad(101) = 0
     real*8              :: Z_imp
 
     n_adas = 1 ! For now we only trace one species, in the future probably more 

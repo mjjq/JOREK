@@ -394,10 +394,10 @@ subroutine preset_parameters
   delta_n_convection = 0
   nimp_bg = 0.
   !====== JET DMV-2 parameters
-  L_tube = 2.d0
+  L_tube = 2.4d0
   K_Dmv = 4.d-2
   A_Dmv = 1.77d-2
-  V_DMV = 0.d0
+  V_Dmv = 9.75d-4
   t_ns  = 2.d3
   !======= Additional parameters for SPI =======
   spi_Vel_Rref    = 0.0d0

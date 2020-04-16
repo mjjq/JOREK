@@ -616,14 +616,14 @@ do ms=1, n_gauss
      delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,1,ms,mt) + x_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
      
      ! --- Temperature dependent resistivity
-     if ( eta_T_dependent .and. Te0_corr <= T_eta_thres) then
+     if ( eta_T_dependent .and. Te0_corr <= T_max_eta) then
        eta_T     = eta   * (Te0_corr/Te_0)**(-1.5d0)
        deta_dT   = ( - eta   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0) ) * dTe0_corr_dT
        d2eta_d2T = (  eta   * (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0) ) * d2Te0_corr_dT2
        deta_dr0  = 0.
        deta_drn0 = 0.
-     else if (eta_T_dependent .and. Te0_corr > T_eta_thres) then
-       eta_T     = eta   * (T_eta_thres/Te_0)**(-1.5d0)
+     else if (eta_T_dependent .and. Te0_corr > T_max_eta) then
+       eta_T     = eta   * (T_max_eta/Te_0)**(-1.5d0)
        deta_dT   = 0.
        d2eta_d2T = 0.
        deta_dr0  = 0.
@@ -644,11 +644,11 @@ do ms=1, n_gauss
 
      ! --- Temperature dependent viscosity
      ! --- Note: No good physics basis, simply for keeping the magnetic Prandtl number constant
-     if ( visco_T_dependent .and. Te0_corr <= T_eta_thres ) then       
+     if ( visco_T_dependent .and. Te0_corr <= T_max_eta ) then       
        visco_T   = visco * (Te0_corr/Te_0)**(-1.5d0)
        dvisco_dT = - visco * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0) * dTe0_corr_dT
-     else if (visco_T_dependent .and. Te0_corr > T_eta_thres) then
-       visco_T   = visco * (T_eta_thres/Te_0)**(-1.5d0)
+     else if (visco_T_dependent .and. Te0_corr > T_max_eta) then
+       visco_T   = visco * (T_max_eta/Te_0)**(-1.5d0)
        dvisco_dT = 0.
      else
        visco_T   = visco
@@ -681,22 +681,22 @@ do ms=1, n_gauss
      ! --- Temperature dependent hyper-resistivity resistivity, there is no
      ! physical reason for this dependence whatsoever, just to keep a constant
      ! ratio between the resistivity and hyper-resistivity
-     if ( eta_num_T_dependent .and. Te0_corr <= T_eta_thres) then
+     if ( eta_num_T_dependent .and. Te0_corr <= T_max_eta) then
        eta_num_T = eta_num * (Te0_corr/Te_0)**(-1.5d0)
        deta_num_dT = ( - eta_num * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0) ) * dTe0_corr_dT
-     else if (eta_num_T_dependent .and. Te0_corr > T_eta_thres) then
-       eta_num_T = eta_num * (T_eta_thres/Te_0)**(-1.5d0)
+     else if (eta_num_T_dependent .and. Te0_corr > T_max_eta) then
+       eta_num_T = eta_num * (T_max_eta/Te_0)**(-1.5d0)
        deta_num_dT = 0.
      else
        eta_num_T = eta_num
        deta_num_dT = 0.
      end if
 
-     if ( visco_num_T_dependent .and. Te0_corr <= T_eta_thres) then
+     if ( visco_num_T_dependent .and. Te0_corr <= T_max_eta) then
        visco_num_T = visco_num * (Te0_corr/Te_0)**(-1.5d0)
        dvisco_num_dT = ( - visco_num * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0) ) * dTe0_corr_dT
-     else if (visco_num_T_dependent .and. Te0_corr > T_eta_thres) then
-       visco_num_T = visco_num * (T_eta_thres/Te_0)**(-1.5d0)
+     else if (visco_num_T_dependent .and. Te0_corr > T_max_eta) then
+       visco_num_T = visco_num * (T_max_eta/Te_0)**(-1.5d0)
        dvisco_num_dT = 0.
      else
        visco_num_T = visco_num
@@ -930,7 +930,7 @@ do ms=1, n_gauss
      eta_Sp       = eta_Sp * eta_coef
 
      if ( eta_T_dependent ) then
-       if (Te0_corr <= T_eta_thres) then
+       if (Te0_corr <= T_max_eta) then
          deta_dr0  = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
          deta_drn0 = eta_T * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
          deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT

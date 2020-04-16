@@ -81,7 +81,7 @@ contains
   real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
   real*8  :: R_mid, Z_mid, R_center, Z_center, direction2, normal(2), normal_direction(2), grad_s(2), grad_t(2)
   integer :: ilarge_vp, ilarge_vp2
-  integer :: kp, j, err, itest, i_mid
+  integer :: kp, j, err, itest, i_mid, i_bnd
   integer :: n_rmp_harm, N_rmp_har_block_size
 
 
@@ -136,6 +136,13 @@ contains
      do i=1, n_local_elms !===============================do elements
 
         ielm = local_elms(i)
+
+        i_bnd = 0
+        do iv=1, n_vertex_max !==========================do vertex
+          inode = element_list%element(ielm)%vertex(iv)
+          if (node_list%node(inode)%boundary .ne. 0) i_bnd = i_bnd + 1
+        enddo
+        if (i_bnd .lt. 2) cycle           
 
         i_mid = 0.d0; R_mid = 0.d0; Z_mid = 0.d0; R_center = 0.d0; Z_center = 0.d0
 

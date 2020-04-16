@@ -145,7 +145,7 @@ real*8  :: Z_imp, T0_Zimp, alpha_Zimp, Z_eff, eta_coef, ne_JOREK
 !   -Coefficients related to Z_imp
 real*8  :: alpha_imp, beta_imp
 !   -Corrected plasma temperature and density for radiation calculation
-real*8  :: T_rad, ne_rad, T_rad_real
+real*8  :: T0_corr_eV, ne_SI, T0_eV
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
@@ -299,7 +299,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (JOREK_MODEL == 501)
 !$omp           source_bg, source_imp, source_tmp,                                             &
 !$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
-!$omp           T_rad, T_rad_real, ne_rad, ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,      &
+!$omp           T0_corr_eV, T0_eV, ne_SI, ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,      &
 !$omp           ion_k, Z_eff, eta_coef, &
 #endif
 
@@ -559,8 +559,8 @@ do ife = ife_min, ife_max
         end select
 
         ! Te in eV:
-        T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-        T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        T0_corr_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        T0_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
    
         if (allocated(imp_adas(1)%ionisation_energy)) then
    
@@ -568,7 +568,7 @@ do ife = ife_min, ife_max
    
           allocate(P_imp(0:imp_adas(1)%n_Z))
    
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T0_corr_eV*EL_CHG/K_BOLTZ),&
                                         p_out=P_imp,z_eff=Z_imp)
    
           ! Calculate the ionization potential energy and its derivative wrt. temperature
@@ -583,14 +583,14 @@ do ife = ife_min, ife_max
           E_ion     = E_ion * EL_CHG
           E_ion_bg  = E_ion_bg * EL_CHG
         else
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T0_corr_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
           E_ion     = 0.
           E_ion_bg  = 0.
         end if
 
         alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
         beta_imp     = m_i_over_m_imp*Z_imp - 1.
-        ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
+        ne_SI       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
         ne_JOREK     = r0_corr + beta_imp * rn0_corr ! Electron density in JOREK unit
         ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                                ! Too small rho_1 will cause a problem
@@ -616,9 +616,9 @@ do ife = ife_min, ife_max
         P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
         P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
 
-        if (ne_rad > 1.d18 .and. T_rad_real > 5. .and. rn0 > 1.d-8) then
+        if (ne_SI > 1.d18 .and. T0_eV > 5. .and. rn0 > 1.d-8) then
           Lrad = 0.0
-          call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad)
+          call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T0_corr_eV*EL_CHG/K_BOLTZ),Lrad)
           if (Lrad < 0.) Lrad = 0.
         else
           Lrad = 0.
@@ -628,9 +628,9 @@ do ife = ife_min, ife_max
         Lrad = Lrad * m_i_over_m_imp
         E_ion = E_ion * m_i_over_m_imp
 
-        local_radiation_phi(mp) = local_radiation_phi(mp) + ne_rad * rn0_corr * central_density * 1.d20 * Lrad &
+        local_radiation_phi(mp) = local_radiation_phi(mp) + ne_SI * rn0_corr * central_density * 1.d20 * Lrad &
                           * bigR * xjac * wst * delta_phi        
-        local_radiation = local_radiation + ne_rad * rn0_corr * central_density * 1.d20 * Lrad &
+        local_radiation = local_radiation + ne_SI * rn0_corr * central_density * 1.d20 * Lrad &
                           * bigR * xjac * wst * delta_phi 
         local_E_ion     = local_E_ion + rn0 * central_density * 1.d20 * E_ion             &
                           * bigR * xjac * wst * delta_phi

@@ -145,9 +145,9 @@ real*8     :: alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis, alpha_im
 real*8     :: beta_imp, dbeta_imp_dT
 !   -Radiation from injected impurities
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
-real*8     :: T_rad, dT_rad_dT                                ! Temperature used in radiation rate
-real*8     :: T_rad_real                                      ! Uncorrected temperature
-real*8     :: ne_rad                                          ! Electron density used in radiation rate
+real*8     :: T0_corr_eV, dT0_corr_eV_dT                      ! Temperature used in radiation rate
+real*8     :: T0_eV                                           ! Uncorrected temperature
+real*8     :: ne_SI                                          ! Electron density used in radiation rate
 real*8     :: ne_JOREK                                        ! Electron density in JOREK unit 
 real*8     :: coef_rad_1, A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
 real*8     :: A2_rad, T2_rad, sig2_rad
@@ -720,9 +720,9 @@ do ms=1, n_gauss
      d2Z_imp_dT2 = 0.
 
      ! Te in eV:
-     T_rad      = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-     dT_rad_dT  = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-     T_rad_real = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     T0_corr_eV      = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     dT0_corr_eV_dT  = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     T0_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
      ! We get the charge state distribution assuming n_e=10^20/m^3.
      ! Later maybe we should implement an iterative method.
@@ -735,7 +735,7 @@ do ms=1, n_gauss
        allocate(P_imp(0:imp_adas(1)%n_Z))
        allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
 
-       call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),           &
+       call imp_cor(1)%interp(density=20.,temperature=log10(T0_corr_eV*EL_CHG/K_BOLTZ),           &
                               p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT, &
                               z_TeTe_out=d2Z_imp_dT2)
 
@@ -758,10 +758,10 @@ do ms=1, n_gauss
        dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
        E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
        ! Convert E_ion gradient wrt. T from 1/K into 1/(JOREK units)
-       dE_ion_dT = dE_ion_dT * dT_rad_dT * EL_CHG / K_BOLTZ
+       dE_ion_dT = dE_ion_dT * dT0_corr_eV_dT * EL_CHG / K_BOLTZ
 
      else
-       call imp_cor(1)%interp(density=20.,temperature=log10(T_rad*EL_CHG/K_BOLTZ),&
+       call imp_cor(1)%interp(density=20.,temperature=log10(T0_corr_eV*EL_CHG/K_BOLTZ),&
                                           z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
 
        E_ion     = 0.
@@ -777,13 +777,13 @@ do ms=1, n_gauss
 
      if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
        write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
-       write(*,*) "T_rad =", T_rad
+       write(*,*) "T0_corr_eV =", T0_corr_eV
        stop
      end if
 
      if (dZ_imp_dT < 0) then
        write(*,*) "WARNING, ERROR with dZ_imp_dT = ", dZ_imp_dT
-       write(*,*) "Z_imp, T_e", Z_imp, T_rad, T0
+       write(*,*) "Z_imp, T_e", Z_imp, T0_corr_eV, T0
        stop
      end if
 
@@ -796,7 +796,7 @@ do ms=1, n_gauss
      beta_imp     = m_i_over_m_imp*Z_imp - 1.
      dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
 
-     ne_rad       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+     ne_SI       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
      ne_JOREK     = r0_corr + beta_imp * rn0_corr ! Electron density in JOREK unit
      ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                             ! Too small rho_1 will cause a problem
@@ -869,12 +869,12 @@ do ms=1, n_gauss
      coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
-     if (ne_rad > 1.d18 .and. T_rad_real > 5. .and. rn0 > 1.d-8) then
+     if (ne_SI > 1.d18 .and. T0_eV > 5. .and. rn0 > 1.d-8) then
 
        Lrad = 0.0
        dLrad_dT = 0.0
 
-       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_rad),log10(T_rad*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T0_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
 
        Lrad = Lrad * coef_rad_1
 
@@ -982,10 +982,10 @@ do ms=1, n_gauss
     Crad_bg = 0.8
 
     frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                  *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                  *nimp_bg*Arad_bg*exp(-((log(T0_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
     dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
-                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T0_corr_eV)-log(Brad_bg))*(1./T0_corr_eV)*exp(-((log(T0_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
 !--------------------------------------------------------
 

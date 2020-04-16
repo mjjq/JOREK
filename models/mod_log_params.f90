@@ -217,8 +217,8 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'nstep_n               ', nstep_n
   write(*,LOGI_FMT) 'eta_T_dependent       ', eta_T_dependent
   write(*,REAL_FMT) 'eta                   ', eta
-  write(*,REAL_FMT) 'T_eta_thres           ', T_eta_thres
-  write(*,REAL_FMT) 'T_eta_thres_ohm       ', T_eta_thres_ohm
+  write(*,REAL_FMT) 'T_max_eta             ', T_max_eta
+  write(*,REAL_FMT) 'T_max_eta_ohm         ', T_max_eta_ohm
   write(*,REAL_FMT) 'eta_ohmic             ', eta_ohmic
   write(*,REAL_FMT) 'T_max_eta             ', T_max_eta
   write(*,REAL_FMT) 'T_max_eta_ohm         ', T_max_eta_ohm  

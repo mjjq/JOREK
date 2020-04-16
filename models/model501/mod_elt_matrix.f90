@@ -532,14 +532,14 @@ do ms=1, n_gauss
      delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,1,ms,mt) + x_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
      
      ! --- Temperature dependent resistivity
-     if ( eta_T_dependent .and. T0_corr <= T_eta_thres) then
+     if ( eta_T_dependent .and. T0_corr <= T_max_eta) then
        eta_T     = eta   * (T0_corr/T_0)**(-1.5d0)
        deta_dT   = ( - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
        d2eta_d2T = (  eta   * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0) ) * d2T0_corr_dT2
        deta_dr0  = 0.
        deta_drn0 = 0.
-     else if (eta_T_dependent .and. T0_corr > T_eta_thres) then
-       eta_T     = eta   * (T_eta_thres/T_0)**(-1.5d0)
+     else if (eta_T_dependent .and. T0_corr > T_max_eta) then
+       eta_T     = eta   * (T_max_eta/T_0)**(-1.5d0)
        deta_dT   = 0.
        d2eta_d2T = 0.
        deta_dr0  = 0.
@@ -552,13 +552,13 @@ do ms=1, n_gauss
        deta_drn0 = 0.
      end if
 
-     if ( eta_T_dependent .and. T0_corr <= T_eta_thres_ohm ) then
+     if ( eta_T_dependent .and. T0_corr <= T_max_eta_ohm ) then
        eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
        deta_dT_ohm   = ( - eta_ohmic   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
        deta_dr0_ohm  = 0.
        deta_drn0_ohm = 0. 
-     else if (eta_T_dependent .and. T0_corr > T_eta_thres_ohm) then  
-       eta_T_ohm     = eta_ohmic   * (T_eta_thres_ohm/T_0)**(-1.5d0)
+     else if (eta_T_dependent .and. T0_corr > T_max_eta_ohm) then  
+       eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
        deta_dT_ohm   = 0.
        deta_dr0_ohm  = 0.
        deta_drn0_ohm = 0.         
@@ -570,11 +570,11 @@ do ms=1, n_gauss
      end if     	 
 	 
      ! --- Temperature dependent viscosity
-     if ( visco_T_dependent .and. T0_corr <= T_eta_thres ) then       
+     if ( visco_T_dependent .and. T0_corr <= T_max_eta ) then       
        visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
        dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) * dT0_corr_dT
-     else if (visco_T_dependent .and. T0_corr > T_eta_thres) then
-       visco_T   = visco * (T_eta_thres/T_0)**(-1.5d0)
+     else if (visco_T_dependent .and. T0_corr > T_max_eta) then
+       visco_T   = visco * (T_max_eta/T_0)**(-1.5d0)
        dvisco_dT = 0.
      else
        visco_T   = visco
@@ -597,11 +597,11 @@ do ms=1, n_gauss
      ! --- Temperature dependent hyper-resistivity. There is no physical
      ! reason for this dependence whatsoever, this is just to keep a constant
      ! ratio between the resistivity and hyper-resistivity.
-     if ( eta_num_T_dependent .and. T0_corr <= T_eta_thres) then
+     if ( eta_num_T_dependent .and. T0_corr <= T_max_eta) then
        eta_num_T = eta_num * (T0_corr/T_0)**(-1.5d0)
        deta_num_dT = ( - eta_num * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
-     else if (eta_num_T_dependent .and. T0_corr > T_eta_thres) then
-       eta_num_T = eta_num * (T_eta_thres/T_0)**(-1.5d0)
+     else if (eta_num_T_dependent .and. T0_corr > T_max_eta) then
+       eta_num_T = eta_num * (T_max_eta/T_0)**(-1.5d0)
        deta_num_dT = 0.
      else
        eta_num_T = eta_num
@@ -609,11 +609,11 @@ do ms=1, n_gauss
      end if
 
      ! --- Same for the hyper-viscosity.
-     if ( visco_num_T_dependent .and. T0_corr <= T_eta_thres) then
+     if ( visco_num_T_dependent .and. T0_corr <= T_max_eta) then
        visco_num_T = visco_num * (T0_corr/T_0)**(-1.5d0)
        dvisco_num_dT = ( - visco_num * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
-     else if (visco_num_T_dependent .and. T0_corr > T_eta_thres) then
-       visco_num_T = visco_num * (T_eta_thres/T_0)**(-1.5d0)
+     else if (visco_num_T_dependent .and. T0_corr > T_max_eta) then
+       visco_num_T = visco_num * (T_max_eta/T_0)**(-1.5d0)
        dvisco_num_dT = 0.
      else
        visco_num_T = visco_num
@@ -829,14 +829,14 @@ do ms=1, n_gauss
 
      if ( eta_T_dependent ) then
 
-       if (T0_corr <= T_eta_thres) then
+       if (T0_corr <= T_max_eta) then
          deta_dr0  = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
          deta_drn0 = eta_T * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
          deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT
        end if
        eta_T     = eta_T * eta_coef
 
-       if (T0_corr <= T_eta_thres_ohm) then
+       if (T0_corr <= T_max_eta_ohm) then
          deta_dr0_ohm  = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
          deta_drn0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
          deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT	   

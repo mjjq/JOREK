@@ -38,7 +38,7 @@ real*8  :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dps
 
 integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, ifail
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
-real*8  :: current_tot, beta_p, beta_n, beta_t, aminor
+real*8  :: beta_p, beta_n, beta_t, aminor
 real*8  :: xjac, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, psi_limit
 real*8  :: r0_corr, T0_corr
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
@@ -377,7 +377,7 @@ do ife = ife_min, ife_max
 
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
-          C_intern = C_intern + zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
+          C_intern = C_intern - zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
           Vol   = Vol   +             xjac * BigR * wst * delta_phi
           H_int = H_int + heat_source     * xjac * BigR * wst * delta_phi
           S_int = S_int + particle_source * xjac * BigR * wst * delta_phi
@@ -390,7 +390,7 @@ do ife = ife_min, ife_max
 
           D_ext = D_ext + r0         * xjac * BigR * wst * delta_phi
           P_ext = P_ext + r0   * T0  * xjac * BigR * wst * delta_phi
-          C_ext = C_ext + zj0 / BigR * xjac *        wst * delta_phi  ! 2D integral
+          C_ext = C_ext - zj0 / BigR * xjac *        wst * delta_phi  ! 2D integral
           H_ext = H_ext + heat_source     * xjac * BigR * wst * delta_phi
           S_ext = S_ext + particle_source * xjac * BigR * wst * delta_phi
           VP_ext = VP_ext + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
@@ -448,7 +448,6 @@ endif
 rho_norm = central_density*1.d20 * central_mass * 1.67d-27
 t_norm   = sqrt(MU_zero*rho_norm)
 
-current_tot = n_period * current_in  / MU_zero / (2.d0 * PI)
 current_in  = n_period * current_in  / MU_zero / (2.d0 * PI)
 current_out = n_period * current_out / MU_zero / (2.d0 * PI)
 density_tot = n_period * density_tot * central_density

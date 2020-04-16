@@ -487,8 +487,8 @@ required = 0
 
   ! This is necessary for the parallel vacuum version during the code restart 
   if(restart) then
-    call MPI_BCAST(wall_curr_initialized, 1 , MPI_LOGICAl,          0, MPI_COMM_WORLD, ierr)
-    call MPI_BCAST(tstep,                 1 , MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call broadcast_phys(my_id)  
+    if(freeboundary) call broadcast_vacuum(my_id, resistive_wall)
   end if
   call populate_element_rtree(node_list, element_list)
   
@@ -688,6 +688,9 @@ required = 0
     if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
 #endif
   end if if_not_restart
+  
+  ! --- Print some grid information
+  if ( my_id == 0 ) call log_grid_info(.false., node_list, element_list)
   
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   

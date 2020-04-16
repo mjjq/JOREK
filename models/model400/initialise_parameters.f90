@@ -38,7 +38,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                n_pfc, n_tor_fft_thresh,                            &
+                n_pfc, n_tor_fft_thresh, manipulate_psi_map,        &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
                 grid_to_wall, RZ_grid_inside_wall,                  &
                 n_wall_blocks, n_ext_block,                         &
@@ -48,13 +48,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 tokamak_device,                                     &
                 F0, time_evol_scheme,                               &
                 zjz_0, zjz_1, zj_coef,                              &
-                rho_0, rho_1, rho_coef, central_density,            &
+                rho_0, rho_1, rho_coef,                             &
+                central_density, central_mass,                      &
                 T_0,   T_1,   T_coef,                               &
                 Ti_0,  Ti_1,  Ti_coef,                              &
                 Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_i_par, ZK_i_perp, ZK_e_par, ZK_e_perp,           &
-                D_par, D_perp,                                      &
+                D_par, D_perp, ZK_par_max,                          &
                 Q_bar, sigma, gamma_sheath,                         &
                 V_0,V_1,V_coef,                			    &
                 particlesource,                                     &

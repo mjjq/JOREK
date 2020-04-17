@@ -131,7 +131,7 @@ contains
 
   end if RMPspectrum
 
-  zbig = 1.d15
+  zbig = 1.d12
   zbig_backup = zbig
      do i=1, n_local_elms !===============================do elements
 

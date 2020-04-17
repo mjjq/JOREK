@@ -131,7 +131,7 @@ contains
 
   end if RMPspectrum
 
-  zbig = 1.d12
+  zbig = 1.d15
   zbig_backup = zbig
      do i=1, n_local_elms !===============================do elements
 
@@ -643,13 +643,11 @@ contains
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
 
-                            if (in .eq. 1) then                              
-!                              write(139,'(i3,12f9.5)') node_list%node(inode)%boundary,node_list%node(inode)%x(1,:), normal_direction, ps0_y, -ps0_x, &
-!                                                   direction, direction2, direction-direction2, ps0_y*normal_direction(1)-ps0_x*normal_direction(2)
-                              write(*,'(i3,A,3e14.6,A,e14.6)') node_list%node(inode)%boundary, &
-                                                               ' Boundary (t): ',Vpar0, -BigR**2 * u0_t/ps0_t, direction*sqrt(GAMMA*T0)/Btot,&
-                                                               ' error : ',Vpar0 - BigR**2 * u0_t/ps0_t - direction*sqrt(GAMMA*T0)/Btot
-                            endif
+!                            if (in .eq. 1) then                              
+!                             write(*,'(i3,A,3e14.6,A,e14.6)') node_list%node(inode)%boundary, &
+!                                                               ' Boundary (t): ',Vpar0, -BigR**2 * u0_t/ps0_t, direction*sqrt(GAMMA*T0)/Btot,&
+!                                                               ' error : ',Vpar0 - BigR**2 * u0_t/ps0_t - direction*sqrt(GAMMA*T0)/Btot
+!                            endif
 
                             ku = 2
                             kv = 7

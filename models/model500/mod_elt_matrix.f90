@@ -325,7 +325,7 @@ do ms=1, n_gauss
 
      r0_corr = corr_neg_dens(r0) ! Correction for negative r0 ...
 
-     r0_hat   = BigR**2 * r0
+     r0_hat   = BigR**2 * abs(r0)
      r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
      r0_y_hat = BigR**2 * r0_y
 
@@ -351,7 +351,7 @@ do ms=1, n_gauss
             + rn0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2            &
             - xjac_y * (- rn0_s * x_t(ms,mt) + rn0_t * x_s(ms,mt) )  / xjac**2
 
-     rn0_hat   = BigR**2 * rn0 
+     rn0_hat   = BigR**2 * abs(rn0)                                                        
      rn0_x_hat = 2.d0 * BigR * BigR_x  * rn0 + BigR**2 * rn0_x                             
      rn0_y_hat = BigR**2 * rn0_y                                                            
 
@@ -1395,7 +1395,7 @@ do ms=1, n_gauss
                            + v * BigR * rho * frad_bg                                           * xjac * theta * tstep
 
 
-                 amat_66 =   v * r0 * T   * BigR * xjac * (1.d0 + zeta)    &
+                 amat_66 =   v * abs(r0) * T   * BigR * xjac * (1.d0 + zeta)    &
 
                            - v * r0 * BigR**2 * ( T_s  * u0_t - T_t  * u0_s)                       * theta * tstep &
                            - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                       * theta * tstep &
@@ -1534,7 +1534,7 @@ do ms=1, n_gauss
                            - v *(r0_corr*r0_corr *dSrec_dT*T)*vpar0*BB2 * BigR           * xjac * theta * tstep &
                            )
 
-                 amat_77 = v * Vpar * r0 * F0**2 / BigR * xjac * (1.d0 + zeta) &
+                 amat_77 = v * Vpar * abs(r0) * F0**2 / BigR * xjac * (1.d0 + zeta) &
                          + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR        * xjac  * theta * tstep &
 
                          + v * (particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR  * xjac * theta * tstep &

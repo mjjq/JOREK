@@ -33,9 +33,8 @@ integer, intent(in) :: tid
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
-real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
+real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)
-real*8     :: source_volume, source_pellet, source_pellet2
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_rhon, Bgrad_T_star, Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rhon_psi, Bgrad_rho_rho, Bgrad_rho_rhon, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
@@ -675,16 +674,14 @@ do ms=1, n_gauss
          ZKpar_T = ZK_par_neg
        endif
      endif
-
-     phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
-     delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
-
-     source_pellet = 0.d0
-     source_volume = 0.d0
    
      Dn0x = D_neutral_x      
      Dn0y = D_neutral_y      
      Dn0p = D_neutral_p      
+
+     ! -------------------------------
+     ! --- Impurity related things
+     ! -------------------------------
 
      select case ( trim(gas_type) )
        case('D2')
@@ -887,10 +884,11 @@ do ms=1, n_gauss
        stop
      end if
 
-
    !--------------------------------------------------------
    ! --- Source of Impurities and Background species
    !--------------------------------------------------------
+
+     phi = 2.d0*PI*float(mp-1)/float(n_plane)/float(n_period)
 
      source_imp = 0.d0                    
      source_bg  = 0.d0
@@ -1097,7 +1095,7 @@ do ms=1, n_gauss
                       + BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u0_x + v_y * u0_y) * xjac * tstep
 
                       ! Old term (not to be included anymore due to implementations of terms above):
-                      ! + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac * tstep
+                      ! + BigR**3 * particle_source(ms,mt) * (v_x * u0_x + v_y * u0_y) * xjac * tstep
 
 !###################################################################################################
 !#  equation 3   (current definition)                                                              #
@@ -1115,7 +1113,7 @@ do ms=1, n_gauss
 !#  equation 5 (total density equation)                                                                  #
 !###################################################################################################
 
-         rhs_ij_5   = v * BigR * (particle_source(ms,mt) + source_pellet + source_bg + source_imp)                                 * xjac * tstep &
+         rhs_ij_5   = v * BigR * (particle_source(ms,mt) + source_bg + source_imp)                                 * xjac * tstep &
                     + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                                              * tstep &
                     + v * 2.d0 * BigR * r0 * u0_y                                                                      * xjac * tstep &
                     !- (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhon)                            * xjac * tstep &
@@ -1256,7 +1254,7 @@ do ms=1, n_gauss
                       - v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)     * vpar0 * BB2 * xjac * tstep &
 
                       ! Old term (not to be included anymore due to implementations of terms above):
-                      ! - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2   * BigR * xjac * tstep &
+                      ! - v * particle_source(ms,mt) * vpar0 * BB2   * BigR * xjac * tstep &
 
                       - TG_NUM7 * 0.25d0 * r0 * Vpar0**2 * BB2 &
                              * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
@@ -1480,7 +1478,7 @@ do ms=1, n_gauss
                            - BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
 
                            ! Old term (not to be included anymore due to implementations of terms above):
-                           ! - BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
+                           ! - BigR**3 * particle_source(ms,mt) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
 
                            + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w0_x * u_y - w0_y * u_x)       &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep   &
@@ -1982,7 +1980,7 @@ do ms=1, n_gauss
                       + v * vpar0 * (r0_x * psi_y - r0_y * psi_x)    * vpar0 * BB2 * xjac * theta * tstep  &
 
                       ! Old term (not to be included anymore due to implementations of terms above):
-                      !+ v * (particle_source(ms,mt) + source_pellet) * vpar0 * BB2_psi * BigR * xjac * theta * tstep &
+                      !+ v * particle_source(ms,mt) * vpar0 * BB2_psi * BigR * xjac * theta * tstep &
 
                          + TG_NUM7 * 0.25d0 * r0 * Vpar0**2 * BB2 &
                                    * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / BigR  &
@@ -2074,7 +2072,7 @@ do ms=1, n_gauss
                          + 2.0 * v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x) * vpar * BB2 * xjac * theta * tstep  &
 
                          ! Old term (not to be included anymore due to implementations of terms above):
-                         ! + v * (particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR  * xjac * theta * tstep &
+                         ! + v * particle_source(ms,mt) * vpar*BB2 * BigR  * xjac * theta * tstep &
 
                          + r0 * vpar0 * vpar * BB2 * (ps0_s * v_t - ps0_t * v_s)                * theta * tstep &
                          - r0 * vpar0 * vpar * BB2 * F0 / BigR * v_p                     * xjac * theta * tstep &

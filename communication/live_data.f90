@@ -62,7 +62,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@plottable: energies magnetic_energies kinetic_energies growth_rates magnetic_growth_rates  &
                                     kinetic_growth_rates times input_profiles axis current betas particlecontent thermalenergy &
                                     heatingpower particlesource diag_coil_curr pf_coil_curr rmp_coil_curr integrated_energies  &
-                                    bnd_fluxes dEdt helicity dissipative_terms work_terms &
+                                    bnd_fluxes dEdt helicity dissipative_terms work_terms mag_energy_balance &
                                     area volume li3 energy_conservation net_tor_wall_curr dparticles_dt bnd_particle_fluxes'
     write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names
     
@@ -288,6 +288,17 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation: %"time"       "-dEtotdt"     "Sum bnd fluxes + sources + dissipative terms" '
     write(LIVE_DATA_HANDLE,*)
+
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_mag_energy_balance: ', 6
+    write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_balance_xlabel: normalized time'
+    write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_balance_xlabel_si: time [ms]'
+    write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_balance_ylabel: Magnetic energy balance (W)'
+    write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_balance_ylabel_si: Magnetic energy balance (W)'
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@mag_energy_balance_x2si: ', sqrt_mu0_rho0*1.e3
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@mag_energy_balance_y2si: ', 1.0
+    write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_balance_logy: 0'
+    write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_balance: %"time"    "dWmagdt"   "Ohmic"  "Poynting"  "JxB.v"  "magSource"  "sum all losses + sources"  '
+    write(LIVE_DATA_HANDLE,*)
  
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dissipative_terms: ', 2
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_xlabel: normalized time'
@@ -410,7 +421,7 @@ module live_data
       thmwork_tot_t, viscopar_dissip_tot_t, viscopar_flux_t, li3_t,      &
       li3_tot_t, part_src_tot_t, heat_src_tot_t, volume_t, area_t, mag_ener_src_tot, eta_ohmic, eta, &
       dpart_tot_dt, part_flux_Dpar_t, part_flux_Dperp_t, part_flux_vpar_t, part_flux_vperp_t, &
-      dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t 
+      dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t, flux_poynting_t 
 
 
     implicit none
@@ -418,7 +429,7 @@ module live_data
     integer, intent(in) :: index !< Timestep index to write data for
     
     integer :: i, j
-    real*8  :: e1, e2, growth_rate, sum_fluxes_dissip
+    real*8  :: e1, e2, growth_rate, sum_fluxes_dissip, sum_mag_energy_terms
     
     if ( .not. produce_live_data ) return
     
@@ -510,20 +521,30 @@ module live_data
                                            part_flux_vpar_t(index), part_flux_vperp_t(index), -npart_flux_t(index)
 
    if(index>1) then
-       write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dEdt: ', xtime(index-1), -dE_tot_dt(index-1), -dWmag_tot_dt(index-1), &
+     write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dEdt: ', xtime(index-1), -dE_tot_dt(index-1), -dWmag_tot_dt(index-1), &
                                             -dthermal_tot_dt(index-1),-dkinperp_tot_dt(index-1),-dkinpar_tot_dt(index-1)
-       write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dparticles_dt: ', xtime(index-1), dpart_tot_dt(index-1) + dnpart_tot_dt(index-1), &
+     write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dparticles_dt: ', xtime(index-1), dpart_tot_dt(index-1) + dnpart_tot_dt(index-1), &
                                                                       dpart_tot_dt(index-1), dnpart_tot_dt(index-1) 
 
-       sum_fluxes_dissip = flux_Pvn_t(index-1)  + flux_kinpar_t(index-1) + flux_qpar_t(index-1) + flux_qperp_t(index-1) &
-                         + viscopar_dissip_tot_t(index-1) - heat_src_tot_t(index-1)  &
-                         + ohmic_tot_t(index-1)*(1.d0 - eta_ohmic/eta) - mag_ener_src_tot(index-1)
- 
-      write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@energy_conservation: ', xtime(index-1), -dE_tot_dt(index-1), sum_fluxes_dissip 
+     sum_fluxes_dissip = flux_Pvn_t(index-1)  + flux_kinpar_t(index-1) + flux_qpar_t(index-1) + flux_qperp_t(index-1) &
+                       + viscopar_dissip_tot_t(index-1) - heat_src_tot_t(index-1)  &
+                       + ohmic_tot_t(index-1)*(1.d0 - eta_ohmic/eta) - mag_ener_src_tot(index-1)
 
+     sum_mag_energy_terms = -ohmic_tot_t(index-1) + flux_poynting_t(index-1) + Magwork_tot_t(index-1) + mag_ener_src_tot(index-1) 
+ 
+     write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@energy_conservation: ', xtime(index-1), -dE_tot_dt(index-1), sum_fluxes_dissip 
+     write(LIVE_DATA_HANDLE,'(A,7ES17.9)') '@mag_energy_balance: ', xtime(index-1), dWmag_tot_dt(index-1),  -ohmic_tot_t(index-1),     &
+                                                            flux_poynting_t(index-1), Magwork_tot_t(index-1),mag_ener_src_tot(index-1), &
+                                                            sum_mag_energy_terms 
     else
+
+      sum_mag_energy_terms = -ohmic_tot_t(index) + flux_poynting_t(index) + Magwork_tot_t(index) + mag_ener_src_tot(index) 
+
       write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dEdt: ', xtime(index), 0.d0, 0.d0, 0.d0, 0.d0, 0.d0
       write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@energy_conservation: ', xtime(index), 0.d0, 0.d0 
+      write(LIVE_DATA_HANDLE,'(A,7ES17.9)') '@mag_energy_balance: ', xtime(index), 0.d0,  -ohmic_tot_t(index),     &
+                                                            flux_poynting_t(index), Magwork_tot_t(index),mag_ener_src_tot(index), &
+                                                            sum_mag_energy_terms 
       write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dparticles_dt: ', xtime(index), 0.d0, 0.d0, 0.d0 
     endif
  

@@ -55,8 +55,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_i_par, ZK_i_perp, ZK_e_par, ZK_e_perp,           &
                 Zk_par, ZK_perp, D_par, D_perp,                     &
-                Q_bar, sigma, gamma_sheath,                         &
-                V_0,V_1,V_coef,                			            &
+                Q_bar, sigma, gamma_sheath, gamma_stangeby,         &
+                V_0,V_1,V_coef,                                     &
                 particlesource, heatsource,                         &
                 heatsource_i, heatsource_e, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num,                  &
@@ -192,7 +192,12 @@ if (my_id .eq. 0) then
     CLOSE(244)
   endif
  !=========================================
-  
+ 
+  ! Calculate JOREK gamma_sheath from gamma_stangeby if provided
+  if (gamma_stangeby > -1.d99) then
+    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0) 
+  endif
+ 
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
   else

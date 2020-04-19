@@ -794,6 +794,7 @@ module vacuum
 
     call MPI_BCAST(n_dof_starwall,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     
+    sz_net     = 0
     sz_diag(:) = 0
     sz_pol(:)  = 0
     sz_rmp(:)  = 0

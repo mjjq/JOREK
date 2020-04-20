@@ -171,7 +171,7 @@ contains
 
               do in=1, n_tor  !========================do n_tor
                 if (keep_n0_const  .and.  in .eq. 1 ) then
-                  zbig = 1.d12
+                  zbig = 1.d15
                 else
                   zbig = zbig_backup
                 endif

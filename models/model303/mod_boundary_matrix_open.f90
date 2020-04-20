@@ -19,8 +19,8 @@ implicit none
 
 type (type_element)   :: element
 type (type_node)      :: nodes(2)        ! the two nodes containing the boundary nodes
-integer,               intent(in)     :: i_tor_min   
-integer,               intent(in)     :: i_tor_max   
+integer, intent(in)   :: i_tor_min   
+integer, intent(in)   :: i_tor_max   
 
 real*8     :: x_g(n_gauss), x_s(n_gauss), x_ss(n_gauss)
 real*8     :: y_g(n_gauss), y_s(n_gauss), y_ss(n_gauss)

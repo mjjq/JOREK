@@ -18,11 +18,9 @@ implicit none
 
 type (type_element)   :: element
 type (type_node)      :: nodes(4)        ! the two nodes containing the boundary nodes
+integer, intent(in)   :: i_tor_min   
+integer, intent(in)   :: i_tor_max   
 
-!real*8, dimension (:,:), allocatable  :: ELM
-!real*8, dimension (:)  , allocatable  :: RHS
-integer,               intent(in)     :: i_tor_min   
-integer,               intent(in)     :: i_tor_max   
 real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
 real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
@@ -73,6 +71,7 @@ real*8     :: element_size_ij, element_size_kl, element_size_perp
 real*8     :: normal(2), normal_direction(2)
 real*8     :: grad_s(2), grad_t(2)
 real*8     :: Mach1
+integer    :: n_tor_local
 
 ! --- Time integration parameters
 theta = time_evol_theta
@@ -156,6 +155,7 @@ do i=1,2
   enddo
 enddo
 
+n_tor_local = i_tor_max - i_tor_min + 1
 ! --- Gaussian integration
 do ms=1, n_gauss
 
@@ -246,7 +246,7 @@ do ms=1, n_gauss
         element_size_ij = element%size(vertex(i),j2)
 
         ! Loop over toroidal modes
-        do im=1,n_tor
+        do im=i_tor_min, i_tor_max
 
           ! --- Test function
           v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)
@@ -268,9 +268,9 @@ do ms=1, n_gauss
           Qbnd(var_T) = - v * (gamma_sheath - 1.d0) * r0 * T0 * c_s * B_dot_n / sqrt(BB2)
 
           ! --- Fill in RHS
-          index_ij = n_tor*n_var*(n_order+1)*(vertex(i)-1) + n_tor * n_var * (j2-1) + im   ! index in the ELM matrix
+          index_ij = n_tor_local*n_var*(n_order+1)*(vertex(i)-1) + n_tor_local * n_var * (j2-1) + im - i_tor_min +1  ! index in the ELM matrix
           do ivar= 1,n_var
-            ij = index_ij + (ivar-1)*n_tor
+            ij = index_ij + (ivar-1)*n_tor_local
             RHS(ij) =  RHS(ij) + Qbnd(ivar) * integrand * tstep
           enddo
 
@@ -291,7 +291,7 @@ do ms=1, n_gauss
               endif
 
               ! Loop over toroidal modes
-              do in = 1, n_tor                                              ! loop over toroidal harmonics
+              do in=i_tor_min, i_tor_max
 
                 ! --- Basis functions
                 bf   = H1(k,l,ms)   * element_size_kl * HZ(in,mp)
@@ -369,11 +369,11 @@ do ms=1, n_gauss
                                         + v * (gamma_sheath - 1.d0) * r0  * T0 * cs_T * B_dot_n    / sqrt(BB2)
 
                 ! --- Fill-in Matrix
-                index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in ! index in the ELM matrix 
+                index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l2-1) + in - i_tor_min +1! index in the ELM matrix 
                 do ivar= 1,n_var
                   do kvar= 1,n_var
-                    ij = index_ij + (ivar-1)*n_tor
-                    kl = index_kl + (kvar-1)*n_tor
+                    ij = index_ij + (ivar-1)*n_tor_local
+                    kl = index_kl + (kvar-1)*n_tor_local
                     ELM(ij,kl) =  ELM(ij,kl) + Qjac(ivar,kvar) * integrand * theta * tstep
                   enddo
                 enddo

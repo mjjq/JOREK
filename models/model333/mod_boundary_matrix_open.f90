@@ -66,9 +66,6 @@ type (type_node)         :: tmp_node
 theta = time_evol_theta
 zeta  = time_evol_zeta
 
-n_tor_local = i_tor_max - i_tor_min + 1
-
-
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_ss  = 0.d0; 
 y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_ss  = 0.d0; 
@@ -139,6 +136,7 @@ do i=1,2    ! sum over 2 verices
 enddo
 
 
+n_tor_local = i_tor_max - i_tor_min + 1
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss
 

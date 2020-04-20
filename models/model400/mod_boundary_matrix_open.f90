@@ -21,8 +21,8 @@ implicit none
 type (type_element)          :: element
 type (type_node)             :: nodes(2)        ! the two nodes containing the boundary nodes
 type (type_strategic_points) :: stpts
-integer,               intent(in)     :: i_tor_min   
-integer,               intent(in)     :: i_tor_max   
+integer,     intent(in)      :: i_tor_min   
+integer,     intent(in)      :: i_tor_max   
 
 real*8     :: x_g(n_gauss), x_s(n_gauss), x_ss(n_gauss)
 real*8     :: y_g(n_gauss), y_s(n_gauss), y_ss(n_gauss)
@@ -56,7 +56,6 @@ theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
 !theta = 1.0d0  ; zeta = 0.0d0       ! Euler scheme 
 !theta = 1.0d0   ; zeta = 0.5d0       ! BDF2 (Gears) scheme
 
-n_tor_local = i_tor_max - i_tor_min + 1
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0;  x_ss  = 0.d0; 
@@ -106,6 +105,7 @@ do i=1,2
   enddo
 enddo
 
+n_tor_local = i_tor_max - i_tor_min + 1
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss
 

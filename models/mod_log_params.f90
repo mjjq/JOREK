@@ -434,6 +434,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
   write(*,REAL_FMT) 'ZK_par_neg            ', ZK_par_neg
   write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
+  write(*,REAL_FMT) 'ZK_par_neg_thresh     ', ZK_par_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
   write(*,LOGI_FMT) 'use_pellet            ', use_pellet
   write(*,REAL_FMT) 'corr_neg_temp_coef    ', corr_neg_temp_coef(:)

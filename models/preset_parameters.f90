@@ -173,6 +173,7 @@ subroutine preset_parameters
   ZK_prof_neg        = 1.d-5
   ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+  ZK_par_neg_thresh  = 0.d0
   T_min              = 0.0
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)

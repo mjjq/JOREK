@@ -36,7 +36,7 @@ real*8, dimension (DIM0) :: RHS
 integer, intent(in) :: tid
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2, n_tor_loop
-integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8
+integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8, ij, kl
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz, source_pellet, source_volume
@@ -182,7 +182,7 @@ else
 endif
 
 rhs_ij  = 0.d0; rhs_ij_k  = 0.d0; 
-amat    = 0.d0; amat_k    = 0.d0; amat_kn = 0.d0
+amat    = 0.d0; amat_k    = 0.d0; amat_n = 0.d0; amat_kn = 0.d0
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_st  = 0.d0; x_ss  = 0.d0; x_tt  = 0.d0;
 y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_st  = 0.d0; y_ss  = 0.d0; y_tt  = 0.d0;
@@ -331,7 +331,7 @@ do i=1,n_vertex_max
 !$OMP  ps0, ps0_x, ps0_y, ps0_p, ps0_s, ps0_t, ps0_ss, ps0_tt, ps0_st, ps0_xx, ps0_yy, ps0_xy,&
 !$OMP  u0,  u0_x,  u0_y,  u0_p,  u0_s,  u0_t,  u0_ss,  u0_tt,  u0_st,  u0_xx,  u0_yy,  u0_xy, &
 !$OMP  zj0, zj0_x, zj0_y, zj0_p, zj0_s, zj0_t,                                                &
-!$OMP  w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_tt, w0_st,  w0_xx,  w0_yy,  w0_xy,         &
+!$OMP  w0,  w0_x,  w0_y,  w0_p,  w0_s,  w0_t,  w0_ss,  w0_tt,  w0_st,  w0_xx,  w0_yy,  w0_xy, &
 !$OMP  r0,  r0_x,  r0_y,  r0_p,  r0_s,  r0_t,  r0_ss,  r0_tt,  r0_st,  r0_xx,  r0_yy, r0_xy,  &
 !$OMP  rn0, rn0_x, rn0_y, rn0_p, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_xx, rn0_yy,        &
 !$OMP  T0,  T0_x,  T0_y,  T0_p,  T0_s,  T0_t,  T0_ss,  T0_tt,  T0_st,  T0_xx,  T0_yy, T0_xy,  &
@@ -343,7 +343,7 @@ do i=1,n_vertex_max
 !$OMP  eta_T, deta_dT, d2eta_d2T,  eta_T_ohm, deta_dT_ohm, visco_T, dvisco_dT, d2visco_dT2, &
 !$OMP  vt0, Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, &
 !$OMP  ZKpar_T, dZKpar_dT, W_dia, eta_num_T, visco_num_T, psi_norm, D_prof, ZK_prof, phi, delta_phi,&
-!$OMP  source_pellet, source_volume, index_ij, vv2, &
+!$OMP  source_pellet, source_volume, vv2, &
 !$OMP  v,   v_x,   v_y,   v_s,   v_t,   v_p,   v_ss,   v_tt,   v_st,   v_xx,   v_yy,   v_xy,   &
 !$OMP  psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_tt, psi_st, psi_xx, psi_yy, psi_xy, &
 !$OMP  zj,  zj_x,  zj_y,  zj_s,  zj_t,  zj_p,  zj_ss,  zj_tt,  zj_st,                          &
@@ -366,7 +366,8 @@ do i=1,n_vertex_max
 !$OMP  amat, amat_k, amat_kn, rhs_ij, rhs_ij_k, &
 !$OMP  Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, Bgrad_T_T_n, T_ps0_x, T_ps0_y, T0_psi_x, &
 !$OMP  T0_psi_y, v_psi_x, v_psi_y,  &
-!$OMP  k,l, index_kl, ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3,kl4, kl5, kl6, kl7, kl8)
+!$OMP  k,l, index_kl, index_ij, ij, kl, &
+!$OMP  ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3,kl4, kl5, kl6, kl7, kl8)
 #endif
 
         do mp = 1, n_plane
@@ -2156,95 +2157,15 @@ do i=1,n_vertex_max
                     ELM_kn(mp,kl8,ij8) =  ELM_kn(mp,kl8,ij8) + wst * amat_kn(8,8)
 
                   else
-                    kl1 = index_kl
-                    kl2 = index_kl + 1 * n_tor_loop
-                    kl3 = index_kl + 2 * n_tor_loop
-                    kl4 = index_kl + 3 * n_tor_loop
-                    kl5 = index_kl + 4 * n_tor_loop
-                    kl6 = index_kl + 5 * n_tor_loop
-                    kl7 = index_kl + 6 * n_tor_loop
-                    kl8 = index_kl + 7 * n_tor_loop
-                    ij1 = index_ij
-                    ij2 = index_ij + 1 * n_tor_loop
-                    ij3 = index_ij + 2 * n_tor_loop
-                    ij4 = index_ij + 3 * n_tor_loop
-                    ij5 = index_ij + 4 * n_tor_loop
-                    ij6 = index_ij + 5 * n_tor_loop
-                    ij7 = index_ij + 6 * n_tor_loop
-                    ij8 = index_ij + 7 * n_tor_loop
-                    
-                    ELM(ij1,kl1) = ELM(ij1,kl1) + (amat(1,1) + amat_k(1,1) + amat_n(1,1) + amat_kn(1,1)) * wst
-                    ELM(ij1,kl2) = ELM(ij1,kl2) + (amat(1,2) + amat_k(1,2) + amat_n(1,2) + amat_kn(1,2)) * wst
-                    ELM(ij1,kl3) = ELM(ij1,kl3) + (amat(1,3) + amat_k(1,3) + amat_n(1,3) + amat_kn(1,3)) * wst
-                    ELM(ij1,kl4) = ELM(ij1,kl4) + (amat(1,4) + amat_k(1,4) + amat_n(1,4) + amat_kn(1,4)) * wst
-                    ELM(ij1,kl5) = ELM(ij1,kl5) + (amat(1,5) + amat_k(1,5) + amat_n(1,5) + amat_kn(1,5)) * wst
-                    ELM(ij1,kl6) = ELM(ij1,kl6) + (amat(1,6) + amat_k(1,6) + amat_n(1,6) + amat_kn(1,6)) * wst
-                    ELM(ij1,kl7) = ELM(ij1,kl7) + (amat(1,7) + amat_k(1,7) + amat_n(1,7) + amat_kn(1,7)) * wst
-                    ELM(ij1,kl8) = ELM(ij1,kl8) + (amat(1,8) + amat_k(1,8) + amat_n(1,8) + amat_kn(1,8)) * wst
-                    
-                    ELM(ij2,kl1) = ELM(ij2,kl1) + (amat(2,1) + amat_k(2,1) + amat_n(2,1) + amat_kn(2,1)) * wst
-                    ELM(ij2,kl2) = ELM(ij2,kl2) + (amat(2,2) + amat_k(2,2) + amat_n(2,2) + amat_kn(2,2)) * wst
-                    ELM(ij2,kl3) = ELM(ij2,kl3) + (amat(2,3) + amat_k(2,3) + amat_n(2,3) + amat_kn(2,3)) * wst
-                    ELM(ij2,kl4) = ELM(ij2,kl4) + (amat(2,4) + amat_k(2,4) + amat_n(2,4) + amat_kn(2,4)) * wst
-                    ELM(ij2,kl5) = ELM(ij2,kl5) + (amat(2,5) + amat_k(2,5) + amat_n(2,5) + amat_kn(2,5)) * wst
-                    ELM(ij2,kl6) = ELM(ij2,kl6) + (amat(2,6) + amat_k(2,6) + amat_n(2,6) + amat_kn(2,6)) * wst
-                    ELM(ij2,kl7) = ELM(ij2,kl7) + (amat(2,7) + amat_k(2,7) + amat_n(2,7) + amat_kn(2,7)) * wst
-                    ELM(ij2,kl8) = ELM(ij2,kl8) + (amat(2,8) + amat_k(2,8) + amat_n(2,8) + amat_kn(2,8)) * wst
-                    
-                    ELM(ij3,kl1) = ELM(ij3,kl1) + (amat(3,1) + amat_k(3,1) + amat_n(3,1) + amat_kn(3,1)) * wst
-                    ELM(ij3,kl2) = ELM(ij3,kl2) + (amat(3,2) + amat_k(3,2) + amat_n(3,2) + amat_kn(3,2)) * wst
-                    ELM(ij3,kl3) = ELM(ij3,kl3) + (amat(3,3) + amat_k(3,3) + amat_n(3,3) + amat_kn(3,3)) * wst
-                    ELM(ij3,kl4) = ELM(ij3,kl4) + (amat(3,4) + amat_k(3,4) + amat_n(3,4) + amat_kn(3,4)) * wst
-                    ELM(ij3,kl5) = ELM(ij3,kl5) + (amat(3,5) + amat_k(3,5) + amat_n(3,5) + amat_kn(3,5)) * wst
-                    ELM(ij3,kl6) = ELM(ij3,kl6) + (amat(3,6) + amat_k(3,6) + amat_n(3,6) + amat_kn(3,6)) * wst
-                    ELM(ij3,kl7) = ELM(ij3,kl7) + (amat(3,7) + amat_k(3,7) + amat_n(3,7) + amat_kn(3,7)) * wst
-                    ELM(ij3,kl8) = ELM(ij3,kl8) + (amat(3,8) + amat_k(3,8) + amat_n(3,8) + amat_kn(3,8)) * wst
-                    
-                    ELM(ij4,kl1) = ELM(ij4,kl1) + (amat(4,1) + amat_k(4,1) + amat_n(4,1) + amat_kn(4,1)) * wst
-                    ELM(ij4,kl2) = ELM(ij4,kl2) + (amat(4,2) + amat_k(4,2) + amat_n(4,2) + amat_kn(4,2)) * wst
-                    ELM(ij4,kl3) = ELM(ij4,kl3) + (amat(4,3) + amat_k(4,3) + amat_n(4,3) + amat_kn(4,3)) * wst
-                    ELM(ij4,kl4) = ELM(ij4,kl4) + (amat(4,4) + amat_k(4,4) + amat_n(4,4) + amat_kn(4,4)) * wst
-                    ELM(ij4,kl5) = ELM(ij4,kl5) + (amat(4,5) + amat_k(4,5) + amat_n(4,5) + amat_kn(4,5)) * wst
-                    ELM(ij4,kl6) = ELM(ij4,kl6) + (amat(4,6) + amat_k(4,6) + amat_n(4,6) + amat_kn(4,6)) * wst
-                    ELM(ij4,kl7) = ELM(ij4,kl7) + (amat(4,7) + amat_k(4,7) + amat_n(4,7) + amat_kn(4,7)) * wst
-                    ELM(ij4,kl8) = ELM(ij4,kl8) + (amat(4,8) + amat_k(4,8) + amat_n(4,8) + amat_kn(4,8)) * wst
-                    
-                    ELM(ij5,kl1) = ELM(ij5,kl1) + (amat(5,1) + amat_k(5,1) + amat_n(5,1) + amat_kn(5,1)) * wst
-                    ELM(ij5,kl2) = ELM(ij5,kl2) + (amat(5,2) + amat_k(5,2) + amat_n(5,2) + amat_kn(5,2)) * wst
-                    ELM(ij5,kl3) = ELM(ij5,kl3) + (amat(5,3) + amat_k(5,3) + amat_n(5,3) + amat_kn(5,3)) * wst
-                    ELM(ij5,kl4) = ELM(ij5,kl4) + (amat(5,4) + amat_k(5,4) + amat_n(5,4) + amat_kn(5,4)) * wst
-                    ELM(ij5,kl5) = ELM(ij5,kl5) + (amat(5,5) + amat_k(5,5) + amat_n(5,5) + amat_kn(5,5)) * wst
-                    ELM(ij5,kl6) = ELM(ij5,kl6) + (amat(5,6) + amat_k(5,6) + amat_n(5,6) + amat_kn(5,6)) * wst
-                    ELM(ij5,kl7) = ELM(ij5,kl7) + (amat(5,7) + amat_k(5,7) + amat_n(5,7) + amat_kn(5,7)) * wst
-                    ELM(ij5,kl8) = ELM(ij5,kl8) + (amat(5,8) + amat_k(5,8) + amat_n(5,8) + amat_kn(5,8)) * wst
-                    
-                    ELM(ij6,kl1) = ELM(ij6,kl1) + (amat(6,1) + amat_k(6,1) + amat_n(6,1) + amat_kn(6,1)) * wst
-                    ELM(ij6,kl2) = ELM(ij6,kl2) + (amat(6,2) + amat_k(6,2) + amat_n(6,2) + amat_kn(6,2)) * wst
-                    ELM(ij6,kl3) = ELM(ij6,kl3) + (amat(6,3) + amat_k(6,3) + amat_n(6,3) + amat_kn(6,3)) * wst
-                    ELM(ij6,kl4) = ELM(ij6,kl4) + (amat(6,4) + amat_k(6,4) + amat_n(6,4) + amat_kn(6,4)) * wst
-                    ELM(ij6,kl5) = ELM(ij6,kl5) + (amat(6,5) + amat_k(6,5) + amat_n(6,5) + amat_kn(6,5)) * wst
-                    ELM(ij6,kl6) = ELM(ij6,kl6) + (amat(6,6) + amat_k(6,6) + amat_n(6,6) + amat_kn(6,6)) * wst
-                    ELM(ij6,kl7) = ELM(ij6,kl7) + (amat(6,7) + amat_k(6,7) + amat_n(6,7) + amat_kn(6,7)) * wst
-                    ELM(ij6,kl8) = ELM(ij6,kl8) + (amat(6,8) + amat_k(6,8) + amat_n(6,8) + amat_kn(6,8)) * wst
-                    
-                    ELM(ij7,kl1) = ELM(ij7,kl1) + (amat(7,1) + amat_k(7,1) + amat_n(7,1) + amat_kn(7,1)) * wst
-                    ELM(ij7,kl2) = ELM(ij7,kl2) + (amat(7,2) + amat_k(7,2) + amat_n(7,2) + amat_kn(7,2)) * wst
-                    ELM(ij7,kl3) = ELM(ij7,kl3) + (amat(7,3) + amat_k(7,3) + amat_n(7,3) + amat_kn(7,3)) * wst
-                    ELM(ij7,kl4) = ELM(ij7,kl4) + (amat(7,4) + amat_k(7,4) + amat_n(7,4) + amat_kn(7,4)) * wst
-                    ELM(ij7,kl5) = ELM(ij7,kl5) + (amat(7,5) + amat_k(7,5) + amat_n(7,5) + amat_kn(7,5)) * wst
-                    ELM(ij7,kl6) = ELM(ij7,kl6) + (amat(7,6) + amat_k(7,6) + amat_n(7,6) + amat_kn(7,6)) * wst
-                    ELM(ij7,kl7) = ELM(ij7,kl7) + (amat(7,7) + amat_k(7,7) + amat_n(7,7) + amat_kn(7,7)) * wst
-                    ELM(ij7,kl8) = ELM(ij7,kl8) + (amat(7,8) + amat_k(7,8) + amat_n(7,8) + amat_kn(7,8)) * wst
 
-                    ELM(ij8,kl1) = ELM(ij8,kl1) + (amat(8,1) + amat_k(8,1) + amat_n(8,1) + amat_kn(8,1)) * wst
-                    ELM(ij8,kl2) = ELM(ij8,kl2) + (amat(8,2) + amat_k(8,2) + amat_n(8,2) + amat_kn(8,2)) * wst
-                    ELM(ij8,kl3) = ELM(ij8,kl3) + (amat(8,3) + amat_k(8,3) + amat_n(8,3) + amat_kn(8,3)) * wst
-                    ELM(ij8,kl4) = ELM(ij8,kl4) + (amat(8,4) + amat_k(8,4) + amat_n(8,4) + amat_kn(8,4)) * wst
-                    ELM(ij8,kl5) = ELM(ij8,kl5) + (amat(8,5) + amat_k(8,5) + amat_n(8,5) + amat_kn(8,5)) * wst
-                    ELM(ij8,kl6) = ELM(ij8,kl6) + (amat(8,6) + amat_k(8,6) + amat_n(8,6) + amat_kn(8,6)) * wst
-                    ELM(ij8,kl7) = ELM(ij8,kl7) + (amat(8,7) + amat_k(8,7) + amat_n(8,7) + amat_kn(8,7)) * wst
-                    ELM(ij8,kl8) = ELM(ij8,kl8) + (amat(8,8) + amat_k(8,8) + amat_n(8,8) + amat_kn(8,8)) * wst
-                    
+                    do kl = 1, n_var
+                      do ij = 1, n_var
+                        ELM(index_ij+(ij-1)*n_tor_loop,index_kl+(kl-1)*n_tor_loop) =       &
+                        ELM(index_ij+(ij-1)*n_tor_loop,index_kl+(kl-1)*n_tor_loop)         &
+                          + (amat(ij,kl) + amat_k(ij,kl) + amat_n(ij,kl) + amat_kn(ij,kl)) * wst
+                      enddo
+                    enddo
+
                   endif
 
                 enddo ! in loop (n_tor, or not...)

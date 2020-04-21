@@ -207,6 +207,8 @@ real*8, dimension(n_var,n_var)   :: QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, Qvm
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k
 real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 
+rho_min = 0.005 ! should be moved to namelist input
+
 ! --- Main switches
 Coef_DivV = 0.0d0 ! this is a stabilisation term !
 ViscType  = 20

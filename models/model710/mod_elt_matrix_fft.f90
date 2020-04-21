@@ -54,7 +54,7 @@ real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),h
 real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
-real*8     :: TG_NUM_Eq, CoefAdv=0.0, rho_min = 0.005
+real*8     :: TG_NUM_Eq, CoefAdv=0.0
 real*8     :: Coef_DivV
 real*8     :: Fprof,dF_dpsi,dF_dz
 real*8     :: dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz

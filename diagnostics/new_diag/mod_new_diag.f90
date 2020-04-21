@@ -424,7 +424,7 @@ module mod_new_diag
     if ( present(filename_start) ) then
       
       output_type = OUTP_ABS_VALUE ! preset
-      if ( present(output_type2) ) output_type = output_type
+      if ( present(output_type2) ) output_type = output_type2
       
       nn(:) = (/ size(cp,1), size(cp,2), size(cp,3), size(cp,4) /)
       n_max = nn(1) - 1

@@ -55,6 +55,7 @@ subroutine preset_parameters
   bc_natural_open    = .false.! use sheath (Bohm) boundary conditions
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid)
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
+  neutral_reflection = 0.d0
   
   amix                 = 0.d0
   amix_freeb           = 0.85d0
@@ -169,7 +170,8 @@ subroutine preset_parameters
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
   ZK_prof_neg        = 1.d-5
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
-  T_min              = 0.0
+  T_min              = 0.0d0
+  rho_min            = 0.0d0
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
@@ -196,6 +198,12 @@ subroutine preset_parameters
   particlesource_gauss      = 0.d0
   particlesource_gauss_psin = 0.9d0
   particlesource_gauss_sig  = 0.1d0
+  neutral_line_source       = 0.d0
+  neutral_line_R_start      = 1.d20
+  neutral_line_Z_start      = 1.d20
+  neutral_line_R_end        = 2.d20
+  neutral_line_Z_end        = 2.d20
+
   
   U_sheath = .false.
   renormalise = .false.

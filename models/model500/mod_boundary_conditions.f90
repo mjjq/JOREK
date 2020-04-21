@@ -1,99 +1,106 @@
 module mod_boundary_conditions
 contains
-  !*******************************************************************************
-  !* Subroutine: boundary_condition                                              *
-  !*******************************************************************************
-  !*                                                                             *
-  !* Add boundary condition on the matrix.                                       *
-  !*                                                                             *
-  !* Parameters:                                                                 *
-  !*   my_id        - Identifier of the node in MPI_COMM_WORLD                   *
-  !*   node_list    - List of nodes                                              *
-  !*   element_list - List of all elements                                       *
-  !*   local_elms   - List of local elements                                     *
-  !*   n_local_elms - Number of local elements                                   *
-  !*   index_min    - Minimal index of local elements                            *
-  !*   index_max    - Maximal index of local elements                            *
-  !*   xpoint2      -                                                            *
-  !*   xcase2       -                                                            *
-  !*   psi_axis     -                                                            *
-  !*   psi_bnd      -                                                            *
-  !*   Z_xpoint     -                                                            *
-  !*   gmres        - boolean indicating if we are using GMRES method            *
-  !*   solve_only   - Indicate if we want to perform only solve                  *
-  !*                                                                             *
-  !*******************************************************************************
-  subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,         &
-       n_local_elms, index_min, index_max, rhs_loc, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, &
-       R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
 
+!*******************************************************************************
+!* Subroutine: boundary_condition                                              *
+!*******************************************************************************
+!*                                                                             *
+!* Add boundary condition on the matrix.                                       *
+!*                                                                             *
+!* Parameters:                                                                 *
+!*   my_id        - Identifier of the node in MPI_COMM_WORLD                   *
+!*   node_list    - List of nodes                                              *
+!*   element_list - List of all elements                                       *
+!*   local_elms   - List of local elements                                     *
+!*   n_local_elms - Number of local elements                                   *
+!*   index_min    - Minimal index of local elements                            *
+!*   index_max    - Maximal index of local elements (                          *
+!*   xpoint2      -                                                            *
+!*   xcase2       -                                                            *
+!*   psi_axis     -                                                            *
+!*   psi_bnd      -                                                            *
+!*   Z_xpoint     -                                                            *
+!*   gmres        - boolean indicating if we are using GMRES method            *
+!*   solve_only   - Indicate if we want to perform only solve                  *
+!*                                                                             *
+!*******************************************************************************
+  subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,    & 
+                                  n_local_elms, index_min, index_max, rhs_loc, xpoint2,   &
+                                  xcase2, R_axis, Z_axis, psi_axis, psi_bnd,              &
+                                  R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only )
+
+    use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     use data_structure
     use vacuum, ONLY: is_freebound
     use global_distributed_matrix
-    use phys_module, only: F0, GAMMA, freeboundary, tstep, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
-       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_start_time, RMP_har_cos, RMP_har_sin,            &
-       RMP_growth_rate, RMP_ramp_up_time, Number_RMP_harmonics, RMP_har_cos_spectrum, RMP_har_sin_spectrum, T_min,&
-       grid_to_wall, n_wall_blocks, keep_n0_const
+    use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
+       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
+       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min, &
+       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
 
     implicit none
 
-    ! --- Routine parameters
-    integer,                   intent(in)    :: my_id
-    type (type_node_list),     intent(in)    :: node_list
-    type (type_element_list),  intent(in)    :: element_list
-    type (type_bnd_node_list), intent(in)    :: bnd_node_list
-    integer,                   intent(in)    :: local_elms(*)
-    integer,                   intent(in)    :: n_local_elms
-    integer,                   intent(in)    :: index_min
-    integer,                   intent(in)    :: index_max
-    real*8,                    intent(inout) :: rhs_loc(*)
-    logical,                   intent(in)    :: xpoint2
-    integer,                   intent(in)    :: xcase2
-    real*8,                    intent(in)    :: R_axis
-    real*8,                    intent(in)    :: Z_axis
-    real*8,                    intent(in)    :: psi_axis
-    real*8,                    intent(in)    :: psi_bnd
-    real*8,                    intent(in)    :: R_xpoint(2)
-    real*8,                    intent(in)    :: Z_xpoint(2)
-    real*8,                    intent(in)    :: psi_xpoint(2)
-    logical,                   intent(in)    :: gmres
-    logical,                   intent(in)    :: solve_only
+!!!! WARNING: gmres already defined in phys_module!!! Hence we use phys_module, ONLY...
 
-    ! Internal parameters
-    real*8  :: zbig, zbig_backup,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
-    real*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
-    real*8  :: Btot, alpha, dT0_dt, dVpar0_dt, dBigR_dt, R_inside, Z_inside
-    real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y
-    integer :: i, in, iv, inode, k
-    integer :: index_large_i, index_node, index_node2, ielm
-    integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, kn, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
-    integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT
-    integer :: ierr
-    logical :: apply_psi_BC, apply_current_BC
 
-!=============== RMP ==============
+  ! Subroutine parameters
+  integer                  :: my_id
+  integer                  :: local_elms(*)
+  integer                  :: n_local_elms
+  integer                  :: index_min, index_max
+  integer                  :: xcase2
+  type (type_node_list)    :: node_list
+  type (type_element_list) :: element_list
+  type (type_bnd_node_list):: bnd_node_list
+  logical                  :: xpoint2
+  real*8                   :: psi_axis, R_axis, Z_axis
+  real*8                   :: psi_bnd
+  real*8                   :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
+  logical                  :: gmres
+  logical                  :: solve_only
+  real*8                   :: rhs_loc(*)
+
+  ! Internal parameters
+  real*8  :: zbig, zbig_backup, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
+  real*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
+  real*8  :: Btot, alpha, dT0_dt, dVpar0_dt, dBigR_dt, R_inside, Z_inside
+  real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y
+  integer :: i, in, iv, inode, k
+  integer :: index_large_i, index_node, index_node2, ielm
+  integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, ilarge_vv, ilarge_vT, ilarge_vus
+  integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT
+  integer :: ierr
+  logical :: is_local
+  logical :: apply_psi_BC, apply_current_BC
   real*8, allocatable :: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
   real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
   real*8  :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
   real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
   integer :: ilarge_vp, ilarge_vp2
-  integer :: kp, j, err, itest
+  integer :: kp, j, err, itest 
+  integer :: n_rmp_harm, N_rmp_har_block_size
 
-
-  if (RMP_on .and. (n_tor .ge. 3)) then
-  call tr_allocate(psi_RMP_cos1,1, bnd_node_list%n_bnd_nodes,"psi_RMP_cos1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_cos_dR1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_cos_dZ1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
-  call tr_allocate(psi_RMP_sin1,1,bnd_node_list%n_bnd_nodes,"psi_RMP_sin1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_sin_dR1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
-  call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
-
-    psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(RMP_har_cos,1,1)
+  RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
+  
+! for the moment it's done in a way that all RMP harmonics follow each other,i.e. n=2,n=3,n=4... 
+! if you want for example n=2 and n=4 RMP you should consider n=2,3,4, but put zeros at the boundary in the input file for n=3 RMP
+! example: ntor=13 and nperiod=1(so taking into account, toroidal numbers n=0,1,2....6) and  n=2 and n=3 are toroidal numbers of RMPs, 
+! so Number_RMP_harmonics=2, RMP_har_cos_spectrum(1)=4,RMP_har_sin_spectrum(1)=5,RMP_har_cos_spectrum(2)=6,RMP_har_sin_spectrum(2)=7.  
+  
+    call tr_allocate(psi_RMP_cos1,1, bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"psi_RMP_cos1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_cos_dR1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_cos_dZ1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)
+    call tr_allocate(psi_RMP_sin1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"psi_RMP_sin1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_sin_dR1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_sin_dR1",CAT_UNKNOWN)
+    call tr_allocate(dpsi_RMP_sin_dZ1,1,bnd_node_list%n_bnd_nodes*Number_RMP_harmonics,"dpsi_RMP_sin_dZ1",CAT_UNKNOWN)
+    N_rmp_har_block_size=bnd_node_list%n_bnd_nodes
+    
+    psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(RMP_har_cos_spectrum(1),1,1)
     ! if necessary, replace by:
-    ! psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(min(RMP_har_cos, n_tor),1,1)
+    ! psi_test =  node_list%node(bnd_node_list%bnd_node(1)%index_jorek)%values(min(RMP_har_cos_spectrum(1), n_tor),1,1)
     write (*,*) 'psi_bnd at previous time step', psi_test
     
     if (abs(psi_test) .le. abs(psi_RMP_cos(1))) then
@@ -104,153 +111,145 @@ contains
       establish_RMP = 0.d0
     endif
     ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*RMP_ramp_up_time/2.d0 ) then establish_RMP =0.0
+  
+    do j=1, bnd_node_list%n_bnd_nodes*Number_RMP_harmonics  
+      psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
+      dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
+      dpsi_RMP_cos_dZ1(j) = dpsi_RMP_cos_dZ(j) * establish_RMP
+      psi_RMP_sin1(j)     = psi_RMP_sin(j)     * establish_RMP
+      dpsi_RMP_sin_dR1(j) = dpsi_RMP_sin_dR(j) * establish_RMP
+      dpsi_RMP_sin_dZ1(j) = dpsi_RMP_sin_dZ(j) * establish_RMP
+    end do
 
-     do j=1, bnd_node_list%n_bnd_nodes
-        psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
-        dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
-        dpsi_RMP_cos_dZ1(j) = dpsi_RMP_cos_dZ(j) * establish_RMP
-        psi_RMP_sin1(j)     = psi_RMP_sin(j)     * establish_RMP
-        dpsi_RMP_sin_dR1(j) = dpsi_RMP_sin_dR(j) * establish_RMP
-        dpsi_RMP_sin_dZ1(j) = dpsi_RMP_sin_dZ(j) * establish_RMP
-     end do
+    if (my_id == 0) then
+      write (*,*) 'psi_RMP_cos1(1) and derivatives after multiplication in boundary conditions'
+      write (*,*) psi_RMP_cos1(1), dpsi_RMP_cos_dR1(1), dpsi_RMP_cos_dZ1(1)
+      write (*,*) 'establish_RMP', establish_RMP
+    endif
 
-     if (my_id == 0) then
+  end if RMPspectrum
 
-        write (*,*) 'psi_RMP_cos1(1) and derivatives after multiplication in boundary conditions'
-        write (*,*) psi_RMP_cos1(1), dpsi_RMP_cos_dR1(1), dpsi_RMP_cos_dZ1(1)
-        write (*,*) 'establish_RMP', establish_RMP
+  zbig = 1.d12
+  zbig_backup = zbig
+     do i=1, n_local_elms !===============================do elements
 
-     endif
+        ielm = local_elms(i)
 
-  endif
-!=============== RMP ==============
+        do iv=1, n_vertex_max !==========================do vertex
 
-    zbig = 1.d12
-    zbig_backup = zbig
+           inode = element_list%element(ielm)%vertex(iv)
 
-    do i=1, n_local_elms
+           if (node_list%node(inode)%boundary .ne. 0) then !==================if boundary nodes
 
-          ielm = local_elms(i)
+              do in=1, n_tor  !========================do n_tor
+                if (keep_n0_const  .and.  in .eq. 1 ) then
+                  zbig = 1.d15
+                else
+                  zbig = zbig_backup
+                endif
 
-          do iv=1, n_vertex_max
+!              do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
 
-             inode = element_list%element(ielm)%vertex(iv)
-
-             if (node_list%node(inode)%boundary .ne. 0) then
-
-                do in=1, n_tor
-                  if (keep_n0_const  .and.  in .eq. 1 ) then
-                    zbig = 1.d15
-                  else
-                    zbig = zbig_backup
-                  endif
-
-                   do k=1, n_var
-                                                                                         !-----(General for all bnd types)
-                      !------------ Decide when Psi or Current need BCs --------------------------------------------------                      
-                      !----Psi
-                      apply_psi_BC = .false.
-                      if (k == 1) then                        
-                        if ( (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1))                    )   apply_psi_BC = .true.
-                        if ( (RMP_on) .and. (in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)) )   apply_psi_BC = .true.
-                        if ( (.not. RMP_on) .and. (in .ge. 2)              )                         apply_psi_BC = .true.
-                        if (              in .eq. 1                        )                         apply_psi_BC = .true.
-                        if (           is_freebound(in,k)                  )                         apply_psi_BC = .false.                     
-                      endif
+                 do k=1, n_var ! ================================do variables
+                 
+                                                                                      !-----(General for all bnd types)
+                   !------------ Decide when Psi or Current need BCs --------------------------------------------------                      
+                   !----Psi
+                   apply_psi_BC = .false.
+                   if (k == 1) then                        
+                     if ( (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1))                    )   apply_psi_BC = .true.
+                     if ( (RMP_on) .and. (in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)) )   apply_psi_BC = .true.
+                     if ( (.not. RMP_on) .and. (in .ge. 2)              )                         apply_psi_BC = .true.
+                     if (              in .eq. 1                        )                         apply_psi_BC = .true.
+                     if (           is_freebound(in,k)                  )                         apply_psi_BC = .false.                     
+                   endif
                       
-                      !----Current
-                      apply_current_BC = .false.
-                      if (k == 3) then
-                        if ( .not. is_freebound(in,k) )   apply_current_BC = .true.
-                      endif
-                      !---------------------------------------------------------------------------------------------------
+                   !----Current
+                   apply_current_BC = .false.
+                   if (k == 3) then
+                     if ( .not. is_freebound(in,k) )   apply_current_BC = .true.
+                   endif
+                   !---------------------------------------------------------------------------------------------------
 
-
-    
-                      !========================================================================
-                      ! conditions for direction 1 (s), i.e. boundary types 1, 3, 4, 9
-                      ! apply fixed bc for variables k=1,2,3,4
-                      ! apply v_par = cs for k=7
-                      !========================================================================
-                      if     ((node_list%node(inode)%boundary .eq.  1) &
-                         .or. (node_list%node(inode)%boundary .eq. 11) &
-                         .or. (node_list%node(inode)%boundary .eq.  9) &
-                         .or. (node_list%node(inode)%boundary .eq. 19) &
-                         .or. (node_list%node(inode)%boundary .eq.  3) &
-                         .or. (node_list%node(inode)%boundary .eq.  4)) then
-
-
+!========================================================================
+! conditions for direction 1 (s), i.e. boundary types 1, 3, 4, 9
+! apply fixed bc for variables k=1,2,3,4
+! apply v_par = cs for k=7
+!========================================================================
+                   if     ((node_list%node(inode)%boundary .eq.  1) &
+                      .or. (node_list%node(inode)%boundary .eq. 11) &
+                      .or. (node_list%node(inode)%boundary .eq.  9) &
+                      .or. (node_list%node(inode)%boundary .eq. 19) &
+                      .or. (node_list%node(inode)%boundary .eq.  3) &
+                      .or. (node_list%node(inode)%boundary .eq.  4)) then
 
 !====================================== beginning RMPs at boundary ======================================================
 !================================== type 1 - boundary: only depends on 's'
 ! ======================================================================================================================
-
+                       
                        if (RMP_on ) then
+!=========================================================RMP spectrum========================================Marina
+                          do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
 
-                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos) .or. (in.eq.RMP_har_sin)) .and. (.not. freeboundary)) then
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) &
+                              .and. (.not. freeboundary)) then
                              ! in .eq. RMP_har_cos corresponds to cos(n_perturbation)
                              ! in .eq. RMP_har_sin corresponds to sin(n_perturbation)
-
+                                       
                              kp=1    ! variable psi
                              kv=1    ! equation for psi
-
+                         
                              index_node = node_list%node(inode)%index(1)  ! index in RHS (or matrix A not compressed)
+                                                
+                             Rnode     = node_list%node(inode)%x(1,1) 
+                             dRnode_ds = node_list%node(inode)%x(2,1) 
+                             Znode     = node_list%node(inode)%x(1,2) 
+                             dZnode_ds = node_list%node(inode)%x(2,2) 
+                          
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index +N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
 
-                             Rnode     = node_list%node(inode)%x(1,1)
-                             dRnode_ds = node_list%node(inode)%x(2,1)
-                             Znode     = node_list%node(inode)%x(1,2)
-                             dZnode_ds = node_list%node(inode)%x(2,2)
-
-                             if (in.eq.RMP_har_cos) then
-                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index)
-
-                             else
-                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index)
+                             else 
+                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
 
                              endif
-
+                             
                              delta_psi_rmp_ds = delta_psi_rmp_dR * dRnode_ds + delta_psi_rmp_dZ * dZnode_ds
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, kv, in,                &
+                                  index_node, kp, in,                &
+                                  zbig, solve_only, gmres,           &
+                                  index_min, index_max)
 
-                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-
-                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-
-                                !-------- index dans A_glob
-                                ilarge_vp  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
-
-                                Rhs_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp
-
-                                irn_glob(ilarge_vp) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vp) =  n_tor * n_var * (index_node-1) + (kp-1)*n_tor + in
-                                A_glob(ilarge_vp)   = ZBIG
-                             endif
-
+                             call boundary_conditions_add_RHS(  &
+                                  index_node, kv, in,           &
+                                  index_min, index_max,         &
+                                  RHS_loc, ZBIG * delta_psi_rmp)
+                             
                              index_node2 = node_list%node(inode)%index(2)
 
-                           
-                             if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
-                                call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node2, kp, in,               &
+                                  zbig, solve_only, gmres,           &
+                                  index_min, index_max)
 
-                                ilarge_vp2  = ijA_position2  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
+                             call boundary_conditions_add_RHS(       &
+                                  index_node2, kv, in,               &
+                                  index_min, index_max,              &
+                                  RHS_loc, ZBIG * delta_psi_rmp_ds)
+                         endif
 
-                                Rhs_loc(n_tor*n_var * (index_node2-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp_ds
-
-                                irn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kp-1)*n_tor + in
-                                A_glob(ilarge_vp2)   = ZBIG
-                             endif
-                          endif
-
-
+                       enddo  !(end RMP harmonics)   
                        endif !(end RMP)
 !======================================= end RMPs ==================================
 
-
-                         if (      apply_psi_BC      &
+                      
+                       if (        apply_psi_BC      &
                               .or. apply_current_BC  &
                               .or. (k .eq. 2)        &
                               .or. (k .eq. 4)        &
@@ -258,38 +257,25 @@ contains
                              !.or. (k .eq. 6)        &
                              !.or. (k .eq. 7)        &
                               .or. (k .eq. 8)        &
-                              ) then
+                           ) then
 
 
                             index_node = node_list%node(inode)%index(1)
-                            if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-
-                               index_large_i = n_tor * n_var * (index_node - 1)
-
-                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-
-                               irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               A_glob(ilarge2)   = zbig
-
-                            endif
+                            call boundary_conditions_add_one_entry( &
+                                 index_node, k, in,                 &
+                                 index_node, k, in,                 &
+                                 zbig, solve_only, gmres,           &
+                                 index_min, index_max)
 
                             index_node = node_list%node(inode)%index(2)
-                            if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                            call boundary_conditions_add_one_entry( &
+                                 index_node, k, in,                 &
+                                 index_node, k, in,                 &
+                                 zbig, solve_only, gmres,           &
+                                 index_min, index_max)
 
-                               index_large_i = n_tor * n_var * (index_node - 1)
-
-                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-
-                               irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               A_glob(ilarge2)    = zbig
-
-                            endif
                          endif
 
 
@@ -344,7 +330,7 @@ contains
                             else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
                               direction = +1.
                             end if
-
+                            
                             ! --- Special field direction for grid patches
                             ! --- (hopefully temporary until Vpar is treated in boundary_matrix_open)
                             if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then
@@ -367,84 +353,90 @@ contains
                             ku = 2
                             kv = 7
                             kT = 6
-                            kn = 8
-
-                            if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-
-                               call locate_irn_jcn(index_node,index_node, index_min,index_max,ijA_position)
-                               call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2)
-
-                               index_large_i = n_tor * n_var * (index_node - 1)
+                            call boundary_conditions_add_one_entry( &
+                                 index_node, kv, in,                &
+                                 index_node, kv, in,                &
+                                 zbig, solve_only, gmres,           &
+                                 index_min, index_max)
 
 
-                               ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
-                               ilarge_vT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
-                               ilarge_vus = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku-1)*n_tor + in
-                               ilarge_vn  = ijA_position - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kn-1)*n_tor + in
+
+                            call boundary_conditions_add_one_entry( &
+                                 index_node, kv, in,                &
+                                 index_node, kT, in,                &
+                                 - zbig / Btot * 0.5d0 * GAMMA      &
+                                 / sqrt(GAMMA*T0) * direction       &
+                                 , solve_only, gmres,               &
+                                 index_min, index_max)
 
 
-                               irn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                               A_glob(ilarge_vv)   =  zbig
 
-                               irn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kT-1)*n_tor + in
-                               A_glob(ilarge_vT)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
+                            call boundary_conditions_add_one_entry( &
+                                 index_node,  kv, in,               &
+                                 index_node2, ku, in,               &
+                                 - zbig * BigR**2 / ps0_s,          &
+                                 solve_only, gmres,                 &
+                                 index_min, index_max)
 
-                               irn_glob(ilarge_vus) =  n_tor * n_var * (index_node -1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vus) =  n_tor * n_var * (index_node2-1) + (ku-1)*n_tor + in
-                               A_glob(ilarge_vus)   = - zbig * BigR**2 / ps0_s
-
-                               irn_glob(ilarge_vn) =  n_tor * n_var * (index_node-1) + (kn-1)*n_tor + in
-                               jcn_glob(ilarge_vn) =  n_tor * n_var * (index_node-1) + (kn-1)*n_tor + in
-                               A_glob(ilarge_vn)   =  zbig
-
-                               if (in .eq. 1) then
-                                  RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                       Zbig * ( - Vpar0 + BigR**2 * U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot)
-                               else
-                                  RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
-                               endif
-
-                            endif
-
+                             if (in .eq. 1) then
+                                call boundary_conditions_add_RHS(       &
+                                     index_node, kv, in,                &
+                                     index_min, index_max,              &
+                                     RHS_loc,                           &
+                                     Zbig * ( - Vpar0 + BigR**2 *       &
+                                     U0_s /ps0_s + direction*sqrt(GAMMA*T0) / Btot))
+                             else
+                                call boundary_conditions_add_RHS(       &
+                                     index_node, kv, in,                &
+                                     index_min, index_max,              &
+                                     RHS_loc, 0.d0)
+                             endif
+  
                             index_node  = node_list%node(inode)%index(1)
                             index_node2 = node_list%node(inode)%index(2)
                             kv = 7
                             kT = 6
 
-                            if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
+                            call boundary_conditions_add_one_entry( &
+                                 index_node2, kv, in,               &
+                                 index_node2, kv, in,               &
+                                 zbig, solve_only, gmres,           &
+                                 index_min, index_max)
 
-                               call locate_irn_jcn(index_node2,index_node,index_min,index_max,ijA_position)
-                               call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
-
-                               index_large_i = n_tor * n_var * (index_node2 - 1)
 
 
-                               ilarge_vsvs = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
-                               ilarge_vsTs = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
-                               ilarge_vsT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
+                            call boundary_conditions_add_one_entry( &
+                                 index_node2, kv, in,               &
+                                 index_node2, kT, in,               &
+                                 - zbig / Btot * 0.5d0 * GAMMA      &
+                                 / sqrt(GAMMA*T0) * direction,      &
+                                 solve_only, gmres,                 &
+                                 index_min, index_max)
 
-                               irn_glob(ilarge_vsvs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vsvs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                               A_glob(ilarge_vsvs)   = zbig
 
-                               irn_glob(ilarge_vsTs) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vsTs) =  n_tor * n_var * (index_node2-1) + (kT-1)*n_tor + in
-                               A_glob(ilarge_vsTs)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
 
-                               irn_glob(ilarge_vsT) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vsT) =  n_tor * n_var * (index_node -1) + (kT-1)*n_tor + in
-                               A_glob(ilarge_vsT)   = + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_ds * direction
+                            call boundary_conditions_add_one_entry( &
+                                 index_node2,  kv, in,              &
+                                 index_node,   kT, in,              &
+                                 + zbig / Btot * 0.25d0 * GAMMA**2  &
+                                 / (GAMMA*T0)**(3/2) * dT0_ds *     &
+                                 direction,                         &
+                                 solve_only, gmres,                 &
+                                 index_min, index_max)
 
-                               if (in .eq. 1) then
-                                  Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
-                                       Zbig*(-dVpar0_ds +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction)
-                               else
-                                  Rhs_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
-                               endif
-
-                            endif
+                            if (in .eq. 1) then
+                                call boundary_conditions_add_RHS(       &
+                                     index_node2, kv, in,               &
+                                     index_min, index_max,              &
+                                     RHS_loc,                           &
+                                     Zbig*(-dVpar0_ds +  0.5d0 / Btot * &
+                                     GAMMA / sqrt(GAMMA*T0) * dT0_ds * direction))
+                             else
+                                call boundary_conditions_add_RHS(       &
+                                     index_node2, kv, in,               &
+                                     index_min, index_max,              &
+                                     RHS_loc, 0.d0)
+                             endif
                          end if
 
                       end if
@@ -459,6 +451,85 @@ contains
                            .or. (node_list%node(inode)%boundary .eq.  9) &
                            .or. (node_list%node(inode)%boundary .eq. 19)) then
 
+!====================================== begining RMPs at boundary ======================================================
+!================================== type 2 - boundary: only depends on 't'
+! ======================================================================================================================
+                       
+                       if (RMP_on ) then
+                          do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
+
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) .and. (.not. freeboundary)) then
+                             ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
+                             ! in .eq. RMP_har_sin   corresponds to sin(n_perturbation)
+               
+
+                                       
+                             kp=1    ! variable psi
+                             kv=1    ! equation for psi
+                          
+                             index_node = node_list%node(inode)%index(1)  ! index in RHS (or matrix A not compressed)
+                                                
+                             Rnode     = node_list%node(inode)%x(1,1) 
+                             dRnode_dt = node_list%node(inode)%x(3,1) 
+                             Znode     = node_list%node(inode)%x(1,2) 
+                             dZnode_dt = node_list%node(inode)%x(3,2) 
+                          
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+
+                                if (node_list%node(inode)%boundary_index == 1 ) then
+                                   write (*,*) 'type2_bnd: my_id, psi_RMP_cos1, Rnode, Znode, in'
+                                   write (*,*) my_id, delta_psi_rmp, Rnode, Znode,in
+                                   write (*,*) 'delta_psi_rmp_dR, delta_psi_rmp_dZ'      
+                                   write (*,*) delta_psi_rmp_dR, delta_psi_rmp_dZ
+                                endif
+                             else 
+                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+
+                             endif
+
+                             delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+
+                                if (node_list%node(inode)%boundary_index == 1 ) then
+                                   write (*,*) 'delta_psi_rmp_dt', delta_psi_rmp_dt
+                                   write (*,*) 'delta_psi_rmp_ds', delta_psi_rmp_ds
+                                endif
+                             endif
+
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, kv, in,                &
+                                  index_node, kp, in,                &
+                                  zbig, solve_only, gmres,           &
+                                  index_min, index_max)
+
+                              call boundary_conditions_add_RHS(  &
+                                   index_node, kv, in,           &
+                                   index_min, index_max,         &
+                                   RHS_loc, ZBIG * delta_psi_rmp)
+                             
+                             index_node2 = node_list%node(inode)%index(3)
+
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node2, kp, in,               &
+                                  zbig, solve_only, gmres,           &
+                                  index_min, index_max)
+
+                             call boundary_conditions_add_RHS(       &
+                                  index_node2, kv, in,               &
+                                  index_min, index_max,              &
+                                  RHS_loc, ZBIG * delta_psi_rmp_dt)
+
+                           endif
+                        enddo        !(end RMP harmonics)
+                        endif        !(end RMPs on)  ==================================
+!======================================= end RMPs ==================================
+
 
                          if (      apply_psi_BC      &
                               .or. apply_current_BC  &
@@ -472,31 +543,21 @@ contains
 
 
                             index_node = node_list%node(inode)%index(1)
-                            if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                            call boundary_conditions_add_one_entry( &
+                                 index_node,  k, in,                &
+                                 index_node,  k, in,                &
+                                 zbig, solve_only, gmres,           &
+                                 index_min, index_max)
 
-                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-
-                               irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               A_glob(ilarge2)   = zbig
-
-                            endif
 
                             index_node = node_list%node(inode)%index(3)
+                            call boundary_conditions_add_one_entry( &
+                                 index_node,  k, in,                &
+                                 index_node,  k, in,                &
+                                 zbig, solve_only, gmres,           &
+                                 index_min, index_max)
 
-                            if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-
-                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-
-                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-
-                               irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               A_glob(ilarge2)    = zbig
-
-                            endif
                          endif
 
 
@@ -559,126 +620,137 @@ contains
                             ku = 2
                             kv = 7
                             kT = 6
-                            if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                            call boundary_conditions_add_one_entry( &
+                                 index_node, kv, in,                &
+                                 index_node, kv, in,                &
+                                 zbig, solve_only, gmres,           &
+                                 index_min, index_max)
 
-                               call locate_irn_jcn(index_node,index_node, index_min,index_max,ijA_position)
-                               call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2)
+                            call boundary_conditions_add_one_entry( &
+                                 index_node, kv, in,                &
+                                 index_node, kT, in,                &
+                                 - zbig / Btot * 0.5d0 * GAMMA /    &
+                                 sqrt(GAMMA*T0) * direction,        &
+                                 solve_only, gmres,                 &
+                                 index_min, index_max)
 
-                               ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
-                               ilarge_vT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
-                               ilarge_vut = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (ku-1)*n_tor + in
+                            call boundary_conditions_add_one_entry( &
+                                 index_node,  kv, in,               &
+                                 index_node2, ku, in,               &
+                                 - zbig * BigR**2 / ps0_t,          &
+                                 solve_only, gmres,                 &
+                                 index_min, index_max)
 
-                               irn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vv) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                               A_glob(ilarge_vv)   =  zbig
-
-                               irn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vT) =  n_tor * n_var * (index_node-1) + (kT-1)*n_tor + in
-                               A_glob(ilarge_vT)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
-
-                               irn_glob(ilarge_vut) =  n_tor * n_var * (index_node -1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vut) =  n_tor * n_var * (index_node2-1) + (ku-1)*n_tor + in
-                               A_glob(ilarge_vut)   = - zbig * BigR**2 / ps0_t
-
-                               if (in .eq. 1) then
-                                  RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = &
-                                       Zbig * ( - Vpar0 + BigR**2 * U0_t /ps0_t + direction*sqrt(GAMMA*T0) / Btot)
-
-                               else
-                                  RHS_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = 0.d0
-                               endif
-                               !         write(*,'(A,i6,3e16.8)') ' bc5:',inode, Vpar0,direction*sqrt(GAMMA*T0) / Btot, Vpar0-direction*sqrt(GAMMA*T0) / Btot
+                            if (in .eq. 1) then
+                               call boundary_conditions_add_RHS(       &
+                                    index_node, kv, in,                &
+                                    index_min, index_max,              &
+                                    RHS_loc,                           &
+                                    Zbig * ( - Vpar0 + BigR**2 * U0_t  &
+                                    /ps0_t + direction*sqrt(GAMMA*T0)  &
+                                    / Btot))
+                            else
+                               call boundary_conditions_add_RHS(       &
+                                    index_node, kv, in,                &
+                                    index_min, index_max,              &
+                                    RHS_loc, 0.d0)
 
                             endif
-
+  
                             index_node  = node_list%node(inode)%index(1)
                             index_node2 = node_list%node(inode)%index(3)
                             kv = 7
                             kT = 6
-                            if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
 
-                               call locate_irn_jcn(index_node2,index_node,index_min,index_max,ijA_position)
-                               call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
+                            call boundary_conditions_add_one_entry( &
+                                 index_node2, kv, in,               &
+                                 index_node2, kv, in,               &
+                                 zbig, solve_only, gmres,           &
+                                 index_min, index_max)
 
-                               ilarge_vtvt = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kv-1)*n_tor + in
-                               ilarge_vtTt = ijA_position2 - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
-                               ilarge_vtT  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kT-1)*n_tor + in
+                            call boundary_conditions_add_one_entry( &
+                                 index_node2, kv, in,               &
+                                 index_node2, kT, in,               &
+                                 - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction, &
+                                 solve_only, gmres,                 &
+                                 index_min, index_max)
 
-                               irn_glob(ilarge_vtvt) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vtvt) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                               A_glob(ilarge_vtvt)   = zbig
+                            call boundary_conditions_add_one_entry( &
+                                 index_node2, kv, in,               &
+                                 index_node,  kT, in,               &
+                                 + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_dt * direction, &
+                                 solve_only, gmres,                 &
+                                 index_min, index_max)
 
-                               irn_glob(ilarge_vtTt) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vtTt) =  n_tor * n_var * (index_node2-1) + (kT-1)*n_tor + in
-                               A_glob(ilarge_vtTt)   = - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction
+                             if (in .eq. 1) then
+                                call boundary_conditions_add_RHS(       &
+                                     index_node2, kv, in,               &
+                                     index_min, index_max,              &
+                                     RHS_loc,                           &
+                                     Zbig*(-dVpar0_dt +  0.5d0 / Btot * &
+                                     GAMMA / sqrt(GAMMA*T0) * dT0_dt * direction))
+                             else
+                                call boundary_conditions_add_RHS(       &
+                                     index_node2, kv, in,               &
+                                     index_min, index_max,              &
+                                     RHS_loc, 0.d0)
+                             endif
 
-                               irn_glob(ilarge_vtT) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                               jcn_glob(ilarge_vtT) =  n_tor * n_var * (index_node -1) + (kT-1)*n_tor + in
-                               A_glob(ilarge_vtT)   = + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_dt * direction
+                       end if
 
-                               if (in .eq. 1) then
-                                  RHS_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = &
-                                       Zbig*(-dVpar0_dt +  0.5d0 / Btot * GAMMA / sqrt(GAMMA*T0) * dT0_dt * direction)
-                               else
-                                  RHS_loc(n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in) = 0.d0
-                               endif
-
-                            endif
-                         end if
-
-                      end if
+                    end if
 
 
 
-                      !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
-                      if    ((node_list%node(inode)%boundary .eq.  2) &
-                        .or. (node_list%node(inode)%boundary .eq. 12) &
-                        .or. (node_list%node(inode)%boundary .eq.  3)) then
-
+                    !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
+                    if    ((node_list%node(inode)%boundary .eq.  2) &
+                      .or. (node_list%node(inode)%boundary .eq. 12) &
+                      .or. (node_list%node(inode)%boundary .eq.  3)) then
 
 !====================================== begining RMPs at boundary ======================================================
 !================================== type 2 - boundary: only depends on 't'
 ! ======================================================================================================================
-
+                       
                        if (RMP_on ) then
+                          do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
 
-                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos) .or. (in.eq.RMP_har_sin)) .and. (.not. freeboundary)) then
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) .and. (.not. freeboundary)) then
                              ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
                              ! in .eq. RMP_har_sin   corresponds to sin(n_perturbation)
+               
 
-
-
+                                       
                              kp=1    ! variable psi
                              kv=1    ! equation for psi
-
+                          
                              index_node = node_list%node(inode)%index(1)  ! index in RHS (or matrix A not compressed)
-
-                             Rnode     = node_list%node(inode)%x(1,1)
-                             dRnode_dt = node_list%node(inode)%x(3,1)
-                             Znode     = node_list%node(inode)%x(1,2)
-                             dZnode_dt = node_list%node(inode)%x(3,2)
-
-                             if (in.eq.RMP_har_cos) then
-
-     delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index)
+                                                
+                             Rnode     = node_list%node(inode)%x(1,1) 
+                             dRnode_dt = node_list%node(inode)%x(3,1) 
+                             Znode     = node_list%node(inode)%x(1,2) 
+                             dZnode_dt = node_list%node(inode)%x(3,2) 
+                          
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
 
                                 if (node_list%node(inode)%boundary_index == 1 ) then
                                    write (*,*) 'type2_bnd: my_id, psi_RMP_cos1, Rnode, Znode, in'
                                    write (*,*) my_id, delta_psi_rmp, Rnode, Znode,in
-                                   write (*,*) 'delta_psi_rmp_dR, delta_psi_rmp_dZ'
+                                   write (*,*) 'delta_psi_rmp_dR, delta_psi_rmp_dZ'      
                                    write (*,*) delta_psi_rmp_dR, delta_psi_rmp_dZ
                                 endif
-                             else
-                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index)
+                             else 
+                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
 
                              endif
 
-   delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
-                             if (in.eq.RMP_har_cos) then
+                             delta_psi_rmp_ds = delta_psi_rmp_dR * dRnode_ds + delta_psi_rmp_dZ * dZnode_ds
+                             delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
 
                                 if (node_list%node(inode)%boundary_index == 1 ) then
                                    write (*,*) 'delta_psi_rmp_dt', delta_psi_rmp_dt
@@ -686,210 +758,209 @@ contains
                                 endif
                              endif
 
-                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, kv, in,                &
+                                  index_node, kp, in,                &
+                                  zbig, solve_only, gmres,           &
+                                  index_min, index_max)
 
-                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-
-                                !-------- index dans A_glob
-                                ilarge_vp  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
-
-                                Rhs_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp
-
-                                irn_glob(ilarge_vp) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-  jcn_glob(ilarge_vp) =  n_tor * n_var * (index_node-1) + (kp-1)*n_tor + in
-                                A_glob(ilarge_vp)   = ZBIG
-
-                             endif
-
+                             call boundary_conditions_add_RHS(  &
+                                  index_node, kv, in,           &
+                                  index_min, index_max,         &
+                                  RHS_loc, ZBIG * delta_psi_rmp)
+                             
                              index_node2 = node_list%node(inode)%index(3)
-
-                             if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
-                                call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
-
-                                ilarge_vp2  = ijA_position2  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
-
-                                Rhs_loc(n_tor*n_var * (index_node2-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp_dt
-
-                                irn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kp-1)*n_tor + in
-                                A_glob(ilarge_vp2)   = ZBIG
-
+                             ! --- special case for grid with patches
+                             if (node_list%node(inode)%boundary .eq. 12) then
+                               index_node2 = node_list%node(inode)%index(2)
+                               delta_psi_rmp_dt = delta_psi_rmp_ds
                              endif
-                          endif
-                       endif
 
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node2, kp, in,               &
+                                  zbig, solve_only, gmres,           &
+                                  index_min, index_max)
+
+                             call boundary_conditions_add_RHS(       &
+                                  index_node2, kv, in,               &
+                                  index_min, index_max,              &
+                                  RHS_loc, ZBIG * delta_psi_rmp_dt)
+
+                           endif
+                        enddo        !(end RMP harmonics)
+                        endif        !(end RMPs on)  ==================================
 !======================================= end RMPs ==================================
 
-
-                         if (      apply_psi_BC      &
-                              .or. apply_current_BC  &
+                       ! decides when the boundary conditions should be applied (for freeboundary and RMP cases)
+                        if (       apply_psi_BC                   &
+                              .or. apply_current_BC               &
                               .or. (( k /= 1 ) .and. ( k /= 3 ))  ) then
 
-                            index_node = node_list%node(inode)%index(1)
-                            if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                          index_node = node_list%node(inode)%index(1)
 
-                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
+                          call boundary_conditions_add_one_entry( &
+                               index_node,  k,  in,               &
+                               index_node,  k,  in,               &
+                               zbig, solve_only, gmres,           &
+                               index_min, index_max)
 
-                               index_large_i = n_tor * n_var * (index_node - 1)
+                          index_node = node_list%node(inode)%index(3)
 
-                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
+                          call boundary_conditions_add_one_entry( &
+                               index_node,  k,  in,               &
+                               index_node,  k,  in,               &
+                               zbig, solve_only, gmres,           &
+                               index_min, index_max)
 
-                               irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               A_glob(ilarge2)   = zbig
+                       endif
 
-                            endif
-                            index_node = node_list%node(inode)%index(3)
+                    endif
 
-                            if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-
-                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-
-                               index_large_i = n_tor * n_var * (index_node - 1)
-
-                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-
-                               irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                               A_glob(ilarge2)    = zbig
-
-                            endif
-                         endif
-
-                      endif
-
-                      !------------------------------------ Special corners (only for grid with patches)
-                      if    ((node_list%node(inode)%boundary .eq. 21) &
-                        .or. (node_list%node(inode)%boundary .eq. 20)) then
+                    !------------------------------------ Special corners (only for grid with patches)
+                    if    ((node_list%node(inode)%boundary .eq. 21) &
+                      .or. (node_list%node(inode)%boundary .eq. 20)) then
 
 !====================================== begining RMPs at boundary ======================================================
 !================================== type 20-21 - boundary: corners apply on 's' and 't'
 ! ======================================================================================================================
                        
                        if (RMP_on ) then
+                          do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
 
-                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos) .or. (in.eq.RMP_har_sin)) .and. (.not. freeboundary)) then
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) .and. (.not. freeboundary)) then
                              ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
                              ! in .eq. RMP_har_sin   corresponds to sin(n_perturbation)
+               
 
+                                       
                              kp=1    ! variable psi
                              kv=1    ! equation for psi
-
+                          
                              index_node = node_list%node(inode)%index(1)  ! index in RHS (or matrix A not compressed)
+                                                
+                             Rnode     = node_list%node(inode)%x(1,1) 
+                             dRnode_dt = node_list%node(inode)%x(3,1) 
+                             Znode     = node_list%node(inode)%x(1,2) 
+                             dZnode_dt = node_list%node(inode)%x(3,2) 
+                          
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
 
-                             Rnode     = node_list%node(inode)%x(1,1)
-                             dRnode_ds = node_list%node(inode)%x(2,1)
-                             dRnode_dt = node_list%node(inode)%x(3,1)
-                             Znode     = node_list%node(inode)%x(1,2)
-                             dZnode_ds = node_list%node(inode)%x(2,2)
-                             dZnode_dt = node_list%node(inode)%x(3,2)
-
-                             if (in.eq.RMP_har_cos) then
-                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index)
                                 if (node_list%node(inode)%boundary_index == 1 ) then
                                    write (*,*) 'type2_bnd: my_id, psi_RMP_cos1, Rnode, Znode, in'
                                    write (*,*) my_id, delta_psi_rmp, Rnode, Znode,in
-                                   write (*,*) 'delta_psi_rmp_dR, delta_psi_rmp_dZ'
+                                   write (*,*) 'delta_psi_rmp_dR, delta_psi_rmp_dZ'      
                                    write (*,*) delta_psi_rmp_dR, delta_psi_rmp_dZ
                                 endif
-                             else
-                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index)
-                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index)
+                             else 
+                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
+
                              endif
 
                              delta_psi_rmp_ds = delta_psi_rmp_dR * dRnode_ds + delta_psi_rmp_dZ * dZnode_ds
                              delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
-                             if (in.eq.RMP_har_cos) then
+                             if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
+
                                 if (node_list%node(inode)%boundary_index == 1 ) then
                                    write (*,*) 'delta_psi_rmp_dt', delta_psi_rmp_dt
                                    write (*,*) 'delta_psi_rmp_ds', delta_psi_rmp_ds
                                 endif
                              endif
 
-                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-                                !-------- index dans A_glob
-                                ilarge_vp  = ijA_position  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
-                                Rhs_loc(n_tor*n_var * (index_node-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp
-                                irn_glob(ilarge_vp) =  n_tor * n_var * (index_node-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vp) =  n_tor * n_var * (index_node-1) + (kp-1)*n_tor + in
-                                A_glob(ilarge_vp)   = ZBIG
-                             endif
+                             call boundary_conditions_add_one_entry( &
+                                  index_node, kv, in,                &
+                                  index_node, kp, in,                &
+                                  zbig, solve_only, gmres,           &
+                                  index_min, index_max)
 
-                             index_node2 = node_list%node(inode)%index(2)
-                             if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
-                                call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
-                                ilarge_vp2  = ijA_position2  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
-                                Rhs_loc(n_tor*n_var * (index_node2-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp_ds
-                                irn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kp-1)*n_tor + in
-                                A_glob(ilarge_vp2)   = ZBIG
-                             endif
-
+                             call boundary_conditions_add_RHS(  &
+                                  index_node, kv, in,           &
+                                  index_min, index_max,         &
+                                  RHS_loc, ZBIG * delta_psi_rmp)
+                             
                              index_node2 = node_list%node(inode)%index(3)
-                             if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
-                                call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2)
-                                ilarge_vp2  = ijA_position2  - 1 + ((kv-1)*n_tor + in-1) * n_var*n_tor + (kp-1)*n_tor + in
-                                Rhs_loc(n_tor*n_var * (index_node2-1) + (kv-1)*n_tor + in) = ZBIG * delta_psi_rmp_dt
-                                irn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kv-1)*n_tor + in
-                                jcn_glob(ilarge_vp2) =  n_tor * n_var * (index_node2-1) + (kp-1)*n_tor + in
-                                A_glob(ilarge_vp2)   = ZBIG
-                             endif
+
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node2, kp, in,               &
+                                  zbig, solve_only, gmres,           &
+                                  index_min, index_max)
+
+                             call boundary_conditions_add_RHS(       &
+                                  index_node2, kv, in,               &
+                                  index_min, index_max,              &
+                                  RHS_loc, ZBIG * delta_psi_rmp_dt)
+                             
+                             index_node2 = node_list%node(inode)%index(2)
+
+                             call boundary_conditions_add_one_entry( &
+                                  index_node2, kv, in,               &
+                                  index_node2, kp, in,               &
+                                  zbig, solve_only, gmres,           &
+                                  index_min, index_max)
+
+                             call boundary_conditions_add_RHS(       &
+                                  index_node2, kv, in,               &
+                                  index_min, index_max,              &
+                                  RHS_loc, ZBIG * delta_psi_rmp_ds)
+                             
                           endif
-                       endif
+                        enddo        !(end RMP harmonics)
+                        endif        !(end RMPs on)  ==================================
+                        !======================================= end RMPs ==================================
 
-!======================================= end RMPs ==================================
-
-                        ! decides when the boundary conditions should be applied (for freeboundary and RMP cases)
-                        if (      apply_psi_BC      &
-                             .or. apply_current_BC  &
-                             .or. (( k /= 1 ) .and. ( k /= 3 ))  ) then
+                       ! decides when the boundary conditions should be applied (for freeboundary and RMP cases)
+                        if (       apply_psi_BC                   &
+                              .or. apply_current_BC               &
+                              .or. (( k /= 1 ) .and. ( k /= 3 ))  ) then
 
                           index_node = node_list%node(inode)%index(1)
-                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-                             call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-                             index_large_i = n_tor * n_var * (index_node - 1)
-                             ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-                             irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                             jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                             A_glob(ilarge2)   = zbig
-                          endif
+
+                          call boundary_conditions_add_one_entry( &
+                               index_node,  k,  in,               &
+                               index_node,  k,  in,               &
+                               zbig, solve_only, gmres,           &
+                               index_min, index_max)
 
                           index_node = node_list%node(inode)%index(2)
-                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-                             call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-                             index_large_i = n_tor * n_var * (index_node - 1)
-                             ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-                             irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                             jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                             A_glob(ilarge2)    = zbig
-                          endif
+
+                          call boundary_conditions_add_one_entry( &
+                               index_node,  k,  in,               &
+                               index_node,  k,  in,               &
+                               zbig, solve_only, gmres,           &
+                               index_min, index_max)
 
                           index_node = node_list%node(inode)%index(3)
-                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-                             call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position)
-                             index_large_i = n_tor * n_var * (index_node - 1)
-                             ilarge2 = ijA_position - 1 + ((k-1)*n_tor + in-1) * n_var*n_tor + (k-1)*n_tor + in
-                             irn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                             jcn_glob(ilarge2) =  n_tor * n_var * (index_node-1) + (k-1)*n_tor + in
-                             A_glob(ilarge2)    = zbig
-                          endif
 
-                        endif
+                          call boundary_conditions_add_one_entry( &
+                               index_node,  k,  in,               &
+                               index_node,  k,  in,               &
+                               zbig, solve_only, gmres,           &
+                               index_min, index_max)
 
-                      endif
+                       endif
 
-                   enddo
+                    endif
 
-                enddo
-             endif
-          enddo
-       enddo
+                 enddo  ! ================================do variables
 
-   if (RMP_on) then
+!              enddo !===========do RMP harmonics , by defalt=1
+
+              enddo !========================do n_tor
+
+           endif !==================if boundary nodes
+
+     enddo  !==========================do vertex
+
+ 
+    enddo !===============================do elements
+
+    if (RMP_on) then
        if (allocated(psi_RMP_cos1))         call tr_deallocate(psi_RMP_cos1,"psi_RMP_cos1",CAT_UNKNOWN)
        if (allocated(dpsi_RMP_cos_dR1))     call tr_deallocate(dpsi_RMP_cos_dR1,"dpsi_RMP_cos_dR1",CAT_UNKNOWN)
        if (allocated(dpsi_RMP_cos_dZ1))     call tr_deallocate(dpsi_RMP_cos_dZ1,"dpsi_RMP_cos_dZ1",CAT_UNKNOWN)

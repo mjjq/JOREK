@@ -822,7 +822,7 @@ end subroutine update_spi
       if (allocated(xtime_spi_ablation_rate)) &
       call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi_tot,1,nstep,"xtime_spi_ablation_rate")
-#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+
       if (allocated(xtime_spi_ablation_bg)) &
       call tr_deallocate(xtime_spi_ablation_bg,"xtime_spi_ablation_bg",CAT_UNKNOWN)
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg,1,n_spi_tot,1,nstep,"xtime_spi_ablation_bg")
@@ -830,7 +830,6 @@ end subroutine update_spi
       if (allocated(xtime_spi_ablation_bg_rate)) &
       call tr_deallocate(xtime_spi_ablation_bg_rate,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi_tot,1,nstep,"xtime_spi_ablation_bg_rate")
-#endif
 
     else
       write(*,*) "...... Seriously!? Double check the input file"

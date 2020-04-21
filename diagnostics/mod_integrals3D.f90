@@ -142,7 +142,7 @@ real*8  :: m_i_over_m_imp
 !   -Mean impurity ionization state
 real*8  :: Z_imp, T0_Zimp, alpha_Zimp
 !   -Corrected plasma temperature and density for radiation calculation
-real*8  :: T0_corr_eV, ne_SI, T0_eV
+real*8  :: Te_corr_eV, ne_SI, Te_eV
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
@@ -303,7 +303,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
 !$omp           source_bg, source_imp, source_tmp, n_spi_tmp,                                  &
 !$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp,                                    &
-!$omp           T0_corr_eV, T0_eV, ne_SI, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,         &
+!$omp           Te_corr_eV, Te_eV, ne_SI, P_imp, Lrad, E_ion, E_ion_bg, ion_i, ion_k,         &
 #endif
 #if (JOREK_MODEL == 502)
 !$omp           alpha_i, alpha_e,                                                              &
@@ -584,8 +584,8 @@ do ife = ife_min, ife_max
         end select
 
         ! Te in eV:
-        T0_corr_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-        T0_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_corr_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
    
         if (allocated(imp_adas(1)%ionisation_energy)) then
    
@@ -593,7 +593,7 @@ do ife = ife_min, ife_max
  
           allocate(P_imp(0:imp_adas(1)%n_Z))
    
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T0_corr_eV*EL_CHG/K_BOLTZ),&
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
                                         p_out=P_imp,z_eff=Z_imp)
    
           ! Calculate the ionization potential energy and it's time gradient
@@ -608,7 +608,7 @@ do ife = ife_min, ife_max
           E_ion     = E_ion * EL_CHG
           E_ion_bg  = E_ion_bg * EL_CHG
         else
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T0_corr_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
           E_ion     = 0.
           E_ion_bg  = 0.
         end if
@@ -620,11 +620,11 @@ do ife = ife_min, ife_max
         P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
         P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
 
-        if (ne_SI > 1.d16 .and. T0_eV > 3. .and. rn0 > 0.) then
+        if (ne_SI > 1.d16 .and. Te_eV > 3. .and. rn0 > 0.) then
           Lrad = 0.0
           ! Here we are temperarily only considering one impurity species, in the
           ! future maybe a do loop will is needed
-          call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T0_corr_eV*EL_CHG/K_BOLTZ),Lrad)
+          call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
           if (Lrad < 0.) Lrad = 0.
         else
           Lrad = 0.
@@ -662,8 +662,8 @@ do ife = ife_min, ife_max
      end select
 
         ! Te in eV:
-        T0_corr_eV = T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-        T0_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_corr_eV = T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20)
    
         if (allocated(imp_adas(1)%ionisation_energy)) then
    
@@ -671,7 +671,7 @@ do ife = ife_min, ife_max
   
           allocate(P_imp(0:imp_adas(1)%n_Z))
    
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T0_corr_eV*EL_CHG/K_BOLTZ),&
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
                                         p_out=P_imp,z_eff=Z_imp)
    
           ! Calculate the ionization potential energy and it's time gradient
@@ -686,7 +686,7 @@ do ife = ife_min, ife_max
           E_ion     = E_ion * EL_CHG
           E_ion_bg  = E_ion_bg * EL_CHG
         else
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(T0_corr_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
           E_ion     = 0.
           E_ion_bg  = 0.
         end if
@@ -700,11 +700,11 @@ do ife = ife_min, ife_max
         P_tot  = P_tot  + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi &
                         + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
 
-        if (ne_SI > 1.d16 .and. T0_eV > 3. .and. rn0 > 0.) then
+        if (ne_SI > 1.d16 .and. Te_eV > 3. .and. rn0 > 0.) then
           Lrad = 0.0
           ! Here we are temperarily only considering one impurity species, in the
           ! future maybe a do loop will is needed
-          call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T0_corr_eV*EL_CHG/K_BOLTZ),Lrad)
+          call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
           if (Lrad < 0.) Lrad = 0.
         else
           Lrad = 0.

@@ -324,7 +324,7 @@ class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 ! Temporary variable for charge state distribution
 integer             :: i_T, i_ion
 real*8, allocatable :: P_imp(:)
-real*8              :: T0_eV, Lrad
+real*8              :: Te_eV, Lrad
 real*8              :: Z_eff
 
 open(20,file="charge_distribution.dat")
@@ -333,14 +333,14 @@ write(20,'(4A22)',advance='no') 'temperature (log10(K))', 'charge states', 'summ
 write(20,'(A22)') 'radiation function'
 
 do i_T = 1, size(cor%temperature,1)
-  T0_eV = cor%temperature(i_T)
+  Te_eV = cor%temperature(i_T)
 
   if (allocated(P_imp)) deallocate(P_imp)
 
   allocate(P_imp(0:cor%n_Z))
-  call cor%interp(density=20.d0,temperature=T0_eV,p_out=P_imp,z_out=Z_eff,rad_out=Lrad)
+  call cor%interp(density=20.d0,temperature=Te_eV,p_out=P_imp,z_out=Z_eff,rad_out=Lrad)
   Lrad = Lrad / (1.d20) ! This is to recover the radiation coefficient
-  write(20,'(f12.3)',advance='no') T0_eV
+  write(20,'(f12.3)',advance='no') Te_eV
   do i_ion = 0, cor%n_Z
     write(20,'(f12.5)',advance='no') P_imp(i_ion)
   end do

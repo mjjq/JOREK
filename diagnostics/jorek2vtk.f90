@@ -106,7 +106,7 @@ real*8                :: angle, source_volume, local_density, local_temperature,
 logical               :: include_radiation
 integer               :: n_radiation,s_radiation
 real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
-real*8                :: T_corr, T0_corr_eV, T0_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
+real*8                :: T_corr, Te_corr_eV, Te_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: T_real8, r0_real8, rn0_real8
 real*8                :: r0_corr, rn0_corr
@@ -1222,19 +1222,19 @@ enddo  ! n_elements
       T_real8 = scalars(i,6)
       T_corr  = corr_neg_temp(T_real8)
       Tion    = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
-      T0_corr_eV   = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+      Te_corr_eV   = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
       Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
 
       coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
 
-      LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T0_corr_eV) ! Only Bremsstrahlung contribution
+      LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(Te_corr_eV) ! Only Bremsstrahlung contribution
 
-      LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T0_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                       -60.947d0*exp(-(log10(T0_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                       -24.067d0*exp(-(log10(T0_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+      LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(Te_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+                                       -60.947d0*exp(-(log10(Te_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                       -24.067d0*exp(-(log10(Te_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
 
-      eta_Sp = 1.65d-9*17*(1.d-3*T0_corr_eV)**(-1.5d0) &
+      eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
                               *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 
       scalars(i,s_radiation+1) = ksiion * scalars(i,5) * scalars(i,8) * Sion_T
@@ -1252,11 +1252,11 @@ enddo  ! n_elements
 
       frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))                               &
                  *((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0)) &
-                 *nimp_bg*Arad_bg*exp(-((log(T0_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+                 *nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
       dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
-                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T0_corr_eV)-log(Brad_bg))     &
-                     *(1./T0_corr_eV)*exp(-((log(T0_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))     &
+                     *(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
       scalars(i,s_radiation+5) = scalars(i,5) * frad_bg
 
@@ -1287,14 +1287,14 @@ enddo  ! n_elements
    do i=1,nnos
      if (jorek_model .eq. 502 ) then
        T_real8 = scalars(i,n_var)
-       T0_corr_eV = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(EL_CHG*MU_ZERO*central_density*1.d20)
-       T0_eV = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20)
+       Te_corr_eV = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(EL_CHG*MU_ZERO*central_density*1.d20)
+       Te_eV = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20)
      else
        T_real8 = scalars(i,6)
-       T0_corr_eV = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-       T0_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       Te_corr_eV = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      endif
-     eta_Sp = 1.65d-9*17*(1.d-3*T0_corr_eV)**(-1.5d0) &
+     eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
                         *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 
      r0_real8 = scalars(i,5)
@@ -1312,7 +1312,7 @@ enddo  ! n_elements
        if (allocated(P_imp)) deallocate(P_imp)
        allocate(P_imp(0:imp_adas(1)%n_Z))
 
-       call imp_cor(1)%interp_linear(density=20.,temperature=log10(T0_corr_eV*EL_CHG/K_BOLTZ),&
+       call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
                                      p_out=P_imp,z_eff=Z_imp)
 
        ! Calculate the ionization potential energy and it's time gradient
@@ -1326,7 +1326,7 @@ enddo  ! n_elements
        ! Convert from eV to JOREK unit
        E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
      else
-       call imp_cor(1)%interp_linear(density=20.,temperature=log10(T0_corr_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+       call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
        E_ion     = 0.
      end if
 
@@ -1359,13 +1359,13 @@ enddo  ! n_elements
      coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
-     if (ne_SI > 1.d18 .and. T0_eV > 5. .and. rn0_real8 > 1.d-8) then
+     if (ne_SI > 1.d18 .and. Te_eV > 5. .and. rn0_real8 > 1.d-8) then
 
        Lrad = 0.0
        
        ! Here we are temperarily only considering one impurity species, in the
        ! future maybe a do loop will is needed
-       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T0_corr_eV*EL_CHG/K_BOLTZ),Lrad)
+       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
 
        Lrad = Lrad * coef_rad_1
 
@@ -1543,19 +1543,19 @@ if (SI_units) then
   
       Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
   
-      T0_corr_eV = corr_neg_temp(T_real8,(/1.d-2,1.d-1/))/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
+      Te_corr_eV = corr_neg_temp(T_real8,(/1.d-2,1.d-1/))/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
   
       Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
   
       coef_rad_1 = 1.d0 !2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
   
-      LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T0_corr_eV) ! Only Bremsstrahlung contribution
+      LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(Te_corr_eV) ! Only Bremsstrahlung contribution
   
-      LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T0_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0))  &
-                                        -60.947d0*exp(-(log10(T0_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                        -24.067d0*exp(-(log10(T0_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+      LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(Te_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0))  &
+                                        -60.947d0*exp(-(log10(Te_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                        -24.067d0*exp(-(log10(Te_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
   
-      eta_Sp = 1.65d-9*17*(1.d-3*T0_corr_eV)**(-1.5d0)
+      eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0)
   
       scalars(i,s_radiation+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
                                        * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T
@@ -1574,11 +1574,11 @@ if (SI_units) then
       Brad_bg = 20.
       Crad_bg = 0.8
   
-      frad_bg = nimp_bg * Arad_bg*exp(-((log(T0_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+      frad_bg = nimp_bg * Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
   
       dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
-                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T0_corr_eV)-log(Brad_bg))     &
-                     *(1./T0_corr_eV)*exp(-((log(T0_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))     &
+                     *(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
   
       scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * frad_bg
   

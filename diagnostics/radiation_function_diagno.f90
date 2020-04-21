@@ -1,3 +1,5 @@
+! This is a program to output the radiation power function and its components for a range of hard-coded parameters.
+! The species and the ADAS data need to be specified below for the program to work properly.
 program radiation_function_diagno
 use mpi_mod
 use mod_openadas

@@ -1,16 +1,16 @@
 module mod_locate_irn_jcn
 implicit none
 contains
-subroutine locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position)
+subroutine locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 !**************************************************************************
 ! subroutine finds the position in the global matrix of the index of      *
 ! node1 and node2 (this is the index per block)                           *
 !                                                                         *
 ! search to be replaced by binary search                                  *
 !**************************************************************************
-use global_distributed_matrix
 integer :: index_node1, index_node2, index_min, index_max, ijA_position, i, index1_local
 logical :: found_index
+integer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
 
 found_index = .false.
 

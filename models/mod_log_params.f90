@@ -142,6 +142,13 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+  write(*,'(1x,a)',advance='no') ' DIRECT_CONSTRUCTION : '
+#ifdef DIRECT_CONSTRUCTION
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
   write(*,'(1x,a)',advance='no') ' GAUSS_ORDER : '
 #ifdef GAUSS_ORDER
   write(*,*) 'Preprocessor flag has been set! Thus, n_gauss=', n_gauss

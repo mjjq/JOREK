@@ -2,7 +2,7 @@ module mod_elt_matrix
   implicit none
 contains
 
-subroutine element_matrix(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid)
+subroutine element_matrix(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, i_tor_min, i_tor_max)
   !---------------------------------------------------------------
   ! calculates the matrix contribution of one element
   !---------------------------------------------------------------
@@ -24,7 +24,7 @@ type (type_node)   , intent(in)   :: nodes(n_vertex_max)
 
 real*8, dimension (:,:), allocatable  :: ELM
 real*8, dimension (:)  , allocatable  :: RHS
-integer, intent(in) :: tid
+integer                ,intent(in)    :: tid, i_tor_min, i_tor_max
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, kl1, kl2, kl3, kl4, kl5, kl6
@@ -55,7 +55,8 @@ real*8     :: amat_51, amat_52, amat_55, amat_61, amat_62, amat_63, amat_66, ama
 real*8     :: amat_stab_11, amat_stab_12, amat_stab_13, amat_stab_14 ,amat_stab_21,amat_stab_22, amat_stab_23, amat_stab_24
 real*8     :: amat_stab_31, amat_stab_32, amat_stab_33, amat_stab_34 ,amat_stab_41,amat_stab_42, amat_stab_43, amat_stab_44
 
-logical    :: xpoint2
+logical    :: xpoint2 
+integer    :: n_tor_local
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
 real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
@@ -255,10 +256,14 @@ do ms=1, n_gauss
      delta_u_y = ( - x_t(ms,mt) * delta_s(mp,2,ms,mt) + x_s(ms,mt) * delta_t(mp,2,ms,mt) ) / xjac
 
      ! --- Temperature dependent resistivity
-     if ( eta_T_dependent ) then
-       eta_T     =   eta * (corr_neg_temp(T0)/T_0)**(-1.5d0)
-       deta_dT   = - eta * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
-       d2eta_d2T =   eta * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
+     if ( eta_T_dependent .and. corr_neg_temp(T0) <= T_max_eta) then
+       eta_T     = eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+       deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+       d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
+     else if ( eta_T_dependent .and. corr_neg_temp(T0) > T_max_eta) then
+       eta_T     = eta   * (T_max_eta/T_0)**(-1.5d0)
+       deta_dT   = 0.d0
+       d2eta_d2T = 0.d0     
      else
        eta_T     = eta
        deta_dT   = 0.d0
@@ -266,8 +271,16 @@ do ms=1, n_gauss
      end if
 
      ! --- Eta for ohmic heating
-     eta_T_ohm   = (eta_T/eta)  * eta_ohmic
-     deta_dT_ohm = (deta_dT/eta) * eta_ohmic
+     if ( eta_T_dependent .and. corr_neg_temp(T0) <= T_max_eta_ohm) then
+       eta_T_ohm     = eta_ohmic   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+       deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+     else if ( eta_T_dependent .and. corr_neg_temp(T0) > T_max_eta_ohm) then
+       eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
+       deta_dT_ohm   = 0.    
+     else
+       eta_T_ohm     = eta_ohmic
+       deta_dT_ohm   = 0.d0
+     end if
      
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then
@@ -293,13 +306,14 @@ do ms=1, n_gauss
        endif
      endif
 
+     n_tor_local = i_tor_max - i_tor_min + 1
      do i=1,n_vertex_max
 
        do j=1,n_order+1
 
-         do im=1,n_tor
+         do im=i_tor_min, i_tor_max
 
-           index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor * n_var * (j-1) + im   ! index in the ELM matrix
+           index_ij = n_tor_local*n_var*(n_order+1)*(i-1) + n_tor_local * n_var * (j-1) + im - i_tor_min + 1  ! index in the ELM matrix
 
            v   =  H(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
            v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac * HZ(im,mp)
@@ -370,11 +384,11 @@ do ms=1, n_gauss
                     + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0    * BigR * xjac  * tstep
 
            ij1 = index_ij
-           ij2 = index_ij + 1*n_tor
-           ij3 = index_ij + 2*n_tor
-           ij4 = index_ij + 3*n_tor
-           ij5 = index_ij + 4*n_tor
-           ij6 = index_ij + 5*n_tor
+           ij2 = index_ij + 1*n_tor_local
+           ij3 = index_ij + 2*n_tor_local
+           ij4 = index_ij + 3*n_tor_local
+           ij5 = index_ij + 4*n_tor_local
+           ij6 = index_ij + 5*n_tor_local
 
            RHS(ij1) = RHS(ij1) + rhs_ij_1 * wst
            RHS(ij2) = RHS(ij2) + rhs_ij_2 * wst
@@ -387,7 +401,7 @@ do ms=1, n_gauss
 
              do l=1,n_order+1
 
-               do in = 1, n_tor
+               do in = i_tor_min, i_tor_max
 
                  psi   = H(k,l,ms,mt) * element%size(k,l) * HZ(in,mp)
 
@@ -429,7 +443,7 @@ do ms=1, n_gauss
                  rho_y_hat = BigR**2 * rho_y
 
 
-                 index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor * n_var * (l-1) + in   ! index in the ELM matrix
+                 index_kl = n_tor_local*n_var*(n_order+1)*(k-1) + n_tor_local * n_var * (l-1) + in - i_tor_min + 1   ! index in the ELM matrix
 
 !---------------------------------------------------------------- equation 1
                  amat_11 = v * psi / BigR * xjac * (1.d0+zeta)                                       &
@@ -520,11 +534,11 @@ do ms=1, n_gauss
 
 
                  kl1 = index_kl
-                 kl2 = index_kl + 1*n_tor
-                 kl3 = index_kl + 2*n_tor
-                 kl4 = index_kl + 3*n_tor
-                 kl5 = index_kl + 4*n_tor
-                 kl6 = index_kl + 5*n_tor
+                 kl2 = index_kl + 1*n_tor_local
+                 kl3 = index_kl + 2*n_tor_local
+                 kl4 = index_kl + 3*n_tor_local
+                 kl5 = index_kl + 4*n_tor_local
+                 kl6 = index_kl + 5*n_tor_local
 
                  ELM(ij1,kl1) =  ELM(ij1,kl1) + wst * amat_11
                  ELM(ij1,kl2) =  ELM(ij1,kl2) + wst * amat_12

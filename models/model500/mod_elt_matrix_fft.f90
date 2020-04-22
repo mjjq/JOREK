@@ -363,6 +363,7 @@ do i=1,n_vertex_max
 !$OMP  Sion_T, dSion_dT, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss, &
 !$OMP  Srec_T, dSrec_dT, coef_rec_1, LradDrays_T, dLradDrays_dT, LradDcont_T, dLradDcont_dT, &
 !$OMP  T_rad, coef_rad_1, Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT, &
+!$OMP  ng_radius, &
 !$OMP  amat, amat_k, amat_kn, rhs_ij, rhs_ij_k, &
 !$OMP  Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, Bgrad_T_T_n, T_ps0_x, T_ps0_y, T0_psi_x, &
 !$OMP  T0_psi_y, v_psi_x, v_psi_y,  &
@@ -1679,7 +1680,7 @@ do i=1,n_vertex_max
                             + v * rho * GAMMA * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)        * theta * tstep &
                             + v * rho * GAMMA * T0 * F0 / BigR * vpar0_p                 * xjac * theta * tstep &
 
-!                           + D_prof * T0 * BigR  * (v_x*rho_x + v_y*rho_y + v_p*rho_p /BigR**2) * xjac * theta * tstep &
+!                           + D_prof * T0 * BigR  * (v_x*rho_x + v_y*rho_y)              * xjac * theta * tstep &
 
                            + v * BigR * rho * rn0_corr * ksiion * Sion_T                      * xjac * theta * tstep &
                            + v * BigR * rho * rn0_corr * LradDrays_T                          * xjac * theta * tstep &
@@ -1710,7 +1711,10 @@ do i=1,n_vertex_max
                                    * rho * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                    &
                                    * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
-                  amat_kn(6,5) = + TG_num6 * 0.25d0 / BigR * vpar0**2                &
+                  amat_kn(6,5) = &
+!                              + D_prof * T0 * BigR  * (v_p*rho_p /BigR**2) * xjac * theta * tstep &
+
+                               + TG_num6 * 0.25d0 / BigR * vpar0**2                &
                                    * T0 * (+ F0 / BigR * rho_p)                      &
                                    * (     + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 

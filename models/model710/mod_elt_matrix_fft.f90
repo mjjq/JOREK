@@ -3,7 +3,8 @@ module mod_elt_matrix_fft
 contains
 
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
-                              ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t)
+                              ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, & 
+                              i_tor_min, i_tor_max)
 ! NOT YET IMPLEMENTED
 
 use mod_parameters
@@ -30,10 +31,9 @@ real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoi
 #define DIM1 n_plane
 #define DIM2 1:n_vertex_max*n_var*(n_order+1)
 
-real*8, dimension (DIM0,DIM0), intent(inout) :: ELM
-real*8, dimension (DIM0),      intent(inout) :: RHS
-integer,                       intent(in)    :: tid
-
+real*8, dimension (DIM0,DIM0)  :: ELM
+real*8, dimension (DIM0)       :: RHS
+integer, intent(in)            :: tid, i_tor_min, i_tor_max
 real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_p
 real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_n
 real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_k
@@ -47,7 +47,8 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: eq_ss, eq_st,
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: delta_g, delta_s, delta_t
 
 ! --- Variables outside the OMP loop
-integer    :: i, j, index, index_k, index_m, n_tor_loop, i_v, j_loc, i_loc, m, ik
+integer    :: n_tor_start, n_tor_end, n_tor_local
+integer    :: i, j, index, index_k, index_m, i_v, j_loc, i_loc, m, ik
 integer    :: in, im, ivar, kvar, ms, mt, mp
 real*8     :: wst, xjac, xjac_R, xjac_Z, R, Z, theta, zeta
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss), source_pellet
@@ -59,7 +60,8 @@ real*8     :: Coef_DivV
 real*8     :: Fprof,dF_dpsi,dF_dz
 real*8     :: dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz
 real*8     :: zFFprime    ,dFFprime_dpsi,dFFprime_dz
-real*8     :: dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz
+real*8     :: dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz 
+logical    :: use_fft
 
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t, x_ss, x_st, x_tt
@@ -263,19 +265,34 @@ Qvec_k    = 0.d0
 theta = time_evol_theta
 zeta  = time_evol_zeta
 
-! --- If we're doing the fft, don't loop...
-if (n_tor .gt. n_tor_fft_thresh) then
-  n_tor_loop  = 1
+! --- Do we need to use the FFT or non-FFT version?
+if ( (i_tor_min == 1) .and. (i_tor_max == n_tor) ) then
+  ! In case of global matrix construction:
+  use_fft = n_tor > n_tor_fft_thresh
 else
-  n_tor_loop  = n_tor
-endif
+  ! In case of "direct construction" of harmonic matrix never FFT:
+  use_fft = .false.
+end if
 
-! --- Toroidal functions            
-if (n_tor .gt. n_tor_fft_thresh) then
+if ( use_fft ) then
+  ! In case of FFT, don't loop over toroidal harmonics:
+  n_tor_start = 1
+  n_tor_end   = 1
+else
+  n_tor_start = i_tor_min
+  n_tor_end   = i_tor_max
+end if
+
+n_tor_local = n_tor_end - n_tor_start +1
+
+! --- Toroidal basis functions
+if (use_fft) then
+  ! --- Not needed in case of FFT
   HHZ    = 1.d0
   HHZ_p  = 1.d0
   HHZ_pp = 1.d0
 else
+  ! --- Needed in case of non-FFT
   do in = 1,n_tor
     do mp=1,n_plane
       HHZ   (in,mp) = HZ   (in,mp)
@@ -767,7 +784,7 @@ do i=1,n_vertex_max
             dvisco_divV_dT  =  0.0
           end select
 
-          do im=1,n_tor_loop
+          do im=n_tor_start, n_tor_end
 
             ! --- test functions (V*)
             v   = H(i,j,ms,mt)   * element%size(i,j) * HHZ(im,mp)
@@ -1066,7 +1083,7 @@ do i=1,n_vertex_max
 
 
             ! --- Fill Up the RHS
-            if (n_tor .gt. n_tor_fft_thresh) then
+            if (use_fft) then
               index_ij =       n_var*(n_order+1)*(i-1) +       n_var*(j-1) + 1
               do ivar= 1,n_var
                 RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar)
@@ -1077,12 +1094,12 @@ do i=1,n_vertex_max
                 RHS_k(mp,ij)   =  RHS_k(mp,ij) + RHS_k_ij(ivar) * wst * R * xjac
               enddo
             else
-              index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor*n_var*(j-1) + im
+              index_ij = n_tor_local*n_var*(n_order+1)*(i-1) + n_tor_local*n_var*(j-1) + im - n_tor_start +1
               do ivar= 1,n_var
                 RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar)
                 RHS_k_ij(ivar) = tstep * Qvec_k(ivar)
 
-                ij = index_ij + (ivar-1)*n_tor_loop
+                ij = index_ij + (ivar-1)*n_tor_local
                 RHS(ij)        =  RHS(ij) + (RHS_p_ij(ivar) + RHS_k_ij(ivar)) * wst * R * xjac
               enddo
             endif
@@ -1091,7 +1108,7 @@ do i=1,n_vertex_max
 
               do l=1,n_order+1
 
-                do in = 1, n_tor_loop
+                do in =  n_tor_start, n_tor_end
 
                   ! --- Basis functions
                   bf    = H(k,l,ms,mt)   * element%size(k,l) * HHZ(in,mp)
@@ -2219,7 +2236,7 @@ do i=1,n_vertex_max
                     Qjac_k (var_Up,var_T ) = Qjac_k (var_Up,var_T ) - dvisco_divV_dT * T * divU * v_p/ R
                   endif
 
-                  if (n_tor .gt. n_tor_fft_thresh) then
+                  if (use_fft) then
                     index_kl =       n_var*(n_order+1)*(k-1) +       n_var*(l-1) + 1
                     do ivar= 1,n_var
                       do kvar= 1,n_var
@@ -2240,11 +2257,11 @@ do i=1,n_vertex_max
                       enddo
                     enddo
                   else
-                    index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor*n_var*(l-1) + in
+                    index_kl = n_tor_local*n_var*(n_order+1)*(k-1) + n_tor_local*n_var*(l-1) + in - n_tor_start +1
                     do ivar= 1,n_var
                       do kvar= 1,n_var
-                        ij = index_ij + (ivar-1) * n_tor_loop
-                        kl = index_kl + (kvar-1) * n_tor_loop
+                        ij = index_ij + (ivar-1) * n_tor_local
+                        kl = index_kl + (kvar-1) * n_tor_local
 
                         amat(ivar,kvar) = (1.d0+zeta)*Pjac(ivar,kvar) - tstep * theta * Qjac_p(ivar,kvar)
                         ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac
@@ -2274,7 +2291,7 @@ do i=1,n_vertex_max
     enddo ! mt loop
 
 
-    if (n_tor .gt. n_tor_fft_thresh) then
+    if (use_fft) then
       do i_v = 1, n_var
         do j_loc=1, n_vertex_max*n_var*(n_order+1)
           i_loc = n_var*(n_order+1)*(i-1) + n_var * (j-1) + i_v 

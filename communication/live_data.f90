@@ -358,7 +358,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_thermalenergy: ', 2 
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_xlabel_si: time [ms]'
-    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_ylabel: Thermal energy [MJ]'
+    write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_ylabel: Thermal energy [J]'
     write(LIVE_DATA_HANDLE,'(A)') '@thermalenergy_ylabel_si: thermal energy [MJ]'
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@thermalenergy_x2si: ', sqrt_mu0_rho0*1.e3
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@thermalenergy_y2si: ', 1.e-6

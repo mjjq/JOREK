@@ -364,6 +364,12 @@ call read_num_profiles(my_id)
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
 
+! --- For now the diamagnetic term has not been implemented properly
+if (tauIC /= 0.0) then
+  tauIC = 0.0
+  write(*,*) "WARNING! The diamagnetic term has not been implemented properly, setting tauIC = 0 now."
+endif
+
 if ( my_id == 0 ) then
   if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
     write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"

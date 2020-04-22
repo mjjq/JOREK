@@ -870,7 +870,7 @@ do ms=1, n_gauss
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
 
-     if (ne_SI > 1.d18 .and. Te_eV > 5. .and. rn0 > 1.d-8) then
+     if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
 
        Lrad = 0.0
        dLrad_dT = 0.0

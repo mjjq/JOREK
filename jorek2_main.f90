@@ -395,12 +395,18 @@ required = 0
     write(*,*) '  of MPI tasks and reducing the number of OpenMP threads in the jobscript.'
   end if
   if ((jorek_model==199) .or. (jorek_model==303)) then
-    if (abs(eta-eta_ohmic)/(eta+eta_ohmic) > 1.d-6) then
+    if (abs(eta-eta_ohmic)/(eta+eta_ohmic+1.d-12) > 1.d-6) then
       write(*,*) 'WARNING: The resistivity eta and the resistivity used for Ohmic heating '
       write(*,*) '  eta_ohm are not the same. No problem if you know what you are doing,  ' 
       write(*,*) '  but with this setup you are not conserving energy.   '
     endif
   endif
+  if (abs(T_max_eta-T_max_eta_ohm)/(T_max_eta+T_max_eta_ohm) > 1.d-6) then
+    write(*,*) 'WARNING: T_max_eta and T_max_eta_ohm are not the same, which breaks  &
+        energy conservation. No problem if you know what you are doing (a good reason to &
+	do this could be to avoid spurious Ohmic heating in the plasma core).'
+  end if
+
 #ifndef USE_BLOCK
   write(*,*) 'WARNING: You are not using USE_BLOCK=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_BLOCK=1 in your Makefile.inc'

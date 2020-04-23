@@ -170,8 +170,8 @@ subroutine preset_parameters
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
   ZK_prof_neg        = 1.d-5
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
-  T_min              = 0.0d0
-  rho_min            = 0.0d0
+  T_min              =-1.0d20
+  rho_min            =-1.0d20
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)

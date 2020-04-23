@@ -422,7 +422,7 @@ do i=1,n_vertex_max
           w0_st = eq_st(mp,4,ms,mt)
 
           r0    = eq_g(mp,5,ms,mt)
-          r0_corr = corr_neg_dens1(r0)
+          r0_corr = corr_neg_dens(r0)
           r0_x  = (   y_t(ms,mt) * eq_s(mp,5,ms,mt) - y_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
           r0_y  = ( - x_t(ms,mt) * eq_s(mp,5,ms,mt) + x_s(ms,mt) * eq_t(mp,5,ms,mt) ) / xjac
           r0_p  = eq_p(mp,5,ms,mt)
@@ -663,10 +663,10 @@ do i=1,n_vertex_max
               ZKpar_T   = Zk_par_max
               dZKpar_dT = 0.d0
             endif
-            if ( xpoint2 .and. (T0 .lt. T_min) ) then
-              ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
-              dZKpar_dT = 0.d0
-            endif
+!            if ( xpoint2 .and. (T0 .lt. T_min) ) then
+!              ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
+!              dZKpar_dT = 0.d0
+!            endif
           else
             ZKpar_T   = ZK_par                                            ! parallel conductivity
             dZKpar_dT = 0.d0
@@ -1127,8 +1127,7 @@ do i=1,n_vertex_max
                        * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)    * xjac * tstep * tstep &
                  
                     + (1.d0 - delta_n_convection) * (     &
-                    - v *(r0_corr * rn0 * Sion_T) * vpar0 * BB2 * BigR                        * xjac * tstep &
-
+                    - v *(r0_corr * rn0_corr * Sion_T) * vpar0 * BB2 * BigR                        * xjac * tstep &
                     + v *(r0_corr * r0_corr  * Srec_T) * vpar0 * BB2 * BigR                        * xjac * tstep &
                     )
  
@@ -1211,6 +1210,7 @@ do i=1,n_vertex_max
               RHS_k(mp,ij5) = RHS_k(mp,ij5) + rhs_ij_k(5) * wst
               RHS_k(mp,ij6) = RHS_k(mp,ij6) + rhs_ij_k(6) * wst
               RHS_k(mp,ij7) = RHS_k(mp,ij7) + rhs_ij_k(7) * wst
+              RHS_k(mp,ij8) = RHS_k(mp,ij8) + rhs_ij_k(8) * wst
             else
               ij1 = index_ij
               ij2 = index_ij + 1*n_tor_loop
@@ -1742,10 +1742,10 @@ do i=1,n_vertex_max
 
                             -v * T * (gamma-1.d0) * deta_dT_ohm * (zj0 / BigR)**2.d0 * BigR * xjac * theta * tstep &
 
-                            + v * BigR * r0 * rn0 * ksiion * dSion_dT * T                   * xjac * theta * tstep &
+                            + v * BigR * r0_corr * rn0_corr * ksiion * dSion_dT * T         * xjac * theta * tstep &
 
                             - v * BigR * T * ((2d0)/(3*BigR**2)) * detaSp_dT * zj0**2       * xjac * theta * tstep &
-                            + v * BigR * T * r0_corr * rn0 * dLradDrays_dT                  * xjac * theta * tstep &
+                            + v * BigR * T * r0_corr * rn0_corr * dLradDrays_dT             * xjac * theta * tstep &
                             + v * BigR * T * r0_corr * r0_corr  * dLradDcont_dT             * xjac * theta * tstep &
                             + v * BigR * T * r0_corr * dfrad_bg_dT                          * xjac * theta * tstep &
 
@@ -1828,7 +1828,7 @@ do i=1,n_vertex_max
                             + v*(particle_source(ms,mt) + source_pellet)*vpar0* BB2_psi * BigR * xjac * theta * tstep &
   
                             + (1.d0 - delta_n_convection) * (  &  
-                              + v *(r0_corr * rn0      * Sion_T) * vpar0 * BB2_psi * BigR    * xjac * theta * tstep  &
+                              + v *(r0_corr * rn0_corr * Sion_T) * vpar0 * BB2_psi * BigR    * xjac * theta * tstep  &
                               - v *(r0_corr * r0_corr  * Srec_T) * vpar0 * BB2_psi * BigR    * xjac * theta * tstep  &
                               ) &
 
@@ -1904,12 +1904,12 @@ do i=1,n_vertex_max
                                         * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
                                         * (                                          + F0 / BigR * rho_p)* xjac * theta * tstep*tstep
                   
-                  amat(7,6) = + v * (T_s * R0 * ps0_t - T_t * R0 * ps0_s)                   * theta * tstep &
-                            + v * (T * R0_s * ps0_t - T * R0_t * ps0_s)                     * theta * tstep &
-                            + v * F0 / BigR * T * R0_p        &
+                  amat(7,6) = + v * (T_s * r0 * ps0_t - T_t * r0 * ps0_s)                   * theta * tstep &
+                            + v * (T * r0_s * ps0_t - T * r0_t * ps0_s)                     * theta * tstep &
+                            + v * F0 / BigR * T * r0_p        &
                         
                             + (1.d0 - delta_n_convection) * (  &
-                              + v *(r0_corr * rn0      * dSion_dT * T) * vpar0 * BB2 * BigR           * xjac * theta * tstep &
+                              + v *(r0_corr * rn0_corr * dSion_dT * T) * vpar0 * BB2 * BigR           * xjac * theta * tstep &
                               - v *(r0_corr * r0_corr  * dSrec_dT * T) * vpar0 * BB2 * BigR           * xjac * theta * tstep &
                                )                       * xjac * theta * tstep
 
@@ -1925,7 +1925,7 @@ do i=1,n_vertex_max
 
                           + (1.d0 - delta_n_convection) * (  &
 
-                            + v *(r0_corr * rn0      * Sion_T) * vpar * BB2 * BigR               * xjac * theta * tstep   &
+                            + v *(r0_corr * rn0_corr * Sion_T) * vpar * BB2 * BigR               * xjac * theta * tstep   &
                             - v *(r0_corr * r0_corr  * Srec_T) * vpar * BB2 * BigR               * xjac * theta * tstep   &
                             ) &
 

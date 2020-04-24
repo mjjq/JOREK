@@ -11,6 +11,7 @@ contains
   use global_distributed_matrix
   use mumps_module  
   use mpi_mod
+  use phys_module, only: centralize_harm_mat
   
   implicit none
   
@@ -21,6 +22,9 @@ contains
   integer, allocatable         :: nz_array(:), disp_array(:)
   integer                      :: nz_total, i, ierr
   
+ 
+  if (centralize_harm_mat) then
+
   allocate(nz_array  (n_cpu_n))
   allocate(disp_array(n_cpu_n))
     
@@ -36,16 +40,12 @@ contains
       nz_total = disp_array(n_cpu_n) + nz_array(n_cpu_n) 
     endif 
     mumps_par%nz  = nz_total   
-    mumps_par%n   = ndof_harm 
   else
     mumps_par%nz  = nz_harm
-    mumps_par%n   = ndof_harm
-  endif 
+    endif
  
-  ! --- Allocate arrays for centralized matrix
-  if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
   
+    ! --- Allocate arrays for centralized matrix
   ! --- Centralize matrix (if it was not distributed, copy it into the right data structure)
   if (n_cpu_n > 1) then
     if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,  "dh_mumps_par%A",  CAT_DMATRIX)
@@ -69,12 +69,28 @@ contains
     mumps_par%jcn => jcn_harm(1:mumps_par%nz)
   endif
 
+    if ( allocated(nz_array) )   deallocate(nz_array)
+    if ( allocated(disp_array) ) deallocate(disp_array)
+  
+  else
+  ! assign distributed values to global
+    mumps_par%nz  = nz_harm
+    mumps_par%A   => A_harm(1:mumps_par%nz)   
+    mumps_par%irn => irn_harm(1:mumps_par%nz)
+    mumps_par%jcn => jcn_harm(1:mumps_par%nz)
+    
+  endif ! centralize_harm_mat
+
+  mumps_par%n   = ndof_harm
+  
+  if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
+  
   do i = 1, mumps_par%n
     mumps_par%rhs(i) = rhs_harm(i)
-  enddo
+  enddo  
   
-  if ( allocated(nz_array) )   deallocate(nz_array)
-  if ( allocated(disp_array) ) deallocate(disp_array)
+  call MPI_Barrier(MPI_COMM_N,ierr)
   
   end subroutine centralization_harmonic
 

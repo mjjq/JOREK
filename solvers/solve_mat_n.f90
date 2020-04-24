@@ -691,7 +691,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     use global_distributed_matrix
     use mpi_mod 
     use mod_clock
-    use phys_module, only : index_now
+    use phys_module, only : index_now, centralize_harm_mat
 
     use strumpack_module
   
@@ -734,14 +734,23 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       call MPI_COMM_SIZE(MPI_COMM_MASTER, n_cpu_master, ierr)     ! the number of cpus
     endif
 
+    if (centralize_harm_mat) then 
     call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
     call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+    endif
     
     n = mumps_par%n
     nnz = mumps_par%nz
     
     if (.not. solve_only) then
         
+      if (.not. spss_initialized) then
+        call strumpack_init(MPI_COMM_N)
+        spss_initialized = .true.
+      endif     
+
+      if (centralize_harm_mat) then
+        ! broadcast centralized matrix
       if (my_id_n.gt.0) then
         if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
         if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
@@ -759,12 +768,8 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       type='double'
       call split_broadcast(type,MPI_COMM_N)
 
-      if (.not. spss_initialized) then
-        call strumpack_init(MPI_COMM_N)
-        spss_initialized = .true.
-      endif
-
-      call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,spss_analyzed)
+        call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
+              UPDATE=spss_analyzed,DISTRIBUTED=.false.)
 
       if (n_cpu_n>1) then
         call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
@@ -775,6 +780,16 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         mumps_par%irn => null()
         mumps_par%jcn => null()
       endif 
+
+      else
+
+        call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
+              UPDATE=spss_analyzed,DISTRIBUTED=.true.)
+        mumps_par%a => null()
+        mumps_par%irn => null()
+        mumps_par%jcn => null()
+
+      endif ! centralize_harm_mat
 
       if (.not. spss_analyzed) then
         call strumpack_analyze(MPI_COMM_N)

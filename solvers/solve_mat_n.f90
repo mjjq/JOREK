@@ -751,35 +751,35 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
       if (centralize_harm_mat) then
         ! broadcast centralized matrix
-      if (my_id_n.gt.0) then
-        if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
-        if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
-        if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-        call tr_allocatep(mumps_par%irn,1,nnz,"mumps_par%irn",CAT_DMATRIX)
-        call tr_allocatep(mumps_par%jcn,1,nnz,"mumps_par%jcn",CAT_DMATRIX)
-        call tr_allocatep(mumps_par%a,1,nnz,"mumps_par%a",CAT_DMATRIX)
-      endif  
-
-          ! Split MPI_BCAST if MPI buffer beyond 2Go
-      type='intIRN'
-      call split_broadcast(type,MPI_COMM_N)
-      type='intJCN'
-      call split_broadcast(type,MPI_COMM_N)
-      type='double'
-      call split_broadcast(type,MPI_COMM_N)
-
+        if (my_id_n.gt.0) then
+          if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+          if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+          if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+          call tr_allocatep(mumps_par%irn,1,nnz,"mumps_par%irn",CAT_DMATRIX)
+          call tr_allocatep(mumps_par%jcn,1,nnz,"mumps_par%jcn",CAT_DMATRIX)
+          call tr_allocatep(mumps_par%a,1,nnz,"mumps_par%a",CAT_DMATRIX)
+        endif  
+  
+        ! Split MPI_BCAST if MPI buffer beyond 2Go
+        type='intIRN'
+        call split_broadcast(type,MPI_COMM_N)
+        type='intJCN'
+        call split_broadcast(type,MPI_COMM_N)
+        type='double'
+        call split_broadcast(type,MPI_COMM_N)
+  
         call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
-              UPDATE=spss_analyzed,DISTRIBUTED=.false.)
-
-      if (n_cpu_n>1) then
-        call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
-        call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
-        call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-      else
-        mumps_par%a => null()
-        mumps_par%irn => null()
-        mumps_par%jcn => null()
-      endif 
+                UPDATE=spss_analyzed,DISTRIBUTED=.false.)
+  
+        if (n_cpu_n>1) then
+          call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+          call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+          call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+        else
+          mumps_par%a => null()
+          mumps_par%irn => null()
+          mumps_par%jcn => null()
+        endif 
 
       else
 
@@ -807,10 +807,10 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     
     call MPI_BCAST(mumps_par%rhs,n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
     
-   if (my_id_n .eq. 0) then                          ! elapsed time solve start
+    if (my_id_n .eq. 0) then                          ! elapsed time solve start
       call MPI_Barrier(MPI_COMM_MASTER,ierr)
       call clck_time(t0)
-   endif    
+    endif    
     
     call MPI_Barrier(MPI_COMM_N,ierr)
     

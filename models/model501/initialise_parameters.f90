@@ -367,7 +367,7 @@ call derive_num_profiles(my_id)
 ! --- For now the diamagnetic term has not been implemented properly
 if (tauIC /= 0.0) then
   tauIC = 0.0
-  write(*,*) "WARNING! The diamagnetic term has not been implemented properly, setting tauIC = 0 now."
+  write(*,*) "WARNING! The diamagnetic term has not been implemented properly for model 501, setting tauIC = 0 now."
 endif
 
 if ( my_id == 0 ) then

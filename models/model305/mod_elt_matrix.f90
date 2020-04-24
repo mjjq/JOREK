@@ -4,7 +4,7 @@ module mod_elt_matrix
 
 contains
 
-subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM,RHS, tid)
+subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM,RHS, tid, i_tor_min, i_tor_max)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 ! using the equations for model305, which is the same as model303, but solves
@@ -31,9 +31,10 @@ type (type_node)      :: nodes(n_vertex_max)
 
 real*8, dimension (:,:), allocatable  :: ELM
 real*8, dimension (:)  , allocatable  :: RHS
-integer, intent(in) :: tid
+integer, intent(in)                   :: tid
+integer, intent(in)                   :: i_tor_min, i_tor_max
 
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2, n_tor_local
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)
@@ -614,13 +615,14 @@ do ms=1, n_gauss
    !                        source_pellet, source_volume)
    !  endif
 
+     n_tor_local = i_tor_max - i_tor_min +1
      do i=1,n_vertex_max
 
        do j=1,n_order+1
 
-         do im=1,n_tor
+         do im=i_tor_min, i_tor_max
 
-           index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor * n_var * (j-1) + im   ! index in the ELM matrix
+           index_ij = n_tor_local*n_var*(n_order+1)*(i-1) + n_tor_local * n_var * (j-1) + im - i_tor_min +1  ! index in the ELM matrix
 
            v   =  H(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
            v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac * HZ(im,mp)
@@ -861,13 +863,13 @@ do ms=1, n_gauss
 !###################################################################################################
 
            ij1 = index_ij
-           ij2 = index_ij + 1*n_tor
-           ij3 = index_ij + 2*n_tor
-           ij4 = index_ij + 3*n_tor
-           ij5 = index_ij + 4*n_tor
-           ij6 = index_ij + 5*n_tor
-           ij7 = index_ij + 6*n_tor
-           ij8 = index_ij + 7*n_tor
+           ij2 = index_ij + 1*n_tor_local
+           ij3 = index_ij + 2*n_tor_local
+           ij4 = index_ij + 3*n_tor_local
+           ij5 = index_ij + 4*n_tor_local
+           ij6 = index_ij + 5*n_tor_local
+           ij7 = index_ij + 6*n_tor_local
+           ij8 = index_ij + 7*n_tor_local
 
            RHS(ij1) = RHS(ij1) + rhs_ij_1 * wst
            RHS(ij2) = RHS(ij2) + rhs_ij_2 * wst
@@ -882,7 +884,7 @@ do ms=1, n_gauss
 
              do l=1,n_order+1
 
-               do in = 1, n_tor
+               do in = i_tor_min, i_tor_max
 
                  psi   = H(k,l,ms,mt) * element%size(k,l) * HZ(in,mp)
 
@@ -948,7 +950,7 @@ jec_t = psi_t
                  rho_y_hat = BigR**2 * rho_y
                   Btheta2_psi  = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
-                 index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor * n_var * (l-1) + in   ! index in the ELM matrix
+                 index_kl = n_tor_local*n_var*(n_order+1)*(k-1) + n_tor_local * n_var * (l-1) + in - i_tor_min +1  ! index in the ELM matrix
 
 !###################################################################################################
 !#  equation 1   (induction equation)                                                              #
@@ -1493,13 +1495,13 @@ jec_t = psi_t
 
 
                  kl1 = index_kl
-                 kl2 = index_kl + 1*n_tor
-                 kl3 = index_kl + 2*n_tor
-                 kl4 = index_kl + 3*n_tor
-                 kl5 = index_kl + 4*n_tor
-                 kl6 = index_kl + 5*n_tor
-                 kl7 = index_kl + 6*n_tor
-                 kl8 = index_kl + 7*n_tor
+                 kl2 = index_kl + 1*n_tor_local
+                 kl3 = index_kl + 2*n_tor_local
+                 kl4 = index_kl + 3*n_tor_local
+                 kl5 = index_kl + 4*n_tor_local
+                 kl6 = index_kl + 5*n_tor_local
+                 kl7 = index_kl + 6*n_tor_local
+                 kl8 = index_kl + 7*n_tor_local
 
                  ELM(ij1,kl1) =  ELM(ij1,kl1) + wst * amat_11
                  ELM(ij1,kl2) =  ELM(ij1,kl2) + wst * amat_12

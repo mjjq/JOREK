@@ -142,6 +142,13 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+  write(*,'(1x,a)',advance='no') ' DIRECT_CONSTRUCTION : '
+#ifdef DIRECT_CONSTRUCTION
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
   write(*,'(1x,a)',advance='no') ' GAUSS_ORDER : '
 #ifdef GAUSS_ORDER
   write(*,*) 'Preprocessor flag has been set! Thus, n_gauss=', n_gauss
@@ -584,6 +591,7 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
+  write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
 
   if (jorek_model .eq. 710) then
     write(*,LOGI_FMT) 'parallel_projection   ', parallel_projection

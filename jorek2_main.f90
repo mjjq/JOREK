@@ -3,7 +3,8 @@
 !! - solvers implemented:
 !!   - MUMPS
 !!   - PastiX
-!!   - GMRES (+MUMPS or PastiX preconditioner)
+!!   - STRUMPACK
+!!   - GMRES (+MUMPS, PastiX or STRUMPACK preconditioner)
 !!
 !! - required libraries :
 !!   - MPI
@@ -385,6 +386,18 @@ required = 0
       stop
     end if
   end if
+  if (.not. centralize_harm_mat) then
+#ifndef DIRECT_CONSTRUCTION
+    write(*,*) 'FATAL : distributed harmonic matrix (centralize_harm_mat=.f.) requres DIRECT_CONSTRUCTION=1'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+#endif
+    if (.not. use_strumpack ) then
+      write(*,*) 'FATAL : distributed harmonic matrix (centralize_harm_mat=.f.) requres use_strumpack'
+      call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+      stop
+    endif
+  end if  
   if ( iand(n_plane,n_plane-1) /= 0 ) then
     write(*,*) 'WARNING: n_plane is not a power of two. This might be inefficient.'
     write(*,*) '  When using FFTW, it is possible to run like this, but it might not be fast.'

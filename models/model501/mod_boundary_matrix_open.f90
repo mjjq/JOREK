@@ -28,8 +28,8 @@ real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
 real*8, dimension (:,:), allocatable  :: ELM
 real*8, dimension (:)  , allocatable  :: RHS
-integer,               intent(in)     :: i_tor_min
-integer,               intent(in)     :: i_tor_max
+integer,               intent(in)     :: i_tor_min   
+integer,               intent(in)     :: i_tor_max   
 
 integer    :: vertex(2), direction(2), i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
@@ -42,7 +42,7 @@ real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
 real*8     :: ps0, ps0_s, Vpar0, r0, T0  
 real*8     :: psi, psi_s, vpar, rho,  T   
 real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67, element_size_ij, element_size_kl
-logical    :: xpoint2
+logical    :: xpoint2 
 integer    :: n_tor_local
 
 
@@ -166,8 +166,8 @@ do ms=1, n_gauss
                  amat_66 = + v * (gamma_sheath-1.d0) * r0  * T  * vpar0 * ps0_s * theta * tstep 
                  amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * theta * tstep 
 
-                 index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l-1) + in - i_tor_min + 1  ! index in the ELM matrix                
-
+                 index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l-1) + in - i_tor_min + 1  ! index in the ELM matrix
+                 
                  kl1 = index_kl
                  kl5 = index_kl + 4*n_tor_local
                  kl6 = index_kl + 5*n_tor_local

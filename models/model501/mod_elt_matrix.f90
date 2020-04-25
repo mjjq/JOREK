@@ -32,10 +32,11 @@ real*8, dimension (:)  , allocatable  :: RHS
 integer, intent(in)                   :: tid, i_tor_min, i_tor_max
 
 integer    :: n_tor_local
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2, i_inj, n_spi_tmp
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
-real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, eps_cyl
+real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)
+real*8     :: source_volume, source_pellet, source_pellet2
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_rhon, Bgrad_T_star, Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rhon_psi, Bgrad_rho_rho, Bgrad_rho_rhon, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, BB2_psi
@@ -137,7 +138,7 @@ real*8     :: beta_imp, dbeta_imp_dT
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
 real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Temperature used in radiation rate
 real*8     :: Te_eV                                           ! Uncorrected temperature
-real*8     :: ne_SI                                           ! Electron density used in radiation rate
+real*8     :: ne_SI                                          ! Electron density used in radiation rate
 real*8     :: ne_JOREK                                        ! Electron density in JOREK unit 
 real*8     :: coef_rad_1, A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
 real*8     :: A2_rad, T2_rad, sig2_rad
@@ -406,6 +407,7 @@ do ms=1, n_gauss
        T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_min) ! For use in eta(T), visco(T), ...
        dT0_corr_dT = dcorr_neg_temp_dT(T0,(/5.d-1,5.d-1/),2.*T_min) ! Improve the correction
        d2T0_corr_dT2 = d2corr_neg_temp_dT2(T0,(/5.d-1,5.d-1/),2.*T_min)
+
      else
        T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_1) ! For use in eta(T), visco(T), ...
        dT0_corr_dT = dcorr_neg_temp_dT(T0,(/5.d-1,5.d-1/),2.*T_1) ! Improve the correction
@@ -552,23 +554,24 @@ do ms=1, n_gauss
        deta_drn0 = 0.
      end if
 
-     if ( eta_T_dependent .and. T0_corr <= T_max_eta_ohm ) then
+     if ( eta_T_dependent .and. T0_corr <= T_max_eta_ohm) then
        eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
-       deta_dT_ohm   = ( - eta_ohmic   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
+       deta_dT_ohm   = ( - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
        deta_dr0_ohm  = 0.
-       deta_drn0_ohm = 0. 
-     else if (eta_T_dependent .and. T0_corr > T_max_eta_ohm) then  
+       deta_drn0_ohm = 0.
+     else if (eta_T_dependent .and. T0_corr > T_max_eta_ohm) then
        eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
        deta_dT_ohm   = 0.
        deta_dr0_ohm  = 0.
-       deta_drn0_ohm = 0.         
+       deta_drn0_ohm = 0.
      else
-       eta_T_ohm      = eta_ohmic
-       deta_dT_ohm    = 0.d0
-       deta_dr0_ohm   = 0.
-       deta_drn0_ohm  = 0.     
-     end if     	 
-	 
+       eta_T_ohm     = eta_ohmic
+       deta_dT_ohm   = 0.d0
+       deta_dr0_ohm  = 0.
+       deta_drn0_ohm = 0.
+     end if
+
+
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent .and. T0_corr <= T_max_eta ) then       
        visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
@@ -594,9 +597,9 @@ do ms=1, n_gauss
        dZKpar_dT = 0.d0
      endif
 
-     ! --- Temperature dependent hyper-resistivity. There is no physical
-     ! reason for this dependence whatsoever, this is just to keep a constant
-     ! ratio between the resistivity and hyper-resistivity.
+     ! --- Temperature dependent hyper-resistivity resistivity, there is no
+     ! physical reason for this dependence whatsoever, just to keep a constant
+     ! ratio between the resistivity and hyper-resistivity
      if ( eta_num_T_dependent .and. T0_corr <= T_max_eta) then
        eta_num_T = eta_num * (T0_corr/T_0)**(-1.5d0)
        deta_num_dT = ( - eta_num * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
@@ -608,7 +611,6 @@ do ms=1, n_gauss
        deta_num_dT = 0.
      end if
 
-     ! --- Same for the hyper-viscosity.
      if ( visco_num_T_dependent .and. T0_corr <= T_max_eta) then
        visco_num_T = visco_num * (T0_corr/T_0)**(-1.5d0)
        dvisco_num_dT = ( - visco_num * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
@@ -619,6 +621,10 @@ do ms=1, n_gauss
        visco_num_T = visco_num
        dvisco_num_dT = 0.
      end if
+
+
+     !eta_num_T   = eta_num                         ! hyperresistivity
+     !visco_num_T = visco_num                       ! hyperviscosity
 
      psi_norm = get_psi_n(ps0, y_g(ms,mt))
 
@@ -661,55 +667,69 @@ do ms=1, n_gauss
        Jb = 0.d0
      endif
 
+
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
+
+!========= For intear benchmark=====
+     !T_neg = 1.d-5
+     !delta_neg = 1.d-4
+
+     !ZK_prof = ZK_prof * (1+100*(0.5+0.5*tanh(-(T0-T_neg)/delta_neg))) 
+!============End==============
+
+     !if (T0 .lt. T_neg) then
+     !heat_source = 1.d-4
+     !endif    
 
      ! --- Increase diffusivity if very small density/temperature
      if (xpoint2) then
        if (r0 .lt. D_prof_neg_thresh)  then
          D_prof  = D_prof_neg
-         D_par   = D_prof_neg
        endif
        if (T0 .lt. ZK_prof_neg_thresh) then
          ZK_prof = ZK_prof_neg
-       endif
-       if (T0 .lt. ZK_par_neg_thresh) then
          ZKpar_T = ZK_par_neg
        endif
      endif
+
+     phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
+     delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
+
+     source_pellet = 0.d0
+     source_volume = 0.d0
    
      Dn0x = D_neutral_x      
      Dn0y = D_neutral_y      
      Dn0p = D_neutral_p      
 
-     ! -------------------------------
-     ! --- Impurity related things
-     ! -------------------------------
+  !-------------------------------------------
+  ! Atomic physics parameters for Argon
+  !-------------------------------------------
 
      select case ( trim(gas_type) )
        case('D2')
-         m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
+         m_i_over_m_imp = central_mass/2.
        case('Ar')
-         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u
+         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
        case('Ne')
-         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
+         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
        case default
          write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
          m_i_over_m_imp = central_mass/2.
      end select
-
      Z_imp = 0.
      dZ_imp_dT = 0.
      d2Z_imp_dT2 = 0.
 
      ! Te in eV:
-     Te_corr_eV      = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-     dTe_corr_eV_dT  = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     Te_corr_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     dTe_corr_eV_dT = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
-     ! We get the charge state distribution assuming n_e=10^20/m^3.
-     ! Later maybe we should implement an iterative method.
+     ! We estimate the effective charge by a test density 10^20/m^3
+     ! Later maybe we should implement a iterative method
 
      if (allocated(imp_adas(1)%ionisation_energy)) then
 
@@ -719,43 +739,40 @@ do ms=1, n_gauss
        allocate(P_imp(0:imp_adas(1)%n_Z))
        allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
 
-       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),           &
-                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT, &
+       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
                               z_TeTe_out=d2Z_imp_dT2)
 
-       ! Ionization potential energy
+       ! Calculate the ionization potential energy and its derivative wrt. temperature
        E_ion     = 0.
        dE_ion_dT = 0.
-       E_ion_bg  = 13.6 ! (Note: H and D have a different ionization energy, 
-                        !  but the difference is small.)       
+       E_ion_bg  = 13.6 ! Hydrogen and deterium seem to have different ionization energy, 
+                        ! but the difference is of the next order.
 
-       ! In eV
        do ion_i=1, imp_adas(1)%n_Z
          do ion_k=1, ion_i
            E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
            dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
          end do
        end do
-       
-       ! Convert from eV to JOREK units
+       ! Convert from eV to JOREK unit
        E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
        dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
        E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
-       ! Convert E_ion gradient wrt. T from 1/K into 1/(JOREK units)       
+       ! Convert the gradient in K to gradient in JOREK unit
        dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
 
      else
        call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
-
+                                            z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
        E_ion     = 0.
        dE_ion_dT = 0.
        E_ion_bg  = 0.
      end if
 
-     ! Convert Z_imp gradient wrt. T from 1/K into 1/eV
+     ! Convert gradient in T(K) in to gradient in T (eV)
      dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
-     ! ...and now from 1/eV into 1/(JOREK units)
+     ! Derivative wrt to T, with T in JOREK units
      dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      dZ_imp_dT = dZ_imp_dT * dT0_corr_dT
 
@@ -828,7 +845,6 @@ do ms=1, n_gauss
      deta_coef_dZeff = deta_coef_dZeff / ((1.+1.198+0.222)/(1.+2.966+0.753))
 
      if ( eta_T_dependent ) then
-
        if (T0_corr <= T_max_eta) then
          deta_dr0  = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
          deta_drn0 = eta_T * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
@@ -839,32 +855,36 @@ do ms=1, n_gauss
        if (T0_corr <= T_max_eta_ohm) then
          deta_dr0_ohm  = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
          deta_drn0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
-         deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT	   
+         deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT
        end if
        eta_T_ohm = eta_T_ohm * eta_coef
 
      end if
-	 
+
+
   !-------------------------------------------
-  ! --- Radiative function using interpolation
+  ! --- Radiative function, using interpolation
   ! ------------------------------------------
 
      ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
      coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp
 
+
      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
 
        Lrad = 0.0
        dLrad_dT = 0.0
 
+       ! Here we are temperarily only considering one impurity species, in the
+       ! future maybe a do loop will is needed
        call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
 
        Lrad = Lrad * coef_rad_1
 
-       ! Convert gradient wrt. to T from 1/K into 1/eV
+       ! Convert gradient in T(K) in to gradient in T (eV)
        dLrad_dT = dLrad_dT * coef_rad_1 * EL_CHG / K_BOLTZ
-       ! ...and now from 1/eV into 1/(JOREK units)
+       ! Derivative wrt to T, with T in JOREK units
        dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
        dLrad_dT = dLrad_dT * dT0_corr_dT
 
@@ -874,10 +894,10 @@ do ms=1, n_gauss
        end if
 
      else
-
        Lrad = 0.
        dLrad_dT = 0.
-
+       !E_ion = 0.
+       !dE_ion_dT = 0.
      end if
 
      ! This is to detect N/A
@@ -887,14 +907,18 @@ do ms=1, n_gauss
        stop
      end if
 
+
    !--------------------------------------------------------
    ! --- Source of Impurities and Background species
    !--------------------------------------------------------
 
-     phi = 2.d0*PI*float(mp-1)/float(n_plane)/float(n_period)
-
      source_imp = 0.d0                    
      source_bg  = 0.d0
+
+!============================================================!
+! Important note: in order to implementing more complicated  !
+!    model, we should add more arguments to inj_source       !
+!============================================================!
 
      if (using_spi) then
 
@@ -904,7 +928,7 @@ do ms=1, n_gauss
          ASDEX_MGI = .false.
        end if
 
-       do spi_i=1, n_spi
+       do spi_i=1, n_spi_tot
 
          source_tmp = 0.d0
 
@@ -920,8 +944,14 @@ do ms=1, n_gauss
              ng_radius = ng_radius_min
            end if
 
+           n_spi_tmp = 0
+           do i_inj = 1, n_inj
+             n_spi_tmp = n_spi_tmp + n_spi(i_inj)
+             if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
+           end do
+
            call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,ns_sig,ns_deltaphi,&
-                         ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,0.,x_g(ms,mt),y_g(ms,mt),    &
+                         ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0.,x_g(ms,mt),y_g(ms,mt),    &
                          phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
          end if
 
@@ -931,11 +961,17 @@ do ms=1, n_gauss
 
        end do
 
-     else ! if not using SPI
+     else
 
-       call inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_imp,t_now,  &
-                     JET_MGI,ASDEX_MGI,central_density,central_mass)
+       do i_inj = 1, n_inj
+         source_tmp = 0.d0
+         call inj_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),   &
+                         ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
+                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_imp,t_now,  &
+                         JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+         source_imp = source_imp + source_tmp
+       end do
 
        ! Converting number density into mass density for each species respectively
        source_imp = source_imp / m_i_over_m_imp
@@ -952,7 +988,6 @@ do ms=1, n_gauss
      if (source_imp .lt. 0.d0) then
       source_imp = 0.d0
      endif
-     
      if (source_bg .lt. 0.d0) then
       source_bg = 0.d0
      endif
@@ -1098,7 +1133,7 @@ do ms=1, n_gauss
                       + BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u0_x + v_y * u0_y) * xjac * tstep
 
                       ! Old term (not to be included anymore due to implementations of terms above):
-                      ! + BigR**3 * particle_source(ms,mt) * (v_x * u0_x + v_y * u0_y) * xjac * tstep
+                      ! + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac * tstep
 
 !###################################################################################################
 !#  equation 3   (current definition)                                                              #
@@ -1116,7 +1151,7 @@ do ms=1, n_gauss
 !#  equation 5 (total density equation)                                                                  #
 !###################################################################################################
 
-         rhs_ij_5   = v * BigR * (particle_source(ms,mt) + source_bg + source_imp)                                 * xjac * tstep &
+         rhs_ij_5   = v * BigR * (particle_source(ms,mt) + source_pellet + source_bg + source_imp)                                 * xjac * tstep &
                     + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                                              * tstep &
                     + v * 2.d0 * BigR * r0 * u0_y                                                                      * xjac * tstep &
                     !- (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhon)                            * xjac * tstep &
@@ -1257,7 +1292,7 @@ do ms=1, n_gauss
                       - v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)     * vpar0 * BB2 * xjac * tstep &
 
                       ! Old term (not to be included anymore due to implementations of terms above):
-                      ! - v * particle_source(ms,mt) * vpar0 * BB2   * BigR * xjac * tstep &
+                      ! - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2   * BigR * xjac * tstep &
 
                       - TG_NUM7 * 0.25d0 * r0 * Vpar0**2 * BB2 &
                              * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
@@ -1481,7 +1516,7 @@ do ms=1, n_gauss
                            - BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
 
                            ! Old term (not to be included anymore due to implementations of terms above):
-                           ! - BigR**3 * particle_source(ms,mt) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
+                           ! - BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
 
                            + TG_num2 * 0.25d0 * r0_hat * BigR**3 * (w0_x * u_y - w0_y * u_x)       &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep   &
@@ -1983,7 +2018,7 @@ do ms=1, n_gauss
                       + v * vpar0 * (r0_x * psi_y - r0_y * psi_x)    * vpar0 * BB2 * xjac * theta * tstep  &
 
                       ! Old term (not to be included anymore due to implementations of terms above):
-                      !+ v * particle_source(ms,mt) * vpar0 * BB2_psi * BigR * xjac * theta * tstep &
+                      !+ v * (particle_source(ms,mt) + source_pellet) * vpar0 * BB2_psi * BigR * xjac * theta * tstep &
 
                          + TG_NUM7 * 0.25d0 * r0 * Vpar0**2 * BB2 &
                                    * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / BigR  &
@@ -2075,7 +2110,7 @@ do ms=1, n_gauss
                          + 2.0 * v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x) * vpar * BB2 * xjac * theta * tstep  &
 
                          ! Old term (not to be included anymore due to implementations of terms above):
-                         ! + v * particle_source(ms,mt) * vpar*BB2 * BigR  * xjac * theta * tstep &
+                         ! + v * (particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR  * xjac * theta * tstep &
 
                          + r0 * vpar0 * vpar * BB2 * (ps0_s * v_t - ps0_t * v_s)                * theta * tstep &
                          - r0 * vpar0 * vpar * BB2 * F0 / BigR * v_p                     * xjac * theta * tstep &

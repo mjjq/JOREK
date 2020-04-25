@@ -76,9 +76,7 @@ contains
     integer :: index_large_i, index_node, index_node2, ielm
     integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, kn, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
     integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT
-    integer :: loop_nbr, loop, cnt, cnt_prod
     integer :: ierr
-    logical :: is_local, only_count
     logical :: apply_psi_BC, apply_current_BC
 
 !=============== RMP ==============
@@ -88,8 +86,8 @@ contains
   real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
   integer :: ilarge_vp, ilarge_vp2
   integer :: kp, j, err, itest
-  integer :: n_tor_local 
-
+  integer				:: n_tor_local 
+    
   n_tor_local = i_tor_max - i_tor_min + 1
   if (RMP_on .and. (n_tor .ge. 3)) then
   call tr_allocate(psi_RMP_cos1,1, bnd_node_list%n_bnd_nodes,"psi_RMP_cos1",CAT_UNKNOWN)
@@ -147,7 +145,6 @@ contains
              if (node_list%node(inode)%boundary .ne. 0) then
 
                 do in=i_tor_min, i_tor_max 
-
                   if (keep_n0_const  .and.  in .eq. 1 ) then
                     zbig = 1.d15
                   else
@@ -177,7 +174,7 @@ contains
 
                       !========================================================================
                       ! conditions for direction 1 (s), i.e. boundary types 1, 3, 4, 9
-                      ! apply fixed bc for variables k=1,2,3,4,8
+                      ! apply fixed bc for variables k=1,2,3,4
                       ! apply v_par = cs for k=7
                       !========================================================================
 
@@ -353,9 +350,9 @@ contains
 
                             if (xcase2 .eq. 2) then
                                direction = -direction
-                            else if ((xcase2 .eq. 3).and.(node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).gt.R_xpoint(2))) then
+                            else if ((xcase2 .eq. 3).and.(node_list%node(inode)%x(1,2).gt.Z_axis+0.1).and.(node_list%node(inode)%x(1,1).gt.R_xpoint(2))) then
                               direction = -1.
-                            else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
+                            else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis+0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
                               direction = +1.
                             end if
 
@@ -472,7 +469,7 @@ contains
 
                       !========================================================================
                       ! conditions for direction 2 (s), i.e. boundary types 5, 9
-                      ! apply fixed bc for variables k=1,2,3,4,8
+                      ! apply fixed bc for variables k=1,2,3,4
                       ! apply v_par = cs for k=7
                       !========================================================================
 
@@ -612,7 +609,7 @@ contains
 
                                else
                                   RHS_loc(n_tor_local*n_var * (index_node-1) + (kv-1)*n_tor_local + in - i_tor_min +1) = 0.d0
-                               endif                                
+                               endif
                                !         write(*,'(A,i6,3e16.8)') ' bc5:',inode, Vpar0,direction*sqrt(GAMMA*T0) / Btot, Vpar0-direction*sqrt(GAMMA*T0) / Btot
 
                             endif
@@ -734,7 +731,6 @@ contains
                              index_node2 = node_list%node(inode)%index(3)
 
                              if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
-
                                 call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
                                 ilarge_vp2  = ijA_position2  - 1 + ((kv-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local + & 
@@ -791,7 +787,6 @@ contains
                          endif
 
                       endif
-
                       !------------------------------------ Special corners (only for grid with patches)
                       if    ((node_list%node(inode)%boundary .eq. 21) &
                         .or. (node_list%node(inode)%boundary .eq. 20)) then

@@ -20,8 +20,10 @@ module exec_commands
   use mod_interp
   use mod_poloidal_currents 
   use mod_bootstrap_functions
-  
-  
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+  use mod_injection_source 
+#endif
+
   
   implicit none
   

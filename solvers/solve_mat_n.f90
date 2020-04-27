@@ -694,6 +694,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     use phys_module, only : index_now
 
     use strumpack_module
+    use matio_module
   
     implicit none
 
@@ -775,6 +776,8 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       type='double'
       call split_broadcast(type,MPI_COMM_N)
 
+      if (my_id_n.eq.0) call timestamp(MSG="SetMat")   
+
       call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
               UPDATE=spss_analyzed,DISTRIBUTED=.false.)
 
@@ -791,10 +794,13 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 #endif
 
       if (.not. spss_analyzed) then
+        call slurmid(my_id)
+        if (my_id_n.eq.0) call timestamp(MSG="Reordering")              
         call strumpack_analyze(MPI_COMM_N)
         spss_analyzed = .true.
       endif
 
+      if (my_id_n.eq.0) call timestamp(MSG="Factorization")    
       call strumpack_factorize(MPI_COMM_N)
 
     endif ! .not. solve_only
@@ -806,15 +812,16 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     
     call MPI_BCAST(mumps_par%rhs,n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
     
-   if (my_id_n .eq. 0) then                          ! elapsed time solve start
+    if (my_id_n .eq. 0) then                          ! elapsed time solve start
       call MPI_Barrier(MPI_COMM_MASTER,ierr)
       call clck_time(t0)
-   endif    
-    
+    endif    
+
     call MPI_Barrier(MPI_COMM_N,ierr)
+
+    if (my_id_n.eq.0) call timestamp(MSG="Solve")
     
     call strumpack_solve(n,mumps_par%rhs,MPI_COMM_N)
-    call MPI_Barrier(MPI_COMM_N,ierr)
     
     if (my_id_n .eq.0) then                            ! elapsed time solve end
        call MPI_Barrier(MPI_COMM_MASTER,ierr)

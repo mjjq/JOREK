@@ -7,6 +7,7 @@ use data_structure
 use grid_xpoint_data
 use mod_interp
 use phys_module, only:   SDN_threshold
+use equil_info,  only:   ES
 
 implicit none
 

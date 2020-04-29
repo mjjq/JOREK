@@ -665,10 +665,10 @@ do i=1,n_vertex_max
               ZKpar_T   = Zk_par_max
               dZKpar_dT = 0.d0
             endif
-!            if ( xpoint2 .and. (T0 .lt. T_min) ) then
-!              ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
-!              dZKpar_dT = 0.d0
-!            endif
+            if ( xpoint2 .and. (T0 .lt. T_min) ) then
+              ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
+              dZKpar_dT = 0.d0
+            endif
           else
             ZKpar_T   = ZK_par                                            ! parallel conductivity
             dZKpar_dT = 0.d0

@@ -29,10 +29,10 @@ implicit none
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
 
+#define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
+
 integer, intent(in)            :: tid
 integer, intent(in)            :: i_tor_min, i_tor_max
-
-#define DIM0 (i_tor_max-i_tor_min+1)*n_vertex_max*(n_order+1)*n_var
 
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS

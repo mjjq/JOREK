@@ -35,7 +35,7 @@ contains
     use vacuum, ONLY: is_freebound
     use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
-       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min, &
+       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min, mach_one_bnd_integral, &
        Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const
     USE tr_module
     use mpi_mod
@@ -83,9 +83,11 @@ contains
   real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
   real*8  :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
   real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
+  real*8  :: R_mid, Z_mid, R_center, Z_center, direction2, normal(2), normal_direction(2), grad_s(2), grad_t(2)
   integer :: ilarge_vp, ilarge_vp2
-  integer :: kp, j, err, itest 
-  integer :: n_rmp_harm, N_rmp_har_block_size 
+  integer :: kp, j, err, itest, i_mid, i_bnd
+  integer :: n_rmp_harm, N_rmp_har_block_size
+
 
   RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
   
@@ -138,6 +140,32 @@ contains
      do i=1, n_local_elms !===============================do elements
 
         ielm = local_elms(i)
+
+        i_bnd = 0
+        do iv=1, n_vertex_max !==========================do vertex
+          inode = element_list%element(ielm)%vertex(iv)
+          if (node_list%node(inode)%boundary .ne. 0) i_bnd = i_bnd + 1
+        enddo
+        if (i_bnd .lt. 2) cycle           
+
+        i_mid = 0.d0; R_mid = 0.d0; Z_mid = 0.d0; R_center = 0.d0; Z_center = 0.d0
+
+        do iv=1, n_vertex_max !==========================do vertex
+          inode = element_list%element(ielm)%vertex(iv)
+          if (node_list%node(inode)%boundary .ne. 0) then
+            i_mid = i_mid + 1
+            R_mid = R_mid + node_list%node(inode)%x(1,1)     ! mid point on boundary (approx.)
+            Z_mid = Z_mid + node_list%node(inode)%x(1,2)     ! mid point on boundary (approx.)
+          endif
+          R_center = R_center + node_list%node(inode)%x(1,1)       ! center point within element (approx.)
+          Z_center = Z_center + node_list%node(inode)%x(1,2)       ! center point within element (approx.)
+        enddo
+        R_mid    = R_mid    / real(i_mid,8)
+        Z_mid    = Z_mid    / real(i_mid,8)
+        R_center = R_center / real(n_vertex_max,8)
+        Z_center = Z_center / real(n_vertex_max,8)
+         
+        normal_direction = (/R_mid - R_center, Z_mid - Z_center /) / norm2((/R_mid - R_center, Z_mid - Z_center /))
 
         do iv=1, n_vertex_max !==========================do vertex
 
@@ -289,7 +317,7 @@ contains
                          endif
 
 
-                         if (k .eq. 7) then
+                         if ( (k .eq. 7) .and. (.not. mach_one_bnd_integral) ) then
 
                             index_node  = node_list%node(inode)%index(1)             ! position of value
                             index_node2 = node_list%node(inode)%index(2)             ! position of first deriative
@@ -348,21 +376,27 @@ contains
                               if (node_list%node(inode)%boundary .eq. 11) direction = -direction
                               if (node_list%node(inode)%boundary .eq. 19) direction = -direction
                             endif
+
+                            grad_t = (/ -Z_s,   R_s /) / xjac
+                          
+                            normal     = dot_product(grad_t,normal_direction) * grad_t      ! outward pointing normal
+                            normal     = normal / norm2(normal)
+                            direction  = sign(1.d0,dot_product((/ps0_y,-ps0_x/),normal))
                             
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
 
-                            if (in .eq. 1) then
-
-                               !                write(*,'(A,3e14.6,A,e14.6)') ' Boundary : ',Vpar0, -BigR**2 * u0_s/ps0_s, direction*sqrt(GAMMA*T0)/Btot,&
-                               !                                              ' error : ',Vpar0 - BigR**2 * u0_s/ps0_s - direction*sqrt(GAMMA*T0)/Btot
-
-                            endif
+!                            if (in .eq. 1) then                              
+!                              write(*,'(i3,A,3e14.6,A,e14.6)') node_list%node(inode)%boundary, &
+!                                                              ' Boundary (s): ',Vpar0, -BigR**2 * u0_s/ps0_s, direction*sqrt(GAMMA*T0)/Btot, &
+!                                                              ' error : ',Vpar0 - BigR**2 * u0_s/ps0_s - direction*sqrt(GAMMA*T0)/Btot
+!                            endif
 
                             ku = 2
                             kv = 7
                             kT = 6
+
                             call boundary_conditions_add_one_entry(   &
                                  index_node, kv, in,                  &
                                  index_node, kv, in,                  &
@@ -370,8 +404,6 @@ contains
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
-
-
 
                             call boundary_conditions_add_one_entry(   &
                                  index_node, kv, in,                  &
@@ -382,8 +414,6 @@ contains
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
-
-
 
                             call boundary_conditions_add_one_entry(   &
                                  index_node,  kv, in,                 &
@@ -424,8 +454,6 @@ contains
                                  ijA_index, ijA_size, irn_jcn,        & 
                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-
-
                             call boundary_conditions_add_one_entry(   &
                                  index_node2, kv, in,                 &
                                  index_node2, kT, in,                 &
@@ -435,8 +463,6 @@ contains
                                  index_min, index_max,                & 
                                  ijA_index, ijA_size, irn_jcn,        & 
                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
-
-
 
                             call boundary_conditions_add_one_entry(   &
                                  index_node2,  kv, in,                &
@@ -490,9 +516,7 @@ contains
                           if ((k.eq.1) .and. ((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) .and. (.not. freeboundary)) then
                              ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
                              ! in .eq. RMP_har_sin   corresponds to sin(n_perturbation)
-               
-
-                                       
+                                                      
                              kp=1    ! variable psi
                              kv=1    ! equation for psi
                           
@@ -518,7 +542,6 @@ contains
                                 delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
                                 delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
                                 delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index+N_rmp_har_block_size*(n_rmp_harm-1))
-
                              endif
 
                              delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
@@ -597,7 +620,7 @@ contains
                          endif
 
 
-                         if (k .eq. 7) then
+                         if ( (k .eq. 7) .and. (.not. mach_one_bnd_integral) ) then
 
                             index_node  = node_list%node(inode)%index(1)             ! position of value
                             index_node2 = node_list%node(inode)%index(3)             ! position of first deriative
@@ -648,10 +671,22 @@ contains
                               if (node_list%node(inode)%boundary .eq. 15) direction = -direction
                               if (node_list%node(inode)%boundary .eq. 19) direction = -direction
                             endif
+
+                            grad_s = (/  Z_t,  - R_t /) / xjac
+                          
+                            normal     = dot_product(grad_s,normal_direction) * grad_s      ! outward pointing normal
+                            normal     = normal / norm2(normal)
+                            direction  = sign(1.d0,dot_product((/ps0_y,-ps0_x/),normal))
                             
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
+
+!                            if (in .eq. 1) then                              
+!                             write(*,'(i3,A,3e14.6,A,e14.6)') node_list%node(inode)%boundary, &
+!                                                               ' Boundary (t): ',Vpar0, -BigR**2 * u0_t/ps0_t, direction*sqrt(GAMMA*T0)/Btot,&
+!                                                               ' error : ',Vpar0 - BigR**2 * u0_t/ps0_t - direction*sqrt(GAMMA*T0)/Btot
+!                            endif
 
                             ku = 2
                             kv = 7
@@ -819,7 +854,7 @@ contains
                                   ijA_index, ijA_size, irn_jcn,      & 
                                   irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                                call boundary_conditions_add_RHS(  &
+                             call boundary_conditions_add_RHS(  &
                                      index_node, kv, in,           &
                                      index_min, index_max,         &
                                      RHS_loc, ZBIG * delta_psi_rmp,&
@@ -840,7 +875,8 @@ contains
                                   index_min, index_max,              & 
                                   ijA_index, ijA_size, irn_jcn,      & 
                                   irn, jcn, A_mat, i_tor_min, i_tor_max)
-                                call boundary_conditions_add_RHS(       &
+                             
+                             call boundary_conditions_add_RHS(          &
                                      index_node2, kv, in,               &
                                      index_min, index_max,              &
                                      RHS_loc, ZBIG * delta_psi_rmp_dt,  &

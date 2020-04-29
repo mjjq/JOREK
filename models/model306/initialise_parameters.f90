@@ -291,6 +291,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   if (allocated(flux_kinpar_t)) call tr_deallocate(flux_kinpar_t,"flux_kinpar_t",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(flux_kinpar_t,1,index_start+nstep,"flux_kinpar_t",CAT_UNKNOWN)
 
+  if (allocated(flux_poynting_t)) call tr_deallocate(flux_poynting_t,"flux_poynting_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(flux_poynting_t,1,index_start+nstep,"flux_poynting_t",CAT_UNKNOWN)
+
   if (allocated(dE_tot_dt)) call tr_deallocate(dE_tot_dt,"dE_tot_dt",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(dE_tot_dt,1,index_start+nstep,"dE_tot_dt",CAT_UNKNOWN)
 

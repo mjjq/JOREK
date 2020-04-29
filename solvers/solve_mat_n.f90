@@ -577,9 +577,16 @@ contains
            call tr_debug_writei("smn_C_mumps_par%n",mumps_par%n)
            call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
         end if
-        if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
-        if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
-        if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+
+        if (n_cpu_n>1) then
+          if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+          if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+          if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+        else
+          mumps_par%A => null()
+          mumps_par%irn => null()
+          mumps_par%jcn => null()
+        endif
 
         call tr_locvnorms("smn_rhs",mumps_par%rhs,mumps_par%n)
 
@@ -758,9 +765,16 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       endif
 
       call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,spss_analyzed)
-      call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
-      call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
-      call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+
+      if (n_cpu_n>1) then
+        call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+        call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+        call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+      else
+        mumps_par%a => null()
+        mumps_par%irn => null()
+        mumps_par%jcn => null()
+      endif 
 
       if (.not. spss_analyzed) then
         call strumpack_analyze(MPI_COMM_N)

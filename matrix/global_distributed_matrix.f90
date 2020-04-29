@@ -8,18 +8,26 @@ module global_distributed_matrix
   
   public
   
+  ! --- The global distributed matrix and related quantities
   real*8,  allocatable, target  :: A_glob(:)    !< Distributed global matrix
   real*8,  allocatable, target  :: rhs_glob(:)  !< Distributed global right hand side
   integer, allocatable, target  :: irn_glob(:)  !< Row indices for coordinate format sparse matrix (or CSR)
   integer, allocatable, target  :: jcn_glob(:)  !< Column indices for coordinate format sparse matrix (or CSR)
-  integer, allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) !< contains the structure of the sparse matrix (to fill in CSR format)
-  real*8,  allocatable :: deltas(:)                                 !< solution from previous step
-  real*8,  allocatable :: column_scaling(:)                         !< column scaling of the global matrix
-  integer, allocatable :: local_index_start(:), local_index_end(:)  !< range of indices local to one MPI process 
-  integer              :: ndof_glob, n_glob, nz_glob
-  integer              :: n_matrix_block_size                       !< Size of a matrix block (n_var x n_tor)
+  integer, allocatable, target  :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) !< contains the structure of the sparse matrix (to fill in CSR format)
+  real*8,  allocatable          :: deltas(:)                                 !< solution from previous step
+  real*8,  allocatable          :: column_scaling(:)                         !< column scaling of the global matrix
+  integer, allocatable          :: local_index_start(:), local_index_end(:)  !< range of indices local to one MPI process 
+  integer                       :: ndof_glob, n_glob, nz_glob
+  integer                       :: n_matrix_block_size                       !< Size of a matrix block (n_var x n_tor)
   
-  
+  ! --- The distributed harmonic matrix (in case of direct construction)
+  integer, allocatable, target  :: ijA_index_harm(:,:), ijA_size_harm(:), irn_jcn_harm(:,:) !< contains the structure of the harmonic sparse matrix (to fill in CSR format)
+  real*8,  allocatable, target  :: A_harm(:)    !< Distributed harmonic matrix
+  real*8,  allocatable, target  :: rhs_harm(:)  !< Distributed harmonic right hand side
+  integer, allocatable, target  :: irn_harm(:)  !< Row indices for coordinate format harmonic sparse matrix (or CSR)
+  integer, allocatable, target  :: jcn_harm(:)  !< Column indices for coordinate format harmonic sparse matrix (or CSR)
+  integer                       :: n_matrix_block_size_harm                       !< Size of a harmonic matrix block (n_var x n_tor)
+  integer                       :: ndof_harm, n_harm, nz_harm                       
   
   contains
   

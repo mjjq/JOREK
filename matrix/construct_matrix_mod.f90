@@ -327,18 +327,18 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer, intent(in) :: nz
   integer, intent(in) :: ndof
   logical, intent(in) :: harmonic_matrix
-  real*8,  intent(in), pointer :: A_mat(:)
-  real*8,  intent(in), pointer :: rhs(:)
-  integer, intent(in), pointer :: irn(:)
-  integer, intent(in), pointer :: jcn(:)
-  integer, intent(in), pointer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+  real*8,  intent(inout), allocatable :: A_mat(:)
+  real*8,  intent(inout), allocatable :: rhs(:)
+  integer, intent(inout), allocatable :: irn(:)
+  integer, intent(inout), allocatable :: jcn(:)
+  integer, intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
   
   !--- Internal variables
   type (type_element)               :: element
   type (type_node)                  :: nodes(n_vertex_max)
   type (type_element)               :: element_father
   type (type_node)                  :: nodes_father(n_vertex_max)
-  real*8,                  pointer  :: rhs_local(:)
+  real*8,              allocatable  :: rhs_local(:)
   integer                           :: i_bnd, i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
   integer                           :: index_node1, index_node2, i_order, k_order, ielm, ierr
   integer                           :: ijA_position, index_min_loc, index_max_loc
@@ -406,15 +406,15 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   endif ! (.not. harmonic_matrix)
 
   ! --- Memory allocation
-  if (associated(A_mat))   call tr_deallocatep(A_mat,"A_mat",CAT_DMATRIX) 
-  call tr_allocatep(A_mat,1,nz,"A_mat",  CAT_DMATRIX)
+  if (allocated(A_mat))   call tr_deallocate(A_mat,"A_mat",CAT_DMATRIX) 
+  call tr_allocate(A_mat,1,nz,"A_mat",  CAT_DMATRIX)
   A_mat = 0.0d0
 
-  if (associated(rhs)) call tr_deallocatep(rhs,"rhs",CAT_DMATRIX) 
-  call tr_allocatep(rhs, 1,ndof,"rhs", CAT_DMATRIX)
+  if (allocated(rhs)) call tr_deallocate(rhs,"rhs",CAT_DMATRIX) 
+  call tr_allocate(rhs, 1,ndof,"rhs", CAT_DMATRIX)
   rhs = 0.0d0 
 
-  call tr_allocatep(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
+  call tr_allocate(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
   
   ! --- Declare shared and private variables for omp
@@ -744,7 +744,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
   endif 
 
-  call tr_deallocatep(RHS_local,"RHS_local",CAT_DMATRIX)
+  call tr_deallocate(RHS_local,"RHS_local",CAT_DMATRIX)
      
   ! --- Memory tracking
   call tr_locvnorms("cm_BCRhs",RHS,ndof)

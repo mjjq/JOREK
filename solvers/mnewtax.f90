@@ -11,7 +11,7 @@ type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 
 real*8    :: r, s, x(2), FVEC(2),FJAC(2,2), ZPSI, ZPSIR, ZPSIS, ZPSIRS, ZPSIRR, ZPSISS
-real*8    :: tolf,tolx, errf, errx, temp, dis
+real*8    :: tolf,tolx, errf, errx, temp, dis, errf_init
 integer   :: ntrial, i, k, ifail, i_elm
 real*8    :: p(2)
 
@@ -38,6 +38,8 @@ do k=1,ntrial
   FJAC(2,2) = ZPSISS
 
   errf=abs(fvec(1))+abs(fvec(2))
+
+  if (k .eq. 1) errf_init = errf
 
   if (errf .le. tolf) then
     r = x(1)
@@ -74,5 +76,11 @@ do k=1,ntrial
 
 enddo
 
+if (errf .lt. errf_init) then
+  r = x(1)
+  s = x(2)
+endif
+
 return
 end
+

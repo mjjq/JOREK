@@ -1785,7 +1785,7 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer             :: i_file, i_spi
+    integer             :: i_file, i_spi, units
     character(len=1024) :: filename, status, access
     
     ierr = 0
@@ -1793,6 +1793,9 @@ module exec_commands
     ! --- Some checks
     call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
     
     write(filename,'(4a)') DIR, 'shards', trim(step_range_string(index_start,index_start)), '.txt'
 
@@ -1801,8 +1804,16 @@ module exec_commands
     call open_ascii_file(ierr, i_file, filename, .false.)
 
     do i_spi = 1, n_spi
-      write(i_file,'(i7,3f12.3,1f12.6)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
-        pellets(i_spi)%spi_radius
+    
+      call eval_expr(ES, units, expr_list,  &
+        pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
+        tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)
+
+      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+    	
+      write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
+        pellets(i_spi)%spi_radius, res0d
+
     enddo
     
     close(i_file)

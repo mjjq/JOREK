@@ -7,6 +7,7 @@ use data_structure
 use grid_xpoint_data
 use mod_interp
 use phys_module, only:   SDN_threshold
+use equil_info,  only:   ES
 
 implicit none
 
@@ -44,6 +45,9 @@ if (my_id == 0) then
 endif
 !write(*,*) ' n_psi : ',surface_list%n_psi
 !write(*,*) ' values : ',surface_list%psi_values(1),surface_list%psi_values(surface_list%n_psi)
+
+psi_xpoint = ES%psi_xpoint;    R_xpoint = ES%R_xpoint;    Z_xpoint = ES%Z_xpoint
+s_xpoint   = ES%s_xpoint;      t_xpoint = ES%t_xpoint
 
 if (allocated(surface_list%flux_surfaces)) then
    call tr_unregister_mem(sizeof(surface_list%flux_surfaces),"surface_list%flux_surfaces")

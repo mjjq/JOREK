@@ -28,8 +28,11 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
-  eta       = 1.d-5
-  eta_ohmic = 0.d0
+  eta           = 1.d-5
+  T_max_eta     = 1.d3
+  eta_ohmic     = 0.d0
+  T_max_eta_ohm = 1.d3
+
   visco = 1.d-5
   visco_par = 1.d-5
   
@@ -49,10 +52,11 @@ subroutine preset_parameters
   freeb_change_indices = .true. ! exchange grid node indices to parallelize boundary integral
 
   bc_natural_flux    = .false.! boundary conditions for flux surface boundaries (2 and 3)
-  bc_natural_open    = .false.! use sheath (Bohm) boundary conditions
+  bc_natural_open    = .false. ! use sheath (Bohm) boundary conditions
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid)
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
-  
+  mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
+
   amix                 = 0.d0
   amix_freeb           = 0.85d0
   equil_accuracy       = 1.d-6
@@ -281,6 +285,7 @@ subroutine preset_parameters
   gmres_4            = 1.d3                 ! error estimate GMRES (ratio preconditioned versus non-preconditioned error
   gmres_m            = 20                   ! gmres restart parameter
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
+  centralize_harm_mat= .true.               ! centralize harmonic matrices on toroidal master rank 
   
   ! --- deprecated, code will stop if these parameters are set to .true. ---
   use_murge          = .false.
@@ -302,6 +307,13 @@ subroutine preset_parameters
   
   grid_to_wall       = .false.              ! extend the grid to a physical wall
   RZ_grid_inside_wall= .false.              ! build the rectangular grid inside first wall
+  
+  ! --- Option to manipulate psi_boundary, switched off by default
+  manipulate_psi_map(:,1) = 0.
+  manipulate_psi_map(:,2) = 99.
+  manipulate_psi_map(:,3) = 99.
+  manipulate_psi_map(:,4) = 0.1
+  manipulate_psi_map(:,5) = 0.1
   
   adaptive_time      = .false.              ! requires no_mpi for Pastix library
   

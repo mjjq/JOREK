@@ -47,7 +47,7 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: eq_ss, eq_st,
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: delta_g, delta_s, delta_t
 
 ! --- Variables outside the OMP loop
-integer    :: n_tor_start, n_tor_end
+integer    :: n_tor_start, n_tor_end, n_tor_local
 integer    :: i, j, index, index_k, index_m, i_v, j_loc, i_loc, m, ik
 integer    :: in, im, ivar, kvar, ms, mt, mp
 real*8     :: wst, xjac, xjac_R, xjac_Z, R, Z, theta, zeta
@@ -282,6 +282,8 @@ else
   n_tor_start = i_tor_min
   n_tor_end   = i_tor_max
 end if
+
+n_tor_local = n_tor_end - n_tor_start +1
 
 ! --- Toroidal basis functions
 if (use_fft) then
@@ -1092,12 +1094,12 @@ do i=1,n_vertex_max
                 RHS_k(mp,ij)   =  RHS_k(mp,ij) + RHS_k_ij(ivar) * wst * R * xjac
               enddo
             else
-              index_ij = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(i-1) + (n_tor_end - n_tor_start +1)*n_var*(j-1) + im - n_tor_start +1
+              index_ij = n_tor_local*n_var*(n_order+1)*(i-1) + n_tor_local*n_var*(j-1) + im - n_tor_start +1
               do ivar= 1,n_var
                 RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar)
                 RHS_k_ij(ivar) = tstep * Qvec_k(ivar)
 
-                ij = index_ij + (ivar-1)*(n_tor_end - n_tor_start +1)
+                ij = index_ij + (ivar-1)*n_tor_local
                 RHS(ij)        =  RHS(ij) + (RHS_p_ij(ivar) + RHS_k_ij(ivar)) * wst * R * xjac
               enddo
             endif
@@ -2255,11 +2257,11 @@ do i=1,n_vertex_max
                       enddo
                     enddo
                   else
-                    index_kl = (n_tor_end - n_tor_start + 1)*n_var*(n_order+1)*(k-1) + (n_tor_end - n_tor_start + 1)*n_var*(l-1) + in - n_tor_start +1
+                    index_kl = n_tor_local*n_var*(n_order+1)*(k-1) + n_tor_local*n_var*(l-1) + in - n_tor_start +1
                     do ivar= 1,n_var
                       do kvar= 1,n_var
-                        ij = index_ij + (ivar-1) * (n_tor_end - n_tor_start + 1)
-                        kl = index_kl + (kvar-1) * (n_tor_end - n_tor_start + 1)
+                        ij = index_ij + (ivar-1) * n_tor_local
+                        kl = index_kl + (kvar-1) * n_tor_local
 
                         amat(ivar,kvar) = (1.d0+zeta)*Pjac(ivar,kvar) - tstep * theta * Qjac_p(ivar,kvar)
                         ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac

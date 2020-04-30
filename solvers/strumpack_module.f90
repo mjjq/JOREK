@@ -40,7 +40,7 @@ module strumpack_module
       type(c_ptr), intent(inout) :: spss
       logical :: upd
     end subroutine spk_set_mat    
-    
+
     subroutine spk_reord(spss,comm) bind(C)
       use iso_c_binding
       use mpi            
@@ -118,7 +118,7 @@ module strumpack_module
 
         integer(kind=C_INT), dimension(:), pointer :: myelm
         logical :: upd=.false., dflag=.false.
-
+        
         integer :: rank, ncpu, nnzloc, nloc, i, j, indx=1
 
         if(present(update)) upd = update
@@ -156,7 +156,6 @@ module strumpack_module
           call spk_set_mat(nloc,dist,irnl,jcnl,vall,spss,comm,upd)
           deallocate(myelm,irnl,jcnl,vall)
 
-#ifdef DISTRIBUTEDA
         elseif (dflag.and.(ncpu>1)) then
            ! get row distribution from irn
 
@@ -188,7 +187,6 @@ module strumpack_module
         
           call spk_set_mat(nloc,dist,irn,jcn,val,spss,comm,upd)
 
-#endif
         else
 
           call distribute_rows(n,1)

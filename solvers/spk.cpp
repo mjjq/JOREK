@@ -100,17 +100,17 @@ extern "C" void spk_set_mat(int* n_, int** dist_, int** irn_, int** jcn_, double
   std::chrono::steady_clock::time_point t0, t1; 
 
 #ifdef NEWSPK
-  if (upd){
-    std::cout<<"Updating matrix values"<<std::endl;
+		if (upd){
+			std::cout<<"Updating matrix values"<<std::endl;
     bool symmetric_pattern = true;
     spss->update_matrix_values(n, irn, jcn, val, dist, symmetric_pattern);
-  }else
+		}else
 #endif
-  {
+		{
     spss->set_distributed_csr_matrix(n, irn, jcn, val, dist);
-  }
+		}
 
-  return;
+	return;
 }
 //===============================================================================//
 extern "C" void spk_reord(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fint* comm_) {

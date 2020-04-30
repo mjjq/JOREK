@@ -10,8 +10,10 @@ module phys_module
   !> @name Various parameters
   real*8  :: eta                  !< Resistivity at plasma cener (normalized)
   real*8  :: eta_T_0              !< Initial resistivity
-  real*8  :: eta_ohmic            !< Resistivity at core for the ohmic heating term
-  logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant.
+  real*8  :: eta_ohmic            !< Resistivity at core for the Ohmic heating term
+  logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant
+  real*8  :: T_max_eta            !< Temperature above which the resistivity is truncated (use with care; only for numerical reasons)
+  real*8  :: T_max_eta_ohm        !< Temperature above which the resistivity used in the Ohmic heating term is truncated (use with care; only for numerical reasons)
   real*8  :: visco                !< Viscosity at plasma center (normalized)
   real*8  :: visco_rst            !< visco value from restart file
   real*8  :: visco_par_rst        !< visco_par value from restart file
@@ -32,6 +34,7 @@ module phys_module
   logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
   real*8  :: gamma_sheath         !< sheath boundary condition on open fieldlines
   real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
+  logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
@@ -51,6 +54,7 @@ module phys_module
   logical :: produce_live_data    !< Write data 'macroscopic_vars.dat' during the code run allowing to use plot_live_data.sh?
   logical :: grid_to_wall         !< extend the grid to a physical wall
   logical :: RZ_grid_inside_wall  !< build the rectangular grid inside first wall
+  real*8  :: manipulate_psi_map(5,5) !< Option to manipulate Psi_boundary for the initial grid
   logical :: adaptive_time        !< (presently not useful)
   logical :: equil                !< compute equilibrium
   logical :: parallel_projection  !< Full-MHD: use B-projection instead of Phi-projection for 3rd Mom.equation (on Up)
@@ -72,6 +76,7 @@ module phys_module
   logical :: use_pastix           !< Use Pastix solver
   logical :: use_strumpack        !< Use Strumpack solver
   logical :: use_wsmp             !< Use WSMP solver
+  logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks
 
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"
@@ -550,7 +555,7 @@ module phys_module
     Magwork_tot_t(:), thmwork_tot_t(:), viscopar_dissip_tot_t(:), viscopar_flux_t(:), li3_t(:),      &
     li3_tot_t(:), part_src_tot_t(:), heat_src_tot_t(:), volume_t(:), area_t(:), mag_ener_src_tot(:), &
     dpart_tot_dt(:), part_flux_Dpar_t(:), part_flux_Dperp_t(:), part_flux_vpar_t(:), part_flux_vperp_t(:), & 
-    dnpart_tot_dt(:), npart_tot_t(:), npart_flux_t(:), density_tot_t(:)
+    dnpart_tot_dt(:), npart_tot_t(:), npart_flux_t(:), density_tot_t(:), flux_poynting_t(:)
 
   !> @name gmres parameters
   integer             :: iter_precon    !< whenever the number of gmres iterations exceeds iter_precon, the preconditioning matrix is updated

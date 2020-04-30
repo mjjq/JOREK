@@ -1,7 +1,7 @@
 module mod_global_matrix_structure
 contains
 subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max,& 
-  ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, i_tor_min, i_tor_max, n_glob, nz_glob, ndof, n_matrix_block_size)
+  ijA_index, ijA_size, irn_jcn, irn, jcn, i_tor_min, i_tor_max, n, nz, ndof, n_matrix_block_size)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
   !* matrix                                                              *
@@ -20,15 +20,15 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   type (type_element)          :: element
   type (type_node)             :: nodes(n_vertex_max)
 
-  integer :: local_elms(*), index_min, index_max, my_id, my_id_n, n_local_elms
+  integer :: local_elms(*), index_min, index_max, my_id, my_id_n, n_local_elms, n_tor_local
   integer :: i, ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2, index1, index2, index1_local, index2_local
   integer :: j_larger, j, ibase, n_max
-  integer :: inode,i_father,maxsize,i_tor_min, i_tor_max, n_glob, nz_glob, n_matrix_block_size, ndof
+  integer :: inode,i_father,maxsize,i_tor_min, i_tor_max, n, nz, n_matrix_block_size, ndof
   integer, dimension(n_vertex_max) ::  node_out
   logical :: freeboundary
   integer, allocatable :: tmp(:,:)
   integer, allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-  integer, allocatable :: irn_glob(:), jcn_glob(:)
+  integer, allocatable :: irn(:), jcn(:)
 
   if ( my_id == 0 ) then
     write(*,*) '**********************************'
@@ -36,14 +36,15 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
     write(*,*) '**********************************'
     if ( freeboundary .and. (sr%n_tor/=0) ) write(*,*) ' FREEBOUNDARY is ON'
   end if
-  
-  n_matrix_block_size = (i_tor_max - i_tor_min +1)*n_var
+ 
+  n_tor_local = i_tor_max - i_tor_min +1 
+  n_matrix_block_size = n_tor_local*n_var
 
   ndof = -1
   do inode1=1,node_list%n_nodes
      ndof = max(ndof,maxval(node_list%node(inode1)%index))
   enddo
-  ndof = ndof * (i_tor_max - i_tor_min +1)*n_var
+  ndof = ndof * n_tor_local*n_var
 
   n_max = 8192
 
@@ -258,24 +259,24 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
 
         ijA_index(i,j) = ibase + 1
 
-        ibase = ibase + ((i_tor_max - i_tor_min +1)*n_var)**2
+        ibase = ibase + (n_tor_local*n_var)**2
 
      enddo
 
   enddo
 
-  n_glob  = (index_max-index_min+1) * (i_tor_max - i_tor_min +1)*n_var
+  n  = (index_max-index_min+1) * n_tor_local*n_var
 
-  nz_glob = ijA_index(index_max-index_min+1,ijA_size(index_max-index_min+1)) + ((i_tor_max - i_tor_min +1)*n_var)**2 - 1
+  nz = ijA_index(index_max-index_min+1,ijA_size(index_max-index_min+1)) + (n_tor_local*n_var)**2 - 1
   
-  if (.not. allocated(irn_glob))  call tr_allocate(irn_glob,1,nz_glob,"irn_glob",CAT_DMATRIX)
-  if (.not. allocated(jcn_glob))  call tr_allocate(jcn_glob,1,nz_glob,"jcn_glob",CAT_DMATRIX)
+  if (.not. allocated(irn))  call tr_allocate(irn,1,nz,"irn",CAT_DMATRIX)
+  if (.not. allocated(jcn))  call tr_allocate(jcn,1,nz,"jcn",CAT_DMATRIX)
   
-  irn_glob = 0
-  jcn_glob = 0
+  irn = 0
+  jcn = 0
 
   !---- for debugging purpose
-  write(*,'(2i6,a,2i12)') my_id, my_id_n, ' size matrices : n, nz = ', n_glob, nz_glob
+  write(*,'(2i6,a,2i12)') my_id, my_id_n, ' size matrices : n, nz = ', n, nz
   !write(*,'(2i6,a,2i12)') my_id, my_id_n, ' ndof = ', ndof
   !write(*,'(2i6,a,2i12)') my_id, my_id_n, ' index_min, index_max = ', index_min, index_max
   !write(*,'(2i6,a,2i12)') my_id, my_id_n, ' n_local_elms = ', n_local_elms

@@ -59,22 +59,11 @@ contains
     n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm)
  
   ! --- Memory allocation
-  if (allocated(A_harm))    call tr_deallocate(A_harm,"A_harm",CAT_DMATRIX) 
-  call tr_allocate(A_harm,1,nz_harm,"A_harm",  CAT_DMATRIX)
-
   if (allocated(irn_harm))  call tr_deallocate(irn_harm,"irn_harm",CAT_DMATRIX)
   call tr_allocate(irn_harm,1,nz_harm,"irn_harm",  CAT_DMATRIX)
  
   if (allocated(jcn_harm))  call tr_deallocate(jcn_harm,"jcn_harm",CAT_DMATRIX)
   call tr_allocate(jcn_harm,1,nz_harm,"jcn_harm",  CAT_DMATRIX) 
-
-  if (allocated(rhs_harm))  call tr_deallocate(rhs_harm,"rhs_harm",CAT_DMATRIX)
-  call tr_allocate (rhs_harm,1,ndof_harm,"rhs_harm",CAT_DMATRIX)
-
-  A_harm     = 0.0d0 
-  rhs_harm   = 0.0d0 
-  irn_harm   = 0
-  jcn_harm   = 0
 
   call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master,                &
     local_elms_harm, n_local_elms_harm, index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint2,&

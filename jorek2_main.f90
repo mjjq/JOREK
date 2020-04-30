@@ -3,7 +3,8 @@
 !! - solvers implemented:
 !!   - MUMPS
 !!   - PastiX
-!!   - GMRES (+MUMPS or PastiX preconditioner)
+!!   - STRUMPACK
+!!   - GMRES (+MUMPS, PastiX or STRUMPACK preconditioner)
 !!
 !! - required libraries :
 !!   - MPI
@@ -385,6 +386,18 @@ required = 0
       stop
     end if
   end if
+  if (.not. centralize_harm_mat) then
+#ifndef DIRECT_CONSTRUCTION
+    write(*,*) 'FATAL : distributed harmonic matrix (centralize_harm_mat=.f.) requres DIRECT_CONSTRUCTION=1'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+#endif
+    if (.not. use_strumpack ) then
+      write(*,*) 'FATAL : distributed harmonic matrix (centralize_harm_mat=.f.) requres use_strumpack'
+      call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+      stop
+    endif
+  end if  
   if ( iand(n_plane,n_plane-1) /= 0 ) then
     write(*,*) 'WARNING: n_plane is not a power of two. This might be inefficient.'
     write(*,*) '  When using FFTW, it is possible to run like this, but it might not be fast.'
@@ -395,12 +408,18 @@ required = 0
     write(*,*) '  of MPI tasks and reducing the number of OpenMP threads in the jobscript.'
   end if
   if ((jorek_model==199) .or. (jorek_model==303)) then
-    if (abs(eta-eta_ohmic)/(eta+eta_ohmic) > 1.d-6) then
+    if (abs(eta-eta_ohmic)/(eta+eta_ohmic+1.d-12) > 1.d-6) then
       write(*,*) 'WARNING: The resistivity eta and the resistivity used for Ohmic heating '
       write(*,*) '  eta_ohm are not the same. No problem if you know what you are doing,  ' 
       write(*,*) '  but with this setup you are not conserving energy.   '
     endif
   endif
+  if (abs(T_max_eta-T_max_eta_ohm)/(T_max_eta+T_max_eta_ohm) > 1.d-6) then
+    write(*,*) 'WARNING: T_max_eta and T_max_eta_ohm are not the same, which breaks  &
+        energy conservation. No problem if you know what you are doing (a good reason to &
+	do this could be to avoid spurious Ohmic heating in the plasma core).'
+  end if
+
 #ifndef USE_BLOCK
   write(*,*) 'WARNING: You are not using USE_BLOCK=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_BLOCK=1 in your Makefile.inc'
@@ -483,8 +502,8 @@ required = 0
 
   ! This is necessary for the parallel vacuum version during the code restart 
   if(restart) then
-    call MPI_BCAST(wall_curr_initialized, 1 , MPI_LOGICAl,          0, MPI_COMM_WORLD, ierr)
-    call MPI_BCAST(tstep,                 1 , MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call broadcast_phys(my_id)  
+    if(freeboundary) call broadcast_vacuum(my_id, resistive_wall)
   end if
   call populate_element_rtree(node_list, element_list)
   

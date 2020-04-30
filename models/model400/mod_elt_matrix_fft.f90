@@ -74,7 +74,7 @@ contains
     ! --- Integration weight
     real*8     :: wst
     logical    :: use_fft   
-    integer    :: n_tor_start, n_tor_end 
+    integer    :: n_tor_start, n_tor_end, n_tor_local 
     ! --- Initialise rhs and lhs terms
     rhs_tmp  = 0.d0; rhs_k_tmp  = 0.d0
     amat_tmp = 0.d0; amat_k_tmp = 0.d0; amat_n_tmp = 0.d0; amat_kn_tmp = 0.d0
@@ -113,7 +113,8 @@ contains
       n_tor_start = i_tor_min
       n_tor_end   = i_tor_max
     end if
-
+    
+    n_tor_local = n_tor_end - n_tor_start + 1
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!! Begin integration loop over Gaussian integration points !!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -135,14 +136,13 @@ contains
 
     	    do i_order =1,n_order+1
 
-    	      do i_tor =n_tor_start, n_tor_end!1,n_tor_loop
+    	      do i_tor =n_tor_start, n_tor_end
 
     		! --- Index in the ELM matrix	    
     		if (use_fft) then
     		  index_ij =       n_var*(n_order+1)*(i_vertex-1) +       n_var*(i_order-1) + 1
     		else
-    		  index_ij = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(i_vertex-1) + & 
-                             (n_tor_end - n_tor_start +1)*n_var*(i_order-1) + i_tor - n_tor_start +1
+    		  index_ij = n_tor_local*n_var*(n_order+1)*(i_vertex-1) + n_tor_local*n_var*(i_order-1) + i_tor - n_tor_start +1
     		endif
 		
 	        call ELM_build_test_functions(element, nodes, ms, mt, i_plane, i_vertex, i_order, i_tor, &
@@ -169,13 +169,13 @@ contains
     		! --- Fill up the matrix
     		if (use_fft) then
     		  do i_ij =1,n_var
-		    ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start +1)
+		    ij_tmp = index_ij + (i_ij-1)*n_tor_local
 		    RHS_p(i_plane,ij_tmp) = RHS_p(i_plane,ij_tmp) + rhs_tmp  (i_ij) * wst
 		    RHS_k(i_plane,ij_tmp) = RHS_k(i_plane,ij_tmp) + rhs_k_tmp(i_ij) * wst
 		  enddo
     		else
     		  do i_ij =1,n_var
-		    ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start +1)
+		    ij_tmp = index_ij + (i_ij-1)*n_tor_local
     		    RHS(ij_tmp) = RHS(ij_tmp) + (rhs_tmp(i_ij) + rhs_k_tmp(i_ij)) * wst
 		  enddo
     		endif
@@ -185,14 +185,13 @@ contains
 
     		  do j_order =1,n_order+1
 
-    		    do j_tor =n_tor_start, n_tor_end!1,n_tor_loop2
+    		    do j_tor =n_tor_start, n_tor_end
 
     		      ! --- Index in the ELM matrix
     		      if (use_fft) then
     			index_kl =       n_var*(n_order+1)*(j_vertex-1) +       n_var*(j_order-1) + 1
     		      else
-    			index_kl = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(j_vertex-1) + & 
-                                   (n_tor_end - n_tor_start +1)*n_var*(j_order-1) + j_tor - n_tor_start +1
+    			index_kl = n_tor_local*n_var*(n_order+1)*(j_vertex-1) + n_tor_local*n_var*(j_order-1) + j_tor - n_tor_start +1
     		      endif
 
 		      call ELM_build_test_functions(element, nodes, ms, mt, i_plane, j_vertex, j_order, j_tor,  &
@@ -248,7 +247,7 @@ contains
     		  	do i_ij =1,n_var
 		  	  ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start+1)
     		  	  do i_kl =1,n_var
-		  	    kl_tmp = index_kl + (i_kl-1)*(n_tor_end - n_tor_start +1)
+		  	    kl_tmp = index_kl + (i_kl-1)*n_tor_local
     			    ELM_p (i_plane,ij_tmp,kl_tmp) = ELM_p (i_plane,ij_tmp,kl_tmp) + wst * amat_tmp   (i_ij,i_kl)
     			    ELM_k (i_plane,ij_tmp,kl_tmp) = ELM_k (i_plane,ij_tmp,kl_tmp) + wst * amat_k_tmp (i_ij,i_kl)
     			    ELM_n (i_plane,ij_tmp,kl_tmp) = ELM_n (i_plane,ij_tmp,kl_tmp) + wst * amat_n_tmp (i_ij,i_kl)
@@ -257,9 +256,9 @@ contains
 		  	enddo
     		      else
     		  	do i_ij =1,n_var
-		  	  ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start +1)
+		  	  ij_tmp = index_ij + (i_ij-1)*n_tor_local
     		  	  do i_kl =1,n_var
-		  	    kl_tmp = index_kl + (i_kl-1)*(n_tor_end - n_tor_start +1)
+		  	    kl_tmp = index_kl + (i_kl-1)*n_tor_local
     			    ELM(ij_tmp,kl_tmp) = ELM(ij_tmp,kl_tmp) + (amat_tmp(i_ij,i_kl) + amat_k_tmp(i_ij,i_kl) + amat_n_tmp(i_ij,i_kl) + amat_kn_tmp(i_ij,i_kl)) * wst
 		  	  enddo
 		  	enddo

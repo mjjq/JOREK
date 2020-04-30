@@ -11,14 +11,15 @@ CC = mpiicc
 CXX = mpiicpc
 
 # Solvers dependencies
-USE_HIPS         = 0
-USE_PASTIX       = 0
-USE_BLOCK        = 0
-USE_MUMPS        = 1
-USE_STRUMPACK    = 1
-USE_FFTW         = 1
-USE_HDF5         = 1
-DEFINES          = -DDIRECT_CONSTRUCTION
+USE_HIPS                = 0
+USE_PASTIX              = 0
+USE_BLOCK               = 0
+USE_MUMPS               = 1
+USE_STRUMPACK           = 1
+USE_FFTW                = 1
+USE_HDF5                = 1
+USE_DIRECT_CONSTRUCTION = 1
+
 # Directory containing the user-compiled libraries (e.g., MUMPS, PASTIX, ...)
 LIBDIR = $(HOME)/lib
 

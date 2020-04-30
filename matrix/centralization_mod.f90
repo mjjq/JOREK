@@ -11,6 +11,7 @@ contains
   use global_distributed_matrix
   use mumps_module  
   use mpi_mod
+  use phys_module, only: centralize_harm_mat
   
   implicit none
   
@@ -22,79 +23,73 @@ contains
   integer                      :: nz_total, i, ierr
   
  
-#ifdef DISTRIBUTEDA
-! hijacking the subtoutine to assign distributed values to global
-  mumps_par%nz  = nz_harm
-  mumps_par%n   = ndof_harm
-  mumps_par%A   => A_harm(1:mumps_par%nz)   
-  mumps_par%irn => irn_harm(1:mumps_par%nz)
-  mumps_par%jcn => jcn_harm(1:mumps_par%nz)
+  if (centralize_harm_mat) then
 
-  if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
-
-  do i = 1, mumps_par%n
-    mumps_par%rhs(i) = rhs_harm(i)
-  enddo  
-  call MPI_Barrier(MPI_COMM_N,ierr)
-
-  return
-#endif
-
-  allocate(nz_array  (n_cpu_n))
-  allocate(disp_array(n_cpu_n))
-    
-  ! --- Determine matrix dimension n and number of nonzeros nz
-  if (n_cpu_n > 1) then
-    call MPI_GATHER(nz_harm, 1, MPI_INTEGER, nz_array, 1, MPI_INTEGER, 0, MPI_COMM_N, ierr) 
-    disp_array = 0 
-    nz_total   = 0
-    if (my_id_n .eq. 0) then
-      do i = 2, n_cpu_n  
-        disp_array(i) = disp_array(i-1) + nz_array(i-1)
-      enddo  
-      nz_total = disp_array(n_cpu_n) + nz_array(n_cpu_n) 
-    endif 
-    mumps_par%nz  = nz_total   
-    mumps_par%n   = ndof_harm 
-  else
-    mumps_par%nz  = nz_harm
-    mumps_par%n   = ndof_harm
-  endif 
- 
-  ! --- Allocate arrays for centralized matrix
-  if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
+    allocate(nz_array  (n_cpu_n))
+    allocate(disp_array(n_cpu_n))
+      
+    ! --- Determine matrix dimension n and number of nonzeros nz
+    if (n_cpu_n > 1) then
+      call MPI_GATHER(nz_harm, 1, MPI_INTEGER, nz_array, 1, MPI_INTEGER, 0, MPI_COMM_N, ierr) 
+      disp_array = 0 
+      nz_total   = 0
+      if (my_id_n .eq. 0) then
+        do i = 2, n_cpu_n  
+          disp_array(i) = disp_array(i-1) + nz_array(i-1)
+        enddo  
+        nz_total = disp_array(n_cpu_n) + nz_array(n_cpu_n) 
+      endif 
+      mumps_par%nz  = nz_total   
+    else
+      mumps_par%nz  = nz_harm
+    endif
   
-  ! --- Centralize matrix (if it was not distributed, copy it into the right data structure)
-  if (n_cpu_n > 1) then
-    if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,  "dh_mumps_par%A",  CAT_DMATRIX)
-    if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
-    if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
-    call tr_allocatep(mumps_par%A,  1,mumps_par%nz,"dh_mumps_par%A",  CAT_DMATRIX)
-    call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
-    call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
+    ! --- Allocate arrays for centralized matrix
+    ! --- Centralize matrix (if it was not distributed, copy it into the right data structure)
+    if (n_cpu_n > 1) then
+      if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,  "dh_mumps_par%A",  CAT_DMATRIX)
+      if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
+      if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
+      call tr_allocatep(mumps_par%A,  1,mumps_par%nz,"dh_mumps_par%A",  CAT_DMATRIX)
+      call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
+      call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
+  
+      call MPI_GATHERV(A_harm, nz_harm, MPI_DOUBLE_PRECISION, mumps_par%A, nz_array, disp_array,&
+        MPI_DOUBLE_PRECISION, 0, MPI_COMM_N, ierr)
+  
+      call MPI_GATHERV(irn_harm, nz_harm, MPI_INTEGER, mumps_par%irn, nz_array, disp_array,&
+        MPI_INTEGER, 0, MPI_COMM_N, ierr)
+  
+      call MPI_GATHERV(jcn_harm, nz_harm, MPI_INTEGER, mumps_par%jcn, nz_array, disp_array,&
+        MPI_INTEGER, 0, MPI_COMM_N, ierr)
+    else 
+      mumps_par%A   => A_harm(1:mumps_par%nz)   
+      mumps_par%irn => irn_harm(1:mumps_par%nz)
+      mumps_par%jcn => jcn_harm(1:mumps_par%nz)
+    endif
 
-    call MPI_GATHERV(A_harm, nz_harm, MPI_DOUBLE_PRECISION, mumps_par%A, nz_array, disp_array,&
-      MPI_DOUBLE_PRECISION, 0, MPI_COMM_N, ierr)
-
-    call MPI_GATHERV(irn_harm, nz_harm, MPI_INTEGER, mumps_par%irn, nz_array, disp_array,&
-      MPI_INTEGER, 0, MPI_COMM_N, ierr)
-
-    call MPI_GATHERV(jcn_harm, nz_harm, MPI_INTEGER, mumps_par%jcn, nz_array, disp_array,&
-      MPI_INTEGER, 0, MPI_COMM_N, ierr)
-  else 
+    if ( allocated(nz_array) )   deallocate(nz_array)
+    if ( allocated(disp_array) ) deallocate(disp_array)
+  
+  else
+    ! assign distributed values to global
+    mumps_par%nz  = nz_harm
     mumps_par%A   => A_harm(1:mumps_par%nz)   
     mumps_par%irn => irn_harm(1:mumps_par%nz)
     mumps_par%jcn => jcn_harm(1:mumps_par%nz)
-  endif
+    
+  endif ! centralize_harm_mat
 
+  mumps_par%n   = ndof_harm
+  
+  if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%rhs,1,mumps_par%n, "dh_mumps_par%rhs",CAT_DMATRIX)
+  
   do i = 1, mumps_par%n
     mumps_par%rhs(i) = rhs_harm(i)
-  enddo
+  enddo  
   
-  if ( allocated(nz_array) )   deallocate(nz_array)
-  if ( allocated(disp_array) ) deallocate(disp_array)
+  call MPI_Barrier(MPI_COMM_N,ierr)
   
   end subroutine centralization_harmonic
 

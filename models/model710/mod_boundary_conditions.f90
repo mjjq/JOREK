@@ -40,30 +40,30 @@ contains
     implicit none
 
     ! Subroutine parameters
-    INTEGER                  :: my_id
-    INTEGER                  :: local_elms(*)
-    INTEGER                  :: n_local_elms
-    INTEGER                  :: index_min
-    INTEGER                  :: index_max
-    INTEGER                  :: xcase2
-    TYPE (type_node_list)    :: node_list
-    TYPE (type_element_list) :: element_list
-    TYPE (type_bnd_node_list):: bnd_node_list
-    logical                  :: xpoint2
-    REAL*8                   :: R_axis
-    REAL*8                   :: Z_axis
-    REAL*8                   :: psi_axis
-    REAL*8                   :: psi_bnd
-    REAL*8                   :: R_xpoint(2)
-    REAL*8                   :: Z_xpoint(2)
-    REAL*8                   :: psi_xpoint(2)
-    logical                  :: gmres
-    logical                  :: solve_only
-    real*8                   :: rhs_loc(*)
-    integer                  :: irn(:), jcn(:) 
-    real*8                   :: A_mat(:) 
-    integer,   intent(in)    :: i_tor_min, i_tor_max
-    integer, intent(in), pointer    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+    INTEGER,                   intent(in)   :: my_id
+    INTEGER,                   intent(in)   :: local_elms(*)
+    INTEGER,                   intent(in)   :: n_local_elms
+    INTEGER,                   intent(in)   :: index_min
+    INTEGER,                   intent(in)   :: index_max
+    INTEGER,                   intent(in)   :: xcase2
+    TYPE (type_node_list),     intent(in)   :: node_list
+    TYPE (type_element_list),  intent(in)   :: element_list
+    TYPE (type_bnd_node_list), intent(in)   :: bnd_node_list
+    logical,                   intent(in)   :: xpoint2
+    REAL*8,                    intent(in)   :: R_axis
+    REAL*8,                    intent(in)   :: Z_axis
+    REAL*8,                    intent(in)   :: psi_axis
+    REAL*8,                    intent(in)   :: psi_bnd
+    REAL*8,                    intent(in)   :: R_xpoint(2)
+    REAL*8,                    intent(in)   :: Z_xpoint(2)
+    REAL*8,                    intent(in)   :: psi_xpoint(2)
+    logical,                   intent(in)   :: gmres
+    logical,                   intent(in)   :: solve_only
+    real*8,                    intent(inout):: rhs_loc(*)
+    integer,                   intent(in)   :: i_tor_min, i_tor_max 
+    integer, pointer,          intent(in)   :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, pointer,          intent(in)   :: irn(:), jcn(:) 
+    real*8, pointer,           intent(in)   :: A_mat(:) 
 
     ! Internal parameters
     real*8  :: zbig, zbig_backup
@@ -71,10 +71,7 @@ contains
     integer :: index_large_i, index_node, index_node2, ielm
     integer :: ijA_position, ijA_position2, ilarge2
     integer :: ilarge_v(n_var), ilarge_vs(n_var)
-
-    integer :: loop_nbr, loop, cnt, cnt_prod
     integer :: ierr
-    logical :: is_local, only_count
     real*8  :: R, R_s, R_t, R_mid, R_cnt
     real*8  :: Z, Z_s, Z_t, Z_mid, Z_cnt
     real*8  :: xjac
@@ -96,7 +93,9 @@ contains
     real*8  :: beta, beta_T, beta_s, beta_s_T, beta_s_Ts
 
     real*8  :: Mach1, Mach1_U, Mach1_T, Mach1_s, Mach1_s_Us, Mach1_s_T, Mach1_s_Ts
+    integer :: n_tor_local
 
+    n_tor_local = i_tor_max - i_tor_min +1 
     zbig = 1.d12
     zbig_backup = zbig
 
@@ -138,26 +137,24 @@ contains
                   if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                     call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-                    index_large_i = (i_tor_max - i_tor_min +1) * n_var * (index_node - 1)
+                    index_large_i = n_tor_local * n_var * (index_node - 1)
 
-                    ilarge2 = ijA_position - 1 + ((k-1)*(i_tor_max - i_tor_min +1) +in-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) & 
-                      + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
+                    ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
 
-                    irn(ilarge2) =  (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                    jcn(ilarge2) =  (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
+                    irn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                    jcn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
                   endif
 
                   index_node = node_list%node(inode)%index(2)
                   if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                     call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-                    index_large_i = (i_tor_max - i_tor_min +1) * n_var * (index_node - 1)
+                    index_large_i = n_tor_local * n_var * (index_node - 1)
 
-                    ilarge2 = ijA_position - 1 + ((k-1)*(i_tor_max - i_tor_min +1) +in-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) & 
-                      + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
+                    ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
 
-                    irn(ilarge2) =  (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                    jcn(ilarge2) =  (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
+                    irn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                    jcn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
 
                   endif
 
@@ -262,24 +259,22 @@ contains
                       call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
                       call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
-                      index_large_i = (i_tor_max - i_tor_min +1) * n_var * (index_node - 1)
+                      index_large_i = n_tor_local * n_var * (index_node - 1)
                       
-                      ilarge_v (k)     = ijA_position  - 1 + ((k-1)*(i_tor_max - i_tor_min +1) +in-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) &
-                        + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      ilarge_v (var_T) = ijA_position  - 1 + ((k-1)*(i_tor_max - i_tor_min +1) +in-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) &
-                        + (var_T-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
+                      ilarge_v (k)     = ijA_position  - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
+                      ilarge_v (var_T) = ijA_position  - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (var_T-1)*n_tor_local + in - i_tor_min +1
 
-                      irn(ilarge_v(k))      = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      jcn(ilarge_v(k))      = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      A_mat  (ilarge_v(k))      = Zbig * Mach1_U
+                      irn(ilarge_v(k))   = n_tor_local * n_var * (index_node -1) + (k-1)*n_tor_local + in - i_tor_min +1
+                      jcn(ilarge_v(k))   = n_tor_local * n_var * (index_node -1) + (k-1)*n_tor_local + in - i_tor_min +1
+                      A_mat(ilarge_v(k)) = Zbig * Mach1_U
 
-                      irn(ilarge_v(var_T))  = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      jcn(ilarge_v(var_T))  = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (var_T-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      A_mat  (ilarge_v(var_T))  = Zbig * Mach1_T
+                      irn(ilarge_v(var_T))  = n_tor_local * n_var * (index_node -1) + (k-1)*n_tor_local + in - i_tor_min +1
+                      jcn(ilarge_v(var_T))  = n_tor_local * n_var * (index_node -1) + (var_T-1)*n_tor_local + in - i_tor_min +1
+                      A_mat(ilarge_v(var_T))= Zbig * Mach1_T
 
-                      RHS_loc((i_tor_max - i_tor_min +1)*n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1) = 0.d0
+                      RHS_loc(n_tor_local*n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1) = 0.d0
                       if (in .eq. 1) then
-                         RHS_loc((i_tor_max - i_tor_min +1)*n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1) = - Zbig * Mach1
+                         RHS_loc(n_tor_local*n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1) = - Zbig * Mach1
                       endif
 
                     endif
@@ -289,30 +284,27 @@ contains
                       call locate_irn_jcn(index_node2,index_node, index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
                       call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
-                      index_large_i = (i_tor_max - i_tor_min +1) * n_var * (index_node2 - 1)
+                      index_large_i = n_tor_local * n_var * (index_node2 - 1)
 
-                      ilarge_vs(k)     = ijA_position2 - 1 + ((k-1)*(i_tor_max - i_tor_min +1) +in-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) &
-                        + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      ilarge_v (var_T) = ijA_position  - 1 + ((k-1)*(i_tor_max - i_tor_min +1) +in-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) &
-                        + (var_T-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      ilarge_vs(var_T) = ijA_position2 - 1 + ((k-1)*(i_tor_max - i_tor_min +1) +in-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) &
-                        + (var_T-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
+                      ilarge_vs(k)     = ijA_position2 - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
+                      ilarge_v (var_T) = ijA_position  - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (var_T-1)*n_tor_local + in - i_tor_min +1
+                      ilarge_vs(var_T) = ijA_position2 - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (var_T-1)*n_tor_local + in - i_tor_min +1
 
-                      irn(ilarge_vs(k))     = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      jcn(ilarge_vs(k))     = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      A_mat  (ilarge_vs(k))     = Zbig * Mach1_s_Us
+                      irn(ilarge_vs(k))   = n_tor_local * n_var * (index_node2-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                      jcn(ilarge_vs(k))   = n_tor_local * n_var * (index_node2-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                      A_mat(ilarge_vs(k)) = Zbig * Mach1_s_Us
 
-                      irn(ilarge_v(var_T))  = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      jcn(ilarge_v(var_T))  = (i_tor_max - i_tor_min +1) * n_var * (index_node -1) + (var_T-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      A_mat  (ilarge_v(var_T))  = Zbig * Mach1_s_T
+                      irn(ilarge_v(var_T))  = n_tor_local * n_var * (index_node2-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                      jcn(ilarge_v(var_T))  = n_tor_local * n_var * (index_node -1) + (var_T-1)*n_tor_local + in - i_tor_min +1
+                      A_mat(ilarge_v(var_T))= Zbig * Mach1_s_T
 
-                      irn(ilarge_vs(var_T)) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      jcn(ilarge_vs(var_T)) = (i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (var_T-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                      A_mat  (ilarge_vs(var_T)) = Zbig * Mach1_s_Ts
+                      irn(ilarge_vs(var_T))   = n_tor_local * n_var * (index_node2-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                      jcn(ilarge_vs(var_T))   = n_tor_local * n_var * (index_node2-1) + (var_T-1)*n_tor_local + in - i_tor_min +1
+                      A_mat(ilarge_vs(var_T)) = Zbig * Mach1_s_Ts
 
-                      Rhs_loc((i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1) = 0.d0
+                      Rhs_loc(n_tor_local * n_var * (index_node2-1) + (k-1)*n_tor_local + in - i_tor_min +1) = 0.d0
                       if (in .eq. 1) then
-                         Rhs_loc((i_tor_max - i_tor_min +1) * n_var * (index_node2-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1) = - Zbig * Mach1_s
+                         Rhs_loc(n_tor_local * n_var * (index_node2-1) + (k-1)*n_tor_local + in - i_tor_min +1) = - Zbig * Mach1_s
                       endif
 
                     endif
@@ -339,13 +331,12 @@ contains
                   if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                     call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-                    index_large_i = (i_tor_max - i_tor_min +1) * n_var * (index_node - 1)
-                    ilarge2 = ijA_position - 1 + ((k-1)*(i_tor_max - i_tor_min +1) +in-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) &
-                        + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
+                    index_large_i = n_tor_local * n_var * (index_node - 1)
+                    ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
 
-                    irn(ilarge2) =  (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                    jcn(ilarge2) =  (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                    A_mat(ilarge2)   = zbig
+                    irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                    jcn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                    A_mat(ilarge2) = zbig
 
                   endif
 
@@ -353,13 +344,12 @@ contains
                   if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                     call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-                    index_large_i = (i_tor_max - i_tor_min +1) * n_var * (index_node - 1)
-                    ilarge2 = ijA_position - 1 + ((k-1)*(i_tor_max - i_tor_min +1) +in-i_tor_min) * n_var*(i_tor_max - i_tor_min +1) &
-                        + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
+                    index_large_i = n_tor_local * n_var * (index_node - 1)
+                    ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
 
-                    irn(ilarge2) =  (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                    jcn(ilarge2) =  (i_tor_max - i_tor_min +1) * n_var * (index_node-1) + (k-1)*(i_tor_max - i_tor_min +1) + in - i_tor_min +1
-                    A_mat(ilarge2)    = zbig
+                    irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                    jcn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                    A_mat(ilarge2) = zbig
                   end if
 
                 endif

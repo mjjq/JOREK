@@ -492,7 +492,7 @@ module mod_straight_field_line
           mapping%npts(k) = j
           do l = 0, mapping%npts(k)
             mapping%t2(k,l) = real(l) / ( mapping%npts(k) - &
-              ( ( mapping%tt(k,mapping%npts(k)) - mapping%tt(k,0) - 2.*PI ) / &
+              ( ( mapping%tt(k,mapping%npts(k)) - mapping%tt(k,0) - sign(2.*PI,mapping%tt(k,j)-mapping%tt(k,0)) ) / &
               ( mapping%tt(k,mapping%npts(k)) - mapping%tt(k,mapping%npts(k)-1) ) ) ) * 2.*PI
           end do
           if ( debug ) then 

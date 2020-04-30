@@ -41,7 +41,7 @@ real*8     :: eq_t(n_plane,n_var,n_gauss)
 real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
 integer    :: direction_perp(2), i, j, ms, mt, mp, k, l, index_ij, index_kl, index
-integer    :: j2, l2, j3, l3, is
+integer    :: j2, l2, j3, l3, is, n_tor_local
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: ws, xjac, BigR, phi, eps_cyl, Btot, Btot_psi
 real*8     :: rhs_ij_5, rhs_ij_6, rhs_ij_7
@@ -65,7 +65,6 @@ type (type_node)         :: tmp_node
 
 theta = time_evol_theta
 zeta  = time_evol_zeta
-
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_ss  = 0.d0; 
@@ -137,6 +136,7 @@ do i=1,2    ! sum over 2 verices
 enddo
 
 
+n_tor_local = i_tor_max - i_tor_min + 1
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss
 
@@ -205,7 +205,7 @@ do ms=1, n_gauss
 
         do im=i_tor_min, i_tor_max
 
-          index_ij = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(vertex(i)-1) + (i_tor_max - i_tor_min + 1) * n_var * (j2-1) + im - i_tor_min + 1  ! index in the ELM matrix
+          index_ij = n_tor_local*n_var*(n_order+1)*(vertex(i)-1) + n_tor_local * n_var * (j2-1) + im - i_tor_min + 1  ! index in the ELM matrix
 
           v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)         ! test function
 
@@ -215,8 +215,8 @@ do ms=1, n_gauss
           
           !rhs_ij_7 = - v * (vpar0 * Btot * normal_sign - cs0 * factor) * Zbig
 
-          ij5 = index_ij + 4*(i_tor_max - i_tor_min + 1)                                          ! local index in element matrix
-          ij6 = index_ij + 5*(i_tor_max - i_tor_min + 1)                                          ! local index in element matrix
+          ij5 = index_ij + 4*n_tor_local                                          ! local index in element matrix
+          ij6 = index_ij + 5*n_tor_local                                          ! local index in element matrix
           !ij7 = index_ij + 6*n_tor                                          ! local index in element matrix
 
 
@@ -266,12 +266,12 @@ do ms=1, n_gauss
                 !amat_77 =   v * (vpar  * Btot     * normal_sign) * Zbig
 
 
-                index_kl = (i_tor_max - i_tor_min + 1)*n_var*(n_order+1)*(vertex(k)-1) + (i_tor_max - i_tor_min + 1) * n_var * (l2-1) + in - i_tor_min + 1  ! index in the ELM matrix
+                index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l2-1) + in - i_tor_min + 1  ! index in the ELM matrix
                 
                 kl1 = index_kl
-                kl5 = index_kl + 4*(i_tor_max - i_tor_min + 1)
-                kl6 = index_kl + 5*(i_tor_max - i_tor_min + 1)
-                kl7 = index_kl + 6*(i_tor_max - i_tor_min + 1)
+                kl5 = index_kl + 4*n_tor_local
+                kl6 = index_kl + 5*n_tor_local
+                kl7 = index_kl + 6*n_tor_local
 
                 ELM(ij5,kl1) =  ELM(ij5,kl1) + ws * amat_51
                 ELM(ij5,kl5) =  ELM(ij5,kl5) + ws * amat_55

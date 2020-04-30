@@ -38,7 +38,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                tokamak_device,                                     &
+                tokamak_device, manipulate_psi_map,                 &
                 F0, gamma,                                          &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
@@ -88,7 +88,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd
+                pastix_maxthrd, centralize_harm_mat
 
 if (my_id .eq. 0) then
 
@@ -246,6 +246,9 @@ if (my_id .eq. 0) then
 
   if (allocated(flux_kinpar_t)) call tr_deallocate(flux_kinpar_t,"flux_kinpar_t",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(flux_kinpar_t,1,index_start+nstep,"flux_kinpar_t",CAT_UNKNOWN)
+
+  if (allocated(flux_poynting_t)) call tr_deallocate(flux_poynting_t,"flux_poynting_t",CAT_UNKNOWN)
+  if (nstep .gt. 0) call tr_allocate(flux_poynting_t,1,index_start+nstep,"flux_poynting_t",CAT_UNKNOWN)
 
   if (allocated(dE_tot_dt)) call tr_deallocate(dE_tot_dt,"dE_tot_dt",CAT_UNKNOWN)
   if (nstep .gt. 0) call tr_allocate(dE_tot_dt,1,index_start+nstep,"dE_tot_dt",CAT_UNKNOWN)

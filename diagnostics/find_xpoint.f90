@@ -6,7 +6,6 @@ use gauss
 use basis_at_gaussian
 use phys_module, only: tokamak_device
 use mod_interp
-use equil_info,  only: ES
 
 implicit none
 
@@ -42,8 +41,10 @@ endif
 ifail   = 1
 n_tries = 500
 
-psi_xpoint = ES%psi_xpoint;    R_xpoint = ES%R_xpoint;    Z_xpoint = ES%Z_xpoint
-s_xpoint   = ES%s_xpoint;      t_xpoint = ES%t_xpoint
+psi_xpoint = 0.
+R_xpoint   = 0.;    Z_xpoint = 0.
+s_xpoint   = 0.;    t_xpoint = 0.
+ielm_xpoint = 0
 
 allocate(grad_psi      (element_list%n_elements,4,4))            ! --- vector storing |grad_psi| at gaussian poitns
 allocate(include_pt_lw (element_list%n_elements,4,4))

@@ -117,6 +117,7 @@ module mod_expression
     call add(exprs_all, 'xjac        ', '2D Jacobian in the Poloidal Plane                     ')
     call add(exprs_all, 't           ', 'Simulation time                                       ')
     call add(exprs_all, 'Psi         ', 'Poloidal Magnetic Flux                                ')
+    call add(exprs_all, 'dPsi_dt     ', 'Time derivative of poloidal magnetic flux             ')
     call add(exprs_all, 'u           ', 'Velocity Stream Function                              ')
     call add(exprs_all, 'Phi         ', 'Electric Potential Phi                                ')
     call add(exprs_all, 'zj          ', 'Toroidal Current Density Multiplied by 1/R            ')
@@ -252,6 +253,7 @@ module mod_expression
     call add(exprs_all_int, 'qn_perp     ', 'Boundary flux of the perpendicular thermal conduction ')
     call add(exprs_all_int, 'sheath_heat ', 'Total heat flux (imposed by sheath BCs)               ')
     call add(exprs_all_int, 'kinpar_flux ', 'Boundary flux of parallel kinetic energy              ')
+    call add(exprs_all_int, 'Poynting_flx', 'Boundary flux of magnetic energy (Poynting flux)      ')
     call add(exprs_all_int, 'vispar_flux ', 'Boundary flux of parallel viscous energy              ')
     call add(exprs_all_int, 'Dpar_pt_flx ', 'Boundary flux of parallel particle diffusion          ')
     call add(exprs_all_int, 'Dperp_pt_flx', 'Boundary flux of perpendicular particle diffusion     ')
@@ -589,7 +591,7 @@ module mod_expression
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
-      ne0_20, ln_Lambda, ln_Lambda0
+      ne0_20, ln_Lambda, ln_Lambda0, dpsi_dt
     real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
     real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var)
@@ -1229,10 +1231,8 @@ module mod_expression
 #else
           neut_part_flux= 0.d0
 #endif    
-
-          ExB_norm      =   BB2 * (VperpR*nmlR + VperpZ*nmlZ)  &
-                        - eta_T * zj0 / (R**2.d0) * (ps0_R*nmlR + ps0_Z*nmlZ)
-
+          dpsi_dt   = BigR*(ps0_s*u0_t - ps0_t*u0_s)/xjac + eta_T*zj0 - F0*u0_p 
+          ExB_norm  = -dpsi_dt * (ps0_R*nmlR + ps0_Z*nmlZ) / (BigR**2.d0) 
          
           ! --- Other parameters (combination of the main variables)
           Er       = 0.d0
@@ -1426,6 +1426,9 @@ module mod_expression
                 
               case ( 'Psi' )
                 res = ps0
+ 
+              case ( 'dPsi_dt' )
+                res = dpsi_dt
                 
               case ( 'Psi_N' )
                 res = psi_norm

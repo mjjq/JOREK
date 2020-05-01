@@ -44,7 +44,7 @@ n_tries = 500
 psi_xpoint = 0.
 R_xpoint   = 0.;    Z_xpoint = 0.
 s_xpoint   = 0.;    t_xpoint = 0.
-ielm_xpoint = 0
+i_elm_xpoint = 0
 
 allocate(grad_psi      (element_list%n_elements,4,4))            ! --- vector storing |grad_psi| at gaussian poitns
 allocate(include_pt_lw (element_list%n_elements,4,4))

@@ -735,7 +735,7 @@ do ife = ife_min, ife_max
                           * bigR * xjac * wst * delta_phi
 #endif
 
-        if (jorek_model .eq. 501)
+        if (jorek_model .eq. 501) then
           P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi
         else if (jorek_model .eq. 502) then
           P_tot  = P_tot  + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi &

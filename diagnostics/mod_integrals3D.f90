@@ -145,8 +145,6 @@ real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 real*8  :: m_i_over_m_imp
 !   -Mean impurity ionization state
 real*8  :: Z_imp, T0_Zimp, alpha_Zimp, Z_eff, eta_coef, ne_JOREK
-!   -Coefficients related to Z_imp
-real*8  :: alpha_imp, beta_imp
 !   -Corrected plasma temperature and density for radiation calculation
 real*8  :: Te_corr_eV, ne_SI, Te_eV
 !   -Temporary variable for charge state distribution

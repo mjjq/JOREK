@@ -498,6 +498,10 @@ if (my_id == 0) then
   endif
   
   if (nice_q) then
+    if (xpoint2) then
+      ES%xpoint = xpoint2
+      ES%Z_xpoint = Z_xpoint
+    endif
     ES%psi_bnd  = psi_bnd
     ES%psi_axis = psi_axis
     call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,psi_xpoint,Z_xpoint)

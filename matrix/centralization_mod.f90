@@ -11,7 +11,7 @@ contains
   use global_distributed_matrix
   use mumps_module  
   use mpi_mod
-  use phys_module, only: centralize_harm_mat
+  use phys_module, only: centralize_harm_mat, use_strumpack
   
   implicit none
   
@@ -23,7 +23,15 @@ contains
   integer                      :: nz_total, i, ierr
   
  
-  if (centralize_harm_mat) then
+  if (.not.centralize_harm_mat .and. use_strumpack) then
+  
+    ! assign distributed values to global
+    mumps_par%nz  = nz_harm
+    mumps_par%A   => A_harm(1:mumps_par%nz)   
+    mumps_par%irn => irn_harm(1:mumps_par%nz)
+    mumps_par%jcn => jcn_harm(1:mumps_par%nz)
+    
+  else
 
     allocate(nz_array  (n_cpu_n))
     allocate(disp_array(n_cpu_n))
@@ -70,14 +78,7 @@ contains
 
     if ( allocated(nz_array) )   deallocate(nz_array)
     if ( allocated(disp_array) ) deallocate(disp_array)
-  
-  else
-    ! assign distributed values to global
-    mumps_par%nz  = nz_harm
-    mumps_par%A   => A_harm(1:mumps_par%nz)   
-    mumps_par%irn => irn_harm(1:mumps_par%nz)
-    mumps_par%jcn => jcn_harm(1:mumps_par%nz)
-    
+   
   endif ! centralize_harm_mat
 
   mumps_par%n   = ndof_harm

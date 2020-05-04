@@ -89,8 +89,6 @@ contains
     mumps_par%rhs(i) = rhs_harm(i)
   enddo  
   
-  call MPI_Barrier(MPI_COMM_N,ierr)
-  
   end subroutine centralization_harmonic
 
 end module centralization_mod

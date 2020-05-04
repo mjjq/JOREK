@@ -243,6 +243,11 @@ module pellet_module
     spi_Vel_phi_tmp = 0.
     spi_phi_inj     = ns_phi
 
+    V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
+    t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+  
+    spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
+
     spi_phi_inj     = ns_phi + ns_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
   
     if (spi_phi_inj >= 2.*PI) then
@@ -900,7 +905,8 @@ module pellet_module
     atn_phi = (0.5d0 - 0.5d0*tanh((phi- pellet_phi)/pellet_length))
     
     particle_source = pellet_amplitude * atn * atn_phi * atn_psi
-  
+
+    return  
   end subroutine pellet_source
 
 

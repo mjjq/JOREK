@@ -11,7 +11,7 @@ use mpi_mod
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mod_neutral_source
 #endif
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   use mod_injection_source
 #endif
 use pellet_module

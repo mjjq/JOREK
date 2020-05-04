@@ -817,7 +817,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: spi_species_arr (:)
   integer, allocatable :: spi_species_arr_old (:)  !< For backward compatibility only
 
-  integer :: err_exists, dterr
+  integer :: err_alloc, err_exists, dterr
   logical :: flag_exists, type_match
 
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.

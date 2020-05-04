@@ -779,8 +779,6 @@ do ife = ife_min, ife_max
 
             source_tmp = 0.d0
 
-            source_tmp = 0.d0
-
             ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
             if (ng_radius < ng_radius_min) then

@@ -66,6 +66,8 @@ subroutine export_binary_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_abl_arr (:)
   real*8, allocatable :: spi_species_arr (:)
 
+  integer :: err_alloc
+
   ! -> Write binary restart file
   open(21, file=filename, form='unformatted', status='replace', action='write')
 
@@ -284,6 +286,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
   real*8, allocatable :: spi_species_arr (:)
+
+  integer :: err_alloc
 
   ! index_now+nstep
   real(RKIND), allocatable :: t_xtime(:)                   ! nstep

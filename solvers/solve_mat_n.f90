@@ -116,7 +116,11 @@ contains
       write(*,*) my_id,'*********************************'
 
       if (use_mumps)  write(*,*) my_id,'*       using solver MUMPS      *'
+#ifndef USE_ZPASTIX
       if (use_pastix) write(*,*) my_id,'*       using solver PastiX     *'
+#else 
+      if (use_pastix) write(*,*) my_id,'*       using complex solver PastiX    *'
+#endif
       if (use_wsmp)   write(*,*) my_id,'*       using solver WSMP       *'
 
       write(*,*) my_id,'*********************************'
@@ -311,6 +315,22 @@ contains
 
         endif
 
+
+#ifdef USE_ZPASTIX 
+        if (associated(A_cmplx))  deallocate(A_cmplx)
+        allocate(A_cmplx(1:mumps_par%nz))
+        if (associated(rhs_cmplx))  deallocate(rhs_cmplx)
+        allocate(rhs_cmplx(1:mumps_par%n))
+
+        do i = 1, mumps_par%n
+          rhs_cmplx(i) = CMPLX(mumps_par%rhs(i))
+        enddo 
+
+        do i = 1, mumps_par%nz
+          A_cmplx(i) = CMPLX(mumps_par%A(i))
+        enddo 
+#endif
+
         if  (.not. pastix_initialised)  then
 
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
@@ -337,14 +357,24 @@ contains
               call tr_allocate(pastix_perm_vars,1,n_block,"pastix_perm_vars",CAT_UNKNOWN)
               call tr_allocate(pastix_iperm_vars,1,n_block,"pastix_iperm_vars",CAT_UNKNOWN)
 
+#ifndef USE_ZPASTIX
               call pastix_fortran(pastix_data,MPI_COMM_N,n_block,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
+              call pastix_fortran(pastix_data,MPI_COMM_N,n_block,mumps_par%jcn,mumps_par%irn,A_cmplx, &
+                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+#endif
+#else
               call tr_allocate(pastix_perm_vars,1 ,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
               call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
-
+#ifndef USE_ZPASTIX
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#else
+              call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,A_cmplx, &
+                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+#endif
+
 #endif
 #endif
 
@@ -448,12 +478,23 @@ contains
               pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
 !              pastix_iparm(IPARM_BINDTHRD)   = API_NO
 #ifdef USE_BLOCK
+#ifndef USE_ZPASTIX
               call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
                 mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
+              call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
+                mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), A_cmplx, &
+                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+#endif
+#else
+#ifndef USE_ZPASTIX
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#else
+              call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,A_cmplx, &
+                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+#endif
 #endif
 
 #else
@@ -522,14 +563,28 @@ contains
           pastix_iparm(IPARM_BINDTHRD)   = API_BIND_TAB
 #endif
           call pastix_bind_threads(my_id)
+
 #ifdef USE_BLOCK
+#ifndef USE_ZPASTIX
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
             mumps_par%jcn, mumps_par%irn, mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#else	   
+          call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
+            mumps_par%jcn, mumps_par%irn, A_cmplx, &
+            pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+#endif
 
 #else	   
+
+#ifndef USE_ZPASTIX
           call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#else	   
+          call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,A_cmplx, &
+            pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+#endif
+
 #endif
 
 #else
@@ -575,20 +630,37 @@ contains
       if (use_pastix) then
         if (.not. pastix_smp_only) then
            call tr_debug_writei("smn_C_mumps_par%n",mumps_par%n)
+#ifndef USE_ZPASTIX
            call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
+#else
+           call MPI_BCAST(rhs_cmplx,mumps_par%n,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
+#endif
         end if
 
         if (n_cpu_n>1) then
           if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
           if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+#ifndef USE_ZPASTIX
           if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+#else
+          if (associated(A_cmplx))   deallocate(A_cmplx)
+#endif
         else
+#ifndef USE_ZPASTIX
           mumps_par%A => null()
+#else
+          A_cmplx => null()
+#endif
           mumps_par%irn => null()
           mumps_par%jcn => null()
         endif
 
+#ifndef USE_ZPASTIX
         call tr_locvnorms("smn_rhs",mumps_par%rhs,mumps_par%n)
+#else
+        call tr_locvnorms_cmplx("smn_rhs",rhs_cmplx,mumps_par%n)
+#endif
+
 
 #ifndef USE_PASTIX6
         ! -- For PaStiX solver before version 6.x
@@ -597,15 +669,31 @@ contains
         pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
 !        pastix_iparm(IPARM_BINDTHRD)   = API_NO
 #ifdef USE_BLOCK
+#ifndef USE_ZPASTIX
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
 !             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
+        call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
+!             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+             DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
+             pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+#endif
+
+#else
+#ifndef USE_ZPASTIX
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
 !             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
           DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
           pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#else
+        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
+!             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+          DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
+          pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+#endif 
+
 #endif
 
 #else
@@ -633,6 +721,11 @@ contains
        call clck_time(t0)
     end if
 
+#ifdef USE_ZPASTIX
+    do i = 1, mumps_par%n
+      mumps_par%rhs(i) = REAL(rhs_cmplx(i))
+    enddo 
+#endif
 
     if (my_id_n .eq. 0) then
 
@@ -666,6 +759,12 @@ contains
 
       call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
       call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)
+
+      !!--psv 
+      do i = 1, ndof_glob
+         write(100,*) i, deltas(i)
+      enddo  
+      !!--psv 
 
       call tr_locvnorms("smn_res",mumps_par%rhs,mumps_par%n)
       call tr_locvnorms("smn_delta",deltas,ndof_glob)

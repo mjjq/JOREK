@@ -160,6 +160,14 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
      
       if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
   
+#ifdef USE_ZPASTIX 
+        !if (associated(rhs_cmplx))  deallocate(rhs_cmplx)
+        !allocate(rhs_cmplx(1:mumps_par%n))
+
+        do i = 1, ifactor*n_loc_n
+          rhs_cmplx(i) = CMPLX(mumps_par%rhs(i))
+        enddo 
+#endif
         ! pastix input parameters working in Pastix5 and Pastix6
         pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations
         pastix_iparm(IPARM_FACTORIZATION)         = pastix_facto
@@ -192,15 +200,31 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 #ifndef USE_PASTIX6
         ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
+
+#ifndef USE_ZPASTIX
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
              !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                    DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else      
+        call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
+             !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                   DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
+                      pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+#endif
+
+#else      
+
+#ifndef USE_ZPASTIX
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#else      
+        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
+             pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
 #endif
-  
+
+#endif
+ 
 #else
          ! -- For PaStiX solver version 6.x
          pastix_rhs_ptr = c_loc(mumps_par%rhs)
@@ -243,10 +267,13 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 
 
   if (my_id_n .eq. 0) then
-  
+ 
     if (.not.use_strumpack) then
   !------------------------------------------ undo column scaling
       do k=1,mumps_par%n
+#ifdef USE_ZPASTIX
+        mumps_par%rhs(k) = REAL(rhs_cmplx(k))
+#endif
         mumps_par%rhs(k) =  mumps_par%rhs(k) / column_scaling(k)
       enddo
     endif

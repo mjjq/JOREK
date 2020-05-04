@@ -733,7 +733,7 @@ do ife = ife_min, ife_max
         P_tot  = P_tot  + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi &
                         + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
 
-        if (ne_SI > 1.d16 .and. Te_eV > 3. .and. rn0 > 0.) then
+        if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
           Lrad = 0.0
           ! Here we are temperarily only considering one impurity species, in the
           ! future maybe a do loop will is needed

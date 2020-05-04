@@ -23,7 +23,7 @@ logical, optional             :: short !< commandline short version or run long 
 ! --- Constants
 character(len=512), parameter :: REAL_FMT = "(1X,A, ' = ', 10ES12.4)"
 character(len=512), parameter :: REAL_FMT2 = "(1X,A, ' = ', ES12.4, A)"
-character(len=512), parameter :: INTG_FMT = "(1X,A, ' = ', 10I12)"
+character(len=512), parameter :: INTG_FMT = "(1X,A, ' = ', 100I12)"
 character(len=512), parameter :: LOGI_FMT = "(1X,A, ' = ', 10L12)"
 character(len=512), parameter :: REA2_FMT = "(1X,A, ' = ', 4ES12.4, '     ...    ', 4ES12.4)"
 character(len=512), parameter :: REA3_FMT = "(1X,A, ' = ', 9ES12.4, '     ...')"
@@ -224,7 +224,7 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'nstep_n               ', nstep_n
   write(*,LOGI_FMT) 'eta_T_dependent       ', eta_T_dependent
   write(*,REAL_FMT) 'eta                   ', eta
-  write(*,REAL_FMT) 'T_max_eta             ', T_max_eta 
+  write(*,REAL_FMT) 'T_max_eta             ', T_max_eta
   write(*,REAL_FMT) 'T_max_eta_ohm         ', T_max_eta_ohm
   write(*,REAL_FMT) 'eta_ohmic             ', eta_ohmic
   write(*,REAL_FMT) 'T_max_eta             ', T_max_eta
@@ -439,8 +439,9 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
   write(*,REAL_FMT) 'D_prof_neg_thresh     ', D_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
-  write(*,REAL_FMT) 'ZK_par_neg           ', ZK_par_neg
+  write(*,REAL_FMT) 'ZK_par_neg            ', ZK_par_neg
   write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
+  write(*,REAL_FMT) 'ZK_par_neg_thresh     ', ZK_par_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
   write(*,REAL_FMT) 'ne_SI_min             ', ne_SI_min
   write(*,REAL_FMT) 'Te_eV_min             ', Te_eV_min
@@ -684,14 +685,14 @@ if (my_id == 0) then
      write(*,INTG_FMT) 'n_inj               ',  n_inj
      write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
-     write(*,CHAR_FMT) 'spi_shard_file      ',  spi_shard_file
+     write(*,CHAR_FMT) 'spi_shard_file      ',  trim(spi_shard_file)
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
      write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
      write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref
      write(*,REAL_FMT) 'spi_quantity        ',  spi_quantity
      write(*,REAL_FMT) 'spi_quantity_bg     ',  spi_quantity_bg
-     write(*,REAL_FMT) 'pellet_density      ', pellet_density
-     write(*,REAL_FMT) 'pellet_density_bg   ', pellet_density_bg
+     write(*,REAL_FMT) 'pellet_density      ',  pellet_density
+     write(*,REAL_FMT) 'pellet_density_bg   ',  pellet_density_bg
      write(*,REAL_FMT) 'spi_angle           ',  spi_angle
      write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
      write(*,REAL_FMT) 'tor_frequency       ',  tor_frequency

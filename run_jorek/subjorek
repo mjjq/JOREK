@@ -1,4 +1,4 @@
-	#!/usr/bin/env bash
+#!/usr/bin/env bash
 
 # -----------------------------------------------------------------
 # script used to submit the jorek job
@@ -38,7 +38,7 @@ FIRSTCAR=${MACHNAME:0:1}
 LASTCAR_MODEL=${MODELNUMBER}
 CASE=D${FIRSTCAR}_${LASTCAR_MODEL}_${CASENAME}
 
-# According to ARCH 
+# According to ARCH variable
 # --------------------------
 case ${ARCH} in
 
@@ -334,27 +334,21 @@ marconi*)
 # batch control
 # -------------
 if [ "${JOREK_HOST}" == "marconi_knl" ]; then
-  echo "Using KNL partition"
   ((THPNODE=68))
-  MPIPROCS=4 #2
-  NTHREAD=17 #34
-  NNODES=6
+  MPIPROCS=2
+  NTHREAD=34
+  NNODES=2
   ((NPES=NNODES*MPIPROCS))
-  PROJ=FUA22_AUGJOR
-  echo "Project = $PROJ"
-  WALLTIME=0:20:00
-elif [ "${JOREK_HOST}" == "marconi_skl" ]; then
-  echo "Using SKL partition"
-  ((THPNODE=48))
-  MPIPROCS=4 #2
-  NTHREAD=12 #24
-  NNODES=6 #1 #6 #11 #21
-  ((NPES=NNODES*MPIPROCS))
-  PROJ=FUA32_JOREK3D
-  echo "Project = $PROJ"
-  WALLTIME=24:00:00
+  PROJ=FUA21_JOREKED
+  WALLTIME=12:00:00
 else
-  echo "Problem with JOREK_HOST, exit"
+    ((THPNODE=48))
+    MPIPROCS=2
+    NTHREAD=24
+    NNODES=2
+    ((NPES=NNODES*MPIPROCS))
+    PROJ=FUA32_JOREK3D
+    WALLTIME=12:0:00
 fi
 echo "==================================================================================="
 echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
@@ -369,8 +363,7 @@ WKDIR=`pwd`
 UTILDIR=${SRCDIR}/util
 DIR=$(basename $(dirname $PWD))
 REP=`echo $DIR | tr -s "/" " " | awk '{print $1}' `
-#RESDIR1=$CINECA_SCRATCH/${REP}
-RESDIR1="/marconi_work/$PROJ/enardon0/${REP}"
+RESDIR1=$CINECA_SCRATCH/${REP}
 RESDIR=${RESDIR1}/${CASE}
 
 # Creation of the work directory
@@ -390,6 +383,130 @@ if [ ! -d ${RESDIR} ]; then
    mkdir -p ${RESDIR}
 fi
 
+;;
+# -----------------------------------------------------------------
+# occigen (CINES)
+# -----------------------------------------------------------------
+occigen*)
+
+# batch control
+# -------------
+# mpi procs per nodes
+MPIPROCS=2
+NTHREAD=24
+NNODES=2
+WALLTIME=1:50:00
+((NPES=NNODES*MPIPROCS))
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(dirname $PWD)
+dir=${DIR#$HOME}
+REP=`echo $dir | tr -s "/" " " | awk '{print $1}' `
+HOMEDIR=${DIR}
+SRCDIR=$HOMEDIR
+UTILDIR=${HOMEDIR}/util
+WKDIR=`pwd`
+echo " USER " $USER
+echo " SCRATCHDIR " $SCRATCHDIR
+RESDIR1=$SCRATCHDIR/${REP}
+echo " RESDIR1 " $RESDIR1
+RESDIR=${RESDIR1}/${CASE}
+echo " RESDIR " $RESDIR
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR1} ]; then
+   mkdir -p ${RESDIR1}
+fi
+
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+fi
+
+;;
+
+# -----------------------------------------------------------------
+# jade (cines)
+# -----------------------------------------------------------------
+jade*)
+
+# batch control
+# -------------
+MPIPROCS=1
+NTHREAD=8
+NNODES=16
+WALLTIME=1800
+((NPES=NNODES*MPIPROCS))
+echo "==================================================================================="
+echo " ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process "
+echo " NPES = $NNODES x $MPIPROCS = " $NPES
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(basename $(dirname $PWD))
+HOMEDIR=/scratch/$USER/${DIR}
+SRCDIR=$HOMEDIR
+UTILDIR=${SRCDIR}/util
+
+DIR=$(basename $PWD)
+WKDIR=${HOMEDIR}/${DIR}
+RESDIR1=${WKDIR}
+RESDIR=${RESDIR1}/${CASE}
+
+# Creation of the work directory
+# ------------------------------
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+fi
+;;
+
+# -----------------------------------------------------------------
+# hpc-ff (Juelich)
+# -----------------------------------------------------------------
+hpcff*)
+
+# batch control
+# -------------
+NODES=32
+NTHREAD=8
+PPN=8   # processs per node=8: reserve the whole node
+WALLTIME=02:00:00
+((NSLOTS=NODES * PPN / NTHREAD))
+echo "==================================================================================="
+echo " ${NODES} nodes are asked for, with ${PPN} processes per node (the whole node) and ${NTHREAD} threads "
+echo "==================================================================================="
+echo " "
+
+# Environment
+# -----------
+DIR=$(dirname $PWD)
+SRCDIR=$DIR
+WKDIR=`pwd`
+UTILDIR=${SRCDIR}/util
+RESDIR1=`echo $HOME | sed "s/jhome*[0123456789]/jwork/" `
+
+# Creation of the work directory
+# ------------------------------
+RESDIR=${RESDIR1}/${CASE}
+if [ ! -d ${RESDIR} ]; then
+   mkdir -p ${RESDIR}
+   ln -s ${RESDIR} ${CASE}
+fi
 ;;
 
 *)
@@ -474,67 +591,65 @@ if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
   if [ -e jorek_model${MODELNUMBER} ]; then mv jorek_model${MODELNUMBER} ${EXECNAME}; fi
 fi
 
-# Eric NARDON: comment lines below which compile jorek2vtk etc.
-#if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
-#  echo "==================================================================================="
-#  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
-#  echo " =============>> compiling the jorek2vtk executable" ${VTKEXECNAME}
-#  echo "==================================================================================="
-#  echo " "
-#  cd ${SRCDIR}
-#
-#  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
-#
-#  if [ -e jorek2vtk ]; then rm -f jorek2vtk; fi
-#  make cleanall
-#  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
-#  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
-#  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
-#  $MAKE jorek2vtk
-#
-#  if [ -e jorek2vtk ]; then mv jorek2vtk ${VTKEXECNAME}; fi
-#fi
-#
-#if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
-#  echo "==================================================================================="
-#  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
-#  echo " =============>> compiling the jorek2_target2vtk executable" ${TARGET_VTKEXECNAME}
-#  echo "==================================================================================="
-#  echo " "
-#  cd ${SRCDIR}
-#
-#  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
-#
-#  if [ -e jorek2_target2vtk ]; then rm -f jorek2_target2vtk; fi
-##  make cleanall
-#  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
-#  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
-#  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
-#  $MAKE jorek2_target2vtk
-#
-#  if [ -e jorek2_target2vtk ]; then mv jorek2_target2vtk ${TARGET_VTKEXECNAME}; fi
-#fi
-#
-#if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
-#  echo "==================================================================================="
-#  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
-#  echo " =============>> compiling the jorek2_powers executable" ${POWERSEXECNAME}
-#  echo "==================================================================================="
-#  echo " "
-#  cd ${SRCDIR}
-#
-#  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
-#
-#  if [ -e jorek2_powers ]; then rm -f jorek2_powers; fi
-##  make cleanall
-#  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
-#  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
-#  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
-#  $MAKE jorek2_powers
-#
-#  if [ -e jorek2_powers ]; then mv jorek2_powers ${POWERSEXECNAME}; fi
-#fi
+if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
+  echo "==================================================================================="
+  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+  echo " =============>> compiling the jorek2vtk executable" ${VTKEXECNAME}
+  echo "==================================================================================="
+  echo " "
+  cd ${SRCDIR}
 
+  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+
+  if [ -e jorek2vtk ]; then rm -f jorek2vtk; fi
+  make cleanall
+  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+  $MAKE jorek2vtk
+
+  if [ -e jorek2vtk ]; then mv jorek2vtk ${VTKEXECNAME}; fi
+fi
+
+if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
+  echo "==================================================================================="
+  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+  echo " =============>> compiling the jorek2_target2vtk executable" ${TARGET_VTKEXECNAME}
+  echo "==================================================================================="
+  echo " "
+  cd ${SRCDIR}
+
+  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+
+  if [ -e jorek2_target2vtk ]; then rm -f jorek2_target2vtk; fi
+#  make cleanall
+  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+  $MAKE jorek2_target2vtk
+
+  if [ -e jorek2_target2vtk ]; then mv jorek2_target2vtk ${TARGET_VTKEXECNAME}; fi
+fi
+
+if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
+  echo "==================================================================================="
+  echo " =============>> model = " $MODELNUMBER", n_tor = " $NTOR", n_period = " $NPERIOD", n_plane = " $NPLANE
+  echo " =============>> compiling the jorek2_powers executable" ${POWERSEXECNAME}
+  echo "==================================================================================="
+  echo " "
+  cd ${SRCDIR}
+
+  ${UTILDIR}/setconfig.sh  model=${MODELNUMBER} n_tor=${NTOR} n_period=${NPERIOD} n_plane=${NPLANE}
+
+  if [ -e jorek2_powers ]; then rm -f jorek2_powers; fi
+#  make cleanall
+  # verify that the model in Makefile.inc is set to jorek_model${MODELNUMBER}
+  # else, change it in Makefile.inc to jorek_model${MODELNUMBER}
+  sed -i "s/  MODEL = .*/  MODEL = model$MODELNUMBER/"  ${SRCDIR}/Makefile.inc
+  $MAKE jorek2_powers
+
+  if [ -e jorek2_powers ]; then mv jorek2_powers ${POWERSEXECNAME}; fi
+fi
 cd ${WKDIR}
 
 # copy exec files and data file in result directory
@@ -545,25 +660,24 @@ if [ ! -e ${SRCDIR}/${EXECNAME} ]; then
 else
     cp ${SRCDIR}/${EXECNAME} ${RESDIR}/.
 fi
-# Eric NARDON: comment lines below related to jorek2vtk etc.
-#if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
-#   echo " Executable ${VTKEXECNAME} does not exist, so exit ";
-#   exit
-#else
-#    cp ${SRCDIR}/${VTKEXECNAME} ${RESDIR}/.
-#fi
-#if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
-#   echo " Executable ${TARGET_VTKEXECNAME} does not exist, so exit ";
-#   exit
-#else
-#    cp ${SRCDIR}/${TARGET_VTKEXECNAME} ${RESDIR}/.
-#fi
-#if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
-#   echo " Executable ${POWERSEXECNAME} does not exist, so exit ";
-#   exit
-#else
-#    cp ${SRCDIR}/${POWERSEXECNAME} ${RESDIR}/.
-#fi
+if [ ! -e ${SRCDIR}/${VTKEXECNAME} ]; then
+   echo " Executable ${VTKEXECNAME} does not exist, so exit ";
+   exit
+else
+    cp ${SRCDIR}/${VTKEXECNAME} ${RESDIR}/.
+fi
+if [ ! -e ${SRCDIR}/${TARGET_VTKEXECNAME} ]; then
+   echo " Executable ${TARGET_VTKEXECNAME} does not exist, so exit ";
+   exit
+else
+    cp ${SRCDIR}/${TARGET_VTKEXECNAME} ${RESDIR}/.
+fi
+if [ ! -e ${SRCDIR}/${POWERSEXECNAME} ]; then
+   echo " Executable ${POWERSEXECNAME} does not exist, so exit ";
+   exit
+else
+    cp ${SRCDIR}/${POWERSEXECNAME} ${RESDIR}/.
+fi
 
 if [ ! -e ${WKDIR}/${DATANAME} ]; then
     echo " Datafile ${DATAFILE} does no exist, so exit ";
@@ -1067,6 +1181,111 @@ EOF
 fi
 ;;
 
+
+# -----------------------------------------------------------------
+# occigen (CINES)
+# -----------------------------------------------------------------
+occigen*)
+
+# Batch control
+#--cpus-per-task=2 --cpu_bind=verbose,cores -c 24
+#CMD_MPIRUN="srun --cpu_bind=verbose,none --mpi=pmi2 -K1 -m block:block --resv-ports -n \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+#CMD_MPIRUN="srun --cpu_bind=verbose,none --mpi=pmi2 -K1 --resv-ports -n \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+#-env DAPL_DBG_TYPE 0xfff -env I_MPI_DAPL_DIRECT_COPY_THRESHOLD 0 -genv I_MPI_FABRICS shm:ofa -genv I_MPI_DAPL_DIRECT_COPY_THRESHOLD 65536 
+#-genv I_MPI_DAPL_BUFFER_SIZE 131072 -genv I_MPI_RDMA_TRANSLATION_CACHE 1 -genv I_MPI_RDMA_RNDV_BUF_ALIGN 65536 -genv I_MPI_SPIN_COUNT 121
+#CMD_MPIRUN="mpirun  -np \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+CMD_MPIRUN="srun --mpi=pmi2 -K1  -m block:block --resv-ports --cpu_bind=verbose -n \$SLURM_NTASKS ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAMEOUT}___${out_increment}.out"   
+CMD_SUB="sbatch ./go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#SBATCH --nodes=${NNODES}
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=24
+#SBATCH --threads-per-core=1
+#SBATCH -J JOREK
+#SBATCH -o ${CASENAME}%j.out      # strout filename (%j is jobid)
+#SBATCH -e ${CASENAME}%j.err      # stderr filename (%j is jobid)
+#SBATCH --time=${WALLTIME}
+
+module purge
+module load intel/14.0.4.211 intelmpi/5.0.1.035
+
+ulimit -Sa
+ulimit -Ha                                                                                                                                                                                                   
+export LANG=C
+export KMP_AFFINITY="granularity=fine,compact,1,0,verbose"
+export MKL_NUM_THREADS=1
+export MKL_DYNAMIC=FALSE
+export OMP_DYNAMIC=FALSE
+export KMP_DYNAMIC=FALSE
+EOF
+;;
+
+# -----------------------------------------------------------------
+# jade (cines)
+# -----------------------------------------------------------------
+jade*)
+
+CMD_MPIRUN="mpiexec ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAME}___${out_increment}.out"
+CMD_SUB="qsub go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#PBS -N ${CASENAME}
+#PBS -V
+#PBS -j oe
+#PBS -l walltime=${WALLTIME}
+##PBS -l select=${NNODES}:ncpus=8:ompthreads=${NTHREAD}:mpiprocs=${MPIPROCS}
+#PBS -l select=1:ncpus=8:ompthreads=${NTHREAD}:mpiprocs=1
+## ${NNODES} nodes with ${MPIPROCS} process MPI per node and ${NTHREAD} threads per MPI process
+
+# environment
+#------------
+ulimit -Sa
+ulimit -Ha
+
+export OMP_NUM_THREADS=${NTHREAD}
+
+EOF
+;;
+
+# -----------------------------------------------------------------
+# hpc-ff (Juelich)
+# -----------------------------------------------------------------
+hpcff*)
+
+CMD_MPIRUN="mpiexec -np=${NSLOTS} ${RESDIR}/${EXECNAME} < ${RESDIR}/${DATANAME} >> ${RESDIR}/${EXECNAME}___${out_increment}.out"
+CMD_SUB="msub go_${DATANAME}.cmd"
+CMD_SUBRST=${CMD_SUB}
+
+# batch job creation
+# ------------------
+cat <<EOF > go_$DATANAME.cmd
+#!/bin/bash
+#MSUB -N ${CASENAME}
+# nodes=Nb of nodes, ppn=process per node (max.8)
+#MSUB -l nodes=${NODES}:ppn=8
+# maximum walltime currently 24hrs walltime=<hh:mm:ss>
+#MSUB -l walltime=${WALLTIME}
+# tpt = Nb of OmpenMp processes
+#MSUB -v tpt=${NTHREAD}
+#MSUB -j oe
+
+# for HPC-FF
+export OMP_NUM_THREADS=8
+export MKL_SERIAL=YES
+export KMP_STACKSIZE=256M
+export PSI_EXPORTS=MKL_SERIAL,OMP_NUM_THREADS,KMP_STACKSIZE
+
+
+EOF
+;;
+
 *)
 esac
 
@@ -1077,16 +1296,15 @@ cd ${RESDIR}
 # Test if restart files exist
 # ---------------------------
 file_list=${RESDIR}/NUM_RST
-# Commente par Eric le 28/06/18
 if [ ! -e "jorek_restart.h5" ]; then
    echo "==================================================================================="
    echo " The restart file does not exist, so INIT"
    echo " nb_restart = " \$nb_restart
    echo "==================================================================================="
    echo " "
-#   nb_restart=0
-#   ${UTILDIR}/setinput.sh ${DATANAME} restart=.f. nstep_n=0 tstep_n=1
-#   ${UTILDIR}/setinput.sh ${DATANAME} restart=.f. nstep=0 tstep=1
+   nb_restart=0
+   ${UTILDIR}/setinput.sh ${DATANAME} restart=.f. nstep_n=0 tstep_n=1
+   ${UTILDIR}/setinput.sh ${DATANAME} restart=.f. nstep=0 tstep=1
 else
    echo "==================================================================================="
    echo " Restart file does exist, so LOOP"

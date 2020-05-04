@@ -612,6 +612,7 @@ module mod_expression
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 #endif
 #if JOREK_MODEL == 501 || JOREK_MODEL == 502
+    ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
     real*8 :: T0_corr, r0_corr, rn0_corr
     ! Atomic physics coefficients:
     !   -Mass ratio between main ions and impurites (m_i/m_imp)
@@ -622,11 +623,11 @@ module mod_expression
     real*8  :: alpha_imp
     real*8  :: beta_imp
     !   -Radiation from injected impurities
-    real*8  :: Lrad, dLrad_dT                      ! Radiation rate and its derivative wrt. temperature
+    real*8  :: Lrad                                ! Radiation rate
     real*8  :: ne_SI                              ! Electron density used in radiation rate
     real*8  :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
     real*8  :: A2_rad, T2_rad, sig2_rad
-	!   -Temporary variable for charge state distribution
+    !   -Temporary variable for charge state distribution
     real*8, allocatable :: P_imp(:)
     real*8  :: E_ion
     integer*8  :: ion_i, ion_k
@@ -660,15 +661,14 @@ module mod_expression
 #if JOREK_MODEL == 501 || JOREK_MODEL == 502
      select case ( trim(gas_type) )
        case('D2')
-         m_i_over_m_imp = central_mass/2.
+         m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
        case('Ar')
-         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
+         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u 
        case('Ne')
-         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
+         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u 
        case default
-         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
-         write(*,*) '=> We assume the gas is D2.'
-         m_i_over_m_imp = central_mass/2.
+         write(*,*) 'ERROR: Unknown gas_type.'
+         stop
      end select
 #endif
     
@@ -762,6 +762,7 @@ module mod_expression
           AZ0   = 0.d0; AZ0_s   = 0.d0; AZ0_t   = 0.d0; AZ0_ss   = 0.d0; AZ0_tt   = 0.d0; AZ0_st   = 0.d0; AZ0_p   = 0.d0; AZ0_pp   = 0.d0
           A30   = 0.d0; A30_s   = 0.d0; A30_t   = 0.d0; A30_ss   = 0.d0; A30_tt   = 0.d0; A30_st   = 0.d0; A30_p   = 0.d0; A30_pp   = 0.d0
           rn0   = 0.d0; rn0_s   = 0.d0; rn0_t   = 0.d0; rn0_ss   = 0.d0; rn0_tt   = 0.d0; rn0_st   = 0.d0; rn0_p   = 0.d0; rn0_pp   = 0.d0
+
 
           ! Extra derivatives for current density calculation
           AR0_sp   = 0.d0; AR0_tp   = 0.d0
@@ -1396,24 +1397,23 @@ module mod_expression
           alpha_imp = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
           beta_imp  = m_i_over_m_imp*Z_imp - 1.
                   
-		  r0_corr  = corr_neg_dens(r0,(/1.d-8,1.d-5/))
-		  rn0_corr = corr_neg_dens(rn0, (/ 1.d-12, 1.d-5 /))
-		  ne_SI   = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
-		  
-		  ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+          r0_corr  = corr_neg_dens(r0,(/1.d-9,1.d-5/),1.d-3)
+          rn0_corr = corr_neg_dens(rn0,(/1.d-9,1.d-5 /),1.d-3)
+          ne_SI   = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+  
+          ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
           coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
-
-          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then  
-            Lrad = 0.0
-            dLrad_dT = 0.0
-            call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+  
+          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
+            Lrad = 0.
+            call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
             Lrad = Lrad * coef_rad_1
           else
             Lrad = 0.
           end if
-		  
-		  ne_SI = ne_SI / 1.d20 / central_density ! Put ne_SI back to JOREK units to have consistent fact_ne factor with other models (see below)
-		  
+  
+          ne_SI = ne_SI / 1.d20 / central_density ! Put ne_SI back to JOREK units to have consistent fact_ne factor with other models (see below)
+  
 #endif
 
           ! --- Factors for switching between JOREK normalized and SI units.
@@ -1428,7 +1428,7 @@ module mod_expression
              fact_resistiv = sqrt ( MU_zero / rho_norm )                           ! factor for eta == 1 / (factor for visco)
              fact_Er       = F0 / fact_time
 #if JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502
-			 fact_rad      = 1.d0/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)
+             fact_rad      = 1.d0/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)
 #endif
              fact_flux     = 1.d0/(mu_zero*fact_time)  
           else if ( units == JOREK_UNITS ) then
@@ -1441,7 +1441,7 @@ module mod_expression
              fact_resistiv = 1.d0
              fact_Er       = 1.d0
 #if JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502			 
-			 fact_rad      = 1.d0
+             fact_rad      = 1.d0
 #endif
              fact_flux     = 1.d0 
           end if
@@ -1771,7 +1771,7 @@ module mod_expression
 
 #if JOREK_MODEL == 501 || JOREK_MODEL == 502
               case ( 'radiation' )
-	          res = (r0_corr + beta_imp*rn0_corr) * rn0_corr * Lrad * fact_rad
+                res = (r0_corr + beta_imp*rn0_corr) * rn0_corr * Lrad * fact_rad
 #endif
 
               case default

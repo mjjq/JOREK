@@ -60,8 +60,6 @@ character*120 :: filename
 integer :: i, ierr, n_d, n_T, k, q, i_n
 logical :: file_exists, recombining
 
-!call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
-
 if (my_id .eq. 0) then
   write(*,'(A)') '*********************************'
   write(*,'(A)') '* Importing OpenAdas data       *'

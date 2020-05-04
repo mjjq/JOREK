@@ -20,11 +20,8 @@ module phys_module
   real*8  :: visco_rst            !< visco value from restart file
   real*8  :: visco_par_rst        !< visco_par value from restart file
   real*8  :: eta_rst              !< eta value from restart file
-
-  ! Temperature dependence of the hyper-resistivity and hyper-viscosity
-  logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature, otherwise constant
-  logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature, otherwise constant
-
+  logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature? Otherwise constant.
+  logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature? Otherwise constant.
   logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
   real*8  :: visco_par            !< Parallel viscosity (normalized)
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
@@ -268,9 +265,9 @@ module phys_module
   real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
   real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
 
-  character(len=80) :: gas_type !< Type of gas used in MGI: Argon, D2, ...
+  character(len=80) :: gas_type !< Type of gas used in material injection (MGI, SPI, ...): Argon, D2, ...
 
-  !> @name Shattered pellet injection-related input parameters
+  !> @name Shattered Pellet Injection related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
   ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
   ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
@@ -291,12 +288,12 @@ module phys_module
 
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud for numerical reasons (in m)
 
-  real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
-  real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
-  real*8, allocatable  :: xtime_spi_ablation_bg(:,:) ! The time history of spi ablation for background species
-  real*8, allocatable  :: xtime_spi_ablation_bg_rate(:,:) ! The time history of spi ablation rate for bg species
+  real*8, allocatable  :: xtime_spi_ablation(:,:)         !< The time history of SPI ablation
+  real*8, allocatable  :: xtime_spi_ablation_rate(:,:)    !< The time history of SPI ablation rate
+  real*8, allocatable  :: xtime_spi_ablation_bg(:,:)      !< The time history of SPI ablation for background species
+  real*8, allocatable  :: xtime_spi_ablation_bg_rate(:,:) ! <The time history of SPI ablation rate for bg species
 
-  real*8, allocatable  :: xtime_radiation(:)    ! The time history of radiated energy in SI unit
+  real*8, allocatable  :: xtime_radiation(:)    !< The time history of radiated energy in SI unit
 
   integer :: n_spi(10)          !< Number of shattered pellets injected
   integer :: n_spi_tot          !< Total number of shattered pellets injected
@@ -308,17 +305,16 @@ module phys_module
 
   character(len=256) :: spi_shard_file !< The name of the shard size file
 
-  logical :: output_rad_phi     !< Out put the radiation asymmetry into a file using integras_3D
-  integer :: n_adas             !< Number of species to be traced by adas, for future development only
+  logical :: output_rad_phi     !< Output the radiation asymmetry into a file using integrals_3D
+  integer :: n_adas             !< Number of species to be traced by ADAS, for future development only
 
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
 
-  character(len=512)            :: adas_dir    !< The directory of adas data file to be read
-
-  type (adf11_all), allocatable :: imp_adas(:)    !< The ADAS data for impurities
-  type (coronal), allocatable   :: imp_cor(:)     !< The coronal equilibrium distribution of impurities
+  character(len=512)            :: adas_dir    !< The directory of ADAS data file to be read
+  type (adf11_all), allocatable :: imp_adas(:) !< The ADAS data for impurities
+  type (coronal), allocatable   :: imp_cor(:)  !< The coronal equilibrium distribution of impurities
 
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor
@@ -595,9 +591,10 @@ module phys_module
   !> @name Numerical parameters
   real*8              :: D_prof_neg         !< Particle diffusion coefficient in regions with negative density
   real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if rho < D_prof_neg_thresh
-  real*8              :: ZK_prof_neg    !< Diffusion coefficient in regions with negative temperature
-  real*8              :: ZK_par_neg    !< Parallel diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_prof_neg        !< Perp. heat diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_par_neg         !< Parallel diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
+  real*8              :: ZK_par_neg_thresh  !< ZK_par_neg becomes effective if T < ZK_par_neg_thresh
   real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.)
 
   real*8              :: ne_SI_min          !< minimum e density (in SI unit) below which we cut-off the radiation loss

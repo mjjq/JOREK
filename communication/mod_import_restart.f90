@@ -457,7 +457,6 @@ endif
     if (allocated(xtime_radiation)) &
       call tr_deallocate(xtime_radiation,"xtime_radiation",CAT_UNKNOWN)
     call tr_allocate(xtime_radiation,1,index_start+nstep,"xtime_radiation",CAT_UNKNOWN)
-
     read(21)  xtime_radiation(1:index_start)
   end if
 
@@ -818,7 +817,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: spi_species_arr (:)
   integer, allocatable :: spi_species_arr_old (:)  !< For backward compatibility only
 
-  integer :: err_alloc, err_exists, dterr
+  integer :: err_exists, dterr
   logical :: flag_exists, type_match
 
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
@@ -1477,7 +1476,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     if (allocated(xtime_radiation)) &
       call tr_deallocate(xtime_radiation,"xtime_radiation",CAT_UNKNOWN)
     call tr_allocate(xtime_radiation,1,index_start+nstep,"xtime_radiation",CAT_UNKNOWN)
-
     call HDF5_array1D_reading(file_id,xtime_radiation,"xtime_radiation")
   end if
 

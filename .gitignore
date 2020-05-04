@@ -65,6 +65,6 @@ coil_field.dat
 RMP_psi*.txt
 RMP_start_time.dat
 shard_size.dat
-version.h
 non_regression_tests_*
 /test_*
+mpiversion.mk

@@ -999,7 +999,6 @@ required = 0
 
     ! --- End of parallel debugging section 
 
-    
     !--------- Constructing Global Matrix
     call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms,   &
          n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,&

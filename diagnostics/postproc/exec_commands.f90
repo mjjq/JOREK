@@ -19,11 +19,15 @@ module exec_commands
   use mod_import_restart
   use mod_interp
   use mod_poloidal_currents 
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
+#endif
   use mod_bootstrap_functions
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   use mod_injection_source 
 #endif
 
+  
   
   implicit none
   
@@ -206,6 +210,8 @@ module exec_commands
           call select_loop_si_units(command, ierr)
         case ( 'spi-state' )
           call spi_state(command, first_step, ierr)
+	case ( 'shards' )
+	  call shards(command, ierr)
         case ( 'timesteps' )
           call timesteps 
         case default
@@ -222,7 +228,7 @@ module exec_commands
           'qprofile', 'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon',       &
           'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics', 'rectangle',    &
           'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF', 'spi-state',         &
-          'zeroD_quantities', 'boundary_quantities')
+          'shards', 'zeroD_quantities', 'boundary_quantities')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -1338,14 +1344,14 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
 
     ! --- Local variables
-    real*8  :: Rstart, Zstart, Rend, Zend, phi, arr_id
+    real*8  :: Rstart, Zstart, Rend, Zend, phi
     integer :: units, npts
     character(len=1024) :: filename, comment
 
     ierr = 0
 
     ! --- Some checks
-    call check_args(command%n_args,ierr,6);  if ( ierr /= 0 ) return
+    call check_args(command%n_args,ierr,5);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);          if ( ierr /= 0 ) return
     call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
 
@@ -1355,16 +1361,12 @@ module exec_commands
     Rend   = to_float(command%args(3), ierr); if ( ierr /= 0 ) return
     Zend   = to_float(command%args(4), ierr); if ( ierr /= 0 ) return
     phi    = to_float(command%args(5), ierr); if ( ierr /= 0 ) return
-    arr_id = to_float(command%args(6), ierr); if ( ierr /= 0 ) return
     units  = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
     npts   = get_int_setting('linepoints', ierr); if ( ierr /= 0 ) return
 
-    !write(filename,'(15a)') DIR, 'integrate_exprs_along_line_R', trim(real2str(Rstart)), '..',             &
-    !  trim(real2str(Rend)), '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p',                &
-    !  trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
-
-    write(filename,'(15a)') DIR, 'integrate_exprs_along_line_R', trim(real2str(arr_id)), &
-      '_p', trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    write(filename,'(15a)') DIR, 'integrate_exprs_along_line_R', trim(real2str(Rstart)), '..',             &
+      trim(real2str(Rend)), '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p',                &
+      trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
 
     write(comment,'(a,i6.6)') 'time step #', index_now
 
@@ -1777,7 +1779,48 @@ module exec_commands
   end subroutine spi_state
 
 
+  !> Write out SPI shards characteristics
+  subroutine shards(command, ierr)
 
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer             :: i_file, i_spi, units
+    character(len=1024) :: filename, status, access
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    
+    write(filename,'(4a)') DIR, 'shards', trim(step_range_string(index_start,index_start)), '.txt'
+
+    i_file = 133
+
+    call open_ascii_file(ierr, i_file, filename, .false.)
+
+    do i_spi = 1, n_spi
+    
+      call eval_expr(ES, units, expr_list,  &
+        pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
+        tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)
+
+      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+    	
+      write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
+        pellets(i_spi)%spi_radius, res0d
+
+    enddo
+    
+    close(i_file)
+
+  end subroutine shards
 
   
   !> Output integrated poloidal current that is normal to the boudary and

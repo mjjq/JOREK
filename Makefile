@@ -153,7 +153,6 @@ CXXFLAGS += -pedantic -Wall
 # Rule-specific includes: an example
 #jorek2_main: DEFINES+="-DMAIN "
 eqdsk2jorek: LIBS+=$(LIBDIERCKX)
-#eqdsk2jorek_new: LIBS+=$(LIBDIERCKX)
 
 # Automatically download adas data for tungsten
 particles/examples/%50_w.dat:

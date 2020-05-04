@@ -109,7 +109,6 @@ if (use_pellet) then
 
 endif
 
-
 open(20,file="rad_history.dat")
 
 write(20,'(2A20)') 'time', 'total_radiation (MJ)'
@@ -118,7 +117,6 @@ do i=1,index_start
   write(20,'(i7,f12.3,1e14.6)') i,xtime(i), xtime_radiation(i)/1.d6
 enddo
 close(20)
-
 
 if (using_spi) then
 

@@ -93,9 +93,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 keep_n0_const, linear_run, export_for_nemec,        &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
-                R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                spi_tor_rot, tor_frequency,                         &
-                D_prof_neg, ZK_prof_neg,                            &
+                R_Z_psi_bnd_file, wall_file,                        &
+                spi_tor_rot, tor_frequency, ZK_par_neg_thresh,      &
+                D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 ne_SI_min, Te_eV_min, rn0_min,                      &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
@@ -342,15 +342,12 @@ if (my_id .eq. 0) then
 
 endif
 
-
 keep_n0_const  = ( keep_n0_const .or. linear_run )
 ! --- Read numerical profiles for rho, T, and ff'.
 call read_num_profiles(my_id)
 
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
-
-! --- Initialize the shattered pellet position
 
 if ( my_id == 0 ) then
   if (2*PI/(n_tor*n_period) >= ns_deltaphi) then

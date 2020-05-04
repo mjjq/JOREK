@@ -63,12 +63,12 @@ contains
     logical,                   intent(in)    :: gmres
     logical,                   intent(in)    :: solve_only
     integer,                   intent(in)    :: i_tor_min, i_tor_max 
-    integer, pointer,          intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, pointer,          intent(in)    :: irn(:), jcn(:) 
-    real*8, pointer,           intent(in)    :: A_mat(:) 
+    integer, allocatable,      intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, allocatable,      intent(inout) :: irn(:), jcn(:) 
+    real*8,  allocatable,      intent(inout) :: A_mat(:) 
 
     ! Internal parameters
-    real*8  :: zbig, zbig_backup,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
+    real*8  :: zbig, zbig_backup, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
     real*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
     real*8  :: Btot, alpha, dT0_dt, dVpar0_dt, dBigR_dt, R_inside, Z_inside
     real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y
@@ -175,7 +175,7 @@ contains
     
                       !========================================================================
                       ! conditions for direction 1 (s), i.e. boundary types 1, 3, 4, 9
-                      ! apply fixed bc for variables k=1,2,3,4
+                      ! apply fixed bc for variables k=1,2,3,4,8
                       ! apply v_par = cs for k=7
                       !========================================================================
                       if     ((node_list%node(inode)%boundary .eq.  1) &
@@ -259,7 +259,6 @@ contains
 
                        endif !(end RMP)
 !======================================= end RMPs ==================================
-
 
                          if (      apply_psi_BC      &
                               .or. apply_current_BC  &
@@ -471,14 +470,13 @@ contains
 
                       !========================================================================
                       ! conditions for direction 2 (s), i.e. boundary types 5, 9
-                      ! apply fixed bc for variables k=1,2,3,4
+                      ! apply fixed bc for variables k=1,2,3,4,8
                       ! apply v_par = cs for k=7
                       !========================================================================
                       if    ((node_list%node(inode)%boundary .eq.     5) &
                            .or. (node_list%node(inode)%boundary .eq. 15) &
                            .or. (node_list%node(inode)%boundary .eq.  9) &
                            .or. (node_list%node(inode)%boundary .eq. 19)) then
-
 
                          if (      apply_psi_BC      &
                               .or. apply_current_BC  &

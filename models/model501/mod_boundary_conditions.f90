@@ -63,9 +63,9 @@ contains
     logical,                   intent(in)    :: gmres
     logical,                   intent(in)    :: solve_only
     integer,                   intent(in)    :: i_tor_min, i_tor_max 
-    integer, pointer,          intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, pointer,          intent(in)    :: irn(:), jcn(:) 
-    real*8, pointer,           intent(in)    :: A_mat(:) 
+    integer, allocatable,      intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, allocatable,      intent(inout) :: irn(:), jcn(:) 
+    real*8,  allocatable,      intent(inout) :: A_mat(:) 
 
     ! Internal parameters
     real*8  :: zbig, zbig_backup, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
@@ -86,8 +86,8 @@ contains
   real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
   integer :: ilarge_vp, ilarge_vp2
   integer :: kp, j, err, itest
-  integer				:: n_tor_local 
-    
+  integer :: n_tor_local 
+
   n_tor_local = i_tor_max - i_tor_min + 1
   if (RMP_on .and. (n_tor .ge. 3)) then
   call tr_allocate(psi_RMP_cos1,1, bnd_node_list%n_bnd_nodes,"psi_RMP_cos1",CAT_UNKNOWN)
@@ -145,6 +145,7 @@ contains
              if (node_list%node(inode)%boundary .ne. 0) then
 
                 do in=i_tor_min, i_tor_max 
+
                   if (keep_n0_const  .and.  in .eq. 1 ) then
                     zbig = 1.d15
                   else
@@ -174,7 +175,7 @@ contains
 
                       !========================================================================
                       ! conditions for direction 1 (s), i.e. boundary types 1, 3, 4, 9
-                      ! apply fixed bc for variables k=1,2,3,4
+                      ! apply fixed bc for variables k=1,2,3,4,8
                       ! apply v_par = cs for k=7
                       !========================================================================
 
@@ -350,9 +351,9 @@ contains
 
                             if (xcase2 .eq. 2) then
                                direction = -direction
-                            else if ((xcase2 .eq. 3).and.(node_list%node(inode)%x(1,2).gt.Z_axis+0.1).and.(node_list%node(inode)%x(1,1).gt.R_xpoint(2))) then
+                            else if ((xcase2 .eq. 3).and.(node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).gt.R_xpoint(2))) then
                               direction = -1.
-                            else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis+0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
+                            else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
                               direction = +1.
                             end if
 
@@ -386,7 +387,6 @@ contains
                                call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
                                index_large_i = n_tor_local * n_var * (index_node - 1)
-
 
                                ilarge_vv  = ijA_position  - 1 + ((kv-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local + & 
                                  (kv-1)*n_tor_local + in- i_tor_min +1
@@ -469,7 +469,7 @@ contains
 
                       !========================================================================
                       ! conditions for direction 2 (s), i.e. boundary types 5, 9
-                      ! apply fixed bc for variables k=1,2,3,4
+                      ! apply fixed bc for variables k=1,2,3,4,8
                       ! apply v_par = cs for k=7
                       !========================================================================
 
@@ -609,7 +609,7 @@ contains
 
                                else
                                   RHS_loc(n_tor_local*n_var * (index_node-1) + (kv-1)*n_tor_local + in - i_tor_min +1) = 0.d0
-                               endif
+                               endif                                
                                !         write(*,'(A,i6,3e16.8)') ' bc5:',inode, Vpar0,direction*sqrt(GAMMA*T0) / Btot, Vpar0-direction*sqrt(GAMMA*T0) / Btot
 
                             endif
@@ -731,6 +731,7 @@ contains
                              index_node2 = node_list%node(inode)%index(3)
 
                              if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
+
                                 call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
                                 ilarge_vp2  = ijA_position2  - 1 + ((kv-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local + & 
@@ -787,6 +788,136 @@ contains
                          endif
 
                       endif
+                      !------------------------------------ Special corners (only for grid with patches)
+                      if    ((node_list%node(inode)%boundary .eq. 21) &
+                        .or. (node_list%node(inode)%boundary .eq. 20)) then
+
+!====================================== begining RMPs at boundary ======================================================
+!================================== type 20-21 - boundary: corners apply on 's' and 't'
+! ======================================================================================================================
+                       
+                       if (RMP_on ) then
+
+                          if ((k.eq.1) .and. ((in.eq.RMP_har_cos) .or. (in.eq.RMP_har_sin)) .and. (.not. freeboundary)) then
+                             ! in .eq. RMP_har_cos  corresponds to cos(n_perturbation)
+                             ! in .eq. RMP_har_sin   corresponds to sin(n_perturbation)
+
+                             kp=1    ! variable psi
+                             kv=1    ! equation for psi
+
+                             index_node = node_list%node(inode)%index(1)  ! index in RHS (or matrix A not compressed)
+
+                             Rnode     = node_list%node(inode)%x(1,1)
+                             dRnode_ds = node_list%node(inode)%x(2,1)
+                             dRnode_dt = node_list%node(inode)%x(3,1)
+                             Znode     = node_list%node(inode)%x(1,2)
+                             dZnode_ds = node_list%node(inode)%x(2,2)
+                             dZnode_dt = node_list%node(inode)%x(3,2)
+
+                             if (in.eq.RMP_har_cos) then
+                                delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dR = dpsi_RMP_cos_dR1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dZ = dpsi_RMP_cos_dZ1(node_list%node(inode)%boundary_index)
+                                if (node_list%node(inode)%boundary_index == 1 ) then
+                                   write (*,*) 'type2_bnd: my_id, psi_RMP_cos1, Rnode, Znode, in'
+                                   write (*,*) my_id, delta_psi_rmp, Rnode, Znode,in
+                                   write (*,*) 'delta_psi_rmp_dR, delta_psi_rmp_dZ'
+                                   write (*,*) delta_psi_rmp_dR, delta_psi_rmp_dZ
+                                endif
+                             else
+                                delta_psi_rmp = psi_RMP_sin1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dR = dpsi_RMP_sin_dR1(node_list%node(inode)%boundary_index)
+                                delta_psi_rmp_dZ = dpsi_RMP_sin_dZ1(node_list%node(inode)%boundary_index)
+                             endif
+
+                             delta_psi_rmp_ds = delta_psi_rmp_dR * dRnode_ds + delta_psi_rmp_dZ * dZnode_ds
+                             delta_psi_rmp_dt = delta_psi_rmp_dR * dRnode_dt + delta_psi_rmp_dZ * dZnode_dt
+                             if (in.eq.RMP_har_cos) then
+                                if (node_list%node(inode)%boundary_index == 1 ) then
+                                   write (*,*) 'delta_psi_rmp_dt', delta_psi_rmp_dt
+                                   write (*,*) 'delta_psi_rmp_ds', delta_psi_rmp_ds
+                                endif
+                             endif
+
+                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                                !-------- index dans A_mat
+                                ilarge_vp  = ijA_position  - 1 + ((kv-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local & 
+                                  + (kp-1)*n_tor_local + in - i_tor_min +1
+                                Rhs_loc(n_tor_local*n_var * (index_node-1) + (kv-1)*n_tor_local + in - i_tor_min +1) = ZBIG * delta_psi_rmp
+                                irn(ilarge_vp) =  n_tor_local * n_var * (index_node-1) + (kv-1)*n_tor_local + in - i_tor_min +1
+                                jcn(ilarge_vp) =  n_tor_local * n_var * (index_node-1) + (kp-1)*n_tor_local + in - i_tor_min +1
+                                A_mat(ilarge_vp)   = ZBIG
+                             endif
+
+                             index_node2 = node_list%node(inode)%index(2)
+                             if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
+                                call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
+                                ilarge_vp2  = ijA_position2  - 1 + ((kv-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local & 
+                                  + (kp-1)*n_tor_local + in - i_tor_min +1
+                                Rhs_loc(n_tor_local*n_var * (index_node2-1) + (kv-1)*n_tor_local + in - i_tor_min +1) = ZBIG * delta_psi_rmp_ds
+                                irn(ilarge_vp2) =  n_tor_local * n_var * (index_node2-1) + (kv-1)*n_tor_local + in - i_tor_min +1
+                                jcn(ilarge_vp2) =  n_tor_local * n_var * (index_node2-1) + (kp-1)*n_tor_local + in - i_tor_min +1
+                                A_mat(ilarge_vp2)   = ZBIG
+                             endif
+
+                             index_node2 = node_list%node(inode)%index(3)
+                             if ((index_node2 .ge. index_min) .and. (index_node2 .le. index_max)) then
+                                call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
+                                ilarge_vp2  = ijA_position2  - 1 + ((kv-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local & 
+                                  + (kp-1)*n_tor_local + in - i_tor_min +1
+                                Rhs_loc(n_tor_local*n_var * (index_node2-1) + (kv-1)*n_tor_local + in - i_tor_min +1) = ZBIG * delta_psi_rmp_dt
+                                irn(ilarge_vp2) =  n_tor_local * n_var * (index_node2-1) + (kv-1)*n_tor_local + in - i_tor_min +1
+                                jcn(ilarge_vp2) =  n_tor_local * n_var * (index_node2-1) + (kp-1)*n_tor_local + in - i_tor_min +1
+                                A_mat(ilarge_vp2)   = ZBIG
+                             endif
+                          endif
+                       endif
+
+!======================================= end RMPs ==================================
+
+                        ! decides when the boundary conditions should be applied (for freeboundary and RMP cases)
+                        if (      apply_psi_BC      &
+                             .or. apply_current_BC  &
+                             .or. (( k /= 1 ) .and. ( k /= 3 ))  ) then
+
+                          index_node = node_list%node(inode)%index(1)
+                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                             call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                             index_large_i = n_tor_local * n_var * (index_node - 1)
+                             ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local & 
+                               + (k-1)*n_tor_local + in - i_tor_min +1
+                             irn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                             jcn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                             A_mat(ilarge2)   = zbig
+                          endif
+
+                          index_node = node_list%node(inode)%index(2)
+                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                             call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                             index_large_i = n_tor_local * n_var * (index_node - 1)
+                             ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local & 
+                               + (k-1)*n_tor_local + in - i_tor_min +1
+                             irn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                             jcn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                             A_mat(ilarge2)    = zbig
+                          endif
+
+                          index_node = node_list%node(inode)%index(3)
+                          if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+                             call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                             index_large_i = n_tor_local * n_var * (index_node - 1)
+                             ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local & 
+                               + (k-1)*n_tor_local + in - i_tor_min +1
+                             irn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                             jcn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                             A_mat(ilarge2)    = zbig
+                          endif
+
+                        endif
+
+                      endif
+
                       !------------------------------------ Special corners (only for grid with patches)
                       if    ((node_list%node(inode)%boundary .eq. 21) &
                         .or. (node_list%node(inode)%boundary .eq. 20)) then

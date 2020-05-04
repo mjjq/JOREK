@@ -28,7 +28,6 @@ character, allocatable :: buffer(:)
 
 ! --- Additional variables in order to broadcast derived MPI type
 integer                :: dtype
-integer                :: err_alloc = 0
 
 if ( my_id == 0 ) then
   write(*,*) '*************************************'
@@ -114,6 +113,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(ZK_prof_neg,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ZK_par_neg,             1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ZK_prof_neg_thresh,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ZK_par_neg_thresh,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(T_min,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(ne_SI_min,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -214,8 +214,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(n_spi_tot,              1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(spi_rnd_seed,          40,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(spi_abl_model,          1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(spi_shard_file,        80,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-
+  call MPI_PACK(spi_shard_file,       256,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(using_spi,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   if (using_spi) then
@@ -223,13 +222,9 @@ if (my_id .eq. 0) then
     write(*,*) "packing pellets: ", ierr
 
     call MPI_PACK(spi_tor_rot,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    call MPI_PACK(tor_frequency,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-    call MPI_PACK(ns_phi_rotate,      1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(tor_frequency,        1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(ns_phi_rotate,        1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   end if
-
-
-!===============================End of SPI model===============================================
-
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
   call MPI_PACK(total_n_particles_inj_all,1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 #endif
@@ -651,6 +646,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,ZK_prof_neg,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ZK_par_neg,             1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ZK_prof_neg_thresh,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ZK_par_neg_thresh,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,T_min,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,ne_SI_min,              1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -714,8 +710,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,JET_MGI,                1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ASDEX_MGI,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
-  call MPI_UNPACK(buffer,bufsize,position,gas_type,             80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,adas_dir,            512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,gas_type,              80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,adas_dir,             512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,L_tube,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,K_Dmv,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -751,8 +747,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,n_spi_tot,              1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,spi_rnd_seed,          40,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,spi_abl_model,          1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,spi_shard_file,        80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
-
+  call MPI_UNPACK(buffer,bufsize,position,spi_shard_file,       256,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,using_spi,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
   if (using_spi) then
@@ -769,10 +764,7 @@ if (my_id .ne. 0) then
     call MPI_UNPACK(buffer,bufsize,position,spi_tor_rot,          1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,tor_frequency,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,ns_phi_rotate,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-
   end if
-
-!===============================End of SPI model===============================================
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
   call MPI_UNPACK(buffer,bufsize,position,total_n_particles_inj_all,1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 #endif

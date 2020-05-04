@@ -109,9 +109,10 @@ real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 real*8                :: T_corr, Te_corr_eV, Te_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: T_real8, r0_real8, rn0_real8
-real*8                :: r0_corr, rn0_corr
+real*8                :: T0_corr, r0_corr, rn0_corr
 
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
 ! Atomic physics coefficients:
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8     :: m_i_over_m_imp
@@ -124,7 +125,7 @@ real*8     :: beta_imp
 real*8     :: Z_eff, eta_coef
 !   -Radiation from injected impurities
 real*8     :: Lrad
-real*8     :: ne_SI                                          ! Electron density used in radiation rate
+real*8     :: ne_SI                              ! Electron density used in radiation rate
 real*8     :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
 real*8     :: A2_rad, T2_rad, sig2_rad
 !   -Temporary variable for charge state distribution
@@ -143,10 +144,6 @@ real*8                :: dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz
 logical               :: include_neutral_dens
 integer               :: n_rn0, s_rn0
 real*8                :: IonN, RecN, AblN, coef_rec_1, Srec_T
-
-
-! MPI arguments
-integer    :: required,provided,StatInfo
 
 #ifdef fullmhd
 !====================== --- Variables related to full mhd 
@@ -185,17 +182,6 @@ allocate(node_list)
 allocate(element_list)
 allocate(bnd_elm_list)
 allocate(bnd_node_list)
-
-  ! --- Initialise MPI / threaded MPI
-!#ifdef FUNNELED
-!required = MPI_THREAD_FUNNELED
-!#else
-!required = MPI_THREAD_MULTIPLE
-!#endif
-!#ifdef STAN_FLAG
-!required = 0
-!#endif
-!call MPI_Init_thread(required, provided, StatInfo)
 
 ! --- Initialise input parameters and read the input namelist.
 my_id     = 0
@@ -334,11 +320,9 @@ endif
     s_rn0       = n_scalars
     n_scalars   = n_scalars + n_rn0
  endif
-
-
 #endif
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
-    n_radiation = 0
+ n_radiation = 0
  if (include_radiation) then
     n_radiation = 5
     s_radiation = n_scalars
@@ -375,7 +359,6 @@ if ( SI_units ) then
    endif
    scalar_names(7)='Vpar_km/s   '
 #endif
-
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
    scalar_names(8)='N_dens_1d20 '
@@ -1300,22 +1283,20 @@ enddo  ! n_elements
      r0_real8 = scalars(i,5)
      rn0_real8 = scalars(i,8)
 
-     r0_corr = corr_neg_dens(r0_real8,(/1.d-8,1.d-5/))
-     rn0_corr = corr_neg_dens(rn0_real8,(/1.d-12,1.d-5/))
-
+     r0_corr = corr_neg_dens(r0_real8,(/1.d-9,1.d-5/),1.d-3)
+     rn0_corr = corr_neg_dens(rn0_real8,(/1.d-9,1.d-5/),1.d-3)
 
      ! We estimate the effective charge by a test density 10^20/m^3
      ! Later maybe we should implement a iterative method
 
      if (allocated(imp_adas(1)%ionisation_energy)) then
-
        if (allocated(P_imp)) deallocate(P_imp)
        allocate(P_imp(0:imp_adas(1)%n_Z))
 
        call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
                                      p_out=P_imp,z_eff=Z_imp)
 
-       ! Calculate the ionization potential energy and it's time gradient
+       ! Calculate the ionization potential energy and derivative wrt. temperature
        E_ion     = 0.
 
        do ion_i=1, imp_adas(1)%n_Z
@@ -1323,14 +1304,14 @@ enddo  ! n_elements
            E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
          end do
        end do
-       ! Convert from eV to JOREK unit
+     ! Convert from eV to JOREK unit
        E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
      else
        call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
        E_ion     = 0.
      end if
 
-     alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+     alpha_imp    = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
      beta_imp     = m_i_over_m_imp*Z_imp - 1.
 
      ne_SI       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
@@ -1348,7 +1329,7 @@ enddo  ! n_elements
      eta_coef = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2) 
      eta_coef = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
 
-     eta_Sp       = eta_Sp * eta_coef
+     eta_Sp = eta_Sp * eta_coef
 
   !-------------------------------------------
   ! --- Radiative function, using interpolation
@@ -1383,6 +1364,7 @@ enddo  ! n_elements
    end do
  endif
 #endif /*(JOREK_MODEL == 501 || JOREK_MODEL == 502)*/
+
 #if (JOREK_MODEL == 500)
   if (include_neutral_dens) then
 
@@ -1535,16 +1517,16 @@ if (SI_units) then
       coef_ion_2 = 0.232d0
       coef_ion_1 = 0.2917d-13 !(MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
       S_ion_puiss = 3.9d-1
-  
+
       ksiion = ksi_ion * central_density * 1.d20
   
       T_real8 = scalars(i,6)*1.e3*2.*EL_CHG*MU_zero*(central_density * 1.d20)
       ! ======= T_real8 in JOREK units
-  
+
       Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
-  
-      Te_corr_eV = corr_neg_temp(T_real8,(/1.d-2,1.d-1/))/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
-  
+
+      Te_corr_eV = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
+
       Sion_T = coef_ion_1*((coef_ion_3/Tion)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/Tion)*exp(-coef_ion_3/Tion)
   
       coef_rad_1 = 1.d0 !2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
@@ -1603,8 +1585,6 @@ endif ! SI_UNITS
 etype = 9  ! for vtk_quad
 
 call write_vtk('jorek_tmp.vtk',xyz,ien,etype,scalar_names,scalars,vector_names,vectors)
-
-!call MPI_FINALIZE(IERR)                                ! clean up MPI
 
 write(*,*) 'done.'
 

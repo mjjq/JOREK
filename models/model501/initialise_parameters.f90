@@ -32,15 +32,15 @@ real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: s_out,t_out,R_out,Z_out
 
 real*8  :: n_SI, T_eV, n_corr, T_corr
-real*8  :: spi_gd_angle_01, spi_gd_angle_02        !The dispersion angles for each spi
-real*8  :: spi_rotation_01, spi_rotation_02        !The rotation angle from spi coordinate to real coordinate
+real*8  :: spi_gd_angle_01, spi_gd_angle_02        ! The dispersion angles for each shard
+real*8  :: spi_rotation_01, spi_rotation_02        ! The rotation angle from shard coordinates to (R,Z,phi) coordinates
 real*8  :: spi_Vel_totref, spi_Vel_i, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_tmp
-real*8  :: spi_Vel_x, spi_Vel_y, spi_Vel_z         !Spi velocity in injection coordinate
-real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Injection position of SPI 
+real*8  :: spi_Vel_x, spi_Vel_y, spi_Vel_z         ! Shard velocity in injection coordinates
+real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       ! Injection position of SPI 
 real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_radius_tmp
 real*8  :: sign_corr, real_total_quantity
-real*8, allocatable :: rnd(:)                      !The random number array 
-real*8, allocatable :: shard_size(:)               !The shard size array
+real*8, allocatable :: rnd(:)                      ! The random number array 
+real*8, allocatable :: shard_size(:)               ! The shard size array
 
 
 ! --- Namelist with input parameters.                                                                                                                        
@@ -99,11 +99,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_pastix, use_wsmp, n_tor_fft_thresh,             &
                 pastix_smp_only, refinement, force_central_node,    &
                 fix_axis_nodes, use_strumpack,                      &
+                grid_to_wall,                                       &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
                 eta_num_T_dependent, visco_num_T_dependent,         &
-                zkpar_T_dependent, T_max_eta, T_max_eta,            & 
+                zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        & 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
@@ -118,7 +119,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                spi_tor_rot, tor_frequency,                         &
+                spi_tor_rot, tor_frequency, ZK_prof_neg_thresh,     &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 ne_SI_min, Te_eV_min, rn0_min,                      &
@@ -132,7 +133,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 gas_type, delta_n_convection, nimp_bg,              &
-                 adas_dir, output_rad_phi,                          &
+                adas_dir, output_rad_phi,                           &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
@@ -146,7 +147,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, eta_ohmic 
+                pastix_maxthrd, eta_ohmic
 
  if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
@@ -363,7 +364,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   if (nstep .gt. 0) call tr_allocate(npart_flux_t,1,index_start+nstep,"npart_flux_t",CAT_UNKNOWN)
 
   if (allocated(dpart_tot_dt)) call tr_deallocate(dpart_tot_dt,"dpart_tot_dt",CAT_UNKNOWN)
-  if (nstep .gt. 0) call tr_allocate(dpart_tot_dt,1,index_start+nstep,"dpart_tot_dt",CAT_UNKNOWN)  
+  if (nstep .gt. 0) call tr_allocate(dpart_tot_dt,1,index_start+nstep,"dpart_tot_dt",CAT_UNKNOWN)
 
 endif
 
@@ -374,9 +375,14 @@ call read_num_profiles(my_id)
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
 
-! --- Initialize the shattered pellet position
+! --- For now the diamagnetic term has not been implemented properly
+if (tauIC .ne. 0.0) then
+  tauIC = 0.0
+  write(*,*) "WARNING! The diamagnetic term has not been implemented properly for model 501, setting tauIC = 0 now."
+endif
+
 if ( my_id == 0 ) then
-  if (2*PI/(n_tor*n_period) >= ns_deltaphi .and. my_id == 0) then
+  if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
     write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
     if (t_now > minval(t_ns)) then
       write(*,*) "EXITING NOW!!!"
@@ -396,7 +402,6 @@ if ( my_id == 0 ) then
     end if
   end do
 
-  !if (using_spi) call init_spi()
   if (using_spi) then
     n_spi_tot = 0
     do i = 1, n_inj

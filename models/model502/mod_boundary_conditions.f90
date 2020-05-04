@@ -65,9 +65,9 @@ contains
     logical,                   intent(in)    :: gmres
     logical,                   intent(in)    :: solve_only
     integer,                   intent(in)    :: i_tor_min, i_tor_max 
-    integer, pointer,          intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, pointer,          intent(in)    :: irn(:), jcn(:) 
-    real*8, pointer,           intent(in)    :: A_mat(:) 
+    integer, allocatable,      intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, allocatable,      intent(inout) :: irn(:), jcn(:) 
+    real*8,  allocatable,      intent(inout) :: A_mat(:) 
 
     ! Internal parameters
     real*8  :: zbig, zbig_backup, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1

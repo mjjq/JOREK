@@ -28,7 +28,7 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
-  eta_num_T_dependent = .false.
+  eta_num_T_dependent   = .false.
   visco_num_T_dependent = .false.
 
   eta           = 1.d-5
@@ -181,6 +181,7 @@ subroutine preset_parameters
   ZK_prof_neg        = 1.d-5
   ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+  ZK_par_neg_thresh  = 0.d0
   T_min              = 0.0
 
   ne_SI_min          = 1.d18
@@ -409,9 +410,10 @@ subroutine preset_parameters
   delta_n_convection = 0
   nimp_bg = 0.
   !====== JET DMV-2 parameters
-  L_tube = 2.d0
+  L_tube = 2.4d0
   K_Dmv = 4.d-2
   A_Dmv = 1.77d-2
+  V_Dmv = 9.75d-4
   t_ns  = 2.d3
   !======= Additional parameters for SPI =======
   spi_Vel_Rref    = 0.0d0
@@ -437,9 +439,8 @@ subroutine preset_parameters
 
   output_rad_phi  = .false.
   n_adas          = 0
-
   adas_dir        = ''
-
+  gas_type        = ''
 
 !======================JP ECCD injection parameters
   nu_jec_fast=1.d1

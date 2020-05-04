@@ -66,7 +66,7 @@ real*8     :: Ti0, Ti0_x, Ti0_y, Te0, Te0_x, Te0_y
 real*8     :: zTi, zTi_x, zTi_y, zTe, zTe_x, zTe_y, zn_x, zn_y
 real*8     :: rn0, rn0_s, rn0_t, rn0_x, rn0_y, rn0_p, rn0_ss, rn0_st, rn0_tt, rn0_xx, rn0_yy
 real*8     :: rn0_hat, rn0_x_hat, rn0_y_hat, rn0_corr
-real*8     :: rhon, rhon_s, rhon_t, rhon_p, rhon_x, rhon_y, rhon_xx, rhon_yy
+real*8     :: rhon, rhon_s, rhon_t, rhon_p, rhon_x, rhon_y, rhon_ss, rhon_tt, rhon_st, rhon_xx, rhon_yy, rhon_xy
 real*8	   :: Jb_0 , Jb, dn0x, dn0y, dn0p
 real*8     :: Vpar, Vpar_x, Vpar_y, Vpar_p, Vpar_s, Vpar_t, Vpar_ss, Vpar_st, Vpar_tt, Vpar_xx, Vpar_yy, Vpar_xy
 real*8     :: P0, P0_s, P0_t, P0_x, P0_y, P0_p, P0_ss, P0_st, P0_tt, P0_xx, P0_xy, P0_yy
@@ -354,7 +354,7 @@ do i=1,n_vertex_max
 !$OMP  rho, rho_x, rho_y, rho_s, rho_t, rho_p, rho_ss, rho_tt, rho_st, rho_xx, rho_yy, rho_xy, &
 !$OMP  T,   T_x,   T_y,   T_s,   T_t,   T_p,   T_ss,   T_tt,   T_st,   T_xx,   T_yy,   T_xy,   &
 !$OMP  vpar, vpar_x, vpar_y, vpar_s, vpar_t, vpar_p, vpar_ss, vpar_tt, vpar_st, vpar_xx, vpar_yy, vpar_xy, &
-!$OMP  rhon, rhon_x, rhon_y, rhon_s, rhon_t, rhon_p,                            rhon_xx, rhon_yy,          &
+!$OMP  rhon, rhon_x, rhon_y, rhon_s, rhon_t, rhon_p, rhon_ss, rhon_tt, rhon_st, rhon_xx, rhon_yy, rhon_xy, &
 !$OMP  rho_hat, rho_x_hat, rho_y_hat,  &
 !$OMP  Bgrad_rho_star, Bgrad_rho_k_star, Bgrad_rho, Bgrad_T_star, Bgrad_T_k_star, Bgrad_T, BB2, &
 !$OMP  Btheta2, v_ps0_x, v_ps0_y, &
@@ -448,7 +448,7 @@ do i=1,n_vertex_max
           rn0_st = eq_st(mp,8,ms,mt)                                                            
           rn0_tt = eq_tt(mp,8,ms,mt)  
 
-          rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0 ...  
+          rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0 ...
      
           rn0_xx = (rn0_ss * y_t(ms,mt)**2 - 2.d0*rn0_st * y_s(ms,mt)*y_t(ms,mt) + rn0_tt * y_s(ms,mt)**2     &
             + rn0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &
@@ -825,12 +825,16 @@ do i=1,n_vertex_max
   ! --- Recombination rate for ionized Deuterium
   ! (see Wiki for more info: http://jorek.eu/wiki/doku.php?id=model500_501_555#recombination_rate_for_deuterium)
   !-------------------------------------------------
-    
+
+  if (Te_ev .gt. 0.1d0) then      
     coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density*1.d20)**(1.5d0)   
  
-    Srec_T    = coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T0_corr/(2.d0))**(-0.5d0) 
-     
-    dSrec_dT  = - 0.5d0 * (1.d0/2.d0) * coef_rec_1 * 0.7d-19 * (13.6*(2*EL_CHG*MU_ZERO*central_density * 1.d20))**(0.5d0) * (T0_corr/(2.d0))**(-1.5d0) * dT0_corr_dT
+    Srec_T    =            coef_rec_1 * 0.7d-19 * (13.6d0*(2.d0*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T0_corr/(2.d0))**(-0.5d0)      
+    dSrec_dT  = - 0.25d0 * coef_rec_1 * 0.7d-19 * (13.6d0*(2.d0*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T0_corr/(2.d0))**(-1.5d0) * dT0_corr_dT
+  else
+    Srec_T   = 0.d0
+    dSrec_dT = 0.d0
+  endif
 
    !--------------------------------------------------------
    ! --- Source of neutrals, e.g. from MGI/SPI
@@ -1273,13 +1277,13 @@ do i=1,n_vertex_max
                   u_p  = psi_p  ;  zj_p  = psi_p  ;  w_p  = psi_p  ; rho_p  = psi_p  ;  T_p  = psi_p  ; vpar_p  = psi_p ; rhon_p = psi_p
                   u_s  = psi_s  ;  zj_s  = psi_s  ;  w_s  = psi_s  ; rho_s  = psi_s  ;  T_s  = psi_s  ; vpar_s  = psi_s ; rhon_s = psi_s
                   u_t  = psi_t  ;  zj_t  = psi_t  ;  w_t  = psi_t  ; rho_t  = psi_t  ;  T_t  = psi_t  ; vpar_t  = psi_t ; rhon_t = psi_st
-                  u_ss = psi_ss ;  zj_ss = psi_ss ;  w_ss = psi_ss ; rho_ss = psi_ss ;  T_ss = psi_ss ; vpar_ss = psi_ss; 
-                  u_tt = psi_tt ;  zj_tt = psi_tt ;  w_tt = psi_tt ; rho_tt = psi_tt ;  T_tt = psi_tt ; vpar_tt = psi_tt; 
-                  u_st = psi_st ;  zj_st = psi_st ;  w_st = psi_st ; rho_st = psi_st ;  T_st = psi_st ; vpar_st = psi_st; 
+                  u_ss = psi_ss ;  zj_ss = psi_ss ;  w_ss = psi_ss ; rho_ss = psi_ss ;  T_ss = psi_ss ; vpar_ss = psi_ss; rhon_ss = psi_ss
+                  u_tt = psi_tt ;  zj_tt = psi_tt ;  w_tt = psi_tt ; rho_tt = psi_tt ;  T_tt = psi_tt ; vpar_tt = psi_tt; rhon_tt = psi_tt
+                  u_st = psi_st ;  zj_st = psi_st ;  w_st = psi_st ; rho_st = psi_st ;  T_st = psi_st ; vpar_st = psi_st; rhon_st = psi_st
 
-                  u_xx = psi_xx ;                    w_xx = psi_xx ; rho_xx = psi_xx ;  T_xx = psi_xx ; vpar_xx = psi_xx
-                  u_yy = psi_yy ;                    w_yy = psi_yy ; rho_yy = psi_yy ;  T_yy = psi_yy ; vpar_yy = psi_yy
-                  u_xy = psi_xy ;                    w_xy = psi_xy ; rho_xy = psi_xy ;  T_xy = psi_xy ; vpar_xy = psi_xy
+                  u_xx = psi_xx ;                    w_xx = psi_xx ; rho_xx = psi_xx ;  T_xx = psi_xx ; vpar_xx = psi_xx ; rhon_xx = psi_xx
+                  u_yy = psi_yy ;                    w_yy = psi_yy ; rho_yy = psi_yy ;  T_yy = psi_yy ; vpar_yy = psi_yy ; rhon_yy = psi_yy
+                  u_xy = psi_xy ;                    w_xy = psi_xy ; rho_xy = psi_xy ;  T_xy = psi_xy ; vpar_xy = psi_xy ; rhon_xy = psi_xy
 
                   rho_hat   = BigR**2 * rho
                   rho_x_hat = 2.d0 * BigR * BigR_x  * rho + BigR**2 * rho_x

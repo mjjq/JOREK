@@ -22,6 +22,8 @@ implicit none
 
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)        ! the two nodes containing the boundary nodes
+integer, intent(in)   :: i_tor_min   
+integer, intent(in)   :: i_tor_max   
 
 real*8     :: x_g(n_gauss), x_s(n_gauss), x_t(n_gauss), x_ss(n_gauss)
 real*8     :: y_g(n_gauss), y_s(n_gauss), y_t(n_gauss), y_ss(n_gauss)
@@ -30,13 +32,8 @@ real*8     :: eq_g(n_plane,n_var,n_gauss), eq_s(n_plane,n_var,n_gauss), eq_p(n_p
 real*8     :: eq_t(n_plane,n_var,n_gauss), eq_ss(n_plane,n_var,n_gauss)
 real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
-integer, intent(in) :: i_tor_min   
-integer, intent(in) :: i_tor_max   
-
-#define DIM0 (i_tor_max-i_tor_min+1)*n_vertex_max*(n_order+1)*n_var
-
-real*8, dimension (DIM0,DIM0)  :: ELM
-real*8, dimension (DIM0)       :: RHS
+real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
+real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
 integer    :: vertex(2), direction(2), direction_perp(2)
 integer    :: i, j, j2, j3, ms, mt, mp, k, l, l2, l3, index_ij, index_kl, index, xcase2
@@ -56,9 +53,9 @@ real*8     :: r0, r0_s, r0_t, r0_p, r0_x, r0_y, rho, rho_s, rho_t, rho_x, rho_y
 real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67, amat_76, amat_77
 real*8     :: amat_81, amat_85, amat_87 
 real*8     :: element_size_ij, element_size_kl, element_size_perp
-real*8     :: grad_t(2), B0_R, B0_Z, factor_cs_bnd_integral, neutral_source
+real*8     :: grad_t(2), B0_R, B0_Z, factor_cs_bnd_integral, neutral_source
 logical    :: xpoint2
-integer    :: n_tor_local
+integer    :: n_tor_local 
 
 type (type_node)         :: tmp_node
 
@@ -69,33 +66,34 @@ Zbig = 1.d12
 
 !--------------------- reorder the nodes to have the same direction as full element (maybe not necesary)
 if ((vertex(1) .eq. 3) .and. (vertex(2) .eq. 4)) then
-  tmp_node = nodes(1)
+  tmp_node  = nodes(1)
   nodes(1)  = nodes(2)
   nodes(2)  = tmp_node
   vertex(1) = 4
   vertex(2) = 3
 endif
 if ((vertex(1) .eq. 4) .and. (vertex(2) .eq. 1)) then
-  tmp_node = nodes(1)
+  tmp_node  = nodes(1)
   nodes(1)  = nodes(2)
   nodes(2)  = tmp_node
   vertex(1) = 1
   vertex(2) = 4
 endif
 if ((vertex(1) .eq. 3) .and. (vertex(2) .eq. 2)) then
-  tmp_node = nodes(1)
+  tmp_node  = nodes(1)
   nodes(1)  = nodes(2)
   nodes(2)  = tmp_node
   vertex(1) = 2
   vertex(2) = 3
 endif
 if ((vertex(1) .eq. 2) .and. (vertex(2) .eq. 1)) then
-  tmp_node = nodes(1)
+  tmp_node  = nodes(1)
   nodes(1)  = nodes(2)
   nodes(2)  = tmp_node
   vertex(1) = 1
   vertex(2) = 2
 endif
+
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_ss  = 0.d0; 
@@ -161,7 +159,7 @@ do i=1,2    ! sum over 2 verices
   enddo
 enddo
 
-n_tor_local = i_tor_max - i_tor_min + 1
+n_tor_local = i_tor_max - i_tor_min +1
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss
 
@@ -216,11 +214,13 @@ do ms=1, n_gauss
     BB2 = Btot**2
 
     bdotn = (+ ps0_y * normal(1) - ps0_x * normal(2)) / x_g(ms) / Btot
+
     normal_sign  = sign(1.d0,bdotn)
     normal_sign3 = sign(1.d0,ps0_s) * normal_sign
 
-    factor = 1.d0
+     factor = 1.d0
 !     factor = (0.5d0 + 0.5d0 * tanh((abs(bdotn) - 0.02d0)/0.016d0))**2
+
     factor_cs_bnd_integral = 0.d0
     if (mach_one_bnd_integral) factor_cs_bnd_integral = 1.d0
 
@@ -241,14 +241,14 @@ do ms=1, n_gauss
 
           rhs_ij_7 = - v * (vpar0 * Btot * normal_sign - cs0 * factor) * dl * Zbig                      ! right hand side equation 7
 
-          rhs_ij_8 = + v * neutral_reflection * r0 * vpar0 * ps0_s * normal_sign3 * tstep &
+          rhs_ij_8 = + v * neutral_reflection * r0_corr * vpar0 * ps0_s * normal_sign3 * tstep &
 
 !                      - v * neutral_reflection * D_prof  * (r0_x * y_t(ms) - r0_y * x_t(ms)) * BigR * tstep &
             
                      + v * neutral_source * dl * tstep                      ! right hand side of neutral equation
 
 
-          index_ij = n_tor_local*n_var*(n_order+1)*(vertex(i)-1) + n_tor_local * n_var * (j-1) + im - i_tor_min + 1  ! index in the ELM matrix
+          index_ij = n_tor_local*n_var*(n_order+1)*(vertex(i)-1) + n_tor_local * n_var * (j2-1) + im - i_tor_min +1  ! index in the ELM matrix
 
           ij5 = index_ij + 4*n_tor_local                                          ! local index in element matrix
           ij6 = index_ij + 5*n_tor_local                                          ! local index in element matrix
@@ -266,18 +266,16 @@ do ms=1, n_gauss
 
               l2 = direction(l)
               element_size_kl = element%size(vertex(k),l2)
- 
+
               l3 = direction_perp(j)
               element_size_perp = - element%size(vertex(k),direction_perp(1)) * 3.d0
 
               do in = i_tor_min, i_tor_max                                              ! loop over toroidal harmonics
 
-                index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l-1) + in - i_tor_min + 1  ! index in the ELM matrix
-
-                psi    = H1(k,l,ms)    * element_size_kl * HZ(in,mp)
-                psi_s  = H1_s(k,l,ms)  * element_size_kl * HZ(in,mp)
+                psi    = H1(k,l,ms)   * element_size_kl * HZ(in,mp)
+                psi_s  = H1_s(k,l,ms) * element_size_kl * HZ(in,mp)
                 psi_ss = H1_ss(k,l,ms) * element_size_kl * HZ(in,mp)
-                psi_t  = H1(k,l,ms)    * element_size_kl * HZ(in,mp) * element_size_perp
+                psi_t  = H1(k,l,ms)   * element_size_kl * HZ(in,mp) * element_size_perp
 
                 rho   = psi
                 rho_s = psi_s
@@ -301,11 +299,12 @@ do ms=1, n_gauss
                 amat_76 =   v * ( - cs_T) * factor          * dl * Zbig
                 amat_77 =   v * (vpar * Btot * normal_sign) * dl * Zbig 
 
-                amat_81 = - v * neutral_reflection * r0  * vpar0 * psi_s * normal_sign3 * theta * tstep 
-                amat_85 = - v * neutral_reflection * rho * vpar0 * ps0_s * normal_sign3 * theta * tstep !&
+                amat_81 = - v * neutral_reflection * r0_corr * vpar0 * psi_s * normal_sign3 * theta * tstep 
+                amat_85 = - v * neutral_reflection * rho     * vpar0 * ps0_s * normal_sign3 * theta * tstep !&
  !                          + v * neutral_reflection * D_prof  * (rho_x * y_t(ms) - rho_y * x_t(ms)) * BigR * theta * tstep 
-                amat_87 = - v * neutral_reflection * r0  * vpar  * ps0_s * normal_sign3 * theta * tstep 
+                amat_87 = - v * neutral_reflection * r0_corr * vpar  * ps0_s * normal_sign3 * theta * tstep 
 
+                index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l2-1) + in - i_tor_min +1  ! index in the ELM matrix
                  
                 kl1 = index_kl
                 kl5 = index_kl + 4*n_tor_local
@@ -328,7 +327,7 @@ do ms=1, n_gauss
                 ELM(ij8,kl1) =  ELM(ij8,kl1) + ws * amat_81
                 ELM(ij8,kl5) =  ELM(ij8,kl5) + ws * amat_85
                 ELM(ij8,kl7) =  ELM(ij8,kl7) + ws * amat_87	
-   
+	
               enddo
             enddo
           enddo

@@ -10,8 +10,6 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   use mpi_mod
   use mod_clock
 
-  use matio_module
-
 !$ use omp_lib
 
   implicit none
@@ -87,13 +85,7 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
     spss_initialized = .true.
   endif
 
-  if (my_id.eq.0) then
-     if (.not.spss_analyzed) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,RHS=mumps_par%rhs)
-     if (spss_analyzed) call save_mat_h5(my_id+1,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,RHS=mumps_par%rhs)
-  endif
-
-  call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_WORLD,&
-                         UPDATE=spss_analyzed)
+  call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_WORLD,spss_analyzed)
   call tr_deallocatep(mumps_par%irn,"mumps_par%IRN",CAT_DMATRIX)
   call tr_deallocatep(mumps_par%jcn,"mumps_par%JCN",CAT_DMATRIX)
   call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)

@@ -50,7 +50,6 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fi
 //  spss->options().set_Krylov_solver(KrylovSolver::PREC_GMRES);
   spss->options().set_Krylov_solver(KrylovSolver::DIRECT);
 //  spss->options().set_Krylov_solver(KrylovSolver::REFINE);
-
   spss->options().set_rel_tol(epsr);
   spss->options().set_abs_tol(eps);  
   spss->options().set_maxit(200);  
@@ -65,10 +64,6 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fi
 //  spss->options().use_BLR();  
 //  spss->options().BLR_options().set_rel_tol(1e-4);  
 //  spss->options().BLR_options().set_abs_tol(1e-8);    
-
-//  spss->options().set_compression(CompressionType::LOSSY);
-//  spss->options().set_lossy_precision(24);
-//  spss->options().set_rel_tol(1e-5);
 
   return;
 }

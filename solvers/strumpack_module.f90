@@ -27,7 +27,7 @@ module strumpack_module
       type(c_ptr), intent(inout) :: spss
       integer, intent(in) :: comm
     end subroutine spk_init
-
+    
     subroutine spk_set_mat(n,dist,irn,jcn,val,spss,comm,upd) bind(C)
       use iso_c_binding
       use mpi            

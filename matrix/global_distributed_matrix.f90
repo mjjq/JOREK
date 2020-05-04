@@ -29,6 +29,11 @@ module global_distributed_matrix
   integer                       :: n_matrix_block_size_harm                       !< Size of a harmonic matrix block (n_var x n_tor)
   integer                       :: ndof_harm, n_harm, nz_harm                       
   
+#ifdef USE_ZPASTIX
+  double complex,       pointer :: A_cmplx(:)    !< Distributed harmonic matrix
+  double complex,       pointer :: rhs_cmplx(:)  !< Distributed harmonic right hand side
+#endif
+ 
   contains
   
   

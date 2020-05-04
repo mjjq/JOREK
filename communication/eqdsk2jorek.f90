@@ -22,11 +22,12 @@ integer,allocatable :: iwrk(:)
 real*8             :: angle, ellip, tria_u, tria_l, quad_u, quad_l, r0, z0, a0, PI
 real*8             :: dummy(3), xdim,zdim,rzero,rgrid1,zmid,rmaxis,zmaxis,ssimag,ssibry,bcentr
 real*8             :: xip,xdum1,xdum2,xdum3,xdum4,xdum5
-real*8             :: psi_sep, sig_sep, tanh1, zmu0, zn0, zmd
+real*8             :: psi_sep, sig_sep, tanh1, zmu0, zn0, zmd, rho_bnd, T_bnd
 real*8             :: xb ,xe, yb, ye, smth, fp, fout
 integer            :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt,nx,ny, i1, j1
-integer            :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext
+integer            :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext, ivtk
 character          :: AA*52, tokamak_name*50
+character          :: buffer*80, lf*1, str1*12, str2*24
 
 
 
@@ -34,7 +35,7 @@ character          :: AA*52, tokamak_name*50
 
 write(*,*) ' EQDSK to JOREK2 '
 
-tokamak_name = 'DIII-D' ! 'ITER' 'DIII-D' 'JET' 
+tokamak_name = 'ITER' !'DIII-D' 'JET' 
 
 write(*,*) 'Tokamak = ', tokamak_name
 
@@ -267,12 +268,14 @@ df2_ext(1:n_psi) = df2(1:n_psi)
 rho_ext(1:n_psi) = 1.d0
 T_ext(1:n_psi)   = p(1:n_psi)
 
-df2_ext(n_psi-1:n_ext) = df2_ext(n_psi-2)
-rho_ext(n_psi-1:n_ext) = rho_ext(n_psi-2)
-T_ext(n_psi-1:n_ext)   = T_ext(n_psi-2)
+df2_ext(n_psi-1:n_ext) = df2_ext(n_psi)
+rho_ext(n_psi-1:n_ext) = rho_ext(n_psi)
+T_ext(n_psi-1:n_ext)   = T_ext(n_psi)
 
-psi_sep = 1.d0
-sig_sep = 0.02
+psi_sep = 1.00d0    ! in normalised psi units
+sig_sep = 0.005     ! in normalised psi units
+rho_bnd = 0.01      ! in jorek units
+T_bnd   = 1.d-5     ! in jorek units
 
 psi_ext(1:n_psi) = psi(1:n_psi)
 do i=n_psi+1,n_ext
@@ -284,8 +287,9 @@ zmu0 = 4.d-7 * PI
 do i=1,n_ext
   tanh1 = tanh((psi_ext(i) - psi_sep)/sig_sep)
   df2_ext(i) = df2_ext(i) * (0.5d0 - 0.5d0*tanh1)
-  rho_ext(i) = rho_ext(i) * (0.5d0 - 0.5d0*tanh1)
-  T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0 
+  rho_ext(i) = (rho_ext(i) - rho_bnd) * (0.5d0 - 0.5d0*tanh1) + rho_bnd
+!  T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0 
+  T_ext(i)   = T_ext(i) / rho_ext(i) * zmu0 + T_bnd 
   p_ext(i)   = rho_ext(i) * T_ext(i)
 enddo
 
@@ -297,7 +301,7 @@ call lplot6(3,3,psi_ext,T_ext,n_ext,'T')
 
 call lincol(1)
 call lplot6(2,2,psi,df2,-n_psi,'df2')
-call lplot6(3,2,psi,p,-n_psi,'pressure')
+call lplot6(3,2,psi,p*zmu0,-n_psi,'pressure')
 
 open(21,file='jorek_ffprime')
 ! We change or not the sign of ff' depending on the sign of Ip because (we assume that) in EQDSK files, 
@@ -335,14 +339,27 @@ write(21,'(A,f8.3,A)') ' current        : ',xip/1d6,' MA'
 write(21,*)             '***************************************'
 write(21,*)
 write(21,*) ' &in1'
-
 write(21,*) ' restart = .f.'
 write(21,*) ' regrid  = .f.'
 write(21,*) ' tstep   = 5.' 
 write(21,*) ' nstep   = 0' 
-
 write(21,*) ' nout = 1'
-
+write(21,*)
+write(21,*) ' time_evol_scheme= "Gears"'
+write(21,*)  
+write(21,*) ' tgnum(2) = 0.'
+write(21,*) ' tgnum(5) = 0.'
+write(21,*) ' tgnum(6) = 0.'
+write(21,*) ' tgnum(7) = 0.'
+write(21,*)
+write(21,*) ' gmres_4     = 1.d0'
+write(21,*) ' iter_precon = 21'
+write(21,*) ' gmres_tol   = 1.d-8'
+write(21,*) ' gmres_m     = 20'
+write(21,*)
+write(21,*) ' !use_mumps =.true.'
+write(21,*) ' !use_pastix = .false.'
+write(21,*) ' write_ps = .false.'
 write(21,*)
 write(21,*) ' !_____________________________________boundary definition'
 write(21,*) ' mf = 0'
@@ -403,14 +420,23 @@ write(21,*) ' n_private = 9'
 write(21,*) ' dPSI_open    = 0.04'
 write(21,*) ' dPSI_private = 0.02'
 
-write(21,*)
+write(21,*) ' amix = 0.d0'
 write(21,*) ' !_____________________________________physics parameters'
 
 write(21,*) ' eta   = 1.d-7'
 write(21,*) ' visco = 1.d-6'
 write(21,*) ' visco_par = 1.d-5'
 
-write(21,*) ' eta_num = 1.d-12'
+write(21,*) ' eta_num       = 1.d-12'
+write(21,*) ' visco_num     = 1.d-12'
+write(21,*) ' visco_par_num = 1.d-12'
+write(21,*) ' d_perp_num    = 1.d-12'
+write(21,*) ' zk_perp_num   = 1.d-12'
+
+
+
+write(21,*) ' bc_natural_open = .false.'
+write(21,*) ' gamma_sheath = 2'
 
 write(21,*) ' rho_file     = "jorek_density"'
 write(21,*) ' T_file       = "jorek_temperature"'
@@ -438,6 +464,44 @@ write(21,*) ' &end'
 close(21)
 
 call finplt
+
+!-------------------------------------- eqdsk to vtk (careful VTK expects single precision)
+lf   = char(10)
+ivtk = 23
+
+write(*,'(A)') ' writing VTK output'
+
+open(unit=ivtk,file='eqdsk.vtk',form='binary',convert='BIG_ENDIAN')
+
+buffer = '# vtk DataFile Version 3.0'//lf                        ; write(ivtk) trim(buffer)
+buffer = 'eqdsk'//lf                                             ; write(ivtk) trim(buffer)
+buffer = 'BINARY'//lf                                            ; write(ivtk) trim(buffer)
+buffer = 'DATASET RECTILINEAR_GRID'//lf                          ; write(ivtk) trim(buffer)
+
+write(str2(1:24),'(3i8)') nr,nz,1
+buffer = 'DIMENSIONS '//str2//lf                             ; write(ivtk) trim(buffer)
+
+write(str1(1:12),'(i12)') nr
+buffer = 'X_COORDINATES '//str1//' FLOAT'//lf                    ; write(ivtk) trim(buffer)
+write(ivtk) (real(xx(i),4),i=1,nr)
+
+write(str1(1:12),'(i12)') nz
+buffer = 'Y_COORDINATES '//str1//' FLOAT'//lf                    ; write(ivtk) trim(buffer)
+write(ivtk) (real(yy(j),4),j=1,nz)
+
+write(str1(1:12),'(i12)') 1
+buffer = 'Z_COORDINATES '//str1//' FLOAT'//lf                    ; write(ivtk) trim(buffer)
+write(ivtk) real(0.d0,4)
+
+! POINT_DATA SECTION
+write(str1(1:12),'(i12)') nr*nz
+buffer = lf//lf//'POINT_DATA '//str1//lf                             ; write(ivtk) trim(buffer)
+
+buffer = 'SCALARS psi float'//lf                                     ; write(ivtk) trim(buffer)
+buffer = 'LOOKUP_TABLE default'//lf                                  ; write(ivtk) trim(buffer)
+write(ivtk) ((real(psirz(i,j),4), i=1,nr), j=1,nz)
+
+close(ivtk)
 
 end
  

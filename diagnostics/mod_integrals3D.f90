@@ -563,6 +563,21 @@ do ife = ife_min, ife_max
           current_source = 0.d0
         endif
 
+        P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
+        D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
+        VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
+        VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
+        VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
+        J2_tot = J2_tot + eta_T *(ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
+
+        mag_src_tot   = mag_src_tot + eta_T*ZJ0*current_source/(BigR**2) * xjac * BigR * wst * delta_phi
+
+        heli_tot      = heli_tot   + hel1         * BigR * xjac * wst * delta_phi
+        mag_wk_tot    = mag_wk_tot + mag_wk       * BigR * xjac * wst * delta_phi
+        thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
+        vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi
+
+
 #if (JOREK_MODEL == 501)
         !-------------------------------------------
         ! Atomic physics parameters for Impurities
@@ -616,6 +631,9 @@ do ife = ife_min, ife_max
         ne_JOREK     = r0_corr + beta_imp * rn0_corr ! Electron density in JOREK unit
         ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                                ! Too small rho_1 will cause a problem
+
+        P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
+        P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
 
         ! Calculate the effective charge of all species
         Z_eff        = 0.
@@ -711,6 +729,10 @@ do ife = ife_min, ife_max
 
         ne_SI       = (r0_corr + alpha_e * rn0_corr) * 1.d20 * central_density ! electron density (SI)
 
+        P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
+        P_tot  = P_tot  + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi &
+                        + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
+
         if (ne_SI > 1.d16 .and. Te_eV > 3. .and. rn0 > 0.) then
           Lrad = 0.0
           ! Here we are temperarily only considering one impurity species, in the
@@ -734,28 +756,6 @@ do ife = ife_min, ife_max
         local_E_ion     = local_E_ion + (r0 - rn0) * central_density * 1.d20 * E_ion_bg   &
                           * bigR * xjac * wst * delta_phi
 #endif
-#if (JOREK_MODEL == 501)
-        P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi
-#endif
-#if (JOREK_MODEL == 502)
-        P_tot  = P_tot  + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi &
-                        + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
-#endif
-#if ((JOREK_MODEL /= 501) && ((JOREK_MODEL /= 502)))
-        P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
-#endif
-        D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
-        VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
-        VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
-        VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-        J2_tot = J2_tot + eta_T *(ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
-
-        mag_src_tot   = mag_src_tot + eta_T*ZJ0*current_source/(BigR**2) * xjac * BigR * wst * delta_phi
-
-        heli_tot      = heli_tot   + hel1         * BigR * xjac * wst * delta_phi
-        mag_wk_tot    = mag_wk_tot + mag_wk       * BigR * xjac * wst * delta_phi
-        thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
-        vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi 
 
         if (use_pellet) then
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &

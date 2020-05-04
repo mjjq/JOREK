@@ -311,7 +311,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
 !$omp           source_bg, source_imp, source_tmp, n_spi_tmp,                                  &
-!$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
+!$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp,                                    &
 !$omp           Te_corr_eV, Te_eV, ne_SI, ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,       &
 !$omp           ion_k, Z_eff, eta_coef,                                                        &
 #endif
@@ -734,16 +734,16 @@ do ife = ife_min, ife_max
         local_E_ion     = local_E_ion + (r0 - rn0) * central_density * 1.d20 * E_ion_bg   &
                           * bigR * xjac * wst * delta_phi
 #endif
-
-        if (jorek_model .eq. 501) then
-          P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi
-        else if (jorek_model .eq. 502) then
-          P_tot  = P_tot  + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi &
-                          + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
-        else
-          P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
-        endif
-
+#if (JOREK_MODEL == 501)
+        P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi
+#endif
+#if (JOREK_MODEL == 502)
+        P_tot  = P_tot  + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi &
+                        + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
+#endif
+#if ((JOREK_MODEL /= 501) && ((JOREK_MODEL /= 502)))
+        P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
+#endif
         D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi

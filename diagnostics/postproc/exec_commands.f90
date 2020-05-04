@@ -1805,7 +1805,7 @@ module exec_commands
 
     call open_ascii_file(ierr, i_file, filename, .false.)
 
-    do i_spi = 1, n_spi
+    do i_spi = 1, n_spi_tot
     
       call eval_expr(ES, units, expr_list,  &
         pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &

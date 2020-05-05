@@ -3,6 +3,7 @@ module real2complex_mod
 
 contains
 
+#ifdef USE_ZPASTIX
 subroutine real2complex(my_id)
  
   use mod_parameters, only: n_tor, n_var
@@ -67,5 +68,6 @@ subroutine real2complex(my_id)
 
   return
 end subroutine real2complex
+#endif
 
 end module real2complex_mod

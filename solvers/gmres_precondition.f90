@@ -161,12 +161,18 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
       if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
   
 #ifdef USE_ZPASTIX 
-        !if (associated(rhs_cmplx))  deallocate(rhs_cmplx)
-        !allocate(rhs_cmplx(1:mumps_par%n))
-
-        do i = 1, ifactor*n_loc_n
-          rhs_cmplx(i) = CMPLX(mumps_par%rhs(i))
-        enddo 
+        if (associated(rhs_cmplx))  deallocate(rhs_cmplx)
+        allocate(rhs_cmplx(1:n_cmplx))
+        
+        if(my_id .eq. 0) then
+          do i = 1, ifactor*n_loc_n
+            rhs_cmplx(i) = CMPLX(mumps_par%rhs(i))
+          enddo 
+        else 
+          do i = 1, ifactor*n_loc_n
+            rhs_cmplx((i+1)/2) = CMPLX(mumps_par%rhs(i),mumps_par%rhs(i+1))
+          enddo  
+        endif
 #endif
         ! pastix input parameters working in Pastix5 and Pastix6
         pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations
@@ -219,7 +225,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else      
-        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
+        call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
 #endif
 
@@ -270,10 +276,21 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
  
     if (.not.use_strumpack) then
   !------------------------------------------ undo column scaling
+#ifndef USE_ZPASTIX
       do k=1,mumps_par%n
-#ifdef USE_ZPASTIX
         mumps_par%rhs(k) = REAL(rhs_cmplx(k))
+      enddo
+#else 
+      do k=1,n_cmplx 
+        if(my_id .eq. 0) then
+          mumps_par%rhs(k) = REAL(rhs_cmplx(k))
+        else 
+          mumps_par%rhs(2*k-1) = REAL(rhs_cmplx(k))
+          mumps_par%rhs(2*k) = AIMAG(rhs_cmplx(k))
+        endif
+      enddo
 #endif
+      do k=1,mumps_par%n
         mumps_par%rhs(k) =  mumps_par%rhs(k) / column_scaling(k)
       enddo
     endif

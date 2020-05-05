@@ -604,7 +604,7 @@ do ife = ife_min, ife_max
           allocate(P_imp(0:imp_adas(1)%n_Z))
    
           call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-                                        p_out=P_imp,z_eff=Z_imp)
+                                        p_out=P_imp,z_avg=Z_imp)
    
           ! Calculate the ionization potential energy and its derivative wrt. temperature
           E_ion     = 0.
@@ -618,7 +618,7 @@ do ife = ife_min, ife_max
           E_ion     = E_ion * EL_CHG
           E_ion_bg  = E_ion_bg * EL_CHG
         else
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
           E_ion     = 0.
           E_ion_bg  = 0.
         end if
@@ -703,7 +703,7 @@ do ife = ife_min, ife_max
           allocate(P_imp(0:imp_adas(1)%n_Z))
    
           call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-                                        p_out=P_imp,z_eff=Z_imp)
+                                        p_out=P_imp,z_avg=Z_imp)
    
           ! Calculate the ionization potential energy and it's time gradient
           E_ion     = 0.
@@ -717,7 +717,7 @@ do ife = ife_min, ife_max
           E_ion     = E_ion * EL_CHG
           E_ion_bg  = E_ion_bg * EL_CHG
         else
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_eff=Z_imp)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
           E_ion     = 0.
           E_ion_bg  = 0.
         end if

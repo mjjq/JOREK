@@ -29,11 +29,13 @@ module global_distributed_matrix
   integer                       :: n_matrix_block_size_harm                       !< Size of a harmonic matrix block (n_var x n_tor)
   integer                       :: ndof_harm, n_harm, nz_harm                       
   
+  ! --- The complex harmonic matrix 
 #ifdef USE_ZPASTIX
   double complex,       pointer :: A_cmplx(:)    !< Distributed harmonic matrix
   double complex,       pointer :: rhs_cmplx(:)  !< Distributed harmonic right hand side
   integer,              pointer :: irn_cmplx(:)  !< Row indices for coordinate format sparse matrix (or CSR)
   integer,              pointer :: jcn_cmplx(:)  !< Column indices for coordinate format sparse matrix (or CSR)
+  integer                       :: n_cmplx, nz_cmplx                       
 #endif
  
   contains

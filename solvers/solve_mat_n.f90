@@ -49,7 +49,9 @@ contains
   !> Solves the system of equation for each harmonic using mumps, pastix, or wsmp
   subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
+#ifdef USE_ZPASTIX
     use real2complex_mod
+#endif
     use tr_module
     use mod_parameters
     use mumps_module

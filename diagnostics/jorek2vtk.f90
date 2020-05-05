@@ -1267,10 +1267,11 @@ enddo  ! n_elements
 
    do i=1,nnos
      T_real8 = scalars(i,6)
+     
      if (T_min > T_1) then
-       T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_min)
+       T0_corr = corr_neg_temp(T_real8,(/5.d-1,5.d-1/),2.*T_min)
      else
-       T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_1)
+       T0_corr = corr_neg_temp(T_real8,(/5.d-1,5.d-1/),2.*T_1)
      end if
      Te_corr_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)

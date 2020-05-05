@@ -150,12 +150,12 @@ end function coronal_equilibrium
 
 
 !> Linear interpolation of coronal model charge at specific density and temperature
-subroutine interpolate_coronal(cor, density, temperature, p_out, z_eff, rad)
+subroutine interpolate_coronal(cor, density, temperature, p_out, z_avg, rad)
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 real*8, intent(in)              :: density !< log10 density (m^-3)
 real*8, intent(in)              :: temperature !< log10 temperature (K)
 real*8, intent(out), optional, dimension(0:cor%n_Z) :: p_out !< distribution of charge states (sum = 1)
-real*8, intent(out), optional   :: z_eff !< effective charge according to coronal equilibrium
+real*8, intent(out), optional   :: z_avg !< Average charge according to coronal equilibrium
 real*8, intent(out), optional   :: rad !< radiated power according to coronal equilibrium
 
 real*8, dimension(0:cor%n_Z)    :: p !< distribution of charge states (sum = 1)
@@ -168,12 +168,12 @@ if (present(p_out)) then
   p_out = p
 endif
 
-if (present(z_eff)) then
+if (present(z_avg)) then
   do iz=0,cor%n_Z
     Z(iz) = real(iz,8)
     if (p(iz)<0.d0) p(iz)=0.d0
   enddo
-  z_eff = dot_product(p/sum(p),Z)
+  z_avg = dot_product(p/sum(p),Z)
 endif
 
 if (present(rad)) then
@@ -185,12 +185,12 @@ end subroutine interpolate_coronal
 
 !> Linear interpolation of coronal model charge at specific density and temperature.
 !> Evaluate the gradients only
-subroutine interpolate_coronal_gradients(cor, density, temperature, p_Te_out, p_Ne_out, z_eff_Te, z_eff_Ne)
+subroutine interpolate_coronal_gradients(cor, density, temperature, p_Te_out, p_Ne_out, z_avg_Te, z_avg_Ne)
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 real*8, intent(in)              :: density !< log10 density (m^-3)
 real*8, intent(in)              :: temperature !< log10 temperature (K)
 real*8, intent(out), optional, dimension(0:cor%n_Z) :: p_Te_out, p_Ne_out !< gradient of distribution of charge states (sum = 1) to Te and Ne
-real*8, intent(out), optional   :: z_eff_Te, z_eff_Ne !< effective charge gradient according to coronal equilibrium
+real*8, intent(out), optional   :: z_avg_Te, z_avg_Ne !< effective charge gradient according to coronal equilibrium
 
 real*8, dimension(0:cor%n_Z)    :: p !< distribution of charge states (sum = 1)
 real*8, dimension(0:cor%n_Z)    :: p_Te, p_Ne !< gradient of distribution of charge states (sum = 1) to Te and Ne
@@ -217,18 +217,18 @@ if (present(p_Ne_out)) then
   p_Ne_out = p_Ne/sum(p)
 endif
 
-if (present(z_eff_Te)) then
+if (present(z_avg_Te)) then
   do iz=0,cor%n_Z
     Z(iz) = real(iz,8)
   enddo
-  z_eff_Te =  dot_product(p_Te/sum(p),Z)
+  z_avg_Te =  dot_product(p_Te/sum(p),Z)
 endif
 
-if (present(z_eff_Ne)) then
+if (present(z_avg_Ne)) then
   do iz=0,cor%n_Z
     Z(iz) = real(iz,8)
   enddo
-  z_eff_Ne =  dot_product(p_Ne/sum(p),Z)
+  z_avg_Ne =  dot_product(p_Ne/sum(p),Z)
 endif
 
 end subroutine interpolate_coronal_gradients

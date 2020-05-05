@@ -32,6 +32,8 @@ module global_distributed_matrix
 #ifdef USE_ZPASTIX
   double complex,       pointer :: A_cmplx(:)    !< Distributed harmonic matrix
   double complex,       pointer :: rhs_cmplx(:)  !< Distributed harmonic right hand side
+  integer,              pointer :: irn_cmplx(:)  !< Row indices for coordinate format sparse matrix (or CSR)
+  integer,              pointer :: jcn_cmplx(:)  !< Column indices for coordinate format sparse matrix (or CSR)
 #endif
  
   contains

@@ -276,11 +276,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
  
     if (.not.use_strumpack) then
   !------------------------------------------ undo column scaling
-#ifndef USE_ZPASTIX
-      do k=1,mumps_par%n
-        mumps_par%rhs(k) = REAL(rhs_cmplx(k))
-      enddo
-#else 
+#ifdef USE_ZPASTIX
       do k=1,n_cmplx 
         if(my_id .eq. 0) then
           mumps_par%rhs(k) = REAL(rhs_cmplx(k))

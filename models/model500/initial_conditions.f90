@@ -199,6 +199,8 @@ do in=2,n_tor
                var_w,var_u,1, ES%psi_axis,ES%psi_bnd,xpoint2, xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)
 enddo
 
+return
+
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)
 do i=1,node_list%n_nodes
 

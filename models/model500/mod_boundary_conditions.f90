@@ -85,7 +85,7 @@ contains
   real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
   real*8  :: R_mid, Z_mid, R_center, Z_center, direction2, normal(2), normal_direction(2), grad_s(2), grad_t(2)
   integer :: ilarge_vp, ilarge_vp2
-  integer :: kp, j, err, itest, i_mid, i_bnd
+  integer :: kp, j, err, itest, i_mid, i_bnd, inode_m, inode_p
   integer :: n_rmp_harm, N_rmp_har_block_size
 
 
@@ -172,6 +172,22 @@ contains
            inode = element_list%element(ielm)%vertex(iv)
 
            if (node_list%node(inode)%boundary .ne. 0) then !==================if boundary nodes
+
+             R_mid = node_list%node(inode)%x(1,1)
+             Z_mid = node_list%node(inode)%x(1,2)
+
+             inode_p = element_list%element(ielm)%vertex(mod(iv  ,4) + 1)
+             inode_m = element_list%element(ielm)%vertex(mod(iv+2,4) + 1)
+
+             if (node_list%node(inode_p)%boundary .eq. 0) then 
+               R_center = node_list%node(inode_p)%x(1,1)
+               Z_center = node_list%node(inode_p)%x(1,2)
+             elseif (node_list%node(inode_m)%boundary .eq. 0) then 
+               R_center = node_list%node(inode_m)%x(1,1)
+               Z_center = node_list%node(inode_m)%x(1,2)
+             endif
+
+             normal_direction = (/R_mid - R_center, Z_mid - Z_center /) / norm2((/R_mid - R_center, Z_mid - Z_center /))
 
               do in=i_tor_min, i_tor_max  !========================do n_tor
                 if (keep_n0_const  .and.  in .eq. 1 ) then
@@ -347,36 +363,6 @@ contains
                             u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
                             u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
 
-                            alpha = ((Z_axis) - Z_xpoint(1))/(R_axis - R_xpoint(1))
-
-                            R_inside = alpha*(node_list%node(inode)%x(1,2)-Z_xpoint(1)) &
-                                 + node_list%node(inode)%x(1,1) + alpha**2 * R_xpoint(1)
-                            R_inside = R_inside / (1.d0 + alpha**2)
-                            Z_inside = alpha * (R_inside - R_xpoint(1)) + Z_xpoint(1)
-
-                            R_inside = min(max(R_inside,R_xpoint(1)),R_axis)
-                            Z_inside = min(max(Z_inside,Z_xpoint(1)),Z_axis)
-
-                            direction = ps0_s * (  (node_list%node(inode)%x(1,1)-R_inside)*Z_s &
-                                 - (node_list%node(inode)%x(1,2)-Z_inside)*R_s)
-                            direction = direction / abs(direction)
-
-                            if (xcase2 .eq. 2) then
-                               direction = -direction
-                            else if ((xcase2 .eq. 3).and.(node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).gt.R_xpoint(2))) then
-                              direction = -1.
-                            else if ((xcase2 .eq. 3) .and. (node_list%node(inode)%x(1,2).gt.Z_axis +0.1).and.(node_list%node(inode)%x(1,1).lt.R_xpoint(2)))then
-                              direction = +1.
-                            end if
-                            
-                            ! --- Special field direction for grid patches
-                            ! --- (hopefully temporary until Vpar is treated in boundary_matrix_open)
-                            if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then
-                              direction = 1
-                              if (node_list%node(inode)%boundary .eq. 11) direction = -direction
-                              if (node_list%node(inode)%boundary .eq. 19) direction = -direction
-                            endif
-
                             grad_t = (/ -Z_s,   R_s /) / xjac
                           
                             normal     = dot_product(grad_t,normal_direction) * grad_t      ! outward pointing normal
@@ -386,7 +372,7 @@ contains
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
 
                             Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
-
+                            
 !                            if (in .eq. 1) then                              
 !                              write(*,'(i3,A,3e14.6,A,e14.6)') node_list%node(inode)%boundary, &
 !                                                              ' Boundary (s): ',Vpar0, -BigR**2 * u0_s/ps0_s, direction*sqrt(GAMMA*T0)/Btot, &
@@ -649,28 +635,6 @@ contains
 
                             u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
                             u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
-
-                            alpha = ((Z_axis) - Z_xpoint(1))/(R_axis - R_xpoint(1))
-
-                            R_inside = alpha*(node_list%node(inode)%x(1,2)-Z_xpoint(1)) &
-                                 + node_list%node(inode)%x(1,1) + alpha**2 * R_xpoint(1)
-                            R_inside = R_inside / (1.d0 + alpha**2)
-                            Z_inside = alpha * (R_inside - R_xpoint(1)) + Z_xpoint(1)
-
-                            R_inside = min(max(R_inside,R_xpoint(1)),R_axis)
-                            Z_inside = min(max(Z_inside,Z_xpoint(1)),Z_axis)
-
-                            direction = ps0_t * (  (node_list%node(inode)%x(1,1)-R_inside)*Z_t &
-                                 - (node_list%node(inode)%x(1,2)-Z_inside)*R_t)
-                            direction = direction / abs(direction)
-
-                            ! --- Special field direction for grid patches
-                            ! --- (hopefully temporary until Vpar is treated in boundary_matrix_open)
-                            if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then
-                              direction = 1
-                              if (node_list%node(inode)%boundary .eq. 15) direction = -direction
-                              if (node_list%node(inode)%boundary .eq. 19) direction = -direction
-                            endif
 
                             grad_s = (/  Z_t,  - R_t /) / xjac
                           

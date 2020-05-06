@@ -74,7 +74,7 @@ real*8     :: P0_x_rho, P0_xx_rho, P0_y_rho, P0_yy_rho, P0_xy_rho
 real*8     :: P0_x_T,   P0_xx_T,   P0_y_T,   P0_yy_T,   P0_xy_T
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T, eta_num_T, W_dia, W_dia_rho, W_dia_T
-real*8     :: eta_T_ohm, deta_dT_ohm, detasp_dt
+real*8     :: eta_T_ohm, deta_dT_ohm
 real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7
 
@@ -1750,7 +1750,6 @@ do i=1,n_vertex_max
 
                             + v * BigR * r0_corr * rn0_corr * ksiion * dSion_dT * T         * xjac * theta * tstep &
 
-                            - v * BigR * T * ((2d0)/(3*BigR**2)) * detaSp_dT * zj0**2       * xjac * theta * tstep &
                             + v * BigR * T * r0_corr * rn0_corr * dLradDrays_dT             * xjac * theta * tstep &
                             + v * BigR * T * r0_corr * r0_corr  * dLradDcont_dT             * xjac * theta * tstep &
                             + v * BigR * T * r0_corr * dfrad_bg_dT                          * xjac * theta * tstep &

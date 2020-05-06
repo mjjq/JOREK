@@ -36,7 +36,7 @@ real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_ord
 real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
 integer    :: vertex(2), direction(2), direction_perp(2)
-integer    :: i, j, j2, j3, ms, mt, mp, k, l, l2, l3, index_ij, index_kl, index, xcase2
+integer    :: i, j, j2, j3, ms, mt, mp, k, l, l2, l3, index_ij, index_kl, index, xcase2, is
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8
 real*8     :: ws, xjac,  dl, BigR, phi, eps_cyl, Btot
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
@@ -176,6 +176,15 @@ do ms=1, n_gauss
 
   normal = dot_product(grad_t,normal_direction) * grad_t      ! outward pointing normal
   normal = normal / norm2(normal)
+
+  neutral_source = 0.d-0
+
+  do is = 1, 10
+    if     ( ((x_g(ms) - neutral_line_R_start(is))*(x_g(ms) - neutral_line_R_end(is)) .lt. 0.d0) &
+       .and. ((y_g(ms) - neutral_line_Z_start(is))*(y_g(ms) - neutral_line_Z_end(is)) .lt. 0.d0) ) then
+       neutral_source = neutral_source + neutral_line_source(is)
+    endif
+  enddo
 
   do mp = 1, n_plane
 

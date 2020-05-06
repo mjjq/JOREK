@@ -57,6 +57,7 @@ complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
 real*8     :: TG_NUM_Eq, CoefAdv=0.0
 real*8     :: Coef_DivV
+real*8     :: psi_axisym(n_gauss,n_gauss)
 real*8     :: Fprof,dF_dpsi,dF_dz
 real*8     :: dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz
 real*8     :: zFFprime    ,dFFprime_dpsi,dFFprime_dz
@@ -325,6 +326,7 @@ TG_NUM    = 0.0
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_ss = 0.d0; x_st = 0.d0; x_tt = 0.d0 
 y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_ss = 0.d0; y_st = 0.d0; y_tt = 0.d0
 eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_p = 0.d0; eq_ss = 0.d0; eq_st = 0.d0; eq_tt = 0.d0
+psi_axisym  = 0.d0
 psieq   = 0.d0; psieq_s = 0.d0; psieq_t = 0.d0
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
 Fprofile = 0.d0
@@ -358,11 +360,14 @@ do i=1,n_vertex_max
         psieq_s(ms,mt)  = psieq_s(ms,mt)  + nodes(i)%psi_eq(j)   * element%size(i,j) * H_s(i,j,ms,mt)
         psieq_t(ms,mt)  = psieq_t(ms,mt)  + nodes(i)%psi_eq(j)   * element%size(i,j) * H_t(i,j,ms,mt)
 
+        ! --- Equilibrium psi (n=0 only) for sources
+        psi_axisym(ms,mt) = psi_axisym(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H(i,j,ms,mt)  * HZ(1,1)
       end do
     end do
 
     do ms=1, n_gauss
       do mt=1, n_gauss
+
         do k=1,n_var
 
           do in=1,n_tor
@@ -401,11 +406,11 @@ heat_source     = 0.d0
 do ms=1, n_gauss
   do mt=1, n_gauss
     if (keep_current_prof) then
-      call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+      call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
       ! --- Historically JOREK uses a negative current, so we need to reverse it.
       current_source(ms,mt) = - current_source(ms,mt)
     endif
-    call sources(xpoint2, xcase2, y_g(ms,mt)           , Z_xpoint, psieq(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
+    call sources(xpoint2, xcase2, y_g(ms,mt)           , Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
   enddo
 enddo
 
@@ -675,7 +680,7 @@ do i=1,n_vertex_max
           p0_p    = rho0_p * T0 + rho0 * T0_p
 
           ! --- psi_norm
-          psi_norm = get_psi_n(A30, y_g(ms,mt))
+          psi_norm = get_psi_n(psi_axisym(ms,mt), y_g(ms,mt))
 
           ! --- Diffusions
           D_prof  = get_dperp (psi_norm)

@@ -32,7 +32,7 @@ character          :: buffer*80, lf*1, str1*12, str2*24
 
 !----------------------------- read eqdsk file -----------
 
-B_scale = 1.d0/3.d0  ! scaling factor for the vacuum toroidal field 
+B_scale = 1.d0/1.d0  ! scaling factor for the vacuum toroidal field 
 I_scale = 1.d0/1.d0  ! scaling factor for the toroidal current
 R_scale = 1.d0/1.d0  ! scaling factor for the space coordinates 
 
@@ -86,8 +86,8 @@ bcentr = bcentr * B_scale
 p      = p      * B_scale**2
 dpr    = dpr    * B_scale
 F      = F      * B_scale
-dF2    = dF2    * B_scale * -1.d0 !* 1.4
-psirz  = psirz  * B_scale * -1.d0
+dF2    = dF2    * B_scale ! * 1.4 
+psirz  = psirz  * B_scale 
 xip    = xip    * B_scale
 
 !=============== scaling of equilibrium with space dimension
@@ -238,8 +238,8 @@ ky = 3
 smth = 2.d-6 ! Controls the tradeoff between closeness of fit and smoothness of fit. When too small, can lead to noise pick-up. When too large, can lead to inaccurate fit.
              ! May need hand tuning, based on a visual inspection of the output.
              ! For more details, see the documentation of regrid.f in libdierckx or the "Hard-coded parameters" section of the Wiki page https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90. 
-nxest = 3*nr/4 ! Upper bound for the number of knots used for the splines. We set it a bit smaller than nr to test the quality of the fit.
-nyest = 3*nz/4
+nxest = nr-3 !3*nr/4 ! Upper bound for the number of knots used for the splines. We set it a bit smaller than nr to test the quality of the fit.
+nyest = nz-3 !3*nz/4
 lwrk  = 4+nxest*(my+2*kx+5)+nyest*(2*ky+5)+mx*(kx+1)+my*(ky+1)+my+nxest
 kwrk  = 3+mx+my+nxest+nyest
 
@@ -322,10 +322,10 @@ df2_ext(n_psi-1:n_ext) = df2_ext(n_psi)
 rho_ext(n_psi-1:n_ext) = rho_ext(n_psi)
 T_ext(n_psi-1:n_ext)   = T_ext(n_psi)
 
-psi_sep = 1.00d0    ! in normalised psi units
-sig_sep = 0.005     ! in normalised psi units
+psi_sep = 0.99d0    ! in normalised psi units
+sig_sep = 0.05      ! in normalised psi units
 rho_bnd = 0.05      ! in jorek units
-T_bnd   = 1.d-6     ! in jorek units
+T_bnd   = 1.d-5     ! in jorek units
 
 psi_ext(1:n_psi) = psi(1:n_psi)
 do i=n_psi+1,n_ext
@@ -338,8 +338,8 @@ do i=1,n_ext
   tanh1 = tanh((psi_ext(i) - psi_sep)/sig_sep)
   df2_ext(i) = df2_ext(i) * (0.5d0 - 0.5d0*tanh1)
   rho_ext(i) = (rho_ext(i) - rho_bnd) * (0.5d0 - 0.5d0*tanh1) + rho_bnd
-!  T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0 
-   T_ext(i)   = T_ext(i) / rho_ext(i) * zmu0 + T_bnd 
+  T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0 +T_bnd 
+!   T_ext(i)   = T_ext(i) / rho_ext(i) * zmu0 + T_bnd 
   p_ext(i)   = rho_ext(i) * T_ext(i)
 enddo
 

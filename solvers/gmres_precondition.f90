@@ -1,6 +1,9 @@
 !> Solve step of the local matrices for each toroidal harmonic (preconditioner for gmres)
 subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
 
+#ifdef USE_ZPASTIX
+  use real2complex_mod
+#endif
   use tr_module 
   use mod_parameters
   use mumps_module
@@ -161,18 +164,8 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
       if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
   
 #ifdef USE_ZPASTIX 
-        if (associated(rhs_cmplx))  deallocate(rhs_cmplx)
-        allocate(rhs_cmplx(1:n_cmplx))
-        
-        if(my_id .eq. 0) then
-          do i = 1, ifactor*n_loc_n
-            rhs_cmplx(i) = CMPLX(mumps_par%rhs(i))
-          enddo 
-        else 
-          do i = 1, ifactor*n_loc_n
-            rhs_cmplx((i+1)/2) = CMPLX(mumps_par%rhs(i),mumps_par%rhs(i+1))
-          enddo  
-        endif
+        !-- converting RHS into the complex form
+        call real2complex_rhs(my_id) 
 #endif
         ! pastix input parameters working in Pastix5 and Pastix6
         pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations

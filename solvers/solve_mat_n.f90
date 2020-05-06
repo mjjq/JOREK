@@ -319,12 +319,12 @@ contains
 
         endif
 
-
 #ifdef USE_ZPASTIX 
         !-- converting real harmonic blocks into the complex ones
-        call real2complex(my_id) 
+        call real2complex_a(my_id) 
+        !-- converting RHS into the complex form
+        call real2complex_rhs(my_id) 
 #endif
-
         if  (.not. pastix_initialised)  then
 
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
@@ -468,6 +468,12 @@ contains
         endif !.not. pastix_initialised
 
 
+!#ifdef USE_ZPASTIX
+!              call MPI_Barrier(MPI_COMM_N,ierr)
+!              call MPI_Abort(MPI_COMM_N,1,ierr)
+!              stop 
+!#endif
+
 
         if (.not. pastix_analysed) then
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
@@ -494,6 +500,8 @@ contains
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
+              print*, 'my_id, size of A_cmplx =', my_id, size(A_cmplx) 
+              print*, 'my_id, size of rhs_cmplx =', my_id, size(rhs_cmplx) 
               call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,jcn_cmplx,irn_cmplx,A_cmplx, &
                 pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
 #endif
@@ -534,6 +542,11 @@ contains
         endif ! .not. pastix_analysed
       endif   ! (else, use_mumps)
 
+!#ifdef USE_ZPASTIX
+!              call MPI_Barrier(MPI_COMM_N,ierr)
+!              call MPI_Abort(MPI_COMM_N,1,ierr)
+!              stop 
+!#endif
 
       if (my_id_n .eq.0) then                            ! elapsed time analysis end
          call MPI_Barrier(MPI_COMM_MASTER,ierr)

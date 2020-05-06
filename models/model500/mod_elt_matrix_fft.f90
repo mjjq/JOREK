@@ -329,48 +329,7 @@ do i=1,n_vertex_max
 ! To keep the initial value that was set before entering the OpenMP constuct, one would
 ! need to use the FIRSTPRIVATE clause.
 !
-!$OMP SIMD private( &
-!$OMP  ps0, ps0_x, ps0_y, ps0_p, ps0_s, ps0_t, ps0_ss, ps0_tt, ps0_st, ps0_xx, ps0_yy, ps0_xy,&
-!$OMP  u0,  u0_x,  u0_y,  u0_p,  u0_s,  u0_t,  u0_ss,  u0_tt,  u0_st,  u0_xx,  u0_yy,  u0_xy, &
-!$OMP  zj0, zj0_x, zj0_y, zj0_p, zj0_s, zj0_t,                                                &
-!$OMP  w0,  w0_x,  w0_y,  w0_p,  w0_s,  w0_t,  w0_ss,  w0_tt,  w0_st,  w0_xx,  w0_yy,  w0_xy, &
-!$OMP  r0,  r0_x,  r0_y,  r0_p,  r0_s,  r0_t,  r0_ss,  r0_tt,  r0_st,  r0_xx,  r0_yy, r0_xy,  &
-!$OMP  rn0, rn0_x, rn0_y, rn0_p, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_xx, rn0_yy,        &
-!$OMP  T0,  T0_x,  T0_y,  T0_p,  T0_s,  T0_t,  T0_ss,  T0_tt,  T0_st,  T0_xx,  T0_yy, T0_xy,  &
-!$OMP  vpar0, vpar0_x, vpar0_y, vpar0_p, vpar0_s, vpar0_t, vpar0_ss, vpar0_tt, vpar0_st, vpar0_xx, vpar0_yy, vpar0_xy, &
-!$OMP  P0,  P0_x,  P0_y,  P0_p,  P0_s,  P0_t,  P0_ss,  P0_tt,  P0_st,  P0_xx,  P0_yy, P0_xy,  &
-!$OMP  r0_corr,  r0_hat,  r0_x_hat,  r0_y_hat, rn0_corr, rn0_hat, rn0_x_hat, rn0_y_hat, T0_corr, dT0_corr_dT, &
-!$OMP  T0_ps0_x, T0_ps0_y, delta_u_x, &
-!$OMP  delta_u_y, delta_ps_x, delta_ps_y,&
-!$OMP  eta_T, deta_dT, d2eta_d2T,  eta_T_ohm, deta_dT_ohm, visco_T, dvisco_dT, d2visco_dT2, &
-!$OMP  vt0, Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, &
-!$OMP  ZKpar_T, dZKpar_dT, W_dia, eta_num_T, visco_num_T, psi_norm, D_prof, ZK_prof, phi, delta_phi,&
-!$OMP  source_pellet, source_volume, vv2, &
-!$OMP  v,   v_x,   v_y,   v_s,   v_t,   v_p,   v_ss,   v_tt,   v_st,   v_xx,   v_yy,   v_xy,   &
-!$OMP  psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_tt, psi_st, psi_xx, psi_yy, psi_xy, &
-!$OMP  zj,  zj_x,  zj_y,  zj_s,  zj_t,  zj_p,  zj_ss,  zj_tt,  zj_st,                          &
-!$OMP  u,   u_x,   u_y,   u_s,   u_t,   u_p,   u_ss,   u_tt,   u_st,   u_xx,   u_yy,   u_xy,   &
-!$OMP  w,   w_x,   w_y,   w_s,   w_t,   w_p,   w_ss,   w_tt,   w_st,   w_xx,   w_yy,   w_xy,   &
-!$OMP  rho, rho_x, rho_y, rho_s, rho_t, rho_p, rho_ss, rho_tt, rho_st, rho_xx, rho_yy, rho_xy, &
-!$OMP  T,   T_x,   T_y,   T_s,   T_t,   T_p,   T_ss,   T_tt,   T_st,   T_xx,   T_yy,   T_xy,   &
-!$OMP  vpar, vpar_x, vpar_y, vpar_s, vpar_t, vpar_p, vpar_ss, vpar_tt, vpar_st, vpar_xx, vpar_yy, vpar_xy, &
-!$OMP  rhon, rhon_x, rhon_y, rhon_s, rhon_t, rhon_p, rhon_ss, rhon_tt, rhon_st, rhon_xx, rhon_yy, rhon_xy, &
-!$OMP  rho_hat, rho_x_hat, rho_y_hat,  &
-!$OMP  Bgrad_rho_star, Bgrad_rho_k_star, Bgrad_rho, Bgrad_T_star, Bgrad_T_k_star, Bgrad_T, BB2, &
-!$OMP  Btheta2, v_ps0_x, v_ps0_y, &
-!$OMP  Btheta2_psi, Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_rho_rho_n, BB2_psi, &
-!$OMP  P0_x_rho, P0_xx_rho, P0_y_rho, P0_yy_rho, P0_xy_rho, P0_x_T, P0_xx_T, P0_y_T, P0_yy_T, P0_xy_T, &
-!$OMP  W_dia_rho, W_dia_T, Vt_x_psi, Vt_y_psi, Omega_tor_x_psi, Omega_tor_y_psi, &
-!$OMP  Dn0x, Dn0y, Dn0p, Te_ev, ksiion, source_neutral, source_neutral_tmp, &
-!$OMP  Sion_T, dSion_dT, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss, &
-!$OMP  Srec_T, dSrec_dT, coef_rec_1, LradDrays_T, dLradDrays_dT, LradDcont_T, dLradDcont_dT, &
-!$OMP  T_rad, coef_rad_1, Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT, &
-!$OMP  ng_radius, &
-!$OMP  amat, amat_k, amat_kn, rhs_ij, rhs_ij_k, &
-!$OMP  Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, Bgrad_T_T_n, T_ps0_x, T_ps0_y, T0_psi_x, &
-!$OMP  T0_psi_y, v_psi_x, v_psi_y,  &
-!$OMP  k,l, index_kl, index_ij, ij, kl, &
-!$OMP  ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3,kl4, kl5, kl6, kl7, kl8)
+!$OMP SIMD
 #endif
 
         do mp = 1, n_plane

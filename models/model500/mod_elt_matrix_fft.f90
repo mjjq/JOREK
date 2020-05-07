@@ -785,15 +785,15 @@ do i=1,n_vertex_max
   ! (see Wiki for more info: http://jorek.eu/wiki/doku.php?id=model500_501_555#recombination_rate_for_deuterium)
   !-------------------------------------------------
 
-  if (Te_ev .gt. 0.1d0) then      
+!  if (Te_ev .gt. 0.1d0) then      
     coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density*1.d20)**(1.5d0)   
  
     Srec_T    =            coef_rec_1 * 0.7d-19 * (13.6d0*(2.d0*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T0_corr/(2.d0))**(-0.5d0)      
     dSrec_dT  = - 0.25d0 * coef_rec_1 * 0.7d-19 * (13.6d0*(2.d0*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T0_corr/(2.d0))**(-1.5d0) * dT0_corr_dT
-  else
-    Srec_T   = 0.d0
-    dSrec_dT = 0.d0
-  endif
+!  else
+!    Srec_T   = 0.d0
+!    dSrec_dT = 0.d0
+!  endif
 
    !--------------------------------------------------------
    ! --- Source of neutrals, e.g. from MGI/SPI

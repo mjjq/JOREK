@@ -137,6 +137,9 @@ module mod_expression
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'ne          ', 'Electron Density                                      ')
+#if JOREK_MODEL == 501
+    call add(exprs_all, 'nimp        ', 'Impurity Density                                      ')
+#endif
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
     call add(exprs_all, 'Te          ', 'Electron temperature (assuming Ti=Te)                 ')
     call add(exprs_all, 'vpar        ', 'Parallel Velocity (along magnetic field lines)        ')
@@ -1524,6 +1527,12 @@ module mod_expression
 #else
                 res = r0 * fact_ne
 #endif
+
+#if JOREK_MODEL == 501
+              case ( 'nimp' )
+                res = rn0 * fact_ne * m_i_over_m_imp
+#endif
+
               case ( 'T' )
                 res = T0 * fact_T
               

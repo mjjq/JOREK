@@ -165,7 +165,8 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
   
 #ifdef USE_ZPASTIX 
         !-- converting RHS into the complex form
-        call real2complex_rhs(my_id) 
+        mumps_par%n = ifactor*n_loc_n
+        call real2complex_rhs(my_id, my_id_master) 
 #endif
         ! pastix input parameters working in Pastix5 and Pastix6
         pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations
@@ -271,7 +272,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
   !------------------------------------------ undo column scaling
 #ifdef USE_ZPASTIX
       do k=1,n_cmplx 
-        if(my_id .eq. 0) then
+        if(my_id_master .eq. 0) then
           mumps_par%rhs(k) = REAL(rhs_cmplx(k))
         else 
           mumps_par%rhs(2*k-1) = REAL(rhs_cmplx(k))
@@ -281,9 +282,9 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 #endif
       do k=1,mumps_par%n
         mumps_par%rhs(k) =  mumps_par%rhs(k) / column_scaling(k)
+        !write(200,*)  k, mumps_par%rhs(k)
       enddo
     endif
-  
     call tr_allocate(y_tmp,1,n_dof,"y_tmp",CAT_GMRES,.false.)
     call tr_allocate(recv_counts,1,n_cpu/M_cpu,"recv_counts",CAT_GMRES)
     call tr_allocate(recv_disp,1,n_cpu/M_cpu,"recv_disp",CAT_GMRES)

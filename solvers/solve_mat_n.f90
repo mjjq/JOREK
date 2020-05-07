@@ -321,9 +321,9 @@ contains
 
 #ifdef USE_ZPASTIX 
         !-- converting real harmonic blocks into the complex ones
-        call real2complex_a(my_id) 
+        call real2complex_a(my_id, my_id_master) 
         !-- converting RHS into the complex form
-        call real2complex_rhs(my_id) 
+        call real2complex_rhs(my_id, my_id_master) 
 #endif
         if  (.not. pastix_initialised)  then
 
@@ -411,8 +411,8 @@ contains
 #endif
 #endif
 
-
-#else
+              ! -- Begin PaStiX6.x
+#else  
               ! -- For PaStiX solver version 6.x
               pastix_iparm(IPARM_MTX_TYPE)              = pastix_sym
               pastix_iparm(IPARM_AMALGAMATION_LVLCBLK)  = pastix_amalg
@@ -454,6 +454,7 @@ contains
 #endif
 
 #endif
+              ! -- End PaStiX6.x
 
              else if (use_wsmp) then
 #ifdef USE_WSMP
@@ -742,7 +743,7 @@ contains
 
 #ifdef USE_ZPASTIX
     do i = 1, n_cmplx
-      if(my_id .eq. 0) then
+      if(my_id_master .eq. 0) then
         mumps_par%rhs(i) = REAL(rhs_cmplx(i)) 
       else
         mumps_par%rhs(2*i-1) = real(rhs_cmplx(i))
@@ -780,15 +781,20 @@ contains
         end do
 
       endif
+      
+      print*, 'my_id', my_id  
+      do i = 1, mumps_par%n
+        write(100+my_id,*) i, rhs_tmp(i)
+      enddo
 
       call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
       call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)
 
-      !!--psv 
-      do i = 1, ndof_glob
-         write(100,*) i, deltas(i)
-      enddo  
-      !!--psv 
+      !!!--psv 
+      !do i = 1, ndof_glob
+      !   write(100,*) i, deltas(i)
+      !enddo  
+      !!!--psv 
 
       call tr_locvnorms("smn_res",mumps_par%rhs,mumps_par%n)
       call tr_locvnorms("smn_delta",deltas,ndof_glob)

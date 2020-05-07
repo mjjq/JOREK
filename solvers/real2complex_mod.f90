@@ -4,7 +4,7 @@ module real2complex_mod
 contains
 
 #ifdef USE_ZPASTIX
-subroutine real2complex_a(my_id)
+subroutine real2complex_a(my_id, my_id_master)
  
   use mod_parameters, only: n_var
   use mumps_module
@@ -13,21 +13,21 @@ subroutine real2complex_a(my_id)
    
   implicit none
 
-  integer, intent(in) :: my_id
+  integer, intent(in) :: my_id, my_id_master
 
   integer :: i, j, k, l, m
 
   if (my_id .eq. 0) then
-    write(*,*) my_id,'*****************************************************'
+    write(*,*) my_id,'********************************************************'
     write(*,*) my_id,'* converting real harmonic block into the complex one  *'
-    write(*,*) my_id,'*****************************************************'
+    write(*,*) my_id,'********************************************************'
   endif
 
   if (associated(A_cmplx))  deallocate(A_cmplx) 
   if (associated(irn_cmplx))deallocate(irn_cmplx) 
   if (associated(jcn_cmplx))deallocate(jcn_cmplx) 
 
-  if(my_id .eq. 0) then 
+  if(my_id_master .eq. 0) then 
     nz_cmplx = mumps_par%nz
   else
     nz_cmplx = mumps_par%nz/4
@@ -37,7 +37,7 @@ subroutine real2complex_a(my_id)
   allocate(irn_cmplx(1:nz_cmplx))
   allocate(jcn_cmplx(1:nz_cmplx))
 
-  if(my_id .eq. 0) then
+  if(my_id_master .eq. 0) then
     do i = 1, mumps_par%nz
       A_cmplx(i) = CMPLX(mumps_par%A(i)) 
       irn_cmplx(i) = mumps_par%irn(i)
@@ -68,7 +68,7 @@ subroutine real2complex_a(my_id)
   return
 end subroutine real2complex_a
 
-subroutine real2complex_rhs(my_id)
+subroutine real2complex_rhs(my_id, my_id_master)
  
   use mumps_module
   use global_distributed_matrix
@@ -76,19 +76,19 @@ subroutine real2complex_rhs(my_id)
    
   implicit none
 
-  integer, intent(in) :: my_id
+  integer, intent(in) :: my_id, my_id_master
 
   integer :: i
 
   if (my_id .eq. 0) then
-    write(*,*) my_id,'*****************************************************'
+    write(*,*) my_id,'*****************************************'
     write(*,*) my_id,'* converting RHS into the complex form  *'
-    write(*,*) my_id,'*****************************************************'
+    write(*,*) my_id,'*****************************************'
   endif
 
   if (associated(rhs_cmplx))deallocate(rhs_cmplx)
 
-  if(my_id .eq. 0) then 
+  if(my_id_master .eq. 0) then 
     n_cmplx = mumps_par%n
   else
     n_cmplx = mumps_par%n/2
@@ -96,7 +96,7 @@ subroutine real2complex_rhs(my_id)
 
   allocate(rhs_cmplx(1:n_cmplx))
 
-  if(my_id .eq. 0) then
+  if(my_id_master .eq. 0) then
     do i = 1, mumps_par%n
       rhs_cmplx(i) = CMPLX(mumps_par%rhs(i))
     enddo  

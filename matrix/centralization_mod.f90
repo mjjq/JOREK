@@ -25,7 +25,7 @@ contains
  
   if (.not.centralize_harm_mat .and. use_strumpack) then
   
-    ! assign distributed values to global
+    ! assign distributed values to the data structures used by the solver
     mumps_par%nz  = nz_harm
     mumps_par%A   => A_harm(1:mumps_par%nz)   
     mumps_par%irn => irn_harm(1:mumps_par%nz)

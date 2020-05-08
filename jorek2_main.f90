@@ -1030,7 +1030,7 @@ required = 0
          endif     
 
          call clck_time_barrier(t0) 
-         ! --- Centralize the harmonic matrix on the master task of the MPI group
+         ! --- Centralize the harmonic matrix on the master task of the MPI group (if needed)
          call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
   
          call clck_time_barrier(t1) 

@@ -1345,7 +1345,7 @@ surface_list%psi_values(2) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.02d0
 surface_list%psi_values(3) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.95d0 
 surface_list%psi_values(4) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.99d0
 
-call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
+call find_flux_surfaces(my_id,xpoint, xcase, node_list, element_list, surface_list)
 call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
      ES%Z_xpoint, qval, radav)
 

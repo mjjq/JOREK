@@ -592,9 +592,9 @@ do ife = ife_min, ife_max
           E_ion_bg  = 0.
         end if
 
-        alpha_imp     = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+        alpha_imp    = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
         beta_imp     = m_i_over_m_imp*Z_imp - 1.
-        ne_SI       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
+        ne_SI        = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
         ne_JOREK     = r0_corr + beta_imp * rn0_corr ! Electron density in JOREK unit
         ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                                ! Too small rho_1 will cause a problem
@@ -644,7 +644,11 @@ do ife = ife_min, ife_max
 #else
         P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
 #endif
-        D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
+#if (JOREK_MODEL == 501)
+        D_tot  = D_tot  + (r0-rn0) * xjac * BigR * wst * delta_phi
+#else
+        D_tot  = D_tot  + r0 * xjac * BigR * wst * delta_phi
+#endif
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
         VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
@@ -755,7 +759,11 @@ do ife = ife_min, ife_max
 
 
         if ( get_psi_n(ps0, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
-          D_int = D_int + r0        * xjac * BigR * wst * delta_phi
+#if (JOREK_MODEL == 501)
+          D_int = D_int + (r0-rn0) * xjac * BigR * wst * delta_phi
+#else	
+          D_int = D_int + r0 * xjac * BigR * wst * delta_phi
+#endif
 #if (JOREK_MODEL == 501)
           P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
 #else
@@ -771,7 +779,11 @@ do ife = ife_min, ife_max
           VM_int = VM_int + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
           J2_int = J2_int + eta_T * (ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
         else
-          D_ext = D_ext + r0         * xjac * BigR * wst * delta_phi
+#if (JOREK_MODEL == 501)
+          D_ext = D_ext + (r0-rn0) * xjac * BigR * wst * delta_phi
+#else
+          D_ext = D_ext + r0 * xjac * BigR * wst * delta_phi
+#endif
 #if (JOREK_MODEL == 501)
           P_ext = P_ext + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
 #else

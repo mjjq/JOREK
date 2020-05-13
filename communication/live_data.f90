@@ -363,7 +363,11 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent_x2si: ', sqrt_mu0_rho0*1.e3
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlecontent_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@particlecontent_logy: 0'
+#if (JOREK_MODEL == 501)
+    write(LIVE_DATA_HANDLE,'(A)') '@particlecontent: %"time"  "Total main ions" "Main ions inside LCFS"  "Main ions outside LCFS" "Total impurities"'
+#else    
     write(LIVE_DATA_HANDLE,'(A)') '@particlecontent: %"time"  "Total ions" "Ions inside LCFS"  "Ions outside LCFS" "Total neutrals"'
+#endif
     write(LIVE_DATA_HANDLE,*)
     
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_thermalenergy: ', 2 

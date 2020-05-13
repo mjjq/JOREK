@@ -619,9 +619,6 @@ do ife = ife_min, ife_max
         eta_T        = eta_T * eta_coef
         eta_T_ohm    = eta_T_ohm * eta_coef
 
-        P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
-        P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
-
         if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
           Lrad = 0.0
           call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
@@ -644,7 +641,11 @@ do ife = ife_min, ife_max
                           * bigR * xjac * wst * delta_phi
 #endif
 
+#if (JOREK_MODEL == 501)
+        P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
+#else
         P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
+#endif
         D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
@@ -749,9 +750,15 @@ do ife = ife_min, ife_max
         local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
 
 #endif
+
+
         if ( get_psi_n(ps0, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
+#if (JOREK_MODEL == 501)
+          P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
+#else
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
+#endif
           C_intern = C_intern - zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
           area1    = area1    +  xjac * wst * delta_phi         
           Vol   = Vol   +             xjac * BigR * wst * delta_phi
@@ -761,13 +768,13 @@ do ife = ife_min, ife_max
           VK_int = VK_int + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_int = VM_int + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
           J2_int = J2_int + eta_T * (ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
-#if (JOREK_MODEL == 501)
-          P_int = P_int - r0 * T0   * xjac * BigR * wst * delta_phi
-          P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
-#endif
         else
           D_ext = D_ext + r0         * xjac * BigR * wst * delta_phi
+#if (JOREK_MODEL == 501)
+          P_ext = P_ext + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
+#else
           P_ext = P_ext + r0   * T0  * xjac * BigR * wst * delta_phi
+#endif
           C_ext = C_ext - zj0 / BigR * xjac *        wst * delta_phi  ! 2D integral
           H_ext = H_ext + heat_source     * xjac * BigR * wst * delta_phi
           S_ext = S_ext + particle_source * xjac * BigR * wst * delta_phi
@@ -775,10 +782,6 @@ do ife = ife_min, ife_max
           VK_ext = VK_ext + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_ext = VM_ext + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
           J2_ext = J2_ext + eta_T * (ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
-#if (JOREK_MODEL == 501)
-          P_int = P_int - r0 * T0   * xjac * BigR * wst * delta_phi
-          P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
-#endif
         endif
 
       enddo

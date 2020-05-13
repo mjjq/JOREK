@@ -305,7 +305,7 @@ do ife = ife_min, ife_max
 
 #ifdef fullmhd
           ! --- Equilibrium psi (n=0 only)
-          psi_axisym(ms,mt) = psi_axisym(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H(i,j,ms,mt)  * HZ(1,1)
+          psi_axisym(ms,mt) = psi_axisym(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H(i,j,ms,mt)
 #endif
 
         enddo

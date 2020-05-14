@@ -206,6 +206,7 @@ contains
 
           block_size2 = block_size**2
           !---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
+#ifndef USE_ZPASTIX
           n_block   = mumps_par%n  / block_size
           nnz_block = mumps_par%nz / block_size2
 
@@ -217,6 +218,24 @@ contains
           if (allocated(sparskit_work)) deallocate(sparskit_work)
           allocate(sparskit_work(n_block+1))
           call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%JCN(1:nnz_block),block_size,sparskit_work)
+#else
+          mumps_par%n  = mumps_par%n  / block_size
+          mumps_par%nz = mumps_par%nz / block_size2
+
+          do i=1,mumps_par%nz   
+            mumps_par%irn(i) = (mumps_par%irn((i-1)*block_size2+1) - 1) / block_size + 1 
+            mumps_par%jcn(i) = (mumps_par%jcn((i-1)*block_size2+1) - 1) / block_size + 1 
+          enddo
+ 
+          !-- converting real harmonic blocks into the complex ones
+          call real2complex_a(my_id, my_id_master) 
+          !-- converting RHS into the complex form
+          call real2complex_rhs(my_id, my_id_master) 
+
+          if (allocated(sparskit_work)) deallocate(sparskit_work)
+          allocate(sparskit_work(n_cmplx+1))
+          call coicsr2_cmplx(n_cmplx,nz_cmplx,A_cmplx,irn_cmplx(1:nz_cmplx),jcn_cmplx(1:nz_cmplx),block_size,sparskit_work)
+#endif
 
           ! WARNING:  USE_BLOCK does not (yet) work with WSMP!!!
           if (use_wsmp) then

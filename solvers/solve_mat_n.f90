@@ -227,12 +227,25 @@ contains
 #endif
           endif
 
-#else
+#else 
+
+#ifndef USE_ZPASTIX
           if (allocated(sparskit_work)) deallocate(sparskit_work)
           allocate(sparskit_work(mumps_par%N + 1))
 
           call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
+#else
+          
+          !-- converting real harmonic blocks into the complex ones
+          call real2complex_a(my_id, my_id_master) 
+          !-- converting RHS into the complex form
+          call real2complex_rhs(my_id, my_id_master) 
 
+          if (allocated(sparskit_work)) deallocate(sparskit_work)
+          allocate(sparskit_work(n_cmplx + 1))
+
+          call coicsr_cmplx(n_cmplx,nz_cmplx,1,A_cmplx,irn_cmplx,jcn_cmplx,sparskit_work)
+#endif
           if (use_wsmp) then
 #ifdef USE_WSMP
             call PWGSMP__allocate(mumps_par%N, mumps_par%NZ, my_id_n)
@@ -264,8 +277,14 @@ contains
         if ((.not. use_wsmp).and.(.not. pastix_smp_only)) then
 !          call pastix_init_num_threads(my_id)
 
+#ifndef USE_ZPASTIX
           call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
           call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+#else
+          call MPI_BCAST(n_cmplx,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(nz_cmplx,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+#endif 
+
 #ifdef USE_BLOCK
           call MPI_BCAST(block_size,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
           call MPI_BCAST(n_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
@@ -319,12 +338,12 @@ contains
 
         endif
 
-#ifdef USE_ZPASTIX 
-        !-- converting real harmonic blocks into the complex ones
-        call real2complex_a(my_id, my_id_master) 
-        !-- converting RHS into the complex form
-        call real2complex_rhs(my_id, my_id_master) 
-#endif
+!#ifdef USE_ZPASTIX 
+!        !-- converting real harmonic blocks into the complex ones
+!        call real2complex_a(my_id, my_id_master) 
+!        !-- converting RHS into the complex form
+!        call real2complex_rhs(my_id, my_id_master) 
+!#endif
         if  (.not. pastix_initialised)  then
 
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then

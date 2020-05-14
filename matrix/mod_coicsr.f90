@@ -5,8 +5,12 @@
 ! routine from SPARSKIT2
 !------------------------------------------------------------------------
       subroutine coicsr (n,nnz,job,a,ja,ia,iwk)
-      integer :: n, nnz, job, ia(nnz),ja(nnz),iwk(n+1)
+      integer :: n, nnz, job, ia(nnz),ja(nnz),iwk(n+1) 
+!#ifndef USE_ZPASTIX
       real*8  :: a(*)
+!#else
+!      double complex  :: a(*)
+!#endif 
 !------------------------------------------------------------------------
 ! IN-PLACE coo-csr conversion routine.
 !------------------------------------------------------------------------
@@ -42,7 +46,11 @@
 !----------------------------------------------------------------------c
 !  Coded by Y. Saad, Sep. 26 1989                                      c
 !----------------------------------------------------------------------c
+!#ifndef USE_ZPASTIX
       real*8  ::   t,tnext
+!#else
+!      double complex  ::   t,tnext
+!#endif
       logical ::   values
       integer ::   i,j,k, init, ipos, inext, jnext
 !-----------------------------------------------------------------------
@@ -103,12 +111,117 @@
 !----------------- end of coicsr ----------------------------------------
 !------------------------------------------------------------------------
       end subroutine coicsr
-
+!------------------------------------------------------------------------
+! routine from SPARSKIT2
+!------------------------------------------------------------------------
+      subroutine coicsr_cmplx (n,nnz,job,a,ja,ia,iwk)
+      integer :: n, nnz, job, ia(nnz),ja(nnz),iwk(n+1) 
+      double complex  :: a(*)
+!------------------------------------------------------------------------
+! IN-PLACE coo-csr conversion routine.
+!------------------------------------------------------------------------
+! this subroutine converts a matrix stored in coordinate format into
+! the csr format. The conversion is done in place in that the arrays
+! a,ja,ia of the result are overwritten onto the original arrays.
+!------------------------------------------------------------------------
+! on entry:
+!---------
+! n     = integer. row dimension of A.
+! nnz   = integer. number of nonzero elements in A.
+! job   = integer. Job indicator. when job=1, the real values in a are
+!         filled. Otherwise a is not touched and the structure of the
+!         array only (i.e. ja, ia)  is obtained.
+! a     = real array of size nnz (number of nonzero elements in A)
+!         containing the nonzero elements
+! ja    = integer array of length nnz containing the column positions
+!         of the corresponding elements in a.
+! ia    = integer array of length nnz containing the row positions
+!         of the corresponding elements in a.
+! iwk   = integer work array of length n+1
+! on return:
+!----------
+! a
+! ja
+! ia    = contains the compressed sparse row data structure for the
+!         resulting matrix.
+! Note:
+!-------
+!         the entries of the output matrix are not sorted (the column
+!         indices in each are not in increasing order) use coocsr
+!         if you want them sorted.
+!----------------------------------------------------------------------c
+!  Coded by Y. Saad, Sep. 26 1989                                      c
+!----------------------------------------------------------------------c
+      double complex  ::   t,tnext
+      logical ::   values
+      integer ::   i,j,k, init, ipos, inext, jnext
+!-----------------------------------------------------------------------
+      values = (job .eq. 1)
+! find pointer array for resulting matrix.
+      do i=1,n+1
+         iwk(i) = 0
+      enddo
+      do k=1,nnz
+         i = ia(k)
+         iwk(i+1) = iwk(i+1)+1
+      enddo
+!------------------------------------------------------------------------
+      iwk(1) = 1
+      do i=2,n
+         iwk(i) = iwk(i-1) + iwk(i)
+      enddo
+!
+!     loop for a cycle in chasing process.
+!
+      init = 1
+      k = 0
+ 5    if (values) t = a(init)
+      i = ia(init)
+      j = ja(init)
+      ia(init) = -1
+!------------------------------------------------------------------------
+ 6    k = k+1
+!-------------------- current row number is i.  determine  where to go.
+      ipos = iwk(i)
+!-------------------- save the chased element.
+      if (values) tnext = a(ipos)
+      inext = ia(ipos)
+      jnext = ja(ipos)
+!-------------------- then occupy its location.
+      if (values) a(ipos)  = t
+      ja(ipos) = j
+!     update pointer information for next element to come in row i.
+      iwk(i) = ipos+1
+!     determine  next element to be chased,
+      if (ia(ipos) .lt. 0) goto 65
+      t = tnext
+      i = inext
+      j = jnext
+      ia(ipos) = -1
+      if (k .lt. nnz) goto 6
+      goto 70
+ 65   init = init+1
+      if (init .gt. nnz) goto 70
+      if (ia(init) .lt. 0) goto 65
+!     restart chasing --
+      goto 5
+ 70   do i=1,n
+         ia(i+1) = iwk(i)
+      enddo
+      ia(1) = 1
+      return
+!----------------- end of coicsr ----------------------------------------
+!------------------------------------------------------------------------
+      end subroutine coicsr_cmplx
 
       subroutine coicsr2 (n,nnz,a,ja,ia,ndof,iwk)
       implicit none
       integer :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
+!#ifndef USE_ZPASTIX
       real*8  :: a(*)
+!#else
+!      double complex  :: a(*)
+!#endif
 !------------------------------------------------------------------------
 ! IN-PLACE coo-csr conversion routine.(with added option ndof)
 !------------------------------------------------------------------------
@@ -143,7 +256,11 @@
 !  Coded by Y. Saad, Sep. 26 1989                                      c
 !----------------------------------------------------------------------c
       integer ::   i,j,k, init, ipos, inext, jnext, ndof, ndof2, id, jd
+!#ifndef USE_ZPASTIX
       real*8  ::   t(ndof*ndof),tnext(ndof*ndof)
+!#else
+!      double complex  ::   t(ndof*ndof),tnext(ndof*ndof)
+!#endif
 !-----------------------------------------------------------------------
       ndof2  = ndof*ndof
       

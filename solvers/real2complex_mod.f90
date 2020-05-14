@@ -52,15 +52,8 @@ subroutine real2complex_a(my_id, my_id_master)
         irn_cmplx(k) = (mumps_par%irn(m)+1)/2    
         jcn_cmplx(k) = (mumps_par%jcn(m)+1)/2
         A_cmplx(k) = CMPLX(mumps_par%A(m), -mumps_par%A(m+1)) 
-        !write(200,*) k, A_cmplx(k)
       enddo
     enddo 
-    write(*,*) 'size of A_cmplx:', size(A_cmplx) 
-    write(*,*) 'size of mumps_par%A:', size(mumps_par%A) 
-    write(*,*) 'size of irn_cmplx:', size(irn_cmplx) 
-    write(*,*) 'size of mumps_par%irn:', size(mumps_par%irn) 
-    write(*,*) 'size of jcn_cmplx:', size(jcn_cmplx) 
-    write(*,*) 'size of mumps_par%jcn:', size(mumps_par%jcn) 
      
   endif      
   
@@ -104,8 +97,6 @@ subroutine real2complex_rhs(my_id, my_id_master)
     do i = 1, mumps_par%n, 2
       rhs_cmplx((i+1)/2) = CMPLX(mumps_par%rhs(i),mumps_par%rhs(i+1))
     enddo  
-    write(*,*) 'size of rhs_cmplx:', size(rhs_cmplx) 
-    write(*,*) 'size of mumps_par%rhs:', size(mumps_par%rhs) 
   endif      
 
   return

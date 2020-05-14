@@ -6,11 +6,7 @@
 !------------------------------------------------------------------------
       subroutine coicsr (n,nnz,job,a,ja,ia,iwk)
       integer :: n, nnz, job, ia(nnz),ja(nnz),iwk(n+1) 
-!#ifndef USE_ZPASTIX
       real*8  :: a(*)
-!#else
-!      double complex  :: a(*)
-!#endif 
 !------------------------------------------------------------------------
 ! IN-PLACE coo-csr conversion routine.
 !------------------------------------------------------------------------
@@ -217,11 +213,7 @@
       subroutine coicsr2 (n,nnz,a,ja,ia,ndof,iwk)
       implicit none
       integer :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
-!#ifndef USE_ZPASTIX
       real*8  :: a(*)
-!#else
-!      double complex  :: a(*)
-!#endif
 !------------------------------------------------------------------------
 ! IN-PLACE coo-csr conversion routine.(with added option ndof)
 !------------------------------------------------------------------------
@@ -256,11 +248,7 @@
 !  Coded by Y. Saad, Sep. 26 1989                                      c
 !----------------------------------------------------------------------c
       integer ::   i,j,k, init, ipos, inext, jnext, ndof, ndof2, id, jd
-!#ifndef USE_ZPASTIX
       real*8  ::   t(ndof*ndof),tnext(ndof*ndof)
-!#else
-!      double complex  ::   t(ndof*ndof),tnext(ndof*ndof)
-!#endif
 !-----------------------------------------------------------------------
       ndof2  = ndof*ndof
       

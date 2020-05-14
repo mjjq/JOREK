@@ -164,7 +164,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
       if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
   
 #ifdef USE_ZPASTIX 
-        !-- converting RHS into the complex form
+        !-- converting RHS from real to complex
         mumps_par%n = ifactor*n_loc_n
         call real2complex_rhs(my_id, my_id_master) 
 #endif
@@ -271,6 +271,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
     if (.not.use_strumpack) then
   !------------------------------------------ undo column scaling
 #ifdef USE_ZPASTIX
+      !-- converting RHS from complex to real
       do k=1,n_cmplx 
         if(my_id_master .eq. 0) then
           mumps_par%rhs(k) = REAL(rhs_cmplx(k))

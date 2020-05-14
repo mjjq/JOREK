@@ -205,7 +205,6 @@ contains
 #ifndef USE_ZPASTIX
           block_size  = n_var
           if (my_id .ne. 0) block_size = 2*n_var
-
           block_size2 = block_size**2
           n_block   = mumps_par%n  / block_size
           nnz_block = mumps_par%nz / block_size2
@@ -221,6 +220,7 @@ contains
 #else
           block_size  = n_var
           block_size2 = block_size**2
+
           !-- converting real harmonic blocks into the complex ones
           call real2complex_a(my_id, my_id_master) 
           !-- converting RHS into the complex form
@@ -228,10 +228,6 @@ contains
   
           n_block   = n_cmplx  / block_size
           nnz_block = nz_cmplx / block_size2
-         
-          write(*,*) 'my_id, n_cmplx, n_block, block_size', my_id, n_cmplx, n_block, block_size 
-          write(*,*) '!!!!!!!!!!!!!!!!!!!!! '
-          write(*,*) 'my_id, nz_cmplx, nnz_block, block_size2', my_id, nz_cmplx, nnz_block, block_size2
            
           do i=1,nnz_block  
             irn_cmplx(i) = (irn_cmplx((i-1)*block_size2+1) - 1) / block_size + 1 
@@ -260,7 +256,6 @@ contains
 
           call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
 #else
-          
           !-- converting real harmonic blocks into the complex ones
           call real2complex_a(my_id, my_id_master) 
           !-- converting RHS into the complex form
@@ -363,12 +358,6 @@ contains
 
         endif
 
-!#ifdef USE_ZPASTIX 
-!        !-- converting real harmonic blocks into the complex ones
-!        call real2complex_a(my_id, my_id_master) 
-!        !-- converting RHS into the complex form
-!        call real2complex_rhs(my_id, my_id_master) 
-!#endif
         if  (.not. pastix_initialised)  then
 
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
@@ -512,14 +501,6 @@ contains
 
         endif !.not. pastix_initialised
 
-
-!#ifdef USE_ZPASTIX
-!              call MPI_Barrier(MPI_COMM_N,ierr)
-!              call MPI_Abort(MPI_COMM_N,1,ierr)
-!              stop 
-!#endif
-
-
         if (.not. pastix_analysed) then
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
@@ -545,8 +526,6 @@ contains
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
-              print*, 'my_id, size of A_cmplx =', my_id, size(A_cmplx) 
-              print*, 'my_id, size of rhs_cmplx =', my_id, size(rhs_cmplx) 
               call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,jcn_cmplx,irn_cmplx,A_cmplx, &
                 pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
 #endif
@@ -587,11 +566,6 @@ contains
         endif ! .not. pastix_analysed
       endif   ! (else, use_mumps)
 
-!#ifdef USE_ZPASTIX
-!              call MPI_Barrier(MPI_COMM_N,ierr)
-!              call MPI_Abort(MPI_COMM_N,1,ierr)
-!              stop 
-!#endif
 
       if (my_id_n .eq.0) then                            ! elapsed time analysis end
          call MPI_Barrier(MPI_COMM_MASTER,ierr)
@@ -740,7 +714,6 @@ contains
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
-!             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
 #endif
@@ -753,7 +726,6 @@ contains
           pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else
         call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,&
-!             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
           DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
           pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
 #endif 
@@ -826,19 +798,8 @@ contains
 
       endif
       
-      print*, 'my_id', my_id  
-      do i = 1, mumps_par%n
-        write(100+my_id,*) i, rhs_tmp(i)
-      enddo
-
       call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
       call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)
-
-      !!!--psv 
-      !do i = 1, ndof_glob
-      !   write(100,*) i, deltas(i)
-      !enddo  
-      !!!--psv 
 
       call tr_locvnorms("smn_res",mumps_par%rhs,mumps_par%n)
       call tr_locvnorms("smn_delta",deltas,ndof_glob)

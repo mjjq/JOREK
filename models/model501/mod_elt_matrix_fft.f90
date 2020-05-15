@@ -1252,7 +1252,7 @@ do ms=1, n_gauss
                     + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
 !==============================End of friction terms=================
 
-                    + v * BigR * (GAMMA - 1.) * BigR**2 * eta_T_ohm * zj0**2           * xjac * tstep  &
+                    + v * BigR * (GAMMA - 1.) * eta_T_ohm * (zj0/BigR)**2           * xjac * tstep  &
                     - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad         * xjac * tstep  &
                     - v * BigR * r0_corr * frad_bg                                     * xjac * tstep  
 

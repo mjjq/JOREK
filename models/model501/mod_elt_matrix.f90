@@ -1800,7 +1800,7 @@ do ms=1, n_gauss
                            + v * BigR * rho * rn0_corr * Lrad                                   * xjac * theta * tstep &
                            + v * BigR * rho * frad_bg                                           * xjac * theta * tstep &
                         ! New term from Z_eff
-                           - v * BigR * rho * (GAMMA - 1.) * BigR**2 * deta_dr0_ohm * zj0**2    * xjac * theta * tstep &
+                           - v * BigR * rho * (GAMMA - 1.) * deta_dr0_ohm * (zj0/BigR)**2    * xjac * theta * tstep &
 !=============== The ionization potential energy term=========================
                            + (GAMMA - 1.) * v * rho * E_ion_bg * BigR * xjac * (1.d0 + zeta)  &
                            - (GAMMA - 1.)* v * E_ion_bg * BigR**2 * (rho_s * u0_t - rho_t * u0_s) * theta * tstep &
@@ -1874,7 +1874,7 @@ do ms=1, n_gauss
                               * (alpha_imp_tri*rn0)* T * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)      &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
 
-                           - v * BigR * T * (GAMMA - 1.) * BigR**2 * deta_dT_ohm * zj0**2        * xjac * theta * tstep  &
+                           - v * BigR * T * (GAMMA - 1.) * deta_dT_ohm * (zj0/BigR)**2        * xjac * theta * tstep  &
                            + v * BigR * T * (r0_corr + beta_imp*rn0_corr) * rn0_corr * dLrad_dT  * xjac * theta * tstep  &
                            + v * BigR * T * dbeta_imp_dT * rn0_corr**2 * Lrad                    * xjac * theta * tstep  &
                            + v * BigR * T * r0_corr * dfrad_bg_dT                                * xjac * theta * tstep
@@ -1953,7 +1953,7 @@ do ms=1, n_gauss
 !===========================End of new TG_num terms===========================
 
                            ! New term from Z_eff
-                           - v * BigR * rhon * (GAMMA - 1.) * BigR**2 * deta_drn0_ohm * zj0**2 * xjac * theta * tstep &
+                           - v * BigR * rhon * (GAMMA - 1.) * deta_drn0_ohm * (zj0/BigR)**2 * xjac * theta * tstep &
                            - v * rhon * BigR**2 * alpha_imp_bis * (T0_s * u0_t - T0_t * u0_s)     * theta * tstep &
                            - v * alpha_imp * T0 * BigR**2 * (rhon_s * u0_t - rhon_t * u0_s)       * theta * tstep &
                            + v * rhon * F0 / BigR * Vpar0 * alpha_imp_bis * T0_p           * xjac * theta * tstep &

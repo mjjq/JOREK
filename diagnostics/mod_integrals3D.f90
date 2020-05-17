@@ -107,7 +107,7 @@ real*8  :: vpar_disp_tot, vpar_disp, viscopar_dissip_tot, source_tot, heating_to
 real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, source_out
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, drhondx, drhondy
-real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm
+real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm, eta_Sp
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, source_ns, neut_particles_tot
 real*8  :: E_tot, E_in, E_out, Zkpar_T, D_prof, ZK_prof, gamma_sheath_stangeby, sheath_heatflux
@@ -273,7 +273,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, thm_wk_tot,                   &
 !$omp          mag_wk_tot, vpar_disp_tot, area1, mag_src_tot,                                  &
-!$omp          eta_ohmic,                                                                      &
+!$omp          eta_ohmici,                                                                     &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
 !$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,               &
@@ -302,7 +302,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, r0_corr, u0_p,                &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
-!$omp           eta_T_ohm, &
+!$omp           eta_T_ohm, eta_Sp,                                                             &
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
 !$omp           rn0, rn0_corr,                                                                 &
@@ -529,9 +529,18 @@ do ife = ife_min, ife_max
 #if (JOREK_MODEL == 502)
         T0_corr = corr_neg_temp1(T0e)
         eta_T   = eta * (T0_corr/Te_0)**(-1.5d0)
+
+        ! Inconsistent with model 500 & 501, we are still using eta_Sp here
+        eta_Sp = 1.65d-9*17*(1.d-3*T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
+                                  *sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO)
 #else
         eta_T   = resistivity(T0_corr)  
+
+        ! Inconsistent with model 500 & 501, we are still using eta_Sp here
+        eta_Sp = 1.65d-9*17*(1.d-3*T0_corr/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
+                                  *sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO)
 #endif
+
         ! This is currently broken for two temperature models, remember to fix!
         dTdx   = (   y_t(ms,mt) * eq_s(mp,var_T,ms,mt) - y_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
         dTdy   = ( - x_t(ms,mt) * eq_s(mp,var_T,ms,mt) + x_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
@@ -572,21 +581,6 @@ do ife = ife_min, ife_max
         else
           current_source = 0.d0
         endif
-
-        P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
-        D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
-        VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
-        VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
-        VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
-        J2_tot = J2_tot + eta_T *(ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
-
-        mag_src_tot   = mag_src_tot + eta_T*ZJ0*current_source/(BigR**2) * xjac * BigR * wst * delta_phi
-
-        heli_tot      = heli_tot   + hel1         * BigR * xjac * wst * delta_phi
-        mag_wk_tot    = mag_wk_tot + mag_wk       * BigR * xjac * wst * delta_phi
-        thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
-        vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi
-
 
 #if (JOREK_MODEL == 501)
         !-------------------------------------------
@@ -642,9 +636,6 @@ do ife = ife_min, ife_max
         ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                                ! Too small rho_1 will cause a problem
 
-        P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
-        P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
-
         ! Calculate the effective charge of all species
         Z_eff        = 0.
    
@@ -662,6 +653,7 @@ do ife = ife_min, ife_max
         eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
         eta_T        = eta_T * eta_coef
         eta_T_ohm    = eta_T_ohm * eta_coef
+        eta_Sp       = eta_Sp * eta_coef
 
         if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
           Lrad = 0.0
@@ -739,9 +731,24 @@ do ife = ife_min, ife_max
 
         ne_SI       = (r0_corr + alpha_e * rn0_corr) * 1.d20 * central_density ! electron density (SI)
 
-        P_tot  = P_tot  - r0 * T0 * xjac * BigR * wst * delta_phi
-        P_tot  = P_tot  + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi &
-                        + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
+        ! Calculate the effective charge of all species
+        Z_eff        = 0.
+
+        ! First get the value of Z_eff
+        Z_eff        = r0_corr - rn0_corr
+        do ion_i=1, imp_adas(1)%n_Z
+          Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
+        end do
+        Z_eff        = Z_eff / ne_JOREK
+
+        if (Z_eff < 1) Z_eff = 1.
+
+        ! This is to represent the dependence on Z_eff in resistivity
+        eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
+        eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
+        eta_T        = eta_T * eta_coef
+        eta_T_ohm    = eta_T_ohm * eta_coef
+        eta_Sp       = eta_Sp * eta_coef
 
         if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
           Lrad = 0.0
@@ -766,6 +773,32 @@ do ife = ife_min, ife_max
         local_E_ion     = local_E_ion + (r0 - rn0) * central_density * 1.d20 * E_ion_bg   &
                           * bigR * xjac * wst * delta_phi
 #endif
+
+#if ((JOREK_MODEL == 501) || (JOREK_MODEL == 502))
+#if (JOREK_MODEL == 501)
+        P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi
+#endif /* JOREK_MODEL == 501 */
+#if (JOREK_MODEL == 502)
+        P_tot  = P_tot  + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi &
+                        + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
+#endif /* JOREK_MODEL == 502 */
+#else
+        P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
+#endif /* ((JOREK_MODEL == 501) || (JOREK_MODEL == 502)) */
+
+        D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
+        VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
+        VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
+        VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
+        J2_tot = J2_tot + eta_Sp *(ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
+
+        mag_src_tot   = mag_src_tot + eta_T*ZJ0*current_source/(BigR**2) * xjac * BigR * wst * delta_phi
+
+        heli_tot      = heli_tot   + hel1         * BigR * xjac * wst * delta_phi
+        mag_wk_tot    = mag_wk_tot + mag_wk       * BigR * xjac * wst * delta_phi
+        thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
+        vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi
+
 
         if (use_pellet) then
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &

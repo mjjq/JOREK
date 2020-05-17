@@ -273,12 +273,12 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, thm_wk_tot,                   &
 !$omp          mag_wk_tot, vpar_disp_tot, area1, mag_src_tot,                                  &
-!$omp          eta_ohmic,                                                                      &
+!$omp          eta_ohmic, central_mass,                                                        &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 502) || (JOREK_MODEL == 555)
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
 !$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,               &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
-!$omp          central_mass, pellets, tor_frequency,                                           &
+!$omp          pellets, tor_frequency,                                                         &
 !$omp          n_spi, using_spi, n_spi_tot, n_inj,                                             &
 !$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
 #endif

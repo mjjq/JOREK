@@ -1657,6 +1657,8 @@ if (my_id .eq. 0) then
   else
     xtime_radiation(index_now) = t_norm * tstep * total_radiation
   end if
+  xtime_rad_power(index_now) = total_radiation
+
   if (output_rad_phi) then
     open(20,file="rad_asymmetry.dat")
     do i_phi = 1, n_plane
@@ -1664,6 +1666,14 @@ if (my_id .eq. 0) then
     end do
     close (20)
   end if
+
+  xtime_E_ion(index_now) = total_E_ion
+  if (index_now > 1) then
+    xtime_E_ion_power(index_now) = (xtime_E_ion(index_now) - xtime_E_ion(index_now-1)) / (t_norm * tstep)
+  else
+    xtime_E_ion_power(index_now) = 0.
+  endif
+
 #endif
 
   do k = 1, n_var

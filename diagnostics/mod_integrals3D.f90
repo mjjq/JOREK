@@ -65,6 +65,7 @@ real*8  :: eq_t(n_plane,0:n_var,n_gauss,n_gauss), eq_p(n_plane,0:n_var,n_gauss,n
 real*8  :: eq_ss(n_plane,0:n_var,n_gauss,n_gauss), eq_tt(n_plane,0:n_var,n_gauss,n_gauss), eq_st(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: eq_sp(n_plane,0:n_var,n_gauss,n_gauss), eq_tp(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: wgauss_copy(n_gauss)
+real*8  :: psi_axisym(n_gauss,n_gauss)
 
 real*8  :: x_g_1D(n_gauss),  x_s_1D(n_gauss),   x_t_1D(n_gauss)
 real*8  :: y_g_1D(n_gauss),  y_s_1D(n_gauss),   y_t_1D(n_gauss)
@@ -91,6 +92,7 @@ real*8, allocatable :: qval(:), radav(:)
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor, current_MA
 real*8  :: xjac, xjac_R, xjac_Z, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, area1
+real*8  :: psi_as_coord
 real*8  :: AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30
 real*8  :: A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ
 real*8  :: BR_Z, BZ_R
@@ -282,8 +284,9 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, xjac_R, xjac_Z, eq_g, eq_s, eq_t, eq_p,    &
 !$omp           x_ss, x_tt, x_st, y_ss, y_tt, y_st, eq_ss, eq_tt, eq_st, eq_sp, eq_tp,         &
+!$omp           psi_axisym,                                                                    &
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
-!$omp           dpdx, dpdy, phi,                                                               &
+!$omp           dpdx, dpdy, phi, psi_as_coord,                                                  &
 !$omp           source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,                      &
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
@@ -340,6 +343,7 @@ do ife = ife_min, ife_max
 
   x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0; x_ss(:,:)    = 0.d0; x_tt(:,:)    = 0.d0; x_st(:,:)    = 0.d0;
   y_g(:,:)    = 0.d0; y_s(:,:)    = 0.d0; y_t(:,:)    = 0.d0; y_ss(:,:)    = 0.d0; y_tt(:,:)    = 0.d0; y_st(:,:)    = 0.d0;
+  psi_axisym(:,:) = 0.d0
 
   do i=1,n_vertex_max
     do j=1,n_order+1
@@ -361,6 +365,11 @@ do ife = ife_min, ife_max
           y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
           y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
           y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
+
+#ifdef fullmhd
+          ! --- Equilibrium psi (n=0 only)
+          psi_axisym(ms,mt) = psi_axisym(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H(i,j,ms,mt)
+#endif
 
         enddo
       enddo
@@ -498,6 +507,9 @@ do ife = ife_min, ife_max
         BR_Z = ( A30_ZZ - AZ0_Zp )/ BigR
         BZ_R = -1/BigR**2 * ( AR0_p - A30_R ) + ( AR0_Rp - A30_RR )/ BigR
         zj0 = - (BZ_R - BR_Z) * BigR
+        psi_as_coord = psi_axisym(ms,mt)
+#else
+        psi_as_coord = ps0
 #endif
 
         T0_corr = corr_neg_temp(T0)
@@ -534,11 +546,11 @@ do ife = ife_min, ife_max
                      particle_source,heat_source_i,heat_source_e)
 		     heat_source = heat_source_i + heat_source_e
 #else
-        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_bnd, &
+        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, psi_as_coord, psi_axis, psi_bnd, &
                      particle_source,heat_source)
 #endif
         if (keep_current_prof) then
-          call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), Z_xpoint, ps0,&
+          call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), Z_xpoint, psi_as_coord,&
                        psi_axis,psi_bnd,current_source)
         else
           current_source = 0.d0
@@ -664,7 +676,7 @@ do ife = ife_min, ife_max
         if (use_pellet) then
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                               pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-                              x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt), eq_zTe(ms,mt), central_density, &
+                              x_g(ms,mt),y_g(ms,mt), psi_as_coord, phi, r0_corr, T0_corr/2.d0, central_density, &
                               pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)
 
           local_pellet_particles = local_pellet_particles + source_pellet * bigR * xjac * wst * delta_phi
@@ -758,7 +770,7 @@ do ife = ife_min, ife_max
 #endif
 
 
-        if ( get_psi_n(ps0, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
+        if ( get_psi_n(psi_as_coord, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
 #if (JOREK_MODEL == 501)
           D_int = D_int + (r0-rn0) * xjac * BigR * wst * delta_phi
 #else	

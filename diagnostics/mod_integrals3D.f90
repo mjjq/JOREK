@@ -278,7 +278,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (JOREK_MODEL == 501)
 !$omp          local_radiation, local_E_ion, gas_type,                                         &
 !$omp          local_radiation_phi,                                                            &
-!$omp          imp_cor, imp_adas,                                                              &
+!$omp          imp_cor, imp_adas, T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,              &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -451,7 +451,15 @@ do ife = ife_min, ife_max
         r0     = eq_g(mp,var_rho,ms,mt)
         r0_corr = corr_neg_dens1(r0)
         T0     = eq_g(mp,var_T,ms,mt)
-        T0_corr = corr_neg_temp1(T0)
+#if (JOREK_MODEL == 501)
+        if (T_min > T_1) then
+          T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_min) ! For use in eta(T), visco(T), ...
+        else
+          T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_1) ! For use in eta(T), visco(T), ...
+        end if
+#else
+        T0_corr = corr_neg_temp(T0)
+#endif
         T0e    = eq_g(mp,var_T,ms,mt) /2.d0 + eq_g(mp,var_Te,ms,mt)
         zj0    = eq_g(mp,var_zj,ms,mt)
         ps0    = eq_g(mp,var_psi,ms,mt)
@@ -512,9 +520,26 @@ do ife = ife_min, ife_max
         psi_as_coord = ps0
 #endif
 
-        T0_corr = corr_neg_temp(T0)
+#if (JOREK_MODEL == 501)
+        if ( eta_T_dependent .and. T0_corr <= T_max_eta) then
+          eta_T     = eta   * (T0_corr/T_0)**(-1.5d0)
+        else if (eta_T_dependent .and. T0_corr > T_max_eta) then
+          eta_T     = eta   * (T_max_eta/T_0)**(-1.5d0)
+        else
+          eta_T     = eta
+        end if
+
+        if ( eta_T_dependent .and. T0_corr <= T_max_eta_ohm ) then
+          eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
+        else if (eta_T_dependent .and. T0_corr > T_max_eta_ohm) then  
+          eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)       
+        else
+          eta_T_ohm      = eta_ohmic   
+        end if     	 
+#else
         eta_T   = resistivity(T0_corr)  
         eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
+#endif
 
         dTdx   = (   y_t(ms,mt) * eq_s(mp,var_T,ms,mt) - y_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
         dTdy   = ( - x_t(ms,mt) * eq_s(mp,var_T,ms,mt) + x_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac

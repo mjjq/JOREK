@@ -1928,7 +1928,7 @@ do ms=1, n_gauss
 
                     - (GAMMA - 1.) * v * E_ion_bg * rho * 2.d0 * BigR * u0_y                    * xjac * theta * tstep &                    
                     + (GAMMA - 1.) * v * E_ion_bg * rho * (vpar0_s*ps0_t - vpar0_t*ps0_s)              * theta * tstep &
-                    + (GAMMA - 1.) * v * E_ion_bg * rho * F0 / BigR * vpar0_p                   * xjac * theta * tstep
+                    + (GAMMA - 1.) * v * E_ion_bg * rho * F0 / BigR * vpar0_p                   * xjac * theta * tstep &
 
                     ! New diffusive ionization energy flux term
                     + (GAMMA - 1.) * E_ion_bg * (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rho                * xjac * theta * tstep &

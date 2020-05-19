@@ -575,6 +575,7 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'iter_precon           ', iter_precon
   write(*,INTG_FMT) 'gmres_m               ', gmres_m
   write(*,REAL_FMT) 'gmres_4               ', gmres_4
+  write(*,LOGI_FMT) 'centralize_harm_mat   ', centralize_harm_mat
   write(*,LOGI_FMT) 'use_mumps             ', use_mumps
   write(*,LOGI_FMT) 'use_wsmp              ', use_wsmp
   write(*,LOGI_FMT) 'use_pastix            ', use_pastix

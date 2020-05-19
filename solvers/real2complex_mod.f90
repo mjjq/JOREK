@@ -26,6 +26,7 @@ subroutine real2complex_a(my_id, my_id_master)
   if (associated(A_cmplx))  deallocate(A_cmplx) 
   if (associated(irn_cmplx))deallocate(irn_cmplx) 
   if (associated(jcn_cmplx))deallocate(jcn_cmplx) 
+ 
 
   if(my_id_master .eq. 0) then 
     nz_cmplx = mumps_par%nz
@@ -51,7 +52,10 @@ subroutine real2complex_a(my_id, my_id_master)
         k = (i + 2*(j-1)*n_var + 1)/2
         irn_cmplx(k) = (mumps_par%irn(m)+1)/2    
         jcn_cmplx(k) = (mumps_par%jcn(m)+1)/2
-        A_cmplx(k) = CMPLX(mumps_par%A(m), -mumps_par%A(m+1)) 
+        !-- Uncomment the line below to remove enforced symmetry 
+        !A_cmplx(k) = CMPLX(mumps_par%A(m), -mumps_par%A(m+1)) 
+        !-- Comment out the line below to remove enforced symmetry 
+        A_cmplx(k) = CMPLX((mumps_par%A(m) + mumps_par%A(m+2*n_var+1))*0.5d0, -((mumps_par%A(m+1))-(mumps_par%A(m+2*n_var)))*0.5d0) 
       enddo
     enddo 
      

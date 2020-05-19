@@ -218,6 +218,12 @@ contains
           allocate(sparskit_work(n_block+1))
           call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%JCN(1:nnz_block),block_size,sparskit_work)
 #else
+          !if(my_id.eq.1) then
+          !  do i = 1, mumps_par%nz/16 
+          !    write(200,*) mumps_par%irn(i), mumps_par%jcn(i), mumps_par%A(i)
+          !  enddo  
+          !endif
+
           block_size  = n_var
           block_size2 = block_size**2
 
@@ -798,10 +804,10 @@ contains
 
       endif
 
-      print*, 'my_id', my_id  
-      do i = 1, mumps_par%n
-        write(100+my_id_master,*) i, rhs_tmp(i)
-      enddo
+      !print*, 'my_id', my_id  
+      !do i = 1, mumps_par%n
+      !  write(100+my_id_master,*) i, rhs_tmp(i)
+      !enddo
       
       call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
       call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)

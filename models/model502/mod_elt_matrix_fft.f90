@@ -2853,7 +2853,6 @@ do ms=1, n_gauss
                        + (GAMMA - 1.) * E_ion_bg * (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rho_n * xjac * theta * tstep &
 !================= End ionization potential energy =========================== 
                        + v * Te0 * F0 / BigR * Vpar0 * rho_p                                * xjac * theta * tstep &
-                       + (GAMMA-1.) * v * E_ion_bg * F0 / BigR * Vpar0 * rho_p              * xjac * theta * tstep &
                        + TG_num9 * 0.25d0 / BigR * vpar0**2 &
                            * Te0 * (                                + F0 / BigR * rho_p)                     &
                            * ( v_x * ps0_y -  v_y * ps0_x                     ) * xjac * theta * tstep * tstep 

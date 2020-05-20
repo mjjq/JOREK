@@ -1439,6 +1439,7 @@ module mod_expression
 #endif
              fact_flux     = 1.d0/(mu_zero*fact_time)  
           else if ( units == JOREK_UNITS ) then
+             rho_norm      = 1.d0
              fact_time     = 1.d0
              fact_mu_zero  = 1.d0
              fact_ne       = 1.d0

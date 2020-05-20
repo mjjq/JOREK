@@ -228,9 +228,9 @@ contains
           block_size2 = block_size**2
 
           !-- converting real harmonic blocks into the complex ones
-          call real2complex_a(my_id, my_id_master) 
+          call real2complex_a(my_id, my_id_n) 
           !-- converting RHS into the complex form
-          call real2complex_rhs(my_id, my_id_master) 
+          call real2complex_rhs(my_id, my_id_n) 
   
           n_block   = n_cmplx  / block_size
           nnz_block = nz_cmplx / block_size2
@@ -263,9 +263,9 @@ contains
           call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
 #else
           !-- converting real harmonic blocks into the complex ones
-          call real2complex_a(my_id, my_id_master) 
+          call real2complex_a(my_id, my_id_n) 
           !-- converting RHS into the complex form
-          call real2complex_rhs(my_id, my_id_master) 
+          call real2complex_rhs(my_id, my_id_n) 
 
           if (allocated(sparskit_work)) deallocate(sparskit_work)
           allocate(sparskit_work(n_cmplx + 1))
@@ -296,7 +296,8 @@ contains
 #endif
         endif ! end (my_id_n .eq. 0)
 
-
+        !write(*,*) 'my_id, my_id_n, my_id_master, n_block, nnz_block:', my_id, my_id_n, my_id_master, n_block, nnz_block
+!        write(*,*) '(1) my_id, my_id_n, my_id_master:', my_id, my_id_n, my_id_master
 
         ! --- Dstribute data to the MPI "slave" tasks (>0)
         !     (When using WSMP, this is *not necessary* in 0-master mode!)
@@ -316,7 +317,10 @@ contains
           call MPI_BCAST(n_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
           call MPI_BCAST(nnz_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 #endif
+        write(*,*) '(1) my_id, my_id_n, my_id_master:', my_id, my_id_n, my_id_master
+        !write(*,*) '(1) my_id, my_id_master, n_block, nnz_block:', my_id, my_id_master, n_block, nnz_block
           if (my_id_n .gt. 0) then
+#ifndef USE_ZPASTIX
             if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
             if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
             if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
@@ -325,8 +329,29 @@ contains
             call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"mumps_par%jcn",CAT_DMATRIX)
             call tr_allocatep(mumps_par%a,1,mumps_par%nz,"mumps_par%a",CAT_DMATRIX)
             call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
+#else
+            if (associated(A_cmplx))  deallocate(A_cmplx)
+            if (associated(rhs_cmplx))  deallocate(rhs_cmplx)
+            if (associated(irn_cmplx))deallocate(irn_cmplx)
+            if (associated(jcn_cmplx))deallocate(jcn_cmplx) 
+            allocate(rhs_cmplx(1:n_cmplx))
+            allocate(A_cmplx(1:nz_cmplx))
+            allocate(irn_cmplx(1:nz_cmplx))
+            allocate(jcn_cmplx(1:nz_cmplx))
+#endif
           endif
 
+#ifdef USE_ZPASTIX
+            call MPI_BCAST(irn_cmplx,nz_cmplx,MPI_INTEGER,0,MPI_COMM_N,ierr)
+            call MPI_BCAST(jcn_cmplx,nz_cmplx,MPI_INTEGER,0,MPI_COMM_N,ierr)
+            call MPI_BCAST(A_cmplx,nz_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
+            call MPI_BCAST(rhs_cmplx,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
+            write(*,*) 'my_id, size(irn_cmplx)',my_id, size(irn_cmplx)
+            write(*,*) 'my_id, size(jcn_cmplx)',my_id, size(jcn_cmplx)
+            write(*,*) 'my_id, size(A_cmplx)',my_id, size(A_cmplx)
+            write(*,*) 'my_id, size(rhs_cmplx)',my_id, size(rhs_cmplx)
+
+#else
           ! Split MPI_BCAST if MPI buffer beyond 2Go
           type='intIRN'
           call split_broadcast(type,MPI_COMM_N)
@@ -334,7 +359,10 @@ contains
           call split_broadcast(type,MPI_COMM_N)
           type='double'
           call split_broadcast(type,MPI_COMM_N)
+#endif
 
+        write(*,*) '(2) my_id, my_id_n, my_id_master:', my_id, my_id_n, my_id_master
+        !write(*,*) '(2) my_id, my_id_master, n_block, nnz_block:', my_id, my_id_master, n_block, nnz_block
 #ifdef USE_PASTIX6
           ! -- For PaStiX solver version 6.x
           allocate(pastix_spm) ! Replace by tr_allocate etc.?!
@@ -364,6 +392,7 @@ contains
 
         endif
 
+        write(*,*) '(2) my_id, my_id_master, n_block, nnz_block:', my_id, my_id_master, n_block, nnz_block
         if  (.not. pastix_initialised)  then
 
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
@@ -804,10 +833,10 @@ contains
 
       endif
 
-      !print*, 'my_id', my_id  
-      !do i = 1, mumps_par%n
-      !  write(100+my_id_master,*) i, rhs_tmp(i)
-      !enddo
+      print*, 'my_id', my_id  
+      do i = 1, mumps_par%n
+        write(100+my_id_master,*) i, rhs_tmp(i)
+      enddo
       
       call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
       call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)

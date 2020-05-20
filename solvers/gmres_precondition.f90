@@ -166,7 +166,12 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 #ifdef USE_ZPASTIX 
         !-- converting RHS from real to complex
         mumps_par%n = ifactor*n_loc_n
-        call real2complex_rhs(my_id, my_id_master) 
+        call real2complex_rhs(my_id, my_id_n)
+        if(my_id_n .gt. 0) then
+          if (associated(rhs_cmplx))  deallocate(rhs_cmplx)
+          allocate(rhs_cmplx(1:n_cmplx)) 
+        endif 
+        call MPI_BCAST(rhs_cmplx,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
 #endif
         ! pastix input parameters working in Pastix5 and Pastix6
         pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations

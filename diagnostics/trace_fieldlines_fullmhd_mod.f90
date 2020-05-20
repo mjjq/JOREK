@@ -9,10 +9,12 @@ subroutine trace_fieldlines_fullmhd(node_list, element_list, nlines, Rstart, Zst
 use constants
 use mod_parameters
 use data_structure
+use equil_info
+use phys_module, only: xpoint, xcase
 
 implicit none
 
-real*8, parameter :: stepsize = 1.d-6 !###
+real*8, parameter :: stepsize = 1.d-4 !###
 
 ! --- Routine parameters
 type(type_node_list),    intent(in) :: node_list
@@ -34,7 +36,8 @@ real*8  :: AA(3), AA_s(3), AA_t(3)
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: AA_p(3)
 real*8  :: BR, BZ, Bp, BB, Bs, Bt, xjac, Fprof
-real*8  :: AR, AR_p, AR_s, AR_t, AR_R, AR_Z, AZ, AZ_p, AZ_s, AZ_t, AZ_R, AZ_Z, A3, A3_p, A3_s, A3_t, A3_R, A3_Z
+real*8  :: dum01, dum02, dum03, dum04, dum05, dum06, dum07, dum08, dum09, dum10, dum11
+real*8  :: AR, AR_p, AR_s, AR_t, AR_R, AR_Z, AZ, AZ_p, AZ_s, AZ_t, AZ_R, AZ_Z, A3, A3_p, A3_s, A3_t, A3_R, A3_Z, psieq
 real*8  :: RR, ZZ, Rnew, Znew, Rold, Zold
 
 if ( (direction /= 1.d0) .and. (direction /= -1.d0) ) then
@@ -147,9 +150,16 @@ contains
   A3_t = AA_t(1)
   A3_R = (   Z_t * AA_s(1) - Z_s * AA_t(1) ) / xjac
   A3_Z = ( - R_t * AA_s(1) + R_s * AA_t(1) ) / xjac
-  
-  Fprof = 0.d0 !####
-  
+
+  ! Fprof = 0.d0  
+  call interp(node_list, element_list, ielm, 1, 1, s, t, psieq, dum01, dum02, dum03, dum04, dum05) 
+
+  call F_profile(xpoint,xcase,Z,ES%Z_xpoint,psieq,ES%psi_axis,ES%psi_bnd,Fprof,dum01,dum02,dum03,dum04,dum05,&
+                 dum06,dum07,dum08,dum09,dum10,dum11)
+
+  !### better to use interp & ivar=456 instead ? 
+  ! interp(node_list, element_list, i_elm, 456, 1, s, t, Fprof, dum01, dum02, dum03, dum04, dum05)
+
   BR = ( A3_Z - AZ_p )/ R
   BZ = ( AR_p - A3_R )/ R
   Bp = ( AZ_R - AR_Z ) + Fprof / R

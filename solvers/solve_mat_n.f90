@@ -123,7 +123,7 @@ contains
 #ifndef USE_ZPASTIX
       if (use_pastix) write(*,*) my_id,'*       using solver PastiX     *'
 #else 
-      if (use_pastix) write(*,*) my_id,'*       using complex solver PastiX    *'
+      if (use_pastix) write(*,*) my_id,'*  using complex solver PastiX  *'
 #endif
       if (use_wsmp)   write(*,*) my_id,'*       using solver WSMP       *'
 
@@ -200,8 +200,6 @@ contains
 #ifdef USE_BLOCK
           !---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
           !                             temporary solution before using blocks everywhere
-
-          !---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
 #ifndef USE_ZPASTIX
           block_size  = n_var
           if (my_id .ne. 0) block_size = 2*n_var
@@ -218,12 +216,6 @@ contains
           allocate(sparskit_work(n_block+1))
           call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%JCN(1:nnz_block),block_size,sparskit_work)
 #else
-          !if(my_id.eq.1) then
-          !  do i = 1, mumps_par%nz/16 
-          !    write(200,*) mumps_par%irn(i), mumps_par%jcn(i), mumps_par%A(i)
-          !  enddo  
-          !endif
-
           block_size  = n_var
           block_size2 = block_size**2
 
@@ -296,9 +288,6 @@ contains
 #endif
         endif ! end (my_id_n .eq. 0)
 
-        !write(*,*) 'my_id, my_id_n, my_id_master, n_block, nnz_block:', my_id, my_id_n, my_id_master, n_block, nnz_block
-!        write(*,*) '(1) my_id, my_id_n, my_id_master:', my_id, my_id_n, my_id_master
-
         ! --- Dstribute data to the MPI "slave" tasks (>0)
         !     (When using WSMP, this is *not necessary* in 0-master mode!)
         if ((.not. use_wsmp).and.(.not. pastix_smp_only)) then
@@ -317,8 +306,6 @@ contains
           call MPI_BCAST(n_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
           call MPI_BCAST(nnz_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
 #endif
-        write(*,*) '(1) my_id, my_id_n, my_id_master:', my_id, my_id_n, my_id_master
-        !write(*,*) '(1) my_id, my_id_master, n_block, nnz_block:', my_id, my_id_master, n_block, nnz_block
           if (my_id_n .gt. 0) then
 #ifndef USE_ZPASTIX
             if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
@@ -346,11 +333,6 @@ contains
             call MPI_BCAST(jcn_cmplx,nz_cmplx,MPI_INTEGER,0,MPI_COMM_N,ierr)
             call MPI_BCAST(A_cmplx,nz_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
             call MPI_BCAST(rhs_cmplx,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
-            write(*,*) 'my_id, size(irn_cmplx)',my_id, size(irn_cmplx)
-            write(*,*) 'my_id, size(jcn_cmplx)',my_id, size(jcn_cmplx)
-            write(*,*) 'my_id, size(A_cmplx)',my_id, size(A_cmplx)
-            write(*,*) 'my_id, size(rhs_cmplx)',my_id, size(rhs_cmplx)
-
 #else
           ! Split MPI_BCAST if MPI buffer beyond 2Go
           type='intIRN'
@@ -361,8 +343,6 @@ contains
           call split_broadcast(type,MPI_COMM_N)
 #endif
 
-        write(*,*) '(2) my_id, my_id_n, my_id_master:', my_id, my_id_n, my_id_master
-        !write(*,*) '(2) my_id, my_id_master, n_block, nnz_block:', my_id, my_id_master, n_block, nnz_block
 #ifdef USE_PASTIX6
           ! -- For PaStiX solver version 6.x
           allocate(pastix_spm) ! Replace by tr_allocate etc.?!
@@ -392,7 +372,6 @@ contains
 
         endif
 
-        write(*,*) '(2) my_id, my_id_master, n_block, nnz_block:', my_id, my_id_master, n_block, nnz_block
         if  (.not. pastix_initialised)  then
 
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then

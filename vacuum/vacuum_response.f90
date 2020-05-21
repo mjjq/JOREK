@@ -2006,7 +2006,7 @@ module vacuum_response
         global_index = my_id*sr%s_ww%step
         net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
       endif
-      call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr,size(net_tor_wall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
     end if
     
     ! --- Initialize coil currents (for plot_live_data)
@@ -2187,7 +2187,7 @@ module vacuum_response
         net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
       endif
     endif
-    call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr,size(net_tor_wall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1 ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
     ! --- Extract coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
     if (sr%ncoil > 0) then
@@ -2209,7 +2209,6 @@ module vacuum_response
           diag_coil_curr(:,:) = 0.d0
         end if
         if (index_now>0) then
-          write(*,*) 
           diag_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_diag_coils:sr%ind_start_diag_coils + sr%n_diag_coils -1) 
         endif
       end if

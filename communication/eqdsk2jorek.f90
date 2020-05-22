@@ -33,7 +33,7 @@ character          :: buffer*80, lf*1, str1*12, str2*24
 !----------------------------- read eqdsk file -----------
 
 B_scale = 1.d0/1.d0  ! scaling factor for the vacuum toroidal field 
-I_scale = 1.d0/1.d0  ! scaling factor for the toroidal current
+I_scale = 1.d0/2.d0  ! scaling factor for the toroidal current
 R_scale = 1.d0/1.d0  ! scaling factor for the space coordinates 
 
 write(*,*) ' EQDSK to JOREK2 '
@@ -86,7 +86,7 @@ bcentr = bcentr * B_scale
 p      = p      * B_scale**2
 dpr    = dpr    * B_scale
 F      = F      * B_scale
-dF2    = dF2    * B_scale ! * 1.4 
+dF2    = dF2    * B_scale 
 psirz  = psirz  * B_scale 
 xip    = xip    * B_scale
 
@@ -108,6 +108,7 @@ zdim   = Zdim   * R_scale
 xip    = xip    * I_scale
 p      = p      * I_scale**2
 dpr    = dpr    * I_scale
+dF2   = dF2     * I_scale
 psirz  = psirz  * I_scale
 
 F_axis = f(1)
@@ -116,7 +117,6 @@ do i=1, nr
   factor  = sqrt(1.d0 + F_axis**2/F(i)**2 * (1.d0/I_scale**2 - 1.d0))
   dfactor = -1.d0/(factor) * (1.d0/I_scale**2 - 1.d0) * F_axis**2/F(i)**4 * dF2(i)
   q(i)   = factor * q(i)
-  dF2(i) = factor * I_scale * (factor * dF2(i) + dfactor * F(i)**2)
   F(i)   = factor * I_scale * F(i)
 enddo
 
@@ -235,11 +235,11 @@ yb = yy(1)
 ye = yy(nz)
 kx = 3
 ky = 3
-smth = 2.d-6 ! Controls the tradeoff between closeness of fit and smoothness of fit. When too small, can lead to noise pick-up. When too large, can lead to inaccurate fit.
+smth = 1.d-6 ! Controls the tradeoff between closeness of fit and smoothness of fit. When too small, can lead to noise pick-up. When too large, can lead to inaccurate fit.
              ! May need hand tuning, based on a visual inspection of the output.
              ! For more details, see the documentation of regrid.f in libdierckx or the "Hard-coded parameters" section of the Wiki page https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90. 
-nxest = nr-3 !3*nr/4 ! Upper bound for the number of knots used for the splines. We set it a bit smaller than nr to test the quality of the fit.
-nyest = nz-3 !3*nz/4
+nxest = 3*nr/4 ! Upper bound for the number of knots used for the splines. We set it a bit smaller than nr to test the quality of the fit.
+nyest = 3*nz/4
 lwrk  = 4+nxest*(my+2*kx+5)+nyest*(2*ky+5)+mx*(kx+1)+my*(ky+1)+my+nxest
 kwrk  = 3+mx+my+nxest+nyest
 
@@ -322,9 +322,9 @@ df2_ext(n_psi-1:n_ext) = df2_ext(n_psi)
 rho_ext(n_psi-1:n_ext) = rho_ext(n_psi)
 T_ext(n_psi-1:n_ext)   = T_ext(n_psi)
 
-psi_sep = 0.99d0    ! in normalised psi units
-sig_sep = 0.05      ! in normalised psi units
-rho_bnd = 0.05      ! in jorek units
+psi_sep = 1.0d0     ! in normalised psi units
+sig_sep = 0.005     ! in normalised psi units
+rho_bnd = 0.01      ! in jorek units
 T_bnd   = 1.d-5     ! in jorek units
 
 psi_ext(1:n_psi) = psi(1:n_psi)

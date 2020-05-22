@@ -33,7 +33,7 @@ character          :: buffer*80, lf*1, str1*12, str2*24
 !----------------------------- read eqdsk file -----------
 
 B_scale = 1.d0/1.d0  ! scaling factor for the vacuum toroidal field 
-I_scale = 1.d0/2.d0  ! scaling factor for the toroidal current
+I_scale = 1.d0/1.d0  ! scaling factor for the toroidal current
 R_scale = 1.d0/1.d0  ! scaling factor for the space coordinates 
 
 write(*,*) ' EQDSK to JOREK2 '

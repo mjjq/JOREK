@@ -32,15 +32,16 @@ contains
     use mod_parameters
     use mod_locate_irn_jcn
 
-    integer, intent(in)          :: index_node,  k,  in
-    integer, intent(in)          :: index_node2, k2, in2
-    real*8,  intent(in)          :: zbig
-    logical, intent(in)          :: solve_only, gmres
-    integer, intent(in)          :: index_min, index_max
-    integer, intent(in)          :: i_tor_min, i_tor_max 
-    integer, intent(in), pointer :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, intent(in), pointer :: irn(:), jcn(:) 
-    real*8, intent(in), pointer  :: A_mat(:) 
+    integer, intent(in)                 :: index_node,  k,  in
+    integer, intent(in)                 :: index_node2, k2, in2
+    real*8,  intent(in)                 :: zbig
+    logical, intent(in)                 :: solve_only, gmres
+    integer, intent(in)                 :: index_min, index_max
+    integer, intent(in)                 :: i_tor_min, i_tor_max 
+    integer, intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, intent(inout), allocatable :: irn(:), jcn(:) 
+    real*8,  intent(inout), allocatable :: A_mat(:) 
+    
     logical                      :: is_local
     integer                      :: ija_position, ilarge_vp, n_tor_local
 

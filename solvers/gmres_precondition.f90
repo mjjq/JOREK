@@ -288,7 +288,6 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 #endif
       do k=1,mumps_par%n
         mumps_par%rhs(k) =  mumps_par%rhs(k) / column_scaling(k)
-        !write(200,*)  k, mumps_par%rhs(k)
       enddo
     endif
     call tr_allocate(y_tmp,1,n_dof,"y_tmp",CAT_GMRES,.false.)

@@ -848,11 +848,6 @@ contains
 
       endif
       ! --- End undo the column scaling ------------------------------------------------------------
-
-      print*, 'my_id', my_id  
-      do i = 1, mumps_par%n
-        write(100+my_id_master,*) i, rhs_tmp(i)
-      enddo
       
       ! --- Collect the RHSs from all harmonic matrices --------------------------------------------
       call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)

@@ -1,14 +1,31 @@
+!> Module for the harmonic matrix systems
+!!
+!! * This library provides routines for:
+!!   - Initialize the solvers, analyzes the matrix, factorizes the matrix
+!!   - Solve the matrix system to obtain initial conditions for the time step
+!!   - The LU factorized matrix stored internally by the solvers is re-used in gmres_precondition
+!! * Supports the following solver libraries:
+!!   - PaSTiX 5.x (real or complex)
+!!   - PaStiX 6.x (without MPI parallelization)
+!!   - MUMPS
+!!   - WSMP (not tested for a while)
+!!   - STRUMPACK
+!!   - Typical choices for production are PaStiX 5.x or STRUMPACK
 module solve_mat_n
   use phys_module, only: use_mumps, use_pastix, use_strumpack, use_wsmp
   implicit none        
 
+
+
 contains
+
+
+
+  !> Routine for the binding of threads to cores in PaStiX
 #ifndef USE_PASTIX6
-  ! -- For PaStiX solver before version 6.x
-  subroutine pastix_bind_threads(my_id)
+  subroutine pastix_bind_threads(my_id) ! For PaStiX before version 6.x
 #else
-  ! -- For PaStiX solver version 6.x
-  subroutine pastix_bind_threads(my_id, thread_map)
+  subroutine pastix_bind_threads(my_id, thread_map) ! For PaStiX 6.x
 #endif
     use pastix_module
    
@@ -20,7 +37,7 @@ contains
 #else
 #include "no_pastix_fortran.h"
 #endif
-#endif
+#endif /* ifndef USE_PASTIX6 */
 
     integer, intent(in) :: my_id
 #ifndef USE_PASTIX6
@@ -29,7 +46,7 @@ contains
 #else
     ! -- For PaStiX solver version 6.x
     integer(kind=c_int)    , dimension(1:pastix_nthrd), intent(out)   :: thread_map
-#endif
+#endif /* ifndef USE_PASTIX6 */
     integer*4 k, packsize, procpernode
 
 #if (defined(WORLDWAR2) || defined(USE_PASTIX6)) && defined(CORES_PER_NODE)
@@ -45,7 +62,9 @@ contains
 #endif
 #endif
   end subroutine pastix_bind_threads
-
+  
+  
+  
   !> Solves the system of equation for each harmonic using mumps, pastix, or wsmp
   subroutine solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
@@ -64,7 +83,6 @@ contains
     use mod_coicsr
  
 #ifdef USE_PASTIX6
-    ! -- For PaStiX solver version 6.x
     use iso_c_binding
     use pastixf
     use pastix_enums
@@ -74,22 +92,22 @@ contains
     implicit none
 
 #ifndef USE_PASTIX6
-    ! -- For PaStiX solver before version 6.x
 #ifdef USE_PASTIX
 #include "pastix_fortran.h"
 #else
 #include "no_pastix_fortran.h"
 #endif
-#endif
+#endif /* ifndef USE_PASTIX6 */
 
 #include "r3_info.h"
-
-
+    
+    ! --- Routine parameters
     integer, intent(in) :: my_id
     integer, dimension(:), intent(in) :: i_tor(:)
     integer, intent(in) :: MPI_COMM_N, MPI_COMM_MASTER
     logical, intent(in) :: solve_only
-
+    
+    ! --- Local variables
     integer :: i, j, k, my_id_n, n_cpu_n, ierr, my_id_master, n_cpu_master
     integer :: i_reduced, j_reduced, n_i, n_j, index, index1, index2
     type(clcktype) :: t_itstart, t0, t1, t2, t3
@@ -101,14 +119,13 @@ contains
     integer :: DUMMY_INT (1:1)
     CHARACTER(LEN=128) :: fname
 #ifdef USE_PASTIX6
-    ! -- For PaStiX solver version 6.x
     integer(c_int)     :: pastix_info
     type(c_ptr)        :: pastix_rhs_ptr
     integer(kind=spm_int_t), dimension(:), pointer     :: pastix_colptr
     integer(kind=spm_int_t), dimension(:), pointer     :: pastix_rowptr
     real(kind=c_double)    , dimension(:), pointer     :: pastix_values
     integer(kind=c_int)    , dimension(1:pastix_nthrd) :: thread_map
-#endif
+#endif /* ifdef USE_PASTIX6 */
 
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
     call tr_print_memsize("BeforeSolveN")
@@ -139,11 +156,12 @@ contains
     endif
 
 
-    if (.not. solve_only) then
+    NOTSOLVEONLY: if (.not. solve_only) then
+      ! This part of the code is needed when the preconditioning matrix is updated. Otherwise, the
+      ! the LU decomposed matrix of a previous time step is re-used.
 
-      !---------------------------------------- column scaling 
+      ! --- Column scaling -------------------------------------------------------------------------
       if (my_id_n .eq. 0) then
-
         if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
         call tr_allocate(column_scaling,1,mumps_par%N,"column_scaling",CAT_DMATRIX)
 
@@ -162,12 +180,12 @@ contains
           j = mumps_par%jcn(k)
           mumps_par%A(k) = mumps_par%A(k) / column_scaling(j)
         enddo
+        
+        ! elapsed time analysis start
+        call MPI_Barrier(MPI_COMM_MASTER,ierr)
+        call clck_time(t0)
       endif
-
-      if (my_id_n .eq. 0) then                          ! elapsed time analysis start
-         call MPI_Barrier(MPI_COMM_MASTER,ierr)
-         call clck_time(t0)
-      endif
+      ! --- End column scaling ---------------------------------------------------------------------
 
 
       if (use_mumps) then
@@ -179,7 +197,6 @@ contains
         mumps_par%icntl(8)  = 7                            ! row and column scaling
         mumps_par%icntl(14) = 30                           ! MAXS
         mumps_par%icntl(18) = 0
-
         if (use_BLR_compression) then
           mumps_par%icntl(35) = 1                          ! Block-low-rank (BLR) compression. 0: off (default), 1: automatic, 2: factorisation and solution, 3: only factorisation
           mumps_par%cntl(7)   = epsilon_BLR                ! Accuracy of BLR approximation
@@ -187,19 +204,21 @@ contains
 
         call DMUMPS(mumps_par)
 
-#endif
+#endif /* ifdef USE_MUMPS */
       else ! .not. use_mumps --> use_pastix or use_wsmp
 
         if (my_id_n .eq. 0) then           
 
-          if (my_id_n .eq. 0) then                
-            call MPI_Barrier(MPI_COMM_MASTER,ierr)
-            call clck_time(t2)
-          endif
+          ! Timing
+          call MPI_Barrier(MPI_COMM_MASTER,ierr)
+          call clck_time(t2)
 
 #ifdef USE_BLOCK
-          !---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
-          !                             temporary solution before using blocks everywhere
+          ! --- Preparation for USE_BLOCK ----------------------------------------------------------
+          ! - reduce IRN,JCN to make use of blocksize ntor*nvar
+          !   (temporary solution before using blocks everywhere)
+          ! - convert matrix and rhs to complex if necessary
+          ! - convert row/column sparse matrix to CSR format
 #ifndef USE_ZPASTIX
           block_size  = n_var
           if (my_id .ne. 0) block_size = 2*n_var
@@ -215,7 +234,7 @@ contains
           if (allocated(sparskit_work)) deallocate(sparskit_work)
           allocate(sparskit_work(n_block+1))
           call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%JCN(1:nnz_block),block_size,sparskit_work)
-#else
+#else /* ifndef USE_ZPASTIX */
           block_size  = n_var
           block_size2 = block_size**2
 
@@ -235,7 +254,7 @@ contains
           if (allocated(sparskit_work)) deallocate(sparskit_work)
           allocate(sparskit_work(n_block+1))
           call coicsr2_cmplx(n_block,nnz_block,A_cmplx,irn_cmplx(1:nnz_block),jcn_cmplx(1:nnz_block),block_size,sparskit_work)
-#endif
+#endif /* ifndef USE_ZPASTIX */
 
           ! WARNING:  USE_BLOCK does not (yet) work with WSMP!!!
           if (use_wsmp) then
@@ -245,9 +264,13 @@ contains
               mumps_par%a, mumps_par%jcn, mumps_par%irn, my_id_n )
 #endif
           endif
+          ! --- End Preparation for USE_BLOCK ------------------------------------------------------
 
-#else 
+#else /* ifdef USE_BLOCK */
 
+          ! --- Preparation without USE_BLOCK ------------------------------------------------------
+          ! - convert matrix and rhs to complex if necessary
+          ! - convert row/column sparse matrix to CSR format
 #ifndef USE_ZPASTIX
           if (allocated(sparskit_work)) deallocate(sparskit_work)
           allocate(sparskit_work(mumps_par%N + 1))
@@ -263,7 +286,7 @@ contains
           allocate(sparskit_work(n_cmplx + 1))
 
           call coicsr_cmplx(n_cmplx,nz_cmplx,1,A_cmplx,irn_cmplx,jcn_cmplx,sparskit_work)
-#endif
+#endif /* ifndef USE_ZPASTIX */
           if (use_wsmp) then
 #ifdef USE_WSMP
             call PWGSMP__allocate(mumps_par%N, mumps_par%NZ, my_id_n)
@@ -271,16 +294,16 @@ contains
               mumps_par%a, mumps_par%jcn, mumps_par%irn, my_id_n )
 #endif
           endif
-#endif
+          ! --- End Preparation without USE_BLOCK --------------------------------------------------
+#endif /* ifdef USE_BLOCK */
 
           if (allocated(sparskit_work)) deallocate(sparskit_work)
 
-          if (my_id_n .eq. 0) then
-            call MPI_Barrier(MPI_COMM_MASTER,ierr) 
-            call clck_time(t3)
-            call clck_ldiff(t2,t3,tsecond)
-            write(*,FMT_TIMING) my_id, '### Elapsed time coicsr :', tsecond
-          endif
+          ! Timing
+          call MPI_Barrier(MPI_COMM_MASTER,ierr) 
+          call clck_time(t3)
+          call clck_ldiff(t2,t3,tsecond)
+          write(*,FMT_TIMING) my_id, '### Elapsed time coicsr :', tsecond
 
         else  ! (my_id_n > 0) below
 #ifdef USE_WSMP
@@ -288,7 +311,7 @@ contains
 #endif
         endif ! end (my_id_n .eq. 0)
 
-        ! --- Dstribute data to the MPI "slave" tasks (>0)
+        ! --- Distribute data to the MPI "slave" tasks (>0) ----------------------------------------
         !     (When using WSMP, this is *not necessary* in 0-master mode!)
         if ((.not. use_wsmp).and.(.not. pastix_smp_only)) then
 !          call pastix_init_num_threads(my_id)
@@ -325,14 +348,14 @@ contains
             allocate(A_cmplx(1:nz_cmplx))
             allocate(irn_cmplx(1:nz_cmplx))
             allocate(jcn_cmplx(1:nz_cmplx))
-#endif
+#endif /* ifndef USE_ZPASTIX */
           endif
 
 #ifdef USE_ZPASTIX
-            call MPI_BCAST(irn_cmplx,nz_cmplx,MPI_INTEGER,0,MPI_COMM_N,ierr)
-            call MPI_BCAST(jcn_cmplx,nz_cmplx,MPI_INTEGER,0,MPI_COMM_N,ierr)
-            call MPI_BCAST(A_cmplx,nz_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
-            call MPI_BCAST(rhs_cmplx,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(irn_cmplx,nz_cmplx,MPI_INTEGER,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(jcn_cmplx,nz_cmplx,MPI_INTEGER,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(A_cmplx,nz_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(rhs_cmplx,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
 #else
           ! Split MPI_BCAST if MPI buffer beyond 2Go
           type='intIRN'
@@ -341,7 +364,7 @@ contains
           call split_broadcast(type,MPI_COMM_N)
           type='double'
           call split_broadcast(type,MPI_COMM_N)
-#endif
+#endif /* ifdef USE_ZPASTIX */
 
 #ifdef USE_PASTIX6
           ! -- For PaStiX solver version 6.x
@@ -356,7 +379,7 @@ contains
           pastix_spm%n           =  mumps_par%n
           pastix_spm%nnz         =  mumps_par%nz
           pastix_spm%dof         =  1
-#endif
+#endif /* ifdef USE_BLOCK */
           call spmUpdateComputedFields(pastix_spm)
           call spmAlloc(pastix_spm)
 
@@ -367,11 +390,14 @@ contains
           pastix_colptr      = mumps_par%jcn(1:pastix_spm%n+1)
           pastix_rowptr      = mumps_par%irn(1:pastix_spm%nnz)
           pastix_values      = mumps_par%A(1:mumps_par%nz)
-#endif
-
+#endif /* ifdef USE_BLOCK */
 
         endif
-
+        ! --- End distribute data to the MPI "slave" tasks (>0) ------------------------------------
+        
+        ! --- Initialize the PaStiX solver ---------------------------------------------------------
+        ! - set parameters
+        ! - call initialization routine
         if  (.not. pastix_initialised)  then
 
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
@@ -388,7 +414,7 @@ contains
 #else
               ! -- For PaStiX solver version 6.x
               call pastixInitParam(pastix_iparm, pastix_dparm)
-#endif
+#endif /* ifndef USE_PASTIX6 */
 
 #ifndef USE_ZPASTIX 
               if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
@@ -405,27 +431,27 @@ contains
 #ifndef USE_ZPASTIX
               call pastix_fortran(pastix_data,MPI_COMM_N,n_block,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#else
+#else /* ifndef USE_ZPASTIX */
               call pastix_fortran(pastix_data,MPI_COMM_N,n_block,jcn_cmplx,irn_cmplx,A_cmplx, &
                 pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
-#endif
-#else
+#endif /* ifndef USE_ZPASTIX */
+#else /* ifdef USE_BLOCK */
 #ifndef USE_ZPASTIX
               call tr_allocate(pastix_perm_vars,1 ,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
               call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
 
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#else
+#else /* ifndef USE_ZPASTIX */
               call tr_allocate(pastix_perm_vars,1 ,n_cmplx,"pastix_perm_vars",CAT_UNKNOWN)
               call tr_allocate(pastix_iperm_vars,1,n_cmplx,"pastix_iperm_vars",CAT_UNKNOWN)
 
               call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,jcn_cmplx,irn_cmplx,A_cmplx, &
                 pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
-#endif
+#endif /* ifndef USE_ZPASTIX */
 
-#endif
-#endif
+#endif /* ifdef USE_BLOCK */
+#endif /* ifndef USE_PASTIX6 */
 
               ! pastix input parameters working in Pastix5 and Pastix6
               pastix_iparm(IPARM_VERBOSE)               = pastix_verb              
@@ -456,10 +482,10 @@ contains
 #else
               pastix_iparm(IPARM_THREAD_COMM_MODE)      = API_THREAD_MULTIPLE
 #endif
-#endif
+#endif /* ifdef WORLDWAR2 */
 
               ! -- Begin PaStiX6.x
-#else  
+#else /* ifndef USE_PASTIX 6 */
               ! -- For PaStiX solver version 6.x
               pastix_iparm(IPARM_MTX_TYPE)              = pastix_sym
               pastix_iparm(IPARM_AMALGAMATION_LVLCBLK)  = pastix_amalg
@@ -498,9 +524,9 @@ contains
               call pastixInitWithAffinity(pastix_data, 0, pastix_iparm, pastix_dparm, thread_map)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
 #else
               call pastixInit(pastix_data, 0, pastix_iparm, pastix_dparm)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
-#endif
+#endif /* ifdef CORES_PER_NODE */
 
-#endif
+#endif /* ifndef USE_PASTIX 6 */
               ! -- End PaStiX6.x
 
              else if (use_wsmp) then
@@ -514,7 +540,9 @@ contains
           endif
 
         endif !.not. pastix_initialised
+        ! --- End Initialize the PaStiX solver -----------------------------------------------------
 
+        ! --- Analyze the matrix -------------------------------------------------------------------
         if (.not. pastix_analysed) then
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
@@ -530,22 +558,22 @@ contains
               call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
                 mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#else
+#else /* ifndef USE_ZPASTIX */
               call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
                 jcn_cmplx(1:n_block+1), irn_cmplx(1:nnz_block), A_cmplx, &
                 pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
-#endif
-#else
+#endif /* ifndef USE_ZPASTIX */
+#else /* ifdef USE_BLOCK */
 #ifndef USE_ZPASTIX
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#else
+#else /* ifndef USE_ZPASTIX */
               call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,jcn_cmplx,irn_cmplx,A_cmplx, &
                 pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
-#endif
-#endif
+#endif /* ifndef USE_ZPASTIX */
+#endif /* ifdef USE_BLOCK */
 
-#else
+#else /* ifndef USE_PASTIX6 */
               ! -- For PaStiX solver version 6.x
 #ifdef USE_BLOCK
 ! ############################################################################
@@ -563,10 +591,10 @@ contains
 ! ############################################################################
 ! ####### end these lines can be replaced...
 ! ############################################################################
-#else
+#else /* ifdef USE_BLOCK */
               call pastix_task_analyze(pastix_data,pastix_spm,pastix_info)
-#endif
-#endif
+#endif /* ifdef USE_BLOCK */
+#endif /* ifndef USE_PASTIX6 */
             else if (use_wsmp) then
               ! do nothing
             endif
@@ -578,8 +606,9 @@ contains
 #endif
           endif
         endif ! .not. pastix_analysed
+        ! --- End analyze the matrix -------------------------------------------------------------------
+        
       endif   ! (else, use_mumps)
-
 
       if (my_id_n .eq.0) then                            ! elapsed time analysis end
          call MPI_Barrier(MPI_COMM_MASTER,ierr)
@@ -589,6 +618,7 @@ contains
          call clck_time(t0)                              ! elapsed time facto start 
       endif
 
+      ! --- Factorize the matrix -------------------------------------------------------------------
       if (use_mumps) then
 #ifdef USE_MUMPS
 
@@ -613,35 +643,36 @@ contains
           call pastix_bind_threads(my_id)
 
 #ifdef USE_BLOCK
+
 #ifndef USE_ZPASTIX
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
             mumps_par%jcn, mumps_par%irn, mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#else	   
+#else /* ifndef USE_ZPASTIX */
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
             jcn_cmplx, irn_cmplx, A_cmplx, &
             pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
-#endif
+#endif /* ifndef USE_ZPASTIX */
 
-#else	   
+#else /* ifdef USE_BLOCK */
 
 #ifndef USE_ZPASTIX
           call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#else	   
+#else /* ifndef USE_ZPASTIX */
           call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,jcn_cmplx,irn_cmplx,A_cmplx, &
             pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
-#endif
+#endif /* ifndef USE_ZPASTIX */
 
-#endif
+#endif /* ifdef USE_BLOCK */
 
-#else
+#else /* ifndef USE_PASTIX6 */
           ! -- For PaStiX solver version 6.x
           call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
 
           call spmExit(pastix_spm)
           deallocate(pastix_spm)
-#endif
+#endif /* ifndef USE_PASTIX6 */
 
         else if (use_wsmp) then
 #ifdef USE_WSMP
@@ -658,7 +689,9 @@ contains
          write(*, FMT_TIMING) my_id,' ## Elapsed time, facto :',tsecond
          call clck_time(t0)
       end if
-   endif
+      ! --- End Factorize the matrix ---------------------------------------------------------------
+      
+   endif NOTSOLVEONLY
    call tr_debug_writei("smn_B_mumps_par%n",mumps_par%n)
 
 
@@ -666,6 +699,8 @@ contains
       call MPI_Barrier(MPI_COMM_MASTER,ierr)
       call clck_time(t0)
    endif
+   
+   ! --- Solve the matrix system -------------------------------------------------------------------
    if (use_mumps) then
 #ifdef USE_MUMPS
       mumps_par%JOB = 3                                   ! Solve
@@ -726,35 +761,35 @@ contains
 !             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#else
+#else /* ifndef USE_ZPASTIX */
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
-#endif
+#endif /* ifndef USE_ZPASTIX */
 
-#else
+#else /* ifdef USE_BLOCK */
 #ifndef USE_ZPASTIX
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
 !             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
           DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
           pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-#else
+#else /* ifndef USE_ZPASTIX */
         call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,&
           DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
           pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
-#endif 
+#endif /* ifndef USE_ZPASTIX */
 
-#endif
+#endif /* ifdef USE_BLOCK */
 
-#else
+#else /* ifndef USE_PASTIX6 */
        ! -- For PaStiX solver version 6.x
        pastix_rhs_ptr = c_loc(mumps_par%rhs)
 #ifdef USE_BLOCK
        call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,n_block,pastix_info)
-#else
+#else /* ifdef USE_BLOCK */
        call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,mumps_par%n,pastix_info)
-#endif
-#endif
+#endif /* ifdef USE_BLOCK */
+#endif /* ifndef USE_PASTIX6 */
 
       else if (use_wsmp) then
 #ifdef USE_WSMP
@@ -763,28 +798,29 @@ contains
      end if
    endif
 
-    if (my_id_n .eq.0) then                            ! elapsed time solve end
-       call MPI_Barrier(MPI_COMM_MASTER,ierr)
-       call clck_time(t1)
-       call clck_ldiff(t0,t1,tsecond)
-       write(*, FMT_TIMING) my_id,' ## Elapsed time, solve :',tsecond
-       call clck_time(t0)
-    end if
+   if (my_id_n .eq.0) then                            ! elapsed time solve end
+     call MPI_Barrier(MPI_COMM_MASTER,ierr)
+     call clck_time(t1)
+     call clck_ldiff(t0,t1,tsecond)
+     write(*, FMT_TIMING) my_id,' ## Elapsed time, solve :',tsecond
+     call clck_time(t0)
+   end if
 
 #ifdef USE_ZPASTIX
-    do i = 1, n_cmplx
-      if(my_id_master .eq. 0) then
-        mumps_par%rhs(i) = REAL(rhs_cmplx(i)) 
-      else
-        mumps_par%rhs(2*i-1) = real(rhs_cmplx(i))
-        mumps_par%rhs(2*i) = aimag(rhs_cmplx(i))
-      endif
-    enddo 
-#endif
+   do i = 1, n_cmplx
+     if(my_id_master .eq. 0) then
+       mumps_par%rhs(i) = REAL(rhs_cmplx(i)) 
+     else
+       mumps_par%rhs(2*i-1) = real(rhs_cmplx(i))
+       mumps_par%rhs(2*i) = aimag(rhs_cmplx(i))
+     endif
+   enddo 
+#endif /* ifdef USE_ZPASTIX */
+   ! --- End solve the matrix system ---------------------------------------------------------------
 
     if (my_id_n .eq. 0) then
 
-      !------------------------------------------ undo column scaling
+      ! --- Undo the column scaling ----------------------------------------------------------------
       do k=1,mumps_par%n
         mumps_par%rhs(k) =  mumps_par%rhs(k) / column_scaling(k)
       enddo
@@ -811,14 +847,17 @@ contains
         end do
 
       endif
+      ! --- End undo the column scaling ------------------------------------------------------------
 
       print*, 'my_id', my_id  
       do i = 1, mumps_par%n
         write(100+my_id_master,*) i, rhs_tmp(i)
       enddo
       
+      ! --- Collect the RHSs from all harmonic matrices --------------------------------------------
       call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
       call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)
+      ! --- End collect the RHSs from all harmonic matrices ----------------------------------------
 
       call tr_locvnorms("smn_res",mumps_par%rhs,mumps_par%n)
       call tr_locvnorms("smn_delta",deltas,ndof_glob)
@@ -832,11 +871,12 @@ contains
     call r3_info_end (r3_info_index_0)         ! timing
     return
   end subroutine solve_matrix_n
-  
 
 
+
+! > Solve the harmonic matrix system using STRUMPACK
 #ifdef USE_STRUMPACK  
-subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+  subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     use tr_module
     use iso_c_binding
     use mod_parameters

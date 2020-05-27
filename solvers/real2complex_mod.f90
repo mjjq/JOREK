@@ -3,7 +3,7 @@ module real2complex_mod
 
 contains
 
-#ifdef USE_ZPASTIX
+#ifdef USE_COMPLEX_PRECOND
   !-- converting matrix entries into the complex form
   subroutine real2complex_a(my_id, my_id_n)
  

@@ -1,7 +1,7 @@
 !> Solve step of the local matrices for each toroidal harmonic (preconditioner for gmres)
 subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
 
-#ifdef USE_ZPASTIX
+#ifdef USE_COMPLEX_PRECOND
   use real2complex_mod
 #endif
   use tr_module 
@@ -163,7 +163,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
      
       if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
   
-#ifdef USE_ZPASTIX 
+#ifdef USE_COMPLEX_PRECOND 
         !-- converting RHS from real to complex
         mumps_par%n = ifactor*n_loc_n
         call real2complex_rhs(my_id, my_id_n)
@@ -206,7 +206,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
         ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
 
-#ifndef USE_ZPASTIX
+#ifndef USE_COMPLEX_PRECOND
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
              !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                    DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
@@ -220,7 +220,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 
 #else      
 
-#ifndef USE_ZPASTIX
+#ifndef USE_COMPLEX_PRECOND
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else      
@@ -275,7 +275,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
  
     if (.not.use_strumpack) then
   !------------------------------------------ undo column scaling
-#ifdef USE_ZPASTIX
+#ifdef USE_COMPLEX_PRECOND
       !-- converting RHS from complex to real
       do k=1,n_cmplx 
         if(my_id_master .eq. 0) then

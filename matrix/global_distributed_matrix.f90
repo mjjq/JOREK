@@ -30,7 +30,7 @@ module global_distributed_matrix
   integer                       :: ndof_harm, n_harm, nz_harm                       
   
   ! --- The complex harmonic matrix 
-#ifdef USE_ZPASTIX
+#ifdef USE_COMPLEX_PRECOND
   double complex,       pointer :: A_cmplx(:)    !< Distributed harmonic matrix
   double complex,       pointer :: rhs_cmplx(:)  !< Distributed harmonic right hand side
   integer,              pointer :: irn_cmplx(:)  !< Row indices for coordinate format sparse matrix (or CSR)

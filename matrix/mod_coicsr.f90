@@ -42,7 +42,7 @@
 !----------------------------------------------------------------------c
 !  Coded by Y. Saad, Sep. 26 1989                                      c
 !----------------------------------------------------------------------c
-!#ifndef USE_ZPASTIX
+!#ifndef USE_COMPLEX_PRECOND
       real*8  ::   t,tnext
 !#else
 !      double complex  ::   t,tnext
@@ -113,44 +113,9 @@
       subroutine coicsr_cmplx (n,nnz,job,a,ja,ia,iwk)
       integer         :: n, nnz, job, ia(nnz),ja(nnz),iwk(n+1) 
       double complex  :: a(*)
-!------------------------------------------------------------------------
-! IN-PLACE coo-csr conversion routine.
-!------------------------------------------------------------------------
-! this subroutine converts a matrix stored in coordinate format into
-! the csr format. The conversion is done in place in that the arrays
-! a,ja,ia of the result are overwritten onto the original arrays.
-!------------------------------------------------------------------------
-! on entry:
-!---------
-! n     = integer. row dimension of A.
-! nnz   = integer. number of nonzero elements in A.
-! job   = integer. Job indicator. when job=1, the real values in a are
-!         filled. Otherwise a is not touched and the structure of the
-!         array only (i.e. ja, ia)  is obtained.
-! a     = real array of size nnz (number of nonzero elements in A)
-!         containing the nonzero elements
-! ja    = integer array of length nnz containing the column positions
-!         of the corresponding elements in a.
-! ia    = integer array of length nnz containing the row positions
-!         of the corresponding elements in a.
-! iwk   = integer work array of length n+1
-! on return:
-!----------
-! a
-! ja
-! ia    = contains the compressed sparse row data structure for the
-!         resulting matrix.
-! Note:
-!-------
-!         the entries of the output matrix are not sorted (the column
-!         indices in each are not in increasing order) use coocsr
-!         if you want them sorted.
-!----------------------------------------------------------------------c
-!  Coded by Y. Saad, Sep. 26 1989                                      c
-!----------------------------------------------------------------------c
-      double complex  ::   t,tnext
-      logical         ::   values
-      integer         ::   i,j,k, init, ipos, inext, jnext
+      double complex  :: t,tnext
+      logical         :: values
+      integer         :: i,j,k, init, ipos, inext, jnext
 !-----------------------------------------------------------------------
       values = (job .eq. 1)
 ! find pointer array for resulting matrix.
@@ -318,41 +283,8 @@
       implicit none
       integer         :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
       double complex  :: a(*)
-!------------------------------------------------------------------------
-! IN-PLACE coo-csr conversion routine.(with added option ndof)
-!------------------------------------------------------------------------
-! this subroutine converts a matrix stored in coordinate format into
-! the csr format. The conversion is done in place in that the arrays
-! a,ja,ia of the result are overwritten onto the original arrays.
-!------------------------------------------------------------------------
-! on entry:
-!---------
-! n     = integer. row dimension of A.
-! nnz   = integer. number of nonzero elements in A.
-! a     = real array of size nnz (number of nonzero elements in A)
-!         containing the nonzero elements
-! ja    = integer array of length nnz containing the column positions
-!         of the corresponding elements in a.
-! ia    = integer array of length nnz containing the row positions
-!         of the corresponding elements in a.
-! ndof  = the number of degrees of freedom
-! iwk   = integer work array of length n+1
-! on return:
-!----------
-! a
-! ja
-! ia    = contains the compressed sparse row data structure for the
-!         resulting matrix.
-! Note:
-!-------
-!         the entries of the output matrix are not sorted (the column
-!         indices in each are not in increasing order) use coocsr
-!         if you want them sorted.
-!----------------------------------------------------------------------c
-!  Coded by Y. Saad, Sep. 26 1989                                      c
-!----------------------------------------------------------------------c
-      integer         ::   i,j,k, init, ipos, inext, jnext, ndof, ndof2, id, jd
-      double complex  ::   t(ndof*ndof),tnext(ndof*ndof)
+      integer         :: i,j,k, init, ipos, inext, jnext, ndof, ndof2, id, jd
+      double complex  :: t(ndof*ndof),tnext(ndof*ndof)
 !-----------------------------------------------------------------------
       ndof2  = ndof*ndof
       

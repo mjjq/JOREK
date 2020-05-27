@@ -74,6 +74,7 @@ module phys_module
   logical :: write_ps             !< Write postscript file at the end of the run
   logical :: use_mumps            !< Use Mumps solver
   logical :: use_pastix           !< Use Pastix solver
+  logical :: use_complex_precond  !< Use Complex Preconditioning  
   logical :: use_strumpack        !< Use Strumpack solver
   logical :: use_wsmp             !< Use WSMP solver
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver

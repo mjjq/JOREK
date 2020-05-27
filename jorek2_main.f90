@@ -253,8 +253,7 @@ required = 0
   ! --- GMRES makes no sense with n_tor=1
   if (n_tor == 1) then
     write(*,*) 'Remark: Setting gmres=.false. since n_tor=1'
-    !gmres     = .false. !-- temporarily commented by psv
-    gmres     = .true.   !-- temporarily added by psv
+    gmres     = .false. 
   end if
   
   ! --- Write out all parameters defined in parameters and the namelist input file.

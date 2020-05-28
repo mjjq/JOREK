@@ -291,7 +291,7 @@
       ! --- Routine parameters
       integer,        intent(inout) :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
       double complex, intent(inout) :: a(*)
-      integer,        intent(inout  :: ndof
+      integer,        intent(inout) :: ndof
 
       ! --- Local variables
       integer                       :: i,j,k, init, ipos, inext, jnext, ndof2, id, jd

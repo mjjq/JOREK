@@ -111,11 +111,17 @@
 ! routine for complex matrix
 !------------------------------------------------------------------------
       subroutine coicsr_cmplx (n,nnz,job,a,ja,ia,iwk)
-      integer         :: n, nnz, job, ia(nnz),ja(nnz),iwk(n+1) 
-      double complex  :: a(*)
-      double complex  :: t,tnext
-      logical         :: values
-      integer         :: i,j,k, init, ipos, inext, jnext
+     
+      ! --- Routine parameters
+      integer, intent(inout)        :: n, nnz 
+      integer, intent(in)           :: job 
+      integer, intent(inout)        :: ia(nnz),ja(nnz),iwk(n+1) 
+      double complex, intent(inout) :: a(*) 
+ 
+      ! --- Local variables
+      double complex                :: t,tnext
+      logical                       :: values
+      integer                       :: i,j,k, init, ipos, inext, jnext
 !-----------------------------------------------------------------------
       values = (job .eq. 1)
 ! find pointer array for resulting matrix.
@@ -281,10 +287,15 @@
       !> Routine for complex matrix block
       subroutine coicsr2_cmplx (n,nnz,a,ja,ia,ndof,iwk)
       implicit none
-      integer         :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
-      double complex  :: a(*)
-      integer         :: i,j,k, init, ipos, inext, jnext, ndof, ndof2, id, jd
-      double complex  :: t(ndof*ndof),tnext(ndof*ndof)
+
+      ! --- Routine parameters
+      integer,        intent(inout) :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
+      double complex, intent(inout) :: a(*)
+      integer,        intent(inout  :: ndof
+
+      ! --- Local variables
+      integer                       :: i,j,k, init, ipos, inext, jnext, ndof2, id, jd
+      double complex                :: t(ndof*ndof),tnext(ndof*ndof)
 !-----------------------------------------------------------------------
       ndof2  = ndof*ndof
       

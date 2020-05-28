@@ -149,6 +149,13 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
+#ifdef USE_COMPLEX_PRECOND
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif 
+
   write(*,'(1x,a)',advance='no') ' GAUSS_ORDER : '
 #ifdef GAUSS_ORDER
   write(*,*) 'Preprocessor flag has been set! Thus, n_gauss=', n_gauss
@@ -569,7 +576,6 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'use_mumps             ', use_mumps
   write(*,LOGI_FMT) 'use_wsmp              ', use_wsmp
   write(*,LOGI_FMT) 'use_pastix            ', use_pastix
-  write(*,LOGI_FMT) 'use_complex_precond   ', use_complex_precond
   write(*,LOGI_FMT) 'use_strumpack         ', use_strumpack  
   write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot

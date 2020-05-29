@@ -25,7 +25,7 @@ integer, intent(in) :: npoints
 ! --- Local variables
 real*8 :: Rstart(npoints)
 real*8 :: Zstart(npoints)
-integer :: i, k, ielm, ifail
+integer :: i, j, k, ielm, ifail
 real*8  :: Rout, Zout, polturns, torturns
 logical :: stop_tracing
 
@@ -39,7 +39,7 @@ real*8  :: AR, AR_p, AR_s, AR_t, AR_R, AR_Z, AZ, AZ_p, AZ_s, AZ_t, AZ_R, AZ_Z, A
 real*8  :: RR, ZZ, Rnew, Znew, Rold, Zold
 
 do i = 1, npoints
-  Rstart(i) = ES%R_axis + REAL(i) * 1.d0/npoints !### TODO: replace by actual width on midplane
+  Rstart(i) = ES%R_axis + REAL(i) * 0.85d0/npoints !### TODO: replace by actual width on midplane
   Zstart(i) = ES%Z_axis
 end do
 
@@ -55,11 +55,13 @@ do i = 1, npoints
   stop_tracing = .false.
   polturns     = 0.d0
   torturns     = 0.d0
+  j            = 0
   do while( .not. stop_tracing )
     
     call do_step()
+    j = j + 1
 
-write(89,*) RR, ZZ !###
+! write(89,*) RR, ZZ !###
    
     if ( phi > 2.d0*PI ) then
       phi   = phi - 2.d0*PI
@@ -67,26 +69,27 @@ write(89,*) RR, ZZ !###
 write(88,*) RR, ZZ !###
     end if
 
-!    if ( (RR - ES%R_axis) > 0.d0 .and. (( ZZ - ES%Z_axis ) * ( Zold - ES%Z_axis )) < 0.d0 ) then
-!      polturns = polturns + 1.d0
-!    else if ( (RR - ES%R_axis) > 0.d0 .and. (( ZZ - ES%Z_axis ) * ( Zold - ES%Z_axis )) == 0.d0 ) then
-!      polturns = polturns + 0.5d0
-!    end if
+    if ( (RR - ES%R_axis) > 0.d0 .and. (( ZZ - ES%Z_axis ) * ( Zold - ES%Z_axis )) < 0.d0 .and. j > 1 ) then
+      polturns = polturns + 1.d0
+    else if ( (RR - ES%R_axis) > 0.d0 .and. (( ZZ - ES%Z_axis ) * ( Zold - ES%Z_axis )) == 0.d0 .and. j > 1 ) then
+      polturns = polturns + 0.5d0
+    end if
       
 !    if ( polturns > REAL(npolturns) ) then
 !      stop_tracing = .true.
 !    end if
     
 !    if ( torturns > (REAL(npolturns) * 5.) ) then
-   if ( torturns > 49.d0 ) then
+   if ( torturns > 99.d0 ) then
       stop_tracing = .true.
     end if
 
   end do
+write(90,*) Rstart(i), torturns, polturns
 write(88,*) !###
 write(88,*) !###
-write(89,*) !###
-write(89,*) !###
+!write(89,*) !###
+!write(89,*) !###
 
 end do 
 
@@ -100,7 +103,7 @@ contains
   
   Rnew   = RR  + 0.5d0 * stepsize * BR / BB
   Znew   = ZZ  + 0.5d0 * stepsize * BZ / BB
-  phinew = phi + 0.5d0 * stepsize * Bp / BB
+  phinew = phi + 0.5d0 * stepsize * Bp / (RR * BB)
   
   Rold   = RR
   Zold   = ZZ
@@ -115,7 +118,7 @@ contains
   
   RR   = Rold   + stepsize * BR / BB
   ZZ   = Zold   + stepsize * BZ / BB
-  phi  = phiold + stepsize * Bp / BB
+  phi  = phiold + stepsize * Bp / (RR * BB)
   
   call find_RZ(node_list,element_list,Rnew,Znew,RR,ZZ,ielm,s,t,ifail)
   if ( ielm < 1 ) then
@@ -159,7 +162,7 @@ contains
                  dum06,dum07,dum08,dum09,dum10,dum11)
 
   !### better to use interp & ivar=456 instead ? 
-  ! interp(node_list, element_list, i_elm, 456, 1, s, t, Fprof, dum01, dum02, dum03, dum04, dum05)
+  !call interp(node_list, element_list, ielm, 456, 1, s, t, Fprof, dum01, dum02, dum03, dum04, dum05)
 
   BR = ( A3_Z - AZ_p )/ R
   BZ = ( AR_p - A3_R )/ R

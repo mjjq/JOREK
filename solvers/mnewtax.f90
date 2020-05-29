@@ -11,7 +11,7 @@ type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 
 real*8    :: r, s, x(2), FVEC(2),FJAC(2,2), ZPSI, ZPSIR, ZPSIS, ZPSIRS, ZPSIRR, ZPSISS
-real*8    :: tolf,tolx, errf, errx, temp, dis
+real*8    :: tolf,tolx, errf, errx, temp, dis, errf_min
 integer   :: ntrial, i, k, ifail, i_elm
 real*8    :: p(2)
 
@@ -23,6 +23,8 @@ x(1) = r
 x(2) = s
 
 ifail = 999
+
+errf_min = 1.d99
 
 do k=1,ntrial
 
@@ -72,7 +74,14 @@ do k=1,ntrial
     return
   endif
 
+  if (errf .lt. errf_min) then
+    r = x(1)
+    s = x(2)
+    errf_min = errf
+  endif
+
 enddo
 
 return
 end
+

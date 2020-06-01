@@ -48,15 +48,15 @@ dF_dz2     = 0.d0
 dF_dpsi_dz = 0.d0
 
 ! --- There are some rules when using FF_coefs with the F-profile in Full-MHD
-if (myFF_1 .ne. 0.d0) then
-  write(*,*)'Full-MHD Warning!!! The F-profile does not like it if FF_1 is not zero !!!'
-  write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
-endif
-if (myFF_coef(4) .gt. 0.01) then
-  write(*,*)'Full-MHD Warning!!! The tanh at FF_coef(5) with width FF_coef(4) is supposed to be a cut-off at the plasma edge !!!'
-  write(*,*)'                    ie. FF_coef(5) should be the edge of your plasma, and FF_coef(4) should be very small...'
-  write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
-endif
+!if (myFF_1 .ne. 0.d0) then
+!  write(*,*)'Full-MHD Warning!!! The F-profile does not like it if FF_1 is not zero !!!'
+!  write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be !consistent!'
+!endif
+!if (myFF_coef(4) .gt. 0.01) then
+!  write(*,*)'Full-MHD Warning!!! The tanh at FF_coef(5) with width FF_coef(4) is supposed to be a cut-off at the plasma edge !!!'
+!  write(*,*)'                    ie. FF_coef(5) should be the edge of your plasma, and FF_coef(4) should be very small...'
+!  write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be !consistent!'
+!endif
 
 ! --- The cutoff of the FFprime at the edge is traditionally the tanh at FF_coef(5), not at psi_n=1.0
 ! --- However, F needs to be F0 outside the plasma, so we take a point far away.

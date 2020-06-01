@@ -47,6 +47,7 @@ dF_dpsi2   = 0.d0
 dF_dz2     = 0.d0
 dF_dpsi_dz = 0.d0
 
+! REMARK: THIS CHECK NEEDS TO BE MOVED. TEMPORARILY COMMENTED.
 ! --- There are some rules when using FF_coefs with the F-profile in Full-MHD
 !if (myFF_1 .ne. 0.d0) then
 !  write(*,*)'Full-MHD Warning!!! The F-profile does not like it if FF_1 is not zero !!!'

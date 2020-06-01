@@ -13,15 +13,15 @@ subroutine fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, 
   implicit none
 
   ! Subroutine parameters
-  integer,                   intent(in) :: local_elms(*)         !< List of local elements
-  integer,                   intent(in) :: n_local_elms          !< Number of local elements
-  integer,                   intent(in) :: index_min, index_max  !< Min/max index of local elements
-  type (type_node_list),     intent(in) :: node_list             !< List of nodes
-  type (type_element_list),  intent(in) :: element_list          !< List of all elements
-  integer, pointer,          intent(in) :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
-  integer,                   intent(in) :: i_tor_min, i_tor_max
-  integer, pointer,          intent(in) :: irn(:), jcn(:)
-  real*8,  pointer,          intent(in) :: A_mat(:)
+  integer,                   intent(in)    :: local_elms(*)         !< List of local elements
+  integer,                   intent(in)    :: n_local_elms          !< Number of local elements
+  integer,                   intent(in)    :: index_min, index_max  !< Min/max index of local elements
+  type (type_node_list),     intent(in)    :: node_list             !< List of nodes
+  type (type_element_list),  intent(in)    :: element_list          !< List of all elements
+  integer, allocatable,      intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+  integer,                   intent(in)    :: i_tor_min, i_tor_max
+  integer, allocatable,      intent(inout) :: irn(:), jcn(:)
+  real*8,  allocatable,      intent(inout) :: A_mat(:)
   ! Internal parameters
   real*8  :: zbig
   integer :: i, in, iv, inode, k

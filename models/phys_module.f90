@@ -558,10 +558,11 @@ module phys_module
     dnpart_tot_dt(:), npart_tot_t(:), npart_flux_t(:), density_tot_t(:), flux_poynting_t(:)
 
   !> @name gmres parameters
-  integer             :: iter_precon    !< whenever the number of gmres iterations exceeds iter_precon, the preconditioning matrix is updated
-  integer             :: gmres_m        !< gmres restart parameter (dimension)
-  real*8              :: gmres_4        !< see gmres manual (error ratio between preconditioned and non-preconditioned error)
-  real*8              :: gmres_tol      !< the tolerance for the gmres iterations to be seen as converged
+  integer             :: iter_precon        !< whenever the number of gmres iterations exceeds iter_precon, the preconditioning matrix is updated
+  integer             :: max_steps_noUpdate !< whenever the steps without preconditioning matrix update exceeds max_steps_noUpdate, the preconditioning matrix is updated
+  integer             :: gmres_m            !< gmres restart parameter (dimension)
+  real*8              :: gmres_4            !< see gmres manual (error ratio between preconditioned and non-preconditioned error)
+  real*8              :: gmres_tol          !< the tolerance for the gmres iterations to be seen as converged
 
   !> @name Taylor-Galerkin Stabilisation coefficients
   real*8              :: tgnum(n_var)   !< Coefficients for Taylor Galerkin stabilization for each equation separately

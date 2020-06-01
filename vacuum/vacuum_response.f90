@@ -2253,6 +2253,16 @@ module vacuum_response
   
   
   !> Reconstruct the potential values at the wall triangle nodes.
+  !!
+  !! To reconstruct the physical wall potentials from the ones we work 
+  !! with we need to muliply them by the similarity transform matrix.
+  !! The physical wall potentials include different types of potentials,
+  !! and the way they are ordered in the array is
+  !!
+  !!   (I_coil_1, I_coil_2, ..., I_coil_ncoil, Iw_net, Potw_1, Potw_2, ..., Potw_npotw-1)
+  !!  
+  !! where I_coil are the coil currents, Iw_net is the net wall current
+  !! and Potw are the single valued wall potentials.
   subroutine reconstruct_triangle_potentials(tripot_w, wall_curr, my_id)
     
     use mpi_mod

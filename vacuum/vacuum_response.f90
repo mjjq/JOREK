@@ -2253,6 +2253,16 @@ module vacuum_response
   
   
   !> Reconstruct the potential values at the wall triangle nodes.
+  !!
+  !! To reconstruct the physical wall potentials from the ones we work 
+  !! with we need to muliply them by the similarity transform matrix.
+  !! The physical wall potentials include different types of potentials,
+  !! and the way they are ordered in the array is
+  !!
+  !!   (I_coil_1, I_coil_2, ..., I_coil_ncoil, Iw_net, Potw_1, Potw_2, ..., Potw_npotw-1)
+  !!  
+  !! where I_coil are the coil currents, Iw_net is the net wall current
+  !! and Potw are the single valued wall potentials.
   subroutine reconstruct_triangle_potentials(tripot_w, wall_curr, my_id)
     
     use mpi_mod
@@ -2265,26 +2275,40 @@ module vacuum_response
     integer,             intent(in)    :: my_id
 
     ! --- Local variables
-    integer :: i, j, ierr, global_index, ntasks
-    integer :: count=1
+    integer              :: i, j, ierr, global_index, ntasks
+    integer              :: count=1
+    real*8, allocatable  :: pot_tmp(:)
 
     if ( allocated(tripot_w) ) deallocate(tripot_w); allocate( tripot_w(sr%npot_w) )    
-    tripot_w = 0.0
+    if ( allocated(pot_tmp)  ) deallocate(pot_tmp);  allocate(  pot_tmp(sr%npot_w) )    
+    tripot_w = 0.d0
+    pot_tmp  = 0.d0
 
+    ! --- multiply by the similarity transform matrix to get the physical wall potentials
     if ( allocated(wall_curr) ) then
       global_index = my_id*sr%s_ww%step
 
       do i = 1, sr%npot_w
         j = i + sr%ncoil
         if ( (j >= sr%s_ww%ind_start) .and. (j <= sr%s_ww%ind_end) ) then
-          tripot_w(i) = sum(sr%s_ww%loc_mat(j - global_index,:) * wall_curr(:))
+          pot_tmp(i) = sum(sr%s_ww%loc_mat(j - global_index,:) * wall_curr(:))
         end if  
       end do
      
-      tripot_w(1) = 0.d0
     end if
 
-    call MPI_AllREDUCE(MPI_IN_PLACE,tripot_w,size(tripot_w),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_AllREDUCE(MPI_IN_PLACE,pot_tmp,size(pot_tmp),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
+    ! --- Correct indexing (1st potential is the net curret potential)
+    ! --- Shift indexing so 1st wall node corresponds to 1st single valued potential (and so on)
+    do i = 1, sr%npot_w-1
+      tripot_w(i) = pot_tmp(i+1)
+    enddo
+
+    tripot_w(sr%npot_w) = 0.d0 ! STARWALL's BC for the single valued potentials (last potential is 0)
+    !!! Net current potential contribution to be added soon!
+
+    deallocate(pot_tmp) 
 
   end subroutine reconstruct_triangle_potentials
   

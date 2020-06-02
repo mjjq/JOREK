@@ -175,8 +175,8 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
-  integer :: nsolvers = 0
-  logical :: solvers(4)
+  integer :: nsolvers=0
+  logical :: solvers(4), solvers_eq(3)
  
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
@@ -263,7 +263,7 @@ required = 0
 
 
 #if (!defined (USE_PASTIX))&&(!defined (USE_PASTIX6))
-  if (use_pastix) then
+  if (use_pastix.or.use_pastix_eq) then
     write(*,*) ' FATAL : use_pastix requires defined USE_PASTIX or USE_PASTIX6'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
@@ -271,7 +271,7 @@ required = 0
 #endif
 
 #ifndef USE_MUMPS
-  if (use_mumps) then
+  if (use_mumps.or.use_mumps_eq) then
     write(*,*) ' FATAL : use_mumps requires defined USE_MUMPS'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
@@ -287,7 +287,7 @@ required = 0
 #endif
 
 #ifndef USE_STRUMPACK
-  if (use_strumpack) then
+  if (use_strumpack.or.use_strumpack_eq) then
     write(*,*) ' FATAL : use_strumpack requires defined USE_STRUMPACK'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
@@ -299,13 +299,26 @@ required = 0
   do i=1,size(solvers)
     if (solvers(i)) nsolvers = nsolvers + 1
   enddo
-
-  if (nsolvers==0) then
+  if (nsolvers.eq.0) then
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
-    stop          
-  elseif (nsolvers>1) then
+    stop
+  elseif (nsolvers.gt.1) then
     write(*,*) ' FATAL : specify only one solver'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
+  
+  solvers_eq = (/use_mumps_eq,use_pastix_eq,use_strumpack_eq/)
+  do i=1,size(solvers_eq)
+    if (solvers_eq(i)) nsolvers = nsolvers + 1
+  enddo
+  if (nsolvers.eq.0) then
+    write(*,*) ' FATAL : specify a valid equilibrium solver'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  elseif (nsolvers.gt.1) then
+    write(*,*) ' FATAL : specify only one equilibrium solver'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
   endif

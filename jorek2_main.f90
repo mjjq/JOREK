@@ -296,6 +296,7 @@ required = 0
   
   ! --- Check solver consistency
   solvers = (/use_mumps,use_pastix,use_wsmp,use_strumpack/)
+  nsolvers = 0
   do i=1,size(solvers)
     if (solvers(i)) nsolvers = nsolvers + 1
   enddo
@@ -310,6 +311,7 @@ required = 0
   endif
   
   solvers_eq = (/use_mumps_eq,use_pastix_eq,use_strumpack_eq/)
+  nsolvers = 0
   do i=1,size(solvers_eq)
     if (solvers_eq(i)) nsolvers = nsolvers + 1
   enddo

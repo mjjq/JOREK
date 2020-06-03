@@ -302,7 +302,7 @@ subroutine preset_parameters
   use_wsmp           = .false.              ! Use WSMP solver (use with care, still in development!)
   
   use_mumps_eq       = .false.              ! Use MUMPS equilibrium solver
-  use_pastix_eq      = .true.               ! Use PASTIX equilibrium solver
+  use_pastix_eq      = .false.              ! Use PASTIX equilibrium solver
   use_strumpack_eq   = .false.              ! Use STRUMPACK equilibrium olver  
   
   refinement         = .false.              ! enable mesh refinement

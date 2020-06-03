@@ -35,5 +35,18 @@ subroutine initialise_and_broadcast_parameters(my_id, filename)
     stop
   end if
   ! -----------------------------------
+  ! -- Set equilibrium solver if not defined by user --
+  if ((.not.use_mumps_eq).and.(.not.use_pastix_eq).and.(.not.use_strumpack_eq)) then
+#ifdef USE_COMPLEX_PRECOND
+    use_mumps_eq = .true.
+    use_pastix_eq = .false.
+    use_strumpack_eq = .false.
+#else
+    use_mumps_eq = use_mumps
+    use_pastix_eq = use_pastix
+    use_strumpack_eq = use_strumpack
+#endif
+  endif
+  ! -----------------------------------
   
 end subroutine initialise_and_broadcast_parameters

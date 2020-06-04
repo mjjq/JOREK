@@ -6,7 +6,7 @@ MODEL = model199
 
 # Fortran compiler 
 FC               = mpiifort
-FFLAGS          := $(FFLAGS) -mcmodel=medium -DUSE_BLOCK -DUSE_COMPLEX_PRECOND
+FFLAGS          := $(FFLAGS) -mcmodel=medium
 CC = mpiicc
 CXX = mpiicpc
 

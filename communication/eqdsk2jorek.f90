@@ -24,6 +24,7 @@ real*8             :: dummy(3), xdim,zdim,rzero,rgrid1,zmid,rmaxis,zmaxis,ssimag
 real*8             :: xip,xdum1,xdum2,xdum3,xdum4,xdum5
 real*8             :: psi_sep, sig_sep, tanh1, zmu0, zn0, zmd, rho_bnd, T_bnd
 real*8             :: xb ,xe, yb, ye, smth, fp, fout
+real*8             :: B_scale, I_scale, R_scale, F_axis, factor, dfactor
 integer            :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt,nx,ny, i1, j1
 integer            :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext, ivtk
 character          :: AA*52, tokamak_name*50
@@ -33,11 +34,15 @@ character          :: buffer*80, lf*1, str1*12, str2*24
 
 !----------------------------- read eqdsk file -----------
 
+B_scale = 1.d0/1.d0  ! scaling factor for the vacuum toroidal field 
+I_scale = 1.d0/1.d0  ! scaling factor for the toroidal current
+R_scale = 1.d0/1.d0  ! scaling factor for the space coordinates 
+
 write(*,*) ' EQDSK to JOREK2 '
 
 tokamak_name = 'ITER' !'DIII-D' 'JET' 
 
-write(*,*) 'Tokamak = ', tokamak_name
+write(*,*) '   Tokamak = ', tokamak_name
 
 read(5,'(A52,2i4)') AA,nr,nz
 
@@ -54,9 +59,9 @@ write(*,'(A,2f10.5,A)') ' rzero, zmid : ',rzero,zmid, ' m'
 write(*,'(A,f10.5,A)')  ' xip         : ',xip/1e6,' MA'
 write(*,'(A,f10.5,A)')  ' zmaxis      : ',zmaxis,' m'
 write(*,'(A,f10.5,A)')  ' Bvac        : ',bcentr,' T'
+write(*,'(A,3f10.5,A)') ' psi (axis,bnd) :',ssimag,ssibry,ssibry-ssimag,' Wb'
 
-      
-write(*,*) ' reading profiles'
+write(*,*) '   reading profiles'
   
 n_psi=nr
 allocate(f(n_psi),p(n_psi),df2(n_psi),dpr(n_psi),psirz(nr,nz),q(n_psi))
@@ -68,7 +73,7 @@ read(5,'(5e16.9)') (dpr(i),i=1,n_psi)
 read(5,'(5e16.9)') ((psirz(i,j),i=1,nr),j=1,nz)
 read(5,'(5e16.9)') (q(i),i=1,n_psi)
 
-write(*,*) ' reading limiter'
+write(*,*) '   reading limiter'
 
 read(5,*)  nbbs,limitr
 allocate(rbnd(nbbs),zbnd(nbbs))
@@ -77,6 +82,54 @@ allocate(rlim(limitr),zlim(limitr))
 read(5,'(5e16.9)') (rlim(i),zlim(i),i=1,limitr)
 
 write(*,*) ' done reading'
+
+!=============== scaling of equilibrium with B
+bcentr = bcentr * B_scale
+p      = p      * B_scale**2
+dpr    = dpr    * B_scale
+F      = F      * B_scale
+dF2    = dF2    * B_scale 
+psirz  = psirz  * B_scale 
+xip    = xip    * B_scale
+
+!=============== scaling of equilibrium with space dimension
+xip    = xip    * R_scale
+p      = p
+dpr    = dpr    / R_scale**2
+F      = F      * R_scale
+dF2    = dF2
+psirz  = psirz  * R_scale**2
+
+rgrid1 = rgrid1 * R_scale
+rzero  = rzero  * R_scale
+xdim   = xdim   * R_scale
+zmid   = zmid   * R_scale
+zdim   = Zdim   * R_scale
+
+!=============== scaling of equilibrium with plasma current
+xip    = xip    * I_scale
+p      = p      * I_scale**2
+dpr    = dpr    * I_scale
+dF2   = dF2     * I_scale
+psirz  = psirz  * I_scale
+
+F_axis = f(1)
+
+do i=1, nr
+  factor  = sqrt(1.d0 + F_axis**2/F(i)**2 * (1.d0/I_scale**2 - 1.d0))
+  dfactor = -1.d0/(factor) * (1.d0/I_scale**2 - 1.d0) * F_axis**2/F(i)**4 * dF2(i)
+  q(i)   = factor * q(i)
+  F(i)   = factor * I_scale * F(i)
+enddo
+
+if ((R_scale .ne. 1.d0) .or. (B_scale .ne. 1.d0) .or. (I_scale .ne. 1.d0)) then
+  write(*,'(A)')               '********************************************************'
+  write(*,'(A)')               '  Equilibrium scaling : '
+  write(*,'(A,f8.4,A,f8.4,A)') '    R_scale : ',R_scale,'    major radius   :',rzero,' [m]'
+  write(*,'(A,f8.4,A,f8.4,A)') '    B_scale : ',B_scale,'    vacuum field   :',bcentr,' [T]'
+  write(*,'(A,f8.4,A,f8.4,A)') '    I_scale : ',I_scale,'    plasma current :',xip/1d6,' [MA]'
+  write(*,'(A)')               '********************************************************'
+endif
 
 allocate(xx(nr),yy(nz),psi(n_psi))
 do i=1,n_psi
@@ -96,21 +149,21 @@ if (tokamak_name == 'ITER') then
   tria_l = 0.65
   quad_u = -0.1
   quad_l = 0.15
-  n_tht   = 257
-  r0     = 6.2
-  z0     = 0.1
-  a0     = 2.25 
-  
+  n_tht  = 257
+  r0     = 6.2  * R_scale
+  z0     = 0.1  * R_scale
+  a0     = 2.25 * R_scale
+
   !-------------------- contour outside ITER wall
   ellip  = 2.1
   tria_u = 0.58
   tria_l = 0.65
   quad_u = -0.12
   quad_l = -0.
-  n_tht   = 257
-  r0     = 6.2
-  z0     = -0.05
-  a0     = 2.34 
+  n_tht  = 257
+  r0     = 6.2   * R_scale
+  z0     = -0.05 * R_scale
+  a0     = 2.34  * R_scale
 
 else if (tokamak_name == 'JET') then
   
@@ -121,10 +174,10 @@ else if (tokamak_name == 'JET') then
   tria_l = 0.4
   quad_u = -0.2
   quad_l = -0.2
-  n_tht   = 257
-  r0     = 2.9
-  z0     = 0.1
-  a0     = 1.08
+  n_tht  = 257
+  r0     = 2.9  * R_scale
+  z0     = 0.1  * R_scale
+  a0     = 1.08 * R_scale
 
   !-------------------- contour to avoid too long divertor legs
   ! red contour in https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
@@ -133,10 +186,11 @@ else if (tokamak_name == 'JET') then
   tria_l = 0.4
   quad_u = -0.4
   quad_l = -0.2
-  n_tht   = 257
-  r0     = 2.85
-  z0     = 0.15
-  a0     = 1.1
+  n_tht  = 257
+  r0     = 2.85 * R_scale
+  z0     = 0.15 * R_scale
+  a0     = 1.1  * R_scale
+
 else if (tokamak_name == 'DIII-D') then
   
   !-------------------- contour outside DIII-D wall
@@ -145,11 +199,11 @@ else if (tokamak_name == 'DIII-D') then
   tria_l = 0.4
   quad_u = -0.2
   quad_l = -0.2
-  n_tht   = 257
-  r0     = 1.7
-  z0     = 0.
-  a0     = 0.7
-
+  n_tht  = 257
+  r0     = 1.7 * R_scale
+  z0     = 0.  * R_scale
+  a0     = 0.7 * R_scale
+  
   !-------------------- Atomic physics JOREK/NIMROD/M3D-C1 benchmark case (paper by B. Lyons)
   ellip  = 1.35/0.7
   tria_u = 0.3
@@ -157,9 +211,9 @@ else if (tokamak_name == 'DIII-D') then
   quad_u = 0.
   quad_l = 0.
   n_tht   = 257
-  r0     = 1.7
-  z0     = 0.
-  a0     = 0.7
+  r0     = 1.7 * R_scale
+  z0     = 0.  * R_scale
+  a0     = 0.7 * R_scale
 
 
 else
@@ -272,7 +326,7 @@ df2_ext(n_psi-1:n_ext) = df2_ext(n_psi)
 rho_ext(n_psi-1:n_ext) = rho_ext(n_psi)
 T_ext(n_psi-1:n_ext)   = T_ext(n_psi)
 
-psi_sep = 1.00d0    ! in normalised psi units
+psi_sep = 1.0d0     ! in normalised psi units
 sig_sep = 0.005     ! in normalised psi units
 rho_bnd = 0.01      ! in jorek units
 T_bnd   = 1.d-5     ! in jorek units
@@ -288,8 +342,8 @@ do i=1,n_ext
   tanh1 = tanh((psi_ext(i) - psi_sep)/sig_sep)
   df2_ext(i) = df2_ext(i) * (0.5d0 - 0.5d0*tanh1)
   rho_ext(i) = (rho_ext(i) - rho_bnd) * (0.5d0 - 0.5d0*tanh1) + rho_bnd
-!  T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0 
-  T_ext(i)   = T_ext(i) / rho_ext(i) * zmu0 + T_bnd 
+  T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0 +T_bnd 
+!   T_ext(i)   = T_ext(i) / rho_ext(i) * zmu0 + T_bnd 
   p_ext(i)   = rho_ext(i) * T_ext(i)
 enddo
 
@@ -334,8 +388,9 @@ write(21,*)             '***************************************'
 write(21,'(A)')        '*  namelist produced by eqdsk2jorek   *'
 write(21,*)             '***************************************'
 write(21,*) AA
-write(21,'(A,f8.3,A)') ' magnetic field : ',Bcentr,' T'
-write(21,'(A,f8.3,A)') ' current        : ',xip/1d6,' MA'
+write(21,'(A,f8.3,A)') '   magnetic field   : ',Bcentr,' [T]'
+write(21,'(A,f8.3,A)') '   current          : ',xip/1d6,' [MA]'
+write(21,'(A,e14.6,A)')'   central pressure : ',p(1), '[Pa]'
 write(21,*)             '***************************************'
 write(21,*)
 write(21,*) ' &in1'
@@ -364,7 +419,8 @@ write(21,*)
 write(21,*) ' !_____________________________________boundary definition'
 write(21,*) ' mf = 0'
 write(21,*) ' n_boundary = ',n_tht
-! We change or not the sign of psi_bnd depending on the sign of Ip because (we assume that) in EQDSK files,
+write(21,*)
+! We change or not the sign of psi_bnd depending on the sign of Ip because (we assume that) in EQDSK files, 
 ! psi_axis is always < psi_boundary, whatever the direction of Ip.
 if (xip>0) then
   do j=1,n_tht
@@ -381,19 +437,19 @@ else
              ', psi_boundary(',j,') =',-psi_bnd(j),','
   enddo
 end if
-
+write(21,*)
 write(21,*) ' ellip  = ',ellip
 write(21,*) ' tria_u = ',tria_u
 write(21,*) ' tria_l = ',tria_l
 write(21,*) ' quad_u = ',quad_u
 write(21,*) ' quad_l = ',quad_l
-
+write(21,*)
 write(21,*) ' xampl  = +0.'
 write(21,*) ' xpoint = .t.'
-
+write(21,*)
 write(21,*) ' freeboundary = .f.'
 write(21,*) ' resistive_wall = .f.'
-
+write(21,*)
 write(21,*) ' R_geo = ',r0
 write(21,*) ' Z_geo = ',z0
 if (tokamak_name=='JET') then
@@ -403,14 +459,14 @@ else
 end if
 
 write(21,*) ' amin  = 1.d0 ! scale factor for plasma size only'
-
+write(21,*)
 write(21,*)
 write(21,*) ' !_____________________________________grid parameters'
 
 write(21,*) ' n_R      = 0'
 write(21,*) ' n_Z      = 0'
-write(21,*) ' n_radial = 41'
-write(21,*) ' n_pol    = 64' 
+write(21,*) ' n_radial = 101'
+write(21,*) ' n_pol    = 128' 
 
 write(21,*) ' n_flux   = 0'
 write(21,*) ' n_tht    = 64'
@@ -426,39 +482,37 @@ write(21,*) ' !_____________________________________physics parameters'
 write(21,*) ' eta   = 1.d-7'
 write(21,*) ' visco = 1.d-6'
 write(21,*) ' visco_par = 1.d-5'
-
+write(21,*)
 write(21,*) ' eta_num       = 1.d-12'
 write(21,*) ' visco_num     = 1.d-12'
 write(21,*) ' visco_par_num = 1.d-12'
 write(21,*) ' d_perp_num    = 1.d-12'
 write(21,*) ' zk_perp_num   = 1.d-12'
-
-
-
+write(21,*)
 write(21,*) ' bc_natural_open = .false.'
 write(21,*) ' gamma_sheath = 2'
-
+write(21,*)
 write(21,*) ' rho_file     = "jorek_density"'
 write(21,*) ' T_file       = "jorek_temperature"'
 write(21,*) ' ffprime_file = "jorek_ffprime"'
-
+write(21,*)
 write(21,*) ' D_par     = 0.d0'
 write(21,*) ' D_perp(1) = 1.d-5'
 write(21,*) ' D_perp(2) = 0.85d0'
 write(21,*) ' D_perp(3) = 0.d0'
 write(21,*) ' D_perp(4) = 0.01d0'
 write(21,*) ' D_perp(5) = 0.92d0'
-
+write(21,*)
 write(21,*) ' ZK_par     = 1.d0'
 write(21,*) ' ZK_perp(1) = 1.d-5'
 write(21,*) ' ZK_perp(2) = 0.85d0'
 write(21,*) ' ZK_perp(3) = 0.d0'
 write(21,*) ' ZK_perp(4) = 0.01d0'
 write(21,*) ' ZK_perp(5) = 0.92d0'
-
+write(21,*)
 write(21,*) ' heatsource     = 1.d-7'
 write(21,*) ' particlesource = 5.d-6'
-
+write(21,*)
 write(21,*) ' &end'
 
 close(21)

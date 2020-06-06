@@ -663,7 +663,7 @@ module live_data
 
     if ( allocated(net_tor_wall_curr) ) then
       if ( .not. header_written_net ) then
-        write(LIVE_DATA_HANDLE,'(A,I5)') '@n_net_tor_wall_curr: ', size(net_tor_wall_curr)
+        write(LIVE_DATA_HANDLE,'(A,I5)') '@n_net_tor_wall_curr: ', 1
         write(LIVE_DATA_HANDLE,'(A)') '@net_tor_wall_curr_xlabel: normalized time'
         write(LIVE_DATA_HANDLE,'(A)') '@net_tor_wall_curr_xlabel_si: time [ms]'
         write(LIVE_DATA_HANDLE,'(A)') '@net_tor_wall_curr_ylabel: Net toroidal wall current'

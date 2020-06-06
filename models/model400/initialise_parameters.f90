@@ -92,7 +92,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 keep_n0_const, linear_run, export_for_nemec,        &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 gmres, gmres_max_iter,                              &
-                gmres_m, gmres_4, gmres_tol, iter_precon, tgnum,    &
+                gmres_m, gmres_4, gmres_tol, iter_precon,           &
+                tgnum, max_steps_noUpdate,                          &
                 RMP_on, RMP_har_cos, RMP_har_sin,                   &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &

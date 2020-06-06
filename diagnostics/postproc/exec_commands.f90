@@ -29,7 +29,8 @@ module exec_commands
   
   
   
-  character(len=11), parameter, private :: DIR = './postproc/' !< Output goes into this directory!
+  character(len=:), private, allocatable :: DIR !< Output goes into this directory!
+                                                !< set to './postproc/' by default
   
   integer, parameter :: NORMAL_MODE = 1 !< Normal mode
   integer, parameter :: LOOP_S_MODE = 2 !< Mode started by 'for step' and ended by 'done' commands
@@ -91,6 +92,10 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ierr = 0
+    
+    if ( DIR == "" ) then
+      DIR = "./postproc/"
+    endif
     
     if ( .not. dir_created ) then
       call system('mkdir -p '//DIR)
@@ -181,6 +186,8 @@ module exec_commands
           call mark_coords(command, ierr)
         case ( 'midplane' )
           call midplane(command, first_step, ierr)
+        case ( 'set_postproc_dir' )
+          call set_postproc_dir(command, ierr)
         case ( 'namelist' )
           call load_namelist(command, ierr)
         case ( 'params' )
@@ -766,6 +773,42 @@ module exec_commands
     write(*,*)
     
   end subroutine timesteps
+   
+  
+  
+  
+  
+  !> Determine the postproc output directory
+  subroutine set_postproc_dir(command, ierr)
+    
+    use phys_module
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+
+    ! --- Local variables
+    character(len=:), allocatable ::  dirname
+    logical                       ::  dir_exists
+    
+    ierr = 0
+    
+    ! --- Some checks.
+    call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
+    dirname = trim(command%args(1))//'/'
+    inquire (directory=dirname, exist=dir_exists)
+
+    if ( .not. dir_exists ) then
+      call system('mkdir -p '//dirname)
+      DIR = dirname
+      dir_created = .true.
+    end if
+      
+  end subroutine set_postproc_dir
+  
+  
+  
+  
   
   
   

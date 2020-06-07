@@ -785,19 +785,15 @@ module exec_commands
     
     ! --- Local variables
     character(len=256) ::  dirname
-    logical            ::  dir_exists
     
     ierr = 0
     
     ! --- Some checks.
     call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
     dirname = trim(command%args(1))//'/'
-    inquire (directory=dirname, exist=dir_exists)
     
-    if ( .not. dir_exists ) then
-      call system('mkdir -p '//dirname)
-      DIR = dirname
-    end if
+    call system('mkdir -p '//dirname)
+    DIR = dirname
     dir_created = .true.
     
   end subroutine set_postproc_dir

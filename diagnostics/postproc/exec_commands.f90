@@ -29,8 +29,8 @@ module exec_commands
   
   
   
-  character(len=:), private, allocatable :: DIR !< Output goes into this directory!
-                                                !< set to './postproc/' by default
+  character(len=256), private :: DIR = './postproc/' !< Output goes into this directory!
+                                                     !! set to './postproc/' by default
   
   integer, parameter :: NORMAL_MODE = 1 !< Normal mode
   integer, parameter :: LOOP_S_MODE = 2 !< Mode started by 'for step' and ended by 'done' commands
@@ -92,10 +92,6 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ierr = 0
-    
-    if ( DIR == "" ) then
-      DIR = "./postproc/"
-    endif
     
     if ( .not. dir_created ) then
       call system('mkdir -p '//DIR)
@@ -773,7 +769,7 @@ module exec_commands
     write(*,*)
     
   end subroutine timesteps
-   
+  
   
   
   
@@ -786,10 +782,10 @@ module exec_commands
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
     integer,            intent(out) :: ierr        !< Error flag
-
+    
     ! --- Local variables
-    character(len=:), allocatable ::  dirname
-    logical                       ::  dir_exists
+    character(len=256) ::  dirname
+    logical            ::  dir_exists
     
     ierr = 0
     
@@ -797,18 +793,14 @@ module exec_commands
     call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
     dirname = trim(command%args(1))//'/'
     inquire (directory=dirname, exist=dir_exists)
-
+    
     if ( .not. dir_exists ) then
       call system('mkdir -p '//dirname)
       DIR = dirname
-      dir_created = .true.
     end if
-      
+    dir_created = .true.
+    
   end subroutine set_postproc_dir
-  
-  
-  
-  
   
   
   

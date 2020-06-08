@@ -4,6 +4,7 @@ program q_poincare_fmhd_slow
 use constants
 use mod_parameters
 use data_structure
+use nodes_elements, only:bnd_node_list,bnd_elm_list
 use equil_info
 use phys_module        !  , only: xpoint, xcase, rst_format
 use mod_import_restart
@@ -11,6 +12,7 @@ use mod_log_params
 use mod_interp
 use elements_nodes_neighbours
 use mod_find_rz_nearby
+use mpi_mod
 
 implicit none
 
@@ -32,27 +34,62 @@ real*8  :: BR, BZ, Bp, BB, Bs, Bt, xjac, Fprof
 real*8  :: dum01, dum02, dum03, dum04, dum05, dum06, dum07, dum08, dum09, dum10, dum11
 real*8  :: AR, AR_p, AR_s, AR_t, AR_R, AR_Z, AZ, AZ_p, AZ_s, AZ_t, AZ_R, AZ_Z, A3, A3_p, A3_s, A3_t, A3_R, A3_Z, psieq
 real*8  :: RR, ZZ, Rnew, Znew, Rold, Zold
+integer :: required,provided,StatInfo, n_cpu
+integer*4 :: rank, comm_size 
+logical :: responsible(npoints)
 
-write(*,*) '***************************************'
-write(*,*) '* q_poincare_fmhd_sloooow             *'
-write(*,*) '***************************************'
+real*8  :: psin_arr(npoints) = 0.d0, polturns_arr(npoints) = 0.d0, torturns_arr(npoints) = 0.d0
 
-my_id=0
+required = MPI_THREAD_FUNNELED
+call MPI_Init_thread(required, provided, StatInfo)
+call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread
+call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
+n_cpu = comm_size
+
+! --- Determine ID of each MPI proc
+call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
+my_id = rank
+
+if ( my_id == 0 ) then
+  write(*,*) '***************************************'
+  write(*,*) '* q_poincare_fmhd_sloooow             *'
+  write(*,*) '***************************************'
+end if
 
 call det_modes()
 call initialise_parameters(my_id,  "__NO_FILENAME__")
 call log_parameters(my_id)
 
-call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
+if ( my_id == 0 ) call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 
-write(*,*) '*** start tracing ***'
+call broadcast_phys(my_id)  
+call broadcast_elements(my_id, element_list)                ! elements
+call broadcast_nodes(my_id, node_list)                      ! nodes
+call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
 
+if ( my_id == 0 ) write(*,*) '*** start tracing ***'
+
+responsible = .false.
 do i = 1, npoints
+  
+  if ( ( real(my_id)/real(n_cpu)*npoints < i ) .and. ( real(my_id+1)/real(n_cpu)*npoints >= i ) ) responsible(i) = .true.
+  
   Rstart(i) = ES%R_axis + REAL(i) * 0.8d0/npoints !### TODO: replace by actual width on midplane #### R_midpl(2)
   Zstart(i) = ES%Z_axis
 end do
 
+do i = 0, n_cpu-1
+  if ( my_id == i ) then
+    write(*,*) 'Task ', my_id, 'responsible for:'
+    do j = 1, npoints
+      if (responsible(j)) write(*,*) j
+    end do
+  end if
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+end do
+
 do i = 1, npoints
+  if ( .not. responsible(i) ) cycle
   call find_RZ(node_list,element_list,Rstart(i),Zstart(i),RR,ZZ,ielm,s,t,ifail)
   phi = 0.d0
   
@@ -90,13 +127,28 @@ do i = 1, npoints
   !  if ( j > 2 ) then
   !    stop_tracing = .true.
   !  end if
-
+    
+    
   end do
-write(90,*) RR, get_psi_n(A3, ZZ), torturns, polturns
+!write(90,*) RR, get_psi_n(A3, ZZ), torturns, polturns
 !write(88,*) !###
 !write(88,*) !###
+  psin_arr(i)     = get_psi_n(A3, ZZ)
+  torturns_arr(i) = torturns
+  polturns_arr(i) = polturns
 
 end do 
+
+do i = 1, npoints
+  
+  if ( responsible(i) ) then
+    write(90,'(es23.13,2i10)') psin_arr(i), torturns_arr(i), polturns_arr(i)
+  end if
+  
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  
+end do
+
 
 contains
 

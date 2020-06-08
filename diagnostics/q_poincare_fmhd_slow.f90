@@ -13,6 +13,7 @@ use mod_interp
 use elements_nodes_neighbours
 use mod_find_rz_nearby
 use mpi_mod
+use mod_element_rtree, only: populate_element_rtree
 
 implicit none
 
@@ -66,6 +67,7 @@ call broadcast_phys(my_id)
 call broadcast_elements(my_id, element_list)                ! elements
 call broadcast_nodes(my_id, node_list)                      ! nodes
 call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
+call populate_element_rtree(node_list, element_list)
 
 if ( my_id == 0 ) write(*,*) '*** start tracing ***'
 

@@ -105,20 +105,29 @@ contains
   
   call determine_field()
   
+  Rold     = RR
+  Zold     = ZZ
+  phiold   = phi
+  sold     = s
+  told     = t
+  ielm_old = ielm
+  
   Rnew   = RR  + 0.5d0 * stepsize * BR / BB
   Znew   = ZZ  + 0.5d0 * stepsize * BZ / BB
   phinew = phi + 0.5d0 * stepsize * Bp / (RR * BB)
   
-  Rold   = RR
-  Zold   = ZZ
-  phiold = phi
-  
-  call find_RZ_nearby(node_list, element_list, RR, ZZ, s, t, ielm, &
+  call find_RZ_nearby(node_list, element_list, Rold, Zold, sold, told, ielm_old, &
     Rnew, Znew, snew, tnew, ielm_new, ifail)
   if ( ielm_new < 1 ) then
     stop_tracing = .true.
     return
   end if
+  
+  RR   = Rnew
+  ZZ   = Znew
+  s    = snew
+  t    = tnew
+  ielm = ielm_new
   call determine_field()
   
   RR   = Rold   + stepsize * BR / BB
@@ -126,8 +135,8 @@ contains
   phi  = phiold + stepsize * Bp / (RR * BB)
   
   call find_RZ_nearby(node_list, element_list, Rnew, Znew, snew, tnew, ielm_new, &
-    RR, ZZ, snew, tnew, ielm_new, ifail)
-  if ( ielm_new < 1 ) then
+    RR, ZZ, s, t, ielm, ifail)
+  if ( ielm < 1 ) then
     stop_tracing = .true.
     return
   end if

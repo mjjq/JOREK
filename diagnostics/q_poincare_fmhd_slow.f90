@@ -20,11 +20,11 @@ integer, parameter :: npoints = 20
 
 real*8 :: Rstart(npoints)
 real*8 :: Zstart(npoints)
-integer :: i, j, k, ielm, ifail, my_id, ierr, ielm_new
+integer :: i, j, k, ielm, ifail, my_id, ierr, ielm_new, ielm_old
 real*8  :: Rout, Zout, polturns, torturns
 logical :: stop_tracing
 
-real*8  :: s, t, phi, phinew, phiold, snew, tnew
+real*8  :: s, t, phi, phinew, phiold, snew, tnew, sold, told
 real*8  :: AA(3), AA_s(3), AA_t(3)
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: AA_p(3)

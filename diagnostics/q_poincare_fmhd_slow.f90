@@ -60,16 +60,13 @@ end if
 call det_modes()
 call initialise_parameters(my_id,  "__NO_FILENAME__")
 call log_parameters(my_id)
-
 if ( my_id == 0 ) call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
-
 call broadcast_phys(my_id)  
 call broadcast_elements(my_id, element_list)                ! elements
 call broadcast_nodes(my_id, node_list)                      ! nodes
 call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
 call populate_element_rtree(node_list, element_list)
 call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
-
 
 if ( my_id == 0 ) write(*,*) '*** start tracing ***'
 
@@ -123,7 +120,7 @@ do i = 1, npoints
     else if ( (RR - ES%R_axis) > 0.d0 .and. (( ZZ - ES%Z_axis ) * ( Zold - ES%Z_axis )) == 0.d0 .and. j > 1 ) then
       polturns = polturns + 0.5d0
     end if
-     
+    
     if ( torturns > 399.d0 ) then
       stop_tracing = .true.
     end if
@@ -140,6 +137,7 @@ do i = 1, npoints
   psin_arr(i)     = get_psi_n(A3, ZZ)
   torturns_arr(i) = torturns
   polturns_arr(i) = polturns
+  write(*,*) 'Finished tracing line ', i
 
 end do 
 

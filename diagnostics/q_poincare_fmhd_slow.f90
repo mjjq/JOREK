@@ -128,13 +128,14 @@ contains
   s    = snew
   t    = tnew
   ielm = ielm_new
+  phi  = phinew
   call determine_field()
   
   RR   = Rold   + stepsize * BR / BB
   ZZ   = Zold   + stepsize * BZ / BB
   phi  = phiold + stepsize * Bp / (RR * BB)
   
-  call find_RZ_nearby(node_list, element_list, Rnew, Znew, snew, tnew, ielm_new, &
+  call find_RZ_nearby(node_list, element_list, Rold, Zold, sold, told, ielm_old, &
     RR, ZZ, s, t, ielm, ifail)
   if ( ielm < 1 ) then
     stop_tracing = .true.

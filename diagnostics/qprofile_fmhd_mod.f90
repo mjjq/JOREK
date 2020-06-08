@@ -39,7 +39,7 @@ real*8  :: AR, AR_p, AR_s, AR_t, AR_R, AR_Z, AZ, AZ_p, AZ_s, AZ_t, AZ_R, AZ_Z, A
 real*8  :: RR, ZZ, Rnew, Znew, Rold, Zold
 
 do i = 1, npoints
-  Rstart(i) = ES%R_axis + REAL(i) * 0.85d0/npoints !### TODO: replace by actual width on midplane
+  Rstart(i) = ES%R_axis + REAL(i) * 0.82d0/npoints !### TODO: replace by actual width on midplane
   Zstart(i) = ES%Z_axis
 end do
 
@@ -85,7 +85,7 @@ write(88,*) RR, ZZ !###
     end if
 
   end do
-write(90,*) Rstart(i), torturns, polturns
+write(90,*) Rstart(i), get_psi_n(A3, ZZ), torturns, polturns
 write(88,*) !###
 write(88,*) !###
 !write(89,*) !###

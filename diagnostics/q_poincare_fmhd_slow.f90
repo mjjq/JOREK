@@ -10,6 +10,7 @@ use mod_import_restart
 use mod_log_params
 use mod_interp
 use elements_nodes_neighbours
+use mod_find_rz_nearby
 
 implicit none
 
@@ -19,11 +20,11 @@ integer, parameter :: npoints = 20
 
 real*8 :: Rstart(npoints)
 real*8 :: Zstart(npoints)
-integer :: i, j, k, ielm, ifail, my_id, ierr
+integer :: i, j, k, ielm, ifail, my_id, ierr, ielm_new
 real*8  :: Rout, Zout, polturns, torturns
 logical :: stop_tracing
 
-real*8  :: s, t, phi, phinew, phiold
+real*8  :: s, t, phi, phinew, phiold, snew, tnew
 real*8  :: AA(3), AA_s(3), AA_t(3)
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: AA_p(3)
@@ -47,7 +48,7 @@ call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .
 write(*,*) '*** start tracing ***'
 
 do i = 1, npoints
-  Rstart(i) = ES%R_axis + REAL(i) * 0.8d0/npoints !### TODO: replace by actual width on midplane
+  Rstart(i) = ES%R_axis + REAL(i) * 0.8d0/npoints !### TODO: replace by actual width on midplane #### R_midpl(2)
   Zstart(i) = ES%Z_axis
 end do
 
@@ -112,8 +113,9 @@ contains
   Zold   = ZZ
   phiold = phi
   
-  call find_RZ(node_list,element_list,Rnew,Znew,RR,ZZ,ielm,s,t,ifail)
-  if ( ielm < 1 ) then
+  call find_RZ_nearby(node_list, element_list, RR, ZZ, s, t, ielm, &
+    Rnew, Znew, snew, tnew, ielm_new, ifail)
+  if ( ielm_new < 1 ) then
     stop_tracing = .true.
     return
   end if
@@ -123,8 +125,9 @@ contains
   ZZ   = Zold   + stepsize * BZ / BB
   phi  = phiold + stepsize * Bp / (RR * BB)
   
-  call find_RZ(node_list,element_list,Rnew,Znew,RR,ZZ,ielm,s,t,ifail)
-  if ( ielm < 1 ) then
+  call find_RZ_nearby(node_list, element_list, Rnew, Znew, snew, tnew, ielm_new, &
+    RR, ZZ, snew, tnew, ielm_new, ifail)
+  if ( ielm_new < 1 ) then
     stop_tracing = .true.
     return
   end if

@@ -711,7 +711,7 @@ module live_data
         do i = 1, n_tor, 2
           e1 = sum(energies(max(i-1,1):i,j,index))
           e2 = sum(energies(max(i-1,1):i,j,index-1))
-          if ( (e1 .NE. 0.) .and. (e2 .NE. 0.) ) then
+          if ( (e1 .GT. 0.) .and. (e2 .GT. 0.) ) then
              growth_rate = 0.5d0 * ( log(e1) - log(e2) ) / (xtime(index)-xtime(index-1))
           else
              growth_rate = 0.d0
@@ -725,7 +725,7 @@ module live_data
       do i = 1, n_tor, 2
         e1 = sum(energies(max(i-1,1):i,1,index))
         e2 = sum(energies(max(i-1,1):i,1,index-1))
-        if ( (e1 .NE. 0.) .and. (e2 .NE. 0.) ) then
+        if ( (e1 .GT. 0.) .and. (e2 .GT. 0.) ) then
            growth_rate = 0.5d0 * ( log(e1) - log(e2) ) / (xtime(index)-xtime(index-1))
         else
            growth_rate = 0.d0
@@ -738,7 +738,7 @@ module live_data
       do i = 1, n_tor, 2
         e1 = sum(energies(max(i-1,1):i,2,index))
         e2 = sum(energies(max(i-1,1):i,2,index-1))
-        if ( (e1 .NE. 0.) .and. (e2 .NE. 0.) ) then
+        if ( (e1 .GT. 0.) .and. (e2 .GT. 0.) ) then
            growth_rate = 0.5d0 * ( log(e1) - log(e2) ) / (xtime(index)-xtime(index-1))
         else
            growth_rate = 0.d0

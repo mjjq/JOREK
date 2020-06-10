@@ -236,32 +236,58 @@ if (allocated(sim%groups)) then
 
     type is (particle_kinetic_relativistic)
       particle_type_name = 'particle_kinetic_relativistic'
-      ! allocate local and global momenta array
-      allocate(v(3,n_here), v_all(3,n_total)) !< maybe only master process requires to allocate v_all
-      ! loop on the local particle array
+ 
+      ! momenta
+      allocate(v(3,n_here), v_all(3,n_total))
       do j=1,n_here
-        v(:,j) = p(j)%p ! store all momenta
+        v(:,j) = p(j)%p
       end do
-      ! retrieve momenta from all particle tables and store them in the global one in the master process
       call MPI_Gatherv(v(:,:), 3*n_here, MPI_REAL8, &
         v_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
         MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-      ! allocate local and global charge array
-      allocate(q(n_here), q_all(n_total)) !< maybe only master process requires to allocate q_all
-      ! loop on the local particle array
+
+      ! q
+      allocate(q(n_here), q_all(n_total))
       do j=1,n_here
-        q(j) = p(j)%q ! store all charges
+        q(j) = p(j)%q
       end do
-      ! retrieve charges from all particle tables and store them in the global one in the master process
       call MPI_Gatherv(q(:), n_here, MPI_INTEGER, &
         q_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
         MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-      ! if master process
+
       if (my_id .eq. 0) then
-        call HDF5_array2D_saving(file,v_all,3,n_total,group_name//"v") ! store momenta in HDF5
-        call HDF5_array1D_saving_int(file,q_all,n_total,group_name//"q") ! store charges in HDF5
+        call HDF5_array2D_saving(file,v_all,3,n_total,group_name//"v") 
+        call HDF5_array1D_saving_int(file,q_all,n_total,group_name//"q") 
       end if
-      deallocate(v,q,v_all,q_all) ! deallocate all momenta and charges arrays
+      deallocate(v,q,v_all,q_all)
+
+    type is (particle_gc_relativistic)
+      particle_type_name = 'particle_gc_relativistic'
+
+      ! momenta (parallel momentum and magnetic moment)
+      allocate(v(2,n_here), v_all(2,n_total))
+      do j=1,n_here
+        v(:,j) = p(j)%p
+      end do
+      call MPI_Gatherv(v(:,:), 2*n_here, MPI_REAL8, &
+        v_all(:,:), particles_per_proc*2, [(sum(particles_per_proc(1:i),1)*2, i=0,n_cpu-1)], &
+        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+
+      ! q
+      allocate(q(n_here), q_all(n_total))
+      do j=1,n_here
+        q(j) = p(j)%q
+      end do
+      call MPI_Gatherv(q(:), n_here, MPI_INTEGER, &
+        q_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+
+      if (my_id .eq. 0) then
+        call HDF5_array2D_saving(file,v_all,2,n_total,group_name//"v") 
+        call HDF5_array1D_saving_int(file,q_all,n_total,group_name//"q") 
+      end if
+      deallocate(v,q,v_all,q_all)
+
     class default
       write(*,*) "error: missing type name declaration for write"
       call exit(1)
@@ -386,6 +412,8 @@ do i=1,n
     allocate(particle_fieldline::sim%groups(i)%particles(n_here), stat=ierr)
   case ('particle_kinetic_relativistic')
     allocate(particle_kinetic_relativistic::sim%groups(i)%particles(n_here), stat=ierr)
+  case ('particle_gc_relativistic')
+    allocate(particle_gc_relativistic::sim%groups(i)%particles(n_here), stat=ierr)
   case default
     write(*,*) "error: missing type name declaration for read"
     call exit(1)
@@ -426,6 +454,7 @@ do i=1,n
   deallocate(int4_1D)
 
   select type (p => sim%groups(i)%particles)
+
   type is (particle_kinetic)
     ! v
     allocate(real8_2D(3,n_here))
@@ -442,6 +471,7 @@ do i=1,n
       p(j)%q = int4_1D(j)
     end do
     deallocate(int4_1D)
+
   type is (particle_kinetic_leapfrog)
     ! v
     allocate(real8_2D(3,n_here))
@@ -458,6 +488,7 @@ do i=1,n
       p(j)%q = int4_1D(j)
     end do
     deallocate(int4_1D)
+
   type is (particle_gc)
     ! E
     allocate(real8_1D(n_here))
@@ -480,6 +511,7 @@ do i=1,n
       p(j)%q = int4_1D(j)
     end do
     deallocate(int4_1D)
+
   type is (particle_fieldline)
     ! v
     allocate(real8_1D(n_here))
@@ -488,7 +520,9 @@ do i=1,n
       p(j)%v = real8_1D(j)
     end do
     deallocate(real8_1D)
+
   type is (particle_kinetic_relativistic)
+
     ! momenta [AMU*m/s]
     allocate(real8_2D(3,n_here))
     call HDF5_array2D_reading(file, real8_2D, group_name//"v",start=[0_HSIZE_T,i_here])
@@ -496,6 +530,7 @@ do i=1,n
       p(j)%p = real8_2D(:,j)
     end do
     deallocate(real8_2D)
+
     ! electric charge q
     allocate(int4_1D(n_here))
     call HDF5_array1D_reading_int(file, int4_1D, group_name//"q", start=[i_here])
@@ -503,6 +538,25 @@ do i=1,n
       p(j)%q = int4_1D(j)
     end do
     deallocate(int4_1D)    
+
+  type is (particle_gc_relativistic)
+
+    ! momenta (parallel momentum and magnetic moment)
+    allocate(real8_2D(2,n_here))
+    call HDF5_array2D_reading(file, real8_2D, group_name//"v",start=[0_HSIZE_T,i_here])
+    do j=1,n_here
+      p(j)%p = real8_2D(:,j)
+    end do
+    deallocate(real8_2D)
+
+    ! electric charge q
+    allocate(int4_1D(n_here))
+    call HDF5_array1D_reading_int(file, int4_1D, group_name//"q", start=[i_here])
+    do j=1,n_here
+      p(j)%q = int4_1D(j)
+    end do
+    deallocate(int4_1D)    
+
   end select
 
   call HDF5_integer_reading(file,sim%groups(i)%Z,group_name//"Z")

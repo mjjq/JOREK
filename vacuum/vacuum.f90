@@ -13,7 +13,6 @@ module vacuum
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
   integer, parameter  :: ivar_psi = 1                    !< Index of Psi variable
   integer, parameter  :: ivar_j   = 3                    !< Index of j variable
-  real*8              :: freeb_fact                      !< Switches on free-boundary terms in elt_matrix when =1.
   
   !> @name Resistive wall only
   real*8              :: wall_resistivity_fact           !< Scaling factor for the wall and coil resistivities specified in STARWALL
@@ -376,10 +375,6 @@ module vacuum
     sr%ntri_w = 0
     sr%n_tor  = 0
     sr%n_tor0 = 0
-    
-    ! --- Switch on terms on the RHS of current equation definition when using free-boundary
-    freeb_fact = 0.d0
-    if ( freeboundary ) freeb_fact = 1.d0
     
     if ( (my_id == 0) .and. (sum(pf_coils%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
        write(*,*) 'WARNING: Poloidal field coil perturbation pf_coils%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
@@ -799,6 +794,7 @@ module vacuum
 
     call MPI_BCAST(n_dof_starwall,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     
+    sz_net     = 0
     sz_diag(:) = 0
     sz_pol(:)  = 0
     sz_rmp(:)  = 0
@@ -841,7 +837,7 @@ module vacuum
         if ( allocated(net_tor_wall_curr) ) deallocate(net_tor_wall_curr)
         if ( allocated(diag_coil_curr) )    deallocate(diag_coil_curr)
         if ( allocated(pf_coil_curr  ) )    deallocate(pf_coil_curr)
-        if ( allocated(rmp_coil_curr ) )    deallocate(pf_coil_curr)
+        if ( allocated(rmp_coil_curr ) )    deallocate(rmp_coil_curr)
         if (         sz_net  > 0 ) allocate( net_tor_wall_curr(sz_net) )
         if ( minval(sz_diag) > 0 ) allocate( diag_coil_curr(sz_diag(1), sz_diag(2)) )
         if ( minval(sz_pol)  > 0 ) allocate(   pf_coil_curr( sz_pol(1),  sz_pol(2)) )
@@ -859,7 +855,6 @@ module vacuum
     end if
     
     call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(freeb_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     
   end subroutine broadcast_vacuum
 

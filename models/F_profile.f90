@@ -15,7 +15,7 @@ logical :: xpoint2
 integer :: xcase2
 real*8  :: Fconst, profF, profF1, F_prof, dF_dpsi, dF_dz, dF_dpsi2, dF_dz2, dF_dpsi_dz
 real*8  :: FFprime_prof, profFF, profFF1, FF_prof, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz
-real*8  :: dF_dpsi3, psi_edge, F_edge, sqrt_edge
+real*8  :: dF_dpsi3, psi_edge, sqrt_edge, F_edge, F_constant
 real*8  :: Z, Z_xpoint(2), psi, psi_axis, psi_bnd,  psi_n, psi_barrier, sig_F, sigz, delta_psi
 real*8  :: psi_star
 real*8  :: atn, datn, d2atn, d3atn
@@ -47,19 +47,24 @@ dF_dpsi2   = 0.d0
 dF_dz2     = 0.d0
 dF_dpsi_dz = 0.d0
 
+! REMARK: THIS CHECK NEEDS TO BE MOVED. TEMPORARILY COMMENTED.
 ! --- There are some rules when using FF_coefs with the F-profile in Full-MHD
-if (myFF_1 .ne. 0.d0) then
-  write(*,*)'Full-MHD Warning!!! The F-profile does not like it if FF_1 is not zero !!!'
-  write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
-endif
-if (myFF_coef(4) .gt. 0.01) then
-  write(*,*)'Full-MHD Warning!!! The tanh at FF_coef(5) with width FF_coef(4) is supposed to be a cut-off at the plasma edge !!!'
-  write(*,*)'                    ie. FF_coef(5) should be the edge of your plasma, and FF_coef(4) should be very small...'
-  write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
-endif
+!if (myFF_1 .ne. 0.d0) then
+!  write(*,*)'Full-MHD Warning!!! The F-profile does not like it if FF_1 is not zero !!!'
+!  write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
+!endif
+!if (myFF_coef(4) .gt. 0.01) then
+!  write(*,*)'Full-MHD Warning!!! The tanh at FF_coef(5) with width FF_coef(4) is supposed to be a cut-off at the plasma edge !!!'
+!  write(*,*)'                    ie. FF_coef(5) should be the edge of your plasma, and FF_coef(4) should be very small...'
+!  write(*,*)'                    if you don,t respect this rule, we cannot guarantee that your F-profile and FFprime will be consistent!'
+!endif
 
-! --- the cutoff of the FFprime at the edge is traditionally the tanh at FF_coef(5), not at psi_n=1.0
-psi_edge  = myFF_coef(5)
+! --- The cutoff of the FFprime at the edge is traditionally the tanh at FF_coef(5), not at psi_n=1.0
+! --- However, F needs to be F0 outside the plasma, so we take a point far away.
+! --- To keep safe, for limiter plasma, the user might have non-zero FF' outside psi_n=1.0, because we
+! --- simply don't solve this, so in this case, we use psi_n=1.0
+psi_edge  = 1.0
+if (xpoint2) psi_edge  = max(1.0,myFF_coef(5) + 2.0 * myFF_coef(4))
 
 ! --- psi_norm
 psi_n = (psi - psi_axis)/(psi_bnd - psi_axis)
@@ -88,16 +93,16 @@ dpert_dpsi3 = - myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**5 / my
               + myFF_coef(6) / cosh((psi_n - myFF_coef(7))/myFF_coef(8))**3 / myFF_coef(8)**4 * 2.0 / delta_psi**4 * no_delta_psi &
                              * sinh((psi_n - myFF_coef(7))/myFF_coef(8))
 
-! --- Value of F at the edge
+! --- Value of F at the edge should be F0
+F_edge = F0
 sqrt_edge =   2.0 * (myFF_0 - myFF_1) * (psi_edge + myFF_coef(1)/2.d0 * psi_edge**2 &
                                                   + myFF_coef(2)/3.d0 * psi_edge**3 &
                                                   + myFF_coef(3)/4.d0 * psi_edge**4 ) * delta_psi &
-            + 2.0 * myFF_coef(6) * tanh((psi_edge - myFF_coef(7))/myFF_coef(8)) / 2.d0 &
-            + F0**2
-F_edge    = sqrt_edge**0.5 
+            + 2.0 * myFF_coef(6) * tanh((psi_edge - myFF_coef(7))/myFF_coef(8)) / 2.d0 * no_delta_psi
+F_constant  = F_edge**2 - sqrt_edge
 
 ! --- sqrt part
-sqrt_term        = 2.0 * (myFF_0 - myFF_1) * poly        + 2.0 * pert            + F0**2 
+sqrt_term        = 2.0 * (myFF_0 - myFF_1) * poly        + 2.0 * pert            + F_constant
 dsqrt_term_dpsi  = 2.0 * (myFF_0 - myFF_1) * dpoly_dpsi  + 2.0 * dpert_dpsi 
 dsqrt_term_dpsi2 = 2.0 * (myFF_0 - myFF_1) * dpoly_dpsi2 + 2.0 * dpert_dpsi2
 dsqrt_term_dpsi3 = 2.0 * (myFF_0 - myFF_1) * dpoly_dpsi3 + 2.0 * dpert_dpsi3
@@ -209,6 +214,7 @@ if ( xpoint2 ) then
   dFF_dpsi_dz  = dFF_dpsi     * ( datn_z * atn_z_u +         atn_z * datn_z_u)
 
 endif
+
 
 
 

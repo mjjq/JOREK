@@ -563,6 +563,7 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'gmres_max_iter        ', gmres_max_iter
   write(*,REAL_FMT) 'gmres tolerance       ', gmres_tol
   write(*,INTG_FMT) 'iter_precon           ', iter_precon
+  write(*,INTG_FMT) 'max_steps_noUpdate    ', max_steps_noUpdate
   write(*,INTG_FMT) 'gmres_m               ', gmres_m
   write(*,REAL_FMT) 'gmres_4               ', gmres_4
   write(*,LOGI_FMT) 'centralize_harm_mat   ', centralize_harm_mat

@@ -47,7 +47,6 @@ program JOREK2
   use basis_at_gaussian, only: initialise_basis
   use mod_expression, only: exprs_all_int, init_expr
   use mod_integrals3D
-
 #ifdef USE_STRUMPACK
   use strumpack_module
 #endif

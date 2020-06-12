@@ -47,8 +47,7 @@ program JOREK2
   use basis_at_gaussian, only: initialise_basis
   use mod_expression, only: exprs_all_int, init_expr
   use mod_integrals3D
-  use trace_fieldlines_fullmhd_mod
-  use qprofile_fmhd_mod
+
 #ifdef USE_STRUMPACK
   use strumpack_module
 #endif
@@ -779,10 +778,6 @@ required = 0
     call print_equil_state(.true.)
     call save_special_points('special_equilibrium_points.dat', .false., ierr)
   end if
-
-  ! call trace_fieldlines_fullmhd(node_list, element_list, 10, (/3.406d0,3.651d0,3.759d0,3.837d0,3.907d0,3.967d0,4.026d0,4.083d0,4.140d0,4.200d0/), (/0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,0.d0/), (/0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,0.d0/), (/500,500,500,500,500,500,500,500,500,500/), 1.d0)
-  
-  !call qprofile_fmhd(node_list, element_list, 20)
 
   !***********************************************************************
   !*                 end of initilisation/equilibrium                    *

@@ -1243,7 +1243,6 @@ do ms=1, n_gauss
                     + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                    + (GAMMA - 1.) * BigR * Vpar0 * visco_par * (v_x * vpar0_x + v_y * vpar0_y)          * xjac * tstep &
                     + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)      * xjac * tstep &
 !==========================End of viscous heating terms==============================
                     + v * BigR * (GAMMA - 1.) * BigR**2 * eta_T_ohm * zj0**2            * xjac * tstep  &
@@ -1944,8 +1943,6 @@ do ms=1, n_gauss
                            + (GAMMA - 1.) * v * E_ion_bg * (r0-rn0) * F0 / BigR * vpar_p         * xjac * theta * tstep  &
 !================= End ionization potential energy ===========================
 !============================Behold, the parallel viscous heating terms!=============
-                           - (GAMMA - 1.) * BigR * Vpar * visco_par * (v_x*vpar0_x + v_y*vpar0_y)* xjac * theta * tstep  &
-                           - (GAMMA - 1.) * BigR * Vpar0 * visco_par * (v_x*vpar_x + v_y*vpar_y) * xjac * theta * tstep  &
                            - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y)              &
                                                                                                  * xjac * theta * tstep  &
 !==========================End of viscous heating terms==============================

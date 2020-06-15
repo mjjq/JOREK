@@ -837,7 +837,7 @@ module vacuum
         if ( allocated(net_tor_wall_curr) ) deallocate(net_tor_wall_curr)
         if ( allocated(diag_coil_curr) )    deallocate(diag_coil_curr)
         if ( allocated(pf_coil_curr  ) )    deallocate(pf_coil_curr)
-        if ( allocated(rmp_coil_curr ) )    deallocate(pf_coil_curr)
+        if ( allocated(rmp_coil_curr ) )    deallocate(rmp_coil_curr)
         if (         sz_net  > 0 ) allocate( net_tor_wall_curr(sz_net) )
         if ( minval(sz_diag) > 0 ) allocate( diag_coil_curr(sz_diag(1), sz_diag(2)) )
         if ( minval(sz_pol)  > 0 ) allocate(   pf_coil_curr( sz_pol(1),  sz_pol(2)) )

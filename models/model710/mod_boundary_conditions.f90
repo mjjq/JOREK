@@ -40,30 +40,30 @@ contains
     implicit none
 
     ! Subroutine parameters
-    INTEGER,                   intent(in)   :: my_id
-    INTEGER,                   intent(in)   :: local_elms(*)
-    INTEGER,                   intent(in)   :: n_local_elms
-    INTEGER,                   intent(in)   :: index_min
-    INTEGER,                   intent(in)   :: index_max
-    INTEGER,                   intent(in)   :: xcase2
-    TYPE (type_node_list),     intent(in)   :: node_list
-    TYPE (type_element_list),  intent(in)   :: element_list
-    TYPE (type_bnd_node_list), intent(in)   :: bnd_node_list
-    logical,                   intent(in)   :: xpoint2
-    REAL*8,                    intent(in)   :: R_axis
-    REAL*8,                    intent(in)   :: Z_axis
-    REAL*8,                    intent(in)   :: psi_axis
-    REAL*8,                    intent(in)   :: psi_bnd
-    REAL*8,                    intent(in)   :: R_xpoint(2)
-    REAL*8,                    intent(in)   :: Z_xpoint(2)
-    REAL*8,                    intent(in)   :: psi_xpoint(2)
-    logical,                   intent(in)   :: gmres
-    logical,                   intent(in)   :: solve_only
-    real*8,                    intent(inout):: rhs_loc(*)
-    integer,                   intent(in)   :: i_tor_min, i_tor_max 
-    integer, pointer,          intent(in)   :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, pointer,          intent(in)   :: irn(:), jcn(:) 
-    real*8, pointer,           intent(in)   :: A_mat(:) 
+    INTEGER,                   intent(in)    :: my_id
+    INTEGER,                   intent(in)    :: local_elms(*)
+    INTEGER,                   intent(in)    :: n_local_elms
+    INTEGER,                   intent(in)    :: index_min
+    INTEGER,                   intent(in)    :: index_max
+    INTEGER,                   intent(in)    :: xcase2
+    TYPE (type_node_list),     intent(in)    :: node_list
+    TYPE (type_element_list),  intent(in)    :: element_list
+    TYPE (type_bnd_node_list), intent(in)    :: bnd_node_list
+    logical,                   intent(in)    :: xpoint2
+    REAL*8,                    intent(in)    :: R_axis
+    REAL*8,                    intent(in)    :: Z_axis
+    REAL*8,                    intent(in)    :: psi_axis
+    REAL*8,                    intent(in)    :: psi_bnd
+    REAL*8,                    intent(in)    :: R_xpoint(2)
+    REAL*8,                    intent(in)    :: Z_xpoint(2)
+    REAL*8,                    intent(in)    :: psi_xpoint(2)
+    logical,                   intent(in)    :: gmres
+    logical,                   intent(in)    :: solve_only
+    real*8,                    intent(inout) :: rhs_loc(*)
+    integer,                   intent(in)    :: i_tor_min, i_tor_max 
+    integer, allocatable,      intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer, allocatable,      intent(inout) :: irn(:), jcn(:) 
+    real*8,  allocatable,      intent(inout) :: A_mat(:) 
 
     ! Internal parameters
     real*8  :: zbig, zbig_backup
@@ -141,8 +141,9 @@ contains
 
                     ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
 
-                    irn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
-                    jcn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                    irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                    jcn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                    A_mat(ilarge2) = zbig
                   endif
 
                   index_node = node_list%node(inode)%index(2)
@@ -153,9 +154,9 @@ contains
 
                     ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
 
-                    irn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
-                    jcn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
-
+                    irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                    jcn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
+                    A_mat(ilarge2) = zbig
                   endif
 
                 endif

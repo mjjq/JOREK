@@ -88,7 +88,7 @@ do i=2, surface_list%n_psi
       grad_psi = sign(1d0, ES%psi_axis - ES%psi_bnd ) * grad_psi ! to get q profile with the correct sign 
 
 #ifdef fullmhd
-      call interp(node_list,element_list,i_elm, 456 ,1,ri,si, Fgi, dFgi_dr,dFgi_ds,dFgi_drs,dFgi_drr,dFgi_dss)  ! ivar = 456 for Fprof_eq
+      call interp(node_list,element_list,i_elm, 710 ,1,ri,si, Fgi, dFgi_dr,dFgi_ds,dFgi_drs,dFgi_drr,dFgi_dss)  ! ivar = 710 for Fprof_eq
 #else
       Fgi = F0
 #endif

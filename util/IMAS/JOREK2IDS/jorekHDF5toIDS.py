@@ -92,8 +92,8 @@ if  __name__ == "__main__":
     f = jorek.fields()
 
     print("PREPARING IDS")
-    shot = 1000
-    run = 4
+    shot = 303
+    run = 1
     username = 'penkod'
     database = 'jorek'
 
@@ -106,6 +106,9 @@ if  __name__ == "__main__":
     #                                   source = 'JOREK',
     #                                   comment = '')
     w_ids.createGridGGD('mhd', 1)
+
+    # w_ids.imas_obj.mhd.time.resize(len(filePathList))
+    allTimeValues = np.array([0]*len(filePathList))
 
     # Resize GGD to the number of timeslices
     w_ids.imas_obj.mhd.ggd.resize(len(filePathList))
@@ -169,6 +172,7 @@ if  __name__ == "__main__":
                                    n = 0,
                                    label = 'JOREK output HDF5 file grid with quantities')
 
+
         quantity_names_list = f.var_names
         quantities_array = f.val
         # print("quantity_names_list: ", quantity_names_list)
@@ -180,6 +184,8 @@ if  __name__ == "__main__":
 
         # Set time
         w_ids.imas_obj.mhd.ggd[i_slice].time = f.t_now
+        # Add to array of all time values of all time slices
+        allTimeValues[i_slice] = f.t_now
 
         print("Array of quantity labels: ", quantity_names_list)
         for i in range(len(quantity_names_list)):
@@ -244,6 +250,9 @@ if  __name__ == "__main__":
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i,:], 1)
 
                 print("v_par max value: ", max(f.val[i,:]))
+
+    # Set time array
+    # w_ids.imas_obj.mhd.time = allTimeValues
 
     w_ids.ids.put()
 

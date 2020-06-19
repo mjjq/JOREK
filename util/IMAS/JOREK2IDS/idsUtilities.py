@@ -16,6 +16,8 @@
 #****************************************************
 #     Copyright(c) 2020- D. Penko
 
+import numpy as np
+
 ENABLED = True
 try:
     import imas
@@ -174,12 +176,6 @@ class readIDS(basicIDS):
         print("getMesh START")
         grid_ggd = self.grid_ggd[n]
 
-        points_geo = []
-        list0D = []    # vertices
-        list1D = []    # edges
-        list2D = []    # 2D cells /faces
-        list3D = []    # 3D volumes
-
         # Get name of the mesh
         meshName = str(ggd.identifier.name)
 
@@ -223,6 +219,21 @@ class readIDS(basicIDS):
         print("num_obj_1D_all: ", num_obj_1D_all)
         print("num_obj_2D_all: ", num_obj_2D_all)
         print("num_obj_3D_all: ", num_obj_3D_all)
+
+
+        # TODO: the use of empty lists and using 'append' is not and efficient
+        #       way. Change to zero numpy arrays and change values at index
+        points_geo = []
+        list0D = []  # vertices
+        list1D = []  # edges
+        list2D = []  # 2D cells /faces
+        list3D = []  # 3D volumes
+
+        # points_geo = np.array([0]*num_obj_0D_all)
+        # list0D = np.array([0]*num_obj_0D_all)    # vertices
+        # list1D = np.array([0]*num_obj_1D_all)    # edges
+        # list2D = np.array([0]*num_obj_2D_all)    # 2D cells /faces
+        # list3D = np.array([0]*num_obj_3D_all)    # 3D volumes
 
         # Get geometry (coordinates) of each point and
         # get connectivity array (node list) of the 0D objects
@@ -415,7 +426,7 @@ class writeIDS(basicIDS):
         ids_equilibrium = self.imas_obj.equilibrium
         ids_equilibrium.putNonTimed()
         ids_equilibrium.ids_properties.homogeneous_time = 1
-        ids_equilibrium.time = [time]
+        ids_equilibrium.time = np.array([time])
         return ids_equilibrium
 
     def setBaseWall(self):
@@ -426,7 +437,7 @@ class writeIDS(basicIDS):
         ids_wall.putNonTimed()
         ids_wall.ids_properties.homogeneous_time = 1
         ids_wall.time.resize(1)
-        ids_wall.time = [time]
+        ids_wall.time = np.array([time])
         return ids_wall
 
     def createDatasetDescriptionIDS(self, user, source='', comment=''):
@@ -449,7 +460,7 @@ class writeIDS(basicIDS):
         desc.imas_version = os.environ['IMAS_VERSION']
         desc.dd_version = os.environ['UAL_VERSION']
         desc.time.resize(1)
-        desc.time = [time]
+        desc.time = np.array([time])
 
         # Write the database description information
         desc.putSlice()
@@ -464,7 +475,7 @@ class writeIDS(basicIDS):
         ids.ids_properties.homogeneous_time = 1
         ids.time.resize(1)
         # ids.time = [time]
-        ids.time = [0]
+        ids.time = np.array([0])
         # Resize the grid_ggd[:] node
         ids.grid_ggd.resize(numSlices)
 
@@ -477,7 +488,7 @@ class writeIDS(basicIDS):
         ids.putNonTimed()
         ids.ids_properties.homogeneous_time = 1
         ids.time.resize(1)
-        ids.time = [time]
+        ids.time = np.array([time])
         # Resize the grid_ggd[:] node
         ids.description_ggd.resize(1)
         ids.description_ggd[0].grid_ggd.resize(numSlices)
@@ -490,7 +501,7 @@ class writeIDS(basicIDS):
         # ids.putNonTimed()
         ids.ids_properties.homogeneous_time = 1
         ids.time.resize(1)
-        ids.time = [time]
+        ids.time = np.array([time])
         # Resize tree node (allocate)
         ids.grid_ggd.resize(numSlices)
         return ids, ids.grid_ggd
@@ -516,7 +527,7 @@ class writeIDS(basicIDS):
         # - Set coordinates_type
         grid_ggd.space[0].coordinates_type.resize(num_coordtype)
         # - Fill coordinates_type
-        grid_ggd.space[0].coordinates_type = [1, 2, 3]
+        grid_ggd.space[0].coordinates_type = np.array([1, 2, 3])
 
         # Additional information on the grid
         # TODO
@@ -539,9 +550,12 @@ class writeIDS(basicIDS):
         # # Writing 0D elements
         for i in range(num_points): # it should be num_points == len(num_obj_0D_all)
             ids_dim_0D.object[i].geometry.resize(num_coordtype)
-            ids_dim_0D.object[i].nodes.resize(1)
             ids_dim_0D.object[i].geometry = points_geo[i]
-            ids_dim_0D.object[i].nodes[0] = i + 1
+            # Note: Separate index for vertices is not needed as "i" already
+            #       indicates the object index (not neccessary to point
+            #       to itself)
+            # ids_dim_0D.object[i].nodes.resize(1)
+            # ids_dim_0D.object[i].nodes[0] = i + 1
 
         num_obj_0D_all = len(obj_0D_list)
         num_obj_1D_all = len(obj_1D_list)

@@ -31,7 +31,7 @@ module mod_new_diag
   ! --- Constants
   character(len=15), parameter, private :: THIS_MOD_NAME      = 'mod_new_diag'
   
-  !    --- Used by routine midplane_profile
+  !    --- Used by routine midplane_profile and midplane_plane
   integer,           parameter          :: HIGHFIELD_SIDE     = 0
   integer,           parameter          :: LOWFIELD_SIDE      = 1
   integer,           parameter          :: BOTH_SIDES         = 2
@@ -130,6 +130,70 @@ module mod_new_diag
     end if
     
   end subroutine midplane_profile
+  
+  
+  
+  
+  
+  !> Toroidally averaged expressions on the midplane.
+  subroutine midplane_plane(node_list, element_list, eq, units, expr_list, res2d, side, n_pts,  &
+    ierr, filename, append, comment)
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':midplane_profile'
+    
+    ! --- Routine parameters
+    type(type_node_list),           intent(in)    :: node_list    !< List of grid nodes
+    type(type_element_list),        intent(in)    :: element_list !< List of grid elements
+    type(t_equil_state),            intent(in)    :: eq           !< Plasma equilibrium information
+    integer,                        intent(in)    :: units        !< Output in which units?
+    type(t_expr_list),              intent(in)    :: expr_list    !< List of expressions to evaluate
+    real*8, allocatable,            intent(inout) :: res2d(:,:,:) !< Result array
+    integer,                        intent(in)    :: side         !< Side of plasma (hfs, lfs, both)
+    integer,                        intent(in)    :: n_pts        !< Number of points in profiles
+    integer,                        intent(out)   :: ierr         !< Error code
+    character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
+    logical,          optional,     intent(in)    :: append       !< Append or overwrite [optional]
+    character(len=*), optional,     intent(in)    :: comment      !< Comment for ascii file [opti.]
+    
+    ! --- Local variables
+    real*8               :: Rstart, Rend
+    real*8, allocatable  :: result(:,:,:,:)
+    type(t_pol_pos_list) :: pol_pos_list
+    type(t_tor_pos_list) :: tor_pos_list
+    
+    ierr = 0
+    
+    if ( side == LOWFIELD_SIDE ) then
+      Rstart = eq%R_axis     + 1.d-3
+      Rend   = eq%R_midpl(2) - 1.d-3
+    else if ( side == HIGHFIELD_SIDE ) then
+      Rstart = eq%R_midpl(1) + 1.d-3
+      Rend   = eq%R_axis     - 1.d-3
+    else if ( side == BOTH_SIDES ) then
+      Rstart = eq%R_midpl(1) + 1.d-3
+      Rend   = eq%R_midpl(2) - 1.d-3
+    else
+      ierr = 100
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': parameter side has illegal value'
+      return
+    end if
+    pol_pos_list = pol_pos(node_list, element_list, eq, Rstart=Rstart, Rend=Rend, Z=eq%Z_axis,     &
+      n=n_pts)
+    tor_pos_list = tor_pos(nphi=250) ! Only temporary hard coded!
+    
+    call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    call reduce_result_to_2d(ierr, result, res2d, i2=1)
+    
+    if ( allocated(result) ) deallocate(result)
+    call cleanup_pol_pos(pol_pos_list)
+    call cleanup_tor_pos(tor_pos_list)
+    
+    if ( present(filename) ) then
+      call write_ascii_2d(ierr, eq, expr_list, res2d, FORM_TABLE, header=.true.,                   &
+        filename=filename, append=append, blanks=.true., comment=comment)
+    end if
+    
+  end subroutine midplane_plane
   
   
   

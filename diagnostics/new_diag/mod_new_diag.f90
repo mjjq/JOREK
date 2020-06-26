@@ -31,7 +31,7 @@ module mod_new_diag
   ! --- Constants
   character(len=15), parameter, private :: THIS_MOD_NAME      = 'mod_new_diag'
   
-  !    --- Used by routine midplane_profile and midplane_plane
+  !    --- Used by routines midplane_profile and midplane_plane
   integer,           parameter          :: HIGHFIELD_SIDE     = 0
   integer,           parameter          :: LOWFIELD_SIDE      = 1
   integer,           parameter          :: BOTH_SIDES         = 2
@@ -71,7 +71,7 @@ module mod_new_diag
   
   
   !> Toroidally averaged expressions on the midplane.
-  subroutine midplane_profile(node_list, element_list, eq, units, expr_list, res1d, side, n_pts,  &
+  subroutine midplane_profile(node_list, element_list, eq, units, expr_list, res1d, side, npts,  &
     ierr, filename, append, comment)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':midplane_profile'
@@ -84,7 +84,7 @@ module mod_new_diag
     type(t_expr_list),              intent(in)    :: expr_list    !< List of expressions to evaluate
     real*8, allocatable,            intent(inout) :: res1d(:,:)   !< Result array
     integer,                        intent(in)    :: side         !< Side of plasma (hfs, lfs, both)
-    integer,                        intent(in)    :: n_pts        !< Number of points in profiles
+    integer,                        intent(in)    :: npts         !< Number of points in profiles
     integer,                        intent(out)   :: ierr         !< Error code
     character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
     logical,          optional,     intent(in)    :: append       !< Append or overwrite [optional]
@@ -113,7 +113,7 @@ module mod_new_diag
       return
     end if
     pol_pos_list = pol_pos(node_list, element_list, eq, Rstart=Rstart, Rend=Rend, Z=eq%Z_axis,     &
-      n=n_pts)
+      n=npts)
     tor_pos_list = tor_pos(nphi=4*n_plane) !###
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
@@ -135,8 +135,8 @@ module mod_new_diag
   
   
   
-  !> Toroidally averaged expressions on the midplane.
-  subroutine midplane_plane(node_list, element_list, eq, units, expr_list, res2d, side, n_pts,  &
+  !> Expressions on the midplane.
+  subroutine midplane_plane(node_list, element_list, eq, units, expr_list, res2d, side, npts, nphi, &
     ierr, filename, append, comment)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':midplane_profile'
@@ -149,7 +149,8 @@ module mod_new_diag
     type(t_expr_list),              intent(in)    :: expr_list    !< List of expressions to evaluate
     real*8, allocatable,            intent(inout) :: res2d(:,:,:) !< Result array
     integer,                        intent(in)    :: side         !< Side of plasma (hfs, lfs, both)
-    integer,                        intent(in)    :: n_pts        !< Number of points in profiles
+    integer,                        intent(in)    :: npts         !< Number of points in radial direction
+    integer,                        intent(in)    :: nphi         !< Number of points in toroidal direction
     integer,                        intent(out)   :: ierr         !< Error code
     character(len=*), optional,     intent(in)    :: filename     !< Filename for ascii [optional]
     logical,          optional,     intent(in)    :: append       !< Append or overwrite [optional]
@@ -178,8 +179,8 @@ module mod_new_diag
       return
     end if
     pol_pos_list = pol_pos(node_list, element_list, eq, Rstart=Rstart, Rend=Rend, Z=eq%Z_axis,     &
-      n=n_pts)
-    tor_pos_list = tor_pos(nphi=250) ! Only temporary hard coded!
+      n=npts)
+    tor_pos_list = tor_pos(nphi=nphi)
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     call reduce_result_to_2d(ierr, result, res2d, i2=1)

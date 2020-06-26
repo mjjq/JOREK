@@ -1282,12 +1282,12 @@ module exec_commands
     ierr = 0
     
     ! --- Some checks
-    call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
-    call check_step_imported(ierr);            if ( ierr /= 0 ) return
-    call check_exprs_selected(ierr);           if ( ierr /= 0 ) return
+    call check_args(command%n_args,ierr,0,1);    if ( ierr /= 0 ) return
+    call check_step_imported(ierr);              if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);             if ( ierr /= 0 ) return
     
-    units = get_int_setting('units', ierr)
-    npts  = get_int_setting('linepoints', ierr)
+    units = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
+    npts  = get_int_setting('linepoints', ierr); if ( ierr /= 0 ) return
     
     if ( command%n_args == 0 ) then
       s = 'midplane'
@@ -1327,18 +1327,19 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer :: units, npts, side
+    integer :: units, npts, nphi, side
     character(len=1024) :: filename, comment, s
     
     ierr = 0
     
     ! --- Some checks
-    call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
-    call check_step_imported(ierr);            if ( ierr /= 0 ) return
-    call check_exprs_selected(ierr);           if ( ierr /= 0 ) return
+    call check_args(command%n_args,ierr,0,1);     if ( ierr /= 0 ) return
+    call check_step_imported(ierr);               if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);              if ( ierr /= 0 ) return
     
-    units = get_int_setting('units', ierr)
-    npts  = get_int_setting('linepoints', ierr)
+    units = get_int_setting('units', ierr);       if ( ierr /= 0 ) return
+    npts  = get_int_setting('linepoints', ierr);  if ( ierr /= 0 ) return
+    nphi  = get_int_setting('tor_points', ierr);  if ( ierr /= 0 ) return
     
     if ( command%n_args == 0 ) then
       s = 'midplane2d'
@@ -1350,17 +1351,17 @@ module exec_commands
       s = 'inner-midplane2d'
       side = HIGHFIELD_SIDE
     else
-      write(*,*) 'WARNING: Illegal parameter for command "midplane".'
+      write(*,*) 'WARNING: Illegal parameter for command "midplane2d".'
       ierr = 1
       return
     end if
     
-    write(filename,'(4a)') trim(DIR), 'exprs_'//trim(s)//                                                &
+    write(filename,'(4a)') trim(DIR), 'exprs_'//trim(s)//                                               &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call midplane_plane(node_list, element_list, ES, units, expr_list, res2d, side, npts,        &
+    call midplane_plane(node_list, element_list, ES, units, expr_list, res2d, side, npts, nphi,          &
       ierr, filename=trim(filename), append=(.not.first_step), comment=trim(comment) )
     
   end subroutine midplane2d

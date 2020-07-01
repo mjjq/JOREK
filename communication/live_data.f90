@@ -783,7 +783,7 @@ module live_data
      sum_fluxes_dissip = flux_Pvn_t(index-1)  + flux_kinpar_t(index-1) + flux_qpar_t(index-1) + flux_qperp_t(index-1) &
                        + viscopar_dissip_tot_t(index-1) - heat_src_tot_t(index-1)  &
                        + ohmic_tot_t(index-1)*(1.d0 - eta_ohmic/eta) - mag_ener_src_tot(index-1) &
-		       - flux_poynting_t(index-1)
+                       - flux_poynting_t(index-1)
 
      sum_mag_energy_terms = -ohmic_tot_t(index-1) + flux_poynting_t(index-1) + Magwork_tot_t(index-1) + mag_ener_src_tot(index-1) 
  

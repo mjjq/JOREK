@@ -138,7 +138,7 @@ real*8     :: Dn0x, Dn0y, Dn0p
 real*8     :: m_i_over_m_imp, m_imp
 !   -Mean impurity ionization state
 real*8     :: Z_imp, dZ_imp_dT, d2Z_imp_dT2, T0_Zimp, alpha_Zimp, Z_eff, dZ_eff_dT, eta_coef, deta_coef_dZeff
-real*8     :: dZ_eff_dr0, dZ_eff_drn0
+real*8     :: dZ_eff_dr0, dZ_eff_drn0, Z_eff_imp, dZ_eff_imp_dT
 
 !   -Coefficients related to Z_imp
 real*8     :: alpha_i, dalpha_i_dT, d2alpha_i_dT2
@@ -871,10 +871,15 @@ do ms=1, n_gauss
      dZ_eff_dr0   = 0.
      dZ_eff_drn0  = 0.
 
+     Z_eff_imp    = 0.
+     dZ_eff_imp_dT= 0.
+
      ! First get the value of Z_eff
      Z_eff        = r0_corr - rn0_corr
      do ion_i=1, imp_adas(1)%n_Z
        Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
+       Z_eff_imp  = Z_eff_imp + P_imp(ion_i) * real(ion_i,8)**2 ! The summation of normalized nZ**2 for impurity
+       dZ_eff_imp_dT = dZ_eff_imp_dT + dP_imp_dT(ion_i) * real(ion_i,8)**2 ! Its temperature gradient
      end do
      Z_eff        = Z_eff / ne_JOREK
      
@@ -1075,7 +1080,7 @@ do ms=1, n_gauss
     lambda_e_imp = 23. - log((ne_SI*1.d-6)**0.5*Z_imp*Te_corr_eV**(-1.5))
     lambda_e_bg  = 23. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.5)) ! Assuming bg_charge is 1! 
     nu_e_imp     = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*m_imp) ** 0.5&
-                   * Z_eff * Z_imp * (1.d14*central_density*rn0_corr*m_i_over_m_imp) * lambda_e_imp &
+                   * Z_eff_imp * (1.d14*central_density*rn0_corr*m_i_over_m_imp) * lambda_e_imp &
                    / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*m_imp)&
                    / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5
     nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
@@ -1098,7 +1103,11 @@ do ms=1, n_gauss
     !We negelect the coulomb log's dericatives due to their smallness
     dnu_e_imp_dTi   = -1.5*MASS_ELECTRON*nu_e_imp*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*m_imp*Te0_corr)
     dnu_e_imp_dTe   = -1.5*MASS_PROTON*m_imp*nu_e_imp*dTe0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*m_imp*Te0_corr) &
-                      + (dZ_eff_dT * dTe0_corr_dT / Z_eff +  dZ_imp_dT * dTe0_corr_dT / Z_imp) * nu_e_imp
+                      + 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*m_imp) ** 0.5&
+                        * dZ_eff_imp_dT * (1.d14*central_density*rn0_corr*m_i_over_m_imp) * lambda_e_imp &
+                        / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*m_imp)&
+                        / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5
+
     dnu_e_imp_drhon = nu_e_imp * drn0_corr_dn / rn0_corr 
     dnu_e_imp_drho  = 0.
 

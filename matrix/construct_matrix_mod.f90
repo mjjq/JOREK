@@ -386,9 +386,19 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
         inode = element_list%element(ielm)%vertex(iv)
 
+        if (node_list%node(inode)%axis_node      ) i_bnd = i_bnd + 2
         if (node_list%node(inode)%boundary .eq. 1) i_bnd = i_bnd + 1
         if (node_list%node(inode)%boundary .eq. 2) i_bnd = i_bnd + 1
         if (node_list%node(inode)%boundary .eq. 3) i_bnd = i_bnd + 2
+        if (node_list%node(inode)%boundary .eq. 4) i_bnd = i_bnd + 2
+        if (node_list%node(inode)%boundary .eq. 5) i_bnd = i_bnd + 2
+        if (node_list%node(inode)%boundary .eq. 9) i_bnd = i_bnd + 3
+        if (node_list%node(inode)%boundary .eq.11) i_bnd = i_bnd + 2
+        if (node_list%node(inode)%boundary .eq.12) i_bnd = i_bnd + 2
+        if (node_list%node(inode)%boundary .eq.15) i_bnd = i_bnd + 2
+        if (node_list%node(inode)%boundary .eq.19) i_bnd = i_bnd + 3
+        if (node_list%node(inode)%boundary .eq.20) i_bnd = i_bnd + 3
+        if (node_list%node(inode)%boundary .eq.21) i_bnd = i_bnd + 3
         if (i == 1 .and. iv == 1) then
           index_min_loc = minval(node_list%node(iv)%index)
           index_max_loc = maxval(node_list%node(iv)%index)

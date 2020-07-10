@@ -1,24 +1,26 @@
 #!/usr/bin/env python
 
-#  Name : jorekHDF5toIDS.py
+#   Name : jorekHDF5toIDS.py
 #
-#  Description :
-#           A script which reads a single JOREK HDF5 output file and writes its
-#           contents (grid geometry, data fields) to mhd IDS.
+#   Description :
+#       A script which reads a single JOREK HDF5 output file and writes its
+#       contents (grid geometry (xyz coordinates (!), quad connectivity
+#       array), data fields) to MHD IDS.
 #
-#           JOREK HDF5 file contents:
+#       JOREK HDF5 file contents:
 #           https://www.jorek.eu/wiki/doku.php?id=hdf5-tools&s[]=hdf5
 #
-#           Requirements:
-#               - pip3 install --user h2py
-#               - IMAS
+#   Requirements:
+#       - pip3 install --user h2py
+#       - IMAS
 #
-#  Author :
-#         Dejan Penko
-#  E-mail :
-#         dejan.penko@lecad.fs.uni-lj.si
 #
-#****************************************************
+#   Author :
+#       Dejan Penko
+#   E-mail :
+#       dejan.penko@lecad.fs.uni-lj.si
+#
+# *****************************************************************************
 #     Copyright(c) 2020- D. Penko
 
 from os import listdir, getenv
@@ -55,7 +57,7 @@ def getHDF5FileDialog():
         .getOpenFileName(None,
                          "Select VTK file",
                          "",
-                         "All Files (*);;H5 Files (*.h5);;HDF5 Files (*.hdf5)",
+                         "H5 Files (*.h5);;HDF5 Files (*.hdf5)",
                          options=options)
     # Close application
     app.exit()
@@ -114,7 +116,7 @@ to IMAS (IDSs). Example command:
     return IDS_parameters
 
 
-if  __name__ == "__main__":
+if __name__ == "__main__":
 
     # Set mandatory arguments
     IDS_parameters = checkArguments()
@@ -206,7 +208,7 @@ if  __name__ == "__main__":
             print ("* len(list_vertex[0]): \n", len(list_vertex[0]))
             print ("* list_vertex[0]: \n", list_vertex[0])
             # Remove the vtk cell type ID from the matrix
-            quad_conn_array = vtk_quad_conn_array[:,1:]
+            quad_conn_array = vtk_quad_conn_array[:, 1:]
             print ("* vtk_quad_conn_array: \n", vtk_quad_conn_array)
             print ("* vtk_quad_conn_array.shape: \n", vtk_quad_conn_array.shape)
             print("* len(f.xyz): ", len(f.xyz))
@@ -225,20 +227,18 @@ if  __name__ == "__main__":
             obj_2D_list_f90 = obj_2D_list_f90 + 1
 
             # Write grid geometry
-            w_ids.writeMeshToSlice(points_geo = f.xyz,
-                                   obj_0D_list = [],
-                                   obj_1D_list = [],
-                                   obj_2D_list = obj_2D_list_f90,
-                                   obj_3D_list = [],
-                                   n = 0,
-                                   label = 'JOREK output HDF5 file grid with quantities')
-
+            w_ids.writeMeshToSlice(points_geo=f.xyz,
+                                   obj_0D_list=[],
+                                   obj_1D_list=[],
+                                   obj_2D_list=obj_2D_list_f90,
+                                   obj_3D_list=[],
+                                   n=0,
+                                   label='JOREK output HDF5 file grid with quantities')
 
         quantity_names_list = f.var_names
         quantities_array = f.val
         # print("quantity_names_list: ", quantity_names_list)
         # print("quantities_array: ", quantities_array)
-
 
         # Set empty IDS path for quantity tree node
         IDSQuantityPath = None
@@ -252,39 +252,39 @@ if  __name__ == "__main__":
         for i in range(len(quantity_names_list)):
             label = quantity_names_list[i]
             print("Current quantity array: ", label)
-            if label == 'psi': # Flux / poloidal magnetic flux
+            if label == 'psi':  # Flux / poloidal magnetic flux
                 print("Writing quantity array: ", label)
                 # Resize/Allocate
                 w_ids.imas_obj.mhd.ggd[i_slice].psi.resize(1)
                 # Set IDS path
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].psi[0]
                 # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i,:], 1)
-            elif label == 'u': # Potential / electric potential
+                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i, :], 1)
+            elif label == 'u':  # Potential / electric potential
                 print("Writing quantity array: ", label)
                 # Resize/Allocate
                 w_ids.imas_obj.mhd.ggd[i_slice].phi_potential.resize(1)
                 # Set IDS path
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].phi_potential[0]
                 # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i,:], 1)
-            elif label == 'j': # Current / toroidal current density
+                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i, :], 1)
+            elif label == 'j':  # Current / toroidal current density
                 print("Writing quantity array: ", label)
                 # Resize/Allocate
                 w_ids.imas_obj.mhd.ggd[i_slice].j_tor.resize(1)
                 # Set IDS path
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].j_tor[0]
                 # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i,:], 1)
-            elif label == 'w': # Vorticity
+                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i, :], 1)
+            elif label == 'w':  # Vorticity
                 print("Writing quantity array: ", label)
                 # Resize/Allocate
                 w_ids.imas_obj.mhd.ggd[i_slice].vorticity.resize(1)
                 # Set IDS path
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].vorticity[0]
                 # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i,:], 1)
-            elif label == 'rho': # Mass Density
+                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i, :], 1)
+            elif label == 'rho':  # Mass Density
                 # print("Writing quantity array: ", label)
                 # # Resize/Allocate
                 # w_ids.imas_obj.mhd.ggd[i_slice].electrons.density.resize(1)
@@ -293,24 +293,24 @@ if  __name__ == "__main__":
                 # # Write quantities
                 # w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i,:], 1)
                 pass
-            elif label == 'T': # Temperature / total temperature
+            elif label == 'T':  # Temperature / total temperature
                 print("Writing quantity array: ", label)
                 # Resize/Allocate
                 w_ids.imas_obj.mhd.ggd[i_slice].electrons.temperature.resize(1)
                 # Set IDS path
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].electrons.temperature[0]
                 # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i,:], 1)
-            elif label == 'v_par': # V_parallel / parallel velocity
+                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i, :], 1)
+            elif label == 'v_par':  # V_parallel / parallel velocity
                 print("Writing quantity array: ", label)
                 # Resize/Allocate
                 w_ids.imas_obj.mhd.ggd[i_slice].velocity_parallel.resize(1)
                 # Set IDS path
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].velocity_parallel[0]
                 # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i,:], 1)
+                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i, :], 1)
 
-                print("v_par max value: ", max(f.val[i,:]))
+                print("v_par max value: ", max(f.val[i, :]))
 
     # Set time array
     # w_ids.imas_obj.mhd.time = allTimeValues

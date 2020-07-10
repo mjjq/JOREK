@@ -141,11 +141,15 @@ def setIDSProperties(mhd, hdf5_file):
 
     mhd.time.resize(1) # mandatory
 
-    # mhd.ids_properties.comment = ...
+    print(f"Model: {hdf5_file['jorek_model'][0]}")
+
+    mhd.ids_properties.comment = f"model{hdf5_file['jorek_model'][0]}"
     mhd.ids_properties.source = "JOREK"
     mhd.ids_properties.provider = getenv("USER")
     mhd.ids_properties.creation_date = str(datetime.datetime.now())
-    mhd.ids_properties.version_put = getenv("UAL_VERSION")
+    mhd.ids_properties.version_put.data_dictionary = getenv("IMAS_VERSION")
+    mhd.ids_properties.version_put.access_layer = getenv("UAL_VERSION")
+    mhd.ids_properties.version_put.access_layer_language = getenv("Python 3.7.4")
 
 
 def setCodeContents_unfinished(mhd, file=None):
@@ -178,6 +182,23 @@ def setBezierGrid(mhd, slice, hdf5_file):
     (found in HDF5 file)
     """
 
+    x = hdf5_file['x'][0]
+    size = hdf5_file['size'][0]
+    vertex = hdf5_file['vertex'][0]
+    values = hdf5_file['values'][0]
+
+    t_now = hdf5_file['t_now'][0]
+    tstep = hdf5_file['tstep'][0]
+    jorek_model = hdf5_file['jorek_model'][0]
+    n_elements = hdf5_file['n_elements'][0]
+    n_nodes = hdf5_file['n_nodes'][0]
+
+    print(f"t_now: {t_now}")
+    print(f"tstep: {tstep}")
+    print(f"jorek_model: {jorek_model}")
+    print(f"n_elements: {n_elements}")
+    print(f"n_nodes: {n_nodes}")
+
     g = mhd.grid_ggd[i_slice]
     g.time = hdf5_file['t_now'][0]
 
@@ -196,7 +217,7 @@ def setBezierGrid(mhd, slice, hdf5_file):
     # IDEA: could the dofs be suggested to be put here? Using dummy indices for
     # now
     # Four dofs: # p_k, u_k, v_k, w_k
-    g.space[0].coordinates_type = [1000, 1001, 1002, 1003]  # dummy IDs
+    g.space[0].coordinates_type = np.array([1000, 1001, 1002, 1003])  # dummy IDs
 
     g.space[0].objects_per_dimension.resize(3)
 
@@ -261,23 +282,6 @@ if __name__ == "__main__":
         hdf5_file = getHDF5File(filePathList[i_slice])
 
         print("keys: ", hdf5_file.keys())
-
-        x = hdf5_file['x'][0]
-        size = hdf5_file['size'][0]
-        vertex = hdf5_file['vertex'][0]
-        values = hdf5_file['values'][0]
-
-        t_now = hdf5_file['t_now'][0]
-        tstep = hdf5_file['tstep'][0]
-        jorek_model = hdf5_file['jorek_model'][0]
-        n_elements = hdf5_file['n_elements'][0]
-        n_nodes = hdf5_file['n_nodes'][0]
-
-        print(f"t_now: {t_now}")
-        print(f"tstep: {tstep}")
-        print(f"jorek_model: {jorek_model}")
-        print(f"n_elements: {n_elements}")
-        print(f"n_nodes: {n_nodes}")
 
         # variables = [0, 1, 2, 3, 4, 5, 6]
         var_names = ["psi", "u", "j", "w", "rho", "T", "v_par"]

@@ -34,7 +34,7 @@ module global_distributed_matrix
   
   
   !> Determine the matrix row or column for given values of ::i_index, ::i_var, and ::i_tor.
-  integer pure function det_row_col(i_index, i_var, i_tor)
+  integer pure function det_row_col(i_index, i_var, i_tor, i_tor_min, i_tor_max)
     
     use mod_parameters, only: n_tor, n_var
     
@@ -44,8 +44,14 @@ module global_distributed_matrix
     integer, intent(in) :: i_index   !< node%index property for the node and node degree of freedom
     integer, intent(in) :: i_var     !< Variable number
     integer, intent(in) :: i_tor     !< Toroidal mode number
-    
-    det_row_col =  n_tor * n_var * (i_index-1) + n_tor * (i_var-1) + i_tor
+    integer, intent(in) :: i_tor_min !< Minimum Toroidal mode number
+    integer, intent(in) :: i_tor_max !< Maximum Toroidal mode number
+
+    ! --- Local variables
+    integer :: n_tor_local           ! local toroidal number
+
+    n_tor_local = i_tor_max - i_tor_min + 1 
+    det_row_col =  n_tor_local * n_var * (i_index-1) + n_tor_local * (i_var-1) + i_tor
     
   end function det_row_col
   
@@ -133,7 +139,7 @@ module global_distributed_matrix
   
   
   !> Initialize the (freeboundary related) row and column numbers in the sparse matrix structure.
-  subroutine global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max)
+  subroutine global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max, i_tor_min, i_tor_max)
     
     use mod_parameters, only: n_tor, n_var
     use data_structure, only: type_node_list, type_bnd_node_list
@@ -144,6 +150,7 @@ module global_distributed_matrix
     type(type_node_list),        intent(in)    :: node_list            !< List of grid nodes
     type(type_bnd_node_list),    intent(in)    :: bnd_node_list        !< List of boundary grid nodes
     integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
+    integer,                     intent(in)    :: i_tor_min, i_tor_max !< Toroidal mode numbers 
     
     ! --- Local variables
     integer :: l_node_bnd, l_dof, l_node, l_dir, l_index, l_tor, l_var, l_row
@@ -152,7 +159,7 @@ module global_distributed_matrix
     
     !$omp parallel do                                                                    &
     !$omp default(none)                                                                  &
-    !$omp shared(bnd_node_list, node_list, index_min, index_max, irn_glob, jcn_glob)     &
+    !$omp shared(bnd_node_list, node_list, index_min, index_max, irn_glob, jcn_glob, i_tor_min, i_tor_max)     &
     !$omp private(l_node_bnd, l_dof, l_tor, l_var, j_node_bnd, j_dof,  j_tor,            &
     !$omp         j_var, l_node, l_dir, l_index, l_row, j_node, j_dir, j_index,          &
     !$omp         j_col, sparsepos)                                                      &
@@ -164,9 +171,9 @@ module global_distributed_matrix
         l_dir       = bnd_node_list%bnd_node(l_node_bnd)%direction(l_dof)
         l_index     = node_list%node(l_node)%index(l_dir)
         if ( (l_index < index_min) .or. (l_index > index_max) ) cycle ! Is the current MPI thread in charge?
-        do l_tor = 1, n_tor
+        do l_tor = i_tor_min, i_tor_max 
           do l_var = 1, n_var
-            l_row = det_row_col(l_index, l_var, l_tor)
+            l_row = det_row_col(l_index, l_var, l_tor, i_tor_min, i_tor_max)
             
             ! --- Select a matrix column
             do j_node_bnd = 1, bnd_node_list%n_bnd_nodes
@@ -174,9 +181,9 @@ module global_distributed_matrix
                 j_node      = bnd_node_list%bnd_node(j_node_bnd)%index_jorek
                 j_dir       = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
                 j_index     = node_list%node(j_node)%index(j_dir)
-                do j_tor = 1, n_tor
+                do j_tor = i_tor_min, i_tor_max
                   do j_var = 1, n_var
-                    j_col = det_row_col(j_index, j_var, j_tor)
+                    j_col = det_row_col(j_index, j_var, j_tor, i_tor_min, i_tor_max)
                     
                     ! --- Determine which position in the sparse matrix data structure corresponds
                     !     to the matrix entry at l_row, j_col.

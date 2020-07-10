@@ -1652,8 +1652,8 @@ module vacuum_response
     !$omp parallel do                                                                                         &
     !$omp default(none)                                                                                       &    
     !$omp shared(my_id,a_glob, rhs_loc, bnd_elm_list, bnd_node_list, node_list,index_min, index_max,          &
-    !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr,                 &
-    !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec,psibnd_coils,                   &
+    !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr, i_tor_min,      &
+    !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec,psibnd_coils, i_tor_max,        &
 #ifdef __GFORTRAN__
     !$omp   wgauss_copy,                                                                                      &
 #endif

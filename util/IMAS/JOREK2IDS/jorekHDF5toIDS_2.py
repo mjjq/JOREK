@@ -130,7 +130,7 @@ def prettify(elem):
 
 def setIDSProperties(mhd, hdf5_file):
 
-    # Data Dictionary entry for homogeneous time:
+    # Data Dictionary entry for homogeneous_time:
     #  This node must be filled (with 0, 1, or 2) for the IDS to be valid.
     #  If 1, the time of this IDS is homogeneous, i.e. the time values for
     #  this IDS are stored in the time node just below the root of this IDS.
@@ -182,24 +182,29 @@ def setBezierGrid(mhd, slice, hdf5_file):
     (found in HDF5 file)
     """
 
-    x = hdf5_file['x'][0]
-    size = hdf5_file['size'][0]
-    vertex = hdf5_file['vertex'][0]
-    values = hdf5_file['values'][0]
+    x = hdf5_file['x']
+    size = hdf5_file['size']
+    vertex = hdf5_file['vertex']
+    values = hdf5_file['values']
 
     t_now = hdf5_file['t_now'][0]
     tstep = hdf5_file['tstep'][0]
     jorek_model = hdf5_file['jorek_model'][0]
     n_elements = hdf5_file['n_elements'][0]
     n_nodes = hdf5_file['n_nodes'][0]
+    n_degrees = hdf5_file['n_degrees'][0]
 
     print(f"t_now: {t_now}")
     print(f"tstep: {tstep}")
     print(f"jorek_model: {jorek_model}")
     print(f"n_elements: {n_elements}")
     print(f"n_nodes: {n_nodes}")
+    print(f"n_degrees: {n_degrees}")
 
     g = mhd.grid_ggd[i_slice]
+    g.identifier.name = "JOREK grid"
+    g.index = 1
+    g.description = "JOREK grid (Bezier finite elements)"
     g.time = hdf5_file['t_now'][0]
 
     # R: mu = 0
@@ -217,15 +222,68 @@ def setBezierGrid(mhd, slice, hdf5_file):
     # IDEA: could the dofs be suggested to be put here? Using dummy indices for
     # now
     # Four dofs: # p_k, u_k, v_k, w_k
-    g.space[0].coordinates_type = np.array([1000, 1001, 1002, 1003])  # dummy IDs
+    g.space[0].coordinates_type = np.array([1001, 1002, 1003, 1004])  # dummy IDs
 
-    g.space[0].objects_per_dimension.resize(3)
+    # Space R
+    mu = 0
+    g.space[mu].identifier.name = "Space R"
+    g.space[mu].identifier.index = mu + 1  # Fortran notation required
+    g.space[mu].identifier.description = \
+        "Space R, four degrees of freedom: p_k, u_k, v_k and w_k"
+    g.space[mu].objects_per_dimension.resize(3)
+    s0opd0 = g.space[0].objects_per_dimension[0]
+    s0opd0.object.resize(hdf5_file['n_nodes'][0])
+    for i_node in range(n_nodes):
+        s0opd0.object[i_node].geometry.resize(n_degrees)
+        for dof in range(n_degrees):
+            s0opd0.object[i_node].geometry[dof] = x[mu][dof][i_node]
 
-    opd0 = g.space[0].objects_per_dimension[0]
-    opd0.object.resize(hdf5_file['n_nodes'][0])
+    # dummy object_per_dimension[1]
+    # Note: leaving mid AOS (Arrays of Structures) empty might result in
+    #       the put command skipping all the next/following AOS altogether
+    g.space[mu].objects_per_dimension[1].object.resize(1)
 
+    # vertex (connectivity array for 2D elements)
+    s0opd2 = g.space[mu].objects_per_dimension[2]
+    s0opd2.object.resize(n_elements)
+    for i_element in range(n_elements):
+        s0opd2.object[i_element].nodes.resize(vertex.shape[0])
+        for i in range(vertex.shape[0]):
+            s0opd2.object[i_element].nodes[i] = vertex[i][i_element]
 
+        # Data Dictionary entry for geometry:
+        #  Geometry data associated with the object. Its dimension depends
+        #  on the type of object, geometry and coordinate considered.
+        s0opd2.object[i_element].geometry.resize(size.shape[0]*size.shape[1])
+        # Note: storing "size" is problematic, as there are, for example,
+        #       4 values per 4 nodes of the element -> 16 values
+        # IDEA:
+        #   s0opd2.object[i_element].geometry = [1.0, d_u1, d_v1, (d_u1 d_v1),
+        #                                       [1.0, d_u2, d_v2, (d_u2 d_v2),
+        #                                       [1.0, d_u3, d_v3, (d_u3 d_v3),
+        #                                       [1.0, d_u4, d_v4, (d_u4 d_v4),]
+        for k in range(size.shape[0]):
+            for d in range(size.shape[1]):
+                dk = k*size.shape[0] + d
+                s0opd2.object[i_element].geometry[dk] = size[d][k][i_element]
 
+    print("Distances of the control points from the element node as set to "
+          "space[1].object[0]: \n", s0opd2.object[0])
+    print("space[1].object[0].geometry: \n", s0opd2.object[0].geometry)
+
+    # Space Z
+    mu = 1
+    g.space[mu].identifier.name = "Space Z"
+    g.space[mu].identifier.index = mu + 1  # Fortran notation required
+    g.space[mu].identifier.description = \
+        "Space R, four degrees of freedom: p_k, u_k, v_k and w_k"
+    g.space[mu].objects_per_dimension.resize(1)
+    s1opd0 = g.space[1].objects_per_dimension[0]
+    s1opd0.object.resize(hdf5_file['n_nodes'][0])
+    for i_node in range(n_nodes):
+        s1opd0.object[i_node].geometry.resize(n_degrees)
+        for dof in range(n_degrees):
+            s1opd0.object[i_node].geometry[dof] = x[mu][dof][i_node]
 
 
 

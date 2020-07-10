@@ -21,19 +21,19 @@
 #****************************************************
 #     Copyright(c) 2020- D. Penko
 
-from os import listdir
+from os import listdir, getenv
 from os.path import isfile, join
 import numpy as np
-import math
-import logging
+# import math
+# import logging
 import sys
-import vtk
+# import vtk
 import numpy as np
 from PyQt5 import QtWidgets
 
 sys.path.append('../../../util')
 import jorek_read_h5 as jorek
-import imas
+# import imas
 
 from idsUtilities import basicIDS, writeIDS
 
@@ -64,7 +64,60 @@ def getHDF5FileDialog():
 
     return filePath
 
+
+def checkArguments():
+    """ Check arguments when running from the terminal.
+    """
+
+    if (len(sys.argv) > 1):
+        import argparse
+        from argparse import RawTextHelpFormatter
+        description = """Utility for storing JOREK output stored in HDF5 files
+to IMAS (IDSs). Example command:
+
+>>> python3 jorekHDF5toIDS.py --shot=303 --run=1 --user=penkod --database=jorek --occurrence=0
+
+
+"""
+
+        parser = argparse.ArgumentParser(description=description,
+                                         formatter_class=RawTextHelpFormatter)
+
+        parser.add_argument("-s", "--shot", type=int, required=True,
+                            help="Case parameter: shot")
+        parser.add_argument("-r", "--run", type=int, required=True,
+                            help="Case parameter: run")
+        parser.add_argument("-u", "--user", type=str, required=False,
+                            help="Case parameter: username",
+                            default=getenv("USER"))
+        parser.add_argument("-d", "--database", type=str, required=True,
+                            help="Case parameter: database")
+        parser.add_argument("-o", "--occurrence", type=int, required=False,
+                            help="Case parameter: occurrence",
+                            default=0)
+
+        args = parser.parse_args()
+        IDS_parameters = {"shot": args.shot,
+                          "run": args.run,
+                          "user": args.user,
+                          "database": args.database,
+                          "occurrence": args.occurrence}
+    else:
+        # Default parameters
+        print("Using default parameters")
+        IDS_parameters = {"shot": 303,
+                          "run": 1,
+                          "user": "penkod",
+                          "database": "jorek",
+                          "occurrence": 0}
+
+    return IDS_parameters
+
+
 if  __name__ == "__main__":
+
+    # Set mandatory arguments
+    IDS_parameters = checkArguments()
 
     # FIRST FILE:
     print("READING FIRST HDF5 FILE")
@@ -92,10 +145,11 @@ if  __name__ == "__main__":
     f = jorek.fields()
 
     print("PREPARING IDS")
-    shot = 303
-    run = 1
-    username = 'penkod'
-    database = 'jorek'
+    shot = IDS_parameters['shot']
+    run = IDS_parameters['run']
+    username = IDS_parameters['user']
+    database = IDS_parameters['database']
+    # occurrence = IDS_parameters['occurrence']  # Not yet implemented
 
     b_ids = basicIDS(shot, run, username, database)
     b_ids.createIMASdatabase()
@@ -121,7 +175,7 @@ if  __name__ == "__main__":
         print("Slice: ", i_slice)
 
         # Read file
-        f.read(filePathList[i_slice], variables=[0,1,2,3,4,5,6])
+        f.read(filePathList[i_slice], variables=[0, 1, 2, 3, 4, 5, 6])
 
         print("Time step: ", f.tstep)
         print("Time: ", f.t_now)
@@ -148,8 +202,15 @@ if  __name__ == "__main__":
 
             list_vertex = f.vertex
             vtk_quad_conn_array = f.ien
+            print ("* list_vertex: \n", list_vertex)
+            print ("* len(list_vertex[0]): \n", len(list_vertex[0]))
+            print ("* list_vertex[0]: \n", list_vertex[0])
             # Remove the vtk cell type ID from the matrix
             quad_conn_array = vtk_quad_conn_array[:,1:]
+            print ("* vtk_quad_conn_array: \n", vtk_quad_conn_array)
+            print ("* vtk_quad_conn_array.shape: \n", vtk_quad_conn_array.shape)
+            print("* len(f.xyz): ", len(f.xyz))
+            print ("* f.xyz: \n", f.xyz)
 
             # print("num_coord: ", len(f.xyz))
             # print("x_coord: ", x_coord)

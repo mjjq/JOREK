@@ -1538,7 +1538,7 @@ module vacuum_response
   !! expressed by the STARWALL vacuum response in terms of the poloidal magnetic field at the
   !! interface (ideal and resistive wall) and the wall currents (resistive wall).
   subroutine vacuum_boundary_integral(my_id, bnd_node_list, node_list,bnd_elm_list,               &
-    freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, tstep, index_now, i_tor_min, i_tor_max)
+    freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, A_mat, tstep, index_now, i_tor_min, i_tor_max)
 
     use data_structure, only: type_node_list, type_bnd_node_list,type_bnd_element_list, type_bnd_element
     use mod_parameters,     only: n_plane, n_var, n_tor
@@ -1559,7 +1559,8 @@ module vacuum_response
     logical,                     intent(in)    :: freeboundary_equil   !< Use free boundary equilibrium?
     logical,                     intent(in)    :: resistive_wall       !< Resistive or ideal wall?
     integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
-    real*8,                      intent(inout) :: rhs_loc(ndof_glob)   !< Part of RHS of MPI proc
+    real*8,                      intent(inout) :: rhs_loc(:)           !< Part of RHS of MPI proc 
+    real*8,  allocatable,      intent(inout)   :: A_mat(:)             !< Distributed global or harmonic matrix 
     real*8,                      intent(in)    :: tstep                !< delta t, timestep
     integer,                     intent(in)    :: index_now            !< Current timestep index
     integer,                     intent(in)    :: i_tor_min, i_tor_max !< Toroidal harmonics 
@@ -1606,7 +1607,7 @@ module vacuum_response
       return
     end if
 
-    if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)),sum(abs(A_glob))
+    if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)),sum(abs(A_mat))
 
     ! --- Determine vectors of the psi and deltapsi boundary values.
     call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
@@ -1651,7 +1652,7 @@ module vacuum_response
     ! --- Sum over boundary elements
     !$omp parallel do                                                                                         &
     !$omp default(none)                                                                                       &    
-    !$omp shared(my_id,a_glob, rhs_loc, bnd_elm_list, bnd_node_list, node_list,index_min, index_max,          &
+    !$omp shared(my_id,A_mat, rhs_loc, bnd_elm_list, bnd_node_list, node_list,index_min, index_max,          &
     !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr, i_tor_min,      &
     !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec,psibnd_coils, i_tor_max,        &
 #ifdef __GFORTRAN__
@@ -1785,7 +1786,7 @@ module vacuum_response
                             ! --- Vacuum response contribution to the lhs of the current equation
                             amat_contrib = - common_prefactor * response_m_e(i_resp, j_resp)
                             !$omp atomic
-                            A_glob(sparsepos_jp) = A_glob(sparsepos_jp) + amat_contrib
+                            A_mat(sparsepos_jp) = A_mat(sparsepos_jp) + amat_contrib
 
                           end do L_JS
                         end do L_JD
@@ -1824,7 +1825,7 @@ module vacuum_response
     !write(68+my_id,*) real(t1 - t0 ) / real(rate)
     !###
 
-    if ( vacuum_debug ) write(*,*) my_id, 'After:', sum(abs(rhs_loc)),sum(abs(A_glob))
+    if ( vacuum_debug ) write(*,*) my_id, 'After:', sum(abs(rhs_loc)),sum(abs(A_mat))
 
     if ( allocated(psibnd_vec ) ) deallocate( psibnd_vec  )
     if ( allocated(dpsibnd_vec) ) deallocate( dpsibnd_vec )

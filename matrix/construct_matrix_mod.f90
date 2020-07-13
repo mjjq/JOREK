@@ -699,7 +699,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
     ! --- Add vacuum response (boundary integral) for free boundary computations
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
       call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
-                                  resistive_wall, index_min, index_max, rhs_local, tstep, index_now, i_tor_min, i_tor_max)
+                                  resistive_wall, index_min, index_max, rhs_local, A_mat, tstep, index_now, i_tor_min, i_tor_max)
     end if
   
     ! --- Summarise element_matrix comparison

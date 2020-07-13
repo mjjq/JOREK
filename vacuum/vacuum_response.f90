@@ -167,7 +167,6 @@ module vacuum_response
     marker   = adjustl(marker)
     name     = adjustl(name)
     datatype = adjustl(datatype)
-
     error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. ( trim(name) /= trim(array_name) )                     &
       .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. ( trim(datatype) /= trim(requested_type) )
 
@@ -258,7 +257,7 @@ module vacuum_response
  
   
   !> Read an array from the STARWALL respone file (MPI I/O).
-  subroutine read_array_not_distr(filehandle, array_name, dim, disp, int1d, int2d, float1d, float2d)
+  subroutine read_array_not_distr(filehandle, array_name, dim, disp, int1d, int2d, float1d, float2d, char1d)
 
     use mpi_mod
     implicit none
@@ -272,6 +271,7 @@ module vacuum_response
     integer, allocatable, optional, intent(inout)   :: int2d(:,:)
     real*8,  allocatable, optional, intent(inout)   :: float1d(:)
     real*8,  allocatable, optional, intent(inout)   :: float2d(:,:)
+    character(len=*), allocatable, optional, intent(inout)   :: char1d(:)
 
     ! --- Local variables
     integer, dimension (MPI_STATUS_SIZE) :: status
@@ -282,6 +282,8 @@ module vacuum_response
 
     if ( present(int1d) .or. present(int2d) ) then
       requested_type = 'int'
+    elseif (present(char1d))then
+      requested_type = 'char'
     else
       requested_type = 'float'
     end if
@@ -292,11 +294,12 @@ module vacuum_response
     call MPI_FILE_READ(filehandle,  datatype, int(sizeof(datatype),4),  MPI_CHARACTER,status,ierr)
     call MPI_FILE_READ(filehandle,  d,        2,                        MPI_INTEGER  ,status,ierr)
     disp = disp + sizeof(marker) + sizeof(name) + sizeof(nd) + sizeof(datatype) + sizeof(d) 
- 
+
     marker   = adjustl(marker)
     name     = adjustl(name)
     datatype = adjustl(datatype)
 
+    
     error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. ( trim(name) /= trim(array_name) ) &
       .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. ( trim(datatype) /= trim(requested_type) )
 
@@ -329,6 +332,10 @@ module vacuum_response
       call MPI_FILE_READ(filehandle, float2d, dim(1)*dim(2), MPI_DOUBLE_PRECISION  ,status,ierr)
       disp = disp + sizeof(float2d)
 
+    else if (present(char1d)) then
+      if ( allocated(char1d) ) deallocate( char1d ); allocate( char1d(dim(1)) )
+      call MPI_FILE_READ(filehandle, char1d, sizeof(char1d(1))*dim(1), MPI_CHARACTER  ,status,ierr)
+      disp = disp + sizeof(char1d(1))*dim(1) 
     end if
 
     if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"> type ",A," size ",2I7)')name, trim(datatype), d(1:nd)
@@ -483,7 +490,7 @@ module vacuum_response
 
     ! --- Local variables
     integer            :: filehandle
-    character(len=512) :: comment
+    character(len=512) :: comment, tmp_int2str
     integer            :: i, j, i_starw, n, is_sin, err, i_tmp, ier
     real*8             :: r_tmp
     real*8, allocatable:: tmp(:)
@@ -491,7 +498,7 @@ module vacuum_response
     integer(kind=MPI_OFFSET_KIND)        :: disp !< Present location in the file
     real*8             :: test_sum
     integer            :: loc_sizes(2),ntasks
- 
+
     disp = 0
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, err)
 
@@ -522,7 +529,7 @@ module vacuum_response
       disp = disp + sizeof(comment)
 
       sr%file_version = read_intparam_parallel(filehandle, 'file_version', disp)
-      if ( sr%file_version > 3 ) then
+      if ( sr%file_version > 4 ) then
         write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
         stop
       end if
@@ -574,9 +581,30 @@ module vacuum_response
           call read_array_not_distr(filehandle, 'phi_coil',      (/sr%ntri_c,3/), disp,  float2d=sr%phi_coil)
           call read_array_not_distr(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/), disp,  float1d=sr%eta_thin_coil)
           call read_array_not_distr(filehandle, 'coil_resist',   (/sr%ncoil,0/),  disp,  float1d=sr%coil_resist)
+          if (sr%file_version > 3)  call read_array_not_distr(filehandle, 'coil_name',     (/sr%ncoil,0/),  disp,  char1d=sr%coil_name)
         end if
         
-      end if
+        if ( (sr%ncoil .gt. 0) .and. sr%file_version .le. 3) then
+         write(*,*) "Coil names not yet supported by starwall (ver <=3). Generic names used."
+         if (allocated(sr%coil_name)) deallocate(sr%coil_name)
+         allocate(sr%coil_name(sr%ncoil))
+
+         do i=1, sr%n_diag_coils
+           write(tmp_int2str,'(I3.3)'), i
+           sr%coil_name(sr%ind_start_diag_coils + i - 1) = trim("Dia_"//trim(tmp_int2str))
+         end do
+
+         do i=1, sr%n_pol_coils
+           write(tmp_int2str,'(I3.3)'), i
+           sr%coil_name(sr%ind_start_pol_coils + i - 1) = trim("PF_"//trim(tmp_int2str))
+         end do
+         
+         do i=1, sr%n_rmp_coils
+           write(tmp_int2str,'(I3.3)'), i
+           sr%coil_name(sr%ind_start_rmp_coils + i - 1) = trim("RMP_"//trim(tmp_int2str))
+         end do
+       endif
+     end if
 
       ! --- eta_thin_w is only part of the STARWALL response file since file_version 2
       if ( sr%file_version >= 2 ) then
@@ -906,22 +934,24 @@ module vacuum_response
         if (allocated(sr%phi_coil)     ) deallocate(sr%phi_coil);      allocate(sr%phi_coil(sr%ntri_c,3))
         if (allocated(sr%eta_thin_coil)) deallocate(sr%eta_thin_coil); allocate(sr%eta_thin_coil(sr%ntri_c))
         if (allocated(sr%coil_resist)  ) deallocate(sr%coil_resist);   allocate(sr%coil_resist(sr%ncoil))
+        if (allocated(sr%coil_name)  )   deallocate(sr%coil_name);     allocate(sr%coil_name(sr%ncoil))
       end if
     end if
     
     ! --- Broadcast matrices.
-    call MPI_bcast(sr%i_tor,    sr%n_tor,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%d_yy,     sr%n_w,              MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%i_tor,    sr%n_tor,                MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%d_yy,     sr%n_w,                  MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,             MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,             MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     if ( sr%ncoil > 0 ) then
-      call MPI_bcast(sr%jtri_c,   sr%ncoil,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%x_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%y_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%z_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%coil_resist,   sr%ncoil,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%jtri_c,   sr%ncoil,              MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%x_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%y_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%z_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,        MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%coil_resist,   sr%ncoil,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%coil_name,sr%ncoil*COIL_NAME_LEN,MPI_CHARACTER       , 0, MPI_COMM_WORLD, ierr)
     end if
     
     if ( vacuum_debug ) then
@@ -998,7 +1028,7 @@ module vacuum_response
        write(*,33) 'ind_start_rmp_coils     =', sr%ind_start_rmp_coils
        write(*,33) 'ind_start_voltage_coils =', sr%ind_start_voltage_coils
        write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
-      if ( sr%file_version >= 2) write(*,37) 'eta_thin_w        =', sr%eta_thin_w
+       if ( sr%file_version >= 2) write(*,37) 'eta_thin_w        =', sr%eta_thin_w
       if (allocated(sr%i_tor)) write(*,33) 'i_tor               ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     end if 
 
@@ -2028,7 +2058,14 @@ module vacuum_response
           allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
           diag_coil_curr(:,:) = 0.d0
         end if
-        diag_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_diag_coils:sr%ind_start_diag_coils + sr%n_diag_coils -1) 
+        diag_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_diag_coils:sr%ind_start_diag_coils + sr%n_diag_coils -1)
+
+        if (.not. allocated(diag_coil_name))  then
+          allocate( diag_coil_name(sr%n_diag_coils) )
+          diag_coil_name(:) = sr%coil_name(sr%ind_start_diag_coils:sr%ind_start_diag_coils +  sr%n_diag_coils -1)
+        end if
+
+        
       endif
       
       if ( sr%n_rmp_coils > 0 ) then
@@ -2037,6 +2074,12 @@ module vacuum_response
           rmp_coil_curr(:,:) = 0.d0
         end if
         rmp_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_rmp_coils : sr%ind_start_rmp_coils + sr%n_rmp_coils -1) 
+
+        if  (.not. allocated(rmp_coil_name)) then
+          allocate( rmp_coil_name(sr%n_rmp_coils) )
+          rmp_coil_name(:) = sr%coil_name(sr%ind_start_rmp_coils:sr%ind_start_rmp_coils +  sr%n_rmp_coils -1)
+        end if
+
       end if
       
       if ( sr%n_pol_coils > 0 ) then
@@ -2045,6 +2088,12 @@ module vacuum_response
           pf_coil_curr(:,:) = 0.d0
         end if
         pf_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_pol_coils:sr%ind_start_pol_coils + sr%n_pol_coils -1) 
+
+        if  (.not. allocated(pf_coil_name)) then
+          allocate( pf_coil_name(sr%n_pol_coils) )
+          pf_coil_name(:) = sr%coil_name(sr%ind_start_pol_coils:sr%ind_start_pol_coils +  sr%n_pol_coils -1)
+        end if
+
       end if
 
       ! Voltage coils not yet implemented
@@ -2211,6 +2260,12 @@ module vacuum_response
         if (index_now>0) then
           diag_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_diag_coils:sr%ind_start_diag_coils + sr%n_diag_coils -1) 
         endif
+        if (.not. allocated(diag_coil_name))  then
+          allocate( diag_coil_name(sr%n_diag_coils) )
+          diag_coil_name(:) = sr%coil_name(sr%ind_start_diag_coils:sr%ind_start_diag_coils +  sr%n_diag_coils -1)
+        end if
+                
+        
       end if
       
       if ( sr%n_rmp_coils > 0 ) then
@@ -2221,6 +2276,11 @@ module vacuum_response
         if (index_now>0) then
           rmp_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_rmp_coils : sr%ind_start_rmp_coils + sr%n_rmp_coils -1) 
         endif
+        if (.not. allocated(rmp_coil_name))  then
+          allocate( rmp_coil_name(sr%n_rmp_coils) )
+          rmp_coil_name(:) = sr%coil_name(sr%ind_start_rmp_coils:sr%ind_start_rmp_coils +  sr%n_rmp_coils -1)
+        end if
+
       end if
       
       if ( sr%n_pol_coils > 0 ) then
@@ -2231,6 +2291,12 @@ module vacuum_response
         if (index_now>0) then
           pf_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_pol_coils:sr%ind_start_pol_coils + sr%n_pol_coils -1) 
         endif
+        
+        If (.not. allocated(pf_coil_name))  then
+          allocate( pf_coil_name(sr%n_pol_coils) )
+          pf_coil_name(:) = sr%coil_name(sr%ind_start_pol_coils:sr%ind_start_pol_coils +  sr%n_pol_coils -1)
+        end if
+
       end if
 
       ! Voltage coils not yet implemented

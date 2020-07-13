@@ -826,7 +826,8 @@ module live_data
   subroutine write_live_data_vacuum(index, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
     
     use phys_module, only: xtime, mu_zero, sqrt_mu0_rho0
-    
+    use vacuum, only: diag_coil_name, pf_coil_name, rmp_coil_name
+      
     integer,             intent(in) :: index
     real*8, allocatable, intent(in) :: diag_coil_curr(:,:), pf_coil_curr(:,:), rmp_coil_curr(:,:), &
                                        net_tor_wall_curr(:)
@@ -848,7 +849,7 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_logy: 0'
         write(LIVE_DATA_HANDLE,'(A)',advance='no') '@diag_coil_curr: %"time"           '
         do n = 1,size(diag_coil_curr,2)
-          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"Diag_{', n, '}"'
+          write(LIVE_DATA_HANDLE,'(A7,A1,I2.2,A2,1x)',advance='no') trim(diag_coil_name(n)), " "
         end do
         write(LIVE_DATA_HANDLE,*)
         header_written_diag = .true.
@@ -868,7 +869,7 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A)') '@pf_coil_curr_logy: 0'
         write(LIVE_DATA_HANDLE,'(A)',advance='no') '@pf_coil_curr: %"time"           '
         do n = 1,size(pf_coil_curr,2)
-          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"PF_{', n, '}"'
+          write(LIVE_DATA_HANDLE,'(A7,A1,I2.2,A2,1x)',advance='no') trim(pf_coil_name(n)), " "
         end do
         write(LIVE_DATA_HANDLE,*)
         header_written_pf = .true.
@@ -889,7 +890,7 @@ module live_data
         write(LIVE_DATA_HANDLE,*)
         write(LIVE_DATA_HANDLE,'(A)',advance='no') '@RMP_coil_curr: %"time"           '
         do n = 1,size(rmp_coil_curr,2)
-          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"RMP_{', n, '}"'
+          write(LIVE_DATA_HANDLE,'(A7,A1,I2.2,A2,1x)',advance='no') trim(rmp_coil_name(n)), " "
         end do
         header_written_rmp = .true.
       end if

@@ -62,14 +62,18 @@ module global_distributed_matrix
   
   !> Determine the position of a matrix entry given by its row and column positions (::i_row and
   !! ::j_col) in the sparse matrix structure.
-  integer pure function det_sparse_pos(i_row, j_col, index_min)
+  integer pure function det_sparse_pos(i_row, j_col, index_min, n_matrix_block_size, ijA_index, ijA_size, irn_jcn)
     
     implicit none
     
     ! --- Routine parameters
-    integer, intent(in) :: i_row     !< Matrix row
-    integer, intent(in) :: j_col     !< Matrix column
-    integer, intent(in) :: index_min !< Smallest block index dealt with by current MPI proc
+    integer,              intent(in)    :: i_row                   !< Matrix row
+    integer,              intent(in)    :: j_col                   !< Matrix column
+    integer,              intent(in)    :: index_min               !< Smallest block index dealt with by current MPI proc
+    integer,              intent(in)    :: n_matrix_block_size     !< Matrix column
+    integer, allocatable, intent(in)    :: ijA_index(:,:)
+    integer, allocatable, intent(in)    :: ijA_size(:)
+    integer, allocatable, intent(in)    :: irn_jcn(:,:)
     
     ! --- Local variables
     integer :: i_block, j_block           ! Block indices
@@ -139,7 +143,8 @@ module global_distributed_matrix
   
   
   !> Initialize the (freeboundary related) row and column numbers in the sparse matrix structure.
-  subroutine global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max, i_tor_min, i_tor_max, irn, jcn)
+  subroutine global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max, i_tor_min, i_tor_max, &
+    irn, jcn, n_matrix_block_size, ijA_index, ijA_size, irn_jcn)
     
     use mod_parameters, only: n_tor, n_var
     use data_structure, only: type_node_list, type_bnd_node_list
@@ -152,6 +157,10 @@ module global_distributed_matrix
     integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
     integer,                     intent(in)    :: i_tor_min, i_tor_max !< Toroidal mode numbers 
     integer, allocatable,        intent(inout) :: irn(:), jcn(:) 
+    integer,                     intent(in)    :: n_matrix_block_size  
+    integer, allocatable,        intent(in)    :: ijA_index(:,:)
+    integer, allocatable,        intent(in)    :: ijA_size(:)
+    integer, allocatable,        intent(in)    :: irn_jcn(:,:)
     ! --- Local variables
     integer :: l_node_bnd, l_dof, l_node, l_dir, l_index, l_tor, l_var, l_row
     integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_tor, j_var, j_col
@@ -159,7 +168,8 @@ module global_distributed_matrix
     
     !$omp parallel do                                                                    &
     !$omp default(none)                                                                  &
-    !$omp shared(bnd_node_list, node_list, index_min, index_max, irn, jcn, i_tor_min, i_tor_max)     &
+    !$omp shared(bnd_node_list, node_list, index_min, index_max, irn, jcn,               & 
+    !$omp        n_matrix_block_size, ijA_index, ijA_size, irn_jcn, i_tor_min, i_tor_max)&
     !$omp private(l_node_bnd, l_dof, l_tor, l_var, j_node_bnd, j_dof,  j_tor,            &
     !$omp         j_var, l_node, l_dir, l_index, l_row, j_node, j_dir, j_index,          &
     !$omp         j_col, sparsepos)                                                      &
@@ -187,7 +197,7 @@ module global_distributed_matrix
                     
                     ! --- Determine which position in the sparse matrix data structure corresponds
                     !     to the matrix entry at l_row, j_col.
-                    sparsepos = det_sparse_pos(l_row, j_col, index_min)
+                    sparsepos = det_sparse_pos(l_row, j_col, index_min, n_matrix_block_size, ijA_index, ijA_size, irn_jcn)
                     
                     ! --- Set row and column numbers in the sparse matrix data structure
                     irn(sparsepos) = l_row

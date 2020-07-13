@@ -63,7 +63,7 @@ contains
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
     call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min_harm(my_id+1), index_max_harm(my_id+1), & 
-      i_tor_min, i_tor_max, irn_harm, jcn_harm) 
+      i_tor_min, i_tor_max, irn_harm, jcn_harm, n_matrix_block_size_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm) 
   endif
  
   ! --- Memory allocation
@@ -76,7 +76,7 @@ contains
   call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master,                &
     local_elms_harm, n_local_elms_harm, index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint2,&
     xcase2, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint,              &
-    ES%psi_xpoint, i_tor_min, i_tor_max, n_harm, nz_harm, ndof_harm, A_harm,  &
+    ES%psi_xpoint, i_tor_min, i_tor_max, n_harm, nz_harm, ndof_harm, n_matrix_block_size, A_harm,  &
     rhs_harm, irn_harm, jcn_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm,     &
     direct_construction)
 

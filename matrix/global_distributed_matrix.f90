@@ -139,7 +139,7 @@ module global_distributed_matrix
   
   
   !> Initialize the (freeboundary related) row and column numbers in the sparse matrix structure.
-  subroutine global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max, i_tor_min, i_tor_max)
+  subroutine global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max, i_tor_min, i_tor_max, irn, jcn)
     
     use mod_parameters, only: n_tor, n_var
     use data_structure, only: type_node_list, type_bnd_node_list
@@ -151,7 +151,7 @@ module global_distributed_matrix
     type(type_bnd_node_list),    intent(in)    :: bnd_node_list        !< List of boundary grid nodes
     integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
     integer,                     intent(in)    :: i_tor_min, i_tor_max !< Toroidal mode numbers 
-    
+    integer, allocatable,        intent(inout) :: irn(:), jcn(:) 
     ! --- Local variables
     integer :: l_node_bnd, l_dof, l_node, l_dir, l_index, l_tor, l_var, l_row
     integer :: j_node_bnd, j_dof, j_node, j_dir, j_index, j_tor, j_var, j_col
@@ -159,7 +159,7 @@ module global_distributed_matrix
     
     !$omp parallel do                                                                    &
     !$omp default(none)                                                                  &
-    !$omp shared(bnd_node_list, node_list, index_min, index_max, irn_glob, jcn_glob, i_tor_min, i_tor_max)     &
+    !$omp shared(bnd_node_list, node_list, index_min, index_max, irn, jcn, i_tor_min, i_tor_max)     &
     !$omp private(l_node_bnd, l_dof, l_tor, l_var, j_node_bnd, j_dof,  j_tor,            &
     !$omp         j_var, l_node, l_dir, l_index, l_row, j_node, j_dir, j_index,          &
     !$omp         j_col, sparsepos)                                                      &
@@ -190,8 +190,8 @@ module global_distributed_matrix
                     sparsepos = det_sparse_pos(l_row, j_col, index_min)
                     
                     ! --- Set row and column numbers in the sparse matrix data structure
-                    irn_glob(sparsepos) = l_row
-                    jcn_glob(sparsepos) = j_col
+                    irn(sparsepos) = l_row
+                    jcn(sparsepos) = j_col
                     
                   end do
                 end do

@@ -19,6 +19,7 @@ contains
   
   ! --- Routine parameters
   type (type_node_list),        intent(in) :: node_list
+  type(type_bnd_node_list),     intent(in) :: bnd_node_list
   type (type_element_list),     intent(in) :: element_list
   type (type_bnd_element_list), intent(in) :: bnd_elm_list
   integer, intent(in) :: my_id, my_id_n, n_cpu, m_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, xcase2
@@ -57,6 +58,13 @@ contains
     index_max_harm(my_id+1), ijA_index_harm, ijA_size_harm,                                     &
     irn_jcn_harm, irn_harm, jcn_harm, i_tor_min, i_tor_max,                           &                         
     n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm)
+
+
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
+    call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min_harm(my_id+1), index_max_harm(my_id+1), & 
+      i_tor_min, i_tor_max, irn_harm, jcn_harm) 
+  endif
  
   ! --- Memory allocation
   if (allocated(irn_harm))  call tr_deallocate(irn_harm,"irn_harm",CAT_DMATRIX)

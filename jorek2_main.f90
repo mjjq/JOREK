@@ -871,7 +871,8 @@ required = 0
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1), 1, n_tor) 
+      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1),& 
+           1, n_tor, irn_glob, jcn_glob) 
     endif
 
     if (use_mumps) then

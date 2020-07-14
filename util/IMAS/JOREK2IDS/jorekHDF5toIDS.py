@@ -285,13 +285,13 @@ if __name__ == "__main__":
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i, :], 1)
             elif label == 'rho':  # Mass Density
-                # print("Writing quantity array: ", label)
-                # # Resize/Allocate
-                # w_ids.imas_obj.mhd.ggd[i_slice].electrons.density.resize(1)
-                # # Set IDS path
-                # IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].electrons.density[0]
-                # # Write quantities
-                # w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i,:], 1)
+                print("Writing quantity array: ", label)
+                # Resize/Allocate
+                w_ids.imas_obj.mhd.ggd[i_slice].mass_density.resize(1)
+                # Set IDS path
+                IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].mass_density[0]
+                # Write quantities
+                w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i,:], 1)
                 pass
             elif label == 'T':  # Temperature / total temperature
                 print("Writing quantity array: ", label)

@@ -139,7 +139,7 @@ def setIDSProperties(mhd, hdf5_file):
     #  If 0, the time values are stored in the various time fields at lower
     #  levels in the tree. In the case only constant or static nodes are filled
     #  within the IDS, homogeneous_time must be set to 2
-    mhd.ids_properties.homogeneous_time = 0  # will fill in e.g. mhd.ggd[:].time
+    mhd.ids_properties.homogeneous_time = 1  # will fill in e.g. mhd.ggd[:].time
 
     mhd.time.resize(1)  # mandatory
 
@@ -188,8 +188,11 @@ def setBezierGrid(mhd, ti, hdf5_file):
     """
 
     x = hdf5_file['x']
+    x_T = np.array(x).transpose()
     size = hdf5_file['size']
+    size_T = np.array(size).transpose()
     vertex = hdf5_file['vertex']
+    vertex_T = np.array(vertex).transpose()
     values = hdf5_file['values']
 
     t_now = hdf5_file['t_now'][0]
@@ -201,8 +204,11 @@ def setBezierGrid(mhd, ti, hdf5_file):
     n_tor = hdf5_file['n_tor'][0]
 
     print("x shape: ", hdf5_file['x'].shape)
+    print("x_T shape: ", x_T.shape)
     print("size shape: ", hdf5_file['size'].shape)
+    print("size_T shape: ", size_T.shape)
     print("vertex shape: ", hdf5_file['vertex'].shape)
+    print("vertex_T shape: ", vertex_T.shape)
     print("values shape: ", hdf5_file['values'].shape)
 
     print(f"t_now: {t_now}")
@@ -217,8 +223,6 @@ def setBezierGrid(mhd, ti, hdf5_file):
     g.identifier.name = "JOREK grid"
     g.index = 1
     g.description = "JOREK grid (Bezier finite elements)"
-    print("*: ", hdf5_file['t_now'])
-    print("*: ", hdf5_file['t_now'][0])
     g.time = hdf5_file['t_now'][0]
 
     # R: mu = 0
@@ -278,8 +282,7 @@ Note: A bit inconvenient because of the GGD structure limitations and
     for k in range(n_nodes):
         s0opd0.object[k].geometry.resize(n_degrees*2)
         for dof in range(n_degrees):
-            s0opd0.object[k].geometry[dof] = x[0][dof][k]
-            s0opd0.object[k].geometry[dof+n_degrees] = x[1][dof][k]
+            s0opd0.object[k].geometry = np.ravel(x_T[k], order='F')
 
     # dummy object_per_dimension[1]
     # Note: leaving mid AOS (Arrays of Structures) empty might result in
@@ -290,14 +293,14 @@ Note: A bit inconvenient because of the GGD structure limitations and
     s0opd2 = g.space[0].objects_per_dimension[2]
     s0opd2.object.resize(n_elements)
     for i_element in range(n_elements):
-        s0opd2.object[i_element].nodes.resize(vertex.shape[0])
-        for k in range(vertex.shape[0]):
-            s0opd2.object[i_element].nodes[k] = vertex[k][i_element]
+        s0opd2.object[i_element].nodes.resize(vertex_T.shape[1])
+        s0opd2.object[i_element].nodes = vertex_T[i_element]
 
         # Data Dictionary entry for geometry:
         #  Geometry data associated with the object. Its dimension depends
         #  on the type of object, geometry and coordinate considered.
-        s0opd2.object[i_element].geometry.resize(size.shape[0]*size.shape[1])
+        # s0opd2.object[i_element].geometry.resize(size.shape[0]*size.shape[1])
+        s0opd2.object[i_element].geometry.resize(size_T[0].size)
         # Note: storing "size" is problematic, as there are, for example,
         #       4 values per 4 nodes of the element -> 16 values
         # IDEA:
@@ -305,10 +308,7 @@ Note: A bit inconvenient because of the GGD structure limitations and
         #                                       [1.0, d_u2, d_v2, (d_u2 d_v2),
         #                                       [1.0, d_u3, d_v3, (d_u3 d_v3),
         #                                       [1.0, d_u4, d_v4, (d_u4 d_v4),]
-        for k in range(size.shape[0]):
-            for d in range(size.shape[1]):
-                dk = k*size.shape[0] + d
-                s0opd2.object[i_element].geometry[dk] = size[d][k][i_element]
+        s0opd2.object[i_element].geometry = np.ravel(size_T[0], order='C')
 
     print("Distances of the control points from the element node as set to "
           "space[0].objects_per_dimension[2].object[0]: \n", s0opd2.object[0])
@@ -363,8 +363,8 @@ if __name__ == "__main__":
     print("WRITING TO IDS")
 
     # Loop through the list of HDF5 files
-    # for ti in range(len(filePathList)):
-    for ti in range(1):  # hardcodded for taking only first slice for testing purposes
+    for ti in range(len(filePathList)):
+    # for ti in range(1):  # hardcodded for taking only first slice for testing purposes
 
         print("Slice: ", ti)
 
@@ -383,6 +383,8 @@ if __name__ == "__main__":
         mhd.grid_ggd.resize(len(filePathList))
         t1 = time()
         setBezierGrid(mhd, ti=ti, hdf5_file=hdf5_file)
+        mhd.time.resize(len(filePathList))
+        mhd.time[ti] = hdf5_file['t_now'][0]
         # t2 = time()
         print(f"Time required to set grid_ggd/ggd for time slice {ti}: {time()-t1:.2f}s")
 

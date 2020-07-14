@@ -26,7 +26,9 @@
 from os import listdir, getenv
 from os.path import isfile, join
 import numpy as np
+from time import time
 import sys
+import platform
 import numpy as np
 from PyQt5 import QtWidgets
 import h5py
@@ -139,7 +141,7 @@ def setIDSProperties(mhd, hdf5_file):
     #  within the IDS, homogeneous_time must be set to 2
     mhd.ids_properties.homogeneous_time = 0  # will fill in e.g. mhd.ggd[:].time
 
-    mhd.time.resize(1) # mandatory
+    mhd.time.resize(1)  # mandatory
 
     print(f"Model: {hdf5_file['jorek_model'][0]}")
 
@@ -149,7 +151,8 @@ def setIDSProperties(mhd, hdf5_file):
     mhd.ids_properties.creation_date = str(datetime.datetime.now())
     mhd.ids_properties.version_put.data_dictionary = getenv("IMAS_VERSION")
     mhd.ids_properties.version_put.access_layer = getenv("UAL_VERSION")
-    mhd.ids_properties.version_put.access_layer_language = getenv("Python 3.7.4")
+    mhd.ids_properties.version_put.access_layer_language = \
+        "Python " + platform.python_version()
 
 
 def setCodeContents_unfinished(mhd, file=None):
@@ -177,9 +180,11 @@ def setCodeContents_unfinished(mhd, file=None):
     mhd.code.parameters = prettify(root)
 
 
-def setBezierGrid(mhd, slice, hdf5_file):
+def setBezierGrid(mhd, ti, hdf5_file):
     """Set Bezier grid based on 'x', 'vertex' and 'size' matrices
-    (found in HDF5 file)
+    (found in HDF5 file).
+
+    ti ... time slice
     """
 
     x = hdf5_file['x']
@@ -193,6 +198,12 @@ def setBezierGrid(mhd, slice, hdf5_file):
     n_elements = hdf5_file['n_elements'][0]
     n_nodes = hdf5_file['n_nodes'][0]
     n_degrees = hdf5_file['n_degrees'][0]
+    n_tor = hdf5_file['n_tor'][0]
+
+    print("x shape: ", hdf5_file['x'].shape)
+    print("size shape: ", hdf5_file['size'].shape)
+    print("vertex shape: ", hdf5_file['vertex'].shape)
+    print("values shape: ", hdf5_file['values'].shape)
 
     print(f"t_now: {t_now}")
     print(f"tstep: {tstep}")
@@ -200,11 +211,14 @@ def setBezierGrid(mhd, slice, hdf5_file):
     print(f"n_elements: {n_elements}")
     print(f"n_nodes: {n_nodes}")
     print(f"n_degrees: {n_degrees}")
+    print(f"n_tor: {n_tor}")
 
-    g = mhd.grid_ggd[i_slice]
+    g = mhd.grid_ggd[ti]
     g.identifier.name = "JOREK grid"
     g.index = 1
     g.description = "JOREK grid (Bezier finite elements)"
+    print("*: ", hdf5_file['t_now'])
+    print("*: ", hdf5_file['t_now'][0])
     g.time = hdf5_file['t_now'][0]
 
     # R: mu = 0
@@ -213,43 +227,72 @@ def setBezierGrid(mhd, slice, hdf5_file):
     # u_k: dof = 1
     # v_k: dof = 2
     # w_k: dof = 3
-    # x[mu][dof][i_node]
-    # g.space[mu].objects_per_dimension[0].object[i_node].geometry = [p_k, u_k, v_k, w_k]
+    # x[mu][dof][k]
+    # g.space[0].objects_per_dimension[0].object[k].geometry =
+    #                                              [p_k_R, u_k_R, v_k_R, w_k_R,
+    #                                               p_k_Z, u_k_Z, v_k_Z, w_k_Z]
     g.space.resize(2)
 
-    # The coordinate types are specified in $IMAS_PREFIX/include/cpp, though
-    # the degrees of freedom (dofs) are not foreseen here.
-    # IDEA: could the dofs be suggested to be put here? Using dummy indices for
-    # now
+    # The coordinate types are specified in Data Dictionary (DD)
+    # utilities/coordinate_identifier.xml
     # Four dofs: # p_k, u_k, v_k, w_k
-    g.space[0].coordinates_type = np.array([1001, 1002, 1003, 1004])  # dummy IDs
+    g.space[0].coordinates_type.resize(2)
+    g.space[0].coordinates_type = np.array([4, 3])  # R, Z
 
-    # Space R
-    mu = 0
-    g.space[mu].identifier.name = "Space R"
-    g.space[mu].identifier.index = mu + 1  # Fortran notation required
-    g.space[mu].identifier.description = \
-        "Space R, four degrees of freedom: p_k, u_k, v_k and w_k"
-    g.space[mu].objects_per_dimension.resize(3)
+    g.space[0].identifier.name = "Space R-Z"
+    g.space[0].identifier.index = 1  # Fortran notation required
+    g.space[0].identifier.description = """Space R-Z, four degrees of freedom
+per coordinate: p_k, u_k, v_k and w_k.
+
+- Information relevant to nodes is being stored to
+grid_ggd[ti].space[0].objects_per_dimension[0].
+
+- Information relevant to 2D elements (quads) is being stored to
+grid_ggd[ti].space[0].objects_per_dimension[2].
+
+- The dofs for each node 'k' are stored as
+grid_ggd[ti].space[0].objects_per_dimension[0].object[k].geometry =
+[p_k_R, u_k_R, v_k_R, w_k_R, p_k_Z, u_k_Z, v_k_Z, w_k_Z].
+
+- The connectivity array for 2D elements (quads) is being stored as
+grid_ggd[ti].space[0].objects_per_dimension[2].object[k].nodes =
+[k_0, k_1, k_2, k_3]
+where k_0, k_1, k_2, k_3 are indices of nodes forming this 2D element.
+
+- The element properties - measures for the distances of the control points from
+the element nodes d_{u,k}, d_{v_k}, are being stored as (single array):
+
+grid_ggd[ti].space[0].objects_per_dimension[2].object[el].geometry =
+[1.0, d_{u_0}, d_{v_0}, d_{u_0, v_0},
+ 1.0, d_{u_1}, d_{v_1}, d_{u_1, v_1},
+ 1.0, d_{u_2}, d_{v_2}, d_{u_2, v_2},
+ 1.0, d_{u_3}, d_{v_3}, d_{u_3, v_3}].
+
+Note: A bit inconvenient because of the GGD structure limitations and
+'geometry' node can hold only 1D array of float values.
+
+"""
+    g.space[0].objects_per_dimension.resize(3)
     s0opd0 = g.space[0].objects_per_dimension[0]
     s0opd0.object.resize(hdf5_file['n_nodes'][0])
-    for i_node in range(n_nodes):
-        s0opd0.object[i_node].geometry.resize(n_degrees)
+    for k in range(n_nodes):
+        s0opd0.object[k].geometry.resize(n_degrees*2)
         for dof in range(n_degrees):
-            s0opd0.object[i_node].geometry[dof] = x[mu][dof][i_node]
+            s0opd0.object[k].geometry[dof] = x[0][dof][k]
+            s0opd0.object[k].geometry[dof+n_degrees] = x[1][dof][k]
 
     # dummy object_per_dimension[1]
     # Note: leaving mid AOS (Arrays of Structures) empty might result in
     #       the put command skipping all the next/following AOS altogether
-    g.space[mu].objects_per_dimension[1].object.resize(1)
+    g.space[0].objects_per_dimension[1].object.resize(1)
 
     # vertex (connectivity array for 2D elements)
-    s0opd2 = g.space[mu].objects_per_dimension[2]
+    s0opd2 = g.space[0].objects_per_dimension[2]
     s0opd2.object.resize(n_elements)
     for i_element in range(n_elements):
         s0opd2.object[i_element].nodes.resize(vertex.shape[0])
-        for i in range(vertex.shape[0]):
-            s0opd2.object[i_element].nodes[i] = vertex[i][i_element]
+        for k in range(vertex.shape[0]):
+            s0opd2.object[i_element].nodes[k] = vertex[k][i_element]
 
         # Data Dictionary entry for geometry:
         #  Geometry data associated with the object. Its dimension depends
@@ -268,23 +311,11 @@ def setBezierGrid(mhd, slice, hdf5_file):
                 s0opd2.object[i_element].geometry[dk] = size[d][k][i_element]
 
     print("Distances of the control points from the element node as set to "
-          "space[1].object[0]: \n", s0opd2.object[0])
-    print("space[1].object[0].geometry: \n", s0opd2.object[0].geometry)
-
-    # Space Z
-    mu = 1
-    g.space[mu].identifier.name = "Space Z"
-    g.space[mu].identifier.index = mu + 1  # Fortran notation required
-    g.space[mu].identifier.description = \
-        "Space R, four degrees of freedom: p_k, u_k, v_k and w_k"
-    g.space[mu].objects_per_dimension.resize(1)
-    s1opd0 = g.space[1].objects_per_dimension[0]
-    s1opd0.object.resize(hdf5_file['n_nodes'][0])
-    for i_node in range(n_nodes):
-        s1opd0.object[i_node].geometry.resize(n_degrees)
-        for dof in range(n_degrees):
-            s1opd0.object[i_node].geometry[dof] = x[mu][dof][i_node]
-
+          "space[0].objects_per_dimension[2].object[0]: \n", s0opd2.object[0])
+    print("space[0].objects_per_dimension[0].object[0].geometry: \n",
+          s0opd0.object[0].geometry)
+    print("space[0].objects_per_dimension[2].object[0].geometry: \n",
+          s0opd2.object[0].geometry)
 
 
 if __name__ == "__main__":
@@ -332,12 +363,12 @@ if __name__ == "__main__":
     print("WRITING TO IDS")
 
     # Loop through the list of HDF5 files
-    # for i_slice in range(len(filePathList)):
-    for i_slice in range(1):
+    # for ti in range(len(filePathList)):
+    for ti in range(1):  # hardcodded for taking only first slice for testing purposes
 
-        print("Slice: ", i_slice)
+        print("Slice: ", ti)
 
-        hdf5_file = getHDF5File(filePathList[i_slice])
+        hdf5_file = getHDF5File(filePathList[ti])
 
         print("keys: ", hdf5_file.keys())
 
@@ -350,9 +381,13 @@ if __name__ == "__main__":
         setCodeContents_unfinished(mhd)
 
         mhd.grid_ggd.resize(len(filePathList))
+        t1 = time()
+        setBezierGrid(mhd, ti=ti, hdf5_file=hdf5_file)
+        # t2 = time()
+        print(f"Time required to set grid_ggd/ggd for time slice {ti}: {time()-t1:.2f}s")
 
-        setBezierGrid(mhd, slice=i_slice, hdf5_file=hdf5_file)
-
+    t1 = time()
     mhd.put()
+    print(f"Time required for put() command to finish: {time()-t1:.2f}s")
 
     pdd.close()

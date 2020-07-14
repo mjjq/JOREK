@@ -179,7 +179,6 @@ def setCodeContents_unfinished(mhd, file=None):
 
     mhd.code.parameters = prettify(root)
 
-
 def setBezierGrid(mhd, ti, hdf5_file):
     """Set Bezier grid based on 'x', 'vertex' and 'size' matrices
     (found in HDF5 file).
@@ -193,7 +192,6 @@ def setBezierGrid(mhd, ti, hdf5_file):
     size_T = np.array(size).transpose()
     vertex = hdf5_file['vertex']
     vertex_T = np.array(vertex).transpose()
-    values = hdf5_file['values']
 
     t_now = hdf5_file['t_now'][0]
     tstep = hdf5_file['tstep'][0]
@@ -203,13 +201,12 @@ def setBezierGrid(mhd, ti, hdf5_file):
     n_degrees = hdf5_file['n_degrees'][0]
     n_tor = hdf5_file['n_tor'][0]
 
-    print("x shape: ", hdf5_file['x'].shape)
+    print("x shape: ", x.shape)
     print("x_T shape: ", x_T.shape)
-    print("size shape: ", hdf5_file['size'].shape)
+    print("size shape: ", size.shape)
     print("size_T shape: ", size_T.shape)
-    print("vertex shape: ", hdf5_file['vertex'].shape)
+    print("vertex shape: ", vertex.shape)
     print("vertex_T shape: ", vertex_T.shape)
-    print("values shape: ", hdf5_file['values'].shape)
 
     print(f"t_now: {t_now}")
     print(f"tstep: {tstep}")
@@ -219,11 +216,11 @@ def setBezierGrid(mhd, ti, hdf5_file):
     print(f"n_degrees: {n_degrees}")
     print(f"n_tor: {n_tor}")
 
-    g = mhd.grid_ggd[ti]
-    g.identifier.name = "JOREK grid"
-    g.index = 1
-    g.description = "JOREK grid (Bezier finite elements)"
-    g.time = hdf5_file['t_now'][0]
+    grid = mhd.grid_ggd[ti]
+    grid.identifier.name = "JOREK grid"
+    grid.index = 1
+    grid.description = "JOREK grid (Bezier finite elements)"
+    grid.time = hdf5_file['t_now'][0]
 
     # R: mu = 0
     # Z: mu = 1
@@ -232,20 +229,20 @@ def setBezierGrid(mhd, ti, hdf5_file):
     # v_k: dof = 2
     # w_k: dof = 3
     # x[mu][dof][k]
-    # g.space[0].objects_per_dimension[0].object[k].geometry =
+    # Four dofs: # p_k, u_k, v_k, w_k
+    # grid.space[0].objects_per_dimension[0].object[k].geometry =
     #                                              [p_k_R, u_k_R, v_k_R, w_k_R,
     #                                               p_k_Z, u_k_Z, v_k_Z, w_k_Z]
-    g.space.resize(2)
+    grid.space.resize(2)
 
     # The coordinate types are specified in Data Dictionary (DD)
     # utilities/coordinate_identifier.xml
-    # Four dofs: # p_k, u_k, v_k, w_k
-    g.space[0].coordinates_type.resize(2)
-    g.space[0].coordinates_type = np.array([4, 3])  # R, Z
+    grid.space[0].coordinates_type.resize(2)
+    grid.space[0].coordinates_type = np.array([4, 3])  # R, Z
 
-    g.space[0].identifier.name = "Space R-Z"
-    g.space[0].identifier.index = 1  # Fortran notation required
-    g.space[0].identifier.description = """Space R-Z, four degrees of freedom
+    grid.space[0].identifier.name = "Space R-Z"
+    grid.space[0].identifier.index = 1  # Fortran notation required
+    grid.space[0].identifier.description = """Space R-Z, four degrees of freedom
 per coordinate: p_k, u_k, v_k and w_k.
 
 - Information relevant to nodes is being stored to
@@ -276,8 +273,8 @@ Note: A bit inconvenient because of the GGD structure limitations and
 'geometry' node can hold only 1D array of float values.
 
 """
-    g.space[0].objects_per_dimension.resize(3)
-    s0opd0 = g.space[0].objects_per_dimension[0]
+    grid.space[0].objects_per_dimension.resize(3)
+    s0opd0 = grid.space[0].objects_per_dimension[0]
     s0opd0.object.resize(hdf5_file['n_nodes'][0])
     for k in range(n_nodes):
         s0opd0.object[k].geometry.resize(n_degrees*2)
@@ -287,10 +284,10 @@ Note: A bit inconvenient because of the GGD structure limitations and
     # dummy object_per_dimension[1]
     # Note: leaving mid AOS (Arrays of Structures) empty might result in
     #       the put command skipping all the next/following AOS altogether
-    g.space[0].objects_per_dimension[1].object.resize(1)
+    grid.space[0].objects_per_dimension[1].object.resize(1)
 
     # vertex (connectivity array for 2D elements)
-    s0opd2 = g.space[0].objects_per_dimension[2]
+    s0opd2 = grid.space[0].objects_per_dimension[2]
     s0opd2.object.resize(n_elements)
     for i_element in range(n_elements):
         s0opd2.object[i_element].nodes.resize(vertex_T.shape[1])
@@ -299,7 +296,6 @@ Note: A bit inconvenient because of the GGD structure limitations and
         # Data Dictionary entry for geometry:
         #  Geometry data associated with the object. Its dimension depends
         #  on the type of object, geometry and coordinate considered.
-        # s0opd2.object[i_element].geometry.resize(size.shape[0]*size.shape[1])
         s0opd2.object[i_element].geometry.resize(size_T[0].size)
         # Note: storing "size" is problematic, as there are, for example,
         #       4 values per 4 nodes of the element -> 16 values
@@ -316,6 +312,100 @@ Note: A bit inconvenient because of the GGD structure limitations and
           s0opd0.object[0].geometry)
     print("space[0].objects_per_dimension[2].object[0].geometry: \n",
           s0opd2.object[0].geometry)
+
+def setBezierValues(mhd, ti, hdf5_file):
+    """Set Bezier grid based values from 'values' matrix (found in HDF5 file).
+
+    ti ... time slice
+    """
+
+    values = hdf5_file['values']
+    values_T = np.array(values).transpose()
+    t_now = hdf5_file['t_now'][0]
+    n_var = hdf5_file['n_var'][0]
+    n_tor = hdf5_file['n_tor'][0]
+    n_elements = hdf5_file['n_elements'][0]
+    n_nodes = hdf5_file['n_nodes'][0]
+    n_degrees = hdf5_file['n_degrees'][0]
+    jorek_model = hdf5_file['jorek_model'][0]
+
+    print("values.shape: ", values.shape)
+    print("values_T.shape: ", values_T.shape)
+    print(f"n_elements: {n_elements}")
+    print(f"n_nodes: {n_nodes}")
+    print(f"n_degrees: {n_degrees}")
+
+    ggd = mhd.ggd[ti]
+    ggd.time = t_now
+
+    if (jorek_model == 303 or jorek_model == 307):
+        variables = ["flux", "potential", "current", "vorticity", "density",
+                     "temperature", "v_par"]
+    else:
+        print(f"No support for given model {jorek_model}. Returning.")
+        return
+
+    for v in range(n_var):
+        if variables[v] == "flux":  # v = 0
+            print("Writing quantity array: ", variables[v])
+            ggd.psi.resize(n_tor)
+            for l in range(n_tor):
+                ggd.psi[l].grid_index = 1
+                ggd.psi[l].grid_subset_index = -l
+                ggd.psi[l].coefficients.resize(n_nodes, n_degrees)
+                ggd.psi[l].coefficients = values[0][:][l]
+        elif variables[v] == "potential":  # v = 1
+            print("Writing quantity array: ", variables[v])
+            ggd.phi_potential.resize(n_tor)
+            for l in range(n_tor):
+                ggd.phi_potential[l].grid_index = 1
+                ggd.phi_potential[l].grid_subset_index = -l
+                ggd.phi_potential[l].coefficients.resize(n_nodes, n_degrees)
+                ggd.phi_potential[l].coefficients = values[0][:][l]
+        elif variables[v] == "current":  # v = 2
+            print("Writing quantity array: ", variables[v])
+            ggd.j_tor.resize(n_tor)
+            for l in range(n_tor):
+                ggd.j_tor[l].grid_index = 1
+                ggd.j_tor[l].grid_subset_index = -l
+                ggd.j_tor[l].coefficients.resize(n_nodes, n_degrees)
+                ggd.j_tor[l].coefficients = values[0][:][l]
+        elif variables[v] == "vorticity":  # v = 3
+            print("Writing quantity array: ", variables[v])
+            ggd.vorticity.resize(n_tor)
+            for l in range(n_tor):
+                ggd.vorticity[l].grid_index = 1
+                ggd.vorticity[l].grid_subset_index = -l
+                ggd.vorticity[l].coefficients.resize(n_nodes, n_degrees)
+                ggd.vorticity[l].coefficients = values[0][:][l]
+        elif variables[v] == "density":  # v = 4
+            print("Writing quantity array: ", variables[v])
+            ggd.mass_density.resize(n_tor)
+            for l in range(n_tor):
+                ggd.mass_density[l].grid_index = 1
+                ggd.mass_density[l].grid_subset_index = -l
+                ggd.mass_density[l].coefficients.resize(n_nodes, n_degrees)
+                ggd.mass_density[l].coefficients = values[0][:][l]
+        elif variables[v] == "temperature":  # v = 5
+            print("Writing quantity array: ", variables[v])
+            ggd.electrons.temperature.resize(n_tor)
+            for l in range(n_tor):
+                ggd.electrons.temperature[l].grid_index = 1
+                ggd.electrons.temperature[l].grid_subset_index = -l
+                ggd.electrons.temperature[l].coefficients.resize(n_nodes, n_degrees)
+                ggd.electrons.temperature[l].coefficients = values[0][:][l]
+        elif variables[v] == "v_par":  # v = 6
+            print("Writing quantity array: ", variables[v])
+            ggd.velocity_parallel.resize(n_tor)
+            for l in range(n_tor):
+                ggd.velocity_parallel[l].grid_index = 1
+                ggd.velocity_parallel[l].grid_subset_index = -l
+                ggd.velocity_parallel[l].coefficients.resize(n_nodes, n_degrees)
+                ggd.velocity_parallel[l].coefficients = values[0][:][l]
+        else:
+            print(f"WARNING! Unrecognized variable {variables[v]} found. Skipping.")
+
+        print(ggd)
 
 
 if __name__ == "__main__":
@@ -362,9 +452,10 @@ if __name__ == "__main__":
 
     print("WRITING TO IDS")
 
+    t0 = time()
+
     # Loop through the list of HDF5 files
     for ti in range(len(filePathList)):
-    # for ti in range(1):  # hardcodded for taking only first slice for testing purposes
 
         print("Slice: ", ti)
 
@@ -380,16 +471,24 @@ if __name__ == "__main__":
         # set code parameters to IDS
         setCodeContents_unfinished(mhd)
 
+        # set grid_ggd
         mhd.grid_ggd.resize(len(filePathList))
         t1 = time()
         setBezierGrid(mhd, ti=ti, hdf5_file=hdf5_file)
         mhd.time.resize(len(filePathList))
         mhd.time[ti] = hdf5_file['t_now'][0]
-        # t2 = time()
-        print(f"Time required to set grid_ggd/ggd for time slice {ti}: {time()-t1:.2f}s")
+        print(f"Time required to set grid_ggd for time slice {ti}: {time()-t1:.2f}s")
+
+        # set ggd
+        mhd.ggd.resize(len(filePathList))
+        t2 = time()
+        setBezierValues(mhd, ti=ti, hdf5_file=hdf5_file)
+        print(f"Time required to set ggd for time slice {ti}: {time()-t2:.2f}s")
 
     t1 = time()
     mhd.put()
     print(f"Time required for put() command to finish: {time()-t1:.2f}s")
+
+    print(f"Total time: {time()-t0:.2f}s")
 
     pdd.close()

@@ -457,6 +457,7 @@ call initialise_basis                              ! define the basis functions 
 
 nnos = nsub*nsub*element_list%n_elements
 allocate(currdens(nnos),xyz(3,nnos),scalars(nnos,1:n_scalars),vectors(nnos,3,1:n_vectors))
+currdens = 0.
 
 nnoel = 4
 nel   = (nsub-1)*(nsub-1)*element_list%n_elements
@@ -660,6 +661,9 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
           scalars(inode,m) = P * HZ(i_tor,i_plane)
         enddo
+        
+        ! The real current density
+        currdens(inode) = -scalars(inode,3)/BigR
 
         if ((xjac .gt. 1.d-6)) then
 

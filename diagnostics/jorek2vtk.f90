@@ -664,6 +664,9 @@ do i=1,element_list%n_elements
           scalars(inode,m) = P * HZ(i_tor,i_plane)
         enddo
 
+        ! The real current density
+        currdens(inode) = -scalars(inode,3)/BigR
+
         if ((xjac .gt. 1.d-6)) then
 
           call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)

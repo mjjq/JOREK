@@ -299,7 +299,6 @@ module vacuum_response
     name     = adjustl(name)
     datatype = adjustl(datatype)
 
-    
     error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. ( trim(name) /= trim(array_name) ) &
       .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. ( trim(datatype) /= trim(requested_type) )
 
@@ -1028,7 +1027,7 @@ module vacuum_response
        write(*,33) 'ind_start_rmp_coils     =', sr%ind_start_rmp_coils
        write(*,33) 'ind_start_voltage_coils =', sr%ind_start_voltage_coils
        write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
-       if ( sr%file_version >= 2) write(*,37) 'eta_thin_w        =', sr%eta_thin_w
+      if ( sr%file_version >= 2) write(*,37) 'eta_thin_w        =', sr%eta_thin_w
       if (allocated(sr%i_tor)) write(*,33) 'i_tor               ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     end if 
 

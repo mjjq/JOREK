@@ -756,9 +756,9 @@ module vacuum
         call HDF5_integer_saving(file_id,sr%n_diag_coils,"n_diag_coil"//char(0))
         call HDF5_integer_saving(file_id,sr%n_pol_coils,"n_pf_coil"//char(0))
         call HDF5_integer_saving(file_id,sr%n_rmp_coils,"n_rmp_coil"//char(0))
-        if(sr%n_pol_coils  .gt. 0) call HDF5_array1D_saving_char(file_id,pf_coil_name,  sr%ncoil*COIL_NAME_LEN,"pf_coil_name"//char(0))
-        if(sr%n_diag_coils .gt. 0) call HDF5_array1D_saving_char(file_id,diag_coil_name,sr%ncoil*COIL_NAME_LEN,"diag_coil_name"//char(0))
-        if(sr%n_rmp_coils  .gt. 0) call HDF5_array1D_saving_char(file_id,rmp_coil_name, sr%ncoil*COIL_NAME_LEN,"rmp_coil_name"//char(0))
+        if(sr%n_diag_coils .gt. 0) call HDF5_array1D_saving_char(file_id,diag_coil_name,sr%n_diag_coils*COIL_NAME_LEN,"diag_coil_name"//char(0))
+        if(sr%n_pol_coils  .gt. 0) call HDF5_array1D_saving_char(file_id,pf_coil_name,  sr%n_pol_coils* COIL_NAME_LEN,"pf_coil_name"//char(0))
+        if(sr%n_rmp_coils  .gt. 0) call HDF5_array1D_saving_char(file_id,rmp_coil_name, sr%n_rmp_coils* COIL_NAME_LEN,"rmp_coil_name"//char(0))
         
 
         if ( index_now > 0) then        
@@ -874,12 +874,23 @@ module vacuum
         if ( allocated(diag_coil_curr) )    deallocate(diag_coil_curr)
         if ( allocated(pf_coil_curr  ) )    deallocate(pf_coil_curr)
         if ( allocated(rmp_coil_curr ) )    deallocate(rmp_coil_curr)
+        if ( allocated(diag_coil_name) )    deallocate(diag_coil_name)
+        if ( allocated(pf_coil_name) )      deallocate(pf_coil_name)
+        if ( allocated(rmp_coil_name) )     deallocate(rmp_coil_name)
         if (         sz_net  > 0 ) allocate( net_tor_wall_curr(sz_net) )
-        if ( minval(sz_diag) > 0 ) allocate( diag_coil_curr(sz_diag(1), sz_diag(2)) )
-        if ( minval(sz_pol)  > 0 ) allocate(   pf_coil_curr( sz_pol(1),  sz_pol(2)) )
-        if ( minval(sz_rmp)  > 0 ) allocate(  rmp_coil_curr( sz_rmp(1),  sz_rmp(2)) )
+        if ( minval(sz_diag) > 0 ) then
+          allocate( diag_coil_curr(sz_diag(1), sz_diag(2)) )
+          allocate( diag_coil_name(sz_diag(2)) )
+        endif
+        if ( minval(sz_pol)  > 0 ) then
+          allocate(   pf_coil_curr( sz_pol(1),  sz_pol(2)) )
+          allocate(   pf_coil_name( sz_pol(2)) )
+        endif
+        if ( minval(sz_rmp)  > 0 ) then
+          allocate(  rmp_coil_curr( sz_rmp(1),  sz_rmp(2)) )
+          allocate(  rmp_coil_name( sz_rmp(2)) )
+        endif
       end if
-
       call MPI_BCAST(wall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(dwall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(old_dpsibnd_vec,n_dof_starwall,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 
@@ -888,6 +899,9 @@ module vacuum
       if ( minval(sz_diag) > 0 ) call MPI_BCAST(diag_coil_curr,sz_diag(1)*sz_diag(2),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       if ( minval( sz_pol) > 0 ) call MPI_BCAST(  pf_coil_curr, sz_pol(1)*sz_pol(2) ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)      
       if ( minval( sz_rmp) > 0 ) call MPI_BCAST( rmp_coil_curr, sz_rmp(1)*sz_rmp(2) ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+      if ( minval(sz_diag) > 0 ) call MPI_BCAST(diag_coil_name, sz_diag(2)*COIL_NAME_LEN ,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
+      if ( minval( sz_pol) > 0 ) call MPI_BCAST(  pf_coil_name,  sz_pol(2)*COIL_NAME_LEN ,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
+      if ( minval( sz_rmp) > 0 ) call MPI_BCAST( rmp_coil_name,  sz_rmp(2)*COIL_NAME_LEN ,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
     end if
     
     call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)

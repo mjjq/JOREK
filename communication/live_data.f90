@@ -849,7 +849,7 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_logy: 0'
         write(LIVE_DATA_HANDLE,'(A)',advance='no') '@diag_coil_curr: %"time"           '
         do n = 1,size(diag_coil_curr,2)
-          write(LIVE_DATA_HANDLE,'(A7,A1,I2.2,A2,1x)',advance='no') trim(diag_coil_name(n)), " "
+          write(LIVE_DATA_HANDLE,'(A12,1x)',advance='no') trim(diag_coil_name(n))
         end do
         write(LIVE_DATA_HANDLE,*)
         header_written_diag = .true.
@@ -869,7 +869,7 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A)') '@pf_coil_curr_logy: 0'
         write(LIVE_DATA_HANDLE,'(A)',advance='no') '@pf_coil_curr: %"time"           '
         do n = 1,size(pf_coil_curr,2)
-          write(LIVE_DATA_HANDLE,'(A7,A1,I2.2,A2,1x)',advance='no') trim(pf_coil_name(n)), " "
+          write(LIVE_DATA_HANDLE,'(A12,1x)',advance='no') trim(pf_coil_name(n))
         end do
         write(LIVE_DATA_HANDLE,*)
         header_written_pf = .true.
@@ -890,7 +890,7 @@ module live_data
         write(LIVE_DATA_HANDLE,*)
         write(LIVE_DATA_HANDLE,'(A)',advance='no') '@RMP_coil_curr: %"time"           '
         do n = 1,size(rmp_coil_curr,2)
-          write(LIVE_DATA_HANDLE,'(A7,A1,I2.2,A2,1x)',advance='no') trim(rmp_coil_name(n)), " "
+          write(LIVE_DATA_HANDLE,'(A12,1x)',advance='no') trim(rmp_coil_name(n))
         end do
         header_written_rmp = .true.
       end if

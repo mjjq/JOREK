@@ -65,13 +65,6 @@ contains
     call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min_harm(my_id+1), index_max_harm(my_id+1), & 
       i_tor_min, i_tor_max, irn_harm, jcn_harm, n_matrix_block_size_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm) 
   endif
- 
-  ! --- Memory allocation
-  if (allocated(irn_harm))  call tr_deallocate(irn_harm,"irn_harm",CAT_DMATRIX)
-  call tr_allocate(irn_harm,1,nz_harm,"irn_harm",  CAT_DMATRIX)
- 
-  if (allocated(jcn_harm))  call tr_deallocate(jcn_harm,"jcn_harm",CAT_DMATRIX)
-  call tr_allocate(jcn_harm,1,nz_harm,"jcn_harm",  CAT_DMATRIX) 
 
   call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master,                &
     local_elms_harm, n_local_elms_harm, index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint2,&

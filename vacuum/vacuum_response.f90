@@ -80,6 +80,7 @@ module vacuum_response
     if ( vacuum_debug  ) call log_starwall_response(my_id, sr) 
     call read_starwall_response(my_id, sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
     call broadcast_starwall_response(my_id, sr)
+    if( sr%ncoil .gt. 0 ) call distribute_coil_names
 
     ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
     if ( (sr%file_version == 1)  .and. (my_id == 0) ) then
@@ -2058,13 +2059,6 @@ module vacuum_response
           diag_coil_curr(:,:) = 0.d0
         end if
         diag_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_diag_coils:sr%ind_start_diag_coils + sr%n_diag_coils -1)
-
-        if (.not. allocated(diag_coil_name))  then
-          allocate( diag_coil_name(sr%n_diag_coils) )
-          diag_coil_name(:) = sr%coil_name(sr%ind_start_diag_coils:sr%ind_start_diag_coils +  sr%n_diag_coils -1)
-        end if
-
-        
       endif
       
       if ( sr%n_rmp_coils > 0 ) then
@@ -2074,11 +2068,6 @@ module vacuum_response
         end if
         rmp_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_rmp_coils : sr%ind_start_rmp_coils + sr%n_rmp_coils -1) 
 
-        if  (.not. allocated(rmp_coil_name)) then
-          allocate( rmp_coil_name(sr%n_rmp_coils) )
-          rmp_coil_name(:) = sr%coil_name(sr%ind_start_rmp_coils:sr%ind_start_rmp_coils +  sr%n_rmp_coils -1)
-        end if
-
       end if
       
       if ( sr%n_pol_coils > 0 ) then
@@ -2087,12 +2076,6 @@ module vacuum_response
           pf_coil_curr(:,:) = 0.d0
         end if
         pf_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_pol_coils:sr%ind_start_pol_coils + sr%n_pol_coils -1) 
-
-        if  (.not. allocated(pf_coil_name)) then
-          allocate( pf_coil_name(sr%n_pol_coils) )
-          pf_coil_name(:) = sr%coil_name(sr%ind_start_pol_coils:sr%ind_start_pol_coils +  sr%n_pol_coils -1)
-        end if
-
       end if
 
       ! Voltage coils not yet implemented
@@ -2259,11 +2242,6 @@ module vacuum_response
         if (index_now>0) then
           diag_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_diag_coils:sr%ind_start_diag_coils + sr%n_diag_coils -1) 
         endif
-        if (.not. allocated(diag_coil_name))  then
-          allocate( diag_coil_name(sr%n_diag_coils) )
-          diag_coil_name(:) = sr%coil_name(sr%ind_start_diag_coils:sr%ind_start_diag_coils +  sr%n_diag_coils -1)
-        end if
-                
         
       end if
       
@@ -2275,11 +2253,6 @@ module vacuum_response
         if (index_now>0) then
           rmp_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_rmp_coils : sr%ind_start_rmp_coils + sr%n_rmp_coils -1) 
         endif
-        if (.not. allocated(rmp_coil_name))  then
-          allocate( rmp_coil_name(sr%n_rmp_coils) )
-          rmp_coil_name(:) = sr%coil_name(sr%ind_start_rmp_coils:sr%ind_start_rmp_coils +  sr%n_rmp_coils -1)
-        end if
-
       end if
       
       if ( sr%n_pol_coils > 0 ) then
@@ -2291,10 +2264,6 @@ module vacuum_response
           pf_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_pol_coils:sr%ind_start_pol_coils + sr%n_pol_coils -1) 
         endif
         
-        If (.not. allocated(pf_coil_name))  then
-          allocate( pf_coil_name(sr%n_pol_coils) )
-          pf_coil_name(:) = sr%coil_name(sr%ind_start_pol_coils:sr%ind_start_pol_coils +  sr%n_pol_coils -1)
-        end if
 
       end if
 
@@ -2881,6 +2850,27 @@ module vacuum_response
     write(*,100)
 
   end subroutine memory_prediction 
+
+  subroutine distribute_coil_names
+    use vacuum
+
+    if ((sr%n_diag_coils .gt. 0) .and. (.not. allocated(diag_coil_name)) )  then
+      allocate( diag_coil_name(sr%n_diag_coils) )
+      diag_coil_name(:) = sr%coil_name(sr%ind_start_diag_coils:sr%ind_start_diag_coils +  sr%n_diag_coils -1)
+    end if
+
+    if (( sr%n_rmp_coils .gt. 0) .and. (.not. allocated( rmp_coil_name)) ) then
+      allocate( rmp_coil_name(sr%n_rmp_coils) )
+      rmp_coil_name(:)  = sr%coil_name(  sr%ind_start_rmp_coils:sr%ind_start_rmp_coils +  sr%n_rmp_coils  -1)
+    end if
+    
+    if (( sr%n_pol_coils .gt. 0) .and. (.not. allocated(  pf_coil_name)) )  then
+      allocate( pf_coil_name(sr%n_pol_coils) )
+      pf_coil_name(:)   = sr%coil_name(  sr%ind_start_pol_coils:sr%ind_start_pol_coils +  sr%n_pol_coils  -1)
+    end if
+    
+  end subroutine distribute_coil_names
+  
 
 end module vacuum_response
 

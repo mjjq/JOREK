@@ -339,7 +339,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   type (type_element)               :: element_father
   type (type_node)                  :: nodes_father(n_vertex_max)
   real*8,              allocatable  :: rhs_local(:)
-  integer                           :: i_bnd, i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
+  integer                           :: i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
   integer                           :: index_node1, index_node2, i_order, k_order, ielm, ierr
   integer                           :: ijA_position, index_min_loc, index_max_loc
   integer                           :: index_large_i, index_large_k, ilarge2, vertex(2), direction(2)
@@ -373,7 +373,6 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   if (.not. harmonic_matrix) then
     
     ! --- Local min-max indices for the nodes of our local elements (local in the MPI sense)
-    i_bnd = 0
     do i = 1, n_local_elms
       ielm = local_elms(i)
 
@@ -384,9 +383,6 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
         inode = element_list%element(ielm)%vertex(iv)
 
-        if (node_list%node(inode)%boundary .eq. 1) i_bnd = i_bnd + 1
-        if (node_list%node(inode)%boundary .eq. 2) i_bnd = i_bnd + 1
-        if (node_list%node(inode)%boundary .eq. 3) i_bnd = i_bnd + 2
         if (i == 1 .and. iv == 1) then
           index_min_loc = minval(node_list%node(iv)%index)
           index_max_loc = maxval(node_list%node(iv)%index)
@@ -634,7 +630,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
                 call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
-                thread_struct(omp_tid)%synch_buff(:) = 0.d0
+                thread_struct(omp_tid)%synch_buff(1:n_var*n_tor_local*n_var*n_tor_local) = 0.d0
                 do j = 1, n_var * n_tor_local
                   index_ij = n_tor_local * n_var * (n_order+1) * (i-1) + n_tor_local * n_var * (i_order-1) + j   ! index in the ELM matrix
 
@@ -657,7 +653,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
                 !$omp critical
                 A_mat(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) = &
                   A_mat(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) +  &
-                  thread_struct(omp_tid)%synch_buff(:)
+                  thread_struct(omp_tid)%synch_buff(1:n_var*n_tor_local*n_var*n_tor_local)
                 !$omp end critical 
 
               enddo ! n_order+1

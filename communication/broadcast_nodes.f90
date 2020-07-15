@@ -10,7 +10,7 @@ implicit none
 type (type_node_list)    :: node_list
 
 type (type_node)         :: anode
-integer                  :: i, ierr, my_id, position, bufsize, IDBL_EXT, INT_EXT, ILOG_EXT
+integer                  :: i, ierr, my_id, position, bufsize, IDBL_EXT, INT_EXT, LONG_EXT, ILOG_EXT
 character, allocatable   :: buffer(:)
 
 !  type type_node                                      ! type definition of a node (i.e. a vertex)
@@ -28,18 +28,22 @@ character, allocatable   :: buffer(:)
 
 call MPI_PACK_SIZE(1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,IDBL_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
+#ifdef INTSIZE64
+call MPI_PACK_SIZE(1,MPI_INTEGER8,MPI_COMM_WORLD,LONG_EXT,ierr)
+#else
+call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,LONG_EXT,ierr)
+#endif
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 
 call MPI_BCAST(node_list%n_nodes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 call MPI_BCAST(node_list%n_dof,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 #ifdef fullmhd
-bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1 + 1+3+1 )*INT_EXT + (2)*ILOG_EXT)
+bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1)*LONG_EXT + (1+3+1)*INT_EXT + (2)*ILOG_EXT)
 #elif altcs
-bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1 + 1+3+1 )*INT_EXT + (2)*ILOG_EXT)
+bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1)*LONG_EXT + (1+3+1)*INT_EXT + (2)*ILOG_EXT)
 #else
-!bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2)*IDBL_EXT + (n_order+1 + 1+3 )*INT_EXT + (2)*ILOG_EXT)
-bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2)*IDBL_EXT + (n_order+1 + 1+3+1 )*INT_EXT + (2)*ILOG_EXT)
+bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2)*IDBL_EXT + (n_order+1)*LONG_EXT + (1+3+1)*INT_EXT + (2)*ILOG_EXT)
 #endif
 
 
@@ -60,7 +64,11 @@ if (my_id .eq. 0) then
     call MPI_PACK(anode%Fprof_eq       ,n_order+1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anode%psi_eq         ,n_order+1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 #endif
+#ifdef INTSIZE64
+    call MPI_PACK(anode%index          ,n_order+1,MPI_INTEGER8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+#else
     call MPI_PACK(anode%index          ,n_order+1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+#endif
     call MPI_PACK(anode%boundary       ,1        ,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anode%boundary_index ,1        ,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anode%axis_node      ,1        ,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -89,7 +97,11 @@ if (my_id .ne. 0) then
     call MPI_UNPACK(buffer,bufsize,position,anode%Fprof_eq       ,n_order+1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anode%psi_eq         ,n_order+1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 #endif
+#ifdef INTSIZE64
+    call MPI_UNPACK(buffer,bufsize,position,anode%index          ,n_order+1,MPI_INTEGER8,MPI_COMM_WORLD,ierr)
+#else
     call MPI_UNPACK(buffer,bufsize,position,anode%index          ,n_order+1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+#endif
     call MPI_UNPACK(buffer,bufsize,position,anode%boundary       ,1        ,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anode%boundary_index ,1        ,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anode%axis_node      ,1        ,MPI_LOGICAL,MPI_COMM_WORLD,ierr)

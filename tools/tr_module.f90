@@ -2,6 +2,8 @@
 ! debug tracing
 module tr_module
 
+  use mod_integer_types
+
   implicit none
   interface tr_register_mem
      module procedure tr_register_mem_int4, tr_register_mem_int8
@@ -253,6 +255,16 @@ contains
     call tr_write("### "//trim(adjustl(bufstring))//" ###")
   end subroutine tr_debug_writei
 
+  !---------------------------------------- 
+  ! Write debug remark in file trace_file
+  !----------------------------------------
+  subroutine tr_debug_writel(string, int_var)
+    character*(*)           :: string
+    integer(kind=int_all)   :: int_var
+    character(len=1024)     :: bufstring
+    write(bufstring,'(A,I20)')string,int_var
+    call tr_write("### "//trim(adjustl(bufstring))//" ###")
+  end subroutine tr_debug_writel
 
   !---------------------------------------- 
   ! Write debug remark in file trace_file

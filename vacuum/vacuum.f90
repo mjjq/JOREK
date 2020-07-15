@@ -874,19 +874,19 @@ module vacuum
         if ( allocated(diag_coil_curr) )    deallocate(diag_coil_curr)
         if ( allocated(pf_coil_curr  ) )    deallocate(pf_coil_curr)
         if ( allocated(rmp_coil_curr ) )    deallocate(rmp_coil_curr)
-        if ( allocated(diag_coil_name) )    deallocate(diag_coil_name)
-        if ( allocated(pf_coil_name) )      deallocate(pf_coil_name)
-        if ( allocated(rmp_coil_name) )     deallocate(rmp_coil_name)
         if (         sz_net  > 0 ) allocate( net_tor_wall_curr(sz_net) )
         if ( minval(sz_diag) > 0 ) then
+          if ( allocated(diag_coil_name) )    deallocate(diag_coil_name)
           allocate( diag_coil_curr(sz_diag(1), sz_diag(2)) )
           allocate( diag_coil_name(sz_diag(2)) )
         endif
         if ( minval(sz_pol)  > 0 ) then
+          if ( allocated(pf_coil_name) )      deallocate(pf_coil_name)
           allocate(   pf_coil_curr( sz_pol(1),  sz_pol(2)) )
           allocate(   pf_coil_name( sz_pol(2)) )
         endif
         if ( minval(sz_rmp)  > 0 ) then
+          if ( allocated(rmp_coil_name) )     deallocate(rmp_coil_name)
           allocate(  rmp_coil_curr( sz_rmp(1),  sz_rmp(2)) )
           allocate(  rmp_coil_name( sz_rmp(2)) )
         endif

@@ -2067,7 +2067,6 @@ module vacuum_response
           rmp_coil_curr(:,:) = 0.d0
         end if
         rmp_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_rmp_coils : sr%ind_start_rmp_coils + sr%n_rmp_coils -1) 
-
       end if
       
       if ( sr%n_pol_coils > 0 ) then
@@ -2242,7 +2241,6 @@ module vacuum_response
         if (index_now>0) then
           diag_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_diag_coils:sr%ind_start_diag_coils + sr%n_diag_coils -1) 
         endif
-        
       end if
       
       if ( sr%n_rmp_coils > 0 ) then
@@ -2263,8 +2261,6 @@ module vacuum_response
         if (index_now>0) then
           pf_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_pol_coils:sr%ind_start_pol_coils + sr%n_pol_coils -1) 
         endif
-        
-
       end if
 
       ! Voltage coils not yet implemented

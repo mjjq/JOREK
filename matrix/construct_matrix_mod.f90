@@ -632,7 +632,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
                 call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
-                thread_struct(omp_tid)%synch_buff(:) = 0.d0
+                thread_struct(omp_tid)%synch_buff(1:n_var*n_tor_local*n_var*n_tor_local) = 0.d0
                 do j = 1, n_var * n_tor_local
                   index_ij = n_tor_local * n_var * (n_order+1) * (i-1) + n_tor_local * n_var * (i_order-1) + j   ! index in the ELM matrix
 
@@ -655,7 +655,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
                 !$omp critical
                 A_mat(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) = &
                   A_mat(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) +  &
-                  thread_struct(omp_tid)%synch_buff(:)
+                  thread_struct(omp_tid)%synch_buff(1:n_var*n_tor_local*n_var*n_tor_local)
                 !$omp end critical 
 
               enddo ! n_order+1

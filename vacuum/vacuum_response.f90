@@ -1715,7 +1715,7 @@ module vacuum_response
 
                       i_tor    = sr%i_tor(i_starwall)
 
-                      if ( (i_tor < i_tor_min) .or. (i_tor > i_tor_max) ) cycle   !--psv 
+                      if ( (i_tor < i_tor_min) .or. (i_tor > i_tor_max) ) cycle    
 
                       i_resp_old   = response_index(i_node_bnd,i_starwall,i_dof)
 
@@ -1770,7 +1770,7 @@ module vacuum_response
 
                             j_tor  = sr%i_tor(j_starwall)
                       
-                            if ( (j_tor < i_tor_min) .or. (j_tor > i_tor_max) ) cycle   !--psv 
+                            if ( (j_tor < i_tor_min) .or. (j_tor > i_tor_max) ) cycle    
 
                             j_resp   = (bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
                                      + bnd_node_list%bnd_node(j_node_bnd)%n_dof*(j_starwall-1)              &
@@ -2266,6 +2266,16 @@ module vacuum_response
   
   
   !> Reconstruct the potential values at the wall triangle nodes.
+  !!
+  !! To reconstruct the physical wall potentials from the ones we work 
+  !! with we need to muliply them by the similarity transform matrix.
+  !! The physical wall potentials include different types of potentials,
+  !! and the way they are ordered in the array is
+  !!
+  !!   (I_coil_1, I_coil_2, ..., I_coil_ncoil, Iw_net, Potw_1, Potw_2, ..., Potw_npotw-1)
+  !!  
+  !! where I_coil are the coil currents, Iw_net is the net wall current
+  !! and Potw are the single valued wall potentials.  
   subroutine reconstruct_triangle_potentials(tripot_w, wall_curr, my_id)
     
     use mpi_mod

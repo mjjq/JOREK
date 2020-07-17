@@ -29,7 +29,8 @@ module exec_commands
   
   
   
-  character(len=11), parameter, private :: DIR = './postproc/' !< Output goes into this directory!
+  character(len=256), private :: DIR = './postproc/' !< Output goes into this directory!
+                                                     !! set to './postproc/' by default
   
   integer, parameter :: NORMAL_MODE = 1 !< Normal mode
   integer, parameter :: LOOP_S_MODE = 2 !< Mode started by 'for step' and ended by 'done' commands
@@ -47,6 +48,7 @@ module exec_commands
   integer            :: n_queued_commands = 0            !< Number of commands in the queue
   type(type_command) :: command_queue(MAX_QUEUE_LENGTH)  !< Queued commands
   
+  character(len=1024)                :: input_file
   logical,             private, save :: input_loaded  = .false. !< Has an input file been loaded?
   logical,             private, save :: step_imported = .false. !< Has a restart file been imported?
   logical,             private, save :: dir_created   = .false. !< Postproc directory created?
@@ -91,9 +93,9 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ierr = 0
-    
+
     if ( .not. dir_created ) then
-      call system('mkdir -p '//DIR)
+      call system('mkdir -p '//trim(DIR))
       dir_created = .true.
     end if
     
@@ -181,6 +183,8 @@ module exec_commands
           call mark_coords(command, ierr)
         case ( 'midplane' )
           call midplane(command, first_step, ierr)
+        case ( 'set_postproc_dir' )
+          call set_postproc_dir(command, ierr)
         case ( 'namelist' )
           call load_namelist(command, ierr)
         case ( 'params' )
@@ -302,7 +306,7 @@ module exec_commands
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
     
     ! --- Locate magnetic axis and X-point.
-    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+    call update_equil_state(0,node_list, element_list, bnd_elm_list, xpoint, xcase)
 
     ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
     minRad = 0.0
@@ -499,7 +503,7 @@ module exec_commands
     
     ! --- Local variables
     integer              :: jcmd, istep, load_error, n_avail, itime, n_time, iavail, n_select, & 
-                            temp_select, loop_unit
+                            temp_select, loop_unit, input_err
     logical              :: first_step, file_exists   ! Is true for the first timestep loaded in the for-loop
     real*8               :: time_loop, rho_norm, loop_fact_time
     character(len=64)    :: file_name
@@ -507,7 +511,8 @@ module exec_commands
     real*8 , allocatable :: selected_times(:)
     integer, allocatable :: available_steps(:)
     
-    ierr = 0
+    ierr      = 0
+    input_err = 0
     loop_mode = exec_mode
     exec_mode = NORMAL_MODE
 		
@@ -519,6 +524,7 @@ module exec_commands
     first_step = .true.
     if ( loop_mode == LOOP_S_MODE ) then
       do istep = loop_min_step, loop_max_step, loop_inc_step
+        call reload_namelist(input_err)
         call load_step(istep, load_error)
         if ( load_error /= 0 ) cycle
 
@@ -619,6 +625,7 @@ module exec_commands
       write(*,*) '--------------------------------------------------'
 
       do istep = 1, n_select
+        call reload_namelist(input_err)
         call load_step( selected_steps(istep), load_error)
         if ( load_error /= 0 ) cycle
       
@@ -771,6 +778,34 @@ module exec_commands
   
   
   
+  !> Determine the postproc output directory
+  subroutine set_postproc_dir(command, ierr)
+    
+    use phys_module
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    character(len=256) ::  dirname
+    
+    ierr = 0
+    
+    ! --- Some checks.
+    call check_args(command%n_args,ierr,1);  if ( ierr /= 0 ) return
+    dirname = trim(command%args(1))//'/'
+    
+    call system('mkdir -p '//trim(dirname))
+    DIR = dirname
+    dir_created = .true.
+    
+  end subroutine set_postproc_dir
+  
+  
+  
+  
+  
   !> Load a specific namelist input file
   subroutine load_namelist(command, ierr)
     
@@ -796,6 +831,7 @@ module exec_commands
     if (file_exists) then
       call initialise_parameters(0, filename)
       input_loaded = .true.
+      input_file   = filename
     else
       ierr = 1
       write(*,*) 'ERROR: input file "', trim(filename), '" does not exist.'
@@ -804,9 +840,41 @@ module exec_commands
 
   end subroutine load_namelist
   
+
+
+
+
+
+  !> Load again the JOREK input file
+  subroutine reload_namelist(ierr)
+    
+    use phys_module     
+    
+    ! --- Routine parameters
+    integer,    intent(inout) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    logical ::  file_exists
+    
+    ierr = 0
+    
+    inquire (file=input_file, exist=file_exists)
+      
+    ! --- Read the input namelist file
+    if (file_exists) then
+      call initialise_parameters(0, input_file)
+      input_loaded = .true.
+    else
+      ierr = 1
+      write(*,*) 'ERROR: input file "', trim(input_file), '" does not exist.'
+      call specific_help('namelist')
+    end if
+
+  end subroutine reload_namelist
   
   
   
+
   
   !> Check if a restart file has already been imported
   subroutine check_step_imported(ierr)
@@ -1107,7 +1175,7 @@ module exec_commands
     tmin  = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
     tmax  = to_float(command%args(2), ierr); if ( ierr /= 0 ) return
     
-    write(filename,'(9a)') DIR, 'energyspectrum_tmin', trim(real2str(tmin,'(f12.4)')), '_tmax', &
+    write(filename,'(9a)') trim(DIR), 'energyspectrum_tmin', trim(real2str(tmin,'(f12.4)')), '_tmax', &
       trim(real2str(tmax,'(f12.4)')), trim(step_range_string(index_now,index_now)), '.dat'
     
     if ( (tmin<xtime(1)) .or. (xtime(index_now)<tmax) .or. (tmax<=tmin) ) then
@@ -1204,7 +1272,7 @@ module exec_commands
       
       phi = to_float(command%args(3), ierr); if ( ierr /= 0 ) return
       
-      write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',  &
+      write(filename,'(9a)') trim(DIR), 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)), '_p',  &
         trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
       
       call eval_expr(ES, units, expr_list, pol_pos(node_list,element_list,ES,R=R,Z=Z),             &
@@ -1214,7 +1282,7 @@ module exec_commands
       
     else ! toroidally averaged values
       
-      write(filename,'(9a)') DIR, 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)),        &
+      write(filename,'(9a)') trim(DIR), 'exprs_at_R', trim(real2str(R)), '_Z', trim(real2str(Z)),        &
         '_toroidally-averaged', trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
       
       call eval_expr(ES, units, expr_list, pol_pos(node_list,element_list,ES,R=R,Z=Z),             &
@@ -1271,7 +1339,7 @@ module exec_commands
       return
     end if
     
-    write(filename,'(4a)') DIR, 'exprs_'//trim(s)//                                                &
+    write(filename,'(4a)') trim(DIR), 'exprs_'//trim(s)//                                                &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     write(comment,'(a,i6.6)') 'time step #', index_now
@@ -1314,7 +1382,7 @@ module exec_commands
     units  = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
     npts   = get_int_setting('linepoints', ierr); if ( ierr /= 0 ) return
     
-    write(filename,'(15a)') DIR, 'exprs_along_line_R', trim(real2str(Rstart)), '..',               &
+    write(filename,'(15a)') trim(DIR), 'exprs_along_line_R', trim(real2str(Rstart)), '..',               &
       trim(real2str(Rend)), '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p',        &
       trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
@@ -1354,7 +1422,7 @@ module exec_commands
     units  = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
     npts   = get_int_setting('linepoints', ierr); if ( ierr /= 0 ) return
 
-    write(filename,'(15a)') DIR, 'integrate_exprs_along_line_R', trim(real2str(Rstart)), '..',             &
+    write(filename,'(15a)') trim(DIR), 'integrate_exprs_along_line_R', trim(real2str(Rstart)), '..',             &
       trim(real2str(Rend)), '_Z', trim(real2str(Zstart)), '..', trim(real2str(Zend)), '_p',                &
       trim(real2str(phi)), trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
 
@@ -1396,7 +1464,7 @@ module exec_commands
     units     = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
     npts      = get_int_setting('linepoints', ierr); if ( ierr /= 0 ) return
     
-    write(filename,'(15a)') DIR, 'exprs_along_line_R', trim(real2str(R)), '_Z', trim(real2str(Z)), &
+    write(filename,'(15a)') trim(DIR), 'exprs_along_line_R', trim(real2str(R)), '_Z', trim(real2str(Z)), &
       '_p', trim(real2str(phi_start)), '..', trim(real2str(phi_end)),                              &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
@@ -1443,7 +1511,7 @@ module exec_commands
     phi       = to_float(command%args(7), ierr); if ( ierr /= 0 ) return
     units     = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
     
-    write(filename,'(15a)') DIR, 'exprs_Rmin', trim(real2str(Rmin)), '_Rmax', trim(real2str(Rmax)),&
+    write(filename,'(15a)') trim(DIR), 'exprs_Rmin', trim(real2str(Rmin)), '_Rmax', trim(real2str(Rmax)),&
       '_Zmin', trim(real2str(Zmin)), '_Zmax', trim(real2str(Zmax)), '_phi', trim(real2str(phi)),   &
       trim(step_range_string(index_now,index_now)), '.h5'
       
@@ -1499,7 +1567,7 @@ module exec_commands
     nphi      = to_float(command%args(9), ierr); if ( ierr /= 0 ) return
     units     = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
     
-    write(filename,'(15a)') DIR, 'exprs_Rmin', trim(real2str(Rmin)), '_Rmax', trim(real2str(Rmax)),&
+    write(filename,'(15a)') trim(DIR), 'exprs_Rmin', trim(real2str(Rmin)), '_Rmax', trim(real2str(Rmax)),&
                                       '_Zmin', trim(real2str(Zmin)), '_Zmax', trim(real2str(Zmax)),&
                               '_phimin', trim(real2str(phimin)), '_phimax', trim(real2str(phimax)),&
       trim(step_range_string(index_now,index_now)), '.h5'
@@ -1558,7 +1626,7 @@ module exec_commands
     units     = get_int_setting('units',      ierr); if ( ierr /= 0 ) return 
     n_elm_pts = get_int_setting('nsub_bnd', ierr); if ( ierr /= 0 ) return
 
-    write(filename,'(4a)') DIR, 'boundary_quantities',                                          &
+    write(filename,'(4a)') trim(DIR), 'boundary_quantities',                                          &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     ! Create set of R, Z points on the boundary (including normals)
@@ -1620,7 +1688,7 @@ module exec_commands
     npts  = get_int_setting('surfaces', ierr)
     nsmall= get_int_setting('nsmallsteps', ierr)
     
-    write(filename,'(4a)') DIR, 'exprs_averaged',                                                  &
+    write(filename,'(4a)') trim(DIR), 'exprs_averaged',                                                  &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     ! ### is nTht and nphi really chosen well???
@@ -1663,7 +1731,7 @@ module exec_commands
     
     units = get_int_setting('units', ierr)
     
-    write(filename,'(4a)') DIR, 'equil_params',                                                    &
+    write(filename,'(4a)') trim(DIR), 'equil_params',                                                    &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     status = 'replace'
@@ -1716,7 +1784,7 @@ module exec_commands
     
     units = get_int_setting('units', ierr)
     
-    write(filename,'(4a)') DIR, 'spi', trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    write(filename,'(4a)') trim(DIR), 'spi', trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     status = 'replace'
     access = 'sequential'
@@ -1792,7 +1860,7 @@ module exec_commands
     call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);          if ( ierr /= 0 ) return
     
-    write(filename,'(4a)') DIR, 'I_halo_TPF',  &
+    write(filename,'(4a)') trim(DIR), 'I_halo_TPF',  &
        trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     status = 'replace'
@@ -1846,7 +1914,7 @@ module exec_commands
     
     units = get_int_setting('units', ierr)
     
-    write(filename,'(4a)') DIR, 'int2d',                                                           &
+    write(filename,'(4a)') trim(DIR), 'int2d',                                                           &
       trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     status = 'replace'
@@ -1918,7 +1986,7 @@ module exec_commands
     allocate(res(expr_list%n_expr+1))
     res = 0.d0   
  
-    write(filename,'(4a)') DIR, 'integrals3D',  &
+    write(filename,'(4a)') trim(DIR), 'integrals3D',  &
        trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     status = 'replace'
@@ -2019,7 +2087,7 @@ module exec_commands
     
     npts  = get_int_setting('surfaces', ierr)
     
-    write(filename,'(4a)') DIR, 'qprofile', trim(step_range_string(loop_min_step,loop_max_step)),  &
+    write(filename,'(4a)') trim(DIR), 'qprofile', trim(step_range_string(loop_min_step,loop_max_step)),  &
       '.dat'
     
     ! --- Find flux surfaces and determine q-profile
@@ -2081,7 +2149,7 @@ module exec_commands
     
     psin  = to_float(command%args(1), ierr); if ( ierr /= 0 ) return
    
-    write(filename,'(5a)') DIR, 'q_at_psin_', trim(real2str(psin,'(f12.4)')), &
+    write(filename,'(5a)') trim(DIR), 'q_at_psin_', trim(real2str(psin,'(f12.4)')), &
        trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     status = 'replace'
@@ -2148,7 +2216,7 @@ module exec_commands
     allocate(res(exprs_all_int%n_expr+1))
     res = 0.d0   
  
-    write(filename,'(4a)') DIR, 'zeroD_quantities',  &
+    write(filename,'(4a)') trim(DIR), 'zeroD_quantities',  &
        trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
     
     status = 'replace'
@@ -2223,7 +2291,7 @@ module exec_commands
     
     npts  = get_int_setting('surfaces', ierr)
     
-    write(filename,'(4a)') DIR, 'fluxsurfaces', trim(step_range_string(index_start,index_start)),  &
+    write(filename,'(4a)') trim(DIR), 'fluxsurfaces', trim(step_range_string(index_start,index_start)),  &
       '.dat'
     
     ! --- Find minimum and maximum psi values
@@ -2323,7 +2391,7 @@ module exec_commands
     call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);          if ( ierr /= 0 ) return
     
-    write(filename,'(4a)') DIR, 'separatrix', trim(step_range_string(index_start,index_start)),    &
+    write(filename,'(4a)') trim(DIR), 'separatrix', trim(step_range_string(index_start,index_start)),    &
       '.dat'
     
     ! --- Find flux surfaces
@@ -2417,7 +2485,7 @@ module exec_commands
     n_thetastar = get_int_setting('nTht', ierr)
     
 
-    write(filename_start,'(3a)') DIR, 'exprs_four2d', trim(step_range_string(index_now,index_now))
+    write(filename_start,'(3a)') trim(DIR), 'exprs_four2d', trim(step_range_string(index_now,index_now))
     write(*,*) 'Input parameters set:'
     write(*,*) 'units        =', units
     write(*,*) 'surfaces     =', npts
@@ -2475,7 +2543,7 @@ module exec_commands
     fact_btor = to_float(command%args(9),  ierr); if ( ierr /= 0 ) return
     fact_bpol = to_float(command%args(10), ierr); if ( ierr /= 0 ) return
     
-    write(filename,'(3a)') DIR, 'gourdon', trim(step_range_string(index_now,index_now))
+    write(filename,'(3a)') trim(DIR), 'gourdon', trim(step_range_string(index_now,index_now))
     
     ! --- Take into account that the last points are not included in Gourdon format!
     R_max2   = R_max   - (R_max-R_min) / real(n_R)
@@ -2624,7 +2692,7 @@ module exec_commands
     call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,          &
       trim(step_range_string(index_now,index_now)))
     
-    call system('mv '//'grid_'//trim(step_range_string(index_now,index_now))//'.dat '//DIR)
+    call system('mv '//'grid_'//trim(step_range_string(index_now,index_now))//'.dat '//trim(DIR))
     
   end subroutine grid
   
@@ -2651,14 +2719,14 @@ module exec_commands
     write(*,*) '*** Information about the computational grid **********************************'
     write(*,*) '*******************************************************************************'
 
-    call log_grid_info(.true., node_list, element_list, DIR, trim(step_range_string(index_now,index_now))//'.dat')
+    call log_grid_info(.true., node_list, element_list, trim(DIR), trim(step_range_string(index_now,index_now))//'.dat')
     
     ! --- Also write out the grid in the same way as the "grid" postproc command does
     call grid(command,ierr)
     
     write(*,*)
     write(*,*) '*** Boundary elements and nodes ***********************************************'
-    call log_bnd_info(.true., node_list, bnd_node_list, bnd_elm_list, DIR, trim(step_range_string(index_now,index_now))//'.dat')
+    call log_bnd_info(.true., node_list, bnd_node_list, bnd_elm_list, trim(DIR), trim(step_range_string(index_now,index_now))//'.dat')
     
     write(*,*) '*******************************************************************************'
     write(*,*) '*** End: Information about the computational grid *****************************'

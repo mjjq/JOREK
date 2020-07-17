@@ -48,6 +48,7 @@ module exec_commands
   integer            :: n_queued_commands = 0            !< Number of commands in the queue
   type(type_command) :: command_queue(MAX_QUEUE_LENGTH)  !< Queued commands
   
+  character(len=1024)                :: input_file
   logical,             private, save :: input_loaded  = .false. !< Has an input file been loaded?
   logical,             private, save :: step_imported = .false. !< Has a restart file been imported?
   logical,             private, save :: dir_created   = .false. !< Postproc directory created?
@@ -502,7 +503,7 @@ module exec_commands
     
     ! --- Local variables
     integer              :: jcmd, istep, load_error, n_avail, itime, n_time, iavail, n_select, & 
-                            temp_select, loop_unit
+                            temp_select, loop_unit, input_err
     logical              :: first_step, file_exists   ! Is true for the first timestep loaded in the for-loop
     real*8               :: time_loop, rho_norm, loop_fact_time
     character(len=64)    :: file_name
@@ -510,7 +511,8 @@ module exec_commands
     real*8 , allocatable :: selected_times(:)
     integer, allocatable :: available_steps(:)
     
-    ierr = 0
+    ierr      = 0
+    input_err = 0
     loop_mode = exec_mode
     exec_mode = NORMAL_MODE
 		
@@ -522,6 +524,7 @@ module exec_commands
     first_step = .true.
     if ( loop_mode == LOOP_S_MODE ) then
       do istep = loop_min_step, loop_max_step, loop_inc_step
+        call reload_namelist(input_err)
         call load_step(istep, load_error)
         if ( load_error /= 0 ) cycle
 
@@ -622,6 +625,7 @@ module exec_commands
       write(*,*) '--------------------------------------------------'
 
       do istep = 1, n_select
+        call reload_namelist(input_err)
         call load_step( selected_steps(istep), load_error)
         if ( load_error /= 0 ) cycle
       
@@ -827,6 +831,7 @@ module exec_commands
     if (file_exists) then
       call initialise_parameters(0, filename)
       input_loaded = .true.
+      input_file   = filename
     else
       ierr = 1
       write(*,*) 'ERROR: input file "', trim(filename), '" does not exist.'
@@ -835,9 +840,41 @@ module exec_commands
 
   end subroutine load_namelist
   
+
+
+
+
+
+  !> Load again the JOREK input file
+  subroutine reload_namelist(ierr)
+    
+    use phys_module     
+    
+    ! --- Routine parameters
+    integer,    intent(inout) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    logical ::  file_exists
+    
+    ierr = 0
+    
+    inquire (file=input_file, exist=file_exists)
+      
+    ! --- Read the input namelist file
+    if (file_exists) then
+      call initialise_parameters(0, input_file)
+      input_loaded = .true.
+    else
+      ierr = 1
+      write(*,*) 'ERROR: input file "', trim(input_file), '" does not exist.'
+      call specific_help('namelist')
+    end if
+
+  end subroutine reload_namelist
   
   
   
+
   
   !> Check if a restart file has already been imported
   subroutine check_step_imported(ierr)

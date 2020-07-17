@@ -841,6 +841,7 @@ required = 0
        m_cpu = n_cpu
     endif
 
+
     !***********************************************************************
     !*  	  distribute nodes and elements over cpu's		   *
     !***********************************************************************
@@ -1011,6 +1012,7 @@ required = 0
          call clck_time(t0)
          ! --- Extract harmonic matrix from global matrix via MPI communication
          call distribute_harmonics(my_id,my_id_n,n_cpu)
+         call MPI_Barrier(MPI_COMM_WORLD,ierr)
          call clck_time_barrier(t1)
          call clck_ldiff(t0,t1,tsecond)
          if (my_id .eq. 0) then
@@ -1022,6 +1024,7 @@ required = 0
          ! --- Direct construction of harmonic matrix
          call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
               node_list, element_list, bnd_elm_list, xpoint, xcase, freeboundary, .true.)
+         call MPI_Barrier(MPI_COMM_WORLD,ierr)
          call clck_time_barrier(t1) 
 
          if (my_id .eq. 0) then
@@ -1032,6 +1035,7 @@ required = 0
          call clck_time_barrier(t0) 
          ! --- Centralize the harmonic matrix on the master task of the MPI group (if needed)
          call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
+         call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
          call clck_time_barrier(t1) 
 

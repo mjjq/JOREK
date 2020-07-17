@@ -340,10 +340,10 @@ contains
             call tr_allocatep(mumps_par%a,1,mumps_par%nz,"mumps_par%a",CAT_DMATRIX)
             call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
 #else
-            if (associated(A_cmplx))  deallocate(A_cmplx)
-            if (associated(rhs_cmplx))  deallocate(rhs_cmplx)
-            if (associated(irn_cmplx))deallocate(irn_cmplx)
-            if (associated(jcn_cmplx))deallocate(jcn_cmplx) 
+            if (allocated(A_cmplx))  deallocate(A_cmplx)
+            if (allocated(rhs_cmplx))  deallocate(rhs_cmplx)
+            if (allocated(irn_cmplx))deallocate(irn_cmplx)
+            if (allocated(jcn_cmplx))deallocate(jcn_cmplx) 
             allocate(rhs_cmplx(1:n_cmplx))
             allocate(A_cmplx(1:nz_cmplx))
             allocate(irn_cmplx(1:nz_cmplx))
@@ -726,9 +726,9 @@ contains
           if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
           if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
 #else
-          if (associated(A_cmplx))   deallocate(A_cmplx)
-          if (associated(irn_cmplx)) deallocate(irn_cmplx)
-          if (associated(jcn_cmplx)) deallocate(jcn_cmplx)
+          if (allocated(A_cmplx))   deallocate(A_cmplx)
+          if (allocated(irn_cmplx)) deallocate(irn_cmplx)
+          if (allocated(jcn_cmplx)) deallocate(jcn_cmplx)
 #endif
         else
 #ifndef USE_COMPLEX_PRECOND
@@ -736,9 +736,9 @@ contains
           mumps_par%irn => null()
           mumps_par%jcn => null()
 #else
-          A_cmplx => null()
-          irn_cmplx => null()
-          jcn_cmplx => null()
+          deallocate(A_cmplx)
+          deallocate(irn_cmplx)
+          deallocate(jcn_cmplx)
 #endif
         endif
 

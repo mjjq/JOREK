@@ -24,9 +24,9 @@ contains
     !endif
 
     if(my_id_n .eq. 0) then 
-      if (associated(A_cmplx))  deallocate(A_cmplx) 
-      if (associated(irn_cmplx))deallocate(irn_cmplx) 
-      if (associated(jcn_cmplx))deallocate(jcn_cmplx) 
+      if (allocated(A_cmplx))  deallocate(A_cmplx) 
+      if (allocated(irn_cmplx))deallocate(irn_cmplx) 
+      if (allocated(jcn_cmplx))deallocate(jcn_cmplx) 
 
       if(my_id .eq. 0) then
         nz_cmplx = mumps_par%nz
@@ -86,7 +86,7 @@ contains
     !endif
 
     if(my_id_n .eq. 0) then 
-      if (associated(rhs_cmplx))deallocate(rhs_cmplx)
+      if (allocated(rhs_cmplx))deallocate(rhs_cmplx)
       if(my_id .eq. 0) then
         n_cmplx = mumps_par%n
       else

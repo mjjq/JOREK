@@ -206,9 +206,6 @@ aki_neo_prof   = 0.d0
 
 do i=1,n_vertex_max
   do j=1,n_order+1
-#if _OPENMP >= 201511
- !$OMP SIMD collapse(2)
-#endif
     do ms=1, n_gauss
       do mt=1, n_gauss
 
@@ -236,9 +233,6 @@ do i=1,n_vertex_max
         do k=1,n_var
 
           do in=1,n_tor
-#if _OPENMP >= 201511
-           !$OMP SIMD
-#endif
             do mp=1,n_plane
               eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ(in,mp)
               eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
@@ -322,15 +316,6 @@ do i=1,n_vertex_max
 
         BigR    = x_g(ms,mt)
         BigR_x  = 1.d0
-
-#if _OPENMP >= 201511
-! Variables that are part of the PRIVATE clause are uninitialized at the beginnig of the
-! OpenMP construct. (Each thread starts with its own uninitialized copy).
-! To keep the initial value that was set before entering the OpenMP constuct, one would
-! need to use the FIRSTPRIVATE clause.
-!
-!$OMP SIMD
-#endif
 
         do mp = 1, n_plane
 

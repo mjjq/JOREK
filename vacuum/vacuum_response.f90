@@ -168,6 +168,7 @@ module vacuum_response
     marker   = adjustl(marker)
     name     = adjustl(name)
     datatype = adjustl(datatype)
+
     error = ( ierr /= 0 ) .or. ( trim(marker) /= '#@array' ) .or. ( trim(name) /= trim(array_name) )                     &
       .or. ( dim(1) /= d(1) ) .or. ( dim(2) /= d(2) ) .or. ( trim(datatype) /= trim(requested_type) )
 
@@ -333,9 +334,9 @@ module vacuum_response
       disp = disp + sizeof(float2d)
 
     else if (present(char1d)) then
-      if ( allocated(char1d) ) deallocate( char1d ); allocate( char1d(dim(1)) )
-      call MPI_FILE_READ(filehandle, char1d, sizeof(char1d(1))*dim(1), MPI_CHARACTER  ,status,ierr)
-      disp = disp + sizeof(char1d(1))*dim(1) 
+      if ( allocated(char1d) ) deallocate( char1d ); allocate( char1d(dim(1)))
+      call MPI_FILE_READ(filehandle, char1d, dim(1), MPI_CHARACTER  ,status,ierr)
+      disp = disp + dim(1)
     end if
 
     if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"> type ",A," size ",2I7)')name, trim(datatype), d(1:nd)
@@ -498,6 +499,7 @@ module vacuum_response
     integer(kind=MPI_OFFSET_KIND)        :: disp !< Present location in the file
     real*8             :: test_sum
     integer            :: loc_sizes(2),ntasks
+    character ,allocatable  :: tmp_coil_name(:)
 
     disp = 0
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, err)
@@ -581,7 +583,12 @@ module vacuum_response
           call read_array_not_distr(filehandle, 'phi_coil',      (/sr%ntri_c,3/), disp,  float2d=sr%phi_coil)
           call read_array_not_distr(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/), disp,  float1d=sr%eta_thin_coil)
           call read_array_not_distr(filehandle, 'coil_resist',   (/sr%ncoil,0/),  disp,  float1d=sr%coil_resist)
-          if (sr%file_version > 3)  call read_array_not_distr(filehandle, 'coil_name',     (/sr%ncoil,0/),  disp,  char1d=sr%coil_name)
+          if (sr%file_version > 3)  then
+            call read_array_not_distr(filehandle, 'coil_name',     (/sr%ncoil*COIL_NAME_LEN,0/),  disp,  char1d=tmp_coil_name)
+            allocate(sr%coil_name(sr%ncoil))
+            sr%coil_name = transfer(tmp_coil_name,sr%coil_name)
+            deallocate(tmp_coil_name)
+          endif
         end if
         
         if ( (sr%ncoil .gt. 0) .and. sr%file_version .le. 3) then

@@ -3,10 +3,13 @@ The code does not need to be compiled with the rest of JOREK, it is independent.
 The RZ-rectangular grid is defined up to the maxima of the JOREK domain.
 If points are outside the JOREK domain, all variables are set to zero, expect psi_norm, which is set to 100.0
 
-Thie code should work with any recent hdf5 JOREK file, but will not work with old hdf5 formats that are missing some equilibrium information like psi_axis and psi_bnd and central_density.
+This code should work with any recent hdf5 JOREK file, but will not work with old hdf5 formats that are missing some equilibrium information like psi_axis and psi_bnd and central_density.
 It needs to be compiled with an mpi compiler. The Makefile as it is here should work on Marconi.
 
 Then, run the code to extract the data.
+Data can be extracted in .txt of .h5 format.
+Many variables are available, including derived variables like the magnetic and the electric field.
+An option is also available to create an image of the data.
 
 The code is parallelised, and the best way to use it, is first to create the "pixel" file.
 This saves the grid coords from JOREK that you want. After this is done, you can run for any JOREK file (from the same simulation run), for any phi angle, using this "pixel file", which makes it much much faster.

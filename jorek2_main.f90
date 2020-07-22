@@ -1,5 +1,8 @@
 !> JOREK 2.0 -- Solves the (reduced) MHD equations in 3D toroidal geometry.
 !!
+!! By using this code, you accept the code license available at:
+!! https://www.jorek.eu/JOREK-license.pdf
+!!
 !! - solvers implemented:
 !!   - MUMPS
 !!   - PastiX
@@ -16,7 +19,7 @@
 !!   - LAPACK, BLAS
 !!   - PPPLIB
 !!
-!! @author Guido Huysmans (Euratom / CEA Association)
+!! @author Guido Huysmans (Euratom / CEA Association) and the whole JOREK Team
 !! @date 18-7-2008
 program JOREK2
 

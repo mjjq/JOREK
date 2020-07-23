@@ -735,10 +735,6 @@ contains
           mumps_par%A => null()
           mumps_par%irn => null()
           mumps_par%jcn => null()
-#else
-          deallocate(A_cmplx)
-          deallocate(irn_cmplx)
-          deallocate(jcn_cmplx)
 #endif
         endif
 

@@ -31,11 +31,11 @@ program process_hdf5_jorek
   integer :: n_tor, n_period, n_elements, n_nodes, n_var, n_data, index_now
   real*8  :: phi_angle
   real*8  :: normalise_min, normalise_max, normalise_data
-  real*8  :: central_density, F0, delta_t
+  real*8  :: central_density, F0, delta_t, time_now
   integer :: i_var(20)
   integer, allocatable :: elm_vertex(:,:)
   real*8,  allocatable :: psi_axis_t(:), psi_bnd_t(:), Z_xpoint_t(:,:)
-  real*8,  allocatable :: modes(:), elm_size(:,:,:), RZ_nodes(:,:,:), values(:,:,:,:), deltas(:,:,:,:)
+  real*8,  allocatable :: modes(:), elm_size(:,:,:), RZ_nodes(:,:,:), values(:,:,:,:), deltas(:,:,:,:), time(:)
   real*8,  allocatable :: HZ(:), HZ_p(:), HZ_pp(:)
   real*8,  allocatable :: my_var(:,:,:,:)
   real*8,  allocatable :: Rgrid(:,:), Zgrid(:,:)
@@ -361,6 +361,11 @@ program process_hdf5_jorek
   t_norm    = sqrt(rho_0*mu_0)
   eV2Joules = 1.602176487d-19
   
+  call HDF5_integer_reading(file_id,index_now,      'index_now')
+  allocate(time(index_now))
+  call HDF5_array1D_reading(file_id,time,           'xtime')
+  time_now = time(index_now) * t_norm
+  
   ! --- Extract data at given toroidal slice
   
   ! --- Write pixel file
@@ -647,6 +652,7 @@ program process_hdf5_jorek
         endif
         write(*,*) 'Now writing data file : ', trim(filename_data)
         ! --- header
+        call HDF5_real_saving   (data_id,time_now,'time_now')
         call HDF5_integer_saving(data_id,nx_pix,'nR')
         call HDF5_integer_saving(data_id,ny_pix,'nZ')
         call HDF5_real_saving   (data_id,Rpix_min,'Rmin')
@@ -670,6 +676,8 @@ program process_hdf5_jorek
         open(unit=2,file=trim(filename_data), ACTION = 'write')
         write(*,*) 'Now writing data file : ', trim(filename_data)
         ! --- header
+        write(2,'(A21)')    'time_now'
+        write(2,'(e21.11)')  time_now
         write(2,'(A8)',advance='no')  'nR'
         write(2,'(A8)')  'nZ'
         write(2,'(2i8)')  nx_pix, ny_pix

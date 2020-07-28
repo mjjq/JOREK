@@ -44,40 +44,6 @@ import inspect
 
 from idsUtilities import basicIDS, writeIDS
 
-
-def getHDF5FileDialog():
-    """Run as standalone application.
-    """
-    # Set QApplication
-    app = QtWidgets.QApplication([])
-    # Set options
-    options = QtWidgets.QFileDialog.Options()
-    options |= QtWidgets.QFileDialog.DontUseNativeDialog
-    # Set file dialog
-    # Note: arguments are:  - parent (None),
-    #                       - window title
-    #                       - default file name
-    #                       - file types selectable options
-    #                       - options
-    filePath, _ = QtWidgets.QFileDialog \
-        .getOpenFileName(None,
-                         "Select VTK file",
-                         "",
-                         "H5 Files (*.h5);;HDF5 Files (*.hdf5)",
-                         options=options)
-    # Close application
-    app.exit()
-
-    print("Selected VTK file (full path): ", filePath)
-
-    return filePath
-
-
-def getHDF5File(filePath):
-    hdf5_file = h5py.File(filePath, 'r')
-    return hdf5_file
-
-
 def checkArguments():
     """ Check arguments when running from the terminal.
     """
@@ -133,283 +99,6 @@ def prettify(elem):
     rough_string = ElementTree.tostring(elem, 'utf-8')
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent="  ")
-
-def setIDSProperties(mhd, hdf5_file):
-
-    # Data Dictionary entry for homogeneous_time:
-    #  This node must be filled (with 0, 1, or 2) for the IDS to be valid.
-    #  If 1, the time of this IDS is homogeneous, i.e. the time values for
-    #  this IDS are stored in the time node just below the root of this IDS.
-    #  If 0, the time values are stored in the various time fields at lower
-    #  levels in the tree. In the case only constant or static nodes are filled
-    #  within the IDS, homogeneous_time must be set to 2
-    mhd.ids_properties.homogeneous_time = 1  # will fill in e.g. mhd.ggd[:].time
-
-    mhd.time.resize(1)  # mandatory
-
-    print(f"Model: {hdf5_file['jorek_model'][0]}")
-
-    mhd.ids_properties.comment = f"model{hdf5_file['jorek_model'][0]}"
-    mhd.ids_properties.source = "JOREK"
-    mhd.ids_properties.provider = getenv("USER")
-    mhd.ids_properties.creation_date = str(datetime.datetime.now())
-    mhd.ids_properties.version_put.data_dictionary = getenv("IMAS_VERSION")
-    mhd.ids_properties.version_put.access_layer = getenv("UAL_VERSION")
-    mhd.ids_properties.version_put.access_layer_language = \
-        "Python " + platform.python_version()
-
-
-def setCodeContents_unfinished(mhd, file=None):
-    """Write code (input) parameters e.g. contents of the "intear" file of
-    model199.
-    """
-
-    mhd.code.name = "jorekHDF5toIDS_2"
-    mhd.code.repository = "https://git.iter.org/projects/STAB/repos/jorek"
-
-    # Set code parameters (XML -> string)
-    root = Element('root')
-    root.append(Comment('Test comment'))
-
-    head = SubElement(root, 'head')
-    title = SubElement(head, 'title')
-    title.text = 'Code parameters'
-
-    generated_on = str(datetime.datetime.now())
-    dc = SubElement(head, 'dateCreated')
-    dc.text = generated_on
-    dm = SubElement(head, 'dateModified')
-    dm.text = generated_on
-
-    mhd.code.parameters = prettify(root)
-
-def setBezierGrid(mhd, ti, hdf5_file):
-    """Set Bezier grid based on 'x', 'vertex' and 'size' matrices
-    (found in HDF5 file).
-
-    ti ... time slice
-    """
-
-    x = hdf5_file['x']
-    x_T = np.array(x).transpose()
-    size = hdf5_file['size']
-    size_T = np.array(size).transpose()
-    vertex = hdf5_file['vertex']
-    vertex_T = np.array(vertex).transpose()
-
-    t_now = hdf5_file['t_now'][0]
-    tstep = hdf5_file['tstep'][0]
-    jorek_model = hdf5_file['jorek_model'][0]
-    n_elements = hdf5_file['n_elements'][0]
-    n_nodes = hdf5_file['n_nodes'][0]
-    n_degrees = hdf5_file['n_degrees'][0]
-    n_tor = hdf5_file['n_tor'][0]
-
-    print("x shape: ", x.shape)
-    print("x_T shape: ", x_T.shape)
-    print("size shape: ", size.shape)
-    print("size_T shape: ", size_T.shape)
-    print("vertex shape: ", vertex.shape)
-    print("vertex_T shape: ", vertex_T.shape)
-
-    print(f"t_now: {t_now}")
-    print(f"tstep: {tstep}")
-    print(f"jorek_model: {jorek_model}")
-    print(f"n_elements: {n_elements}")
-    print(f"n_nodes: {n_nodes}")
-    print(f"n_degrees: {n_degrees}")
-    print(f"n_tor: {n_tor}")
-
-    grid = mhd.grid_ggd[ti]
-    grid.identifier.name = "JOREK grid"
-    grid.index = 1
-    grid.description = "JOREK grid (Bezier finite elements)"
-    grid.time = hdf5_file['t_now'][0]
-
-    # R: mu = 0
-    # Z: mu = 1
-    # p_k: dof = 0
-    # u_k: dof = 1
-    # v_k: dof = 2
-    # w_k: dof = 3
-    # x[mu][dof][k]
-    # Four dofs: # p_k, u_k, v_k, w_k
-    # grid.space[0].objects_per_dimension[0].object[k].geometry =
-    #                                              [p_k_R, u_k_R, v_k_R, w_k_R,
-    #                                               p_k_Z, u_k_Z, v_k_Z, w_k_Z]
-    grid.space.resize(2)
-
-    # The coordinate types are specified in Data Dictionary (DD)
-    # utilities/coordinate_identifier.xml
-    grid.space[0].coordinates_type.resize(2)
-    grid.space[0].coordinates_type = np.array([4, 3])  # R, Z
-
-    grid.space[0].identifier.name = "Space R-Z"
-    grid.space[0].identifier.index = 1  # Fortran notation required
-    grid.space[0].identifier.description = """Space R-Z, four degrees of freedom
-per coordinate: p_k, u_k, v_k and w_k.
-
-- Information relevant to nodes is being stored to
-grid_ggd[ti].space[0].objects_per_dimension[0].
-
-- Information relevant to 2D elements (quads) is being stored to
-grid_ggd[ti].space[0].objects_per_dimension[2].
-
-- The dofs for each node 'k' are stored as
-grid_ggd[ti].space[0].objects_per_dimension[0].object[k].geometry =
-[p_k_R, u_k_R, v_k_R, w_k_R, p_k_Z, u_k_Z, v_k_Z, w_k_Z].
-
-- The connectivity array for 2D elements (quads) is being stored as
-grid_ggd[ti].space[0].objects_per_dimension[2].object[k].nodes =
-[k_0, k_1, k_2, k_3]
-where k_0, k_1, k_2, k_3 are indices of nodes forming this 2D element.
-
-- The element properties - measures for the distances of the control points from
-the element nodes d_{u,k}, d_{v_k}, are being stored as (single array):
-
-grid_ggd[ti].space[0].objects_per_dimension[2].object[el].geometry =
-[1.0, d_{u_0}, d_{v_0}, d_{u_0, v_0},
- 1.0, d_{u_1}, d_{v_1}, d_{u_1, v_1},
- 1.0, d_{u_2}, d_{v_2}, d_{u_2, v_2},
- 1.0, d_{u_3}, d_{v_3}, d_{u_3, v_3}].
-
-Note: A bit inconvenient because of the GGD structure limitations and
-'geometry' node can hold only 1D array of float values.
-
-"""
-    grid.space[0].objects_per_dimension.resize(3)
-    s0opd0 = grid.space[0].objects_per_dimension[0]
-    s0opd0.object.resize(hdf5_file['n_nodes'][0])
-    for k in range(n_nodes):
-        s0opd0.object[k].geometry.resize(n_degrees*2)
-        for dof in range(n_degrees):
-            s0opd0.object[k].geometry = np.ravel(x_T[k], order='F')
-
-    # dummy object_per_dimension[1]
-    # Note: leaving mid AOS (Arrays of Structures) empty might result in
-    #       the put command skipping all the next/following AOS altogether
-    grid.space[0].objects_per_dimension[1].object.resize(1)
-
-    # vertex (connectivity array for 2D elements)
-    s0opd2 = grid.space[0].objects_per_dimension[2]
-    s0opd2.object.resize(n_elements)
-    for i_element in range(n_elements):
-        s0opd2.object[i_element].nodes.resize(vertex_T.shape[1])
-        s0opd2.object[i_element].nodes = vertex_T[i_element]
-
-        # Data Dictionary entry for geometry:
-        #  Geometry data associated with the object. Its dimension depends
-        #  on the type of object, geometry and coordinate considered.
-        s0opd2.object[i_element].geometry.resize(size_T[0].size)
-        # Note: storing "size" is problematic, as there are, for example,
-        #       4 values per 4 nodes of the element -> 16 values
-        # IDEA:
-        #   s0opd2.object[i_element].geometry = [1.0, d_u1, d_v1, (d_u1 d_v1),
-        #                                       [1.0, d_u2, d_v2, (d_u2 d_v2),
-        #                                       [1.0, d_u3, d_v3, (d_u3 d_v3),
-        #                                       [1.0, d_u4, d_v4, (d_u4 d_v4),]
-        s0opd2.object[i_element].geometry = np.ravel(size_T[0], order='C')
-
-    print("Distances of the control points from the element node as set to "
-          "space[0].objects_per_dimension[2].object[0]: \n", s0opd2.object[0])
-    print("space[0].objects_per_dimension[0].object[0].geometry: \n",
-          s0opd0.object[0].geometry)
-    print("space[0].objects_per_dimension[2].object[0].geometry: \n",
-          s0opd2.object[0].geometry)
-
-def setBezierValues(mhd, ti, hdf5_file):
-    """Set Bezier grid based values from 'values' matrix (found in HDF5 file).
-
-    ti ... time slice
-    """
-
-    values = hdf5_file['values']
-    values_T = np.array(values).transpose()
-    t_now = hdf5_file['t_now'][0]
-    n_var = hdf5_file['n_var'][0]
-    n_tor = hdf5_file['n_tor'][0]
-    n_elements = hdf5_file['n_elements'][0]
-    n_nodes = hdf5_file['n_nodes'][0]
-    n_degrees = hdf5_file['n_degrees'][0]
-    jorek_model = hdf5_file['jorek_model'][0]
-
-    print("values.shape: ", values.shape)
-    print("values_T.shape: ", values_T.shape)
-    print(f"n_elements: {n_elements}")
-    print(f"n_nodes: {n_nodes}")
-    print(f"n_degrees: {n_degrees}")
-
-    ggd = mhd.ggd[ti]
-    ggd.time = t_now
-
-    if (jorek_model == 303 or jorek_model == 307):
-        variables = ["flux", "potential", "current", "vorticity", "density",
-                     "temperature", "v_par"]
-    else:
-        print(f"No support for given model {jorek_model}. Returning.")
-        return
-
-    for v in range(n_var):
-        if variables[v] == "flux":  # v = 0
-            print("Writing quantity array: ", variables[v])
-            ggd.psi.resize(n_tor)
-            for l in range(n_tor):
-                ggd.psi[l].grid_index = 1
-                ggd.psi[l].grid_subset_index = -l
-                ggd.psi[l].coefficients.resize(n_nodes, n_degrees)
-                ggd.psi[l].coefficients = values[0][:][l]
-        elif variables[v] == "potential":  # v = 1
-            print("Writing quantity array: ", variables[v])
-            ggd.phi_potential.resize(n_tor)
-            for l in range(n_tor):
-                ggd.phi_potential[l].grid_index = 1
-                ggd.phi_potential[l].grid_subset_index = -l
-                ggd.phi_potential[l].coefficients.resize(n_nodes, n_degrees)
-                ggd.phi_potential[l].coefficients = values[0][:][l]
-        elif variables[v] == "current":  # v = 2
-            print("Writing quantity array: ", variables[v])
-            ggd.j_tor.resize(n_tor)
-            for l in range(n_tor):
-                ggd.j_tor[l].grid_index = 1
-                ggd.j_tor[l].grid_subset_index = -l
-                ggd.j_tor[l].coefficients.resize(n_nodes, n_degrees)
-                ggd.j_tor[l].coefficients = values[0][:][l]
-        elif variables[v] == "vorticity":  # v = 3
-            print("Writing quantity array: ", variables[v])
-            ggd.vorticity.resize(n_tor)
-            for l in range(n_tor):
-                ggd.vorticity[l].grid_index = 1
-                ggd.vorticity[l].grid_subset_index = -l
-                ggd.vorticity[l].coefficients.resize(n_nodes, n_degrees)
-                ggd.vorticity[l].coefficients = values[0][:][l]
-        elif variables[v] == "density":  # v = 4
-            print("Writing quantity array: ", variables[v])
-            ggd.mass_density.resize(n_tor)
-            for l in range(n_tor):
-                ggd.mass_density[l].grid_index = 1
-                ggd.mass_density[l].grid_subset_index = -l
-                ggd.mass_density[l].coefficients.resize(n_nodes, n_degrees)
-                ggd.mass_density[l].coefficients = values[0][:][l]
-        elif variables[v] == "temperature":  # v = 5
-            print("Writing quantity array: ", variables[v])
-            ggd.electrons.temperature.resize(n_tor)
-            for l in range(n_tor):
-                ggd.electrons.temperature[l].grid_index = 1
-                ggd.electrons.temperature[l].grid_subset_index = -l
-                ggd.electrons.temperature[l].coefficients.resize(n_nodes, n_degrees)
-                ggd.electrons.temperature[l].coefficients = values[0][:][l]
-        elif variables[v] == "v_par":  # v = 6
-            print("Writing quantity array: ", variables[v])
-            ggd.velocity_parallel.resize(n_tor)
-            for l in range(n_tor):
-                ggd.velocity_parallel[l].grid_index = 1
-                ggd.velocity_parallel[l].grid_subset_index = -l
-                ggd.velocity_parallel[l].coefficients.resize(n_nodes, n_degrees)
-                ggd.velocity_parallel[l].coefficients = values[0][:][l]
-        else:
-            print(f"WARNING! Unrecognized variable {variables[v]} found. Skipping.")
-
-        # print(ggd)
 
 
 class jorekRun2IDS():
@@ -502,6 +191,10 @@ class jorekRun2IDS():
 
         self.writeLogDebug(self, inspect.currentframe(), "END")
 
+    def getHDF5File(self, hdf5_file_id):
+        hdf5_file = h5py.File(self.HDF5pathList[hdf5_file_id], 'r')
+        return hdf5_file
+
     def setIDS(self, shot, run, username, database):
 
         # set IDS object
@@ -522,7 +215,7 @@ class jorekRun2IDS():
 
     def setIDSProperties(self, hdf5_file_id):
 
-        hdf5_file = h5py.File(self.HDF5pathList[hdf5_file_id], 'r')
+        hdf5_file = self.getHDF5File(hdf5_file_id=hdf5_file_id)
 
         # Data Dictionary entry for homogeneous_time:
         #  This node must be filled (with 0, 1, or 2) for the IDS to be valid.
@@ -577,7 +270,7 @@ class jorekRun2IDS():
         ti ... time slice
         """
 
-        hdf5_file = h5py.File(self.HDF5pathList[hdf5_file_id], 'r')
+        hdf5_file = self.getHDF5File(hdf5_file_id=hdf5_file_id)
 
         x = hdf5_file['x']
         x_T = np.array(x).transpose()
@@ -712,7 +405,7 @@ class jorekRun2IDS():
         ti ... time slice
         """
 
-        hdf5_file = h5py.File(self.HDF5pathList[hdf5_file_id], 'r')
+        hdf5_file = self.getHDF5File(hdf5_file_id=hdf5_file_id)
 
         values = hdf5_file['values']
         values_T = np.array(values).transpose()

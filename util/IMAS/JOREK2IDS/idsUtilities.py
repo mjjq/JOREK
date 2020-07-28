@@ -103,7 +103,7 @@ class basicIDS(object):
 
         print('Open IMAS database FINISHED')
 
-    def createIMASdatabase(self):
+    def createNewIMASdatabase(self):
         """Created IMAS database.
         """
         print('Create IMAS database START')
@@ -417,7 +417,7 @@ class writeIDS(basicIDS):
     def __init__(self, shot, run, user, device, version='3'):
         super(writeIDS, self).__init__(shot, run, user, device, version)
         if ENABLED:
-            self.createIMASdatabase()
+            self.createNewIMASdatabase()
 
     def createGridGGD(self, IDSName, numSlices):
         """Open an IDS.

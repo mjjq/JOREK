@@ -154,7 +154,7 @@ if __name__ == "__main__":
     # occurrence = IDS_parameters['occurrence']  # Not yet implemented
 
     b_ids = basicIDS(shot, run, username, database)
-    b_ids.createIMASdatabase()
+    b_ids.createNewIMASdatabase()
 
     w_ids = writeIDS(shot, run, username, database)
     comment = "Written results of multiple JOREK output HDF5 files/timeslices."

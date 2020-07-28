@@ -13,17 +13,40 @@
 #  E-mail :
 #         dejan.penko@lecad.fs.uni-lj.si
 #
-#****************************************************
+# *****************************************************************************
 #     Copyright(c) 2020- D. Penko
 
 import numpy as np
+import sys
+import os
 
 ENABLED = True
-try:
-    import imas
-except ImportError as e:
-    # No IMAS module installed
-    ENABLED = False
+# Check if the mandatory IMAS module is loaded
+if 'IMAS_PREFIX' not in os.environ and 'IMAS_VERSION' not in os.environ:
+    if __name__ == '__main__':
+        print('IMAS module not found. Check if the module is loaded. ' +
+              'Exiting.')
+        sys.exit(2)
+    else:
+        ENABLED = False
+
+else:
+
+    try:
+        import imas
+    except ImportError:
+        if __name__ == '__main__':
+            print('There is no IMAS module... Exiting.')
+            sys.exit(2)
+        else:
+            ENABLED = False
+    except FileNotFoundError:
+        print(__name__, 'Corrupted IMAS module!')
+        if __name__ == '__main__':
+            sys.exit(2)
+        else:
+            ENABLED = False
+
 
 class basicIDS(object):
     """This class provides basic routines for opening and closing the IMAS

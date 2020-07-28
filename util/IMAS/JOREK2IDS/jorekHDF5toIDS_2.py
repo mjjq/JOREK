@@ -3,9 +3,11 @@
 #   Name : jorekHDF5toIDS_bezier.py
 #
 #   Description :
-#       A script which reads a single JOREK HDF5 output file and writes its
+#       This script reads the contents of the JOREK case run directory,
+#       extracts the data from HDF5 output files and writes their
 #       contents (Bezier finite elements: 'x', 'values', 'vertex', 'size') to
-#       MHD IDS.
+#       MHD IDS. Contents of each HDF5 file is being written under its own
+#       time slice.
 #
 #       JOREK HDF5 file contents:
 #           https://www.jorek.eu/wiki/doku.php?id=hdf5-tools&s[]=hdf5
@@ -37,6 +39,8 @@ from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 import datetime
 from xml.etree import ElementTree
 from xml.dom import minidom
+import logging
+import inspect
 
 from idsUtilities import basicIDS, writeIDS
 
@@ -408,28 +412,100 @@ def setBezierValues(mhd, ti, hdf5_file):
         print(ggd)
 
 
+class jorekRun2IDS():
+    def __init__(self):
+
+        # Set log parser
+        self.log = logging.getLogger(__name__)
+        self.log.addHandler(logging.StreamHandler())
+        self.setDebugMode(0)  # Set to INFO
+
+        # Set initial variables
+        # - Path to JOREK (case) run directory
+        self.rundir = None
+        # - A list to hold all HDF5 files found in
+        #   JOREK run directory
+        self.HDF5pathList = []
+
+    def writeLogDebug(self, instance, currentframe, msg):
+        """ Print to DEBUG log.
+        Arguments:
+            instance     (obj) : Class instance (e.g. self).
+            currentframe (obj) : Frame object for the caller’s stack frame.
+            msg          (str) : Additional message (usually "START" or "END")
+        """
+
+        self.log.debug(f"DEBUG | {type(instance).__name__} | "
+                       f"{currentframe.f_code.co_name}  | {msg}.")
+
+    def writeLogError(self, instance, currentframe, msg):
+        """ Print to ERROR log.
+        Arguments:
+            instance     (obj) : Class instance (e.g. self).
+            currentframe (obj) : Frame object for the caller’s stack frame.
+            msg          (str) : Additional message (usually "START" or "END")
+        """
+
+        self.log.debug(f"ERROR | {type(instance).__name__} | "
+                       f"{currentframe.f_code.co_name}  | {msg}.", exc_info=True)
+
+    def getLogger(self):
+        return self.log
+
+    def setDebugMode(self, state):
+        """Set debug mode on/off.
+        """
+        if state:
+            self.log.setLevel(logging.DEBUG)
+        else:
+            self.log.setLevel(logging.INFO)
+
+    def setRunDirectory(self):
+        # Set QApplication (required for dialog to show)
+        app = QtWidgets.QApplication([])
+        # Set options
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        # get rundir
+        self.rundir = str(QtWidgets.QFileDialog.getExistingDirectory(
+            None, "Select JOREK run directory", options=options))
+
+        # Close application
+        app.exit()
+
+    def setHDF5filesList(self):
+        self.writeLogDebug(self, inspect.currentframe(), "START")
+
+        if self.rundir is None:
+            print("No rundir set. Returning.")
+            return
+
+        for file in listdir(self.rundir):
+            if file.startswith("jorek") and file.endswith(".h5"):
+                self.HDF5pathList.append(join(self.rundir, file))
+
+        # Sort list of files alphabetically
+        self.HDF5pathList = sorted(self.HDF5pathList)
+
+        if len(self.HDF5pathList) > 0:
+            self.log.info(f"List of HDF5 files: {self.HDF5pathList}")
+        else:
+            self.log.warning(f"The list of HDF5 is EMPTY!")
+
+        self.writeLogDebug(self, inspect.currentframe(), "END")
+
+
 if __name__ == "__main__":
 
     # Set mandatory arguments
     IDS_parameters = checkArguments()
 
     # FIRST FILE:
-    print("READING FIRST HDF5 FILE")
-    filePath = getHDF5FileDialog()
-
-    print(filePath.split("/"))
-    fileName = filePath.split("/")[-1]
-    print(fileName)
-    fileDirPath = filePath.split(fileName)[0]
-    print(fileDirPath)
-
-    filePathList = []
-    for file in listdir(fileDirPath):
-        if file.startswith("jorek0") and file.endswith(".h5"):
-            filePathList.append(join(fileDirPath, file))
-
-    # Sort list of files alphabetically
-    filePathList = sorted(filePathList)
+    print("READING RUN DIRECTORY")
+    j2IDS = jorekRun2IDS()
+    # j2IDS.setDebugMode(1)  # Set debug mode ON
+    j2IDS.setRunDirectory()
+    j2IDS.setHDF5filesList()
 
     print("PREPARING IDS")
     shot = IDS_parameters['shot']
@@ -455,16 +531,16 @@ if __name__ == "__main__":
     t0 = time()
 
     # Loop through the list of HDF5 files
-    for ti in range(len(filePathList)):
+    for ti in range(len(j2IDS.HDF5pathList)):
 
         print("Slice: ", ti)
 
-        hdf5_file = getHDF5File(filePathList[ti])
+        hdf5_file = getHDF5File(j2IDS.HDF5pathList[ti])
 
         print("keys: ", hdf5_file.keys())
 
         # variables = [0, 1, 2, 3, 4, 5, 6]
-        var_names = ["psi", "u", "j", "w", "rho", "T", "v_par"]
+        # var_names = ["psi", "u", "j", "w", "rho", "T", "v_par"]
 
         setIDSProperties(mhd, hdf5_file=hdf5_file)
 
@@ -472,15 +548,15 @@ if __name__ == "__main__":
         setCodeContents_unfinished(mhd)
 
         # set grid_ggd
-        mhd.grid_ggd.resize(len(filePathList))
+        mhd.grid_ggd.resize(len(j2IDS.HDF5pathList))
         t1 = time()
         setBezierGrid(mhd, ti=ti, hdf5_file=hdf5_file)
-        mhd.time.resize(len(filePathList))
+        mhd.time.resize(len(j2IDS.HDF5pathList))
         mhd.time[ti] = hdf5_file['t_now'][0]
         print(f"Time required to set grid_ggd for time slice {ti}: {time()-t1:.2f}s")
 
         # set ggd
-        mhd.ggd.resize(len(filePathList))
+        mhd.ggd.resize(len(j2IDS.HDF5pathList))
         t2 = time()
         setBezierValues(mhd, ti=ti, hdf5_file=hdf5_file)
         print(f"Time required to set ggd for time slice {ti}: {time()-t2:.2f}s")

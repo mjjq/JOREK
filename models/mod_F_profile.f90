@@ -170,6 +170,10 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
     ! --- It's not F' that we integrate in the routine "integrate_F_profile"
     ! --- It's (F^2)', and therefore the denormalisation is not just a matter of a factor delta_psi
     else
+      if (F0 .lt. 0.d0) Fmid   = - Fmid  
+      if (F0 .lt. 0.d0) dFmid  = - dFmid 
+      if (F0 .lt. 0.d0) d2Fmid = - d2Fmid
+      if (F0 .lt. 0.d0) d3Fmid = - d3Fmid
       prof0        = + ( delta_psi * (Fmid**2 - F0**2) + F0**2 )**(+0.5)
       dprof0_dpsi  = + ( delta_psi * (Fmid**2 - F0**2) + F0**2 )**(-0.5) * (Fmid * dFmid)
       dprof0_dpsi2 = + ( delta_psi * (Fmid**2 - F0**2) + F0**2 )**(-0.5) * (Fmid * dFmid)**2 &
@@ -178,6 +182,10 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
                      + ( delta_psi * (Fmid**2 - F0**2) + F0**2 )**(-0.5) * (Fmid * dFmid) * 2.0 * (dFmid**2 + Fmid * d2Fmid) / delta_psi &
                      + ( delta_psi * (Fmid**2 - F0**2) + F0**2 )**(-0.5) * (Fmid * dFmid) * (dFmid**2 + Fmid * d2Fmid) / delta_psi &
                      + ( delta_psi * (Fmid**2 - F0**2) + F0**2 )**(-0.5) * (2.0*dFmid*d2Fmid + dFmid * d2Fmid + Fmid * d3Fmid) / delta_psi
+      if (F0 .lt. 0.d0) prof0        = - prof0
+      if (F0 .lt. 0.d0) dprof0_dpsi  = - dprof0_dpsi 
+      if (F0 .lt. 0.d0) dprof0_dpsi2 = - dprof0_dpsi2
+      if (F0 .lt. 0.d0) dprof0_dpsi3 = - dprof0_dpsi3
     endif
     
   endif ! end of numerical profile

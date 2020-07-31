@@ -13,7 +13,6 @@ module vacuum
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
   integer, parameter  :: ivar_psi = 1                    !< Index of Psi variable
   integer, parameter  :: ivar_j   = 3                    !< Index of j variable
-  real*8              :: freeb_fact                      !< Switches on free-boundary terms in elt_matrix when =1.
   
   !> @name Resistive wall only
   real*8              :: wall_resistivity_fact           !< Scaling factor for the wall and coil resistivities specified in STARWALL
@@ -87,7 +86,9 @@ module vacuum
   real*8, allocatable :: coil_voltages(:)                !< Coil voltages (not ready yet)
   real*8              :: current_FB_fact  = 1.d0         !< Factor used for current feedback during the freeboundary equilibrium
   real*8, allocatable :: diag_coil_curr(:,:), pf_coil_curr(:,:), rmp_coil_curr(:,:)
+  integer,parameter   :: COIL_NAME_LEN=64                !< Max name length per coil (same as in starwall)
   real*8, allocatable :: net_tor_wall_curr(:)            !< Time trace of net toroidal wall current (live data)
+  character(len=COIL_NAME_LEN), allocatable:: diag_coil_name(:), pf_coil_name(:), rmp_coil_name(:)  !< Names for coils needed for live_data
   
   type :: t_starwall_response
     integer :: file_version           = 9999
@@ -115,6 +116,7 @@ module vacuum
     real*8,  allocatable :: phi_coil(:,:)    !< "Potential" at coil triangle nodes
     real*8,  allocatable :: eta_thin_coil(:) !< Thin wall resistivity of coil triangles
     real*8,  allocatable :: coil_resist(:)   !< Resistance of each coil
+    character(len=COIL_NAME_LEN),  allocatable :: coil_name(:)   !< Name of each coil
     real*8  :: eta_thin_w             = 1. !< Thin wall resistivity of wall triangles
     integer, allocatable :: i_tor(:)
     real*8,  allocatable :: d_yy(:)
@@ -377,10 +379,6 @@ module vacuum
     sr%n_tor  = 0
     sr%n_tor0 = 0
     
-    ! --- Switch on terms on the RHS of current equation definition when using free-boundary
-    freeb_fact = 0.d0
-    if ( freeboundary ) freeb_fact = 1.d0
-    
     if ( (my_id == 0) .and. (sum(pf_coils%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
        write(*,*) 'WARNING: Poloidal field coil perturbation pf_coils%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
     end if
@@ -517,6 +515,7 @@ module vacuum
     integer   :: n_diag_coil = 0, n_pf_coil = 0, n_rmp_coil = 0
     character :: t_freeboundary, t_resistive_wall
     real*8, allocatable :: t_diag_coil_curr(:,:), t_pf_coil_curr(:,:), t_rmp_coil_curr(:,:)
+    character, allocatable :: t_diag_coil_name(:), t_pf_coil_name(:), t_rmp_coil_name(:)
     real*8, allocatable :: t_net_tor_wall_curr(:)   
  
     call HDF5_char_reading(file_id,t_freeboundary,"freeboundary")
@@ -557,33 +556,62 @@ module vacuum
         if ( index_start > 1 ) then
 
           if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
+          if ( allocated(diag_coil_name) ) deallocate(diag_coil_name)
           call HDF5_integer_reading(file_id,n_diag_coil,"n_diag_coil")
           if (n_diag_coil > 0 ) then ! if sr%n_diag_coil > 0 the array will be allocated in evolve_wall_currents
+
             allocate( t_diag_coil_curr(index_start,n_diag_coil) )
             call HDF5_array2D_reading(file_id,t_diag_coil_curr,"diag_coil_curr")
             allocate( diag_coil_curr(index_start+nstep,n_diag_coil) )
             diag_coil_curr(1:index_start,:) = t_diag_coil_curr(1:index_start,:)
             deallocate(t_diag_coil_curr)
+
+            allocate( t_diag_coil_name(n_diag_coil*COIL_NAME_LEN) )
+            call HDF5_array1D_reading_char(file_id,t_diag_coil_name,"diag_coil_name")
+            allocate( diag_coil_name(n_diag_coil) )
+            diag_coil_name = transfer(t_diag_coil_name,diag_coil_name)
+            deallocate(t_diag_coil_name)
+            
           endif
 
+
           if ( allocated(pf_coil_curr) ) deallocate(pf_coil_curr)
+          if ( allocated(pf_coil_name) ) deallocate(pf_coil_name)
           call HDF5_integer_reading(file_id,n_pf_coil,"n_pf_coil")
           if (n_pf_coil > 0 ) then    ! if sr%n_pol_coil > 0 the array will be allocated in evolve_wall_currents
+
             allocate( t_pf_coil_curr(index_start,n_pf_coil) )
             call HDF5_array2D_reading(file_id,t_pf_coil_curr,"pf_coil_curr")
             allocate( pf_coil_curr(index_start+nstep,n_pf_coil) )
             pf_coil_curr(1:index_start,:) = t_pf_coil_curr(1:index_start,:)
             deallocate(t_pf_coil_curr)
+
+            allocate( t_pf_coil_name(n_pf_coil*COIL_NAME_LEN) )
+            call HDF5_array1D_reading_char(file_id,t_pf_coil_name,"pf_coil_name")
+            allocate( pf_coil_name(n_pf_coil) )
+            pf_coil_name = transfer(t_pf_coil_name,pf_coil_name)
+            deallocate(t_pf_coil_name)
+
           endif
 
           if ( allocated(rmp_coil_curr) ) deallocate(rmp_coil_curr)
+          if ( allocated(rmp_coil_name) ) deallocate(rmp_coil_name)
           call HDF5_integer_reading(file_id,n_rmp_coil,"n_rmp_coil")
+
           if (n_rmp_coil > 0 ) then! if sr%n_rmp_coil > 0 the array will be allocated in evolve_wall_currents
+
             allocate( t_rmp_coil_curr(index_start,n_rmp_coil) )
             call HDF5_array2D_reading(file_id,t_rmp_coil_curr,"rmp_coil_curr")
             allocate( rmp_coil_curr(index_start+nstep,n_rmp_coil) )
             rmp_coil_curr(1:index_start,:) = t_rmp_coil_curr(1:index_start,:)
             deallocate(t_rmp_coil_curr)
+
+            allocate( t_rmp_coil_name(n_rmp_coil*COIL_NAME_LEN) )
+            call HDF5_array1D_reading_char(file_id,t_rmp_coil_name,"rmp_coil_name")
+            allocate( rmp_coil_name(n_rmp_coil) )
+            rmp_coil_name = transfer(t_rmp_coil_name,rmp_coil_name)
+            deallocate(t_rmp_coil_name)
+
           endif
 
           if ( allocated(net_tor_wall_curr) ) deallocate(net_tor_wall_curr)
@@ -728,7 +756,10 @@ module vacuum
         call HDF5_integer_saving(file_id,sr%n_diag_coils,"n_diag_coil"//char(0))
         call HDF5_integer_saving(file_id,sr%n_pol_coils,"n_pf_coil"//char(0))
         call HDF5_integer_saving(file_id,sr%n_rmp_coils,"n_rmp_coil"//char(0))
-
+        if(sr%n_diag_coils .gt. 0) call HDF5_array1D_saving_char(file_id,diag_coil_name,sr%n_diag_coils*COIL_NAME_LEN,"diag_coil_name"//char(0))
+        if(sr%n_pol_coils  .gt. 0) call HDF5_array1D_saving_char(file_id,pf_coil_name,  sr%n_pol_coils* COIL_NAME_LEN,"pf_coil_name"//char(0))
+        if(sr%n_rmp_coils  .gt. 0) call HDF5_array1D_saving_char(file_id,rmp_coil_name, sr%n_rmp_coils* COIL_NAME_LEN,"rmp_coil_name"//char(0))
+        
 
         if ( index_now > 0) then        
 
@@ -799,6 +830,7 @@ module vacuum
 
     call MPI_BCAST(n_dof_starwall,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     
+    sz_net     = 0
     sz_diag(:) = 0
     sz_pol(:)  = 0
     sz_rmp(:)  = 0
@@ -841,13 +873,24 @@ module vacuum
         if ( allocated(net_tor_wall_curr) ) deallocate(net_tor_wall_curr)
         if ( allocated(diag_coil_curr) )    deallocate(diag_coil_curr)
         if ( allocated(pf_coil_curr  ) )    deallocate(pf_coil_curr)
-        if ( allocated(rmp_coil_curr ) )    deallocate(pf_coil_curr)
+        if ( allocated(rmp_coil_curr ) )    deallocate(rmp_coil_curr)
         if (         sz_net  > 0 ) allocate( net_tor_wall_curr(sz_net) )
-        if ( minval(sz_diag) > 0 ) allocate( diag_coil_curr(sz_diag(1), sz_diag(2)) )
-        if ( minval(sz_pol)  > 0 ) allocate(   pf_coil_curr( sz_pol(1),  sz_pol(2)) )
-        if ( minval(sz_rmp)  > 0 ) allocate(  rmp_coil_curr( sz_rmp(1),  sz_rmp(2)) )
+        if ( minval(sz_diag) > 0 ) then
+          if ( allocated(diag_coil_name) )    deallocate(diag_coil_name)
+          allocate( diag_coil_curr(sz_diag(1), sz_diag(2)) )
+          allocate( diag_coil_name(sz_diag(2)) )
+        endif
+        if ( minval(sz_pol)  > 0 ) then
+          if ( allocated(pf_coil_name) )      deallocate(pf_coil_name)
+          allocate(   pf_coil_curr( sz_pol(1),  sz_pol(2)) )
+          allocate(   pf_coil_name( sz_pol(2)) )
+        endif
+        if ( minval(sz_rmp)  > 0 ) then
+          if ( allocated(rmp_coil_name) )     deallocate(rmp_coil_name)
+          allocate(  rmp_coil_curr( sz_rmp(1),  sz_rmp(2)) )
+          allocate(  rmp_coil_name( sz_rmp(2)) )
+        endif
       end if
-
       call MPI_BCAST(wall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(dwall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(old_dpsibnd_vec,n_dof_starwall,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr) 
@@ -856,10 +899,12 @@ module vacuum
       if ( minval(sz_diag) > 0 ) call MPI_BCAST(diag_coil_curr,sz_diag(1)*sz_diag(2),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       if ( minval( sz_pol) > 0 ) call MPI_BCAST(  pf_coil_curr, sz_pol(1)*sz_pol(2) ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)      
       if ( minval( sz_rmp) > 0 ) call MPI_BCAST( rmp_coil_curr, sz_rmp(1)*sz_rmp(2) ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+      if ( minval(sz_diag) > 0 ) call MPI_BCAST(diag_coil_name, sz_diag(2)*COIL_NAME_LEN ,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
+      if ( minval( sz_pol) > 0 ) call MPI_BCAST(  pf_coil_name,  sz_pol(2)*COIL_NAME_LEN ,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
+      if ( minval( sz_rmp) > 0 ) call MPI_BCAST( rmp_coil_name,  sz_rmp(2)*COIL_NAME_LEN ,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
     end if
     
     call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(freeb_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     
   end subroutine broadcast_vacuum
 

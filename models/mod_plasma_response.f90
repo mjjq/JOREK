@@ -12,14 +12,36 @@ module mod_plasma_response
   use basis_at_gaussian
   use tr_module
   use phys_module
+  use mod_vtk
   
   implicit none
   
   private
   
   public ::  Greens_functions,  psi_plasma,   B_plasma,  comelp
-  public ::  find_Icoils, find_Icoils2, find_Icoils_JET
+  public ::  find_Icoils, find_Icoils_JET
+  public ::  t_pol_coil, t_coil, psi_coils
+  public ::  read_coils, construct_test_coil, destruct_coils, log_coils, log_coil
   
+  ! --- Derived datatypes
+  type :: t_pol_coil
+    integer             :: n_fila
+    real*8, allocatable :: R_fila(:)
+    real*8, allocatable :: Z_fila(:)
+    real*8, allocatable :: weight(:)
+  end type t_pol_coil
+  
+  type :: t_coil
+    character(len=80)      :: name
+    integer                :: coil_type
+    type(t_pol_coil) :: pol_coil
+  end type t_coil
+  
+  integer, parameter :: C_POL_COIL  = 1       !< Value of coil_type indicating a poloidal field coil
+  logical            :: debug=.true.        !< Output debugging information (fort.xxx files)
+  logical            :: debug_norm=.false.   !< Output normalized magnetic field vectors
+  logical            :: verbose=.false.      !< Output verbose information
+ 
   contains
   
     
@@ -303,154 +325,9 @@ module mod_plasma_response
   
   
     
-  !---------------------------------------------------------------------
-  !> Find the best coil currents for a given fixed boundary equilibrium (using psi)
-  !---------------------------------------------------------------------
-  subroutine find_Icoils(node_list,element_list,bnd_node_list,bnd_elm_list)
-    
-    use vacuum
-    use mod_basisfunctions
-    
-    implicit none
-    
-    type (type_node_list),       intent(in) :: node_list
-    type (type_element_list),    intent(in) :: element_list
-    type(type_bnd_node_list),    intent(in) :: bnd_node_list         !< List of boundary elements
-    type(type_bnd_element_list), intent(in) :: bnd_elm_list          !< List of grid elements
-    
-    type(type_bnd_element) :: bndelem_m
-    
-    integer              :: n_points, n_points_elm, numb_coils
-    integer              :: i, p, m_bndelem, m_pt, count, i_c, j_c
-    integer              :: i_v, i_d, i_node_bnd, i_resp, i_dir, i_node, info
-    real*8               :: H1(2,2), H1_s(2,2), H1_ss(2,2)
-    real*8               :: s, R, Z, psi, psi_c
-    real*8,  allocatable :: R_vec(:), Z_vec(:), coeff(:,:), psi_all(:), psi_p(:), psi_ext(:)
-    real*8,  allocatable :: A_mat_min(:,:), RHS_min(:)
-    integer, allocatable :: ipiv(:)
-
-    write(*,*) ' '
-    write(*,*) '************************************************************'
-    write(*,*) '******** Calculate best I_coils from fixed bnd *************'
-    write(*,*) '************************************************************'
-    write(*,*) ' '
-        
-    !---- Calculate coefficients for each coil and point  **coeff(point,coil) **
-    !------------------------------------------------------------------------
-    
-    numb_coils   = size(bext_tan(1,:),1)
-    write(*,*) ' Coils number = ', numb_coils
-    
-    n_points_elm = 6
-    n_points     = n_points_elm * bnd_elm_list%n_bnd_elements  
-    
-    allocate( R_vec(n_points), Z_vec(n_points), coeff(n_points, numb_coils) )
-    allocate( psi_all(n_points), psi_ext(n_points), psi_p(n_points) )    
-    R_vec = 0.d0 ; Z_vec = 0.d0; coeff = 0.d0; psi_all=0.d0; psi_ext=0.d0; psi_p=0.d0;
-    
-    write(*,*) ' n_bnd_elm    = ',  bnd_elm_list%n_bnd_elements
-    write(*,*) ' n_points     =  ',  n_points
-    
-    count = 0
-    
-    do m_bndelem = 1, bnd_elm_list%n_bnd_elements      !--- create vector R, Z, psi
-      
-      bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
-  
-      do m_pt = 1, n_points_elm     
-      
-        count = count + 1
-        
-        s = float(m_pt)/float(n_points_elm+1)
-
-        call basisfunctions1(s, H1, H1_s, H1_ss)
-  
-        do i_c = 1, numb_coils
-        
-          R = 0.d0;  Z = 0.d0;  psi=0.d0;  psi_c = 0.d0
-    
-          do i_v = 1, 2
-            do i_d = 1, 2 ! degrees of freedom
-              i_node     = bndelem_m%vertex(i_v)
-              i_node_bnd = bndelem_m%bnd_vertex(i_v)
-              i_dir      = bndelem_m%direction(i_v, i_d)
-              i_resp     = bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_d)
-                 
-              R      = R     + node_list%node(i_node)%x(i_dir,1)        * H1(i_v,i_d)   * bndelem_m%size(i_v,i_d)
-              Z      = Z     + node_list%node(i_node)%x(i_dir,2)        * H1(i_v,i_d)   * bndelem_m%size(i_v,i_d)              
-              psi    = psi   + node_list%node(i_node)%values(1,i_dir,1) * H1(i_v,i_d)   * bndelem_m%size(i_v,i_d)
-              psi_c  = psi_c + bext_psi(i_resp,i_c)                     * H1(i_v,i_d)   * bndelem_m%size(i_v,i_d)
-            end do
-          end do
-    
-          R_vec(count) = R;      Z_vec(count) = Z;     psi_all(count) = psi;     coeff(count, i_c) = psi_c;
-        enddo    
-      
-      enddo  
-    enddo
-    
-    !------------------------- Calculate psi external from the fixed boundary
-    !-----------------------------------------------------------------
-    write(*,*) ' '
-    write(*,*) 'Calculating external flux contribution of fixed bnd ...'
-   
-    call psi_plasma(node_list,element_list, R_vec, Z_vec, psi_p)
-    
-    psi_ext(:) = psi_all(:) - psi_p(:) 
-    
-    open(25,file='psi_contributions.txt',status="replace", position="append", action="write")
-    do i = 1, n_points
-      write(25,'(5ES14.6)') R_vec(i), Z_vec(i), psi_all(i), psi_p(i), psi_ext(i)
-    enddo
-    close(25)
-    
-    !------------------------- Solve minimization problem -------------------
-    !------------------------------------------------------------------------
-    ! Here we minimize  \sum_i ( \psi_ext - \psi_coils  )_i**2
-    ! calculate RHS and A matrix
-    write(*,*) ' '
-    write(*,*) 'Solve minimization problem'
-    
-    allocate(RHS_min(numb_coils), A_mat_min(numb_coils,numb_coils) )
-    allocate(ipiv(numb_coils))
-    RHS_min = 0.d0;     A_mat_min = 0.d0
-    
-    do i_c = 1, numb_coils
-      do p = 1, n_points
-        RHS_min(i_c) = RHS_min(i_c) + psi_ext(p) * coeff(p, i_c)               
-      enddo
-      
-      do j_c = 1, numb_coils
-        do p = 1, n_points  
-          A_mat_min(i_c, j_c) = A_mat_min(i_c, j_c) + coeff(p, i_c) * coeff(p, j_c)       
-        enddo
-      enddo
-    enddo
-
-   call dgesv( numb_coils, 1, A_mat_min, numb_coils, ipiv, RHS_min, numb_coils, info )
-   write(*,*) 'info = ', info
-   
-   !----- Compare given and calculated currents
-   write(*,*) ' '
-   write(*,*) ' Initial coil currents, Calculated currents, Relative differences '
-   do i=1, numb_coils
-     write(*,'(3ES14.6)') pf_coils(i)%current, RHS_min(i), (pf_coils(i)%current - RHS_min(i)) / (pf_coils(i)%current + 0.1)
-   enddo
-    
-   deallocate(A_mat_min,RHS_min, R_vec, Z_vec, coeff, psi_all, psi_ext, psi_p)
-  
-  end subroutine find_Icoils  
-  
-  
-  
-  
-  
-  
-  
-  !---------------------------------------------------------------------
   !> Find the best coil currents for a given fixed boundary equilibrium (using Btan)
   !---------------------------------------------------------------------
-  subroutine find_Icoils2(node_list,element_list,bnd_node_list,bnd_elm_list)
+  subroutine find_Icoils(node_list,element_list,bnd_node_list,bnd_elm_list, coils)
         
     use vacuum
     use vacuum_response
@@ -463,7 +340,8 @@ module mod_plasma_response
     type (type_element_list),    intent(in) :: element_list
     type(type_bnd_node_list),    intent(in) :: bnd_node_list         !< List of boundary elements
     type(type_bnd_element_list), intent(in) :: bnd_elm_list          !< List of grid elements
-  
+    type(t_coil),                intent(in) :: coils(:)
+ 
     ! --- Local variables
 
     type(type_bnd_element) :: bndelem_m
@@ -483,12 +361,12 @@ module mod_plasma_response
     logical  :: s_const            ! Is the bound. elem. an s=const side of the 2D element?
   
     real*8,  allocatable :: R_vec(:), Z_vec(:), coeff(:,:), B_all(:,:), B_p(:,:), B_ext(:,:)
-    real*8,  allocatable ::  Btan_ext(:), v_tan(:,:), weights(:)
+    real*8,  allocatable :: Btan_ext(:), v_tan(:,:), weights(:)
     real*8,  allocatable :: A_mat_min(:,:), RHS_min(:)
     integer, allocatable :: ipiv(:)
     integer              :: n_points, n_points_elm, numb_coils
     integer              :: i, pt, count, i_c, j_c, info
-    real*8               :: Btan_c, Bmax
+    real*8               :: Btan_c, Bmax, Bc(2)
   
     l_starwall=1;  l_tor=1;
   
@@ -501,7 +379,7 @@ module mod_plasma_response
     !---- Calculate coefficients for each coil and point  **coeff(point,coil) **
     !------------------------------------------------------------------------
     
-    numb_coils   = size(bext_tan(1,:),1)
+    numb_coils   = size(coils,1)
     write(*,*) ' Coils number = ', numb_coils
     
     n_points_elm = 6
@@ -574,32 +452,10 @@ module mod_plasma_response
         P_Z   = ( - P_s * R_t + P_t * R_s ) / xjac ! dPsi/dZ
         B_pol = (/ P_Z, -P_R /) / R
         
-        do i_c = 1, numb_coils
-        
-          Btan_c = 0.d0
-    
-          ! --- Sum over boundary dofs at which response is calculated
-          L_IV: do i_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
-    
-            i_node_bnd  = bndelem_m%bnd_vertex(i_vertex)
-    
-            L_ID: do i_dof = 1, 2 ! (loop over node dofs)
-    
-              i_size   = bndelem_m%size(i_vertex,i_dof)                      
-              i_resp_0 = response_index_eq(i_node_bnd,i_dof)
-        
-              ! --- Determine basis function
-              basfunc_i = H1(i_vertex,i_dof) * i_size
-            
-              ! --- Btan per coil
-              Btan_c = Btan_c + basfunc_i * bext_tan(i_resp_0, i_c)
-          
-            end do L_ID
-          end do L_IV
-                      
-          coeff(count, i_c) = Btan_c;
-        
-        enddo  !coils loop
+        do i_c = 1, numb_coils        
+          call B_coil_unit(coils(i_c), R, Z, Bc) 
+          coeff(count, i_c) = -Bc(1)*e_par(1) -  Bc(2)*e_par(2)  
+        enddo  
         
         R_vec(count)   = R;     Z_vec(count) = Z;       B_all(count,:) = B_pol(:);   v_tan(count,:) = e_par(:); 
     
@@ -621,7 +477,7 @@ module mod_plasma_response
     !--- Check coils initial guess
     open(25,file='B_ext.txt',status="replace", position="append", action="write")
     do i = 1, n_points
-      write(25,'(5ES14.6)') R_vec(i), Z_vec(i), Btan_ext(i), sum(coeff(i,:) * I_coils(:))
+      write(25,'(5ES14.6)') R_vec(i), Z_vec(i), Btan_ext(i), sum(coeff(i,:) * pf_coils(:)%current)
     enddo
     close(25)
     
@@ -660,6 +516,16 @@ module mod_plasma_response
 
    call dgesv( numb_coils, 1, A_mat_min, numb_coils, ipiv, RHS_min, numb_coils, info )
    write(*,*) 'info = ', info
+
+   write(*,*) ' '
+   write(*,*) ' Found total coil currents (stored in Icoils_found.txt) '
+
+   open(26,file='Icoils_found.txt',status="replace", position="append", action="write")
+   do i=1, numb_coils
+     write(26,'(1ES18.10)')   RHS_min(i) 
+     write(*, '(1ES18.10)')   RHS_min(i) 
+   enddo
+   close(26)
    
    !----- Compare given and calculated currents
    write(*,*) ' '
@@ -668,7 +534,7 @@ module mod_plasma_response
      write(*,'(3ES14.6)') pf_coils(i)%current, RHS_min(i), (pf_coils(i)%current - RHS_min(i)) / (pf_coils(i)%current + 0.1)
    enddo
 
-  end subroutine find_Icoils2  
+  end subroutine find_Icoils 
   
   
   
@@ -680,7 +546,7 @@ module mod_plasma_response
   !! This is a separate routine as the 20 JET coils are constrained to 10 circuits and therefore
   !! 10 degrees of freedom. TO DO: A generalization for circuits and coils dof should be done
   !!-------------------------------------------------------------------------------------------
-  subroutine find_Icoils_JET(node_list,element_list,bnd_node_list,bnd_elm_list)
+  subroutine find_Icoils_JET(node_list,element_list,bnd_node_list,bnd_elm_list, coils)
     
     use vacuum
     use vacuum_response
@@ -691,7 +557,9 @@ module mod_plasma_response
     type (type_element_list),    intent(in) :: element_list
     type(type_bnd_node_list),    intent(in) :: bnd_node_list         !< List of boundary elements
     type(type_bnd_element_list), intent(in) :: bnd_elm_list          !< List of grid elements
-  
+    type(t_coil),                intent(in) :: coils(:)
+
+ 
     ! --- Local variables
 
     type(type_bnd_element) :: bndelem_m
@@ -711,12 +579,12 @@ module mod_plasma_response
     logical  :: s_const            ! Is the bound. elem. an s=const side of the 2D element?
   
     real*8,  allocatable :: R_vec(:), Z_vec(:), coeff(:,:), B_all(:,:), B_p(:,:), B_ext(:,:)
-    real*8,  allocatable ::  Btan_ext(:), v_tan(:,:), weights(:)
+    real*8,  allocatable :: Btan_ext(:), v_tan(:,:), weights(:)
     real*8,  allocatable :: A_mat_min(:,:), RHS_min(:)
     integer, allocatable :: ipiv(:), alpha(:,:)
     integer              :: n_points, n_points_elm, numb_coils, n_eq
     integer              :: i, pt, count, i_c, j_c, info, i_eq_i, i_eq_j
-    real*8               :: Btan_c, Bmax, cont_ip, cont_jp
+    real*8               :: Btan_c, Bmax, cont_ip, cont_jp, Bc(2)
   
     l_starwall=1;  l_tor=1;
   
@@ -729,7 +597,7 @@ module mod_plasma_response
     !---- Calculate coefficients for each coil and point  **coeff(point,coil) **
     !------------------------------------------------------------------------
     
-    numb_coils   = size(bext_tan(1,:),1)
+    numb_coils   = size(coils, 1) 
     
     if (numb_coils /= 20) then
       write(*,*) 'For using this feature with JET you must use the 20 coils generated by write_jet_pfsystems'
@@ -807,33 +675,11 @@ module mod_plasma_response
         P_Z   = ( - P_s * R_t + P_t * R_s ) / xjac ! dPsi/dZ
         B_pol = (/ P_Z, -P_R /) / R
         
-        do i_c = 1, numb_coils
-        
-          Btan_c = 0.d0
-    
-          ! --- Sum over boundary dofs at which response is calculated
-          L_IV: do i_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
-    
-            i_node_bnd  = bndelem_m%bnd_vertex(i_vertex)
-    
-            L_ID: do i_dof = 1, 2 ! (loop over node dofs)
-    
-              i_size   = bndelem_m%size(i_vertex,i_dof)                      
-              i_resp_0 = response_index_eq(i_node_bnd,i_dof)
-        
-              ! --- Determine basis function
-              basfunc_i = H1(i_vertex,i_dof) * i_size
-            
-              ! --- Btan per coil
-              Btan_c = Btan_c + basfunc_i * bext_tan(i_resp_0, i_c)
-          
-            end do L_ID
-          end do L_IV
-                      
-          coeff(count, i_c) = Btan_c;
-        
-        enddo  !coils loop
-        
+        do i_c = 1, numb_coils        
+          call B_coil_unit(coils(i_c), R, Z, Bc) 
+          coeff(count, i_c) = -Bc(1)*e_par(1) -  Bc(2)*e_par(2)  
+        enddo  
+      
         R_vec(count)   = R;     Z_vec(count) = Z;       B_all(count,:) = B_pol(:);   v_tan(count,:) = e_par(:); 
     
       end do L_MP
@@ -850,13 +696,6 @@ module mod_plasma_response
     
     B_ext(:,:)  = B_all(:,:) - B_p(:,:) 
     Btan_ext(:) = B_ext(:,1)*v_tan(:,1) +  B_ext(:,2)*v_tan(:,2)  
-    
-    !--- Check coils initial guess
-    open(25,file='B_ext.txt',status="replace", position="append", action="write")
-    do i = 1, n_points
-      write(25,'(5ES14.6)') R_vec(i), Z_vec(i), Btan_ext(i), sum(coeff(i,:) * I_coils(:))
-    enddo
-    close(25)
     
     Bmax = maxval(abs(Btan_ext))
     !--- Calculate weights for each point
@@ -936,30 +775,37 @@ module mod_plasma_response
       enddo
     enddo
 
+   ! --- Solve linear system of equations for minimization 
    call dgesv( n_eq, 1, A_mat_min, n_eq, ipiv, RHS_min, n_eq, info )
    write(*,*) 'info = ', info
    
-   !----- Compare given and calculated currents
+   ! --- Write out found currents
    write(*,*) ' '
-   write(*,*) ' Found circuit currents '
+   write(*,*) ' Found circuit currents (stored in Icircuits_found.txt) '
+
+   open(25,file='Icircuits_found.txt',status="replace", position="append", action="write")
    do i=1, n_eq
-     write(*,'(1ES14.6)') RHS_min(i)
+     write(25,'(1ES18.10)') RHS_min(i)
+     write(*, '(1ES18.10)') RHS_min(i)
    enddo
-   
-   
+   close(25)
+      
    write(*,*) ' '
-   write(*,*) ' Found total coil currents '
+   write(*,*) ' Found total coil currents (stored in Icoils_found.txt) '
+
+   open(26,file='Icoils_found.txt',status="replace", position="append", action="write")
    do i=1, numb_coils
-     I_coils(i) =  sum( alpha(:,i) * RHS_min(:) )
-     write(*,*) I_coils(i)
+     write(26,'(1ES18.10)')sum( alpha(:,i) * RHS_min(:) )
+     write(*, '(1ES18.10)')sum( alpha(:,i) * RHS_min(:) )
    enddo
-   
+   close(26)
+  
    !--- Check coils initial guess
-    open(25,file='B_ext_new.txt',status="replace", position="append", action="write")
-    do i = 1, n_points
-      write(25,'(4ES14.6)') R_vec(i), Z_vec(i), Btan_ext(i),  sum(coeff(i,:) * I_coils(:)) 
-    enddo
-    close(25)
+   open(27,file='B_ext_new.txt',status="replace", position="append", action="write")
+   do i = 1, n_points
+     write(27,'(4ES14.6)') R_vec(i), Z_vec(i), Btan_ext(i),  sum(coeff(i,:) * pf_coils(:)%current) 
+   enddo
+   close(27)
 
   end subroutine find_Icoils_JET
   
@@ -1061,5 +907,270 @@ module mod_plasma_response
       return
   end  subroutine comelp
 
+
+
+
+
+
+! --- Routines related to coils
+
+  subroutine read_coils(coils, coil_file)
+    implicit none
     
+    ! --- Routine parameters
+    type(t_coil), allocatable, intent(inout) :: coils(:)
+    character(len=*),          intent(in)    :: coil_file
+    ! --- Local variables
+    integer :: file_handle = 21
+    integer :: err, ncoils, i_c, i_f
+    real*8, allocatable :: n_turns(:)
+    real*8  :: n_turns_fila
+    character(len=512) :: comment_line
+    
+    call destruct_coils(coils)
+    open(file_handle, file=trim(coil_file), status='old', action='read', iostat=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR: Cannot open coil file "'//trim(coil_file)//'".'
+      stop
+    end if
+    
+    read(file_handle,'(a)') comment_line
+    read(file_handle,*) ncoils
+    
+    allocate( coils(ncoils), n_turns(ncoils) )
+    
+    read(file_handle,'(a)') comment_line
+    do i_c = 1, ncoils
+      read(file_handle,*) coils(i_c)%pol_coil%n_fila, coils(i_c)%name, n_turns(i_c)
+      
+      coils(i_c)%coil_type = C_POL_COIL
+      coils(i_c)%name = trim(adjustl(coils(i_c)%name))
+      allocate( coils(i_c)%pol_coil%R_fila(coils(i_c)%pol_coil%n_fila) )
+      allocate( coils(i_c)%pol_coil%Z_fila(coils(i_c)%pol_coil%n_fila) )
+      allocate( coils(i_c)%pol_coil%weight(coils(i_c)%pol_coil%n_fila) )
+    end do
+    
+    do i_c = 1, ncoils
+      read(file_handle,'(a)') comment_line
+      read(file_handle,'(a)') comment_line
+      read(file_handle,'(a)') comment_line
+      do i_f = 1, coils(i_c)%pol_coil%n_fila
+        read(file_handle,*) coils(i_c)%pol_coil%R_fila(i_f), coils(i_c)%pol_coil%Z_fila(i_f),      &
+          n_turns_fila
+        
+        coils(i_c)%pol_coil%weight(i_f) = n_turns_fila / n_turns(i_c)
+      end do
+    end do
+    
+    close(file_handle)
+    
+  end subroutine read_coils
+  
+  
+  
+  subroutine construct_test_coil(coils)
+    implicit none
+    
+    ! --- Routine parameters
+    type(t_coil), allocatable, intent(inout) :: coils(:)
+    
+    call destruct_coils(coils)
+    allocate( coils(1) )
+    coils(1)%name = 'Axisymmetric Test-Coil'
+    coils(1)%coil_type = C_POL_COIL
+    coils(1)%pol_coil%n_fila = 1
+    allocate( coils(1)%pol_coil%R_fila(1) )
+    allocate( coils(1)%pol_coil%Z_fila(1) )
+    allocate( coils(1)%pol_coil%weight(1) )
+    coils(1)%pol_coil%R_fila(:) = (/ 9.2 /)
+    coils(1)%pol_coil%Z_fila(:) = (/ 1.0 /)
+    coils(1)%pol_coil%weight(:) = (/ 1.0 /)
+  end subroutine construct_test_coil
+  
+  
+  
+  subroutine destruct_coils(coils)
+    implicit none
+    
+    ! --- Routine parameters
+    type(t_coil), allocatable, intent(inout) :: coils(:)
+    ! --- Local variables
+    integer :: i_c
+    
+    if ( allocated(coils) ) then
+      do i_c = 1, size(coils,1)
+        if ( allocated(coils(i_c)%pol_coil%R_fila) ) deallocate(coils(i_c)%pol_coil%R_fila)
+        if ( allocated(coils(i_c)%pol_coil%Z_fila) ) deallocate(coils(i_c)%pol_coil%Z_fila)
+        if ( allocated(coils(i_c)%pol_coil%weight) ) deallocate(coils(i_c)%pol_coil%weight)
+      end do
+      deallocate(coils)
+    end if
+  end subroutine destruct_coils
+  
+  
+  
+  subroutine log_coils(coils,verbose)
+    implicit none
+    
+    ! --- Routine parameters
+    type(t_coil), allocatable, intent(in) :: coils(:)
+    logical,                   intent(in) :: verbose
+    ! --- Local variables
+    integer :: i
+    
+    write(*,*)
+    write(*,*) '+-- COILS --------------------------------------------------------'
+    if ( allocated(coils) ) then
+      write(*,'(1x,a,i4)') '| Number of coils:', size(coils,1)
+      do i = 1, size(coils,1)
+        call log_coil(coils(i),verbose)
+      end do
+    else
+      write(*,*) '| [not allocated]'
+    end if
+    write(*,*) '+-----------------------------------------------------------------'
+    write(*,*)
+  end subroutine log_coils
+  
+  
+  
+  subroutine log_coil(coil,verbose)
+    implicit none
+    
+    ! --- Routine parameters
+    type(t_coil), intent(in) :: coil
+    logical,      intent(in) :: verbose
+    ! --- Local variables
+    integer :: i
+    
+    write(*,'(1x,5a)') '| Coil "', trim(coil%name), '" (', trim(coil_type_name(coil%coil_type)), ')'
+    if ( verbose .or. debug ) then
+      if ( coil%coil_type == C_POL_COIL ) then
+        write(*,*) '|   Filament         R               Z            weight'
+        do i = 1, coil%pol_coil%n_fila
+          write(*,'(1x,a,i10,3es16.7)') '|', i, coil%pol_coil%R_fila(i), coil%pol_coil%Z_fila(i),   &
+            coil%pol_coil%weight(i)
+          if ( debug ) write(37,*) coil%pol_coil%R_fila(i), coil%pol_coil%Z_fila(i)
+        end do
+        if ( debug ) write(37,*)
+      else
+        write(*,*) '|   ERROR: ILLEGAL COIL_TYPE!'
+      end if
+    end if
+    
+  end subroutine log_coil
+ 
+
+
+
+
+  character(len=128) function coil_type_name(coil_type)
+    implicit none
+    
+    ! --- Routine parameters
+    integer, intent(in) :: coil_type
+    
+    if ( coil_type == C_POL_COIL ) then
+      coil_type_name = 'poloidal field coil'
+    else
+      coil_type_name = 'ILLEGAL COIL TYPE'
+    end if
+    
+  end function coil_type_name
+ 
+
+
+
+
+  !------------------------------------------------------------------
+  !> Calculates psi_coils at given (R,Z) points 
+  !------------------------------------------------------------------
+  subroutine psi_coils(coils, R0, Z0, psi_c)
+
+    use vacuum, only : pf_coils
+
+    implicit none
+
+    type(t_coil),  intent(in) :: coils(:)
+
+    real*8, intent(in)        :: R0(:), Z0(:)
+    real*8, intent(inout)     :: psi_c(:)
+    
+    ! --- local variables    
+    integer    :: i_p, i_c, i_f 
+    real*8     :: R_f, Z_f, I_coil
+    real*8     :: G_BR, G_BZ, G_psi
+    integer    :: n_points, n_coils
+    
+    n_points = size(R0,1)
+    n_coils  = size(coils,1)    
+
+    psi_c    = 0.d0
+        
+    do i_p = 1, n_points   ! --- loop over given RZ points 
+      do i_c =1, n_coils     ! --- loop over coils
+
+        I_coil = pf_coils(i_c)%current
+   
+        do i_f = 1, coils(i_c)%pol_coil%n_fila ! (Loop over coil filaments)
+
+          ! --- Position of filament point
+          R_f   = coils(i_c)%pol_coil%R_fila(i_f)
+          Z_f   = coils(i_c)%pol_coil%Z_fila(i_f)
+
+           !--- Calculate Green's function            
+          call Greens_functions(R0(i_p), Z0(i_p), R_f, Z_f, G_BR, G_BZ, G_psi)
+            
+          !--- psi = \int Greens_funct * I   see (4.66 Computational Methods in P.Physics, Jardin)
+          psi_c(i_p) = psi_c(i_p) - G_psi * I_coil * coils(i_c)%pol_coil%weight(i_f) * mu_zero
+
+        enddo
+      enddo
+    enddo
+      
+  end subroutine psi_coils
+ 
+ 
+ 
+
+  !------------------------------------------------------------------
+  !> Calculates B-field of a single coil with unitary current
+  !------------------------------------------------------------------
+  subroutine B_coil_unit(coil, R0, Z0, B)
+
+    implicit none
+
+    type(t_coil),  intent(in) :: coil
+
+    real*8, intent(in)        :: R0, Z0
+    real*8, intent(inout)     :: B(2)
+    
+    ! --- local variables    
+    integer    :: i_p, i_c, i_f 
+    real*8     :: R_f, Z_f
+    real*8     :: G_BR, G_BZ, G_psi
+    
+    B = 0.d0     
+
+    do i_f = 1, coil%pol_coil%n_fila ! (Loop over coil filaments)
+
+      ! --- Position of filament point
+      R_f   = coil%pol_coil%R_fila(i_f)
+      Z_f   = coil%pol_coil%Z_fila(i_f)
+
+      !--- Calculate Green's function            
+      call Greens_functions(R0, Z0, R_f, Z_f, G_BR, G_BZ, G_psi)
+            
+      !--- B = \int Greens_funct * I   see (4.66 Computational Methods in P.Physics, Jardin)
+      B(1)  = B(1)  -  G_BR *  coil%pol_coil%weight(i_f) * mu_zero
+      B(2)  = B(2)  -  G_Bz *  coil%pol_coil%weight(i_f) * mu_zero
+
+    enddo
+      
+  end subroutine B_coil_unit
+
+
+
+
+   
 end module mod_plasma_response

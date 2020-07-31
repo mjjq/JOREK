@@ -431,10 +431,14 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! -------------------------------------
   ! --- Temperature dependent resistivity
   ! -------------------------------------
-  if ( eta_T_dependent ) then
-    eta_Te       =   eta   * (Te0_corr / Te_0)**(-1.5d0)
-    deta_dTe     = - eta   * (1.5d0)  * Te0_corr **(-2.5d0) * Te_0**(1.5d0)
-    d2eta_d2Te   =   eta   * (3.75d0) * Te0_corr **(-3.5d0) * Te_0**(1.5d0)
+  if ( eta_T_dependent .and. 2.d0*Te0_corr <= T_max_eta) then
+    eta_Te     =   eta   * (Te0_corr / Te_0)**(-1.5d0)
+    deta_dTe   = - eta	* (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
+    d2eta_d2Te =   eta	* (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0)
+  else if ( eta_T_dependent .and. 2.d0*Te0_corr > T_max_eta) then
+     eta_Te     = eta   * ((T_max_eta/2.d0)/Te_0)**(-1.5d0)
+     deta_dTe   = 0.
+     d2eta_d2Te = 0.     
   else
     eta_Te     = eta
     deta_dTe   = 0.d0
@@ -445,8 +449,16 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! -------------------------
   ! --- Eta for ohmic heating
   ! -------------------------
-  eta_Te_ohm   = (eta_Te/eta)  * eta_ohmic
-  deta_dTe_ohm = (deta_dTe/eta) * eta_ohmic
+  if ( eta_T_dependent .and. 2.d0*Te0_corr <= T_max_eta_ohm) then
+    eta_Te_ohm     = eta_ohmic   * (Te0_corr/Te_0)**(-1.5d0)
+    deta_dTe_ohm   = - eta_ohmic   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
+  else if ( eta_T_dependent .and. 2.d0*Te0_corr > T_max_eta_ohm) then
+    eta_Te_ohm     = eta_ohmic   * ((T_max_eta_ohm/2.d0)/Te_0)**(-1.5d0)
+    deta_dTe_ohm   = 0.    
+  else
+    eta_Te_ohm     = eta_ohmic
+    deta_dTe_ohm   = 0.d0
+  end if  
   
 
   ! -----------------------------------
@@ -600,18 +612,21 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     call temperature_e(xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)
 
     ! --- Toroidal momentum source
-    if ( abs(V_0) .ge. 1.e-12) then 
-      call velocity(xpoint2,xcase2, y_g,Z_xpoint, ps0,psi_axis,psi_bnd, V_source,dV_dpsi_source,dV_dz_source,dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz)
-      
-      if (normalized_velocity_profile) then
-        Vt0_x = dV_dpsi_source * ps0_x
-        Vt0_y = dV_dz_source + dV_dpsi_source * ps0_y
-      else
-        Omega_tor0_x = dV_dpsi_source * ps0_x
-        Omega_tor0_y = dV_dz_source + dV_dpsi_source * ps0_y
-      endif
-    endif
-  endif
+    dV_dpsi_source = 0.d0
+    dV_dz_source   = 0.d0
+    if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
+      call velocity(xpoint2, xcase2, y_g, z_xpoint, ps0, psi_axis, psi_bnd, V_source,               &
+        dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2,           &
+        dV_dpsi2_dz)
+    end if
+    if (normalized_velocity_profile) then
+      Vt0_x = dV_dpsi_source * ps0_x
+      Vt0_y = dV_dz_source + dV_dpsi_source * ps0_y
+    else
+      Omega_tor0_x = dV_dpsi_source * ps0_x
+      Omega_tor0_y = dV_dz_source + dV_dpsi_source * ps0_y
+    end if
+  end if
   
   ! --- Avoid negative density/temperature
   if ( r0 .lt. 1.d-1*rho_1 ) then

@@ -80,6 +80,7 @@ module vacuum_response
     if ( vacuum_debug  ) call log_starwall_response(my_id, sr) 
     call read_starwall_response(my_id, sr,'starwall-response.dat',bnd_elm_list%n_bnd_elements)
     call broadcast_starwall_response(my_id, sr)
+    if( sr%ncoil .gt. 0 ) call distribute_coil_names
 
     ! --- Set the "wall resistivity" to be used inside JOREK (actually it is the normalized thin wall resistivity)
     if ( (sr%file_version == 1)  .and. (my_id == 0) ) then
@@ -258,7 +259,7 @@ module vacuum_response
  
   
   !> Read an array from the STARWALL respone file (MPI I/O).
-  subroutine read_array_not_distr(filehandle, array_name, dim, disp, int1d, int2d, float1d, float2d)
+  subroutine read_array_not_distr(filehandle, array_name, dim, disp, int1d, int2d, float1d, float2d, char1d)
 
     use mpi_mod
     implicit none
@@ -272,16 +273,20 @@ module vacuum_response
     integer, allocatable, optional, intent(inout)   :: int2d(:,:)
     real*8,  allocatable, optional, intent(inout)   :: float1d(:)
     real*8,  allocatable, optional, intent(inout)   :: float2d(:,:)
+    character(len=*), allocatable, optional, intent(inout)   :: char1d(:)
 
     ! --- Local variables
     integer, dimension (MPI_STATUS_SIZE) :: status
     character(len=12) :: marker
-    integer           :: nd, d(2), ierr, err
+    integer           :: nd, d(2), ierr, err, str_len
     character(len=24) :: name, datatype, requested_type
     logical           :: error
-
+    character, allocatable :: tmp_char1d(:)
+    
     if ( present(int1d) .or. present(int2d) ) then
       requested_type = 'int'
+    elseif (present(char1d))then
+      requested_type = 'char'
     else
       requested_type = 'float'
     end if
@@ -292,7 +297,7 @@ module vacuum_response
     call MPI_FILE_READ(filehandle,  datatype, int(sizeof(datatype),4),  MPI_CHARACTER,status,ierr)
     call MPI_FILE_READ(filehandle,  d,        2,                        MPI_INTEGER  ,status,ierr)
     disp = disp + sizeof(marker) + sizeof(name) + sizeof(nd) + sizeof(datatype) + sizeof(d) 
- 
+
     marker   = adjustl(marker)
     name     = adjustl(name)
     datatype = adjustl(datatype)
@@ -329,6 +334,14 @@ module vacuum_response
       call MPI_FILE_READ(filehandle, float2d, dim(1)*dim(2), MPI_DOUBLE_PRECISION  ,status,ierr)
       disp = disp + sizeof(float2d)
 
+    else if (present(char1d)) then
+      str_len = dim(1) * sizeof(char1d(1))
+      if ( allocated(tmp_char1d) ) deallocate( tmp_char1d ); allocate( tmp_char1d(str_len))
+      if ( allocated(char1d) ) deallocate( char1d ); allocate( char1d(dim(1)))
+      call MPI_FILE_READ(filehandle, tmp_char1d, str_len, MPI_CHARACTER  ,status,ierr)
+      char1d = transfer(tmp_char1d, char1d)
+      deallocate(tmp_char1d)
+      disp = disp + str_len
     end if
 
     if ( vacuum_debug ) write(*,'(3x,"Read: ",A24,"> type ",A," size ",2I7)')name, trim(datatype), d(1:nd)
@@ -483,7 +496,7 @@ module vacuum_response
 
     ! --- Local variables
     integer            :: filehandle
-    character(len=512) :: comment
+    character(len=512) :: comment, tmp_int2str
     integer            :: i, j, i_starw, n, is_sin, err, i_tmp, ier
     real*8             :: r_tmp
     real*8, allocatable:: tmp(:)
@@ -491,7 +504,7 @@ module vacuum_response
     integer(kind=MPI_OFFSET_KIND)        :: disp !< Present location in the file
     real*8             :: test_sum
     integer            :: loc_sizes(2),ntasks
- 
+
     disp = 0
     call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, err)
 
@@ -522,7 +535,7 @@ module vacuum_response
       disp = disp + sizeof(comment)
 
       sr%file_version = read_intparam_parallel(filehandle, 'file_version', disp)
-      if ( sr%file_version > 3 ) then
+      if ( sr%file_version > 4 ) then
         write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
         stop
       end if
@@ -574,9 +587,32 @@ module vacuum_response
           call read_array_not_distr(filehandle, 'phi_coil',      (/sr%ntri_c,3/), disp,  float2d=sr%phi_coil)
           call read_array_not_distr(filehandle, 'eta_thin_coil', (/sr%ntri_c,0/), disp,  float1d=sr%eta_thin_coil)
           call read_array_not_distr(filehandle, 'coil_resist',   (/sr%ncoil,0/),  disp,  float1d=sr%coil_resist)
+          if (sr%file_version > 3)  then
+            call read_array_not_distr(filehandle, 'coil_name',     (/sr%ncoil,0/),  disp,  char1d=sr%coil_name)
+           endif
         end if
         
-      end if
+        if ( (sr%ncoil .gt. 0) .and. sr%file_version .le. 3) then
+         write(*,*) "Coil names not yet supported by starwall (ver <=3). Generic names used."
+         if (allocated(sr%coil_name)) deallocate(sr%coil_name)
+         allocate(sr%coil_name(sr%ncoil))
+
+         do i=1, sr%n_diag_coils
+           write(tmp_int2str,'(I3.3)'), i
+           sr%coil_name(sr%ind_start_diag_coils + i - 1) = trim("Dia_"//trim(tmp_int2str))
+         end do
+
+         do i=1, sr%n_pol_coils
+           write(tmp_int2str,'(I3.3)'), i
+           sr%coil_name(sr%ind_start_pol_coils + i - 1) = trim("PF_"//trim(tmp_int2str))
+         end do
+         
+         do i=1, sr%n_rmp_coils
+           write(tmp_int2str,'(I3.3)'), i
+           sr%coil_name(sr%ind_start_rmp_coils + i - 1) = trim("RMP_"//trim(tmp_int2str))
+         end do
+       endif
+     end if
 
       ! --- eta_thin_w is only part of the STARWALL response file since file_version 2
       if ( sr%file_version >= 2 ) then
@@ -906,22 +942,24 @@ module vacuum_response
         if (allocated(sr%phi_coil)     ) deallocate(sr%phi_coil);      allocate(sr%phi_coil(sr%ntri_c,3))
         if (allocated(sr%eta_thin_coil)) deallocate(sr%eta_thin_coil); allocate(sr%eta_thin_coil(sr%ntri_c))
         if (allocated(sr%coil_resist)  ) deallocate(sr%coil_resist);   allocate(sr%coil_resist(sr%ncoil))
+        if (allocated(sr%coil_name)  )   deallocate(sr%coil_name);     allocate(sr%coil_name(sr%ncoil))
       end if
     end if
     
     ! --- Broadcast matrices.
-    call MPI_bcast(sr%i_tor,    sr%n_tor,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%d_yy,     sr%n_w,              MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,         MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%i_tor,    sr%n_tor,                MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%d_yy,     sr%n_w,                  MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,             MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,             MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     if ( sr%ncoil > 0 ) then
-      call MPI_bcast(sr%jtri_c,   sr%ncoil,            MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%x_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%y_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%z_coil,   sr%ntri_c*3,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,    MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%coil_resist,   sr%ncoil,       MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%jtri_c,   sr%ncoil,              MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%x_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%y_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%z_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,        MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%coil_resist,   sr%ncoil,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%coil_name,sr%ncoil*COIL_NAME_LEN,MPI_CHARACTER       , 0, MPI_COMM_WORLD, ierr)
     end if
     
     if ( vacuum_debug ) then
@@ -1959,6 +1997,7 @@ module vacuum_response
     real*8, allocatable :: psibnd_vec(:)    ! Vector of Psi values at the boundary
     real*8, allocatable :: dpsibnd_vec(:)   ! Vector of deltaPsi values at the boundary
     real*8, allocatable :: wall_and_coil_curr(:)
+    real*8, allocatable :: tmp_coil_curr(:)
     integer             :: k, k2, global_index, ierr
     
     call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
@@ -2005,56 +2044,57 @@ module vacuum_response
         global_index = my_id*sr%s_ww%step
         net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
       endif
-      call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr,size(net_tor_wall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
     end if
     
-    ! --- Initialize diagnostic coil currents (for plot_live_data)
-    if ( resistive_wall .and. (sr%n_diag_coils > 0) .and. (index_now>0) .and. (index_start+nstep>0)) then
-      if ( .not. allocated(diag_coil_curr) ) then
-        allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
-        diag_coil_curr(:,:) = 0.d0
-      end if
-      do k = 1, sr%n_diag_coils
-        k2 = k + sr%ind_start_diag_coils - 1
-        if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
+    ! --- Initialize coil currents (for plot_live_data)
+    if ( resistive_wall .and. (sr%ncoil > 0) .and. (index_now>0) .and. (index_start+nstep>0)) then
+      ! Calculate coil currents for all coil types
+      if  (.not. allocated(tmp_coil_curr) ) allocate(tmp_coil_curr(sr%ncoil))
+      tmp_coil_curr = 0.d0
+      do k = 1, sr%ncoil
+        if ( (k >= sr%s_ww%ind_start) .and. (k <= sr%s_ww%ind_end) ) then
           global_index = my_id*sr%s_ww%step
-          diag_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
+          tmp_coil_curr(k) = sum(sr%s_ww%loc_mat(k - global_index,:) * wall_curr(:))
         endif
       end do
-      call MPI_ALLReduce(MPI_IN_PLACE, diag_coil_curr,size(diag_coil_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    end if
+      call MPI_ALLReduce(MPI_IN_PLACE, tmp_coil_curr,sr%ncoil,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-    ! --- Initialize PF coil currents (for plot_live_data)
-    if ( resistive_wall .and. (sr%n_pol_coils > 0) .and. (index_now>0) .and. (index_start+nstep>0)) then
-      if ( .not. allocated(pf_coil_curr) ) then
-        allocate( pf_coil_curr(index_start+nstep,sr%n_pol_coils) )
-        pf_coil_curr(:,:) = 0.d0
+      ! Distribute the coil currents to the different coil types
+      if ( sr%n_diag_coils > 0 ) then
+        if ( (.not. allocated(diag_coil_curr)) .and. (index_start+nstep >0) ) then
+          allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
+          diag_coil_curr(:,:) = 0.d0
+        end if
+        diag_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_diag_coils:sr%ind_start_diag_coils + sr%n_diag_coils -1)
+      endif
+      
+      if ( sr%n_rmp_coils > 0 ) then
+        if ( (.not. allocated(rmp_coil_curr)) .and. (index_start+nstep >0) ) then
+          allocate( rmp_coil_curr(index_start+nstep,sr%n_rmp_coils) )
+          rmp_coil_curr(:,:) = 0.d0
+        end if
+        rmp_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_rmp_coils : sr%ind_start_rmp_coils + sr%n_rmp_coils -1) 
       end if
-      do k = 1, sr%n_pol_coils
-        k2 = k + sr%ind_start_pol_coils - 1
-        if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
-          global_index = my_id*sr%s_ww%step
-          pf_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
-        endif
-      end do
-      call MPI_ALLReduce(MPI_IN_PLACE, pf_coil_curr,size(pf_coil_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    end if
+      
+      if ( sr%n_pol_coils > 0 ) then
+        if ( (.not. allocated(pf_coil_curr)) .and. (index_start+nstep >0) ) then
+          allocate( pf_coil_curr(index_start+nstep,sr%n_pol_coils) )
+          pf_coil_curr(:,:) = 0.d0
+        end if
+        pf_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_pol_coils:sr%ind_start_pol_coils + sr%n_pol_coils -1) 
+      end if
 
-    ! --- Initialize RMP coil currents (for plot_live_data)
-    if ( resistive_wall .and. (sr%n_rmp_coils > 0) .and. (index_now>0) .and. (index_start+nstep>0)) then
-      if ( .not. allocated(rmp_coil_curr) ) then
-        allocate( rmp_coil_curr(index_start+nstep,sr%n_rmp_coils) )
-        rmp_coil_curr(:,:) = 0.d0
-      end if
-      do k = 1, sr%n_rmp_coils
-        k2 = k + sr%ind_start_rmp_coils - 1
-        if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
-          global_index = my_id*sr%s_ww%step
-          rmp_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
-        endif
-      end do
-      call MPI_ALLReduce(MPI_IN_PLACE, rmp_coil_curr,size(rmp_coil_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    end if
+      ! Voltage coils not yet implemented
+      ! if ( sr%n_voltage_coils > 0 ) then
+      !  if ( (.not. allocated(voltage_coil_curr)) .and. (index_start+nstep >0) ) then
+      !    allocate( voltage_coil_curr(index_start+nstep,sr%n_voltage_coils) )
+      !    voltage_coil_curr(:,:) = 0.d0
+      !  end if
+      !  voltage_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_voltage_coils:sr%ind_start_voltage_coils + sr%n_voltage_coils -1) 
+      !  endif
+      !end if
+    endif
           
  
     if ( vacuum_debug .and. (my_id == 0) ) write(*,*) 'Wall currents initialized.'
@@ -2136,7 +2176,8 @@ module vacuum_response
     ! --- Local variables
     integer              :: k, k2, global_index
     integer              :: ierr
-    real *8, allocatable :: dwall_curr_2(:)   
+    real *8, allocatable :: dwall_curr_2(:)
+    real *8, allocatable :: tmp_coil_curr(:)
 
     if  (.not. allocated(dwall_curr_2)) allocate (dwall_curr_2(n_wall_curr))
     if ( vacuum_debug ) write(*,*) 'wall_curr(before)', sum(abs(wall_curr)), sum(wall_curr)    
@@ -2184,61 +2225,63 @@ module vacuum_response
         net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
       endif
     endif
-    call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr,size(net_tor_wall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1 ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-    ! --- Extract diagnostic coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
-    if ( sr%n_diag_coils > 0 ) then
-      if ( (.not. allocated(diag_coil_curr)) .and. (index_start+nstep >0) ) then
-        allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
-        diag_coil_curr(:,:) = 0.d0
-      end if
-      if (index_now>0) then
-        do k = 1, sr%n_diag_coils
-          k2 = k + sr%ind_start_diag_coils - 1
-          if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
-            global_index = my_id*sr%s_ww%step
-            diag_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
-          endif
-        end do
-      endif
-      call MPI_ALLReduce(MPI_IN_PLACE, diag_coil_curr,size(diag_coil_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    end if
+    ! --- Extract coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
+    if (sr%ncoil > 0) then
+      ! Calculate coil currents for all coil types
+      if  (.not. allocated(tmp_coil_curr) ) allocate(tmp_coil_curr(sr%ncoil))
+      tmp_coil_curr = 0.d0
+      do k = 1, sr%ncoil
+        if ( (k >= sr%s_ww%ind_start) .and. (k <= sr%s_ww%ind_end) ) then
+          global_index = my_id*sr%s_ww%step
+          tmp_coil_curr(k) = sum(sr%s_ww%loc_mat(k - global_index,:) * wall_curr(:))
+        endif
+      end do
+      call MPI_ALLReduce(MPI_IN_PLACE, tmp_coil_curr,sr%ncoil,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-    ! --- Extract PF coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
-    if ( sr%n_pol_coils > 0 ) then
-      if ( (.not. allocated(pf_coil_curr)) .and. (index_start+nstep >0) ) then
-        allocate( pf_coil_curr(index_start+nstep,sr%n_pol_coils) )
-        pf_coil_curr(:,:) = 0.d0
+      ! Distribute the coil currents to the different coil types
+      if ( sr%n_diag_coils > 0 ) then
+        if ( (.not. allocated(diag_coil_curr)) .and. (index_start+nstep >0) ) then
+          allocate( diag_coil_curr(index_start+nstep,sr%n_diag_coils) )
+          diag_coil_curr(:,:) = 0.d0
+        end if
+        if (index_now>0) then
+          diag_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_diag_coils:sr%ind_start_diag_coils + sr%n_diag_coils -1) 
+        endif
       end if
-      if (index_now>0) then
-        do k = 1, sr%n_pol_coils
-          k2 = k + sr%ind_start_pol_coils - 1
-          if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
-            global_index = my_id*sr%s_ww%step
-            pf_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
-          endif
-        end do
-      endif
-      call MPI_ALLReduce(MPI_IN_PLACE, pf_coil_curr,size(pf_coil_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    end if
+      
+      if ( sr%n_rmp_coils > 0 ) then
+        if ( (.not. allocated(rmp_coil_curr)) .and. (index_start+nstep >0) ) then
+          allocate( rmp_coil_curr(index_start+nstep,sr%n_rmp_coils) )
+          rmp_coil_curr(:,:) = 0.d0
+        end if
+        if (index_now>0) then
+          rmp_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_rmp_coils : sr%ind_start_rmp_coils + sr%n_rmp_coils -1) 
+        endif
+      end if
+      
+      if ( sr%n_pol_coils > 0 ) then
+        if ( (.not. allocated(pf_coil_curr)) .and. (index_start+nstep >0) ) then
+          allocate( pf_coil_curr(index_start+nstep,sr%n_pol_coils) )
+          pf_coil_curr(:,:) = 0.d0
+        end if
+        if (index_now>0) then
+          pf_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_pol_coils:sr%ind_start_pol_coils + sr%n_pol_coils -1) 
+        endif
+      end if
 
-    ! --- Extract RMP coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
-    if ( sr%n_rmp_coils > 0 ) then
-      if ( (.not. allocated(rmp_coil_curr)) .and. (index_start+nstep >0) ) then
-        allocate( rmp_coil_curr(index_start+nstep,sr%n_rmp_coils) )
-        rmp_coil_curr(:,:) = 0.d0
-      end if
-      if (index_now>0) then
-        do k = 1, sr%n_rmp_coils
-          k2 = k + sr%ind_start_rmp_coils - 1
-          if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
-            global_index = my_id*sr%s_ww%step
-            rmp_coil_curr(index_now,k) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
-          endif
-        end do
-      endif
-      call MPI_ALLReduce(MPI_IN_PLACE, rmp_coil_curr,size(rmp_coil_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    end if
+      ! Voltage coils not yet implemented
+      !if ( sr%n_voltage_coils > 0 ) then
+      !  if ( (.not. allocated(voltage_coil_curr)) .and. (index_start+nstep >0) ) then
+      !    allocate( voltage_coil_curr(index_start+nstep,sr%n_voltage_coils) )
+      !    voltage_coil_curr(:,:) = 0.d0
+      !  end if
+      !  if (index_now>0) then
+      !    voltage_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_voltage_coils:sr%ind_start_voltage_coils + sr%n_voltage_coils -1) 
+      !  endif
+      !end if
+    endif
 
 
     if ( vacuum_debug .and. (my_id ==0) ) write(*,*) 'wall_curr(after)', sum(abs(wall_curr)), sum(wall_curr)
@@ -2248,6 +2291,16 @@ module vacuum_response
   
   
   !> Reconstruct the potential values at the wall triangle nodes.
+  !!
+  !! To reconstruct the physical wall potentials from the ones we work 
+  !! with we need to muliply them by the similarity transform matrix.
+  !! The physical wall potentials include different types of potentials,
+  !! and the way they are ordered in the array is
+  !!
+  !!   (I_coil_1, I_coil_2, ..., I_coil_ncoil, Iw_net, Potw_1, Potw_2, ..., Potw_npotw-1)
+  !!  
+  !! where I_coil are the coil currents, Iw_net is the net wall current
+  !! and Potw are the single valued wall potentials.
   subroutine reconstruct_triangle_potentials(tripot_w, wall_curr, my_id)
     
     use mpi_mod
@@ -2260,26 +2313,40 @@ module vacuum_response
     integer,             intent(in)    :: my_id
 
     ! --- Local variables
-    integer :: i, j, ierr, global_index, ntasks
-    integer :: count=1
+    integer              :: i, j, ierr, global_index, ntasks
+    integer              :: count=1
+    real*8, allocatable  :: pot_tmp(:)
 
     if ( allocated(tripot_w) ) deallocate(tripot_w); allocate( tripot_w(sr%npot_w) )    
-    tripot_w = 0.0
+    if ( allocated(pot_tmp)  ) deallocate(pot_tmp);  allocate(  pot_tmp(sr%npot_w) )    
+    tripot_w = 0.d0
+    pot_tmp  = 0.d0
 
+    ! --- multiply by the similarity transform matrix to get the physical wall potentials
     if ( allocated(wall_curr) ) then
       global_index = my_id*sr%s_ww%step
 
       do i = 1, sr%npot_w
         j = i + sr%ncoil
         if ( (j >= sr%s_ww%ind_start) .and. (j <= sr%s_ww%ind_end) ) then
-          tripot_w(i) = sum(sr%s_ww%loc_mat(j - global_index,:) * wall_curr(:))
+          pot_tmp(i) = sum(sr%s_ww%loc_mat(j - global_index,:) * wall_curr(:))
         end if  
       end do
      
-      tripot_w(1) = 0.d0
     end if
 
-    call MPI_AllREDUCE(MPI_IN_PLACE,tripot_w,size(tripot_w),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_AllREDUCE(MPI_IN_PLACE,pot_tmp,size(pot_tmp),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
+    ! --- Correct indexing (1st potential is the net curret potential)
+    ! --- Shift indexing so 1st wall node corresponds to 1st single valued potential (and so on)
+    do i = 1, sr%npot_w-1
+      tripot_w(i) = pot_tmp(i+1)
+    enddo
+
+    tripot_w(sr%npot_w) = 0.d0 ! STARWALL's BC for the single valued potentials (last potential is 0)
+    !!! Net current potential contribution to be added soon!
+
+    deallocate(pot_tmp) 
 
   end subroutine reconstruct_triangle_potentials
   
@@ -2787,6 +2854,27 @@ module vacuum_response
     write(*,100)
 
   end subroutine memory_prediction 
+
+  subroutine distribute_coil_names
+    use vacuum
+
+    if ((sr%n_diag_coils .gt. 0) .and. (.not. allocated(diag_coil_name)) )  then
+      allocate( diag_coil_name(sr%n_diag_coils) )
+      diag_coil_name(:) = sr%coil_name(sr%ind_start_diag_coils:sr%ind_start_diag_coils +  sr%n_diag_coils -1)
+    end if
+
+    if (( sr%n_rmp_coils .gt. 0) .and. (.not. allocated( rmp_coil_name)) ) then
+      allocate( rmp_coil_name(sr%n_rmp_coils) )
+      rmp_coil_name(:)  = sr%coil_name(  sr%ind_start_rmp_coils:sr%ind_start_rmp_coils +  sr%n_rmp_coils  -1)
+    end if
+    
+    if (( sr%n_pol_coils .gt. 0) .and. (.not. allocated(  pf_coil_name)) )  then
+      allocate( pf_coil_name(sr%n_pol_coils) )
+      pf_coil_name(:)   = sr%coil_name(  sr%ind_start_pol_coils:sr%ind_start_pol_coils +  sr%n_pol_coils  -1)
+    end if
+    
+  end subroutine distribute_coil_names
+  
 
 end module vacuum_response
 

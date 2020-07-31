@@ -13,10 +13,11 @@ use phys_module
 
 implicit none
 
-integer             :: n_bnd, i, j, m,err
+integer             :: n_bnd, i, j, k, l, m, err
 real*8, allocatable :: r_tmp(:),psi_tmp(:),dr_tmp(:),dpsi_tmp(:),tht_tmp(:)
 real*8, allocatable :: Work(:)
 real*8              :: Vr(4), Vpsi(4), RP, ZP, theta, tht_i
+real*8              :: amp, Rm, Zm, dRm, dZm, dPsi
 
 write(*,*) '*******************************************'
 write(*,*) '*    Defining boundary                    *'
@@ -73,6 +74,18 @@ if (mf .le. 0) then
         psi_tmp(i) = 0.d0
       endif
 
+      ! --- Manipulate Psi boundary
+      dPsi = 0.d0
+      do l = 1, 5
+        amp = manipulate_psi_map(l,1)
+        Rm  = manipulate_psi_map(l,2)
+        Zm  = manipulate_psi_map(l,3)
+        dRm = manipulate_psi_map(l,4)
+        dZm = manipulate_psi_map(l,5)
+        dPsi = dPsi + amp * exp(-((Rp+R_geo)-Rm)**2/dRm**2-((Zp+Z_geo)-Zm)**2/dZm**2)
+      end do
+      psi_tmp(i) = psi_tmp(i) + dPsi
+
     enddo
 
     r_tmp(n_bnd)   = r_tmp(1)
@@ -113,8 +126,20 @@ if (mf .le. 0) then
           tht_tmp(i) = tht_tmp(i) + 2.d0*pi
         endif
       endif
-
-    enddo
+      
+      ! --- Manipulate Psi boundary
+      dPsi = 0.d0
+      do l = 1, 5
+        amp = manipulate_psi_map(l,1)
+        Rm  = manipulate_psi_map(l,2)
+        Zm  = manipulate_psi_map(l,3)
+        dRm = manipulate_psi_map(l,4)
+        dZm = manipulate_psi_map(l,5)
+        dPsi = dPsi + amp * exp(-(R_boundary(i)-Rm)**2/dRm**2-(Z_boundary(i)-Zm)**2/dZm**2)
+      end do
+      psi_tmp(i) = psi_tmp(i) + dPsi
+    
+    end do
 
     r_tmp(n_bnd)   = r_tmp(1)
     psi_tmp(n_bnd) = psi_tmp(1)

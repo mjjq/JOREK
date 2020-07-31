@@ -437,6 +437,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
   write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
+  write(*,REAL_FMT) 'rho_min               ', rho_min
   write(*,LOGI_FMT) 'use_pellet            ', use_pellet
   write(*,REAL_FMT) 'corr_neg_temp_coef    ', corr_neg_temp_coef(:)
   write(*,REAL_FMT) 'corr_neg_dens_coef    ', corr_neg_dens_coef(:)
@@ -663,6 +664,12 @@ if (my_id == 0) then
      write(*,REAL_FMT) 't_ns                ',  t_ns
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
+     write(*,REAL_FMT) 'neutral_line_source ', neutral_line_source
+     write(*,REAL_FMT) 'neutral_line_R_start', neutral_line_R_start
+     write(*,REAL_FMT) 'neutral_line_Z_start', neutral_line_Z_start
+     write(*,REAL_FMT) 'neutral_line_R_end  ', neutral_line_R_end
+     write(*,REAL_FMT) 'neutral_line_Z_end  ', neutral_line_Z_end
+     write(*,REAL_FMT) 'neutral_reflection  ', neutral_reflection
 
      !< Additional log for SPI model
    if(using_spi) then

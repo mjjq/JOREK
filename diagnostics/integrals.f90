@@ -248,29 +248,6 @@ do ife =1, element_list%n_elements
       ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                                ! Too small rho_1 will cause a problem
 
-      ! Calculate the effective charge of all species
-      Z_eff        = 0.
-
-      ! First get the value of Z_eff
-      Z_eff        = r0_corr - rn0_corr
-      do ion_i=1, imp_adas(1)%n_Z
-        Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
-      end do
-      Z_eff        = Z_eff / ne_JOREK
-
-      if (Z_eff < 1) Z_eff = 1.
-
-      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rhon_00 > rn0_min) then
-        Lrad = 0.0
-        call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
-        if (Lrad < 0.) Lrad = 0.
-      else
-        Lrad = 0.
-        E_ion = 0.
-      end if
-      Lrad = Lrad * m_i_over_m_imp
-      E_ion = E_ion * m_i_over_m_imp
-
 #endif
 
 #if (JOREK_MODEL == 501)

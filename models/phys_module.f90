@@ -483,6 +483,16 @@ module phys_module
   real*8, allocatable :: num_rhon_y3(:)   !< Third derivatives of neutral density profile (\f$ d^3\rhon/d\Psi_N^3 \f$)
   
   !> @name Numerical input profile for Fprofile
+  character(len=512)  :: Fprofile_file      !< ASCII file the Fprofile is read from.
+  logical             :: num_Fprofile       !< is set true if Fprofile_file /= 'none'
+  integer             :: num_Fprofile_len   !< Number of points in profile
+  real*8, allocatable :: num_Fprofile_x(:)  !< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_Fprofile_y0(:) !< Values of FFprime profile
+  real*8, allocatable :: num_Fprofile_y1(:) !< First derivatives of Fprofile profile (\f$ dF/d\Psi_N \f$)
+  real*8, allocatable :: num_Fprofile_y2(:) !< Second derivatives of Fprofile profile (\f$ d^2F/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_Fprofile_y3(:) !< Third derivatives of Fprofile profile (\f$ d^2F/d\Psi_N^2 \f$)
+
+  !> @name Numerical input profile for Fprofile
   integer, parameter  :: n_Fprofile_internal_max = 300                !< INTERNAL Max Size of F-profile
   integer             :: n_Fprofile_internal                          !< INTERNAL Size of F-profile
   real*8              :: Fprofile_internal   (n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration

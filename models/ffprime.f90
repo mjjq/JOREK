@@ -51,14 +51,6 @@ real*8  :: no_delta_psi, ffprime_out, FFprime_profile2, F_prof2
     dFF_dz2         = - dFF_dz2
     dFF_dpsi_dz     = - dFF_dpsi_dz
 
-    call F_profile2(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
-                    F_prof2,          dF_dpsi,  dF_dz,  dF_dpsi2,  dF_dz2,  dF_dpsi_dz , &
-                    FFprime_profile2, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz)
-    call ffprime_external(psi, Z, Z_xpoint, psi_axis, psi_bnd, ffprime_out)
-    !if (ffprime_out .gt. 1.d-1) write(*,'(A,3f)')'comparing:',FFprime_profile,-FFprime_profile2,-ffprime_out
-    !if (ffprime_out .gt. 1.d-1) write(*,'(A,3f)')'comparing:',F_prof,F_prof2
-    !if (abs(psi-psi_axis) .lt. 1.d-03) write(*,'(A,3f)')'comparing:',F_prof,F_prof2,F0
-
     return
   endif
 #endif

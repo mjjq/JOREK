@@ -60,6 +60,19 @@ subroutine read_num_profiles(my_id)
     T_1 = Te_1 + Ti_1
   end if
   
+  num_ffprime = ( ffprime_file /= 'none' )
+  if ( num_ffprime .and. ( my_id == 0 ) ) then
+    call readProf(num_ffprime_x, num_ffprime_y0, num_ffprime_len, ffprime_file)
+    call check_num_prof(num_ffprime, num_ffprime_x, num_ffprime_y0, num_ffprime_len, 'ffprime',    &
+      check_positive=.false.)
+    FF_0 = num_ffprime_y0(1)
+    FF_1 = num_ffprime_y0(num_ffprime_len)
+    num_ffprime_y0 = num_ffprime_y0 - FF_1
+    ! --- Early allocation needed for full-MHD
+    call tr_allocate(num_ffprime_y1,1,num_ffprime_len,"num_ffprime_y1",CAT_GRID)
+    call tr_allocate(num_ffprime_y2,1,num_ffprime_len,"num_ffprime_y2",CAT_GRID)
+  end if
+  
   ! --- Special case for F-profile in model710:
   ! --- If there is no F-profile, we create one by integrating the FF' function numerically
   num_Fprofile = ( Fprofile_file /= 'none' )
@@ -68,6 +81,10 @@ subroutine read_num_profiles(my_id)
     write(*,*)'*** numerical Fprofile profiles only implemented for model710!'
     write(*,*)'*** Aborting...'
     stop
+  else if ( num_Fprofile .and. ( my_id == 0 ) ) then
+    call readProf(num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, Fprofile_file)
+    call check_num_prof(num_Fprofile, num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, 'Fprofile',    &
+      check_positive=.false.)
   endif
   if ( ( my_id == 0 ) .and. (jorek_model == 710)  ) then
     if ( .not. num_Fprofile ) then
@@ -94,16 +111,6 @@ subroutine read_num_profiles(my_id)
       call check_num_prof(num_Fprofile, num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, 'Fprofile',    &
         check_positive=.false.)
     end if
-  end if
-  
-  num_ffprime = ( ffprime_file /= 'none' )
-  if ( num_ffprime .and. ( my_id == 0 ) ) then
-    call readProf(num_ffprime_x, num_ffprime_y0, num_ffprime_len, ffprime_file)
-    call check_num_prof(num_ffprime, num_ffprime_x, num_ffprime_y0, num_ffprime_len, 'ffprime',    &
-      check_positive=.false.)
-    FF_0 = num_ffprime_y0(1)
-    FF_1 = num_ffprime_y0(num_ffprime_len)
-    num_ffprime_y0 = num_ffprime_y0 - FF_1
   end if
   
   num_d_perp = ( d_perp_file /= 'none' )

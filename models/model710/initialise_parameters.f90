@@ -57,7 +57,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, time_evol_scheme,                            &
-                rho_file, T_file, ffprime_file, freeboundary_equil, &
+                freeboundary_equil,                                 &
+                rho_file, T_file, ffprime_file, Fprofile_file,      &
                 bc_natural_open, bc_natural_flux, gamma_sheath,     &
                 freeboundary, resistive_wall, freeb_change_indices, &
                 use_mumps, mumps_ordering, use_strumpack,           &

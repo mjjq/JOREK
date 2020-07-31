@@ -52,11 +52,12 @@ subroutine preset_parameters
   freeb_change_indices = .true. ! exchange grid node indices to parallelize boundary integral
 
   bc_natural_flux    = .false.! boundary conditions for flux surface boundaries (2 and 3)
-  bc_natural_open    = .false.! use sheath (Bohm) boundary conditions
-  gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid)
+  bc_natural_open    = .false. ! use sheath (Bohm) boundary conditions
+  gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid) in the JOREK definition
   gamma_stangeby     = -1.d99 ! sheath transmission factor (single fluid) given by Stangeby
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
-  
+  mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
+
   amix                 = 0.d0
   amix_freeb           = 0.85d0
   equil_accuracy       = 1.d-6
@@ -285,6 +286,8 @@ subroutine preset_parameters
   gmres_4            = 1.d3                 ! error estimate GMRES (ratio preconditioned versus non-preconditioned error
   gmres_m            = 20                   ! gmres restart parameter
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
+  max_steps_noUpdate = 10000000             ! redo preconditioner when steps without preconditioning matrix update > max_steps_noUpdate
+  centralize_harm_mat= .false.              ! centralize harmonic matrices on toroidal master rank 
   
   ! --- deprecated, code will stop if these parameters are set to .true. ---
   use_murge          = .false.

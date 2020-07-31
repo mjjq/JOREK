@@ -142,6 +142,13 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+  write(*,'(1x,a)',advance='no') ' DIRECT_CONSTRUCTION : '
+#ifdef DIRECT_CONSTRUCTION
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
   write(*,'(1x,a)',advance='no') ' GAUSS_ORDER : '
 #ifdef GAUSS_ORDER
   write(*,*) 'Preprocessor flag has been set! Thus, n_gauss=', n_gauss
@@ -557,8 +564,10 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'gmres_max_iter        ', gmres_max_iter
   write(*,REAL_FMT) 'gmres tolerance       ', gmres_tol
   write(*,INTG_FMT) 'iter_precon           ', iter_precon
+  write(*,INTG_FMT) 'max_steps_noUpdate    ', max_steps_noUpdate
   write(*,INTG_FMT) 'gmres_m               ', gmres_m
   write(*,REAL_FMT) 'gmres_4               ', gmres_4
+  write(*,LOGI_FMT) 'centralize_harm_mat   ', centralize_harm_mat
   write(*,LOGI_FMT) 'use_mumps             ', use_mumps
   write(*,LOGI_FMT) 'use_wsmp              ', use_wsmp
   write(*,LOGI_FMT) 'use_pastix            ', use_pastix
@@ -575,6 +584,7 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
+  write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
 
   if (jorek_model .eq. 710) then
     write(*,LOGI_FMT) 'parallel_projection   ', parallel_projection

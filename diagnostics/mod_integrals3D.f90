@@ -61,6 +61,7 @@ real*8  :: eq_t(n_plane,0:n_var,n_gauss,n_gauss), eq_p(n_plane,0:n_var,n_gauss,n
 real*8  :: eq_ss(n_plane,0:n_var,n_gauss,n_gauss), eq_tt(n_plane,0:n_var,n_gauss,n_gauss), eq_st(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: eq_sp(n_plane,0:n_var,n_gauss,n_gauss), eq_tp(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: wgauss_copy(n_gauss)
+real*8  :: psi_axisym(n_gauss,n_gauss)
 
 real*8  :: x_g_1D(n_gauss),  x_s_1D(n_gauss),   x_t_1D(n_gauss)
 real*8  :: y_g_1D(n_gauss),  y_s_1D(n_gauss),   y_t_1D(n_gauss)
@@ -87,6 +88,7 @@ real*8, allocatable :: qval(:), radav(:)
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor, current_MA
 real*8  :: xjac, xjac_R, xjac_Z, BigR, wst, P_int, C_intern, zj0, ps0, r0, T0, T0e, Vol, Volume, Area, Bgeo, area1
+real*8  :: psi_as_coord
 real*8  :: AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30
 real*8  :: A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ
 real*8  :: BR_Z, BZ_R
@@ -107,16 +109,19 @@ real*8  :: local_n_particles_inj, local_n_particles, source_ns, rn0, neut_partic
 real*8  :: E_tot, E_in, E_out, Zkpar_T, D_prof, ZK_prof, gamma_sheath_stangeby, sheath_heatflux
 real*8  :: fact_mu0, fact_flux, fact_part
 real*8  :: hel1, heli, helicity_tot, psi_off, curr, Ip, vn_p0, qn, pflow, kinflow, cond_par, cond_perp
-real*8  :: kinpar_flux, qn_par, qn_perp, etajxb, eta_JxB, mag_work_tot, mag_src_tot, mag_source_tot
+real*8  :: kinpar_flux, qn_par, qn_perp, mag_work_tot, mag_src_tot, mag_source_tot
 real*8  :: vpar_part_flux, vperp_part_flux, Dperp_part_flux, Dpar_part_flux, neut_part_flux
 real*8  :: vpar_part_flow, vperp_part_flow, Dperp_part_flow, Dpar_part_flow, neut_part_flow
+real*8  :: poynting_flux, poynting_tmp, dpsi_dt
 real*8  :: s_or_t,sg,tg,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
 real*8  :: RH,RH_s,RH_t,RH_st,RH_ss,RH_tt
 real*8  :: TT,TT_s,TT_t,TT_st,TT_ss,TT_tt 
+real*8  :: UU,UU_s,UU_t,UU_st,UU_ss,UU_tt 
 real*8  :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt 
 real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt 
 real*8  :: rn,rn_s,rn_t,rn_st,rn_ss,rn_tt 
 real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t
+real*8  :: u0_p, u_s, u_t, u_p
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 
@@ -170,8 +175,8 @@ vn_p0    = 0.d0
 qn_par   = 0.d0
 qn_perp  = 0.d0
 kinpar_flux  = 0.d0
-eta_JxB      = 0.d0
-viscopar_flux   = 0.d0
+poynting_flux= 0.d0
+viscopar_flux= 0.d0
 vpar_disp_tot= 0.d0
 psi_off      = 0.d0
 thm_wk_tot   = 0.d0
@@ -228,14 +233,15 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, xjac_R, xjac_Z, eq_g, eq_s, eq_t, eq_p,    &
 !$omp           x_ss, x_tt, x_st, y_ss, y_tt, y_st, eq_ss, eq_tt, eq_st, eq_sp, eq_tp,         &
+!$omp           psi_axisym,                                                                    &
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
-!$omp           dpdx, dpdy, phi,                                                               &
+!$omp           dpdx, dpdy, phi, psi_as_coord,                                                  &
 !$omp           source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,                      &
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
-!$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, r0_corr, &
+!$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, r0_corr, u0_p,                &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
 
@@ -274,6 +280,7 @@ do ife = ife_min, ife_max
 
   x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0; x_ss(:,:)    = 0.d0; x_tt(:,:)    = 0.d0; x_st(:,:)    = 0.d0;
   y_g(:,:)    = 0.d0; y_s(:,:)    = 0.d0; y_t(:,:)    = 0.d0; y_ss(:,:)    = 0.d0; y_tt(:,:)    = 0.d0; y_st(:,:)    = 0.d0;
+  psi_axisym(:,:) = 0.d0
 
   do i=1,n_vertex_max
     do j=1,n_order+1
@@ -295,6 +302,11 @@ do ife = ife_min, ife_max
           y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
           y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
           y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
+
+#ifdef fullmhd
+          ! --- Equilibrium psi (n=0 only)
+          psi_axisym(ms,mt) = psi_axisym(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H(i,j,ms,mt)
+#endif
 
         enddo
       enddo
@@ -384,6 +396,7 @@ do ife = ife_min, ife_max
         ps0_t  = eq_t(mp,var_psi,ms,mt)
         u0_s   = eq_s(mp,var_u,ms,mt) 
         u0_t   = eq_t(mp,var_u,ms,mt)
+        u0_p   = eq_p(mp,var_u,ms,mt)
         p0_s   = r0*eq_s(mp,var_T,ms,mt) + T0 * eq_s(mp,var_rho,ms,mt) 
         p0_t   = r0*eq_t(mp,var_T,ms,mt) + T0 * eq_t(mp,var_rho,ms,mt) 
         p0_p   = r0*eq_p(mp,var_T,ms,mt) + T0 * eq_p(mp,var_rho,ms,mt) 
@@ -430,6 +443,9 @@ do ife = ife_min, ife_max
         BR_Z = ( A30_ZZ - AZ0_Zp )/ BigR
         BZ_R = -1/BigR**2 * ( AR0_p - A30_R ) + ( AR0_Rp - A30_RR )/ BigR
         zj0 = - (BZ_R - BR_Z) * BigR
+        psi_as_coord = psi_axisym(ms,mt)
+#else
+        psi_as_coord = ps0
 #endif
 
         eta_T   = resistivity(T0_corr)  
@@ -455,7 +471,8 @@ do ife = ife_min, ife_max
 
         hel1       = F0* ( (ps0 - psi_off) - y_g(ms,mt)*dpsidy) / (BigR**2.d0)
         thm_wk     = vpar0 * (p0_s*ps0_t - p0_t*ps0_s) + vpar0 * F0/BigR*p0_p*xjac 
-        mag_wk     = BigR**2.d0 * (p0_s*u0_t - p0_t*u0_s)  
+        mag_wk     = - (ps0_s*u0_t - ps0_t*u0_s) / xjac * zj0 / BigR  &
+                     + F0 * zj0 * u0_p / (BigR**2.d0)
         vpar_disp  = visco_par * (F0/BigR)**2.d0 * (vpar_x**2.d0+vpar_y**2.d0 ) 
 
 #if (JOREK_MODEL == 400)
@@ -463,11 +480,11 @@ do ife = ife_min, ife_max
                      particle_source,heat_source_i,heat_source_e)
 		     heat_source = heat_source_i + heat_source_e
 #else
-        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_bnd, &
+        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, psi_as_coord, psi_axis, psi_bnd, &
                      particle_source,heat_source)
 #endif
         if (keep_current_prof) then
-          call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), Z_xpoint, ps0,&
+          call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), Z_xpoint, psi_as_coord,&
                        psi_axis,psi_bnd,current_source)
         else
           current_source = 0.d0
@@ -483,14 +500,14 @@ do ife = ife_min, ife_max
         mag_src_tot   = mag_src_tot + eta_T*ZJ0*current_source/(BigR**2) * xjac * BigR * wst * delta_phi
 
         heli_tot      = heli_tot   + hel1         * BigR * xjac * wst * delta_phi
-        mag_wk_tot    = mag_wk_tot + mag_wk                     * wst * delta_phi
+        mag_wk_tot    = mag_wk_tot + mag_wk       * BigR * xjac * wst * delta_phi
         thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
         vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi 
 
         if (use_pellet) then
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                               pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-                              x_g(ms,mt),y_g(ms,mt), ps0, phi, r0_corr, T0_corr/2.d0, central_density, &
+                              x_g(ms,mt),y_g(ms,mt), psi_as_coord, phi, r0_corr, T0_corr/2.d0, central_density, &
                               pellet_particles, pellet_density, pellet_volume, source_pellet, source_volume)
 
           local_pellet_particles = local_pellet_particles + source_pellet * bigR * xjac * wst * delta_phi
@@ -511,7 +528,7 @@ do ife = ife_min, ife_max
         local_n_particles     = local_n_particles     +  rn0 * bigR * xjac * wst * delta_phi
 #endif
 
-        if ( get_psi_n(ps0, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
+        if ( get_psi_n(psi_as_coord, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
           C_intern = C_intern - zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
@@ -628,35 +645,47 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
     do mp=1, n_plane
 
-      ps0      = eq_g_1D(mp,1,ms)  !--- here sbnd is the direction along the boundary!!
-      ps0_sbnd = eq_s_1D(mp,1,ms)
-      u0_sbnd  = eq_s_1D(mp,2,ms)
-      r0       = eq_g_1D(mp,5,ms) 
-      T0       = eq_g_1D(mp,6,ms) 
+      ps0      = eq_g_1D(mp,var_psi ,ms)  !--- here sbnd is the direction along the boundary!!
+      ps0_sbnd = eq_s_1D(mp,var_psi ,ms)
+      u0_sbnd  = eq_s_1D(mp,var_u   ,ms)
+      zj0      = eq_g_1D(mp,var_Zj  ,ms) 
+      r0       = eq_g_1D(mp,var_rho ,ms) 
+      T0       = eq_g_1D(mp,var_T   ,ms) 
 #if (JOREK_MODEL > 299)
-      vpar0    = eq_g_1D(mp,7,ms)
+      vpar0    = eq_g_1D(mp,var_vpar,ms)
 #else
       vpar0    = 0.d0
 #endif
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-      rn0      = eq_g_1D(mp,8,ms)
+      rn0      = eq_g_1D(mp,var_rhon,ms)
 #else
       rn0      = 0.d0 
 #endif
 
-
+      if (keep_current_prof) then
+        call current(xpoint, xcase, R, Z, Z_xpoint, ps0, psi_axis, psi_bnd, current_source)
+      else
+        current_source = 0.d0
+      endif
+ 
       !--- calculate derivates in real s, t (s_1D is a coordinate that can be s or t)
       psi_s  = 0.d0; psi_t  = 0.d0;
+      u_s    = 0.d0; u_t    = 0.d0; u_p = 0.d0;
       rho_s  = 0.d0; rho_t  = 0.d0;
       rhon_s = 0.d0; rhon_t = 0.d0;
       T_s    = 0.d0; T_t    = 0.d0;
       vpar_s = 0.d0; vpar_t = 0.d0; 
- 
+
       do in = 1,n_tor
         call interp(node_list,element_list,m_elm,1,in,sg,tg,PS,PS_s,PS_t,PS_st,PS_ss,PS_tt)
         psi_s = psi_s + PS_s * HZ(in,mp)
         psi_t = psi_t + PS_t * HZ(in,mp)
+
+        call interp(node_list,element_list,m_elm,2,in,sg,tg,UU,UU_s,UU_t,UU_st,UU_ss,UU_tt)
+        u_s   = u_s   + UU_s * HZ(in,mp)
+        u_t   = u_t   + UU_t * HZ(in,mp)
+        u_p   = u_p   + UU   * HZ_p(in,mp)
 
         call interp(node_list,element_list,m_elm,5,in,sg,tg,RH,RH_s,RH_t,RH_st,RH_ss,RH_tt)
         rho_s = rho_s + RH_s * HZ(in,mp)
@@ -667,7 +696,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         T_t = T_t + TT_t * HZ(in,mp)
 
 #if (JOREK_MODEL > 299)
-        call interp(node_list,element_list,m_elm,6,in,sg,tg,vp,vp_s,vp_t,vp_st,vp_ss,vp_tt)
+        call interp(node_list,element_list,m_elm,7,in,sg,tg,vp,vp_s,vp_t,vp_st,vp_ss,vp_tt)
         vpar_s = vpar_s + vp_s * HZ(in,mp)
         vpar_t = vpar_t + vp_t * HZ(in,mp)
 #else
@@ -710,6 +739,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
  
       ! --- get resistivity and diffusion coefficients
       T0_corr = corr_neg_temp(T0)
+      if (T_min > 0.d0) T0_corr=max(T0,T_min)
+
       eta_T   = resistivity(T0_corr)  
       D_prof  = get_dperp (psi_n)
       ZK_prof = get_zkperp(psi_n)
@@ -739,6 +770,10 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       viscopar_f  = visco_par * (F0/BigR)**2.d0 *  (vpar_x*grad_t(1) + vpar_y *grad_t(2) ) &
                   * sign_out  * BigR * vpar0
 
+      dpsi_dt     = BigR*(psi_s*u_t - psi_t*u_s)/xjac + eta_T*(zj0-current_source) - F0*u_p 
+      poynting_tmp= dpsi_dt * (dpsidx*grad_t(1) + dpsidy*grad_t(2)) * sign_out / BigR 
+
+
       vn_p0         = vn_p0          +   pflow      * wgauss(ms) * delta_phi 
       kinpar_flux   = kinpar_flux    + kinflow      * wgauss(ms) * delta_phi 
       qn_par        = qn_par         + cond_par     * wgauss(ms) * delta_phi 
@@ -751,6 +786,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       neut_part_flux   =  neut_part_flux     + neut_part_flow    * wgauss(ms) * delta_phi 
 
       viscopar_flux = viscopar_flux  +  viscopar_f  * wgauss(ms) * delta_phi
+      poynting_flux = poynting_flux  + poynting_tmp * wgauss(ms) * delta_phi
 
     enddo
   enddo
@@ -914,6 +950,7 @@ Dperp_part_flux      =  n_period * Dperp_part_flux* fact_part / t_norm2
 vpar_part_flux       =  n_period * vpar_part_flux * fact_part / t_norm2
 vperp_part_flux      =  n_period * vperp_part_flux* fact_part / t_norm2
 neut_part_flux       =  n_period * neut_part_flux * fact_part / t_norm2
+poynting_flux        =  n_period * poynting_flux  * fact_flux
 
 ! --- Derived quantities
 E_tot        = mag_tot + pressure     + kin_par_tot + kin_perp_tot 
@@ -944,7 +981,7 @@ surface_list%psi_values(2) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.02d0
 surface_list%psi_values(3) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.95d0 
 surface_list%psi_values(4) = ES%psi_axis + (ES%psi_bnd - ES%psi_axis) * 0.99d0
 
-call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
+call find_flux_surfaces(my_id,xpoint, xcase, node_list, element_list, surface_list)
 call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
      ES%Z_xpoint, qval, radav)
 
@@ -1103,6 +1140,9 @@ if (my_id .eq. 0) then
       case ( 'kinpar_flux' )
         res(iexpr+1) = kinpar_flux
 
+      case ( 'Poynting_flx' )
+        res(iexpr+1) = poynting_flux
+
       case ( 'vispar_flux' )
         res(iexpr+1) = viscopar_flux
 
@@ -1222,6 +1262,7 @@ if (my_id .eq. 0) then
     flux_qpar_t(index_now)           = qn_par 
     flux_qperp_t(index_now)          = qn_perp 
     flux_kinpar_t(index_now)         = kinpar_flux 
+    flux_poynting_t(index_now)       = poynting_flux 
     li3_t(index_now)                 = li3
     li3_tot_t(index_now)             = li3_tot
     viscopar_flux_t(index_now)       = viscopar_flux

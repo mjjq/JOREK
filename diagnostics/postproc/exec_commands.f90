@@ -2231,7 +2231,7 @@ module exec_commands
     
     npts    = get_int_setting('surfaces', ierr)
    
-    write(filename,'(5a)') DIR, 'q_surface_', trim(real2str(qvalue,'(f12.4)')), &
+    write(filename,'(5a)') trim(DIR), 'q_surface_', trim(real2str(qvalue,'(f12.4)')), &
        trim(step_range_string(index_start,index_start)), '.txt'
     status = 'replace'
     access = 'sequential'

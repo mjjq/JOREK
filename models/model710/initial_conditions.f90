@@ -85,18 +85,12 @@ if (my_id .eq. 0) then
 
     node_list%node(i)%deltas = 0.d0
 
-#ifdef fullmhd
     node_list%node(i)%psi_eq(:) = node_list%node(i)%values(1,:,1)
 
-    call F_profile(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,F_prof  ,dF_dpsi      ,dF_dz      , &
-                                                                dF_dpsi2      ,dF_dz2       ,dF_dpsi_dz , &
-                                                                zFFprime      ,dFFprime_dpsi,dFFprime_dz, &
-                                                                dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
-
     ! Fprof_eq was aleady initialised in equilibrium.f90. 
-    ! Not sure if the above small change in psi on the grid axis of flux aligned grids matters, therefore Fprof_eq is reinitilised here. 
-
-
+    ! We fill in the values here as well, but anyway, we solve Fprof = Fprof below to ensure that the node values are clean
+    ! This makes it 100% certain that all derivatives of Fprofile (when taken from the node values), will be accurate
+    ! to the level of our finite elements.
     node_list%node(i)%Fprof_eq(1) =   F_prof
     node_list%node(i)%Fprof_eq(2) =   dF_dpsi  * node_list%node(i)%values(1,2,var_A3) + dF_dz * node_list%node(i)%x(2,2)
     node_list%node(i)%Fprof_eq(3) =   dF_dpsi  * node_list%node(i)%values(1,3,var_A3) + dF_dz * node_list%node(i)%x(3,2)
@@ -106,14 +100,12 @@ if (my_id .eq. 0) then
                                   + dF_dpsi_dz * node_list%node(i)%values(1,3,var_A3) * node_list%node(i)%x(2,2)         &
                                   + dF_dpsi_dz * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%x(3,2)      
 
-#endif
-
-  node_list%node(i)%values(1,:,var_A3) = node_list%node(i)%values(1,:,var_A3) 
-
   enddo
 
 endif
 
+call Poisson(my_id,710,node_list,element_list,bnd_node_list,bnd_elm_list, &
+             1,710,1, ES%psi_axis,ES%psi_bnd,xpoint2, xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)      ! inverse Poisson
 
 
 

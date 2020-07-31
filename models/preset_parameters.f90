@@ -259,7 +259,6 @@ subroutine preset_parameters
   T_file             = 'none'
   Te_file            = 'none'
   Ti_file            = 'none'
-  Fprofile_file      = 'none'
   ffprime_file       = 'none'
   d_perp_file        = 'none'
   zk_perp_file       = 'none'
@@ -270,9 +269,9 @@ subroutine preset_parameters
   rot_file           = 'none'
   normalized_velocity_profile = .true.
 
-  n_Fprofile_internal = 300 ! model710 only
-  Fprofile_psi_max    = 1.5 ! model710 only
-  Fprofile_tolerance  = 1.0 ! model710 only
+  n_Fprofile_internal = 300 ! model710 only: size of internal numerical F-profile
+  Fprofile_psi_max    = 1.5 ! model710 only: max-psi_norm of internal numerical F-profile
+  Fprofile_tolerance  = 1.0 ! model710 only: tolerance of average different between final FFprime and requested FFprime
 
   produce_live_data  = .true.
   

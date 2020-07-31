@@ -1036,9 +1036,7 @@ do i=1,n_vertex_max
                                  * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep  &
 
                        + zeta * v * r0 * delta_g(mp,6,ms,mt) * BigR                       * xjac &
-                       + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                       * xjac &
-
-                       + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR * xjac  * tstep
+                       + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                       * xjac
 
 
             rhs_ij_k(6) = - (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T * xjac * tstep &

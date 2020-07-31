@@ -7,7 +7,7 @@ contains
 #include "corr_neg_include.f90"
 
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
-  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t)
+  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, i_tor_min, i_tor_max)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -30,10 +30,12 @@ type (type_node)      :: nodes(n_vertex_max)
 #define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
 
 real*8, dimension (DIM0,DIM0)  :: ELM
-real*8, dimension (DIM0) :: RHS
-integer, intent(in) :: tid
+real*8, dimension (DIM0)       :: RHS
+integer, intent(in)            :: tid
+integer, intent(in)            :: i_tor_min, i_tor_max
 
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2, n_tor_loop
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
+integer    :: n_tor_start, n_tor_end, n_tor_local
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
@@ -108,7 +110,7 @@ real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
 real*8     :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
 real*8     :: dn_dpsi(n_gauss,n_gauss),dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
 real*8     :: dT_dpsi(n_gauss,n_gauss),dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
-logical    :: xpoint2
+logical    :: xpoint2, use_fft
 real*8     :: w00_xx, w00_yy                                                                                                                                                                
 !======================================= NEO
 real*8     :: Btheta2
@@ -143,7 +145,6 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: delta_g, delta_s, delta_t
 
 real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 
-
 ELM_p = 0.d0
 ELM_n = 0.d0
 ELM_k = 0.d0
@@ -166,19 +167,33 @@ TG_num1    = TGNUM(1); TG_num2    = TGNUM(2); TG_num5    = TGNUM(5); TG_num6    
 theta = time_evol_theta
 zeta  = time_evol_zeta
 
-! --- If we're doing the fft, don't loop...
-if (n_tor .ge. n_tor_fft_thresh) then
-  n_tor_loop  = 1
+! --- Do we need to use the FFT or non-FFT version?
+if ( (i_tor_min == 1) .and. (i_tor_max == n_tor) ) then
+  ! In case of global matrix construction:
+  use_fft = n_tor > n_tor_fft_thresh
 else
-  n_tor_loop  = n_tor
-endif
+  ! In case of "direct construction" of harmonic matrix never FFT:
+  use_fft = .false.
+end if
 
-! --- Toroidal functions            
-if (n_tor .ge. n_tor_fft_thresh) then
+if ( use_fft ) then
+  ! In case of FFT, don't loop over toroidal harmonics:
+  n_tor_start = 1
+  n_tor_end   = 1
+else
+  n_tor_start = i_tor_min
+  n_tor_end   = i_tor_max
+end if
+
+n_tor_local = n_tor_end - n_tor_start + 1
+! --- Toroidal basis functions
+if (use_fft) then
+  ! --- Not needed in case of FFT
   HHZ    = 1.d0
   HHZ_p  = 1.d0
   HHZ_pp = 1.d0
 else
+  ! --- Needed in case of non-FFT
   do in = 1,n_tor
     do mp=1,n_plane
       HHZ   (in,mp) = HZ   (in,mp)
@@ -245,9 +260,6 @@ endif
 
 do i=1,n_vertex_max
   do j=1,n_order+1
-#if _OPENMP >= 201511
- !$OMP SIMD collapse(2)
-#endif
     do ms=1, n_gauss
       do mt=1, n_gauss
 
@@ -273,11 +285,7 @@ do i=1,n_vertex_max
     do ms=1, n_gauss
       do mt=1, n_gauss
         do k=1,n_var
-
           do in=1,n_tor
-#if _OPENMP >= 201511
-           !$OMP SIMD
-#endif
             do mp=1,n_plane
               eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ(in,mp)
               eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
@@ -366,45 +374,6 @@ do i=1,n_vertex_max
 
         eps_cyl = 1.d0          ! for cylinder geometry : epscyl = eps
 
-#if _OPENMP >= 201511
-! Variables that are part of the PRIVATE clause are uninitialized at the beginnig of the
-! OpenMP construct. (Each thread starts with its own uninitialized copy).
-! To keep the initial value that was set before entering the OpenMP constuct, one would
-! need to use the FIRSTPRIVATE clause.
-!
-!$OMP SIMD private(ps0, ps0_x, ps0_y, ps0_p, ps0_s, ps0_t, ps0_ss, ps0_tt, ps0_st, &
-!$OMP  u0, u0_x, u0_y, u0_p, u0_s, u0_t, u0_ss, u0_tt, u0_st, vv2, zj0, zj0_x, zj0_y, zj0_p, zj0_s, zj0_t, &
-!$OMP  vt0, Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_tt, w0_st, &
-!$OMP  r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_tt, r0_st, r0_corr, r0_hat, r0_x_hat, r0_y_hat, &
-!$OMP  t0, t0_x, t0_y, t0_p, t0_s, t0_t, t0_ss, t0_tt, t0_st, t0_corr, &
-!$OMP  vpar0, vpar0_x, vpar0_y, vpar0_p, vpar0_s, vpar0_t, vpar0_ss, vpar0_tt, vpar0_st, &
-!$OMP  P0, P0_x, P0_y, P0_p, P0_s, P0_t, P0_ss, P0_tt, P0_st, &
-!$OMP  ps0_xx, ps0_yy, ps0_xy, w0_xx, w0_yy, w0_xy, r0_xx, r0_yy, r0_xy, T0_xx, T0_yy, T0_xy, vpar0_xx,&
-!$OMP  vpar0_yy, vpar0_xy, P0_xx, P0_yy, P0_xy, T0_ps0_x, T0_ps0_y, u0_xx, u0_yy, u0_xy, delta_u_x, &
-!$OMP  delta_u_y, delta_ps_x, delta_ps_y, eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, d2visco_dT2, &
-!$OMP  eta_T_ohm, deta_dT_ohm, amat_63, &
-!$OMP  ZKpar_T, dZKpar_dT, W_dia, eta_num_T, visco_num_T, psi_norm, D_prof, ZK_prof, phi, delta_phi,&
-!$OMP  source_pellet, source_volume, index_ij, v, v_x, v_y, v_s, v_t, v_p, v_ss, v_tt, v_st, v_xx, v_yy, &
-!$OMP  v_xy, Bgrad_rho_star, Bgrad_rho_k_star, Bgrad_rho, Bgrad_T_star, Bgrad_T_k_star, Bgrad_T, BB2, &
-!$OMP  Btheta2, v_ps0_x, v_ps0_y, rhs_ij_1, rhs_ij_2, rhs_ij_3, rhs_ij_4, rhs_ij_5, rhs_ij_5_k,&
-!$OMP  rhs_ij_6, rhs_ij_6_k, rhs_ij_7, rhs_ij_7_k, psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_tt,&
-!$OMP  psi_st, psi_xx, psi_yy, psi_xy, u, zj, w, rho, T, vpar, u_x, zj_x, w_x, rho_x, T_x, vpar_x, u_y, &
-!$OMP  zj_y, w_y, rho_y, T_y, vpar_y, u_p, zj_p, w_p, rho_p, T_p, vpar_p, u_s, zj_s, w_s, rho_s, T_s, &
-!$OMP  vpar_s,  u_t, zj_t, w_t, rho_t, T_t, vpar_t, u_ss, zj_ss, w_ss, rho_ss, T_ss, vpar_ss, u_tt, zj_tt, &
-!$OMP  w_tt, rho_tt, T_tt, vpar_tt, u_st, zj_st, w_st, rho_st, T_st, vpar_st, u_xx, w_xx, rho_xx, T_xx, &
-!$OMP  vpar_xx, u_yy, w_yy, rho_yy, T_yy, vpar_yy, u_xy, w_xy, rho_xy, T_xy, vpar_xy, rho_hat, rho_x_hat, &
-!$OMP  rho_y_hat, Btheta2_psi, Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_rho_rho_n, BB2_psi, &
-!$OMP  P0_x_rho, P0_xx_rho, P0_y_rho, P0_yy_rho, P0_xy_rho, P0_x_T, P0_xx_T, P0_y_T, P0_yy_T, P0_xy_T, &
-!$OMP  W_dia_rho, W_dia_T, Vt_x_psi, Vt_y_psi, Omega_tor_x_psi, Omega_tor_y_psi, amat_11, amat_12, &
-!$OMP  amat_12_n, amat_13, amat_15, amat_15_n, amat_16, amat_16_n, amat_21, amat_22, amat_23, amat_23_n, &
-!$OMP  amat_24, amat_25, amat_26, amat_27, amat_33, amat_31, amat_44, amat_42, amat_51, amat_51_k, &
-!$OMP  amat_51_n, amat_52, amat_55, amat_55_k, amat_55_n, amat_55_kn, amat_56, amat_57, amat_57_k, &
-!$OMP  amat_57_n, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, Bgrad_T_T_n, T_ps0_x, T_ps0_y, T0_psi_x, &
-!$OMP  T0_psi_y, v_psi_x, v_psi_y, amat_61, amat_61_k, amat_62, amat_65, amat_65_n, amat_65_k, amat_65_kn, &
-!$OMP  amat_66, amat_66_k, amat_66_n, amat_66_kn, amat_67, amat_67_k, amat_67_n, amat_71, amat_71_k, &
-!$OMP  amat_72, amat_75, amat_75_k, amat_75_n, amat_76, amat_76_n, amat_77, amat_77_k, amat_77_n, &
-!$OMP  amat_77_kn, k,l, index_kl, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3,kl4, kl5,kl6,kl7)
-#endif
         do mp = 1, n_plane
 
           ps0    = eq_g(mp,1,ms,mt)
@@ -619,24 +588,37 @@ do i=1,n_vertex_max
           delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,1,ms,mt) + x_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
 
           ! --- Temperature dependent resistivity
-          if ( eta_T_dependent ) then
-            eta_T     = eta   * (T0_corr/T_0)**(-1.5d0)
-            deta_dT   = - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-            d2eta_d2T =   eta   * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
-            if ( xpoint2 .and. (T0 .lt. T_min) ) then
-              eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
-              deta_dT   = 0.d0
-              d2eta_d2T = 0.d0
-            endif
+          if ( eta_T_dependent .and. corr_neg_temp1(T0) <= T_max_eta) then
+            eta_T     = eta   * (corr_neg_temp1(T0)/T_0)**(-1.5d0)
+            deta_dT   = - eta   * (1.5d0)  * corr_neg_temp1(T0)**(-2.5d0) * T_0**(1.5d0)
+            d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp1(T0)**(-3.5d0) * T_0**(1.5d0)
+          else if ( eta_T_dependent .and. corr_neg_temp1(T0) > T_max_eta) then
+            eta_T     = eta   * (T_max_eta/T_0)**(-1.5d0)
+            deta_dT   = 0.
+            d2eta_d2T = 0.     
           else
             eta_T     = eta
             deta_dT   = 0.d0
             d2eta_d2T = 0.d0
           end if
 
+          if ( eta_T_dependent .and.  xpoint2 .and. (T0 .lt. T_min) ) then
+              eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
+              deta_dT   = 0.d0
+              d2eta_d2T = 0.d0
+          end if
+
           ! --- Eta for ohmic heating
-          eta_T_ohm   = (eta_T/eta)  * eta_ohmic
-          deta_dT_ohm = (deta_dT/eta) * eta_ohmic
+          if ( eta_T_dependent .and. corr_neg_temp1(T0) <= T_max_eta_ohm) then
+            eta_T_ohm     = eta_ohmic   * (corr_neg_temp1(T0)/T_0)**(-1.5d0)
+            deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * corr_neg_temp1(T0)**(-2.5d0) * T_0**(1.5d0)
+          else if ( eta_T_dependent .and. corr_neg_temp1(T0) > T_max_eta_ohm) then
+            eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
+            deta_dT_ohm   = 0.    
+          else
+            eta_T_ohm     = eta_ohmic
+            deta_dT_ohm   = 0.d0
+          end if
 
           ! --- Temperature dependent viscosity
           if ( visco_T_dependent ) then
@@ -752,7 +734,7 @@ do i=1,n_vertex_max
                                 source_pellet, source_volume)
           endif
 
-          do im=1,n_tor_loop
+          do im=n_tor_start, n_tor_end
 
             v   =  H(i,j,ms,mt) * element%size(i,j) * HHZ(im,mp)
             v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac * HHZ(im,mp)
@@ -1005,15 +987,17 @@ do i=1,n_vertex_max
             !#  RHS equations end                                                                                  #
             !###################################################################################################
 
-            if (n_tor .ge. n_tor_fft_thresh) then
+            if (use_fft) then
+
               index_ij =       n_var*(n_order+1)*(i-1) +       n_var*(j-1) + 1
             else
-              index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor*n_var*(j-1) + im
+              index_ij = n_tor_local*n_var*(n_order+1)*(i-1) + n_tor_local * n_var * (j-1) + im - n_tor_start +1 
             endif
 
 
             ! --- Fill up the matrix
-            if (n_tor .ge. n_tor_fft_thresh) then
+            if (use_fft) then
+
               ij1 = index_ij
               ij2 = index_ij + 1
               ij3 = index_ij + 2
@@ -1034,12 +1018,12 @@ do i=1,n_vertex_max
               RHS_k(mp,ij7) = RHS_k(mp,ij7) + rhs_ij_7_k * wst
             else
               ij1 = index_ij
-              ij2 = index_ij + 1*n_tor_loop
-              ij3 = index_ij + 2*n_tor_loop
-              ij4 = index_ij + 3*n_tor_loop
-              ij5 = index_ij + 4*n_tor_loop
-              ij6 = index_ij + 5*n_tor_loop
-              ij7 = index_ij + 6*n_tor_loop
+              ij2 = index_ij + 1*(n_tor_end - n_tor_start + 1)
+              ij3 = index_ij + 2*(n_tor_end - n_tor_start + 1)
+              ij4 = index_ij + 3*(n_tor_end - n_tor_start + 1)
+              ij5 = index_ij + 4*(n_tor_end - n_tor_start + 1)
+              ij6 = index_ij + 5*(n_tor_end - n_tor_start + 1)
+              ij7 = index_ij + 6*(n_tor_end - n_tor_start + 1)
               RHS(ij1) = RHS(ij1) + (rhs_ij_1 + rhs_ij_1_k) * wst
               RHS(ij2) = RHS(ij2) + (rhs_ij_2 + rhs_ij_2_k) * wst
               RHS(ij3) = RHS(ij3) + (rhs_ij_3 + rhs_ij_3_k) * wst
@@ -1053,7 +1037,7 @@ do i=1,n_vertex_max
 
               do l=1,n_order+1
 
-                do in = 1, n_tor_loop
+                do in = n_tor_start, n_tor_end
 
                   psi   = H(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
 
@@ -1786,14 +1770,16 @@ do i=1,n_vertex_max
                   !# end equation 7                                                                                  #
                   !###################################################################################################
 
-                  if (n_tor .ge. n_tor_fft_thresh) then
+                  if (use_fft) then
+
                     index_kl =       n_var*(n_order+1)*(k-1) +       n_var*(l-1) + 1
                   else
-                    index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor*n_var*(l-1) + in
+                    index_kl = n_tor_local*n_var*(n_order+1)*(k-1) + n_tor_local*n_var*(l-1) + in - n_tor_start +1
                   endif
 
                   ! --- Fill up the matrix
-                  if (n_tor .ge. n_tor_fft_thresh) then
+                  if (use_fft) then
+
                     kl1 = index_kl
                     kl2 = index_kl + 1
                     kl3 = index_kl + 2
@@ -1893,19 +1879,19 @@ do i=1,n_vertex_max
                     ELM_kn(mp,kl7,ij7) =  ELM_kn(mp,kl7,ij7) + wst * amat_77_kn
                   else
                     kl1 = index_kl
-                    kl2 = index_kl + 1 * n_tor_loop
-                    kl3 = index_kl + 2 * n_tor_loop
-                    kl4 = index_kl + 3 * n_tor_loop
-                    kl5 = index_kl + 4 * n_tor_loop
-                    kl6 = index_kl + 5 * n_tor_loop
-                    kl7 = index_kl + 6 * n_tor_loop
+                    kl2 = index_kl + 1 * (n_tor_end - n_tor_start + 1)
+                    kl3 = index_kl + 2 * (n_tor_end - n_tor_start + 1) 
+                    kl4 = index_kl + 3 * (n_tor_end - n_tor_start + 1)
+                    kl5 = index_kl + 4 * (n_tor_end - n_tor_start + 1)
+                    kl6 = index_kl + 5 * (n_tor_end - n_tor_start + 1)
+                    kl7 = index_kl + 6 * (n_tor_end - n_tor_start + 1)
                     ij1 = index_ij
-                    ij2 = index_ij + 1 * n_tor_loop
-                    ij3 = index_ij + 2 * n_tor_loop
-                    ij4 = index_ij + 3 * n_tor_loop
-                    ij5 = index_ij + 4 * n_tor_loop
-                    ij6 = index_ij + 5 * n_tor_loop
-                    ij7 = index_ij + 6 * n_tor_loop
+                    ij2 = index_ij + 1 * (n_tor_end - n_tor_start + 1)
+                    ij3 = index_ij + 2 * (n_tor_end - n_tor_start + 1)
+                    ij4 = index_ij + 3 * (n_tor_end - n_tor_start + 1)
+                    ij5 = index_ij + 4 * (n_tor_end - n_tor_start + 1)
+                    ij6 = index_ij + 5 * (n_tor_end - n_tor_start + 1)
+                    ij7 = index_ij + 6 * (n_tor_end - n_tor_start + 1)
                     
                     ELM(ij1,kl1) = ELM(ij1,kl1) + (amat_11 + amat_11_k + amat_11_n + amat_11_kn) * wst
                     ELM(ij1,kl2) = ELM(ij1,kl2) + (amat_12 + amat_12_k + amat_12_n + amat_12_kn) * wst
@@ -1978,7 +1964,7 @@ do i=1,n_vertex_max
     enddo ! mt loop
 
 
-    if (n_tor .ge. n_tor_fft_thresh) then
+    if (use_fft) then
 
       do i_v = 1, n_var
         do j_loc=1, n_vertex_max*n_var*(n_order+1)
@@ -2197,7 +2183,7 @@ do i=1,n_vertex_max
   enddo ! j loop (n_order+1)
 enddo ! i loop (n_vertex)
 
-if (n_tor .lt. n_tor_fft_thresh) return
+if (.NOT. use_fft) return
 
 ELM = 0.5d0 * ELM
 

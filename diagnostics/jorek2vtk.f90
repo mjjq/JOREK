@@ -25,7 +25,7 @@ type (type_bnd_element_list), pointer :: bnd_elm_list
 type (type_bnd_node_list),    pointer :: bnd_node_list 
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
-real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
+real*4,allocatable    :: currdens(:), xyz (:,:), scalars(:,:), vectors(:,:,:)
 integer,allocatable   :: ien (:,:)
 integer, parameter    :: ivtk = 22 ! an arbitrary unit number for the VTK output file
 integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, i_tor_old, i_plane, index, index_node, my_id
@@ -103,10 +103,8 @@ real*8                :: T_corr, T_rad, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: T_real8
 
-real*8                :: F_prof  ,dF_dpsi      ,dF_dz     
-real*8                :: dF_dpsi2      ,dF_dz2       ,dF_dpsi_dz
-real*8                :: zFFprime      ,dFFprime_dpsi,dFFprime_dz
-real*8                :: dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz
+real*8                :: psi_equi, psi_equi_s, psi_equi_t, psi_equi_R, psi_equi_Z
+real*8                :: F_prof,   F_prof_s,   F_prof_t,   dF_dR,      dF_dZ,     dF_dpsi
 
 
 !====================== --- Variables related to neutral density evolution (model 500 or 555)
@@ -291,7 +289,7 @@ endif
 #endif
 
 #if fullmhd
- n_fullmhd = 10
+ n_fullmhd = 11
  s_fullmhd = n_scalars
  n_scalars = n_scalars + n_fullmhd
 #endif /*fullmhd*/
@@ -391,10 +389,10 @@ endif
 
 #ifdef fullmhd
 scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_R         ', 'B_Z         ', 'B_phi       ', &
-                                                    'J_R         ', 'J_Z         ', 'J_phi       ', 'FFprime     ', &
-                                                    'Grad_P      ', 'JxB         ', 'V_parallel  '/)
+                                                    'J_R         ', 'J_Z         ', 'J_phi       ', 'FFprime_equi', &
+                                                    'F_prof_equi ', 'Grad_P      ', 'JxB         ', 'V_parallel  '/)
 if ( SI_units ) then
-scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = 'V_par_km/s  '
+scalar_names(s_fullmhd+1:s_fullmhd+11) = 'V_par_km/s  '
 endif
 #endif /*fullmhd*/
 
@@ -411,7 +409,7 @@ call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
 nnos = nsub*nsub*element_list%n_elements
-allocate(xyz(3,nnos),scalars(nnos,1:n_scalars),vectors(nnos,3,1:n_vectors))
+allocate(currdens(nnos),xyz(3,nnos),scalars(nnos,1:n_scalars),vectors(nnos,3,1:n_vectors))
 
 nnoel = 4
 nel   = (nsub-1)*(nsub-1)*element_list%n_elements
@@ -689,16 +687,8 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,var_rho,i_tor,s,t,ZN0,ZN0_s,ZN0_t,ZN0_st,ZN0_ss,ZN0_tt)
 
           if (i_tor == 1) then
-            !call interp(node_list,element_list,i,456,i_tor,s,t,Fprof,W_s,W_t,W_st,W_ss,W_tt)
-            call F_profile(xpoint, xcase, Z, ES%Z_xpoint, A30, ES%psi_axis, ES%psi_bnd, &
-                           F_prof        ,dF_dpsi      ,dF_dz      , &
-                           dF_dpsi2      ,dF_dz2       ,dF_dpsi_dz , &
-                           zFFprime      ,dFFprime_dpsi,dFFprime_dz, &
-                           dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
-            ! --- Uncomment if you want to compare with the old FF'...
-            !call FFprime(  xpoint, xcase, Z, ES%Z_xpoint, A30, ES%psi_axis, ES%psi_bnd, &
-            !               zFFprime,      dFFprime_dpsi,dFFprime_dz, &
-            !               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+            call interp(node_list,element_list,i,710,i_tor,s,t,F_prof  ,F_prof_s  ,F_prof_t  ,W_st,W_ss,W_tt)
+            call interp(node_list,element_list,i,711,i_tor,s,t,psi_equi,psi_equi_s,psi_equi_t,W_st,W_ss,W_tt)
           endif
 
           AR_p  = AR_p  + AR0 * HZ_p(i_tor,i_plane)
@@ -786,6 +776,13 @@ do i=1,element_list%n_elements
 
         enddo  ! end loop toroidal harmonics
 
+        ! --- Derivatives of F-profile
+        dF_dR      = (   Z_t * F_prof_s   - Z_s * F_prof_t   ) / xjac
+        dF_dZ      = ( - R_t * F_prof_s   + R_s * F_prof_t   ) / xjac
+        psi_equi_R = (   Z_t * psi_equi_s - Z_s * psi_equi_t ) / xjac
+        psi_equi_Z = ( - R_t * psi_equi_s + R_s * psi_equi_t ) / xjac
+        dF_dpsi = (dF_dR*psi_equi_R + dF_dZ*psi_equi_Z) / max(1.d-13,(psi_equi_R**2 + psi_equi_Z**2))
+
         BR = ( A3_Z - AZ_p )/ R
         BZ = ( AR_p - A3_R )/ R 
         BP = ( AZ_R - AR_Z )    + F_prof/ R
@@ -821,14 +818,15 @@ do i=1,element_list%n_elements
         scalars(inode,s_fullmhd+4) = J_R
         scalars(inode,s_fullmhd+5) = J_Z
         scalars(inode,s_fullmhd+6) = J_phi
-        scalars(inode,s_fullmhd+7) = zFFprime 
+        scalars(inode,s_fullmhd+7) = F_prof*dF_dpsi
+        scalars(inode,s_fullmhd+8) = F_prof 
         
         ! --- Choose which direction
-        scalars(inode,s_fullmhd+8) = GradP_pol ! GradP_p ! GradP_Z  ! GradP_R !
-        scalars(inode,s_fullmhd+9) = JxB_pol   ! JxB_p   ! JxB_Z    ! JxB_R   !
+        scalars(inode,s_fullmhd+9)  = GradP_pol ! GradP_p ! GradP_Z  ! GradP_R !
+        scalars(inode,s_fullmhd+10) = JxB_pol   ! JxB_p   ! JxB_Z    ! JxB_R   !
 
         ! --- V_parallel
-        scalars(inode,s_fullmhd+10)= (VR*BR + VZ*BZ + Vp*Bp)  / sqrt(BR**2 + BZ**2 + Bp**2)
+        scalars(inode,s_fullmhd+11)= (VR*BR + VZ*BZ + Vp*Bp)  / sqrt(BR**2 + BZ**2 + Bp**2)
 
         psi_norm = get_psi_n(A3, Z)
 
@@ -1122,6 +1120,8 @@ do i=1,element_list%n_elements
 
 #endif /* end of non-full-MHD part */
 
+        currdens(inode) = -scalars(inode,3)/BigR
+
       endif ! i_tor from 1 to n_tor
 
     enddo  ! nsub
@@ -1247,7 +1247,7 @@ if (SI_units) then
     scalars(i,var_UR) = scalars(i,var_UR) /t_norm/1.e3
     scalars(i,var_UZ) = scalars(i,var_UZ) /t_norm/1.e3
     scalars(i,var_Up) = scalars(i,var_Up) /t_norm/1.e3
-    scalars(i,s_fullmhd+10) = scalars(i,s_fullmhd+10) /t_norm/1.e3 ! V_parallel
+    scalars(i,s_fullmhd+11) = scalars(i,s_fullmhd+11) /t_norm/1.e3 ! V_parallel
     !=====================Pressure in kPa
     if (include_fluxes) scalars(i,s_fluxes+1) = scalars(i,s_fluxes+1) / MU_zero/1.e3
     ! not yet implemented
@@ -1283,7 +1283,7 @@ if (SI_units) then
 #else /* not full-MHD */
 
     !============================================j_phi in MA/m2
-    scalars(i,3) = scalars(i,3)/ MU_zero*1.e-6
+    scalars(i,3) = currdens(i) / MU_zero * 1.e-6
     !============================================density in 1e20m-3
     scalars(i,5) = scalars(i,5) * central_density
     if ( jorek_model .eq. 400 ) then

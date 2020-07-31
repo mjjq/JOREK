@@ -24,7 +24,7 @@ integer                  :: k, j, ierr, my_id
 mumps_par%A_loc   => A_glob(1:nz_glob)
 mumps_par%irn_loc => irn_glob(1:nz_glob)
 mumps_par%jcn_loc => jcn_glob(1:nz_glob)
-mumps_par%rhs     => rhs_glob(1:nz_glob)
+mumps_par%rhs     => rhs_glob(1:ndof_glob)
 
 mumps_par%n      = ndof_glob
 mumps_par%nz_loc = nz_glob

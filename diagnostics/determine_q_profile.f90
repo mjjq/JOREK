@@ -6,7 +6,7 @@ use constants
 use tr_module 
 use data_structure
 use phys_module
-use equil_info, only : get_psi_n
+use equil_info
 use mod_interp
 
 
@@ -85,9 +85,10 @@ do i=2, surface_list%n_psi
       PSI_Z = ( - dPSgi_dr * dRRgi_ds + dPSgi_ds * dRRgi_dr ) / RZjac
 
       grad_psi = sqrt(PSI_R * PSI_R + PSI_Z * PSI_Z)
+      grad_psi = sign(1d0, ES%psi_axis - ES%psi_bnd ) * grad_psi ! to get q profile with the correct sign 
 
 #ifdef fullmhd
-      call interp(node_list,element_list,i_elm, 456 ,1,ri,si, Fgi, dFgi_dr,dFgi_ds,dFgi_drs,dFgi_drr,dFgi_dss)  ! ivar = 456 for Fprof_eq
+      call interp(node_list,element_list,i_elm, 710 ,1,ri,si, Fgi, dFgi_dr,dFgi_ds,dFgi_drs,dFgi_drr,dFgi_dss)  ! ivar = 710 for Fprof_eq
 #else
       Fgi = F0
 #endif

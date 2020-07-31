@@ -59,12 +59,13 @@ real*8,allocatable  :: Aspline(:), Bspline(:), Cspline(:), Dspline(:)
 real*8              :: x_g(n_gauss,n_gauss), y_g(n_gauss,n_gauss), psi_g(n_gauss,n_gauss), xmin(2), xmax(2)
 real*8              :: abltg(3), t_node, sign_psi
 real*8              :: Rtmp, Ztmp, dRtmp, dZtmp, Rtmp2, Ztmp2, dRtmp2, dZtmp2, Rtmp3, Ztmp3, dRtmp3, dZtmp3
-real*8              :: t2, t3, t_delta, t_total
+real*8              :: t2, t3, t_delta, t_total, xl_axis, theta_axis
 logical             :: xpoint, extend
 real*8,external     :: root, spwert
 character*4         :: label
-integer             :: i_elm1, i_vertex1, i_node1, i_node_save
+integer             :: i_elm1, i_vertex1, i_node1, i_node_save, iv1, iv2, iv3, iv4
 integer             :: i_elm2, i_vertex2, i_node2
+integer             :: n_remove_elements, n_remove_nodes, remove_elements(100), remove_nodes(100), newnode_index(n_nodes_max), skip_index
 
 xpoint = .true.
 extend = .true.;   if (n_ext .lt. 1) extend = .false.
@@ -245,7 +246,7 @@ endif
 allocate(R_wall_max(n_tht+2*n_leg),Z_wall_max(n_tht+2*n_leg),T_wall_par(n_tht+2*n_leg))
 allocate(R_wall_min(n_tht+2*n_leg),Z_wall_min(n_tht+2*n_leg))
 
-do j=2,n_tht-1
+do j=1,n_tht
 
   if (Z_sep(j) .le. Z_axis) then
 
@@ -277,8 +278,8 @@ R_wall_max(1)     = RL9
 Z_wall_max(1)     = ZL9
 R_wall_max(n_tht) = RL8
 Z_wall_max(n_tht) = ZL8
-T_wall_par(1)     = angle_L9 + PI/2.d0
-T_wall_par(n_tht) = angle_L8 + PI/2.d0
+!T_wall_par(1)     = angle_L9 + PI/2.d0
+!T_wall_par(n_tht) = angle_L8 + PI/2.d0
 
 if ( write_ps ) then
   call lincol(6)  
@@ -564,6 +565,8 @@ do j=1,n_tht
   if ((j .eq. 1) .or. (j .eq. n_tht))       delta = 0.d0
   if ((j .eq. 2) .or. (j .eq. n_tht - 1))   delta = 0.05d0
 
+  theta_axis = tht_x + 2.*PI*(j-1)/(n_tht-1)
+
   R_polar(1,1,j) = R_axis
   R_polar(1,4,j) = delta * R_axis + (1.d0 - delta) * R_sep(j)
   R_polar(1,2,j) = ( 2.d0 * R_polar(1,1,j)  +         R_polar(1,4,j) ) / 3.d0
@@ -573,6 +576,11 @@ do j=1,n_tht
   Z_polar(1,4,j) = delta * Z_axis + (1.d0 - delta) * Z_sep(j)
   Z_polar(1,2,j) = ( 2.d0 * Z_polar(1,1,j)  +         Z_polar(1,4,j) ) / 3.d0
   Z_polar(1,3,j) = (        Z_polar(1,1,j)  +  2.d0 * Z_polar(1,4,j) ) / 3.d0
+
+  xl_axis = sqrt((R_polar(1,2,j) -  R_axis)**2 + (Z_polar(1,2,j) -  Z_axis)**2 )
+
+  R_polar(1,2,j) = R_axis +  0.8 * xl_axis * cos(theta_axis)
+  Z_polar(1,2,j) = Z_axis +  0.8 * xl_axis * sin(theta_axis)
 
   R_polar(3,1,j) = R_wall_max(j)
   R_polar(3,4,j) = delta * R_wall_max(j) + (1.d0 - delta) * R_sep(j)
@@ -605,10 +613,6 @@ do j=1,2*n_leg
   if ((j .eq. n_leg)   .or. (j .eq. 2*n_leg))    delta = 0.d0
   if ((j .eq. n_leg-1) .or. (j .eq. 2*n_leg-1))  delta = 0.05d0
   if ((j .eq. n_leg-2) .or. (j .eq. 2*n_leg-2))  delta = 0.1d0
-!  if  (j .eq. 1)        delta = 0.05d0
-!  if  (j .eq. 2)        delta = 0.08d0
-!  if  (j .eq. 1+n_leg)  delta = 0.05d0
-!  if  (j .eq. 2+n_leg)  delta = 0.08d0
 
   if (j .le. n_leg) then
     j2 = n_leg -j + 1
@@ -755,7 +759,7 @@ if ( write_ps ) then
     call lincol(0)
     
   enddo
-  deallocate(xp,yp)
+  deallocate(xp,yp,xout)
 endif
 
 !----------------------------------- find grid_points from crossing of coordinate lines
@@ -1001,10 +1005,10 @@ do i=n_flux-1,n_flux-1+n_open           !--------------------------- nodes on th
     Z_cub1d = (/ Z_polar(k,1,j), 3.d0/2.d0 *(Z_polar(k,2,j)-Z_polar(k,1,j)), &
                  Z_polar(k,4,j), 3.d0/2.d0 *(Z_polar(k,4,j)-Z_polar(k,3,j)) /)
 
-    call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i,j),tmp1, dR_dt)
-    call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i,j),tmp2, dZ_dt)
+    call CUB1D(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i+1,j),tmp1, dR_dt)
+    call CUB1D(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i+1,j),tmp2, dZ_dt)
 
-    call interp_RZ(node_list,element_list,ielm_flux(i,j),s_flux(i,j),t_flux(i,j), &
+    call interp_RZ(node_list,element_list,ielm_flux(i+1,j),s_flux(i+1,j),t_flux(i+1,j), &
                    RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
     call interp(node_list,element_list,ielm_flux(i+1,j),1,1,s_flux(i+1,j),t_flux(i+1,j),&
@@ -1827,7 +1831,34 @@ do j=1,n_tht - 1
   newnode_list%node(i)%values(1,2:4,1) = 0.d0
 enddo
 
+n_remove_elements = 0
+n_remove_nodes    = 0
 
+do i=1, newelement_list%n_elements
+  do j=1, n_vertex_max
+
+    iv = newelement_list%element(i)%vertex(j)
+
+    if (newnode_list%node(iv)%boundary .eq. 9) then  ! remove the small edge "triangles"
+      write(*,*) 'removing element : ',i      
+      remove_elements(n_remove_elements+1) = i
+      n_remove_elements = n_remove_elements + 1
+
+      remove_nodes(n_remove_nodes+1)       = iv
+      n_remove_nodes = n_remove_nodes + 1
+
+      iv1 = newelement_list%element(i)%vertex(j)
+      iv2 = newelement_list%element(i)%vertex(mod(j,4)+1)
+      iv3 = newelement_list%element(i)%vertex(mod(j+1,4)+1)
+      iv4 = newelement_list%element(i)%vertex(mod(j+2,4)+1)
+
+      newnode_list%node(iv2)%boundary = 99  ! temporary value to be reset to 9 below
+      newnode_list%node(iv3)%boundary = 99  ! temporary value to be reset to 9 below
+      newnode_list%node(iv4)%boundary = 99  ! temporary value to be reset to 9 below
+
+    endif
+  enddo
+enddo
 !----------------------------- grid optimisation
 
 !call align_grid(node_List,element_list,new_nodelist,new_element_list,psi_gaussians)
@@ -1848,12 +1879,39 @@ do i=1,element_list%n_elements
   element_list%element(i)%neighbours = 0
 enddo
 
-!---------------------------- copy new grid into nodes/elements
-node_list%n_nodes = newnode_list%n_nodes
-node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
+!---------------------------- copy new grid into nodes/elements, optional remove some nodes/elements
+node_list%n_nodes = 0
+skip_index        = 0
+do i = 1, newnode_list%n_nodes
+  if (.not. any(remove_nodes(1:n_remove_nodes) == i)) then
+    newnode_index(i)  = node_list%n_nodes+1 
+    node_list%node(node_list%n_nodes+1) = newnode_list%node(i) 
+    node_list%node(node_list%n_nodes+1)%index = newnode_list%node(i)%index - skip_index
+    node_list%n_nodes = node_list%n_nodes + 1
+  else 
+    skip_index = skip_index + newnode_list%node(i)%index(4) - newnode_list%node(i)%index(1) + 1
+    write(*,*) ' skip_index : ',skip_index
+  endif
+enddo
 
-element_list%n_elements = newelement_list%n_elements
-element_list%element(1:element_list%n_elements) = newelement_list%element(1:element_list%n_elements)
+element_list%n_elements = 0
+do i = 1, newelement_list%n_elements
+  if (.not. any(remove_elements(1:n_remove_elements) == i)) then
+    element_list%element(element_list%n_elements+1) = newelement_list%element(i)    
+    element_list%n_elements                         = element_list%n_elements + 1
+  endif
+enddo
+
+do i=1, node_list%n_nodes
+  if (node_list%node(i)%boundary == 99) node_list%node(i)%boundary = 9  
+enddo
+
+do i = 1, element_list%n_elements
+  do iv=1, n_vertex_max
+    inode = element_list%element(i)%vertex(iv)
+    element_list%element(i)%vertex(iv) = newnode_index(inode)  
+  enddo
+enddo
 
 if ( newnode_list%n_nodes > n_nodes_max ) then
   write(*,*) 'ERROR in grid_xpoint_wall: hard-coded parameter n_nodes_max is too small'
@@ -1870,19 +1928,14 @@ do i=1, element_list%n_elements
   element_list%element(i)%sons(:) = 0
 enddo
 
-DEALLOCATE(newnode_list, newelement_list)
-
-
-!call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-ifail=333
-call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-
+deallocate(newnode_list, newelement_list)
 deallocate(s_values,theta_sep,R_sep,Z_sep,R_max,Z_max,R_min,Z_min,s_tmp)
-deallocate(R_polar,Z_polar,xout)
+deallocate(R_polar,Z_polar)
 deallocate(RR_new,ZZ_new,s_flux,t_flux,t_tht)
 deallocate(ielm_flux,k_cross)
 
 call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
+
 write(*,*) ' completed grid_xpoint_wall'
 
 return

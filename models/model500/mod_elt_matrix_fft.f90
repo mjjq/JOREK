@@ -5,7 +5,7 @@ module mod_elt_matrix_fft
 contains
 
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
-  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t)
+  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, i_tor_min, i_tor_max)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -19,7 +19,6 @@ use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
 use mod_neutral_source
-use vacuum, only: freeb_fact
 use mod_bootstrap_functions
 use equil_info, only : get_psi_n
 
@@ -31,8 +30,9 @@ type (type_node)      :: nodes(n_vertex_max)
 #define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
 
 real*8, dimension (DIM0,DIM0)  :: ELM
-real*8, dimension (DIM0) :: RHS
-integer, intent(in) :: tid
+real*8, dimension (DIM0)       :: RHS
+integer, intent(in)            :: tid
+integer, intent(in)            :: i_tor_min, i_tor_max
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
@@ -526,17 +526,28 @@ do ms=1, n_gauss
      delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,1,ms,mt) + x_s(ms,mt) * delta_t(mp,1,ms,mt) ) / xjac
      
      ! --- Temperature dependent resistivity
-     if ( eta_T_dependent ) then
+     if ( eta_T_dependent .and. T_corr <= T_max_eta ) then
        eta_T     = eta   * (T_corr/T_0)**(-1.5d0)
        deta_dT   = - eta   * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0) * dT_corr_dT
+     else if ( eta_T_dependent .and. T_corr > T_max_eta ) then
+       eta_T     = eta   * (T_max_eta/T_0)**(-1.5d0)
+       deta_dT   = 0.d0
      else
        eta_T     = eta
        deta_dT   = 0.d0
      end if
 
      ! --- Eta for ohmic heating
-     eta_T_ohm   = (eta_T/eta)  * eta_ohmic
-     deta_dT_ohm = (deta_dT/eta) * eta_ohmic
+     if ( eta_T_dependent .and. T_corr <= T_max_eta_ohm ) then
+       eta_T_ohm     = eta_ohmic   * (T_corr/T_0)**(-1.5d0)
+       deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T_corr**(-2.5d0) * T_0**(1.5d0) * dT_corr_dT
+     else if ( eta_T_dependent .and. T_corr > T_max_eta_ohm ) then
+       eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
+       deta_dT_ohm   = 0.d0
+     else
+       eta_T_ohm     = eta_ohmic
+       deta_dT_ohm   = 0.d0
+     end if
 
      ! --- Temperature dependent viscosity
      if ( visco_T_dependent ) then       
@@ -864,13 +875,13 @@ do ms=1, n_gauss
 !#  equation 3   (current definition)                                                              #
 !###################################################################################################
 
-         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * freeb_fact
+         rhs_ij_3 = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac
 
 !###################################################################################################
 !#  equation 4   (vorticity definition)                                                            #
 !###################################################################################################
 
-         rhs_ij_4 = 0.d0 !- ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
+         rhs_ij_4 = - ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
 
 !###################################################################################################
 !#  equation 5   (density equation)                                                                #

@@ -1016,6 +1016,9 @@ do i=1,n_vertex_max
  
                        - ZK_perp_num  *  (v_xx + v_x/Bigr + v_yy)*(T0_xx + T0_x/Bigr + T0_yy) * BigR * xjac * tstep &
 
+                       - ZK_par_num * (v_ps0_x  * ps0_y - v_ps0_y  * ps0_x) &
+                                    * (T0_ps0_x * ps0_y - T0_ps0_y * ps0_x)               * xjac * tstep &
+
                        - v * BigR * ksiion * r0_corr * rn0_corr * Sion_T                  * xjac * tstep         &
 
                        + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR  * xjac * tstep  &

@@ -553,8 +553,10 @@ if (my_id == 0) then
           node_list%node(i)%values(i_harm,k,ivar_out) = node_list%node(i)%values(i_harm,k,ivar_out) &
                                                       + (1.d0 - amix_used) * mumps_par%RHS(index)
         !--------------- for model710 when solving Fprofile to get accurate profiles on nodes
+#ifdef fullmhd
         elseif (itype .eq. 710) then
           node_list%node(i)%Fprof_eq(k) = node_list%node(i)%Fprof_eq(k) + (1.d0 - amix_used) * mumps_par%RHS(index)
+#endif
         !--------------- for equation on total flux
         else
           node_list%node(i)%deltas(i_harm,k,ivar_out) = node_list%node(i)%values(i_harm,k,ivar_out) - mumps_par%RHS(index)

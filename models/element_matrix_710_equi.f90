@@ -2,6 +2,7 @@ subroutine element_matrix_710_equi(itype,element,nodes,ivar_in,ivar_out,i_harm,E
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
+#ifdef fullmhd
 use mod_parameters
 use data_structure
 use gauss
@@ -112,5 +113,6 @@ do ms=1, n_gauss
  enddo
 enddo
 
+#endif
 return
 end

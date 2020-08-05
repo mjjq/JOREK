@@ -505,6 +505,9 @@ if (my_id == 0) then
     endif
     ES%psi_bnd  = psi_bnd
     ES%psi_axis = psi_axis
+    ES%Z_xpoint = Z_xpoint
+    ES%xpoint   = xpoint
+    ES%xcase    = xcase
     call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,psi_xpoint,Z_xpoint)
   endif
   

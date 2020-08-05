@@ -163,10 +163,10 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
     
     ! --- When using numerical F-profile, no need to denormalise
     if (num_Fprofile) then
-      prof0        = Fmid   !* delta_psi 
-      dprof0_dpsi  = dFmid  !/ delta_psi   
-      dprof0_dpsi2 = d2Fmid !/ delta_psi**2
-      dprof0_dpsi3 = d3Fmid !/ delta_psi**3
+      prof0        = Fmid
+      dprof0_dpsi  = dFmid
+      dprof0_dpsi2 = d2Fmid
+      dprof0_dpsi3 = d3Fmid
     ! --- It's not F' that we integrate in the routine "integrate_F_profile"
     ! --- It's (F^2)', and therefore the denormalisation is not just a matter of a factor delta_psi
     else
@@ -206,10 +206,6 @@ subroutine F_profile(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,&
   dFF_dz       = 0.d0
   dFF_dz2      = 0.d0
   dFF_dpsi_dz  = 0.d0
-
-  !if ( (psi_n.lt.0.001) .and. (psi_n.gt.0.000) ) write(*,*)'FFprime at 0.0  : -2.8   6.0 ',FFprime_prof,F_prof
-  !if ( (psi_n.lt.0.501) .and. (psi_n.gt.0.500) ) write(*,*)'FFprime at 0.5  : -1.44  5.9 ',FFprime_prof,F_prof
-  !if ( (psi_n.lt.0.976) .and. (psi_n.gt.0.975) ) write(*,*)'FFprime at 0.976: +1.95  5.89',FFprime_prof,F_prof
 
 
   ! --- Cut-off at plasma edge

@@ -81,10 +81,6 @@ subroutine read_num_profiles(my_id)
     write(*,*)'*** numerical Fprofile profiles only implemented for model710!'
     write(*,*)'*** Aborting...'
     stop
-  else if ( num_Fprofile .and. ( my_id == 0 ) ) then
-    call readProf(num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, Fprofile_file)
-    call check_num_prof(num_Fprofile, num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, 'Fprofile',    &
-      check_positive=.false.)
   endif
   if ( ( my_id == 0 ) .and. (jorek_model == 710)  ) then
     if ( .not. num_Fprofile ) then

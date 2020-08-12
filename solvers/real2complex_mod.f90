@@ -68,16 +68,17 @@ contains
   end subroutine real2complex_a
 
   !-- converting RHS into the complex form
-  subroutine real2complex_rhs(my_id, my_id_n)
+  subroutine real2complex_rhs(my_id, my_id_n, rhs_cmplx)
  
     use mumps_module
-    use global_distributed_matrix
+    use global_distributed_matrix, only: n_cmplx 
     use mpi_mod 
    
     implicit none
 
-    integer, intent(in) :: my_id, my_id_n
-    integer             :: i
+    integer,                     intent(in)    :: my_id, my_id_n
+    double complex, allocatable, intent(inout) :: rhs_cmplx(:) 
+    integer                                    :: i
 
     !if (my_id .eq. 0) then
     !  write(*,*) my_id,'*****************************************'

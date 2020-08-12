@@ -166,12 +166,12 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 #ifdef USE_COMPLEX_PRECOND 
         !-- converting RHS from real to complex
         mumps_par%n = ifactor*n_loc_n
-        call real2complex_rhs(my_id, my_id_n)
+        call real2complex_rhs(my_id, my_id_n, rhs_cmplx_sol)
         if(my_id_n .gt. 0) then
-          if (allocated(rhs_cmplx))  deallocate(rhs_cmplx)
-          allocate(rhs_cmplx(1:n_cmplx)) 
+          if (allocated(rhs_cmplx_sol))  deallocate(rhs_cmplx_sol)
+          allocate(rhs_cmplx_sol(1:n_cmplx)) 
         endif 
-        call MPI_BCAST(rhs_cmplx,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
+        call MPI_BCAST(rhs_cmplx_sol,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
 #endif
         ! pastix input parameters working in Pastix5 and Pastix6
         pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations
@@ -215,7 +215,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
              !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                    DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
-                      pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+                      pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_sol,1,pastix_iparm,pastix_dparm)
 #endif
 
 #else      
@@ -225,7 +225,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else      
         call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
-             pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+             pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_sol,1,pastix_iparm,pastix_dparm)
 #endif
 
 #endif
@@ -279,10 +279,10 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
       !-- converting RHS from complex to real
       do k=1,n_cmplx 
         if(my_id_master .eq. 0) then
-          mumps_par%rhs(k) = REAL(rhs_cmplx(k))
+          mumps_par%rhs(k) = REAL(rhs_cmplx_sol(k))
         else 
-          mumps_par%rhs(2*k-1) = REAL(rhs_cmplx(k))
-          mumps_par%rhs(2*k) = AIMAG(rhs_cmplx(k))
+          mumps_par%rhs(2*k-1) = REAL(rhs_cmplx_sol(k))
+          mumps_par%rhs(2*k) = AIMAG(rhs_cmplx_sol(k))
         endif
       enddo
 #endif

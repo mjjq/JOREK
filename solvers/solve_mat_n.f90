@@ -241,7 +241,7 @@ contains
           !-- converting real harmonic blocks into the complex ones
           call real2complex_a(my_id, my_id_n) 
           !-- converting RHS into the complex form
-          call real2complex_rhs(my_id, my_id_n) 
+          call real2complex_rhs(my_id, my_id_n, rhs_cmplx) 
   
           n_block   = n_cmplx  / block_size
           nnz_block = nz_cmplx / block_size2
@@ -280,7 +280,7 @@ contains
           !-- converting real harmonic blocks into the complex ones
           call real2complex_a(my_id, my_id_n) 
           !-- converting RHS into the complex form
-          call real2complex_rhs(my_id, my_id_n) 
+          call real2complex_rhs(my_id, my_id_n, rhs_cmplx) 
 
           if (allocated(sparskit_work)) deallocate(sparskit_work)
           allocate(sparskit_work(n_cmplx + 1))
@@ -694,6 +694,11 @@ contains
    endif NOTSOLVEONLY
    call tr_debug_writei("smn_B_mumps_par%n",mumps_par%n)
 
+#ifdef USE_COMPLEX_PRECOND
+   if (allocated(rhs_cmplx_guess))  deallocate(rhs_cmplx_guess)
+   allocate(rhs_cmplx_guess(1:n_cmplx))
+   rhs_cmplx_guess(:) = rhs_cmplx(:) 
+#endif
 
    if (my_id_n .eq. 0) then                          ! elapsed time solve start
       call MPI_Barrier(MPI_COMM_MASTER,ierr)
@@ -716,7 +721,7 @@ contains
 #ifndef USE_COMPLEX_PRECOND
            call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 #else
-           call MPI_BCAST(rhs_cmplx,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
+           call MPI_BCAST(rhs_cmplx_guess,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
 #endif
         end if
 
@@ -741,7 +746,7 @@ contains
 #ifndef USE_COMPLEX_PRECOND
         call tr_locvnorms("smn_rhs",mumps_par%rhs,mumps_par%n)
 #else
-        call tr_locvnorms_cmplx("smn_rhs",rhs_cmplx,n_cmplx)
+        call tr_locvnorms_cmplx("smn_rhs",rhs_cmplx_guess,n_cmplx)
 #endif
 
 
@@ -760,7 +765,7 @@ contains
 #else /* ifndef USE_COMPLEX_PRECOND */
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-             pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+             pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_guess,1,pastix_iparm,pastix_dparm)
 #endif /* ifndef USE_COMPLEX_PRECOND */
 
 #else /* ifdef USE_BLOCK */
@@ -772,7 +777,7 @@ contains
 #else /* ifndef USE_COMPLEX_PRECOND */
         call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,&
           DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-          pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+          pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_guess,1,pastix_iparm,pastix_dparm)
 #endif /* ifndef USE_COMPLEX_PRECOND */
 
 #endif /* ifdef USE_BLOCK */
@@ -805,10 +810,10 @@ contains
 #ifdef USE_COMPLEX_PRECOND
    do i = 1, n_cmplx
      if(my_id_master .eq. 0) then
-       mumps_par%rhs(i) = REAL(rhs_cmplx(i)) 
+       mumps_par%rhs(i) = REAL(rhs_cmplx_guess(i)) 
      else
-       mumps_par%rhs(2*i-1) = real(rhs_cmplx(i))
-       mumps_par%rhs(2*i) = aimag(rhs_cmplx(i))
+       mumps_par%rhs(2*i-1) = real(rhs_cmplx_guess(i))
+       mumps_par%rhs(2*i) = aimag(rhs_cmplx_guess(i))
      endif
    enddo 
 #endif /* ifdef USE_COMPLEX_PRECOND */

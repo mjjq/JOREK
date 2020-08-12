@@ -31,10 +31,12 @@ module global_distributed_matrix
   
   ! --- The complex harmonic matrix 
 #ifdef USE_COMPLEX_PRECOND
-  double complex, allocatable, target :: A_cmplx(:)    !< Distributed harmonic matrix
-  double complex, allocatable, target :: rhs_cmplx(:)  !< Distributed harmonic right hand side
-  integer,        allocatable, target :: irn_cmplx(:)  !< Row indices for coordinate format sparse matrix (or CSR)
-  integer,        allocatable, target :: jcn_cmplx(:)  !< Column indices for coordinate format sparse matrix (or CSR)
+  double complex, allocatable, target :: A_cmplx(:)          !< Distributed harmonic matrix
+  double complex, allocatable, target :: rhs_cmplx(:)        !< Distributed harmonic right hand side
+  double complex, allocatable, target :: rhs_cmplx_guess(:)  !< Guess solution for GMRES
+  double complex, allocatable, target :: rhs_cmplx_sol(:)    !< Solution from GMRES
+  integer,        allocatable, target :: irn_cmplx(:)        !< Row indices for coordinate format sparse matrix (or CSR)
+  integer,        allocatable, target :: jcn_cmplx(:)        !< Column indices for coordinate format sparse matrix (or CSR)
   integer                             :: n_cmplx, nz_cmplx                       
 #endif
  

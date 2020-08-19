@@ -113,6 +113,11 @@ end if
 if (jorek_model == 710) then
   call MPI_BCAST(num_Fprofile_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if ( my_id /= 0 ) then
+     if ( allocated(num_Fprofile_x ) ) deallocate( num_Fprofile_x  )
+     if ( allocated(num_Fprofile_y0) ) deallocate( num_Fprofile_y0 )
+     if ( allocated(num_Fprofile_y1) ) deallocate( num_Fprofile_y1 )
+     if ( allocated(num_Fprofile_y2) ) deallocate( num_Fprofile_y2 )
+     if ( allocated(num_Fprofile_y3) ) deallocate( num_Fprofile_y3 )
      call tr_allocate(num_Fprofile_x,1,num_Fprofile_len,"num_Fprofile_x",CAT_UNKNOWN)
      call tr_allocate(num_Fprofile_y0,1,num_Fprofile_len,"num_Fprofile_y0",CAT_UNKNOWN)
      call tr_allocate(num_Fprofile_y1,1,num_Fprofile_len,"num_Fprofile_y1",CAT_UNKNOWN)
@@ -129,6 +134,10 @@ endif
 if ( num_ffprime ) then
   call MPI_BCAST(num_ffprime_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if ( my_id /= 0 ) then
+     if ( allocated(num_ffprime_x ) ) deallocate( num_ffprime_x  )
+     if ( allocated(num_ffprime_y0) ) deallocate( num_ffprime_y0 )
+     if ( allocated(num_ffprime_y1) ) deallocate( num_ffprime_y1 )
+     if ( allocated(num_ffprime_y2) ) deallocate( num_ffprime_y2 )
      call tr_allocate(num_ffprime_x,1,num_ffprime_len,"num_ffprime_x",CAT_UNKNOWN)
      call tr_allocate(num_ffprime_y0,1,num_ffprime_len,"num_ffprime_y0",CAT_UNKNOWN)
      call tr_allocate(num_ffprime_y1,1,num_ffprime_len,"num_ffprime_y1",CAT_UNKNOWN)

@@ -69,6 +69,8 @@ subroutine read_num_profiles(my_id)
     FF_1 = num_ffprime_y0(num_ffprime_len)
     num_ffprime_y0 = num_ffprime_y0 - FF_1
     ! --- Early allocation needed for full-MHD
+    if ( allocated(num_ffprime_y1) ) deallocate( num_ffprime_y1 )
+    if ( allocated(num_ffprime_y2) ) deallocate( num_ffprime_y2 )
     call tr_allocate(num_ffprime_y1,1,num_ffprime_len,"num_ffprime_y1",CAT_GRID)
     call tr_allocate(num_ffprime_y2,1,num_ffprime_len,"num_ffprime_y2",CAT_GRID)
   end if
@@ -88,6 +90,11 @@ subroutine read_num_profiles(my_id)
       call integrate_F_profile()
       ! --- Copy profile from internal profile instead of reading it from file
       num_Fprofile_len = n_Fprofile_internal
+      if ( allocated(num_Fprofile_x ) ) deallocate( num_Fprofile_x  )
+      if ( allocated(num_Fprofile_y0) ) deallocate( num_Fprofile_y0 )
+      if ( allocated(num_Fprofile_y1) ) deallocate( num_Fprofile_y1 )
+      if ( allocated(num_Fprofile_y2) ) deallocate( num_Fprofile_y2 )
+      if ( allocated(num_Fprofile_y3) ) deallocate( num_Fprofile_y3 )
       call tr_allocate(num_Fprofile_x ,1,n_Fprofile_internal,"num_Fprofile_x",CAT_GRID)
       call tr_allocate(num_Fprofile_y0,1,n_Fprofile_internal,"num_Fprofile_y0",CAT_GRID)
       call tr_allocate(num_Fprofile_y1,1,n_Fprofile_internal,"num_Fprofile_y1",CAT_GRID)

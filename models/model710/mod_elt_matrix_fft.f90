@@ -56,7 +56,7 @@ real*8     :: particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
 real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
-real*8     :: TG_NUM_Eq, CoefAdv=0.0, rho_min = 0.005
+real*8     :: TG_NUM_Eq, CoefAdv=0.0
 real*8     :: Coef_DivV
 real*8     :: psi_axisym(n_gauss,n_gauss)
 real*8     :: Fprof_time_dep,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
@@ -212,6 +212,8 @@ Coef_DivV = 0.0d0 ! this is a stabilisation term !
 ViscType  = 20
 VmsType   = -1    ! this is a stabilisation term if >=0 !
 CoefAdv   = 0.d0  ! this is a stabilisation term (part of VMS) !
+
+rho_min = 0.005   ! should be moved to namelist input
 
 ! --- Info about ViscType:
 ! --- =0  : Full-MHD resistivity

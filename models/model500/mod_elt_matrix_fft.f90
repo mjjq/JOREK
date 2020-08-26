@@ -1851,7 +1851,7 @@ do i=1,n_vertex_max
                   
                   amat(7,6) = + v * (T_s * r0 * ps0_t - T_t * r0 * ps0_s)                   * theta * tstep &
                             + v * (T * r0_s * ps0_t - T * r0_t * ps0_s)                     * theta * tstep &
-                            + v * F0 / BigR * T * r0_p        &
+                            + v * F0 / BigR * T * r0_p                               * xjac * theta * tstep &
                         
                             + (1.d0 - delta_n_convection) * (  &
                               + v *(r0_corr * rn0_corr * dSion_dT * T) * vpar0 * BB2 * BigR           * xjac * theta * tstep &

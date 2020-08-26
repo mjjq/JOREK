@@ -218,6 +218,7 @@ extern "C" void spk_finalize(StrumpackSparseSolverMPIDist<double,int>** spss_,MP
 	return;
 }  
 //==========================================================================================//
+#ifdef USE_MKL
 extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, int **jcn, double **val)
 {
   //int *rowptrE;
@@ -269,6 +270,37 @@ extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, 
 
   return;
 }  
+#else
+extern "C" void convert2csr(int *indx_, int *m_, int *n_, int *nnz_, int **irn, int **jcn, double **val)
+{
+  int nc =*n_, nr=*m_, nnz=*nnz_, indx=*indx_;
+
+  std::vector<int> rptr(nr+1 ,0);
+
+  std::cout<<"rows = "<<nr<<" cols = "<<nc<<" nnz = "<<nnz<<std::endl;
+  if (nr>nnz+1){std::cout<<"Error: #rows > nnz+1"<<std::endl; return;}
+
+  std::chrono::steady_clock::time_point t0, t1;
+  t0 = std::chrono::steady_clock::now();
+
+  for (int i=0; i<nnz; i++){
+    rptr[(*irn)[i]+1-indx] += 1;
+  }
+
+  (*irn)[0]=0;
+  (*irn)[nr]= nnz;
+  for (int i=1; i<nr; i++){(*irn)[i]=rptr[i] + (*irn)[i-1];}
+  rptr.clear();
+
+  for (int i=0; i<nnz; i++){(*jcn)[i]-=indx;}
+
+  t1 = std::chrono::steady_clock::now();
+  std::cout<<"coo2csr (s) = "<< std::chrono::duration_cast<
+			std::chrono::microseconds>(t1 - t0).count()*1e-6 << std::endl;
+
+  return;
+}
+#endif
 //=========================================================================================//
 // distribute n rows among P ranks
 int* distribute(int n, int P){

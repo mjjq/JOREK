@@ -60,37 +60,33 @@ contains
 
   end function unique_sorted
 
-  recursive function find_index(list,low,high,x)
+  recursive function find_index(list,low,high,x) result(idx)
     integer, intent(in) :: low, high
     integer, intent(in) :: list(:), x
     integer :: mid
-    integer :: find_index
+    integer :: idx
 
     if (low>high) then
-      find_index = 0
+      idx = 0
       write(*,*) "Error in find_index: element not found"
       call exit(0)
-      return
     endif
 
     mid = (low + high)/2
 
     ! target value is found
     if (x .eq. list(mid)) then
-      find_index = mid
-      return
+      idx = mid
 
     ! discard all elements in the right search space
     ! including the mid element
     elseif (x .lt. list(mid)) then
-      find_index = find_index(list, low,  mid - 1, x)
-      return
+      idx = find_index(list, low,  mid - 1, x)
 
     ! discard all elements in the left search space
     ! including the mid element
     else
-      find_index = find_index(list, mid + 1, high, x)
-      return
+      idx = find_index(list, mid + 1, high, x)
     endif
 
   end function find_index

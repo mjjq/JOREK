@@ -831,13 +831,13 @@ do i=1,n_vertex_max
             !#  equation 3   (current definition)                                                              #
             !###################################################################################################
 
-            rhs_ij(3) = 0.d0 ! - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac
+            rhs_ij(3) = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac
 
             !###################################################################################################
             !#  equation 4   (vorticity definition)                                                            #
             !###################################################################################################
 
-            rhs_ij(4) = 0.d0 ! - ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
+            rhs_ij(4) = - ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
 
             !###################################################################################################
             !#  equation 5   (density equation)                                                                #
@@ -1010,7 +1010,7 @@ do i=1,n_vertex_max
                                  * r0 * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                      &
                                  * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep  &
 
-                       + zeta * v * r0  * delta_g(mp,6,ms,mt) * BigR                     * xjac &
+                       + zeta * v * r0  * delta_g(mp,8,ms,mt) * BigR                     * xjac &
                        + zeta * v * Te0 * delta_g(mp,5,ms,mt) * BigR                     * xjac
 
 
@@ -1661,7 +1661,7 @@ do i=1,n_vertex_max
                   
                   amat(7,6) = + v * (Ti_s * r0   * ps0_t - Ti_t * r0   * ps0_s)               * theta * tstep &
                               + v * (Ti   * r0_s * ps0_t - Ti   * r0_t * ps0_s)               * theta * tstep &
-                              + v * F0 / BigR * Ti * r0_p      
+                              + v * F0 / BigR * Ti * r0_p                              * xjac * theta * tstep     
                         
                   amat_n(7,6) = + v * F0 / BigR * Ti_p * R0                            * xjac * theta * tstep
 
@@ -1729,6 +1729,13 @@ do i=1,n_vertex_max
                     amat(7,7) = amat(7,7) + v * amu_neo_prof(ms,mt) * BB2 * r0 * vpar * BigR * xjac * tstep * theta 
                   endif
 
+
+                  amat(7,8)   = + v * (Te_s * r0   * ps0_t - Te_t * r0   * ps0_s)                   * theta * tstep  &
+                                + v * (Te   * r0_s * ps0_t - Te   * r0_t * ps0_s)                   * theta * tstep  &
+                                + v * F0 / BigR * Te * r0_p                                  * xjac * theta * tstep 
+  
+                  amat_n(7,8) = + v * F0 / BigR * Te_p * r0                                  * xjac * theta * tstep
+                 
 
                   !###################################################################################################
                   !#  equation 8   (electron energy equation)                                                        #
@@ -1824,6 +1831,7 @@ do i=1,n_vertex_max
                   amat_kn(8,5) = + TG_num8 * 0.25d0 / BigR * vpar0**2                 &
                                    * Te0 * (+ F0 / BigR * rho_p)                      &
                                    * (      + F0 / BigR * v_p) * xjac * theta * tstep * tstep
+         
 
 
                   amat(8,8) = v * r0_corr * Te  * BigR * xjac * (1.d0 + zeta)     &
@@ -1881,20 +1889,20 @@ do i=1,n_vertex_max
                                  + ZKe_prof * BigR   * (v_p*Te_p /BigR**2 )                           * xjac * theta * tstep &
 
                               + TG_num8 * 0.25d0 / BigR * vpar0**2 &
-                                * r0 * ( + F0 / BigR * Te_p) * ( + F0 / BigR * v_p)          * xjac * theta * tstep * tstep
+                                * r0 * ( + F0 / BigR * Te_p) * ( + F0 / BigR * v_p)           * xjac * theta * tstep * tstep
+ 
+                  amat(8,7) = + v * r0 * F0 / BigR * Vpar * Te0_p                             * xjac * theta * tstep &
+                              + v * Te0 * F0 / BigR * Vpar * r0_p                             * xjac * theta * tstep &
 
-                  amat(8,7) = + v * r0 * F0 / BigR * Vpar * Te0_p                            * xjac * theta * tstep &
-                             + v * Te0 * F0 / BigR * Vpar * r0_p                             * xjac * theta * tstep &
+                              + v * r0  * Vpar * (Te0_s * ps0_t - Te0_t * ps0_s)                      * theta * tstep &
+                              + v * Te0 * Vpar * (r0_s * ps0_t  - r0_t * ps0_s)                       * theta * tstep & 
 
-                            + v * r0  * Vpar * (Te0_s * ps0_t - Te0_t * ps0_s)                      * theta * tstep &
-                            + v * Te0 * Vpar * (r0_s * ps0_t  - r0_t * ps0_s)                       * theta * tstep & 
-
-                            + v * r0 * GAMMA * Te0 * (vpar_s * ps0_t - vpar_t * ps0_s)              * theta * tstep &
+                              + v * r0 * GAMMA * Te0 * (vpar_s * ps0_t - vpar_t * ps0_s)              * theta * tstep &
   
-                            + TG_num8 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
+                              + TG_num8 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
                                   * Te0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                               &
                                   * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * theta * tstep * tstep &
-                            + TG_num8 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
+                              + TG_num8 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
                                   * r0 * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                             &
                                   * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * theta * tstep * tstep 
 
@@ -1908,6 +1916,7 @@ do i=1,n_vertex_max
 
                   amat_n(8,7) = + v * r0 * GAMMA * Te0 * F0 / BigR * vpar_p          * xjac * theta * tstep
 
+ 
                   !###################################################################################################
                   !# end equations                                                                                   #
                   !###################################################################################################

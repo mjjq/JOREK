@@ -48,7 +48,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Z_block_points_left,  Z_block_points_right,         &
                 tokamak_device,                                     &
                 F0,                                                 &
-                gamma_sheath_i, gamma_sheath_i, density_reflection, &
+                gamma_sheath_i, gamma_sheath_e, density_reflection, &
                 mach_one_bnd_integral,                              &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &

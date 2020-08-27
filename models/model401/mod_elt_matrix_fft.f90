@@ -1090,7 +1090,7 @@ do i=1,n_vertex_max
                   u_y  = psi_y  ;  zj_y  = psi_y  ;  w_y  = psi_y  ; rho_y  = psi_y  ;  Ti_y  = psi_y  ; vpar_y  = psi_y ; Te_y = psi_y
                   u_p  = psi_p  ;  zj_p  = psi_p  ;  w_p  = psi_p  ; rho_p  = psi_p  ;  Ti_p  = psi_p  ; vpar_p  = psi_p ; Te_p = psi_p
                   u_s  = psi_s  ;  zj_s  = psi_s  ;  w_s  = psi_s  ; rho_s  = psi_s  ;  Ti_s  = psi_s  ; vpar_s  = psi_s ; Te_s = psi_s
-                  u_t  = psi_t  ;  zj_t  = psi_t  ;  w_t  = psi_t  ; rho_t  = psi_t  ;  Ti_t  = psi_t  ; vpar_t  = psi_t ; Te_t = psi_st
+                  u_t  = psi_t  ;  zj_t  = psi_t  ;  w_t  = psi_t  ; rho_t  = psi_t  ;  Ti_t  = psi_t  ; vpar_t  = psi_t ; Te_t = psi_t
                   u_ss = psi_ss ;  zj_ss = psi_ss ;  w_ss = psi_ss ; rho_ss = psi_ss ;  Ti_ss = psi_ss ; vpar_ss = psi_ss; Te_ss = psi_ss
                   u_tt = psi_tt ;  zj_tt = psi_tt ;  w_tt = psi_tt ; rho_tt = psi_tt ;  Ti_tt = psi_tt ; vpar_tt = psi_tt; Te_tt = psi_tt
                   u_st = psi_st ;  zj_st = psi_st ;  w_st = psi_st ; rho_st = psi_st ;  Ti_st = psi_st ; vpar_st = psi_st; Te_st = psi_st
@@ -1907,10 +1907,10 @@ do i=1,n_vertex_max
                                   * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * theta * tstep * tstep 
 
                   amat_k(8,7) =  &
-                        + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
+                        + TG_num8 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
                                   * Te0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                          &
                                   * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
-                        + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
+                        + TG_num8 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
                                   * r0 * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                          &
                                   * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep 
 

@@ -180,7 +180,7 @@ module mod_new_diag
     end if
     pol_pos_list = pol_pos(node_list, element_list, eq, Rstart=Rstart, Rend=Rend, Z=eq%Z_axis,     &
       n=npts)
-    tor_pos_list = tor_pos(nphi=nphi)
+    tor_pos_list = tor_pos(nphi=nphi,phistart=0.d0,phiend=(2.d0*PI)*real(nphi-1)/real(nphi))
     
     call eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
     call reduce_result_to_2d(ierr, result, res2d, i2=1)

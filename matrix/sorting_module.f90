@@ -6,7 +6,8 @@ module sorting_module
 contains
   recursive subroutine sort(temp, start, finish, list)
     implicit none
-    integer, intent(inout) :: start, list(:), temp(:)
+    integer(kind=8), intent(inout) :: list(:), temp(:)
+    integer, intent(inout) :: start
     integer, intent(in) :: finish
     integer :: middle
     if (finish-start<2) then
@@ -21,10 +22,10 @@ contains
 
   subroutine merge(list, start, middle, finish, temp)
     implicit none
-    integer,intent(in) :: list(:)
-    integer,intent(inout) :: temp(:)
+    integer(kind=8),intent(in) :: list(:)
+    integer(kind=8),intent(inout) :: temp(:)
     integer,intent(in) ::start, middle, finish
-    integer    :: i, i1, i2
+    integer :: i, i1, i2
     i1 = start
     i2 = middle
     do i=start, finish-1
@@ -41,8 +42,8 @@ contains
   function unique_sorted(list)
     implicit none
     integer :: start, finish, n
-    integer, intent(inout) :: list(:)
-    integer, allocatable :: unique_sorted(:), work(:)
+    integer(kind=8), intent(inout) :: list(:)
+    integer(kind=8), allocatable :: unique_sorted(:), work(:)
     logical,allocatable :: duplicates(:)
     ! sorting
     work=list
@@ -53,22 +54,22 @@ contains
     ! removing duplicates
     allocate(duplicates(n))
     duplicates=.false.
-    !duplicates(1:n-1)=list(1:n-1)==list(2:n)
     !removes duplicates and zeros
-    duplicates(1:n-1)=((list(1:n-1)==list(2:n)).or.(list(1:n-1)==0))
+    duplicates(1:n-1)=list(1:n-1).eq.list(2:n)
+    !duplicates(1:n-1)=((list(1:n-1).eq.list(2:n)).or.(list(1:n).eq.0))
     unique_sorted=pack(list,.not.duplicates)
 
   end function unique_sorted
 
   recursive function find_index(list,low,high,x) result(idx)
     integer, intent(in) :: low, high
-    integer, intent(in) :: list(:), x
+    integer(kind=8), intent(in) :: list(:), x
     integer :: mid
-    integer :: idx
+    integer(kind=8) :: idx
 
-    if (low>high) then
+    if (low.gt.high) then
       idx = 0
-      write(*,*) "Error in find_index: element not found"
+      write(*,*) "Error in find_index: element not found", x, low, high
       call exit(0)
     endif
 
@@ -92,6 +93,7 @@ contains
   end function find_index
 
   subroutine remove_duplicates(n,nnz,irn,jcn,val)
+  ! sort and remove duplicates from sparse matrix
     use, intrinsic :: iso_c_binding
 
     integer, intent(in) :: n
@@ -100,24 +102,31 @@ contains
     real(kind=C_DOUBLE), dimension(:), pointer :: val
 
     real(kind=C_DOUBLE), allocatable :: val_new(:)
-    integer(kind=C_INT), allocatable :: ij(:), ij_new(:), new_ind(:)
+    ! long integer is required for 1d representation of coordinate index
+    integer(kind=8), allocatable :: ij(:), ij_new(:), new_ind(:)
+    integer(kind=8) :: dum, i1, i2, i3
     integer :: i, j, nnz_new
 
     allocate(ij(nnz), new_ind(nnz))
     do i = 1, nnz
-      ij(i) = (irn(i) - 1)*n + jcn(i)
+      i1 = int(irn(i)-1,kind=8)
+      i2 = int(n,kind=8)
+      i3 = int(jcn(i),kind=8)
+      ij(i) = i1*i2 + i3
     enddo
 
     ij_new=unique_sorted(ij)
+    deallocate(ij)
     nnz_new = size(ij_new)
     if (nnz.ne.nnz_new) write(*,*) "Number of nnz changed: nnz_old, nnz_new = ", nnz, nnz_new
-
-    do i = 1, nnz
-      ij(i) = (irn(i) - 1)*n + jcn(i)
-    enddo
+    
     ! find index of original element in the new (ordered) list
     do i = 1, nnz
-      new_ind(i) = find_index(ij_new,1,nnz_new,ij(i))
+      i1 = int(irn(i)-1,kind=8)
+      i2 = int(n,kind=8)
+      i3 = int(jcn(i),kind=8)
+      dum = i1*i2 + i3
+      new_ind(i) = find_index(ij_new,1,nnz_new,dum)
     enddo
 
     allocate(val_new(nnz_new)); val_new = 0.0
@@ -125,17 +134,13 @@ contains
       val_new(new_ind(i)) = val_new(new_ind(i)) + val(i)
     enddo
 
-    !val => null(); irn => null(); jcn => null()
-    !val => val_new
-    !allocate(irn(nnz_new),jcn(nnz_new))
-
     do i = 1, nnz_new
       irn(i) = int((ij_new(i)-1)/n) + 1
       jcn(i) = mod(ij_new(i)-1,n) + 1
       val(i) = val_new(i)
     enddo
 
-    deallocate(ij,ij_new,new_ind,val_new)
+    deallocate(ij_new,new_ind,val_new)
     nnz = nnz_new
 
   end subroutine remove_duplicates

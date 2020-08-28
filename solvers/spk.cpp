@@ -8,7 +8,10 @@
 #include <string>
 #include "hdf5.h"
 #include <math.h>
+
+#ifdef USE_MKL
 #include "mkl_spblas.h"
+#endif
 
 #include "StrumpackSparseSolverMPIDist.hpp"
 #include "sparse/CSRMatrix.hpp"
@@ -271,9 +274,9 @@ extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, 
   return;
 }  
 #else
-extern "C" void convert2csr(int *indx_, int *m_, int *n_, int *nnz_, int **irn, int **jcn, double **val)
+extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, int **jcn, double **val)
 {
-  int nc =*n_, nr=*m_, nnz=*nnz_, indx=*indx_;
+  int nc =*m_, nr=*n_, nnz=*nnz_, indx=*indx_;
 
   std::vector<int> rptr(nr+1 ,0);
 
@@ -295,7 +298,7 @@ extern "C" void convert2csr(int *indx_, int *m_, int *n_, int *nnz_, int **irn, 
   for (int i=0; i<nnz; i++){(*jcn)[i]-=indx;}
 
   t1 = std::chrono::steady_clock::now();
-  std::cout<<"coo2csr (s) = "<< std::chrono::duration_cast<
+  std::cout<<"coo2csr (no-MKL) (s) = "<< std::chrono::duration_cast<
 			std::chrono::microseconds>(t1 - t0).count()*1e-6 << std::endl;
 
   return;

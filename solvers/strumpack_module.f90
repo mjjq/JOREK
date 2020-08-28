@@ -133,7 +133,7 @@ module strumpack_module
           !call exit(0)
         endif
 
-        if ((.not. dflag).and.(ncpu>1)) then
+        if ((.not. dflag).and.(ncpu.gt.1)) then
 
           call distribute_rows(n,ncpu)
 
@@ -164,7 +164,7 @@ module strumpack_module
           call spk_set_mat(nloc,dist,irnl,jcnl,vall,spss,comm,upd)
           deallocate(myelm,irnl,jcnl,vall)
 
-        elseif (dflag.and.(ncpu>1)) then
+        elseif (dflag.and.(ncpu.gt.1)) then
            ! get row distribution from irn
 
           if (associated(dist)) dist=>null()

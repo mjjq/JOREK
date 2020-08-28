@@ -9,7 +9,7 @@
 #include "hdf5.h"
 #include <math.h>
 
-#ifdef USE_MKL
+#ifndef NOMKL
 #include "mkl_spblas.h"
 #endif
 
@@ -221,7 +221,7 @@ extern "C" void spk_finalize(StrumpackSparseSolverMPIDist<double,int>** spss_,MP
 	return;
 }  
 //==========================================================================================//
-#ifdef USE_MKL
+#ifndef NOMKL
 extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, int **jcn, double **val)
 {
   //int *rowptrE;

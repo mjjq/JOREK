@@ -1,71 +1,60 @@
 module sorting_module
+  use iso_c_binding
   implicit none
   private
   public remove_duplicates
 
-contains
-  recursive subroutine sort(temp, start, finish, list)
-    implicit none
-    integer(kind=8), intent(inout) :: list(:), temp(:)
-    integer, intent(inout) :: start
-    integer, intent(in) :: finish
-    integer :: middle
-    if (finish-start<2) then
-      return
-    else
-      middle = (start + finish)/2
-      call sort(list, start, middle, temp)
-      call sort(list, middle, finish, temp)
-      call merge(temp, start, middle, finish, list)
-    endif
-  end subroutine sort
+#define INTSIZE 8
+#define CINT c_int64_t
 
-  subroutine merge(list, start, middle, finish, temp)
-    implicit none
-    integer(kind=8),intent(in) :: list(:)
-    integer(kind=8),intent(inout) :: temp(:)
-    integer,intent(in) ::start, middle, finish
-    integer :: i, i1, i2
-    i1 = start
-    i2 = middle
-    do i=start, finish-1
-      if (i1.lt.middle.and.(i2.ge.finish.or.list(i1).le.list(i2))) then
-        temp(i)=list(i1)
-        i1 = i1 + 1
-      else
-        temp(i)=list(i2)
-        i2 = i2 + 1
-      endif
-    enddo
-  end subroutine merge
+interface
+  subroutine qsort(array,elem_count,elem_size,compare) bind(C,name="qsort")
+    import
+    type(c_ptr),value       :: array
+    integer(c_size_t),value :: elem_count
+    integer(c_size_t),value :: elem_size
+    type(c_funptr),value    :: compare
+  end subroutine qsort
+end interface  
+
+contains
+  integer(c_int) function compar(a, b) bind(C)
+    use iso_c_binding
+    integer(CINT) a, b
+
+    if ( a .lt. b ) compar = -1
+    if ( a .eq. b ) compar = 0
+    if ( a .gt. b ) compar = 1
+  end function compar
 
   function unique_sorted(list)
     implicit none
-    integer :: start, finish, n
-    integer(kind=8), intent(inout) :: list(:)
-    integer(kind=8), allocatable :: unique_sorted(:), work(:)
+    integer :: n
+    integer(kind=INTSIZE), intent(inout), target :: list(:)
+    integer(kind=INTSIZE), allocatable :: unique_sorted(:)
     logical,allocatable :: duplicates(:)
-    ! sorting
-    work=list
-    start=1
+    integer(c_size_t) l,isize
+
     n=size(list)
-    finish=n+1
-    call sort(work,start,finish,list)
+    
+    l = n; isize = INTSIZE
+    call qsort(c_loc(list(1)),l,isize,c_funloc(compar))
+
     ! removing duplicates
     allocate(duplicates(n))
     duplicates=.false.
     !removes duplicates and zeros
-    duplicates(1:n-1)=list(1:n-1).eq.list(2:n)
+    duplicates(1:n)=list(1:n-1).eq.list(2:n)
     !duplicates(1:n-1)=((list(1:n-1).eq.list(2:n)).or.(list(1:n).eq.0))
-    unique_sorted=pack(list,.not.duplicates)
+    unique_sorted = pack(list,.not.duplicates)
 
   end function unique_sorted
 
   recursive function find_index(list,low,high,x) result(idx)
     integer, intent(in) :: low, high
-    integer(kind=8), intent(in) :: list(:), x
+    integer(kind=INTSIZE), intent(in) :: list(:), x
     integer :: mid
-    integer(kind=8) :: idx
+    integer(kind=INTSIZE) :: idx
 
     if (low.gt.high) then
       idx = 0
@@ -103,15 +92,15 @@ contains
 
     real(kind=C_DOUBLE), allocatable :: val_new(:)
     ! long integer is required for 1d representation of coordinate index
-    integer(kind=8), allocatable :: ij(:), ij_new(:), new_ind(:)
-    integer(kind=8) :: dum, i1, i2, i3
+    integer(kind=INTSIZE), allocatable :: ij(:), ij_new(:), new_ind(:)
+    integer(kind=INTSIZE) :: dum, i1, i2, i3
     integer :: i, j, nnz_new
 
     allocate(ij(nnz), new_ind(nnz))
     do i = 1, nnz
-      i1 = int(irn(i)-1,kind=8)
-      i2 = int(n,kind=8)
-      i3 = int(jcn(i),kind=8)
+      i1 = int(irn(i)-1,kind=INTSIZE)
+      i2 = int(n,kind=INTSIZE)
+      i3 = int(jcn(i),kind=INTSIZE)
       ij(i) = i1*i2 + i3
     enddo
 
@@ -122,9 +111,9 @@ contains
     
     ! find index of original element in the new (ordered) list
     do i = 1, nnz
-      i1 = int(irn(i)-1,kind=8)
-      i2 = int(n,kind=8)
-      i3 = int(jcn(i),kind=8)
+      i1 = int(irn(i)-1,kind=INTSIZE)
+      i2 = int(n,kind=INTSIZE)
+      i3 = int(jcn(i),kind=INTSIZE)
       dum = i1*i2 + i3
       new_ind(i) = find_index(ij_new,1,nnz_new,dum)
     enddo

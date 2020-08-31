@@ -1204,10 +1204,12 @@ if (extend) then
       tht_bnd = atan2(sign_psi*newnode_list%node(index_ext1-n_tht+j)%x(3,2),&
                       sign_psi*newnode_list%node(index_ext1-n_tht+j)%x(3,1))
 
-
-      if (T_wall_par(j) .gt. PI)            T_wall_par(j) = T_wall_par(j) - 2.d0*PI
-      if (T_wall_par(j) - tht_bnd .gt. PI)  T_wall_par(j) = T_wall_par(j) - 2.d0*PI
+      if (T_wall_par(j) .gt. PI)  T_wall_par(j) = T_wall_par(j) - 2.d0*PI
+      if (T_wall_par(j) .lt.-PI)  T_wall_par(j) = T_wall_par(j) + 2.d0*PI
       if (tht_bnd - T_wall_par(j) .gt. PI)  tht_bnd = tht_bnd - 2.d0*PI
+      if (tht_bnd - T_wall_par(j) .lt.-PI)  tht_bnd = tht_bnd + 2.d0*PI
+      if (T_wall_par(j) - tht_bnd .gt. PI)  tht_bnd = tht_bnd + 2.d0*PI
+      if (T_wall_par(j) - tht_bnd .lt.-PI)  tht_bnd = tht_bnd - 2.d0*PI
 
       tht_ext = tht_bnd + (T_wall_par(j) - tht_bnd) * float(i)/float(n_ext)
 

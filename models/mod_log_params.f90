@@ -562,6 +562,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'central_density       ', central_density
   write(*,REAL_FMT) 'central_mass          ', central_mass
   write(*,REAL_FMT) 'gamma_sheath          ', gamma_sheath
+  write(*,REAL_FMT) 'gamma_stangeby        ', gamma_stangeby
   write(*,LOGI_FMT) 'bc_natural_open       ', bc_natural_open
   write(*,LOGI_FMT) 'produce_live_data     ', produce_live_data
   write(*,LOGI_FMT) 'export_for_nemec      ', export_for_nemec
@@ -570,6 +571,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,INTG_FMT) 'gmres_max_iter        ', gmres_max_iter
   write(*,REAL_FMT) 'gmres tolerance       ', gmres_tol
   write(*,INTG_FMT) 'iter_precon           ', iter_precon
+  write(*,INTG_FMT) 'max_steps_noUpdate    ', max_steps_noUpdate
   write(*,INTG_FMT) 'gmres_m               ', gmres_m
   write(*,REAL_FMT) 'gmres_4               ', gmres_4
   write(*,LOGI_FMT) 'centralize_harm_mat   ', centralize_harm_mat

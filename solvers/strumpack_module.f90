@@ -108,6 +108,7 @@ module strumpack_module
         use, intrinsic :: iso_c_binding
         use mpi
         use sorting_module, only : remove_duplicates
+
         implicit none
 
         integer comm,ierr
@@ -133,7 +134,7 @@ module strumpack_module
           !call exit(0)
         endif
 
-        if ((.not. dflag).and.(ncpu>1)) then
+        if ((.not. dflag).and.(ncpu.gt.1)) then
 
           call distribute_rows(n,ncpu)
 
@@ -156,7 +157,7 @@ module strumpack_module
             jcnl(i) = jcn(myelm(i))                          ! jcn remains the same
             vall(i) = val(myelm(i))
           enddo
-#ifndef USE_MKL
+#ifdef NOMKL
           call remove_duplicates(n,nnzloc,irnl,jcnl,vall)
 #endif
           call convert2csr(indx,nloc,n,nnzloc,irnl,jcnl,vall)
@@ -164,7 +165,7 @@ module strumpack_module
           call spk_set_mat(nloc,dist,irnl,jcnl,vall,spss,comm,upd)
           deallocate(myelm,irnl,jcnl,vall)
 
-        elseif (dflag.and.(ncpu>1)) then
+        elseif (dflag.and.(ncpu.gt.1)) then
            ! get row distribution from irn
 
           if (associated(dist)) dist=>null()
@@ -190,7 +191,7 @@ module strumpack_module
 
           nloc = dist(rank+2) - dist(rank+1)
           irn(:) = irn(:) - dist(rank+1) + 1 ! irn starts from 1
-#ifndef USE_MKL
+#ifdef NOMKL
           call remove_duplicates(n,nnz,irn,jcn,val)
 #endif
           call convert2csr(indx,nloc,n,nnz,irn,jcn,val)          
@@ -202,10 +203,11 @@ module strumpack_module
 
           call distribute_rows(n,1)
           dist(:) = dist(:) - indx
-#ifndef USE_MKL
+#ifdef NOMKL
           call remove_duplicates(n,nnz,irn,jcn,val)
 #endif
           call convert2csr(indx,n,n,nnz,irn,jcn,val)
+
           call spk_set_mat(n,dist,irn,jcn,val,spss,comm,upd)
 
         endif

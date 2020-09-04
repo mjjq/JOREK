@@ -274,9 +274,9 @@ extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, 
   return;
 }  
 #else
-extern "C" void convert2csr(int *indx_, int *m_, int *n_, int *nnz_, int **irn, int **jcn, double **val)
+extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, int **jcn, double **val)
 {
-  int nc =*n_, nr=*m_, nnz=*nnz_, indx=*indx_;
+  int nc =*m_, nr=*n_, nnz=*nnz_, indx=*indx_;
 
   std::vector<int> rptr(nr+1 ,0);
 

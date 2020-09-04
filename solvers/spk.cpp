@@ -8,7 +8,10 @@
 #include <string>
 #include "hdf5.h"
 #include <math.h>
+
+#ifndef NOMKL
 #include "mkl_spblas.h"
+#endif
 
 #include "StrumpackSparseSolverMPIDist.hpp"
 #include "sparse/CSRMatrix.hpp"
@@ -218,7 +221,7 @@ extern "C" void spk_finalize(StrumpackSparseSolverMPIDist<double,int>** spss_,MP
 	return;
 }  
 //==========================================================================================//
-#ifdef USE_MKL
+#ifndef NOMKL
 extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, int **jcn, double **val)
 {
   //int *rowptrE;
@@ -295,7 +298,7 @@ extern "C" void convert2csr(int *indx_, int *m_, int *n_, int *nnz_, int **irn, 
   for (int i=0; i<nnz; i++){(*jcn)[i]-=indx;}
 
   t1 = std::chrono::steady_clock::now();
-  std::cout<<"coo2csr (s) = "<< std::chrono::duration_cast<
+  std::cout<<"coo2csr (no-MKL) (s) = "<< std::chrono::duration_cast<
 			std::chrono::microseconds>(t1 - t0).count()*1e-6 << std::endl;
 
   return;

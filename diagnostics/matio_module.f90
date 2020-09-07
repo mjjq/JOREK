@@ -313,18 +313,26 @@ module matio_module
 
   end subroutine slurmid
 
-  subroutine timestamp(msg)
+  subroutine timestamp(msg,id)
     character(len=*), intent(in) :: msg
+    integer, intent(in), optional :: id
 
     integer,dimension(8) :: values
+    character(len=14) :: fname
     real :: t 
     
-    if (.not.fileexist) open(unit = 100, file = 'timeline.out', status='REPLACE', action='WRITE')
+    if (present(id)) then
+      write (fname, "(A8,(I0.2),A4)") 'timeline', id, '.out'
+    else
+      write (fname, "(A12)") 'timeline.out'
+    endif
+
+    if (.not.fileexist) open(unit = 100, file = trim(fname), status='REPLACE', action='WRITE')
     fileexist = .true.
 
     call date_and_time(VALUES=values)
     t = values(5)*3600000 + values(6)*60000 + values(7)*1000 + values(8)
-    open(unit = 100, file = 'timeline.out', status='OLD', position="append", action='WRITE')
+    open(unit = 100, file = trim(fname), status='OLD', position="append", action='WRITE')
     write(100,*) t, trim(msg) 
     close(100)
 

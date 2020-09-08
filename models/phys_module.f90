@@ -36,6 +36,8 @@ module phys_module
   real*8  :: density_reflection   !< density reflection coeeficient open fieldlines (model303)
   real*8  :: neutral_reflection   !< reflection coefficient of ions into neutrals (model500)
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
+  logical :: vpar_smoothing       !< apply a smoothing function to smooth jumps in Vpar at B.n=0
+  real*8  :: vpar_smoothing_coef(3) !< coefficients for the smoothing profile of the parallel velocity
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull

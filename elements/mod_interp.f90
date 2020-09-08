@@ -10,6 +10,7 @@ public :: interp_delta !< interp a specific harmonic in finite elements, of the 
 public :: interp_0 !< interp variable only, no derivatives at a specific position in domain
 public :: interp_0_delta !< interp variable only, no derivatives at a specific position in domain, of the deltas
 public :: interp_RZ !< Interpolate space only
+public :: interp_RZ_2 !< Interpolate space only
 public :: interp_PRZ !< interp variable + pos at values or deltas
 public :: sincosperiod_moivre, mode_moivre !< public for regtesting, used by interp_PRZ
 
@@ -284,11 +285,12 @@ pure subroutine sincosperiod_moivre(phi,HZ,dHZ)
     dHZ(3) = HZ(2)*(n_period)
 
     do i=2,n_mode
-      call moivre(HZ(2),HZ(3), &
-                  HZ(2),HZ(3), &
-                  HZ(2*i),HZ(2*i+1))
+
+      call moivre(HZ(2),HZ(3), HZ(2*i-2),HZ(2*i-1), HZ(2*i),HZ(2*i+1))
+
       dHZ(2*i)   = HZ(2*i+1)*(-n_period*i)
       dHZ(2*i+1) = HZ(2*i)*(n_period*i)
+
     end do
   end if
 end subroutine sincosperiod_moivre
@@ -317,9 +319,7 @@ pure subroutine mode_moivre(phi,HZ)
     HZ(3) = sin(n_period*phi)
 
     do i=2,n_mode
-      call moivre(HZ(2),HZ(3), &
-                  HZ(2),HZ(3), &
-                  HZ(2*i),HZ(2*i+1))
+      call moivre(HZ(2),HZ(3), HZ(2*i-2),HZ(2*i-1), HZ(2*i),HZ(2*i+1))
     end do
   end if
 end subroutine mode_moivre
@@ -488,7 +488,7 @@ end subroutine interp_0_delta
 
 
 !> Calculates the interpolation within one element (i_elm) for a given position (s,t) in local coordinates
-subroutine interp_RZ_0(node_list,element_list,i_elm,s,t,R,Z)
+pure subroutine interp_RZ_0(node_list,element_list,i_elm,s,t,R,Z)
 type (type_node_list),    intent(in)  :: node_list
 type (type_element_list), intent(in)  :: element_list
 integer,                  intent(in)  :: i_elm
@@ -515,6 +515,7 @@ do kv = 1,n_vertex_max  ! 4 vertices
     Z    = Z    + xx2 * ss * G(kv,kf)
   end do
 end do
+
 end subroutine interp_RZ_0
 
 
@@ -549,12 +550,13 @@ R_t = sum(xR*H_t)
 Z   = sum(xZ*H)
 Z_s = sum(xZ*H_s)
 Z_t = sum(xZ*H_t)
+
 end subroutine interp_RZ_1
 
 
 
 !> Calculates the interpolation within one element (i_elm) for a given position (s,t) in local coordinates
-subroutine interp_RZ_2(node_list,element_list,i_elm,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+pure subroutine interp_RZ_2(node_list,element_list,i_elm,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 type (type_node_list),    intent(in)  :: node_list
 type (type_element_list), intent(in)  :: element_list
 integer,                  intent(in)  :: i_elm
@@ -563,9 +565,9 @@ real*8,                   intent(out) :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, 
 
 ! --- Local variables
 real*8  :: H(4,4), H_s(4,4), H_t(4,4), H_st(4,4), H_ss(4,4), H_tt(4,4)
-integer :: kv, iv
+integer :: kv, iv, kf
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
-real*8  :: sizes(n_order+1)
+real*8  :: sizes(n_order+1), sum_R
 
 call basisfunctions_T(s,t,H,H_s,H_t,H_st,H_ss,H_tt)
 

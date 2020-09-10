@@ -591,8 +591,7 @@ module mod_expression
       P0_RR, P0_ZZ, P0_RZ, BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,          &
       E_dreicer, AR0_R, AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ, AR0_ZZ, &
       AR0_RR, AZ0_RR, AZ0_ZZ, A30_Rp, A30_Zp, AR0_RZ, AZ0_RZ, BR_p, BZ_p, BP_Z, BP_R,              &
-      BR_R, BZ_Z, B_R, B_Z,                                                                        &
-      BdotNablaBR, BdotNablaBZ, BdotNablaBphi, BdotNablaB, Kappa_R, Kappa_Z, Kappa_phi, gradPdotKappa  
+      BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_phi  
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
@@ -1172,8 +1171,6 @@ module mod_expression
           Kappa_Z    = ( Btot*BR*BZ_R - BR*BZ*B_R   - BZ*BZ*B_Z   + Btot*BZ*BZ_Z                     ) / Btot**3.
           Kappa_phi  = ( Btot*BR*Bp_R - BR*Btor*B_R - BZ*Btor*B_Z                + Btot*Btor*BR/BigR ) / Btot**3.
 
-          gradPdotKappa = P0_R*Kappa_R + P0_Z*Kappa_Z + P0_p / BigR * Kappa_phi
-
           if (psi_abs > 1.d-6) then
             FFprime_loc = zj0 + (R**2.d0) * (ps0_R*P0_R + ps0_Z*P0_Z)/(psi_abs**2.d0)
           else
@@ -1559,7 +1556,7 @@ module mod_expression
                 res = P0_p / BigR / fact_mu_zero
  
               case ( 'gradPdotCurv' )
-                res = gradPdotKappa / fact_mu_zero
+                res = ( P0_R*Kappa_R + P0_Z*Kappa_Z + P0_p / BigR * Kappa_phi ) / fact_mu_zero
       
               case ( 'curvat_R' )
                 res = Kappa_R

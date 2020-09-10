@@ -698,6 +698,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     use phys_module, only : index_now, centralize_harm_mat
 
     use strumpack_module
+    use matio_module, only :  save_mat_h5
   
     implicit none
 
@@ -774,6 +775,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
         call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
                 UPDATE=spss_analyzed,DISTRIBUTED=.false.)
+        !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
         
         if (n_cpu_n>1) then
           call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)

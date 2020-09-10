@@ -318,11 +318,11 @@ module matio_module
     integer, intent(in), optional :: id
 
     integer,dimension(8) :: values
-    character(len=14) :: fname
+    character(len=16) :: fname
     real :: t 
     
     if (present(id)) then
-      write (fname, "(A8,(I0.2),A4)") 'timeline', id, '.out'
+      write (fname, "(A8,(I0.4),A4)") 'timeline', id, '.out'
     else
       write (fname, "(A12)") 'timeline.out'
     endif

@@ -59,7 +59,7 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fi
   spss->options().set_gmres_restart(50);    
   spss->options().set_verbose(true);  
 
-  spss->options().set_compression(CompressionType::HSS);
+//  spss->options().set_compression(CompressionType::HSS);
 //  spss->options().set_compression_min_sep_size(512);
 //  spss->options().set_compression_min_front_size(1024);
 //  spss->options().HSS_options().set_rel_tol(1e-6);  

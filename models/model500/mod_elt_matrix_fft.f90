@@ -1178,13 +1178,13 @@ do i=1,n_vertex_max
               RHS_k(mp,ij8) = RHS_k(mp,ij8) + rhs_ij_k(8) * wst
             else
               ij1 = index_ij
-              ij2 = index_ij + 1*(n_tor_end - n_tor_start + 1)
-              ij3 = index_ij + 2*(n_tor_end - n_tor_start + 1)
-              ij4 = index_ij + 3*(n_tor_end - n_tor_start + 1)
-              ij5 = index_ij + 4*(n_tor_end - n_tor_start + 1)
-              ij6 = index_ij + 5*(n_tor_end - n_tor_start + 1)
-              ij7 = index_ij + 6*(n_tor_end - n_tor_start + 1)
-              ij8 = index_ij + 7*(n_tor_end - n_tor_start + 1)
+              ij2 = index_ij + 1*n_tor_local
+              ij3 = index_ij + 2*n_tor_local
+              ij4 = index_ij + 3*n_tor_local
+              ij5 = index_ij + 4*n_tor_local
+              ij6 = index_ij + 5*n_tor_local
+              ij7 = index_ij + 6*n_tor_local
+              ij8 = index_ij + 7*n_tor_local
 
               RHS(ij1) = RHS(ij1) + (rhs_ij(1) + rhs_ij_k(1)) * wst
               RHS(ij2) = RHS(ij2) + (rhs_ij(2) + rhs_ij_k(2)) * wst
@@ -2123,8 +2123,8 @@ do i=1,n_vertex_max
 
                     do kl = 1, n_var
                       do ij = 1, n_var
-                        ELM(index_ij+(ij-1)*(n_tor_end - n_tor_start + 1),index_kl+(kl-1)*(n_tor_end - n_tor_start + 1)) =       &
-                        ELM(index_ij+(ij-1)*(n_tor_end - n_tor_start + 1),index_kl+(kl-1)*(n_tor_end - n_tor_start + 1))         &
+                        ELM(index_ij+(ij-1)*n_tor_local,index_kl+(kl-1)*n_tor_local) =       &
+                        ELM(index_ij+(ij-1)*n_tor_local,index_kl+(kl-1)*n_tor_local)         &
                           + (amat(ij,kl) + amat_k(ij,kl) + amat_n(ij,kl) + amat_kn(ij,kl)) * wst
                       enddo
                     enddo

@@ -27,16 +27,15 @@ contains
     if ( a .gt. b ) compar = 1
   end function compar
 
-  function unique_sorted(list)
+  subroutine unique_sorted(list,n)
     implicit none
-    integer :: n
-    integer(kind=INTSIZE), intent(inout), target :: list(:)
-    integer(kind=INTSIZE), allocatable :: unique_sorted(:)
+    integer,intent(inout) :: n
+    integer(kind=INTSIZE), allocatable, intent(inout), target :: list(:)
+    integer(kind=INTSIZE), allocatable :: dum(:)
     logical,allocatable :: duplicates(:)
     integer(c_size_t) l,isize
+    integer :: i, j
 
-    n=size(list)
-    
     l = n; isize = INTSIZE
     call qsort(c_loc(list(1)),l,isize,c_funloc(compar))
 
@@ -45,10 +44,24 @@ contains
     duplicates=.false.
     !removes duplicates and zeros
     duplicates(1:n)=list(1:n-1).eq.list(2:n)
+    j = 1
+    do i=1, n
+      if (.not.duplicates(i)) then
+        list(j) = list(i)
+        j = j + 1
+      endif
+    enddo
+    n = j - 1
     !duplicates(1:n-1)=((list(1:n-1).eq.list(2:n)).or.(list(1:n).eq.0))
-    unique_sorted = pack(list,.not.duplicates)
+    !write(*,*) n
+    !n = count(.not.duplicates)
+    !write(*,*) n
+    !allocate(dum(n))
+    !dum = pack(list(1:n),.not.duplicates)
+    !deallocate(list); allocate(list(size(dum)))
+    !list=dum
 
-  end function unique_sorted
+  end subroutine unique_sorted
 
   recursive function find_index(list,low,high,x) result(idx)
     integer, intent(in) :: low, high
@@ -94,7 +107,7 @@ contains
     ! long integer is required for 1d representation of coordinate index
     integer(kind=INTSIZE), allocatable :: ij(:), ij_new(:), new_ind(:)
     integer(kind=INTSIZE) :: dum, i1, i2, i3
-    integer :: i, j, nnz_new
+    integer :: i, j, nnz0
 
     allocate(ij(nnz), new_ind(nnz))
     do i = 1, nnz
@@ -103,34 +116,33 @@ contains
       i3 = int(jcn(i),kind=INTSIZE)
       ij(i) = i1*i2 + i3
     enddo
+    
+    nnz0 = nnz
+    call unique_sorted(ij,nnz)
 
-    ij_new=unique_sorted(ij)
-    deallocate(ij)
-    nnz_new = size(ij_new)
-    if (nnz.ne.nnz_new) write(*,*) "Number of nnz changed: nnz_old, nnz_new = ", nnz, nnz_new
+    if (nnz.ne.nnz0) write(*,*) "Number of nnz changed: nnz_old, nnz_new = ", nnz0, nnz
     
     ! find index of original element in the new (ordered) list
-    do i = 1, nnz
+    do i = 1, nnz0
       i1 = int(irn(i)-1,kind=INTSIZE)
       i2 = int(n,kind=INTSIZE)
       i3 = int(jcn(i),kind=INTSIZE)
       dum = i1*i2 + i3
-      new_ind(i) = find_index(ij_new,1,nnz_new,dum)
+      new_ind(i) = find_index(ij,1,nnz,dum)
     enddo
 
-    allocate(val_new(nnz_new)); val_new = 0.0
-    do i =1, nnz
+    allocate(val_new(nnz)); val_new = 0.0
+    do i =1, nnz0
       val_new(new_ind(i)) = val_new(new_ind(i)) + val(i)
     enddo
 
-    do i = 1, nnz_new
-      irn(i) = int((ij_new(i)-1)/n) + 1
-      jcn(i) = mod(ij_new(i)-1,n) + 1
+    do i = 1, nnz
+      irn(i) = int((ij(i)-1)/n) + 1
+      jcn(i) = mod(ij(i)-1,n) + 1
       val(i) = val_new(i)
     enddo
 
-    deallocate(ij_new,new_ind,val_new)
-    nnz = nnz_new
+    deallocate(ij,new_ind,val_new)
 
   end subroutine remove_duplicates
 

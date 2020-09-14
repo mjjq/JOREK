@@ -1,5 +1,8 @@
 !> JOREK 2.0 -- Solves the (reduced) MHD equations in 3D toroidal geometry.
 !!
+!! By using this code, you accept the code license available at:
+!! https://www.jorek.eu/JOREK-license.pdf
+!!
 !! - solvers implemented:
 !!   - MUMPS
 !!   - PastiX
@@ -16,7 +19,7 @@
 !!   - LAPACK, BLAS
 !!   - PPPLIB
 !!
-!! @author Guido Huysmans (Euratom / CEA Association)
+!! @author Guido Huysmans (Euratom / CEA Association) and the whole JOREK Team
 !! @date 18-7-2008
 program JOREK2
 
@@ -153,7 +156,7 @@ program JOREK2
   real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   real*8,allocatable       :: res(:) 
-  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev
+  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev, n_since_update
   logical                  :: is_local, file_exists
   integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
@@ -674,7 +677,7 @@ required = 0
     if (my_id == 0) then
           
       ! --- Update the status of the equilibrium
-      call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+      call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
       
       ! --- Set initial conditions for time-evolution
       call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)
@@ -787,7 +790,7 @@ required = 0
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
-  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+  call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
   if ( my_id == 0 ) then
     call print_equil_state(.true.)
     call save_special_points('special_equilibrium_points.dat', .false., ierr)
@@ -924,9 +927,10 @@ required = 0
   
   if (nstep > 0) call update_deltas(my_id, node_list) ! create list of delta values in local_matrix module
 
-  iter_gmres  = iter_precon
-  iter_big    = gmres_max_iter
-  iter_prev   = 0
+  iter_gmres     = iter_precon
+  iter_big       = gmres_max_iter
+  iter_prev      = 0
+  n_since_update = 0
 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
@@ -957,7 +961,7 @@ required = 0
     ! --- n_plane, n_var have to remain the same until the end of the program.
     call new_thread_buffers()
     
-    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+    call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
     if ( my_id == 0 ) call print_equil_state(.false.)
 
     ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
@@ -982,7 +986,12 @@ required = 0
       ! ... in the first step of a simulation (also when restarting)
       ! ... when tstep changes
       ! ... when the previous time steps took too many iterations
-      solve_only = (istep > 1) .and. (iter_gmres+iter_prev <= 2*iter_precon)
+      solve_only = (istep > 1) .and. ((iter_gmres+iter_prev <= 2*iter_precon) .or. (n_since_update > max_steps_noUpdate))
+      if (solve_only) then 
+        n_since_update = n_since_update + 1
+      else
+        n_since_update = 0
+      endif
       !if ( my_id == 0 ) write(*,*) 'solve_only: ', solve_only
     endif
     
@@ -1148,16 +1157,16 @@ required = 0
 
     if (gmres .and. adaptive_time) then        ! experimental
        if (iter_gmres .ge. iter_big) then
-    	  tstep = tstep /2.d0
-    	  write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
+          tstep = tstep /2.d0
+          write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
        elseif (max(abs(mindelta),abs(maxdelta)) .gt. 0.05) then
-    	  !	 tstep = tstep /2.d0
-    	  !	 iter_gmres = 99999
-    	  !	 write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
+          !	 tstep = tstep /2.d0
+          !	 iter_gmres = 99999
+          !	 write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
        elseif (max(abs(mindelta),abs(maxdelta)) .lt. 0.001) then
-    	  !	 tstep = tstep * 2.d0
-    	  !	 iter_gmres = 99999
-    	  !	 write(*,*) my_id,' INCREASE TIMESTEP : ',tstep
+          !	 tstep = tstep * 2.d0
+          !	 iter_gmres = 99999
+          !	 write(*,*) my_id,' INCREASE TIMESTEP : ',tstep
        endif
     endif
 
@@ -1166,9 +1175,15 @@ required = 0
 
        call energy(node_list,element_list,W_mag,W_kin)
 
-       R_axis_t(index_now)   = ES%R_axis
-       Z_axis_t(index_now)   = ES%Z_axis
-       psi_axis_t(index_now) = ES%psi_axis
+       R_axis_t(index_now)       = ES%R_axis
+       Z_axis_t(index_now)       = ES%Z_axis
+       psi_axis_t(index_now)     = ES%psi_axis
+       R_xpoint_t(index_now,:)   = ES%R_xpoint(:)
+       Z_xpoint_t(index_now,:)   = ES%Z_xpoint(:)
+       psi_xpoint_t(index_now,:) = ES%psi_xpoint(:)
+       R_bnd_t(index_now)        = ES%R_bnd
+       Z_bnd_t(index_now)        = ES%Z_bnd
+       psi_bnd_t(index_now)      = ES%psi_bnd
 
        xtime(index_now) = t_now
        energies(1:n_tor,1,index_now) = W_mag(1:n_tor)
@@ -1233,7 +1248,7 @@ required = 0
       call write_live_data4(index_now)
 #endif
 #endif
-endif
+    endif
 
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
@@ -1265,6 +1280,21 @@ endif
       end if
       exit jstep_loop
     end if
+
+    ! --- Redo LU decomposition if a file "REDO_LU" exists in the run directory.
+    inquire(file='REDO_LU', exist=file_exists)
+    if ( file_exists ) then
+      if ( my_id == 0 ) then
+        write(*,*)
+        write(*,*) '>>>>> FOUND FILE REDO_LU: NEXT STEP DO AN LU DECOMPOSITION <<<<<'
+        write(*,*)
+        open(42, file='REDO_LU', iostat=ierr)
+        if ( ierr == 0 ) close(42, status='delete')
+      end if
+      iter_prev  = iter_precon + 1
+      iter_gmres = iter_precon + 1
+    end if
+
 
     ! --- Exit the code if SIGTERM has been called on any node
     call MPI_ALLReduce(sigterm_called(), to_quit, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, ierr)

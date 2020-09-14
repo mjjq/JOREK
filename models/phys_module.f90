@@ -32,7 +32,8 @@ module phys_module
   logical :: Wdia                 !< Include diamagnetic flows in viscosity terms? (see [[wdia|here]])
   logical :: U_sheath             !< Use Stangeby BCs for electric potential
   logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
-  real*8  :: gamma_sheath         !< sheath boundary condition on open fieldlines
+  real*8  :: gamma_sheath         !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
+  real*8  :: gamma_stangeby       !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
   real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
@@ -549,8 +550,9 @@ module phys_module
   logical             :: normalized_velocity_profile !< if true, reads the normalized velocity profile as flux function, else Omega_tor is read as flux function. 
   
   !> @name Global quantities determined in each time step
-  real*8, allocatable :: R_axis_t(:), Z_axis_t(:), psi_axis_t(:), current_t(:), beta_p_t(:),       &
-    beta_t_t(:), beta_n_t(:), density_in_t(:), density_out_t(:), pressure_in_t(:), &
+  real*8, allocatable :: R_axis_t(:), Z_axis_t(:), psi_axis_t(:), R_xpoint_t(:,:), Z_xpoint_t(:,:),           &
+    psi_xpoint_t(:,:), R_bnd_t(:), Z_bnd_t(:), psi_bnd_t(:),                                                  &
+    current_t(:), beta_p_t(:), beta_t_t(:), beta_n_t(:), density_in_t(:), density_out_t(:), pressure_in_t(:), &
     pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:),   &
     E_tot_t(:), Helicity_tot_t(:), Kin_perp_tot_t(:), thermal_tot_t(:), kin_par_tot_t(:), ohmic_tot_t(:),      &
     Wmag_tot_t(:), Ip_tot_t(:), flux_Pvn_t(:), flux_qpar_t(:), dE_tot_dt(:), flux_qperp_t(:), flux_kinpar_t(:), &
@@ -561,10 +563,11 @@ module phys_module
     dnpart_tot_dt(:), npart_tot_t(:), npart_flux_t(:), density_tot_t(:), flux_poynting_t(:)
 
   !> @name gmres parameters
-  integer             :: iter_precon    !< whenever the number of gmres iterations exceeds iter_precon, the preconditioning matrix is updated
-  integer             :: gmres_m        !< gmres restart parameter (dimension)
-  real*8              :: gmres_4        !< see gmres manual (error ratio between preconditioned and non-preconditioned error)
-  real*8              :: gmres_tol      !< the tolerance for the gmres iterations to be seen as converged
+  integer             :: iter_precon        !< whenever the number of gmres iterations exceeds iter_precon, the preconditioning matrix is updated
+  integer             :: max_steps_noUpdate !< whenever the steps without preconditioning matrix update exceeds max_steps_noUpdate, the preconditioning matrix is updated
+  integer             :: gmres_m            !< gmres restart parameter (dimension)
+  real*8              :: gmres_4            !< see gmres manual (error ratio between preconditioned and non-preconditioned error)
+  real*8              :: gmres_tol          !< the tolerance for the gmres iterations to be seen as converged
 
   !> @name Taylor-Galerkin Stabilisation coefficients
   real*8              :: tgnum(n_var)   !< Coefficients for Taylor Galerkin stabilization for each equation separately

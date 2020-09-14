@@ -34,12 +34,15 @@ contains
     use data_structure
     use vacuum, ONLY: is_freebound
     use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
-       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,  &
-       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min, mach_one_bnd_integral, &
+       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,            &
+       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min,                                             &
+       mach_one_bnd_integral, Vpar_smoothing, vpar_smoothing_coef,                                         &
        Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
+    use mod_basisfunctions
+    use mod_interp
 
     implicit none
 
@@ -77,10 +80,11 @@ contains
 
   ! Internal parameters
   real*8  :: zbig, zbig_backup,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
-  real*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
+  real*8  :: R_s, R_t, Z, Z_s, Z_t, R_tt, Z_tt, ps0, ps0_s, ps0_t, ps0_tt, ps0_x, ps0_y, direction, xjac
   real*8  :: Btot, alpha, dT0_dt, dVpar0_dt, dBigR_dt, R_inside, Z_inside
-  real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y
-  integer :: i, in, iv, inode, k, index_tmp
+  real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y, element_size_0, element_size_2, element_size_perp
+  real*8  :: H1(2,2), H1_s(2,2), H1_ss(2,2)
+  integer :: i, in, iv, iv2, inode, inode2, k, index_tmp
   integer :: index_large_i, index_node, index_node2, ielm
   integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, kn, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
   integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT
@@ -92,10 +96,14 @@ contains
   real*8  :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
   real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
   real*8  :: R_mid, Z_mid, R_center, Z_center, direction2, normal(2), normal_direction(2), grad_s(2), grad_t(2)
+  real*8  :: factor, factor_t, c_1, c_2, c_3, bn, cs0, cs0_T, cs0_TT, dl, dl_dt, bn_t, bn_t_abs, hfact_t
   integer :: ilarge_vp, ilarge_vp2
   integer :: kp, j, err, itest, i_mid, i_bnd, inode_m, inode_p
   integer :: n_rmp_harm, N_rmp_har_block_size
 
+  real*8  :: R_out, Z_out, s_elm, t_elm, QR,QR_s,QR_t,QR_st,QR_ss,QR_tt,QZ,QZ_s,QZ_t,QZ_st,QZ_ss,QZ_tt
+  real*8  :: QPs0,QPs0_s,QPs0_t,QPs0_st,QPs0_ss,QPs0_tt
+  integer :: ifail, i_elm
 
   RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
   
@@ -145,6 +153,7 @@ contains
 
   zbig = 1.d12
   zbig_backup = zbig
+
      do i=1, n_local_elms !===============================do elements
 
         ielm = local_elms(i)
@@ -156,7 +165,7 @@ contains
         enddo
         if (i_bnd .lt. 2) cycle           
 
-        i_mid = 0.d0; R_mid = 0.d0; Z_mid = 0.d0; R_center = 0.d0; Z_center = 0.d0
+        i_mid = 0; R_mid = 0.d0; Z_mid = 0.d0; R_center = 0.d0; Z_center = 0.d0
 
         do iv=1, n_vertex_max !==========================do vertex
           inode = element_list%element(ielm)%vertex(iv)
@@ -190,9 +199,13 @@ contains
              if (node_list%node(inode_p)%boundary .eq. 0) then 
                R_center = node_list%node(inode_p)%x(1,1)
                Z_center = node_list%node(inode_p)%x(1,2)
+               iv2 = mod(iv+2,4) + 1                                  ! the index of the other boundary vertex
+               inode2 = inode_m
              elseif (node_list%node(inode_m)%boundary .eq. 0) then 
                R_center = node_list%node(inode_m)%x(1,1)
                Z_center = node_list%node(inode_m)%x(1,2)
+               iv2 = mod(iv  ,4) + 1                                  ! the index of the other boundary vertex
+               inode2 = inode_p
              endif
 
              normal_direction = (/R_mid - R_center, Z_mid - Z_center /) / norm2((/R_mid - R_center, Z_mid - Z_center /))
@@ -616,26 +629,67 @@ contains
 
                          if ( (k .eq. 7) .and. (.not. mach_one_bnd_integral) ) then
 
+                            call basisfunctions1(0.d0, H1, H1_s, H1_ss)
+
+                            if ( (iv.eq.1) .or. (iv .eq.2)) then
+                              element_size_0 =   element_list%element(ielm)%size(iv ,3) * H1_s(1,2)  ! this is a boundary along t
+                            else
+                              element_size_0 = - element_list%element(ielm)%size(iv ,3) * H1_s(1,2)  ! this is a boundary along t
+                            endif
+
+                            if (iv*iv2 .eq. 6) then
+                              element_size_perp = - element_list%element(ielm)%size(iv,2) * H1_s(1,2)
+                            else
+                              element_size_perp = + element_list%element(ielm)%size(iv,2) * H1_s(1,2)
+                            endif
+
                             index_node  = node_list%node(inode)%index(1)             ! position of value
                             index_node2 = node_list%node(inode)%index(3)             ! position of first deriative
 
                             T0        = max(node_list%node(inode)%values(1,1,6), T_min)
                             Vpar0     = node_list%node(inode)%values(1,1,7)
                             BigR      = node_list%node(inode)%x(1,1)
-                            dT0_dt    = node_list%node(inode)%values(1,3,6)
-                            dVpar0_dt = node_list%node(inode)%values(1,3,7)
-                            dBigR_dt  = node_list%node(inode)%x(3,1)
 
-                            ps0_s     = node_list%node(inode)%values(1,2,1)
-                            ps0_t     = node_list%node(inode)%values(1,3,1)
+                            dT0_dt    = node_list%node(inode)%values(1,3,6) * element_size_0 
+                            dVpar0_dt = node_list%node(inode)%values(1,3,7) * element_size_0 
+                            dBigR_dt  = node_list%node(inode)%x(3,1)        * element_size_0
 
-                            U0_s      = node_list%node(inode)%values(1,2,2)
-                            U0_t      = node_list%node(inode)%values(1,3,2)
+                            ps0       = node_list%node(inode)%values(1,1,1)
+                            ps0_s     = node_list%node(inode)%values(1,2,1) * element_size_perp
+                            ps0_t     = node_list%node(inode)%values(1,3,1) * element_size_0
 
-                            R_s       = node_list%node(inode)%x(2,1)
-                            R_t       = node_list%node(inode)%x(3,1)
-                            Z_s       = node_list%node(inode)%x(2,2)
-                            Z_t       = node_list%node(inode)%x(3,2)
+                            U0_s      = node_list%node(inode)%values(1,2,2) * element_size_perp
+                            U0_t      = node_list%node(inode)%values(1,3,2) * element_size_0   
+
+                            R_s       = node_list%node(inode)%x(2,1) * element_size_perp
+                            R_t       = node_list%node(inode)%x(3,1) * element_size_0    
+                            Z_s       = node_list%node(inode)%x(2,2) * element_size_perp
+                            Z_t       = node_list%node(inode)%x(3,2) * element_size_0    
+                            Z         = node_list%node(inode)%x(1,2)
+                            
+                            ps0_tt = element_list%element(ielm)%size(iv ,1) * node_list%node(inode)%values(1,1,1)  * H1_ss(1,1) &
+                                   + element_list%element(ielm)%size(iv ,3) * node_list%node(inode)%values(1,3,1)  * H1_ss(1,2) &
+                                   + element_list%element(ielm)%size(iv2,1) * node_list%node(inode2)%values(1,1,1) * H1_ss(2,1) &
+                                   + element_list%element(ielm)%size(iv2,3) * node_list%node(inode2)%values(1,3,1) * H1_ss(2,2)
+
+                            R_tt = + element_list%element(ielm)%size(iv ,1) * node_list%node(inode )%x(1,1) * H1_ss(1,1)  &
+                                   + element_list%element(ielm)%size(iv ,3) * node_list%node(inode )%x(3,1) * H1_ss(1,2)  &
+                                   + element_list%element(ielm)%size(iv2,1) * node_list%node(inode2)%x(1,1) * H1_ss(2,1)  &
+                                   + element_list%element(ielm)%size(iv2,3) * node_list%node(inode2)%x(3,1) * H1_ss(2,2)  
+
+                            Z_tt = + element_list%element(ielm)%size(iv ,1) * node_list%node(inode )%x(1,2) * H1_ss(1,1)  &
+                                   + element_list%element(ielm)%size(iv ,3) * node_list%node(inode )%x(3,2) * H1_ss(1,2)  &
+                                   + element_list%element(ielm)%size(iv2,1) * node_list%node(inode2)%x(1,2) * H1_ss(2,1)  &
+                                   + element_list%element(ielm)%size(iv2,3) * node_list%node(inode2)%x(3,2) * H1_ss(2,2)  
+                            
+!                            call find_RZ(node_list, element_list, BigR, Z, R_out, Z_out, i_elm, s_elm, t_elm, ifail)
+!                            call interp_RZ_2(node_list,element_list,i_elm,s_elm,t_elm,QR,QR_s,QR_t,QR_st,QR_ss,QR_tt,QZ,QZ_s,QZ_t,QZ_st,QZ_ss,QZ_tt)
+!                            call interp(node_list,element_list,i_elm,1,1,s_elm, t_elm, QPs0,QPs0_s,QPs0_t,QPs0_st,QPs0_ss,QPs0_tt)
+!                            if (ielm .eq. i_elm) then
+!                              write(112,'(3i8,20e14.6)') ielm,i_elm,iv,s_elm,t_elm,Qps0,ps0,Qps0_s,ps0_s, Qps0_t,ps0_t, Qps0_tt, ps0_tt
+!                              write(113,'(3i8,20e14.6)') ielm,i_elm,iv,s_elm,t_elm,QR,bigR,QR_s,R_s, QR_t,R_t, QR_tt, R_tt
+!                              write(114,'(3i8,20e14.6)') ielm,i_elm,iv,s_elm,t_elm,QZ,Z,QZ_s,Z_s, QZ_t,Z_t, QZ_tt, Z_tt
+!                            endif
 
                             xjac  =  R_s*Z_t - R_t*Z_s
                             ps0_x = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
@@ -646,64 +700,79 @@ contains
 
                             grad_s = (/  Z_t,  - R_t /) / xjac
                           
-                            normal     = dot_product(grad_s,normal_direction) * grad_s      ! outward pointing normal
-                            normal     = normal / norm2(normal)
-                            direction  = sign(1.d0,dot_product((/ps0_y,-ps0_x/),normal))
+                            normal    = dot_product(grad_s,normal_direction) * grad_s      ! outward pointing normal
+                            normal    = normal / norm2(normal)
+                            direction = sign(1.d0,dot_product((/ps0_y,-ps0_x/),normal))
                             
                             grad_psi = sqrt(ps0_x**2 + ps0_y**2)
+                            Btot     = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
+                            dl       = sqrt(R_t**2 + Z_t**2)
 
-                            Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
+                            dl_dt    = (R_t*R_tt + Z_t*Z_tt) / dl
 
-!                            if (in .eq. 1) then                              
-!                             write(*,'(i3,A,3e14.6,A,e14.6)') node_list%node(inode)%boundary, &
-!                                                               ' Boundary (t): ',Vpar0, -BigR**2 * u0_t/ps0_t, direction*sqrt(GAMMA*T0)/Btot,&
-!                                                               ' error : ',Vpar0 - BigR**2 * u0_t/ps0_t - direction*sqrt(GAMMA*T0)/Btot
-!                            endif
+                            cs0    =   sqrt(gamma*T0)
+                            cs0_T  =   0.5d0  * gamma    / cs0
+                            cs0_TT = - 0.25d0 * gamma**2 / cs0**2 
+
+                            bn     = dot_product( (/ps0_y,-ps0_x/), normal ) /  (BigR*Btot)  ! B·n/Btot
+!                            bn     = ps0_t/(BigR*Btot*dl)
+                            bn_t   = 1.d0 / (Btot*dl*BigR) * (ps0_tt - ps0_t * dl_dt /dl )
+
+                            c_1 = vpar_smoothing_coef(1); c_2 = vpar_smoothing_coef(2); c_3 = vpar_smoothing_coef(3)
+
+                            if (vpar_smoothing) then
+                               if (c_2 .gt. 0d0) then
+                                 factor    = 0.25d0 * ( 1.d0 + tanh( (abs(bn) - c_1) / c_2 ) )**2 - c_3
+                                 factor_t  = 0.5d0  * ( 1.d0 + tanh( (abs(bn) - c_1) / c_2 ) )           & 
+                                           * (bn_t * bn/abs(bn) /c_2) /(cosh( (abs(bn) - c_1) / c_2 ) )**2
+                                else
+                                  factor    = tanh(bn/c_1)
+                                  factor_t  = bn_t /c_1 / cosh(bn/c_1)**2
+                                  direction = 1.d0                            
+                                endif                       
+                            else
+                              factor   = 1.d0
+                              factor_t = 0.d0
+                            endif
+
+                            Hfact_t   = factor * R_t / BigR  + factor_t
+
+ !                           if ((in .eq. 1) .and. (node_list%node(inode)%boundary .eq. 5)) then                              
+ !                            write(111,'(6i8,A,3e14.6,A,20e14.6)') node_list%node(inode)%boundary, ielm, inode, iv, inode2, iv2, &
+ !                                                              ' Boundary (t): ',Vpar0, -BigR**2 * u0_t/ps0_t, factor*direction*sqrt(GAMMA*T0)/Btot,&
+ !                                                              ' error : ',Vpar0 - BigR**2 * u0_t/ps0_t - factor*direction*sqrt(GAMMA*T0)/Btot                                                               
+ !                           endif
 
                             ku = 2
                             kv = 7
                             kT = 6
-                            call boundary_conditions_add_one_entry(   &
-                                 index_node, kv, in,                  &
-                                 index_node, kv, in,                  &
-                                 zbig, solve_only, gmres,             &
-                                 index_min, index_max,                & 
-                                 ijA_index, ijA_size, irn_jcn,        & 
-                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
+                            call boundary_conditions_add_one_entry(             &
+                                 index_node, kv, in, index_node, kv, in,        &
+                                 zbig,                                          &
+                                 solve_only, gmres, index_min, index_max,       & 
+                                 ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                            call boundary_conditions_add_one_entry(   &
-                                 index_node, kv, in,                  &
-                                 index_node, kT, in,                  &
-                                 - zbig / Btot * 0.5d0 * GAMMA /      &
-                                 sqrt(GAMMA*T0) * direction,          &
-                                 solve_only, gmres,                   &
-                                 index_min, index_max,                & 
-                                 ijA_index, ijA_size, irn_jcn,        & 
-                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
+                            call boundary_conditions_add_one_entry(             &
+                                 index_node, kv, in, index_node, kT, in,        &
+                                 - zbig * factor / Btot * cs0_T * direction,    &
+                                 solve_only, gmres, index_min, index_max,       & 
+                                 ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                            call boundary_conditions_add_one_entry(   &
-                                 index_node,  kv, in,                 &
-                                 index_node2, ku, in,                 &
-                                 - zbig * BigR**2 / ps0_t,            &
-                                 solve_only, gmres,                   &
-                                 index_min, index_max,                & 
-                                 ijA_index, ijA_size, irn_jcn,        & 
-                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
+                            call boundary_conditions_add_one_entry(             &
+                                 index_node,  kv, in, index_node2, ku, in,      &
+                                 - zbig * factor * BigR**2 * element_size_0 / ps0_t,   &
+                                 solve_only, gmres, index_min, index_max,       & 
+                                 ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
                                if (in .eq. 1) then
-                                  call boundary_conditions_add_RHS(       &
-                                       index_node, kv, in,                &
-                                       index_min, index_max,              &
-                                       RHS_loc,                           &
-                                       Zbig * ( - Vpar0 + BigR**2 * U0_t  &
-                                       /ps0_t + direction*sqrt(GAMMA*T0)  &
-                                       / Btot),                           &
+                                  call boundary_conditions_add_RHS(                      &
+                                       index_node, kv, in,index_min, index_max, RHS_loc, &
+                                       Zbig * ( - Vpar0 + factor*(BigR**2 * U0_t/ps0_t + cs0 * direction) / Btot), &
                                        i_tor_min, i_tor_max)
                                else
-                                  call boundary_conditions_add_RHS(       &
-                                       index_node, kv, in,                &
-                                       index_min, index_max,              &
-                                       RHS_loc, 0.d0,                     &
+                                  call boundary_conditions_add_RHS(                       &
+                                       index_node, kv, in, index_min, index_max, RHS_loc, &
+                                       0.d0,                                              &
                                        i_tor_min, i_tor_max)
 
                                endif
@@ -713,52 +782,41 @@ contains
                             kv = 7
                             kT = 6
 
-                            call boundary_conditions_add_one_entry(   &
-                                 index_node2, kv, in,                 &
-                                 index_node2, kv, in,                 &
-                                 zbig, solve_only, gmres,             &
-                                 index_min, index_max,                & 
-                                 ijA_index, ijA_size, irn_jcn,        & 
-                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
+                            call boundary_conditions_add_one_entry(               &
+                                   index_node2, kv, in, index_node2, kv, in,      &
+                                   zbig * element_size_0,                         &
+                                   solve_only, gmres, index_min, index_max,       & 
+                                   ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                            call boundary_conditions_add_one_entry(                          &
-                                 index_node2, kv, in,                                        &
-                                 index_node2, kT, in,                                        &
-                                 - zbig / Btot * 0.5d0 * GAMMA / sqrt(GAMMA*T0) * direction, &
-                                 solve_only, gmres,                                          &
-                                 index_min, index_max,                                       & 
-                                 ijA_index, ijA_size, irn_jcn,                               & 
-                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
+                            call boundary_conditions_add_one_entry(               &
+                                   index_node2, kv, in, index_node2, kT, in,      &
+                                   - zbig * element_size_0 * factor / Btot * cs0_T * direction,    &
+                                   solve_only, gmres, index_min, index_max,       & 
+                                   ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                            call boundary_conditions_add_one_entry(                                          &
-                                 index_node2, kv, in,                                                        &
-                                 index_node,  kT, in,                                                        &
-                                 + zbig / Btot * 0.25d0 * GAMMA**2 / (GAMMA*T0)**(3/2) * dT0_dt * direction, &
-                                 solve_only, gmres,                                                          &
-                                 index_min, index_max,                                                       & 
-                                 ijA_index, ijA_size, irn_jcn,                                               & 
-                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
+                            call boundary_conditions_add_one_entry(               &
+                                   index_node2, kv, in, index_node,  kT, in,      &
+                                   - zbig * factor  / Btot * cs0_TT * dT0_dt * direction  &
+                                   - zbig * Hfact_t / Btot * cs0_T           * direction, & 
+                                   solve_only, gmres, index_min, index_max,       & 
+                                   ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-                               if (in .eq. 1) then
-                                  call boundary_conditions_add_RHS(                  &
-                                       index_node2, kv, in,                          &
-                                       index_min, index_max,                         &
-                                       RHS_loc,                                      &
-                                       Zbig*(-dVpar0_dt +  0.5d0 / Btot *            &
-                                       GAMMA / sqrt(GAMMA*T0) * dT0_dt * direction), &
-                                       i_tor_min, i_tor_max)
-                               else
-                                  call boundary_conditions_add_RHS(                  &
-                                       index_node2, kv, in,                          &
-                                       index_min, index_max,                         &
-                                       RHS_loc, 0.d0,                                &
-                                       i_tor_min, i_tor_max)
+                            if (in .eq. 1) then
+                              call boundary_conditions_add_RHS(                    &
+                                     index_node2, kv, in, index_min, index_max, RHS_loc,              &
+                                     Zbig*(-dVpar0_dt + factor  / Btot * cs0_T * dT0_dt * direction   &
+                                                      + Hfact_t / Btot * cs0            * direction), &
+                                     i_tor_min, i_tor_max)
+                            else
+                               call boundary_conditions_add_RHS(                   &
+                                     index_node2, kv, in, index_min, index_max, RHS_loc, &
+                                     0.d0,                                         &
+                                     i_tor_min, i_tor_max) 
+                            endif
 
-                               endif
+                       endif
 
-                       end if
-
-                    end if
+                    endif
 
 
 

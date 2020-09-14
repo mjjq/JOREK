@@ -78,9 +78,11 @@ subroutine read_num_profiles(my_id)
   ! --- Special case for F-profile in model710:
   ! --- If there is no F-profile, we create one by integrating the FF' function numerically
   num_Fprofile = ( Fprofile_file /= 'none' )
-  if ( num_Fprofile .and. ( my_id == 0 ) .and. (jorek_model /= 710) ) then
+  if ( num_Fprofile .and. ( my_id == 0 ) ) then
     write(*,*)'*** WARNING ***'
-    write(*,*)'*** numerical Fprofile profiles only implemented for model710!'
+    write(*,*)'*** numerical Fprofile profiles are not allowed by default'
+    write(*,*)'*** in order to avoid confusion with the normalisation of'
+    write(*,*)'*** the profile with respect to (psi_bnd-psi_axis)'
     write(*,*)'*** Aborting...'
     stop
   endif

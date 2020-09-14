@@ -315,6 +315,7 @@ pure subroutine mode_moivre(phi,HZ)
   integer :: i
   HZ(1) = 1.d0
   if (n_mode .gt. 0) then
+  
     HZ(2) = cos(n_period*phi)
     HZ(3) = sin(n_period*phi)
 

@@ -40,7 +40,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 tokamak_device, manipulate_psi_map,                 &
-                F0, gamma,                                          &
+                F0, gamma, gamma_stangeby,                          &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef, T_min,                        &
@@ -149,8 +149,14 @@ if (my_id .eq. 0) then
     endif    
     CLOSE(244)
   endif
-  !=========================================
   
+  ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
+  if (gamma_stangeby > -1.d89) then
+    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0)
+  else
+    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 )
+  end if
+
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
   else

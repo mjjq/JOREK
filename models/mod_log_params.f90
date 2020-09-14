@@ -556,6 +556,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'central_density       ', central_density
   write(*,REAL_FMT) 'central_mass          ', central_mass
   write(*,REAL_FMT) 'gamma_sheath          ', gamma_sheath
+  write(*,REAL_FMT) 'gamma_stangeby        ', gamma_stangeby
   write(*,LOGI_FMT) 'bc_natural_open       ', bc_natural_open
   write(*,LOGI_FMT) 'produce_live_data     ', produce_live_data
   write(*,LOGI_FMT) 'export_for_nemec      ', export_for_nemec

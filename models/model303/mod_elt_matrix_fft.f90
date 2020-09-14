@@ -260,6 +260,9 @@ endif
 
 do i=1,n_vertex_max
   do j=1,n_order+1
+#if _OPENMP >= 201511
+ !$OMP SIMD collapse(2)
+#endif
     do ms=1, n_gauss
       do mt=1, n_gauss
 
@@ -285,7 +288,11 @@ do i=1,n_vertex_max
     do ms=1, n_gauss
       do mt=1, n_gauss
         do k=1,n_var
+
           do in=1,n_tor
+#if _OPENMP >= 201511
+           !$OMP SIMD
+#endif
             do mp=1,n_plane
               eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ(in,mp)
               eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
@@ -374,6 +381,45 @@ do i=1,n_vertex_max
 
         eps_cyl = 1.d0          ! for cylinder geometry : epscyl = eps
 
+#if _OPENMP >= 201511
+! Variables that are part of the PRIVATE clause are uninitialized at the beginnig of the
+! OpenMP construct. (Each thread starts with its own uninitialized copy).
+! To keep the initial value that was set before entering the OpenMP constuct, one would
+! need to use the FIRSTPRIVATE clause.
+!
+!$OMP SIMD private(ps0, ps0_x, ps0_y, ps0_p, ps0_s, ps0_t, ps0_ss, ps0_tt, ps0_st, &
+!$OMP  u0, u0_x, u0_y, u0_p, u0_s, u0_t, u0_ss, u0_tt, u0_st, vv2, zj0, zj0_x, zj0_y, zj0_p, zj0_s, zj0_t, &
+!$OMP  vt0, Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, w0, w0_x, w0_y, w0_p, w0_s, w0_t, w0_ss, w0_tt, w0_st, &
+!$OMP  r0, r0_x, r0_y, r0_p, r0_s, r0_t, r0_ss, r0_tt, r0_st, r0_corr, r0_hat, r0_x_hat, r0_y_hat, &
+!$OMP  t0, t0_x, t0_y, t0_p, t0_s, t0_t, t0_ss, t0_tt, t0_st, t0_corr, &
+!$OMP  vpar0, vpar0_x, vpar0_y, vpar0_p, vpar0_s, vpar0_t, vpar0_ss, vpar0_tt, vpar0_st, &
+!$OMP  P0, P0_x, P0_y, P0_p, P0_s, P0_t, P0_ss, P0_tt, P0_st, &
+!$OMP  ps0_xx, ps0_yy, ps0_xy, w0_xx, w0_yy, w0_xy, r0_xx, r0_yy, r0_xy, T0_xx, T0_yy, T0_xy, vpar0_xx,&
+!$OMP  vpar0_yy, vpar0_xy, P0_xx, P0_yy, P0_xy, T0_ps0_x, T0_ps0_y, u0_xx, u0_yy, u0_xy, delta_u_x, &
+!$OMP  delta_u_y, delta_ps_x, delta_ps_y, eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, d2visco_dT2, &
+!$OMP  eta_T_ohm, deta_dT_ohm, amat_63, &
+!$OMP  ZKpar_T, dZKpar_dT, W_dia, eta_num_T, visco_num_T, psi_norm, D_prof, ZK_prof, phi, delta_phi,&
+!$OMP  source_pellet, source_volume, index_ij, v, v_x, v_y, v_s, v_t, v_p, v_ss, v_tt, v_st, v_xx, v_yy, &
+!$OMP  v_xy, Bgrad_rho_star, Bgrad_rho_k_star, Bgrad_rho, Bgrad_T_star, Bgrad_T_k_star, Bgrad_T, BB2, &
+!$OMP  Btheta2, v_ps0_x, v_ps0_y, rhs_ij_1, rhs_ij_2, rhs_ij_3, rhs_ij_4, rhs_ij_5, rhs_ij_5_k,&
+!$OMP  rhs_ij_6, rhs_ij_6_k, rhs_ij_7, rhs_ij_7_k, psi, psi_x, psi_y, psi_p, psi_s, psi_t, psi_ss, psi_tt,&
+!$OMP  psi_st, psi_xx, psi_yy, psi_xy, u, zj, w, rho, T, vpar, u_x, zj_x, w_x, rho_x, T_x, vpar_x, u_y, &
+!$OMP  zj_y, w_y, rho_y, T_y, vpar_y, u_p, zj_p, w_p, rho_p, T_p, vpar_p, u_s, zj_s, w_s, rho_s, T_s, &
+!$OMP  vpar_s,  u_t, zj_t, w_t, rho_t, T_t, vpar_t, u_ss, zj_ss, w_ss, rho_ss, T_ss, vpar_ss, u_tt, zj_tt, &
+!$OMP  w_tt, rho_tt, T_tt, vpar_tt, u_st, zj_st, w_st, rho_st, T_st, vpar_st, u_xx, w_xx, rho_xx, T_xx, &
+!$OMP  vpar_xx, u_yy, w_yy, rho_yy, T_yy, vpar_yy, u_xy, w_xy, rho_xy, T_xy, vpar_xy, rho_hat, rho_x_hat, &
+!$OMP  rho_y_hat, Btheta2_psi, Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_rho_rho_n, BB2_psi, &
+!$OMP  P0_x_rho, P0_xx_rho, P0_y_rho, P0_yy_rho, P0_xy_rho, P0_x_T, P0_xx_T, P0_y_T, P0_yy_T, P0_xy_T, &
+!$OMP  W_dia_rho, W_dia_T, Vt_x_psi, Vt_y_psi, Omega_tor_x_psi, Omega_tor_y_psi, amat_11, amat_12, &
+!$OMP  amat_12_n, amat_13, amat_15, amat_15_n, amat_16, amat_16_n, amat_21, amat_22, amat_23, amat_23_n, &
+!$OMP  amat_24, amat_25, amat_26, amat_27, amat_33, amat_31, amat_44, amat_42, amat_51, amat_51_k, &
+!$OMP  amat_51_n, amat_52, amat_55, amat_55_k, amat_55_n, amat_55_kn, amat_56, amat_57, amat_57_k, &
+!$OMP  amat_57_n, Bgrad_T_star_psi, Bgrad_T_psi, Bgrad_T_T, Bgrad_T_T_n, T_ps0_x, T_ps0_y, T0_psi_x, &
+!$OMP  T0_psi_y, v_psi_x, v_psi_y, amat_61, amat_61_k, amat_62, amat_65, amat_65_n, amat_65_k, amat_65_kn, &
+!$OMP  amat_66, amat_66_k, amat_66_n, amat_66_kn, amat_67, amat_67_k, amat_67_n, amat_71, amat_71_k, &
+!$OMP  amat_72, amat_75, amat_75_k, amat_75_n, amat_76, amat_76_n, amat_77, amat_77_k, amat_77_n, &
+!$OMP  amat_77_kn, k,l, index_kl, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3,kl4, kl5,kl6,kl7)
+#endif
         do mp = 1, n_plane
 
           ps0    = eq_g(mp,1,ms,mt)

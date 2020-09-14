@@ -559,7 +559,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'gamma_stangeby        ', gamma_stangeby
   write(*,LOGI_FMT) 'vpar_smoothing        ', vpar_smoothing
   if ( vpar_smoothing ) then
-    write(*,REAL_FMT) 'vpar_smoothing_coeff  ', vpar_smoothing_coeff(:)
+    write(*,REAL_FMT) 'vpar_smoothing_coef   ', vpar_smoothing_coef(:)
   end if
   write(*,LOGI_FMT) 'bc_natural_open       ', bc_natural_open
   write(*,LOGI_FMT) 'produce_live_data     ', produce_live_data

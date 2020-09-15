@@ -152,9 +152,6 @@ if (my_id == 0) then
 write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
 #ifdef USE_COMPLEX_PRECOND
   write(*,*) 'on'
-  write(*,LOGI_FMT) 'use_mumps_eq             ', use_mumps_eq
-  write(*,LOGI_FMT) 'use_pastix_eq            ', use_pastix_eq
-  write(*,LOGI_FMT) 'use_strumpack_eq         ', use_strumpack_eq  
 #else
   write(*,*) 'off'
 #endif 
@@ -582,6 +579,9 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,LOGI_FMT) 'use_wsmp              ', use_wsmp
   write(*,LOGI_FMT) 'use_pastix            ', use_pastix
   write(*,LOGI_FMT) 'use_strumpack         ', use_strumpack  
+  write(*,LOGI_FMT) 'use_mumps_eq          ', use_mumps_eq
+  write(*,LOGI_FMT) 'use_pastix_eq         ', use_pastix_eq
+  write(*,LOGI_FMT) 'use_strumpack_eq      ', use_strumpack_eq  
   write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot
   write(*,INTG_FMT) 'pastix_maxthrd        ', pastix_maxthrd

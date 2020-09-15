@@ -36,7 +36,7 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fi
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &P);
   MPI_Query_thread(&thread_level);
-  if (thread_level != MPI_THREAD_FUNNELED && rank == 0)
+  if (thread_level < MPI_THREAD_FUNNELED && rank == 0)
     std::cout << "MPI implementation does not support MPI_THREAD_FUNNELED"
               << std::endl;
 

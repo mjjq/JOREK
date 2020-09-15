@@ -122,6 +122,7 @@ module strumpack_module
         logical :: upd=.false., dflag=.false.
         
         integer :: rank, ncpu, nnzloc, nloc, i, j, indx=1
+        integer, allocatable :: irn_tmp(:), jcn_tmp(:)
 
         if(present(update)) upd = update
         if(present(distributed)) dflag = distributed
@@ -207,7 +208,6 @@ module strumpack_module
           call remove_duplicates(n,nnz,irn,jcn,val)
 #endif
           call convert2csr(indx,n,n,nnz,irn,jcn,val)
-
           call spk_set_mat(n,dist,irn,jcn,val,spss,comm,upd)
 
         endif

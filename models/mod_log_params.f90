@@ -152,6 +152,9 @@ if (my_id == 0) then
 write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
 #ifdef USE_COMPLEX_PRECOND
   write(*,*) 'on'
+  write(*,LOGI_FMT) 'use_mumps_eq             ', use_mumps_eq
+  write(*,LOGI_FMT) 'use_pastix_eq            ', use_pastix_eq
+  write(*,LOGI_FMT) 'use_strumpack_eq         ', use_strumpack_eq  
 #else
   write(*,*) 'off'
 #endif 

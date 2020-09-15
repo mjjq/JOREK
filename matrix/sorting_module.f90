@@ -1,4 +1,7 @@
 module sorting_module
+!> Contains subroutines to sort (in continuos ij index) 
+!  and remove duplicates from the sparse matrix as needed for STRUMPACK solver
+
   use iso_c_binding
   implicit none
   private
@@ -9,6 +12,7 @@ module sorting_module
 
 interface
   subroutine qsort(array,elem_count,elem_size,compare) bind(C,name="qsort")
+  !> Interface to C-function qsort
     import
     type(c_ptr),value       :: array
     integer(c_size_t),value :: elem_count
@@ -28,42 +32,40 @@ contains
   end function compar
 
   subroutine unique_sorted(list,n)
+  !> Sort and remove duplicates from 1D list
+  ! replace list with uniquelly sorted entries; return number of unique elements
+
     implicit none
     integer,intent(inout) :: n
     integer(kind=INTSIZE), allocatable, intent(inout), target :: list(:)
-    integer(kind=INTSIZE), allocatable :: dum(:)
     logical,allocatable :: duplicates(:)
     integer(c_size_t) l,isize
-    integer :: i, j
+    integer :: i, j, m
 
     l = n; isize = INTSIZE
     call qsort(c_loc(list(1)),l,isize,c_funloc(compar))
 
     ! removing duplicates
-    allocate(duplicates(n))
-    duplicates=.false.
-    !removes duplicates and zeros
+    allocate(duplicates(n)); duplicates=.false.
     duplicates(1:n)=list(1:n-1).eq.list(2:n)
-    j = 1
-    do i=1, n
-      if (.not.duplicates(i)) then
-        list(j) = list(i)
-        j = j + 1
-      endif
-    enddo
-    n = j - 1
-    !duplicates(1:n-1)=((list(1:n-1).eq.list(2:n)).or.(list(1:n).eq.0))
-    !write(*,*) n
-    !n = count(.not.duplicates)
-    !write(*,*) n
-    !allocate(dum(n))
-    !dum = pack(list(1:n),.not.duplicates)
-    !deallocate(list); allocate(list(size(dum)))
-    !list=dum
+
+    m = count(duplicates)
+    if (m.gt.0) then
+      j = 1
+      do i=1, n
+        if (.not.duplicates(i)) then
+          list(j) = list(i)
+          j = j + 1
+        endif
+      enddo
+      n = j - 1
+    endif
+    return
 
   end subroutine unique_sorted
 
   recursive function find_index(list,low,high,x) result(idx)
+  !> Find index of element x in the list
     integer, intent(in) :: low, high
     integer(kind=INTSIZE), intent(in) :: list(:), x
     integer :: mid
@@ -95,7 +97,7 @@ contains
   end function find_index
 
   subroutine remove_duplicates(n,nnz,irn,jcn,val)
-  ! sort and remove duplicates from sparse matrix
+  !> Sort and remove duplicates from sparse matrix
     use, intrinsic :: iso_c_binding
 
     integer, intent(in) :: n

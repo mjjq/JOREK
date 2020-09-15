@@ -1,5 +1,5 @@
+!> Set of subroutines for custom diagnistics
 module matio_module
-!> Subroutines for custom diagnistics
   use hdf5_io_module
   implicit none
 
@@ -10,9 +10,8 @@ module matio_module
 
   contains 
 
-
+!> Reads sparse matrix from HDF5 file
   subroutine read_matrix_h5(fname,n,nnz,rowptr,colptr,val,rhs)
-  !> Reads sparse matrix from HDF5 file       
     integer :: i,stat, ierr
     integer(HID_T) fid
 
@@ -53,9 +52,8 @@ module matio_module
     return
   end subroutine read_matrix_h5  
 
+!> Save sparse matrix into HDF5 file
   subroutine save_mat_h5(rank,n,nnz,irn,jcn,val,rhs)
-  !> Save sparse matrix into HDF5 file
-    
     integer :: rank,n,nnz,ierr
     integer(HID_T) fid
     CHARACTER(LEN=10)              :: fname
@@ -78,8 +76,8 @@ module matio_module
     
   end subroutine save_mat_h5  
 
+!> Saves 1D array into HDF5 file
   subroutine save_solution_h5(fname,n,x)
-  !> Saves 1D array into HDF5 file
       integer(HID_T) fid
       integer :: i,stat, ierr
       integer, intent(in) :: n
@@ -96,8 +94,8 @@ module matio_module
       return
   end subroutine save_solution_h5
 
+!> Saves SLURM_PROCID variable into file
   subroutine slurmid(rank)
-  !> Saves SLURM_PROCID variable into file
     character(len=12) :: envname="SLURM_PROCID"
     character(len=4) :: val
     integer :: rank
@@ -109,8 +107,8 @@ module matio_module
 
   end subroutine slurmid
 
+!> Saves timestamp and message into timeline file
   subroutine timestamp(msg,id)
-  !> Saves timestamp and message into timeline file
     character(len=*), intent(in) :: msg
     integer, intent(in), optional :: id
 

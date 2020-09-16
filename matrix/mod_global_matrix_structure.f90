@@ -269,8 +269,10 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
 
   nz = ijA_index(index_max-index_min+1,ijA_size(index_max-index_min+1)) + (n_tor_local*n_var)**2 - 1
   
-  if (.not. allocated(irn))  call tr_allocate(irn,1,nz,"irn",CAT_DMATRIX)
-  if (.not. allocated(jcn))  call tr_allocate(jcn,1,nz,"jcn",CAT_DMATRIX)
+  if (allocated(irn))  call tr_deallocate(irn,"irn",CAT_DMATRIX) 
+  call tr_allocate(irn,1,nz,"irn",CAT_DMATRIX)
+  if (allocated(jcn))  call tr_deallocate(jcn,"jcn",CAT_DMATRIX) 
+  call tr_allocate(jcn,1,nz,"jcn",CAT_DMATRIX)  
   
   irn = 0
   jcn = 0

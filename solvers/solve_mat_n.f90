@@ -1,5 +1,6 @@
 module solve_mat_n
   use phys_module, only: use_mumps, use_pastix, use_strumpack, use_wsmp
+  use matio_module, only: timestamp
   implicit none        
 
 contains
@@ -447,6 +448,7 @@ contains
               pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
               pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
 !              pastix_iparm(IPARM_BINDTHRD)   = API_NO
+              !if (my_id_n.eq.0) call timestamp("Reorder",my_id)
 #ifdef USE_BLOCK
               call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
                 mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
@@ -518,6 +520,7 @@ contains
           pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd
           pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK)   = API_TASK_NUMFACT
+          !if (my_id_n.eq.0) call timestamp("Factorize",my_id)
 #if defined(WORLDWAR2) && defined(CORES_PER_NODE)
           pastix_iparm(IPARM_BINDTHRD)   = API_BIND_TAB
 #endif
@@ -596,6 +599,7 @@ contains
         pastix_iparm(IPARM_START_TASK) = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
 !        pastix_iparm(IPARM_BINDTHRD)   = API_NO
+        !if (my_id_n.eq.0) call timestamp("Solve",my_id)
 #ifdef USE_BLOCK
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
 !             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
@@ -694,6 +698,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     use phys_module, only : index_now, centralize_harm_mat
 
     use strumpack_module
+    use matio_module, only :  save_mat_h5
   
     implicit none
 
@@ -770,6 +775,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
         call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
                 UPDATE=spss_analyzed,DISTRIBUTED=.false.)
+        !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
         
         if (n_cpu_n>1) then
           call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
@@ -793,11 +799,35 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       endif ! centralize_harm_mat
 
       if (.not. spss_analyzed) then
+        if (my_id_n.eq. 0) then                  ! elapsed time reorder start
+          call MPI_Barrier(MPI_COMM_MASTER,ierr)
+          call clck_time(t0)
+        endif
+              
+        !if (my_id_n.eq.0) call timestamp("Reorder",my_id)
         call strumpack_analyze(MPI_COMM_N)
         spss_analyzed = .true.
+        if (my_id_n .eq.0) then                  ! elapsed time reorder end
+          call MPI_Barrier(MPI_COMM_MASTER,ierr)
+          call clck_time(t1)
+          call clck_ldiff(t0,t1,tsecond)
+          write(*, FMT_TIMING) my_id,' ## Elapsed time, analysis :',tsecond
+        endif        
       endif
-
+      
+      if (my_id_n.eq. 0) then                   ! elapsed time factorization start
+      call MPI_Barrier(MPI_COMM_MASTER,ierr)
+          call clck_time(t0)
+        endif      
+      !if (my_id_n.eq.0) call timestamp("Factorize",my_id)
       call strumpack_factorize(MPI_COMM_N)
+      
+      if (my_id_n.eq.0) then                   ! elapsed time facto end
+        call MPI_Barrier(MPI_COMM_MASTER,ierr)
+        call clck_time(t1)
+        call clck_ldiff(t0,t1,tsecond)
+        write(*, FMT_TIMING) my_id,' ## Elapsed time, factorization :',tsecond
+      endif       
 
     endif ! .not. solve_only
     
@@ -814,7 +844,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     endif    
     
     call MPI_Barrier(MPI_COMM_N,ierr)
-    
+    !if (my_id_n.eq.0) call timestamp("Solve",my_id)
     call strumpack_solve(n,mumps_par%rhs,MPI_COMM_N)
     
     if (my_id_n .eq.0) then                            ! elapsed time solve end
@@ -823,7 +853,7 @@ subroutine solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
        call clck_ldiff(t0,t1,tsecond)
        write(*, FMT_TIMING) my_id,' ## Elapsed time, solve :',tsecond
        call clck_time(t0)
-    end if    
+    endif    
 
     if (my_id_n .eq. 0) then
 

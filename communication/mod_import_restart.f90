@@ -1748,9 +1748,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
           node_list%node(i)%values(m,:,9) = amplitude * node_list%node(i)%values(1,:,9)
 #endif
 #if (JOREK_MODEL == 710)
-          node_list%node(i)%values(j,:,var_AR)= amplitude * node_list%node(i)%values(1,:,var_AR)
-          node_list%node(i)%values(j,:,var_AZ)= amplitude * node_list%node(i)%values(1,:,var_AZ)
-          node_list%node(i)%values(j,:,var_A3)= amplitude * node_list%node(i)%values(1,:,var_A3)
+          node_list%node(i)%values(m,:,var_AR)= amplitude * node_list%node(i)%values(1,:,var_AR)
+          node_list%node(i)%values(m,:,var_AZ)= amplitude * node_list%node(i)%values(1,:,var_AZ)
+          node_list%node(i)%values(m,:,var_A3)= amplitude * node_list%node(i)%values(1,:,var_A3)
 #endif
           end if
         end do

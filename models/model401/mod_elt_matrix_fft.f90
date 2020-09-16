@@ -100,6 +100,15 @@ integer*8  :: plan
 
 integer    :: i_v, i_loc, j_loc
 
+!   -Ion-electron energy transfer
+real*8     :: nu_e_bg, lambda_e_bg, dTi_e, dTe_i
+real*8     :: dnu_e_bg_dTi, dnu_e_bg_dTe
+real*8     :: dnu_e_bg_drho, dnu_e_bg_drhon
+real*8     :: ddTi_e_dTi, ddTi_e_dTe, ddTi_e_drho, ddTi_e_drhon
+real*8     :: ddTe_i_dTi, ddTe_i_dTe, ddTe_i_drho, ddTe_i_drhon
+real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Electron temperature in eV
+real*8     :: ne_SI                                          ! Electron density in SI unit
+
 #define DIM1 n_plane
 #define DIM2 1:n_vertex_max*n_var*(n_order+1)
 
@@ -640,6 +649,62 @@ do i=1,n_vertex_max
 
           eta_num_T   = eta_num                         ! hyperresistivity
           visco_num_T = visco_num                       ! hyperviscosity
+
+   !--------------------------------------------------------
+   ! --- Ion-electron energy transfer
+   !--------------------------------------------------------
+
+          ! Te in eV:
+          Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+          dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
+
+          ne_SI          = r0_corr * 1.d20 * central_density ! electron density (SI)
+          if (ne_SI < 1.d16) ne_SI = 1.d16 ! To prevent absurd number in the coulomb lambda
+
+          lambda_e_bg  = 23. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.5)) ! Assuming bg_charge is 1! 
+          nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
+                         * (1.d14*central_density*r0_corr) * lambda_e_bg &
+                         / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
+                         / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
+      
+          if (nu_e_bg < 0.)  nu_e_bg  = 0.
+      
+          !Converting the energy transfer rate from s^-1 to JOREK unit
+          t_norm   = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+          nu_e_bg  = nu_e_bg * t_norm    
+      
+          dTe_i    = nu_e_bg * (Ti0_corr - Te0_corr)
+          dTi_e    = -dTe_i
+      
+          !Calculating the density and temperature derivative for amats
+          !We negelect the coulomb log's dericatives due to their smallness
+      
+          dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+          dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
+                            / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+
+          dnu_e_bg_drho   = nu_e_bg * dr0_corr_dn / r0_corr
+
+          ddTe_i_dTi      = dnu_e_bg_dTi * (Ti0_corr - Te0_corr) + nu_e_bg
+          ddTe_i_dTe      = dnu_e_bg_dTe * (Ti0_corr - Te0_corr) - nu_e_bg
+          ddTe_i_drhon    = (dnu_e_imp_drhon + dnu_e_bg_drhon) * (Ti0_corr - Te0_corr)
+          ddTe_i_drho     = (dnu_e_imp_drho + dnu_e_bg_drho) * (Ti0_corr - Te0_corr)
+      
+          ddTi_e_dTi      = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_dTi / (r0_corr+alpha_i*rn0_corr)
+          ddTi_e_dTe      = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_dTi / (r0_corr+alpha_i*rn0_corr) &
+                            -dTe_i * rn0_corr * dalpha_e_dT * dTe0_corr_dT / (r0_corr+alpha_i*rn0_corr) 
+          ddTi_e_drhon    = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_drhon / (r0_corr+alpha_i*rn0_corr) & 
+                            -dTe_i * (alpha_e-alpha_i) * r0_corr * drn0_corr_dn / (r0_corr+alpha_i*rn0_corr)**2
+          ddTi_e_drho     = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_drho  / (r0_corr+alpha_i*rn0_corr) &
+                            -dTe_i * (alpha_i-alpha_e) * rn0_corr * dr0_corr_dn / (r0_corr+alpha_i*rn0_corr)**2
+      
+          if (r0_corr+alpha_e*rn0_corr < 0.) then
+            dTi_e         = 0.
+            ddTi_e_dTi    = 0.
+            ddTe_i_dTe    = 0.
+            ddTi_e_drhon  = 0.
+            ddTi_e_drho   = 0.
+          end if
 
           psi_norm = get_psi_n( ps0, y_g(ms,mt))
 

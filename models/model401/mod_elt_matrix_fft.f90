@@ -351,6 +351,7 @@ do i=1,n_vertex_max
 
           r0    = eq_g(mp,var_rho,ms,mt)
           r0_corr = corr_neg_dens(r0)
+          dr0_corr_dn = dcorr_neg_dens_drho(r0)
           r0_x  = (   y_t(ms,mt) * eq_s(mp,var_rho,ms,mt) - y_s(ms,mt) * eq_t(mp,var_rho,ms,mt) ) / xjac
           r0_y  = ( - x_t(ms,mt) * eq_s(mp,var_rho,ms,mt) + x_s(ms,mt) * eq_t(mp,var_rho,ms,mt) ) / xjac
           r0_p  = eq_p(mp,var_rho,ms,mt)
@@ -687,25 +688,12 @@ do i=1,n_vertex_max
 
           ddTe_i_dTi      = dnu_e_bg_dTi * (Ti0_corr - Te0_corr) + nu_e_bg
           ddTe_i_dTe      = dnu_e_bg_dTe * (Ti0_corr - Te0_corr) - nu_e_bg
-          ddTe_i_drhon    = (dnu_e_imp_drhon + dnu_e_bg_drhon) * (Ti0_corr - Te0_corr)
-          ddTe_i_drho     = (dnu_e_imp_drho + dnu_e_bg_drho) * (Ti0_corr - Te0_corr)
+          ddTe_i_drho     = dnu_e_bg_drho * (Ti0_corr - Te0_corr)
       
-          ddTi_e_dTi      = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_dTi / (r0_corr+alpha_i*rn0_corr)
-          ddTi_e_dTe      = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_dTi / (r0_corr+alpha_i*rn0_corr) &
-                            -dTe_i * rn0_corr * dalpha_e_dT * dTe0_corr_dT / (r0_corr+alpha_i*rn0_corr) 
-          ddTi_e_drhon    = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_drhon / (r0_corr+alpha_i*rn0_corr) & 
-                            -dTe_i * (alpha_e-alpha_i) * r0_corr * drn0_corr_dn / (r0_corr+alpha_i*rn0_corr)**2
-          ddTi_e_drho     = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_drho  / (r0_corr+alpha_i*rn0_corr) &
-                            -dTe_i * (alpha_i-alpha_e) * rn0_corr * dr0_corr_dn / (r0_corr+alpha_i*rn0_corr)**2
+          ddTi_e_dTi      = -ddTe_i_dTi
+          ddTi_e_dTe      = -ddTe_i_dTi
+          ddTi_e_drho     = -ddTe_i_drho
       
-          if (r0_corr+alpha_e*rn0_corr < 0.) then
-            dTi_e         = 0.
-            ddTi_e_dTi    = 0.
-            ddTe_i_dTe    = 0.
-            ddTi_e_drhon  = 0.
-            ddTi_e_drho   = 0.
-          end if
-
           psi_norm = get_psi_n( ps0, y_g(ms,mt))
 
           ! --- Bootstrap current 
@@ -978,7 +966,9 @@ do i=1,n_vertex_max
                                  * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep  &
 
                        + zeta * v * r0  * delta_g(mp,6,ms,mt) * BigR                     * xjac &
-                       + zeta * v * Ti0 * delta_g(mp,5,ms,mt) * BigR                     * xjac
+                       + zeta * v * Ti0 * delta_g(mp,5,ms,mt) * BigR                     * xjac &
+                       ! Energy exchange term
+                       + v * BigR * dTi_e                                                * xjac * tstep                       
 
 
             rhs_ij_k(6) = - (ZKi_par_T-ZKi_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_Ti * xjac * tstep &
@@ -1076,7 +1066,9 @@ do i=1,n_vertex_max
                                  * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep  &
 
                        + zeta * v * r0  * delta_g(mp,8,ms,mt) * BigR                     * xjac &
-                       + zeta * v * Te0 * delta_g(mp,5,ms,mt) * BigR                     * xjac
+                       + zeta * v * Te0 * delta_g(mp,5,ms,mt) * BigR                     * xjac &
+                       ! Energy exchange term
+                       + v * BigR * dTe_i                                                * xjac * tstep
 
 
             rhs_ij_k(8) = - (ZKe_par_T-ZKe_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_Te * xjac * tstep &
@@ -1531,6 +1523,9 @@ do i=1,n_vertex_max
                             + v * rho * GAMMA * Ti0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)        * theta * tstep &
                             + v * rho * GAMMA * Ti0 * F0 / BigR * vpar0_p                 * xjac * theta * tstep &
 
+                            ! Energy exchange term
+                            - v * BigR * ddTi_e_drho * rho                                * xjac * theta * tstep &
+
                          + TG_num6 * 0.25d0 * BigR**2 * Ti0* (rho_x * u0_y - rho_y * u0_x)         &
                                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep         &
                          + TG_num6 * 0.25d0 * BigR**2 * rho * (Ti0_x * u0_y - Ti0_y * u0_x)        &
@@ -1571,6 +1566,9 @@ do i=1,n_vertex_max
 
                             + v * r0 * GAMMA * Ti * (vpar0_s * ps0_t - vpar0_t * ps0_s)      * theta * tstep &
                             + v * r0 * GAMMA * Ti * F0 / BigR * vpar0_p               * xjac * theta * tstep &
+
+                            ! Energy exchange term
+                            - v * BigR * ddTi_e_dTi * Ti                              * xjac * theta * tstep &
 
                             + v * Ti * F0 / BigR * Vpar0 * r0_p                       * xjac * theta * tstep &
 
@@ -1641,6 +1639,8 @@ do i=1,n_vertex_max
                                   * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep 
 
                   amat_n(6,7) = + v * r0 * GAMMA * Ti0 * F0 / BigR * vpar_p          * xjac * theta * tstep
+
+                  amat(6,8) = - v * BigR * ddTi_e_dTe * Te                           * xjac * theta * tstep
 
                   !###################################################################################################
                   !#  equation 7   (parallel velocity equation)                                                      #
@@ -1868,6 +1868,9 @@ do i=1,n_vertex_max
 
                             + v * rho * GAMMA * Te0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)        * theta * tstep &
                             + v * rho * GAMMA * Te0 * F0 / BigR * vpar0_p                 * xjac * theta * tstep &
+                            ! Energy exchange term
+                            - v * BigR * ddTe_i_drho * rho                                * xjac * theta * tstep &
+
 
                          + TG_num8 * 0.25d0 * BigR**2 * Te0* (rho_x * u0_y - rho_y * u0_x)         &
                                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep         &
@@ -1896,7 +1899,8 @@ do i=1,n_vertex_max
                   amat_kn(8,5) = + TG_num8 * 0.25d0 / BigR * vpar0**2                 &
                                    * Te0 * (+ F0 / BigR * rho_p)                      &
                                    * (      + F0 / BigR * v_p) * xjac * theta * tstep * tstep
-         
+
+                  amat(8,6) = - v * BigR * ddTe_i_dTi * Ti                            * xjac * theta * tstep
 
 
                   amat(8,8) = v * r0_corr * Te  * BigR * xjac * (1.d0 + zeta)     &
@@ -1912,6 +1916,9 @@ do i=1,n_vertex_max
                             + v * r0 * GAMMA * Te * F0 / BigR * vpar0_p               * xjac * theta * tstep &
 
                             + v * Te * F0 / BigR * Vpar0 * r0_p                       * xjac * theta * tstep &
+
+                            ! Energy exchange term
+                            - v * BigR * ddTe_i_dTe * Te                              * xjac * theta * tstep &
 
                             + (ZKe_par_T-ZKe_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Te_Te * xjac * theta * tstep &
                             + ZKe_prof * BigR * ( v_x*Te_x + v_y*Te_y )                      * xjac * theta * tstep &

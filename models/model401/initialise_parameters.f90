@@ -39,6 +39,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
+                R_Z_psi_bnd_file,                                   &
+                force_horizontal_Xline,                            &
                 n_pfc, manipulate_psi_map,                          &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
                 grid_to_wall, RZ_grid_inside_wall,                  &
@@ -48,7 +50,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Z_block_points_left,  Z_block_points_right,         &
                 tokamak_device,                                     &
                 F0,                                                 &
-                gamma_sheath_i, gamma_sheath_e, density_reflection, &
+                gamma_sheath_i, gamma_sheath_e,                     &
+                density_reflection,                                 &
                 mach_one_bnd_integral,                              &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
@@ -72,6 +75,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, SDN_threshold, D_perp_file, ZK_perp_file,    &
                 rho_file, T_file, Ti_file, Te_file, ffprime_file,   &
+                rot_file,                                           &
                 freeboundary_equil, freeboundary,  freeb_change_indices, &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
@@ -91,6 +95,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 edgeparticlesource, edgeparticlesource_psin,        &
                 edgeparticlesource_sig,                             &
                 particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_i, heatsource_gauss_e,             &
                 heatsource_gauss_psin, heatsource_gauss_sig,        &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
@@ -101,9 +106,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_limiter, R_limiter, Z_limiter,                    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
                 spi_tor_rot, tor_frequency,                         &
+                NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 D_prof_neg, ZK_prof_neg,                            &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 rho_min,                                            &
+                corr_neg_temp_coef,                                 &
+                corr_neg_dens_coef, D_prof_neg, ZK_prof_neg,      &  
                 ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &

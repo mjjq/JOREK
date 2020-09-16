@@ -419,6 +419,8 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
   write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig
   write(*,REAL_FMT) 'heatsource_gauss      ', heatsource_gauss
+  write(*,REAL_FMT) 'heatsource_gauss_e    ', heatsource_gauss_e
+  write(*,REAL_FMT) 'heatsource_gauss_i    ', heatsource_gauss_i
   write(*,REAL_FMT) 'heatsource_gauss_psin ', heatsource_gauss_psin
   write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
   write(*,REAL_FMT) 'tauIC                 ', tauIC
@@ -428,6 +430,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'visco_par_num         ', visco_par_num
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
   write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
+  write(*,REAL_FMT) 'rho_min               ', rho_min
   write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
   write(*,LOGI_FMT) 'keep_current_prof     ', keep_current_prof
@@ -556,6 +559,10 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'central_mass          ', central_mass
   write(*,REAL_FMT) 'gamma_sheath          ', gamma_sheath
   write(*,REAL_FMT) 'gamma_stangeby        ', gamma_stangeby
+  write(*,REAL_FMT) 'gamma_sheath_e        ', gamma_sheath_e
+!  write(*,REAL_FMT) 'gamma_stangeby_e      ', gamma_stangeby_e
+  write(*,REAL_FMT) 'gamma_sheath_i        ', gamma_sheath_i
+!  write(*,REAL_FMT) 'gamma_stangeby_i      ', gamma_stangeby_i
   write(*,LOGI_FMT) 'bc_natural_open       ', bc_natural_open
   write(*,LOGI_FMT) 'produce_live_data     ', produce_live_data
   write(*,LOGI_FMT) 'export_for_nemec      ', export_for_nemec

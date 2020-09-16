@@ -1118,8 +1118,8 @@ do ms=1, n_gauss
       dnu_e_bg_drhon = 0.
       dnu_e_bg_drho  = 0.
     else
-      dnu_e_bg_drhon = -nu_e_imp * drn0_corr_dn / (r0_corr-rn0_corr)
-      dnu_e_bg_drho  = nu_e_imp * dr0_corr_dn / (r0_corr-rn0_corr)
+      dnu_e_bg_drhon = -nu_e_bg * drn0_corr_dn / (r0_corr-rn0_corr)
+      dnu_e_bg_drho  = nu_e_bg * dr0_corr_dn / (r0_corr-rn0_corr)
     end if
 
     ddTe_i_dTi      = (dnu_e_imp_dTi + dnu_e_bg_dTi) * (Ti0_corr - Te0_corr) + nu_e_imp + nu_e_bg

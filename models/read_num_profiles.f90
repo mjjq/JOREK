@@ -83,6 +83,8 @@ subroutine read_num_profiles(my_id)
     write(*,*)'*** numerical Fprofile profiles are not allowed by default'
     write(*,*)'*** in order to avoid confusion with the normalisation of'
     write(*,*)'*** the profile with respect to (psi_bnd-psi_axis)'
+    write(*,*)'*** If you really want to use an F-profile, you will need'
+    write(*,*)'*** to normalise your F-profile as F_profile/(psi_bnd-psi_axis)'
     write(*,*)'*** Aborting...'
     stop
   endif

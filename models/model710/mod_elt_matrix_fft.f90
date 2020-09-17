@@ -328,9 +328,6 @@ delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
 Fprofile= 0.d0
 do i=1,n_vertex_max
   do j=1,n_order+1
-#if _OPENMP >= 201511
- !$OMP SIMD collapse(2)
-#endif
     do ms=1, n_gauss
       do mt=1, n_gauss
 
@@ -363,9 +360,6 @@ do i=1,n_vertex_max
         do k=1,n_var
 
           do in=1,n_tor
-#if _OPENMP >= 201511
-           !$OMP SIMD
-#endif
             do mp=1,n_plane
               ! --- store variables
               eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ(in,mp)
@@ -460,119 +454,6 @@ do i=1,n_vertex_max
         R = x_g(ms,mt)
         Z = y_g(ms,mt)
 
-#if _OPENMP >= 201511
-!!!#if 1 >= 2
-! Variables that are part of the PRIVATE clause are uninitialized at the beginnig of the
-! OpenMP construct. (Each thread starts with its own uninitialized copy).
-! To keep the initial value that was set before entering the OpenMP constuct, one would
-! need to use the FIRSTPRIVATE clause.
-!
-!$OMP SIMD private(k, l, index_ij, index_kl, ij, kl, &
-!$OMP  AR0,  AR0_R,  AR0_Z,  AR0_p,  AR0_s,  AR0_t, &
-!$OMP  AZ0,  AZ0_R,  AZ0_Z,  AZ0_p,  AZ0_s,  AZ0_t, &
-!$OMP  A30,  A30_R,  A30_Z,  A30_p,  A30_s,  A30_t, &
-!$OMP  UR0,  UR0_R,  UR0_Z,  UR0_p,  UR0_s,  UR0_t,  UR0_ss, UR0_st, UR0_tt, UR0_RR, UR0_ZZ, UR0_RZ, &
-!$OMP  UZ0,  UZ0_R,  UZ0_Z,  UZ0_p,  UZ0_s,  UZ0_t,  UZ0_ss, UZ0_st, UZ0_tt, UZ0_RR, UZ0_ZZ, UZ0_RZ, &
-!$OMP  Up0,  Up0_R,  Up0_Z,  Up0_p,  Up0_s,  Up0_t,  Up0_ss, Up0_st, Up0_tt, Up0_RR, Up0_ZZ, Up0_RZ, &
-!$OMP  rho0, rho0_R, rho0_Z, rho0_p, rho0_s, rho0_t, rho0_corr, &
-!$OMP  T0,   T0_R,   T0_Z,   T0_p,   T0_s,   T0_t,   T0_corr, &
-!$OMP  p0,   p0_R,   p0_Z,   p0_p,   p0_s,   p0_t,   p0_corr, &
-!$OMP  AR,  AR_R,  AR_Z,  AR_p,  AR_s,  AR_t, &
-!$OMP  AZ,  AZ_R,  AZ_Z,  AZ_p,  AZ_s,  AZ_t, &
-!$OMP  A3,  A3_R,  A3_Z,  A3_p,  A3_s,  A3_t, &
-!$OMP  UR,  UR_R,  UR_Z,  UR_p,  UR_s,  UR_t, UR_RR, UR_ZZ, &
-!$OMP  UZ,  UZ_R,  UZ_Z,  UZ_p,  UZ_s,  UZ_t, UZ_RR, UZ_ZZ, &
-!$OMP  Up,  Up_R,  Up_Z,  Up_p,  Up_s,  Up_t, Up_RR, Up_ZZ, &
-!$OMP  T,   T_R,   T_Z,   T_p,   T_s,   T_t, &
-!$OMP  rho, rho_R, rho_Z, rho_p, rho_s, rho_t, &
-!$OMP  v,  v_R,  v_Z,  v_s,  v_t,  v_p, &
-!$OMP  bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ, &
-!$OMP  Fprof, &
-!$OMP  BR0, BR0_AR,    BR0_AZ__n, BR0_A3, &
-!$OMP  BZ0, BZ0_AR__n, BZ0_AZ,    BZ0_A3, &
-!$OMP  Bp0, Bp0_AR,    Bp0_AZ,    Bp0_A3, &
-!$OMP  BB2, BB2_AR__p, BB2_AR__n, BB2_AZ__p, BB2_AZ__n, BB2_A3, &
-!$OMP  BgradT, BgradT_AR__p, BgradT_AR__n, BgradT_AZ__p, BgradT_AZ__n, BgradT_A3, BgradT_T__p, BgradT_T__n, &
-!$OMP  BgradRho, BgradRho_AR__p, BgradRho_AR__n, BgradRho_AZ__p, BgradRho_AZ__n, BgradRho_A3, BgradRho_rho__p, BgradRho_rho__n, &
-!$OMP  BgradVstar__p, BgradVstar__k, &
-!$OMP  BgradVstar_AR__p, BgradVstar_AR__k, BgradVstar_AR__n, &
-!$OMP  BgradVstar_AZ__p, BgradVstar_AZ__k, BgradVstar_AZ__n, &
-!$OMP  BgradVstar_A3__p, BgradVstar_A3__k, &
-!$OMP  UgradRho, UgradRho_UR, UgradRho_UZ, UgradRho_Up, UgradRho_rho__p, UgradRho_rho__n, &
-!$OMP  UgradT,   UgradT_UR,   UgradT_UZ,   UgradT_Up,   UgradT_T__p,     UgradT_T__n, &
-!$OMP  UgradVstar__p, UgradVstar__k, UgradVstar_UR, UgradVstar_UZ, UgradVstar_Up__k, &
-!$OMP  gradRho_gradVstar__p, gradRho_gradVstar__k, gradRho_gradVstar_rho__p, gradRho_gradVstar_rho__kn, &
-!$OMP  gradT_gradVstar__p,   gradT_gradVstar__k,   gradT_gradVstar_T__p,   gradT_gradVstar_T__kn, &
-!$OMP  gradBF_gradVstar__p, gradBF_gradVstar__kn, UgradBF__p, UgradBF__n, BgradBF__p, BgradBF__n, &
-!$OMP  UgradUR, UgradUR_UR__p, UgradUR_UR__n, UgradUR_UZ,    UgradUR_Up, &
-!$OMP  UgradUZ, UgradUZ_UR,    UgradUZ_UZ__p, UgradUZ_UZ__n, UgradUZ_Up, &
-!$OMP  UgradUp, UgradUp_UR,    UgradUp_UZ   , UgradUp_Up__p, UgradUp_Up__n, &
-!$OMP  divU, divU_UR, divU_UZ, divU_Up__n, &
-!$OMP  divRhoU, divRhoU_UR, divRhoU_UZ, divRhoU_Up__p, divRhoU_Up__n, divRhoU_rho__p, divRhoU_rho__n, &
-!$OMP  ZK_prof, D_prof, psi_norm, &
-!$OMP  eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, visco_divV, dvisco_divV_dT, &
-!$OMP  eta_num_T, eta_R, eta_Z, eta_p, Zkpar_T, dZKpar_dt, &
-!$OMP  eta_T_T, eta_R_T, eta_Z_T, eta_p_T__p, eta_p_T__n, &
-!$OMP  Qconv_UR, &
-!$OMP  Qconv_UR_UR__p,  Qconv_UR_UR__n, &
-!$OMP  Qconv_UR_UZ__p,  Qconv_UR_UZ__n, &
-!$OMP  Qconv_UR_Up__p,  Qconv_UR_Up__n, &
-!$OMP  Qconv_UR_rho__p, Qconv_UR_rho__n, &
-!$OMP  Qconv_UZ, &
-!$OMP  Qconv_UZ_UR__p,  Qconv_UZ_UR__n, &
-!$OMP  Qconv_UZ_UZ__p,  Qconv_UZ_UZ__n, &
-!$OMP  Qconv_UZ_Up__p,  Qconv_UZ_Up__n, &
-!$OMP  Qconv_UZ_rho__p, Qconv_UZ_rho__n, &
-!$OMP  Qconv_Up, &
-!$OMP  Qconv_Up_UR__p,  Qconv_Up_UR__n, &
-!$OMP  Qconv_Up_UZ__p,  Qconv_Up_UZ__n, &
-!$OMP  Qconv_Up_Up__p,  Qconv_Up_Up__n, &
-!$OMP  Qconv_Up_rho__p, Qconv_Up_rho__n, &
-!$OMP  JxB_UR__p, JxB_UR__k, &
-!$OMP  JxB_UZ__p, JxB_UZ__k, &
-!$OMP  JxB_Up__p, JxB_Up__k, &
-!$OMP  JxB_UR_AR__p, JxB_UR_AR__k, JxB_UR_AR__n, JxB_UR_AR__kn, &
-!$OMP  JxB_UZ_AR__p, JxB_UZ_AR__k, JxB_UZ_AR__n, JxB_UZ_AR__kn, &
-!$OMP  JxB_Up_AR__p, JxB_Up_AR__k, JxB_Up_AR__n, JxB_Up_AR__kn, &
-!$OMP  JxB_UR_AZ__p, JxB_UR_AZ__k, JxB_UR_AZ__n, JxB_UR_AZ__kn, &
-!$OMP  JxB_UZ_AZ__p, JxB_UZ_AZ__k, JxB_UZ_AZ__n, JxB_UZ_AZ__kn, &
-!$OMP  JxB_Up_AZ__p, JxB_Up_AZ__k, JxB_Up_AZ__n, JxB_Up_AZ__kn, &
-!$OMP  JxB_UR_A3__p, JxB_UR_A3__k, JxB_UR_A3__n, JxB_UR_A3__kn, &
-!$OMP  JxB_UZ_A3__p, JxB_UZ_A3__k, JxB_UZ_A3__n, JxB_UZ_A3__kn, &
-!$OMP  JxB_Up_A3__p, JxB_Up_A3__k, JxB_Up_A3__n, JxB_Up_A3__kn, &
-!$OMP  Qvisc_UR__p, Qvisc_UR__k, &
-!$OMP  Qvisc_UR_UR__p, Qvisc_UR_UR__k, Qvisc_UR_UR__n, Qvisc_UR_UR__kn, &
-!$OMP  Qvisc_UR_UZ__p, Qvisc_UR_UZ__k, Qvisc_UR_UZ__n, Qvisc_UR_UZ__kn, &
-!$OMP  Qvisc_UR_Up__p, Qvisc_UR_Up__k, Qvisc_UR_Up__n, Qvisc_UR_Up__kn, &
-!$OMP  Qvisc_UZ__p, Qvisc_UZ__k, &
-!$OMP  Qvisc_UZ_UR__p, Qvisc_UZ_UR__k, Qvisc_UZ_UR__n, Qvisc_UZ_UR__kn, &
-!$OMP  Qvisc_UZ_UZ__p, Qvisc_UZ_UZ__k, Qvisc_UZ_UZ__n, Qvisc_UZ_UZ__kn, &
-!$OMP  Qvisc_UZ_Up__p, Qvisc_UZ_Up__k, Qvisc_UZ_Up__n, Qvisc_UZ_Up__kn, &
-!$OMP  Qvisc_Up__p, Qvisc_Up__k, &
-!$OMP  Qvisc_Up_UR__p, Qvisc_Up_UR__k, Qvisc_Up_UR__n, Qvisc_Up_UR__kn, &
-!$OMP  Qvisc_Up_UZ__p, Qvisc_Up_UZ__k, Qvisc_Up_UZ__n, Qvisc_Up_UZ__kn, &
-!$OMP  Qvisc_Up_Up__p, Qvisc_Up_Up__k, Qvisc_Up_Up__n, Qvisc_Up_Up__kn, &
-!$OMP  QviscT0, &
-!$OMP  QviscT0_UR__p, QviscT0_UR__n, &
-!$OMP  QviscT0_UZ__p, QviscT0_UZ__n, &
-!$OMP  QviscT0_Up__p, QviscT0_Up__n, &
-!$OMP  QviscT0_T__p,  QviscT0_T__n, &
-!$OMP  Qvisc_T, &
-!$OMP  Qvisc_T_UR__p, Qvisc_T_UR__n, &
-!$OMP  Qvisc_T_UZ__p, Qvisc_T_UZ__n, &
-!$OMP  Qvisc_T_Up__p, Qvisc_T_Up__n, &
-!$OMP  Qvisc_T_T__p,  Qvisc_T_T__n, &
-!$OMP  VdotB, &
-!$OMP  CvR0, CvZ0, Cvp0, CvGradAR0, CvGradAZ0, CvGradA30, CvGradr0, CvGradT0, &
-!$OMP  VbR0, VbZ0, Vbp0, VbGradAR0, VbGradAZ0, VbGradA30, VbGradr0, VbGradT0, &
-!$OMP  CvGradUR0, CvGradUZ0, CvGradUp0, VbGradUR0, VbGradUZ0, VbGradUp0, &
-!$OMP  CvGradVi__p, VbGradVi__p, CvGradVi__k, VbGradVi__k, DiveRMVi, DiveZMVi, DivePMVi__k, &
-!$OMP  CvGradVj__p, CvGradVj__n, VbGradVj__p, VbGradVj__n, DiveRMVj, DiveZMVj, DivePMVj__n, &
-!$OMP  VmsCoefF, VmsCoefF_T, &
-!$OMP  QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, QvmsF_p, QvmsF_n, QvmsF_k, QvmsF_kn, &
-!$OMP  rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k, &
-!$OMP  amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn)
-#endif
         do mp = 1, n_plane
 
           ! --- AR

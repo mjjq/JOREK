@@ -15,7 +15,7 @@ subroutine find_wall_crossing(R_wall,Z_wall,n_wall,Rp,Zp,tht_p,Rw,Zw,Tw)
   integer, intent(in)  :: n_wall
   
   ! --- local variables
-  real*8  :: tan_p, tan12, PI, TWOPI, HALFPI
+  real*8  :: tan_p, tan12, PI, TWOPI, HALFPI, area
   integer :: k, my_id
   logical :: found
   
@@ -32,6 +32,12 @@ subroutine find_wall_crossing(R_wall,Z_wall,n_wall,Rp,Zp,tht_p,Rw,Zw,Tw)
   if (tht_p .gt. 1.5*PI)  tht_p = tht_p - TWOPI
   
   found = .false.
+
+!---- determine if wall points are clockwise or anti-clockwise
+  area = 0.d0           ! assumes a closed curve (first point equals last point)
+  do k=1,n_wall-1
+    area = area + (R_wall(k+1)-R_wall(k))*(Z_wall(k+1)+Z_wall(k))
+  enddo
   
   do k=1,n_wall-1
   
@@ -68,8 +74,12 @@ subroutine find_wall_crossing(R_wall,Z_wall,n_wall,Rp,Zp,tht_p,Rw,Zw,Tw)
   
     if (((Zw-Z_wall(k))*(Zw-Z_wall(k+1)) .le. 0.d0) .and. (((Rw-R_wall(k))*(Rw-R_wall(k+1)) .le. 0.d0))) then
 
-      Tw = atan2(Z_wall(k+1)-Z_wall(k),R_wall(k+1)-R_wall(k))
-
+      if (area .lt. 0) then
+        Tw = atan2(Z_wall(k+1)- Z_wall(k),  R_wall(k+1)- R_wall(k))
+      else
+        Tw = atan2(Z_wall(k)  - Z_wall(k+1),R_wall(k)  - R_wall(k+1))
+      endif
+   
       if (((tht_p .gt. -HALFPI) .and. (tht_p .le. HALFPI))    .and. (Rw .ge. Rp)) then
 
         found = .true.

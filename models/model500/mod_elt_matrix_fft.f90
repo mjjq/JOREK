@@ -37,7 +37,8 @@ integer, intent(in)            :: i_tor_min, i_tor_max
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS
 
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2, n_tor_loop
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
+integer    :: n_tor_start, n_tor_end, n_tor_local
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8, ij, kl
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi
 real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
@@ -85,7 +86,7 @@ real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
 real*8     :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
 real*8     :: dn_dpsi(n_gauss,n_gauss),dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
 real*8     :: dT_dpsi(n_gauss,n_gauss),dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
-logical    :: xpoint2
+logical    :: xpoint2, use_fft
 real*8     :: Btheta2, epsil, Btheta2_psi
 real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
 ! neutral source
@@ -161,15 +162,28 @@ TG_num1    = TGNUM(1); TG_num2    = TGNUM(2); TG_num5    = TGNUM(5); TG_num6    
 theta = time_evol_theta
 zeta  = time_evol_zeta
 
-! --- If we're doing the fft, don't loop...
-if (n_tor .ge. n_tor_fft_thresh) then
-  n_tor_loop  = 1
+! --- Do we need to use the FFT or non-FFT version?
+if ( (i_tor_min == 1) .and. (i_tor_max == n_tor) ) then
+  ! In case of global matrix construction:
+  use_fft = n_tor > n_tor_fft_thresh
 else
-  n_tor_loop  = n_tor
-endif
+  ! In case of "direct construction" of harmonic matrix never FFT:
+  use_fft = .false.
+end if
+
+if ( use_fft ) then
+  ! In case of FFT, don't loop over toroidal harmonics:
+  n_tor_start = 1
+  n_tor_end   = 1
+else
+  n_tor_start = i_tor_min
+  n_tor_end   = i_tor_max
+end if
+
+n_tor_local = n_tor_end - n_tor_start + 1
 
 ! --- Toroidal functions            
-if (n_tor .ge. n_tor_fft_thresh) then
+if (use_fft) then
   HHZ    = 1.d0
   HHZ_p  = 1.d0
   HHZ_pp = 1.d0
@@ -836,7 +850,7 @@ do i=1,n_vertex_max
 
 !--------------------------------------------------------
 
-          do im=1,n_tor_loop
+          do im=n_tor_start, n_tor_end
 
             v   =  H(i,j,ms,mt) * element%size(i,j) * HHZ(im,mp)
             v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac * HHZ(im,mp)
@@ -1131,15 +1145,15 @@ do i=1,n_vertex_max
             !#  RHS equations end                                                                                  #
             !###################################################################################################
 
-            if (n_tor .ge. n_tor_fft_thresh) then
+            if (use_fft) then
               index_ij =       n_var*(n_order+1)*(i-1) +       n_var*(j-1) + 1
             else
-              index_ij = n_tor*n_var*(n_order+1)*(i-1) + n_tor*n_var*(j-1) + im
+              index_ij = n_tor_local*n_var*(n_order+1)*(i-1) + n_tor_local * n_var * (j-1) + im - n_tor_start +1 
             endif
 
 
             ! --- Fill up the matrix
-            if (n_tor .ge. n_tor_fft_thresh) then
+            if (use_fft) then
               ij1 = index_ij
               ij2 = index_ij + 1
               ij3 = index_ij + 2
@@ -1164,13 +1178,13 @@ do i=1,n_vertex_max
               RHS_k(mp,ij8) = RHS_k(mp,ij8) + rhs_ij_k(8) * wst
             else
               ij1 = index_ij
-              ij2 = index_ij + 1*n_tor_loop
-              ij3 = index_ij + 2*n_tor_loop
-              ij4 = index_ij + 3*n_tor_loop
-              ij5 = index_ij + 4*n_tor_loop
-              ij6 = index_ij + 5*n_tor_loop
-              ij7 = index_ij + 6*n_tor_loop
-              ij8 = index_ij + 7*n_tor_loop
+              ij2 = index_ij + 1*n_tor_local
+              ij3 = index_ij + 2*n_tor_local
+              ij4 = index_ij + 3*n_tor_local
+              ij5 = index_ij + 4*n_tor_local
+              ij6 = index_ij + 5*n_tor_local
+              ij7 = index_ij + 6*n_tor_local
+              ij8 = index_ij + 7*n_tor_local
 
               RHS(ij1) = RHS(ij1) + (rhs_ij(1) + rhs_ij_k(1)) * wst
               RHS(ij2) = RHS(ij2) + (rhs_ij(2) + rhs_ij_k(2)) * wst
@@ -1186,7 +1200,7 @@ do i=1,n_vertex_max
 
               do l=1,n_order+1
 
-                do in = 1, n_tor_loop
+                do in = n_tor_start, n_tor_end
 
                   psi   = H(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
 
@@ -1982,14 +1996,14 @@ do i=1,n_vertex_max
                   !# end equations                                                                                   #
                   !###################################################################################################
 
-                  if (n_tor .ge. n_tor_fft_thresh) then
+                  if (use_fft) then
                     index_kl =       n_var*(n_order+1)*(k-1) +       n_var*(l-1) + 1
                   else
-                    index_kl = n_tor*n_var*(n_order+1)*(k-1) + n_tor*n_var*(l-1) + in
+                    index_kl = n_tor_local*n_var*(n_order+1)*(k-1) + n_tor_local*n_var*(l-1) + in - n_tor_start +1
                   endif
 
                   ! --- Fill up the matrix
-                  if (n_tor .ge. n_tor_fft_thresh) then
+                  if (use_fft) then
                     kl1 = index_kl
                     kl2 = index_kl + 1
                     kl3 = index_kl + 2
@@ -2109,8 +2123,8 @@ do i=1,n_vertex_max
 
                     do kl = 1, n_var
                       do ij = 1, n_var
-                        ELM(index_ij+(ij-1)*n_tor_loop,index_kl+(kl-1)*n_tor_loop) =       &
-                        ELM(index_ij+(ij-1)*n_tor_loop,index_kl+(kl-1)*n_tor_loop)         &
+                        ELM(index_ij+(ij-1)*n_tor_local,index_kl+(kl-1)*n_tor_local) =       &
+                        ELM(index_ij+(ij-1)*n_tor_local,index_kl+(kl-1)*n_tor_local)         &
                           + (amat(ij,kl) + amat_k(ij,kl) + amat_n(ij,kl) + amat_kn(ij,kl)) * wst
                       enddo
                     enddo
@@ -2130,7 +2144,7 @@ do i=1,n_vertex_max
     enddo ! mt loop
 
 
-    if (n_tor .ge. n_tor_fft_thresh) then
+    if (use_fft) then
 
       do i_v = 1, n_var
         do j_loc=1, n_vertex_max*n_var*(n_order+1)
@@ -2349,7 +2363,7 @@ do i=1,n_vertex_max
   enddo ! j loop (n_order+1)
 enddo ! i loop (n_vertex)
 
-if (n_tor .lt. n_tor_fft_thresh) return
+if (.NOT. use_fft) return
 
 ELM = 0.5d0 * ELM
 

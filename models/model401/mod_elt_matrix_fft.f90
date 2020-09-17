@@ -109,6 +109,7 @@ real*8     :: ddTi_e_dTi, ddTi_e_dTe, ddTi_e_drho, ddTi_e_drhon
 real*8     :: ddTe_i_dTi, ddTe_i_dTe, ddTe_i_drho, ddTe_i_drhon
 real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Electron temperature in eV
 real*8     :: ne_SI                                          ! Electron density in SI unit
+real*8     :: dr0_corr_dn
 
 #define DIM1 n_plane
 #define DIM2 1:n_vertex_max*n_var*(n_order+1)

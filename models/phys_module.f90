@@ -158,6 +158,8 @@ module phys_module
   real*8  :: heatsource_i              !< Ion heat source amplitude
   real*8  :: heatsource_e              !< Electron heat source amplitude
   real*8  :: heatsource_gauss          !< Additional Gaussian heat source amplitude
+  real*8  :: heatsource_gauss_e        !< Gaussian heat source for electrons
+  real*8  :: heatsource_gauss_i        !< Gaussiam heat source for ions
   real*8  :: heatsource_gauss_psin     !< Position around which Gaussian source is located
   real*8  :: heatsource_gauss_sig      !< Width over which Gaussian source extends
   

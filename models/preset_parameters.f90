@@ -52,7 +52,7 @@ subroutine preset_parameters
   freeb_change_indices = .true. ! exchange grid node indices to parallelize boundary integral
 
   bc_natural_flux    = .false.! boundary conditions for flux surface boundaries (2 and 3)
-  bc_natural_open    = .false.! use sheath (Bohm) boundary conditions
+  bc_natural_open    = .false. ! use sheath (Bohm) boundary conditions
 
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid) in the JOREK definition
   gamma_stangeby     = -1.d99 ! sheath transmission factor (single fluid) given by Stangeby
@@ -198,6 +198,8 @@ subroutine preset_parameters
   edgeparticlesource_psin = 0.98
   edgeparticlesource_sig  = 0.01
   heatsource_gauss          = 0.d0
+  heatsource_gauss_i        = 0.d0
+  heatsource_gauss_e        = 0.d0
   heatsource_gauss_psin     = 0.9d0
   heatsource_gauss_sig      = 0.1d0
   particlesource_gauss      = 0.d0

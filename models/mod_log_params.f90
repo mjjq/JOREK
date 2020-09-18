@@ -361,7 +361,7 @@ if (my_id == 0) then
     write(*,CHAR_FMT) 'T_file                ', trim(T_file)
   end if
 
-  if ( jorek_model == 400 ) then
+  if ( ( jorek_model == 400 ) .or. ( jorek_model == 401 ) ) then
     write(*,REAL_FMT) 'Te_0                   ', Te_0
     write(*,REAL_FMT) 'Te_1                   ', Te_1
     write(*,REAL_FMT) 'Te_coef                ', Te_coef(1:5)
@@ -382,6 +382,7 @@ if (my_id == 0) then
     write(*,REAL_FMT) 'heatsource_i           ', heatsource_i
     write(*,REAL_FMT) 'ZK_e_par               ', ZK_e_par
     write(*,REAL_FMT) 'ZK_i_par               ', ZK_i_par
+    write(*,LOGI_FMT) 'thermalization         ', thermalization
   end if
 
   if ( .not. num_ffprime ) then
@@ -697,9 +698,6 @@ if (my_id == 0) then
   write(*,200)
   write(*,REAL_FMT) 'sqrt(mu0*rho0)      ',  sqrt_mu0_rho0 
   write(*,REAL_FMT) 'sqrt(mu0/rho0)      ',  sqrt_mu0_over_rho0 
-
-  write(*,LOGI_FMT) 'thermalization      ',  thermalization
-
   write(*,*)
 
 end if

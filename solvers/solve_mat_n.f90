@@ -13,6 +13,7 @@
 !!   - Typical choices for production are PaStiX 5.x or STRUMPACK
 module solve_mat_n
   use phys_module, only: use_mumps, use_pastix, use_strumpack, use_wsmp
+  use matio_module, only: timestamp
   implicit none        
 
 
@@ -553,6 +554,7 @@ contains
               pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
               pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
 !              pastix_iparm(IPARM_BINDTHRD)   = API_NO
+              !if (my_id_n.eq.0) call timestamp("Reorder",my_id)
 #ifdef USE_BLOCK
 #ifndef USE_COMPLEX_PRECOND
               call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
@@ -637,6 +639,7 @@ contains
           pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd
           pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK)   = API_TASK_NUMFACT
+          !if (my_id_n.eq.0) call timestamp("Factorize",my_id)
 #if defined(WORLDWAR2) && defined(CORES_PER_NODE)
           pastix_iparm(IPARM_BINDTHRD)   = API_BIND_TAB
 #endif
@@ -756,6 +759,7 @@ contains
         pastix_iparm(IPARM_START_TASK) = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
 !        pastix_iparm(IPARM_BINDTHRD)   = API_NO
+        !if (my_id_n.eq.0) call timestamp("Solve",my_id)
 #ifdef USE_BLOCK
 #ifndef USE_COMPLEX_PRECOND
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
@@ -883,6 +887,7 @@ contains
     use phys_module, only : index_now, centralize_harm_mat
 
     use strumpack_module
+    use matio_module, only :  save_mat_h5
   
     implicit none
 
@@ -959,6 +964,7 @@ contains
 
         call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
                 UPDATE=spss_analyzed,DISTRIBUTED=.false.)
+        !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
         
         if (n_cpu_n>1) then
           call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
@@ -982,11 +988,35 @@ contains
       endif ! centralize_harm_mat
 
       if (.not. spss_analyzed) then
+        if (my_id_n.eq. 0) then                  ! elapsed time reorder start
+          call MPI_Barrier(MPI_COMM_MASTER,ierr)
+          call clck_time(t0)
+        endif
+              
+        !if (my_id_n.eq.0) call timestamp("Reorder",my_id)
         call strumpack_analyze(MPI_COMM_N)
         spss_analyzed = .true.
+        if (my_id_n .eq.0) then                  ! elapsed time reorder end
+          call MPI_Barrier(MPI_COMM_MASTER,ierr)
+          call clck_time(t1)
+          call clck_ldiff(t0,t1,tsecond)
+          write(*, FMT_TIMING) my_id,' ## Elapsed time, analysis :',tsecond
+        endif        
       endif
-
+      
+      if (my_id_n.eq. 0) then                   ! elapsed time factorization start
+      call MPI_Barrier(MPI_COMM_MASTER,ierr)
+          call clck_time(t0)
+        endif      
+      !if (my_id_n.eq.0) call timestamp("Factorize",my_id)
       call strumpack_factorize(MPI_COMM_N)
+      
+      if (my_id_n.eq.0) then                   ! elapsed time facto end
+        call MPI_Barrier(MPI_COMM_MASTER,ierr)
+        call clck_time(t1)
+        call clck_ldiff(t0,t1,tsecond)
+        write(*, FMT_TIMING) my_id,' ## Elapsed time, factorization :',tsecond
+      endif       
 
     endif ! .not. solve_only
     
@@ -1003,7 +1033,7 @@ contains
     endif    
     
     call MPI_Barrier(MPI_COMM_N,ierr)
-    
+    !if (my_id_n.eq.0) call timestamp("Solve",my_id)
     call strumpack_solve(n,mumps_par%rhs,MPI_COMM_N)
     
     if (my_id_n .eq.0) then                            ! elapsed time solve end
@@ -1012,7 +1042,7 @@ contains
        call clck_ldiff(t0,t1,tsecond)
        write(*, FMT_TIMING) my_id,' ## Elapsed time, solve :',tsecond
        call clck_time(t0)
-    end if    
+    endif    
 
     if (my_id_n .eq. 0) then
 

@@ -71,6 +71,7 @@ program JOREK2
 #ifdef USE_HDF5
   use hdf5
   use hdf5_io_module
+  use matio_module, only: timestamp
 #endif
   use mpi_mod
 
@@ -596,6 +597,7 @@ required = 0
 #endif
 
     ! --- Compute the plasma equilibrium
+    !if (my_id.eq.0) call timestamp("Equilibrium")
     if (equil) then
       call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
       if (export_for_nemec) then
@@ -1078,7 +1080,7 @@ required = 0
        call del_thread_buffers()
 
        call clck_time(t0)
-
+      !if (my_id.eq.0) call timestamp("solve_mat_n")
       if (use_strumpack) then 
 #ifdef USE_STRUMPACK
         call solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
@@ -1099,6 +1101,7 @@ required = 0
     if (gmres) then
       iter_prev = iter_gmres
       iter_gmres = gmres_max_iter
+      !if (my_id.eq.0) call timestamp("gmres")
       call gmres_driver(my_id,my_id_n,i_tor, n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
     endif
     call clck_time_barrier(t1)

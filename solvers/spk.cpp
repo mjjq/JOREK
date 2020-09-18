@@ -8,7 +8,10 @@
 #include <string>
 #include "hdf5.h"
 #include <math.h>
+
+#ifndef NOMKL
 #include "mkl_spblas.h"
+#endif
 
 #include "StrumpackSparseSolverMPIDist.hpp"
 #include "sparse/CSRMatrix.hpp"
@@ -33,7 +36,7 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fi
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &P);
   MPI_Query_thread(&thread_level);
-  if (thread_level != MPI_THREAD_FUNNELED && rank == 0)
+  if (thread_level < MPI_THREAD_FUNNELED && rank == 0)
     std::cout << "MPI implementation does not support MPI_THREAD_FUNNELED"
               << std::endl;
 
@@ -55,13 +58,12 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fi
   spss->options().set_maxit(200);  
   spss->options().set_gmres_restart(50);    
   spss->options().set_verbose(true);  
-//  spss->options().enable_HSS();
-//  spss->options().use_HSS();
-//  spss->options().set_HSS_min_sep_size(432);
+
+//  spss->options().set_compression(CompressionType::HSS);
+//  spss->options().set_compression_min_sep_size(512);
+//  spss->options().set_compression_min_front_size(1024);
 //  spss->options().HSS_options().set_rel_tol(1e-6);  
 //  spss->options().HSS_options().set_abs_tol(1e-10);  
-//  spss->options().enable_BLR();
-//  spss->options().use_BLR();  
 //  spss->options().BLR_options().set_rel_tol(1e-4);  
 //  spss->options().BLR_options().set_abs_tol(1e-8);    
 
@@ -218,6 +220,7 @@ extern "C" void spk_finalize(StrumpackSparseSolverMPIDist<double,int>** spss_,MP
 	return;
 }  
 //==========================================================================================//
+#ifndef NOMKL
 extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, int **jcn, double **val)
 {
   //int *rowptrE;
@@ -269,6 +272,37 @@ extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, 
 
   return;
 }  
+#else
+extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, int **jcn, double **val)
+{
+  int nc =*m_, nr=*n_, nnz=*nnz_, indx=*indx_;
+
+  std::vector<int> rptr(nr+1 ,0);
+
+  std::cout<<"rows = "<<nr<<" cols = "<<nc<<" nnz = "<<nnz<<std::endl;
+  if (nr>nnz+1){std::cout<<"Error: #rows > nnz+1"<<std::endl; return;}
+
+  std::chrono::steady_clock::time_point t0, t1;
+  t0 = std::chrono::steady_clock::now();
+
+  for (int i=0; i<nnz; i++){
+    rptr[(*irn)[i]+1-indx] += 1;
+  }
+
+  (*irn)[0]=0;
+  (*irn)[nr]= nnz;
+  for (int i=1; i<nr; i++){(*irn)[i]=rptr[i] + (*irn)[i-1];}
+  rptr.clear();
+
+  for (int i=0; i<nnz; i++){(*jcn)[i]-=indx;}
+
+  t1 = std::chrono::steady_clock::now();
+  std::cout<<"coo2csr (no-MKL) (s) = "<< std::chrono::duration_cast<
+			std::chrono::microseconds>(t1 - t0).count()*1e-6 << std::endl;
+
+  return;
+}
+#endif
 //=========================================================================================//
 // distribute n rows among P ranks
 int* distribute(int n, int P){

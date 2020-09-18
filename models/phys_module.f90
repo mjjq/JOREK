@@ -600,6 +600,9 @@ module phys_module
   real*8  :: JJ_par             ! velocity of resonent electrons
   real*8  :: jw1,jw2,jw3        ! parameters to determine current source
 
+  !> @name Flag for thermalization term
+  logical             :: thermalization ! If true turns on the ion-electron thermalization term
+
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral

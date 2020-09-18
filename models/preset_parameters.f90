@@ -439,4 +439,8 @@ subroutine preset_parameters
   jw2=1.d0  ! outer cut-off
   jw3=1.d0  ! outer cut-off
 
+!===================== Thermalization flag========
+
+  thermalization = .true.
+
 end subroutine preset_parameters

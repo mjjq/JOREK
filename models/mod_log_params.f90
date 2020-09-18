@@ -698,6 +698,8 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'sqrt(mu0*rho0)      ',  sqrt_mu0_rho0 
   write(*,REAL_FMT) 'sqrt(mu0/rho0)      ',  sqrt_mu0_over_rho0 
 
+  write(*,LOGI_FMT) 'thermalization      ',  thermalization
+
   write(*,*)
 
 end if

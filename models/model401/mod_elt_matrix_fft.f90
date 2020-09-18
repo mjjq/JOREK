@@ -1367,7 +1367,7 @@ do i=1,n_vertex_max
                               * (tauIC*(ps0_x*(r0_x*Ti+r0*Ti_x) + ps0_y*(r0_y*Ti+r0*Ti_y))                       &
                               + aki_neo_prof(ms,mt) *tauIC * r0 *(ps0_x*Ti_x + ps0_y*Ti_y)) * BigR * xjac * theta * tstep 
                     
-                    amat(2,7) = amat(2,7) + amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
+                    amat(2,7) = amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
                               * BigR * xjac * tstep * theta 
                   endif
 

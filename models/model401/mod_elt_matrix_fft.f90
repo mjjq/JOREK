@@ -707,7 +707,7 @@ do i=1,n_vertex_max
             ddTe_i_drho     = dnu_e_bg_drho * (Ti0_corr - Te0_corr)
         
             ddTi_e_dTi      = -ddTe_i_dTi
-            ddTi_e_dTe      = -ddTe_i_dTi
+            ddTi_e_dTe      = -ddTe_i_dTe
             ddTi_e_drho     = -ddTe_i_drho
           else
             dTe_i = 0.

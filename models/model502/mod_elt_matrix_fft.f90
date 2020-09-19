@@ -1142,7 +1142,7 @@ do ms=1, n_gauss
     ddTe_i_drho     = (dnu_e_imp_drho + dnu_e_bg_drho) * (Ti0_corr - Te0_corr)
 
     ddTi_e_dTi      = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_dTi / (r0_corr+alpha_i*rn0_corr)
-    ddTi_e_dTe      = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_dTi / (r0_corr+alpha_i*rn0_corr) &
+    ddTi_e_dTe      = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_dTe / (r0_corr+alpha_i*rn0_corr) &
                       -dTe_i * rn0_corr * dalpha_e_dT * dTe0_corr_dT / (r0_corr+alpha_i*rn0_corr)
     ddTi_e_drhon    = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_drhon / (r0_corr+alpha_i*rn0_corr) &
                       -dTe_i * (alpha_e-alpha_i) * r0_corr * drn0_corr_dn / (r0_corr+alpha_i*rn0_corr)**2

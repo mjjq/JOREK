@@ -99,6 +99,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 resistive_wall, SDN_threshold,                      &
                 wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
+                use_mumps_eq, use_pastix_eq, use_strumpack_eq,      &
                 use_mumps, mumps_ordering,                          &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_wsmp, n_tor_fft_thresh,             &

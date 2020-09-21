@@ -71,6 +71,7 @@ program JOREK2
 #ifdef USE_HDF5
   use hdf5
   use hdf5_io_module
+  use matio_module, only: timestamp
 #endif
   use mpi_mod
 
@@ -178,8 +179,8 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
-  integer :: nsolvers = 0
-  logical :: solvers(4)
+  integer :: nsolvers=0
+  logical :: solvers(4), solvers_eq(3)
  
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
@@ -256,7 +257,7 @@ required = 0
   ! --- GMRES makes no sense with n_tor=1
   if (n_tor == 1) then
     write(*,*) 'Remark: Setting gmres=.false. since n_tor=1'
-    gmres     = .false.
+    gmres     = .false. 
   end if
   
   ! --- Write out all parameters defined in parameters and the namelist input file.
@@ -266,7 +267,7 @@ required = 0
 
 
 #if (!defined (USE_PASTIX))&&(!defined (USE_PASTIX6))
-  if (use_pastix) then
+  if (use_pastix.or.use_pastix_eq) then
     write(*,*) ' FATAL : use_pastix requires defined USE_PASTIX or USE_PASTIX6'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
@@ -274,7 +275,7 @@ required = 0
 #endif
 
 #ifndef USE_MUMPS
-  if (use_mumps) then
+  if (use_mumps.or.use_mumps_eq) then
     write(*,*) ' FATAL : use_mumps requires defined USE_MUMPS'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
@@ -290,7 +291,7 @@ required = 0
 #endif
 
 #ifndef USE_STRUMPACK
-  if (use_strumpack) then
+  if (use_strumpack.or.use_strumpack_eq) then
     write(*,*) ' FATAL : use_strumpack requires defined USE_STRUMPACK'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
@@ -299,16 +300,31 @@ required = 0
   
   ! --- Check solver consistency
   solvers = (/use_mumps,use_pastix,use_wsmp,use_strumpack/)
+  nsolvers = 0
   do i=1,size(solvers)
     if (solvers(i)) nsolvers = nsolvers + 1
   enddo
-
-  if (nsolvers==0) then
+  if (nsolvers.eq.0) then
     write(*,*) ' FATAL : specify a valid solver'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
-    stop          
-  elseif (nsolvers>1) then
+    stop
+  elseif (nsolvers.gt.1) then
     write(*,*) ' FATAL : specify only one solver'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
+  
+  solvers_eq = (/use_mumps_eq,use_pastix_eq,use_strumpack_eq/)
+  nsolvers = 0
+  do i=1,size(solvers_eq)
+    if (solvers_eq(i)) nsolvers = nsolvers + 1
+  enddo
+  if (nsolvers.eq.0) then
+    write(*,*) ' FATAL : specify a valid equilibrium solver'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  elseif (nsolvers.gt.1) then
+    write(*,*) ' FATAL : specify only one equilibrium solver'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
   endif
@@ -581,6 +597,7 @@ required = 0
 #endif
 
     ! --- Compute the plasma equilibrium
+    !if (my_id.eq.0) call timestamp("Equilibrium")
     if (equil) then
       call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
       if (export_for_nemec) then
@@ -844,6 +861,7 @@ required = 0
        m_cpu = n_cpu
     endif
 
+
     !***********************************************************************
     !*  	  distribute nodes and elements over cpu's		   *
     !***********************************************************************
@@ -1020,6 +1038,7 @@ required = 0
          call clck_time(t0)
          ! --- Extract harmonic matrix from global matrix via MPI communication
          call distribute_harmonics(my_id,my_id_n,n_cpu)
+         call MPI_Barrier(MPI_COMM_WORLD,ierr)
          call clck_time_barrier(t1)
          call clck_ldiff(t0,t1,tsecond)
          if (my_id .eq. 0) then
@@ -1031,6 +1050,7 @@ required = 0
          ! --- Direct construction of harmonic matrix
          call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
               node_list, element_list, bnd_elm_list, xpoint, xcase, freeboundary, .true.)
+         call MPI_Barrier(MPI_COMM_WORLD,ierr)
          call clck_time_barrier(t1) 
 
          if (my_id .eq. 0) then
@@ -1041,6 +1061,7 @@ required = 0
          call clck_time_barrier(t0) 
          ! --- Centralize the harmonic matrix on the master task of the MPI group (if needed)
          call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
+         call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
          call clck_time_barrier(t1) 
 
@@ -1059,7 +1080,7 @@ required = 0
        call del_thread_buffers()
 
        call clck_time(t0)
-
+      !if (my_id.eq.0) call timestamp("solve_mat_n")
       if (use_strumpack) then 
 #ifdef USE_STRUMPACK
         call solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
@@ -1080,6 +1101,7 @@ required = 0
     if (gmres) then
       iter_prev = iter_gmres
       iter_gmres = gmres_max_iter
+      !if (my_id.eq.0) call timestamp("gmres")
       call gmres_driver(my_id,my_id_n,i_tor, n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
     endif
     call clck_time_barrier(t1)

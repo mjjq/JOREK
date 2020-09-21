@@ -3,7 +3,7 @@ module mod_parameters
 
   implicit none
 
-  integer, parameter :: jorek_model    = 400       !< JOREK physics model
+  integer, parameter :: jorek_model    = 401       !< JOREK physics model
 
   integer, parameter :: var_A3   = 0                       ! place of variable psi/mag pot 3               (ps or A3)
   integer, parameter :: var_AR   = 0                       ! place of variable mag pot  1                  (AR)

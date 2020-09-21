@@ -565,9 +565,9 @@ real*8,                   intent(out) :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, 
 
 ! --- Local variables
 real*8  :: H(4,4), H_s(4,4), H_t(4,4), H_st(4,4), H_ss(4,4), H_tt(4,4)
-integer :: kv, iv, kf
+integer :: kv, iv
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
-real*8  :: sizes(n_order+1), sum_R
+real*8  :: sizes(n_order+1)
 
 call basisfunctions_T(s,t,H,H_s,H_t,H_st,H_ss,H_tt)
 

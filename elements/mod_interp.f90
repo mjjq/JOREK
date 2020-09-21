@@ -10,7 +10,6 @@ public :: interp_delta !< interp a specific harmonic in finite elements, of the 
 public :: interp_0 !< interp variable only, no derivatives at a specific position in domain
 public :: interp_0_delta !< interp variable only, no derivatives at a specific position in domain, of the deltas
 public :: interp_RZ !< Interpolate space only
-public :: interp_RZ_2 !< Interpolate space only
 public :: interp_PRZ !< interp variable + pos at values or deltas
 public :: sincosperiod_moivre, mode_moivre !< public for regtesting, used by interp_PRZ
 

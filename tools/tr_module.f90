@@ -184,6 +184,35 @@ contains
 #endif
   end subroutine tr_locvnorms
 
+  subroutine tr_locvnorms_cmplx(prefix,mat,nnz)
+    use mpi_mod
+    double complex, dimension(:) :: mat
+    character(len=*) :: prefix
+    INTEGER :: nnz
+#ifdef NORMTRACE
+    double complex  :: lnorms(1:3)
+    double complex  :: l1, l2, linf, absv
+    character(len=92) :: bufstring
+    INTEGER :: ierr
+    INTEGER :: i
+
+    l1 = COMPLEX(0._8,0._8)
+    l2 = COMPLEX(0._8,0._8)
+    linf = COMPLEX(0._8,0._8)
+    do i = 1, nnz
+       absv = abs(mat(i))
+       l2   = l2   + mat(i)*mat(i) 
+       l1   = l1   + absv
+       if (absv .gt. linf) linf = absv
+    end do
+    lnorms(1:3) = (/ l1, l2, linf /)
+    write(bufstring,'(A20,A4,1X,3E22.13)') trim(prefix), ":ln:", lnorms(1:3)
+    call tr_write(bufstring)
+#endif
+  end subroutine tr_locvnorms_cmplx
+
+
+
   !---------------------------------------- 
   ! Init target file in each processor
   !----------------------------------------

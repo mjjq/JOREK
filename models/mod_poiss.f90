@@ -10,7 +10,7 @@ use tr_module
 use data_structure
 use mumps_module
 use pastix_module
-use phys_module, only: amix, amix_freeb, use_pastix, use_mumps, use_strumpack
+use phys_module, only: amix, amix_freeb, use_pastix_eq, use_mumps_eq, use_strumpack_eq
 use vacuum_equilibrium, only: vacuum_equil
 use mod_coicsr
 use mpi_mod
@@ -344,7 +344,7 @@ endif
 
 if (my_id == 0) then
 #ifdef USE_MUMPS
-  if (use_mumps) then
+  if (use_mumps_eq) then
     mumps_par%n  = n_AA
   
     mumps_par%JOB = 6
@@ -359,7 +359,7 @@ if (my_id == 0) then
 #endif    
 
 #ifdef USE_STRUMPACK
-  if (use_strumpack) then
+  if (use_strumpack_eq) then
     call strumpack_init(MPI_COMM_SELF)
     call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_SELF)
     call strumpack_analyze(MPI_COMM_SELF)    
@@ -370,7 +370,7 @@ if (my_id == 0) then
 #endif
 
 #if defined USE_PASTIX  || defined USE_PASTIX6
-  if (use_pastix) then
+  if (use_pastix_eq) then
     if (allocated(sparskit_work)) deallocate(sparskit_work)
     allocate(sparskit_work(mumps_par%N + 1))
     call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
@@ -533,7 +533,7 @@ if (my_id == 0) then
 
 #endif
     call tr_print_memsize("PASTIX_For_Poisson")
-  endif ! use_pastix
+  endif ! use_pastix_eq
 #endif /* defined(USE_PASTIX) || defined(USE_PASTIX6) */
   
   call tr_debug_write("mumps_par%N",int(mumps_par%N))

@@ -42,6 +42,7 @@ integer            :: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
 character          :: buffer*80, lf*1, str1*12, str2*12
 character*12, allocatable :: scalar_names(:)
 logical :: psi_theta
+
 integer :: n_stride
 
 namelist /connecvtk_params/ psi_theta, n_turns, n_phi, ns, nt, n_stride, P_start, element_start_percent

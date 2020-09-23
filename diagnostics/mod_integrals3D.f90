@@ -160,7 +160,6 @@ integer*8  :: ion_i, ion_k, i_phi
 integer    :: spi_i
 real*8     :: ng_radius
 
-
 #ifndef NOMPIVERSION
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 n_cpu = max(n_cpu,1)
@@ -678,12 +677,9 @@ do ife = ife_min, ife_max
 
 #if (JOREK_MODEL == 501)
         P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
-#else
-        P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
-#endif
-#if (JOREK_MODEL == 501)
         D_tot  = D_tot  + (r0-rn0) * xjac * BigR * wst * delta_phi
 #else
+        P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
         D_tot  = D_tot  + r0 * xjac * BigR * wst * delta_phi
 #endif
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
@@ -798,12 +794,9 @@ do ife = ife_min, ife_max
         if ( get_psi_n(psi_as_coord, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
 #if (JOREK_MODEL == 501)
           D_int = D_int + (r0-rn0) * xjac * BigR * wst * delta_phi
+          P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
 #else	
           D_int = D_int + r0 * xjac * BigR * wst * delta_phi
-#endif
-#if (JOREK_MODEL == 501)
-          P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
-#else
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
 #endif
           C_intern = C_intern - zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
@@ -818,12 +811,9 @@ do ife = ife_min, ife_max
         else
 #if (JOREK_MODEL == 501)
           D_ext = D_ext + (r0-rn0) * xjac * BigR * wst * delta_phi
-#else
-          D_ext = D_ext + r0 * xjac * BigR * wst * delta_phi
-#endif
-#if (JOREK_MODEL == 501)
           P_ext = P_ext + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
 #else
+          D_ext = D_ext + r0 * xjac * BigR * wst * delta_phi
           P_ext = P_ext + r0   * T0  * xjac * BigR * wst * delta_phi
 #endif
           C_ext = C_ext - zj0 / BigR * xjac *        wst * delta_phi  ! 2D integral

@@ -81,7 +81,6 @@ real*8     :: E_ion, Lrad, E_ion_bg
 integer*8  :: ion_i, ion_k, i_phi
 #endif
 
-
 write(*,*) '***************************************'
 write(*,*) '* Integrals                           *'
 write(*,*) '***************************************'
@@ -91,7 +90,6 @@ pressure = 0.d0
 D_int    = 0.d0
 P_int    = 0.d0
 C_intern = 0.d0
-
 D_ext    = 0.d0
 P_ext    = 0.d0
 C_ext    = 0.d0
@@ -99,14 +97,11 @@ P_hel    = 0.d0
 C_hel    = 0.d0
 Volume   = 0.d0
 Area     = 0.d0
-
 heat_src = 0.d0
 part_src = 0.d0
 heat_src_in  = 0.d0
-
 heat_src_out = 0.d0
 part_src_in  = 0.d0
-
 part_src_out = 0.d0
 
 Bgeo = F0 / R_geo
@@ -273,17 +268,15 @@ do ife =1, element_list%n_elements
           psi_limit, part_src, heat_src)
 #endif
         
+#if (JOREK_MODEL == 501)
         ! --- 3D integrals
-#if (JOREK_MODEL == 501)
         D_int = D_int + ((rho_00-rhon_00) + rhon_00*m_i_over_m_imp) * xjac * 2.d0 * PI * BigR * wst
-#else
-        D_int = D_int + rho_00       * xjac * 2.d0 * PI * BigR * wst
-#endif
-#if (JOREK_MODEL == 501)
         P_int = P_int + (rho_00+alpha_imp*rhon_00) * T_00 * xjac * 2.d0 * PI * BigR * wst
         ! --- 2D integrals
         P_hel = P_hel + (rho_00+alpha_imp*rhon_00) * T_00 * xjac * wst
 #else
+        ! --- 3D integrals
+        D_int = D_int + rho_00       * xjac * 2.d0 * PI * BigR * wst
         P_int = P_int + rho_00 * T_00 * xjac * 2.d0 * PI * BigR * wst
         ! --- 2D integrals
         P_hel = P_hel + rho_00 * T_00 * xjac * wst
@@ -298,17 +291,14 @@ do ife =1, element_list%n_elements
         Area   = Area   + xjac * wst
         
       else
+
 #if (JOREK_MODEL == 501)
         D_ext = D_ext + ((rho_00-rhon_00) + rhon_00*m_i_over_m_imp) * xjac * 2.d0 * PI * BigR * wst
-#else
-        D_ext = D_ext + rho_00       * xjac * 2.d0 * PI * BigR * wst
-#endif
-#if (JOREK_MODEL == 501)
         P_ext = P_ext + (rho_00+alpha_imp*rhon_00) * T_00 * xjac * 2.d0 * PI * BigR * wst
 #else
+        D_ext = D_ext + rho_00       * xjac * 2.d0 * PI * BigR * wst
         P_ext = P_ext + rho_00 * T_00 * xjac * 2.d0 * PI * BigR * wst
 #endif
-        
         C_ext = C_ext + ZJ_0 /BigR  * xjac * 2.d0 * PI * BigR * wst
         
         heat_src_out = heat_src_out + 2.d0 * PI * BigR * xjac * wst * heat_src
@@ -317,7 +307,6 @@ do ife =1, element_list%n_elements
       
     enddo
   enddo
-
 enddo
 
 density_in   = D_int

@@ -11,7 +11,6 @@ use mpi_mod
 use mod_bootstrap_functions
 use corr_neg
 use mod_import_restart
-use mod_log_params
 use equil_info
 use mod_boundary
 use mod_vtk
@@ -209,7 +208,6 @@ include_neutral_dens = .true.
 ! --- Read ADAS data and generate coronal equilibrium is needed
 call init_imp_adas(my_id)
 #endif
-
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)

@@ -55,7 +55,6 @@ subroutine export_binary_restart(node_list,element_list,filename)
   ! --- Local variables
   integer :: i
   character*50 :: version_control
-
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)
   real*8, allocatable :: spi_phi_arr (:)
@@ -635,7 +634,6 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
              n_spi,index_now,'xtime_spi_ablation_bg'//char(0))
       call HDF5_array2D_saving(file_id,xtime_spi_ablation_bg_rate, &
              n_spi,index_now,'xtime_spi_ablation_bg_rate'//char(0))
-
     end if
 
     call HDF5_integer_saving(file_id,n_spi,"n_spi"//char(0))

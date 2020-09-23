@@ -35,7 +35,10 @@ module phys_module
   real*8  :: gamma_sheath         !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
   real*8  :: gamma_stangeby       !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
   real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
+  real*8  :: neutral_reflection   !< reflection coefficient of ions into neutrals (model500)
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
+  logical :: vpar_smoothing       !< apply a smoothing function to smooth jumps in Vpar at B.n=0
+  real*8  :: vpar_smoothing_coef(3) !< coefficients for the smoothing profile of the parallel velocity
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
@@ -151,6 +154,11 @@ module phys_module
   real*8  :: edgeparticlesource        !< Edge particle source amplitude
   real*8  :: edgeparticlesource_psin   !< Position around which the edge particle source is located
   real*8  :: edgeparticlesource_sig    !< Width over which edge particle source extends
+  real*8  :: neutral_line_source(10)   !< neutral inflow source
+  real*8  :: neutral_line_R_start(10)  !< neutral inflow source (starting point of line source)
+  real*8  :: neutral_line_Z_start(10)  !< neutral inflow source
+  real*8  :: neutral_line_R_end(10)    !< neutral inflow source (end point of line source)
+  real*8  :: neutral_line_Z_end(10)    !< neutral inflow source
   real*8  :: heatsource                !< Heat source amplitude
   real*8  :: heatsource_psin           !< Position around which the source is ramped down
   real*8  :: heatsource_sig            !< Width over which the source is ramped down
@@ -601,6 +609,7 @@ module phys_module
   real*8              :: ZK_prof_neg        !< Heat diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
   real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.)
+  real*8              :: rho_min            !< minimum density
   integer             :: n_tor_fft_thresh   !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
   integer*8           :: fftw_plan          !< Required for FFTW library
   real*8              :: corr_neg_temp_coef(2) !< Parameters used in models/corr_neg.f90

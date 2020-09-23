@@ -95,7 +95,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 keep_n0_const, linear_run, export_for_nemec,        &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
-                R_Z_psi_bnd_file, wall_file,                        &
+                R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
                 spi_tor_rot, tor_frequency, ZK_par_neg_thresh,      &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &

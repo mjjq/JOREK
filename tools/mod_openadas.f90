@@ -49,7 +49,6 @@ use mpi_mod
 integer, intent(in)          :: my_id
 character(len=*), intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li)
 character(len=*), intent(in), optional :: directory
-
 type(ADF11_all), target :: ad !< OpenAdas data type
 
 type(ADF11), pointer :: a

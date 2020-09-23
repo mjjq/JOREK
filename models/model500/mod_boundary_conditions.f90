@@ -68,7 +68,7 @@ contains
     real*8,  allocatable,      intent(inout) :: A_mat(:) 
 
     ! Internal parameters
-    real*8  :: zbig, zbig_backup, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
+    real*8  :: zbig, zbig_backup,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
     real*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
     real*8  :: Btot, alpha, dT0_dt, dVpar0_dt, dBigR_dt, R_inside, Z_inside
     real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y
@@ -259,6 +259,7 @@ contains
 
                        endif !(end RMP)
 !======================================= end RMPs ==================================
+
 
                          if (      apply_psi_BC      &
                               .or. apply_current_BC  &
@@ -477,6 +478,7 @@ contains
                            .or. (node_list%node(inode)%boundary .eq. 15) &
                            .or. (node_list%node(inode)%boundary .eq.  9) &
                            .or. (node_list%node(inode)%boundary .eq. 19)) then
+
 
                          if (      apply_psi_BC      &
                               .or. apply_current_BC  &

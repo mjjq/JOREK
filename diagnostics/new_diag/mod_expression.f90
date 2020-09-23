@@ -771,7 +771,6 @@ module mod_expression
           A30   = 0.d0; A30_s   = 0.d0; A30_t   = 0.d0; A30_ss   = 0.d0; A30_tt   = 0.d0; A30_st   = 0.d0; A30_p   = 0.d0; A30_pp   = 0.d0
           rn0   = 0.d0; rn0_s   = 0.d0; rn0_t   = 0.d0; rn0_ss   = 0.d0; rn0_tt   = 0.d0; rn0_st   = 0.d0; rn0_p   = 0.d0; rn0_pp   = 0.d0
 
-
           ! Extra derivatives for current density calculation
           AR0_sp   = 0.d0; AR0_tp   = 0.d0
           AZ0_sp   = 0.d0; AZ0_tp   = 0.d0
@@ -1824,7 +1823,6 @@ module mod_expression
               case ( 'brem' )
                 res = r0 * fact_ne * r0 * fact_ne * LradDcont_T
 #endif
-
 #if JOREK_MODEL == 501
               case ( 'radiation' )
                 res = (r0_corr + beta_imp*rn0_corr) * rn0_corr * Lrad * fact_rad

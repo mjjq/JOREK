@@ -488,7 +488,7 @@ end subroutine interp_0_delta
 
 
 !> Calculates the interpolation within one element (i_elm) for a given position (s,t) in local coordinates
-subroutine interp_RZ_0(node_list,element_list,i_elm,s,t,R,Z)
+pure subroutine interp_RZ_0(node_list,element_list,i_elm,s,t,R,Z)
 type (type_node_list),    intent(in)  :: node_list
 type (type_element_list), intent(in)  :: element_list
 integer,                  intent(in)  :: i_elm
@@ -515,6 +515,7 @@ do kv = 1,n_vertex_max  ! 4 vertices
     Z    = Z    + xx2 * ss * G(kv,kf)
   end do
 end do
+
 end subroutine interp_RZ_0
 
 
@@ -549,12 +550,13 @@ R_t = sum(xR*H_t)
 Z   = sum(xZ*H)
 Z_s = sum(xZ*H_s)
 Z_t = sum(xZ*H_t)
+
 end subroutine interp_RZ_1
 
 
 
 !> Calculates the interpolation within one element (i_elm) for a given position (s,t) in local coordinates
-subroutine interp_RZ_2(node_list,element_list,i_elm,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+pure subroutine interp_RZ_2(node_list,element_list,i_elm,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 type (type_node_list),    intent(in)  :: node_list
 type (type_element_list), intent(in)  :: element_list
 integer,                  intent(in)  :: i_elm

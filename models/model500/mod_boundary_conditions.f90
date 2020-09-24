@@ -255,15 +255,15 @@ do i=1, n_local_elms !=== do elements
 !================================= start RMPs (for both directions) ==================================
         if (RMP_on ) then
 
-          do n_rmp_harm=1, Number_RMP_harmonics !===========do RMP harmonics
+          do n_rmp_harm=1, Number_RMP_harmonics !=== do RMP harmonics
 
             if (((in.eq.RMP_har_cos_spectrum(n_rmp_harm)) .or. (in.eq.RMP_har_sin_spectrum(n_rmp_harm))) &
                .and. (.not. freeboundary)) then
                    ! in .eq. RMP_har_cos corresponds to cos(n_perturbation)
                    ! in .eq. RMP_har_sin corresponds to sin(n_perturbation)
                                  
-              kp=1    ! variable psi
-              kv=1    ! equation for psi
+              kp=var_psi    ! variable psi
+              kv=var_psi    ! equation for psi
                    
               index_node = node_list%node(inode)%index(1)  !=== index in RHS (or matrix A not compressed)
                                           
@@ -316,30 +316,33 @@ do i=1, n_local_elms !=== do elements
           !------------ Decide when Psi or Current need BCs --------------------------------------------------                      
           !----Psi
           apply_psi_BC = .false.
-          if (k == 1) then                        
+          if (k == var_psi) then                        
             if ( (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1))                    )   apply_psi_BC = .true.
             if ( (RMP_on) .and. (in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)) )   apply_psi_BC = .true.
             if ( (.not. RMP_on) .and. (in .ge. 2)              )                         apply_psi_BC = .true.
-            if (              in .eq. 1                        )                         apply_psi_BC = .true.
-            if (           is_freebound(in,k)                  )                         apply_psi_BC = .false.                     
+            if (in .eq. 1)                                                               apply_psi_BC = .true.
+            if (is_freebound(in,k))                                                      apply_psi_BC = .false.                     
           endif
                 
           !----Current
           apply_current_BC = .false.
-          if (k == 3) then
+          if (k == var_zj) then
             if ( .not. is_freebound(in,k) )   apply_current_BC = .true.
           endif
                 
           if (        apply_psi_BC      &
                  .or. apply_current_BC  &
-                 .or. ((k .eq. 2) .and. apply_dirichlet_1234) &
-                 .or. ((k .eq. 4) .and. apply_dirichlet_1234) &
-                 .or. ((k .eq. 5) .and. apply_dirichlet_all)  &
-                 .or. ((k .eq. 6) .and. apply_dirichlet_all)  &
-                 .or. ((k .eq. 7) .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_u)    .and. apply_dirichlet_1234) &
+                 .or. ((k .eq. var_w)    .and. apply_dirichlet_1234) &
+                 .or. ((k .eq. var_rho)  .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_T)    .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_Te)   .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_Ti)   .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_vpar) .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_rhon) .and. apply_dirichlet_all)  &
               ) then
 
-            if ((k.eq.7) .and. (node_list%node(inode)%boundary .eq. 3)) cycle 
+!            if ((k.eq.7) .and. (node_list%node(inode)%boundary .eq. 3)) cycle  !=== better included for ITER extended wall
 
             index_node = node_list%node(inode)%index(1)
 
@@ -383,20 +386,20 @@ do i=1, n_local_elms !=== do elements
           index_node  = node_list%node(inode)%index(1)             ! position of value
           index_node2 = node_list%node(inode)%index(iv_dir)        ! position of first deriative
 
-          T0        = max(node_list%node(inode)%values(1,1,6), T_min)
-          T0_b      = node_list%node(inode)%values(1,iv_dir,6) * element_size_0 
+          T0        = max(node_list%node(inode)%values(1,1,var_T), T_min)
+          T0_b      = node_list%node(inode)%values(1,iv_dir,var_T)    * element_size_0 
 
-          Vpar0     = node_list%node(inode)%values(1,1,7)
-          Vpar0_b   = node_list%node(inode)%values(1,iv_dir,7) * element_size_0 
+          Vpar0     = node_list%node(inode)%values(1,1,var_vpar)
+          Vpar0_b   = node_list%node(inode)%values(1,iv_dir,var_Vpar) * element_size_0 
 
-          ps0       = node_list%node(inode)%values(1,1,1)
-          ps0_b     = node_list%node(inode)%values(1,iv_dir,1) * element_size_0 
-          ps0_s     = node_list%node(inode)%values(1,2,1)      * element_size_s
-          ps0_t     = node_list%node(inode)%values(1,3,1)      * element_size_t
+          ps0       = node_list%node(inode)%values(1,1,var_psi)
+          ps0_b     = node_list%node(inode)%values(1,iv_dir,var_psi)  * element_size_0 
+          ps0_s     = node_list%node(inode)%values(1,2,var_psi)       * element_size_s
+          ps0_t     = node_list%node(inode)%values(1,3,var_psi)       * element_size_t
 
-          u0_b      = node_list%node(inode)%values(1,iv_dir,2) * element_size_0 
-          U0_s      = node_list%node(inode)%values(1,2,2)      * element_size_s
-          U0_t      = node_list%node(inode)%values(1,3,2)      * element_size_t   
+          u0_b      = node_list%node(inode)%values(1,iv_dir,var_u)    * element_size_0 
+          U0_s      = node_list%node(inode)%values(1,2,var_u)         * element_size_s
+          U0_t      = node_list%node(inode)%values(1,3,var_u)         * element_size_t   
 
           BigR      = node_list%node(inode)%x(1,1)
           R_b       = node_list%node(inode)%x(iv_dir,1) * element_size_0
@@ -408,10 +411,10 @@ do i=1, n_local_elms !=== do elements
           Z_t       = node_list%node(inode)%x(3,2)      * element_size_t    
           Z         = node_list%node(inode)%x(1,2)
           
-          ps0_bb = element_list%element(ielm)%size(iv ,1)      * node_list%node(inode )%values(1,1,1)      * H1_ss(1,1) &
-                 + element_list%element(ielm)%size(iv ,iv_dir) * node_list%node(inode )%values(1,iv_dir,1) * H1_ss(1,2) &
-                 + element_list%element(ielm)%size(iv2,1)      * node_list%node(inode2)%values(1,1,1)      * H1_ss(2,1) &
-                 + element_list%element(ielm)%size(iv2,iv_dir) * node_list%node(inode2)%values(1,iv_dir,1) * H1_ss(2,2)
+          ps0_bb = element_list%element(ielm)%size(iv ,1)      * node_list%node(inode )%values(1,1,var_psi)      * H1_ss(1,1) &
+                 + element_list%element(ielm)%size(iv ,iv_dir) * node_list%node(inode )%values(1,iv_dir,var_psi) * H1_ss(1,2) &
+                 + element_list%element(ielm)%size(iv2,1)      * node_list%node(inode2)%values(1,1,var_psi)      * H1_ss(2,1) &
+                 + element_list%element(ielm)%size(iv2,iv_dir) * node_list%node(inode2)%values(1,iv_dir,var_psi) * H1_ss(2,2)
 
           R_bb = + element_list%element(ielm)%size(iv ,1)      * node_list%node(inode )%x(1,1)      * H1_ss(1,1)  &
                  + element_list%element(ielm)%size(iv ,iv_dir) * node_list%node(inode )%x(iv_dir,1) * H1_ss(1,2)  &
@@ -423,7 +426,7 @@ do i=1, n_local_elms !=== do elements
                  + element_list%element(ielm)%size(iv2,1)      * node_list%node(inode2)%x(1,     2) * H1_ss(2,1)  &
                  + element_list%element(ielm)%size(iv2,iv_dir) * node_list%node(inode2)%x(iv_dir,2) * H1_ss(2,2)  
 
-          ps2_b     = node_list%node(inode2)%values(1,iv_dir,1) * element_size_2 
+          ps2_b     = node_list%node(inode2)%values(1,iv_dir,var_psi) * element_size_2 
           
 !=== diagnostic for comparison values calculated on the boundary and interp_PRZ (please keep)
 !          call find_RZ(node_list, element_list, BigR, Z, R_out, Z_out, i_elm, s_elm, t_elm, ifail)
@@ -502,16 +505,16 @@ do i=1, n_local_elms !=== do elements
           endif
 
           Hfact_b   = factor * R_b / BigR  + factor_b
-
+ 
  !           if ((in .eq. 1) .and. (node_list%node(inode)%boundary .eq. 5)) then                              
  !            write(111,'(6i8,A,3e14.6,A,20e14.6)') node_list%node(inode)%boundary, ielm, inode, iv, inode2, iv2, &
  !                                              ' Boundary (t): ',Vpar0, -BigR**2 * u0_t/ps0_t, factor*direction*sqrt(GAMMA*T0)/Btot,&
  !                                              ' error : ',Vpar0 - BigR**2 * u0_t/ps0_t - factor*direction*sqrt(GAMMA*T0)/Btot                                                               
  !           endif
 
-          ku = 2
-          kv = 7
-          kT = 6
+          ku = var_u
+          kv = var_Vpar
+          kT = var_T
 
           call boundary_conditions_add_one_entry(             &
                index_node, kv, in, index_node, kv, in,        &

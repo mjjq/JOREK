@@ -336,6 +336,8 @@ do i=1, n_local_elms !=== do elements
                  .or. ((k .eq. var_w)    .and. apply_dirichlet_1234) &
                  .or. ((k .eq. var_rho)  .and. apply_dirichlet_all)  &
                  .or. ((k .eq. var_T)    .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_Te)   .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_Ti)   .and. apply_dirichlet_all)  &
                  .or. ((k .eq. var_vpar) .and. apply_dirichlet_all)  &
                  .or. ((k .eq. var_rhon) .and. apply_dirichlet_all)  &
               ) then

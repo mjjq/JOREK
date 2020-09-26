@@ -1,4 +1,6 @@
   &in1
+  
+ T_min = 0.0001d0
 
  restart = .f.
 

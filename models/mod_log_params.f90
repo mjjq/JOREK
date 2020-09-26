@@ -453,6 +453,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'ne_SI_min             ', ne_SI_min
   write(*,REAL_FMT) 'Te_eV_min             ', Te_eV_min
   write(*,REAL_FMT) 'rn0_min               ', rn0_min
+  write(*,REAL_FMT) 'rho_min               ', rho_min
   write(*,LOGI_FMT) 'use_pellet            ', use_pellet
   write(*,REAL_FMT) 'corr_neg_temp_coef    ', corr_neg_temp_coef(:)
   write(*,REAL_FMT) 'corr_neg_dens_coef    ', corr_neg_dens_coef(:)
@@ -573,6 +574,10 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'central_mass          ', central_mass
   write(*,REAL_FMT) 'gamma_sheath          ', gamma_sheath
   write(*,REAL_FMT) 'gamma_stangeby        ', gamma_stangeby
+  write(*,LOGI_FMT) 'vpar_smoothing        ', vpar_smoothing
+  if ( vpar_smoothing ) then
+    write(*,REAL_FMT) 'vpar_smoothing_coef   ', vpar_smoothing_coef(:)
+  end if
   write(*,LOGI_FMT) 'bc_natural_open       ', bc_natural_open
   write(*,LOGI_FMT) 'produce_live_data     ', produce_live_data
   write(*,LOGI_FMT) 'export_for_nemec      ', export_for_nemec
@@ -686,6 +691,12 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 't_ns                ',  t_ns
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
+     write(*,REAL_FMT) 'neutral_line_source ', neutral_line_source
+     write(*,REAL_FMT) 'neutral_line_R_start', neutral_line_R_start
+     write(*,REAL_FMT) 'neutral_line_Z_start', neutral_line_Z_start
+     write(*,REAL_FMT) 'neutral_line_R_end  ', neutral_line_R_end
+     write(*,REAL_FMT) 'neutral_line_Z_end  ', neutral_line_Z_end
+     write(*,REAL_FMT) 'neutral_reflection  ', neutral_reflection
 
      !< Additional log for SPI model
    if(using_spi) then

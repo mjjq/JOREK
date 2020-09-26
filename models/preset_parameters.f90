@@ -59,7 +59,11 @@ subroutine preset_parameters
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid) in the JOREK definition
   gamma_stangeby     = -1.d99 ! sheath transmission factor (single fluid) given by Stangeby
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
+  neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
+  
   mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
+  Vpar_smoothing        = .false. ! smooth the transitions of Vpar positive/negavtive at B.n
+  Vpar_smoothing_coef   = (/0.01d0, 0.d0, 0.d0 /) !(/ 0.01d0, 0.016d0, 0.00575446347d0/)
 
   amix                 = 0.d0
   amix_freeb           = 0.85d0
@@ -183,12 +187,14 @@ subroutine preset_parameters
   ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
   ZK_par_neg_thresh  = 0.d0
-  T_min              = 0.0
 
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.
   rn0_min            = 1.d-8
 
+  T_min              =-1.0d20
+  rho_min            =-1.0d20
+  
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
 
@@ -216,6 +222,12 @@ subroutine preset_parameters
   particlesource_gauss      = 0.d0
   particlesource_gauss_psin = 0.9d0
   particlesource_gauss_sig  = 0.1d0
+  neutral_line_source       = 0.d0
+  neutral_line_R_start      = 1.d20
+  neutral_line_Z_start      = 1.d20
+  neutral_line_R_end        = 2.d20
+  neutral_line_Z_end        = 2.d20
+
   
   U_sheath = .false.
   renormalise = .false.
@@ -282,6 +294,7 @@ subroutine preset_parameters
   T_file             = 'none'
   Te_file            = 'none'
   Ti_file            = 'none'
+  Fprofile_file      = 'none'
   ffprime_file       = 'none'
   d_perp_file        = 'none'
   zk_perp_file       = 'none'
@@ -291,6 +304,10 @@ subroutine preset_parameters
   wall_file          = 'none'
   rot_file           = 'none'
   normalized_velocity_profile = .true.
+
+  n_Fprofile_internal = 300 ! model710 only: size of internal numerical F-profile
+  Fprofile_psi_max    = 1.5 ! model710 only: max-psi_norm of internal numerical F-profile
+  Fprofile_tolerance  = 1.0 ! model710 only: tolerance of average different between final FFprime and requested FFprime
 
   produce_live_data  = .true.
   

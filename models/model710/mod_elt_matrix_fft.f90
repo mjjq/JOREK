@@ -14,6 +14,7 @@ use basis_at_gaussian
 use phys_module
 use diffusivities, only: get_dperp, get_zkperp
 use equil_info, only : get_psi_n, ES
+use mod_F_profile
 
 implicit none
 
@@ -56,7 +57,7 @@ real*8     :: particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss)
 real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer    :: VmsType=0, ViscType=0
-real*8     :: TG_NUM_Eq, CoefAdv=0.0, rho_min = 0.005
+real*8     :: TG_NUM_Eq, CoefAdv=0.0
 real*8     :: Coef_DivV
 real*8     :: psi_axisym(n_gauss,n_gauss)
 real*8     :: Fprof_time_dep,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
@@ -206,6 +207,8 @@ real*8     :: VmsCoefF, VmsCoefF_T
 real*8, dimension(n_var,n_var)   :: QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, QvmsF_p, QvmsF_n, QvmsF_k, QvmsF_kn
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k
 real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
+
+rho_min = 0.005 ! should be moved to namelist input
 
 ! --- Main switches
 Coef_DivV = 0.0d0 ! this is a stabilisation term !
@@ -614,6 +617,7 @@ do i=1,n_vertex_max
           Fprof   = Fprofile(ms,mt)
 
           ! --- Magnetic field
+          Fprof = Fprofile(ms,mt)
           BR0 = ( A30_Z - AZ0_p )/ R
           BZ0 = ( AR0_p - A30_R )/ R
           Bp0 = ( AZ0_R - AR0_Z )    + Fprof / R

@@ -92,7 +92,7 @@ do ife =1,  element_list%n_elements
       endif
 
       call FFprime(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, ps_g(ms,mt),psi_axis,psi_bnd, &
-                   zFFprime, dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,ddFFprime_dpsi_dz)
+                   zFFprime, dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,ddFFprime_dpsi_dz, .true.)
                    
       wst = wgauss(ms)*wgauss(mt)
 

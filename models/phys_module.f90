@@ -39,7 +39,10 @@ module phys_module
   real*8  :: gamma_sheath         !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
   real*8  :: gamma_stangeby       !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
   real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
+  real*8  :: neutral_reflection   !< reflection coefficient of ions into neutrals (model500)
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
+  logical :: vpar_smoothing       !< apply a smoothing function to smooth jumps in Vpar at B.n=0
+  real*8  :: vpar_smoothing_coef(3) !< coefficients for the smoothing profile of the parallel velocity
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
@@ -155,6 +158,11 @@ module phys_module
   real*8  :: edgeparticlesource        !< Edge particle source amplitude
   real*8  :: edgeparticlesource_psin   !< Position around which the edge particle source is located
   real*8  :: edgeparticlesource_sig    !< Width over which edge particle source extends
+  real*8  :: neutral_line_source(10)   !< neutral inflow source
+  real*8  :: neutral_line_R_start(10)  !< neutral inflow source (starting point of line source)
+  real*8  :: neutral_line_Z_start(10)  !< neutral inflow source
+  real*8  :: neutral_line_R_end(10)    !< neutral inflow source (end point of line source)
+  real*8  :: neutral_line_Z_end(10)    !< neutral inflow source
   real*8  :: heatsource                !< Heat source amplitude
   real*8  :: heatsource_psin           !< Position around which the source is ramped down
   real*8  :: heatsource_sig            !< Width over which the source is ramped down
@@ -510,6 +518,26 @@ module phys_module
   real*8, allocatable :: num_rhon_y2(:)   !< Second derivatives of neutral density profile (\f$ d^2\rhon/d\Psi_N^2 \f$)
   real*8, allocatable :: num_rhon_y3(:)   !< Third derivatives of neutral density profile (\f$ d^3\rhon/d\Psi_N^3 \f$)
   
+  !> @name Numerical input profile for Fprofile
+  character(len=512)  :: Fprofile_file      !< ASCII file the Fprofile is read from.
+  logical             :: num_Fprofile       !< is set true if Fprofile_file /= 'none'
+  integer             :: num_Fprofile_len   !< Number of points in profile
+  real*8, allocatable :: num_Fprofile_x(:)  !< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_Fprofile_y0(:) !< Values of FFprime profile
+  real*8, allocatable :: num_Fprofile_y1(:) !< First derivatives of Fprofile profile (\f$ dF/d\Psi_N \f$)
+  real*8, allocatable :: num_Fprofile_y2(:) !< Second derivatives of Fprofile profile (\f$ d^2F/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_Fprofile_y3(:) !< Third derivatives of Fprofile profile (\f$ d^2F/d\Psi_N^2 \f$)
+
+  !> @name Numerical input profile for Fprofile
+  integer, parameter  :: n_Fprofile_internal_max = 300                !< INTERNAL Max Size of F-profile
+  integer             :: n_Fprofile_internal                          !< INTERNAL Size of F-profile
+  real*8              :: Fprofile_internal   (n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration
+  real*8              :: Fprofile_internal_d1(n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration (first derivative)
+  real*8              :: Fprofile_internal_d2(n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration (second derivative)
+  real*8              :: Fprofile_internal_d3(n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration (third derivative)
+  real*8              :: Fprofile_psi_max                             !< INTERNAL max psi_norm of F-profile
+  real*8              :: Fprofile_tolerance                           !< INTERNAL tolerance (in %) for accuracy of F-profile compared to input FFprime
+
   !> @name Analytical input profile for FFprime
   real*8  :: FF_0              !< FF' value in the plasma center
   real*8  :: FF_1              !< FF' value in the SOL

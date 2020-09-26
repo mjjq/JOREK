@@ -922,7 +922,6 @@ do ife = ife_min, ife_max
         if ( get_psi_n(psi_as_coord, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
-#endif
           C_intern = C_intern - zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
           area1    = area1    +  xjac * wst * delta_phi         
           Vol   = Vol   +             xjac * BigR * wst * delta_phi

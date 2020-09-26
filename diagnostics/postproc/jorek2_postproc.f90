@@ -15,7 +15,7 @@ program jorek2_postproc
   
   type(type_command) :: command
   integer            :: ierr
-
+  
   ! --- Initialize mode and mode_type arrays
   call det_modes()
   
@@ -46,7 +46,7 @@ program jorek2_postproc
   
   ! --- Print getting started information
   call specific_help('getting_started')
-
+  
   do ! (main loop: Read, parse, and execute one command after the other)
     
     ! --- Read and parse a command line

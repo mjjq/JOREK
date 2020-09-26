@@ -155,7 +155,7 @@ class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 real*8, intent(in)              :: density !< log10 density (m^-3)
 real*8, intent(in)              :: temperature !< log10 temperature (K)
 real*8, intent(out), optional, dimension(0:cor%n_Z) :: p_out !< distribution of charge states (sum = 1)
-real*8, intent(out), optional   :: z_avg !< effective charge according to coronal equilibrium
+real*8, intent(out), optional   :: z_avg !< Average charge according to coronal equilibrium
 real*8, intent(out), optional   :: rad !< radiated power according to coronal equilibrium
 
 real*8, dimension(0:cor%n_Z)    :: p !< distribution of charge states (sum = 1)

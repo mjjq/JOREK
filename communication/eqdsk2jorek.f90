@@ -145,6 +145,7 @@ do i=1,nz
 enddo     
 
 if (tokamak_name == 'ITER') then
+
   !--------------------close fit to ITER wall
   ellip  = 2.0
   tria_u = 0.55
@@ -194,7 +195,7 @@ else if (tokamak_name == 'JET') then
   a0     = 1.1  * R_scale
 
 else if (tokamak_name == 'DIII-D') then
-  
+
   !-------------------- contour outside DIII-D wall
   ellip  = 1.85
   tria_u = 0.4
@@ -217,13 +218,12 @@ else if (tokamak_name == 'DIII-D') then
   z0     = 0.  * R_scale
   a0     = 0.7 * R_scale
 
-
 else
 
   write(*,*) 'Tokamak name not or wrongly specified, stopping'
   stop
 
-end if
+end if  
   
 PI = 2.d0 * asin(1.d0)
 
@@ -398,11 +398,11 @@ open(21,file='jorek_ffprime')
 if (xip>0) then
   do i=1,n_ext
     write(21,*) psi_ext(i),-df2_ext(i) ! The minus sign is because ff' in JOREK is opposite to the usual ff' for historical reasons.
-  enddo
+  enddo  
 else
   do i=1,n_ext
-    write(21,*) psi_ext(i),df2_ext(i)
-  enddo
+    write(21,*) psi_ext(i),df2_ext(i) 
+  enddo  
 end if
 close(21)
 
@@ -470,7 +470,7 @@ else
              '  R_boundary(',j,') =',r_bnd(j), &
              ', Z_boundary(',j,') =',z_bnd(j), &
              ', psi_boundary(',j,') =',-psi_bnd(j),','
-  enddo
+  enddo	     
 end if
 write(21,*)
 write(21,*) ' ellip  = ',ellip
@@ -488,11 +488,10 @@ write(21,*)
 write(21,*) ' R_geo = ',r0
 write(21,*) ' Z_geo = ',z0
 if (tokamak_name=='JET') then
-  write(21,*) ' F0    = ',-2.96*bcentr ! By convention, the vacuum toroidal field is given at 2.96m in JET eqdsk files.      
+  write(21,*) ' F0    = ',-2.96*bcentr ! By convention, the vacuum toroidal field is given at 2.96m in JET eqdsk files. 					
 else
   write(21,*) ' F0    = ',-r0*bcentr
 end if
-
 write(21,*) ' amin  = 1.d0 ! scale factor for plasma size only'
 write(21,*)
 write(21,*)

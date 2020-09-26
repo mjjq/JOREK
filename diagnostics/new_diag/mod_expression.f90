@@ -141,6 +141,9 @@ module mod_expression
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'ne          ', 'Electron Density                                      ')
+#if JOREK_MODEL == 501
+    call add(exprs_all, 'nimp        ', 'Impurity Density                                      ')
+#endif
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
     call add(exprs_all, 'Te          ', 'Electron temperature (assuming Ti=Te)                 ')
     call add(exprs_all, 'vpar        ', 'Parallel Velocity (along magnetic field lines)        ')
@@ -767,7 +770,6 @@ module mod_expression
           AZ0   = 0.d0; AZ0_s   = 0.d0; AZ0_t   = 0.d0; AZ0_ss   = 0.d0; AZ0_tt   = 0.d0; AZ0_st   = 0.d0; AZ0_p   = 0.d0; AZ0_pp   = 0.d0
           A30   = 0.d0; A30_s   = 0.d0; A30_t   = 0.d0; A30_ss   = 0.d0; A30_tt   = 0.d0; A30_st   = 0.d0; A30_p   = 0.d0; A30_pp   = 0.d0
           rn0   = 0.d0; rn0_s   = 0.d0; rn0_t   = 0.d0; rn0_ss   = 0.d0; rn0_tt   = 0.d0; rn0_st   = 0.d0; rn0_p   = 0.d0; rn0_pp   = 0.d0
-
 
           ! Extra derivatives for current density calculation
           AR0_sp   = 0.d0; AR0_tp   = 0.d0
@@ -1462,6 +1464,7 @@ module mod_expression
 #endif
              fact_flux     = 1.d0/(mu_zero*fact_time)  
           else if ( units == JOREK_UNITS ) then
+             rho_norm      = 1.d0
              fact_time     = 1.d0
              fact_mu_zero  = 1.d0
              fact_ne       = 1.d0
@@ -1550,6 +1553,12 @@ module mod_expression
 #else
                 res = r0 * fact_ne
 #endif
+
+#if JOREK_MODEL == 501
+              case ( 'nimp' )
+                res = rn0 * fact_ne * m_i_over_m_imp
+#endif
+
               case ( 'T' )
                 res = T0 * fact_T
               
@@ -1810,7 +1819,6 @@ module mod_expression
               case ( 'brem' )
                 res = r0 * fact_ne * r0 * fact_ne * LradDcont_T
 #endif
-
 #if JOREK_MODEL == 501 || JOREK_MODEL == 502
               case ( 'radiation' )
                 res = (r0_corr + beta_imp*rn0_corr) * rn0_corr * Lrad * fact_rad

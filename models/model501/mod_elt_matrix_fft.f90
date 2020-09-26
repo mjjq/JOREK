@@ -1274,7 +1274,7 @@ do ms=1, n_gauss
                     + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)      * xjac * tstep &
 !==========================End of viscous heating terms==============================
 
-                    + v * BigR * (GAMMA - 1.) * BigR**2 * eta_T_ohm * zj0**2           * xjac * tstep  &
+                    + v * BigR * (GAMMA - 1.) * eta_T_ohm * (zj0/BigR)**2           * xjac * tstep  &
                     - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad         * xjac * tstep  &
                     - v * BigR * r0_corr * frad_bg                                     * xjac * tstep  
 
@@ -1870,7 +1870,8 @@ do ms=1, n_gauss
                          - (GAMMA - 1.) * E_ion_bg * (D_par-D_prof) * BigR * BB2_psi / BB2**2 * Bgrad_rho_k_star * (Bgrad_rho-Bgrad_rhon)         * xjac * theta * tstep &
                          + (GAMMA - 1.) * E_ion_bg * (D_par-D_prof) * BigR / BB2              * Bgrad_rho_k_star * (Bgrad_rho_psi-Bgrad_rhon_psi) * xjac * theta * tstep &
 
-!================= End ionization potential energy =========================== 
+!================= End ionization potential energy ===========================
+ 
                    + TG_num6 * 0.25d0 / BigR * vpar0**2                                                       &
                              * T0 * ((r0_x+alpha_imp*rn0_x) * psi_y - (r0_y+alpha_imp*rn0_y) * psi_x)         &
                              * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
@@ -1935,7 +1936,7 @@ do ms=1, n_gauss
                     + v * BigR * rho * rn0 * Lrad                                          * xjac * theta * tstep  &
                     + v * BigR * rho * frad_bg                                             * xjac * theta * tstep&
                     ! New term from Z_eff
-                    - v * BigR * rho * (GAMMA - 1.) * BigR**2 * deta_dr0_ohm * zj0**2      * xjac * theta * tstep&
+                    - v * BigR * rho * (GAMMA - 1.) * deta_dr0_ohm * (zj0/BigR)**2      * xjac * theta * tstep&
 !=============== The ionization potential energy term=========================
                     + (GAMMA - 1.) * v * rho * E_ion_bg * BigR * xjac * (1.d0 + zeta) &
                     - (GAMMA - 1.) * v * E_ion_bg * BigR**2 * (rho_s * u0_t - rho_t * u0_s)            * theta * tstep &
@@ -1945,10 +1946,11 @@ do ms=1, n_gauss
                     - (GAMMA - 1.) * v * E_ion_bg * rho * 2.d0 * BigR * u0_y                    * xjac * theta * tstep &                    
                     + (GAMMA - 1.) * v * E_ion_bg * rho * (vpar0_s*ps0_t - vpar0_t*ps0_s)              * theta * tstep &
                     + (GAMMA - 1.) * v * E_ion_bg * rho * F0 / BigR * vpar0_p                   * xjac * theta * tstep &
-                    
+
                     ! New diffusive ionization energy flux term
                     + (GAMMA - 1.) * E_ion_bg * (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rho                * xjac * theta * tstep &
                     + (GAMMA - 1.) * E_ion_bg * D_prof * BigR  * (v_x*rho_x + v_y*rho_y                                   ) * xjac * theta * tstep
+
 !================= End ionization potential energy =========================== 
 
 
@@ -1969,6 +1971,7 @@ do ms=1, n_gauss
                     + (GAMMA - 1.) * E_ion_bg * (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rho              * xjac * theta * tstep &
 
 !================= End ionization potential energy ===========================
+
                          + TG_num6 * 0.25d0 / BigR * vpar0**2 &
                               * T0 * (rho_x * ps0_y - rho_y * ps0_x                    )                      &
                               * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep&
@@ -2046,7 +2049,7 @@ do ms=1, n_gauss
                              * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
 
 
-                           - v * BigR * T * (GAMMA - 1.) * BigR**2 * deta_dT_ohm * zj0**2                         * xjac * theta * tstep  &
+                           - v * BigR * T * (GAMMA - 1.) * deta_dT_ohm * (zj0/BigR)**2                            * xjac * theta * tstep  &
                            + v * BigR * T * (r0 + beta_imp*rn0) * rn0 * dLrad_dT                                  * xjac * theta * tstep  &
                            + v * BigR * T * dbeta_imp_dT * rn0**2 * Lrad                                          * xjac * theta * tstep  &
                            + v * BigR * T * r0 * dfrad_bg_dT                                                      * xjac * theta * tstep
@@ -2116,7 +2119,7 @@ do ms=1, n_gauss
 !============================Behold, the parallel viscous heating terms!=============
                        - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) * xjac * theta * tstep  &
 !==========================End of viscous heating terms==============================
-
+ 
                    + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
                              * T0 * ((r0_x+alpha_imp*rn0_x) * ps0_y - (r0_y+alpha_imp*rn0_y) * ps0_x &
                                      + F0 / BigR * (r0_p+alpha_imp*rn0_p))                          &
@@ -2164,6 +2167,7 @@ do ms=1, n_gauss
                        + (GAMMA - 1.) * E_ion * D_prof * BigR  * (v_x*rhon_x + v_y*rhon_y                                    ) * xjac * theta * tstep &
                        - (GAMMA - 1.) * E_ion_bg * (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon                  * xjac * theta * tstep &
                        - (GAMMA - 1.) * E_ion_bg * D_prof * BigR  * (v_x*rhon_x + v_y*rhon_y                                    ) * xjac * theta * tstep &
+
 !================= End ionization potential energy ===========================
 !=========================New TG_num terms====================================
                        + TG_num6 * 0.25d0 * BigR**2 * T0 * alpha_imp * (rhon_x * u0_y - rhon_y * u0_x)        &
@@ -2182,7 +2186,7 @@ do ms=1, n_gauss
 !===========================End of new TG_num terms===========================
 
                        ! New term from Z_eff
-                       - v * BigR * rhon * (GAMMA - 1.) * BigR**2 * deta_drn0_ohm * zj0**2 * xjac * theta * tstep &
+                       - v * BigR * rhon * (GAMMA - 1.) * deta_drn0_ohm * (zj0/BigR)**2 * xjac * theta * tstep &
 
                        - v * rhon * BigR**2 * alpha_imp_bis * (T0_s * u0_t - T0_t * u0_s)     * theta * tstep &
                        - v * alpha_imp * T0 * BigR**2 * (rhon_s * u0_t - rhon_t * u0_s)       * theta * tstep &

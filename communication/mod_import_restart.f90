@@ -74,16 +74,15 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
-
-  real*8, allocatable :: spi_R_arr (:)
-  real*8, allocatable :: spi_Z_arr (:)
-  real*8, allocatable :: spi_phi_arr (:)
-  real*8, allocatable :: spi_Vel_R_arr (:)
-  real*8, allocatable :: spi_Vel_Z_arr (:)
-  real*8, allocatable :: spi_Vel_RxZ_arr (:)
-  real*8, allocatable :: spi_radius_arr (:)
-  real*8, allocatable :: spi_abl_arr (:)
-  real*8, allocatable :: spi_species_arr (:)
+  real*8,  allocatable :: spi_R_arr (:)
+  real*8,  allocatable :: spi_Z_arr (:)
+  real*8,  allocatable :: spi_phi_arr (:)
+  real*8,  allocatable :: spi_Vel_R_arr (:)
+  real*8,  allocatable :: spi_Vel_Z_arr (:)
+  real*8,  allocatable :: spi_Vel_RxZ_arr (:)
+  real*8,  allocatable :: spi_radius_arr (:)
+  real*8,  allocatable :: spi_abl_arr (:)
+  real*8, allocatable  :: spi_species_arr (:)
 
   integer              :: err_alloc, n_spi_check, n_inj_check
   logical              :: modes_changed
@@ -518,7 +517,6 @@ endif
         read(21)  xtime_spi_ablation_rate(1:n_spi_tot,1:index_start)
         read(21)  xtime_spi_ablation_bg(1:n_spi_tot,1:index_start)
         read(21)  xtime_spi_ablation_bg_rate(1:n_spi_tot,1:index_start)
-
       end if
 
       read(21,err=999, end=999) n_spi_check
@@ -586,6 +584,7 @@ endif
 
     end if
   end if
+
 999 continue
   
   close(21)

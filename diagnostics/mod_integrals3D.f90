@@ -167,7 +167,6 @@ real*8  :: alpha_i, alpha_e
 integer    :: spi_i, i_inj, n_spi_tmp
 real*8     :: ng_radius
 
-
 #ifndef NOMPIVERSION
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 n_cpu = max(n_cpu,1)
@@ -285,7 +284,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
 !$omp          local_radiation, local_E_ion, gas_type,                                         &
 !$omp          local_radiation_phi,                                                            &
-!$omp          imp_cor, imp_adas,                                                              &
+!$omp          imp_cor, imp_adas, T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,              &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -855,9 +854,11 @@ do ife = ife_min, ife_max
           end do
         end if
 
+        ! Neutral injection rate in particles/s
         local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_neutral * bigR *&
                                  xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
-        local_n_particles     = local_n_particles     +  rn0 * bigR * xjac * wst * delta_phi
+        ! Total neutrals in particles
+        local_n_particles     = local_n_particles     +  rn0 * central_density * 1.d20 * bigR * xjac * wst * delta_phi
 #endif
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
         !--- Calculate the neutral injection rate and the number of neutrals in the plasma
@@ -912,13 +913,16 @@ do ife = ife_min, ife_max
   
         end if
 
-        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_imp * bigR * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
-        local_n_particles     = local_n_particles     + central_density * 1.d20 * rn0 * bigR * xjac * wst * delta_phi
-
+        ! Neutral injection rate in particles/s
+        local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_imp * m_i_over_m_imp * bigR &
+	                         * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
+        ! Total neutrals in particles
+        local_n_particles     = local_n_particles + central_density * 1.d20 * rn0 * m_i_over_m_imp * bigR * xjac * wst * delta_phi
 #endif
         if ( get_psi_n(psi_as_coord, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
+#endif
           C_intern = C_intern - zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
           area1    = area1    +  xjac * wst * delta_phi         
           Vol   = Vol   +             xjac * BigR * wst * delta_phi
@@ -933,8 +937,13 @@ do ife = ife_min, ife_max
           P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
 #endif
         else
-          D_ext = D_ext + r0         * xjac * BigR * wst * delta_phi
+#if (JOREK_MODEL == 501)
+          D_ext = D_ext + (r0-rn0) * xjac * BigR * wst * delta_phi
+          P_ext = P_ext + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
+#else
+          D_ext = D_ext + r0 * xjac * BigR * wst * delta_phi
           P_ext = P_ext + r0   * T0  * xjac * BigR * wst * delta_phi
+#endif
           C_ext = C_ext - zj0 / BigR * xjac *        wst * delta_phi  ! 2D integral
           H_ext = H_ext + heat_source     * xjac * BigR * wst * delta_phi
           S_ext = S_ext + particle_source * xjac * BigR * wst * delta_phi
@@ -1287,7 +1296,7 @@ endif
   total_n_particles_inj = local_n_particles_inj
   total_n_particles     = local_n_particles
 #endif /* NOMPIVERSION */
-  neut_particles_tot    = total_n_particles
+  neut_particles_tot    = total_n_particles / (central_density * 1.d20)
 #else
   neut_particles_tot = 0.d0
 #endif

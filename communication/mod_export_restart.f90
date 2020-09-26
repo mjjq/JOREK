@@ -55,7 +55,6 @@ subroutine export_binary_restart(node_list,element_list,filename)
   ! --- Local variables
   integer :: i
   character*50 :: version_control
-
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)
   real*8, allocatable :: spi_phi_arr (:)
@@ -640,7 +639,6 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
              n_spi_tot,index_now,'xtime_spi_ablation_bg'//char(0))
       call HDF5_array2D_saving(file_id,xtime_spi_ablation_bg_rate, &
              n_spi_tot,index_now,'xtime_spi_ablation_bg_rate'//char(0))
-
     end if
 
     call HDF5_integer_saving(file_id,n_inj,"n_inj"//char(0))
@@ -698,7 +696,6 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
     deallocate (spi_species_arr)
 
     if (spi_tor_rot) call HDF5_real_saving(file_id,ns_phi_rotate,"ns_phi_rotate"//char(0)) 
-
   else
     n_spi_tot = 0
     call HDF5_integer_saving(file_id,n_spi_tot,"n_spi_tot"//char(0))

@@ -1,6 +1,7 @@
 module construct_matrix_mod
 
 use mod_parameters, only : n_var
+
 implicit none
 
 logical  :: difference_found, rhs_problem(n_var), elm_problem(n_var,n_var)
@@ -55,6 +56,7 @@ contains
     call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
     my_id = rank
 #endif
+
     ! --- Call element_matrix
     if ( ( (i_tor_min .eq. 1) .and. (i_tor_max .eq. n_tor) .and. (n_tor .ge. n_tor_fft_thresh) )   &
       .or. (unified_element_matrix) ) then

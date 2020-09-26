@@ -130,7 +130,7 @@ module data_structure
                                      !! 0.: pure background species
                                      !! 1.: pure impurity shard
   end type type_SPI
-  
+ 
   integer                                         , public :: nbthreads
   TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()
   

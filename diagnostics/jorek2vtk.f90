@@ -11,7 +11,6 @@ use mpi_mod
 use mod_bootstrap_functions
 use corr_neg
 use mod_import_restart
-use mod_log_params
 use equil_info
 use mod_boundary
 use mod_vtk
@@ -209,7 +208,6 @@ include_neutral_dens = .true.
 ! --- Read ADAS data and generate coronal equilibrium is needed
 call init_imp_adas(my_id)
 #endif
-
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -460,6 +458,7 @@ call initialise_basis                              ! define the basis functions 
 
 nnos = nsub*nsub*element_list%n_elements
 allocate(currdens(nnos),xyz(3,nnos),scalars(nnos,1:n_scalars),vectors(nnos,3,1:n_vectors))
+currdens = 0.
 
 nnoel = 4
 nel   = (nsub-1)*(nsub-1)*element_list%n_elements
@@ -663,6 +662,9 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
           scalars(inode,m) = P * HZ(i_tor,i_plane)
         enddo
+        
+        ! The real current density
+        currdens(inode) = -scalars(inode,3)/BigR
 
         ! The real current density
         currdens(inode) = -scalars(inode,3)/BigR
@@ -1271,13 +1273,14 @@ enddo  ! n_elements
    do i=1,nnos
      if (jorek_model .eq. 502 ) then
        T_real8 = scalars(i,n_var)
-       Te_corr_eV = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(EL_CHG*MU_ZERO*central_density*1.d20)
+       Te_corr_eV = corr_neg_temp(T_real8,(/5.d-1,5.d-1/),max(T_min,Te_1))/(EL_CHG*MU_ZERO*central_density*1.d20)
        Te_eV = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20)
      else
        T_real8 = scalars(i,6)
-       Te_corr_eV = corr_neg_temp(T_real8,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       Te_corr_eV = corr_neg_temp(T_real8,(/5.d-1,5.d-1/),max(2.*T_min,2.*T_1))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
        Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      endif
+     
      eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
                         *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 

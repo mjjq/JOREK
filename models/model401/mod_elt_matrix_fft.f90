@@ -1280,7 +1280,8 @@ do i=1,n_vertex_max
                          ! ========= linearization of 1/(Btheta2**i) , i=2 or 1
                          - amu_neo_prof(ms,mt) * BB2 * (-2.d0*Btheta2_psi)/((Btheta2+epsil)**3) * (ps0_x*v_x + ps0_y*v_y)  &
                                                      * (r0 * (ps0_x*u0_x + ps0_y*u0_y) + tauIC * (ps0_x*Pi0_x + ps0_y*Pi0_y) &
-                         + aki_neo_prof(ms,mt) * tauIC * r0 * (ps0_x*Ti0_x + ps0_y*Ti0_y)) * BigR * xjac * theta * tstep     &
+                                                        + aki_neo_prof(ms,mt) * tauIC * r0 * (ps0_x*Ti0_x + ps0_y*Ti0_y) &
+                                                        - r0 * Vpar0 * Btheta2) * BigR * xjac * theta * tstep     &
                          + amu_neo_prof(ms,mt) * BB2 * (-Btheta2_psi)/((Btheta2+epsil)**2) * r0 * vpar0 * (ps0_x*v_x + ps0_y*v_y) &
                                                * BigR * xjac * tstep * theta 
                   endif
@@ -1367,7 +1368,7 @@ do i=1,n_vertex_max
                               * (tauIC*(ps0_x*(r0_x*Ti+r0*Ti_x) + ps0_y*(r0_y*Ti+r0*Ti_y))                       &
                               + aki_neo_prof(ms,mt) *tauIC * r0 *(ps0_x*Ti_x + ps0_y*Ti_y)) * BigR * xjac * theta * tstep 
                     
-                    amat(2,7) = amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
+                    amat(2,7) = amu_neo_prof(ms,mt)*BB2 * Btheta2 /((Btheta2+epsil)**2)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
                               * BigR * xjac * tstep * theta 
                   endif
 

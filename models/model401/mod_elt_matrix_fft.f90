@@ -1234,7 +1234,7 @@ do i=1,n_vertex_max
                   amat(1,1) = v * psi / BigR * xjac * (1.d0 + zeta)                                                   &
                             - v * (psi_s * u0_t - psi_t * u0_s)                                       * theta * tstep &
 
-                     + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * (psi_s * p0_t - psi_t * p0_s)        * theta * tstep &
+                     + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * (psi_s * pe0_t - psi_t * pe0_s)      * theta * tstep &
                      - v * tauIC/(r0_corr*BB2**2) * BB2_psi * F0**2/BigR**2 * (ps0_x*pe0_y - ps0_y*pe0_x) * xjac * theta * tstep &
                      + v * tauIC/(r0_corr*BB2**2) * BB2_psi * F0**3/BigR**3 * pe0_p            * xjac * theta * tstep
 

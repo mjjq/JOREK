@@ -75,7 +75,7 @@ real*8     :: Pi0_x_Ti,  Pi0_xx_Ti,  Pi0_y_Ti,  Pi0_yy_Ti,  Pi0_xy_Ti
 real*8     :: Pe0, Pe0_s, Pe0_t, Pe0_x, Pe0_y, Pe0_p, Pe0_ss, Pe0_st, Pe0_tt, Pe0_xx, Pe0_xy, Pe0_yy
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T, eta_num_T, W_dia, W_dia_rho, W_dia_Ti
-real*8     :: eta_T_ohm, deta_dT_ohm
+real*8     :: eta_T_ohm, deta_dT_ohm,  deta_num_dT,  dvisco_num_dT
 real*8     :: Ti0_ps0_x, Ti_ps0_x, Ti0_psi_x, Ti0_ps0_y, Ti_ps0_y, Ti0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: Te0_ps0_x, Te_ps0_x, Te0_psi_x, Te0_ps0_y, Te_ps0_y, Te0_psi_y
 real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7, TG_num8
@@ -655,6 +655,33 @@ do i=1,n_vertex_max
             dZKe_par_dT = 0.d0
           endif
 
+          ! --- Temperature dependent hyper-resistivity
+          if ( eta_num_T_dependent ) then
+            eta_num_T     =   eta_num   * (Te0_corr/Te_0)**(-3.d0)
+            deta_num_dT   = - eta_num   * (3.d0)  * Te0_corr**(-4.d0) * Te_0**(3.d0)
+            if ( xpoint2 .and. (Te0 .lt. T_min) ) then
+              eta_num_T     = eta_num    * (max(Te0,T_min)/Te_0)**(-3.d0)
+              deta_num_dT   = 0.d0
+            endif
+          else
+            eta_num_T     = eta_num
+            deta_num_dT   = 0.d0
+          end if
+   
+          ! --- Temperature dependent hyper-viscosity
+          if ( visco_num_T_dependent ) then
+            visco_num_T     =   visco_num   * (Te0_corr/Te_0)**(-3.d0)
+            dvisco_num_dT   = - visco_num   * (3.d0)  * Te0_corr**(-4.d0) * Te_0**(3.d0)
+            if ( xpoint2 .and. (Te0 .lt. T_min) ) then
+              visco_num_T     = visco_num    * (max(Te0,T_min)/Te_0)**(-3.d0)
+              dvisco_num_dT   = 0.d0
+            endif
+          else
+            visco_num_T     = visco_num
+            dvisco_num_dT   = 0.d0
+          end if
+
+
           ! --- Diamagnetic viscosity
           if (Wdia) then
             W_dia = + tauIC /r0_corr    * (pi0_xx + pi0_x/bigR + pi0_yy) &
@@ -662,9 +689,6 @@ do i=1,n_vertex_max
           else
             W_dia = 0.d0
           endif
-
-          eta_num_T   = eta_num                         ! hyperresistivity
-          visco_num_T = visco_num                       ! hyperviscosity
 
    !--------------------------------------------------------
    ! --- Ion-electron energy transfer
@@ -719,6 +743,7 @@ do i=1,n_vertex_max
             ddTi_e_dTe = 0.
             ddTi_e_drho = 0.
           endif
+
 
           psi_norm = get_psi_n( ps0, y_g(ms,mt))
 
@@ -1255,6 +1280,7 @@ do i=1,n_vertex_max
                   amat_n(1,5) = - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * Te0  * rho_p            * xjac * theta * tstep 
 
                   amat(1,8) = - deta_dT * v * Te * (zj0 - current_source(ms,mt) - Jb)/ BigR * xjac          * theta * tstep &
+                              - deta_num_dT * Te * (v_x * zj0_x + v_y * zj0_y)              * xjac          * theta * tstep &
                             + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * r0 * (ps0_s * Te_t  - ps0_t * Te_s) * theta * tstep &
                             + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * Te * (ps0_s * r0_t - ps0_t * r0_s)  * theta * tstep &
                             - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * Te * r0_p * xjac                    * theta * tstep 

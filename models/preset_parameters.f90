@@ -192,6 +192,8 @@ subroutine preset_parameters
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
   Dn_perp_num   = 0.d0
+  eta_num_T_dependent   = .false.
+  visco_num_T_dependent = .false.
 
   heatsource          = 1.e-7
   heatsource_psin     = 1.0d0

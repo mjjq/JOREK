@@ -176,6 +176,7 @@ module phys_module
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num
+  logical :: eta_num_T_dependent, visco_num_T_dependent  
   
   !> @name Timestepping parameters
   real*8  :: tstep             		!< Size of the timesteps (\f$ \Delta t \f$)

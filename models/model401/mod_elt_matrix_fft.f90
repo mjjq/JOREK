@@ -1016,8 +1016,8 @@ do i=1,n_vertex_max
                                  * r0 * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                      &
                                  * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep  &
 
-                       + zeta * v * r0  * delta_g(mp,6,ms,mt) * BigR                     * xjac &
-                       + zeta * v * Ti0 * delta_g(mp,5,ms,mt) * BigR                     * xjac &
+                       + zeta * v * r0_corr  * delta_g(mp,6,ms,mt) * BigR                     * xjac &
+                       + zeta * v * Ti0_corr * delta_g(mp,5,ms,mt) * BigR                     * xjac &
                        ! Energy exchange term
                        + v * BigR * dTi_e                                                * xjac * tstep                       
 
@@ -1047,8 +1047,8 @@ do i=1,n_vertex_max
 
                      - visco_par_num * (v_xx + v_x/Bigr + v_yy)*(vpar0_xx + vpar0_x/Bigr + vpar0_yy) * BigR * xjac * tstep &
 
-                     + zeta * v * delta_g(mp,7,ms,mt) * r0 * F0**2 / BigR                        * xjac &
-                     + zeta * v * r0 * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / BigR  * xjac &
+                     + zeta * v * delta_g(mp,7,ms,mt) * r0_corr * F0**2 / BigR                        * xjac &
+                     + zeta * v * r0_corr * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / BigR  * xjac &
 
              - TG_NUM7 * 0.25d0 * r0 * Vpar0**2 * BB2 &
                        * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
@@ -1116,8 +1116,8 @@ do i=1,n_vertex_max
                                  * r0 * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                      &
                                  * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep  &
 
-                       + zeta * v * r0  * delta_g(mp,8,ms,mt) * BigR                     * xjac &
-                       + zeta * v * Te0 * delta_g(mp,5,ms,mt) * BigR                     * xjac &
+                       + zeta * v * r0_corr  * delta_g(mp,8,ms,mt) * BigR                     * xjac &
+                       + zeta * v * Te0_corr * delta_g(mp,5,ms,mt) * BigR                     * xjac &
                        ! Energy exchange term
                        + v * BigR * dTe_i                                                * xjac * tstep
 
@@ -1565,7 +1565,7 @@ do i=1,n_vertex_max
                                             * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
 
 
-                  amat(6,5) = v * rho * Ti0   * BigR * xjac * (1.d0 + zeta)     &
+                  amat(6,5) = v * rho * Ti0_corr   * BigR * xjac * (1.d0 + zeta)     &
                             - v * rho * BigR**2 * ( Ti0_s * u0_t - Ti0_t * u0_s)                        * theta * tstep &
                             - v * Ti0 * BigR**2 * ( rho_s * u0_t - rho_t * u0_s)                        * theta * tstep &
                             - v * rho * 2.d0* GAMMA * BigR * Ti0 * u0_y                          * xjac * theta * tstep &
@@ -1700,7 +1700,7 @@ do i=1,n_vertex_max
                   !#  equation 7   (parallel velocity equation)                                                      #
                   !###################################################################################################
 
-                  amat(7,1) = v * r0 * vpar0 / BigR * (ps0_x * psi_x + ps0_y * psi_y) * xjac * (1.d0 + zeta) &
+                  amat(7,1) = v * r0_corr * vpar0 / BigR * (ps0_x * psi_x + ps0_y * psi_y) * xjac * (1.d0 + zeta) &
 
                             + v * (P0_s * psi_t - P0_t * psi_s)                                       * theta * tstep &
 
@@ -1911,7 +1911,7 @@ do i=1,n_vertex_max
 
                   amat(8,3) = - v * (gamma-1.d0) * eta_T_ohm * 2.d0 * zj * zj0/(BigR**2.d0) * BigR * xjac * theta * tstep
 
-                  amat(8,5) = v * rho * Te0   * BigR * xjac * (1.d0 + zeta)     &
+                  amat(8,5) = v * rho * Te0_corr   * BigR * xjac * (1.d0 + zeta)     &
                             - v * rho * BigR**2 * ( Te0_s * u0_t - Te0_t * u0_s)                        * theta * tstep &
                             - v * Te0 * BigR**2 * ( rho_s * u0_t - rho_t * u0_s)                        * theta * tstep &
                             - v * rho * 2.d0* GAMMA * BigR * Te0 * u0_y                          * xjac * theta * tstep &

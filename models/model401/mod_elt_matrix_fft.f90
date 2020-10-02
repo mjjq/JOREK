@@ -1314,7 +1314,7 @@ do i=1,n_vertex_max
 
                   amat(2,4) = r0_hat * BigR**2 * w  * ( v_s * u0_t - v_t * u0_s)  * theta * tstep  &
                             + BigR * ( v_x * w_x + v_y * w_y) * visco_T  * xjac   * theta * tstep  &
-                            + v * tauIC * BigR**4 * (p0_s * w_t - p0_t * w_s)     * theta * tstep  & 
+                            + v * tauIC * BigR**4 * (pi0_s * w_t - pi0_t * w_s)   * theta * tstep  & 
 
                             + visco_num_T * (v_xx + v_x/BigR + v_yy)*(w_xx + w_x/BigR + w_yy) * xjac * theta * tstep    &
 

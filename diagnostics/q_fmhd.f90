@@ -17,8 +17,12 @@ use mod_element_rtree, only: populate_element_rtree
 
 implicit none
 
-real*8, parameter  :: stepsize = 1.d-5
+!--- Input parameters --------------------!
+!-----------------------------------------!
+real*8, parameter  :: stepsize = 1.d-3
 integer, parameter :: npoints = 200
+!-----------------------------------------!
+!-----------------------------------------!
 
 real*8    :: Rstart(npoints)
 real*8    :: Zstart(npoints)
@@ -30,15 +34,17 @@ real*8    :: s, t, phi, phinew, phiold, snew, tnew, sold, told
 real*8    :: AA(3), AA_s(3), AA_t(3), AA_p(3)
 real*8    :: R, R_s, R_t, Z, Z_s, Z_t
 real*8    :: BR, BZ, Bp, BB, xjac, Fprof
-real*8    :: dum01, dum02, dum03, dum04, dum05, dum06, dum07, dum08, dum09, dum10, dum11
+real*8    :: dum01, dum02, dum03, dum04, dum05
 real*8    :: AR, AR_p, AR_s, AR_t, AR_R, AR_Z, AZ, AZ_p, AZ_s, AZ_t, AZ_R, AZ_Z, A3, A3_p, A3_s, A3_t, A3_R, A3_Z, psieq
 real*8    :: RR, ZZ, Rnew, Znew, Rold, Zold
+real*8    :: Rnewtmp, Znewtmp, RRtmp, ZZtmp
 
 integer   :: required,provided,StatInfo, n_cpu
 integer*4 :: rank, comm_size 
 logical   :: responsible(npoints)
 
-real*8    :: psin_arr(npoints) = 0.d0, polturns_arr(npoints) = 0.d0, torturns_arr(npoints) = 0.d0, phi_arr(npoints) = 0.d0
+real*8    :: psin_arr(npoints) = 0.d0, polturns_arr(npoints) = 0.d0, torturns_arr(npoints) = 0.d0, phi_arr(npoints) = 0.d0, R_arr(npoints) = 0.d0
+real*8    :: psin_arr_tot(npoints) = 0.d0, phi_arr_tot(npoints) = 0.d0, R_arr_tot(npoints) = 0.d0
 
 required = MPI_THREAD_FUNNELED
 call MPI_Init_thread(required, provided, StatInfo)
@@ -66,6 +72,7 @@ call broadcast_nodes(my_id, node_list)                      ! nodes
 call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
 call populate_element_rtree(node_list, element_list)
 call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+call broadcast_equil_state(my_id)
 
 if ( my_id == 0 ) write(*,*) '*** ...start tracing... ***'
 
@@ -73,19 +80,20 @@ if ( my_id == 0 ) write(*,*) '*** ...start tracing... ***'
 responsible = .false.
 do i = 1, npoints
   
-  if ( ( real(my_id)/real(n_cpu)*npoints < i ) .and. ( real(my_id+1)/real(n_cpu)*npoints >= i ) ) responsible(i) = .true.
-  
-  Rstart(i) = ES%R_axis + REAL(i) * (ES%R_midpl(2) - ES%R_axis - 0.002d0)/npoints
-  Zstart(i) = ES%Z_axis
+  if ( ( real(my_id)/real(n_cpu)*npoints < i ) .and. ( real(my_id+1)/real(n_cpu)*npoints >= i ) ) then
+    responsible(i) = .true.
+    Rstart(i) = ES%R_axis + REAL(i) * (ES%R_midpl(2) - ES%R_axis - 0.002d0)/npoints
+    Zstart(i) = ES%Z_axis
+  end if
   
 end do
 
 ! --- Write out distribution of field lines among tasks
 do i = 0, n_cpu-1
   if ( my_id == i ) then
-    write(*,*) 'Task ', my_id, 'responsible for:'
+    write(*,*) 'Task ', my_id, 'responsible for (field line number & radius):'
     do j = 1, npoints
-      if (responsible(j)) write(*,*) j
+      if (responsible(j)) write(*,*) j, Rstart(j)
     end do
   end if
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -93,7 +101,13 @@ end do
 
 ! --- Trace field lines
 do i = 1, npoints
-  if ( .not. responsible(i) ) cycle
+  if ( .not. responsible(i) ) then
+    psin_arr(i) = 0.d0
+    phi_arr(i)  = 0.d0
+    R_arr(i)  = 0.d0
+    cycle
+  end if
+  
   call find_RZ(node_list,element_list,Rstart(i),Zstart(i),RR,ZZ,ielm,s,t,ifail)
   phi = 0.d0
   
@@ -112,8 +126,12 @@ do i = 1, npoints
     call do_step()
     j = j + 1
    
-    if ( phi > 2.d0*PI ) then
-      phi   = phi - 2.d0*PI
+    if ( ABS(phi) > 2.d0*PI ) then
+      if ( phi > 0.d0 ) then
+        phi   = phi - 2.d0*PI
+      else
+        phi   = phi + 2.d0*PI
+      end if
       torturns = torturns + 1.d0
     end if
 
@@ -125,31 +143,40 @@ do i = 1, npoints
   end do
   
   psin_arr(i)     = get_psi_n(A3, ZZ)
-  phi_arr(i)      = phiold + (phi - phiold) * (Zold / (Zold - ZZ)) + torturns * 2.d0 * PI
+  if ( phi > 0.d0 ) then
+    phi_arr(i)      = phiold + (phi - phiold) * ((Zold - ES%Z_axis)/ (Zold - ZZ)) + torturns * 2.d0 * PI
+  else if ( phi < 0.d0 ) then
+    phi_arr(i)      = phiold + (phi - phiold) * ((Zold - ES%Z_axis)/ (Zold - ZZ)) - torturns * 2.d0 * PI
+  else
+    if ( phiold > 0.d0 ) then
+      phi_arr(i)      = phiold + (phi - phiold) * ((Zold - ES%Z_axis)/ (Zold - ZZ)) + torturns * 2.d0 * PI
+    else
+      phi_arr(i)      = phiold + (phi - phiold) * ((Zold - ES%Z_axis)/ (Zold - ZZ)) - torturns * 2.d0 * PI
+    end if
+  end if
   torturns_arr(i) = torturns
   polturns_arr(i) = polturns
+  R_arr(i)        = RR
   write(*,*) 'Finished tracing line ', i
-!  write(*,'(4es23.5,i10)') psin_arr(i), phi_arr(i)/(2.d0*PI), torturns_arr(i), polturns_arr(i), i !### has to be moved out
+  write(*,*) '...toroidal & poloidal turns:', torturns, polturns
 
 end do
 
 call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
-! --- Write out result !TODO: file
+call MPI_Reduce(psin_arr,  psin_arr_tot,  npoints,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+call MPI_Reduce(phi_arr,   phi_arr_tot,   npoints,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+call MPI_Reduce(R_arr,     R_arr_tot,     npoints,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+
+! --- Write out result
 if ( my_id == 0 ) then
-  write(*,*) '# Safety factor profile versus Psi_N'
+  open(99, file='q_profile.dat', action='write', status='replace')
+  write(99,*) '# Psi_N | Safety factor | Radius at LFS midplane [m]'
+  do i = 1, npoints
+    write(99,'(3es23.5)') psin_arr_tot(i), phi_arr_tot(i)/(2.d0*PI), R_arr_tot(i)
+  end do
+  close(99)
 end if
-
-do i = 1, npoints
-  
-  if ( responsible(i) ) then
-    write(*,'(4es23.5,i10)') psin_arr(i), phi_arr(i)/(2.d0*PI), torturns_arr(i), polturns_arr(i), i
-  end if
-
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
- 
-end do
-
 
 contains
 
@@ -170,8 +197,15 @@ contains
   phinew = phi + 0.5d0 * stepsize * Bp / (RR * BB)
   
   call find_RZ_nearby(node_list, element_list, Rold, Zold, sold, told, ielm_old, &
-    Rnew, Znew, snew, tnew, ielm_new, ifail)  
+                      Rnew, Znew, snew, tnew, ielm_new, ifail)
   if ( ielm_new < 1 ) then
+    write(*,*) 'find_RZ_nearby failed, using find_RZ instead, (R,Z)-position:', Rnew, Znew
+    Rnewtmp = Rnew
+    Znewtmp = Znew 
+    call find_RZ(node_list, element_list, Rnewtmp, Znewtmp, Rnew, Znew, ielm_new, snew, tnew, ifail)
+  end if 
+  if ( ielm_new < 1 ) then
+    write(*,*) 'ATTENTION: both find_RZ_nearby and find_RZ failed!', Rnew, Znew, ielm_new, ifail
     stop_tracing = .true.
     return
   end if
@@ -186,11 +220,18 @@ contains
   
   RR   = Rold   + stepsize * BR / BB
   ZZ   = Zold   + stepsize * BZ / BB
-  phi  = phiold + stepsize * Bp / (RR * BB)
+  phi  = phiold + stepsize * Bp / (Rold * BB)
   
   call find_RZ_nearby(node_list, element_list, Rold, Zold, sold, told, ielm_old, &
-    RR, ZZ, s, t, ielm, ifail)
+                      RR, ZZ, s, t, ielm, ifail)
   if ( ielm < 1 ) then
+    write(*,*) 'find_RZ_nearby failed, using find_RZ instead, (R,Z)-position:', RR, ZZ
+    RRtmp = RR
+    ZZtmp = ZZ 
+    call find_RZ(node_list, element_list, RRtmp, ZZtmp, RR, ZZ, ielm, s, t, ifail)
+  end if
+  if ( ielm < 1 ) then
+    write(*,*) 'ATTENTION: both find_RZ_nearby and find_RZ failed!', RR, ZZ, ielm, ifail
     stop_tracing = .true.
     return
   end if
@@ -219,7 +260,6 @@ contains
   AZ_p = 0.d0
  
   !call interp(node_list, element_list, ielm, 1, 1, s, t, psieq, dum01, dum02, dum03, dum04, dum05) 
-
   !call F_profile(xpoint,xcase,Z,ES%Z_xpoint,psieq,ES%psi_axis,ES%psi_bnd,Fprof,dum01,dum02,dum03,dum04,dum05,&
   !               dum06,dum07,dum08,dum09,dum10,dum11)
  

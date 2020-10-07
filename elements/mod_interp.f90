@@ -284,11 +284,12 @@ pure subroutine sincosperiod_moivre(phi,HZ,dHZ)
     dHZ(3) = HZ(2)*(n_period)
 
     do i=2,n_mode
-      call moivre(HZ(2),HZ(3), &
-                  HZ(2),HZ(3), &
-                  HZ(2*i),HZ(2*i+1))
+
+      call moivre(HZ(2),HZ(3), HZ(2*i-2),HZ(2*i-1), HZ(2*i),HZ(2*i+1))
+
       dHZ(2*i)   = HZ(2*i+1)*(-n_period*i)
       dHZ(2*i+1) = HZ(2*i)*(n_period*i)
+
     end do
   end if
 end subroutine sincosperiod_moivre
@@ -313,13 +314,12 @@ pure subroutine mode_moivre(phi,HZ)
   integer :: i
   HZ(1) = 1.d0
   if (n_mode .gt. 0) then
+  
     HZ(2) = cos(n_period*phi)
     HZ(3) = sin(n_period*phi)
 
     do i=2,n_mode
-      call moivre(HZ(2),HZ(3), &
-                  HZ(2),HZ(3), &
-                  HZ(2*i),HZ(2*i+1))
+      call moivre(HZ(2),HZ(3), HZ(2*i-2),HZ(2*i-1), HZ(2*i),HZ(2*i+1))
     end do
   end if
 end subroutine mode_moivre
@@ -351,13 +351,20 @@ do kv = 1,n_vertex_max  ! 4 vertices
   do kf = 1, n_order+1       ! 4 basis functions
 
 #ifdef fullmhd
-    if (i_var == 456) then
+    if (i_var == 710) then
       P    = P    + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
       P_s  = P_s  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
       P_t  = P_t  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
       P_st = P_st + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
       P_ss = P_ss + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
       P_tt = P_tt + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
+    elseif (i_var == 711) then
+      P    = P    + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+      P_s  = P_s  + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
+      P_t  = P_t  + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
+      P_st = P_st + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
+      P_ss = P_ss + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
+      P_tt = P_tt + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
     else
 #endif
       P    = P    + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
@@ -397,21 +404,12 @@ P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   do kf = 1, n_order+1       ! 4 basis functions
-
-#ifdef fullmhd
-    if (i_var == 456) then
-      ! TODO: what is the equivalent of Fprof_eq for deltas?
-    else
-#endif
-      P    = P    + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-      P_s  = P_s  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-      P_t  = P_t  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-      P_st = P_st + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-      P_ss = P_ss + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-      P_tt = P_tt + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
-#ifdef fullmhd
-    endif
-#endif
+    P    = P    + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+    P_s  = P_s  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
+    P_t  = P_t  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
+    P_st = P_st + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
+    P_ss = P_ss + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
+    P_tt = P_tt + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
   end do
 end do
 end subroutine interp_delta
@@ -490,7 +488,7 @@ end subroutine interp_0_delta
 
 
 !> Calculates the interpolation within one element (i_elm) for a given position (s,t) in local coordinates
-subroutine interp_RZ_0(node_list,element_list,i_elm,s,t,R,Z)
+pure subroutine interp_RZ_0(node_list,element_list,i_elm,s,t,R,Z)
 type (type_node_list),    intent(in)  :: node_list
 type (type_element_list), intent(in)  :: element_list
 integer,                  intent(in)  :: i_elm
@@ -517,6 +515,7 @@ do kv = 1,n_vertex_max  ! 4 vertices
     Z    = Z    + xx2 * ss * G(kv,kf)
   end do
 end do
+
 end subroutine interp_RZ_0
 
 
@@ -551,12 +550,13 @@ R_t = sum(xR*H_t)
 Z   = sum(xZ*H)
 Z_s = sum(xZ*H_s)
 Z_t = sum(xZ*H_t)
+
 end subroutine interp_RZ_1
 
 
 
 !> Calculates the interpolation within one element (i_elm) for a given position (s,t) in local coordinates
-subroutine interp_RZ_2(node_list,element_list,i_elm,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+pure subroutine interp_RZ_2(node_list,element_list,i_elm,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
 type (type_node_list),    intent(in)  :: node_list
 type (type_element_list), intent(in)  :: element_list
 integer,                  intent(in)  :: i_elm

@@ -32,7 +32,7 @@ program jorek2_postproc
   call set_setting('units',           '0',     ierr, 'Calculate quantities in which units (1=JOREK, 0=SI)')
   call set_setting('loop_units',      '0',     ierr, 'Use which units for time-loops (1=JOREK, 0=SI)'     )
   call set_setting('linepoints',      '200',   ierr, 'Number of points along a line e.g. for pol_line'    )
-  call set_setting('tor_points',      '50',    ierr, 'Number of toroidal points e.g. for tor_line'        )
+  call set_setting('tor_points',      '200',   ierr, 'Number of toroidal points e.g. for tor_line'        )
   call set_setting('surfaces',        '100',   ierr, 'number for flux surfaces e.g. for qprofile'         )
   call set_setting('verbose',         'false', ierr, 'print detailed information?'                        )
   call set_setting('debug',           'false', ierr, 'debugging output for postproc?'                     )

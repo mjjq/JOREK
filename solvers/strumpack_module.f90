@@ -107,6 +107,8 @@ module strumpack_module
     subroutine strumpack_set_mat(n,nnz,irn,jcn,val,comm,update,distributed) bind(C)
         use, intrinsic :: iso_c_binding
         use mpi
+        use sorting_module, only : remove_duplicates
+
         implicit none
 
         integer comm,ierr
@@ -127,8 +129,13 @@ module strumpack_module
         call MPI_COMM_RANK(comm, rank, ierr)
         call MPI_COMM_SIZE(comm, ncpu, ierr)
 
-        if ((.not. dflag).and.(ncpu>1)) then
+        if ((minval(irn).lt.1).or.(maxval(irn).gt.n)) then
+          write(*,*) rank, ": Error: inconsistent row indices", minval(irn), maxval(irn)
+          !call exit(0)
+        endif
 
+        if ((.not. dflag).and.(ncpu.gt.1)) then
+          ! distribute rows between ncpu
           call distribute_rows(n,ncpu)
 
           allocate(myelm(nnz))
@@ -150,19 +157,21 @@ module strumpack_module
             jcnl(i) = jcn(myelm(i))                          ! jcn remains the same
             vall(i) = val(myelm(i))
           enddo
-
+          dist(:) = dist(:) - indx ! convert ot c-indexing
+#ifdef NOMKL
+          call remove_duplicates(n,nnzloc,irnl,jcnl,vall)
+#endif
           call convert2csr(indx,nloc,n,nnzloc,irnl,jcnl,vall)
-          dist(:) = dist(:) - indx                           ! convert to c-indexing
           call spk_set_mat(nloc,dist,irnl,jcnl,vall,spss,comm,upd)
           deallocate(myelm,irnl,jcnl,vall)
 
-        elseif (dflag.and.(ncpu>1)) then
-           ! get row distribution from irn
-
+        elseif (dflag.and.(ncpu.gt.1)) then
+          ! get row distribution from irn in case of pre-distributed matrix
           if (associated(dist)) dist=>null()
           allocate(dist(ncpu+1))
           dist(:) = 0
           dist(rank+1) = minval(irn)
+
           if (rank.eq.(ncpu-1)) dist(rank+2) = maxval(irn) + 1
 
           call MPI_Allreduce(MPI_IN_PLACE,dist,ncpu+1,MPI_INTEGER,MPI_SUM,comm,ierr)
@@ -181,16 +190,20 @@ module strumpack_module
 
           nloc = dist(rank+2) - dist(rank+1)
           irn(:) = irn(:) - dist(rank+1) + 1 ! irn starts from 1
-
-          call convert2csr(indx,nloc,n,nnz,irn,jcn,val)          
           dist(:) = dist(:) - indx
-        
+#ifdef NOMKL
+          call remove_duplicates(n,nnz,irn,jcn,val)
+#endif
+          call convert2csr(indx,nloc,n,nnz,irn,jcn,val)          
           call spk_set_mat(nloc,dist,irn,jcn,val,spss,comm,upd)
 
         else
-
+          ! case of ncpu = 1
           call distribute_rows(n,1)
           dist(:) = dist(:) - indx
+#ifdef NOMKL
+          call remove_duplicates(n,nnz,irn,jcn,val)
+#endif
           call convert2csr(indx,n,n,nnz,irn,jcn,val)
           call spk_set_mat(n,dist,irn,jcn,val,spss,comm,upd)
 

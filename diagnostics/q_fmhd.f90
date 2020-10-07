@@ -262,7 +262,7 @@ contains
   !call F_profile(xpoint,xcase,Z,ES%Z_xpoint,psieq,ES%psi_axis,ES%psi_bnd,Fprof,dum01,dum02,dum03,dum04,dum05,&
   !               dum06,dum07,dum08,dum09,dum10,dum11)
  
-  call interp(node_list, element_list, ielm, 456, 1, s, t, Fprof, dum01, dum02, dum03, dum04, dum05)
+  call interp(node_list, element_list, ielm, 710, 1, s, t, Fprof, dum01, dum02, dum03, dum04, dum05)
 
   BR = ( A3_Z - AZ_p )/ R
   BZ = ( AR_p - A3_R )/ R

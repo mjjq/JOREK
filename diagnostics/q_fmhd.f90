@@ -71,7 +71,6 @@ call broadcast_elements(my_id, element_list)                ! elements
 call broadcast_nodes(my_id, node_list)                      ! nodes
 call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
 call populate_element_rtree(node_list, element_list)
-call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
 call broadcast_equil_state(my_id)
 
 if ( my_id == 0 ) write(*,*) '*** ...start tracing... ***'

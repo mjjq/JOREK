@@ -326,8 +326,8 @@ subroutine do_read(this, sim, ev)
   else
     allocate(jorek_fields_interp_linear::sim%fields)
   end if
-  if (.not. allocated(sim%fields%node_list)) allocate(sim%fields%node_list)
-  if (.not. allocated(sim%fields%element_list)) allocate(sim%fields%element_list)
+  if (.not. associated(sim%fields%node_list))    allocate(sim%fields%node_list)
+  if (.not. associated(sim%fields%element_list)) allocate(sim%fields%element_list)
   
   ! Continue for jorek_fields_interp_linear
   select type (f => sim%fields)

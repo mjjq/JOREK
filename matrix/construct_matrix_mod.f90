@@ -11,7 +11,8 @@ contains
   !> subroutine that will construct elementary matrices
   subroutine elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis,         &
        &                             Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint,   &
-       &                             omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
+       &                             omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max, &
+                                     aux_nodes)
 
     ! --- Modules
     use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order, unified_element_matrix
@@ -41,6 +42,7 @@ contains
     integer,                          intent(in)     :: i_tor_min   
     integer,                          intent(in)     :: i_tor_max   
     TYPE (type_node_list),            intent(in)     :: node_list
+    type (type_node), optional,       intent(inout)  :: aux_nodes(n_vertex_max)
     
     ! -- internal parameters
     integer :: iv, iv2, iv3, iv4, inode1, inode2, inode3, inode4, i, j
@@ -69,13 +71,14 @@ contains
         thread_struct(omp_tid)%eq_g, thread_struct(omp_tid)%eq_s, thread_struct(omp_tid)%eq_t,     &
         thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st,   &
         thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g,                              &
-        thread_struct(omp_tid)%delta_s, thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max)
+        thread_struct(omp_tid)%delta_s, thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max,      &
+        aux_nodes)
     else
       ! (use the element matrix by toroidal integration in case of very few harmonics or in case
       ! of direct construction of the harmonic matrices used in preconditioning)
       call element_matrix(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd,       &
         R_xpoint, Z_xpoint, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid,       &
-        i_tor_min, i_tor_max)
+        i_tor_min, i_tor_max, aux_nodes)
     endif
     
     ! --- Apply sheath boundary conditions at the targets

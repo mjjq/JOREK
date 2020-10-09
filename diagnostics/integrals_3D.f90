@@ -235,7 +235,7 @@ do ife = ife_min, ife_max
       call density(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt),ES%psi_axis,ES%psi_bnd,eq_zne(ms,mt), &
                    dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-#if (JOREK_MODEL == 400) || (JOREK_MODEL == 711)
+#if (JOREK_MODEL == 400) || (JOREK_MODEL == 711) || (JOREK_MODEL == 712)
       call temperature_e(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt),ES%psi_axis,ES%psi_bnd,eq_zTe(ms,mt), &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 #else
@@ -246,7 +246,7 @@ do ife = ife_min, ife_max
     enddo
   enddo
 
-#if (JOREK_MODEL == 400) || (JOREK_MODEL == 711)
+#if (JOREK_MODEL == 400) || (JOREK_MODEL == 711) || (JOREK_MODEL == 712)
 #else
   eq_zTe = eq_zTe / 2.d0	! electron temperature
 #endif
@@ -313,7 +313,7 @@ do ife = ife_min, ife_max
 
         grad_P_psi = (dPdx * dpsidx + dPdy * dpsidy)/grad_psi
 
-#if (JOREK_MODEL == 400) || (JOREK_MODEL == 711)
+#if (JOREK_MODEL == 400) || (JOREK_MODEL == 711) || (JOREK_MODEL == 712)
         call sources(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, ps0, ES%psi_axis, psi_limit, &
                      particle_source,heat_source_i,heat_source_e)
 		     heat_source = heat_source_i + heat_source_e

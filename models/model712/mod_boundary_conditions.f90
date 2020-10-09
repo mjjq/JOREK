@@ -374,7 +374,7 @@ contains
               !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
               if ((node_list%node(inode)%boundary == 2) .or. (node_list%node(inode)%boundary == 3)) then
 
-                if ( (.not. is_freebound(in,k)) ) then ! apply fixed boundary conditions where necessary
+                if ( (.not. is_freebound(in,k)) .and. (k .ne. var_rhon) ) then ! apply fixed boundary conditions where necessary
 
                   index_node = node_list%node(inode)%index(1)
                   if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then

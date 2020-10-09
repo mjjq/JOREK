@@ -322,7 +322,7 @@ if (eta_ARAZ_on  ) eta_ARAZ   = 1.d0 ! switched on by default
 if (tauIC_ARAZ_on) tauIC_ARAZ = 1.d0 ! switched on by default
 
 ! --- Energy transfer between Ti and Te
-thermalization = .false.
+thermalization = .true.
 
 ! --- Initialise
 ELM_p  = 0.d0

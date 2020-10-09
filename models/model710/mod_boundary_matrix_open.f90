@@ -328,6 +328,7 @@ do ms=1, n_gauss
                 bf   = H1(k,l,ms)   * element_size_kl * HZ(in,mp)
                 bf_s = H1_s(k,l,ms) * element_size_kl * HZ(in,mp)   
                 bf_t = H1(k,l,ms)   * element_size_kl * HZ(in,mp) * element_size_perp
+                bf_p = H1(k,l,ms)   * element_size_kl * HZ_p(in,mp)
                 bf_R = (   Z_t(ms) * bf_s - Z_s(ms) * bf_t ) / xjac
                 bf_Z = ( - R_t(ms) * bf_s + R_s(ms) * bf_t ) / xjac
 

@@ -250,12 +250,12 @@ contains
                     beta_s = Cs_s * cs_direction / sqrt(BB2)
                     
                     ! --- Vector along element side, Ti and Te derivatives
-                    Cs_s_Ti  = - 0.25 * gamma**2 * Ti0_s * (gamma * (Ti0_corr+Te0_corr))**(-1.5)
+                    Cs_s_Ti  = - 0.25 * gamma**2 * (Ti0_s+Te0_s) * (gamma * (Ti0_corr+Te0_corr))**(-1.5)
                     Cs_s_Tis = 0.5 * gamma * (gamma * (Ti0_corr+Te0_corr))**(-0.5)
                     beta_s_Ti  = Cs_s_Ti  * cs_direction / sqrt(BB2)
                     beta_s_Tis = Cs_s_Tis * cs_direction / sqrt(BB2)
 
-                    Cs_s_Te  = - 0.25 * gamma**2 * Te0_s * (gamma * (Ti0_corr+Te0_corr))**(-1.5)
+                    Cs_s_Te  = - 0.25 * gamma**2 * (Ti0_s+Te0_s) * (gamma * (Ti0_corr+Te0_corr))**(-1.5)
                     Cs_s_Tes = 0.5 * gamma * (gamma * (Ti0_corr+Te0_corr))**(-0.5)
                     beta_s_Te  = Cs_s_Te  * cs_direction / sqrt(BB2)
                     beta_s_Tes = Cs_s_Tes * cs_direction / sqrt(BB2)
@@ -274,7 +274,7 @@ contains
                     if (k == var_uR) Mach1_s     = uR0_s - beta_s     * BR0
                     if (k == var_uZ) Mach1_s     = uZ0_s - beta_s     * BZ0
                     if (k == var_up) Mach1_s     = up0_s - beta_s     * Bp0
-                    if (k == var_uR) Mach1_s_Us  = 1.0
+                                     Mach1_s_Us  = 1.0
                     if (k == var_uR) Mach1_s_Ti  =       - beta_s_Ti  * BR0
                     if (k == var_uZ) Mach1_s_Ti  =       - beta_s_Ti  * BZ0
                     if (k == var_up) Mach1_s_Ti  =       - beta_s_Ti  * Bp0

@@ -712,7 +712,7 @@ do i=1,n_vertex_max
 
           ! --- rho
           rho0      = eq_g(mp,var_rho,ms,mt)
-          rho0_corr = corr_neg_dens1(rho0)
+          rho0_corr = max(rho0,1.d-12)!corr_neg_dens1(rho0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
           rho0_p    = eq_p(mp,var_rho,ms,mt)
           rho0_s    = eq_s(mp,var_rho,ms,mt)
           rho0_t    = eq_t(mp,var_rho,ms,mt)
@@ -721,7 +721,7 @@ do i=1,n_vertex_max
 
           ! --- T
           T0      = eq_g(mp,var_T,ms,mt)
-          T0_corr = corr_neg_temp1(T0)
+          T0_corr = max(T0,1.d-12)!corr_neg_temp1(T0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
           T0_p    = eq_p(mp,var_T,ms,mt)
           T0_s    = eq_s(mp,var_T,ms,mt)
           T0_t    = eq_t(mp,var_T,ms,mt)

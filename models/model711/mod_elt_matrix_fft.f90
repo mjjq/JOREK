@@ -871,8 +871,8 @@ do i=1,n_vertex_max
 
           ! --- B.grad and V.grad
           BgradTi   = BR0 * Ti0_R   + BZ0 * Ti0_Z   + Bp0 * Ti0_p   / R
-          BgradTi   = BR0 * Ti0_R   + BZ0 * Ti0_Z   + Bp0 * Ti0_p   / R
-          UgradTe   = UR0 * Te0_R   + UZ0 * Te0_Z   + Up0 * Te0_p   / R
+          BgradTe   = BR0 * Te0_R   + BZ0 * Te0_Z   + Bp0 * Te0_p   / R
+          UgradTi   = UR0 * Ti0_R   + UZ0 * Ti0_Z   + Up0 * Ti0_p   / R
           UgradTe   = UR0 * Te0_R   + UZ0 * Te0_Z   + Up0 * Te0_p   / R
           BgradRho = BR0 * rho0_R + BZ0 * rho0_Z + Bp0 * rho0_p / R
           UgradRho = UR0 * rho0_R + UZ0 * rho0_Z + Up0 * rho0_p / R

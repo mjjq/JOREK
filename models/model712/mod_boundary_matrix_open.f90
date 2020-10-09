@@ -311,11 +311,11 @@ do ms=1, n_gauss
           Qbnd(var_rho) = - v * rhoVdia_dot_n
 
           ! --- Sheath BC's
-          Qbnd(var_Ti) = - v * (gamma_sheath_i - 1.d0) * rho0 * Ti0 * c_s * B_dot_n / sqrt(BB2)
-          Qbnd(var_Te) = - v * (gamma_sheath_e - 1.d0) * rho0 * Te0 * c_s * B_dot_n / sqrt(BB2)
+          Qbnd(var_Ti) = - v * (gamma_sheath_i - 1.d0) * rho0 * Ti0 * cs_direction * c_s * B_dot_n / sqrt(BB2)
+          Qbnd(var_Te) = - v * (gamma_sheath_e - 1.d0) * rho0 * Te0 * cs_direction * c_s * B_dot_n / sqrt(BB2)
 
           ! --- Neutrals reflection
-          Qbnd(var_rhon) = + v * neutral_reflection * rho0 * c_s * B_dot_n / sqrt(BB2)
+          Qbnd(var_rhon) = + v * neutral_reflection * rho0 * cs_direction * c_s * B_dot_n / sqrt(BB2)
 
           ! --- Fill in RHS
           index_ij = n_tor_local*n_var*(n_order+1)*(vertex(i)-1) + n_tor_local * n_var * (j2-1) + im - i_tor_min +1  ! index in the ELM matrix
@@ -445,39 +445,39 @@ do ms=1, n_gauss
                 Qjac(var_rho, var_Ti ) = + v * rhoVdia_dot_n_Ti 
 
                 ! --- Sheath-linearised energy equation
-                Qjac(var_Ti, var_AR )  = + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * c_s   * B_dot_n_AR / sqrt(BB2) &
-                                         - v * (gamma_sheath - 1.d0) * rho0 * Ti0 * c_s   * B_dot_n    * 0.5 * BB2_AR / BB2**1.5
-                Qjac(var_Ti, var_AZ )  = + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * c_s   * B_dot_n_AZ / sqrt(BB2) &
-                                         - v * (gamma_sheath - 1.d0) * rho0 * Ti0 * c_s   * B_dot_n    * 0.5 * BB2_AZ / BB2**1.5
-                Qjac(var_Ti, var_A3 )  = + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * c_s   * B_dot_n_A3 / sqrt(BB2) &
-                                         - v * (gamma_sheath - 1.d0) * rho0 * Ti0 * c_s   * B_dot_n    * 0.5 * BB2_A3 / BB2**1.5
-                Qjac(var_Ti, var_rho)  = + v * (gamma_sheath - 1.d0) * rho  * Ti0 * c_s   * B_dot_n    / sqrt(BB2)
-                Qjac(var_Ti, var_Ti)   = + v * (gamma_sheath - 1.d0) * rho0 * Ti  * c_s   * B_dot_n    / sqrt(BB2) &
-                                         + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_Ti * B_dot_n    / sqrt(BB2)
-                Qjac(var_Ti, var_Te)   = + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_Te * B_dot_n    / sqrt(BB2)
+                Qjac(var_Ti, var_AR )  = + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_direction * c_s   * B_dot_n_AR / sqrt(BB2) &
+                                         - v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AR / BB2**1.5
+                Qjac(var_Ti, var_AZ )  = + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_direction * c_s   * B_dot_n_AZ / sqrt(BB2) &
+                                         - v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AZ / BB2**1.5
+                Qjac(var_Ti, var_A3 )  = + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_direction * c_s   * B_dot_n_A3 / sqrt(BB2) &
+                                         - v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_A3 / BB2**1.5
+                Qjac(var_Ti, var_rho)  = + v * (gamma_sheath - 1.d0) * rho  * Ti0 * cs_direction * c_s   * B_dot_n    / sqrt(BB2)
+                Qjac(var_Ti, var_Ti)   = + v * (gamma_sheath - 1.d0) * rho0 * Ti  * cs_direction * c_s   * B_dot_n    / sqrt(BB2) &
+                                         + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_direction * cs_Ti * B_dot_n    / sqrt(BB2)
+                Qjac(var_Ti, var_Te)   = + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_direction * cs_Te * B_dot_n    / sqrt(BB2)
 
                 ! --- Sheath-linearised energy equation
-                Qjac(var_Te, var_AR )  = + v * (gamma_sheath - 1.d0) * rho0 * Te0 * c_s   * B_dot_n_AR / sqrt(BB2) &
-                                         - v * (gamma_sheath - 1.d0) * rho0 * Te0 * c_s   * B_dot_n    * 0.5 * BB2_AR / BB2**1.5
-                Qjac(var_Te, var_AZ )  = + v * (gamma_sheath - 1.d0) * rho0 * Te0 * c_s   * B_dot_n_AZ / sqrt(BB2) &
-                                         - v * (gamma_sheath - 1.d0) * rho0 * Te0 * c_s   * B_dot_n    * 0.5 * BB2_AZ / BB2**1.5
-                Qjac(var_Te, var_A3 )  = + v * (gamma_sheath - 1.d0) * rho0 * Te0 * c_s   * B_dot_n_A3 / sqrt(BB2) &
-                                         - v * (gamma_sheath - 1.d0) * rho0 * Te0 * c_s   * B_dot_n    * 0.5 * BB2_A3 / BB2**1.5
-                Qjac(var_Te, var_rho)  = + v * (gamma_sheath - 1.d0) * rho  * Te0 * c_s   * B_dot_n    / sqrt(BB2)
-                Qjac(var_Te, var_Te)   = + v * (gamma_sheath - 1.d0) * rho0 * Te  * c_s   * B_dot_n    / sqrt(BB2) &
-                                         + v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_Te * B_dot_n    / sqrt(BB2)
-                Qjac(var_Te, var_Ti)   = + v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_Ti * B_dot_n    / sqrt(BB2)
+                Qjac(var_Te, var_AR )  = + v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_direction * c_s   * B_dot_n_AR / sqrt(BB2) &
+                                         - v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AR / BB2**1.5
+                Qjac(var_Te, var_AZ )  = + v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_direction * c_s   * B_dot_n_AZ / sqrt(BB2) &
+                                         - v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AZ / BB2**1.5
+                Qjac(var_Te, var_A3 )  = + v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_direction * c_s   * B_dot_n_A3 / sqrt(BB2) &
+                                         - v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_A3 / BB2**1.5
+                Qjac(var_Te, var_rho)  = + v * (gamma_sheath - 1.d0) * rho  * Te0 * cs_direction * c_s   * B_dot_n    / sqrt(BB2)
+                Qjac(var_Te, var_Te)   = + v * (gamma_sheath - 1.d0) * rho0 * Te  * cs_direction * c_s   * B_dot_n    / sqrt(BB2) &
+                                         + v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_direction * cs_Te * B_dot_n    / sqrt(BB2)
+                Qjac(var_Te, var_Ti)   = + v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_direction * cs_Ti * B_dot_n    / sqrt(BB2)
 
                 ! --- Neutrals reflection
-                Qjac(var_rhon, var_AR ) = - v * neutral_reflection * rho0 * c_s   * B_dot_n_AR / sqrt(BB2) &
-                                          + v * neutral_reflection * rho0 * c_s   * B_dot_n    * 0.5 * BB2_AR / sqrt(BB2)**1.5
-                Qjac(var_rhon, var_AZ ) = - v * neutral_reflection * rho0 * c_s   * B_dot_n_AZ / sqrt(BB2) &
-                                          + v * neutral_reflection * rho0 * c_s   * B_dot_n    * 0.5 * BB2_AZ / sqrt(BB2)**1.5
-                Qjac(var_rhon, var_A3 ) = - v * neutral_reflection * rho0 * c_s   * B_dot_n_A3 / sqrt(BB2) &
-                                          + v * neutral_reflection * rho0 * c_s   * B_dot_n    * 0.5 * BB2_A3 / sqrt(BB2)**1.5
-                Qjac(var_rhon, var_rho) = - v * neutral_reflection * rho  * c_s   * B_dot_n / sqrt(BB2)
-                Qjac(var_rhon, var_Ti ) = - v * neutral_reflection * rho0 * cs_Ti * B_dot_n / sqrt(BB2)
-                Qjac(var_rhon, var_Te ) = - v * neutral_reflection * rho0 * cs_Te * B_dot_n / sqrt(BB2)
+                Qjac(var_rhon, var_AR ) = - v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n_AR / sqrt(BB2) &
+                                          + v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AR / sqrt(BB2)**1.5
+                Qjac(var_rhon, var_AZ ) = - v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n_AZ / sqrt(BB2) &
+                                          + v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AZ / sqrt(BB2)**1.5
+                Qjac(var_rhon, var_A3 ) = - v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n_A3 / sqrt(BB2) &
+                                          + v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_A3 / sqrt(BB2)**1.5
+                Qjac(var_rhon, var_rho) = - v * neutral_reflection * rho  * cs_direction * c_s   * B_dot_n / sqrt(BB2)
+                Qjac(var_rhon, var_Ti ) = - v * neutral_reflection * rho0 * cs_direction * cs_Ti * B_dot_n / sqrt(BB2)
+                Qjac(var_rhon, var_Te ) = - v * neutral_reflection * rho0 * cs_direction * cs_Te * B_dot_n / sqrt(BB2)
 
                 ! --- Fill-in Matrix
                 index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l2-1) + in - i_tor_min +1! index in the ELM matrix 

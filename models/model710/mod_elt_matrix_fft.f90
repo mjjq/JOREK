@@ -100,14 +100,14 @@ real*8     :: p0,   p0_R,   p0_Z,   p0_p,   p0_s,   p0_t,   p0_corr
 real*8     :: AR,  AR_R,  AR_Z,  AR_p,  AR_s,  AR_t
 real*8     :: AZ,  AZ_R,  AZ_Z,  AZ_p,  AZ_s,  AZ_t
 real*8     :: A3,  A3_R,  A3_Z,  A3_p,  A3_s,  A3_t
-real*8     :: UR,  UR_R,  UR_Z,  UR_p,  UR_s,  UR_t, UR_RR, UR_ZZ
-real*8     :: UZ,  UZ_R,  UZ_Z,  UZ_p,  UZ_s,  UZ_t, UZ_RR, UZ_ZZ
-real*8     :: Up,  Up_R,  Up_Z,  Up_p,  Up_s,  Up_t, Up_RR, Up_ZZ
+real*8     :: UR,  UR_R,  UR_Z,  UR_p,  UR_s,  UR_t
+real*8     :: UZ,  UZ_R,  UZ_Z,  UZ_p,  UZ_s,  UZ_t
+real*8     :: Up,  Up_R,  Up_Z,  Up_p,  Up_s,  Up_t
 real*8     :: T,   T_R,   T_Z,   T_p,   T_s,   T_t
 real*8     :: rho, rho_R, rho_Z, rho_p, rho_s, rho_t
 
 real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p
-real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ
+real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p
 
 real*8     :: Fprof
 real*8     :: BR0, BR0_AR,    BR0_AZ__n, BR0_A3
@@ -1253,19 +1253,6 @@ do i=1,n_vertex_max
                   bf_t  = H_t(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
                   bf_R = (   y_t(ms,mt) * bf_s - y_s(ms,mt) * bf_t ) / xjac
                   bf_Z = ( - x_t(ms,mt) * bf_s + x_s(ms,mt) * bf_t ) / xjac
-                  bf_ss = H_ss(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
-                  bf_tt = H_tt(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
-                  bf_st = H_st(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
-                  bf_RR =  (   bf_ss * y_t(ms,mt)**2 - 2.d0*bf_st * y_s(ms,mt)*y_t(ms,mt)                    &
-                            + bf_tt * y_s(ms,mt)**2                                                          &
-                            + bf_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                      &
-                            + bf_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) )           )/ xjac**2 &
-                            - bf_R * xjac_R / xjac
-                  bf_ZZ =  (   bf_ss * x_t(ms,mt)**2 - 2.d0*bf_st * x_s(ms,mt)*x_t(ms,mt)              &
-                            + bf_tt * x_s(ms,mt)**2                                                    &
-                            + bf_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
-                            + bf_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
-                            - bf_Z * xjac_Z / xjac
 
                   UR    = bf    ;  UZ    = bf    ;  Up    = bf
                   UR_R  = bf_R  ;  UZ_R  = bf_R  ;  Up_R  = bf_R
@@ -1273,8 +1260,6 @@ do i=1,n_vertex_max
                   UR_p  = bf_p  ;  UZ_p  = bf_p  ;  Up_p  = bf_p
                   UR_s  = bf_s  ;  UZ_s  = bf_s  ;  Up_s  = bf_s
                   UR_t  = bf_t  ;  UZ_t  = bf_t  ;  Up_t  = bf_t
-                  UR_RR = bf_RR ;  UZ_RR = bf_RR ;  Up_RR = bf_RR
-                  UR_ZZ = bf_ZZ ;  UZ_ZZ = bf_ZZ ;  Up_ZZ = bf_ZZ
 
                   AR    = bf    ;  AZ    = bf    ;  A3    = bf    ; T    = bf    ; rho    = bf
                   AR_R  = bf_R  ;  AZ_R  = bf_R  ;  A3_R  = bf_R  ; T_R  = bf_R  ; rho_R  = bf_R 

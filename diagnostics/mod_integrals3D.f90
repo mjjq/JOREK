@@ -357,7 +357,7 @@ do ife = ife_min, ife_max
       call density(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                    dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-#if JOREK_MODEL == 400
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
       call temperature_e(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 #else
@@ -475,7 +475,7 @@ do ife = ife_min, ife_max
                      + F0 * zj0 * u0_p / (BigR**2.d0)
         vpar_disp  = visco_par * (F0/BigR)**2.d0 * (vpar_x**2.d0+vpar_y**2.d0 ) 
 
-#if (JOREK_MODEL == 400)
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
         call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_bnd, &
                      particle_source,heat_source_i,heat_source_e)
 		     heat_source = heat_source_i + heat_source_e

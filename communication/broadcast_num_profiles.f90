@@ -110,7 +110,7 @@ if ( num_Te ) then
   call MPI_BCAST(num_Te_y3,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
-if (jorek_model == 710) then
+if ( (jorek_model == 710) .or. (jorek_model == 711) ) then
   call MPI_BCAST(num_Fprofile_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   if ( my_id /= 0 ) then
      if ( allocated(num_Fprofile_x ) ) deallocate( num_Fprofile_x  )

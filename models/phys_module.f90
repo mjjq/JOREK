@@ -33,6 +33,8 @@ module phys_module
   logical :: U_sheath             !< Use Stangeby BCs for electric potential
   logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
   real*8  :: gamma_sheath         !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
+  real*8  :: gamma_sheath_i       !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
+  real*8  :: gamma_sheath_e       !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
   real*8  :: gamma_stangeby       !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
   real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
   real*8  :: neutral_reflection   !< reflection coefficient of ions into neutrals (model500)
@@ -168,6 +170,8 @@ module phys_module
   real*8  :: heatsource_gauss          !< Additional Gaussian heat source amplitude
   real*8  :: heatsource_gauss_psin     !< Position around which Gaussian source is located
   real*8  :: heatsource_gauss_sig      !< Width over which Gaussian source extends
+  real*8  :: heatsource_gauss_i        !< Additional Gaussian heat source amplitude
+  real*8  :: heatsource_gauss_e        !< Additional Gaussian heat source amplitude
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num

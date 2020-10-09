@@ -296,7 +296,7 @@ do ms=1, n_gauss
           Qbnd(var_rho) = - v * rhoVdia_dot_n
 
           ! --- Sheath BC's
-          Qbnd(var_T) = - v * (gamma_sheath - 1.d0) * rho0 * T0 * c_s * B_dot_n / sqrt(BB2)
+          Qbnd(var_T) = - v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * c_s * B_dot_n / sqrt(BB2)
 
           ! --- Fill in RHS
           index_ij = n_tor_local*n_var*(n_order+1)*(vertex(i)-1) + n_tor_local * n_var * (j2-1) + im - i_tor_min +1  ! index in the ELM matrix
@@ -421,15 +421,15 @@ do ms=1, n_gauss
                 Qjac(var_rho, var_T  ) = + v * rhoVdia_dot_n_T  
 
                 ! --- Sheath-linearised energy equation
-                Qjac(var_T, var_AR )  = + v * (gamma_sheath - 1.d0) * rho0 * T0 * c_s  * B_dot_n_AR / sqrt(BB2) &
-                                        - v * (gamma_sheath - 1.d0) * rho0 * T0 * c_s  * B_dot_n    * 0.5 * BB2_AR / BB2**1.5
-                Qjac(var_T, var_AZ )  = + v * (gamma_sheath - 1.d0) * rho0 * T0 * c_s  * B_dot_n_AZ / sqrt(BB2) &
-                                        - v * (gamma_sheath - 1.d0) * rho0 * T0 * c_s  * B_dot_n    * 0.5 * BB2_AZ / BB2**1.5
-                Qjac(var_T, var_A3 )  = + v * (gamma_sheath - 1.d0) * rho0 * T0 * c_s  * B_dot_n_A3 / sqrt(BB2) &
-                                        - v * (gamma_sheath - 1.d0) * rho0 * T0 * c_s  * B_dot_n    * 0.5 * BB2_A3 / BB2**1.5
-                Qjac(var_T, var_rho)  = + v * (gamma_sheath - 1.d0) * rho  * T0 * c_s  * B_dot_n    / sqrt(BB2)
-                Qjac(var_T, var_T)    = + v * (gamma_sheath - 1.d0) * rho0 * T  * c_s  * B_dot_n    / sqrt(BB2) &
-                                        + v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_T * B_dot_n    / sqrt(BB2)
+                Qjac(var_T, var_AR )  = + v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * c_s  * B_dot_n_AR / sqrt(BB2) &
+                                        - v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * c_s  * B_dot_n    * 0.5 * BB2_AR / BB2**1.5
+                Qjac(var_T, var_AZ )  = + v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * c_s  * B_dot_n_AZ / sqrt(BB2) &
+                                        - v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * c_s  * B_dot_n    * 0.5 * BB2_AZ / BB2**1.5
+                Qjac(var_T, var_A3 )  = + v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * c_s  * B_dot_n_A3 / sqrt(BB2) &
+                                        - v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * c_s  * B_dot_n    * 0.5 * BB2_A3 / BB2**1.5
+                Qjac(var_T, var_rho)  = + v * (gamma_sheath - 1.d0) * rho  * T0 * cs_direction * c_s  * B_dot_n    / sqrt(BB2)
+                Qjac(var_T, var_T)    = + v * (gamma_sheath - 1.d0) * rho0 * T  * cs_direction * c_s  * B_dot_n    / sqrt(BB2) &
+                                        + v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * cs_T * B_dot_n    / sqrt(BB2)
 
                 ! --- Fill-in Matrix
                 index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l2-1) + in - i_tor_min +1! index in the ELM matrix 

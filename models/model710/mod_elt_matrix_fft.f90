@@ -323,7 +323,7 @@ rho_min = 0.005 ! should be moved to namelist input
 
 ! --- Main switches
 Coef_DivV = 0.0d0 ! this is a stabilisation term !
-ViscType  = 20
+ViscType  = 22
 VmsType   = -1    ! this is a stabilisation term if >=0 !
 CoefAdv   = 0.d0  ! this is a stabilisation term (part of VMS) !
 
@@ -338,6 +338,7 @@ if (tauIC_ARAZ_on) tauIC_ARAZ = 1.d0 ! switched on by default
 ! --- =10 : Generic form of the full viscous tensor (from B.Nkonga and A.Bhole)
 ! --- =15 : Mock-up of reduced-MHD resistivity (from B.Nkonga)
 ! --- =20 : Viscous terms as implemented by W.Haverkort
+! --- =22 : The correct viscous tensor (there is only one.)
 
 
 ! --- The settings that will reproduce the old 710 set-up (assuming you are also
@@ -821,6 +822,14 @@ do i=1,n_vertex_max
           VdiaGradUZ  = VdiaR0 * UZ0_R + VdiaZ0 * UZ0_Z + VdiaP0 * UZ0_p / R
           VdiaGradUp  = VdiaR0 * Up0_R + VdiaZ0 * Up0_Z + VdiaP0 * Up0_p / R
           
+          ! --- Make sure SOL density/temperature stays levelled
+          if (.true.) then
+            if (rho0 .lt. 1.0*rho_1) particle_source(ms,mt) = 0.5 * (1.0*rho_1-rho0) / tstep
+            if (T0   .lt. 1.0*T_1  ) heat_source(ms,mt)     = 0.5 * (1.0*T_1 -T0  ) / tstep
+            if (rho0 .lt. 1.0*rho_1) D_prof  = D_prof  * 1.d2
+            if (T0   .lt. 1.0*T_1  ) ZK_prof = ZK_prof * 1.d2
+          endif
+
           ! --- Toroidal velocity
           Vt0   = V_source(ms,mt)
           Vt0_R = dV_dpsi_source(ms,mt) * psi_axisym_R(ms,mt)
@@ -1007,6 +1016,20 @@ do i=1,n_vertex_max
                                + ( -Up0 / R + Up0_R + UR0_p / R ) * v_R           &
                                + (R * Up0_Z + UZ0_p) * v_Z / R                    )
               Qvisc_Up__k = - (2.d0 * ( UR0 + Up0_p ) * v_p / R**2)
+            case(22) ! --- The correct viscosity (there is only one...)
+              Qvisc_UR__p = - (v_R + v/R) * divU + v_Z * (UZ0_R - UR0_Z)
+              Qvisc_UR__k = - v_p/R**2 * (UR0_p - Up0 - R*Up0_R)
+
+              Qvisc_UZ__p = - v_Z * divU - v_R * (UZ0_R - UR0_Z)
+              Qvisc_UZ__k = + v_p/R**2 * (R*Up0_Z - UZ0_p)
+
+              Qvisc_Up__p = - v_Z/R * (R*Up0_Z - UZ0_p) + (v_R + v/R)/R * (UR0_p - Up0 - R*Up0_R)
+              Qvisc_Up__k = - v_p/R * divU
+              
+              ! --- The toroidal momentum source (same as above replacing all Up0 by -Vt0)
+              Qvisc_UR__k = Qvisc_UR__k + v_p/R**2 * (- Vt0 - R*Vt0_R)
+              Qvisc_UZ__k = Qvisc_UZ__k - v_p/R**2 * (R*Vt0_Z)
+              Qvisc_Up__p = Qvisc_Up__p + v_Z/R * (R*Vt0_Z) - (v_R + v/R)/R * (- Vt0 - R*Vt0_R)
             case(30)
             case default
             end select
@@ -1863,6 +1886,51 @@ do i=1,n_vertex_max
 
                     Qvisc_Up_UR__k  = - (2.d0 * ( UR ) * v_p / R**2)
                     Qvisc_Up_Up__kn = - (2.d0 * ( Up_p ) * v_p / R**2)
+                  case (22) ! --- The correct viscosity (there is only one...)
+                    Qvisc_UR_UR__p  = - (v_R + v/R) * divU_UR + v_Z * (- UR_Z)
+                    Qvisc_UR_UR__k  = 0.d0
+                    Qvisc_UR_UR__n  = 0.d0
+                    Qvisc_UR_UR__kn = - v_p/R**2 * (UR_p)
+
+                    Qvisc_UR_UZ__p  = - (v_R + v/R) * divU_UZ + v_Z * (UZ_R)
+                    Qvisc_UR_UZ__k  = 0.d0
+                    Qvisc_UR_UZ__n  = 0.d0
+                    Qvisc_UR_UZ__kn = 0.d0
+
+                    Qvisc_UR_Up__p  = 0.d0
+                    Qvisc_UR_Up__k  = - v_p/R**2 * (- Up - R*Up_R)
+                    Qvisc_UR_Up__n  = - (v_R + v/R) * divU_Up__n
+                    Qvisc_UR_Up__kn = 0.d0
+
+                    Qvisc_UZ_UR__p  = - v_Z * divU_UR - v_R * (- UR_Z)
+                    Qvisc_UZ_UR__k  = 0.d0
+                    Qvisc_UZ_UR__n  = 0.d0
+                    Qvisc_UZ_UR__kn = 0.d0
+
+                    Qvisc_UZ_UZ__p  = - v_Z * divU_UZ - v_R * (UZ_R)
+                    Qvisc_UZ_UZ__k  = 0.d0
+                    Qvisc_UZ_UZ__n  = 0.d0
+                    Qvisc_UZ_UZ__kn = + v_p/R**2 * (- UZ_p)
+
+                    Qvisc_UZ_Up__p  = 0.d0
+                    Qvisc_UZ_Up__k  = + v_p/R**2 * (R*Up_Z)
+                    Qvisc_UZ_Up__n  = - v_Z * divU_Up__n
+                    Qvisc_UZ_Up__kn = 0.d0
+
+                    Qvisc_Up_UR__p  = 0.d0
+                    Qvisc_Up_UR__k  = - v_p/R * divU_UR
+                    Qvisc_Up_UR__n  = + (v_R + v/R)/R * (UR_p)
+                    Qvisc_Up_UR__kn = 0.d0
+
+                    Qvisc_Up_UZ__p  = 0.d0
+                    Qvisc_Up_UZ__k  = - v_p/R * divU_UZ
+                    Qvisc_Up_UZ__n  = - v_Z/R * (- UZ_p)
+                    Qvisc_Up_UZ__kn = 0.d0
+
+                    Qvisc_Up_Up__p  = - v_Z/R * (R*Up_Z) + (v_R + v/R)/R * (- Up - R*Up_R)
+                    Qvisc_Up_Up__k  = 0.d0
+                    Qvisc_Up_Up__n  = 0.d0
+                    Qvisc_Up_Up__kn = - v_p/R * divU_Up__n
                   case (30)
                   case default
                   end select

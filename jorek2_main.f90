@@ -75,7 +75,7 @@ program JOREK2
 #endif
   use mpi_mod
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555 || JOREK_MODEL == 712)
   use mod_neutral_source
 #endif
 
@@ -1127,7 +1127,7 @@ required = 0
 
       endif
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555 || JOREK_MODEL == 712)
       call total_neutrals(my_id,node_list,element_list)
       if (using_spi .and. t_now >= t_ns) then
         call update_spi(my_id,node_list,element_list)
@@ -1477,7 +1477,7 @@ required = 0
 
     	  call density(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
     	     zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-    	  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) ) then	     
+    	  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) .or. (jorek_model .eq. 712) ) then	     
     	    call temperature_i(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
     	      zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
     	    call temperature_e(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &

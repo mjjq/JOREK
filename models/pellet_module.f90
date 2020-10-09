@@ -186,7 +186,7 @@ module pellet_module
     use data_structure
     use phys_module
     use mpi_mod
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555 || JOREK_MODEL == 712)
       use mod_neutral_source
 #endif
     use corr_neg
@@ -358,7 +358,7 @@ module pellet_module
     use data_structure
     use phys_module
     use mpi_mod
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555 || JOREK_MODEL == 712)
     use mod_neutral_source
 #endif
     use corr_neg

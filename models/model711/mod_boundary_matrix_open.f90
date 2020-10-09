@@ -434,11 +434,11 @@ do ms=1, n_gauss
                 endif
 
                 ! --- Diamagnetic BC's
-                Qjac(var_rho, var_AR ) = - v * rhoVdia_dot_n_AR 
-                Qjac(var_rho, var_AZ ) = - v * rhoVdia_dot_n_AZ 
-                Qjac(var_rho, var_A3 ) = - v * rhoVdia_dot_n_A3 
-                Qjac(var_rho, var_rho) = - v * rhoVdia_dot_n_rho
-                Qjac(var_rho, var_Ti ) = - v * rhoVdia_dot_n_Ti 
+                Qjac(var_rho, var_AR ) = + v * rhoVdia_dot_n_AR 
+                Qjac(var_rho, var_AZ ) = + v * rhoVdia_dot_n_AZ 
+                Qjac(var_rho, var_A3 ) = + v * rhoVdia_dot_n_A3 
+                Qjac(var_rho, var_rho) = + v * rhoVdia_dot_n_rho
+                Qjac(var_rho, var_Ti ) = + v * rhoVdia_dot_n_Ti 
 
                 ! --- Sheath-linearised energy equation
                 Qjac(var_Ti, var_AR )  = + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * c_s   * B_dot_n_AR / sqrt(BB2) &

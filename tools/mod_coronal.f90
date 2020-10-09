@@ -10,6 +10,8 @@ implicit none
 private
 public coronal
 public output_coronal
+public specific_coronal_equilibrium
+public coronal_prad
 
 !> Coronal equilibrium datatype
 type coronal
@@ -17,7 +19,7 @@ type coronal
   real*8, allocatable :: density(:) !< log10 density (m^-3)
   real*8, allocatable :: temperature(:) !< log10 temperature (K)
   real*8, allocatable :: Z(:,:,:) !< Charge state (e) density for specific densities, temperatures and charge states [i_n, i_T, i_q]
-  real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W) for the above densities and temperatures [i_n, i_T]
+  real*8, allocatable :: Prad(:,:) !< Radiated power per ion (W) for the above densities and temperatures [i_n, i_T]
   type(Fspline)       :: ZFspline  !< Spline functions for effective charge
   type(Fspline)       :: PradFspline  !< Spline functions for CE radiation function
   type(Fspline), allocatable :: PFspline(:)  !< Spline functions for each charge state
@@ -40,15 +42,16 @@ real*8, intent(in), dimension(0:ad%n_Z) :: fractions !< Fractional charge states
 real*8, intent(in), optional            :: neutral_density !< log10 neutral density in m^-3
 real*8                                  :: coronal_Prad !< Output power in W / atom
 
-real*8, dimension(ad%n_Z) :: rad
-real*8, dimension(ad%n_Z) :: rad_RC
-real*8  :: density_n, rad_RB, rad_LT
+real*8 :: rad_RB, rad_LT
+real*8, dimension(0:ad%n_Z) :: rad
+real*8, dimension(0:ad%n_Z) :: rad_RC
+real*8  :: density_n
 integer :: iz
 
-do iz=1,ad%n_Z
-  call ad%PRB%interp(iz, density, temperature, rad_RB)
-  call ad%PLT%interp(iz, density, temperature, rad_LT)
-  call ad%PRC%interp(iz, density, temperature, rad_RC(iz))
+do iz=0,ad%n_Z
+  call ad%PRB%interp_linear(iz, density, temperature, rad_RB)
+  call ad%PLT%interp_linear(iz, density, temperature, rad_LT)
+  call ad%PRC%interp_linear(iz, density, temperature, rad_RC(iz))
   rad(iz) = rad_RB + rad_LT
 enddo ! radiation emitted by atoms at level iz
 ! PRB and PLT should also be multiplied by n_e, and PRC with neutral density
@@ -60,8 +63,30 @@ else ! otherwise set it to some extremely low value
   density_n = -99.d0 ! this is log10 of density
 endif
 
-coronal_Prad = dot_product(fractions(1:ad%n_Z), rad*10.d0**density + rad_RC*10.d0**density_n)
+coronal_Prad = dot_product(fractions(0:ad%n_Z), rad*10.d0**density + rad_RC*10.d0**density_n)
 end function coronal_Prad
+
+
+
+!> Calculate the coronal equilibrium values at specific values of density and temperature
+function specific_coronal_equilibrium(ad, density, temperature) result(fractions)
+type (ADF11_all), intent(in) :: ad !< ADF11 datatype
+real*8, intent(in) :: density !< log10 density in m^-3
+real*8, intent(in) :: temperature !< log10 temperature in K
+real*8, dimension(0:ad%n_Z) :: fractions
+
+integer :: iz
+real*8 :: ion_rate, rec_rate
+
+fractions(0) = 1.d0
+do iz=1,ad%n_Z
+  call ad%SCD%interp_linear(iz-1, density, temperature, ion_rate) ! ionizing to level iz (0 is neutral)
+  call ad%ACD%interp_linear(iz,   density, temperature, rec_rate) ! recombining from iz+1
+  fractions(iz) = fractions(iz-1) * ion_rate/rec_rate
+end do
+fractions = fractions/sum(fractions)
+end function specific_coronal_equilibrium
+
 
 
 !> Calculate the coronal equilibrium values at specific values of density and temperature
@@ -91,7 +116,7 @@ call AllocFspline(cor%ZFspline,n_T,n_d)
 call AllocFspline(cor%PradFspline,n_T,n_d)
 
 do m=1, n_d
-  cor%density(m) = 18.d0 + float(m-1)/n_d * (21.-18.) ! log10 [m^-3], linear between 18 and 21
+  cor%density(m) = 18.d0 + real(m-1,8)/real(n_d-1,8) * (21.d0-18.d0) ! log10 [m^-3], linear between 18 and 21
 end do
 do k=1, n_T
   cor%temperature(k) = log10( 1.d0 + exp(log(4.d4)*float(k-1)/(float(n_T-1))) - 1.d0 ) + log10(EL_CHG) - log10(K_BOLTZ) ! in log10 [K], 1 to 40000 eV in logscale
@@ -108,20 +133,19 @@ end do
 
 do m=1, n_d
   do k=1, n_T
-    p(0) = 1.d0
-    do iz=1,ad%n_Z
-      call ad%SCD%interp(iz, cor%density(m), cor%temperature(k), ion_rate) ! ionizing to level iz (0 is neutral)
-      call ad%ACD%interp(iz, cor%density(m), cor%temperature(k), rec_rate) ! recombining from iz+1
-      p(iz) = p(iz-1) * ion_rate/rec_rate
-    end do
+    p = specific_coronal_equilibrium(ad, cor%density(m), cor%temperature(k))
 
-    cor%Z(m,k,:)  = p/sum(p)
+    cor%Z(m,k,0:ad%n_Z) = p(0:ad%n_Z)
     do iz=1,ad%n_Z
       Z_eff(m,k) = Z_eff(m,k) + cor%Z(m,k,iz) * real(iz,8)
     end do
     cor%Prad(m,k) = coronal_Prad(ad, cor%density(m), cor%temperature(k), p/sum(p)) ! Do not set neutral density yet
   enddo
 enddo
+
+if (any(cor%Z .lt. 0.d0)) then
+  write(*,*) "Z prob below zero", count(cor%Z .lt. 0.d0), minval(cor%Z), minloc(cor%Z)
+end if
 
 call ConstructFspline(cor%ZFspline,Z_eff)
 call ConstructFspline(cor%PradFspline,cor%Prad)
@@ -137,6 +161,7 @@ subroutine interpolate_coronal(cor, density, temperature, p_out, z_eff, rad)
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 real*8, intent(in)              :: density !< log10 density (m^-3)
 real*8, intent(in)              :: temperature !< log10 temperature (K)
+real*8, dimension(0:cor%n_Z)    :: p !< distribution of charge states (sum = 1)
 real*8, intent(out), optional, dimension(0:cor%n_Z) :: p_out !< distribution of charge states (sum = 1)
 real*8, intent(out), optional   :: z_eff !< effective charge according to coronal equilibrium
 real*8, intent(out), optional   :: rad !< radiated power according to coronal equilibrium
@@ -145,7 +170,9 @@ real*8, dimension(0:cor%n_Z)    :: p !< distribution of charge states (sum = 1)
 real*8, dimension(0:cor%n_Z)    :: Z !< The charge number at each charge state
 integer                         :: iz
 
-p = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature)
+if (present(p_out) .or. present(z_eff)) then
+  p = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature)
+end if
 
 if (present(p_out)) then
   p_out = p

@@ -10,6 +10,7 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   use data_structure
   use mod_ch_node_struct
   use vacuum, only: sr
+  use mod_integer_types
 
   implicit none
 

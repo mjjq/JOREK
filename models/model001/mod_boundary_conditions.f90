@@ -34,6 +34,7 @@ contains
     use phys_module, only: F0, GAMMA, freeboundary, keep_n0_const
     use mpi_mod
     use mod_locate_irn_jcn
+    use mod_integer_types
 
     implicit none
 

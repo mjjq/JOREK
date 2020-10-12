@@ -197,6 +197,7 @@ C*
 *
 * Input variables
 * ---------------
+       use mod_integer_types
        integer(kind=int_all) n, nloc, lwork
        integer icntl(*)
        double precision   cntl(*)
@@ -523,6 +524,7 @@ C*
 *
         subroutine dgmres(n,m,b,x,H,w,r0,V,dot,yCurrent,xCurrent,rotSin,
      &                   rotCos,irc,icntl,cntl,info,rinfo)
+       use mod_integer_types
 *
 *
 *  Purpose

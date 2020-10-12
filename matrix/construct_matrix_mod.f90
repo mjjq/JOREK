@@ -299,6 +299,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   use mod_boundary_conditions, only : boundary_conditions
   use mod_fix_axis_nodes, only : fix_nodes_on_axis
   use mod_locate_irn_jcn
+  use mod_integer_types
   !$ use omp_lib
   implicit none
   

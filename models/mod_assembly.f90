@@ -31,6 +31,7 @@ contains
        &   irn, jcn, A_mat, i_tor_min, i_tor_max)
     use mod_parameters
     use mod_locate_irn_jcn
+    use mod_integer_types
 
     integer,               intent(in)                 :: k,  in
     integer,               intent(in)                 :: k2, in2
@@ -88,6 +89,7 @@ contains
        &   rhs_loc,  val,                 &
        &   i_tor_min, i_tor_max)
     use mod_parameters
+    use mod_integer_types
     integer,               intent(in)    :: k,  in
     integer(kind=int_all), intent(in)    :: index_node
     integer(kind=int_all), intent(in)    :: index_min, index_max

@@ -73,6 +73,7 @@ contains
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
+    use mod_integer_types
 
     implicit none
     !include 'mpif.h'
@@ -590,6 +591,7 @@ contains
     use data_structure
     use phys_module, only: RMP_har_cos, RMP_har_sin
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
+    use mod_integer_types
     
     implicit none
     
@@ -684,6 +686,7 @@ contains
     use data_structure
     use phys_module, only: RMP_har_cos, RMP_har_sin
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
+    use mod_integer_types
     
     implicit none
     
@@ -744,6 +747,7 @@ contains
     use data_structure
     use phys_module, only: GAMMA, tauIC, central_density, mu_zero
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
+    use mod_integer_types
     
     implicit none
     
@@ -957,6 +961,7 @@ contains
     use data_structure
     use phys_module, only: GAMMA, tauIC, central_density, mu_zero, F0, FF_0
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
+    use mod_integer_types
     
     implicit none
     

@@ -15,6 +15,7 @@ use vacuum_equilibrium, only: vacuum_equil
 use mod_coicsr
 use mpi_mod
 use mod_basisfunctions
+    use mod_integer_types
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
 use iso_c_binding

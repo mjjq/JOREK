@@ -43,6 +43,7 @@ contains
     use mod_locate_irn_jcn
     use mod_basisfunctions
     use mod_interp
+    use mod_integer_types
 
     implicit none
 

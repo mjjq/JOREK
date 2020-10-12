@@ -4,6 +4,8 @@
 !! given to the solver for calculating the time evolution of the physical quantities.
 module global_distributed_matrix
   
+  use mod_integer_types
+
   implicit none
   
   public
@@ -69,6 +71,8 @@ module global_distributed_matrix
   !! ::j_col) in the sparse matrix structure.
   integer pure function det_sparse_pos(i_row, j_col, index_min)
     
+    use mod_integer_types
+
     implicit none
     
     ! --- Routine parameters
@@ -148,6 +152,7 @@ module global_distributed_matrix
     
     use mod_parameters, only: n_tor, n_var
     use data_structure, only: type_node_list, type_bnd_node_list
+    use mod_integer_types
     
     implicit none
     

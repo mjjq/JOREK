@@ -38,6 +38,7 @@ contains
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
+    use mod_integer_types
 
     implicit none
 

@@ -1,10 +1,12 @@
       module mod_coicsr
+      use mod_integer_types
       implicit none
       contains
 !------------------------------------------------------------------------
 ! routine from SPARSKIT2
 !------------------------------------------------------------------------
       subroutine coicsr (n,nnz,job,a,ja,ia,iwk)
+      use mod_integer_types
       integer               :: job 
       integer(kind=int_all) :: n, nnz, ia(nnz),ja(nnz),iwk(n+1) 
       real*8                :: a(*)
@@ -112,6 +114,7 @@
 ! routine for complex matrix
 !------------------------------------------------------------------------
       subroutine coicsr_cmplx (n,nnz,job,a,ja,ia,iwk)
+      use mod_integer_types
      
       ! --- Routine parameters
       integer(kind=int_all), intent(inout) :: n, nnz 
@@ -183,6 +186,7 @@
       end subroutine coicsr_cmplx
 
       subroutine coicsr2 (n,nnz,a,ja,ia,ndof,iwk)
+      use mod_integer_types
       implicit none
       integer(kind=int_all) :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
       real*8                :: a(*)
@@ -287,6 +291,7 @@
 
       !> Routine for complex matrix block
       subroutine coicsr2_cmplx (n,nnz,a,ja,ia,ndof,iwk)
+      use mod_integer_types
       implicit none
 
       ! --- Routine parameters

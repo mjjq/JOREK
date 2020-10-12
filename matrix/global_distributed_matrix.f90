@@ -9,35 +9,35 @@ module global_distributed_matrix
   public
   
   ! --- The global distributed matrix and related quantities
-  real*8,  allocatable, target  :: A_glob(:)    !< Distributed global matrix
-  real*8,  allocatable, target  :: rhs_glob(:)  !< Distributed global right hand side
-  integer, allocatable, target  :: irn_glob(:)  !< Row indices for coordinate format sparse matrix (or CSR)
-  integer, allocatable, target  :: jcn_glob(:)  !< Column indices for coordinate format sparse matrix (or CSR)
-  integer, allocatable, target  :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) !< contains the structure of the sparse matrix (to fill in CSR format)
-  real*8,  allocatable          :: deltas(:)                                 !< solution from previous step
-  real*8,  allocatable          :: column_scaling(:)                         !< column scaling of the global matrix
-  integer, allocatable          :: local_index_start(:), local_index_end(:)  !< range of indices local to one MPI process 
-  integer                       :: ndof_glob, n_glob, nz_glob
-  integer                       :: n_matrix_block_size                       !< Size of a matrix block (n_var x n_tor)
+  real*8,                allocatable, target  :: A_glob(:)    !< Distributed global matrix
+  real*8,                allocatable, target  :: rhs_glob(:)  !< Distributed global right hand side
+  integer(kind=int_all), allocatable, target  :: irn_glob(:)  !< Row indices for coordinate format sparse matrix (or CSR)
+  integer(kind=int_all), allocatable, target  :: jcn_glob(:)  !< Column indices for coordinate format sparse matrix (or CSR)
+  integer(kind=int_all), allocatable, target  :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) !< contains the structure of the sparse matrix (to fill in CSR format)
+  real*8,                allocatable          :: deltas(:)                                 !< solution from previous step
+  real*8,                allocatable          :: column_scaling(:)                         !< column scaling of the global matrix
+  integer(kind=int_all), allocatable          :: local_index_start(:), local_index_end(:)  !< range of indices local to one MPI process 
+  integer(kind=int_all)                       :: ndof_glob, n_glob, nz_glob
+  integer(kind=int_all)                       :: n_matrix_block_size                       !< Size of a matrix block (n_var x n_tor)
   
   ! --- The distributed harmonic matrix (in case of direct construction)
   integer, allocatable, target  :: ijA_index_harm(:,:), ijA_size_harm(:), irn_jcn_harm(:,:) !< contains the structure of the harmonic sparse matrix (to fill in CSR format)
-  real*8,  allocatable, target  :: A_harm(:)    !< Distributed harmonic matrix
-  real*8,  allocatable, target  :: rhs_harm(:)  !< Distributed harmonic right hand side
-  integer, allocatable, target  :: irn_harm(:)  !< Row indices for coordinate format harmonic sparse matrix (or CSR)
-  integer, allocatable, target  :: jcn_harm(:)  !< Column indices for coordinate format harmonic sparse matrix (or CSR)
-  integer                       :: n_matrix_block_size_harm                       !< Size of a harmonic matrix block (n_var x n_tor)
-  integer                       :: ndof_harm, n_harm, nz_harm                       
+  real*8,                allocatable, target  :: A_harm(:)    !< Distributed harmonic matrix
+  real*8,                allocatable, target  :: rhs_harm(:)  !< Distributed harmonic right hand side
+  integer(kind=int_all), allocatable, target  :: irn_harm(:)  !< Row indices for coordinate format harmonic sparse matrix (or CSR)
+  integer(kind=int_all), allocatable, target  :: jcn_harm(:)  !< Column indices for coordinate format harmonic sparse matrix (or CSR)
+  integer(kind=int_all)                       :: n_matrix_block_size_harm                       !< Size of a harmonic matrix block (n_var x n_tor)
+  integer(kind=int_all)                       :: ndof_harm, n_harm, nz_harm                       
   
   ! --- The complex harmonic matrix 
 #ifdef USE_COMPLEX_PRECOND
-  double complex, allocatable, target :: A_cmplx(:)          !< Distributed harmonic matrix
-  double complex, allocatable, target :: rhs_cmplx(:)        !< Distributed harmonic right hand side
-  double complex, allocatable, target :: rhs_cmplx_guess(:)  !< Guess solution for GMRES
-  double complex, allocatable, target :: rhs_cmplx_sol(:)    !< Solution from GMRES
-  integer,        allocatable, target :: irn_cmplx(:)        !< Row indices for coordinate format sparse matrix (or CSR)
-  integer,        allocatable, target :: jcn_cmplx(:)        !< Column indices for coordinate format sparse matrix (or CSR)
-  integer                             :: n_cmplx, nz_cmplx                       
+  double complex,        allocatable, target :: A_cmplx(:)          !< Distributed harmonic matrix
+  double complex,        allocatable, target :: rhs_cmplx(:)        !< Distributed harmonic right hand side
+  double complex,        allocatable, target :: rhs_cmplx_guess(:)  !< Guess solution for GMRES
+  double complex,        allocatable, target :: rhs_cmplx_sol(:)    !< Solution from GMRES
+  integer(kind=int_all), allocatable, target :: irn_cmplx(:)        !< Row indices for coordinate format sparse matrix (or CSR)
+  integer(kind=int_all), allocatable, target :: jcn_cmplx(:)        !< Column indices for coordinate format sparse matrix (or CSR)
+  integer(kind=int_all)                      :: n_cmplx, nz_cmplx                       
 #endif
  
   contains
@@ -72,9 +72,9 @@ module global_distributed_matrix
     implicit none
     
     ! --- Routine parameters
-    integer, intent(in) :: i_row     !< Matrix row
-    integer, intent(in) :: j_col     !< Matrix column
-    integer, intent(in) :: index_min !< Smallest block index dealt with by current MPI proc
+    integer,               intent(in) :: i_row     !< Matrix row
+    integer,               intent(in) :: j_col     !< Matrix column
+    integer(kind=int_all), intent(in) :: index_min !< Smallest block index dealt with by current MPI proc
     
     ! --- Local variables
     integer :: i_block, j_block           ! Block indices
@@ -154,7 +154,7 @@ module global_distributed_matrix
     ! --- Routine parameters
     type(type_node_list),        intent(in)    :: node_list            !< List of grid nodes
     type(type_bnd_node_list),    intent(in)    :: bnd_node_list        !< List of boundary grid nodes
-    integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
+    integer(kind=int_all),       intent(in)    :: index_min, index_max !< Responsibility of MPI proc
     
     ! --- Local variables
     integer :: l_node_bnd, l_dof, l_node, l_dir, l_index, l_tor, l_var, l_row

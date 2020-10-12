@@ -144,7 +144,8 @@ program JOREK2
   character*8              :: label, itlabel
   character*14             :: fileout
   integer                  :: required,provided,StatInfo
-  integer, allocatable     :: local_elms(:), i_tor(:), index_min(:), index_max(:)
+  integer, allocatable     :: local_elms(:), i_tor(:)
+  integer(kind=int_all), allocatable :: index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
   logical                  :: solve_only, to_quit, freeb_equil2
   integer*4                :: rank, comm_size 

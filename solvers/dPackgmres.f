@@ -708,10 +708,13 @@ C*
 *
 * Local variables
 * ---------------
-       integer(kind=int_all)  j, jH, iterOut, nOrtho, iterMax, initGuess, iOrthog
-       integer(kind=int_all)  xptr, bptr, wptr, r0ptr, Vptr, Hptr, yptr, xcuptr
+       integer(kind=int_all)  j, jH, iterOut, nOrtho, iterMax
+       integer(kind=int_all)  initGuess, iOrthog
+       integer(kind=int_all)  xptr, bptr, wptr, r0ptr, Vptr, Hptr
+       integer(kind=int_all)  yptr, xcuptr
        integer(kind=int_all)  dotptr
-       integer(kind=int_all)  typePrec, leftPrec, rightPrec, dblePrec, noPrec
+       integer(kind=int_all)  typePrec, leftPrec, rightPrec
+       integer(kind=int_all)  dblePrec, noPrec
        integer(kind=int_all)  iwarn, ihist
        integer(kind=int_all)  compRsd
        integer(kind=int_all)  Int1

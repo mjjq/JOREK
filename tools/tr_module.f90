@@ -296,7 +296,7 @@ contains
   !----------------------------------------
   subroutine tr_debug_writel(string, int_var)
     character*(*)           :: string
-    integer(kind=int_all)   :: int_var
+    integer*8               :: int_var
     character(len=1024)     :: bufstring
     write(bufstring,'(A,I20)')string,int_var
     call tr_write("### "//trim(adjustl(bufstring))//" ###")

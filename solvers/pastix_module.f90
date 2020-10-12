@@ -1,4 +1,5 @@
 module pastix_module             ! PastiX specific variables
+  use mod_integer_types
 #ifndef USE_PASTIX6
 ! -- For PaStiX solver before version 6.x
 #ifdef USE_PASTIX 

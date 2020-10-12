@@ -14,6 +14,7 @@
 module solve_mat_n
   use phys_module, only: use_mumps, use_pastix, use_strumpack, use_wsmp
   use matio_module, only: timestamp
+  use mod_integer_types
   implicit none        
 
 
@@ -82,6 +83,7 @@ contains
     use mod_clock
     use phys_module, only : index_now, use_BLR_compression, epsilon_BLR, just_in_time_BLR, pastix_blr_abs_tol
     use mod_coicsr
+    use mod_integer_types
  
 #ifdef USE_PASTIX6
     use iso_c_binding
@@ -109,15 +111,18 @@ contains
     logical, intent(in) :: solve_only
     
     ! --- Local variables
-    integer :: i, j, k, my_id_n, n_cpu_n, ierr, my_id_master, n_cpu_master
-    integer :: i_reduced, j_reduced, n_i, n_j, index, index1, index2
-    type(clcktype) :: t_itstart, t0, t1, t2, t3
-    real*8  :: tsecond
-    real*8, allocatable :: RHS_tmp(:)
+    integer               :: my_id_n, n_cpu_n, ierr, my_id_master, n_cpu_master
+    integer(kind=int_all) :: i, j, k
+    integer(kind=int_all) :: i_reduced, j_reduced, index, index1, index2
+    integer               :: n_i, n_j
+    type(clcktype)        :: t_itstart, t0, t1, t2, t3
+    real*8                :: tsecond
+    real*8, allocatable   :: RHS_tmp(:)
     !Split broadcast
-    character*8 :: type
-    real*8  :: DUMMY_REAL(1:1)
-    integer :: DUMMY_INT (1:1)
+    character*8           :: type
+    real*8                :: DUMMY_REAL(1:1)
+    integer(kind=int_all) :: DUMMY_INT (1:1)
+    integer(kind=int_all) :: Int1=1
     CHARACTER(LEN=128) :: fname
 #ifdef USE_PASTIX6
     integer(c_int)     :: pastix_info
@@ -130,7 +135,7 @@ contains
 
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
     call tr_print_memsize("BeforeSolveN")
-    call tr_debug_writei("smn_A_mumps_par%n",mumps_par%n)
+    call tr_debug_write("smn_A_mumps_par%n",mumps_par%n)
 
     if (my_id .eq. 0) then
       write(*,*) my_id,'*********************************'
@@ -164,7 +169,7 @@ contains
       ! --- Column scaling -------------------------------------------------------------------------
       if (my_id_n .eq. 0) then
         if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
-        call tr_allocate(column_scaling,1,mumps_par%N,"column_scaling",CAT_DMATRIX)
+        call tr_allocate(column_scaling,Int1,mumps_par%N,"column_scaling",CAT_DMATRIX)
 
         column_scaling = 1.d-20
         do k=1,mumps_par%nz
@@ -318,17 +323,17 @@ contains
 !          call pastix_init_num_threads(my_id)
 
 #ifndef USE_COMPLEX_PRECOND
-          call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
-          call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(mumps_par%n,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
 #else
-          call MPI_BCAST(n_cmplx,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
-          call MPI_BCAST(nz_cmplx,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(n_cmplx,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(nz_cmplx,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
 #endif 
 
 #ifdef USE_BLOCK
-          call MPI_BCAST(block_size,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
-          call MPI_BCAST(n_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
-          call MPI_BCAST(nnz_block,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(block_size,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(n_block,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(nnz_block,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
 #endif
           if (my_id_n .gt. 0) then
 #ifndef USE_COMPLEX_PRECOND
@@ -336,10 +341,10 @@ contains
             if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
             if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
             if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
-            call tr_allocatep(mumps_par%irn,1,mumps_par%nz,"mumps_par%irn",CAT_DMATRIX)
-            call tr_allocatep(mumps_par%jcn,1,mumps_par%nz,"mumps_par%jcn",CAT_DMATRIX)
-            call tr_allocatep(mumps_par%a,1,mumps_par%nz,"mumps_par%a",CAT_DMATRIX)
-            call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
+            call tr_allocatep(mumps_par%irn,Int1,mumps_par%nz,"mumps_par%irn",CAT_DMATRIX)
+            call tr_allocatep(mumps_par%jcn,Int1,mumps_par%nz,"mumps_par%jcn",CAT_DMATRIX)
+            call tr_allocatep(mumps_par%a,Int1,mumps_par%nz,"mumps_par%a",CAT_DMATRIX)
+            call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
 #else
             if (allocated(A_cmplx))  deallocate(A_cmplx)
             if (allocated(rhs_cmplx))  deallocate(rhs_cmplx)
@@ -353,8 +358,8 @@ contains
           endif
 
 #ifdef USE_COMPLEX_PRECOND
-          call MPI_BCAST(irn_cmplx,nz_cmplx,MPI_INTEGER,0,MPI_COMM_N,ierr)
-          call MPI_BCAST(jcn_cmplx,nz_cmplx,MPI_INTEGER,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(irn_cmplx,nz_cmplx,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
+          call MPI_BCAST(jcn_cmplx,nz_cmplx,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
           call MPI_BCAST(A_cmplx,nz_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
           call MPI_BCAST(rhs_cmplx,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
 #else
@@ -418,37 +423,37 @@ contains
 #endif /* ifndef USE_PASTIX6 */
 
 #ifndef USE_COMPLEX_PRECOND 
-              if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+              if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
 #else
-              if (.not. pastix_smp_only) call MPI_BCAST(n_cmplx,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+              if (.not. pastix_smp_only) call MPI_BCAST(n_cmplx,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
 #endif
 
 #ifndef USE_PASTIX6
               ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
-              call tr_allocate(pastix_perm_vars,1,n_block,"pastix_perm_vars",CAT_UNKNOWN)
-              call tr_allocate(pastix_iperm_vars,1,n_block,"pastix_iperm_vars",CAT_UNKNOWN)
+              call tr_allocate(pastix_perm_vars,Int1,n_block,"pastix_perm_vars",CAT_UNKNOWN)
+              call tr_allocate(pastix_iperm_vars,Int1,n_block,"pastix_iperm_vars",CAT_UNKNOWN)
 
 #ifndef USE_COMPLEX_PRECOND
               call pastix_fortran(pastix_data,MPI_COMM_N,n_block,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #else /* ifndef USE_COMPLEX_PRECOND */
               call pastix_fortran(pastix_data,MPI_COMM_N,n_block,jcn_cmplx,irn_cmplx,A_cmplx, &
-                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,Int1,pastix_iparm,pastix_dparm)
 #endif /* ifndef USE_COMPLEX_PRECOND */
 #else /* ifdef USE_BLOCK */
 #ifndef USE_COMPLEX_PRECOND
-              call tr_allocate(pastix_perm_vars,1 ,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
-              call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
+              call tr_allocate(pastix_perm_vars,Int1 ,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
+              call tr_allocate(pastix_iperm_vars,Int1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
 
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                 pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else /* ifndef USE_COMPLEX_PRECOND */
-              call tr_allocate(pastix_perm_vars,1 ,n_cmplx,"pastix_perm_vars",CAT_UNKNOWN)
-              call tr_allocate(pastix_iperm_vars,1,n_cmplx,"pastix_iperm_vars",CAT_UNKNOWN)
+              call tr_allocate(pastix_perm_vars,Int1 ,n_cmplx,"pastix_perm_vars",CAT_UNKNOWN)
+              call tr_allocate(pastix_iperm_vars,Int1,n_cmplx,"pastix_iperm_vars",CAT_UNKNOWN)
 
               call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,jcn_cmplx,irn_cmplx,A_cmplx, &
-                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,Int1,pastix_iparm,pastix_dparm)
 #endif /* ifndef USE_COMPLEX_PRECOND */
 
 #endif /* ifdef USE_BLOCK */
@@ -559,19 +564,19 @@ contains
 #ifndef USE_COMPLEX_PRECOND
               call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
                 mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A, &
-                pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #else /* ifndef USE_COMPLEX_PRECOND */
               call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
                 jcn_cmplx(1:n_block+1), irn_cmplx(1:nnz_block), A_cmplx, &
-                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,Int1,pastix_iparm,pastix_dparm)
 #endif /* ifndef USE_COMPLEX_PRECOND */
 #else /* ifdef USE_BLOCK */
 #ifndef USE_COMPLEX_PRECOND
               call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #else /* ifndef USE_COMPLEX_PRECOND */
               call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,jcn_cmplx,irn_cmplx,A_cmplx, &
-                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+                pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,Int1,pastix_iparm,pastix_dparm)
 #endif /* ifndef USE_COMPLEX_PRECOND */
 #endif /* ifdef USE_BLOCK */
 
@@ -650,21 +655,21 @@ contains
 #ifndef USE_COMPLEX_PRECOND
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
             mumps_par%jcn, mumps_par%irn, mumps_par%A, &
-            pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+            pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #else /* ifndef USE_COMPLEX_PRECOND */
           call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
             jcn_cmplx, irn_cmplx, A_cmplx, &
-            pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+            pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,Int1,pastix_iparm,pastix_dparm)
 #endif /* ifndef USE_COMPLEX_PRECOND */
 
 #else /* ifdef USE_BLOCK */
 
 #ifndef USE_COMPLEX_PRECOND
           call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-            pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+            pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #else /* ifndef USE_COMPLEX_PRECOND */
           call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,jcn_cmplx,irn_cmplx,A_cmplx, &
-            pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,1,pastix_iparm,pastix_dparm)
+            pastix_perm_vars,pastix_iperm_vars,rhs_cmplx,Int1,pastix_iparm,pastix_dparm)
 #endif /* ifndef USE_COMPLEX_PRECOND */
 
 #endif /* ifdef USE_BLOCK */
@@ -695,7 +700,7 @@ contains
       ! --- End Factorize the matrix ---------------------------------------------------------------
       
    endif NOTSOLVEONLY
-   call tr_debug_writei("smn_B_mumps_par%n",mumps_par%n)
+   call tr_debug_write("smn_B_mumps_par%n",mumps_par%n)
 
 #ifdef USE_COMPLEX_PRECOND
    if (allocated(rhs_cmplx_guess))  deallocate(rhs_cmplx_guess)
@@ -720,7 +725,7 @@ contains
 
       if (use_pastix) then
         if (.not. pastix_smp_only) then
-           call tr_debug_writei("smn_C_mumps_par%n",mumps_par%n)
+           call tr_debug_write("smn_C_mumps_par%n",mumps_par%n)
 #ifndef USE_COMPLEX_PRECOND
            call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
 #else
@@ -765,11 +770,11 @@ contains
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
 !             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #else /* ifndef USE_COMPLEX_PRECOND */
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
              DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-             pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_guess,1,pastix_iparm,pastix_dparm)
+             pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_guess,Int1,pastix_iparm,pastix_dparm)
 #endif /* ifndef USE_COMPLEX_PRECOND */
 
 #else /* ifdef USE_BLOCK */
@@ -777,11 +782,11 @@ contains
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
 !             mumps_par%jcn,mumps_par%irn,mumps_par%A, &
           DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #else /* ifndef USE_COMPLEX_PRECOND */
         call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx,&
           DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-          pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_guess,1,pastix_iparm,pastix_dparm)
+          pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_guess,Int1,pastix_iparm,pastix_dparm)
 #endif /* ifndef USE_COMPLEX_PRECOND */
 
 #endif /* ifdef USE_BLOCK */
@@ -831,10 +836,10 @@ contains
       enddo
 
       if (allocated(deltas)) call tr_deallocate(deltas,"deltas",CAT_PRECOND)
-      call tr_allocate(deltas,1,ndof_glob,"deltas",CAT_PRECOND)
+      call tr_allocate(deltas,Int1,ndof_glob,"deltas",CAT_PRECOND)
       deltas = 0.d0
 
-      call tr_allocate(rhs_tmp,1,ndof_glob,"rhs_tmp",CAT_PRECOND)
+      call tr_allocate(rhs_tmp,Int1,ndof_glob,"rhs_tmp",CAT_PRECOND)
 
       rhs_tmp = 0.d0
 
@@ -888,6 +893,7 @@ contains
 
     use strumpack_module
     use matio_module, only :  save_mat_h5
+    use mod_integer_types
   
     implicit none
 
@@ -898,15 +904,18 @@ contains
     integer, intent(in) :: MPI_COMM_N, MPI_COMM_MASTER
     logical, intent(in) :: solve_only
 
-    integer :: i, j, k, my_id_n, n_cpu_n, ierr, my_id_master, n_cpu_master
-    integer :: i_reduced, j_reduced, n_i, n_j
-    type(clcktype) :: t_itstart, t0, t1, t2, t3
-    real*8  :: tsecond
-    real*8, allocatable :: RHS_tmp(:)
+    integer               :: my_id_n, n_cpu_n, ierr, my_id_master, n_cpu_master
+    integer               :: n_i, n_j
+    integer(kind=int_all) :: Int1=1
+    integer(kind=int_all) :: i, j, k
+    integer(kind=int_all) :: i_reduced, j_reduced
+    type(clcktype)        :: t_itstart, t0, t1, t2, t3
+    real*8                :: tsecond
+    real*8, allocatable   :: RHS_tmp(:)
     !Split broadcast
     character*8 :: type
     
-    integer(kind=C_INT) :: n, nnz
+    integer(kind=C_INT_ALL) :: n, nnz
 
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
     call tr_print_memsize("BeforeSolveN")
@@ -929,8 +938,8 @@ contains
     endif
 
     if (centralize_harm_mat) then 
-    call MPI_BCAST(mumps_par%n,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
-    call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER,0,MPI_COMM_N,ierr)
+    call MPI_BCAST(mumps_par%n,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
+    call MPI_BCAST(mumps_par%nz,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
     endif
     
     n = mumps_par%n
@@ -949,9 +958,9 @@ contains
           if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
           if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
           if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-          call tr_allocatep(mumps_par%irn,1,nnz,"mumps_par%irn",CAT_DMATRIX)
-          call tr_allocatep(mumps_par%jcn,1,nnz,"mumps_par%jcn",CAT_DMATRIX)
-          call tr_allocatep(mumps_par%a,1,nnz,"mumps_par%a",CAT_DMATRIX)
+          call tr_allocatep(mumps_par%irn,Int1,nnz,"mumps_par%irn",CAT_DMATRIX)
+          call tr_allocatep(mumps_par%jcn,Int1,nnz,"mumps_par%jcn",CAT_DMATRIX)
+          call tr_allocatep(mumps_par%a,Int1,nnz,"mumps_par%a",CAT_DMATRIX)
         endif  
   
         ! Split MPI_BCAST if MPI buffer beyond 2Go
@@ -1022,7 +1031,7 @@ contains
     
     if (my_id_n.gt.0) then
       if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
-      call tr_allocatep(mumps_par%rhs,1,n,"mumps_par%rhs",CAT_DMATRIX)
+      call tr_allocatep(mumps_par%rhs,Int1,n,"mumps_par%rhs",CAT_DMATRIX)
     endif
     
     call MPI_BCAST(mumps_par%rhs,n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
@@ -1047,10 +1056,10 @@ contains
     if (my_id_n .eq. 0) then
 
       if (allocated(deltas)) call tr_deallocate(deltas,"deltas",CAT_PRECOND)
-      call tr_allocate(deltas,1,ndof_glob,"deltas",CAT_PRECOND)
+      call tr_allocate(deltas,Int1,ndof_glob,"deltas",CAT_PRECOND)
       deltas = 0.d0
 
-      call tr_allocate(rhs_tmp,1,ndof_glob,"rhs_tmp",CAT_PRECOND)
+      call tr_allocate(rhs_tmp,Int1,ndof_glob,"rhs_tmp",CAT_PRECOND)
 
       rhs_tmp = 0.d0
 

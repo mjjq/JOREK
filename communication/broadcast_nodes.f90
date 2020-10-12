@@ -5,6 +5,7 @@ subroutine Broadcast_nodes(my_id,node_list)
 use tr_module 
 use data_structure
 use mpi_mod
+use mod_integer_types
 implicit none
 
 type (type_node_list)    :: node_list
@@ -28,11 +29,7 @@ character, allocatable   :: buffer(:)
 
 call MPI_PACK_SIZE(1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,IDBL_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
-#ifdef INTSIZE64
-call MPI_PACK_SIZE(1,MPI_INTEGER8,MPI_COMM_WORLD,LONG_EXT,ierr)
-#else
-call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,LONG_EXT,ierr)
-#endif
+call MPI_PACK_SIZE(1,MPI_INTEGER_ALL,MPI_COMM_WORLD,LONG_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 
 call MPI_BCAST(node_list%n_nodes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
@@ -64,11 +61,7 @@ if (my_id .eq. 0) then
     call MPI_PACK(anode%Fprof_eq       ,n_order+1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anode%psi_eq         ,n_order+1,MPI_DOUBLE_PRECISION,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 #endif
-#ifdef INTSIZE64
-    call MPI_PACK(anode%index          ,n_order+1,MPI_INTEGER8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-#else
-    call MPI_PACK(anode%index          ,n_order+1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-#endif
+    call MPI_PACK(anode%index          ,n_order+1,MPI_INTEGER_ALL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anode%boundary       ,1        ,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anode%boundary_index ,1        ,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
     call MPI_PACK(anode%axis_node      ,1        ,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -97,11 +90,7 @@ if (my_id .ne. 0) then
     call MPI_UNPACK(buffer,bufsize,position,anode%Fprof_eq       ,n_order+1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anode%psi_eq         ,n_order+1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 #endif
-#ifdef INTSIZE64
-    call MPI_UNPACK(buffer,bufsize,position,anode%index          ,n_order+1,MPI_INTEGER8,MPI_COMM_WORLD,ierr)
-#else
-    call MPI_UNPACK(buffer,bufsize,position,anode%index          ,n_order+1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-#endif
+    call MPI_UNPACK(buffer,bufsize,position,anode%index          ,n_order+1,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anode%boundary       ,1        ,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anode%boundary_index ,1        ,MPI_INTEGER,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,anode%axis_node      ,1        ,MPI_LOGICAL,MPI_COMM_WORLD,ierr)

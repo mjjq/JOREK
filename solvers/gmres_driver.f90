@@ -107,11 +107,7 @@ end if
          call drive_dgmres(n_dof,n_dof,m,lwork,work,irc,icntl,cntl,info,rinfo)
        endif
 
-#ifdef INTSIZE64
-       call MPI_BCAST(irc,5,MPI_INTEGER8,0,MPI_COMM_WORLD,ierr)
-#else
-       call MPI_BCAST(irc,5,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-#endif
+       call MPI_BCAST(irc,5,MPI_INTEGER_ALL,0,MPI_COMM_WORLD,ierr)
        revcom = irc(1)
        colx   = irc(2)
        coly   = irc(3)

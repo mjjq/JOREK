@@ -10,7 +10,7 @@ use tr_module
 use data_structure
 use mumps_module
 use pastix_module
-use phys_module, only: amix, amix_freeb, use_pastix, use_mumps, use_strumpack
+use phys_module, only: amix, amix_freeb, use_pastix_eq, use_mumps_eq, use_strumpack_eq
 use vacuum_equilibrium, only: vacuum_equil
 use mod_coicsr
 use mpi_mod
@@ -100,21 +100,23 @@ if (my_id == 0) then
   call tr_debug_write("Deb_poisson",nz_AA)
   
   n_border = 0
-  do i=1,node_list%n_nodes
-    if (node_list%node(i)%axis_node      ) n_border = n_border+2
-    if (node_list%node(i)%boundary .eq. 1) n_border = n_border+2
-    if (node_list%node(i)%boundary .eq. 2) n_border = n_border+2
-    if (node_list%node(i)%boundary .eq. 3) n_border = n_border+3
-    if (node_list%node(i)%boundary .eq. 4) n_border = n_border+2
-    if (node_list%node(i)%boundary .eq. 5) n_border = n_border+2
-    if (node_list%node(i)%boundary .eq. 9) n_border = n_border+3
-    if (node_list%node(i)%boundary .eq.11) n_border = n_border+2
-    if (node_list%node(i)%boundary .eq.12) n_border = n_border+2
-    if (node_list%node(i)%boundary .eq.15) n_border = n_border+2
-    if (node_list%node(i)%boundary .eq.19) n_border = n_border+3
-    if (node_list%node(i)%boundary .eq.20) n_border = n_border+3
-    if (node_list%node(i)%boundary .eq.21) n_border = n_border+3
-  enddo
+  if (itype .ne. 710) then
+    do i=1,node_list%n_nodes
+      if (node_list%node(i)%axis_node      ) n_border = n_border+2
+      if (node_list%node(i)%boundary .eq. 1) n_border = n_border+2
+      if (node_list%node(i)%boundary .eq. 2) n_border = n_border+2
+      if (node_list%node(i)%boundary .eq. 3) n_border = n_border+3
+      if (node_list%node(i)%boundary .eq. 4) n_border = n_border+2
+      if (node_list%node(i)%boundary .eq. 5) n_border = n_border+2
+      if (node_list%node(i)%boundary .eq. 9) n_border = n_border+3
+      if (node_list%node(i)%boundary .eq.11) n_border = n_border+2
+      if (node_list%node(i)%boundary .eq.12) n_border = n_border+2
+      if (node_list%node(i)%boundary .eq.15) n_border = n_border+2
+      if (node_list%node(i)%boundary .eq.19) n_border = n_border+3
+      if (node_list%node(i)%boundary .eq.20) n_border = n_border+3
+      if (node_list%node(i)%boundary .eq.21) n_border = n_border+3
+    enddo
+  endif
   
   if ((.not. freeboundary_equil) .or. (itype .ne. -1)) then
     nz_AA = nz_AA + n_border
@@ -193,6 +195,10 @@ if (my_id == 0) then
   
       call element_matrix_Poisson_inverse(itype,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
   
+    elseif (itype .eq. 710) then
+  
+      call element_matrix_710_equi(itype,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
+  
     else
   
       call element_matrix_Poisson(itype,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
@@ -254,7 +260,7 @@ if (freeboundary_equil .and. (itype .eq. -1)) then
   
   call vacuum_equil(my_id,node_list,bnd_node_list,bnd_elm_list,psi_axis,psi_bnd)
   
-else        ! apply fixed boundary conditions
+elseif (itype .ne. 710) then        ! apply fixed boundary conditions
 
   if (my_id == 0 ) then
     do i=1,node_list%n_nodes
@@ -338,7 +344,7 @@ endif
 
 if (my_id == 0) then
 #ifdef USE_MUMPS
-  if (use_mumps) then
+  if (use_mumps_eq) then
     mumps_par%n  = n_AA
   
     mumps_par%JOB = 6
@@ -353,7 +359,7 @@ if (my_id == 0) then
 #endif    
 
 #ifdef USE_STRUMPACK
-  if (use_strumpack) then
+  if (use_strumpack_eq) then
     call strumpack_init(MPI_COMM_SELF)
     call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_SELF)
     call strumpack_analyze(MPI_COMM_SELF)    
@@ -364,7 +370,7 @@ if (my_id == 0) then
 #endif
 
 #if defined USE_PASTIX  || defined USE_PASTIX6
-  if (use_pastix) then
+  if (use_pastix_eq) then
     if (allocated(sparskit_work)) deallocate(sparskit_work)
     allocate(sparskit_work(mumps_par%N + 1))
     call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
@@ -527,7 +533,7 @@ if (my_id == 0) then
 
 #endif
     call tr_print_memsize("PASTIX_For_Poisson")
-  endif ! use_pastix
+  endif ! use_pastix_eq
 #endif /* defined(USE_PASTIX) || defined(USE_PASTIX6) */
   
   call tr_debug_write("mumps_par%N",int(mumps_par%N))
@@ -541,13 +547,18 @@ if (my_id == 0) then
   
         index = node_list%node(i)%index(k)
   
-  !--------------- for equation in perturbation form
+        !--------------- for equation in perturbation form
         if (itype .eq. -1) then
           node_list%node(i)%deltas(i_harm,k,ivar_out) = mumps_par%RHS(index)
           node_list%node(i)%values(i_harm,k,ivar_out) = node_list%node(i)%values(i_harm,k,ivar_out) &
                                                       + (1.d0 - amix_used) * mumps_par%RHS(index)
+        !--------------- for model710 when solving Fprofile to get accurate profiles on nodes
+#ifdef fullmhd
+        elseif (itype .eq. 710) then
+          node_list%node(i)%Fprof_eq(k) = node_list%node(i)%Fprof_eq(k) + (1.d0 - amix_used) * mumps_par%RHS(index)
+#endif
+        !--------------- for equation on total flux
         else
-  !--------------- for equation on total flux
           node_list%node(i)%deltas(i_harm,k,ivar_out) = node_list%node(i)%values(i_harm,k,ivar_out) - mumps_par%RHS(index)
           node_list%node(i)%values(i_harm,k,ivar_out) = amix_used * node_list%node(i)%values(i_harm,k,ivar_out) &
                                                       + (1.d0 - amix_used) * mumps_par%RHS(index)

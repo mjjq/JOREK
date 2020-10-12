@@ -1,11 +1,12 @@
 recursive subroutine FFprime(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,FFprime_profile,dFF_dpsi,dFF_dz, &
-                       dFF_dpsi2,dFF_dz2,dFF_dpsi_dz)
+                       dFF_dpsi2,dFF_dz2,dFF_dpsi_dz, from_F_profile_710)
 !-----------------------------------------------------------------------
 ! Determines the F*F' value and its derivatives at the given
 ! position (Z, psi) from the analytical or numerical input profile.
 !-----------------------------------------------------------------------
 use phys_module
 use vacuum, only: current_FB_fact
+use mod_F_profile
 
 implicit none
 
@@ -14,6 +15,7 @@ logical, intent(in)  :: xpoint2
 integer, intent(in)  :: xcase2
 real*8,  intent(in)  :: Z, Z_xpoint(2), psi, psi_axis, psi_bnd
 real*8,  intent(out) :: FFprime_profile, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz
+logical, intent(in)  :: from_F_profile_710
 
 ! --- Internal variables.
 real*8  :: prof0, prof1, dprof0_dpsi, dprof0_dpsi2, psi_barrier
@@ -28,28 +30,29 @@ real*8  :: tanh1, tanh2, tanh2_u
 integer :: left, right, mid
 real*8  :: aux1, aux2, Z_star, Z_star_u
 real*8  :: F_prof, dF_dpsi, dF_dz, dF_dpsi2, dF_dz2, dF_dpsi_dz
-real*8  :: no_delta_psi
+real*8  :: no_delta_psi, ffprime_out, FFprime_profile2, F_prof2
 
 
 ! --- the F-profile and FFprime need to be coherent. Always!!!
 #ifdef fullmhd
+  if (from_F_profile_710) then
+    ! --- Call function
+    call F_profile(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+                   F_prof,          dF_dpsi,  dF_dz,  dF_dpsi2,  dF_dz2,  dF_dpsi_dz , &
+                   FFprime_profile, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz)
 
-  ! --- Call function
-  call F_profile(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
-                 F_prof,          dF_dpsi,  dF_dz,  dF_dpsi2,  dF_dz2,  dF_dpsi_dz , &
-                 FFprime_profile, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz)
+    ! --- Because JOREK uses a negative FF' in the GS-equation and the current-routines
+    ! --- But in Full-MHD, because we need to integrate FF', we can't do this, so we use the real F-profile and FF',
+    ! --- and then reverse it for all the routines that use it.
+    FFprime_profile = - FFprime_profile
+    dFF_dpsi        = - dFF_dpsi
+    dFF_dz          = - dFF_dz
+    dFF_dpsi2       = - dFF_dpsi2
+    dFF_dz2         = - dFF_dz2
+    dFF_dpsi_dz     = - dFF_dpsi_dz
 
-  ! --- Because JOREK uses a negative FF' in the GS-equation and the current-routines
-  ! --- But in Full-MHD, because we need to integrate FF', we can't do this, so we use the real F-profile and FF',
-  ! --- and then reverse it for all the routines that use it.
-  FFprime_profile = - FFprime_profile
-  dFF_dpsi        = - dFF_dpsi
-  dFF_dz          = - dFF_dz
-  dFF_dpsi2       = - dFF_dpsi2
-  dFF_dz2         = - dFF_dz2
-  dFF_dpsi_dz     = - dFF_dpsi_dz
-
-  return
+    return
+  endif
 #endif
 
 

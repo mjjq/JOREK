@@ -47,7 +47,7 @@ if (my_id .eq. 0) then
                                                                dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 
     call FFprime(    xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
-                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .true.)
 
     node_list%node(i)%values(1,1,5) = zn
     node_list%node(i)%values(1,2,5) = dn_dpsi  * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(2,2)

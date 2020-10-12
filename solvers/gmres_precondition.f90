@@ -1,6 +1,9 @@
 !> Solve step of the local matrices for each toroidal harmonic (preconditioner for gmres)
 subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
 
+#ifdef USE_COMPLEX_PRECOND
+  use real2complex_mod
+#endif
   use tr_module 
   use mod_parameters
   use mumps_module
@@ -160,6 +163,16 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
      
       if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
   
+#ifdef USE_COMPLEX_PRECOND 
+        !-- converting RHS from real to complex
+        mumps_par%n = ifactor*n_loc_n
+        call real2complex_rhs(my_id, my_id_n, rhs_cmplx_sol)
+        if(my_id_n .gt. 0) then
+          if (allocated(rhs_cmplx_sol))  deallocate(rhs_cmplx_sol)
+          allocate(rhs_cmplx_sol(1:n_cmplx)) 
+        endif 
+        call MPI_BCAST(rhs_cmplx_sol,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
+#endif
         ! pastix input parameters working in Pastix5 and Pastix6
         pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations
         pastix_iparm(IPARM_FACTORIZATION)         = pastix_facto
@@ -192,15 +205,31 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 #ifndef USE_PASTIX6
         ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
+
+#ifndef USE_COMPLEX_PRECOND
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
              !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                    DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
 #else      
+        call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
+             !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+                   DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
+                      pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_sol,1,pastix_iparm,pastix_dparm)
+#endif
+
+#else      
+
+#ifndef USE_COMPLEX_PRECOND
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+#else      
+        call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
+             pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_sol,1,pastix_iparm,pastix_dparm)
 #endif
-  
+
+#endif
+ 
 #else
          ! -- For PaStiX solver version 6.x
          pastix_rhs_ptr = c_loc(mumps_par%rhs)
@@ -243,14 +272,24 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
 
 
   if (my_id_n .eq. 0) then
-  
+ 
     if (.not.use_strumpack) then
   !------------------------------------------ undo column scaling
+#ifdef USE_COMPLEX_PRECOND
+      !-- converting RHS from complex to real
+      do k=1,n_cmplx 
+        if(my_id_master .eq. 0) then
+          mumps_par%rhs(k) = REAL(rhs_cmplx_sol(k))
+        else 
+          mumps_par%rhs(2*k-1) = REAL(rhs_cmplx_sol(k))
+          mumps_par%rhs(2*k) = AIMAG(rhs_cmplx_sol(k))
+        endif
+      enddo
+#endif
       do k=1,mumps_par%n
         mumps_par%rhs(k) =  mumps_par%rhs(k) / column_scaling(k)
       enddo
     endif
-  
     call tr_allocate(y_tmp,1,n_dof,"y_tmp",CAT_GMRES,.false.)
     call tr_allocate(recv_counts,1,n_cpu/M_cpu,"recv_counts",CAT_GMRES)
     call tr_allocate(recv_disp,1,n_cpu/M_cpu,"recv_disp",CAT_GMRES)

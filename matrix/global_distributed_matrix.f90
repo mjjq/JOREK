@@ -29,6 +29,17 @@ module global_distributed_matrix
   integer                       :: n_matrix_block_size_harm                       !< Size of a harmonic matrix block (n_var x n_tor)
   integer                       :: ndof_harm, n_harm, nz_harm                       
   
+  ! --- The complex harmonic matrix 
+#ifdef USE_COMPLEX_PRECOND
+  double complex, allocatable, target :: A_cmplx(:)          !< Distributed harmonic matrix
+  double complex, allocatable, target :: rhs_cmplx(:)        !< Distributed harmonic right hand side
+  double complex, allocatable, target :: rhs_cmplx_guess(:)  !< Guess solution for GMRES
+  double complex, allocatable, target :: rhs_cmplx_sol(:)    !< Solution from GMRES
+  integer,        allocatable, target :: irn_cmplx(:)        !< Row indices for coordinate format sparse matrix (or CSR)
+  integer,        allocatable, target :: jcn_cmplx(:)        !< Column indices for coordinate format sparse matrix (or CSR)
+  integer                             :: n_cmplx, nz_cmplx                       
+#endif
+ 
   contains
   
   

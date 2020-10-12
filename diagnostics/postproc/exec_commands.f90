@@ -183,6 +183,8 @@ module exec_commands
           call mark_coords(command, ierr)
         case ( 'midplane' )
           call midplane(command, first_step, ierr)
+        case ( 'midplane2d' )
+          call midplane2d(command, first_step, ierr)
         case ( 'set_postproc_dir' )
           call set_postproc_dir(command, ierr)
         case ( 'namelist' )
@@ -223,7 +225,7 @@ module exec_commands
           'qprofile', 'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon',       &
           'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics', 'rectangle',    &
           'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF', 'spi-state',         &
-          'zeroD_quantities', 'boundary_quantities', 'find_q_surface' )
+          'zeroD_quantities', 'boundary_quantities', 'find_q_surface', 'midplane2d')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -1319,12 +1321,12 @@ module exec_commands
     ierr = 0
     
     ! --- Some checks
-    call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
-    call check_step_imported(ierr);            if ( ierr /= 0 ) return
-    call check_exprs_selected(ierr);           if ( ierr /= 0 ) return
+    call check_args(command%n_args,ierr,0,1);    if ( ierr /= 0 ) return
+    call check_step_imported(ierr);              if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);             if ( ierr /= 0 ) return
     
-    units = get_int_setting('units', ierr)
-    npts  = get_int_setting('linepoints', ierr)
+    units = get_int_setting('units', ierr);      if ( ierr /= 0 ) return
+    npts  = get_int_setting('linepoints', ierr); if ( ierr /= 0 ) return
     
     if ( command%n_args == 0 ) then
       s = 'midplane'
@@ -1350,6 +1352,58 @@ module exec_commands
       ierr, filename=trim(filename), append=(.not.first_step), comment=trim(comment) )
     
   end subroutine midplane
+  
+  
+  
+  
+  
+  !> Evaluate expressions on the midplane.
+  subroutine midplane2d(command, first_step, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    logical,            intent(in)  :: first_step  !< First time step of a for loop?
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer :: units, npts, nphi, side
+    character(len=1024) :: filename, comment, s
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0,1);     if ( ierr /= 0 ) return
+    call check_step_imported(ierr);               if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);              if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr);       if ( ierr /= 0 ) return
+    npts  = get_int_setting('linepoints', ierr);  if ( ierr /= 0 ) return
+    nphi  = get_int_setting('tor_points', ierr);  if ( ierr /= 0 ) return
+    
+    if ( command%n_args == 0 ) then
+      s = 'midplane2d'
+      side = BOTH_SIDES
+    else if ( command%args(1) == 'outer' ) then
+      s = 'outer-midplane2d'
+      side = LOWFIELD_SIDE
+    else if ( command%args(1) == 'inner' ) then
+      s = 'inner-midplane2d'
+      side = HIGHFIELD_SIDE
+    else
+      write(*,*) 'WARNING: Illegal parameter for command "midplane2d".'
+      ierr = 1
+      return
+    end if
+    
+    write(filename,'(4a)') trim(DIR), 'exprs_'//trim(s)//                                               &
+      trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
+    
+    write(comment,'(a,i6.6)') 'time step #', index_now
+    
+    call midplane_plane(node_list, element_list, ES, units, expr_list, res2d, side, npts, nphi,          &
+      ierr, filename=trim(filename), append=(.not.first_step), comment=trim(comment) )
+    
+  end subroutine midplane2d
   
   
   

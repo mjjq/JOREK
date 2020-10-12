@@ -23,7 +23,7 @@ module global_distributed_matrix
   integer(kind=int_all)                       :: n_matrix_block_size                       !< Size of a matrix block (n_var x n_tor)
   
   ! --- The distributed harmonic matrix (in case of direct construction)
-  integer, allocatable, target  :: ijA_index_harm(:,:), ijA_size_harm(:), irn_jcn_harm(:,:) !< contains the structure of the harmonic sparse matrix (to fill in CSR format)
+  integer(kind=int_all), allocatable, target  :: ijA_index_harm(:,:), ijA_size_harm(:), irn_jcn_harm(:,:) !< contains the structure of the harmonic sparse matrix (to fill in CSR format)
   real*8,                allocatable, target  :: A_harm(:)    !< Distributed harmonic matrix
   real*8,                allocatable, target  :: rhs_harm(:)  !< Distributed harmonic right hand side
   integer(kind=int_all), allocatable, target  :: irn_harm(:)  !< Row indices for coordinate format harmonic sparse matrix (or CSR)

@@ -14,6 +14,7 @@ contains
   use equil_info
   use construct_matrix_mod, only : construct_matrix 
   use mpi_mod
+  use mod_integer_types
   
   implicit none
   
@@ -25,12 +26,13 @@ contains
   logical, intent(in) :: direct_construction, xpoint2, freeboundary
   
   ! --- Local variables
-  integer, allocatable         :: index_min_harm(:), index_max_harm(:)
-  integer, allocatable         :: local_elms_harm(:)
-  integer                      :: n_local_elms_harm
-  integer                      :: ndof 
-  integer                      :: i_tor_min, i_tor_max 
-  integer                      :: i, ierr
+  integer(kind=int_all)              :: Int1=1
+  integer(kind=int_all), allocatable :: index_min_harm(:), index_max_harm(:)
+  integer,               allocatable :: local_elms_harm(:)
+  integer                            :: n_local_elms_harm
+  integer(kind=int_all)              :: ndof 
+  integer                            :: i_tor_min, i_tor_max 
+  integer                            :: i, ierr
       
   ! --- Memory allocation 
   if (allocated(local_elms_harm)) call tr_deallocate(local_elms_harm,"local_elms_harm",CAT_DMATRIX) 
@@ -60,10 +62,10 @@ contains
  
   ! --- Memory allocation
   if (allocated(irn_harm))  call tr_deallocate(irn_harm,"irn_harm",CAT_DMATRIX)
-  call tr_allocate(irn_harm,1,nz_harm,"irn_harm",  CAT_DMATRIX)
+  call tr_allocate(irn_harm,Int1,nz_harm,"irn_harm",  CAT_DMATRIX)
  
   if (allocated(jcn_harm))  call tr_deallocate(jcn_harm,"jcn_harm",CAT_DMATRIX)
-  call tr_allocate(jcn_harm,1,nz_harm,"jcn_harm",  CAT_DMATRIX) 
+  call tr_allocate(jcn_harm,Int1,nz_harm,"jcn_harm",  CAT_DMATRIX) 
 
   call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master,                &
     local_elms_harm, n_local_elms_harm, index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint2,&

@@ -44,7 +44,7 @@ n_blocksize = n_tor * n_var
 n_blocks    = nz_glob/n_blocksize**2
 ndof_local   = (local_index_end(my_id+1) - local_index_start(my_id+1) + 1) * n_blocksize
 index_offset = (local_index_start(my_id+1)-1) * n_blocksize 
-call tr_allocate(y_tmp,1,ndof_local,"y_tmp",CAT_GMRES)
+call tr_allocate(y_tmp,Int1,ndof_local,"y_tmp",CAT_GMRES)
 y_tmp(1:ndof_local) = 0.d0
 !$omp parallel default(none)                                                                                              &
 !$omp   shared(y_tmp, A_glob, jcn_glob, irn_glob,x, n_blocks,n_blocksize, nz_glob, local_index_start, index_offset,Int1)  &

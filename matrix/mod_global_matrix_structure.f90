@@ -57,7 +57,7 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   if (allocated(ijA_size))  call tr_deallocate(ijA_size,"ijA_size",CAT_DMATRIX) 
   call tr_allocate(ijA_size,Int1,index_max-index_min+1,"ijA_size",CAT_DMATRIX)
   if (allocated(irn_jcn))  call tr_deallocate(irn_jcn,"irn_jcn",CAT_DMATRIX) 
-  call tr_allocate(irn_jcn,Int1,index_max-index_min+1,1,n_max,"irn_jcn",CAT_DMATRIX)
+  call tr_allocate(irn_jcn,Int1,index_max-index_min+1,Int1,n_max,"irn_jcn",CAT_DMATRIX)
 
   ijA_size    = 0
   irn_jcn = 0

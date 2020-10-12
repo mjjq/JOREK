@@ -326,15 +326,15 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   logical,               intent(in) :: xpoint2
   integer,               intent(in) :: i_tor_min
   integer,               intent(in) :: i_tor_max
-  integer,               intent(in) :: n
-  integer,               intent(in) :: nz
-  integer,               intent(in) :: ndof
+  integer(kind=int_all), intent(in) :: n
+  integer(kind=int_all), intent(in) :: nz
+  integer(kind=int_all), intent(in) :: ndof
   logical,               intent(in) :: harmonic_matrix
   real*8,                intent(inout), allocatable :: A_mat(:)
   real*8,                intent(inout), allocatable :: rhs(:)
-  integer,               intent(inout), allocatable :: irn(:)
-  integer,               intent(inout), allocatable :: jcn(:)
-  integer,               intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+  integer(kind=int_all), intent(inout), allocatable :: irn(:)
+  integer(kind=int_all), intent(inout), allocatable :: jcn(:)
+  integer(kind=int_all), intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
   
   !--- Internal variables
   type (type_element)               :: element

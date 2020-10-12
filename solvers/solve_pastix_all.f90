@@ -12,6 +12,7 @@ use mpi_mod
 use mod_clock
 use mod_coicsr
 use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR, pastix_blr_abs_tol
+  use mod_integer_types
 
 !$ use omp_lib
 
@@ -48,6 +49,7 @@ integer(kind=spm_int_t), dimension(:), pointer       :: pastix_colptr
 integer(kind=spm_int_t), dimension(:), pointer       :: pastix_rowptr
 real(kind=c_double)    , dimension(:), pointer       :: pastix_values
 #endif
+integer(kind=int_all) :: Int1=1
 
 
 !write(*,*) my_id,'*********************************'
@@ -65,8 +67,8 @@ call clck_time(t0)
 
 if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
 if (allocated(column_local))    call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
-call tr_allocate(column_scaling,1,mumps_par%N,"column_scaling",CAT_DMATRIX)
-call tr_allocate(column_local,1,mumps_par%N,"column_local",CAT_DMATRIX)
+call tr_allocate(column_scaling,Int1,mumps_par%N,"column_scaling",CAT_DMATRIX)
+call tr_allocate(column_local,Int1,mumps_par%N,"column_local",CAT_DMATRIX)
 
 column_local = 1.d-20;   column_scaling = 1.d-20
 do k=1,nz_glob
@@ -106,16 +108,16 @@ if (associated(mumps_par%JCN)) call tr_deallocatep(mumps_par%JCN,"mumps_par%JCN"
 if (associated(mumps_par%A) )  call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
 if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
 
-call tr_allocatep(mumps_par%IRN,1,mumps_par%nz,"mumps_par%IRN",CAT_DMATRIX)
-call tr_allocatep(mumps_par%JCN,1,mumps_par%nz,"mumps_par%JCN",CAT_DMATRIX)
-call tr_allocatep(mumps_par%A,1,mumps_par%nz,"mumps_par%A",CAT_DMATRIX)
-call tr_allocatep(mumps_par%rhs,1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
+call tr_allocatep(mumps_par%IRN,Int1,mumps_par%nz,"mumps_par%IRN",CAT_DMATRIX)
+call tr_allocatep(mumps_par%JCN,Int1,mumps_par%nz,"mumps_par%JCN",CAT_DMATRIX)
+call tr_allocatep(mumps_par%A,Int1,mumps_par%nz,"mumps_par%A",CAT_DMATRIX)
+call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
 
-call MPI_AllgatherV(IRN_glob,mumps_par%nz_loc,MPI_INTEGER,mumps_par%IRN, &
-                    counts,displacements,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+call MPI_AllgatherV(IRN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%IRN, &
+                    counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
 
-call MPI_AllgatherV(JCN_glob,mumps_par%nz_loc,MPI_INTEGER,mumps_par%JCN, &
-                    counts,displacements,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+call MPI_AllgatherV(JCN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%JCN, &
+                    counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
 
 call MPI_AllgatherV(A_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%A, &
                     counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
@@ -149,8 +151,8 @@ call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%
 
 #ifndef USE_PASTIX6
 ! -- For PaStiX solver before version 6.x
-if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,n_block,"pastix_perm_vars",CAT_UNKNOWN)
-if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,n_block,"pastix_iperm_vars",CAT_UNKNOWN)
+if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,Int1,n_block,"pastix_perm_vars",CAT_UNKNOWN)
+if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,Int1,n_block,"pastix_iperm_vars",CAT_UNKNOWN)
 #endif
 
 #else
@@ -169,8 +171,8 @@ if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecon
 
 #ifndef USE_PASTIX6
 ! -- For PaStiX solver before version 6.x
-if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
-if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
+if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,Int1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
+if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,Int1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
 #else
 ! -- For PaStiX solver version 6.x
 allocate(pastix_spm) ! Replace by tr_allocate etc.?!
@@ -224,10 +226,10 @@ if (.not. pastix_initialised) then
   ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
   call pastix_fortran(pastix_data,MPI_COMM_WORLD,n_block,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                        pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                        pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #else
   call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                        pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                        pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #endif
 #endif
 
@@ -326,13 +328,13 @@ if (.not. pastix_analysed) then
   
   call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block, &
                       mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
-                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 
 #else
 
   call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, &
                       mumps_par%jcn(1:mumps_par%n+1), mumps_par%irn(1:mumps_par%nz), mumps_par%A(1:mumps_par%nz), &
-                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 
 #endif
 
@@ -401,12 +403,12 @@ pastix_iparm(IPARM_DOF_NBR)            = block_size
 
 call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block,                                                 &
                     mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
-                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 
 #else
 
 call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
-                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 
 #endif
 

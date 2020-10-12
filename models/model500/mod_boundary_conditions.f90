@@ -50,60 +50,62 @@ contains
 
 
   ! --- Routine parameters
-  integer,                   intent(in)    :: my_id
-  type (type_node_list),     intent(in)    :: node_list
-  type (type_element_list),  intent(in)    :: element_list
-  type (type_bnd_node_list), intent(in)    :: bnd_node_list
-  integer,                   intent(in)    :: local_elms(*)
-  integer,                   intent(in)    :: n_local_elms
-  integer,                   intent(in)    :: index_min
-  integer,                   intent(in)    :: index_max
-  logical,                   intent(in)    :: xpoint2
-  integer,                   intent(in)    :: xcase2
-  real*8,                    intent(in)    :: R_axis
-  real*8,                    intent(in)    :: Z_axis
-  real*8,                    intent(in)    :: psi_axis
-  real*8,                    intent(in)    :: psi_bnd
-  real*8,                    intent(in)    :: R_xpoint(2)
-  real*8,                    intent(in)    :: Z_xpoint(2)
-  real*8,                    intent(in)    :: psi_xpoint(2)
-  logical,                   intent(in)    :: gmres
-  logical,                   intent(in)    :: solve_only
-  real*8,                    intent(inout) :: rhs_loc(*)
-  integer,                   intent(in)    :: i_tor_min, i_tor_max 
-  integer, allocatable,      intent(in)    :: ijA_index(:,:)
-  integer, allocatable,      intent(in)    :: ijA_size(:)
-  integer, allocatable,      intent(in)    :: irn_jcn(:,:) 
-  integer, allocatable,      intent(inout) :: irn(:)
-  integer, allocatable,      intent(inout) :: jcn(:) 
-  real*8,  allocatable,      intent(inout) :: A_mat(:) 
+  integer,                            intent(in)    :: my_id
+  type (type_node_list),              intent(in)    :: node_list
+  type (type_element_list),           intent(in)    :: element_list
+  type (type_bnd_node_list),          intent(in)    :: bnd_node_list
+  integer,                            intent(in)    :: local_elms(*)
+  integer,                            intent(in)    :: n_local_elms
+  integer(kind=int_all),              intent(in)    :: index_min
+  integer(kind=int_all),              intent(in)    :: index_max
+  logical,                            intent(in)    :: xpoint2
+  integer,                            intent(in)    :: xcase2
+  real*8,                             intent(in)    :: R_axis
+  real*8,                             intent(in)    :: Z_axis
+  real*8,                             intent(in)    :: psi_axis
+  real*8,                             intent(in)    :: psi_bnd
+  real*8,                             intent(in)    :: R_xpoint(2)
+  real*8,                             intent(in)    :: Z_xpoint(2)
+  real*8,                             intent(in)    :: psi_xpoint(2)
+  logical,                            intent(in)    :: gmres
+  logical,                            intent(in)    :: solve_only
+  real*8,                             intent(inout) :: rhs_loc(*)
+  integer,                            intent(in)    :: i_tor_min, i_tor_max 
+  integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:)
+  integer(kind=int_all), allocatable, intent(in)    :: ijA_size(:)
+  integer(kind=int_all), allocatable, intent(in)    :: irn_jcn(:,:) 
+  integer(kind=int_all), allocatable, intent(inout) :: irn(:)
+  integer(kind=int_all), allocatable, intent(inout) :: jcn(:) 
+  real*8,                allocatable, intent(inout) :: A_mat(:) 
 
   ! Internal parameters
-  real*8  :: zbig, zbig_backup,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
-  real*8  :: R_s, R_t, Z, Z_s, Z_t, R_tt, Z_tt, ps0, ps0_s, ps0_t, ps0_tt, ps0_x, ps0_y, direction, xjac
-  real*8  :: Btot, alpha, dT0_dt, dVpar0_dt, dBigR_dt, R_inside, Z_inside
-  real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y, element_size_0, element_size_2, element_size_perp
-  real*8  :: H1(2,2), H1_s(2,2), H1_ss(2,2)
-  integer :: i, in, iv, iv2, inode, inode2, k, index_tmp
-  integer :: index_large_i, index_node, index_node2, ielm
-  integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, kn, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
-  integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT
-  integer :: ierr
-  logical :: apply_psi_BC, apply_current_BC
+  real*8                :: zbig, zbig_backup,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
+  real*8                :: R_s, R_t, Z, Z_s, Z_t, R_tt, Z_tt, ps0, ps0_s, ps0_t, ps0_tt, ps0_x, ps0_y, direction, xjac
+  real*8                :: Btot, alpha, dT0_dt, dVpar0_dt, dBigR_dt, R_inside, Z_inside
+  real*8                :: grad_psi, u0_s, u0_t, u0_x, u0_y, element_size_0, element_size_2, element_size_perp
+  real*8                :: H1(2,2), H1_s(2,2), H1_ss(2,2)
+  integer               :: i, in, iv, iv2, inode, inode2, k, index_tmp
+  integer               :: index_large_i, ielm
+  integer(kind=int_all) :: index_node, index_node2
+  integer(kind=int_all) :: ijA_position,ijA_position2
+  integer               :: ilarge2, kv, kT, ku, kn, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
+  integer               :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT
+  integer               :: ierr
+  logical               :: apply_psi_BC, apply_current_BC
 
-  real*8, allocatable :: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
-  real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
-  real*8  :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
-  real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
-  real*8  :: R_mid, Z_mid, R_center, Z_center, direction2, normal(2), normal_direction(2), grad_s(2), grad_t(2)
-  real*8  :: factor, factor_t, c_1, c_2, c_3, bn, cs0, cs0_T, cs0_TT, dl, dl_dt, bn_t, bn_t_abs, hfact_t
-  integer :: ilarge_vp, ilarge_vp2
-  integer :: kp, j, err, itest, i_mid, i_bnd, inode_m, inode_p
-  integer :: n_rmp_harm, N_rmp_har_block_size
+  real*8, allocatable   :: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
+  real*8, allocatable   :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
+  real*8                :: Rnode, dRnode_ds, Znode, dZnode_ds, dRnode_dt, dZnode_dt, establish_RMP
+  real*8                :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
+  real*8                :: R_mid, Z_mid, R_center, Z_center, direction2, normal(2), normal_direction(2), grad_s(2), grad_t(2)
+  real*8                :: factor, factor_t, c_1, c_2, c_3, bn, cs0, cs0_T, cs0_TT, dl, dl_dt, bn_t, bn_t_abs, hfact_t
+  integer               :: ilarge_vp, ilarge_vp2
+  integer               :: kp, j, err, itest, i_mid, i_bnd, inode_m, inode_p
+  integer               :: n_rmp_harm, N_rmp_har_block_size
 
-  real*8  :: R_out, Z_out, s_elm, t_elm, QR,QR_s,QR_t,QR_st,QR_ss,QR_tt,QZ,QZ_s,QZ_t,QZ_st,QZ_ss,QZ_tt
-  real*8  :: QPs0,QPs0_s,QPs0_t,QPs0_st,QPs0_ss,QPs0_tt
-  integer :: ifail, i_elm
+  real*8                :: R_out, Z_out, s_elm, t_elm, QR,QR_s,QR_t,QR_st,QR_ss,QR_tt,QZ,QZ_s,QZ_t,QZ_st,QZ_ss,QZ_tt
+  real*8                :: QPs0,QPs0_s,QPs0_t,QPs0_st,QPs0_ss,QPs0_tt
+  integer               :: ifail, i_elm
 
   RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
   

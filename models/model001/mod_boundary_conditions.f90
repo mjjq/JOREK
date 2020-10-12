@@ -38,41 +38,43 @@ contains
     implicit none
 
     ! --- Routine parameters
-    integer,                   intent(in)    :: my_id
-    type (type_node_list),     intent(in)    :: node_list
-    type (type_element_list),  intent(in)    :: element_list
-    type (type_bnd_node_list), intent(in)    :: bnd_node_list
-    integer,                   intent(in)    :: local_elms(*)
-    integer,                   intent(in)    :: n_local_elms
-    integer,                   intent(in)    :: index_min
-    integer,                   intent(in)    :: index_max
-    real*8,                    intent(inout) :: rhs_loc(*)
-    logical,                   intent(in)    :: xpoint2
-    integer,                   intent(in)    :: xcase2
-    real*8,                    intent(in)    :: R_axis
-    real*8,                    intent(in)    :: Z_axis
-    real*8,                    intent(in)    :: psi_axis
-    real*8,                    intent(in)    :: psi_bnd
-    real*8,                    intent(in)    :: R_xpoint(2)
-    real*8,                    intent(in)    :: Z_xpoint(2)
-    real*8,                    intent(in)    :: psi_xpoint(2)
-    logical,                   intent(in)    :: gmres
-    logical,                   intent(in)    :: solve_only
-    integer,                   intent(in)    :: i_tor_min, i_tor_max 
-    integer, allocatable,      intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, allocatable,      intent(inout) :: irn(:), jcn(:) 
-    real*8,  allocatable,      intent(inout) :: A_mat(:) 
+    integer,                            intent(in)    :: my_id
+    type (type_node_list),              intent(in)    :: node_list
+    type (type_element_list),           intent(in)    :: element_list
+    type (type_bnd_node_list),          intent(in)    :: bnd_node_list
+    integer,                            intent(in)    :: local_elms(*)
+    integer,                            intent(in)    :: n_local_elms
+    integer(kind=int_all),              intent(in)    :: index_min
+    integer(kind=int_all),              intent(in)    :: index_max
+    real*8,                             intent(inout) :: rhs_loc(*)
+    logical,                            intent(in)    :: xpoint2
+    integer,                            intent(in)    :: xcase2
+    real*8,                             intent(in)    :: R_axis
+    real*8,                             intent(in)    :: Z_axis
+    real*8,                             intent(in)    :: psi_axis
+    real*8,                             intent(in)    :: psi_bnd
+    real*8,                             intent(in)    :: R_xpoint(2)
+    real*8,                             intent(in)    :: Z_xpoint(2)
+    real*8,                             intent(in)    :: psi_xpoint(2)
+    logical,                            intent(in)    :: gmres
+    logical,                            intent(in)    :: solve_only
+    integer,                            intent(in)    :: i_tor_min, i_tor_max 
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
+    real*8,                allocatable, intent(inout) :: A_mat(:) 
 
     ! Internal parameters
-    real*8  :: zbig, zbig_backup,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds
-    real*8  :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
-    real*8  :: Btot
-    real*8  :: grad_psi, u0_s, u0_t, u0_x, u0_y
-    integer :: i, in, iv, inode, k
-    integer :: index_large_i, index_node, index_node2, ielm
-    integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, ilarge_vv, ilarge_vT, ilarge_vus
-    integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT
-    integer :: first_tor, last_tor, ierr, n_tor_local
+    real*8                :: zbig, zbig_backup,  T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds
+    real*8                :: R_s, R_t, Z_s, Z_t, ps0_s, ps0_t, ps0_x, ps0_y, direction, xjac
+    real*8                :: Btot
+    real*8                :: grad_psi, u0_s, u0_t, u0_x, u0_y
+    integer               :: i, in, iv, inode, k
+    integer               :: index_large_i, ielm
+    integer(kind=int_all) :: index_node, index_node2, ielm
+    integer(kind=int_all) :: ijA_position,ijA_position2
+    integer               :: ilarge2, kv, kT, ku, ilarge_vv, ilarge_vT, ilarge_vus
+    integer               :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT
+    integer               :: first_tor, last_tor, ierr, n_tor_local
 
     n_tor_local = i_tor_max - i_tor_min + 1 
     zbig = 1.d10

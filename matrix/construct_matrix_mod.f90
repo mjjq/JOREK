@@ -342,7 +342,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   type (type_node)                  :: nodes_father(n_vertex_max)
   real*8,              allocatable  :: rhs_local(:)
   integer                           :: i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
-  integer(kind=int_all)             :: Int1
+  integer(kind=int_all)             :: Int1=1
   integer(kind=int_all)             :: index_node1, index_node2
   integer(kind=int_all)             :: ijA_position, index_min_loc, index_max_loc
   integer(kind=int_all)             :: index_large_i, index_large_k, ilarge2

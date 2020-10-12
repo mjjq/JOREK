@@ -33,7 +33,7 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   integer(kind=int_all), allocatable :: tmp(:,:)
   integer(kind=int_all), allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
   integer(kind=int_all), allocatable :: irn(:), jcn(:)
-  integer(kind=int_all)              :: Int1
+  integer(kind=int_all)              :: Int1=1
 
   if ( my_id == 0 ) then
     write(*,*) '**********************************'

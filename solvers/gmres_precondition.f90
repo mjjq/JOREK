@@ -47,7 +47,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
   real*8                :: tsecond
   real*8, allocatable   :: buffer(:)
   integer               :: ibuf_size, status(MPI_STATUS_SIZE)
-  integer(kind=int_all) :: Int1
+  integer(kind=int_all) :: Int1=1
   
   real*8                :: DUMMY_REAL(1:1)
   integer(kind=int_all) :: DUMMY_INT (1:1)

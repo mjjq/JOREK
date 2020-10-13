@@ -1,4 +1,3 @@
-use mod_integer_types
 #define PASTIX_INT_KIND    int_all
 #define pastix_int_t       INTEGER(kind=int_all)
 #define pastix_uint_t      unsigned INTEGER(kind=int_all)

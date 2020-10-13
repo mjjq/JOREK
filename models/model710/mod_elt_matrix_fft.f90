@@ -18,8 +18,6 @@ use mod_F_profile
 
 implicit none
 
-include 'mpif.h'
-
 ! --- Input Variables
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)

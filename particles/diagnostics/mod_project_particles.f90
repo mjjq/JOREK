@@ -354,7 +354,7 @@ function new_projection(node_list, element_list,                                
     new%i_tor_local = 1
   else
     new%n_tor_local = 2
-    new%i_tor_local = i_tor(new%my_id+1)
+    new%i_tor_local = 2*i_tor(new%my_id+1) - 2       ! i_tor_local is the (starting) index in HZ
   endif
 
   allocate(new%node_list,    source=node_list)
@@ -1111,7 +1111,7 @@ do i_elm=1,element_list%n_elements
 
             do im = 1, n_tor_local
 
-              im_index = (i_tor_local-1) + im
+              im_index = i_tor_local + im - 1   ! i_tor_local is the starting index in HZ
 
               index_ij = n_tor_local*(n_order+1)*(i-1) + n_tor_local * (j-1) + im   ! index in the ELM matrix
 
@@ -1145,7 +1145,7 @@ do i_elm=1,element_list%n_elements
 
                   do in = 1, n_tor_local
 
-                    in_index = (i_tor_local-1) + in
+                    in_index = i_tor_local + in - 1
 
                     index_kl = n_tor_local*(n_order+1)*(k-1) + n_tor_local * (l-1) + in   ! index in the ELM matrix
 
@@ -1300,7 +1300,7 @@ subroutine prepare_mumps_par_n0(node_list, element_list, n_tor_local, i_tor_loca
                                 this_mpi_comm_world, this_mpi_comm_n, this_mpi_comm_master,  &
                                 mumps_par, area, volume,                                     &
                                 filter, filter_hyper, filter_parallel,                       &
-                                skip_factorisation, integral_weights, do_zonal)
+                                integral_weights, skip_factorisation, do_zonal)
 use phys_module, only : F0, TWOPI
 use data_structure
 use basis_at_gaussian
@@ -1317,7 +1317,7 @@ type (DMUMPS_STRUC), intent(inout)   :: mumps_par
 real*8, intent(in)                   :: filter
 real*8, intent(in)                   :: filter_hyper
 real*8, intent(in)                   :: filter_parallel
-logical, intent(in)                  :: do_zonal
+logical, intent(in), optional        :: do_zonal
 logical, intent(in), optional        :: skip_factorisation
 real*8, intent(out), dimension(:), allocatable :: integral_weights !< these will be filled with the volume of each basis function
 real*8, intent(out)                  :: area, volume
@@ -1338,7 +1338,7 @@ integer    :: i, j, k, l, m, in, im, ilarge, index_large_i, index_large_k, inode
 integer    :: nz_AA, n_AA, nz_bnd, i_elm, index_ij, index_kl, im_index, in_index, index1, index2, index_rhs
 integer    :: ms, mt, mp, my_id, my_id_n, my_id_master, ierr, MPI_COMM_MUMPS
 logical    :: halt(size(IEEE_USUAL,1))
-logical    :: apply_dirichlet_condition
+logical    :: apply_dirichlet_condition, apply_zonal
 real*8, dimension(n_vertex_max,n_order+1) :: basisfunction_volume
 
 ! We need a separate communicator to be able to run multiple MUMPSes
@@ -1353,6 +1353,9 @@ mumps_par%PAR  = 1
 call DMUMPS(mumps_par)
 call MPI_COMM_RANK(this_mpi_comm_world,  my_id, ierr)
 call MPI_COMM_RANK(mumps_par%COMM,       my_id_n, ierr)
+
+apply_zonal = .false.
+if (present(do_zonal)) apply_zonal = do_zonal
 
 apply_dirichlet_condition = .true.
 if (do_zonal)  apply_dirichlet_condition = .true.
@@ -1397,13 +1400,13 @@ if (my_id_n .eq. 0) then
   write(*,*) '* constructing particle projection matrix (n=0) *'
   write(*,*) '*************************************************'
   write(*,'(2I3,A,3e12.4)') my_id, my_id_n,'  filters (n=0) : ',filter_n0, filter_hyper_n0, filter_parallel_n0
-  if (do_zonal) write(*,*) 'using n=0 zonal flow equations'
+  if (apply_zonal) write(*,*) 'using n=0 zonal flow equations'
 
   if (apply_dirichlet_condition) write(*,*) 'applying Dirichlet conditions'
 
 !$omp parallel do default(none) &
 !$omp shared(element_list, node_list, n_tor_local, i_tor_local,                       &
-!$omp        apply_dirichlet_condition, zonal_factor, do_zonal,                       &
+!$omp        apply_dirichlet_condition, zonal_factor, apply_zonal,                    &
 !$omp        H, H_s, H_t, H_ss, H_st, H_tt, Hz, Hz_p, mumps_par, wgauss2,             &
 !$omp        filter_n0, filter_hyper_n0, filter_parallel_n0, integral_weights, F0, my_id_master) &
 !$omp private(ELM, i_elm, element, nodes, i, j, k, l, ms, mt, in, im, mp,           &
@@ -1547,7 +1550,7 @@ do i_elm=1,element_list%n_elements
               Bgrad_p = ( F0 / x_g(ms,mt) * p_p +  p_x * psi_y - p_y * psi_x ) / x_g(ms,mt)
 
 
-              if (do_zonal) then
+              if (apply_zonal) then
 
                 ELM(index_ij,index_kl)     = ELM(index_ij,index_kl)     + p * v        * xjac * x_g(ms,mt) * wst &
 

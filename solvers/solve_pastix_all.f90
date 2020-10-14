@@ -12,7 +12,7 @@ use mpi_mod
 use mod_clock
 use mod_coicsr
 use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR, pastix_blr_abs_tol
-  use mod_integer_types
+use mod_integer_types
 
 !$ use omp_lib
 
@@ -35,12 +35,16 @@ implicit none
 #endif
 
 
-integer                  :: n_cpu, index_min, index_max       ! global index_min, index_max for this cpu
-real*8,allocatable       :: column_local(:)
-type(clcktype)           :: t_itstart, t0, t1, t2, t3
-real*8                   :: tsecond
-integer                  :: i, k, j, ierr, my_id, m_loc
-integer,allocatable      :: counts(:), displacements(:)
+! --- Routine variables
+integer                           :: n_cpu, my_id, index_min, index_max       ! global index_min, index_max for this cpu
+! --- Local variables
+real*8,               allocatable :: column_local(:)
+type(clcktype)                    :: t_itstart, t0, t1, t2, t3
+real*8                            :: tsecond
+integer                           :: i, k, j, ierr
+integer(kind=int_all)             :: m_loc
+integer(kind=int_all),allocatable :: counts(:), displacements(:)
+integer(kind=int_all)             :: Int1=1
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
 integer(c_int)     :: pastix_info
@@ -49,7 +53,6 @@ integer(kind=spm_int_t), dimension(:), pointer       :: pastix_colptr
 integer(kind=spm_int_t), dimension(:), pointer       :: pastix_rowptr
 real(kind=c_double)    , dimension(:), pointer       :: pastix_values
 #endif
-integer(kind=int_all) :: Int1=1
 
 
 !write(*,*) my_id,'*********************************'
@@ -59,8 +62,8 @@ integer(kind=int_all) :: Int1=1
 m_loc = (index_max - index_min + 1) * n_tor * n_var
 mumps_par%nz_loc = nz_glob
 
-call MPI_Allreduce(m_loc,mumps_par%N,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
-call MPI_Allreduce(mumps_par%NZ_loc,mumps_par%nz,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_Allreduce(m_loc,mumps_par%N,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_Allreduce(mumps_par%NZ_loc,mumps_par%nz,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
 
 !------------------------------------------------------- colunm scaling of global distributed matrix
 call clck_time(t0)
@@ -96,7 +99,7 @@ if (allocated(displacements)) call tr_deallocate(displacements,"displacements",C
 call tr_allocate(counts,1,n_cpu,"counts",CAT_DMATRIX)
 call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)
 
-call MPI_Allgather(mumps_par%nz_loc,1,MPI_INTEGER,counts,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+call MPI_Allgather(mumps_par%nz_loc,1,MPI_INTEGER_ALL,counts,1,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
 
 displacements(1) = 0
 do i=2,n_cpu
@@ -113,14 +116,13 @@ call tr_allocatep(mumps_par%JCN,Int1,mumps_par%nz,"mumps_par%JCN",CAT_DMATRIX)
 call tr_allocatep(mumps_par%A,Int1,mumps_par%nz,"mumps_par%A",CAT_DMATRIX)
 call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
 
-call MPI_AllgatherV(IRN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%IRN, &
-                    counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-
-call MPI_AllgatherV(JCN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%JCN, &
-                    counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-
-call MPI_AllgatherV(A_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%A, &
-                    counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+call split_allgathersolve(n_cpu,my_id,counts,displacements)
+!call MPI_AllgatherV(IRN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%IRN, &
+!                    counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
+!call MPI_AllgatherV(JCN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%JCN, &
+!                    counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
+!call MPI_AllgatherV(A_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%A, &
+!                    counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 
 call MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 

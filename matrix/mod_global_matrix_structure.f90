@@ -27,7 +27,7 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   integer(kind=int_all)              :: j_larger, j, n_max, maxsize
   integer(kind=int_all)              :: n, nz, n_matrix_block_size, ndof
   integer                            :: ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2
-  integer                            :: ibase
+  integer(kind=int_all)              :: ibase
   integer                            :: inode,i_father,i_tor_min, i_tor_max
   integer, dimension(n_vertex_max)   ::  node_out
   logical                            :: freeboundary

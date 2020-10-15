@@ -59,9 +59,6 @@ integer   :: seed, i_rng, n_stream
 ! Start up MPI, jorek
 call sim%initialize(num_groups=1)
 
-sim%fields%node_list    => node_list
-sim%fields%element_list => element_list
-
 rho_part    = 1.195d19 !(corrected value to obtain density=1.441e17 (as in benchmark, for original profile with toroidal flux) 
 
 n_particles_local = int(n_particles/sim%n_cpu) 
@@ -73,11 +70,11 @@ call with(sim, fieldreader)
 
 write(*,*) 'main : t_start = ',t_start
 
-if (sim%my_id .eq. 0) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+if (sim%my_id .eq. 0) call boundary_from_grid(sim%fields%node_list, sim%fields%element_list, bnd_node_list, bnd_elm_list, .false.)
 
 call broadcast_boundary(sim%my_id, bnd_elm_list, bnd_node_list)
 
-call update_equil_state(sim%my_id, node_list, element_list, bnd_elm_list, xpoint, xcase )
+call update_equil_state(sim%my_id, sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase )
 
 n_norm    = CENTRAL_DENSITY * 1.d20                              ! (number) density normalisation
 rho_norm  = CENTRAL_MASS * MASS_PROTON * n_norm                  ! rho_SI = rho_norm * rho
@@ -119,18 +116,18 @@ if (.not. restart) then
 
   end select
 
-  do i=1,node_list%n_nodes
-    node_list%node(i)%values(:,:,2) = 0.d0
-    node_list%node(i)%values(:,:,4) = 0.d0
+  do i=1,sim%fields%node_list%n_nodes
+    sim%fields%node_list%node(i)%values(:,:,2) = 0.d0
+    sim%fields%node_list%node(i)%values(:,:,4) = 0.d0
   enddo
 
 endif
 
-!do i=1,node_list%n_nodes
-!  node_list%node(i)%values(2:3,:,:) = 1.d-2 * node_list%node(i)%values(2:3,:,:)
+!do i=1,sim%fields%node_list%n_nodes
+!  sim%fields%node_list%node(i)%values(2:3,:,:) = 1.d-2 * sim%fields%node_list%node(i)%values(2:3,:,:)
 !enddo
 
-jorek_feedback = new_projection(node_list, element_list, &
+jorek_feedback = new_projection(sim%fields%node_list, sim%fields%element_list, &
                                 filter = filter_perp, filter_hyper = filter_hyper, filter_parallel=filter_par, fractional_digits = 9, &
                                 calc_integrals=.false., to_vtk=.false., to_h5 = .false., basename='projections')
 
@@ -138,12 +135,12 @@ allocate(jorek_feedback%rhs(n_order+1, n_vertex_max, sim%fields%element_list%n_e
 
 jorek_feedback%rhs = 0.d0
 
-project_density = new_projection(node_list, element_list,                         &
+project_density = new_projection(sim%fields%node_list, sim%fields%element_list,   &
                       filter = 0d-3, filter_hyper = 1d-5, filter_parallel = 0.d0, &
                       f=[proj_f(proj_one, group = 1)], fractional_digits = 9,     &
                       calc_integrals=.true., to_vtk=.true., to_h5=.false., basename='density', nsub=5)
 
-project_current = new_projection(node_list, element_list,                         &
+project_current = new_projection(sim%fields%node_list, sim%fields%element_list,   &
                       filter = 0d-3, filter_hyper = 1d-5, filter_parallel = 0.d0, &
                       f=[proj_f(proj_jPhi, group = 1)], fractional_digits = 9,    &
                       calc_integrals=.true., to_vtk=.false., to_h5=.false., basename='current', nsub=5)

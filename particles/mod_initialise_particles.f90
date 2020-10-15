@@ -233,7 +233,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
   use constants
   use phys_module, only: F0, central_density
   use mod_coronal
-  use mod_boris, only: gc_to_kinetic_leapfrog
+  use mod_boris, only: gc_to_kinetic_leapfrog, kinetic_to_kinetic_leapfrog, gc_to_kinetic
   use mpi
   use mod_interp
   implicit none

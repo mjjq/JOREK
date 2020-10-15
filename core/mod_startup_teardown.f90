@@ -10,7 +10,7 @@ subroutine initialise(my_id, n_cpu, skip_help)
   use mod_clock, only: clck_init
   use data_structure, only: init_threads
   use basis_at_gaussian
-  use phys_module, only: gmres, write_ps
+  use phys_module, only: gmres
 #include "r3_info.h"
 ! Necessary for dependency reasons... should clean that up a bit and create a module
   integer, intent(out) :: my_id, n_cpu
@@ -90,7 +90,7 @@ subroutine initialise(my_id, n_cpu, skip_help)
   call initialise_basis()
 
   ! --- Initialise ppplib plotting library
-  if ((my_id == 0).and. (write_ps)) call begplt('jorek2.ps')
+  if (my_id == 0) call begplt('jorek2.ps')
 end subroutine initialise
 
 
@@ -98,6 +98,9 @@ end subroutine initialise
 !> Verify that we are not doing stupid things. Run this after loading parameters
 !> from the input file.
 subroutine sanity_checks(my_id, n_cpu)
+  use mumps_module
+  use pastix_module
+  use wsmp_module
   use mod_parameters, only: n_tor, n_plane
   use phys_module
 
@@ -135,6 +138,12 @@ subroutine sanity_checks(my_id, n_cpu)
      write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 in Makefile.inc'
      call MPI_Abort(MPI_COMM_WORLD, 7, ierr)
      stop
+#endif
+  else if ( use_wsmp ) then
+#ifndef USE_WSMP
+    write(*,*) 'FATAL : use_wsmp=.true. requires USE_WSMP=1 in Makefile.inc'
+    call MPI_Abort(MPI_COMM_WORLD, 9, ierr)
+    stop
 #endif
 #ifdef USE_BLOCK
     write(*,*) 'FATAL : USE_BLOCK=1 in Makefile.inc is currently not possible with use_wsmp'

@@ -382,7 +382,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
 
     ! Generate the random numbers
     call cpu_time(t0)
-    allocate(rans(7,blocksize))
+    allocate(rans(8,blocksize))
     do i=1,blocksize
       call rng%next(rans(:,i))
     end do
@@ -404,7 +404,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
     allocate(found(blocksize))
     !$omp parallel do default(none) & ! for gfortran which cannot handle the derived types otherwise
     !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, P2, &
-    !$omp           R_i, Z_i, xjac, grad_P2, u, &
+    !$omp           R_i, Z_i, xjac, grad_P2, u,  &
     !$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle, temp, ifail, DUMMY_R, DUMMY_Z) &
     !$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, T_Maxwell, &
     !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize, &
@@ -542,8 +542,13 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
         select type(p => particles_tmp(i))
         type is (particle_kinetic_leapfrog)
 
-          p = gc_to_kinetic_leapfrog(particle, fields%node_list, fields%element_list, chi, [0.d0, 0.d0, 0.d0], B, mass, dt=0.d0) ! ignore electric field and set dt to 0
- 
+! the generic copy of particle_kinetic_leapfrog, i.e p = ..., seems broken, therefor a using yhe non-generic copy
+
+          call copy_particle_kinetic_leapfrog( &
+                 kinetic_to_kinetic_leapfrog(gc_to_kinetic(fields%node_list, fields%element_list, particle, chi, B, mass), &
+                                             [0.d0, 0.d0, 0.d0], B, mass, dt=0.d0), &
+                                             p )
+
           ! if the kinetic position is not in the grid particles(i)%i_elm the particle is lost
           if (p%i_elm .le. 0) found(i) = .false.
         type is (particle_gc)

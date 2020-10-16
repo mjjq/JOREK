@@ -27,7 +27,7 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   integer(kind=int_all),allocatable :: counts(:), displacements(:)
   integer(kind=int_all)             :: Int1=1
   
-  integer(kind=C_INT) :: n, nnz
+  integer(kind=C_INT_ALL) :: n, nnz
 
 !write(*,*) my_id,'*********************************'
 !write(*,*) my_id,'*  solve global matrix using STRUMPACK *'

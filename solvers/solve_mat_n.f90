@@ -919,7 +919,7 @@ contains
 
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
     call tr_print_memsize("BeforeSolveN")
-    call tr_debug_writei("smn_A_mumps_par%n",mumps_par%n)
+    call tr_debug_write("smn_A_mumps_par%n",mumps_par%n)
 
     if (my_id .eq. 0) then
       write(*,*) my_id,'*********************************'

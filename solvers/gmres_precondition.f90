@@ -47,6 +47,7 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
   real*8                :: tsecond
   real*8, allocatable   :: buffer(:)
   integer               :: ibuf_size, status(MPI_STATUS_SIZE)
+  integer(kind=int_all) :: int_tmp
   integer(kind=int_all) :: Int1=1
   
   real*8                :: DUMMY_REAL(1:1)
@@ -259,7 +260,8 @@ subroutine gmres_precondition(x,y,i_tor,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N
     endif
    
     call MPI_BCAST(mumps_par%rhs,ifactor*n_loc_n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)      
-    call strumpack_solve(ifactor*n_loc_n,mumps_par%rhs,MPI_COMM_N)
+    int_tmp = ifactor*n_loc_n
+    call strumpack_solve(int_tmp,mumps_par%rhs,MPI_COMM_N)
   endif  
 #endif 
 

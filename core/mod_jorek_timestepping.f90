@@ -169,7 +169,7 @@ subroutine setup_solvers(this, sim)
 
   ! Initialise the boundary element and node list
   if (sim%my_id .eq. 0) then
-    call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
+    call boundary_from_grid(sim%fields%node_list, sim%fields%element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
   endif
 
   call broadcast_boundary(sim%my_id, bnd_elm_list, bnd_node_list)
@@ -177,7 +177,7 @@ subroutine setup_solvers(this, sim)
   ! --- Fill the vacuum response matrices for freeboundary computations
   if ( freeboundary ) then
   
-    call get_vacuum_response(sim%my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil, resistive_wall)
+    call get_vacuum_response(sim%my_id, sim%fields%node_list, bnd_elm_list, bnd_node_list, freeboundary_equil, resistive_wall)
 
     call update_response(sim%my_id,get_tstep_n(1), freeboundary_equil, resistive_wall)
     
@@ -205,12 +205,12 @@ subroutine setup_solvers(this, sim)
   if ( freeboundary ) call broadcast_vacuum(sim%my_id, resistive_wall)
 
   this%n_AA = 0
-  do inode = 1, node_list%n_nodes  
-    this%n_AA = max(this%n_AA,node_list%node(inode)%index(4))  
+  do inode = 1, sim%fields%node_list%n_nodes  
+    this%n_AA = max(this%n_AA,sim%fields%node_list%node(inode)%index(4))  
   end do
   mumps_par%n = this%n_AA
 
-  call update_equil_state(sim%my_id, node_list, element_list, bnd_elm_list, xpoint, xcase)
+  call update_equil_state(sim%my_id, sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase)
   this%eq = ES
 
   if ( sim%my_id == 0 ) then
@@ -229,6 +229,7 @@ subroutine setup_solvers(this, sim)
                            this%my_id_trans, this%n_cpu_trans, this%my_id_master,        &
                            this%MPI_COMM_N, this%MPI_COMM_TRANS, this%MPI_COMM_MASTER,   &
                            this%MPI_GROUP_MASTER, this%MPI_GROUP_WORLD)
+                      
   else
      this%my_id_n    = sim%my_id
      this%n_cpu_n    = sim%n_cpu
@@ -241,18 +242,18 @@ subroutine setup_solvers(this, sim)
   index_size  = sim%n_cpu
   id_elements = sim%my_id
 
-  call tr_allocate(this%local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
+  call tr_allocate(this%local_elms,1,sim%fields%element_list%n_elements,"local_elms",CAT_FEM)
   call tr_allocate(this%index_min,1,index_size,"index_min",CAT_FEM)
   call tr_allocate(this%index_max,1,index_size,"index_max",CAT_FEM)
   !
   ! Construct index_min, index_max and local_elems
   !
-  call distribute_nodes_elements(id_elements,index_size,node_list,element_list,this%local_elms, &
-                                 this%n_local_elms,ndof_glob,this%index_min,this%index_max)
-
-  node_list%n_dof = ndof_glob
+  call distribute_nodes_elements(id_elements,this%n_cpu_n,index_size,sim%fields%node_list,sim%fields%element_list, .false., &
+                                 this%local_elms, this%n_local_elms, ndof_glob, this%index_min, this%index_max)
+                        
+  sim%fields%node_list%n_dof = ndof_glob
   
-  call update_deltas(sim%my_id, node_list) ! create list of delta values in local_matrix module
+  call update_deltas(sim%my_id, sim%fields%node_list) ! create list of delta values in local_matrix module
   
   ! Build ijA_index, ijA_size and irn_jcn
   call tr_allocate(local_index_start,1,sim%n_cpu,"local_index_start",CAT_FEM)
@@ -263,12 +264,12 @@ subroutine setup_solvers(this, sim)
 
   block_size = n_tor*n_var
 
-  call global_matrix_structure(sim%my_id,this%my_id_n, node_List, element_list, bnd_elm_list, freeboundary,&
+  call global_matrix_structure(sim%my_id,this%my_id_n, sim%fields%node_List, sim%fields%element_list, bnd_elm_list, freeboundary,&
                                this%local_elms,this%n_local_elms,this%index_min(id_elements+1),this%index_max(id_elements+1),      &
                                ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, 1, n_tor, n_glob, nz_glob, ndof_glob, block_size)
 
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-    call global_matrix_structure_vacuum(node_list, bnd_node_list, this%index_min(sim%my_id+1), this%index_max(sim%my_id+1)) 
+    call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%index_min(sim%my_id+1), this%index_max(sim%my_id+1)) 
   endif
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
@@ -409,7 +410,7 @@ subroutine do_jorek_timestep(this, sim, ev)
   ! --- n_plane, n_var have to remain the same until the end of the program.
   call new_thread_buffers()
 
-  call update_equil_state(sim%my_id, node_list, element_list, bnd_elm_list, xpoint, xcase )
+  call update_equil_state(sim%my_id, sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase )
   this%eq = ES
 
   if ( sim%my_id == 0 ) call print_equil_state(.false.)
@@ -417,9 +418,9 @@ subroutine do_jorek_timestep(this, sim, ev)
   ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
   minRad=0.d0
   if (bootstrap) then
-    call bootstrap_find_minRad(node_list, element_list, this%eq%R_axis, this%eq%Z_axis, this%eq%psi_axis, this%eq%psi_bnd)
+    call bootstrap_find_minRad(sim%fields%node_list, sim%fields%element_list, this%eq%R_axis, this%eq%Z_axis, this%eq%psi_axis, this%eq%psi_bnd)
 
-    call bootstrap_get_q_and_ft_splines(node_list, element_list, this%eq%psi_axis, this%eq%psi_xpoint, this%eq%R_xpoint, this%eq%Z_xpoint)
+    call bootstrap_get_q_and_ft_splines(sim%fields%node_list, sim%fields%element_list, this%eq%psi_axis, this%eq%psi_xpoint, this%eq%R_xpoint, this%eq%Z_xpoint)
   endif
   
   call clck_time_barrier(t1)
@@ -438,7 +439,7 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   if (use_pellet) then            ! calculating the pellet_volume (total_pellet_volume)
     pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
-    call Integrals_3D(sim%my_id, node_list, element_list, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
+    call Integrals_3D(sim%my_id, sim%fields%node_list, sim%fields%element_list, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
   endif
 
 
@@ -497,11 +498,11 @@ subroutine do_jorek_timestep(this, sim, ev)
 
     ! TODO add if use_pellet
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-    call update_mgi(sim%my_id, node_list, element_list)
+    call update_mgi(sim%my_id, sim%fields%node_list, sim%fields%element_list)
 #endif
 
-    call update_values(sim%my_id, element_list, node_list, deltas)         ! add solution to node values
-    call update_deltas(sim%my_id,node_list)
+    call update_values(sim%my_id, sim%fields%element_list, sim%fields%node_list, deltas)         ! add solution to node values
+    call update_deltas(sim%my_id, sim%fields%node_list)
     t_now = t_now + dt_jorek
   else
     if ( sim%my_id == 0 ) then
@@ -519,18 +520,18 @@ subroutine do_jorek_timestep(this, sim, ev)
   !--------------------------------------------------------- energies
   if (sim%my_id == 0) then
     ! This is a change from jorek2_main, where these quantities are calculated using the old xpoint and axis data
-    call update_equil_state(sim%my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
-    this%eq = ES
+!    call update_equil_state(sim%my_id,sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase)
+!    this%eq = ES
 
-    call energy(node_list, element_list, W_mag, W_kin)
+    call energy(W_mag, W_kin)
     
-    call integrals(node_list, element_list,                                                         &
-        this%eq%R_axis, this%eq%Z_axis, this%eq%psi_axis, this%eq%R_xpoint, this%eq%Z_xpoint,       &
-        this%eq%psi_xpoint, this%eq%psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now), &
-        beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),             &
-        density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                           &
-        pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),             &
-        part_src_in_t(index_now), part_src_out_t(index_now))
+!    call integrals(sim%fields%node_list, sim%fields%element_list,                                                         &
+!        this%eq%R_axis, this%eq%Z_axis, this%eq%psi_axis, this%eq%R_xpoint, this%eq%Z_xpoint,       &
+!        this%eq%psi_xpoint, this%eq%psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now), &
+!        beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),             &
+!        density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                           &
+!        pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),             &
+!        part_src_in_t(index_now), part_src_out_t(index_now))
 
     R_axis_t(index_now)   = this%eq%R_axis
     Z_axis_t(index_now)   = this%eq%Z_axis
@@ -539,28 +540,6 @@ subroutine do_jorek_timestep(this, sim, ev)
     xtime(index_now)              = t_now
     energies(1:n_tor,1,index_now) = W_mag(1:n_tor)
     energies(1:n_tor,2,index_now) = W_kin(1:n_tor)
-
-#ifdef JECCD
-    call temp(node_list,element_list,A_tem,A_den,A_jen,A_jec,A_jec1,A_jec2)
-    write(*,'(A,12e16.8)') ' current energies2 : ',A_tem,A_den
-    write(*,'(A,12e16.8)') ' current energies3 : ',A_jen,A_jec
-#ifdef JEC2DIAG
-    write(*,'(A,12e16.8)') ' current energies4 : ',A_jec1,A_jec2
-#endif
-
-    energies2(1:n_tor,1,index_now) = A_tem(1:n_tor)
-    energies2(1:n_tor,2,index_now) = A_den(1:n_tor)
-
-    energies3(1:n_tor,1,index_now) = A_jen(1:n_tor)
-    energies3(1:n_tor,2,index_now) = A_jec(1:n_tor)
-
-#ifdef JEC2DIAG
-    energies4(1:n_tor,1,index_now) = A_jec1(1:n_tor)
-    energies4(1:n_tor,2,index_now) = A_jec2(1:n_tor)
-#endif
-
-    write(*,*) ' exiting current energies '
-#endif
 
     mindelta = minval(deltas); maxdelta = maxval(deltas);
     
@@ -579,11 +558,16 @@ subroutine do_jorek_timestep(this, sim, ev)
     Growth_mag  = 0.d0; Growth_kin  = 0.d0; Growth_mag0 = 0.d0; Growth_kin0 = 0.d0
 
     if (index_now > index_start+1) then
-      Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
-      Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
+      if (n_tor .gt. 1) then
+        Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
+        Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
+      else
+        Growth_mag  = 0.d0
+        Growth_kin  = 0.d0
+      endif
       if (linear_run) then
         Growth_mag0 = 0.d0
-        Growth_kin  = 0.d0
+        Growth_kin0 = 0.d0
       else
         Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
         Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
@@ -620,7 +604,7 @@ subroutine do_jorek_timestep(this, sim, ev)
   ! --- Write a restart file every nout timesteps
   if ( (sim%my_id == 0) .and. (mod(index_now,nout) == 0) ) then
     write(fileout,'(A5,i5.5)') 'jorek',index_now
-    call export_restart(node_list, element_list, fileout)
+    call export_restart(sim%fields%node_list, sim%fields%element_list, fileout)
   endif
   
   ! --- Exit the code if NaNs are detected.
@@ -648,7 +632,7 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   ! Write a restart file on code exit
   if (sim%stop_now .and. sim%my_id .eq. 0) then
-    call export_restart(node_list, element_list, 'jorek_restart')
+    call export_restart(sim%fields%node_list, sim%fields%element_list, 'jorek_restart')
   end if
 
   select type (fields => sim%fields)

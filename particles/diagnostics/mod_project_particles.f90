@@ -61,8 +61,8 @@ end interface proj_f
 !> You must use the (new_)projection() constructor to set this up.
 !> At construction time the matrix is solved.
 type, extends(io_action) :: projection
-  type(type_node_list), allocatable    :: node_list !< node lists to save particle projections in
-  type(type_element_list), allocatable :: element_list
+  type(type_node_list),    pointer :: node_list !< node lists to save particle projections in
+  type(type_element_list), pointer :: element_list
 
   real*8 :: filter          !< Smoothing factor used for this projection (Laplacian, poloidal plane)
   real*8 :: filter_hyper    !< hyper-smoothing factor used for this projection (double Laplacian, poloidal plane)
@@ -301,7 +301,7 @@ function new_projection(node_list, element_list,                                
   !use mod_parameters, only n_node_max
   type(projection) :: new
   type(type_node_list), intent(in)       :: node_list
-  type(type_element_list), intent(in)    :: element_list
+  type(type_element_list), intent(in), target    :: element_list
   real*8, intent(in), optional           :: filter,    filter_hyper,    filter_parallel    !< normal, hyper and parallel smoothing
   real*8, intent(in), optional           :: filter_n0, filter_hyper_n0, filter_parallel_n0 !< for n=0
   type(proj_f), intent(in), dimension(:), optional :: f !< Type with function to map over particles before projection
@@ -358,6 +358,7 @@ function new_projection(node_list, element_list,                                
   endif
 
   allocate(new%node_list,    source=node_list)
+  new%node_list = node_list
 
   do inode = 1, n_nodes_max
     new%node_list%node(inode)%values = 0.d0
@@ -365,6 +366,7 @@ function new_projection(node_list, element_list,                                
   end do
 
   allocate(new%element_list, source=element_list)
+  new%element_list = element_list
 
   new%filter             = 0.d0
   new%filter_hyper       = 0.d0
@@ -760,7 +762,7 @@ subroutine sample_rhs(this, sim)
   end if
 
   if (.not. allocated(this%rhs_f)) then
-    if (.not. allocated(this%element_list)) then
+    if (.not. associated(this%element_list)) then
       write(*,*) "ERROR: Call the constructor for projection or allocate element_list"
       return
     end if

@@ -25,7 +25,7 @@ subroutine gmres_setup_jorek(my_id, n_cpu, i_tor, my_id_n, n_cpu_n, my_id_trans,
   integer, intent(out) :: MPI_COMM_MASTER !< Every first of MPI_COMM_N
   integer, intent(out) :: MPI_GROUP_MASTER !< subset of MPI_COMM_WORLD corresponding to MPI_COMM_MASTER
   integer, intent(out) :: MPI_GROUP_WORLD
-  integer :: N_masters, M_cpu, i_rank(n_tor)
+  integer :: N_masters, i_rank(n_tor), m_cpu
   integer :: i, ierr
 
   N_masters = (n_tor+1)/2
@@ -61,5 +61,8 @@ subroutine gmres_setup_jorek(my_id, n_cpu, i_tor, my_id_n, n_cpu_n, my_id_trans,
   call MPI_COMM_SIZE(MPI_COMM_N, n_cpu_n, ierr) ! number of local comm cpu
   call MPI_COMM_RANK(MPI_COMM_TRANS, my_id_trans, ierr) ! id of this proc in transverse comm
   call MPI_COMM_SIZE(MPI_COMM_TRANS, n_cpu_trans, ierr) ! num proc in transverse comm
+
+  write(*,*) 'gmres_setup : m_cpu, n_cpu_n ',m_cpu, n_cpu_n
+
 end subroutine gmres_setup_jorek
 end module gmres_setup

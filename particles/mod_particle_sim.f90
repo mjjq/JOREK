@@ -31,7 +31,7 @@ type :: particle_sim
   !< MPI settings
   integer :: my_id = 0
   integer :: n_cpu = 1 ! if not initialized, act as if there is no mpi
-  real*8 :: wtime_start !< Clock time at the start of the program
+  real*8  :: wtime_start !< Clock time at the start of the program
 contains
   procedure :: finalize
   procedure :: initialize

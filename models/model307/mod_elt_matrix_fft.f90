@@ -431,7 +431,7 @@ do i=1,n_vertex_max
             aux_jy0   = eq_aux_g(mp,6,ms,mt)
             aux_jz0   = eq_aux_g(mp,7,ms,mt)
           elseif (use_pcs) then
-            aux_P0      = eq_aux_g(mp,4,ms,mt)
+            aux_P0      = eq_aux_g(mp,1,ms,mt)
             aux_jz0_pcs = 0.d0 !eq_aux_g(mp,5,ms,mt)
           endif
 

@@ -353,6 +353,8 @@ subroutine do_jorek_timestep(this, sim, ev)
   use mod_fields_linear
   use mod_gmres_driver
   use mod_expression,          only: exprs_all_int, init_expr
+  use mod_integrals3D
+
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mgi_module,              only: update_mgi
 #endif
@@ -367,10 +369,15 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   real*8         :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
   real*8         :: density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
+  real*8, allocatable :: res(:)
 
   real*8         :: mindelta, maxdelta, sum_deltas
   character*8    :: label, itlabel
   character*14   :: fileout
+
+  call init_expr()
+  allocate(res(exprs_all_int%n_expr+1))
+  res = 0.d0  
 
   ! Get the timestep size
   dt_jorek = get_tstep_n(this%istep)
@@ -520,8 +527,8 @@ subroutine do_jorek_timestep(this, sim, ev)
   !--------------------------------------------------------- energies
   if (sim%my_id == 0) then
     ! This is a change from jorek2_main, where these quantities are calculated using the old xpoint and axis data
-!    call update_equil_state(sim%my_id,sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase)
-!    this%eq = ES
+    call update_equil_state(sim%my_id,sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase)
+    this%eq = ES
 
     call energy(W_mag, W_kin)
     
@@ -579,7 +586,7 @@ subroutine do_jorek_timestep(this, sim, ev)
   
   endif ! myid = 0
 
-!  call int3d_new(sim%my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
+  call int3d_new(sim%my_id, sim%fields%node_list, sim%fields%element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
 
   if (sim%my_id .eq. 0 ) then
     ! --- Output energies and growth_rates to text files during the code run

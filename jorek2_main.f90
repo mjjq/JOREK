@@ -768,23 +768,7 @@ required = 0
 #ifdef USE_FFTW
   call dfftw_plan_dft_r2c_1d(fftw_plan,n_plane,in_fft,out_fft,FFTW_PATIENT)
 #endif
-
-! if (RMP_on) then
-!    print*, 'bnd_node_list%n_bnd_nodes', bnd_node_list%n_bnd_nodes
-!    !print*, 'psi_RMP_cos after broadcast RMP3, my_id', psi_RMP_cos(3), my_id
-!    print*, 'psi_RMP_cos after broadcast RMP3, my_id', psi_RMP_cos(bnd_node_list%n_bnd_nodes)
-!    !print*, 'dpsi_RMP_cos_dR after broadcast RMP3, my_id', dpsi_RMP_cos_dR(3), my_id
-!    print*, 'dpsi_RMP_cos_dR after broadcast RMP3, my_id', dpsi_RMP_cos_dR(bnd_node_list%n_bnd_nodes), my_id
-!    !print*, 'dpsi_RMP_cos_dZ after broadcast RMP3, my_id', dpsi_RMP_cos_dZ(3), my_id
-!    print*, 'dpsi_RMP_cos_dZ after broadcast RMP3, my_id', dpsi_RMP_cos_dZ(bnd_node_list%n_bnd_nodes), my_id
-!    !print*, 'psi_RMP_sin after broadcast RMP3, my_id', psi_RMP_sin(3), my_id
-!    print*, 'psi_RMP_sin after broadcast RMP3, my_id', psi_RMP_sin(bnd_node_list%n_bnd_nodes), my_id
-!    !print*, 'dpsi_RMP_sin_dR after broadcast RMP3, my_id', dpsi_RMP_sin_dR(3), my_id
-!    print*, 'dpsi_RMP_sin_dR after broadcast RMP3, my_id', dpsi_RMP_sin_dR(bnd_node_list%n_bnd_nodes), my_id
-!    !print*, 'dpsi_RMP_sin_dZ after broadcast RMP3, my_id', dpsi_RMP_sin_dZ(3), my_id
-!    print*, 'dpsi_RMP_sin_dZ after broadcast RMP3, my_id', dpsi_RMP_sin_dZ(bnd_node_list%n_bnd_nodes), my_id
-! endif
-! 
+ 
   call tr_debug_write("JMAIN:End_init elt_list",element_list%n_elements)
   call tr_debug_write("JMAIN:End_init bnd_elt_list",bnd_elm_list%n_bnd_elements)
   call tr_debug_write("JMAIN:End_init node_list",node_list%n_nodes)
@@ -937,6 +921,8 @@ required = 0
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
   
+  if (.not. associated(aux_node_list)) allocate(aux_node_list) ! information of particle moments is stored in aux_list
+
   index_now = index_start  ! index_now: Index of current timestep
 
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
@@ -1176,7 +1162,7 @@ required = 0
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
 
-       call energy(node_list,element_list,W_mag,W_kin)
+       call energy(W_mag,W_kin)
 
        R_axis_t(index_now)       = ES%R_axis
        Z_axis_t(index_now)       = ES%Z_axis

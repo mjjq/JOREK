@@ -61,7 +61,6 @@ integer   :: seed, i_rng, n_stream
 call sim%initialize(num_groups=1)
 
 rho_part    = 1.195d19 !(corrected value to obtain density=1.441e17 (as in benchmark, for original profile with toroidal flux) 
-
 n_particles_local = int(n_particles/sim%n_cpu) 
 timesteps         = tstep_particles
 
@@ -86,9 +85,11 @@ n_steps   = floor(tstep_si / timesteps)
 timesteps = tstep_si / n_steps
 n_steps   = tstep_si / timesteps
 
-write(*,*) ' adapt time step to be multiple of jorek time step'
-write(*,*) "tstep = ", tstep_si, n_steps, timesteps
-write(*,*) "check :", n_steps, tstep_si - n_steps*timesteps
+if (sim%my_id .eq.0) then
+  write(*,*) ' adapt time step to be multiple of jorek time step'
+  write(*,*) "tstep = ", tstep_si, n_steps, timesteps
+  write(*,*) "check :", n_steps, tstep_si - n_steps*timesteps
+endif
 
 if (.not. restart) then
 
@@ -117,11 +118,6 @@ if (.not. restart) then
 
   end select
 
-  do i=1,sim%fields%node_list%n_nodes
-    sim%fields%node_list%node(i)%values(:,:,2) = 0.d0
-    sim%fields%node_list%node(i)%values(:,:,4) = 0.d0
-  enddo
-
 endif
 
 !do i=1,sim%fields%node_list%n_nodes
@@ -132,8 +128,7 @@ jorek_feedback = new_projection(sim%fields%node_list, sim%fields%element_list, &
                                 filter_n0 = filter_perp_n0, filter_hyper_n0 = filter_hyper_n0, filter_parallel_n0=filter_par_n0,      &
                                 filter = filter_perp, filter_hyper = filter_hyper, filter_parallel=filter_par, fractional_digits = 9, &
                                 do_zonal = .false., calc_integrals=.false., to_vtk=.false., to_h5 = .false., basename='projections')
-allocate(aux_node_list)
-!aux_node_list => jorek_feedback%node_list
+aux_node_list => jorek_feedback%node_list
 
 allocate(jorek_feedback%rhs(n_order+1, n_vertex_max, sim%fields%element_list%n_elements, n_tor, 1))
 
@@ -258,8 +253,6 @@ integer   :: n_particles, ifail
 
 !$ w0 = omp_get_wtime()
 
-write(*,*) 'loop_particle_kinetic_local'
-
 n_norm   = CENTRAL_DENSITY * 1.d20                              ! (number) density normalisation
 rho_norm = CENTRAL_MASS * MASS_PROTON * n_norm                  ! rho_SI = rho_norm * rho
 t_norm   = sqrt((MU_ZERO * rho_norm))                           ! t_SI   = t_norm * t_jorek
@@ -351,13 +344,11 @@ type is (particle_kinetic_leapfrog)
   end do   ! particles
   !$omp end parallel do
   
-  if (sim%my_id .eq. 0) write(*,*) "End of the particle loop"
-
 end select
 
 !  write(*,*) 'CAREFUL: averaging over n_steps : ',n_steps
 !  jorek_feedback%rhs = jorek_feedback%rhs / real(n_steps,8)
-write(*,*) 'done loop_particle_kinetic_local'
+if (sim%my_id .eq. 0) write(*,*) 'done loop_particle_kinetic_local'
 
 end subroutine
 

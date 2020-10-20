@@ -65,7 +65,6 @@ call tr_allocate(work,1,lwork,"work",CAT_GMRES)
 
 work(1:n_dof)         = deltas(1:n_dof)                     ! the initial guess
 work(n_dof+1:2*n_dof) = RHS_glob(1:n_dof)                   ! the right hand side
-write(*,*) "CHECK : ",my_id,maxval(abs(work(1:n_dof))), maxval(abs(work(n_dof+1:2*n_dof)))
 
 call gmres_matrix_vector(work(1:n_dof),work(2*n_dof+1:3*n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 if (my_id .eq. 0) then
@@ -134,7 +133,7 @@ end if
        endif
 
 !******************************** end of GMRES reverse communication
-       if (my_id .eq. 0) write(*,*) 'check work : ',n_dof,maxval(abs(work(1:n_dof)))
+       
 if (my_id .eq. 0) deltas(1:n_dof) = work(1:n_dof)
 
 call gmres_matrix_vector(deltas,work(n_dof+1:2*n_dof),my_id,my_id_n, i_tor, MPI_COMM_MASTER)

@@ -687,17 +687,9 @@ required = 0
 !      call remove_centre(node_list,element_list,n_tht,67*(n_tht-1))
 
       ! --- Determine initial energies
-      call energy(node_list,element_list,W_mag,W_kin)
+      call energy(W_mag,W_kin)
       write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
 
-#ifdef JECCD
-      call temp(node_list,element_list,A_tem,A_den,A_jen,A_jec,A_jec1,A_jec2)
-      write(*,'(A,12e16.8)') ' initial energies2 : ',A_tem,A_den
-      write(*,'(A,12e16.8)') ' initial energies3 : ',A_jen,A_jec
-#ifdef JEC2DIAG
-      write(*,'(A,12e16.8)') ' initial energies4 : ',A_jec1,A_jec2
-#endif
-#endif
     end if ! (my_id == 0)
     
 #ifdef USE_MUMPS

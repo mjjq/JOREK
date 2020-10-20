@@ -30,7 +30,7 @@ real*8     :: Omega, dOmega_dpsi, dOmega_dz, dOmega_dpsi2, dOmega_dz2, dOmega_dp
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
-  write(*,*) '*      initial conditions  (500)      *'
+  write(*,*) '*      initial conditions  (307)      *'
   write(*,*) '***************************************'
 endif
 

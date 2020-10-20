@@ -6,18 +6,18 @@ subroutine flux_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,fre
   use vacuum
   use vacuum_response
   use vacuum_equilibrium,  only: import_external_fields
-  use mod_boundary, only: boundary_from_grid
-  use mod_element_rtree, only: populate_element_rtree
+  use mod_boundary,        only: boundary_from_grid
+  use mod_element_rtree,   only: populate_element_rtree
   implicit none
-  type(type_node_list), intent(inout) :: node_list
-  type(type_element_list), intent(inout) :: element_list
-  type(type_bnd_node_list), intent(inout) :: bnd_node_list
+  type(type_node_list),        intent(inout) :: node_list
+  type(type_element_list),     intent(inout) :: element_list
+  type(type_bnd_node_list),    intent(inout) :: bnd_node_list
   type(type_bnd_element_list), intent(inout) :: bnd_elm_list
   integer, intent(in) :: my_id
   logical, intent(in) :: freeb_equil2
   type (type_surface_list) :: surface_list
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
-  integer :: ierr
+  integer                  :: ierr
 
   if (my_id == 0) then
     if (xpoint)  then
@@ -65,7 +65,7 @@ subroutine flux_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,fre
     call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()
-    if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, node_list, bnd_node_list, resistive_wall)
+    if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
   end if
   
   ! --- Compute the plasma equilibrium in the new grid (pastix or mumps)

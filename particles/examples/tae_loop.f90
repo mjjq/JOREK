@@ -251,6 +251,8 @@ integer   :: seed, i_rng, n_stream, ierr, nthreads
 integer   :: i_tor, index_lm, i_elm_temp
 integer   :: n_particles, ifail
 
+real*8,allocatable :: feedback_rhs(:,:,:,:,:)
+
 !$ w0 = omp_get_wtime()
 
 n_norm   = CENTRAL_DENSITY * 1.d20                              ! (number) density normalisation
@@ -262,7 +264,10 @@ M_norm   = rho_norm * v_norm                                    ! momentum norma
 
 jorek_feedback%rhs_gather_time = jorek_feedback%rhs_gather_time + n_steps * timesteps
 
+allocate(feedback_rhs,source=jorek_feedback%rhs)
+
 jorek_feedback%rhs = 0.d0
+feedback_rhs       = 0.d0
 
 call with(sim, counter)
 
@@ -274,13 +279,13 @@ type is (particle_kinetic_leapfrog)
  !$omp parallel do default(none) &
 #endif
  !$omp schedule(dynamic,10) &
- !$omp shared(sim, particles, n_steps, timesteps, rng, particle_start_time, &
- !$omp rho_norm, t_norm, v_norm, E_norm, M_norm, N_norm, &
- !$omp jorek_feedback, CENTRAL_DENSITY, CENTRAL_MASS) &
- !$omp private(particle_tmp, i_rng, i,j,k,l,m, t, E, B, psi, U, rz_old, st_old, &
- !$omp i_elm_old, i_elm, n_e, T_e,& 
- !$omp R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, HH, HH_s, HH_t, HZ, index_lm, &
- !$omp ifail, v)  
+ !$omp shared(sim, particles, n_steps, timesteps, rng, particle_start_time,        &
+ !$omp rho_norm, t_norm, v_norm, E_norm, M_norm, N_norm,                           &
+ !$omp jorek_feedback, CENTRAL_DENSITY, CENTRAL_MASS)                              &
+ !$omp private(particle_tmp, i_rng, i,j,k,l,m, t, E, B, psi, U, rz_old, st_old,    &
+ !$omp i_elm_old, i_elm, n_e, T_e,                                                 & 
+ !$omp R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, HH, HH_s, HH_t, HZ, index_lm, ifail, v) &
+ !$omp reduction(+:feedback_rhs)
  do j=1,size(particles,1)
 
     call copy_particle_kinetic_leapfrog(particles(j),particle_tmp)
@@ -326,12 +331,11 @@ type is (particle_kinetic_leapfrog)
           v = HH(l,m) * sim%fields%element_list%element(i_elm)%size(l,m) 
 
           do i_tor=1,n_tor
-            !$omp atomic              
-            jorek_feedback%rhs(m,l,i_elm,i_tor,1) = jorek_feedback%rhs(m,l,i_elm,i_tor,1) &
+            feedback_rhs(m,l,i_elm,i_tor,1) = feedback_rhs(m,l,i_elm,i_tor,1) &
                                                   
-                                                  + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
+                                            + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
             
-                                                  * (1.d0/3.d0) * (particle_tmp%v(1)**2 + particle_tmp%v(2)**2 + particle_tmp%v(3)**2) * mu_zero
+                                            * (1.d0/3.d0) * (particle_tmp%v(1)**2 + particle_tmp%v(2)**2 + particle_tmp%v(3)**2) * mu_zero
           enddo
 
         enddo   !< order
@@ -345,6 +349,10 @@ type is (particle_kinetic_leapfrog)
   !$omp end parallel do
   
 end select
+
+jorek_feedback%rhs = feedback_rhs
+
+deallocate(feedback_rhs)
 
 !  write(*,*) 'CAREFUL: averaging over n_steps : ',n_steps
 !  jorek_feedback%rhs = jorek_feedback%rhs / real(n_steps,8)

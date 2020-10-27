@@ -83,10 +83,7 @@ subroutine initialize(sim, num_groups, skip_jorek2help)
   end if
 
   ! Initialise mode numbers
-  do i_tor=1, n_tor
-    mode(i_tor) = + int(i_tor / 2) * n_period
-    if (sim%my_id .eq. 0) write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
-  enddo
+  call det_modes()
 
   ! Initialise parameters
   call initialise_and_broadcast_parameters(sim%my_id, "__NO_FILENAME__")

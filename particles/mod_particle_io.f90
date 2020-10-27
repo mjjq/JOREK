@@ -78,8 +78,7 @@ if (allocated(sim%groups)) then
     end if
     ! Find the number of particles on each node
     n_here = size(sim%groups(i)%particles,1)
-    call MPI_Gather(n_here,1,MPI_INTEGER,&
-        particles_per_proc,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+    call MPI_Gather(n_here,1,MPI_INTEGER,particles_per_proc,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     n_total = sum(particles_per_proc,1) ! set it on other processes as well (to
     ! 0) so they can allocate the useless arrays
 
@@ -96,9 +95,19 @@ if (allocated(sim%groups)) then
     do j=1,n_here
       x(:,j) = sim%groups(i)%particles(j)%x
     end do
-    call MPI_Gatherv(x(:,:), 3*n_here, MPI_REAL8, &
-      x_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
-      MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+!    call MPI_Gatherv(x(:,:), 3*n_here, MPI_REAL8, &
+!      x_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
+!      MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+
+    call MPI_Gatherv(x(1,:), n_here, MPI_REAL8, &
+                     x_all(1,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                     MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+    call MPI_Gatherv(x(2,:), n_here, MPI_REAL8, &
+                     x_all(2,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                     MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+    call MPI_Gatherv(x(3,:), n_here, MPI_REAL8, &
+                     x_all(3,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                     MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
     ! st
     allocate(st(2,n_here), st_all(2,n_total))
@@ -156,10 +165,19 @@ if (allocated(sim%groups)) then
       do j=1,n_here
         v(:,j) = p(j)%v
       end do
-      call MPI_Gatherv(v(:,:), 3*n_here, MPI_REAL8, &
-        v_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
-        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+!      call MPI_Gatherv(v(:,:), 3*n_here, MPI_REAL8, &
+!        v_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
+!        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
+      call MPI_Gatherv(v(1,:), n_here, MPI_REAL8, &
+                       v_all(1,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+      call MPI_Gatherv(v(2,:), n_here, MPI_REAL8, &
+                       v_all(2,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+      call MPI_Gatherv(v(3,:), n_here, MPI_REAL8, &
+                       v_all(3,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
       ! q
       allocate(q(n_here), q_all(n_total))
       do j=1,n_here
@@ -183,9 +201,19 @@ if (allocated(sim%groups)) then
       do j=1,n_here
         v(:,j) = p(j)%v
       end do
-      call MPI_Gatherv(v(:,:), 3*n_here, MPI_REAL8, &
-        v_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
-        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+!      call MPI_Gatherv(v(:,:), 3*n_here, MPI_REAL8, &
+!        v_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
+!        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+
+      call MPI_Gatherv(v(1,:), n_here, MPI_REAL8, &
+                       v_all(1,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+      call MPI_Gatherv(v(2,:), n_here, MPI_REAL8, &
+                       v_all(2,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+      call MPI_Gatherv(v(3,:), n_here, MPI_REAL8, &
+                       v_all(3,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
       ! q
       allocate(q(n_here), q_all(n_total))

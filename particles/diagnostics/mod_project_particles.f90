@@ -831,7 +831,7 @@ subroutine sample_rhs(this, sim)
     !$omp end parallel do
     this%rhs_f(:,:,:,:,i_f) = my_rhs(:,:,:,:,1)
   enddo
-
+ 
   deallocate(my_rhs)
 
 end subroutine sample_rhs
@@ -869,7 +869,7 @@ subroutine save_to_vtk(this, sim)
 
     call write_particle_distribution_to_vtk(this%node_list, this%element_list, &
       trim(filename), this%vtk_grid%nsub, min(n_proj,n_var), this%vtk_grid%xyz, this%vtk_grid%ien)
-
+      
     write(*,*) "Written projection to ", trim(filename)
   end if
   call cpu_time(t1)
@@ -944,7 +944,7 @@ subroutine prepare_mumps_par(node_list, element_list, n_tor_local, i_tor_local, 
                              this_mpi_comm_world, this_mpi_comm_n, this_mpi_comm_master,  &
                              mumps_par, filter, filter_hyper, filter_parallel,            &
                              skip_factorisation)
-use phys_module, only : F0, TWOPI
+use phys_module, only : F0, TWOPI, mode
 use data_structure
 use basis_at_gaussian
 use mod_basisfunctions
@@ -1021,9 +1021,9 @@ if (my_id_n .eq. 0) then
 ! thing https://groups.google.com/forum/#!topic/comp.lang.fortran/VKhoAm8m9KE
   wgauss2 = wgauss
 
-  write(*,*) '*******************************************'
-  write(*,*) '* constructing particle projection matrix *'
-  write(*,*) '*******************************************'
+  write(*,*) '**************************************************'
+  write(*,'(A,i2,A)') ' * constructing particle projection matrix (n=',mode(i_tor_local),') *'
+  write(*,*) '**************************************************'
   write(*,'(2i3,A,3e12.4)') my_id,my_id_n,'  filters       ',filter, filter_hyper, filter_parallel
   if (apply_dirichlet_condition) write(*,*) 'applying Dirichlet conditions'
 
@@ -1359,7 +1359,7 @@ call MPI_COMM_RANK(mumps_par%COMM,       my_id_n, ierr)
 apply_zonal = .false.
 if (present(do_zonal)) apply_zonal = do_zonal
 
-apply_dirichlet_condition = .true.
+apply_dirichlet_condition = .false.
 if (do_zonal)  apply_dirichlet_condition = .true.
 
 nz_AA = 4 * element_list%n_elements * (n_vertex_max * (n_order+1))**2
@@ -1837,8 +1837,6 @@ real*8 :: P, P_s, P_t, P_st, P_ss, P_tt
 
 integer, parameter :: etype = 9 ! for vtk_quad
 
-write(*,'(A,4i8)') 'PROJECT VTK : ',n_fields,n_tor,node_list%n_nodes,element_list%n_elements
-
 n_scalars = n_tor * n_fields
 nnos = nsub*nsub*element_list%n_elements
 
@@ -1864,9 +1862,9 @@ do i=1,element_list%n_elements
     do k=1,n_tor
       ivar = (j-1)*n_tor + k
       do l=1,nsub
-        s = float(l-1)/float(nsub-1)
+        s = real(l-1,8)/real(nsub-1,8)
         do m=1,nsub
-          t = float(m-1)/float(nsub-1)
+          t = real(m-1,8)/real(nsub-1,8)
           inode = (i-1)*nsub*nsub+(l-1)*nsub+m
           call interp(node_list, element_list, i, j, k, s, t, P, P_s, P_t, P_st, P_ss, P_tt)
           scalars(inode,ivar) = real(P,4)

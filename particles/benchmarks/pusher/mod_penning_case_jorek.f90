@@ -42,7 +42,7 @@ subroutine jorek_penning_fields(node_list, element_list)
   Phi0    = epsilon*omega_e**2/qom/2.d0*t_norm ! In JOREK units: E_SI*t_norm
 
   call prepare_mumps_par(node_list, element_list, 0, 0, MPI_COMM_WORLD, MPI_COMM_WORLD, MPI_COMM_WORLD, &
-                         p, filter=0.d0, filter_hyper=0.d0, filter_parallel=0.d0, .false.)
+                         p, filter=0.d0, filter_hyper=0.d0, filter_parallel=0.d0, skip_factorisation=.false.)
 
   allocate(p%rhs(p%n))
 

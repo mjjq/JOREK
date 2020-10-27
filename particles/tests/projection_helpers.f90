@@ -204,8 +204,6 @@ subroutine default_flux_grid(node_list, element_list, npol)
   particlesource = 0.d0
   rst_hdf5 = 1
 
-  use_mumps_eq = .true.
-
 
   node_list%n_nodes = 0
   element_list%n_elements = 0

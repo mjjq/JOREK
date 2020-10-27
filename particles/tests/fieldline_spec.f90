@@ -9,7 +9,6 @@ use mod_fields_linear
 use projection_helpers
 use mod_fieldline_euler
 use mod_neighbours
-use nodes_elements
 implicit none
 
 contains
@@ -23,7 +22,6 @@ end subroutine setup_fieldline_spec
 !> Test tracing a fieldline back and forth with euler
 subroutine test_fieldline_backforth_euler
   use mod_find_rz_nearby
-  use nodes_elements
   type(jorek_fields_interp_linear) :: f
   integer, parameter :: n_p = 2
   type(particle_fieldline) :: p(n_p)
@@ -33,20 +31,11 @@ subroutine test_fieldline_backforth_euler
   integer :: ielm_out ! against find_RZ trouble
   integer :: i, j, k, ifail, i_elm_old
   character(len=2) :: is
-
-!  if (.not. associated(f%node_list))    allocate(f%node_list)
-!  if (.not. associated(f%element_list)) allocate(f%element_list)
-
-  if (.not. associated(f%node_list))    f%node_list    => node_list
-  if (.not. associated(f%element_list)) f%element_list => element_list
-
-  call begplt('fieldline_spec.ps')
-  
+  if (.not. associated(f%node_list))    allocate(f%node_list)
+  if (.not. associated(f%element_list)) allocate(f%element_list)
   call default_flux_grid_31(f%node_list, f%element_list)
-  
   ! Call this once to setup the rtree
   call find_RZ(f%node_list,f%element_list,2.d0,1.d0,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-  
   ! Setup neighbour information for the run
   call update_neighbours(f%node_list, f%element_list)
   

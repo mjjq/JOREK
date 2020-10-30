@@ -25,6 +25,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
                 restart, rst_format, regrid, bootstrap, write_ps,   &
+                force_horizontal_Xline, fix_axis_nodes,             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_leg_out, n_ext,         &
                 n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
@@ -55,7 +56,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 T_0,   T_1,   T_coef,                               &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_par, ZK_par_max, ZK_perp, D_par, D_perp,         &
-                particlesource, heatsource, tauIC,                  &
+                particlesource, heatsource, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
@@ -67,7 +68,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, SDN_threshold, D_perp_file, ZK_perp_file,    &
-                rho_file, T_file, ffprime_file,                     &
+                rho_file, T_file, ffprime_file, rot_file,           &
+                normalized_velocity_profile,                        &
                 freeboundary_equil, freeboundary,  freeb_change_indices, &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
@@ -83,7 +85,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
-                zkpar_T_dependent,                                  & 
+                zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        &                                 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
@@ -100,8 +102,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 keep_n0_const, linear_run, export_for_nemec,        &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
+                first_target_point, last_target_point,              &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
                 spi_tor_rot, tor_frequency, ZK_par_neg_thresh,      &
+                corr_neg_temp_coef, corr_neg_dens_coef,             &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 ne_SI_min, Te_eV_min, rn0_min,                      &
@@ -170,6 +174,22 @@ if (my_id .eq. 0) then
       read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
       write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
     enddo
+  endif
+
+  if (n_limiter.ne.0) then
+    ! --- Open the file.
+    OPEN(UNIT=244, FILE=wall_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(wall_file)//'.'
+      write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
+    else
+      write(*,'(A)') ' wall info from wall_file: R_wall, Z_wall ' 
+      do i=1,n_limiter
+        read(244,*) R_limiter(i),Z_limiter(i)
+        write(*,*)  R_limiter(i),Z_limiter(i)
+      enddo
+    endif    
+    CLOSE(244)
   endif
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)

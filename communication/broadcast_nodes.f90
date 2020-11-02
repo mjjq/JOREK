@@ -5,7 +5,6 @@ subroutine Broadcast_nodes(my_id,node_list)
 use tr_module 
 use data_structure
 use mpi_mod
-use mod_integer_types
 implicit none
 
 type (type_node_list)    :: node_list
@@ -35,11 +34,11 @@ call MPI_BCAST(node_list%n_nodes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 call MPI_BCAST(node_list%n_dof,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 #ifdef fullmhd
-bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1)*INT_EXT + (1+3+1)*INT_EXT + (2)*ILOG_EXT)
+bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1 + 1+3+1)*INT_EXT + (2)*ILOG_EXT)
 #elif altcs
-bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1)*INT_EXT + (1+3+1)*INT_EXT + (2)*ILOG_EXT)
+bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1 + 1+3+1)*INT_EXT + (2)*ILOG_EXT)
 #else
-bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2)*IDBL_EXT + (n_order+1)*INT_EXT + (1+3+1)*INT_EXT + (2)*ILOG_EXT)
+bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2)*IDBL_EXT + (n_order+1 + 1+3+1)*INT_EXT + (2)*ILOG_EXT)
 #endif
 
 

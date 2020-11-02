@@ -460,12 +460,7 @@ if (my_id_n .eq. 0) then
       ! --- just to keep safe, because fortran modulo is a short-int function...
       mod_frac  = ( mumps_par%jcn(i)-1 ) / n_tor
       mod_arg_j = ( mumps_par%jcn(i)-1 ) - mod_frac * n_tor
-#ifdef INTSIZE64
-      !j_reduced = 2 * int8((mumps_par%jcn(i)-1) / n_tor) + mod(mod(mumps_par%jcn(i)-1,n_tor)+1,2) + 1
-      j_reduced = 2 * int((mumps_par%jcn(i)-1) / n_tor) + mod(mod(mumps_par%jcn(i)-1,n_tor)+1,2) + 1
-#else
-      j_reduced = 2 * int((mumps_par%jcn(i)-1) / n_tor) + mod(mod(mumps_par%jcn(i)-1,n_tor)+1,2) + 1
-#endif
+      j_reduced = 2 * mod_frac + mod(mod(mumps_par%jcn(i)-1,n_tor)+1,2) + 1
     endif
 
     if (n_i .eq. 0) then
@@ -474,12 +469,7 @@ if (my_id_n .eq. 0) then
       ! --- just to keep safe, because fortran modulo is a short-int function...
       mod_frac  = ( mumps_par%irn(i)-1 ) / n_tor
       mod_arg_i = ( mumps_par%irn(i)-1 ) - mod_frac * n_tor
-#ifdef INTSIZE64
-      !i_reduced = 2 * int8((mumps_par%irn(i)-1) / n_tor) + mod(mod(mumps_par%irn(i)-1,n_tor)+1,2) + 1
-      i_reduced = 2 * int((mumps_par%irn(i)-1) / n_tor) + mod(mod(mumps_par%irn(i)-1,n_tor)+1,2) + 1
-#else
-      i_reduced = 2 * int((mumps_par%irn(i)-1) / n_tor) + mod(mod(mumps_par%irn(i)-1,n_tor)+1,2) + 1
-#endif
+      i_reduced = 2 * mod_frac + mod(mod(mumps_par%irn(i)-1,n_tor)+1,2) + 1
     endif
 
     mumps_par%irn(i) = i_reduced

@@ -25,7 +25,8 @@ integer               :: i_tor(:), j, my_id, my_id_n, my_id_master, MPI_COMM_N, 
 integer               :: revcom, iter_gmres, n_tor
 integer               :: icntl(8), info(3)
 integer(kind=int_all) :: i, m, colx, coly, colz, nbscal, lwork, n_dof, irc(5)
-integer(kind=int_all) :: Int1=1
+
+integer(kind=int_all), parameter   :: Int1=1
 
 integer :: matvec, precondLeft, precondRight, dotProd, ierr
 real*8  :: cntl(5), rinfo(2), sum, err, Bnorm, Xnorm

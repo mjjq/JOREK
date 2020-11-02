@@ -14,7 +14,7 @@ implicit none
 real*8                             :: rhs(:), rhs_dis(:)
 integer                            :: my_id, my_id_n, in, j, M_cpu, n_cpu, ifactor
 integer                            :: idisp, n_send, ierr
-integer(kind=int_all)              :: Int1=1
+integer(kind=int_all), parameter   :: Int1=1
 integer(kind=int_all)              :: n_loc_n, nz_loc_n, n_recv
 integer(kind=int_all)              :: index_snd, old_n, old_nz
 logical                            :: again

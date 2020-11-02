@@ -13,7 +13,6 @@ use mod_integer_types
 implicit none
 
 integer               :: i_tor(:), MPI_COMM_MASTER
-integer(kind=int_all) :: Int1=1
 integer(kind=int_all) :: size_x,size_y
 real*8                :: x(size_x), y(size_y), t1, t2, t3, t4, t5
 real*8, allocatable   :: y_tmp(:), y_tmp2(:), x_tmp(:)
@@ -22,6 +21,8 @@ integer,allocatable   :: recv_counts(:), recv_disp(:)
 integer               :: n, i, ir, jc, ierr, my_id, my_id_n, n_cpu
 integer(kind=int_all) :: n_blocksize, n_blocks, iA_start, ix_start, iy_start, ndof_local, index_offset, Int_tmp
 integer               :: ndof_glob_short
+
+integer(kind=int_all), parameter   :: Int1=1
 
 integer index_ytmp_min,index_ytmp_max
 logical found_value

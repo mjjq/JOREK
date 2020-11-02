@@ -25,7 +25,7 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   integer                           :: i, k, j, ierr
   integer(kind=int_all)             :: m_loc
   integer(kind=int_all),allocatable :: counts(:), displacements(:)
-  integer(kind=int_all)             :: Int1=1
+  integer(kind=int_all), parameter  :: Int1=1
   
   integer(kind=C_INT_ALL) :: n, nnz
 
@@ -70,12 +70,6 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   call tr_allocatep(mumps_par%rhs,Int1,n,"mumps_par%rhs",CAT_DMATRIX)
 
   call split_allgathersolve(n_cpu,my_id,counts,displacements)
-  !call MPI_AllgatherV(irn_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%irn, &
-  !                  counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-  !call MPI_AllgatherV(jcn_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%jcn, &
-  !                  counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-  !call MPI_AllgatherV(a_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%a, &
-  !                  counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 
   call MPI_AllReduce(rhs_glob,mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   

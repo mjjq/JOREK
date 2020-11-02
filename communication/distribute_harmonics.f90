@@ -33,9 +33,11 @@ interface
 end interface
 
 integer                :: my_id, my_id_n, n_cpu, m_cpu, idisp, in, ierr, ifactor
-integer(kind=int_all)  :: Int1=1, i, j, nz_loc_n, n_loc_n, nrecv_max, nsend_max
+integer(kind=int_all)  :: i, j, nz_loc_n, n_loc_n, nrecv_max, nsend_max
 integer(kind=int_all)  :: index((n_tor+1)/2), index_snd, n_i, n_j, ibufsize
 integer(kind=int_all)  :: i_reduced, j_reduced
+
+integer(kind=int_all), parameter   :: Int1=1
 
 real*8,                allocatable :: Asnd_buffer(:)
 integer(kind=int_all), allocatable :: isnd_buffer(:), jsnd_buffer(:)

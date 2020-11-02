@@ -44,7 +44,7 @@ real*8                            :: tsecond
 integer                           :: i, k, j, ierr
 integer(kind=int_all)             :: m_loc
 integer(kind=int_all),allocatable :: counts(:), displacements(:)
-integer(kind=int_all)             :: Int1=1
+integer(kind=int_all), parameter  :: Int1=1
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
 integer(c_int)     :: pastix_info
@@ -117,12 +117,6 @@ call tr_allocatep(mumps_par%A,Int1,mumps_par%nz,"mumps_par%A",CAT_DMATRIX)
 call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
 
 call split_allgathersolve(n_cpu,my_id,counts,displacements)
-!call MPI_AllgatherV(IRN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%IRN, &
-!                    counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-!call MPI_AllgatherV(JCN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%JCN, &
-!                    counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-!call MPI_AllgatherV(A_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%A, &
-!                    counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 
 call MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 

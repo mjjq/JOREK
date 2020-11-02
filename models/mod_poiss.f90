@@ -83,8 +83,8 @@ integer(kind=spm_int_t), dimension(:), pointer             :: pastix_rowptr
 real(kind=c_double)    , dimension(:), pointer             :: pastix_values
 #endif
 
-integer(kind=int_all) :: Int0=0
-integer(kind=int_all) :: Int1=1
+integer(kind=int_all), parameter   :: Int0=0
+integer(kind=int_all), parameter   :: Int1=1
 
 
 if (my_id == 0) then

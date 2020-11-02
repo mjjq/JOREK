@@ -122,7 +122,7 @@ contains
     character*8           :: type
     real*8                :: DUMMY_REAL(1:1)
     integer(kind=int_all) :: DUMMY_INT (1:1)
-    integer(kind=int_all) :: Int1=1
+    integer(kind=int_all), parameter   :: Int1=1
     CHARACTER(LEN=128) :: fname
 #ifdef USE_PASTIX6
     integer(c_int)     :: pastix_info
@@ -906,7 +906,6 @@ contains
 
     integer               :: my_id_n, n_cpu_n, ierr, my_id_master, n_cpu_master
     integer               :: n_i, n_j
-    integer(kind=int_all) :: Int1=1
     integer(kind=int_all) :: i, j, k
     integer(kind=int_all) :: i_reduced, j_reduced
     type(clcktype)        :: t_itstart, t0, t1, t2, t3
@@ -914,6 +913,8 @@ contains
     real*8, allocatable   :: RHS_tmp(:)
     !Split broadcast
     character*8 :: type
+
+    integer(kind=int_all), parameter   :: Int1=1
     
     integer(kind=C_INT_ALL) :: n, nnz
 

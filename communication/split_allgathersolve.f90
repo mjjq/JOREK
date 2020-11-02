@@ -16,13 +16,14 @@ subroutine split_allgathersolve(n_cpu,my_id,counts,displacements)
   ! --- Local variables
   integer               :: i, i_cpu, ierr
   integer, allocatable  :: counts_int(:),displacements_int(:)
-  integer(kind=int_all) :: Int1=1
   integer(kind=int_all) :: i_long
 
   integer(kind=int_all)  :: INT_MAX=1000000000 ! very conservative, could be up to ~2147000000
   logical                :: need_to_split
   integer                :: n_split, i_split
   integer(kind=int_all)  :: count_split
+
+  integer(kind=int_all), parameter   :: Int1=1
 
   real*8,                allocatable :: Asend_buffer(:)
   integer(kind=int_all), allocatable :: isend_buffer(:), jsend_buffer(:)

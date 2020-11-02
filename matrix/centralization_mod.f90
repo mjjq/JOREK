@@ -17,13 +17,13 @@ contains
   implicit none
   
   ! --- Routine parameters
-  integer, intent(in)          :: my_id, my_id_n, n_cpu_n, MPI_COMM_N
+  integer, intent(in)                :: my_id, my_id_n, n_cpu_n, MPI_COMM_N
   
   ! --- Local variables
   integer(kind=int_all), allocatable :: nz_array(:), disp_array(:)
-  integer(kind=int_all)    :: Int1=1
-  integer(kind=int_all)    :: nz_total, i
-  integer                  :: i_cpu, ierr
+  integer(kind=int_all), parameter   :: Int1=1
+  integer(kind=int_all)              :: nz_total, i
+  integer                            :: i_cpu, ierr
   
  
   if (.not.centralize_harm_mat .and. use_strumpack) then

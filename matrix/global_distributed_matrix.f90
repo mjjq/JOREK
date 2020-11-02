@@ -18,7 +18,7 @@ module global_distributed_matrix
   integer(kind=int_all), allocatable, target  :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) !< contains the structure of the sparse matrix (to fill in CSR format)
   real*8,                allocatable          :: deltas(:)                                 !< solution from previous step
   real*8,                allocatable          :: column_scaling(:)                         !< column scaling of the global matrix
-  integer(kind=int_all), allocatable          :: local_index_start(:), local_index_end(:)  !< range of indices local to one MPI process 
+  integer,               allocatable          :: local_index_start(:), local_index_end(:)  !< range of indices local to one MPI process 
   integer(kind=int_all)                       :: ndof_glob, n_glob, nz_glob
   integer(kind=int_all)                       :: n_matrix_block_size                       !< Size of a matrix block (n_var x n_tor)
   
@@ -78,7 +78,7 @@ module global_distributed_matrix
     ! --- Routine parameters
     integer,               intent(in) :: i_row     !< Matrix row
     integer,               intent(in) :: j_col     !< Matrix column
-    integer(kind=int_all), intent(in) :: index_min !< Smallest block index dealt with by current MPI proc
+    integer,               intent(in) :: index_min !< Smallest block index dealt with by current MPI proc
     
     ! --- Local variables
     integer :: i_block, j_block           ! Block indices
@@ -159,7 +159,7 @@ module global_distributed_matrix
     ! --- Routine parameters
     type(type_node_list),        intent(in)    :: node_list            !< List of grid nodes
     type(type_bnd_node_list),    intent(in)    :: bnd_node_list        !< List of boundary grid nodes
-    integer(kind=int_all),       intent(in)    :: index_min, index_max !< Responsibility of MPI proc
+    integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
     
     ! --- Local variables
     integer :: l_node_bnd, l_dof, l_node, l_dir, l_index, l_tor, l_var, l_row

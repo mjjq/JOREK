@@ -57,8 +57,8 @@ contains
   type (type_bnd_node_list),          intent(in)    :: bnd_node_list
   integer,                            intent(in)    :: local_elms(*)
   integer,                            intent(in)    :: n_local_elms
-  integer(kind=int_all),              intent(in)    :: index_min
-  integer(kind=int_all),              intent(in)    :: index_max
+  integer,                            intent(in)    :: index_min
+  integer,                            intent(in)    :: index_max
   logical,                            intent(in)    :: xpoint2
   integer,                            intent(in)    :: xcase2
   real*8,                             intent(in)    :: R_axis
@@ -85,9 +85,9 @@ contains
   real*8                :: Btot, alpha, dT0_dt, dVpar0_dt, dBigR_dt, R_inside, Z_inside
   real*8                :: grad_psi, u0_s, u0_t, u0_x, u0_y, element_size_0, element_size_2, element_size_perp
   real*8                :: H1(2,2), H1_s(2,2), H1_ss(2,2)
-  integer               :: i, in, iv, iv2, inode, inode2, k, index_tmp
-  integer               :: index_large_i, ielm
-  integer(kind=int_all) :: index_node, index_node2
+  integer               :: i, in, iv, iv2, inode, inode2, k
+  integer               :: ielm
+  integer               :: index_node, index_node2
   integer(kind=int_all) :: ijA_position,ijA_position2
   integer               :: ilarge2, kv, kT, ku, kn, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
   integer               :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT

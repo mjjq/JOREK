@@ -17,7 +17,7 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
 
 ! --- Routine parameters
   integer,               intent(in) :: n_cpu, my_id
-  integer(kind=int_all), intent(in) :: index_min, index_max
+  integer,               intent(in) :: index_min, index_max
 
 ! --- Local variables
   type(clcktype)                    :: t_itstart, t0, t1, t2, t3

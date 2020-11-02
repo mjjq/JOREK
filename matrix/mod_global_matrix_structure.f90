@@ -22,8 +22,8 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   type (type_node)             :: nodes(n_vertex_max)
 
   integer :: local_elms(*), my_id, my_id_n, n_local_elms, n_tor_local
-  integer(kind=int_all)              :: index_min, index_max
-  integer(kind=int_all)              :: i, index1, index2, index1_local, index2_local
+  integer                            :: index_min, index_max
+  integer                            :: i, index1, index2, index1_local, index2_local
   integer(kind=int_all)              :: j_larger, j, n_max, maxsize
   integer(kind=int_all)              :: n, nz, n_matrix_block_size, ndof
   integer                            :: ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2
@@ -55,9 +55,9 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   n_max = 8192
 
   if (allocated(ijA_size))  call tr_deallocate(ijA_size,"ijA_size",CAT_DMATRIX) 
-  call tr_allocate(ijA_size,Int1,index_max-index_min+1,"ijA_size",CAT_DMATRIX)
+  call tr_allocate(ijA_size,Int1,index_max-index_min+Int1,"ijA_size",CAT_DMATRIX)
   if (allocated(irn_jcn))  call tr_deallocate(irn_jcn,"irn_jcn",CAT_DMATRIX) 
-  call tr_allocate(irn_jcn,Int1,index_max-index_min+1,Int1,n_max,"irn_jcn",CAT_DMATRIX)
+  call tr_allocate(irn_jcn,Int1,index_max-index_min+Int1,Int1,n_max,"irn_jcn",CAT_DMATRIX)
 
   ijA_size    = 0
   irn_jcn = 0

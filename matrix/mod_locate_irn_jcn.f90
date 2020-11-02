@@ -10,7 +10,8 @@ use mod_integer_types
 !                                                                         *
 ! search to be replaced by binary search                                  *
 !**************************************************************************
-integer(kind=int_all) :: index_node1, index_node2, index_min, index_max, ijA_position, i, index1_local
+integer               :: index_node1, index_node2, index_min, index_max, index1_local
+integer(kind=int_all) :: ijA_position, i
 logical               :: found_index
 integer(kind=int_all) :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
 

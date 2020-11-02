@@ -85,8 +85,8 @@ contains
     type (type_bnd_node_list),          intent(in)    :: bnd_node_list
     integer,                            intent(in)    :: local_elms(*)
     integer,                            intent(in)    :: n_local_elms
-    integer(kind=int_all),              intent(in)    :: index_min
-    integer(kind=int_all),              intent(in)    :: index_max
+    integer,                            intent(in)    :: index_min
+    integer,                            intent(in)    :: index_max
     real*8,                             intent(inout) :: rhs_loc(*)
     logical,                            intent(in)    :: xpoint2
     integer,                            intent(in)    :: xcase2
@@ -603,14 +603,14 @@ contains
     real*8,                             intent(in)    :: psi_RMP_cos1(*), dpsi_RMP_cos_dR1(*), dpsi_RMP_cos_dZ1(*)
     real*8,                             intent(in)    :: psi_RMP_sin1(*), dpsi_RMP_sin_dR1(*), dpsi_RMP_sin_dZ1(*)
     logical,                            intent(in)    :: solve_only, gmres
-    integer(kind=int_all),              intent(in)    :: index_min, index_max
+    integer,                            intent(in)    :: index_min, index_max
     integer,                            intent(in)    :: i_tor_min, i_tor_max 
     integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
     integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
     real*8,                allocatable, intent(inout) :: A_mat(:) 
     
     ! --- Internal variables
-    integer(kind=int_all)                             :: index_node,   index_node2
+    integer                                           :: index_node,   index_node2
     real*8                                            :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_dl
     
     ! --- Get psi perturbation and its derivatives
@@ -695,14 +695,14 @@ contains
     integer,                            intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
     integer,                            intent(in)    :: k_var
     integer,                            intent(in)    :: i_tor
-    integer(kind=int_all),              intent(in)    :: index_min, index_max
+    integer,                            intent(in)    :: index_min, index_max
     logical,                            intent(in)    :: gmres, solve_only
     integer,                            intent(in)    :: i_tor_min, i_tor_max
     integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
     integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
     real*8,                allocatable, intent(inout) :: A_mat(:) 
     ! --- Internal variables
-    integer(kind=int_all)                             :: index_node,   index_node2
+    integer                                           :: index_node,   index_node2
     
     ! --- Get nodes index
     index_node  = node%index(1)
@@ -756,7 +756,7 @@ contains
     type (type_node),                   intent(in)    :: node
     integer,                            intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
     integer,                            intent(in)    :: i_tor
-    integer(kind=int_all),              intent(in)    :: index_min, index_max
+    integer,                            intent(in)    :: index_min, index_max
     logical,                            intent(in)    :: gmres, solve_only
     integer,                            intent(in)    :: i_tor_min, i_tor_max
     integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
@@ -764,7 +764,7 @@ contains
     real*8,                allocatable, intent(inout) :: A_mat(:) 
     
     ! --- Internal variables
-    integer(kind=int_all)                             :: index_node,   index_node2
+    integer                                           :: index_node,   index_node2
     real*8                                            :: mach1, dmach1_dVpar, dmach1_dpsis, dmach1_dus, dmach1_drho, dmach1_drhos, dmach1_dTi, dmach1_dTis
     real*8                                            :: mach1_ds, mach1_ds_Vpars, mach1_ds_Ti, mach1_ds_Tis
     
@@ -970,7 +970,7 @@ contains
     type (type_node),                   intent(in)    :: node
     integer,                            intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
     integer,                            intent(in)    :: i_tor
-    integer(kind=int_all),              intent(in)    :: index_min, index_max
+    integer,                            intent(in)    :: index_min, index_max
     logical,                            intent(in)    :: gmres, solve_only
     integer,                            intent(in)    :: i_tor_min, i_tor_max
     integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
@@ -978,7 +978,7 @@ contains
     real*8,                allocatable, intent(inout) :: A_mat(:) 
     
     ! --- Internal variables
-    integer(kind=int_all)                             :: index_node,   index_node2
+    integer                                           :: index_node,   index_node2
     real*8                                            :: constmp
     real*8                                            :: sheath_u, dsheath_u, dsheath_T
     real*8                                            :: sheath_ds, dsheath_ds_us, dsheath_ds_Ts

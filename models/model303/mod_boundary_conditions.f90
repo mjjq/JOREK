@@ -51,7 +51,7 @@ contains
   integer,                            intent(in)    :: my_id
   integer,                            intent(in)    :: local_elms(*)
   integer,                            intent(in)    :: n_local_elms
-  integer(kind=int_all),              intent(in)    :: index_min, index_max
+  integer,                            intent(in)    :: index_min, index_max
   integer,                            intent(in)    :: xcase2
   type (type_node_list),              intent(in)    :: node_list
   type (type_element_list),           intent(in)    :: element_list
@@ -74,8 +74,8 @@ contains
   real*8                :: Btot, alpha, dT0_dt, dVpar0_dt, dBigR_dt, R_inside, Z_inside
   real*8                :: grad_psi, u0_s, u0_t, u0_x, u0_y
   integer               :: i, in, iv, inode, k
-  integer               :: index_large_i, ielm
-  integer(kind=int_all) :: index_node, index_node2
+  integer               :: ielm
+  integer               :: index_node, index_node2
   integer(kind=int_all) :: ijA_position,ijA_position2
   integer               :: ilarge2, kv, kT, ku, ilarge_vv, ilarge_vT, ilarge_vus
   integer               :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT

@@ -20,7 +20,7 @@ module data_structure
 #elif altcs
     real*8     :: psi_eq(n_order+1)               !< equilibrium flux at the nodes
 #endif
-    integer(kind=int_all) :: index(n_order+1)     !< index in the main matrix
+    integer    :: index(n_order+1)                !< index in the main matrix
     integer    :: boundary                        !< = 1, 2 or 3 for boundary nodes.
                                                   !< For wall-aligned grids, check routine update_boundary_types_final
                                                   !< in grids/grid_utils/update_boundary_types.f90

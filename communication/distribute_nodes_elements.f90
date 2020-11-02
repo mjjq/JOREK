@@ -16,9 +16,10 @@ type (type_surface_list) :: flux_list
 
 integer               :: local_elms(*)
 integer               :: my_id, n_cpu, m_cpu, n_local_elms, inode
-integer(kind=int_all) :: n_dof, index_total
+integer(kind=int_all) :: n_dof
+integer               :: index_total
 integer               :: inext, i,j, k, iv,index1
-integer(kind=int_all) :: index_min(*), index_max(*), index_part
+integer               :: index_min(*), index_max(*)
 
 logical :: elm_is_local, direct_construction
 !integer, dimension(node_list%n_nodes) :: active_node

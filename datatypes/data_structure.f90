@@ -5,7 +5,6 @@ module data_structure
   use tr_module
   use gauss
   use ISO_C_BINDING, ONLY : C_INT
-  use mod_integer_types
 
   implicit none
 

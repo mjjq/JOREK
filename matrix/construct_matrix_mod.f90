@@ -313,8 +313,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer,               intent(in) :: my_id_master
   integer,               intent(in) :: local_elms(*)
   integer,               intent(in) :: n_local_elms
-  integer(kind=int_all), intent(in) :: index_min
-  integer(kind=int_all), intent(in) :: index_max
+  integer,               intent(in) :: index_min
+  integer,               intent(in) :: index_max
   integer,               intent(in) :: xcase2
   real*8,                intent(in) :: R_axis
   real*8,                intent(in) :: Z_axis
@@ -344,8 +344,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   real*8,              allocatable  :: rhs_local(:)
   integer                           :: i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
   integer(kind=int_all)             :: Int1=1
-  integer(kind=int_all)             :: index_node1, index_node2
-  integer(kind=int_all)             :: ijA_position, index_min_loc, index_max_loc
+  integer                           :: index_node1, index_node2, index_min_loc, index_max_loc
+  integer(kind=int_all)             :: ijA_position
   integer(kind=int_all)             :: index_large_i, index_large_k, ilarge2
   integer                           :: i_order, k_order, ielm, ierr
   integer                           :: vertex(2), direction(2)

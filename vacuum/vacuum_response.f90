@@ -1597,7 +1597,7 @@ module vacuum_response
     type(type_bnd_element_list), intent(in)    :: bnd_elm_list         !< List of boundary elements
     logical,                     intent(in)    :: freeboundary_equil   !< Use free boundary equilibrium?
     logical,                     intent(in)    :: resistive_wall       !< Resistive or ideal wall?
-    integer(kind=int_all),       intent(in)    :: index_min, index_max !< Responsibility of MPI proc
+    integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
     real*8,                      intent(inout) :: rhs_loc(ndof_glob)   !< Part of RHS of MPI proc
     real*8,                      intent(in)    :: tstep                !< delta t, timestep
     integer,                     intent(in)    :: index_now            !< Current timestep index

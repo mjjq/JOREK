@@ -27,7 +27,7 @@ contains
   
   ! --- Local variables
   integer(kind=int_all)              :: Int1=1
-  integer(kind=int_all), allocatable :: index_min_harm(:), index_max_harm(:)
+  integer,               allocatable :: index_min_harm(:), index_max_harm(:)
   integer,               allocatable :: local_elms_harm(:)
   integer                            :: n_local_elms_harm
   integer(kind=int_all)              :: ndof 

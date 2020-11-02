@@ -35,11 +35,11 @@ contains
 
     integer,               intent(in)                 :: k,  in
     integer,               intent(in)                 :: k2, in2
-    integer(kind=int_all), intent(in)                 :: index_node
-    integer(kind=int_all), intent(in)                 :: index_node2
+    integer,               intent(in)                 :: index_node
+    integer,               intent(in)                 :: index_node2
     real*8,                intent(in)                 :: zbig
     logical,               intent(in)                 :: solve_only, gmres
-    integer(kind=int_all), intent(in)                 :: index_min, index_max
+    integer,               intent(in)                 :: index_min, index_max
     integer,               intent(in)                 :: i_tor_min, i_tor_max 
     integer(kind=int_all), intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
     integer(kind=int_all), intent(inout), allocatable :: irn(:), jcn(:) 
@@ -91,8 +91,8 @@ contains
     use mod_parameters
     use mod_integer_types
     integer,               intent(in)    :: k,  in
-    integer(kind=int_all), intent(in)    :: index_node
-    integer(kind=int_all), intent(in)    :: index_min, index_max
+    integer,               intent(in)    :: index_node
+    integer,               intent(in)    :: index_min, index_max
     integer,               intent(in)    :: i_tor_min, i_tor_max 
     real*8,                intent(in)    :: val
     real*8,                intent(inOUT) :: rhs_loc(*) 

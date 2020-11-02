@@ -44,8 +44,8 @@ contains
     INTEGER,                            intent(in)    :: my_id
     INTEGER,                            intent(in)    :: local_elms(*)
     INTEGER,                            intent(in)    :: n_local_elms
-    INTEGER(kind=int_all),              intent(in)    :: index_min
-    INTEGER(kind=int_all),              intent(in)    :: index_max
+    INTEGER,                            intent(in)    :: index_min
+    INTEGER,                            intent(in)    :: index_max
     INTEGER,                            intent(in)    :: xcase2
     TYPE (type_node_list),              intent(in)    :: node_list
     TYPE (type_element_list),           intent(in)    :: element_list
@@ -69,8 +69,8 @@ contains
     ! Internal parameters
     real*8                :: zbig, zbig_backup
     integer               :: i, in, iv, inode, k
-    integer               :: index_large_i, ielm
-    integer(kind=int_all) :: index_node, index_node2
+    integer               :: ielm
+    integer               :: index_node, index_node2
     integer(kind=int_all) :: ijA_position, ijA_position2
     integer               :: ilarge2, ilarge_v(n_var), ilarge_vs(n_var)
     integer               :: ierr
@@ -139,8 +139,6 @@ contains
                   if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                     call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-                    index_large_i = n_tor_local * n_var * (index_node - 1)
-
                     ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
 
                     irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
@@ -152,8 +150,6 @@ contains
                   if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                     call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-                    index_large_i = n_tor_local * n_var * (index_node - 1)
-
                     ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
 
                     irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
@@ -262,8 +258,6 @@ contains
                       call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
                       call locate_irn_jcn(index_node,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
 
-                      index_large_i = n_tor_local * n_var * (index_node - 1)
-                      
                       ilarge_v (k)     = ijA_position  - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
                       ilarge_v (var_T) = ijA_position  - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (var_T-1)*n_tor_local + in - i_tor_min +1
 
@@ -286,8 +280,6 @@ contains
 
                       call locate_irn_jcn(index_node2,index_node, index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
                       call locate_irn_jcn(index_node2,index_node2,index_min,index_max,ijA_position2,ijA_index, ijA_size, irn_jcn)
-
-                      index_large_i = n_tor_local * n_var * (index_node2 - 1)
 
                       ilarge_vs(k)     = ijA_position2 - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
                       ilarge_v (var_T) = ijA_position  - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (var_T-1)*n_tor_local + in - i_tor_min +1
@@ -334,7 +326,6 @@ contains
                   if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                     call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-                    index_large_i = n_tor_local * n_var * (index_node - 1)
                     ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
 
                     irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1
@@ -347,7 +338,6 @@ contains
                   if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                     call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-                    index_large_i = n_tor_local * n_var * (index_node - 1)
                     ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - i_tor_min +1
 
                     irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min +1

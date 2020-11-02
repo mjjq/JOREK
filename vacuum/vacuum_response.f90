@@ -1586,7 +1586,6 @@ module vacuum_response
     use basis_at_gaussian, only: H1, H1_s, HZ
     use phys_module, only: t_now, t_start
     use mpi_mod
-    use mod_integer_types
 
     implicit none
 

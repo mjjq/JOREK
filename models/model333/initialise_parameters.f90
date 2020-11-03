@@ -177,9 +177,9 @@ if (my_id .eq. 0) then
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
   if (gamma_stangeby > -1.d89) then
-    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0)
+    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0 - 0.5d0*gamma)
   else
-    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 )
+    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 + 0.5d0 * gamma )
   end if
 
   if (sum(nstep_n) .gt. 0) then

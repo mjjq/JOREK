@@ -38,7 +38,7 @@ integer(kind=int_all)  :: index((n_tor+1)/2), index_snd, n_i, n_j, ibufsize
 integer(kind=int_all)  :: i_reduced, j_reduced
 integer(kind=int_all)  :: n_tor_int
 
-integer(kind=int_all), parameter   :: Int1=1
+integer(kind=int_all), parameter   :: Int1=1, Int2=2
 
 real*8,                allocatable :: Asnd_buffer(:)
 integer(kind=int_all), allocatable :: isnd_buffer(:), jsnd_buffer(:)
@@ -440,13 +440,13 @@ if (my_id_n .eq. 0) then
     if (n_j .eq. 0) then
       j_reduced = (mumps_par%jcn(i)-1) / n_tor + 1
     else
-      j_reduced = 2 * int((mumps_par%jcn(i)-1) / n_tor) + mod(mod(mumps_par%jcn(i)-Int1,n_tor_int)+1,2) + 1
+      j_reduced = 2 * int((mumps_par%jcn(i)-1) / n_tor) + mod(mod(mumps_par%jcn(i)-Int1,n_tor_int)+Int1,Int2) + 1
     endif
 
     if (n_i .eq. 0) then
       i_reduced = (mumps_par%irn(i)-1) / n_tor + 1
     else
-      i_reduced = 2 * int((mumps_par%irn(i)-1) / n_tor) + mod(mod(mumps_par%irn(i)-Int1,n_tor_int)+1,2) + 1
+      i_reduced = 2 * int((mumps_par%irn(i)-1) / n_tor) + mod(mod(mumps_par%irn(i)-Int1,n_tor_int)+Int1,Int2) + 1
     endif
 
     mumps_par%irn(i) = i_reduced

@@ -36,6 +36,7 @@ integer                :: my_id, my_id_n, n_cpu, m_cpu, idisp, in, ierr, ifactor
 integer(kind=int_all)  :: i, j, nz_loc_n, n_loc_n, nrecv_max, nsend_max
 integer(kind=int_all)  :: index((n_tor+1)/2), index_snd, n_i, n_j, ibufsize
 integer(kind=int_all)  :: i_reduced, j_reduced
+integer(kind=int_all)  :: n_tor_int
 
 integer(kind=int_all), parameter   :: Int1=1
 
@@ -69,6 +70,8 @@ endif
   INT_MAX = 2147000000
 #endif
 
+! --- Copy of n_tor as long-integer for modulo functions (just to keep safe)
+n_tor_int = n_tor
 
 ! --- Allocate MPI send/recv counters
 call tr_allocate(send_counts     ,1,n_cpu,"dh_send_counts"     ,CAT_DMATRIX)
@@ -82,8 +85,8 @@ call tr_allocate(n_recv_prev     ,1,n_cpu,"dh_n_recv_prev"     ,CAT_DMATRIX)
 ! --- Get the size of harmonics matrix on this process
 ibufsize=0
 do i=1,nz_glob                                    ! determine buffersize
-  n_i = (mod(irn_glob(i)-1,n_tor) + 1) / 2        ! the toroidal modenumbers for this row-index
-  n_j = (mod(jcn_glob(i)-1,n_tor) + 1) / 2        ! the toroidal modenumbers for this column-index
+  n_i = (mod(irn_glob(i)-Int1,n_tor_int) + 1) / 2 ! the toroidal modenumbers for this row-index
+  n_j = (mod(jcn_glob(i)-Int1,n_tor_int) + 1) / 2 ! the toroidal modenumbers for this column-index
   if (n_i .eq. n_j) then                          ! select only the contributions from each toroidal harmonic
     ibufsize = ibufsize + 1
   endif
@@ -210,8 +213,8 @@ if (need_to_split) then
     ibufsize  = 0
     count_all = 0
     do i=1,nz_glob                                    ! determine buffersize
-      n_i = (mod(irn_glob(i)-1,n_tor) + 1) / 2        ! the toroidal modenumbers for this row-index
-      n_j = (mod(jcn_glob(i)-1,n_tor) + 1) / 2        ! the toroidal modenumbers for this column-index
+      n_i = (mod(irn_glob(i)-Int1,n_tor_int) + 1) / 2 ! the toroidal modenumbers for this row-index
+      n_j = (mod(jcn_glob(i)-Int1,n_tor_int) + 1) / 2 ! the toroidal modenumbers for this column-index
       if (n_i .eq. n_j) then                          ! select only the contributions from each toroidal harmonic
         count_all = count_all + 1
         ! --- Start counting at the relevant split
@@ -253,8 +256,8 @@ if (need_to_split) then
     ibufsize  = 0
     count_all = 0
     do i=1,nz_glob
-      n_i = (mod(irn_glob(i)-1,n_tor) + 1) / 2        ! the toroidal modenumbers for this row-index
-      n_j = (mod(jcn_glob(i)-1,n_tor) + 1) / 2        ! the toroidal modenumbers for this column-index
+      n_i = (mod(irn_glob(i)-Int1,n_tor_int) + 1) / 2 ! the toroidal modenumbers for this row-index
+      n_j = (mod(jcn_glob(i)-Int1,n_tor_int) + 1) / 2 ! the toroidal modenumbers for this column-index
       if (n_i .eq. n_j) then                          ! select only the contributions from each toroidal harmonic
         count_all = count_all + 1
         ! --- Start counting at the relevant split
@@ -342,8 +345,8 @@ else
 
   ! --- Copy matrix into send-buffer
   do i=1,nz_glob
-    n_i = (mod(irn_glob(i)-1,n_tor) + 1) / 2        ! the toroidal modenumbers for this row-index
-    n_j = (mod(jcn_glob(i)-1,n_tor) + 1) / 2        ! the toroidal modenumbers for this column-index
+    n_i = (mod(irn_glob(i)-Int1,n_tor_int) + 1) / 2        ! the toroidal modenumbers for this row-index
+    n_j = (mod(jcn_glob(i)-Int1,n_tor_int) + 1) / 2        ! the toroidal modenumbers for this column-index
     if (n_i .eq. n_j) then                          ! select only the contributions from each toroidal harmonic
       index(n_i+1) = index(n_i+1) + 1               ! index reference for each harmonic block
       Asnd_buffer(index(n_i+1)) = A_glob(i)
@@ -431,19 +434,19 @@ if (my_id_n .eq. 0) then
   do i=1,mumps_par%nz
 
     ! --- just to keep safe, because fortran modulo is a short-int function...
-    n_i = (mod(mumps_par%irn(i)-1,n_tor) + 1) / 2
-    n_j = (mod(mumps_par%jcn(i)-1,n_tor) + 1) / 2
+    n_i = (mod(mumps_par%irn(i)-Int1,n_tor_int) + 1) / 2
+    n_j = (mod(mumps_par%jcn(i)-Int1,n_tor_int) + 1) / 2
 
     if (n_j .eq. 0) then
       j_reduced = (mumps_par%jcn(i)-1) / n_tor + 1
     else
-      j_reduced = 2 * int((mumps_par%jcn(i)-1) / n_tor) + mod(mod(mumps_par%jcn(i)-1,n_tor)+1,2) + 1
+      j_reduced = 2 * int((mumps_par%jcn(i)-1) / n_tor) + mod(mod(mumps_par%jcn(i)-Int1,n_tor_int)+1,2) + 1
     endif
 
     if (n_i .eq. 0) then
       i_reduced = (mumps_par%irn(i)-1) / n_tor + 1
     else
-      i_reduced = 2 * int((mumps_par%irn(i)-1) / n_tor) + mod(mod(mumps_par%irn(i)-1,n_tor)+1,2) + 1
+      i_reduced = 2 * int((mumps_par%irn(i)-1) / n_tor) + mod(mod(mumps_par%irn(i)-Int1,n_tor_int)+1,2) + 1
     endif
 
     mumps_par%irn(i) = i_reduced

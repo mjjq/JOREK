@@ -180,6 +180,8 @@ subroutine preset_parameters
   ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
   ZK_par_neg_thresh  = 0.d0
+  D_neutral_neg_thresh = 0.d0
+  D_neutral_neg      = 1.d-4
 
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.

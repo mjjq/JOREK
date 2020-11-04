@@ -699,6 +699,14 @@ do ms=1, n_gauss
      Dn0y = D_neutral_y      
      Dn0p = D_neutral_p      
 
+     if (xpoint2) then
+        if (rn0 .lt. D_neutral_neg_thresh)  then
+           Dn0x = D_neutral_neg
+           Dn0y = D_neutral_neg
+           Dn0p = D_neutral_neg
+        endif
+     endif        
+
      ! -------------------------------
      ! --- Impurity related things
      ! -------------------------------

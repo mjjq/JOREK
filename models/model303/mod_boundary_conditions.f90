@@ -44,37 +44,38 @@ use mpi_mod
 use mod_locate_irn_jcn
 use mod_basisfunctions
 use mod_interp
+use mod_integer_types
 
 implicit none
 
 ! --- Routine parameters
-integer,                   intent(in)    :: my_id
-type (type_node_list),     intent(in)    :: node_list
-type (type_element_list),  intent(in)    :: element_list
-type (type_bnd_node_list), intent(in)    :: bnd_node_list
-integer,                   intent(in)    :: local_elms(*)
-integer,                   intent(in)    :: n_local_elms
-integer,                   intent(in)    :: index_min
-integer,                   intent(in)    :: index_max
-logical,                   intent(in)    :: xpoint2
-integer,                   intent(in)    :: xcase2
-real*8,                    intent(in)    :: R_axis
-real*8,                    intent(in)    :: Z_axis
-real*8,                    intent(in)    :: psi_axis
-real*8,                    intent(in)    :: psi_bnd
-real*8,                    intent(in)    :: R_xpoint(2)
-real*8,                    intent(in)    :: Z_xpoint(2)
-real*8,                    intent(in)    :: psi_xpoint(2)
-logical,                   intent(in)    :: gmres
-logical,                   intent(in)    :: solve_only
-real*8,                    intent(inout) :: rhs_loc(*)
-integer,                   intent(in)    :: i_tor_min, i_tor_max 
-integer, allocatable,      intent(in)    :: ijA_index(:,:)
-integer, allocatable,      intent(in)    :: ijA_size(:)
-integer, allocatable,      intent(in)    :: irn_jcn(:,:) 
-integer, allocatable,      intent(inout) :: irn(:)
-integer, allocatable,      intent(inout) :: jcn(:) 
-real*8,  allocatable,      intent(inout) :: A_mat(:) 
+integer,                            intent(in)    :: my_id
+type (type_node_list),              intent(in)    :: node_list
+type (type_element_list),           intent(in)    :: element_list
+type (type_bnd_node_list),          intent(in)    :: bnd_node_list
+integer,                            intent(in)    :: local_elms(*)
+integer,                            intent(in)    :: n_local_elms
+integer,                            intent(in)    :: index_min
+integer,                            intent(in)    :: index_max
+logical,                            intent(in)    :: xpoint2
+integer,                            intent(in)    :: xcase2
+real*8,                             intent(in)    :: R_axis
+real*8,                             intent(in)    :: Z_axis
+real*8,                             intent(in)    :: psi_axis
+real*8,                             intent(in)    :: psi_bnd
+real*8,                             intent(in)    :: R_xpoint(2)
+real*8,                             intent(in)    :: Z_xpoint(2)
+real*8,                             intent(in)    :: psi_xpoint(2)
+logical,                            intent(in)    :: gmres
+logical,                            intent(in)    :: solve_only
+real*8,                             intent(inout) :: rhs_loc(*)
+integer,                            intent(in)    :: i_tor_min, i_tor_max 
+real*8,  allocatable,               intent(inout) :: A_mat(:) 
+integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:)
+integer(kind=int_all), allocatable, intent(in)    :: ijA_size(:)
+integer(kind=int_all), allocatable, intent(in)    :: irn_jcn(:,:) 
+integer(kind=int_all), allocatable, intent(inout) :: irn(:)
+integer(kind=int_all), allocatable, intent(inout) :: jcn(:) 
 
 ! Internal parameters
 real*8  :: zbig, zbig_backup,  T0, Vpar0, bigR
@@ -85,7 +86,8 @@ real*8  :: element_size_s, element_size_t, element_size_0
 real*8  :: H1(2,2), H1_s(2,2), H1_ss(2,2)
 integer :: i, in, iv, iv2, iv3, inode, inode2, inode3, k
 integer :: index_large_i, index_node, index_node2, ielm
-integer :: ijA_position,ijA_position2, ilarge2, kv, kT, ku, kn, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
+integer(kind=int_all) :: ijA_position,ijA_position2
+integer :: ilarge2, kv, kT, ku, kn, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
 integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT
 integer :: ierr
 logical :: apply_psi_BC, apply_current_BC, s_constant_boundary, t_constant_boundary, apply_cs, apply_dirichlet_1234, apply_dirichlet_all

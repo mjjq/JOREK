@@ -10,9 +10,9 @@ use constants
 use mod_import_restart
 use mod_neighbours
 use mod_interp
+use mpi
 
 implicit none
-include 'mpif.h'
 
 real*8,allocatable  :: rp(:), zp(:), R_all(:), Z_all(:), C_all(:)
 real*4,allocatable  :: R_strike(:),  Z_strike(:), P_strike(:)        ! position of strike points

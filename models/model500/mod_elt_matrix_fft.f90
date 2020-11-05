@@ -706,6 +706,14 @@ do i=1,n_vertex_max
           Dn0y = D_neutral_y      
           Dn0p = D_neutral_p    
   
+          if (xpoint2) then
+             if (rn0 .lt. D_neutral_neg_thresh)  then
+                Dn0x = D_neutral_neg
+                Dn0y = D_neutral_neg
+                Dn0p = D_neutral_neg
+             endif
+          endif
+
           if (use_pellet) then
 
             call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &

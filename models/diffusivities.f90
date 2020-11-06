@@ -83,7 +83,7 @@ module diffusivities
       
     if ( jorek_model >= 300 ) then
         
-      get_dperp3 = get_dperp1 + D_perp_sp(6)*D_perp_sp(2) *   &
+      get_dperp3 = get_dperp3 + D_perp_sp(6)*D_perp_sp(2) *   &
         ((0.5d0 - 0.5d0*tanh((-psin+D_perp_sp(5)+D_perp_sp(3)) /D_perp_sp(4))))
 
     end if

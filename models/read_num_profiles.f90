@@ -121,7 +121,7 @@ subroutine read_num_profiles(my_id)
   end if
   
   num_d_perp = ((( d_perp_file /= 'none' ) .and. ( d_perp_imp_file /= 'none' )) .or.&
-                (( d_perp_file /= 'none' ) .and. ( D_diff_flag == .false.)))
+                (( d_perp_file /= 'none' ) .and. ( .not. D_diff_flag )))
   if ( num_d_perp .and. ( my_id == 0 ) ) then
     call readProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, d_perp_file)
     call check_num_prof(num_d_perp, num_d_perp_x, num_d_perp_y, num_d_perp_len, 'd_perp',          &

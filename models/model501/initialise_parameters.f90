@@ -71,10 +71,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef,                               &
                 FF_0,  FF_1,  FF_coef,                              &
-                ZK_par, ZK_par_max, ZK_perp, D_par, D_perp,         &
+                ZK_par, ZK_par_max, ZK_perp, D_par, D_perp, D_perp_imp, &
                 particlesource, heatsource, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
-                ZK_perp_num, Dn_perp_num,                           &
+                ZK_perp_num, Dn_perp_num, D_diff_flag,              &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
@@ -83,7 +83,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pellet_particles, use_pellet,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                xcase, D_perp_file, ZK_perp_file,                   &
+                xcase, D_perp_file, D_perp_imp_file, ZK_perp_file,  &
                 rho_file, T_file, ffprime_file, rot_file,           &
                 normalized_velocity_profile,                        &
                 freeboundary_equil, freeboundary,  freeb_change_indices, &

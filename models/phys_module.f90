@@ -413,6 +413,8 @@ module phys_module
   !> @name Analytical heat, particle and neutral particles diffusivity parameters
   real*8  :: D_perp(10)    = 0.d0 !< Coefficients for perpendicular particle diffusion profile
   real*8  :: D_par                !< Parallel particle diffusion (usually not useful)
+  real*8  :: D_perp_imp(10)= 0.d0 !< Coefficients for perpendicular imp particle diffusion profile
+  real*8  :: D_par_imp            !< Parallel impurity particle diffusion (usually not useful)
   real*8  :: ZK_perp(10)   = 0.d0 !< Coefficients for perpendicular heat diffusion profile
   real*8  :: ZK_par               !< Parallel heat diffusion value in the plasma center
   real*8  :: ZK_par_max           !< Do not use larger parallel heat diffusion values for numerical reasons
@@ -424,9 +426,12 @@ module phys_module
   real*8  :: D_neutral_y          !< Neutral particle diffusivity in Z-direction
   real*8  :: D_neutral_p          !< Neutral particle diffusivity in phi-direction
   logical :: ZKpar_T_dependent    !< Use a temperature dependent parallel heat diffusivity
+  logical :: D_diff_flag          !< If true, we use different diffusion coefficient for total 
+                                  !< and impurity mass density
 
   !> @name Numerical heat and particle diffusivity profiles
   character(len=512)  :: d_perp_file        !< ASCII file with perpendicular particle diffusion profile
+  character(len=512)  :: d_perp_imp_file    !< ASCII file with perpendicular particle diffusion profile
   character(len=512)  :: zk_perp_file       !< ASCII file with perpendicular heat diffusion profile
   character(len=512)  :: zk_e_perp_file     !< ASCII file with perpendicular electron heat diffusion profile
   character(len=512)  :: zk_i_perp_file     !< ASCII file wtih perpendicular ion heat diffusion profile
@@ -435,11 +440,14 @@ module phys_module
   logical             :: num_zk_e_perp      !< automatically set true if zk_e_perp_file /= 'none'
   logical             :: num_zk_i_perp      !< automatically set true if zk_i_perp_file /= 'none'
   integer             :: num_d_perp_len     !< Number of datapoints in d_perp profile
+  integer             :: num_d_perp_len_imp !< Number of datapoints in d_perp profile for impurity
   integer             :: num_zk_perp_len    !< Number of datapoints in zk_perp profile
   integer             :: num_zk_e_perp_len  !< Number of datapoints in zk_e_perp profile
   integer             :: num_zk_i_perp_len  !< Number of datapoints in zk_i_perp profile
   real*8, allocatable :: num_d_perp_x(:)    !< Psi_N values of d_perp  profile
   real*8, allocatable :: num_d_perp_y(:)    !< D_perp values of d_perp profile
+  real*8, allocatable :: num_d_perp_x_imp(:)!< Psi_N values of d_perp  profile for impurity
+  real*8, allocatable :: num_d_perp_y_imp(:)!< D_perp values of d_perp profile for impurity
   real*8, allocatable :: num_zk_perp_x(:)   !< Psi_N values of zk_perp profile
   real*8, allocatable :: num_zk_perp_y(:)   !< ZK_perp values of zk_perp profile
   real*8, allocatable :: num_zk_e_perp_x(:) !< Psi_N values of zk_e_perp profile

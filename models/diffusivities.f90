@@ -40,18 +40,39 @@ module diffusivities
   
   
   !> Determine perpendicular particle diffusivity, D_perp, as a function of Psi_N
-  real*8 function get_dperp1(psin)
+  real*8 function get_dperp1(psin,D_perp_sp,num_d_prof_x,num_d_prof_y,num_d_prof_len)
 #if _OPENMP >= 201511
     !$omp declare simd
 #endif
     implicit none
     
-    real*8, intent(in) :: psin
-    
-    if ( num_d_perp ) then
-      
+    real*8, intent(in)                     :: psin
+    real*8, intent(in), optional           :: D_perp_sp(10)
+    real*8, intent(in), pointer, optional  :: num_d_prof_x(:) !<Given numerical profile
+    real*8, intent(in), pointer, optional  :: num_d_prof_y(:) !<Given numerical profile
+    integer, intent(in), optional          :: num_d_prof_len  !<Length of given numerical profile
+
+    if (num_d_perp .and. present(num_d_prof_x) .and. & 
+        present(num_d_prof_y) .and. present(num_d_prof_len)) then
+
+      get_dperp1 = interpolProf(num_d_prof_x, num_d_prof_y, num_d_prof_len, psin)
+
+    else if (num_d_perp) then
+
       get_dperp1 = interpolProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, psin)
       
+    else if (present(D_perp_sp)) then
+
+      get_dperp1 = D_perp_sp(1) * ( (1.d0-D_perp_sp(2)) +                                                 &
+        D_perp_sp(2)*(0.5d0 - 0.5d0*tanh((psin-D_perp_sp(5))/D_perp_sp(4))) )
+      
+      if ( jorek_model >= 300 ) then
+        
+        get_dperp1 = get_dperp1 + D_perp_sp(6)*D_perp_sp(2) *                                              &
+          ((0.5d0 - 0.5d0*tanh((-psin+D_perp_sp(5)+D_perp_sp(3)) /D_perp_sp(4))))
+        
+      end if
+
     else
       
       get_dperp1 = D_perp(1) * ( (1.d0-D_perp(2)) +                                                 &
@@ -67,8 +88,6 @@ module diffusivities
     end if
     
   end function get_dperp1
-  
-  
   
   !> Determine perpendicular heat diffusivity, ZK_perp, as a function of Psi_N
   real*8 function get_zkperp1(psin)

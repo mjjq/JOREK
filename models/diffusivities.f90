@@ -78,12 +78,12 @@ module diffusivities
     real*8, intent(in)                     :: psin
     real*8, intent(in)                     :: D_perp_sp(10)
 
-    get_dperp1 = D_perp_sp(1) * ( (1.d0-D_perp_sp(2)) +  &
+    get_dperp3 = D_perp_sp(1) * ( (1.d0-D_perp_sp(2)) +  &
       D_perp_sp(2)*(0.5d0 - 0.5d0*tanh((psin-D_perp_sp(5))/D_perp_sp(4))) )
       
     if ( jorek_model >= 300 ) then
         
-      get_dperp1 = get_dperp1 + D_perp_sp(6)*D_perp_sp(2) *   &
+      get_dperp3 = get_dperp1 + D_perp_sp(6)*D_perp_sp(2) *   &
         ((0.5d0 - 0.5d0*tanh((-psin+D_perp_sp(5)+D_perp_sp(3)) /D_perp_sp(4))))
 
     end if
@@ -102,7 +102,7 @@ module diffusivities
     real*8, intent(in), allocatable        :: num_d_prof_y(:) !<Given numerical profile
     integer, intent(in)                    :: num_d_prof_len  !<Length of given numerical profile
 
-    get_dperp1 = interpolProf(num_d_prof_x, num_d_prof_y, num_d_prof_len, psin)
+    get_dperp4 = interpolProf(num_d_prof_x, num_d_prof_y, num_d_prof_len, psin)
     
   end function get_dperp4
 

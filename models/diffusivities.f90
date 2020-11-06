@@ -48,8 +48,8 @@ module diffusivities
     
     real*8, intent(in)                     :: psin
     real*8, intent(in), optional           :: D_perp_sp(10)
-    real*8, intent(in), pointer, optional  :: num_d_prof_x(:) !<Given numerical profile
-    real*8, intent(in), pointer, optional  :: num_d_prof_y(:) !<Given numerical profile
+    real*8, intent(in), allocatable, optional :: num_d_prof_x(:) !<Given numerical profile
+    real*8, intent(in), allocatable, optional :: num_d_prof_y(:) !<Given numerical profile
     integer, intent(in), optional          :: num_d_prof_len  !<Length of given numerical profile
 
     if (num_d_perp .and. present(num_d_prof_x) .and. & 

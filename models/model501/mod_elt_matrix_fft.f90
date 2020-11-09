@@ -682,30 +682,26 @@ do ms=1, n_gauss
      ZK_prof = get_zkperp(psi_norm)
 
      ! --- Increase diffusivity if very small density/temperature
-     if (xpoint2) then
-       if (r0 .lt. D_prof_neg_thresh)  then
-         D_prof  = D_prof_neg
-         D_par   = D_prof_neg
-       endif
-       if (T0 .lt. ZK_prof_neg_thresh) then
-         ZK_prof = ZK_prof_neg
-       endif
-       if (T0 .lt. ZK_par_neg_thresh) then
-         ZKpar_T = ZK_par_neg
-       endif
+     if (r0 .lt. D_prof_neg_thresh)  then
+        D_prof  = D_prof_neg
+        D_par   = D_prof_neg
+     endif
+     if (T0 .lt. ZK_prof_neg_thresh) then
+        ZK_prof = ZK_prof_neg
+     endif
+     if (T0 .lt. ZK_par_neg_thresh) then
+        ZKpar_T = ZK_par_neg
      endif
    
      Dn0x = D_neutral_x      
      Dn0y = D_neutral_y      
      Dn0p = D_neutral_p      
 
-     if (xpoint2) then
-        if (rn0 .lt. D_neutral_neg_thresh)  then
-           Dn0x = D_neutral_neg
-           Dn0y = D_neutral_neg
-           Dn0p = D_neutral_neg
-        endif
-     endif        
+     if (rn0 .lt. D_neutral_neg_thresh)  then
+        Dn0x = D_neutral_neg
+        Dn0y = D_neutral_neg
+        Dn0p = D_neutral_neg
+     endif
 
      ! -------------------------------
      ! --- Impurity related things

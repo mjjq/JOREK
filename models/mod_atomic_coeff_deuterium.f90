@@ -3,10 +3,11 @@ module mod_atomic_coeff_deuterium
 
 use mod_openadas
 use constants
-use phys_module, only: central_density, central_mass, gamma
+use phys_module, only: central_density, central_mass, gamma, deuterium_adas, old_deuterium_atomic
 
 implicit none
 
+! ad =  read_adf11('96_h', '/marconi/home/userexternal/fartolas/tmp/H_atomic/') 
 type(ADF11_all) :: ad_deuterium !< ADAS structure for deuterium 
 
 ! --- Fit coefficients
@@ -53,11 +54,6 @@ pure subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, 
   real*8 :: zlt_log10, dzlt_log10
   real*8 :: zrb_log10, dzrb_log10
 
-  logical, parameter :: old_deuterium_fit = .false., deuterium_adas = .false.
-
-
-! ad =  read_adf11('96_h', '/marconi/home/userexternal/fartolas/tmp/H_atomic/') 
-
 
   ! --- Normalization constants
   rho_norm     = central_density*1.d20 * central_mass * MASS_PROTON
@@ -66,7 +62,7 @@ pure subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, 
   gamma_factor = gamma-1.d0  ! Normalization factor to include terms in the pressure equation
                              ! internal_energy = pressure / (gamma - 1)
 
-  if ( (.not. old_deuterium_fit) .and. (.not. deuterium_adas) ) then 
+  if ( (.not. old_deuterium_atomic) .and. (.not. deuterium_adas) ) then 
 
     Te_eV_lim = max(Te_eV,     0.2d0 )  ! ADAS fit valid between 0.2eV and 10 keV  
     Te_eV_lim = min(Te_eV_lim, 1.d4  )  

@@ -35,41 +35,44 @@ contains
     use vacuum, only: is_freebound
     use mpi_mod
     use mod_locate_irn_jcn
+    use mod_integer_types
 
     implicit none
 
     ! --- Routine parameters
-    integer,                   intent(in)    :: my_id
-    type (type_node_list),     intent(in)    :: node_list
-    type (type_element_list),  intent(in)    :: element_list
-    type (type_bnd_node_list), intent(in)    :: bnd_node_list
-    integer,                   intent(in)    :: local_elms(*)
-    integer,                   intent(in)    :: n_local_elms
-    integer,                   intent(in)    :: index_min
-    integer,                   intent(in)    :: index_max
-    real*8,                    intent(inout) :: rhs_loc(*)
-    logical,                   intent(in)    :: xpoint2
-    integer,                   intent(in)    :: xcase2
-    real*8,                    intent(in)    :: R_axis
-    real*8,                    intent(in)    :: Z_axis
-    real*8,                    intent(in)    :: psi_axis
-    real*8,                    intent(in)    :: psi_bnd
-    real*8,                    intent(in)    :: R_xpoint(2)
-    real*8,                    intent(in)    :: Z_xpoint(2)
-    real*8,                    intent(in)    :: psi_xpoint(2)
-    logical,                   intent(in)    :: gmres
-    logical,                   intent(in)    :: solve_only
-    integer,                   intent(in)    :: i_tor_min, i_tor_max 
-    integer, allocatable,      intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, allocatable,      intent(inout) :: irn(:), jcn(:) 
-    real*8,  allocatable,      intent(inout) :: A_mat(:) 
+    integer,                            intent(in)    :: my_id
+    type (type_node_list),              intent(in)    :: node_list
+    type (type_element_list),           intent(in)    :: element_list
+    type (type_bnd_node_list),          intent(in)    :: bnd_node_list
+    integer,                            intent(in)    :: local_elms(*)
+    integer,                            intent(in)    :: n_local_elms
+    integer,                            intent(in)    :: index_min
+    integer,                            intent(in)    :: index_max
+    real*8,                             intent(inout) :: rhs_loc(*)
+    logical,                            intent(in)    :: xpoint2
+    integer,                            intent(in)    :: xcase2
+    real*8,                             intent(in)    :: R_axis
+    real*8,                             intent(in)    :: Z_axis
+    real*8,                             intent(in)    :: psi_axis
+    real*8,                             intent(in)    :: psi_bnd
+    real*8,                             intent(in)    :: R_xpoint(2)
+    real*8,                             intent(in)    :: Z_xpoint(2)
+    real*8,                             intent(in)    :: psi_xpoint(2)
+    logical,                            intent(in)    :: gmres
+    logical,                            intent(in)    :: solve_only
+    integer,                            intent(in)    :: i_tor_min, i_tor_max 
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
+    real*8,                allocatable, intent(inout) :: A_mat(:) 
 
     ! Internal parameters
-    real*8  :: zbig, zbig_backup
-    integer :: i, in, iv, inode, k
-    integer :: index_large_i, index_node, ielm
-    integer :: ijA_position, ilarge2
-    integer :: ierr, n_tor_local
+    real*8                :: zbig, zbig_backup
+    integer               :: i, in, iv, inode, k
+    integer               :: ielm
+    integer               :: index_node
+    integer(kind=int_all) :: ijA_position
+    integer               :: ilarge2
+    integer               :: ierr, n_tor_local
 
     n_tor_local = i_tor_max - i_tor_min + 1
     zbig = 1.d12
@@ -106,8 +109,6 @@ contains
 
                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
-                               index_large_i = n_tor_local * n_var * (index_node - 1)
-
                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local  & 
                                  +  (k-1)*n_tor_local + in - i_tor_min + 1
 
@@ -122,8 +123,6 @@ contains
                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-
-                               index_large_i = n_tor_local * n_var * (index_node - 1)
 
                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local   & 
                                  +  (k-1)*n_tor_local + in - i_tor_min + 1
@@ -149,8 +148,6 @@ contains
 
                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
-                               index_large_i = n_tor_local * n_var * (index_node - 1)
-
                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local   & 
                                  +  (k-1)*n_tor_local + in - i_tor_min + 1
 
@@ -165,8 +162,6 @@ contains
                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
                                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
-
-                               index_large_i = n_tor_local * n_var * (index_node - 1)
 
                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local   & 
                                  +  (k-1)*n_tor_local + in - i_tor_min + 1

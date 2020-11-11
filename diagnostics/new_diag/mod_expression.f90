@@ -1750,7 +1750,7 @@ module mod_expression
                 res = (VR*nmlR + VZ*nmlZ) / fact_time
 
               case ( 'heatF_sheath' )
-                res = gamma_sheath/(gamma-1.d0)*r0*T0*vpar0*Bnorm*fact_flux
+                res = gamma_stangeby*r0*T0/2.d0*vpar0*Bnorm*fact_flux
 
               case ( 'heatF_par_cd' )
                 res = ZKpar_flux * fact_flux

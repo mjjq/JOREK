@@ -3,6 +3,7 @@ module sorting_module
 !  and remove duplicates from the sparse matrix as needed for STRUMPACK solver
 
   use iso_c_binding
+  use mod_integer_types
   implicit none
   private
   public remove_duplicates
@@ -36,11 +37,11 @@ contains
   ! replace list with uniquelly sorted entries; return number of unique elements
 
     implicit none
-    integer,intent(inout) :: n
+    integer(kind=int_all),intent(inout) :: n
     integer(kind=INTSIZE), allocatable, intent(inout), target :: list(:)
     logical,allocatable :: duplicates(:)
     integer(c_size_t) l,isize
-    integer :: i, j, m
+    integer(kind=int_all) :: i, j, m
 
     l = n; isize = INTSIZE
     call qsort(c_loc(list(1)),l,isize,c_funloc(compar))
@@ -66,9 +67,9 @@ contains
 
   recursive function find_index(list,low,high,x) result(idx)
   !> Find index of element x in the list
-    integer, intent(in) :: low, high
+    integer(kind=int_all), intent(in) :: low, high
     integer(kind=INTSIZE), intent(in) :: list(:), x
-    integer :: mid
+    integer(kind=int_all) :: mid
     integer(kind=INTSIZE) :: idx
 
     if (low.gt.high) then
@@ -99,17 +100,18 @@ contains
   subroutine remove_duplicates(n,nnz,irn,jcn,val)
   !> Sort and remove duplicates from sparse matrix
     use, intrinsic :: iso_c_binding
+    use mod_integer_types
 
-    integer, intent(in) :: n
-    integer, intent(inout) :: nnz
-    integer(kind=C_INT), dimension(:), pointer :: irn, jcn
+    integer(kind=int_all), intent(in) :: n
+    integer(kind=int_all), intent(inout) :: nnz
+    integer(kind=C_INT_ALL), dimension(:), pointer :: irn, jcn
     real(kind=C_DOUBLE), dimension(:), pointer :: val
 
     real(kind=C_DOUBLE), allocatable :: val_new(:)
     ! long integer is required for 1d representation of coordinate index
     integer(kind=INTSIZE), allocatable :: ij(:), ij_new(:), new_ind(:)
     integer(kind=INTSIZE) :: dum, i1, i2, i3
-    integer :: i, j, nnz0
+    integer(kind=int_all) :: i, j, nnz0
 
     allocate(ij(nnz), new_ind(nnz))
     do i = 1, nnz

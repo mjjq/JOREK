@@ -9,21 +9,25 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   use global_distributed_matrix
   use mpi_mod
   use mod_clock
+  use mod_integer_types
 
 !$ use omp_lib
 
   implicit none
 
 ! --- Routine parameters
-  integer, intent(in)      :: n_cpu, my_id, index_min, index_max
+  integer,               intent(in) :: n_cpu, my_id
+  integer,               intent(in) :: index_min, index_max
 
 ! --- Local variables
-  type(clcktype)           :: t_itstart, t0, t1, t2, t3
-  real*8                   :: tsecond
-  integer                  :: i, k, j, ierr, m_loc
-  integer,allocatable      :: counts(:), displacements(:)
+  type(clcktype)                    :: t_itstart, t0, t1, t2, t3
+  real*8                            :: tsecond
+  integer                           :: i, k, j, ierr
+  integer(kind=int_all)             :: m_loc
+  integer(kind=int_all),allocatable :: counts(:), displacements(:)
+  integer(kind=int_all), parameter  :: Int1=1
   
-  integer(kind=C_INT) :: n, nnz
+  integer(kind=C_INT_ALL) :: n, nnz
 
 !write(*,*) my_id,'*********************************'
 !write(*,*) my_id,'*  solve global matrix using STRUMPACK *'
@@ -32,8 +36,8 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   m_loc = (index_max - index_min + 1) * n_tor * n_var
   mumps_par%nz_loc = nz_glob
 
-  call MPI_Allreduce(m_loc,mumps_par%n,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_Allreduce(mumps_par%nz_loc,mumps_par%nz,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
+  call MPI_Allreduce(m_loc,mumps_par%n,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
+  call MPI_Allreduce(mumps_par%nz_loc,mumps_par%nz,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
   
   n = mumps_par%n
   nnz = mumps_par%nz
@@ -48,7 +52,7 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   call tr_allocate(counts,1,n_cpu,"counts",CAT_DMATRIX)
   call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)
 
-  call MPI_Allgather(mumps_par%nz_loc,1,MPI_INTEGER,counts,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+  call MPI_Allgather(mumps_par%nz_loc,1,MPI_INTEGER_ALL,counts,1,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
 
   displacements(1) = 0
   do i=2,n_cpu
@@ -60,19 +64,12 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   if (associated(mumps_par%a) )  call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
   if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
 
-  call tr_allocatep(mumps_par%irn,1,nnz,"mumps_par%IRN",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%jcn,1,nnz,"mumps_par%JCN",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%a,1,nnz,"mumps_par%A",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%rhs,1,n,"mumps_par%rhs",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%irn,Int1,nnz,"mumps_par%IRN",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%jcn,Int1,nnz,"mumps_par%JCN",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%a,Int1,nnz,"mumps_par%A",CAT_DMATRIX)
+  call tr_allocatep(mumps_par%rhs,Int1,n,"mumps_par%rhs",CAT_DMATRIX)
 
-  call MPI_AllgatherV(irn_glob,mumps_par%nz_loc,MPI_INTEGER,mumps_par%irn, &
-                    counts,displacements,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-
-  call MPI_AllgatherV(jcn_glob,mumps_par%nz_loc,MPI_INTEGER,mumps_par%jcn, &
-                    counts,displacements,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-
-  call MPI_AllgatherV(a_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%a, &
-                    counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call split_allgathersolve(n_cpu,my_id,counts,displacements)
 
   call MPI_AllReduce(rhs_glob,mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   

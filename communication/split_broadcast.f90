@@ -4,6 +4,7 @@ SUBROUTINE split_broadcast(type,MPI_COMM_N)
   ! 
   USE mumps_module
   USE mpi_mod
+  use mod_integer_types
   !  
   IMPLICIT NONE
   !
@@ -31,9 +32,9 @@ SUBROUTINE split_broadcast(type,MPI_COMM_N)
         is = (i-1)*buff_max+1
         ie = i*buff_max
         IF (trim(type).EQ.'intIRN') THEN
-           CALL MPI_BCAST(mumps_par%IRN(is:ie),buff_max,MPI_INTEGER,0,MPI_COMM_N,ierr)
+           CALL MPI_BCAST(mumps_par%IRN(is:ie),buff_max,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
         ELSE IF (trim(type).EQ.'intJCN') THEN
-           CALL MPI_BCAST(mumps_par%JCN(is:ie),buff_max,MPI_INTEGER,0,MPI_COMM_N,ierr)   
+           CALL MPI_BCAST(mumps_par%JCN(is:ie),buff_max,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)   
         ELSE IF (trim(type).EQ.'double') THEN
            CALL MPI_BCAST(mumps_par%A(is:ie),buff_max,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
         ENDIF
@@ -43,17 +44,17 @@ SUBROUTINE split_broadcast(type,MPI_COMM_N)
      is = crit * buff_max + 1
      ie = mumps_par%nz
      IF (trim(type).EQ.'intIRN') THEN
-        CALL MPI_BCAST(mumps_par%IRN(is:ie),nz_split_end,MPI_INTEGER,0,MPI_COMM_N,ierr)
+        CALL MPI_BCAST(mumps_par%IRN(is:ie),nz_split_end,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
      ELSE IF (trim(type).EQ.'intJCN') THEN
-        CALL MPI_BCAST(mumps_par%JCN(is:ie),nz_split_end,MPI_INTEGER,0,MPI_COMM_N,ierr)   
+        CALL MPI_BCAST(mumps_par%JCN(is:ie),nz_split_end,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)   
      ELSE IF (trim(type).EQ.'double') THEN
         CALL MPI_BCAST(mumps_par%A(is:ie),nz_split_end,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
      ENDIF
   ELSE
      IF (trim(type).EQ.'intIRN') THEN
-        CALL MPI_BCAST(mumps_par%IRN,mumps_par%nz,MPI_INTEGER,0,MPI_COMM_N,ierr)
+        CALL MPI_BCAST(mumps_par%IRN,mumps_par%nz,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
      ELSE IF (trim(type).EQ.'intJCN') THEN   
-        CALL MPI_BCAST(mumps_par%JCN,mumps_par%nz,MPI_INTEGER,0,MPI_COMM_N,ierr)
+        CALL MPI_BCAST(mumps_par%JCN,mumps_par%nz,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
      ELSE IF (trim(type).EQ.'double') THEN
         CALL MPI_BCAST(mumps_par%A,mumps_par%nz,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
      ENDIF

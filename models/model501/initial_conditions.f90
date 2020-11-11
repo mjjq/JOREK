@@ -151,7 +151,7 @@ if (my_id .eq. 0) then
       endif
 
     endif
-    
+
     node_list%node(i)%deltas = 0.d0
 
   enddo
@@ -162,7 +162,6 @@ if (tauIC .ne. 0.d0) then
   call Poisson(my_id,2,node_list,element_list,bnd_node_list,bnd_elm_list, &
                var_u,var_w,1, ES%psi_axis,ES%psi_bnd,xpoint2, xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)      ! inverse Poisson
 endif
-
     
 !---------------------------- initialise perturbations
 amplitude = 1.d-12
@@ -204,6 +203,7 @@ enddo
 
 return
 
+! The following seems don't have any meaning since it is after the return, should we delete this
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)
 do i=1,node_list%n_nodes
 

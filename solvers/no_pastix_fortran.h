@@ -1,8 +1,8 @@
-#define PASTIX_INT_KIND    4
-#define pastix_int_t       INTEGER(kind=4)
-#define pastix_uint_t      unsigned INTEGER(kind=4)
+#define PASTIX_INT_KIND    int_all
+#define pastix_int_t       INTEGER(kind=int_all)
+#define pastix_uint_t      unsigned INTEGER(kind=int_all)
 #define pastix_data_ptr_t  INTEGER(kind=8)
-#define MPI_PASTIX_INT     MPI_INTEGER4
+#define MPI_PASTIX_INT     MPI_INTEGER_ALL
 #define pastix_float_t     REAL(kind=8)
 #define MPI_PASTIX_FLOAT   MPI_REAL8
 !  Copyright 2008 BORDEAUX I UNIVERSITY & INRIA ! **

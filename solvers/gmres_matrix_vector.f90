@@ -1,4 +1,4 @@
-subroutine gmres_matrix_vector(x,y,my_id,my_id_n, i_tor, MPI_COMM_MASTER)
+subroutine gmres_matrix_vector(size_x,x,size_y,y,my_id,my_id_n, i_tor, MPI_COMM_MASTER)
 !-----------------------------------------------------------------------
 ! sparse matrix vector product using coordinate scheme
 ! to be called only on all of MPI_COMM_WORLD
@@ -9,18 +9,24 @@ use tr_module
 use mod_parameters
 use global_distributed_matrix
 use mpi_mod
+use mod_integer_types
 implicit none
 
-integer             :: i_tor(:), MPI_COMM_MASTER
-real*8              :: x(:), y(:), t1, t2, t3, t4, t5
-real*8, allocatable :: y_tmp(:), y_tmp2(:), x_tmp(:)
-real*8              :: y_tmp_block(n_tor*n_var)
-integer,allocatable :: recv_counts(:), recv_disp(:)
-integer             :: n, i, ir, jc, ierr, my_id, my_id_n, n_cpu, index_offset
-integer             :: n_blocksize, n_blocks, iA_start, ix_start, iy_start, ndof_local
+integer               :: i_tor(:), MPI_COMM_MASTER
+integer(kind=int_all) :: size_x,size_y
+real*8                :: x(size_x), y(size_y), t1, t2, t3, t4, t5
+real*8, allocatable   :: y_tmp(:), y_tmp2(:), x_tmp(:)
+real*8                :: y_tmp_block(n_tor*n_var)
+integer,allocatable   :: recv_counts(:), recv_disp(:)
+integer               :: n, i, ir, jc, ierr, my_id, my_id_n, n_cpu
+integer(kind=int_all) :: n_blocksize, n_blocks, iA_start, ix_start, iy_start, ndof_local, index_offset, Int_tmp
+integer               :: ndof_glob_short
 
 integer index_ytmp_min,index_ytmp_max
 logical found_value
+
+integer(kind=int_all) :: Int1
+Int1=1
 
 !write(*,*) my_id,my_id_n,' GMRES matrix_vector ',ndof_glob
 call cpu_time(t1)
@@ -30,19 +36,20 @@ call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)     ! the number of cpus
 
 call cpu_time(t2)
 
-call MPI_BCAST(x,ndof_glob,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+ndof_glob_short = ndof_glob
+call MPI_BCAST(x,ndof_glob_short,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 
 call cpu_time(t3)
 
-y = 0
+y(1:size_y) = 0.d0
 n_blocksize = n_tor * n_var
 n_blocks    = nz_glob/n_blocksize**2
 ndof_local   = (local_index_end(my_id+1) - local_index_start(my_id+1) + 1) * n_blocksize
 index_offset = (local_index_start(my_id+1)-1) * n_blocksize 
-call tr_allocate(y_tmp,1,ndof_local,"y_tmp",CAT_GMRES)
+call tr_allocate(y_tmp,Int1,ndof_local,"y_tmp",CAT_GMRES)
 y_tmp(1:ndof_local) = 0.d0
-!$omp parallel default(none)                                                                                         &
-!$omp   shared(y_tmp, A_glob, jcn_glob, irn_glob,x, n_blocks,n_blocksize, nz_glob, local_index_start, index_offset)  &
+!$omp parallel default(none)                                                                                              &
+!$omp   shared(y_tmp, A_glob, jcn_glob, irn_glob,x, n_blocks,n_blocksize, nz_glob, local_index_start, index_offset,Int1)  &
 !$omp   private(i,iA_start,ix_start, iy_start, ir, jc, y_tmp_block)
 
 !$omp do
@@ -52,7 +59,7 @@ do i=1, n_blocks
   ix_start = jcn_glob(iA_start+1)
   iy_start = irn_glob(iA_start+1) - index_offset
   
-  call dgemv('T',n_blocksize,n_blocksize,1.d0,A_glob(iA_start+1),n_blocksize,x(ix_start),1,0.d0,y_tmp_block,1)
+  call dgemv('T',n_blocksize,n_blocksize,1.d0,A_glob(iA_start+1),n_blocksize,x(ix_start),Int1,0.d0,y_tmp_block,Int1)
   
   !$omp critical
   y_tmp(iy_start:iy_start+n_blocksize-1) = y_tmp(iy_start:iy_start+n_blocksize-1) + y_tmp_block(1:n_blocksize)
@@ -70,13 +77,14 @@ end do
 
 call cpu_time(t4)
 
-y(1:ndof_glob) = 0.d0
+y(1:size_y) = 0.d0
 
 call tr_allocate(recv_counts,1,n_cpu,"recv_counts",CAT_GMRES)
 call tr_allocate(recv_disp,1,n_cpu,"recv_disp",CAT_GMRES)
 
 do i=1,n_cpu
-   recv_counts(i) = (local_index_end(i) - local_index_start(i) + 1) * n_blocksize
+   Int_tmp = (local_index_end(i) - local_index_start(i) + Int1) * n_blocksize
+   recv_counts(i) = Int_tmp
 enddo
 
 recv_disp(1) = 0

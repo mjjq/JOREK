@@ -86,13 +86,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_i_perp, ZK_e_perp, D_par, D_perp, D_perp_imp,    &
                 particlesource, heatsource_i, heatsource_e, tauIC,  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
-                ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
+                ZK_perp_num, Dn_perp_num, D_diff_flag,              &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
                 pellet_velocity_R, pellet_velocity_Z,               &
                 central_density, central_mass,                      &
-                pellet_particles, use_pellet, D_diff_flag,          &
+                pellet_particles, use_pellet,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, D_perp_file, ZK_i_perp_file, ZK_e_perp_file, &
@@ -249,7 +249,12 @@ call read_num_profiles(my_id)
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
 
-! --- Initialize the shattered pellet position
+! --- For now the diamagnetic term has not been implemented properly
+if (tauIC .ne. 0.0) then
+  tauIC = 0.0
+  write(*,*) "WARNING! The diamagnetic term has not been implemented properly for model 501, setting tauIC = 0 now."
+endif
+
 if ( my_id == 0 ) then
   if (2*PI/(n_tor*n_period) >= ns_deltaphi .and. my_id == 0) then
     write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"

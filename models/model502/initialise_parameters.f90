@@ -83,7 +83,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_i_par, ZK_e_par, ZK_par_max, Wdia,               &
-                ZK_i_perp, ZK_e_perp, D_par, D_perp,                &
+                ZK_i_perp, ZK_e_perp, D_par, D_perp, D_perp_imp,    &
                 particlesource, heatsource_i, heatsource_e, tauIC,  &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
@@ -92,16 +92,16 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
                 pellet_velocity_R, pellet_velocity_Z,               &
                 central_density, central_mass,                      &
-                pellet_particles, use_pellet,                       &
+                pellet_particles, use_pellet, D_diff_flag,          &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, D_perp_file, ZK_i_perp_file, ZK_e_perp_file, &
                 rho_file, T_file, Ti_file, Te_file, ffprime_file,   &
-                normalized_velocity_profile,                        &
+                normalized_velocity_profile, SDN_threshold,         &
                 freeboundary_equil, freeboundary,  freeb_change_indices, &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
-                bc_natural_open, rot_file,                          &
+                bc_natural_open, rot_file, D_perp_imp_file,         &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 use_mumps_eq, use_pastix_eq, use_strumpack_eq,      &
                 use_mumps, mumps_ordering,                          &

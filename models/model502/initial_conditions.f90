@@ -175,6 +175,7 @@ if (my_id .eq. 0) then
       endif
 
     endif
+
     node_list%node(i)%deltas = 0.d0
 
   enddo
@@ -225,6 +226,7 @@ do in=2,n_tor
 enddo
 
 return
+
 ! The following seems don't have any meaning since it is after the return, should we delete this
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)
 do i=1,node_list%n_nodes

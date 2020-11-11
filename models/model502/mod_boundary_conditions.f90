@@ -1,73 +1,82 @@
 module mod_boundary_conditions
 contains
 
-  !*******************************************************************************
-  !* Subroutine: boundary_condition                                              *
-  !*******************************************************************************
-  !*                                                                             *
-  !* Add boundary condition on the matrix.                                       *
-  !*                                                                             *
-  !* Parameters:                                                                 *
-  !*   my_id        - Identifier of the node in MPI_COMM_WORLD                   *
-  !*   node_list    - List of nodes                                              *
-  !*   element_list - List of all elements                                       *
-  !*   local_elms   - List of local elements                                     *
-  !*   n_local_elms - Number of local elements                                   *
-  !*   index_min    - Minimal index of local elements                            *
-  !*   index_max    - Maximal index of local elements                            *
-  !*   xpoint2      -                                                            *
-  !*   xcase2       -                                                            *
-  !*   psi_axis     -                                                            *
-  !*   psi_bnd      -                                                            *
-  !*   Z_xpoint     -                                                            *
-  !*   gmres        - boolean indicating if we are using GMRES method            *
-  !*   solve_only   - Indicate if we want to perform only solve                  *
-  !*                                                                             *
-  !*******************************************************************************
-  subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,          &
-                                  n_local_elms, index_min, index_max, rhs_loc, xpoint2, xcase2,       & 
-                                  R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,  & 
-                                  gmres, solve_only, ijA_index, ijA_size, irn_jcn, irn, jcn,          & 
-                                  A_mat, i_tor_min, i_tor_max )
+!*******************************************************************************
+!* Subroutine: boundary_condition                                              *
+!*******************************************************************************
+!*                                                                             *
+!* Add boundary condition on the matrix.                                       *
+!*                                                                             *
+!* Parameters:                                                                 *
+!*   my_id        - Identifier of the node in MPI_COMM_WORLD                   *
+!*   node_list    - List of nodes                                              *
+!*   element_list - List of all elements                                       *
+!*   local_elms   - List of local elements                                     *
+!*   n_local_elms - Number of local elements                                   *
+!*   index_min    - Minimal index of local elements                            *
+!*   index_max    - Maximal index of local elements (                          *
+!*   xpoint2      -                                                            *
+!*   xcase2       -                                                            *
+!*   psi_axis     -                                                            *
+!*   psi_bnd      -                                                            *
+!*   Z_xpoint     -                                                            *
+!*   gmres        - boolean indicating if we are using GMRES method            *
+!*   solve_only   - Indicate if we want to perform only solve                  *
+!*                                                                             *
+!*******************************************************************************
+  subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,& 
+                                  n_local_elms, index_min, index_max, rhs_loc, xpoint2,     &
+                                  xcase2, R_axis, Z_axis, psi_axis, psi_bnd,                &
+                                  R_xpoint, Z_xpoint, psi_xpoint, gmres, solve_only,        & 
+                                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
 
+    use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     use data_structure
     use vacuum, ONLY: is_freebound
-    use phys_module, only: F0, GAMMA, freeboundary, tstep, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
-       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_start_time, RMP_har_cos, RMP_har_sin,            &
-       RMP_growth_rate, RMP_ramp_up_time, Number_RMP_harmonics, RMP_har_cos_spectrum, RMP_har_sin_spectrum, T_min,&
-       grid_to_wall, n_wall_blocks, keep_n0_const, mach_one_bnd_integral
+    use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
+       psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,            &
+       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min,                                             &
+       mach_one_bnd_integral, Vpar_smoothing, vpar_smoothing_coef,                                         &
+       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
-    use mod_assembly, only : boundary_conditions_add_one_entry
+    use mod_basisfunctions
+    use mod_interp
+    use mod_integer_types
 
     implicit none
 
-    ! --- Routine parameters
-    integer,                   intent(in)    :: my_id
-    type (type_node_list),     intent(in)    :: node_list
-    type (type_element_list),  intent(in)    :: element_list
-    type (type_bnd_node_list), intent(in)    :: bnd_node_list
-    integer,                   intent(in)    :: local_elms(*)
-    integer,                   intent(in)    :: n_local_elms
-    integer,                   intent(in)    :: index_min
-    integer,                   intent(in)    :: index_max
-    real*8,                    intent(inout) :: rhs_loc(*)
-    logical,                   intent(in)    :: xpoint2
-    integer,                   intent(in)    :: xcase2
-    real*8,                    intent(in)    :: R_axis
-    real*8,                    intent(in)    :: Z_axis
-    real*8,                    intent(in)    :: psi_axis
-    real*8,                    intent(in)    :: psi_bnd
-    real*8,                    intent(in)    :: R_xpoint(2)
-    real*8,                    intent(in)    :: Z_xpoint(2)
-    real*8,                    intent(in)    :: psi_xpoint(2)
-    logical,                   intent(in)    :: gmres
-    logical,                   intent(in)    :: solve_only
-    integer,                   intent(in)    :: i_tor_min, i_tor_max 
-    integer, allocatable,      intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, allocatable,      intent(inout) :: irn(:), jcn(:) 
-    real*8,  allocatable,      intent(inout) :: A_mat(:) 
+
+
+  ! --- Routine parameters
+  integer,                            intent(in)    :: my_id
+  type (type_node_list),              intent(in)    :: node_list
+  type (type_element_list),           intent(in)    :: element_list
+  type (type_bnd_node_list),          intent(in)    :: bnd_node_list
+  integer,                            intent(in)    :: local_elms(*)
+  integer,                            intent(in)    :: n_local_elms
+  integer,                            intent(in)    :: index_min
+  integer,                            intent(in)    :: index_max
+  logical,                            intent(in)    :: xpoint2
+  integer,                            intent(in)    :: xcase2
+  real*8,                             intent(in)    :: R_axis
+  real*8,                             intent(in)    :: Z_axis
+  real*8,                             intent(in)    :: psi_axis
+  real*8,                             intent(in)    :: psi_bnd
+  real*8,                             intent(in)    :: R_xpoint(2)
+  real*8,                             intent(in)    :: Z_xpoint(2)
+  real*8,                             intent(in)    :: psi_xpoint(2)
+  logical,                            intent(in)    :: gmres
+  logical,                            intent(in)    :: solve_only
+  real*8,                             intent(inout) :: rhs_loc(*)
+  integer,                            intent(in)    :: i_tor_min, i_tor_max 
+  integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:)
+  integer(kind=int_all), allocatable, intent(in)    :: ijA_size(:)
+  integer(kind=int_all), allocatable, intent(in)    :: irn_jcn(:,:) 
+  integer(kind=int_all), allocatable, intent(inout) :: irn(:)
+  integer(kind=int_all), allocatable, intent(inout) :: jcn(:) 
+  real*8,                allocatable, intent(inout) :: A_mat(:) 
 
     ! Internal parameters
     real*8  :: zbig, zbig_backup, T0, Vpar0, bigR, dT0_ds, dVpar0_ds, dBigR_ds, psi_1, R_1, Z_1
@@ -113,7 +122,7 @@ contains
     endif
     ! Other possibility (simpler) : if ( (t_now - RMP_start_time) .ge. 2.2*RMP_ramp_up_time/2.d0 ) then establish_RMP =0.0
 
-     do j=1, bnd_node_list%n_bnd_nodes
+    do j=1, bnd_node_list%n_bnd_nodes
         psi_RMP_cos1(j)     = psi_RMP_cos(j)     * establish_RMP
         dpsi_RMP_cos_dR1(j) = dpsi_RMP_cos_dR(j) * establish_RMP
         dpsi_RMP_cos_dZ1(j) = dpsi_RMP_cos_dZ(j) * establish_RMP

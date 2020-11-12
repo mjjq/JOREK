@@ -18,7 +18,7 @@ real*8, parameter :: A5_zlt= 0.026279151, A4_zlt=-0.367640092, A3_zlt= 1.9927701
 real*8, parameter :: S_ion_puiss = 3.9d-1
 
 private
-public atomic_coeff_deuterium 
+public atomic_coeff_deuterium, ad_deuterium 
 
 
 contains
@@ -28,7 +28,7 @@ contains
 ! ---   * Outputs are the normalized coefficients
 ! ---   * NOTE THAT THE DERIVATIVES ARE WITH RESPECT TO Te (not T=Te+Ti)
 ! ---   * The coeffiencts are calculated for ne = 1.e20  m^-3
-pure subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
 
   implicit none
 
@@ -43,7 +43,7 @@ pure subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, 
   real*8 :: coef_ion_1, coef_ion_2, coef_ion_3, T0 
   real*8 :: coef_rad_1, coef_rec_1
   real*8 :: rho_norm, t_norm
-  real*8 :: Te_si, Te_eV, Te_evL10, dTe_eVL10_dT0, Te_eV_lim
+  real*8 :: Te_eV, Te_evL10, dTe_eVL10_dT0, Te_eV_lim, Te_si_log10, ne_si_log10
   real*8 :: Sion_si, dSion_si                     
   real*8 :: Srec_si, DSrec_si                     
   real*8 :: Szlt_T, dSzlt_dT, Szlt_si, dSzlt_si   
@@ -53,7 +53,6 @@ pure subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, 
   real*8 :: rec_log10, drec_log10
   real*8 :: zlt_log10, dzlt_log10
   real*8 :: zrb_log10, dzrb_log10
-
 
   ! --- Normalization constants
   rho_norm     = central_density*1.d20 * central_mass * MASS_PROTON
@@ -201,15 +200,47 @@ pure subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, 
 
   else  ! --- use OPEN ADAS
 
-    Te_eV  = max(Te_eV, 0.2d0)  ! Adas fit should be between 0.2eV and 10 keV  
-    Te_eV  = min(Te_eV, 1.d4 )  
+    Te_eV_lim  = max(Te_eV,     0.2d0)  ! ADAS data is given between 0.2eV and 10 keV  
+    Te_eV_lim  = min(Te_eV_lim, 1.d4 )  
 
-    Te_si  =  Te_eV / K_BOLTZ * EL_CHG 
+    Te_si_log10= log10( Te_eV_lim / K_BOLTZ * EL_CHG )
+    ne_si_log10= 20.d0
 
-!      Sion_T      =  GRC(ad_deuterium%scd, 1, 20.0, log10(Te_si))* t_norm * central_density * 1.d20
-!      Srec_T      =  GRC(ad_deuterium%acd, 1, 20.0, log10(Te_si))* t_norm * central_density * 1.d20
-!      LradDcont_T =  GRC(ad_deuterium%prb, 1, 20.0, log10(Te_si))* (central_density * 1.d20)**2 * MU_zero * t_norm / 1.5d0 
-!      LradDrays_T =  GRC(ad_deuterium%plt, 1, 20.0, log10(Te_si))* (central_density * 1.d20)**2 * MU_zero * t_norm / 1.5d0 
+    call ad_deuterium%scd%interp( 1, ne_si_log10, Te_si_log10, Sion_T, dSion_dT)
+    call ad_deuterium%acd%interp( 1, ne_si_log10, Te_si_log10, Srec_T, dSrec_dT)
+    call ad_deuterium%prb%interp( 1, ne_si_log10, Te_si_log10, LradDcont_T, dLradDCont_dT)
+    call ad_deuterium%plt%interp( 1, ne_si_log10, Te_si_log10, LradDrays_T, dLradDrays_dT)
+
+    if ( Te_eV < 0.2d0) then  ! --- Don't radiate or ionize below 0.2 eV, recombination allowed
+      LradDcont_T   = 0.d0
+      dLradDcont_dT = 0.d0
+      LradDrays_T   = 0.d0
+      dLradDrays_dT = 0.d0
+      dSrec_dT      = 0.d0
+      Sion_T        = 0.d0
+      dSion_dT      = 0.d0
+    endif
+
+    if ( Te_eV > 1.d4) then   ! --- Fix values beyond 10 keV and remove derivatives
+      dLradDcont_dT = 0.d0
+      dLradDrays_dT = 0.d0
+      dSrec_dT      = 0.d0
+      dSion_dT      = 0.d0
+    endif
+
+    ! --- Transform the coefficients to JOREK units
+    Sion_T        = Sion_T   * t_norm * central_density * 1.d20
+    Srec_T        = Srec_T   * t_norm * central_density * 1.d20
+    LradDCont_T   = LradDCont_T   * (central_density * 1.d20)**2 * MU_zero * t_norm * gamma_factor 
+    LradDrays_T   = LradDrays_T   * (central_density * 1.d20)**2 * MU_zero * t_norm * gamma_factor 
+
+    dSion_dT      = dSion_dT * t_norm * central_density * 1.d20/ (EL_CHG*MU_ZERO*central_density*1.d20)
+    dSrec_dT      = dSrec_dT * t_norm * central_density * 1.d20/ (EL_CHG*MU_ZERO*central_density*1.d20)
+    dLradDCont_dT = dLradDCont_dT * (central_density * 1.d20)**2 * MU_zero * t_norm * gamma_factor &
+                                  / (EL_CHG*MU_ZERO*central_density*1.d20)
+    dLradDrays_dT = dLradDrays_dT * (central_density * 1.d20)**2 * MU_zero * t_norm * gamma_factor & 
+                                  / (EL_CHG*MU_ZERO*central_density*1.d20) ! factor to get the T derivative in JOREK units
+
 
   endif
 

@@ -49,7 +49,7 @@ contains
       else !-- if my_id .ne. 0 
 
         do j = 1, nz_cmplx/n_var
-          do i = 1, 2*n_var, 2
+          do i = 1, 2*n_var-1, 2
             m = i  + 4*(j-1)*n_var
             k = (i + 2*(j-1)*n_var + 1)/2
             irn_cmplx(k) = (mumps_par%irn(m)+1)/2    
@@ -100,7 +100,7 @@ contains
           rhs_cmplx(i) = CMPLX(mumps_par%rhs(i))
         enddo  
       else !-- if my_id .ne. 0 
-        do i = 1, mumps_par%n, 2
+        do i = 1, mumps_par%n-1, 2
           rhs_cmplx((i+1)/2) = CMPLX(mumps_par%rhs(i),mumps_par%rhs(i+1))
         enddo  
       endif      

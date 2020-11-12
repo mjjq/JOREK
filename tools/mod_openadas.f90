@@ -249,7 +249,7 @@ endif
 
 if (present(GRC_out)) GRC_out = GRC
 if (present(dGRC_dT_out)) dGRC_dT_out = dGRC_dT
-if (present(dGRC_dT_out)) dGRC_dn_out = dGRC_dn
+if (present(dGRC_dn_out)) dGRC_dn_out = dGRC_dn
 
 end subroutine GRC_spl
 

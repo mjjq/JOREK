@@ -7,7 +7,6 @@ use phys_module, only: central_density, central_mass, gamma, deuterium_adas, old
 
 implicit none
 
-! ad =  read_adf11('96_h', '/marconi/home/userexternal/fartolas/tmp/H_atomic/') 
 type(ADF11_all) :: ad_deuterium !< ADAS structure for deuterium 
 
 ! --- Fit coefficients
@@ -18,15 +17,15 @@ real*8, parameter :: A5_zlt= 0.026279151, A4_zlt=-0.367640092, A3_zlt= 1.9927701
 real*8, parameter :: S_ion_puiss = 3.9d-1
 
 private
-public atomic_coeff_deuterium, ad_deuterium 
+public atomic_coeff_deuterium, ad_deuterium, plot_atomic_coefficients
 
 
 contains
 
 ! --- This routine gives ionization, recombination and radiation coefficients for Deuterium
-! ---   * The input value is the JOREK normalized electron temperarute
+! ---   * The input value is the JOREK normalized electron temperature
 ! ---   * Outputs are the normalized coefficients
-! ---   * NOTE THAT THE DERIVATIVES ARE WITH RESPECT TO Te (not T=Te+Ti)
+! ---   * NOTE THAT THE DERIVATIVES ARE WITH RESPECT TO THE ELECTRON TEMPERATURE (not T=Te+Ti)
 ! ---   * The coeffiencts are calculated for ne = 1.e20  m^-3
 subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
 
@@ -36,8 +35,8 @@ subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradD
   real*8, intent(in)    :: Te0                        ! Electron temperature in JOREK units
   real*8, intent(inout) :: Sion_T, dSion_dT           ! Normalized ionization coefficient and its temperature derivative
   real*8, intent(inout) :: Srec_T, dSrec_dT           ! Normalized recombination coefficient and its temperature derivative
-  real*8, intent(inout) :: LradDcont_T, dLradDcont_dT ! Normalized ionization coefficient and its temperature derivative
-  real*8, intent(inout) :: LradDrays_T, dLradDrays_dT ! Normalized ionization coefficient and its temperature derivative
+  real*8, intent(inout) :: LradDcont_T, dLradDcont_dT ! Normalized Bremss and recomb radiation coefficient and its temperature derivative
+  real*8, intent(inout) :: LradDrays_T, dLradDrays_dT ! Normalized line radiation coefficient and its temperature derivative
 
   ! --- Local
   real*8 :: coef_ion_1, coef_ion_2, coef_ion_3, T0 
@@ -57,11 +56,15 @@ subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradD
   ! --- Normalization constants
   rho_norm     = central_density*1.d20 * central_mass * MASS_PROTON
   t_norm       = sqrt(MU_zero*rho_norm)
-  Te_eV        = Te0 / (EL_CHG*MU_ZERO*central_density*1.d20)
   gamma_factor = gamma-1.d0  ! Normalization factor to include terms in the pressure equation
                              ! internal_energy = pressure / (gamma - 1)
 
+  Te_eV        = Te0 / (EL_CHG*MU_ZERO*central_density*1.d20)
+
   if ( (.not. old_deuterium_atomic) .and. (.not. deuterium_adas) ) then 
+
+    ! Fit of ADAS data calculated by Guido, see comparisons in 
+    ! https://jira.iter.org/browse/IMAS-3403
 
     Te_eV_lim = max(Te_eV,     0.2d0 )  ! ADAS fit valid between 0.2eV and 10 keV  
     Te_eV_lim = min(Te_eV_lim, 1.d4  )  
@@ -234,17 +237,57 @@ subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradD
     LradDCont_T   = LradDCont_T   * (central_density * 1.d20)**2 * MU_zero * t_norm * gamma_factor 
     LradDrays_T   = LradDrays_T   * (central_density * 1.d20)**2 * MU_zero * t_norm * gamma_factor 
 
-    dSion_dT      = dSion_dT * t_norm * central_density * 1.d20/ (EL_CHG*MU_ZERO*central_density*1.d20)
-    dSrec_dT      = dSrec_dT * t_norm * central_density * 1.d20/ (EL_CHG*MU_ZERO*central_density*1.d20)
+    dSion_dT      = dSion_dT * t_norm * central_density * 1.d20/ (K_BOLTZ*MU_ZERO*central_density*1.d20)
+    dSrec_dT      = dSrec_dT * t_norm * central_density * 1.d20/ (K_BOLTZ*MU_ZERO*central_density*1.d20)
     dLradDCont_dT = dLradDCont_dT * (central_density * 1.d20)**2 * MU_zero * t_norm * gamma_factor &
-                                  / (EL_CHG*MU_ZERO*central_density*1.d20)
+                                  / (K_BOLTZ*MU_ZERO*central_density*1.d20)
     dLradDrays_dT = dLradDrays_dT * (central_density * 1.d20)**2 * MU_zero * t_norm * gamma_factor & 
-                                  / (EL_CHG*MU_ZERO*central_density*1.d20) ! factor to get the T derivative in JOREK units
-
+                                  / (K_BOLTZ*MU_ZERO*central_density*1.d20) ! factor to get the T derivative in JOREK units
 
   endif
 
 end subroutine
+
+
+subroutine plot_atomic_coefficients()
+
+  implicit none
+
+  real*8 :: Te0                        
+  real*8 :: Sion_T, dSion_dT           
+  real*8 :: Srec_T, dSrec_dT           
+  real*8 :: LradDcont_T, dLradDcont_dT 
+  real*8 :: LradDrays_T, dLradDrays_dT 
+  real*8 :: Tmin, Tmax, deltaT         
+  integer:: i, nT
+
+  deltaT = 2.d-6
+  Tmin   = 1.d-6
+  Tmax   = 1.d-1
+
+  nT = int(Tmax/deltaT)
+ 
+  open(unit=29, file='coefficients_atomic.txt', action='write')
+
+  do i=1, nT
+
+    Te0 = Tmin + (Tmax - Tmin)*float(i-1)/float(nT-1)
+
+    call atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+
+     write(29,'(9ES14.6)') Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT
+
+  enddo
+
+  close(29)  
+
+
+end subroutine
+
+
+
+
 
 
 end module mod_atomic_coeff_deuterium

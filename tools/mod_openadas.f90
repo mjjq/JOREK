@@ -77,7 +77,7 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   end if
 
   if (my_id .eq. 0) write(*,"(A,A)",advance="no") "Reading data from ", trim(filename)
-  open(10,file=trim(filename),status="old",iostat=ierr)
+  open(10,file=trim(filename),action="read",status="old",iostat=ierr)
   if (ierr .ne. 0) then
     write(*,*) my_id, " failed with code ", ierr
     cycle

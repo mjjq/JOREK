@@ -60,6 +60,7 @@ subroutine preset_parameters
   gamma_stangeby     = -1.d99 ! sheath transmission factor (single fluid) given by Stangeby
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
+  imp_reflection     = 0.d0   ! reflection coefficient for (fluid) impurities
   
   mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
   Vpar_smoothing        = .false. ! smooth the transitions of Vpar positive/negavtive at B.n

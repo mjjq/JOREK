@@ -311,6 +311,12 @@ do ms=1, n_gauss
                 rho_x = (   y_t(ms) * rho_s - y_s(ms) * rho_t ) / xjac
                 rho_y = ( - x_t(ms) * rho_s + x_s(ms) * rho_t ) / xjac
 
+                rhon   = psi
+                rhon_s = psi_s
+                rhon_t = psi_t
+                rhon_x = (   y_t(ms) * rhon_s - y_s(ms) * rhon_t ) / xjac
+                rhon_y = ( - x_t(ms) * rhon_s + x_s(ms) * rhon_t ) / xjac
+
                 T   = psi;    vpar = psi;  vpar_ss = psi_ss;  u_s = psi_s
 
                 cs_T  = gamma * T / (2.d0 * cs0)

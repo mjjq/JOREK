@@ -85,6 +85,9 @@ module phys_module
   logical :: use_wsmp             !< Use WSMP solver
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
 
+  logical, dimension(0:20, 30) :: apply_dirichlet_bc  !< Apply_dirichlet_bc(k,j) for variable k and boundary type j? 
+  logical, dimension(30)       :: apply_mach1_bc      !< Apply Mach=1 B.C. for vpar? 
+
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"
   ! Identity of the processor

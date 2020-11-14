@@ -119,7 +119,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, eta_ohmic, centralize_harm_mat
+                pastix_maxthrd, eta_ohmic, centralize_harm_mat,     &
+                apply_dirichlet_bc, apply_mach1_bc
 
 if (my_id .eq. 0) then
 

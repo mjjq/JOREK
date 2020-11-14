@@ -38,7 +38,8 @@ use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_co
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,            &
        RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min,                                             &
        mach_one_bnd_integral, Vpar_smoothing, vpar_smoothing_coef,                                         &
-       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const
+       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const, &
+       apply_dirichlet_bc, apply_mach1_bc
 use tr_module
 use mpi_mod
 use mod_locate_irn_jcn
@@ -85,12 +86,12 @@ real*8  :: Btot, grad_psi, u0_s, u0_t, u0_x, u0_y
 real*8  :: element_size_s, element_size_t, element_size_0
 real*8  :: H1(2,2), H1_s(2,2), H1_ss(2,2)
 integer :: i, in, iv, iv2, iv3, inode, inode2, inode3, k
-integer :: index_large_i, index_node, index_node2, ielm
+integer :: index_large_i, index_node, index_node2, ielm, bnd_type
 integer(kind=int_all) :: ijA_position,ijA_position2
 integer :: ilarge2, kv, kT, ku, kn, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
 integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT
 integer :: ierr
-logical :: apply_psi_BC, apply_current_BC, s_constant_boundary, t_constant_boundary, apply_cs, apply_dirichlet_1234, apply_dirichlet_all
+logical :: apply_psi_BC, apply_current_BC, s_constant_boundary, t_constant_boundary 
 
 real*8, allocatable :: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
 real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
@@ -106,6 +107,7 @@ integer :: n_rmp_harm, N_rmp_har_block_size
 real*8  :: R_out, Z_out, s_elm, t_elm, QR,QR_s,QR_t,QR_st,QR_ss,QR_tt,QZ,QZ_s,QZ_t,QZ_st,QZ_ss,QZ_tt
 real*8  :: QPs0,QPs0_s,QPs0_t,QPs0_st,QPs0_ss,QPs0_tt
 integer :: ifail, i_elm
+
 
 
 RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
@@ -220,31 +222,7 @@ do i=1, n_local_elms !=== do elements
 
       normal_direction = (/R_mid - R_center, Z_mid - Z_center /) / norm2((/R_mid - R_center, Z_mid - Z_center /))
 
-      apply_cs             = .false.
-      apply_dirichlet_1234 = .true.
-      apply_dirichlet_all  = .false.
-
-      if (     (node_list%node(inode)%boundary .eq.  2) &
-          .or. (node_list%node(inode)%boundary .eq.  3) &
-          .or. (node_list%node(inode)%boundary .eq. 12) &
-          .or. (node_list%node(inode)%boundary .eq. 20) &
-          .or. (node_list%node(inode)%boundary .eq. 21)) &
-      then
-        apply_dirichlet_all = .true.
-      endif
-
-      if      ((node_list%node(inode)%boundary .eq.  1) &
-          .or. (node_list%node(inode)%boundary .eq.  3) &
-          .or. (node_list%node(inode)%boundary .eq.  4) &
-          .or. (node_list%node(inode)%boundary .eq.  5) &
-          .or. (node_list%node(inode)%boundary .eq.  9) &
-          .or. (node_list%node(inode)%boundary .eq. 11) &
-          .or. (node_list%node(inode)%boundary .eq. 15) &
-          .or. (node_list%node(inode)%boundary .eq. 19)) &
-      then
-        apply_cs = .true.
-      endif
-
+      bnd_type = node_list%node(inode)%boundary
 
       do in=i_tor_min, i_tor_max  ! === do n_tor
       
@@ -331,18 +309,12 @@ do i=1, n_local_elms !=== do elements
           if (k == var_zj) then
             if ( .not. is_freebound(in,k) )   apply_current_BC = .true.
           endif
+
+          if (.not. apply_psi_BC)      apply_dirichlet_BC(var_psi,:) = .false.
+          if (.not. apply_current_BC)  apply_dirichlet_BC(var_zj, :) = .false.
+
                 
-          if (        apply_psi_BC      &
-                 .or. apply_current_BC  &
-                 .or. ((k .eq. var_u)    .and. apply_dirichlet_1234) &
-                 .or. ((k .eq. var_w)    .and. apply_dirichlet_1234) &
-                 .or. ((k .eq. var_rho)  .and. apply_dirichlet_all)  &
-                 .or. ((k .eq. var_T)    .and. apply_dirichlet_all)  &
-                 .or. ((k .eq. var_Te)   .and. apply_dirichlet_all)  &
-                 .or. ((k .eq. var_Ti)   .and. apply_dirichlet_all)  &
-                 .or. ((k .eq. var_vpar) .and. apply_dirichlet_all)  &
-                 .or. ((k .eq. var_rhon) .and. apply_dirichlet_all)  &
-              ) then
+          if ( apply_dirichlet_BC(k, bnd_type)  ) then
 
 !            if ((k.eq.7) .and. (node_list%node(inode)%boundary .eq. 3)) cycle  !=== better included for ITER extended wall
 
@@ -366,7 +338,7 @@ do i=1, n_local_elms !=== do elements
 
         if ((node_list%node(inode)%boundary .eq.  3) .and. (node_list%node(inode2)%boundary .eq.  2)) cycle
 
-        if ( (.not. mach_one_bnd_integral) .and. apply_cs) then
+        if ( (.not. mach_one_bnd_integral) .and. apply_mach1_bc(bnd_type) ) then
 
           call basisfunctions1(0.d0, H1, H1_s, H1_ss)
 

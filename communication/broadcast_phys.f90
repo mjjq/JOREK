@@ -151,6 +151,12 @@ if (my_id .eq. 0) then
   call MPI_PACK(central_density,        1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(central_mass,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
+  do i=1, 30
+    call MPI_PACK(apply_dirichlet_bc(:,i), 21,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  enddo
+
+  call MPI_PACK(apply_mach1_bc(:),     30,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+
   call MPI_PACK(pellet_amplitude,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(pellet_R,               1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(pellet_Z,               1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -692,6 +698,12 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,Vpar_smoothing_coef,    3,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,central_density,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,central_mass,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+
+  do i=1, 30
+    call MPI_UNPACK(buffer,bufsize,position,apply_dirichlet_bc(:,i),  21,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+  enddo
+
+  call MPI_UNPACK(buffer,bufsize,position,apply_mach1_bc(:),     30,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,pellet_amplitude,       1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,pellet_R,               1,MPI_REAL8,MPI_COMM_WORLD,ierr)

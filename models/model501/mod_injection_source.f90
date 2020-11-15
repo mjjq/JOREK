@@ -411,7 +411,7 @@ module mod_injection_source
     
     call cor%interp_linear(density,temperature,rad_out=rad)
     Lrad = rad / (10.0**density) ! This is to recover the radiation coefficient
-    if (present(dLrad_dTe) .or. present(dLrad_dNe)) then
+    if (present(dLrad_dTe)) then
       call cor%interp_linear(density,temperature,p_out=p,p_Te_out=p_Te)
       dradRB_dT = ad%PRB%interp_grad_T(density,temperature) !Loglog gradient still!!!
       dradLT_dT = ad%PLT%interp_grad_T(density,temperature) !Loglog gradient still!!!

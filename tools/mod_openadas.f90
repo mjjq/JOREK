@@ -191,15 +191,15 @@ function dGRC_dT(a, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)       :: density     !< log10 density in m^-3
 real*8, intent(in)       :: temperature !< log10 temperature in K
-real*8, dimension(a%n_Z) :: dGRC_dT !< Generalized Radiational Coefficient at this density and temperature
+real*8, dimension(0:a%n_Z) :: dGRC_dT !< Generalized Radiational Coefficient at this density and temperature
 integer                  :: i_z     !< Index of charge state
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC)) then
-  !dGRC_dT = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,1)
-  do i_z = 0, a%n_z
-    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dx=dGRC_dT(i_z))
-  end do
+  dGRC_dT = L2D2interp_grad(a%density,a%temperature,a%n_Z+1,a%GRC(:,:,0:a%n_Z),density,temperature,1)
+!  do i_z = 0, a%n_z
+!    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dx=dGRC_dT(i_z))
+!  end do
 else
   dGRC_dT = 0.d0
 endif
@@ -211,15 +211,15 @@ function dGRC_dn(a, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)       :: density     !< log10 density in m^-3
 real*8, intent(in)       :: temperature !< log10 temperature in K
-real*8, dimension(a%n_Z) :: dGRC_dn !< Generalized Radiational Coefficient at this density and temperature
+real*8, dimension(0:a%n_Z) :: dGRC_dn !< Generalized Radiational Coefficient at this density and temperature
 integer                  :: i_z     !< Index of charge state
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC)) then
-  !dGRC_dn = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,2)
-  do i_z = 0, a%n_z
-    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dy=dGRC_dn(i_z))
-  end do
+  dGRC_dn = L2D2interp_grad(a%density,a%temperature,a%n_Z+1,a%GRC(:,:,0:a%n_Z),density,temperature,2)
+!  do i_z = 0, a%n_z
+!    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dy=dGRC_dn(i_z))
+!  end do
 else
   dGRC_dn = 0.d0
 endif

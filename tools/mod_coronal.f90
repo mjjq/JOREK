@@ -85,9 +85,9 @@ do m = 1, n_d
     density_cor     = cor%density(m)
     temperature_cor = cor%temperature(k)
 
-    call imp_cor(1)%interp(density=density_cor,temperature=temperature_cor,               &
-                           p_Te_out=dp_dT,z_Te_out=dZ_avg_dT, z_TeTe_out=d2Z_avg_dT2,     &
-                           rad_Te_out=dPrad_dT)
+    call cor(1)%interp(density=density_cor,temperature=temperature_cor,               &
+                       p_Te_out=dp_dT,z_Te_out=dZ_avg_dT, z_TeTe_out=d2Z_avg_dT2,     &
+                       rad_Te_out=dPrad_dT)
     
     cor%Z_1T(m,k,:)       = dp_dT
     cor%Prad_1T(m,k)      = dPrad_dT

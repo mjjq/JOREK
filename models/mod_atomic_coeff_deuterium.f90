@@ -140,6 +140,9 @@ subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradD
 
     T0 = 2.d0 * Te0   ! The total temperature was used for these old coefficients...
 
+    ! --- Te_max=10 keV, beyond that value the fits blow up
+    T0 = min( T0, 2.d0 * 1.d4 * EL_CHG*MU_ZERO*central_density*1.d20 )
+
     coef_ion_1  = sqrt(MU_ZERO*central_mass*MASS_PROTON) * (central_density*1.d20)**(1.5d0) * 0.2917d-13
     coef_ion_2  = 0.232d0
     coef_ion_3  = EL_CHG*MU_ZERO*central_density*1.d20 * 27.2d0

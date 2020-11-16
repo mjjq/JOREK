@@ -26,8 +26,8 @@ contains
 ! ---   * The input value is the JOREK normalized electron temperature
 ! ---   * Outputs are the normalized coefficients
 ! ---   * NOTE THAT THE DERIVATIVES ARE WITH RESPECT TO THE ELECTRON TEMPERATURE (not T=Te+Ti)
-! ---   * The coeffiencts are calculated for ne = 1.e20  m^-3
-subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+! ---   * The coeffiencts are calculated for ne = 1.e20  m^-3 for the fits
+subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, ne0 ) 
 
   implicit none
 
@@ -37,12 +37,13 @@ subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradD
   real*8, intent(inout) :: Srec_T, dSrec_dT           ! Normalized recombination coefficient and its temperature derivative
   real*8, intent(inout) :: LradDcont_T, dLradDcont_dT ! Normalized Bremss and recomb radiation coefficient and its temperature derivative
   real*8, intent(inout) :: LradDrays_T, dLradDrays_dT ! Normalized line radiation coefficient and its temperature derivative
+  real*8, optional, intent(in) :: ne0                 ! Electron density in JOREK units (used only for ADAS data)
 
   ! --- Local
   real*8 :: coef_ion_1, coef_ion_2, coef_ion_3, T0 
   real*8 :: coef_rad_1, coef_rec_1
   real*8 :: rho_norm, t_norm
-  real*8 :: Te_eV, Te_evL10, dTe_eVL10_dT0, Te_eV_lim, Te_si_log10, ne_si_log10
+  real*8 :: Te_eV, Te_evL10, dTe_eVL10_dT0, Te_eV_lim, Te_si_log10, ne_si_log10, ne_si
   real*8 :: Sion_si, dSion_si                     
   real*8 :: Srec_si, DSrec_si                     
   real*8 :: Szlt_T, dSzlt_dT, Szlt_si, dSzlt_si   
@@ -207,7 +208,15 @@ subroutine atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT, LradD
     Te_eV_lim  = min(Te_eV_lim, 1.d4 )  
 
     Te_si_log10= log10( Te_eV_lim / K_BOLTZ * EL_CHG )
-    ne_si_log10= 20.d0
+
+    ne_si      = 1.d20
+    if (present(ne0)) then
+      ne_si = ne0 * central_density * 1.d20
+      ne_si = max(ne_si,  1.d14)    ! ADAS density is bewteen 1.d14 and 1.21 m^-3
+      ne_si = min(ne_si,  1.d21) 
+    endif
+
+    ne_si_log10= log10(ne_si)
 
     call ad_deuterium%scd%interp( 1, ne_si_log10, Te_si_log10, Sion_T, dSion_dT)
     call ad_deuterium%acd%interp( 1, ne_si_log10, Te_si_log10, Srec_T, dSrec_dT)

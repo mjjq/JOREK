@@ -550,7 +550,7 @@ module live_data
     write(LIVE_DATA_HANDLE,*)
  
 #if (JOREK_MODEL == 500)
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dissipative_terms: ', 3
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dissipative_terms: ', 4
 #else
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dissipative_terms: ', 2
 #endif
@@ -563,7 +563,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_logy: 0'
 #if (JOREK_MODEL == 500)
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms: %"time"         "Ohmic power"   "Parallel viscosity power"  &
-                                                        "Radiated power"'
+                                                        "Radiated power"  "Ionization power"'
 #else
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms: %"time"         "Ohmic power"   "Parallel viscosity power" '
 #endif
@@ -680,7 +680,7 @@ module live_data
       thmwork_tot_t, viscopar_dissip_tot_t, viscopar_flux_t, li3_t,      &
       li3_tot_t, part_src_tot_t, heat_src_tot_t, volume_t, area_t, mag_ener_src_tot, eta_ohmic, eta, &
       dpart_tot_dt, part_flux_Dpar_t, part_flux_Dperp_t, part_flux_vpar_t, part_flux_vperp_t, &
-      dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t, flux_poynting_t, xtime_rad_power 
+      dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t, flux_poynting_t, xtime_rad_power, xtime_E_ion_power  
 
 
     implicit none
@@ -777,7 +777,7 @@ module live_data
 
 #if (JOREK_MODEL == 500)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms: ', xtime(index), ohmic_tot_t(index), viscopar_dissip_tot_t(index), &
-                                                                  xtime_rad_power(index)
+                                                                  xtime_rad_power(index), xtime_E_ion_power(index)
 #else
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms: ', xtime(index), ohmic_tot_t(index), viscopar_dissip_tot_t(index)
 #endif
@@ -799,6 +799,10 @@ module live_data
                        + viscopar_dissip_tot_t(index-1) - heat_src_tot_t(index-1)  &
                        + ohmic_tot_t(index-1)*(1.d0 - eta_ohmic/eta) - mag_ener_src_tot(index-1) &
                        - flux_poynting_t(index-1)
+
+#if (JOREK_MODEL == 501)
+     sum_fluxes_dissip = sum_fluxes_dissip + xtime_rad_power(index-1) + xtime_E_ion_power(index-1)
+#endif
 
      sum_mag_energy_terms = -ohmic_tot_t(index-1) + flux_poynting_t(index-1) + Magwork_tot_t(index-1) + mag_ener_src_tot(index-1) 
  

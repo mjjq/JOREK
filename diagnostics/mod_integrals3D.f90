@@ -128,11 +128,12 @@ real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 
 ! Additional variables related to the radiated power
 #if (JOREK_MODEL == 500)
-real*8  :: local_radiation, total_radiation
+real*8  :: local_radiation, total_radiation, local_E_ion, total_E_ion
 real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 ! Atomic physics coefficients:
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
+real*8     :: ksiion                                          ! Ionization energy
 !   -Recombination
 real*8     :: Srec_T, dSrec_dT                                ! Recombination rate and its derivative wrt. temperature
 !   -Radiation from injected gas/impurities
@@ -221,6 +222,7 @@ local_n_particles     = 0.d0
 #if (JOREK_MODEL == 500)
 local_radiation       = 0.d0
 local_radiation_phi   = 0.d0
+local_E_ion           = 0.d0
 #endif
 
 delta_phi     = 2.d0 * PI / float(n_plane) / float(n_period)
@@ -253,7 +255,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          central_mass,                                                                   &
 #endif
 #if (JOREK_MODEL == 500)
-!$omp          local_radiation, local_radiation_phi, nimp_bg,                                           &
+!$omp          local_radiation, local_radiation_phi, nimp_bg, local_E_ion, ksi_ion,            &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -275,7 +277,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           rn0, source_ns, rn0_corr,                                                      &
 #endif
 #if (JOREK_MODEL == 500)
-!$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT,                                            &
+!$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion,                                    &
 !$omp           ne_SI, Te_eV, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
 !$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
 #endif
@@ -295,7 +297,7 @@ omp_tid      = 0
 !$omp                local_n_particles_inj,  local_n_particles,                               &
 #endif
 #if (JOREK_MODEL == 500)
-!$omp                local_radiation, local_radiation_phi,                                    &
+!$omp                local_radiation, local_radiation_phi, local_E_ion,                       &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
@@ -532,7 +534,9 @@ do ife = ife_min, ife_max
   ! --- Get ionization, recombination and radiation coefficients for Deuterium 
   call atomic_coeff_deuterium(0.5d0*T0_corr, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
                                       LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
-  
+
+  ksiion = central_density * 1.d20 * ksi_ion   !Normalisation of the ionization energy cost for Deuterium
+
   ! --- Radiation from background impurity
   Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
   Arad_bg = 2.4d-31 
@@ -546,7 +550,9 @@ do ife = ife_min, ife_max
    local_radiation_phi(mp) = local_radiation_phi(mp) + (ne_SI * rn0_corr * central_density * 1.d20 * LradDrays_T &
                              + ne_SI ** 2 * LradDcont_T + ne_SI * frad_bg) * bigR * xjac * wst * delta_phi  
    local_radiation = local_radiation + (ne_SI * rn0_corr * central_density * 1.d20 * LradDrays_T &
-                             + ne_SI ** 2 * LradDcont_T + ne_SI * frad_bg) * bigR * xjac * wst * delta_phi   
+                             + ne_SI ** 2 * LradDcont_T + ne_SI * frad_bg) * bigR * xjac * wst * delta_phi
+   local_E_ion     = local_E_ion + ksiion * ne_SI * rn0_corr * central_density * 1.d20 * Sion_T             &
+                             * bigR * xjac * wst * delta_phi 
 #endif
  
         P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
@@ -925,6 +931,7 @@ V_max                = varmax
 
 #if (JOREK_MODEL == 500)
 call MPI_AllReduce(local_radiation, total_radiation,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(local_E_ion, total_E_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_radiation_phi, total_radiation_phi,n_plane,&
                    MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 #endif
@@ -1007,6 +1014,7 @@ area                 = n_period * area / (2.d0 * PI)
 #if (JOREK_MODEL == 500)
 total_radiation     = n_period * total_radiation
 total_radiation_phi = n_period * total_radiation_phi
+total_E_ion         = n_period * total_E_ion
 #endif
 
 ! --- Boundary integrals
@@ -1312,6 +1320,7 @@ if (my_id .eq. 0) then
 #if (JOREK_MODEL == 500)
   write(*,'(A,1e14.6,A)') ' Radiation power          : ', total_radiation/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
+  write(*,'(A,1e14.6,A)') 'Ionization potential E   : ', total_E_ion/1.d6, ' [MJ]'
   if (index_now > 1) then
     xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation
   else
@@ -1326,6 +1335,14 @@ if (my_id .eq. 0) then
     end do
     close (20)
   end if
+
+  xtime_E_ion(index_now) = total_E_ion
+  if (index_now > 1) then
+    xtime_E_ion_power(index_now) = (xtime_E_ion(index_now) - xtime_E_ion(index_now-1)) / (t_norm * tstep)
+  else
+    xtime_E_ion_power(index_now) = 0.
+  endif
+
 #endif
 
   do k = 1, n_var

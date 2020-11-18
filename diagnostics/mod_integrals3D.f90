@@ -125,6 +125,20 @@ real*8  :: u0_p, u_s, u_t, u_p
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 
+! Additional variables related to the radiated power
+#if (JOREK_MODEL == 500)
+real*8  :: local_radiation, total_radiation
+real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
+! Atomic physics coefficients:
+real*8     :: ne_SI                                           ! Electron density in SI
+! Radiation from injected gas/impurities
+real*8     :: LradDrays_T, LradDcont_T                        ! Line (/rays) and continuum (Brem.) radiation rate, reps.
+real*8     :: T_rad                                           ! Temperature used in radiation rate
+real*8     :: coef_rad_1                                      ! Radiation rate parameters
+! Radiation from background impurities
+real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg
+#endif
+
 #ifndef NOMPIVERSION
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 n_cpu = max(n_cpu,1)
@@ -198,6 +212,11 @@ local_pellet_volume    = 0.d0
 local_n_particles_inj = 0.d0
 local_n_particles     = 0.d0
 
+#if (JOREK_MODEL == 500)
+local_radiation       = 0.d0
+local_radiation_phi   = 0.d0
+#endif
+
 delta_phi     = 2.d0 * PI / float(n_plane) / float(n_period)
 
 psi_axis   = ES%psi_axis;        R_axis = ES%R_axis;        Z_axis = ES%Z_axis
@@ -224,8 +243,11 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
 !$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm,                            &
-!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,            &
+!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
 !$omp          central_mass,                                                                   &
+#endif
+#if (JOREK_MODEL == 500)
+!$omp          local_radiation, local_radiation_phi, nimp_bg,                                           &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -244,7 +266,11 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp           rn0, source_ns,                                                               &
+!$omp           rn0, source_ns,                                                                &
+#endif
+#if (JOREK_MODEL == 500)
+!$omp           ne_SI, T_rad, LradDrays_T, LradDcont_T, coef_rad_1,                            &
+!$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -260,6 +286,9 @@ omp_tid      = 0
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
+#endif
+#if (JOREK_MODEL == 500)
+!$omp                local_radiation, local_radiation_phi,                                    &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
@@ -487,6 +516,45 @@ do ife = ife_min, ife_max
         else
           current_source = 0.d0
         endif
+
+!-------------------------------------------
+! --- Radiative Power
+! ------------------------------------------
+#if (JOREK_MODEL == 500)
+   T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
+  
+   if (T0 .gt. 1.d-6) then
+   ! --- Radiative Power for neutral Deuterium
+   ! Formulae for radiative power is in SI units and for T = Te + Ti
+
+     coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
+
+     LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
+
+     LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+                                    -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                    -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+ 
+   ! --- Radiation from background impurity
+     Arad_bg = 2.4d-31 
+     Brad_bg = 20.
+     Crad_bg = 0.8
+
+     frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
+                  *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+
+   else
+     LradDcont_T = 0.d0
+     LradDrays_T = 0.d0
+     frad_bg     = 0.d0
+   endif
+   
+   ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+   local_radiation_phi(mp) = local_radiation_phi(mp) + (ne_SI * rn0 * central_density * 1.d20 * LradDrays_T &
+                             + ne_SI ** 2 * LradDcont_T + ne_SI * frad_bg) * bigR * xjac * wst * delta_phi  
+   local_radiation = local_radiation + (ne_SI * rn0 * central_density * 1.d20 * LradDrays_T &
+                             + ne_SI ** 2 * LradDcont_T + ne_SI * frad_bg) * bigR * xjac * wst * delta_phi   
+#endif
  
         P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
         D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
@@ -862,6 +930,12 @@ V_min                = varmin
 V_max                = varmax
 #endif /* NOMPIVERSION */
 
+#if (JOREK_MODEL == 500)
+call MPI_AllReduce(local_radiation, total_radiation,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(local_radiation_phi, total_radiation_phi,n_plane,&
+                   MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+#endif
+
 if (use_pellet) then
 #ifndef NOMPIVERSION
   call MPI_AllReduce(local_pellet_particles,total_pellet_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -936,6 +1010,11 @@ viscopar_dissip_tot  = n_period * viscopar_dissip_tot * fact_flux
 mag_source_tot       = n_period * mag_source_tot      * fact_flux
 volume               = n_period * volume
 area                 = n_period * area / (2.d0 * PI)
+
+#if (JOREK_MODEL == 500)
+total_radiation     = n_period * total_radiation
+total_radiation_phi = n_period * total_radiation_phi
+#endif
 
 ! --- Boundary integrals
 vn_p0                =  n_period * vn_p0          * fact_flux 
@@ -1235,6 +1314,12 @@ if (my_id .eq. 0) then
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
   write(*,'(A,4es14.6)')   ' Integrals_3D, MGI               : ', total_n_particles_inj, total_n_particles
+#endif
+
+#if (JOREK_MODEL == 500)
+  write(*,'(A,1e14.6,A)') ' Radiation power          : ', total_radiation/1.d6, ' [MW]'
+  write(*,'(A,1e14.6,A)') ' Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
+
 #endif
 
   do k = 1, n_var

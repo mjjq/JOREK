@@ -20,6 +20,7 @@ module mod_integrals3D
   use mod_poloidal_currents, only : integrated_normal_bnd_curr 
   use corr_neg
   use equil_info, only : get_psi_n, ES
+  use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 
   implicit none
   
@@ -130,11 +131,15 @@ real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 real*8  :: local_radiation, total_radiation
 real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 ! Atomic physics coefficients:
+!   -Ionization
+real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
+!   -Recombination
+real*8     :: Srec_T, dSrec_dT                                ! Recombination rate and its derivative wrt. temperature
+!   -Radiation from injected gas/impurities
+real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
+real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
 real*8     :: ne_SI                                           ! Electron density in SI
-! Radiation from injected gas/impurities
-real*8     :: LradDrays_T, LradDcont_T                        ! Line (/rays) and continuum (Brem.) radiation rate, reps.
-real*8     :: T_rad                                           ! Temperature used in radiation rate
-real*8     :: coef_rad_1                                      ! Radiation rate parameters
+real*8     :: Te_eV                                           ! Temperature used in radiation rate
 ! Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg
 integer*8  :: i_phi
@@ -270,7 +275,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           rn0, source_ns, rn0_corr,                                                      &
 #endif
 #if (JOREK_MODEL == 500)
-!$omp           ne_SI, T_rad, LradDrays_T, LradDcont_T, coef_rad_1,                            &
+!$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT,                                            &
+!$omp           ne_SI, Te_eV, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
 !$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
 #endif
 !$omp           omp_nthreads,omp_tid)
@@ -523,33 +529,18 @@ do ife = ife_min, ife_max
 ! --- Radiative Power
 ! ------------------------------------------
 #if (JOREK_MODEL == 500)
-   T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
+  ! --- Get ionization, recombination and radiation coefficients for Deuterium 
+  call atomic_coeff_deuterium(0.5d0*T0_corr, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                      LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
   
-   if (T0 .gt. 1.d-6) then
-   ! --- Radiative Power for neutral Deuterium
-   ! Formulae for radiative power is in SI units and for T = Te + Ti
+  ! --- Radiation from background impurity
+  Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
+  Arad_bg = 2.4d-31 
+  Brad_bg = 20.
+  Crad_bg = 0.8
+  frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
+                  *nimp_bg*Arad_bg*exp(-((log(Te_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
-     coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
-
-     LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
-
-     LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                    -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                    -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
- 
-   ! --- Radiation from background impurity
-     Arad_bg = 2.4d-31 
-     Brad_bg = 20.
-     Crad_bg = 0.8
-
-     frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                  *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
-   else
-     LradDcont_T = 0.d0
-     LradDrays_T = 0.d0
-     frad_bg     = 0.d0
-   endif
    
    ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
    local_radiation_phi(mp) = local_radiation_phi(mp) + (ne_SI * rn0_corr * central_density * 1.d20 * LradDrays_T &

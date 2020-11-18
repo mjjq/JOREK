@@ -804,6 +804,7 @@ do i=1,n_vertex_max
           ! --- Note-1: Phi component defined as physical component VdiaP*e_phi, like V and B
           ! --- Note-2: Factor of F0 is here so that we have the same definition of tau_IC in RMHD and FMHD
           tau_IC = tauIC
+          ! --- Switch off at targets?
           !distance_bnd = 1.d10
           !do im=1,n_vertex_max
           !  if (nodes(im)%boundary .eq. 1) then
@@ -820,15 +821,7 @@ do i=1,n_vertex_max
           VdiaGradUZ  = VdiaR0 * UZ0_R + VdiaZ0 * UZ0_Z + VdiaP0 * UZ0_p / R
           VdiaGradUp  = VdiaR0 * Up0_R + VdiaZ0 * Up0_Z + VdiaP0 * Up0_p / R
           
-          ! --- Make sure SOL density/temperature stays levelled
-          if (.true.) then
-            if (rho0 .lt. 1.0*rho_1) particle_source(ms,mt) = 0.5 * (1.0*rho_1-rho0) / tstep
-            if (T0   .lt. 1.0*T_1  ) heat_source(ms,mt)     = 0.5 * (1.0*T_1 -T0  ) / tstep
-            if (rho0 .lt. 1.0*rho_1) D_prof  = D_prof  * 1.d2
-            if (T0   .lt. 1.0*T_1  ) ZK_prof = ZK_prof * 1.d2
-          endif
-
-          ! --- Toroidal velocity
+          ! --- Toroidal velocity source
           Vt0   = V_source(ms,mt)
           Vt0_R = dV_dpsi_source(ms,mt) * psi_axisym_R(ms,mt)
           Vt0_Z = dV_dz_source(ms,mt) + dV_dpsi_source(ms,mt) * psi_axisym_Z(ms,mt)

@@ -75,7 +75,7 @@ module vacuum
   integer             :: n_feedback_current              !< Feedback will be performed each n_... iterations (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   integer             :: n_iter_freeb                    !< Number of iterations for freeboundary equilibirum (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
-  
+
   !> @name Time-evolution PF coils parameters
   real*8              :: PF_pert_start_time              !< Time to start a perturbation to speed-up VDEs
   
@@ -158,8 +158,20 @@ module vacuum
   type(t_coil_curr_input), target :: voltage_coils(MAX_COILS) ! not ready yet (see [[jorek-starwall-faqs|jorek_starwall_FAQs]])
   type(t_coil_curr_input), target :: pf_coils(MAX_COILS)      ! see [[jorek-starwall-faqs|jorek_starwall_FAQs]]
   type(t_coil_curr_time_trace)    :: coil_curr_time_trace(4*MAX_COILS)
-  
   real*8 :: vert_FB_amp(MAX_COILS) = 0.d0 !< Tune direction and magnitude of vert feedback for each poloidal field coil ([[jorek-starwall-faqs|eq_FAQs]])
+  !> Parameters for the feedback on the vertical position during timestepping
+  character(len=256)  :: vert_pos_file = 'None'
+  type :: t_Z_axis_ref_ts     
+    integer                :: len          !< Number of points in numerical time trace.
+    real*8, allocatable    :: time(:)      !< time-values of numerical time trace
+    real*8, allocatable    :: position(:)  !< evolution of vertical axis position over time
+  end type t_Z_axis_ref_ts
+  real*8                        :: start_VFB_ts              = 0.d0  !< start time of active VFB during simulation ([JORREK units])
+  real*8                        :: vert_FB_amp_ts(MAX_COILS) = 0.d0  !< Tune direction and magnitude of vert feedback for each poloidal field coil ([[jorek-starwall-faqs|eq_FAQs]])
+  real*8                        :: I_coils_max(MAX_COILS)    = 1.d99 !< Maximum absolute current in coils ([Ampere])
+  real*8                        :: a_VFB(3),VFB_tact                 !< Parameters for PD controller of vertical Feedback during timestepping, VFB_tact([ms])
+  real*8                        :: dZ_axis_integral                  !< Integrated values of Z deviation from reference value, needs to be exported to restart file
+  type(t_Z_axis_ref_ts), target :: Z_axis_ref_ts                     !< Prescribe Z_axis position over time
   
   
   contains
@@ -321,6 +333,57 @@ module vacuum
     end do
   end subroutine check_coil_curr_time_trace_input
   
+  subroutine read_Z_axis_profile()
+    ! If file for the time evolution of the magnetic axis is present, read the profile
+    ! Otherwise either the input value for Z_axis_ref is used or the equilibrium value
+
+    use profiles, only: readProf
+    use equil_info, only: ES
+    if (vert_pos_file /= 'None') then
+      call readProf(Z_axis_ref_ts%time, Z_axis_ref_ts%position, Z_axis_ref_ts%len, vert_pos_file)
+    else
+      if (Z_axis_ref > 1.d10)   Z_axis_ref = ES%Z_axis
+
+      if (allocated(Z_axis_ref_ts%time)) deallocate(Z_axis_ref_ts%time)
+      if (allocated(Z_axis_ref_ts%position)) deallocate(Z_axis_ref_ts%position)
+      allocate(Z_axis_ref_ts%time    (2) )
+      allocate(Z_axis_ref_ts%position(2) )
+      Z_axis_ref_ts%len          =  2
+      Z_axis_ref_ts%time     (1) = -1.d12
+      Z_axis_ref_ts%time     (2) =  1.d12
+      Z_axis_ref_ts%position (1) =  Z_axis_ref 
+      Z_axis_ref_ts%position (2) =  Z_axis_ref
+    endif
+    call check_Z_axis_profile() 
+  end subroutine read_Z_axis_profile
+
+  subroutine check_Z_axis_profile()
+    integer :: i
+    ! Check if the time evolution of the vertical magnetic axis makes sense
+    if (sum(abs(vert_FB_amp_ts(:)))>1.d-6) then
+      if  (maxval(abs(Z_axis_ref_ts%position(:))) > 1.d10) then
+        write(*,*) 'ERROR: target Z_axis beyond Machine limits'
+        stop
+      endif
+      if (minval(I_coils_max(:)) .lt. 0)then
+        write(*,*) 'ERROR: The maximum value of the coil cannot be smaller than 0.'
+        stop
+      endif
+      if (Z_axis_ref_ts%time(1)>0.d0) then        
+        write(*,*) 'ERROR: The Z_axis time trace does not start at time 0. Check your input file'
+        stop
+      endif
+      if (Z_axis_ref_ts%len .le. 1) then        
+        write(*,*) 'ERROR: The length of the profile for the axis target position must be larger than 1'
+        stop
+      endif
+      open(66, file='Z_prof_evolution.dat',action='write')
+      do i = 1,Z_axis_ref_ts%len
+        write(66,*) Z_axis_ref_ts%time(i),  Z_axis_ref_ts%position(i)
+      enddo
+      close(66)
+    endif
+  end subroutine check_Z_axis_profile
   
   
   !> Preset freeboundary related input parameters to reasonable default values.
@@ -354,6 +417,14 @@ module vacuum
     
     PF_pert_start_time   = 1.d99
     psi_offset_freeb     = 0.d0
+
+  ! ---- Parameters for vertical feedbakc (VFB)
+    vert_FB_amp_ts = 0.d0
+    a_VFB(1)              = 1.d0   ! Proportional gain of VFB
+    a_VFB(2)              = 0.d0   ! Derivative gain of VFB
+    a_VFB(3)              = 0.d0   ! Integral gain of VFB
+    VFB_tact              = 1.d-9  ! Tact of VFB controller
+    I_coils_max           = 1.d99  ! Maximum absolute value for coils
     
   end subroutine vacuum_preset
   
@@ -472,6 +543,7 @@ module vacuum
       end if
       
       read(file_handle) current_FB_fact
+      read(file_handle) dZ_axis_integral
       read(file_handle) n_coils
       if ( n_coils /= 0 ) then
         if ( allocated(I_coils) ) deallocate(I_coils)
@@ -641,6 +713,7 @@ module vacuum
       end if
       
       call HDF5_real_reading(file_id,current_FB_fact,'current_FB_fact')
+      call HDF5_real_reading(file_id,dZ_axis_integral,'dZ_axis_integral')
       call HDF5_integer_reading(file_id,n_coils,"n_coils")
       if ( n_coils /= 0 ) then
         if ( allocated(I_coils) ) deallocate(I_coils)
@@ -690,6 +763,7 @@ module vacuum
       end if
       
       write(file_handle) current_FB_fact
+      write(file_handle) dZ_axis_integral
       
       if ( (n_coils/=0) .and. (.not. allocated(I_coils)) ) then
         write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
@@ -796,6 +870,7 @@ module vacuum
       call HDF5_array1D_saving(file_id,old_dpsibnd_vec,n_dof_starwall,"old_dpsibnd_vec"//char(0))
       
       call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
+      call HDF5_real_saving(file_id,dZ_axis_integral,'dZ_axis_integral'//char(0))
       if ( (n_coils/=0) .and. (.not. allocated(I_coils)) )  then
         write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
         stop
@@ -905,6 +980,7 @@ module vacuum
     end if
     
     call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(dZ_axis_integral,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     
   end subroutine broadcast_vacuum
 

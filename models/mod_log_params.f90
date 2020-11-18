@@ -503,6 +503,24 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
       write(*,REAL_FMT2) 'wall_resistivity_fact ', wall_resistivity_fact, ' (used only if STARWALL response file_version>=2)'
     end if
     write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time 
+    write(*,REAL_FMT,advance='no') 'a_VFB                 ', a_VFB(1) 
+    write(*,'(10ES12.4)',advance='no') a_VFB(2)
+    write(*,'(10ES12.4)') a_VFB(3)
+    write(*,REAL_FMT,advance='no')   'vert_FB_amp_ts     '
+    do i = 1, n_pf_coils
+      write(*,'(10ES12.4)',advance='no') vert_FB_amp_ts(i)
+    end do
+    write(*,*)
+    write(*,REAL_FMT) 'VFB_tact      ', VFB_tact
+    write(*,CHAR_FMT) 'vert_pos_file         ', trim(vert_pos_file)
+    write(*,REAL_FMT,advance='no')   'I_coils_max     '
+    do i = 1, n_pf_coils
+      write(*,'(10ES12.4)',advance='no') I_coils_max(i)
+    end do
+    write(*,*)
+
+
+    
   end if
   
   if ( manipulate_psi_map(1,1) /= 0.d0 ) &

@@ -308,6 +308,8 @@ module phys_module
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
+
+  logical :: output_prad        !< Output the total radiation power into a file using integrals_3D
   
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor

@@ -16,10 +16,18 @@ use basis_at_gaussian
 use pellet_module
 use mpi_mod
 use mod_import_restart
+use mod_boundary, only: boundary_from_grid
+use mod_integrals3D
+use mod_expression, only: exprs_all_int, init_expr, t_expr_list
+
 implicit none
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
+type (type_bnd_node_list)    :: bnd_node_list
+type (type_bnd_element_list) :: bnd_elm_list
+type (t_expr_list)           :: expr_list
+
 integer :: i, in, i_tor
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
 real*8  :: Rplot(2), Zplot(2)
@@ -95,6 +103,16 @@ if (use_pellet) then
    pellet_volume = total_pellet_volume
    call update_pellet(my_id,node_list,element_list)
 end if
+
+#if (JOREK_MODEL == 500)
+  if (output_prad) then
+    ! --- Determine boundary information from the grid
+    call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+
+    call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
+  endif
+#endif
+
 !------------------lowshape3bis outside
 !Rplot(1) = 3.0
 !Rplot(2) = 3.676

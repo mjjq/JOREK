@@ -105,7 +105,7 @@ real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, drhondx, drhondy
 real*8  :: source_volume, source_pellet, eta_T
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, source_ns, rn0, neut_particles_tot
+real*8  :: local_n_particles_inj, local_n_particles, source_ns, rn0, rn0_corr, neut_particles_tot
 real*8  :: E_tot, E_in, E_out, Zkpar_T, D_prof, ZK_prof, sheath_heatflux
 real*8  :: fact_mu0, fact_flux, fact_part
 real*8  :: hel1, heli, helicity_tot, psi_off, curr, Ip, vn_p0, qn, pflow, kinflow, cond_par, cond_perp
@@ -137,6 +137,7 @@ real*8     :: T_rad                                           ! Temperature used
 real*8     :: coef_rad_1                                      ! Radiation rate parameters
 ! Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg
+integer*8  :: i_phi
 #endif
 
 #ifndef NOMPIVERSION
@@ -266,7 +267,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp           rn0, source_ns,                                                                &
+!$omp           rn0, source_ns, rn0_corr,                                                      &
 #endif
 #if (JOREK_MODEL == 500)
 !$omp           ne_SI, T_rad, LradDrays_T, LradDcont_T, coef_rad_1,                            &
@@ -434,6 +435,7 @@ do ife = ife_min, ife_max
 
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
         rn0    = eq_g(mp,var_rhon,ms,mt)
+        rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0
 #endif
       
 #ifdef fullmhd
@@ -550,9 +552,9 @@ do ife = ife_min, ife_max
    endif
    
    ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-   local_radiation_phi(mp) = local_radiation_phi(mp) + (ne_SI * rn0 * central_density * 1.d20 * LradDrays_T &
+   local_radiation_phi(mp) = local_radiation_phi(mp) + (ne_SI * rn0_corr * central_density * 1.d20 * LradDrays_T &
                              + ne_SI ** 2 * LradDcont_T + ne_SI * frad_bg) * bigR * xjac * wst * delta_phi  
-   local_radiation = local_radiation + (ne_SI * rn0 * central_density * 1.d20 * LradDrays_T &
+   local_radiation = local_radiation + (ne_SI * rn0_corr * central_density * 1.d20 * LradDrays_T &
                              + ne_SI ** 2 * LradDcont_T + ne_SI * frad_bg) * bigR * xjac * wst * delta_phi   
 #endif
  
@@ -1319,7 +1321,16 @@ if (my_id .eq. 0) then
 #if (JOREK_MODEL == 500)
   write(*,'(A,1e14.6,A)') ' Radiation power          : ', total_radiation/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
-
+  if (output_prad) then
+    open(20,file="total_radiation_power.dat",action="write",position="append")
+    write(20,'(1e14.6)') total_radiation/1.d6
+    close (20)
+    open(21,file="total_radiation_phi.dat",action="write",position="append")
+    do i_phi = 1, n_plane
+      write(21,'(1e14.6)') total_radiation_phi(i_phi)/1.d6
+    end do
+    close (21)
+  end if
 #endif
 
   do k = 1, n_var

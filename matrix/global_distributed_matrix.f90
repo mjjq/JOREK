@@ -51,7 +51,7 @@ module global_distributed_matrix
     integer :: n_tor_local           ! local toroidal number
 
     n_tor_local = i_tor_max - i_tor_min + 1 
-    det_row_col =  n_tor_local * n_var * (i_index-1) + n_tor_local * (i_var-1) + i_tor
+    det_row_col =  n_tor_local * n_var * (i_index-1) + n_tor_local * (i_var-1) + i_tor - i_tor_min + 1
     
   end function det_row_col
   

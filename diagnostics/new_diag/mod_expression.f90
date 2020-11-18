@@ -23,7 +23,7 @@ module mod_expression
   use mod_basisfunctions
   use mod_bootstrap_functions
   use mod_poloidal_currents
-  
+  use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
   
   
   
@@ -608,7 +608,8 @@ module mod_expression
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
       fact_resistiv, fact_Er, fact_flux
     real*8  :: coef_rad_1
-    real*8  :: T_rad, LradDrays_T, LradDcont_T
+    real*8  :: T_rad, LradDrays_T, LradDcont_T, Sion_T, Srec_T
+    real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
     
@@ -1344,25 +1345,9 @@ module mod_expression
 #if JOREK_MODEL == 500
 
    T_rad = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
-  !write(*,*) 'T_rad = ', T_rad
-  if ( units == SI_UNITS ) then
 
-   coef_rad_1 = 1.d0
-
-  else if ( units == JOREK_UNITS ) then
-
-   coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density * 1.d20)**2.5d0
-
-  endif
-
-   LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
-
-   LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                    -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                    -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
-
- !write(*,*) 'Lbrem = ', LradDcont_T
- !write(*,*) 'Lrays = ', LradDrays_T
+   call atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                              LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
 
   !--------------------------------------------------------
   ! --- Radiation from background impurity

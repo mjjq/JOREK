@@ -79,7 +79,7 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   end if
 
   if (my_id .eq. 0) write(*,"(A,A)",advance="no") "Reading data from ", trim(filename)
-  open(10,file=trim(filename),status="old",iostat=ierr)
+  open(10,file=trim(filename),status="old",iostat=ierr, action="read")
   if (ierr .ne. 0) then
     write(*,*) my_id, " failed with code ", ierr
     cycle
@@ -147,7 +147,7 @@ do i=1,3,2 ! full, strip
   if (present(directory)) filename = trim(directory) // trim(filename)
   inquire(file=trim(filename), exist=file_exists)
   if (file_exists) then
-    open(10,file=trim(filename),status="old",iostat=ierr)
+    open(10,file=trim(filename),status="old",iostat=ierr, action="read")
     if (ierr .ne. 0) then
       write(*,*) my_id, " failed with code ", ierr
     else
@@ -249,7 +249,7 @@ endif
 
 if (present(GRC_out)) GRC_out = GRC
 if (present(dGRC_dT_out)) dGRC_dT_out = dGRC_dT
-if (present(dGRC_dT_out)) dGRC_dn_out = dGRC_dn
+if (present(dGRC_dn_out)) dGRC_dn_out = dGRC_dn
 
 end subroutine GRC_spl
 

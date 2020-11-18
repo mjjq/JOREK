@@ -635,6 +635,7 @@ module vacuum
             allocate( t_diag_coil_curr(index_start,n_diag_coil) )
             call HDF5_array2D_reading(file_id,t_diag_coil_curr,"diag_coil_curr")
             allocate( diag_coil_curr(index_start+nstep,n_diag_coil) )
+            diag_coil_curr = 0.d0
             diag_coil_curr(1:index_start,:) = t_diag_coil_curr(1:index_start,:)
             deallocate(t_diag_coil_curr)
 
@@ -655,6 +656,7 @@ module vacuum
             allocate( t_pf_coil_curr(index_start,n_pf_coil) )
             call HDF5_array2D_reading(file_id,t_pf_coil_curr,"pf_coil_curr")
             allocate( pf_coil_curr(index_start+nstep,n_pf_coil) )
+            pf_coil_curr  = 0.d0
             pf_coil_curr(1:index_start,:) = t_pf_coil_curr(1:index_start,:)
             deallocate(t_pf_coil_curr)
 
@@ -675,6 +677,7 @@ module vacuum
             allocate( t_rmp_coil_curr(index_start,n_rmp_coil) )
             call HDF5_array2D_reading(file_id,t_rmp_coil_curr,"rmp_coil_curr")
             allocate( rmp_coil_curr(index_start+nstep,n_rmp_coil) )
+            rmp_coil_curr = 0.d0
             rmp_coil_curr(1:index_start,:) = t_rmp_coil_curr(1:index_start,:)
             deallocate(t_rmp_coil_curr)
 
@@ -689,6 +692,7 @@ module vacuum
           if ( allocated(net_tor_wall_curr) ) deallocate(net_tor_wall_curr)
           allocate( t_net_tor_wall_curr(index_start) )
           call HDF5_array1D_reading(file_id,t_net_tor_wall_curr,"net_tor_wall_curr")
+          net_tor_wall_curr = 0.d0
           allocate( net_tor_wall_curr(index_start+nstep) )
           net_tor_wall_curr(1:index_start) = t_net_tor_wall_curr(1:index_start)
           deallocate(t_net_tor_wall_curr)

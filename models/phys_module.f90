@@ -300,6 +300,9 @@ module phys_module
   real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
   real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
 
+  real*8, allocatable  :: xtime_radiation(:)    !< The time history of radiated energy in SI unit
+  real*8, allocatable  :: xtime_rad_power(:)    !< The time history of radiated power in SI unit
+
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: spi_abl_model      !< Ablation model to be used. 0 for constant release rate, 1 for NGS model, 2 for Sergeev formula
 

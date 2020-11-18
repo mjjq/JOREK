@@ -478,6 +478,17 @@ endif
     write(*,'(A,e12.4,2f10.5)') ' *** PELLET PARAMETERS : ',pellet_particles, pellet_R, pellet_Z
   endif
 
+  if (index_start >= 1) then
+    if (allocated(xtime_radiation)) &
+      call tr_deallocate(xtime_radiation,"xtime_radiation",CAT_UNKNOWN)
+    call tr_allocate(xtime_radiation,1,index_start+nstep,"xtime_radiation",CAT_UNKNOWN)
+    read(21)  xtime_radiation(1:index_start)
+    if (allocated(xtime_rad_power)) &
+      call tr_deallocate(xtime_rad_power,"xtime_rad_power",CAT_UNKNOWN)
+    call tr_allocate(xtime_rad_power,1,index_start+nstep,"xtime_rad_power",CAT_UNKNOWN)
+    read(21)  xtime_rad_power(1:index_start)
+  end if
+
   if (using_spi) then
     if (n_spi >= 1) then
 
@@ -1499,6 +1510,17 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
      call HDF5_real_reading(file_id,pellet_Z,"pellet_Z")
      call HDF5_real_reading(file_id,pellet_particles,"pellet_particles")
   endif
+
+  if (index_start >= 1) then
+    if (allocated(xtime_radiation)) &
+      call tr_deallocate(xtime_radiation,"xtime_radiation",CAT_UNKNOWN)
+    call tr_allocate(xtime_radiation,1,index_start+nstep,"xtime_radiation",CAT_UNKNOWN)
+    call HDF5_array1D_reading(file_id,xtime_radiation,"xtime_radiation")
+    if (allocated(xtime_rad_power)) &
+      call tr_deallocate(xtime_rad_power,"xtime_rad_power",CAT_UNKNOWN)
+    call tr_allocate(xtime_rad_power,1,index_start+nstep,"xtime_rad_power",CAT_UNKNOWN)
+    call HDF5_array1D_reading(file_id,xtime_rad_power,"xtime_rad_power")
+  end if
 
   if (using_spi) then
     if (n_spi >= 1) then

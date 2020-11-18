@@ -549,7 +549,11 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_balance: %"time"    "dWmagdt"   "Ohmic"  "Poynting"  "JxB.v"  "magSource"  "sum all losses + sources"  '
     write(LIVE_DATA_HANDLE,*)
  
+#if (JOREK_MODEL == 500)
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dissipative_terms: ', 3
+#else
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dissipative_terms: ', 2
+#endif
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_ylabel: Dissipative powers [W]'
@@ -557,7 +561,12 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms_x2si: ', sqrt_mu0_rho0*1.e3
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_logy: 0'
+#if (JOREK_MODEL == 500)
+    write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms: %"time"         "Ohmic power"   "Parallel viscosity power"  &
+                                                        "Radiated power"'
+#else
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms: %"time"         "Ohmic power"   "Parallel viscosity power" '
+#endif
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_work_terms: ', 2 
@@ -671,7 +680,7 @@ module live_data
       thmwork_tot_t, viscopar_dissip_tot_t, viscopar_flux_t, li3_t,      &
       li3_tot_t, part_src_tot_t, heat_src_tot_t, volume_t, area_t, mag_ener_src_tot, eta_ohmic, eta, &
       dpart_tot_dt, part_flux_Dpar_t, part_flux_Dperp_t, part_flux_vpar_t, part_flux_vperp_t, &
-      dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t, flux_poynting_t 
+      dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t, flux_poynting_t, xtime_rad_power 
 
 
     implicit none
@@ -766,7 +775,13 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@volume: ', xtime(index), volume_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@li3: ', xtime(index), li3_t(index), li3_tot_t(index)
 
+#if (JOREK_MODEL == 500)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms: ', xtime(index), ohmic_tot_t(index), viscopar_dissip_tot_t(index), &
+                                                                  xtime_rad_power(index)
+#else
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms: ', xtime(index), ohmic_tot_t(index), viscopar_dissip_tot_t(index)
+#endif
+
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@mag_energy_src: ', xtime(index), mag_ener_src_tot(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@work_terms: ', xtime(index), Magwork_tot_t(index), thmwork_tot_t(index)
     write(LIVE_DATA_HANDLE,'(A,7ES17.9)') '@bnd_fluxes: ', xtime(index), flux_Pvn_t(index), flux_kinpar_t(index), &

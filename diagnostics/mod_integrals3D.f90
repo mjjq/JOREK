@@ -1312,15 +1312,19 @@ if (my_id .eq. 0) then
 #if (JOREK_MODEL == 500)
   write(*,'(A,1e14.6,A)') ' Radiation power          : ', total_radiation/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
+  if (index_now > 1) then
+    xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation
+  else
+    xtime_radiation(index_now) = t_norm * tstep * total_radiation
+  end if
+  xtime_rad_power(index_now) = total_radiation
+
   if (output_prad) then
-    open(20,file="total_radiation_power.dat",action="write",position="append")
-    write(20,'(1e14.6)') total_radiation/1.d6
-    close (20)
-    open(21,file="total_radiation_phi.dat",action="write",position="append")
+    open(20,file="total_radiation_phi.dat",action="write",position="append")
     do i_phi = 1, n_plane
-      write(21,'(1e14.6)') total_radiation_phi(i_phi)/1.d6
+      write(20,'(1e14.6)') total_radiation_phi(i_phi)/1.d6
     end do
-    close (21)
+    close (20)
   end if
 #endif
 

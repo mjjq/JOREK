@@ -317,7 +317,7 @@ module phys_module
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
 
-  logical :: output_prad        !< Output the total radiation power into a file using integrals_3D
+  logical :: output_prad_phi    !< Output Prad(phi) into a file using integrals_3D
   
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor

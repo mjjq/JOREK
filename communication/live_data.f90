@@ -800,7 +800,7 @@ module live_data
                        + ohmic_tot_t(index-1)*(1.d0 - eta_ohmic/eta) - mag_ener_src_tot(index-1) &
                        - flux_poynting_t(index-1)
 
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 500)
      sum_fluxes_dissip = sum_fluxes_dissip + xtime_rad_power(index-1) + xtime_E_ion_power(index-1)
 #endif
 

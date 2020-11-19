@@ -438,7 +438,7 @@ subroutine preset_parameters
   spi_tor_rot     = .false.
   using_spi       = .false.
 
-  output_prad     = .false.
+  output_prad_phi = .false.
 
 !======================JP ECCD injection parameters
   nu_jec_fast=1.d1

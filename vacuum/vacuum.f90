@@ -169,7 +169,7 @@ module vacuum
   real*8                        :: start_VFB_ts              = 0.d0  !< start time of active VFB during simulation ([JORREK units])
   real*8                        :: vert_FB_amp_ts(MAX_COILS) = 0.d0  !< Tune direction and magnitude of vert feedback for each poloidal field coil ([[jorek-starwall-faqs|eq_FAQs]])
   real*8                        :: I_coils_max(MAX_COILS)    = 1.d99 !< Maximum absolute current in coils ([Ampere])
-  real*8                        :: a_VFB(3),VFB_tact                 !< Parameters for PD controller of vertical Feedback during timestepping, VFB_tact([ms])
+  real*8                        :: vert_FB_gain(3),vert_FB_tact      !< Parameters for PD controller of vertical Feedback during timestepping, vert_FB_tact([JOREK units])
   real*8                        :: dZ_axis_integral                  !< Integrated values of Z deviation from reference value, needs to be exported to restart file
   type(t_Z_axis_ref_ts), target :: Z_axis_ref_ts                     !< Prescribe Z_axis position over time
   
@@ -418,12 +418,12 @@ module vacuum
     PF_pert_start_time   = 1.d99
     psi_offset_freeb     = 0.d0
 
-  ! ---- Parameters for vertical feedbakc (VFB)
-    vert_FB_amp_ts = 0.d0
-    a_VFB(1)              = 1.d0   ! Proportional gain of VFB
-    a_VFB(2)              = 0.d0   ! Derivative gain of VFB
-    a_VFB(3)              = 0.d0   ! Integral gain of VFB
-    VFB_tact              = 1.d-9  ! Tact of VFB controller
+  ! ---- Parameters for vertical feedback (VFB)
+    vert_FB_amp_ts        = 0.d0
+    vert_FB_gain(1)       = 0.d0   ! Proportional gain of VFB
+    vert_FB_gain(2)       = 0.d0   ! Derivative gain of VFB
+    vert_FB_gain(3)       = 0.d0   ! Integral gain of VFB
+    vert_FB_tact          = 1.d-9  ! Tact of VFB controller
     I_coils_max           = 1.d99  ! Maximum absolute value for coils
     
   end subroutine vacuum_preset

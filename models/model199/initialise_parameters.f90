@@ -112,8 +112,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
                 pastix_maxthrd, eta_ohmic, centralize_harm_mat,     &
-                vert_FB_amp_ts, a_VFB, vert_pos_file, VFB_tact,     &
-                I_coils_max
+                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
+                vert_FB_tact, I_coils_max
 
 
 

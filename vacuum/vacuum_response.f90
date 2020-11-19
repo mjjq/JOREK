@@ -2150,20 +2150,24 @@ module vacuum_response
     if ( t_now > start_VFB_ts .and. sum( abs( vert_FB_amp_ts ) ) > 1.e-6 ) then
       z_ref_inter = interpolProf(Z_axis_ref_ts%time, Z_axis_ref_ts%position ,  Z_axis_ref_ts%len, t_now*t_norm*1.d3)
       dZ_axis_integral = dZ_axis_integral + ( Z_axis_t(index_now-1) - z_ref_inter )*tstep*t_norm
-      if ((t_now-t_last)*t_norm*1.d3 .gt. VFB_tact) then 
+
+      if ((t_now-t_last) .gt. vert_FB_tact) then 
         t_last = t_now
         do i =1,n_coils
+
           if (index_now>3) then
-            delta_coil  = a_VFB(1)* ( Z_axis_t(index_now-1) - z_ref_inter )  & 
-                + a_VFB(2) * ( Z_axis_t(index_now-1) - Z_axis_t(index_now-2) )/( tstep*t_norm ) &
-                + a_VFB(3) * dZ_axis_integral
+            delta_coil  = vert_FB_gain(1)* ( Z_axis_t(index_now-1) - z_ref_inter )  & 
+                + vert_FB_gain(2) * ( Z_axis_t(index_now-1) - Z_axis_t(index_now-2) )/( tstep*t_norm ) &
+                + vert_FB_gain(3) * dZ_axis_integral
           else  ! no derivative feedback
-            delta_coil  = a_VFB(1)*( Z_axis_t(index_now-1) - z_ref_inter )  & 
-                + a_VFB(3) * dZ_axis_integral
+            delta_coil  = vert_FB_gain(1)*( Z_axis_t(index_now-1) - z_ref_inter )  & 
+                + vert_FB_gain(3) * dZ_axis_integral
           endif
-          delta_coil  =   vert_FB_amp_ts(i) * delta_coil   
+          delta_coil        =   vert_FB_amp_ts(i) * delta_coil   
           delta_Icoils_0(i) = delta_Icoils_0(i) + delta_coil
+
         end do
+
       endif
     endif
     

@@ -2161,7 +2161,7 @@ module vacuum_response
             delta_coil  = a_VFB(1)*( Z_axis_t(index_now-1) - z_ref_inter )  & 
                 + a_VFB(3) * dZ_axis_integral
           endif
-          delta_coil  =   vert_FB_amp_ts(i) * delta_coil / tstep *1.d3     ! Normalize by dt to be more independent from timestepping
+          delta_coil  =   vert_FB_amp_ts(i) * delta_coil   
           delta_Icoils_0(i) = delta_Icoils_0(i) + delta_coil
         end do
       endif

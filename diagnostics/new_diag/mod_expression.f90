@@ -613,10 +613,10 @@ module mod_expression
     real*8  ::  pres_flux_par, pres_flux_tot, kin_flux_par, kin_flux_tot, neut_part_flux, ExB_norm 
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
-      fact_resistiv, fact_Er, fact_flux
+      fact_resistiv, fact_Er, fact_flux, fact_rad
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
 #if JOREK_MODEL == 500 || JOREK_MODEL == 501
-    real*8  :: coef_rad_1, fact_rad
+    real*8  :: coef_rad_1
     real*8  :: Te_corr_eV, Te_eV
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
     real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T

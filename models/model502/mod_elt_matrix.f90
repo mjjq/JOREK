@@ -803,7 +803,10 @@ do ms=1, n_gauss
        allocate(P_imp(0:imp_adas(1)%n_Z))
        allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
 
-       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+!       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+!                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
+!                              z_TeTe_out=d2Z_imp_dT2)
+       call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
                               p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
                               z_TeTe_out=d2Z_imp_dT2)
 
@@ -827,7 +830,9 @@ do ms=1, n_gauss
        dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
 
      else
-       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+!       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+!                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
+       call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
                                           z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
        E_ion     = 0.
        dE_ion_dT = 0.
@@ -948,7 +953,8 @@ do ms=1, n_gauss
 
        ! Here we are temperarily only considering one impurity species, in the
        ! future maybe a do loop will is needed
-       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+!       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+       call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
 
        Lrad = Lrad * coef_rad_1
 

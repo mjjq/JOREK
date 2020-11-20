@@ -1289,6 +1289,9 @@ if (my_id .eq. 0) then
             
   end do loop_expr
 
+  write(*,*) 'iexpr+1, n_expr, res'
+  write(*,*) iexpr+1, expr_list%n_expr, size(res,1)
+
   ! ---- Print out some data 
   write(*,'(A,3e14.6,A)') ' Time : ',xt,xt*t_norm,t_norm, ' [s]'
   if (use_pellet) then 
@@ -1323,10 +1326,13 @@ if (my_id .eq. 0) then
   write(*,'(A,1e14.6,A)') ' Ionization power         : ', total_E_ion/1.d6, ' [MW]'
   if (index_now > 1) then
     xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation
-  else
+  else if (index_now == 1) then
     xtime_radiation(index_now) = t_norm * tstep * total_radiation
   end if
+  if (index_now > 0) then
   xtime_rad_power(index_now) = total_radiation
+  end if
+  write(*,*) 'DEBUG: xtime_rad'
 
   if (output_prad_phi) then
     open(20,file="total_radiation_phi.dat",action="write",position="append")
@@ -1335,14 +1341,17 @@ if (my_id .eq. 0) then
     end do
     close (20)
   end if
+  write(*,*) 'DEBUG: write prad_phi' 
 
   if (index_now > 1) then
     xtime_E_ion(index_now) = xtime_E_ion(index_now-1) + t_norm * tstep * total_E_ion
-  else
+  else if (index_now == 1) then
     xtime_E_ion(index_now) = t_norm * tstep * total_E_ion
   end if
+  if (index_now > 0) then
   xtime_E_ion_power(index_now) = total_E_ion
-
+  end if
+  write(*,*) 'DEBUG: xtime_E_ion'
 #endif
 
   do k = 1, n_var
@@ -1451,9 +1460,9 @@ if (my_id .eq. 0) then
   endif
 
 endif !--- my_id
+ write(*,*) 'DEBUG: end mod_integrals3D'
+end subroutine int3d_new 
 
-end subroutine int3d_new
-  
 #ifndef NOMPIVERSION
 end module mod_integrals3D
 #endif

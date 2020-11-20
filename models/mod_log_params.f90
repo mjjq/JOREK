@@ -149,6 +149,13 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
+write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
+#ifdef USE_COMPLEX_PRECOND
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif 
+
   write(*,'(1x,a)',advance='no') ' GAUSS_ORDER : '
 #ifdef GAUSS_ORDER
   write(*,*) 'Preprocessor flag has been set! Thus, n_gauss=', n_gauss
@@ -437,6 +444,7 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
   write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
+  write(*,REAL_FMT) 'rho_min               ', rho_min
   write(*,LOGI_FMT) 'use_pellet            ', use_pellet
   write(*,REAL_FMT) 'corr_neg_temp_coef    ', corr_neg_temp_coef(:)
   write(*,REAL_FMT) 'corr_neg_dens_coef    ', corr_neg_dens_coef(:)
@@ -555,6 +563,11 @@ if (my_id == 0) then
   write(*,REAL_FMT) 'central_density       ', central_density
   write(*,REAL_FMT) 'central_mass          ', central_mass
   write(*,REAL_FMT) 'gamma_sheath          ', gamma_sheath
+  write(*,REAL_FMT) 'gamma_stangeby        ', gamma_stangeby
+  write(*,LOGI_FMT) 'vpar_smoothing        ', vpar_smoothing
+  if ( vpar_smoothing ) then
+    write(*,REAL_FMT) 'vpar_smoothing_coef   ', vpar_smoothing_coef(:)
+  end if
   write(*,LOGI_FMT) 'bc_natural_open       ', bc_natural_open
   write(*,LOGI_FMT) 'produce_live_data     ', produce_live_data
   write(*,LOGI_FMT) 'export_for_nemec      ', export_for_nemec
@@ -563,6 +576,7 @@ if (my_id == 0) then
   write(*,INTG_FMT) 'gmres_max_iter        ', gmres_max_iter
   write(*,REAL_FMT) 'gmres tolerance       ', gmres_tol
   write(*,INTG_FMT) 'iter_precon           ', iter_precon
+  write(*,INTG_FMT) 'max_steps_noUpdate    ', max_steps_noUpdate
   write(*,INTG_FMT) 'gmres_m               ', gmres_m
   write(*,REAL_FMT) 'gmres_4               ', gmres_4
   write(*,LOGI_FMT) 'centralize_harm_mat   ', centralize_harm_mat
@@ -570,6 +584,9 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'use_wsmp              ', use_wsmp
   write(*,LOGI_FMT) 'use_pastix            ', use_pastix
   write(*,LOGI_FMT) 'use_strumpack         ', use_strumpack  
+  write(*,LOGI_FMT) 'use_mumps_eq          ', use_mumps_eq
+  write(*,LOGI_FMT) 'use_pastix_eq         ', use_pastix_eq
+  write(*,LOGI_FMT) 'use_strumpack_eq      ', use_strumpack_eq  
   write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot
   write(*,INTG_FMT) 'pastix_maxthrd        ', pastix_maxthrd
@@ -583,6 +600,8 @@ if (my_id == 0) then
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
   write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
+  write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
+  write(*,LOGI_FMT) 'old_deuterium_atomic  ', old_deuterium_atomic
 
   if (jorek_model .eq. 710) then
     write(*,LOGI_FMT) 'parallel_projection   ', parallel_projection
@@ -662,6 +681,12 @@ if (my_id == 0) then
      write(*,REAL_FMT) 't_ns                ',  t_ns
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
+     write(*,REAL_FMT) 'neutral_line_source ', neutral_line_source
+     write(*,REAL_FMT) 'neutral_line_R_start', neutral_line_R_start
+     write(*,REAL_FMT) 'neutral_line_Z_start', neutral_line_Z_start
+     write(*,REAL_FMT) 'neutral_line_R_end  ', neutral_line_R_end
+     write(*,REAL_FMT) 'neutral_line_Z_end  ', neutral_line_Z_end
+     write(*,REAL_FMT) 'neutral_reflection  ', neutral_reflection
 
      !< Additional log for SPI model
    if(using_spi) then

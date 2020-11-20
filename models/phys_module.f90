@@ -32,9 +32,15 @@ module phys_module
   logical :: Wdia                 !< Include diamagnetic flows in viscosity terms? (see [[wdia|here]])
   logical :: U_sheath             !< Use Stangeby BCs for electric potential
   logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
-  real*8  :: gamma_sheath         !< sheath boundary condition on open fieldlines
+  real*8  :: gamma_sheath         !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
+  real*8  :: gamma_stangeby       !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
   real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
+  real*8  :: neutral_reflection   !< reflection coefficient of ions into neutrals (model500)
+  logical :: old_deuterium_atomic !< use old fit to calculate atomic coefficients for D (ionization, recombination, radiation), otherwise a better fit is used
+  logical :: deuterium_adas       !< use OPEN ADAS to calculate ionization, recombination and radiation coeffients for deuterium                        
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
+  logical :: vpar_smoothing       !< apply a smoothing function to smooth jumps in Vpar at B.n=0
+  real*8  :: vpar_smoothing_coef(3) !< coefficients for the smoothing profile of the parallel velocity
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
@@ -75,6 +81,9 @@ module phys_module
   logical :: use_mumps            !< Use Mumps solver
   logical :: use_pastix           !< Use Pastix solver
   logical :: use_strumpack        !< Use Strumpack solver
+  logical :: use_mumps_eq         !< Use Mumps equilibrium solver
+  logical :: use_pastix_eq        !< Use Pastix equilibrium solver
+  logical :: use_strumpack_eq     !< Use Strumpack equilibrium solver  
   logical :: use_wsmp             !< Use WSMP solver
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
 
@@ -147,6 +156,11 @@ module phys_module
   real*8  :: edgeparticlesource        !< Edge particle source amplitude
   real*8  :: edgeparticlesource_psin   !< Position around which the edge particle source is located
   real*8  :: edgeparticlesource_sig    !< Width over which edge particle source extends
+  real*8  :: neutral_line_source(10)   !< neutral inflow source
+  real*8  :: neutral_line_R_start(10)  !< neutral inflow source (starting point of line source)
+  real*8  :: neutral_line_Z_start(10)  !< neutral inflow source
+  real*8  :: neutral_line_R_end(10)    !< neutral inflow source (end point of line source)
+  real*8  :: neutral_line_Z_end(10)    !< neutral inflow source
   real*8  :: heatsource                !< Heat source amplitude
   real*8  :: heatsource_psin           !< Position around which the source is ramped down
   real*8  :: heatsource_sig            !< Width over which the source is ramped down
@@ -482,6 +496,26 @@ module phys_module
   real*8, allocatable :: num_rhon_y2(:)   !< Second derivatives of neutral density profile (\f$ d^2\rhon/d\Psi_N^2 \f$)
   real*8, allocatable :: num_rhon_y3(:)   !< Third derivatives of neutral density profile (\f$ d^3\rhon/d\Psi_N^3 \f$)
   
+  !> @name Numerical input profile for Fprofile
+  character(len=512)  :: Fprofile_file      !< ASCII file the Fprofile is read from.
+  logical             :: num_Fprofile       !< is set true if Fprofile_file /= 'none'
+  integer             :: num_Fprofile_len   !< Number of points in profile
+  real*8, allocatable :: num_Fprofile_x(:)  !< Radial positions of profile points (PsiN values)
+  real*8, allocatable :: num_Fprofile_y0(:) !< Values of FFprime profile
+  real*8, allocatable :: num_Fprofile_y1(:) !< First derivatives of Fprofile profile (\f$ dF/d\Psi_N \f$)
+  real*8, allocatable :: num_Fprofile_y2(:) !< Second derivatives of Fprofile profile (\f$ d^2F/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_Fprofile_y3(:) !< Third derivatives of Fprofile profile (\f$ d^2F/d\Psi_N^2 \f$)
+
+  !> @name Numerical input profile for Fprofile
+  integer, parameter  :: n_Fprofile_internal_max = 300                !< INTERNAL Max Size of F-profile
+  integer             :: n_Fprofile_internal                          !< INTERNAL Size of F-profile
+  real*8              :: Fprofile_internal   (n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration
+  real*8              :: Fprofile_internal_d1(n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration (first derivative)
+  real*8              :: Fprofile_internal_d2(n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration (second derivative)
+  real*8              :: Fprofile_internal_d3(n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration (third derivative)
+  real*8              :: Fprofile_psi_max                             !< INTERNAL max psi_norm of F-profile
+  real*8              :: Fprofile_tolerance                           !< INTERNAL tolerance (in %) for accuracy of F-profile compared to input FFprime
+
   !> @name Analytical input profile for FFprime
   real*8  :: FF_0              !< FF' value in the plasma center
   real*8  :: FF_1              !< FF' value in the SOL
@@ -546,8 +580,9 @@ module phys_module
   logical             :: normalized_velocity_profile !< if true, reads the normalized velocity profile as flux function, else Omega_tor is read as flux function. 
   
   !> @name Global quantities determined in each time step
-  real*8, allocatable :: R_axis_t(:), Z_axis_t(:), psi_axis_t(:), current_t(:), beta_p_t(:),       &
-    beta_t_t(:), beta_n_t(:), density_in_t(:), density_out_t(:), pressure_in_t(:), &
+  real*8, allocatable :: R_axis_t(:), Z_axis_t(:), psi_axis_t(:), R_xpoint_t(:,:), Z_xpoint_t(:,:),           &
+    psi_xpoint_t(:,:), R_bnd_t(:), Z_bnd_t(:), psi_bnd_t(:),                                                  &
+    current_t(:), beta_p_t(:), beta_t_t(:), beta_n_t(:), density_in_t(:), density_out_t(:), pressure_in_t(:), &
     pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:),   &
     E_tot_t(:), Helicity_tot_t(:), Kin_perp_tot_t(:), thermal_tot_t(:), kin_par_tot_t(:), ohmic_tot_t(:),      &
     Wmag_tot_t(:), Ip_tot_t(:), flux_Pvn_t(:), flux_qpar_t(:), dE_tot_dt(:), flux_qperp_t(:), flux_kinpar_t(:), &
@@ -558,10 +593,11 @@ module phys_module
     dnpart_tot_dt(:), npart_tot_t(:), npart_flux_t(:), density_tot_t(:), flux_poynting_t(:)
 
   !> @name gmres parameters
-  integer             :: iter_precon    !< whenever the number of gmres iterations exceeds iter_precon, the preconditioning matrix is updated
-  integer             :: gmres_m        !< gmres restart parameter (dimension)
-  real*8              :: gmres_4        !< see gmres manual (error ratio between preconditioned and non-preconditioned error)
-  real*8              :: gmres_tol      !< the tolerance for the gmres iterations to be seen as converged
+  integer             :: iter_precon        !< whenever the number of gmres iterations exceeds iter_precon, the preconditioning matrix is updated
+  integer             :: max_steps_noUpdate !< whenever the steps without preconditioning matrix update exceeds max_steps_noUpdate, the preconditioning matrix is updated
+  integer             :: gmres_m            !< gmres restart parameter (dimension)
+  real*8              :: gmres_4            !< see gmres manual (error ratio between preconditioned and non-preconditioned error)
+  real*8              :: gmres_tol          !< the tolerance for the gmres iterations to be seen as converged
 
   !> @name Taylor-Galerkin Stabilisation coefficients
   real*8              :: tgnum(n_var)   !< Coefficients for Taylor Galerkin stabilization for each equation separately
@@ -575,6 +611,7 @@ module phys_module
   real*8              :: ZK_prof_neg        !< Heat diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
   real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.)
+  real*8              :: rho_min            !< minimum density
   integer             :: n_tor_fft_thresh   !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
   integer*8           :: fftw_plan          !< Required for FFTW library
   real*8              :: corr_neg_temp_coef(2) !< Parameters used in models/corr_neg.f90

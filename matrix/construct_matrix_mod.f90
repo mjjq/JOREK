@@ -299,42 +299,43 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   use mod_boundary_conditions, only : boundary_conditions
   use mod_fix_axis_nodes, only : fix_nodes_on_axis
   use mod_locate_irn_jcn
+  use mod_integer_types
   !$ use omp_lib
   implicit none
   
 #include "r3_info.h"
 
   ! --- Routine parameters
-  integer, intent(in) :: my_id
-  integer, intent(in) :: MPI_COMM_N
-  integer, intent(in) :: my_id_n
-  integer, intent(in) :: MPI_COMM_MASTER
-  integer, intent(in) :: my_id_master
-  integer, intent(in) :: local_elms(*)
-  integer, intent(in) :: n_local_elms
-  integer, intent(in) :: index_min
-  integer, intent(in) :: index_max
-  integer, intent(in) :: xcase2
-  real*8,  intent(in) :: R_axis
-  real*8,  intent(in) :: Z_axis
-  real*8,  intent(in) :: psi_axis
-  real*8,  intent(in) :: psi_bnd
-  real*8,  intent(in) :: R_xpoint(2)
-  real*8,  intent(in) :: Z_xpoint(2)
-  real*8,  intent(in) :: psi_xpoint(2)
-  logical, intent(in) :: xpoint2
-  integer, intent(in) :: i_tor_min
-  integer, intent(in) :: i_tor_max
-  integer, intent(in) :: n
-  integer, intent(in) :: nz
-  integer, intent(in) :: ndof
-  integer, intent(in) :: n_matrix_block_size
-  logical, intent(in) :: harmonic_matrix
-  real*8,  intent(inout), allocatable :: A_mat(:)
-  real*8,  intent(inout), allocatable :: rhs(:)
-  integer, intent(inout), allocatable :: irn(:)
-  integer, intent(inout), allocatable :: jcn(:)
-  integer, intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+  integer,               intent(in) :: my_id
+  integer,               intent(in) :: MPI_COMM_N
+  integer,               intent(in) :: my_id_n
+  integer,               intent(in) :: MPI_COMM_MASTER
+  integer,               intent(in) :: my_id_master
+  integer,               intent(in) :: local_elms(*)
+  integer,               intent(in) :: n_local_elms
+  integer,               intent(in) :: index_min
+  integer,               intent(in) :: index_max
+  integer,               intent(in) :: xcase2
+  real*8,                intent(in) :: R_axis
+  real*8,                intent(in) :: Z_axis
+  real*8,                intent(in) :: psi_axis
+  real*8,                intent(in) :: psi_bnd
+  real*8,                intent(in) :: R_xpoint(2)
+  real*8,                intent(in) :: Z_xpoint(2)
+  real*8,                intent(in) :: psi_xpoint(2)
+  logical,               intent(in) :: xpoint2
+  integer,               intent(in) :: i_tor_min
+  integer,               intent(in) :: i_tor_max
+  integer(kind=int_all), intent(in) :: n
+  integer(kind=int_all), intent(in) :: nz
+  integer(kind=int_all), intent(in) :: ndof
+  integer,               intent(in) :: n_matrix_block_size
+  logical,               intent(in) :: harmonic_matrix
+  real*8,                intent(inout), allocatable :: A_mat(:)
+  real*8,                intent(inout), allocatable :: rhs(:)
+  integer(kind=int_all), intent(inout), allocatable :: irn(:)
+  integer(kind=int_all), intent(inout), allocatable :: jcn(:)
+  integer(kind=int_all), intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
   
   !--- Internal variables
   type (type_element)               :: element
@@ -342,10 +343,13 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   type (type_element)               :: element_father
   type (type_node)                  :: nodes_father(n_vertex_max)
   real*8,              allocatable  :: rhs_local(:)
-  integer                           :: i_bnd, i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
-  integer                           :: index_node1, index_node2, i_order, k_order, ielm, ierr
-  integer                           :: ijA_position, index_min_loc, index_max_loc
-  integer                           :: index_large_i, index_large_k, ilarge2, vertex(2), direction(2)
+  integer                           :: i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
+  integer(kind=int_all), parameter  :: Int1=1
+  integer                           :: index_node1, index_node2, index_min_loc, index_max_loc
+  integer(kind=int_all)             :: ijA_position
+  integer(kind=int_all)             :: index_large_i, index_large_k, ilarge2
+  integer                           :: i_order, k_order, ielm, ierr
+  integer                           :: vertex(2), direction(2)
   integer                           :: omp_nthreads, omp_tid, n_tor_local
   integer                           :: node_out(n_vertex_max)
   integer                           :: i_father,INODE_FATHER, ios
@@ -376,7 +380,6 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   if (.not. harmonic_matrix) then
     
     ! --- Local min-max indices for the nodes of our local elements (local in the MPI sense)
-    i_bnd = 0
     do i = 1, n_local_elms
       ielm = local_elms(i)
 
@@ -387,9 +390,6 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
         inode = element_list%element(ielm)%vertex(iv)
 
-        if (node_list%node(inode)%boundary .eq. 1) i_bnd = i_bnd + 1
-        if (node_list%node(inode)%boundary .eq. 2) i_bnd = i_bnd + 1
-        if (node_list%node(inode)%boundary .eq. 3) i_bnd = i_bnd + 2
         if (i == 1 .and. iv == 1) then
           index_min_loc = minval(node_list%node(iv)%index)
           index_max_loc = maxval(node_list%node(iv)%index)
@@ -410,14 +410,14 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
   ! --- Memory allocation
   if (allocated(A_mat))   call tr_deallocate(A_mat,"A_mat",CAT_DMATRIX) 
-  call tr_allocate(A_mat,1,nz,"A_mat",  CAT_DMATRIX)
+  call tr_allocate(A_mat,Int1,nz,"A_mat",  CAT_DMATRIX)
   A_mat = 0.0d0
 
   if (allocated(rhs)) call tr_deallocate(rhs,"rhs",CAT_DMATRIX) 
-  call tr_allocate(rhs, 1,ndof,"rhs", CAT_DMATRIX)
+  call tr_allocate(rhs, Int1,ndof,"rhs", CAT_DMATRIX)
   rhs = 0.0d0 
 
-  call tr_allocate(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
+  call tr_allocate(rhs_local, Int1,ndof,"rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
   
   ! --- Declare shared and private variables for omp
@@ -637,7 +637,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
                 call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
-                thread_struct(omp_tid)%synch_buff(:) = 0.d0
+                thread_struct(omp_tid)%synch_buff(1:n_var*n_tor_local*n_var*n_tor_local) = 0.d0
                 do j = 1, n_var * n_tor_local
                   index_ij = n_tor_local * n_var * (n_order+1) * (i-1) + n_tor_local * n_var * (i_order-1) + j   ! index in the ELM matrix
 
@@ -660,7 +660,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
                 !$omp critical
                 A_mat(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) = &
                   A_mat(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) +  &
-                  thread_struct(omp_tid)%synch_buff(:)
+                  thread_struct(omp_tid)%synch_buff(1:n_var*n_tor_local*n_var*n_tor_local)
                 !$omp end critical 
 
               enddo ! n_order+1
@@ -752,7 +752,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
      
   ! --- Memory tracking
   call tr_locvnorms("cm_BCRhs",RHS,ndof)
-  call tr_debug_writei("ndof",ndof)
+  call tr_debug_write("ndof",ndof)
   
   ! --- Timing
   call r3_info_end(r3_info_index_0)

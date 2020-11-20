@@ -822,8 +822,8 @@ do ms=1, n_gauss
 !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
 !                              z_TeTe_out=d2Z_imp_dT2)
        call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
-                              z_TeTe_out=d2Z_imp_dT2)
+                              p_out=P_imp,p_Te_out=dP_imp_dT,z_avg=Z_imp,z_avg_Te=dZ_imp_dT,&
+                              z_avg_TeTe=d2Z_imp_dT2)
 
 
        ! Calculate the ionization potential energy and its derivative wrt. temperature
@@ -849,7 +849,7 @@ do ms=1, n_gauss
 !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
 !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
        call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
+                                          z_avg=Z_imp,z_avg_Te=dZ_imp_dT,z_avg_TeTe=d2Z_imp_dT2)
 
        E_ion     = 0.
        dE_ion_dT = 0.

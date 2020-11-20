@@ -159,7 +159,7 @@ do i=1,3,2 ! full, strip
   if (present(directory)) filename = trim(directory) // trim(filename)
   inquire(file=trim(filename), exist=file_exists)
   if (file_exists) then
-    open(10,file=trim(filename),status="old",iostat=ierr)
+    open(10,file=trim(filename),status="old",iostat=ierr, action="read")
     if (ierr .ne. 0) then
       write(*,*) my_id, " failed with code ", ierr
     else
@@ -269,7 +269,7 @@ endif
 
 if (present(GRC_out)) GRC_out = GRC
 if (present(dGRC_dT_out)) dGRC_dT_out = dGRC_dT
-if (present(dGRC_dT_out)) dGRC_dn_out = dGRC_dn
+if (present(dGRC_dn_out)) dGRC_dn_out = dGRC_dn
 
 end subroutine GRC_spl
 

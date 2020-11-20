@@ -26,6 +26,7 @@ module mod_expression
 #if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   use mod_injection_source, only: radiation_function
 #endif
+  use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
   
   
   implicit none
@@ -616,8 +617,10 @@ module mod_expression
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
 #if JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 502
     real*8  :: coef_rad_1
-    real*8  :: Te_corr_eV, LradDrays_T, LradDcont_T, Te_eV
+    real*8  :: Te_corr_eV, Te_eV
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
+    real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T
+    real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
 #endif
 #if JOREK_MODEL == 501 || JOREK_MODEL == 502
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
@@ -1386,20 +1389,10 @@ module mod_expression
 
 #if JOREK_MODEL == 500
 
-  Te_corr_eV = corr_neg_temp(T0,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
-  Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+   Te_corr_eV = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
 
-  if ( units == SI_UNITS ) then
-    coef_rad_1 = 1.d0
-  else if ( units == JOREK_UNITS ) then
-    coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density * 1.d20)**2.5d0
-  endif
-
-  LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(Te_corr_eV) ! Only Bremsstrahlung contribution
-
-  LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(Te_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                   -60.947d0*exp(-(log10(Te_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                   -24.067d0*exp(-(log10(Te_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+   call atomic_coeff_deuterium(Te_corr_eV, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                              LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
 
   !--------------------------------------------------------
   ! --- Radiation from background impurity

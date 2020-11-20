@@ -619,6 +619,8 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
   write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
+  write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
+  write(*,LOGI_FMT) 'old_deuterium_atomic  ', old_deuterium_atomic
 
   if (jorek_model .eq. 710) then
     write(*,LOGI_FMT) 'parallel_projection   ', parallel_projection

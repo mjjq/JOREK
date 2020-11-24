@@ -547,8 +547,8 @@ do ms=1, n_gauss
       call current(xpoint2, xcase2, R,Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,current_source_Jp(ms,mt))
       current_source_Jp(ms,mt) = - current_source_Jp(ms,mt)
       ! --- Poloidal current sources
-      current_source_JR(ms,mt) = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_Z * dF_dpsi / R
-      current_source_JZ(ms,mt) = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_R * dF_dpsi / R
+      current_source_JR(ms,mt) = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_Z(ms,mt) * dF_dpsi / R
+      current_source_JZ(ms,mt) = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_R(ms,mt) * dF_dpsi / R
     endif
     call sources(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
     ! --- Bootstrap current 

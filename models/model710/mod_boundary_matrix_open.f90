@@ -75,7 +75,9 @@ integer    :: n_tor_local
 
 ! --- Time integration parameters
 theta = time_evol_theta
-zeta  = time_evol_zeta
+!zeta  = time_evol_zeta
+! change zeta for variable dt
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
 ! --- Flag to switch Mach-1 between boundary_conditions and boundary_matrix_open
 Mach1 = 0.d0

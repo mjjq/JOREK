@@ -24,7 +24,7 @@ module mod_expression
   use mod_bootstrap_functions
   use mod_poloidal_currents
 #if (JOREK_MODEL == 501)
-  use mod_injection_source, only: radiation_function
+  use mod_injection_source
 #endif
   
   

@@ -409,12 +409,20 @@ module mod_injection_source
     real*8, dimension(0:cor%n_Z):: p_Te       !< gradient of distribution of charge states (sum = 1) to Te and Ne
     integer :: iz
     
-    call cor%interp_linear(density,temperature,rad_out=rad, rad_p_out=rad_p, rad_Te_out=drad_dT)
+    call cor%interp_linear(density,temperature,rad_out=rad)
     Lrad = rad / (10.0**density) ! This is to recover the radiation coefficient
-    rad_p = rad_p / (10.0**density) ! This is to recover the radiation coefficient
     if (present(dLrad_dTe)) then
       call cor%interp_linear(density,temperature,p_out=p,p_Te_out=p_Te)
-      dLrad_dTe = dot_product(p_Te,rad_p) + dot_product(p,drad_dT)
+      dradRB_dT = ad%PRB%interp_grad_T(density,temperature) !Loglog gradient still!!!
+      dradLT_dT = ad%PLT%interp_grad_T(density,temperature) !Loglog gradient still!!!
+      do iz=0,ad%n_Z
+        radRB     = ad%PRB%interp_linear(iz,density,temperature)
+        radLT     = ad%PLT%interp_linear(iz,density,temperature)
+        rad_p(iz)   = radRB + radLT
+        drad_dT(iz) = dradRB_dT(iz) * radRB / (10.0**temperature) &
+                      + dradLT_dT(iz) * radLT / (10.0**temperature) ! Convert to normal gradient
+      enddo ! radiation emitted by atoms at level iz
+      if (present(dLrad_dTe)) dLrad_dTe = dot_product(p_Te,rad_p) + dot_product(p,drad_dT)
     end if
 
   end subroutine radiation_function_linear

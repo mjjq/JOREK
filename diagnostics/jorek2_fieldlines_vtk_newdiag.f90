@@ -162,8 +162,8 @@ allocate(Xfield(n_large,n_lines),Yfield(n_large,n_lines),Zfield(n_large,n_lines)
 n_scalars=3
 allocate(scalar_names(n_scalars))
 allocate(Tfield(n_large,n_lines,n_scalars))
-scalar_names = (/ 'Te_eV','ne_m-3','nimp_m-3'/)
-expr_list = exprs((/'Te','ne','nimp'/), 3)
+scalar_names = (/'Te_eV','ne_m-3','nimp_m-3'/)
+expr_list = exprs((/'Te  ','ne  ','nimp'/), 3)
 
 R_all    = 0.d0; Z_all    = 0.d0; C_all = 0.d0
 R_strike = 0.d0; Z_strike = 0.d0; P_strike = 0.d0; C_strike = 0.d0

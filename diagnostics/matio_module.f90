@@ -1,6 +1,7 @@
 !> Set of subroutines for custom diagnistics
 module matio_module
   use hdf5_io_module
+  use iso_c_binding, only: c_double
   implicit none
 
   logical :: fileexist=.false.

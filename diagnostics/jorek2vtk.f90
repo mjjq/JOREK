@@ -126,9 +126,6 @@ real*8  :: stmp(200)
 real*8  :: Rp_start, Zp_start, Rp_end, Zp_end
 real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
 
-! --- Load deuterium ADAS data if required
-if (deuterium_adas) ad_deuterium =  read_adf11(0,'96_h')
-
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
                       include_bootstrap, include_psi_norm, include_electric_field, include_Jpol, RphiZ_coords

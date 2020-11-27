@@ -46,7 +46,6 @@ contains
 !> are not present.
 function read_adf11(my_id,suffix, directory) result(ad)
 use constants
-!use mpi_mod
 character(len=*), intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li)
 character(len=*), intent(in), optional :: directory
 type(ADF11_all), target :: ad !< OpenAdas data type
@@ -59,8 +58,6 @@ character*120 :: filename
 integer, intent(in) :: my_id
 integer :: i, ierr, n_d, n_T, k, q, i_n
 logical :: file_exists
-
-!call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr) !< just used to communicate my_id
 
 if (my_id .eq. 0) then
   write(*,'(A)') '*********************************'

@@ -2326,10 +2326,14 @@ module vacuum_response
     integer,             intent(in)    :: my_id
 
     ! --- Local variables
-    integer :: i, j, ierr, global_index, ntasks
-    integer :: count=1
+    integer              :: i, j, ierr, global_index, ntasks
+    integer              :: count=1
+    real*8, allocatable  :: pot_tmp(:)
 
     if ( allocated(tripot_w) ) deallocate(tripot_w); allocate( tripot_w(sr%npot_w) )    
+    if ( allocated(pot_tmp)  ) deallocate(pot_tmp);  allocate(  pot_tmp(sr%npot_w) )    
+    tripot_w = 0.d0
+    pot_tmp  = 0.d0
     tripot_w = 0.0
 
     if ( allocated(wall_curr) ) then

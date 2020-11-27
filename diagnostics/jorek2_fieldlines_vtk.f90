@@ -10,7 +10,6 @@ use mod_neighbours
 use mod_import_restart
 use equil_info, only : get_psi_n, ES
 use mod_interp
-use mod_new_diag
 
 implicit none
 
@@ -32,11 +31,6 @@ character :: buffer*80, lf*1, str1*12, str2*12, str3*24
 integer :: ivtk, i_var, my_id, ierr
 logical :: psi_theta
 real*8  :: coord_min(2), coord_max(2), coord_out(2)
-
-type(t_pol_pos_list) :: pol_pos_list
-type(t_tor_pos_list) :: tor_pos_list
-type(t_expr_list)    :: expr_list
-real*8, allocatable :: result(:,:,:,:), res0d(:)
 
 namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max
 
@@ -95,9 +89,6 @@ call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .
 
 call initialise_basis                                       ! define the basis functions at the Gaussian points
 
-! --- Initialize the new_diag framework and print some information (.true.)
-call init_new_diag(.true.)
-
 allocate(element_neighbours(4,element_list%n_elements))
 
 element_neighbours = 0
@@ -146,8 +137,6 @@ allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines)
 allocate(R_all(n_lines),Z_all(n_lines),C_all(n_lines))
 
 allocate(Xfield(n_large,n_lines),Yfield(n_large,n_lines),Zfield(n_large,n_lines),Nfield(n_lines),Tfield(n_large,n_lines))
-
-expr_list = exprs((/'T'/), 1)
 
 R_all    = 0.d0; Z_all    = 0.d0; C_all = 0.d0
 R_strike = 0.d0; Z_strike = 0.d0; P_strike = 0.d0; C_strike = 0.d0
@@ -238,13 +227,7 @@ do i =n_start, n_end
       Zfield(1,i_line) = R_start * sin(total_phi)
       Yfield(1,i_line) = Z_start
 
-!      call var_value(i_elm,6,s_line,t_line,total_phi,value_out)
-      call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, ielm=i_elm, s=s_line, t=t_line)
-      call create_tor_pos(tor_pos_list, ierr, phi=total_phi)
-      call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
-      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
-      value_out = res0d(1)
-
+      call var_value(i_elm,6,s_line,t_line,total_phi,value_out)
       Tfield(1,i_line) = value_out
       
       i_field = 1
@@ -475,12 +458,7 @@ do i =n_start, n_end
 	    Yfield(i_field,i_line) = Z_in
 	    Nfield(i_line)         = Nfield(i_line) + 1
 
-!            call var_value(i_elm,6,s_line,t_line,total_phi,value_out)
-            call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, ielm=i_elm, s=s_line, t=t_line)
-            call create_tor_pos(tor_pos_list, ierr, phi=total_phi)
-            call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
-            call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
-            value_out = res0d(1)
+            call var_value(i_elm,6,s_line,t_line,total_phi,value_out)
 	    
 	    Tfield(i_field,i_line) = value_out
 

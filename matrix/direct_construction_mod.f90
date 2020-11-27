@@ -62,7 +62,6 @@ contains
     irn_jcn_harm, irn_harm, jcn_harm, i_tor_min, i_tor_max,                           &                         
     n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm)
 
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
     call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min_harm(my_id+1), index_max_harm(my_id+1), & 
       i_tor_min, i_tor_max, irn_harm, jcn_harm, n_matrix_block_size_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm) 

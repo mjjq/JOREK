@@ -2343,11 +2343,9 @@ module vacuum_response
         j = i + sr%ncoil
         if ( (j >= sr%s_ww%ind_start) .and. (j <= sr%s_ww%ind_end) ) then
           pot_tmp(i) = sum(sr%s_ww%loc_mat(j - global_index,:) * wall_curr(:))
-          tripot_w(i) = sum(sr%s_ww%loc_mat(j - global_index,:) * wall_curr(:))
         end if  
       end do
      
-      tripot_w(1) = 0.d0
     end if
 
     call MPI_AllREDUCE(MPI_IN_PLACE,pot_tmp,size(pot_tmp),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -2362,7 +2360,6 @@ module vacuum_response
     !!! Net current potential contribution to be added soon!
 
     deallocate(pot_tmp) 
-    call MPI_AllREDUCE(MPI_IN_PLACE,tripot_w,size(tripot_w),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
   end subroutine reconstruct_triangle_potentials
   

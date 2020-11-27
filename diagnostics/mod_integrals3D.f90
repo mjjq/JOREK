@@ -1330,15 +1330,11 @@ if (my_id .eq. 0) then
   write(*,'(A,1e14.6,A)') ' Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Ionization power         : ', total_E_ion/1.d6, ' [MW]'
 
-  if (.not. allocated(xtime_radiation)) &
-      call tr_allocate(xtime_radiation,1,nstep,"xtime_radiation",CAT_UNKNOWN)
   if (index_now > 1) then
     xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation
   else if (index_now == 1) then
     xtime_radiation(index_now) = t_norm * tstep * total_radiation
   end if
-  if (.not. allocated(xtime_rad_power)) &
-      call tr_allocate(xtime_rad_power,1,nstep,"xtime_rad_power",CAT_UNKNOWN)
   if (index_now > 0) then
   xtime_rad_power(index_now) = total_radiation
   end if
@@ -1351,15 +1347,11 @@ if (my_id .eq. 0) then
     close (20)
   end if
 
-  if (.not. allocated(xtime_E_ion)) &
-      call tr_allocate(xtime_E_ion,1,nstep,"xtime_E_ion",CAT_UNKNOWN)
   if (index_now > 1) then
     xtime_E_ion(index_now) = xtime_E_ion(index_now-1) + t_norm * tstep * total_E_ion
   else if (index_now == 1) then
     xtime_E_ion(index_now) = t_norm * tstep * total_E_ion
   end if
-  if (.not. allocated(xtime_E_ion_power)) &
-      call tr_allocate(xtime_E_ion_power,1,nstep,"xtime_E_ion_power",CAT_UNKNOWN)
   if (index_now > 0) then
   xtime_E_ion_power(index_now) = total_E_ion
   end if

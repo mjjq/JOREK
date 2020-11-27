@@ -233,6 +233,8 @@ if (my_id .eq. 0) then
 
   call MPI_PACK(nimp_bg,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
+  call MPI_PACK(output_prad_phi,        1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+
   call MPI_PACK(gmres_4,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(gmres_tol,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(tgnum,              n_var,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -776,6 +778,9 @@ if (my_id .ne. 0) then
     call MPI_UNPACK(buffer,bufsize,position,tor_frequency,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,ns_phi_rotate,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   end if
+
+  call MPI_UNPACK(buffer,bufsize,position,output_prad_phi,        1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
+
   call MPI_UNPACK(buffer,bufsize,position,nimp_bg,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,gmres_4,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)

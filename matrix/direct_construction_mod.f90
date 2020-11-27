@@ -1,6 +1,7 @@
 module direct_construction_mod
 
 implicit none
+  logical, private                   :: matrix_structure_initialized = .false.  
 
 contains  
 
@@ -35,7 +36,7 @@ contains
   integer(kind=int_all)              :: ndof 
   integer                            :: i_tor_min, i_tor_max 
   integer                            :: i, ierr
-      
+    
   ! --- Memory allocation 
   if (allocated(local_elms_harm)) call tr_deallocate(local_elms_harm,"local_elms_harm",CAT_DMATRIX) 
   if (allocated(index_min_harm))  call tr_deallocate(index_min_harm,"index_min_harm",CAT_DMATRIX) 
@@ -56,27 +57,21 @@ contains
   call distribute_nodes_elements(my_id,m_cpu,n_cpu,node_list,element_list, direct_construction, & 
     local_elms_harm, n_local_elms_harm, ndof, index_min_harm,index_max_harm)
 
-  call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary, &
-    local_elms_harm,n_local_elms_harm,index_min_harm(my_id+1),                                  & 
-    index_max_harm(my_id+1), ijA_index_harm, ijA_size_harm,                                     &
-    irn_jcn_harm, irn_harm, jcn_harm, i_tor_min, i_tor_max,                           &                         
-    n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm)
+  if ( .not. matrix_structure_initialized ) then
+    matrix_structure_initialized = .true.
 
-  if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-    call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min_harm(my_id+1), index_max_harm(my_id+1), & 
-      i_tor_min, i_tor_max, irn_harm, jcn_harm, n_matrix_block_size_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm) 
+    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary, &
+      local_elms_harm,n_local_elms_harm,index_min_harm(my_id+1),                                  & 
+      index_max_harm(my_id+1), ijA_index_harm, ijA_size_harm,                                     &
+      irn_jcn_harm, irn_harm, jcn_harm, i_tor_min, i_tor_max,                           &                         
+      n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm)
+
+    if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
+      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min_harm(my_id+1), index_max_harm(my_id+1), & 
+        i_tor_min, i_tor_max, irn_harm, jcn_harm, n_matrix_block_size_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm) 
+    endif
   endif
  
-!--- This part makes some of the JCN entries zero and introduces an error in the
-!----column scaling 
-!  ! --- Memory allocation
-!  if (allocated(irn_harm))  call tr_deallocate(irn_harm,"irn_harm",CAT_DMATRIX)
-!  call tr_allocate(irn_harm,Int1,nz_harm,"irn_harm",  CAT_DMATRIX)
-! 
-!  if (allocated(jcn_harm))  call tr_deallocate(jcn_harm,"jcn_harm",CAT_DMATRIX)
-!  call tr_allocate(jcn_harm,Int1,nz_harm,"jcn_harm",  CAT_DMATRIX) 
-!--- This part makes some of the JCN entries zero and introduces an error in the
-!----column scaling 
 
   call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master,                &
     local_elms_harm, n_local_elms_harm, index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint2,&

@@ -4,7 +4,7 @@ program coupling_function
 use particle_tracer
 use mod_particle_diagnostics
 use mpi
-use mod_elements
+use mod_atomic_elements
 use mod_particle_io
 use mod_event
 use mod_project_particles
@@ -124,7 +124,8 @@ end select
 
 ! Set up feedback
 jorek_feedback = new_projection(sim%fields%node_list, sim%fields%element_list, &
-                     smoothing = 0d-3, smoothing2 = 1d-7, &
+                     filter    = 0d-3, filter_hyper    = 1d-7, filter_parallel   = 0.d0, &
+                     filter_n0 = 0d-3, filter_hyper_n0 = 1d-7, filter_parallel_n0 = 0.d0, &
                      fractional_digits = 9,  to_vtk=.FALSE., to_h5 = .FALSE., basename='projections')
 
 allocate(jorek_feedback%rhs(n_order+1, n_vertex_max, sim%fields%element_list%n_elements, n_tor, 3))
@@ -132,7 +133,8 @@ allocate(jorek_feedback%rhs(n_order+1, n_vertex_max, sim%fields%element_list%n_e
 jorek_feedback%rhs = 0.d0
 
 project_density = new_projection(sim%fields%node_list, sim%fields%element_list, &
-                      smoothing = 0d-4, smoothing2 = 1d-8, &
+                      filter    = 0d-4, filter_hyper    = 1d-8, filter_parallel    = 0.d0, &
+                      filter_n0 = 0d-4, filter_hyper_n0 = 1d-8, filter_parallel_n0 = 0.d0, &
                       f=[proj_f(proj_one, group = 1)], &
                       fractional_digits = 9,  to_vtk=.TRUE., to_h5=.FALSE., basename='density', nsub=5)
 
@@ -166,7 +168,7 @@ subroutine main_particle_loop(jorek_stepper, jorek_feedback, project_density, ti
 use particle_tracer
 use mod_particle_diagnostics
 use mpi
-use mod_elements
+use mod_atomic_elements
 use mod_particle_io
 use mod_event
 use mod_project_particles
@@ -187,6 +189,7 @@ logical            :: use_ionisation, use_cx, use_sputtering
 type(projection), target                          :: jorek_feedback, project_density
 type(jorek_timestep_action), target               :: jorek_stepper
 
+real*8,allocatable :: feedback_rhs(:,:,:,:,:)
 real*8    :: oldtime, step_rest_time, particle_step_time, particle_start_time, diag_time
 real*8    :: rho_norm, t_norm, v_norm, E_norm, M_norm, N_norm, tstep_si
 real*8    :: kinetic_energy, ion_energy
@@ -271,22 +274,28 @@ do while (.not. sim%stop_now)
 
   jorek_feedback%rhs_gather_time = jorek_feedback%rhs_gather_time + n_steps * timesteps
 
+  allocate(feedback_rhs,source=jorek_feedback%rhs)
+
+  jorek_feedback%rhs = 0.d0
+  feedback_rhs       = 0.d0
+  
   call with(sim, counter)
  
   select type (particles => sim%groups(1)%particles)
   type is (particle_kinetic_leapfrog)
 
     !$omp parallel do default(none) &
-    !$omp schedule(dynamic,10) &
+    !$omp schedule(dynamic,10)      &
     !$omp shared(sim, particles, n_particles, n_steps, timesteps, rng, particle_start_time, &
     !$omp rho_norm, t_norm, v_norm, E_norm, M_norm, N_norm, &
-    !$omp use_cx, use_ionisation, use_sputtering, &
-    !$omp jorek_feedback, CENTRAL_DENSITY, CENTRAL_MASS) &
-    !$omp private(i_rng, i,j,k,l,m, t, E, B, psi, U, rz_old, st_old, &
+    !$omp use_cx, use_ionisation, use_sputtering,           &
+    !$omp CENTRAL_DENSITY, CENTRAL_MASS)                    &
+    !$omp private(i_rng, i,j,k,l,m, t, E, B, psi, U, rz_old, st_old,                        &
     !$omp i_elm_old, n_e, T_e, ion_rate, ion_prob, ion_ran, ion_source, ion_energy, kinetic_energy,& 
-    !$omp R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, HH, HH_s, HH_t, HZ, index_lm, &
-    !$omp ifail, CX_rate, CX_prob, CX_source, CX_energy, v, v_E, v_v, &
-    !$omp particle_source, velocity_par_source, energy_source, v_temp, K_eV, T_eV, cx_ran)  
+    !$omp R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, HH, HH_s, HH_t, HZ, index_lm,                 &
+    !$omp ifail, CX_rate, CX_prob, CX_source, CX_energy, v, v_E, v_v,                       &
+    !$omp particle_source, velocity_par_source, energy_source, v_temp, K_eV, T_eV, cx_ran)  &
+    !$omp reduction(+:feedback_rhs)
     do j=1,size(particles,1)
 
 !      i_rng = 1
@@ -374,7 +383,6 @@ do while (.not. sim%stop_now)
 
         endif
 
-
         energy_source       = ion_source * ion_energy + cx_source * cx_energy
 
         particle_source     = ion_source * sim%groups(1)%mass * ATOMIC_MASS_UNIT
@@ -382,7 +390,6 @@ do while (.not. sim%stop_now)
         velocity_par_source = ion_source * dot_product(B, particles(j)%v)          * sim%groups(1)%mass * ATOMIC_MASS_UNIT &
                             
                             + CX_source  * dot_product(B, particles(j)%v - v_temp) * sim%groups(1)%mass * ATOMIC_MASS_UNIT 
-
                                
         particles(j)%v = v_temp 
 
@@ -404,13 +411,9 @@ do while (.not. sim%stop_now)
             v_v = HH(l,m) * sim%fields%element_list%element(i_elm_old)%size(l,m) * velocity_par_source * t_norm / m_norm
         
             do i_tor=1,n_tor
-              !TODO: test the performance impact of omp atomic here, and if necessary
-              ! use a reduction operator (though this is nontrivial since we also need to include the existing value, since not
-              ! every event is the jorek timestep
-              !$omp atomic
-              jorek_feedback%rhs(m,l,i_elm_old,i_tor,1) = jorek_feedback%rhs(m,l,i_elm_old,i_tor,1) + HZ(i_tor) * v
-              jorek_feedback%rhs(m,l,i_elm_old,i_tor,2) = jorek_feedback%rhs(m,l,i_elm_old,i_tor,2) + HZ(i_tor) * v_E
-              jorek_feedback%rhs(m,l,i_elm_old,i_tor,3) = jorek_feedback%rhs(m,l,i_elm_old,i_tor,3) + HZ(i_tor) * v_v
+              feedback_rhs(m,l,i_elm_old,i_tor,1) = feedback_rhs(m,l,i_elm_old,i_tor,1) + HZ(i_tor) * v
+              feedback_rhs(m,l,i_elm_old,i_tor,2) = feedback_rhs(m,l,i_elm_old,i_tor,2) + HZ(i_tor) * v_E
+              feedback_rhs(m,l,i_elm_old,i_tor,3) = feedback_rhs(m,l,i_elm_old,i_tor,3) + HZ(i_tor) * v_v
             enddo
 
           enddo
@@ -430,6 +433,9 @@ do while (.not. sim%stop_now)
 
   end select
 
+  jorek_feedback%rhs = feedback_rhs
+
+  deallocate(feedback_rhs)
 
   call MPI_REDUCE(n_lost_ion, n_lost_ion_all, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   

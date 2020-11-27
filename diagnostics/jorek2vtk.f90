@@ -16,8 +16,8 @@ use mod_boundary
 use mod_vtk
 use mod_interp
 use mod_poloidal_currents
-use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
-
+use mod_openadas , only : read_adf11
+use mod_atomic_coeff_deuterium, only : ad_deuterium , atomic_coeff_deuterium
 implicit none
 
 type (type_node_list)   ,     pointer :: node_list
@@ -125,6 +125,9 @@ integer :: iplot, i_elm
 real*8  :: stmp(200)
 real*8  :: Rp_start, Zp_start, Rp_end, Zp_end
 real*8  :: Rp, Zp, Rmin, Rmax, Zmin, Zmax, s_out, t_out, R_out, Z_out
+
+! --- Load deuterium ADAS data if required
+if (deuterium_adas) ad_deuterium =  read_adf11(0,'96_h')
 
 namelist /vtk_params/ nsub, i_tor, i_plane, without_n0_mode, SI_units, &
                       include_fluxes, include_neo, include_magnetic_field, include_velocity_field,&
@@ -1141,6 +1144,7 @@ do i=1,element_list%n_elements
 enddo  ! n_elements
 
 #if (JOREK_MODEL == 500)
+  if (deuterium_adas)  ad_deuterium =  read_adf11(0,'96_h') !< for both include_radiation and include_neutral_dens
   if (include_radiation) then
     do i=1,nnos
 
@@ -1157,7 +1161,7 @@ enddo  ! n_elements
       T_rad   = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
       call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) !< add scalars(i,5) as last optional parameter for density dependence
 
 
       eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0) &

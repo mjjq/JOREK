@@ -28,7 +28,7 @@ module mod_injection_source
 
 
 
-  subroutine inj_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,  &
+  subroutine inj_source(ns_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,  &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,                  &
                         JET_MGI,ASDEX_MGI,central_density,central_mass)
 
@@ -36,7 +36,7 @@ module mod_injection_source
   !  This subroutine computes the neutral density source for a realistic Deuterium
   !  MGI in JET (if mgi_timedependent is .t.).
   !  If mgi_timedependent is .f., this routine computes a constant source in time
-  !  where the main parameter is mgi_amplitude
+  !  where the main parameter is ns_amplitude
   !  More details in the JOREK wiki or by asking A.Fil or E.Nardon
   !=================================================================================
 
@@ -78,7 +78,7 @@ module mod_injection_source
     real*8, intent(in)  :: P_Dmv
     real*8, intent(in)  :: t_now
     real*8, intent(in)  :: t_mgi
-    real*8, intent(in)  :: mgi_amplitude
+    real*8, intent(in)  :: ns_amplitude
     real*8, intent(in)  :: mgi_R
     real*8, intent(in)  :: mgi_Z
     real*8, intent(in)  :: mgi_phi
@@ -242,7 +242,7 @@ module mod_injection_source
 
       else 
 
-        rhon_source = mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
+        rhon_source = ns_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
                       /  (V_mgi * 1.d20 * central_density)
 
       endif

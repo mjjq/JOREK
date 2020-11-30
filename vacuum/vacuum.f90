@@ -162,16 +162,16 @@ module vacuum
   !> Parameters for the feedback on the vertical position during timestepping
   character(len=256)  :: vert_pos_file = 'None'
   type :: t_Z_axis_ref_ts     
-    integer                :: len          !< Number of points in numerical time trace.
+    integer                :: len = 0      !< Number of points in numerical time trace.
     real*8, allocatable    :: time(:)      !< time-values of numerical time trace
     real*8, allocatable    :: position(:)  !< evolution of vertical axis position over time
   end type t_Z_axis_ref_ts
-  real*8                        :: start_VFB_ts              = 0.d0  !< start time of active VFB during simulation ([JORREK units])
-  real*8                        :: vert_FB_amp_ts(MAX_COILS) = 0.d0  !< Tune direction and magnitude of vert feedback for each poloidal field coil ([[jorek-starwall-faqs|eq_FAQs]])
-  real*8                        :: I_coils_max(MAX_COILS)    = 1.d99 !< Maximum absolute current in coils ([Ampere])
-  real*8                        :: vert_FB_gain(3),vert_FB_tact      !< Parameters for PD controller of vertical Feedback during timestepping, vert_FB_tact([JOREK units])
-  real*8                        :: dZ_axis_integral                  !< Integrated values of Z deviation from reference value, needs to be exported to restart file
-  type(t_Z_axis_ref_ts), target :: Z_axis_ref_ts                     !< Prescribe Z_axis position over time
+  real*8                        :: start_VFB_ts                  !< start time of active VFB during simulation ([JORREK units])
+  real*8                        :: vert_FB_amp_ts(MAX_COILS)     !< Tune direction and magnitude of vert feedback for each poloidal field coil ([[jorek-starwall-faqs|eq_FAQs]])
+  real*8                        :: I_coils_max(MAX_COILS)        !< Maximum absolute current in coils ([Ampere])
+  real*8                        :: vert_FB_gain(3),vert_FB_tact  !< Parameters for PD controller of vertical Feedback during timestepping, vert_FB_tact([JOREK units])
+  real*8                        :: dZ_axis_integral              !< Integrated values of Z deviation from reference value, needs to be exported to restart file
+  type(t_Z_axis_ref_ts), target :: Z_axis_ref_ts                 !< Prescribe Z_axis position over time
   
   
   contains
@@ -360,7 +360,7 @@ module vacuum
   subroutine check_Z_axis_profile()
     integer :: i
     ! Check if the time evolution of the vertical magnetic axis makes sense
-    if (sum(abs(vert_FB_amp_ts(:)))>1.d-6) then
+    if (sum(abs(vert_FB_amp_ts(1:n_pf_coils)))>1.d-6) then
       if  (maxval(abs(Z_axis_ref_ts%position(:))) > 1.d10) then
         write(*,*) 'ERROR: target Z_axis beyond Machine limits'
         stop
@@ -377,11 +377,6 @@ module vacuum
         write(*,*) 'ERROR: The length of the profile for the axis target position must be larger than 1'
         stop
       endif
-      open(66, file='Z_prof_evolution.dat',action='write')
-      do i = 1,Z_axis_ref_ts%len
-        write(66,*) Z_axis_ref_ts%time(i),  Z_axis_ref_ts%position(i)
-      enddo
-      close(66)
     endif
   end subroutine check_Z_axis_profile
   
@@ -419,13 +414,12 @@ module vacuum
     psi_offset_freeb     = 0.d0
 
   ! ---- Parameters for vertical feedback (VFB)
-    vert_FB_amp_ts        = 0.d0
-    vert_FB_gain(1)       = 0.d0   ! Proportional gain of VFB
-    vert_FB_gain(2)       = 0.d0   ! Derivative gain of VFB
-    vert_FB_gain(3)       = 0.d0   ! Integral gain of VFB
+    start_VFB_ts          = 0.d0
+    vert_FB_amp_ts        = 0.d0   ! amplification factor (of PF coil)
+    vert_FB_gain(:)       = 0.d0   ! Proportional, derivative, integral gain of VFB controller
     vert_FB_tact          = 1.d-9  ! Tact of VFB controller
     I_coils_max           = 1.d99  ! Maximum absolute value for coils
-    
+    dZ_axis_integral      = 0.d0   ! Integrated error the Z-axis
   end subroutine vacuum_preset
   
   

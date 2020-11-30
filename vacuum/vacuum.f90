@@ -218,7 +218,7 @@ module vacuum
         
         call readProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, &
           coil_curr_time_trace(i)%len, coil_curr_input%curr_file)
-        
+
       else if ( coil_curr_input%curr_expr /= 'none' ) then ! ... analytical Python expression
         
         ! --- Python script
@@ -253,7 +253,7 @@ module vacuum
         ! --- Read the result
         call readProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, &
           coil_curr_time_trace(i)%len, './jorek_curr_expr_'//trim(adjustl(s))//'.dat')
-        
+
         ! --- Delete temporary files
         call system('rm ./jorek_curr_expr_'//trim(adjustl(s))//'.py ./jorek_curr_expr_'//trim(adjustl(s))//'.dat')
         
@@ -373,7 +373,7 @@ module vacuum
         write(*,*) 'ERROR: The Z_axis time trace does not start at time 0. Check your input file'
         stop
       endif
-      if (Z_axis_ref_ts%len .le. 1) then        
+      if (Z_axis_ref_ts%len .lt. 2) then        
         write(*,*) 'ERROR: The length of the profile for the axis target position must be larger than 1'
         stop
       endif

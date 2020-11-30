@@ -34,25 +34,22 @@ module profiles
     
     integer :: left, mid, right
     real*8  :: aux1, aux2
-
-    if (len .eq. 1) then
-      interpolProf = y(1)
-    else
-      left  = 1
-      right = len
-      do
-        if ( right == left + 1 ) exit
-        mid = (left + right) / 2
-        if ( x(mid) >= x0 ) then
-          right = mid
-        else
-          left = mid
-        end if
-      end do
-      aux1  = (x0 - x(left)) / (x(right) - x(left))
-      aux2  = (1. - aux1)
-      interpolProf = y(left) * aux2 + y(right) * aux1
-    endif
+    
+    left  = 1
+    right = len
+    do
+      if ( right == left + 1 ) exit
+      mid = (left + right) / 2
+      if ( x(mid) >= x0 ) then
+        right = mid
+      else
+        left = mid
+      end if
+    end do
+    aux1  = (x0 - x(left)) / (x(right) - x(left))
+    aux2  = (1. - aux1)
+    interpolProf = y(left) * aux2 + y(right) * aux1
+    
   end function interpolProf
   
   

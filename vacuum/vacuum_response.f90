@@ -2108,7 +2108,7 @@ module vacuum_response
   subroutine coil_current_source(my_id)
     
     use constants
-    use phys_module, only: t_now, Z_axis_t, index_now, tstep, sqrt_mu0_rho0
+    use phys_module, only: t_now, Z_axis_t, index_now, tstep
     use profiles
     use mpi_mod    
 
@@ -2121,7 +2121,7 @@ module vacuum_response
     real*8, save, allocatable :: delta_Icoils_0(:)
     real*8, save              :: t_last
     logical, save             :: initialized=.false.
-    real*8                    :: t_norm, delta_coil, z_ref_inter
+    real*8                    ::  delta_coil, z_ref_inter
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
 
     ! --- Calculate the difference between the input file coil currents and the ones coming from the restart file
@@ -2146,10 +2146,9 @@ module vacuum_response
 
     ! -- During timestepping apply vertical feedback by the PF coils which were activated
     ! Add the feedback current to the difference from the restart file
-    t_norm =  sqrt_mu0_rho0
     if ( t_now > start_VFB_ts .and. sum( abs( vert_FB_amp_ts ) ) > 1.e-6 ) then
-      z_ref_inter = interpolProf(Z_axis_ref_ts%time, Z_axis_ref_ts%position ,  Z_axis_ref_ts%len, t_now*t_norm*1.d3)
-      dZ_axis_integral = dZ_axis_integral + ( Z_axis_t(index_now-1) - z_ref_inter )*tstep*t_norm
+      z_ref_inter = interpolProf(Z_axis_ref_ts%time, Z_axis_ref_ts%position ,  Z_axis_ref_ts%len, t_now)
+      dZ_axis_integral = dZ_axis_integral + ( Z_axis_t(index_now-1) - z_ref_inter )*tstep
 
       if ((t_now-t_last) .gt. vert_FB_tact) then 
         t_last = t_now
@@ -2157,7 +2156,7 @@ module vacuum_response
 
           if (index_now>3) then
             delta_coil  = vert_FB_gain(1)* ( Z_axis_t(index_now-1) - z_ref_inter )  & 
-                + vert_FB_gain(2) * ( Z_axis_t(index_now-1) - Z_axis_t(index_now-2) )/( tstep*t_norm ) &
+                + vert_FB_gain(2) * ( Z_axis_t(index_now-1) - Z_axis_t(index_now-2) )/( tstep ) &
                 + vert_FB_gain(3) * dZ_axis_integral
           else  ! no derivative feedback
             delta_coil  = vert_FB_gain(1)*( Z_axis_t(index_now-1) - z_ref_inter )  & 

@@ -49,7 +49,7 @@ call fields%interp_PRZ(time,i_elm,&
 #if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
       [5,var_Te],& ! electron temperature
 #else
-      [5,var_Ti],& ! electron temperature + ion temperature (assumed equal)
+      [5,var_T],& ! electron temperature + ion temperature (assumed equal)
 #endif
           2,s,t,phi,P,P_s,P_t,P_phi,P_time,R,R_s,R_t,Z,Z_s,Z_t)
 

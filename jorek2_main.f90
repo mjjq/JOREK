@@ -728,7 +728,7 @@ required = 0
     call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()
-    call read_Z_axis_profile()  !! Only if freeb_equil = .t.???
+    call read_Z_axis_profile() 
     if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
   end if
   

@@ -2146,15 +2146,16 @@ module vacuum_response
 
     ! -- During timestepping apply vertical feedback by the PF coils which were activated
     ! Add the feedback current to the difference from the restart file
-    if ( t_now > start_VFB_ts .and. sum( abs( vert_FB_amp_ts ) ) > 1.e-6 ) then
+    if ( t_now>start_VFB_ts .and. sum( abs(vert_FB_amp_ts(1:n_pf_coils)) )>1.e-6 .and. sr%i_tor(1) ==  1 ) then
       z_ref_inter = interpolProf(Z_axis_ref_ts%time, Z_axis_ref_ts%position ,  Z_axis_ref_ts%len, t_now)
       dZ_axis_integral = dZ_axis_integral + ( Z_axis_t(index_now-1) - z_ref_inter )*tstep
 
-      if ((t_now-t_last) .gt. vert_FB_tact) then 
+      if ( (t_now-t_last)>vert_FB_tact ) then 
+        if (my_id==0) write(*,*) 'Vertical feedback active'
         t_last = t_now
         do i =1,n_coils
 
-          if (index_now>3) then
+          if ( index_now>3 ) then
             delta_coil  = vert_FB_gain(1)* ( Z_axis_t(index_now-1) - z_ref_inter )  & 
                 + vert_FB_gain(2) * ( Z_axis_t(index_now-1) - Z_axis_t(index_now-2) )/( tstep ) &
                 + vert_FB_gain(3) * dZ_axis_integral
@@ -2166,7 +2167,6 @@ module vacuum_response
           delta_Icoils_0(i) = delta_Icoils_0(i) + delta_coil
 
         end do
-
       endif
     endif
     

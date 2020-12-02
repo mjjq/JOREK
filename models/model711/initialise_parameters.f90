@@ -171,16 +171,16 @@ if (my_id .eq. 0) then
   ns_tor_norm = ns_deltaphi * PI**0.5 * ERF(PI/ns_deltaphi)
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
-  !if (gamma_e_stangeby > -1.d89) then
-  !  gamma_sheath_e = (gamma-1.d0) * (0.5d0*gamma_e_stangeby - 1.d0)
-  !else
-  !  gamma_e_stangeby = 2.d0 * ( gamma_sheath_e / (gamma-1.d0) + 1.d0 )
-  !end if
-  !if (gamma_i_stangeby > -1.d89) then
-  !  gamma_sheath_i = (gamma-1.d0) * (0.5d0*gamma_i_stangeby - 1.d0)
-  !else
-  !  gamma_i_stangeby = 2.d0 * ( gamma_sheath_i / (gamma-1.d0) + 1.d0 )
-  !end if
+  if (gamma_e_stangeby > -1.d89) then
+    gamma_sheath_e = (gamma-1.d0) * (0.5d0*gamma_e_stangeby - 1.d0)
+  else
+    gamma_e_stangeby = 2.d0 * ( gamma_sheath_e / (gamma-1.d0) + 1.d0 )
+  end if
+  if (gamma_i_stangeby > -1.d89) then
+    gamma_sheath_i = (gamma-1.d0) * (0.5d0*gamma_i_stangeby - 1.d0)
+  else
+    gamma_i_stangeby = 2.d0 * ( gamma_sheath_i / (gamma-1.d0) + 1.d0 )
+  end if
 
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)

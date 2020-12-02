@@ -53,8 +53,13 @@ subroutine preset_parameters
 
   bc_natural_flux    = .false.! boundary conditions for flux surface boundaries (2 and 3)
   bc_natural_open    = .false. ! use sheath (Bohm) boundary conditions
+
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid) in the JOREK definition
   gamma_stangeby     = -1.d99 ! sheath transmission factor (single fluid) given by Stangeby
+  gamma_sheath_e     = 2.33d0 ! sheath transmission factor (electron fluid) in the JOREK definition
+  gamma_e_stangeby   = -1.d99 ! sheath transmission factor (electron fluid) given by Stangeby
+  gamma_sheath_i     = 1.0d0  ! sheath transmission factor (ion fluid) in the JOREK definition
+  gamma_i_stangeby   = -1.d99 ! sheath transmission factor (ion fluid) given by Stangeby
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
   

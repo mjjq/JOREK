@@ -21,8 +21,6 @@ use mod_bootstrap_functions
 
 implicit none
 
-include 'mpif.h'
-
 ! --- Input Variables
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)

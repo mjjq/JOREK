@@ -71,8 +71,7 @@ contains
     integer               :: i, in, iv, inode, k
     integer               :: ielm
     integer               :: index_node, index_node2
-    integer(kind=int_all) :: ijA_position, ijA_position2
-    integer               :: ilarge2, ilarge_v(n_var), ilarge_vs(n_var)
+    integer(kind=int_all) :: ijA_position, ijA_position2, ilarge2, ilarge_v(n_var), ilarge_vs(n_var)
     integer               :: ierr
     real*8                :: R, R_s, R_t, R_mid, R_cnt
     real*8                :: Z, Z_s, Z_t, Z_mid, Z_cnt

@@ -698,7 +698,7 @@ do ms=1, n_gauss
         ZK_prof = ZK_prof_neg
      endif
      if (T0 .lt. ZK_par_neg_thresh) then
-        ZKpar_T = ZK_par_neg
+        ZKpar_T = max(ZKpar_T, ZK_par_neg)
      endif
    
      Dn0x = D_neutral_x      

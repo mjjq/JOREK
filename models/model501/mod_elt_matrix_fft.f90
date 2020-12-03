@@ -691,9 +691,8 @@ do ms=1, n_gauss
      if (r0 .lt. D_prof_neg_thresh)  then
         D_prof  = D_prof_neg
         D_prof_imp = D_prof_neg
-        D_prof  = D_prof_neg
         D_par   = D_prof_neg
-        D_par_imp   = D_prof_neg
+        D_par_imp = D_prof_neg
      endif
      if (T0 .lt. ZK_prof_neg_thresh) then
         ZK_prof = ZK_prof_neg

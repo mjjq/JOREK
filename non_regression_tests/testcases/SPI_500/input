@@ -259,5 +259,7 @@
  ! --- Background impurity density (/m^3)
  nimp_bg = 0. 
 
+ old_deuterium_atomic = .true.
+
  /
 

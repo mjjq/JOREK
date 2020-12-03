@@ -50,6 +50,8 @@ program JOREK2
   use basis_at_gaussian, only: initialise_basis
   use mod_expression, only: exprs_all_int, init_expr
   use mod_integrals3D
+  use mod_openadas, only : read_adf11
+  use mod_atomic_coeff_deuterium, only: ad_deuterium 
 #ifdef USE_STRUMPACK
   use strumpack_module
 #endif
@@ -764,6 +766,9 @@ required = 0
   end do
   mumps_par%n = n_AA
 
+  ! --- Load deuterium ADAS data if required
+  if (deuterium_adas) ad_deuterium =  read_adf11(my_id,'96_h') 
+
    ! --- Initialize FFTW
 #ifdef USE_FFTW
   call dfftw_plan_dft_r2c_1d(fftw_plan,n_plane,in_fft,out_fft,FFTW_PATIENT)
@@ -892,7 +897,8 @@ required = 0
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1)) 
+      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1),& 
+           1, n_tor, irn_glob, jcn_glob, n_matrix_block_size, ijA_index, ijA_size, irn_jcn) 
     endif
 
     if (use_mumps) then
@@ -1007,7 +1013,7 @@ required = 0
     call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms,   &
          n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,&
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, 1, n_tor,   &
-         n_glob, nz_glob, ndof_glob, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
+         n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
          irn_jcn, .false.)
 
     call clck_time_barrier(t1)
@@ -1049,7 +1055,7 @@ required = 0
          call clck_time_barrier(t0) 
          ! --- Direct construction of harmonic matrix
          call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
-              node_list, element_list, bnd_elm_list, xpoint, xcase, freeboundary, .true.)
+              node_list, element_list, bnd_elm_list, bnd_node_list, xpoint, xcase, freeboundary, .true.)
          call MPI_Barrier(MPI_COMM_WORLD,ierr)
          call clck_time_barrier(t1) 
 

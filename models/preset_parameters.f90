@@ -58,6 +58,8 @@ subroutine preset_parameters
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
   
+  deuterium_adas        = .false. 
+  old_deuterium_atomic  = .false. 
   mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
   Vpar_smoothing        = .false. ! smooth the transitions of Vpar positive/negavtive at B.n
   Vpar_smoothing_coef   = (/0.01d0, 0.d0, 0.d0 /) !(/ 0.01d0, 0.016d0, 0.00575446347d0/)
@@ -397,8 +399,10 @@ subroutine preset_parameters
   
   equil              = .true.               ! compute equilibrium
   
-  parallel_projection= .true.               ! Full-MHD: use B-projection instead of Phi-projection for 3rd Mom.equation (on Up)
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+
+  eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
+  tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
 
   fix_axis_nodes     = .false.              !< Fix t-derivative on axis to avoid noise)
   

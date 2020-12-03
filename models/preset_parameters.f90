@@ -60,7 +60,10 @@ subroutine preset_parameters
   gamma_stangeby     = -1.d99 ! sheath transmission factor (single fluid) given by Stangeby
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
+  imp_reflection     = 0.d0   ! reflection coefficient for (fluid) impurities
   
+  deuterium_adas        = .false. 
+  old_deuterium_atomic  = .false. 
   mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
   Vpar_smoothing        = .false. ! smooth the transitions of Vpar positive/negavtive at B.n
   Vpar_smoothing_coef   = (/0.01d0, 0.d0, 0.d0 /) !(/ 0.01d0, 0.016d0, 0.00575446347d0/)
@@ -173,7 +176,10 @@ subroutine preset_parameters
   ZK_par_max   = 1.d20
   D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par        = 0.d0
-  
+  D_perp_imp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  D_par_imp        = 0.d0
+  D_diff_flag      = .false.
+
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
   ZK_prof_neg        = 1.d-5
@@ -290,6 +296,7 @@ subroutine preset_parameters
   Fprofile_file      = 'none'
   ffprime_file       = 'none'
   d_perp_file        = 'none'
+  d_perp_imp_file    = 'none'
   zk_perp_file       = 'none'
   zk_e_perp_file     = 'none'
   zk_i_perp_file     = 'none'
@@ -354,8 +361,10 @@ subroutine preset_parameters
   
   equil              = .true.               ! compute equilibrium
   
-  parallel_projection= .true.               ! Full-MHD: use B-projection instead of Phi-projection for 3rd Mom.equation (on Up)
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+
+  eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
+  tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
 
   fix_axis_nodes     = .false.              !< Fix t-derivative on axis to avoid noise)
   

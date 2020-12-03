@@ -28,7 +28,7 @@ module mod_injection_source
 
 
 
-  subroutine inj_source(mgi_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,  &
+  subroutine inj_source(ns_amplitude,mgi_R,mgi_Z,mgi_phi,mgi_radius,mgi_sig,mgi_deltaphi,mgi_tor_norm,  &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_mgi,L_tube,R,Z,phi,rhon_source,t_now,                  &
                         JET_MGI,ASDEX_MGI,central_density,central_mass)
 
@@ -36,7 +36,7 @@ module mod_injection_source
   !  This subroutine computes the neutral density source for a realistic Deuterium
   !  MGI in JET (if mgi_timedependent is .t.).
   !  If mgi_timedependent is .f., this routine computes a constant source in time
-  !  where the main parameter is mgi_amplitude
+  !  where the main parameter is ns_amplitude
   !  More details in the JOREK wiki or by asking A.Fil or E.Nardon
   !=================================================================================
 
@@ -78,7 +78,7 @@ module mod_injection_source
     real*8, intent(in)  :: P_Dmv
     real*8, intent(in)  :: t_now
     real*8, intent(in)  :: t_mgi
-    real*8, intent(in)  :: mgi_amplitude
+    real*8, intent(in)  :: ns_amplitude
     real*8, intent(in)  :: mgi_R
     real*8, intent(in)  :: mgi_Z
     real*8, intent(in)  :: mgi_phi
@@ -242,7 +242,7 @@ module mod_injection_source
 
       else 
 
-        rhon_source = mgi_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
+        rhon_source = ns_amplitude * mgi_pol_shape * mgi_tor_shape * t_norm &
                       /  (V_mgi * 1.d20 * central_density)
 
       endif
@@ -363,7 +363,7 @@ module mod_injection_source
 
     real*8                      :: rad!Local density multiplied radiation function
     real*8                      :: radRB, dradRB_dT, dradRB_dn, radLT, dradLT_dT, dradLT_dn
-    real*8, dimension(ad%n_Z)   :: rad_p, drad_dT, drad_dn
+    real*8, dimension(0:ad%n_Z) :: rad_p, drad_dT, drad_dn
     real*8, dimension(0:cor%n_Z):: p          !< charge state distribution
     real*8, dimension(0:cor%n_Z):: p_Te, p_Ne !< gradient of distribution of charge states (sum = 1) to Te and Ne
     integer :: iz
@@ -372,17 +372,59 @@ module mod_injection_source
     Lrad = rad / (10.0**density) ! This is to recover the radiation coefficient
     if (present(dLrad_dTe) .or. present(dLrad_dNe)) then
       call cor%interp(density,temperature,p_out=p,p_Te_out=p_Te,p_Ne_out=p_Ne)
-      do iz=1,ad%n_Z
+      do iz=0,ad%n_Z
         call ad%PRB%interp(iz,density,temperature,GRC_out=radRB,dGRC_dT_out=dradRB_dT,dGRC_dn_out=dradRB_dn)
         call ad%PLT%interp(iz,density,temperature,GRC_out=radLT,dGRC_dT_out=dradLT_dT,dGRC_dn_out=dradLT_dn)
         rad_p(iz)   = radRB + radLT
         drad_dT(iz) = dradRB_dT + dradLT_dT
         drad_dn(iz) = dradRB_dn + dradLT_dn
       enddo ! radiation emitted by atoms at level iz
-       if (present(dLrad_dTe)) dLrad_dTe = dot_product(p_Te(1:ad%n_Z),rad_p) + dot_product(p(1:ad%n_Z),drad_dT)
-       if (present(dLrad_dNe)) dLrad_dTe = dot_product(p_Ne(1:ad%n_Z),rad_p) + dot_product(p(1:ad%n_Z),drad_dn)
+      if (present(dLrad_dTe)) dLrad_dTe = dot_product(p_Te,rad_p) + dot_product(p,drad_dT)
+      if (present(dLrad_dNe)) dLrad_dTe = dot_product(p_Ne,rad_p) + dot_product(p,drad_dn)
     end if
 
   end subroutine radiation_function
+
+  subroutine radiation_function_linear(ad,cor, density, temperature, Lrad, dLrad_dTe)
+
+    use phys_module
+    use mod_openadas
+    use mod_coronal
+    use mod_interp_splinear
+
+    implicit none
+
+    type(adf11_all), intent(in) :: ad
+    type(coronal), intent(in)   :: cor
+    real*8, intent(in)          :: density !< log10 density in m^-3
+    real*8, intent(in)          :: temperature !< log10 electron temperature in K
+
+    real*8, intent(out)         :: Lrad ! value of radiation function
+    real*8, intent(out), optional :: dLrad_dTe ! derivatives of radiation functioni
+
+    real*8                      :: rad!Local density multiplied radiation function
+    real*8                      :: radRB, radLT
+    real*8, dimension(0:ad%n_Z) :: rad_p, drad_dT, dradRB_dT, dradLT_dT
+    real*8, dimension(0:cor%n_Z):: p          !< charge state distribution
+    real*8, dimension(0:cor%n_Z):: p_Te       !< gradient of distribution of charge states (sum = 1) to Te and Ne
+    integer :: iz
+    
+    call cor%interp_linear(density,temperature,rad_out=rad)
+    Lrad = rad / (10.0**density) ! This is to recover the radiation coefficient
+    if (present(dLrad_dTe)) then
+      call cor%interp_linear(density,temperature,p_out=p,p_Te_out=p_Te)
+      dradRB_dT = ad%PRB%interp_grad_T(density,temperature) !Loglog gradient still!!!
+      dradLT_dT = ad%PLT%interp_grad_T(density,temperature) !Loglog gradient still!!!
+      do iz=0,ad%n_Z
+        radRB     = ad%PRB%interp_linear(iz,density,temperature)
+        radLT     = ad%PLT%interp_linear(iz,density,temperature)
+        rad_p(iz)   = radRB + radLT
+        drad_dT(iz) = dradRB_dT(iz) * radRB / (10.0**temperature) &
+                      + dradLT_dT(iz) * radLT / (10.0**temperature) ! Convert to normal gradient
+      enddo ! radiation emitted by atoms at level iz
+      if (present(dLrad_dTe)) dLrad_dTe = dot_product(p_Te,rad_p) + dot_product(p,drad_dT)
+    end if
+
+  end subroutine radiation_function_linear
 
 end module mod_injection_source

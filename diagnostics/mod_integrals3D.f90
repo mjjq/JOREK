@@ -23,7 +23,7 @@ module mod_integrals3D
   use mod_neutral_source, only: neutral_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all 
 #endif
 #if (JOREK_MODEL == 501)
-  use mod_injection_source, only: inj_source, radiation_function, total_n_particles, total_n_particles_inj, &
+  use mod_injection_source, only: inj_source, radiation_function, radiation_function_linear, total_n_particles, total_n_particles_inj, &
                                   total_n_particles_inj_all 
 #endif
   use equil_info, only : get_psi_n, ES
@@ -110,7 +110,7 @@ real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, d
 real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, source_ns, neut_particles_tot
-real*8  :: E_tot, E_in, E_out, Zkpar_T, D_prof, ZK_prof, gamma_sheath_stangeby, sheath_heatflux
+real*8  :: E_tot, E_in, E_out, Zkpar_T, D_prof, ZK_prof, sheath_heatflux
 real*8  :: fact_mu0, fact_flux, fact_part
 real*8  :: hel1, heli, helicity_tot, psi_off, curr, Ip, vn_p0, qn, pflow, kinflow, cond_par, cond_perp
 real*8  :: kinpar_flux, qn_par, qn_perp, mag_work_tot, mag_src_tot, mag_source_tot
@@ -244,8 +244,6 @@ delta_phi     = 2.d0 * PI / float(n_plane) / float(n_period)
 psi_axis   = ES%psi_axis;        R_axis = ES%R_axis;        Z_axis = ES%Z_axis
 psi_xpoint = ES%psi_xpoint;    R_xpoint = ES%R_xpoint;    Z_xpoint = ES%Z_xpoint 
 psi_bnd    = ES%psi_bnd
-
-gamma_sheath_stangeby = 2.d0 * ( gamma_sheath/(gamma-1.d0) + 1.d0 )
 
 ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
@@ -655,7 +653,8 @@ do ife = ife_min, ife_max
 
         if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
           Lrad = 0.0
-          call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
+          !call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
+          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
           if (Lrad < 0.) Lrad = 0.
         else
           Lrad = 0.
@@ -1252,7 +1251,7 @@ beta_t       = 2.d0 * pressure_in / volume / Bgeo**2           * (GAMMA-1)/fact_
 beta_n       = 100.d0 * beta_t * Bgeo/current_MA * sqrt(area/PI)
 li3          = 2.d0 * mag_in /0.5  /( current_in**2 * R_geo ) * fact_mu0
 li3_tot      = 2.d0 * mag_tot/0.5  /(current_tot**2 * R_geo ) * fact_mu0
-sheath_heatflux      =  gamma_sheath_stangeby * (gamma-1)/(2.d0*gamma) * vn_p0
+sheath_heatflux =  gamma_stangeby * (gamma-1)/(2.d0*gamma) * vn_p0 ! the factor comes to obtain n T_e v from vn_p0
 
 ! --- Externally calculated quantities
 ! --- Halo currents

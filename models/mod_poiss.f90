@@ -15,6 +15,7 @@ use vacuum_equilibrium, only: vacuum_equil
 use mod_coicsr
 use mpi_mod
 use mod_basisfunctions
+    use mod_integer_types
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
 use iso_c_binding
@@ -82,6 +83,8 @@ integer(kind=spm_int_t), dimension(:), pointer             :: pastix_rowptr
 real(kind=c_double)    , dimension(:), pointer             :: pastix_values
 #endif
 
+integer(kind=int_all), parameter   :: Int0=0
+integer(kind=int_all), parameter   :: Int1=1
 
 
 if (my_id == 0) then
@@ -382,17 +385,17 @@ if (my_id == 0) then
 #ifndef USE_PASTIX6
   ! -- For PaStiX solver before version 6.x
     call pastix_fortran_checkmatrix(check_data, MPI_COMM_SELF, &
-       1, pastix_sym, 1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -1, 1)
+       Int1, pastix_sym, Int1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -Int1, Int1)
 
     mumps_par%NZ = mumps_par%JCN(mumps_par%N+1) - 1
     if (mumps_par%NZ /= nnz ) then
        write (*,*) "associated (mumps_par%IRN)", associated (mumps_par%IRN)
        if (associated (mumps_par%IRN)) call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN",CAT_DMATRIX)
        if (associated (mumps_par%A)  ) call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
-       call tr_allocatep(mumps_par%IRN,1,mumps_par%NZ,"mumps_par%IRN",CAT_DMATRIX)
-       call tr_allocatep(mumps_par%A,1,mumps_par%NZ,"mumps_par%A",CAT_DMATRIX)
+       call tr_allocatep(mumps_par%IRN,Int1,mumps_par%NZ,"mumps_par%IRN",CAT_DMATRIX)
+       call tr_allocatep(mumps_par%A,Int1,mumps_par%NZ,"mumps_par%A",CAT_DMATRIX)
        call pastix_fortran_checkmatrix_end(check_data, &
-          1, mumps_par%IRN,mumps_par%A, 1)
+          Int1, mumps_par%IRN,mumps_par%A, Int1)
     endif
   
     if (   allocated(pastix_perm_vars) .and.     &
@@ -404,8 +407,8 @@ if (my_id == 0) then
          & size(pastix_iperm_vars) /= mumps_par%N) then 
        call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
     end if
-    if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
-    if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
+    if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,Int1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
+    if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,Int1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
 
  
 #else
@@ -456,7 +459,7 @@ if (my_id == 0) then
   
     pastix_data = 0
     call pastix_fortran(pastix_data,MPI_COMM_SELF,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
   
     pastix_iparm(2) = 1
     pastix_iparm(3) = 7
@@ -502,7 +505,7 @@ if (my_id == 0) then
 ! pastix_iparm(IPARM_THREAD_COMM_MODE)      = PastixThreadFunneled
 !#endif
 
-    call pastixInit(pastix_data, 0, pastix_iparm, pastix_dparm)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
+    call pastixInit(pastix_data, Int0, pastix_iparm, pastix_dparm)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
 #endif
  
  
@@ -513,7 +516,7 @@ if (my_id == 0) then
 #ifndef USE_PASTIX6
     ! -- For PaStiX solver before version 6.x
     call pastix_fortran(pastix_data,MPI_COMM_SELF, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
-       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #else
     ! -- For PaStiX solver version 6.x
     call pastix_task_analyze(pastix_data,pastix_spm,pastix_info)
@@ -523,8 +526,8 @@ if (my_id == 0) then
     allocate(pastix_rhs(pastix_spm%n))
     pastix_rhs_ptr = c_loc(pastix_rhs)
     pastix_rhs = mumps_par%rhs
-    call pastix_task_solve(pastix_data,1,pastix_x_ptr,pastix_spm%n,pastix_info)
-    call pastix_task_refine(pastix_data,pastix_spm%n,1,pastix_rhs_ptr,pastix_spm%n,pastix_x_ptr,pastix_spm%n,pastix_info)
+    call pastix_task_solve(pastix_data,Int1,pastix_x_ptr,pastix_spm%n,pastix_info)
+    call pastix_task_refine(pastix_data,pastix_spm%n,Int1,pastix_rhs_ptr,pastix_spm%n,pastix_x_ptr,pastix_spm%n,pastix_info)
     deallocate(pastix_rhs)
 
     call pastixFinalize(pastix_data)

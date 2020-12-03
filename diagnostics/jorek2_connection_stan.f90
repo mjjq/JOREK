@@ -10,9 +10,9 @@ program jorek2_poincare
   use mod_import_restart
   use mod_neighbours
   use mod_interp
+  use mpi
   
   implicit none
-  include 'mpif.h'
   
   ! --- Poincare data
   real*8,allocatable	:: rp(:), zp(:), R_all(:), Z_all(:), C_all(:), C_minus(:), C_plus(:)

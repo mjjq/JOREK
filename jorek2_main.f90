@@ -50,6 +50,8 @@ program JOREK2
   use basis_at_gaussian, only: initialise_basis
   use mod_expression, only: exprs_all_int, init_expr
   use mod_integrals3D
+  use mod_openadas, only : read_adf11
+  use mod_atomic_coeff_deuterium, only: ad_deuterium 
 #ifdef USE_STRUMPACK
   use strumpack_module
 #endif
@@ -772,6 +774,9 @@ required = 0
     n_AA = max(n_AA,node_list%node(inode)%index(4))  
   end do
   mumps_par%n = n_AA
+
+  ! --- Load deuterium ADAS data if required
+  if (deuterium_adas) ad_deuterium =  read_adf11(my_id,'96_h') 
 
    ! --- Initialize FFTW
 #ifdef USE_FFTW

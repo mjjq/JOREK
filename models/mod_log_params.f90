@@ -415,6 +415,15 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   else
     write(*,CHAR_FMT) 'D_perp_file           ', trim(D_perp_file)
   end if
+#if (JOREK_MODEL == 501)
+  write(*,REAL_FMT) 'D_par_imp               ', D_par_imp
+  if ( .not. num_d_perp ) then
+    write(*,REAL_FMT) 'D_perp_imp            ', D_perp_imp(1:6)
+  else
+    write(*,CHAR_FMT) 'D_perp_imp_file       ', trim(D_perp_imp_file)
+  end if
+  write(*,LOGI_FMT) 'D_diff_flag           ', D_diff_flag
+#endif
   write(*,REAL_FMT) 'particlesource        ', particlesource
   write(*,REAL_FMT) 'particlesource_psin   ', particlesource_psin
   write(*,REAL_FMT) 'particlesource_sig    ', particlesource_sig
@@ -612,10 +621,13 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
   write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
+  write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
+  write(*,LOGI_FMT) 'old_deuterium_atomic  ', old_deuterium_atomic
 
   if (jorek_model .eq. 710) then
-    write(*,LOGI_FMT) 'parallel_projection   ', parallel_projection
     write(*,LOGI_FMT) 'Mach1_openBC          ', Mach1_openBC
+    write(*,LOGI_FMT) 'eta_ARAZ_on           ', eta_ARAZ_on
+    write(*,LOGI_FMT) 'tauIC_ARAZ_on         ', tauIC_ARAZ_on
   endif
 
   write(*,LOGI_FMT) 'fix_axis_nodes        ',fix_axis_nodes 
@@ -698,6 +710,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'neutral_line_R_end  ', neutral_line_R_end
      write(*,REAL_FMT) 'neutral_line_Z_end  ', neutral_line_Z_end
      write(*,REAL_FMT) 'neutral_reflection  ', neutral_reflection
+     write(*,REAL_FMT) 'imp_reflection      ', imp_reflection
 
      !< Additional log for SPI model
    if(using_spi) then

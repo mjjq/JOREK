@@ -604,10 +604,13 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
   write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
+  write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
+  write(*,LOGI_FMT) 'old_deuterium_atomic  ', old_deuterium_atomic
 
   if (jorek_model .eq. 710) then
-    write(*,LOGI_FMT) 'parallel_projection   ', parallel_projection
     write(*,LOGI_FMT) 'Mach1_openBC          ', Mach1_openBC
+    write(*,LOGI_FMT) 'eta_ARAZ_on           ', eta_ARAZ_on
+    write(*,LOGI_FMT) 'tauIC_ARAZ_on         ', tauIC_ARAZ_on
   endif
 
   write(*,LOGI_FMT) 'fix_axis_nodes        ',fix_axis_nodes 

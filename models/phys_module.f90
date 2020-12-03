@@ -36,6 +36,8 @@ module phys_module
   real*8  :: gamma_stangeby       !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
   real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
   real*8  :: neutral_reflection   !< reflection coefficient of ions into neutrals (model500)
+  logical :: old_deuterium_atomic !< use old fit to calculate atomic coefficients for D (ionization, recombination, radiation), otherwise a better fit is used
+  logical :: deuterium_adas       !< use OPEN ADAS to calculate ionization, recombination and radiation coeffients for deuterium                        
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
   logical :: vpar_smoothing       !< apply a smoothing function to smooth jumps in Vpar at B.n=0
   real*8  :: vpar_smoothing_coef(3) !< coefficients for the smoothing profile of the parallel velocity
@@ -61,8 +63,9 @@ module phys_module
   real*8  :: manipulate_psi_map(5,5) !< Option to manipulate Psi_boundary for the initial grid
   logical :: adaptive_time        !< (presently not useful)
   logical :: equil                !< compute equilibrium
-  logical :: parallel_projection  !< Full-MHD: use B-projection instead of Phi-projection for 3rd Mom.equation (on Up)
   logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+  logical :: eta_ARAZ_on          !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
+  logical :: tauIC_ARAZ_on        !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
   logical :: bench_without_plot   !< if .true., do not produce certain output plots (e.g., for benchmarking)
   logical :: gmres                !< Use iterative GMRES solver
   integer :: gmres_max_iter       !< Maximum number of GMRES iterations

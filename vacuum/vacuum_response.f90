@@ -2121,7 +2121,8 @@ module vacuum_response
   subroutine coil_current_source(my_id)
     
     use constants
-    use phys_module, only: t_now, Z_axis_t, index_now, tstep, nstep, index_start
+    use phys_module, only: t_now, index_now, tstep, nstep, index_start
+    use equil_info, only: ES
     use profiles
     use mpi_mod    
 
@@ -2132,9 +2133,9 @@ module vacuum_response
     integer                   :: i, ierr
     real*8, allocatable       :: potentials_real_0(:)
     real*8, save, allocatable :: delta_Icoils_0(:)
-    real*8, save              :: t_last
+    real*8, save              :: t_last, Z_p = 1.d10
     logical, save             :: initialized=.false.
-    real*8                    ::  delta_coil, z_ref_inter
+    real*8                    :: z_ref_inter, Z_n
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
 
     ! --- Calculate the difference between the input file coil currents and the ones coming from the restart file
@@ -2166,24 +2167,21 @@ module vacuum_response
     z_ref_inter = interpolProf(Z_axis_ref_ts%time, Z_axis_ref_ts%position ,  Z_axis_ref_ts%len, t_now)
     vert_FB_response(index_now,4) = z_ref_inter
     if ( t_now>start_VFB_ts .and. sum( abs(vert_FB_amp_ts(1:n_pf_coils)) )>1.e-6 .and. sr%i_tor(1) ==  1 ) then
-      dZ_axis_integral = dZ_axis_integral + ( Z_axis_t(index_now-1) - z_ref_inter )*tstep
+      Z_n = ES%Z_axis
+      if ( Z_p > 1.d9 ) Z_p = Z_n
+      dZ_axis_integral = dZ_axis_integral + ( Z_n - z_ref_inter )*tstep
       if ( (t_now-t_last)>vert_FB_tact ) then 
         if (my_id==0) write(*,*) 'Vertical feedback active'
         t_last = t_now
-        if ( index_now>3 ) then
-          vert_FB_response(index_now,1:3) =  &
-              (/  1.d3  * vert_FB_gain(1)* (Z_axis_t(index_now-1) - z_ref_inter), &
-                  1.d5  * vert_FB_gain(2)* (Z_axis_t(index_now-1) - Z_axis_t(index_now-2) )/ tstep, &
-                  1.d-3 * vert_FB_gain(3)* dZ_axis_integral /)
-        else  ! no derivative feedback
-          vert_FB_response(index_now,1:3) =  &
-              (/  1.d3  * vert_FB_gain(1)* (Z_axis_t(index_now-1) - z_ref_inter), &
-                  0.d0,&
-                  1.d-3 * vert_FB_gain(3)* dZ_axis_integral /)
-        endif
+        vert_FB_response(index_now,1:3) =  &
+            (/  1.d3  * vert_FB_gain(1)* (Z_n - z_ref_inter), &
+                1.d5  * vert_FB_gain(2)* (Z_n - Z_p )/ tstep, &
+                1.d-3 * vert_FB_gain(3)* dZ_axis_integral /)
         delta_Icoils_0(1:n_pf_coils) = delta_Icoils_0(1:n_pf_coils) +  sum(vert_FB_response(index_now,1:3))*vert_FB_amp_ts(1:n_pf_coils)
       endif
+      Z_p = Z_n
     endif
+
     
 
     ! -- Apply coil current limits

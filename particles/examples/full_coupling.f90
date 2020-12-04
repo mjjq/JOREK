@@ -13,7 +13,7 @@ use mod_random_seed
 use mod_interp, only: mode_moivre, interp_RZ
 use mod_basisfunctions
 use nodes_elements
-use phys_module, only: n_particles, nstep_particles, nsubstep_particles, tstep_particles
+use phys_module, only: n_particles, nstep_particles, nsubstep_particles, tstep_particles, use_ncs, use_pcs, use_ccs
 use phys_module, only: filter_perp, filter_hyper, filter_par, filter_perp_n0, filter_hyper_n0, filter_par_n0
 use phys_module, only: tstep
 use phys_module, only: CENTRAL_MASS, CENTRAL_DENSITY
@@ -505,14 +505,13 @@ do while (.not. sim%stop_now)
 
     enddo
     !omp end parallel do
-
-    call MPI_REDUCE(particles_remaining, all_particles, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-    call MPI_REDUCE(momentum_remaining, all_momentum,   1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-    call MPI_REDUCE(energy_remaining, all_energy,       1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-
-    write(*,'(A,3e16.8)') 'REMAINING (START) : ',all_particles, all_momentum, all_energy
-
   end select
+
+  call MPI_REDUCE(particles_remaining, all_particles, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+  call MPI_REDUCE(momentum_remaining, all_momentum,   1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+  call MPI_REDUCE(energy_remaining, all_energy,       1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+
+  write(*,'(A,3e16.8)') 'REMAINING (START) : ',all_particles, all_momentum, all_energy
 
   write(*,'(A,126e16.8)') ' TOTAL : ',sim%time,density_tot+all_particles/1.d20, density_tot, all_particles/1.d20, &
                                     mom_par_tot+all_momentum, mom_par_tot, all_momentum, &

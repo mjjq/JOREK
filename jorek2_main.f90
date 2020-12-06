@@ -262,6 +262,11 @@ required = 0
     gmres     = .false. 
   end if
   
+  ! --- Initialize time-traces of radiation and ionization energy/power
+#if (JOREK_MODEL == 500)
+  call init_xtime_rad_ionization(my_id)
+#endif
+
   ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)
  

@@ -47,9 +47,8 @@ contains
 !> Suffix is usually of the form 50_w, 96_li
 !> Try to also read the ionisation energy coefficients, but don't crash if they
 !> are not present.
-function read_adf11(suffix, directory) result(ad)
+function read_adf11(my_id,suffix, directory) result(ad)
 use constants
-use mpi_mod
 character(len=*), intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li)
 character(len=*), intent(in), optional :: directory
 type(ADF11_all), target :: ad !< OpenAdas data type
@@ -59,10 +58,9 @@ integer :: i_ADF11
 character*3, dimension(1:6), parameter :: ADF11_filenames = (/"acd", "scd", "ccd", "plt", "prb", "prc"/)
 character*120 :: filename
 
-integer :: i, ierr, n_d, n_T, k, my_id, q, i_n
+integer, intent(in) :: my_id
+integer :: i, ierr, n_d, n_T, k, q, i_n
 logical :: file_exists, recombining
-
-call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
 if (my_id .eq. 0) then
   write(*,'(A)') '*********************************'
@@ -82,7 +80,7 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   end if
 
   if (my_id .eq. 0) write(*,"(A,A)",advance="no") "Reading data from ", trim(filename)
-  open(10,file=trim(filename),status="old",iostat=ierr)
+  open(10,file=trim(filename),status="old",iostat=ierr, action="read")
   if (ierr .ne. 0) then
     write(*,*) my_id, " failed with code ", ierr
     cycle
@@ -157,36 +155,25 @@ else
 endif
 
 
-
-    ! Try to load the ionisation energies
-    ! try 2 cases, first the full suffix and then the stripped suffix
-    ! i.e. ion50_w.dat and ion_w.dat
-    do i=1,3,2 ! full, strip
-      ! assume the suffix starts with 2 digits
-      write(filename,"(A,A,A)") 'ion', trim(suffix(i:len(suffix))), '.dat'
-      if (present(directory)) filename = trim(directory) // trim(filename)
-      inquire(file=trim(filename), exist=file_exists)
-      if (file_exists) then
-        open(10,file=trim(filename),status="old",iostat=ierr)
-        if (ierr .ne. 0) then
-          write(*,*) my_id, " failed with code ", ierr
-        else
-          allocate(ad%ionisation_energy(0:ad%n_Z))
-          ad%ionisation_energy(0) = 0.d0 ! Zero energy for no ionisation
-          do k=1,ad%n_Z
-            read(10,*) q, ad%ionisation_energy(k)
-            if (q + 1 .ne. k) then ! conversion from 0-based to 1-based indices for ionisation energies
-              if (my_id .eq. 0) write(*,*) 'Mismatch in detected energy levels, ', q+1, k
-              stop 1
-            end if
-          end do
-          if (my_id .eq. 0) write(*,*) "Read ionisation energies from ", trim(filename)
-          close(10)
-          exit ! the loop, we have found a file
-        endif
-      else
-        if (i .eq. 3 .and. my_id .eq. 0) then
-          write(*,*) "Cannot find ionisation data file ", trim(filename), " not loading ionisation energies"
+! Try to load the ionisation energies
+! try 2 cases, first the full suffix and then the stripped suffix
+! i.e. ion50_w.dat and ion_w.dat
+do i=1,3,2 ! full, strip
+  ! assume the suffix starts with 2 digits
+  write(filename,"(A,A,A)") 'ion', trim(suffix(i:len(suffix))), '.dat'
+  if (present(directory)) filename = trim(directory) // trim(filename)
+  inquire(file=trim(filename), exist=file_exists)
+  if (file_exists) then
+    open(10,file=trim(filename),status="old",iostat=ierr, action="read")
+    if (ierr .ne. 0) then
+      write(*,*) my_id, " failed with code ", ierr
+    else
+      allocate(ad%ionisation_energy(1:ad%n_Z))
+      do k=1,ad%n_Z
+        read(10,*) q, ad%ionisation_energy(k)
+        if (q + 1 .ne. k) then ! conversion from 0-based to 1-based indices for ionisation energies
+          write(*,*) 'Mismatch in detected energy levels, ', q+1, k
+          stop 1
         end if
       end if
     end do
@@ -270,7 +257,7 @@ endif
 
 if (present(GRC_out)) GRC_out = GRC
 if (present(dGRC_dT_out)) dGRC_dT_out = dGRC_dT
-if (present(dGRC_dT_out)) dGRC_dn_out = dGRC_dn
+if (present(dGRC_dn_out)) dGRC_dn_out = dGRC_dn
 
 end subroutine GRC_spl
 

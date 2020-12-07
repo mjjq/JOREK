@@ -305,7 +305,11 @@ do while (.not. sim%stop_now)
   select type (particles => sim%groups(1)%particles)
   type is (particle_kinetic_leapfrog)
 
+#ifdef __GFORTRAN__
+    !$omp parallel do default(shared) & This is to avoid GNU compiler failure
+#else
     !$omp parallel do default(none) &
+#endif
     !$omp schedule(dynamic,10)      &
 #ifdef __GFORTRAN__
     !$omp shared(sim, n_particles, n_steps, timesteps, rng, particle_start_time, & ! This is to work around the GNU compiler error: ASSOCIATE name '__tmp_type_particle_kinetic_leapfrog' in SHARED clause

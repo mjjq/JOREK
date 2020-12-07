@@ -358,7 +358,7 @@ subroutine do_jorek_timestep(this, sim, ev)
   use mod_integrals3D
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-  use mgi_module,              only: update_mgi
+  use pellet_module,           only: update_spi
 #endif
   class(jorek_timestep_action), intent(inout) :: this
   type(particle_sim), intent(inout)           :: sim

@@ -161,7 +161,7 @@ module vacuum
   real*8 :: vert_FB_amp(MAX_COILS) = 0.d0 !< Tune direction and magnitude of vert feedback for each poloidal field coil ([[jorek-starwall-faqs|eq_FAQs]])
   
   ! --- Parameters for the feedback on the vertical position during timestepping (VFB), see ([[active_controller_model_for_vertical_stabilization|documentation]])
-  character(len=256)  :: vert_pos_file = 'None'
+  character(len=256)  :: vert_pos_file = 'none'
   !> Time trace of axis position to match
   type :: t_Z_axis_ref_ts     
     integer                :: len = 0      !< Number of points in numerical time trace
@@ -338,21 +338,24 @@ module vacuum
     end do
   end subroutine check_coil_curr_time_trace_input
   
+  
+  
+  
+  !> Read the prescribed time evolution profile of Z_axis from a file, if prsent. Otherwise use
+  !! either the input value Z_axis_ref or the equilibrium value
   subroutine read_Z_axis_profile()
-    ! If file for the time evolution of the magnetic axis is present, read the profile
-    ! Otherwise either the input value for Z_axis_ref is used or the equilibrium value
 
     use profiles, only: readProf
     use equil_info, only: ES
-    if (vert_pos_file /= 'None') then
+    if (vert_pos_file /= 'none') then
       call readProf(Z_axis_ref_ts%time, Z_axis_ref_ts%position, Z_axis_ref_ts%len, vert_pos_file)
     else
-      if (Z_axis_ref > 1.d10)   Z_axis_ref = ES%Z_axis
+      if (Z_axis_ref > 1.d10) Z_axis_ref = ES%Z_axis
 
-      if (allocated(Z_axis_ref_ts%time)) deallocate(Z_axis_ref_ts%time)
+      if (allocated(Z_axis_ref_ts%time))     deallocate(Z_axis_ref_ts%time)
       if (allocated(Z_axis_ref_ts%position)) deallocate(Z_axis_ref_ts%position)
-      allocate(Z_axis_ref_ts%time    (2) )
-      allocate(Z_axis_ref_ts%position(2) )
+      allocate(Z_axis_ref_ts%time    (2))
+      allocate(Z_axis_ref_ts%position(2))
       Z_axis_ref_ts%len          =  2
       Z_axis_ref_ts%time     (1) = -1.d12
       Z_axis_ref_ts%time     (2) =  1.d12
@@ -361,29 +364,28 @@ module vacuum
     endif
     call check_Z_axis_profile() 
   end subroutine read_Z_axis_profile
-
+  
+  
+  
+  !> Basic checks that the prescribed Z_axis profile provided makes sense
   subroutine check_Z_axis_profile()
-    integer :: i
-    ! Check if the time evolution of the vertical magnetic axis makes sense
     if (sum(abs(vert_FB_amp_ts(1:n_pf_coils)))>1.d-6) then
       if  (maxval(abs(Z_axis_ref_ts%position(:))) > 1.d10) then
         write(*,*) 'ERROR: target Z_axis beyond Machine limits'
         stop
-      endif
-      if (minval(I_coils_max(:)) .lt. 0)then
+      else if (minval(I_coils_max(:)) .lt. 0) then
         write(*,*) 'ERROR: The maximum value of the coil cannot be smaller than 0.'
         stop
-      endif
-      if (Z_axis_ref_ts%time(1)>0.d0) then        
+      else if (Z_axis_ref_ts%time(1)>0.d0) then        
         write(*,*) 'ERROR: The Z_axis time trace does not start at time 0. Check your input file'
         stop
-      endif
-      if (Z_axis_ref_ts%len .lt. 2) then        
+      else if (Z_axis_ref_ts%len .lt. 2) then        
         write(*,*) 'ERROR: The length of the profile for the axis target position must be larger than 1'
         stop
       endif
     endif
   end subroutine check_Z_axis_profile
+  
   
   
   !> Preset freeboundary related input parameters to reasonable default values.

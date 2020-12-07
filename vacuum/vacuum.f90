@@ -159,20 +159,24 @@ module vacuum
   type(t_coil_curr_input), target :: pf_coils(MAX_COILS)      ! see [[jorek-starwall-faqs|jorek_starwall_FAQs]]
   type(t_coil_curr_time_trace)    :: coil_curr_time_trace(4*MAX_COILS)
   real*8 :: vert_FB_amp(MAX_COILS) = 0.d0 !< Tune direction and magnitude of vert feedback for each poloidal field coil ([[jorek-starwall-faqs|eq_FAQs]])
-  !> Parameters for the feedback on the vertical position during timestepping
+  
+  ! --- Parameters for the feedback on the vertical position during timestepping (VFB), see ([[active_controller_model_for_vertical_stabilization|documentation]])
   character(len=256)  :: vert_pos_file = 'None'
+  !> Time trace of axis position to match
   type :: t_Z_axis_ref_ts     
-    integer                :: len = 0      !< Number of points in numerical time trace.
+    integer                :: len = 0      !< Number of points in numerical time trace
     real*8, allocatable    :: time(:)      !< time-values of numerical time trace
     real*8, allocatable    :: position(:)  !< evolution of vertical axis position over time
   end type t_Z_axis_ref_ts
-  real*8                        :: start_VFB_ts                  !< start time of active VFB during simulation ([JORREK units])
-  real*8                        :: vert_FB_amp_ts(MAX_COILS)     !< Tune direction and magnitude of vert feedback for each poloidal field coil ([[jorek-starwall-faqs|eq_FAQs]])
-  real*8                        :: I_coils_max(MAX_COILS)        !< Maximum absolute current in coils ([Ampere])
-  real*8                        :: vert_FB_gain(3),vert_FB_tact  !< Parameters for PD controller of vertical Feedback during timestepping, vert_FB_tact([JOREK units])
-  real*8                        :: dZ_axis_integral              !< Integrated values of Z deviation from reference value, needs to be exported to restart file
-  real*8,allocatable            :: vert_FB_response(:,:)         !< controller response (PID gain * err) and target axis 
-  type(t_Z_axis_ref_ts), target :: Z_axis_ref_ts                 !< Prescribe Z_axis position over time
+  real*8                        :: start_VFB_ts                  !< start time of active VFB during simulation ([JOREK units])
+  real*8                        :: vert_FB_amp_ts(MAX_COILS)     !< Amplitude and sign of vert feedback for each coil ([[jorek-starwall-faqs|eq_FAQs]])
+  real*8                        :: I_coils_max(MAX_COILS)        !< Current limit of each coil ([Ampere])
+  real*8                        :: vert_FB_gain(3)               !< Gain parameters for vertical feedback controller
+  real*8                        :: vert_FB_tact                  !< Time interval between two controller actions ([JOREK units])
+  real*8                        :: dZ_axis_integral              !< Integrated values of Z_axis-Z_reference for controller
+  real*8, allocatable           :: vert_FB_response(:,:)         !< Controller response (PID gain * err) and target axis
+  type(t_Z_axis_ref_ts), target :: Z_axis_ref_ts                 !< Time trace of axis target position
+  
   
   
   contains

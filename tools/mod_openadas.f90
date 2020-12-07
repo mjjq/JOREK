@@ -175,8 +175,10 @@ do i=1,3,2 ! full, strip
           write(*,*) 'Mismatch in detected energy levels, ', q+1, k
           stop 1
         end if
-      end if
-    end do
+      end do
+    end if
+  endif
+enddo
 end function read_adf11
 
 

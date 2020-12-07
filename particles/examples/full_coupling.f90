@@ -306,7 +306,7 @@ do while (.not. sim%stop_now)
   type is (particle_kinetic_leapfrog)
 
 #ifdef __GFORTRAN__
-    !$omp parallel do default(shared) & This is to avoid GNU compiler failure
+    !$omp parallel do default(shared) & !This is to avoid GNU compiler failure
 #else
     !$omp parallel do default(none) &
 #endif

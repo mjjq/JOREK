@@ -269,7 +269,9 @@ subroutine setup_solvers(this, sim)
                                ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, 1, n_tor, n_glob, nz_glob, ndof_glob, block_size)
 
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-    call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%index_min(sim%my_id+1), this%index_max(sim%my_id+1)) 
+    call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%index_min(sim%my_id+1), &
+                                        this%index_max(sim%my_id+1), 1, n_tor, irn_glob, jcn_glob, block_size, &
+                                        ijA_index, ijA_size, irn_jcn) 
   endif
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
@@ -454,8 +456,8 @@ subroutine do_jorek_timestep(this, sim, ev)
                         this%local_elms, this%n_local_elms, this%index_min(sim%my_id+1),                                 &
                         this%index_max(sim%my_id+1), xpoint, xcase, this%eq%R_axis, this%eq%Z_axis, this%eq%psi_axis,    &
                         this%eq%psi_bnd, this%eq%R_xpoint, this%eq%Z_xpoint, this%eq%psi_xpoint,                         &
-                        1, n_tor, n_glob, nz_glob, ndof_glob, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size, &
-                        irn_jcn, .false.)
+                        1, n_tor, n_glob, nz_glob, ndof_glob, block_size, A_glob, rhs_glob, irn_glob, jcn_glob,          &
+                        ijA_index, ijA_size, irn_jcn, .false.)
   
   ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
   call del_thread_buffers()

@@ -373,7 +373,7 @@ module vacuum
       if  (maxval(abs(Z_axis_ref_ts%position(:))) > 1.d10) then
         write(*,*) 'ERROR: target Z_axis beyond Machine limits'
         stop
-      else if (minval(I_coils_max(:)) .lt. 0) then
+      else if (minval(I_coils_max(1:n_coils)) .lt. 0) then
         write(*,*) 'ERROR: The maximum value of the coil cannot be smaller than 0.'
         stop
       else if (Z_axis_ref_ts%time(1)>0.d0) then        

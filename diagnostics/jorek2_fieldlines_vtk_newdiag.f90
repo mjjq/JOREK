@@ -35,15 +35,16 @@ integer :: ivtk, i_var, my_id, ierr
 logical :: psi_theta
 real*8  :: coord_min(2), coord_max(2), coord_out(2)
 
-! Next 4 lines additional to jorek2_fieldlines_vtk
+! Next lines additional to jorek2_fieldlines_vtk
 type(t_pol_pos_list) :: pol_pos_list
 type(t_tor_pos_list) :: tor_pos_list
 type(t_expr_list)    :: expr_list
 real*8, allocatable :: result(:,:,:,:), res0d(:)
+real*8  :: phi_start
 
 !namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max
 ! Different from jorek2_fieldlines_vtk
-namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max, P_start
+namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max, phi_start
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_fieldlines_vtk               *'
@@ -65,7 +66,7 @@ coord_min(1)= 0.95
 coord_min(2)= -PI/20.d0
 coord_max(1)= 0.97
 coord_max(2)= +PI/20.d0
-P_start = 0.d0
+phi_start = 0.d0
 
 ! --- Read parameters from namelist file 'fieldlines_vtk.nml' if it exists
 open(42, file='fieldlines_vtk.nml', action='read', status='old', iostat=ierr)
@@ -88,9 +89,11 @@ if (my_id .eq. 0 ) then
    write(*,*) 'coord_min = ', coord_min
    write(*,*) 'coord_max = ', coord_max
 ! additional to jorek2_fieldlines_vtk
-   write(*,*) 'P_start = ', P_start
+   write(*,*) 'phi_start = ', phi_start
 endif
 
+! This will be updated soon because I plan to make R_start, Z_start and P_start allocatable arrays as in jorek2_poincare
+P_start = phi_start
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period

@@ -19,7 +19,7 @@ module mod_boundary
   !! from the information stored in the grid (element and node lists).
   !! 
   !! Note: Grid nodes with boundary=3 (located at the edges of the boundary in
-  !!       the divertor region) are intentionally added twice to the bnd_node_list.
+  !!       the divertor region)  and boundary=9 are intentionally added twice to the bnd_node_list.
   subroutine boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list,infos)
 
     use data_structure
@@ -193,8 +193,8 @@ module mod_boundary
 
     integer :: i, idir
 
-    ! --- Make sure the node is not in the boundary node list yet (except for boundary=3).
-    if ( boundary /= 3 ) then
+    ! --- Make sure the node is not in the boundary node list yet (except for boundary=3 and boundary=9).
+    if (( boundary /= 3 ) .and. (boundary /= 9)) then
       do i = 1, bnd_node_list%n_bnd_nodes
         if ( bnd_node_list%bnd_node(i)%index_jorek == inode ) then
           bnd_vertex = i ! Node is already in the list, return its index.

@@ -30,18 +30,20 @@ real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi
 real*8  :: Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t, dl2, total_length, length_max, s_ini, t_ini, value_out
 real*8  :: psi_norm_out, theta_out
 
-! Next 4 lines additional to jorek2_fieldlines_vtk
 character :: buffer*80, lf*1, str1*12, str2*12, str3*24
 integer :: ivtk, i_var, my_id, ierr
 logical :: psi_theta
 real*8  :: coord_min(2), coord_max(2), coord_out(2)
 
+! Next 4 lines additional to jorek2_fieldlines_vtk
 type(t_pol_pos_list) :: pol_pos_list
 type(t_tor_pos_list) :: tor_pos_list
 type(t_expr_list)    :: expr_list
 real*8, allocatable :: result(:,:,:,:), res0d(:)
 
-namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max
+!namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max
+! Different from jorek2_fieldlines_vtk
+namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max, P_start
 
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_fieldlines_vtk               *'
@@ -63,6 +65,7 @@ coord_min(1)= 0.95
 coord_min(2)= -PI/20.d0
 coord_max(1)= 0.97
 coord_max(2)= +PI/20.d0
+P_start = 0.d0
 
 ! --- Read parameters from namelist file 'fieldlines_vtk.nml' if it exists
 open(42, file='fieldlines_vtk.nml', action='read', status='old', iostat=ierr)
@@ -84,6 +87,8 @@ if (my_id .eq. 0 ) then
    write(*,*) 'psi_theta = ', psi_theta
    write(*,*) 'coord_min = ', coord_min
    write(*,*) 'coord_max = ', coord_max
+! additional to jorek2_fieldlines_vtk
+   write(*,*) 'P_start = ', P_start
 endif
 
 
@@ -243,12 +248,14 @@ do i =n_start, n_end
              
 
       total_length = 0.d0
-      total_phi    = 0.d0
+!      total_phi    = 0.d0
+! Different from jorek2_fieldlines_vtk
+      total_phi    = P_start
 
       i_elm = i
       R_start = R_out
       Z_start = Z_out
-      P_start = 0.d0
+!      P_start = 0.d0
 
       Xfield(1,i_line) = R_start * cos(total_phi)
       Zfield(1,i_line) = R_start * sin(total_phi)

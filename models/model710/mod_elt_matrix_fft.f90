@@ -774,9 +774,6 @@ do i=1,n_vertex_max
             dZKpar_dT = 0.d0
           endif
 
-          ! --- F_profile
-          Fprof   = Fprofile(ms,mt)
-
           ! --- Magnetic field
           Fprof = Fprofile(ms,mt)
           BR0 = ( A30_Z - AZ0_p )/ R

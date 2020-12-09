@@ -174,7 +174,7 @@ contains
                     xjac      = R_s*Z_t - R_t*Z_s
 
                     T0        = node_list%node(inode)%values(1,1,var_T)
-                    T0_corr   = max(T0, 1.d-12)
+                    T0_corr   = max(T0, 1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
                     T0_s      = node_list%node(inode)%values(1,2,var_T)
                     uR0       = node_list%node(inode)%values(1,1,var_uR)
                     uR0_s     = node_list%node(inode)%values(1,2,var_uR)

@@ -185,11 +185,11 @@ contains
                     xjac      = R_s*Z_t - R_t*Z_s
 
                     Ti0        = node_list%node(inode)%values(1,1,var_Ti)
-                    Ti0_corr   = max(Ti0, 1.d-12)
+                    Ti0_corr   = max(Ti0, 1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
                     Ti0_s      = node_list%node(inode)%values(1,2,var_Ti)
 
                     Te0        = node_list%node(inode)%values(1,1,var_Te)
-                    Te0_corr   = max(Te0, 1.d-12)
+                    Te0_corr   = max(Te0, 1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
                     Te0_s      = node_list%node(inode)%values(1,2,var_Te)
 
                     uR0       = node_list%node(inode)%values(1,1,var_uR)

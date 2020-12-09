@@ -262,7 +262,7 @@ do ms=1, n_gauss
     B_dot_n = BR0 * normal(1) + BZ0 * normal(2)
     cs_direction = B_dot_n / abs(B_dot_n)
 
-    T0_corr = max(T0,1.d-12) ! should we use corrected temperature ?
+    T0_corr = max(T0,1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
     c_s = sqrt(gamma * T0_corr)
 
     ! --- Loop over nodes

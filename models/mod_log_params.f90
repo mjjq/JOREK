@@ -565,9 +565,11 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'gamma_sheath          ', gamma_sheath
   write(*,REAL_FMT) 'gamma_stangeby        ', gamma_stangeby
   write(*,REAL_FMT) 'gamma_sheath_e        ', gamma_sheath_e
-  write(*,REAL_FMT) 'gamma_stangeby_e      ', gamma_stangeby_e
   write(*,REAL_FMT) 'gamma_sheath_i        ', gamma_sheath_i
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
+  write(*,REAL_FMT) 'gamma_stangeby_e      ', gamma_stangeby_e
   write(*,REAL_FMT) 'gamma_stangeby_i      ', gamma_stangeby_i
+#endif
   write(*,LOGI_FMT) 'vpar_smoothing        ', vpar_smoothing
   if ( vpar_smoothing ) then
     write(*,REAL_FMT) 'vpar_smoothing_coef   ', vpar_smoothing_coef(:)

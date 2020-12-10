@@ -15,15 +15,13 @@ use mod_new_diag
 implicit none
 
 real*8,allocatable  :: rp(:), zp(:), R_all(:), Z_all(:), C_all(:), R_strike(:), Z_strike(:), P_strike(:), C_strike(:)
-!real*4,allocatable  :: Xfield(:,:), Yfield(:,:), Zfield(:,:), Tfield(:,:)
-! Different from jorek2_fieldlines_vtk
 real*4,allocatable  :: Xfield(:,:), Yfield(:,:), Zfield(:,:), Tfield(:,:,:)
 integer,allocatable :: Nfield(:)
 character*12, allocatable :: scalar_names(:), vector_names(:)
-integer :: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_dir, k, m, nr, np, ntotal
+integer :: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_dir, k, m, ntotal
 integer :: n_start, n_end, n_large, n_total, n_delta, n_scalars, n_vectors
-integer :: i_elm, ifail, i_phi, n_phi, i_turn, n_turns, i_elm_out, i_elm_prev, i_elm_tmp,i_steps, i_field
-real*8  :: R_start, Z_start, P_start, R_line, Z_line, s_line, t_line, p_line, s_mid, t_mid, p_mid, s_out, t_out
+integer :: i_elm, ifail, i_phi, n_phi, i_turn, i_elm_out, i_elm_prev, i_elm_tmp,i_steps, i_field
+real*8  :: R_line, Z_line, s_line, t_line, p_line, s_mid, t_mid, p_mid, s_out, t_out
 real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: tol, delta_phi, Zjac, psi_s, psi_t, R_in, Z_in, R_out, Z_out, Rmin, Rmax, Zmin, Zmax, delta_s, delta_t, R_keep, Z_keep
 real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi_step, total_phi
@@ -35,19 +33,20 @@ integer :: ivtk, i_var, my_id, ierr
 logical :: psi_theta
 real*8  :: coord_min(2), coord_max(2), coord_out(2)
 
-! Next lines additional to jorek2_fieldlines_vtk
+character(len=512) :: s
+character(len=12) :: name, expr
+integer :: nr, ntour, curr, n_dir
+real*8  :: rr, zz, psi
 type(t_pol_pos_list) :: pol_pos_list
 type(t_tor_pos_list) :: tor_pos_list
 type(t_expr_list)    :: expr_list
+integer, allocatable :: n_turn(:)
 real*8, allocatable :: result(:,:,:,:), res0d(:)
-real*8  :: phi_start
-
-!namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max
-! Different from jorek2_fieldlines_vtk
-namelist /fieldlines_vtk_params/ psi_theta, n_turns, n_phi, n_lines, coord_min, coord_max, phi_start
+real*8, allocatable :: R_start(:), Z_start(:), P_start(:)
+character*12, allocatable :: scalar_exprs(:)
 
 write(*,*) '***************************************'
-write(*,*) '* JOREK2_fieldlines_vtk               *'
+write(*,*) '* JOREK2_fieldlines_vtk_newdiag       *'
 write(*,*) '***************************************'
 write(*,*) ' nperiod : ',n_period
 
@@ -55,45 +54,112 @@ my_id=0
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
-! --- Preset parameters 
-  ! steps
-n_turns = 20             ! number of toroidal turns to follow a fieldline
-n_phi   = 1000           ! number of steps per toroidal turn
-n_lines = 800
-  !default coordinates of the starting points.
-psi_theta = .true.
-coord_min(1)= 0.95
-coord_min(2)= -PI/20.d0
-coord_max(1)= 0.97
-coord_max(2)= +PI/20.d0
-phi_start = 0.d0
+! --- Read start points from file 'stpts'.
+!
+! Example for a stpts file:
+!   Eleven field lines will be started, the first ten between (1.7,0.0) and (1.8,0.0), the eleventh at (1.85,0.2)
+! 
+!   +-------------------------------------------------------
+!   |# n_lines
+!   |  11
+!   |# nr   R_start   Z_start    psi_start   n_turns
+!   |   1    1.700      0.000     0.000      100
+!   |  10    1.800      0.000     0.000      200
+!   |  11    1.850      0.200     0.000      800
+!   +-------------------------------------------------------
+!
+open(21, file='stpts', status='old', action='read', iostat=ierr)
 
-! --- Read parameters from namelist file 'fieldlines_vtk.nml' if it exists
-open(42, file='fieldlines_vtk.nml', action='read', status='old', iostat=ierr)
-if ( ierr == 0 ) then
-if (my_id .eq. 0 ) then
-   write(*,*) 'Reading parameters from fieldlines_vtk.nml namelist.'
-endif
-read(42,fieldlines_vtk_params)
-close(42)
+if ( ierr == 0 ) then ! stpts file exists, use it.
+
+  read(21, '(a)') s ! read comment line (ignored)
+  read(21,*) n_scalars
+  if ( n_scalars < 1 ) then
+    write(*,*) 'ERROR in stpts file: n_scalars must be >= 1.'
+    stop
+  end if
+
+  allocate(scalar_names(n_scalars),scalar_exprs(n_scalars))
+
+  read(21, '(a)') s ! read comment line (ignored)
+  do i = 1, n_scalars
+     read(21,*) expr,name
+     scalar_exprs(i)=expr
+     scalar_names(i)=name
+  end do
+
+  write (*,*) 'Scalar expressions: ',scalar_exprs
+  write (*,*) 'Scalar names:       ',scalar_names
+  
+  read(21, '(a)') s ! read comment line (ignored)
+  read(21,*) n_lines
+  if ( n_lines < 1 ) then
+    write(*,*) 'ERROR in stpts file: n_lines must be >= 1.'
+    stop
+  end if
+
+  write (*,*) n_lines
+  
+  read(21, '(a)') s ! read comment line (ignored)
+
+  allocate( R_start(n_lines), Z_start(n_lines), P_start(n_lines), n_turn(n_lines) )
+  
+  curr = 0
+  do
+    if ( curr >= n_lines ) exit
+    
+    read(21, *) nr, rr, zz, psi, ntour
+    
+    if ( ( nr == 1 ) .and. ( curr == 0 ) ) then
+      R_start(1) = rr
+      Z_start(1) = zz
+      P_start(1) = psi
+      n_turn(1)  = ntour
+    else if ( curr == 0 ) then
+      write(*,*) 'ERROR in stpts file: first start point must be nr=1.'
+      stop
+    else if ( ( nr < 1 ) .or. ( nr > n_lines ) ) then
+      write(*,*) 'ERROR in stpts file: nr must be > 0 and < n_lines.'
+      stop
+    else if ( nr <= curr ) then
+      write(*,*) 'ERROR in stpts file: start points must be sorted in ascending nr-order.'
+      stop
+    else
+      
+      do i_line = curr + 1, nr
+        R_start(i_line) = R_start(curr) + ( rr - R_start(curr) ) * ( real(i_line-curr) / real(nr-curr) )
+        Z_start(i_line) = Z_start(curr) + ( zz - Z_start(curr) ) * ( real(i_line-curr) / real(nr-curr) )
+        P_start(i_line) = P_start(curr) + ( psi- P_start(curr) ) * ( real(i_line-curr) / real(nr-curr) )
+        n_turn(i_line)  = nint( n_turn(curr) + real( ntour - n_turn(curr) ) * ( real(i_line-curr) / real(nr-curr) ) )
+      end do
+      
+    end if
+    
+    curr = nr
+    
+  end do
+  
+  close(21)
+
+else ! if no stpts file exists, use the following hard-coded default startpoints
+
+  n_scalars=3
+  scalar_exprs = (/'Te  ','ne  ','nimp'/)
+  scalar_names = (/'Te_eV   ','ne_m-3  ','nimp_m-3'/)
+
+  n_lines = 50
+
+  allocate( R_start(n_lines), Z_start(n_lines), P_start(n_lines), n_turn(n_lines) )
+
+  do i_line = 1, n_lines
+    R_start(i_line) = 1.7156 + (2.18-1.7156) * float(i_line-1)/float(n_lines-1)
+    Z_start(i_line) = 0.12237
+    P_start(i_line) = 0.d0
+  end do
+
+  n_turn  = 500
+ 
 end if
-
-if (my_id .eq. 0 ) then
-   write(*,*)
-   write(*,*) 'Parameters:'
-   write(*,*) '-----------'
-   write(*,*) 'n_turns = ', n_turns
-   write(*,*) 'n_phi = ', n_phi
-   write(*,*) 'n_lines = ', n_lines
-   write(*,*) 'psi_theta = ', psi_theta
-   write(*,*) 'coord_min = ', coord_min
-   write(*,*) 'coord_max = ', coord_max
-! additional to jorek2_fieldlines_vtk
-   write(*,*) 'phi_start = ', phi_start
-endif
-
-! This will be updated soon because I plan to make R_start, Z_start and P_start allocatable arrays as in jorek2_poincare
-P_start = phi_start
 
 do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
@@ -109,6 +175,7 @@ call initialise_basis                                       ! define the basis f
 ! --- Initialize the new_diag framework and print some information (.true.)
 ! additional to jorek2_fieldlines_vtk
 call init_new_diag(.true.)
+expr_list = exprs(scalar_exprs, n_scalars)
 
 ! --- Read ADAS data and generate coronal equilibrium is needed
 ! additional to jorek2_fieldlines_vtk
@@ -142,10 +209,9 @@ enddo
 ! step at constant delta_phi
 
 !n_turns = 20
-!n_phi   = 1000
-
-np = 5
-nr = 2
+n_phi   = 1000
+n_dir   = 2 ! forward and backward directions
+!n_dir   = 1 ! only forward direction
 
 delta_phi = 2.d0 * PI / float(n_period*n_phi)
 tol       = 1.d-6
@@ -155,23 +221,16 @@ i_var_psi = 1
 n_start = 1
 n_end   = element_list%n_elements
 
-!n_lines = 800 ! 2* (n_end - n_start + 1) * nr * np
-n_large = n_turns * n_phi * 10
+n_large = maxval(n_turn) * n_phi * 10
 
 write(*,*) ' n_lines : ',n_lines,n_large
 
-allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines))
+allocate(R_strike(n_dir*n_lines),Z_strike(n_dir*n_lines),P_strike(n_dir*n_lines),C_strike(n_dir*n_lines))
 
-allocate(R_all(n_lines),Z_all(n_lines),C_all(n_lines))
+allocate(R_all(n_dir*n_lines),Z_all(n_dir*n_lines),C_all(n_dir*n_lines))
 
-!allocate(Xfield(n_large,n_lines),Yfield(n_large,n_lines),Zfield(n_large,n_lines),Nfield(n_lines),Tfield(n_large,n_lines))
-! Different from jorek2_fieldlines_vtk
-allocate(Xfield(n_large,n_lines),Yfield(n_large,n_lines),Zfield(n_large,n_lines),Nfield(n_lines))
-n_scalars=3
-allocate(scalar_names(n_scalars))
-allocate(Tfield(n_large,n_lines,n_scalars))
-scalar_names = (/'Te_eV   ','ne_m-3  ','nimp_m-3'/)
-expr_list = exprs((/'Te  ','ne  ','nimp'/), 3)
+allocate(Xfield(n_large,n_dir*n_lines),Yfield(n_large,n_dir*n_lines),Zfield(n_large,n_dir*n_lines),Nfield(n_dir*n_lines))
+allocate(Tfield(n_large,n_dir*n_lines,n_scalars))
 
 R_all    = 0.d0; Z_all    = 0.d0; C_all = 0.d0
 R_strike = 0.d0; Z_strike = 0.d0; P_strike = 0.d0; C_strike = 0.d0
@@ -194,98 +253,55 @@ i_line = 0
 
 write(*,*) ' number of elements : ',element_list%n_elements
 
-if (psi_theta) then
-   !------------------------------------------------- find x-point(s), psi_bnd and psi_axis
-   if (my_id .eq. 0 ) then
-      write(*,*) ' xcase,1st x-point:R,Z,psi: ',xcase, ES%R_xpoint(1),ES%Z_xpoint(1),ES%psi_xpoint(1),ES%psi_bnd
-      !   write(*,*) ' PSI_XPOINT : ',psi_xpoint,i_elm_xpoint
-      write(*,*) ' PSI_AXIS : ', ES%psi_axis,ES%i_elm_axis
-      write(*,*) ' RZ_AXIS : ',  ES%R_axis, ES%Z_axis
-   endif
-endif
+do i=1,n_lines
 
-do i =n_start, n_end
+   write(*,*)
+   write(*,'(1x,2(a,i6),a,2f8.3)') 'Line',i,' of',n_lines,' started at',R_start(i),Z_start(i)
 
-  if ( i_line .ge. n_lines ) cycle
+  do i_dir = -1*(-1)**n_dir,1,n_dir
 
-  do k=1, nr
+     write(*,'(1x,a,i6)') 'Direction',i_dir
 
-    if ( i_line .ge. n_lines ) cycle
-    
-    s_ini = real(k)/real(nr+1)
+     call find_RZ(node_list,element_list,R_start(i),Z_start(i),R_out,Z_out,i_elm,s_out,t_out,ifail)
+ 
+     if (ifail .ne. 0) write(*,*) "Can not find RZ,", ifail 
+     if (ifail .ne. 0) exit
 
-    do m=1, np
-
-      if ( i_line .ge. n_lines ) cycle
-            
-      t_ini = real(m)/real(np+1)
-
-      call var_value(i,1,s_ini,t_ini,0.d0,value_out)
-
-      call interp_RZ(node_list,element_list,i,s_ini,t_ini,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
-      psi_norm_out = get_psi_n(value_out, Z_out)
-      theta_out = atan2( (Z_out - ES%Z_axis) , (R_out - ES%R_axis) ) !/ (2.d0*PI)      
-      if (psi_theta) then
-         coord_out(1) = psi_norm_out
-         coord_out(2) = theta_out
-      else
-         coord_out(1) = R_out
-         coord_out(2) = Z_out
-      endif
-         if ((coord_out(1) .gt. coord_min(1)) .and. (coord_out(1) .lt. coord_max(1)) .and. &
-              (coord_out(2) .gt. coord_min(2)) .and. (coord_out(2) .lt. coord_max(2)) .and. (i_line .lt. n_lines) ) then
-	  
-	  write(*,'(i6,2f7.3)') i_line, coord_out
-
-      do i_dir = -1,1,2
+     R_line = R_start(i)
+     Z_line = Z_start(i)
+     p_line = P_start(i)
+     s_line = s_out
+     t_line = t_out
 
       i_field = 0
       i_line  = i_line + 1
 
-      s_line = s_ini
-      t_line = t_ini
-
       delta_phi = 2.d0 * PI * float(i_dir) / float(n_period*n_phi)
 
-      !call interp_RZ(node_list,element_list,i,s_line,t_line,R_out,R_s,R_t,R_st,R_ss,R_tt,Z_out,Z_s,Z_t,Z_st,Z_ss,Z_tt)
-             
-
       total_length = 0.d0
-!      total_phi    = 0.d0
-! Different from jorek2_fieldlines_vtk
-      total_phi    = P_start
+      total_phi    = p_line
 
-      i_elm = i
-      R_start = R_out
-      Z_start = Z_out
-!      P_start = 0.d0
+!      Xfield(1,i_line) = R_line * cos(total_phi)
+!      Zfield(1,i_line) = R_line * sin(total_phi)
+      Xfield(1,i_line) = R_line * cos(total_phi-P_start(i))
+      Zfield(1,i_line) = R_line * sin(total_phi-P_start(i))
+      Yfield(1,i_line) = Z_line
 
-      Xfield(1,i_line) = R_start * cos(total_phi)
-      Zfield(1,i_line) = R_start * sin(total_phi)
-      Yfield(1,i_line) = Z_start
-
-!      call var_value(i_elm,6,s_line,t_line,total_phi,value_out)
-!      Tfield(1,i_line) = value_out
-! Different from jorek2_fieldlines_vtk
       call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, ielm=i_elm, s=s_line, t=t_line)
       call create_tor_pos(tor_pos_list, ierr, phi=total_phi)
       call eval_expr(ES, SI_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
       call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
-      Tfield(1,i_line,1) = res0d(1)
-      Tfield(1,i_line,2) = res0d(2)
-      Tfield(1,i_line,2) = res0d(3)
+      Tfield(1,i_line,:) = res0d
       
       i_field = 1
 
-      R_all(i_line) = R_start
-      Z_all(i_line) = Z_start
+      R_all(i_line) = R_line
+      Z_all(i_line) = Z_line
 
-      R_line = R_start
-      Z_line = Z_start
-      p_line = P_start
-
-      do i_turn = 1, n_turns
-
+      do i_turn = 1, n_turn(i)
+         if ( mod(i_turn-1,max(n_turn(i)/6+1,5)) == 0 ) then
+            write(*,'(3x,2(a,i6))') 'Turn',i_turn,' of',n_turn(i)
+         end if
         do i_phi=1,n_phi
 
           delta_phi_local = 0.d0
@@ -498,21 +514,18 @@ do i =n_start, n_end
 	    total_phi    = total_phi    + small_delta * delta_phi_step
 
 	    i_field = i_field + 1
-	    Xfield(i_field,i_line) = R_in * cos(total_phi)
-	    Zfield(i_field,i_line) = R_in * sin(total_phi)
+!	    Xfield(i_field,i_line) = R_in * cos(total_phi)
+!	    Zfield(i_field,i_line) = R_in * sin(total_phi)
+	    Xfield(i_field,i_line) = R_in * cos(total_phi-P_start(i))
+	    Zfield(i_field,i_line) = R_in * sin(total_phi-P_start(i))
 	    Yfield(i_field,i_line) = Z_in
 	    Nfield(i_line)         = Nfield(i_line) + 1
 
-!            call var_value(i_elm,6,s_line,t_line,total_phi,value_out)
-! 	     Tfield(i_field,i_line) = value_out
-! Different from jorek2_fieldlines_vtk
             call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, ielm=i_elm, s=s_line, t=t_line)
             call create_tor_pos(tor_pos_list, ierr, phi=total_phi)
             call eval_expr(ES, SI_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
             call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
-            Tfield(i_field,i_line,1) = res0d(1)
-            Tfield(i_field,i_line,2) = res0d(2)
-            Tfield(i_field,i_line,3) = res0d(3)
+            Tfield(i_field,i_line,:) = res0d
 
             if (i_elm .eq. 0) exit
 
@@ -544,13 +557,7 @@ do i =n_start, n_end
 !        C_strike(i_line) = total_length
 !      endif
 
-    endif ! area selection
-
-    enddo
-  enddo
-
-
-enddo ! end of loop over elements
+enddo ! end of main loop
 
 
 n_lines = i_line
@@ -615,8 +622,6 @@ buffer = lf//lf//'POINT_DATA '//str1//lf                                        
 do i_var =1, n_scalars
   buffer = 'SCALARS '//scalar_names(i_var)//' float'//lf                              ; write(ivtk) trim(buffer)
   buffer = 'LOOKUP_TABLE default'//lf                                                 ; write(ivtk) trim(buffer)
-!  write(ivtk) (((Tfield(j,i)), j=1,Nfield(i)),i=1,n_lines)
-! Different from jorek2_fieldlines_vtk
   write(ivtk) (((Tfield(j,i,i_var)), j=1,Nfield(i)),i=1,n_lines)
 enddo
 

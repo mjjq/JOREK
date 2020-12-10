@@ -283,6 +283,7 @@ do i=1,n_lines
 
 !      Xfield(1,i_line) = R_line * cos(total_phi)
 !      Zfield(1,i_line) = R_line * sin(total_phi)
+! to produce a vtk file consistent with jorek2vtk where the coordinates are (X,Y,Z=0) no matter what i_plane is
       Xfield(1,i_line) = R_line * cos(total_phi-P_start(i))
       Zfield(1,i_line) = R_line * sin(total_phi-P_start(i))
       Yfield(1,i_line) = Z_line
@@ -516,6 +517,7 @@ do i=1,n_lines
 	    i_field = i_field + 1
 !	    Xfield(i_field,i_line) = R_in * cos(total_phi)
 !	    Zfield(i_field,i_line) = R_in * sin(total_phi)
+! to produce a vtk file consistent with jorek2vtk where the coordinates are (X,Y,Z=0) no matter what i_plane is
 	    Xfield(i_field,i_line) = R_in * cos(total_phi-P_start(i))
 	    Zfield(i_field,i_line) = R_in * sin(total_phi-P_start(i))
 	    Yfield(i_field,i_line) = Z_in

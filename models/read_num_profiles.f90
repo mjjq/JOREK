@@ -128,7 +128,7 @@ subroutine read_num_profiles(my_id)
   end if
 
   num_d_perp_imp = ( d_perp_imp_file /= 'none' )
-  if ( num_d_perp .and. ( my_id == 0 ) ) then
+  if ( num_d_perp_imp .and. ( my_id == 0 ) ) then
     call readProf(num_d_perp_x_imp, num_d_perp_y_imp, num_d_perp_len_imp, d_perp_imp_file)
     call check_num_prof(num_d_perp, num_d_perp_x_imp, num_d_perp_y_imp, num_d_perp_len_imp, &
                         'd_perp_imp', check_positive=.true.)

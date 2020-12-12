@@ -426,7 +426,6 @@ subroutine preset_parameters
 
   JET_MGI = .false.
   ASDEX_MGI = .false.
-  gas_type  = 'D2'
   ns_amplitude = 0.d0
   ns_R      = 3.2d0
   ns_Z      =  1.5d0

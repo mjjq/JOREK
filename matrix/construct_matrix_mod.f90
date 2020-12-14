@@ -280,7 +280,7 @@ contains
 !! added by external routine calls.
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,& 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,i_tor_min, i_tor_max,  &
-                            n, nz, ndof, A_mat, rhs, irn, jcn, ijA_index, ijA_size, irn_jcn, harmonic_matrix)
+                            n, nz, ndof, n_matrix_block_size, A_mat, rhs, irn, jcn, ijA_index, ijA_size, irn_jcn, harmonic_matrix)
   
   use mumps_module 
   use tr_module 
@@ -299,41 +299,43 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   use mod_boundary_conditions, only : boundary_conditions
   use mod_fix_axis_nodes, only : fix_nodes_on_axis
   use mod_locate_irn_jcn
+  use mod_integer_types
   !$ use omp_lib
   implicit none
   
 #include "r3_info.h"
 
   ! --- Routine parameters
-  integer, intent(in) :: my_id
-  integer, intent(in) :: MPI_COMM_N
-  integer, intent(in) :: my_id_n
-  integer, intent(in) :: MPI_COMM_MASTER
-  integer, intent(in) :: my_id_master
-  integer, intent(in) :: local_elms(*)
-  integer, intent(in) :: n_local_elms
-  integer, intent(in) :: index_min
-  integer, intent(in) :: index_max
-  integer, intent(in) :: xcase2
-  real*8,  intent(in) :: R_axis
-  real*8,  intent(in) :: Z_axis
-  real*8,  intent(in) :: psi_axis
-  real*8,  intent(in) :: psi_bnd
-  real*8,  intent(in) :: R_xpoint(2)
-  real*8,  intent(in) :: Z_xpoint(2)
-  real*8,  intent(in) :: psi_xpoint(2)
-  logical, intent(in) :: xpoint2
-  integer, intent(in) :: i_tor_min
-  integer, intent(in) :: i_tor_max
-  integer, intent(in) :: n
-  integer, intent(in) :: nz
-  integer, intent(in) :: ndof
-  logical, intent(in) :: harmonic_matrix
-  real*8,  intent(inout), allocatable :: A_mat(:)
-  real*8,  intent(inout), allocatable :: rhs(:)
-  integer, intent(inout), allocatable :: irn(:)
-  integer, intent(inout), allocatable :: jcn(:)
-  integer, intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+  integer,               intent(in) :: my_id
+  integer,               intent(in) :: MPI_COMM_N
+  integer,               intent(in) :: my_id_n
+  integer,               intent(in) :: MPI_COMM_MASTER
+  integer,               intent(in) :: my_id_master
+  integer,               intent(in) :: local_elms(*)
+  integer,               intent(in) :: n_local_elms
+  integer,               intent(in) :: index_min
+  integer,               intent(in) :: index_max
+  integer,               intent(in) :: xcase2
+  real*8,                intent(in) :: R_axis
+  real*8,                intent(in) :: Z_axis
+  real*8,                intent(in) :: psi_axis
+  real*8,                intent(in) :: psi_bnd
+  real*8,                intent(in) :: R_xpoint(2)
+  real*8,                intent(in) :: Z_xpoint(2)
+  real*8,                intent(in) :: psi_xpoint(2)
+  logical,               intent(in) :: xpoint2
+  integer,               intent(in) :: i_tor_min
+  integer,               intent(in) :: i_tor_max
+  integer(kind=int_all), intent(in) :: n
+  integer(kind=int_all), intent(in) :: nz
+  integer(kind=int_all), intent(in) :: ndof
+  integer,               intent(in) :: n_matrix_block_size
+  logical,               intent(in) :: harmonic_matrix
+  real*8,                intent(inout), allocatable :: A_mat(:)
+  real*8,                intent(inout), allocatable :: rhs(:)
+  integer(kind=int_all), intent(inout), allocatable :: irn(:)
+  integer(kind=int_all), intent(inout), allocatable :: jcn(:)
+  integer(kind=int_all), intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
   
   !--- Internal variables
   type (type_element)               :: element
@@ -342,9 +344,12 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   type (type_node)                  :: nodes_father(n_vertex_max)
   real*8,              allocatable  :: rhs_local(:)
   integer                           :: i, ife, iv, iv2, inode, inode1, inode2, knode, j, k, l, index_ij, index_kl
-  integer                           :: index_node1, index_node2, i_order, k_order, ielm, ierr
-  integer                           :: ijA_position, index_min_loc, index_max_loc
-  integer                           :: index_large_i, index_large_k, ilarge2, vertex(2), direction(2)
+  integer(kind=int_all), parameter  :: Int1=1
+  integer                           :: index_node1, index_node2, index_min_loc, index_max_loc
+  integer(kind=int_all)             :: ijA_position
+  integer(kind=int_all)             :: index_large_i, index_large_k, ilarge2
+  integer                           :: i_order, k_order, ielm, ierr
+  integer                           :: vertex(2), direction(2)
   integer                           :: omp_nthreads, omp_tid, n_tor_local
   integer                           :: node_out(n_vertex_max)
   integer                           :: i_father,INODE_FATHER, ios
@@ -405,14 +410,14 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
   ! --- Memory allocation
   if (allocated(A_mat))   call tr_deallocate(A_mat,"A_mat",CAT_DMATRIX) 
-  call tr_allocate(A_mat,1,nz,"A_mat",  CAT_DMATRIX)
+  call tr_allocate(A_mat,Int1,nz,"A_mat",  CAT_DMATRIX)
   A_mat = 0.0d0
 
   if (allocated(rhs)) call tr_deallocate(rhs,"rhs",CAT_DMATRIX) 
-  call tr_allocate(rhs, 1,ndof,"rhs", CAT_DMATRIX)
+  call tr_allocate(rhs, Int1,ndof,"rhs", CAT_DMATRIX)
   rhs = 0.0d0 
 
-  call tr_allocate(rhs_local, 1,ndof,"rhs_local", CAT_DMATRIX)
+  call tr_allocate(rhs_local, Int1,ndof,"rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
   
   ! --- Declare shared and private variables for omp
@@ -690,14 +695,15 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_mat,nz)
 
-  if ( .not. harmonic_matrix ) then 
 
     ! --- Add vacuum response (boundary integral) for free boundary computations
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
       call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
-                                  resistive_wall, index_min, index_max, rhs_local, tstep, index_now)
+                                  resistive_wall, index_min, index_max, rhs_local, A_mat, tstep, index_now, & 
+                                  irn, jcn, n_matrix_block_size, ijA_index, ijA_size, irn_jcn, i_tor_min, i_tor_max)
     end if
   
+  if ( .not. harmonic_matrix ) then 
     ! --- Summarise element_matrix comparison
 #ifdef COMPARE_ELEMENT_MATRIX
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -746,7 +752,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
      
   ! --- Memory tracking
   call tr_locvnorms("cm_BCRhs",RHS,ndof)
-  call tr_debug_writei("ndof",ndof)
+  call tr_debug_write("ndof",ndof)
   
   ! --- Timing
   call r3_info_end(r3_info_index_0)

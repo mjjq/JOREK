@@ -21,8 +21,6 @@ use mod_bootstrap_functions
 
 implicit none
 
-include 'mpif.h'
-
 ! --- Input Variables
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
@@ -549,8 +547,8 @@ do ms=1, n_gauss
       call current(xpoint2, xcase2, R,Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,current_source_Jp(ms,mt))
       current_source_Jp(ms,mt) = - current_source_Jp(ms,mt)
       ! --- Poloidal current sources
-      current_source_JR(ms,mt) = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_Z * dF_dpsi / R
-      current_source_JZ(ms,mt) = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_R * dF_dpsi / R
+      current_source_JR(ms,mt) = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_Z(ms,mt) * dF_dpsi / R
+      current_source_JZ(ms,mt) = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_R(ms,mt) * dF_dpsi / R
     endif
     call sources(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
     ! --- Bootstrap current 
@@ -745,14 +743,23 @@ do i=1,n_vertex_max
           ZK_prof = get_zkperp(psi_norm)
 
           ! --- Resistivity
-          if ( eta_T_dependent ) then
-            eta_T     =   eta   * (abs(T0_corr)/T_0)**(-1.5d0)
-            deta_dT   = - eta   * 1.5d0  * abs(T0_corr)**(-2.5d0) * T_0**(1.5d0)
-            d2eta_d2T =   eta   * 3.75d0 * abs(T0_corr)**(-3.5d0) * T_0**(1.5d0)
+          if ( eta_T_dependent .and. T0_corr <= T_max_eta) then
+            eta_T     =   eta   * (T0_corr/T_0)**(-1.5d0)
+            deta_dT   = - eta   * 1.5d0  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+            d2eta_d2T =   eta   * 3.75d0 * T0_corr**(-3.5d0) * T_0**(1.5d0)
+          else if ( eta_T_dependent .and. T0_corr > T_max_eta) then
+            eta_T     = eta * (T_max_eta/T_0)**(-1.5d0)
+            deta_dT   = 0.d0
+            d2eta_d2T = 0.d0
           else
             eta_T     = eta
             deta_dT   = 0.d0
             d2eta_d2T = 0.d0
+          end if
+          if ( eta_T_dependent .and.  xpoint2 .and. (T0 .lt. T_min) ) then
+              eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
+              deta_dT   = 0.d0
+              d2eta_d2T = 0.d0
           end if
           eta_R = deta_dT * T0_R
           eta_Z = deta_dT * T0_Z
@@ -760,8 +767,12 @@ do i=1,n_vertex_max
 
           ! --- Viscosity
           if ( visco_T_dependent ) then
-            visco_T   = visco * (abs(T0_corr)/T_0)**(-1.5d0)
-            dvisco_dT = - visco * (1.5d0)  * abs(T0_corr)**(-2.5d0) * T_0**(1.5d0)
+            visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
+            dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+            if ( xpoint2 .and. (T0 .lt. T_min) ) then
+              visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+              dvisco_dT   = 0.d0
+            endif
           else
             visco_T   = visco
             dvisco_dT = 0.d0
@@ -769,15 +780,20 @@ do i=1,n_vertex_max
 
           ! --- Kpar
           if ( ZKpar_T_dependent ) then
-            ZKpar_T   = ZK_par * (abs(T0_corr)/T_0)**(+2.5d0)
-            dZKpar_dT = ZK_par * (2.5d0)  * abs(T0_corr)**(+1.5d0) * T_0**(-2.5d0)
+            ZKpar_T   = ZK_par * (T0_corr/T_0)**(+2.5d0)
+            dZKpar_dT = ZK_par * (2.5d0)  * T0_corr**(+1.5d0) * T_0**(-2.5d0)
+            if (ZKpar_T .gt. ZK_par_max) then
+              ZKpar_T   = Zk_par_max
+              dZKpar_dT = 0.d0
+            endif
+            if ( xpoint2 .and. (T0 .lt. T_min) ) then
+              ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
+              dZKpar_dT = 0.d0
+            endif
           else
             ZKpar_T   = ZK_par
             dZKpar_dT = 0.d0
           endif
-
-          ! --- F_profile
-          Fprof   = Fprofile(ms,mt)
 
           ! --- Magnetic field
           Fprof = Fprofile(ms,mt)
@@ -806,6 +822,7 @@ do i=1,n_vertex_max
           ! --- Note-1: Phi component defined as physical component VdiaP*e_phi, like V and B
           ! --- Note-2: Factor of F0 is here so that we have the same definition of tau_IC in RMHD and FMHD
           tau_IC = tauIC
+          ! --- Switch off at targets?
           !distance_bnd = 1.d10
           !do im=1,n_vertex_max
           !  if (nodes(im)%boundary .eq. 1) then
@@ -822,15 +839,7 @@ do i=1,n_vertex_max
           VdiaGradUZ  = VdiaR0 * UZ0_R + VdiaZ0 * UZ0_Z + VdiaP0 * UZ0_p / R
           VdiaGradUp  = VdiaR0 * Up0_R + VdiaZ0 * Up0_Z + VdiaP0 * Up0_p / R
           
-          ! --- Make sure SOL density/temperature stays levelled
-          if (.true.) then
-            if (rho0 .lt. 1.0*rho_1) particle_source(ms,mt) = 0.5 * (1.0*rho_1-rho0) / tstep
-            if (T0   .lt. 1.0*T_1  ) heat_source(ms,mt)     = 0.5 * (1.0*T_1 -T0  ) / tstep
-            if (rho0 .lt. 1.0*rho_1) D_prof  = D_prof  * 1.d2
-            if (T0   .lt. 1.0*T_1  ) ZK_prof = ZK_prof * 1.d2
-          endif
-
-          ! --- Toroidal velocity
+          ! --- Toroidal velocity source
           Vt0   = V_source(ms,mt)
           Vt0_R = dV_dpsi_source(ms,mt) * psi_axisym_R(ms,mt)
           Vt0_Z = dV_dz_source(ms,mt) + dV_dpsi_source(ms,mt) * psi_axisym_Z(ms,mt)

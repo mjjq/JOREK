@@ -50,6 +50,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 tokamak_device,                                     &
                 F0,gamma_sheath,gamma_stangeby, density_reflection, &
                 mach_one_bnd_integral, Vpar_smoothing,              &
+                deuterium_adas, old_deuterium_atomic,               &
                 Vpar_smoothing_coef,                                &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
@@ -85,7 +86,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
-                zkpar_T_dependent,                                  & 
+                zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        &                                 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
@@ -117,7 +118,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
-                delta_n_convection, nimp_bg,                        &
+                delta_n_convection, nimp_bg, output_prad_phi,       &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
@@ -133,7 +134,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, eta_ohmic, centralize_harm_mat
+                pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
+                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
+                vert_FB_tact, start_VFB_ts, I_coils_max
+
 
 if (my_id .eq. 0) then
 
@@ -193,9 +197,9 @@ if (my_id .eq. 0) then
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
   if (gamma_stangeby > -1.d89) then
-    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0)
+    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0 - 0.5d0*gamma)
   else
-    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 )
+    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 + 0.5d0 * gamma )
   end if
 
   if (sum(nstep_n) .gt. 0) then

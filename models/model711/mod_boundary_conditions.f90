@@ -40,69 +40,68 @@ contains
     implicit none
 
     ! Subroutine parameters
-    INTEGER,                   intent(in)    :: my_id
-    INTEGER,                   intent(in)    :: local_elms(*)
-    INTEGER,                   intent(in)    :: n_local_elms
-    INTEGER,                   intent(in)    :: index_min
-    INTEGER,                   intent(in)    :: index_max
-    INTEGER,                   intent(in)    :: xcase2
-    TYPE (type_node_list),     intent(in)    :: node_list
-    TYPE (type_element_list),  intent(in)    :: element_list
-    TYPE (type_bnd_node_list), intent(in)    :: bnd_node_list
-    logical,                   intent(in)    :: xpoint2
-    REAL*8,                    intent(in)    :: R_axis
-    REAL*8,                    intent(in)    :: Z_axis
-    REAL*8,                    intent(in)    :: psi_axis
-    REAL*8,                    intent(in)    :: psi_bnd
-    REAL*8,                    intent(in)    :: R_xpoint(2)
-    REAL*8,                    intent(in)    :: Z_xpoint(2)
-    REAL*8,                    intent(in)    :: psi_xpoint(2)
-    logical,                   intent(in)    :: gmres
-    logical,                   intent(in)    :: solve_only
-    real*8,                    intent(inout) :: rhs_loc(*)
-    integer,                   intent(in)    :: i_tor_min, i_tor_max 
-    integer, allocatable,      intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, allocatable,      intent(inout) :: irn(:), jcn(:) 
-    real*8,  allocatable,      intent(inout) :: A_mat(:) 
+    INTEGER,                            intent(in)    :: my_id
+    INTEGER,                            intent(in)    :: local_elms(*)
+    INTEGER,                            intent(in)    :: n_local_elms
+    INTEGER,                            intent(in)    :: index_min
+    INTEGER,                            intent(in)    :: index_max
+    INTEGER,                            intent(in)    :: xcase2
+    TYPE (type_node_list),              intent(in)    :: node_list
+    TYPE (type_element_list),           intent(in)    :: element_list
+    TYPE (type_bnd_node_list),          intent(in)    :: bnd_node_list
+    logical,                            intent(in)    :: xpoint2
+    REAL*8,                             intent(in)    :: R_axis
+    REAL*8,                             intent(in)    :: Z_axis
+    REAL*8,                             intent(in)    :: psi_axis
+    REAL*8,                             intent(in)    :: psi_bnd
+    REAL*8,                             intent(in)    :: R_xpoint(2)
+    REAL*8,                             intent(in)    :: Z_xpoint(2)
+    REAL*8,                             intent(in)    :: psi_xpoint(2)
+    logical,                            intent(in)    :: gmres
+    logical,                            intent(in)    :: solve_only
+    real*8,                             intent(inout) :: rhs_loc(*)
+    integer,                            intent(in)    :: i_tor_min, i_tor_max 
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
+    real*8,  allocatable,               intent(inout) :: A_mat(:) 
 
     ! Internal parameters
-    real*8  :: zbig, zbig_backup
-    integer :: i, in, iv, inode, k
-    integer :: index_large_i, index_node, index_node2, ielm
-    integer :: ijA_position, ijA_position2, ilarge2
-    integer :: ilarge_v(n_var), ilarge_vs(n_var)
-    integer :: ierr
-    real*8  :: R, R_s, R_t, R_mid, R_cnt
-    real*8  :: Z, Z_s, Z_t, Z_mid, Z_cnt
-    real*8  :: xjac
-
-    real*8  :: Ti0, Ti0_corr, Ti0_s   
-    real*8  :: Te0, Te0_corr, Te0_s   
-    real*8  :: uR0, uR0_s  
-    real*8  :: uZ0, uZ0_s  
-    real*8  :: up0, up0_s  
-
-    real*8  :: AR0, AR0_s, AR0_t, AR0_p, AR0_R, AR0_Z
-    real*8  :: AZ0, AZ0_s, AZ0_t, AZ0_p, AZ0_R, AZ0_Z
-    real*8  :: A30, A30_s, A30_t, A30_p, A30_R, A30_Z
-    real*8  :: Fprofile, BR0, BZ0, Bp0, BB2, B_dot_n
-
-    real*8  :: normal(2), normal_direction(2), cs_direction
-    real*8  :: grad_s(2), grad_t(2)
-
-    real*8  :: Cs, Cs_s
-    real*8  :: Cs_Ti, Cs_s_Ti, Cs_s_Tis
-    real*8  :: Cs_Te, Cs_s_Te, Cs_s_Tes
-    real*8  :: beta, beta_s
-    real*8  :: beta_Ti, beta_s_Ti, beta_s_Tis
-    real*8  :: beta_Te, beta_s_Te, beta_s_Tes
-
-    real*8  :: Mach1, Mach1_s
-    real*8  :: Mach1_U, Mach1_s_Us
-    real*8  :: Mach1_Ti, Mach1_s_Ti, Mach1_s_Tis
-    real*8  :: Mach1_Te, Mach1_s_Te, Mach1_s_Tes
-
-    integer :: n_tor_local
+    real*8                :: zbig, zbig_backup
+    integer               :: i, in, iv, inode, k
+    integer               :: index_large_i, index_node, index_node2, ielm
+    integer(kind=int_all) :: ijA_position, ijA_position2, ilarge2, ilarge_v(n_var), ilarge_vs(n_var)
+    integer               :: ierr
+    real*8                :: R, R_s, R_t, R_mid, R_cnt
+    real*8                :: Z, Z_s, Z_t, Z_mid, Z_cnt
+    real*8                :: xjac
+                          
+    real*8                :: Ti0, Ti0_corr, Ti0_s   
+    real*8                :: Te0, Te0_corr, Te0_s   
+    real*8                :: uR0, uR0_s  
+    real*8                :: uZ0, uZ0_s  
+    real*8                :: up0, up0_s  
+                          
+    real*8                :: AR0, AR0_s, AR0_t, AR0_p, AR0_R, AR0_Z
+    real*8                :: AZ0, AZ0_s, AZ0_t, AZ0_p, AZ0_R, AZ0_Z
+    real*8                :: A30, A30_s, A30_t, A30_p, A30_R, A30_Z
+    real*8                :: Fprofile, BR0, BZ0, Bp0, BB2, B_dot_n
+                          
+    real*8                :: normal(2), normal_direction(2), cs_direction
+    real*8                :: grad_s(2), grad_t(2)
+                          
+    real*8                :: Cs, Cs_s
+    real*8                :: Cs_Ti, Cs_s_Ti, Cs_s_Tis
+    real*8                :: Cs_Te, Cs_s_Te, Cs_s_Tes
+    real*8                :: beta, beta_s
+    real*8                :: beta_Ti, beta_s_Ti, beta_s_Tis
+    real*8                :: beta_Te, beta_s_Te, beta_s_Tes
+                          
+    real*8                :: Mach1, Mach1_s
+    real*8                :: Mach1_U, Mach1_s_Us
+    real*8                :: Mach1_Ti, Mach1_s_Ti, Mach1_s_Tis
+    real*8                :: Mach1_Te, Mach1_s_Te, Mach1_s_Tes
+                          
+    integer               :: n_tor_local
 
     n_tor_local = i_tor_max - i_tor_min +1 
     zbig = 1.d12
@@ -186,11 +185,11 @@ contains
                     xjac      = R_s*Z_t - R_t*Z_s
 
                     Ti0        = node_list%node(inode)%values(1,1,var_Ti)
-                    Ti0_corr   = max(Ti0, 1.d-12)
+                    Ti0_corr   = max(Ti0, 1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
                     Ti0_s      = node_list%node(inode)%values(1,2,var_Ti)
 
                     Te0        = node_list%node(inode)%values(1,1,var_Te)
-                    Te0_corr   = max(Te0, 1.d-12)
+                    Te0_corr   = max(Te0, 1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
                     Te0_s      = node_list%node(inode)%values(1,2,var_Te)
 
                     uR0       = node_list%node(inode)%values(1,1,var_uR)

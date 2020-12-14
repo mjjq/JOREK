@@ -19,16 +19,23 @@
 
 #include <sys/sysinfo.h>
 #include <unistd.h>
+
+#ifdef INTSIZE64
+#define int_all int64_t
+#else
+#define int_all int
+#endif
+
 using namespace strumpack;
 
-extern "C" void convert2csr(int *indx, int *n, int *m, int *nnz, int **irn, int **jcn, double **val);
-int* distribute(int n, int P);
+extern "C" void convert2csr(int *indx, int_all *n, int_all *m, int_all *nnz, int_all **irn, int_all **jcn, double **val);
+int_all* distribute(int_all n, int P);
 extern "C" void spk(void) {}
 
 //===============================================================================//
-extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fint* comm_) {
+extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int_all>** spss_,MPI_Fint* comm_) {
 
-  StrumpackSparseSolverMPIDist<double,int>* spss= *spss_;
+  StrumpackSparseSolverMPIDist<double,int_all>* spss= *spss_;
   MPI_Comm comm=MPI_Comm_f2c(*comm_);
   int thread_level,rank,P;
   double eps=1e-36, epsr=1.e-12, rnorm;
@@ -40,7 +47,7 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fi
     std::cout << "MPI implementation does not support MPI_THREAD_FUNNELED"
               << std::endl;
 
-  *spss_= new StrumpackSparseSolverMPIDist<double,int>(comm);
+  *spss_= new StrumpackSparseSolverMPIDist<double,int_all>(comm);
   spss = *spss_;
 
   spss->options().set_matching(MatchingJob::MAX_DIAGONAL_PRODUCT_SCALING);
@@ -70,18 +77,18 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fi
   return;
 }
 //===============================================================================//
-extern "C" void spk_set_mat(int* n_, int** dist_, int** irn_, int** jcn_, double** val_,
-		StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fint* comm_,bool* upd_) {
+extern "C" void spk_set_mat(int_all* n_, int_all** dist_, int_all** irn_, int_all** jcn_, double** val_,
+		StrumpackSparseSolverMPIDist<double,int_all>** spss_,MPI_Fint* comm_,bool* upd_) {
 // set and factorize (distributed) matrix
 
-  int n=*n_;
-  int *dist=*dist_;
-  int *irn=*irn_;  
-  int *jcn=*jcn_;  
+  int_all n=*n_;
+  int_all *dist=*dist_;
+  int_all *irn=*irn_;  
+  int_all *jcn=*jcn_;  
   double *val=*val_;
   bool upd=*upd_;
 
-  StrumpackSparseSolverMPIDist<double,int>* spss= *spss_;  
+  StrumpackSparseSolverMPIDist<double,int_all>* spss= *spss_;  
 /*
   MPI_Comm comm=MPI_Comm_f2c(*comm_);
   int rank,P;	
@@ -110,10 +117,10 @@ extern "C" void spk_set_mat(int* n_, int** dist_, int** irn_, int** jcn_, double
 	return;
 }
 //===============================================================================//
-extern "C" void spk_reord(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fint* comm_) {
+extern "C" void spk_reord(StrumpackSparseSolverMPIDist<double,int_all>** spss_,MPI_Fint* comm_) {
 // reorder (distributed) matrix
 
-  StrumpackSparseSolverMPIDist<double,int>* spss= *spss_;   
+  StrumpackSparseSolverMPIDist<double,int_all>* spss= *spss_;   
 
   MPI_Comm comm=MPI_Comm_f2c(*comm_);
   int rank,P;	
@@ -132,10 +139,10 @@ extern "C" void spk_reord(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_F
   return;
 }
 //===============================================================================//
-extern "C" void spk_fact(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fint* comm_) {
+extern "C" void spk_fact(StrumpackSparseSolverMPIDist<double,int_all>** spss_,MPI_Fint* comm_) {
 // factorize (distributed) matrix
 
-  StrumpackSparseSolverMPIDist<double,int>* spss= *spss_;   
+  StrumpackSparseSolverMPIDist<double,int_all>* spss= *spss_;   
 
   MPI_Comm comm=MPI_Comm_f2c(*comm_);
   int rank,P;	
@@ -154,14 +161,14 @@ extern "C" void spk_fact(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fi
   return;
 }
 //===============================================================================//
-extern "C" void spk_solve(int* n_, int ** dist_, double** rhs_,
-		StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fint* comm_,int* phase) {
+extern "C" void spk_solve(int_all* n_, int_all ** dist_, double** rhs_,
+		StrumpackSparseSolverMPIDist<double,int_all>** spss_,MPI_Fint* comm_,int* phase) {
 
-  int n=*n_;
+  int_all n=*n_;
   double* rhs=*rhs_;
-  int *dist = *dist_;
+  int_all *dist = *dist_;
 
-  StrumpackSparseSolverMPIDist<double,int>* spss= *spss_;   
+  StrumpackSparseSolverMPIDist<double,int_all>* spss= *spss_;   
 
   MPI_Comm comm=MPI_Comm_f2c(*comm_);
   int thread_level,rank,P;
@@ -169,14 +176,14 @@ extern "C" void spk_solve(int* n_, int ** dist_, double** rhs_,
   MPI_Comm_size(comm, &P);	
   std::chrono::steady_clock::time_point t0, t1;  
 
-  int n_local = dist[rank+1]-dist[rank];
+  int_all n_local = dist[rank+1]-dist[rank];
 
   // set local RHS    
 	std::vector<double> b(n_local), x(n_local);
 
 #pragma omp for
-	for (int i=dist[rank]; i<dist[rank+1]; i++)
-		b[i-dist[rank]]=rhs[i];    
+	for (int_all i=dist[rank]; i<dist[rank+1]; i++)
+		   b[i-dist[rank]]=rhs[i];    
 
 	t0 = std::chrono::steady_clock::now();
 	spss->solve(b.data(),x.data(),false);
@@ -187,7 +194,7 @@ extern "C" void spk_solve(int* n_, int ** dist_, double** rhs_,
 	x_buf.assign(n,0);
 
 #pragma omp for
-	for (int i=dist[rank]; i<dist[rank+1]; i++)
+	for (int_all i=dist[rank]; i<dist[rank+1]; i++)
 			x_buf[i]=x[i-dist[rank]];
 
 	MPI_Allreduce(x_buf.data(), x_glob.data(), n, MPI_DOUBLE_PRECISION, MPI_SUM, comm);
@@ -199,7 +206,7 @@ extern "C" void spk_solve(int* n_, int ** dist_, double** rhs_,
 	}
 
 #pragma omp for	
-	for (int i=0;i<n;i++){
+	for (int_all i=0;i<n;i++){
 				(*rhs_)[i] = x_glob[i];
 	}
 
@@ -211,8 +218,8 @@ extern "C" void spk_solve(int* n_, int ** dist_, double** rhs_,
 	return;
 }
 //==========================================================================================//
-extern "C" void spk_finalize(StrumpackSparseSolverMPIDist<double,int>** spss_,MPI_Fint* comm_) {
-  StrumpackSparseSolverMPIDist<double,int>* spss= *spss_;
+extern "C" void spk_finalize(StrumpackSparseSolverMPIDist<double,int_all>** spss_,MPI_Fint* comm_) {
+  StrumpackSparseSolverMPIDist<double,int_all>* spss= *spss_;
   MPI_Comm comm=MPI_Comm_f2c(*comm_);
 
 	delete *spss_;
@@ -220,11 +227,13 @@ extern "C" void spk_finalize(StrumpackSparseSolverMPIDist<double,int>** spss_,MP
 	return;
 }  
 //==========================================================================================//
-#ifndef NOMKL
-extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, int **jcn, double **val)
+#if (!defined(NOMKL)) && (!defined(INTSIZE64))
+extern "C" void convert2csr(int *indx_, int_all *n_, int_all *m_, int_all *nnz_, int_all **irn, int_all **jcn, double **val)
 {
   //int *rowptrE;
-  int n =*n_, m=*m_, nnz=*nnz_, indx=*indx_;
+  int_all n =*n_, m=*m_, nnz=*nnz_;
+  int indx=*indx_;
+
   std::cout<<"n = "<<n<<" m = "<<m<<" nnz = "<<nnz<<std::endl;
 
   sparse_index_base_t    indexing;  
@@ -256,14 +265,14 @@ extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, 
   *nnz_ = nnz;
 
 #pragma omp for  
-  for (int i=0; i<n; i++){
+  for (int_all i=0; i<n; i++){
 	  (*irn)[i] = rowptrB[i] - indx;
   }
   
   (*irn)[n]=nnz;
 
 #pragma omp for
-  for (int i=0; i<nnz; i++){
+  for (int_all i=0; i<nnz; i++){
 	  (*jcn)[i] = colind[i] -indx;
 	  (*val)[i] = values[i];
   } 
@@ -273,11 +282,12 @@ extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, 
   return;
 }  
 #else
-extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, int **jcn, double **val)
+extern "C" void convert2csr(int *indx_, int_all *n_, int_all *m_, int_all *nnz_, int_all **irn, int_all **jcn, double **val)
 {
-  int nc =*m_, nr=*n_, nnz=*nnz_, indx=*indx_;
+  int indx=*indx_;
+  int_all nc =*m_, nr=*n_, nnz=*nnz_;
 
-  std::vector<int> rptr(nr+1 ,0);
+  std::vector<int_all> rptr(nr+1 ,0);
 
   std::cout<<"rows = "<<nr<<" cols = "<<nc<<" nnz = "<<nnz<<std::endl;
   if (nr>nnz+1){std::cout<<"Error: #rows > nnz+1"<<std::endl; return;}
@@ -285,16 +295,16 @@ extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, 
   std::chrono::steady_clock::time_point t0, t1;
   t0 = std::chrono::steady_clock::now();
 
-  for (int i=0; i<nnz; i++){
+  for (int_all i=0; i<nnz; i++){
     rptr[(*irn)[i]+1-indx] += 1;
   }
 
   (*irn)[0]=0;
   (*irn)[nr]= nnz;
-  for (int i=1; i<nr; i++){(*irn)[i]=rptr[i] + (*irn)[i-1];}
+  for (int_all i=1; i<nr; i++){(*irn)[i]=rptr[i] + (*irn)[i-1];}
   rptr.clear();
 
-  for (int i=0; i<nnz; i++){(*jcn)[i]-=indx;}
+  for (int_all i=0; i<nnz; i++){(*jcn)[i]-=indx;}
 
   t1 = std::chrono::steady_clock::now();
   std::cout<<"coo2csr (no-MKL) (s) = "<< std::chrono::duration_cast<
@@ -305,12 +315,12 @@ extern "C" void convert2csr(int *indx_, int *n_, int *m_, int *nnz_, int **irn, 
 #endif
 //=========================================================================================//
 // distribute n rows among P ranks
-int* distribute(int n, int P){
-    int* dist;  
+int_all* distribute(int_all n, int P){
+    int_all* dist;  
     int* nl;
-    int n_local;
+    int_all n_local;
 
-    dist = new int[P+1];
+    dist = new int_all[P+1];
     nl = new int[P];      
 
     for (int i=0; i<P; i++){
@@ -335,6 +345,4 @@ extern "C" void getmem(float *av, float *tot){
 
     return;
 }
-
 #endif
-

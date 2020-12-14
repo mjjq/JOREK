@@ -85,10 +85,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,ZKpar_T_dependent,&
-                heatsource_psin, heatsource_sig,                    &
-                particlesource_psin, particlesource_sig,            &
-                edgeparticlesource, edgeparticlesource_psin,        &
-                edgeparticlesource_sig,                             &
                 produce_live_data, gmres, gmres_max_iter,           &
                 iter_precon, gmres_4, gmres_m, gmres_tol,           &
                 max_steps_noUpdate,                                 &
@@ -171,16 +167,16 @@ if (my_id .eq. 0) then
   ns_tor_norm = ns_deltaphi * PI**0.5 * ERF(PI/ns_deltaphi)
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
-  !if (gamma_e_stangeby > -1.d89) then
-  !  gamma_sheath_e = (gamma-1.d0) * (0.5d0*gamma_e_stangeby - 1.d0)
-  !else
-  !  gamma_e_stangeby = 2.d0 * ( gamma_sheath_e / (gamma-1.d0) + 1.d0 )
-  !end if
-  !if (gamma_i_stangeby > -1.d89) then
-  !  gamma_sheath_i = (gamma-1.d0) * (0.5d0*gamma_i_stangeby - 1.d0)
-  !else
-  !  gamma_i_stangeby = 2.d0 * ( gamma_sheath_i / (gamma-1.d0) + 1.d0 )
-  !end if
+  if (gamma_e_stangeby > -1.d89) then
+    gamma_sheath_e = (gamma-1.d0) * (0.5d0*gamma_e_stangeby - 1.d0)
+  else
+    gamma_e_stangeby = 2.d0 * ( gamma_sheath_e / (gamma-1.d0) + 1.d0 )
+  end if
+  if (gamma_i_stangeby > -1.d89) then
+    gamma_sheath_i = (gamma-1.d0) * (0.5d0*gamma_i_stangeby - 1.d0)
+  else
+    gamma_i_stangeby = 2.d0 * ( gamma_sheath_i / (gamma-1.d0) + 1.d0 )
+  end if
 
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)

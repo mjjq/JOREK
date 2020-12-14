@@ -33,11 +33,15 @@ module phys_module
   logical :: U_sheath             !< Use Stangeby BCs for electric potential
   logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
   real*8  :: gamma_sheath         !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
-  real*8  :: gamma_sheath_i       !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
-  real*8  :: gamma_sheath_e       !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
   real*8  :: gamma_stangeby       !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
+  real*8  :: gamma_sheath_e       !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
+  real*8  :: gamma_e_stangeby     !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
+  real*8  :: gamma_sheath_i       !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
+  real*8  :: gamma_i_stangeby     !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
   real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
   real*8  :: neutral_reflection   !< reflection coefficient of ions into neutrals (model500)
+  logical :: old_deuterium_atomic !< use old fit to calculate atomic coefficients for D (ionization, recombination, radiation), otherwise a better fit is used
+  logical :: deuterium_adas       !< use OPEN ADAS to calculate ionization, recombination and radiation coeffients for deuterium                        
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
   logical :: vpar_smoothing       !< apply a smoothing function to smooth jumps in Vpar at B.n=0
   real*8  :: vpar_smoothing_coef(3) !< coefficients for the smoothing profile of the parallel velocity
@@ -303,6 +307,12 @@ module phys_module
   real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
   real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
 
+  real*8, allocatable  :: xtime_radiation(:)    !< The time history of radiated energy in SI unit
+  real*8, allocatable  :: xtime_rad_power(:)    !< The time history of radiated power in SI unit
+
+  real*8, allocatable  :: xtime_E_ion(:)        !< The time history of the ionization potential energy in SI unit
+  real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
+
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: spi_abl_model      !< Ablation model to be used. 0 for constant release rate, 1 for NGS model, 2 for Sergeev formula
 
@@ -313,6 +323,8 @@ module phys_module
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
+
+  logical :: output_prad_phi    !< Output Prad(phi) into a file using integrals_3D
   
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor

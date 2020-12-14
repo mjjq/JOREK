@@ -21,8 +21,6 @@ use mod_bootstrap_functions
 
 implicit none
 
-include 'mpif.h'
-
 ! --- Input Variables
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
@@ -500,8 +498,8 @@ do ms=1, n_gauss
       call current(xpoint2, xcase2, R,Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,current_source_Jp(ms,mt))
       current_source_Jp(ms,mt) = - current_source_Jp(ms,mt)
       ! --- Poloidal current sources
-      current_source_JR(ms,mt) = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_Z * dF_dpsi / R
-      current_source_JZ(ms,mt) = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * A30_R * dF_dpsi / R
+      current_source_JR(ms,mt) = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_Z(ms,mt) * dF_dpsi / R
+      current_source_JZ(ms,mt) = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_R(ms,mt) * dF_dpsi / R
     endif
     call sources(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source_i(ms,mt),heat_source_e(ms,mt))
     ! --- Bootstrap current 
@@ -666,7 +664,7 @@ do i=1,n_vertex_max
 
           ! --- rho
           rho0      = eq_g(mp,var_rho,ms,mt)
-          rho0_corr = max(rho0,1.d-12)!corr_neg_dens1(rho0)
+          rho0_corr = max(rho0,1.d-12)!corr_neg_dens1(rho0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
           drho0_corr_dn = 0.d0!dcorr_neg_dens_drho(rho0)
           rho0_p    = eq_p(mp,var_rho,ms,mt)
           rho0_s    = eq_s(mp,var_rho,ms,mt)
@@ -676,7 +674,7 @@ do i=1,n_vertex_max
 
           ! --- T
           Ti0      = eq_g(mp,var_Ti,ms,mt)
-          Ti0_corr = max(Ti0,1.d-12)!corr_neg_temp1(Ti0)
+          Ti0_corr = max(Ti0,1.d-12)!corr_neg_temp1(Ti0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
           dTi0_corr_dT = 0.d0 !dcorr_neg_temp_dT(Ti0) ! Improve the correction
           Ti0_p    = eq_p(mp,var_Ti,ms,mt)
           Ti0_s    = eq_s(mp,var_Ti,ms,mt)
@@ -686,7 +684,7 @@ do i=1,n_vertex_max
 
           ! --- T
           Te0      = eq_g(mp,var_Te,ms,mt)
-          Te0_corr = max(Te0,1.d-12)!corr_neg_temp1(Te0)
+          Te0_corr = max(Te0,1.d-12)!corr_neg_temp1(Te0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
           dTe0_corr_dT = 0.d0 !dcorr_neg_temp_dT(Te0) ! Improve the correction
           Te0_p    = eq_p(mp,var_Te,ms,mt)
           Te0_s    = eq_s(mp,var_Te,ms,mt)

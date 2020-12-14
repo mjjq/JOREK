@@ -7,16 +7,20 @@ use mod_parameters
 use global_distributed_matrix
 use mumps_module
 use mpi_mod
+use mod_integer_types
 
 implicit none
 
-real*8               :: rhs(:), rhs_dis(:)
-integer              :: my_id, my_id_n, in, j, M_cpu, n_cpu, ifactor
-integer              ::  idisp, n_loc_n, nz_loc_n, n_send, ierr, n_recv
-integer              :: index_snd, old_n, old_nz
-logical              :: again
-real*8,  allocatable :: Asnd_buffer(:), Rsnd_buffer(:)
-integer, allocatable :: send_counts(:), send_disp(:), recv_counts(:), recv_disp(:), sizes(:)
+real*8                             :: rhs(:), rhs_dis(:)
+integer                            :: my_id, my_id_n, in, j, M_cpu, n_cpu, ifactor
+integer                            :: idisp, n_send, ierr
+integer(kind=int_all), parameter   :: Int1=1
+integer(kind=int_all)              :: n_loc_n, nz_loc_n, n_recv
+integer(kind=int_all)              :: index_snd, old_n, old_nz
+logical                            :: again
+real*8,                allocatable :: Asnd_buffer(:), Rsnd_buffer(:)
+integer,               allocatable :: send_counts(:), send_disp(:)
+integer(kind=int_all), allocatable :: recv_counts(:), recv_disp(:), sizes(:)
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
 
@@ -29,7 +33,7 @@ call tr_allocate(send_counts,1,n_cpu    ,"dv_send_counts",CAT_DMATRIX)
 call tr_allocate(send_disp,1,n_cpu      ,"dv_send_disp"  ,CAT_DMATRIX)
 call tr_allocate(recv_counts,1,n_cpu    ,"dv_recv_counts",CAT_DMATRIX)
 call tr_allocate(recv_disp,1,n_cpu      ,"dv_recv_disp"  ,CAT_DMATRIX)
-call tr_allocate(Rsnd_buffer,1,ndof_glob,"dv_Rsnd_buffer",CAT_DMATRIX)
+call tr_allocate(Rsnd_buffer,Int1,ndof_glob,"dv_Rsnd_buffer",CAT_DMATRIX)
 
 if (my_id .eq. 0) then
 
@@ -75,7 +79,7 @@ mumps_par%n =  ifactor*n_loc_n
 nz_loc_n = nz_glob    / n_tor**2
 call tr_allocate(sizes,1,n_cpu,"dh_sizes",CAT_DMATRIX)
 
-call mpi_allgather(nz_loc_n,1,MPI_INTEGER,sizes,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+call mpi_allgather(nz_loc_n,1,MPI_INTEGER_ALL,sizes,1,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
 
 recv_counts(:) = 0
 recv_disp(:)   = 0

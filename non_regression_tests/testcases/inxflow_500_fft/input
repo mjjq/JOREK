@@ -84,6 +84,8 @@
  heatsource     = 1.d-7
  particlesource = 5.d-6
 
+ old_deuterium_atomic = .true.
+
  T_0 = 1.5d-2
  T_1 = 3.d-4
  T_coef(1) = -0.66d0

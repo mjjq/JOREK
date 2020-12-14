@@ -276,8 +276,8 @@ do ms=1, n_gauss
     B_dot_n = BR0 * normal(1) + BZ0 * normal(2)
     cs_direction = B_dot_n / abs(B_dot_n)
 
-    Ti0_corr = corr_neg_temp1(Ti0)
-    Te0_corr = corr_neg_temp1(Te0)
+    Ti0_corr = max(Ti0,1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
+    Te0_corr = max(Te0,1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
     c_s = sqrt(gamma * (Ti0_corr+Te0_corr))
 
     ! --- Loop over nodes

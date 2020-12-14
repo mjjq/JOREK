@@ -428,6 +428,7 @@ subroutine do_read(this, sim, ev)
     call MPI_Bcast(sim%time, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
     call MPI_Bcast(t_start, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr) ! might be needed in some cases (static with number)
     call MPI_Bcast(f%static, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
+    call MPI_Bcast(index_start, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
     if (present(ev)) then
       call MPI_Bcast(ev%start, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
     end if

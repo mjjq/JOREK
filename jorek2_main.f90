@@ -262,6 +262,11 @@ required = 0
     gmres     = .false. 
   end if
   
+  ! --- Initialize time-traces of radiation and ionization energy/power
+#if (JOREK_MODEL == 500)
+  call init_xtime_rad_ionization(my_id)
+#endif
+
   ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)
  
@@ -475,7 +480,7 @@ required = 0
     if ( .not. bench_without_plot ) then
       do index_now = 1, index_start
         call write_live_data(index_now)
-        call write_live_data_vacuum(index_now, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
+        call write_live_data_vacuum(index_now)
 #ifdef JECCD
         call write_live_data2(index_now)
         call write_live_data3(index_now)
@@ -730,6 +735,7 @@ required = 0
     call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()
+    call read_Z_axis_profile() 
     if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
   end if
   
@@ -897,7 +903,8 @@ required = 0
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1)) 
+      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1),& 
+           1, n_tor, irn_glob, jcn_glob, n_matrix_block_size, ijA_index, ijA_size, irn_jcn) 
     endif
 
     if (use_mumps) then
@@ -1012,7 +1019,7 @@ required = 0
     call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms,   &
          n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,&
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, 1, n_tor,   &
-         n_glob, nz_glob, ndof_glob, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
+         n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
          irn_jcn, .false.)
 
     call clck_time_barrier(t1)
@@ -1054,7 +1061,7 @@ required = 0
          call clck_time_barrier(t0) 
          ! --- Direct construction of harmonic matrix
          call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
-              node_list, element_list, bnd_elm_list, xpoint, xcase, freeboundary, .true.)
+              node_list, element_list, bnd_elm_list, bnd_node_list, xpoint, xcase, freeboundary, .true.)
          call MPI_Barrier(MPI_COMM_WORLD,ierr)
          call clck_time_barrier(t1) 
 
@@ -1247,7 +1254,7 @@ required = 0
     if (my_id .eq. 0 ) then
       ! --- Output energies and growth_rates to text files during the code run
       call write_live_data(index_now)
-      call write_live_data_vacuum(index_now, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
+      call write_live_data_vacuum(index_now)
 
 #ifdef JECCD
       call write_live_data2(index_now)

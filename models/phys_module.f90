@@ -307,6 +307,12 @@ module phys_module
   real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
   real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
 
+  real*8, allocatable  :: xtime_radiation(:)    !< The time history of radiated energy in SI unit
+  real*8, allocatable  :: xtime_rad_power(:)    !< The time history of radiated power in SI unit
+
+  real*8, allocatable  :: xtime_E_ion(:)        !< The time history of the ionization potential energy in SI unit
+  real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
+
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: spi_abl_model      !< Ablation model to be used. 0 for constant release rate, 1 for NGS model, 2 for Sergeev formula
 
@@ -317,6 +323,8 @@ module phys_module
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
+
+  logical :: output_prad_phi    !< Output Prad(phi) into a file using integrals_3D
   
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor

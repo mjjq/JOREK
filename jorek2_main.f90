@@ -472,7 +472,11 @@ required = 0
     if ( ierr /= 0 ) stop
 
     ! for variable time step Gears method
-    tstep_prev = xtime(index_start) - xtime(index_start-1)
+    if ( index_now==1) then
+      tstep_prev = tstep
+    else
+      tstep_prev = xtime(index_start) - xtime(index_start-1)
+    end if
 
     ! --- Write live data for previous time-steps
     if ( .not. bench_without_plot ) then

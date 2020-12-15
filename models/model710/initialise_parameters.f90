@@ -47,7 +47,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 T_0,   T_1,   T_coef, T_min,                        &
                 FF_0,  FF_1,  FF_coef,                              &
                 V_0, V_1, V_coef,                                   &
-                ZK_par, ZK_perp, D_par, D_perp,                     &
+                ZK_par, ZK_perp, ZK_par_max, D_par, D_perp,         &
                 eta, visco, visco_par,                              &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 particlesource, heatsource, tauIC,                  &
@@ -75,6 +75,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
                 edgeparticlesource_sig,                             &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
+                particlesource, heatsource, tauIC,                  &
                 produce_live_data, gmres, gmres_max_iter,           &
                 iter_precon, gmres_4, gmres_m, gmres_tol,           &
                 max_steps_noUpdate,                                 &

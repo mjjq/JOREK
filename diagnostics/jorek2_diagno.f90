@@ -156,7 +156,7 @@ endif
   call init_imp_adas(my_id)
 #endif
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
-  if (output_rad_phi) then
+  if (output_prad_phi) then
     ! --- Determine boundary information from the grid
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 

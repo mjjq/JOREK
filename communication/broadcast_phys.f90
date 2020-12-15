@@ -97,6 +97,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(heatsource_gauss,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(heatsource_gauss_psin,  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(heatsource_gauss_sig,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(heatsource_gauss_i,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(heatsource_gauss_e,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(particlesource,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(particlesource_gauss,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(particlesource_gauss_psin,1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -147,6 +149,10 @@ if (my_id .eq. 0) then
   call MPI_PACK(tauIC,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(gamma_sheath,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(gamma_stangeby,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(gamma_sheath_e,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(gamma_e_stangeby,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(gamma_sheath_i,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(gamma_i_stangeby,       1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(density_reflection,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(neutral_reflection,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(imp_reflection,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -243,6 +249,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(total_n_particles_inj_all,1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 #endif
   call MPI_PACK(nimp_bg,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+
+  call MPI_PACK(output_prad_phi,        1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(gmres_4,                1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(gmres_tol,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -659,6 +667,8 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,heatsource_gauss,       1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,heatsource_gauss_psin,  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,heatsource_gauss_sig,   1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,heatsource_gauss_i,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,heatsource_gauss_e,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,particlesource,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,particlesource_gauss,   1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,particlesource_gauss_psin, 1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -709,6 +719,10 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,tauIC,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,gamma_sheath,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,gamma_stangeby,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,gamma_sheath_e,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,gamma_e_stangeby,       1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,gamma_sheath_i,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,gamma_i_stangeby,       1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,density_reflection,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,neutral_reflection,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,imp_reflection,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -802,10 +816,9 @@ if (my_id .ne. 0) then
     call MPI_UNPACK(buffer,bufsize,position,tor_frequency,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
     call MPI_UNPACK(buffer,bufsize,position,ns_phi_rotate,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   end if
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
-  call MPI_UNPACK(buffer,bufsize,position,total_n_particles_inj_all,1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-#endif
+
   call MPI_UNPACK(buffer,bufsize,position,nimp_bg,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,output_prad_phi,        1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,gmres_4,                1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,gmres_tol,              1,MPI_REAL8,MPI_COMM_WORLD,ierr)

@@ -1588,7 +1588,7 @@ if (my_id .eq. 0) then
   write(*,'(A,4es14.6)')   ' Integrals_3D, MGI               : ', total_n_particles_inj, total_n_particles
 #endif
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL =501)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
   write(*,'(A,1e14.6,A)') ' Radiation power          : ', total_radiation/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Ionization power         : ', total_E_ion/1.d6, ' [MW]'

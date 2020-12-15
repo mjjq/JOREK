@@ -324,11 +324,6 @@ module phys_module
   real*8, allocatable  :: xtime_E_ion(:)        !< The time history of the ionization potential energy in SI unit
   real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
 
-  real*8, allocatable  :: xtime_radiation(:)    !< The time history of radiated energy in SI unit
-  real*8, allocatable  :: xtime_rad_power(:)    !< The time history of radiated power in SI unit
-
-  real*8, allocatable  :: xtime_E_ion(:)        !< The time history of the ionization potential energy in SI unit
-  real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
 
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: spi_abl_model      !< Ablation model to be used. 0 for constant release rate, 1 for NGS model, 2 for Sergeev formula

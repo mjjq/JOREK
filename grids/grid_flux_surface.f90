@@ -80,7 +80,7 @@ call meshac2(surface_list%n_psi+1,s_values,xr1,xr2,sig1,sig2,0.6d0,1.0d0)
 
 psi_values(1) = psi_axis
 
-psi_bnd = ES%psi_bnd + 1.d-6*(ES%psi_axis-ES%psi_bnd)
+psi_bnd = ES%psi_bnd + 1.d-8*(ES%psi_axis-ES%psi_bnd)
 if (xpoint) then
   psi_bnd = psi_xpoint(1)
   if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then

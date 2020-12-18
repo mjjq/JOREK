@@ -44,9 +44,8 @@ contains
 !> Suffix is usually of the form 50_w, 96_li
 !> Try to also read the ionisation energy coefficients, but don't crash if they
 !> are not present.
-function read_adf11(suffix, directory) result(ad)
+function read_adf11(my_id,suffix, directory) result(ad)
 use constants
-use mpi_mod
 character(len=*), intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li)
 character(len=*), intent(in), optional :: directory
 type(ADF11_all), target :: ad !< OpenAdas data type
@@ -56,10 +55,9 @@ integer :: i_ADF11
 character*3, dimension(1:6), parameter :: ADF11_filenames = (/"acd", "scd", "ccd", "plt", "prb", "prc"/)
 character*120 :: filename
 
-integer :: i, ierr, n_d, n_T, k, my_id, q, i_n
+integer, intent(in) :: my_id
+integer :: i, ierr, n_d, n_T, k, q, i_n
 logical :: file_exists
-
-call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
 
 if (my_id .eq. 0) then
   write(*,'(A)') '*********************************'

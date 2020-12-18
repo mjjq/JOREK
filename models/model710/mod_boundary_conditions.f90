@@ -71,8 +71,7 @@ contains
     integer               :: i, in, iv, inode, k
     integer               :: ielm
     integer               :: index_node, index_node2
-    integer(kind=int_all) :: ijA_position, ijA_position2
-    integer               :: ilarge2, ilarge_v(n_var), ilarge_vs(n_var)
+    integer(kind=int_all) :: ijA_position, ijA_position2, ilarge2, ilarge_v(n_var), ilarge_vs(n_var)
     integer               :: ierr
     real*8                :: R, R_s, R_t, R_mid, R_cnt
     real*8                :: Z, Z_s, Z_t, Z_mid, Z_cnt
@@ -175,7 +174,7 @@ contains
                     xjac      = R_s*Z_t - R_t*Z_s
 
                     T0        = node_list%node(inode)%values(1,1,var_T)
-                    T0_corr   = max(T0, 1.d-12)
+                    T0_corr   = max(T0, 1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
                     T0_s      = node_list%node(inode)%values(1,2,var_T)
                     uR0       = node_list%node(inode)%values(1,1,var_uR)
                     uR0_s     = node_list%node(inode)%values(1,2,var_uR)
@@ -245,7 +244,7 @@ contains
                     if (k == var_uR) Mach1_s    = uR0_s - beta_s    * BR0
                     if (k == var_uZ) Mach1_s    = uZ0_s - beta_s    * BZ0
                     if (k == var_up) Mach1_s    = up0_s - beta_s    * Bp0
-                    if (k == var_uR) Mach1_s_Us = 1.0
+                                     Mach1_s_Us = 1.0
                     if (k == var_uR) Mach1_s_T  =     - beta_s_T  * BR0
                     if (k == var_uZ) Mach1_s_T  =     - beta_s_T  * BZ0
                     if (k == var_up) Mach1_s_T  =     - beta_s_T  * Bp0

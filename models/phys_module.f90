@@ -34,6 +34,10 @@ module phys_module
   logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
   real*8  :: gamma_sheath         !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
   real*8  :: gamma_stangeby       !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
+  real*8  :: gamma_sheath_e       !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
+  real*8  :: gamma_e_stangeby     !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
+  real*8  :: gamma_sheath_i       !< sheath boundary condition on open fieldlines (JOREK units); you can also provide gamma_stangeby in normal units instead!
+  real*8  :: gamma_i_stangeby     !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
   real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
   real*8  :: neutral_reflection   !< reflection coefficient of ions into neutrals (model500)
   logical :: old_deuterium_atomic !< use old fit to calculate atomic coefficients for D (ionization, recombination, radiation), otherwise a better fit is used
@@ -63,8 +67,9 @@ module phys_module
   real*8  :: manipulate_psi_map(5,5) !< Option to manipulate Psi_boundary for the initial grid
   logical :: adaptive_time        !< (presently not useful)
   logical :: equil                !< compute equilibrium
-  logical :: parallel_projection  !< Full-MHD: use B-projection instead of Phi-projection for 3rd Mom.equation (on Up)
   logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+  logical :: eta_ARAZ_on          !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
+  logical :: tauIC_ARAZ_on        !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
   logical :: bench_without_plot   !< if .true., do not produce certain output plots (e.g., for benchmarking)
   logical :: gmres                !< Use iterative GMRES solver
   integer :: gmres_max_iter       !< Maximum number of GMRES iterations
@@ -169,6 +174,8 @@ module phys_module
   real*8  :: heatsource_gauss          !< Additional Gaussian heat source amplitude
   real*8  :: heatsource_gauss_psin     !< Position around which Gaussian source is located
   real*8  :: heatsource_gauss_sig      !< Width over which Gaussian source extends
+  real*8  :: heatsource_gauss_i        !< Additional Gaussian heat source amplitude
+  real*8  :: heatsource_gauss_e        !< Additional Gaussian heat source amplitude
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num
@@ -301,6 +308,12 @@ module phys_module
   real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
   real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
 
+  real*8, allocatable  :: xtime_radiation(:)    !< The time history of radiated energy in SI unit
+  real*8, allocatable  :: xtime_rad_power(:)    !< The time history of radiated power in SI unit
+
+  real*8, allocatable  :: xtime_E_ion(:)        !< The time history of the ionization potential energy in SI unit
+  real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
+
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: spi_abl_model      !< Ablation model to be used. 0 for constant release rate, 1 for NGS model, 2 for Sergeev formula
 
@@ -311,6 +324,8 @@ module phys_module
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
+
+  logical :: output_prad_phi    !< Output Prad(phi) into a file using integrals_3D
   
   !> @name Fix boundary equilibrium parameters
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor

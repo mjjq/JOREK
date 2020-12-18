@@ -660,7 +660,7 @@ do ms=1, n_gauss
      endif
 
      D_prof     = get_dperp(psi_norm)
-     if (num_d_perp_imp) then
+     if (num_d_perp) then
        D_prof_imp = get_dperp(psi_norm,num_d_prof_x=num_d_perp_x_imp,&
                               num_d_prof_y=num_d_perp_y_imp,num_d_prof_len=num_d_perp_len_imp)
      else
@@ -672,15 +672,17 @@ do ms=1, n_gauss
      if (xpoint2) then
        if (r0 .lt. D_prof_neg_thresh)  then
          D_prof  = D_prof_neg
-         D_prof_imp = D_prof_neg
          D_par   = D_prof_neg
-         D_par_imp = D_prof_neg
+       endif
+       if (rn0 .lt. D_prof_imp_neg_thresh)  then
+         D_prof_imp = D_prof_imp_neg
+         D_par_imp = D_prof_imp_neg
        endif
        if (T0 .lt. ZK_prof_neg_thresh) then
          ZK_prof = ZK_prof_neg
        endif
        if (T0 .lt. ZK_par_neg_thresh) then
-         ZKpar_T = ZK_par_neg
+         ZKpar_T = max(ZKpar_T, ZK_par_neg)
        endif
      endif
    

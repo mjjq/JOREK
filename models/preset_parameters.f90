@@ -182,6 +182,8 @@ subroutine preset_parameters
 
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+  D_prof_imp_neg     = 1.d-5
+  D_prof_imp_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
   ZK_prof_neg        = 1.d-5
   ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior

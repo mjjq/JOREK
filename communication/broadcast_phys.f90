@@ -696,6 +696,8 @@ if (my_id .ne. 0) then
 
   call MPI_UNPACK(buffer,bufsize,position,D_prof_neg,             1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,D_prof_neg_thresh,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,D_prof_imp_neg,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,D_prof_imp_neg_thresh,  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ZK_prof_neg,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ZK_par_neg,             1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ZK_prof_neg_thresh,     1,MPI_REAL8,MPI_COMM_WORLD,ierr)

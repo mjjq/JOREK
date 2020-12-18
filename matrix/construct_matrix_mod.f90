@@ -210,7 +210,7 @@ contains
     if (ife .eq. n_local_elms/2) then
 
       ! --- Call both routines
-      if ( (jorek_model .eq. 303) .or. (jorek_model .eq. 333) .or. (jorek_model .eq. 710) ) n_tor_fft_thresh = 1
+      if ( (jorek_model .eq. 303) .or. (jorek_model .eq. 333) .or. (jorek_model .eq. 710) .or. (jorek_model .eq. 711) ) n_tor_fft_thresh = 1
       call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM2, thread_struct(omp_tid)%RHS2, omp_tid, &
         thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn, &
@@ -218,7 +218,7 @@ contains
         thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, &
         thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, &
         thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max)
-      if ( (jorek_model .eq. 303) .or. (jorek_model .eq. 333) .or. (jorek_model .eq. 710) ) n_tor_fft_thresh = 300
+      if ( (jorek_model .eq. 303) .or. (jorek_model .eq. 333) .or. (jorek_model .eq. 710) .or. (jorek_model .eq. 711) ) n_tor_fft_thresh = 300
       call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM,  thread_struct(omp_tid)%RHS,  omp_tid, i_tor_min, i_tor_max)
       
@@ -280,7 +280,7 @@ contains
 !! added by external routine calls.
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,& 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,i_tor_min, i_tor_max,  &
-                            n, nz, ndof, A_mat, rhs, irn, jcn, ijA_index, ijA_size, irn_jcn, harmonic_matrix)
+                            n, nz, ndof, n_matrix_block_size, A_mat, rhs, irn, jcn, ijA_index, ijA_size, irn_jcn, harmonic_matrix)
   
   use mumps_module 
   use tr_module 
@@ -329,6 +329,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer(kind=int_all), intent(in) :: n
   integer(kind=int_all), intent(in) :: nz
   integer(kind=int_all), intent(in) :: ndof
+  integer,               intent(in) :: n_matrix_block_size
   logical,               intent(in) :: harmonic_matrix
   real*8,                intent(inout), allocatable :: A_mat(:)
   real*8,                intent(inout), allocatable :: rhs(:)
@@ -488,8 +489,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
         write(388, "( '#', A17, 4A4)" ), 'RHS', 'v1', 'i', 'j', 'im'
       
         n_var_reduced = n_var
-#if (JOREK_MODEL == 400)
-        n_var_reduced = 7
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
+        n_var_reduced = n_var - 1
 #endif
       
         do v1 = 1, n_var_reduced
@@ -518,18 +519,18 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
                       
                         ! --- Indices for T_e (model400)
                         index_ij_model400_e = n_tor_local * n_var * (n_order+1) * (i-1) &
-                                            + n_tor_local * n_var * (j-1) + n_tor_local * (8 -1) + im
+                                            + n_tor_local * n_var * (j-1) + n_tor_local * (var_Te -1) + im
                         index_kl_model400_e = n_tor_local * n_var * (n_order+1) * (k-1) &
-                                            + n_tor_local * n_var * (l-1) + n_tor_local * (8 -1) + in
+                                            + n_tor_local * n_var * (l-1) + n_tor_local * (var_Te -1) + in
 
                         !--- RHS: simple output of vector element
                         if ( (k==1) .and. (l==1) .and. (v2==1) .and. (in==1) ) then
                         
                           tmp_rhs = thread_struct(omp_tid)%RHS(index_ij)
                         
-#if (JOREK_MODEL == 400)
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
                           !--- RHS: for model400, add T_e (v1=8) to T_i (v1=6)
-                          if (v1 == 6) tmp_rhs = tmp_rhs + thread_struct(omp_tid)%RHS(index_ij_model400_e)
+                          if (v1 == var_Ti) tmp_rhs = tmp_rhs + thread_struct(omp_tid)%RHS(index_ij_model400_e)
 #endif
                         
                           write(388, "( E18.6, 4I4 )" ) tmp_rhs, v1, i, j, im
@@ -547,15 +548,15 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
                         ! --- for model400, when v1==6, add the ELM(v1=8, v2) contribution to ELM(v1=6, v2), for both tmp_elm and tmp_elm_v2_8
 
-#if (JOREK_MODEL == 400)
-                        if (v2 == 6 ) then
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
+                        if (v2 == var_Ti ) then
                           tmp_elm_v2_8 = thread_struct(omp_tid)%ELM(index_ij, index_kl_model400_e) 
-                          if (v1 == 6) then
+                          if (v1 == var_Ti) then
                             tmp_elm_v2_8 = tmp_elm_v2_8 + thread_struct(omp_tid)%ELM(index_ij_model400_e, index_kl_model400_e) 
                           end if
                         end if
                       
-                        if (v1 == 6) then
+                        if (v1 == var_Ti) then
                           tmp_elm = tmp_elm + thread_struct(omp_tid)%ELM(index_ij_model400_e, index_kl)
                         end if
 #endif
@@ -694,14 +695,15 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc",A_mat,nz)
 
-  if ( .not. harmonic_matrix ) then 
 
     ! --- Add vacuum response (boundary integral) for free boundary computations
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
       call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
-                                  resistive_wall, index_min, index_max, rhs_local, tstep, index_now)
+                                  resistive_wall, index_min, index_max, rhs_local, A_mat, tstep, index_now, & 
+                                  irn, jcn, n_matrix_block_size, ijA_index, ijA_size, irn_jcn, i_tor_min, i_tor_max)
     end if
   
+  if ( .not. harmonic_matrix ) then 
     ! --- Summarise element_matrix comparison
 #ifdef COMPARE_ELEMENT_MATRIX
     call MPI_Barrier(MPI_COMM_WORLD,ierr)

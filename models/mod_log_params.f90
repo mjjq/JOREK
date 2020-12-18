@@ -21,7 +21,7 @@ integer,           intent(in) :: my_id !< MPI proc id
 logical, optional             :: short !< commandline short version or run long version
 
 ! --- Constants
-character(len=512), parameter :: REAL_FMT = "(1X,A, ' = ', 10ES12.4)"
+character(len=512), parameter :: REAL_FMT = "(1X,A, ' = ', 99ES12.4)"
 character(len=512), parameter :: REAL_FMT2 = "(1X,A, ' = ', ES12.4, A)"
 character(len=512), parameter :: INTG_FMT = "(1X,A, ' = ', 100I12)"
 character(len=512), parameter :: LOGI_FMT = "(1X,A, ' = ', 10L12)"
@@ -370,7 +370,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,CHAR_FMT) 'T_file                ', trim(T_file)
   end if
 
-  if ( jorek_model == 400 ) then
+  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) ) then
     write(*,REAL_FMT) 'Te_0                   ', Te_0
     write(*,REAL_FMT) 'Te_1                   ', Te_1
     write(*,REAL_FMT) 'Te_coef                ', Te_coef(1:5)
@@ -415,14 +415,13 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   else
     write(*,CHAR_FMT) 'D_perp_file           ', trim(D_perp_file)
   end if
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
   write(*,REAL_FMT) 'D_par_imp               ', D_par_imp
-  if ( .not. num_d_perp ) then
+  if ( .not. num_d_perp_imp ) then
     write(*,REAL_FMT) 'D_perp_imp            ', D_perp_imp(1:6)
   else
     write(*,CHAR_FMT) 'D_perp_imp_file       ', trim(D_perp_imp_file)
   end if
-  write(*,LOGI_FMT) 'D_diff_flag           ', D_diff_flag
 #endif
   write(*,REAL_FMT) 'particlesource        ', particlesource
   write(*,REAL_FMT) 'particlesource_psin   ', particlesource_psin
@@ -526,6 +525,14 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
       write(*,REAL_FMT2) 'wall_resistivity_fact ', wall_resistivity_fact, ' (used only if STARWALL response file_version>=2)'
     end if
     write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time 
+    write(*,REAL_FMT) 'start_VFB_ts          ', start_VFB_ts
+    write(*,REAL_FMT) 'vert_FB_gain          ', vert_FB_gain(:)
+    write(*,REAL_FMT) 'vert_FB_amp_ts        ', vert_FB_amp_ts(1:n_pf_coils)
+    write(*,REAL_FMT) 'vert_FB_tact          ', vert_FB_tact
+    write(*,CHAR_FMT) 'vert_pos_file         ', trim(vert_pos_file)
+    write(*,REAL_FMT) 'I_coils_max           ', I_coils_max(1:n_pf_coils)
+
+    
   end if
   
   if ( manipulate_psi_map(1,1) /= 0.d0 ) &
@@ -567,11 +574,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
       write(*,'(10ES12.4)',advance='no') pf_coils(i)%current
     end do
     write(*,*)
-    write(*,REAL_FMT,advance='no') 'vert_FB_amp           '
-    do i = 1, n_pf_coils
-      write(*,'(10ES12.4)',advance='no') vert_FB_amp(i)
-    end do
-    write(*,*)
+    write(*,REAL_FMT,advance='no') 'vert_FB_amp           ', vert_FB_amp(n_pf_coils)
     write(*,REAL_FMT,advance='no') 'pf_coils%pert         '
     do i = 1, n_pf_coils
       write(*,'(10ES12.4)',advance='no') pf_coils(i)%pert
@@ -587,6 +590,12 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'central_mass          ', central_mass
   write(*,REAL_FMT) 'gamma_sheath          ', gamma_sheath
   write(*,REAL_FMT) 'gamma_stangeby        ', gamma_stangeby
+  write(*,REAL_FMT) 'gamma_sheath_e        ', gamma_sheath_e
+  write(*,REAL_FMT) 'gamma_sheath_i        ', gamma_sheath_i
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
+  write(*,REAL_FMT) 'gamma_i_stangeby      ', gamma_i_stangeby
+  write(*,REAL_FMT) 'gamma_e_stangeby      ', gamma_e_stangeby
+#endif
   write(*,LOGI_FMT) 'vpar_smoothing        ', vpar_smoothing
   if ( vpar_smoothing ) then
     write(*,REAL_FMT) 'vpar_smoothing_coef   ', vpar_smoothing_coef(:)
@@ -626,7 +635,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
   write(*,LOGI_FMT) 'old_deuterium_atomic  ', old_deuterium_atomic
 
-  if (jorek_model .eq. 710) then
+  if ( (jorek_model .eq. 710) .or. (jorek_model .eq. 711) ) then
     write(*,LOGI_FMT) 'Mach1_openBC          ', Mach1_openBC
     write(*,LOGI_FMT) 'eta_ARAZ_on           ', eta_ARAZ_on
     write(*,LOGI_FMT) 'tauIC_ARAZ_on         ', tauIC_ARAZ_on
@@ -713,6 +722,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'neutral_line_Z_end  ', neutral_line_Z_end
      write(*,REAL_FMT) 'neutral_reflection  ', neutral_reflection
      write(*,REAL_FMT) 'imp_reflection      ', imp_reflection
+     write(*,LOGI_FMT) 'output_prad_phi     ', output_prad_phi
 
      !< Additional log for SPI model
    if(using_spi) then

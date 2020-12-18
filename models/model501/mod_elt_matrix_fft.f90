@@ -677,40 +677,30 @@ do ms=1, n_gauss
      endif     
 
      D_prof     = get_dperp(psi_norm)
-     if (D_diff_flag .and. num_d_perp) then
+     if (num_d_perp_imp) then
        D_prof_imp = get_dperp(psi_norm,num_d_prof_x=num_d_perp_x_imp,&
                               num_d_prof_y=num_d_perp_y_imp,num_d_prof_len=num_d_perp_len_imp)
-     else if (D_diff_flag) then
-       D_prof_imp = get_dperp(psi_norm,D_perp_sp=D_perp_imp)
      else
-       D_prof_imp = get_dperp(psi_norm)
+       D_prof_imp = get_dperp(psi_norm,D_perp_sp=D_perp_imp)
      end if
      ZK_prof = get_zkperp(psi_norm)
 
      ! --- Increase diffusivity if very small density/temperature
-     if (r0 .lt. D_prof_neg_thresh)  then
-        D_prof  = D_prof_neg
-        D_prof_imp = D_prof_neg
-        D_par   = D_prof_neg
-        D_par_imp = D_prof_neg
-     endif
-     if (T0 .lt. ZK_prof_neg_thresh) then
-        ZK_prof = ZK_prof_neg
-     endif
-     if (T0 .lt. ZK_par_neg_thresh) then
-        ZKpar_T = max(ZKpar_T, ZK_par_neg)
+     if (xpoint2) then
+       if (r0 .lt. D_prof_neg_thresh)  then
+         D_prof  = D_prof_neg
+         D_prof_imp = D_prof_neg
+         D_par   = D_prof_neg
+         D_par_imp = D_prof_neg
+       endif
+       if (T0 .lt. ZK_prof_neg_thresh) then
+         ZK_prof = ZK_prof_neg
+       endif
+       if (T0 .lt. ZK_par_neg_thresh) then
+         ZKpar_T = ZK_par_neg
+       endif
      endif
    
-     Dn0x = D_neutral_x      
-     Dn0y = D_neutral_y      
-     Dn0p = D_neutral_p      
-
-     if (rn0 .lt. D_neutral_neg_thresh)  then
-        Dn0x = D_neutral_neg
-        Dn0y = D_neutral_neg
-        Dn0p = D_neutral_neg
-     endif
-
      ! -------------------------------
      ! --- Impurity related things
      ! -------------------------------

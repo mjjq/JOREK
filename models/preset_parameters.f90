@@ -182,6 +182,11 @@ subroutine preset_parameters
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
   ZK_prof_neg        = 1.d-5
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+
+  ne_SI_min          = 1.d18
+  Te_eV_min          = 5.
+  rn0_min            = 1.d-8
+
   T_min              =-1.0d20
   rho_min            =-1.0d20
   
@@ -423,6 +428,9 @@ subroutine preset_parameters
   D_neutral_p = 1.d-5
   delta_n_convection = 0
   nimp_bg = 0.
+  imp_bg_type = 'Ar'
+  n_adas = 0
+  adas_dir = ''
   !====== JET DMV-2 parameters
   L_tube = 2.d0
   K_Dmv = 4.d-2

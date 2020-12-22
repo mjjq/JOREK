@@ -140,10 +140,12 @@ real*8     :: Srec_T, dSrec_dT                                ! Recombination ra
 real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
 real*8     :: Te_eV                                           ! Temperature used in radiation rate
+real*8     :: ne_SI                                           ! Electron density used in radiation rate
 !   -Radiation from background impurities
+real*8     :: Lrad_imp
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg
+real*8     :: m_i_over_m_imp_bg                               ! Mass ratio between main ions and background impurity
 integer*8  :: i_phi
-
 real*8     :: coef_prad_si                                    ! Prad,SI = coef_prad_si * Prad,jorek
 
 #endif
@@ -244,6 +246,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
 !$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0,                    &
+!$omp          ne_SI_min, Te_eV_min, rn0_min,                                                  &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
@@ -258,6 +261,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #if (JOREK_MODEL == 500)
 !$omp          local_radiation, local_radiation_phi, nimp_bg, local_E_ion, ksi_ion, GAMMA,     &
+!$omp          imp_bg_type, imp_cor, imp_adas,                                                 &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -280,8 +284,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #if (JOREK_MODEL == 500)
 !$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion,                                    &
-!$omp           Te_eV, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,                 &
-!$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg, coef_prad_si,                              &
+!$omp           Te_eV, ne_SI, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
+!$omp           Lrad_imp, m_i_over_m_imp_bg, Arad_bg, Brad_bg, Crad_bg, frad_bg, coef_prad_si, &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -544,20 +548,52 @@ do ife = ife_min, ife_max
   ksiion = central_density * 1.d20 * ksi_ion   !Normalisation of the ionization energy cost for Deuterium
 
   ! --- Radiation from background impurity
+  ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
   Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
+
+  select case ( trim(imp_bg_type) )
+    case('C')
+      m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
+    case('Ar')
+      m_i_over_m_imp_bg = central_mass/40.  ! Argon mass = 40 u
+    case('Ne')
+      m_i_over_m_imp_bg = central_mass/20.  ! Neon mass = 20 u
+    case default
+      write(*,*) '!! Background impurity"', trim(imp_bg_type), '" unknown (in mod_neutral_source.f90) !!'
+      write(*,*) '=> We assume the impurity is argon.'
+      m_i_over_m_imp_bg = central_mass/40.
+  end select
+
   Arad_bg = 2.4d-31 
   Brad_bg = 20.
   Crad_bg = 0.8
   frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
                   *nimp_bg*Arad_bg*exp(-((log(Te_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
+  ! Use radiation coefficient from ADAS
+  if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
+    Lrad_imp = 0.0
+    call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
+    if (Lrad_imp < 0.) Lrad_imp = 0.
+  else
+    Lrad_imp = 0.
+  end if
+
+  Lrad_imp = Lrad_imp * m_i_over_m_imp_bg
       
-  local_radiation_phi(mp) = local_radiation_phi(mp) + (r0_corr * rn0_corr  * LradDrays_T &
-                             + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
-                             * bigR * xjac * wst * delta_phi  
-  local_radiation         = local_radiation + (r0_corr * rn0_corr  * LradDrays_T &
-                             + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
-                             * bigR * xjac * wst * delta_phi 
+ ! local_radiation_phi(mp) = local_radiation_phi(mp) + (r0_corr * rn0_corr  * LradDrays_T &
+  !                           + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
+  !                           * bigR * xjac * wst * delta_phi  
+  !local_radiation         = local_radiation + (r0_corr * rn0_corr  * LradDrays_T &
+   !                          + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
+    !                         * bigR * xjac * wst * delta_phi 
+
+  local_radiation_phi(mp) = local_radiation_phi(mp) + ( (r0_corr * rn0_corr  * LradDrays_T    &
+                             + r0_corr ** 2 * LradDcont_T) * coef_prad_si                     & 
+                             + ne_SI * nimp_bg * Lrad_imp) * bigR * xjac * wst * delta_phi  
+  local_radiation         = local_radiation + ( (r0_corr * rn0_corr  * LradDrays_T            &
+                             + r0_corr ** 2 * LradDcont_T) * coef_prad_si                     & 
+                             + ne_SI * nimp_bg * Lrad_imp) * bigR * xjac * wst * delta_phi 
   local_E_ion             = local_E_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
                              * bigR * xjac * wst * delta_phi
 

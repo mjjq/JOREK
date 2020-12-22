@@ -4,7 +4,9 @@ module phys_module
   use mod_parameters
   use constants
   use data_structure              !< Added in order to dynamically allocate pellets
-  
+  use mod_openadas
+  use mod_coronal
+
   implicit none
   
   !> @name Various parameters
@@ -282,7 +284,9 @@ module phys_module
   real*8  :: ksi_ion            !< Energy cost of each ionization
   real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
   real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
- 
+  character(len=80) :: imp_bg_type !< Type of background impurity species: Argon, neon, ...
+  integer :: n_adas             !< Number of species to be traced by ADAS, for future development only
+
   !> @name Shattered pellet injection-related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
   ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
@@ -323,6 +327,10 @@ module phys_module
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
+
+  character(len=512)            :: adas_dir    !< The directory of ADAS data file to be read
+  type (adf11_all), allocatable :: imp_adas(:) !< The ADAS data for impurities
+  type (coronal), allocatable   :: imp_cor(:)  !< The coronal equilibrium distribution of impurities
 
   logical :: output_prad_phi    !< Output Prad(phi) into a file using integrals_3D
   
@@ -627,6 +635,11 @@ module phys_module
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
   real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.)
   real*8              :: rho_min            !< minimum density
+
+  real*8              :: ne_SI_min          !< minimum e density (in SI unit) below which we cut-off the radiation loss
+  real*8              :: Te_eV_min          !< minimum temperature (in eV) below which we cut-off the radiation loss
+  real*8              :: rn0_min            !< minimum impurity density (in JU) for radiation loss cut-off
+
   integer             :: n_tor_fft_thresh   !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
   integer*8           :: fftw_plan          !< Required for FFTW library
   real*8              :: corr_neg_temp_coef(2) !< Parameters used in models/corr_neg.f90

@@ -17,6 +17,7 @@ type coronal
   real*8, allocatable :: density(:) !< log10 density (m^-3)
   real*8, allocatable :: temperature(:) !< log10 temperature (K)
   real*8, allocatable :: Z(:,:,:) !< Charge state (e) density for specific densities, temperatures and charge states [i_n, i_T, i_q]
+  real*8, allocatable :: Z_1T(:,:,:) !< First temperature derivative of charge state (e) density for specific densities, temperatures and charge states [i_n, i_T, i_q]
   real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W) for the above densities and temperatures [i_n, i_T]
   type(Fspline)       :: ZFspline  !< Spline functions for effective charge
   type(Fspline)       :: PradFspline  !< Spline functions for CE radiation function
@@ -133,24 +134,23 @@ end function coronal_equilibrium
 
 
 !> Linear interpolation of coronal model charge at specific density and temperature
-subroutine interpolate_coronal(cor, density, temperature, p_out, z_eff, rad)
+subroutine interpolate_coronal(cor, density, temperature, p_out, p_Te_out, z_eff, rad_out)
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 real*8, intent(in)              :: density !< log10 density (m^-3)
 real*8, intent(in)              :: temperature !< log10 temperature (K)
-real*8, intent(out), optional, dimension(0:cor%n_Z) :: p_out !< distribution of charge states (sum = 1)
+real*8, intent(out), optional, dimension(0:cor%n_Z) :: p_out, p_Te_out !< distribution of charge states (sum = 1)
 real*8, intent(out), optional   :: z_eff !< effective charge according to coronal equilibrium
-real*8, intent(out), optional   :: rad !< radiated power according to coronal equilibrium
+real*8, intent(out), optional   :: rad_out !< radiated power according to coronal equilibrium
 
-real*8, dimension(0:cor%n_Z)    :: p !< distribution of charge states (sum = 1)
+real*8, dimension(0:cor%n_Z)    :: p, dp_dT !< distribution of charge states (sum = 1)
 real*8, dimension(0:cor%n_Z)    :: Z !< The charge number at each charge state
 integer                         :: iz
 
 p = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature)
+dp_dT = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z_1T(:,:,:),density,temperature)
 
-if (present(p_out)) then
-  p_out = p
-endif
-
+if (present(p_out)) p_out = p
+if (present(p_Te_out)) p_Te_out = dp_dT
 if (present(z_eff)) then
   do iz=0,cor%n_Z
     Z(iz) = real(iz,8)
@@ -159,8 +159,8 @@ if (present(z_eff)) then
   z_eff = dot_product(p/sum(p),Z)
 endif
 
-if (present(rad)) then
-  rad = L2Dinterp(cor%density,cor%temperature,cor%Prad(:,:),density,temperature)
+if (present(rad_out)) then
+  rad_out = L2Dinterp(cor%density,cor%temperature,cor%Prad(:,:),density,temperature)
 endif
 end subroutine interpolate_coronal
 

@@ -1587,27 +1587,28 @@ module vacuum_response
     use basis_at_gaussian, only: H1, H1_s, HZ
     use phys_module, only: t_now, t_start
     use mpi_mod
+    use mod_integer_types
 
     implicit none
 
     ! --- Routine parameters
-    integer,                     intent(in)    :: my_id                !< MPI process ID
-    type(type_node_list),        intent(in)    :: node_list            !< List of grid nodes
-    type(type_bnd_node_list),    intent(in)    :: bnd_node_list        !< List of boundary grid nodes
-    type(type_bnd_element_list), intent(in)    :: bnd_elm_list         !< List of boundary elements
-    logical,                     intent(in)    :: freeboundary_equil   !< Use free boundary equilibrium?
-    logical,                     intent(in)    :: resistive_wall       !< Resistive or ideal wall?
-    integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
-    real*8,                      intent(inout) :: rhs_loc(:)           !< Part of RHS of MPI proc 
-    real*8,  allocatable,      intent(inout)   :: A_mat(:)             !< Distributed global or harmonic matrix 
-    real*8,                      intent(in)    :: tstep                !< delta t, timestep
-    integer,                     intent(in)    :: index_now            !< Current timestep index
-    integer,                     intent(in)    :: i_tor_min, i_tor_max !< Toroidal harmonics 
-    integer, allocatable,        intent(inout) :: irn(:), jcn(:)  
-    integer,                     intent(in)    :: n_matrix_block_size
-    integer, allocatable,        intent(in)    :: ijA_index(:,:)
-    integer, allocatable,        intent(in)    :: ijA_size(:)
-    integer, allocatable,        intent(in)    :: irn_jcn(:,:)
+    integer,                            intent(in)    :: my_id                !< MPI process ID
+    type(type_node_list),               intent(in)    :: node_list            !< List of grid nodes
+    type(type_bnd_node_list),           intent(in)    :: bnd_node_list        !< List of boundary grid nodes
+    type(type_bnd_element_list),        intent(in)    :: bnd_elm_list         !< List of boundary elements
+    logical,                            intent(in)    :: freeboundary_equil   !< Use free boundary equilibrium?
+    logical,                            intent(in)    :: resistive_wall       !< Resistive or ideal wall?
+    integer,                            intent(in)    :: index_min, index_max !< Responsibility of MPI proc
+    real*8,                             intent(inout) :: rhs_loc(:)           !< Part of RHS of MPI proc 
+    real*8,                allocatable, intent(inout) :: A_mat(:)             !< Distributed global or harmonic matrix 
+    real*8,                             intent(in)    :: tstep                !< delta t, timestep
+    integer,                            intent(in)    :: index_now            !< Current timestep index
+    integer,                            intent(in)    :: i_tor_min, i_tor_max !< Toroidal harmonics 
+    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:)  
+    integer(kind=int_all),              intent(in)    :: n_matrix_block_size
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:)
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_size(:)
+    integer(kind=int_all), allocatable, intent(in)    :: irn_jcn(:,:)
 
     ! --- Local variables
     real*8, allocatable :: psibnd_vec(:)    ! Vector of the values of Psi at the boundary

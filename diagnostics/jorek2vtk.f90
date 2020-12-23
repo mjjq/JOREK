@@ -1198,11 +1198,11 @@ enddo  ! n_elements
       coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                      *(central_density*1.d20)**2.5d0*m_i_over_m_imp_bg
 
-      if (ne_SI > ne_SI_min .and. T_eV > Te_eV_min .and. nimp_bg > nimp_bg_min) then
+      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > nimp_bg_min) then
 
         Lrad_imp = 0.0
 
-        call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_eV*EL_CHG/K_BOLTZ),Lrad_imp)
+        call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
         Lrad_imp = Lrad_imp * coef_rad_imp          
 
         if (Lrad_imp < 0.) then

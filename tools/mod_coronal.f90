@@ -65,6 +65,39 @@ coronal_Prad = dot_product(fractions(1:ad%n_Z), rad*10.d0**density + rad_RC*10.d
 end function coronal_Prad
 
 
+!> The gradients of several quantities in a specific coronal equilibrium configuration and temperature
+subroutine coronal_gradients(ad, cor, n_d, n_T)
+type (ADF11_all), intent(in)            :: ad !< ADF11 datatype
+type (coronal), intent(inout)           :: cor !< Coronal equilibrium datatypei
+integer, intent(in)                     :: n_d, n_T
+
+real*8, dimension(0:cor%n_Z) :: dp_dT
+!real*8  :: dPrad_dT, dZ_avg_dT, d2Z_avg_dT2
+real*8  :: temperature_cor, density_cor
+integer :: iz, m, k
+
+do m = 1, n_d
+  do k = 1, n_T
+
+    density_cor     = cor%density(m)
+    temperature_cor = cor%temperature(k)
+
+    !call cor%interp(density=density_cor,temperature=temperature_cor, p_Te_out=dp_dT,&
+                    !z_Te_out=dZ_avg_dT, z_TeTe_out=d2Z_avg_dT2, rad_Te_out=dPrad_dT)
+
+    call cor%interp(density=density_cor,temperature=temperature_cor, p_Te_out=dp_dT)
+    
+    cor%Z_1T(m,k,:)       = dp_dT
+    !cor%Prad_1T(m,k)      = dPrad_dT
+    !cor%Z_avg_1T_CE(m,k)  = dZ_avg_dT
+    !cor%Z_avg_2T_CE(m,k)  = d2Z_avg_dT2
+
+  enddo
+enddo
+
+end subroutine coronal_gradients
+
+
 !> Calculate the coronal equilibrium values at specific values of density and temperature
 function coronal_equilibrium(ad) result(cor)
 use constants
@@ -81,6 +114,7 @@ n_d = 10
 n_T = 1000
 
 allocate(cor%density(n_d), cor%temperature(n_T), cor%Z(n_d,n_T,0:cor%n_Z), cor%Prad(n_d,n_T))
+allocate(cor%Z_1T(n_d,n_T,0:cor%n_Z))
 allocate(Z_eff(n_d,n_T))
 Z_eff = 0.0
 
@@ -129,6 +163,8 @@ call ConstructFspline(cor%PradFspline,cor%Prad)
 do iz=0,ad%n_Z
   call ConstructFspline(cor%PFspline(iz),cor%Z(:,:,iz))
 end do
+
+call coronal_gradients(ad, cor, n_d, n_T)
 
 end function coronal_equilibrium
 

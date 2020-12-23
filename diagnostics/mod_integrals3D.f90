@@ -551,8 +551,8 @@ do ife = ife_min, ife_max
   Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
 
   ! Debug: fixed ne_SI and Te_ev
-  ne_SI = 5.d18
-  Te_eV = 10
+  !ne_SI = 5.d18
+  !Te_eV = 10
 
   select case ( trim(imp_bg_type) )
     case('C')
@@ -573,7 +573,7 @@ do ife = ife_min, ife_max
   frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
                   *nimp_bg*Arad_bg*exp(-((log(Te_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
-  ! Use radiation coefficient from ADAS
+  ! Use radiation coefficients from ADAS
   if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > nimp_bg_min) then
     Lrad_imp = 0.0
     call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
@@ -914,10 +914,6 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
 enddo !--- bnd elements, end of calculation of boundary fluxes
 
-if (my_id .eq. 0) then
-  write(*,*) 'DEBUG: integrals3D, before MPI_AllReduce'
-endif
-
 ! --- gather contribution from all MPI processes
 #ifndef NOMPIVERSION
 call MPI_AllReduce(D_int,density_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -1020,10 +1016,6 @@ endif
 #else
   neut_particles_tot = 0.d0
 #endif
-
-if (my_id .eq. 0) then
-  write(*,*) 'DEBUG: integrals3D, after MPI_AllReduce'
-endif
 
 ! --- Normalization factors
 rho_norm = central_density*1.d20 * central_mass * MASS_PROTON 
@@ -1387,11 +1379,11 @@ if (my_id .eq. 0) then
   write(*,'(A,1e14.6,A)') ' Ionization power         : ', total_E_ion/1.d6, ' [MW]'
 
   !> Debugging
+  write(*,'(A,1e14.6,A)') ' Local radiation       : ', local_radiation/1.d6
   write(*,'(A,2e14.6,A)') ' r0, T0: ', r0, T0
   write(*,'(A,3e14.6,A)') ' r0_corr, T0_corr, rn0 : ', r0_corr, T0_corr, rn0
   write(*,'(A,2e14.6,A)') ' ne_SI, Te_eV : ', ne_SI, Te_eV
   write(*,*) 'Lrad_imp from ADAS  : ', Lrad_imp
-  write(*,'(A,1e14.6,A)') ' Local radiation       : ', local_radiation/1.d6
 
   if (index_now > 1) then
     xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation

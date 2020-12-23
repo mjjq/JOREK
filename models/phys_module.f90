@@ -638,7 +638,7 @@ module phys_module
 
   real*8              :: ne_SI_min          !< minimum e density (in SI unit) below which we cut-off the radiation loss
   real*8              :: Te_eV_min          !< minimum temperature (in eV) below which we cut-off the radiation loss
-  real*8              :: rn0_min            !< minimum impurity density (in JU) for radiation loss cut-off
+  real*8              :: nimp_bg_min        !< minimum background impurity density (in SI) for radiation loss cut-off
 
   integer             :: n_tor_fft_thresh   !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
   integer*8           :: fftw_plan          !< Required for FFTW library

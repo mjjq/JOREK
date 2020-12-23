@@ -446,7 +446,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'T_min                 ', T_min
   write(*,REAL_FMT) 'ne_SI_min             ', ne_SI_min
   write(*,REAL_FMT) 'Te_eV_min             ', Te_eV_min
-  write(*,REAL_FMT) 'rn0_min               ', rn0_min
+  write(*,REAL_FMT) 'nimp_bg_min           ', nimp_bg_min
   write(*,REAL_FMT) 'rho_min               ', rho_min
   write(*,LOGI_FMT) 'use_pellet            ', use_pellet
   write(*,REAL_FMT) 'corr_neg_temp_coef    ', corr_neg_temp_coef(:)

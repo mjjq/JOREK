@@ -246,7 +246,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
 !$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0,                    &
-!$omp          ne_SI_min, Te_eV_min, rn0_min,                                                  &
+!$omp          ne_SI_min, Te_eV_min, nimp_bg_min,                                              &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
@@ -309,7 +309,6 @@ omp_tid      = 0
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
 !$omp                VM_int, VM_tot, Vol, P_tot, D_tot,J2_tot, J2_int, J2_ext,                &
 !$omp                heli_tot, mag_wk_tot, vpar_disp_tot, thm_wk_tot, area1, mag_src_tot )
-
 
 do ife = ife_min, ife_max
 
@@ -551,6 +550,10 @@ do ife = ife_min, ife_max
   ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
   Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
 
+  ! Debug: fixed ne_SI and Te_ev
+  ne_SI = 5.d18
+  Te_eV = 10
+
   select case ( trim(imp_bg_type) )
     case('C')
       m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
@@ -571,7 +574,7 @@ do ife = ife_min, ife_max
                   *nimp_bg*Arad_bg*exp(-((log(Te_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
   ! Use radiation coefficient from ADAS
-  if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
+  if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > nimp_bg_min) then
     Lrad_imp = 0.0
     call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
     if (Lrad_imp < 0.) Lrad_imp = 0.
@@ -580,7 +583,13 @@ do ife = ife_min, ife_max
   end if
 
   Lrad_imp = Lrad_imp * m_i_over_m_imp_bg
-      
+
+  ! This is to detect N/A
+  if (Lrad_imp/=Lrad_imp) then
+    write(*,*) "WARNING: Lrad_imp ", Lrad_imp
+    stop
+  end if
+  
  ! local_radiation_phi(mp) = local_radiation_phi(mp) + (r0_corr * rn0_corr  * LradDrays_T &
   !                           + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
   !                           * bigR * xjac * wst * delta_phi  
@@ -669,6 +678,9 @@ enddo
 !$omp end do
 !$omp end parallel
 
+if (my_id .eq. 0) then
+  write(*,*) 'DEBUG: integrals3D, after mp loop'
+endif
 
 !------ Calculate boundary fluxes --------------------------------------------------------
 !--- go through the boundary elements
@@ -902,6 +914,10 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
 enddo !--- bnd elements, end of calculation of boundary fluxes
 
+if (my_id .eq. 0) then
+  write(*,*) 'DEBUG: integrals3D, before MPI_AllReduce'
+endif
+
 ! --- gather contribution from all MPI processes
 #ifndef NOMPIVERSION
 call MPI_AllReduce(D_int,density_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -1004,6 +1020,10 @@ endif
 #else
   neut_particles_tot = 0.d0
 #endif
+
+if (my_id .eq. 0) then
+  write(*,*) 'DEBUG: integrals3D, after MPI_AllReduce'
+endif
 
 ! --- Normalization factors
 rho_norm = central_density*1.d20 * central_mass * MASS_PROTON 
@@ -1365,6 +1385,13 @@ if (my_id .eq. 0) then
   write(*,'(A,1e14.6,A)') ' Radiation power          : ', total_radiation/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Ionization power         : ', total_E_ion/1.d6, ' [MW]'
+
+  !> Debugging
+  write(*,'(A,2e14.6,A)') ' r0, T0: ', r0, T0
+  write(*,'(A,3e14.6,A)') ' r0_corr, T0_corr, rn0 : ', r0_corr, T0_corr, rn0
+  write(*,'(A,2e14.6,A)') ' ne_SI, Te_eV : ', ne_SI, Te_eV
+  write(*,*) 'Lrad_imp from ADAS  : ', Lrad_imp
+  write(*,'(A,1e14.6,A)') ' Local radiation       : ', local_radiation/1.d6
 
   if (index_now > 1) then
     xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation

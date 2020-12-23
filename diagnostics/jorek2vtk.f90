@@ -18,6 +18,10 @@ use mod_interp
 use mod_poloidal_currents
 use mod_openadas , only : read_adf11
 use mod_atomic_coeff_deuterium, only : ad_deuterium , atomic_coeff_deuterium
+#if (JOREK_MODEL == 500)
+   use mod_neutral_source
+#endif
+
 implicit none
 
 type (type_node_list)   ,     pointer :: node_list
@@ -99,7 +103,7 @@ real*8                :: angle, source_volume, local_density, local_temperature,
 
 logical               :: include_radiation
 integer               :: n_radiation,s_radiation
-real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
+real*8                :: Te_eV, ne_SI, Lrad_imp, m_i_over_m_imp_bg, r_imp, coef_rad_imp
 real*8                :: T_corr, T_rad, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: T_real8, dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
@@ -1171,21 +1175,44 @@ enddo  ! n_elements
 
       !--------------------------------------------------------
       ! --- Radiation from background impurity
-      !--------------------------------------------------------
+      !--------------------------------------------------------   
 
-      Arad_bg = 2.4d-31
-      Brad_bg = 20.
-      Crad_bg = 0.8
+      ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+      Te_eV = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
+      r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU
 
-      frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))                               &
-                 *((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0)) &
-                 *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+      select case ( trim(imp_bg_type) )
+        case('C')
+          m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
+        case('Ar')
+          m_i_over_m_imp_bg = central_mass/40.  ! Argon mass = 40 u
+        case('Ne')
+          m_i_over_m_imp_bg = central_mass/20.  ! Neon mass = 20 u
+        case default
+          write(*,*) '!! Background impurity"', trim(imp_bg_type), '" unknown (in mod_neutral_source.f90) !!'
+          write(*,*) '=> We assume the impurity is argon.'
+          m_i_over_m_imp_bg = central_mass/40.
+      end select      
 
-      dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
-                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
-                     *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+      ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+      coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                     *(central_density*1.d20)**2.5d0*m_i_over_m_imp_bg
 
-      scalars(i,s_radiation+5) = scalars(i,5) * frad_bg
+      if (ne_SI > ne_SI_min .and. T_eV > Te_eV_min .and. nimp_bg > nimp_bg_min) then
+
+        Lrad_imp = 0.0
+
+        call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_eV*EL_CHG/K_BOLTZ),Lrad_imp)
+        Lrad_imp = Lrad_imp * coef_rad_imp          
+
+        if (Lrad_imp < 0.) then
+          Lrad_imp = 0.
+        end if
+      else     
+        Lrad_imp = 0.
+      end if     
+
+      scalars(i,s_radiation+5) = scalars(i,5) * r_imp * Lrad_imp
 
     enddo
   endif
@@ -1356,17 +1383,34 @@ if (SI_units) then
       ! --- Radiation from background impurity
       !--------------------------------------------------------
 
-      Arad_bg = 2.4d-31
-      Brad_bg = 20.
-      Crad_bg = 0.8
+      ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+      Te_eV = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
 
-      frad_bg = nimp_bg * Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+      select case ( trim(imp_bg_type) )
+        case('C')
+          m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
+        case('Ar')
+          m_i_over_m_imp_bg = central_mass/40.  ! Argon mass = 40 u
+        case('Ne')
+          m_i_over_m_imp_bg = central_mass/20.  ! Neon mass = 20 u
+        case default
+          write(*,*) '!! Background impurity"', trim(imp_bg_type), '" unknown (in mod_neutral_source.f90) !!'
+          write(*,*) '=> We assume the impurity is argon.'
+          m_i_over_m_imp_bg = central_mass/40.
+      end select
 
-      dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
-                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
-                     *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+      ! Use radiation coefficients from ADAS
+      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > nimp_bg_min) then
+        Lrad_imp = 0.0
+        call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
+        if (Lrad_imp < 0.) Lrad_imp = 0.
+      else
+        Lrad_imp = 0.
+      end if
 
-      scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * frad_bg
+      Lrad_imp = Lrad_imp * m_i_over_m_imp_bg
+
+      scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * nimp_bg * Lrad_imp
 
     endif
 #endif /*(JOREK_MODEL == 500)*/

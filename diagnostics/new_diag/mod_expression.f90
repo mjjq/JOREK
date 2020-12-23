@@ -24,7 +24,10 @@ module mod_expression
   use mod_bootstrap_functions
   use mod_poloidal_currents
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
-  
+      
+#if (JOREK_MODEL == 500)
+  use mod_neutral_source
+#endif
   
   
   implicit none
@@ -554,7 +557,7 @@ module mod_expression
   
   !> Evaluate one/several expressions at one/several poloidal and one/several toroidal positions.
   subroutine eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
-    
+
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':eval_expr'
     
     ! --- Routine parameters
@@ -611,7 +614,7 @@ module mod_expression
     real*8  :: T_rad, LradDrays_T, LradDcont_T, Sion_T, Srec_T
     real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
-    real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
+    real*8  :: frad_bg, ne_SI, Lrad_imp, m_i_over_m_imp_bg, r_imp, coef_rad_imp
     
     ierr = 0
     
@@ -1353,18 +1356,40 @@ module mod_expression
   ! --- Radiation from background impurity
   !--------------------------------------------------------
 
-    Arad_bg = 2.4d-31
-    Brad_bg = 20.
-    Crad_bg = 0.8
+    ne_SI = corr_neg_dens(r0) * 1.d20 * central_density !electron density (SI)
+    r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU
+
+    select case ( trim(imp_bg_type) )
+      case('C')
+        m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
+      case('Ar')
+        m_i_over_m_imp_bg = central_mass/40.  ! Argon mass = 40 u
+      case('Ne')
+        m_i_over_m_imp_bg = central_mass/20.  ! Neon mass = 20 u
+      case default
+        write(*,*) '!! Background impurity"', trim(imp_bg_type), '" unknown (in mod_neutral_source.f90) !!'
+        write(*,*) '=> We assume the impurity is argon.'
+        m_i_over_m_imp_bg = central_mass/40.
+    end select      
+
+    ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+    coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                   *(central_density*1.d20)**2.5d0*m_i_over_m_imp_bg
+
+    if (ne_SI > ne_SI_min .and. T_rad > Te_eV_min .and. nimp_bg > nimp_bg_min) then
+      Lrad_imp = 0.0
+      call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_rad*EL_CHG/K_BOLTZ),Lrad_imp)         
+      if (Lrad_imp < 0.) then
+        Lrad_imp = 0.
+      end if
+    else     
+      Lrad_imp = 0.
+    end if     
 
   if ( units == SI_UNITS ) then
-
-    frad_bg = nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
+    frad_bg = nimp_bg * Lrad_imp * m_i_over_m_imp_bg
   else if ( units == JOREK_UNITS ) then
-
-    frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))*nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
+    frad_bg = r_imp * Lrad_imp * coef_rad_imp 
   endif
   !--------------------------------------------------------
 

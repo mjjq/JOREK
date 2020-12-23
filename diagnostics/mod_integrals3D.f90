@@ -143,7 +143,6 @@ real*8     :: Te_eV                                           ! Temperature used
 real*8     :: ne_SI                                           ! Electron density used in radiation rate
 !   -Radiation from background impurities
 real*8     :: Lrad_imp
-real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg
 real*8     :: m_i_over_m_imp_bg                               ! Mass ratio between main ions and background impurity
 integer*8  :: i_phi
 real*8     :: coef_prad_si                                    ! Prad,SI = coef_prad_si * Prad,jorek
@@ -285,7 +284,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (JOREK_MODEL == 500)
 !$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion,                                    &
 !$omp           Te_eV, ne_SI, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
-!$omp           Lrad_imp, m_i_over_m_imp_bg, Arad_bg, Brad_bg, Crad_bg, frad_bg, coef_prad_si, &
+!$omp           Lrad_imp, m_i_over_m_imp_bg, coef_prad_si,                                     &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -550,10 +549,6 @@ do ife = ife_min, ife_max
   ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
   Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
 
-  ! Debug: fixed ne_SI and Te_ev
-  !ne_SI = 5.d18
-  !Te_eV = 10
-
   select case ( trim(imp_bg_type) )
     case('C')
       m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
@@ -566,12 +561,6 @@ do ife = ife_min, ife_max
       write(*,*) '=> We assume the impurity is argon.'
       m_i_over_m_imp_bg = central_mass/40.
   end select
-
-  Arad_bg = 2.4d-31 
-  Brad_bg = 20.
-  Crad_bg = 0.8
-  frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                  *nimp_bg*Arad_bg*exp(-((log(Te_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
   ! Use radiation coefficients from ADAS
   if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > nimp_bg_min) then
@@ -589,13 +578,7 @@ do ife = ife_min, ife_max
     write(*,*) "WARNING: Lrad_imp ", Lrad_imp
     stop
   end if
-  
- ! local_radiation_phi(mp) = local_radiation_phi(mp) + (r0_corr * rn0_corr  * LradDrays_T &
-  !                           + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
-  !                           * bigR * xjac * wst * delta_phi  
-  !local_radiation         = local_radiation + (r0_corr * rn0_corr  * LradDrays_T &
-   !                          + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
-    !                         * bigR * xjac * wst * delta_phi 
+
 
   local_radiation_phi(mp) = local_radiation_phi(mp) + ( (r0_corr * rn0_corr  * LradDrays_T    &
                              + r0_corr ** 2 * LradDcont_T) * coef_prad_si                     & 

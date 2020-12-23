@@ -284,7 +284,7 @@ module mod_neutral_source
     real*8, intent(in)          :: temperature !< log10 electron temperature in K
 
     real*8, intent(out)         :: Lrad ! value of radiation function
-    real*8, intent(out), optional :: dLrad_dTe ! derivatives of radiation functioni
+    real*8, intent(out), optional :: dLrad_dTe ! derivatives of radiation function
 
     real*8                      :: rad!Local density multiplied radiation function
     real*8                      :: radRB, radLT

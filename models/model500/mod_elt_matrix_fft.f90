@@ -114,7 +114,6 @@ real*8     :: coef_rad_1                                      ! Radiation rate p
 real*8     :: ne_SI                                           ! Electron density used in radiation rate
 
 !   -Radiation from background impurities
-real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 real*8     :: m_i_over_m_imp_bg                               ! Mass ratio between main ions and background impurity
 real*8     :: Lrad_imp, dLrad_imp_dT                          ! Radiation rate and its derivative wrt. temperature
 real*8     :: r_imp                                           ! Background impurity density in JOREK unit
@@ -795,18 +794,7 @@ do i=1,n_vertex_max
               write(*,*) '!! Background impurity"', trim(imp_bg_type), '" unknown (in mod_neutral_source.f90) !!'
               write(*,*) '=> We assume the impurity is argon.'
               m_i_over_m_imp_bg = central_mass/40.
-          end select
-
-          Arad_bg = 2.4d-31
-          Brad_bg = 20.
-          Crad_bg = 0.8
-      
-          frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                        *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-      
-          dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
-                        *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-      
+          end select      
 
           ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
           coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
@@ -1031,8 +1019,7 @@ do i=1,n_vertex_max
                        + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR  * xjac * tstep  &
                        - v * BigR * r0_corr * rn0_corr * LradDrays_T                       * xjac * tstep  &
                        - v * BigR * r0_corr * r0_corr  * LradDcont_T                       * xjac * tstep  &
-                       !- v * BigR * r0_corr * frad_bg                                      * xjac * tstep  &
-                       - v * BigR * r0_corr * r_imp * Lrad_imp                           * xjac * tstep  &
+                       - v * BigR * r0_corr * r_imp * Lrad_imp                             * xjac * tstep  &
 
                        - TG_num6 * 0.25d0 * BigR**3 * T0 * (r0_x * u0_y - r0_y * u0_x)         &
                                           * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep  &
@@ -1639,8 +1626,7 @@ do i=1,n_vertex_max
                            + v * BigR * rho * rn0_corr * ksiion * Sion_T                      * xjac * theta * tstep &
                            + v * BigR * rho * rn0_corr * LradDrays_T                          * xjac * theta * tstep &
                            + v * BigR * rho * 2d0 * r0_corr * LradDcont_T                * xjac * theta * tstep &
-                          ! + v * BigR * rho * frad_bg                                    * xjac * theta * tstep &
-                           + v * BigR * rho * r_imp * Lrad_imp                         * xjac * theta * tstep &
+                           + v * BigR * rho * r_imp * Lrad_imp                           * xjac * theta * tstep &
 
                          + TG_num6 * 0.25d0 * BigR**2 * T0* (rho_x * u0_y - rho_y * u0_x)      &
                                    * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep     &
@@ -1698,8 +1684,7 @@ do i=1,n_vertex_max
 
                             + v * BigR * T * r0_corr * rn0_corr * dLradDrays_dT             * xjac * theta * tstep &
                             + v * BigR * T * r0_corr * r0_corr  * dLradDcont_dT             * xjac * theta * tstep &
-                            !+ v * BigR * T * r0_corr * dfrad_bg_dT                          * xjac * theta * tstep &
-                            + v * BigR * T * r0_corr * r_imp * dLrad_imp_dT               * xjac * theta * tstep &
+                            + v * BigR * T * r0_corr * r_imp * dLrad_imp_dT                 * xjac * theta * tstep &
 
                             + TG_num6 * 0.25d0 * BigR**2 * T* (r0_x * u0_y - r0_y * u0_x)         &
                                       * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &

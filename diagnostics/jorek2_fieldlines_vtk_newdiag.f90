@@ -609,10 +609,10 @@ n_lines = i_line
 !close(20)
 
 open(20,file='field_lines.txt')
-write(20,'(13A16)') 'line', 'X', 'Y', 'Z', 'Phi', (scalar_names(i_var),i_var=1,n_scalars)
+write(20,'(13A16)') 'line', 'x', 'y', 'z', 'Phi', (scalar_names(i_var),i_var=1,n_scalars)
 do i=1,n_lines
    do j=1,Nfield(i)
-      write(20,'(i16,12e16.8)') i,Xfield(j,i),Yfield(j,i),Zfield(j,i),Pfield(j,i),(Tfield(j,i,i_var),i_var=1,n_scalars)
+      write(20,'(i16,12e16.8)') i,Xfield(j,i),-Zfield(j,i),Yfield(j,i),Pfield(j,i),(Tfield(j,i,i_var),i_var=1,n_scalars)
    enddo
 enddo
 close(20)

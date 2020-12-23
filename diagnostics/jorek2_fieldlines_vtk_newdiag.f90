@@ -318,11 +318,11 @@ do i=1,n_lines
       total_length = 0.d0
       total_phi    = p_line
 
-!      Xfield(1,i_line) = R_line * cos(total_phi)
-!      Zfield(1,i_line) = R_line * sin(total_phi)
+      Xfield(1,i_line) = R_line * cos(total_phi)
+      Zfield(1,i_line) = R_line * sin(total_phi)
 ! to produce a vtk file consistent with jorek2vtk where the coordinates are (X,Y,Z=0) no matter what i_plane is
-      Xfield(1,i_line) = R_line * cos(total_phi-P_start(i))
-      Zfield(1,i_line) = R_line * sin(total_phi-P_start(i))
+!      Xfield(1,i_line) = R_line * cos(total_phi-P_start(i))
+!      Zfield(1,i_line) = R_line * sin(total_phi-P_start(i))
       Yfield(1,i_line) = Z_line
       Pfield(1,i_line) = total_phi
 
@@ -553,11 +553,11 @@ do i=1,n_lines
 	    total_phi    = total_phi    + small_delta * delta_phi_step
 
 	    i_field = i_field + 1
-!	    Xfield(i_field,i_line) = R_in * cos(total_phi)
-!	    Zfield(i_field,i_line) = R_in * sin(total_phi)
+	    Xfield(i_field,i_line) = R_in * cos(total_phi)
+	    Zfield(i_field,i_line) = R_in * sin(total_phi)
 ! to produce a vtk file consistent with jorek2vtk where the coordinates are (X,Y,Z=0) no matter what i_plane is
-	    Xfield(i_field,i_line) = R_in * cos(total_phi-P_start(i))
-	    Zfield(i_field,i_line) = R_in * sin(total_phi-P_start(i))
+!	    Xfield(i_field,i_line) = R_in * cos(total_phi-P_start(i))
+!	    Zfield(i_field,i_line) = R_in * sin(total_phi-P_start(i))
 	    Yfield(i_field,i_line) = Z_in
 	    Pfield(i_field,i_line) = total_phi
 	    Nfield(i_line)         = Nfield(i_line) + 1

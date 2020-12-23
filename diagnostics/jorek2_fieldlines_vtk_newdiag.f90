@@ -15,7 +15,7 @@ use mod_new_diag
 implicit none
 
 real*8,allocatable  :: rp(:), zp(:), R_all(:), Z_all(:), C_all(:), R_strike(:), Z_strike(:), P_strike(:), C_strike(:)
-real*4,allocatable  :: Xfield(:,:), Yfield(:,:), Zfield(:,:), Tfield(:,:,:)
+real*4,allocatable  :: Xfield(:,:), Yfield(:,:), Zfield(:,:), Pfield(:,:), Tfield(:,:,:)
 integer,allocatable :: Nfield(:)
 character*12, allocatable :: scalar_names(:), vector_names(:)
 integer :: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_dir, k, m, ntotal
@@ -229,12 +229,12 @@ allocate(R_strike(n_dir*n_lines),Z_strike(n_dir*n_lines),P_strike(n_dir*n_lines)
 
 allocate(R_all(n_dir*n_lines),Z_all(n_dir*n_lines),C_all(n_dir*n_lines))
 
-allocate(Xfield(n_large,n_dir*n_lines),Yfield(n_large,n_dir*n_lines),Zfield(n_large,n_dir*n_lines),Nfield(n_dir*n_lines))
-allocate(Tfield(n_large,n_dir*n_lines,n_scalars))
+allocate(Xfield(n_large,n_dir*n_lines),Yfield(n_large,n_dir*n_lines),Zfield(n_large,n_dir*n_lines),Pfield(n_large,n_dir*n_lines))
+allocate(Nfield(n_dir*n_lines),Tfield(n_large,n_dir*n_lines,n_scalars))
 
 R_all    = 0.d0; Z_all    = 0.d0; C_all = 0.d0
 R_strike = 0.d0; Z_strike = 0.d0; P_strike = 0.d0; C_strike = 0.d0
-Xfield   = 0.d0; Yfield   = 0.d0; Zfield = 0.d0;  Tfield = 0.d0; Nfield = 0
+Xfield   = 0.d0; Yfield   = 0.d0; Zfield = 0.d0; Pfield = 0.d0; Tfield = 0.d0; Nfield = 0
 
 Rmin = 1.d20; Rmax = -1.d20; Zmin = 1.d20; Zmax=-1.d20
 do i=1,node_list%n_nodes
@@ -287,6 +287,7 @@ do i=1,n_lines
       Xfield(1,i_line) = R_line * cos(total_phi-P_start(i))
       Zfield(1,i_line) = R_line * sin(total_phi-P_start(i))
       Yfield(1,i_line) = Z_line
+      Pfield(1,i_line) = total_phi
 
       call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, ielm=i_elm, s=s_line, t=t_line)
       call create_tor_pos(tor_pos_list, ierr, phi=total_phi)
@@ -521,6 +522,7 @@ do i=1,n_lines
 	    Xfield(i_field,i_line) = R_in * cos(total_phi-P_start(i))
 	    Zfield(i_field,i_line) = R_in * sin(total_phi-P_start(i))
 	    Yfield(i_field,i_line) = Z_in
+	    Pfield(i_field,i_line) = total_phi
 	    Nfield(i_line)         = Nfield(i_line) + 1
 
             call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, ielm=i_elm, s=s_line, t=t_line)
@@ -571,10 +573,10 @@ enddo
 close(20)
 
 open(20,file='fieldlines_newdiag.txt')
-write(20,'(13A16)') 'line', 'X', 'Y', 'Z', (scalar_names(i_var),i_var=1,n_scalars)
+write(20,'(13A16)') 'line', 'X', 'Y', 'Z', 'Phi', (scalar_names(i_var),i_var=1,n_scalars)
 do i=1,n_lines
    do j=1,Nfield(i)
-      write(20,'(i16,12e16.8)') i,Xfield(j,i),Yfield(j,i),Zfield(j,i),(Tfield(j,i,i_var),i_var=1,n_scalars)
+      write(20,'(i16,12e16.8)') i,Xfield(j,i),Yfield(j,i),Zfield(j,i),Pfield(j,i),(Tfield(j,i,i_var),i_var=1,n_scalars)
    enddo
 enddo
 close(20)

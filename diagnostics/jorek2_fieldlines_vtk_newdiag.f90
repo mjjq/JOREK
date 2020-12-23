@@ -1,3 +1,17 @@
+!**************************************************************************************************
+!* This diagnostics evaluates arbitrary physical expressions (using the new_diag framework)       *
+!* along field lines and writes this information to both vtk and txt files.                       *
+!* It uses the file jorek_restart.h5 to load the simulation state,                                *
+!* and a text file called stpts containing required information                                   *
+!* about the field lines along which physical expressions are to be to evaluated,                 *
+!* and the physical expressions to be evaluated.                                                  *
+!* Output is generated in the binary file field_lines.vtk                                         *
+!* and ASCII file field_lines.txt                                                                 *
+!*                                                                                                *      
+!* For details, see:                                                                              *
+!* https://www.jorek.eu/wiki/doku.php?id=jorek2_fieldlines_vtk_newdiag                            *
+!**************************************************************************************************
+
 program jorek2_fieldlines_vtk_newdiag
 
 use constants
@@ -54,19 +68,42 @@ my_id=0
 
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
-! --- Read start points from file 'stpts'.
+! --- Read start points and expressions from file 'stpts'.
 !
 ! Example for a stpts file:
-!   Eleven field lines will be started, the first ten between (1.7,0.0) and (1.8,0.0), the eleventh at (1.85,0.2)
-! 
 !   +-------------------------------------------------------
+!   |# n_scalars
+!   |   3
+!   |# expr  name
+!   |  Te    Te_eV
+!   |  ne    ne_m-3
+!   |  nimp  nimp_m-3
 !   |# n_lines
-!   |  11
-!   |# nr   R_start   Z_start    psi_start   n_turns
-!   |   1    1.700      0.000     0.000      100
-!   |  10    1.800      0.000     0.000      200
-!   |  11    1.850      0.200     0.000      800
+!   |   100
+!   |# nr    R_start   Z_start   phi_start   n_turns
+!   |   1    3.003     1.606     6.0900      1
+!   |   2    2.988     1.558     6.0900      1
+!   |   3    2.990     1.560     6.0900      1
+!   |   4    2.946     1.576     6.0900      1
+!   |   5    2.989     1.571     6.0900      1
+!   |   6    2.995     1.649     6.0900      1
+!   |   7    3.002     1.648     6.0900      1
+!   |   8    2.977     1.550     6.0900      1
+!   |   9    3.017     1.631     6.0900      1
+!   |  10    3.033     1.621     6.0900      1
+!   | ...
+!   | 100    2.997     1.620     6.0900      1
 !   +-------------------------------------------------------
+!
+! n_scalars is the number of scalar expressions to be evaluated,
+! expr and name are the expressions (as defined in the new_diag framework) and its name,
+! n_lines are the number of field lines to be evaluated
+! (in both backward and forward direction so the final number of computed field lines will be twice this number).
+! nr is the field line number, R_start, Z_start and phi_start its initial coordinate,
+! and n_turns the number of toroidal turns along which the field line should be followed.
+! As in the jorek2_poincare diagnostics, the user can either provide the initial coordinates of all the field lines,
+! or specify groups of field lines where only the first and last lines are explicitly given,
+! and their initial coordinates are assumed to be uniformily distributed between the first and the last.
 !
 open(21, file='stpts', status='old', action='read', iostat=ierr)
 
@@ -563,16 +600,15 @@ do i=1,n_lines
 
 enddo ! end of main loop
 
-
 n_lines = i_line
 
-open(20,file='fieldlines.txt')
-do i_line=1,n_lines
-   write(20,'(i8,8e16.8)') i_line,C_all(i_line),R_all(i_line),Z_all(i_line)
-enddo
-close(20)
+!open(20,file='fieldlines.txt')
+!do i_line=1,n_lines
+!   write(20,'(i8,8e16.8)') i_line,C_all(i_line),R_all(i_line),Z_all(i_line)
+!enddo
+!close(20)
 
-open(20,file='fieldlines_newdiag.txt')
+open(20,file='field_lines.txt')
 write(20,'(13A16)') 'line', 'X', 'Y', 'Z', 'Phi', (scalar_names(i_var),i_var=1,n_scalars)
 do i=1,n_lines
    do j=1,Nfield(i)
@@ -580,8 +616,6 @@ do i=1,n_lines
    enddo
 enddo
 close(20)
-
-
 
 !do i_line=1,n_lines
 !   write(*,'(i8,8e12.4)') i_line,C_strike(i_line),R_strike(i_line),Z_strike(i_line),P_strike(i_line)

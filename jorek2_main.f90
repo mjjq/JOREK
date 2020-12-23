@@ -262,10 +262,9 @@ required = 0
     gmres     = .false. 
   end if
   
-  ! --- Initialize adas for background impurity and time-traces of radiation and ionization energy/power
+  ! --- Initialize adas for background impurity and time-traces of radiation and ionization energy/power.
 #if (JOREK_MODEL == 500)
   call init_imp_adas(my_id)
-  call init_xtime_rad_ionization(my_id)
 #endif
 
   ! --- Write out all parameters defined in parameters and the namelist input file.

@@ -216,15 +216,13 @@ module mod_neutral_source
         do i=1, n_adas
           select case ( trim(imp_bg_type) )
             case('C')
-              write(*,*) "Carbon adas calculation unsupported for now, terminating."
-              adas_suffix = 'none'
-              deallocate(imp_cor)
-              deallocate(imp_adas)
-              stop
+              adas_suffix = '96_c'
             case('Ar')
               adas_suffix = '89_ar'
             case('Ne')
               adas_suffix = '96_ne'
+            case('W')
+              adas_suffix = '50_w'
             case default
               write(*,*) "Unrecognized species, terminating."
               adas_suffix = 'none'
@@ -242,18 +240,7 @@ module mod_neutral_source
           if (my_id == 0) call output_coronal(imp_cor(i))
         end do
       end if
-
     end if
-  end subroutine init_imp_adas
-
-  !> Initialize time-traces of radiation and ionization energy/power
-  subroutine init_xtime_rad_ionization(my_id)
-   
-    use phys_module
-
-    implicit none
-
-    integer, intent(in) :: my_id
 
     if ( my_id == 0 ) then
       if (allocated(xtime_radiation)) call tr_deallocate(xtime_radiation,"xtime_radiation",CAT_GRID)
@@ -266,7 +253,7 @@ module mod_neutral_source
       if (nstep .gt. 0) call tr_allocate(xtime_E_ion_power,1,nstep,"xtime_E_ion_power")
     end if 
 
-  end subroutine init_xtime_rad_ionization
+  end subroutine init_imp_adas
 
   !> Get the radiation coefficients from adas, outputs Lrad in [wm^3] and dLrad_dTe in [Wm^3/K]
   subroutine radiation_function_linear(ad,cor, density, temperature, Lrad, dLrad_dTe)

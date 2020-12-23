@@ -570,6 +570,17 @@ do i_line=1,n_lines
 enddo
 close(20)
 
+open(20,file='fieldlines_newdiag.txt')
+write(20,'(13A16)') 'line', 'X', 'Y', 'Z', (scalar_names(i_var),i_var=1,n_scalars)
+do i=1,n_lines
+   do j=1,Nfield(i)
+      write(20,'(i16,12e16.8)') i,Xfield(j,i),Yfield(j,i),Zfield(j,i),(Tfield(j,i,i_var),i_var=1,n_scalars)
+   enddo
+enddo
+close(20)
+
+
+
 !do i_line=1,n_lines
 !   write(*,'(i8,8e12.4)') i_line,C_strike(i_line),R_strike(i_line),Z_strike(i_line),P_strike(i_line)
 !enddo

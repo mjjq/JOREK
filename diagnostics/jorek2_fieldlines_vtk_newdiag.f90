@@ -1,16 +1,16 @@
-!**************************************************************************************************
-!* This diagnostics evaluates arbitrary physical expressions (using the new_diag framework)       *
-!* along field lines and writes this information to both vtk and txt files.                       *
-!* It uses the file jorek_restart.h5 to load the simulation state,                                *
-!* and a text file called stpts containing required information                                   *
-!* about the field lines along which physical expressions are to be to evaluated,                 *
-!* and the physical expressions to be evaluated.                                                  *
-!* Output is generated in the binary file field_lines.vtk                                         *
-!* and ASCII file field_lines.txt                                                                 *
-!*                                                                                                *      
-!* For details, see:                                                                              *
-!* https://www.jorek.eu/wiki/doku.php?id=jorek2_fieldlines_vtk_newdiag                            *
-!**************************************************************************************************
+!**************************************************************************************************************************
+!* This diagnostics evaluates arbitrary physical expressions (using the new_diag framework)                               *
+!* along field lines and writes this information to both vtk and txt files.                                               *
+!* It uses the file jorek_restart.h5 to load the simulation state,                                                        *
+!* and a text file called stpts containing required information                                                           *
+!* about the field lines along which physical expressions are to be to evaluated,                                         *
+!* and the physical expressions to be evaluated.                                                                          *
+!* Output is generated in the binary file field_lines.vtk (using a coordinate system consistent with jorek2vtk)           *
+!* and ASCII file field_lines.txt (using the coordinate system in https://www.jorek.eu/wiki/doku.php?id=coordinates))     *
+!*                                                                                                                        *
+!* For details, see:                                                                                                      *
+!* https://www.jorek.eu/wiki/doku.php?id=jorek2_fieldlines_vtk_newdiag                                                    *
+!**************************************************************************************************************************
 
 program jorek2_fieldlines_vtk_newdiag
 
@@ -30,6 +30,7 @@ implicit none
 
 real*8,allocatable  :: rp(:), zp(:), R_all(:), Z_all(:), C_all(:), R_strike(:), Z_strike(:), P_strike(:), C_strike(:)
 real*4,allocatable  :: Xfield(:,:), Yfield(:,:), Zfield(:,:), Pfield(:,:), Tfield(:,:,:)
+real*4,allocatable  :: XfieldVTK(:,:), YfieldVTK(:,:), ZfieldVTK(:,:)
 integer,allocatable :: Nfield(:)
 character*12, allocatable :: scalar_names(:), vector_names(:)
 integer :: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_dir, k, m, ntotal
@@ -267,11 +268,13 @@ allocate(R_strike(n_dir*n_lines),Z_strike(n_dir*n_lines),P_strike(n_dir*n_lines)
 allocate(R_all(n_dir*n_lines),Z_all(n_dir*n_lines),C_all(n_dir*n_lines))
 
 allocate(Xfield(n_large,n_dir*n_lines),Yfield(n_large,n_dir*n_lines),Zfield(n_large,n_dir*n_lines),Pfield(n_large,n_dir*n_lines))
+allocate(XfieldVTK(n_large,n_dir*n_lines),YfieldVTK(n_large,n_dir*n_lines),ZfieldVTK(n_large,n_dir*n_lines))
 allocate(Nfield(n_dir*n_lines),Tfield(n_large,n_dir*n_lines,n_scalars))
 
 R_all    = 0.d0; Z_all    = 0.d0; C_all = 0.d0
 R_strike = 0.d0; Z_strike = 0.d0; P_strike = 0.d0; C_strike = 0.d0
 Xfield   = 0.d0; Yfield   = 0.d0; Zfield = 0.d0; Pfield = 0.d0; Tfield = 0.d0; Nfield = 0
+XfieldVTK   = 0.d0; YfieldVTK   = 0.d0; ZfieldVTK = 0.d0
 
 Rmin = 1.d20; Rmax = -1.d20; Zmin = 1.d20; Zmax=-1.d20
 do i=1,node_list%n_nodes
@@ -319,11 +322,11 @@ do i=1,n_lines
       total_phi    = p_line
 
       Xfield(1,i_line) = R_line * cos(total_phi)
-      Zfield(1,i_line) = R_line * sin(total_phi)
-! to produce a vtk file consistent with jorek2vtk where the coordinates are (X,Y,Z=0) no matter what i_plane is
-!      Xfield(1,i_line) = R_line * cos(total_phi-P_start(i))
-!      Zfield(1,i_line) = R_line * sin(total_phi-P_start(i))
-      Yfield(1,i_line) = Z_line
+      Yfield(1,i_line) = -R_line * sin(total_phi)
+      Zfield(1,i_line) = Z_line
+      XfieldVTK(1,i_line) = R_line * cos(total_phi-P_start(i))
+      ZfieldVTK(1,i_line) = R_line * sin(total_phi-P_start(i))
+      YfieldVTK(1,i_line) = Z_line
       Pfield(1,i_line) = total_phi
 
       call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, ielm=i_elm, s=s_line, t=t_line)
@@ -554,11 +557,11 @@ do i=1,n_lines
 
 	    i_field = i_field + 1
 	    Xfield(i_field,i_line) = R_in * cos(total_phi)
-	    Zfield(i_field,i_line) = R_in * sin(total_phi)
-! to produce a vtk file consistent with jorek2vtk where the coordinates are (X,Y,Z=0) no matter what i_plane is
-!	    Xfield(i_field,i_line) = R_in * cos(total_phi-P_start(i))
-!	    Zfield(i_field,i_line) = R_in * sin(total_phi-P_start(i))
-	    Yfield(i_field,i_line) = Z_in
+	    Yfield(i_field,i_line) = -R_in * sin(total_phi)
+	    Zfield(i_field,i_line) = Z_in
+	    XfieldVTK(i_field,i_line) = R_in * cos(total_phi-P_start(i))
+	    ZfieldVTK(i_field,i_line) = R_in * sin(total_phi-P_start(i))
+	    YfieldVTK(i_field,i_line) = Z_in
 	    Pfield(i_field,i_line) = total_phi
 	    Nfield(i_line)         = Nfield(i_line) + 1
 
@@ -612,7 +615,7 @@ open(20,file='field_lines.txt')
 write(20,'(13A16)') 'line', 'x', 'y', 'z', 'Phi', (scalar_names(i_var),i_var=1,n_scalars)
 do i=1,n_lines
    do j=1,Nfield(i)
-      write(20,'(i16,12e16.8)') i,Xfield(j,i),-Zfield(j,i),Yfield(j,i),Pfield(j,i),(Tfield(j,i,i_var),i_var=1,n_scalars)
+      write(20,'(i16,12e16.8)') i,Xfield(j,i),Yfield(j,i),Zfield(j,i),Pfield(j,i),(Tfield(j,i,i_var),i_var=1,n_scalars)
    enddo
 enddo
 close(20)
@@ -652,7 +655,7 @@ buffer = 'DATASET POLYDATA'//lf//lf                                             
 write(str1(1:12),'(i12)') n_total
 buffer = 'POINTS '//str1//'  float'//lf                                               ; write(ivtk) trim(buffer)
 
-write(ivtk) (([Xfield(j,i),Yfield(j,i),Zfield(j,i)], j=1,Nfield(i)),i=1,n_lines)
+write(ivtk) (([XfieldVTK(j,i),YfieldVTK(j,i),ZfieldVTK(j,i)], j=1,Nfield(i)),i=1,n_lines)
 
 !LINES SECTION
 write(str3(1:24),'(2i12)') n_lines,n_total+n_lines

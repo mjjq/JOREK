@@ -72,26 +72,15 @@ type (coronal), intent(inout)           :: cor !< Coronal equilibrium datatypei
 integer, intent(in)                     :: n_d, n_T
 
 real*8, dimension(0:cor%n_Z) :: dp_dT
-!real*8  :: dPrad_dT, dZ_avg_dT, d2Z_avg_dT2
 real*8  :: temperature_cor, density_cor
 integer :: iz, m, k
 
 do m = 1, n_d
   do k = 1, n_T
-
     density_cor     = cor%density(m)
     temperature_cor = cor%temperature(k)
-
-    !call cor%interp(density=density_cor,temperature=temperature_cor, p_Te_out=dp_dT,&
-                    !z_Te_out=dZ_avg_dT, z_TeTe_out=d2Z_avg_dT2, rad_Te_out=dPrad_dT)
-
-    call cor%interp(density=density_cor,temperature=temperature_cor, p_Te_out=dp_dT)
-    
+    call cor%interp(density=density_cor,temperature=temperature_cor, p_Te_out=dp_dT)    
     cor%Z_1T(m,k,:)       = dp_dT
-    !cor%Prad_1T(m,k)      = dPrad_dT
-    !cor%Z_avg_1T_CE(m,k)  = dZ_avg_dT
-    !cor%Z_avg_2T_CE(m,k)  = d2Z_avg_dT2
-
   enddo
 enddo
 

@@ -556,6 +556,8 @@ do ife = ife_min, ife_max
       m_i_over_m_imp_bg = central_mass/40.  ! Argon mass = 40 u
     case('Ne')
       m_i_over_m_imp_bg = central_mass/20.  ! Neon mass = 20 u
+    case('W')
+      m_i_over_m_imp_bg = central_mass/184. ! Tungsten mass = 184 u
     case default
       write(*,*) '!! Background impurity"', trim(imp_bg_type), '" unknown (in mod_neutral_source.f90) !!'
       write(*,*) '=> We assume the impurity is argon.'
@@ -660,10 +662,6 @@ do ife = ife_min, ife_max
 enddo
 !$omp end do
 !$omp end parallel
-
-if (my_id .eq. 0) then
-  write(*,*) 'DEBUG: integrals3D, after mp loop'
-endif
 
 !------ Calculate boundary fluxes --------------------------------------------------------
 !--- go through the boundary elements
@@ -1360,13 +1358,6 @@ if (my_id .eq. 0) then
   write(*,'(A,1e14.6,A)') ' Radiation power          : ', total_radiation/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Ionization power         : ', total_E_ion/1.d6, ' [MW]'
-
-  !> Debugging
-  write(*,'(A,1e14.6,A)') ' Local radiation       : ', local_radiation/1.d6
-  write(*,'(A,2e14.6,A)') ' r0, T0: ', r0, T0
-  write(*,'(A,3e14.6,A)') ' r0_corr, T0_corr, rn0 : ', r0_corr, T0_corr, rn0
-  write(*,'(A,2e14.6,A)') ' ne_SI, Te_eV : ', ne_SI, Te_eV
-  write(*,*) 'Lrad_imp from ADAS  : ', Lrad_imp
 
   if (index_now > 1) then
     xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation

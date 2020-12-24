@@ -779,7 +779,6 @@ do i=1,n_vertex_max
          ! --- Radiation from background impurity, using ADAS
          !--------------------------------------------------------
           ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-          !Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
           T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
           r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU
 
@@ -790,6 +789,8 @@ do i=1,n_vertex_max
               m_i_over_m_imp_bg = central_mass/40.  ! Argon mass = 40 u
             case('Ne')
               m_i_over_m_imp_bg = central_mass/20.  ! Neon mass = 20 u
+            case('W')
+              m_i_over_m_imp_bg = central_mass/184.  ! Tungsten mass = 184 u
             case default
               write(*,*) '!! Background impurity"', trim(imp_bg_type), '" unknown (in mod_neutral_source.f90) !!'
               write(*,*) '=> We assume the impurity is argon.'

@@ -370,7 +370,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,CHAR_FMT) 'T_file                ', trim(T_file)
   end if
 
-  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) ) then
+  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 502) .or. (jorek_model .eq. 711) ) then
     write(*,REAL_FMT) 'Te_0                   ', Te_0
     write(*,REAL_FMT) 'Te_1                   ', Te_1
     write(*,REAL_FMT) 'Te_coef                ', Te_coef(1:5)
@@ -588,7 +588,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'gamma_stangeby        ', gamma_stangeby
   write(*,REAL_FMT) 'gamma_sheath_e        ', gamma_sheath_e
   write(*,REAL_FMT) 'gamma_sheath_i        ', gamma_sheath_i
-#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 500) || (JOREK_MODEL == 711) )
   write(*,REAL_FMT) 'gamma_i_stangeby      ', gamma_i_stangeby
   write(*,REAL_FMT) 'gamma_e_stangeby      ', gamma_e_stangeby
 #endif

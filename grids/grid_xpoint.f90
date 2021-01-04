@@ -10,7 +10,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
-use phys_module, only: force_central_node, write_ps, fix_axis_nodes
+use phys_module, only: force_central_node, write_ps, fix_axis_nodes, treat_axis
 
 implicit none
 
@@ -1367,53 +1367,114 @@ enddo
 !*             fill in the values into the new grid                    *
 !***********************************************************************
 
-index = 0
-do i=1,newnode_list%n_nodes
+! Share 4 DoFs of all nodes on the grid axis
+if(treat_axis)then
 
-  newnode_list%node(i)%axis_node = .false.
-  if ( fix_axis_nodes .and. (i .le. n_tht) ) newnode_list%node(i)%axis_node = .true.
+  do i=1, n_tht - 1
+    newnode_list%node(i)%index(1) = 1
+    newnode_list%node(i)%index(2) = 2
+    newnode_list%node(i)%index(3) = 3
+    newnode_list%node(i)%index(4) = 4
+    newnode_list%node(i)%axis_node = .true.
 
-  do k=1,n_order+1
-
-    index = index + 1
-    newnode_list%node(i)%index(k) = index
-
-    if ((force_central_node) .and. (i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
-      index = index - 1
-    endif
-    if ((i .eq. index_xpoint+1).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. index_xpoint+1).and.(k.eq.3)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. index_xpoint+2).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. index_xpoint+2).and.(k.eq.2)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. index_xpoint+3).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. index_xpoint+3).and.(k.eq.2)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. index_xpoint+3).and.(k.eq.3)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
-      index = index - 1
-    endif
+    newnode_list%node(i)%constrained = .false.
   enddo
+
+  index = 4
+
+  do i=n_tht, newnode_list%n_nodes
+
+    newnode_list%node(i)%axis_node = .false.
+
+    do k=1,n_order+1
+
+      index = index + 1
+      newnode_list%node(i)%index(k) = index
+
+      if ((i .eq. index_xpoint+1).and.(k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+1).and.(k.eq.3)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+2).and.(k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+2).and.(k.eq.2)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+3).and.(k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+3).and.(k.eq.2)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+3).and.(k.eq.3)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
+        index = index - 1
+      endif
+    enddo
+
+    newnode_list%node(i)%constrained = .false.
+  enddo
+
+else
+
+  index = 0
+  do i=1,newnode_list%n_nodes
+
+    newnode_list%node(i)%axis_node = .false.
+    if ( fix_axis_nodes .and. (i .le. n_tht) ) newnode_list%node(i)%axis_node = .true.
+
+    do k=1,n_order+1
+
+      index = index + 1
+      newnode_list%node(i)%index(k) = index
+
+      if ((force_central_node) .and. (i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+1).and.(k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+1).and.(k.eq.3)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+2).and.(k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+2).and.(k.eq.2)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+3).and.(k.eq.1)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+3).and.(k.eq.2)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
+      if ((i .eq. index_xpoint+3).and.(k.eq.3)) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
+        index = index - 1
+      endif
+    enddo
   
-  newnode_list%node(i)%constrained = .false.
-enddo
+    newnode_list%node(i)%constrained = .false.
+  enddo
+
+endif
 
 if (fix_axis_nodes) then
   do k=1, newelement_list%n_elements
@@ -1443,10 +1504,19 @@ do i=1,newnode_list%n_nodes
   PSI_R  = (   dZZg1_ds * dPSg1_dr - dZZg1_dr * dPSg1_ds ) / RZ_jac
   PSI_Z  = ( - dRRg1_ds * dPSg1_dr + dRRg1_dr * dPSg1_ds ) / RZ_jac
 
-  newnode_list%node(i)%values(1,1,1) = PSg1
-  newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(2,1) + PSI_Z * newnode_list%node(i)%x(2,2)
-  newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(3,1) + PSI_Z * newnode_list%node(i)%x(3,2)
-  newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(4,1) + PSI_Z * newnode_list%node(i)%x(4,2)
+  ! Adapt to axis treatment that involves new basis functions
+  if(treat_axis .and. newnode_list%node(i)%axis_node)then
+    newnode_list%node(i)%x(3,1:2) = 0.d0
+    newnode_list%node(i)%values(1,1,1) = PSg1
+    newnode_list%node(i)%values(1,2,1) = PSI_R
+    newnode_list%node(i)%values(1,3,1) = 0.d0
+    newnode_list%node(i)%values(1,4,1) = PSI_Z
+  else
+    newnode_list%node(i)%values(1,1,1) = PSg1
+    newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(2,1) + PSI_Z * newnode_list%node(i)%x(2,2)
+    newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(3,1) + PSI_Z * newnode_list%node(i)%x(3,2)
+    newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(4,1) + PSI_Z * newnode_list%node(i)%x(4,2)
+  endif
 
   if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0
 
@@ -1457,9 +1527,14 @@ newnode_list%node(index_xpoint+1)%values(1,2:4,1) = 0.d0
 newnode_list%node(index_xpoint+2)%values(1,2:4,1) = 0.d0
 newnode_list%node(index_xpoint+3)%values(1,2:4,1) = 0.d0
 
+if(treat_axis)then
+  ! do nothing here. For axis treatment it is not necessory 
+  ! that 2nd and 4th DoF should be zero.
+else
 do j=1,n_tht - 1
   newnode_list%node(i)%values(1,2:4,1) = 0.d0
 enddo
+endif
 
 !----------------------------- empty old nodes/elements
 do i=1,node_list%n_nodes

@@ -216,6 +216,9 @@ do i=1,nr-1
                  element_list%element(Index)%vertex(3) = n_node_start + i*np    + 1
    endif    
 
+  ! We do not want to implement axis treatment on non-flux aligned grid
+   element_list%element(index)%axis_element = .false.
+
            !Neighbours of the element (refinement procedure)
 
             if(i==1) then               

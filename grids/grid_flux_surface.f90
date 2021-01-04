@@ -7,7 +7,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
-use phys_module, only: force_central_node, fix_axis_nodes
+use phys_module, only: force_central_node, fix_axis_nodes, treat_axis
 
 implicit none
 
@@ -447,7 +447,26 @@ do i=1,nrnew
 
     if (.not. refinement) then       ! keep original formulation if not using refinement
    
-      if (force_central_node .and. (i.eq.1)) then
+      ! Share 4 DoFs of all nodes on the grid axis and flag axis nodes
+      if(treat_axis)then
+
+         if(i.eq.1)then
+           node_list%node(index)%index(1) = 1
+           node_list%node(index)%index(2) = 2
+           node_list%node(index)%index(3) = 3
+           node_list%node(index)%index(4) = 4
+           n_index_start = 4
+           node_list%node(index)%axis_node = .true.
+
+         else
+           do k=1,n_order+1
+             node_list%node(index)%index(k) = n_index_start + k
+           enddo
+           n_index_start = n_index_start + n_order+1
+           node_list%node(index)%axis_node = .false.
+         endif
+
+      elseif (force_central_node .and. (i.eq.1)) then
 
         node_list%node(index)%index(1) = 1
 
@@ -563,6 +582,14 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
       if (node_list%node(j)%axis_node) then
         element_list%element(k)%size(iv,3) = 0.d0
         element_list%element(k)%size(iv,4) = 0.d0
+      endif
+   endif
+
+   ! To identify elements on the axis.
+   if (treat_axis) then
+      j = element_list%element(k)%vertex(iv)
+      if (node_list%node(j)%axis_node) then
+        element_list%element(k)%axis_element = .true.
       endif
    endif
 

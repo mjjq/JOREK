@@ -10,7 +10,7 @@ use tr_module
 use data_structure
 use mumps_module
 use pastix_module
-use phys_module, only: amix, amix_freeb, use_pastix_eq, use_mumps_eq, use_strumpack_eq
+use phys_module, only: amix, amix_freeb, use_pastix_eq, use_mumps_eq, use_strumpack_eq, treat_axis, fix_axis_nodes
 use vacuum_equilibrium, only: vacuum_equil
 use mod_coicsr
 use mpi_mod
@@ -105,7 +105,12 @@ if (my_id == 0) then
   n_border = 0
   if (itype .ne. 710) then
     do i=1,node_list%n_nodes
-      if (node_list%node(i)%axis_node      ) n_border = n_border+2
+      if(treat_axis .and. xpoint)then
+        ! no of DoFs on which bc to be applied
+        if (node_list%node(i)%axis_node      ) n_border = n_border+1
+      else
+        if (node_list%node(i)%axis_node      ) n_border = n_border+2
+      endif
       if (node_list%node(i)%boundary .eq. 1) n_border = n_border+2
       if (node_list%node(i)%boundary .eq. 2) n_border = n_border+2
       if (node_list%node(i)%boundary .eq. 3) n_border = n_border+3
@@ -270,17 +275,29 @@ elseif (itype .ne. 710) then        ! apply fixed boundary conditions
   
       if (node_list%node(i)%axis_node) then
       
-        index_i = node_list%node(i)%index(3)  ! base index in the main matrix
-        mumps_par%irn(ilarge+1) = index_i
-        mumps_par%jcn(ilarge+1) = index_i
-        mumps_par%A(ilarge+1)   = zbig
-        ilarge = ilarge + 1
+        if (treat_axis) then
+          ! penalize 3rd DoF to enforce C0 continuity at the grid center        
+          index_i = node_list%node(i)%index(3)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+        endif
 
-        index_i = node_list%node(i)%index(4)  ! base index in the main matrix
-        mumps_par%irn(ilarge+1) = index_i
-        mumps_par%jcn(ilarge+1) = index_i
-        mumps_par%A(ilarge+1)   = zbig
-        ilarge = ilarge + 1
+        if(fix_axis_nodes)then
+
+          index_i = node_list%node(i)%index(3)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+
+          index_i = node_list%node(i)%index(4)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+        endif
 
       endif
 

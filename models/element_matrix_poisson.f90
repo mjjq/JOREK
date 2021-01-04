@@ -6,6 +6,7 @@ use mod_parameters
 use data_structure
 use gauss
 use basis_at_gaussian
+use phys_module, only: treat_axis
 
 implicit none
 
@@ -23,8 +24,28 @@ real*8     :: xjac, wst
 real*8     :: ps0_x, ps0_y, v, v_x, v_y, psi, psi_x, psi_y, rhs_ij
 integer    :: ms, mt, i, j, k, l, index_ij, index_kl, itype, ivar_in, ivar_out, i_harm
 
+! axis treatment related variables
+integer    :: inode
+real*8     :: esize(n_vertex_max,n_order+1)
+real*8     :: BasFun   (n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_s (n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_t (n_vertex_max, n_order+1, n_gauss, n_gauss)
+
 ELM=0.d0
 RHS=0.d0
+
+! change basis function for elements on the grid axis
+esize(:,:) = element%size(:,:)
+BasFun  = H ; BasFun_s  = H_s ; BasFun_t  = H_t
+
+if(treat_axis .and. element%axis_element)then
+  call on_the_axis(element, nodes, H  ,  BasFun  )
+  call on_the_axis(element, nodes, H_s,  BasFun_s)
+  call on_the_axis(element, nodes, H_t,  BasFun_t)
+  esize(1  ,:) = 1.0d0
+  esize(2:3,:) = element%size(2:3,:)
+  esize(4  ,:) = 1.0d0
+endif
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g(:,:)   = 0.d0; x_s(:,:)   = 0.d0; x_t(:,:)   = 0.d0;
@@ -45,13 +66,14 @@ do i=1,n_vertex_max
        y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
        y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
 
-       eq_g(ms,mt)  = eq_g(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * element%size(i,j) * H(i,j,ms,mt)
-       eq_s(ms,mt)  = eq_s(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * element%size(i,j) * H_s(i,j,ms,mt)
-       eq_t(ms,mt)  = eq_t(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * element%size(i,j) * H_t(i,j,ms,mt)
+       ! change basis function for axis elements only for physical variables
+       eq_g(ms,mt)  = eq_g(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * esize(i,j) * BasFun(i,j,ms,mt)
+       eq_s(ms,mt)  = eq_s(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * esize(i,j) * BasFun_s(i,j,ms,mt)
+       eq_t(ms,mt)  = eq_t(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * esize(i,j) * BasFun_t(i,j,ms,mt)
 
-       eq2_g(ms,mt)  = eq2_g(ms,mt)  + nodes(i)%values(i_harm,j,ivar_out) * element%size(i,j) * H(i,j,ms,mt)
-       eq2_s(ms,mt)  = eq2_s(ms,mt)  + nodes(i)%values(i_harm,j,ivar_out) * element%size(i,j) * H_s(i,j,ms,mt)
-       eq2_t(ms,mt)  = eq2_t(ms,mt)  + nodes(i)%values(i_harm,j,ivar_out) * element%size(i,j) * H_t(i,j,ms,mt)
+       eq2_g(ms,mt)  = eq2_g(ms,mt)  + nodes(i)%values(i_harm,j,ivar_out) * esize(i,j) * BasFun(i,j,ms,mt)
+       eq2_s(ms,mt)  = eq2_s(ms,mt)  + nodes(i)%values(i_harm,j,ivar_out) * esize(i,j) * BasFun_s(i,j,ms,mt)
+       eq2_t(ms,mt)  = eq2_t(ms,mt)  + nodes(i)%values(i_harm,j,ivar_out) * esize(i,j) * BasFun_t(i,j,ms,mt)
 
      enddo
    enddo
@@ -82,9 +104,10 @@ do ms=1, n_gauss
 
        index_ij = (i-1)*(n_order+1) + j
 
-       v   = h(i,j,ms,mt)  * element%size(i,j)
-       v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
-       v_y = (- x_t(ms,mt) * h_s(i,j,ms,mt) + x_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
+       ! change basis function for axis elements
+       v   = BasFun(i,j,ms,mt)  * esize(i,j)
+       v_x = (  y_t(ms,mt) * BasFun_s(i,j,ms,mt) - y_s(ms,mt) * BasFun_t(i,j,ms,mt) ) * esize(i,j) / xjac
+       v_y = (- x_t(ms,mt) * BasFun_s(i,j,ms,mt) + x_s(ms,mt) * BasFun_t(i,j,ms,mt) ) * esize(i,j) / xjac
 
        rhs_ij = eq_g(ms,mt) * factor(ms,mt)
 
@@ -96,9 +119,10 @@ do ms=1, n_gauss
 
          do l=1,n_order+1
 
-           psi   = h(k,l,ms,mt)  * element%size(k,l)
-           psi_x = (   y_t(ms,mt) * h_s(k,l,ms,mt) - y_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
-           psi_y = ( - x_t(ms,mt) * h_s(k,l,ms,mt) + x_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
+           ! change basis function for axis elements
+           psi   = BasFun(k,l,ms,mt)  * esize(k,l)
+           psi_x = (   y_t(ms,mt) * BasFun_s(k,l,ms,mt) - y_s(ms,mt) * BasFun_t(k,l,ms,mt) ) * esize(k,l) / xjac
+           psi_y = ( - x_t(ms,mt) * BasFun_s(k,l,ms,mt) + x_s(ms,mt) * BasFun_t(k,l,ms,mt) ) * esize(k,l) / xjac
 
            index_kl = (k-1)*(n_order+1) + l
 

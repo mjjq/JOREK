@@ -6,7 +6,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only:   SDN_threshold
+use phys_module, only:   SDN_threshold, treat_axis
 
 implicit none
 
@@ -36,6 +36,12 @@ real*8  :: r_psi_copy(4), s_psi_copy(4), tht_copy(4)
 integer :: l, i_neigh, Xneigh, icount
 integer :: i, j, k, ifound, iv, im, is, n1, n2, n3
 integer :: ifail, itht(4), itmp,i_elm_xpoint(2)
+
+! Axis treatment related variables
+integer :: inode
+real*8 :: esize(n_vertex_max,n_order+1)
+type (type_element)      :: element
+type (type_node)         :: nodes(n_vertex_max)
 
 if (my_id == 0) then
   write(*,*) '***********************************'
@@ -75,6 +81,19 @@ do i=1, element_list%n_elements
        
   call psi_minmax(node_list,element_list,i,psimin,psimax)
  
+  ! change size for elements on the grid axis
+  esize(:,:) = element_list%element(i)%size(:,:)
+  if(treat_axis .and. element_list%element(i)%axis_element)then
+     element = element_list%element(i)
+     do iv = 1, n_vertex_max
+        inode     = element%vertex(iv)
+        nodes(iv) = node_list%node(inode)
+     enddo
+     esize(1  ,:) = 1.0d0
+     esize(2:3,:) = element_list%element(i)%size(2:3,:)
+     esize(4  ,:) = 1.0d0
+  endif
+
   do j=1, surface_list%n_psi
 
     ifound = 0
@@ -91,10 +110,10 @@ do i=1, element_list%n_elements
 
         is = mod(iv+1,2) + 2
 
-        p1  =  node_list%node(n1)%values(1,1,1)  * element_list%element(i)%size(iv,1)
-        dp1 =  node_list%node(n1)%values(1,is,1) * element_list%element(i)%size(iv,is)
-        p4  =  node_list%node(n2)%values(1,1,1)  * element_list%element(i)%size(im,1)
-        dp4 =  node_list%node(n2)%values(1,is,1) * element_list%element(i)%size(im,is)
+        p1  =  node_list%node(n1)%values(1,1,1)  * esize(iv,1)
+        dp1 =  node_list%node(n1)%values(1,is,1) * esize(iv,is)
+        p4  =  node_list%node(n2)%values(1,1,1)  * esize(im,1)
+        dp4 =  node_list%node(n2)%values(1,is,1) * esize(im,is)
 
         p2  = p1 + dp1
         p3  = p4 + dp4

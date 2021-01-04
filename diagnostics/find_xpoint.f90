@@ -4,7 +4,7 @@ subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint
 use data_structure
 use gauss
 use basis_at_gaussian
-use phys_module, only: tokamak_device
+use phys_module, only: tokamak_device, treat_axis
 use mod_interp
 
 implicit none
@@ -31,6 +31,15 @@ integer :: i_elm_xp_init(2), min_indices_lw(3), min_indices_up(3)
 logical :: found_upper, found_lower
 real*8,  allocatable :: grad_psi(:,:,:)
 logical, allocatable :: include_pt_lw(:,:,:), include_pt_up(:,:,:)
+
+!--- Axis treatment related variables
+integer :: inode
+type (type_element)      :: element
+type (type_node)         :: nodes(n_vertex_max)
+real*8 :: esize(n_vertex_max,n_order+1)
+real*8 :: BasFun   (n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8 :: BasFun_s (n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8 :: BasFun_t (n_vertex_max, n_order+1, n_gauss, n_gauss)
 
 if (my_id .eq. 0) then
   write(*,*) '*********************************'
@@ -59,6 +68,24 @@ found_lower = .false.
 
 do i=1,element_list%n_elements    ! --- loop over elements
   
+  ! Change basis functions for elements on the axis
+  esize(:,:) = element_list%element(i)%size(:,:)
+  BasFun  = H ; BasFun_s  = H_s ; BasFun_t  = H_t
+
+  if(treat_axis .and. element_list%element(i)%axis_element)then
+     element = element_list%element(i)
+     do iv = 1, n_vertex_max
+        inode     = element%vertex(iv)
+        nodes(iv) = node_list%node(inode)
+     enddo
+     call on_the_axis(element, nodes, H  ,  BasFun  )
+     call on_the_axis(element, nodes, H_s,  BasFun_s)
+     call on_the_axis(element, nodes, H_t,  BasFun_t)
+     esize(1,  :) = 1.0d0
+     esize(2:3,:) = element_list%element(i)%size(2:3,:)
+     esize(4  ,:) = 1.0d0
+  endif
+
   do ms = 1, 4           ! 4 Gaussian points
     do mt = 1, 4         ! 4 Gaussian points
 
@@ -76,8 +103,9 @@ do i=1,element_list%n_elements    ! --- loop over elements
 
           iv = element_list%element(i)%vertex(kv)
 
-          ps_s = ps_s + node_list%node(iv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_s(kv,kf,ms,mt)
-          ps_t = ps_t + node_list%node(iv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_t(kv,kf,ms,mt)
+          ! use new basis function for physical variables in elements on the axis
+          ps_s = ps_s + node_list%node(iv)%values(1,kf,1) * esize(kv,kf) * BasFun_s(kv,kf,ms,mt)
+          ps_t = ps_t + node_list%node(iv)%values(1,kf,1) * esize(kv,kf) * BasFun_t(kv,kf,ms,mt)
 
           R   = R   + node_list%node(iv)%x(kf,1) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)
           Z   = Z   + node_list%node(iv)%x(kf,2) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)

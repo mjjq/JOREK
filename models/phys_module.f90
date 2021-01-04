@@ -645,7 +645,9 @@ module phys_module
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral
-  
+ 
+  !> @name  
+  logical  :: treat_axis        ! flag for chosing grid axis treatment
   contains
   
 end module phys_module

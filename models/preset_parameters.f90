@@ -465,4 +465,6 @@ subroutine preset_parameters
   jw2=1.d0  ! outer cut-off
   jw3=1.d0  ! outer cut-off
 
+  treat_axis = .false.       ! flag for chosing grid axis treatment
+
 end subroutine preset_parameters

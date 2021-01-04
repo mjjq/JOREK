@@ -87,4 +87,39 @@ subroutine initialise_basis()
 
   enddo
 end subroutine initialise_basis
+
+! added for the treatment on the axis
+subroutine on_the_axis(element, nodes, Hf, Nf)
+use phys_module
+use data_structure
+implicit none
+type (type_element)   :: element
+type (type_node)      :: nodes(n_vertex_max)
+real*8,intent(in) :: Hf(n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8,intent(out) :: Nf(n_vertex_max, n_order+1, n_gauss, n_gauss)
+integer    :: ms, mt, i, j, k, l
+
+Nf = Hf
+do ms = 1, n_gauss
+do mt = 1, n_gauss
+   ! vertex 1
+   Nf(1,1,ms,mt) = element%size(1,1) * Hf(1,1,ms,mt)
+   Nf(1,2,ms,mt) = element%size(1,2) * Hf(1,2,ms,mt) * nodes(1)%x(2,1) + &
+                 & element%size(1,4) * Hf(1,4,ms,mt) * nodes(1)%x(4,1)
+   Nf(1,3,ms,mt) = element%size(1,3) * Hf(1,3,ms,mt)
+   Nf(1,4,ms,mt) = element%size(1,2) * Hf(1,2,ms,mt) * nodes(1)%x(2,2) + &
+                 & element%size(1,4) * Hf(1,4,ms,mt) * nodes(1)%x(4,2)
+
+   ! vertex 4
+   Nf(4,1,ms,mt) = element%size(4,1) * Hf(4,1,ms,mt)
+   Nf(4,2,ms,mt) = element%size(4,2) * Hf(4,2,ms,mt) * nodes(4)%x(2,1) + &
+                 & element%size(4,4) * Hf(4,4,ms,mt) * nodes(4)%x(4,1)
+   Nf(4,3,ms,mt) = element%size(4,3) * Hf(4,3,ms,mt)
+   Nf(4,4,ms,mt) = element%size(4,2) * Hf(4,2,ms,mt) * nodes(4)%x(2,2)+ &
+                 & element%size(4,4) * Hf(4,4,ms,mt) * nodes(4)%x(4,2)
+
+enddo
+enddo
+
+end subroutine on_the_axis
 end module basis_at_gaussian

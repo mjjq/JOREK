@@ -3,6 +3,7 @@ module mod_interp
 use data_structure
 use mod_basisfunctions
 use mod_parameters, only: n_period, n_tor
+use phys_module, only: treat_axis
 implicit none
 private
 public :: interp !< interp a specific harmonic in finite elements
@@ -41,10 +42,32 @@ real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp
 logical :: my_deltas
+integer :: inode
+real*8  :: esize(n_vertex_max,n_order+1)
+real*8  :: BasFun(4,4)
+type (type_element) :: element
+type (type_node)    :: nodes(n_vertex_max)
 
 call basisfunctions(s,t,H)
-H = transpose(H)
+H = transpose(H) ! Why transpose?
 call sincosperiod_moivre(phi, HZ, dHZ) ! dHZ unused
+
+! To implement axis treatment, change basis functions 
+! for elements on the axis. This is to be done only for
+! physical variables and not grid variables.
+element = element_list%element(i_elm)
+esize(:,:) = element%size(:,:)
+BasFun    = H
+if(treat_axis .and. element%axis_element) then
+  do iv = 1, n_vertex_max
+     inode     = element%vertex(iv)
+     nodes(iv) = node_list%node(inode)
+  enddo
+  call basisfunctions_axis(element, nodes, H   , BasFun   )
+  esize(1  ,:) = 1.0d0
+  esize(2:3,:) = element%size(2:3,:)
+  esize(4  ,:) = 1.0d0
+endif
 
 P = 0.d0
 
@@ -79,12 +102,34 @@ end do
 R   = sum(xR*H)
 Z   = sum(xZ*H)
 
+! Preload values and premultiply with sizes(:,kv) for variables.
+! When using axis treatment, size and basis function changes only for
+! physical variables.
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)
+  sizes(:) = esize(kv,:)
+
+  if (my_deltas) then
+    do i = 1, n_v
+      do kf=1,n_order+1
+        values(1:n_tor,kf,i,kv) = node_list%node(iv)%deltas(1:n_tor,kf,i_v(i)) * sizes(kf)
+      end do
+    end do
+  else
+    do i = 1, n_v
+      do kf=1,n_order+1
+        values(1:n_tor,kf,i,kv) = node_list%node(iv)%values(1:n_tor,kf,i_v(i)) * sizes(kf)
+      end do
+    end do
+  end if
+end do
+
 ! 40% exec time
 do kv = 1, n_vertex_max
   do i = 1, n_v
     do kf = 1, n_order+1
       v = dot_product(values(1:n_tor,kf,i,kv),HZ(1:n_tor))
-      P(i)     = P(i)     + v * H(kf, kv)
+      P(i)     = P(i)     + v * BasFun(kf, kv)
     enddo
   enddo
 enddo
@@ -108,9 +153,35 @@ real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp
 logical :: my_deltas
+integer :: inode
+real*8  :: esize(n_vertex_max,n_order+1)
+real*8  :: BasFun(4,4), BasFun_s(4,4), BasFun_t(4,4)
+type (type_element) :: element
+type (type_node)    :: nodes(n_vertex_max)
 
 ! 7% exec time
 call basisfunctions_T(s,t,H,H_s,H_t)
+
+! To implement axis treatment, change basis functions 
+! for elements on the axis. This is to be done only for
+! physical variables and not grid variables.
+element = element_list%element(i_elm)
+esize(:,:) = element%size(:,:)
+BasFun    = H
+BasFun_s  = H_s
+BasFun_t  = H_t
+if(treat_axis .and. element%axis_element) then
+  do iv = 1, n_vertex_max
+     inode     = element%vertex(iv)
+     nodes(iv) = node_list%node(inode)
+  enddo
+  call basisfunctions_axis(element, nodes, H   , BasFun   )
+  call basisfunctions_axis(element, nodes, H_s , BasFun_s )
+  call basisfunctions_axis(element, nodes, H_t , BasFun_t )
+  esize(1  ,:) = 1.0d0
+  esize(2:3,:) = element%size(2:3,:)
+  esize(4  ,:) = 1.0d0
+endif
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_phi = 0.d0
 
@@ -153,16 +224,38 @@ Z   = sum(xZ*H)
 Z_s = sum(xZ*H_s)
 Z_t = sum(xZ*H_t)
 
+! Preload values and premultiply with sizes(:,kv) for variables.
+! When using axis treatment, size and basis function changes only for
+! physical variables.
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)
+  sizes(:) = esize(kv,:)
+
+  if (my_deltas) then
+    do i = 1, n_v
+      do kf=1,n_order+1
+        values(1:n_tor,kf,i,kv) = node_list%node(iv)%deltas(1:n_tor,kf,i_v(i)) * sizes(kf)
+      end do
+    end do
+  else
+    do i = 1, n_v
+      do kf=1,n_order+1
+        values(1:n_tor,kf,i,kv) = node_list%node(iv)%values(1:n_tor,kf,i_v(i)) * sizes(kf)
+      end do
+    end do
+  end if
+end do
+
 ! 40% exec time
 do kv = 1, n_vertex_max
   do i = 1, n_v
     do kf = 1, n_order+1
       v = dot_product(values(1:n_tor,kf,i,kv),HZ(1:n_tor))
-      P(i)     = P(i)     + v * H(kf, kv)
-      P_s(i)   = P_s(i)   + v * H_s(kf, kv)
-      P_t(i)   = P_t(i)   + v * H_t(kf, kv)
+      P(i)     = P(i)     + v * BasFun(kf, kv)
+      P_s(i)   = P_s(i)   + v * BasFun_s(kf, kv)
+      P_t(i)   = P_t(i)   + v * BasFun_t(kf, kv)
       vp = dot_product(values(1:n_tor,kf,i,kv),dHZ(1:n_tor))
-      P_phi(i) = P_phi(i) + vp * H(kf, kv)
+      P_phi(i) = P_phi(i) + vp * BasFun(kf, kv)
     enddo
   enddo
 enddo
@@ -190,8 +283,40 @@ real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp, vpp
 logical :: my_deltas
+integer :: inode
+real*8  :: esize(n_vertex_max,n_order+1)
+real*8  :: BasFun(4,4), BasFun_s(4,4), BasFun_t(4,4), BasFun_st(4,4), BasFun_ss(4,4), BasFun_tt(4,4)
+type (type_element) :: element
+type (type_node)    :: nodes(n_vertex_max)
 
 call basisfunctions_T(s,t,H,H_s,H_t,H_st,H_ss,H_tt)
+
+! To implement axis treatment, change basis functions 
+! for elements on the axis. This is to be done only for
+! physical variables and not grid variables.
+element = element_list%element(i_elm)
+esize(:,:) = element%size(:,:)
+BasFun    = H
+BasFun_s  = H_s
+BasFun_t  = H_t
+BasFun_ss = H_ss
+BasFun_st = H_st
+BasFun_tt = H_tt
+if(treat_axis .and. element%axis_element) then
+  do iv = 1, n_vertex_max
+     inode     = element%vertex(iv)
+     nodes(iv) = node_list%node(inode)
+  enddo
+  call basisfunctions_axis(element, nodes, H   , BasFun   )
+  call basisfunctions_axis(element, nodes, H_s , BasFun_s )
+  call basisfunctions_axis(element, nodes, H_t , BasFun_t )
+  call basisfunctions_axis(element, nodes, H_ss, BasFun_ss)
+  call basisfunctions_axis(element, nodes, H_st, BasFun_st)
+  call basisfunctions_axis(element, nodes, H_tt, BasFun_tt)
+  esize(1  ,:) = 1.0d0
+  esize(2:3,:) = element%size(2:3,:)
+  esize(4  ,:) = 1.0d0
+endif
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
 P_sphi = 0.d0; P_tphi = 0.d0; P_phiphi = 0.d0
@@ -241,24 +366,46 @@ Z_st = sum(xZ*H_st)
 Z_ss = sum(xZ*H_ss)
 Z_tt = sum(xZ*H_tt)
 
+! Preload values and premultiply with sizes(:,kv) for variables.
+! When using axis treatment, size and basis function changes only for
+! physical variables.
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)
+  sizes(:) = esize(kv,:)
+
+  if (my_deltas) then
+    do i = 1, n_v
+      do kf=1,n_order+1
+        values(1:n_tor,kf,i,kv) = node_list%node(iv)%deltas(1:n_tor,kf,i_v(i)) * sizes(kf)
+      end do
+    end do
+  else
+    do i = 1, n_v
+      do kf=1,n_order+1
+        values(1:n_tor,kf,i,kv) = node_list%node(iv)%values(1:n_tor,kf,i_v(i)) * sizes(kf)
+      end do
+    end do
+  end if
+end do
+
 do kv = 1, n_vertex_max
   do i = 1, n_v
     do kf = 1, n_order+1
       v = dot_product(values(1:n_tor,kf,i,kv),HZ(1:n_tor))
-      P(i)     = P(i)     + v * H(kf, kv)
-      P_s(i)   = P_s(i)   + v * H_s(kf, kv)
-      P_t(i)   = P_t(i)   + v * H_t(kf, kv)
+      P(i)     = P(i)     + v * BasFun(kf, kv)
+      P_s(i)   = P_s(i)   + v * BasFun_s(kf, kv)
+      P_t(i)   = P_t(i)   + v * BasFun_t(kf, kv)
       vp = dot_product(values(1:n_tor,kf,i,kv),dHZ(1:n_tor))
-      P_phi(i) = P_phi(i) + vp * H(kf, kv)
+      P_phi(i) = P_phi(i) + vp * BasFun(kf, kv)
 
-      P_st(i)  = P_st(i)  + v * H_st(kf, kv)
-      P_ss(i)  = P_ss(i)  + v * H_ss(kf, kv)
-      P_tt(i)  = P_tt(i)  + v * H_tt(kf, kv)
+      P_st(i)  = P_st(i)  + v * BasFun_st(kf, kv)
+      P_ss(i)  = P_ss(i)  + v * BasFun_ss(kf, kv)
+      P_tt(i)  = P_tt(i)  + v * BasFun_tt(kf, kv)
 
-      P_sphi(i)   = P_sphi(i)   + vp * H_s(kf, kv)
-      P_tphi(i)   = P_tphi(i)   + vp * H_t(kf, kv)
+      P_sphi(i)   = P_sphi(i)   + vp * BasFun_s(kf, kv)
+      P_tphi(i)   = P_tphi(i)   + vp * BasFun_t(kf, kv)
       vpp = dot_product(values(1:n_tor,kf,i,kv),ddHZ(1:n_tor))
-      P_phiphi(i) = P_phiphi(i) + vpp * H(kf, kv)
+      P_phiphi(i) = P_phiphi(i) + vpp * BasFun(kf, kv)
     enddo
   enddo
 enddo
@@ -340,9 +487,40 @@ real*8,                   intent(out) :: P, P_s, P_t, P_st, P_ss, P_tt
 
 ! --- Local variables
 real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
-integer :: kv, iv, kf 
+integer :: kv, iv, kf, inode
+real*8 :: esize(n_vertex_max,n_order+1)
+real*8 :: BasFun(4,4), BasFun_s(4,4), BasFun_t(4,4), BasFun_st(4,4), BasFun_ss(4,4), BasFun_tt(4,4)
+type (type_element) :: element
+type (type_node)    :: nodes(n_vertex_max)
 
 call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)
+
+! To implement axis treatment, change basis functions 
+! for elements on the axis. This is to be done only for
+! physical variables and not grid variables.
+element = element_list%element(i_elm)
+esize(:,:) = element%size(:,:)
+BasFun    = G
+BasFun_s  = G_s
+BasFun_t  = G_t
+BasFun_ss = G_ss
+BasFun_st = G_st
+BasFun_tt = G_tt
+if(treat_axis .and. element%axis_element) then
+  do iv = 1, n_vertex_max
+     inode     = element%vertex(iv)
+     nodes(iv) = node_list%node(inode)
+  enddo
+  call basisfunctions_axis(element, nodes, G   , BasFun   )
+  call basisfunctions_axis(element, nodes, G_s , BasFun_s )
+  call basisfunctions_axis(element, nodes, G_t , BasFun_t )
+  call basisfunctions_axis(element, nodes, G_ss, BasFun_ss)
+  call basisfunctions_axis(element, nodes, G_st, BasFun_st)
+  call basisfunctions_axis(element, nodes, G_tt, BasFun_tt)
+  esize(1  ,:) = 1.0d0
+  esize(2:3,:) = element%size(2:3,:)
+  esize(4  ,:) = 1.0d0
+endif
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
 
@@ -352,27 +530,27 @@ do kv = 1,n_vertex_max  ! 4 vertices
 
 #ifdef fullmhd
     if (i_var == 710) then
-      P    = P    + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-      P_s  = P_s  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-      P_t  = P_t  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-      P_st = P_st + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-      P_ss = P_ss + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-      P_tt = P_tt + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
+      P    = P    + node_list%node(iv)%Fprof_eq(kf) * esize(kv,kf) * BasFun(kv,kf)
+      P_s  = P_s  + node_list%node(iv)%Fprof_eq(kf) * esize(kv,kf) * BasFun_s(kv,kf)
+      P_t  = P_t  + node_list%node(iv)%Fprof_eq(kf) * esize(kv,kf) * BasFun_t(kv,kf)
+      P_st = P_st + node_list%node(iv)%Fprof_eq(kf) * esize(kv,kf) * BasFun_st(kv,kf)
+      P_ss = P_ss + node_list%node(iv)%Fprof_eq(kf) * esize(kv,kf) * BasFun_ss(kv,kf)
+      P_tt = P_tt + node_list%node(iv)%Fprof_eq(kf) * esize(kv,kf) * BasFun_tt(kv,kf)
     elseif (i_var == 711) then
-      P    = P    + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-      P_s  = P_s  + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-      P_t  = P_t  + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-      P_st = P_st + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-      P_ss = P_ss + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-      P_tt = P_tt + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
+      P    = P    + node_list%node(iv)%psi_eq(kf) * esize(kv,kf) * BasFun(kv,kf)
+      P_s  = P_s  + node_list%node(iv)%psi_eq(kf) * esize(kv,kf) * BasFun_s(kv,kf)
+      P_t  = P_t  + node_list%node(iv)%psi_eq(kf) * esize(kv,kf) * BasFun_t(kv,kf)
+      P_st = P_st + node_list%node(iv)%psi_eq(kf) * esize(kv,kf) * BasFun_st(kv,kf)
+      P_ss = P_ss + node_list%node(iv)%psi_eq(kf) * esize(kv,kf) * BasFun_ss(kv,kf)
+      P_tt = P_tt + node_list%node(iv)%psi_eq(kf) * esize(kv,kf) * BasFun_tt(kv,kf)
     else
 #endif
-      P    = P    + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-      P_s  = P_s  + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-      P_t  = P_t  + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-      P_st = P_st + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-      P_ss = P_ss + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-      P_tt = P_tt + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
+      P    = P    + node_list%node(iv)%values(i_harm,kf,i_var) * esize(kv,kf) * BasFun(kv,kf)
+      P_s  = P_s  + node_list%node(iv)%values(i_harm,kf,i_var) * esize(kv,kf) * BasFun_s(kv,kf)
+      P_t  = P_t  + node_list%node(iv)%values(i_harm,kf,i_var) * esize(kv,kf) * BasFun_t(kv,kf)
+      P_st = P_st + node_list%node(iv)%values(i_harm,kf,i_var) * esize(kv,kf) * BasFun_st(kv,kf)
+      P_ss = P_ss + node_list%node(iv)%values(i_harm,kf,i_var) * esize(kv,kf) * BasFun_ss(kv,kf)
+      P_tt = P_tt + node_list%node(iv)%values(i_harm,kf,i_var) * esize(kv,kf) * BasFun_tt(kv,kf)
 #ifdef fullmhd
     endif
 #endif
@@ -395,21 +573,52 @@ real*8,                   intent(out) :: P, P_s, P_t, P_st, P_ss, P_tt
 
 ! --- Local variables
 real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
-integer :: kv, iv, kf 
+integer :: kv, iv, kf, inode
+real*8 :: esize(n_vertex_max,n_order+1)
+real*8 :: BasFun(4,4), BasFun_s(4,4), BasFun_t(4,4), BasFun_st(4,4), BasFun_ss(4,4), BasFun_tt(4,4)
+type (type_element) :: element
+type (type_node)    :: nodes(n_vertex_max)
 
 call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)
+
+! To implement axis treatment, change basis functions 
+! for elements on the axis. This is to be done only for
+! physical variables and not grid variables.
+element = element_list%element(i_elm)
+esize(:,:) = element%size(:,:)
+BasFun    = G
+BasFun_s  = G_s
+BasFun_t  = G_t
+BasFun_ss = G_ss
+BasFun_st = G_st
+BasFun_tt = G_tt
+if(treat_axis .and. element%axis_element) then
+  do iv = 1, n_vertex_max
+     inode     = element%vertex(iv)
+     nodes(iv) = node_list%node(inode)
+  enddo
+  call basisfunctions_axis(element, nodes, G   , BasFun   )
+  call basisfunctions_axis(element, nodes, G_s , BasFun_s )
+  call basisfunctions_axis(element, nodes, G_t , BasFun_t )
+  call basisfunctions_axis(element, nodes, G_ss, BasFun_ss)
+  call basisfunctions_axis(element, nodes, G_st, BasFun_st)
+  call basisfunctions_axis(element, nodes, G_tt, BasFun_tt)
+  esize(1  ,:) = 1.0d0
+  esize(2:3,:) = element%size(2:3,:)
+  esize(4  ,:) = 1.0d0
+endif
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
 
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   do kf = 1, n_order+1       ! 4 basis functions
-    P    = P    + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-    P_s  = P_s  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-    P_t  = P_t  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-    P_st = P_st + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-    P_ss = P_ss + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-    P_tt = P_tt + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
+    P    = P    + node_list%node(iv)%deltas(i_harm,kf,i_var) * esize(kv,kf) * BasFun(kv,kf)
+    P_s  = P_s  + node_list%node(iv)%deltas(i_harm,kf,i_var) * esize(kv,kf) * BasFun_s(kv,kf)
+    P_t  = P_t  + node_list%node(iv)%deltas(i_harm,kf,i_var) * esize(kv,kf) * BasFun_t(kv,kf)
+    P_st = P_st + node_list%node(iv)%deltas(i_harm,kf,i_var) * esize(kv,kf) * BasFun_st(kv,kf)
+    P_ss = P_ss + node_list%node(iv)%deltas(i_harm,kf,i_var) * esize(kv,kf) * BasFun_ss(kv,kf)
+    P_tt = P_tt + node_list%node(iv)%deltas(i_harm,kf,i_var) * esize(kv,kf) * BasFun_tt(kv,kf)
   end do
 end do
 end subroutine interp_delta
@@ -425,23 +634,44 @@ real*8,                   intent(in)  :: s, t, phi
 real*8,                   intent(out) :: P(n_v)
 
 real*8  :: H(4,4), ss, mode
-integer :: kv, iv, kf, m, i, i_harm, i_tor
+integer :: kv, iv, kf, m, i, i_harm, i_tor, inode
+real*8 :: esize(n_vertex_max,n_order+1)
+real*8 :: BasFun(4,4)
+type (type_element) :: element
+type (type_node)    :: nodes(n_vertex_max)
 
 call basisfunctions(s,t,H)
+
+! To implement axis treatment, change basis functions 
+! for elements on the axis. This is to be done only for
+! physical variables and not grid variables.
+element   = element_list%element(i_elm)
+esize(:,:)= element%size(:,:)
+BasFun    = H
+if(treat_axis .and. element%axis_element) then
+  do iv = 1, n_vertex_max
+     inode     = element%vertex(iv)
+     nodes(iv) = node_list%node(inode)
+  enddo
+  call basisfunctions_axis(element, nodes, H,    BasFun)
+  esize(1  ,:) = 1.0d0
+  esize(2:3,:) = element%size(2:3,:)
+  esize(4  ,:) = 1.0d0
+endif
 
 P = 0.d0
 
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   do kf = 1, n_order+1       ! 4 basis functions
-    ss  = element_list%element(i_elm)%size(kv,kf)
+    ss  = esize(kv,kf)
     do i = 1, n_v
-      P(i)    = P(i)   + node_list%node(iv)%values(1,kf,i_v(i)) * ss * H(kv,kf)
+      P(i)    = P(i)   + node_list%node(iv)%values(1,kf,i_v(i)) * ss * BasFun(kv,kf)
       do i_tor = 1, (n_tor-1)/2
         i_harm = 2*i_tor
         mode = i_tor * n_period
-        P(i)    = P(i)   + node_list%node(iv)%values(i_harm,kf,i_v(i))   * ss * H(kv,kf)   * cos(mode*phi)
-        P(i)    = P(i)   + node_list%node(iv)%values(i_harm+1,kf,i_v(i)) * ss * H(kv,kf)   * sin(mode*phi)
+        P(i)    = P(i)   + node_list%node(iv)%values(i_harm,kf,i_v(i))   * ss * BasFun(kv,kf)   * cos(mode*phi)
+        P(i)    = P(i)   + node_list%node(iv)%values(i_harm+1,kf,i_v(i)) * ss * BasFun(kv,kf)   * sin(mode*phi)
       end do
     end do
   end do
@@ -461,23 +691,44 @@ real*8,                   intent(in)  :: s, t, phi
 real*8,                   intent(out) :: P(n_v)
 
 real*8  :: H(4,4), ss, mode
-integer :: kv, iv, kf, m, i, i_harm, i_tor
+integer :: kv, iv, kf, m, i, i_harm, i_tor, inode
+real*8 :: esize(n_vertex_max,n_order+1)
+real*8 :: BasFun(4,4)
+type (type_element) :: element
+type (type_node)    :: nodes(n_vertex_max)
 
 call basisfunctions(s,t,H)
+
+! To implement axis treatment, change basis functions 
+! for elements on the axis. This is to be done only for
+! physical variables and not grid variables.
+element   = element_list%element(i_elm)
+esize(:,:)= element%size(:,:)
+BasFun    = H
+if(treat_axis .and. element%axis_element) then
+  do iv = 1, n_vertex_max
+     inode     = element%vertex(iv)
+     nodes(iv) = node_list%node(inode)
+  enddo
+  call basisfunctions_axis(element, nodes, H,    BasFun)
+  esize(1  ,:) = 1.0d0
+  esize(2:3,:) = element%size(2:3,:)
+  esize(4  ,:) = 1.0d0
+endif
 
 P = 0.d0
 
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   do kf = 1, n_order+1       ! 4 basis functions
-    ss  = element_list%element(i_elm)%size(kv,kf)
+    ss  = esize(kv,kf)
     do i = 1, n_v
-      P(i)    = P(i)   + node_list%node(iv)%deltas(1,kf,i_v(i)) * ss * H(kv,kf)
+      P(i)    = P(i)   + node_list%node(iv)%deltas(1,kf,i_v(i)) * ss * BasFun(kv,kf)
       do i_tor = 1, (n_tor-1)/2
         i_harm = 2*i_tor
         mode = i_tor * n_period
-        P(i)    = P(i)   + node_list%node(iv)%deltas(i_harm,kf,i_v(i))   * ss * H(kv,kf)   * cos(mode*phi)
-        P(i)    = P(i)   + node_list%node(iv)%deltas(i_harm+1,kf,i_v(i)) * ss * H(kv,kf)   * sin(mode*phi)
+        P(i)    = P(i)   + node_list%node(iv)%deltas(i_harm,kf,i_v(i))   * ss * BasFun(kv,kf)   * cos(mode*phi)
+        P(i)    = P(i)   + node_list%node(iv)%deltas(i_harm+1,kf,i_v(i)) * ss * BasFun(kv,kf)   * sin(mode*phi)
       end do
     end do
   end do

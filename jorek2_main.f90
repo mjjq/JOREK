@@ -253,6 +253,14 @@ required = 0
   ! --- Preset input parameters to reasonable defaults, then read the input file.
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
   
+  ! WARNING for axis treatment
+  if(treat_axis .and. fix_axis_nodes)then
+    write(*,*) 'WARNING :'
+    write(*,*) 'If using treat_axis = .true. then'
+    write(*,*) 'fix_axis_nodes and force_central_nodes both MUST be .false.'
+    stop
+  endif
+
   ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)
   

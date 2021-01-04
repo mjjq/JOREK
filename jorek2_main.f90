@@ -254,7 +254,7 @@ required = 0
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
   
   ! WARNING for axis treatment
-  if(treat_axis .and. fix_axis_nodes)then
+  if(treat_axis .and. (fix_axis_nodes .or. force_central_nodes))then
     write(*,*) 'WARNING :'
     write(*,*) 'If using treat_axis = .true. then'
     write(*,*) 'fix_axis_nodes and force_central_nodes both MUST be .false.'
@@ -626,6 +626,14 @@ required = 0
     if (n_flux > 1) then
 
       if (my_id == 0) then
+
+        ! WARNING for axis treatment
+        if(treat_axis .and. (grid_to_wall .or. (xcase .ge. 2)))then
+          write(*,*) 'Grid axis treatment has not yet implemented for'
+          write(*,*) 'grid_to_wall and/or more than one xpoint grids.'
+          write(*,*) 'Aborting...'
+          stop
+        endif
         
         if (xpoint)  then
 

@@ -5,7 +5,7 @@ module diffusivities
   use phys_module, only: num_d_perp, D_perp, num_d_perp_x, num_d_perp_y, num_d_perp_len,           &
                          num_zk_perp, num_zk_e_perp, num_zk_i_perp, ZK_perp, ZK_e_perp, ZK_i_perp, num_zk_perp_x, num_zk_perp_y, num_zk_perp_len,      &
                          num_zk_e_perp_x, num_zk_i_perp_x, num_zk_e_perp_y, num_zk_i_perp_y, num_zk_e_perp_len, num_zk_i_perp_len,     &
-       xpoint, xcase, rho_0, rho_coef, T_coef
+       xpoint, xcase, rho_0, rho_coef, T_coef, Ti_coef, Te_coef
   use profiles,    only: interpolProf
     
   implicit none

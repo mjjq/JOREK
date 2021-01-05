@@ -33,7 +33,7 @@ call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,IDBL_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
 
-bufsize = element_list%n_elements * ((2*n_vertex_max+8+5)*INT_EXT + n_vertex_max*(n_order+1)*IDBL_EXT) + ILOG_EXT
+bufsize = element_list%n_elements * ((2*n_vertex_max+8+5)*INT_EXT + n_vertex_max*(n_order+1)*IDBL_EXT + ILOG_EXT)
 
 allocate(buffer(bufsize))
 call tr_register_mem(sizeof(buffer),"bcaste_buffer")

@@ -48,6 +48,15 @@ real*8, dimension(:,:,:,:) , pointer :: eq_p
 real*8, dimension(:,:,:,:) , pointer :: eq_ss, eq_st, eq_tt   
 real*8, dimension(:,:,:,:) , pointer :: delta_g, delta_s, delta_t
 
+! variables for axis treatment
+real*8     :: BasFun   (n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_s (n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_t (n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_ss(n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_st(n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_tt(n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8 :: esize(n_vertex_max,n_order+1)
+
 eq_g    => thread_struct(tid)%eq_g   
 eq_s    => thread_struct(tid)%eq_s   
 eq_t    => thread_struct(tid)%eq_t   
@@ -72,6 +81,26 @@ y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_ss  = 0.d0; y_st  = 0.d0; y_tt  = 0.d0;
 eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_ss = 0.d0; eq_st = 0.d0; eq_tt = 0.d0;
 
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
+
+! change basis function for elements on the grid axis
+esize(:,:) = element%size(:,:)
+BasFun     = H
+BasFun_s   = H_s
+BasFun_t   = H_t
+BasFun_ss  = H_ss
+BasFun_st  = H_st
+BasFun_tt  = H_tt
+if(treat_axis .and. element%axis_element)then
+  call on_the_axis(element, nodes, H   ,  BasFun   )
+  call on_the_axis(element, nodes, H_s ,  BasFun_s )
+  call on_the_axis(element, nodes, H_t ,  BasFun_t )
+  call on_the_axis(element, nodes, H_ss,  BasFun_ss)
+  call on_the_axis(element, nodes, H_st,  BasFun_st)
+  call on_the_axis(element, nodes, H_tt,  BasFun_tt)
+  esize(1  ,:) = 1.0d0
+  esize(2:3,:) = element%size(2:3,:)
+  esize(4  ,:) = 1.0d0
+endif
 
 mp = 1
 in = 1
@@ -100,17 +129,18 @@ do i=1,n_vertex_max
 
         do k=1,n_var
 
-          eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  
-          eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)
-          eq_t(mp,k,ms,mt) = eq_t(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)
+          ! change basis function for axis elements only for physical variables
+          eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun(i,j,ms,mt)  
+          eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_s(i,j,ms,mt)
+          eq_t(mp,k,ms,mt) = eq_t(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_t(i,j,ms,mt)
 
-          eq_ss(mp,k,ms,mt) = eq_ss(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_ss(i,j,ms,mt)
-          eq_st(mp,k,ms,mt) = eq_st(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_st(i,j,ms,mt)
-          eq_tt(mp,k,ms,mt) = eq_tt(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_tt(i,j,ms,mt)
+          eq_ss(mp,k,ms,mt) = eq_ss(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_ss(i,j,ms,mt)
+          eq_st(mp,k,ms,mt) = eq_st(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_st(i,j,ms,mt)
+          eq_tt(mp,k,ms,mt) = eq_tt(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_tt(i,j,ms,mt)
 
-          delta_g(mp,k,ms,mt) = delta_g(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  
-          delta_s(mp,k,ms,mt) = delta_s(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)
-          delta_t(mp,k,ms,mt) = delta_t(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt) 
+          delta_g(mp,k,ms,mt) = delta_g(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * esize(i,j) * BasFun(i,j,ms,mt)  
+          delta_s(mp,k,ms,mt) = delta_s(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * esize(i,j) * BasFun_s(i,j,ms,mt)
+          delta_t(mp,k,ms,mt) = delta_t(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * esize(i,j) * BasFun_t(i,j,ms,mt) 
 
         enddo
 
@@ -178,15 +208,16 @@ do ms=1, n_gauss
 
         index_ij = n_var*(n_order+1)*(i-1) + n_var * (j-1) + 1   ! index in the ELM matrix
 
-        v   =  H(i,j,ms,mt) * element%size(i,j) 
-        v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac 
-        v_y = (- x_t(ms,mt) * h_s(i,j,ms,mt) + x_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac 
+        ! change basis function for axis elements
+        v   =  BasFun(i,j,ms,mt) * esize(i,j) 
+        v_x = (  y_t(ms,mt) * BasFun_s(i,j,ms,mt) - y_s(ms,mt) * BasFun_t(i,j,ms,mt) ) * esize(i,j) / xjac 
+        v_y = (- x_t(ms,mt) * BasFun_s(i,j,ms,mt) + x_s(ms,mt) * BasFun_t(i,j,ms,mt) ) * esize(i,j) / xjac 
 
-        v_s  = h_s(i,j,ms,mt)  * element%size(i,j) 
-        v_t  = h_t(i,j,ms,mt)  * element%size(i,j)
-        v_ss = h_ss(i,j,ms,mt) * element%size(i,j) 
-        v_tt = h_tt(i,j,ms,mt) * element%size(i,j) 
-        v_st = h_st(i,j,ms,mt) * element%size(i,j)
+        v_s  = BasFun_s(i,j,ms,mt)  * esize(i,j) 
+        v_t  = BasFun_t(i,j,ms,mt)  * esize(i,j)
+        v_ss = BasFun_ss(i,j,ms,mt) * esize(i,j) 
+        v_tt = BasFun_tt(i,j,ms,mt) * esize(i,j) 
+        v_st = BasFun_st(i,j,ms,mt) * esize(i,j)
 
 	v_xx = (v_ss * y_t(ms,mt)**2 - 2.d0*v_st * y_s(ms,mt)*y_t(ms,mt) + v_tt * y_s(ms,mt)**2   &	        
 	      + v_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                          &	   
@@ -219,15 +250,16 @@ do ms=1, n_gauss
 
           do l=1,n_order+1
 
-            u    = h(k,l,ms,mt)    * element%size(k,l)
-            u_s  = h_s(k,l,ms,mt)  * element%size(k,l)
-            u_t  = h_t(k,l,ms,mt)  * element%size(k,l) 
-            u_ss = h_ss(k,l,ms,mt) * element%size(k,l) 
-            u_tt = h_tt(k,l,ms,mt) * element%size(k,l) 
-            u_st = h_st(k,l,ms,mt) * element%size(k,l)
+            ! change basis function for axis elements
+            u    = BasFun(k,l,ms,mt)    * esize(k,l)
+            u_s  = BasFun_s(k,l,ms,mt)  * esize(k,l)
+            u_t  = BasFun_t(k,l,ms,mt)  * esize(k,l) 
+            u_ss = BasFun_ss(k,l,ms,mt) * esize(k,l) 
+            u_tt = BasFun_tt(k,l,ms,mt) * esize(k,l) 
+            u_st = BasFun_st(k,l,ms,mt) * esize(k,l)
 		 
-            u_x = (   y_t(ms,mt) * h_s(k,l,ms,mt) - y_s(ms,mt) * h_t(k,l,ms,mt) ) / xjac * element%size(k,l) 
-            u_y = ( - x_t(ms,mt) * h_s(k,l,ms,mt) + x_s(ms,mt) * h_t(k,l,ms,mt) ) / xjac * element%size(k,l)
+            u_x = (   y_t(ms,mt) * BasFun_s(k,l,ms,mt) - y_s(ms,mt) * BasFun_t(k,l,ms,mt) ) / xjac * esize(k,l) 
+            u_y = ( - x_t(ms,mt) * BasFun_s(k,l,ms,mt) + x_s(ms,mt) * BasFun_t(k,l,ms,mt) ) / xjac * esize(k,l)
 
             w = u ; w_x = u_x ; w_y = u_y ; w_s = u_s ; w_t = u_t; w_ss = u_ss ; w_st = u_st ; w_tt = u_tt 
 

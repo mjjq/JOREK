@@ -317,6 +317,15 @@ real*8, dimension(n_var,n_var)   :: QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, Qvm
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k
 real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 
+! variables for axis treatment
+real*8     :: BasFun   (n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_s (n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_t (n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_ss(n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_st(n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8     :: BasFun_tt(n_vertex_max, n_order+1, n_gauss, n_gauss)
+real*8 :: esize(n_vertex_max,n_order+1)
+
 rho_min = 0.005 ! should be moved to namelist input
 
 ! --- Main switches
@@ -442,6 +451,27 @@ eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_p = 0.d0; eq_ss = 0.d0; eq_st = 0.d0; 
 psi_axisym = 0.d0 ; psi_axisym_s = 0.d0 ; psi_axisym_t = 0.d0
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
 Fprofile= 0.d0
+
+! change basis function for elements on the grid axis
+esize(:,:) = element%size(:,:)
+BasFun     = H
+BasFun_s   = H_s
+BasFun_t   = H_t
+BasFun_ss  = H_ss
+BasFun_st  = H_st
+BasFun_tt  = H_tt
+if(treat_axis .and. element%axis_element)then
+  call on_the_axis(element, nodes, H   ,  BasFun   )
+  call on_the_axis(element, nodes, H_s ,  BasFun_s )
+  call on_the_axis(element, nodes, H_t ,  BasFun_t )
+  call on_the_axis(element, nodes, H_ss,  BasFun_ss)
+  call on_the_axis(element, nodes, H_st,  BasFun_st)
+  call on_the_axis(element, nodes, H_tt,  BasFun_tt)
+  esize(1  ,:) = 1.0d0
+  esize(2:3,:) = element%size(2:3,:)
+  esize(4  ,:) = 1.0d0
+endif
+
 do i=1,n_vertex_max
   do j=1,n_order+1
     do ms=1, n_gauss
@@ -463,12 +493,12 @@ do i=1,n_vertex_max
         y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
         y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
 
-        Fprofile  (ms,mt) = Fprofile  (ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H  (i,j,ms,mt)
+        Fprofile  (ms,mt) = Fprofile  (ms,mt) + nodes(i)%Fprof_eq(j) * esize(i,j) * BasFun  (i,j,ms,mt)
 
         ! --- Equilibrium psi (n=0 only) for sources
-        psi_axisym(ms,mt) = psi_axisym(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H(i,j,ms,mt)  * HZ(1,1)
-        psi_axisym_s(ms,mt) = psi_axisym_s(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H_s(i,j,ms,mt)
-        psi_axisym_t(ms,mt) = psi_axisym_t(ms,mt) + nodes(i)%values(1,j,var_A3) * element%size(i,j) * H_t(i,j,ms,mt)
+        psi_axisym(ms,mt) = psi_axisym(ms,mt) + nodes(i)%values(1,j,var_A3) * esize(i,j) * BasFun(i,j,ms,mt)  * HZ(1,1)
+        psi_axisym_s(ms,mt) = psi_axisym_s(ms,mt) + nodes(i)%values(1,j,var_A3) * esize(i,j) * BasFun_s(i,j,ms,mt)
+        psi_axisym_t(ms,mt) = psi_axisym_t(ms,mt) + nodes(i)%values(1,j,var_A3) * esize(i,j) * BasFun_t(i,j,ms,mt)
       end do
     end do
 
@@ -479,19 +509,20 @@ do i=1,n_vertex_max
 
           do in=1,n_tor
             do mp=1,n_plane
-              ! --- store variables
-              eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ(in,mp)
-              eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
-              eq_t(mp,k,ms,mt) = eq_t(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ(in,mp)
-              eq_p(mp,k,ms,mt) = eq_p(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ_p(in,mp)
+             ! --- store variables
+             ! change basis function for axis elements only for physical variables
+             eq_g(mp,k,ms,mt) = eq_g(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun(i,j,ms,mt)  * HZ(in,mp)
+             eq_s(mp,k,ms,mt) = eq_s(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_s(i,j,ms,mt)* HZ(in,mp)
+             eq_t(mp,k,ms,mt) = eq_t(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_t(i,j,ms,mt)* HZ(in,mp)
+             eq_p(mp,k,ms,mt) = eq_p(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun(i,j,ms,mt)  * HZ_p(in,mp)
 
-              eq_ss(mp,k,ms,mt) = eq_ss(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_ss(i,j,ms,mt)* HZ(in,mp)
-              eq_st(mp,k,ms,mt) = eq_st(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_st(i,j,ms,mt)* HZ(in,mp)
-              eq_tt(mp,k,ms,mt) = eq_tt(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_tt(i,j,ms,mt)* HZ(in,mp)
+             eq_ss(mp,k,ms,mt) = eq_ss(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_ss(i,j,ms,mt)* HZ(in,mp)
+             eq_st(mp,k,ms,mt) = eq_st(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_st(i,j,ms,mt)* HZ(in,mp)
+             eq_tt(mp,k,ms,mt) = eq_tt(mp,k,ms,mt) + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_tt(i,j,ms,mt)* HZ(in,mp)
 
-              delta_g(mp,k,ms,mt) = delta_g(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * element%size(i,j) * H(i,j,ms,mt)   * HZ(in,mp)
-              delta_s(mp,k,ms,mt) = delta_s(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt) * HZ(in,mp)
-              delta_t(mp,k,ms,mt) = delta_t(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt) * HZ(in,mp)
+             delta_g(mp,k,ms,mt) = delta_g(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * esize(i,j) * BasFun(i,j,ms,mt)   * HZ(in,mp)
+             delta_s(mp,k,ms,mt) = delta_s(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * esize(i,j) * BasFun_s(i,j,ms,mt) * HZ(in,mp)
+             delta_t(mp,k,ms,mt) = delta_t(mp,k,ms,mt) + nodes(i)%deltas(in,j,k) * esize(i,j) * BasFun_t(i,j,ms,mt) * HZ(in,mp)
             enddo
 
           enddo
@@ -915,10 +946,11 @@ do i=1,n_vertex_max
           do im=n_tor_start, n_tor_end
 
             ! --- test functions (V*)
-            v   = H(i,j,ms,mt)   * element%size(i,j) * HHZ(im,mp)
-            v_s = H_s(i,j,ms,mt) * element%size(i,j) * HHZ(im,mp)
-            v_t = H_t(i,j,ms,mt) * element%size(i,j) * HHZ(im,mp)
-            v_p = H(i,j,ms,mt)   * element%size(i,j) * HHZ_p(im,mp)
+            ! change basis function for axis elements
+            v   = BasFun  (i,j,ms,mt) * esize(i,j) * HHZ(im,mp)
+            v_s = BasFun_s(i,j,ms,mt) * esize(i,j) * HHZ(im,mp)
+            v_t = BasFun_t(i,j,ms,mt) * esize(i,j) * HHZ(im,mp)
+            v_p = BasFun  (i,j,ms,mt) * esize(i,j) * HHZ_p(im,mp)
             v_R = (  y_t(ms,mt) * v_s - y_s(ms,mt) * v_t ) / xjac
             v_Z = (- x_t(ms,mt) * v_s + x_s(ms,mt) * v_t ) / xjac 
 
@@ -1256,10 +1288,11 @@ do i=1,n_vertex_max
                 do in =  n_tor_start, n_tor_end
 
                   ! --- Basis functions
-                  bf    = H(k,l,ms,mt)   * element%size(k,l) * HHZ(in,mp)
-                  bf_p  = H(k,l,ms,mt)   * element%size(k,l) * HHZ_p(in,mp)
-                  bf_s  = H_s(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
-                  bf_t  = H_t(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
+                  ! change basis function for axis elements
+                  bf    = BasFun  (k,l,ms,mt) * esize(k,l) * HHZ(in,mp)
+                  bf_p  = BasFun  (k,l,ms,mt) * esize(k,l) * HHZ_p(in,mp)
+                  bf_s  = BasFun_s(k,l,ms,mt) * esize(k,l) * HHZ(in,mp)
+                  bf_t  = BasFun_t(k,l,ms,mt) * esize(k,l) * HHZ(in,mp)
                   bf_R = (   y_t(ms,mt) * bf_s - y_s(ms,mt) * bf_t ) / xjac
                   bf_Z = ( - x_t(ms,mt) * bf_s + x_s(ms,mt) * bf_t ) / xjac
 

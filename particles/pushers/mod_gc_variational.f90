@@ -7,10 +7,12 @@ module mod_gc_variational
   implicit none  
   public copy_particle_gc_vpar, copy_particle_gc_Qin, copy_particle_gc_Qin_to_vpar
   public initialise_gc_Qin, push_gc_Qin, push_gc_rk4
+  public convert_leapfrog_to_gc_vpar
     
 contains
 
 subroutine copy_particle_gc_vpar(particle_in, particle_out)
+implicit none
 type(particle_gc_vpar), intent(in)  :: particle_in
 type(particle_gc_vpar)              :: particle_out
     
@@ -20,11 +22,56 @@ particle_out%x     = particle_in%x
 particle_out%vpar  = particle_in%vpar
 particle_out%st    = particle_in%st
 particle_out%q     = particle_in%q
+particle_out%weight= particle_in%weight
 
 return
 end
 
+subroutine convert_leapfrog_to_gc_vpar(node_list, element_list, particle_in, B, mass, particle_out)
+  use data_structure
+  use mod_math_operators, only: cross_product
+  use mod_find_rz_nearby
+  implicit none
+
+  type(type_node_list), intent(in)            :: node_list
+  type(type_element_list), intent(in)         :: element_list
+  type(particle_kinetic_leapfrog), intent(in) :: particle_in
+  real*8, dimension(3), intent(in)            :: B !< Magnetic field at kinetic position [T]
+  real*8, intent(in)                          :: mass !< Mass of the particle [amu]
+  type(particle_gc_vpar)                      :: particle_out
+  real*8  :: B_hat(3), B_norm, v_par, v2
+  integer :: ifail
+
+  call copy_particle_base(particle_in, particle_out)
+
+  particle_out%q      = particle_in%q
+  particle_out%weight = particle_in%weight
+
+  B_norm = norm2(B)
+  B_hat  = B/B_norm
+  v_par  = dot_product(particle_in%v,B_hat)
+  v2     = dot_product(particle_in%v,particle_in%v)
+
+  ! Calculate GC position
+  if (particle_out%q .ne. 0) then
+    particle_out%x = particle_in%x + (mass*ATOMIC_MASS_UNIT*cross_product(particle_in%v,B_hat))/(particle_in%q*EL_CHG*B_norm)
+  else
+    particle_out%x = particle_in%x
+  end if
+
+  ! Calculate velocity-related variables
+  particle_out%vpar  = v_par
+  ! Perhaps we could also use the magnetic field in the guiding center to calculate
+  ! v_perp, but don't do it for now.
+  particle_out%mu = 0.5d0 * (v2 - v_par**2) / B_norm
+
+  ! Calculate new st and i_elm
+  call find_RZ_nearby(node_list, element_list, particle_in%x(1), particle_in%x(2), particle_in%st(1), particle_in%st(2), particle_in%i_elm, &
+                      particle_out%x(1), particle_out%x(2), particle_out%st(1), particle_out%st(2), particle_out%i_elm, ifail)
+end
+
 subroutine copy_particle_gc_Qin(particle_in,particle_out)
+implicit none
 class(particle_gc_Qin), intent(in)  :: particle_in
 class(particle_gc_Qin), intent(out) :: particle_out
   
@@ -34,6 +81,7 @@ particle_out%x     = particle_in%x
 particle_out%vpar  = particle_in%vpar
 particle_out%st    = particle_in%st
 particle_out%q     = particle_in%q
+particle_out%weight= particle_in%weight
 
 particle_out%x_m      = particle_in%x_m
 particle_out%vpar_m   = particle_in%vpar_m
@@ -49,6 +97,7 @@ end
 
 subroutine copy_particle_gc_Qin_to_vpar(particle_in,particle_out)
 use mod_particle_types
+implicit none
 class(particle_gc_Qin), intent(in)   :: particle_in
 class(particle_gc_vpar), intent(out) :: particle_out
   
@@ -58,12 +107,14 @@ particle_out%x     = particle_in%x
 particle_out%vpar  = particle_in%vpar
 particle_out%st    = particle_in%st
 particle_out%q     = particle_in%q
+particle_out%weight= particle_in%weight
   
 return
 end
 
 subroutine copy_particle_gc_Vpar_to_Qin(particle_in,particle_out)
 use mod_particle_types
+implicit none
 class(particle_gc_Vpar), intent(in) :: particle_in
 class(particle_gc_Qin), intent(out) :: particle_out
     
@@ -73,13 +124,81 @@ particle_out%x     = particle_in%x
 particle_out%vpar  = particle_in%vpar
 particle_out%st    = particle_in%st
 particle_out%q     = particle_in%q
+particle_out%weight= particle_in%weight
 
 return
 end
    
+subroutine convert_gc_vpar_to_kinetic(node_list, element_list, particle_in, B, mass, n_points, particle_out)
+  use constants
+  use data_structure
+  use mod_pusher_tools, only: get_orthonormals
+  use mod_math_operators, only: cross_product
+  use mod_find_rz_nearby
+  implicit none
+
+  type(type_node_list), intent(in)    :: node_list
+  type(type_element_list), intent(in) :: element_list
+  type(particle_gc_vpar), intent(in)  :: particle_in
+  real*8, intent(in)   :: B(3)        !< Magnetic field at GC position [T]
+  real*8, intent(in)   :: mass        !< Mass of the particle [amu]
+  integer, intent(in)  :: n_points    !< number of points of the gyro orbit
+  type(particle_kinetic_leapfrog), intent(out)  :: particle_out(n_points)
+
+  real*8  :: B_norm, v_perp, v_par, B_hat(3), e1(3), e2(3), chi, chi_start
+  integer :: i, ifail
+
+  B_norm = norm2(B)
+  B_hat  = B/B_norm
+
+  v_perp = sqrt(2.d0 * particle_in%mu * B_norm) ! [m/s]
+  
+  ! Define chi as the angle of the velocity vector with b x r
+  call get_orthonormals(B_hat, e1, e2)
+
+  write(*,'(A,6e18.10)') ' e1 :',e1
+  write(*,'(A,6e18.10)') ' e2 :',e2
+
+  call random_number(chi_start)
+  chi_start = 0.75d0
+  chi_start = chi_start * TWOPI ! replace with pcg32
+
+  do i = 1, n_points
+    
+    chi = chi_start + real(i-1,8) / real(n_points,8) * TWOPI
+
+    particle_out(i)%v  = particle_in%vpar * B_hat + v_perp * (cos(chi) * e1 + sin(chi) * e2)
+
+    write(*,'(A,6e18.10)') ' chi             :',chi
+    write(*,'(A,6e18.10)') ' cos e1 + sin e2 :',cos(chi) * e1 + sin(chi) * e2
+ 
+    if (particle_in%q .ne. 0) then
+
+      particle_out(i)%x = particle_in%x - (mass*ATOMIC_MASS_UNIT*cross_product(particle_out(i)%v,B_hat))/(real(particle_in%q,8)*EL_CHG*B_norm)
+
+      call find_RZ_nearby(node_list, element_list, &
+      particle_in%x(1),     particle_in%x(2),     particle_in%st(1),     particle_in%st(2),     particle_in%i_elm, &
+      particle_out(i)%x(1), particle_out(i)%x(2), particle_out(i)%st(1), particle_out(i)%st(2), particle_out(i)%i_elm, ifail)
+write(*,*) 'vpar  : ',particle_in%vpar * B_hat      
+write(*,*) 'vperp : ',+ v_perp * (cos(chi) * e1 + sin(chi) * e2) 
+write(*,'(2i3,8e18.10)') i,ifail,particle_out(i)%x,particle_out(i)%v
+    else
+
+      particle_out(i)%x     = particle_in%x
+      particle_out(i)%st    = particle_in%st
+      particle_out(i)%i_elm = particle_in%i_elm
+
+    end if
+
+  enddo
+
+end subroutine convert_gc_vpar_to_kinetic
+
 subroutine initialise_gc_Qin(fields, particle_Qin, mass, timestep)
+! initialising backward in time
 use mod_particle_types
 use mod_fields, only: fields_base
+implicit none
 class(fields_base)      :: fields
 type(particle_gc_Qin)  :: particle_Qin
 real*8, intent(in)     :: timestep ! [s]
@@ -121,6 +240,7 @@ end
 
 
 subroutine initialise_gc_Qin2(fields, particle_Qin, mass, timestep)
+! initialising forward in time
 use mod_particle_types
 use mod_fields, only: fields_base
 class(fields_base)      :: fields
@@ -307,6 +427,8 @@ integer :: i, ifail
 
 qom = particle_gc%q * EL_CHG / (mass * ATOMIC_MASS_UNIT) 
 
+if (particle_gc%i_elm .le. 0) return
+
 call copy_particle_gc_vpar(particle_gc,p_0)
 call copy_particle_gc_vpar(particle_gc,p_1)
 call copy_particle_gc_vpar(particle_gc,p_2)
@@ -324,6 +446,8 @@ do i =1, n_steps
 
   call find_RZ_nearby(node_list, element_list, p_0%x(1), p_0%x(2), p_0%st(1), p_0%st(2), p_0%i_elm, &
                                                p_1%x(1), p_1%x(2), p_1%st(1), p_1%st(2), p_1%i_elm, ifail)
+                                               
+  if (p_1%i_elm .le. 0) return
     
   call fields%calc_RK4(time_1, p_1%i_elm, p_1%st, p_1%x(3), A_1, dA_1, B_1, dB_1, Bnorm_1, dBnorm_1, bn_1, dbn_1, E_1)
 !  call fields%calc_RK4_analytic(p_1%x(1), p_1%x(2), p_1%x(3), A_1, dA_1, B_1, dB_1, Bnorm_1, dBnorm_1, bn_1, dbn_1, E_1)
@@ -335,6 +459,7 @@ do i =1, n_steps
 
   call find_RZ_nearby(node_list, element_list, p_0%x(1), p_0%x(2), p_0%st(1), p_0%st(2), p_0%i_elm, &
                                                p_2%x(1), p_2%x(2), p_2%st(1), p_2%st(2), p_2%i_elm, ifail)
+  if (p_2%i_elm .le. 0) return
   
   call fields%calc_RK4(time_2, p_2%i_elm, p_2%st, p_2%x(3), A_2, dA_2, B_2, dB_2, Bnorm_2, dBnorm_2, bn_2, dbn_2, E_2)
 !  call fields%calc_RK4_analytic(p_2%x(1), p_2%x(2), p_2%x(3), A_2, dA_2, B_2, dB_2, Bnorm_2, dBnorm_2, bn_2, dbn_2, E_2)
@@ -346,6 +471,8 @@ do i =1, n_steps
 
   call find_RZ_nearby(node_list, element_list, p_0%x(1), p_0%x(2), p_0%st(1), p_0%st(2), p_0%i_elm, &
                                                p_3%x(1), p_3%x(2), p_3%st(1), p_3%st(2), p_3%i_elm, ifail)
+
+  if (p_3%i_elm .le. 0) return                                             
   
   call fields%calc_RK4(time_3, p_3%i_elm, p_3%st, p_3%x(3), A_3, dA_3, B_3, dB_3, Bnorm_3, dBnorm_3, bn_3, dbn_3, E_3)
 !  call fields%calc_RK4_analytic(p_3%x(1), p_3%x(2), p_3%x(3), A_3, dA_3, B_3, dB_3, Bnorm_3, dBnorm_3, bn_3, dbn_3, E_3)
@@ -358,6 +485,8 @@ do i =1, n_steps
   call find_RZ_nearby(node_list, element_list, &
                       particle_gc%x(1), particle_gc%x(2), particle_gc%st(1), particle_gc%st(2), particle_gc%i_elm, &
                       p_0%x(1),  p_0%x(2),  p_0%st(1),  p_0%st(2),  p_0%i_elm, ifail)
+
+  if (p_0%i_elm .le. 0) return
 
 enddo
 
@@ -392,7 +521,7 @@ real*8 :: Bstar(3), Estar(3), Bpar_star, delta_x(3), delta_u
     
   Bstar     = B + vpar * rot_tmp(x,Bnorm,dBnorm) / qom
   Bpar_star = dot_product(Bstar,Bnorm)
-  Estar     = E(3) - zmu * dB /qom
+  Estar     = E - zmu * dB /qom
         
   delta_x = (Bstar * vpar  - cross(Bnorm, Estar)) / Bpar_star
   delta_u = dot_product(Bstar,Estar) * qom        / Bpar_star

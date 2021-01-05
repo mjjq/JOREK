@@ -415,11 +415,11 @@ module diffusivities
       else
         
         ! --- Take values from input file (rho_coef, T_coef...) 
-        Diff(1) = T_coef(1)
-        Diff(2) = T_coef(2)
-        Diff(3) = T_coef(3)
-        Diff(4) = T_coef(4)
-        Diff(5) = T_coef(5)
+        Diff(1) = Ti_coef(1)
+        Diff(2) = Ti_coef(2)
+        Diff(3) = Ti_coef(3)
+        Diff(4) = Ti_coef(4)
+        Diff(5) = Ti_coef(5)
         
         ! --- Correct for hollow profiles (otherwise D_perp > infinity)
         if (Diff(1) .ge. 0.d0) Diff(1) = -0.1d0
@@ -511,11 +511,11 @@ module diffusivities
       else
         
         ! --- Take values from input file (rho_coef, T_coef...) 
-        Diff(1) = T_coef(1)
-        Diff(2) = T_coef(2)
-        Diff(3) = T_coef(3)
-        Diff(4) = T_coef(4)
-        Diff(5) = T_coef(5)
+        Diff(1) = Te_coef(1)
+        Diff(2) = Te_coef(2)
+        Diff(3) = Te_coef(3)
+        Diff(4) = Te_coef(4)
+        Diff(5) = Te_coef(5)
         
         ! --- Correct for hollow profiles (otherwise D_perp > infinity)
         if (Diff(1) .ge. 0.d0) Diff(1) = -0.1d0

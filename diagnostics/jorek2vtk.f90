@@ -180,7 +180,10 @@ RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,
 #if (JOREK_MODEL == 500)
 include_radiation = .true.
 include_neutral_dens = .true.
+! --- Read ADAS data and generate coronal equilibrium is needed
+call init_imp_adas(my_id)
 #endif
+
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -408,6 +411,7 @@ if (include_electric_field)  vector_names(s_Efield+1:s_Efield+n_Efield) = 'E_fie
 do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
 enddo
+
 
 call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 
@@ -1176,6 +1180,8 @@ enddo  ! n_elements
       !--------------------------------------------------------
       ! --- Radiation from background impurity
       !--------------------------------------------------------   
+      r0_real8  = scalars(i,5)
+      r0_corr   = corr_neg_dens(r0_real8)
 
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
       Te_eV = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
@@ -1201,12 +1207,9 @@ enddo  ! n_elements
                      *(central_density*1.d20)**2.5d0*m_i_over_m_imp_bg
 
       if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > nimp_bg_min) then
-
         Lrad_imp = 0.0
-
         call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
         Lrad_imp = Lrad_imp * coef_rad_imp          
-
         if (Lrad_imp < 0.) then
           Lrad_imp = 0.
         end if
@@ -1354,7 +1357,6 @@ if (SI_units) then
 
 #if (JOREK_MODEL == 500)
     if (include_radiation) then
-
       coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density*1.d20)**(1.5d0)
       coef_rad_1 = (gamma-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
 
@@ -1384,6 +1386,8 @@ if (SI_units) then
       !--------------------------------------------------------
       ! --- Radiation from background impurity
       !--------------------------------------------------------
+      r0_real8  = scalars(i,5)
+      r0_corr   = corr_neg_dens(r0_real8)
 
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
       Te_eV = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV

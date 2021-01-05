@@ -20,9 +20,9 @@ module exec_commands
   use mod_interp
   use mod_poloidal_currents 
   use mod_bootstrap_functions
-  
-  
-  
+#if (JOREK_MODEL == 500)
+   use mod_neutral_source
+#endif
   
   implicit none
   
@@ -189,6 +189,10 @@ module exec_commands
           call set_postproc_dir(command, ierr)
         case ( 'namelist' )
           call load_namelist(command, ierr)
+#if (JOREK_MODEL == 500)
+          ! --- Read ADAS data and generate coronal equilibrium is needed
+          call init_imp_adas(0)
+#endif
         case ( 'params' )
           call log_parameters(0, .false.)
         case ( 'point' )

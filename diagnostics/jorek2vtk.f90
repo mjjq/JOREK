@@ -1386,11 +1386,11 @@ if (SI_units) then
       !--------------------------------------------------------
       ! --- Radiation from background impurity
       !--------------------------------------------------------
-      r0_real8  = scalars(i,5)
+      r0_real8  = scalars(i,5) / central_density ! Back to JU first
       r0_corr   = corr_neg_dens(r0_real8)
 
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-      Te_eV = T_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
+      Te_eV = T_rad   ! Te in eV
 
       select case ( trim(imp_bg_type) )
         case('C')
@@ -1419,8 +1419,9 @@ if (SI_units) then
       Lrad_imp = Lrad_imp * m_i_over_m_imp_bg
 
       scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * nimp_bg * Lrad_imp
-
+ 
     endif
+
 #endif /*(JOREK_MODEL == 500)*/
 
 #endif /* end of non-full-MHD part*/

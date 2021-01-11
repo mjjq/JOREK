@@ -268,9 +268,10 @@ module mod_injection_source
 !============================================================!
   subroutine get_source(R,Z,phi,source_background,source_impurity,mass_ratio) 
 
-    use phys_module, only: using_spi, JET_MGI, ASDEX_MGI, n_spi_tot, pellets, ng_radius_ratio
-    use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_sig, ns_deltaphi
+    use phys_module, only: using_spi, JET_MGI, ASDEX_MGI, n_spi_tot, pellets, ng_radius_ratio, ns_radius
+    use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_sig, ns_deltaphi, L_tube
     use phys_module, only: ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns, t_now, central_density, central_mass
+    use phys_module, only: ns_amplitude, ns_R, ns_Z, ns_phi
 
     implicit none
 
@@ -282,7 +283,7 @@ module mod_injection_source
     real*8, intent(in)   :: mass_ratio
 
     ! Temporary variables serving the SPI module
-    integer    :: spi_i
+    integer    :: spi_i, i_inj,  n_spi_tmp
     
     real*8     :: spi_R_tmp
     real*8     :: spi_Z_tmp
@@ -327,7 +328,7 @@ module mod_injection_source
         end if
 
         ! Converting number density into mass density for each species respectively
-        source_backgroudn  = source_background + source_tmp * ( 1. - pellets(spi_i)%spi_species)
+        source_background  = source_background + source_tmp * ( 1. - pellets(spi_i)%spi_species)
         source_impurity    = source_impurity + source_tmp * pellets(spi_i)%spi_species / mass_ratio
 
       end do
@@ -338,7 +339,7 @@ module mod_injection_source
         source_tmp = 0.d0
         call inj_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),   &
                         ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
-                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_impurity,&
+                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,source_impurity,&
                         t_now, JET_MGI,ASDEX_MGI,central_density,central_mass)
 
         source_impurity = source_impurity + source_tmp
@@ -349,5 +350,5 @@ module mod_injection_source
 
     end if
 
-  end subroutine get source
+  end subroutine get_source
 end module mod_injection_source

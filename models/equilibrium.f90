@@ -227,6 +227,12 @@ if (freeboundary_equil) then
           write(*,'(A,4f8.3)') ' LIMITER PLASMA ',psi_lim, psi_bnd, R_lim,Z_lim
         endif
       endif
+
+      if (freeb_equil_iterate_area .and. (.not. xpoint2)) then
+        call iterate2area(node_list,element_list, psi_axis, psi_lim, xpoint2, xcase2, area_ref, psi_bnd)
+      endif
+      
+      write(*,'(A,1f8.3)') ' Psi_bnd = ', psi_bnd   
       
       ! Calculate current feedback
       call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_tot)
@@ -248,12 +254,6 @@ if (freeboundary_equil) then
       
       write(*,'(A,1e12.4)') 'Current Feedback factor = ',  current_FB_fact
       
-      if (freeb_equil_iterate_area .and. (.not. xpoint2)) then
-        call iterate2area(node_list,element_list, psi_axis, psi_lim, xpoint2, xcase2, area_ref, psi_bnd)
-      endif
-      
-      write(*,'(A,1f8.3)') ' Psi_bnd = ', psi_bnd   
-    
       !Vertical feedback - needed for vertically unstable plasmas        
       Z_axis_int = Z_axis_int + (Z_axis - Z_axis_ref)
       if (iter .eq. 1) then

@@ -129,23 +129,9 @@ real*8     :: amat_25_n, amat_27_n
 
 ! Neutral source
 real*8     :: source_imp, source_bg
-real*8     :: source_tmp       !Temporary neutral source for each shattered pellets 
 
 ! time normalization
 real*8     :: t_norm
-
-! Temporary variables serving the SPI module
-integer    :: spi_i
-
-real*8     :: spi_R_tmp
-real*8     :: spi_Z_tmp
-real*8     :: spi_phi_tmp
-real*8     :: spi_abl_tmp 
-real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
-! Additional variables reserved for future implementation
-!real*8     :: spi_Vel_R_tmp
-!real*8     :: spi_Vel_Z_tmp
-!real*8     :: spi_Vel_phi_tmp
 
 ! Atomic physics coefficients:
 !   -Mass ratio between main ions and impurites (m_i/m_imp)

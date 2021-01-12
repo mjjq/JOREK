@@ -50,7 +50,7 @@ function x_orbit(timestep, time) result(x)
   real*8 :: x(2), m
   integer :: i
 
-  particle%x(1,:)  = [1.d0, 0.d0, 0.d0]
+  particle%x(:)  = [1.d0, 0.d0, 0.d0]
   particle%v(:)  = [0.d0, TWOPI, 0.d0] ! TODO get accurate v^(-1/2), see Delzanno, JCP (2013) and pusher_test
   particle%q     = 1 ! +1 e
   m              = EL_CHG/TWOPI/ATOMIC_MASS_UNIT ! mass in unified atomic mass units to have f=1Hz in a field of 1 Tesla
@@ -58,6 +58,6 @@ function x_orbit(timestep, time) result(x)
   do i=1,nint(time/timestep)
     call boris_push_cartesian(particle, m, [0d0,0d0,0d0], [0d0,0d0,-1d0], timestep)
   end do
-  x = particle%x(1,1:2)
+  x = particle%x(1:2)
 end function
 end module pusher_boris_spec

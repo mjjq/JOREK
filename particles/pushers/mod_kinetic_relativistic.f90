@@ -118,8 +118,8 @@ subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail
   ! calculate cylindrical coordinates from cartesian ones
   half_position(4:6) = cartesian_to_cylindrical(half_position(1:3))
   ! find the (i_elm,s,t) coordinates
-  call find_RZ_nearby(fields%node_list,fields%element_list,particle%x(1,1),&
-       particle%x(1,2),particle%st(1),particle%st(2),particle%i_elm,&
+  call find_RZ_nearby(fields%node_list,fields%element_list,particle%x(1),&
+       particle%x(2),particle%st(1),particle%st(2),particle%i_elm,&
        half_position(4),half_position(5),particle%st(1),particle%st(2),&
        particle%i_elm,ifail)
   ! check if the particle is lost, exit if it is the case
@@ -128,18 +128,18 @@ subroutine volume_preserving_push_jorek(particle,fields,mass,time,timestep,ifail
   particle%x = half_position(4:6)
   ! compute magnetic and electric fields
   call fields%calc_EBpsiU(time+5.d-1*timestep,particle%i_elm,&
-       particle%st,particle%x(1,3),E,B,psi,U)
+       particle%st,particle%x(3),E,B,psi,U)
   ! compute the second half-step  
   call volume_preserving_second_half_step_jorek(particle, &
     half_position(1:3),scaling_factor,                    &
-    vector_cylindrical_to_cartesian(particle%x(1,3),E),     &
-    vector_cylindrical_to_cartesian(particle%x(1,3),B),     &
+    vector_cylindrical_to_cartesian(particle%x(3),E),     &
+    vector_cylindrical_to_cartesian(particle%x(3),B),     &
     mass,timestep)
   ! transform back from cartesian to cylindrical coordinates
   half_position(4:6) = cartesian_to_cylindrical(half_position(1:3))
   ! find the (i_elm,s,t) coordinates
-  call find_RZ_nearby(fields%node_list,fields%element_list,particle%x(1,1), &
-    particle%x(1,2),particle%st(1),particle%st(2),particle%i_elm,           &
+  call find_RZ_nearby(fields%node_list,fields%element_list,particle%x(1), &
+    particle%x(2),particle%st(1),particle%st(2),particle%i_elm,           &
     half_position(4),half_position(5),particle%st(1),particle%st(2),      &
     particle%i_elm,ifail)
   ! copy new RZPHI position into particle
@@ -182,12 +182,12 @@ pure subroutine volume_preserving_push_analytical(particle,fields,&
   !> convert back the position to cylindrical coordinates
   particle%x = cartesian_to_cylindrical(half_position)
   !> compute the analytical electromagnetic fields
-  call fields%calc_analytical_EBpsiU(particle%x(1,1:2),E,B,psi,U)
+  call fields%calc_analytical_EBpsiU(particle%x(1:2),E,B,psi,U)
   !> apply the secon VPA step
   call volume_preserving_second_half_step_jorek(particle,&
        half_position,scaling_factor,&
-       vector_cylindrical_to_cartesian(particle%x(1,3),E),&
-       vector_cylindrical_to_cartesian(particle%x(1,3),B),&
+       vector_cylindrical_to_cartesian(particle%x(3),E),&
+       vector_cylindrical_to_cartesian(particle%x(3),B),&
        mass,timestep)
   !> convert back the position to cylindrical coordinates
   particle%x = cartesian_to_cylindrical(half_position)
@@ -275,14 +275,14 @@ subroutine runge_kutta_fixed_dt_relativistic_particle_push_jorek( &
   !> apply the RK scheme
   call runge_kutta_fixed_dt(                                    &
     compute_relativistic_particle_derivatives_jorek,fields,     &
-    6,2,3,t,dt,[particle%x(1,1),particle%x(1,2),particle%x(1,3),      &
+    6,2,3,t,dt,[particle%x(1),particle%x(2),particle%x(3),      &
     particle%p(1),particle%p(2),particle%p(3)],[particle%i_elm, &
     int(particle%p)],[particle%st(1),particle%st(2),mass],      &
     solution_new,i_elm_new)
   
   !> find the particle in the JOREK mesh in case of success
   if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list,&
-       fields%element_list,particle%x(1,1),particle%x(1,2),&
+       fields%element_list,particle%x(1),particle%x(2),&
        particle%st(1),particle%st(2),particle%i_elm,solution_new(1),&
        solution_new(2),st_new(1),st_new(2),i_elm_new,ifail)
 
@@ -323,7 +323,7 @@ subroutine runge_kutta_fixed_dt_relativistic_particle_push(fields,t,dt, &
   real(kind=8), dimension(6) :: solution_new
 
   call runge_kutta_fixed_dt(compute_relativistic_particle_derivatives, &
-    fields,6,1,1,t,dt,[particle%x(1,1),particle%x(1,2),particle%x(1,3),      &
+    fields,6,1,1,t,dt,[particle%x(1),particle%x(2),particle%x(3),      &
     particle%p(1),particle%p(2),particle%p(3)],[int(particle%q)],      &
     [mass],solution_new,ifail)
 
@@ -570,7 +570,7 @@ function relativistic_kinetic_to_relativistic_gc(node_list,element_list, &
   out%q = in%q
 
   !> extract momenta in cylindrical coordinates
-  p_perp = vector_cartesian_to_cylindrical(in%x(1,3),in%p)
+  p_perp = vector_cartesian_to_cylindrical(in%x(3),in%p)
 
   !> compute parallel momentum
   out%p(1) = p_perp(1)*B_hat(1)+p_perp(2)*B_hat(2)+p_perp(3)*B_hat(3)
@@ -585,7 +585,7 @@ function relativistic_kinetic_to_relativistic_gc(node_list,element_list, &
   !> compute GC position
   if(out%q.ne.0) then
      call particle_position_to_gc(node_list,element_list,in%x,&
-          in%st,in%i_elm,vector_cartesian_to_cylindrical(in%x(1,3),in%p),&
+          in%st,in%i_elm,vector_cartesian_to_cylindrical(in%x(3),in%p),&
           in%q,B_hat,norm_B,out%x,out%st,out%i_elm)
   endif
   
@@ -637,7 +637,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out
   B_hat = B/B_norm  !< direction
   
   ! compute the parallel and perpendicular momenta
-  p_perp = vector_cartesian_to_cylindrical(in%x(1,3),in%p)
+  p_perp = vector_cartesian_to_cylindrical(in%x(3),in%p)
   p_par  = p_perp(1)*B_hat(1) + p_perp(2)*B_hat(2) + p_perp(3)*B_hat(3)
   p_perp = p_perp - p_par*B_hat
 
@@ -651,7 +651,7 @@ function relativistic_kinetic_to_gc(node_list,element_list,in,mass,B) result(out
   if(out%q.ne.0) then 
     call particle_position_to_gc(node_list,element_list,  &
       in%x,in%st,in%i_elm,                                &
-      vector_cartesian_to_cylindrical(in%x(1,3),in%p),in%q, &
+      vector_cartesian_to_cylindrical(in%x(3),in%p),in%q, &
       B_hat,B_norm,out%x,out%st,out%i_elm)
   endif  
 end function relativistic_kinetic_to_gc
@@ -721,7 +721,7 @@ function gc_to_relativistic_kinetic(node_list,element_list,in,time,mass,chi,B) r
   endif
  
   !> transform the momentum in cartesian coodinates
-  out%p = vector_cylindrical_to_cartesian(out%x(1,3),out%p)
+  out%p = vector_cylindrical_to_cartesian(out%x(3),out%p)
 end function gc_to_relativistic_kinetic
 
 

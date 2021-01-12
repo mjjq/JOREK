@@ -71,7 +71,7 @@ pure subroutine initialize_particle_gradB(this, particle)
     select type (particle)
     type is (particle_kinetic_leapfrog)
       particle%q = charge
-      particle%v = vector_rotation(v0, particle%x(1,3))
+      particle%v = vector_rotation(v0, particle%x(3))
     end select
   end select
 end subroutine initialize_particle_gradB

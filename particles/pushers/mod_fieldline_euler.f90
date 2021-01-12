@@ -23,13 +23,13 @@ pure subroutine fieldline_euler_push_cylindrical(particle, B, dt)
   real*8 :: R, Rphi
   real*8 :: B_hat(3)
   B_hat = B / norm2(B)
-  R    = particle%x(1,1) + B_hat(1)*particle%v * dt
+  R    = particle%x(1) + B_hat(1)*particle%v * dt
   RPhi = particle%v*B_hat(3) * dt
 
   ! Calculate the new R, Phi, Z
-  particle%x(1,1) = sqrt(R**2 + RPhi**2)
-  particle%x(1,2) = particle%x(1,2) + dt * particle%v*B_hat(2)
-  particle%x(1,3) = particle%x(1,3) + asin(RPhi / particle%x(1,1))
+  particle%x(1) = sqrt(R**2 + RPhi**2)
+  particle%x(2) = particle%x(2) + dt * particle%v*B_hat(2)
+  particle%x(3) = particle%x(3) + asin(RPhi / particle%x(1))
 end subroutine fieldline_euler_push_cylindrical
 
 !> Follow a fieldline for a single timestep with a Two-step Adams-Bashfort method
@@ -44,9 +44,9 @@ pure subroutine fieldline_adams_bashforth_push_cylindrical(particle, B, dt)
   B_hat = B / norm2(B)
 
   ! No cylindrical correction! works better because adams-bashforth needs linear steps
-  particle%x(1,3) = (particle%x(1,3)*particle%x(1,1)  + (B_hat(3)*1.5d0 - particle%B_hat_prev(3)*0.5d0) * particle%v * dt)/particle%x(1,1)
-  particle%x(1,1) = particle%x(1,1)                 + (B_hat(1)*1.5d0 - particle%B_hat_prev(1)*0.5d0) * particle%v * dt
-  particle%x(1,2) = particle%x(1,2) + dt * particle%v*(B_hat(2)*1.5d0 - particle%B_hat_prev(2)*0.5d0)
+  particle%x(3) = (particle%x(3)*particle%x(1)  + (B_hat(3)*1.5d0 - particle%B_hat_prev(3)*0.5d0) * particle%v * dt)/particle%x(1)
+  particle%x(1) = particle%x(1)                 + (B_hat(1)*1.5d0 - particle%B_hat_prev(1)*0.5d0) * particle%v * dt
+  particle%x(2) = particle%x(2) + dt * particle%v*(B_hat(2)*1.5d0 - particle%B_hat_prev(2)*0.5d0)
   particle%B_hat_prev = B_hat
 end subroutine fieldline_adams_bashforth_push_cylindrical
 

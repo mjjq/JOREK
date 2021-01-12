@@ -54,7 +54,7 @@ do i=1,size(sim_in%groups)
       else
         ! Calculate magnetic field to get GC coordinate
         call sim_in%fields%calc_EBpsiU(0.d0, particles(j)%i_elm, &
-            particles(j)%st, particles(j)%x(1,3), E, B, psi, U)
+            particles(j)%st, particles(j)%x(3), E, B, psi, U)
         sim_out%groups(i)%particles(j) = kinetic_leapfrog_to_gc(sim_in%fields%node_list, sim_in%fields%element_list, particles(j), E, B, sim_in%groups(i)%mass, dt=0.d0)
         ! dt above is not per-se the right dt for this particle (since we read it from a file). Use 0 instead
       end if
@@ -97,14 +97,14 @@ do while (.not. sim_out%stop_now)
         do k=1,n_steps
           if (particles(j)%i_elm .eq. 0) exit
           call sim_in%fields%calc_EBpsiU(0.d0, particles(j)%i_elm, &
-              particles(j)%st, particles(j)%x(1,3), E, B, psi, U)
-          rz_old    = particles(j)%x(1,1:2)
+              particles(j)%st, particles(j)%x(3), E, B, psi, U)
+          rz_old    = particles(j)%x(1:2)
           st_old    = particles(j)%st
           i_elm_old = particles(j)%i_elm
 
           call fieldline_euler_push_cylindrical(particles(j), B, dt)
           call find_RZ_nearby(sim_in%fields%node_list, sim_in%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-              particles(j)%x(1,1), particles(j)%x(1,2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
+              particles(j)%x(1), particles(j)%x(2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
           if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1
         end do ! steps
       end do ! particles

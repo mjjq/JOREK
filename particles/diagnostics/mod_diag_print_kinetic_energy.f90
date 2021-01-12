@@ -112,7 +112,7 @@ impure elemental function gc_relativistic_kinetic_energy(particle,mass,fields,ti
   real(kind=8) :: psi, U, B_norm, gamma
   real(kind=8),dimension(3) :: E, B
 
-  call fields%calc_EBpsiU(time, particle%i_elm, particle%st, particle%x(1,3), E, B, psi, U)
+  call fields%calc_EBpsiU(time, particle%i_elm, particle%st, particle%x(3), E, B, psi, U)
 
   B_norm = sqrt(B(1)*B(1)+B(2)*B(2)+B(3)*B(3))
 

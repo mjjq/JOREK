@@ -79,14 +79,14 @@ do while (.not. sim%stop_now)
           if (particles(j)%i_elm .eq. 0) exit
           t = sim%time + k*timesteps(i)
           call sim%fields%calc_EBpsiU(t, particles(j)%i_elm, &
-              particles(j)%st, particles(j)%x(1,3), E, B, psi, U)
-          rz_old    = particles(j)%x(1,1:2)
+              particles(j)%st, particles(j)%x(3), E, B, psi, U)
+          rz_old    = particles(j)%x(1:2)
           st_old    = particles(j)%st
           i_elm_old = particles(j)%i_elm
 
           call boris_push_cylindrical(particles(j), sim%groups(i)%mass, E, B, timesteps(i))
           call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-              particles(j)%x(1,1), particles(j)%x(1,2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
+              particles(j)%x(1), particles(j)%x(2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
         end do ! steps
       end do ! particles
       !$omp end parallel do

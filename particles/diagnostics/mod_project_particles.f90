@@ -395,7 +395,7 @@ subroutine sample_rhs(this, sim)
       if (particle%i_elm .eq. 0) cycle
 
       x(1:2) = particle%st
-      x(3)   = particle%x(1,3)
+      x(3)   = particle%x(3)
 
       call interp_RZ(this%node_list,this%element_list,particle%i_elm,x(1),x(2),R_g,R_s,R_t,Z_g,Z_s,Z_t)
       xjac = R_s*Z_t - R_t*Z_s

@@ -71,13 +71,13 @@ contains
     !> compute Runge-Kutta solution and new time step
 #ifdef TEST
     call runge_kutta_order_error_control_dt(compute_relativistic_gc_derivatives_jorek, &
-      fields,4,2,4,t,t_stop,dt,[particle%x(1,1),particle%x(1,2),particle%x(1,3),             &
+      fields,4,2,4,t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),             &
       particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),                 &
       particle%st(2),mass,particle%p(2)],                                              &
       tolerances,dt_new,solution_new,i_elm_new,error)
 #else
     call runge_kutta_order_error_control_dt(compute_relativistic_gc_derivatives_jorek, &
-      fields,4,2,4,t,t_stop,dt,[particle%x(1,1),particle%x(1,2),particle%x(1,3),             &
+      fields,4,2,4,t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),             &
       particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),                 &
       particle%st(2),mass,particle%p(2)],                                              &
       tolerances,dt_new,solution_new,i_elm_new)
@@ -87,7 +87,7 @@ contains
     particle%i_elm = i_elm_new
     if(i_elm_new.gt.0) then 
       call find_rz_nearby(fields%node_list,                  &
-        fields%element_list,particle%x(1,1),particle%x(1,2),     &
+        fields%element_list,particle%x(1),particle%x(2),     &
         particle%st(1),particle%st(2),particle%i_elm,        &
         solution_new(1),solution_new(2),st_new(1),st_new(2), &
         i_elm_new,ifail)
@@ -135,13 +135,13 @@ contains
     !> compute Runge-Kutta solution and new time step
     call runge_kutta_adaptative_dt(compute_relativistic_gc_derivatives_jorek,&
          adapt_time_step_gradB_curlb_dbdt,fields,4,2,4,&
-         t,t_stop,dt,[particle%x(1,1),particle%x(1,2),particle%x(1,3),&
+         t,t_stop,dt,[particle%x(1),particle%x(2),particle%x(3),&
          particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),&
          particle%st(2),mass,particle%p(2)],solution_new,i_elm_new)
     
     !> compute new local coordinates
     if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list,&
-         fields%element_list,particle%x(1,1),particle%x(1,2),&
+         fields%element_list,particle%x(1),particle%x(2),&
          particle%st(1),particle%st(2),particle%i_elm,&
          solution_new(1),solution_new(2),st_new(1),st_new(2),&
          i_elm_new,ifail)
@@ -252,13 +252,13 @@ contains
 
     !> compute Runge-Kutta differentials
     call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives_jorek, &
-      fields,4,2,4,t,dt,[particle%x(1,1),particle%x(1,2),particle%x(1,3),      &
+      fields,4,2,4,t,dt,[particle%x(1),particle%x(2),particle%x(3),      &
       particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),   &
       particle%st(2),mass,particle%p(2)],solution_new,i_elm_new)
     
     !> compute the new local coordinates
     if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list, &
-      fields%element_list,particle%x(1,1),particle%x(1,2),       &
+      fields%element_list,particle%x(1),particle%x(2),       &
       particle%st(1),particle%st(2),particle%i_elm,          &
       solution_new(1),solution_new(2),st_new(1),st_new(2),   &
       i_elm_new,ifail)
@@ -299,7 +299,7 @@ contains
 
     !> push GC
     call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives,&
-         fields,4,1,2,t,dt,[particle%x(1,1),particle%x(1,2),particle%x(1,3),&
+         fields,4,1,2,t,dt,[particle%x(1),particle%x(2),particle%x(3),&
          particle%p(1)],[int(particle%q)],[mass,particle%p(2)],&
          solution_new,ifail)
 	 
@@ -548,7 +548,7 @@ contains
          out%st,out%i_elm)
     endif
     !> transform the momenta to cartesian coordinates
-    out%p = vector_cylindrical_to_cartesian(out%x(1,3),out%p)
+    out%p = vector_cylindrical_to_cartesian(out%x(3),out%p)
   end function relativistic_gc_to_relativistic_kinetic 
 
   !> This procedure transforms a particle_gc_relativistic into a particle_gc
@@ -656,7 +656,7 @@ contains
     p_norm_sq = ((energy*EL_CHG)**2-energy_at_rest**2)/SPEED_OF_LIGHT**2
 
     !> mu [AMU (m/s)**2 /T]
-    call fields%calc_EBpsiU(time, rel_gc_out%i_elm, rel_gc_out%st, rel_gc_out%x(1,3), E, B, psi, U)
+    call fields%calc_EBpsiU(time, rel_gc_out%i_elm, rel_gc_out%st, rel_gc_out%x(3), E, B, psi, U)
     B_norm = norm2(B)
     rel_gc_out%p(2) = p_norm_sq*(1.d0-ksi**2)/(2.d0*B_norm*mass*ATOMIC_MASS_UNIT**2)
 

@@ -62,8 +62,8 @@ if (.not. restart) then
     p%q = -1
     p%x = [3.68d0,0.d0,0.d0]
     call find_RZ(sim%fields%node_list, sim%fields%element_list, &
-                 p%x(1,1), p%x(1,2), & ! inputs
-                 p%x(1,1), p%x(1,2), p%i_elm, p%st(1), p%st(2), ifail) ! outputs
+                 p%x(1), p%x(2), & ! inputs
+                 p%x(1), p%x(2), p%i_elm, p%st(1), p%st(2), ifail) ! outputs
     !p%p = [1.d7,0.]
     energy = 1.d7 ! 5.12d5 ! Particle energy, including rest energy
     ksi    = 0. !1.d0      ! Cosine of pitch-angle
@@ -129,7 +129,7 @@ do while (.not. sim%stop_now)
           call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time,timesteps(i), &
               sim%groups(i)%mass,particles(j)) !< push in jorek fields
 
-!          write(*,*) 'Particle position: ', particles(j)%x(1,1), particles(j)%x(1,2), particles(j)%x(1,3)
+!          write(*,*) 'Particle position: ', particles(j)%x(1), particles(j)%x(2), particles(j)%x(3)
 !          write(*,*) 'Particle momenta: ', particles(j)%p(1), particles(j)%p(2)
 
 !	  if (modulo(k-1,10000)==0) then	                
@@ -155,12 +155,12 @@ do while (.not. sim%stop_now)
 enddo !< event
 
 ! Print particle information
-write(*,*) 'Final R, Z, phi: ', sim%groups(1)%particles(1)%x(1,1), sim%groups(1)%particles(1)%x(1,2), sim%groups(1)%particles(1)%x(1,3)
+write(*,*) 'Final R, Z, phi: ', sim%groups(1)%particles(1)%x(1), sim%groups(1)%particles(1)%x(2), sim%groups(1)%particles(1)%x(3)
 
 ! Convert particle to particle_gc to get energy and mu
 gyro_angle = 0.
 call sim%fields%calc_EBpsiU(sim%time, sim%groups(1)%particles(1)%i_elm, sim%groups(1)%particles(1)%st, &              
-                            sim%groups(1)%particles(1)%x(1,3), E, B, psi, U)
+                            sim%groups(1)%particles(1)%x(3), E, B, psi, U)
 particle_in = sim%groups(1)%particles(1)
 call relativistic_gc_to_particle(sim%fields%node_list, sim%fields%element_list, &
                                  particle_in, particle_out_gc, sim%groups(1)%mass, &

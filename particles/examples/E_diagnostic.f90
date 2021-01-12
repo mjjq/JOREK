@@ -71,7 +71,7 @@ subroutine do_save_E(this, sim, ev)
         ! changes u_n - u(n-1))
         call sim%fields%interp_PRZ(sim%time, sim%groups(i)%particles(j)%i_elm, [1,2,3,6], 4, &
           sim%groups(i)%particles(j)%st(1), sim%groups(i)%particles(j)%st(2), &
-          sim%groups(i)%particles(j)%x(1,3), &
+          sim%groups(i)%particles(j)%x(3), &
           P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
 
         R_inv = 1.d0/R

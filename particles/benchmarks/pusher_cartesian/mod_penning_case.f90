@@ -66,7 +66,7 @@ subroutine initialize_particle_penning(this, particle)
     select type (p => particle)
     type is (particle_kinetic_leapfrog)
       p%q = charge
-      p%v = vector_rotation(cartesian_to_cylindrical(v0), p%x(1,3))
+      p%v = vector_rotation(cartesian_to_cylindrical(v0), p%x(3))
     class default
       write(*,*) "WARNING: Unknown type in initialize_particle_penning"
     end select

@@ -805,8 +805,8 @@ integer(HID_T)     :: file_id
 integer            :: ierr
 
 ! type_node, node_list%n_nodes
-real(RKIND), allocatable :: t_x(:,:,:)                   ! n_order+1, n_dim
-real(RKIND), allocatable :: t_values(:,:,:,:)            ! n_tor, n_order+1, n_fields
+real(RKIND), allocatable :: t_x(:,:,:,:)                   ! n_tor, n_order+1, n_dim
+real(RKIND), allocatable :: t_values(:,:,:,:)              ! n_tor, n_order+1, n_fields
 
 ! element, element_list%n_elements
 integer,     allocatable :: t_vertex(:,:)                ! n_vertex_max
@@ -814,7 +814,7 @@ integer,     allocatable :: t_neighbours(:,:)            ! n_vertex_max
 real(RKIND), allocatable :: t_size(:,:,:)                ! n_vertex_max,n_order+1
 
 ! type_node, node_list%n_nodes
-call tr_allocate(t_x,1,node_list%n_nodes,1,n_order+1,1,n_dim, &
+call tr_allocate(t_x,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_dim, &
      "node_list%x",CAT_UNKNOWN)
 call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_fields, &
      "node_list%values",CAT_UNKNOWN)
@@ -825,7 +825,7 @@ call tr_allocate(t_neighbours,1,element_list%n_elements,1,n_vertex_max,"neighbou
 call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_order+1,"size",CAT_UNKNOWN)
 
 do i=1,node_list%n_nodes
-   t_x(i,:,:)        = node_list%node(i)%x
+   t_x(i,:,:,:)        = node_list%node(i)%x
    t_values(i,:,:,:) = node_list%node(i)%values(:,:,1:n_fields)
 end do
 
@@ -862,8 +862,8 @@ call HDF5_integer_saving(file_id,node_list%n_nodes,'n_nodes'//char(0))
 call HDF5_integer_saving(file_id,element_list%n_elements,'n_elements'//char(0))
 call HDF5_integer_saving(file_id,node_list%n_dof,'n_dof'//char(0))
 
-call HDF5_array3D_saving(file_id,t_x, &
-     node_list%n_nodes,n_order+1,n_dim,'x'//char(0))
+call HDF5_array4D_saving(file_id,t_x, &
+     node_list%n_nodes,n_tor,n_order+1,n_dim,'x'//char(0))
 call HDF5_array4D_saving(file_id,t_values, &
      node_list%n_nodes,n_tor,n_order+1,n_fields,'values'//char(0))
 

@@ -247,7 +247,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   integer            :: ind, ierr
 
   ! type_node, node_list%n_nodes
-  real(RKIND), allocatable :: t_x(:,:,:)                   ! n_order+1, n_dim
+  real(RKIND), allocatable :: t_x(:,:,:,:)                 ! n_tor, n_order+1, n_dim
   real(RKIND), allocatable :: t_values(:,:,:,:)            ! n_tor, n_order+1, n_var
   real(RKIND), allocatable :: t_deltas(:,:,:,:)            ! n_tor, n_order+1, n_var
 
@@ -296,7 +296,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 #endif
 
   ! type_node, node_list%n_nodes
-  call tr_allocate(t_x,1,node_list%n_nodes,1,n_order+1,1,n_dim, &
+  call tr_allocate(t_x,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_dim, &
        "node_list%x",CAT_UNKNOWN)
   call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_var, &
        "node_list%values",CAT_UNKNOWN)
@@ -362,7 +362,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   !
   do i=1,node_list%n_nodes
-     t_x(i,:,:)        = node_list%node(i)%x
+     t_x(i,:,:,:)        = node_list%node(i)%x
      t_values(i,:,:,:) = node_list%node(i)%values
      t_deltas(i,:,:,:) = node_list%node(i)%deltas
 
@@ -448,8 +448,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call HDF5_integer_saving(file_id,element_list%n_elements,'n_elements'//char(0))
   call HDF5_integer_saving(file_id,node_list%n_dof,'n_dof'//char(0))
 
-  call HDF5_array3D_saving(file_id,t_x, &
-       node_list%n_nodes,n_order+1,n_dim,'x'//char(0))
+  call HDF5_array4D_saving(file_id,t_x, &
+       node_list%n_nodes,n_tor,n_order+1,n_dim,'x'//char(0))
   call HDF5_array4D_saving(file_id,t_values, &
        node_list%n_nodes,n_tor,n_order+1,n_var,'values'//char(0))
   call HDF5_array4D_saving(file_id,t_deltas, &

@@ -74,8 +74,8 @@ if (.not. restart) then
       p%x = [3.68d0,0.d0,0.d0] ! in (R,Z,phi) coordinates
 
       call find_RZ(sim%fields%node_list, sim%fields%element_list,    &
-                   p%x(1), p%x(2),                                   & ! inputs
-                   p%x(1), p%x(2), p%i_elm, p%st(1), p%st(2), ifail)   ! outputs
+                   p%x(1,1), p%x(1,2),                                   & ! inputs
+                   p%x(1,1), p%x(1,2), p%i_elm, p%st(1), p%st(2), ifail)   ! outputs
 
       !p%p = [0.d0,1.d+7,0.d0] ! in (X,Y,Z) coordinates
 
@@ -88,7 +88,7 @@ if (.not. restart) then
       ksi        = 0. !1.d0      ! Cosine of pitch-angle
       gyro_angle = 0.
 
-      call sim%fields%calc_EBpsiU(sim%time, p%i_elm, p%st, p%x(3), E, B, psi, U)
+      call sim%fields%calc_EBpsiU(sim%time, p%i_elm, p%st, p%x(1,3), E, B, psi, U)
       
       ! Convert to particle_gc_relativistic
       particle_gc_rel = relativistic_kinetic_to_relativistic_gc(sim%fields%node_list, &
@@ -190,13 +190,13 @@ do while (.not. sim%stop_now)
 enddo
 
 ! Print final particle information
-!write(*,*) 'Final x,y,z: ', sim%groups(1)%particles(1)%x(1), sim%groups(1)%particles(1)%x(2), sim%groups(1)%particles(1)%x(3)
+!write(*,*) 'Final x,y,z: ', sim%groups(1)%particles(1)%x(1,1), sim%groups(1)%particles(1)%x(1,2), sim%groups(1)%particles(1)%x(1,3)
 !call print_kinetic_energy%do(sim,events(1))  !< print particle kinetic energy
 
 ! Convert particle to particle_gc to get energy and mu
 particle_kin_rel = sim%groups(1)%particles(1)
 call sim%fields%calc_EBpsiU(sim%time, sim%groups(1)%particles(1)%i_elm, sim%groups(1)%particles(1)%st, &              
-                            sim%groups(1)%particles(1)%x(3), E, B, psi, U)
+                            sim%groups(1)%particles(1)%x(1,3), E, B, psi, U)
 call relativistic_kinetic_to_particle(sim%fields%node_list, sim%fields%element_list, &
                                       particle_kin_rel, particle_gc_out, sim%groups(1)%mass, B)
 write(*,*) 'Final E (eV), mu (eV/T): ', particle_gc_out%E, particle_gc_out%mu

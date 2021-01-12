@@ -50,17 +50,17 @@ pure subroutine boris_push_cylindrical(particle, m, E, B, dt)
   particle%v = particle%v + fE * E
   ! update the position from v^n to v^(n+1)
   ! Calculate the new R and RPhi
-  R    = particle%x(1) + particle%v(1) * dt
+  R    = particle%x(1,1) + particle%v(1) * dt
   RPhi = particle%v(3) * dt
 
   ! Calculate the new R, Phi, Z
-  particle%x(1) = sqrt(R**2 + RPhi**2)
-  particle%x(2) = particle%x(2) + dt * particle%v(2)
-  particle%x(3) = particle%x(3) + asin(RPhi / particle%x(1))
+  particle%x(1,1) = sqrt(R**2 + RPhi**2)
+  particle%x(1,2) = particle%x(1,2) + dt * particle%v(2)
+  particle%x(1,3) = particle%x(1,3) + asin(RPhi / particle%x(1,1))
 
   ! Adjust R and Phi velocities (component 1 and 3) to the new reference frame
   particle%v(1:3:2) = [R     * particle%v(1) + RPhi * particle%v(3), &
-                       -RPhi * particle%v(1) + R    * particle%v(3)] / particle%x(1)
+                       -RPhi * particle%v(1) + R    * particle%v(3)] / particle%x(1,1)
 end subroutine boris_push_cylindrical
 
 !> Push a single particle for some timesteps with the boris method
@@ -154,7 +154,7 @@ subroutine boris_all_initial_half_step_backwards_RZPhi(particles, m, fields, t, 
   !$omp parallel do default(private) shared(particles, fields, dt, m, t)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .eq. 0) cycle
-    call fields%calc_EBpsiU(t, particles(i)%i_elm, particles(i)%st, particles(i)%x(3), &
+    call fields%calc_EBpsiU(t, particles(i)%i_elm, particles(i)%st, particles(i)%x(1,3), &
         E, B, psi, U)
     call boris_initial_half_step_backwards_RZPhi(particles(i), m, E, B, dt)
   end do
@@ -274,8 +274,8 @@ function kinetic_to_gc(node_list, element_list, in, B, mass) result(out)
       /B_norm/EL_CHG, v_par) ! [eV/T]
 
   ! Calculate new st and i_elm
-  call find_RZ_nearby(node_list, element_list, in%x(1), in%x(2), in%st(1), in%st(2), in%i_elm, &
-      out%x(1), out%x(2), out%st(1), out%st(2), out%i_elm, ifail)
+  call find_RZ_nearby(node_list, element_list, in%x(1,1), in%x(1,2), in%st(1), in%st(2), in%i_elm, &
+      out%x(1,1), out%x(1,2), out%st(1), out%st(2), out%i_elm, ifail)
 end function kinetic_to_gc
 
 !> Take a particle_gc and get the kinetic particle.
@@ -318,7 +318,7 @@ function gc_to_kinetic(node_list, element_list, in, chi, B, mass) result(out)
   end if
 
   ! Calculate new st and i_elm
-  call find_RZ_nearby(node_list, element_list, in%x(1), in%x(2), in%st(1), in%st(2), in%i_elm, &
-      out%x(1), out%x(2), out%st(1), out%st(2), out%i_elm, ifail)
+  call find_RZ_nearby(node_list, element_list, in%x(1,1), in%x(1,2), in%st(1), in%st(2), in%i_elm, &
+      out%x(1,1), out%x(1,2), out%st(1), out%st(2), out%i_elm, ifail)
 end function gc_to_kinetic
 end module mod_boris

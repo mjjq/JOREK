@@ -52,8 +52,8 @@ module divertor_desc
       j = divpos%divseg_pos%num_seg
 
       normpos = divpos%relpos/divseglen(divpos%divseg_pos)
-      p = (1-normpos)* divertor%divparts(i)%divpts(j)%x(index) + &
-           &normpos* divertor%divparts(i)%divpts(j+1)%x(index)
+      p = (1-normpos)* divertor%divparts(i)%divpts(j)%x(1,index) + &
+           &normpos* divertor%divparts(i)%divpts(j+1)%x(1,index)
     end function divpos_r
 
     function divpos2divdist(divpos)
@@ -265,8 +265,8 @@ module divertor_desc
          end do
          startpos = divpart%divpts(divpart%npts)%absdist
       endif
-      divpart%zmin = minval(divpart%divpts(:)%x(2))
-      divpart%zmax = maxval(divpart%divpts(:)%x(2))
+      divpart%zmin = minval(divpart%divpts(:)%x(1,2))
+      divpart%zmax = maxval(divpart%divpts(:)%x(1,2))
     end subroutine init_divpart_data
 
     subroutine init_divpart(fdiv, divpart, startpos)
@@ -290,8 +290,8 @@ module divertor_desc
          end do
          startpos = divpart%divpts(divpart%npts)%absdist
       endif
-      divpart%zmin = minval(divpart%divpts(:)%x(2))
-      divpart%zmax = maxval(divpart%divpts(:)%x(2))
+      divpart%zmin = minval(divpart%divpts(:)%x(1,2))
+      divpart%zmax = maxval(divpart%divpts(:)%x(1,2))
     end subroutine init_divpart
 
     function R_div(divseg, pt) result (p)
@@ -310,7 +310,7 @@ module divertor_desc
       i = divseg%num_part
       j = divseg%num_seg
 
-      p = divertor%divparts(i)%divpts(j+pt-1)%x(index)
+      p = divertor%divparts(i)%divpts(j+pt-1)%x(1,index)
     end function R_div
     
 

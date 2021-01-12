@@ -102,13 +102,13 @@ do i=1,size(tstep_n)
 
   do j=1,nstep_n(i)
     if (mod(j,max(nstep_n(i)/100,10)) .eq. 0) write(*,'(A)',advance='no') '.'
-    call sim%fields%calc_EBpsiU(0.d0, particle%i_elm, particle%st, particle%x(3), E, B, psi, U)
-    rz_old    = particle%x(1:2)
+    call sim%fields%calc_EBpsiU(0.d0, particle%i_elm, particle%st, particle%x(1,3), E, B, psi, U)
+    rz_old    = particle%x(1,1:2)
     st_old    = particle%st
     i_elm_old = particle%i_elm
     call boris_push_cylindrical(particle, real(mass,8), E, B, tstep_n(i))
     call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-        particle%x(1), particle%x(2), particle%st(1), particle%st(2), particle%i_elm, ifail)
+        particle%x(1,1), particle%x(1,2), particle%st(1), particle%st(2), particle%i_elm, ifail)
     if (particle%i_elm .le. 0) then
       write(*,*) 'Particle lost! exiting.'
       stop 1
@@ -146,7 +146,7 @@ contains
     particle%st = [s,t]
     particle%i_elm = ielm_out
     particle%x = [R,Z,x0(3)]
-    particle%v = vector_rotation(cartesian_to_cylindrical(v0), particle%x(3))
+    particle%v = vector_rotation(cartesian_to_cylindrical(v0), particle%x(1,3))
     particle%q = charge
     particle%weight = 1.d0
   end subroutine reset_particle

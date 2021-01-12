@@ -97,14 +97,14 @@ do i=1,fields%node_list%n_nodes
   ! Get value and derivatives
   ! XXX we make a mistake here I think. Perhaps it is better to use the projection matrix approach here.
   ! at least node%size needs to be in here somewhere.
-  R    = fields%node_list%node(i)%x(1,1)
-  R_s  = fields%node_list%node(i)%x(2,1)
-  R_t  = fields%node_list%node(i)%x(3,1)
-  R_st = fields%node_list%node(i)%x(4,1)
-  Z    = fields%node_list%node(i)%x(1,2)
-  Z_s  = fields%node_list%node(i)%x(2,2)
-  Z_t  = fields%node_list%node(i)%x(3,2)
-  Z_st = fields%node_list%node(i)%x(4,2)
+  R    = fields%node_list%node(i)%x(1,1,1)
+  R_s  = fields%node_list%node(i)%x(1,2,1)
+  R_t  = fields%node_list%node(i)%x(1,3,1)
+  R_st = fields%node_list%node(i)%x(1,4,1)
+  Z    = fields%node_list%node(i)%x(1,1,2)
+  Z_s  = fields%node_list%node(i)%x(1,2,2)
+  Z_t  = fields%node_list%node(i)%x(1,3,2)
+  Z_st = fields%node_list%node(i)%x(1,4,2)
 
   ! B has only a z component, so F = 0, Psi(R) = -B0/2 R^2
   fields%node_list%node(i)%values(1,1,1) = -0.5d0*B0*R**2
@@ -141,16 +141,16 @@ if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not
   call boris_initial_half_step_backwards_RZPhi(particle, mass, E, B, tstep_n(i)*t_norm)
 
   do j=1,nstep_n(i)
-    call fields%calc_EBpsiU(0.d0, particle%i_elm, particle%st, particle%x(3), E, B, psi, U)
+    call fields%calc_EBpsiU(0.d0, particle%i_elm, particle%st, particle%x(1,3), E, B, psi, U)
     B(3) = 0.d0 ! same as toroidal_field_factor
-    !write(*,"(6g14.6)") E, [-2.d0*Phi0/t_norm*particle%x(1),0.d0,0.d0]
-    rz_old    = particle%x(1:2)
+    !write(*,"(6g14.6)") E, [-2.d0*Phi0/t_norm*particle%x(1,1),0.d0,0.d0]
+    rz_old    = particle%x(1,1:2)
     st_old    = particle%st
     i_elm_old = particle%i_elm
     call boris_push_cylindrical(particle, mass, E, B, tstep_n(i)*t_norm)
     call find_RZ_nearby(fields%node_list, fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-        particle%x(1), particle%x(2), particle%st(1), particle%st(2), particle%i_elm, ifail)
-    !write(*,*) rz_old, particle%x(1:2)
+        particle%x(1,1), particle%x(1,2), particle%st(1), particle%st(2), particle%i_elm, ifail)
+    !write(*,*) rz_old, particle%x(1,1:2)
   end do
 
   ! Check position against analytical result

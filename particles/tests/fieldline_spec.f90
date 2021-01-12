@@ -45,31 +45,31 @@ subroutine test_fieldline_backforth_euler
     call initialise_particles(p, f%node_list, f%element_list, sobseq_rng())
     do k=1,n_p
       p(k)%v = v
-      call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi0, u)
-      phi0 = p(k)%x(3)
+      call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(1,3), E, B, psi0, u)
+      phi0 = p(k)%x(1,3)
       do j=1,20*10**(-(i+5)) ! 200 steps at smallest dt
         if (p(k)%i_elm .eq. 0) then
           call assert_true(.false., 'Particle should be in domain dt=10**'//is)
           exit
         end if
         call f%calc_EBpsiU(0.d0, p(k)%i_elm, &
-            p(k)%st, p(k)%x(3), E, B, psi, U)
-        rz_old    = p(k)%x(1:2)
+            p(k)%st, p(k)%x(1,3), E, B, psi, U)
+        rz_old    = p(k)%x(1,1:2)
         st_old    = p(k)%st
         i_elm_old = p(k)%i_elm
 
         call fieldline_euler_push_cylindrical(p(k), B, dt)
         call find_RZ_nearby(f%node_list, f%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-            p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
+            p(k)%x(1,1), p(k)%x(1,2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
         if (j .eq. 10*10**(-(i+5))) then
           call assert_equals(0.d0, psi-psi0, 13d4*dt, "Must not leave flux surface mid dt=1e"//is)
           p(k)%v = -v ! go backwards after this point
         end if
       end do
       if (p(k)%i_elm .ne. 0) then
-        call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi, u)
+        call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(1,3), E, B, psi, u)
         call assert_equals(0.d0, psi-psi0, 25d4*dt, "Must not leave flux surface dt=1e"//is)
-        call assert_equals(0.d0, p(k)%x(3)-phi0, 7d6*dt, "Must be back at same phi dt=1e"//is)
+        call assert_equals(0.d0, p(k)%x(1,3)-phi0, 7d6*dt, "Must be back at same phi dt=1e"//is)
       else
         call assert_true(.false., 'Particle should be in domain after run dt=1e'//is)
       end if
@@ -105,15 +105,15 @@ subroutine test_fieldline_backforth_adams_bashforth
     call initialise_particles(p, f%node_list, f%element_list, sobseq_rng())
     do k=1,n_p
       p(k)%v = v
-      call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi0, u)
-      phi0 = p(k)%x(3)
+      call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(1,3), E, B, psi0, u)
+      phi0 = p(k)%x(1,3)
       ! Do a single euler step forward to setup the adams-bashforth method
-      rz_old    = p(k)%x(1:2)
+      rz_old    = p(k)%x(1,1:2)
       st_old    = p(k)%st
       i_elm_old = p(k)%i_elm
       call fieldline_euler_push_cylindrical(p(k), B, dt)
       call find_RZ_nearby(f%node_list, f%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-          p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
+          p(k)%x(1,1), p(k)%x(1,2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
       p(k)%B_hat_prev = B/norm2(B)
 
       do j=2,20*10**(-(i+5)) ! 200 steps at smallest dt
@@ -122,23 +122,23 @@ subroutine test_fieldline_backforth_adams_bashforth
           exit
         end if
         call f%calc_EBpsiU(0.d0, p(k)%i_elm, &
-            p(k)%st, p(k)%x(3), E, B, psi, U)
-        rz_old    = p(k)%x(1:2)
+            p(k)%st, p(k)%x(1,3), E, B, psi, U)
+        rz_old    = p(k)%x(1,1:2)
         st_old    = p(k)%st
         i_elm_old = p(k)%i_elm
 
         call fieldline_adams_bashforth_push_cylindrical(p(k), B, dt)
         call find_RZ_nearby(f%node_list, f%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-            p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
+            p(k)%x(1,1), p(k)%x(1,2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
         if (j .eq. 10*10**(-(i+5))) then
           call assert_equals(0.d0, psi-psi0, 2d9*dt**2, "Must not leave flux surface mid dt=1e"//is)
           p(k)%v = -v ! go backwards after this point
         end if
       end do
       if (p(k)%i_elm .ne. 0) then
-        call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi, u)
+        call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(1,3), E, B, psi, u)
         call assert_equals(0.d0, psi-psi0, 2d9*dt**2, "Must not leave flux surface dt=1e"//is)
-        call assert_equals(0.d0, p(k)%x(3)-phi0, 8d4*dt, "Must be back at same phi dt=1e"//is) ! WARNING: this is linear instead of quadratic
+        call assert_equals(0.d0, p(k)%x(1,3)-phi0, 8d4*dt, "Must be back at same phi dt=1e"//is) ! WARNING: this is linear instead of quadratic
       else
         call assert_true(.false., 'Particle should be in domain after run dt=1e'//is)
       end if

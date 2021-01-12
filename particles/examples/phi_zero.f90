@@ -76,7 +76,7 @@ do i=1,size(sim%groups,1)
         else
           ! Calculate magnetic field to get GC coordinate
           call sim%fields%calc_EBpsiU(0.d0, p(j)%i_elm, &
-              p(j)%st, p(j)%x(3), E, B, psi, U)
+              p(j)%st, p(j)%x(1,3), E, B, psi, U)
           particles(j) = kinetic_leapfrog_to_gc(sim%fields%node_list, sim%fields%element_list, p(j), E, B, sim%groups(i)%mass, dt=0.d0)
           ! dt above is not per-se the right dt for this particle (since we read it from a file). Use 0 instead
         end if
@@ -99,36 +99,36 @@ do i=1,size(sim%groups,1)
       if (particles(j)%i_elm .eq. 0) cycle
       ! Do a single euler step forward to setup the adams-bashforth method
       call sim%fields%calc_EBpsiU(0.d0, particles(j)%i_elm, &
-        particles(j)%st, particles(j)%x(3), E, B, psi, U)
-      rz_old    = particles(j)%x(1:2)
+        particles(j)%st, particles(j)%x(1,3), E, B, psi, U)
+      rz_old    = particles(j)%x(1,1:2)
       st_old    = particles(j)%st
       i_elm_old = particles(j)%i_elm
       call fieldline_euler_push_cylindrical(particles(j), B, dt)
       call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-          particles(j)%x(1), particles(j)%x(2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
+          particles(j)%x(1,1), particles(j)%x(1,2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
       if (particles(j)%i_elm .eq. 0) cycle
       particles(j)%B_hat_prev = B/norm2(B)
 
       do k=1,200*nint(1.d0/(v*dt)) ! maximum number of steps from maximum length = q*circumference/v/dt \approx 100/vdt
         call sim%fields%calc_EBpsiU(0.d0, particles(j)%i_elm, &
-          particles(j)%st, particles(j)%x(3), E, B, psi, U)
-        rz_old    = particles(j)%x(1:2)
-        phi_old   = particles(j)%x(3)
+          particles(j)%st, particles(j)%x(1,3), E, B, psi, U)
+        rz_old    = particles(j)%x(1,1:2)
+        phi_old   = particles(j)%x(1,3)
         st_old    = particles(j)%st
         i_elm_old = particles(j)%i_elm
-        theta_old = atan2(particles(j)%x(2)-Z_axis, particles(j)%x(1)-R_axis)
+        theta_old = atan2(particles(j)%x(1,2)-Z_axis, particles(j)%x(1,1)-R_axis)
 
         call fieldline_adams_bashforth_push_cylindrical(particles(j), B, dt)
         call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-            particles(j)%x(1), particles(j)%x(2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
+            particles(j)%x(1,1), particles(j)%x(1,2), particles(j)%st(1), particles(j)%st(2), particles(j)%i_elm, ifail)
         if (particles(j)%i_elm .eq. 0) exit
 
         ! Check if the new position is at the outer midplane
-        theta = atan2(particles(j)%x(2)-Z_axis, particles(j)%x(1)-R_axis)
+        theta = atan2(particles(j)%x(1,2)-Z_axis, particles(j)%x(1,1)-R_axis)
         ! This is true if theta has a different sign from theta_old and they are both smaller than pi/2
         if (sign(1.d0,theta) .ne. sign(1.d0,theta_old) .and. abs(theta) .lt. 0.5d0*PI .and. abs(theta_old) .lt. 0.5d0*PI) then 
           ! interpolate linearly (small-angle approx) to find a more precise value of phi
-          phi = particles(j)%x(3)
+          phi = particles(j)%x(1,3)
           phi_zero(j,dir) = phi - theta*(phi - phi_old)/(theta - theta_old)
           ! Calculate the distance more precisely as well
           phi_zero_dist(j,dir) = (real(k-1) + abs(theta)/abs(theta-theta_old))*v*dt

@@ -54,9 +54,9 @@ subroutine test_known_gc_kinetic
     x_ref = gc%x + cos(chi)*r*e2 - sin(chi)*r*e1
     v_ref = v_perp*cos(chi)*e1 + v_perp*sin(chi)*e2 + v_par*B/norm2(B)
     ! this uses the value of B being in the z-direction!
-    call assert_equals(kinetic%x(1), x_ref(1), tol, "R positions must be same")
-    call assert_equals(kinetic%x(2), x_ref(2), tol, "Z positions must be same")
-    call assert_equals(kinetic%x(3), x_ref(3), tol, "phi positions must be same")
+    call assert_equals(kinetic%x(1,1), x_ref(1), tol, "R positions must be same")
+    call assert_equals(kinetic%x(1,2), x_ref(2), tol, "Z positions must be same")
+    call assert_equals(kinetic%x(1,3), x_ref(3), tol, "phi positions must be same")
     call assert_equals(kinetic%v(1), v_ref(1), tol, "R velocity must be same")
     call assert_equals(kinetic%v(2), v_ref(2), tol, "Z velocity must be same")
     call assert_equals(kinetic%v(3), v_ref(3), tol, "phi velocity must be same")
@@ -93,9 +93,9 @@ subroutine test_known_kinetic_gc
 
     gc = kinetic_to_gc(node_list, element_list, kinetic, B, mass)
     ! this uses the value of B being in the z-direction!
-    call assert_equals(1d0, gc%x(1), tol, "R positions must be same")
-    call assert_equals(2d0, gc%x(2), tol, "Z positions must be same")
-    call assert_equals(3d0, gc%x(3), tol, "phi positions must be same")
+    call assert_equals(1d0, gc%x(1,1), tol, "R positions must be same")
+    call assert_equals(2d0, gc%x(1,2), tol, "Z positions must be same")
+    call assert_equals(3d0, gc%x(1,3), tol, "phi positions must be same")
     call assert_equals(gc%E,  0.5d0*mass*ATOMIC_MASS_UNIT*dot_product(kinetic%v,kinetic%v)/EL_CHG, tol, "Energy must be right")
     call assert_equals(gc%mu, 0.5d0*mass*ATOMIC_MASS_UNIT*dot_product(kinetic%v(1:2),kinetic%v(1:2))/norm2(B)/EL_CHG, tol, "mu must be right")
   end do
@@ -121,9 +121,9 @@ subroutine test_kinetic_gc_kinetic
   gc = kinetic_to_gc(node_list, element_list, kinetic1, B, mass)
   kinetic2 = gc_to_kinetic(node_list, element_list, gc, chi, B, mass)
 
-  call assert_equals(kinetic1%x(1), kinetic2%x(1), tol, "R positions must be same")
-  call assert_equals(kinetic1%x(2), kinetic2%x(2), tol, "Z positions must be same")
-  call assert_equals(kinetic1%x(3), kinetic2%x(3), tol, "phi positions must be same")
+  call assert_equals(kinetic1%x(1,1), kinetic2%x(1,1), tol, "R positions must be same")
+  call assert_equals(kinetic1%x(1,2), kinetic2%x(1,2), tol, "Z positions must be same")
+  call assert_equals(kinetic1%x(1,3), kinetic2%x(1,3), tol, "phi positions must be same")
   call assert_equals(kinetic1%v(1), kinetic2%v(1), tol, "R velocity must be same")
   call assert_equals(kinetic1%v(2), kinetic2%v(2), tol, "Z velocity must be same")
   call assert_equals(kinetic1%v(3), kinetic2%v(3), tol, "phi velocity must be same")
@@ -146,9 +146,9 @@ subroutine test_gc_kinetic_gc
   kinetic = gc_to_kinetic(node_list, element_list, gc1, chi, B, mass)
   gc2 = kinetic_to_gc(node_list, element_list, kinetic, B, mass)
 
-  call assert_equals(gc1%x(1), gc2%x(1), tol, "R positions must be same")
-  call assert_equals(gc1%x(2), gc2%x(2), tol, "Z positions must be same")
-  call assert_equals(gc1%x(3), gc2%x(3), tol, "phi positions must be same")
+  call assert_equals(gc1%x(1,1), gc2%x(1,1), tol, "R positions must be same")
+  call assert_equals(gc1%x(1,2), gc2%x(1,2), tol, "Z positions must be same")
+  call assert_equals(gc1%x(1,3), gc2%x(1,3), tol, "phi positions must be same")
   call assert_equals(gc1%E, gc2%E, tol, "Energies must be same")
   call assert_equals(gc1%mu, gc2%mu, tol, "Mu must be same")
   call assert_equals(int(gc1%q,4), int(gc2%q,4), "q must be same")
@@ -170,9 +170,9 @@ subroutine test_gc_kinetic_gc_negative_mu
   kinetic = gc_to_kinetic(node_list, element_list, gc1, chi, B, mass)
   gc2 = kinetic_to_gc(node_list, element_list, kinetic, B, mass)
 
-  call assert_equals(gc1%x(1), gc2%x(1), tol, "R positions must be same")
-  call assert_equals(gc1%x(2), gc2%x(2), tol, "Z positions must be same")
-  call assert_equals(gc1%x(3), gc2%x(3), tol, "phi positions must be same")
+  call assert_equals(gc1%x(1,1), gc2%x(1,1), tol, "R positions must be same")
+  call assert_equals(gc1%x(1,2), gc2%x(1,2), tol, "Z positions must be same")
+  call assert_equals(gc1%x(1,3), gc2%x(1,3), tol, "phi positions must be same")
   call assert_equals(gc1%E, gc2%E, tol, "Energies must be same")
   call assert_equals(gc1%mu, gc2%mu, tol, "Mu must be same")
   call assert_equals(int(gc1%q,4), int(gc2%q,4), "q must be same")

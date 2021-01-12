@@ -604,7 +604,7 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
   do i=1,size(particles,1)
     if (particles(i)%i_elm .eq. 0) cycle
     call       interp_PRZ(node_list,element_list,particles(i)%i_elm,[1],1, &
-        particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+        particles(i)%st(1),particles(i)%st(2),particles(i)%x(1,3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
     select type (pa => particles(i))
     type is (particle_kinetic_leapfrog)
       psibar = real(pa%q,8) * P(1) * EL_CHG + mass * ATOMIC_MASS_UNIT * R * pa%v(3)
@@ -624,7 +624,7 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
     else
       ! Calculate the local temperature and use this instead
       call       interp_PRZ(node_list,element_list,particles(i)%i_elm,[6],1, &
-        particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+        particles(i)%st(1),particles(i)%st(2),particles(i)%x(1,3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
       ! P(1)/(kb mu_zero n_zero) is in [K], multiply by kb/el_chg to go to eV
       T = P(1)/(2.d0*MU_ZERO*central_density*1.d20*EL_CHG) ! [eV] factor 2 is due to
       ! definition of P(1) as ion + electron temperature
@@ -658,7 +658,7 @@ subroutine normalize_with_projection(proj, particles, i_group)
   do i=1,size(particles,1)
     if (particles(i)%i_elm .ne. 0) then
       call interp_PRZ(proj%node_list,proj%element_list,particles(i)%i_elm,[group],1, &
-        particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
+        particles(i)%st(1),particles(i)%st(2),particles(i)%x(1,3),P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
       particles(i)%weight = real(particles(i)%weight/P(1),4)
     end if
   end do
@@ -694,13 +694,13 @@ subroutine weigh_with_interp_f(node_list, element_list, particles, vars, f)
     if (particles(i)%i_elm .ne. 0) then
       call interp_0(node_list,element_list,particles(i)%i_elm,&
         vars(n_geom:n_geom+n_mhd),n_mhd,particles(i)%st(1),particles(i)%st(2),&
-        particles(i)%x(3), P(n_geom:n_geom+n_mhd))
+        particles(i)%x(1,3), P(n_geom:n_geom+n_mhd))
       do k=1,n_geom
         select case (vars(k))
         case (0);  P(k) = 1.d0
-        case (-1); P(k) = particles(i)%x(1)
-        case (-2); P(k) = particles(i)%x(2)
-        case (-3); P(k) = particles(i)%x(3)
+        case (-1); P(k) = particles(i)%x(1,1)
+        case (-2); P(k) = particles(i)%x(1,2)
+        case (-3); P(k) = particles(i)%x(1,3)
         end select
       end do
       particles(i)%weight = particles(i)%weight * f(P)
@@ -836,10 +836,10 @@ end if
 do i=1,size(particles)
   if (particles(i)%i_elm .eq. 0) cycle
 #if (JOREK_MODEL == 400)
-  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,8,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,8,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(1,3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 #else
-  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,6,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,6,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(1,3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 #endif
 

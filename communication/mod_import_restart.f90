@@ -797,7 +797,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer(HID_T)     :: file_id
   integer            :: ind, n_spi_check
   
-  real(RKIND), allocatable :: t_x(:,:,:)
+  real(RKIND), allocatable :: t_x(:,:,:,:)
   real(RKIND), allocatable :: t_values(:,:,:,:)
   real(RKIND), allocatable :: t_deltas(:,:,:,:)
 
@@ -951,7 +951,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_integer_reading(file_id,node_list%n_dof,"n_dof")
 
   ! -> Allocate temporary arrays 
-  call tr_allocate(t_x,     1,node_list%n_nodes,1,n_order+1,1,n_dim,             "node_list%x",     CAT_UNKNOWN)
+  call tr_allocate(t_x,     1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_dim,         "node_list%x",     CAT_UNKNOWN)
   call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor_tmp,1,n_order+1,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
   call tr_allocate(t_deltas,1,node_list%n_nodes,1,n_tor_tmp,1,n_order+1,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
  
@@ -982,7 +982,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_allocate(t_contain_node,1,element_list%n_elements,1,5,                        "contain_node",CAT_UNKNOWN)
   call tr_allocate(t_nref,        1,element_list%n_elements,                            "nref",CAT_UNKNOWN)
 
-  call HDF5_array3D_reading(file_id,t_x,        'x')
+  call HDF5_array4D_reading(file_id,t_x,        'x')
   call HDF5_array4D_reading(file_id,t_values,   'values')
   call HDF5_array4D_reading(file_id,t_deltas,   'deltas')
 
@@ -1022,7 +1022,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   if (any(new_mode .ne. 0)) write(*,'(a,999i4)') ' need initialization  : ', new_mode
   
   do i=1,node_list%n_nodes
-    node_list%node(i)%x = t_x(i,:,:) 
+    node_list%node(i)%x = t_x(i,:,:,:) 
 
     node_list%node(i)%values = 0.d0 
     node_list%node(i)%deltas = 0.d0 

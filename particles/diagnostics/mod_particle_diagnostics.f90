@@ -464,7 +464,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
         int_stats(i,2) = particle_in%q
       end select
     else
-      call fields%calc_EBpsiU(time, particles(i)%i_elm, particles(i)%st, particles(i)%x(3), E, B, psi, U)
+      call fields%calc_EBpsiU(time, particles(i)%i_elm, particles(i)%st, particles(i)%x(1,3), E, B, psi, U)
       ! Calculate psi and B in the current particle location (either GC or kinetic)
 
       select type (particle_in => particles(i))
@@ -480,24 +480,24 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
         if (particle%i_elm .eq. 0) cycle
 
         ! P_phi (generalized canonical toroidal momentum) at the particle position
-        real_stats_tmp(6) = particle_centered%q * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle_centered%x(1) * particle_centered%v(3)
+        real_stats_tmp(6) = particle_centered%q * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle_centered%x(1,1) * particle_centered%v(3)
       type is (particle_gc)
         v_par    = sign(sqrt(2*(particle%E-particle%mu*norm2(B))*EL_CHG/(mass*ATOMIC_MASS_UNIT)),particle%mu)
         particle = particle_in
-        real_stats_tmp(6) = real(particle%q,8) * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle%x(1) * v_par * B(3)/norm2(B)
+        real_stats_tmp(6) = real(particle%q,8) * EL_CHG * psi + mass * ATOMIC_MASS_UNIT * particle%x(1,1) * v_par * B(3)/norm2(B)
       type is (particle_fieldline)
         particle = particle_in
         real_stats_tmp(6) = 0.d0 ! Since there is no momentum defined for this we just use 0
       type is (particle_kinetic_relativistic)
         ! compute the canonical toroidal momentum P_phi
-        real_stats_tmp(6) = real(particle_in%q,8)*EL_CHG*psi - ATOMIC_MASS_UNIT*particle_in%x(1)* &
-          (particle_in%p(1)*sin(particle_in%x(3))+particle_in%p(2)*cos(particle_in%x(3)))
+        real_stats_tmp(6) = real(particle_in%q,8)*EL_CHG*psi - ATOMIC_MASS_UNIT*particle_in%x(1,1)* &
+          (particle_in%p(1)*sin(particle_in%x(1,3))+particle_in%p(2)*cos(particle_in%x(1,3)))
 	! transform the particle into a gc to get E and mu
         call relativistic_kinetic_to_particle(fields%node_list,fields%element_list,&
              particle_in,particle,mass,B)
        type is (particle_gc_relativistic)
          ! compute the canonical toroidal momentum P_phi
-          real_stats_tmp(6) = EL_CHG*particle_in%q*psi + ATOMIC_MASS_UNIT*particle_in%x(1)* &
+          real_stats_tmp(6) = EL_CHG*particle_in%q*psi + ATOMIC_MASS_UNIT*particle_in%x(1,1)* &
             particle_in%p(1)*B(3)/norm2(B)
          ! transform the particle into a gc to get E and mu
           call relativistic_gc_to_particle(fields%node_list,fields%element_list, &
@@ -526,13 +526,13 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
       ! weight
       real_stats_tmp(7) = real(particle%weight, 8)
       ! theta
-      real_stats_tmp(8) = atan2(particles(i)%x(2)-Z_axis, particles(i)%x(1)-R_axis)
+      real_stats_tmp(8) = atan2(particles(i)%x(1,2)-Z_axis, particles(i)%x(1,1)-R_axis)
       ! phi
-      real_stats_tmp(9) = particles(i)%x(3)
+      real_stats_tmp(9) = particles(i)%x(1,3)
       ! R
-      real_stats_tmp(10) = particles(i)%x(1)
+      real_stats_tmp(10) = particles(i)%x(1,1)
       ! Z
-      real_stats_tmp(11) = particles(i)%x(2)           
+      real_stats_tmp(11) = particles(i)%x(1,2)           
 
       ! 1. lost (boolean)
       int_stats(i,1) = 0
@@ -540,7 +540,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
       int_stats(i,2) = particle%q
       ! 3. region (enum)
       domain = which_domain(fields%node_list, fields%element_list, &
-          particle%x(1), particle%x(2), &
+          particle%x(1,1), particle%x(1,2), &
           psi, xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
           R_axis, Z_axis, psi_axis)
       int_stats(i,3) = domain
@@ -625,7 +625,7 @@ function particles_in_regions(node_list, element_list, particles)
         p%st(1), p%st(2), psi, psi_s, psi_t, psi_st, psi_ss, psi_tt)
 
     domain = which_domain(node_list, element_list, &
-        p%x(1), p%x(2), &
+        p%x(1,1), p%x(1,2), &
         psi, xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
         R_axis, Z_axis, psi_axis)
     end associate

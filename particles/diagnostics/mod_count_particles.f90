@@ -132,15 +132,15 @@ do i_tor=1, n_tor
     i = (particles(m)%i_elm-1)*nsub**2 + (i_t-1)*nsub + i_s
     if (mode(i_tor) .gt. 1) then ! mode(1) = 0, mode(2) -> cos, mode(3) -> sin
       if (mod(i_tor,2) .eq. 0) then
-        v = cos(mode(i_tor)*particles(m)%x(3))
+        v = cos(mode(i_tor)*particles(m)%x(1,3))
       else
-        v = sin(mode(i_tor)*particles(m)%x(3))
+        v = sin(mode(i_tor)*particles(m)%x(1,3))
       endif
       v = v / PI ! int cos^2(nx) from 0 to 2pi = pi for n > 0
     else
       v = 1.d0 / TWOPI ! int 1 from 0 to 2pi = 2pi
     endif
-    counts(i,i_tor) = counts(i,i_tor) + v/particles(m)%x(1) ! normalize with R to get a density
+    counts(i,i_tor) = counts(i,i_tor) + v/particles(m)%x(1,1) ! normalize with R to get a density
   enddo
 
 enddo ! i_tor
@@ -273,11 +273,11 @@ do i_elm=1,element_list%n_elements
     do j=1,n_order+1
       do ms=1, n_gauss
         do mt=1, n_gauss
-          x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
-          x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
+          x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_s(i,j,ms,mt)
+          x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_t(i,j,ms,mt)
 
-          y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
-          y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+          y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_s(i,j,ms,mt)
+          y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_t(i,j,ms,mt)
         enddo
       enddo
     enddo

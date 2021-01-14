@@ -697,6 +697,7 @@ do i=1,n_vertex_max
             endif
             if (T0 .lt. ZK_par_neg_thresh) then
               ZKpar_T = max(ZKpar_T, ZK_par_neg)
+            endif
           endif
 
           phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)

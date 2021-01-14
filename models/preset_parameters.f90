@@ -53,13 +53,8 @@ subroutine preset_parameters
 
   bc_natural_flux    = .false.! boundary conditions for flux surface boundaries (2 and 3)
   bc_natural_open    = .false. ! use sheath (Bohm) boundary conditions
-
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid) in the JOREK definition
   gamma_stangeby     = -1.d99 ! sheath transmission factor (single fluid) given by Stangeby
-  gamma_sheath_e     = 2.33d0 ! sheath transmission factor (electron fluid) in the JOREK definition
-  gamma_e_stangeby   = -1.d99 ! sheath transmission factor (electron fluid) given by Stangeby
-  gamma_sheath_i     = 1.0d0  ! sheath transmission factor (ion fluid) in the JOREK definition
-  gamma_i_stangeby   = -1.d99 ! sheath transmission factor (ion fluid) given by Stangeby
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
   
@@ -205,8 +200,6 @@ subroutine preset_parameters
   edgeparticlesource_psin = 0.98
   edgeparticlesource_sig  = 0.01
   heatsource_gauss          = 0.d0
-  heatsource_gauss_i        = 0.d0
-  heatsource_gauss_e        = 0.d0
   heatsource_gauss_psin     = 0.9d0
   heatsource_gauss_sig      = 0.1d0
   particlesource_gauss      = 0.d0
@@ -246,6 +239,12 @@ subroutine preset_parameters
   Ti_coef     = 0.d0;  Ti_coef(1)  = -1.d0
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
+
+  rhon_0 =  0.d0
+  rhon_1 =  0.d0
+  rhon_coef    = 0.d0
+  rhon_coef(4) = 0.01
+  rhon_coef(8) = 0.01
 
   pellet_amplitude  = 0.d0
   pellet_R          = 3.8d0
@@ -446,8 +445,6 @@ subroutine preset_parameters
   spi_shard_file  = 'none'
   spi_tor_rot     = .false.
   using_spi       = .false.
-
-  output_prad_phi = .false.
 
 !======================JP ECCD injection parameters
   nu_jec_fast=1.d1

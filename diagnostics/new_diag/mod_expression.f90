@@ -1468,9 +1468,7 @@ module mod_expression
              fact_vpar     = 1.d0
              fact_resistiv = 1.d0
              fact_Er       = 1.d0
-#if JOREK_MODEL == 500 || JOREK_MODEL == 501			 
              fact_rad      = 1.d0
-#endif
              fact_flux     = 1.d0 
           end if
           

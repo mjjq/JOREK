@@ -468,6 +468,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_par_neg_thresh     ', ZK_par_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
+  write(*,REAL_FMT) 'rho_min               ', rho_min
   write(*,REAL_FMT) 'ne_SI_min             ', ne_SI_min
   write(*,REAL_FMT) 'Te_eV_min             ', Te_eV_min
   write(*,REAL_FMT) 'rn0_min               ', rn0_min

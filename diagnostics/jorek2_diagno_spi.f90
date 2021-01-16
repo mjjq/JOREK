@@ -45,7 +45,6 @@ integer :: i, in, i_tor, i_spi, resultlength
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
 real*8  :: Rplot(2), Zplot(2)
 real*8  :: psi_bnd, psi_axis,R_axis,Z_axis,s_axis,t_axis
-real*8  :: spi_abl_rate_tot, spi_abl_tot
 integer :: ifail, my_id, ierr, i_elm_axis
 integer :: required, provided, StatInfo
 integer :: rank, comm_size, n_cpu

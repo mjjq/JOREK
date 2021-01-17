@@ -25,6 +25,7 @@ character, allocatable   :: buffer(:)
 !    type (type_node)     :: node(n_nodes_max)         ! an allocatable list of nodes
 !  endtype type_node_list
 
+
 call MPI_PACK_SIZE(1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,IDBL_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_INTEGER,MPI_COMM_WORLD,INT_EXT,ierr)
 call MPI_PACK_SIZE(1,MPI_LOGICAL,MPI_COMM_WORLD,ILOG_EXT,ierr)
@@ -33,13 +34,13 @@ call MPI_BCAST(node_list%n_nodes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 call MPI_BCAST(node_list%n_dof,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 #ifdef fullmhd
-bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1 + 1+3+1 )*INT_EXT + (2)*ILOG_EXT)
+bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1 + 1+3+1)*INT_EXT + (2)*ILOG_EXT)
 #elif altcs
-bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1 + 1+3+1 )*INT_EXT + (2)*ILOG_EXT)
+bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2*(n_order+1)+2)*IDBL_EXT + (n_order+1 + 1+3+1)*INT_EXT + (2)*ILOG_EXT)
 #else
-!bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2)*IDBL_EXT + (n_order+1 + 1+3 )*INT_EXT + (2)*ILOG_EXT)
-bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2)*IDBL_EXT + (n_order+1 + 1+3+1 )*INT_EXT + (2)*ILOG_EXT)
+bufsize = node_list%n_nodes * (((n_order+1)*n_dim + 2*n_tor*(n_order+1)*n_var+2)*IDBL_EXT + (n_order+1 + 1+3+1)*INT_EXT + (2)*ILOG_EXT)
 #endif
+
 
 allocate(buffer(bufsize))
 call tr_register_mem(bufsize,"bcastn_buffer")

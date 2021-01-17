@@ -48,8 +48,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_block_points_left,  R_block_points_right,         &
                 Z_block_points_left,  Z_block_points_right,         &
                 tokamak_device,                                     &
-                F0, gamma_sheath, density_reflection,               &
-                mach_one_bnd_integral,                              &
+                F0,gamma_sheath,gamma_stangeby, density_reflection, &
+                mach_one_bnd_integral, Vpar_smoothing,              &
+                Vpar_smoothing_coef,                                &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef,                               &
@@ -74,6 +75,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
+                use_mumps_eq, use_pastix_eq, use_strumpack_eq,      &
                 use_mumps, mumps_ordering,                          &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
@@ -117,7 +119,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, eta_ohmic, centralize_harm_mat
+                pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
+                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
+                vert_FB_tact, start_VFB_ts, I_coils_max
+
 
 if (my_id .eq. 0) then
 
@@ -175,8 +180,14 @@ if (my_id .eq. 0) then
     endif    
     CLOSE(244)
   endif
-  !=========================================
-  
+
+  ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
+  if (gamma_stangeby > -1.d89) then
+    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0 - 0.5d0*gamma)
+  else
+    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 + 0.5d0 * gamma )
+  end if
+
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
   else

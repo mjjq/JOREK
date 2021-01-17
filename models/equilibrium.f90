@@ -14,6 +14,7 @@ use equil_info
 use vacuum
 use mpi_mod
 use mod_interp, only: interp
+use mod_F_profile
 implicit none
 
           
@@ -320,7 +321,7 @@ if (my_id == 0) then
     call density(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
                                                                dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
   
-    if (jorek_model .eq. 400) then
+    if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) ) then
       call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
     		     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
   
@@ -354,7 +355,7 @@ if (my_id == 0) then
                                       + dF_dz2   * node_list%node(i)%x(2,2) * node_list%node(i)%x(3,2)
 #else
     call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
-                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .true.)
 #endif
 
   
@@ -504,6 +505,9 @@ if (my_id == 0) then
     endif
     ES%psi_bnd  = psi_bnd
     ES%psi_axis = psi_axis
+    ES%Z_xpoint = Z_xpoint
+    ES%xpoint   = xpoint
+    ES%xcase    = xcase
     call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,psi_xpoint,Z_xpoint)
   endif
   
@@ -516,7 +520,7 @@ if (my_id == 0) then
   do i=2,surface_list%n_psi
     psi= surface_list%psi_values(i)
     
-    if (jorek_model .eq. 400) then
+    if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) ) then
       call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
            Ti_prof,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
   

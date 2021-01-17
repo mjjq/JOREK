@@ -390,10 +390,6 @@ deallocate(s_tmp); allocate(s_tmp(n_leg))
 s_tmp = 0
 call meshac2(n_leg,s_tmp,0.d0,1.d0,SIG_leg_0,SIG_leg_1,0.6d0,1.0d0)
 
-do j=1,n_leg
-  s_tmp(j) = real(j-1,8)/real(n_leg-1,8)
-enddo
-
 !----------------------------- inner leg, private side
 do j=1,n_leg
 
@@ -1204,10 +1200,12 @@ if (extend) then
       tht_bnd = atan2(sign_psi*newnode_list%node(index_ext1-n_tht+j)%x(3,2),&
                       sign_psi*newnode_list%node(index_ext1-n_tht+j)%x(3,1))
 
-
-      if (T_wall_par(j) .gt. PI)            T_wall_par(j) = T_wall_par(j) - 2.d0*PI
-      if (T_wall_par(j) - tht_bnd .gt. PI)  T_wall_par(j) = T_wall_par(j) - 2.d0*PI
+      if (T_wall_par(j) .gt. PI)  T_wall_par(j) = T_wall_par(j) - 2.d0*PI
+      if (T_wall_par(j) .lt.-PI)  T_wall_par(j) = T_wall_par(j) + 2.d0*PI
       if (tht_bnd - T_wall_par(j) .gt. PI)  tht_bnd = tht_bnd - 2.d0*PI
+      if (tht_bnd - T_wall_par(j) .lt.-PI)  tht_bnd = tht_bnd + 2.d0*PI
+      if (T_wall_par(j) - tht_bnd .gt. PI)  tht_bnd = tht_bnd + 2.d0*PI
+      if (T_wall_par(j) - tht_bnd .lt.-PI)  tht_bnd = tht_bnd - 2.d0*PI
 
       tht_ext = tht_bnd + (T_wall_par(j) - tht_bnd) * float(i)/float(n_ext)
 

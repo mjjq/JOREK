@@ -1,4 +1,6 @@
   &in1
+  
+ T_min = 0.0001d0
 
  restart = .f.
 
@@ -257,6 +259,8 @@
 
  ! --- Background impurity density (/m^3)
  nimp_bg = 0. 
+
+ old_deuterium_atomic = .true.
 
  /
 

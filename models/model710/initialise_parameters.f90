@@ -23,7 +23,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 restart, regrid, write_ps, time_evol_theta,         &
                 time_evol_zeta, force_horizontal_Xline,             &
-                parallel_projection, Mach1_openBC,                  &
+                Mach1_openBC,                                       &
+                eta_ARAZ_on, tauIC_ARAZ_on,                         &
                 n_tor_fft_thresh, fix_axis_nodes,                   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg,                           &
@@ -40,13 +41,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 tokamak_device, manipulate_psi_map,                 &
-                F0, gamma,                                          &
+                F0, gamma, gamma_stangeby,                          &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef, T_min,                        &
                 FF_0,  FF_1,  FF_coef,                              &
                 V_0, V_1, V_coef,                                   &
-                ZK_par, ZK_perp, D_par, D_perp,                     &
+                ZK_par, ZK_perp, ZK_par_max, D_par, D_perp,         &
                 eta, visco, visco_par,                              &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 particlesource, heatsource, tauIC,                  &
@@ -57,9 +58,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
                 xcase, time_evol_scheme,                            &
-                rho_file, T_file, ffprime_file, freeboundary_equil, &
+                freeboundary_equil,                                 &
+                rho_file, T_file, ffprime_file, Fprofile_file,      &
                 bc_natural_open, bc_natural_flux, gamma_sheath,     &
                 freeboundary, resistive_wall, freeb_change_indices, &
+                use_mumps_eq, use_pastix_eq, use_strumpack_eq,      &
                 use_mumps, mumps_ordering, use_strumpack,           &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element,           &
@@ -72,6 +75,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
                 edgeparticlesource_sig,                             &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
+                particlesource, heatsource, tauIC,                  &
                 produce_live_data, gmres, gmres_max_iter,           &
                 iter_precon, gmres_4, gmres_m, gmres_tol,           &
                 max_steps_noUpdate,                                 &
@@ -80,6 +87,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 wall_file,                                          &
                 first_target_point, last_target_point,              &
                 n_limiter, R_limiter, Z_limiter,                    &
+                NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
@@ -90,7 +98,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, centralize_harm_mat
+                pastix_maxthrd, centralize_harm_mat,                & 
+                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
+                vert_FB_tact, start_VFB_ts, I_coils_max
+
 
 if (my_id .eq. 0) then
 
@@ -148,8 +159,14 @@ if (my_id .eq. 0) then
     endif    
     CLOSE(244)
   endif
-  !=========================================
   
+  ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
+  if (gamma_stangeby > -1.d89) then
+    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0 - 0.5d0*gamma)
+  else
+    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 + 0.5d0 * gamma )
+  end if
+
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
   else

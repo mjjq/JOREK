@@ -280,7 +280,8 @@ module live_data
                                     heatingpower particlesource diag_coil_curr pf_coil_curr rmp_coil_curr integrated_energies  &
                                     bnd_fluxes dEdt helicity dissipative_terms work_terms mag_energy_balance                   &
                                     Xpoint_up Xpoint_low bnd_point                                                             &
-                                    area volume li3 energy_conservation net_tor_wall_curr dparticles_dt bnd_particle_fluxes'
+                                    area volume li3 energy_conservation net_tor_wall_curr dparticles_dt bnd_particle_fluxes    & 
+                                     vert_FB_response vert_FB_axis'   
     write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names
     
     ! --- Write file headers indicating what data is in the files.
@@ -549,7 +550,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@mag_energy_balance: %"time"    "dWmagdt"   "Ohmic"  "Poynting"  "JxB.v"  "magSource"  "sum all losses + sources"  '
     write(LIVE_DATA_HANDLE,*)
  
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dissipative_terms: ', 4
 #else
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_dissipative_terms: ', 2
@@ -561,7 +562,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms_x2si: ', sqrt_mu0_rho0*1.e3
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms_logy: 0'
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
     write(LIVE_DATA_HANDLE,'(A)') '@dissipative_terms: %"time"         "Ohmic power"   "Parallel viscosity power"  &
                                                         "Radiated power"  "Ionization power"'
 #else
@@ -684,7 +685,7 @@ module live_data
       thmwork_tot_t, viscopar_dissip_tot_t, viscopar_flux_t, li3_t,      &
       li3_tot_t, part_src_tot_t, heat_src_tot_t, volume_t, area_t, mag_ener_src_tot, eta_ohmic, eta, &
       dpart_tot_dt, part_flux_Dpar_t, part_flux_Dperp_t, part_flux_vpar_t, part_flux_vperp_t, &
-      dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t, flux_poynting_t, xtime_rad_power, xtime_E_ion_power 
+      dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t, flux_poynting_t, xtime_rad_power, xtime_E_ion_power  
 
 
     implicit none
@@ -779,7 +780,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@volume: ', xtime(index), volume_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@li3: ', xtime(index), li3_t(index), li3_tot_t(index)
 
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms: ', xtime(index), ohmic_tot_t(index), viscopar_dissip_tot_t(index), &
                                                                   xtime_rad_power(index), xtime_E_ion_power(index)
 #else
@@ -801,8 +802,13 @@ module live_data
 
      sum_fluxes_dissip = flux_Pvn_t(index-1)  + flux_kinpar_t(index-1) + flux_qpar_t(index-1) + flux_qperp_t(index-1) &
                        + viscopar_dissip_tot_t(index-1) - heat_src_tot_t(index-1)  &
-                       + ohmic_tot_t(index-1)*(1.d0 - eta_ohmic/eta) - mag_ener_src_tot(index-1)
+                       + ohmic_tot_t(index-1)*(1.d0 - eta_ohmic/eta) - mag_ener_src_tot(index-1) &
+                       - flux_poynting_t(index-1)
 #if (JOREK_MODEL == 501)
+     sum_fluxes_dissip = sum_fluxes_dissip + xtime_rad_power(index-1) + xtime_E_ion_power(index-1)
+#endif
+
+#if (JOREK_MODEL == 500)
      sum_fluxes_dissip = sum_fluxes_dissip + xtime_rad_power(index-1) + xtime_E_ion_power(index-1)
 #endif
 
@@ -845,16 +851,14 @@ module live_data
   
   
   
-  subroutine write_live_data_vacuum(index, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
+  subroutine write_live_data_vacuum(index)
     
-    use phys_module, only: xtime, mu_zero, sqrt_mu0_rho0
-    
+    use phys_module, only: xtime, mu_zero, sqrt_mu0_rho0, Z_axis_t
+    use vacuum
+      
     integer,             intent(in) :: index
-    real*8, allocatable, intent(in) :: diag_coil_curr(:,:), pf_coil_curr(:,:), rmp_coil_curr(:,:), &
-                                       net_tor_wall_curr(:)
-    
     logical, save :: header_written_diag = .false., header_written_pf = .false., header_written_rmp = .false., &
-                     header_written_net  = .false.
+                     header_written_net  = .false., header_written_VFB = .false.
     integer :: n
     open(LIVE_DATA_HANDLE, file=LIVE_DATA_FILE, status='OLD', position='APPEND', action='WRITE')
     
@@ -870,7 +874,7 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A)') '@diag_coil_curr_logy: 0'
         write(LIVE_DATA_HANDLE,'(A)',advance='no') '@diag_coil_curr: %"time"           '
         do n = 1,size(diag_coil_curr,2)
-          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"Diag_{', n, '}"'
+          write(LIVE_DATA_HANDLE,'(A12,1x)',advance='no') trim(diag_coil_name(n))
         end do
         write(LIVE_DATA_HANDLE,*)
         header_written_diag = .true.
@@ -890,7 +894,7 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A)') '@pf_coil_curr_logy: 0'
         write(LIVE_DATA_HANDLE,'(A)',advance='no') '@pf_coil_curr: %"time"           '
         do n = 1,size(pf_coil_curr,2)
-          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"PF_{', n, '}"'
+          write(LIVE_DATA_HANDLE,'(A12,1x)',advance='no') trim(pf_coil_name(n))
         end do
         write(LIVE_DATA_HANDLE,*)
         header_written_pf = .true.
@@ -911,7 +915,7 @@ module live_data
         write(LIVE_DATA_HANDLE,*)
         write(LIVE_DATA_HANDLE,'(A)',advance='no') '@RMP_coil_curr: %"time"           '
         do n = 1,size(rmp_coil_curr,2)
-          write(LIVE_DATA_HANDLE,'(A7,I2.2,A2,1x)',advance='no') '"RMP_{', n, '}"'
+          write(LIVE_DATA_HANDLE,'(A12,1x)',advance='no') trim(rmp_coil_name(n))
         end do
         header_written_rmp = .true.
       end if
@@ -928,11 +932,37 @@ module live_data
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@net_tor_wall_curr_x2si: ', sqrt_mu0_rho0*1.e3
         write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@net_tor_wall_curr_y2si: ', 1./mu_zero
         write(LIVE_DATA_HANDLE,'(A)') '@net_tor_wall_curr_logy: 0'
-        write(LIVE_DATA_HANDLE,'(A)',advance='no') '@net_tor_wall_curr: %"time"           "I_{tor,wall}"'
-        write(LIVE_DATA_HANDLE,*)
+        write(LIVE_DATA_HANDLE,'(A)') '@net_tor_wall_curr: %"time"           "I_{tor,wall}"'
         header_written_net = .true.
       end if
       write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@net_tor_wall_curr: ', xtime(index), net_tor_wall_curr(index)
+    end if
+
+    if ( allocated(vert_FB_response) ) then
+      if ( .not. header_written_VFB ) then
+        write(LIVE_DATA_HANDLE,'(A,I5)') '@n_vert_FB_response: ', 3
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_response_xlabel: normalized time'
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_response_xlabel_si: time [ms]'
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_response_ylabel: VFB response [-]'
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_response_ylabel_si: VFB response [-]'
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@vert_FB_response_x2si: ', sqrt_mu0_rho0*1.e3
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@vert_FB_response_y2si: ', 1.
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_response_logy: 0'
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_response: %"time"           "proportional_FB"              "derivative_FB"           "integral_FB"'
+
+        write(LIVE_DATA_HANDLE,'(A,I5)') '@n_vert_FB_axis: ', 2
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_axis_xlabel: normalized time'
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_axis_xlabel_si: time [ms]'
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_axis_ylabel: Z-axis [m]'
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_axis_ylabel_si: Z-axis [m]'
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@vert_FB_axis_x2si: ', sqrt_mu0_rho0*1.e3
+        write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@vert_FB_axis_y2si: ', 1.
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_axis_logy: 0'
+        write(LIVE_DATA_HANDLE,'(A)') '@vert_FB_axis: %"time"           "Z-axis"              "Z-axis,target"'
+        header_written_VFB = .true.
+      end if
+      write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@vert_FB_response: ', xtime(index), vert_FB_response(index,1:3)
+      write(LIVE_DATA_HANDLE,'(A,999ES17.9)') '@vert_FB_axis:     ', xtime(index), Z_axis_t(index), vert_FB_response(index,4)
     end if
    
     close(LIVE_DATA_HANDLE)

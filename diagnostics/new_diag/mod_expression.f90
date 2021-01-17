@@ -26,6 +26,7 @@ module mod_expression
 #if (JOREK_MODEL == 501)
   use mod_injection_source
 #endif
+  use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
   
   
   implicit none
@@ -134,6 +135,10 @@ module mod_expression
     call add(exprs_all, 'gradP_R     ', 'Pressure gradient force (R component)                 ')
     call add(exprs_all, 'gradP_Z     ', 'Pressure gradient force (Z component)                 ')
     call add(exprs_all, 'gradP_phi   ', 'Pressure gradient force (phi component)               ')
+    call add(exprs_all, 'gradPdotCurv', 'grad p dot curvature                                  ')
+    call add(exprs_all, 'curvat_R    ', 'curvature (= b . grad ( b )) in the R direction       ')
+    call add(exprs_all, 'curvat_Z    ', 'curvature (= b . grad ( b )) in the Z direction       ')
+    call add(exprs_all, 'curvat_phi  ', 'curvature (= b . grad ( b )) in the phi direction     ')
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'ne          ', 'Electron Density                                      ')
@@ -204,7 +209,7 @@ module mod_expression
     call add(exprs_all, 'partF_total ', 'Total particle flux (normal to the boundary)          ', 'boundary    ')
     call add(exprs_all, 'npartF_total', 'Total neutral particle flux (normal to the boundary)  ', 'boundary    ')
     call add(exprs_all, 'ExB_norm    ', 'EM energy flux, Poynting vector (normal to boundary)  ', 'boundary    ')
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500 || JOREK_MODEL == 710 || JOREK_MODEL == 711
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
@@ -592,7 +597,8 @@ module mod_expression
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
       P0_RR, P0_ZZ, P0_RZ, BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,          &
       E_dreicer, AR0_R, AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ, AR0_ZZ, &
-      AR0_RR, AZ0_RR, AZ0_ZZ, A30_Rp, A30_Zp, AR0_RZ, AZ0_RZ, BR_p, BZ_p, BP_Z, BP_R 
+      AR0_RR, AZ0_RR, AZ0_ZZ, A30_Rp, A30_Zp, AR0_RZ, AZ0_RZ, AR0_Zp, AZ0_Rp, A30_RZ, BR_p, BZ_p,  &
+      BP_Z, BP_R, BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_phi
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
@@ -611,8 +617,10 @@ module mod_expression
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
 #if JOREK_MODEL == 500 || JOREK_MODEL == 501
     real*8  :: coef_rad_1
-    real*8  :: Te_corr_eV, LradDrays_T, LradDcont_T, Te_eV
+    real*8  :: Te_corr_eV, Te_eV
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
+    real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T
+    real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
 #endif
 #if JOREK_MODEL == 501
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
@@ -765,7 +773,6 @@ module mod_expression
           AZ0   = 0.d0; AZ0_s   = 0.d0; AZ0_t   = 0.d0; AZ0_ss   = 0.d0; AZ0_tt   = 0.d0; AZ0_st   = 0.d0; AZ0_p   = 0.d0; AZ0_pp   = 0.d0
           A30   = 0.d0; A30_s   = 0.d0; A30_t   = 0.d0; A30_ss   = 0.d0; A30_tt   = 0.d0; A30_st   = 0.d0; A30_p   = 0.d0; A30_pp   = 0.d0
           rn0   = 0.d0; rn0_s   = 0.d0; rn0_t   = 0.d0; rn0_ss   = 0.d0; rn0_tt   = 0.d0; rn0_st   = 0.d0; rn0_p   = 0.d0; rn0_pp   = 0.d0
-
 
           ! Extra derivatives for current density calculation
           AR0_sp   = 0.d0; AR0_tp   = 0.d0
@@ -1099,6 +1106,8 @@ module mod_expression
           A30_Z = ( - R_t * A30_s  + R_s * A30_t ) / xjac
 
           AR0_Rp = (   Z_t * AR0_sp  - Z_s * AR0_tp ) / xjac
+          AR0_Zp = ( - R_t * AR0_sp  + R_s * AR0_tp ) / xjac
+          AZ0_Rp = (   Z_t * AZ0_sp  - Z_s * AZ0_tp ) / xjac
           AZ0_Zp = ( - R_t * AZ0_sp  + R_s * AZ0_tp ) / xjac 
           A30_Rp = (   Z_t * A30_sp  - Z_s * A30_tp ) / xjac
           A30_Zp = ( - R_t * A30_sp  + R_s * A30_tp ) / xjac 
@@ -1139,6 +1148,11 @@ module mod_expression
                       + A30_s * (R_st*R_t - R_tt*R_s )                             &
                       + A30_t * (R_st*R_s - R_ss*R_t ) )       / xjac**2           &
                       - xjac_Z * (- A30_s * R_t + A30_t * R_s )  / xjac**2
+          A30_RZ   = (- A30_ss * Z_t*R_t - A30_tt * R_s*Z_s                        &
+                      + A30_st * (Z_s*R_t  + Z_t*R_s  )                            &
+                      - A30_s  * (R_st*Z_t - R_tt*Z_s )                            &
+                      - A30_t * (R_st*Z_s  - R_ss*Z_t ) )  / xjac**2               &
+                      - xjac_R * (- A30_s * R_t + A30_t * R_s )   / xjac**2
 
           Fprofile_R = (   Z_t * Fprofile_s  - Z_s * Fprofile_t ) / xjac
           Fprofile_Z = ( - R_t * Fprofile_s  + R_s * Fprofile_t ) / xjac
@@ -1163,15 +1177,20 @@ module mod_expression
           BR   = ( A30_Z - AZ0_p )/ BigR
           BZ   = ( AR0_p - A30_R )/ BigR
           Btor = ( AZ0_R - AR0_Z )    + Fprofile / BigR
+          BR_R = -1/BigR**2 * ( A30_Z - AZ0_p ) + ( A30_RZ - AZ0_Rp )/ BigR
           BR_Z = ( A30_ZZ - AZ0_Zp )/ BigR
           BR_p = ( A30_Zp - AZ0_pp )/ BigR
           BZ_R = -1/BigR**2 * ( AR0_p - A30_R ) + ( AR0_Rp - A30_RR )/ BigR
+          BZ_Z = ( AR0_Zp - A30_RZ )/ BigR
           BZ_p = ( AR0_pp - A30_Rp )/BigR
           BP_R = ( AZ0_RR - AR0_RZ ) + Fprofile_R/BigR - Fprofile/BigR**2
           BP_Z = ( AZ0_RZ - AR0_ZZ ) + Fprofile_Z/BigR
+          B_R  = ( BR_R + BZ_R + Bp_R ) / Btot
+          B_Z  = ( BR_Z + BZ_Z + Bp_Z ) / Btot
 
           Btheta   = sqrt( BR*BR + BZ*BZ )
           BB2      = Btor**2 + BR**2 + BZ**2
+          Btot     = sqrt(BB2)
           zj0      = - (BZ_R - BR_Z) * BigR
           JpolR    = (R*BP_Z - BZ_p) / R
           JpolZ    = (BR_p - R*BP_R - Btor) / R
@@ -1198,12 +1217,25 @@ module mod_expression
           psi_norm = get_psi_n(ps0, Z)
           psi_abs  = sqrt(ps0_R*ps0_R + ps0_Z * ps0_Z)
 
+          BR_R     = + ps0_RZ / BigR - ps0_Z / BigR**2
+          BR_Z     = + ps0_ZZ / BigR
+          BZ_R     = - ps0_RR / BigR + ps0_R / BigR**2
+          BZ_Z     = - ps0_RZ / BigR
+          Bp_R     = - F0     / BigR**2
+          Bp_Z     =   0.
+          B_R      = ( BR_R + BZ_R + Bp_R ) / Btot
+          B_Z      = ( BR_Z + BZ_Z + Bp_Z ) / Btot
+
           if (psi_abs > 1.d-6) then
             FFprime_loc = zj0 + (R**2.d0) * (ps0_R*P0_R + ps0_Z*P0_Z)/(psi_abs**2.d0)
           else
             FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
           endif
 #endif
+
+          Kappa_R    = ( Btot*BR*BR_R - BR*BR*B_R   - BZ*BR*B_Z   + Btot*BZ*BR_Z - Btot*Btor**2/BigR ) / Btot**3.
+          Kappa_Z    = ( Btot*BR*BZ_R - BR*BZ*B_R   - BZ*BZ*B_Z   + Btot*BZ*BZ_Z                     ) / Btot**3.
+          Kappa_phi  = ( Btot*BR*Bp_R - BR*Btor*B_R - BZ*Btor*B_Z + Btot*BZ*Bp_Z + Btot*Btor*BR/BigR ) / Btot**3.
 
           Jtor        = -zj0/BigR
           Jpol        = FFprime_loc * Btheta     / F0     !Jpol = F' Bpol
@@ -1346,7 +1378,7 @@ module mod_expression
           
           E_dreicer = EL_CHG**3 * ln_Lambda0 * MU_ZERO**1.5 * (central_density*1.d20*central_mass*MASS_PROTON)**2.5 * r0 / ( 2.d0 * PI * EPS_ZERO**2 * (MASS_PROTON*central_mass)**2 * T0 )
           
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500 || JOREK_MODEL == 710 || JOREK_MODEL == 711
           if (bootstrap) then
             call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
               ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
@@ -1357,20 +1389,10 @@ module mod_expression
 
 #if JOREK_MODEL == 500
 
-  Te_corr_eV = corr_neg_temp(T0,(/5.d-1,5.d-1/))/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
-  Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+   Te_corr_eV = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
 
-  if ( units == SI_UNITS ) then
-    coef_rad_1 = 1.d0
-  else if ( units == JOREK_UNITS ) then
-    coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density * 1.d20)**2.5d0
-  endif
-
-  LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(Te_corr_eV) ! Only Bremsstrahlung contribution
-
-  LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(Te_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                   -60.947d0*exp(-(log10(Te_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                   -24.067d0*exp(-(log10(Te_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+   call atomic_coeff_deuterium(Te_corr_eV, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                              LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
 
   !--------------------------------------------------------
   ! --- Radiation from background impurity
@@ -1434,9 +1456,7 @@ module mod_expression
              fact_vpar     = sqrt(BB2) / fact_time                                 ! factor for Vpar
              fact_resistiv = sqrt ( MU_zero / rho_norm )                           ! factor for eta == 1 / (factor for visco)
              fact_Er       = F0 / fact_time
-#if JOREK_MODEL == 500 || JOREK_MODEL == 501
              fact_rad      = 1.d0/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)
-#endif
              fact_flux     = 1.d0/(mu_zero*fact_time)  
           else if ( units == JOREK_UNITS ) then
              rho_norm      = 1.d0
@@ -1448,9 +1468,7 @@ module mod_expression
              fact_vpar     = 1.d0
              fact_resistiv = 1.d0
              fact_Er       = 1.d0
-#if JOREK_MODEL == 500 || JOREK_MODEL == 501			 
              fact_rad      = 1.d0
-#endif
              fact_flux     = 1.d0 
           end if
           
@@ -1621,6 +1639,18 @@ module mod_expression
               case ( 'gradP_phi' )
                 res = P0_p / BigR / fact_mu_zero
  
+              case ( 'gradPdotCurv' )
+                res = ( P0_R*Kappa_R + P0_Z*Kappa_Z + P0_p / BigR * Kappa_phi ) / fact_mu_zero
+      
+              case ( 'curvat_R' )
+                res = Kappa_R
+   
+              case ( 'curvat_Z' )
+                res = Kappa_Z
+
+              case ( 'curvat_phi' )
+                res = Kappa_phi
+
               case ( 'Er' )
                 res = Er * fact_Er
                 
@@ -1709,7 +1739,7 @@ module mod_expression
                 res = (VR*nmlR + VZ*nmlZ) / fact_time
 
               case ( 'heatF_sheath' )
-                res = gamma_sheath/(gamma-1.d0)*r0*T0*vpar0*Bnorm*fact_flux
+                res = gamma_stangeby*r0*T0/2.d0*vpar0*Bnorm*fact_flux
 
               case ( 'heatF_par_cd' )
                 res = ZKpar_flux * fact_flux
@@ -1762,7 +1792,7 @@ module mod_expression
               case ( 'ExB_norm'  )
                 res = ExB_norm * fact_flux
   
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
+#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500 || JOREK_MODEL == 710 || JOREK_MODEL == 711
               case ( 'J_bootstrap' )
                 res = J_boot / R / fact_mu_zero
 #endif
@@ -1782,7 +1812,6 @@ module mod_expression
               case ( 'brem' )
                 res = r0 * fact_ne * r0 * fact_ne * LradDcont_T
 #endif
-
 #if JOREK_MODEL == 501
               case ( 'radiation' )
                 res = (r0_corr + beta_imp*rn0_corr) * rn0_corr * Lrad * fact_rad

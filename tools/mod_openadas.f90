@@ -43,13 +43,10 @@ contains
 !> Suffix is usually of the form 50_w, 96_li
 !> Try to also read the ionisation energy coefficients, but don't crash if they
 !> are not present.
-function read_adf11(my_id, suffix, directory) result(ad)
+function read_adf11(my_id,suffix, directory) result(ad)
 use constants
-use mpi_mod
-integer, intent(in)          :: my_id
 character(len=*), intent(in) :: suffix !< Usually year_atom (ex: 50_w, 96_li)
 character(len=*), intent(in), optional :: directory
-
 type(ADF11_all), target :: ad !< OpenAdas data type
 
 type(ADF11), pointer :: a
@@ -57,6 +54,7 @@ integer :: i_ADF11
 character*3, dimension(1:6), parameter :: ADF11_filenames = (/"acd", "scd", "ccd", "plt", "prb", "prc"/)
 character*120 :: filename
 
+integer, intent(in) :: my_id
 integer :: i, ierr, n_d, n_T, k, q, i_n
 logical :: file_exists, recombining
 
@@ -78,7 +76,7 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   end if
 
   if (my_id .eq. 0) write(*,"(A,A)",advance="no") "Reading data from ", trim(filename)
-  open(10,file=trim(filename),status="old",iostat=ierr)
+  open(10,file=trim(filename),action="read",status="old",iostat=ierr)
   if (ierr .ne. 0) then
     write(*,*) my_id, " failed with code ", ierr
     cycle
@@ -160,7 +158,7 @@ do i=1,3,2 ! full, strip
   if (present(directory)) filename = trim(directory) // trim(filename)
   inquire(file=trim(filename), exist=file_exists)
   if (file_exists) then
-    open(10,file=trim(filename),status="old",iostat=ierr)
+    open(10,file=trim(filename),status="old",iostat=ierr, action="read")
     if (ierr .ne. 0) then
       write(*,*) my_id, " failed with code ", ierr
     else
@@ -178,7 +176,8 @@ do i=1,3,2 ! full, strip
     endif
   else
     if (i .eq. 3) then
-      write(*,*) "Cannot find ionisation data file ", trim(filename), "not loading ionisation energies"
+      write(*,*) "Cannot find ionisation data file ", trim(filename), ", terminating!"
+      stop
     end if
   end if
 end do
@@ -192,15 +191,15 @@ function dGRC_dT(a, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)       :: density     !< log10 density in m^-3
 real*8, intent(in)       :: temperature !< log10 temperature in K
-real*8, dimension(a%n_Z) :: dGRC_dT !< Generalized Radiational Coefficient at this density and temperature
+real*8, dimension(0:a%n_Z) :: dGRC_dT !< Generalized Radiational Coefficient at this density and temperature
 integer                  :: i_z     !< Index of charge state
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC)) then
-  !dGRC_dT = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,1)
-  do i_z = 0, a%n_z
-    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dx=dGRC_dT(i_z))
-  end do
+  dGRC_dT = L2D2interp_grad(a%density,a%temperature,a%n_Z+1,a%GRC(:,:,0:a%n_Z),density,temperature,1)
+!  do i_z = 0, a%n_z
+!    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dx=dGRC_dT(i_z))
+!  end do
 else
   dGRC_dT = 0.d0
 endif
@@ -212,15 +211,15 @@ function dGRC_dn(a, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)       :: density     !< log10 density in m^-3
 real*8, intent(in)       :: temperature !< log10 temperature in K
-real*8, dimension(a%n_Z) :: dGRC_dn !< Generalized Radiational Coefficient at this density and temperature
+real*8, dimension(0:a%n_Z) :: dGRC_dn !< Generalized Radiational Coefficient at this density and temperature
 integer                  :: i_z     !< Index of charge state
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC)) then
-  !dGRC_dn = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,1:a%n_Z),density,temperature,2)
-  do i_z = 0, a%n_z
-    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dy=dGRC_dn(i_z))
-  end do
+  dGRC_dn = L2D2interp_grad(a%density,a%temperature,a%n_Z+1,a%GRC(:,:,0:a%n_Z),density,temperature,2)
+!  do i_z = 0, a%n_z
+!    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dy=dGRC_dn(i_z))
+!  end do
 else
   dGRC_dn = 0.d0
 endif
@@ -270,7 +269,7 @@ endif
 
 if (present(GRC_out)) GRC_out = GRC
 if (present(dGRC_dT_out)) dGRC_dT_out = dGRC_dT
-if (present(dGRC_dT_out)) dGRC_dn_out = dGRC_dn
+if (present(dGRC_dn_out)) dGRC_dn_out = dGRC_dn
 
 end subroutine GRC_spl
 

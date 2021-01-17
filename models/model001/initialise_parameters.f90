@@ -52,6 +52,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rho_file, T_file, ffprime_file,                     &
                 freeboundary, resistive_wall, freeb_change_indices, &
                 wall_resistivity, wall_resistivity_fact,            &
+                use_mumps_eq, use_pastix_eq, use_strumpack_eq,      &
                 use_mumps, mumps_ordering,                          &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
@@ -81,7 +82,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, centralize_harm_mat
+                pastix_maxthrd, centralize_harm_mat,                & 
+                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
+                vert_FB_tact, start_VFB_ts, I_coils_max
+
 
 if (my_id .eq. 0) then
 

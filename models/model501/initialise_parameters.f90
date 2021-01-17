@@ -48,10 +48,12 @@ real*8, allocatable :: shard_size(:)               ! The shard size array
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
-                restart, rst_format, regrid, bootstrap, write_ps,   &                
+                restart, rst_format, regrid, bootstrap, write_ps,   &
+                force_horizontal_Xline, fix_axis_nodes,             &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open, n_private, n_leg, n_ext,                    &
-                n_outer, n_inner, n_up_priv, n_up_leg,              &
+                n_open, n_private, n_leg, n_leg_out, n_ext,         &
+                n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
+                n_tht_equidistant,                                  &
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
@@ -62,18 +64,25 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                n_pfc, tokamak_device,                              &
+                n_pfc, manipulate_psi_map,                          &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
-                F0, gamma_sheath, density_reflection,               &
-                mach_one_bnd_integral,                              &
+                grid_to_wall, RZ_grid_inside_wall,                  &
+                n_wall_blocks, n_ext_block,                         &
+                n_block_points_left,  n_block_points_right,         &
+                R_block_points_left,  R_block_points_right,         &
+                Z_block_points_left,  Z_block_points_right,         &
+                tokamak_device,                                     &
+                F0,gamma_sheath,gamma_stangeby, density_reflection, &
+                mach_one_bnd_integral, Vpar_smoothing,              &
+                Vpar_smoothing_coef,                                &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef,                               &
                 FF_0,  FF_1,  FF_coef,                              &
-                ZK_par, ZK_par_max, ZK_perp, D_par, D_perp,         &
-                particlesource, heatsource, tauIC,                  &
+                ZK_par, ZK_par_max, ZK_perp, D_par, D_perp, D_perp_imp, &
+                particlesource, heatsource, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
-                ZK_perp_num, Dn_perp_num,                           &
+                ZK_perp_num, Dn_perp_num, D_par_imp,                &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
@@ -82,18 +91,20 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pellet_particles, use_pellet,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
-                xcase, D_perp_file, ZK_perp_file,                   &
-                rho_file, T_file, ffprime_file,                     &
+                xcase, D_perp_file, D_perp_imp_file, ZK_perp_file,  &
+                rho_file, T_file, ffprime_file, rot_file,           &
+                normalized_velocity_profile, SDN_threshold,         &
                 freeboundary_equil, freeboundary,  freeb_change_indices, &
                 resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
                 bc_natural_open,                                    &
+                NEO, neo_file, aki_neo_const, amu_neo_const,        &
+                use_mumps_eq, use_pastix_eq, use_strumpack_eq,      &
                 use_mumps, mumps_ordering,                          &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_wsmp, n_tor_fft_thresh,             &
                 pastix_smp_only, refinement, force_central_node,    &
                 fix_axis_nodes, use_strumpack,                      &
-                grid_to_wall,                                       &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
@@ -112,12 +123,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 keep_n0_const, linear_run, export_for_nemec,        &
                 V_0,V_1,V_coef, output_bnd_elements,                &
                 n_limiter, R_limiter, Z_limiter,                    &
+                first_target_point, last_target_point,              &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                spi_tor_rot, tor_frequency, ZK_prof_neg_thresh,     &
+                spi_tor_rot, tor_frequency,                         &
+                corr_neg_temp_coef, corr_neg_dens_coef,             &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 ne_SI_min, Te_eV_min, rn0_min,                      &
-                D_neutral_x, D_neutral_y, D_neutral_p,              &
+                rho_min, ZK_par_neg_thresh,         &
                 ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
@@ -127,10 +140,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 gas_type, delta_n_convection, nimp_bg,              &
-                adas_dir, output_rad_phi,                           &
+                adas_dir, output_prad_phi,                          &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
+                Number_RMP_harmonics,RMP_har_cos_spectrum,          &
+                RMP_har_sin_spectrum,                               &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
@@ -141,7 +156,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, eta_ohmic, centralize_harm_mat
+                pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
+                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
+                vert_FB_tact, start_VFB_ts, I_coils_max
 
  if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
@@ -184,6 +201,29 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
       write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
     enddo
   endif
+
+  if (n_limiter.ne.0) then
+    ! --- Open the file.
+    OPEN(UNIT=244, FILE=wall_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
+    if ( err /= 0 ) then
+      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(wall_file)//'.'
+      write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
+    else
+      write(*,'(A)') ' wall info from wall_file: R_wall, Z_wall ' 
+      do i=1,n_limiter
+        read(244,*) R_limiter(i),Z_limiter(i)
+        write(*,*)  R_limiter(i),Z_limiter(i)
+      enddo
+    endif    
+    CLOSE(244)
+  endif
+
+  ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
+  if (gamma_stangeby > -1.d89) then
+    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0 - 0.5d0*gamma)
+  else
+    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 + 0.5d0 * gamma )
+  end if
 
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)

@@ -349,7 +349,7 @@ if (my_id == 0) then
     endif
   endif
 
-  if (freeb_equil_iterate_area .and. (.not. xpoint2)) then
+  if (freeboundary_equil .and. freeb_equil_iterate_area .and. (.not. xpoint2)) then
     call iterate2area(node_list,element_list, psi_axis, psi_lim, xpoint2, xcase2, area_ref, psi_bnd)
   endif
   

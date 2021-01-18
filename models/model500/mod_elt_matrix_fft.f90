@@ -722,7 +722,6 @@ do i=1,n_vertex_max
                                 source_pellet, source_volume)
           endif
 
-
           call atomic_coeff_deuterium(0.5d0*T0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
                                       LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
 
@@ -794,7 +793,6 @@ do i=1,n_vertex_max
                         *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
       
          !--------------------------------------------------------
-
 
           do im=n_tor_start, n_tor_end
 

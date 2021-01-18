@@ -77,9 +77,13 @@ program JOREK2
 #endif
   use mpi_mod
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mod_neutral_source
 #endif
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
+#endif
+
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
@@ -261,6 +265,11 @@ required = 0
     write(*,*) 'Remark: Setting gmres=.false. since n_tor=1'
     gmres     = .false. 
   end if
+
+#if (JOREK_MODEL == 501)
+  ! --- Read ADAS data and generate coronal equilibrium is needed
+  call init_imp_adas(my_id)
+#endif
   
   ! --- Initialize time-traces of radiation and ionization energy/power
 #if (JOREK_MODEL == 500)
@@ -1011,7 +1020,7 @@ required = 0
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
-      call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
+      call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
 
@@ -1141,6 +1150,11 @@ required = 0
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
       call total_neutrals(my_id,node_list,element_list)
+      if (using_spi .and. t_now >= t_ns) then
+        call update_spi(my_id,node_list,element_list)
+      end if
+#endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
       if (using_spi .and. t_now >= t_ns) then
         call update_spi(my_id,node_list,element_list)
       end if

@@ -16,6 +16,13 @@ use mod_boundary
 use mod_vtk
 use mod_interp
 use mod_poloidal_currents
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+  use mod_neutral_source
+#endif
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
+#endif
+use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 use mod_openadas , only : read_adf11
 use mod_atomic_coeff_deuterium, only : ad_deuterium , atomic_coeff_deuterium
 implicit none
@@ -100,8 +107,33 @@ real*8                :: angle, source_volume, local_density, local_temperature,
 logical               :: include_radiation
 integer               :: n_radiation,s_radiation
 real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
-real*8                :: T_corr, T_rad, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
+real*8                :: T_corr, Te_corr_eV, Te_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
+real*8                :: r0_real8, rn0_real8
+real*8                :: T0_corr, r0_corr, rn0_corr
+
+#if JOREK_MODEL == 501
+! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
+! Atomic physics coefficients:
+!   -Mass ratio between main ions and impurites (m_i/m_imp)
+real*8     :: m_i_over_m_imp
+!   -Mean impurity ionization state
+real*8     :: Z_imp, T0_Zimp, alpha_Zimp
+!   -Coefficients related to Z_imp
+real*8     :: alpha_imp
+real*8     :: beta_imp
+!   - Effective charge state
+real*8     :: Z_eff, eta_coef
+!   -Radiation from injected impurities
+real*8     :: Lrad
+real*8     :: ne_SI                              ! Electron density used in radiation rate
+real*8     :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
+real*8     :: A2_rad, T2_rad, sig2_rad
+!   -Temporary variable for charge state distribution
+real*8, allocatable :: P_imp(:)
+real*8     :: E_ion
+integer*8  :: ion_i, ion_k
+#endif
 real*8                :: T_real8, dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
 
 real*8                :: psi_equi, psi_equi_s, psi_equi_t, psi_equi_R, psi_equi_Z
@@ -111,8 +143,6 @@ real*8                :: F_prof,   F_prof_s,   F_prof_t,   dF_dR,      dF_dZ,   
 !====================== --- Variables related to neutral density evolution (model 500 or 555)
 logical               :: include_neutral_dens
 integer               :: n_rn0, s_rn0
-real*8                :: r0_corr, rn0_corr
-real*8                :: r0_real8, rn0_real8
 real*8                :: IonN, RecN, AblN, coef_rec_1, Srec_T
 
 #ifdef fullmhd
@@ -173,9 +203,13 @@ include_bootstrap      = .false. ! include bootstrap current and averaged curren
 include_psi_norm       = .true.  ! include normalized flux
 RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,Z,0)
 
-#if (JOREK_MODEL == 500)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
 include_radiation = .true.
 include_neutral_dens = .true.
+#endif
+#if (JOREK_MODEL == 501)
+! --- Read ADAS data and generate coronal equilibrium is needed
+call init_imp_adas(my_id)
 #endif
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
@@ -285,8 +319,15 @@ endif
     s_rn0       = n_scalars
     n_scalars   = n_scalars + n_rn0
  endif
+#endif
 
-
+#if (JOREK_MODEL == 501)
+ n_radiation = 0
+ if (include_radiation) then
+    n_radiation = 5
+    s_radiation = n_scalars
+    n_scalars   = n_scalars + n_radiation
+ endif
 #endif
 
 #if fullmhd
@@ -319,7 +360,7 @@ if ( SI_units ) then
    scalar_names(7)='Vpar_km/s   '
 #endif
 
-#if (JOREK_MODEL == 500)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
    scalar_names(8)='N_dens_1d20  '
 #endif
 
@@ -387,6 +428,12 @@ endif
  endif
 
 #endif
+#if (JOREK_MODEL == 501)
+ if (include_radiation) then
+     scalar_names(s_radiation+1:s_radiation+n_radiation) &
+                  = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp ', 'Z_eff '/)
+ endif
+#endif
 
 #ifdef fullmhd
 scalar_names(s_fullmhd+1:s_fullmhd+n_fullmhd) = (/  'B_R         ', 'B_Z         ', 'B_phi       ', &
@@ -411,6 +458,7 @@ call initialise_basis                              ! define the basis functions 
 
 nnos = nsub*nsub*element_list%n_elements
 allocate(currdens(nnos),xyz(3,nnos),scalars(nnos,1:n_scalars),vectors(nnos,3,1:n_vectors))
+currdens = 0.
 
 nnoel = 4
 nel   = (nsub-1)*(nsub-1)*element_list%n_elements
@@ -614,6 +662,9 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,m,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
           scalars(inode,m) = P * HZ(i_tor,i_plane)
         enddo
+        
+        ! The real current density
+        currdens(inode) = -scalars(inode,3)/BigR
 
         if ((xjac .gt. 1.d-6)) then
 
@@ -1155,13 +1206,20 @@ enddo  ! n_elements
       T_real8 = scalars(i,6)
       T_corr  = corr_neg_temp(T_real8)
       Tion    = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
-      T_rad   = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+      Te_corr_eV   = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
       call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
                                   LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) !< add scalars(i,5) as last optional parameter for density dependence
 
+      coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
 
-      eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0) &
+      LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(Te_corr_eV) ! Only Bremsstrahlung contribution
+
+      LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(Te_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
+                                       -60.947d0*exp(-(log10(Te_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
+                                       -24.067d0*exp(-(log10(Te_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
+
+      eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
                               *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 
       scalars(i,s_radiation+1) = ksiion * scalars(i,5) * scalars(i,8) * Sion_T
@@ -1179,17 +1237,140 @@ enddo  ! n_elements
 
       frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))                               &
                  *((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0)) &
-                 *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                 *nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
       dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
-                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
-                     *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))     &
+                     *(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
       scalars(i,s_radiation+5) = scalars(i,5) * frad_bg
 
     enddo
   endif
+#endif /*(JOREK_MODEL==500)*/
 
+#if (JOREK_MODEL == 501)
+
+ if (include_radiation) then
+
+  !-------------------------------------------
+  ! Atomic physics parameters for Impurities
+  !-------------------------------------------
+
+     select case ( trim(gas_type) )
+       case('D2')
+         m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
+       case('Ar')
+         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u
+       case('Ne')
+         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
+       case default
+         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
+         write(*,*) '=> We assume the gas is D2.'
+         m_i_over_m_imp = central_mass/2.
+     end select
+
+   do i=1,nnos
+     T_real8 = scalars(i,6)
+     
+     if (T_min > T_1) then
+       T0_corr = corr_neg_temp(T_real8,(/5.d-1,5.d-1/),2.*T_min)
+     else
+       T0_corr = corr_neg_temp(T_real8,(/5.d-1,5.d-1/),2.*T_1)
+     end if
+     Te_corr_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+
+     eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
+                        *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
+
+     r0_real8 = scalars(i,5)
+     rn0_real8 = scalars(i,8)
+
+     r0_corr = corr_neg_dens(r0_real8,(/1.d-9,1.d-5/),1.d-3)
+     rn0_corr = corr_neg_dens(rn0_real8,(/1.d-9,1.d-5/),1.d-3)
+
+     ! We estimate the effective charge by a test density 10^20/m^3
+     ! Later maybe we should implement a iterative method
+
+     if (allocated(imp_adas(1)%ionisation_energy)) then
+       if (allocated(P_imp)) deallocate(P_imp)
+       allocate(P_imp(0:imp_adas(1)%n_Z))
+
+       call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+                                     p_out=P_imp,z_avg=Z_imp)
+
+       ! Calculate the ionization potential energy and derivative wrt. temperature
+       E_ion     = 0.
+
+       do ion_i=1, imp_adas(1)%n_Z
+         do ion_k=1, ion_i
+           E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+         end do
+       end do
+     ! Convert from eV to JOREK unit
+       E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
+     else
+       call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
+       E_ion     = 0.
+     end if
+
+     alpha_imp    = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+     beta_imp     = m_i_over_m_imp*Z_imp - 1.
+
+     ne_SI       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+     scalars(i,5) = (r0_corr + beta_imp * rn0_corr)                           ! electron density (JOREK units)
+
+     !Calculate the Z_eff, as it is done in mod_elt_matrix
+     Z_eff = r0_corr - rn0_corr
+     do ion_i=1, imp_adas(1)%n_Z
+       Z_eff = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
+     end do
+     Z_eff = Z_eff / scalars(i,5)  
+     scalars(inode,s_radiation+5) = Z_eff
+
+     ! This is to represent the dependence on Z_eff in resistivity
+     eta_coef = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2) 
+     eta_coef = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
+
+     eta_Sp = eta_Sp * eta_coef
+
+  !-------------------------------------------
+  ! --- Radiative function, using interpolation
+  ! ------------------------------------------
+
+     ! Normalization coefficient for radiation rate from SI units (W.m^3) to
+     ! JOREK units:
+     coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                  *(central_density*1.d20)**2.5d0*m_i_over_m_imp
+
+     if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0_real8 > rn0_min) then
+
+       Lrad = 0.0
+       
+       ! Here we are temperarily only considering one impurity species, in the
+       ! future maybe a do loop will is needed
+       !call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
+       call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
+
+       Lrad = Lrad * coef_rad_1
+
+     else
+       Lrad = 0.
+       E_ion = 0.
+     end if
+
+     scalars(i,s_radiation+1) = (2./3.) * scalars(i,8) * E_ion
+     scalars(i,s_radiation+2) = (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad
+     scalars(i,s_radiation+3) = (2./(3. * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
+     scalars(i,s_radiation+4) = Z_imp
+     scalars(i,s_radiation+5) = Z_eff
+
+   end do
+ endif
+#endif /*(JOREK_MODEL == 501)*/
+
+#if (JOREK_MODEL == 500)
   if (include_neutral_dens) then
 
     do i=1,nnos
@@ -1289,6 +1470,11 @@ if (SI_units) then
     !===================================== Neutral density in 1e20m-3
     scalars(i,8) = scalars(i,8) * central_density
 #endif
+
+#if (JOREK_MODEL == 501)
+    !===================================== Impurity density in 1e20m-3
+    scalars(i,8) = scalars(i,8) * central_density * m_i_over_m_imp
+#endif
     !=====================Pressure in kPa
     if (include_fluxes) scalars(i,s_fluxes+1) = scalars(i,s_fluxes+1) / MU_zero/1.e3
     if (include_neo) then
@@ -1336,12 +1522,12 @@ if (SI_units) then
 
       Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
 
-      T_rad = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
+      Te_corr_eV = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
 
       call atomic_coeff_deuterium(0.5d0*scalars(i,6), Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
                                   LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
 
-      eta_Sp = 1.65d-9*17*(1.d-3*T_rad)**(-1.5d0)
+      eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0)
 
       scalars(i,s_radiation+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
                                           * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T / coef_ion_1
@@ -1360,17 +1546,24 @@ if (SI_units) then
       Brad_bg = 20.
       Crad_bg = 0.8
 
-      frad_bg = nimp_bg * Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+      frad_bg = nimp_bg * Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
       dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0)) &
-                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))     &
-                     *(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                     *(1./EL_CHG)*2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))     &
+                     *(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
       scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * frad_bg
-
-    endif
+  endif
 #endif /*(JOREK_MODEL == 500)*/
 
+#if (JOREK_MODEL == 501)
+  if (include_radiation) then
+   scalars(i,s_radiation+1) = scalars(i,s_radiation+1)/(K_BOLTZ*MU_ZERO)
+   scalars(i,s_radiation+2) = scalars(i,s_radiation+2)/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)
+   scalars(i,s_radiation+3) = scalars(i,s_radiation+3)/(2.d0/3.d0*((central_mass*MASS_PROTON*central_density*1.d20)**0.5)*(MU_ZERO**1.5)) 
+   scalars(i,s_radiation+4) = scalars(i,s_radiation+4)
+  end if
+#endif /*(JOREK_MODEL == 501)*/
 #endif /* end of non-full-MHD part*/
 
   enddo  ! nnos

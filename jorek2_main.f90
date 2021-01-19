@@ -266,13 +266,8 @@ required = 0
     gmres     = .false. 
   end if
 
-#if (JOREK_MODEL == 501)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
   ! --- Read ADAS data and generate coronal equilibrium is needed
-  call init_imp_adas(my_id)
-#endif
-  
-  ! --- Initialize adas for background impurity and time-traces of radiation and ionization energy/power.
-#if (JOREK_MODEL == 500)
   call init_imp_adas(my_id)
 #endif
 

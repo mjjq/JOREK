@@ -370,6 +370,8 @@ subroutine preset_parameters
   
   equil              = .true.               ! compute equilibrium
   
+  no_mach1_bc        = .true.               ! Never apply Mach-1 BCs
+
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
 
   eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations

@@ -581,6 +581,11 @@ required = 0
         call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
         stop
       end if 
+
+      ! --- Optional: Add patches to an existing grid imported from restart file
+      if ( extend_existing_grid .and. (n_flux .le. 0) ) &
+          call grid_patches_on_existing_grid(node_list, element_list)
+
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
       
       ! --- Determine boundary information from the grid
@@ -681,6 +686,10 @@ required = 0
              
         end if ! (if xpoint)
 
+        ! --- Optional: Add patches to an existing grid imported from restart file
+        if (extend_existing_grid) &
+            call grid_patches_on_existing_grid(node_list, element_list)
+
         if ( freeboundary .and. freeb_change_indices .and. (my_id == 0)) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
 
         ! --- Determine boundary information from the grid
@@ -705,41 +714,6 @@ required = 0
 
     end if ! if (n_flux > 1) then
  
-    ! --- Optional: Add patches to an existing grid imported from restart file
-    if (extend_existing_grid) then
-      if (my_id == 0) then
-
-        call grid_patches_on_existing_grid(node_list, element_list)
-
-        call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.,'xpoint')
-
-        if (refinement) then
-          n_to_be_refined=0
-          call Refine_Elem_List(node_list, element_list, list_to_be_refined, n_to_be_refined)
-          call Ref_Update_Index(element_list, node_list)
-        end if
-
-        if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
-
-        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
-        call export_boundary(node_list, bnd_elm_list, bnd_node_list)
-        call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list) 
-
-        if ( freeb_equil2) then
-          freeboundary_equil = .true.
-          call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
-            resistive_wall)
-          call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
-          call import_external_fields('coil_field.dat', my_id)
-          call set_coil_curr_time_trace()
-          if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
-        end if
-
-        if (equil) call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
-          
-      end if
-    end if
-    
     if (my_id == 0) then
           
       ! --- Update the status of the equilibrium

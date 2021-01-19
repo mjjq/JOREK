@@ -100,7 +100,7 @@ else
   call copy_node_structure(node_list, element_list, node_list_new, element_list_new)
   rtree_initialized = .false.
   call populate_element_rtree(node_list, element_list)
-  ! --- Define nodes index in the matrix
+  ! --- Define nodes index in the matrix, and the psi-values (zero?)
   write(*,*) '                 Definition of nodes index '
   index = 0
   do i=1,node_list%n_nodes
@@ -110,6 +110,10 @@ else
       node_list%node(i)%index(k) = index
     enddo  
     node_list%node(i)%constrained = .false.
+    node_list%node(i)%values(1,1,1) = 0.d0
+    node_list%node(i)%values(1,2,1) = 0.d0
+    node_list%node(i)%values(1,3,1) = 0.d0
+    node_list%node(i)%values(1,4,1) = 0.d0
   enddo
   ! ---temporary, needs to be completed, neighbour and boundary information
   call update_neighbours_basic(element_list,node_list)

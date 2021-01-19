@@ -642,6 +642,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
   write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
   write(*,LOGI_FMT) 'old_deuterium_atomic  ', old_deuterium_atomic
+  write(*,LOGI_FMT) 'no_mach1_bc           ', no_mach1_bc
 
   if ( (jorek_model .eq. 710) .or. (jorek_model .eq. 711) ) then
     write(*,LOGI_FMT) 'Mach1_openBC          ', Mach1_openBC

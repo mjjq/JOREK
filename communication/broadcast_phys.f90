@@ -558,6 +558,8 @@ if (my_id .eq. 0) then
   call MPI_PACK(RZ_grid_inside_wall,    1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(adaptive_time,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(equil,                  1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(no_mach1_bc,            1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(no_mach1_bc,            1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(Mach1_openBC,           1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(eta_ARAZ_on,            1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(tauIC_ARAZ_on,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)

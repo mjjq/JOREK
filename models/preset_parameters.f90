@@ -184,7 +184,7 @@ subroutine preset_parameters
   D_par_imp        = 0.d0
 
   D_prof_neg         = 1.d-5
-  D_prof_neg_thresh  = -1.d0 ! to disable by default enhanced neutrals diffusion in model500
+  D_prof_neg_thresh  = 0.d0
   D_prof_imp_neg     = 1.d-5
   D_prof_imp_neg_thresh  = -1.d0 ! to disable by default enhanced impurities diffusion in model501
   ZK_prof_neg        = 1.d-5

@@ -159,7 +159,7 @@ contains
                 endif
 
                 ! --- Mach-1 BCs
-                if (.not. Mach1_openBC) then 
+                if ( (.not. Mach1_openBC) .and. (.not. no_mach1_bc) ) then 
                   if ( (k == var_uR) .or. (k == var_uZ) .or. (k == var_up) ) then 
                     
                     index_node  = node_list%node(inode)%index(1)             ! position of value

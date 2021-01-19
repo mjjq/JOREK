@@ -213,11 +213,6 @@ include_neutral_dens = .true.
 ! --- Read ADAS data and generate coronal equilibrium is needed
 call init_imp_adas(my_id)
 #endif
-#if (JOREK_MODEL == 501)
-! --- Read ADAS data and generate coronal equilibrium is needed
-call init_imp_adas(my_id)
-#endif
-
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
 open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
@@ -1218,14 +1213,6 @@ enddo  ! n_elements
 
       call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
                                   LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) !< add scalars(i,5) as last optional parameter for density dependence
-
-      coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
-
-      LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(Te_corr_eV) ! Only Bremsstrahlung contribution
-
-      LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(Te_corr_eV)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                       -60.947d0*exp(-(log10(Te_corr_eV)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                       -24.067d0*exp(-(log10(Te_corr_eV)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
 
       eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
                               *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)

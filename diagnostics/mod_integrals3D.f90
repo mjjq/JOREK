@@ -132,6 +132,9 @@ real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
 real*8  :: source_neutral, source_tmp
+real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion
+real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
+real*8  :: ne_SI, Te_eV
 #endif
 #if (JOREK_MODEL == 501)
 real*8  :: source_bg, source_imp, source_tmp
@@ -140,8 +143,6 @@ real*8  :: source_bg, source_imp, source_tmp
 ! Additional diagnostic variables for impurity model
 ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
 #if (JOREK_MODEL == 501)
-real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion
-real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 ! Atomic physics coefficients:
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8  :: m_i_over_m_imp
@@ -150,7 +151,7 @@ real*8  :: Z_imp, T0_Zimp, alpha_Zimp, Z_eff, eta_coef, ne_JOREK
 !   -Coefficients related to Z_imp
 real*8  :: alpha_imp, beta_imp
 !   -Corrected plasma temperature and density for radiation calculation
-real*8  :: Te_corr_eV, ne_SI, Te_eV
+real*8  :: Te_corr_eV
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
@@ -162,8 +163,6 @@ real*8     :: ng_radius
 
 ! Additional variables related to the radiated power
 #if (JOREK_MODEL == 500)
-real*8  :: local_radiation, total_radiation, local_E_ion, total_E_ion
-real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 ! Atomic physics coefficients:
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
@@ -173,8 +172,6 @@ real*8     :: Srec_T, dSrec_dT                                ! Recombination ra
 !   -Radiation from injected gas/impurities
 real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
-real*8     :: Te_eV                                           ! Temperature used in radiation rate
-real*8     :: ne_SI                                           ! Electron density used in radiation rate
 !   -Radiation from background impurities
 real*8     :: Lrad_imp
 real*8     :: m_i_over_m_imp_bg                               ! Mass ratio between main ions and background impurity
@@ -295,14 +292,15 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          n_spi, using_spi,                                                               &
 !$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
 #endif
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+!$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas,                        &
+#endif
 #if (JOREK_MODEL == 501)
-!$omp          local_radiation, local_E_ion, gas_type,                                         &
-!$omp          local_radiation_phi,                                                            &
-!$omp          imp_cor, imp_adas, T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,              &
+!$omp          local_E_ion, gas_type,                                                          &
+!$omp          T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,                                 &
 #endif
 #if (JOREK_MODEL == 500)
-!$omp          local_radiation, local_radiation_phi, nimp_bg, local_E_ion, ksi_ion, GAMMA,     &
-!$omp          imp_bg_type, imp_cor, imp_adas,                                                 &
+!$omp          nimp_bg, local_E_ion, ksi_ion, GAMMA, imp_bg_type,                              &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &

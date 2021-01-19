@@ -131,7 +131,6 @@ real*8     :: beta_imp
 real*8     :: Z_eff, eta_coef
 !   -Radiation from injected impurities
 real*8     :: Lrad
-real*8     :: ne_SI                              ! Electron density used in radiation rate
 real*8     :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
 real*8     :: A2_rad, T2_rad, sig2_rad
 !   -Temporary variable for charge state distribution

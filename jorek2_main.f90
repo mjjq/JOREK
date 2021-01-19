@@ -527,12 +527,6 @@ required = 0
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
     end if
     
-    ! --- Optional: Add patches to an existing grid imported from restart file
-    if (extend_existing_grid) then
-      call grid_patches_on_existing_grid(node_list, element_list)
-      if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
-    end if
-    
   end if !   if ( restart .and. (my_id == 0) ) then
 
 

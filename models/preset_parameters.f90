@@ -412,7 +412,9 @@ subroutine preset_parameters
   R_limiter = 0.d0
   Z_limiter = 0.d0
   
+  extend_existing_grid = .false.
   n_wall_blocks        = 0
+  corner_block         = 0
   n_ext_block          = 0
   n_block_points_left  = 0
   R_block_points_left  = 0.d0

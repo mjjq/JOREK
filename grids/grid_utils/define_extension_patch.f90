@@ -32,6 +32,9 @@ real*8              :: R_polar_bnd  (n_nodes_max/4,          4),Z_polar_bnd  (n_
 real*8              :: R_polar_wall (n_wall_max,             4),Z_polar_wall (n_wall_max,             4)
 integer             :: i, j, k, l, index, i_sep, pieces, i_node, i_node2, count, i_wall
 integer             :: n_tmp, n_start, i_start
+integer             :: i_refine, n_refine, i_save
+real*8              :: s_refine_min, s_refine_max
+real*8              :: s_refine_min_next, s_refine_max_next
 real*8              :: R_cub1d(4), Z_cub1d(4)
 real*8              :: length
 real*8              :: R1,R2,R3,dR1_dr,dR1_ds,dR1_drs,dR1_drr,dR1_dss, dR3_dr
@@ -368,9 +371,9 @@ if (n_lim .ge. n_wall-1) n_lim = 0
 if (far_from_wall) n_lim = 1
 
 
-! --- Are we joining this block with the previous one?
+! --- Are we joining this block with the previous one? (note: corner block are not considered)
 attached = .false.
-if (i_ext .gt. 1) then
+if ( (i_ext .gt. 1) .and. (corner_block(i_ext) .ne. 1) ) then
   diff = sqrt( (R_block_points_left(i_ext,1)-R_block_points_right(i_ext-1,1))**2 + (Z_block_points_left(i_ext,1)-Z_block_points_right(i_ext-1,1))**2 )
   if (diff .lt. tolerance) then
     attached = .true.
@@ -989,34 +992,47 @@ do i = i_start,n_nodes
   ! --- In case we do not find good parameters, save an equidistant segmentation
   call meshac2(n_seg,seg_new,1.d0,9999.d0,9999.0,9999.d0,1.d0,1.0d0)
   ! --- Then find the right segmentation to have a smooth transition
-  n_tmp    = 100 ! we try a few of them, and take the closest one
-  diff_min = 1.d10
-  sig_tmp  = 0.15d0 ! we take a transition 1/3 of the total length
-  if (attached) then
-    if (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) then
-      sig_tmp = (sig_tmp * length_prev) / polar_length ! special case
+  ! --- It is important to do this with high refinment, otherwise the segmentation
+  ! --- will be jumpy between each iteration of the main loop [i = i_start,n_nodes]
+  n_refine = 3
+  s_refine_min_next = 0.d0
+  s_refine_max_next = 1.d0
+  do i_refine = 1,n_refine
+    s_refine_min = s_refine_min_next
+    s_refine_max = s_refine_max_next
+    n_tmp    = 20 ! we try a few of them, and take the closest one
+    diff_min = 1.d10
+    sig_tmp  = 0.15d0 ! we take a transition 1/3 of the total length
+    if (attached) then
+      if (n_block_points_left(i_ext) .gt. n_block_points_right(i_ext-1)) then
+        sig_tmp = (sig_tmp * length_prev) / polar_length ! special case
+      endif
     endif
-  endif
-  do j = 1,n_tmp
-    bgf_tmp = real(j)/real(n_tmp+1)
-    call meshac2(n_seg,seg_tmp,0.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
-    length_tmp = polar_length * seg_tmp(2) * abs(sin(alpha))
-    diff = abs(length_tmp-previous_length)
-    if (diff .lt. diff_min) then
-      diff_min = diff
-      call meshac2(n_seg,seg_new,0.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
-    endif
-  enddo
-  ! --- Try the other way around as well
-  do j = 1,n_tmp
-    bgf_tmp = real(j)/real(n_tmp+1)
-    call meshac2(n_seg,seg_tmp,1.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
-    length_tmp = polar_length * seg_tmp(2) * abs(sin(alpha))
-    diff = abs(length_tmp-previous_length)
-    if (diff .lt. diff_min) then
-      diff_min = diff
-      call meshac2(n_seg,seg_new,1.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
-    endif
+    do j = 1,n_tmp
+      bgf_tmp = s_refine_min + (s_refine_max - s_refine_min) * real(j)/real(n_tmp+1)
+      call meshac2(n_seg,seg_tmp,0.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
+      length_tmp = polar_length * seg_tmp(2) * abs(sin(alpha))
+      diff = abs(length_tmp-previous_length)
+      if (diff .lt. diff_min) then
+        diff_min = diff
+        call meshac2(n_seg,seg_new,0.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
+        i_save = j
+      endif
+      ! --- Try the other way around as well
+      call meshac2(n_seg,seg_tmp,1.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
+      length_tmp = polar_length * seg_tmp(2) * abs(sin(alpha))
+      diff = abs(length_tmp-previous_length)
+      if (diff .lt. diff_min) then
+        diff_min = diff
+        call meshac2(n_seg,seg_new,1.d0,9999.d0,sig_tmp,9999.d0,bgf_tmp,1.0d0)
+        i_save = j
+      endif
+    enddo
+    ! --- New interval for next refinment
+    j = max(1,i_save-1)
+    s_refine_min_next = s_refine_min + (s_refine_max - s_refine_min) * real(j)/real(n_tmp+1)
+    j = min(n_tmp,i_save+1)
+    s_refine_max_next = s_refine_min + (s_refine_max - s_refine_min) * real(j)/real(n_tmp+1)
   enddo
   ! --- In case you know you want a specific extension beyond the previous patch
   if (attached) then

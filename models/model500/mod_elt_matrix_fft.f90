@@ -164,7 +164,9 @@ TG_num1    = TGNUM(1); TG_num2    = TGNUM(2); TG_num5    = TGNUM(5); TG_num6    
 
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta
-zeta  = time_evol_zeta
+!zeta  = time_evol_zeta
+! change zeta for variable dt
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
 ! --- Do we need to use the FFT or non-FFT version?
 if ( (i_tor_min == 1) .and. (i_tor_max == n_tor) ) then
@@ -274,6 +276,11 @@ do i=1,n_vertex_max
     enddo
   enddo
 enddo
+
+! changes deltas for variable time steps
+delta_g = delta_g * tstep / tstep_prev
+delta_s = delta_s * tstep / tstep_prev
+delta_t = delta_t * tstep / tstep_prev
 
 do ms=1, n_gauss
   do mt=1, n_gauss
@@ -719,7 +726,6 @@ do i=1,n_vertex_max
                                 source_pellet, source_volume)
           endif
 
-
           call atomic_coeff_deuterium(0.5d0*T0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
                                       LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
 
@@ -832,7 +838,6 @@ do i=1,n_vertex_max
 
 
          !--------------------------------------------------------
-
 
           do im=n_tor_start, n_tor_end
 

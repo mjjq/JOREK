@@ -20,6 +20,8 @@ module phys_module
   real*8  :: visco_rst            !< visco value from restart file
   real*8  :: visco_par_rst        !< visco_par value from restart file
   real*8  :: eta_rst              !< eta value from restart file
+  logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature? Otherwise constant.
+  logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature? Otherwise constant.
   logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
   real*8  :: visco_par            !< Parallel viscosity (normalized)
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
@@ -184,6 +186,7 @@ module phys_module
   
   !> @name Timestepping parameters
   real*8  :: tstep             		!< Size of the timesteps (\f$ \Delta t \f$)
+  real*8  :: tstep_prev                 !< Previous time-step if using variable dt Gears
   real*8  :: tstep_n(10)       		!< Alternative to tstep: Up to ten values may be given
   integer :: nstep             		!< Number of timesteps to perform
   integer :: nstep_n(10)       		!< Alternative to nstep: Up to ten values may be given
@@ -260,6 +263,7 @@ module phys_module
   real*8  :: pellet_velocity_R !< pellet velocity component radial direction
   real*8  :: pellet_velocity_Z !< pellet velocity component Z direction
   real*8  :: pellet_density    !< pellet atom number density (in units \f$10^{20} m^{-3}\f$)
+  real*8  :: pellet_density_bg !< background species pellet atom number density (in units 10^20 m^-3)
   real*8  :: pellet_particles  !< the number of particles in the pellet (in units of \f$10^{20}\f$)
   logical :: use_pellet
   
@@ -285,9 +289,11 @@ module phys_module
   real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
   real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
   character(len=80) :: imp_bg_type !< Type of background impurity species: Argon, neon, ...
-  integer :: n_adas             !< Number of species to be traced by ADAS, for future development only
-
+ 
   !> @name Shattered pellet injection-related input parameters
+  character(len=80) :: gas_type !< Type of gas used in material injection (MGI, SPI, ...): Argon, D2, ...
+
+  !> @name Shattered Pellet Injection related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
   ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
   ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
@@ -296,9 +302,10 @@ module phys_module
   real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z upon injection (in m/s)
   real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection (in m/s)
   real*8  :: spi_quantity       !< Total number of injected atoms by SPI
-  real*8  :: ng_radius_ratio    !! Ratio between the radius of neutral gas cloud and shard radius
-                                !! Assumed constant. If ng_radius_ratio times shard radius > ng_radius_min,
-                                !! this radius is used for neutral deposition, otherwise the ng_radius_min.
+  real*8  :: spi_quantity_bg    !< Total injected atom number for background species SPI
+  real*8  :: ng_radius_ratio    !< Ratio between the radius of neutral gas cloud and shard radius
+                                !< Assumed constant. If ng_radius_ratio times shard radius > ng_radius_min,
+                                !< this radius is used for neutral deposition, otherwise the ng_radius_min.
 
   real*8  :: spi_Vel_diff       !< The maximum speed difference from the reference speed
   real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
@@ -308,8 +315,10 @@ module phys_module
 
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud for numerical reasons (in m)
 
-  real*8, allocatable  :: xtime_spi_ablation(:,:) ! The time history of spi ablation
-  real*8, allocatable  :: xtime_spi_ablation_rate(:,:) ! The time history of spi ablation rate
+  real*8, allocatable  :: xtime_spi_ablation(:,:)         !< The time history of SPI ablation
+  real*8, allocatable  :: xtime_spi_ablation_rate(:,:)    !< The time history of SPI ablation rate
+  real*8, allocatable  :: xtime_spi_ablation_bg(:,:)      !< The time history of SPI ablation for background species
+  real*8, allocatable  :: xtime_spi_ablation_bg_rate(:,:) ! <The time history of SPI ablation rate for bg species
 
   real*8, allocatable  :: xtime_radiation(:)    !< The time history of radiated energy in SI unit
   real*8, allocatable  :: xtime_rad_power(:)    !< The time history of radiated power in SI unit
@@ -317,12 +326,15 @@ module phys_module
   real*8, allocatable  :: xtime_E_ion(:)        !< The time history of the ionization potential energy in SI unit
   real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
 
+
   integer :: n_spi              !< Number of shattered pellets injected
   integer :: spi_abl_model      !< Ablation model to be used. 0 for constant release rate, 1 for NGS model, 2 for Sergeev formula
 
   integer :: spi_rnd_seed(40)   !< Random seed array used for the generation of the SPI velocity spread
 
   character(len=256) :: spi_shard_file !< The name of the shard size file
+
+  integer :: n_adas             !< Number of species to be traced by ADAS, for future development only
 
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
@@ -414,6 +426,8 @@ module phys_module
   !> @name Analytical heat, particle and neutral particles diffusivity parameters
   real*8  :: D_perp(10)    = 0.d0 !< Coefficients for perpendicular particle diffusion profile
   real*8  :: D_par                !< Parallel particle diffusion (usually not useful)
+  real*8  :: D_perp_imp(10)= 0.d0 !< Coefficients for perpendicular imp particle diffusion profile
+  real*8  :: D_par_imp            !< Parallel impurity particle diffusion (usually not useful)
   real*8  :: ZK_perp(10)   = 0.d0 !< Coefficients for perpendicular heat diffusion profile
   real*8  :: ZK_par               !< Parallel heat diffusion value in the plasma center
   real*8  :: ZK_par_max           !< Do not use larger parallel heat diffusion values for numerical reasons
@@ -428,19 +442,24 @@ module phys_module
 
   !> @name Numerical heat and particle diffusivity profiles
   character(len=512)  :: d_perp_file        !< ASCII file with perpendicular particle diffusion profile
+  character(len=512)  :: d_perp_imp_file    !< ASCII file with perpendicular particle diffusion profile
   character(len=512)  :: zk_perp_file       !< ASCII file with perpendicular heat diffusion profile
   character(len=512)  :: zk_e_perp_file     !< ASCII file with perpendicular electron heat diffusion profile
   character(len=512)  :: zk_i_perp_file     !< ASCII file wtih perpendicular ion heat diffusion profile
   logical             :: num_d_perp         !< automatically set true if d_perp_file /= 'none'
+  logical             :: num_d_perp_imp     !< automatically set true if d_perp_file /= 'none'
   logical             :: num_zk_perp        !< automatically set true if zk_perp_file /= 'none'
   logical             :: num_zk_e_perp      !< automatically set true if zk_e_perp_file /= 'none'
   logical             :: num_zk_i_perp      !< automatically set true if zk_i_perp_file /= 'none'
   integer             :: num_d_perp_len     !< Number of datapoints in d_perp profile
+  integer             :: num_d_perp_len_imp !< Number of datapoints in d_perp profile for impurity
   integer             :: num_zk_perp_len    !< Number of datapoints in zk_perp profile
   integer             :: num_zk_e_perp_len  !< Number of datapoints in zk_e_perp profile
   integer             :: num_zk_i_perp_len  !< Number of datapoints in zk_i_perp profile
   real*8, allocatable :: num_d_perp_x(:)    !< Psi_N values of d_perp  profile
   real*8, allocatable :: num_d_perp_y(:)    !< D_perp values of d_perp profile
+  real*8, allocatable :: num_d_perp_x_imp(:)!< Psi_N values of d_perp  profile for impurity
+  real*8, allocatable :: num_d_perp_y_imp(:)!< D_perp values of d_perp profile for impurity
   real*8, allocatable :: num_zk_perp_x(:)   !< Psi_N values of zk_perp profile
   real*8, allocatable :: num_zk_perp_y(:)   !< ZK_perp values of zk_perp profile
   real*8, allocatable :: num_zk_e_perp_x(:) !< Psi_N values of zk_e_perp profile
@@ -631,14 +650,17 @@ module phys_module
   !> @name Numerical parameters
   real*8              :: D_prof_neg         !< Particle diffusion coefficient in regions with negative density
   real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if rho < D_prof_neg_thresh
-  real*8              :: ZK_prof_neg        !< Heat diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_prof_neg        !< Perp. heat diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_par_neg         !< Parallel diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
+  real*8              :: ZK_par_neg_thresh  !< ZK_par_neg becomes effective if T < ZK_par_neg_thresh
   real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.)
   real*8              :: rho_min            !< minimum density
 
   real*8              :: ne_SI_min          !< minimum e density (in SI unit) below which we cut-off the radiation loss
   real*8              :: Te_eV_min          !< minimum temperature (in eV) below which we cut-off the radiation loss
   real*8              :: nimp_bg_min        !< minimum background impurity density (in SI) for radiation loss cut-off
+  real*8              :: rn0_min            !< minimum impurity density (in JU) for radiation loss cut-off
 
   integer             :: n_tor_fft_thresh   !< If n_tor >= n_tor_fft_thresh, element_matrix_fft will be used
   integer*8           :: fftw_plan          !< Required for FFTW library

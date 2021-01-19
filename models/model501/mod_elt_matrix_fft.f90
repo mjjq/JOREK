@@ -692,8 +692,8 @@ do ms=1, n_gauss
          D_par   = D_prof_neg
        endif
        if (rn0 .lt. D_prof_imp_neg_thresh)  then
-         D_prof_imp = D_prof_imp_neg
-         D_par_imp = D_prof_imp_neg
+         D_prof_imp = max(D_prof_imp, D_prof_imp_neg)
+         D_par_imp  = max(D_par_imp,  D_prof_imp_neg)
        endif
        if (T0 .lt. ZK_prof_neg_thresh) then
          ZK_prof = ZK_prof_neg

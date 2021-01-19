@@ -711,9 +711,9 @@ do i=1,n_vertex_max
           Dn0p = D_neutral_p    
  
           if (rn0 .lt. D_neutral_neg_thresh)  then
-             Dn0x = D_neutral_neg
-             Dn0y = D_neutral_neg
-             Dn0p = D_neutral_neg
+             Dn0x = max(Dn0x, D_neutral_neg)
+             Dn0y = max(Dn0y, D_neutral_neg)
+             Dn0p = max(Dn0p, D_neutral_neg)
           endif
  
           if (use_pellet) then

@@ -117,7 +117,7 @@ module phys_module
   integer :: first_target_point		   !< index of the first target point on the limiter (for xpoint_grid_wall)
   integer :: last_target_point		   !< index of the last  target point on the limiter (does NOT need to be > first_target_point)
   
-  !> Points used as blocks to extend grid into complex wall structures
+  !> Points used as blocks to extend grid into complex wall structures, see https://www.jorek.eu/wiki/doku.php?id=wallgrid_tutorial
   logical :: extend_existing_grid                                               !< Add patches to existing grid from restart file
   integer, parameter :: n_wall_blocks_max = 30                                  !< Maximum number of blocks (30 should be enough)
   integer :: n_wall_blocks                                                      !< Number of blocks

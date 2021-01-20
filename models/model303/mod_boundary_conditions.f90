@@ -244,7 +244,6 @@ do i=1, n_local_elms !=== do elements
       then
         apply_cs = .true.
       endif
-write(*,*)'hello',no_mach1_bc
       if (no_mach1_bc) apply_cs = .false.
 
 

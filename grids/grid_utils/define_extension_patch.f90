@@ -1382,7 +1382,7 @@ do i = i_start,n_nodes
   ! --- Then find the right segmentation to have a smooth transition
   ! --- It is important to do this with high refinment, otherwise the segmentation
   ! --- will be jumpy between each iteration of the main loop [i = i_start,n_nodes]
-  n_refine = 3
+  n_refine = 4
   s_refine_min_next = 0.d0
   s_refine_max_next = 1.d0
   do i_refine = 1,n_refine

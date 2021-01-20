@@ -130,14 +130,17 @@ real*8  :: u0_p, u_s, u_t, u_p
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
 real*8  :: source_neutral, source_tmp
-real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion
-real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
-real*8  :: ne_SI, Te_eV
 #endif
 #if (JOREK_MODEL == 501)
 real*8  :: source_bg, source_imp, source_tmp
+#endif
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion
+real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
+real*8  :: ne_SI, Te_eV
 #endif
 
 ! Additional diagnostic variables for impurity model

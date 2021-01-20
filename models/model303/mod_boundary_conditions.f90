@@ -244,7 +244,8 @@ do i=1, n_local_elms !=== do elements
       then
         apply_cs = .true.
       endif
-      !if (no_mach1_bc) apply_cs = .false.
+write(*,*)'hello',no_mach1_bc
+      if (no_mach1_bc) apply_cs = .false.
 
 
       do in=i_tor_min, i_tor_max  ! === do n_tor

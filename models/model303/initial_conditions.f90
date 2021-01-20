@@ -246,7 +246,7 @@ if (.not. no_mach1_bc) then
       direction = + ps0_x / abs(ps0_x)		 ! temporary solution for lower x-point only
       if (xcase2 .eq. 2) direction = -direction
       if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (ES%Z_xpoint(1)+ES%Z_xpoint(2))/2.d0) ) direction = -direction
-!!     if ( (grid_to_wall) .and. (n_wall_blocks .ne. 0) ) direction = 0.d0 !everything to zero for grid with patches
+!      if ( (grid_to_wall) .and. (n_wall_blocks .ne. 0) ) direction = 0.d0 !everything to zero for grid with patches
       if (grid_to_wall) direction = 0.d0 ! everything to zero for grid with patches
  
       BigR = node_list%node(i)%x(1,1)

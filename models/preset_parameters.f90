@@ -370,7 +370,7 @@ subroutine preset_parameters
   
   equil              = .true.               ! compute equilibrium
   
-  no_mach1_bc        = .true.               ! Never apply Mach-1 BCs
+  no_mach1_bc        = .false.              ! Never apply Mach-1 BCs
 
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
 

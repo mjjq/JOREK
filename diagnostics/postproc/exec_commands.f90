@@ -1922,7 +1922,7 @@ module exec_commands
     
     units = get_int_setting('units', ierr)
     
-    write(filename,'(4a)') DIR, 'shards', trim(step_range_string(index_start,index_start)), '.txt'
+    write(filename,'(4a)') trim(DIR), 'shards', trim(step_range_string(index_start,index_start)), '.txt'
 
     i_file = 133
 

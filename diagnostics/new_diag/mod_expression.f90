@@ -1407,7 +1407,7 @@ module mod_expression
     ne_SI = corr_neg_dens(r0) * 1.d20 * central_density !electron density (SI)
     r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU
 
-    select case ( trim(imp_bg_type) )
+    select case ( trim(imp_type) )
       case('C')
         m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
       case('Ar')
@@ -1417,7 +1417,7 @@ module mod_expression
       case('W')
         m_i_over_m_imp_bg = central_mass/184. ! Tungsten mass = 184 u
       case default
-        write(*,*) '!! Background impurity"', trim(imp_bg_type), '" unknown (in mod_neutral_source.f90) !!'
+        write(*,*) '!! Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90) !!'
         write(*,*) '=> We assume the impurity is argon.'
         m_i_over_m_imp_bg = central_mass/40.
     end select      

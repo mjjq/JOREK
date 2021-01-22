@@ -125,7 +125,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 Number_RMP_harmonics,RMP_har_cos_spectrum,          &
-                RMP_har_sin_spectrum, imp_bg_type, adas_dir,        &
+                RMP_har_sin_spectrum, imp_type, adas_dir,           &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &

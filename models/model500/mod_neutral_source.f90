@@ -215,7 +215,7 @@ module mod_neutral_source
       else
         if (nimp_bg .gt. nimp_bg_min) then
           do i=1, n_adas
-            select case ( trim(imp_bg_type) )
+            select case ( trim(imp_type) )
               case('C')
                 adas_suffix = '96_c'
               case('Ar')

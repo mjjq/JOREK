@@ -443,7 +443,7 @@ subroutine preset_parameters
   D_neutral_p = 1.d-5
   delta_n_convection = 0
   nimp_bg = 0.
-  imp_bg_type = 'Ar'
+  imp_type = ''
   n_adas = 0
   adas_dir = ''
   !====== JET DMV-2 parameters

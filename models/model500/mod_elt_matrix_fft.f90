@@ -788,7 +788,7 @@ do i=1,n_vertex_max
           T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
           r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU
 
-          select case ( trim(imp_bg_type) )
+          select case ( trim(imp_type) )
             case('C')
               m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
             case('Ar')
@@ -798,7 +798,7 @@ do i=1,n_vertex_max
             case('W')
               m_i_over_m_imp_bg = central_mass/184.  ! Tungsten mass = 184 u
             case default
-              write(*,*) '!! Background impurity"', trim(imp_bg_type), '" unknown (in mod_neutral_source.f90) !!'
+              write(*,*) '!! Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90) !!'
               write(*,*) '=> We assume the impurity is argon.'
               m_i_over_m_imp_bg = central_mass/40.
           end select      

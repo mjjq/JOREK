@@ -303,7 +303,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,                                 &
 #endif
 #if (JOREK_MODEL == 500)
-!$omp          nimp_bg, local_E_ion, ksi_ion, GAMMA, imp_bg_type,                              &
+!$omp          nimp_bg, local_E_ion, ksi_ion, GAMMA, imp_type,                                 &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -628,7 +628,7 @@ do ife = ife_min, ife_max
   ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
   Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
 
-  select case ( trim(imp_bg_type) )
+  select case ( trim(imp_type) )
     case('C')
       m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
     case('Ar')
@@ -638,7 +638,7 @@ do ife = ife_min, ife_max
     case('W')
       m_i_over_m_imp_bg = central_mass/184. ! Tungsten mass = 184 u
     case default
-      write(*,*) '!! Background impurity"', trim(imp_bg_type), '" unknown (in mod_neutral_source.f90) !!'
+      write(*,*) '!! Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90) !!'
       write(*,*) '=> We assume the impurity is argon.'
       m_i_over_m_imp_bg = central_mass/40.
   end select

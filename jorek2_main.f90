@@ -77,9 +77,13 @@ program JOREK2
 #endif
   use mpi_mod
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mod_neutral_source
 #endif
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
+#endif
+
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
@@ -261,7 +265,17 @@ required = 0
     write(*,*) 'Remark: Setting gmres=.false. since n_tor=1'
     gmres     = .false. 
   end if
+
+#if (JOREK_MODEL == 501)
+  ! --- Read ADAS data and generate coronal equilibrium is needed
+  call init_imp_adas(my_id)
+#endif
   
+  ! --- Initialize time-traces of radiation and ionization energy/power
+#if (JOREK_MODEL == 500)
+  call init_xtime_rad_ionization(my_id)
+#endif
+
   ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)
  
@@ -471,11 +485,18 @@ required = 0
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
     if ( ierr /= 0 ) stop
 
+    ! for variable time step Gears method
+    if ( index_now==1) then
+      tstep_prev = tstep
+    else
+      tstep_prev = xtime(index_start) - xtime(index_start-1)
+    end if
+
     ! --- Write live data for previous time-steps
     if ( .not. bench_without_plot ) then
       do index_now = 1, index_start
         call write_live_data(index_now)
-        call write_live_data_vacuum(index_now, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
+        call write_live_data_vacuum(index_now)
 #ifdef JECCD
         call write_live_data2(index_now)
         call write_live_data3(index_now)
@@ -730,6 +751,7 @@ required = 0
     call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()
+    call read_Z_axis_profile() 
     if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
   end if
   
@@ -956,12 +978,14 @@ required = 0
     index_now = index_now + 1
     
     tstep = tstep_n(jstep)
+    ! start from t=0 
+    if ( index_now == 1 ) tstep_prev = tstep
     
     if ( freeboundary ) call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
 
     if ( my_id == 0 ) then
       write(*,*) '******************************************************'
-      write(*,'(A17,3i7,f14.5,A)') ' *   time step : ',jstep,istep,index_now,tstep,'  *'
+      write(*,'(A17,3i7,2f14.5,A)') ' *   time step : ',jstep,istep,index_now,tstep,tstep_prev,'  *'
       write(*,*) '******************************************************'
     end if
 
@@ -1005,7 +1029,7 @@ required = 0
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
-      call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
+      call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
 
@@ -1139,12 +1163,21 @@ required = 0
         call update_spi(my_id,node_list,element_list)
       end if
 #endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+      if (using_spi .and. t_now >= t_ns) then
+        call update_spi(my_id,node_list,element_list)
+      end if
+#endif
 
 
       call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
       call update_deltas(my_id,node_list)
  
       t_now = t_now + tstep
+
+      ! save previous time step
+      tstep_prev = tstep
+
 
     else
       if ( my_id == 0 ) then
@@ -1248,7 +1281,7 @@ required = 0
     if (my_id .eq. 0 ) then
       ! --- Output energies and growth_rates to text files during the code run
       call write_live_data(index_now)
-      call write_live_data_vacuum(index_now, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
+      call write_live_data_vacuum(index_now)
 
 #ifdef JECCD
       call write_live_data2(index_now)
@@ -1483,7 +1516,7 @@ required = 0
 
     	  call density(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
     	     zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-    	  if (jorek_model .eq. 400) then	     
+    	  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) ) then	     
     	    call temperature_i(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
     	      zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
     	    call temperature_e(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &

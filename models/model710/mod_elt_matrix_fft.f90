@@ -379,7 +379,9 @@ Qvec_k    = 0.d0
 
 ! --- Implicit scheme
 theta = time_evol_theta
-zeta  = time_evol_zeta
+!zeta  = time_evol_zeta
+! change zeta for variable dt
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
 ! --- Do we need to use the FFT or non-FFT version?
 if ( (i_tor_min == 1) .and. (i_tor_max == n_tor) ) then
@@ -743,14 +745,23 @@ do i=1,n_vertex_max
           ZK_prof = get_zkperp(psi_norm)
 
           ! --- Resistivity
-          if ( eta_T_dependent ) then
-            eta_T     =   eta   * (abs(T0_corr)/T_0)**(-1.5d0)
-            deta_dT   = - eta   * 1.5d0  * abs(T0_corr)**(-2.5d0) * T_0**(1.5d0)
-            d2eta_d2T =   eta   * 3.75d0 * abs(T0_corr)**(-3.5d0) * T_0**(1.5d0)
+          if ( eta_T_dependent .and. T0_corr <= T_max_eta) then
+            eta_T     =   eta   * (T0_corr/T_0)**(-1.5d0)
+            deta_dT   = - eta   * 1.5d0  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+            d2eta_d2T =   eta   * 3.75d0 * T0_corr**(-3.5d0) * T_0**(1.5d0)
+          else if ( eta_T_dependent .and. T0_corr > T_max_eta) then
+            eta_T     = eta * (T_max_eta/T_0)**(-1.5d0)
+            deta_dT   = 0.d0
+            d2eta_d2T = 0.d0
           else
             eta_T     = eta
             deta_dT   = 0.d0
             d2eta_d2T = 0.d0
+          end if
+          if ( eta_T_dependent .and.  xpoint2 .and. (T0 .lt. T_min) ) then
+              eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
+              deta_dT   = 0.d0
+              d2eta_d2T = 0.d0
           end if
           eta_R = deta_dT * T0_R
           eta_Z = deta_dT * T0_Z
@@ -758,8 +769,12 @@ do i=1,n_vertex_max
 
           ! --- Viscosity
           if ( visco_T_dependent ) then
-            visco_T   = visco * (abs(T0_corr)/T_0)**(-1.5d0)
-            dvisco_dT = - visco * (1.5d0)  * abs(T0_corr)**(-2.5d0) * T_0**(1.5d0)
+            visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
+            dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+            if ( xpoint2 .and. (T0 .lt. T_min) ) then
+              visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+              dvisco_dT   = 0.d0
+            endif
           else
             visco_T   = visco
             dvisco_dT = 0.d0
@@ -767,15 +782,20 @@ do i=1,n_vertex_max
 
           ! --- Kpar
           if ( ZKpar_T_dependent ) then
-            ZKpar_T   = ZK_par * (abs(T0_corr)/T_0)**(+2.5d0)
-            dZKpar_dT = ZK_par * (2.5d0)  * abs(T0_corr)**(+1.5d0) * T_0**(-2.5d0)
+            ZKpar_T   = ZK_par * (T0_corr/T_0)**(+2.5d0)
+            dZKpar_dT = ZK_par * (2.5d0)  * T0_corr**(+1.5d0) * T_0**(-2.5d0)
+            if (ZKpar_T .gt. ZK_par_max) then
+              ZKpar_T   = Zk_par_max
+              dZKpar_dT = 0.d0
+            endif
+            if ( xpoint2 .and. (T0 .lt. T_min) ) then
+              ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
+              dZKpar_dT = 0.d0
+            endif
           else
             ZKpar_T   = ZK_par
             dZKpar_dT = 0.d0
           endif
-
-          ! --- F_profile
-          Fprof   = Fprofile(ms,mt)
 
           ! --- Magnetic field
           Fprof = Fprofile(ms,mt)
@@ -1213,7 +1233,7 @@ do i=1,n_vertex_max
             if (use_fft) then
               index_ij =       n_var*(n_order+1)*(i-1) +       n_var*(j-1) + 1
               do ivar= 1,n_var
-                RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar)
+                RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar) * tstep / tstep_prev
                 RHS_k_ij(ivar) = tstep * Qvec_k(ivar)
 
                 ij = index_ij + (ivar-1)
@@ -1223,7 +1243,7 @@ do i=1,n_vertex_max
             else
               index_ij = n_tor_local*n_var*(n_order+1)*(i-1) + n_tor_local*n_var*(j-1) + im - n_tor_start +1
               do ivar= 1,n_var
-                RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar)
+                RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar) * tstep / tstep_prev
                 RHS_k_ij(ivar) = tstep * Qvec_k(ivar)
 
                 ij = index_ij + (ivar-1)*n_tor_local

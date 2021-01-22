@@ -1,4 +1,4 @@
-subroutine Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure,pressure_in,pressure_out)
+subroutine integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure,pressure_in,pressure_out)
 !---------------------------------------------------------------
 !
 !---------------------------------------------------------------
@@ -235,13 +235,21 @@ do ife = ife_min, ife_max
       call density(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt),ES%psi_axis,ES%psi_bnd,eq_zne(ms,mt), &
                    dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
+#if (JOREK_MODEL == 400) || (JOREK_MODEL == 711)
+      call temperature_e(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt),ES%psi_axis,ES%psi_bnd,eq_zTe(ms,mt), &
+                       dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+#else
       call temperature(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt),ES%psi_axis,ES%psi_bnd,eq_zTe(ms,mt), &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+#endif
 
     enddo
   enddo
 
+#if (JOREK_MODEL == 400) || (JOREK_MODEL == 711)
+#else
   eq_zTe = eq_zTe / 2.d0	! electron temperature
+#endif
 !--------------------------------------------------- sum over the Gaussian integration points
 
   do mp=1,n_plane
@@ -305,7 +313,7 @@ do ife = ife_min, ife_max
 
         grad_P_psi = (dPdx * dpsidx + dPdy * dpsidy)/grad_psi
 
-#if (JOREK_MODEL == 400)
+#if (JOREK_MODEL == 400) || (JOREK_MODEL == 711)
         call sources(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, ps0, ES%psi_axis, psi_limit, &
                      particle_source,heat_source_i,heat_source_e)
 		     heat_source = heat_source_i + heat_source_e
@@ -496,8 +504,10 @@ if (my_id .eq. 0) then
   write(*,'(A,3e14.6,A)') ' source   (in/out)       : ',xt,source_in, source_out,' [10^20/m^3/s]'
   write(*,'(A,4e14.6,A)') ' Ohmic    (in/out)       : ',xt,Ohm_tot/1.d6, Ohm_in/1.d6, Ohm_out/1.d6,' [MW]'
 
+#ifndef fullmhd
   write(*,'(A,2e14.6)') ' li(3)    : ',xt, 2.d0 * mag_in/0.5  /(current_in**2 * R_geo * MU_zero)
   write(*,'(A,2e14.6)') ' betap(1) : ',xt, 4.d0 * pressure_in/1.5d0/(R_geo * current_in**2 * MU_zero)
+#endif
 
   write(*,'(A120)') 'sum ,time ,density_tot, pressure, Wkin_par, Wkin_perp, Wmag, Ohm, heating, source'
 

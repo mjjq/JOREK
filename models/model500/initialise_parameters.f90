@@ -54,12 +54,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Vpar_smoothing_coef,                                &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
+                rhon_0, rhon_1, rhon_coef,                          &
                 T_0,   T_1,   T_coef,                               &
                 FF_0,  FF_1,  FF_coef,                              &
                 ZK_par, ZK_par_max, ZK_perp, D_par, D_perp,         &
                 particlesource, heatsource, tauIC, Wdia,            &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
-                ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
+                ZK_perp_num, Dn_perp_num,                           &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
@@ -105,10 +106,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_limiter, R_limiter, Z_limiter,                    &
                 first_target_point, last_target_point,              &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                spi_tor_rot, tor_frequency,                         &
+                spi_tor_rot, tor_frequency, ZK_par_neg_thresh,      &
                 corr_neg_temp_coef, corr_neg_dens_coef,             &
-                D_prof_neg, ZK_prof_neg,                            &
+                D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
+                ne_SI_min, Te_eV_min, rn0_min,                      &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 neutral_reflection, rho_min,                        &
                 ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
@@ -118,7 +120,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
-                delta_n_convection, nimp_bg,                        &
+                delta_n_convection, nimp_bg, output_prad_phi,       &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
@@ -134,7 +136,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, eta_ohmic, centralize_harm_mat
+                pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
+                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
+                vert_FB_tact, start_VFB_ts, I_coils_max
+
 
 if (my_id .eq. 0) then
 
@@ -213,15 +218,12 @@ if (my_id .eq. 0) then
 
 endif
 
-
 keep_n0_const  = ( keep_n0_const .or. linear_run )
 ! --- Read numerical profiles for rho, T, and ff'.
 call read_num_profiles(my_id)
 
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
-
-! --- Initialize the shattered pellet position
 
 if ( my_id == 0 ) then
   if (2*PI/(n_tor*n_period) >= ns_deltaphi) then

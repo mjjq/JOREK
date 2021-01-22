@@ -85,7 +85,9 @@ logical    :: parallel_projection
 
 ! --- Time integration parameters
 theta = time_evol_theta
-zeta  = time_evol_zeta
+!zeta  = time_evol_zeta
+! change zeta for variable dt
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
 ! --- Flag to switch Mach-1 between boundary_conditions and boundary_matrix_open
 Mach1 = 0.d0
@@ -262,7 +264,7 @@ do ms=1, n_gauss
     B_dot_n = BR0 * normal(1) + BZ0 * normal(2)
     cs_direction = B_dot_n / abs(B_dot_n)
 
-    T0_corr = max(T0,1.d-12) ! should we use corrected temperature ?
+    T0_corr = max(T0,1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
     c_s = sqrt(gamma * T0_corr)
 
     ! --- Loop over nodes

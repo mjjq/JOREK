@@ -60,13 +60,14 @@ program process_hdf5_jorek
   integer, allocatable :: Xindex3D(:), Yindex3D(:),Zindex3D(:), index3D(:,:,:)
 
   ! --- VTK variables
-  integer               :: ivtk, vtk_n_cells, vtk_points_per_cell
-  integer               :: int32
-  real*4                :: float32
-  real*4,allocatable    :: vtk_xyz (:,:), vtk_scalars(:,:)
-  integer,allocatable   :: vtk_cells(:,:)
-  integer               :: etype
-  character             :: buffer*80, lf*1, str1*10, str2*10, str3*3
+  integer                 :: ivtk, vtk_n_cells, vtk_points_per_cell
+  integer(kind=C_INT8_T)  :: uint8
+  integer(kind=C_INT32_T) :: int32
+  real*4                  :: float32
+  real*4,allocatable      :: vtk_xyz (:,:), vtk_scalars(:,:)
+  integer,allocatable     :: vtk_cells(:,:)
+  integer                 :: etype
+  character               :: buffer*80, lf*1, str1*10, str2*10, str3*3
   
   ! --- Photon Emissivity Coeff (PEC) variables
   integer               :: PEC_size, PEC_index_Ne, PEC_index_Te, PEC_index, k_pec
@@ -1241,10 +1242,10 @@ program process_hdf5_jorek
     ! --- Write one file per data
     do i_data = 1,n_data
       write(filename_data_multiple,'(A11,A,A10)')'jorek_data_',trim(variable_names(i_var(i_data))),'.ascii.bin'
-      open(unit=2,file=trim(filename_data_multiple), ACTION = 'write', form="unformatted", status='replace')
+      open(unit=2,file=trim(filename_data_multiple), ACTION = 'write', form="unformatted", status='replace', access='stream')
       write(*,*) 'Now writing data file : ', trim(filename_data_multiple)
       str3 = 'VOL'    ; write(2) str3  ! for Mitsuba2 (guess this means "VOLUME")
-      int32 = 3       ; write(2) int32 ! for Mitsuba2 (File format version, currently 3)
+      uint8 = 3       ; write(2) uint8 ! for Mitsuba2 (File format version, currently 3)
       int32 = 1       ; write(2) int32 ! for Mitsuba2: [=1->float32] [=2->float16(NotSupported)] [=3->uint8(0..255)] [=4->DenseQuantized]
       int32 = nx_3D   ; write(2) int32
       int32 = ny_3D   ; write(2) int32

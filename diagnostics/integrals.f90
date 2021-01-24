@@ -193,7 +193,7 @@ do ife =1, element_list%n_elements
       ! Atomic physics parameters for Impurities
       !-------------------------------------------
 
-      select case ( trim(gas_type) )
+      select case ( trim(imp_type) )
         case('D2')
           m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
         case('Ar')
@@ -201,7 +201,7 @@ do ife =1, element_list%n_elements
         case('Ne')
           m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
         case default
-          write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
+          write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
           write(*,*) '=> We assume the gas is D2.'
           m_i_over_m_imp = central_mass/2.
       end select

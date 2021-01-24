@@ -676,7 +676,7 @@ module mod_expression
     end if
 
 #if JOREK_MODEL == 501
-     select case ( trim(gas_type) )
+     select case ( trim(imp_type) )
        case('D2')
          m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
        case('Ar')
@@ -684,7 +684,7 @@ module mod_expression
        case('Ne')
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u 
        case default
-         write(*,*) 'ERROR: Unknown gas_type.'
+         write(*,*) 'ERROR: Unknown imp_type.'
          stop
      end select
 #endif

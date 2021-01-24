@@ -206,7 +206,6 @@ if (my_id .eq. 0) then
   call MPI_PACK(JET_MGI,                1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ASDEX_MGI,              1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
-  call MPI_PACK(gas_type,             80,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(adas_dir,            512,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(L_tube,                 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -778,7 +777,6 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,JET_MGI,                1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ASDEX_MGI,              1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
 
-  call MPI_UNPACK(buffer,bufsize,position,gas_type,              80,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,adas_dir,             512,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,L_tube,                 1,MPI_REAL8,MPI_COMM_WORLD,ierr)

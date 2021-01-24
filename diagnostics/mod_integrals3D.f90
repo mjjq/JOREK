@@ -296,14 +296,14 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
 #endif
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
-!$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas,                        &
+!$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type,              &
 #endif
 #if (JOREK_MODEL == 501)
-!$omp          local_E_ion, gas_type,                                                          &
+!$omp          local_E_ion,                                                                    &
 !$omp          T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,                                 &
 #endif
 #if (JOREK_MODEL == 500)
-!$omp          nimp_bg, local_E_ion, ksi_ion, GAMMA, imp_type,                                 &
+!$omp          nimp_bg, local_E_ion, ksi_ion, GAMMA,                                           &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -681,7 +681,7 @@ do ife = ife_min, ife_max
         ! Atomic physics parameters for Impurities
         !-------------------------------------------
 
-        select case ( trim(gas_type) )
+        select case ( trim(imp_type) )
           case('D2')
             m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
           case('Ar')
@@ -689,7 +689,7 @@ do ife = ife_min, ife_max
           case('Ne')
             m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
           case default
-            write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
+            write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
             write(*,*) '=> We assume the gas is D2.'
             m_i_over_m_imp = central_mass/2.
         end select

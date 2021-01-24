@@ -443,7 +443,6 @@ subroutine preset_parameters
   D_neutral_p = 1.d-5
   delta_n_convection = 0
   nimp_bg = 0.
-  imp_type = ''
   n_adas = 0
   adas_dir = ''
   !====== JET DMV-2 parameters
@@ -474,7 +473,7 @@ subroutine preset_parameters
 
   n_adas          = 0
   adas_dir        = ''
-  gas_type        = ''
+  imp_type        = ''
   output_prad_phi = .false.
 
 !======================JP ECCD injection parameters

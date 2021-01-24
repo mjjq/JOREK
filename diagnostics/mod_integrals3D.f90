@@ -636,12 +636,16 @@ do ife = ife_min, ife_max
     case('Ne')
       m_i_over_m_imp_bg = central_mass/20.  ! Neon mass = 20 u
     case('W')
-      m_i_over_m_imp_bg = central_mass/184. ! Tungsten mass = 184 u
+      m_i_over_m_imp_bg = central_mass/184.  ! Tungsten mass = 184 u
     case default
-      write(*,*) '!! Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90) !!'
-      write(*,*) '=> We assume the impurity is argon.'
-      m_i_over_m_imp_bg = central_mass/40.
-  end select
+      if (nimp_bg > nimp_bg_min) then
+        write(*,*) 'Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90), terminating.'
+        m_i_over_m_imp_bg = central_mass/40.
+        stop
+      else
+        m_i_over_m_imp_bg = central_mass/40.
+      end if 
+    end select  
 
   ! Use radiation coefficients from ADAS
   if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > nimp_bg_min) then

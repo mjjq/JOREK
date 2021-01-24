@@ -1417,9 +1417,13 @@ module mod_expression
       case('W')
         m_i_over_m_imp_bg = central_mass/184. ! Tungsten mass = 184 u
       case default
-        write(*,*) '!! Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90) !!'
-        write(*,*) '=> We assume the impurity is argon.'
-        m_i_over_m_imp_bg = central_mass/40.
+        if (nimp_bg > nimp_bg_min) then
+          write(*,*) 'Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90), terminating.'
+          m_i_over_m_imp_bg = central_mass/40.
+          stop
+        else
+          m_i_over_m_imp_bg = central_mass/40.
+        end if 
     end select      
 
     ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:

@@ -64,7 +64,7 @@ program process_hdf5_jorek
   integer(kind=C_INT8_T)  :: uint8
   integer(kind=C_INT32_T) :: int32
   real*4                  :: float32
-  real*4,allocatable      :: vtk_xyz (:,:), vtk_scalars(:,:)
+  real*4,allocatable      :: vtk_xyz (:,:), vtk_scalars(:,:), vtk_scalars3D(:,:,:,:)
   integer,allocatable     :: vtk_cells(:,:)
   integer                 :: etype
   character               :: buffer*80, lf*1, str1*10, str2*10, str3*3
@@ -1233,10 +1233,10 @@ program process_hdf5_jorek
   ! --- Write data-file
   if ( (my_id .eq. 0) .and. (bin_data) ) then
     ! --- Copy data in usable format
-    allocate(vtk_scalars(n_data,ny_pix))
+    allocate(vtk_scalars3D(n_data,nx_3D,ny_3D,nz_3D))
     do i=1,ny_pix
       do i_data=1,n_data
-        vtk_scalars(i_data,i) = my_var(1,i,1,i_data)
+        vtk_scalars3D(i_data,Xindex3D(i),Yindex3D(i),Zindex3D(i)) = my_var(1,i,1,i_data)
       enddo
     enddo
     ! --- Write one file per data
@@ -1257,7 +1257,6 @@ program process_hdf5_jorek
       float32 = Xpix_max ; write(2) float32
       float32 = Ypix_max ; write(2) float32
       float32 = Zpix_max ; write(2) float32
-      ny_pix = 0
       do k = 1,nz_3D
         progress = 1.d2 * float(k-1) / float(nz_3D)
         progress = max(0.d0,progress)
@@ -1265,14 +1264,13 @@ program process_hdf5_jorek
         write(*,"(' Processing  ... ',I0,'%',A,$)") int(progress),CHAR(13)
         do j = 1,ny_3D
           do i = 1,nx_3D
-            ny_pix = ny_pix + 1
-            write(2) vtk_scalars(i_data,ny_pix)
+            write(2) vtk_scalars3D(i_data,i,j,k)
           enddo
         enddo
       enddo
       close(2)
     enddo
-    deallocate(vtk_scalars)
+    deallocate(vtk_scalars3D)
   endif ! my_id=0
 
   !***********************************************************************

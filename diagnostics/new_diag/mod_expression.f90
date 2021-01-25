@@ -1417,7 +1417,7 @@ module mod_expression
       case('W')
         m_i_over_m_imp_bg = central_mass/184. ! Tungsten mass = 184 u
       case default
-        if (nimp_bg > nimp_bg_min) then
+        if (nimp_bg > 0) then
           write(*,*) 'Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90), terminating.'
           m_i_over_m_imp_bg = central_mass/40.
           stop
@@ -1430,7 +1430,7 @@ module mod_expression
     coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                    *(central_density*1.d20)**2.5d0*m_i_over_m_imp_bg
 
-    if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > nimp_bg_min) then
+    if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
       Lrad_imp = 0.0
       call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad_imp)         
       if (Lrad_imp < 0.) then

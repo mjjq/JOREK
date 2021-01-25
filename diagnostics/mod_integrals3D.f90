@@ -279,7 +279,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
 !$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0, T_min,             &
-!$omp          ne_SI_min, Te_eV_min, nimp_bg_min, rn0_min,                                     &
+!$omp          ne_SI_min, Te_eV_min, rn0_min,                                                  &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
@@ -638,7 +638,7 @@ do ife = ife_min, ife_max
     case('W')
       m_i_over_m_imp_bg = central_mass/184.  ! Tungsten mass = 184 u
     case default
-      if (nimp_bg > nimp_bg_min) then
+      if (nimp_bg > 0) then
         write(*,*) 'Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90), terminating.'
         m_i_over_m_imp_bg = central_mass/40.
         stop
@@ -648,7 +648,7 @@ do ife = ife_min, ife_max
     end select  
 
   ! Use radiation coefficients from ADAS
-  if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > nimp_bg_min) then
+  if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > 0) then
     Lrad_imp = 0.0
     call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
     if (Lrad_imp < 0.) Lrad_imp = 0.

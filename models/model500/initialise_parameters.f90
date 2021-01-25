@@ -110,7 +110,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 corr_neg_temp_coef, corr_neg_dens_coef,             &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
-                ne_SI_min, Te_eV_min, nimp_bg_min, rn0_min,         &
+                ne_SI_min, Te_eV_min, rn0_min,                      &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 neutral_reflection, rho_min,                        &
                 ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &

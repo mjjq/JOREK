@@ -231,8 +231,6 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,INTG_FMT) 'nstep_n               ', nstep_n
   write(*,LOGI_FMT) 'eta_T_dependent       ', eta_T_dependent
   write(*,REAL_FMT) 'eta                   ', eta
-  write(*,REAL_FMT) 'T_max_eta             ', T_max_eta
-  write(*,REAL_FMT) 'T_max_eta_ohm         ', T_max_eta_ohm
   write(*,REAL_FMT) 'eta_ohmic             ', eta_ohmic
   write(*,REAL_FMT) 'T_max_eta             ', T_max_eta
   write(*,REAL_FMT) 'T_max_eta_ohm         ', T_max_eta_ohm  
@@ -461,8 +459,6 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
   write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
   write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
-  write(*,LOGI_FMT) 'eta_num_T_dependent   ', eta_num_T_dependent 
-  write(*,LOGI_FMT) 'visco_num_T_dependent ', visco_num_T_dependent
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
   write(*,LOGI_FMT) 'keep_current_prof     ', keep_current_prof
   write(*,LOGI_FMT) 'linear_run            ', linear_run

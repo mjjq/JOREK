@@ -593,11 +593,7 @@ do ife = ife_min, ife_max
                      + F0 * zj0 * u0_p / (BigR**2.d0)
         vpar_disp  = visco_par * (F0/BigR)**2.d0 * (vpar_x**2.d0+vpar_y**2.d0 ) 
 
-<<<<<<< HEAD
-#if (JOREK_MODEL == 400) || (JOREK_MODEL == 401)
-=======
-#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
->>>>>>> develop
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 401) || (JOREK_MODEL == 711) )
         call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_bnd, &
                      particle_source,heat_source_i,heat_source_e)
 		     heat_source = heat_source_i + heat_source_e

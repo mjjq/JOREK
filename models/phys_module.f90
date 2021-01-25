@@ -20,8 +20,6 @@ module phys_module
   real*8  :: visco_rst            !< visco value from restart file
   real*8  :: visco_par_rst        !< visco_par value from restart file
   real*8  :: eta_rst              !< eta value from restart file
-  logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature? Otherwise constant.
-  logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature? Otherwise constant.
   logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
   real*8  :: visco_par            !< Parallel viscosity (normalized)
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
@@ -180,12 +178,11 @@ module phys_module
   real*8  :: heatsource_gauss_i        !< Gaussiam heat source for ions
   real*8  :: heatsource_gauss_psin     !< Position around which Gaussian source is located
   real*8  :: heatsource_gauss_sig      !< Width over which Gaussian source extends
-  real*8  :: heatsource_gauss_i        !< Additional Gaussian heat source amplitude
-  real*8  :: heatsource_gauss_e        !< Additional Gaussian heat source amplitude
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num
-  logical :: eta_num_T_dependent, visco_num_T_dependent  
+  logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature? Otherwise constant.
+  logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature? Otherwise constant.
   
   !> @name Timestepping parameters
   real*8  :: tstep             		!< Size of the timesteps (\f$ \Delta t \f$)

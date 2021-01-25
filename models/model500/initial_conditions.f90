@@ -74,13 +74,13 @@ if (my_id .eq. 0) then
                                     + dn_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(1,3,2)      
 
     node_list%node(i)%values(1,1,var_rhon) = zrn
-    node_list%node(i)%values(1,2,var_rhon) = drn_dpsi    * node_list%node(i)%values(1,2,var_psi) + drn_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,var_rhon) = drn_dpsi    * node_list%node(i)%values(1,3,var_psi) + drn_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,var_rhon) = drn_dpsi    * node_list%node(i)%values(1,4,var_psi) + drn_dz * node_list%node(i)%x(4,2) &
+    node_list%node(i)%values(1,2,var_rhon) = drn_dpsi    * node_list%node(i)%values(1,2,var_psi) + drn_dz * node_list%node(i)%x(1,2,2)
+    node_list%node(i)%values(1,3,var_rhon) = drn_dpsi    * node_list%node(i)%values(1,3,var_psi) + drn_dz * node_list%node(i)%x(1,3,2)
+    node_list%node(i)%values(1,4,var_rhon) = drn_dpsi    * node_list%node(i)%values(1,4,var_psi) + drn_dz * node_list%node(i)%x(1,4,2) &
                                     + drn_dpsi2   * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%values(1,3,var_psi)  &
-                                    + drn_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
-                                    + drn_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(2,2)         &
-                                    + drn_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(3,2)
+                                    + drn_dz2     * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)         &
+                                    + drn_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(1,2,2)         &
+                                    + drn_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(1,3,2)
 
     node_list%node(i)%values(1,1,var_T) = zT
     node_list%node(i)%values(1,2,var_T) = dT_dpsi    * node_list%node(i)%values(1,2,var_psi) + dT_dz * node_list%node(i)%x(1,2,2)

@@ -28,6 +28,9 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
+  eta_num_T_dependent   = .false.
+  visco_num_T_dependent = .false.
+
   eta           = 1.d-5
   T_max_eta     = 1.d3
   eta_ohmic     = 0.d0
@@ -177,11 +180,20 @@ subroutine preset_parameters
   ZK_par_max   = 1.d20
   D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par        = 0.d0
-  
+  D_perp_imp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  D_par_imp        = 0.d0
+
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
   ZK_prof_neg        = 1.d-5
+  ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+  ZK_par_neg_thresh  = 0.d0
+
+  ne_SI_min          = 1.d18
+  Te_eV_min          = 5.
+  rn0_min            = 1.d-8
+
   T_min              =-1.0d20
   rho_min            =-1.0d20
   
@@ -268,6 +280,7 @@ subroutine preset_parameters
   pellet_velocity_Z = 0.d0
   pellet_particles  = 0.d0
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
+  pellet_density_bg = 3.d8
   use_pellet        = .false.
   
   t_now       = 0.d0
@@ -292,6 +305,7 @@ subroutine preset_parameters
   Fprofile_file      = 'none'
   ffprime_file       = 'none'
   d_perp_file        = 'none'
+  d_perp_imp_file    = 'none'
   zk_perp_file       = 'none'
   zk_e_perp_file     = 'none'
   zk_i_perp_file     = 'none'
@@ -430,15 +444,17 @@ subroutine preset_parameters
   delta_n_convection = 0
   nimp_bg = 0.
   !====== JET DMV-2 parameters
-  L_tube = 2.d0
+  L_tube = 2.4d0
   K_Dmv = 4.d-2
   A_Dmv = 1.77d-2
+  V_Dmv = 9.75d-4
   t_ns  = 2.d3
   !======= Additional parameters for SPI =======
   spi_Vel_Rref    = 0.0d0
   spi_Vel_Zref    = 0.0d0
   spi_Vel_RxZref  = 0.0d0
   spi_quantity    = 0.0
+  spi_quantity_bg = 0.0
   ng_radius_ratio = 1.4d0
   ng_radius_min   = 8.d-2
   spi_Vel_diff    = 0.0
@@ -453,6 +469,9 @@ subroutine preset_parameters
   spi_tor_rot     = .false.
   using_spi       = .false.
 
+  n_adas          = 0
+  adas_dir        = ''
+  gas_type        = ''
   output_prad_phi = .false.
 
 !======================JP ECCD injection parameters

@@ -494,6 +494,6 @@ subroutine preset_parameters
 
 !===================== Thermalization flag========
 
-  thermalization = .true.
+  thermalization = .false.
 
 end subroutine preset_parameters

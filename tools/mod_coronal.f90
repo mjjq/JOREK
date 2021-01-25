@@ -191,12 +191,11 @@ end function coronal_equilibrium
 !> Linear interpolation of coronal model charge at specific density and temperature
 
 subroutine interpolate_coronal(cor, density, temperature, p_out, p_Te_out, &
-                               z_eff,z_avg, z_avg_Te, z_avg_TeTe, rad_out, rad_Te_out)
+                               z_avg, z_avg_Te, z_avg_TeTe, rad_out, rad_Te_out)
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 real*8, intent(in)              :: density !< log10 density (m^-3)
 real*8, intent(in)              :: temperature !< log10 temperature (K)
 real*8, intent(out), optional, dimension(0:cor%n_Z) :: p_out, p_Te_out !< distribution of charge states (sum = 1)
-real*8, intent(out), optional   :: z_eff !< effective charge according to coronal equilibrium
 real*8, intent(out), optional   :: z_avg, z_avg_Te, z_avg_TeTe !< Average charge according to coronal equilibrium and its derivatives
 real*8, intent(out), optional   :: rad_out, rad_Te_out !< radiated power according to coronal equilibrium and its derivatives
 
@@ -209,13 +208,6 @@ dp_dT = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z_1T(:,:,:),density
 
 if (present(p_out)) p_out = p
 if (present(p_Te_out)) p_Te_out = dp_dT
-if (present(z_eff)) then
-  do iz=0,cor%n_Z
-    Z(iz) = real(iz,8)
-    if (p(iz)<0.d0) p(iz)=0.d0
-  enddo
-  z_eff = dot_product(p/sum(p),Z)
-endif 
 if (present(z_avg)) then
   z_avg = L2Dinterp(cor%density,cor%temperature,cor%Z_avg_CE(:,:),density,temperature)
 endif

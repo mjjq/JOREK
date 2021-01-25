@@ -528,11 +528,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
                         
                           tmp_rhs = thread_struct(omp_tid)%RHS(index_ij)
                         
-<<<<<<< HEAD
-#if (JOREK_MODEL == 400) || (JOREK_MODEL == 401)
-=======
-#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
->>>>>>> develop
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 401) || (JOREK_MODEL == 711) )
                           !--- RHS: for model400, add T_e (v1=8) to T_i (v1=6)
                           if (v1 == var_Ti) tmp_rhs = tmp_rhs + thread_struct(omp_tid)%RHS(index_ij_model400_e)
 #endif
@@ -552,13 +548,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
                         ! --- for model400, when v1==6, add the ELM(v1=8, v2) contribution to ELM(v1=6, v2), for both tmp_elm and tmp_elm_v2_8
 
-<<<<<<< HEAD
-#if (JOREK_MODEL == 400) || (JOREK_MODEL == 401)
-                        if (v2 == 6 ) then
-=======
-#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 401) || (JOREK_MODEL == 711) )
                         if (v2 == var_Ti ) then
->>>>>>> develop
                           tmp_elm_v2_8 = thread_struct(omp_tid)%ELM(index_ij, index_kl_model400_e) 
                           if (v1 == var_Ti) then
                             tmp_elm_v2_8 = tmp_elm_v2_8 + thread_struct(omp_tid)%ELM(index_ij_model400_e, index_kl_model400_e) 
@@ -800,3 +791,4 @@ end subroutine decrypt_index
 
 
 end module construct_matrix_mod
+`

@@ -192,7 +192,7 @@ subroutine preset_parameters
 
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.
-  nimp_bg_min        = 1.d14
+  nimp_bg_min        = 1.d-3
   rn0_min            = 1.d-8
   T_min              =-1.0d20
   rho_min            =-1.0d20

@@ -3,10 +3,11 @@ module strumpack_module
      
   use iso_c_binding
   use mpi
+  use mod_integer_types
 
   implicit none
   type(C_PTR) :: spss ! STRUMPACK sparse solver
-  integer(kind=C_INT), dimension(:), pointer :: dist  ! row distribution
+  integer(kind=C_INT_ALL), dimension(:), pointer :: dist  ! row distribution
   logical :: spss_initialized, spss_analyzed
 
   private
@@ -31,11 +32,12 @@ module strumpack_module
     subroutine spk_set_mat(n,dist,irn,jcn,val,spss,comm,upd) bind(C)
       use iso_c_binding
       use mpi            
+      use mod_integer_types
       implicit none
       
-      integer(kind=C_INT), dimension(:), pointer, intent(in) :: irn,jcn,dist
+      integer(kind=C_INT_ALL), dimension(:), pointer, intent(in) :: irn,jcn,dist
       real(kind=C_DOUBLE), dimension(:), pointer, intent(in) :: val
-      integer(kind=C_INT), intent(in) :: n
+      integer(kind=C_INT_ALL), intent(in) :: n
       integer, intent(in) :: comm
       type(c_ptr), intent(inout) :: spss
       logical :: upd
@@ -62,10 +64,11 @@ module strumpack_module
     subroutine spk_solve(n,dist,rhsc,spss,comm) bind(C)
       use iso_c_binding
       use mpi            
+      use mod_integer_types
       implicit none
       
-      integer(kind=C_INT), intent(in) :: n
-      integer(kind=C_INT), dimension(:), pointer, intent(in) :: dist
+      integer(kind=C_INT_ALL), intent(in) :: n
+      integer(kind=C_INT_ALL), dimension(:), pointer, intent(in) :: dist
       type(c_ptr), intent(inout) :: spss, rhsc      
       integer, intent(in) :: comm
     end subroutine spk_solve    
@@ -81,11 +84,13 @@ module strumpack_module
 
     subroutine convert2csr(indx, n, m, nnz, irn, jcn, val) bind(C)
       use iso_c_binding
+      use mod_integer_types
       implicit none
-      integer(kind=C_INT), dimension(:), pointer, intent(in) :: irn,jcn
+      integer(kind=C_INT_ALL), dimension(:), pointer, intent(in) :: irn,jcn
       real(kind=C_DOUBLE), dimension(:), pointer, intent(in) :: val
-      integer(kind=C_INT), intent(in) :: n, m, indx
-      integer(kind=C_INT), intent(inout) :: nnz       
+      integer(kind=C_INT), intent(in) :: indx
+      integer(kind=C_INT_ALL), intent(in) :: n, m
+      integer(kind=C_INT_ALL), intent(inout) :: nnz       
     end subroutine convert2csr
 
   end interface
@@ -108,20 +113,22 @@ module strumpack_module
         use, intrinsic :: iso_c_binding
         use mpi
         use sorting_module, only : remove_duplicates
+        use mod_integer_types
 
         implicit none
 
         integer comm,ierr
-        integer(kind=C_INT), dimension(:), pointer :: irn, jcn, irnl, jcnl
+        integer(kind=C_INT_ALL), dimension(:), pointer :: irn, jcn, irnl, jcnl
         real(kind=C_DOUBLE),  dimension(:), pointer :: val, vall
-        integer(kind=C_INT), intent(in) :: n
-        integer(kind=C_INT), intent(inout) :: nnz 
+        integer(kind=C_INT_ALL), intent(in) :: n
+        integer(kind=C_INT_ALL), intent(inout) :: nnz 
         logical,intent(in),optional :: update, distributed
 
-        integer(kind=C_INT), dimension(:), pointer :: myelm
+        integer(kind=C_INT_ALL), dimension(:), pointer :: myelm
         logical :: upd=.false., dflag=.false.
         
-        integer :: rank, ncpu, nnzloc, nloc, i, j, indx=1
+        integer :: rank, ncpu, indx=1
+        integer(kind=int_all) :: nnzloc, nloc, i, j
 
         if(present(update)) upd = update
         if(present(distributed)) dflag = distributed
@@ -158,7 +165,7 @@ module strumpack_module
             vall(i) = val(myelm(i))
           enddo
           dist(:) = dist(:) - indx ! convert ot c-indexing
-#ifdef NOMKL
+#if (defined(NOMKL)) || (defined(INTSIZE64))
           call remove_duplicates(n,nnzloc,irnl,jcnl,vall)
 #endif
           call convert2csr(indx,nloc,n,nnzloc,irnl,jcnl,vall)
@@ -191,7 +198,7 @@ module strumpack_module
           nloc = dist(rank+2) - dist(rank+1)
           irn(:) = irn(:) - dist(rank+1) + 1 ! irn starts from 1
           dist(:) = dist(:) - indx
-#ifdef NOMKL
+#if (defined(NOMKL)) || (defined(INTSIZE64))
           call remove_duplicates(n,nnz,irn,jcn,val)
 #endif
           call convert2csr(indx,nloc,n,nnz,irn,jcn,val)          
@@ -201,7 +208,7 @@ module strumpack_module
           ! case of ncpu = 1
           call distribute_rows(n,1)
           dist(:) = dist(:) - indx
-#ifdef NOMKL
+#if (defined(NOMKL)) || (defined(INTSIZE64))
           call remove_duplicates(n,nnz,irn,jcn,val)
 #endif
           call convert2csr(indx,n,n,nnz,irn,jcn,val)
@@ -243,10 +250,11 @@ module strumpack_module
     subroutine strumpack_solve(n,rhs,comm) bind(C)
         use, intrinsic :: iso_c_binding
         use mpi
+        use mod_integer_types
         implicit none
 
         real(kind=C_DOUBLE),  dimension(:), pointer :: rhs        
-        integer(kind=C_INT), intent(in) :: n
+        integer(kind=C_INT_ALL), intent(in) :: n
         integer, intent(in) :: comm 
         
         integer :: rank, ncpu, ierr, nloc
@@ -281,10 +289,12 @@ module strumpack_module
 
         use, intrinsic :: iso_c_binding
         use mpi
+        use mod_integer_types
         implicit none
 
-        integer, intent(in) :: n, ncpu
-        integer(kind=C_INT), dimension(:), allocatable :: nl
+        integer, intent(in) :: ncpu
+        integer(kind=int_all), intent(in) :: n
+        integer(kind=C_INT_ALL), dimension(:), allocatable :: nl
         integer :: ierr, i
 
         if (associated(dist)) dist=>null()

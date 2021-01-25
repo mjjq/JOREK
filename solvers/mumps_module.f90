@@ -5,7 +5,11 @@ module mumps_module
 #ifdef USE_MUMPS
   include 'dmumps_struc.h'        ! MUMPS include files defining its datastructure
 #else
+#ifdef INTSIZE64
+  include 'no_dmumps_struct_int64.h'
+#else
   include 'no_dmumps_struct.h'
+#endif
 #endif
   
   type (DMUMPS_STRUC) :: mumps_par

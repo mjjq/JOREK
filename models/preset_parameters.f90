@@ -28,6 +28,9 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
+  eta_num_T_dependent   = .false.
+  visco_num_T_dependent = .false.
+
   eta           = 1.d-5
   T_max_eta     = 1.d3
   eta_ohmic     = 0.d0
@@ -63,6 +66,8 @@ subroutine preset_parameters
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
   
+  deuterium_adas        = .false. 
+  old_deuterium_atomic  = .false. 
   mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
   Vpar_smoothing        = .false. ! smooth the transitions of Vpar positive/negavtive at B.n
   Vpar_smoothing_coef   = (/0.01d0, 0.d0, 0.d0 /) !(/ 0.01d0, 0.016d0, 0.00575446347d0/)
@@ -175,11 +180,20 @@ subroutine preset_parameters
   ZK_par_max   = 1.d20
   D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par        = 0.d0
-  
+  D_perp_imp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  D_par_imp        = 0.d0
+
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
   ZK_prof_neg        = 1.d-5
+  ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+  ZK_par_neg_thresh  = 0.d0
+
+  ne_SI_min          = 1.d18
+  Te_eV_min          = 5.
+  rn0_min            = 1.d-8
+
   T_min              =-1.0d20
   rho_min            =-1.0d20
   
@@ -247,6 +261,12 @@ subroutine preset_parameters
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
 
+  rhon_0 =  0.d0
+  rhon_1 =  0.d0
+  rhon_coef    = 0.d0
+  rhon_coef(4) = 0.01
+  rhon_coef(8) = 0.01
+
   pellet_amplitude  = 0.d0
   pellet_R          = 3.8d0
   pellet_Z          = 0.0d0
@@ -262,6 +282,7 @@ subroutine preset_parameters
   pellet_velocity_Z = 0.d0
   pellet_particles  = 0.d0
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
+  pellet_density_bg = 3.d8
   use_pellet        = .false.
   
   t_now       = 0.d0
@@ -286,6 +307,7 @@ subroutine preset_parameters
   Fprofile_file      = 'none'
   ffprime_file       = 'none'
   d_perp_file        = 'none'
+  d_perp_imp_file    = 'none'
   zk_perp_file       = 'none'
   zk_e_perp_file     = 'none'
   zk_i_perp_file     = 'none'
@@ -350,8 +372,10 @@ subroutine preset_parameters
   
   equil              = .true.               ! compute equilibrium
   
-  parallel_projection= .true.               ! Full-MHD: use B-projection instead of Phi-projection for 3rd Mom.equation (on Up)
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+
+  eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
+  tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
 
   fix_axis_nodes     = .false.              !< Fix t-derivative on axis to avoid noise)
   
@@ -422,15 +446,17 @@ subroutine preset_parameters
   delta_n_convection = 0
   nimp_bg = 0.
   !====== JET DMV-2 parameters
-  L_tube = 2.d0
+  L_tube = 2.4d0
   K_Dmv = 4.d-2
   A_Dmv = 1.77d-2
+  V_Dmv = 9.75d-4
   t_ns  = 2.d3
   !======= Additional parameters for SPI =======
   spi_Vel_Rref    = 0.0d0
   spi_Vel_Zref    = 0.0d0
   spi_Vel_RxZref  = 0.0d0
   spi_quantity    = 0.0
+  spi_quantity_bg = 0.0
   ng_radius_ratio = 1.4d0
   ng_radius_min   = 8.d-2
   spi_Vel_diff    = 0.0
@@ -444,6 +470,11 @@ subroutine preset_parameters
   spi_shard_file  = 'none'
   spi_tor_rot     = .false.
   using_spi       = .false.
+
+  n_adas          = 0
+  adas_dir        = ''
+  gas_type        = ''
+  output_prad_phi = .false.
 
 !======================JP ECCD injection parameters
   nu_jec_fast=1.d1

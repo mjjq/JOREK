@@ -460,7 +460,6 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'visco_par_num         ', visco_par_num
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
   write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
-  write(*,REAL_FMT) 'rho_min               ', rho_min
   write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
   write(*,LOGI_FMT) 'eta_num_T_dependent   ', eta_num_T_dependent 
   write(*,LOGI_FMT) 'visco_num_T_dependent ', visco_num_T_dependent
@@ -474,7 +473,6 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_par_neg_thresh     ', ZK_par_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
-  write(*,REAL_FMT) 'rho_min               ', rho_min
   write(*,REAL_FMT) 'ne_SI_min             ', ne_SI_min
   write(*,REAL_FMT) 'Te_eV_min             ', Te_eV_min
   write(*,REAL_FMT) 'rn0_min               ', rn0_min

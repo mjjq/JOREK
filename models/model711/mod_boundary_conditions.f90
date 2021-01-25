@@ -359,7 +359,7 @@ contains
                   
                   endif
                 else
-                  if (.not. bc_natural_open) then
+                  if ( (.not. bc_natural_open) .and. (.not. no_mach1_bc) ) then
                     write(*,*)'*** MODEL710 WARNING ***'
                     write(*,*)'*** YOU ARE NOT USING ANY DIVERTOR BOUNDARY CONDITIONS!!!'
                     write(*,*)'*** YOU NEED TO USE EITHER Mach1_openBC=.f. OR bc_natural_open=.t.'

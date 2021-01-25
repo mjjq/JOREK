@@ -316,7 +316,7 @@ do ife = ife_min, ife_max
 #if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 401) || (JOREK_MODEL == 711) )
         call sources(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, ps0, ES%psi_axis, psi_limit, &
                      particle_source,heat_source_i,heat_source_e)
-		     heat_source = heat_source_i + heat_source_e
+        heat_source = heat_source_i + heat_source_e
 #else
         call sources(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, ps0, ES%psi_axis, psi_limit, &
                      particle_source,heat_source)

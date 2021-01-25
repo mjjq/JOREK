@@ -262,7 +262,7 @@ do ife =1, element_list%n_elements
 #if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 401) || (JOREK_MODEL == 711) )
         call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(var_psi,ms,mt), psi_axis, &
           psi_limit, part_src, heat_src_i, heat_src_e)
-          heat_src = heat_src_i + heat_src_e
+        heat_src = heat_src_i + heat_src_e
 #else
         call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(var_psi,ms,mt), psi_axis, &
           psi_limit, part_src, heat_src)

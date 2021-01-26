@@ -13,8 +13,11 @@ use domains
 use corr_neg
 use equil_info, only : get_psi_n, ES
 !$ use omp_lib
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
   use mod_neutral_source
+#endif
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  use mod_injection_source
 #endif
 
 implicit none

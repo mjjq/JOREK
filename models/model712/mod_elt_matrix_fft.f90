@@ -873,20 +873,23 @@ do i=1,n_vertex_max
 
             !Calculating the density and temperature derivative for amats
             !We negelect the coulomb log's dericatives due to their smallness
+            ! IMPORTANT NOTE: in full-MHD these derivatives are very unstable for some reason
+            !                 this may be for the same reason that correction functions cannot be used for
+            !                 the density and temperatures. Will need to be investigated in the future
 
-            dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
-            dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
-                              / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+            dnu_e_bg_dTi    = 0.d0!-1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+            dnu_e_bg_dTe    = 0.d0!-1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
+                                  !/ (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
 
-            dnu_e_bg_drho   = nu_e_bg * drho0_corr_dn / rho0_corr
+            dnu_e_bg_drho   = 0.d0!nu_e_bg * drho0_corr_dn / rho0_corr
 
-            ddTe_i_dTi      = dnu_e_bg_dTi  * (Ti0_corr - Te0_corr) + nu_e_bg
-            ddTe_i_dTe      = dnu_e_bg_dTe  * (Ti0_corr - Te0_corr) - nu_e_bg
-            ddTe_i_drho     = dnu_e_bg_drho * (Ti0_corr - Te0_corr)
+            ddTe_i_dTi      = 0.d0!dnu_e_bg_dTi  * (Ti0_corr - Te0_corr) + nu_e_bg
+            ddTe_i_dTe      = 0.d0!dnu_e_bg_dTe  * (Ti0_corr - Te0_corr) - nu_e_bg
+            ddTe_i_drho     = 0.d0!dnu_e_bg_drho * (Ti0_corr - Te0_corr)
 
-            ddTi_e_dTi      = -ddTe_i_dTi
-            ddTi_e_dTe      = -ddTe_i_dTe
-            ddTi_e_drho     = -ddTe_i_drho
+            ddTi_e_dTi      = 0.d0!-ddTe_i_dTi
+            ddTi_e_dTe      = 0.d0!-ddTe_i_dTe
+            ddTi_e_drho     = 0.d0!-ddTe_i_drho
           else
             dTe_i       = 0.d0
             dTi_e       = 0.d0

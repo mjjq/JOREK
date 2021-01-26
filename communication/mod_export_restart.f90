@@ -248,9 +248,9 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   integer            :: ind, ierr
 
   ! type_node, node_list%n_nodes
-  real(RKIND), allocatable :: t_x(:,:,:,:)                 ! n_tor, n_order+1, n_dim
-  real(RKIND), allocatable :: t_values(:,:,:,:)            ! n_tor, n_order+1, n_var
-  real(RKIND), allocatable :: t_deltas(:,:,:,:)            ! n_tor, n_order+1, n_var
+  real(RKIND), allocatable :: t_x(:,:,:,:)                 ! n_tor_coord, n_order+1, n_dim
+  real(RKIND), allocatable :: t_values(:,:,:,:)            !       n_tor, n_order+1, n_var
+  real(RKIND), allocatable :: t_deltas(:,:,:,:)            !       n_tor, n_order+1, n_var
 
   real(RKIND), allocatable :: t_psi_eq(:,:)                ! n_order+1
   real(RKIND), allocatable :: t_Fprof_eq(:,:)              ! n_order+1
@@ -298,8 +298,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 #endif
 
   ! type_node, node_list%n_nodes
-  call tr_allocate(t_x,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_dim, &
-       "node_list%x",CAT_UNKNOWN)
+  call tr_allocate(t_x,1,node_list%n_nodes,1,n_tor_coord,1,n_order+1,1,n_dim, &
+      "node_list%x",CAT_UNKNOWN)
   call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_var, &
        "node_list%values",CAT_UNKNOWN)
   call tr_allocate(t_deltas,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_var, &
@@ -434,6 +434,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0))
   call HDF5_integer_saving(file_id,n_order,'n_order'//char(0))
   call HDF5_integer_saving(file_id,n_tor,'n_tor'//char(0))
+  call HDF5_integer_saving(file_id,n_tor_coord,'n_tor_coord'//char(0))
   call HDF5_integer_saving(file_id,n_period,'n_period'//char(0))
   call HDF5_integer_saving(file_id,n_plane,'n_plane'//char(0))
   call HDF5_integer_saving(file_id,n_vertex_max,'n_vertex_max'//char(0))

@@ -1004,7 +1004,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   if (rst_hdf5_version .eq. 2) then
     call HDF5_array4D_reading(file_id,t_x,        'x')
   else
-    if (n_coord_tor .ne. 1) write(*,*) "The value of n_coord_tor must be 1 for a 3D array..."; stop
     call HDF5_array3D_reading(file_id,t_x(:,1,:,:),        'x')
   endif
   call HDF5_array4D_reading(file_id,t_values,   'values')

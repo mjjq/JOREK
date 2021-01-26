@@ -450,9 +450,14 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call HDF5_integer_saving(file_id,node_list%n_nodes,'n_nodes'//char(0))
   call HDF5_integer_saving(file_id,element_list%n_elements,'n_elements'//char(0))
   call HDF5_integer_saving(file_id,node_list%n_dof,'n_dof'//char(0))
-
-  call HDF5_array4D_saving(file_id,t_x, &
-       node_list%n_nodes,n_tor,n_order+1,n_dim,'x'//char(0))
+  
+  if (rst_hdf5_version .eq. 2) then
+    call HDF5_array4D_saving(file_id,t_x, &
+         node_list%n_nodes,n_coord_tor,n_order+1,n_dim,'x'//char(0))
+  else
+    call HDF5_array3D_saving(file_id,t_x(:,1,:,:), &
+         node_list%n_nodes,n_order+1,n_dim,'x'//char(0))
+  endif
   call HDF5_array4D_saving(file_id,t_values, &
        node_list%n_nodes,n_tor,n_order+1,n_var,'values'//char(0))
   call HDF5_array4D_saving(file_id,t_deltas, &

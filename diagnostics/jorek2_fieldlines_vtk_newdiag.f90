@@ -25,6 +25,9 @@ use mod_import_restart
 use equil_info, only : get_psi_n, ES
 use mod_interp
 use mod_new_diag
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+use mod_impurity, only : init_imp_adas
+#endif
 
 implicit none
 

@@ -1,6 +1,7 @@
 subroutine psi_minmax(node_list,element_list,i_elm,psimin,psimax)
 
 use data_structure
+use mod_newton_methods
 
 implicit none
 
@@ -14,6 +15,14 @@ real*8,external :: root
 integer :: i_elm, iv, n, im, n1, n2
 real*8  :: s,t,P,P_s,P_t,P_st,P_ss,P_tt
 integer :: k
+
+! --- For n_order>3, we need to use Newton methods (not exactly true, should implement quartic root finder) 
+if (.true.) then
+  call find_variable_minmax(node_list,element_list,i_elm, var_psi, psimin, psimax)
+  return
+endif
+
+! --- Continue for bi-cubic elements
 
 psimin = 1d10
 psimax =-1d10

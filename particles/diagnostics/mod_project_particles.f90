@@ -805,7 +805,7 @@ integer(HID_T)     :: file_id
 integer            :: ierr
 
 ! type_node, node_list%n_nodes
-real(RKIND), allocatable :: t_x(:,:,:,:)                   ! n_tor_coord, n_order+1, n_dim
+real(RKIND), allocatable :: t_x(:,:,:,:)                   ! n_coord_tor, n_order+1, n_dim
 real(RKIND), allocatable :: t_values(:,:,:,:)              !       n_tor, n_order+1, n_fields
 
 ! element, element_list%n_elements
@@ -814,7 +814,7 @@ integer,     allocatable :: t_neighbours(:,:)            ! n_vertex_max
 real(RKIND), allocatable :: t_size(:,:,:)                ! n_vertex_max,n_order+1
 
 ! type_node, node_list%n_nodes
-call tr_allocate(t_x,1,node_list%n_nodes,1,n_tor_coord,1,n_order+1,1,n_dim, &
+call tr_allocate(t_x,1,node_list%n_nodes,1,n_coord_tor,1,n_order+1,1,n_dim, &
      "node_list%x",CAT_UNKNOWN)
 call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_fields, &
      "node_list%values",CAT_UNKNOWN)
@@ -852,7 +852,7 @@ call HDF5_integer_saving(file_id,n_fields,'n_var'//char(0))
 call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0))
 call HDF5_integer_saving(file_id,n_order,'n_order'//char(0))
 call HDF5_integer_saving(file_id,n_tor,'n_tor'//char(0))
-call HDF5_integer_saving(file_id,n_tor_coord,'n_tor_coord'//char(0))
+call HDF5_integer_saving(file_id,n_coord_tor,'n_coord_tor'//char(0))
 call HDF5_integer_saving(file_id,n_period,'n_period'//char(0))
 call HDF5_integer_saving(file_id,n_vertex_max,'n_vertex_max'//char(0))
 call HDF5_integer_saving(file_id,n_nodes_max,'n_nodes_max'//char(0))
@@ -864,7 +864,7 @@ call HDF5_integer_saving(file_id,element_list%n_elements,'n_elements'//char(0))
 call HDF5_integer_saving(file_id,node_list%n_dof,'n_dof'//char(0))
 
 call HDF5_array4D_saving(file_id,t_x, &
-     node_list%n_nodes,n_tor_coord,n_order+1,n_dim,'x'//char(0))
+     node_list%n_nodes,n_coord_tor,n_order+1,n_dim,'x'//char(0))
 call HDF5_array4D_saving(file_id,t_values, &
      node_list%n_nodes,n_tor,n_order+1,n_fields,'values'//char(0))
 

@@ -379,7 +379,7 @@ Qvec_k    = 0.d0
 
 ! --- Implicit scheme
 theta = time_evol_theta
-zeta  = time_evol_zeta
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
 ! --- Do we need to use the FFT or non-FFT version?
 if ( (i_tor_min == 1) .and. (i_tor_max == n_tor) ) then

@@ -148,10 +148,7 @@ LIBS += $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
 DEFINES += -DJOREK_MODEL=$(MODEL_NUMBER) -DUSE_MPI
 
 # Use flags
-ifeq (model710, $(MODEL))
-  DEFINES  := $(DEFINES) -Dfullmhd
-endif
-ifeq (model711, $(MODEL))
+ifeq ( (model710, $(MODEL)) || (model711, $(MODEL)) || (model712, $(MODEL)) )
   DEFINES  := $(DEFINES) -Dfullmhd
 endif
 

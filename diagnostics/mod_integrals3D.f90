@@ -640,10 +640,7 @@ do ife = ife_min, ife_max
     case default
       if (nimp_bg > 0) then
         write(*,*) 'Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90), terminating.'
-        m_i_over_m_imp_bg = central_mass/40.
         stop
-      else
-        m_i_over_m_imp_bg = central_mass/40.
       end if 
     end select  
 
@@ -652,11 +649,10 @@ do ife = ife_min, ife_max
     Lrad_imp = 0.0
     call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
     if (Lrad_imp < 0.) Lrad_imp = 0.
+    Lrad_imp = Lrad_imp * m_i_over_m_imp_bg
   else
     Lrad_imp = 0.
   end if
-
-  Lrad_imp = Lrad_imp * m_i_over_m_imp_bg
 
   ! This is to detect N/A
   if (Lrad_imp/=Lrad_imp) then

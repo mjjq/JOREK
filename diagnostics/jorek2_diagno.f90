@@ -92,7 +92,7 @@ if (use_pellet) then
 endif
 
 #if (JOREK_MODEL == 500)
-  ! --- Read ADAS data and generate coronal equilibrium is needed
+  ! --- Read ADAS data and generate coronal equilibrium if needed
   call init_imp_adas(my_id)
 #endif
 

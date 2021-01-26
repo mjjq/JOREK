@@ -210,7 +210,7 @@ RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,
 #if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
 include_radiation = .true.
 include_neutral_dens = .true.
-! --- Read ADAS data and generate coronal equilibrium is needed
+! --- Read ADAS data and generate coronal equilibrium if needed
 call init_imp_adas(my_id)
 #endif
 
@@ -1244,18 +1244,15 @@ enddo  ! n_elements
         case default
           if (nimp_bg > 0) then
             write(*,*) 'Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90), terminating.'
-            m_i_over_m_imp_bg = central_mass/40.
             stop
-          else
-            m_i_over_m_imp_bg = central_mass/40.
           end if
       end select      
 
-      ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-      coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > 0) then
+        ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+        coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                      *(central_density*1.d20)**2.5d0*m_i_over_m_imp_bg
 
-      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > 0) then
         Lrad_imp = 0.0
         call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
         Lrad_imp = Lrad_imp * coef_rad_imp          
@@ -1372,7 +1369,7 @@ enddo  ! n_elements
        Lrad = 0.0
        
        ! Here we are temperarily only considering one impurity species, in the
-       ! future maybe a do loop will is needed
+       ! future maybe a do loop will be needed
        !call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
        call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
 
@@ -1580,10 +1577,7 @@ if (SI_units) then
         case default
           if (nimp_bg > 0) then
             write(*,*) 'Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90), terminating.'
-            m_i_over_m_imp_bg = central_mass/40.
             stop
-          else
-            m_i_over_m_imp_bg = central_mass/40.
           end if 
       end select
 
@@ -1592,14 +1586,13 @@ if (SI_units) then
         Lrad_imp = 0.0
         call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
         if (Lrad_imp < 0.) Lrad_imp = 0.
+        Lrad_imp = Lrad_imp * m_i_over_m_imp_bg
       else
         Lrad_imp = 0.
       end if
 
-      Lrad_imp = Lrad_imp * m_i_over_m_imp_bg
-
       scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * nimp_bg * Lrad_imp
- 
+
     endif
 #endif /*(JOREK_MODEL == 500)*/
 

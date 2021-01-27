@@ -3,7 +3,7 @@ module mod_boundary_matrix_open
 contains
 
 subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, &
-                                psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
+                                psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, i_tor_min, i_tor_max)
 !---------------------------------------------------------------------
 ! calculates the matrix contribution of the boundaries of one element
 ! implements the natural boundary conditions
@@ -19,6 +19,8 @@ implicit none
 
 type (type_element)   :: element
 type (type_node)      :: nodes(2)        ! the two nodes containing the boundary nodes
+integer, intent(in)   :: i_tor_min   
+integer, intent(in)   :: i_tor_max   
 
 real*8     :: x_g(n_gauss), x_s(n_gauss), x_ss(n_gauss)
 real*8     :: y_g(n_gauss), y_s(n_gauss), y_ss(n_gauss)
@@ -42,9 +44,13 @@ real*8     :: psi, psi_s, vpar, rho,  T
 real*8     :: alpha, R_inside, Z_inside, normal, normal1, DL, Dwall, gas_puff
 real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67, element_size_ij, element_size_kl
 logical    :: xpoint2
+integer    :: n_tor_local
+
 
 theta = time_evol_theta
-zeta  = time_evol_zeta
+!zeta  = time_evol_zeta
+! change zeta for variable dt
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0;  x_ss  = 0.d0; 
@@ -63,11 +69,11 @@ do i=1,2
 
     do ms=1, n_gauss
 
-      x_g(ms)  = x_g(ms)  + nodes(i)%x(j2,1) * element_size_ij * H1(i,j,ms)
-      x_s(ms)  = x_s(ms)  + nodes(i)%x(j2,1) * element_size_ij * H1_s(i,j,ms)
+      x_g(ms)  = x_g(ms)  + nodes(i)%x(1,j2,1) * element_size_ij * H1(i,j,ms)
+      x_s(ms)  = x_s(ms)  + nodes(i)%x(1,j2,1) * element_size_ij * H1_s(i,j,ms)
 
-      y_g(ms)  = y_g(ms)  + nodes(i)%x(j2,2) * element_size_ij * H1(i,j,ms)
-      y_s(ms)  = y_s(ms)  + nodes(i)%x(j2,2) * element_size_ij * H1_s(i,j,ms)
+      y_g(ms)  = y_g(ms)  + nodes(i)%x(1,j2,2) * element_size_ij * H1(i,j,ms)
+      y_s(ms)  = y_s(ms)  + nodes(i)%x(1,j2,2) * element_size_ij * H1_s(i,j,ms)
 
       do mp=1,n_plane
 
@@ -91,6 +97,11 @@ do i=1,2
   enddo
 enddo
 
+! changes deltas for variable time steps
+delta_g = delta_g * tstep / tstep_prev
+delta_s = delta_s * tstep / tstep_prev
+
+n_tor_local = i_tor_max - i_tor_min + 1
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss
 
@@ -129,9 +140,9 @@ do ms=1, n_gauss
          j2 = direction(j)
          element_size_ij = element%size(vertex(i),j2)
 
-         do im=1,n_tor
+         do im=i_tor_min, i_tor_max
 
-           index_ij = n_tor*n_var*(n_order+1)*(vertex(i)-1) + n_tor * n_var * (j2-1) + im   ! index in the ELM matrix
+           index_ij = n_tor_local*n_var*(n_order+1)*(vertex(i)-1) + n_tor_local * n_var * (j2-1) + im - i_tor_min + 1  ! index in the ELM matrix
 
            v   =  H1(i,j,ms) * element_size_ij * HZ(im,mp)         ! test function
 
@@ -140,8 +151,8 @@ do ms=1, n_gauss
 
            rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * normal * tstep  ! right hand side equation 6
 
-           ij5 = index_ij + 4*n_tor                                          ! local index in element matrix
-           ij6 = index_ij + 5*n_tor                                          ! local index in element matrix
+           ij5 = index_ij + 4*n_tor_local                                          ! local index in element matrix
+           ij6 = index_ij + 5*n_tor_local                                          ! local index in element matrix
 
            RHS(ij5) = RHS(ij5) + rhs_ij_5 * ws                               ! add to element RHS
            RHS(ij6) = RHS(ij6) + rhs_ij_6 * ws                               ! add to element RHS
@@ -153,7 +164,7 @@ do ms=1, n_gauss
                l2 = direction(l)
                element_size_kl = element%size(vertex(k),l2)
 
-               do in = 1, n_tor                                              ! loop over toroidal harmonics
+               do in = i_tor_min, i_tor_max                                              ! loop over toroidal harmonics
 
                  psi   = H1(k,l,ms)   * element_size_kl * HZ(in,mp)
 
@@ -175,12 +186,12 @@ do ms=1, n_gauss
 
                  amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * normal * theta * tstep 
 
-                 index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l2-1) + in   ! index in the ELM matrix
+                 index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l2-1) + in - i_tor_min + 1  ! index in the ELM matrix
 
                  kl1 = index_kl
-                 kl5 = index_kl + 4*n_tor
-                 kl6 = index_kl + 5*n_tor
-                 kl7 = index_kl + 6*n_tor
+                 kl5 = index_kl + 4*n_tor_local
+                 kl6 = index_kl + 5*n_tor_local
+                 kl7 = index_kl + 6*n_tor_local
 
                  ELM(ij5,kl1) =  ELM(ij5,kl1) + ws * amat_51
                  ELM(ij5,kl5) =  ELM(ij5,kl5) + ws * amat_55

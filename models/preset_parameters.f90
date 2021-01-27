@@ -6,9 +6,8 @@
 subroutine preset_parameters
   
   use phys_module
-  use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
-  use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
-  use wsmp_module,   only: use_wsmp
+  use mumps_module,  only: no_zeros_mumps, mumps_ordering
+  use pastix_module, only: no_zeros_pastix, pastix_smp_only
   
   implicit none
   
@@ -29,11 +28,16 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
-  eta       = 1.d-5
-  eta_ohmic = 0.d0
+  eta_num_T_dependent   = .false.
+  visco_num_T_dependent = .false.
+
+  eta           = 1.d-5
+  T_max_eta     = 1.d3
+  eta_ohmic     = 0.d0
+  T_max_eta_ohm = 1.d3
+
   visco = 1.d-5
   visco_par = 1.d-5
-  visco2    = 0.d0
   
   central_density = 1.d0        ! the central density in units 10^20 m^-3
   central_mass    = 2.d0        ! the central average ion mass (D)
@@ -51,10 +55,23 @@ subroutine preset_parameters
   freeb_change_indices = .true. ! exchange grid node indices to parallelize boundary integral
 
   bc_natural_flux    = .false.! boundary conditions for flux surface boundaries (2 and 3)
-  bc_natural_open    = .false.! use sheath (Bohm) boundary conditions
-  gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid)
+  bc_natural_open    = .false. ! use sheath (Bohm) boundary conditions
+
+  gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid) in the JOREK definition
+  gamma_stangeby     = -1.d99 ! sheath transmission factor (single fluid) given by Stangeby
+  gamma_sheath_e     = 2.33d0 ! sheath transmission factor (electron fluid) in the JOREK definition
+  gamma_e_stangeby   = -1.d99 ! sheath transmission factor (electron fluid) given by Stangeby
+  gamma_sheath_i     = 1.0d0  ! sheath transmission factor (ion fluid) in the JOREK definition
+  gamma_i_stangeby   = -1.d99 ! sheath transmission factor (ion fluid) given by Stangeby
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
+  neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
   
+  deuterium_adas        = .false. 
+  old_deuterium_atomic  = .false. 
+  mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
+  Vpar_smoothing        = .false. ! smooth the transitions of Vpar positive/negavtive at B.n
+  Vpar_smoothing_coef   = (/0.01d0, 0.d0, 0.d0 /) !(/ 0.01d0, 0.016d0, 0.00575446347d0/)
+
   amix                 = 0.d0
   amix_freeb           = 0.85d0
   equil_accuracy       = 1.d-6
@@ -163,12 +180,22 @@ subroutine preset_parameters
   ZK_par_max   = 1.d20
   D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par        = 0.d0
-  
+  D_perp_imp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  D_par_imp        = 0.d0
+
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
   ZK_prof_neg        = 1.d-5
+  ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
-  T_min              = 0.0
+  ZK_par_neg_thresh  = 0.d0
+
+  ne_SI_min          = 1.d18
+  Te_eV_min          = 5.
+  rn0_min            = 1.d-8
+
+  T_min              =-1.0d20
+  rho_min            =-1.0d20
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
@@ -190,11 +217,19 @@ subroutine preset_parameters
   edgeparticlesource_psin = 0.98
   edgeparticlesource_sig  = 0.01
   heatsource_gauss          = 0.d0
+  heatsource_gauss_i        = 0.d0
+  heatsource_gauss_e        = 0.d0
   heatsource_gauss_psin     = 0.9d0
   heatsource_gauss_sig      = 0.1d0
   particlesource_gauss      = 0.d0
   particlesource_gauss_psin = 0.9d0
   particlesource_gauss_sig  = 0.1d0
+  neutral_line_source       = 0.d0
+  neutral_line_R_start      = 1.d20
+  neutral_line_Z_start      = 1.d20
+  neutral_line_R_end        = 2.d20
+  neutral_line_Z_end        = 2.d20
+
   
   U_sheath = .false.
   renormalise = .false.
@@ -224,6 +259,12 @@ subroutine preset_parameters
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
 
+  rhon_0 =  0.d0
+  rhon_1 =  0.d0
+  rhon_coef    = 0.d0
+  rhon_coef(4) = 0.01
+  rhon_coef(8) = 0.01
+
   pellet_amplitude  = 0.d0
   pellet_R          = 3.8d0
   pellet_Z          = 0.0d0
@@ -239,6 +280,7 @@ subroutine preset_parameters
   pellet_velocity_Z = 0.d0
   pellet_particles  = 0.d0
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
+  pellet_density_bg = 3.d8
   use_pellet        = .false.
   
   t_now       = 0.d0
@@ -260,8 +302,10 @@ subroutine preset_parameters
   T_file             = 'none'
   Te_file            = 'none'
   Ti_file            = 'none'
+  Fprofile_file      = 'none'
   ffprime_file       = 'none'
   d_perp_file        = 'none'
+  d_perp_imp_file    = 'none'
   zk_perp_file       = 'none'
   zk_e_perp_file     = 'none'
   zk_i_perp_file     = 'none'
@@ -270,8 +314,13 @@ subroutine preset_parameters
   rot_file           = 'none'
   normalized_velocity_profile = .true.
 
+  n_Fprofile_internal = 300 ! model710 only: size of internal numerical F-profile
+  Fprofile_psi_max    = 1.5 ! model710 only: max-psi_norm of internal numerical F-profile
+  Fprofile_tolerance  = 1.0 ! model710 only: tolerance of average different between final FFprime and requested FFprime
+
   produce_live_data  = .true.
   
+  keep_n0_const      = .false.
   linear_run         = .false.
   
   export_for_nemec   = .false.
@@ -282,6 +331,8 @@ subroutine preset_parameters
   gmres_4            = 1.d3                 ! error estimate GMRES (ratio preconditioned versus non-preconditioned error
   gmres_m            = 20                   ! gmres restart parameter
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
+  max_steps_noUpdate = 10000000             ! redo preconditioner when steps without preconditioning matrix update > max_steps_noUpdate
+  centralize_harm_mat= .false.              ! centralize harmonic matrices on toroidal master rank 
   
   ! --- deprecated, code will stop if these parameters are set to .true. ---
   use_murge          = .false.
@@ -294,7 +345,12 @@ subroutine preset_parameters
   
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver
+  use_strumpack      = .false.              ! Use STRUMPACK solver  
   use_wsmp           = .false.              ! Use WSMP solver (use with care, still in development!)
+  
+  use_mumps_eq       = .false.              ! Use MUMPS equilibrium solver
+  use_pastix_eq      = .false.              ! Use PASTIX equilibrium solver
+  use_strumpack_eq   = .false.              ! Use STRUMPACK equilibrium olver  
   
   refinement         = .false.              ! enable mesh refinement
   force_central_node = .true.               ! force all nodes in the grid center to have the same values in flux surface aligned grids
@@ -303,9 +359,23 @@ subroutine preset_parameters
   grid_to_wall       = .false.              ! extend the grid to a physical wall
   RZ_grid_inside_wall= .false.              ! build the rectangular grid inside first wall
   
+  ! --- Option to manipulate psi_boundary, switched off by default
+  manipulate_psi_map(:,1) = 0.
+  manipulate_psi_map(:,2) = 99.
+  manipulate_psi_map(:,3) = 99.
+  manipulate_psi_map(:,4) = 0.1
+  manipulate_psi_map(:,5) = 0.1
+  
   adaptive_time      = .false.              ! requires no_mpi for Pastix library
   
   equil              = .true.               ! compute equilibrium
+  
+  Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+
+  eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
+  tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
+
+  fix_axis_nodes     = .false.              !< Fix t-derivative on axis to avoid noise)
   
   bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
   no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
@@ -374,15 +444,17 @@ subroutine preset_parameters
   delta_n_convection = 0
   nimp_bg = 0.
   !====== JET DMV-2 parameters
-  L_tube = 2.d0
+  L_tube = 2.4d0
   K_Dmv = 4.d-2
   A_Dmv = 1.77d-2
+  V_Dmv = 9.75d-4
   t_ns  = 2.d3
   !======= Additional parameters for SPI =======
   spi_Vel_Rref    = 0.0d0
   spi_Vel_Zref    = 0.0d0
   spi_Vel_RxZref  = 0.0d0
   spi_quantity    = 0.0
+  spi_quantity_bg = 0.0
   ng_radius_ratio = 1.4d0
   ng_radius_min   = 8.d-2
   spi_Vel_diff    = 0.0
@@ -396,6 +468,11 @@ subroutine preset_parameters
   spi_shard_file  = 'none'
   spi_tor_rot     = .false.
   using_spi       = .false.
+
+  n_adas          = 0
+  adas_dir        = ''
+  gas_type        = ''
+  output_prad_phi = .false.
 
 !======================JP ECCD injection parameters
   nu_jec_fast=1.d1

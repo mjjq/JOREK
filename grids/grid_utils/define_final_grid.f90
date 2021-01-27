@@ -150,8 +150,8 @@ do i=1,n_flux
     call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)
 
     if (i .eq. 1) then   !------------------------------------ magnetic axis : special case
-      newnode_list%node(index)%x(3,:) = 0.d0
-      newnode_list%node(index)%x(4,:) = 0.d0
+      newnode_list%node(index)%x(1,3,:) = 0.d0
+      newnode_list%node(index)%x(1,4,:) = 0.d0
     endif
 
   enddo
@@ -448,8 +448,8 @@ if (plot_grid .and. write_ps) then
   call tr_allocate(xp,1,index,"xp")
   call tr_allocate(yp,1,index,"yp")
   do i=1,newnode_list%n_nodes
-    xp(i) = newnode_list%node(i)%x(1,1)
-    yp(i) = newnode_list%node(i)%x(1,2)
+    xp(i) = newnode_list%node(i)%x(1,1,1)
+    yp(i) = newnode_list%node(i)%x(1,1,2)
   enddo
   call lplot(1,1,421,xp,yp,-newnode_list%n_nodes,1,'R',1,'Z',1,'nodes',5)
   call tr_deallocate(xp,"xp")
@@ -472,8 +472,8 @@ if (plot_grid .and. write_ps) then
   do i=1,newnode_list%n_nodes
     if(newnode_list%node(i)%boundary .ne. 0) then
       index=index+1
-      xp(index) = newnode_list%node(i)%x(1,1)
-      yp(index) = newnode_list%node(i)%x(1,2)
+      xp(index) = newnode_list%node(i)%x(1,1,1)
+      yp(index) = newnode_list%node(i)%x(1,1,2)
     endif
   enddo
   call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
@@ -497,8 +497,8 @@ if (plot_grid .and. write_ps) then
   do i=1,newnode_list%n_nodes
     if(newnode_list%node(i)%boundary .eq. 1) then
       index=index+1
-      xp(index) = newnode_list%node(i)%x(1,1)
-      yp(index) = newnode_list%node(i)%x(1,2)
+      xp(index) = newnode_list%node(i)%x(1,1,1)
+      yp(index) = newnode_list%node(i)%x(1,1,2)
     endif
   enddo
   call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
@@ -522,8 +522,8 @@ if (plot_grid .and. write_ps ) then
   do i=1,newnode_list%n_nodes
     if(newnode_list%node(i)%boundary .eq. 2) then
       index=index+1
-      xp(index) = newnode_list%node(i)%x(1,1)
-      yp(index) = newnode_list%node(i)%x(1,2)
+      xp(index) = newnode_list%node(i)%x(1,1,1)
+      yp(index) = newnode_list%node(i)%x(1,1,2)
     endif
   enddo
   call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
@@ -547,8 +547,8 @@ if (plot_grid .and. write_ps ) then
   do i=1,newnode_list%n_nodes
     if(newnode_list%node(i)%boundary .eq. 3) then
       index=index+1
-      xp(index) = newnode_list%node(i)%x(1,1)
-      yp(index) = newnode_list%node(i)%x(1,2)
+      xp(index) = newnode_list%node(i)%x(1,1,1)
+      yp(index) = newnode_list%node(i)%x(1,1,2)
     endif
   enddo
   call lplot(1,1,421,xp,yp,-index,1,'R',1,'Z',1,'nodes',5)
@@ -559,10 +559,10 @@ endif
 !-------------------------------- Verify that only the Xpoint and the magnetic axis appear more than once
 !do i=n_tht-1,newnode_list%n_nodes
 !  do j=i+1,newnode_list%n_nodes
-!    if((newnode_list%node(i)%x(1,1) .eq. newnode_list%node(j)%x(1,1))      &
-!      .and. (newnode_list%node(i)%x(1,2) .eq. newnode_list%node(j)%x(1,2)) ) then
+!    if((newnode_list%node(i)%x(1,1,1) .eq. newnode_list%node(j)%x(1,1,1))      &
+!      .and. (newnode_list%node(i)%x(1,1,2) .eq. newnode_list%node(j)%x(1,1,2)) ) then
 !      write(*,*)'Found ij',i,j
-!      write(*,*)'RZ',newnode_list%node(i)%x(1,1),newnode_list%node(i)%x(1,2)
+!      write(*,*)'RZ',newnode_list%node(i)%x(1,1,1),newnode_list%node(i)%x(1,1,2)
 !    endif
 !  enddo
 !enddo
@@ -996,8 +996,8 @@ if (plot_grid .and. write_ps ) then
   do j=1,newelement_list%n_elements
     do i=1,4
       k = newelement_list%element(j)%vertex(i)
-      xp(4*(j-1)+i) = newnode_list%node(k)%x(1,1)
-      yp(4*(j-1)+i) = newnode_list%node(k)%x(1,2)
+      xp(4*(j-1)+i) = newnode_list%node(k)%x(1,1,1)
+      yp(4*(j-1)+i) = newnode_list%node(k)%x(1,1,2)
     enddo
   enddo
   k = 4*index
@@ -1019,11 +1019,11 @@ if (plot_grid .and. write_ps) then
     do j=1,n_loop
       do i=1,2
         index = newelement_list%element(j)%vertex(i)
-        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,1)
-        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,2)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,1,2)
         index = newelement_list%element(j)%vertex(i+2)
-        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,1)
-        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,2)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,1,2)
       enddo
     enddo
     write(101,'(A,i6,A)')    ' for i in range (0,',n_loop*2,'):'
@@ -1031,8 +1031,8 @@ if (plot_grid .and. write_ps) then
     do j=1,n_loop
       do i=1,4
         index = newelement_list%element(j)%vertex(i)
-        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,1)
-        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,2)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,1,2)
       enddo
     enddo
     write(101,'(A,i6,A)')    ' for i in range (0,',n_loop,'):'
@@ -1060,15 +1060,15 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
     node_ivp = newelement_list%element(k)%vertex(ivp) 
 
     if ((iv .eq. 1) .or. (iv .eq. 3)) then
-      R0 = newnode_list%node(node_iv )%X(1,1)  ; dR0 = newnode_list%node(node_iv )%X(2,1)
-      Z0 = newnode_list%node(node_iv )%X(1,2)  ; dZ0 = newnode_list%node(node_iv )%X(2,2)
-      RP = newnode_list%node(node_ivp)%X(1,1)  ; dRP = newnode_list%node(node_ivp)%X(2,1)
-      ZP = newnode_list%node(node_ivp)%X(1,2)  ; dZP = newnode_list%node(node_ivp)%X(2,2)
+      R0 = newnode_list%node(node_iv )%X(1,1,1)  ; dR0 = newnode_list%node(node_iv )%X(1,2,1)
+      Z0 = newnode_list%node(node_iv )%X(1,1,2)  ; dZ0 = newnode_list%node(node_iv )%X(1,2,2)
+      RP = newnode_list%node(node_ivp)%X(1,1,1)  ; dRP = newnode_list%node(node_ivp)%X(1,2,1)
+      ZP = newnode_list%node(node_ivp)%X(1,1,2)  ; dZP = newnode_list%node(node_ivp)%X(1,2,2)
     else
-      R0 = newnode_list%node(node_iv )%X(1,1)  ; dR0 = newnode_list%node(node_iv )%X(3,1)
-      Z0 = newnode_list%node(node_iv )%X(1,2)  ; dZ0 = newnode_list%node(node_iv )%X(3,2)
-      RP = newnode_list%node(node_ivp)%X(1,1)  ; dRP = newnode_list%node(node_ivp)%X(3,1)
-      ZP = newnode_list%node(node_ivp)%X(1,2)  ; dZP = newnode_list%node(node_ivp)%X(3,2)
+      R0 = newnode_list%node(node_iv )%X(1,1,1)  ; dR0 = newnode_list%node(node_iv )%X(1,3,1)
+      Z0 = newnode_list%node(node_iv )%X(1,1,2)  ; dZ0 = newnode_list%node(node_iv )%X(1,3,2)
+      RP = newnode_list%node(node_ivp)%X(1,1,1)  ; dRP = newnode_list%node(node_ivp)%X(1,3,1)
+      ZP = newnode_list%node(node_ivp)%X(1,1,2)  ; dZP = newnode_list%node(node_ivp)%X(1,3,2)
     endif
 
     size_0 = 1.d0
@@ -1113,8 +1113,8 @@ enddo
 !-------------------------------- Fill in PSI-values at each node
 do i=1,newnode_list%n_nodes
 
-  R1 = newnode_list%node(i)%x(1,1)
-  Z1 = newnode_list%node(i)%x(1,2)
+  R1 = newnode_list%node(i)%x(1,1,1)
+  Z1 = newnode_list%node(i)%x(1,1,2)
 
   call find_RZ(node_list,element_list,R1,Z1,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 
@@ -1154,14 +1154,14 @@ do i=1,newnode_list%n_nodes
            - dRZ_jac_dR * (- dPSg1_dr * dRRg1_ds + dPSg1_ds * dRRg1_dr )   / RZ_jac**2
 
   newnode_list%node(i)%values(1,1,1) = PSg1
-  newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(2,1) + PSI_Z * newnode_list%node(i)%x(2,2)
-  newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(3,1) + PSI_Z * newnode_list%node(i)%x(3,2)
-  newnode_list%node(i)%values(1,4,1) = PSI_RR * newnode_list%node(i)%x(2,1) * newnode_list%node(i)%x(3,1) &
-                                     + PSI_RZ * newnode_list%node(i)%x(2,1) * newnode_list%node(i)%x(3,2) &
-                                     + PSI_RZ * newnode_list%node(i)%x(3,1) * newnode_list%node(i)%x(2,2) &
-                                     + PSI_ZZ * newnode_list%node(i)%x(2,2) * newnode_list%node(i)%x(3,2) &
-                                     + PSI_R  * newnode_list%node(i)%x(4,1)                               &
-                                     + PSI_Z  * newnode_list%node(i)%x(4,2)
+  newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(1,2,1) + PSI_Z * newnode_list%node(i)%x(1,2,2)
+  newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(1,3,1) + PSI_Z * newnode_list%node(i)%x(1,3,2)
+  newnode_list%node(i)%values(1,4,1) = PSI_RR * newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,3,1) &
+                                     + PSI_RZ * newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,3,2) &
+                                     + PSI_RZ * newnode_list%node(i)%x(1,3,1) * newnode_list%node(i)%x(1,2,2) &
+                                     + PSI_ZZ * newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,3,2) &
+                                     + PSI_R  * newnode_list%node(i)%x(1,4,1)                               &
+                                     + PSI_Z  * newnode_list%node(i)%x(1,4,2)
 
   if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0
 
@@ -1254,22 +1254,10 @@ do i=1,newnode_list%n_nodes
 
   node_list%node(i)%axis_node = .false.
   if (fix_axis_nodes) then
-    ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
-    ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
-    ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
-    ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
     if (xcase .ne. 3) then
-      if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) then
-        node_list%node(i)%axis_node = .true.
-        node_list%node(i)%x(3,1) = +node_list%node(i)%x(2,2)
-        node_list%node(i)%x(3,2) = -node_list%node(i)%x(2,1)
-      endif
+      if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) node_list%node(i)%axis_node = .true.
     else
-      if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) then
-        node_list%node(i)%axis_node = .true.
-        node_list%node(i)%x(3,1) = +node_list%node(i)%x(2,2)
-        node_list%node(i)%x(3,2) = -node_list%node(i)%x(2,1)
-      endif
+      if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) node_list%node(i)%axis_node = .true.
     endif
   endif
 
@@ -1281,12 +1269,12 @@ do i=1,newnode_list%n_nodes
     ! Remove all but one node at axis
     if (force_central_node) then
       if (xcase .ne. 3) then
-        if ((i .ge. 5) .and. (i .le. 4+n_tht-1) .and. (k.eq.1)) then
+        if ((i .gt. 5) .and. (i .le. 4+n_tht-1) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(5)%index(1)
           index = index - 1
         endif
       else
-        if ((i .ge. 9) .and. (i .le. 8+n_tht-2) .and. (k.eq.1)) then
+        if ((i .gt. 9) .and. (i .le. 8+n_tht-2) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(9)%index(1)
           index = index - 1
         endif

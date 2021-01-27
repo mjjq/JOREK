@@ -135,7 +135,7 @@ module mod_poloidal_currents
   !!
   !! See documentation in attached file in JIRA issue IMAS-2016
   !!-------------------------------------------------------------------
-  subroutine integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF)
+  subroutine integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF, print_halo)
 
     implicit none
 
@@ -143,6 +143,7 @@ module mod_poloidal_currents
     type (type_bnd_element_list), intent(in)    :: bnd_elm_list   
     type (type_bnd_node_list),    intent(in)    :: bnd_node_list
     real*8,                       intent(inout) :: I_halo, TPF      
+    logical,                      intent(in)    :: print_halo      
 
     ! --- Local variables
     integer               :: m_bndelem, m_pt, m_elm, mv1, mp, in, ms
@@ -161,7 +162,7 @@ module mod_poloidal_currents
 
     ! --- create folder with files for each time with I_halo(phi) profile if
     ! --- n_tor > 1 
-    if (n_tor > 1) then
+    if ((n_tor > 1) .and. print_halo) then
       call system('mkdir -p '//DIR)
 
       write(filename,'(4a)') DIR, 'I_halo_phi_tnow_', trim(real2str(t_now,'(f12.4)')), '.dat'
@@ -171,8 +172,9 @@ module mod_poloidal_currents
       write(i_file,'(a)') '#             phi               I_halo(phi) [MA/rad]'
     endif
  
-    I_halo = 0.d0
-    I_net  = 0.d0
+    I_halo    = 0.d0
+    I_net     = 0.d0
+    I_halo_mp = 0.d0
 
     !--- go through the boundary elements
     do m_bndelem = 1, bnd_elm_list%n_bnd_elements
@@ -191,16 +193,16 @@ module mod_poloidal_currents
           k_size   = bndelem%size(k_vertex,k_dof)
           node_k   = node_list%node(k_node)
         
-          R  (:)   = R  (:)  + node_k%x(k_dir,1) * k_size * H1  (k_vertex,k_dof,:)
-          Z  (:)   = Z  (:)  + node_k%x(k_dir,2) * k_size * H1  (k_vertex,k_dof,:)
-          R_s(:)   = R_s(:)  + node_k%x(k_dir,1) * k_size * H1_s(k_vertex,k_dof,:)
-          Z_s(:)   = Z_s(:)  + node_k%x(k_dir,2) * k_size * H1_s(k_vertex,k_dof,:)
+          R  (:)   = R  (:)  + node_k%x(1,k_dir,1) * k_size * H1  (k_vertex,k_dof,:)
+          Z  (:)   = Z  (:)  + node_k%x(1,k_dir,2) * k_size * H1  (k_vertex,k_dof,:)
+          R_s(:)   = R_s(:)  + node_k%x(1,k_dir,1) * k_size * H1_s(k_vertex,k_dof,:)
+          Z_s(:)   = Z_s(:)  + node_k%x(1,k_dir,2) * k_size * H1_s(k_vertex,k_dof,:)
         
           do mp=1,n_plane
             do in=1,n_tor
               psi_s(:,mp) = psi_s(:,mp)  + node_k%values(in,k_dir,1) * k_size*H1_s(k_vertex,k_dof,:) * HZ(in,mp)
               zj   (:,mp) = zj   (:,mp)  + node_k%values(in,k_dir,3) * k_size*  H1(k_vertex,k_dof,:) * HZ(in,mp)
-              if (jorek_model > 200) then  
+              if (jorek_model > 190) then  
                 rho  (:,mp) = rho  (:,mp)  + node_k%values(in,k_dir,5) * k_size*  H1(k_vertex,k_dof,:) * HZ(in,mp)
                 rho_s(:,mp) = rho_s(:,mp)  + node_k%values(in,k_dir,5) * k_size*H1_s(k_vertex,k_dof,:) * HZ(in,mp)
                 T0   (:,mp) = T0   (:,mp)  + node_k%values(in,k_dir,6) * k_size*  H1(k_vertex,k_dof,:) * HZ(in,mp)
@@ -236,10 +238,12 @@ module mod_poloidal_currents
     I_halo_mp(:) = 0.5*I_halo_mp(:) / mu_zero * 1.d-6 * 2.d0 * PI 
     TPF          = maxval(I_halo_mp)/I_halo 
 
-    write(*,*) ' I_halo, I_net [MA]:  ', I_halo, I_net
-    write(*,*) '               TPF :  ', TPF
+    if (print_halo) then
+      write(*,*) ' I_halo, I_net [MA]:  ', I_halo, I_net
+      write(*,*) '               TPF :  ', TPF
+    endif
 
-    if (n_tor > 1) then 
+    if ((n_tor > 1) .and. print_halo) then 
       do mp = 1, n_plane 
         write(i_file,'(2es20.10)') phi(mp), I_halo_mp(mp)
       enddo
@@ -316,10 +320,10 @@ module mod_poloidal_currents
           k_size   = bndelem%size(k_vertex,k_dof)
           node_k   = node_list%node(k_node)
         
-          R  (:)   = R  (:)  + node_k%x(k_dir,1) * k_size * H1  (k_vertex,k_dof,:)
-          Z  (:)   = Z  (:)  + node_k%x(k_dir,2) * k_size * H1  (k_vertex,k_dof,:)
-          R_s(:)   = R_s(:)  + node_k%x(k_dir,1) * k_size * H1_s(k_vertex,k_dof,:)
-          Z_s(:)   = Z_s(:)  + node_k%x(k_dir,2) * k_size * H1_s(k_vertex,k_dof,:)
+          R  (:)   = R  (:)  + node_k%x(1,k_dir,1) * k_size * H1  (k_vertex,k_dof,:)
+          Z  (:)   = Z  (:)  + node_k%x(1,k_dir,2) * k_size * H1  (k_vertex,k_dof,:)
+          R_s(:)   = R_s(:)  + node_k%x(1,k_dir,1) * k_size * H1_s(k_vertex,k_dof,:)
+          Z_s(:)   = Z_s(:)  + node_k%x(1,k_dir,2) * k_size * H1_s(k_vertex,k_dof,:)
         
           do in=1,n_tor
             psi_s(:) = psi_s(:) + node_k%values(in,k_dir,1) * k_size*H1_s(k_vertex,k_dof,:) * HZ(in,i_plane)
@@ -347,8 +351,8 @@ module mod_poloidal_currents
       do i = 1, n_vertex_max
         do j = 1, n_order+1
           node_k = node_list%node(elm_k%vertex(i)) 
-          R_c    = R_c + node_k%x(j,1) * elm_k%size(i,j) * G(i,j)
-          Z_c    = Z_c + node_k%x(j,2) * elm_k%size(i,j) * G(i,j)
+          R_c    = R_c + node_k%x(1,j,1) * elm_k%size(i,j) * G(i,j)
+          Z_c    = Z_c + node_k%x(1,j,2) * elm_k%size(i,j) * G(i,j)
         enddo
       enddo  
       vec_inside = (/ R_c - R(2), Z_c - Z(2) /)       ! vector pointing towards the domain

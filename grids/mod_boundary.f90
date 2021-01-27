@@ -119,6 +119,11 @@ module mod_boundary
     call add_bnd_node( i_elem, iv2, inode2, iside, b2, ib2, bnd_node_list )
 
     bnd_elm_list%n_bnd_elements = bnd_elm_list%n_bnd_elements + 1
+    
+    if ( bnd_elm_list%n_bnd_elements > n_boundary_max ) then
+      write(*,*) 'ERROR in mod_boundary:boundary_from_grid: hard-coded parameter n_boundary_max is too small'
+      stop
+    end if
 
     ! --- Store vertex indices belonging to the boundary element.
     bnd_elm_list%bnd_element(bnd_elm_list%n_bnd_elements)%vertex = (/ inode1, inode2 /)
@@ -362,13 +367,13 @@ module mod_boundary
 
     implicit none
 
-    type(type_bnd_element), intent(in) :: bnd_elem
+    type(type_bnd_element), intent(inout) :: bnd_elem
 
     type(type_bnd_element) :: reversed_elem
 
-    write(*,*) '############################################################################'
+    !write(*,*) '############################################################################'
     write(*,*) 'REVERSE_ELEM'
-    write(*,*) '############################################################################'
+    !write(*,*) '############################################################################'
 
     reversed_elem%vertex(1) = bnd_elem%vertex(2)
     reversed_elem%vertex(2) = bnd_elem%vertex(1)
@@ -381,6 +386,8 @@ module mod_boundary
 
     reversed_elem%size(1,:) = bnd_elem%size(2,:)
     reversed_elem%size(2,:) = bnd_elem%size(1,:)
+    
+    bnd_elem = reversed_elem
 
   end subroutine reverse_elem
 

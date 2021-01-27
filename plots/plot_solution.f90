@@ -23,6 +23,10 @@ integer            :: i, kv, kf, ms, mt, nc, iv, ivar, iharm, nlab, in, iangle
 character*(*)      :: label
 logical            :: all_harmonics
 
+if ( .not. write_ps ) then
+  write(*,*) 'Jorek postscript deactivated. Skip plot_solutions'
+  return
+endif
 write(*,*) '****************************************************'
 write(*,'(A,A,2i5)') ' * plotting solution : ',label,iharm,iangle
 write(*,*) '****************************************************'

@@ -24,6 +24,7 @@ end subroutine setup_kinetic_to_gc_spec
 !> convert a particle orbiting at 6 different points around a gc and see if we get the right answers
 subroutine test_known_gc_kinetic
   use constants, only: PI, ATOMIC_MASS_UNIT, EL_CHG
+  use mod_pusher_tools, only: get_orthonormals
   type(particle_kinetic) :: kinetic
   type(particle_gc)               :: gc
 
@@ -66,6 +67,7 @@ end subroutine test_known_gc_kinetic
 !> Test a few positions around a known guiding center and see if it is found okay
 subroutine test_known_kinetic_gc
   use constants, only: PI, ATOMIC_MASS_UNIT, EL_CHG
+  use mod_pusher_tools, only: get_orthonormals
   type(particle_kinetic) :: kinetic
   type(particle_gc)               :: gc
 
@@ -102,6 +104,7 @@ end subroutine test_known_kinetic_gc
 
 !> Test the performance by transforming back and forth
 subroutine test_kinetic_gc_kinetic
+  use mod_pusher_tools, only: get_orthonormals
   use constants, only: PI
   type(particle_kinetic) :: kinetic1, kinetic2
   type(particle_gc)               :: gc
@@ -178,6 +181,8 @@ end subroutine test_gc_kinetic_gc_negative_mu
 
 !> Test function to generate orthonormal vectors
 subroutine test_get_orthonormals
+  use mod_pusher_tools, only: get_orthonormals
+
   real*8, dimension(3) :: in, e1, e2
 
   in = [1d0, 0d0, 0d0]

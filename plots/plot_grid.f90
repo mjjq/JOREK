@@ -5,6 +5,7 @@ subroutine plot_grid(node_list, element_list, boundary_list, bnd_node_list, fram
 use tr_module 
 use mod_parameters
 use data_structure
+use phys_module, only: write_ps
 
 implicit none
 
@@ -46,52 +47,53 @@ ymin = minval(xp(:,2))
 xmin  = 1.1 * xmin - 0.1 * xmax
 ymin  = 1.1 * ymin - 0.1 * ymax
 
-if (frame) call nframe(21,11,1,xmin,xmax,ymin,ymax,'Bezier grid',11,'X',1,'Y',1)
-call lplot(21,11,461,xp(:,1),xp(:,2),-node_list%n_nodes,1,'Nodes',5,'X',1,'Y',1)
+if ( write_ps ) then
+  if (frame) call nframe(21,11,1,xmin,xmax,ymin,ymax,'Bezier grid',11,'X',1,'Y',1)
+  call lplot(21,11,461,xp(:,1),xp(:,2),-node_list%n_nodes,1,'Nodes',5,'X',1,'Y',1)
 
 !---------------------------------------------- plot unit vectors
 
-call lincol(2)
-do i=1,node_list%n_nodes
+  call lincol(2)
+  do i=1,node_list%n_nodes
 
-  xs(1,1:n_dim) = node_list%node(i)%x(1,1:n_dim)
+    xs(1,1:n_dim) = node_list%node(i)%x(1,1:n_dim)
 
-  if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
+    if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
 
-!    write(*,'(A,i5,6e16.8)') ' boundary point (1,3) : ',i,node_list%node(i)%x(1,:)
+      !    write(*,'(A,i5,6e16.8)') ' boundary point (1,3) : ',i,node_list%node(i)%x(1,:)
 
-    x_length = sqrt( node_list%node(i)%x(2,1)**2 +  node_list%node(i)%x(2,2)**2)
+      x_length = sqrt( node_list%node(i)%x(2,1)**2 +  node_list%node(i)%x(2,2)**2)
 
-    if (x_length .gt. 0.d0) then
-      xs(2,1:n_dim) = xs(1,1:n_dim) + 0.1 * node_list%node(i)%x(2,1:n_dim) / x_length
-      call lplot6(1,1,xs(:,1),xs(:,2),-2,' ')
+      if (x_length .gt. 0.d0) then
+        xs(2,1:n_dim) = xs(1,1:n_dim) + 0.1 * node_list%node(i)%x(2,1:n_dim) / x_length
+        call lplot6(1,1,xs(:,1),xs(:,2),-2,' ')
+      endif
+
     endif
 
-  endif
-
-enddo
+  enddo
 
 
-call lincol(3)
-do i=1,node_list%n_nodes
+  call lincol(3)
+  do i=1,node_list%n_nodes
 
-  if ((node_list%node(i)%boundary .eq. 2) .or. (node_list%node(i)%boundary .eq. 3)) then
+    if ((node_list%node(i)%boundary .eq. 2) .or. (node_list%node(i)%boundary .eq. 3)) then
 
-!    write(*,'(A,i5,6e16.8)') ' boundary point (2,3) : ',i,node_list%node(i)%x(1,:)
+      !    write(*,'(A,i5,6e16.8)') ' boundary point (2,3) : ',i,node_list%node(i)%x(1,:)
 
-    x_length = sqrt( node_list%node(i)%x(3,1)**2 +  node_list%node(i)%x(3,2)**2)
+      x_length = sqrt( node_list%node(i)%x(3,1)**2 +  node_list%node(i)%x(3,2)**2)
 
-    if (x_length .gt. 0.d0) then
-      xs(1,1:n_dim) = node_list%node(i)%x(1,1:n_dim)
-      xs(2,1:n_dim) = xs(1,1:n_dim) + 0.1 * node_list%node(i)%x(3,1:n_dim) / x_length
-      call lplot6(1,1,xs(:,1),xs(:,2),-2,' ')
+      if (x_length .gt. 0.d0) then
+        xs(1,1:n_dim) = node_list%node(i)%x(1,1:n_dim)
+        xs(2,1:n_dim) = xs(1,1:n_dim) + 0.1 * node_list%node(i)%x(3,1:n_dim) / x_length
+        call lplot6(1,1,xs(:,1),xs(:,2),-2,' ')
+      endif
+
     endif
 
-  endif
-
-enddo
-call lincol(0)
-
+  enddo
+  call lincol(0)
+endif
 !return
 
 !------------------------------ plot the curved boundaries
@@ -141,88 +143,88 @@ do k=1, element_list%n_elements
    write(21,*)
    write(21,*)
    
-   call lplot6(1,1,xp(1:np,1),xp(1:np,2),-np,' ')
+   if ( write_ps ) call lplot6(1,1,xp(1:np,1),xp(1:np,2),-np,' ')
  enddo
 enddo
 
 close(21) ! Close the ascii file
+if ( write_ps ) then
+  call lincol(1)
+  call lplot(11,11,461,xp(:,1),xp(:,2),-iplot,1,' ',1,' ',1,' ',1)
+  
+  call lincol(4)
+  
+  do k=1, boundary_list%n_bnd_elements
 
-call lincol(1)
-call lplot(11,11,461,xp(:,1),xp(:,2),-iplot,1,' ',1,' ',1,' ',1)
+    idir_0 = boundary_list%bnd_element(k)%direction(1,2)
 
-call lincol(4)
+    inode_0 = boundary_list%bnd_element(k)%vertex(1)
+    xx_0    = node_list%node(inode_0)%x(1,:)
+    uv_0    = node_list%node(inode_0)%x(idir_0,:)
+    huv_0   = boundary_list%bnd_element(k)%size(1,2)
 
-do k=1, boundary_list%n_bnd_elements
+    idir_p = boundary_list%bnd_element(k)%direction(2,2)
 
-   idir_0 = boundary_list%bnd_element(k)%direction(1,2)
-
-   inode_0 = boundary_list%bnd_element(k)%vertex(1)
-   xx_0    = node_list%node(inode_0)%x(1,:)
-   uv_0    = node_list%node(inode_0)%x(idir_0,:)
-   huv_0   = boundary_list%bnd_element(k)%size(1,2)
-
-   idir_p = boundary_list%bnd_element(k)%direction(2,2)
-
-   inode_p = boundary_list%bnd_element(k)%vertex(2)
-   xx_p    = node_list%node(inode_p)%x(1,:)
-   uv_p    = node_list%node(inode_p)%x(idir_p,:)
-   huv_p   = boundary_list%bnd_element(k)%size(2,2)
+    inode_p = boundary_list%bnd_element(k)%vertex(2)
+    xx_p    = node_list%node(inode_p)%x(1,:)
+    uv_p    = node_list%node(inode_p)%x(idir_p,:)
+    huv_p   = boundary_list%bnd_element(k)%size(2,2)
 
 !    write(*,*) xx_0
 !    write(*,*) xx_0 + uv_0*huv_0
 !    write(*,*) xx_p + uv_p*huv_p
 !    write(*,*) xx_p
 
-   do j=1,np
-     s = (float(j-1)/float(np-1))
-     xb(1,:) = xx_0
-     xb(2,:) = xx_0+uv_0*huv_0
-     xb(3,:) = xx_p+uv_p*huv_p
-     xb(4,:) = xx_p
+    do j=1,np
+      s = (float(j-1)/float(np-1))
+      xb(1,:) = xx_0
+      xb(2,:) = xx_0+uv_0*huv_0
+      xb(3,:) = xx_p+uv_p*huv_p
+      xb(4,:) = xx_p
 
-     call bezier_1d(n_dim, s, xb, xp(j,:))
-   enddo
+      call bezier_1d(n_dim, s, xb, xp(j,:))
+    enddo
 
-   call lplot6(1,1,xp(1:np,1),xp(1:np,2),-np,' ')
+    call lplot6(1,1,xp(1:np,1),xp(1:np,2),-np,' ')
    
-enddo
+  enddo
 
-call lincol(0)
+  call lincol(0)
 
-call tr_deallocate(xp,"xp",CAT_GRID)
+  call tr_deallocate(xp,"xp",CAT_GRID)
 
-if (.not. bezier) return
+  if (.not. bezier) return
 
-!------------------------------ plot the Bezier points
-call tr_allocate(xp,1,12*element_list%n_elements,1,n_dim,"xp",CAT_GRID)
+  !------------------------------ plot the Bezier points
+  call tr_allocate(xp,1,12*element_list%n_elements,1,n_dim,"xp",CAT_GRID)
 
-iplot = 0
+  iplot = 0
 
-do k=1, element_list%n_elements
+  do k=1, element_list%n_elements
 
- do i=1,4
+    do i=1,4
 
-   inode_0 = element_list%element(k)%vertex(i)
-   xx_0    = node_list%node(inode_0)%x(1,:)
-   uu_0    = node_list%node(inode_0)%x(2,:)
-   vv_0    = node_list%node(inode_0)%x(3,:)
-   ww_0    = node_list%node(inode_0)%x(4,:)
+      inode_0 = element_list%element(k)%vertex(i)
+      xx_0    = node_list%node(inode_0)%x(1,:)
+      uu_0    = node_list%node(inode_0)%x(2,:)
+      vv_0    = node_list%node(inode_0)%x(3,:)
+      ww_0    = node_list%node(inode_0)%x(4,:)
 
-   xp(iplot+1,:) = node_list%node(inode_0)%x(1,:) + uu_0(:) * element_list%element(k)%size(i,2)
-   xp(iplot+2,:) = node_list%node(inode_0)%x(1,:) + vv_0(:) * element_list%element(k)%size(i,3)
-   xp(iplot+3,:) = node_list%node(inode_0)%x(1,:)  &
-                 + uu_0(:) * element_list%element(k)%size(i,2) &
-                 + vv_0(:) * element_list%element(k)%size(i,3) &
-                 + ww_0(:) * element_list%element(k)%size(i,4)
+      xp(iplot+1,:) = node_list%node(inode_0)%x(1,:) + uu_0(:) * element_list%element(k)%size(i,2)
+      xp(iplot+2,:) = node_list%node(inode_0)%x(1,:) + vv_0(:) * element_list%element(k)%size(i,3)
+      xp(iplot+3,:) = node_list%node(inode_0)%x(1,:)  &
+          + uu_0(:) * element_list%element(k)%size(i,2) &
+          + vv_0(:) * element_list%element(k)%size(i,3) &
+          + ww_0(:) * element_list%element(k)%size(i,4)
 
-   iplot = iplot + 3
- enddo
-enddo
+      iplot = iplot + 3
+    enddo
+  enddo
 
-call lincol(1)
-!call lplot(11,11,461,xp(:,1),xp(:,2),-iplot,1,' ',1,' ',1,' ',1)
-call pplot(11,11,xp(:,1),xp(:,2),iplot,1)
-
+  call lincol(1)
+  !call lplot(11,11,461,xp(:,1),xp(:,2),-iplot,1,' ',1,' ',1,' ',1)
+  call pplot(11,11,xp(:,1),xp(:,2),iplot,1)
+endif
 call tr_deallocate(xp,"xp",CAT_GRID)
 
 

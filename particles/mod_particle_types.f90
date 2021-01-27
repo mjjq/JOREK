@@ -6,8 +6,10 @@ module mod_particle_types
   implicit none
   private
   public particle_base, particle_kinetic, particle_kinetic_leapfrog, particle_gc, particle_fieldline
+  public particle_kinetic_relativistic
   public particle_get_q
   public copy_particle
+  public update_particle_position
 
   !> The base type for all other particles. Includes only the position and weight elements
   !> Integration in a 2D finite element method is included in the form of 2 coordinates
@@ -49,6 +51,13 @@ module mod_particle_types
     integer*1            :: q !< charge [e]
   end type particle_kinetic_leapfrog
 
+  !> This particle type is used for computing the full orbit trajectory
+  !> of a relativistic particle. Final particle positions and momenta are given at time \(t\) 
+  type, extends(particle_base) :: particle_kinetic_relativistic
+    real(kind=8),dimension(3) :: p !< momentum in cartesian coordinates (p_x,p_y,p_z) in [AMU*m/s]
+    integer(kind=1)           :: q !< charge [e]
+  end type particle_kinetic_relativistic
+
 contains
   !> Convenience function to obtain q if it exists, or 0 otherwise
   !> Here also because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82064
@@ -63,6 +72,8 @@ contains
     type is (particle_kinetic_leapfrog)
       q = p%q
     type is (particle_gc)
+      q = p%q
+    type is (particle_kinetic_relativistic)
       q = p%q
     class default
       q = 0
@@ -127,6 +138,26 @@ contains
         p_out%v  = [0.d0, 0.d0, 0.d0]
         p_out%q  = 0
       end select
+    type is (particle_kinetic_relativistic)
+      select type (p_in => particle_in)
+      type is (particle_kinetic_relativistic)
+        p_out%p  = p_in%p
+        p_out%q  = p_in%q
+      class default
+        p_out%p  = [0.d0, 0.d0, 0.d0]
+        p_out%q  = 0
+      end select
     end select
   end subroutine copy_particle
+
+  ! This method updates a particle RZPHI position
+  subroutine update_particle_position(particle,position)
+    ! declare input/output variables
+    class(particle_base),intent(inout) :: particle ! the particle to be updated
+    ! declare input variables
+    real(kind=8),dimension(3),intent(in) :: position ! new particle position in RZPHI
+    ! copy the new position in particle
+    particle%x = position
+  end subroutine update_particle_position
+
 end module mod_particle_types

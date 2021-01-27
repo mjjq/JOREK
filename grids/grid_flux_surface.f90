@@ -7,7 +7,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
-use phys_module, only: force_central_node
+use phys_module, only: force_central_node, fix_axis_nodes
 
 implicit none
 
@@ -384,6 +384,14 @@ enddo
 element_list%n_elements = (nrnew-1)*npnew
 node_list%n_nodes       = nrnew*npnew
 
+if ( node_list%n_nodes > n_nodes_max ) then
+  write(*,*) 'ERROR in grid_flux_surface: hard-coded parameter n_nodes_max is too small'
+  stop
+else if ( element_list%n_elements > n_elements_max ) then
+  write(*,*) 'ERROR in grid_flux_surface: hard-coded parameter n_elements_max is too small'
+  stop
+end if
+
 n_node_start    = 0
 n_element_start = 0
 n_index_start   = 0
@@ -433,6 +441,19 @@ do i=1,nrnew
     node_list%node(index)%values(1,4,1) = PSInew(4,index0) * 4.d0/9.d0
 
     if (i .eq. nrnew) node_list%node(index)%boundary = 2
+
+    node_list%node(index)%axis_node = .false.
+    if (fix_axis_nodes) then
+      if (i .eq. 1) then
+        node_list%node(index)%axis_node = .true.
+        ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
+        ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
+        ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
+        ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
+        node_list%node(index)%x(3,1) = +node_list%node(index)%x(2,2)
+        node_list%node(index)%x(3,2) = -node_list%node(index)%x(2,1)
+      endif
+    endif
 
     if (.not. refinement) then       ! keep original formulation if not using refinement
    
@@ -547,6 +568,13 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
    element_list%element(k)%size(iv,2) = dir_2
    element_list%element(k)%size(iv,3) = dir_3
    element_list%element(k)%size(iv,4) = element_list%element(k)%size(iv,2) * element_list%element(k)%size(iv,3)
+   if (fix_axis_nodes) then
+      j = element_list%element(k)%vertex(iv)
+      if (node_list%node(j)%axis_node) then
+        element_list%element(k)%size(iv,3) = 0.d0
+        element_list%element(k)%size(iv,4) = 0.d0
+      endif
+   endif
 
 !   if ((RR(2,node_iv)**2 + ZZ(2,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,2) = dir_2
 !   if ((RR(3,node_iv)**2 + ZZ(3,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,3) = dir_3

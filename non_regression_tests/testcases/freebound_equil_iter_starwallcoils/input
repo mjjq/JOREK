@@ -19,7 +19,7 @@
  current_ref          = 12.d6
  FB_Zaxis_position    = 10.d0
  Z_axis_ref           = 0.603d0
- Zaxis_find_limit     = 1.5d0
+ axis_srch_radius     = 2.5d0
  start_VFB            = 4
  n_feedback_current   = 1
  n_feedback_vertical  = 1

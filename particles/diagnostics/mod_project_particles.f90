@@ -121,6 +121,8 @@ pure function proj_q(sim, group, particle)
     proj_q = real(p%q, 8)
   type is (particle_gc)
     proj_q = real(p%q, 8)
+  type is (particle_kinetic_relativistic)
+    proj_q = real(p%q, 8)
   class default
     proj_q = 0.d0
   end select

@@ -2,6 +2,7 @@ subroutine plot_flux_surfaces(node_list,element_list,surface_list,frame,every_nt
 use tr_module 
 use data_structure
 use mod_interp
+use phys_module, only: write_ps
 implicit none
 
 ! --- Routine parameters
@@ -22,6 +23,11 @@ real*8             :: psi_bnd, psi_bnd2
 real*8,allocatable :: rplot(:), zplot(:)
 character*13       :: LABEL
 
+
+if ( .not. write_ps ) then
+  write(*,*) ' Jorek2postscript deactivated. Skipping plot_flux_surfaces'
+  return
+endif
 psi_bnd  = 0.d0
 psi_bnd2 = 0.d0
 

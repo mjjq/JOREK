@@ -18,7 +18,7 @@
  FB_Zaxis_position    = 10.
  FB_Zaxis_integral    = 0.0
  FB_Zaxis_derivative  = 2.0
- Zaxis_find_limit     = 1.5d0
+ axis_srch_radius     = 1.5d0
  start_VFB            = 20
  n_feedback_current   = 1
  n_feedback_vertical  = 1

@@ -16,7 +16,6 @@ program JOREK2_FOUR
   
   integer                      :: i, j, k, l, ierr, ivar, n_cpu, err, vars_per_cpu, nTht
   type(t_theta_mapping)        :: mapping        ! Mapping between theta_mag and theta_geo
-  type(t_equil_state)          :: eq
   type (type_bnd_element_list) :: bnd_elm_list
   type (type_bnd_node_list)    :: bnd_node_list
   complex, allocatable         :: vfour(:,:,:,:) ! Transformed quantities (m,n,irad,ivar)
@@ -40,10 +39,6 @@ program JOREK2_FOUR
   call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)   ! read restart file
 
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
-
-  ! --- Initialize the plasma equilibrium data structure
-  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase, eq)
-  call print_equil_state(eq, .false.)
 
   !   --- Preset field line tracing parameters.
   nstpts      = 30
@@ -91,7 +86,7 @@ program JOREK2_FOUR
   ! --- Determine magnetic coordinates by field line tracing.
   write(*,*)
   write(*,*) '>>> Determining the poloidal straight field line angle theta_star <<<'
-  call determine_theta_mag(mapping, node_list, element_list, eq, rad_range, nstpts, nTht, ierr, nmaxsteps_corr, deltaphi_corr, nsmallsteps)
+  call determine_theta_mag(mapping, node_list, element_list, ES, rad_range, nstpts, nTht, ierr, nmaxsteps_corr, deltaphi_corr, nsmallsteps)
 
   ! --- Transform the quantities
   write(*,*)

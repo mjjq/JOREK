@@ -18,6 +18,7 @@ use phys_module
 use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use vacuum, only: freeb_fact
+use equil_info, only : get_psi_n
 
 implicit none
 
@@ -458,15 +459,7 @@ do ms=1, n_gauss
      eta_num_T   = eta_num                         ! hyperresistivity
      visco_num_T = visco_num                       ! hyperviscosity
 
-     psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
-     if (xpoint2) then
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
-         psi_norm = 2.d0 - psi_norm
-       endif
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms,mt) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
-         psi_norm = 2.d0 - psi_norm
-       endif
-     endif
+     psi_norm = get_psi_n(ps0, y_g(ms,mt))
 
      D_prof  = get_dperp (psi_norm)
      ZK_prof = get_zkperp(psi_norm)
@@ -490,7 +483,7 @@ do ms=1, n_gauss
 
        call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                            pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
-                           x_g(ms,mt),y_g(ms,mt), ps0, phi, eq_zne(ms,mt),eq_zTe(ms,mt), &
+                           x_g(ms,mt),y_g(ms,mt), ps0, phi, r0, T0/2.d0, &
                            central_density, pellet_particles, pellet_density, total_pellet_volume, &
                            source_pellet, source_volume)
      endif

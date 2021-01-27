@@ -14,7 +14,9 @@ use diffusivities, only: get_dperp, get_zkperp
 use nodes_elements
 use mod_boundary
 use mod_import_restart
+use equil_info, only : get_psi_n, ES
 use mod_interp
+
 implicit none
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors, my_id
@@ -29,8 +31,7 @@ real*8                :: sg, tg, phi, angle
 real*8,allocatable    :: avg6(:), avg7(:), avg8(:), avg11(:), Ravg(:), Zavg(:)
 real*8,allocatable    :: prf1(:), prf2(:), prf3(:), prf4(:), prf5(:), prf6(:), prf7(:), prf8(:), prf11(:), Rprf(:), Zprf(:)
 logical,allocatable   :: tobedone(:)
-real*8                :: psi_axis, R_axis, Z_axis, psi_bnd, BigR, xjac, s_axis, t_axis, psi_norm
-real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
+real*8                :: BigR, xjac, psi_norm
 real*8                :: R,R_s,R_t,R_st,R_ss,R_tt, Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
 real*8                :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt, VP,VP_s,VP_t,VP_st,VP_ss,VP_tt
 real*8                :: RH,RH_s,RH_t,RH_st,RH_ss,RH_tt, TT,TT_s,TT_t,TT_st,TT_ss,TT_tt
@@ -101,14 +102,13 @@ t_norm   = sqrt(MU_zero*rho_norm)
 
 ! --- Find the lowest point on the outer divertor target (required later)
 call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
-call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
 R_start = 1.d99
 Z_start = 1.d99
 do i_bnd_node = 1, bnd_node_list%n_bnd_nodes
   i_node = bnd_node_list%bnd_node(i_bnd_node)%index_jorek
   R = node_list%node(i_node)%x(1,1)
   Z = node_list%node(i_node)%x(1,2)
-  if ( ( node_list%node(i_node)%boundary == 3 ) .and. ( R > R_xpoint(1) ) .and. ( Z < Z_start ) ) then
+  if ( ( node_list%node(i_node)%boundary == 3 ) .and. ( R > ES%R_xpoint(1) ) .and. ( Z < Z_start ) ) then
     R_start = R
     Z_start = Z
   end if
@@ -189,18 +189,6 @@ do m=1,n_plane
     phi = 2.d0 * PI * float(m-1)/float(n_plane-1) / float(n_period)
   endif
 enddo
-
-call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
-if (xpoint) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-  psi_bnd = psi_xpoint(1)
-  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    psi_bnd = psi_xpoint(2)
-  endif
-else
-  psi_bnd = 0.d0
-endif
 
 do m=1, n_plane
 
@@ -366,21 +354,13 @@ do m=1, n_plane
           T_y   = ( - R_t * T_s   + R_s * T_t )   / xjac
 
           BB2 = (F0**2 + (psi_x*psi_x+psi_y*psi_y)) / BigR**2
+          
+          psi_norm = get_psi_n(psi, Z)
 
-          psi_norm = (psi - psi_axis)/(psi_bnd - psi_axis)
-          if (xpoint) then
-            if ((psi_norm .lt. 1.d0) .and. (Z .lt. Z_xpoint(1)) .and. (xcase .ne. 2)) then
-              psi_norm = 2.d0 - psi_norm
-            endif
-            if ((psi_norm .lt. 1.d0) .and. (Z .gt. Z_xpoint(2)) .and. (xcase .ne. 1)) then
-              psi_norm = 2.d0 - psi_norm
-            endif
-          endif
+          D_prof   = get_dperp (psi_norm)
+          ZK_prof  = get_zkperp(psi_norm)
 
-          D_prof  = get_dperp (psi_norm)
-          ZK_prof = get_zkperp(psi_norm)
-
-          ZKpar_T = ZK_par * abs(max(T,0.001d0)/T_0)**2.5
+          ZKpar_T  = ZK_par * abs(max(T,0.001d0)/T_0)**2.5
 
           scalars(inode,1) = psi
           scalars(inode,2) = rho

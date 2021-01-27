@@ -40,9 +40,10 @@ ms              = int(sys.argv[7])
 
 
 # --- Loads the list of times and step numbers from the existing restart files
+#     Ignores restart files with indices greater than highest index in macroscopic_vars.dat
 files           = np.loadtxt(name_steps,dtype=int)
 times           = np.loadtxt(name_times)
-available_times = times[files]
+available_times = times[files[files < len(times)]]
 
 
 

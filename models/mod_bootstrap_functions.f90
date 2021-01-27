@@ -454,7 +454,7 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
       psi_bnd2 = psi_xpoint(2)  
     endif
     ! If we have a symmetric double-null, force the single separatrix
-    if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. symmetric_threshold) then
+    if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
       psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
       psi_xpoint(2) = psi_xpoint(1)
       psi_bnd  = psi_xpoint(1)
@@ -645,7 +645,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
       psi_bnd2 = psi_xpoint(2)  
     endif
     ! If we have a symmetric double-null, force the single separatrix
-    if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. symmetric_threshold) then
+    if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
       psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
       psi_xpoint(2) = psi_xpoint(1)
       psi_bnd  = psi_xpoint(1)

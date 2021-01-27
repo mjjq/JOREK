@@ -29,6 +29,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
+use equil_info, only : get_psi_n
 
 
 implicit none
@@ -428,9 +429,9 @@ endif
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Diffusivities
 
-     psi_norm = (A30 - psi_axis) / (psi_bnd - psi_axis)
-     D_prof  = D_perp(1)  * ((1.d0- D_perp(2)) + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4) )))
-     ZK_prof = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4))))
+     psi_norm = get_psi_n(A30, y_g(ms,mt))
+     D_prof   = D_perp(1)  * ((1.d0- D_perp(2)) + D_perp(2)  *(0.5d0 - 0.5d0*tanh((psi_norm-D_perp(5)) /D_perp(4) )))
+     ZK_prof  = ZK_perp(1) * ((1.d0-ZK_perp(2)) + ZK_perp(2) *(0.5d0 - 0.5d0*tanh((psi_norm-ZK_perp(5))/ZK_perp(4))))
 
 
      ! --- Temperature dependent resistivity

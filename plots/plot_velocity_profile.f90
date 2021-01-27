@@ -96,7 +96,7 @@ do i = 1,iplot
    write(21,*) xp(i), yp(i)
 enddo
 
-call lplot(1,1,1,xp,yp,iplot,1,'perp. flow',10,'distance',8,'flow',4)
+if ( write_ps ) call lplot(1,1,1,xp,yp,iplot,1,'perp. flow',10,'distance',8,'flow',4)
 
 call tr_deallocate(xp,"xp",CAT_GRID)
 call tr_deallocate(yp,"yp",CAT_GRID)

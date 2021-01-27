@@ -119,6 +119,7 @@ if(xcase .ne. 2) then
     
     ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
     min_indices_lw(:) = minloc(grad_psi, mask=include_pt_lw)
+    if (.not. any(include_pt_lw)) min_indices_lw = 0
 
     if ((min_indices_lw(1) == 0) .and. (i_tries == 1)) then     ! --- if all elements are initially excluded, stop search and initialize values
       found_lower      = .false.
@@ -158,6 +159,7 @@ if(xcase .ne. 1) then
 
     ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
     min_indices_up(:) = minloc(grad_psi, mask=include_pt_up)
+    if (.not. any(include_pt_up)) min_indices_up = 0
     
     if ((min_indices_up(1) == 0) .and. (i_tries == 1)) then     ! --- if all elements are initially excluded, stop search and initialize values
       found_upper      = .false.

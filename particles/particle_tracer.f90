@@ -12,6 +12,7 @@ use mod_io_actions
 ! Pushers
 use mod_boris
 use mod_fieldline_euler
+use mod_kinetic_relativistic
 
 ! Fields
 use mod_fields

@@ -6,7 +6,7 @@
 subroutine preset_parameters
   
   use phys_module
-  use mumps_module,  only: use_mumps, no_zeros_mumps, use_mumps_BLR, mumps_BLR_eps, mumps_ordering
+  use mumps_module,  only: use_mumps, no_zeros_mumps, mumps_ordering
   use pastix_module, only: use_pastix, no_zeros_pastix, pastix_smp_only
   use wsmp_module,   only: use_wsmp
   
@@ -14,7 +14,7 @@ subroutine preset_parameters
   
   time_evol_scheme = 'Crank-Nicholson'
   
-  n_tor_fft_thresh = 5
+  n_tor_fft_thresh = 2
   if(jorek_model == 305 .or. jorek_model == 306) n_tor_fft_thresh = 99
   
   ! --- DoubleNull flag
@@ -42,7 +42,8 @@ subroutine preset_parameters
   import_equil = .false.
   regrid       = .false.
   rst_format   = 0             ! use 'old' format for restart import
-
+  write_ps     = .true.           ! write postscript file at the end of the run 
+  
   freeboundary_equil = .false. ! use free or fixed boundary equilibrium
   freeboundary       = .false. ! use free or fixed boundary?
   resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
@@ -58,26 +59,29 @@ subroutine preset_parameters
   amix_freeb           = 0.85d0
   equil_accuracy       = 1.d-6
   equil_accuracy_freeb = 1.d-6
-  Zaxis_find_limit     = 99.d0
+  axis_srch_radius     = 99.d0
   
-  n_R       = 0
-  n_Z       = 0
+  n_R          = 0
+  n_Z          = 0
 
-  n_radial  = 11
-  n_pol     = 16
+  n_radial     = 11
+  n_pol        = 16
 
-  n_flux    = 11
-  n_tht     = 16
-
-  n_open    = 5
-  n_outer   = 0
-  n_inner   = 0
-  n_leg     = 5
-  n_private = 5
-  n_up_leg  = 0
-  n_up_priv = 0
+  n_flux       = 11
+  n_tht        = 16
+  n_tht_equidistant = .false.
   
-  n_ext = 0
+  n_open       = 5
+  n_outer      = 0
+  n_inner      = 0
+  n_leg        = 5
+  n_leg_out    = 0
+  n_private    = 5
+  n_up_leg     = 0
+  n_up_leg_out = 0
+  n_up_priv    = 0
+  
+  n_ext        = 0
 
   psi_axis_init = -0.1d0
   XR_r(:)       = 999.d0
@@ -102,6 +106,8 @@ subroutine preset_parameters
   dPSI_inner   = 0.11
   dPSI_private = 0.03
   dPSI_up_priv = 0.03
+  
+  SDN_threshold = 1.d-4
   
   R_geo     = 10.d0
   Z_geo     = 0.d0
@@ -292,8 +298,10 @@ subroutine preset_parameters
   
   refinement         = .false.              ! enable mesh refinement
   force_central_node = .true.               ! force all nodes in the grid center to have the same values in flux surface aligned grids
+  fix_axis_nodes     = .false.              ! Fix t-derivative and cross st-derivative on axis to avoid noise
   
   grid_to_wall       = .false.              ! extend the grid to a physical wall
+  RZ_grid_inside_wall= .false.              ! build the rectangular grid inside first wall
   
   adaptive_time      = .false.              ! requires no_mpi for Pastix library
   
@@ -304,8 +312,11 @@ subroutine preset_parameters
   no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
 
   mumps_ordering     = 7                    ! MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
-  use_mumps_BLR      = .false.              ! Use MUMPS solver with Block-low-rank (BLR) compression
-  mumps_BLR_eps      = 0                    ! Accuracy of MUMPS BLR approximations (0 = full precision)
+  use_BLR_compression = .false.             ! Use MUMPS / PaStiX 6 solver with Block-low-rank (BLR) compression
+  pastix_blr_abs_tol = .true.               ! Use absolute tolerance
+  epsilon_BLR        = 0.                   ! Accuracy of BLR compression (0. = lossless)
+  just_in_time_BLR   = .true.               ! Use Just-in-time strategy for BLR compression (.false. = memory-optimal)
+
   
 !==== RMP parameters =====
   RMP_on             = .false.              ! .true. to activate RMPs (changes boundary conditions)
@@ -331,6 +342,15 @@ subroutine preset_parameters
   R_limiter = 0.d0
   Z_limiter = 0.d0
   
+  n_wall_blocks        = 0
+  n_ext_block          = 0
+  n_block_points_left  = 0
+  R_block_points_left  = 0.d0
+  Z_block_points_left  = 0.d0
+  n_block_points_right = 0
+  R_block_points_right = 0.d0
+  Z_block_points_right = 0.d0
+ 
  !======================MB rotation profile
   V_0 = 0.d0
   V_1 = 0.d0

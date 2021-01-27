@@ -63,6 +63,7 @@ use corr_neg
 use elements_nodes_neighbours
 use mod_import_restart
 use mod_neighbours
+use equil_info, only : get_psi_n, ES
 
 
 implicit none
@@ -75,9 +76,7 @@ type (type_node)         :: nodes(n_vertex_max)
 integer    :: i, j, k, in, ms, mt, mp, im, iv, inode, ife, n_elements
 integer    :: k_tor, ierr, my_id, i_elm_axis, i_elm_xpoint, ifail, n_plane_local
 
-real*8     :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
-real*8     :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
-real*8     :: psi_norm, psi_bnd
+real*8     :: psi_norm
 real*8     :: wst, xjac, xjac_x, xjac_y, error, Btot, BigR, BigZ
 
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss)                    &
@@ -176,21 +175,6 @@ do k_tor = 2, n_tor
   write(mode_num_TermSum,'(I4)') mode(k_tor)
   write(*,MODE_write) k_tor, mode_type(k_tor), trim(adjustl(mode_num_TermSum))
 end do
-
-
-call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
-
-if (xpoint) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint          &
-                  ,s_xpoint,t_xpoint,xcase,ifail)
-  psi_bnd  = psi_xpoint(1)
-  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-    psi_bnd = psi_xpoint(2)
-  endif
-else
-  psi_bnd = 0.d0
-endif
 
 ! --- Initialization for VTK files
 n_terms   = 22
@@ -298,10 +282,10 @@ write(*,*) 'visco                  = ', visco
 write(*,*) 'visco_num              = ', visco_num
 write(*,*) 'xpoint                 = ', xpoint
 write(*,*) 'visco_T_dependent      = ', visco_T_dependent
-write(*,*) 'psi_axis               = ', psi_axis
-write(*,*) 'psi_bnd                = ', psi_bnd
-write(*,*) 'psi_xpoint             = ', psi_xpoint
-write(*,*) 'Z_xpoint               = ', Z_xpoint
+write(*,*) 'psi_axis               = ', ES%psi_axis
+write(*,*) 'psi_bnd                = ', ES%psi_bnd
+write(*,*) 'psi_xpoint             = ', ES%psi_xpoint
+write(*,*) 'Z_xpoint               = ', ES%Z_xpoint
 write(*,*) 'F0                     = ', F0
 write(*,*) 'R_geo,Z_geo            = ', R_geo, Z_geo
 write(*,*) 'HZ                     = ', HZ
@@ -562,7 +546,7 @@ do ife = 1, element_list%n_elements
 
     eps_cyl = 1.d0          ! for cylinder geometry : epscyl = eps
 
-    call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt), psi_axis, psi_bnd  &
+    call sources(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt), ES%psi_axis, ES%psi_bnd  &
                , particle_source(ms,mt), heat_source(ms,mt))
 
     do mp = 1, n_plane_local
@@ -880,8 +864,7 @@ do ife = 1, element_list%n_elements
           Source_term    = + BigR**3. * particle_source(ms,mt) * (v_x(mp,ms,mt) * u0_x             &
                                                                 + v_y(mp,ms,mt) * u0_y)       * xjac
                                                                 
-          psi_norm = (ps0 - psi_axis) / (psi_bnd - psi_axis)
-          !psi_norm = 2.d0 - psi_norm
+          psi_norm = get_psi_n( ps0, y_g(ms,mt)) 
         
           Source_term_2  = -1. * v(mp,ms,mt) * ( particle_source(ms,mt) * BigR**3. * w0            &
                            + BigR * ( u0_x * ps0_x + u0_y * ps0_y )                                &

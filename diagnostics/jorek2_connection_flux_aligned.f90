@@ -1,6 +1,24 @@
 program jorek2_connection_flux_aligned
   !-----------------------------------------------------------------------
+  ! This routine is a modified version of jorek2_poincare. Field lines are traced around the simulated domain in order
+  ! to determine the distance travelled before reaching the simulation boundary, or an arbitrary psi_n flux surface
+  ! within the plasma.
   !
+  ! Currently the diagnostic calculates the connection length and strike points on the set end boundary.
+  ! 
+  ! STEPS:
+  ! 1. Read input parameters from connect.nml and distribute start points among MPI tasks.
+  ! 2. Loop over start points
+  !   3. Trace field lines around torus for a pre-set number of turns using a pre-set number of steps.
+  !     4. Perform step.
+  !     5. Check if element boundary is crossed.
+  !     6. If end boundary is crossed - break and start new field line
+  ! 7. Write out poincare 
+  ! 8. Write connection length
+  ! 9. Write strike points
+  !
+  ! TO-DO: This routine should be able to generate poincare plots but there seems to be a bug in the implementation of this
+  !        feature that needs to be fixed.
   !-----------------------------------------------------------------------
   use data_structure
   use phys_module
@@ -116,7 +134,7 @@ program jorek2_connection_flux_aligned
   ! --- Broadcast accross MPIs
 !  call broadcast_elements(my_id, element_list)              ! elements
 !  call broadcast_nodes(my_id, node_list)                    ! nodes
-  call populate_element_rtree(node_list, element_list)      ! populate tree for all mpi tasks
+  call populate_element_rtree(node_list, element_list)       ! populate tree for all mpi tasks
 
   ! --- Define element neighbours
   allocate(element_neighbours(4,element_list%n_elements))
@@ -162,7 +180,7 @@ program jorek2_connection_flux_aligned
   end if
   n_lines = 2 * ntheta * npsin              ! number of starting points to allocate
   if (psin_range_max .gt. 0.999) then
-    write(*, *) 'Maximum psi normalised cannot be greater than 1. The input value is: ', psin_range_max
+    write(*, *) 'Maximum psi normalised cannot be greater than 0.999. The input value is: ', psin_range_max
     stop
   end if
 
@@ -232,7 +250,6 @@ program jorek2_connection_flux_aligned
   ! -------------------------------------------------------------------------------------------------
   ! --- Second part: Loop over starting points and store connection lengths
   ! -------------------------------------------------------------------------------------------------
-  
   ! --- Loop over poloidal locations
   do i = local_theta_start, local_theta_end
     theta_start = i * delta_theta
@@ -969,6 +986,7 @@ subroutine find_new_element(s_bnd, i_elm, i_elm_prev, &
   endif
 end
 
+! Take step along the traced field line
 subroutine step(i_elm,s_in,t_in,p_in,delta_p,delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)
   use mod_parameters
   use elements_nodes_neighbours

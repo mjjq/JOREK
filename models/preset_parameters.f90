@@ -444,6 +444,9 @@ subroutine preset_parameters
   nimp_bg = 0.
   n_adas = 0
   adas_dir = ''
+  imp_type = ''
+  use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one exists for argon
+
   !====== JET DMV-2 parameters
   L_tube = 2.4d0
   K_Dmv = 4.d-2
@@ -470,9 +473,6 @@ subroutine preset_parameters
   spi_tor_rot     = .false.
   using_spi       = .false.
 
-  n_adas          = 0
-  adas_dir        = ''
-  imp_type        = ''
   output_prad_phi = .false.
 
 !======================JP ECCD injection parameters

@@ -9,20 +9,25 @@ program jorek2_connection_flux_aligned
   use elements_nodes_neighbours
   use constants
   use mod_import_restart
+  use mod_boundary
   use mod_neighbours
   use mod_interp
   
   implicit none
   include 'mpif.h'
   
+  type (type_bnd_element_list)           :: bnd_elm_list    
+  type (type_bnd_node_list)              :: bnd_node_list 
+  
   ! --- Poincare data
   real*8,allocatable  :: rp(:), zp(:), R_all(:), Z_all(:), psin_all(:), C_all(:), C_minus(:), C_plus(:)  ! arrays for position variables, and connection length for all lines
-  real*4,allocatable  :: C_all_4(:)
-  real*4,allocatable  :: R_strike(:),  Z_strike(:), P_strike(:)                                         ! position of strike points
+  real*8,allocatable  :: C_all_4(:)
+  real*8,allocatable  :: R_strike(:),  Z_strike(:), P_strike(:)                                         ! position of strike points
   real*8,allocatable  :: C_strike(:),  B_strike(:)                                                      ! connection length, boundary type at strike points
   real*8,allocatable  :: T0_strike(:), T_strike(:)                                                      ! temperature at start and end of fieldline
   real*8,allocatable  :: ZN0_strike(:), ZN_strike(:)                                                    ! density at start and end of fieldline
   real*8,allocatable  :: PS0_strike(:)                                                                  ! flux at starting point
+  real*8,allocatable  :: in_domain_strike(:)                                                            ! Determine if field line is inside the domain
   real*8,allocatable  :: R_turn(:,:), Z_turn(:,:), C_turn(:,:), C_turn_tmp(:,:)                         ! position, and connection length of field line after each turn
   real*8,allocatable  :: T_turn(:,:), PSI_turn(:,:), ZN_turn(:,:)                                       ! physical parameters of field line after each turn
   
@@ -30,7 +35,7 @@ program jorek2_connection_flux_aligned
   integer   :: ntheta, npsin
   integer   :: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, i_line0
   integer   :: thetas_per_cpu, local_theta_start, local_theta_end
-  integer   :: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
+  integer   :: nnos, i_var, i_strike, i_strike0
   integer   :: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_var_n, i_var_T, i_dir, k, m
   integer   :: i_elm, i_elm_start, ifail, i_phi, n_phi, i_turn, n_turns, i_elm_out, i_elm_prev, i_steps, n_turn_max(2)
   integer   :: v_s0_t0, v_s1_t0, v_s1_t1, v_s0_t1                                                        ! vertex indices for local element vertices
@@ -49,6 +54,7 @@ program jorek2_connection_flux_aligned
   real*8    :: psin_range_min, psin_range_max
   real*8    :: Rmin, Rmax
   real*8    :: Zmin, Zmax
+  real*8    :: psin_strike_bnd
   real*8    :: delta_phi, delta_phi_local, delta_phi_step, total_phi
   real*8    :: delta_s, small_delta_s
   real*8    :: delta_t, small_delta_t
@@ -61,17 +67,17 @@ program jorek2_connection_flux_aligned
   real*8    :: s_tmp,   s_tmp_opp
   real*8    :: t_tmp,   t_tmp_opp
   real*8    :: value_out
-  real*4,allocatable  :: RZkeep(:,:),scalars(:,:)
-  real*4    :: ZERO
+  real*8,allocatable  :: RZkeep(:,:),RhoThetakeep(:,:)
   integer   :: status(MPI_STATUS_SIZE)
   character   :: buffer*80, lf*1, str1*12, str2*12
+  character*12, allocatable :: scalar_names(:)
   integer   :: count_lines, count_lines_tot
   real*8    :: C_average,   C_average_tot
   real*8    :: small_r, theta_pol
   logical, parameter  :: Rtheta_plot = .true.
   integer   :: n_points_max
   real*8    :: R_tmp,Z_tmp
-  real*8    :: psi_tmp,P0_s,P0_t,P0_st,P0_ss,P0_tt
+  real*8    :: psi_tmp,psin_tmp, P0_s,P0_t,P0_st,P0_ss,P0_tt
   integer   :: ielm_tmp
 
   ! Data for find starting point routine
@@ -80,7 +86,7 @@ program jorek2_connection_flux_aligned
   ! -------------------------------------------------------------------------------------------------
   ! --- First part: Initialisation
   ! -------------------------------------------------------------------------------------------------
-  namelist /connect_params/ n_turns, n_phi, ntheta, npsin, phi_start, tol, psin_range_min, psin_range_max
+  namelist /connect_params/ n_turns, n_phi, ntheta, npsin, phi_start, tol, psin_range_min, psin_range_max, psin_strike_bnd
 
 #define DEBUG
 
@@ -97,18 +103,20 @@ program jorek2_connection_flux_aligned
   endif
   
   ! --- Initilise data
+  call initialise_basis                                     ! define the basis functions at the Gaussian points
   call initialise_parameters(my_id, "__NO_FILENAME__")
   do i_tor=1, n_tor
     mode(i_tor) = + int(i_tor / 2) * n_period
   enddo
-  call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
-  call initialise_basis                                     ! define the basis functions at the Gaussian points
   
-  ! --- Broadcast accross MPIs
-  call broadcast_elements(my_id, element_list)              ! elements
-  call broadcast_nodes(my_id, node_list)                    ! nodes
-  call populate_element_rtree(node_list, element_list)      ! populate tree for all mpi tasks
   call broadcast_phys(my_id)                                ! physics parameters
+  call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+  call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+
+  ! --- Broadcast accross MPIs
+!  call broadcast_elements(my_id, element_list)              ! elements
+!  call broadcast_nodes(my_id, node_list)                    ! nodes
+  call populate_element_rtree(node_list, element_list)      ! populate tree for all mpi tasks
 
   ! --- Define element neighbours
   allocate(element_neighbours(4,element_list%n_elements))
@@ -123,7 +131,6 @@ program jorek2_connection_flux_aligned
   enddo
   
   ! --- Initialise constants
-  n_scalars = 4
   i_var_psi = 1                             ! magnetic flux index
   i_var_n   = 1                             ! number density index
   i_var_T   = 6                             ! temperature index
@@ -144,11 +151,12 @@ program jorek2_connection_flux_aligned
   phi_start   = PI/4.                       ! starting toroidal angle
   ntheta      = 500                         ! number of poloidal starting points on each flux surface
   npsin       = 25                          ! number of radial starting points on each flux surface
-  psin_range_min = 0.d0
-  psin_range_max = 0.995
+  psin_range_min = 0.d0                     ! Minimum psin value
+  psin_range_max = 0.995                    ! Maximym psin value - should be smaller than psin_strike_bnd
+  psin_strike_bnd = 1.0                     ! Boundary location outside of which field lines are no longer traced and strike points are recorded
   open(42, file='connect.nml', action='read', status='old', iostat=ierr)
   if ( ierr == 0 ) then
-    if (my_id .eq. 0 ) write(*,*) 'Reading parameters from connecvtk.nml namelist.'
+    if (my_id .eq. 0 ) write(*,*) 'Reading parameters from connect.nml namelist.'
     read(42,connect_params)
     close(42)
   end if
@@ -159,19 +167,19 @@ program jorek2_connection_flux_aligned
   end if
 
   ! --- Allocate data
-  allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines),B_strike(n_lines))
+  allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines),B_strike(n_lines), in_domain_strike(n_lines))
   allocate(T0_strike(n_lines),T_strike(n_lines),ZN0_strike(n_lines),ZN_strike(n_lines),PS0_strike(n_lines))
   allocate(R_all(n_lines),Z_all(n_lines),psin_all(n_lines),C_all(n_lines),C_minus(n_lines),C_plus(n_lines))
   allocate(C_all_4(n_lines))
   allocate(R_turn(n_turns+1,2),Z_turn(n_turns+1,2),C_turn(n_turns+1,2),C_turn_tmp(n_turns+1,2))
   allocate(T_turn(n_turns+1,2),PSI_turn(n_turns+1,2),ZN_turn(n_turns+1,2))
   n_points_max = 10000000
-  allocate(RZkeep(2,n_points_max),scalars(n_points_max,n_scalars))
+  allocate(RZkeep(2,n_points_max),RhoThetakeep(2,n_points_max))
 
   ! --- Initialise allocated data
   R_all     = 0.d0; Z_all     = 0.d0; psin_all=0.d0; C_all = 0.d0;  C_all_4    = 0.d0
   C_minus   = 0.d0; C_plus    = 0.d0
-  R_strike  = 0.d0; Z_strike  = 0.d0; P_strike  = 0.d0;  C_strike   = 0.d0
+  R_strike  = 0.d0; Z_strike  = 0.d0; P_strike  = 0.d0;  C_strike   = 0.d0; in_domain_strike = 0.d0
   T0_strike = 0.d0; T_strike  = 0.d0; ZN0_strike = 0.d0; ZN_strike  = 0.d0; PS0_strike = 0.d0
   R_turn    = 0.d0; Z_turn    = 0.d0; C_turn  = 0.d0;  C_turn_tmp = 0.d0
   
@@ -196,8 +204,8 @@ program jorek2_connection_flux_aligned
     endif
     if (xcase .eq. 1) psi_bnd2 = psi_bnd
   else
-    psi_bnd  = 0.d0
-    psi_bnd2 = 0.d0
+    call find_limiter(my_id, node_list, element_list, bnd_elm_list, psi_bnd, R_start, Z_start)
+    psi_bnd2 = psi_bnd
   endif
     
   ! --- The elements our local MPI is looking at
@@ -206,6 +214,8 @@ program jorek2_connection_flux_aligned
   thetas_per_cpu = ntheta / n_cpu
   local_theta_start = my_id * thetas_per_cpu + 1
   local_theta_end = min(ntheta, (my_id + 1) * thetas_per_cpu)
+  if (my_id .eq. 0) write(*, *) thetas_per_cpu
+  write(*, *) my_id, local_theta_start, local_theta_end
   
   ! --- Some info print outs
   delta_theta = 2.d0 * PI / ntheta
@@ -254,7 +264,7 @@ program jorek2_connection_flux_aligned
       do i_dir = -1,1,2
          
         ! --- The toroidal step (with direction)
-        delta_phi = 2.d0 * PI * float(i_dir) / float(n_period*n_phi)      
+        delta_phi = 2.d0 * PI * float(i_dir) / float(n_period*n_phi)
 
         ! --- Initialise data before start
         i_elm = i_elm_start
@@ -278,11 +288,11 @@ program jorek2_connection_flux_aligned
         PSI_turn(1,(i_dir+1)/2+1) = psin_all(i_line)
         call var_value(i_elm, i_var_n, s_line,t_line,phi_start, ZN_turn (1,(i_dir+1)/2+1) )
         
-        ! --- Starting location
+        ! --- Set and store starting location
         R_line = R_start
         Z_line = Z_start
         p_line = phi_start
-    
+
         ! --- We assume this line will give a strike on the target
         i_strike = i_strike + 1
         ZN0_strike(i_strike) = ZN_turn (1,(i_dir+1)/2+1)
@@ -345,7 +355,6 @@ program jorek2_connection_flux_aligned
                                           s_line, t_line, p_line, small_delta, delta_s, delta_t, delta_phi_step, &
                                           e_splus, e_sminus, v_s1_t0, v_s1_t1, &
                                           dl2)
-                  
                   elseif (s_line + delta_s .lt. 0.d0) then ! crossing boundary 2 or 4 at s=0
                     s_line = 0.d0
                     call find_new_element(.true., i_elm, i_elm_prev, &
@@ -368,7 +377,6 @@ program jorek2_connection_flux_aligned
                                           s_line, t_line, p_line, small_delta, delta_s, delta_t, delta_phi_step, &
                                           e_tplus, e_tminus, v_s1_t1, v_s0_t1, &
                                           dl2)
-                  
                   elseif (t_line + delta_t .lt. 0.d0) then  ! crossing boundary 1 or 3 at t=0
                     t_line = 0.d0
                     call find_new_element(.false., i_elm, i_elm_prev, &
@@ -410,15 +418,17 @@ program jorek2_connection_flux_aligned
               ! --- Exit if we stepped out of domain
               if (i_elm .eq. 0) exit
               
+              call interp(node_list,element_list,i_elm,1,1,s_line,t_line,psi_tmp,P0_s,P0_t,P0_st,P0_ss,P0_tt)
+              psin_tmp = (psi_tmp - psi_axis) / (psi_bnd - psi_axis)
+              if (psin_tmp .gt. psin_strike_bnd) exit
             enddo  ! end of loop over steps within one element
     
             ! --- Exit if we stepped out of domain
-            if (i_elm .eq. 0) exit
-    
+            if ((i_elm .eq. 0) .or. (psin_tmp .gt. psin_strike_bnd)) exit
           enddo    ! end of a 2Pi turn (or before if end of open field line)
     
           ! --- Exit if we stepped out of domain
-          if (i_elm .eq. 0) exit
+          if ((i_elm .eq. 0)) exit
     
           ! --- Record Poincare point
           call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,R_s,R_t,R_st,R_ss,R_tt,Z_in,Z_s,Z_t,Z_st,Z_ss,Z_tt)
@@ -428,16 +438,27 @@ program jorek2_connection_flux_aligned
           call var_value(i_elm, i_var_T, s_line,t_line,p_line, T_turn  (i_turn+1,(i_dir+1)/2+1) )
           call var_value(i_elm, i_var_psi, s_line,t_line,p_line, PSI_turn(i_turn+1,(i_dir+1)/2+1) )
           call var_value(i_elm, i_var_n, s_line,t_line,p_line, ZN_turn (i_turn+1,(i_dir+1)/2+1) )
-    
+          
+          if (psin_tmp .gt. psin_strike_bnd) then
+            R_strike(i_strike) = R_in
+            Z_strike(i_strike) = Z_in
+            P_strike(i_strike) = p_line
+            C_strike(i_strike) = 0.d0        ! to be done (total_length needs correction)
+            B_strike(i_strike) = 0
+            call var_value(i_elm,i_var_T,s_line,t_line,p_line,T_strike(i_strike))
+            call var_value(i_elm,i_var_n,s_line,t_line,p_line,ZN_strike(i_strike))
+            exit
+          endif
         enddo  ! end of loop over toroidal turns
     
         ! --- Field line still in domain, after n_turn turns
-        if (i_elm .ne. 0) then
+        if ((i_elm .ne. 0) .and. (psin_tmp .lt. psin_strike_bnd)) then
           R_strike(i_strike) = R_in
           Z_strike(i_strike) = Z_in
           P_strike(i_strike) = p_line
           C_strike(i_strike) = 0.d0        ! to be done (total_length needs correction)
           B_strike(i_strike) = 0
+          in_domain_strike(i_strike) = 1
           call var_value(i_elm,i_var_T,s_line,t_line,p_line,T_strike(i_strike))
           call var_value(i_elm,i_var_n,s_line,t_line,p_line,ZN_strike(i_strike))
         endif
@@ -449,7 +470,7 @@ program jorek2_connection_flux_aligned
           C_all_4(i_line) = total_length
           partial(1)      = total_length
         else
-              C_all(i_line)   = C_all(i_line)+total_length!min(C_all(i_line),total_length)
+          C_all(i_line)   = C_all(i_line)+total_length!min(C_all(i_line),total_length)
           C_plus(i_line)  = total_length
           C_all_4(i_line) = C_all_4(i_line)+total_length
           partial(2)      = total_length
@@ -469,9 +490,7 @@ program jorek2_connection_flux_aligned
       enddo
 
       ! --- Keep only field lines starting inside the plasma
-      if ( (PSI_turn(1,1) .lt. psi_bnd2) &
-        .and. (    ((n_turn_max(1) .lt. n_turns) .and. (n_turn_max(2) .lt. n_turns)) &
-            .or. Rtheta_plot ) &
+      if ( (((n_turn_max(1) .lt. n_turns) .and. (n_turn_max(2) .lt. n_turns))) &
         .and. ( ( (xcase .eq. 1) .and. (Z_turn(1,1) .gt. Z_xpoint(1)) ) &
           .or.( (xcase .eq. 2) .and. (Z_turn(1,1) .lt. Z_xpoint(2)) ) &
           .or.( (xcase .eq. 3) .and. (Z_turn(1,1) .gt. Z_xpoint(1)) .and. (Z_turn(1,1) .lt. Z_xpoint(2)) ) ) ) then
@@ -482,10 +501,8 @@ program jorek2_connection_flux_aligned
   
         ! --- Do both directions
         do i_dir=1,2
-
           ! --- Do all turns
           do i_turn=1,n_turn_max(i_dir)+1
-
             if (R_turn(i_turn,i_dir) .gt. 0.d0) then
 
               ! --- Connection lengths in both directions
@@ -498,18 +515,12 @@ program jorek2_connection_flux_aligned
               if (theta_pol .lt. 0.d0) theta_pol = theta_pol + 2.d0*PI
               
               if (ikeep .le. n_points_max) then
-                if (Rtheta_plot) then
-                  call find_RZ(node_list,element_list,R_turn(i_turn,i_dir),Z_turn(i_turn,i_dir),R_tmp,Z_tmp,ielm_tmp,s_tmp,t_tmp,ifail)
-                  call interp(node_list,element_list,ielm_tmp,1,1,s_tmp,t_tmp,psi_tmp,P0_s,P0_t,P0_st,P0_ss,P0_tt)
-                  RZkeep(1,ikeep)      = (psi_tmp-psi_axis)/(psi_bnd-psi_axis)!small_r
-                  RZkeep(2,ikeep)      = theta_pol / (2.d0*PI)
-                else
-                  RZkeep(1,ikeep)      = R_turn(i_turn,i_dir)
-                  RZkeep(2,ikeep)      = Z_turn(i_turn,i_dir)
-                endif
-                !scalars(ikeep,1:n_scalars) = (/ min(zl1,zl2),T_turn(1,i_dir) /)
-                !scalars(ikeep,1:n_scalars) = (/ C_all_4(i_line),C_minus(i_line),C_plus(i_line),T_turn(1,i_dir) /)
-                scalars(ikeep,1:n_scalars) = (/ C_all(i_line),min(zl1,zl2),PSI_turn(1,i_dir),T_turn(1,i_dir) /)
+                call find_RZ(node_list,element_list,R_turn(i_turn,i_dir),Z_turn(i_turn,i_dir),R_tmp,Z_tmp,ielm_tmp,s_tmp,t_tmp,ifail)
+                call interp(node_list,element_list,ielm_tmp,1,1,s_tmp,t_tmp,psi_tmp,P0_s,P0_t,P0_st,P0_ss,P0_tt)
+                RhoThetakeep(1,ikeep)      = (psi_tmp-psi_axis)/(psi_bnd-psi_axis)!small_r
+                RhoThetakeep(2,ikeep)      = theta_pol / (2.d0*PI)
+                RZkeep(1,ikeep)            = R_turn(i_turn,i_dir)
+                RZkeep(2,ikeep)            = Z_turn(i_turn,i_dir)
               else
                 write(*,*) 'Warning! Exceeded maximum number of points',n_points_max
               endif
@@ -534,9 +545,66 @@ program jorek2_connection_flux_aligned
   endif
 
   ! -------------------------------------------------------------------------------------------------
-  ! --- Third part: write connection lengths to file
   ! -------------------------------------------------------------------------------------------------
+  ! --- Third part: write poincare plot to VTK file
+  ! -------------------------------------------------------------------------------------------------
+  ! -------------------------------------------------------------------------------------------------
+  write(*,*)'Writing poincare files - WARNING: this implementation is likely broken'
   
+  ! --- The local number of points (for mpi_0)
+  ikeep0  = ikeep
+  call MPI_Reduce(ikeep,nnos,1,MPI_INTEGER,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+  if (my_id .eq. 0) write(*,*) ' number of points : ',nnos
+  
+  ! --- Open file and write headers
+  open(21,file='poinc_R-Z.dat')
+  write(21,*) '#  R                 Z'
+  open(22,file='poinc_rho-theta.dat')
+  write(22,*) '# rho=sqrt(psi_n)'
+  write(22,*) '# psi_n=(psi - psi_axis)/(psi_bnd - psi_axis)'
+  write(22,*) '#'
+  write(22,*) '#  rho               theta'
+  
+  ! --- Write points for local MPI (id=0)
+  if (my_id .eq. 0) then
+    write(21,'(2e18.8)') (RZkeep(1,i),RZkeep(2,i), i=1,ikeep0 )
+    write(22,'(2e18.8)') (RhoThetakeep(1,i),RhoThetakeep(2,i), i=1,ikeep0 )
+    write(21,*)
+    write(21,*)
+    write(22,*)
+    write(22,*)
+  endif
+  
+  ! --- Write points for all other MPIs
+  if (my_id .eq. 0) then
+    ! --- If this is mpi_0, we receive data from the other MPIs and print it
+    do j=1,n_cpu-1
+      call mpi_recv(ikeep,1, MPI_INTEGER, j, j, MPI_COMM_WORLD, status, ierr)
+      if (ikeep .gt. 0) then
+        nrecv = 2*ikeep
+        call mpi_recv(RZkeep,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(RhoThetakeep,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        write(21,'(2e18.8)') (RZkeep(1,i),RZkeep(2,i), i=1,ikeep0 )
+        write(22,'(2e18.8)') (RhoThetakeep(1,i),RhoThetakeep(2,i), i=1,ikeep0 )
+        write(21,*)
+        write(21,*)
+        write(22,*)
+        write(22,*)
+      endif
+    enddo
+  else
+    ! --- If this is not mpi_0, we send data to the main MPI 0
+    call mpi_send(ikeep, 1, MPI_INTEGER, 0, my_id, MPI_COMM_WORLD, ierr)
+    if (ikeep .gt. 0) then
+      nsend = 2*ikeep
+      call mpi_send(RZkeep, nsend,MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+      call mpi_send(RhoThetakeep, nsend,MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+    endif
+  endif
+
+  ! -------------------------------------------------------------------------------------------------
+  ! --- Fourth part: write connection lengths to file
+  ! -------------------------------------------------------------------------------------------------
   if (my_id .eq. 0) write(*,*) 'Writing lines to connections.txt'
   open(23, file='connections.txt', action='write', status='replace', form='formatted', recl=400)
   
@@ -578,8 +646,62 @@ program jorek2_connection_flux_aligned
   endif
   close(23)
 
-  deallocate(RZkeep,scalars)
+  deallocate(RZkeep,RhoThetakeep)
 
+  ! -------------------------------------------------------------------------------------------------
+  ! -------------------------------------------------------------------------------------------------
+  ! --- Fifth part: write strike points to file
+  ! -------------------------------------------------------------------------------------------------
+  ! -------------------------------------------------------------------------------------------------
+  ! --- Open text file
+  write(*,*)'Writing strikes.txt...'
+  open(23,file='strikes.txt')
+  
+  ! --- The local number of strikes (for mpi_0)
+  i_strike0 = i_strike
+  call MPI_Reduce(i_strike,nnos,1,MPI_INTEGER,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+  if (my_id .eq. 0) write(*,*) ' number of points : ',nnos
+  
+  ! --- Write points for local MPI (id=0)
+  if (my_id .eq. 0) then
+    write(23,'(7f22.8)') ( (/ R_strike(i), Z_strike(i), P_strike(i), Ps0_strike(i), T0_strike(i), C_all_4(i), in_domain_strike(i) /),i=1,i_strike0)
+  endif
+  
+  ! --- Write points for all other MPIs
+  if (my_id .eq. 0) then
+    ! --- If this is mpi_0, we receive data from the other MPIs and print it
+    do j=1,n_cpu-1
+      call mpi_recv(i_strike,1, MPI_INTEGER, j, j, MPI_COMM_WORLD, status, ierr)
+      if (i_strike .gt. 0) then
+        nrecv = i_strike
+        call mpi_recv(R_strike,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(Z_strike,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(P_strike,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(Ps0_strike,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(T0_strike,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(C_all_4,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(in_domain_strike,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        !	   write(23,'(4e16.8)') ( (/R_strike(i)*cos(P_strike(i)), Z_strike(i), R_strike(i)*sin(P_strike(i)), C_all_4(i) /),i=1,i_strike)
+        write(23,'(7f22.8)') ( (/ R_strike(i), Z_strike(i), P_strike(i), Ps0_strike(i), T0_strike(i), C_all_4(i), in_domain_strike(i) /),i=1,i_strike)
+      endif
+    enddo
+  else
+    ! --- If this is not mpi_0, we send data to the main MPI 0
+    call mpi_send(i_strike, 1, MPI_INTEGER, 0, my_id, MPI_COMM_WORLD, ierr)
+    if (i_strike .gt. 0) then
+      nsend = i_strike
+      call mpi_send(R_strike, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+      call mpi_send(Z_strike, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+      call mpi_send(P_strike, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+      call mpi_send(Ps0_strike, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+      call mpi_send(T0_strike, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+      call mpi_send(C_all_4, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+      call mpi_send(in_domain_strike, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+    endif
+  endif
+  
+  ! Clean and exit
+  close(23)
   call MPI_FINALIZE(IERR)                                ! clean up MPI
 
 end program jorek2_connection_flux_aligned
@@ -701,9 +823,9 @@ subroutine find_starting_element(i_elm, &
       call find_RZ(node_list, element_list, BigR_tmp, Z_tmp, BigR_upper, Z_upper, i_elm, s_ini, t_ini, ifail)
 
       ! Correct r_upper if new point is outside of the domain, or in the x-point region, where bisections will fail
-      z_beyond_xpoint = (((xcase .eq. 1) .and. (Z_upper .lt. Z_xpoint(1)) ) &
+      z_beyond_xpoint = (xpoint .and. (((xcase .eq. 1) .and. (Z_upper .lt. Z_xpoint(1)) ) &
           .or.( (xcase .eq. 2) .and. (Z_upper .gt. Z_xpoint(2)) ) &
-          .or.( (xcase .eq. 3) .and. ((Z_upper .lt. Z_xpoint(1)) .or. (Z_upper .gt. Z_xpoint(2)))))
+          .or.( (xcase .eq. 3) .and. ((Z_upper .lt. Z_xpoint(1)) .or. (Z_upper .gt. Z_xpoint(2))))))
       sub_iter = 0
       do while ((ifail .ne. 0) .or. z_beyond_xpoint)
         if (sub_iter .gt. 50) then 
@@ -715,9 +837,9 @@ subroutine find_starting_element(i_elm, &
         BigR_tmp = R_axis + r_upper * cos(theta_start)
         Z_tmp = Z_axis + r_upper * sin(theta_start)
         call find_RZ(node_list, element_list, BigR_tmp, Z_tmp, BigR_upper, Z_upper, i_elm, s_ini, t_ini, ifail)
-        z_beyond_xpoint = (((xcase .eq. 1) .and. (Z_upper .lt. Z_xpoint(1)) ) &
+        z_beyond_xpoint = (xpoint .and. (((xcase .eq. 1) .and. (Z_upper .lt. Z_xpoint(1)) ) &
           .or.( (xcase .eq. 2) .and. (Z_upper .gt. Z_xpoint(2)) ) &
-          .or.( (xcase .eq. 3) .and. ((Z_upper .lt. Z_xpoint(1)) .or. (Z_upper .gt. Z_xpoint(2)))))
+          .or.( (xcase .eq. 3) .and. ((Z_upper .lt. Z_xpoint(1)) .or. (Z_upper .gt. Z_xpoint(2))))))
       enddo
       call interp(node_list,element_list,i_elm,1,1,s_ini,t_ini,psin_upper,P0_s,P0_t,P0_st,P0_ss,P0_tt)
       psin_upper = (psin_upper - psi_axis) / delta_psi_bnd
@@ -781,7 +903,7 @@ subroutine find_new_element(s_bnd, i_elm, i_elm_prev, &
   logical, intent(in)     :: s_bnd                                                                    ! Determine whether crossing is from the s coordinate  
   integer, intent(inout)  :: i_elm, i_elm_prev                                                        ! Element index of current element and previous element
   real*8, intent(inout)   :: total_length                                                             ! Total connection length
-  real*4, intent(inout)   :: R_strike, Z_strike, P_strike                                             ! Strike locations
+  real*8, intent(inout)   :: R_strike, Z_strike, P_strike                                             ! Strike locations
   real*8, intent(inout)   :: C_strike, T_strike, ZN_strike, B_strike                                  ! Strike connection length, and physical state
   real*8, intent(in)      :: R_mid, R_mid_s, R_mid_t, Z_mid_s, Z_mid_t                                ! R and Z derivatives for current half step
   integer, intent(in)     :: element_to_neighbour_idx, neighbour_to_element_idx                       ! Indices of current element to neighbour and expected neighbour to current element without orientation change
@@ -844,7 +966,6 @@ subroutine find_new_element(s_bnd, i_elm, i_elm_prev, &
     else
       write(*,*) 'error : leaving domain but not at correct boundary!',inode1,inode2,R_in,Z_in
     endif
-
   endif
 end
 

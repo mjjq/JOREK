@@ -3,10 +3,10 @@ module phys_module
   
   use mod_parameters
   use constants
-  use data_structure              !< Added in order to dynamically allocate pellets 
+  use data_structure              !< Added in order to dynamically allocate pellets
   use mod_openadas
   use mod_coronal
- 
+
   implicit none
   
   !> @name Various parameters
@@ -288,9 +288,9 @@ module phys_module
   real*8  :: ksi_ion            !< Energy cost of each ionization
   real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
   real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
-
-  character(len=80) :: gas_type !< Type of gas used in material injection (MGI, SPI, ...): Argon, D2, ...
-
+  character(len=80) :: imp_type !< Type of injected material or background impurity species: Argon, neon, ...
+  logical :: use_imp_adas       !< Use open adas to calculate ionization, recombination and radiation coeffients for impurities
+ 
   !> @name Shattered Pellet Injection related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
   ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 

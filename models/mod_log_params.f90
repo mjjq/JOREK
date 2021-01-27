@@ -714,7 +714,6 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion
      write(*,LOGI_FMT) 'JET_MGI             ',  JET_MGI
      write(*,LOGI_FMT) 'ASDEX_MGI           ',  ASDEX_MGI
-     write(*,CHAR_FMT) 'gas_type            ',  trim(gas_type)
      write(*,REAL_FMT) 'A_Dmv               ',  A_Dmv
      write(*,REAL_FMT) 'K_Dmv               ',  K_Dmv
      write(*,REAL_FMT) 'V_Dmv               ',  V_Dmv
@@ -722,6 +721,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 't_ns                ',  t_ns
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
+     write(*,CHAR_FMT) 'imp_type            ',  trim(imp_type)
      write(*,REAL_FMT) 'neutral_line_source ', neutral_line_source
      write(*,REAL_FMT) 'neutral_line_R_start', neutral_line_R_start
      write(*,REAL_FMT) 'neutral_line_Z_start', neutral_line_Z_start
@@ -729,6 +729,9 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'neutral_line_Z_end  ', neutral_line_Z_end
      write(*,REAL_FMT) 'neutral_reflection  ', neutral_reflection
      write(*,LOGI_FMT) 'output_prad_phi     ', output_prad_phi
+     write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
+     write(*,INTG_FMT) 'n_adas              ',  n_adas
+     write(*,LOGI_FMT) 'use_imp_adas        ',  use_imp_adas
 
      !< Additional log for SPI model
    if(using_spi) then

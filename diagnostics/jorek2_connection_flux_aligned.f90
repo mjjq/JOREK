@@ -452,7 +452,7 @@ program jorek2_connection_flux_aligned
             R_strike(i_strike) = R_in
             Z_strike(i_strike) = Z_in
             P_strike(i_strike) = p_line
-            ! C_strike does not need to be updated
+            C_strike(i_strike) = total_length
             call var_value(i_elm,i_var_T,s_line,t_line,p_line,T_strike(i_strike))
             call var_value(i_elm,i_var_n,s_line,t_line,p_line,ZN_strike(i_strike))
             exit
@@ -464,7 +464,7 @@ program jorek2_connection_flux_aligned
           R_strike(i_strike) = R_in
           Z_strike(i_strike) = Z_in
           P_strike(i_strike) = p_line
-          ! C_strike does not need to be updated
+          C_strike(i_strike) = total_length     
           in_domain_strike(i_strike) = 1
           call var_value(i_elm,i_var_T,s_line,t_line,p_line,T_strike(i_strike))
           call var_value(i_elm,i_var_n,s_line,t_line,p_line,ZN_strike(i_strike))

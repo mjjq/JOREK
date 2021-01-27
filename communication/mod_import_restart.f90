@@ -797,7 +797,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   logical, parameter   			:: import_perturbation = .false.
 
   ! --- Local variables
-  integer              :: i, j, m, k, n_tor_tmp, jorek_model_tmp, n_var_tmp, n_order_tmp, n_period_tmp, rst_hdf5_version_tmp
+  integer              :: i, j, m, k, n_tor_tmp, n_coord_tor_tmp, jorek_model_tmp, n_var_tmp, n_order_tmp, n_period_tmp, rst_hdf5_version_tmp
   integer              :: n_plane_tmp, n_vertex_max_tmp, n_nodes_max_tmp, n_elements_max_tmp,n_boundary_max_tmp
   integer              :: n_pieces_max_tmp, n_degrees_tmp, nref_max_tmp, n_ref_list_tmp, n_new_modes
   real*8               :: growth_mag, growth_kin, amplitude
@@ -810,7 +810,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer(HID_T)     :: file_id, datatype, dataset
   integer            :: ind, n_spi_check
   
-  real(RKIND), allocatable :: t_x(:,:,:)
+  real(RKIND), allocatable :: t_x(:,:,:,:)
   real(RKIND), allocatable :: t_values(:,:,:,:)
   real(RKIND), allocatable :: t_deltas(:,:,:,:)
 
@@ -906,6 +906,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   end if
   call HDF5_integer_reading(file_id,n_order_tmp,"n_order")
   call HDF5_integer_reading(file_id,n_tor_tmp, "n_tor")
+  if (rst_hdf5_version_tmp .eq. 2) then
+    call HDF5_integer_reading(file_id,n_coord_tor_tmp, "n_coord_tor")
+  else
+    n_coord_tor_tmp = 1
+  endif  
   call HDF5_integer_reading(file_id,n_period_tmp, "n_period")
   call HDF5_integer_reading(file_id,n_plane_tmp, "n_plane")
   call HDF5_integer_reading(file_id,n_vertex_max_tmp, "n_vertex_max")
@@ -958,7 +963,12 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
        ' Warning: Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
   if (n_period_tmp .ne. n_period) write(*,'(3(a,i5))') &
        ' Warning: n_period has changed from', n_period_tmp, ' to', n_period
-
+  if (n_coord_tor_tmp .ne. n_coord_tor) then
+    write(*,'(3(a,i5))') "Error: The number of toroidal harmonics in the grid representation has changed from ", &
+                         n_coord_tor_tmp, " to ", n_coord_tor, "!"
+    stop
+  endif
+    
   !write(*,'(2(A,i5))') ' Importing ',n_tor_tmp,' harmonics with n_period=', n_period_tmp 
 
   call HDF5_integer_reading(file_id,node_list%n_nodes,"n_nodes")
@@ -966,9 +976,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_integer_reading(file_id,node_list%n_dof,"n_dof")
 
   ! -> Allocate temporary arrays 
-  call tr_allocate(t_x,     1,node_list%n_nodes,1,n_order+1,1,n_dim,             "node_list%x",     CAT_UNKNOWN)
-  call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor_tmp,1,n_order+1,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
-  call tr_allocate(t_deltas,1,node_list%n_nodes,1,n_tor_tmp,1,n_order+1,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
+  call tr_allocate(t_x,     1,node_list%n_nodes,1,n_coord_tor_tmp,1,n_order+1,1,n_dim,         "node_list%x",     CAT_UNKNOWN)
+  call tr_allocate(t_values,1,node_list%n_nodes,1,      n_tor_tmp,1,n_order+1,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
+  call tr_allocate(t_deltas,1,node_list%n_nodes,1,      n_tor_tmp,1,n_order+1,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
  
 #ifdef fullmhd
   call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_order+1, "node_list%psi_eq",  CAT_UNKNOWN)
@@ -997,7 +1007,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_allocate(t_contain_node,1,element_list%n_elements,1,5,                        "contain_node",CAT_UNKNOWN)
   call tr_allocate(t_nref,        1,element_list%n_elements,                            "nref",CAT_UNKNOWN)
 
-  call HDF5_array3D_reading(file_id,t_x,        'x')
+  if (rst_hdf5_version .eq. 2) then
+    call HDF5_array4D_reading(file_id,t_x,        'x')
+  else
+    call HDF5_array3D_reading(file_id,t_x(:,1,:,:),        'x')
+  endif
   call HDF5_array4D_reading(file_id,t_values,   'values')
   call HDF5_array4D_reading(file_id,t_deltas,   'deltas')
 
@@ -1037,7 +1051,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   if (any(new_mode .ne. 0)) write(*,'(a,999i4)') ' need initialization  : ', new_mode
   
   do i=1,node_list%n_nodes
-    node_list%node(i)%x = t_x(i,:,:) 
+    node_list%node(i)%x = t_x(i,:,:,:) 
 
     node_list%node(i)%values = 0.d0 
     node_list%node(i)%deltas = 0.d0 

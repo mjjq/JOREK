@@ -60,7 +60,7 @@ integer  :: i_elm_axis, i_elm_xpoint(2)
 integer  :: n_AA, nz_AA, nz_AA_old, n_border, ilarge, ife, iv, i,j,k,l
 integer  :: inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i
 
-real*8, dimension(4,4)	 :: H, H_s, H_t, H_st
+real*8, dimension(4,n_order+1)	 :: H, H_s, H_t, H_st
 real*8			 :: lambda, mu	
 real*8			 :: Psi,dPsi_ds,dPsi_dt,d2Psi_dsdt
 real*8			 :: dX_ds, dX_dt, dY_ds, dY_dt, d2X_dsdt, d2Y_dsdt, h_u, h_v, h_w
@@ -118,6 +118,8 @@ if (my_id == 0) then
       if (node_list%node(i)%boundary .eq.19) n_border = n_border+3
       if (node_list%node(i)%boundary .eq.20) n_border = n_border+3
       if (node_list%node(i)%boundary .eq.21) n_border = n_border+3
+      if((node_list%node(i)%axis_node      ) .and. (n_order .eq. 8)) n_border = n_border+5
+      if((node_list%node(i)%boundary .ne. 0) .and. (n_order .eq. 8)) n_border = n_border+5
     enddo
   endif
   
@@ -282,6 +284,38 @@ elseif (itype .ne. 710) then        ! apply fixed boundary conditions
         mumps_par%A(ilarge+1)   = zbig
         ilarge = ilarge + 1
 
+        if (n_order .eq. 8) then
+          index_i = node_list%node(i)%index(5)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+
+          index_i = node_list%node(i)%index(6)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+
+          index_i = node_list%node(i)%index(7)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+          
+          index_i = node_list%node(i)%index(8)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+          
+          index_i = node_list%node(i)%index(9)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+        endif
+
       endif
 
       if (node_list%node(i)%boundary .ne. 0) then
@@ -330,6 +364,38 @@ elseif (itype .ne. 710) then        ! apply fixed boundary conditions
           mumps_par%A(ilarge+1)   = zbig
           ilarge = ilarge + 1
       
+        endif
+
+        if (n_order .eq. 8) then
+          index_i = node_list%node(i)%index(5)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+
+          index_i = node_list%node(i)%index(6)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+          
+          index_i = node_list%node(i)%index(7)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+          
+          index_i = node_list%node(i)%index(8)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+          
+          index_i = node_list%node(i)%index(9)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
         endif
   
       endif

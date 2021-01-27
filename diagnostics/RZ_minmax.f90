@@ -2,6 +2,7 @@ subroutine RZ_minmax(node_list,element_list,i_elm,Rmin,Rmax,Zmin,Zmax)
 
 use data_structure
 use mod_newton_methods
+use mod_parameters, only: n_order
 
 implicit none
 
@@ -19,7 +20,7 @@ integer :: k
 
 ! --- For n_order>3, we need to use Newton methods (not exactly true, should implement quartic root finder) 
 ! --- Could be important/faster for particles module!!!
-if (.true.) then
+if (n_order .eq. 8) then
   call find_variable_minmax(node_list,element_list,i_elm, -1, Rmin, Rmax)
   call find_variable_minmax(node_list,element_list,i_elm, -2, Zmin, Zmax)
   return

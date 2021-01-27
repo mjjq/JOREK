@@ -20,7 +20,7 @@ implicit none
                  n_vertex_max*(n_order+1))	:: ELM, ELM_bis, ELM_tr, C_matrix
 
  real*8, dimension( n_vertex_max*(n_order+1))	:: RHS,RHS_bis
- real*8, dimension(4,4)			  	:: H, H_s, H_t, H_st
+ real*8, dimension(4,n_order+1)                 :: H, H_s, H_t, H_st
  real*8, dimension(2,4) 			:: c, dc_ds, dc_dt, d2c_dsdt					   
  real*8						:: lambda, mu						   						   
  integer, dimension(n_vertex_max)		:: pr, pos_node_constrained

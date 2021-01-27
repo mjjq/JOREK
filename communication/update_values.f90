@@ -16,7 +16,7 @@ type (type_node_list),    intent(inout) :: node_list
 real*8,                   intent(in)    :: RHS(*)
 
 ! --- local variables
-real*8, dimension(4,4)	 :: H, H_s, H_t, H_st
+real*8, dimension(4,n_order+1)	 :: H, H_s, H_t, H_st
 real*8	:: lambda, mu
 real*8, dimension(n_tor) :: Psi, dPsi_ds,dPsi_dt, d2Psi_dsdt
 real*8, dimension(n_tor) :: Delt,Delt_ds,Delt_dt,Delt_dsdt

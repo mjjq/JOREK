@@ -61,8 +61,8 @@ subroutine initialise_basis()
    call basisfunctions1(s,H1(1:2,1:4,k), H1_s(1:2,1:4,k), H1_ss(1:2,1:4,k)) ! the one-D basis functions
    do l=1,n_gauss
      t = xgauss(l)
-     call basisfunctions(s,t,H(1:4,1:4,k,l),   H_s(1:4,1:4,k,l), H_t(1:4,1:4,k,l), &
-                             H_st(1:4,1:4,k,l),H_ss(1:4,1:4,k,l),H_tt(1:4,1:4,k,l) )
+     call basisfunctions(s,t,H(1:4,1:n_order+1,k,l),   H_s(1:4,1:n_order+1,k,l), H_t(1:4,1:n_order+1,k,l), &
+                             H_st(1:4,1:n_order+1,k,l),H_ss(1:4,1:n_order+1,k,l),H_tt(1:4,1:n_order+1,k,l) )
    enddo
   enddo
 

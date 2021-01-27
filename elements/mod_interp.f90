@@ -2,7 +2,7 @@
 module mod_interp
 use data_structure
 use mod_basisfunctions
-use mod_parameters, only: n_period, n_tor
+use mod_parameters, only: n_period, n_tor, n_order
 implicit none
 private
 public :: interp !< interp a specific harmonic in finite elements
@@ -36,15 +36,15 @@ real*8,                   intent(out) :: R, Z
 logical, optional, intent(in)         :: deltas
 
 ! --- Local variables
-real*8  :: H(4,4), HZ(n_tor), dHZ(n_tor)
+real*8  :: H(n_order+1,4), H_T(4,n_order+1), HZ(n_tor), dHZ(n_tor)
 integer :: kv, iv, kf, i
 real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp
 logical :: my_deltas
 
-call basisfunctions(s,t,H)
-H = transpose(H)
+call basisfunctions(s,t,H_T)
+H = transpose(H_T)
 call sincosperiod_moivre(phi, HZ, dHZ) ! dHZ unused
 
 P = 0.d0
@@ -103,7 +103,7 @@ real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
 logical, optional, intent(in)         :: deltas
 
 ! --- Local variables
-real*8  :: H(4,4), H_s(4,4), H_t(4,4), HZ(n_tor), dHZ(n_tor)
+real*8  :: H(n_order+1,4), H_s(n_order+1,4), H_t(n_order+1,4), HZ(n_tor), dHZ(n_tor)
 integer :: kv, iv, kf, i
 real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
@@ -340,7 +340,7 @@ real*8,                   intent(in)  :: t
 real*8,                   intent(out) :: P, P_s, P_t, P_st, P_ss, P_tt
 
 ! --- Local variables
-real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
+real*8 :: G(4,n_order+1), G_s(4,n_order+1), G_t(4,n_order+1), G_st(4,n_order+1), G_ss(4,n_order+1), G_tt(4,n_order+1)
 integer :: kv, iv, kf 
 
 call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)
@@ -395,7 +395,7 @@ real*8,                   intent(in)  :: t
 real*8,                   intent(out) :: P, P_s, P_t, P_st, P_ss, P_tt
 
 ! --- Local variables
-real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
+real*8 :: G(4,n_order+1), G_s(4,n_order+1), G_t(4,n_order+1), G_st(4,n_order+1), G_ss(4,n_order+1), G_tt(4,n_order+1)
 integer :: kv, iv, kf 
 
 call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)
@@ -425,7 +425,7 @@ integer,                  intent(in)  :: n_v, i_v(n_v)
 real*8,                   intent(in)  :: s, t, phi
 real*8,                   intent(out) :: P(n_v)
 
-real*8  :: H(4,4), ss, mode
+real*8  :: H(4,n_order+1), ss, mode
 integer :: kv, iv, kf, m, i, i_harm, i_tor
 
 call basisfunctions(s,t,H)
@@ -461,7 +461,7 @@ integer,                  intent(in)  :: n_v, i_v(n_v)
 real*8,                   intent(in)  :: s, t, phi
 real*8,                   intent(out) :: P(n_v)
 
-real*8  :: H(4,4), ss, mode
+real*8  :: H(4,n_order+1), ss, mode
 integer :: kv, iv, kf, m, i, i_harm, i_tor
 
 call basisfunctions(s,t,H)
@@ -497,7 +497,7 @@ real*8,                   intent(in)  :: s,t
 real*8,                   intent(out) :: R, Z
 
 ! --- Local variables
-real*8  :: G(4,4)
+real*8  :: G(4,n_order+1)
 real*8  :: xx1, xx2, ss
 integer :: kv, iv, kf
 
@@ -530,7 +530,7 @@ real*8,                   intent(in)  :: s, t
 real*8,                   intent(out) :: R, R_s, R_t, Z, Z_s, Z_t
 
 ! --- Local variables
-real*8  :: H(4,4), H_s(4,4), H_t(4,4)
+real*8  :: H(n_order+1,4), H_s(n_order+1,4), H_t(n_order+1,4)
 integer :: kv, iv
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1)
@@ -565,7 +565,7 @@ real*8,                   intent(in)  :: s,t
 real*8,                   intent(out) :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
 
 ! --- Local variables
-real*8  :: H(4,4), H_s(4,4), H_t(4,4), H_st(4,4), H_ss(4,4), H_tt(4,4)
+real*8  :: H(n_order+1,4), H_s(n_order+1,4), H_t(n_order+1,4), H_st(n_order+1,4), H_ss(n_order+1,4), H_tt(n_order+1,4)
 integer :: kv, iv
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1)
@@ -609,7 +609,7 @@ real*8,                   intent(in)  :: t
 real*8,                   intent(out) :: P, P_s, P_t, P_st, P_ss, P_tt
 
 ! --- Local variables
-real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
+real*8 :: G(4,n_order+1), G_s(4,n_order+1), G_t(4,n_order+1), G_st(4,n_order+1), G_ss(4,n_order+1), G_tt(4,n_order+1)
 integer :: kv, iv, kf 
 
 call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)

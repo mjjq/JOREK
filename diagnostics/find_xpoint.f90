@@ -46,9 +46,9 @@ R_xpoint   = 0.;    Z_xpoint = 0.
 s_xpoint   = 0.;    t_xpoint = 0.
 i_elm_xpoint = 0
 
-allocate(grad_psi      (element_list%n_elements,4,4))            ! --- vector storing |grad_psi| at gaussian poitns
-allocate(include_pt_lw (element_list%n_elements,4,4))
-allocate(include_pt_up (element_list%n_elements,4,4))
+allocate(grad_psi      (element_list%n_elements,n_gauss,n_gauss))            ! --- vector storing |grad_psi| at gaussian poitns
+allocate(include_pt_lw (element_list%n_elements,n_gauss,n_gauss))
+allocate(include_pt_up (element_list%n_elements,n_gauss,n_gauss))
 grad_psi    = 0.d0
 include_pt_lw = .false.
 include_pt_up = .false.
@@ -59,8 +59,8 @@ found_lower = .false.
 
 do i=1,element_list%n_elements    ! --- loop over elements
   
-  do ms = 1, 4           ! 4 Gaussian points
-    do mt = 1, 4         ! 4 Gaussian points
+  do ms = 1, n_gauss           ! 4 Gaussian points
+    do mt = 1, n_gauss         ! 4 Gaussian points
 
       ps_s = 0.d0
       ps_t = 0.d0
@@ -71,7 +71,7 @@ do i=1,element_list%n_elements    ! --- loop over elements
       R    = 0.d0
       Z    = 0.d0
 
-      do kf = 1, 4       ! 4 basis functions
+      do kf = 1, n_order+1       ! 4 basis functions
         do kv = 1, 4     ! 4 vertices
 
           iv = element_list%element(i)%vertex(kv)

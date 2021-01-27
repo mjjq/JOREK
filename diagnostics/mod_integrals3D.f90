@@ -85,7 +85,7 @@ integer :: k_vertex, k_dof, k_node, k_dir, k_dir_perp, m_bndelem, dir_perp(2), m
 integer :: iexpr
 real*8  :: R_c, Z_c, vec_inside(2), grad_t(2)
 real*8  :: k_size, k_size_perp
-real*8  :: G(4,4), sign_out, psi_n, ps0_sbnd, u0_sbnd
+real*8  :: G(4,n_order+1), sign_out, psi_n, ps0_sbnd, u0_sbnd
 real*8  :: dt_back, dt_now, r_dt, r_dt2
 real*8  :: I_halo, TPF, q02, q95, q99
 real*8, allocatable :: qval(:), radav(:)

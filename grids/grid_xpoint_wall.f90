@@ -1388,7 +1388,10 @@ do i=1,n_flux-1
     newelement_list%element(index)%vertex(4) = (i-1)*(n_tht-1) + j + 1
 
     do iv = 1,4
-      newelement_list%element(index)%size(iv,:) = (/ 1.d0, 0.01d0, 0.01d0, 0.0d0 /)
+      newelement_list%element(index)%size(iv,1) = 1.d0
+      newelement_list%element(index)%size(iv,2) = 0.01d0
+      newelement_list%element(index)%size(iv,3) = 0.01d0
+      newelement_list%element(index)%size(iv,4) = 0.0d0
     enddo
 
     if (j .eq. n_tht-1) then
@@ -1452,7 +1455,10 @@ do i=1,n_open
     endif
 
     do iv = 1,4
-      newelement_list%element(index)%size(iv,:) = (/ 1.d0, 0.01d0, 0.01d0, 0.0d0 /)
+      newelement_list%element(index)%size(iv,1) = 1.d0
+      newelement_list%element(index)%size(iv,2) = 0.01d0
+      newelement_list%element(index)%size(iv,3) = 0.01d0
+      newelement_list%element(index)%size(iv,4) = 0.0d0
     enddo
 
   enddo
@@ -1527,7 +1533,10 @@ do i=1, n_open+n_private
     endif
 
     do iv = 1,4
-      newelement_list%element(index)%size(iv,:) = (/ 1.d0, 0.01d0, 0.01d0, 0.0d0 /)
+      newelement_list%element(index)%size(iv,1) = 1.d0
+      newelement_list%element(index)%size(iv,2) = 0.01d0
+      newelement_list%element(index)%size(iv,3) = 0.01d0
+      newelement_list%element(index)%size(iv,4) = 0.0d0
     enddo
 
   enddo

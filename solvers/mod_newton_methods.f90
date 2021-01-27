@@ -254,7 +254,7 @@ module mod_newton_methods
     ! --- Internal variables
     real*8    :: psi, psi_s, psi_t, psi_st, psi_ss, psi_tt
     real*8    :: tolx
-    real*8    :: step, s_or_t, st_tmp, jump, ff, df, errx, errf
+    real*8    :: step, s_or_t, st_tmp, jump, ff, df
     real*8    :: st_min, st_max
     integer   :: ntrial, i, j, k, n_inflex, n_tmp
     real*8    :: inflex(n_order), inflex_tmp(n_order), st_single, st_found_tmp(n_order)
@@ -325,7 +325,7 @@ module mod_newton_methods
       do i=1,n_found
         found_duplicate = .false.
         do j=i+1,n_found
-          if ( abs(st_found_tmp(i)-st_found_tmp(j)) .lt. 2.0*errx ) found_duplicate = .true.
+          if ( abs(st_found_tmp(i)-st_found_tmp(j)) .lt. 2.0*tolx ) found_duplicate = .true.
         enddo
         if (.not. found_duplicate) then
           n_tmp = n_tmp + 1

@@ -21,7 +21,7 @@ subroutine Ch_nod_rhs_elm(i_element, element,nodes,element_father,nodes_father,E
 		 n_vertex_max*n_var*(n_order+1)*n_tor)  	:: ELM_bis, ELM_tr, C_matrix
 
   real*8, dimension(n_vertex_max*n_var*(n_order+1)*n_tor)	:: RHS_bis
-  real*8, dimension(4,4)			  	:: H, H_s, H_t, H_st
+  real*8, dimension(4,n_order+1)                :: H, H_s, H_t, H_st
   real*8, dimension(2,4) 			:: c, dc_ds, dc_dt, d2c_dsdt					   
   real*8						:: lambda, mu,h_u,h_v,h_w						   
 						   

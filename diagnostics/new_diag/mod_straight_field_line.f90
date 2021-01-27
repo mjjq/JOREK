@@ -576,11 +576,12 @@ module mod_straight_field_line
     integer, intent(in)                   :: i_elm, i_var, i_harm
     real*8, intent(in)                    :: s, t
     real*8, intent(out)                   :: P, P_s, P_t
-    real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
+    real*8 :: G(4,n_order+1), G_s(4,n_order+1), G_t(4,n_order+1) 
+    real*8 :: G_st(4,n_order+1), G_ss(4,n_order+1), G_tt(4,n_order+1)
     integer :: kv, iv, kf
     
-    call basisfunctions(s,t,G(1:4,1:4),G_s(1:4,1:4),G_t(1:4,1:4),G_st(1:4,1:4),G_ss(1:4,1:4),     &
-      G_tt(1:4,1:4))
+    call basisfunctions(s,t,G(1:4,1:n_order+1),G_s(1:4,1:n_order+1),G_t(1:4,1:n_order+1), &
+      G_st(1:4,1:n_order+1),G_ss(1:4,1:n_order+1),G_tt(1:4,1:n_order+1))
   
     P = 0.d0; P_s = 0.d0; P_t = 0.d0
   

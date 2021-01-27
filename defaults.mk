@@ -161,6 +161,13 @@ ifeq (1, $(USE_FFTW))
   INCLUDES := $(INCLUDES) $(INC_FFTW)
 endif
 
+# polynomial order > 3 requires more Gauss points
+N_ORDER_PARAMETER = $(shell cat models/$(MODEL)/mod_parameters.f90 |grep n_order |grep -v n_degrees | awk '{print $$6}')
+ifneq ("3", $(N_ORDER_PARAMETER))
+  DEFINES  := $(DEFINES) -DGAUSS_ORDER=8
+endif
+
+
 ifeq (1, $(USE_PASTIX_MURGE))
   LIBS     := $(LIBS) $(LIB_PASTIX_MURGE) $(LIB_PASTIX_BLAS)
   DEFINES  := $(DEFINES) -DUSE_MURGE

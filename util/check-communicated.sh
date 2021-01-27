@@ -67,4 +67,10 @@ done
 
 rm -f tmp*_$$*
 
+if [ $err -ne 0 ]; then
+  echo ""
+  echo "WARNING: Some parameters seem not to be communicated!"
+  echo ""
+fi
+
 exit $err

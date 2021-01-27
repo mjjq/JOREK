@@ -289,14 +289,14 @@ diff_min_beg = 1.d10
 diff_min_end = 1.d10
 do i_node = 1,node_list%n_nodes
   if (node_list%node(i_node)%boundary .eq. 0) cycle
-  diff = sqrt( (node_list%node(i_node)%x(1,1)-R_block_points_right(i_ext,1))**2 &
-              +(node_list%node(i_node)%x(1,2)-Z_block_points_right(i_ext,1))**2 )
+  diff = sqrt( (node_list%node(i_node)%x(1,1,1)-R_block_points_right(i_ext,1))**2 &
+              +(node_list%node(i_node)%x(1,1,2)-Z_block_points_right(i_ext,1))**2 )
   if (diff .lt. diff_min_beg) then
     diff_min_beg = diff
     i_side_beg = i_node
   endif
-  diff = sqrt( (node_list%node(i_node)%x(1,1)-R_block_points_right(i_ext,n_block_points_right(i_ext)))**2 &
-              +(node_list%node(i_node)%x(1,2)-Z_block_points_right(i_ext,n_block_points_right(i_ext)))**2 )
+  diff = sqrt( (node_list%node(i_node)%x(1,1,1)-R_block_points_right(i_ext,n_block_points_right(i_ext)))**2 &
+              +(node_list%node(i_node)%x(1,1,2)-Z_block_points_right(i_ext,n_block_points_right(i_ext)))**2 )
   if (diff .lt. diff_min_end) then
     diff_min_end = diff
     i_side_end = i_node
@@ -308,19 +308,19 @@ if (      (diff_min_beg .lt. side_tolerance) &
 ! --- If yes, step along boundary between these two nodes
 if (attached_side) then
   ! --- Precise beg/end points
-  R_block_points_right(i_ext,1) = node_list%node(i_side_beg)%x(1,1)
-  Z_block_points_right(i_ext,1) = node_list%node(i_side_beg)%x(1,2)
-  R_block_points_right(i_ext,n_block_points_right(i_ext)) = node_list%node(i_side_end)%x(1,1)
-  Z_block_points_right(i_ext,n_block_points_right(i_ext)) = node_list%node(i_side_end)%x(1,2)
+  R_block_points_right(i_ext,1) = node_list%node(i_side_beg)%x(1,1,1)
+  Z_block_points_right(i_ext,1) = node_list%node(i_side_beg)%x(1,1,2)
+  R_block_points_right(i_ext,n_block_points_right(i_ext)) = node_list%node(i_side_end)%x(1,1,1)
+  Z_block_points_right(i_ext,n_block_points_right(i_ext)) = node_list%node(i_side_end)%x(1,1,2)
   ! --- Now step along boundary between these two nodes
   call find_next_bnd_node(node_list,element_list,i_side_beg,-1,i_node_prev)
   call find_next_bnd_node(node_list,element_list,i_side_beg,+1,i_node_next)
-  R1 = node_list%node(i_side_end)%x(1,1)
-  Z1 = node_list%node(i_side_end)%x(1,2)
-  R2 = node_list%node(i_node_prev)%x(1,1)
-  Z2 = node_list%node(i_node_prev)%x(1,2)
-  R3 = node_list%node(i_node_next)%x(1,1)
-  Z3 = node_list%node(i_node_next)%x(1,2)
+  R1 = node_list%node(i_side_end)%x(1,1,1)
+  Z1 = node_list%node(i_side_end)%x(1,1,2)
+  R2 = node_list%node(i_node_prev)%x(1,1,1)
+  Z2 = node_list%node(i_node_prev)%x(1,1,2)
+  R3 = node_list%node(i_node_next)%x(1,1,1)
+  Z3 = node_list%node(i_node_next)%x(1,1,2)
   if ( sqrt( (R1-R3)**2 + (Z1-Z3)**2 ) .lt. sqrt( (R1-R2)**2 + (Z1-Z2)**2 ) ) then
     direction = +1
   else
@@ -996,8 +996,8 @@ enddo
 if (attached_side) then
   do i=1,n_nodes_side
     i_node = index_side(i)
-    R_seg(i,n_nodes) = node_list%node(i_node)%x(1,1)
-    Z_seg(i,n_nodes) = node_list%node(i_node)%x(1,2)
+    R_seg(i,n_nodes) = node_list%node(i_node)%x(1,1,1)
+    Z_seg(i,n_nodes) = node_list%node(i_node)%x(1,1,2)
   enddo
   call create_polar_lines_simple(n_nodes_side, R_seg(1:n_nodes_side,n_nodes), Z_seg(1:n_nodes_side,n_nodes), R_polar_right(1:n_nodes_side-1,1:4) , Z_polar_right(1:n_nodes_side-1,1:4) )
   length_right = 0.d0

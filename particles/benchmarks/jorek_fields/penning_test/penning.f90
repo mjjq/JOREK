@@ -141,16 +141,16 @@ if (tstep_n(i) .le. 1.1) cycle ! Skip anything below 1 (the default value if not
   call boris_initial_half_step_backwards_RZPhi(particle, mass, E, B, tstep_n(i)*t_norm)
 
   do j=1,nstep_n(i)
-    call fields%calc_EBpsiU(0.d0, particle%i_elm, particle%st, particle%x(1,3), E, B, psi, U)
+    call fields%calc_EBpsiU(0.d0, particle%i_elm, particle%st, particle%x(3), E, B, psi, U)
     B(3) = 0.d0 ! same as toroidal_field_factor
-    !write(*,"(6g14.6)") E, [-2.d0*Phi0/t_norm*particle%x(1,1),0.d0,0.d0]
-    rz_old    = particle%x(1,1:2)
+    !write(*,"(6g14.6)") E, [-2.d0*Phi0/t_norm*particle%x(1),0.d0,0.d0]
+    rz_old    = particle%x(1:2)
     st_old    = particle%st
     i_elm_old = particle%i_elm
     call boris_push_cylindrical(particle, mass, E, B, tstep_n(i)*t_norm)
     call find_RZ_nearby(fields%node_list, fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-        particle%x(1,1), particle%x(1,2), particle%st(1), particle%st(2), particle%i_elm, ifail)
-    !write(*,*) rz_old, particle%x(1,1:2)
+        particle%x(1), particle%x(2), particle%st(1), particle%st(2), particle%i_elm, ifail)
+    !write(*,*) rz_old, particle%x(1:2)
   end do
 
   ! Check position against analytical result

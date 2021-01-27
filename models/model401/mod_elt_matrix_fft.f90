@@ -1741,7 +1741,7 @@ do i=1,n_vertex_max
                     amat(7,1) = amat(7,1) &
                          - v * amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)*(r0 * (psi_x*u0_x + psi_y*u0_y) + tauIC*(psi_x*Pi0_x + psi_y*Pi0_y) &
                          + aki_neo_prof(ms,mt) * tauIC * r0 * (psi_x*Ti0_x + psi_y*Ti0_y)) * BigR * xjac * theta * tstep                   &
-                         - v * amu_neo_prof(ms,mt) * (-Btheta2_psi)*BB2/(Btheta2**2) * (r0*(ps0_x*u0_x+ps0_y*u0_y)                         &
+                         - v * amu_neo_prof(ms,mt) * (-Btheta2_psi)*BB2/((Btheta2+epsil)**2) * (r0*(ps0_x*u0_x+ps0_y*u0_y)                         &
                                                       + tauIC*(ps0_x*Pi0_x+ps0_y*Pi0_y)                                                    &                     
                          + aki_neo_prof(ms,mt) * tauIC * r0 * (ps0_x*Ti0_x + ps0_y*Ti0_y)) * BigR * xjac * theta * tstep
 

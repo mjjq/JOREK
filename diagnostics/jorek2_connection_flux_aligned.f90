@@ -7,18 +7,17 @@ program jorek2_connection_flux_aligned
   ! Currently the diagnostic calculates the connection length and strike points on the set end boundary.
   ! 
   ! STEPS:
-  ! 1. Read input parameters from connect.nml and distribute start points among MPI tasks.
-  ! 2. Loop over start points
+  ! 1.  Read input parameters from connect.nml and distribute start points among MPI tasks.
+  ! 2.  Loop over start points
   !   3. Trace field lines around torus for a pre-set number of turns using a pre-set number of steps.
-  !     4. Perform step.
-  !     5. Check if element boundary is crossed.
-  !     6. If end boundary is crossed - break and start new field line
-  ! 7. Write out poincare 
-  ! 8. Write connection length
-  ! 9. Write strike points
-  !
-  ! TO-DO: This routine should be able to generate poincare plots but there seems to be a bug in the implementation of this
-  !        feature that needs to be fixed.
+  !      4. Loop over max turns and steps per turn
+  !        5. Perform step.
+  !        6. Check if element boundary is crossed.
+  !        7. If end boundary is crossed - signal to break and start new field line
+  !      8. Record turn based data for poincares. 
+  ! 9.  Write out poincare 
+  ! 10. Write connection length
+  ! 11. Write strike points
   !-----------------------------------------------------------------------
   use data_structure
   use phys_module
@@ -38,8 +37,7 @@ program jorek2_connection_flux_aligned
   type (type_bnd_node_list)              :: bnd_node_list 
   
   ! --- Poincare data
-  real*8,allocatable  :: rp(:), zp(:), R_all(:), Z_all(:), psin_all(:), C_all(:), C_minus(:), C_plus(:)  ! arrays for position variables, and connection length for all lines
-  real*8,allocatable  :: C_all_4(:)
+  real*8,allocatable  :: rp(:), zp(:), R_all(:), Z_all(:), psin_all(:), C_all(:)                        ! arrays for position variables, and connection length for all lines
   real*8,allocatable  :: R_strike(:),  Z_strike(:), P_strike(:)                                         ! position of strike points
   real*8,allocatable  :: C_strike(:),  B_strike(:)                                                      ! connection length, boundary type at strike points
   real*8,allocatable  :: T0_strike(:), T_strike(:)                                                      ! temperature at start and end of fieldline
@@ -61,7 +59,6 @@ program jorek2_connection_flux_aligned
   real*8    :: delta_theta, delta_psin
   real*8    :: R_start, Z_start, phi_start
   real*8    :: R_line, Z_line, s_line, t_line, p_line
-  real*8    :: Zjac
   real*8    :: s_mid, t_mid, p_mid
   real*8    :: s_ini, t_ini
   real*8    :: s_out, t_out
@@ -82,13 +79,9 @@ program jorek2_connection_flux_aligned
   real*8    :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_bnd, psi_bnd2
   real*8    :: psi_axis,R_axis,Z_axis,s_axis,t_axis
   integer   :: bnd_tmp, bnd_tmp_opp
-  real*8    :: s_tmp,   s_tmp_opp
-  real*8    :: t_tmp,   t_tmp_opp
-  real*8    :: value_out
+  real*8    :: s_tmp, t_tmp
   real*8,allocatable  :: RZkeep(:,:),RhoThetakeep(:,:)
   integer   :: status(MPI_STATUS_SIZE)
-  character   :: buffer*80, lf*1, str1*12, str2*12
-  character*12, allocatable :: scalar_names(:)
   integer   :: count_lines, count_lines_tot
   real*8    :: C_average,   C_average_tot
   real*8    :: small_r, theta_pol
@@ -187,16 +180,14 @@ program jorek2_connection_flux_aligned
   ! --- Allocate data
   allocate(R_strike(n_lines),Z_strike(n_lines),P_strike(n_lines),C_strike(n_lines),B_strike(n_lines), in_domain_strike(n_lines))
   allocate(T0_strike(n_lines),T_strike(n_lines),ZN0_strike(n_lines),ZN_strike(n_lines),PS0_strike(n_lines))
-  allocate(R_all(n_lines),Z_all(n_lines),psin_all(n_lines),C_all(n_lines),C_minus(n_lines),C_plus(n_lines))
-  allocate(C_all_4(n_lines))
+  allocate(R_all(n_lines),Z_all(n_lines),psin_all(n_lines),C_all(n_lines))
   allocate(R_turn(n_turns+1,2),Z_turn(n_turns+1,2),C_turn(n_turns+1,2),C_turn_tmp(n_turns+1,2))
   allocate(T_turn(n_turns+1,2),PSI_turn(n_turns+1,2),ZN_turn(n_turns+1,2))
   n_points_max = 10000000
   allocate(RZkeep(2,n_points_max),RhoThetakeep(2,n_points_max))
 
   ! --- Initialise allocated data
-  R_all     = 0.d0; Z_all     = 0.d0; psin_all=0.d0; C_all = 0.d0;  C_all_4    = 0.d0
-  C_minus   = 0.d0; C_plus    = 0.d0
+  R_all     = 0.d0; Z_all     = 0.d0; psin_all=0.d0; C_all = 0.d0;  
   R_strike  = 0.d0; Z_strike  = 0.d0; P_strike  = 0.d0;  C_strike   = 0.d0; in_domain_strike = 0.d0
   T0_strike = 0.d0; T_strike  = 0.d0; ZN0_strike = 0.d0; ZN_strike  = 0.d0; PS0_strike = 0.d0
   R_turn    = 0.d0; Z_turn    = 0.d0; C_turn  = 0.d0;  C_turn_tmp = 0.d0
@@ -456,12 +447,12 @@ program jorek2_connection_flux_aligned
           call var_value(i_elm, i_var_psi, s_line,t_line,p_line, PSI_turn(i_turn+1,(i_dir+1)/2+1) )
           call var_value(i_elm, i_var_n, s_line,t_line,p_line, ZN_turn (i_turn+1,(i_dir+1)/2+1) )
           
+          ! Finish line if it has struck the psin based boundary
           if (psin_tmp .gt. psin_strike_bnd) then
             R_strike(i_strike) = R_in
             Z_strike(i_strike) = Z_in
             P_strike(i_strike) = p_line
-            C_strike(i_strike) = 0.d0        ! to be done (total_length needs correction)
-            B_strike(i_strike) = 0
+            ! C_strike does not need to be updated
             call var_value(i_elm,i_var_T,s_line,t_line,p_line,T_strike(i_strike))
             call var_value(i_elm,i_var_n,s_line,t_line,p_line,ZN_strike(i_strike))
             exit
@@ -473,8 +464,7 @@ program jorek2_connection_flux_aligned
           R_strike(i_strike) = R_in
           Z_strike(i_strike) = Z_in
           P_strike(i_strike) = p_line
-          C_strike(i_strike) = 0.d0        ! to be done (total_length needs correction)
-          B_strike(i_strike) = 0
+          ! C_strike does not need to be updated
           in_domain_strike(i_strike) = 1
           call var_value(i_elm,i_var_T,s_line,t_line,p_line,T_strike(i_strike))
           call var_value(i_elm,i_var_n,s_line,t_line,p_line,ZN_strike(i_strike))
@@ -483,22 +473,17 @@ program jorek2_connection_flux_aligned
         ! --- Record connection length
         if (i_dir .eq. -1) then  
           C_all(i_line)   = total_length
-          C_minus(i_line) = total_length
-          C_all_4(i_line) = total_length
           partial(1)      = total_length
         else
           C_all(i_line)   = C_all(i_line)+total_length!min(C_all(i_line),total_length)
-          C_plus(i_line)  = total_length
-          C_all_4(i_line) = C_all_4(i_line)+total_length
           partial(2)      = total_length
         endif
     
       enddo  ! end of two directions
 
-      ! -----------------------------------
-      ! --- Record turn based data --------
-      ! -----------------------------------
-
+      ! ------------------------------------------------------
+      ! --- Record turn based data for poincare plots --------
+      ! ------------------------------------------------------
       ! --- Reverse connection length (not from plasma to position, but from target to position)
       do i_dir=1,2
         do i_turn = 1, n_turn_max(i_dir)
@@ -506,9 +491,8 @@ program jorek2_connection_flux_aligned
         enddo
       enddo
 
-      ! --- Keep only field lines starting inside the plasma
-      if ( (((n_turn_max(1) .lt. n_turns) .and. (n_turn_max(2) .lt. n_turns))) &
-        .and. ( ( (xcase .eq. 1) .and. (Z_turn(1,1) .gt. Z_xpoint(1)) ) &
+      ! --- Keep only field lines starting inside the plasma region
+      if ( ( ( (xcase .eq. 1) .and. (Z_turn(1,1) .gt. Z_xpoint(1)) ) &
           .or.( (xcase .eq. 2) .and. (Z_turn(1,1) .lt. Z_xpoint(2)) ) &
           .or.( (xcase .eq. 3) .and. (Z_turn(1,1) .gt. Z_xpoint(1)) .and. (Z_turn(1,1) .lt. Z_xpoint(2)) ) ) ) then
 
@@ -523,9 +507,6 @@ program jorek2_connection_flux_aligned
             if (R_turn(i_turn,i_dir) .gt. 0.d0) then
 
               ! --- Connection lengths in both directions
-              zl1 = C_turn(i_turn,i_dir)
-              zl2 = C_turn(1,1) + C_turn(1,2) - C_turn(i_turn,i_dir)
-
               ikeep = ikeep + 1
               small_r   = sqrt( (R_turn(i_turn,i_dir)-R_axis)**2 + (Z_turn(i_turn,i_dir)-Z_axis)**2 )
               theta_pol = atan2(Z_turn(i_turn,i_dir)-Z_axis,R_turn(i_turn,i_dir)-R_axis)
@@ -566,7 +547,7 @@ program jorek2_connection_flux_aligned
   ! --- Third part: write poincare plot to VTK file
   ! -------------------------------------------------------------------------------------------------
   ! -------------------------------------------------------------------------------------------------
-  write(*,*)'Writing poincare files - WARNING: this implementation is likely broken'
+  write(*,*)'Writing poincare files'
   
   ! --- The local number of points (for mpi_0)
   ikeep0  = ikeep
@@ -632,6 +613,7 @@ program jorek2_connection_flux_aligned
 
   ! --- Write points for local MPI (id=0)
   if (my_id .eq. 0) then
+    write(23,*) "# R    Z    Psi_N    Connection_length"
     write(23,'(4e16.8)') ( (/ R_all(i), Z_all(i), psin_all(i), C_all(i) /),i=1,i_line0)
   endif
   
@@ -681,7 +663,8 @@ program jorek2_connection_flux_aligned
   
   ! --- Write points for local MPI (id=0)
   if (my_id .eq. 0) then
-    write(23,'(7f22.8)') ( (/ R_strike(i), Z_strike(i), P_strike(i), Ps0_strike(i), T0_strike(i), C_all_4(i), in_domain_strike(i) /),i=1,i_strike0)
+    write(23,*) "# R    Z    phi    Psi_N    T    Connection_length    in_domain"
+    write(23,'(7f22.8)') ( (/ R_strike(i), Z_strike(i), P_strike(i), Ps0_strike(i), T0_strike(i), C_strike(i), in_domain_strike(i) /),i=1,i_strike0)
   endif
   
   ! --- Write points for all other MPIs
@@ -696,10 +679,9 @@ program jorek2_connection_flux_aligned
         call mpi_recv(P_strike,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
         call mpi_recv(Ps0_strike,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
         call mpi_recv(T0_strike,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
-        call mpi_recv(C_all_4,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
+        call mpi_recv(C_strike,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
         call mpi_recv(in_domain_strike,nrecv, MPI_DOUBLE_PRECISION, j, j, MPI_COMM_WORLD, status, ierr)
-        !	   write(23,'(4e16.8)') ( (/R_strike(i)*cos(P_strike(i)), Z_strike(i), R_strike(i)*sin(P_strike(i)), C_all_4(i) /),i=1,i_strike)
-        write(23,'(7f22.8)') ( (/ R_strike(i), Z_strike(i), P_strike(i), Ps0_strike(i), T0_strike(i), C_all_4(i), in_domain_strike(i) /),i=1,i_strike)
+        write(23,'(7f22.8)') ( (/ R_strike(i), Z_strike(i), P_strike(i), Ps0_strike(i), T0_strike(i), C_strike(i), in_domain_strike(i) /),i=1,i_strike)
       endif
     enddo
   else
@@ -712,7 +694,7 @@ program jorek2_connection_flux_aligned
       call mpi_send(P_strike, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
       call mpi_send(Ps0_strike, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
       call mpi_send(T0_strike, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
-      call mpi_send(C_all_4, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
+      call mpi_send(C_strike, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
       call mpi_send(in_domain_strike, nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
     endif
   endif

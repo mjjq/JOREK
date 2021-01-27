@@ -193,7 +193,6 @@ subroutine preset_parameters
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.
   rn0_min            = 1.d-8
-
   T_min              =-1.0d20
   rho_min            =-1.0d20
   
@@ -206,6 +205,8 @@ subroutine preset_parameters
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
   Dn_perp_num   = 0.d0
+  eta_num_T_dependent   = .false.
+  visco_num_T_dependent = .false.
 
   heatsource          = 1.e-7
   heatsource_psin     = 1.0d0
@@ -447,6 +448,11 @@ subroutine preset_parameters
   D_neutral_p = 1.d-5
   delta_n_convection = 0
   nimp_bg = 0.
+  n_adas = 0
+  adas_dir = ''
+  imp_type = ''
+  use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one exists for argon
+
   !====== JET DMV-2 parameters
   L_tube = 2.4d0
   K_Dmv = 4.d-2
@@ -473,9 +479,6 @@ subroutine preset_parameters
   spi_tor_rot     = .false.
   using_spi       = .false.
 
-  n_adas          = 0
-  adas_dir        = ''
-  gas_type        = ''
   output_prad_phi = .false.
 
 !======================JP ECCD injection parameters
@@ -493,5 +496,9 @@ subroutine preset_parameters
   jw1=5.d-1 ! inner cut-off
   jw2=1.d0  ! outer cut-off
   jw3=1.d0  ! outer cut-off
+
+!===================== Thermalization flag========
+
+  thermalization = .false.
 
 end subroutine preset_parameters

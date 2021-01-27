@@ -266,14 +266,9 @@ required = 0
     gmres     = .false. 
   end if
 
-#if (JOREK_MODEL == 501)
-  ! --- Read ADAS data and generate coronal equilibrium is needed
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+  ! --- Read ADAS data and generate coronal equilibrium if needed
   call init_imp_adas(my_id)
-#endif
-  
-  ! --- Initialize time-traces of radiation and ionization energy/power
-#if (JOREK_MODEL == 500)
-  call init_xtime_rad_ionization(my_id)
 #endif
 
   ! --- Write out all parameters defined in parameters and the namelist input file.
@@ -350,6 +345,9 @@ required = 0
     write(*,*) 'FATAL : Hard-coded parameter n_tor has an illegal value', n_tor
     call MPI_Abort(MPI_COMM_WORLD, 23, ierr)
     stop
+  else if ( (n_coord_tor > 1) .and. (rst_hdf5_version .eq. 1) ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_coord_tor > 1 is only possible with rst_hdf5_version > 1'
+    call MPI_Abort(MPI_COMM_WORLD, 23, ierr)
   else if ( n_period<1 ) then
     write(*,*) 'FATAL : Hard-coded parameter n_period has an illegal value', n_period
     call MPI_Abort(MPI_COMM_WORLD, 24, ierr)
@@ -1525,7 +1523,7 @@ required = 0
 
     	  call density(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
     	     zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-    	  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) ) then	     
+    	  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 401) .or. (jorek_model .eq. 711) ) then	     
     	    call temperature_i(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
     	      zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
     	    call temperature_e(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &

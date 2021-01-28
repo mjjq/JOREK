@@ -125,7 +125,7 @@ real*8  :: UU,UU_s,UU_t,UU_st,UU_ss,UU_tt
 real*8  :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt 
 real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt 
 real*8  :: rn,rn_s,rn_t,rn_st,rn_ss,rn_tt 
-real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t
+real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, Ti, Ti_t, Te, Te_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t
 real*8  :: u0_p, u_s, u_t, u_p
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
@@ -1069,9 +1069,20 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         rho_s = rho_s + RH_s * HZ(in,mp)
         rho_t = rho_t + RH_t * HZ(in,mp)
 
+#ifdef WITH_TiTe
+        call interp(node_list,element_list,m_elm,var_Ti,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+        Ti_s = Ti_s + TT_s * HZ(in,mp)
+        Ti_t = Ti_t + TT_t * HZ(in,mp)
+        call interp(node_list,element_list,m_elm,var_Te,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+        Te_s = Te_s + TT_s * HZ(in,mp)
+        Te_t = Te_t + TT_t * HZ(in,mp)
+        T_s = Te_s + Ti_s
+        T_t = Te_t + Ti_t
+#else
         call interp(node_list,element_list,m_elm,var_T,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
         T_s = T_s + TT_s * HZ(in,mp)
         T_t = T_t + TT_t * HZ(in,mp)
+#endif
 
 #ifdef WITH_Vpar
         call interp(node_list,element_list,m_elm,var_Vpar,in,sg,tg,vp,vp_s,vp_t,vp_st,vp_ss,vp_tt)

@@ -609,14 +609,14 @@ required = 0
       freeboundary_equil  = .false.
     end if
     
-    ! --- Check sanity of grid
-    call check_grid(my_id, node_list, element_list)
-
     ! --- Plot the grid  
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
       call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
     end if
     
+    ! --- Check sanity of grid
+    call check_grid(my_id, node_list, element_list)
+
 #ifdef USE_MUMPS
     ! --- Initialize MUMPS solver (used for equilibrium)
     call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)

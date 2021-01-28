@@ -193,7 +193,7 @@ module pellet_module
   
   use constants
   use data_structure
-  use phys_module, only: pellets, gas_type, central_density, central_mass, spi_abl_model, spi_tor_rot,      &
+  use phys_module, only: pellets, imp_type, central_density, central_mass, spi_abl_model, spi_tor_rot,      &
                          ns_phi_rotate, tor_frequency, tstep, pellet_density, pellet_density_bg,            &
                          index_now, xtime_spi_ablation, xtime_spi_ablation_bg, xtime_spi_ablation_rate,&
                          xtime_spi_ablation_bg_rate, F0, R_geo, imp_cor
@@ -542,7 +542,7 @@ module pellet_module
     use constants
     use tr_module
     use data_structure
-    use phys_module, only: pellets, gas_type, central_density, central_mass, pellet_density, pellet_density_bg,&
+    use phys_module, only: pellets, imp_type, central_density, central_mass, pellet_density, pellet_density_bg,&
                            spi_rnd_seed, spi_angle, xtime_spi_ablation, xtime_spi_ablation_bg, xtime_spi_ablation_rate,&
                            xtime_spi_ablation_bg_rate, nstep, spi_shard_file, spi_abl_model, n_spi_tot
     use mpi_mod

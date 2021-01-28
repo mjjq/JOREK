@@ -137,7 +137,7 @@ real*8  :: source_neutral, source_tmp
 #ifdef WITH_Impurities
 real*8  :: source_bg, source_imp, source_tmp
 #endif
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion
 real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 real*8  :: ne_SI, Te_eV
@@ -257,7 +257,7 @@ local_pellet_volume    = 0.d0
 local_n_particles_inj = 0.d0
 local_n_particles     = 0.d0
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 local_radiation       = 0.d0
 local_radiation_phi   = 0.d0
 local_E_ion           = 0.d0
@@ -288,7 +288,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, thm_wk_tot,                   &
 !$omp          mag_wk_tot, vpar_disp_tot, area1, mag_src_tot,  &
 !$omp          eta_ohmic,  &
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
 !$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,               &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
@@ -320,7 +320,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
 !$omp           eta_T_ohm, &
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp           rn0, rn0_corr,                                                                 &
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
@@ -348,7 +348,7 @@ omp_tid      = 0
 #endif
 
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
 !$omp                local_radiation, local_radiation_phi, local_E_ion,                       &
 #endif
@@ -501,7 +501,7 @@ do ife = ife_min, ife_max
         vpar_s  = eq_s(mp,var_Vpar,ms,mt)
         vpar_t  = eq_t(mp,var_Vpar,ms,mt)
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
         rn0    = eq_g(mp,var_rhon,ms,mt)
         rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0
 #endif
@@ -1242,7 +1242,7 @@ V_min                = varmin
 V_max                = varmax
 #endif /* NOMPIVERSION */
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 call MPI_AllReduce(local_radiation, total_radiation,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_E_ion, total_E_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_radiation_phi, total_radiation_phi,n_plane,&
@@ -1261,7 +1261,7 @@ if (use_pellet) then
 #endif /* NOMPIVERSION */
 endif
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 #ifndef NOMPIVERSION
   call MPI_AllReduce(local_n_particles_inj, total_n_particles_inj,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_n_particles, total_n_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -1324,7 +1324,7 @@ mag_source_tot       = n_period * mag_source_tot      * fact_flux
 volume               = n_period * volume
 area                 = n_period * area / (2.d0 * PI)
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 total_radiation     = n_period * total_radiation
 total_radiation_phi = n_period * total_radiation_phi
 total_E_ion         = n_period * total_E_ion
@@ -1626,7 +1626,7 @@ if (my_id .eq. 0) then
   write(*,'(A,20es14.6)')  ' sum ',xt,density_tot,pressure/1.d6,kin_par_tot/1.d6,kin_perp_tot/1.d6,mag_tot/1.d6, &
                                  Ohm_tot/1.d6,heating_in/1d6+heating_out/1.d6 ,source_in+source_out
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   write(*,'(A,4es14.6)')   ' Integrals_3D, MGI               : ', total_n_particles_inj, total_n_particles
   write(*,'(A,1e14.6,A)') ' Radiation power          : ', total_radiation/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'

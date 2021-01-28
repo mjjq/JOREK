@@ -213,8 +213,10 @@ module mod_expression
     call add(exprs_all, 'npartF_total', 'Total neutral particle flux (normal to the boundary)  ', 'boundary    ')
     call add(exprs_all, 'ExB_norm    ', 'EM energy flux, Poynting vector (normal to boundary)  ', 'boundary    ')
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
     call add(exprs_all, 'radiation   ', 'Radiation terms for bolometry diagnostic              ')
+#endif
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     call add(exprs_all, 'brem        ', 'Brem terms for bolometry diagnostic                   ')
 #endif
     ! --- List of volume and boundary integrals
@@ -615,7 +617,7 @@ module mod_expression
       fact_resistiv, fact_Er, fact_flux, fact_rad
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
     real*8  :: Te_corr_eV
     real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T
     real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
@@ -1305,7 +1307,7 @@ module mod_expression
           partF_cnv_par =   r0 * Vpar_tot * Bnorm / Btot                           !  p v_par·n
           partF_cnv_tot =   r0 * ( VR * nmlR + VZ * nmlZ )                         !  n v·n
     
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
           neut_part_flux= -D_neutral_x*rn0_R * nmlR - D_neutral_y * rn0_Z * nmlZ
 #else
           neut_part_flux= 0.d0
@@ -1385,7 +1387,6 @@ module mod_expression
             call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
               ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
           endif
-          J_boot = 0.d0
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 

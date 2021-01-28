@@ -176,7 +176,7 @@ do ife =1, element_list%n_elements
       ZJ_0  = eq_g(var_zj,ms,mt)
       PS_0  = eq_g(var_psi,ms,mt) 
       
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
       rhon_00 = eq_g(var_rhon,ms,mt)
       rn0_corr = corr_neg_dens1(rhon_00)
 #endif

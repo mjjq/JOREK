@@ -260,7 +260,7 @@ if (using_spi) then
 
 endif
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   ! --- Read ADAS data and generate coronal equilibrium is needed
   call init_imp_adas(my_id)
   if (output_prad_phi) then

@@ -193,7 +193,7 @@ module exec_commands
         case ( 'namelist' )
           call load_namelist(command, ierr)
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
           ! --- Read ADAS data and generate coronal equilibrium is needed
           call init_imp_adas(0)
 #endif

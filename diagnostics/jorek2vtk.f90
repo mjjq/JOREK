@@ -16,7 +16,7 @@ use mod_boundary
 use mod_vtk
 use mod_interp
 use mod_poloidal_currents
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   use mod_neutral_source
 #endif
 #ifdef WITH_Impurities
@@ -204,7 +204,7 @@ include_bootstrap      = .false. ! include bootstrap current and averaged curren
 include_psi_norm       = .true.  ! include normalized flux
 RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,Z,0)
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 include_radiation = .true.
 include_neutral_dens = .true.
 ! --- Read ADAS data and generate coronal equilibrium if needed
@@ -304,7 +304,7 @@ if (include_psi_norm) then
    n_scalars  = n_scalars + n_psi_norm
 endif
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     n_radiation = 0
  if (include_radiation) then
     n_radiation = 5
@@ -359,7 +359,7 @@ if ( SI_units ) then
    scalar_names(7)='Vpar_km/s   '
 #endif
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
    scalar_names(8)='N_dens_1d20  '
 #endif
 
@@ -414,7 +414,7 @@ if (include_psi_norm) then
    scalar_names(s_psi_norm+1:s_psi_norm+n_psi_norm) = ('psi_norm    ')
 endif
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
  if (include_radiation) then
    scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
                   = (/ 'Ionis_Wm-3  ', 'Lin_radWm-3 ', 'Brems_Wm-3  ', 'Joule_Wm-3  ', 'Imp_bg_Wm-3 '/)
@@ -1192,7 +1192,7 @@ do i=1,element_list%n_elements
 
 enddo  ! n_elements
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   if (deuterium_adas)  ad_deuterium =  read_adf11(0,'96_h') !< for both include_radiation and include_neutral_dens
   if (include_radiation) then
     do i=1,nnos
@@ -1282,7 +1282,7 @@ enddo  ! n_elements
 
     enddo
   endif
-#endif /* WITH_Neutrals */
+#endif /* WITH_Neutrals but not WITH_Impurities */
 
 #ifdef WITH_Impurities
 
@@ -1405,7 +1405,7 @@ enddo  ! n_elements
  endif
 #endif /*WITH_Impurities*/
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   if (include_neutral_dens) then
 
     do i=1,nnos
@@ -1431,7 +1431,7 @@ enddo  ! n_elements
 
     end do
   end if
-#endif /* WITH_Neutrals*/
+#endif /* WITH_Neutrals but not WITH_Impurities */
 
 
 if (SI_units) then
@@ -1501,7 +1501,7 @@ if (SI_units) then
     endif
     !=====================================Vparal in km/s *Btot!!!
     scalars(i,7) = scalars(i,7) /t_norm/1.e3
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     !===================================== Neutral density in 1e20m-3
     scalars(i,8) = scalars(i,8) * central_density
 #endif
@@ -1544,7 +1544,7 @@ if (SI_units) then
  
     !========================================================
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     if (include_radiation) then
       coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density*1.d20)**(1.5d0)
       coef_rad_1 = (gamma-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
@@ -1619,7 +1619,7 @@ if (SI_units) then
       end if
       scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * frad_bg
     endif
-#endif /* WITH_Neutrals */
+#endif /* WITH_Neutrals but not WITH_Impurities */
 
 #ifdef WITH_Impurities
   if (include_radiation) then

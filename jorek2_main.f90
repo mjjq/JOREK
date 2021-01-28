@@ -609,6 +609,9 @@ required = 0
       freeboundary_equil  = .false.
     end if
     
+    ! --- Check sanity of grid
+    call check_grid(my_id, node_list, element_list)
+
     ! --- Plot the grid  
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
       call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
@@ -690,6 +693,7 @@ required = 0
 
       endif ! if (my_id == 0) then        
 
+      ! --- Check sanity of grid
       call check_grid(my_id, node_list, element_list)
 
       call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list) 

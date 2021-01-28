@@ -10,7 +10,7 @@ use basis_at_gaussian
 use phys_module
 use domains
 use corr_neg
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   use mod_neutral_source, only: neutral_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all
 #endif
 #ifdef WITH_Impurities

@@ -19,7 +19,7 @@ module mod_integrals3D
   use mod_poloidal_currents, only : integrated_normal_bnd_curr 
   use corr_neg
   use pellet_module
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   use mod_neutral_source, only: neutral_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all 
 #endif
 #ifdef WITH_Impurities

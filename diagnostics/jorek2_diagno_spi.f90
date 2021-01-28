@@ -22,7 +22,7 @@ use mod_log_params
 use diagnostics, only: axis_is_psi_minimum
 use mod_boundary, only: boundary_from_grid
 use mod_element_rtree
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   use mod_neutral_source
 #endif
 #ifdef WITH_Impurities

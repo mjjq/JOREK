@@ -28,7 +28,7 @@ module mod_expression
 #endif
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
       
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   use mod_neutral_source
 #endif
   

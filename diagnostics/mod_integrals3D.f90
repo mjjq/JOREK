@@ -131,7 +131,7 @@ real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, l
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 real*8  :: source_neutral, source_tmp
 #endif
 #ifdef WITH_Impurities
@@ -165,7 +165,7 @@ integer    :: spi_i
 real*8     :: ng_radius
 
 ! Additional variables related to the radiated power
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 ! Atomic physics coefficients:
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
@@ -296,6 +296,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          n_spi, using_spi,                                                               &
 !$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
 !$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type,              &
+#endif
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp          nimp_bg, local_E_ion, ksi_ion, GAMMA, use_imp_adas,                             &
 #endif
 #ifdef WITH_Impurities
@@ -318,19 +320,21 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
 !$omp           eta_T_ohm, &
+#ifdef WITH_Neutrals
+!$omp           rn0, rn0_corr,                                                                 &
+#endif
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+!$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion,                                    &
+!$omp           Te_eV, ne_SI, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
+!$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
+!$omp           Lrad_imp, m_i_over_m_imp_bg, coef_prad_si,                                     &
+!$omp           source_neutral, source_tmp,                                                    &
+#endif
 #ifdef WITH_Impurities
 !$omp           source_bg, source_imp, source_tmp,                                             &
 !$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
 !$omp           Te_corr_eV, Te_eV, ne_SI, ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,       &
 !$omp           ion_k, Z_eff, eta_coef,                                                        &
-#endif
-#ifdef WITH_Neutrals
-!$omp           rn0, rn0_corr,                                                                 &
-!$omp           source_neutral, source_tmp,                                                    &
-!$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion,                                    &
-!$omp           Te_eV, ne_SI, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
-!$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
-!$omp           Lrad_imp, m_i_over_m_imp_bg, coef_prad_si,                                     &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -1031,7 +1035,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       vpar0    = 0.d0
 #endif
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
       rn0      = eq_g_1D(mp,var_rhon,ms)
 #else
       rn0      = 0.d0 
@@ -1078,7 +1082,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         vpar_t = 0.d0
 #endif
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
         call interp(node_list,element_list,m_elm,8,in,sg,tg,rn,rn_s,rn_t,rn_st,rn_ss,rn_tt)
         rhon_s = rhon_s + rn_s * HZ(in,mp)
         rhon_t = rhon_t + rn_t * HZ(in,mp)

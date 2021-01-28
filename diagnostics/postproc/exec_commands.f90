@@ -23,7 +23,7 @@ module exec_commands
   use mod_injection_source
 #endif
   use mod_bootstrap_functions
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
    use mod_neutral_source
 #endif
   

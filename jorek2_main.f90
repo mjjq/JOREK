@@ -77,7 +77,7 @@ program JOREK2
 #endif
   use mpi_mod
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   use mod_neutral_source
 #endif
 #ifdef WITH_Impurities
@@ -1164,7 +1164,7 @@ required = 0
 
       endif
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
       call total_neutrals(my_id,node_list,element_list)
       if (using_spi .and. t_now >= t_ns) then
         call update_spi(my_id,node_list,element_list)

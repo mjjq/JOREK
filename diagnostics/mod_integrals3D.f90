@@ -125,7 +125,7 @@ real*8  :: UU,UU_s,UU_t,UU_st,UU_ss,UU_tt
 real*8  :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt 
 real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt 
 real*8  :: rn,rn_s,rn_t,rn_st,rn_ss,rn_tt 
-real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, Ti, Ti_t, Te, Te_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t
+real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, Ti, Ti_s, Ti_t, Te, Te_s, Te_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t
 real*8  :: u0_p, u_s, u_t, u_p
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
@@ -1053,6 +1053,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       rho_s  = 0.d0; rho_t  = 0.d0;
       rhon_s = 0.d0; rhon_t = 0.d0;
       T_s    = 0.d0; T_t    = 0.d0;
+      Ti_s   = 0.d0; Ti_t   = 0.d0;
+      Te_s   = 0.d0; Te_t   = 0.d0;
       vpar_s = 0.d0; vpar_t = 0.d0; 
 
       do in = 1,n_tor

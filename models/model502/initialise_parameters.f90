@@ -72,10 +72,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_block_points_left,  n_block_points_right,         &
                 R_block_points_left,  R_block_points_right,         &
                 Z_block_points_left,  Z_block_points_right,         &
-                tokamak_device,                                     &
-                F0,gamma_sheath,gamma_stangeby, density_reflection, &
+                tokamak_device, gamma_i_stangeby, gamma_sheath_e,   &
+                F0,gamma_sheath_i,gamma_e_stangeby,                 &
                 mach_one_bnd_integral, Vpar_smoothing,              &
-                Vpar_smoothing_coef,                                &
+                Vpar_smoothing_coef, density_reflection,            &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 Ti_0,  Ti_1,  Ti_coef,                              &

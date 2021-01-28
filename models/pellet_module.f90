@@ -538,7 +538,9 @@ module pellet_module
   subroutine init_spi_all()
   
     use data_structure
-    use phys_module
+    use phys_module, only: pellets, n_spi, n_spi_tot, n_inj, JET_MGI, ASDEX_MGI, ns_R, ns_Z, ns_phi,&
+                           ns_amplitude, spi_Vel_Rref, spi_Vel_Zref, spi_Vel_RxZref,&
+                           spi_quantity, spi_quantity_bg, spi_Vel_diff, spi_L_inj
     use mpi_mod
     
     implicit none

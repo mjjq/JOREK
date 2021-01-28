@@ -614,6 +614,9 @@ required = 0
       call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
     end if
     
+    ! --- Check sanity of grid
+    call check_grid(my_id, node_list, element_list)
+
 #ifdef USE_MUMPS
     ! --- Initialize MUMPS solver (used for equilibrium)
     call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
@@ -690,6 +693,7 @@ required = 0
 
       endif ! if (my_id == 0) then        
 
+      ! --- Check sanity of grid
       call check_grid(my_id, node_list, element_list)
 
       call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list) 

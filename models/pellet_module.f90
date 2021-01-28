@@ -534,6 +534,51 @@ module pellet_module
   end subroutine update_spi
 
 
+  !> This is a blanket subroutine taking care of initialization of fragments for all injection locations
+  subroutine init_spi_all()
+  
+    use data_structure
+    use phys_module
+    use mpi_mod
+    
+    implicit none
+    
+    integer             :: i, n_spi_begin
+    integer             :: err_alloc=0, err_alloc_rnd=0    
+    logical             :: ferr
+    
+    n_spi_tot = 0
+    do i = 1, n_inj
+      n_spi_tot = n_spi_tot + n_spi(i)
+    end do
+
+    if (allocated(pellets)) then
+      deallocate(pellets)
+    end if
+
+    allocate (pellets(n_spi_tot),stat=err_alloc)  !< Dynamically allocate memeries for pellets
+
+    if (err_alloc /= 0) then
+      write(*,*) "Error when trying to dynamically allocate memeries for pellets, exiting."
+      stop
+    else
+      if (JET_MGI .or. ASDEX_MGI) then
+        write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
+        write(*,*) "JET_MGI:", JET_MGI
+        write(*,*) "ASDEX_MGI:", ASDEX_MGI
+        stop
+      else      !< Do one initialization for each injection location
+        n_spi_begin = 1
+        do i = 1, n_inj
+          call init_spi(ns_R(i),ns_Z(i),ns_phi(i),ns_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
+                        spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),n_spi(i),n_spi_begin)
+          n_spi_begin = n_spi_begin + n_spi(i)
+        end do
+      end if
+    end if
+
+    return
+  end subroutine init_spi_all
 
   !> Initializes the shattered pellet position, velocity and size
   subroutine init_spi(ns_R,ns_Z,ns_phi,ns_amplitude,spi_Vel_Rref,spi_Vel_Zref,spi_Vel_RxZref,&

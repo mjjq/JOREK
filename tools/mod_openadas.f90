@@ -176,7 +176,7 @@ do i=1,3,2 ! full, strip
     endif
   else
     if (i .eq. 3) then
-#if (JOREK_MODEL == 500)
+#ifdef WITH_Neutrals
       write(*,*) "Cannot find ionisation data file ", trim(filename), "not loading ionisation energies"
 #else
       write(*,*) "Cannot find ionisation data file ", trim(filename), ", terminating!"

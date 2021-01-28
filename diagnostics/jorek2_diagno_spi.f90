@@ -22,10 +22,10 @@ use mod_log_params
 use diagnostics, only: axis_is_psi_minimum
 use mod_boundary, only: boundary_from_grid
 use mod_element_rtree
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+#ifdef WITH_Neutrals
   use mod_neutral_source
 #endif
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
   use mod_injection_source
 #endif
 use mod_integrals3D
@@ -260,11 +260,9 @@ if (using_spi) then
 
 endif
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+#ifdef WITH_Neutrals
   ! --- Read ADAS data and generate coronal equilibrium is needed
   call init_imp_adas(my_id)
-#endif
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
   if (output_prad_phi) then
     ! --- Determine boundary information from the grid
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)

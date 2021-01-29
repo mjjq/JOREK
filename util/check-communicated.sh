@@ -7,14 +7,12 @@
 
 startdir=`pwd`
 
-outfile="parameter-overview.txt"
-
 onlycheck="0"
 
 if [ $# -ne 0 ]; then
   if [ $# -eq 1 ]; then
     if [ $1 == "-h" ]; then
-      echo "Usage: ./util/parameter-overview.txt [-h] [-o]"
+      echo "Usage: ./util/check-communicated.sh [-h] [-o]"
       echo "-h print help"
       echo "-o only check whether parameters communicated"
       exit

@@ -1518,16 +1518,16 @@ do i=1,newnode_list%n_nodes
 
   ! Adapt to axis treatment that involves new basis functions
   if(treat_axis .and. newnode_list%node(i)%axis_node)then
-    newnode_list%node(i)%x(3,1:2) = 0.d0
+    newnode_list%node(i)%x(1,3,1:2) = 0.d0
     newnode_list%node(i)%values(1,1,1) = PSg1
     newnode_list%node(i)%values(1,2,1) = PSI_R
     newnode_list%node(i)%values(1,3,1) = 0.d0
     newnode_list%node(i)%values(1,4,1) = PSI_Z
   else
     newnode_list%node(i)%values(1,1,1) = PSg1
-    newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(2,1) + PSI_Z * newnode_list%node(i)%x(2,2)
-    newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(3,1) + PSI_Z * newnode_list%node(i)%x(3,2)
-    newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(4,1) + PSI_Z * newnode_list%node(i)%x(4,2)
+    newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(1,2,1) + PSI_Z * newnode_list%node(i)%x(1,2,2)
+    newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(1,3,1) + PSI_Z * newnode_list%node(i)%x(1,3,2)
+    newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(1,4,1) + PSI_Z * newnode_list%node(i)%x(1,4,2)
   endif
 
   if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0

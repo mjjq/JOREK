@@ -104,19 +104,19 @@ do ms = 1, n_gauss
 do mt = 1, n_gauss
    ! vertex 1
    Nf(1,1,ms,mt) = element%size(1,1) * Hf(1,1,ms,mt)
-   Nf(1,2,ms,mt) = element%size(1,2) * Hf(1,2,ms,mt) * nodes(1)%x(2,1) + &
-                 & element%size(1,4) * Hf(1,4,ms,mt) * nodes(1)%x(4,1)
+   Nf(1,2,ms,mt) = element%size(1,2) * Hf(1,2,ms,mt) * nodes(1)%x(1,2,1) + &
+                 & element%size(1,4) * Hf(1,4,ms,mt) * nodes(1)%x(1,4,1)
    Nf(1,3,ms,mt) = element%size(1,3) * Hf(1,3,ms,mt)
-   Nf(1,4,ms,mt) = element%size(1,2) * Hf(1,2,ms,mt) * nodes(1)%x(2,2) + &
-                 & element%size(1,4) * Hf(1,4,ms,mt) * nodes(1)%x(4,2)
+   Nf(1,4,ms,mt) = element%size(1,2) * Hf(1,2,ms,mt) * nodes(1)%x(1,2,2) + &
+                 & element%size(1,4) * Hf(1,4,ms,mt) * nodes(1)%x(1,4,2)
 
    ! vertex 4
    Nf(4,1,ms,mt) = element%size(4,1) * Hf(4,1,ms,mt)
-   Nf(4,2,ms,mt) = element%size(4,2) * Hf(4,2,ms,mt) * nodes(4)%x(2,1) + &
-                 & element%size(4,4) * Hf(4,4,ms,mt) * nodes(4)%x(4,1)
+   Nf(4,2,ms,mt) = element%size(4,2) * Hf(4,2,ms,mt) * nodes(4)%x(1,2,1) + &
+                 & element%size(4,4) * Hf(4,4,ms,mt) * nodes(4)%x(1,4,1)
    Nf(4,3,ms,mt) = element%size(4,3) * Hf(4,3,ms,mt)
-   Nf(4,4,ms,mt) = element%size(4,2) * Hf(4,2,ms,mt) * nodes(4)%x(2,2)+ &
-                 & element%size(4,4) * Hf(4,4,ms,mt) * nodes(4)%x(4,2)
+   Nf(4,4,ms,mt) = element%size(4,2) * Hf(4,2,ms,mt) * nodes(4)%x(1,2,2)+ &
+                 & element%size(4,4) * Hf(4,4,ms,mt) * nodes(4)%x(1,4,2)
 
 enddo
 enddo

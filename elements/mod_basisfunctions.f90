@@ -660,19 +660,19 @@ Nf = Hf
 
 !vertex 1
 Nf(1,1) = element%size(1,1) * Hf(1,1)
-Nf(1,2) = element%size(1,2) * Hf(1,2) * nodes(1)%x(2,1)+ &
-          element%size(1,4) * Hf(1,4) * nodes(1)%x(4,1)
+Nf(1,2) = element%size(1,2) * Hf(1,2) * nodes(1)%x(1,2,1)+ &
+          element%size(1,4) * Hf(1,4) * nodes(1)%x(1,4,1)
 Nf(1,3) = element%size(1,3) * Hf(1,3)
-Nf(1,4) = element%size(1,2) * Hf(1,2) * nodes(1)%x(2,2) + &
-          element%size(1,4) * Hf(1,4) * nodes(1)%x(4,2)
+Nf(1,4) = element%size(1,2) * Hf(1,2) * nodes(1)%x(1,2,2) + &
+          element%size(1,4) * Hf(1,4) * nodes(1)%x(1,4,2)
 
 ! vertex 4
 Nf(4,1) = element%size(4,1) * Hf(4,1)
-Nf(4,2) = element%size(4,2) * Hf(4,2) * nodes(4)%x(2,1) + &
-          element%size(4,4) * Hf(4,4) * nodes(4)%x(4,1)
+Nf(4,2) = element%size(4,2) * Hf(4,2) * nodes(4)%x(1,2,1) + &
+          element%size(4,4) * Hf(4,4) * nodes(4)%x(1,4,1)
 Nf(4,3) = element%size(4,3) * Hf(4,3)
-Nf(4,4) = element%size(4,2) * Hf(4,2) * nodes(4)%x(2,2) + &
-          element%size(4,4) * Hf(4,4) * nodes(4)%x(4,2)
+Nf(4,4) = element%size(4,2) * Hf(4,2) * nodes(4)%x(1,2,2) + &
+          element%size(4,4) * Hf(4,4) * nodes(4)%x(1,4,2)
 
 return
 end subroutine basisfunctions_axis

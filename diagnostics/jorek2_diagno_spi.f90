@@ -15,26 +15,42 @@ use phys_module
 use basis_at_gaussian
 use pellet_module
 use mpi_mod
+use mod_boundary, only: boundary_from_grid 
 use mod_import_restart
 use domains
 use mod_log_params
 use diagnostics, only: axis_is_psi_minimum
-
+use mod_boundary, only: boundary_from_grid
 use mod_element_rtree
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+  use mod_neutral_source
+#endif
+#if (JOREK_MODEL == 501)
+  use mod_injection_source
+#endif
+use mod_integrals3D
+use mod_expression, only: exprs_all_int, init_expr, t_expr_list
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
+type (type_node_list)        :: node_list
+type (type_element_list)     :: element_list
+type (type_bnd_node_list)    :: bnd_node_list
+type (type_bnd_element_list) :: bnd_elm_list
+type (t_expr_list)           :: expr_list
+real*8, allocatable          :: res(:)
+integer                      :: units
+
 integer :: i, in, i_tor, i_spi, resultlength
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
 real*8  :: Rplot(2), Zplot(2)
 real*8  :: psi_bnd, psi_axis,R_axis,Z_axis,s_axis,t_axis
-real*8  :: spi_abl_rate_tot, spi_abl_tot
 integer :: ifail, my_id, ierr, i_elm_axis
 integer :: required, provided, StatInfo
 integer :: rank, comm_size, n_cpu
 integer :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
+real*8  :: spi_abl_rate_tot, spi_abl_tot
+real*8  :: spi_abl_bg_rate_tot, spi_abl_bg_tot
 
   interface
     subroutine distribute_vector(my_id,rhs,rhs_dis,again)
@@ -84,6 +100,10 @@ logical, save :: axis_is_min
 write(*,*) '***************************************'
 write(*,*) '* JOREK2_diagno                       *'
 write(*,*) '***************************************'
+
+call init_expr()
+allocate(res(exprs_all_int%n_expr+1))
+res = 0.d0
 
 !my_id=0
 
@@ -200,6 +220,15 @@ if (use_pellet) then
 
 endif
 
+open(20,file="rad_history.dat")
+
+write(20,'(2A20)') 'time', 'total_radiation (MJ)'
+
+do i=1,index_start
+  write(20,'(i7,f12.3,1e14.6)') i,xtime(i), xtime_radiation(i)/1.d6
+enddo
+close(20)
+
 if (using_spi) then
 
   open(20,file="abl_history.dat")
@@ -209,20 +238,40 @@ if (using_spi) then
   do i=1,index_start
     spi_abl_rate_tot = 0.0
     spi_abl_tot = 0.0
+    spi_abl_bg_rate_tot = 0.0
+    spi_abl_bg_tot = 0.0
     do i_spi = 1, n_spi
       spi_abl_rate_tot = spi_abl_rate_tot + xtime_spi_ablation_rate(i_spi,i)
       spi_abl_tot = spi_abl_tot + xtime_spi_ablation(i_spi,i)
+      spi_abl_bg_rate_tot = spi_abl_bg_rate_tot + xtime_spi_ablation_bg_rate(i_spi,i)
+      spi_abl_bg_tot = spi_abl_bg_tot + xtime_spi_ablation_bg(i_spi,i)
     end do
-    write(20,'(i7,f12.3,200e14.6)') i,xtime(i), spi_abl_rate_tot, spi_abl_tot
+    write(20,'(i7,f12.3,4e14.6)') i,xtime(i), spi_abl_rate_tot, spi_abl_tot, spi_abl_bg_rate_tot, spi_abl_bg_tot
   enddo
+  close(20)
+
+  open(20,file="fragments_position.dat")
+
+  do i_spi = 1, n_spi
+    write(20,'(i7,2f12.3,e14.6,f12.3)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_radius,&
+                                            pellets(i_spi)%spi_species
+  end do
   close(20)
 
 endif
 
-!call populate_element_rtree(node_list, element_list)
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+  ! --- Read ADAS data and generate coronal equilibrium is needed
+  call init_imp_adas(my_id)
+#endif
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+  if (output_prad_phi) then
+    ! --- Determine boundary information from the grid
+    call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 
-call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
-
+    call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
+  endif
+#endif
 !if (use_pellet) then
 !   pellet_volume = total_pellet_volume
 !   call update_pellet(my_id,node_list,element_list)

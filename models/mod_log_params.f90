@@ -23,7 +23,7 @@ logical, optional             :: short !< commandline short version or run long 
 ! --- Constants
 character(len=512), parameter :: REAL_FMT = "(1X,A, ' = ', 99ES12.4)"
 character(len=512), parameter :: REAL_FMT2 = "(1X,A, ' = ', ES12.4, A)"
-character(len=512), parameter :: INTG_FMT = "(1X,A, ' = ', 10I12)"
+character(len=512), parameter :: INTG_FMT = "(1X,A, ' = ', 100I12)"
 character(len=512), parameter :: LOGI_FMT = "(1X,A, ' = ', 10L12)"
 character(len=512), parameter :: REA2_FMT = "(1X,A, ' = ', 4ES12.4, '     ...    ', 4ES12.4)"
 character(len=512), parameter :: REA3_FMT = "(1X,A, ' = ', 9ES12.4, '     ...')"
@@ -295,11 +295,12 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,REAL_FMT) 'SDN_threshold         ', SDN_threshold
   end if
 
-  if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then
+  if ( ( (grid_to_wall) .or. (extend_existing_grid) ) .and. (n_wall_blocks .gt. 0) ) then
     write(*,LOGI_FMT) 'RZ_grid_inside_wall   ', RZ_grid_inside_wall
     write(*,INTG_FMT) 'n_wall_blocks         ', n_wall_blocks
     do i=1,n_wall_blocks
       write(*,INTG_FMT) 'Wall Patch number:    ', i
+      write(*,INTG_FMT) 'corner block:         ', corner_block(i)
       write(*,INTG_FMT) 'resolution of block:  ', n_ext_block(i)
       write(*,INTG_FMT) 'n_block_points_left   ', n_block_points_left(i)
       do j=1,n_block_points_left(i)
@@ -348,6 +349,16 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,CHAR_FMT) 'rho_file              ', trim(rho_file)
   end if
 
+  if (jorek_model .eq. 500) then
+    if ( .not. num_rhon ) then
+      write(*,REAL_FMT) 'rhon_0                ', rhon_0
+      write(*,REAL_FMT) 'rhon_1                ', rhon_1
+      write(*,REAL_FMT) 'rhon_coef             ', rhon_coef(1:5)
+    else
+      write(*,CHAR_FMT) 'rhon_file             ', trim(rhon_file)
+    end if
+  end if
+
   if ( num_rot ) then
     write(*,CHAR_FMT) 'rot_file              ', trim(rot_file)
   else
@@ -368,7 +379,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,CHAR_FMT) 'T_file                ', trim(T_file)
   end if
 
-  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) ) then
+  if ( ( jorek_model == 400 ) .or. ( jorek_model == 401 ) .or. ( jorek_model == 711 ) ) then
     write(*,REAL_FMT) 'Te_0                   ', Te_0
     write(*,REAL_FMT) 'Te_1                   ', Te_1
     write(*,REAL_FMT) 'Te_coef                ', Te_coef(1:5)
@@ -389,6 +400,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,REAL_FMT) 'heatsource_i           ', heatsource_i
     write(*,REAL_FMT) 'ZK_e_par               ', ZK_e_par
     write(*,REAL_FMT) 'ZK_i_par               ', ZK_i_par
+    write(*,LOGI_FMT) 'thermalization         ', thermalization
   end if
 
   if ( .not. num_ffprime ) then
@@ -413,6 +425,14 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   else
     write(*,CHAR_FMT) 'D_perp_file           ', trim(D_perp_file)
   end if
+#if (JOREK_MODEL == 501 || JOREK_MODEL == 502)
+  write(*,REAL_FMT) 'D_par_imp               ', D_par_imp
+  if ( .not. num_d_perp_imp ) then
+    write(*,REAL_FMT) 'D_perp_imp            ', D_perp_imp(1:6)
+  else
+    write(*,CHAR_FMT) 'D_perp_imp_file       ', trim(D_perp_imp_file)
+  end if
+#endif
   write(*,REAL_FMT) 'particlesource        ', particlesource
   write(*,REAL_FMT) 'particlesource_psin   ', particlesource_psin
   write(*,REAL_FMT) 'particlesource_sig    ', particlesource_sig
@@ -426,12 +446,16 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
   write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig
   write(*,REAL_FMT) 'heatsource_gauss      ', heatsource_gauss
+  write(*,REAL_FMT) 'heatsource_gauss_e    ', heatsource_gauss_e
+  write(*,REAL_FMT) 'heatsource_gauss_i    ', heatsource_gauss_i
   write(*,REAL_FMT) 'heatsource_gauss_psin ', heatsource_gauss_psin
   write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
   write(*,REAL_FMT) 'tauIC                 ', tauIC
   write(*,LOGI_FMT) 'Wdia                  ', Wdia
   write(*,REAL_FMT) 'eta_num               ', eta_num
+  write(*,LOGI_FMT) 'eta_num_T_dependent   ', eta_num_T_dependent
   write(*,REAL_FMT) 'visco_num             ', visco_num
+  write(*,LOGI_FMT) 'visco_num_T_dependent ', visco_num_T_dependent
   write(*,REAL_FMT) 'visco_par_num         ', visco_par_num
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
   write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
@@ -442,8 +466,13 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
   write(*,REAL_FMT) 'D_prof_neg_thresh     ', D_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
+  write(*,REAL_FMT) 'ZK_par_neg            ', ZK_par_neg
   write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
+  write(*,REAL_FMT) 'ZK_par_neg_thresh     ', ZK_par_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
+  write(*,REAL_FMT) 'ne_SI_min             ', ne_SI_min
+  write(*,REAL_FMT) 'Te_eV_min             ', Te_eV_min
+  write(*,REAL_FMT) 'rn0_min               ', rn0_min
   write(*,REAL_FMT) 'rho_min               ', rho_min
   write(*,LOGI_FMT) 'use_pellet            ', use_pellet
   write(*,REAL_FMT) 'corr_neg_temp_coef    ', corr_neg_temp_coef(:)
@@ -462,6 +491,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,REAL_FMT) 'pellet_theta          ', pellet_theta
     write(*,REAL_FMT) 'pellet_delta_psi      ', pellet_delta_psi
     write(*,REAL_FMT) 'pellet_density        ', pellet_density
+    write(*,REAL_FMT) 'pellet_density_bg     ', pellet_density_bg
     write(*,REAL_FMT) 'pellet_particles      ', pellet_particles
     write(*,REAL_FMT) 'pellet_velocity_R     ', pellet_velocity_R
     write(*,REAL_FMT) 'pellet_velocity_Z     ', pellet_velocity_Z
@@ -568,11 +598,11 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'central_mass          ', central_mass
   write(*,REAL_FMT) 'gamma_sheath          ', gamma_sheath
   write(*,REAL_FMT) 'gamma_stangeby        ', gamma_stangeby
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 401) || (JOREK_MODEL == 711) )
   write(*,REAL_FMT) 'gamma_sheath_e        ', gamma_sheath_e
   write(*,REAL_FMT) 'gamma_sheath_i        ', gamma_sheath_i
-#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 711) )
-  write(*,REAL_FMT) 'gamma_i_stangeby      ', gamma_i_stangeby
   write(*,REAL_FMT) 'gamma_e_stangeby      ', gamma_e_stangeby
+  write(*,REAL_FMT) 'gamma_i_stangeby      ', gamma_i_stangeby
 #endif
   write(*,LOGI_FMT) 'vpar_smoothing        ', vpar_smoothing
   if ( vpar_smoothing ) then
@@ -612,6 +642,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
   write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
   write(*,LOGI_FMT) 'old_deuterium_atomic  ', old_deuterium_atomic
+  write(*,LOGI_FMT) 'no_mach1_bc           ', no_mach1_bc
 
   if ( (jorek_model .eq. 710) .or. (jorek_model .eq. 711) ) then
     write(*,LOGI_FMT) 'Mach1_openBC          ', Mach1_openBC
@@ -674,7 +705,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'jecamp              ',  jecamp
   endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
      write(*,REAL_FMT) 'ns_amplitude        ',  ns_amplitude
      write(*,REAL_FMT) 'ns_R                ',  ns_R
      write(*,REAL_FMT) 'ns_Z                ',  ns_Z
@@ -693,6 +724,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 't_ns                ',  t_ns
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
+     write(*,CHAR_FMT) 'imp_type            ',  trim(imp_type)
      write(*,REAL_FMT) 'neutral_line_source ', neutral_line_source
      write(*,REAL_FMT) 'neutral_line_R_start', neutral_line_R_start
      write(*,REAL_FMT) 'neutral_line_Z_start', neutral_line_Z_start
@@ -700,19 +732,27 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'neutral_line_Z_end  ', neutral_line_Z_end
      write(*,REAL_FMT) 'neutral_reflection  ', neutral_reflection
      write(*,LOGI_FMT) 'output_prad_phi     ', output_prad_phi
+     write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
+     write(*,INTG_FMT) 'n_adas              ',  n_adas
+     write(*,LOGI_FMT) 'use_imp_adas        ',  use_imp_adas
 
      !< Additional log for SPI model
    if(using_spi) then
      write(*,LOGI_FMT) 'using_spi           ',  using_spi
      write(*,LOGI_FMT) 'spi_tor_rot         ',  spi_tor_rot
+     write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
+     write(*,INTG_FMT) 'n_adas              ',  n_adas
      write(*,INTG_FMT) 'n_spi               ',  n_spi
      write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
-     write(*,CHAR_FMT) 'spi_shard_file      ',  spi_shard_file
+     write(*,CHAR_FMT) 'spi_shard_file      ',  trim(spi_shard_file)
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
      write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
      write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref
      write(*,REAL_FMT) 'spi_quantity        ',  spi_quantity
+     write(*,REAL_FMT) 'spi_quantity_bg     ',  spi_quantity_bg
+     write(*,REAL_FMT) 'pellet_density      ',  pellet_density
+     write(*,REAL_FMT) 'pellet_density_bg   ',  pellet_density_bg
      write(*,REAL_FMT) 'spi_angle           ',  spi_angle
      write(*,REAL_FMT) 'spi_L_inj           ',  spi_L_inj
      write(*,REAL_FMT) 'tor_frequency       ',  tor_frequency
@@ -726,7 +766,6 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,200)
   write(*,REAL_FMT) 'sqrt(mu0*rho0)      ',  sqrt_mu0_rho0 
   write(*,REAL_FMT) 'sqrt(mu0/rho0)      ',  sqrt_mu0_over_rho0 
-
   write(*,*)
 
 end if

@@ -1,4 +1,4 @@
-subroutine Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure,pressure_in,pressure_out)
+subroutine integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure,pressure_in,pressure_out)
 !---------------------------------------------------------------
 !
 !---------------------------------------------------------------
@@ -191,13 +191,13 @@ do ife = ife_min, ife_max
       do ms=1, n_gauss
         do mt=1, n_gauss
 
-          x_g(ms,mt) = x_g(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H(i,j,ms,mt)
-          y_g(ms,mt) = y_g(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H(i,j,ms,mt)
+          x_g(ms,mt) = x_g(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H(i,j,ms,mt)
+          y_g(ms,mt) = y_g(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H(i,j,ms,mt)
 
-          x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
-          x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
-          y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
-          y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+          x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_s(i,j,ms,mt)
+          x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_t(i,j,ms,mt)
+          y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_s(i,j,ms,mt)
+          y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_t(i,j,ms,mt)
 
         enddo
       enddo
@@ -313,10 +313,10 @@ do ife = ife_min, ife_max
 
         grad_P_psi = (dPdx * dpsidx + dPdy * dpsidy)/grad_psi
 
-#if (JOREK_MODEL == 400) || (JOREK_MODEL == 711)
+#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 401) || (JOREK_MODEL == 711) )
         call sources(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, ps0, ES%psi_axis, psi_limit, &
                      particle_source,heat_source_i,heat_source_e)
-		     heat_source = heat_source_i + heat_source_e
+        heat_source = heat_source_i + heat_source_e
 #else
         call sources(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, ps0, ES%psi_axis, psi_limit, &
                      particle_source,heat_source)

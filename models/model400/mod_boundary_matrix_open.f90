@@ -52,10 +52,14 @@ real*8     :: amat_81, amat_85, amat_88, amat_87
 real*8     :: element_size_ij, element_size_kl
 logical    :: xpoint2
 
-theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
+!theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
 !theta = 1.0d0  ; zeta = 0.0d0       ! Euler scheme 
 !theta = 1.0d0   ; zeta = 0.5d0       ! BDF2 (Gears) scheme
 
+theta = time_evol_theta
+!zeta  = time_evol_zeta
+! change zeta for variable dt
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0;  x_ss  = 0.d0; 
@@ -77,11 +81,11 @@ do i=1,2
 
     do ms=1, n_gauss
 
-      x_g(ms)  = x_g(ms)  + nodes(i)%x(j2,1) * element_size_ij * H1(i,j,ms)
-      x_s(ms)  = x_s(ms)  + nodes(i)%x(j2,1) * element_size_ij * H1_s(i,j,ms)
+      x_g(ms)  = x_g(ms)  + nodes(i)%x(1,j2,1) * element_size_ij * H1(i,j,ms)
+      x_s(ms)  = x_s(ms)  + nodes(i)%x(1,j2,1) * element_size_ij * H1_s(i,j,ms)
 
-      y_g(ms)  = y_g(ms)  + nodes(i)%x(j2,2) * element_size_ij * H1(i,j,ms)
-      y_s(ms)  = y_s(ms)  + nodes(i)%x(j2,2) * element_size_ij * H1_s(i,j,ms)
+      y_g(ms)  = y_g(ms)  + nodes(i)%x(1,j2,2) * element_size_ij * H1(i,j,ms)
+      y_s(ms)  = y_s(ms)  + nodes(i)%x(1,j2,2) * element_size_ij * H1_s(i,j,ms)
 
       do mp=1,n_plane
 
@@ -104,6 +108,10 @@ do i=1,2
     enddo
   enddo
 enddo
+
+! changes deltas for variable time steps
+delta_g = delta_g * tstep / tstep_prev
+delta_s = delta_s * tstep / tstep_prev
 
 n_tor_local = i_tor_max - i_tor_min + 1
 !--------------------------------------------------- sum over the Gaussian integration points

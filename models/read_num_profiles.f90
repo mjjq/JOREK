@@ -55,11 +55,9 @@ subroutine read_num_profiles(my_id)
     num_Ti_y0 = num_Ti_y0 - Ti_1
   end if
   
-  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) ) then
-    if ( my_id ==0 ) then
-      T_0 = Te_0 + Ti_0
-      T_1 = Te_1 + Ti_1
-    end if
+  if (( (jorek_model == 400).or.(jorek_model == 401).or.(jorek_model == 711) ) .and. ( my_id ==0 )) then
+    T_0 = Te_0 + Ti_0
+    T_1 = Te_1 + Ti_1
   end if
   
   num_ffprime = ( ffprime_file /= 'none' )
@@ -126,7 +124,14 @@ subroutine read_num_profiles(my_id)
   if ( num_d_perp .and. ( my_id == 0 ) ) then
     call readProf(num_d_perp_x, num_d_perp_y, num_d_perp_len, d_perp_file)
     call check_num_prof(num_d_perp, num_d_perp_x, num_d_perp_y, num_d_perp_len, 'd_perp',          &
-      check_positive=.true.)
+                        check_positive=.true.)
+  end if
+
+  num_d_perp_imp = ( d_perp_imp_file /= 'none' )
+  if ( num_d_perp_imp .and. ( my_id == 0 ) ) then
+    call readProf(num_d_perp_x_imp, num_d_perp_y_imp, num_d_perp_len_imp, d_perp_imp_file)
+    call check_num_prof(num_d_perp, num_d_perp_x_imp, num_d_perp_y_imp, num_d_perp_len_imp, &
+                        'd_perp_imp', check_positive=.true.)
   end if
 
   num_zk_perp = ( zk_perp_file /= 'none' )

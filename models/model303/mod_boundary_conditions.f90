@@ -83,7 +83,7 @@ real*8  :: R_s, R_t, Z, Z_s, Z_t, R_tt, Z_tt, ps0, ps0_s, ps0_t, ps0_tt, ps0_x, 
 real*8  :: ps0_b, T0_b, u0_b, Vpar0_b, R_b, Z_b, R_bb, Z_bb, ps0_bb, grad_b(2)
 real*8  :: Btot, grad_psi, u0_s, u0_t, u0_x, u0_y
 real*8  :: element_size_s, element_size_t, element_size_0
-real*8  :: H1(2,(n_order+1)**0.5), H1_s(2,(n_order+1)**0.5), H1_ss(2,(n_order+1)**0.5)
+real*8  :: H1(2,(n_order+1)/2), H1_s(2,(n_order+1)/2), H1_ss(2,(n_order+1)/2)
 integer :: i, in, iv, iv2, iv3, inode, inode2, inode3, k
 integer :: index_large_i, index_node, index_node2, ielm
 integer(kind=int_all) :: ijA_position,ijA_position2
@@ -361,7 +361,7 @@ do i=1, n_local_elms !=== do elements
                    zbig, solve_only, gmres, index_min, index_max,   & 
                    ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-            if (n_order .eq. 8) then
+            if (n_order .eq. 5) then
               ! --- THIS WILL NEED TO BE GENERALISED!!!
               do j=5,8
                 index_node = node_list%node(inode)%index(j)

@@ -70,13 +70,13 @@ type, extends(io_action) :: projection
 
   !> Right-hand side
   type(proj_f), dimension(:), allocatable :: f !< List of projection transformations to use (n_proj)
-  real*8, dimension(:,:,:,:,:), allocatable :: rhs !< dim (n_vertex_max,n_order+1,n_elements,n_tor,n_proj2)
+  real*8, dimension(:,:,:,:,:), allocatable :: rhs !< dim (n_vertex_max,n_degrees,n_elements,n_tor,n_proj2)
   !< right-hand side for accumulation during sampling
   !< assumed to be filled by the user. Will be MPI_Reduced (+) before projecting
   !< n_proj + n_proj2 should be less than n_var (extra input will be ignored)
   !< After projection this will be zeroed but not deallocated
 
-  real*8, dimension(:,:,:,:,:), private, allocatable :: rhs_f !< dim (n_vertex_max,n_order+1,n_elements,n_tor,n_proj) storage
+  real*8, dimension(:,:,:,:,:), private, allocatable :: rhs_f !< dim (n_vertex_max,n_degrees,n_elements,n_tor,n_proj) storage
   !< location for proj_f output
 
   !> Internal variables
@@ -281,7 +281,7 @@ subroutine project_only(this, sim)
       do i_elm=1,this%element_list%n_elements
         do i=1,n_vertex_max
           inode = this%element_list%element(i_elm)%vertex(i)
-          do j=1,n_order+1
+          do j=1,n_degrees
             index_large_i = this%node_list%node(inode)%index(j) + this%mumps_par%n * ((i_rhs-1)*n_tor + (i_tor-1))  ! base index in the main matrix + rhs index
 
             my_rhs(index_large_i) = my_rhs(index_large_i) + this%rhs(j, i, i_elm, i_tor, i_rhs)
@@ -296,7 +296,7 @@ subroutine project_only(this, sim)
       do i_elm=1,this%element_list%n_elements
         do i=1,n_vertex_max
           inode = this%element_list%element(i_elm)%vertex(i)
-          do j=1,n_order+1
+          do j=1,n_degrees
             index_large_i = this%node_list%node(inode)%index(j) + this%mumps_par%n * (n_rhs*n_tor + (i_rhs-1)*n_tor + (i_tor-1))  ! base index in the main matrix + rhs index
 
             my_rhs(index_large_i) = my_rhs(index_large_i) + this%rhs_f(j, i, i_elm, i_tor, i_rhs)
@@ -322,7 +322,7 @@ subroutine project_only(this, sim)
   if (my_id .eq. 0) then
     do i_var=1,min(n_rhs+n_rhs_f,n_var)
       do i=1,this%node_list%n_nodes
-        do k=1,n_order+1
+        do k=1,n_degrees
           index = this%node_list%node(i)%index(k)
           do i_tor=1,n_tor
             this%node_list%node(i)%values(i_tor,k,i_var) = this%mumps_par%rhs(index + this%mumps_par%n*((i_var-1)*n_tor + (i_tor-1)))
@@ -379,7 +379,7 @@ subroutine sample_rhs(this, sim)
   end if
 
   if (.not. allocated(this%rhs_f)) then
-    allocate(this%rhs_f(n_vertex_max,n_order+1,this%element_list%n_elements,n_tor,n_sample))
+    allocate(this%rhs_f(n_vertex_max,n_degrees,this%element_list%n_elements,n_tor,n_sample))
   end if
   this%rhs_f = 0.d0
 
@@ -404,8 +404,8 @@ subroutine sample_rhs(this, sim)
       HZ(1) = HZ(1)*0.5d0 ! int cos^2(nx) from 0 to 2pi = pi for n > 0
       HZ(:) = HZ(:)/PI ! int 1 from 0 to 2pi = 2pi
       do i=1,n_vertex_max
-        do j=1,n_order+1
-          index_ij = (i-1)*(n_order+1) + j
+        do j=1,n_degrees
+          index_ij = (i-1)*n_degrees + j
 
           v = HH(i,j) * this%element_list%element(particle%i_elm)%size(i,j)
           v = v * this%f(i_f)%f(sim, i_group, particle) * particle%weight
@@ -542,7 +542,7 @@ logical, intent(in), optional        :: skip_factorisation
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 
-real*8     :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1))
+real*8     :: ELM(n_vertex_max*n_degrees,n_vertex_max*n_degrees)
 real*8     :: wgauss2(n_gauss)
 real*8, dimension(n_gauss,n_gauss) :: x_g, x_s, x_t, x_ss, x_tt, x_st, &
                                       y_g, y_s, y_t, y_ss, y_tt, y_st
@@ -564,12 +564,12 @@ mumps_par%PAR  = 1
 call DMUMPS(mumps_par)
 call MPI_COMM_RANK(MPI_COMM_MUMPS, my_id, ierr)
 
-nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
+nz_AA = element_list%n_elements * (n_vertex_max * n_degrees)**2
 n_AA = maxval(node_list%node(1:node_list%n_nodes)%index(4))
 
 ! Only perform the construction of the matrix on the host
 if (my_id .eq. 0) then
-write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * (n_order+1)
+write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * n_degrees
 write(*,*) ' nz_AA                   : ',nz_AA
 
 ! Allocate space for elements
@@ -611,7 +611,7 @@ do i_elm=1,element_list%n_elements
   x_g = 0.d0; x_s = 0.d0; x_t = 0.d0; x_ss = 0.d0; x_st = 0.d0; x_tt = 0.d0
   y_g = 0.d0; y_s = 0.d0; y_t = 0.d0; y_ss = 0.d0; y_st = 0.d0; y_tt = 0.d0
   do i=1,n_vertex_max
-    do j=1,n_order+1
+    do j=1,n_degrees
       do ms=1, n_gauss
         do mt=1, n_gauss
           x_g(ms,mt)  = x_g(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H(i,j,ms,mt)
@@ -652,8 +652,8 @@ do i_elm=1,element_list%n_elements
       volume = volume + TWOPI * x_g(ms,mt) * xjac * wst
 
       do i=1,n_vertex_max
-        do j=1,n_order+1
-          index_ij = (i-1)*(n_order+1) + j
+        do j=1,n_degrees
+          index_ij = (i-1)*n_degrees + j
 
           v   = h(i,j,ms,mt)   * element%size(i,j)
           v_s = h_s(i,j,ms,mt) * element%size(i,j)
@@ -683,8 +683,8 @@ do i_elm=1,element_list%n_elements
                - xjac_x * (- v_s * x_t(ms,mt) + v_t * x_s(ms,mt) )   / xjac**2
 
           do k=1,n_vertex_max
-            do l=1,n_order+1
-              index_kl = (k-1)*(n_order+1) + l
+            do l=1,n_degrees
+              index_kl = (k-1)*n_degrees + l
 
               p   = h(k,l,ms,mt)   * element%size(k,l)
               p_s = h_s(k,l,ms,mt) * element%size(k,l)
@@ -728,20 +728,20 @@ do i_elm=1,element_list%n_elements
   ! Save contribution of this element in MUMPS format
   do i=1,n_vertex_max
     inode = element_list%element(i_elm)%vertex(i)
-    do j=1,n_order+1
-      index_ij = (i-1)*(n_order+1) + j
+    do j=1,n_degrees
+      index_ij = (i-1)*n_degrees + j
       index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
 
       do k=1,n_vertex_max
         knode = element_list%element(i_elm)%vertex(k)
-        do l=1,n_order+1
-          index_kl = (k-1)*(n_order+1) + l
+        do l=1,n_degrees
+          index_kl = (k-1)*n_degrees + l
 
           index_large_k = node_list%node(knode)%index(l)  ! base index in the main matrix
 
           ! Explicitly calculate the index
-          ilarge = l + (k-1)*(n_order+1) + (j-1)*(n_vertex_max*(n_order+1)) + (i-1)*(n_vertex_max*(n_order+1)**2) &
-                     + (i_elm-1)*(n_vertex_max*(n_order+1))**2
+          ilarge = l + (k-1)*n_degrees + (j-1)*(n_vertex_max*n_degrees) + (i-1)*(n_vertex_max*n_degrees**2) &
+                     + (i_elm-1)*(n_vertex_max*n_degrees)**2
 
           mumps_par%irn(ilarge) = index_large_i
           mumps_par%jcn(ilarge) = index_large_k
@@ -805,24 +805,24 @@ integer(HID_T)     :: file_id
 integer            :: ierr
 
 ! type_node, node_list%n_nodes
-real(RKIND), allocatable :: t_x(:,:,:,:)                   ! n_coord_tor, n_order+1, n_dim
-real(RKIND), allocatable :: t_values(:,:,:,:)              !       n_tor, n_order+1, n_fields
+real(RKIND), allocatable :: t_x(:,:,:,:)                   ! n_coord_tor, n_degrees, n_dim
+real(RKIND), allocatable :: t_values(:,:,:,:)              !       n_tor, n_degrees, n_fields
 
 ! element, element_list%n_elements
 integer,     allocatable :: t_vertex(:,:)                ! n_vertex_max
 integer,     allocatable :: t_neighbours(:,:)            ! n_vertex_max
-real(RKIND), allocatable :: t_size(:,:,:)                ! n_vertex_max,n_order+1
+real(RKIND), allocatable :: t_size(:,:,:)                ! n_vertex_max,n_degrees
 
 ! type_node, node_list%n_nodes
-call tr_allocate(t_x,1,node_list%n_nodes,1,n_coord_tor,1,n_order+1,1,n_dim, &
+call tr_allocate(t_x,1,node_list%n_nodes,1,n_coord_tor,1,n_degrees,1,n_dim, &
      "node_list%x",CAT_UNKNOWN)
-call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_fields, &
+call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor,1,n_degrees,1,n_fields, &
      "node_list%values",CAT_UNKNOWN)
 
 ! element_list%n_elements
 call tr_allocate(t_vertex,1,element_list%n_elements,1,n_vertex_max,"vertex",CAT_UNKNOWN)
 call tr_allocate(t_neighbours,1,element_list%n_elements,1,n_vertex_max,"neighbours",CAT_UNKNOWN)
-call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_order+1,"size",CAT_UNKNOWN)
+call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_degrees,"size",CAT_UNKNOWN)
 
 do i=1,node_list%n_nodes
    t_x(i,:,:,:)        = node_list%node(i)%x
@@ -864,16 +864,16 @@ call HDF5_integer_saving(file_id,element_list%n_elements,'n_elements'//char(0))
 call HDF5_integer_saving(file_id,node_list%n_dof,'n_dof'//char(0))
 
 call HDF5_array4D_saving(file_id,t_x, &
-     node_list%n_nodes,n_coord_tor,n_order+1,n_dim,'x'//char(0))
+     node_list%n_nodes,n_coord_tor,n_degrees,n_dim,'x'//char(0))
 call HDF5_array4D_saving(file_id,t_values, &
-     node_list%n_nodes,n_tor,n_order+1,n_fields,'values'//char(0))
+     node_list%n_nodes,n_tor,n_degrees,n_fields,'values'//char(0))
 
 call HDF5_array2D_saving_int(file_id,t_vertex, &
      element_list%n_elements,n_vertex_max,'vertex'//char(0))
 call HDF5_array2D_saving_int(file_id,t_neighbours, &
      element_list%n_elements,n_vertex_max,'neighbours'//char(0))
 call HDF5_array3D_saving(file_id,t_size, &
-     element_list%n_elements,n_vertex_max,n_order+1,'size'//char(0))
+     element_list%n_elements,n_vertex_max,n_degrees,'size'//char(0))
 call HDF5_real_saving(file_id,time,'t_now'//char(0))
 
 ! -> close file

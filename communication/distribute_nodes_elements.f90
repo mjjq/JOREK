@@ -89,7 +89,7 @@ do i = 1, element_list%n_elements
 
     inode = element_list%element(i)%vertex(iv)
 
-    do k=1, n_order+1
+    do k=1, n_degrees
 
       if ( (node_list%node(inode)%index(k) .ge. index_min(my_id+1)) .and. &
            (node_list%node(inode)%index(k) .le. index_max(my_id+1)) ) then
@@ -101,7 +101,7 @@ do i = 1, element_list%n_elements
     if(node_list%node(inode)%constrained) then
 	     do j = 1, 2
 		 index1 = node_list%node(inode)%parents(j)
-		  do k=1, n_order+1
+		  do k=1, n_degrees
 
                        if ( (node_list%node(index1)%index(k) .ge. index_min(my_id+1)) .and. &
                         (node_list%node(index1)%index(k) .le. index_max(my_id+1)) ) then

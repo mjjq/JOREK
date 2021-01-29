@@ -73,8 +73,8 @@ do j=1,nZ
       if ((j .eq. 1) .or. (j .eq. nZ)) node_list%node(inode)%boundary = node_list%node(inode)%boundary + 1
     endif
 
-    do k=1, n_order+1
-      node_list%node(inode)%index(k) = (n_order+1)*(inode-1) + k
+    do k=1, n_degrees
+      node_list%node(inode)%index(k) = n_degrees*(inode-1) + k
     enddo
 
   enddo

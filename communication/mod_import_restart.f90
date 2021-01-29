@@ -117,7 +117,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
 
   read(21) n_tor_tmp
 
-  allocate(mode_tmp(n_tor_tmp), values_tmp(n_tor_tmp,n_order+1,n_var), deltas_tmp(n_tor_tmp,n_order+1,n_var))
+  allocate(mode_tmp(n_tor_tmp), values_tmp(n_tor_tmp,n_degrees,n_var), deltas_tmp(n_tor_tmp,n_degrees,n_var))
 
   if (format_rst == 1) then
     read(21) mode_tmp
@@ -624,8 +624,8 @@ endif
       endif
 
       allocate( mode_tmp_perturbation  (n_tor_tmp_perturbation                ) )
-      allocate( values_tmp_perturbation(n_tor_tmp_perturbation,n_order+1,n_var) )
-      allocate( deltas_tmp_perturbation(n_tor_tmp_perturbation,n_order+1,n_var) )
+      allocate( values_tmp_perturbation(n_tor_tmp_perturbation,n_degrees,n_var) )
+      allocate( deltas_tmp_perturbation(n_tor_tmp_perturbation,n_degrees,n_var) )
 
       if (format_rst == 1) then
    	read(21) mode_tmp_perturbation
@@ -970,18 +970,18 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_integer_reading(file_id,node_list%n_dof,"n_dof")
 
   ! -> Allocate temporary arrays 
-  call tr_allocate(t_x,     1,node_list%n_nodes,1,n_coord_tor_tmp,1,n_order+1,1,n_dim,         "node_list%x",     CAT_UNKNOWN)
-  call tr_allocate(t_values,1,node_list%n_nodes,1,      n_tor_tmp,1,n_order+1,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
-  call tr_allocate(t_deltas,1,node_list%n_nodes,1,      n_tor_tmp,1,n_order+1,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
+  call tr_allocate(t_x,     1,node_list%n_nodes,1,n_coord_tor_tmp,1,n_degrees,1,n_dim,         "node_list%x",     CAT_UNKNOWN)
+  call tr_allocate(t_values,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
+  call tr_allocate(t_deltas,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
  
 #ifdef fullmhd
-  call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_order+1, "node_list%psi_eq",  CAT_UNKNOWN)
-  call tr_allocate(t_Fprof_eq,1,node_list%n_nodes,1,n_order+1, "node_list%Fprof_eq",CAT_UNKNOWN)
+  call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_degrees, "node_list%psi_eq",  CAT_UNKNOWN)
+  call tr_allocate(t_Fprof_eq,1,node_list%n_nodes,1,n_degrees, "node_list%Fprof_eq",CAT_UNKNOWN)
 #elif altcs
-  call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_order+1, "node_list%psi_eq",  CAT_UNKNOWN)
+  call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_degrees, "node_list%psi_eq",  CAT_UNKNOWN)
 #endif
  
-  call tr_allocate(t_index,      1,node_list%n_nodes,1,n_order+1,"index",      CAT_UNKNOWN)
+  call tr_allocate(t_index,      1,node_list%n_nodes,1,n_degrees,"index",      CAT_UNKNOWN)
   call tr_allocate(t_boundary,   1,node_list%n_nodes,            "boundary",   CAT_UNKNOWN)
   call tr_allocate(t_axis_node,  1,node_list%n_nodes,            "axis_node",  CAT_UNKNOWN)
   call tr_allocate(t_parents,    1,node_list%n_nodes,1,2,        "parent",     CAT_UNKNOWN)
@@ -993,7 +993,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   ! type_element, element_list%n_elements
   call tr_allocate(t_vertex,      1,element_list%n_elements,1,n_vertex_max,             "vertex",CAT_UNKNOWN)
   call tr_allocate(t_neighbours,  1,element_list%n_elements,1,n_vertex_max,             "neighbours",CAT_UNKNOWN)
-  call tr_allocate(t_size,        1,element_list%n_elements,1,n_vertex_max,1,n_order+1, "size",CAT_UNKNOWN)
+  call tr_allocate(t_size,        1,element_list%n_elements,1,n_vertex_max,1,n_degrees, "size",CAT_UNKNOWN)
   call tr_allocate(t_father,      1,element_list%n_elements,                            "father",CAT_UNKNOWN)
   call tr_allocate(t_n_sons,      1,element_list%n_elements,                            "n_sons",CAT_UNKNOWN)
   call tr_allocate(t_n_gen,       1,element_list%n_elements,                            "n_gen",CAT_UNKNOWN)

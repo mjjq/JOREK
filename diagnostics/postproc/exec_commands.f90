@@ -1104,7 +1104,7 @@ module exec_commands
     
     weight = 0.d0
     if (first_step) then
-      allocate(values(n_tor,n_order+1,n_var,node_list%n_nodes))
+      allocate(values(n_tor,n_degrees,n_var,node_list%n_nodes))
       values = 0.d0
     else
       weight = xtime(index_now)-xtime(prev_index)

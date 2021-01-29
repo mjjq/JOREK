@@ -1261,7 +1261,7 @@ do i=1,newnode_list%n_nodes
     endif
   endif
 
-  do k=1,n_order+1
+  do k=1,n_degrees
 
     index = index + 1
     node_list%node(i)%index(k) = index

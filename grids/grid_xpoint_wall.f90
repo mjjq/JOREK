@@ -1750,7 +1750,7 @@ do i=1,newnode_list%n_nodes
   newnode_list%node(i)%axis_node = .false.
   if ( fix_axis_nodes .and. (i .le. n_tht) ) newnode_list%node(i)%axis_node = .true.
 
-  do k=1,n_order+1
+  do k=1,n_degrees
 
     index = index + 1
     newnode_list%node(i)%index(k) = index

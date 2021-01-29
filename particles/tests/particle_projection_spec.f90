@@ -123,8 +123,8 @@ subroutine rhs_convergence_square_10_10(node_list, element_list, n, rng)
   do i_elm=1,element_list%n_elements
     do i=1,n_vertex_max
       inode = element_list%element(i_elm)%vertex(i)
-      do j=1,n_order+1
-        index_ij = (i-1)*(n_order+1) + j
+      do j=1,n_degrees
+        index_ij = (i-1)*n_degrees + j
         index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
 
         my_rhs(index_large_i) = my_rhs(index_large_i) + p%rhs(j,i,i_elm,1,1)

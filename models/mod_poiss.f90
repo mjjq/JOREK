@@ -52,7 +52,7 @@ type (type_node)         :: nodes_father(n_vertex_max)
 type (type_bnd_node_list)    :: bnd_node_list
 type (type_bnd_element_list) :: bnd_elm_list
 
-real*8   :: ELM(n_vertex_max*(n_order+1),n_vertex_max*(n_order+1)), RHS(n_vertex_max*(n_order+1))
+real*8   :: ELM(n_vertex_max*n_degrees,n_vertex_max*n_degrees), RHS(n_vertex_max*n_degrees)
 real*8   :: zbig, Z_xpoint(2), psi_axis, psi_bnd, psi_xpoint(2), R_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8   :: R_axis, Z_axis, s_axis, t_axis
 real*8   :: amix_used
@@ -60,7 +60,7 @@ integer  :: i_elm_axis, i_elm_xpoint(2)
 integer  :: n_AA, nz_AA, nz_AA_old, n_border, ilarge, ife, iv, i,j,k,l
 integer  :: inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i
 
-real*8, dimension(4,n_order+1)	 :: H, H_s, H_t, H_st
+real*8, dimension(4,n_degrees)	 :: H, H_s, H_t, H_st
 real*8			 :: lambda, mu	
 real*8			 :: Psi,dPsi_ds,dPsi_dt,d2Psi_dsdt
 real*8			 :: dX_ds, dX_dt, dY_ds, dY_dt, d2X_dsdt, d2Y_dsdt, h_u, h_v, h_w
@@ -99,7 +99,7 @@ if (my_id == 0) then
     write(*,*) ' freeboundary_equil : ',freeboundary_equil
   endif
   
-  nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2 
+  nz_AA = element_list%n_elements * (n_vertex_max * n_degrees)**2 
   call tr_debug_write("Deb_poisson",nz_AA)
   
   n_border = 0
@@ -118,8 +118,8 @@ if (my_id == 0) then
       if (node_list%node(i)%boundary .eq.19) n_border = n_border+3
       if (node_list%node(i)%boundary .eq.20) n_border = n_border+3
       if (node_list%node(i)%boundary .eq.21) n_border = n_border+3
-      if((node_list%node(i)%axis_node      ) .and. (n_order .eq. 8)) n_border = n_border+5
-      if((node_list%node(i)%boundary .ne. 0) .and. (n_order .eq. 8)) n_border = n_border+5
+      if((node_list%node(i)%axis_node      ) .and. (n_order .eq. 5)) n_border = n_border+5
+      if((node_list%node(i)%boundary .ne. 0) .and. (n_order .eq. 5)) n_border = n_border+5
     enddo
   endif
   
@@ -131,13 +131,13 @@ if (my_id == 0) then
     
   n_AA = 0
   do inode = 1, node_list%n_nodes
-      do k = 1, n_order+1 
+      do k = 1, n_degrees 
         n_AA = max(n_AA,node_list%node(inode)%index(k))
       enddo
   enddo
   
   if (iter .le. 1) then
-    write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * (n_order+1)
+    write(*,*) ' number of unknowns      : ',n_AA, node_list%n_nodes * n_degrees
     write(*,*) ' number of boundary nodes: ',n_border
     write(*,*) ' nz_AA                   : ',nz_AA
   endif
@@ -220,9 +220,9 @@ if (my_id == 0) then
   
       inode = node_out(i)
   
-      do j=1,n_order+1
+      do j=1,n_degrees
   
-        index_ij = (i-1)*(n_order+1) + j     ! index in the ELM matrix
+        index_ij = (i-1)*n_degrees + j     ! index in the ELM matrix
   
         index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
   
@@ -232,9 +232,9 @@ if (my_id == 0) then
   
           knode         =node_out(k)! element%vertex(k)
   
-          do l=1,n_order+1
+          do l=1,n_degrees
   
-            index_kl = (k-1)*(n_order+1) + l
+            index_kl = (k-1)*n_degrees + l
   
             index_large_k = node_list%node(knode)%index(l)  ! base index in the main matrix
   
@@ -284,7 +284,7 @@ elseif (itype .ne. 710) then        ! apply fixed boundary conditions
         mumps_par%A(ilarge+1)   = zbig
         ilarge = ilarge + 1
 
-        if (n_order .eq. 8) then
+        if (n_order .eq. 5) then
           index_i = node_list%node(i)%index(5)  ! base index in the main matrix
           mumps_par%irn(ilarge+1) = index_i
           mumps_par%jcn(ilarge+1) = index_i
@@ -366,7 +366,7 @@ elseif (itype .ne. 710) then        ! apply fixed boundary conditions
       
         endif
 
-        if (n_order .eq. 8) then
+        if (n_order .eq. 5) then
           index_i = node_list%node(i)%index(5)  ! base index in the main matrix
           mumps_par%irn(ilarge+1) = index_i
           mumps_par%jcn(ilarge+1) = index_i
@@ -612,7 +612,7 @@ if (my_id == 0) then
   
     if ((.not. refinement) .or. (refinement .and. (.not. node_list%node(i)%constrained)) ) then
   
-      do k=1,n_order+1
+      do k=1,n_degrees
   
         index = node_list%node(i)%index(k)
   
@@ -674,7 +674,7 @@ if (my_id == 0) then
   
           if ((pr(k)==parent(1)).or.(pr(k)==parent(2))) then
   
-            do l = 1, n_order+1
+            do l = 1, n_degrees
     
               dx_ds = dx_ds + node_list%node(pr(k))%x(1,l,1) * H_s(k,l) 	&
               * element_list%element(index_elm)%size(k,l)

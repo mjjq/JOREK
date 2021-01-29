@@ -3,7 +3,7 @@
 !> \see ::basisfunctions and ::basisfunctions1
 module mod_basisfunctions
 
-use mod_parameters, only: n_order
+use mod_parameters, only: n_order, n_degrees
 
 implicit none
 
@@ -38,7 +38,7 @@ contains
 !> Subroutine which defines the basis functions in one dimension with no derivatives
 pure subroutine basisfunctions_1D_0(s,H)
   real*8, intent(in)  :: s                         !< s-coordinate in the element (in [0,1])
-  real*8, intent(out) :: H(2,(n_order+1)**0.5)     !< Basis functions
+  real*8, intent(out) :: H(2,(n_order+1)/2)     !< Basis functions
   ! --- CUBIC
   if (n_order .eq. 3) then
     !---------------------------------------------------------- vertex (1)
@@ -63,8 +63,8 @@ end subroutine basisfunctions_1D_0
 !> Subroutine which defines the basis functions in one dimension with first derivatives
 pure subroutine basisfunctions_1D_1(s,H,H_s)
   real*8, intent(in)  :: s                         !< s-coordinate in the element (in [0,1])
-  real*8, intent(out) :: H  (2,(n_order+1)**0.5)   !< Basis functions
-  real*8, intent(out) :: H_s(2,(n_order+1)**0.5)   !< Basis functions derived with respect to s
+  real*8, intent(out) :: H  (2,(n_order+1)/2)   !< Basis functions
+  real*8, intent(out) :: H_s(2,(n_order+1)/2)   !< Basis functions derived with respect to s
   call basisfunctions_1D_0(s,H)
   ! --- CUBIC
   if (n_order .eq. 3) then
@@ -90,9 +90,9 @@ end subroutine basisfunctions_1D_1
 !> Subroutine which defines the basis functions in one dimension with first and second derivatives
 pure subroutine basisfunctions_1D_2(s,H,H_s,H_ss)
   real*8, intent(in)  :: s                         !< s-coordinate in the element (in [0,1])
-  real*8, intent(out) :: H   (2,(n_order+1)**0.5)  !< Basis functions
-  real*8, intent(out) :: H_s (2,(n_order+1)**0.5)  !< Basis functions derived with respect to s
-  real*8, intent(out) :: H_ss(2,(n_order+1)**0.5)  !< Basis functions derived two times with respect to s
+  real*8, intent(out) :: H   (2,(n_order+1)/2)  !< Basis functions
+  real*8, intent(out) :: H_s (2,(n_order+1)/2)  !< Basis functions derived with respect to s
+  real*8, intent(out) :: H_ss(2,(n_order+1)/2)  !< Basis functions derived two times with respect to s
   call basisfunctions_1D_1(s,H,H_s)
   ! --- CUBIC
   if (n_order .eq. 3) then
@@ -123,7 +123,7 @@ pure subroutine basisfunctions_2D_0(s, t, H)
   implicit none
   real*8, intent(in)  :: s                  !< s-coordinate in the element [0,1]
   real*8, intent(in)  :: t                  !< t-coordinate in the element [0,1]
-  real*8, intent(out) :: H(4,n_order+1)     !< Basis functions
+  real*8, intent(out) :: H(4,n_degrees)     !< Basis functions
   ! --- CUBIC
   if (n_order .eq. 3) then
     !---------------------------------------------------------- vertex (1)
@@ -224,9 +224,9 @@ pure subroutine basisfunctions_2D_1(s, t, H, H_s, H_t)
   implicit none
   real*8, intent(in)  :: s                  !< s-coordinate in the element [0,1]
   real*8, intent(in)  :: t                  !< t-coordinate in the element [0,1]
-  real*8, intent(out) :: H  (4,n_order+1)   !< Basis functions
-  real*8, intent(out) :: H_s(4,n_order+1)   !< Basis functions derived with respect to s
-  real*8, intent(out) :: H_t(4,n_order+1)   !< Basis functions derived with respect to t
+  real*8, intent(out) :: H  (4,n_degrees)   !< Basis functions
+  real*8, intent(out) :: H_s(4,n_degrees)   !< Basis functions derived with respect to s
+  real*8, intent(out) :: H_t(4,n_degrees)   !< Basis functions derived with respect to t
   
   call basisfunctions_2D_0(s, t, H)
   
@@ -427,9 +427,9 @@ pure subroutine basisfunctions_2D_1_T(s, t, H, H_s, H_t)
   implicit none
   real*8, intent(in)  :: s                  !< s-coordinate in the element [0,1]
   real*8, intent(in)  :: t                  !< t-coordinate in the element [0,1]
-  real*8, intent(out) :: H  (n_order+1,4)   !< Basis functions
-  real*8, intent(out) :: H_s(n_order+1,4)   !< Basis functions derived with respect to s
-  real*8, intent(out) :: H_t(n_order+1,4)   !< Basis functions derived with respect to t
+  real*8, intent(out) :: H  (n_degrees,4)   !< Basis functions
+  real*8, intent(out) :: H_s(n_degrees,4)   !< Basis functions derived with respect to s
+  real*8, intent(out) :: H_t(n_degrees,4)   !< Basis functions derived with respect to t
   
   ! --- CUBIC
   if (n_order .eq. 3) then
@@ -707,10 +707,10 @@ pure subroutine basisfunctions_2D_1p(s,t,H,H_s,H_t,H_st)
   implicit none
   real*8, intent(in)  :: s                   !< s-coordinate in the element [0,1]
   real*8, intent(in)  :: t                   !< t-coordinate in the element [0,1]
-  real*8, intent(out) :: H   (4,n_order+1)   !< Basis functions
-  real*8, intent(out) :: H_s (4,n_order+1)   !< Basis functions derived with respect to s
-  real*8, intent(out) :: H_t (4,n_order+1)   !< Basis functions derived with respect to t
-  real*8, intent(out) :: H_st(4,n_order+1)   !< Basis functions derived with respect to s and t
+  real*8, intent(out) :: H   (4,n_degrees)   !< Basis functions
+  real*8, intent(out) :: H_s (4,n_degrees)   !< Basis functions derived with respect to s
+  real*8, intent(out) :: H_t (4,n_degrees)   !< Basis functions derived with respect to t
+  real*8, intent(out) :: H_st(4,n_degrees)   !< Basis functions derived with respect to s and t
   
   ! --- Local variables
   real*8 :: scale1, dscale1_ds, dscale1_dt, dscale1_dsdt
@@ -943,12 +943,12 @@ pure subroutine basisfunctions_2D_2(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
   implicit none
   real*8, intent(in)  :: s                  !< s-coordinate in the element [0,1]
   real*8, intent(in)  :: t                  !< t-coordinate in the element [0,1]
-  real*8, intent(out) :: H   (4,n_order+1)  !< Basis functions
-  real*8, intent(out) :: H_s (4,n_order+1)  !< Basis functions derived with respect to s
-  real*8, intent(out) :: H_t (4,n_order+1)  !< Basis functions derived with respect to t
-  real*8, intent(out) :: H_st(4,n_order+1)  !< Basis functions derived with respect to s and t
-  real*8, intent(out) :: H_ss(4,n_order+1)  !< Basis functions derived two times with respect to s
-  real*8, intent(out) :: H_tt(4,n_order+1)  !< Basis functions derived two times with respect to t
+  real*8, intent(out) :: H   (4,n_degrees)  !< Basis functions
+  real*8, intent(out) :: H_s (4,n_degrees)  !< Basis functions derived with respect to s
+  real*8, intent(out) :: H_t (4,n_degrees)  !< Basis functions derived with respect to t
+  real*8, intent(out) :: H_st(4,n_degrees)  !< Basis functions derived with respect to s and t
+  real*8, intent(out) :: H_ss(4,n_degrees)  !< Basis functions derived two times with respect to s
+  real*8, intent(out) :: H_tt(4,n_degrees)  !< Basis functions derived two times with respect to t
   
   call basisfunctions_2D_1(s, t, H, H_s, H_t)
   
@@ -1261,12 +1261,12 @@ pure subroutine basisfunctions_2D_2_T(s, t, H, H_s, H_t, H_st, H_ss, H_tt)
   implicit none
   real*8, intent(in)  :: s                  !< s-coordinate in the element [0,1]
   real*8, intent(in)  :: t                  !< t-coordinate in the element [0,1]
-  real*8, intent(out) :: H   (n_order+1,4)  !< Basis functions
-  real*8, intent(out) :: H_s (n_order+1,4)  !< Basis functions derived with respect to s
-  real*8, intent(out) :: H_t (n_order+1,4)  !< Basis functions derived with respect to t
-  real*8, intent(out) :: H_st(n_order+1,4)  !< Basis functions derived with respect to s and t
-  real*8, intent(out) :: H_ss(n_order+1,4)  !< Basis functions derived two times with respect to s
-  real*8, intent(out) :: H_tt(n_order+1,4)  !< Basis functions derived two times with respect to t
+  real*8, intent(out) :: H   (n_degrees,4)  !< Basis functions
+  real*8, intent(out) :: H_s (n_degrees,4)  !< Basis functions derived with respect to s
+  real*8, intent(out) :: H_t (n_degrees,4)  !< Basis functions derived with respect to t
+  real*8, intent(out) :: H_st(n_degrees,4)  !< Basis functions derived with respect to s and t
+  real*8, intent(out) :: H_ss(n_degrees,4)  !< Basis functions derived two times with respect to s
+  real*8, intent(out) :: H_tt(n_degrees,4)  !< Basis functions derived two times with respect to t
   
   call basisfunctions_2D_1_T(s, t, H, H_s, H_t)
   
@@ -1577,9 +1577,9 @@ pure subroutine basisfunctions3(s, t, H, H_s, H_t)
   implicit none
   real*8, intent(in)  :: s                  !< s-coordinate in the element
   real*8, intent(in)  :: t                  !< t-coordinate in the element
-  real*8, intent(out) :: H  (4,n_order+1)   !< Basis functions
-  real*8, intent(out) :: H_s(4,n_order+1)   !< Basis functions derived with respect to s
-  real*8, intent(out) :: H_t(4,n_order+1)   !< Basis functions derived with respect to t
+  real*8, intent(out) :: H  (4,n_degrees)   !< Basis functions
+  real*8, intent(out) :: H_s(4,n_degrees)   !< Basis functions derived with respect to s
+  real*8, intent(out) :: H_t(4,n_degrees)   !< Basis functions derived with respect to t
   
   ! --- CUBIC
   if (n_order .eq. 3) then
@@ -1890,16 +1890,16 @@ pure subroutine basisfunctions_C2bi5(s, t, H, H_s, H_t, H_st, H_ss, H_tt, H_sss,
   ! --- Routine parameters
   real*8, intent(in)  :: s                   !< s-coordinate in the element
   real*8, intent(in)  :: t                   !< t-coordinate in the element
-  real*8, intent(out) :: H    (4,n_order+1)  !< Basis functions
-  real*8, intent(out) :: H_s  (4,n_order+1)  !< Basis functions derived with respect to s
-  real*8, intent(out) :: H_t  (4,n_order+1)  !< Basis functions derived with respect to t
-  real*8, intent(out) :: H_st (4,n_order+1)  !< Basis functions derived with respect to s and t
-  real*8, intent(out) :: H_ss (4,n_order+1)  !< Basis functions derived two times with respect to s
-  real*8, intent(out) :: H_tt (4,n_order+1)  !< Basis functions derived two times with respect to t
-  real*8, intent(out) :: H_sss(4,n_order+1)  !< Basis functions derived three times with respect to s
-  real*8, intent(out) :: H_ttt(4,n_order+1)  !< Basis functions derived three times with respect to t
-  real*8, intent(out) :: H_sst(4,n_order+1)  !< Basis functions derived three times with respect to s and t
-  real*8, intent(out) :: H_stt(4,n_order+1)  !< Basis functions derived three times with respect to s and t
+  real*8, intent(out) :: H    (4,n_degrees)  !< Basis functions
+  real*8, intent(out) :: H_s  (4,n_degrees)  !< Basis functions derived with respect to s
+  real*8, intent(out) :: H_t  (4,n_degrees)  !< Basis functions derived with respect to t
+  real*8, intent(out) :: H_st (4,n_degrees)  !< Basis functions derived with respect to s and t
+  real*8, intent(out) :: H_ss (4,n_degrees)  !< Basis functions derived two times with respect to s
+  real*8, intent(out) :: H_tt (4,n_degrees)  !< Basis functions derived two times with respect to t
+  real*8, intent(out) :: H_sss(4,n_degrees)  !< Basis functions derived three times with respect to s
+  real*8, intent(out) :: H_ttt(4,n_degrees)  !< Basis functions derived three times with respect to t
+  real*8, intent(out) :: H_sst(4,n_degrees)  !< Basis functions derived three times with respect to s and t
+  real*8, intent(out) :: H_stt(4,n_degrees)  !< Basis functions derived three times with respect to s and t
   
   
   ! --------------------------------------------------------------------------------
@@ -2885,16 +2885,16 @@ pure subroutine basisfunctions_C2bi5_T(s, t, H, H_s, H_t, H_st, H_ss, H_tt, H_ss
   ! --- Routine parameters
   real*8, intent(in)  :: s                   !< s-coordinate in the element
   real*8, intent(in)  :: t                   !< t-coordinate in the element
-  real*8, intent(out) :: H    (n_order+1,4)  !< Basis functions
-  real*8, intent(out) :: H_s  (n_order+1,4)  !< Basis functions derived with respect to s
-  real*8, intent(out) :: H_t  (n_order+1,4)  !< Basis functions derived with respect to t
-  real*8, intent(out) :: H_st (n_order+1,4)  !< Basis functions derived with respect to s and t
-  real*8, intent(out) :: H_ss (n_order+1,4)  !< Basis functions derived two times with respect to s
-  real*8, intent(out) :: H_tt (n_order+1,4)  !< Basis functions derived two times with respect to t
-  real*8, intent(out) :: H_sss(n_order+1,4)  !< Basis functions derived three times with respect to s
-  real*8, intent(out) :: H_ttt(n_order+1,4)  !< Basis functions derived three times with respect to t
-  real*8, intent(out) :: H_sst(n_order+1,4)  !< Basis functions derived three times with respect to s and t
-  real*8, intent(out) :: H_stt(n_order+1,4)  !< Basis functions derived three times with respect to s and t
+  real*8, intent(out) :: H    (n_degrees,4)  !< Basis functions
+  real*8, intent(out) :: H_s  (n_degrees,4)  !< Basis functions derived with respect to s
+  real*8, intent(out) :: H_t  (n_degrees,4)  !< Basis functions derived with respect to t
+  real*8, intent(out) :: H_st (n_degrees,4)  !< Basis functions derived with respect to s and t
+  real*8, intent(out) :: H_ss (n_degrees,4)  !< Basis functions derived two times with respect to s
+  real*8, intent(out) :: H_tt (n_degrees,4)  !< Basis functions derived two times with respect to t
+  real*8, intent(out) :: H_sss(n_degrees,4)  !< Basis functions derived three times with respect to s
+  real*8, intent(out) :: H_ttt(n_degrees,4)  !< Basis functions derived three times with respect to t
+  real*8, intent(out) :: H_sst(n_degrees,4)  !< Basis functions derived three times with respect to s and t
+  real*8, intent(out) :: H_stt(n_degrees,4)  !< Basis functions derived three times with respect to s and t
   
   
   ! --------------------------------------------------------------------------------

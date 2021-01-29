@@ -456,19 +456,19 @@ do i=1,nrnew
         node_list%node(index)%index(2) = n_index_start + 1
         node_list%node(index)%index(3) = n_index_start + 2
         node_list%node(index)%index(4) = n_index_start + 3
-        n_index_start = n_index_start + n_order
+        n_index_start = n_index_start + n_degrees-1
 
       else
-        do k=1,n_order+1
+        do k=1,n_degrees
           node_list%node(index)%index(k) = n_index_start + k
         enddo
-        n_index_start = n_index_start + n_order+1
+        n_index_start = n_index_start + n_degrees
       endif
    
     else      ! in case of refinement
   
-      do k=1,n_order+1
-        node_list%node(index)%index(k) = n_index_start + (n_order+1)*(index0-1)+k
+      do k=1,n_degrees
+        node_list%node(index)%index(k) = n_index_start + n_degrees*(index0-1)+k
       enddo
   
           !Neighbours of the element (for refinement procedure)

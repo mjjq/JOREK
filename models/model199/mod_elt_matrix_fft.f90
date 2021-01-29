@@ -25,7 +25,7 @@ implicit none
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
 
-#define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
+#define DIM0 n_tor*n_vertex_max*n_degrees*n_var
 
 real*8, dimension (DIM0,DIM0)       :: ELM
 real*8, dimension (DIM0)            :: RHS
@@ -73,7 +73,7 @@ INTEGER    :: FFTW_FORWARD,  FFTW_BACKWARD, FFTW_ESTIMATE
 PARAMETER (FFTW_FORWARD=-1,FFTW_BACKWARD=+1, FFTW_ESTIMATE=64)
 
 #define DIM1 n_plane
-#define DIM2 1:n_vertex_max*n_var*(n_order+1)
+#define DIM2 1:n_vertex_max*n_var*n_degrees
 
 real*8, dimension(DIM1, DIM2, DIM2) :: ELM_p
 real*8, dimension(DIM1, DIM2, DIM2) :: ELM_n
@@ -123,7 +123,7 @@ eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_st = 0.d0; eq_ss = 0.d0; eq_tt = 0.d0;
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
 
 do i=1,n_vertex_max
- do j=1,n_order+1
+ do j=1,n_degrees
 
    do ms=1, n_gauss
      do mt=1, n_gauss
@@ -337,9 +337,9 @@ do ms=1, n_gauss
 
      do i=1,n_vertex_max
 
-       do j=1,n_order+1
+       do j=1,n_degrees
 
-         index_ij = n_var*(n_order+1)*(i-1) + n_var * (j-1) + 1   ! index in the ELM matrix
+         index_ij = n_var*n_degrees*(i-1) + n_var * (j-1) + 1   ! index in the ELM matrix
 
          v   =  H(i,j,ms,mt) * element%size(i,j)
          v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
@@ -436,7 +436,7 @@ do ms=1, n_gauss
 
          do k=1,n_vertex_max
 
-           do l=1,n_order+1
+           do l=1,n_degrees
 
              psi   = H(k,l,ms,mt) * element%size(k,l)
 
@@ -474,7 +474,7 @@ do ms=1, n_gauss
              rho_x_hat = 2.d0 * BigR * BigR_x  * rho + BigR**2 * rho_x
              rho_y_hat = BigR**2 * rho_y
 
-             index_kl = n_var*(n_order+1)*(k-1) + n_var * (l-1) + 1   ! index in the ELM matrix
+             index_kl = n_var*n_degrees*(k-1) + n_var * (l-1) + 1   ! index in the ELM matrix
 
 !------------------------------------------------------------ equation 1
              amat_11 = v * psi / BigR * xjac * (1.d0+zeta)                                             &
@@ -651,9 +651,9 @@ do ms=1, n_gauss
 enddo
 
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
     in_fft =  ELM_p(1:n_plane,i,j)
 
@@ -715,9 +715,9 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
 enddo
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
   if (maxval(abs(ELM_n(1:n_plane,i,j))) .ne. 0.d0) then
 
@@ -783,9 +783,9 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
 enddo
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
   if (maxval(abs(ELM_k(1:n_plane,i,j))) .ne. 0.d0) then
 
@@ -852,9 +852,9 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 enddo
 
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
   if (maxval(abs(ELM_kn(1:n_plane,i,j))) .ne. 0.d0) then
 
@@ -923,7 +923,7 @@ enddo
 
 ELM = 0.5d0 * ELM
 
-do j=1, n_vertex_max*n_var*(n_order+1)
+do j=1, n_vertex_max*n_var*n_degrees
 
   in_fft = RHS_p(1:n_plane,j)
 
@@ -948,7 +948,7 @@ do j=1, n_vertex_max*n_var*(n_order+1)
 
 enddo
 
-do j=1, n_vertex_max*n_var*(n_order+1)
+do j=1, n_vertex_max*n_var*n_degrees
 
   in_fft = RHS_k(1:n_plane,j)
 

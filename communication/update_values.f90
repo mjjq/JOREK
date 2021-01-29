@@ -16,7 +16,7 @@ type (type_node_list),    intent(inout) :: node_list
 real*8,                   intent(in)    :: RHS(*)
 
 ! --- local variables
-real*8, dimension(4,n_order+1)	 :: H, H_s, H_t, H_st
+real*8, dimension(4,n_degrees)	 :: H, H_s, H_t, H_st
 real*8	:: lambda, mu
 real*8, dimension(n_tor) :: Psi, dPsi_ds,dPsi_dt, d2Psi_dsdt
 real*8, dimension(n_tor) :: Delt,Delt_ds,Delt_dt,Delt_dsdt
@@ -33,7 +33,7 @@ if (my_id .eq. 0) then
 
   do i = 1, node_list%n_nodes
    if((.not. node_list%node(i)%constrained) ) then 
-    do j=1,n_order+1
+    do j=1,n_degrees
 
       index_node = node_list%node(i)%index(j)
 
@@ -114,7 +114,7 @@ if (my_id .eq. 0) then
           do k = 1, n_vertex_max        
              Pr(k) = element_list%element(index_elm)%vertex(k)
            if((Pr(k)==parent(1)).or.(Pr(k)==parent(2))) then
-             do l = 1, n_order+1
+             do l = 1, n_degrees
                  !  Values      *
                  Psi(i_tor) = Psi(i_tor) +node_list%node(Pr(k))%values(i_tor,l,ivar)* H(k,l) &
                      *element_list%element(index_elm)%size(k,l)
@@ -169,7 +169,7 @@ if (my_id .eq. 0) then
           do k = 1, n_vertex_max
              Pr(k) = element_list%element(index_elm)%vertex(k)
            if((Pr(k)==parent(1)).or.(Pr(k)==parent(2))) then
-             do l = 1, n_order+1
+             do l = 1, n_degrees
                  ! Values
                  Psi(i_tor) = Psi(i_tor)+node_list%node(Pr(k))%values(i_tor,l,n_var)* H(k,l) &
                      *element_list%element(index_elm)%size(k,l)
@@ -228,7 +228,7 @@ if (my_id .eq. 0) then
              Pr(k) = element_list%element(index_elm)%vertex(k)    
            if((Pr(k)==parent(1)).or.(Pr(k)==parent(2))) then
             
-             do l = 1, n_order+1
+             do l = 1, n_degrees
                          
                         !***************
                         !  Values      *

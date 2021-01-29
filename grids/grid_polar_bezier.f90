@@ -259,14 +259,14 @@ enddo
 !-------------------- translate cubic Hermite to Bezier parameters
 !
 !  type type_node                                      ! type definition of a node (i.e. a vertex)
-!    real*8    :: x(n_order+1,ndim)                      ! x,y coordinates of points and additional nodal geometry
+!    real*8    :: x(n_degrees,ndim)                      ! x,y coordinates of points and additional nodal geometry
 !    integer :: boundary                               ! = 1 for boundary nodes
 !  endtype type_node                                   ! x(:,1) : position, x(:,2) : vector u, x(:,3) : vector v, x(4) : vector w
 !
 !  type type_element
 !    integer :: vertex(n_vertex_max)
 !    integer :: neighbours(n_vertex_max)
-!    real*8    :: size(n_vertex_max,n_order+1)
+!    real*8    :: size(n_vertex_max,n_degrees)
 !  endtype type_element
 !-----------------------------------------------------------
 
@@ -310,13 +310,13 @@ do i=1,nr
      node_list%node(index)%index(2) = n_index_start + 1
      node_list%node(index)%index(3) = n_index_start + 2
      node_list%node(index)%index(4) = n_index_start + 3
-     n_index_start = n_index_start + n_order
+     n_index_start = n_index_start +n_degrees-1
 
    else
-     do k=1,n_order+1
+     do k=1,n_degrees
        node_list%node(index)%index(k) = n_index_start + k
      enddo
-     n_index_start = n_index_start + n_order+1
+     n_index_start = n_index_start + n_degrees
    endif
   
    node_list%node(index)%constrained=.false.
@@ -394,7 +394,7 @@ enddo
 
 if ( .not. skip_update_neighbours ) call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 
-if (n_order .eq. 8) call transform_to_bi_quintic(node_list,element_list)
+if (n_order .eq. 5) call transform_to_bi_quintic(node_list,element_list)
 
 return
 end subroutine grid_polar_bezier
@@ -782,15 +782,15 @@ do i_node = 1, node_list%n_nodes
   ! --- Careful with force_axis_nodes
   if (node_list%node(i_node)%index(1) .eq. 1) then
     if (index .eq. 0) index = 1
-    do i=2,n_order+1
+    do i=2,n_degrees
       node_list%node(i_node)%index(i) = index + i-1
     enddo
-    index = index + n_order
+    index = index + n_degrees-1
   else
-    do i=1,n_order+1
+    do i=1,n_degrees
       node_list%node(i_node)%index(i) = index + i
     enddo
-    index = index + n_order+1
+    index = index + n_degrees
   endif
 enddo
 

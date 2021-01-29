@@ -9,7 +9,7 @@ module mod_newton_methods
 
     use data_structure
     use mod_interp, only: interp
-    use mod_parameters, only: n_order, n_vertex_max
+    use mod_parameters, only: n_vertex_max
     implicit none
 
     ! --- Routine variables

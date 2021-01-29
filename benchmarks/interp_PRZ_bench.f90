@@ -9,6 +9,7 @@ use mod_pcg32_rng
 use mod_random_seed
 use mod_interp
 use basis_at_gaussian, only: initialise_basis
+use mod_parameters, only: n_degrees
 implicit none
 
 integer, parameter :: n_switch = 100 !< Go to a new element every 100 steps (mimic jorek particle pattern)
@@ -39,7 +40,7 @@ call grid_bezier_square(n, n, R_geo-amin,R_geo+amin, Z_geo-amin, Z_geo+amin, .tr
 call rng%initialize(1, random_seed(), 1, 1)
 
 do i=1,node_list%n_nodes
-  do k=1,n_order+1
+  do k=1,n_degrees
     call rng%next(u)
     node_list%node(i)%values(1,k,:) = u(1)
     node_list%node(i)%deltas(1,k,:) = 0.1d0*u(1)

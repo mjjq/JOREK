@@ -251,7 +251,7 @@ subroutine project_f(node_list, element_list, f, smoothing, smoothing2)
   call DMUMPS(p)
 
   do i=1,node_list%n_nodes
-    do k=1,n_order+1
+    do k=1,n_degrees
       index = node_list%node(i)%index(k)
       node_list%node(i)%values(1,k,1) = p%rhs(index)
     enddo
@@ -283,7 +283,7 @@ subroutine calc_rhs_f(node_list,element_list,f,rhs)
     ! Set up gauss points in this element
     x_g = 0.d0; x_s = 0.d0; x_t = 0.d0; y_g = 0.d0; y_s = 0.d0; y_t = 0.d0
     do i=1,n_vertex_max
-      do j=1,n_order+1
+      do j=1,n_degrees
         do ms=1, n_gauss
           do mt=1, n_gauss
             x_g(ms,mt) = x_g(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H(i,j,ms,mt)
@@ -306,7 +306,7 @@ subroutine calc_rhs_f(node_list,element_list,f,rhs)
         xjac =  x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
 
         do i=1,n_vertex_max
-          do j=1,n_order+1
+          do j=1,n_degrees
             index = nodes(i)%index(j)
 
             v   = h(i,j,ms,mt)  * element%size(i,j)
@@ -352,7 +352,7 @@ subroutine elements_mean_rms(node_list, element_list, f, mean, rms)
     ! Set up gauss points in this element
     x_g = 0.d0; x_s = 0.d0; x_t = 0.d0; y_g = 0.d0; y_s = 0.d0; y_t = 0.d0
     do i=1,n_vertex_max
-      do j=1,n_order+1
+      do j=1,n_degrees
         do ms=1, n_gauss
           do mt=1, n_gauss
             x_g(ms,mt) = x_g(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H(i,j,ms,mt)

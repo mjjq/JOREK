@@ -5,7 +5,7 @@ module fourier
   
   use constants
   use tr_module 
-  use mod_parameters,      only: n_vertex_max, n_order, n_plane, n_tor, n_var, variable_names
+  use mod_parameters,      only: n_vertex_max, n_degrees, n_plane, n_tor, n_var, variable_names
   use nodes_elements,  only: node_list, element_list
   use phys_module,     only: F0, xpoint, xcase
   use mod_straight_field_line
@@ -89,7 +89,7 @@ module fourier
     
                 iv = element_list%element(i_elm_out)%vertex(kv)  ! the node number
     
-                do kf = 1, n_order+1       ! 4 basis functions
+                do kf = 1, n_degrees       ! basis functions
     
                   v = v + node_list%node(iv)%values(iharm,kf,l)                                    &
                     * element_list%element(i_elm_out)%size(kv,kf) * G(kv,kf)

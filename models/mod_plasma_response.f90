@@ -135,7 +135,7 @@ module mod_plasma_response
       
       !--- Calculate R,Z and derivatives at gausstian points
       do i=1,n_vertex_max
-        do j=1,n_order+1
+        do j=1,n_degrees
 
           do ms=1, n_gauss
             do mt=1, n_gauss
@@ -157,7 +157,7 @@ module mod_plasma_response
             
       !--- Calculate the current at gaussian points
       do i=1,n_vertex_max
-        do j=1,n_order+1
+        do j=1,n_degrees
 
           do mp=1,n_plane
             do ms=1, n_gauss
@@ -253,7 +253,7 @@ module mod_plasma_response
       
       !--- Calculate R,Z and derivatives at gausstian points
       do i=1,n_vertex_max
-        do j=1,n_order+1
+        do j=1,n_degrees
 
           do ms=1, n_gauss
             do mt=1, n_gauss
@@ -275,7 +275,7 @@ module mod_plasma_response
             
       !--- Calculate the current at gaussian points
       do i=1,n_vertex_max
-        do j=1,n_order+1
+        do j=1,n_degrees
 
           do mp=1,n_plane
             do ms=1, n_gauss
@@ -349,7 +349,7 @@ module mod_plasma_response
     integer  :: m_bndelem, m_pt, m_elm, mv1
     integer  :: i_vertex, i_dof, i_node, i_node_bnd, i_resp, i_resp_old, i_resp_0
     real*8   :: i_size, basfunc_i
-    real*8   :: H1(2,(n_order+1)**0.5), H1_s(2,(n_order+1)**0.5), H1_ss(2,(n_order+1)**0.5)
+    real*8   :: H1(2,(n_order+1)/2), H1_s(2,(n_order+1)/2), H1_ss(2,(n_order+1)/2)
     real*8   :: P, P_s, P_t, P_st, P_ss, P_tt
     real*8   :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
     real*8   :: s_pt, t_pt, s_or_t ! s and t values at current point
@@ -567,7 +567,7 @@ module mod_plasma_response
     integer  :: m_bndelem, m_pt, m_elm, mv1
     integer  :: i_vertex, i_dof, i_node, i_node_bnd, i_resp, i_resp_old, i_resp_0
     real*8   :: i_size, basfunc_i
-    real*8   :: H1(2,(n_order+1)**0.5), H1_s(2,(n_order+1)**0.5), H1_ss(2,(n_order+1)**0.5)
+    real*8   :: H1(2,(n_order+1)/2), H1_s(2,(n_order+1)/2), H1_ss(2,(n_order+1)/2)
     real*8   :: P, P_s, P_t, P_st, P_ss, P_tt
     real*8   :: R, R_s, R_t, Z, Z_s, Z_t
     real*8   :: s_pt, t_pt, s_or_t ! s and t values at current point

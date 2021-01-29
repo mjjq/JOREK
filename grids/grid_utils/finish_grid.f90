@@ -321,7 +321,7 @@ do i=1,node_list%n_nodes
   endif
 
 
-  do k=1,n_order+1
+  do k=1,n_degrees
 
     index = index + 1
     node_list%node(i)%index(k) = index
@@ -722,7 +722,7 @@ write(*,*) '                 Definition of nodes index '
 index = 0
 do i=1,node_list%n_nodes
   node_list%node(i)%axis_node = .false.
-  do k=1,n_order+1
+  do k=1,n_degrees
     index = index + 1
     node_list%node(i)%index(k) = index
   enddo  

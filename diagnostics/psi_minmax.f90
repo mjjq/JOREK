@@ -18,7 +18,7 @@ real*8  :: s,t,P,P_s,P_t,P_st,P_ss,P_tt
 integer :: k
 
 ! --- For n_order>3, we need to use Newton methods (not exactly true, should implement quartic root finder) 
-if (n_order .eq. 8) then
+if (n_order .eq. 5) then
   call find_variable_minmax(node_list,element_list,i_elm, var_psi, psimin, psimax)
   return
 endif

@@ -348,19 +348,19 @@ if ( SI_units ) then
    scalar_names(var_UZ )='VZ_km/s     '
    scalar_names(var_Up )='Vp_km/s     '
 #else
-   scalar_names(3)='j_MA/m2     '
-   scalar_names(5)='n_e20m-3    '
+   scalar_names(var_zj)='j_MA/m2     '
+   scalar_names(var_rho)='n_e20m-3    '
    if (with_TiTe) then
-      scalar_names(6)='Ti_keV      '
-      scalar_names(8)='Te_keV      '
+      scalar_names(var_Ti)='Ti_keV      '
+      scalar_names(var_Te)='Te_keV      '
    else
-      scalar_names(6)='Te_keV      '
+      scalar_names(var_T)='Te_keV      '
    endif
-   scalar_names(7)='Vpar_km/s   '
+   scalar_names(var_Vpar)='Vpar_km/s   '
 #endif
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-   scalar_names(8)='N_dens_1d20  '
+   scalar_names(var_rhon)='N_dens_1d20  '
 #endif
 
 endif
@@ -1488,27 +1488,27 @@ if (SI_units) then
 #else /* not full-MHD */
 
     !============================================j_phi in MA/m2
-    scalars(i,3) = currdens(i) / MU_zero * 1.e-6
+    scalars(i,var_zj) = currdens(i) / MU_zero * 1.e-6
     !============================================density in 1e20m-3
-    scalars(i,5) = scalars(i,5) * central_density
+    scalars(i,var_rho) = scalars(i,var_rho) * central_density
     if (with_TiTe) then
       !===========================================ion and electron temperatures in keV
-      scalars(i,6) = scalars(i,6) / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 !
-      scalars(i,8) = scalars(i,8) / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 !
+      scalars(i,var_Ti) = scalars(i,var_Ti) / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 !
+      scalars(i,var_Te) = scalars(i,var_Te) / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 !
     else
     !===========================================electron temperature in keV
-      scalars(i,6) = scalars(i,6) / MU_zero / (central_density * 1d20) / EL_CHG /2./1.e3 !(assumes Te=Ti=T/2)
+      scalars(i,var_T) = scalars(i,var_T) / MU_zero / (central_density * 1d20) / EL_CHG /2./1.e3 !(assumes Te=Ti=T/2)
     endif
     !=====================================Vparal in km/s *Btot!!!
-    scalars(i,7) = scalars(i,7) /t_norm/1.e3
+    scalars(i,var_Vpar) = scalars(i,var_Vpar) /t_norm/1.e3
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     !===================================== Neutral density in 1e20m-3
-    scalars(i,8) = scalars(i,8) * central_density
+    scalars(i,var_rhon) = scalars(i,var_rhon) * central_density
 #endif
 
 #ifdef WITH_Impurities
     !===================================== Impurity density in 1e20m-3
-    scalars(i,8) = scalars(i,8) * central_density * m_i_over_m_imp
+    scalars(i,var_rhon) = scalars(i,var_rhon) * central_density * m_i_over_m_imp
 #endif
     !=====================Pressure in kPa
     if (include_fluxes) scalars(i,s_fluxes+1) = scalars(i,s_fluxes+1) / MU_zero/1.e3

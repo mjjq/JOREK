@@ -770,9 +770,9 @@ real*8               :: R, R_s, R_t, Z, Z_s, Z_t, q
 real*8 :: local_Te, local_Ne, DUMMY_REAL
 call interp_PRZ(node_list,element_list,i_elm,&
 #ifdef WITH_TiTe
-      [5,8],& ! electron temperature
+      [5,var_Te],& ! electron temperature
 #else
-      [5,6],& ! electron temperature + ion temperature (assumed equal)
+      [5,var_T],& ! electron temperature + ion temperature (assumed equal)
 #endif
           2,s,t,phi,P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 
@@ -836,10 +836,10 @@ end if
 do i=1,size(particles)
   if (particles(i)%i_elm .eq. 0) cycle
 #ifdef WITH_TiTe
-  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,8,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,var_Te,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 #else
-  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,6,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,var_T,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 #endif
 

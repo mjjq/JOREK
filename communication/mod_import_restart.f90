@@ -722,10 +722,12 @@ endif
       do i=1,node_list%n_nodes
         node_list%node(i)%values(n_tor_tmp+1:n_tor,:,:)= 0.d0
         do j=n_tor_tmp+1, n_tor
-          node_list%node(i)%values(j,:,5)= amplitude * node_list%node(i)%values(1,:,5)
-          node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)
+          node_list%node(i)%values(j,:,var_rho)= amplitude * node_list%node(i)%values(1,:,var_rho)
 #ifdef WITH_TiTe
-          node_list%node(i)%values(j,:,8)= amplitude * node_list%node(i)%values(1,:,8)
+          node_list%node(i)%values(j,:,var_Ti)= amplitude * node_list%node(i)%values(1,:,var_Ti)
+          node_list%node(i)%values(j,:,var_Te)= amplitude * node_list%node(i)%values(1,:,var_Te)
+#else
+          node_list%node(i)%values(j,:,var_T)  = amplitude * node_list%node(i)%values(1,:,var_T)
 #endif
 #ifdef fullmhd
           node_list%node(i)%values(j,:,var_AR)= amplitude * node_list%node(i)%values(1,:,var_AR)

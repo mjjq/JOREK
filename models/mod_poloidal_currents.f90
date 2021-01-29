@@ -82,7 +82,7 @@ module mod_poloidal_currents
       elseif (jorek_model < 200) then 
         T0 = 0.d0;  T0_s = 0.d0; T0_t = 0.d0; rho = 1.d0; rho_t = 0.d0; rho_s = 0.d0
       else
-        call interp(node_list,element_list,i_elm,var_Ti,i_tor,s,t,T0,T0_s,T0_t,T0_st,T0_ss,T0_tt) 
+        call interp(node_list,element_list,i_elm,var_T,i_tor,s,t,T0,T0_s,T0_t,T0_st,T0_ss,T0_tt) 
         call interp(node_list,element_list,i_elm,var_rho,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
       endif
 

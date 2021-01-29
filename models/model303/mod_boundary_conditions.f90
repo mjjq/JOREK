@@ -37,7 +37,7 @@ use vacuum, ONLY: is_freebound
 use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,            &
        RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min,                                             &
-       mach_one_bnd_integral, Vpar_smoothing, vpar_smoothing_coef,                                         &
+       mach_one_bnd_integral, Vpar_smoothing, vpar_smoothing_coef, no_mach1_bc,                            &
        Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const
 use tr_module
 use mpi_mod
@@ -184,8 +184,8 @@ do i=1, n_local_elms !=== do elements
 
     do idir=1, 2        ! check the two directions
 
-      R_mid = node_list%node(inode)%x(1,1)
-      Z_mid = node_list%node(inode)%x(1,2)
+      R_mid = node_list%node(inode)%x(1,1,1)
+      Z_mid = node_list%node(inode)%x(1,1,2)
 
       if (idir .eq. 1) then
         iv2 = mod(iv  ,4) + 1
@@ -215,8 +215,8 @@ do i=1, n_local_elms !=== do elements
       endif
 
 
-      R_center = node_list%node(inode3)%x(1,1)
-      Z_center = node_list%node(inode3)%x(1,2)
+      R_center = node_list%node(inode3)%x(1,1,1)
+      Z_center = node_list%node(inode3)%x(1,1,2)
 
       normal_direction = (/R_mid - R_center, Z_mid - Z_center /) / norm2((/R_mid - R_center, Z_mid - Z_center /))
 
@@ -244,6 +244,7 @@ do i=1, n_local_elms !=== do elements
       then
         apply_cs = .true.
       endif
+      if (no_mach1_bc) apply_cs = .false.
 
 
       do in=i_tor_min, i_tor_max  ! === do n_tor
@@ -269,10 +270,10 @@ do i=1, n_local_elms !=== do elements
                    
               index_node = node_list%node(inode)%index(1)  !=== index in RHS (or matrix A not compressed)
                                           
-              Rnode     = node_list%node(inode)%x(1,1) 
-              dRnode_ds = node_list%node(inode)%x(iv_dir,1) 
-              Znode     = node_list%node(inode)%x(1,2) 
-              dZnode_ds = node_list%node(inode)%x(iv_dir,2) 
+              Rnode     = node_list%node(inode)%x(1,1,1) 
+              dRnode_ds = node_list%node(inode)%x(1,iv_dir,1) 
+              Znode     = node_list%node(inode)%x(1,1,2) 
+              dZnode_ds = node_list%node(inode)%x(1,iv_dir,2) 
                   
               if (in.eq.RMP_har_cos_spectrum(n_rmp_harm)) then
                 delta_psi_rmp = psi_RMP_cos1(node_list%node(inode)%boundary_index +N_rmp_har_block_size*(n_rmp_harm-1))
@@ -414,30 +415,30 @@ do i=1, n_local_elms !=== do elements
           U0_s      = node_list%node(inode)%values(1,2,var_u)         * element_size_s
           U0_t      = node_list%node(inode)%values(1,3,var_u)         * element_size_t   
 
-          BigR      = node_list%node(inode)%x(1,1)
-          R_b       = node_list%node(inode)%x(iv_dir,1) * element_size_0
-          Z_b       = node_list%node(inode)%x(iv_dir,2) * element_size_0
+          BigR      = node_list%node(inode)%x(1,1,1)
+          R_b       = node_list%node(inode)%x(1,iv_dir,1) * element_size_0
+          Z_b       = node_list%node(inode)%x(1,iv_dir,2) * element_size_0
 
-          R_s       = node_list%node(inode)%x(2,1)      * element_size_s
-          R_t       = node_list%node(inode)%x(3,1)      * element_size_t    
-          Z_s       = node_list%node(inode)%x(2,2)      * element_size_s
-          Z_t       = node_list%node(inode)%x(3,2)      * element_size_t    
-          Z         = node_list%node(inode)%x(1,2)
+          R_s       = node_list%node(inode)%x(1,2,1)      * element_size_s
+          R_t       = node_list%node(inode)%x(1,3,1)      * element_size_t    
+          Z_s       = node_list%node(inode)%x(1,2,2)      * element_size_s
+          Z_t       = node_list%node(inode)%x(1,3,2)      * element_size_t    
+          Z         = node_list%node(inode)%x(1,1,2)
           
           ps0_bb = element_list%element(ielm)%size(iv ,1)      * node_list%node(inode )%values(1,1,var_psi)      * H1_ss(1,1) &
                  + element_list%element(ielm)%size(iv ,iv_dir) * node_list%node(inode )%values(1,iv_dir,var_psi) * H1_ss(1,2) &
                  + element_list%element(ielm)%size(iv2,1)      * node_list%node(inode2)%values(1,1,var_psi)      * H1_ss(2,1) &
                  + element_list%element(ielm)%size(iv2,iv_dir) * node_list%node(inode2)%values(1,iv_dir,var_psi) * H1_ss(2,2)
 
-          R_bb = + element_list%element(ielm)%size(iv ,1)      * node_list%node(inode )%x(1,1)      * H1_ss(1,1)  &
-                 + element_list%element(ielm)%size(iv ,iv_dir) * node_list%node(inode )%x(iv_dir,1) * H1_ss(1,2)  &
-                 + element_list%element(ielm)%size(iv2,1)      * node_list%node(inode2)%x(1,1)      * H1_ss(2,1)  &
-                 + element_list%element(ielm)%size(iv2,iv_dir) * node_list%node(inode2)%x(iv_dir,1) * H1_ss(2,2)  
+          R_bb = + element_list%element(ielm)%size(iv ,1)      * node_list%node(inode )%x(1,1,1)      * H1_ss(1,1)  &
+                 + element_list%element(ielm)%size(iv ,iv_dir) * node_list%node(inode )%x(1,iv_dir,1) * H1_ss(1,2)  &
+                 + element_list%element(ielm)%size(iv2,1)      * node_list%node(inode2)%x(1,1,1)      * H1_ss(2,1)  &
+                 + element_list%element(ielm)%size(iv2,iv_dir) * node_list%node(inode2)%x(1,iv_dir,1) * H1_ss(2,2)  
 
-          Z_bb = + element_list%element(ielm)%size(iv ,1)      * node_list%node(inode )%x(1,     2) * H1_ss(1,1)  &
-                 + element_list%element(ielm)%size(iv ,iv_dir) * node_list%node(inode )%x(iv_dir,2) * H1_ss(1,2)  &
-                 + element_list%element(ielm)%size(iv2,1)      * node_list%node(inode2)%x(1,     2) * H1_ss(2,1)  &
-                 + element_list%element(ielm)%size(iv2,iv_dir) * node_list%node(inode2)%x(iv_dir,2) * H1_ss(2,2)  
+          Z_bb = + element_list%element(ielm)%size(iv ,1)      * node_list%node(inode )%x(1,1,     2) * H1_ss(1,1)  &
+                 + element_list%element(ielm)%size(iv ,iv_dir) * node_list%node(inode )%x(1,iv_dir,2) * H1_ss(1,2)  &
+                 + element_list%element(ielm)%size(iv2,1)      * node_list%node(inode2)%x(1,1,     2) * H1_ss(2,1)  &
+                 + element_list%element(ielm)%size(iv2,iv_dir) * node_list%node(inode2)%x(1,iv_dir,2) * H1_ss(2,2)  
 
           ps2_b     = node_list%node(inode2)%values(1,iv_dir,var_psi) * element_size_2 
           

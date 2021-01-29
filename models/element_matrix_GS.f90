@@ -6,6 +6,7 @@ use mod_parameters
 use data_structure
 use gauss
 use basis_at_gaussian
+use phys_module, only: treat_axis
 
 implicit none
 

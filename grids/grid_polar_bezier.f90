@@ -437,8 +437,9 @@ integer                       :: i_node_u, i_node_v
 integer                       :: index
 real*8                        :: size_u_min, size_v_min
 real*8                        :: size_tmp
-real*8                        :: point1(2)
+real*8                        :: point1(2), point2(2)
 real*8                        :: distance1, distance2
+real*8                        :: direction
 real*8                        :: scale_uv, scale_ij, scale_wk
 real*8                        :: distance_nodes, distance_node_point, distance_points
 
@@ -492,9 +493,9 @@ do i_node = 1, node_list%n_nodes
   ! scale by 1/3 of the element side?
   scale_uv = 0.3
   ! scale by 1/10 of the element side?
-  scale_ij = 0.1
+  scale_ij = 0.5
   ! scale by 1/10 of the element side?
-  scale_wk = 0.01
+  scale_wk = 0.0
   
   ! --- Loop over each parent element and get minimal size
   size_u_min = 1.d15
@@ -552,8 +553,8 @@ do i_node = 1, node_list%n_nodes
     endif
     ! --- compare size of side with distance from tip of vector u
     distance1 = distance_nodes(node_list,i_node,i_node_u)
-    point1(1)   = node_list%node(i_node)%X(1,1) + node_list%node(i_node)%X(2,1) ! tip of vector u
-    point1(2)   = node_list%node(i_node)%X(1,2) + node_list%node(i_node)%X(2,2) ! tip of vector u
+    point1(1) = node_list%node(i_node)%X(1,1) + node_list%node(i_node)%X(2,1) ! tip of vector u
+    point1(2) = node_list%node(i_node)%X(1,2) + node_list%node(i_node)%X(2,2) ! tip of vector u
     distance2 = distance_node_point(node_list,i_node_u,point1)
     ! --- reverse vector u if needed
     if (distance2 .lt. distance1) then
@@ -564,8 +565,8 @@ do i_node = 1, node_list%n_nodes
     endif
     ! --- compare size of side with distance from tip of vector v
     distance1 = distance_nodes(node_list,i_node,i_node_v)
-    point1(1)   = node_list%node(i_node)%X(1,1) + node_list%node(i_node)%X(3,1) ! tip of vector v
-    point1(2)   = node_list%node(i_node)%X(1,2) + node_list%node(i_node)%X(3,2) ! tip of vector v
+    point1(1) = node_list%node(i_node)%X(1,1) + node_list%node(i_node)%X(3,1) ! tip of vector v
+    point1(2) = node_list%node(i_node)%X(1,2) + node_list%node(i_node)%X(3,2) ! tip of vector v
     distance2 = distance_node_point(node_list,i_node_v,point1)
     ! --- reverse vector v if needed
     if (distance2 .lt. distance1) then
@@ -641,8 +642,8 @@ do i_node = 1, node_list%n_nodes
   ! --- with scale_i = 0.1 ?
   
   ! --- Vector definition
-  node_list%node(i_node)%X(5,1) = scale_ij * ( node_list%node(i_node)%X(2,1) + node_list%node(i_node)%X(3,1) )
-  node_list%node(i_node)%X(5,2) = scale_ij * ( node_list%node(i_node)%X(2,2) + node_list%node(i_node)%X(3,2) )
+  node_list%node(i_node)%X(5,1) = 0.d0 ! node_list%node(i_node)%X(2,1) + node_list%node(i_node)%X(3,1)
+  node_list%node(i_node)%X(5,2) = 0.d0 ! node_list%node(i_node)%X(2,2) + node_list%node(i_node)%X(3,2)
   ! --- SIZE CONDITION: h_i must be the same on all parent nodes
   i_elm = node_parents(1,i_node)
   size_tmp = 0.5 * ( abs(element_list%element(i_elm)%size(1,2)) + abs(element_list%element(i_elm)%size(1,3)) )
@@ -662,8 +663,20 @@ do i_node = 1, node_list%n_nodes
   ! --- But since it doesn't matter, that's what we choose...
   
   ! --- Vector definition
-  node_list%node(i_node)%X(6,1) = scale_ij * ( node_list%node(i_node)%X(2,1) + node_list%node(i_node)%X(3,1) )
-  node_list%node(i_node)%X(6,2) = scale_ij * ( node_list%node(i_node)%X(2,2) + node_list%node(i_node)%X(3,2) )
+  !node_list%node(i_node)%X(6,1) = 0.d0 !node_list%node(i_node)%X(2,1) + node_list%node(i_node)%X(3,1)
+  !node_list%node(i_node)%X(6,2) = 0.d0 !node_list%node(i_node)%X(2,2) + node_list%node(i_node)%X(3,2)
+  ! --- compare size of side with distance from tip of vector v
+  point1(1) = R_geo
+  point1(2) = Z_geo
+  distance1 = distance_node_point(node_list,i_node,point1)
+  point2(1) = node_list%node(i_node)%X(1,1) + node_list%node(i_node)%X(2,1) ! tip of vector u
+  point2(2) = node_list%node(i_node)%X(1,2) + node_list%node(i_node)%X(2,2) ! tip of vector u
+  distance2 = distance_points(node_list,point1,point2)
+  ! --- reverse vector v if needed
+  direction = 1.d0
+  if (distance2 .gt. distance1) direction = -1.d0
+  node_list%node(i_node)%X(6,1) = direction * node_list%node(i_node)%X(2,1)
+  node_list%node(i_node)%X(6,2) = direction * node_list%node(i_node)%X(2,2)
   ! --- SIZE CONDITION: h_j must be the same on all parent nodes
   i_elm = node_parents(1,i_node)
   size_tmp = 0.5 * ( abs(element_list%element(i_elm)%size(1,2)) + abs(element_list%element(i_elm)%size(1,3)) )

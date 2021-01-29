@@ -360,6 +360,17 @@ do i=1, n_local_elms !=== do elements
                    zbig, solve_only, gmres, index_min, index_max,   & 
                    ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
+            if (n_order .eq. 8) then
+              ! --- THIS WILL NEED TO BE GENERALISED!!!
+              do j=5,8
+                index_node = node_list%node(inode)%index(j)
+                call boundary_conditions_add_one_entry(                 &
+                       index_node, k, in, index_node, k, in,            &
+                       zbig, solve_only, gmres, index_min, index_max,   & 
+                       ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
+              enddo
+            endif
+
           endif
 
         enddo !=== variables

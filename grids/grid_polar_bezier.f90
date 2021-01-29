@@ -531,10 +531,10 @@ do i_node = 1, node_list%n_nodes
   ! --- are smaller than the element side
   call normalise_vector(node_list,i_node,2)
   call normalise_vector(node_list,i_node,3)
-  node_list%node(i_node)%X(2,1) = node_list%node(i_node)%X(2,1) * size_u_min * scale_uv
-  node_list%node(i_node)%X(2,2) = node_list%node(i_node)%X(2,2) * size_u_min * scale_uv
-  node_list%node(i_node)%X(3,1) = node_list%node(i_node)%X(3,1) * size_v_min * scale_uv
-  node_list%node(i_node)%X(3,2) = node_list%node(i_node)%X(3,2) * size_v_min * scale_uv
+  node_list%node(i_node)%X(1,2,1) = node_list%node(i_node)%X(1,2,1) * size_u_min * scale_uv
+  node_list%node(i_node)%X(1,2,2) = node_list%node(i_node)%X(1,2,2) * size_u_min * scale_uv
+  node_list%node(i_node)%X(1,3,1) = node_list%node(i_node)%X(1,3,1) * size_v_min * scale_uv
+  node_list%node(i_node)%X(1,3,2) = node_list%node(i_node)%X(1,3,2) * size_v_min * scale_uv
   ! --- Then, we check the direction by locating the tip of the vector relative to the nodes
   do i=1,n_parents(i_node)
     i_elm = node_parents(i,i_node)
@@ -553,26 +553,26 @@ do i_node = 1, node_list%n_nodes
     endif
     ! --- compare size of side with distance from tip of vector u
     distance1 = distance_nodes(node_list,i_node,i_node_u)
-    point1(1) = node_list%node(i_node)%X(1,1) + node_list%node(i_node)%X(2,1) ! tip of vector u
-    point1(2) = node_list%node(i_node)%X(1,2) + node_list%node(i_node)%X(2,2) ! tip of vector u
+    point1(1) = node_list%node(i_node)%X(1,1,1) + node_list%node(i_node)%X(1,2,1) ! tip of vector u
+    point1(2) = node_list%node(i_node)%X(1,1,2) + node_list%node(i_node)%X(1,2,2) ! tip of vector u
     distance2 = distance_node_point(node_list,i_node_u,point1)
     ! --- reverse vector u if needed
     if (distance2 .lt. distance1) then
       if ( (parent_elm_node(i,i_node) .eq. 2) .or. (parent_elm_node(i,i_node) .eq. 3) ) then
-        node_list%node(i_node)%X(2,1) = - node_list%node(i_node)%X(2,1)
-        node_list%node(i_node)%X(2,2) = - node_list%node(i_node)%X(2,2)
+        node_list%node(i_node)%X(1,2,1) = - node_list%node(i_node)%X(1,2,1)
+        node_list%node(i_node)%X(1,2,2) = - node_list%node(i_node)%X(1,2,2)
       endif
     endif
     ! --- compare size of side with distance from tip of vector v
     distance1 = distance_nodes(node_list,i_node,i_node_v)
-    point1(1) = node_list%node(i_node)%X(1,1) + node_list%node(i_node)%X(3,1) ! tip of vector v
-    point1(2) = node_list%node(i_node)%X(1,2) + node_list%node(i_node)%X(3,2) ! tip of vector v
+    point1(1) = node_list%node(i_node)%X(1,1,1) + node_list%node(i_node)%X(1,3,1) ! tip of vector v
+    point1(2) = node_list%node(i_node)%X(1,1,2) + node_list%node(i_node)%X(1,3,2) ! tip of vector v
     distance2 = distance_node_point(node_list,i_node_v,point1)
     ! --- reverse vector v if needed
     if (distance2 .lt. distance1) then
       if ( (parent_elm_node(i,i_node) .eq. 3) .or. (parent_elm_node(i,i_node) .eq. 4) ) then
-        node_list%node(i_node)%X(3,1) = - node_list%node(i_node)%X(3,1)
-        node_list%node(i_node)%X(3,2) = - node_list%node(i_node)%X(3,2)
+        node_list%node(i_node)%X(1,3,1) = - node_list%node(i_node)%X(1,3,1)
+        node_list%node(i_node)%X(1,3,2) = - node_list%node(i_node)%X(1,3,2)
       endif
     endif
   enddo
@@ -609,8 +609,8 @@ do i_node = 1, node_list%n_nodes
   ! --- w = u+v, of length scale_wk*(u+v). But the condition comes on the element size
   
   ! --- Vector definition
-  node_list%node(i_node)%X(4,1) = scale_wk * ( node_list%node(i_node)%X(2,1) + node_list%node(i_node)%X(3,1) )
-  node_list%node(i_node)%X(4,2) = scale_wk * ( node_list%node(i_node)%X(2,2) + node_list%node(i_node)%X(3,2) )
+  node_list%node(i_node)%X(1,4,1) = scale_wk * ( node_list%node(i_node)%X(1,2,1) + node_list%node(i_node)%X(1,3,1) )
+  node_list%node(i_node)%X(1,4,2) = scale_wk * ( node_list%node(i_node)%X(1,2,2) + node_list%node(i_node)%X(1,3,2) )
   ! --- SIZE CONDITION: h_w = h_u*h_v
   do i = 1,n_parents(i_node)
     i_elm    = node_parents(i,i_node)
@@ -642,8 +642,8 @@ do i_node = 1, node_list%n_nodes
   ! --- with scale_i = 0.1 ?
   
   ! --- Vector definition
-  node_list%node(i_node)%X(5,1) = 0.d0 ! node_list%node(i_node)%X(2,1) + node_list%node(i_node)%X(3,1)
-  node_list%node(i_node)%X(5,2) = 0.d0 ! node_list%node(i_node)%X(2,2) + node_list%node(i_node)%X(3,2)
+  node_list%node(i_node)%X(1,5,1) = 0.d0 ! node_list%node(i_node)%X(1,2,1) + node_list%node(i_node)%X(1,3,1)
+  node_list%node(i_node)%X(1,5,2) = 0.d0 ! node_list%node(i_node)%X(1,2,2) + node_list%node(i_node)%X(1,3,2)
   ! --- SIZE CONDITION: h_i must be the same on all parent nodes
   i_elm = node_parents(1,i_node)
   size_tmp = 0.5 * ( abs(element_list%element(i_elm)%size(1,2)) + abs(element_list%element(i_elm)%size(1,3)) )
@@ -663,20 +663,20 @@ do i_node = 1, node_list%n_nodes
   ! --- But since it doesn't matter, that's what we choose...
   
   ! --- Vector definition
-  !node_list%node(i_node)%X(6,1) = 0.d0 !node_list%node(i_node)%X(2,1) + node_list%node(i_node)%X(3,1)
-  !node_list%node(i_node)%X(6,2) = 0.d0 !node_list%node(i_node)%X(2,2) + node_list%node(i_node)%X(3,2)
+  !node_list%node(i_node)%X(1,6,1) = 0.d0 !node_list%node(i_node)%X(1,2,1) + node_list%node(i_node)%X(1,3,1)
+  !node_list%node(i_node)%X(1,6,2) = 0.d0 !node_list%node(i_node)%X(1,2,2) + node_list%node(i_node)%X(1,3,2)
   ! --- compare size of side with distance from tip of vector v
   point1(1) = R_geo
   point1(2) = Z_geo
   distance1 = distance_node_point(node_list,i_node,point1)
-  point2(1) = node_list%node(i_node)%X(1,1) + node_list%node(i_node)%X(2,1) ! tip of vector u
-  point2(2) = node_list%node(i_node)%X(1,2) + node_list%node(i_node)%X(2,2) ! tip of vector u
+  point2(1) = node_list%node(i_node)%X(1,1,1) + node_list%node(i_node)%X(1,2,1) ! tip of vector u
+  point2(2) = node_list%node(i_node)%X(1,1,2) + node_list%node(i_node)%X(1,2,2) ! tip of vector u
   distance2 = distance_points(node_list,point1,point2)
   ! --- reverse vector v if needed
   direction = 1.d0
   if (distance2 .gt. distance1) direction = -1.d0
-  node_list%node(i_node)%X(6,1) = direction * node_list%node(i_node)%X(2,1)
-  node_list%node(i_node)%X(6,2) = direction * node_list%node(i_node)%X(2,2)
+  node_list%node(i_node)%X(1,6,1) = direction * node_list%node(i_node)%X(1,2,1)
+  node_list%node(i_node)%X(1,6,2) = direction * node_list%node(i_node)%X(1,2,2)
   ! --- SIZE CONDITION: h_j must be the same on all parent nodes
   i_elm = node_parents(1,i_node)
   size_tmp = 0.5 * ( abs(element_list%element(i_elm)%size(1,2)) + abs(element_list%element(i_elm)%size(1,3)) )
@@ -695,8 +695,8 @@ do i_node = 1, node_list%n_nodes
   ! --- and we set the size the same as that of the v vector
   
   ! --- Vector definition
-  node_list%node(i_node)%X(7,1) = node_list%node(i_node)%X(3,1)
-  node_list%node(i_node)%X(7,2) = node_list%node(i_node)%X(3,2)
+  node_list%node(i_node)%X(1,7,1) = node_list%node(i_node)%X(1,3,1)
+  node_list%node(i_node)%X(1,7,2) = node_list%node(i_node)%X(1,3,2)
   call normalise_vector(node_list,i_node,7)
   ! --- SIZE CONDITION: h_m must opposite on either side of the two parent nodes (like v)
   do i = 1,n_parents(i_node)
@@ -714,8 +714,8 @@ do i_node = 1, node_list%n_nodes
   ! --- and we set the size the same as that of the u vector
   
   ! --- Vector definition
-  node_list%node(i_node)%X(8,1) = node_list%node(i_node)%X(2,1)
-  node_list%node(i_node)%X(8,2) = node_list%node(i_node)%X(2,2)
+  node_list%node(i_node)%X(1,8,1) = node_list%node(i_node)%X(1,2,1)
+  node_list%node(i_node)%X(1,8,2) = node_list%node(i_node)%X(1,2,2)
   call normalise_vector(node_list,i_node,8)
   ! --- SIZE CONDITION: h_n must opposite on either side of the two parent nodes (like u)
   do i = 1,n_parents(i_node)
@@ -733,8 +733,8 @@ do i_node = 1, node_list%n_nodes
   ! --- and we set the size the same as that of the u vector
   
   ! --- Vector definition
-  node_list%node(i_node)%X(9,1) = node_list%node(i_node)%X(4,1)
-  node_list%node(i_node)%X(9,2) = node_list%node(i_node)%X(4,2)
+  node_list%node(i_node)%X(1,9,1) = node_list%node(i_node)%X(1,4,1)
+  node_list%node(i_node)%X(1,9,2) = node_list%node(i_node)%X(1,4,2)
   ! --- SIZE CONDITION: h_k = (h_u*h_v)**2 = h_w**2
   do i = 1,n_parents(i_node)
     i_elm    = node_parents(i,i_node)
@@ -811,8 +811,8 @@ use data_structure
 implicit none
 type(type_node_list), intent(in) :: node_list
 integer,              intent(in) :: i_node1,i_node2
-distance_nodes = sqrt(  (node_list%node(i_node2)%X(1,1) - node_list%node(i_node1)%X(1,1))**2 &
-                      + (node_list%node(i_node2)%X(1,2) - node_list%node(i_node1)%X(1,2))**2 )
+distance_nodes = sqrt(  (node_list%node(i_node2)%X(1,1,1) - node_list%node(i_node1)%X(1,1,1))**2 &
+                      + (node_list%node(i_node2)%X(1,1,2) - node_list%node(i_node1)%X(1,1,2))**2 )
 end function distance_nodes
 
 pure real*8 function distance_node_point(node_list,i_node,point)
@@ -821,8 +821,8 @@ implicit none
 type(type_node_list), intent(in) :: node_list
 integer,              intent(in) :: i_node
 real*8,               intent(in) :: point(2)
-distance_node_point = sqrt(  (point(1) - node_list%node(i_node)%X(1,1))**2 &
-                           + (point(2) - node_list%node(i_node)%X(1,2))**2 )
+distance_node_point = sqrt(  (point(1) - node_list%node(i_node)%X(1,1,1))**2 &
+                           + (point(2) - node_list%node(i_node)%X(1,1,2))**2 )
 end function distance_node_point
 
 pure real*8 function distance_points(point1,point2)
@@ -838,10 +838,10 @@ implicit none
 type(type_node_list), intent(inout) :: node_list
 integer,              intent(in)    :: i_node, i_vector
 real*8                              :: vector_size
-  vector_size = sqrt( node_list%node(i_node)%X(i_vector,1)**2.0 + node_list%node(i_node)%X(i_vector,2)**2.0 )
+  vector_size = sqrt( node_list%node(i_node)%X(1,i_vector,1)**2.0 + node_list%node(i_node)%X(1,i_vector,2)**2.0 )
   if (vector_size .eq. 0.d0) return ! yes, because with fix_axis, we set v and w to zero!
-  node_list%node(i_node)%X(i_vector,1) = node_list%node(i_node)%X(i_vector,1) / vector_size
-  node_list%node(i_node)%X(i_vector,2) = node_list%node(i_node)%X(i_vector,2) / vector_size
+  node_list%node(i_node)%X(1,i_vector,1) = node_list%node(i_node)%X(1,i_vector,1) / vector_size
+  node_list%node(i_node)%X(1,i_vector,2) = node_list%node(i_node)%X(1,i_vector,2) / vector_size
 end subroutine normalise_vector
 
 

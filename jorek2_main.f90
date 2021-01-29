@@ -266,14 +266,9 @@ required = 0
     gmres     = .false. 
   end if
 
-#if (JOREK_MODEL == 501)
-  ! --- Read ADAS data and generate coronal equilibrium is needed
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+  ! --- Read ADAS data and generate coronal equilibrium if needed
   call init_imp_adas(my_id)
-#endif
-  
-  ! --- Initialize time-traces of radiation and ionization energy/power
-#if (JOREK_MODEL == 500)
-  call init_xtime_rad_ionization(my_id)
 #endif
 
   ! --- Write out all parameters defined in parameters and the namelist input file.
@@ -528,10 +523,10 @@ required = 0
                                sig1, xr2, sig2, refinement)
       end if
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
+      
     end if
     
   end if !   if ( restart .and. (my_id == 0) ) then
-
 
   ! This is necessary for the parallel vacuum version during the code restart 
   if(restart) then
@@ -578,6 +573,11 @@ required = 0
         call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
         stop
       end if 
+
+      ! --- Optional: Add patches to an existing grid imported from restart file
+      if ( extend_existing_grid .and. (n_flux .le. 0) ) &
+          call grid_patches_on_existing_grid(node_list, element_list)
+
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
       
       ! --- Determine boundary information from the grid
@@ -614,6 +614,9 @@ required = 0
       call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
     end if
     
+    ! --- Check sanity of grid
+    call check_grid(my_id, node_list, element_list)
+
 #ifdef USE_MUMPS
     ! --- Initialize MUMPS solver (used for equilibrium)
     call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
@@ -678,6 +681,10 @@ required = 0
              
         end if ! (if xpoint)
 
+        ! --- Optional: Add patches to an existing grid imported from restart file
+        if (extend_existing_grid) &
+            call grid_patches_on_existing_grid(node_list, element_list)
+
         if ( freeboundary .and. freeb_change_indices .and. (my_id == 0)) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
 
         ! --- Determine boundary information from the grid
@@ -685,6 +692,9 @@ required = 0
         call export_boundary(node_list, bnd_elm_list, bnd_node_list)
 
       endif ! if (my_id == 0) then        
+
+      ! --- Check sanity of grid
+      call check_grid(my_id, node_list, element_list)
 
       call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list) 
       if ( freeb_equil2) then
@@ -1519,7 +1529,7 @@ required = 0
 
     	  call density(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
     	     zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-    	  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) ) then	     
+    	  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 401) .or. (jorek_model .eq. 711) ) then	     
     	    call temperature_i(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
     	      zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
     	    call temperature_e(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &

@@ -175,10 +175,10 @@ ifeq (model500, $(MODEL))
   DEFINES  := $(DEFINES) -DWITH_Neutrals
 endif
 ifeq (model501, $(MODEL))
-  DEFINES  := $(DEFINES) -DWITH_Neutrals -DWITH_Impurities
+  DEFINES  := $(DEFINES) -DWITH_Impurities
 endif
 ifeq (model502, $(MODEL))
-  DEFINES  := $(DEFINES) -DWITH_Neutrals -DWITH_Impurities -DWITH_TiTe
+  DEFINES  := $(DEFINES) -DWITH_Impurities -DWITH_TiTe
 endif
 ifeq (model711, $(MODEL))
   DEFINES  := $(DEFINES) -DWITH_TiTe

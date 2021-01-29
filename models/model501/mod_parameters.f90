@@ -6,7 +6,7 @@ module mod_parameters
   integer, parameter :: jorek_model    = 501       !< JOREK physics model
 
   logical, parameter :: with_TiTe       = .false.
-  logical, parameter :: with_neutrals   = .true.
+  logical, parameter :: with_neutrals   = .false.
   logical, parameter :: with_impurities = .true.
   logical, parameter :: with_Vpar       = .true.
   logical, parameter :: with_etaOhm     = .true.

@@ -21,7 +21,7 @@ type (type_node)    :: node
 integer             :: ielm, ivert, idof, ms, mt
 real*8              :: x_g, x_s, x_t, y_g, y_s, y_t, xjac, xjac_min, xjac_max, s, t
 logical             :: problem_found
-real*8, dimension(4,4,NST,NST) :: H, H_s, H_t
+real*8, dimension(4,n_order+1,NST,NST) :: H, H_s, H_t
 
 problem_found = .false.
 

@@ -212,7 +212,9 @@ module mod_expression
     call add(exprs_all, 'partF_total ', 'Total particle flux (normal to the boundary)          ', 'boundary    ')
     call add(exprs_all, 'npartF_total', 'Total neutral particle flux (normal to the boundary)  ', 'boundary    ')
     call add(exprs_all, 'ExB_norm    ', 'EM energy flux, Poynting vector (normal to boundary)  ', 'boundary    ')
+#if JOREK_MODEL >= 303
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
+#endif
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
     call add(exprs_all, 'radiation   ', 'Radiation terms for bolometry diagnostic              ')
 #endif
@@ -1383,10 +1385,14 @@ module mod_expression
           
           E_dreicer = EL_CHG**3 * ln_Lambda0 * MU_ZERO**1.5 * (central_density*1.d20*central_mass*MASS_PROTON)**2.5 * r0 / ( 2.d0 * PI * EPS_ZERO**2 * (MASS_PROTON*central_mass)**2 * T0 )
           
+#if JOREK_MODEL >= 303
           if (bootstrap) then
             call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
               ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
           endif
+#else
+          J_boot = 0.d0
+#endif
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 

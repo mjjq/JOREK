@@ -31,7 +31,7 @@ program jorek2_connection_flux_aligned
   use mod_interp
   
   implicit none
-  include 'mpif.h'
+
   
   type (type_bnd_element_list)           :: bnd_elm_list    
   type (type_bnd_node_list)              :: bnd_node_list 
@@ -195,10 +195,10 @@ program jorek2_connection_flux_aligned
   ! --- Get domain limits
   Rmin = 1.d20; Rmax = -1.d20; Zmin = 1.d20; Zmax=-1.d20
   do i=1,node_list%n_nodes
-    Rmin = min(Rmin,node_list%node(i)%x(1,1))
-    Rmax = max(Rmax,node_list%node(i)%x(1,1))
-    Zmin = min(Zmin,node_list%node(i)%x(1,2))
-    Zmax = max(Zmax,node_list%node(i)%x(1,2))
+    Rmin = min(Rmin,node_list%node(i)%x(1,1,1))
+    Rmax = max(Rmax,node_list%node(i)%x(1,1,1))
+    Zmin = min(Zmin,node_list%node(i)%x(1,1,2))
+    Zmax = max(Zmax,node_list%node(i)%x(1,1,2))
   enddo
   
   ! --- find x-point(s)

@@ -19,11 +19,11 @@ module exec_commands
   use mod_import_restart
   use mod_interp
   use mod_poloidal_currents 
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
   use mod_injection_source
 #endif
   use mod_bootstrap_functions
-#if (JOREK_MODEL == 500)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
    use mod_neutral_source
 #endif
   
@@ -193,7 +193,7 @@ module exec_commands
         case ( 'namelist' )
           call load_namelist(command, ierr)
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
           ! --- Read ADAS data and generate coronal equilibrium is needed
           call init_imp_adas(0)
 #endif

@@ -104,8 +104,10 @@ real*8     :: TG_num1, TG_num2, TG_num5, TG_num6, TG_num7
 !==================MB: velocity profile is kept by a source which compensating diffusion
 real*8     :: Vt0,Omega_tor0_x,Omega_tor0_y,Vt0_x,Vt0_y
 real*8     :: V_source(n_gauss,n_gauss), Vt_x_psi, Vt_y_psi, Omega_tor_x_psi, Omega_tor_y_psi
-real*8     :: dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
-real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
+real*8     ::    dV_dpsi_source(n_gauss,n_gauss), dV_dz_source(n_gauss,n_gauss) ! 1st order derivatives
+real*8     ::    dV_dpsi2, dV_dz2, dV_dpsi_dz                                   ! 2nd order derivatives
+real*8     ::    dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3                    ! 2rd order derivatives
+real*8     ::    dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4       ! 4th order derivatives
 !=======================================
 real*8     :: eq_zne(n_gauss,n_gauss)
 real*8     ::    dn_dpsi(n_gauss,n_gauss), dn_dz                          ! 1st order derivatives
@@ -334,7 +336,10 @@ do ms=1, n_gauss
     ! Source of parallel velocity
     if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
       call velocity(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt), psi_axis, psi_bnd, V_source(ms,mt), &
-           dV_dpsi_source(ms,mt),dV_dz_source(ms,mt),dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+                    dV_dpsi_source(ms,mt), dV_dz_source(ms,mt), &            ! 1st order derivatives
+                    dV_dpsi2, dV_dz2, dV_dpsi_dz, &                          ! 2nd order derivatives
+                    dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3, &           ! 2rd order derivatives
+                    dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4)! 4th order derivatives
     endif
 
     call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &

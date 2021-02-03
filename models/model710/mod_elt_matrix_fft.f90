@@ -78,8 +78,12 @@ real*8     :: Jb, Jb_0
 real*8     :: Ti0, Ti0_R, Ti0_Z
 real*8     :: Te0, Te0_R, Te0_Z
 real*8     :: amu_neo_prof(n_gauss,n_gauss), aki_neo_prof(n_gauss,n_gauss)
-real*8     :: V_source(n_gauss,n_gauss), dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
-real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
+real*8     :: Vt0,Omega_tor0_x,Omega_tor0_y,Vt0_x,Vt0_y
+real*8     :: V_source(n_gauss,n_gauss)
+real*8     ::    dV_dpsi_source(n_gauss,n_gauss), dV_dz_source(n_gauss,n_gauss) ! 1st order derivatives
+real*8     ::    dV_dpsi2, dV_dz2, dV_dpsi_dz                                   ! 2nd order derivatives
+real*8     ::    dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3                    ! 2rd order derivatives
+real*8     ::    dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4       ! 4th order derivatives
 real*8     :: eta_ARAZ, tauIC_ARAZ
 logical    :: use_fft
 
@@ -634,9 +638,11 @@ do ms=1, n_gauss
     endif
     ! --- Source of toroidal velocity
     if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
-      call velocity(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt), psi_axis, psi_bnd, &
-                    V_source(ms,mt), dV_dpsi_source(ms,mt),dV_dz_source(ms,mt),         &
-                    dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+      call velocity(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt), psi_axis, psi_bnd, V_source(ms,mt), &
+                    dV_dpsi_source(ms,mt), dV_dz_source(ms,mt), &            ! 1st order derivatives
+                    dV_dpsi2, dV_dz2, dV_dpsi_dz, &                          ! 2nd order derivatives
+                    dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3, &           ! 2rd order derivatives
+                    dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4)! 4th order derivatives
     else
       V_source(ms,mt)       = 0.d0
       dV_dpsi_source(ms,mt) = 0.d0

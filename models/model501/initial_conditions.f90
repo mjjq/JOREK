@@ -33,8 +33,16 @@ real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2
 real*8     :: zp, dp_dpsi, dp_dpsi2, dp_dz, dp_dz2, dp_dpsi_dz, P_ss, P_st, P_tt, R_out,Z_out,s_out,t_out
 real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t,R_s, R_t, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 logical    :: xpoint2
-real*8     :: zV, dV_dpsi, dV_dpsi2, dV_dz, dV_dz2, dV_dpsi_dz, dV_dpsi3, dV_dpsi2_dz, dV_dpsi_dz2
-real*8     :: Omega, dOmega_dpsi, dOmega_dz, dOmega_dpsi2, dOmega_dz2, dOmega_dpsi_dz
+real*8     :: zV
+real*8     ::    dV_dpsi, dV_dz                                           ! 1st order derivatives
+real*8     ::    dV_dpsi2, dV_dz2, dV_dpsi_dz                             ! 2nd order derivatives
+real*8     ::    dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3              ! 2rd order derivatives
+real*8     ::    dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4 ! 4th order derivatives
+real*8     :: Omega
+real*8     ::    dOmega_dpsi, dOmega_dz
+real*8     ::    dOmega_dpsi2, dOmega_dz2, dOmega_dpsi_dz
+real*8     ::    dOmega_dpsi3, dOmega_dpsi_dz2, dOmega_dpsi2_dz,  dOmega_dz3
+real*8     ::    dOmega_dpsi4, dOmega_dpsi_dz3, dOmega_dpsi2_dz2, dOmega_dpsi3_dz, dOmega_dz4
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
@@ -115,8 +123,11 @@ if (my_id .eq. 0) then
 
       if (normalized_velocity_profile) then
 
-        call velocity(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zV,dV_dpsi,dV_dz,dV_dpsi2,dV_dz2, &
-                      dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+        call velocity(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zV, &
+                      dV_dpsi, dV_dz, &                                        ! 1st order derivatives
+                      dV_dpsi2, dV_dz2, dV_dpsi_dz, &                          ! 2nd order derivatives
+                      dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3, &           ! 2rd order derivatives
+                      dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4)! 4th order derivatives
 
         node_list%node(i)%values(1,1,var_Vpar) = zV
         node_list%node(i)%values(1,2,var_Vpar) = dV_dpsi  * node_list%node(i)%values(1,2,var_psi) + dV_dz * node_list%node(i)%x(1,2,2)
@@ -129,8 +140,11 @@ if (my_id .eq. 0) then
   
       else
 
-        call velocity(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,Omega,dOmega_dpsi,dOmega_dz,dOmega_dpsi2,dOmega_dz2, &
-                    dOmega_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+        call velocity(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,Omega, &
+                      dOmega_dpsi, dOmega_dz, &
+                      dOmega_dpsi2, dOmega_dz2, dOmega_dpsi_dz, &
+                      dOmega_dpsi3, dOmega_dpsi_dz2, dOmega_dpsi2_dz,  dOmega_dz3, &
+                      dOmega_dpsi4, dOmega_dpsi_dz3, dOmega_dpsi2_dz2, dOmega_dpsi3_dz, dOmega_dz4)
 
         node_list%node(i)%values(1,1,var_Vpar) = R**2 * Omega
         node_list%node(i)%values(1,2,var_Vpar) = 2.d0 * R * node_list%node(i)%x(1,2,1) * Omega              &

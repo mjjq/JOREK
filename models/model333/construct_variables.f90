@@ -376,7 +376,10 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   
   ! --- Internal variables
   real*8		      :: psi_norm
-  real*8		      :: V_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
+  real*8                      :: V_source
+  real*8                      ::    dV_dpsi2, dV_dz2, dV_dpsi_dz                             ! 2nd order derivatives
+  real*8                      ::    dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3              ! 2rd order derivatives
+  real*8                      ::    dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4 ! 4th order derivatives
   real*8		      :: Ti0, Ti0_x, Ti0_y, Te0, Te0_x, Te0_y
   real*8		      :: zTi, zTi_x, zTi_y, zTe, zTe_x, zTe_y, zn_x, zn_y
   real*8		      :: Jb_0
@@ -588,8 +591,10 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     dV_dz_source   = 0.d0
     if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
       call velocity(xpoint2, xcase2, y_g, z_xpoint, ps0, psi_axis, psi_bnd, V_source,               &
-        dV_dpsi_source, dV_dz_source, dV_dpsi2, dV_dz2, dV_dpsi_dz, dV_dpsi3,dV_dpsi_dz2,           &
-        dV_dpsi2_dz)
+                        dV_dpsi_source, dV_dz_source, &                          ! 1st order derivatives
+                        dV_dpsi2, dV_dz2, dV_dpsi_dz, &                          ! 2nd order derivatives
+                        dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3, &           ! 2rd order derivatives
+                        dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4)! 4th order derivatives
     end if
     if (normalized_velocity_profile) then
       Vt0_x = dV_dpsi_source * ps0_x

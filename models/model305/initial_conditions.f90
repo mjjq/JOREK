@@ -34,7 +34,11 @@ real*8     :: zp, dp_dpsi, dp_dpsi2, dp_dz, dp_dz2, P_ss, P_st, P_tt, R_out,Z_ou
 real*8     :: ps0_s, ps0_t, p_s, p_t, zj0_s, zj0_t,R_s, R_t, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 logical    :: xpoint2
 !=============================MB:  parallel velocity profile
-real*8     :: zV, dV_dpsi, dV_dpsi2, dV_dz, dV_dz2, dV_dpsi_dz, dV_dpsi3, dV_dpsi2_dz, dV_dpsi_dz2
+real*8     :: zV
+real*8     ::    dV_dpsi, dV_dz                                           ! 1st order derivatives
+real*8     ::    dV_dpsi2, dV_dz2, dV_dpsi_dz                             ! 2nd order derivatives
+real*8     ::    dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3              ! 2rd order derivatives
+real*8     ::    dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4 ! 4th order derivatives
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
   write(*,*) '*      initial conditions  (305)      *'
@@ -66,8 +70,11 @@ if (my_id .eq. 0) then
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .true.)
 !============================MB
     if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot)) then
-    call velocity(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zV,dV_dpsi,dV_dz,dV_dpsi2,dV_dz2, &
-                  dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
+    call velocity(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zV, &
+                  dV_dpsi, dV_dz, &                                        ! 1st order derivatives
+                  dV_dpsi2, dV_dz2, dV_dpsi_dz, &                          ! 2nd order derivatives
+                  dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3, &           ! 2rd order derivatives
+                  dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4)! 4th order derivatives
     endif
 !============================MB
 							       

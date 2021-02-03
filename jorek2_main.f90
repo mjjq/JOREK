@@ -484,7 +484,7 @@ required = 0
     if ( ierr /= 0 ) stop
 
     ! for variable time step Gears method
-    if ( index_now==1) then
+    if ( index_now <= 1 ) then
       tstep_prev = tstep
     else
       tstep_prev = xtime(index_start) - xtime(index_start-1)
@@ -992,7 +992,7 @@ required = 0
     
     tstep = tstep_n(jstep)
     ! start from t=0 
-    if ( index_now == 1 ) tstep_prev = tstep
+    if ( index_now <= 1 ) tstep_prev = tstep
     
     if ( freeboundary ) call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
 

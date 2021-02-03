@@ -32,7 +32,12 @@ real*8  :: eq_t(n_plane,n_var,n_gauss,n_gauss), eq_p(n_plane,n_var,n_gauss,n_gau
 real*8  :: wgauss_copy(n_gauss)
 
 real*8  :: particle_source, heat_source, heat_source_i, heat_source_e, xt, t_norm, rho_norm, rotation_source
-real*8  :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
+real*8  :: eq_zne(n_gauss,n_gauss)
+real*8  ::    dn_dpsi, dn_dz                                           ! 1st order derivatives
+real*8  ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                             ! 2nd order derivatives
+real*8  ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3              ! 2rd order derivatives
+real*8  ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4 ! 4th order derivatives
+real*8  :: eq_zTe(n_gauss,n_gauss)
 real*8  :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz
 real*8  :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz
 
@@ -148,7 +153,10 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           dpdx, dpdy, grad_P, grad_psi, grad_P_psi,gradP_max, gradP_psi_max, phi,        &
 !$omp           P_max, source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2, eta_T_ohm,    &
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, rotation_source,   &
-!$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
+!$omp           dn_dpsi, dn_dz,                                                                &
+!$omp           dn_dpsi2, dn_dz2, dn_dpsi_dz,                                                  &
+!$omp           dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3,                                   &
+!$omp           dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4,                      &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           r0_corr, T0_corr,                                                              &
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
@@ -233,7 +241,10 @@ do ife = ife_min, ife_max
     do mt=1, n_gauss
 
       call density(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt),ES%psi_axis,ES%psi_bnd,eq_zne(ms,mt), &
-                   dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+                   dn_dpsi, dn_dz, &                                        ! 1st order derivatives
+                   dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                   dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                   dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
 
 #if (JOREK_MODEL == 400) || (JOREK_MODEL == 711)
       call temperature_e(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt),ES%psi_axis,ES%psi_bnd,eq_zTe(ms,mt), &

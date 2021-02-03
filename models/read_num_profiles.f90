@@ -99,11 +99,13 @@ subroutine read_num_profiles(my_id)
       if ( allocated(num_Fprofile_y1) ) deallocate( num_Fprofile_y1 )
       if ( allocated(num_Fprofile_y2) ) deallocate( num_Fprofile_y2 )
       if ( allocated(num_Fprofile_y3) ) deallocate( num_Fprofile_y3 )
+      if ( allocated(num_Fprofile_y4) ) deallocate( num_Fprofile_y4 )
       call tr_allocate(num_Fprofile_x ,1,n_Fprofile_internal,"num_Fprofile_x",CAT_GRID)
       call tr_allocate(num_Fprofile_y0,1,n_Fprofile_internal,"num_Fprofile_y0",CAT_GRID)
       call tr_allocate(num_Fprofile_y1,1,n_Fprofile_internal,"num_Fprofile_y1",CAT_GRID)
       call tr_allocate(num_Fprofile_y2,1,n_Fprofile_internal,"num_Fprofile_y2",CAT_GRID)
       call tr_allocate(num_Fprofile_y3,1,n_Fprofile_internal,"num_Fprofile_y3",CAT_GRID)
+      call tr_allocate(num_Fprofile_y4,1,n_Fprofile_internal,"num_Fprofile_y4",CAT_GRID)
       do i=1,n_Fprofile_internal
         num_Fprofile_x (i) = Fprofile_psi_max * real(i-1)/real(n_Fprofile_internal-1)
         num_Fprofile_y0(i) = Fprofile_internal(i)
@@ -111,6 +113,7 @@ subroutine read_num_profiles(my_id)
       call derivProf(num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, num_Fprofile_y1)
       call derivProf(num_Fprofile_x, num_Fprofile_y1, num_Fprofile_len, num_Fprofile_y2)
       call derivProf(num_Fprofile_x, num_Fprofile_y2, num_Fprofile_len, num_Fprofile_y3)
+      call derivProf(num_Fprofile_x, num_Fprofile_y3, num_Fprofile_len, num_Fprofile_y4)
       ! --- Check that new profile is accurate by deriving again and comparing against input FFprime
       call check_F_profile_accuracy() ! this will abort if error is too large
     else

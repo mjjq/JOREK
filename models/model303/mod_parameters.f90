@@ -27,7 +27,7 @@ module mod_parameters
 
   integer, parameter :: n_var          = 7         !< number of variables
   integer, parameter :: n_dim          = 2         !< number of dimensions
-  integer, parameter :: n_order        = 3         !< order of the polynomial basis
+  integer, parameter :: n_order        = 5         !< order of the polynomial basis
   integer, parameter :: n_tor          = 1!9         !< number of toroidal harmonicsin physics variables
   integer, parameter :: n_coord_tor    = 1!1         !< number of toroidal harmonics in (R, Z) coordinates
   integer, parameter :: n_period       = 1!3         !< periodicity in toroidal direction

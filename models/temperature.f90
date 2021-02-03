@@ -28,7 +28,7 @@ real*8  :: psi_n, psi_star, delta_psi, sig_T, sigz, dprof1_dpsi, dprof1_dpsi2, d
 real*8  :: atn, datn, d2atn, d3atn, d4atn
 real*8  :: atn_z,   datn_z,   d2atn_z, d3atn_z, d4atn_z
 real*8  :: atn_z_u, datn_z_u, d2atn_z_u, d3atn_z_u, d4atn_z_u
-real*8  :: cosh1, cosh2, sinh2, cosh3, cosh4, sinh4, cosh3_u, cosh4_u, sinh4_u
+real*8  :: cosh1, sinh1, cosh2, sinh2, cosh3, cosh4, sinh4, cosh3_u, cosh4_u, sinh4_u
 real*8  :: tanh1, tanh2, tanh2_u
 ! for interpolating numerical profiles
 integer :: left, right, mid
@@ -56,6 +56,7 @@ if ( .not. num_T ) then ! use analytical representation
   
   tanh1 = tanh(psi_star)
   cosh1 = cosh(psi_star)
+  sinh1 = sinh(psi_star)
   cosh2 = cosh(2.d0*psi_star)
   sinh2 = sinh(2.d0*psi_star)
   
@@ -63,7 +64,7 @@ if ( .not. num_T ) then ! use analytical representation
   datn  = - 1.d0/cosh1**2 / (2.d0 * sig_T) / delta_psi
   d2atn =   1.d0/cosh1**2 / sig_T**2 * tanh1 / delta_psi**2
   d3atn = - 1.d0/cosh1**4 / sig_T**3 * (-2.d0 + cosh2) / delta_psi**3
-  d4atn =   4.d0/cosh1**5 / sig_T**4 * (-2.d0 + cosh2) / delta_psi**4 &
+  d4atn = - 4.d0/cosh1**5 / sig_T**4 * (-2.d0 + cosh2) / delta_psi**4 * sinh1 &
           - 1.d0/cosh1**4 / sig_T**4 * (-2.d0 * sinh2) / delta_psi**4
   
   prof1        = prof0        * atn

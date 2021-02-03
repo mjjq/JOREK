@@ -504,10 +504,16 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
 			   Ti0, Ti0_x, Ti0_y,                    &
 			   Te0, Te0_x, Te0_y,                  Jb)
     ! --- Full Sauter formula for initial profiles
-    call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    		     zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
-    call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+    call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zn, &
+                 dn_dpsi, dn_dz, &                                        ! 1st order derivatives
+                 dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
+    call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zT, &
+                     dT_dpsi,  dT_dz, &                                       ! 1st order derivatives
+                     dT_dpsi2, dT_dz2, dT_dpsi_dz, &                          ! 2nd order derivatives
+                     dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &           ! 2rd order derivatives
+                     dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4)! 4th order derivatives
     zTi   = zT / 2.d0             
     zTi_x = dT_dpsi * ps0_x / 2.d0
     zTi_y = dT_dpsi * ps0_y / 2.d0
@@ -566,10 +572,16 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
     call sources(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd,particle_source,heat_source)
     
     ! --- New source profile: source with exactly the same profile as the initial equilibirum profiles.
-    call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    		     zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
-    call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+    call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zn, &
+                 dn_dpsi, dn_dz, &                                        ! 1st order derivatives
+                 dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
+    call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zT, &
+                     dT_dpsi,  dT_dz, &                                       ! 1st order derivatives
+                     dT_dpsi2, dT_dz2, dT_dpsi_dz, &                          ! 2nd order derivatives
+                     dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &           ! 2rd order derivatives
+                     dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4)! 4th order derivatives
     
     ! --- Toroidal momentum source (NBI)
     dV_dpsi_source = 0.d0
@@ -646,10 +658,16 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Make sure SOL density/temperature stays levelled
   if (.false.) then
     if (psi_norm .gt. 1.0) then
-      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    		       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
-      call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    		       zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zn, &
+                 dn_dpsi, dn_dz, &                                        ! 1st order derivatives
+                 dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
+      call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zT, &
+                     dT_dpsi,  dT_dz, &                                       ! 1st order derivatives
+                     dT_dpsi2, dT_dz2, dT_dpsi_dz, &                          ! 2nd order derivatives
+                     dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &           ! 2rd order derivatives
+                     dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4)! 4th order derivatives
       ! --- If equilibrium density comes below half of initial SOL value, we fill it up
       if (r00 .lt. 0.5*zn) total_rho_source = 0.5 * (0.5*zn-r00) / tstep
       if (T00 .lt. 0.5*zT) heat_source = 0.5 * (0.5*zT-T00) / tstep
@@ -663,16 +681,22 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   if (.false.) then
     ! --- Usually this happens outside the separatrix
     if (psi_norm .gt. 1.0) then
-      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    		       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zn, &
+                 dn_dpsi, dn_dz, &                                        ! 1st order derivatives
+                 dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
       if ( (r0 .lt. 0.3*zn) .and. (r00 .gt. 0.3*zn) ) then
     	total_rho_source = 0.5 * (0.3*zn-r0) / tstep
       endif
     endif
     ! --- But it can also happen in the pedestal, where you might want to use different values
     if ( (psi_norm .gt. 0.95) .and. (psi_norm .le. 1.0) ) then
-      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-    		       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zn, &
+                 dn_dpsi, dn_dz, &                                        ! 1st order derivatives
+                 dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
       if ( (r0 .lt. 0.3*zn) .and. (r00 .gt. 0.3*zn) ) then
     	total_rho_source = 0.5 * (0.3*zn-r0) / tstep
       endif
@@ -686,15 +710,21 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! --- Just a source localised in the pedestal
   if (.false.) then
     ! --- Density
-    call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-                     zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+    call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zn, &
+                 dn_dpsi, dn_dz, &                                        ! 1st order derivatives
+                 dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
     if (r00 .lt. 1.3*zn) then ! should not exceed 30% above equilibrium initial value
       total_rho_source = particlesource * (0.5d0 - 0.5d0 * tanh( (psi_norm - 1.0d0)/0.003) ) * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.60d0)/0.1) ) &
                        + 1.d-4 * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.998d0)/0.003) )
     endif
     ! --- Temperature
-    call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-                     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+    call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zT, &
+                     dT_dpsi,  dT_dz, &                                       ! 1st order derivatives
+                     dT_dpsi2, dT_dz2, dT_dpsi_dz, &                          ! 2nd order derivatives
+                     dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &           ! 2rd order derivatives
+                     dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4)! 4th order derivatives
     if (T00 .lt. 1.3*zT) then ! should not exceed 30% above equilibrium initial value
       heat_source      = heatsource     * (0.5d0 - 0.5d0 * tanh( (psi_norm - 1.0d0)/0.003) ) * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.60d0)/0.1) ) &
                        + 4.d-7 * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.998d0)/0.003) )
@@ -710,10 +740,16 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
       ! --- This determines how far above the initial equilibrium profiles you want to go
       ! --- eg. 0.4 means 40% above, 0.0 means exactly the initial profile, not above
       above_prof = 1.d0 + 0.4d0 * (0.5d0 - 0.5d0 * tanh(-(psi_norm - 0.6d0)/0.3) )
-      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-                       zn,dn_dpsi,  dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
-      call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, &
-                       zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+      call density(    xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zn, &
+                 dn_dpsi, dn_dz, &                                        ! 1st order derivatives
+                 dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
+      call temperature(xpoint2, xcase2, y_g, Z_xpoint, ps0,psi_axis,psi_bnd, zT, &
+                     dT_dpsi,  dT_dz, &                                       ! 1st order derivatives
+                     dT_dpsi2, dT_dz2, dT_dpsi_dz, &                          ! 2nd order derivatives
+                     dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &           ! 2rd order derivatives
+                     dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4)! 4th order derivatives
       ! --- Note that here, the value of particlesource and heatsource determines how long
       ! --- it will take for the target profile to be recovered. eg. if 0.1, it will take
       ! --- 10 JOREK times. If 0.001 it will take 1000 JOREK times

@@ -82,12 +82,12 @@ i_plane                = 1       ! ... otherwise, all modes will be summed up at
 
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
-open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
-if ( ierr == 0 ) then
-  write(*,*) 'Reading parameters from vtk.nml namelist.'
-  read(42,vtk_params)
-  close(42)
-end if
+!open(42, file='vtk.nml', action='read', status='old', iostat=ierr)
+!if ( ierr == 0 ) then
+!  write(*,*) 'Reading parameters from vtk.nml namelist.'
+!  read(42,vtk_params)
+!  close(42)
+!end if
 
 write(*,*)
 write(*,*) 'Parameters:'
@@ -153,6 +153,26 @@ if (toroidal_angle .ne. 0.d0) then
 endif
 
 do i=1,element_list%n_elements
+
+
+
+if (i.eq.133) then
+write(*,'(A,2f)')'compare j at 0:',element_list%element(i)%size(2,6)*node_list%node(element_list%element(i)%vertex(2))%x(1,6,1:2)
+write(*,'(A,2f)')'compare j at 1:',element_list%element(i)%size(3,6)*node_list%node(element_list%element(i)%vertex(3))%x(1,6,1:2)
+s=1 ; t=0
+call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+!write(*,'(A,4f)')'checking_t  0  :',R_t,node_list%node(element_list%element(i)%vertex(2))%x(1,3,1),element_list%element(i)%size(2,3),0
+!write(*,'(A,4f)')'checking_t  0  :',R_t, Z_t, node_list%node(element_list%element(i)%vertex(2))%x(1,3,1:2)
+write(*,'(A,4f)')'checking_tt 0  :',R_tt,Z_tt,node_list%node(element_list%element(i)%vertex(2))%x(1,6,1:2)
+s=1 ; t=1
+call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+!write(*,'(A,4f)')'checking_t  1  :',R_t, Z_t, node_list%node(element_list%element(i)%vertex(3))%x(1,3,1:2)
+write(*,'(A,4f)')'checking_tt 1  :',R_tt,Z_tt,node_list%node(element_list%element(i)%vertex(3))%x(1,6,1:2)
+s=1 ; t=0.5
+call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+!write(*,'(A,2f)')'checking_t  0.5:',R_t, Z_t
+write(*,'(A,2f)')'checking_tt 0.5:',R_tt,Z_tt
+endif
 
    ! if(element_list%element(i)%n_sons.eq.0) then
 

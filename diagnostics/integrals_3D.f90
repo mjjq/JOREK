@@ -38,8 +38,10 @@ real*8  ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                             ! 2nd ord
 real*8  ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3              ! 2rd order derivatives
 real*8  ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4 ! 4th order derivatives
 real*8  :: eq_zTe(n_gauss,n_gauss)
-real*8  :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz
-real*8  :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz
+real*8  ::    dT_dpsi,  dT_dz                                          ! 1st order derivatives
+real*8  ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                             ! 2nd order derivatives
+real*8  ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3              ! 2rd order derivatives
+real*8  ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4 ! 4th order derivatives
 
 integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, ifail
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
@@ -157,7 +159,10 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           dn_dpsi2, dn_dz2, dn_dpsi_dz,                                                  &
 !$omp           dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3,                                   &
 !$omp           dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4,                      &
-!$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
+!$omp           dT_dpsi, dT_dz,                                                                &
+!$omp           dT_dpsi2, dT_dz2, dT_dpsi_dz,                                                  &
+!$omp           dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3,                                   &
+!$omp           dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4,                      &
 !$omp           r0_corr, T0_corr,                                                              &
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp           rn0, source_neutral,                                                           &
@@ -248,10 +253,16 @@ do ife = ife_min, ife_max
 
 #ifdef WITH_TiTe
       call temperature_e(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt),ES%psi_axis,ES%psi_bnd,eq_zTe(ms,mt), &
-                       dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+                       dT_dpsi,  dT_dz, &                                       ! 1st order derivatives
+                       dT_dpsi2, dT_dz2, dT_dpsi_dz, &                          ! 2nd order derivatives
+                       dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &           ! 2rd order derivatives
+                       dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4)! 4th order derivatives
 #else
       call temperature(xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(1,1,ms,mt),ES%psi_axis,ES%psi_bnd,eq_zTe(ms,mt), &
-                       dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+                       dT_dpsi,  dT_dz, &                                       ! 1st order derivatives
+                       dT_dpsi2, dT_dz2, dT_dpsi_dz, &                          ! 2nd order derivatives
+                       dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &           ! 2rd order derivatives
+                       dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4)! 4th order derivatives
 #endif
 
     enddo

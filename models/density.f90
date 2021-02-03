@@ -1,5 +1,8 @@
-subroutine density(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,density_profile,dn_dpsi,dn_dz, &
-                   dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+subroutine density(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,density_profile,&
+                   dn_dpsi, dn_dz, &                                        ! 1st order derivatives
+                   dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                   dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                   dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
 !-----------------------------------------------------------------------
 ! Determines the density value and its derivatives at the given
 ! position (Z, psi) from the analytical or numerical input profile.
@@ -12,16 +15,19 @@ implicit none
 logical, intent(in)  :: xpoint2
 integer, intent(in)  :: xcase2
 real*8,  intent(in)  :: Z, Z_xpoint(2), psi, psi_axis, psi_bnd
-real*8,  intent(out) :: density_profile, dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, &
-                        dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz
+real*8,  intent(out) :: density_profile
+real*8,  intent(out) :: dn_dpsi, dn_dz
+real*8,  intent(out) :: dn_dpsi2, dn_dz2, dn_dpsi_dz
+real*8,  intent(out) :: dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3
+real*8,  intent(out) :: dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4
 
 ! --- Internal variables.
-real*8  :: prof0, prof1, dprof0_dpsi, dprof0_dpsi2, dprof0_dpsi3, psi_barrier
-real*8  :: psi_n, psi_star, delta_psi, sig_n, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3
-real*8  :: atn, datn, d2atn, d3atn
-real*8  :: atn_z,   datn_z,   d2atn_z
-real*8  :: atn_z_u, datn_z_u, d2atn_z_u, factor
-real*8  :: cosh1, cosh2, cosh3, cosh3_u
+real*8  :: prof0, prof1, dprof0_dpsi, dprof0_dpsi2, dprof0_dpsi3, dprof0_dpsi4, psi_barrier
+real*8  :: psi_n, psi_star, delta_psi, sig_n, sigz, dprof1_dpsi, dprof1_dpsi2, dprof1_dpsi3, dprof1_dpsi4
+real*8  :: atn, datn, d2atn, d3atn, d4atn
+real*8  :: atn_z,   datn_z,   d2atn_z, d3atn_z, d4atn_z
+real*8  :: atn_z_u, datn_z_u, d2atn_z_u, d3atn_z_u, d4atn_z_u
+real*8  :: cosh1, cosh2, sinh2, cosh3, cosh4, sinh4, cosh3_u, cosh4_u, sinh4_u
 real*8  :: tanh1, tanh2, tanh2_u
 ! for interpolating numerical profiles
 integer :: left, right, mid
@@ -32,14 +38,6 @@ psi_n     = (psi - psi_axis) / delta_psi
 
 psi_n = max( min(psi_n, 2.), 0. )
 
-!factor = 1.d0
-!if (xpoint2) then
-!  if ((Z .lt. Z_xpoint) .and. (psi_n .lt. 1.d0) ) then
-!    psi_n = 2.d0 - psi_n
-!    factor = -1.d0
-!  endif
-!endif
-
 ! --- Profile as a function of Psi_N.
 if ( .not. num_rho ) then ! use analytical representation
   
@@ -47,6 +45,7 @@ if ( .not. num_rho ) then ! use analytical representation
   dprof0_dpsi  = (rho_0-rho_1)*(rho_coef(1) + 2.d0 * rho_coef(2) * psi_n + 3.d0 * rho_coef(3) * psi_n**2) / delta_psi
   dprof0_dpsi2 = (rho_0-rho_1)*(2.d0 * rho_coef(2) + 6.d0 * rho_coef(3) * psi_n)                          / delta_psi**2
   dprof0_dpsi3 = (rho_0-rho_1)*(6.d0 * rho_coef(3))                                                       / delta_psi**3
+  dprof0_dpsi4 = 0.d0
   
   sig_n       = rho_coef(4)
   psi_barrier = rho_coef(5)
@@ -57,16 +56,21 @@ if ( .not. num_rho ) then ! use analytical representation
   tanh1 = tanh(psi_star)
   cosh1 = cosh(psi_star)
   cosh2 = cosh(2.d0*psi_star)
+  sinh2 = sinh(2.d0*psi_star)
   
   atn   = (0.5d0 - 0.5d0*tanh1)
   datn  = - 1.d0/cosh1**2 / (2.d0 * sig_n) / delta_psi
   d2atn =   1.d0/cosh1**2 / sig_n**2 * tanh1 / delta_psi**2
   d3atn = - 1.d0/cosh1**4 / sig_n**3 * (-2.d0 + cosh2) / delta_psi**3
+  d4atn =   4.d0/cosh1**5 / sig_n**4 * (-2.d0 + cosh2) / delta_psi**4 &
+          - 1.d0/cosh1**4 / sig_n**4 * (-2.d0 * sinh2) / delta_psi**4
   
   prof1        = prof0        * atn
   dprof1_dpsi  = dprof0_dpsi  * atn +         prof0       * datn
   dprof1_dpsi2 = dprof0_dpsi2 * atn + 2.d0 * dprof0_dpsi  * datn + prof0              * d2atn
   dprof1_dpsi3 = dprof0_dpsi3 * atn + 3.d0 * dprof0_dpsi2 * datn + 3.d0 * dprof0_dpsi * d2atn + prof0 * d3atn
+  dprof1_dpsi4 = dprof0_dpsi4 * atn + 4.d0 * dprof0_dpsi3 * datn + 6.d0 * dprof0_dpsi2 * d2atn & 
+                 + 6.d0 * dprof0_dpsi * d3atn + prof0 * d4atn
   
 else ! use numerical representation.
   
@@ -88,6 +92,7 @@ else ! use numerical representation.
   dprof1_dpsi  = ( num_rho_y1(left) * aux2 + num_rho_y1(right) * aux1 ) / delta_psi
   dprof1_dpsi2 = ( num_rho_y2(left) * aux2 + num_rho_y2(right) * aux1 ) / delta_psi**2
   dprof1_dpsi3 = ( num_rho_y3(left) * aux2 + num_rho_y3(right) * aux1 ) / delta_psi**3
+  dprof1_dpsi4 = ( num_rho_y4(left) * aux2 + num_rho_y4(right) * aux1 ) / delta_psi**4
   
 end if
 
@@ -101,55 +106,87 @@ if (xpoint2) then
     atn_z_u   = 1.d0
     datn_z_u  = 0.d0
     d2atn_z_u = 0.d0
+    d3atn_z_u = 0.d0
+    d4atn_z_u = 0.d0
   else
     Z_star_u  = (Z-Z_xpoint(2))/sigz
     Z_star_u  = min( max( Z_star_u, -40.d0), 40.d0) ! avoid floating-point exceptions
     
     tanh2_u   = tanh(Z_star_u)
     cosh3_u   = cosh(Z_star_u)
+    cosh4_u   = cosh(2.0*Z_star_u)
+    sinh4_u   = sinh(2.0*Z_star_u)
     
     atn_z_u   = (0.5d0 - 0.5d0*tanh2_u)
     datn_z_u  = -0.5d0/cosh3_u**2 / sigz
     d2atn_z_u =  1.0d0/cosh3_u**2 / sigz**2 * tanh2_u
+    d3atn_z_u = -1.0d0/cosh3_u**4 / sigz**3 * (-2.d0 + cosh4_u) 
+    d4atn_z_u =  4.0d0/cosh3_u**5 / sigz**4 * (-2.d0 + cosh4_u) &
+                -1.0d0/cosh3_u**4 / sigz**4 * (-2.d0 * sinh4_u) 
   endif
   
   if (xcase2 .eq. 2) then
     atn_z   = 1.d0
     datn_z  = 0.d0
     d2atn_z = 0.d0
+    d3atn_z = 0.d0
+    d4atn_z = 0.d0
   else
     Z_star  = (Z_xpoint(1)-Z)/sigz
     Z_star  = min( max( Z_star, -40.d0), 40.d0) ! avoid floating-point exceptions
 
     tanh2   = tanh(Z_star)
     cosh3   = cosh(Z_star)
+    cosh4   = cosh(2.0*Z_star)
+    sinh4   = sinh(2.0*Z_star)
       
     atn_z   = (0.5d0 - 0.5d0*tanh2)
     datn_z  =  0.5d0/cosh3**2 / sigz
     d2atn_z =  1.0d0/cosh3**2 / sigz**2 * tanh2
+    d3atn_z = -1.0d0/cosh3**4 / sigz**3 * (-2.d0 + cosh4) 
+    d4atn_z =  4.0d0/cosh3**5 / sigz**4 * (-2.d0 + cosh4) &
+              -1.0d0/cosh3**4 / sigz**4 * (-2.d0 * sinh4) 
   endif
   
   density_profile = prof1        *    atn_z * atn_z_u
+
   dn_dpsi         = dprof1_dpsi  *    atn_z * atn_z_u
   dn_dpsi2        = dprof1_dpsi2 *    atn_z * atn_z_u
   dn_dpsi3        = dprof1_dpsi3 *    atn_z * atn_z_u  
-  dn_dz           = prof1        * ( datn_z * atn_z_u +         atn_z * datn_z_u)
-  dn_dz2          = prof1        * (d2atn_z * atn_z_u + 2.d0 * datn_z * datn_z_u  + atn_z * d2atn_z_u)  
+  dn_dpsi4        = dprof1_dpsi4 *    atn_z * atn_z_u  
+
+  dn_dz           = prof1        * ( datn_z * atn_z_u +          atn_z * datn_z_u)
+  dn_dz2          = prof1        * (d2atn_z * atn_z_u + 2.d0 *  datn_z * datn_z_u        +   atn_z * d2atn_z_u)  
+  dn_dz3          = prof1        * (d3atn_z * atn_z_u + 4.d0 * d2atn_z * datn_z_u + 4.d0 *  datn_z * d2atn_z_u  + atn_z * d3atn_z_u)  
+  dn_dz4          = prof1        * (d4atn_z * atn_z_u + 4.d0 * d3atn_z * datn_z_u + 6.d0 * d2atn_z * d2atn_z_u &
+                                    + 4.d0 * datn_z * d3atn_z_u + atn_z * d4atn_z_u)
+
   dn_dpsi_dz      = dprof1_dpsi  * ( datn_z * atn_z_u +         atn_z * datn_z_u)
   dn_dpsi_dz2     = dprof1_dpsi  * (d2atn_z * atn_z_u + 2.d0 * datn_z * datn_z_u  + atn_z * d2atn_z_u)  
+  dn_dpsi_dz3     = dprof1_dpsi  * (d3atn_z * atn_z_u + 4.d0 * d2atn_z * datn_z_u + 4.d0 *  datn_z * d2atn_z_u  + atn_z * d3atn_z_u)
+
   dn_dpsi2_dz     = dprof1_dpsi2 * ( datn_z * atn_z_u +         atn_z * datn_z_u)
+  dn_dpsi2_dz2    = dprof1_dpsi2 * (d2atn_z * atn_z_u + 2.d0 * datn_z * datn_z_u  + atn_z * d2atn_z_u)
+
+  dn_dpsi3_dz     = dprof1_dpsi3 * ( datn_z * atn_z_u +         atn_z * datn_z_u)
 
 else
   
   density_profile = prof1
-  dn_dpsi     = dprof1_dpsi!   * factor
-  dn_dpsi2    = dprof1_dpsi2
-  dn_dpsi3    = dprof1_dpsi3!  * factor
-  dn_dz       = 0.d0
-  dn_dz2      = 0.d0
-  dn_dpsi_dz  = 0.d0
-  dn_dpsi2_dz = 0.d0
-  dn_dpsi_dz2 = 0.d0
+  dn_dpsi         = dprof1_dpsi
+  dn_dpsi2        = dprof1_dpsi2
+  dn_dpsi3        = dprof1_dpsi3
+  dn_dpsi4        = dprof1_dpsi4
+  dn_dz           = 0.d0
+  dn_dz2          = 0.d0
+  dn_dz3          = 0.d0
+  dn_dz4          = 0.d0
+  dn_dpsi_dz      = 0.d0
+  dn_dpsi_dz2     = 0.d0
+  dn_dpsi_dz3     = 0.d0
+  dn_dpsi2_dz     = 0.d0
+  dn_dpsi2_dz2    = 0.d0
+  dn_dpsi3_dz     = 0.d0
 
 end if
 

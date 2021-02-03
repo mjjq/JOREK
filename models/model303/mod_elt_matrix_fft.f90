@@ -107,9 +107,16 @@ real*8     :: V_source(n_gauss,n_gauss), Vt_x_psi, Vt_y_psi, Omega_tor_x_psi, Om
 real*8     :: dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
 real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
 !=======================================
-real*8     :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
-real*8     :: dn_dpsi(n_gauss,n_gauss),dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
-real*8     :: dT_dpsi(n_gauss,n_gauss),dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
+real*8     :: eq_zne(n_gauss,n_gauss)
+real*8     ::    dn_dpsi(n_gauss,n_gauss), dn_dz                          ! 1st order derivatives
+real*8     ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                             ! 2nd order derivatives
+real*8     ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3              ! 2rd order derivatives
+real*8     ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4 ! 4th order derivatives
+real*8     :: eq_zTe(n_gauss,n_gauss)
+real*8     ::    dT_dpsi(n_gauss,n_gauss),  dT_dz                         ! 1st order derivatives
+real*8     ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                             ! 2nd order derivatives
+real*8     ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3              ! 2rd order derivatives
+real*8     ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4 ! 4th order derivatives
 logical    :: xpoint2, use_fft
 real*8     :: w00_xx, w00_yy                                                                                                                                                                
 !======================================= NEO
@@ -331,10 +338,16 @@ do ms=1, n_gauss
     endif
 
     call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
-                 dn_dpsi(ms,mt),dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+                 dn_dpsi(ms,mt), dn_dz, &                                 ! 1st order derivatives
+                 dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
 
     call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
-                     dT_dpsi(ms,mt),dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+                     dT_dpsi(ms,mt),  dT_dz, &                                ! 1st order derivatives
+                     dT_dpsi2, dT_dz2, dT_dpsi_dz, &                          ! 2nd order derivatives
+                     dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &           ! 2rd order derivatives
+                     dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4)! 4th order derivatives
 
     !======================================= NEO
     if ( NEO ) then 

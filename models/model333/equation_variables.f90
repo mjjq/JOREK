@@ -7,8 +7,16 @@ module equation_variables
 
     
   ! --- Profiles and sources
-  real*8 	:: zn,  dn_dpsi,  dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
-  real*8 	:: zT,  dT_dpsi,  dT_dz,  dT_dpsi2,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi_dz2,  dT_dpsi2_dz
+  real*8        :: zn
+  real*8        ::    dn_dpsi, dn_dz                                           ! 1st order derivatives
+  real*8        ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                             ! 2nd order derivatives
+  real*8        ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3              ! 2rd order derivatives
+  real*8        ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4 ! 4th order derivatives
+  real*8        :: zT
+  real*8        ::    dT_dpsi,  dT_dz                                          ! 1st order derivatives
+  real*8        ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                             ! 2nd order derivatives
+  real*8        ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3              ! 2rd order derivatives
+  real*8        ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4 ! 4th order derivatives
   real*8 	:: current_source, particle_source, heat_source, total_rho_source
   real*8 	:: source_mgi, source_pellet, source_volume
   real*8 	:: Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, dV_dpsi_source, dV_dz_source
@@ -101,8 +109,16 @@ module equation_variables
 
   ! --- Declare variables as private for each thread (one module for each call to element_matrix)
   !$omp threadprivate(														           	&
-  !$omp 	zn,  dn_dpsi,  dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz,					&
-  !$omp 	zT,  dT_dpsi,  dT_dz,  dT_dpsi2,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi_dz2,  dT_dpsi2_dz,					&
+  !$omp 	zn,                                                                                                                             &
+  !$omp 	   dn_dpsi, dn_dz,                                                                                                              &
+  !$omp 	   dn_dpsi2, dn_dz2, dn_dpsi_dz,                                                                                                &
+  !$omp 	   dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3,                                                                                 &
+  !$omp 	   dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4,                                                                    &
+  !$omp         zT,                                                                                                                             &
+  !$omp            dT_dpsi,  dT_dz,                                                                                                             &
+  !$omp            dT_dpsi2, dT_dz2, dT_dpsi_dz,                                                                                                &
+  !$omp            dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3,                                                                                 &
+  !$omp            dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4,                                                                    &
   !$omp 	current_source, particle_source, heat_source, total_rho_source,									&
   !$omp 	source_mgi, source_pellet, source_volume,											&
   !$omp 	Vt0_x, Vt0_y, Omega_tor0_x, Omega_tor0_y, dV_dpsi_source, dV_dz_source,				                                &

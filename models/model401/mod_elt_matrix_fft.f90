@@ -85,10 +85,21 @@ real*8     :: V_source(n_gauss,n_gauss), Vt_x_psi, Vt_y_psi, Omega_tor_x_psi, Om
 
 real*8     :: dV_dpsi_source(n_gauss,n_gauss), dV_dz_source(n_gauss,n_gauss)
 real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
-real*8     :: eq_zne(n_gauss,n_gauss),  eq_zTi(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
-real*8     :: dn_dpsi(n_gauss,n_gauss), dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
-real*8     :: dTi_dpsi(n_gauss,n_gauss),dTi_dz, dTi_dpsi2, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz
-real*8     :: dTe_dpsi(n_gauss,n_gauss),dTe_dz, dTe_dpsi2, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz
+real*8     :: eq_zne(n_gauss,n_gauss)
+real*8     ::    dn_dpsi(n_gauss,n_gauss), dn_dz                          ! 1st order derivatives
+real*8     ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                             ! 2nd order derivatives
+real*8     ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3              ! 2rd order derivatives
+real*8     ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4 ! 4th order derivatives
+real*8     :: eq_zTi(n_gauss,n_gauss)
+real*8     ::    dTi_dpsi(n_gauss,n_gauss),  dTi_dz                            ! 1st order derivatives
+real*8     ::    dTi_dpsi2, dTi_dz2, dTi_dpsi_dz                               ! 2nd order derivatives
+real*8     ::    dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz,  dTi_dz3               ! 2rd order derivatives
+real*8     ::    dTi_dpsi4, dTi_dpsi_dz3, dTi_dpsi2_dz2, dTi_dpsi3_dz, dTi_dz4 ! 4th order derivatives
+real*8     :: eq_zTe(n_gauss,n_gauss)
+real*8     ::    dTe_dpsi(n_gauss,n_gauss),  dTe_dz                            ! 1st order derivatives
+real*8     ::    dTe_dpsi2, dTe_dz2, dTe_dpsi_dz                               ! 2nd order derivatives
+real*8     ::    dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz,  dTe_dz3               ! 2rd order derivatives
+real*8     ::    dTe_dpsi4, dTe_dpsi_dz3, dTe_dpsi2_dz2, dTe_dpsi3_dz, dTe_dz4 ! 4th order derivatives
 
 logical    :: xpoint2, use_fft
 real*8     :: Btheta2, epsil, Btheta2_psi
@@ -282,13 +293,22 @@ do ms=1, n_gauss
     endif
 
     call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
-                 dn_dpsi(ms,mt),dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+                 dn_dpsi(ms,mt), dn_dz, &                                 ! 1st order derivatives
+                 dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
 
     call temperature_i(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, eq_zTi(ms,mt), &
-                     dTi_dpsi(ms,mt),dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
+                       dTi_dpsi(ms,mt),  dTi_dz, &                                   ! 1st order derivatives
+                       dTi_dpsi2, dTi_dz2, dTi_dpsi_dz, &                            ! 2nd order derivatives
+                       dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz,  dTi_dz3, &            ! 2rd order derivatives
+                       dTi_dpsi4, dTi_dpsi_dz3, dTi_dpsi2_dz2, dTi_dpsi3_dz, dTi_dz4)! 4th order derivatives
 
     call temperature_e(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
-                     dTe_dpsi(ms,mt),dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
+                       dTe_dpsi(ms,mt),  dTe_dz, &                                   ! 1st order derivatives
+                       dTe_dpsi2, dTe_dz2, dTe_dpsi_dz, &                            ! 2nd order derivatives
+                       dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz,  dTe_dz3, &            ! 2rd order derivatives
+                       dTe_dpsi4, dTe_dpsi_dz3, dTe_dpsi2_dz2, dTe_dpsi3_dz, dTe_dz4)! 4th order derivatives
 
     if ( NEO ) then 
       if (num_neo_file) then

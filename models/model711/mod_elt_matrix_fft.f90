@@ -61,9 +61,21 @@ real*8     :: psi_axisym(n_gauss,n_gauss), psi_axisym_s(n_gauss,n_gauss), psi_ax
 real*8     ::                              psi_axisym_R(n_gauss,n_gauss), psi_axisym_Z(n_gauss,n_gauss)
 real*8     :: Fprof_time_dep,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
 real*8     :: zFFprime      ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz
-real*8     :: rho_initial(n_gauss,n_gauss),dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2,  dn_dpsi2_dz
-real*8     :: Ti_initial (n_gauss,n_gauss),dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz
-real*8     :: Te_initial (n_gauss,n_gauss),dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz
+real*8     :: rho_initial(n_gauss,n_gauss)
+real*8     ::    dn_dpsi, dn_dz                                           ! 1st order derivatives
+real*8     ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                             ! 2nd order derivatives
+real*8     ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3              ! 2rd order derivatives
+real*8     ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4 ! 4th order derivatives
+real*8     :: Ti_initial (n_gauss,n_gauss)
+real*8     ::    dTi_dpsi,  dTi_dz                                             ! 1st order derivatives
+real*8     ::    dTi_dpsi2, dTi_dz2, dTi_dpsi_dz                               ! 2nd order derivatives
+real*8     ::    dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz,  dTi_dz3               ! 2rd order derivatives
+real*8     ::    dTi_dpsi4, dTi_dpsi_dz3, dTi_dpsi2_dz2, dTi_dpsi3_dz, dTi_dz4 ! 4th order derivatives
+real*8     :: Te_initial (n_gauss,n_gauss)
+real*8     ::    dTe_dpsi,  dTe_dz                                             ! 1st order derivatives
+real*8     ::    dTe_dpsi2, dTe_dz2, dTe_dpsi_dz                               ! 2nd order derivatives
+real*8     ::    dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz,  dTe_dz3               ! 2rd order derivatives
+real*8     ::    dTe_dpsi4, dTe_dpsi_dz3, dTe_dpsi2_dz2, dTe_dpsi3_dz, dTe_dz4 ! 4th order derivatives
 real*8     :: Jb, Jb_0
 real*8     :: amu_neo_prof(n_gauss,n_gauss), aki_neo_prof(n_gauss,n_gauss)
 real*8     :: V_source(n_gauss,n_gauss), dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
@@ -526,12 +538,21 @@ do ms=1, n_gauss
                              Te0,  Te0_R,  Te0_Z,                                         &
                              Jb)
       ! --- Full Sauter formula for initial profiles
-      call density      (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, &
-                         rho_initial(ms,mt),dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
-      call temperature_i(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
-                         Ti_initial (ms,mt),dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
-      call temperature_e(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
-                         Te_initial (ms,mt),dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
+      call density      (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_initial(ms,mt), &
+                         dn_dpsi, dn_dz, &                                        ! 1st order derivatives
+                         dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
+                         dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
+                         dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
+      call temperature_i(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, Ti_initial (ms,mt), &
+                         dTi_dpsi,  dTi_dz, &                                          ! 1st order derivatives
+                         dTi_dpsi2, dTi_dz2, dTi_dpsi_dz, &                            ! 2nd order derivatives
+                         dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz,  dTi_dz3, &            ! 2rd order derivatives
+                         dTi_dpsi4, dTi_dpsi_dz3, dTi_dpsi2_dz2, dTi_dpsi3_dz, dTi_dz4)! 4th order derivatives
+      call temperature_e(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, Te_initial (ms,mt), &
+                         dTe_dpsi,  dTe_dz, &                                          ! 1st order derivatives
+                         dTe_dpsi2, dTe_dz2, dTe_dpsi_dz, &                            ! 2nd order derivatives
+                         dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz,  dTe_dz3, &            ! 2rd order derivatives
+                         dTe_dpsi4, dTe_dpsi_dz3, dTe_dpsi2_dz2, dTe_dpsi3_dz, dTe_dz4)! 4th order derivatives
       Ti0   = Ti_initial(ms,mt)
       Ti0_R = dTi_dpsi * psi_axisym_R(ms,mt)
       Ti0_Z = dTi_dpsi * psi_axisym_Z(ms,mt)

@@ -175,8 +175,12 @@ subroutine preset_parameters
   Z_begin = -0.1d0
   Z_end   = 0.1d0
   
-  ZK_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_perp(1:5)   = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_i_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_e_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   ZK_par       = 1.d0
+  ZK_i_par     = 1.d0
+  ZK_e_par     = 1.d0
   ZK_par_max   = 1.d20
   D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par        = 0.d0
@@ -209,6 +213,8 @@ subroutine preset_parameters
   visco_num_T_dependent = .false.
 
   heatsource          = 1.e-7
+  heatsource_e        = 0.5e-7
+  heatsource_i        = 0.5e-7
   heatsource_psin     = 1.0d0
   heatsource_sig      = 0.1d0
   particlesource      = 1.e-5

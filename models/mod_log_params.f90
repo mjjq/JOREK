@@ -450,6 +450,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'heatsource_gauss_i    ', heatsource_gauss_i
   write(*,REAL_FMT) 'heatsource_gauss_psin ', heatsource_gauss_psin
   write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
+  write(*,REAL_FMT) 'gamma                 ', gamma
   write(*,REAL_FMT) 'tauIC                 ', tauIC
   write(*,LOGI_FMT) 'Wdia                  ', Wdia
   write(*,REAL_FMT) 'eta_num               ', eta_num

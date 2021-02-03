@@ -19,10 +19,10 @@ module mod_integrals3D
   use mod_poloidal_currents, only : integrated_normal_bnd_curr 
   use corr_neg
   use pellet_module
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   use mod_neutral_source, only: neutral_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all 
 #endif
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
   use mod_injection_source, only: inj_source, radiation_function, radiation_function_linear, total_n_particles, total_n_particles_inj, &
                                   total_n_particles_inj_all 
 #endif
@@ -129,19 +129,19 @@ real*8  :: UU,UU_s,UU_t,UU_st,UU_ss,UU_tt
 real*8  :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt 
 real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt 
 real*8  :: rn,rn_s,rn_t,rn_st,rn_ss,rn_tt 
-real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t
+real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, Ti, Ti_s, Ti_t, Te, Te_s, Te_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t
 real*8  :: u0_p, u_s, u_t, u_p
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 real*8  :: source_neutral, source_tmp
 #endif
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
 real*8  :: source_bg, source_imp, source_tmp
 #endif
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion
 real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 real*8  :: ne_SI, Te_eV
@@ -149,7 +149,7 @@ real*8  :: ne_SI, Te_eV
 
 ! Additional diagnostic variables for impurity model
 ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
 ! Atomic physics coefficients:
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8  :: m_i_over_m_imp
@@ -169,7 +169,7 @@ integer    :: spi_i
 real*8     :: ng_radius
 
 ! Additional variables related to the radiated power
-#if (JOREK_MODEL == 500)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 ! Atomic physics coefficients:
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
@@ -261,7 +261,7 @@ local_pellet_volume    = 0.d0
 local_n_particles_inj = 0.d0
 local_n_particles     = 0.d0
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 local_radiation       = 0.d0
 local_radiation_phi   = 0.d0
 local_E_ion           = 0.d0
@@ -292,23 +292,21 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, thm_wk_tot,                   &
 !$omp          mag_wk_tot, vpar_disp_tot, area1, mag_src_tot,  &
 !$omp          eta_ohmic,  &
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
 !$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,               &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
 !$omp          central_mass, pellets, tor_frequency,                                           &
 !$omp          n_spi, using_spi,                                                               &
 !$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
-#endif
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
 !$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type,              &
 #endif
-#if (JOREK_MODEL == 501)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+!$omp          nimp_bg, local_E_ion, ksi_ion, GAMMA, use_imp_adas,                             &
+#endif
+#ifdef WITH_Impurities
 !$omp          local_E_ion,                                                                    &
 !$omp          T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,                                 &
-#endif
-#if (JOREK_MODEL == 500)
-!$omp          nimp_bg, local_E_ion, ksi_ion, GAMMA, use_imp_adas,                             &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
@@ -329,23 +327,21 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
 !$omp           eta_T_ohm, &
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp           rn0, rn0_corr,                                                                 &
 #endif
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-!$omp           source_neutral, source_tmp,                                                    &
-#endif
-#if (JOREK_MODEL == 501)
-!$omp           source_bg, source_imp, source_tmp,                                             &
-!$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
-!$omp           Te_corr_eV, Te_eV, ne_SI, ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,       &
-!$omp           ion_k, Z_eff, eta_coef,                                                        &
-#endif
-#if (JOREK_MODEL == 500)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion,                                    &
 !$omp           Te_eV, ne_SI, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
 !$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
 !$omp           Lrad_imp, m_i_over_m_imp_bg, coef_prad_si,                                     &
+!$omp           source_neutral, source_tmp,                                                    &
+#endif
+#ifdef WITH_Impurities
+!$omp           source_bg, source_imp, source_tmp,                                             &
+!$omp           m_i_over_m_imp, Z_imp, T0_Zimp, alpha_Zimp, alpha_imp, beta_imp,               &
+!$omp           Te_corr_eV, Te_eV, ne_SI, ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,       &
+!$omp           ion_k, Z_eff, eta_coef,                                                        &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -359,10 +355,8 @@ omp_tid      = 0
 #endif
 
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
-#endif
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
 !$omp                local_radiation, local_radiation_phi, local_E_ion,                       &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
@@ -461,7 +455,7 @@ do ife = ife_min, ife_max
                    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
                    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
 
-#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 401) || (JOREK_MODEL == 711) )
+#ifdef WITH_TiTe
       call temperature_e(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 #else
@@ -492,7 +486,7 @@ do ife = ife_min, ife_max
         r0     = eq_g(mp,var_rho,ms,mt)
         r0_corr = corr_neg_dens1(r0)
         T0     = eq_g(mp,var_T,ms,mt)
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
         if (T_min > T_1) then
           T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_min) ! For use in eta(T), visco(T), ...
         else
@@ -517,7 +511,7 @@ do ife = ife_min, ife_max
         vpar_s  = eq_s(mp,var_Vpar,ms,mt)
         vpar_t  = eq_t(mp,var_Vpar,ms,mt)
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
         rn0    = eq_g(mp,var_rhon,ms,mt)
         rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0
 #endif
@@ -561,7 +555,7 @@ do ife = ife_min, ife_max
         psi_as_coord = ps0
 #endif
 
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
         if ( eta_T_dependent .and. T0_corr <= T_max_eta) then
           eta_T     = eta   * (T0_corr/T_0)**(-1.5d0)
         else if (eta_T_dependent .and. T0_corr > T_max_eta) then
@@ -607,7 +601,7 @@ do ife = ife_min, ife_max
                      + F0 * zj0 * u0_p / (BigR**2.d0)
         vpar_disp  = visco_par * (F0/BigR)**2.d0 * (vpar_x**2.d0+vpar_y**2.d0 ) 
 
-#if ( (JOREK_MODEL == 400) || (JOREK_MODEL == 401) || (JOREK_MODEL == 711) )
+#ifdef WITH_TiTe
         call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_bnd, &
                      particle_source,heat_source_i,heat_source_e)
         heat_source = heat_source_i + heat_source_e
@@ -625,7 +619,7 @@ do ife = ife_min, ife_max
 !-------------------------------------------
 ! --- Radiation and ionization power
 ! ------------------------------------------
-#if (JOREK_MODEL == 500)
+#if ( (defined WITH_Neutrals) && (! defined WITH_Impurities) )
   ! --- Get ionization, recombination and radiation coefficients for Deuterium 
   call atomic_coeff_deuterium(0.5d0*T0_corr, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
                                       LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
@@ -703,7 +697,7 @@ do ife = ife_min, ife_max
 
 #endif
 
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
         !-------------------------------------------
         ! Atomic physics parameters for Impurities
         !-------------------------------------------
@@ -797,7 +791,7 @@ do ife = ife_min, ife_max
                           * bigR * xjac * wst * delta_phi
 #endif
 
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
         P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi 
         D_tot  = D_tot  + (r0-rn0) * xjac * BigR * wst * delta_phi
 #else
@@ -827,7 +821,7 @@ do ife = ife_min, ife_max
           local_pellet_volume    = local_pellet_volume    + source_volume * bigR * xjac * wst * delta_phi
         endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if ( (defined WITH_Neutrals) && (! defined WITH_Impurities) )
         !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
 
         source_neutral = 0.d0
@@ -865,7 +859,7 @@ do ife = ife_min, ife_max
         ! Total neutrals in particles
         local_n_particles     = local_n_particles     +  rn0 * central_density * 1.d20 * bigR * xjac * wst * delta_phi
 #endif
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
         !--- Calculate the neutral injection rate and the number of neutrals in the plasma
 
         source_imp = 0.d0
@@ -914,7 +908,7 @@ do ife = ife_min, ife_max
 
 
         if ( get_psi_n(psi_as_coord, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
           D_int = D_int + (r0-rn0) * xjac * BigR * wst * delta_phi
           P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
 #else	
@@ -931,7 +925,7 @@ do ife = ife_min, ife_max
           VM_int = VM_int + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
           J2_int = J2_int + eta_T_ohm * (ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
         else
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
           D_ext = D_ext + (r0-rn0) * xjac * BigR * wst * delta_phi
           P_ext = P_ext + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
 #else
@@ -1045,13 +1039,13 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       zj0      = eq_g_1D(mp,var_Zj  ,ms) 
       r0       = eq_g_1D(mp,var_rho ,ms) 
       T0       = eq_g_1D(mp,var_T   ,ms) 
-#if (JOREK_MODEL > 299)
+#ifdef WITH_Vpar
       vpar0    = eq_g_1D(mp,var_vpar,ms)
 #else
       vpar0    = 0.d0
 #endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
       rn0      = eq_g_1D(mp,var_rhon,ms)
 #else
       rn0      = 0.d0 
@@ -1069,28 +1063,41 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       rho_s  = 0.d0; rho_t  = 0.d0;
       rhon_s = 0.d0; rhon_t = 0.d0;
       T_s    = 0.d0; T_t    = 0.d0;
+      Ti_s   = 0.d0; Ti_t   = 0.d0;
+      Te_s   = 0.d0; Te_t   = 0.d0;
       vpar_s = 0.d0; vpar_t = 0.d0; 
 
       do in = 1,n_tor
-        call interp(node_list,element_list,m_elm,1,in,sg,tg,PS,PS_s,PS_t,PS_st,PS_ss,PS_tt)
+        call interp(node_list,element_list,m_elm,var_psi,in,sg,tg,PS,PS_s,PS_t,PS_st,PS_ss,PS_tt)
         psi_s = psi_s + PS_s * HZ(in,mp)
         psi_t = psi_t + PS_t * HZ(in,mp)
 
-        call interp(node_list,element_list,m_elm,2,in,sg,tg,UU,UU_s,UU_t,UU_st,UU_ss,UU_tt)
+        call interp(node_list,element_list,m_elm,var_u,in,sg,tg,UU,UU_s,UU_t,UU_st,UU_ss,UU_tt)
         u_s   = u_s   + UU_s * HZ(in,mp)
         u_t   = u_t   + UU_t * HZ(in,mp)
         u_p   = u_p   + UU   * HZ_p(in,mp)
 
-        call interp(node_list,element_list,m_elm,5,in,sg,tg,RH,RH_s,RH_t,RH_st,RH_ss,RH_tt)
+        call interp(node_list,element_list,m_elm,var_rho,in,sg,tg,RH,RH_s,RH_t,RH_st,RH_ss,RH_tt)
         rho_s = rho_s + RH_s * HZ(in,mp)
         rho_t = rho_t + RH_t * HZ(in,mp)
 
-        call interp(node_list,element_list,m_elm,6,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+#ifdef WITH_TiTe
+        call interp(node_list,element_list,m_elm,var_Ti,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+        Ti_s = Ti_s + TT_s * HZ(in,mp)
+        Ti_t = Ti_t + TT_t * HZ(in,mp)
+        call interp(node_list,element_list,m_elm,var_Te,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+        Te_s = Te_s + TT_s * HZ(in,mp)
+        Te_t = Te_t + TT_t * HZ(in,mp)
+        T_s = Te_s + Ti_s
+        T_t = Te_t + Ti_t
+#else
+        call interp(node_list,element_list,m_elm,var_T,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
         T_s = T_s + TT_s * HZ(in,mp)
         T_t = T_t + TT_t * HZ(in,mp)
+#endif
 
-#if (JOREK_MODEL > 299)
-        call interp(node_list,element_list,m_elm,7,in,sg,tg,vp,vp_s,vp_t,vp_st,vp_ss,vp_tt)
+#ifdef WITH_Vpar
+        call interp(node_list,element_list,m_elm,var_Vpar,in,sg,tg,vp,vp_s,vp_t,vp_st,vp_ss,vp_tt)
         vpar_s = vpar_s + vp_s * HZ(in,mp)
         vpar_t = vpar_t + vp_t * HZ(in,mp)
 #else
@@ -1098,7 +1105,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         vpar_t = 0.d0
 #endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
         call interp(node_list,element_list,m_elm,8,in,sg,tg,rn,rn_s,rn_t,rn_st,rn_ss,rn_tt)
         rhon_s = rhon_s + rn_s * HZ(in,mp)
         rhon_t = rhon_t + rn_t * HZ(in,mp)
@@ -1258,7 +1265,7 @@ V_min                = varmin
 V_max                = varmax
 #endif /* NOMPIVERSION */
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 call MPI_AllReduce(local_radiation, total_radiation,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_E_ion, total_E_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_radiation_phi, total_radiation_phi,n_plane,&
@@ -1277,7 +1284,7 @@ if (use_pellet) then
 #endif /* NOMPIVERSION */
 endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 #ifndef NOMPIVERSION
   call MPI_AllReduce(local_n_particles_inj, total_n_particles_inj,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_AllReduce(local_n_particles, total_n_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -1340,7 +1347,7 @@ mag_source_tot       = n_period * mag_source_tot      * fact_flux
 volume               = n_period * volume
 area                 = n_period * area / (2.d0 * PI)
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 total_radiation     = n_period * total_radiation
 total_radiation_phi = n_period * total_radiation_phi
 total_E_ion         = n_period * total_E_ion
@@ -1642,11 +1649,8 @@ if (my_id .eq. 0) then
   write(*,'(A,20es14.6)')  ' sum ',xt,density_tot,pressure/1.d6,kin_par_tot/1.d6,kin_perp_tot/1.d6,mag_tot/1.d6, &
                                  Ohm_tot/1.d6,heating_in/1d6+heating_out/1.d6 ,source_in+source_out
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   write(*,'(A,4es14.6)')   ' Integrals_3D, MGI               : ', total_n_particles_inj, total_n_particles
-#endif
-
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
   write(*,'(A,1e14.6,A)') ' Radiation power          : ', total_radiation/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Ionization power         : ', total_E_ion/1.d6, ' [MW]'

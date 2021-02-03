@@ -27,7 +27,7 @@ real*8  :: psi_n, psi_star, delta_psi, sig_n, sigz, dprof1_dpsi, dprof1_dpsi2, d
 real*8  :: atn, datn, d2atn, d3atn, d4atn
 real*8  :: atn_z,   datn_z,   d2atn_z, d3atn_z, d4atn_z
 real*8  :: atn_z_u, datn_z_u, d2atn_z_u, d3atn_z_u, d4atn_z_u
-real*8  :: cosh1, sinh1, cosh2, sinh2, cosh3, cosh4, sinh4, cosh3_u, cosh4_u, sinh4_u
+real*8  :: cosh1, sinh1, cosh2, sinh2, cosh3, sinh3, cosh4, sinh4, cosh3_u, sinh3_u, cosh4_u, sinh4_u
 real*8  :: tanh1, tanh2, tanh2_u
 real*8  :: Ztan_pos
 ! for interpolating numerical profiles
@@ -129,6 +129,7 @@ if (xpoint2) then
     
     tanh2_u   = tanh(Z_star_u)
     cosh3_u   = cosh(Z_star_u)
+    sinh3_u   = sinh(Z_star_u)
     cosh4_u   = cosh(2.0*Z_star_u)
     sinh4_u   = sinh(2.0*Z_star_u)
     
@@ -136,7 +137,7 @@ if (xpoint2) then
     datn_z_u  = -0.5d0/cosh3_u**2 / sigz
     d2atn_z_u =  1.0d0/cosh3_u**2 / sigz**2 * tanh2_u
     d3atn_z_u = -1.0d0/cosh3_u**4 / sigz**3 * (-2.d0 + cosh4_u) 
-    d4atn_z_u =  4.0d0/cosh3_u**5 / sigz**4 * (-2.d0 + cosh4_u) &
+    d4atn_z_u = -4.0d0/cosh3_u**5 / sigz**4 * (-2.d0 + cosh4_u) * sinh3_u &
                 -1.0d0/cosh3_u**4 / sigz**4 * (-2.d0 * sinh4_u) 
   endif
   
@@ -154,6 +155,7 @@ if (xpoint2) then
 
     tanh2   = tanh(Z_star)
     cosh3   = cosh(Z_star)
+    sinh3   = sinh(Z_star)
     cosh4   = cosh(2.0*Z_star)
     sinh4   = sinh(2.0*Z_star)
       
@@ -161,7 +163,7 @@ if (xpoint2) then
     datn_z  =  0.5d0/cosh3**2 / sigz
     d2atn_z =  1.0d0/cosh3**2 / sigz**2 * tanh2
     d3atn_z = -1.0d0/cosh3**4 / sigz**3 * (-2.d0 + cosh4) 
-    d4atn_z =  4.0d0/cosh3**5 / sigz**4 * (-2.d0 + cosh4) &
+    d4atn_z = -4.0d0/cosh3**5 / sigz**4 * (-2.d0 + cosh4) * sinh3 &
               -1.0d0/cosh3**4 / sigz**4 * (-2.d0 * sinh4) 
   endif
   

@@ -30,11 +30,13 @@ type(type_element_list), intent(inout) :: element_list   !< list of elements wit
 real*8 :: acentre2, radius2
 real*8              :: si
 real*8, allocatable :: RR(:,:),ZZ(:,:),PSI(:,:)
-real*8              :: dt, ds, thtj, radius, rm, drm, drmt, drmtr, angle, psi_axis
-real*8              :: delta_rm, delta_zm, delta_rp, delta_zp, dir_2, dir_3
+real*8              :: dt, ds, thtj, radius
+real*8              :: rm, drm_r, drm_rr, FFpsi, dFFpsi_t, dFFpsi_tt, GGpsi, dGGpsi_t, dGGpsi_tt
+real*8              :: angle, psi_axis
+real*8              :: delta_rm, delta_zm, delta_rp, delta_zp, dir_2, dir_3, size_ratio
 integer             :: i, j, m, index, index0, node, k, iv, ivp, ivm, node_iv, node_ivp, node_ivm,i_sons
 integer             :: n_element_start, n_node_start, n_index_start
-real*8              :: abltg(3), dr_ds, dtht_dt
+real*8              :: abltg(3), dr_ds, dr2_ds, dr_ds2, dr2_ds2, dtht_dt, dtht_dt2
 real*8, allocatable :: S1(:), S2(:), SP1(:), SP2(:), SP3(:), SP4(:)
 real*8, allocatable :: T1(:), T2(:), TP1(:), TP2(:), TP3(:), TP4(:)
 real*8, external    :: spwert
@@ -42,9 +44,9 @@ logical             :: skip_update_neighbours
 logical             :: doing_polar_square
 
 
-call tr_allocate(RR,1,4,1,nr*np,"RR",CAT_GRID)
-call tr_allocate(ZZ,1,4,1,nr*np,"ZZ",CAT_GRID)
-call tr_allocate(PSI,1,4,1,nr*np,"PSI",CAT_GRID)
+call tr_allocate(RR,1,n_degrees,1,nr*np,"RR",CAT_GRID)
+call tr_allocate(ZZ,1,n_degrees,1,nr*np,"ZZ",CAT_GRID)
+call tr_allocate(PSI,1,n_degrees,1,nr*np,"PSI",CAT_GRID)
 
 dt = 2.d0*pi/real(np)
 ds = 1.d0/real(nr-1)
@@ -116,9 +118,12 @@ do i=1,nr
 
   si = spwert(nr,S1(i),SP1,SP2,SP3,SP4,S1,ABLTG)
 
-  radius = ( acentre2 + (1.d0-acentre2) * si )
-  radius2= si
-  dr_ds  = (1.d0-acentre2) * abltg(1)
+  radius  = ( acentre2 + (1.d0-acentre2) * si )
+  dr_ds   = (1.d0-acentre2) * abltg(1)
+  dr_ds2  = (1.d0-acentre2) * abltg(2)
+  radius2 = si
+  dr2_ds  = abltg(1)
+  dr2_ds2 = abltg(2)
   
   do  j=1,np
   
@@ -126,65 +131,177 @@ do i=1,nr
 
     thtj     = angle_start + spwert(np+1,T1(j),TP1,TP2,TP3,TP4,T1,ABLTG) * 2.d0 * PI
     dtht_dt  = abltg(1)
+    dtht_dt2 = abltg(2)
     
-    RR(1,node) = Rgeo + amin * radius * fbnd(1) * cos(thtj) / 2.d0
-    RR(2,node) =        amin *          fbnd(1) * cos(thtj) / 2.d0
-    RR(3,node) =      - amin * radius * fbnd(1) * sin(thtj) / 2.d0
-    RR(4,node) =      - amin          * fbnd(1) * sin(thtj) / 2.d0
-    ZZ(1,node) = Zgeo + amin * radius * fbnd(1) * sin(thtj) / 2.d0
-    ZZ(2,node) =        amin *          fbnd(1) * sin(thtj) / 2.d0
-    ZZ(3,node) =        amin * radius * fbnd(1) * cos(thtj) / 2.d0
-    ZZ(4,node) =        amin *          fbnd(1) * cos(thtj) / 2.d0
+    rm     = radius
+    drm_r  = dr_ds
+    drm_rr = dr_ds2
 
-    PSI(1,node) =        radius**8 * fpsi(1) / 2.d0 + psi_axis*(1.d0 - radius**2)
-    PSI(2,node) =  8.d0* radius**7 * fpsi(1) / 2.d0 - psi_axis*2.d0* radius
-    PSI(3,node) =  0.d0
-    PSI(4,node) =  0.d0
+    ! --- R for first harmonic
+    FFpsi     =   fbnd(1) * cos(thtj) / 2.d0
+    dFFpsi_t  = - fbnd(1) * sin(thtj) / 2.d0 * dtht_dt
+    dFFpsi_tt = - fbnd(1) * sin(thtj) / 2.d0 * dtht_dt2 - fbnd(1) * cos(thtj) / 2.d0 * dtht_dt**2
+
+    RR(1,node)   = Rgeo + amin * rm     * FFpsi
+    RR(2,node)   =        amin * drm_r  * FFpsi
+    RR(3,node)   =        amin * rm     * dFFpsi_t
+    RR(4,node)   =        amin * drm_r  * dFFpsi_t
+    if (n_order .eq. 5) then
+      RR(5,node) =        amin * drm_rr * FFpsi
+      RR(6,node) =        amin * rm     * dFFpsi_tt
+      RR(7,node) =        amin * drm_rr * dFFpsi_t
+      RR(8,node) =        amin * drm_r  * dFFpsi_tt
+      RR(9,node) =        amin * drm_rr * dFFpsi_tt
+    endif
+
+    FFpsi     = fbnd(1) * sin(thtj) / 2.d0
+    dFFpsi_t  = fbnd(1) * cos(thtj) / 2.d0 * dtht_dt
+    dFFpsi_tt = fbnd(1) * cos(thtj) / 2.d0 * dtht_dt2 - fbnd(1) * sin(thtj) / 2.d0 * dtht_dt**2
+
+    ! --- Z for first harmonic
+    ZZ(1,node)   = Zgeo + amin * rm     * FFpsi
+    ZZ(2,node)   =        amin * drm_r  * FFpsi
+    ZZ(3,node)   =        amin * rm     * dFFpsi_t
+    ZZ(4,node)   =        amin * drm_r  * dFFpsi_t
+    if (n_order .eq. 5) then
+      ZZ(5,node) =        amin * drm_rr * FFpsi
+      ZZ(6,node) =        amin * rm     * dFFpsi_tt
+      ZZ(7,node) =        amin * drm_rr * dFFpsi_t
+      ZZ(8,node) =        amin * drm_r  * dFFpsi_tt
+      ZZ(9,node) =        amin * drm_rr * dFFpsi_tt
+    endif
+
+    ! --- PSI for first harmonic
+    rm     =             radius**8 * fpsi(1) / 2.d0 + psi_axis*(1.d0 - radius**2)
+    drm_r  = (8.d0     * radius**7 * fpsi(1) / 2.d0 - psi_axis* 2.d0 * radius   ) * dr_ds
+    drm_rr = (8.d0     * radius**7 * fpsi(1) / 2.d0 - psi_axis* 2.d0 * radius   ) * dr_ds2 &
+            +(8.d0*7.d0* radius**6 * fpsi(1) / 2.d0 - psi_axis* 2.d0            ) * dr_ds**2
+
+    PSI(1,node)   = rm
+    PSI(2,node)   = drm_r
+    PSI(3,node)   = 0.d0
+    PSI(4,node)   = 0.d0
+    if (n_order .eq. 5) then
+      PSI(5,node) = drm_rr
+      PSI(6,node) = 0.d0
+      PSI(7,node) = 0.d0
+      PSI(8,node) = 0.d0
+      PSI(9,node) = 0.d0
+    endif
 
 !   write(*,'(A,2i6,12e16.8)') ' PSI(1,node) : ', node,1,PSI(1,node),radius,thtj,fpsi(1),fpsi(2)
 
     do m = 2, mf/2
 
       if (m .eq. 2) then
-        rm   = radius2 * ( fbnd(2*M-1) * cos((M-1)*THTJ)           + fbnd(2*M) * sin((M-1)*THTJ) )
-        drm  =           ( fbnd(2*M-1) * cos((M-1)*THTJ)           + fbnd(2*M) * sin((M-1)*THTJ) )
-        drmt = radius2 * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ)     + fbnd(2*M) * (M-1)*cos((M-1)*THTJ))
-        drmtr=           (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ)     + fbnd(2*M) * (M-1)*cos((M-1)*THTJ))
+        rm     = radius2
+        drm_r  = dr2_ds
+        drm_rr = dr2_ds2
       else
-        rm   =      radius2**(M-1) * ( fbnd(2*M-1) * cos((M-1)*THTJ)       + fbnd(2*M) * sin((M-1)*THTJ) )
-        drm  =(M-1)*radius2**(M-2) * ( fbnd(2*M-1) * cos((M-1)*THTJ)       + fbnd(2*M) * sin((M-1)*THTJ) )
-        drmt =      radius2**(M-1) * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ) + fbnd(2*M) *(M-1)*cos((M-1)*THTJ))
-        drmtr=(M-1)*radius2**(M-2) * (-fbnd(2*M-1) * (M-1)*sin((M-1)*THTJ) + fbnd(2*M) *(M-1)*cos((M-1)*THTJ))
+        rm     =             radius2**(m-1)
+        drm_r  = (m-1)      *radius2**(m-2) * dr2_ds
+        drm_rr = (m-1)      *radius2**(m-2) * dr2_ds2 &
+                +(m-1)*(m-2)*radius2**(m-3) * dr2_ds**2
       endif
-      RR(1,node) = RR(1,node) + amin * rm  * cos(thtj)
-      ZZ(1,node) = ZZ(1,node) + amin * rm  * sin(thtj)
-      RR(2,node) = RR(2,node) + amin * drm * cos(thtj)
-      ZZ(2,node) = ZZ(2,node) + amin * drm * sin(thtj)
-      RR(3,node) = RR(3,node) - amin * rm  * sin(thtj) + amin * drmt  * cos(thtj)
-      ZZ(3,node) = ZZ(3,node) + amin * rm  * cos(thtj) + amin * drmt  * sin(thtj)
-      RR(4,node) = RR(4,node) - amin * drm * sin(thtj) + amin * drmtr * cos(thtj)
-      ZZ(4,node) = ZZ(4,node) + amin * drm * cos(thtj) + amin * drmtr * sin(thtj) 
 
-      PSI(1,node) = PSI(1,node) + radius**8              * (   fpsi(2*m-1) *            cos((m-1)*thtj)       &
-                                                             + fpsi(2*m)   *            sin((m-1)*thtj) )
-      PSI(2,node) = PSI(2,node) + 8.d0 * radius**7 * drm * (   fpsi(2*m-1) *            cos((m-1)*thtj)       &
-                                                             + fpsi(2*m)   *            sin((m-1)*thtj) )
-      PSI(3,node) = PSI(3,node) + radius**8              * ( - fpsi(2*m-1) * float(m-1)*sin((m-1)*thtj)       &
-                                                             + fpsi(2*m)   * float(m-1)*cos((m-1)*thtj) )
-      PSI(4,node) = PSI(4,node) + 8.d0 * radius**7 * drm * ( - fpsi(2*m-1) * float(m-1)*sin((m-1)*thtj)       &
-                                                             + fpsi(2*m)   * float(m-1)*cos((m-1)*thtj) )
+      FFpsi     = ( fbnd(2*m-1)           *cos((m-1)*thtj) + fbnd(2*m)          *sin((m-1)*thtj) )
+      dFFpsi_t  = (-fbnd(2*m-1) * (m-1)   *sin((m-1)*thtj) + fbnd(2*m) *(m-1)   *cos((m-1)*thtj) ) * dtht_dt
+      dFFpsi_tt = (-fbnd(2*m-1) * (m-1)   *sin((m-1)*thtj) + fbnd(2*m) *(m-1)   *cos((m-1)*thtj) ) * dtht_dt2 &
+                 +(-fbnd(2*m-1) * (m-1)**2*cos((m-1)*thtj) - fbnd(2*m) *(m-1)**2*sin((m-1)*thtj) ) * dtht_dt**2
+
+      ! --- R for higher harmonics
+      GGpsi     = FFpsi     * cos(thtj)
+      dGGpsi_t  = dFFpsi_t  * cos(thtj) - FFpsi * sin(thtj) * dtht_dt
+      dGGpsi_tt = dFFpsi_tt * cos(thtj) - 2.0 * dFFpsi_t * sin(thtj) * dtht_dt &
+                 - FFpsi * cos(thtj) * dtht_dt**2 - FFpsi * sin(thtj) * dtht_dt2
+
+      RR(1,node)   = RR(1,node) + amin * rm     *  GGpsi
+      RR(2,node)   = RR(2,node) + amin * drm_r  *  GGpsi
+      RR(3,node)   = RR(3,node) + amin * rm     * dGGpsi_t
+      RR(4,node)   = RR(4,node) + amin * drm_r  * dGGpsi_t
+      if (n_order .eq. 5) then
+        RR(5,node) = RR(5,node) + amin * drm_rr *  GGpsi
+        RR(6,node) = RR(6,node) + amin * rm     * dGGpsi_tt
+        RR(7,node) = RR(7,node) + amin * drm_rr * dGGpsi_t
+        RR(8,node) = RR(8,node) + amin * drm_r  * dGGpsi_tt
+        RR(9,node) = RR(9,node) + amin * drm_rr * dGGpsi_tt
+      endif
+
+      ! --- Z for higher harmonics
+      GGpsi     = FFpsi     * sin(thtj)
+      dGGpsi_t  = dFFpsi_t  * sin(thtj) + FFpsi * cos(thtj) * dtht_dt
+      dGGpsi_tt = dFFpsi_tt * sin(thtj) + 2.0 * dFFpsi_t * cos(thtj) * dtht_dt &
+                 - FFpsi * sin(thtj) * dtht_dt**2 + FFpsi * cos(thtj) * dtht_dt2
+
+      ZZ(1,node)   = ZZ(1,node) + amin * rm     *  GGpsi
+      ZZ(2,node)   = ZZ(2,node) + amin * drm_r  *  GGpsi
+      ZZ(3,node)   = ZZ(3,node) + amin * rm     * dGGpsi_t
+      ZZ(4,node)   = ZZ(4,node) + amin * drm_r  * dGGpsi_t
+      if (n_order .eq. 5) then                              
+        ZZ(5,node) = ZZ(5,node) + amin * drm_rr *  GGpsi
+        ZZ(6,node) = ZZ(6,node) + amin * rm     * dGGpsi_tt
+        ZZ(7,node) = ZZ(7,node) + amin * drm_rr * dGGpsi_t
+        ZZ(8,node) = ZZ(8,node) + amin * drm_r  * dGGpsi_tt
+        ZZ(9,node) = ZZ(9,node) + amin * drm_rr * dGGpsi_tt
+      endif
+
+      ! --- PSI for higher harmonics
+      rm     =               radius**8
+      drm_r  = 8.d0        * radius**7 * dr_ds
+      drm_rr = 8.d0        * radius**7 * dr_ds2 &
+              +8.d0 * 7.d0 * radius**6 * dr_ds**2
+
+      FFpsi     =   fpsi(2*m-1)                *cos((m-1)*thtj) + fpsi(2*m)                *sin((m-1)*thtj)
+      dFFpsi_t  = - fpsi(2*m-1) * float(m-1)   *sin((m-1)*thtj) + fpsi(2*m) * float(m-1)   *cos((m-1)*thtj)
+      dFFpsi_tt = - fpsi(2*m-1) * float(m-1)**2*cos((m-1)*thtj) - fpsi(2*m) * float(m-1)**2*sin((m-1)*thtj)
+
+      PSI(1,node)   = PSI(1,node) + rm     *  FFpsi
+      PSI(2,node)   = PSI(2,node) + drm_r  *  FFpsi
+      PSI(3,node)   = PSI(3,node) + rm     * dFFpsi_t
+      PSI(4,node)   = PSI(4,node) + drm_r  * dFFpsi_t
+      if (n_order .eq. 5) then
+        PSI(5,node) = PSI(5,node) + drm_rr *  FFpsi
+        PSI(6,node) = PSI(6,node) + rm     * dFFpsi_tt
+        PSI(7,node) = PSI(7,node) + drm_rr * dFFpsi_t
+        PSI(8,node) = PSI(8,node) + drm_r  * dFFpsi_tt
+        PSI(9,node) = PSI(9,node) + drm_rr * dFFpsi_tt
+      endif
 
     enddo
 
-    RR(2,node)  = RR(2,node)  * ds/2.d0 * dr_ds
-    RR(3,node)  = RR(3,node)  * dt/2.d0 * dtht_dt
-    RR(4,node)  = RR(4,node)  * ds/2.d0 * dt/2.d0 * dr_ds * dtht_dt
-    ZZ(2,node)  = ZZ(2,node)  * ds/2.d0 * dr_ds
-    ZZ(3,node)  = ZZ(3,node)  * dt/2.d0 * dtht_dt
-    ZZ(4,node)  = ZZ(4,node)  * ds/2.d0 * dt/2.d0 * dr_ds * dtht_dt
-    PSI(2,node) = PSI(2,node) * ds/2.d0 * dr_ds
-    PSI(3,node) = PSI(3,node) * dt/2.d0 * dtht_dt
-    PSI(4,node) = PSI(4,node) * ds/2.d0 * dt/2.d0 * dr_ds * dtht_dt
+    ! --- Include ds and dt for all derivatives
+    RR(2,node)   = RR(2,node) * ds/2.d0
+    RR(3,node)   = RR(3,node) * dt/2.d0
+    RR(4,node)   = RR(4,node) * ds/2.d0 * dt/2.d0
+    if (n_order .eq. 5) then
+      RR(5,node) = RR(5,node) * ds/2.d0 * ds/2.d0
+      RR(6,node) = RR(6,node) * dt/2.d0 * dt/2.d0
+      RR(7,node) = RR(7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
+      RR(8,node) = RR(8,node) * ds/2.d0 * dt/2.d0 * dt/2.d0
+      RR(9,node) = RR(9,node) * ds/2.d0 * ds/2.d0 * dt/2.d0 * dt/2.d0
+    endif
+
+    ZZ(2,node)   = ZZ(2,node) * ds/2.d0
+    ZZ(3,node)   = ZZ(3,node) * dt/2.d0
+    ZZ(4,node)   = ZZ(4,node) * ds/2.d0 * dt/2.d0
+    if (n_order .eq. 5) then
+      ZZ(5,node) = ZZ(5,node) * ds/2.d0 * ds/2.d0
+      ZZ(6,node) = ZZ(6,node) * dt/2.d0 * dt/2.d0
+      ZZ(7,node) = ZZ(7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
+      ZZ(8,node) = ZZ(8,node) * ds/2.d0 * dt/2.d0 * dt/2.d0
+      ZZ(9,node) = ZZ(9,node) * ds/2.d0 * ds/2.d0 * dt/2.d0 * dt/2.d0
+    endif
+
+    PSI(2,node)   = PSI(2,node) * ds/2.d0
+    PSI(3,node)   = PSI(3,node) * dt/2.d0
+    PSI(4,node)   = PSI(4,node) * ds/2.d0 * dt/2.d0
+    if (n_order .eq. 5) then
+      PSI(5,node) = PSI(5,node) * ds/2.d0 * ds/2.d0
+      PSI(6,node) = PSI(6,node) * dt/2.d0 * dt/2.d0
+      PSI(7,node) = PSI(7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
+      PSI(8,node) = PSI(8,node) * ds/2.d0 * dt/2.d0 * dt/2.d0
+      PSI(9,node) = PSI(9,node) * ds/2.d0 * ds/2.d0 * dt/2.d0 * dt/2.d0
+    endif
 
   enddo
 enddo
@@ -279,21 +396,44 @@ do i=1,nr
    index0 = np*(i-1) + j
    index  = n_node_start + np*(i-1) + j
 
+   ! --- Note: factor 2.0 is because of derivatives ds/2 and dt/2 above
+   size_ratio = 2.d0/float(n_order)
+
    node_list%node(index)%X(1,1,1)        = RR(1,index0)
-   node_list%node(index)%X(1,1,2)        = ZZ(1,index0)
-   node_list%node(index)%values(1,1,1) = PSI(1,index0)
+   node_list%node(index)%X(1,2,1)        = RR(2,index0)  * size_ratio
+   node_list%node(index)%X(1,3,1)        = RR(3,index0)  * size_ratio
+   node_list%node(index)%X(1,4,1)        = RR(4,index0)  * size_ratio**2
+   if (n_order .eq. 5) then                              
+     node_list%node(index)%X(1,5,1)      = RR(5,index0)  * size_ratio**2
+     node_list%node(index)%X(1,6,1)      = RR(6,index0)  * size_ratio**2
+     node_list%node(index)%X(1,7,1)      = RR(7,index0)  * size_ratio**3 - RR(3,index0)  * size_ratio
+     node_list%node(index)%X(1,8,1)      = RR(8,index0)  * size_ratio**3 - RR(2,index0)  * size_ratio
+     node_list%node(index)%X(1,9,1)      = RR(9,index0)  * size_ratio**4 - RR(5,index0)  * size_ratio**2 - RR(6,index0) * size_ratio**2
+   endif                                                 
+                                                         
+   node_list%node(index)%X(1,1,2)        = ZZ(1,index0) 
+   node_list%node(index)%X(1,2,2)        = ZZ(2,index0)  * size_ratio
+   node_list%node(index)%X(1,3,2)        = ZZ(3,index0)  * size_ratio
+   node_list%node(index)%X(1,4,2)        = ZZ(4,index0)  * size_ratio**2
+   if (n_order .eq. 5) then                              
+     node_list%node(index)%X(1,5,2)      = ZZ(5,index0)  * size_ratio**2
+     node_list%node(index)%X(1,6,2)      = ZZ(6,index0)  * size_ratio**2
+     node_list%node(index)%X(1,7,2)      = ZZ(7,index0)  * size_ratio**3 - ZZ(3,index0)  * size_ratio
+     node_list%node(index)%X(1,8,2)      = ZZ(8,index0)  * size_ratio**3 - ZZ(2,index0)  * size_ratio
+     node_list%node(index)%X(1,9,2)      = ZZ(9,index0)  * size_ratio**4 - ZZ(5,index0)  * size_ratio**2 - ZZ(6,index0) * size_ratio**2
+   endif
 
-   node_list%node(index)%X(1,2,1)        = RR(2,index0)  * 2.d0/3.d0
-   node_list%node(index)%X(1,2,2)        = ZZ(2,index0)  * 2.d0/3.d0
-   node_list%node(index)%values(1,2,1) = PSI(2,index0) * 2.d0/3.d0
-
-   node_list%node(index)%X(1,3,1)        = RR(3,index0)  * 2.d0/3.d0
-   node_list%node(index)%X(1,3,2)        = ZZ(3,index0)  * 2.d0/3.d0
-   node_list%node(index)%values(1,3,1) = PSI(3,index0) * 2.d0/3.d0
-
-   node_list%node(index)%X(1,4,1)        = RR(4,index0)  * 4.d0/9.d0
-   node_list%node(index)%X(1,4,2)        = ZZ(4,index0)  * 4.d0/9.d0
-   node_list%node(index)%values(1,4,1) = PSI(4,index0) * 4.d0/9.d0
+   node_list%node(index)%values(1,1,1)   = PSI(1,index0)
+   node_list%node(index)%values(1,2,1)   = PSI(2,index0) * size_ratio
+   node_list%node(index)%values(1,3,1)   = PSI(3,index0) * size_ratio
+   node_list%node(index)%values(1,4,1)   = PSI(4,index0) * size_ratio**2
+   if (n_order .eq. 5) then
+     node_list%node(index)%values(1,5,1) = PSI(5,index0) * size_ratio**2
+     node_list%node(index)%values(1,6,1) = PSI(6,index0) * size_ratio**2
+     node_list%node(index)%values(1,7,1) = PSI(7,index0) * size_ratio**3 - PSI(3,index0) * size_ratio
+     node_list%node(index)%values(1,8,1) = PSI(8,index0) * size_ratio**3 - PSI(2,index0) * size_ratio
+     node_list%node(index)%values(1,9,1) = PSI(9,index0) * size_ratio**4 - PSI(5,index0) * size_ratio**2 - PSI(6,index0) * size_ratio**2
+   endif
 
    node_list%node(index)%boundary = 0
    if (i .eq. nr) node_list%node(index)%boundary = 2
@@ -307,9 +447,9 @@ do i=1,nr
 
      if (j.eq.1) n_index_start = n_index_start + 1
 
-     node_list%node(index)%index(2) = n_index_start + 1
-     node_list%node(index)%index(3) = n_index_start + 2
-     node_list%node(index)%index(4) = n_index_start + 3
+     do k=2,n_degrees
+       node_list%node(index)%index(k) = n_index_start + k-1
+     enddo
      n_index_start = n_index_start +n_degrees-1
 
    else
@@ -374,11 +514,24 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
    element_list%element(k)%size(iv,2) = dir_2
    element_list%element(k)%size(iv,3) = dir_3
    element_list%element(k)%size(iv,4) = element_list%element(k)%size(iv,2) * element_list%element(k)%size(iv,3)
+   if (n_order .eq. 5) then
+     element_list%element(k)%size(iv,5) = 1.d0
+     element_list%element(k)%size(iv,6) = 1.d0
+     element_list%element(k)%size(iv,7) = -dir_3
+     element_list%element(k)%size(iv,8) = -dir_2
+     element_list%element(k)%size(iv,9) = element_list%element(k)%size(iv,5) * element_list%element(k)%size(iv,6)
+   endif
    if (fix_axis_nodes) then
       j = element_list%element(k)%vertex(iv)
       if (node_list%node(j)%axis_node) then
         element_list%element(k)%size(iv,3) = 0.d0
         element_list%element(k)%size(iv,4) = 0.d0
+        if (n_order .eq. 5) then
+          element_list%element(k)%size(iv,6) = 0.d0
+          element_list%element(k)%size(iv,7) = 0.d0
+          element_list%element(k)%size(iv,8) = 0.d0
+          element_list%element(k)%size(iv,9) = 0.d0
+        endif
       endif
    endif
 
@@ -394,10 +547,13 @@ enddo
 
 if ( .not. skip_update_neighbours ) call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 
-if (n_order .eq. 5) call transform_to_bi_quintic(node_list,element_list)
+!if (n_order .eq. 5) call transform_to_bi_quintic(node_list,element_list)
 
 return
 end subroutine grid_polar_bezier
+
+
+
 
 
 
@@ -432,7 +588,7 @@ type(type_element_list), intent(inout) :: element_list   !< list of elements wit
 integer, allocatable          :: n_parents(:)         ! for each node, want the number of parent elements
 integer, allocatable          :: node_parents(:,:)    ! for each node, want to know the 4 parent elements
 integer, allocatable          :: parent_elm_node(:,:) ! for each node, want to know the corresonding vertex for the 4 parent elements
-integer                       :: i_node, i_elm, i_vertex, i
+integer                       :: i_node, i_elm, i_vertex, i_vertex1, i_vertex2, i
 integer                       :: i_node_u, i_node_v
 integer                       :: index
 real*8                        :: size_u_min, size_v_min
@@ -475,6 +631,13 @@ do i_node = 1, node_list%n_nodes
 enddo
 
 
+! --- For cubic elements, we scale by 1/3, for quintic elements, by 1/5
+scale_uv = 0.2
+! scale by 1/10 of the element side?
+scale_ij = 0.001 !1.0
+! scale by 1/10 of the element side?
+scale_wk = 0.0
+  
 
 ! --- Redefine all vectors at each node
 do i_node = 1, node_list%n_nodes
@@ -489,13 +652,6 @@ do i_node = 1, node_list%n_nodes
 
   ! --- We must freeze the u/v vector sizes, which means we 
   ! --- must make sure the vector size is based on the smallest element
-  
-  ! scale by 1/3 of the element side?
-  scale_uv = 0.3
-  ! scale by 1/10 of the element side?
-  scale_ij = 0.5
-  ! scale by 1/10 of the element side?
-  scale_wk = 0.0
   
   ! --- Loop over each parent element and get minimal size
   size_u_min = 1.d15
@@ -522,7 +678,6 @@ do i_node = 1, node_list%n_nodes
   enddo
   if (size_u_min .eq. 1.d15) size_u_min = 0.d0 
   if (size_v_min .eq. 1.d15) size_v_min = 0.d0 
-
   
   ! --- Set the direction u and v
   ! --- Positive direction of u is always from node-(1->2) === (4->3)
@@ -618,6 +773,8 @@ do i_node = 1, node_list%n_nodes
     element_list%element(i_elm)%size(i_vertex,4) = element_list%element(i_elm)%size(i_vertex,2) * element_list%element(i_elm)%size(i_vertex,3)
   enddo
 
+enddo
+
 
 ! VECTORS i AND j NEED TO DETERMINE THE CURVATURE! THEY NEED TO BE SET DEPENDING ON ELEMENT SHAPE!!!
 ! VECTORS i AND j NEED TO DETERMINE THE CURVATURE! THEY NEED TO BE SET DEPENDING ON ELEMENT SHAPE!!!
@@ -630,6 +787,8 @@ do i_node = 1, node_list%n_nodes
 ! VECTORS i AND j NEED TO DETERMINE THE CURVATURE! THEY NEED TO BE SET DEPENDING ON ELEMENT SHAPE!!!
 ! VECTORS i AND j NEED TO DETERMINE THE CURVATURE! THEY NEED TO BE SET DEPENDING ON ELEMENT SHAPE!!!
 
+! --- After definition of u,v,w, we are ready for i and j.
+do i_node = 1, node_list%n_nodes
   
   ! ------------
   ! --- Vector i
@@ -647,6 +806,35 @@ do i_node = 1, node_list%n_nodes
   ! --- SIZE CONDITION: h_i must be the same on all parent nodes
   i_elm = node_parents(1,i_node)
   size_tmp = 0.5 * ( abs(element_list%element(i_elm)%size(1,2)) + abs(element_list%element(i_elm)%size(1,3)) )
+
+  ! --- METHOD: Assume curvature in the middle of edge is 0.5(curv_00+curv_05) 
+  ! --- Find the next node
+  i = n_parents(1)
+  i_elm = node_parents(i,i_node)
+  if (parent_elm_node(i,i_node) .eq. 1) then
+    i_vertex1 = 1 ; i_vertex2 = 2
+    i_node_u = element_list%element(i_elm)%vertex(2)
+  elseif (parent_elm_node(i,i_node) .eq. 2) then
+    i_vertex1 = 2 ; i_vertex2 = 1
+    i_node_u = element_list%element(i_elm)%vertex(1)
+  elseif (parent_elm_node(i,i_node) .eq. 3) then
+    i_vertex1 = 3 ; i_vertex2 = 4
+    i_node_u = element_list%element(i_elm)%vertex(4)
+  elseif (parent_elm_node(i,i_node) .eq. 4) then
+    i_vertex1 = 4 ; i_vertex2 = 3
+    i_node_u = element_list%element(i_elm)%vertex(3)
+  endif
+  ! --- Formulation: h_i*\vec{i} = -0.25 * ( h_00^u*\vec{u}_00 + h_50^u*\vec{u}_50 )
+  point1(1) = -0.25 * ( element_list%element(i_elm)%size(i_vertex1,2)*node_list%node(i_node  )%x(1,2,1) &
+                       +element_list%element(i_elm)%size(i_vertex2,2)*node_list%node(i_node_u)%x(1,2,1) )
+  point1(2) = -0.25 * ( element_list%element(i_elm)%size(i_vertex1,2)*node_list%node(i_node  )%x(1,2,2) &
+                       +element_list%element(i_elm)%size(i_vertex2,2)*node_list%node(i_node_u)%x(1,2,2) )
+  point2(1) = 0.d0 ; point2(2) = 0.d0
+  distance1 = distance_points(point1,point2)
+  node_list%node(i_node)%X(1,5,1) = point1(1)
+  node_list%node(i_node)%X(1,5,2) = point1(2)
+  call normalise_vector(node_list,i_node,5)
+  size_tmp = distance1
   do i = 1,n_parents(i_node)
     i_elm    = node_parents(i,i_node)
     i_vertex = parent_elm_node(i,i_node)
@@ -658,28 +846,35 @@ do i_node = 1, node_list%n_nodes
   ! --- Vector j
   ! ------------
   
-  ! --- Exactly the same as i
-  ! --- Note, the sizes don't need to be the same as that of the i-vector
-  ! --- But since it doesn't matter, that's what we choose...
-  
-  ! --- Vector definition
-  !node_list%node(i_node)%X(1,6,1) = 0.d0 !node_list%node(i_node)%X(1,2,1) + node_list%node(i_node)%X(1,3,1)
-  !node_list%node(i_node)%X(1,6,2) = 0.d0 !node_list%node(i_node)%X(1,2,2) + node_list%node(i_node)%X(1,3,2)
-  ! --- compare size of side with distance from tip of vector v
-  point1(1) = R_geo
-  point1(2) = Z_geo
-  distance1 = distance_node_point(node_list,i_node,point1)
-  point2(1) = node_list%node(i_node)%X(1,1,1) + node_list%node(i_node)%X(1,2,1) ! tip of vector u
-  point2(2) = node_list%node(i_node)%X(1,1,2) + node_list%node(i_node)%X(1,2,2) ! tip of vector u
-  distance2 = distance_points(node_list,point1,point2)
-  ! --- reverse vector v if needed
-  direction = 1.d0
-  if (distance2 .gt. distance1) direction = -1.d0
-  node_list%node(i_node)%X(1,6,1) = direction * node_list%node(i_node)%X(1,2,1)
-  node_list%node(i_node)%X(1,6,2) = direction * node_list%node(i_node)%X(1,2,2)
+  ! --- METHOD: Assume curvature in the middle of edge is 0.5(curv_00+curv_05) 
+  ! --- Find the next node
+  i = n_parents(1)
+  i_elm = node_parents(i,i_node)
+  if (parent_elm_node(i,i_node) .eq. 1) then
+    i_vertex1 = 1 ; i_vertex2 = 4
+    i_node_v = element_list%element(i_elm)%vertex(4)
+  elseif (parent_elm_node(i,i_node) .eq. 2) then
+    i_vertex1 = 2 ; i_vertex2 = 3
+    i_node_v = element_list%element(i_elm)%vertex(3)
+  elseif (parent_elm_node(i,i_node) .eq. 3) then
+    i_vertex1 = 3 ; i_vertex2 = 2
+    i_node_v = element_list%element(i_elm)%vertex(2)
+  elseif (parent_elm_node(i,i_node) .eq. 4) then
+    i_vertex1 = 4 ; i_vertex2 = 1
+    i_node_v = element_list%element(i_elm)%vertex(1)
+  endif
+  ! --- Formulation: h_j*\vec{j} = -0.25 * ( h_00^v*\vec{v}_00 + h_05^v*\vec{v}_05 )
+  point1(1) = -0.25 * ( element_list%element(i_elm)%size(i_vertex1,3)*node_list%node(i_node  )%x(1,3,1) &
+                       +element_list%element(i_elm)%size(i_vertex2,3)*node_list%node(i_node_v)%x(1,3,1) )
+  point1(2) = -0.25 * ( element_list%element(i_elm)%size(i_vertex1,3)*node_list%node(i_node  )%x(1,3,2) &
+                       +element_list%element(i_elm)%size(i_vertex2,3)*node_list%node(i_node_v)%x(1,3,2) )
+  point2(1) = 0.d0 ; point2(2) = 0.d0
+  distance1 = distance_points(point1,point2)
+  node_list%node(i_node)%X(1,6,1) = element_list%element(i_elm)%size(i_vertex1,2) * node_list%node(i_node)%X(1,2,1) !point1(1)
+  node_list%node(i_node)%X(1,6,2) = element_list%element(i_elm)%size(i_vertex1,2) * node_list%node(i_node)%X(1,2,2) !point1(2)
+  call normalise_vector(node_list,i_node,6)
   ! --- SIZE CONDITION: h_j must be the same on all parent nodes
-  i_elm = node_parents(1,i_node)
-  size_tmp = 0.5 * ( abs(element_list%element(i_elm)%size(1,2)) + abs(element_list%element(i_elm)%size(1,3)) )
+  size_tmp = distance1
   do i = 1,n_parents(i_node)
     i_elm    = node_parents(i,i_node)
     i_vertex = parent_elm_node(i,i_node)
@@ -735,11 +930,11 @@ do i_node = 1, node_list%n_nodes
   ! --- Vector definition
   node_list%node(i_node)%X(1,9,1) = node_list%node(i_node)%X(1,4,1)
   node_list%node(i_node)%X(1,9,2) = node_list%node(i_node)%X(1,4,2)
-  ! --- SIZE CONDITION: h_k = (h_u*h_v)**2 = h_w**2
+  ! --- SIZE CONDITION: h_k = h_i*h_j       ! OLD: (h_u*h_v)**2 = h_w**2
   do i = 1,n_parents(i_node)
     i_elm    = node_parents(i,i_node)
     i_vertex = parent_elm_node(i,i_node)
-    element_list%element(i_elm)%size(i_vertex,9) = element_list%element(i_elm)%size(i_vertex,4)**2.0
+    element_list%element(i_elm)%size(i_vertex,9) = element_list%element(i_elm)%size(i_vertex,5) *  element_list%element(i_elm)%size(i_vertex,6)
   enddo
 
   ! --- IMPORTANT NOTE: We assume that "force_central_node" is used

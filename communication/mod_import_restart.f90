@@ -823,6 +823,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   integer,     allocatable :: t_vertex(:,:)
   integer,     allocatable :: t_neighbours(:,:)
   real(RKIND), allocatable :: t_size(:,:,:)
+  character,   allocatable :: t_axis_element(:)
   integer,     allocatable :: t_father(:)
   integer,     allocatable :: t_n_sons(:)
   integer,     allocatable :: t_n_gen(:)
@@ -994,6 +995,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_allocate(t_vertex,      1,element_list%n_elements,1,n_vertex_max,             "vertex",CAT_UNKNOWN)
   call tr_allocate(t_neighbours,  1,element_list%n_elements,1,n_vertex_max,             "neighbours",CAT_UNKNOWN)
   call tr_allocate(t_size,        1,element_list%n_elements,1,n_vertex_max,1,n_order+1, "size",CAT_UNKNOWN)
+  call tr_allocate(t_axis_element,1,element_list%n_elements,                            "axis_element",  CAT_UNKNOWN)
   call tr_allocate(t_father,      1,element_list%n_elements,                            "father",CAT_UNKNOWN)
   call tr_allocate(t_n_sons,      1,element_list%n_elements,                            "n_sons",CAT_UNKNOWN)
   call tr_allocate(t_n_gen,       1,element_list%n_elements,                            "n_gen",CAT_UNKNOWN)
@@ -1103,6 +1105,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_array2D_reading_int(file_id,t_vertex,      'vertex')
   call HDF5_array2D_reading_int(file_id,t_neighbours,  'neighbours')
   call HDF5_array3D_reading    (file_id,t_size,        'size')
+  call HDF5_array1D_reading_char(file_id,t_axis_element,   'axis_element')
   call HDF5_array1D_reading_int(file_id,t_father,      'father')
   call HDF5_array1D_reading_int(file_id,t_n_sons,      'n_sons')
   call HDF5_array1D_reading_int(file_id,t_n_gen,       'n_gen')
@@ -1114,6 +1117,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     element_list%element(i)%vertex	 = t_vertex(i,:)
     element_list%element(i)%neighbours   = t_neighbours(i,:)
     element_list%element(i)%size	 = t_size(i,:,:)
+    if (t_axis_element(i) == 'T') then
+       element_list%element(i)%axis_element = .true.
+    else
+       element_list%element(i)%axis_element = .false.
+    end if
     element_list%element(i)%father	 = t_father(i)
     element_list%element(i)%n_sons	 = t_n_sons(i)
     element_list%element(i)%n_gen	 = t_n_gen(i)
@@ -1773,6 +1781,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_deallocate(t_vertex,"t_vertex",CAT_UNKNOWN)
   call tr_deallocate(t_neighbours,"t_neighbours",CAT_UNKNOWN)
   call tr_deallocate(t_size,"t_size",CAT_UNKNOWN)
+  call tr_deallocate(t_axis_element,"axis_element",CAT_UNKNOWN)
   call tr_deallocate(t_father,"t_father",CAT_UNKNOWN)
   call tr_deallocate(t_n_sons,"t_n_sons",CAT_UNKNOWN)
   call tr_deallocate(t_n_gen,"t_n_gen",CAT_UNKNOWN)

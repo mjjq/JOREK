@@ -28,6 +28,9 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
+  eta_num_T_dependent   = .false.
+  visco_num_T_dependent = .false.
+
   eta           = 1.d-5
   T_max_eta     = 1.d3
   eta_ohmic     = 0.d0
@@ -172,16 +175,28 @@ subroutine preset_parameters
   Z_begin = -0.1d0
   Z_end   = 0.1d0
   
-  ZK_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_perp(1:5)   = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_i_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_e_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   ZK_par       = 1.d0
+  ZK_i_par     = 1.d0
+  ZK_e_par     = 1.d0
   ZK_par_max   = 1.d20
   D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par        = 0.d0
-  
+  D_perp_imp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  D_par_imp        = 0.d0
+
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
   ZK_prof_neg        = 1.d-5
+  ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+  ZK_par_neg_thresh  = 0.d0
+
+  ne_SI_min          = 1.d18
+  Te_eV_min          = 5.
+  rn0_min            = 1.d-8
   T_min              =-1.0d20
   rho_min            =-1.0d20
   
@@ -194,8 +209,12 @@ subroutine preset_parameters
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
   Dn_perp_num   = 0.d0
+  eta_num_T_dependent   = .false.
+  visco_num_T_dependent = .false.
 
   heatsource          = 1.e-7
+  heatsource_e        = 0.5e-7
+  heatsource_i        = 0.5e-7
   heatsource_psin     = 1.0d0
   heatsource_sig      = 0.1d0
   particlesource      = 1.e-5
@@ -247,6 +266,12 @@ subroutine preset_parameters
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
 
+  rhon_0 =  0.d0
+  rhon_1 =  0.d0
+  rhon_coef    = 0.d0
+  rhon_coef(4) = 0.01
+  rhon_coef(8) = 0.01
+
   pellet_amplitude  = 0.d0
   pellet_R          = 3.8d0
   pellet_Z          = 0.0d0
@@ -262,6 +287,7 @@ subroutine preset_parameters
   pellet_velocity_Z = 0.d0
   pellet_particles  = 0.d0
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
+  pellet_density_bg = 3.d8
   use_pellet        = .false.
   
   t_now       = 0.d0
@@ -286,6 +312,7 @@ subroutine preset_parameters
   Fprofile_file      = 'none'
   ffprime_file       = 'none'
   d_perp_file        = 'none'
+  d_perp_imp_file    = 'none'
   zk_perp_file       = 'none'
   zk_e_perp_file     = 'none'
   zk_i_perp_file     = 'none'
@@ -350,6 +377,8 @@ subroutine preset_parameters
   
   equil              = .true.               ! compute equilibrium
   
+  no_mach1_bc        = .false.              ! Never apply Mach-1 BCs
+
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
 
   eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
@@ -392,7 +421,9 @@ subroutine preset_parameters
   R_limiter = 0.d0
   Z_limiter = 0.d0
   
+  extend_existing_grid = .false.
   n_wall_blocks        = 0
+  corner_block         = 0
   n_ext_block          = 0
   n_block_points_left  = 0
   R_block_points_left  = 0.d0
@@ -423,16 +454,23 @@ subroutine preset_parameters
   D_neutral_p = 1.d-5
   delta_n_convection = 0
   nimp_bg = 0.
+  n_adas = 0
+  adas_dir = ''
+  imp_type = ''
+  use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one exists for argon
+
   !====== JET DMV-2 parameters
-  L_tube = 2.d0
+  L_tube = 2.4d0
   K_Dmv = 4.d-2
   A_Dmv = 1.77d-2
+  V_Dmv = 9.75d-4
   t_ns  = 2.d3
   !======= Additional parameters for SPI =======
   spi_Vel_Rref    = 0.0d0
   spi_Vel_Zref    = 0.0d0
   spi_Vel_RxZref  = 0.0d0
   spi_quantity    = 0.0
+  spi_quantity_bg = 0.0
   ng_radius_ratio = 1.4d0
   ng_radius_min   = 8.d-2
   spi_Vel_diff    = 0.0
@@ -464,5 +502,9 @@ subroutine preset_parameters
   jw1=5.d-1 ! inner cut-off
   jw2=1.d0  ! outer cut-off
   jw3=1.d0  ! outer cut-off
+
+!===================== Thermalization flag========
+
+  thermalization = .false.
 
 end subroutine preset_parameters

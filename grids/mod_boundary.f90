@@ -18,7 +18,7 @@ module mod_boundary
   !> Routine extracts the boundary information (boundary element and node lists)
   !! from the information stored in the grid (element and node lists).
   !! 
-  !! Note: Grid nodes with boundary=3 (located at the edges of the boundary in
+  !! Note: Grid nodes with boundary=3, 9, 19, 20 or 21 (located at the edges of the boundary in
   !!       the divertor region) are intentionally added twice to the bnd_node_list.
   subroutine boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list,infos)
 
@@ -193,8 +193,8 @@ module mod_boundary
 
     integer :: i, idir
 
-    ! --- Make sure the node is not in the boundary node list yet (except for boundary=3).
-    if ( boundary /= 3 ) then
+    ! --- Make sure the node is not in the boundary node list yet (except for boundary types 3, 9, 19, 20 and 21).
+    if (( boundary /= 3 ) .and. (boundary /= 9) .and. (boundary /= 19) .and. (boundary /= 20) .and. (boundary /= 21)) then
       do i = 1, bnd_node_list%n_bnd_nodes
         if ( bnd_node_list%bnd_node(i)%index_jorek == inode ) then
           bnd_vertex = i ! Node is already in the list, return its index.
@@ -301,8 +301,8 @@ module mod_boundary
       write(*,*) trim(DIR) // '/boundary_element_nodes' // trim(filename_appendix)
       open(42, file=trim(DIR) // '/boundary_element_nodes' // trim(filename_appendix), status='replace', action='write')
       do i = 1, bnd_elm_list%n_bnd_elements
-        write(42,*) node_list%node( bnd_elm_list%bnd_element(i)%vertex(1) )%x(1,:)
-        write(42,*) node_list%node( bnd_elm_list%bnd_element(i)%vertex(2) )%x(1,:)
+        write(42,*) node_list%node( bnd_elm_list%bnd_element(i)%vertex(1) )%x(1,1,:)
+        write(42,*) node_list%node( bnd_elm_list%bnd_element(i)%vertex(2) )%x(1,1,:)
         write(42,*)
         write(42,*)
       end do
@@ -313,7 +313,7 @@ module mod_boundary
       write(*,*) trim(DIR) // '/boundary_nodes' // trim(filename_appendix)
       open(42, file=trim(DIR) // '/boundary_nodes' // trim(filename_appendix), status='replace', action='write')
       do i = 1, bnd_node_list%n_bnd_nodes
-        write(42,*) node_list%node( bnd_node_list%bnd_node(i)%index_jorek )%x(1,:)
+        write(42,*) node_list%node( bnd_node_list%bnd_node(i)%index_jorek )%x(1,1,:)
       end do
       close(42)
       
@@ -330,8 +330,8 @@ module mod_boundary
           bnd_elm_list%bnd_element(i)%direction(:,:), bnd_elm_list%bnd_element(i)%element,                   &
           bnd_elm_list%bnd_element(i)%side, node_list%node(bnd_elm_list%bnd_element(i)%vertex(1))%boundary,  &
           node_list%node(bnd_elm_list%bnd_element(i)%vertex(2))%boundary,                                    &
-          node_list%node(bnd_elm_list%bnd_element(i)%vertex(1))%x(1,:),                                      &
-          node_list%node(bnd_elm_list%bnd_element(i)%vertex(1))%x(2,:)
+          node_list%node(bnd_elm_list%bnd_element(i)%vertex(1))%x(1,1,:),                                      &
+          node_list%node(bnd_elm_list%bnd_element(i)%vertex(1))%x(1,2,:)
       end do
       close(42)
       

@@ -220,8 +220,9 @@ program jorek2_connection_flux_aligned
   ! --- The elements our local MPI is looking at
   ! --- Field lines are separated poloidally to ensure that the computational time
   ! --- should be evenly distributed among MPI tasks
-  if (mod(n_theta, n_cpu) .ne. 0) then
-    write(*,*) "ERROR: n_theta must be exactly divisible by n_cpu! Otherwise poloidal distribution of field lines is non-uniform."
+  if (mod(ntheta, n_cpu) .ne. 0) then
+    write(*,*) "ERROR: n_theta must be exactly divisible by n_cpu! Otherwise poloidal distribution of field lines is non-uniform.", ntheta, n_cpu
+    stop 
   endif 
   thetas_per_cpu = ntheta / n_cpu
   local_theta_start = my_id * thetas_per_cpu + 1

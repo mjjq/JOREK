@@ -76,15 +76,17 @@ real*8  :: eq_t_1D(n_plane,0:n_var,n_gauss), eq_p_1D(n_plane,0:n_var,n_gauss)
 real*8  :: current_source, particle_source, heat_source, heat_source_i, heat_source_e, rotation_source
 real*8  :: xt, t_norm, rho_norm, t_norm2
 real*8  :: eq_zne(n_gauss,n_gauss)
-real*8  ::    dn_dpsi, dn_dz                                           ! 1st order derivatives
-real*8  ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                             ! 2nd order derivatives
-real*8  ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3              ! 2rd order derivatives
-real*8  ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4 ! 4th order derivatives
+real*8  ::    dn_dpsi, dn_dz                                                ! 1st order derivatives
+real*8  ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
+real*8  ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
+real*8  ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives
+real*8  ::    dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz! 5th order derivatives (z5 not needed)
 real*8  :: eq_zTe(n_gauss,n_gauss)
-real*8  ::    dT_dpsi,  dT_dz                                          ! 1st order derivatives
-real*8  ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                             ! 2nd order derivatives
-real*8  ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3              ! 2rd order derivatives
-real*8  ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4 ! 4th order derivatives
+real*8  ::    dT_dpsi,  dT_dz                                               ! 1st order derivatives
+real*8  ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                                  ! 2nd order derivatives
+real*8  ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3                   ! 2rd order derivatives
+real*8  ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4      ! 4th order derivatives
+real*8  ::    dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz! 5th order derivatives (z5 not needed)
 
 integer :: i, j, k, in, ms, mt, mp, iv, inode, ife, n_elements, i_elm_axis, i_elm_xpoint(2), ifail
 integer :: ierr, n_cpu, my_id, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
@@ -324,10 +326,12 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           dn_dpsi2, dn_dz2, dn_dpsi_dz,                                                  &
 !$omp           dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3,                                   &
 !$omp           dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4,                      &
+!$omp           dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz,                &
 !$omp           dT_dpsi, dT_dz,                                                                &
 !$omp           dT_dpsi2, dT_dz2, dT_dpsi_dz,                                                  &
 !$omp           dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3,                                   &
 !$omp           dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4,                      &
+!$omp           dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz,                &
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, p0_p, T0_corr, r0_corr, u0_p,                &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
@@ -456,23 +460,26 @@ do ife = ife_min, ife_max
   do ms=1, n_gauss
     do mt=1, n_gauss
       call density(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
-                   dn_dpsi, dn_dz, &                                        ! 1st order derivatives
-                   dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
-                   dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
-                   dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
+                   dn_dpsi,  dn_dz, &                                             ! 1st order derivatives
+                   dn_dpsi2, dn_dz2,      dn_dpsi_dz, &                           ! 2nd order derivatives
+                   dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &                 ! 2rd order derivatives
+                   dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz,  dn_dz4, &   ! 4th order derivatives
+                   dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz)! 5th order derivatives (z5 not needed)
 
 #ifdef WITH_TiTe
       call temperature_e(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
-                       dT_dpsi,  dT_dz, &                                       ! 1st order derivatives
-                       dT_dpsi2, dT_dz2, dT_dpsi_dz, &                          ! 2nd order derivatives
-                       dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &           ! 2rd order derivatives
-                       dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4)! 4th order derivatives
+                         dT_dpsi,  dT_dz, &                                             ! 1st order derivatives
+                         dT_dpsi2, dT_dz2,      dT_dpsi_dz, &                           ! 2nd order derivatives
+                         dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &                 ! 2rd order derivatives
+                         dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz,  dT_dz4, &   ! 4th order derivatives
+                         dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz)! 5th order derivatives (z5 not needed)
 #else
       call temperature(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt),   &
-                       dT_dpsi,  dT_dz, &                                       ! 1st order derivatives
-                       dT_dpsi2, dT_dz2, dT_dpsi_dz, &                          ! 2nd order derivatives
-                       dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &           ! 2rd order derivatives
-                       dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4)! 4th order derivatives
+                       dT_dpsi,  dT_dz, &                                             ! 1st order derivatives
+                       dT_dpsi2, dT_dz2,      dT_dpsi_dz, &                           ! 2nd order derivatives
+                       dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &                 ! 2rd order derivatives
+                       dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz,  dT_dz4, &   ! 4th order derivatives
+                       dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz)! 5th order derivatives (z5 not needed)
       eq_zTe(ms,mt) = eq_zTe(ms,mt) / 2.d0	! electron temperature
 #endif
     enddo

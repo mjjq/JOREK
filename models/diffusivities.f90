@@ -292,12 +292,13 @@ module diffusivities
     real*8         :: psi_D
     real*8         :: atn_D, datn_D, atn_D_n, pol_D, dpol_D, D_min
     real*8         :: Diff(1:5)
-    real*8             :: rho_norm
+    real*8         :: rho_norm
     real*8         :: zn
-    real*8         ::    dn_dpsi, dn_dz                                           ! 1st order derivatives
-    real*8         ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                             ! 2nd order derivatives
-    real*8         ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3              ! 2rd order derivatives
-    real*8         ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4 ! 4th order derivatives
+    real*8         ::    dn_dpsi, dn_dz                                                ! 1st order derivatives
+    real*8         ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
+    real*8         ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
+    real*8         ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives
+    real*8         ::    dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz! 5th order derivatives (z5 not needed)
     
     
     ! --- Numerical profile
@@ -372,10 +373,11 @@ module diffusivities
         ! --- K-perp is the pressure diffusion, not the temperature diffusion, so need to divide by rho
         psi_D = psi
         call density(xpoint, xcase, Z, Z_xpoint, psi_D,psi_axis,psi_bnd, zn, &
-                     dn_dpsi, dn_dz, &                                        ! 1st order derivatives
-                     dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
-                     dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
-                     dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
+                     dn_dpsi,  dn_dz, &                                             ! 1st order derivatives
+                     dn_dpsi2, dn_dz2,      dn_dpsi_dz, &                           ! 2nd order derivatives
+                     dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &                 ! 2rd order derivatives
+                     dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz,  dn_dz4, &   ! 4th order derivatives
+                     dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz)! 5th order derivatives (z5 not needed)
         rho_norm        = zn / rho_0 ! normalise to 1.0 in core
         get_zkperp2 = get_zkperp2 / rho_norm
   
@@ -395,12 +397,13 @@ module diffusivities
     real*8         :: psi_D
     real*8         :: atn_D, datn_D, atn_D_n, pol_D, dpol_D, D_min
     real*8         :: Diff(1:5)
-    real*8             :: rho_norm
+    real*8         :: rho_norm
     real*8         :: zn
-    real*8         ::    dn_dpsi, dn_dz                                           ! 1st order derivatives
-    real*8         ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                             ! 2nd order derivatives
-    real*8         ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3              ! 2rd order derivatives
-    real*8         ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4 ! 4th order derivatives
+    real*8         ::    dn_dpsi, dn_dz                                                ! 1st order derivatives
+    real*8         ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
+    real*8         ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
+    real*8         ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives
+    real*8         ::    dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz! 5th order derivatives (z5 not needed)
     
     
     ! --- Numerical profile
@@ -475,10 +478,11 @@ module diffusivities
         ! --- K-perp is the pressure diffusion, not the temperature diffusion, so need to divide by rho
         psi_D = psi
         call density(xpoint, xcase, Z, Z_xpoint, psi_D,psi_axis,psi_bnd, zn, &
-                     dn_dpsi, dn_dz, &                                        ! 1st order derivatives
-                     dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
-                     dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
-                     dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
+                     dn_dpsi,  dn_dz, &                                             ! 1st order derivatives
+                     dn_dpsi2, dn_dz2,      dn_dpsi_dz, &                           ! 2nd order derivatives
+                     dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &                 ! 2rd order derivatives
+                     dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz,  dn_dz4, &   ! 4th order derivatives
+                     dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz)! 5th order derivatives (z5 not needed)
         rho_norm        = zn / rho_0 ! normalise to 1.0 in core
         get_zk_iperp2 = get_zk_iperp2 / rho_norm
   
@@ -498,12 +502,13 @@ module diffusivities
     real*8         :: psi_D
     real*8         :: atn_D, datn_D, atn_D_n, pol_D, dpol_D, D_min
     real*8         :: Diff(1:5)
-    real*8             :: rho_norm
+    real*8         :: rho_norm
     real*8         :: zn
-    real*8         ::    dn_dpsi, dn_dz                                           ! 1st order derivatives
-    real*8         ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                             ! 2nd order derivatives
-    real*8         ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3              ! 2rd order derivatives
-    real*8         ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4 ! 4th order derivatives
+    real*8         ::    dn_dpsi, dn_dz                                                ! 1st order derivatives
+    real*8         ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
+    real*8         ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
+    real*8         ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives
+    real*8         ::    dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz! 5th order derivatives (z5 not needed)
     
     
     ! --- Numerical profile
@@ -578,10 +583,11 @@ module diffusivities
         ! --- K-perp is the pressure diffusion, not the temperature diffusion, so need to divide by rho
         psi_D = psi
         call density(xpoint, xcase, Z, Z_xpoint, psi_D,psi_axis,psi_bnd, zn, &
-                     dn_dpsi, dn_dz, &                                        ! 1st order derivatives
-                     dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
-                     dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
-                     dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
+                     dn_dpsi,  dn_dz, &                                             ! 1st order derivatives
+                     dn_dpsi2, dn_dz2,      dn_dpsi_dz, &                           ! 2nd order derivatives
+                     dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &                 ! 2rd order derivatives
+                     dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz,  dn_dz4, &   ! 4th order derivatives
+                     dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz)! 5th order derivatives (z5 not needed)
         rho_norm        = zn / rho_0 ! normalise to 1.0 in core
         get_zk_eperp2 = get_zk_eperp2 / rho_norm
   

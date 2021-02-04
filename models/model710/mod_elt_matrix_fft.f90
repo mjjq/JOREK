@@ -73,15 +73,17 @@ real*8     ::    dFF_dpsi2, dFF_dz2, dFF_dpsi_dz                                
 real*8     ::    dFF_dpsi3, dFF_dpsi_dz2, dFF_dpsi2_dz,  dFF_dz3                 ! 2rd order derivatives
 real*8     ::    dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz, dFF_dz4   ! 4th order derivatives
 real*8     :: rho_initial(n_gauss,n_gauss)
-real*8     ::    dn_dpsi, dn_dz                                           ! 1st order derivatives
-real*8     ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                             ! 2nd order derivatives
-real*8     ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3              ! 2rd order derivatives
-real*8     ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4 ! 4th order derivatives
+real*8     ::    dn_dpsi, dn_dz                                                ! 1st order derivatives
+real*8     ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
+real*8     ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
+real*8     ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives
+real*8     ::    dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz! 5th order derivatives (z5 not needed)
 real*8     :: T_initial  (n_gauss,n_gauss)
-real*8     ::    dT_dpsi,  dT_dz                                          ! 1st order derivatives
-real*8     ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                             ! 2nd order derivatives
-real*8     ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3              ! 2rd order derivatives
-real*8     ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4 ! 4th order derivatives
+real*8     ::    dT_dpsi,  dT_dz                                               ! 1st order derivatives
+real*8     ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                                  ! 2nd order derivatives
+real*8     ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3                   ! 2rd order derivatives
+real*8     ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4      ! 4th order derivatives
+real*8     ::    dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz! 5th order derivatives (z5 not needed)
 real*8     :: Jb, Jb_0
 real*8     :: Ti0, Ti0_R, Ti0_Z
 real*8     :: Te0, Te0_R, Te0_Z
@@ -607,15 +609,17 @@ do ms=1, n_gauss
                              Jb)
       ! --- Full Sauter formula for initial profiles
       call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_initial(ms,mt), &
-                       dn_dpsi, dn_dz, &                                        ! 1st order derivatives
-                       dn_dpsi2, dn_dz2, dn_dpsi_dz, &                          ! 2nd order derivatives
-                       dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &           ! 2rd order derivatives
-                       dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4)! 4th order derivatives
+                       dn_dpsi,  dn_dz, &                                             ! 1st order derivatives
+                       dn_dpsi2, dn_dz2,      dn_dpsi_dz, &                           ! 2nd order derivatives
+                       dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &                 ! 2rd order derivatives
+                       dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz,  dn_dz4, &   ! 4th order derivatives
+                       dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz)! 5th order derivatives (z5 not needed)
       call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, T_initial  (ms,mt), &
-                       dT_dpsi,  dT_dz, &                                       ! 1st order derivatives
-                       dT_dpsi2, dT_dz2, dT_dpsi_dz, &                          ! 2nd order derivatives
-                       dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &           ! 2rd order derivatives
-                       dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4)! 4th order derivatives
+                       dT_dpsi,  dT_dz, &                                             ! 1st order derivatives
+                       dT_dpsi2, dT_dz2,      dT_dpsi_dz, &                           ! 2nd order derivatives
+                       dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &                 ! 2rd order derivatives
+                       dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz,  dT_dz4, &   ! 4th order derivatives
+                       dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz)! 5th order derivatives (z5 not needed)
       Ti0   = T_initial(ms,mt)       / 2.d0
       Ti0_R = dT_dpsi * psi_axisym_R(ms,mt) / 2.d0
       Ti0_Z = dT_dpsi * psi_axisym_Z(ms,mt) / 2.d0

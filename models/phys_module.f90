@@ -483,6 +483,7 @@ module phys_module
   real*8, allocatable :: num_rho_y2(:)   !< Second derivatives of density profile (\f$ d^2\rho/d\Psi_N^2 \f$)
   real*8, allocatable :: num_rho_y3(:)   !< Third derivatives of density profile (\f$ d^3\rho/d\Psi_N^3 \f$)
   real*8, allocatable :: num_rho_y4(:)   !< Fourth derivatives of density profile (\f$ d^3\rho/d\Psi_N^3 \f$)
+  real*8, allocatable :: num_rho_y5(:)   !< Fifth derivatives of density profile (\f$ d^3\rho/d\Psi_N^3 \f$)
 
   !> @name Analytical input profile for the temperature
   real*8  :: T_0            !< Central normalized temperature
@@ -505,6 +506,7 @@ module phys_module
   real*8, allocatable :: num_T_y2(:)     !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
   real*8, allocatable :: num_T_y3(:)     !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
   real*8, allocatable :: num_T_y4(:)     !< Fourth derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
+  real*8, allocatable :: num_T_y5(:)     !< Fifth derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
   
   !> @name Numerical input profile for the ion temperature (model400)
   character(len=512)  :: Ti_file         !< ASCII file the ion temperature profile is read from.
@@ -516,6 +518,7 @@ module phys_module
   real*8, allocatable :: num_Ti_y2(:)    !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
   real*8, allocatable :: num_Ti_y3(:)    !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
   real*8, allocatable :: num_Ti_y4(:)    !< Fourth derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
+  real*8, allocatable :: num_Ti_y5(:)    !< Fifth derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)
   
   !> @name Numerical input profile for the electron temperature (model400)
   character(len=512)  :: Te_file         !< ASCII file the electron temperature profile is read from.
@@ -527,6 +530,7 @@ module phys_module
   real*8, allocatable :: num_Te_y2(:)    !< Second derivatives of temperature profile (\f$ d^2T/d\Psi_N^2 \f$)
   real*8, allocatable :: num_Te_y3(:)    !< Third derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)  
   real*8, allocatable :: num_Te_y4(:)    !< Fourth derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)  
+  real*8, allocatable :: num_Te_y5(:)    !< Fifth derivatives of temperature profile (\f$ d^3T/d\Psi_N^3 \f$)  
   
   !> @name Analytical input profile for the neutral density (model 500)
   real*8  :: rhon_0           !< Central value for the initial normalized neutral density

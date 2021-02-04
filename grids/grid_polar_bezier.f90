@@ -406,9 +406,9 @@ do i=1,nr
    if (n_order .eq. 5) then                              
      node_list%node(index)%X(1,5,1)      = RR(5,index0)  * size_ratio**2
      node_list%node(index)%X(1,6,1)      = RR(6,index0)  * size_ratio**2
-     node_list%node(index)%X(1,7,1)      = RR(7,index0)  * size_ratio**3 - RR(3,index0)  * size_ratio
-     node_list%node(index)%X(1,8,1)      = RR(8,index0)  * size_ratio**3 - RR(2,index0)  * size_ratio
-     node_list%node(index)%X(1,9,1)      = RR(9,index0)  * size_ratio**4 - RR(5,index0)  * size_ratio**2 - RR(6,index0) * size_ratio**2
+     node_list%node(index)%X(1,7,1)      = RR(7,index0)  * size_ratio**3 + RR(3,index0)  * size_ratio ! see definition of derivatives in paper
+     node_list%node(index)%X(1,8,1)      = RR(8,index0)  * size_ratio**3 + RR(2,index0)  * size_ratio
+     node_list%node(index)%X(1,9,1)      = RR(9,index0)  * size_ratio**4 + RR(5,index0)  * size_ratio**2 + RR(6,index0) * size_ratio**2
    endif                                                 
                                                          
    node_list%node(index)%X(1,1,2)        = ZZ(1,index0) 
@@ -418,9 +418,9 @@ do i=1,nr
    if (n_order .eq. 5) then                              
      node_list%node(index)%X(1,5,2)      = ZZ(5,index0)  * size_ratio**2
      node_list%node(index)%X(1,6,2)      = ZZ(6,index0)  * size_ratio**2
-     node_list%node(index)%X(1,7,2)      = ZZ(7,index0)  * size_ratio**3 - ZZ(3,index0)  * size_ratio
-     node_list%node(index)%X(1,8,2)      = ZZ(8,index0)  * size_ratio**3 - ZZ(2,index0)  * size_ratio
-     node_list%node(index)%X(1,9,2)      = ZZ(9,index0)  * size_ratio**4 - ZZ(5,index0)  * size_ratio**2 - ZZ(6,index0) * size_ratio**2
+     node_list%node(index)%X(1,7,2)      = ZZ(7,index0)  * size_ratio**3 + ZZ(3,index0)  * size_ratio ! see definition of derivatives in paper
+     node_list%node(index)%X(1,8,2)      = ZZ(8,index0)  * size_ratio**3 + ZZ(2,index0)  * size_ratio
+     node_list%node(index)%X(1,9,2)      = ZZ(9,index0)  * size_ratio**4 + ZZ(5,index0)  * size_ratio**2 + ZZ(6,index0) * size_ratio**2
    endif
 
    node_list%node(index)%values(1,1,1)   = PSI(1,index0)
@@ -430,9 +430,9 @@ do i=1,nr
    if (n_order .eq. 5) then
      node_list%node(index)%values(1,5,1) = PSI(5,index0) * size_ratio**2
      node_list%node(index)%values(1,6,1) = PSI(6,index0) * size_ratio**2
-     node_list%node(index)%values(1,7,1) = PSI(7,index0) * size_ratio**3 - PSI(3,index0) * size_ratio
-     node_list%node(index)%values(1,8,1) = PSI(8,index0) * size_ratio**3 - PSI(2,index0) * size_ratio
-     node_list%node(index)%values(1,9,1) = PSI(9,index0) * size_ratio**4 - PSI(5,index0) * size_ratio**2 - PSI(6,index0) * size_ratio**2
+     node_list%node(index)%values(1,7,1) = PSI(7,index0) * size_ratio**3 + PSI(3,index0) * size_ratio ! see definition of derivatives in paper
+     node_list%node(index)%values(1,8,1) = PSI(8,index0) * size_ratio**3 + PSI(2,index0) * size_ratio
+     node_list%node(index)%values(1,9,1) = PSI(9,index0) * size_ratio**4 + PSI(5,index0) * size_ratio**2 + PSI(6,index0) * size_ratio**2
    endif
 
    node_list%node(index)%boundary = 0
@@ -517,8 +517,8 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
    if (n_order .eq. 5) then
      element_list%element(k)%size(iv,5) = 1.d0
      element_list%element(k)%size(iv,6) = 1.d0
-     element_list%element(k)%size(iv,7) = -dir_3
-     element_list%element(k)%size(iv,8) = -dir_2
+     element_list%element(k)%size(iv,7) = dir_3 ! because \vec{m} is similar to \vec{v}
+     element_list%element(k)%size(iv,8) = dir_2 ! while   \vec{n} is similar to \vec{u}
      element_list%element(k)%size(iv,9) = element_list%element(k)%size(iv,5) * element_list%element(k)%size(iv,6)
    endif
    if (fix_axis_nodes) then

@@ -218,8 +218,11 @@ program jorek2_connection_flux_aligned
   endif
     
   ! --- The elements our local MPI is looking at
-  ! --- We divide the elements in two halves, and put 5/6 of the MPIs on the first half
-  ! --- Because elements in the core take much longer to run...
+  ! --- Field lines are separated poloidally to ensure that the computational time
+  ! --- should be evenly distributed among MPI tasks
+  if (mod(n_theta, n_cpu) .ne. 0) then
+    write(*,*) "ERROR: n_theta must be exactly divisible by n_cpu! Otherwise poloidal distribution of field lines is non-uniform."
+  endif 
   thetas_per_cpu = ntheta / n_cpu
   local_theta_start = my_id * thetas_per_cpu + 1
   local_theta_end = min(ntheta, (my_id + 1) * thetas_per_cpu)

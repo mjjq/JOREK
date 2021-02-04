@@ -43,11 +43,14 @@ subroutine derive_num_profiles(my_id)
       call derivProf(num_Fprofile_x, num_Fprofile_y1, num_Fprofile_len, num_Fprofile_y2)
       call derivProf(num_Fprofile_x, num_Fprofile_y2, num_Fprofile_len, num_Fprofile_y3)
       call derivProf(num_Fprofile_x, num_Fprofile_y3, num_Fprofile_len, num_Fprofile_y4)
+      call derivProf(num_Fprofile_x, num_Fprofile_y4, num_Fprofile_len, num_Fprofile_y5)
     end if
     
     if ( num_ffprime ) then
       call derivProf(num_ffprime_x, num_ffprime_y0, num_ffprime_len, num_ffprime_y1)
       call derivProf(num_ffprime_x, num_ffprime_y1, num_ffprime_len, num_ffprime_y2)
+      call derivProf(num_ffprime_x, num_ffprime_y2, num_ffprime_len, num_ffprime_y3)
+      call derivProf(num_ffprime_x, num_ffprime_y3, num_ffprime_len, num_ffprime_y4)
     end if
     
     if ( num_rot ) then

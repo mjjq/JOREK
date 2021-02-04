@@ -39,8 +39,16 @@ real*8     :: Omega, dOmega_dpsi, dOmega_dpsi2, zeta, Lam, dLam_dpsi, dLam_dpsi2
 real*8     :: zn0, zT0, dn0_dpsi, dT0_dpsi, dn_dR, dn_dR2, dT_dR, dT_dR2, R2sh, rf, rf0
 real*8     :: x21, x31, x41, psi2, psi3, psi4
 logical    :: xpoint2
-real*8     :: F_prof,          dF_dpsi,  dF_dz,  dF_dpsi2,  dF_dz2,  dF_dpsi_dz
-real*8     :: FFprime_profile, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz
+real*8     :: F_prof   
+real*8     ::   dF_dpsi, dF_dz                                             ! 1st order derivatives
+real*8     ::   dF_dpsi2, dF_dz2, dF_dpsi_dz                               ! 2nd order derivatives
+real*8     ::   dF_dpsi3, dF_dpsi_dz2, dF_dpsi2_dz,  dF_dz3                ! 2rd order derivatives
+real*8     ::   dF_dpsi4, dF_dpsi_dz3, dF_dpsi2_dz2, dF_dpsi3_dz, dF_dz4   ! 4th order derivatives
+real*8     :: FFprime_profile
+real*8     ::    dFF_dpsi, dFF_dz                                                ! 1st order derivatives
+real*8     ::    dFF_dpsi2, dFF_dz2, dFF_dpsi_dz                                 ! 2nd order derivatives
+real*8     ::    dFF_dpsi3, dFF_dpsi_dz2, dFF_dpsi2_dz,  dFF_dz3                 ! 2rd order derivatives
+real*8     ::    dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz, dFF_dz4   ! 4th order derivatives
 
 
 
@@ -106,8 +114,16 @@ if (my_id .eq. 0) then
     ! This makes it 100% certain that all derivatives of Fprofile (when taken from the node values), will be accurate
     ! to the level of our finite elements.
     call F_profile(xpoint2, xcase2, Z, ES%Z_xpoint, psi, ES%psi_axis, ES%psi_bnd, &
-                   F_prof,          dF_dpsi,  dF_dz,  dF_dpsi2,  dF_dz2,  dF_dpsi_dz , &
-                   FFprime_profile, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz)
+                   F_prof, &
+                     dF_dpsi, dF_dz, &                                          ! 1st order derivatives
+                     dF_dpsi2, dF_dz2, dF_dpsi_dz, &                            ! 2nd order derivatives
+                     dF_dpsi3, dF_dpsi_dz2, dF_dpsi2_dz,  dF_dz3, &             ! 2rd order derivatives
+                     dF_dpsi4, dF_dpsi_dz3, dF_dpsi2_dz2, dF_dpsi3_dz, dF_dz4, &! 4th order derivatives
+                   FFprime_profile, &
+                     dFF_dpsi, dFF_dz, &                                             ! 1st order derivatives
+                     dFF_dpsi2, dFF_dz2, dFF_dpsi_dz, &                              ! 2nd order derivatives
+                     dFF_dpsi3, dFF_dpsi_dz2, dFF_dpsi2_dz,  dFF_dz3, &              ! 2rd order derivatives
+                     dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz, dFF_dz4)  ! 4th order derivatives
     node_list%node(i)%Fprof_eq(1) =   F_prof
     node_list%node(i)%Fprof_eq(2) =   dF_dpsi  * node_list%node(i)%values(1,2,var_A3) + dF_dz * node_list%node(i)%x(1,2,2)
     node_list%node(i)%Fprof_eq(3) =   dF_dpsi  * node_list%node(i)%values(1,3,var_A3) + dF_dz * node_list%node(i)%x(1,3,2)

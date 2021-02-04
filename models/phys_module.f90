@@ -554,6 +554,7 @@ module phys_module
   real*8, allocatable :: num_Fprofile_y2(:) !< Second derivatives of Fprofile profile (\f$ d^2F/d\Psi_N^2 \f$)
   real*8, allocatable :: num_Fprofile_y3(:) !< Third derivatives of Fprofile profile (\f$ d^2F/d\Psi_N^2 \f$)
   real*8, allocatable :: num_Fprofile_y4(:) !< Fourth derivatives of Fprofile profile (\f$ d^2F/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_Fprofile_y5(:) !< Fifth derivatives of Fprofile profile (\f$ d^2F/d\Psi_N^2 \f$)
 
   !> @name Numerical input profile for Fprofile
   integer, parameter  :: n_Fprofile_internal_max = 300                !< INTERNAL Max Size of F-profile
@@ -578,6 +579,8 @@ module phys_module
   real*8, allocatable :: num_ffprime_y0(:) !< Values of FFprime profile
   real*8, allocatable :: num_ffprime_y1(:) !< First derivatives of FFprime profile (\f$ dFF'/d\Psi_N \f$)
   real*8, allocatable :: num_ffprime_y2(:) !< Second derivatives of FFprime profile (\f$ d^2FF'/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_ffprime_y3(:) !< Third derivatives of FFprime profile (\f$ d^2FF'/d\Psi_N^2 \f$)
+  real*8, allocatable :: num_ffprime_y4(:) !< Fourth derivatives of FFprime profile (\f$ d^2FF'/d\Psi_N^2 \f$)
 
   !> --- Numerical input profiles for neoclassical coefficients
   logical             :: NEO              !< If .true. neoclassical effects are considered, (see [[neo|here]])

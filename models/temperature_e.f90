@@ -131,7 +131,7 @@ if (xpoint2) then
   datn_z_u         = -0.5d0/cosh3_u**2 / sigz
   d2atn_z_u        =  1.0d0/cosh3_u**2 / sigz**2 * tanh2_u
   d3atn_z_u        = -1.0d0/cosh3_u**4 / sigz**3 * (-2.d0 + cosh4_u) 
-  d4atn_z_u        = p4.0d0/cosh3_u**5 / sigz**4 * (-2.d0 + cosh4_u) * sinh3_u &
+  d4atn_z_u        = -4.0d0/cosh3_u**5 / sigz**4 * (-2.d0 + cosh4_u) * sinh3_u &
                      -1.0d0/cosh3_u**4 / sigz**4 * (-2.d0 * sinh4_u) 
   
   if(xcase2 .eq. 1) then

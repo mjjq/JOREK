@@ -49,7 +49,7 @@ type (type_element) :: element
 type (type_node)    :: nodes(n_vertex_max)
 
 call basisfunctions(s,t,H)
-H = transpose(H) ! Why transpose?
+H = transpose(H)
 call sincosperiod_moivre(phi, HZ, dHZ) ! dHZ unused
 
 ! To implement axis treatment, change basis functions 

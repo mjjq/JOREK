@@ -575,6 +575,7 @@ required = 0
         
         call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
           node_list, element_list)
+        call identify_axis_elements(node_list, element_list)
         
       else
         write(*,*) ' FATAL : no valid combination of grid-sizes specified'

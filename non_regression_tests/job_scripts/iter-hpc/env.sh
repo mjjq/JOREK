@@ -1,11 +1,9 @@
 #!/bin/bash
-#eval `tclsh /work/imas/opt/modules-tcl/modulecmd.tcl $(basename $SHELL) autoinit`
-eval `tclsh /work/imas_centos7/opt/modules-tcl/modulecmd.tcl $(basename $SHELL) autoinit`
+eval `tclsh /work/imas/opt/modules-tcl/modulecmd.tcl $(basename $SHELL) autoinit`
 
 module purge
 
-#module use /work/imas/etc/modules/all
-module use /work/imas_centos7/etc/modules/all
+module use /work/imas/etc/modules/all
 
 module load cURL/7.58.0-GCCcore-6.4.0
 module load MUMPS/5.1.2-intel-2018a-metis

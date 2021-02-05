@@ -670,6 +670,7 @@ required = 0
             if (.not. grid_to_wall) then
               call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
                                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
+              call identify_axis_elements(node_list, element_list)
             else
 !!! works only for ITER wall for the moment
  !            write(*,*) 'ITER wall started'
@@ -685,6 +686,7 @@ required = 0
           
           call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht,     &
                                  xr1, sig1, xr2, sig2,refinement)
+          call identify_axis_elements(node_list, element_list)
           
           call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,'fluxsurface')
           

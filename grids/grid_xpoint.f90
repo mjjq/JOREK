@@ -1488,18 +1488,6 @@ if (fix_axis_nodes) then
   enddo
 endif
 
-! To identify elements on the axis.
-if (treat_axis) then
-  do k=1, newelement_list%n_elements
-    do iv=1,4
-      j = newelement_list%element(k)%vertex(iv)
-      if (newnode_list%node(j)%axis_node) then
-        newelement_list%element(k)%axis_element = .true.
-      endif
-    enddo
-  enddo
-endif
-
 do i=1,newnode_list%n_nodes
 
   R1 = newnode_list%node(i)%x(1,1,1)

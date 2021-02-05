@@ -586,14 +586,6 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
       endif
    endif
 
-   ! To identify elements on the axis.
-   if (treat_axis) then
-      j = element_list%element(k)%vertex(iv)
-      if (node_list%node(j)%axis_node) then
-        element_list%element(k)%axis_element = .true.
-      endif
-   endif
-
 !   if ((RR(2,node_iv)**2 + ZZ(2,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,2) = dir_2
 !   if ((RR(3,node_iv)**2 + ZZ(3,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,3) = dir_3
 !   if ((RR(4,node_iv)**2 + ZZ(4,node_iv)**2) .eq. 0.) element_list%element(k)%size(iv,4) = dir_2 * dir_3

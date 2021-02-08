@@ -331,10 +331,10 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           Te_corr_eV, Te_eV, ne_SI, ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,       &
 !$omp           ion_k, Z_eff, eta_coef,                                                        &
 #endif
-#if (defined WITH_Impurities) || (defined WITH_TiTe)
+#if (defined WITH_Impurities) && (defined WITH_TiTe)
 !$omp           alpha_i, alpha_e,                                                              &
 #endif
-#if (defined WITH_Impurities) || (!defined WITH_TiTe) 
+#if (defined WITH_Impurities) && (!defined WITH_TiTe) 
 !$omp           alpha_imp, beta_imp,                                                           &
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)

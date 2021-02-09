@@ -559,9 +559,9 @@ program jorek2_connection_flux_aligned
   if (my_id .eq. 0) write(*,*) ' number of points : ',nnos
   
   ! --- Open file and write headers
-  open(21,file='poinc_R-Z.dat')
+  open(21,file='poinc_R-Z.dat',status='replace')
   write(21,*) '#  R                 Z'
-  open(22,file='poinc_rho-theta.dat')
+  open(22,file='poinc_rho-theta.dat',status='replace')
   write(22,*) '# rho=sqrt(psi_n)'
   write(22,*) '# psi_n=(psi - psi_axis)/(psi_bnd - psi_axis)'
   write(22,*) '#'
@@ -658,7 +658,7 @@ program jorek2_connection_flux_aligned
   ! -------------------------------------------------------------------------------------------------
   ! --- Open text file
   write(*,*)'Writing strikes.txt...'
-  open(23,file='strikes.txt')
+  open(23,file='strikes.txt',status='replace')
   
   ! --- The local number of strikes (for mpi_0)
   i_strike0 = i_strike

@@ -3,7 +3,13 @@ module mod_parameters
 
   implicit none
 
-  integer, parameter :: jorek_model    = 400       !< JOREK physics model
+  integer, parameter :: jorek_model    = 401       !< JOREK physics model
+
+  logical, parameter :: with_TiTe       = .true.
+  logical, parameter :: with_neutrals   = .false.
+  logical, parameter :: with_impurities = .false.
+  logical, parameter :: with_Vpar       = .true.
+  logical, parameter :: with_etaOhm     = .false.
 
   integer, parameter :: var_A3   = 0                       ! place of variable psi/mag pot 3               (ps or A3)
   integer, parameter :: var_AR   = 0                       ! place of variable mag pot  1                  (AR)
@@ -28,15 +34,15 @@ module mod_parameters
   integer, parameter :: n_var          = 8         !< number of variables
   integer, parameter :: n_dim          = 2         !< number of dimensions
   integer, parameter :: n_order        = 3         !< order of the polynomial basis
-  integer, parameter :: n_tor          = 1!3!15!11!9!3!3!11!3!21!1!21                  !< number of toroidal harmonics in physics variables
+  integer, parameter :: n_tor          = 1         !< number of toroidal harmonics in physics variables
   integer, parameter :: n_coord_tor    = 1         !< number of toroidal harmonics in (R, Z) coordinates
-  integer, parameter :: n_period       = 1!3!3!4!6!6!6!4!4!2!1!2         !< periodicity in toroidal direction
-  integer, parameter :: n_plane        = 1!8!64!64!32!8!8!64!8!128!1!128         !< number of toroidal angles
+  integer, parameter :: n_period       = 1         !< periodicity in toroidal direction
+  integer, parameter :: n_plane        = 1         !< number of toroidal angles
   integer, parameter :: n_vertex_max   = 4         !< maximum number of corners of an element
-  integer, parameter :: n_nodes_max    = 100001     !< maximum number of nodes
-  integer, parameter :: n_elements_max = 100001     !< maximum number of elements
+  integer, parameter :: n_nodes_max    = 60001     !< maximum number of nodes
+  integer, parameter :: n_elements_max = 60001     !< maximum number of elements
   integer, parameter :: n_boundary_max = 1001      !< maximum number of boundary elements
-  integer, parameter :: n_pieces_max   = 100001     !< maximum number of line pieces describing a flux surface
+  integer, parameter :: n_pieces_max   = 6001      !< maximum number of line pieces describing a flux surface
   integer, parameter :: n_degrees      = n_order+1 !< degrees of freedom per variable per node
   integer, parameter :: nref_max       = 10000     !< (refinement)
   integer, parameter :: n_ref_list     = 10000     !< (refinement)
@@ -44,7 +50,7 @@ module mod_parameters
   !> Names of the physical variables
   character(len=11) :: variable_names(n_var) =                       &
     (/ 'Flux       ','Potential  ','Current    ','Vorticity  ',      &
-       'Density    ','Ions_Temp  ','V_parallel ','Elec_Temp  '/)
+       'Density    ','T_ion      ','V_parallel ','T_electron ' /)
   
   !> element_matrix and element_matrix_fft combined into a single one?
   logical, parameter :: unified_element_matrix = .true.

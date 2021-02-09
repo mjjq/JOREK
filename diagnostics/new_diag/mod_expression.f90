@@ -23,11 +23,14 @@ module mod_expression
   use mod_basisfunctions
   use mod_bootstrap_functions
   use mod_poloidal_currents
-#if (JOREK_MODEL == 501)
+#ifdef WITH_Impurities
   use mod_injection_source
 #endif
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
-  
+      
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+  use mod_neutral_source
+#endif
   
   implicit none
   
@@ -142,7 +145,7 @@ module mod_expression
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'ne          ', 'Electron Density                                      ')
-#if JOREK_MODEL == 501
+#ifdef WITH_Impurities
     call add(exprs_all, 'nimp        ', 'Impurity Density                                      ')
 #endif
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
@@ -209,13 +212,13 @@ module mod_expression
     call add(exprs_all, 'partF_total ', 'Total particle flux (normal to the boundary)          ', 'boundary    ')
     call add(exprs_all, 'npartF_total', 'Total neutral particle flux (normal to the boundary)  ', 'boundary    ')
     call add(exprs_all, 'ExB_norm    ', 'EM energy flux, Poynting vector (normal to boundary)  ', 'boundary    ')
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500 || JOREK_MODEL == 710 || JOREK_MODEL == 711
+#if JOREK_MODEL >= 303
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
     call add(exprs_all, 'radiation   ', 'Radiation terms for bolometry diagnostic              ')
 #endif
-#if JOREK_MODEL == 500
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     call add(exprs_all, 'brem        ', 'Brem terms for bolometry diagnostic                   ')
 #endif
     ! --- List of volume and boundary integrals
@@ -561,7 +564,7 @@ module mod_expression
   
   !> Evaluate one/several expressions at one/several poloidal and one/several toroidal positions.
   subroutine eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
-    
+
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':eval_expr'
     
     ! --- Routine parameters
@@ -615,16 +618,21 @@ module mod_expression
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
       fact_resistiv, fact_Er, fact_flux, fact_rad
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
-#if JOREK_MODEL == 500 || JOREK_MODEL == 501
-    real*8  :: coef_rad_1
-    real*8  :: Te_corr_eV, Te_eV
-    real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
+
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+    real*8  :: Te_corr_eV
     real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T
     real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
+    real*8  :: ne_SI                              ! Electron density used in radiation rate
 #endif
-#if JOREK_MODEL == 501
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+    real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg
+    real*8  :: Lrad_imp, m_i_over_m_imp_bg, r_imp, coef_rad_imp
+#endif
+#ifdef WITH_Impurities
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
-    real*8 :: T0_corr, r0_corr, rn0_corr
+    real*8  :: coef_rad_1, Te_eV
+    real*8  :: T0_corr, r0_corr, rn0_corr
     ! Atomic physics coefficients:
     !   -Mass ratio between main ions and impurites (m_i/m_imp)
     real*8  :: m_i_over_m_imp
@@ -635,7 +643,6 @@ module mod_expression
     real*8  :: beta_imp
     !   -Radiation from injected impurities
     real*8  :: Lrad                                ! Radiation rate
-    real*8  :: ne_SI                              ! Electron density used in radiation rate
     real*8  :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
     real*8  :: A2_rad, T2_rad, sig2_rad
     !   -Temporary variable for charge state distribution
@@ -669,8 +676,8 @@ module mod_expression
       return
     end if
 
-#if JOREK_MODEL == 501
-     select case ( trim(gas_type) )
+#ifdef WITH_Impurities
+     select case ( trim(imp_type) )
        case('D2')
          m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
        case('Ar')
@@ -678,7 +685,7 @@ module mod_expression
        case('Ne')
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u 
        case default
-         write(*,*) 'ERROR: Unknown gas_type.'
+         write(*,*) 'ERROR: Unknown imp_type.'
          stop
      end select
 #endif
@@ -1302,7 +1309,7 @@ module mod_expression
           partF_cnv_par =   r0 * Vpar_tot * Bnorm / Btot                           !  p v_par·n
           partF_cnv_tot =   r0 * ( VR * nmlR + VZ * nmlZ )                         !  n v·n
     
-#if JOREK_MODEL == 500
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
           neut_part_flux= -D_neutral_x*rn0_R * nmlR - D_neutral_y * rn0_Z * nmlZ
 #else
           neut_part_flux= 0.d0
@@ -1378,7 +1385,7 @@ module mod_expression
           
           E_dreicer = EL_CHG**3 * ln_Lambda0 * MU_ZERO**1.5 * (central_density*1.d20*central_mass*MASS_PROTON)**2.5 * r0 / ( 2.d0 * PI * EPS_ZERO**2 * (MASS_PROTON*central_mass)**2 * T0 )
           
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500 || JOREK_MODEL == 710 || JOREK_MODEL == 711
+#if JOREK_MODEL >= 303
           if (bootstrap) then
             call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
               ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
@@ -1387,31 +1394,74 @@ module mod_expression
           J_boot = 0.d0
 #endif
 
-#if JOREK_MODEL == 500
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 
    Te_corr_eV = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
 
-   call atomic_coeff_deuterium(Te_corr_eV, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                              LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+   if (use_imp_adas) then
+     call atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+     ! Note the input Te0 for atomic_coeff_deuterium should be in JOREK units!!!
 
-  !--------------------------------------------------------
-  ! --- Radiation from background impurity
-  !--------------------------------------------------------
+    !--------------------------------------------------------
+    ! --- Radiation from background impurity
+    !--------------------------------------------------------
+      ne_SI = corr_neg_dens(r0) * 1.d20 * central_density !electron density (SI)
+      r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU
 
-  Arad_bg = 2.4d-31
-  Brad_bg = 20.
-  Crad_bg = 0.8
+      select case ( trim(imp_type) )
+        case('C')
+          m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
+        case('Ar')
+          m_i_over_m_imp_bg = central_mass/40.  ! Argon mass = 40 u
+        case('Ne')
+          m_i_over_m_imp_bg = central_mass/20.  ! Neon mass = 20 u
+        case('W')
+          m_i_over_m_imp_bg = central_mass/184. ! Tungsten mass = 184 u
+        case default
+          if (nimp_bg > 0) then
+            write(*,*) 'Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90), terminating.'
+            stop
+          end if 
+      end select      
 
-  if ( units == SI_UNITS ) then
-    frad_bg = nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
-  else if ( units == JOREK_UNITS ) then
-    frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))*nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
-  endif
-  !--------------------------------------------------------
+      if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
+        ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+        coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                     *(central_density*1.d20)**2.5d0*m_i_over_m_imp_bg
+        Lrad_imp = 0.0
+        call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad_imp)         
+        if (Lrad_imp < 0.) then
+          Lrad_imp = 0.
+        end if
+        if ( units == SI_UNITS ) then
+          frad_bg = nimp_bg * Lrad_imp * m_i_over_m_imp_bg
+        else if ( units == JOREK_UNITS ) then
+          frad_bg = r_imp * Lrad_imp * coef_rad_imp 
+        endif
+      else     
+        Lrad_imp = 0.
+        frad_bg = 0.
+      end if   
+    else
+      if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+        Arad_bg = 2.4d-31
+        Brad_bg = 20.
+        Crad_bg = 0.8
+        if ( units == SI_UNITS ) then
+          frad_bg = nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+        else if ( units == JOREK_UNITS ) then
+          frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))*nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+        end if
+      else
+        write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+        stop
+      end if      
+    end if  
 
 #endif
 
-#if JOREK_MODEL == 501
+#ifdef WITH_Impurities
 
           if (T_min > T_1) then
             T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_min)
@@ -1541,13 +1591,13 @@ module mod_expression
                 res = r0 * fact_rho
                 
               case ( 'ne' )
-#if JOREK_MODEL == 501
+#ifdef WITH_Impurities
                 res = ne_SI * fact_ne 
 #else
                 res = r0 * fact_ne
 #endif
 
-#if JOREK_MODEL == 501
+#ifdef WITH_Impurities
               case ( 'nimp' )
                 res = rn0 * fact_ne * m_i_over_m_imp
 #endif
@@ -1792,12 +1842,10 @@ module mod_expression
               case ( 'ExB_norm'  )
                 res = ExB_norm * fact_flux
   
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500 || JOREK_MODEL == 710 || JOREK_MODEL == 711
               case ( 'J_bootstrap' )
                 res = J_boot / R / fact_mu_zero
-#endif
 
-#if JOREK_MODEL == 500
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
               case ( 'radiation' )
 
                 if (rn0 .lt. 0.d0) then
@@ -1812,7 +1860,7 @@ module mod_expression
               case ( 'brem' )
                 res = r0 * fact_ne * r0 * fact_ne * LradDcont_T
 #endif
-#if JOREK_MODEL == 501
+#ifdef WITH_Impurities
               case ( 'radiation' )
                 res = (r0_corr + beta_imp*rn0_corr) * rn0_corr * Lrad * fact_rad
 #endif

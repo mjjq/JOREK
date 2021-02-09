@@ -647,6 +647,7 @@ H_s(4,4) =9.d0*(1.d0 - 3.d0*s)*(-1.d0 + s)*(-1.d0 + t)*t**2
 H_t(4,4) =-9.d0*(-1.d0 + s)**2*s*t*(-2.d0 + 3.d0*t)
 end subroutine basisfunctions3
 
+! For details, please see https://www.jorek.eu/wiki/doku.php?id=grid-axis
 pure subroutine basisfunctions_axis(element, nodes, Hf, Nf)
 use data_structure
 implicit none

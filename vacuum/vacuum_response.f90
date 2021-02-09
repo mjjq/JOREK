@@ -1641,7 +1641,7 @@ module vacuum_response
 #ifdef __GFORTRAN__
     real*8 :: wgauss_copy(4)
 #endif
-    !integer :: rate, t0, t1 !### timing ###
+    real*8 :: t_elaps_start, t_elaps_end !### timing ###
     logical, save  :: PF_perturbation = .true.
     integer  :: ierr,i
     real*8, allocatable :: rhs_contrib_arr(:)
@@ -1650,6 +1650,9 @@ module vacuum_response
       write(*,*) 'Skipping vacuum_boundary_integral since sr%n_tor==0.'
       return
     end if
+    
+    t_elaps_start = MPI_WTIME()  !### timing ###
+
 
     if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)),sum(abs(A_mat))
 
@@ -1862,11 +1865,10 @@ module vacuum_response
     !$omp end parallel do
 
     !### timing ###
-    !call system_clock(count=t1)
-    !write(*,*) 'vacuum_boundary_integral main loop:', real(t1 - t0 ) / real(rate), 's'
-    !write(68+my_id,*) real(t1 - t0 ) / real(rate)
+    t_elaps_end = MPI_WTIME()
+    write(*,'(I4,A,F10.7,A)') my_id, '  Elapsed time vacuum_boundary_integral', t_elaps_end - t_elaps_start, ' s'
     !###
-
+    
     if ( vacuum_debug ) write(*,*) my_id, 'After:', sum(abs(rhs_loc)),sum(abs(A_mat))
 
     if ( allocated(psibnd_vec ) ) deallocate( psibnd_vec  )

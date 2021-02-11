@@ -172,6 +172,7 @@ program JOREK2
   REAL*8                   :: max_time, min_time, tsecond
   integer, allocatable     :: tab_n_local_elems(:)
   real*8                   :: t_this, sum_deltas
+  integer                  :: mpi_distr_count, ib, l_index, ik
 ! =================== plot NEO coeffs ==================
   real*8                   :: amu_neo_node, aki_neo_node
   real*8,allocatable       :: mu_neo(:), ki_neo(:)
@@ -919,6 +920,26 @@ required = 0
     !
     call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,.false.,local_elms, & 
          n_local_elms,ndof_glob,index_min,index_max)
+         
+    mpi_distr_count=0
+    if (restart .and. freeboundary) then 
+      do ib = 1, node_list%n_nodes	
+	  if ( node_list%node(ib)%boundary > 0 ) then
+	       do ik=1, 4
+		  l_index = node_list%node(ib)%index(ik)
+ 		  if ((l_index .gt. index_min(my_id+1)) .and. (l_index < index_max(my_id+1))) then ! This MPI proc responsible?
+		            mpi_distr_count=mpi_distr_count+1
+	          end if
+	  	
+		end do
+	  end if
+	end do
+    !   write(*,*) 'task ', my_id, 'is responsible for ', mpi_distr_count, 'boundary nodes.'
+       if (mpi_distr_count == 0) then 
+            write(*,*) 'WARNING: boundary node indices are not distributed evenly among the MPI tasks. '
+       end if 
+    end if
+     
 
     node_list%n_dof = ndof_glob
     local_index_start = index_min

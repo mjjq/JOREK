@@ -925,7 +925,7 @@ required = 0
     if (restart .and. freeboundary) then 
       do ib = 1, node_list%n_nodes	
 	  if ( node_list%node(ib)%boundary > 0 ) then
-	       do ik=1, 4
+	       do ik=1, n_vertex_max
 		  l_index = node_list%node(ib)%index(ik)
  		  if ((l_index .gt. index_min(my_id+1)) .and. (l_index < index_max(my_id+1))) then ! This MPI proc responsible?
 		            mpi_distr_count=mpi_distr_count+1

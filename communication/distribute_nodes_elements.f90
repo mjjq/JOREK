@@ -132,9 +132,9 @@ mpi_distr_count=0
 if (restart .and. freeboundary) then 
   do ib = 1, node_list%n_nodes	
     if ( node_list%node(ib)%boundary > 0 ) then
-      do ik=1, n_vertex_max
+      do ik=1, n_order+1
         l_index = node_list%node(ib)%index(ik)
-          if ((l_index .gt. index_min(my_id+1)) .and. (l_index < index_max(my_id+1))) then ! This MPI proc responsible?
+          if ((l_index .ge. index_min(my_id+1)) .and. (l_index .le. index_max(my_id+1))) then ! This MPI proc responsible?
             mpi_distr_count=mpi_distr_count+1
           end if
       end do
@@ -142,7 +142,7 @@ if (restart .and. freeboundary) then
   end do
   !write(*,*) 'task ', my_id, 'is responsible for ', mpi_distr_count, 'boundary nodes.'
   if (mpi_distr_count == 0) then 
-    write(*,*) 'WARNING: boundary node indices are not distributed evenly among the MPI tasks. '
+    write(*,*) 'WARNING: boundary node indices seem to be unevenly distributed among the MPI tasks. To avoid this, use freeb_change_indices=.true. from the very beginning of your simulation."'
   end if 
 end if
      

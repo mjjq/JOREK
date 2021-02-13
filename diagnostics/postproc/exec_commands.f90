@@ -58,7 +58,7 @@ module exec_commands
   logical,             private, save :: verbose
   logical,             private, save :: debug
   type(t_expr_list),   private, save :: expr_list
-  real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:), sum(:)
+  real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:), the_sum(:)
   complex*16, allocatable, private, save :: cp(:,:,:,:)
   real*8,              private, save :: time_now !< Time of current restart file in selected units
   
@@ -1493,7 +1493,7 @@ module exec_commands
 
     write(comment,'(a,i6.6)') 'time step #', index_now
 
-    call int_along_pol_lineout(node_list, element_list, ES, units, expr_list, sum, phi, Rstart, Zstart,    &
+    call int_along_pol_lineout(node_list, element_list, ES, units, expr_list, the_sum, phi, Rstart, Zstart,    &
       Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
 
   end subroutine int_along_pol_line

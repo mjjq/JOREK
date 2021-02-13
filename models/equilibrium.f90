@@ -469,7 +469,6 @@ if (my_id == 0) then
                  dFF_dpsi3, dFF_dpsi_dz2, dFF_dpsi2_dz,  dFF_dz3, &              ! 2rd order derivatives
                  dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz, dFF_dz4, &! 4th order derivatives
                  .true.)
-#endif
 
     ! --- Before dealing with the current, let's do grad(p)  
     GP            = dn_dpsi * zT + zn * dT_dpsi
@@ -513,64 +512,49 @@ if (my_id == 0) then
                     + 4.0 * dn_dZ * dT_dpsi_dZ3 + zn * dT_dpsi_dZ4
 
 
+    ! --- Now we  record**2 the current profile for projection on the node
+    ! --- For the record**2, j = - FF' - R^2 Grad(p), but JOREK uses -FFprime...
+    F_values = 0.d0
     ! --- Current needs to be derived 4*4*4 times...
     F_values(0,0,0) = zFFprime      -       R**2 *  GP
     ! --- 1st derivatives
     F_values(1,0,0) = dFF_dpsi      -       R**2 * dGP_dpsi
-    F_values(0,1,0) = zFFprime      - 2.0 * R    *  GP
+    F_values(0,1,0) =               - 2.0 * R    *  GP
     F_values(0,0,1) = dFF_dZ        -       R**2 * dGP_dZ
     ! --- 2nd derivatives
     F_values(2,0,0) = dFF_dpsi2     -       R**2 * dGP_dpsi2
-    F_values(0,2,0) = zFFprime      - 2.0        *  GP
+    F_values(0,2,0) =               - 2.0        *  GP
     F_values(0,0,2) = dFF_dZ2       -       R**2 * dGP_dZ2
-    F_values(1,1,0) = dFF_dpsi      - 2.0 * R    * dGP_dpsi
-    F_values(1,0,0) = dFF_dpsi      -       R**2 * dGP_dpsi
+    F_values(1,1,0) =               - 2.0 * R    * dGP_dpsi
+    F_values(1,0,1) = dFF_dpsi_dZ   -       R**2 * dGP_dpsi_dZ
+    F_values(0,1,1) =               - 2.0 * R    * dGP_dZ
+    ! --- 3rd derivatives
+    F_values(3,0,0) = dFF_dpsi3     -       R**2 * dGP_dpsi3
+    F_values(0,0,3) = dFF_dZ3       -       R**2 * dGP_dZ3
+    F_values(2,1,0) =               - 2.0 * R    * dGP_dpsi2
+    F_values(2,0,1) = dFF_dpsi2_dZ  -       R**2 * dGP_dpsi2_dZ
+    F_values(1,2,0) =               - 2.0        * dGP_dpsi
+    F_values(1,1,1) =               - 2.0 * R    * dGP_dpsi_dZ
+    F_values(1,0,2) = dFF_dpsi_dZ2  -       R**2 * dGP_dpsi_dZ2
+    F_values(0,2,1) =               - 2.0        * dGP_dZ
+    F_values(0,1,2) =               - 2.0 * R    * dGP_dZ2
+    ! --- 4th derivatives
+    F_values(4,0,0) = dFF_dpsi4     -       R**2 * dGP_dpsi4
+    F_values(0,0,4) = dFF_dZ4       -       R**2 * dGP_dZ4
+    F_values(3,0,1) = dFF_dpsi3_dZ  -       R**2 * dGP_dpsi3_dZ
+    F_values(3,1,0) =               - 2.0 * R    * dGP_dpsi3
+    F_values(2,2,0) =               - 2.0        * dGP_dpsi2
+    F_values(2,1,1) =               - 2.0 * R    * dGP_dpsi2_dZ
+    F_values(2,0,2) = dFF_dpsi2_dZ2 -       R**2 * dGP_dpsi2_dZ2
+    F_values(1,2,1) =               - 2.0        * dGP_dpsi_dZ
+    F_values(1,1,2) =               - 2.0 * R    * dGP_dpsi_dZ2
+    F_values(1,0,3) = dFF_dpsi_dZ3  -       R**2 * dGP_dpsi_dZ3
+    F_values(0,2,2) =               - 2.0        * dGP_dZ2
+    F_values(0,1,3) =               - 2.0 * R    * dGP_dZ3
 
+    call project_var_on_node(node_list, i, var_zj, F_values)
 
-
-    dj_dpsi  = dFF_dpsi      - R*R * (dn_dpsi2 * zT + 2.d0 * dn_dpsi * dT_dpsi + zn * dT_dpsi2)
-    dj_dpsi2 = dFF_dpsi2     - R*R * (dn_dpsi3 * zT + 3.d0 * dn_dpsi * dT_dpsi2 + 3.d0 * dn_dpsi2 * dT_dpsi + zn * dT_dpsi3)
-  
-    dj_dR   =               - 2.d0 * R * (dn_dpsi    * zT + zn * dT_dpsi)
-  
-    dj_dZ   = dFF_dz        - R*R *      (dn_dpsi_dz * zT + dn_dpsi * dT_dz + zn * dT_dpsi_dz + dn_dz * dT_dpsi)
-  
-    dj_dR_dR = - 2.d0     * (dn_dpsi     * zT + zn * dT_dpsi)
-  
-    dj_dZ_dZ = dFF_dz2        - R*R * ( dn_dpsi_dz2 * zT   + dn_dpsi_dz * dT_dz  + dn_dz * dT_dpsi_dz  + dn_dz2 * dT_dpsi &
-                                      +  dn_dpsi_dz  * dT_dz + dn_dpsi    * dT_dz2 + zn    * dT_dpsi_dz2 + dn_dz  * dT_dpsi_dz)
-  
-  
-    dj_dR_dZ   = - 2.d0 * R * (dn_dpsi_dz * zT + dn_dpsi * dT_dz + zn * dT_dpsi_dz + dn_dz * dT_dpsi)
-  
-    dj_dR_dpsi = - 2.d0 * R * (dn_dpsi2   * zT + zn * dT_dpsi2   + 2.d0 * dn_dpsi * dT_dpsi)
-  
-    dj_dZ_dpsi = dFF_dpsi_dz      - R*R * ( dn_dpsi2_dz * zT    + dn_dz * dT_dpsi2     + 2.d0 * dn_dpsi_dz * dT_dpsi  &
-                                            + dn_dpsi2    * dT_dz + zn    * dT_dpsi2_dz  + 2.d0 * dn_dpsi    * dT_dpsi_dz)
-  
-  
-    node_list%node(i)%values(1,1,3) = zjz
-  
-    node_list%node(i)%values(1,2,3) = dj_dpsi * node_list%node(i)%values(1,2,1) &
-                                    + dj_dR   * node_list%node(i)%x(1,2,1)        &
-                                    + dj_dZ   * node_list%node(i)%x(1,2,2)
-  
-    node_list%node(i)%values(1,3,3) = dj_dpsi * node_list%node(i)%values(1,3,1) &
-                                    + dj_dR   * node_list%node(i)%x(1,3,1)        &
-                                    + dj_dZ   * node_list%node(i)%x(1,3,2)
-  
-    node_list%node(i)%values(1,4,3) = dj_dpsi  * node_list%node(i)%values(1,4,1) &
-                                    + dj_dR    * node_list%node(i)%x(1,4,1)        &
-                                    + dj_dZ    * node_list%node(i)%x(1,4,2)        &
-                                    + dj_dR_dR * node_list%node(i)%x(1,2,1) * node_list%node(i)%x(1,3,1)  &
-                                    + dj_dZ_dZ * node_list%node(i)%x(1,2,2) * node_list%node(i)%x(1,3,2)  &
-                                    + dj_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dj_dR_dZ * ( node_list%node(i)%x(1,2,1) * node_list%node(i)%x(1,3,2)          &
-                                                 + node_list%node(i)%x(1,3,1) * node_list%node(i)%x(1,2,2) )        &
-                                    + dj_dR_dpsi*( node_list%node(i)%x(1,2,1) * node_list%node(i)%values(1,3,1)   &
-                                                 + node_list%node(i)%x(1,3,1) * node_list%node(i)%values(1,2,1) ) &
-                                    + dj_dZ_dpsi*( node_list%node(i)%x(1,2,2) * node_list%node(i)%values(1,3,1)   &
-                                                 + node_list%node(i)%x(1,3,2) * node_list%node(i)%values(1,2,1) )
+#endif /* end of non-fullmhd */
   
   enddo
   

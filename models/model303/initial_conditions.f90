@@ -50,6 +50,7 @@ real*8     ::    dOmega_dpsi, dOmega_dz
 real*8     ::    dOmega_dpsi2, dOmega_dz2, dOmega_dpsi_dz
 real*8     ::    dOmega_dpsi3, dOmega_dpsi_dz2, dOmega_dpsi2_dz,  dOmega_dz3
 real*8     ::    dOmega_dpsi4, dOmega_dpsi_dz3, dOmega_dpsi2_dz2, dOmega_dpsi3_dz, dOmega_dz4
+real*8     :: F_values(0:4,0:4,0:4)        !< variable and its derivatives
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
   write(*,*) '*      initial conditions  (303)      *'
@@ -110,23 +111,23 @@ if (my_id .eq. 0) then
     dp_dz2     = zn * dT_dz2 + 2.d0 * dn_dz * dT_dz + dn_dz2 * zT 							       
     dp_dpsi_dz = zn * dT_dpsi_dz + dn_dz * dT_dpsi + dn_dpsi * dT_dz + dn_dpsi_dz * zT
 
-    node_list%node(i)%values(1,1,5) = zn
-    node_list%node(i)%values(1,2,5) = dn_dpsi    * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(1,2,2)
-    node_list%node(i)%values(1,3,5) = dn_dpsi    * node_list%node(i)%values(1,3,1) + dn_dz * node_list%node(i)%x(1,3,2)
-    node_list%node(i)%values(1,4,5) = dn_dpsi    * node_list%node(i)%values(1,4,1) + dn_dz * node_list%node(i)%x(1,4,2) &
-                                    + dn_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dn_dz2     * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)         &
-                                    + dn_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(1,2,2)         &
-                                    + dn_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(1,3,2)      
+    F_values = 0.d0
+    F_values(0,0,0) = zn
+    F_values(1,0,0) = dn_dpsi      ; F_values(0,0,1) = dn_dZ
+    F_values(2,0,0) = dn_dpsi2     ; F_values(1,0,1) = dn_dpsi_dZ ; F_values(0,0,2) = dn_dZ2
+    F_values(3,0,0) = dn_dpsi3     ; F_values(0,0,3) = dn_dZ3     ; F_values(2,0,1) = dn_dpsi2_dZ  ; F_values(1,0,2) = dn_dpsi_dZ2
+    F_values(4,0,0) = dn_dpsi4     ; F_values(0,0,4) = dn_dZ4     ; F_values(3,0,1) = dn_dpsi3_dZ
+    F_values(2,0,2) = dn_dpsi3_dZ2 ; F_values(1,0,3) = dn_dpsi_dZ3
+    call project_var_on_node(node_list, i, var_rho, F_values)
 
-    node_list%node(i)%values(1,1,6) = zT
-    node_list%node(i)%values(1,2,6) = dT_dpsi    * node_list%node(i)%values(1,2,1) + dT_dz * node_list%node(i)%x(1,2,2)
-    node_list%node(i)%values(1,3,6) = dT_dpsi    * node_list%node(i)%values(1,3,1) + dT_dz * node_list%node(i)%x(1,3,2)
-    node_list%node(i)%values(1,4,6) = dT_dpsi    * node_list%node(i)%values(1,4,1) + dT_dz * node_list%node(i)%x(1,4,2) &
-                                    + dT_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dT_dz2     * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)         &
-                                    + dT_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(1,2,2)         &
-                                    + dT_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(1,3,2)      
+    F_values = 0.d0
+    F_values(0,0,0) = zT
+    F_values(1,0,0) = dT_dpsi      ; F_values(0,0,1) = dT_dZ
+    F_values(2,0,0) = dT_dpsi2     ; F_values(1,0,1) = dT_dpsi_dZ ; F_values(0,0,2) = dT_dZ2
+    F_values(3,0,0) = dT_dpsi3     ; F_values(0,0,3) = dT_dZ3     ; F_values(2,0,1) = dT_dpsi2_dZ  ; F_values(1,0,2) = dT_dpsi_dZ2
+    F_values(4,0,0) = dT_dpsi4     ; F_values(0,0,4) = dT_dZ4     ; F_values(3,0,1) = dT_dpsi3_dZ
+    F_values(2,0,2) = dT_dpsi3_dZ2 ; F_values(1,0,3) = dT_dpsi_dZ3
+    call project_var_on_node(node_list, i, var_T, F_values)
 
     node_list%node(i)%values(1,1,2) = - tauIC * zp 
     node_list%node(i)%values(1,2,2) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,2,1) + dp_dz * node_list%node(i)%x(1,2,2))

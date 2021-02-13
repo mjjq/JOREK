@@ -87,7 +87,7 @@ real*8     ::    dV_dpsi2, dV_dz2, dV_dpsi_dz                                   
 real*8     ::    dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3                    ! 2rd order derivatives
 real*8     ::    dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4       ! 4th order derivatives
 real*8     :: eq_zne(n_gauss,n_gauss)
-real*8     ::    dT_dpsi(n_gauss,n_gauss),  dT_dz                              ! 1st order derivatives
+real*8     ::    dn_dpsi(n_gauss,n_gauss),  dn_dz                              ! 1st order derivatives
 real*8     ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
 real*8     ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
 real*8     ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives

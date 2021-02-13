@@ -1,6 +1,8 @@
 !> module with generic functions to build input profiles, in order to avoid duplication
 module mod_input_profiles
 
+contains
+
 
 subroutine input_profiles_psi_component(psi,psi_axis,psi_bnd, &
                                         CORE, SOL, coef, &
@@ -28,7 +30,7 @@ subroutine input_profiles_psi_component(psi,psi_axis,psi_bnd, &
   real*8,  intent(out) :: dprof1_dpsi5
   
   ! --- Internal variables.
-  real*8  :: psi_n, psi_star, delta_psi, sigg
+  real*8  :: psi_n, psi_star, delta_psi, sigg, psi_barrier
   real*8  :: atn, datn, d2atn, d3atn, d4atn, d5atn
   real*8  :: cosh1, sinh1, tanh1
   real*8  :: prof0       
@@ -52,7 +54,7 @@ subroutine input_profiles_psi_component(psi,psi_axis,psi_bnd, &
   sigg        = coef(4)
   psi_barrier = coef(5)
   
-  psi_star = (psi_n - psi_barrier)/sig_n
+  psi_star = (psi_n - psi_barrier)/sigg
   psi_star = min( max( psi_star, -40.d0), 40.d0) ! avoid floating-point exceptions
   
   tanh1 = tanh(psi_star)
@@ -113,7 +115,7 @@ subroutine input_profiles_edge_perturbation(psi,psi_axis,psi_bnd, &
   real*8,  intent(out) :: d5_pert
   
   ! --- Internal variables.
-  real*8  :: psi_n, psi_star, delta_psi, no_delta_psi, sigg, psi_star
+  real*8  :: psi_n, psi_star, delta_psi, no_delta_psi, sigg, psi_barrier
   real*8  :: atn, datn, d2atn, d3atn, d4atn
   real*8  :: cosh1, sinh1, tanh1
   real*8  :: prof0       
@@ -145,7 +147,7 @@ subroutine input_profiles_edge_perturbation(psi,psi_axis,psi_bnd, &
   sigg        = coef(4)
   psi_barrier = coef(5)
   
-  psi_star = (psi_n - psi_barrier)/sig_n
+  psi_star = (psi_n - psi_barrier)/sigg
   psi_star = min( max( psi_star, -40.d0), 40.d0) ! avoid floating-point exceptions
   
   tanh1 = tanh(psi_star)
@@ -226,13 +228,13 @@ subroutine input_profiles_Z_component(xpoint2,xcase2,Z,Z_xpoint,&
       cosh1     = cosh(Z_star_u)
       sinh1     = sinh(Z_star_u)
  
-      atn_z_u   = (0.5d0 - 0.5d0*tanh2)
-      datn_z_u  = - 0.5d0 * cosh2**(-2)              / sigz
-      d2atn_z_u = + 1.0d0 * cosh2**(-3) * sinh2_u    / sigz**2
-      d3atn_z_u = - 3.0d0 * cosh2**(-4) * sinh2_u**2 / sigz**3 &
-                  + 1.0d0 * cosh2**(-2)              / sigz**3
-      d4atn_z_u = +12.0d0 * cosh2**(-5) * sinh2_u**3 / sigz**4 &
-                  - 8.0d0 * cosh2**(-3) * sinh2_u    / sigz**4
+      atn_z_u   = (0.5d0 - 0.5d0*tanh1)
+      datn_z_u  = - 0.5d0 * cosh1**(-2)            / sigz
+      d2atn_z_u = + 1.0d0 * cosh1**(-3) * sinh1    / sigz**2
+      d3atn_z_u = - 3.0d0 * cosh1**(-4) * sinh1**2 / sigz**3 &
+                  + 1.0d0 * cosh1**(-2)            / sigz**3
+      d4atn_z_u = +12.0d0 * cosh1**(-5) * sinh1**3 / sigz**4 &
+                  - 8.0d0 * cosh1**(-3) * sinh1    / sigz**4
      
     endif
     
@@ -250,13 +252,13 @@ subroutine input_profiles_Z_component(xpoint2,xcase2,Z,Z_xpoint,&
       cosh1   = cosh(Z_star)
       sinh1   = sinh(Z_star)
   
-      atn_z   = (0.5d0 - 0.5d0*tanh2)
-      datn_z  = - 0.5d0 * cosh2**(-2)            / sigz
-      d2atn_z = + 1.0d0 * cosh2**(-3) * sinh2    / sigz**2
-      d3atn_z = - 3.0d0 * cosh2**(-4) * sinh2**2 / sigz**3 &
-                + 1.0d0 * cosh2**(-2)            / sigz**3
-      d4atn_z = +12.0d0 * cosh2**(-5) * sinh2**3 / sigz**4 &
-                - 8.0d0 * cosh2**(-3) * sinh2    / sigz**4
+      atn_z   = (0.5d0 - 0.5d0*tanh1)
+      datn_z  = - 0.5d0 * cosh1**(-2)            / sigz
+      d2atn_z = + 1.0d0 * cosh1**(-3) * sinh1    / sigz**2
+      d3atn_z = - 3.0d0 * cosh1**(-4) * sinh1**2 / sigz**3 &
+                + 1.0d0 * cosh1**(-2)            / sigz**3
+      d4atn_z = +12.0d0 * cosh1**(-5) * sinh1**3 / sigz**4 &
+                - 8.0d0 * cosh1**(-3) * sinh1    / sigz**4
        
     endif
     

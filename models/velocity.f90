@@ -77,7 +77,6 @@ dV_dpsi             = dprof1_dpsi  *   atn
 dV_dpsi2            = dprof1_dpsi2 *   atn
 dV_dpsi3            = dprof1_dpsi3 *   atn
 dV_dpsi4            = dprof1_dpsi4 *   atn
-dV_dpsi5            = dprof1_dpsi5 *   atn
 dV_dz               = prof1        *  datn
 dV_dz2              = prof1        * d2atn
 dV_dz3              = prof1        * d3atn

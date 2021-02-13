@@ -27,7 +27,7 @@ real*8,  intent(out) ::    dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz,
 logical, intent(in)  :: from_F_profile_710
 
 ! --- Internal variables.
-real*8  :: prof0, prof1, dprof0_dpsi, dprof0_dpsi2, dprof0_dpsi3, dprof0_dpsi4, dprof1_dpsi5
+real*8  :: prof1,dprof1_dpsi,dprof1_dpsi2,dprof1_dpsi3,dprof1_dpsi4,dprof1_dpsi5
 real*8  :: psi_n, psi_star, delta_psi
 real*8  :: atn, datn, d2atn, d3atn, d4atn
 real*8  :: d_pert, d2_pert, d3_pert, d4_pert, d5_pert

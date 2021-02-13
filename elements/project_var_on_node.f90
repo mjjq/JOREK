@@ -7,10 +7,10 @@ use mod_parameters, only: n_degrees, n_order
 implicit none
 
 ! --- Routine parameters
-type (type_node_list),    intent(in)  :: node_list                    !< node list, duh
-integer,                  intent(in)  :: i_node                       !< index of node to project on
-integer,                  intent(in)  :: i_var                        !< variable we are projecting one
-real*8,                   intent(in)  :: F_values(0:4,0:4,0:4)        !< variable and its derivatives
+type (type_node_list),    intent(inout):: node_list                    !< node list, duh
+integer,                  intent(in)   :: i_node                       !< index of node to project on
+integer,                  intent(in)   :: i_var                        !< variable we are projecting one
+real*8,                   intent(in)   :: F_values(0:4,0:4,0:4)        !< variable and its derivatives
              !< The 3 indices are for the thre variables (psi, R, Z)
              !< most variables only use psi and Z, but for the current in equilibrium.f90
              !< there is also a dependence on R. Hence we just do the generic case for
@@ -20,7 +20,7 @@ real*8,                   intent(in)  :: F_values(0:4,0:4,0:4)        !< variabl
 
 ! --- Variable derivatives
 real*8  :: F
-real*8  :: dF_dpsi, dF_R, dF_dZ                                                          ! 1st derivatives
+real*8  :: dF_dpsi, dF_dR, dF_dZ                                                         ! 1st derivatives
 real*8  :: dF_dpsi2, dF_dpsi_dR, dF_dpsi_dZ                                              ! 2nd derivatives
 real*8  :: dF_dR2, dF_dR_dZ, dF_dZ2                                                      ! 2nd derivatives
 real*8  :: dF_dpsi3, dF_dpsi2_dR, dF_dpsi2_dZ, dF_dpsi_dR2, dF_dpsi_dZ2, dF_dpsi_dR_dZ   ! 3rd derivatives
@@ -49,7 +49,7 @@ real*8  :: R_sstt, Z_sstt                      ! 4th derivatives
 
 ! --- Allocate user's variables
 F = F_values(0,0,0)
-dF_dpsi      = F_values(1,0,0); dF_R           = F_values(0,1,0); dF_dZ          = F_values(0,0,1)
+dF_dpsi      = F_values(1,0,0); dF_dR          = F_values(0,1,0); dF_dZ          = F_values(0,0,1)
 dF_dpsi2     = F_values(2,0,0); dF_dpsi_dR     = F_values(1,1,0); dF_dpsi_dZ     = F_values(1,0,1)
 dF_dR2       = F_values(0,2,0); dF_dR_dZ       = F_values(0,1,1); dF_dZ2         = F_values(0,0,2)
 dF_dpsi3     = F_values(3,0,0); dF_dpsi2_dR    = F_values(2,1,0); dF_dpsi2_dZ    = F_values(2,0,1)
@@ -59,7 +59,7 @@ dF_dpsi4     = F_values(4,0,0); dF_dpsi3_dR    = F_values(3,1,0); dF_dpsi3_dZ   
 dF_dpsi2_dR2 = F_values(2,2,0); dF_dpsi2_dZ2   = F_values(2,0,2); dF_dpsi2_dR_dZ = F_values(2,1,1)
 dF_dpsi_dR3  = F_values(1,3,0); dF_dpsi_dR2_dZ = F_values(1,2,1); dF_dpsi_dR_dZ2 = F_values(1,1,2); dF_dpsi_dZ3 = F_values(1,0,3)
 dF_dR4       = F_values(0,4,0); dF_dR3_dZ      = F_values(0,3,1); dF_dR2_dZ2     = F_values(0,2,2); dF_dR_dZ3   = F_values(0,1,3)
-dF_dZ4 = F_values(0,0,0)
+dF_dZ4       = F_values(0,0,4)
 
 ! --- Allocate psi variables (in doubt, please refer to definition of derivatives for degrees 7,8,9)
 psi      = node_list%node(i_node)%values(1,1,var_psi)
@@ -154,7 +154,7 @@ var_out(7) =                                                                    
     +                           dF_dpsi_dZ                                  * 2.0 * Z_s    * psi_st  &
     + ((dF_dpsi2 * psi_t) + (dF_dpsi_dR * R_t) + (dF_dpsi_dZ * Z_t))                       * psi_ss  &
     +                           dF_dpsi                                                    * psi_sst &
-    + dF_dR2((dF_dpsi_dR2 * psi_t) + (dF_dR3 * R_t) + (dF_dR2_dZ * Z_t))          * R_s    * R_s     &
+    + ((dF_dpsi_dR2 * psi_t) + (dF_dR3 * R_t) + (dF_dR2_dZ * Z_t))                * R_s    * R_s     &
     +                           dF_dR2                                      * 2.0 * R_st   * R_s     &
     + ((dF_dpsi_dR_dZ * psi_t) + (dF_dR2_dZ * R_t) + (dF_dR_dZ2 * Z_t))     * 2.0 * Z_s    * R_s     &
     +                           dF_dR_dZ                                    * 2.0 * Z_st   * R_s     &
@@ -165,7 +165,7 @@ var_out(7) =                                                                    
     +                           dF_dZ2                                      * 2.0 * Z_st   * Z_s     &
     + ((dF_dpsi_dZ * psi_t) + (dF_dR_dZ * R_t) + (dF_dZ2 * Z_t))                           * Z_ss    &
     +                           dF_dZ                                                      * Z_sst   &
-    - var_out(3)
+    + var_out(3)
 
 
 ! --- 8th degree (stt-derivative)
@@ -191,7 +191,7 @@ var_out(8) =                                                                    
     +                           dF_dZ2                                      * 2.0 * Z_st   * Z_t     &
     + ((dF_dpsi_dZ * psi_s) + (dF_dR_dZ * R_s) + (dF_dZ2 * Z_s))                           * Z_tt    &
     +                           dF_dZ                                                      * Z_stt   &
-    - var_out(2)
+    + var_out(2)
 
 
 ! --- 9th degree (sstt-derivative) that's the fun one...
@@ -261,8 +261,8 @@ var_out(9) =                                                                    
     +                           dF_dR                                      * R_sstt   &
     + ((dF_dpsi_dZ * psi_s) + (dF_dR_dZ * R_s) + (dF_dZ2 * Z_s))           * Z_stt    &
     +                           dF_dZ                                      * Z_sstt   &
-    - var_out(5) &
-    - var_out(6)
+    + var_out(5) &
+    + var_out(6)
 
 
 endif

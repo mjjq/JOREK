@@ -593,6 +593,63 @@ def write_basis_function_basisfunctions3(F_basis):
 
 
 
+# --- gauss.f90
+def write_gauss_points():
+    
+    n_gauss = n_order+1
+    
+    gauss_numpy = numpy.polynomial.legendre.leggauss(n_gauss)
+    xgauss = gauss_numpy[0]
+    wgauss = gauss_numpy[1]
+    # --- Rescale because numpy is in interval [-1,+1], and JOREK is in [0,1]
+    for i in range(n_gauss):
+        xgauss[i] = 0.5 + 0.5 * xgauss[i]
+        wgauss[i] = 0.5 * wgauss[i]
+    
+    gauss_file = open('gauss.f90','w')
+    
+    gauss_file.write("!> IMPORTANT: auto-generated code for n_order=%d\n" % (n_order))
+    gauss_file.write("!> Contains positions (xgauss) and weights (wgauss) of\n")
+    gauss_file.write("!! Gaussian points for Gaussian integration.\n")
+    gauss_file.write("!!\n")
+    gauss_file.write("!! The values are valid for normalised coordinates in the range [0,1]\n")
+    gauss_file.write("!!\n")
+    gauss_file.write("!! Taken from numpy.polynomial.legendre.leggauss function\n")
+    gauss_file.write("!! converted to [0,1], with weights normalized to sum 1\n")
+    gauss_file.write("module gauss\n")
+    gauss_file.write("\n")
+    gauss_file.write("  integer, parameter :: n_gauss   = %d    !< Number of Gaussian points\n" % (n_gauss))
+    gauss_file.write("\n")
+    gauss_file.write("  real*8,  parameter :: Xgauss(n_gauss) = &\n")
+    gauss_file.write("                        [ &\n")
+    for i in range(n_gauss):
+        gauss_file.write("                         %e" % (xgauss[i]))
+        if (i < n_gauss - 1):
+            gauss_file.write(", &\n")
+        else:
+            gauss_file.write(" &\n")
+    gauss_file.write("                        ]\n")
+    gauss_file.write("\n")
+    gauss_file.write("  real*8,  parameter :: Wgauss(n_gauss) = &\n")
+    gauss_file.write("                        [ &\n")
+    for i in range(n_gauss):
+        gauss_file.write("                         %e" % (wgauss[i]))
+        if (i < n_gauss - 1):
+            gauss_file.write(", &\n")
+        else:
+            gauss_file.write(" &\n")
+    gauss_file.write("                        ]\n")
+    gauss_file.write("\n")
+    gauss_file.write("integer, parameter :: n_gauss_2 = n_gauss * n_gauss  !< Square of n_gauss\n")
+    gauss_file.write("\n")
+    gauss_file.write("end module gauss\n")
+    
+    gauss_file.close()
+    
+
+
+
+
 
 
 
@@ -1025,6 +1082,9 @@ def main():
         write_basis_function_basisfunctions_2D_2_T(F_basis)
         write_basis_function_basisfunctions3(F_basis)
         write_basis_function_tail()
+        #if (n_order > 7):
+        #    write_gauss_points()
+        write_gauss_points()
     
 
 

@@ -15,7 +15,8 @@ use vacuum_equilibrium, only: vacuum_equil
 use mod_coicsr
 use mpi_mod
 use mod_basisfunctions
-    use mod_integer_types
+use mod_integer_types
+use mod_node_indices
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
 use iso_c_binding
@@ -72,6 +73,8 @@ integer:: nnz, ierr
 integer*8 :: check_data
 character*8 :: type
 
+integer :: node_indices( (n_order+1)/2, (n_order+1)/2 )
+
 #ifdef USE_PASTIX6
 ! -- For PaStiX solver version 6.x
 integer(c_int)     :: pastix_info
@@ -105,21 +108,22 @@ if (my_id == 0) then
   n_border = 0
   if (itype .ne. 710) then
     do i=1,node_list%n_nodes
-      if (node_list%node(i)%axis_node      ) n_border = n_border+2
-      if (node_list%node(i)%boundary .eq. 1) n_border = n_border+2
-      if (node_list%node(i)%boundary .eq. 2) n_border = n_border+2
-      if (node_list%node(i)%boundary .eq. 3) n_border = n_border+3
-      if (node_list%node(i)%boundary .eq. 4) n_border = n_border+2
-      if (node_list%node(i)%boundary .eq. 5) n_border = n_border+2
-      if (node_list%node(i)%boundary .eq. 9) n_border = n_border+3
-      if (node_list%node(i)%boundary .eq.11) n_border = n_border+2
-      if (node_list%node(i)%boundary .eq.12) n_border = n_border+2
-      if (node_list%node(i)%boundary .eq.15) n_border = n_border+2
-      if (node_list%node(i)%boundary .eq.19) n_border = n_border+3
-      if (node_list%node(i)%boundary .eq.20) n_border = n_border+3
-      if (node_list%node(i)%boundary .eq.21) n_border = n_border+3
-      if((node_list%node(i)%axis_node      ) .and. (n_order .eq. 5)) n_border = n_border+5
-      if((node_list%node(i)%boundary .ne. 0) .and. (n_order .eq. 5)) n_border = n_border+5
+      ! --- t-derivatives and cross derivatives are switched off on axis, so (n_order+1)/2 are not fixed
+      if (node_list%node(i)%axis_node      ) n_border = n_border + n_degrees - (n_order+1)/2
+      ! --- on non-corner boundaries, only tangent derivatives are fixed, ie. (n_order+1)/2
+      if (node_list%node(i)%boundary .eq. 1) n_border = n_border + (n_order+1)/2
+      if (node_list%node(i)%boundary .eq. 2) n_border = n_border + (n_order+1)/2
+      if (node_list%node(i)%boundary .eq. 4) n_border = n_border + (n_order+1)/2
+      if (node_list%node(i)%boundary .eq. 5) n_border = n_border + (n_order+1)/2
+      if (node_list%node(i)%boundary .eq.11) n_border = n_border + (n_order+1)/2
+      if (node_list%node(i)%boundary .eq.12) n_border = n_border + (n_order+1)/2
+      if (node_list%node(i)%boundary .eq.15) n_border = n_border + (n_order+1)/2
+      ! --- on corner boundaries, derivatives in both are fixed, but not cross-derivatives (-1 is to avoid having value twice)
+      if (node_list%node(i)%boundary .eq. 3) n_border = n_border + 2 * (n_order+1)/2 - 1
+      if (node_list%node(i)%boundary .eq. 9) n_border = n_border + 2 * (n_order+1)/2 - 1
+      if (node_list%node(i)%boundary .eq.19) n_border = n_border + 2 * (n_order+1)/2 - 1
+      if (node_list%node(i)%boundary .eq.20) n_border = n_border + 2 * (n_order+1)/2 - 1
+      if (node_list%node(i)%boundary .eq.21) n_border = n_border + 2 * (n_order+1)/2 - 1
     enddo
   endif
   
@@ -268,60 +272,32 @@ if (freeboundary_equil .and. (itype .eq. -1)) then
 elseif (itype .ne. 710) then        ! apply fixed boundary conditions
 
   if (my_id == 0 ) then
+
+    ! --- calculate node_indices
+    call calculate_node_indices(node_indices)
+
     do i=1,node_list%n_nodes
   
+      ! --- On axis, we fix the t-derivatives, plus all cross-derivatives
       if (node_list%node(i)%axis_node) then
       
-        index_i = node_list%node(i)%index(3)  ! base index in the main matrix
-        mumps_par%irn(ilarge+1) = index_i
-        mumps_par%jcn(ilarge+1) = index_i
-        mumps_par%A(ilarge+1)   = zbig
-        ilarge = ilarge + 1
-
-        index_i = node_list%node(i)%index(4)  ! base index in the main matrix
-        mumps_par%irn(ilarge+1) = index_i
-        mumps_par%jcn(ilarge+1) = index_i
-        mumps_par%A(ilarge+1)   = zbig
-        ilarge = ilarge + 1
-
-        if (n_order .eq. 5) then
-          index_i = node_list%node(i)%index(5)  ! base index in the main matrix
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
-
-          index_i = node_list%node(i)%index(6)  ! base index in the main matrix
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
-
-          index_i = node_list%node(i)%index(7)  ! base index in the main matrix
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
-          
-          index_i = node_list%node(i)%index(8)  ! base index in the main matrix
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
-          
-          index_i = node_list%node(i)%index(9)  ! base index in the main matrix
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
-        endif
+        do k = 1,(n_order+1)/2
+          do l = 2,(n_order+1)/2 ! start t-index from 2 to keep only the pure s-derivatives
+            index = node_indices(k,l)
+            index_i = node_list%node(i)%index(index)  ! base index in the main matrix
+            mumps_par%irn(ilarge+1) = index_i
+            mumps_par%jcn(ilarge+1) = index_i
+            mumps_par%A(ilarge+1)   = zbig
+            ilarge = ilarge + 1
+          enddo
+        enddo
 
       endif
 
       if (node_list%node(i)%boundary .ne. 0) then
   
+        ! --- fix node value (index is always 1)
         index_i = node_list%node(i)%index(1)  ! base index in the main matrix
-  
         mumps_par%irn(ilarge+1) = index_i
         mumps_par%jcn(ilarge+1) = index_i
         mumps_par%A(ilarge+1)   = zbig
@@ -338,12 +314,16 @@ elseif (itype .ne. 710) then        ! apply fixed boundary conditions
             .or. (node_list%node(i)%boundary .eq.21) &
         ) then
   
-          index_i = node_list%node(i)%index(2)  ! base index in the main matrix
-  
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
+          ! --- Fix s-derivatives
+          do k = 2,(n_order+1)/2 ! start from 2 because node value already fixed above
+            l = 1 ! t-index = 1 to fix only s-derivatives
+            index = node_indices(k,l)
+            index_i = node_list%node(i)%index(index)  ! base index in the main matrix
+            mumps_par%irn(ilarge+1) = index_i
+            mumps_par%jcn(ilarge+1) = index_i
+            mumps_par%A(ilarge+1)   = zbig
+            ilarge = ilarge + 1
+          enddo
 
         endif
   
@@ -357,47 +337,19 @@ elseif (itype .ne. 710) then        ! apply fixed boundary conditions
             .or. (node_list%node(i)%boundary .eq.21) &
         ) then
   
-          index_i = node_list%node(i)%index(3)  ! base index in the main matrix
-  
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
+          ! --- Fix t-derivatives
+          k = 1 ! s-index = 1 to fix only t-derivatives
+          do l = 2,(n_order+1)/2 ! start from 2 because node value already fixed above
+            index = node_indices(k,l)
+            index_i = node_list%node(i)%index(index)  ! base index in the main matrix
+            mumps_par%irn(ilarge+1) = index_i
+            mumps_par%jcn(ilarge+1) = index_i
+            mumps_par%A(ilarge+1)   = zbig
+            ilarge = ilarge + 1
+          enddo
       
         endif
 
-        if (n_order .eq. 5) then
-          index_i = node_list%node(i)%index(5)  ! base index in the main matrix
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
-
-          index_i = node_list%node(i)%index(6)  ! base index in the main matrix
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
-          
-          index_i = node_list%node(i)%index(7)  ! base index in the main matrix
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
-          
-          index_i = node_list%node(i)%index(8)  ! base index in the main matrix
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
-          
-          index_i = node_list%node(i)%index(9)  ! base index in the main matrix
-          mumps_par%irn(ilarge+1) = index_i
-          mumps_par%jcn(ilarge+1) = index_i
-          mumps_par%A(ilarge+1)   = zbig
-          ilarge = ilarge + 1
-        endif
-  
       endif
     enddo
   

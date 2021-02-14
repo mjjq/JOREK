@@ -20,7 +20,7 @@ integer :: k
 
 ! --- For n_order>3, we need to use Newton methods (not exactly true, should implement quartic root finder) 
 ! --- Could be important/faster for particles module!!!
-if (n_order .eq. 5) then
+if (n_order .ge. 5) then
   call find_variable_minmax(node_list,element_list,i_elm, -1, Rmin, Rmax)
   call find_variable_minmax(node_list,element_list,i_elm, -2, Zmin, Zmax)
   return

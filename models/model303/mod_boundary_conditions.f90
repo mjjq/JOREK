@@ -45,6 +45,7 @@ use mod_locate_irn_jcn
 use mod_basisfunctions
 use mod_interp
 use mod_integer_types
+use mod_node_indices
 
 implicit none
 
@@ -107,6 +108,8 @@ real*8  :: R_out, Z_out, s_elm, t_elm, QR,QR_s,QR_t,QR_st,QR_ss,QR_tt,QZ,QZ_s,QZ
 real*8  :: QPs0,QPs0_s,QPs0_t,QPs0_st,QPs0_ss,QPs0_tt
 integer :: ifail, i_elm
 
+integer :: node_indices( (n_order+1)/2, (n_order+1)/2 ), index_tmp, kk, ll
+
 
 RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
   
@@ -158,6 +161,9 @@ end if RMPspectrum
 
 zbig        = 1.d12
 zbig_backup = zbig
+
+! --- calculate node_indices
+call calculate_node_indices(node_indices)
 
 do i=1, n_local_elms !=== do elements
 
@@ -347,30 +353,19 @@ do i=1, n_local_elms !=== do elements
 
 !            if ((k.eq.7) .and. (node_list%node(inode)%boundary .eq. 3)) cycle  !=== better included for ITER extended wall
 
-            index_node = node_list%node(inode)%index(1)
-
-            call boundary_conditions_add_one_entry(                 &
-                   index_node, k, in, index_node, k, in,            &
-                   zbig, solve_only, gmres, index_min, index_max,   & 
-                   ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
-
-            index_node = node_list%node(inode)%index(iv_dir)
-
-            call boundary_conditions_add_one_entry(                 &
-                   index_node, k, in, index_node, k, in,            &
-                   zbig, solve_only, gmres, index_min, index_max,   & 
-                   ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
-
-            if (n_order .eq. 5) then
-              ! --- THIS WILL NEED TO BE GENERALISED!!!
-              do j=5,8
-                index_node = node_list%node(inode)%index(j)
+            ! --- Fix derivatives in on direction
+            do kk = 1,(n_order+1)/2
+              if ( (iv_dir .eq. 3) .and. (kk .gt. 1) ) cycle ! do only t-derivatives and node value
+              do ll = 1,(n_order+1)/2
+                if ( (iv_dir .eq. 2) .and. (ll .gt. 1) ) cycle ! do only s-derivatives and node value
+                index_tmp = node_indices(kk,ll)
+                index_node = node_list%node(inode)%index(index_tmp)
                 call boundary_conditions_add_one_entry(                 &
                        index_node, k, in, index_node, k, in,            &
                        zbig, solve_only, gmres, index_min, index_max,   & 
                        ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
               enddo
-            endif
+            enddo
 
           endif
 

@@ -3,7 +3,7 @@ subroutine project_var_on_node(node_list, i_node, i_var, F_values)
 
 use data_structure
 use mod_basisfunctions
-use mod_parameters, only: n_degrees, n_order
+use mod_parameters, only: n_degrees, n_order, n_degrees
 implicit none
 
 ! --- Routine parameters
@@ -61,17 +61,17 @@ dF_dpsi_dR3  = F_values(1,3,0); dF_dpsi_dR2_dZ = F_values(1,2,1); dF_dpsi_dR_dZ2
 dF_dR4       = F_values(0,4,0); dF_dR3_dZ      = F_values(0,3,1); dF_dR2_dZ2     = F_values(0,2,2); dF_dR_dZ3   = F_values(0,1,3)
 dF_dZ4       = F_values(0,0,4)
 
-! --- Allocate psi variables (in doubt, please refer to definition of derivatives for degrees 7,8,9)
+! --- Allocate psi variables
 psi      = node_list%node(i_node)%values(1,1,var_psi)
 psi_s    = node_list%node(i_node)%values(1,2,var_psi)
 psi_t    = node_list%node(i_node)%values(1,3,var_psi)
 psi_st   = node_list%node(i_node)%values(1,4,var_psi)
-if (n_order .eq. 5) then
+if (n_order .ge. 5) then
 psi_ss   = node_list%node(i_node)%values(1,5,var_psi)
 psi_tt   = node_list%node(i_node)%values(1,6,var_psi)
-psi_sst  = node_list%node(i_node)%values(1,7,var_psi) - node_list%node(i_node)%values(1,3,var_psi)
-psi_stt  = node_list%node(i_node)%values(1,8,var_psi) - node_list%node(i_node)%values(1,2,var_psi)
-psi_sstt = node_list%node(i_node)%values(1,9,var_psi) - node_list%node(i_node)%values(1,5,var_psi) - node_list%node(i_node)%values(1,6,var_psi)
+psi_sst  = node_list%node(i_node)%values(1,7,var_psi)
+psi_stt  = node_list%node(i_node)%values(1,8,var_psi)
+psi_sstt = node_list%node(i_node)%values(1,9,var_psi)
 endif
 
 ! --- Allocate RZ variables
@@ -79,23 +79,23 @@ R      = node_list%node(i_node)%x(1,1,1)
 R_s    = node_list%node(i_node)%x(1,2,1)
 R_t    = node_list%node(i_node)%x(1,3,1)
 R_st   = node_list%node(i_node)%x(1,4,1)
-if (n_order .eq. 5) then
+if (n_order .ge. 5) then
 R_ss   = node_list%node(i_node)%x(1,5,1)
 R_tt   = node_list%node(i_node)%x(1,6,1)
-R_sst  = node_list%node(i_node)%x(1,7,1) - node_list%node(i_node)%x(1,3,1)
-R_stt  = node_list%node(i_node)%x(1,8,1) - node_list%node(i_node)%x(1,2,1)
-R_sstt = node_list%node(i_node)%x(1,9,1) - node_list%node(i_node)%x(1,5,1) - node_list%node(i_node)%x(1,6,1)
+R_sst  = node_list%node(i_node)%x(1,7,1)
+R_stt  = node_list%node(i_node)%x(1,8,1)
+R_sstt = node_list%node(i_node)%x(1,9,1)
 endif
 Z      = node_list%node(i_node)%x(1,1,2)
 Z_s    = node_list%node(i_node)%x(1,2,2)
 Z_t    = node_list%node(i_node)%x(1,3,2)
 Z_st   = node_list%node(i_node)%x(1,4,2)
-if (n_order .eq. 5) then
+if (n_order .ge. 5) then
 Z_ss   = node_list%node(i_node)%x(1,5,2)
 Z_tt   = node_list%node(i_node)%x(1,6,2)
-Z_sst  = node_list%node(i_node)%x(1,7,2) - node_list%node(i_node)%x(1,3,2)
-Z_stt  = node_list%node(i_node)%x(1,8,2) - node_list%node(i_node)%x(1,2,2)
-Z_sstt = node_list%node(i_node)%x(1,9,2) - node_list%node(i_node)%x(1,5,2) - node_list%node(i_node)%x(1,6,2)
+Z_sst  = node_list%node(i_node)%x(1,7,2)
+Z_stt  = node_list%node(i_node)%x(1,8,2)
+Z_sstt = node_list%node(i_node)%x(1,9,2)
 endif
 
 
@@ -122,7 +122,7 @@ var_out(4) =                                                                    
     +                              dF_dZ                               * Z_st
 
 ! --- Beyond this point, only quintic matters
-if (n_order .eq. 5) then
+if (n_order .ge. 5) then
 
 ! --- 5th degree (ss-derivative)
 var_out(5) =                                                                    &
@@ -164,8 +164,7 @@ var_out(7) =                                                                    
     + ((dF_dpsi_dZ2 * psi_t) + (dF_dR_dZ2 * R_t) + (dF_dZ3 * Z_t))                * Z_s    * Z_s     &
     +                           dF_dZ2                                      * 2.0 * Z_st   * Z_s     &
     + ((dF_dpsi_dZ * psi_t) + (dF_dR_dZ * R_t) + (dF_dZ2 * Z_t))                           * Z_ss    &
-    +                           dF_dZ                                                      * Z_sst   &
-    + var_out(3)
+    +                           dF_dZ                                                      * Z_sst 
 
 
 ! --- 8th degree (stt-derivative)
@@ -190,8 +189,7 @@ var_out(8) =                                                                    
     + ((dF_dpsi_dZ2 * psi_s) + (dF_dR_dZ2 * R_s) + (dF_dZ3 * Z_s))                * Z_t    * Z_t     &
     +                           dF_dZ2                                      * 2.0 * Z_st   * Z_t     &
     + ((dF_dpsi_dZ * psi_s) + (dF_dR_dZ * R_s) + (dF_dZ2 * Z_s))                           * Z_tt    &
-    +                           dF_dZ                                                      * Z_stt   &
-    + var_out(2)
+    +                           dF_dZ                                                      * Z_stt 
 
 
 ! --- 9th degree (sstt-derivative) that's the fun one...
@@ -260,35 +258,39 @@ var_out(9) =                                                                    
     + ((dF_dpsi_dR * psi_s) + (dF_dR2 * R_s) + (dF_dR_dZ * Z_s))           * R_stt    &
     +                           dF_dR                                      * R_sstt   &
     + ((dF_dpsi_dZ * psi_s) + (dF_dR_dZ * R_s) + (dF_dZ2 * Z_s))           * Z_stt    &
-    +                           dF_dZ                                      * Z_sstt   &
-    + var_out(5) &
-    + var_out(6)
+    +                           dF_dZ                                      * Z_sstt 
 
 
 endif
 
 #ifdef fullmhd
 if (i_var .eq. 710) then
-node_list%node(i_node)%Fprof_eq(1) = var_out(1)
-node_list%node(i_node)%Fprof_eq(2) = var_out(2)
-node_list%node(i_node)%Fprof_eq(3) = var_out(3)
-node_list%node(i_node)%Fprof_eq(4) = var_out(4)
-node_list%node(i_node)%Fprof_eq(5) = var_out(5)
-node_list%node(i_node)%Fprof_eq(6) = var_out(6)
-node_list%node(i_node)%Fprof_eq(7) = var_out(7)
-node_list%node(i_node)%Fprof_eq(8) = var_out(8)
-node_list%node(i_node)%Fprof_eq(9) = var_out(9)
+  node_list%node(i_node)%Fprof_eq(1) = var_out(1)
+  node_list%node(i_node)%Fprof_eq(2) = var_out(2)
+  node_list%node(i_node)%Fprof_eq(3) = var_out(3)
+  node_list%node(i_node)%Fprof_eq(4) = var_out(4)
+  if (n_order .ge. 5) then
+    node_list%node(i_node)%Fprof_eq(5) = var_out(5)
+    node_list%node(i_node)%Fprof_eq(6) = var_out(6)
+    node_list%node(i_node)%Fprof_eq(7) = var_out(7)
+    node_list%node(i_node)%Fprof_eq(8) = var_out(8)
+    node_list%node(i_node)%Fprof_eq(9) = var_out(9)
+  endif
+  if (n_order .gt. 5) node_list%node(i_node)%Fprof_eq(10:n_degrees) = 0.d0
 else
 #endif
-node_list%node(i_node)%values(1,1,i_var) = var_out(1)
-node_list%node(i_node)%values(1,2,i_var) = var_out(2)
-node_list%node(i_node)%values(1,3,i_var) = var_out(3)
-node_list%node(i_node)%values(1,4,i_var) = var_out(4)
-node_list%node(i_node)%values(1,5,i_var) = var_out(5)
-node_list%node(i_node)%values(1,6,i_var) = var_out(6)
-node_list%node(i_node)%values(1,7,i_var) = var_out(7)
-node_list%node(i_node)%values(1,8,i_var) = var_out(8)
-node_list%node(i_node)%values(1,9,i_var) = var_out(9)
+  node_list%node(i_node)%values(1,1,i_var) = var_out(1)
+  node_list%node(i_node)%values(1,2,i_var) = var_out(2)
+  node_list%node(i_node)%values(1,3,i_var) = var_out(3)
+  node_list%node(i_node)%values(1,4,i_var) = var_out(4)
+  if (n_order .ge. 5) then
+    node_list%node(i_node)%values(1,5,i_var) = var_out(5)
+    node_list%node(i_node)%values(1,6,i_var) = var_out(6)
+    node_list%node(i_node)%values(1,7,i_var) = var_out(7)
+    node_list%node(i_node)%values(1,8,i_var) = var_out(8)
+    node_list%node(i_node)%values(1,9,i_var) = var_out(9)
+  endif
+  if (n_order .gt. 5) node_list%node(i_node)%values(1,10:n_degrees,i_var) = 0.d0
 #ifdef fullmhd
 endif
 #endif

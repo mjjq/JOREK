@@ -8,6 +8,7 @@ use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
 use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes, force_central_node
+use mod_node_indices
 
 implicit none
 
@@ -35,7 +36,7 @@ real*8              :: rm, drm_r, drm_rr, FFpsi, dFFpsi_t, dFFpsi_tt, GGpsi, dGG
 real*8              :: angle, psi_axis
 real*8              :: delta_rm, delta_zm, delta_rp, delta_zp, dir_2, dir_3, size_ratio
 integer             :: i, j, m, index, index0, node, k, iv, ivp, ivm, node_iv, node_ivp, node_ivm,i_sons
-integer             :: n_element_start, n_node_start, n_index_start
+integer             :: n_element_start, n_node_start, n_index_start, n_max
 real*8              :: abltg(3), dr_ds, dr2_ds, dr_ds2, dr2_ds2, dtht_dt, dtht_dt2
 real*8, allocatable :: S1(:), S2(:), SP1(:), SP2(:), SP3(:), SP4(:)
 real*8, allocatable :: T1(:), T2(:), TP1(:), TP2(:), TP3(:), TP4(:)
@@ -43,10 +44,13 @@ real*8, external    :: spwert
 logical             :: skip_update_neighbours
 logical             :: doing_polar_square
 
+integer :: node_indices( (n_order+1)/2, (n_order+1)/2 ), kk, ll, index_tmp
 
-call tr_allocate(RR,1,n_degrees,1,nr*np,"RR",CAT_GRID)
-call tr_allocate(ZZ,1,n_degrees,1,nr*np,"ZZ",CAT_GRID)
-call tr_allocate(PSI,1,n_degrees,1,nr*np,"PSI",CAT_GRID)
+n_max = n_degrees
+if (n_order .gt. 5) n_max = (5+1)**2 / 4 ! we don't care about derivatives >= 3...
+call tr_allocate(RR,1,n_max,1,nr*np,"RR",CAT_GRID)
+call tr_allocate(ZZ,1,n_max,1,nr*np,"ZZ",CAT_GRID)
+call tr_allocate(PSI,1,n_max,1,nr*np,"PSI",CAT_GRID)
 
 dt = 2.d0*pi/real(np)
 ds = 1.d0/real(nr-1)
@@ -146,7 +150,7 @@ do i=1,nr
     RR(2,node)   =        amin * drm_r  * FFpsi
     RR(3,node)   =        amin * rm     * dFFpsi_t
     RR(4,node)   =        amin * drm_r  * dFFpsi_t
-    if (n_order .eq. 5) then
+    if (n_order .ge. 5) then
       RR(5,node) =        amin * drm_rr * FFpsi
       RR(6,node) =        amin * rm     * dFFpsi_tt
       RR(7,node) =        amin * drm_rr * dFFpsi_t
@@ -163,7 +167,7 @@ do i=1,nr
     ZZ(2,node)   =        amin * drm_r  * FFpsi
     ZZ(3,node)   =        amin * rm     * dFFpsi_t
     ZZ(4,node)   =        amin * drm_r  * dFFpsi_t
-    if (n_order .eq. 5) then
+    if (n_order .ge. 5) then
       ZZ(5,node) =        amin * drm_rr * FFpsi
       ZZ(6,node) =        amin * rm     * dFFpsi_tt
       ZZ(7,node) =        amin * drm_rr * dFFpsi_t
@@ -181,7 +185,7 @@ do i=1,nr
     PSI(2,node)   = drm_r
     PSI(3,node)   = 0.d0
     PSI(4,node)   = 0.d0
-    if (n_order .eq. 5) then
+    if (n_order .ge. 5) then
       PSI(5,node) = drm_rr
       PSI(6,node) = 0.d0
       PSI(7,node) = 0.d0
@@ -219,7 +223,7 @@ do i=1,nr
       RR(2,node)   = RR(2,node) + amin * drm_r  *  GGpsi
       RR(3,node)   = RR(3,node) + amin * rm     * dGGpsi_t
       RR(4,node)   = RR(4,node) + amin * drm_r  * dGGpsi_t
-      if (n_order .eq. 5) then
+      if (n_order .ge. 5) then
         RR(5,node) = RR(5,node) + amin * drm_rr *  GGpsi
         RR(6,node) = RR(6,node) + amin * rm     * dGGpsi_tt
         RR(7,node) = RR(7,node) + amin * drm_rr * dGGpsi_t
@@ -237,7 +241,7 @@ do i=1,nr
       ZZ(2,node)   = ZZ(2,node) + amin * drm_r  *  GGpsi
       ZZ(3,node)   = ZZ(3,node) + amin * rm     * dGGpsi_t
       ZZ(4,node)   = ZZ(4,node) + amin * drm_r  * dGGpsi_t
-      if (n_order .eq. 5) then                              
+      if (n_order .ge. 5) then                              
         ZZ(5,node) = ZZ(5,node) + amin * drm_rr *  GGpsi
         ZZ(6,node) = ZZ(6,node) + amin * rm     * dGGpsi_tt
         ZZ(7,node) = ZZ(7,node) + amin * drm_rr * dGGpsi_t
@@ -259,7 +263,7 @@ do i=1,nr
       PSI(2,node)   = PSI(2,node) + drm_r  *  FFpsi
       PSI(3,node)   = PSI(3,node) + rm     * dFFpsi_t
       PSI(4,node)   = PSI(4,node) + drm_r  * dFFpsi_t
-      if (n_order .eq. 5) then
+      if (n_order .ge. 5) then
         PSI(5,node) = PSI(5,node) + drm_rr *  FFpsi
         PSI(6,node) = PSI(6,node) + rm     * dFFpsi_tt
         PSI(7,node) = PSI(7,node) + drm_rr * dFFpsi_t
@@ -273,7 +277,7 @@ do i=1,nr
     RR(2,node)   = RR(2,node) * ds/2.d0
     RR(3,node)   = RR(3,node) * dt/2.d0
     RR(4,node)   = RR(4,node) * ds/2.d0 * dt/2.d0
-    if (n_order .eq. 5) then
+    if (n_order .ge. 5) then
       RR(5,node) = RR(5,node) * ds/2.d0 * ds/2.d0
       RR(6,node) = RR(6,node) * dt/2.d0 * dt/2.d0
       RR(7,node) = RR(7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
@@ -284,7 +288,7 @@ do i=1,nr
     ZZ(2,node)   = ZZ(2,node) * ds/2.d0
     ZZ(3,node)   = ZZ(3,node) * dt/2.d0
     ZZ(4,node)   = ZZ(4,node) * ds/2.d0 * dt/2.d0
-    if (n_order .eq. 5) then
+    if (n_order .ge. 5) then
       ZZ(5,node) = ZZ(5,node) * ds/2.d0 * ds/2.d0
       ZZ(6,node) = ZZ(6,node) * dt/2.d0 * dt/2.d0
       ZZ(7,node) = ZZ(7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
@@ -295,7 +299,7 @@ do i=1,nr
     PSI(2,node)   = PSI(2,node) * ds/2.d0
     PSI(3,node)   = PSI(3,node) * dt/2.d0
     PSI(4,node)   = PSI(4,node) * ds/2.d0 * dt/2.d0
-    if (n_order .eq. 5) then
+    if (n_order .ge. 5) then
       PSI(5,node) = PSI(5,node) * ds/2.d0 * ds/2.d0
       PSI(6,node) = PSI(6,node) * dt/2.d0 * dt/2.d0
       PSI(7,node) = PSI(7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
@@ -399,40 +403,43 @@ do i=1,nr
    ! --- Note: factor 2.0 is because of derivatives ds/2 and dt/2 above
    size_ratio = 2.d0/float(n_order)
 
+   node_list%node(index)%X(1,:,1)        = 0.d0
    node_list%node(index)%X(1,1,1)        = RR(1,index0)
    node_list%node(index)%X(1,2,1)        = RR(2,index0)  * size_ratio
    node_list%node(index)%X(1,3,1)        = RR(3,index0)  * size_ratio
    node_list%node(index)%X(1,4,1)        = RR(4,index0)  * size_ratio**2
-   if (n_order .eq. 5) then                              
+   if (n_order .ge. 5) then                              
      node_list%node(index)%X(1,5,1)      = RR(5,index0)  * size_ratio**2
      node_list%node(index)%X(1,6,1)      = RR(6,index0)  * size_ratio**2
-     node_list%node(index)%X(1,7,1)      = RR(7,index0)  * size_ratio**3 + RR(3,index0)  * size_ratio ! see definition of derivatives in paper
-     node_list%node(index)%X(1,8,1)      = RR(8,index0)  * size_ratio**3 + RR(2,index0)  * size_ratio
-     node_list%node(index)%X(1,9,1)      = RR(9,index0)  * size_ratio**4 + RR(5,index0)  * size_ratio**2 + RR(6,index0) * size_ratio**2
+     node_list%node(index)%X(1,7,1)      = RR(7,index0)  * size_ratio**3
+     node_list%node(index)%X(1,8,1)      = RR(8,index0)  * size_ratio**3
+     node_list%node(index)%X(1,9,1)      = RR(9,index0)  * size_ratio**4
    endif                                                 
                                                          
+   node_list%node(index)%X(1,:,2)        = 0.d0
    node_list%node(index)%X(1,1,2)        = ZZ(1,index0) 
    node_list%node(index)%X(1,2,2)        = ZZ(2,index0)  * size_ratio
    node_list%node(index)%X(1,3,2)        = ZZ(3,index0)  * size_ratio
    node_list%node(index)%X(1,4,2)        = ZZ(4,index0)  * size_ratio**2
-   if (n_order .eq. 5) then                              
+   if (n_order .ge. 5) then                              
      node_list%node(index)%X(1,5,2)      = ZZ(5,index0)  * size_ratio**2
      node_list%node(index)%X(1,6,2)      = ZZ(6,index0)  * size_ratio**2
-     node_list%node(index)%X(1,7,2)      = ZZ(7,index0)  * size_ratio**3 + ZZ(3,index0)  * size_ratio ! see definition of derivatives in paper
-     node_list%node(index)%X(1,8,2)      = ZZ(8,index0)  * size_ratio**3 + ZZ(2,index0)  * size_ratio
-     node_list%node(index)%X(1,9,2)      = ZZ(9,index0)  * size_ratio**4 + ZZ(5,index0)  * size_ratio**2 + ZZ(6,index0) * size_ratio**2
+     node_list%node(index)%X(1,7,2)      = ZZ(7,index0)  * size_ratio**3
+     node_list%node(index)%X(1,8,2)      = ZZ(8,index0)  * size_ratio**3
+     node_list%node(index)%X(1,9,2)      = ZZ(9,index0)  * size_ratio**4
    endif
 
+   node_list%node(index)%values(1,:,1)   = 0.d0
    node_list%node(index)%values(1,1,1)   = PSI(1,index0)
    node_list%node(index)%values(1,2,1)   = PSI(2,index0) * size_ratio
    node_list%node(index)%values(1,3,1)   = PSI(3,index0) * size_ratio
    node_list%node(index)%values(1,4,1)   = PSI(4,index0) * size_ratio**2
-   if (n_order .eq. 5) then
+   if (n_order .ge. 5) then
      node_list%node(index)%values(1,5,1) = PSI(5,index0) * size_ratio**2
      node_list%node(index)%values(1,6,1) = PSI(6,index0) * size_ratio**2
-     node_list%node(index)%values(1,7,1) = PSI(7,index0) * size_ratio**3 + PSI(3,index0) * size_ratio ! see definition of derivatives in paper
-     node_list%node(index)%values(1,8,1) = PSI(8,index0) * size_ratio**3 + PSI(2,index0) * size_ratio
-     node_list%node(index)%values(1,9,1) = PSI(9,index0) * size_ratio**4 + PSI(5,index0) * size_ratio**2 + PSI(6,index0) * size_ratio**2
+     node_list%node(index)%values(1,7,1) = PSI(7,index0) * size_ratio**3
+     node_list%node(index)%values(1,8,1) = PSI(8,index0) * size_ratio**3
+     node_list%node(index)%values(1,9,1) = PSI(9,index0) * size_ratio**4
    endif
 
    node_list%node(index)%boundary = 0
@@ -514,23 +521,55 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
    element_list%element(k)%size(iv,2) = dir_2
    element_list%element(k)%size(iv,3) = dir_3
    element_list%element(k)%size(iv,4) = element_list%element(k)%size(iv,2) * element_list%element(k)%size(iv,3)
-   if (n_order .eq. 5) then
+   if (n_order .ge. 5) then
      element_list%element(k)%size(iv,5) = 1.d0
      element_list%element(k)%size(iv,6) = 1.d0
      element_list%element(k)%size(iv,7) = dir_3 ! because \vec{m} is similar to \vec{v}
      element_list%element(k)%size(iv,8) = dir_2 ! while   \vec{n} is similar to \vec{u}
      element_list%element(k)%size(iv,9) = element_list%element(k)%size(iv,5) * element_list%element(k)%size(iv,6)
    endif
+   if (n_order .gt. 5) then
+     do j=10,n_degrees
+       ! --- Just use a random size for higher orders, but one we're sure is the same for all elements
+       element_list%element(k)%size(iv,j) = element_list%element(k)%size(iv,5) * element_list%element(k)%size(iv,6)
+     enddo
+     ! --- calculate node_indices
+     call calculate_node_indices(node_indices)
+     ! --- Loop over all indices
+     do kk = 1,(n_order+1)/2
+       do ll = 1,(n_order+1)/2
+         index_tmp = node_indices(kk,ll)
+         if (index_tmp .le. 9) cycle ! we want only derivatives >=3
+         if ( (kk .ne. 2) .and. (ll .ne. 2) ) cycle ! we want only the nodes that are next to boundary (the only ones with h_ij = - h_-ij)
+         if (kk .eq. 2) then
+           element_list%element(k)%size(iv,index_tmp) = dir_2
+         endif
+         if (ll .eq. 2) then
+           element_list%element(k)%size(iv,index_tmp) = dir_3
+         endif
+       enddo
+     enddo
+   endif
    if (fix_axis_nodes) then
       j = element_list%element(k)%vertex(iv)
       if (node_list%node(j)%axis_node) then
         element_list%element(k)%size(iv,3) = 0.d0
         element_list%element(k)%size(iv,4) = 0.d0
-        if (n_order .eq. 5) then
+        if (n_order .ge. 5) then
           element_list%element(k)%size(iv,6) = 0.d0
           element_list%element(k)%size(iv,7) = 0.d0
           element_list%element(k)%size(iv,8) = 0.d0
           element_list%element(k)%size(iv,9) = 0.d0
+        endif
+        if (n_order .gt. 5) then
+          ! --- Loop over all indices (note node_indices have already been calculated above...)
+          do kk = 1,(n_order+1)/2
+            do ll = 2,(n_order+1)/2 ! start t-index from 2 to keep only the pure s-derivatives
+              index_tmp = node_indices(kk,ll)
+              if (index_tmp .le. 9) cycle ! we want only derivatives >=3
+              element_list%element(k)%size(iv,index_tmp) = 0.d0
+            enddo
+          enddo
         endif
       endif
    endif
@@ -546,8 +585,6 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
 enddo
 
 if ( .not. skip_update_neighbours ) call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
-
-!if (n_order .eq. 5) call transform_to_bi_quintic(node_list,element_list)
 
 return
 end subroutine grid_polar_bezier

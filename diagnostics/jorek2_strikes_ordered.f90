@@ -253,7 +253,7 @@ xcase = 1
 if (xpoint) then
   call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
   psi_bnd = psi_xpoint(1)
-  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis))) ) then
     psi_bnd = psi_xpoint(2)
   endif
 else

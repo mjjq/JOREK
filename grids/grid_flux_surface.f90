@@ -83,7 +83,7 @@ psi_values(1) = psi_axis
 psi_bnd = ES%psi_bnd + 1.d-8*(ES%psi_axis-ES%psi_bnd)
 if (xpoint) then
   psi_bnd = psi_xpoint(1)
-  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+  if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis))) ) then
     psi_bnd = psi_xpoint(2)
   endif
 endif
@@ -102,7 +102,7 @@ ZZnew(1:4,1:nrnew*npnew)  = 0.d0
 PSInew(1:4,1:nrnew*npnew) = 0.d0
 
 call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,surface_list)
-call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
+call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase, psi_axis)
 
 !call q_profile(node_list,element_list,surface_list,psi_axis,psi_xpoint,Z_xpoint)
 

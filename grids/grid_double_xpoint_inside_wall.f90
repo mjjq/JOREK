@@ -144,7 +144,7 @@ call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm
 if(xcase .eq. 1) psi_bnd = psi_xpoint(1)
 if(xcase .eq. 2) psi_bnd = psi_xpoint(2)
 if(xcase .eq. 3) then
-  if(psi_xpoint(2) .lt. psi_xpoint(1)) then
+  if(abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) then
     psi_bnd  = psi_xpoint(2)
     psi_bnd2 = psi_xpoint(1)
   else
@@ -182,8 +182,8 @@ call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_
 call define_flux_values(node_list, element_list, flux_list, sep_list, &
                         xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_axis, n_grids, sigmas)
 
-call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
-call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase)
+call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase, psi_axis)
+call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,.true.,xcase, psi_axis)
 
 if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
 
@@ -195,9 +195,9 @@ if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
 
 !-------------------------------- Call the routine
 call reorder_flux_surfaces(node_list, element_list, flux_list, ifail)
-call clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_xpoint,Z_xpoint)
+call clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_xpoint,Z_xpoint, psi_axis)
 call find_strategic_points_advanced(node_list, element_list, flux_list, xcase, force_horizontal_Xline, &
-                                    R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, n_grids, stpts)
+                                    R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, psi_axis, n_grids, stpts)
 
 
 !-------------------------------------------------------------------------------------------!

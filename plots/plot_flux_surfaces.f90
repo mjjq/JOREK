@@ -1,4 +1,4 @@
-subroutine plot_flux_surfaces(node_list,element_list,surface_list,frame,every_nth,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase)
+subroutine plot_flux_surfaces(node_list,element_list,surface_list,frame,every_nth,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase, psi_axis)
 use tr_module 
 use data_structure
 use mod_interp
@@ -13,7 +13,8 @@ logical,                  intent(in) :: frame
 integer,                  intent(in) :: every_nth     ! Plot only every_nth flux surface
 integer,                  intent(in) :: xcase
 logical,                  intent(in) :: xpoint
-real*8,                   intent(in) :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)    
+real*8,                   intent(in) :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
+real*8,                   intent(in) :: psi_axis
 
 ! --- internal variables
 integer            :: i, j, k,ip, nplot, node1, node2, node3, node4, i_elm, found
@@ -35,7 +36,7 @@ if(xpoint) then
   if (xcase .eq. 1) psi_bnd = psi_xpoint(1)
   if (xcase .eq. 2) psi_bnd = psi_xpoint(2)
   if (xcase .eq. 3) then
-    if (psi_xpoint(2) .lt. psi_xpoint(1)) then
+    if (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) then
       psi_bnd  = psi_xpoint(2)
       psi_bnd2 = psi_xpoint(1)
     else
@@ -78,7 +79,7 @@ do j = 1, surface_list%n_psi, every_nth
       if ((surface_list%psi_values(j) .lt. surface_list%psi_values(j-1))  .and. (found .eq. 2)) found = 3
       if ((surface_list%psi_values(j) .gt. surface_list%psi_values(j-1))  .and. (found .eq. 4)) found = 5
       if (xcase .gt. 1) then
-        if ((surface_list%psi_values(j) .lt. psi_xpoint(2)) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) &
+        if ((surface_list%psi_values(j) .lt. psi_xpoint(2)) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) &
             .and. (     abs(surface_list%psi_values(j)  -surface_list%psi_values(j-1)) .gt. &
              2.d0*abs(surface_list%psi_values(j-1)-surface_list%psi_values(j-2))       ) &
             .and. (found .eq. 4) ) found = 5
@@ -153,10 +154,10 @@ do j = 1, surface_list%n_psi, every_nth
         .and. ( ((surface_list%psi_values(j) .lt. psi_bnd) .and. (maxval(zplot) .gt. Z_xpoint(2))) &
 	       .or. (surface_list%psi_values(j) .ge. psi_bnd)) ) call lplot6(21,11,rplot,zplot,-nplot,' ')
       if (xcase .eq. 3) then
-        if(     (psi_xpoint(2) .lt. psi_xpoint(1)) &
+        if(     (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) &
           .and. ((surface_list%psi_values(j) .eq. psi_xpoint(1)) &
 	  .or.   (minval(zplot) .ge. Z_xpoint(1)))  ) call lplot6(21,11,rplot,zplot,-nplot,' ')
-        if(     (psi_xpoint(1) .le. psi_xpoint(2)) &
+        if(     (abs(psi_xpoint(1)-psi_axis) .le. abs(psi_xpoint(2)-psi_axis)) &
           .and. ((surface_list%psi_values(j) .eq. psi_xpoint(2)) &
 	  .or.   (maxval(zplot) .le. Z_xpoint(2)))  ) call lplot6(21,11,rplot,zplot,-nplot,' ')
       endif

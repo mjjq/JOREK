@@ -1,5 +1,5 @@
 subroutine find_strategic_points(node_list, element_list, flux_list, xcase, force_horizontal_Xline, &
-                                 R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, n_grids, stpts)
+                                 R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, psi_axis,  n_grids, stpts)
 !----------------------------------------------------------------------------------------
 ! subroutine finds all the strategic points on the legs (Leg corners, strike points etc.)
 !----------------------------------------------------------------------------------------
@@ -22,6 +22,7 @@ integer,                      intent(in)    :: n_grids(10)
 integer,                      intent(in)    :: xcase
 logical,                      intent(in)    :: force_horizontal_Xline
 real*8,                       intent(in)    :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), R_axis, Z_axis
+real*8,                       intent(in)    :: psi_axis
 
 
 ! --- local variables
@@ -84,7 +85,7 @@ if(xcase .ne. 3) then
   stpts%RSecondStrike_InnerLeg   = 0.d0;    stpts%ZSecondStrike_InnerLeg   = 0.d0       
   stpts%RSecondStrike_OuterLeg   = 0.d0;    stpts%ZSecondStrike_OuterLeg   = 0.d0       
 else
-  if (psi_xpoint(1) .lt. psi_xpoint(2)) then
+  if (abs(psi_xpoint(1)-psi_axis) .lt. abs(psi_xpoint(2)-psi_axis)) then
     stpts%RSecondStrike_InnerLeg = 999.d0;  stpts%ZSecondStrike_InnerLeg   = 1.d10   
     stpts%RSecondStrike_OuterLeg = 999.d0;  stpts%ZSecondStrike_OuterLeg   = 1.d10   
   else
@@ -287,7 +288,7 @@ endif
 
 ! ---------------------------------- Find lower strike points
 if (xcase .ne. 2) then
-  if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) then
+  if ( (xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) ) then
     i_surf = n_flux + n_open
   else
     i_surf = n_flux
@@ -317,7 +318,7 @@ endif
 
 ! ---------------------------------- Find upper strike points
 if (xcase .ne. 1) then
-  if ( (xcase .eq. 3) .and. (psi_xpoint(1) .lt. psi_xpoint(2)) ) then
+  if ( (xcase .eq. 3) .and. (abs(psi_xpoint(1)-psi_axis) .lt. abs(psi_xpoint(2)-psi_axis)) ) then
     i_surf = n_flux + n_open
   else
     i_surf = n_flux
@@ -358,7 +359,7 @@ if (xcase .eq. 3) then
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                                                           ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
-      if (psi_xpoint(1) .lt. psi_xpoint(2)) then
+      if (abs(psi_xpoint(1)-psi_axis) .lt. abs(psi_xpoint(2)-psi_axis)) then
         if ((ZZg1 .lt. stpts%ZSecondStrike_InnerLeg) .and. (RRg1 .lt. R_xpoint(1))) then
           stpts%RSecondStrike_InnerLeg = RRg1
           stpts%ZSecondStrike_InnerLeg = ZZg1
@@ -650,7 +651,7 @@ end subroutine find_strategic_points
 
 
 subroutine find_strategic_points_advanced(node_list, element_list, flux_list, xcase, force_horizontal_Xline, &
-                                          R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, n_grids, stpts)
+                                          R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, psi_axis, n_grids, stpts)
 !----------------------------------------------------------------------------------------
 ! subroutine finds all the strategic points on the legs (Leg corners, strike points etc.)
 !----------------------------------------------------------------------------------------
@@ -673,6 +674,7 @@ integer,                      intent(in)    :: n_grids(10)
 integer,                      intent(in)    :: xcase
 logical,                      intent(in)    :: force_horizontal_Xline
 real*8,                       intent(in)    :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), R_axis, Z_axis
+real*8,                       intent(in)    :: psi_axis
 
 
 ! --- local variables
@@ -746,7 +748,7 @@ if(xcase .ne. 3) then
   stpts%RSecondStrike_InnerLeg   = 0.d0;    stpts%ZSecondStrike_InnerLeg   = 0.d0
   stpts%RSecondStrike_OuterLeg   = 0.d0;    stpts%ZSecondStrike_OuterLeg   = 0.d0
 else
-  if (psi_xpoint(1) .lt. psi_xpoint(2)) then
+  if (abs(psi_xpoint(1)-psi_axis) .lt. abs(psi_xpoint(2)-psi_axis)) then
     stpts%RSecondStrike_InnerLeg = 999.d0;  stpts%ZSecondStrike_InnerLeg   = 1.d10
     stpts%RSecondStrike_OuterLeg = 999.d0;  stpts%ZSecondStrike_OuterLeg   = 1.d10
   else
@@ -854,12 +856,12 @@ else
         Z_tmp(count) = ZZg1
       endif
       if (xcase .eq. 3) then
-        if ( (psi_xpoint(1) .lt. psi_xpoint(2)) .and. (ZZg1 .lt. Z_axis) ) then
+        if ( (abs(psi_xpoint(1)-psi_axis) .lt. abs(psi_xpoint(2)-psi_axis)) .and. (ZZg1 .lt. Z_axis) ) then
           count = count + 1
           R_tmp(count) = RRg1
           Z_tmp(count) = ZZg1
         endif
-        if ( (psi_xpoint(2) .lt. psi_xpoint(1)) .and. (ZZg1 .gt. Z_axis) ) then
+        if ( (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) .and. (ZZg1 .gt. Z_axis) ) then
           count = count + 1
           R_tmp(count) = RRg1
           Z_tmp(count) = ZZg1
@@ -932,12 +934,12 @@ else
         call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                                                             ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
         if (xcase .eq. 3) then
-          if ( (psi_xpoint(1) .lt. psi_xpoint(2)) .and. (ZZg1 .gt. Z_axis) ) then
+          if ( (abs(psi_xpoint(1)-psi_axis) .lt. abs(psi_xpoint(2)-psi_axis)) .and. (ZZg1 .gt. Z_axis) ) then
             count = count + 1
             R_tmp(count) = RRg1
             Z_tmp(count) = ZZg1
           endif
-          if ( (psi_xpoint(2) .lt. psi_xpoint(1)) .and. (ZZg1 .lt. Z_axis) ) then
+          if ( (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) .and. (ZZg1 .lt. Z_axis) ) then
             count = count + 1
             R_tmp(count) = RRg1
             Z_tmp(count) = ZZg1
@@ -997,7 +999,7 @@ else
 endif
 
 ! ---------------------------------- Find strike points of 2nd separatrix
-if ( (xcase .eq. 3) .and. (psi_xpoint(1) .ne. psi_xpoint(2)) ) then
+if ( (xcase .eq. 3) .and. (abs(psi_xpoint(1)-psi_axis) .ne. abs(psi_xpoint(2)-psi_axis)) ) then
   if (debug) write(*,*)'looking for strike points of secondary separatrix on main target'
   i_surf = n_flux + n_open
   count = 0
@@ -1012,12 +1014,12 @@ if ( (xcase .eq. 3) .and. (psi_xpoint(1) .ne. psi_xpoint(2)) ) then
       i_elm = flux_list%flux_surfaces(i_surf)%elm(edge_piece(l))
       call interp_RZ(node_list,element_list,i_elm,rr1,ss1,RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss, &
                                                           ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
-      if ( (psi_xpoint(1) .lt. psi_xpoint(2)) .and. (ZZg1 .lt. Z_axis) ) then
+      if ( (abs(psi_xpoint(1)-psi_axis) .lt. abs(psi_xpoint(2)-psi_axis)) .and. (ZZg1 .lt. Z_axis) ) then
         count = count + 1
         R_tmp(count) = RRg1
         Z_tmp(count) = ZZg1
       endif
-      if ( (psi_xpoint(2) .lt. psi_xpoint(1)) .and. (ZZg1 .gt. Z_axis) ) then
+      if ( (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) .and. (ZZg1 .gt. Z_axis) ) then
         count = count + 1
         R_tmp(count) = RRg1
         Z_tmp(count) = ZZg1
@@ -1503,7 +1505,7 @@ if (xcase .ne. 1) then
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Lower corner of the Upper Outer Leg  : (',stpts%RLimit_UpperOuterLeg,     ', ', stpts%ZLimit_UpperOuterLeg,     ') |'
 endif
 
-if ( (xcase .eq. 3) .and. (psi_xpoint(1) .ne. psi_xpoint(2)) ) then
+if ( (xcase .eq. 3) .and. (abs(psi_xpoint(1)-psi_axis) .ne. abs(psi_xpoint(2)-psi_axis)) ) then
   write(*,'(A)')                '| Secondary Strike Points : ------------------------------|'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Left  Strike point of 2nd separatrix : (',stpts%RSecondStrike_InnerLeg,   ', ', stpts%ZSecondStrike_InnerLeg,   ') |'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Right Strike point of 2nd separatrix : (',stpts%RSecondStrike_OuterLeg,   ', ', stpts%ZSecondStrike_OuterLeg,   ') |'

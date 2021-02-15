@@ -91,7 +91,7 @@ if (my_id == 0) then
       call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint2,Z_xpoint2,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
       if (ifail == 0) then ! (otherwise, keep the values of the previous iteration as a reasonable guess)
         psi_bnd  = psi_xpoint(1)
-        if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+        if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis))) ) then
           psi_bnd = psi_xpoint(2)
         endif
         R_xpoint(1) = R_xpoint2(1)
@@ -204,7 +204,7 @@ if (freeboundary_equil) then
         call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
         if (ifail .ne. 1) then      
           psi_bnd  = psi_xpoint(1)
-          if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+          if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis))) ) then
             psi_bnd = psi_xpoint(2)
           endif
           if(xcase2 .eq. 1) Z_xpoint(2) = +99.d0
@@ -326,7 +326,7 @@ if (my_id == 0) then
     call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
     if (ifail .ne. 1) then      
       psi_bnd  = psi_xpoint(1)
-      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis))) ) then
         psi_bnd = psi_xpoint(2)
       endif
       if(xcase2 .eq. 1) Z_xpoint(2) = +99.d0
@@ -528,19 +528,19 @@ if (my_id == 0) then
   
   if (freeboundary_equil) then
     !call plot_coils(.true.)
-    call plot_flux_surfaces(node_list,element_list,surface_list,.false.,4,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
-    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+    call plot_flux_surfaces(node_list,element_list,surface_list,.false.,4,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
+    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
   
-    call plot_flux_surfaces(node_list,element_list,surface_list,.true.,4,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
-    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+    call plot_flux_surfaces(node_list,element_list,surface_list,.true.,4,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
+    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
     !call plot_coils(.false.)
   else
     if (xpoint2 .and. (n_flux .gt. 1)) then
-      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
-      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
+      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
     else
-      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,.false.,0)
-      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,.false.,0, psi_axis)
+      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
     endif
   endif
   

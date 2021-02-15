@@ -274,7 +274,7 @@ do i=1,node_list%n_nodes
         write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,ES%psi_xpoint(1),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
 			    node_list%node(i)%values(in,1,var_Vpar),BigR/F0 * sqrt(GAMMA*T0)
       endif
-      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (ES%psi_xpoint(2) .lt. ES%psi_xpoint(1))) ) then
+      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(ES%psi_xpoint(2)-ES%psi_axis) .lt. abs(ES%psi_xpoint(1)-ES%psi_axis))) ) then
         write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,ES%psi_xpoint(2),node_list%node(i)%values(1,1,1),ps0_x,ps0_y, &
 			    node_list%node(i)%values(in,1,var_Vpar),BigR/F0 * sqrt(GAMMA*T0)
       endif

@@ -42,7 +42,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
       t_xpoint,xcase,ifail)
     if (ifail .ne. 1) then
       psi_bnd  = psi_xpoint(1)
-      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+      if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis))) ) then
         psi_bnd = psi_xpoint(2)
       endif
     endif

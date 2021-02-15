@@ -640,7 +640,7 @@ end subroutine find_all_edge_pieces
 
 
 !> This routine removes the private region surface pieces under a given psi_value
-subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_xpoint,Z_xpoint)
+subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_xpoint,Z_xpoint, psi_axis)
 
 
 
@@ -659,6 +659,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   type (type_surface_list),     intent(inout)   :: flux_list
   integer,                      intent(in)      :: n_grids(10) 
   real*8,                       intent(in)      :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
+  real*8,                       intent(in)      :: psi_axis
   
   ! --- Internal parameters
   type (type_surface_list) :: sep_list
@@ -702,7 +703,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   if ((xcase .eq. 3) .and. (psi_xpoint(2) .eq. psi_xpoint(1))) then
     call get_symmetric_separatrix_contours(node_list, element_list, sep_list)
   else
-    call get_separatrix_contours(node_list, element_list, sep_list)
+    call get_separatrix_contours(node_list, element_list, sep_list, psi_axis)
   endif
   
   ! --- Because this will have been overwritten with the separatrix!
@@ -762,7 +763,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
                      R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
                      Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
       inside2 = 0
-      if ( (xcase .eq. 1) .or. ((xcase .eq. 3) .and. (psi_xpoint(1) .lt. psi_xpoint(2))) ) then
+      if ( (xcase .eq. 1) .or. ((xcase .eq. 3) .and. (abs(psi_xpoint(1)-psi_axis) .lt. abs(psi_xpoint(2)-psi_axis))) ) then
         call check_point_is_inside_contour(R, Z, n_private_contour, R_private_contour, Z_private_contour, inside)
         if (xcase .eq. 3) call check_point_is_inside_contour(R, Z, n_up_priv_contour, R_up_priv_contour, Z_up_priv_contour, inside2)
       else
@@ -805,7 +806,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
         call interp_RZ(node_list,element_list,i_elm,rr,ss, &
                        R,dR_dr,dR_ds,dR_drs,dR_drr,dR_dss, &
                        Z,dZ_dr,dZ_ds,dZ_drs,dZ_drr,dZ_dss)
-        if (psi_xpoint(2) .lt. psi_xpoint(1)) then
+        if (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) then
           call check_point_is_inside_contour(R, Z, n_private_contour, R_private_contour, Z_private_contour, inside)
         else
           call check_point_is_inside_contour(R, Z, n_up_priv_contour, R_up_priv_contour, Z_up_priv_contour, inside)
@@ -1102,7 +1103,7 @@ end subroutine clean_surfaces
 
 
 !> Deprecated!!! Use the one above, much more robust...
-subroutine clean_single_surface(node_list,element_list,surface,location,psi_xpoint,R_xpoint,Z_xpoint)
+subroutine clean_single_surface(node_list,element_list,surface,location,psi_xpoint,R_xpoint,Z_xpoint, psi_axis)
 
 
 
@@ -1119,6 +1120,7 @@ subroutine clean_single_surface(node_list,element_list,surface,location,psi_xpoi
   type (type_surface),          intent(inout)   :: surface
   integer,                      intent(in)      :: location
   real*8,                       intent(in)      :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2)
+  real*8,                       intent(in)      :: psi_axis
   
   ! --- Internal parameters
   type (type_surface)   :: surface_tmp
@@ -1168,13 +1170,13 @@ subroutine clean_single_surface(node_list,element_list,surface,location,psi_xpoi
       
     ! --- Sandwich region (ie. not private parts)
     if (location .eq. sandwich) then
-      if ( (psi_xpoint(1) .gt. psi_xpoint(2)) .and. (Z .gt. Z_xpoint(1)) ) then
+      if ( (abs(psi_xpoint(1)-psi_axis) .gt. abs(psi_xpoint(2)-psi_axis)) .and. (Z .gt. Z_xpoint(1)) ) then
         surface_tmp%n_pieces = surface_tmp%n_pieces + 1
         surface_tmp%elm(surface_tmp%n_pieces) = surface%elm(i)
         surface_tmp%s(:,surface_tmp%n_pieces) = surface%s(:,i)
         surface_tmp%t(:,surface_tmp%n_pieces) = surface%t(:,i)
       endif
-      if ( (psi_xpoint(1) .lt. psi_xpoint(2)) .and. (Z .lt. Z_xpoint(2)) ) then
+      if ( (abs(psi_xpoint(1)-psi_axis) .lt. abs(psi_xpoint(2)-psi_axis)) .and. (Z .lt. Z_xpoint(2)) ) then
         surface_tmp%n_pieces = surface_tmp%n_pieces + 1
         surface_tmp%elm(surface_tmp%n_pieces) = surface%elm(i)
         surface_tmp%s(:,surface_tmp%n_pieces) = surface%s(:,i)
@@ -2032,7 +2034,7 @@ end subroutine get_symmetric_separatrix_contours
 
 
 
-subroutine get_separatrix_contours(node_list, element_list, sep_list)
+subroutine get_separatrix_contours(node_list, element_list, sep_list, psi_axis)
 
   use data_structure
   use reorder_surfaces_parameters
@@ -2047,6 +2049,7 @@ subroutine get_separatrix_contours(node_list, element_list, sep_list)
   type (type_node_list),        intent(in)      :: node_list
   type (type_element_list),     intent(in)      :: element_list
   type (type_surface_list),     intent(inout)   :: sep_list
+  real*8,                       intent(in)      :: psi_axis
   
   ! --- Internal parameters
   integer               :: i_surf, i_part, i_piece, i_elm, ifail, n_sub, i_sub
@@ -2073,7 +2076,7 @@ subroutine get_separatrix_contours(node_list, element_list, sep_list)
   call find_xpoint(1,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
   main_xpoint   = 1
   second_xpoint = 2
-  if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) then
+  if ( (xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) ) then
     main_xpoint   = 2
     second_xpoint = 1
   endif

@@ -157,7 +157,7 @@ if (which_leg .le. 2) then
   R_beg(1) = stpts%RMiddle_LowerPrivate; Z_beg(1) = stpts%ZMiddle_LowerPrivate
   R_beg(2) = R_xpoint(1);                Z_beg(2) = Z_xpoint(1)
   i_surf(1) = n_flux + n_open + n_outer + n_inner + n_private
-  if ( (psi_xpoint(1) .le. psi_xpoint(2)) .or. (xcase .ne. 3) ) then
+  if ( (abs(psi_xpoint(1)-psi_axis) .le. abs(psi_xpoint(2)-psi_axis)) .or. (xcase .ne. 3) ) then
     i_surf(2) = n_flux
   else
     i_surf(2) = n_flux + n_open
@@ -170,7 +170,7 @@ if (which_leg .le. 2) then
     R_end(3) = stpts%RLeftCorn_LowerInnerLeg;  Z_end(3) = stpts%ZLeftCorn_LowerInnerLeg
     i_surf(3) = n_flux + n_open + n_outer + n_inner
     n_seg = n_leg
-    if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(2)) ) then
+    if ( (xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) ) then
       n_surf_tot = n_inner + n_private + 1
       allocate(i_flux(n_surf_tot))
       do i=1,n_private
@@ -206,7 +206,7 @@ if (which_leg .le. 2) then
     i_surf(3) = n_flux + n_open + n_outer
     n_seg = n_leg
     if (n_leg_out .gt. 0) n_seg = n_leg_out
-    if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(2)) ) then
+    if ( (xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) ) then
       n_surf_tot = n_outer + n_private + 1
       allocate(i_flux(n_surf_tot))
       do i=1,n_private
@@ -241,7 +241,7 @@ else
   i_surf(1) = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv
   R_beg(1) = stpts%RMiddle_UpperPrivate; Z_beg(1) = stpts%ZMiddle_UpperPrivate
   R_beg(2) = R_xpoint(2);                Z_beg(2) = Z_xpoint(2)
-  if ( (psi_xpoint(2) .le. psi_xpoint(1)) .or. (xcase .ne. 3) ) then
+  if ( (abs(psi_xpoint(2)-psi_axis) .le. abs(psi_xpoint(1)-psi_axis)) .or. (xcase .ne. 3) ) then
     i_surf(2) = n_flux
   else
     i_surf(2) = n_flux + n_open
@@ -253,7 +253,7 @@ else
     R_end(3) = stpts%RLeftCorn_UpperInnerLeg;  Z_end(3) = stpts%ZLeftCorn_UpperInnerLeg
     i_surf(3) = n_flux + n_open + n_outer + n_inner
     n_seg = n_up_leg
-    if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(2)) ) then
+    if ( (xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) ) then
       n_surf_tot = n_inner + n_open + n_up_priv + 1
       allocate(i_flux(n_surf_tot))
       do i=1,n_up_priv
@@ -290,7 +290,7 @@ else
     i_surf(3) = n_flux + n_open + n_outer
     n_seg = n_up_leg
     if (n_up_leg_out .gt. 0) n_seg = n_up_leg_out
-    if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(2)) ) then
+    if ( (xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) ) then
       n_surf_tot = n_outer + n_open + n_up_priv + 1
       allocate(i_flux(n_surf_tot))
       do i=1,n_up_priv
@@ -726,13 +726,13 @@ if (xcase .eq. 2) then
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
                      2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
 endif 
-if ( (xcase .eq. 3) .and. (psi_xpoint(1) .le. psi_xpoint(2)) ) then ! Put lower Xpoint first
+if ( (xcase .eq. 3) .and. (abs(psi_xpoint(1)-psi_axis) .le. abs(psi_xpoint(2)-psi_axis)) ) then ! Put lower Xpoint first
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
                      1, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
                      2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
 endif 
-if ( (xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)) ) then ! Put upper Xpoint first
+if ( (xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) ) then ! Put upper Xpoint first
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
                      2, R_axis, Z_axis, R_xpoint, Z_xpoint, i_elm_xpoint, s_xpoint, t_xpoint)
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &

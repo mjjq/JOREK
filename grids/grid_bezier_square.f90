@@ -5,6 +5,7 @@ use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
 use phys_module, only: psi_axis_init, R_geo, Z_geo, n_radial
+use mod_node_indices
 
 implicit none
 
@@ -25,6 +26,8 @@ integer                  :: n_element_start, n_node_start, n_index_start
 real*8                   :: xx_0(n_dim),xx_p(n_dim),uv_0(n_dim),uv_p(n_dim)
 real*8, external         :: dlength
 real*8, external         :: ddot
+
+integer :: node_indices( (n_order+1)/2, (n_order+1)/2 ), kk, ll, index_tmp
 
 write(*,*) '*************************************'
 write(*,*) '*       grid_bezier_square          *'
@@ -56,6 +59,9 @@ do j=1,nZ
   do i=1,nR
 
     inode = inode + 1
+
+    node_list%node(inode)%x(1,:,1) = 0.d0 ! initialise to zero
+    node_list%node(inode)%x(1,:,2) = 0.d0 ! initialise to zero
 
     node_list%node(inode)%x(1,1,1) = R_begin + (R_end - R_begin) * float(i-1)/float(nR-1)   ! the position of the node
     node_list%node(inode)%x(1,1,2) = Z_begin + (Z_end - Z_begin) * float(j-1)/float(nZ-1)
@@ -118,6 +124,9 @@ if (i_element .ne. n_elements) write(*,*) ' something is wrong ! (1)'
 
 element_list%n_elements = n_elements
 
+! --- calculate node_indices
+call calculate_node_indices(node_indices)
+
 do k=1, element_list%n_elements   ! fill in the size of the elements
 
 
@@ -135,8 +144,8 @@ do k=1, element_list%n_elements   ! fill in the size of the elements
    uv_p    = node_list%node(inode_p)%x(1,iuv+1,:)
 
    element_list%element(k)%size(iv,1)     = 1.
-   element_list%element(k)%size(iv,iuv+1) = sign(dlength(xx_p,xx_0),ddot(n_dim,xx_p - xx_0,1,uv_0,1)) /3.d0
-   element_list%element(k)%size(ip,iuv+1) = sign(dlength(xx_p,xx_0),ddot(n_dim,xx_0 - xx_p,1,uv_p,1)) /3.d0
+   element_list%element(k)%size(iv,iuv+1) = sign(dlength(xx_p,xx_0),ddot(n_dim,xx_p - xx_0,1,uv_0,1)) / float(n_order)
+   element_list%element(k)%size(ip,iuv+1) = sign(dlength(xx_p,xx_0),ddot(n_dim,xx_0 - xx_p,1,uv_p,1)) / float(n_order)
 
 !    write(*,*) element_list%element(k)%size(iv,iuv+1),element_list%element(k)%size(ip,iuv+1)
 
@@ -145,6 +154,39 @@ do k=1, element_list%n_elements   ! fill in the size of the elements
  do iv=1,4
    element_list%element(k)%size(iv,4) = element_list%element(k)%size(iv,2) * element_list%element(k)%size(iv,3)
  enddo
+
+ if (n_order .ge. 5) then
+   do iv=1,4
+     element_list%element(k)%size(iv,5) = 1.d0
+     element_list%element(k)%size(iv,6) = 1.d0
+     element_list%element(k)%size(iv,7) = element_list%element(k)%size(iv,3)
+     element_list%element(k)%size(iv,8) = element_list%element(k)%size(iv,2)
+     element_list%element(k)%size(iv,9) = element_list%element(k)%size(iv,5) * element_list%element(k)%size(iv,6)
+   enddo
+ endif
+
+ if (n_order .gt. 5) then
+   do iv=1,4
+     do j=10,n_degrees
+       ! --- Just use a random size for higher orders, but one we're sure is the same for all elements
+       element_list%element(k)%size(iv,j) = element_list%element(k)%size(iv,5) * element_list%element(k)%size(iv,6)
+     enddo
+     ! --- Loop over all indices
+     do kk = 1,(n_order+1)/2
+       do ll = 1,(n_order+1)/2
+         index_tmp = node_indices(kk,ll)
+         if (index_tmp .le. 9) cycle ! we want only derivatives >=3
+         if ( (kk .ne. 2) .and. (ll .ne. 2) ) cycle ! we want only the nodes that are next to boundary (the only ones with h_ij = - h_-ij)
+         if (kk .eq. 2) then
+           element_list%element(k)%size(iv,index_tmp) = element_list%element(k)%size(iv,2)
+         endif
+         if (ll .eq. 2) then
+           element_list%element(k)%size(iv,index_tmp) = element_list%element(k)%size(iv,3)
+         endif
+       enddo
+     enddo
+   enddo
+ endif
 
 enddo
 

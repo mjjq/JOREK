@@ -1651,8 +1651,7 @@ module vacuum_response
       return
     end if
     
-    t_elaps_start = MPI_WTIME()  !### timing ###
-
+    if ( vacuum_debug ) t_elaps_start = MPI_WTIME()  ! for timing
 
     if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)),sum(abs(A_mat))
 
@@ -1864,10 +1863,11 @@ module vacuum_response
     end do L_MB
     !$omp end parallel do
 
-    !### timing ###
-    t_elaps_end = MPI_WTIME()
-    write(*,'(I4,A,F10.7,A)') my_id, '  Elapsed time vacuum_boundary_integral', t_elaps_end - t_elaps_start, ' s'
-    !###
+    ! --- timing
+    if ( vacuum_debug ) then
+      t_elaps_end = MPI_WTIME()
+      write(*,'(I4,A,F10.7,A)') my_id, '  Elapsed time vacuum_boundary_integral', t_elaps_end - t_elaps_start, ' s'
+    end if
     
     if ( vacuum_debug ) write(*,*) my_id, 'After:', sum(abs(rhs_loc)),sum(abs(A_mat))
 

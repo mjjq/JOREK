@@ -4,6 +4,7 @@ subroutine grid_bezier_square(nR,nZ,R_begin,R_end,Z_begin,Z_end,boundary,node_li
 use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
+use phys_module, only: psi_axis_init, R_geo, Z_geo, n_radial
 
 implicit none
 
@@ -71,6 +72,12 @@ do j=1,nZ
     if (boundary) then
       if ((i .eq. 1) .or. (i .eq. nR)) node_list%node(inode)%boundary = node_list%node(inode)%boundary + 2
       if ((j .eq. 1) .or. (j .eq. nZ)) node_list%node(inode)%boundary = node_list%node(inode)%boundary + 1
+    endif
+
+    ! --- Add a small psi-profile otherwise GS-equilibrium returns NaNs because psi_axis = psi_bnd = 0
+    if ( (psi_axis_init .ne. 0.d0) .and. (n_radial .eq. 0) .and. (node_list%node(inode)%boundary .eq. 0) ) then
+      node_list%node(inode)%values(1,1,1) = psi_axis_init &
+           + sqrt( (node_list%node(inode)%x(1,1,1)-R_geo)**2 +(node_list%node(inode)%x(1,1,2)-Z_geo)**2 )
     endif
 
     do k=1, n_degrees

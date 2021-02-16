@@ -88,7 +88,6 @@ real*8     :: Jb, Jb_0
 real*8     :: Ti0, Ti0_R, Ti0_Z
 real*8     :: Te0, Te0_R, Te0_Z
 real*8     :: amu_neo_prof(n_gauss,n_gauss), aki_neo_prof(n_gauss,n_gauss)
-real*8     :: Vt0,Omega_tor0_x,Omega_tor0_y,Vt0_x,Vt0_y
 real*8     :: V_source(n_gauss,n_gauss)
 real*8     ::    dV_dpsi_source(n_gauss,n_gauss), dV_dz_source(n_gauss,n_gauss) ! 1st order derivatives
 real*8     ::    dV_dpsi2, dV_dz2, dV_dpsi_dz                                   ! 2nd order derivatives

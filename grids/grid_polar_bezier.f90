@@ -43,13 +43,6 @@ real*8, allocatable :: T1(:), T2(:), TP1(:), TP2(:), TP3(:), TP4(:)
 real*8, external    :: spwert
 logical             :: skip_update_neighbours
 logical             :: doing_polar_square
-integer             :: i5, i6, i7, i8, i9
-
-i5 = 5
-i6 = 6
-i7 = 7
-i8 = 8
-i9 = 9
 
 n_max = n_degrees
 if (n_order .gt. 5) n_max = (5+1)**2 / 4 ! we don't care about derivatives >= 3...
@@ -156,11 +149,11 @@ do i=1,nr
     RR(3,node)   =        amin * rm     * dFFpsi_t
     RR(4,node)   =        amin * drm_r  * dFFpsi_t
     if (n_order .ge. 5) then
-      RR(i5,node) =        amin * drm_rr * FFpsi
-      RR(i6,node) =        amin * rm     * dFFpsi_tt
-      RR(i7,node) =        amin * drm_rr * dFFpsi_t
-      RR(i8,node) =        amin * drm_r  * dFFpsi_tt
-      RR(i9,node) =        amin * drm_rr * dFFpsi_tt
+      RR(5,node) =        amin * drm_rr * FFpsi
+      RR(6,node) =        amin * rm     * dFFpsi_tt
+      RR(7,node) =        amin * drm_rr * dFFpsi_t
+      RR(8,node) =        amin * drm_r  * dFFpsi_tt
+      RR(9,node) =        amin * drm_rr * dFFpsi_tt
     endif
 
     FFpsi     = fbnd(1) * sin(thtj) / 2.d0
@@ -173,11 +166,11 @@ do i=1,nr
     ZZ(3,node)   =        amin * rm     * dFFpsi_t
     ZZ(4,node)   =        amin * drm_r  * dFFpsi_t
     if (n_order .ge. 5) then
-      ZZ(i5,node) =        amin * drm_rr * FFpsi
-      ZZ(i6,node) =        amin * rm     * dFFpsi_tt
-      ZZ(i7,node) =        amin * drm_rr * dFFpsi_t
-      ZZ(i8,node) =        amin * drm_r  * dFFpsi_tt
-      ZZ(i9,node) =        amin * drm_rr * dFFpsi_tt
+      ZZ(5,node) =        amin * drm_rr * FFpsi
+      ZZ(6,node) =        amin * rm     * dFFpsi_tt
+      ZZ(7,node) =        amin * drm_rr * dFFpsi_t
+      ZZ(8,node) =        amin * drm_r  * dFFpsi_tt
+      ZZ(9,node) =        amin * drm_rr * dFFpsi_tt
     endif
 
     ! --- PSI for first harmonic
@@ -191,11 +184,11 @@ do i=1,nr
     PSI(3,node)   = 0.d0
     PSI(4,node)   = 0.d0
     if (n_order .ge. 5) then
-      PSI(i5,node) = drm_rr
-      PSI(i6,node) = 0.d0
-      PSI(i7,node) = 0.d0
-      PSI(i8,node) = 0.d0
-      PSI(i9,node) = 0.d0
+      PSI(5,node) = drm_rr
+      PSI(6,node) = 0.d0
+      PSI(7,node) = 0.d0
+      PSI(8,node) = 0.d0
+      PSI(9,node) = 0.d0
     endif
 
 !   write(*,'(A,2i6,12e16.8)') ' PSI(1,node) : ', node,1,PSI(1,node),radius,thtj,fpsi(1),fpsi(2)
@@ -229,11 +222,11 @@ do i=1,nr
       RR(3,node)   = RR(3,node) + amin * rm     * dGGpsi_t
       RR(4,node)   = RR(4,node) + amin * drm_r  * dGGpsi_t
       if (n_order .ge. 5) then
-        RR(i5,node) = RR(i5,node) + amin * drm_rr *  GGpsi
-        RR(i6,node) = RR(i6,node) + amin * rm     * dGGpsi_tt
-        RR(i7,node) = RR(i7,node) + amin * drm_rr * dGGpsi_t
-        RR(i8,node) = RR(i8,node) + amin * drm_r  * dGGpsi_tt
-        RR(i9,node) = RR(i9,node) + amin * drm_rr * dGGpsi_tt
+        RR(5,node) = RR(5,node) + amin * drm_rr *  GGpsi
+        RR(6,node) = RR(6,node) + amin * rm     * dGGpsi_tt
+        RR(7,node) = RR(7,node) + amin * drm_rr * dGGpsi_t
+        RR(8,node) = RR(8,node) + amin * drm_r  * dGGpsi_tt
+        RR(9,node) = RR(9,node) + amin * drm_rr * dGGpsi_tt
       endif
 
       ! --- Z for higher harmonics
@@ -247,11 +240,11 @@ do i=1,nr
       ZZ(3,node)   = ZZ(3,node) + amin * rm     * dGGpsi_t
       ZZ(4,node)   = ZZ(4,node) + amin * drm_r  * dGGpsi_t
       if (n_order .ge. 5) then                              
-        ZZ(i5,node) = ZZ(i5,node) + amin * drm_rr *  GGpsi
-        ZZ(i6,node) = ZZ(i6,node) + amin * rm     * dGGpsi_tt
-        ZZ(i7,node) = ZZ(i7,node) + amin * drm_rr * dGGpsi_t
-        ZZ(i8,node) = ZZ(i8,node) + amin * drm_r  * dGGpsi_tt
-        ZZ(i9,node) = ZZ(i9,node) + amin * drm_rr * dGGpsi_tt
+        ZZ(5,node) = ZZ(5,node) + amin * drm_rr *  GGpsi
+        ZZ(6,node) = ZZ(6,node) + amin * rm     * dGGpsi_tt
+        ZZ(7,node) = ZZ(7,node) + amin * drm_rr * dGGpsi_t
+        ZZ(8,node) = ZZ(8,node) + amin * drm_r  * dGGpsi_tt
+        ZZ(9,node) = ZZ(9,node) + amin * drm_rr * dGGpsi_tt
       endif
 
       ! --- PSI for higher harmonics
@@ -269,11 +262,11 @@ do i=1,nr
       PSI(3,node)   = PSI(3,node) + rm     * dFFpsi_t
       PSI(4,node)   = PSI(4,node) + drm_r  * dFFpsi_t
       if (n_order .ge. 5) then
-        PSI(i5,node) = PSI(i5,node) + drm_rr *  FFpsi
-        PSI(i6,node) = PSI(i6,node) + rm     * dFFpsi_tt
-        PSI(i7,node) = PSI(i7,node) + drm_rr * dFFpsi_t
-        PSI(i8,node) = PSI(i8,node) + drm_r  * dFFpsi_tt
-        PSI(i9,node) = PSI(i9,node) + drm_rr * dFFpsi_tt
+        PSI(5,node) = PSI(5,node) + drm_rr *  FFpsi
+        PSI(6,node) = PSI(6,node) + rm     * dFFpsi_tt
+        PSI(7,node) = PSI(7,node) + drm_rr * dFFpsi_t
+        PSI(8,node) = PSI(8,node) + drm_r  * dFFpsi_tt
+        PSI(9,node) = PSI(9,node) + drm_rr * dFFpsi_tt
       endif
 
     enddo
@@ -283,33 +276,33 @@ do i=1,nr
     RR(3,node)   = RR(3,node) * dt/2.d0
     RR(4,node)   = RR(4,node) * ds/2.d0 * dt/2.d0
     if (n_order .ge. 5) then
-      RR(i5,node) = RR(i5,node) * ds/2.d0 * ds/2.d0
-      RR(i6,node) = RR(i6,node) * dt/2.d0 * dt/2.d0
-      RR(i7,node) = RR(i7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
-      RR(i8,node) = RR(i8,node) * ds/2.d0 * dt/2.d0 * dt/2.d0
-      RR(i9,node) = RR(i9,node) * ds/2.d0 * ds/2.d0 * dt/2.d0 * dt/2.d0
+      RR(5,node) = RR(5,node) * ds/2.d0 * ds/2.d0
+      RR(6,node) = RR(6,node) * dt/2.d0 * dt/2.d0
+      RR(7,node) = RR(7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
+      RR(8,node) = RR(8,node) * ds/2.d0 * dt/2.d0 * dt/2.d0
+      RR(9,node) = RR(9,node) * ds/2.d0 * ds/2.d0 * dt/2.d0 * dt/2.d0
     endif
 
     ZZ(2,node)   = ZZ(2,node) * ds/2.d0
     ZZ(3,node)   = ZZ(3,node) * dt/2.d0
     ZZ(4,node)   = ZZ(4,node) * ds/2.d0 * dt/2.d0
     if (n_order .ge. 5) then
-      ZZ(i5,node) = ZZ(i5,node) * ds/2.d0 * ds/2.d0
-      ZZ(i6,node) = ZZ(i6,node) * dt/2.d0 * dt/2.d0
-      ZZ(i7,node) = ZZ(i7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
-      ZZ(i8,node) = ZZ(i8,node) * ds/2.d0 * dt/2.d0 * dt/2.d0
-      ZZ(i9,node) = ZZ(i9,node) * ds/2.d0 * ds/2.d0 * dt/2.d0 * dt/2.d0
+      ZZ(5,node) = ZZ(5,node) * ds/2.d0 * ds/2.d0
+      ZZ(6,node) = ZZ(6,node) * dt/2.d0 * dt/2.d0
+      ZZ(7,node) = ZZ(7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
+      ZZ(8,node) = ZZ(8,node) * ds/2.d0 * dt/2.d0 * dt/2.d0
+      ZZ(9,node) = ZZ(9,node) * ds/2.d0 * ds/2.d0 * dt/2.d0 * dt/2.d0
     endif
 
     PSI(2,node)   = PSI(2,node) * ds/2.d0
     PSI(3,node)   = PSI(3,node) * dt/2.d0
     PSI(4,node)   = PSI(4,node) * ds/2.d0 * dt/2.d0
     if (n_order .ge. 5) then
-      PSI(i5,node) = PSI(i5,node) * ds/2.d0 * ds/2.d0
-      PSI(i6,node) = PSI(i6,node) * dt/2.d0 * dt/2.d0
-      PSI(i7,node) = PSI(i7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
-      PSI(i8,node) = PSI(i8,node) * ds/2.d0 * dt/2.d0 * dt/2.d0
-      PSI(i9,node) = PSI(i9,node) * ds/2.d0 * ds/2.d0 * dt/2.d0 * dt/2.d0
+      PSI(5,node) = PSI(5,node) * ds/2.d0 * ds/2.d0
+      PSI(6,node) = PSI(6,node) * dt/2.d0 * dt/2.d0
+      PSI(7,node) = PSI(7,node) * ds/2.d0 * ds/2.d0 * dt/2.d0
+      PSI(8,node) = PSI(8,node) * ds/2.d0 * dt/2.d0 * dt/2.d0
+      PSI(9,node) = PSI(9,node) * ds/2.d0 * ds/2.d0 * dt/2.d0 * dt/2.d0
     endif
 
   enddo
@@ -414,11 +407,11 @@ do i=1,nr
    node_list%node(index)%X(1,3,1)        = RR(3,index0)  * size_ratio
    node_list%node(index)%X(1,4,1)        = RR(4,index0)  * size_ratio**2
    if (n_order .ge. 5) then                              
-     node_list%node(index)%X(1,i5,1)      = RR(5,index0)  * size_ratio**2
-     node_list%node(index)%X(1,i6,1)      = RR(6,index0)  * size_ratio**2
-     node_list%node(index)%X(1,i7,1)      = RR(7,index0)  * size_ratio**3
-     node_list%node(index)%X(1,i8,1)      = RR(8,index0)  * size_ratio**3
-     node_list%node(index)%X(1,i9,1)      = RR(9,index0)  * size_ratio**4
+     node_list%node(index)%X(1,5,1)      = RR(5,index0)  * size_ratio**2
+     node_list%node(index)%X(1,6,1)      = RR(6,index0)  * size_ratio**2
+     node_list%node(index)%X(1,7,1)      = RR(7,index0)  * size_ratio**3
+     node_list%node(index)%X(1,8,1)      = RR(8,index0)  * size_ratio**3
+     node_list%node(index)%X(1,9,1)      = RR(9,index0)  * size_ratio**4
    endif                                                 
                                                          
    node_list%node(index)%X(1,:,2)        = 0.d0
@@ -427,11 +420,11 @@ do i=1,nr
    node_list%node(index)%X(1,3,2)        = ZZ(3,index0)  * size_ratio
    node_list%node(index)%X(1,4,2)        = ZZ(4,index0)  * size_ratio**2
    if (n_order .ge. 5) then                              
-     node_list%node(index)%X(1,i5,2)      = ZZ(5,index0)  * size_ratio**2
-     node_list%node(index)%X(1,i6,2)      = ZZ(6,index0)  * size_ratio**2
-     node_list%node(index)%X(1,i7,2)      = ZZ(7,index0)  * size_ratio**3
-     node_list%node(index)%X(1,i8,2)      = ZZ(8,index0)  * size_ratio**3
-     node_list%node(index)%X(1,i9,2)      = ZZ(9,index0)  * size_ratio**4
+     node_list%node(index)%X(1,5,2)      = ZZ(5,index0)  * size_ratio**2
+     node_list%node(index)%X(1,6,2)      = ZZ(6,index0)  * size_ratio**2
+     node_list%node(index)%X(1,7,2)      = ZZ(7,index0)  * size_ratio**3
+     node_list%node(index)%X(1,8,2)      = ZZ(8,index0)  * size_ratio**3
+     node_list%node(index)%X(1,9,2)      = ZZ(9,index0)  * size_ratio**4
    endif
 
    node_list%node(index)%values(1,:,1)   = 0.d0
@@ -440,11 +433,11 @@ do i=1,nr
    node_list%node(index)%values(1,3,1)   = PSI(3,index0) * size_ratio
    node_list%node(index)%values(1,4,1)   = PSI(4,index0) * size_ratio**2
    if (n_order .ge. 5) then
-     node_list%node(index)%values(1,i5,1) = PSI(5,index0) * size_ratio**2
-     node_list%node(index)%values(1,i6,1) = PSI(6,index0) * size_ratio**2
-     node_list%node(index)%values(1,i7,1) = PSI(7,index0) * size_ratio**3
-     node_list%node(index)%values(1,i8,1) = PSI(8,index0) * size_ratio**3
-     node_list%node(index)%values(1,i9,1) = PSI(9,index0) * size_ratio**4
+     node_list%node(index)%values(1,5,1) = PSI(5,index0) * size_ratio**2
+     node_list%node(index)%values(1,6,1) = PSI(6,index0) * size_ratio**2
+     node_list%node(index)%values(1,7,1) = PSI(7,index0) * size_ratio**3
+     node_list%node(index)%values(1,8,1) = PSI(8,index0) * size_ratio**3
+     node_list%node(index)%values(1,9,1) = PSI(9,index0) * size_ratio**4
    endif
 
    node_list%node(index)%boundary = 0

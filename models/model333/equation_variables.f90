@@ -8,7 +8,7 @@ module equation_variables
     
   ! --- Profiles and sources
   real*8        :: zn
-  real*8        ::    dT_dpsi,  dT_dz                                               ! 1st order derivatives
+  real*8        ::    dn_dpsi,  dn_dz                                               ! 1st order derivatives
   real*8        ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
   real*8        ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
   real*8        ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives

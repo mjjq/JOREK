@@ -357,12 +357,13 @@ subroutine sample_rhs(this, sim)
   use mod_interp, only: mode_moivre, interp_RZ
   use constants, only: PI
   use mod_basisfunctions
+  use mod_parameters, only: n_degrees
   !$ use omp_lib
   class(projection), intent(inout)  :: this
   type(particle_sim), intent(inout) :: sim
   integer :: n_sample !< number of groups to sample
   real*8 :: HZ(n_tor)
-  real*8 :: v, R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3), HH(4,4), HH_s(4,4), HH_t(4,4)
+  real*8 :: v, R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, x(3), HH(4,n_degrees), HH_s(4,n_degrees), HH_t(4,n_degrees)
   integer :: i_group, m, i, j, i_tor, i_f
   integer :: index_ij
 

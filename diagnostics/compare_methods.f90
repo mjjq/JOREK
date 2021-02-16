@@ -66,8 +66,8 @@ do i_elm=1,element_list%n_elements
     call find_variable_minmax(node_list,element_list,i_elm, -1, Rmin2, Rmax2)
     call find_variable_minmax(node_list,element_list,i_elm, -2, Zmin2, Zmax2)
     diff_RZ = abs(Rmin-Rmin2) + abs(Rmax-Rmax2) + abs(Zmin-Zmin2) + abs(Zmax-Zmax2)
-    if (diff    .gt. 1.d-15) write(*,'(A,i6,3e)')'psiminmax on element:',i_elm,diff,psimin,psimax
-    if (diff_RZ .gt. 1.d-15) write(*,'(A,i6,1e)')'RZ minmax on element:',i_elm,diff_RZ
+    if (diff    .gt. 1.d-15) write(*,'(A,i6,3e16.8)')'psiminmax on element:',i_elm,diff,psimin,psimax
+    if (diff_RZ .gt. 1.d-15) write(*,'(A,i6,1e16.8)')'RZ minmax on element:',i_elm,diff_RZ
   endif
 
   ! --- Check root-solver
@@ -135,8 +135,8 @@ do i_elm=1,element_list%n_elements
         if (iv .ge. 3) st_found2(1) = 1.d0 - st_found2(1)
         ! --- Check difference
         diff = abs(st_found(1)-st_found2(1))
-        if (diff .gt. 1.d-10) write(*,'(A,2i6,3e)')'found different',i_elm,iv,diff,st_found(1),st_found2(1)
-        !write(*,'(A,2i6,3e)')'found???',i_elm,iv,diff,st_found(1),st_found2(1)
+        if (diff .gt. 1.d-10) write(*,'(A,2i6,3e16.8)')'found different',i_elm,iv,diff,st_found(1),st_found2(1)
+        !write(*,'(A,2i6,3e16.8)')'found???',i_elm,iv,diff,st_found(1),st_found2(1)
       endif
 
     enddo

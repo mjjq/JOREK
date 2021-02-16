@@ -11,6 +11,7 @@ use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
 use phys_module, only: force_central_node, write_ps, fix_axis_nodes
+use mod_grid_conversions
 
 implicit none
 
@@ -1331,8 +1332,8 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
 
 !    else
 
-      size_0 = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /3.d0, dR0 * (RP-R0) + dZ0 * (ZP-Z0) )
-      size_P = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /3.d0, dRP * (R0-RP) + dZP * (Z0-ZP) )
+      size_0 = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /float(n_order) , dR0 * (RP-R0) + dZ0 * (ZP-Z0) )
+      size_P = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /float(n_order) , dRP * (R0-RP) + dZP * (Z0-ZP) )
 
       if ((R0-RP)**2 + (Z0-ZP)**2 .eq. 0.d0) then
         size_0 = 1.d0
@@ -1356,10 +1357,19 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
     newelement_list%element(k)%size(iv,4) = newelement_list%element(k)%size(iv,2) * newelement_list%element(k)%size(iv,3)
   enddo
 
+
   newelement_list%element(k)%father     = 0
   newelement_list%element(k)%n_sons     = 0
   element_list%element(Index)%sons(:)   = 0
 enddo
+
+if (n_order .ge. 5) call set_high_order_sizes(newelement_list)
+if (n_order .ge. 5) then
+  do i=1,newnode_list%n_nodes
+    newnode_list%node(i)%x(1,5:n_degrees,1:2) = 0.d0
+    newnode_list%node(i)%values(1,5:n_degrees,1) = 0.d0
+  enddo
+endif
 
 !call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
 
@@ -1426,6 +1436,7 @@ if (fix_axis_nodes) then
     enddo
   enddo
 endif
+if ( (n_order .ge. 5) .and. fix_axis_nodes) call set_high_order_sizes_on_axis(newnode_list,newelement_list)
 
 do i=1,newnode_list%n_nodes
 

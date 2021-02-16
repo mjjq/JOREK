@@ -612,13 +612,11 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
    element_list%element(k)%size(iv,2) = dir_2
    element_list%element(k)%size(iv,3) = dir_3
    element_list%element(k)%size(iv,4) = element_list%element(k)%size(iv,2) * element_list%element(k)%size(iv,3)
-   if (n_order .ge. 5) call set_high_order_sizes(node_list,element_list, k, iv)
    if (fix_axis_nodes) then
       j = element_list%element(k)%vertex(iv)
       if (node_list%node(j)%axis_node) then
         element_list%element(k)%size(iv,3) = 0.d0
         element_list%element(k)%size(iv,4) = 0.d0
-        if (n_order .ge. 5) call set_high_order_sizes_on_axis(node_list,element_list, k, iv)
       endif
    endif
 
@@ -631,6 +629,10 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
  enddo
 
 enddo
+
+if (n_order .ge. 5) call set_high_order_sizes(element_list)
+if ( (n_order .ge. 5) .and. fix_axis_nodes) call set_high_order_sizes_on_axis(node_list,element_list)
+
 call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 return
 end subroutine grid_flux_surface

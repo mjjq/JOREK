@@ -15,7 +15,7 @@ contains
 
 
 !> This routine just sets the n_order>=5 sizes with the basic rules
-subroutine set_high_order_sizes(node_list,element_list, i_elm, i_vertex)
+subroutine set_high_order_sizes(element_list)
 
 
 use mod_parameters
@@ -26,45 +26,48 @@ use mod_node_indices
 implicit none
 
 ! --- Routine variables
-type(type_node_list),    intent(inout) :: node_list      !< list of nodes with grid information
 type(type_element_list), intent(inout) :: element_list   !< list of elements with element information
-integer,                 intent(in)    :: i_elm, i_vertex
 
 ! --- Local variables
-integer :: k, l, node_index
+integer :: i_elm, i_vertex, k, l, node_index
 integer :: node_indices( (n_order+1)/2, (n_order+1)/2 )
 
-if (n_order .ge. 5) then
-  element_list%element(i_elm)%size(i_vertex,5) = 1.d0
-  element_list%element(i_elm)%size(i_vertex,6) = 1.d0
-  element_list%element(i_elm)%size(i_vertex,7) = element_list%element(i_elm)%size(i_vertex,3) ! because \vec{m} is similar to \vec{v}
-  element_list%element(i_elm)%size(i_vertex,8) = element_list%element(i_elm)%size(i_vertex,2) ! while   \vec{n} is similar to \vec{u}
-  element_list%element(i_elm)%size(i_vertex,9) = element_list%element(i_elm)%size(i_vertex,5) &
-                                                *element_list%element(i_elm)%size(i_vertex,6)
-endif
-if (n_order .gt. 5) then
-  do k=10,n_degrees
-    ! --- Just same size for all higher orders, (we take care of the other ones after)
-    element_list%element(i_elm)%size(i_vertex,k) =  element_list%element(i_elm)%size(i_vertex,5) &
-                                                  * element_list%element(i_elm)%size(i_vertex,6)
+! --- calculate node_indices
+call calculate_node_indices(node_indices)
+
+do i_elm = 1,element_list%n_elements
+  do i_vertex = 1,n_vertex_max
+    if (n_order .ge. 5) then
+      element_list%element(i_elm)%size(i_vertex,5) = 1.d0
+      element_list%element(i_elm)%size(i_vertex,6) = 1.d0
+      element_list%element(i_elm)%size(i_vertex,7) = element_list%element(i_elm)%size(i_vertex,3) ! because \vec{m} is similar to \vec{v}
+      element_list%element(i_elm)%size(i_vertex,8) = element_list%element(i_elm)%size(i_vertex,2) ! while   \vec{n} is similar to \vec{u}
+      element_list%element(i_elm)%size(i_vertex,9) = element_list%element(i_elm)%size(i_vertex,5) &
+                                                    *element_list%element(i_elm)%size(i_vertex,6)
+    endif
+    if (n_order .gt. 5) then
+      do k=10,n_degrees
+        ! --- Just same size for all higher orders, (we take care of the other ones after)
+        element_list%element(i_elm)%size(i_vertex,k) =  element_list%element(i_elm)%size(i_vertex,5) &
+                                                      * element_list%element(i_elm)%size(i_vertex,6)
+      enddo
+      ! --- Loop over all indices
+      do k = 1,(n_order+1)/2
+        do l = 1,(n_order+1)/2
+          node_index = node_indices(k,l)
+          if (node_index .le. 9) cycle ! we want only derivatives >=3
+          if ( (k .ne. 2) .and. (l .ne. 2) ) cycle ! we want only the nodes that are next to boundary (the only ones with h_ij = - h_-ij)
+          if (k .eq. 2) then
+            element_list%element(i_elm)%size(i_vertex,node_index) = element_list%element(i_elm)%size(i_vertex,2)
+          endif
+          if (l .eq. 2) then
+            element_list%element(i_elm)%size(i_vertex,node_index) = element_list%element(i_elm)%size(i_vertex,3)
+          endif
+        enddo
+      enddo
+    endif
   enddo
-  ! --- calculate node_indices
-  call calculate_node_indices(node_indices)
-  ! --- Loop over all indices
-  do k = 1,(n_order+1)/2
-    do l = 1,(n_order+1)/2
-      node_index = node_indices(k,l)
-      if (node_index .le. 9) cycle ! we want only derivatives >=3
-      if ( (k .ne. 2) .and. (l .ne. 2) ) cycle ! we want only the nodes that are next to boundary (the only ones with h_ij = - h_-ij)
-      if (k .eq. 2) then
-        element_list%element(i_elm)%size(i_vertex,node_index) = element_list%element(i_elm)%size(i_vertex,2)
-      endif
-      if (l .eq. 2) then
-        element_list%element(i_elm)%size(i_vertex,node_index) = element_list%element(i_elm)%size(i_vertex,3)
-      endif
-    enddo
-  enddo
-endif
+enddo
 
 
 return
@@ -82,12 +85,13 @@ end subroutine set_high_order_sizes
 
 
 !> This routine just sets the sizes of _t derivatives of n_order>=5 to zero
-subroutine set_high_order_sizes_on_axis(node_list,element_list, i_elm, i_vertex)
+subroutine set_high_order_sizes_on_axis(node_list,element_list)
 
 
 use mod_parameters
 use data_structure
 use mod_node_indices
+use phys_module, only: fix_axis_nodes
 
 
 implicit none
@@ -95,28 +99,40 @@ implicit none
 ! --- Routine variables
 type(type_node_list),    intent(inout) :: node_list      !< list of nodes with grid information
 type(type_element_list), intent(inout) :: element_list   !< list of elements with element information
-integer,                 intent(in)    :: i_elm, i_vertex
 
 ! --- Local variables
-integer :: k, l, node_index
+integer :: i_elm, i_vertex, i_node, k, l, node_index
 integer :: node_indices( (n_order+1)/2, (n_order+1)/2 )
 
-if (n_order .ge. 5) then
-  element_list%element(i_elm)%size(i_vertex,6) = 0.d0
-  element_list%element(i_elm)%size(i_vertex,7) = 0.d0
-  element_list%element(i_elm)%size(i_vertex,8) = 0.d0
-  element_list%element(i_elm)%size(i_vertex,9) = 0.d0
-endif
-if (n_order .gt. 5) then
-  ! --- Loop over all indices (note node_indices have already been calculated above...)
-  do k = 1,(n_order+1)/2
-    do l = 2,(n_order+1)/2 ! start t-index from 2 to keep only the pure s-derivatives
-      node_index = node_indices(k,l)
-      if (node_index .le. 9) cycle ! we want only derivatives >=3
-      element_list%element(i_elm)%size(i_vertex,node_index) = 0.d0
-    enddo
+if (.not. fix_axis_nodes) return
+if (n_order .lt. 5) return
+
+! --- calculate node_indices
+call calculate_node_indices(node_indices)
+
+do i_elm = 1,element_list%n_elements
+  do i_vertex = 1,n_vertex_max
+    i_node = element_list%element(i_elm)%vertex(i_vertex)
+    if (node_list%node(i_node)%axis_node) then
+      if (n_order .ge. 5) then
+        element_list%element(i_elm)%size(i_vertex,6) = 0.d0
+        element_list%element(i_elm)%size(i_vertex,7) = 0.d0
+        element_list%element(i_elm)%size(i_vertex,8) = 0.d0
+        element_list%element(i_elm)%size(i_vertex,9) = 0.d0
+      endif
+      if (n_order .gt. 5) then
+        ! --- Loop over all indices (note node_indices have already been calculated above...)
+        do k = 1,(n_order+1)/2
+          do l = 2,(n_order+1)/2 ! start t-index from 2 to keep only the pure s-derivatives
+            node_index = node_indices(k,l)
+            if (node_index .le. 9) cycle ! we want only derivatives >=3
+            element_list%element(i_elm)%size(i_vertex,node_index) = 0.d0
+          enddo
+        enddo
+      endif
+    endif
   enddo
-endif
+enddo
 
 
 return

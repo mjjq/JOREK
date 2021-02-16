@@ -150,13 +150,9 @@ do k=1, element_list%n_elements   ! fill in the size of the elements
    element_list%element(k)%size(iv,4) = element_list%element(k)%size(iv,2) * element_list%element(k)%size(iv,3)
  enddo
 
- if (n_order .ge. 5) then
-   do iv=1,4
-      call set_high_order_sizes(node_list,element_list, k, iv)
-   enddo
- endif
-
 enddo
+
+if (n_order .ge. 5) call set_high_order_sizes(element_list)
 
 call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 return

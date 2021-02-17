@@ -542,7 +542,7 @@ do i=1, n_local_elms !=== do elements
 
           call boundary_conditions_add_one_entry(             &
                index_node,  kv, in, index_node2, ku, in,      &
-               - zbig * factor * BigR**2 * element_size_0 / ps0_b,   &
+               - zbig * factor * BigR**2 * element_size_0 / ps0_b / Btot,   &
                solve_only, gmres, index_min, index_max,       & 
                ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 

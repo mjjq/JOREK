@@ -35,7 +35,7 @@ real*8              :: RRg1,dRRg1_dr,dRRg1_ds
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
 real*8,allocatable  :: R_polar(:,:,:),Z_polar(:,:,:),xout(:),xp(:),yp(:)
-real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z
+real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, dR_dtt, dZ_dtt, RZ_jac, PSI_R, PSI_Z
 real*8, allocatable :: RR_new(:,:),ZZ_new(:,:),s_flux(:,:),t_flux(:,:),t_tht(:,:)
 integer,allocatable :: ielm_flux(:,:), keep(:,:,:), k_cross(:,:)
 integer             :: i, j, k, l, m, n_psi, n_flux_2, n_open_2, n_tht_2, n_psi_2, i2, j2
@@ -672,6 +672,7 @@ do i=1,n_flux_2+n_open_2
 
     do k=1,n_pieces       ! 3 line pieces per coordinate line
 
+
       R_cub1d = (/ R_polar(k,1,j), 3.d0/2.d0 *(R_polar(k,2,j)-R_polar(k,1,j)), &
                    R_polar(k,4,j), 3.d0/2.d0 *(R_polar(k,4,j)-R_polar(k,3,j))  /)
       Z_cub1d = (/ Z_polar(k,1,j), 3.d0/2.d0 *(Z_polar(k,2,j)-Z_polar(k,1,j)), &
@@ -806,6 +807,13 @@ do i=1,n_flux-1                 !------------------------ the closed field lines
       newnode_list%node(index)%x(1,4,:) = 0.d0
     endif
 
+    if (n_order .ge. 5) then
+      call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
+      call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
+      newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
+      newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
+    endif
+
   enddo
 enddo
 newnode_list%n_nodes = node
@@ -918,6 +926,13 @@ do i=n_flux,n_flux+n_open           !--------------------------- nodes on the op
 
     if (i .eq. n_flux+n_open)                   newnode_list%node(index)%boundary = 2
 
+    if (n_order .ge. 5) then
+      call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
+      call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
+      newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
+      newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
+    endif
+
   enddo
 enddo
 
@@ -973,6 +988,13 @@ do j=1, n_leg                         !--------------------------- nodes on righ
       if ((k.eq.1) .or. (k .eq. n_open+n_private+1))  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
       if  (j .eq. 1)                                  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
 
+      if (n_order .ge. 5) then
+        call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
+        call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
+        newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
+        newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
+      endif
+
    endif
 
   enddo
@@ -1025,6 +1047,13 @@ do l=1, n_leg-1                       !--------------------------- nodes on left
 
     if ((k.eq.1) .or. (k .eq. n_open+n_private+1))  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
     if  (j .eq. 1)                                  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
+
+    if (n_order .ge. 5) then
+      call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
+      call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
+      newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
+      newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
+    endif
 
  enddo
 enddo
@@ -1364,12 +1393,10 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
 enddo
 
 if (n_order .ge. 5) call set_high_order_sizes(newelement_list)
-if (n_order .ge. 5) then
-  do i=1,newnode_list%n_nodes
-    newnode_list%node(i)%x(1,5:n_degrees,1:2) = 0.d0
-    newnode_list%node(i)%values(1,5:n_degrees,1) = 0.d0
-  enddo
-endif
+if (n_order .ge. 5) call approximate_2nd_derivatives(newnode_list,newelement_list)
+do i=1,newnode_list%n_nodes
+  newnode_list%node(i)%x(1,7:n_degrees,:) = 0.d0
+enddo
 
 !call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
 
@@ -1388,37 +1415,33 @@ do i=1,newnode_list%n_nodes
     index = index + 1
     newnode_list%node(i)%index(k) = index
 
+    ! --- Remove Axis nodes
     if ((force_central_node) .and. (i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
       newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
       index = index - 1
     endif
-    if ((i .eq. index_xpoint+1).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-      index = index - 1
+    ! --- Remove Xpoint nodes
+    if (i .eq. index_xpoint+1) then
+      if ( (k.eq.1) .or. (k.eq.3) .or. (k.eq.6) ) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
     endif
-    if ((i .eq. index_xpoint+1).and.(k.eq.3)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-      index = index - 1
+    if (i .eq. index_xpoint+2) then
+      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
     endif
-    if ((i .eq. index_xpoint+2).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. index_xpoint+2).and.(k.eq.2)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. index_xpoint+3).and.(k.eq.1)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. index_xpoint+3).and.(k.eq.2)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. index_xpoint+3).and.(k.eq.3)) then
-      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
-      index = index - 1
+    if (i .eq. index_xpoint+3) then
+      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        index = index - 1
+      endif
+      if ( (k.eq.3) .or. (k.eq.6) ) then
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
+        index = index - 1
+      endif
     endif
   enddo
   

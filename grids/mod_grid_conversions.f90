@@ -149,6 +149,245 @@ end subroutine set_high_order_sizes_on_axis
 
 
 
+subroutine approximate_2nd_derivatives(node_list,element_list)
+
+
+use constants
+use tr_module
+use mod_parameters
+use data_structure
+use phys_module, only: R_geo, Z_geo
+
+implicit none
+
+! --- Routine variables
+type(type_node_list),    intent(inout) :: node_list      !< list of nodes with grid information
+type(type_element_list), intent(inout) :: element_list   !< list of elements with element information
+
+! --- Local variables
+integer, allocatable          :: n_parents(:)         ! for each node, want the number of parent elements
+integer, allocatable          :: node_parents(:,:)    ! for each node, want to know the 4 parent elements
+integer, allocatable          :: parent_elm_node(:,:) ! for each node, want to know the corresonding vertex for the 4 parent elements
+integer                       :: i_node, i_elm, i_vertex, i_vertex1, i_vertex2, i
+integer                       :: i_node_u, i_node_v
+integer                       :: index
+real*8                        :: size_u_min, size_v_min
+real*8                        :: size_tmp
+real*8                        :: point1(2), point2(2)
+real*8                        :: distance1, distance2
+real*8                        :: direction
+
+allocate( n_parents      (  node_list%n_nodes) )
+allocate( node_parents   (4,node_list%n_nodes) )
+allocate( parent_elm_node(4,node_list%n_nodes) )
+n_parents       = 0
+node_parents    = 0
+parent_elm_node = 0
+
+! --- Find parent elements
+do i_node = 1, node_list%n_nodes
+
+  n_parents(i_node) = 0
+  do i_elm = 1, element_list%n_elements
+  
+    do i_vertex = 1, n_vertex_max
+    
+      if (element_list%element(i_elm)%vertex(i_vertex) .eq. i_node) then
+        n_parents(i_node) = n_parents(i_node) + 1
+        node_parents   (n_parents(i_node),i_node) = i_elm
+        parent_elm_node(n_parents(i_node),i_node) = i_vertex
+        exit
+      endif
+    
+    enddo
+    
+    if ( (node_list%node(i_node)%boundary .eq. 2) .and. (n_parents(i_node) .eq. 2) ) exit
+    if ( (node_list%node(i_node)%boundary .ne. 2) .and. (n_parents(i_node) .eq. 4) ) exit
+  
+  enddo
+  
+enddo
+
+
+
+
+! --- After definition of u,v,w, we are ready for i and j.
+do i_node = 1, node_list%n_nodes
+  
+  ! ------------
+  ! --- Vector i
+  ! ------------
+  
+  ! --- METHOD: Assume curvature in the middle of edge is 0.5(curv_00+curv_05) 
+  ! --- Find the next node
+  i = 1
+  i_elm = node_parents(i,i_node)
+  if (parent_elm_node(i,i_node) .eq. 1) then
+    i_vertex1 = 1 ; i_vertex2 = 2
+    i_node_u = element_list%element(i_elm)%vertex(2)
+  elseif (parent_elm_node(i,i_node) .eq. 2) then
+    i_vertex1 = 2 ; i_vertex2 = 1
+    i_node_u = element_list%element(i_elm)%vertex(1)
+  elseif (parent_elm_node(i,i_node) .eq. 3) then
+    i_vertex1 = 3 ; i_vertex2 = 4
+    i_node_u = element_list%element(i_elm)%vertex(4)
+  elseif (parent_elm_node(i,i_node) .eq. 4) then
+    i_vertex1 = 4 ; i_vertex2 = 3
+    i_node_u = element_list%element(i_elm)%vertex(3)
+  endif
+  ! --- Formulation: h_i*\vec{i} = -0.25 * ( h_00^u*\vec{u}_00 + h_50^u*\vec{u}_50 )
+  node_list%node(i_node)%X(1,5,1) = -0.25 * ( element_list%element(i_elm)%size(i_vertex1,2)*node_list%node(i_node  )%x(1,2,1) &
+                                             +element_list%element(i_elm)%size(i_vertex2,2)*node_list%node(i_node_u)%x(1,2,1) )
+  node_list%node(i_node)%X(1,5,2) = -0.25 * ( element_list%element(i_elm)%size(i_vertex1,2)*node_list%node(i_node  )%x(1,2,2) &
+                                             +element_list%element(i_elm)%size(i_vertex2,2)*node_list%node(i_node_u)%x(1,2,2) )
+  ! --- Take the average from both sides of the node
+  if (n_parents(i_node) .gt. 1) then
+    do i = 2,n_parents(i_node)
+      i_elm = node_parents(i,i_node)
+      i_vertex2 = 0
+      if ( (i_vertex1 .eq. 1) .or. (i_vertex1 .eq. 4) ) then
+        if (parent_elm_node(i,i_node) .eq. 2) then
+          i_vertex1 = 2 ; i_vertex2 = 1
+          i_node_u = element_list%element(i_elm)%vertex(1)
+        elseif (parent_elm_node(i,i_node) .eq. 3) then
+          i_vertex1 = 3 ; i_vertex2 = 4
+          i_node_u = element_list%element(i_elm)%vertex(4)
+        endif
+      elseif ( (i_vertex1 .eq. 2) .or. (i_vertex1 .eq. 3) ) then
+        if (parent_elm_node(i,i_node) .eq. 1) then
+          i_vertex1 = 1 ; i_vertex2 = 2
+          i_node_u = element_list%element(i_elm)%vertex(2)
+        elseif (parent_elm_node(i,i_node) .eq. 4) then
+          i_vertex1 = 4 ; i_vertex2 = 3
+          i_node_u = element_list%element(i_elm)%vertex(3)
+        endif
+      endif
+      if (i_vertex2 .eq. 0) then
+        cycle
+      else
+        ! --- Formulation: h_i*\vec{i} = -0.25 * ( h_00^u*\vec{u}_00 + h_50^u*\vec{u}_50 )
+        node_list%node(i_node)%X(1,5,1) = 0.5 * node_list%node(i_node)%X(1,5,1) &
+                                          -0.5*0.25 * ( element_list%element(i_elm)%size(i_vertex1,2)*node_list%node(i_node  )%x(1,2,1) &
+                                                       +element_list%element(i_elm)%size(i_vertex2,2)*node_list%node(i_node_u)%x(1,2,1) )
+        node_list%node(i_node)%X(1,5,2) = 0.5 * node_list%node(i_node)%X(1,5,2) &
+                                          -0.5*0.25 * ( element_list%element(i_elm)%size(i_vertex1,2)*node_list%node(i_node  )%x(1,2,2) &
+                                                       +element_list%element(i_elm)%size(i_vertex2,2)*node_list%node(i_node_u)%x(1,2,2) )
+        exit
+      endif
+    enddo
+  endif
+  
+  ! ------------
+  ! --- Vector j
+  ! ------------
+  
+  ! --- METHOD: Assume curvature in the middle of edge is 0.5(curv_00+curv_05) 
+  ! --- Find the next node
+  i = 1
+  i_elm = node_parents(i,i_node)
+  if (parent_elm_node(i,i_node) .eq. 1) then
+    i_vertex1 = 1 ; i_vertex2 = 4
+    i_node_v = element_list%element(i_elm)%vertex(4)
+  elseif (parent_elm_node(i,i_node) .eq. 2) then
+    i_vertex1 = 2 ; i_vertex2 = 3
+    i_node_v = element_list%element(i_elm)%vertex(3)
+  elseif (parent_elm_node(i,i_node) .eq. 3) then
+    i_vertex1 = 3 ; i_vertex2 = 2
+    i_node_v = element_list%element(i_elm)%vertex(2)
+  elseif (parent_elm_node(i,i_node) .eq. 4) then
+    i_vertex1 = 4 ; i_vertex2 = 1
+    i_node_v = element_list%element(i_elm)%vertex(1)
+  endif
+  ! --- Formulation: h_j*\vec{j} = -0.25 * ( h_00^v*\vec{v}_00 + h_05^v*\vec{v}_05 )
+  node_list%node(i_node)%X(1,6,1) = -0.25 * ( element_list%element(i_elm)%size(i_vertex1,3)*node_list%node(i_node  )%x(1,3,1) &
+                                             +element_list%element(i_elm)%size(i_vertex2,3)*node_list%node(i_node_v)%x(1,3,1) )
+  node_list%node(i_node)%X(1,6,2) = -0.25 * ( element_list%element(i_elm)%size(i_vertex1,3)*node_list%node(i_node  )%x(1,3,2) &
+                                             +element_list%element(i_elm)%size(i_vertex2,3)*node_list%node(i_node_v)%x(1,3,2) )
+  ! --- Take the average from both sides of the node
+  if (n_parents(i_node) .gt. 1) then
+    do i = 2,n_parents(i_node)
+      i_elm = node_parents(i,i_node)
+      i_vertex2 = 0
+      if ( (i_vertex1 .eq. 1) .or. (i_vertex1 .eq. 2) ) then
+        if (parent_elm_node(i,i_node) .eq. 3) then
+          i_vertex1 = 3 ; i_vertex2 = 2
+          i_node_v = element_list%element(i_elm)%vertex(2)
+        elseif (parent_elm_node(i,i_node) .eq. 4) then
+          i_vertex1 = 4 ; i_vertex2 = 1
+          i_node_v = element_list%element(i_elm)%vertex(1)
+        endif
+      elseif ( (i_vertex1 .eq. 3) .or. (i_vertex1 .eq. 4) ) then
+        if (parent_elm_node(i,i_node) .eq. 1) then
+          i_vertex1 = 1 ; i_vertex2 = 4
+          i_node_v = element_list%element(i_elm)%vertex(4)
+        elseif (parent_elm_node(i,i_node) .eq. 2) then
+          i_vertex1 = 2 ; i_vertex2 = 3
+          i_node_v = element_list%element(i_elm)%vertex(3)
+        endif
+      endif
+      if (i_vertex2 .eq. 0) then
+        cycle
+      else
+        ! --- Formulation: h_i*\vec{i} = -0.25 * ( h_00^u*\vec{u}_00 + h_50^u*\vec{u}_50 )
+        node_list%node(i_node)%X(1,6,1) = 0.5 * node_list%node(i_node)%X(1,6,1) &
+                                          -0.5*0.25 * ( element_list%element(i_elm)%size(i_vertex1,3)*node_list%node(i_node  )%x(1,3,1) &
+                                                       +element_list%element(i_elm)%size(i_vertex2,3)*node_list%node(i_node_v)%x(1,3,1) )
+        node_list%node(i_node)%X(1,6,2) = 0.5 * node_list%node(i_node)%X(1,6,2) &
+                                          -0.5*0.25 * ( element_list%element(i_elm)%size(i_vertex1,3)*node_list%node(i_node  )%x(1,3,2) &
+                                                       +element_list%element(i_elm)%size(i_vertex2,3)*node_list%node(i_node_v)%x(1,3,2) )
+        exit
+      endif
+    enddo
+  endif
+  
+
+enddo
+
+
+
+
+return
+
+end subroutine approximate_2nd_derivatives
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

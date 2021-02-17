@@ -82,7 +82,7 @@ integer(kind=int_all), allocatable, intent(inout) :: jcn(:)
 real*8  :: zbig, zbig_backup,  T0, Vpar0, bigR
 real*8  :: R_s, R_t, Z, Z_s, Z_t, R_tt, Z_tt, ps0, ps0_s, ps0_t, ps0_tt, ps0_x, ps0_y, direction, xjac
 real*8  :: ps0_b, T0_b, u0_b, Vpar0_b, R_b, Z_b, R_bb, Z_bb, ps0_bb, grad_b(2)
-real*8  :: Btot, grad_psi, u0_s, u0_t, u0_x, u0_y
+real*8  :: Btot, grad_psi
 real*8  :: element_size_s, element_size_t, element_size_0
 real*8  :: H1(2,(n_order+1)/2), H1_s(2,(n_order+1)/2), H1_ss(2,(n_order+1)/2)
 integer :: i, in, iv, iv2, iv3, inode, inode2, inode3, k
@@ -107,6 +107,9 @@ integer :: n_rmp_harm, N_rmp_har_block_size
 real*8  :: R_out, Z_out, s_elm, t_elm, QR,QR_s,QR_t,QR_st,QR_ss,QR_tt,QZ,QZ_s,QZ_t,QZ_st,QZ_ss,QZ_tt
 real*8  :: QPs0,QPs0_s,QPs0_t,QPs0_st,QPs0_ss,QPs0_tt
 integer :: ifail, i_elm
+
+real*8  :: Mach1BC,  Mach1BC_v,  Mach1BC_T,  Mach1BC_u
+real*8  :: dMach1BC, dMach1BC_v, dMach1BC_T, dMach1BC_Tb
 
 integer :: node_indices( (n_order+1)/2, (n_order+1)/2 ), index_tmp, kk, ll
 
@@ -354,7 +357,7 @@ do i=1, n_local_elms !=== do elements
 
 !            if ((k.eq.7) .and. (node_list%node(inode)%boundary .eq. 3)) cycle  !=== better included for ITER extended wall
 
-            ! --- Fix derivatives in on direction
+            ! --- Fix derivatives in one direction
             do kk = 1,(n_order+1)/2
               if ( (iv_dir .eq. 3) .and. (kk .gt. 1) ) cycle ! do only t-derivatives and node value
               do ll = 1,(n_order+1)/2
@@ -374,6 +377,7 @@ do i=1, n_local_elms !=== do elements
 
         if ((node_list%node(inode)%boundary .eq.  3) .and. (node_list%node(inode2)%boundary .eq.  2)) cycle
 
+        ! --- Mach1 Boundary Conditions
         if ( (.not. mach_one_bnd_integral) .and. apply_cs) then
 
           call basisfunctions1(0.d0, H1, H1_s, H1_ss)
@@ -396,20 +400,11 @@ do i=1, n_local_elms !=== do elements
           index_node  = node_list%node(inode)%index(1)             ! position of value
           index_node2 = node_list%node(inode)%index(iv_dir)        ! position of first deriative
 
-          T0        = max(node_list%node(inode)%values(1,1,var_T), T_min)
-          T0_b      = node_list%node(inode)%values(1,iv_dir,var_T)    * element_size_0 
-
-          Vpar0     = node_list%node(inode)%values(1,1,var_vpar)
-          Vpar0_b   = node_list%node(inode)%values(1,iv_dir,var_Vpar) * element_size_0 
-
+          ! --- Determine the direction of the BCs and apply smoothing factors if requested
           ps0       = node_list%node(inode)%values(1,1,var_psi)
           ps0_b     = node_list%node(inode)%values(1,iv_dir,var_psi)  * element_size_0 
           ps0_s     = node_list%node(inode)%values(1,2,var_psi)       * element_size_s
           ps0_t     = node_list%node(inode)%values(1,3,var_psi)       * element_size_t
-
-          u0_b      = node_list%node(inode)%values(1,iv_dir,var_u)    * element_size_0 
-          U0_s      = node_list%node(inode)%values(1,2,var_u)         * element_size_s
-          U0_t      = node_list%node(inode)%values(1,3,var_u)         * element_size_t   
 
           BigR      = node_list%node(inode)%x(1,1,1)
           R_b       = node_list%node(inode)%x(1,iv_dir,1) * element_size_0
@@ -438,28 +433,9 @@ do i=1, n_local_elms !=== do elements
 
           ps2_b     = node_list%node(inode2)%values(1,iv_dir,var_psi) * element_size_2 
           
-!=== diagnostic for comparison values calculated on the boundary and interp_PRZ (please keep)
-!          call find_RZ(node_list, element_list, BigR, Z, R_out, Z_out, i_elm, s_elm, t_elm, ifail)
-!          call interp_RZ(node_list,element_list,i_elm,s_elm,t_elm,QR,QR_s,QR_t,QR_st,QR_ss,QR_tt,QZ,QZ_s,QZ_t,QZ_st,QZ_ss,QZ_tt)
-!          call interp(node_list,element_list,i_elm,1,1,s_elm, t_elm, QPs0,QPs0_s,QPs0_t,QPs0_st,QPs0_ss,QPs0_tt)
-!          if (ielm .eq. i_elm) then
-!            if (iv_dir .eq. 2) then
-!              write(112,'(4i8,20e14.6)') ielm,i_elm,iv,iv_dir,s_elm,t_elm,Qps0,ps0,Qps0_s,ps0_s, Qps0_t,ps0_t, Qps0_ss, ps0_bb
-!              write(113,'(4i8,20e14.6)') ielm,i_elm,iv,iv_dir,s_elm,t_elm,QR,bigR,QR_s,R_s, QR_t,R_t, QR_ss, R_bb
-!              write(114,'(4i8,20e14.6)') ielm,i_elm,iv,iv_dir,s_elm,t_elm,QZ,Z,QZ_s,Z_s, QZ_t,Z_t, QZ_ss, Z_bb
-!            else
-!              write(112,'(4i8,20e14.6)') ielm,i_elm,iv,iv_dir,s_elm,t_elm,Qps0,ps0,Qps0_s,ps0_s, Qps0_t,ps0_t, Qps0_tt, ps0_bb
-!              write(113,'(4i8,20e14.6)') ielm,i_elm,iv,iv_dir,s_elm,t_elm,QR,bigR,QR_s,R_s, QR_t,R_t, QR_tt, R_bb
-!              write(114,'(4i8,20e14.6)') ielm,i_elm,iv,iv_dir,s_elm,t_elm,QZ,Z,QZ_s,Z_s, QZ_t,Z_t, QZ_tt, Z_bb
-!            endif
-!          endif
-
           xjac  =  R_s*Z_t - R_t*Z_s
           ps0_x = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
           ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
-
-          u0_x = (   Z_t * u0_s - Z_s * u0_t ) / xjac
-          u0_y = ( - R_t * u0_s + R_s * u0_t ) / xjac
 
           grad_s = (/  Z_t,  -R_t /) / xjac
           grad_t = (/ -Z_s,   R_s /) / xjac
@@ -477,12 +453,7 @@ do i=1, n_local_elms !=== do elements
           grad_psi = sqrt(ps0_x**2 + ps0_y**2)
           Btot     = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
           dl       = sqrt(R_b**2 + Z_b**2)
-
           dl_b     = (R_b*R_bb + Z_b*Z_bb) / dl
-
-          cs0      =   sqrt(gamma*T0)
-          cs0_T    =   0.5d0  * gamma    / cs0
-          cs0_TT   = - 0.25d0 * gamma**2 / cs0**2 
 
           bn     = dot_product( (/ps0_y,-ps0_x/), normal ) /  (BigR*Btot)  ! B·n/Btot
           bn_b   = 1.d0 / (Btot*dl*BigR) * (ps0_bb - ps0_b * dl_b /dl )
@@ -495,8 +466,8 @@ do i=1, n_local_elms !=== do elements
           if ((s_constant_boundary) .and. ((iv2 .eq. 1) .or. (iv2 .eq. 4))) bn_2 = - bn_2
           if ((t_constant_boundary) .and. ((iv2 .eq. 3) .or. (iv2 .eq. 4))) bn_2 = - bn_2
 
+          ! --- Apply Smoothing?
           c_1 = vpar_smoothing_coef(1); c_2 = vpar_smoothing_coef(2); c_3 = vpar_smoothing_coef(3)
-
           if ((vpar_smoothing) .and. (bn_1*bn_2 .lt. 0.d0)) then
             if (c_2 .gt. 0d0) then
               factor    = 0.25d0 * ( 1.d0 + tanh( (abs(bn) - c_1) / c_2 ) )**2 - c_3
@@ -506,48 +477,68 @@ do i=1, n_local_elms !=== do elements
                factor    = tanh(bn/c_1)
                factor_b  = bn_b /c_1 / cosh(bn/c_1)**2
                direction = 1.d0                            
-!               factor    = tanh(abs(bn)/c_1)
-!               factor_b  = bn_b * bn/abs(bn) / c_1 / cosh(abs(bn)/c_1)**2
             endif                       
           else
             factor   = 1.d0
             factor_b = 0.d0
           endif
-
           Hfact_b   = factor * R_b / BigR  + factor_b
  
- !           if ((in .eq. 1) .and. (node_list%node(inode)%boundary .eq. 5)) then                              
- !            write(111,'(6i8,A,3e14.6,A,20e14.6)') node_list%node(inode)%boundary, ielm, inode, iv, inode2, iv2, &
- !                                              ' Boundary (t): ',Vpar0, -BigR**2 * u0_t/ps0_t, factor*direction*sqrt(GAMMA*T0)/Btot,&
- !                                              ' error : ',Vpar0 - BigR**2 * u0_t/ps0_t - factor*direction*sqrt(GAMMA*T0)/Btot                                                               
- !           endif
+          ! --- For the BC's the magnetic field is assumed constant, and we do
+          ! --- not take derivatives of psi into account. Vpar, T and U are the
+          ! --- only variables that will be used for the linearisation
+          T0        = max(node_list%node(inode)%values(1,1,var_T), T_min)
+          T0_b      = node_list%node(inode)%values(1,iv_dir,var_T)    * element_size_0 
 
+          Vpar0     = node_list%node(inode)%values(1,1,var_vpar)
+          Vpar0_b   = node_list%node(inode)%values(1,iv_dir,var_Vpar) * element_size_0 
+
+          u0_b      = node_list%node(inode)%values(1,iv_dir,var_u)    * element_size_0 
+
+          ! --- Mach1 BC's and derivatives
+          cs0      =   sqrt(gamma*T0)
+          cs0_T    =   0.5d0  * gamma    / cs0
+          cs0_TT   = - 0.25d0 * gamma**2 / cs0**2 
+
+          Mach1BC     = - Vpar0   + direction / Btot * factor  * cs0               + factor / Btot * BigR**2 * U0_b/ps0_b 
+          Mach1BC_v   = - 1.0
+          Mach1BC_T   =           + direction / Btot * factor  * cs0_T 
+          Mach1BC_u   =                                                            + factor / Btot * BigR**2 * element_size_0/ps0_b 
+          dMach1BC    = - Vpar0_b + direction / Btot * factor  * cs0_T * T0_b   &
+                                  + direction / Btot * Hfact_b * cs0         
+          dMach1BC_v  = - element_size_0
+          dMach1BC_T  = - Vpar0_b + direction / Btot * factor  * cs0_TT* T0_b   &
+                                  + direction / Btot * Hfact_b * cs0_T
+          dMach1BC_Tb = - Vpar0_b + direction / Btot * factor  * cs0_T * element_size_0
+
+          ! --- Apply Mach1
           ku = var_u
           kv = var_Vpar
           kT = var_T
 
+          ! --- Impose Mach1 on node values
           call boundary_conditions_add_one_entry(             &
                index_node, kv, in, index_node, kv, in,        &
-               zbig,                                          &
+               - zbig * Mach1BC_v,                            &
                solve_only, gmres, index_min, index_max,       & 
                ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
           call boundary_conditions_add_one_entry(             &
                index_node, kv, in, index_node, kT, in,        &
-               - zbig * factor / Btot * cs0_T * direction,    &
+               - zbig * Mach1BC_T,                            &
                solve_only, gmres, index_min, index_max,       & 
                ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
           call boundary_conditions_add_one_entry(             &
                index_node,  kv, in, index_node2, ku, in,      &
-               - zbig * factor * BigR**2 * element_size_0 / ps0_b,   &
+               - zbig * Mach1BC_u,                            &
                solve_only, gmres, index_min, index_max,       & 
                ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
           if (in .eq. 1) then
             call boundary_conditions_add_RHS(                        &
                    index_node, kv, in,index_min, index_max, RHS_loc, &
-                   Zbig * ( - Vpar0 + factor*(BigR**2 * U0_b/ps0_b + cs0 * direction) / Btot), &
+                   Zbig * Mach1BC,                                   &
                    i_tor_min, i_tor_max)
           else
             call boundary_conditions_add_RHS(                         &
@@ -556,40 +547,53 @@ do i=1, n_local_elms !=== do elements
                    i_tor_min, i_tor_max)
           endif
   
+          ! --- Impose Mach1 on node derivatives
           index_node  = node_list%node(inode)%index(1)
           index_node2 = node_list%node(inode)%index(iv_dir)
 
           call boundary_conditions_add_one_entry(               &
                  index_node2, kv, in, index_node2, kv, in,      &
-                 zbig * element_size_0,                         &
+                 - zbig * dMach1BC_v,                           &
                  solve_only, gmres, index_min, index_max,       & 
                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
           call boundary_conditions_add_one_entry(               &
                  index_node2, kv, in, index_node2, kT, in,      &
-                 - zbig * element_size_0 * factor / Btot * cs0_T * direction,    &
+                 - zbig * dMach1BC_Tb,                          &
                  solve_only, gmres, index_min, index_max,       & 
                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
           call boundary_conditions_add_one_entry(               &
                  index_node2, kv, in, index_node,  kT, in,      &
-                 - zbig * factor  / Btot * cs0_TT * T0_b * direction  &
-                 - zbig * Hfact_b / Btot * cs0_T         * direction, & 
+                 - zbig * dMach1BC_T,                           & 
                  solve_only, gmres, index_min, index_max,       & 
                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
           if (in .eq. 1) then
-            call boundary_conditions_add_RHS(                    &
-                   index_node2, kv, in, index_min, index_max, RHS_loc,              &
-                   Zbig*(-Vpar0_b + factor  / Btot * cs0_T * T0_b * direction   &
-                                  + Hfact_b / Btot * cs0          * direction), &
+            call boundary_conditions_add_RHS(                           &
+                   index_node2, kv, in, index_min, index_max, RHS_loc,  &
+                   Zbig * dMach1BC,                                     &
                    i_tor_min, i_tor_max)
           else
-             call boundary_conditions_add_RHS(                   &
+             call boundary_conditions_add_RHS(                         &
                    index_node2, kv, in, index_min, index_max, RHS_loc, &
-                   0.d0,                                         &
+                   0.d0,                                               &
                    i_tor_min, i_tor_max) 
           endif
+
+          ! --- Fix derivatives in one direction
+!          do kk = 1,(n_order+1)/2
+!            if ( (iv_dir .eq. 2) .and. (kk .lt. 3) ) cycle ! do only t-derivatives and node value
+!            do ll = 1,(n_order+1)/2
+!              if ( (iv_dir .eq. 3) .and. (ll .gt. 3) ) cycle ! do only s-derivatives and node value
+!              index_tmp = node_indices(kk,ll)
+!              index_node = node_list%node(inode)%index(index_tmp)
+!              call boundary_conditions_add_one_entry(                 &
+!                     index_node, k, in, index_node, k, in,            &
+!                     zbig, solve_only, gmres, index_min, index_max,   & 
+!                     ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
+!            enddo
+!          enddo
 
         endif   !=== apply_cs
         

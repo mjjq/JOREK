@@ -210,73 +210,69 @@ subroutine input_profiles_Z_component(xpoint2,xcase2,Z,Z_xpoint,&
   real*8  :: cosh1, sinh1, tanh1
   real*8  :: Z_star, Z_star_u
 
-  sigz            = 0.1d0
+  atn_both   = 1.d0
+  datn_both  = 0.d0
+  d2atn_both = 0.d0
+  d3atn_both = 0.d0
+  d4atn_both = 0.d0
 
-  if (xpoint2) then
+  if (.not. xpoint2) return
 
-    if (xcase2 .eq. 1) then
-      atn_z_u   = 1.d0
-      datn_z_u  = 0.d0
-      d2atn_z_u = 0.d0
-      d3atn_z_u = 0.d0
-      d4atn_z_u = 0.d0
-    else
-      Z_star_u  = (Z-Z_xpoint(2))/sigz
-      Z_star_u  = min( max( Z_star_u, -40.d0), 40.d0) ! avoid floating-point exceptions
-      
-      tanh1     = tanh(Z_star_u)
-      cosh1     = cosh(Z_star_u)
-      sinh1     = sinh(Z_star_u)
- 
-      atn_z_u   = (0.5d0 - 0.5d0*tanh1)
-      datn_z_u  = - 0.5d0 * cosh1**(-2)            / sigz
-      d2atn_z_u = + 1.0d0 * cosh1**(-3) * sinh1    / sigz**2
-      d3atn_z_u = - 3.0d0 * cosh1**(-4) * sinh1**2 / sigz**3 &
-                  + 1.0d0 * cosh1**(-2)            / sigz**3
-      d4atn_z_u = +12.0d0 * cosh1**(-5) * sinh1**3 / sigz**4 &
-                  - 8.0d0 * cosh1**(-3) * sinh1    / sigz**4
-     
-    endif
-    
-    if (xcase2 .eq. 2) then
-      atn_z   = 1.d0
-      datn_z  = 0.d0
-      d2atn_z = 0.d0
-      d3atn_z = 0.d0
-      d4atn_z = 0.d0
-    else
-      Z_star  = (Z_xpoint(1)-Z)/sigz
-      Z_star  = min( max( Z_star, -40.d0), 40.d0) ! avoid floating-point exceptions
- 
-      tanh1   = tanh(Z_star)
-      cosh1   = cosh(Z_star)
-      sinh1   = sinh(Z_star)
-  
-      atn_z   = (0.5d0 - 0.5d0*tanh1)
-      datn_z  = - 0.5d0 * cosh1**(-2)            / sigz
-      d2atn_z = + 1.0d0 * cosh1**(-3) * sinh1    / sigz**2
-      d3atn_z = - 3.0d0 * cosh1**(-4) * sinh1**2 / sigz**3 &
-                + 1.0d0 * cosh1**(-2)            / sigz**3
-      d4atn_z = +12.0d0 * cosh1**(-5) * sinh1**3 / sigz**4 &
-                - 8.0d0 * cosh1**(-3) * sinh1    / sigz**4
-       
-    endif
-    
-    atn_both   = atn_z * atn_z_u
-    datn_both  = datn_z * atn_z_u + atn_z * datn_z_u
-    d2atn_both = d2atn_z * atn_z_u + 2.d0 * datn_z * datn_z_u + atn_z * d2atn_z_u
-    d3atn_both = d3atn_z * atn_z_u + 3.d0 * d2atn_z * datn_z_u + 3.d0 *  datn_z * d2atn_z_u + atn_z * d3atn_z_u
-    d4atn_both = d4atn_z * atn_z_u + 4.d0 * d3atn_z * datn_z_u + 6.d0 * d2atn_z * d2atn_z_u + 4.d0 * datn_z * d3atn_z_u + atn_z * d4atn_z_u
+  sigz = 0.1d0
 
+  if (xcase2 .eq. 1) then
+    atn_z_u   = 1.d0
+    datn_z_u  = 0.d0
+    d2atn_z_u = 0.d0
+    d3atn_z_u = 0.d0
+    d4atn_z_u = 0.d0
   else
-
-    atn_both   = 1.d0
-    datn_both  = 0.d0
-    d2atn_both = 0.d0
-    d3atn_both = 0.d0
-    d4atn_both = 0.d0
-
+    Z_star_u  = (Z-Z_xpoint(2))/sigz
+    Z_star_u  = min( max( Z_star_u, -40.d0), 40.d0) ! avoid floating-point exceptions
+    
+    tanh1     = tanh(Z_star_u)
+    cosh1     = cosh(Z_star_u)
+    sinh1     = sinh(Z_star_u)
+ 
+    atn_z_u   = (0.5d0 - 0.5d0*tanh1)
+    datn_z_u  = - 0.5d0 * cosh1**(-2)            / sigz
+    d2atn_z_u = + 1.0d0 * cosh1**(-3) * sinh1    / sigz**2
+    d3atn_z_u = - 3.0d0 * cosh1**(-4) * sinh1**2 / sigz**3 &
+                + 1.0d0 * cosh1**(-2)            / sigz**3
+    d4atn_z_u = +12.0d0 * cosh1**(-5) * sinh1**3 / sigz**4 &
+                - 8.0d0 * cosh1**(-3) * sinh1    / sigz**4
+   
   endif
+  
+  if (xcase2 .eq. 2) then
+    atn_z   = 1.d0
+    datn_z  = 0.d0
+    d2atn_z = 0.d0
+    d3atn_z = 0.d0
+    d4atn_z = 0.d0
+  else
+    Z_star  = (Z_xpoint(1)-Z)/sigz
+    Z_star  = min( max( Z_star, -40.d0), 40.d0) ! avoid floating-point exceptions
+ 
+    tanh1   = tanh(Z_star)
+    cosh1   = cosh(Z_star)
+    sinh1   = sinh(Z_star)
+  
+    atn_z   = (0.5d0 - 0.5d0*tanh1)
+    datn_z  = - 0.5d0 * cosh1**(-2)            * (-1.d0) / sigz
+    d2atn_z = + 1.0d0 * cosh1**(-3) * sinh1    * (+1.d0) / sigz**2
+    d3atn_z = - 3.0d0 * cosh1**(-4) * sinh1**2 * (-1.d0) / sigz**3 &
+              + 1.0d0 * cosh1**(-2)            * (-1.d0) / sigz**3
+    d4atn_z = +12.0d0 * cosh1**(-5) * sinh1**3 * (+1.d0) / sigz**4 &
+              - 8.0d0 * cosh1**(-3) * sinh1    * (+1.d0) / sigz**4
+     
+  endif
+  
+  atn_both   = atn_z * atn_z_u
+  datn_both  = datn_z * atn_z_u + atn_z * datn_z_u
+  d2atn_both = d2atn_z * atn_z_u + 2.d0 * datn_z * datn_z_u + atn_z * d2atn_z_u
+  d3atn_both = d3atn_z * atn_z_u + 3.d0 * d2atn_z * datn_z_u + 3.d0 *  datn_z * d2atn_z_u + atn_z * d3atn_z_u
+  d4atn_both = d4atn_z * atn_z_u + 4.d0 * d3atn_z * datn_z_u + 6.d0 * d2atn_z * d2atn_z_u + 4.d0 * datn_z * d3atn_z_u + atn_z * d4atn_z_u
 
 
 return

@@ -11,7 +11,7 @@ do ie = 1, element_list%n_elements
   do iv = 1, 4 
     j = element_list%element(ie)%vertex(iv)
     element_list%element(ie)%axis_element = .false.
-    if ( (treat_axis .and. node_list%node(j)%axis_node) .or. (n_flux .le. 1) ) then
+    if ( (treat_axis .and. node_list%node(j)%axis_node) .and. (n_flux .le. 1) ) then
        element_list%element(ie)%axis_element = .true.
     endif
   enddo

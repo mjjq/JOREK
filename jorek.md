@@ -15,6 +15,7 @@ exclude_dir: ./doc
 	     ./models/model333
 	     ./models/model400
 	     ./models/model500
+             ./models/model501
 	     ./models/model555
 	     ./models/model701
 	     ./models/model710

@@ -32,7 +32,7 @@ contains
                                   ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
 
     use data_structure
-    use phys_module, only: F0, GAMMA, Mach1_openBC, bc_natural_open, keep_n0_const
+    use phys_module, only: F0, GAMMA, Mach1_openBC, bc_natural_open, keep_n0_const, no_mach1_bc
     use vacuum, only: is_freebound
     use mpi_mod
     use mod_locate_irn_jcn
@@ -107,16 +107,16 @@ contains
       R_cnt = 0.d0 ; Z_cnt = 0.d0
       do iv=1, n_vertex_max
         inode = element_list%element(ielm)%vertex(iv)
-        R_cnt = R_cnt + node_list%node(inode)%x(1,1) / 4.d0     ! center point within element (approx.)
-        Z_cnt = Z_cnt + node_list%node(inode)%x(1,2) / 4.d0
+        R_cnt = R_cnt + node_list%node(inode)%x(1,1,1) / 4.d0     ! center point within element (approx.)
+        Z_cnt = Z_cnt + node_list%node(inode)%x(1,1,2) / 4.d0
       enddo
 
       do iv=1, n_vertex_max
         inode = element_list%element(ielm)%vertex(iv)
 
         ! --- Needed for Mach1 BCs
-        R_mid = node_list%node(inode)%x(1,1)
-        Z_mid = node_list%node(inode)%x(1,2)
+        R_mid = node_list%node(inode)%x(1,1,1)
+        Z_mid = node_list%node(inode)%x(1,1,2)
         normal_direction = (/R_mid - R_cnt, Z_mid - Z_cnt /) / norm2((/R_mid - R_cnt, Z_mid - Z_cnt /))
 
         if (node_list%node(inode)%boundary .ne. 0) then
@@ -132,7 +132,7 @@ contains
               !------------------------------------ the open field lines (in case of x-point grid)
               if ((node_list%node(inode)%boundary == 1) .or. (node_list%node(inode)%boundary == 3)) then
 
-                if ((k .eq. var_AR) .or. (k .eq. var_AZ) .or. (k .eq. var_A3)) then
+                if ((k .eq. var_AR) .or. (k .eq. var_AZ) .or. (k .eq. var_A3) .or. (no_mach1_bc)) then
 
                   index_node = node_list%node(inode)%index(1)
                   if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
@@ -159,18 +159,18 @@ contains
                 endif
 
                 ! --- Mach-1 BCs
-                if (.not. Mach1_openBC) then 
+                if ( (.not. Mach1_openBC) .and. (.not. no_mach1_bc) ) then 
                   if ( (k == var_uR) .or. (k == var_uZ) .or. (k == var_up) ) then 
                     
                     index_node  = node_list%node(inode)%index(1)             ! position of value
                     index_node2 = node_list%node(inode)%index(2)             ! position of first deriative
 
-                    R         = node_list%node(inode)%x(1,1)
-                    R_s       = node_list%node(inode)%x(2,1)
-                    R_t       = node_list%node(inode)%x(3,1)
-                    Z         = node_list%node(inode)%x(1,2)
-                    Z_s       = node_list%node(inode)%x(2,2)
-                    Z_t       = node_list%node(inode)%x(3,2)
+                    R         = node_list%node(inode)%x(1,1,1)
+                    R_s       = node_list%node(inode)%x(1,2,1)
+                    R_t       = node_list%node(inode)%x(1,3,1)
+                    Z         = node_list%node(inode)%x(1,1,2)
+                    Z_s       = node_list%node(inode)%x(1,2,2)
+                    Z_t       = node_list%node(inode)%x(1,3,2)
                     xjac      = R_s*Z_t - R_t*Z_s
 
                     T0        = node_list%node(inode)%values(1,1,var_T)
@@ -305,7 +305,7 @@ contains
                   
                   endif
                 else
-                  if (.not. bc_natural_open) then
+                  if ( (.not. bc_natural_open) .and. (.not. no_mach1_bc) ) then
                     write(*,*)'*** MODEL710 WARNING ***'
                     write(*,*)'*** YOU ARE NOT USING ANY DIVERTOR BOUNDARY CONDITIONS!!!'
                     write(*,*)'*** YOU NEED TO USE EITHER Mach1_openBC=.f. OR bc_natural_open=.t.'

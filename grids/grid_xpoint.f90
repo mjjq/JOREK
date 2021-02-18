@@ -1365,62 +1365,6 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
 enddo
 
 
-if (.false.) then
-do k=1, newelement_list%n_elements   ! fill in the size of the elements
-
-  do iv = 1, 4                    ! over 4 sides of an element
-
-    ivp = mod(iv,4)   + 1         ! vertex with index one higher
-
-    if ((iv .eq. 1) .or. (iv .eq. 3)) then
-      size_0 = newelement_list%element(k)%size(iv,2)
-      size_p = newelement_list%element(k)%size(ivp,2)
-      i = newelement_list%element(k)%vertex(iv)
-      ss1 = sqrt( newnode_list%node(i)%x(1,2,1)**2 + newnode_list%node(i)%x(1,2,2)**2 )
-      if (abs(ss1-1.d0) .lt. 1.d-8) then
-        newnode_list%node(i)%x(1,2,1) = newnode_list%node(i)%x(1,2,1) * abs(size_0)
-        newnode_list%node(i)%x(1,2,2) = newnode_list%node(i)%x(1,2,2) * abs(size_0)
-      endif
-      i = newelement_list%element(k)%vertex(ivp)
-      ss1 = sqrt( newnode_list%node(i)%x(1,2,1)**2 + newnode_list%node(i)%x(1,2,2)**2 )
-      if (abs(ss1-1.d0) .lt. 1.d-8) then
-        newnode_list%node(i)%x(1,2,1) = newnode_list%node(i)%x(1,2,1) * abs(size_p)
-        newnode_list%node(i)%x(1,2,2) = newnode_list%node(i)%x(1,2,2) * abs(size_p)
-      endif
-      newelement_list%element(k)%size(iv,2)  = size_0 / abs(size_0)
-      newelement_list%element(k)%size(ivp,2) = size_p / abs(size_p)
-    else
-      size_0 = newelement_list%element(k)%size(iv,3)
-      size_p = newelement_list%element(k)%size(ivp,3)
-      i = newelement_list%element(k)%vertex(iv)
-      ss1 = sqrt( newnode_list%node(i)%x(1,3,1)**2 + newnode_list%node(i)%x(1,3,2)**2 )
-      if (abs(ss1-1.d0) .lt. 1.d-8) then
-        newnode_list%node(i)%x(1,3,1) = newnode_list%node(i)%x(1,3,1) * abs(size_0)
-        newnode_list%node(i)%x(1,3,2) = newnode_list%node(i)%x(1,3,2) * abs(size_0)
-      endif
-      i = newelement_list%element(k)%vertex(ivp)
-      ss1 = sqrt( newnode_list%node(i)%x(1,3,1)**2 + newnode_list%node(i)%x(1,3,2)**2 )
-      if (abs(ss1-1.d0) .lt. 1.d-8) then
-        newnode_list%node(i)%x(1,3,1) = newnode_list%node(i)%x(1,3,1) * abs(size_p)
-        newnode_list%node(i)%x(1,3,2) = newnode_list%node(i)%x(1,3,2) * abs(size_p)
-      endif
-      newelement_list%element(k)%size(iv,3)  = size_0 / abs(size_0)
-      newelement_list%element(k)%size(ivp,3) = size_p / abs(size_p)
-    endif
-
-  enddo
-
-  do iv=1,4
-    newelement_list%element(k)%size(iv,1) = 1.d0
-    newelement_list%element(k)%size(iv,4) = newelement_list%element(k)%size(iv,2) * newelement_list%element(k)%size(iv,3)
-  enddo
-
-enddo
-endif
-
-
-
-
 if (n_order .ge. 5) call set_high_order_sizes(newelement_list)
 if (n_order .ge. 5) call approximate_2nd_derivatives(newnode_list,newelement_list)
 do i=1,newnode_list%n_nodes

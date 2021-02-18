@@ -21,16 +21,12 @@ if ( num_rho ) then
      call tr_allocate(num_rho_y1,1,num_rho_len,"num_rho_y1",CAT_UNKNOWN)
      call tr_allocate(num_rho_y2,1,num_rho_len,"num_rho_y2",CAT_UNKNOWN)
      call tr_allocate(num_rho_y3,1,num_rho_len,"num_rho_y3",CAT_UNKNOWN)
-     call tr_allocate(num_rho_y4,1,num_rho_len,"num_rho_y4",CAT_UNKNOWN)
-     call tr_allocate(num_rho_y5,1,num_rho_len,"num_rho_y5",CAT_UNKNOWN)
   end if
   call MPI_BCAST(num_rho_x,num_rho_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rho_y0,num_rho_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rho_y1,num_rho_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rho_y2,num_rho_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rho_y3,num_rho_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_rho_y4,num_rho_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_rho_y5,num_rho_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
 if ( num_rot ) then
@@ -41,14 +37,12 @@ if ( num_rot ) then
      call tr_allocate(num_rot_y1,1,num_rot_len,"num_rot_y1",CAT_UNKNOWN)
      call tr_allocate(num_rot_y2,1,num_rot_len,"num_rot_y2",CAT_UNKNOWN)
      call tr_allocate(num_rot_y3,1,num_rot_len,"num_rot_y3",CAT_UNKNOWN)
-     call tr_allocate(num_rot_y4,1,num_rot_len,"num_rot_y4",CAT_UNKNOWN)
   end if
   call MPI_BCAST(num_rot_x,num_rot_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rot_y0,num_rot_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rot_y1,num_rot_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rot_y2,num_rot_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rot_y3,num_rot_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_rot_y4,num_rot_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
 if ( num_rhon ) then
@@ -59,14 +53,12 @@ if ( num_rhon ) then
      call tr_allocate(num_rhon_y1,1,num_rhon_len,"num_rhon_y1",CAT_UNKNOWN)
      call tr_allocate(num_rhon_y2,1,num_rhon_len,"num_rhon_y2",CAT_UNKNOWN)
      call tr_allocate(num_rhon_y3,1,num_rhon_len,"num_rhon_y3",CAT_UNKNOWN)
-     call tr_allocate(num_rhon_y4,1,num_rhon_len,"num_rhon_y4",CAT_UNKNOWN)
   end if
   call MPI_BCAST(num_rhon_x,num_rhon_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rhon_y0,num_rhon_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rhon_y1,num_rhon_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rhon_y2,num_rhon_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_rhon_y3,num_rhon_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_rhon_y4,num_rhon_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
 
@@ -78,16 +70,12 @@ if ( num_T ) then
      call tr_allocate(num_T_y1,1,num_T_len,"num_T_y1",CAT_UNKNOWN)
      call tr_allocate(num_T_y2,1,num_T_len,"num_T_y2",CAT_UNKNOWN)
      call tr_allocate(num_T_y3,1,num_T_len,"num_T_y3",CAT_UNKNOWN)
-     call tr_allocate(num_T_y4,1,num_T_len,"num_T_y4",CAT_UNKNOWN)
-     call tr_allocate(num_T_y5,1,num_T_len,"num_T_y5",CAT_UNKNOWN)
   end if
   call MPI_BCAST(num_T_x,num_T_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_T_y0,num_T_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_T_y1,num_T_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_T_y2,num_T_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_T_y3,num_T_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_T_y4,num_T_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_T_y5,num_T_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
 if ( num_Ti ) then
@@ -98,16 +86,12 @@ if ( num_Ti ) then
      call tr_allocate(num_Ti_y1,1,num_Ti_len,"num_Ti_y1",CAT_UNKNOWN)
      call tr_allocate(num_Ti_y2,1,num_Ti_len,"num_Ti_y2",CAT_UNKNOWN)
      call tr_allocate(num_Ti_y3,1,num_Ti_len,"num_Ti_y3",CAT_UNKNOWN)
-     call tr_allocate(num_Ti_y4,1,num_Ti_len,"num_Ti_y4",CAT_UNKNOWN)
-     call tr_allocate(num_Ti_y5,1,num_Ti_len,"num_Ti_y5",CAT_UNKNOWN)
   end if
   call MPI_BCAST(num_Ti_x,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Ti_y0,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Ti_y1,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Ti_y2,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Ti_y3,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_Ti_y4,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_Ti_y5,num_Ti_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
 if ( num_Te ) then
@@ -118,16 +102,12 @@ if ( num_Te ) then
      call tr_allocate(num_Te_y1,1,num_Te_len,"num_Te_y1",CAT_UNKNOWN)
      call tr_allocate(num_Te_y2,1,num_Te_len,"num_Te_y2",CAT_UNKNOWN)
      call tr_allocate(num_Te_y3,1,num_Te_len,"num_Te_y3",CAT_UNKNOWN)
-     call tr_allocate(num_Te_y4,1,num_Te_len,"num_Te_y4",CAT_UNKNOWN)
-     call tr_allocate(num_Te_y5,1,num_Te_len,"num_Te_y5",CAT_UNKNOWN)
   end if
   call MPI_BCAST(num_Te_x,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Te_y0,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Te_y1,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Te_y2,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Te_y3,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_Te_y4,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_Te_y5,num_Te_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
 #ifdef fullmhd
@@ -138,23 +118,17 @@ end if
      if ( allocated(num_Fprofile_y1) ) deallocate( num_Fprofile_y1 )
      if ( allocated(num_Fprofile_y2) ) deallocate( num_Fprofile_y2 )
      if ( allocated(num_Fprofile_y3) ) deallocate( num_Fprofile_y3 )
-     if ( allocated(num_Fprofile_y4) ) deallocate( num_Fprofile_y4 )
-     if ( allocated(num_Fprofile_y5) ) deallocate( num_Fprofile_y5 )
      call tr_allocate(num_Fprofile_x,1,num_Fprofile_len,"num_Fprofile_x",CAT_UNKNOWN)
      call tr_allocate(num_Fprofile_y0,1,num_Fprofile_len,"num_Fprofile_y0",CAT_UNKNOWN)
      call tr_allocate(num_Fprofile_y1,1,num_Fprofile_len,"num_Fprofile_y1",CAT_UNKNOWN)
      call tr_allocate(num_Fprofile_y2,1,num_Fprofile_len,"num_Fprofile_y2",CAT_UNKNOWN)
      call tr_allocate(num_Fprofile_y3,1,num_Fprofile_len,"num_Fprofile_y3",CAT_UNKNOWN)
-     call tr_allocate(num_Fprofile_y4,1,num_Fprofile_len,"num_Fprofile_y4",CAT_UNKNOWN)
-     call tr_allocate(num_Fprofile_y5,1,num_Fprofile_len,"num_Fprofile_y5",CAT_UNKNOWN)
   end if
   call MPI_BCAST(num_Fprofile_x,num_Fprofile_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Fprofile_y0,num_Fprofile_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Fprofile_y1,num_Fprofile_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Fprofile_y2,num_Fprofile_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_Fprofile_y3,num_Fprofile_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_Fprofile_y4,num_Fprofile_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_Fprofile_y5,num_Fprofile_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 #endif
 
 if ( num_ffprime ) then
@@ -164,21 +138,15 @@ if ( num_ffprime ) then
      if ( allocated(num_ffprime_y0) ) deallocate( num_ffprime_y0 )
      if ( allocated(num_ffprime_y1) ) deallocate( num_ffprime_y1 )
      if ( allocated(num_ffprime_y2) ) deallocate( num_ffprime_y2 )
-     if ( allocated(num_ffprime_y3) ) deallocate( num_ffprime_y3 )
-     if ( allocated(num_ffprime_y4) ) deallocate( num_ffprime_y4 )
      call tr_allocate(num_ffprime_x,1,num_ffprime_len,"num_ffprime_x",CAT_UNKNOWN)
      call tr_allocate(num_ffprime_y0,1,num_ffprime_len,"num_ffprime_y0",CAT_UNKNOWN)
      call tr_allocate(num_ffprime_y1,1,num_ffprime_len,"num_ffprime_y1",CAT_UNKNOWN)
      call tr_allocate(num_ffprime_y2,1,num_ffprime_len,"num_ffprime_y2",CAT_UNKNOWN)
-     call tr_allocate(num_ffprime_y3,1,num_ffprime_len,"num_ffprime_y3",CAT_UNKNOWN)
-     call tr_allocate(num_ffprime_y4,1,num_ffprime_len,"num_ffprime_y4",CAT_UNKNOWN)
   end if
   call MPI_BCAST(num_ffprime_x,num_ffprime_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_ffprime_y0,num_ffprime_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_ffprime_y1,num_ffprime_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(num_ffprime_y2,num_ffprime_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_ffprime_y3,num_ffprime_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(num_ffprime_y4,num_ffprime_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
 if ( num_d_perp ) then

@@ -21,18 +21,8 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   
   ! --- Local variables
   real*8 :: pressure, psi_i, Phi_edge
-  real*8 :: dens
-  real*8 ::    dn_dpsi, dn_dz                                                ! 1st order derivatives
-  real*8 ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
-  real*8 ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
-  real*8 ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives
-  real*8 ::    dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz! 5th order derivatives (z5 not needed)
-  real*8 :: temp
-  real*8 ::    dT_dpsi,  dT_dz                                               ! 1st order derivatives
-  real*8 ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                                  ! 2nd order derivatives
-  real*8 ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3                   ! 2rd order derivatives
-  real*8 ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4      ! 4th order derivatives
-  real*8 ::    dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz! 5th order derivatives (z5 not needed)
+  real*8 :: dens, dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz
+  real*8 :: temp, dT_dpsi, dT_dz, dT_dpsi2, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz
   type (type_surface_list) :: surface_list
   integer :: i, i_elm_xpoint(2), i_elm_axis, ifail
   real*8  :: R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2), psi_bnd
@@ -99,18 +89,10 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   write(42,*) surface_list%n_psi
   do i = 1, surface_list%n_psi
     psi_i = surface_list%psi_values(i)
-    call density(    xpoint, xcase, 0.d0, (/-99.d0,-99.d0/), psi_i, psi_axis, psi_bnd, dens, &
-                     dn_dpsi,  dn_dz, &                                             ! 1st order derivatives
-                     dn_dpsi2, dn_dz2,      dn_dpsi_dz, &                           ! 2nd order derivatives
-                     dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &                 ! 2rd order derivatives
-                     dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz,  dn_dz4, &   ! 4th order derivatives
-                     dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz)! 5th order derivatives (z5 not needed)
-    call temperature(xpoint, xcase, 0.d0, (/-99.d0,-99.d0/), psi_i, psi_axis, psi_bnd, temp,         &
-                     dT_dpsi,  dT_dz, &                                             ! 1st order derivatives
-                     dT_dpsi2, dT_dz2,      dT_dpsi_dz, &                           ! 2nd order derivatives
-                     dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &                 ! 2rd order derivatives
-                     dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz,  dT_dz4, &   ! 4th order derivatives
-                     dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz)! 5th order derivatives (z5 not needed)
+    call density(xpoint, xcase, 0.d0, (/-99.d0,-99.d0/), psi_i, psi_axis, psi_bnd, dens, dn_dpsi, dn_dz, dn_dpsi2,   &
+      dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz)
+    call temperature(xpoint, xcase, 0.d0, (/-99.d0,-99.d0/), psi_i, psi_axis, psi_bnd, temp, dT_dpsi, dT_dz,         &
+      dT_dpsi2, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz)
     pressure = dens * temp / MU_ZERO
     write(42,*) PhiN(i), pressure
   end do

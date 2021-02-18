@@ -926,12 +926,12 @@ do i=n_flux,n_flux+n_open           !--------------------------- nodes on the op
 
     if (i .eq. n_flux+n_open)                   newnode_list%node(index)%boundary = 2
 
-    if (n_order .ge. 5) then
-      call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
-      call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
-      newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
-      newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
-    endif
+!    if (n_order .ge. 5) then
+!      call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
+!      call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
+!      newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
+!      newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
+!    endif
 
   enddo
 enddo
@@ -988,12 +988,12 @@ do j=1, n_leg                         !--------------------------- nodes on righ
       if ((k.eq.1) .or. (k .eq. n_open+n_private+1))  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
       if  (j .eq. 1)                                  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
 
-      if (n_order .ge. 5) then
-        call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
-        call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
-        newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
-        newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
-      endif
+!      if (n_order .ge. 5) then
+!        call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
+!        call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
+!        newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
+!        newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
+!      endif
 
    endif
 
@@ -1048,12 +1048,12 @@ do l=1, n_leg-1                       !--------------------------- nodes on left
     if ((k.eq.1) .or. (k .eq. n_open+n_private+1))  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
     if  (j .eq. 1)                                  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
 
-    if (n_order .ge. 5) then
-      call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
-      call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
-      newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
-      newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
-    endif
+!    if (n_order .ge. 5) then
+!      call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
+!      call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
+!      newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
+!      newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
+!    endif
 
  enddo
 enddo
@@ -1392,11 +1392,72 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
   element_list%element(Index)%sons(:)   = 0
 enddo
 
+
+if (.false.) then
+do k=1, newelement_list%n_elements   ! fill in the size of the elements
+
+  do iv = 1, 4                    ! over 4 sides of an element
+
+    ivp = mod(iv,4)   + 1         ! vertex with index one higher
+
+    if ((iv .eq. 1) .or. (iv .eq. 3)) then
+      size_0 = newelement_list%element(k)%size(iv,2)
+      size_p = newelement_list%element(k)%size(ivp,2)
+      i = newelement_list%element(k)%vertex(iv)
+      ss1 = sqrt( newnode_list%node(i)%x(1,2,1)**2 + newnode_list%node(i)%x(1,2,2)**2 )
+      if (abs(ss1-1.d0) .lt. 1.d-8) then
+        newnode_list%node(i)%x(1,2,1) = newnode_list%node(i)%x(1,2,1) * abs(size_0)
+        newnode_list%node(i)%x(1,2,2) = newnode_list%node(i)%x(1,2,2) * abs(size_0)
+      endif
+      i = newelement_list%element(k)%vertex(ivp)
+      ss1 = sqrt( newnode_list%node(i)%x(1,2,1)**2 + newnode_list%node(i)%x(1,2,2)**2 )
+      if (abs(ss1-1.d0) .lt. 1.d-8) then
+        newnode_list%node(i)%x(1,2,1) = newnode_list%node(i)%x(1,2,1) * abs(size_p)
+        newnode_list%node(i)%x(1,2,2) = newnode_list%node(i)%x(1,2,2) * abs(size_p)
+      endif
+      newelement_list%element(k)%size(iv,2)  = size_0 / abs(size_0)
+      newelement_list%element(k)%size(ivp,2) = size_p / abs(size_p)
+    else
+      size_0 = newelement_list%element(k)%size(iv,3)
+      size_p = newelement_list%element(k)%size(ivp,3)
+      i = newelement_list%element(k)%vertex(iv)
+      ss1 = sqrt( newnode_list%node(i)%x(1,3,1)**2 + newnode_list%node(i)%x(1,3,2)**2 )
+      if (abs(ss1-1.d0) .lt. 1.d-8) then
+        newnode_list%node(i)%x(1,3,1) = newnode_list%node(i)%x(1,3,1) * abs(size_0)
+        newnode_list%node(i)%x(1,3,2) = newnode_list%node(i)%x(1,3,2) * abs(size_0)
+      endif
+      i = newelement_list%element(k)%vertex(ivp)
+      ss1 = sqrt( newnode_list%node(i)%x(1,3,1)**2 + newnode_list%node(i)%x(1,3,2)**2 )
+      if (abs(ss1-1.d0) .lt. 1.d-8) then
+        newnode_list%node(i)%x(1,3,1) = newnode_list%node(i)%x(1,3,1) * abs(size_p)
+        newnode_list%node(i)%x(1,3,2) = newnode_list%node(i)%x(1,3,2) * abs(size_p)
+      endif
+      newelement_list%element(k)%size(iv,3)  = size_0 / abs(size_0)
+      newelement_list%element(k)%size(ivp,3) = size_p / abs(size_p)
+    endif
+
+  enddo
+
+  do iv=1,4
+    newelement_list%element(k)%size(iv,1) = 1.d0
+    newelement_list%element(k)%size(iv,4) = newelement_list%element(k)%size(iv,2) * newelement_list%element(k)%size(iv,3)
+  enddo
+
+enddo
+endif
+
+
+
+
 if (n_order .ge. 5) call set_high_order_sizes(newelement_list)
 if (n_order .ge. 5) call approximate_2nd_derivatives(newnode_list,newelement_list)
 do i=1,newnode_list%n_nodes
   newnode_list%node(i)%x(1,7:n_degrees,:) = 0.d0
 enddo
+newnode_list%node(index_xpoint  )%x(1,5:n_degrees,:) = 0.d0
+newnode_list%node(index_xpoint+1)%x(1,5:n_degrees,:) = 0.d0
+newnode_list%node(index_xpoint+2)%x(1,5:n_degrees,:) = 0.d0
+newnode_list%node(index_xpoint+3)%x(1,5:n_degrees,:) = 0.d0
 
 !call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
 
@@ -1481,18 +1542,19 @@ do i=1,newnode_list%n_nodes
   newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(1,2,1) + PSI_Z * newnode_list%node(i)%x(1,2,2)
   newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(1,3,1) + PSI_Z * newnode_list%node(i)%x(1,3,2)
   newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(1,4,1) + PSI_Z * newnode_list%node(i)%x(1,4,2)
+  newnode_list%node(i)%values(1,5:n_degrees,1) = 0.d0
 
   if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0
 
 enddo
 
-newnode_list%node(index_xpoint  )%values(1,2:4,1) = 0.d0
-newnode_list%node(index_xpoint+1)%values(1,2:4,1) = 0.d0
-newnode_list%node(index_xpoint+2)%values(1,2:4,1) = 0.d0
-newnode_list%node(index_xpoint+3)%values(1,2:4,1) = 0.d0
+newnode_list%node(index_xpoint  )%values(1,2:n_degrees,1) = 0.d0
+newnode_list%node(index_xpoint+1)%values(1,2:n_degrees,1) = 0.d0
+newnode_list%node(index_xpoint+2)%values(1,2:n_degrees,1) = 0.d0
+newnode_list%node(index_xpoint+3)%values(1,2:n_degrees,1) = 0.d0
 
 do j=1,n_tht - 1
-  newnode_list%node(i)%values(1,2:4,1) = 0.d0
+  newnode_list%node(i)%values(1,2:n_degrees,1) = 0.d0
 enddo
 
 !----------------------------- empty old nodes/elements

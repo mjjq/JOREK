@@ -32,53 +32,18 @@ logical,                      intent(in)    :: nice_q
 type (type_surface_list) :: surface_list, sep_list
 integer    :: ierr, n_iter, iter, i, in, mm, i_elm_axis, i_elm_xpoint(2), i_elm_lim, ifail, i_elm
 real*8     :: amplitude, psi, psi_bnd
-real*8     :: zn
-real*8     ::    dn_dpsi, dn_dz                                                ! 1st order derivatives
-real*8     ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
-real*8     ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
-real*8     ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives
-real*8     ::    dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz! 5th order derivatives (z5 not needed)
-real*8     :: zT
-real*8     ::    dT_dpsi,  dT_dz                                               ! 1st order derivatives
-real*8     ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                                  ! 2nd order derivatives
-real*8     ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3                   ! 2rd order derivatives
-real*8     ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4      ! 4th order derivatives
-real*8     ::    dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz! 5th order derivatives (z5 not needed)
-real*8     :: zTi
-real*8     ::    dTi_dpsi,  dTi_dz                                                  ! 1st order derivatives
-real*8     ::    dTi_dpsi2, dTi_dz2, dTi_dpsi_dz                                    ! 2nd order derivatives
-real*8     ::    dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz,  dTi_dz3                    ! 2rd order derivatives
-real*8     ::    dTi_dpsi4, dTi_dpsi_dz3, dTi_dpsi2_dz2, dTi_dpsi3_dz, dTi_dz4      ! 4th order derivatives
-real*8     ::    dTi_dpsi5, dTi_dpsi_dz4, dTi_dpsi2_dz3, dTi_dpsi3_dz2, dTi_dpsi4_dz! 5th order derivatives (z5 not needed)
-real*8     :: zTe
-real*8     ::    dTe_dpsi,  dTe_dz                                                  ! 1st order derivatives
-real*8     ::    dTe_dpsi2, dTe_dz2, dTe_dpsi_dz                                    ! 2nd order derivatives
-real*8     ::    dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz,  dTe_dz3                    ! 2rd order derivatives
-real*8     ::    dTe_dpsi4, dTe_dpsi_dz3, dTe_dpsi2_dz2, dTe_dpsi3_dz, dTe_dz4      ! 4th order derivatives
-real*8     ::    dTe_dpsi5, dTe_dpsi_dz4, dTe_dpsi2_dz3, dTe_dpsi3_dz2, dTe_dpsi4_dz! 5th order derivatives (z5 not needed)
+real*8     :: zn,  dn_dpsi,  dn_dpsi2,  dn_dz,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi2_dz,  dn_dpsi_dz2
+real*8     :: zT,  dT_dpsi,  dT_dpsi2,  dT_dz,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi2_dz,  dT_dpsi_dz2
+real*8     :: zTi, dTi_dpsi, dTi_dpsi2, dTi_dz, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi2_dz, dTi_dpsi_dz2
+real*8     :: zTe, dTe_dpsi, dTe_dpsi2, dTe_dz, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi2_dz, dTe_dpsi_dz2
 real*8     :: Ti_prof, Te_prof
-real*8     :: zFFprime
-real*8     ::    dFF_dpsi, dFF_dz                                                ! 1st order derivatives
-real*8     ::    dFF_dpsi2, dFF_dz2, dFF_dpsi_dz                                 ! 2nd order derivatives
-real*8     ::    dFF_dpsi3, dFF_dpsi_dz2, dFF_dpsi2_dz,  dFF_dz3                 ! 2rd order derivatives
-real*8     ::    dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz, dFF_dz4   ! 4th order derivatives
-real*8     :: F_prof   
-real*8     ::   dF_dpsi, dF_dz                                             ! 1st order derivatives
-real*8     ::   dF_dpsi2, dF_dz2, dF_dpsi_dz                               ! 2nd order derivatives
-real*8     ::   dF_dpsi3, dF_dpsi_dz2, dF_dpsi2_dz,  dF_dz3                ! 2rd order derivatives
-real*8     ::   dF_dpsi4, dF_dpsi_dz3, dF_dpsi2_dz2, dF_dpsi3_dz, dF_dz4   ! 4th order derivatives
-real*8     :: F_values(0:4,0:4,0:4)        !< variable and its derivatives
+real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
+real*8     :: F_prof, dF_dpsi, dF_dz, dF_dpsi2, dF_dz2, dF_dpsi_dz
 real*8     :: xx, x_s, x_t, x_st, x_ss, x_tt, yy, y_s, y_t, y_st, y_ss, y_tt
 real*8     :: R_axis, Z_axis, s_axis, t_axis, psi_axis,R, Z, BigR, T0, BigR_s, T0_s
 real*8     :: R_lim, Z_lim, s_lim, t_lim, psi_lim, R_out, Z_out, s_out, t_out
 real*8     :: R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_xpoint(2)
-real*8     :: zjz, psi_n
-real*8     :: GP
-real*8     ::    dGP_dpsi,  dGP_dz                                                  ! 1st order derivatives
-real*8     ::    dGP_dpsi2, dGP_dz2,      dGP_dpsi_dz                               ! 2nd order derivatives
-real*8     ::    dGP_dpsi3, dGP_dpsi_dz2, dGP_dpsi2_dz,  dGP_dz3                    ! 2rd order derivatives
-real*8     ::    dGP_dpsi4, dGP_dpsi_dz3, dGP_dpsi2_dz2, dGP_dpsi3_dz,  dGP_dz4     ! 4th order derivatives
-real*8     ::    dGP_dpsi5, dGP_dpsi_dz4, dGP_dpsi2_dz3, dGP_dpsi3_dz2, dGP_dpsi4_dz! 5th order derivatives (z5 not needed)
+real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi, psi_n
 real*8     :: ps0_s, ps0_t, p_s, p_t, p_ss, p_st, p_tt 
 real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
@@ -399,27 +364,15 @@ if (my_id == 0) then
     R   = node_list%node(i)%x(1,1,1)
     Z   = node_list%node(i)%x(1,1,2)
   
-    call density(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,             &
-                 dn_dpsi,  dn_dz, &                                             ! 1st order derivatives
-                 dn_dpsi2, dn_dz2,      dn_dpsi_dz, &                           ! 2nd order derivatives
-                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &                 ! 2rd order derivatives
-                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz,  dn_dz4, &   ! 4th order derivatives
-                 dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz)! 5th order derivatives (z5 not needed)
+    call density(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+                                                               dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
   
     if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 401) .or. (jorek_model .eq. 711) ) then
-      call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, zTi, &
-                         dTi_dpsi,  dTi_dz, &                                                ! 1st order derivatives
-                         dTi_dpsi2, dTi_dz2,      dTi_dpsi_dz, &                             ! 2nd order derivatives
-                         dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz,  dTi_dz3, &                  ! 2rd order derivatives
-                         dTi_dpsi4, dTi_dpsi_dz3, dTi_dpsi2_dz2, dTi_dpsi3_dz,  dTi_dz4, &   ! 4th order derivatives
-                         dTi_dpsi5, dTi_dpsi_dz4, dTi_dpsi2_dz3, dTi_dpsi3_dz2, dTi_dpsi4_dz)! 5th order derivatives (z5 not needed)
+      call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+    		     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
   
-      call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, zTe, &
-                         dTe_dpsi,  dTe_dz, &                                                ! 1st order derivatives
-                         dTe_dpsi2, dTe_dz2,      dTe_dpsi_dz, &                             ! 2nd order derivatives
-                         dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz,  dTe_dz3, &                  ! 2rd order derivatives
-                         dTe_dpsi4, dTe_dpsi_dz3, dTe_dpsi2_dz2, dTe_dpsi3_dz,  dTe_dz4, &   ! 4th order derivatives
-                         dTe_dpsi5, dTe_dpsi_dz4, dTe_dpsi2_dz3, dTe_dpsi3_dz2, dTe_dpsi4_dz)! 5th order derivatives (z5 not needed)
+      call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+    		     zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
       zT  	= zTi	       + zTe
       dT_dpsi	= dTi_dpsi     + dTe_dpsi
       dT_dpsi2	= dTi_dpsi2    + dTe_dpsi2
@@ -430,133 +383,95 @@ if (my_id == 0) then
       dT_dpsi2_dz = dTi_dpsi2_dz + dTe_dpsi2_dz
       dT_dpsi_dz2 = dTi_dpsi_dz2 + dTe_dpsi_dz2 
     else
-      call temperature(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, zT, &
-                       dT_dpsi,  dT_dz, &                                             ! 1st order derivatives
-                       dT_dpsi2, dT_dz2,      dT_dpsi_dz, &                           ! 2nd order derivatives
-                       dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &                 ! 2rd order derivatives
-                       dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz,  dT_dz4, &   ! 4th order derivatives
-                       dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz)! 5th order derivatives (z5 not needed)
+      call temperature(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+    		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
     endif
   
 #ifdef fullmhd
-    call F_profile(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
-                   F_prof, &
-                     dF_dpsi, dF_dz, &                                          ! 1st order derivatives
-                     dF_dpsi2, dF_dz2, dF_dpsi_dz, &                            ! 2nd order derivatives
-                     dF_dpsi3, dF_dpsi_dz2, dF_dpsi2_dz,  dF_dz3, &             ! 2rd order derivatives
-                     dF_dpsi4, dF_dpsi_dz3, dF_dpsi2_dz2, dF_dpsi3_dz, dF_dz4, &! 4th order derivatives
-                   zFFprime, &
-                     dFF_dpsi, dFF_dz, &                                             ! 1st order derivatives
-                     dFF_dpsi2, dFF_dz2, dFF_dpsi_dz, &                              ! 2nd order derivatives
-                     dFF_dpsi3, dFF_dpsi_dz2, dFF_dpsi2_dz,  dFF_dz3, &              ! 2rd order derivatives
-                     dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz, dFF_dz4)  ! 4th order derivatives
+      call F_profile(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,F_prof,dF_dpsi      ,dF_dz      , &
+                                                                  dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz , &
+                                                                  zFFprime    ,dFFprime_dpsi,dFFprime_dz, &
+                                                                  dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
   
-    F_values = 0.d0
-    F_values(0,0,0) = F_prof
-    F_values(1,0,0) = dF_dpsi  ; F_values(0,0,1) = dF_dZ  
-    F_values(2,0,0) = dF_dpsi2 ; F_values(0,0,2) = dF_dZ2 
-    F_values(3,0,0) = dF_dpsi3 ; F_values(0,0,3) = dF_dZ3 
-    F_values(4,0,0) = dF_dpsi4 ; F_values(0,0,4) = dF_dZ4 
-    F_values(1,0,1) = dF_dpsi_dZ  ; F_values(2,0,1) = dF_dpsi2_dZ  
-    F_values(1,0,2) = dF_dpsi_dZ2 ; F_values(2,0,2) = dF_dpsi2_dZ2
-    F_values(1,0,3) = dF_dpsi_dZ3 ; F_values(3,0,2) = dF_dpsi3_dZ
-
-    call project_var_on_node(node_list, i, 710, F_values)
+      node_list%node(i)%Fprof_eq(1) =   F_prof
+      node_list%node(i)%Fprof_eq(2) =   dF_dpsi * node_list%node(i)%values(1,2,var_A3)  + dF_dz * node_list%node(i)%x(1,2,2)
+      node_list%node(i)%Fprof_eq(3) =   dF_dpsi * node_list%node(i)%values(1,3,var_A3)  + dF_dz * node_list%node(i)%x(1,3,2)
+      node_list%node(i)%Fprof_eq(4) =   dF_dpsi * node_list%node(i)%values(1,4,var_A3)  + dF_dz * node_list%node(i)%x(1,4,2)      &
+                                      + dF_dpsi2 * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
+                                      + dF_dz2   * node_list%node(i)%x(1,2,2) * node_list%node(i)%x(1,3,2)
 #else
-    call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime, &
-                 dFF_dpsi, dFF_dz, &                                             ! 1st order derivatives
-                 dFF_dpsi2, dFF_dz2, dFF_dpsi_dz, &                              ! 2nd order derivatives
-                 dFF_dpsi3, dFF_dpsi_dz2, dFF_dpsi2_dz,  dFF_dz3, &              ! 2rd order derivatives
-                 dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz, dFF_dz4, &! 4th order derivatives
-                 .true.)
+    call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
+                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .true.)
+#endif
 
-    ! --- Before dealing with the current, let's do grad(p)  
-    GP            = dn_dpsi * zT + zn * dT_dpsi
-    ! --- 1st derivatives
-    dGP_dpsi      = dn_dpsi2 * zT + 2.0 * dn_dpsi * dT_dpsi + zn * dT_dpsi2
-    dGP_dz        = dn_dpsi_dZ * zT + dn_dpsi * dT_dZ + dn_dZ * dT_dpsi + zn * dT_dpsi_dZ
-    ! --- 2nd derivatives
-    dGP_dpsi2     = dn_dpsi3 * zT + 3.0 * dn_dpsi2 * dT_dpsi + 3.0 * dn_dpsi * dT_dpsi2 + zn * dT_dpsi3
-    dGP_dz2       = dn_dpsi_dZ2 * zT + 2.0 * dn_dpsi_dZ * dT_dZ + dn_dpsi * dT_dZ2 + dn_dZ2 * dT_dpsi + 2.0 * dn_dZ * dT_dpsi_dZ + zn * dT_dpsi_dZ2
-    dGP_dpsi_dz   = dn_dpsi2_dZ * zT + dn_dpsi2 * dT_dZ + 2.0 * dn_dpsi_dZ * dT_dpsi + 2.0 * dn_dpsi * dT_dpsi_dZ + dn_dZ * dT_dpsi2 + zn * dT_dpsi2_dZ
-    ! --- 3rd derivatives
-    dGP_dpsi3     = dn_dpsi4 * zT  + 4.0 * dn_dpsi3 * dT_dpsi + 6.0 * dn_dpsi2 * dT_dpsi2 &
-                                   + 4.0 * dn_dpsi * dT_dpsi3 + zn * dT_dpsi4
-    dGP_dpsi_dz2  = dn_dpsi2_dZ2 * zT  + 2.0 * dn_dpsi_dZ2 * dT_dpsi + 2.0 * dn_dpsi2_dZ * dT_dZ &
-                    + 4.0 * dn_dpsi_dZ * dT_dpsi_dZ + dn_dpsi2 * dT_dZ2 + 2.0 * dn_dpsi * dT_dpsi_dZ2 &
-                    + dn_dZ2 * dT_dpsi2 + 2.0 * dn_dZ * dT_dpsi2_dZ + zn * dT_dpsi2_dZ2
-    dGP_dpsi2_dz  = dn_dpsi3_dZ * zT + dn_dpsi3 * dT_dZ + 3.0 * dn_dpsi2_dZ * dT_dpsi &
-                    + 3.0 * dn_dpsi2 * dT_dpsi_dZ + 3.0 * dn_dpsi_dZ * dT_dpsi2 &
-                    + 3.0 * dn_dpsi * dT_dpsi2_dZ + dn_dZ * dT_dpsi3 + zn * dT_dpsi3_dZ
-    dGP_dz3       = dn_dpsi_dZ3 * zT + 3.0 * dn_dpsi_dZ2 * dT_dZ + 3.0 * dn_dpsi_dZ * dT_dZ2 &
-                    + dn_dpsi * dT_dZ3 + dn_dZ3 * dT_dpsi + 3.0 * dn_dZ2 * dT_dpsi_dZ &
-                    + 3.0 * dn_dZ * dT_dpsi_dZ2 + zn * dT_dpsi_dZ3
-    ! --- 4th derivatives
-    dGP_dpsi4     = dn_dpsi5 * zT + 5.0 * dn_dpsi4 * dT_dpsi + 10.0 * dn_dpsi3 * dT_dpsi2 &
-                    + 10.0 * dn_dpsi2 * dT_dpsi3 + 5.0 * dn_dpsi * dT_dpsi4 + zn * dT_dpsi5
-    dGP_dpsi_dz3  = + dn_dpsi2_dZ3 * zT + 2.0 * dn_dpsi_dZ3 * dT_dpsi + 3.0 * dn_dpsi2_dZ2 * dT_dZ &
-                    + 6.0 * dn_dpsi_dZ2 * dT_dpsi_dZ + 3.0 * dn_dpsi2_dZ * dT_dZ2 + 6.0 * dn_dpsi_dZ * dT_dpsi_dZ2 &
-                    + dn_dpsi2 * dT_dZ3 + 2.0 * dn_dpsi * dT_dpsi_dZ3  + dn_dZ3 * dT_dpsi2 &
-                    + 3.0 * dn_dZ2 * dT_dpsi2_dZ + 3.0 * dn_dZ * dT_dpsi2_dZ2 + zn * dT_dpsi2_dZ3
-    dGP_dpsi2_dz2 = + dn_dpsi3_dZ2 * zT + 3.0 * dn_dpsi2_dZ2 * dT_dpsi + 3.0 * dn_dpsi_dZ2 * dT_dpsi2 &
-                    + 2.0 * dn_dpsi3_dZ * dT_dZ + 6.0 * dn_dpsi2_dZ * dT_dpsi_dZ + 6.0 * dn_dpsi_dZ * dT_dpsi2_dZ &
-                    + dn_dpsi3 * dT_dZ2 + 3.0 * dn_dpsi2 * dT_dpsi_dZ2 + 3.0 * dn_dpsi * dT_dpsi2_dZ2 &
-                    + dn_dZ2 * dT_dpsi3 + 2.0 * dn_dZ * dT_dpsi3_dZ + zn * dT_dpsi3_dZ2
-    dGP_dpsi3_dz  = + dn_dpsi4_dZ * zT + dn_dpsi4 * dT_dZ + 4.0 * dn_dpsi3_dZ * dT_dpsi &
-                    + 6.0 * dn_dpsi2_dZ * dT_dpsi2 + 4.0 * dn_dpsi3 * dT_dpsi_dZ &
-                    + 4.0 * dn_dpsi_dZ * dT_dpsi3 + 6.0 * dn_dpsi2 * dT_dpsi2_dZ &
-                    + 4.0 * dn_dpsi * dT_dpsi3_dZ + dn_dZ * dT_dpsi4 + zn * dT_dpsi4_dZ
-    dGP_dz4       = + dn_dpsi_dZ4 * zT + 4.0 * dn_dpsi_dZ3 * dT_dZ + 6.0 * dn_dpsi_dZ2 * dT_dZ2 &
-                    + 4.0 * dn_dpsi_dZ * dT_dZ3 + dn_dpsi * dT_dZ4 + dn_dZ4 * dT_dpsi &
-                    + 4.0 * dn_dZ3 * dT_dpsi_dZ + 6.0 * dn_dZ2 * dT_dpsi_dZ2 &
-                    + 4.0 * dn_dZ * dT_dpsi_dZ3 + zn * dT_dpsi_dZ4
-
-
-    ! --- Now we  record**2 the current profile for projection on the node
-    ! --- For the record**2, j = - FF' - R^2 Grad(p), but JOREK uses -FFprime...
-    F_values = 0.d0
-    ! --- Current needs to be derived 4*4*4 times...
-    F_values(0,0,0) = zFFprime      -       R**2 *  GP
-    ! --- 1st derivatives
-    F_values(1,0,0) = dFF_dpsi      -       R**2 * dGP_dpsi
-    F_values(0,1,0) =               - 2.0 * R    *  GP
-    F_values(0,0,1) = dFF_dZ        -       R**2 * dGP_dZ
-    ! --- 2nd derivatives
-    F_values(2,0,0) = dFF_dpsi2     -       R**2 * dGP_dpsi2
-    F_values(0,2,0) =               - 2.0        *  GP
-    F_values(0,0,2) = dFF_dZ2       -       R**2 * dGP_dZ2
-    F_values(1,1,0) =               - 2.0 * R    * dGP_dpsi
-    F_values(1,0,1) = dFF_dpsi_dZ   -       R**2 * dGP_dpsi_dZ
-    F_values(0,1,1) =               - 2.0 * R    * dGP_dZ
-    ! --- 3rd derivatives
-    F_values(3,0,0) = dFF_dpsi3     -       R**2 * dGP_dpsi3
-    F_values(0,0,3) = dFF_dZ3       -       R**2 * dGP_dZ3
-    F_values(2,1,0) =               - 2.0 * R    * dGP_dpsi2
-    F_values(2,0,1) = dFF_dpsi2_dZ  -       R**2 * dGP_dpsi2_dZ
-    F_values(1,2,0) =               - 2.0        * dGP_dpsi
-    F_values(1,1,1) =               - 2.0 * R    * dGP_dpsi_dZ
-    F_values(1,0,2) = dFF_dpsi_dZ2  -       R**2 * dGP_dpsi_dZ2
-    F_values(0,2,1) =               - 2.0        * dGP_dZ
-    F_values(0,1,2) =               - 2.0 * R    * dGP_dZ2
-    ! --- 4th derivatives
-    F_values(4,0,0) = dFF_dpsi4     -       R**2 * dGP_dpsi4
-    F_values(0,0,4) = dFF_dZ4       -       R**2 * dGP_dZ4
-    F_values(3,0,1) = dFF_dpsi3_dZ  -       R**2 * dGP_dpsi3_dZ
-    F_values(3,1,0) =               - 2.0 * R    * dGP_dpsi3
-    F_values(2,2,0) =               - 2.0        * dGP_dpsi2
-    F_values(2,1,1) =               - 2.0 * R    * dGP_dpsi2_dZ
-    F_values(2,0,2) = dFF_dpsi2_dZ2 -       R**2 * dGP_dpsi2_dZ2
-    F_values(1,2,1) =               - 2.0        * dGP_dpsi_dZ
-    F_values(1,1,2) =               - 2.0 * R    * dGP_dpsi_dZ2
-    F_values(1,0,3) = dFF_dpsi_dZ3  -       R**2 * dGP_dpsi_dZ3
-    F_values(0,2,2) =               - 2.0        * dGP_dZ2
-    F_values(0,1,3) =               - 2.0 * R    * dGP_dZ3
-
-    call project_var_on_node(node_list, i, var_zj, F_values)
-
-#endif /* end of non-fullmhd */
+  
+    zjz     = zFFprime      - R*R *      (dn_dpsi    * zT + zn * dT_dpsi)
+  
+    dj_dpsi = dFFprime_dpsi - R*R *      (dn_dpsi2   * zT + zn * dT_dpsi2  + 2.d0 * dn_dpsi * dT_dpsi)
+  
+    dj_dR   =               - 2.d0 * R * (dn_dpsi    * zT + zn * dT_dpsi)
+  
+    dj_dZ   = dFFprime_dz   - R*R *      (dn_dpsi_dz * zT + dn_dpsi * dT_dz + zn * dT_dpsi_dz + dn_dz * dT_dpsi)
+  
+    dj_dR_dR = - 2.d0     * (dn_dpsi     * zT + zn * dT_dpsi)
+  
+    dj_dZ_dZ = dFFprime_dz2   - R*R * ( dn_dpsi_dz2 * zT   + dn_dpsi_dz * dT_dz  + dn_dz * dT_dpsi_dz  + dn_dz2 * dT_dpsi &
+                                      +  dn_dpsi_dz  * dT_dz + dn_dpsi    * dT_dz2 + zn    * dT_dpsi_dz2 + dn_dz  * dT_dpsi_dz)
+  
+    dj_dpsi2 = dFFprime_dpsi2 - R*R * (dn_dpsi3 * zT + 3.d0 * dn_dpsi * dT_dpsi2 + 3.d0 * dn_dpsi2 * dT_dpsi + zn * dT_dpsi3 )
+  
+    dj_dR_dZ   = - 2.d0 * R * (dn_dpsi_dz * zT + dn_dpsi * dT_dz + zn * dT_dpsi_dz + dn_dz * dT_dpsi)
+  
+    dj_dR_dpsi = - 2.d0 * R * (dn_dpsi2   * zT + zn * dT_dpsi2   + 2.d0 * dn_dpsi * dT_dpsi)
+  
+    dj_dZ_dpsi = dFFprime_dpsi_dz - R*R * ( dn_dpsi2_dz * zT    + dn_dz * dT_dpsi2     + 2.d0 * dn_dpsi_dz * dT_dpsi  &
+                                            + dn_dpsi2    * dT_dz + zn    * dT_dpsi2_dz  + 2.d0 * dn_dpsi    * dT_dpsi_dz)
+  
+  
+    node_list%node(i)%values(1,1,3) = zjz
+  
+    node_list%node(i)%values(1,2,3) = dj_dpsi * node_list%node(i)%values(1,2,1) &
+                                    + dj_dR   * node_list%node(i)%x(1,2,1)        &
+                                    + dj_dZ   * node_list%node(i)%x(1,2,2)
+  
+    node_list%node(i)%values(1,3,3) = dj_dpsi * node_list%node(i)%values(1,3,1) &
+                                    + dj_dR   * node_list%node(i)%x(1,3,1)        &
+                                    + dj_dZ   * node_list%node(i)%x(1,3,2)
+  
+    node_list%node(i)%values(1,4,3) = dj_dpsi  * node_list%node(i)%values(1,4,1) &
+                                    + dj_dR    * node_list%node(i)%x(1,4,1)        &
+                                    + dj_dZ    * node_list%node(i)%x(1,4,2)        &
+                                    + dj_dR_dR * node_list%node(i)%x(1,2,1) * node_list%node(i)%x(1,3,1)  &
+                                    + dj_dZ_dZ * node_list%node(i)%x(1,2,2) * node_list%node(i)%x(1,3,2)  &
+                                    + dj_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dj_dR_dZ * ( node_list%node(i)%x(1,2,1) * node_list%node(i)%x(1,3,2)          &
+                                                 + node_list%node(i)%x(1,3,1) * node_list%node(i)%x(1,2,2) )        &
+                                    + dj_dR_dpsi*( node_list%node(i)%x(1,2,1) * node_list%node(i)%values(1,3,1)   &
+                                                 + node_list%node(i)%x(1,3,1) * node_list%node(i)%values(1,2,1) ) &
+                                    + dj_dZ_dpsi*( node_list%node(i)%x(1,2,2) * node_list%node(i)%values(1,3,1)   &
+                                                 + node_list%node(i)%x(1,3,2) * node_list%node(i)%values(1,2,1) )
   
   enddo
+  
+  ! --- Variable projection is better at higher order...
+  ! --- (by the way, we could use this for n_order=3 and remove all the above as well, 
+  ! --- and remove all derivatives from profiles functions, which are not really needed, 
+  ! --- except dn_dpsi and dT_dpsi for current profile...)
+  if (n_order .ge. 5) then
+    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint2,Z_xpoint2,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
+    if (xpoint2) then
+      ES%xpoint = xpoint2
+      ES%Z_xpoint = Z_xpoint
+    endif
+    ES%psi_bnd  = psi_bnd
+    ES%psi_axis = psi_axis
+    ES%Z_xpoint = Z_xpoint
+    ES%xpoint   = xpoint
+    ES%xcase    = xcase
+    call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
+                 var_psi,var_zj,1, psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,1)
+  endif
   
   ! --- Find flux surfaces and plot them; determine the q-profile.  
   if (xpoint2 .and. (n_flux .gt. 1)) then
@@ -672,19 +587,11 @@ if (my_id == 0) then
     psi= surface_list%psi_values(i)
     
     if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 401) .or. (jorek_model .eq. 711) ) then
-      call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, Ti_prof, &
-                         dTi_dpsi,  dTi_dz, &                                                ! 1st order derivatives
-                         dTi_dpsi2, dTi_dz2,      dTi_dpsi_dz, &                             ! 2nd order derivatives
-                         dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz,  dTi_dz3, &                  ! 2rd order derivatives
-                         dTi_dpsi4, dTi_dpsi_dz3, dTi_dpsi2_dz2, dTi_dpsi3_dz,  dTi_dz4, &   ! 4th order derivatives
-                         dTi_dpsi5, dTi_dpsi_dz4, dTi_dpsi2_dz3, dTi_dpsi3_dz2, dTi_dpsi4_dz)! 5th order derivatives (z5 not needed)
+      call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+           Ti_prof,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
   
-      call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, Te_prof, &
-                         dTe_dpsi,  dTe_dz, &                                                ! 1st order derivatives
-                         dTe_dpsi2, dTe_dz2,      dTe_dpsi_dz, &                             ! 2nd order derivatives
-                         dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz,  dTe_dz3, &                  ! 2rd order derivatives
-                         dTe_dpsi4, dTe_dpsi_dz3, dTe_dpsi2_dz2, dTe_dpsi3_dz,  dTe_dz4, &   ! 4th order derivatives
-                         dTe_dpsi5, dTe_dpsi_dz4, dTe_dpsi2_dz3, dTe_dpsi3_dz2, dTe_dpsi4_dz)! 5th order derivatives (z5 not needed)
+      call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
+           Te_prof,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
       T_prof      = Ti_prof      + Te_prof
       dT_dpsi     = dTi_dpsi     + dTe_dpsi
       dT_dpsi2    = dTi_dpsi2    + dTe_dpsi2
@@ -695,20 +602,12 @@ if (my_id == 0) then
       dT_dpsi2_dz = dTi_dpsi2_dz + dTe_dpsi2_dz
       dT_dpsi_dz2 = dTi_dpsi_dz2 + dTe_dpsi_dz2 
     else
-      call temperature(.false.,xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,T_prof,             &
-                       dT_dpsi,  dT_dz, &                                             ! 1st order derivatives
-                       dT_dpsi2, dT_dz2,      dT_dpsi_dz, &                           ! 2nd order derivatives
-                       dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &                 ! 2rd order derivatives
-                       dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz,  dT_dz4, &   ! 4th order derivatives
-                       dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz)! 5th order derivatives (z5 not needed)
+      call temperature(.false.,xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,T_prof,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
+        dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
     endif
 
-    call density( .false., xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,density_prof,             &
-                 dn_dpsi,  dn_dz, &                                             ! 1st order derivatives
-                 dn_dpsi2, dn_dz2,      dn_dpsi_dz, &                           ! 2nd order derivatives
-                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &                 ! 2rd order derivatives
-                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz,  dn_dz4, &   ! 4th order derivatives
-                 dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz)! 5th order derivatives (z5 not needed)
+    call density( .false., xcase2,0., Z_xpoint, psi,psi_axis,psi_bnd,density_prof,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+          dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
   
     T_profile(i)=T_prof
     density_profile(i)=density_prof

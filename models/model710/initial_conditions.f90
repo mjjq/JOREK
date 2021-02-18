@@ -21,18 +21,8 @@ type (type_bnd_element_list) :: bnd_elm_list
 integer    :: my_id, i, in, mm, i_elm, ifail, xcase2
 integer    :: index0, index, n_node_start, n_index_start, j, k, ivar
 real*8     :: amplitude, psi, psi_n, theta
-real*8     :: zn
-real*8     ::    dn_dpsi, dn_dz                                                ! 1st order derivatives
-real*8     ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
-real*8     ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
-real*8     ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives
-real*8     ::    dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz! 5th order derivatives (z5 not needed)
-real*8     :: zT
-real*8     ::    dT_dpsi,  dT_dz                                               ! 1st order derivatives
-real*8     ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                                  ! 2nd order derivatives
-real*8     ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3                   ! 2rd order derivatives
-real*8     ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4      ! 4th order derivatives
-real*8     ::    dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz! 5th order derivatives (z5 not needed)
+real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
+real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
 real*8     :: R, Z, BigR, T0, BigR_s, T0_s
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi
 real*8     :: P_ss, P_st, P_tt, R_out,Z_out,s_out,t_out 
@@ -41,16 +31,8 @@ real*8     :: Omega, dOmega_dpsi, dOmega_dpsi2, zeta, Lam, dLam_dpsi, dLam_dpsi2
 real*8     :: zn0, zT0, dn0_dpsi, dT0_dpsi, dn_dR, dn_dR2, dT_dR, dT_dR2, R2sh, rf, rf0
 real*8     :: x21, x31, x41, psi2, psi3, psi4
 logical    :: xpoint2
-real*8     :: F_prof   
-real*8     ::   dF_dpsi, dF_dz                                             ! 1st order derivatives
-real*8     ::   dF_dpsi2, dF_dz2, dF_dpsi_dz                               ! 2nd order derivatives
-real*8     ::   dF_dpsi3, dF_dpsi_dz2, dF_dpsi2_dz,  dF_dz3                ! 2rd order derivatives
-real*8     ::   dF_dpsi4, dF_dpsi_dz3, dF_dpsi2_dz2, dF_dpsi3_dz, dF_dz4   ! 4th order derivatives
-real*8     :: FFprime_profile
-real*8     ::    dFF_dpsi, dFF_dz                                                ! 1st order derivatives
-real*8     ::    dFF_dpsi2, dFF_dz2, dFF_dpsi_dz                                 ! 2nd order derivatives
-real*8     ::    dFF_dpsi3, dFF_dpsi_dz2, dFF_dpsi2_dz,  dFF_dz3                 ! 2rd order derivatives
-real*8     ::    dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz, dFF_dz4   ! 4th order derivatives
+real*8     :: F_prof,          dF_dpsi,  dF_dz,  dF_dpsi2,  dF_dz2,  dF_dpsi_dz
+real*8     :: FFprime_profile, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz
 
 
 
@@ -68,19 +50,11 @@ if (my_id .eq. 0) then
     R   = node_list%node(i)%x(1,1,1)
     Z   = node_list%node(i)%x(1,1,2)
 
-    call density(    xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zn,             &
-                     dn_dpsi,  dn_dz, &                                             ! 1st order derivatives
-                     dn_dpsi2, dn_dz2,      dn_dpsi_dz, &                           ! 2nd order derivatives
-                     dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &                 ! 2rd order derivatives
-                     dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz,  dn_dz4, &   ! 4th order derivatives
-                     dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz)! 5th order derivatives (z5 not needed)
+    call density(    xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+                                                               dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-    call temperature(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zT,             &
-                     dT_dpsi,  dT_dz, &                                             ! 1st order derivatives
-                     dT_dpsi2, dT_dz2,      dT_dpsi_dz, &                           ! 2nd order derivatives
-                     dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &                 ! 2rd order derivatives
-                     dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz,  dT_dz4, &   ! 4th order derivatives
-                     dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz)! 5th order derivatives (z5 not needed)
+    call temperature(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
+                                                               dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 
     node_list%node(i)%values(1,:,var_uR) = 0.d0    
     node_list%node(i)%values(1,:,var_uZ) = 0.d0
@@ -118,16 +92,8 @@ if (my_id .eq. 0) then
     ! This makes it 100% certain that all derivatives of Fprofile (when taken from the node values), will be accurate
     ! to the level of our finite elements.
     call F_profile(xpoint2, xcase2, Z, ES%Z_xpoint, psi, ES%psi_axis, ES%psi_bnd, &
-                   F_prof, &
-                     dF_dpsi, dF_dz, &                                          ! 1st order derivatives
-                     dF_dpsi2, dF_dz2, dF_dpsi_dz, &                            ! 2nd order derivatives
-                     dF_dpsi3, dF_dpsi_dz2, dF_dpsi2_dz,  dF_dz3, &             ! 2rd order derivatives
-                     dF_dpsi4, dF_dpsi_dz3, dF_dpsi2_dz2, dF_dpsi3_dz, dF_dz4, &! 4th order derivatives
-                   FFprime_profile, &
-                     dFF_dpsi, dFF_dz, &                                             ! 1st order derivatives
-                     dFF_dpsi2, dFF_dz2, dFF_dpsi_dz, &                              ! 2nd order derivatives
-                     dFF_dpsi3, dFF_dpsi_dz2, dFF_dpsi2_dz,  dFF_dz3, &              ! 2rd order derivatives
-                     dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz, dFF_dz4)  ! 4th order derivatives
+                   F_prof,          dF_dpsi,  dF_dz,  dF_dpsi2,  dF_dz2,  dF_dpsi_dz , &
+                   FFprime_profile, dFF_dpsi, dFF_dz, dFF_dpsi2, dFF_dz2, dFF_dpsi_dz)
     node_list%node(i)%Fprof_eq(1) =   F_prof
     node_list%node(i)%Fprof_eq(2) =   dF_dpsi  * node_list%node(i)%values(1,2,var_A3) + dF_dz * node_list%node(i)%x(1,2,2)
     node_list%node(i)%Fprof_eq(3) =   dF_dpsi  * node_list%node(i)%values(1,3,var_A3) + dF_dz * node_list%node(i)%x(1,3,2)
@@ -142,7 +108,7 @@ if (my_id .eq. 0) then
 endif
 
 ! --- This is the special Poisson for Fprofile (it will not overwrite var_A3)
-call Poisson(my_id,710,node_list,element_list,bnd_node_list,bnd_elm_list, &
+call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
              var_A3,710,1, ES%psi_axis,ES%psi_bnd,xpoint2, xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)      ! inverse Poisson
 
 

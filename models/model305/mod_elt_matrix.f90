@@ -74,23 +74,12 @@ logical    :: xpoint2
 !==================MB: velocity profile is kept by a source which compensating diffusion
 real*8     :: Vt0,Vt0_x,Vt0_y
 real*8     :: V_source(n_gauss,n_gauss)
-real*8     ::    dV_dpsi_source(n_gauss,n_gauss), dV_dz_source(n_gauss,n_gauss) ! 1st order derivatives
-real*8     ::    dV_dpsi2, dV_dz2, dV_dpsi_dz                                   ! 2nd order derivatives
-real*8     ::    dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3                    ! 2rd order derivatives
-real*8     ::    dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4       ! 4th order derivatives
+real*8     :: dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
+real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
 !=======================================
-real*8     :: eq_zne(n_gauss,n_gauss)
-real*8     ::    dT_dpsi,  dT_dz                                               ! 1st order derivatives
-real*8     ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
-real*8     ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
-real*8     ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives
-real*8     ::    dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz! 5th order derivatives (z5 not needed)
-real*8     :: eq_zTe(n_gauss,n_gauss)
-real*8     ::    dT_dpsi,  dT_dz                                               ! 1st order derivatives
-real*8     ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                                  ! 2nd order derivatives
-real*8     ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3                   ! 2rd order derivatives
-real*8     ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4      ! 4th order derivatives
-real*8     ::    dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz! 5th order derivatives (z5 not needed)
+real*8     :: eq_zne(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
+real*8     :: dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz
+real*8     :: dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz
 real*8     :: w00_xx, w00_yy 
 !======================================= NEO
 real*8     :: amat_27, Btheta2
@@ -265,25 +254,14 @@ do ms=1, n_gauss
 !=========================================MB :velocity profile
        if ( (abs(V_0) .ge. 1.e-12) .or. (num_rot)) then 
         call velocity(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt), psi_axis, psi_bnd, V_source(ms,mt), &
-                      dV_dpsi_source(ms,mt), dV_dz_source(ms,mt), &            ! 1st order derivatives
-                      dV_dpsi2, dV_dz2, dV_dpsi_dz, &                          ! 2nd order derivatives
-                      dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3, &           ! 2rd order derivatives
-                      dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4)! 4th order derivatives
+                      dV_dpsi_source(ms,mt),dV_dz_source(ms,mt),dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
        endif
 !======================================MB
     call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
-                 dn_dpsi, dn_dz, &                                              ! 1st order derivatives
-                 dn_dpsi2, dn_dz2,      dn_dpsi_dz, &                           ! 2nd order derivatives
-                 dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &                 ! 2rd order derivatives
-                 dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz,  dn_dz4, &   ! 4th order derivatives
-                 dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz)! 5th order derivatives (z5 not needed)
+                 dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
     call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
-                     dT_dpsi,  dT_dz, &                                             ! 1st order derivatives
-                     dT_dpsi2, dT_dz2,      dT_dpsi_dz, &                           ! 2nd order derivatives
-                     dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &                 ! 2rd order derivatives
-                     dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz,  dT_dz4, &   ! 4th order derivatives
-                     dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz)! 5th order derivatives (z5 not needed)
+                     dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
 
 !======================================= NEO
     if ( NEO ) then 
@@ -651,7 +629,7 @@ do ms=1, n_gauss
 
          do im=i_tor_min, i_tor_max
 
-           index_ij = n_tor_local*n_var*n_degrees*(i-1) + n_tor_local * n_var * (j-1) + im - i_tor_min +1  ! index in the ELM matrix
+           index_ij = n_tor_local*n_var*(n_degrees)*(i-1) + n_tor_local * n_var * (j-1) + im - i_tor_min +1  ! index in the ELM matrix
 
            v   =  H(i,j,ms,mt) * element%size(i,j) * HZ(im,mp)
            v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac * HZ(im,mp)
@@ -979,7 +957,7 @@ jec_t = psi_t
                  rho_y_hat = BigR**2 * rho_y
                   Btheta2_psi  = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
-                 index_kl = n_tor_local*n_var*n_degrees*(k-1) + n_tor_local * n_var * (l-1) + in - i_tor_min +1  ! index in the ELM matrix
+                 index_kl = n_tor_local*n_var*(n_degrees)*(k-1) + n_tor_local * n_var * (l-1) + in - i_tor_min +1  ! index in the ELM matrix
 
 !###################################################################################################
 !#  equation 1   (induction equation)                                                              #

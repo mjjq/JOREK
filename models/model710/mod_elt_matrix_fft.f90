@@ -29,9 +29,9 @@ logical, intent(in)    :: xpoint2
 integer, intent(in)    :: xcase2
 real*8,  intent(in)    :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 
-#define DIM0 n_tor*n_vertex_max*n_degrees*n_var
+#define DIM0 n_tor*n_vertex_max*(n_degrees)*n_var
 #define DIM1 n_plane
-#define DIM2 1:n_vertex_max*n_var*n_degrees
+#define DIM2 1:n_vertex_max*n_var*(n_degrees)
 
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS
@@ -62,37 +62,16 @@ real*8     :: TG_NUM_Eq, CoefAdv=0.0
 real*8     :: Coef_DivV
 real*8     :: psi_axisym(n_gauss,n_gauss), psi_axisym_s(n_gauss,n_gauss), psi_axisym_t(n_gauss,n_gauss)
 real*8     ::                              psi_axisym_R(n_gauss,n_gauss), psi_axisym_Z(n_gauss,n_gauss)
-real*8     :: F_prof_time_dep
-real*8     ::   dF_dpsi, dF_dz                                             ! 1st order derivatives
-real*8     ::   dF_dpsi2, dF_dz2, dF_dpsi_dz                               ! 2nd order derivatives
-real*8     ::   dF_dpsi3, dF_dpsi_dz2, dF_dpsi2_dz,  dF_dz3                ! 2rd order derivatives
-real*8     ::   dF_dpsi4, dF_dpsi_dz3, dF_dpsi2_dz2, dF_dpsi3_dz, dF_dz4   ! 4th order derivatives
-real*8     :: zFFprime
-real*8     ::    dFF_dpsi, dFF_dz                                                ! 1st order derivatives
-real*8     ::    dFF_dpsi2, dFF_dz2, dFF_dpsi_dz                                 ! 2nd order derivatives
-real*8     ::    dFF_dpsi3, dFF_dpsi_dz2, dFF_dpsi2_dz,  dFF_dz3                 ! 2rd order derivatives
-real*8     ::    dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz, dFF_dz4   ! 4th order derivatives
-real*8     :: rho_initial(n_gauss,n_gauss)
-real*8     ::    dn_dpsi, dn_dz                                                ! 1st order derivatives
-real*8     ::    dn_dpsi2, dn_dz2, dn_dpsi_dz                                  ! 2nd order derivatives
-real*8     ::    dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3                   ! 2rd order derivatives
-real*8     ::    dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz, dn_dz4      ! 4th order derivatives
-real*8     ::    dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz! 5th order derivatives (z5 not needed)
-real*8     :: T_initial  (n_gauss,n_gauss)
-real*8     ::    dT_dpsi,  dT_dz                                               ! 1st order derivatives
-real*8     ::    dT_dpsi2, dT_dz2, dT_dpsi_dz                                  ! 2nd order derivatives
-real*8     ::    dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3                   ! 2rd order derivatives
-real*8     ::    dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz, dT_dz4      ! 4th order derivatives
-real*8     ::    dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz! 5th order derivatives (z5 not needed)
+real*8     :: Fprof_time_dep,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
+real*8     :: zFFprime      ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz
+real*8     :: rho_initial(n_gauss,n_gauss),dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz
+real*8     :: T_initial  (n_gauss,n_gauss),dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz
 real*8     :: Jb, Jb_0
 real*8     :: Ti0, Ti0_R, Ti0_Z
 real*8     :: Te0, Te0_R, Te0_Z
 real*8     :: amu_neo_prof(n_gauss,n_gauss), aki_neo_prof(n_gauss,n_gauss)
-real*8     :: V_source(n_gauss,n_gauss)
-real*8     ::    dV_dpsi_source(n_gauss,n_gauss), dV_dz_source(n_gauss,n_gauss) ! 1st order derivatives
-real*8     ::    dV_dpsi2, dV_dz2, dV_dpsi_dz                                   ! 2nd order derivatives
-real*8     ::    dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3                    ! 2rd order derivatives
-real*8     ::    dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4       ! 4th order derivatives
+real*8     :: V_source(n_gauss,n_gauss), dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
+real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
 real*8     :: eta_ARAZ, tauIC_ARAZ
 logical    :: use_fft
 
@@ -564,16 +543,8 @@ do ms=1, n_gauss
       ! --- The dF_dpsi function calculated on time-dependent psi_norm
       ! --- Note: Fprof is be taken from the node values (cleaner)
       call F_profile(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt), psi_axis, psi_bnd, &
-                     F_prof_time_dep, &
-                       dF_dpsi, dF_dz, &                                          ! 1st order derivatives
-                       dF_dpsi2, dF_dz2, dF_dpsi_dz, &                            ! 2nd order derivatives
-                       dF_dpsi3, dF_dpsi_dz2, dF_dpsi2_dz,  dF_dz3, &             ! 2rd order derivatives
-                       dF_dpsi4, dF_dpsi_dz3, dF_dpsi2_dz2, dF_dpsi3_dz, dF_dz4, &! 4th order derivatives
-                     zFFprime, &
-                       dFF_dpsi, dFF_dz, &                                             ! 1st order derivatives
-                       dFF_dpsi2, dFF_dz2, dFF_dpsi_dz, &                              ! 2nd order derivatives
-                       dFF_dpsi3, dFF_dpsi_dz2, dFF_dpsi2_dz,  dFF_dz3, &              ! 2rd order derivatives
-                       dFF_dpsi4, dFF_dpsi_dz3, dFF_dpsi2_dz2, dFF_dpsi3_dz, dFF_dz4)  ! 4th order derivatives
+                     Fprof_time_dep,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz , &
+                     zFFprime      ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
       ! --- Toroidal current source. Historically JOREK uses a negative current, so we need to reverse it.
       call current(xpoint2, xcase2, R,Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,current_source_Jp(ms,mt))
       current_source_Jp(ms,mt) = - current_source_Jp(ms,mt)
@@ -607,18 +578,10 @@ do ms=1, n_gauss
                              Te0,  Te0_R,  Te0_Z,                                         &
                              Jb)
       ! --- Full Sauter formula for initial profiles
-      call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_initial(ms,mt), &
-                       dn_dpsi,  dn_dz, &                                             ! 1st order derivatives
-                       dn_dpsi2, dn_dz2,      dn_dpsi_dz, &                           ! 2nd order derivatives
-                       dn_dpsi3, dn_dpsi_dz2, dn_dpsi2_dz,  dn_dz3, &                 ! 2rd order derivatives
-                       dn_dpsi4, dn_dpsi_dz3, dn_dpsi2_dz2, dn_dpsi3_dz,  dn_dz4, &   ! 4th order derivatives
-                       dn_dpsi5, dn_dpsi_dz4, dn_dpsi2_dz3, dn_dpsi3_dz2, dn_dpsi4_dz)! 5th order derivatives (z5 not needed)
-      call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, T_initial  (ms,mt), &
-                       dT_dpsi,  dT_dz, &                                             ! 1st order derivatives
-                       dT_dpsi2, dT_dz2,      dT_dpsi_dz, &                           ! 2nd order derivatives
-                       dT_dpsi3, dT_dpsi_dz2, dT_dpsi2_dz,  dT_dz3, &                 ! 2rd order derivatives
-                       dT_dpsi4, dT_dpsi_dz3, dT_dpsi2_dz2, dT_dpsi3_dz,  dT_dz4, &   ! 4th order derivatives
-                       dT_dpsi5, dT_dpsi_dz4, dT_dpsi2_dz3, dT_dpsi3_dz2, dT_dpsi4_dz)! 5th order derivatives (z5 not needed)
+      call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, &
+                       rho_initial(ms,mt),dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+      call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
+                       T_initial  (ms,mt),dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
       Ti0   = T_initial(ms,mt)       / 2.d0
       Ti0_R = dT_dpsi * psi_axisym_R(ms,mt) / 2.d0
       Ti0_Z = dT_dpsi * psi_axisym_Z(ms,mt) / 2.d0
@@ -657,11 +620,9 @@ do ms=1, n_gauss
     endif
     ! --- Source of toroidal velocity
     if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
-      call velocity(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt), psi_axis, psi_bnd, V_source(ms,mt), &
-                    dV_dpsi_source(ms,mt), dV_dz_source(ms,mt), &            ! 1st order derivatives
-                    dV_dpsi2, dV_dz2, dV_dpsi_dz, &                          ! 2nd order derivatives
-                    dV_dpsi3, dV_dpsi_dz2, dV_dpsi2_dz,  dV_dz3, &           ! 2rd order derivatives
-                    dV_dpsi4, dV_dpsi_dz3, dV_dpsi2_dz2, dV_dpsi3_dz, dV_dz4)! 4th order derivatives
+      call velocity(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt), psi_axis, psi_bnd, &
+                    V_source(ms,mt), dV_dpsi_source(ms,mt),dV_dz_source(ms,mt),         &
+                    dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
     else
       V_source(ms,mt)       = 0.d0
       dV_dpsi_source(ms,mt) = 0.d0
@@ -1270,7 +1231,7 @@ do i=1,n_vertex_max
 
             ! --- Fill Up the RHS
             if (use_fft) then
-              index_ij =       n_var*n_degrees*(i-1) +       n_var*(j-1) + 1
+              index_ij =       n_var*(n_degrees)*(i-1) +       n_var*(j-1) + 1
               do ivar= 1,n_var
                 RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar) * tstep / tstep_prev
                 RHS_k_ij(ivar) = tstep * Qvec_k(ivar)
@@ -1280,7 +1241,7 @@ do i=1,n_vertex_max
                 RHS_k(mp,ij)   =  RHS_k(mp,ij) + RHS_k_ij(ivar) * wst * R * xjac
               enddo
             else
-              index_ij = n_tor_local*n_var*n_degrees*(i-1) + n_tor_local*n_var*(j-1) + im - n_tor_start +1
+              index_ij = n_tor_local*n_var*(n_degrees)*(i-1) + n_tor_local*n_var*(j-1) + im - n_tor_start +1
               do ivar= 1,n_var
                 RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar) * tstep / tstep_prev
                 RHS_k_ij(ivar) = tstep * Qvec_k(ivar)
@@ -2812,7 +2773,7 @@ do i=1,n_vertex_max
                   Qjac_k (var_Up,var_T ) = Qjac_k (var_Up,var_T ) - dvisco_divV_dT * T * divU * BgradVstar__k
 
                   if (use_fft) then
-                    index_kl =       n_var*n_degrees*(k-1) +       n_var*(l-1) + 1
+                    index_kl =       n_var*(n_degrees)*(k-1) +       n_var*(l-1) + 1
                     do ivar= 1,n_var
                       do kvar= 1,n_var
                         ij = ivar
@@ -2832,7 +2793,7 @@ do i=1,n_vertex_max
                       enddo
                     enddo
                   else
-                    index_kl = n_tor_local*n_var*n_degrees*(k-1) + n_tor_local*n_var*(l-1) + in - n_tor_start +1
+                    index_kl = n_tor_local*n_var*(n_degrees)*(k-1) + n_tor_local*n_var*(l-1) + in - n_tor_start +1
                     do ivar= 1,n_var
                       do kvar= 1,n_var
                         ij = index_ij + (ivar-1) * n_tor_local
@@ -2855,7 +2816,7 @@ do i=1,n_vertex_max
 
                 enddo ! in loop (n_tor, or not...)
 
-              enddo ! l loop n_degrees
+              enddo ! l loop (n_degrees)
             enddo ! k loop (n_vertex)
 
           enddo ! im loop (n_tor, or not...)
@@ -2868,8 +2829,8 @@ do i=1,n_vertex_max
 
     if (use_fft) then
       do i_v = 1, n_var
-        do j_loc=1, n_vertex_max*n_var*n_degrees
-          i_loc = n_var*n_degrees*(i-1) + n_var * (j-1) + i_v 
+        do j_loc=1, n_vertex_max*n_var*(n_degrees)
+          i_loc = n_var*(n_degrees)*(i-1) + n_var * (j-1) + i_v 
           in_fft =  ELM_p(1:n_plane,j_loc,i_v)
 #ifdef USE_FFTW
           call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
@@ -3079,14 +3040,14 @@ do i=1,n_vertex_max
 
     endif ! apply fft (or not)
 
-  enddo ! j loop n_degrees
+  enddo ! j loop (n_degrees)
 enddo ! i loop (n_vertex)
 
 if (n_tor .le. n_tor_fft_thresh) return
 
 ELM = 0.5d0 * ELM
 
-do j=1, n_vertex_max*n_var*n_degrees
+do j=1, n_vertex_max*n_var*(n_degrees)
 
   in_fft = RHS_p(1:n_plane,j)
 #ifdef USE_FFTW
@@ -3106,7 +3067,7 @@ do j=1, n_vertex_max*n_var*n_degrees
 
 enddo
 
-do j=1, n_vertex_max*n_var*n_degrees
+do j=1, n_vertex_max*n_var*(n_degrees)
 
   in_fft = RHS_k(1:n_plane,j)
 #ifdef USE_FFTW

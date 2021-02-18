@@ -28,10 +28,10 @@
  xshift = 0.0
  xpoint = .f.
 
- R_begin = 9.5
- R_end   = 10.5
- Z_begin = -0.5
- Z_end   = 0.5
+ R_begin = 9.0
+ R_end   = 11.0
+ Z_begin = -1.0
+ Z_end   = 1.0
 
  R_geo   = 10.0
  Z_geo   = 0.

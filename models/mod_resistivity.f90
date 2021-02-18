@@ -13,47 +13,58 @@ module mod_resistivity
   
   
   !> Determine resistivity
-  pure function resistivity(T) result(eta_T)
+  pure function resistivity(eta_0,T,T_max) result(eta_T)
 #if _OPENMP >= 201511
     !$omp declare simd
 #endif
     implicit none
     
-    real*8, intent(in) :: T
-    real*8             :: eta_T
+    real*8, intent(in)           :: T
+    real*8, intent(in)           :: eta_0
+    real*8, intent(in), optional :: T_max
+    real*8                       :: eta_T
+    real*8                       :: T_max_local, T_local
+
+    T_max_local = 1.d3
+    T_local     = max(T, T_min)
+    if (present(T_max)) T_max_local = T_max
 
     ! --- Temperature dependent resistivity
-    if ( eta_T_dependent ) then
-      eta_T     = eta   * (T/T_0)**(-1.5d0)
-      if ( xpoint .and. (T .lt. T_min) ) then
-        eta_T   = eta   * (max(T,T_min)/T_0)**(-1.5d0)
-      endif
+    if ( eta_T_dependent .and. (T_local <= T_max_local)) then
+      eta_T     = eta_0 * (T_local/T_0)**(-1.5d0)
+    else if ( eta_T_dependent .and. (T_local > T_max_local)) then
+      eta_T     = eta_0 * (T_max_local/T_0)**(-1.5d0)
     else
-      eta_T     = eta
+      eta_T     = eta_0
     end if
 
   end function resistivity
     
   !> Determine eta derivative 
-  pure function dresistivity_dT(T) result(deta_dT)
+  pure function dresistivity_dT(eta_0,T,T_max) result(deta_dT)
 #if _OPENMP >= 201511
     !$omp declare simd
 #endif
     implicit none
     
-    real*8, intent(in) :: T
-    real*8             :: deta_dT
+    real*8, intent(in)           :: T
+    real*8, intent(in)           :: eta_0
+    real*8, intent(in), optional :: T_max
+    real*8                       :: deta_dT
+    real*8                       :: T_max_local
+
+    T_max_local = 1.d3
+    if (present(T_max)) T_max_local = T_max
 
     ! --- Temperature dependent resistivity
-    if ( eta_T_dependent ) then
+    if ( eta_T_dependent .and. (T <= T_max_local)) then
       deta_dT   = - eta   * (1.5d0)  * T**(-2.5d0) * T_0**(1.5d0)
       if ( xpoint .and. (T .lt. T_min) ) then
         deta_dT   = 0.d0
       endif
     else
-      deta_dT   = 0.d0
+      deta_dT   = 0.
     end if
-    
    
   end function dresistivity_dT 
   

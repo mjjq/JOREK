@@ -807,13 +807,6 @@ do i=1,n_flux-1                 !------------------------ the closed field lines
       newnode_list%node(index)%x(1,4,:) = 0.d0
     endif
 
-    if (n_order .ge. 5) then
-      call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
-      call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
-      newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
-      newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
-    endif
-
   enddo
 enddo
 newnode_list%n_nodes = node
@@ -926,13 +919,6 @@ do i=n_flux,n_flux+n_open           !--------------------------- nodes on the op
 
     if (i .eq. n_flux+n_open)                   newnode_list%node(index)%boundary = 2
 
-!    if (n_order .ge. 5) then
-!      call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
-!      call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
-!      newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
-!      newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
-!    endif
-
   enddo
 enddo
 
@@ -988,13 +974,6 @@ do j=1, n_leg                         !--------------------------- nodes on righ
       if ((k.eq.1) .or. (k .eq. n_open+n_private+1))  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
       if  (j .eq. 1)                                  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
 
-!      if (n_order .ge. 5) then
-!        call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
-!        call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
-!        newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
-!        newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
-!      endif
-
    endif
 
   enddo
@@ -1047,13 +1026,6 @@ do l=1, n_leg-1                       !--------------------------- nodes on left
 
     if ((k.eq.1) .or. (k .eq. n_open+n_private+1))  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 2
     if  (j .eq. 1)                                  newnode_list%node(index)%boundary = newnode_list%node(index)%boundary + 1
-
-!    if (n_order .ge. 5) then
-!      call CUB1D_DERIV2(R_cub1d(1), R_cub1d(2), R_cub1d(3), R_cub1d(4),t_tht(i2,j2),dR_dtt)
-!      call CUB1D_DERIV2(Z_cub1d(1), Z_cub1d(2), Z_cub1d(3), Z_cub1d(4),t_tht(i2,j2),dZ_dtt)
-!      newnode_list%node(index)%x(1,5,:) = (/ dR_dtt, dZ_dtt /) !/ sqrt( dR_dtt**2 + dZ_dtt**2 )
-!      newnode_list%node(index)%x(1,6:n_degrees,:) = 0.d0
-!    endif
 
  enddo
 enddo

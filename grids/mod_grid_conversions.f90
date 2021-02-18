@@ -201,50 +201,10 @@ do i_node = 1, node_list%n_nodes
     
     enddo
     
-    if ( (node_list%node(i_node)%boundary .eq. 2) .and. (n_parents(i_node) .eq. 2) ) exit
-    !if ( (node_list%node(i_node)%boundary .ne. 2) .and. (n_parents(i_node) .eq. 4) ) exit
-  
   enddo
   
 enddo
 
-
-
-! --- Rescale sizes of i and j w.r.t. u and v
-do i_node = 1, node_list%n_nodes
-  ! --- Loop over each parent element and get minimal size
-  size_u_min = 1.d15
-  size_v_min = 1.d15
-  do i=1,n_parents(i_node)
-    i_elm = node_parents(i,i_node)
-    if (parent_elm_node(i,i_node) .eq. 1) then
-      i_node_u = element_list%element(i_elm)%vertex(2)
-      i_node_v = element_list%element(i_elm)%vertex(4)
-    elseif (parent_elm_node(i,i_node) .eq. 2) then
-      i_node_u = element_list%element(i_elm)%vertex(1)
-      i_node_v = element_list%element(i_elm)%vertex(3)
-    elseif (parent_elm_node(i,i_node) .eq. 3) then
-      i_node_u = element_list%element(i_elm)%vertex(4)
-      i_node_v = element_list%element(i_elm)%vertex(2)
-    elseif (parent_elm_node(i,i_node) .eq. 4) then
-      i_node_u = element_list%element(i_elm)%vertex(3)
-      i_node_v = element_list%element(i_elm)%vertex(1)
-    endif
-    distance1 = distance_nodes(node_list,i_node,i_node_u)
-    distance2 = distance_nodes(node_list,i_node,i_node_v)
-    if (distance1 .ne. 0.d0) size_u_min = min(size_u_min, distance1)
-    if (distance2 .ne. 0.d0) size_v_min = min(size_v_min, distance2)
-  enddo
-  if (size_u_min .eq. 1.d15) size_u_min = 0.d0 
-  if (size_v_min .eq. 1.d15) size_v_min = 0.d0 
-  ! --- Reset size
-  do i=1,n_parents(i_node)
-    i_elm = node_parents(i,i_node)
-    i_vertex = parent_elm_node(i,i_node)
-    if (size_u_min .ne. 0.d0) element_list%element(i_elm)%size(i_vertex,5) = abs(size_u_min) / n_order**2
-    if (size_v_min .ne. 0.d0) element_list%element(i_elm)%size(i_vertex,6) = abs(size_v_min) / n_order**2
-  enddo
-enddo
 
 
 
@@ -313,11 +273,6 @@ do i_node = 1, node_list%n_nodes
       endif
     enddo
   endif
-  i = 1
-  i_elm = node_parents(i,i_node)
-  i_vertex = parent_elm_node(i,i_node)
-  node_list%node(i_node)%X(1,5,1) = node_list%node(i_node)%X(1,5,1) / element_list%element(i_elm)%size(i_vertex,5)
-  node_list%node(i_node)%X(1,5,2) = node_list%node(i_node)%X(1,5,2) / element_list%element(i_elm)%size(i_vertex,5)
   
   ! ------------
   ! --- Vector j
@@ -381,11 +336,6 @@ do i_node = 1, node_list%n_nodes
       endif
     enddo
   endif
-  i = 1
-  i_elm = node_parents(i,i_node)
-  i_vertex = parent_elm_node(i,i_node)
-  node_list%node(i_node)%X(1,6,1) = node_list%node(i_node)%X(1,6,1) / element_list%element(i_elm)%size(i_vertex,6)
-  node_list%node(i_node)%X(1,6,2) = node_list%node(i_node)%X(1,6,2) / element_list%element(i_elm)%size(i_vertex,6)
   
 
 enddo

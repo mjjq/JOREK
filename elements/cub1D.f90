@@ -20,23 +20,3 @@ XS = X1*H0MS + X1S*H1MS + X2*H0PS + X2S*H1PS
 
 return
 end
-
-
-subroutine cub1D_deriv2(X1,X1S,X2,X2S,S,XSS)
-!-----------------------------------------------------------------------
-! CUBIC HERMITE INTERPOLATION IN ONE DIMENSION
-!-----------------------------------------------------------------------
-implicit none
-real*8   :: X1,X1S,X2,X2S,S,XSS
-real*8   :: H0MSS,H0PSS,H1MSS,H1PSS
-
-H0MSS = + (S+2.)/2. + (S-1.)/2. + (S-1.) * 0.5 
-H0PSS = - (S-2.)/2. - (S+1.)/2. - (S+1.) * 0.5
-H1MSS = + (S+1.)/2. + (S-1.)/2. + (S-1.) * 0.5
-H1PSS = + (S-1.)/2. + (S+1.)/2. + (S+1.) * 0.5
-
-XSS = X1*H0MSS + X1S*H1MSS + X2*H0PSS + X2S*H1PSS
-
-return
-end
-

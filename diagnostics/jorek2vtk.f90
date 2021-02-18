@@ -1145,7 +1145,7 @@ do i=1,element_list%n_elements
         endif
         
         if (include_psi_norm) then
-           scalars(inode,s_psi_norm+1) = ps_ss !psi_norm
+           scalars(inode,s_psi_norm+1) = psi_norm
         endif
 
         if (use_pellet) then

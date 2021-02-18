@@ -1406,7 +1406,7 @@ do i=1,newnode_list%n_nodes
     endif
     if (i .eq. index_xpoint+2) then
       if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
         index = index - 1
       endif
     endif
@@ -1435,8 +1435,8 @@ if (fix_axis_nodes) then
       endif
     enddo
   enddo
+  if (n_order .ge. 5) call set_high_order_sizes_on_axis(newnode_list,newelement_list)
 endif
-if ( (n_order .ge. 5) .and. fix_axis_nodes) call set_high_order_sizes_on_axis(newnode_list,newelement_list)
 
 do i=1,newnode_list%n_nodes
 

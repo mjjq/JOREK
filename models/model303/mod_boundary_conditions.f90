@@ -582,18 +582,20 @@ do i=1, n_local_elms !=== do elements
           endif
 
           ! --- Fix derivatives in one direction
-!          do kk = 1,(n_order+1)/2
-!            if ( (iv_dir .eq. 2) .and. (kk .lt. 3) ) cycle ! do only t-derivatives and node value
-!            do ll = 1,(n_order+1)/2
-!              if ( (iv_dir .eq. 3) .and. (ll .gt. 3) ) cycle ! do only s-derivatives and node value
-!              index_tmp = node_indices(kk,ll)
-!              index_node = node_list%node(inode)%index(index_tmp)
-!              call boundary_conditions_add_one_entry(                 &
-!                     index_node, k, in, index_node, k, in,            &
-!                     zbig, solve_only, gmres, index_min, index_max,   & 
-!                     ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
-!            enddo
-!          enddo
+          do kk = 1,(n_order+1)/2
+            do ll = 1,(n_order+1)/2
+              if ( (iv_dir .eq. 2) .and. (ll .gt. 1) ) cycle ! do only s-derivatives and node value
+              if ( (iv_dir .eq. 3) .and. (kk .gt. 1) ) cycle ! do only t-derivatives and node value
+              if ( (iv_dir .eq. 2) .and. (kk .lt. 2) ) cycle ! fix derivatives > 2
+              if ( (iv_dir .eq. 3) .and. (ll .gt. 2) ) cycle ! fix derivatives > 2
+              index_tmp = node_indices(kk,ll)
+              index_node = node_list%node(inode)%index(index_tmp)
+              call boundary_conditions_add_one_entry(                 &
+                     index_node, k, in, index_node, k, in,            &
+                     zbig, solve_only, gmres, index_min, index_max,   & 
+                     ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
+            enddo
+          enddo
 
         endif   !=== apply_cs
         

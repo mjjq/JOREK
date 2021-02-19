@@ -108,7 +108,7 @@ real*8  :: vpar_disp_tot, vpar_disp, viscopar_dissip_tot, source_tot, heating_to
 real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, source_out
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, drhondx, drhondy
-real*8  :: dTedx, dTedy, dTidx, dTidy, dPedx, dPedy
+real*8  :: dTedx, dTedy, dTidx, dTidy, dPedx, dPedy, dPidx, dPidy
 real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, rn0, rn0_corr, neut_particles_tot
@@ -154,7 +154,7 @@ real*8  :: m_i_over_m_imp
 !   -Mean impurity ionization state
 real*8  :: Z_imp, dZ_imp_dT, T0_Zimp, alpha_Zimp, Z_eff, eta_coef, ne_JOREK, dne_JOREK_dx, dne_JOREK_dy
 !   -Corrected plasma temperature and density for radiation calculation
-real*8  :: Te_corr_eV,  dT0e_coor_dT
+real*8  :: Te_corr_eV,  dT0e_corr_dT
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg

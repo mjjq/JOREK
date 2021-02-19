@@ -113,6 +113,7 @@ real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, rn0, rn0_corr, neut_particles_tot
 real*8  :: E_tot, E_in, E_out, Zkpar_T, D_prof, ZK_prof, sheath_heatflux
+real*8  :: ZK_e_prof, ZK_i_prof, ZK_e_par_T, ZK_i_par_T
 real*8  :: fact_mu0, fact_flux, fact_part
 real*8  :: hel1, heli, helicity_tot, psi_off, curr, Ip, vn_p0, qn, pflow, kinflow, cond_par, cond_perp
 real*8  :: kinpar_flux, qn_par, qn_perp, mag_work_tot, mag_src_tot, mag_source_tot
@@ -153,7 +154,7 @@ real*8  :: m_i_over_m_imp
 !   -Mean impurity ionization state
 real*8  :: Z_imp, dZ_imp_dT, T0_Zimp, alpha_Zimp, Z_eff, eta_coef, ne_JOREK, dne_JOREK_dx, dne_JOREK_dy
 !   -Corrected plasma temperature and density for radiation calculation
-real*8  :: Te_corr_eV
+real*8  :: Te_corr_eV,  dT0e_coor_dT
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
@@ -1134,12 +1135,12 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       endif
 #endif
 
+#ifdef WITH_Impurities
       T0e_corr = corr_neg_temp1(T0e)
       dT0e_corr_dT = dcorr_neg_temp_dT(T0e,(/5.d-1,5.d-1/),T_min)
       Te_corr_eV = T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
       Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20)
    
-#ifdef WITH_Impurities
       if (allocated(P_imp)) deallocate(P_imp)
       allocate(P_imp(0:imp_adas(1)%n_Z))
       call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&

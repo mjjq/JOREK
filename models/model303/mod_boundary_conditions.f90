@@ -394,13 +394,18 @@ do i=1, n_local_elms !=== do elements
 
           element_size_0 =   element_list%element(ielm)%size(iv, iv_dir)   * H1_s(1,2) 
           element_size_2 =   element_list%element(ielm)%size(iv2,iv_dir)   * H1_s(1,2) 
-          if (n_order .ge. 5) element_size_3 =   element_list%element(ielm)%size(iv, iv_dir+3) * H1_s(1,3) 
 
           if (t_constant_boundary .and. ((iv  .eq. 2) .or. (iv  .eq. 3))) element_size_0 = - element_size_0
           if (s_constant_boundary .and. ((iv  .eq. 3) .or. (iv  .eq. 4))) element_size_0 = - element_size_0
 
           if (t_constant_boundary .and. ((iv2 .eq. 2) .or. (iv2 .eq. 3))) element_size_2 = - element_size_2
           if (s_constant_boundary .and. ((iv2 .eq. 3) .or. (iv2 .eq. 4))) element_size_2 = - element_size_2
+          
+          if (n_order .ge. 5) then
+            element_size_3 =  element_list%element(ielm)%size(iv, iv_dir+3) * H1_ss(1,2) 
+            if (t_constant_boundary .and. ((iv  .eq. 2) .or. (iv  .eq. 3))) element_size_3 = - element_size_3
+            if (s_constant_boundary .and. ((iv  .eq. 3) .or. (iv  .eq. 4))) element_size_3 = - element_size_3
+          endif
           
           index_node  = node_list%node(inode)%index(1)             ! position of value
           index_node2 = node_list%node(inode)%index(iv_dir)        ! position of first deriative
@@ -517,7 +522,7 @@ do i=1, n_local_elms !=== do elements
           cs0      =   sqrt(gamma*T0)
           cs0_T    =   0.5d0  * gamma    / cs0
           cs0_TT   = - 0.25d0 * gamma**2 / cs0**3 
-          cs0_TTT  = 3.d0/8.d0 * gamma**3 / cs0**5 
+          cs0_TTT  = 3.d0/8.d0* gamma**3 / cs0**5 
 
           Mach1BC     = - Vpar0   + direction / Btot * factor  * cs0               + factor / Btot * BigR**2 * U0_b/ps0_b 
           Mach1BC_v   = - 1.0
@@ -534,9 +539,9 @@ do i=1, n_local_elms !=== do elements
             dMach1BC     = dMach1BC + factor / Btot * BigR**2 * U0_bb/ps0_b
             dMach1BC_ubb = + factor / Btot * BigR**2 * element_size_3/ps0_b
             d2Mach1BC    = - Vpar0_bb + direction / Btot * factor   * cs0_TT * T0_b**2   &
-                                      + direction / Btot * factor   * cs0_T  * T0_bb     &
-                                      + direction / Btot * Hfact_b  * cs0_T  * T0_b *2.0 &
-                                      + direction / Btot * Hfact_bb * cs0         
+                                      + direction / Btot * factor   * cs0_T  * T0_bb     !&
+                                      !+ direction / Btot * Hfact_b  * cs0_T  * T0_b *2.0 !&
+                                      !+ direction / Btot * Hfact_bb * cs0         
             d2Mach1BC_v  = - element_size_3
             d2Mach1BC_T  =            + direction / Btot * factor   * cs0_TTT * T0_b**2   &
                                       + direction / Btot * factor   * cs0_TT  * T0_bb     &
@@ -602,7 +607,7 @@ do i=1, n_local_elms !=== do elements
                  solve_only, gmres, index_min, index_max,       & 
                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-          if (n_order .ge. 5) then
+          if (.false.) then !(n_order .ge. 5) then
             call boundary_conditions_add_one_entry(               &
                    index_node2, kv, in, index_node3, ku, in,      &
                    - zbig * dMach1BC_ubb,                         &
@@ -623,7 +628,8 @@ do i=1, n_local_elms !=== do elements
           endif
 
           ! --- Impose Mach1 on node 2nd derivatives
-          if (n_order .ge. 5) then
+!DOESNT WORK. I DONT KNOW WHY...
+          if (.false.) then !(n_order .ge. 5) then
             call boundary_conditions_add_one_entry(               &
                    index_node3, kv, in, index_node3, kv, in,      &
                    - zbig * d2Mach1BC_v,                          &
@@ -658,20 +664,19 @@ do i=1, n_local_elms !=== do elements
           endif
 
           ! --- Fix derivatives in one direction
-          do k=1, n_var ! === do variables
-            do kk = 1,(n_order+1)/2
-              do ll = 1,(n_order+1)/2
-                if ( (iv_dir .eq. 2) .and. (ll .gt. 2) ) cycle ! do only s-derivatives and node value
-                if ( (iv_dir .eq. 3) .and. (kk .gt. 2) ) cycle ! do only t-derivatives and node value
-                if ( (iv_dir .eq. 2) .and. (kk .lt. 2) ) cycle ! fix derivatives > 2
-                if ( (iv_dir .eq. 3) .and. (ll .lt. 2) ) cycle ! fix derivatives > 2
-                index_tmp = node_indices(kk,ll)
-                index_node = node_list%node(inode)%index(index_tmp)
-                call boundary_conditions_add_one_entry(                 &
-                       index_node, k, in, index_node, k, in,            &
-                       zbig, solve_only, gmres, index_min, index_max,   & 
-                       ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
-              enddo
+          k = var_Vpar
+          do kk = 1,(n_order+1)/2
+            do ll = 1,(n_order+1)/2
+              if ( (iv_dir .eq. 2) .and. (ll .gt. 1) ) cycle ! do only pure s derivatives, not cross _st
+              if ( (iv_dir .eq. 3) .and. (kk .gt. 1) ) cycle ! do only pure t derivatives, not cross _st
+              if ( (iv_dir .eq. 2) .and. (kk .lt. 3) ) cycle ! do only node value, 1st and 2nd derivatives, fix the rest
+              if ( (iv_dir .eq. 3) .and. (ll .lt. 3) ) cycle ! do only node value, 1st and 2nd derivatives, fix the rest
+              index_tmp = node_indices(kk,ll)
+              index_node = node_list%node(inode)%index(index_tmp)
+              call boundary_conditions_add_one_entry(                 &
+                     index_node, k, in, index_node, k, in,            &
+                     zbig, solve_only, gmres, index_min, index_max,   & 
+                     ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
             enddo
           enddo
 

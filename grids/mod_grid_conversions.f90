@@ -146,9 +146,247 @@ end subroutine set_high_order_sizes_on_axis
 
 
 
+!> Routine aligns the second derivative control points (ie. i and j)
+!> This is not an exact alignment, it looks at the psi-value at s=0.1
+!> and compared to the psi-value on the node itself, and moves the control point 
+!> until convergence is obtained towards the right psi-value.
+subroutine align_2nd_derivatives(node_list,element_list, newnode_list,newelement_list)
+
+
+use constants
+use tr_module
+use mod_parameters
+use data_structure
+use mod_interp
+use phys_module, only: R_geo, Z_geo
+
+implicit none
+
+! --- Routine variables
+type(type_node_list),    intent(inout) :: node_list,    newnode_list      !< list of nodes with grid information
+type(type_element_list), intent(inout) :: element_list, newelement_list   !< list of elements with element information
+
+! --- Local variables
+integer, allocatable :: n_parents(:)         ! for each node, want the number of parent elements
+integer, allocatable :: node_parents(:,:)    ! for each node, want to know the 4 parent elements
+integer, allocatable :: parent_elm_node(:,:) ! for each node, want to know the corresonding vertex for the 4 parent elements
+integer              :: i_node, i_elm, i_vertex, i_vertex1, i_vertex2, i
+integer              :: i_node_u, i_node_v
+integer              :: index
+real*8               :: size_u_min, size_v_min
+real*8               :: size_tmp
+real*8               :: point1(2), point2(2)
+real*8               :: distance1, distance2
+real*8               :: direction, offset
+real*8               :: R_find, Z_find
+real*8               :: psi_node, psi_node1, psi_node2
+real*8               :: s_base, t_base, psi_base
+real*8               :: psi_prev, psi_next
+real*8               :: size_base, size_record
+real*8               :: size_min, size_max
+logical              :: align_i_not_j
+integer              :: i_or_j
+integer              :: iter, n_tries, i_min
+integer              :: n_alignment_loops, i_align
+integer, parameter   :: n_range = 10
+real*8               :: psi_range(n_range), size_range(n_range), diff_min
+real*8, parameter    :: tolerance = 1.d-5 ! convergence tolerance in absolute psi
+
+! --- First, get an approximation of the 2nd derivative alignment, it's a good starting point
+! --- Note, this is actually a very good guess in most cases, particularly if
+! --- the grid has fine resolution. The further realignment, below, is probably
+! --- not even needed...
+call approximate_2nd_derivatives(newnode_list,newelement_list)
+return
+
+
+allocate( n_parents      (  newnode_list%n_nodes) )
+allocate( node_parents   (8,newnode_list%n_nodes) )
+allocate( parent_elm_node(8,newnode_list%n_nodes) )
+n_parents       = 0
+node_parents    = 0
+parent_elm_node = 0
+
+! --- Find parent elements
+do i_node = 1, newnode_list%n_nodes
+  n_parents(i_node) = 0
+  do i_elm = 1, newelement_list%n_elements
+    do i_vertex = 1, n_vertex_max
+      if (newelement_list%element(i_elm)%vertex(i_vertex) .eq. i_node) then
+        n_parents(i_node) = n_parents(i_node) + 1
+        node_parents   (n_parents(i_node),i_node) = i_elm
+        parent_elm_node(n_parents(i_node),i_node) = i_vertex
+        exit
+      endif
+    enddo
+  enddo
+enddo
+
+
+! --- We look at the alignment at 10% away from node, or whatever distance you choose here
+offset = 0.1
+
+! --- Because we change the size at one end of the element side, and then later
+! --- on (while doing another node), we might re-align the size at the order end
+! --- of that same element, it might modify the first end alignment a bit, so we
+! --- need to do this a few time
+n_alignment_loops = 1
+n_tries = 4 ! number of tries for each node
+do i_align = 1,n_alignment_loops
+
+  ! --- Align nodes one by one
+  do i_node=1,newnode_list%n_nodes
+
+    ! --- We only care about one side, the one aligned to a psi-surface, so we need to find which side this is
+    ! --- psi on node
+    R_find = newnode_list%node(i_node)%x(1,1,1)
+    Z_find = newnode_list%node(i_node)%x(1,1,2)
+    psi_node = get_psi_on_point(node_list, element_list, R_find, Z_find)
+    if (psi_node .eq. 1.d10) cycle
+    ! --- just take the first parent element
+    i = 1
+    i_elm = node_parents(i,i_node)
+    ! --- Always set vertex1 to be along u (and i), and vertex2 along v (and j)
+    if (parent_elm_node(i,i_node) .eq. 1) then
+      i_vertex = 1 ; i_vertex1 = 2 ; i_vertex2 = 4
+    elseif (parent_elm_node(i,i_node) .eq. 2) then
+      i_vertex = 2 ; i_vertex1 = 1 ; i_vertex2 = 3
+    elseif (parent_elm_node(i,i_node) .eq. 3) then
+      i_vertex = 3 ; i_vertex1 = 4 ; i_vertex2 = 2
+    elseif (parent_elm_node(i,i_node) .eq. 4) then
+      i_vertex = 4 ; i_vertex1 = 3 ; i_vertex2 = 1
+    endif
+    ! --- psi on node1
+    i_node_u  = newelement_list%element(i_elm)%vertex(i_vertex1)
+    R_find    = newnode_list%node(i_node_u)%x(1,1,1)
+    Z_find    = newnode_list%node(i_node_u)%x(1,1,2)
+    psi_node1 = get_psi_on_point(node_list, element_list, R_find, Z_find)
+    ! --- psi on node2
+    i_node_v  = newelement_list%element(i_elm)%vertex(i_vertex2)
+    R_find    = newnode_list%node(i_node_v)%x(1,1,1)
+    Z_find    = newnode_list%node(i_node_v)%x(1,1,2)
+    psi_node2 = get_psi_on_point(node_list, element_list, R_find, Z_find)
+    if ( (psi_node1 .eq. 1.d10) .and. (psi_node2 .eq. 1.d10) ) cycle
+    ! --- compare values
+    if ( abs(psi_node1-psi_node) .lt. abs(psi_node2-psi_node) ) then
+      align_i_not_j = .true.
+      i_or_j        = 5
+    else
+      align_i_not_j = .false.
+      i_or_j        = 6
+    endif
+    ! --- Set the (s,t) coords where we will do our alignment
+    if (parent_elm_node(i,i_node) .eq. 1) then
+      if (align_i_not_j) then
+        s_base = offset ; t_base = 0.0
+      else
+        s_base = 0.0    ; t_base = offset
+      endif
+    elseif (parent_elm_node(i,i_node) .eq. 2) then
+      if (align_i_not_j) then
+        s_base = 1.0-offset ; t_base = 0.0
+      else
+        s_base = 1.0        ; t_base = offset
+      endif
+    elseif (parent_elm_node(i,i_node) .eq. 3) then
+      if (align_i_not_j) then
+        s_base = 1.0-offset ; t_base = 1.0
+      else
+        s_base = 1.0        ; t_base = 1.0-offset
+      endif
+    elseif (parent_elm_node(i,i_node) .eq. 4) then
+      if (align_i_not_j) then
+        s_base = offset ; t_base = 1.0
+      else
+        s_base = 0.0    ; t_base = 1.0-offset
+      endif
+    endif
+ 
+    ! --- Get current psi_value at base
+    call interp_RZ(newnode_list,newelement_list,i_elm,s_base,t_base,R_find,Z_find)
+    psi_base = get_psi_on_point(node_list, element_list, R_find, Z_find)
+    if (psi_base .eq. 1.d10) cycle
+    if ( abs(psi_base-psi_node) .lt. tolerance ) cycle
+    ! --- Save element size
+    size_base = newelement_list%element(i_elm)%size(i_vertex,i_or_j)
+    size_record = size_base
+    ! --- Start with a range of 30%
+    size_min = 0.7*size_base
+    size_max = 1.3*size_base
+    do iter = 1,n_tries
+      diff_min = 1.d10
+      do i=1,n_range
+        size_range(i) = size_min + float(i-1)/float(n_range-1) * (size_max - size_min)
+        newelement_list%element(i_elm)%size(i_vertex,i_or_j) = size_range(i)
+        call interp_RZ(newnode_list,newelement_list,i_elm,s_base,t_base,R_find,Z_find)
+        psi_range(i) = get_psi_on_point(node_list, element_list, R_find, Z_find)
+        if ( abs(psi_range(i)-psi_node) .lt. diff_min ) then
+          diff_min = abs(psi_range(i)-psi_node)
+          i_min = i
+        endif
+      enddo
+      ! --- Determine next range
+      if (i_min .eq. 1) then
+        size_min = 0.7 * size_min
+        size_max = size_range(2)
+      elseif (i_min .eq. n_range) then
+        size_min = size_range(n_range-1)
+        size_max = 1.3*size_max
+      else
+        size_min = size_range(i_min-1)
+        size_max = size_range(i_min+1)
+      endif
+      !write(*,'(A,4i6,3f18.7)')'alignment',i_align,i_node,iter,i_min,psi_node,psi_base,psi_range(i_min)
+      if (diff_min .lt. abs(psi_base-psi_node) ) size_base = size_range(i_min)
+      if (diff_min .lt. tolerance ) exit
+    enddo
+    !write(*,'(A,2i6,2f18.7)')'alignment',i_align,i_node,size_record,size_base
+    newelement_list%element(i_elm)%size(i_vertex,i_or_j) = size_base
+
+    ! --- Size need to be the same on all parent elements!
+    do i = 2,n_parents(i_node)
+      i_elm    = node_parents(i,i_node)
+      i_vertex = parent_elm_node(i,i_node)
+      newelement_list%element(i_elm)%size(i_vertex,i_or_j) = size_base
+    enddo
+
+  enddo ! end i_node loop
+
+enddo ! end alignment_loops
+
+
+deallocate(n_parents      )
+deallocate(node_parents   )
+deallocate(parent_elm_node)
 
 
 
+return
+
+end subroutine align_2nd_derivatives
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!> This routine approximates the second derivative control points (ie. vectors i and j)
+!> such that the curvature changes linearly between two vertices of an element
+!> Therefore, we assume that the _ss derivative is not known on the nodes, but
+!> by assuming that, at s=0.5, the _ss value is 0.5*(node1_ss + node2_ss), this
+!> gives us an approximation for the vectors i and j (Please see paper for the formula)
 subroutine approximate_2nd_derivatives(node_list,element_list)
 
 
@@ -165,17 +403,17 @@ type(type_node_list),    intent(inout) :: node_list      !< list of nodes with g
 type(type_element_list), intent(inout) :: element_list   !< list of elements with element information
 
 ! --- Local variables
-integer, allocatable          :: n_parents(:)         ! for each node, want the number of parent elements
-integer, allocatable          :: node_parents(:,:)    ! for each node, want to know the 4 parent elements
-integer, allocatable          :: parent_elm_node(:,:) ! for each node, want to know the corresonding vertex for the 4 parent elements
-integer                       :: i_node, i_elm, i_vertex, i_vertex1, i_vertex2, i
-integer                       :: i_node_u, i_node_v
-integer                       :: index
-real*8                        :: size_u_min, size_v_min
-real*8                        :: size_tmp
-real*8                        :: point1(2), point2(2)
-real*8                        :: distance1, distance2
-real*8                        :: direction
+integer, allocatable :: n_parents(:)         ! for each node, want the number of parent elements
+integer, allocatable :: node_parents(:,:)    ! for each node, want to know the 4 parent elements
+integer, allocatable :: parent_elm_node(:,:) ! for each node, want to know the corresonding vertex for the 4 parent elements
+integer              :: i_node, i_elm, i_vertex, i_vertex1, i_vertex2, i
+integer              :: i_node_u, i_node_v
+integer              :: index
+real*8               :: size_u_min, size_v_min
+real*8               :: size_tmp
+real*8               :: point1(2), point2(2)
+real*8               :: distance1, distance2
+real*8               :: direction
 
 allocate( n_parents      (  node_list%n_nodes) )
 allocate( node_parents   (8,node_list%n_nodes) )
@@ -186,23 +424,17 @@ parent_elm_node = 0
 
 ! --- Find parent elements
 do i_node = 1, node_list%n_nodes
-
   n_parents(i_node) = 0
   do i_elm = 1, element_list%n_elements
-  
     do i_vertex = 1, n_vertex_max
-    
       if (element_list%element(i_elm)%vertex(i_vertex) .eq. i_node) then
         n_parents(i_node) = n_parents(i_node) + 1
         node_parents   (n_parents(i_node),i_node) = i_elm
         parent_elm_node(n_parents(i_node),i_node) = i_vertex
         exit
       endif
-    
     enddo
-    
   enddo
-  
 enddo
 
 
@@ -340,8 +572,9 @@ do i_node = 1, node_list%n_nodes
 
 enddo
 
-
-
+deallocate(n_parents      )
+deallocate(node_parents   )
+deallocate(parent_elm_node)
 
 return
 
@@ -860,7 +1093,22 @@ real*8                              :: vector_size
   node_list%node(i_node)%X(1,i_vector,2) = node_list%node(i_node)%X(1,i_vector,2) / vector_size
 end subroutine normalise_vector
 
-
+real*8 function get_psi_on_point(node_list, element_list, R_find, Z_find)
+use data_structure
+use mod_interp
+implicit none
+type(type_node_list),    intent(in) :: node_list
+type(type_element_list), intent(in) :: element_list 
+real*8,                  intent(in) :: R_find, Z_find
+integer :: ifail, i_elm_out
+real*8  :: R_out,Z_out,s_out,t_out
+real*8  :: psi, dd1,dd2,dd3,dd4,dd5
+  get_psi_on_point = 1.d10
+  call find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,i_elm_out,s_out,t_out,ifail)
+  if (ifail .ne. 0) return
+  call interp(node_list,element_list,i_elm_out,1,1,s_out,t_out,psi,dd1,dd2,dd3,dd4,dd5)
+  get_psi_on_point = psi
+end function get_psi_on_point
 
 
 

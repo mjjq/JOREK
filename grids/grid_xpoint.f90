@@ -31,11 +31,11 @@ type (type_element_list), pointer :: newelement_list
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
 real*8              :: s_find(8), t_find(8), st_find(8), tht_x, theta, delta, ss, tmp1, tmp2
-real*8              :: RRg1,dRRg1_dr,dRRg1_ds
-real*8              :: ZZg1,dZZg1_dr,dZZg1_ds
+real*8              :: RRg1,dRRg1_dr,dRRg1_ds, dRRg1_drs, dRRg1_drr, dRRg1_dss
+real*8              :: ZZg1,dZZg1_dr,dZZg1_ds, dZZg1_drs, dZZg1_drr, dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
 real*8,allocatable  :: R_polar(:,:,:),Z_polar(:,:,:),xout(:),xp(:),yp(:)
-real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, dR_dtt, dZ_dtt, RZ_jac, PSI_R, PSI_Z
+real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, RZ_jac, RZ_jac_R, RZ_jac_Z, PSI_R, PSI_Z, PSI_RR, psi_ZZ, PSI_RZ
 real*8, allocatable :: RR_new(:,:),ZZ_new(:,:),s_flux(:,:),t_flux(:,:),t_tht(:,:)
 integer,allocatable :: ielm_flux(:,:), keep(:,:,:), k_cross(:,:)
 integer             :: i, j, k, l, m, n_psi, n_flux_2, n_open_2, n_tht_2, n_psi_2, i2, j2
@@ -671,7 +671,6 @@ do i=1,n_flux_2+n_open_2
   do j=1, n_tht_2
 
     do k=1,n_pieces       ! 3 line pieces per coordinate line
-
 
       R_cub1d = (/ R_polar(k,1,j), 3.d0/2.d0 *(R_polar(k,2,j)-R_polar(k,1,j)), &
                    R_polar(k,4,j), 3.d0/2.d0 *(R_polar(k,4,j)-R_polar(k,3,j))  /)
@@ -1358,22 +1357,23 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
     newelement_list%element(k)%size(iv,4) = newelement_list%element(k)%size(iv,2) * newelement_list%element(k)%size(iv,3)
   enddo
 
-
   newelement_list%element(k)%father     = 0
   newelement_list%element(k)%n_sons     = 0
   element_list%element(Index)%sons(:)   = 0
 enddo
 
 
-if (n_order .ge. 5) call set_high_order_sizes(newelement_list)
-if (n_order .ge. 5) call approximate_2nd_derivatives(newnode_list,newelement_list)
-do i=1,newnode_list%n_nodes
-  newnode_list%node(i)%x(1,7:n_degrees,:) = 0.d0
-enddo
-newnode_list%node(index_xpoint  )%x(1,5:n_degrees,:) = 0.d0
-newnode_list%node(index_xpoint+1)%x(1,5:n_degrees,:) = 0.d0
-newnode_list%node(index_xpoint+2)%x(1,5:n_degrees,:) = 0.d0
-newnode_list%node(index_xpoint+3)%x(1,5:n_degrees,:) = 0.d0
+if (n_order .ge. 5) then
+  call set_high_order_sizes(newelement_list)
+  call align_2nd_derivatives(node_list,element_list, newnode_list,newelement_list)
+  do i=1,newnode_list%n_nodes
+    newnode_list%node(i)%x(1,7:n_degrees,:) = 0.d0
+  enddo
+  newnode_list%node(index_xpoint  )%x(1,5:n_degrees,:) = 0.d0
+  newnode_list%node(index_xpoint+1)%x(1,5:n_degrees,:) = 0.d0
+  newnode_list%node(index_xpoint+2)%x(1,5:n_degrees,:) = 0.d0
+  newnode_list%node(index_xpoint+3)%x(1,5:n_degrees,:) = 0.d0
+endif
 
 !call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1)
 
@@ -1445,8 +1445,9 @@ do i=1,newnode_list%n_nodes
 
   call find_RZ(node_list,element_list,R1,Z1,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 
-  call interp_RZ(node_list,element_list,ielm_out,s_out,t_out, &
-                 RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
+  call interp_RZ(node_list,element_list,ielm_out,s_out,t_out,   &
+                 RRg1,dRRg1_dr,dRRg1_ds, dRRg1_drs, dRRg1_drr, dRRg1_dss, &
+                 ZZg1,dZZg1_dr,dZZg1_ds, dZZg1_drs, dZZg1_drr, dZZg1_dss)
 
   call interp(node_list,element_list,ielm_out,1,1,s_out,t_out,PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
 
@@ -1454,11 +1455,52 @@ do i=1,newnode_list%n_nodes
   PSI_R  = (   dZZg1_ds * dPSg1_dr - dZZg1_dr * dPSg1_ds ) / RZ_jac
   PSI_Z  = ( - dRRg1_ds * dPSg1_dr + dRRg1_dr * dPSg1_ds ) / RZ_jac
 
+  RZ_jac_R  = (  dRRg1_drr* dZZg1_ds**2 - dZZg1_drr*dRRg1_ds*dZZg1_ds - 2.d0*dRRg1_drs*dZZg1_dr*dZZg1_ds   &
+               + dZZg1_drs*(dRRg1_dr*dZZg1_ds + dRRg1_ds*dZZg1_dr)                                         &
+               + dRRg1_dss* dZZg1_dr**2 - dZZg1_dss*dRRg1_dr*dZZg1_dr) / RZ_jac
+        
+  RZ_jac_Z  = (  dZZg1_dss* dRRg1_dr**2 - dRRg1_dss*dZZg1_dr*dRRg1_dr - 2.d0*dZZg1_drs*dRRg1_ds*dRRg1_dr   &
+               + dRRg1_drs*(dZZg1_ds*dRRg1_dr + dZZg1_dr*dRRg1_ds)                                         &
+               + dZZg1_drr* dRRg1_ds**2 - dRRg1_drr*dZZg1_ds*dRRg1_ds) / RZ_jac
+
+  PSI_RR = (  dPSg1_drr * dZZg1_ds**2 - 2.d0*dPSg1_drs * dZZg1_dr*dZZg1_ds + dPSg1_dss * dZZg1_dr**2  &  
+            + dPSg1_dr  * (dZZg1_drs*dZZg1_ds - dZZg1_dss*dZZg1_dr )                                  &
+            + dPSg1_ds  * (dZZg1_drs*dZZg1_dr - dZZg1_drr*dZZg1_ds ) )        / RZ_jac**2             &  
+            - RZ_jac_R * (dPSg1_dr * dZZg1_ds - dPSg1_ds * dZZg1_dr)          / RZ_jac**2
+  PSI_ZZ = (  dPSg1_drr * dRRg1_ds**2 - 2.d0*dPSg1_drs * dRRg1_dr*dRRg1_ds + dPSg1_dss * dRRg1_dr**2  &  
+            + dPSg1_dr * (dRRg1_drs*dRRg1_ds - dRRg1_dss*dRRg1_dr )                                   &
+            + dPSg1_ds * (dRRg1_drs*dRRg1_dr - dRRg1_drr*dRRg1_ds ) )         / RZ_jac**2             &  
+            - RZ_jac_Z * (- dPSg1_dr * dRRg1_ds + dPSg1_ds * dRRg1_dr )       / RZ_jac**2
+  PSI_RZ = (- dPSg1_drr * dZZg1_ds*dRRg1_ds - dPSg1_dss * dRRg1_dr*dZZg1_dr                           &
+            + dPSg1_drs * (dZZg1_dr*dRRg1_ds  + dZZg1_ds*dRRg1_dr  )                                  &
+            - dPSg1_dr  * (dRRg1_drs*dZZg1_ds - dRRg1_dss*dZZg1_dr )                                  &
+            - dPSg1_ds  * (dRRg1_drs*dZZg1_dr - dRRg1_drr*dZZg1_ds )  )       / RZ_jac**2             &      
+            - RZ_jac_R * (- dPSg1_dr * dRRg1_ds + dPSg1_ds * dRRg1_dr )       / RZ_jac**2
+
   newnode_list%node(i)%values(1,1,1) = PSg1
   newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(1,2,1) + PSI_Z * newnode_list%node(i)%x(1,2,2)
   newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(1,3,1) + PSI_Z * newnode_list%node(i)%x(1,3,2)
-  newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(1,4,1) + PSI_Z * newnode_list%node(i)%x(1,4,2)
-  newnode_list%node(i)%values(1,5:n_degrees,1) = 0.d0
+  newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(1,4,1) &
+                                      +PSI_RR* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,3,1) &
+                                      +PSI_RZ* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,3,2) &
+                                      +PSI_Z * newnode_list%node(i)%x(1,4,2) &
+                                      +PSI_RZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,3,1) &
+                                      +PSI_ZZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,3,2)
+  if (n_order .ge. 5) then
+    newnode_list%node(i)%values(1,5,1) = PSI_R * newnode_list%node(i)%x(1,4,1) &
+                                        +PSI_RR* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,2,1) &
+                                        +PSI_RZ* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,2,2) &
+                                        +PSI_Z * newnode_list%node(i)%x(1,4,2) &
+                                        +PSI_RZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,2,1) &
+                                        +PSI_ZZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,2,2)
+    newnode_list%node(i)%values(1,6,1) = PSI_R * newnode_list%node(i)%x(1,4,1) &
+                                        +PSI_RR* newnode_list%node(i)%x(1,3,1) * newnode_list%node(i)%x(1,3,1) &
+                                        +PSI_RZ* newnode_list%node(i)%x(1,3,1) * newnode_list%node(i)%x(1,3,2) &
+                                        +PSI_Z * newnode_list%node(i)%x(1,4,2) &
+                                        +PSI_RZ* newnode_list%node(i)%x(1,3,2) * newnode_list%node(i)%x(1,3,1) &
+                                        +PSI_ZZ* newnode_list%node(i)%x(1,3,2) * newnode_list%node(i)%x(1,3,2)
+    newnode_list%node(i)%values(1,7:n_degrees,1) = 0.d0
+  endif
 
   if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0
 

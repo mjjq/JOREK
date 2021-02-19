@@ -481,8 +481,10 @@ do ife = ife_min, ife_max
         r0_corr = corr_neg_dens1(r0)
         T0     = eq_g(mp,var_T,ms,mt)
         T0_corr = corr_neg_temp1(T0)
+#ifdef WITH_TiTe
         T0i    = eq_g(mp,var_T,ms,mt) /2.d0 + eq_g(mp,var_Ti,ms,mt)
         T0e    = eq_g(mp,var_T,ms,mt) /2.d0 + eq_g(mp,var_Te,ms,mt)
+#endif
         zj0    = eq_g(mp,var_zj,ms,mt)
         ps0    = eq_g(mp,var_psi,ms,mt)
         ps0_s  = eq_s(mp,var_psi,ms,mt) 
@@ -1067,6 +1069,10 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       zj0      = eq_g_1D(mp,var_Zj  ,ms) 
       r0       = eq_g_1D(mp,var_rho ,ms) 
       T0       = eq_g_1D(mp,var_T   ,ms) 
+#ifdef WITH_TiTe
+      T0i    = eq_g(mp,var_T,ms,mt) /2.d0 + eq_g(mp,var_Ti,ms,mt)
+      T0e    = eq_g(mp,var_T,ms,mt) /2.d0 + eq_g(mp,var_Te,ms,mt)
+#endif
 #ifdef WITH_Vpar
       vpar0    = eq_g_1D(mp,var_vpar,ms)
 #else
@@ -1166,6 +1172,15 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       ! --- get normalized flux 
       psi_n = get_psi_n(ps0,Z)
  
+#ifdef WITH_TiTe
+        T0e_corr      = corr_neg_temp1(T0e)
+        eta_T         = resistivity(eta, T0e_corr, T_max_eta)  
+        eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm)
+#else
+        T0_corr       = corr_neg_temp1(T0)
+        eta_T         = resistivity(eta, T0_corr, T_max_eta)  
+        eta_T_ohm     = resistivity(eta_ohmic, T0_corr, T_max_eta_ohm)
+#endif
       D_prof  = get_dperp (psi_n)
       ZK_prof = get_zkperp(psi_n)
  

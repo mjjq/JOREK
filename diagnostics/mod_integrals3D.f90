@@ -1169,11 +1169,6 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       ! --- get normalized flux 
       psi_n = get_psi_n(ps0,Z)
  
-      ! --- get resistivity and diffusion coefficients
-      T0_corr = corr_neg_temp(T0)
-      if (T_min > 0.d0) T0_corr=max(T0,T_min)
-
-      eta_T   = resistivity(T0_corr)  
       D_prof  = get_dperp (psi_n)
       ZK_prof = get_zkperp(psi_n)
  

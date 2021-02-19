@@ -2,6 +2,7 @@
 module mod_resistivity 
   
   use phys_module, only: eta_T_dependent, T_0, T_min, xpoint, eta 
+  use mod_parameters, only: with_TiTe
     
   implicit none
   
@@ -21,8 +22,8 @@ module mod_resistivity
     
     real*8, intent(in)           :: T
     real*8, intent(in)           :: eta_0
-    real*8, intent(in), optional :: T_max
-    real*8                       :: eta_T
+    real*8, intent(in)           :: T_max
+    real*8, intent(out)          :: eta_T
     real*8                       :: T_max_local, T_local
 
     T_max_local = 1.d3
@@ -30,12 +31,22 @@ module mod_resistivity
     if (present(T_max)) T_max_local = T_max
 
     ! --- Temperature dependent resistivity
-    if ( eta_T_dependent .and. (T_local <= T_max_local)) then
-      eta_T     = eta_0 * (T_local/T_0)**(-1.5d0)
-    else if ( eta_T_dependent .and. (T_local > T_max_local)) then
-      eta_T     = eta_0 * (T_max_local/T_0)**(-1.5d0)
+    if (with_TiTe) then
+      if ( eta_T_dependent .and. (T_local <= T_max_local)) then
+        eta_T     = eta_0 * (T_local/Te_0)**(-1.5d0)
+      else if ( eta_T_dependent .and. (T_local > T_max_local)) then
+        eta_T     = eta_0 * (T_max_local/Te_0)**(-1.5d0)
+      else
+        eta_T     = eta_0
+      end if
     else
-      eta_T     = eta_0
+      if ( eta_T_dependent .and. (T_local <= T_max_local)) then
+        eta_T     = eta_0 * (T_local/T_0)**(-1.5d0)
+      else if ( eta_T_dependent .and. (T_local > T_max_local)) then
+        eta_T     = eta_0 * (T_max_local/T_0)**(-1.5d0)
+      else
+        eta_T     = eta_0
+      end if
     end if
 
   end function resistivity
@@ -49,7 +60,7 @@ module mod_resistivity
     
     real*8, intent(in)           :: T
     real*8, intent(in)           :: eta_0
-    real*8, intent(in), optional :: T_max
+    real*8, intent(in)           :: T_max
     real*8                       :: deta_dT
     real*8                       :: T_max_local
 
@@ -57,14 +68,25 @@ module mod_resistivity
     if (present(T_max)) T_max_local = T_max
 
     ! --- Temperature dependent resistivity
-    if ( eta_T_dependent .and. (T <= T_max_local)) then
-      deta_dT   = - eta   * (1.5d0)  * T**(-2.5d0) * T_0**(1.5d0)
-      if ( xpoint .and. (T .lt. T_min) ) then
-        deta_dT   = 0.d0
-      endif
+    if (with_TiTe) then
+      if ( eta_T_dependent .and. (T <= T_max_local)) then
+        deta_dT   = - eta   * (1.5d0)  * T**(-2.5d0) * Te_0**(1.5d0)
+        if ( xpoint .and. (T .lt. T_min) ) then
+          deta_dT   = 0.d0
+        endif
+      else
+        deta_dT   = 0.
+      end if
     else
-      deta_dT   = 0.
-    end if
+      if ( eta_T_dependent .and. (T <= T_max_local)) then
+        deta_dT   = - eta   * (1.5d0)  * T**(-2.5d0) * T_0**(1.5d0)
+        if ( xpoint .and. (T .lt. T_min) ) then
+          deta_dT   = 0.d0
+        endif
+      else
+        deta_dT   = 0.
+      end if
+    endif
    
   end function dresistivity_dT 
   

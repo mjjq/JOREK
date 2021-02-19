@@ -8,7 +8,8 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only: write_ps, force_central_node, SDN_threshold, fix_axis_nodes
+use phys_module, only: write_ps, force_central_node, SDN_threshold, fix_axis_nodes, freeboundary_equil,refinement
+use mod_grid_conversions
 
 implicit none
 
@@ -20,6 +21,8 @@ type (type_strategic_points), intent(in)    :: stpts
 type (type_new_points)      , intent(in)    :: nwpts
 integer,                      intent(in)    :: n_grids(10), xcase
 
+type (type_bnd_node_list)    :: bnd_node_list
+type (type_bnd_element_list) :: bnd_elm_list
 
 ! --- local variables
 type (type_node_list),    pointer :: newnode_list
@@ -43,7 +46,7 @@ real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
 real*8              :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
-real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis
+real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, psi_bnd
 real*8              :: R1, Z1, s_out, t_out, R_out, Z_out, RZ_jac, dRZ_jac_dR, dRZ_jac_dZ, PSI_R, PSI_Z, PSI_RR, PSI_ZZ, PSI_RZ
 real*8              :: R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
 character*4         :: label
@@ -71,6 +74,20 @@ if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
   psi_xpoint(2) = psi_xpoint(1)
 endif
 
+psi_bnd  = 0.d0
+if(xcase .eq. 1) psi_bnd = psi_xpoint(1)
+if(xcase .eq. 2) psi_bnd = psi_xpoint(2)
+if(xcase .eq. 3) then
+  if(psi_xpoint(2) .lt. psi_xpoint(1)) then
+    psi_bnd  = psi_xpoint(2)
+  else
+    psi_bnd  = psi_xpoint(1)
+  endif
+  ! If we have a symmetric double-null, force the single separatrix
+  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
+    psi_bnd  = psi_xpoint(1)
+  endif
+endif
 
 
 !------------------------------------------------------------------------------------------------------------------------!
@@ -1074,8 +1091,8 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
     size_0 = 1.d0
     size_p = 1.d0
     denom = ( dRP * dZ0 - dR0 * dZP)
-    size_0 = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /3.d0, dR0 * (RP-R0) + dZ0 * (ZP-Z0) )
-    size_P = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /3.d0, dRP * (R0-RP) + dZP * (Z0-ZP) )
+    size_0 = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /float(n_order), dR0 * (RP-R0) + dZ0 * (ZP-Z0) )
+    size_P = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /float(n_order), dRP * (R0-RP) + dZP * (Z0-ZP) )
 
     if ((R0-RP)**2 + (Z0-ZP)**2 .eq. 0.d0) then
       size_0 = 1.d0
@@ -1101,6 +1118,26 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
   newelement_list%element(k)%n_sons     = 0
   element_list%element(Index)%sons(:)   = 0
 enddo
+
+if (n_order .ge. 5) then
+  call set_high_order_sizes(newelement_list)
+  call align_2nd_derivatives(node_list,element_list, newnode_list,newelement_list)
+  do i=1,newnode_list%n_nodes
+    newnode_list%node(i)%x(1,7:n_degrees,:) = 0.d0
+  enddo
+  ! --- The 1st Xpoint should have zero second derivatives...
+  newnode_list%node(1)%x(1,5:n_degrees,:) = 0.d0
+  newnode_list%node(2)%x(1,5:n_degrees,:) = 0.d0
+  newnode_list%node(3)%x(1,5:n_degrees,:) = 0.d0
+  newnode_list%node(4)%x(1,5:n_degrees,:) = 0.d0
+  ! --- The 2nd Xpoint should have zero second derivatives...
+  if (xcase .eq. 3) then
+    newnode_list%node(5)%x(1,5:n_degrees,:) = 0.d0
+    newnode_list%node(6)%x(1,5:n_degrees,:) = 0.d0
+    newnode_list%node(7)%x(1,5:n_degrees,:) = 0.d0
+    newnode_list%node(8)%x(1,5:n_degrees,:) = 0.d0
+  endif
+endif
 
 
 
@@ -1162,31 +1199,47 @@ do i=1,newnode_list%n_nodes
                                      + PSI_ZZ * newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,3,2) &
                                      + PSI_R  * newnode_list%node(i)%x(1,4,1)                               &
                                      + PSI_Z  * newnode_list%node(i)%x(1,4,2)
+  if (n_order .ge. 5) then
+    newnode_list%node(i)%values(1,5,1) = PSI_R * newnode_list%node(i)%x(1,4,1) &
+                                        +PSI_RR* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,2,1) &
+                                        +PSI_RZ* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,2,2) &
+                                        +PSI_Z * newnode_list%node(i)%x(1,4,2) &
+                                        +PSI_RZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,2,1) &
+                                        +PSI_ZZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,2,2)
+    newnode_list%node(i)%values(1,6,1) = PSI_R * newnode_list%node(i)%x(1,4,1) &
+                                        +PSI_RR* newnode_list%node(i)%x(1,3,1) * newnode_list%node(i)%x(1,3,1) &
+                                        +PSI_RZ* newnode_list%node(i)%x(1,3,1) * newnode_list%node(i)%x(1,3,2) &
+                                        +PSI_Z * newnode_list%node(i)%x(1,4,2) &
+                                        +PSI_RZ* newnode_list%node(i)%x(1,3,2) * newnode_list%node(i)%x(1,3,1) &
+                                        +PSI_ZZ* newnode_list%node(i)%x(1,3,2) * newnode_list%node(i)%x(1,3,2)
+    newnode_list%node(i)%values(1,7:n_degrees,1) = 0.d0
+  endif
 
   if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0
+  if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,6,1) = 0.d0
 
 enddo
 
 !-------------------------------- Empty Xpoints
-newnode_list%node(1)%values(1,2:4,1) = 0.d0
-newnode_list%node(2)%values(1,2:4,1) = 0.d0
-newnode_list%node(3)%values(1,2:4,1) = 0.d0
-newnode_list%node(4)%values(1,2:4,1) = 0.d0
+newnode_list%node(1)%values(1,2:n_degrees,1) = 0.d0
+newnode_list%node(2)%values(1,2:n_degrees,1) = 0.d0
+newnode_list%node(3)%values(1,2:n_degrees,1) = 0.d0
+newnode_list%node(4)%values(1,2:n_degrees,1) = 0.d0
 if (xcase .eq. 3) then
-  newnode_list%node(5)%values(1,2:4,1) = 0.d0
-  newnode_list%node(6)%values(1,2:4,1) = 0.d0
-  newnode_list%node(7)%values(1,2:4,1) = 0.d0
-  newnode_list%node(8)%values(1,2:4,1) = 0.d0
+  newnode_list%node(5)%values(1,2:n_degrees,1) = 0.d0
+  newnode_list%node(6)%values(1,2:n_degrees,1) = 0.d0
+  newnode_list%node(7)%values(1,2:n_degrees,1) = 0.d0
+  newnode_list%node(8)%values(1,2:n_degrees,1) = 0.d0
 endif
 
 !-------------------------------- Empty Axis
 if (xcase .ne. 3) then
   do j=5,4+n_tht-1
-    newnode_list%node(j)%values(1,2:4,1) = 0.d0
+    newnode_list%node(j)%values(1,2:n_degrees,1) = 0.d0
   enddo
 else
   do j=9,8+n_tht-2
-    newnode_list%node(j)%values(1,2:4,1) = 0.d0
+    newnode_list%node(j)%values(1,2:n_degrees,1) = 0.d0
   enddo
 endif
 
@@ -1282,62 +1335,48 @@ do i=1,newnode_list%n_nodes
     endif
     
     ! Remove all but one node at first Xpoint
-    if ((i .eq. 2).and.(k.eq.1)) then
-      node_list%node(i)%index(k) = node_list%node(1)%index(k)
-      index = index - 1
+    if (i .eq. 2) then
+      if ( (k.eq.1) .or. (k.eq.3) .or. (k.eq.6) ) then
+        node_list%node(i)%index(k) = node_list%node(1)%index(k)
+        index = index - 1
+      endif
     endif
-    if ((i .eq. 2).and.(k.eq.3)) then
-      node_list%node(i)%index(k) = node_list%node(1)%index(k)
-      index = index - 1
+    if (i .eq. 3) then
+      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+        node_list%node(i)%index(k) = node_list%node(2)%index(k)
+        index = index - 1
+      endif
     endif
-    if ((i .eq. 3).and.(k.eq.1)) then
-      node_list%node(i)%index(k) = node_list%node(1)%index(k)
-      index = index - 1
+    if (i .eq. 3) then
+      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+        node_list%node(i)%index(k) = node_list%node(1)%index(k)
+        index = index - 1
+      endif
+      if ( (k.eq.3) .or. (k.eq.6) ) then
+        node_list%node(i)%index(k) = node_list%node(3)%index(k)
+        index = index - 1
+      endif
     endif
-    if ((i .eq. 3).and.(k.eq.2)) then
-      node_list%node(i)%index(k) = node_list%node(2)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.1)) then
-      node_list%node(i)%index(k) = node_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.2)) then
-      node_list%node(i)%index(k) = node_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.3)) then
-      node_list%node(i)%index(k) = node_list%node(3)%index(k)
-      index = index - 1
-    endif
-  
+
     ! Remove all but one node at second Xpoint
-    if (xcase .eq. 3) then
-      if ((i .eq. 6).and.(k.eq.1)) then
+    if (i .eq. 6) then
+      if ( (k.eq.1) .or. (k.eq.3) .or. (k.eq.6) ) then
         node_list%node(i)%index(k) = node_list%node(5)%index(k)
         index = index - 1
       endif
-      if ((i .eq. 6).and.(k.eq.3)) then
-        node_list%node(i)%index(k) = node_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 7).and.(k.eq.1)) then
-        node_list%node(i)%index(k) = node_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 7).and.(k.eq.2)) then
+    endif
+    if (i .eq. 7) then
+      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
         node_list%node(i)%index(k) = node_list%node(6)%index(k)
         index = index - 1
       endif
-      if ((i .eq. 8).and.(k.eq.1)) then
+    endif
+    if (i .eq. 8) then
+      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
         node_list%node(i)%index(k) = node_list%node(5)%index(k)
         index = index - 1
       endif
-      if ((i .eq. 8).and.(k.eq.2)) then
-        node_list%node(i)%index(k) = node_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 8).and.(k.eq.3)) then
+      if ( (k.eq.3) .or. (k.eq.6) ) then
         node_list%node(i)%index(k) = node_list%node(7)%index(k)
         index = index - 1
       endif
@@ -1357,6 +1396,7 @@ if (fix_axis_nodes) then
       endif
     enddo
   enddo
+  if (n_order .ge. 5) call set_high_order_sizes_on_axis(node_list,element_list)
 endif
 
 

@@ -116,6 +116,7 @@ real*8  ::  dMach1BC,  dMach1BC_v,  dMach1BC_T,  dMach1BC_Tb, dMach1BC_ubb
 real*8  :: d2Mach1BC, d2Mach1BC_v, d2Mach1BC_T, d2Mach1BC_Tb, d2Mach1BC_Tbb
 
 integer :: node_indices( (n_order+1)/2, (n_order+1)/2 ), index_tmp, kk, ll
+logical, parameter :: include_2nd_derivatives = .false.
 
 
 RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
@@ -607,7 +608,7 @@ do i=1, n_local_elms !=== do elements
                  solve_only, gmres, index_min, index_max,       & 
                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-          if (.false.) then !(n_order .ge. 5) then
+          if ( include_2nd_derivatives .and. (n_order .ge. 5) ) then
             call boundary_conditions_add_one_entry(               &
                    index_node2, kv, in, index_node3, ku, in,      &
                    - zbig * dMach1BC_ubb,                         &
@@ -629,7 +630,7 @@ do i=1, n_local_elms !=== do elements
 
           ! --- Impose Mach1 on node 2nd derivatives
 !DOESNT WORK. I DONT KNOW WHY...
-          if (.false.) then !(n_order .ge. 5) then
+          if ( include_2nd_derivatives .and. (n_order .ge. 5) ) then
             call boundary_conditions_add_one_entry(               &
                    index_node3, kv, in, index_node3, kv, in,      &
                    - zbig * d2Mach1BC_v,                          &

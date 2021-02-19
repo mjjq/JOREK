@@ -228,8 +228,8 @@ offset = 0.1
 ! --- on (while doing another node), we might re-align the size at the order end
 ! --- of that same element, it might modify the first end alignment a bit, so we
 ! --- need to do this a few time
-n_alignment_loops = 1
-n_tries = 4 ! number of tries for each node
+n_alignment_loops = 2
+n_tries = 2 ! number of tries for each node
 do i_align = 1,n_alignment_loops
 
   ! --- Align nodes one by one

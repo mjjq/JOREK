@@ -165,7 +165,7 @@ subroutine find_crossing_on_surface_piece(node_list,element_list,surface,piece, 
   
     ifail = 999
     max_step = 1.005d0
-    if (n_order .ge. 5) max_step = 1.05d0
+    if (n_order .ge. 5) max_step = 1.005d0
   
     do i=1,ntrial
   

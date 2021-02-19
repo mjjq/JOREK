@@ -1503,6 +1503,7 @@ do i=1,newnode_list%n_nodes
   endif
 
   if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0
+  if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,6,1) = 0.d0
 
 enddo
 

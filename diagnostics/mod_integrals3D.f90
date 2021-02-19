@@ -479,11 +479,15 @@ do ife = ife_min, ife_max
 
         r0     = eq_g(mp,var_rho,ms,mt)
         r0_corr = corr_neg_dens1(r0)
-        T0     = eq_g(mp,var_T,ms,mt)
-        T0_corr = corr_neg_temp1(T0)
 #ifdef WITH_TiTe
-        T0i    = eq_g(mp,var_T,ms,mt) /2.d0 + eq_g(mp,var_Ti,ms,mt)
-        T0e    = eq_g(mp,var_T,ms,mt) /2.d0 + eq_g(mp,var_Te,ms,mt)
+        T0i    = eq_g(mp,var_Ti,ms,mt)
+        T0e    = eq_g(mp,var_Te,ms,mt)
+        T0e_corr = corr_neg_temp1(T0e)
+#else
+        T0     = eq_g(mp,var_T,ms,mt)
+        T0i    = eq_g(mp,var_T,ms,mt) /2.d0
+        T0e    = eq_g(mp,var_T,ms,mt) /2.d0
+        T0_corr = corr_neg_temp1(T0)
 #endif
         zj0    = eq_g(mp,var_zj,ms,mt)
         ps0    = eq_g(mp,var_psi,ms,mt)
@@ -544,7 +548,6 @@ do ife = ife_min, ife_max
         psi_as_coord = ps0
 #endif
 #ifdef WITH_TiTe
-        T0e_corr      = corr_neg_temp1(T0e)
         eta_T         = resistivity(eta, T0e_corr, T_max_eta)  
         eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm)
 #else
@@ -1070,8 +1073,11 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       r0       = eq_g_1D(mp,var_rho ,ms) 
       T0       = eq_g_1D(mp,var_T   ,ms) 
 #ifdef WITH_TiTe
-      T0i    = eq_g_1D(mp,var_T,ms,mt) /2.d0 + eq_g_1D(mp,var_Ti,ms,mt)
-      T0e    = eq_g_1D(mp,var_T,ms,mt) /2.d0 + eq_g_1D(mp,var_Te,ms,mt)
+      T0i    = eq_g_1D(mp,var_Ti,ms)
+      T0e    = eq_g_1D(mp,var_Te,ms)
+#else
+      T0i    = eq_g_1D(mp,var_T,ms) /2.d0
+      T0e    = eq_g_1D(mp,var_T,ms) /2.d0
 #endif
 #ifdef WITH_Vpar
       vpar0    = eq_g_1D(mp,var_vpar,ms)

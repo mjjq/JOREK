@@ -1,7 +1,7 @@
 !> Module containing functions to determine the plasma resistivity 
 module mod_resistivity 
   
-  use phys_module, only: eta_T_dependent, T_0, ,Te_0 T_min, xpoint, eta 
+  use phys_module, only: eta_T_dependent, T_0, Te_0, T_min, xpoint, eta, eta_ohmic 
   use mod_parameters, only: with_TiTe
     
   implicit none

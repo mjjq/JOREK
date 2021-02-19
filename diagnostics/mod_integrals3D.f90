@@ -1070,8 +1070,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       r0       = eq_g_1D(mp,var_rho ,ms) 
       T0       = eq_g_1D(mp,var_T   ,ms) 
 #ifdef WITH_TiTe
-      T0i    = eq_g(mp,var_T,ms,mt) /2.d0 + eq_g(mp,var_Ti,ms,mt)
-      T0e    = eq_g(mp,var_T,ms,mt) /2.d0 + eq_g(mp,var_Te,ms,mt)
+      T0i    = eq_g_1D(mp,var_T,ms,mt) /2.d0 + eq_g_1D(mp,var_Ti,ms,mt)
+      T0e    = eq_g_1D(mp,var_T,ms,mt) /2.d0 + eq_g_1D(mp,var_Te,ms,mt)
 #endif
 #ifdef WITH_Vpar
       vpar0    = eq_g_1D(mp,var_vpar,ms)

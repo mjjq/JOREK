@@ -294,17 +294,14 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          eta_ohmic, central_mass,                                                        &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
-!$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot,               &
+!$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot, local_E_ion,  &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
 !$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type,              &
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-!$omp          nimp_bg, local_E_ion, ksi_ion, GAMMA, use_imp_adas,                             &
+!$omp          nimp_bg, ksi_ion, GAMMA, use_imp_adas,                                          &
 #endif
-#ifdef WITH_Impurities
-!$omp          local_E_ion,                                                                    &
 !$omp          T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,                                 &
-#endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, xjac_R, xjac_Z, eq_g, eq_s, eq_t, eq_p,    &

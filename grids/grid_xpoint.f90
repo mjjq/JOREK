@@ -12,6 +12,7 @@ use mod_neighbours, only: update_neighbours
 use mod_interp
 use phys_module, only: force_central_node, write_ps, fix_axis_nodes
 use mod_grid_conversions
+use mod_poiss
 
 implicit none
 
@@ -28,14 +29,18 @@ type (type_surface_list) :: flux_list
 type (type_node_list),    pointer :: newnode_list
 type (type_element_list), pointer :: newelement_list
 
+! --- Unused (just for call to Poisson for psi-projection)
+type (type_bnd_node_list)    :: bnd_node_list
+type (type_bnd_element_list) :: bnd_elm_list
+
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
-real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
+real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2), psi_bnd
 real*8              :: s_find(8), t_find(8), st_find(8), tht_x, theta, delta, ss, tmp1, tmp2
-real*8              :: RRg1,dRRg1_dr,dRRg1_ds, dRRg1_drs, dRRg1_drr, dRRg1_dss
-real*8              :: ZZg1,dZZg1_dr,dZZg1_ds, dZZg1_drs, dZZg1_drr, dZZg1_dss
+real*8              :: RRg1,dRRg1_dr,dRRg1_ds
+real*8              :: ZZg1,dZZg1_dr,dZZg1_ds
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
 real*8,allocatable  :: R_polar(:,:,:),Z_polar(:,:,:),xout(:),xp(:),yp(:)
-real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, RZ_jac, RZ_jac_R, RZ_jac_Z, PSI_R, PSI_Z, PSI_RR, psi_ZZ, PSI_RZ
+real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z, PSI_RR, psi_ZZ, PSI_RZ
 real*8, allocatable :: RR_new(:,:),ZZ_new(:,:),s_flux(:,:),t_flux(:,:),t_tht(:,:)
 integer,allocatable :: ielm_flux(:,:), keep(:,:,:), k_cross(:,:)
 integer             :: i, j, k, l, m, n_psi, n_flux_2, n_open_2, n_tht_2, n_psi_2, i2, j2
@@ -66,6 +71,7 @@ write(*,*) '*************************************'
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
 call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+psi_bnd  = psi_xpoint(1)
 
 !-------------------------------- double values to find the mid_points
 n_flux_2    = 2 * (n_flux - 1)
@@ -1446,8 +1452,7 @@ do i=1,newnode_list%n_nodes
   call find_RZ(node_list,element_list,R1,Z1,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 
   call interp_RZ(node_list,element_list,ielm_out,s_out,t_out,   &
-                 RRg1,dRRg1_dr,dRRg1_ds, dRRg1_drs, dRRg1_drr, dRRg1_dss, &
-                 ZZg1,dZZg1_dr,dZZg1_ds, dZZg1_drs, dZZg1_drr, dZZg1_dss)
+                 RRg1,dRRg1_dr,dRRg1_ds,ZZg1,dZZg1_dr,dZZg1_ds)
 
   call interp(node_list,element_list,ielm_out,1,1,s_out,t_out,PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss)
 
@@ -1455,57 +1460,25 @@ do i=1,newnode_list%n_nodes
   PSI_R  = (   dZZg1_ds * dPSg1_dr - dZZg1_dr * dPSg1_ds ) / RZ_jac
   PSI_Z  = ( - dRRg1_ds * dPSg1_dr + dRRg1_dr * dPSg1_ds ) / RZ_jac
 
-  RZ_jac_R  = (  dRRg1_drr* dZZg1_ds**2 - dZZg1_drr*dRRg1_ds*dZZg1_ds - 2.d0*dRRg1_drs*dZZg1_dr*dZZg1_ds   &
-               + dZZg1_drs*(dRRg1_dr*dZZg1_ds + dRRg1_ds*dZZg1_dr)                                         &
-               + dRRg1_dss* dZZg1_dr**2 - dZZg1_dss*dRRg1_dr*dZZg1_dr) / RZ_jac
-        
-  RZ_jac_Z  = (  dZZg1_dss* dRRg1_dr**2 - dRRg1_dss*dZZg1_dr*dRRg1_dr - 2.d0*dZZg1_drs*dRRg1_ds*dRRg1_dr   &
-               + dRRg1_drs*(dZZg1_ds*dRRg1_dr + dZZg1_dr*dRRg1_ds)                                         &
-               + dZZg1_drr* dRRg1_ds**2 - dRRg1_drr*dZZg1_ds*dRRg1_ds) / RZ_jac
-
-  PSI_RR = (  dPSg1_drr * dZZg1_ds**2 - 2.d0*dPSg1_drs * dZZg1_dr*dZZg1_ds + dPSg1_dss * dZZg1_dr**2  &  
-            + dPSg1_dr  * (dZZg1_drs*dZZg1_ds - dZZg1_dss*dZZg1_dr )                                  &
-            + dPSg1_ds  * (dZZg1_drs*dZZg1_dr - dZZg1_drr*dZZg1_ds ) )        / RZ_jac**2             &  
-            - RZ_jac_R * (dPSg1_dr * dZZg1_ds - dPSg1_ds * dZZg1_dr)          / RZ_jac**2
-  PSI_ZZ = (  dPSg1_drr * dRRg1_ds**2 - 2.d0*dPSg1_drs * dRRg1_dr*dRRg1_ds + dPSg1_dss * dRRg1_dr**2  &  
-            + dPSg1_dr * (dRRg1_drs*dRRg1_ds - dRRg1_dss*dRRg1_dr )                                   &
-            + dPSg1_ds * (dRRg1_drs*dRRg1_dr - dRRg1_drr*dRRg1_ds ) )         / RZ_jac**2             &  
-            - RZ_jac_Z * (- dPSg1_dr * dRRg1_ds + dPSg1_ds * dRRg1_dr )       / RZ_jac**2
-  PSI_RZ = (- dPSg1_drr * dZZg1_ds*dRRg1_ds - dPSg1_dss * dRRg1_dr*dZZg1_dr                           &
-            + dPSg1_drs * (dZZg1_dr*dRRg1_ds  + dZZg1_ds*dRRg1_dr  )                                  &
-            - dPSg1_dr  * (dRRg1_drs*dZZg1_ds - dRRg1_dss*dZZg1_dr )                                  &
-            - dPSg1_ds  * (dRRg1_drs*dZZg1_dr - dRRg1_drr*dZZg1_ds )  )       / RZ_jac**2             &      
-            - RZ_jac_R * (- dPSg1_dr * dRRg1_ds + dPSg1_ds * dRRg1_dr )       / RZ_jac**2
-
   newnode_list%node(i)%values(1,1,1) = PSg1
   newnode_list%node(i)%values(1,2,1) = PSI_R * newnode_list%node(i)%x(1,2,1) + PSI_Z * newnode_list%node(i)%x(1,2,2)
   newnode_list%node(i)%values(1,3,1) = PSI_R * newnode_list%node(i)%x(1,3,1) + PSI_Z * newnode_list%node(i)%x(1,3,2)
-  newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(1,4,1) &
-                                      +PSI_RR* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,3,1) &
-                                      +PSI_RZ* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,3,2) &
-                                      +PSI_Z * newnode_list%node(i)%x(1,4,2) &
-                                      +PSI_RZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,3,1) &
-                                      +PSI_ZZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,3,2)
-  if (n_order .ge. 5) then
-    newnode_list%node(i)%values(1,5,1) = PSI_R * newnode_list%node(i)%x(1,4,1) &
-                                        +PSI_RR* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,2,1) &
-                                        +PSI_RZ* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,2,2) &
-                                        +PSI_Z * newnode_list%node(i)%x(1,4,2) &
-                                        +PSI_RZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,2,1) &
-                                        +PSI_ZZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,2,2)
-    newnode_list%node(i)%values(1,6,1) = PSI_R * newnode_list%node(i)%x(1,4,1) &
-                                        +PSI_RR* newnode_list%node(i)%x(1,3,1) * newnode_list%node(i)%x(1,3,1) &
-                                        +PSI_RZ* newnode_list%node(i)%x(1,3,1) * newnode_list%node(i)%x(1,3,2) &
-                                        +PSI_Z * newnode_list%node(i)%x(1,4,2) &
-                                        +PSI_RZ* newnode_list%node(i)%x(1,3,2) * newnode_list%node(i)%x(1,3,1) &
-                                        +PSI_ZZ* newnode_list%node(i)%x(1,3,2) * newnode_list%node(i)%x(1,3,2)
-    newnode_list%node(i)%values(1,7:n_degrees,1) = 0.d0
-  endif
+  newnode_list%node(i)%values(1,4,1) = PSI_R * newnode_list%node(i)%x(1,4,1) + PSI_Z * newnode_list%node(i)%x(1,4,2)
 
   if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0
-  if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,6,1) = 0.d0
 
 enddo
+
+! --- Use Poisson to project psi variable from old grid onto new grid
+! --- At high order, this is the best way to do it.
+if (n_order .ge. 5) then
+  ! --- For some reason, Poisson needs to be called with -1 first (don't understand why, but gives NaN otherwise)
+  call poisson(my_id,-1,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, 3,1,1, &
+               psi_axis,psi_bnd,.true.,xcase,Z_xpoint,.false.,.false.,1)
+  ! --- Project variable
+  call Poisson(my_id,0,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, var_psi,var_psi,1, &
+               psi_axis,psi_bnd,.true.,xcase,Z_xpoint,.false.,.false.,1)
+endif
 
 newnode_list%node(index_xpoint  )%values(1,2:n_degrees,1) = 0.d0
 newnode_list%node(index_xpoint+1)%values(1,2:n_degrees,1) = 0.d0

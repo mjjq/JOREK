@@ -8,8 +8,9 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only: write_ps, force_central_node, SDN_threshold, fix_axis_nodes, freeboundary_equil,refinement
+use phys_module, only: write_ps, force_central_node, SDN_threshold, fix_axis_nodes
 use mod_grid_conversions
+use mod_poiss
 
 implicit none
 
@@ -21,6 +22,7 @@ type (type_strategic_points), intent(in)    :: stpts
 type (type_new_points)      , intent(in)    :: nwpts
 integer,                      intent(in)    :: n_grids(10), xcase
 
+! --- Unused (just for call to Poisson for psi-projection)
 type (type_bnd_node_list)    :: bnd_node_list
 type (type_bnd_element_list) :: bnd_elm_list
 
@@ -1199,26 +1201,21 @@ do i=1,newnode_list%n_nodes
                                      + PSI_ZZ * newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,3,2) &
                                      + PSI_R  * newnode_list%node(i)%x(1,4,1)                               &
                                      + PSI_Z  * newnode_list%node(i)%x(1,4,2)
-  if (n_order .ge. 5) then
-    newnode_list%node(i)%values(1,5,1) = PSI_R * newnode_list%node(i)%x(1,4,1) &
-                                        +PSI_RR* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,2,1) &
-                                        +PSI_RZ* newnode_list%node(i)%x(1,2,1) * newnode_list%node(i)%x(1,2,2) &
-                                        +PSI_Z * newnode_list%node(i)%x(1,4,2) &
-                                        +PSI_RZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,2,1) &
-                                        +PSI_ZZ* newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,2,2)
-    newnode_list%node(i)%values(1,6,1) = PSI_R * newnode_list%node(i)%x(1,4,1) &
-                                        +PSI_RR* newnode_list%node(i)%x(1,3,1) * newnode_list%node(i)%x(1,3,1) &
-                                        +PSI_RZ* newnode_list%node(i)%x(1,3,1) * newnode_list%node(i)%x(1,3,2) &
-                                        +PSI_Z * newnode_list%node(i)%x(1,4,2) &
-                                        +PSI_RZ* newnode_list%node(i)%x(1,3,2) * newnode_list%node(i)%x(1,3,1) &
-                                        +PSI_ZZ* newnode_list%node(i)%x(1,3,2) * newnode_list%node(i)%x(1,3,2)
-    newnode_list%node(i)%values(1,7:n_degrees,1) = 0.d0
-  endif
 
   if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0
-  if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,6,1) = 0.d0
 
 enddo
+
+! --- Use Poisson to project psi variable from old grid onto new grid
+! --- At high order, this is the best way to do it.
+if (n_order .ge. 5) then
+  ! --- For some reason, Poisson needs to be called with -1 first (don't understand why, but gives NaN otherwise)
+  call poisson(my_id,-1,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, 3,1,1, &
+               psi_axis,psi_bnd,.true.,xcase,Z_xpoint,.false.,.false.,1)
+  ! --- Project variable
+  call Poisson(my_id,0,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, var_psi,var_psi,1, &
+               psi_axis,psi_bnd,.true.,xcase,Z_xpoint,.false.,.false.,1)
+endif
 
 !-------------------------------- Empty Xpoints
 newnode_list%node(1)%values(1,2:n_degrees,1) = 0.d0

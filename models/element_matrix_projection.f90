@@ -9,6 +9,8 @@ use basis_at_gaussian
 use equil_info, only: ES
 use phys_module, only: xpoint, xcase
 use mod_F_profile
+use mod_interp
+use nodes_elements
 
 implicit none
 
@@ -34,6 +36,9 @@ real*8     :: zTe, dTe_dpsi, dTe_dpsi2, dTe_dz, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3,
 real*8     :: zrn, drn_dpsi, drn_dpsi2, drn_dz, drn_dz2, drn_dpsi_dz, drn_dpsi3, drn_dpsi2_dz, drn_dpsi_dz2
 real*8     :: zV,  dV_dpsi,  dV_dpsi2,  dV_dz,  dV_dz2,  dV_dpsi_dz,  dV_dpsi3,  dV_dpsi2_dz,  dV_dpsi_dz2
 real*8     :: var_RHS
+real*8     :: R_out,Z_out,s_out,t_out
+integer    :: ielm_out,ifail
+real*8     :: dd1,dd2,dd3,dd4,dd5
 
 ELM=0.d0
 RHS=0.d0
@@ -132,6 +137,18 @@ do ms=1, n_gauss
       var_RHS = zrn
     endif
     
+    ! --- Special case for psi, we interpolate from the old grid copied into grid_xpoint_data module
+    if (ivar_out .eq. var_psi) then
+      call find_RZ(node_list,element_list,x_g(ms,mt),y_g(ms,mt),R_out,Z_out,ielm_out,s_out,t_out,ifail)
+      if (ifail .ne. 0) then ! this should never happen...
+        write(*,'(A,2f18.7)')'Projection Warning: location not found on old grid',x_g(ms,mt),y_g(ms,mt)
+        var_RHS = 0.d0
+      else
+        call interp(node_list,element_list,ielm_out,1,1,s_out,t_out,psi,dd1,dd2,dd3,dd4,dd5)
+        var_RHS = psi
+      endif
+    endif
+
     ! --- Special case for current
     if (ivar_out .eq. var_zj) then
       if (with_TiTe) then

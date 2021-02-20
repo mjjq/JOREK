@@ -10,6 +10,8 @@ use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node, fix_axis_
 use mod_eqdsk_tools
 use mod_interp, only: interp_RZ, interp
 use mod_element_rtree
+use mod_grid_conversions
+use mod_poiss
 
 implicit none
 
@@ -20,6 +22,9 @@ type (type_node_list)       , intent(inout) :: newnode_list
 type (type_element_list)    , intent(inout) :: newelement_list
 integer,                      intent(in)    :: n_grids(10)
 
+! --- Unused (just for call to Poisson for psi-projection)
+type (type_bnd_node_list)    :: bnd_node_list
+type (type_bnd_element_list) :: bnd_elm_list
 
 integer             :: i, j, j2, k, l, my_id, ifail, n_tmp
 integer             :: i_elm1, i_vertex1, i_node1, i_node_save
@@ -92,8 +97,8 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
     size_0 = 1.d0
     size_p = 1.d0
     denom = ( dRP * dZ0 - dR0 * dZP)
-    size_0 = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /3.d0, dR0 * (RP-R0) + dZ0 * (ZP-Z0) )
-    size_P = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /3.d0, dRP * (R0-RP) + dZP * (Z0-ZP) )
+    size_0 = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /float(n_order), dR0 * (RP-R0) + dZ0 * (ZP-Z0) )
+    size_P = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /float(n_order), dRP * (R0-RP) + dZP * (Z0-ZP) )
 
     if ((R0-RP)**2 + (Z0-ZP)**2 .eq. 0.d0) then
       size_0 = 1.d0
@@ -118,6 +123,26 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
   newelement_list%element(k)%father     = 0
   newelement_list%element(k)%n_sons     = 0
 enddo
+
+if (n_order .ge. 5) then
+  call set_high_order_sizes(newelement_list)
+  call align_2nd_derivatives(node_list,element_list, newnode_list,newelement_list)
+  do i=1,newnode_list%n_nodes
+    newnode_list%node(i)%x(1,5:n_degrees,:) = 0.d0
+  enddo
+  ! --- The 1st Xpoint should have zero second derivatives...
+  newnode_list%node(1)%x(1,5:n_degrees,:) = 0.d0
+  newnode_list%node(2)%x(1,5:n_degrees,:) = 0.d0
+  newnode_list%node(3)%x(1,5:n_degrees,:) = 0.d0
+  newnode_list%node(4)%x(1,5:n_degrees,:) = 0.d0
+  ! --- The 2nd Xpoint should have zero second derivatives...
+  if (xcase .eq. 3) then
+    newnode_list%node(5)%x(1,5:n_degrees,:) = 0.d0
+    newnode_list%node(6)%x(1,5:n_degrees,:) = 0.d0
+    newnode_list%node(7)%x(1,5:n_degrees,:) = 0.d0
+    newnode_list%node(8)%x(1,5:n_degrees,:) = 0.d0
+  endif
+endif
 
 
 
@@ -201,31 +226,51 @@ do i=1,newnode_list%n_nodes
 
 enddo
 
+! --- Use Poisson to project psi variable from old grid onto new grid
+! --- At high order, this is the best way to do it.
+if (n_order .ge. 5) then
+  ! --- Temporary, just for projection
+  index = 0
+  do i=1,node_list%n_nodes
+    do k=1,n_degrees
+      index = index + 1
+      newnode_list%node(i)%index(k) = index
+    enddo
+  enddo
+  ! --- For some reason, Poisson needs to be called with -1 first (don't understand why, but gives NaN otherwise)
+  call poisson(0,-1,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, 3,1,1, &
+               0.0,1.0,.true.,xcase,Z_xpoint,.false.,.false.,1)
+  ! --- Project variable
+  call Poisson(0,0,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, var_psi,var_psi,1, &
+               0.0,1.0,.true.,xcase,Z_xpoint,.false.,.false.,1)
+endif
+
+
 !-------------------------------------------------------------------------------------------!
 !--------------------------- Fill in the values into the new grid --------------------------!
 !-------------------------------------------------------------------------------------------!
 write(*,*) '                 Copy new grid into old one '
 
 !-------------------------------- Empty Xpoints
-newnode_list%node(1)%values(1,2:4,1) = 0.d0
-newnode_list%node(2)%values(1,2:4,1) = 0.d0
-newnode_list%node(3)%values(1,2:4,1) = 0.d0
-newnode_list%node(4)%values(1,2:4,1) = 0.d0
+newnode_list%node(1)%values(1,2:n_degrees,1) = 0.d0
+newnode_list%node(2)%values(1,2:n_degrees,1) = 0.d0
+newnode_list%node(3)%values(1,2:n_degrees,1) = 0.d0
+newnode_list%node(4)%values(1,2:n_degrees,1) = 0.d0
 if (xcase .eq. 3) then
-  newnode_list%node(5)%values(1,2:4,1) = 0.d0
-  newnode_list%node(6)%values(1,2:4,1) = 0.d0
-  newnode_list%node(7)%values(1,2:4,1) = 0.d0
-  newnode_list%node(8)%values(1,2:4,1) = 0.d0
+  newnode_list%node(5)%values(1,2:n_degrees,1) = 0.d0
+  newnode_list%node(6)%values(1,2:n_degrees,1) = 0.d0
+  newnode_list%node(7)%values(1,2:n_degrees,1) = 0.d0
+  newnode_list%node(8)%values(1,2:n_degrees,1) = 0.d0
 endif
 
 !-------------------------------- Empty Axis
 if (xcase .ne. 3) then
   do j=5,4+n_tht-1
-    newnode_list%node(j)%values(1,2:4,1) = 0.d0
+    newnode_list%node(j)%values(1,2:n_degrees,1) = 0.d0
   enddo
 else
   do j=9,8+n_tht-2
-    newnode_list%node(j)%values(1,2:4,1) = 0.d0
+    newnode_list%node(j)%values(1,2:n_degrees,1) = 0.d0
   enddo
 endif
 
@@ -340,69 +385,55 @@ do i=1,node_list%n_nodes
         endif
       endif
     endif
-    
+
     ! Remove all but one node at first Xpoint
-    if ((i .eq. 2).and.(k.eq.1)) then
-      node_list%node(i)%index(k) = node_list%node(1)%index(k)
-      index = index - 1
+    if (i .eq. 2) then
+      if ( (k.eq.1) .or. (k.eq.3) .or. (k.eq.6) ) then
+        node_list%node(i)%index(k) = node_list%node(1)%index(k)
+        index = index - 1
+      endif
     endif
-    if ((i .eq. 2).and.(k.eq.3)) then
-      node_list%node(i)%index(k) = node_list%node(1)%index(k)
-      index = index - 1
+    if (i .eq. 3) then
+      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+        node_list%node(i)%index(k) = node_list%node(2)%index(k)
+        index = index - 1
+      endif
     endif
-    if ((i .eq. 3).and.(k.eq.1)) then
-      node_list%node(i)%index(k) = node_list%node(1)%index(k)
-      index = index - 1
+    if (i .eq. 4) then
+      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+        node_list%node(i)%index(k) = node_list%node(1)%index(k)
+        index = index - 1
+      endif
+      if ( (k.eq.3) .or. (k.eq.6) ) then
+        node_list%node(i)%index(k) = node_list%node(3)%index(k)
+        index = index - 1
+      endif
     endif
-    if ((i .eq. 3).and.(k.eq.2)) then
-      node_list%node(i)%index(k) = node_list%node(2)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.1)) then
-      node_list%node(i)%index(k) = node_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.2)) then
-      node_list%node(i)%index(k) = node_list%node(1)%index(k)
-      index = index - 1
-    endif
-    if ((i .eq. 4).and.(k.eq.3)) then
-      node_list%node(i)%index(k) = node_list%node(3)%index(k)
-      index = index - 1
-    endif
-  
+
     ! Remove all but one node at second Xpoint
-    if (xcase .eq. 3) then
-      if ((i .eq. 6).and.(k.eq.1)) then
+    if (i .eq. 6) then
+      if ( (k.eq.1) .or. (k.eq.3) .or. (k.eq.6) ) then
         node_list%node(i)%index(k) = node_list%node(5)%index(k)
         index = index - 1
       endif
-      if ((i .eq. 6).and.(k.eq.3)) then
-        node_list%node(i)%index(k) = node_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 7).and.(k.eq.1)) then
-        node_list%node(i)%index(k) = node_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 7).and.(k.eq.2)) then
+    endif
+    if (i .eq. 7) then
+      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
         node_list%node(i)%index(k) = node_list%node(6)%index(k)
         index = index - 1
       endif
-      if ((i .eq. 8).and.(k.eq.1)) then
+    endif
+    if (i .eq. 8) then
+      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
         node_list%node(i)%index(k) = node_list%node(5)%index(k)
         index = index - 1
       endif
-      if ((i .eq. 8).and.(k.eq.2)) then
-        node_list%node(i)%index(k) = node_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. 8).and.(k.eq.3)) then
+      if ( (k.eq.3) .or. (k.eq.6) ) then
         node_list%node(i)%index(k) = node_list%node(7)%index(k)
         index = index - 1
       endif
     endif
-  
+ 
   enddo  
   node_list%node(i)%constrained = .false.
 enddo
@@ -417,6 +448,7 @@ if (fix_axis_nodes) then
       endif
     enddo
   enddo
+  if (n_order .ge. 5) call set_high_order_sizes_on_axis(node_list,element_list)
 endif
 
 
@@ -516,6 +548,8 @@ use mod_eqdsk_tools
 use mod_interp, only: interp_RZ, interp
 use mod_element_rtree
 use phys_module, only:     n_wall_blocks, xpoint, R_geo, Z_geo
+use mod_grid_conversions
+use mod_poiss
 
 implicit none
 
@@ -526,6 +560,9 @@ type (type_node_list)       , intent(inout) :: newnode_list
 type (type_element_list)    , intent(inout) :: newelement_list
 integer,                      intent(in)    :: n_grids(10)
 
+! --- Unused (just for call to Poisson for psi-projection)
+type (type_bnd_node_list)    :: bnd_node_list
+type (type_bnd_element_list) :: bnd_elm_list
 
 integer             :: i, j, j2, k, l, my_id, ifail, n_tmp
 integer             :: i_elm1, i_vertex1, i_node1, i_node_save
@@ -595,8 +632,8 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
     size_0 = 1.d0
     size_p = 1.d0
     denom = ( dRP * dZ0 - dR0 * dZP)
-    size_0 = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /3.d0, dR0 * (RP-R0) + dZ0 * (ZP-Z0) )
-    size_P = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /3.d0, dRP * (R0-RP) + dZP * (Z0-ZP) )
+    size_0 = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /float(n_order), dR0 * (RP-R0) + dZ0 * (ZP-Z0) )
+    size_P = sign(sqrt((R0-RP)**2 + (Z0-ZP)**2) /float(n_order), dRP * (R0-RP) + dZP * (Z0-ZP) )
 
     if ((R0-RP)**2 + (Z0-ZP)**2 .eq. 0.d0) then
       size_0 = 1.d0
@@ -621,6 +658,15 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
   newelement_list%element(k)%father     = 0
   newelement_list%element(k)%n_sons     = 0
 enddo
+
+if (n_order .ge. 5) then
+  call set_high_order_sizes(newelement_list)
+  call align_2nd_derivatives(node_list,element_list, newnode_list,newelement_list)
+  do i=1,newnode_list%n_nodes
+    newnode_list%node(i)%x(1,7:n_degrees,:) = 0.d0
+  enddo
+endif
+
 
 
 

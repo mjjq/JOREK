@@ -87,7 +87,7 @@ do i=1, element_list%n_elements
       do iv=1, 4
 
         ! --- For bi-cubic elements
-        if (.false.) then
+        if (n_order .eq. 3) then
 
           im = MOD(iv,4) + 1
           n1 = element_list%element(i)%vertex(iv)

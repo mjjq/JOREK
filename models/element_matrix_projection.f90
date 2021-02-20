@@ -107,17 +107,17 @@ do ms=1, n_gauss
                            zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
       if (ivar_out .eq. var_rho) var_RHS = zn
     endif
-    if ( (ivar_out .eq. var_T) .or. (ivar_out .eq. var_zj) ) then
+    if ( (ivar_out .eq. var_T) .or. ( (ivar_out .eq. var_zj) .and. (.not. with_TiTe)) ) then
       call temperature    (xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(ms,mt), ES%psi_axis, ES%psi_bnd, &
                            zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
       if (ivar_out .eq. var_T) var_RHS = zT
     endif
-    if ( (ivar_out .eq. var_Ti) .or. (ivar_out .eq. var_zj) ) then
+    if ( (ivar_out .eq. var_Ti) .or. ( (ivar_out .eq. var_zj) .and. with_TiTe) ) then
       call temperature_i  (xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(ms,mt), ES%psi_axis, ES%psi_bnd, &
                            zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
       if (ivar_out .eq. var_Ti) var_RHS = zTi
     endif
-    if ( (ivar_out .eq. var_Te) .or. (ivar_out .eq. var_zj) ) then
+    if ( (ivar_out .eq. var_Te) .or. ( (ivar_out .eq. var_zj) .and. with_TiTe) ) then
       call temperature_e  (xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(ms,mt), ES%psi_axis, ES%psi_bnd, &
                            zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
       if (ivar_out .eq. var_Te) var_RHS = zTe

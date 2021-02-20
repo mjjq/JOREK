@@ -40,7 +40,7 @@ type (type_bnd_element_list) :: bnd_elm_list
 real*8, allocatable :: s_values(:), theta_sep(:), R_sep(:), Z_sep(:), R_max(:), Z_max(:), R_min(:), Z_min(:),s_tmp(:)
 real*8, allocatable :: R_wall_max(:), Z_wall_max(:), T_wall_par(:), R_wall_min(:), Z_wall_min(:)
 real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis
-real*8              :: R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2), psi_bnd
+real*8              :: R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2), psi_xpoint(2)
 real*8              :: PI, s_find(8), t_find(8), st_find(8), tht_x, theta, delta, ss, tmp1, tmp2, tan_max, tht_bnd, tht_ext
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds
@@ -98,7 +98,6 @@ close(23)
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
 call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-psi_bnd  = psi_xpoint(1)
 
 
 
@@ -1849,12 +1848,20 @@ enddo
 ! --- Use Poisson to project psi variable from old grid onto new grid
 ! --- At high order, this is the best way to do it.
 if (n_order .ge. 5) then
+  ! --- Temporary, just for projection
+  index = 0
+  do i=1,node_list%n_nodes
+    do k=1,n_degrees
+      index = index + 1
+      newnode_list%node(i)%index(k) = index
+    enddo
+  enddo
   ! --- For some reason, Poisson needs to be called with -1 first (don't understand why, but gives NaN otherwise)
   call poisson(0,-1,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, 3,1,1, &
-               psi_axis,psi_bnd,.true.,xcase,Z_xpoint,.false.,.false.,1)
+               0.0,1.0,.true.,xcase,Z_xpoint,.false.,.false.,1)
   ! --- Project variable
   call Poisson(0,0,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, var_psi,var_psi,1, &
-               psi_axis,psi_bnd,.true.,xcase,Z_xpoint,.false.,.false.,1)
+               0.0,1.0,.true.,xcase,Z_xpoint,.false.,.false.,1)
 endif
 
 newnode_list%node(index_xpoint  )%values(1,2:n_degrees,1) = 0.d0

@@ -48,7 +48,7 @@ real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
 real*8              :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
-real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis, psi_bnd
+real*8              :: psi_axis, R_axis, Z_axis, s_axis, t_axis
 real*8              :: R1, Z1, s_out, t_out, R_out, Z_out, RZ_jac, dRZ_jac_dR, dRZ_jac_dZ, PSI_R, PSI_Z, PSI_RR, PSI_ZZ, PSI_RZ
 real*8              :: R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
 character*4         :: label
@@ -76,20 +76,6 @@ if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
   psi_xpoint(2) = psi_xpoint(1)
 endif
 
-psi_bnd  = 0.d0
-if(xcase .eq. 1) psi_bnd = psi_xpoint(1)
-if(xcase .eq. 2) psi_bnd = psi_xpoint(2)
-if(xcase .eq. 3) then
-  if(psi_xpoint(2) .lt. psi_xpoint(1)) then
-    psi_bnd  = psi_xpoint(2)
-  else
-    psi_bnd  = psi_xpoint(1)
-  endif
-  ! If we have a symmetric double-null, force the single separatrix
-  if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
-    psi_bnd  = psi_xpoint(1)
-  endif
-endif
 
 
 !------------------------------------------------------------------------------------------------------------------------!
@@ -1209,12 +1195,20 @@ enddo
 ! --- Use Poisson to project psi variable from old grid onto new grid
 ! --- At high order, this is the best way to do it.
 if (n_order .ge. 5) then
+  ! --- Temporary, just for projection
+  index = 0
+  do i=1,node_list%n_nodes
+    do k=1,n_degrees
+      index = index + 1
+      newnode_list%node(i)%index(k) = index
+    enddo
+  enddo
   ! --- For some reason, Poisson needs to be called with -1 first (don't understand why, but gives NaN otherwise)
   call poisson(0,-1,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, 3,1,1, &
-               psi_axis,psi_bnd,.true.,xcase,Z_xpoint,.false.,.false.,1)
+               0.0,1.0,.true.,xcase,Z_xpoint,.false.,.false.,1)
   ! --- Project variable
   call Poisson(0,0,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, var_psi,var_psi,1, &
-               psi_axis,psi_bnd,.true.,xcase,Z_xpoint,.false.,.false.,1)
+               0.0,1.0,.true.,xcase,Z_xpoint,.false.,.false.,1)
 endif
 
 !-------------------------------- Empty Xpoints
@@ -1344,7 +1338,7 @@ do i=1,newnode_list%n_nodes
         index = index - 1
       endif
     endif
-    if (i .eq. 3) then
+    if (i .eq. 4) then
       if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
         node_list%node(i)%index(k) = node_list%node(1)%index(k)
         index = index - 1

@@ -1473,10 +1473,10 @@ enddo
 ! --- At high order, this is the best way to do it.
 if (n_order .ge. 5) then
   ! --- For some reason, Poisson needs to be called with -1 first (don't understand why, but gives NaN otherwise)
-  call poisson(my_id,-1,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, 3,1,1, &
+  call poisson(0,-1,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, 3,1,1, &
                psi_axis,psi_bnd,.true.,xcase,Z_xpoint,.false.,.false.,1)
   ! --- Project variable
-  call Poisson(my_id,0,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, var_psi,var_psi,1, &
+  call Poisson(0,0,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, var_psi,var_psi,1, &
                psi_axis,psi_bnd,.true.,xcase,Z_xpoint,.false.,.false.,1)
 endif
 

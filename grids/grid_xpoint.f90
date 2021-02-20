@@ -40,7 +40,7 @@ real*8              :: RRg1,dRRg1_dr,dRRg1_ds
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds
 real*8              :: PSg1,dPSg1_dr,dPSg1_ds,dPSg1_drs,dPSg1_drr,dPSg1_dss
 real*8,allocatable  :: R_polar(:,:,:),Z_polar(:,:,:),xout(:),xp(:),yp(:)
-real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z, PSI_RR, psi_ZZ, PSI_RZ
+real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z
 real*8, allocatable :: RR_new(:,:),ZZ_new(:,:),s_flux(:,:),t_flux(:,:),t_tht(:,:)
 integer,allocatable :: ielm_flux(:,:), keep(:,:,:), k_cross(:,:)
 integer             :: i, j, k, l, m, n_psi, n_flux_2, n_open_2, n_tht_2, n_psi_2, i2, j2
@@ -1368,7 +1368,7 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
   element_list%element(Index)%sons(:)   = 0
 enddo
 
-
+! --- Set element sizes for higher orders
 if (n_order .ge. 5) then
   call set_high_order_sizes(newelement_list)
   call align_2nd_derivatives(node_list,element_list, newnode_list,newelement_list)
@@ -1426,6 +1426,7 @@ do i=1,newnode_list%n_nodes
         index = index - 1
       endif
     endif
+
   enddo
   
   newnode_list%node(i)%constrained = .false.

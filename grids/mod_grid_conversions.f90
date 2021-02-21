@@ -191,7 +191,6 @@ real*8, parameter    :: tolerance = 1.d-5 ! convergence tolerance in absolute ps
 ! --- the grid has fine resolution. The further realignment, below, is probably
 ! --- not even needed...
 call approximate_2nd_derivatives(newnode_list,newelement_list)
-return 
 
 allocate( n_parents      (  newnode_list%n_nodes) )
 allocate( node_parents   (8,newnode_list%n_nodes) )

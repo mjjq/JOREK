@@ -411,26 +411,28 @@ do i=1,node_list%n_nodes
     endif
 
     ! Remove all but one node at second Xpoint
-    if (i .eq. 6) then
-      if ( (k.eq.1) .or. (k.eq.3) .or. (k.eq.6) ) then
-        node_list%node(i)%index(k) = node_list%node(5)%index(k)
-        index = index - 1
+    if (xcase .eq. 3) then
+      if (i .eq. 6) then
+        if ( (k.eq.1) .or. (k.eq.3) .or. (k.eq.6) ) then
+          node_list%node(i)%index(k) = node_list%node(5)%index(k)
+          index = index - 1
+        endif
       endif
-    endif
-    if (i .eq. 7) then
-      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
-        node_list%node(i)%index(k) = node_list%node(6)%index(k)
-        index = index - 1
+      if (i .eq. 7) then
+        if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+          node_list%node(i)%index(k) = node_list%node(6)%index(k)
+          index = index - 1
+        endif
       endif
-    endif
-    if (i .eq. 8) then
-      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
-        node_list%node(i)%index(k) = node_list%node(5)%index(k)
-        index = index - 1
-      endif
-      if ( (k.eq.3) .or. (k.eq.6) ) then
-        node_list%node(i)%index(k) = node_list%node(7)%index(k)
-        index = index - 1
+      if (i .eq. 8) then
+        if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+          node_list%node(i)%index(k) = node_list%node(5)%index(k)
+          index = index - 1
+        endif
+        if ( (k.eq.3) .or. (k.eq.6) ) then
+          node_list%node(i)%index(k) = node_list%node(7)%index(k)
+          index = index - 1
+        endif
       endif
     endif
  

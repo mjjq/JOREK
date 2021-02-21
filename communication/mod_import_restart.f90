@@ -974,36 +974,36 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_integer_reading(file_id,node_list%n_dof,"n_dof")
 
   ! -> Allocate temporary arrays 
-  call tr_allocate(t_x,     1,node_list%n_nodes,1,n_coord_tor_tmp,1,n_degrees,1,n_dim,         "node_list%x",     CAT_UNKNOWN)
-  call tr_allocate(t_values,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
-  call tr_allocate(t_deltas,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
+  call tr_allocate(t_x,     1,node_list%n_nodes,1,n_coord_tor_tmp,1,n_degrees_tmp,1,n_dim,         "node_list%x",     CAT_UNKNOWN)
+  call tr_allocate(t_values,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
+  call tr_allocate(t_deltas,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
  
 #ifdef fullmhd
-  call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_degrees, "node_list%psi_eq",  CAT_UNKNOWN)
-  call tr_allocate(t_Fprof_eq,1,node_list%n_nodes,1,n_degrees, "node_list%Fprof_eq",CAT_UNKNOWN)
+  call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_degrees_tmp, "node_list%psi_eq",  CAT_UNKNOWN)
+  call tr_allocate(t_Fprof_eq,1,node_list%n_nodes,1,n_degrees_tmp, "node_list%Fprof_eq",CAT_UNKNOWN)
 #elif altcs
-  call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_degrees, "node_list%psi_eq",  CAT_UNKNOWN)
+  call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_degrees_tmp, "node_list%psi_eq",  CAT_UNKNOWN)
 #endif
  
-  call tr_allocate(t_index,      1,node_list%n_nodes,1,n_degrees,"index",      CAT_UNKNOWN)
-  call tr_allocate(t_boundary,   1,node_list%n_nodes,            "boundary",   CAT_UNKNOWN)
-  call tr_allocate(t_axis_node,  1,node_list%n_nodes,            "axis_node",  CAT_UNKNOWN)
-  call tr_allocate(t_parents,    1,node_list%n_nodes,1,2,        "parent",     CAT_UNKNOWN)
-  call tr_allocate(t_parent_elem,1,node_list%n_nodes,            "parent_elem",CAT_UNKNOWN)
-  call tr_allocate(t_ref_lambda, 1,node_list%n_nodes,            "ref_lambda" ,CAT_UNKNOWN)
-  call tr_allocate(t_ref_mu,     1,node_list%n_nodes,            "ref_mu",     CAT_UNKNOWN)
-  call tr_allocate(t_constrained,1,node_list%n_nodes,            "constrained",CAT_UNKNOWN)
+  call tr_allocate(t_index,      1,node_list%n_nodes,1,n_degrees_tmp,"index",      CAT_UNKNOWN)
+  call tr_allocate(t_boundary,   1,node_list%n_nodes,                "boundary",   CAT_UNKNOWN)
+  call tr_allocate(t_axis_node,  1,node_list%n_nodes,                "axis_node",  CAT_UNKNOWN)
+  call tr_allocate(t_parents,    1,node_list%n_nodes,1,2,            "parent",     CAT_UNKNOWN)
+  call tr_allocate(t_parent_elem,1,node_list%n_nodes,                "parent_elem",CAT_UNKNOWN)
+  call tr_allocate(t_ref_lambda, 1,node_list%n_nodes,                "ref_lambda" ,CAT_UNKNOWN)
+  call tr_allocate(t_ref_mu,     1,node_list%n_nodes,                "ref_mu",     CAT_UNKNOWN)
+  call tr_allocate(t_constrained,1,node_list%n_nodes,                "constrained",CAT_UNKNOWN)
 
   ! type_element, element_list%n_elements
-  call tr_allocate(t_vertex,      1,element_list%n_elements,1,n_vertex_max,             "vertex",CAT_UNKNOWN)
-  call tr_allocate(t_neighbours,  1,element_list%n_elements,1,n_vertex_max,             "neighbours",CAT_UNKNOWN)
-  call tr_allocate(t_size,        1,element_list%n_elements,1,n_vertex_max,1,n_degrees, "size",CAT_UNKNOWN)
-  call tr_allocate(t_father,      1,element_list%n_elements,                            "father",CAT_UNKNOWN)
-  call tr_allocate(t_n_sons,      1,element_list%n_elements,                            "n_sons",CAT_UNKNOWN)
-  call tr_allocate(t_n_gen,       1,element_list%n_elements,                            "n_gen",CAT_UNKNOWN)
-  call tr_allocate(t_sons,        1,element_list%n_elements,1,4,                        "sons",CAT_UNKNOWN)
-  call tr_allocate(t_contain_node,1,element_list%n_elements,1,5,                        "contain_node",CAT_UNKNOWN)
-  call tr_allocate(t_nref,        1,element_list%n_elements,                            "nref",CAT_UNKNOWN)
+  call tr_allocate(t_vertex,      1,element_list%n_elements,1,n_vertex_max,                 "vertex",CAT_UNKNOWN)
+  call tr_allocate(t_neighbours,  1,element_list%n_elements,1,n_vertex_max,                 "neighbours",CAT_UNKNOWN)
+  call tr_allocate(t_size,        1,element_list%n_elements,1,n_vertex_max,1,n_degrees_tmp, "size",CAT_UNKNOWN)
+  call tr_allocate(t_father,      1,element_list%n_elements,                                "father",CAT_UNKNOWN)
+  call tr_allocate(t_n_sons,      1,element_list%n_elements,                                "n_sons",CAT_UNKNOWN)
+  call tr_allocate(t_n_gen,       1,element_list%n_elements,                                "n_gen",CAT_UNKNOWN)
+  call tr_allocate(t_sons,        1,element_list%n_elements,1,4,                            "sons",CAT_UNKNOWN)
+  call tr_allocate(t_contain_node,1,element_list%n_elements,1,5,                            "contain_node",CAT_UNKNOWN)
+  call tr_allocate(t_nref,        1,element_list%n_elements,                                "nref",CAT_UNKNOWN)
 
   if (rst_hdf5_version .eq. 2) then
     call HDF5_array4D_reading(file_id,t_x,        'x')
@@ -1049,33 +1049,39 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   if (any(new_mode .ne. 0)) write(*,'(a,999i4)') ' need initialization  : ', new_mode
   
   do i=1,node_list%n_nodes
-    node_list%node(i)%x = t_x(i,:,:,:) 
+    do j=1,n_degrees_tmp
+      node_list%node(i)%x(:,j,:) = t_x(i,:,j,:) 
+    enddo
 
     node_list%node(i)%values = 0.d0 
     node_list%node(i)%deltas = 0.d0 
 
     do m=1,n_tor_tmp,2
       do k=1, n_tor,2 
-        if (mode_tmp(m) .eq. mode(k)) then
-          if ((m .eq. 1) .and. (k.eq.1)) then
-            node_list%node(i)%values(k,:,1:n_var_tmp)   = t_values(i,m,:,1:n_var_tmp)
-            node_list%node(i)%deltas(k,:,1:n_var_tmp)   = t_deltas(i,m,:,1:n_var_tmp)
-          else
-            node_list%node(i)%values(k-1,:,1:n_var_tmp) = t_values(i,m-1,:,1:n_var_tmp)
-            node_list%node(i)%deltas(k-1,:,1:n_var_tmp) = t_deltas(i,m-1,:,1:n_var_tmp) 
-            node_list%node(i)%values(k,:,1:n_var_tmp)   = t_values(i,m,:,1:n_var_tmp) 
-            node_list%node(i)%deltas(k,:,1:n_var_tmp)   = t_deltas(i,m,:,1:n_var_tmp)
+        do j=1,n_degrees_tmp
+          if (mode_tmp(m) .eq. mode(k)) then
+            if ((m .eq. 1) .and. (k.eq.1)) then
+              node_list%node(i)%values(k,j,1:n_var_tmp)   = t_values(i,m,j,1:n_var_tmp)
+              node_list%node(i)%deltas(k,j,1:n_var_tmp)   = t_deltas(i,m,j,1:n_var_tmp)
+            else
+              node_list%node(i)%values(k-1,j,1:n_var_tmp) = t_values(i,m-1,j,1:n_var_tmp)
+              node_list%node(i)%deltas(k-1,j,1:n_var_tmp) = t_deltas(i,m-1,j,1:n_var_tmp) 
+              node_list%node(i)%values(k,j,1:n_var_tmp)   = t_values(i,m,j,1:n_var_tmp) 
+              node_list%node(i)%deltas(k,j,1:n_var_tmp)   = t_deltas(i,m,j,1:n_var_tmp)
+            end if
           end if
-        end if
+        end do
       end do
     end do
 
     ! --- Split "total" temperature into electron and ion temperature
     if ( import_3xx_4xx ) then
-      node_list%node(i)%values(:,:,8) = node_list%node(i)%values(:,:,6) / 2.d0
-      node_list%node(i)%deltas(:,:,8) = node_list%node(i)%deltas(:,:,6) / 2.d0
-      node_list%node(i)%values(:,:,6) = node_list%node(i)%values(:,:,6) / 2.d0
-      node_list%node(i)%deltas(:,:,6) = node_list%node(i)%deltas(:,:,6) / 2.d0
+      do j=1,n_degrees_tmp
+        node_list%node(i)%values(:,j,8) = node_list%node(i)%values(:,j,6) / 2.d0
+        node_list%node(i)%deltas(:,j,8) = node_list%node(i)%deltas(:,j,6) / 2.d0
+        node_list%node(i)%values(:,j,6) = node_list%node(i)%values(:,j,6) / 2.d0
+        node_list%node(i)%deltas(:,j,6) = node_list%node(i)%deltas(:,j,6) / 2.d0
+      end do
     end if
 
 
@@ -1086,7 +1092,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     node_list%node(i)%psi_eq   = t_psi_eq(i,:)
 #endif
 
-    node_list%node(i)%index = t_index(i,:)
+    node_list%node(i)%index(1:n_degrees_tmp) = t_index(i,1:n_degrees_tmp)
     node_list%node(i)%boundary = t_boundary(i)
     if (t_axis_node(i) == 'T') then
        node_list%node(i)%axis_node = .true.
@@ -1117,7 +1123,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   do i=1,element_list%n_elements
     element_list%element(i)%vertex	 = t_vertex(i,:)
     element_list%element(i)%neighbours   = t_neighbours(i,:)
-    element_list%element(i)%size	 = t_size(i,:,:)
+    element_list%element(i)%size(:,1:n_degrees_tmp) = t_size(i,:,1:n_degrees_tmp)
     element_list%element(i)%father	 = t_father(i)
     element_list%element(i)%n_sons	 = t_n_sons(i)
     element_list%element(i)%n_gen	 = t_n_gen(i)

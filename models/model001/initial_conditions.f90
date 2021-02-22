@@ -67,11 +67,18 @@ if (my_id .eq. 0) then
     Z_s  = node_list%node(i)%x(1,2,2)
     Z_t  = node_list%node(i)%x(1,3,2)
     Z_st = node_list%node(i)%x(1,4,2)
-        
-    node_list%node(i)%values(1,1,2) = W
-    node_list%node(i)%values(1,2,2) = W_R * R_s + W_z * Z_s                                      
-    node_list%node(i)%values(1,3,2) = W_R * R_t + W_z * Z_t 
-    node_list%node(i)%values(1,4,2) = W_RR * R_s*R_t + W_R * R_st + W_RZ * (R_s*Z_t+R_t*Z_s) + W_ZZ*Z_s*Z_t + W_Z*Z_st
+     
+    if(treat_axis .and. node_list%node(i)%axis_node) then   
+      node_list%node(i)%values(1,1,2) = W
+      node_list%node(i)%values(1,2,2) = W_R
+      node_list%node(i)%values(1,3,2) = 0.d0
+      node_list%node(i)%values(1,4,2) = W_Z
+    else
+      node_list%node(i)%values(1,1,2) = W
+      node_list%node(i)%values(1,2,2) = W_R * R_s + W_z * Z_s                                      
+      node_list%node(i)%values(1,3,2) = W_R * R_t + W_z * Z_t 
+      node_list%node(i)%values(1,4,2) = W_RR * R_s*R_t + W_R * R_st + W_RZ * (R_s*Z_t+R_t*Z_s) + W_ZZ*Z_s*Z_t + W_Z*Z_st
+    endif
 
     node_list%node(i)%deltas = 0.d0
     

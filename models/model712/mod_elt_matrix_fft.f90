@@ -307,7 +307,6 @@ real*8     :: Dn0R, Dn0Z, Dn0p
 real*8     :: source_pellet, source_volume
 
 ! --- Ion-electron energy transfer
-logical    :: thermalization
 real*8     :: nu_e_bg, lambda_e_bg, dTi_e, dTe_i
 real*8     :: dnu_e_bg_dTi, dnu_e_bg_dTe
 real*8     :: dnu_e_bg_drho, dnu_e_bg_drhon
@@ -351,9 +350,6 @@ eta_ARAZ  = 0.d0  ! =0.0 to switch off resistive   terms for AR and AZ equations
 tauIC_ARAZ= 0.d0  ! =0.0 to switch off diamagnetic terms for AR and AZ equations
 if (eta_ARAZ_on  ) eta_ARAZ   = 1.d0 ! switched on by default
 if (tauIC_ARAZ_on) tauIC_ARAZ = 1.d0 ! switched on by default
-
-! --- Energy transfer between Ti and Te
-thermalization = .false.
 
 ! --- Initialise
 ELM_p  = 0.d0

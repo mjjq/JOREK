@@ -59,6 +59,7 @@ module mod_particle_types
     real*8    :: Bn_k          !< B   (amplitude, current step)
     real*8    :: dBn_k(3)      !< dB  (derivatives of Bn, current step)
     real*8    :: Bnorm_k(3)    !< normalised B (current step)
+    real*8    :: E_k(3)        !< electric field (current step)
   end type particle_gc_Qin
 
   !> For most kinetic methods the velocity is required at time \(t\)

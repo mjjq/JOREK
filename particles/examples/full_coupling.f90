@@ -451,7 +451,7 @@ do while (.not. sim%stop_now)
 
   if (use_ncs) then
     write(*,*) 'GATHER TIME : ',jorek_feedback%rhs_gather_time
-    jorek_feedback%rhs = feedback_rhs / jorek_feedback%rhs_gather_time !* TWOPI
+    jorek_feedback%rhs = feedback_rhs / jorek_feedback%rhs_gather_time
     jorek_feedback%rhs_gather_time = 0.d0
   else
     jorek_feedback%rhs = feedback_rhs 

@@ -91,6 +91,7 @@ particle_out%dAstar_k = particle_in%dAstar_k
 particle_out%Bn_k     = particle_in%Bn_k
 particle_out%dBn_k    = particle_in%dBn_k
 particle_out%Bnorm_k  = particle_in%Bnorm_k
+particle_out%E_k      = particle_in%E_k
 
 return
 end
@@ -129,7 +130,7 @@ particle_out%weight= particle_in%weight
 return
 end
    
-subroutine convert_gc_vpar_to_kinetic(node_list, element_list, particle_in, B, mass, n_points, particle_out)
+subroutine convert_gc_vpar_to_kinetic(node_list, element_list, particle_in, B, mass, n_phases, particle_out)
   use constants
   use data_structure
   use mod_pusher_tools, only: get_orthonormals
@@ -142,11 +143,23 @@ subroutine convert_gc_vpar_to_kinetic(node_list, element_list, particle_in, B, m
   type(particle_gc_vpar), intent(in)  :: particle_in
   real*8, intent(in)   :: B(3)        !< Magnetic field at GC position [T]
   real*8, intent(in)   :: mass        !< Mass of the particle [amu]
-  integer, intent(in)  :: n_points    !< number of points of the gyro orbit
-  type(particle_kinetic_leapfrog), intent(out)  :: particle_out(n_points)
+  integer, intent(in)  :: n_phases    !< number of points of the gyro orbit
+  type(particle_kinetic_leapfrog), intent(out)  :: particle_out(:)
 
   real*8  :: B_norm, v_perp, v_par, B_hat(3), e1(3), e2(3), chi, chi_start
   integer :: i, ifail
+
+  if (n_phases .lt. 0) return
+
+  if (n_phases .eq. 0) then             ! return a kinetic particle at gyro-centre
+    particle_out(1)%x      = particle_in%x
+    particle_out(1)%st     = particle_in%st
+    particle_out(1)%i_elm  = particle_in%i_elm
+    particle_out(1)%q      = particle_in%q
+    particle_out(1)%weight = particle_in%weight
+    return
+  endif
+
 
   B_norm = norm2(B)
   B_hat  = B/B_norm
@@ -156,32 +169,28 @@ subroutine convert_gc_vpar_to_kinetic(node_list, element_list, particle_in, B, m
   ! Define chi as the angle of the velocity vector with b x r
   call get_orthonormals(B_hat, e1, e2)
 
-  write(*,'(A,6e18.10)') ' e1 :',e1
-  write(*,'(A,6e18.10)') ' e2 :',e2
-
   call random_number(chi_start)
-  chi_start = 0.75d0
+ ! chi_start = 0.d0
+
   chi_start = chi_start * TWOPI ! replace with pcg32
 
-  do i = 1, n_points
+  do i = 1, n_phases
     
-    chi = chi_start + real(i-1,8) / real(n_points,8) * TWOPI
+    chi = chi_start + real(i-1,8) / real(n_phases,8) * TWOPI
 
     particle_out(i)%v  = particle_in%vpar * B_hat + v_perp * (cos(chi) * e1 + sin(chi) * e2)
 
-    write(*,'(A,6e18.10)') ' chi             :',chi
-    write(*,'(A,6e18.10)') ' cos e1 + sin e2 :',cos(chi) * e1 + sin(chi) * e2
- 
+    particle_out(i)%q      = particle_in%q
+    particle_out(i)%weight = particle_in%weight
+
     if (particle_in%q .ne. 0) then
 
+      !CHECK for phi! gyro orbit should be in the plane perpendicular to B
       particle_out(i)%x = particle_in%x - (mass*ATOMIC_MASS_UNIT*cross_product(particle_out(i)%v,B_hat))/(real(particle_in%q,8)*EL_CHG*B_norm)
 
       call find_RZ_nearby(node_list, element_list, &
-      particle_in%x(1),     particle_in%x(2),     particle_in%st(1),     particle_in%st(2),     particle_in%i_elm, &
-      particle_out(i)%x(1), particle_out(i)%x(2), particle_out(i)%st(1), particle_out(i)%st(2), particle_out(i)%i_elm, ifail)
-write(*,*) 'vpar  : ',particle_in%vpar * B_hat      
-write(*,*) 'vperp : ',+ v_perp * (cos(chi) * e1 + sin(chi) * e2) 
-write(*,'(2i3,8e18.10)') i,ifail,particle_out(i)%x,particle_out(i)%v
+             particle_in%x(1),     particle_in%x(2),     particle_in%st(1),     particle_in%st(2),     particle_in%i_elm, &
+             particle_out(i)%x(1), particle_out(i)%x(2), particle_out(i)%st(1), particle_out(i)%st(2), particle_out(i)%i_elm, ifail)
     else
 
       particle_out(i)%x     = particle_in%x
@@ -221,10 +230,11 @@ particle_Qin%dAstar_k = qom * dA_k + particle_Qin%vpar * dbnorm_k
 particle_Qin%Bn_k     = Bn_k   
 particle_Qin%dBn_k    = dBn_k   
 particle_Qin%Bnorm_k  = Bnorm_k 
+particle_Qin%E_k      = E_k 
 
 call copy_particle_gc_Qin_to_Vpar(particle_Qin, particle_Vpar)
 
-call push_gc_rk4(fields, particle_Vpar, mass, -timestep, 1)      ! should be only the very first call
+call push_gc_rk4(fields, particle_Vpar, mass, -timestep, 1, 0)      ! should be only the very first call
 
 particle_Qin%x_m    = particle_Vpar%x
 particle_Qin%vpar_m = particle_Vpar%vpar
@@ -263,7 +273,7 @@ particle_Qin%Astar_m  =  qom * A_m + particle_Qin%vpar *  Bnorm_m
 
 call copy_particle_gc_Qin_to_Vpar(particle_Qin, particle_Vpar)
 
-call push_gc_rk4(fields, particle_Vpar, mass, timestep, 1)      ! should be only the very first call
+call push_gc_rk4(fields, particle_Vpar, mass, timestep, 1, 0)      ! should be only the very first call
 
 particle_Qin%x_m    = particle_Qin%x
 particle_Qin%vpar_m = particle_Qin%vpar
@@ -280,6 +290,7 @@ particle_Qin%dAstar_k = qom * dA_k + particle_Qin%vpar * dbnorm_k
 particle_Qin%Bn_k     = Bn_k   
 particle_Qin%dBn_k    = dBn_k   
 particle_Qin%Bnorm_k  = Bnorm_k 
+particle_Qin%E_k      = E_k 
 
 return
 end
@@ -303,6 +314,8 @@ real*8 :: Astar_p(3), dAstar_p(3,3)
 real*8 :: newton_rhs(3), newton_matrix(3,3), residue, mp_k, wp_k, mp_p, wp_p, mp_m, wp_m
 integer :: info, ifail, ipiv(3), iter, i, j, it, i_elm_k, i_elm_p
   
+if (particle_Qin%i_elm .le. 0) return
+
 qom = particle_Qin%q * EL_CHG / (mass * ATOMIC_MASS_UNIT) 
 
 do it=1, n_steps
@@ -316,7 +329,7 @@ do it=1, n_steps
   !----------------------------- initial guess from linearised equations
   do j=1,3
     newton_rhs(j) = - 2.d0 * particle_Qin%bnorm_k(j) * (particle_Qin%vpar_m + vpar_k) &
-                    + 2.d0 * timestep * particle_Qin%mu * particle_Qin%dBn_k(j)
+                    + 2.d0 * timestep * (particle_Qin%mu * particle_Qin%dBn_k(j) - qom * particle_Qin%E_k(j))
     do i=1,3
       newton_matrix(i,j) = particle_Qin%dAstar_k(i,j) - particle_Qin%dAstar_k(j,i) &
                          - 2.d0 * particle_Qin%bnorm_k(j) *  particle_Qin%bnorm_k(i) / timestep
@@ -331,6 +344,8 @@ do it=1, n_steps
   call find_RZ_nearby(node_list, element_list, x_k(1), x_k(2), st_k(1), st_k(2), i_elm_k, &
                       particle_Qin%x(1), particle_Qin%x(2), particle_Qin%st(1), particle_Qin%st(2), particle_Qin%i_elm, ifail)
 
+  if (particle_Qin%i_elm .le. 0) return
+
   call fields%calc_Qin(time_0, particle_Qin%i_elm, particle_Qin%st, particle_Qin%x(3), &
                        A_p, dA_p, B_p, dB_p, Bnorm_p, dBnorm_p, bn_p, dbn_p, E_p)  
   !call fields%calc_Qin_analytic(particle_Qin%x(1), particle_Qin%x(2), particle_Qin%x(3), A_p, dA_p, B_p, dB_p, Bnorm_p, dBnorm_p, bn_p, dbn_p, E_p)  
@@ -339,11 +354,13 @@ do it=1, n_steps
   dAstar_p = qom * dA_p + particle_Qin%vpar * dbnorm_p
 
   !---------------------------- Newton iterations
-  do iter =1,5
+  do iter =1,8
  
      do i=1,3
 
-      newton_rhs(i) = (Astar_p(i) - particle_Qin%Astar_m(i)) + 2.d0 * timestep * particle_Qin%mu * particle_Qin%dBn_k(i) &
+      newton_rhs(i) = (Astar_p(i) - particle_Qin%Astar_m(i)) &
+                    
+                    + 2.d0 * timestep * (particle_Qin%mu * particle_Qin%dBn_k(i)  -  qom * particle_Qin%E_k(i)) &
 
                     - dot_product(particle_Qin%dAstar_k(:,i), particle_Qin%x - particle_Qin%x_m)
 !     if (i .eq. 3) write(*,*) it, iter, norm2(newton_rhs)
@@ -370,6 +387,8 @@ do it=1, n_steps
   
     call find_RZ_nearby(node_list, element_list, x_p(1), x_p(2), st_p(1), st_p(2), i_elm_p, &
                         particle_Qin%x(1), particle_Qin%x(2), particle_Qin%st(1), particle_Qin%st(2), particle_Qin%i_elm, ifail)
+  
+    if (particle_Qin%i_elm .le. 0) return
 
     call fields%calc_Qin(time_0, particle_Qin%i_elm, particle_Qin%st, particle_Qin%x(3), &
                          A_p, dA_p, B_p, dB_p, Bnorm_p, dBnorm_p, bn_p, dbn_p, E_p)  
@@ -382,11 +401,12 @@ do it=1, n_steps
 
 
   do j=1,3    
-    newton_rhs(j) = (Astar_p(j) - particle_Qin%Astar_m(j)) + 2.d0 * timestep * particle_Qin%mu * particle_Qin%dBn_k(j) &
+    newton_rhs(j) = (Astar_p(j) - particle_Qin%Astar_m(j)) &
+                 + 2.d0 * timestep * (particle_Qin%mu * particle_Qin%dBn_k(j) - qom * particle_Qin%E_k(j)) &
                  - dot_product(particle_Qin%dAstar_k(:,j), particle_Qin%x - particle_Qin%x_m)
   enddo
   residue = norm2(newton_rhs)
-!  if (residue .gt. 1.d-6) write(*,'(A,i4,e14.6)') ' Qin : residue : ',it, residue
+  if (residue .gt. 1.d-6) write(*,'(A,i4,e14.6)') ' Qin : residue : ',it, residue
 
 !  mp_p = Astar_p(3)
 !  wp_p = 0.25d0 * (vpar_k**2 + particle_Qin%vpar**2) + 0.5d0 * particle_Qin%mu * (particle_Qin%bn_k + bn_p)
@@ -399,22 +419,25 @@ do it=1, n_steps
   particle_Qin%Bn_k     = Bn_p
   particle_Qin%dBn_k    = dBn_p
   particle_Qin%Bnorm_k  = Bnorm_p
+  particle_Qin%E_k      = E_p
 
 enddo
 
 return
 end
 
-subroutine push_gc_rk4(fields, particle_gc, mass, timestep, n_steps)
+subroutine push_gc_rk4(fields, particle_gc, mass, timestep, n_steps, n_gyro_phases)
 use nodes_elements
 use mod_find_rz_nearby
 use mod_fields, only: fields_base
 implicit none
 class(fields_base)     :: fields
 type(particle_gc_vpar) :: particle_gc
-real*8, intent(in)     :: timestep ! [s]
-real*8, intent(in)     :: mass     ! [amu]
-integer, intent(in)    :: n_steps
+real*8, intent(in)     :: timestep      ! [s]
+real*8, intent(in)     :: mass          ! [amu]
+integer, intent(in)    :: n_steps       ! number of time steps 
+integer, intent(in)    :: n_gyro_phases ! number of gyro phases for gyro-averaging
+
 real*8 :: A_0(3), dA_0(3,3), B_0(3), dB_0(3,3), bn_0, dbn_0(3), Bnorm_0(3), dBnorm_0(3,3), E_0(3)
 real*8 :: A_1(3), dA_1(3,3), B_1(3), dB_1(3,3), bn_1, dbn_1(3), Bnorm_1(3), dBnorm_1(3,3), E_1(3)
 real*8 :: A_2(3), dA_2(3,3), B_2(3), dB_2(3,3), bn_2, dbn_2(3), Bnorm_2(3), dBnorm_2(3,3), E_2(3)
@@ -422,12 +445,21 @@ real*8 :: A_3(3), dA_3(3,3), B_3(3), dB_3(3,3), bn_3, dbn_3(3), Bnorm_3(3), dBno
 real*8 :: x_0(3), x_1(3), x_2(3), x_3(3), u_0, u_1, u_2, u_3, time_0, time_1, time_2, time_3
 real*8 :: delta_x1(3), delta_x2(3), delta_x3(3), delta_x4(3)
 real*8 :: delta_u1, delta_u2, delta_u3, delta_u4, qom, p_phi, energy
+
 type(particle_gc_vpar) :: p_0, p_1, p_2, p_3
-integer :: i, ifail
+type(particle_kinetic_leapfrog), allocatable  :: p_orbit(:) 
+integer :: i, ifail, n_phases
 
 qom = particle_gc%q * EL_CHG / (mass * ATOMIC_MASS_UNIT) 
 
 if (particle_gc%i_elm .le. 0) return
+
+n_phases = n_gyro_phases
+if (n_gyro_phases .eq. 0) then     ! evolve guiding centre instead of gyro centre
+  n_phases = 1
+endif
+
+allocate(p_orbit(n_phases))
 
 call copy_particle_gc_vpar(particle_gc,p_0)
 call copy_particle_gc_vpar(particle_gc,p_1)
@@ -436,6 +468,9 @@ call copy_particle_gc_vpar(particle_gc,p_3)
 
 call fields%calc_RK4(time_0, p_0%i_elm, p_0%st, p_0%x(3), A_0, dA_0, B_0, dB_0, Bnorm_0, dBnorm_0, bn_0, dbn_0, E_0)
 !call fields%calc_RK4_analytic(p_0%x(1), p_0%x(2), p_0%x(3), A_0, dA_0, B_0, dB_0, Bnorm_0, dBnorm_0, bn_0, dbn_0, E_0)
+
+!call convert_gc_vpar_to_kinetic(node_list, element_list, p_0, B_0, mass, n_gyro_phases, p_orbit)
+!call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_0)
 
 do i =1, n_steps
   
@@ -449,9 +484,12 @@ do i =1, n_steps
                                                
   if (p_1%i_elm .le. 0) return
     
-  call fields%calc_RK4(time_1, p_1%i_elm, p_1%st, p_1%x(3), A_1, dA_1, B_1, dB_1, Bnorm_1, dBnorm_1, bn_1, dbn_1, E_1)
+   call fields%calc_RK4(time_1, p_1%i_elm, p_1%st, p_1%x(3), A_1, dA_1, B_1, dB_1, Bnorm_1, dBnorm_1, bn_1, dbn_1, E_1)
 !  call fields%calc_RK4_analytic(p_1%x(1), p_1%x(2), p_1%x(3), A_1, dA_1, B_1, dB_1, Bnorm_1, dBnorm_1, bn_1, dbn_1, E_1)
 
+!  call convert_gc_vpar_to_kinetic(node_list, element_list, p_1, B_1, mass, n_gyro_phases, p_orbit)
+!  call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_1)
+  
   call rk4_step(p_1%x, p_1%vpar, qom, p_1%mu, E_1, B_1, Bnorm_1, dBnorm_1, dBn_1, delta_x2, delta_u2)
 
   p_2%x    = p_0%x    + 0.5d0 * timestep * delta_x2
@@ -461,9 +499,12 @@ do i =1, n_steps
                                                p_2%x(1), p_2%x(2), p_2%st(1), p_2%st(2), p_2%i_elm, ifail)
   if (p_2%i_elm .le. 0) return
   
-  call fields%calc_RK4(time_2, p_2%i_elm, p_2%st, p_2%x(3), A_2, dA_2, B_2, dB_2, Bnorm_2, dBnorm_2, bn_2, dbn_2, E_2)
+   call fields%calc_RK4(time_2, p_2%i_elm, p_2%st, p_2%x(3), A_2, dA_2, B_2, dB_2, Bnorm_2, dBnorm_2, bn_2, dbn_2, E_2)
 !  call fields%calc_RK4_analytic(p_2%x(1), p_2%x(2), p_2%x(3), A_2, dA_2, B_2, dB_2, Bnorm_2, dBnorm_2, bn_2, dbn_2, E_2)
-                           
+            
+!  call convert_gc_vpar_to_kinetic(node_list, element_list, p_2, B_2, mass, n_gyro_phases, p_orbit)
+!  call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_2)
+
   call rk4_step(p_2%x, p_2%vpar, qom, p_2%mu, E_2, B_2, Bnorm_2, dBnorm_2, dBn_2, delta_x3, delta_u3)
 
   p_3%x    = p_0%x    + timestep * delta_x3
@@ -477,6 +518,9 @@ do i =1, n_steps
   call fields%calc_RK4(time_3, p_3%i_elm, p_3%st, p_3%x(3), A_3, dA_3, B_3, dB_3, Bnorm_3, dBnorm_3, bn_3, dbn_3, E_3)
 !  call fields%calc_RK4_analytic(p_3%x(1), p_3%x(2), p_3%x(3), A_3, dA_3, B_3, dB_3, Bnorm_3, dBnorm_3, bn_3, dbn_3, E_3)
     
+!  call convert_gc_vpar_to_kinetic(node_list, element_list, p_3, B_3, mass, n_gyro_phases, p_orbit)
+!  call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_3)
+
   call rk4_step(p_3%x, p_3%vpar, qom, p_3%mu, E_3, B_3, Bnorm_3, dBnorm_3, dBn_3, delta_x4, delta_u4)
                                 
   p_0%x    = p_0%x    + timestep * (delta_x1 + 2.d0*delta_x2 + 2.d0*delta_x3 + delta_x4)/6.d0
@@ -518,7 +562,7 @@ subroutine rk4_step(x, vpar, qom, zmu, E, B, Bnorm, dBnorm, dB, delta_x, delta_u
 implicit none
 real*8 :: x(3), vpar, qom, zmu, A(3), dA(3,3), E(3), Bnorm(3), dBnorm(3,3), B(3), dB(3)
 real*8 :: Bstar(3), Estar(3), Bpar_star, delta_x(3), delta_u
-    
+  
   Bstar     = B + vpar * rot_tmp(x,Bnorm,dBnorm) / qom
   Bpar_star = dot_product(Bstar,Bnorm)
   Estar     = E - zmu * dB /qom

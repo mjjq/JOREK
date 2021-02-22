@@ -19,6 +19,9 @@ use mod_import_restart
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
    use mod_neutral_source
 #endif
+#if (!defined WITH_Neutrals) && (defined WITH_Impurities)
+   use mod_injection_source
+#endif
 
 implicit none
 
@@ -91,7 +94,7 @@ if (use_pellet) then
 
 endif
 
-#if (!defined WITH_Neutrals) && (defined WITH_Impurities)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   ! --- Read ADAS data and generate coronal equilibrium if needed
   call init_imp_adas(my_id)
 #endif

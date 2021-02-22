@@ -4,9 +4,10 @@ subroutine initialise_parameters(my_id, filename)
 use tr_module
 use phys_module
 use mumps_module,  only: no_zeros_mumps, mumps_ordering
-use pastix_module, only: no_zeros_pastix, pastix_smp_only, &
+use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
 use vacuum
+use pellet_module
 use live_data
 
 implicit none
@@ -14,16 +15,16 @@ implicit none
 ! --- Routine parameters
 integer,                      intent(in) :: my_id
 character(len=*),             intent(in) :: filename
+real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
-integer :: ierr, i, err
+integer :: ierr,err,i
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
-                restart, regrid, write_ps, bootstrap,               &
-                force_horizontal_Xline,                             &
+                restart, rst_format, regrid, bootstrap, write_ps,   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_leg_out, n_ext,         &
                 n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
@@ -37,73 +38,92 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 nout, xr1, sig1, xr2, sig2,                         &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
-                R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                n_pfc, n_tor_fft_thresh, manipulate_psi_map,        &
+                R_Z_psi_bnd_file,                                   &
+                force_horizontal_Xline,                            &
+                n_pfc, manipulate_psi_map,                          &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
                 grid_to_wall, RZ_grid_inside_wall,                  &
                 n_wall_blocks, n_ext_block,                         &
                 n_block_points_left,  n_block_points_right,         &
                 R_block_points_left,  R_block_points_right,         &
                 Z_block_points_left,  Z_block_points_right,         &
-                tokamak_device,                                     &
-                F0, time_evol_scheme,                               &
+                tokamak_device, thermalization,                     &
+                F0,                                                 &
+                gamma_sheath_i, gamma_sheath_e,                     &
+                density_reflection,                                 &
+                mach_one_bnd_integral,                              &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
-                central_density, central_mass,                      &
                 T_0,   T_1,   T_coef,                               &
                 Ti_0,  Ti_1,  Ti_coef,                              &
                 Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
-                ZK_i_par, ZK_i_perp, ZK_e_par, ZK_e_perp,           &
-                D_par, D_perp, ZK_par_max,                          &
-                Q_bar, sigma, gamma_sheath, gamma_stangeby,         &
-                V_0,V_1,V_coef,                			    &
-                particlesource,                                     &
-                heatsource_i, heatsource_e, tauIC, Wdia,            &
-                eta_num, visco_num, visco_par_num,                  &
-                D_perp_num, ZK_perp_num,                            &
+                ZK_par, ZK_i_par, ZK_e_par, ZK_par_max,             &
+                ZK_perp, ZK_i_perp, ZK_e_perp, D_par, D_perp,       &
+                heatsource_e, heatsource_i,                         &
+                particlesource, tauIC,                              &
+                eta_num, visco_num, visco_par_num, D_perp_num,      &
+                eta_num_T_dependent, visco_num_T_dependent,         &
+                ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
-                pellet_psi, pellet_delta_psi,                       &
+                pellet_psi, pellet_delta_psi, pellet_density,       &
+                pellet_velocity_R, pellet_velocity_Z,               &
+                central_density, central_mass,                      &
+                pellet_particles, use_pellet,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
-                xampl,xwidth,xsig,xtheta,xshift,xleft,xpoint,xcase, &
-                SDN_threshold,                                      &
-                D_perp_file, ZK_e_perp_file, ZK_i_perp_file,        &
-                rho_file, T_file, Ti_file, Te_file,                 &
-                ffprime_file, freeboundary_equil,                   &
-                freeboundary, resistive_wall, freeb_change_indices, &
+                xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
+                xcase, SDN_threshold, D_perp_file, ZK_perp_file,    &
+                rho_file, T_file, Ti_file, Te_file, ffprime_file,   &
+                rot_file,                                           &
+                freeboundary_equil, freeboundary,  freeb_change_indices, &
+                resistive_wall,                                     &
                 wall_resistivity, wall_resistivity_fact,            &
-                use_mumps_eq, use_pastix_eq, use_strumpack_eq,      &
-                use_mumps, mumps_ordering, use_strumpack,           &
+                bc_natural_open,                                    &
+                use_mumps, mumps_ordering,                          &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
+                n_tor_fft_thresh, use_strumpack,                    &
                 pastix_smp_only, refinement, force_central_node,    &
                 fix_axis_nodes,                                     &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
+                zkpar_T_dependent,                                  & 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
                 edgeparticlesource_sig,                             &
                 particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_i, heatsource_gauss_e,             &
                 heatsource_gauss_psin, heatsource_gauss_sig,        &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
-                produce_live_data,                                  &
-                keep_n0_const, linear_run, export_for_nemec,        &
-                NEO, neo_file, aki_neo_const, amu_neo_const,        &
-                gmres, gmres_max_iter,                              &
+                produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
-                tgnum, max_steps_noUpdate,                          &
-                RMP_on, RMP_har_cos, RMP_har_sin,                   &
+                tgnum,  pastix_pivot, max_steps_noUpdate,           &
+                keep_n0_const, linear_run, export_for_nemec,        &
+                V_0,V_1,V_coef, output_bnd_elements,                &
+                n_limiter, R_limiter, Z_limiter,                    &
+                R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
+                spi_tor_rot, tor_frequency,                         &
+                NEO, neo_file, aki_neo_const, amu_neo_const,        &
+                D_prof_neg, ZK_prof_neg,                            &
+                D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
+                rho_min,                                            &
+                corr_neg_temp_coef,                                 &
+                corr_neg_dens_coef, D_prof_neg, ZK_prof_neg,      &  
+                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
+                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
+                spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
+                spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
+                ng_radius_ratio, ng_radius_min, spi_angle,          &
+                spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
+                spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
+                delta_n_convection, nimp_bg,                        &
+                RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
-                output_bnd_elements,                                &
-                corr_neg_temp_coef, corr_neg_dens_coef,             &
-                wall_file,                                          &
-                first_target_point, last_target_point,              &
-                n_limiter, R_limiter, Z_limiter, bc_natural_open,   &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
@@ -114,44 +134,17 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
-                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
-                vert_FB_tact, start_VFB_ts, I_coils_max
-
+                pastix_maxthrd, eta_ohmic, centralize_harm_mat
 
 if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
+
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
   
   ! --- Model-specific presets
-  Te_file        = 'none'
-  Ti_file        = 'none'
-  ZK_e_perp_file = 'none'
-  ZK_i_perp_file = 'none'
-  
-  Ti_0   =  0.5d-6
-  Ti_1   =  0.5d-8
-  
-  Te_0   =  0.5d-6
-  Te_1   =  0.5d-8
-  
-  Ti_coef     = 0.d0
-  Ti_coef(1)  = -1.d0
-  Te_coef     = 0.d0
-  Te_coef(1)  = -1.d0
-
-  heatsource_i   = 0.5e-7
-  heatsource_e   = 0.5e-7
-
-  ZK_i_perp(:) = 0.d0
-  ZK_i_perp(1) = 1.d-5; ZK_i_perp(2) = 0.d0; ZK_i_perp(3)= 0.d0; ZK_i_perp(4)= 99.d0; ZK_i_perp(5) = 99.d0
-  ZK_i_par     = 1.d0
-  
-  ZK_e_perp(:) = 0.d0  
-  ZK_e_perp(1) = 1.d-5; ZK_e_perp(2) = 0.d0; ZK_e_perp(3)= 0.d0; ZK_e_perp(4)= 99.d0; ZK_e_perp(5) = 99.d0
-  ZK_e_par     = 1.d0
+  particlesource_psin = 100.d0
   
   ! --- Read input parameters from namelist.
   if (trim(filename) .ne. "__NO_FILENAME__" ) then
@@ -164,49 +157,37 @@ if (my_id .eq. 0) then
     close(42)
   else
     read(5,in1)
-  end if
+  endif
 
-  !==============================R_Z_psi_bnd==========================
-  if ( (n_boundary.ne.0) .and. (R_Z_psi_bnd_file /= 'none') ) then
+  ! --- Calculate normalisation factor for MGI source (related to its toroidal shape)
+  ns_tor_norm = ns_deltaphi * PI**0.5 * ERF(PI/ns_deltaphi)
+
+  if (trim(R_Z_psi_bnd_file) .ne. 'none') then
     ! --- Open the file.
     OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
     if ( err /= 0 ) then
       write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(R_Z_psi_bnd_file)//'.'
-      write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
-    else
-      write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary ' 
-      do i=1,n_boundary
-        read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
-        write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)  
-      enddo
-    endif    
-    CLOSE(243)
-  endif
-  !=========================================
-  
-  !==============================Limiter==========================
-  if (n_limiter.ne.0) then
-    ! --- Open the file.
-    OPEN(UNIT=244, FILE=wall_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
-    if ( err /= 0 ) then
-      write(*,*) 'ERROR in initialise_parameters: Cannot open file '//TRIM(wall_file)//'.'
-      write(*,*) 'Assuming data is in main input file '//TRIM(filename)//'.'
-    else
-      write(*,'(A)') ' wall info from wall_file: R_wall, Z_wall ' 
-      do i=1,n_limiter
-        read(244,*) R_limiter(i),Z_limiter(i)
-        write(*,*)  R_limiter(i),Z_limiter(i)
-      enddo
-    endif    
-    CLOSE(244)
+      stop
+    endif
+    write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary '
+    do i=1,n_boundary
+      read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+      write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
+    enddo
   endif
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
-  if (gamma_stangeby > -1.d89) then
-    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0 - 0.5d0*gamma)
+  if (gamma_e_stangeby > -1.d89) then
+    gamma_sheath_e = (gamma-1.d0) * (0.5d0*gamma_e_stangeby - 1.d0)
   else
-    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 + 0.5d0 * gamma )
+    gamma_e_stangeby = 2.d0 * ( gamma_sheath_e / (gamma-1.d0) + 1.d0 )
   end if
+  if (gamma_i_stangeby > -1.d89) then
+    gamma_sheath_i = (gamma-1.d0) * (0.5d0*gamma_i_stangeby - 1.d0)
+  else
+    gamma_i_stangeby = 2.d0 * ( gamma_sheath_i / (gamma-1.d0) + 1.d0 )
+  end if
+
 
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
@@ -216,10 +197,11 @@ if (my_id .eq. 0) then
     nstep_n    = 0
     nstep_n(1) = nstep
   endif
-  
+
   call allocate_live_data()
 
 endif
+
 
 keep_n0_const  = ( keep_n0_const .or. linear_run )
 ! --- Read numerical profiles for rho, T, and ff'.
@@ -227,6 +209,29 @@ call read_num_profiles(my_id)
 
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
-  
+
+! --- Initialize the shattered pellet position
+
+if ( my_id == 0 ) then
+  if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
+    write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
+    if (t_now > t_ns) then
+      write(*,*) "EXITING NOW!!!"
+      stop
+    end if
+  end if
+
+  if (using_spi) then
+    if (JET_MGI .or. ASDEX_MGI) then
+      write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
+      write(*,*) "JET_MGI:", JET_MGI
+      write(*,*) "ASDEX_MGI:", ASDEX_MGI
+      stop
+    else 
+      call init_spi()
+    end if
+  end if
+end if
+
 return
 end subroutine initialise_parameters

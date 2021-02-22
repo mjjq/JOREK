@@ -479,6 +479,7 @@ endif
     write(*,'(A,e12.4,2f10.5)') ' *** PELLET PARAMETERS : ',pellet_particles, pellet_R, pellet_Z
   endif
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   if (index_start >= 1) then
     if (allocated(xtime_radiation)) &
       call tr_deallocate(xtime_radiation,"xtime_radiation",CAT_UNKNOWN)
@@ -497,6 +498,7 @@ endif
     call tr_allocate(xtime_E_ion_power,1,index_start+nstep,"xtime_E_ion_power",CAT_UNKNOWN)
     read(21)  xtime_E_ion_power(1:index_start)
   end if
+#endif
 
   if (using_spi) then
     if (n_spi >= 1) then
@@ -725,10 +727,12 @@ endif
       do i=1,node_list%n_nodes
         node_list%node(i)%values(n_tor_tmp+1:n_tor,:,:)= 0.d0
         do j=n_tor_tmp+1, n_tor
-          node_list%node(i)%values(j,:,5)= amplitude * node_list%node(i)%values(1,:,5)
-          node_list%node(i)%values(j,:,6)= amplitude * node_list%node(i)%values(1,:,6)
-#if (JOREK_MODEL == 400)
-          node_list%node(i)%values(j,:,8)= amplitude * node_list%node(i)%values(1,:,8)
+          node_list%node(i)%values(j,:,var_rho)= amplitude * node_list%node(i)%values(1,:,var_rho)
+#ifdef WITH_TiTe
+          node_list%node(i)%values(j,:,var_Ti)= amplitude * node_list%node(i)%values(1,:,var_Ti)
+          node_list%node(i)%values(j,:,var_Te)= amplitude * node_list%node(i)%values(1,:,var_Te)
+#else
+          node_list%node(i)%values(j,:,var_T)  = amplitude * node_list%node(i)%values(1,:,var_T)
 #endif
 #ifdef fullmhd
           node_list%node(i)%values(j,:,var_AR)= amplitude * node_list%node(i)%values(1,:,var_AR)
@@ -1548,6 +1552,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
      call HDF5_real_reading(file_id,pellet_particles,"pellet_particles")
   endif
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   if (index_start >= 1) then
     if (allocated(xtime_radiation)) &
       call tr_deallocate(xtime_radiation,"xtime_radiation",CAT_UNKNOWN)
@@ -1566,6 +1571,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     call tr_allocate(xtime_E_ion_power,1,index_start+nstep,"xtime_E_ion_power",CAT_UNKNOWN)
     call HDF5_array1D_reading(file_id,xtime_E_ion_power,"xtime_E_ion_power")
   end if
+#endif
 
   if (using_spi) then
     if (n_spi >= 1) then
@@ -1727,7 +1733,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
           node_list%node(i)%values(m,:,:) = 0.d0
           node_list%node(i)%values(m,:,5)   = amplitude * node_list%node(i)%values(1,:,5)
           node_list%node(i)%values(m,:,6)   = amplitude * node_list%node(i)%values(1,:,6)
-#if (JOREK_MODEL == 400)
+#ifdef WITH_TiTe
           node_list%node(i)%values(m,:,8)= amplitude * node_list%node(i)%values(1,:,8)
 #endif
 #ifdef fullmhd

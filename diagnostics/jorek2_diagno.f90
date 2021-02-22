@@ -91,7 +91,7 @@ if (use_pellet) then
 
 endif
 
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+#if (!defined WITH_Neutrals) && (defined WITH_Impurities)
   ! --- Read ADAS data and generate coronal equilibrium if needed
   call init_imp_adas(my_id)
 #endif

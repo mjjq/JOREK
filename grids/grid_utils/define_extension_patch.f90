@@ -408,8 +408,8 @@ if (far_from_wall) then
     Z_block_points_right(i_ext,n_block_points_right(i_ext)) = node_list%node(i_lim_end)%x(1,1,2)
   endif
   close_to_grid = .true.
-  if (     (diff_min_beg .gt. far_from_wall_tolerance) &
-      .or. (diff_min_end .gt. far_from_wall_tolerance) ) close_to_grid = .false.
+  if (     (diff_min_beg .gt. wall_node_proximity_tolerance) &
+      .or. (diff_min_end .gt. wall_node_proximity_tolerance) ) close_to_grid = .false.
   
   if (close_to_grid) then
     ! --- Now step along boundary between these two nodes
@@ -456,7 +456,7 @@ if (far_from_wall) then
         index_lim(count) = i_node_next
         if (i_node_next .eq. i_lim_end) exit
         if ( (node_list%node(i_node_next)%boundary .eq. 3) .and. (count .ge. 2) ) then
-          write(*,*) 'Extended bnd nodes should not have a corner in the middle. Aborting...'
+          write(*,*) 'Extended bnd top nodes should not have a corner in the middle. Aborting...'
           stop
         endif
         i_node = i_node_next

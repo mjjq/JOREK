@@ -1,12 +1,13 @@
 module preconditioner_module
   use phys_module, only: modes_per_family, mode_families_modes, autodistribute_modes, n_mode_families, weights_per_family, &
                          autodistribute_ranks, ranks_per_family, centralize_harm_mat, use_strumpack
+  use mod_integer_types
 
   implicit none
 
   integer :: my_family_id
   integer, dimension(:), allocatable :: my_mode_set !< Mode number in local mode family used for preconditioner
-  integer, dimension(:), allocatable :: my_row_index !< Row indices of local mode family in global RHS  - can be replaced by logical
+  integer(kind=int_all), dimension(:), allocatable :: my_row_index !< Row indices of local mode family in global RHS  - can be replaced by logical
   real, dimension(:), allocatable :: my_row_factor !< Multiplying factor of local mode family in global RHS  - can be replaced by logical
   integer :: my_mode_set_n !< number of modes in local mode family
   integer, allocatable :: mode_families_ranks(:,:), rank_range(:)
@@ -179,17 +180,21 @@ module preconditioner_module
   !> Determine mapping from local to globar row index for the RHS
     use mod_parameters, only: n_tor
     use tr_module
+    use mod_integer_types
+
     implicit none
 
-    integer, intent(in) :: ndof
-    integer :: i, im, ndof_family
+    integer(kind=int_all), intent(in) :: ndof
+    integer(kind=int_all) :: i, ndof_family
+    integer(kind=int_all), parameter   :: Int1=1
+    integer :: im
 
     ndof_family = my_mode_set_n*ndof/n_tor
 
     if (allocated(my_row_index)) call tr_deallocate(my_row_index,"my_row_index",CAT_DMATRIX)
-    call tr_allocate(my_row_index,1,ndof_family,"my_row_index",CAT_DMATRIX)
+    call tr_allocate(my_row_index,Int1,ndof_family,"my_row_index",CAT_DMATRIX)
     if (allocated(my_row_factor)) call tr_deallocate(my_row_factor,"my_row_index",CAT_DMATRIX)
-    call tr_allocate(my_row_factor,1,ndof_family,"my_row_factor",CAT_DMATRIX)
+    call tr_allocate(my_row_factor,Int1,ndof_family,"my_row_factor",CAT_DMATRIX)
     my_row_factor = weights_per_family(my_family_id)
 
     do i = 0, ndof/n_tor - 1

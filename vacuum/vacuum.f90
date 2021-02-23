@@ -75,9 +75,6 @@ module vacuum
   integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   integer             :: n_iter_freeb                    !< Number of iterations for freeboundary equilibirum (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
 
-  !> @name Time-evolution PF coils parameters
-  real*8              :: PF_pert_start_time              !< Time to start a perturbation to speed-up VDEs
-  
   
   ! ### various variables, some need to be removed
   real*8, allocatable :: R_coils(:), Z_coils(:)          ! ### old
@@ -433,7 +430,6 @@ module vacuum
     
     n_iter_freeb         = 900
     
-    PF_pert_start_time   = 1.d99
     psi_offset_freeb     = 0.d0
 
   ! ---- Parameters for vertical feedback (VFB)
@@ -467,8 +463,8 @@ module vacuum
     sr%n_tor  = 0
     sr%n_tor0 = 0
     
-    if ( (my_id == 0) .and. (sum(pf_coils%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
-       write(*,*) 'WARNING: Poloidal field coil perturbation pf_coils%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
+    if ( (my_id == 0) .and. (sum(pf_coils%pert) > 0) .and. ( min(pf_coils%pert_start_time)>1.d30 ) ) then
+       write(*,*) 'WARNING: Poloidal field coil perturbation pf_coils%pert has been set by the user, but will not be applied since pert_start_time was not set to a reasonable value.'
     end if
     
   end subroutine vacuum_init

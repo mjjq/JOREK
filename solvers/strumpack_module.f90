@@ -82,17 +82,6 @@ module strumpack_module
       integer, intent(in) :: comm
     end subroutine spk_finalize
 
-    subroutine convert2csr(indx, n, m, nnz, irn, jcn, val) bind(C)
-      use iso_c_binding
-      use mod_integer_types
-      implicit none
-      integer(kind=C_INT_ALL), dimension(:), pointer, intent(in) :: irn,jcn
-      real(kind=C_DOUBLE), dimension(:), pointer, intent(in) :: val
-      integer(kind=C_INT), intent(in) :: indx
-      integer(kind=C_INT_ALL), intent(in) :: n, m
-      integer(kind=C_INT_ALL), intent(inout) :: nnz       
-    end subroutine convert2csr
-
   end interface
 
   contains
@@ -112,7 +101,7 @@ module strumpack_module
     subroutine strumpack_set_mat(n,nnz,irn,jcn,val,comm,update,distributed) bind(C)
         use, intrinsic :: iso_c_binding
         use mpi
-        use sorting_module, only : remove_duplicates
+        use sorting_module, only : remove_duplicates, convert2csr
         use mod_integer_types
 
         implicit none
@@ -137,8 +126,8 @@ module strumpack_module
         call MPI_COMM_SIZE(comm, ncpu, ierr)
 
         if ((minval(irn).lt.1).or.(maxval(irn).gt.n)) then
-          write(*,*) rank, ": Error: inconsistent row indices", minval(irn), maxval(irn)
-          !call exit(0)
+          write(*,*) rank, ": Error: inconsistent row indices", minval(irn), maxval(irn), n
+          call exit(0)
         endif
 
         if ((.not. dflag).and.(ncpu.gt.1)) then
@@ -165,7 +154,8 @@ module strumpack_module
             vall(i) = val(myelm(i))
           enddo
           dist(:) = dist(:) - indx ! convert ot c-indexing
-#if (defined(NOMKL)) || (defined(INTSIZE64))
+
+#if (!defined(USEMKL)) || (defined(INTSIZE64))
           call remove_duplicates(n,nnzloc,irnl,jcnl,vall)
 #endif
           call convert2csr(indx,nloc,n,nnzloc,irnl,jcnl,vall)
@@ -198,7 +188,7 @@ module strumpack_module
           nloc = dist(rank+2) - dist(rank+1)
           irn(:) = irn(:) - dist(rank+1) + 1 ! irn starts from 1
           dist(:) = dist(:) - indx
-#if (defined(NOMKL)) || (defined(INTSIZE64))
+#if (!defined(USEMKL)) || (defined(INTSIZE64))
           call remove_duplicates(n,nnz,irn,jcn,val)
 #endif
           call convert2csr(indx,nloc,n,nnz,irn,jcn,val)          
@@ -208,7 +198,7 @@ module strumpack_module
           ! case of ncpu = 1
           call distribute_rows(n,1)
           dist(:) = dist(:) - indx
-#if (defined(NOMKL)) || (defined(INTSIZE64))
+#if (!defined(USEMKL)) || (defined(INTSIZE64))
           call remove_duplicates(n,nnz,irn,jcn,val)
 #endif
           call convert2csr(indx,n,n,nnz,irn,jcn,val)

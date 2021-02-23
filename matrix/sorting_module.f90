@@ -1,12 +1,12 @@
 module sorting_module
 !> Contains subroutines to sort (in continuos ij index) 
-!  and remove duplicates from the sparse matrix as needed for STRUMPACK solver
+!  and remove duplicates from the sparse matrix as may be needed for STRUMPACK solver
 
   use iso_c_binding
   use mod_integer_types
   implicit none
   private
-  public remove_duplicates
+  public remove_duplicates, convert2csr
 
 #define INTSIZE 8
 #define CINT c_int64_t
@@ -20,7 +20,27 @@ interface
     integer(c_size_t),value :: elem_size
     type(c_funptr),value    :: compare
   end subroutine qsort
-end interface  
+
+
+  subroutine convert2csr(indx, n, m, nnz, irn, jcn, val) bind(C)
+    use iso_c_binding
+    use mod_integer_types
+    implicit none
+    integer(kind=C_INT_ALL), dimension(:), pointer, intent(in) :: irn,jcn
+    real(kind=C_DOUBLE), dimension(:), pointer, intent(in) :: val
+    integer(kind=C_INT_ALL), intent(in) :: n, m, indx
+    integer(kind=C_INT_ALL), intent(inout) :: nnz
+  end subroutine convert2csr
+
+  subroutine sortunique(nnz,ijn) bind(C)
+    use iso_c_binding
+    use mod_integer_types
+    implicit none
+    integer(kind=C_INT_ALL) :: nnz
+    integer(kind=CINT),dimension(:), pointer, intent(inout) :: ijn
+  end subroutine sortunique
+
+end interface
 
 contains
   integer(c_int) function compar(a, b) bind(C)
@@ -64,11 +84,13 @@ contains
     return
 
   end subroutine unique_sorted
-
   recursive function find_index(list,low,high,x) result(idx)
   !> Find index of element x in the list
+    use mod_integer_types
+    
+    integer(kind=INTSIZE), intent(in) :: x
     integer(kind=int_all), intent(in) :: low, high
-    integer(kind=INTSIZE), intent(in) :: list(:), x
+    integer(kind=INTSIZE), dimension(:), pointer :: list(:)
     integer(kind=int_all) :: mid
     integer(kind=INTSIZE) :: idx
 
@@ -104,14 +126,14 @@ contains
 
     integer(kind=int_all), intent(in) :: n
     integer(kind=int_all), intent(inout) :: nnz
-    integer(kind=C_INT_ALL), dimension(:), pointer :: irn, jcn
-    real(kind=C_DOUBLE), dimension(:), pointer :: val
+    integer(kind=C_INT_ALL), dimension(:), pointer  :: irn, jcn
+    real(kind=C_DOUBLE), dimension(:), pointer  :: val
 
     real(kind=C_DOUBLE), allocatable :: val_new(:)
     ! long integer is required for 1d representation of coordinate index
-    integer(kind=INTSIZE), allocatable :: ij(:), ij_new(:), new_ind(:)
+    integer(kind=INTSIZE), dimension(:), pointer :: ij, ij_new, new_ind
     integer(kind=INTSIZE) :: dum, i1, i2, i3
-    integer(kind=int_all) :: i, j, nnz0
+    integer(kind=int_all) :: i, j, nnz0, indmin, indmax
 
     allocate(ij(nnz), new_ind(nnz))
     do i = 1, nnz
@@ -120,21 +142,24 @@ contains
       i3 = int(jcn(i),kind=INTSIZE)
       ij(i) = i1*i2 + i3
     enddo
-    
-    nnz0 = nnz
-    call unique_sorted(ij,nnz)
 
+    nnz0 = nnz
+    call sortunique(nnz,ij)
+    !call unique_sorted(ij,nnz)
     if (nnz.ne.nnz0) write(*,*) "Number of nnz changed: nnz_old, nnz_new = ", nnz0, nnz
     
     ! find index of original element in the new (ordered) list
+    i1 = int(n,kind=INTSIZE)
+    indmin = 1; indmax = nnz;
     do i = 1, nnz0
       i1 = int(irn(i)-1,kind=INTSIZE)
       i2 = int(n,kind=INTSIZE)
       i3 = int(jcn(i),kind=INTSIZE)
       dum = i1*i2 + i3
-      new_ind(i) = find_index(ij,1,nnz,dum)
+      new_ind(i) = find_index(ij,indmin,indmax,dum)
     enddo
 
+    ! sum up possible duplicates
     allocate(val_new(nnz)); val_new = 0.0
     do i =1, nnz0
       val_new(new_ind(i)) = val_new(new_ind(i)) + val(i)

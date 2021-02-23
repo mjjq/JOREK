@@ -684,6 +684,15 @@ module phys_module
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral
   
+  !> @name Mode families preconditioner parameters
+  integer :: n_mode_families !< number of families
+  logical :: autodistribute_modes           !< use automatic or manual mode distribution
+  integer :: modes_per_family(n_tor)         !< Number of modes in families
+  integer :: mode_families_modes(n_tor,n_tor)    !< Modes belonging to families
+  real*8  :: weights_per_family(n_tor)         !< Multiplication factor of family's contribution to the full solution
+  logical :: autodistribute_ranks           !< use automatic or manual rank distribution
+  integer :: ranks_per_family(n_tor)         !< Number of MPI ranks per mode families
+  
   contains
   
 end module phys_module

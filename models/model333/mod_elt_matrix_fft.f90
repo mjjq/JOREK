@@ -15,7 +15,7 @@ contains
   !------------------------------------------------------------------------------------------------------------------------------
   !------------------------------------------------------------------------------------------------------------------------------
   subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
-  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g_arg, delta_s_arg, delta_t_arg)
+  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g_arg, delta_s_arg, delta_t_arg, i_tor_min, i_tor_max)
 
     ! --- Modules
     use equation_variables
@@ -43,6 +43,7 @@ contains
 
     ! --- Matrix elements and toroidal functions
     integer, intent(in) 			:: tid
+    integer, intent(in)                         :: i_tor_min, i_tor_max
 #define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
 #define DIM1 n_plane
 #define DIM2 1:n_vertex_max*n_var*(n_order+1)
@@ -75,6 +76,8 @@ contains
     
     ! --- Integration weight
     real*8     :: wst
+    logical    :: use_fft   
+    integer    :: n_tor_start, n_tor_end 
         
     ! --- Initialise rhs and lhs terms
     rhs_tmp  = 0.d0; rhs_k_tmp  = 0.d0
@@ -92,22 +95,30 @@ contains
         
     ! --- Take time evolution parameters from phys_module
     theta = time_evol_theta
-    zeta  = time_evol_zeta
+    !zeta  = time_evol_zeta
+    ! change zeta for variable dt
+    zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
     ! for cylinder geometry : epscyl = eps
     eps_cyl = 1.d0
 
-    ! --- If we're doing the fft, don't loop...
-    if (n_tor .gt. 3) then
-      n_tor_loop  = 1
-      n_tor_loop2 = 1
+    ! --- Do we need to use the FFT or non-FFT version?
+    if ( (i_tor_min == 1) .and. (i_tor_max == n_tor) ) then
+      ! In case of global matrix construction:
+      use_fft = n_tor > 3 
     else
-      n_tor_loop  = n_tor
-      n_tor_loop2 = n_tor
-    endif
-    	      
-
-
+      ! In case of "direct construction" of harmonic matrix never FFT:
+      use_fft = .false.
+    end if
+    
+    if ( use_fft ) then
+      ! In case of FFT, don't loop over toroidal harmonics:
+      n_tor_start = 1
+      n_tor_end   = 1
+    else
+      n_tor_start = i_tor_min
+      n_tor_end   = i_tor_max
+    end if
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!! Begin integration loop over Gaussian integration points !!!!!!!!!!!!
@@ -130,13 +141,14 @@ contains
 
     	    do i_order =1,n_order+1
 
-    	      do i_tor =1,n_tor_loop
+    	      do i_tor =n_tor_start, n_tor_end
 
     		! --- Index in the ELM matrix	    
-    		if (n_tor .gt. 3) then
+    		if (use_fft) then
     		  index_ij =       n_var*(n_order+1)*(i_vertex-1) +       n_var*(i_order-1) + 1
     		else
-    		  index_ij = n_tor*n_var*(n_order+1)*(i_vertex-1) + n_tor*n_var*(i_order-1) + i_tor
+    		  index_ij = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(i_vertex-1) + (n_tor_end - n_tor_start +1)*n_var*(i_order-1) + & 
+                             i_tor - n_tor_start +1
     		endif
 		
 	        ! --- Build test functions (which we choose to be the basis functions)
@@ -160,15 +172,15 @@ contains
     		
 
     		! --- Fill up the matrix
-    		if (n_tor .gt. 3) then
+    		if (use_fft) then
     		  do i_ij =1,n_var
-		    ij_tmp = index_ij + (i_ij-1)*n_tor_loop
+		    ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start +1)
 		    RHS_p(i_plane,ij_tmp) = RHS_p(i_plane,ij_tmp) + rhs_tmp  (i_ij) * wst
 		    RHS_k(i_plane,ij_tmp) = RHS_k(i_plane,ij_tmp) + rhs_k_tmp(i_ij) * wst
 		  enddo
     		else
     		  do i_ij =1,n_var
-		    ij_tmp = index_ij + (i_ij-1)*n_tor_loop
+		    ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start +1)
     		    RHS(ij_tmp) = RHS(ij_tmp) + (rhs_tmp(i_ij) + rhs_k_tmp(i_ij)) * wst
 		  enddo
     		endif
@@ -178,13 +190,14 @@ contains
 
     		  do j_order =1,n_order+1
 
-    		    do j_tor =1,n_tor_loop2
+    		    do j_tor =n_tor_start, n_tor_end 
 
     		      ! --- Index in the ELM matrix
-    		      if (n_tor .gt. 3) then
+    		      if (use_fft) then
     			index_kl =       n_var*(n_order+1)*(j_vertex-1) +       n_var*(j_order-1) + 1
     		      else
-    			index_kl = n_tor*n_var*(n_order+1)*(j_vertex-1) + n_tor*n_var*(j_order-1) + j_tor
+    			index_kl = (n_tor_end - n_tor_start +1)*n_var*(n_order+1)*(j_vertex-1) + & 
+                                   (n_tor_end - n_tor_start +1)*n_var*(j_order-1) + j_tor - n_tor_start +1
     		      endif
 
 		      ! --- Build basis functions
@@ -232,11 +245,11 @@ contains
     		      call ELM_main_lhs_7_numm(amat_tmp, amat_k_tmp, amat_n_tmp, amat_kn_tmp)
 		      
     		      ! --- Fill up the matrix
-    		      if (n_tor .gt. 3) then
+    		      if (use_fft) then
     		  	do i_ij =1,n_var
-		  	  ij_tmp = index_ij + (i_ij-1)*n_tor_loop
+		  	  ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start +1)
     		  	  do i_kl =1,n_var
-		  	    kl_tmp = index_kl + (i_kl-1)*n_tor_loop
+		  	    kl_tmp = index_kl + (i_kl-1)*(n_tor_end - n_tor_start +1)
     			    ELM_p (i_plane,ij_tmp,kl_tmp) = ELM_p (i_plane,ij_tmp,kl_tmp) + wst * amat_tmp   (i_ij,i_kl)
     			    ELM_k (i_plane,ij_tmp,kl_tmp) = ELM_k (i_plane,ij_tmp,kl_tmp) + wst * amat_k_tmp (i_ij,i_kl)
     			    ELM_n (i_plane,ij_tmp,kl_tmp) = ELM_n (i_plane,ij_tmp,kl_tmp) + wst * amat_n_tmp (i_ij,i_kl)
@@ -245,9 +258,9 @@ contains
 		  	enddo
     		      else
     		  	do i_ij =1,n_var
-		  	  ij_tmp = index_ij + (i_ij-1)*n_tor_loop
+		  	  ij_tmp = index_ij + (i_ij-1)*(n_tor_end - n_tor_start+1)
     		  	  do i_kl =1,n_var
-		  	    kl_tmp = index_kl + (i_kl-1)*n_tor_loop
+		  	    kl_tmp = index_kl + (i_kl-1)*(n_tor_end - n_tor_start +1)
     			    ELM(ij_tmp,kl_tmp) = ELM(ij_tmp,kl_tmp) + (amat_tmp(i_ij,i_kl) + amat_k_tmp(i_ij,i_kl) + amat_n_tmp(i_ij,i_kl) + amat_kn_tmp(i_ij,i_kl)) * wst
 		  	  enddo
 		  	enddo
@@ -274,7 +287,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!! Apply FFT !!!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    if (n_tor .gt. 3) then
+    if (use_fft) then
       call ELM_apply_fft(RHS, RHS_p, RHS_k, ELM, ELM_p, ELM_n, ELM_k, ELM_kn, tid)
     endif
     

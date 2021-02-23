@@ -147,10 +147,46 @@ endef
 LIBS += $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
 DEFINES += -DJOREK_MODEL=$(MODEL_NUMBER) -DUSE_MPI
 
-# Use flags
+# Full-MHD models flags
 ifeq (model710, $(MODEL))
   DEFINES  := $(DEFINES) -Dfullmhd
 endif
+ifeq (model711, $(MODEL))
+  DEFINES  := $(DEFINES) -Dfullmhd
+endif
+
+# Generic models flags
+ifeq (model303, $(MODEL))
+  DEFINES  := $(DEFINES) -DWITH_Vpar
+endif
+ifeq (model305, $(MODEL))
+  DEFINES  := $(DEFINES) -DWITH_Vpar
+endif
+ifeq (model306, $(MODEL))
+  DEFINES  := $(DEFINES) -DWITH_Vpar
+endif
+ifeq (model333, $(MODEL))
+  DEFINES  := $(DEFINES) -DWITH_Vpar
+endif
+ifeq (model401, $(MODEL))
+  DEFINES  := $(DEFINES) -DWITH_TiTe
+endif
+ifeq (model500, $(MODEL))
+  DEFINES  := $(DEFINES) -DWITH_Neutrals
+endif
+ifeq (model501, $(MODEL))
+  DEFINES  := $(DEFINES) -DWITH_Impurities
+endif
+ifeq (model502, $(MODEL))
+  DEFINES  := $(DEFINES) -DWITH_Impurities -DWITH_TiTe
+endif
+ifeq (model711, $(MODEL))
+  DEFINES  := $(DEFINES) -DWITH_TiTe
+endif
+ifeq (model712, $(MODEL))
+  DEFINES  := $(DEFINES) -DWITH_TiTe -DWITH_Neutrals
+endif
+
 
 ifeq (1, $(USE_FFTW))
   LIBS     := $(LIBS) $(LIBFFTW)
@@ -214,8 +250,20 @@ ifeq (1, $(USE_BLOCK))
   DEFINES := $(DEFINES) -DUSE_BLOCK
 endif
 
+ifeq (1, $(USE_DIRECT_CONSTRUCTION))
+  DEFINES  := $(DEFINES) -DDIRECT_CONSTRUCTION
+endif
+
+ifeq (1, $(USE_COMPLEX_PRECOND))
+  DEFINES  := $(DEFINES) -DUSE_COMPLEX_PRECOND
+endif
+
+ifeq (1, $(USE_INTSIZE64))
+  DEFINES  := $(DEFINES) -DINTSIZE64
+endif
+
 ifeq (1, $(USE_STRUMPACK))
-  DEFINES  := $(DEFINES) -DUSE_STRUMPACK -DFUNNELED
+  DEFINES  := $(DEFINES) -DUSE_STRUMPACK
   LIBS     := $(LIBS) $(STRUMPACKLIB)
   INCLUDES := $(INCLUDES) $(STRUMPACKINC)
   EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14

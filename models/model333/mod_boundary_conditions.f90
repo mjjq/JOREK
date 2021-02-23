@@ -59,10 +59,10 @@ contains
                                  xpoint2, xcase2,                                         &
                                  R_axis, Z_axis, psi_axis,                                &
                                  psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,                 &
-                                 gmres, solve_only )
+                                 gmres, solve_only, ijA_index, ijA_size, irn_jcn,         & 
+                                 irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     use data_structure
-    use global_distributed_matrix
     use vacuum, ONLY: is_freebound
     use phys_module, only: F0, GAMMA, freeboundary, tokamak_device, U_sheath,               &
                            RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ,           &
@@ -73,46 +73,51 @@ contains
     USE tr_module
     use mpi_mod
     use mod_locate_irn_jcn
+    use mod_integer_types
 
     implicit none
     !include 'mpif.h'
 
     ! --- Routine parameters
-    integer,                   intent(in)    :: my_id
-    type (type_node_list),     intent(in)    :: node_list
-    type (type_element_list),  intent(in)    :: element_list
-    type (type_bnd_node_list), intent(in)    :: bnd_node_list
-    integer,                   intent(in)    :: local_elms(*)
-    integer,                   intent(in)    :: n_local_elms
-    integer,                   intent(in)    :: index_min
-    integer,                   intent(in)    :: index_max
-    real*8,                    intent(inout) :: rhs_loc(*)
-    logical,                   intent(in)    :: xpoint2
-    integer,                   intent(in)    :: xcase2
-    real*8,                    intent(in)    :: R_axis
-    real*8,                    intent(in)    :: Z_axis
-    real*8,                    intent(in)    :: psi_axis
-    real*8,                    intent(in)    :: psi_bnd
-    real*8,                    intent(in)    :: R_xpoint(2)
-    real*8,                    intent(in)    :: Z_xpoint(2)
-    real*8,                    intent(in)    :: psi_xpoint(2)
-    logical,                   intent(in)    :: gmres
-    logical,                   intent(in)    :: solve_only
+    integer,                            intent(in)    :: my_id
+    type (type_node_list),              intent(in)    :: node_list
+    type (type_element_list),           intent(in)    :: element_list
+    type (type_bnd_node_list),          intent(in)    :: bnd_node_list
+    integer,                            intent(in)    :: local_elms(*)
+    integer,                            intent(in)    :: n_local_elms
+    integer,                            intent(in)    :: index_min
+    integer,                            intent(in)    :: index_max
+    real*8,                             intent(inout) :: rhs_loc(*)
+    logical,                            intent(in)    :: xpoint2
+    integer,                            intent(in)    :: xcase2
+    real*8,                             intent(in)    :: R_axis
+    real*8,                             intent(in)    :: Z_axis
+    real*8,                             intent(in)    :: psi_axis
+    real*8,                             intent(in)    :: psi_bnd
+    real*8,                             intent(in)    :: R_xpoint(2)
+    real*8,                             intent(in)    :: Z_xpoint(2)
+    real*8,                             intent(in)    :: psi_xpoint(2)
+    logical,                            intent(in)    :: gmres
+    logical,                            intent(in)    :: solve_only
+    integer,                            intent(in)    :: i_tor_min, i_tor_max 
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
+    real*8,                allocatable, intent(inout) :: A_mat(:) 
 
     ! --- Internal parameters
     real*8  :: mach1, dmach1, d2mach1_dTi, d2mach1_dTe, mach_u, dmach_u, dmach_rho
     integer :: i, i_tor, iv, inode, k_var, side
-    integer :: ielm, index_tmp
+    integer :: ielm
     integer :: ierr
     logical :: apply_dirichlet, apply_on_psi, apply_on_current, on_private, on_inner, on_inner_or_private
 
     ! --- RMP parameters
-    real*8, allocatable	:: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
-    real*8, allocatable	:: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
-    real*8  		:: establish_RMP
-    real*8  		:: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
-    integer 		:: ilarge_vp, ilarge_vp2
-    integer 		:: j, err, itest
+    real*8, allocatable :: psi_RMP_cos1(:),dpsi_RMP_cos_dR1(:),dpsi_RMP_cos_dZ1(:)
+    real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
+    real*8              :: establish_RMP
+    real*8              :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
+    integer             :: ilarge_vp, ilarge_vp2
+    integer             :: j, err, itest
 
     zbig_backup = zbig
     ! -------------------------
@@ -171,7 +176,7 @@ contains
 
             call construct_variables(node_list%node(inode), R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
             
-            do i_tor=1, n_tor
+            do i_tor=i_tor_min, i_tor_max
               if (keep_n0_const  .and.  i_tor .eq. 1 ) then
                  zbig = 1.d15
                else
@@ -202,6 +207,7 @@ contains
 
                   ! ---------------------------------------------
                   ! --- Apply RMP on target (only depends on 's')
+
                   if (      RMP_on                                                      &
                       .and. (k_var .eq. 1)                                              &
                       .and. ((i_tor.eq.RMP_har_cos) .or. (i_tor.eq.RMP_har_sin))        &
@@ -210,8 +216,9 @@ contains
                       call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,           &
                                          psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,      &
                                          psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,      &
-                                         solve_only, gmres,                                     &
-                                         index_min,index_max)
+                                         solve_only, gmres, index_min, index_max,               &
+                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
+
                   endif
                   
                   ! -----------------------------------------------
@@ -238,16 +245,20 @@ contains
                       !.or.  (k_var .eq. 7)                              &
                       ) apply_dirichlet = .true.
 
+
                   ! --- Apply Dirichlet if required
                   if (apply_dirichlet) then
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min, index_max, gmres, solve_only, & 
+                      ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
                   endif
 
                   ! --------------
                   ! --- Mach-1 BCs
                   if (k_var .eq. k_Vpar) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only)
-                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only)
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min, index_max, gmres, solve_only, &
+                      i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
+                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only, & 
+                      i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
 
                 endif
@@ -263,13 +274,13 @@ contains
 
                   ! --- Which side is this? 2 => d/ds, 3 => d/dt
                   side = 3
-                  
+
                   ! --- Field direction
                   if ( (grid_to_wall) .and. (n_wall_blocks .gt. 0) ) then
                     direction = 1
                     if (node_list%node(inode)%boundary .eq. 15) direction = -direction
                     if (node_list%node(inode)%boundary .eq. 19) direction = -direction
-                  endif
+                  endif                 
 
                   ! ---------------------------------------------
                   ! --- Apply RMP on target (only depends on 's')
@@ -281,8 +292,8 @@ contains
                       call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,           &
                                          psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,      &
                                          psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,      &
-                                         solve_only, gmres,                                     &
-                                         index_min,index_max)
+                                         solve_only, gmres, index_min, index_max,               &
+                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
                   
                   ! -----------------------------------------------
@@ -308,16 +319,20 @@ contains
                       .or.  (k_var .eq. 4)                              &
                       ) apply_dirichlet = .true.
 
+
                   ! --- Apply Dirichlet if required
                   if (apply_dirichlet) then
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
                   endif
 
                   ! --------------
                   ! --- Mach-1 BCs
                   if (k_var .eq. k_Vpar) then
-                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only)
-                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only)
+                    call apply_Mach1_BCs(rhs_loc, node_list%node(inode), side, i_tor, index_min,   &
+                      index_max, gmres, solve_only, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
+                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
+                      index_min,index_max, gmres, solve_only, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
 
                 endif
@@ -336,6 +351,7 @@ contains
                   
                   ! ---------------------------------------------
                   ! --- Apply RMP on target (only depends on 't')
+
                   if (      RMP_on                                                      &
                       .and. (k_var .eq. 1)                                              &
                       .and. ((i_tor.eq.RMP_har_cos) .or. (i_tor.eq.RMP_har_sin))        &
@@ -344,8 +360,8 @@ contains
                       call apply_RMP_BCs(rhs_loc, node_list%node(inode), side, i_tor,           &
                                          psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,      &
                                          psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,      &
-                                         solve_only, gmres,                                     &
-                                         index_min,index_max)
+                                         solve_only, gmres, index_min, index_max,               &
+                                         i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
                   
                   ! -----------------------------------------------
@@ -393,8 +409,10 @@ contains
                       ) apply_dirichlet = .true.
 
                   if (apply_dirichlet) then
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
-                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor, index_min,index_max, gmres, solve_only)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
+                    if (U_sheath) call apply_U_sheath (rhs_loc, node_list%node(inode), side, i_tor,&
+                      index_min,index_max, gmres, solve_only, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
                   endif
 
                 endif
@@ -405,16 +423,20 @@ contains
                 if (node_list%node(inode)%boundary .eq. 21) then
                   if ( (k_var .eq. k_Ti) .or. (k_var .eq. k_Vpar) ) then
                     side = 2
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
                     side = 3
-                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
+                    call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
                   endif
                 endif
                 if (node_list%node(inode)%boundary .eq. 20) then
                   side = 2
-                  call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
+                  call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
                   side = 3
-                  call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,index_max, gmres, solve_only)
+                  call apply_Dirichlet_BCs(node_list%node(inode), side, k_var,i_tor, index_min,  &
+                      index_max, gmres, solve_only, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
                 endif
               enddo
 
@@ -444,26 +466,26 @@ contains
     use data_structure
     use phys_module, only: F0, FF_0, xpoint, xcase, tokamak_device,    &
                            central_mass, mass_proton, central_density, &
-			   mu_zero, tauIC, renormalise, grid_to_wall, n_wall_blocks
+                           mu_zero, tauIC, renormalise, grid_to_wall, n_wall_blocks
     use corr_neg
     
     implicit none
     
     ! --- Routine variables
-    type (type_node),	intent(in)    :: node
-    real*8,		intent(in)    :: R_axis
-    real*8,		intent(in)    :: Z_axis
-    real*8,		intent(in)    :: R_xpoint(2)
-    real*8,		intent(in)    :: Z_xpoint(2)
-    real*8,		intent(in)    :: psi_bnd
+    type (type_node),   intent(in)    :: node
+    real*8,             intent(in)    :: R_axis
+    real*8,             intent(in)    :: Z_axis
+    real*8,             intent(in)    :: R_xpoint(2)
+    real*8,             intent(in)    :: Z_xpoint(2)
+    real*8,             intent(in)    :: psi_bnd
   
     ! --- Define (R,Z) coords and Jacobian
-    R	      = node%x(1,1)
-    R_s       = node%x(2,1)
-    R_t       = node%x(3,1)
-    Z	      = node%x(1,2)
-    Z_s       = node%x(2,2)
-    Z_t       = node%x(3,2)
+    R         = node%x(1,1,1)
+    R_s       = node%x(1,2,1)
+    R_t       = node%x(1,3,1)
+    Z         = node%x(1,1,2)
+    Z_s       = node%x(1,2,2)
+    Z_t       = node%x(1,3,2)
     xjac      = R_s*Z_t - R_t*Z_s
     
     ! --- Define psi variables
@@ -558,33 +580,38 @@ contains
   !********* Routine to apply RMP perturbation on boundary conditions ***********
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_RMP_BCs(RHS_loc, node, side, i_tor, 				&
-		           psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,	&
-		           psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,	&
-                           solve_only, gmres,	     				&
-    	                     index_min,index_max)
+  subroutine apply_RMP_BCs(RHS_loc, node, side, i_tor,                          &
+                           psi_RMP_cos1, dpsi_RMP_cos_dR1, dpsi_RMP_cos_dZ1,    &
+                           psi_RMP_sin1, dpsi_RMP_sin_dR1, dpsi_RMP_sin_dZ1,    &
+                           solve_only, gmres, index_min, index_max,             &
+                           i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
+
   
     use mod_parameters
     use data_structure
-    use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
+    use mod_integer_types
     
     implicit none
     
     ! --- Routine variables
-    real*8,		intent(inout) :: RHS_loc(*)
-    type (type_node),	intent(in)    :: node
-    integer,		intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
-    integer,		intent(in)    :: i_tor
-    real*8,		intent(in)    :: psi_RMP_cos1(*), dpsi_RMP_cos_dR1(*), dpsi_RMP_cos_dZ1(*)
-    real*8,		intent(in)    :: psi_RMP_sin1(*), dpsi_RMP_sin_dR1(*), dpsi_RMP_sin_dZ1(*)
-    logical,            intent(in)    :: solve_only, gmres
-    integer,		intent(in)    :: index_min, index_max
+    real*8,                             intent(inout) :: RHS_loc(*)
+    type (type_node),                   intent(in)    :: node
+    integer,                            intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
+    integer,                            intent(in)    :: i_tor
+    real*8,                             intent(in)    :: psi_RMP_cos1(*), dpsi_RMP_cos_dR1(*), dpsi_RMP_cos_dZ1(*)
+    real*8,                             intent(in)    :: psi_RMP_sin1(*), dpsi_RMP_sin_dR1(*), dpsi_RMP_sin_dZ1(*)
+    logical,                            intent(in)    :: solve_only, gmres
+    integer,                            intent(in)    :: index_min, index_max
+    integer,                            intent(in)    :: i_tor_min, i_tor_max 
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
+    real*8,                allocatable, intent(inout) :: A_mat(:) 
     
     ! --- Internal variables
-    integer				:: index_node,   index_node2
-    real*8				:: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_dl
+    integer                                           :: index_node,   index_node2
+    real*8                                            :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_dl
     
     ! --- Get psi perturbation and its derivatives
     if (i_tor.eq.RMP_har_cos) then
@@ -611,28 +638,34 @@ contains
     rhs_tmp = ZBIG * delta_psi_rmp
     
     call boundary_conditions_add_one_entry( &
-    	 index_node, k_psi, i_tor,            &
-    	 index_node, k_psi, i_tor,	          &
-    	 lhs_tmp, solve_only, gmres,	        &
-       index_min, index_max)
-    call boundary_conditions_add_RHS(     &
-       index_node, k_psi, i_tor, 	        &
-       index_min, index_max,              &
-       RHS_loc, rhs_tmp)
+         index_node, k_psi, i_tor,          &
+         index_node, k_psi, i_tor,          &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
+      call boundary_conditions_add_RHS(     &
+           index_node, k_psi, i_tor,        &
+           index_min, index_max,            &
+           RHS_loc, rhs_tmp,                &
+           i_tor_min, i_tor_max)
     
     ! --- Condition between nodes (d/ds or d/dt)
     lhs_tmp = ZBIG
     rhs_tmp = ZBIG * delta_psi_rmp_dl
     
     call boundary_conditions_add_one_entry( &
-    	 index_node2, k_psi, i_tor,           &
-    	 index_node2, k_psi, i_tor,           &
-    	 lhs_tmp, solve_only, gmres,	        &
-       index_min, index_max)
-    call boundary_conditions_add_RHS(     &
-       index_node2, k_psi, i_tor,	        &
-       index_min, index_max,	            &
-       RHS_loc, rhs_tmp)
+         index_node2, k_psi, i_tor,         &
+         index_node2, k_psi, i_tor,         &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
+      call boundary_conditions_add_RHS(     &
+           index_node2, k_psi, i_tor,       &
+           index_min, index_max,            &
+           RHS_loc, rhs_tmp,                &
+           i_tor_min, i_tor_max)
   
     return
   end subroutine apply_RMP_BCs
@@ -646,26 +679,30 @@ contains
   !***************** Routine to apply Dirichlet boundary conditions *************
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only)
+  subroutine apply_Dirichlet_BCs(node, side, k_var,i_tor, index_min,index_max, gmres, solve_only, &
+    ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
   
     use mod_parameters
     use data_structure
-    use global_distributed_matrix
     use phys_module, only: RMP_har_cos, RMP_har_sin
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
+    use mod_integer_types
     
     implicit none
     
     ! --- Routine variables
-    type (type_node),	intent(in)    :: node
-    integer,		intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
-    integer,		intent(in)    :: k_var
-    integer,		intent(in)    :: i_tor
-    integer,		intent(in)    :: index_min, index_max
-    logical,		intent(in)    :: gmres, solve_only
-    
+    type (type_node),                   intent(in)    :: node
+    integer,                            intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
+    integer,                            intent(in)    :: k_var
+    integer,                            intent(in)    :: i_tor
+    integer,                            intent(in)    :: index_min, index_max
+    logical,                            intent(in)    :: gmres, solve_only
+    integer,                            intent(in)    :: i_tor_min, i_tor_max
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
+    real*8,                allocatable, intent(inout) :: A_mat(:) 
     ! --- Internal variables
-    integer				:: index_node,   index_node2
+    integer                                           :: index_node,   index_node2
     
     ! --- Get nodes index
     index_node  = node%index(1)
@@ -678,14 +715,18 @@ contains
          index_node, k_var, i_tor,          &
          index_node, k_var, i_tor,          &
          lhs_tmp, solve_only, gmres,        &
-         index_min, index_max)
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     ! --- Condition between nodes (d/ds or d/dt)
     call boundary_conditions_add_one_entry( &
          index_node2, k_var, i_tor,         &
          index_node2, k_var, i_tor,         &
          lhs_tmp, solve_only, gmres,        &
-         index_min, index_max)
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
     
     return
   end subroutine apply_Dirichlet_BCs
@@ -699,38 +740,43 @@ contains
   !****************** Routine to apply Mach-1 boundary conditions ***************
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only)
+  subroutine apply_Mach1_BCs(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only,   &
+    i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
   
     use mod_parameters
     use data_structure
-    use global_distributed_matrix
     use phys_module, only: GAMMA, tauIC, central_density, mu_zero
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
+    use mod_integer_types
     
     implicit none
     
     ! --- Routine variables
-    real*8,		intent(inout) :: rhs_loc(*)
-    type (type_node),	intent(in)    :: node
-    integer,		intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
-    integer,		intent(in)    :: i_tor
-    integer,		intent(in)    :: index_min, index_max
-    logical,		intent(in)    :: gmres, solve_only
+    real*8,                             intent(inout) :: rhs_loc(*)
+    type (type_node),                   intent(in)    :: node
+    integer,                            intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
+    integer,                            intent(in)    :: i_tor
+    integer,                            intent(in)    :: index_min, index_max
+    logical,                            intent(in)    :: gmres, solve_only
+    integer,                            intent(in)    :: i_tor_min, i_tor_max
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
+    real*8,                allocatable, intent(inout) :: A_mat(:) 
     
     ! --- Internal variables
-    integer			      :: index_node,   index_node2
-    real*8			      :: mach1, dmach1_dVpar, dmach1_dpsis, dmach1_dus, dmach1_drho, dmach1_drhos, dmach1_dTi, dmach1_dTis
-    real*8			      :: mach1_ds, mach1_ds_Vpars, mach1_ds_Ti, mach1_ds_Tis
+    integer                                           :: index_node,   index_node2
+    real*8                                            :: mach1, dmach1_dVpar, dmach1_dpsis, dmach1_dus, dmach1_drho, dmach1_drhos, dmach1_dTi, dmach1_dTis
+    real*8                                            :: mach1_ds, mach1_ds_Vpars, mach1_ds_Ti, mach1_ds_Tis
     
     ! --- Define node indices
-    index_node  = node%index(1) 	    ! position of value
-    index_node2 = node%index(side) 	    ! position of first deriative
+    index_node  = node%index(1)             ! position of value
+    index_node2 = node%index(side)          ! position of first deriative
 
     ! --- Define equations first, depends on which side we're on (d/ds or d/dt)
     if (side .eq. 2) then
       mach1          =   zbig*Vpar0                                                           & ! Main part
-		       - zbig * R**2 * u0_s / ps0_s                                           & ! Vperp part
-		       - zbig * R**2 * tau_IC / rho0    * Pi0_s / ps0_s                       & ! Vdia part
+                       - zbig * R**2 * u0_s / ps0_s                                           & ! Vperp part
+                       - zbig * R**2 * tau_IC / rho0    * Pi0_s / ps0_s                       & ! Vdia part
                        - zbig * direction / Btot                             * sqrt(GAMMA*Ti0)  ! Sound speed
       ! --- Linearise mach1
       dmach1_dVpar   =   zbig                                                          
@@ -741,19 +787,19 @@ contains
                        - zbig * R**2 * tau_IC / rho0    * Ti0_s / ps0_s                      
       dmach1_drhos   = - zbig * R**2 * tau_IC / rho0    * Ti0   / ps0_s 
       dmach1_dTi     = - zbig * R**2 * tau_IC / rho0    * rho0_s/ ps0_s                       &
-                       - zbig * direction / Btot * 0.5d0  * GAMMA            / sqrt(GAMMA*Ti0)	     
+                       - zbig * direction / Btot * 0.5d0  * GAMMA            / sqrt(GAMMA*Ti0)       
       dmach1_dTis    = - zbig * R**2 * tau_IC / rho0    * rho0  / ps0_s                  
       ! --- d(mach1)/ds
       mach1_ds       =   zbig*Vpar0_s                                                         &
-                       - zbig * direction / Btot * 0.5d0  * GAMMA    * Ti0_s / sqrt(GAMMA*Ti0)	     
+                       - zbig * direction / Btot * 0.5d0  * GAMMA    * Ti0_s / sqrt(GAMMA*Ti0)       
       ! --- Linearise d(mach1)/ds
       mach1_ds_Vpars =   zbig
-      mach1_ds_Ti    = + zbig * direction / Btot * 0.25d0 * GAMMA**2 * Ti0_s / sqrt(GAMMA*Ti0)	     
-      mach1_ds_Tis   = - zbig * direction / Btot * 0.5d0  * GAMMA            / sqrt(GAMMA*Ti0)	     
+      mach1_ds_Ti    = + zbig * direction / Btot * 0.25d0 * GAMMA**2 * Ti0_s / sqrt(GAMMA*Ti0)       
+      mach1_ds_Tis   = - zbig * direction / Btot * 0.5d0  * GAMMA            / sqrt(GAMMA*Ti0)       
     else
       mach1          =   zbig*Vpar0                                                           & ! Main part
-		       - zbig * R**2 * u0_t / ps0_t                                           & ! Vperp part
-		       - zbig * R**2 * tau_IC / rho0    * Pi0_t / ps0_t                       & ! Vdia part
+                       - zbig * R**2 * u0_t / ps0_t                                           & ! Vperp part
+                       - zbig * R**2 * tau_IC / rho0    * Pi0_t / ps0_t                       & ! Vdia part
                        - zbig * direction / Btot                             * sqrt(GAMMA*Ti0)  ! Sound speed
       ! --- Linearise mach1
       dmach1_dVpar   =   zbig                                                          
@@ -764,100 +810,120 @@ contains
                        - zbig * R**2 * tau_IC / rho0    * Ti0_t / ps0_t                      
       dmach1_drhos   = - zbig * R**2 * tau_IC / rho0    * Ti0   / ps0_t 
       dmach1_dTi     = - zbig * R**2 * tau_IC / rho0    * rho0_t/ ps0_t                       &
-                       - zbig * direction / Btot * 0.5d0  * GAMMA            / sqrt(GAMMA*Ti0)	     
+                       - zbig * direction / Btot * 0.5d0  * GAMMA            / sqrt(GAMMA*Ti0)       
       dmach1_dTis    = - zbig * R**2 * tau_IC / rho0    * rho0  / ps0_t                  
       ! --- d(mach1)/ds
       mach1_ds       =   zbig*Vpar0_t                                                         &
-                       - zbig * direction / Btot * 0.5d0  * GAMMA    * Ti0_t / sqrt(GAMMA*Ti0)	     
+                       - zbig * direction / Btot * 0.5d0  * GAMMA    * Ti0_t / sqrt(GAMMA*Ti0)       
       ! --- Linearise d(mach1)/ds
       mach1_ds_Vpars =   zbig
-      mach1_ds_Ti    = + zbig * direction / Btot * 0.25d0 * GAMMA**2 * Ti0_t / sqrt(GAMMA*Ti0)	     
-      mach1_ds_Tis   = - zbig * direction / Btot * 0.5d0  * GAMMA            / sqrt(GAMMA*Ti0)	     
+      mach1_ds_Ti    = + zbig * direction / Btot * 0.25d0 * GAMMA**2 * Ti0_t / sqrt(GAMMA*Ti0)       
+      mach1_ds_Tis   = - zbig * direction / Btot * 0.5d0  * GAMMA            / sqrt(GAMMA*Ti0)       
     endif
     
     
     ! --- Condition on nodes
     lhs_tmp = dmach1_dVpar
     call boundary_conditions_add_one_entry( &
-    	 index_node, k_Vpar, i_tor,	    &
-    	 index_node, k_Vpar, i_tor,	    &
-    	 lhs_tmp, solve_only, gmres,	  &
-    	 index_min, index_max)
+         index_node, k_Vpar, i_tor,         &
+         index_node, k_Vpar, i_tor,         &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dpsis
     call boundary_conditions_add_one_entry( &
-    	 index_node,  k_Vpar, i_tor,	    &
-    	 index_node2, k_psi,  i_tor,	    &
-    	 lhs_tmp, solve_only, gmres,	    &
-    	 index_min, index_max)
+         index_node,  k_Vpar, i_tor,        &
+         index_node2, k_psi,  i_tor,        &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dus
     call boundary_conditions_add_one_entry( &
-    	 index_node,  k_Vpar, i_tor,	    &
-    	 index_node2, k_u,    i_tor,	    &
-    	 lhs_tmp, solve_only, gmres,	    &
-    	 index_min, index_max)
+         index_node,  k_Vpar, i_tor,        &
+         index_node2, k_u,    i_tor,        &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_drho
     call boundary_conditions_add_one_entry( &
-    	 index_node,  k_Vpar, i_tor,	    &
-    	 index_node,  k_rho,  i_tor,	    &
-    	 lhs_tmp, solve_only, gmres,	    &
-    	 index_min, index_max)
+         index_node,  k_Vpar, i_tor,        &
+         index_node,  k_rho,  i_tor,        &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_drhos
     call boundary_conditions_add_one_entry( &
-    	 index_node,  k_Vpar, i_tor,	    &
-    	 index_node2, k_rho,  i_tor,	    &
-    	 lhs_tmp, solve_only, gmres,	    &
-    	 index_min, index_max)
+         index_node,  k_Vpar, i_tor,        &
+         index_node2, k_rho,  i_tor,        &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dTi
     call boundary_conditions_add_one_entry( &
-    	 index_node,  k_Vpar, i_tor,	    &
-    	 index_node,  k_Ti,   i_tor,	    &
-    	 lhs_tmp, solve_only, gmres,	    &
-    	 index_min, index_max)
+         index_node,  k_Vpar, i_tor,        &
+         index_node,  k_Ti,   i_tor,        &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dmach1_dTis
     call boundary_conditions_add_one_entry( &
-    	 index_node,  k_Vpar, i_tor,	    &
-    	 index_node2, k_Ti,   i_tor,	    &
-    	 lhs_tmp, solve_only, gmres,	    &
-    	 index_min, index_max)
+         index_node,  k_Vpar, i_tor,        &
+         index_node2, k_Ti,   i_tor,        &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-    if (i_tor .eq. 1) then
-      rhs_tmp = - mach1
-    else
-      rhs_tmp = 0.d0
-    endif
+      if (i_tor .eq. 1) then
+        rhs_tmp = - mach1
+      else
+        rhs_tmp = 0.d0
+      endif
+      call boundary_conditions_add_RHS(       &
+           index_node, k_Vpar, i_tor,         &
+           index_min, index_max,              &
+           RHS_loc, rhs_tmp,                  &
+           i_tor_min, i_tor_max)
 
-    call boundary_conditions_add_RHS(    &
-    	   index_node, k_Vpar, i_tor,	     &
-   	     index_min, index_max,	         &
-   	     RHS_loc, rhs_tmp)
-    
     ! --- Condition between nodes (d/ds or d/dt)
     lhs_tmp = mach1_ds_Vpars
     call boundary_conditions_add_one_entry( &
-    	 index_node2, k_Vpar, i_tor,	    &
-    	 index_node2, k_Vpar, i_tor,	    &
-    	 lhs_tmp, solve_only, gmres,	    &
-    	 index_min, index_max)
+         index_node2, k_Vpar, i_tor,        &
+         index_node2, k_Vpar, i_tor,        &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = mach1_ds_Ti
     call boundary_conditions_add_one_entry( &
-    	 index_node2, k_Vpar, i_tor,	    &
-    	 index_node,  k_Ti,   i_tor,	    &
-    	 lhs_tmp, solve_only, gmres,	    &
-    	 index_min, index_max)
+         index_node2, k_Vpar, i_tor,        &
+         index_node,  k_Ti,   i_tor,        &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = mach1_ds_Tis
     call boundary_conditions_add_one_entry( &
-    	 index_node2, k_Vpar, i_tor,	    &
-    	 index_node2, k_Ti,   i_tor,	    &
-    	 lhs_tmp, solve_only, gmres,	    &
-    	 index_min, index_max)
+         index_node2, k_Vpar, i_tor,        &
+         index_node2, k_Ti,   i_tor,        &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     if (i_tor .eq. 1) then
       rhs_tmp = - mach1_ds
@@ -866,9 +932,10 @@ contains
     endif
     
     call boundary_conditions_add_RHS(       &
-    	   index_node2, k_Vpar, i_tor,	      &
-    	   index_min, index_max,	            &
-    	   RHS_loc, rhs_tmp)
+           index_node2, k_Vpar, i_tor,        &
+           index_min, index_max,              &
+           RHS_loc, rhs_tmp,                  &
+           i_tor_min, i_tor_max)
   
     return
   end subroutine apply_Mach1_BCs
@@ -887,34 +954,39 @@ contains
   !****************** Routine to apply STANGEBY boundary conditions on U ********
   !******************************************************************************
   !******************************************************************************
-  subroutine apply_U_sheath(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only)
+  subroutine apply_U_sheath(rhs_loc, node, side, i_tor, index_min,index_max, gmres, solve_only, &
+    i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat)
   
     use mod_parameters
     use data_structure
-    use global_distributed_matrix
     use phys_module, only: GAMMA, tauIC, central_density, mu_zero, F0, FF_0
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
+    use mod_integer_types
     
     implicit none
     
     ! --- Routine variables
-    real*8,		intent(inout) :: rhs_loc(*)
-    type (type_node),	intent(in)    :: node
-    integer,		intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
-    integer,		intent(in)    :: i_tor
-    integer,		intent(in)    :: index_min, index_max
-    logical,		intent(in)    :: gmres, solve_only
+    real*8,                             intent(inout) :: rhs_loc(*)
+    type (type_node),                   intent(in)    :: node
+    integer,                            intent(in)    :: side ! == 2 for d/ds, == 3 for d/dt
+    integer,                            intent(in)    :: i_tor
+    integer,                            intent(in)    :: index_min, index_max
+    logical,                            intent(in)    :: gmres, solve_only
+    integer,                            intent(in)    :: i_tor_min, i_tor_max
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
+    real*8,                allocatable, intent(inout) :: A_mat(:) 
     
     ! --- Internal variables
-    integer				:: index_node,   index_node2
-    real*8				:: constmp
-    real*8				:: sheath_u, dsheath_u, dsheath_T
-    real*8				:: sheath_ds, dsheath_ds_us, dsheath_ds_Ts
-    real*8				:: sign_tmp
+    integer                                           :: index_node,   index_node2
+    real*8                                            :: constmp
+    real*8                                            :: sheath_u, dsheath_u, dsheath_T
+    real*8                                            :: sheath_ds, dsheath_ds_us, dsheath_ds_Ts
+    real*8                                            :: sign_tmp
     
     ! --- Define node indices
-    index_node  = node%index(1) 	    ! position of value
-    index_node2 = node%index(side) 	    ! position of first deriative
+    index_node  = node%index(1)             ! position of value
+    index_node2 = node%index(side)          ! position of first deriative
 
     ! --- Define equations before MURGE and non-MURGE fork
     
@@ -943,54 +1015,63 @@ contains
     ! --- Condition on nodes
     lhs_tmp = dsheath_u
     call boundary_conditions_add_one_entry( &
-    	 index_node, k_u, i_tor,	            &
-    	 index_node, k_u, i_tor,	            &
-    	 lhs_tmp, solve_only, gmres,	        &
-    	 index_min, index_max)
+         index_node, k_u, i_tor,            &
+         index_node, k_u, i_tor,            &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dsheath_T
     call boundary_conditions_add_one_entry( &
-    	 index_node, k_u,  i_tor,	            &
-    	 index_node, k_Ti, i_tor,	            &
-    	 lhs_tmp, solve_only, gmres,	        &
-     	 index_min, index_max)
+         index_node, k_u,  i_tor,           &
+         index_node, k_Ti, i_tor,           &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-    if (i_tor .eq. 1) then
-      rhs_tmp = - sheath_u
-    else
-      rhs_tmp = 0.d0
-    endif
-    call boundary_conditions_add_RHS(      &
-    	   index_node, k_u, i_tor,	         &
-    	   index_min, index_max,	           &
-    	   RHS_loc, rhs_tmp)
+      if (i_tor .eq. 1) then
+        rhs_tmp = - sheath_u
+      else
+        rhs_tmp = 0.d0
+      endif
+      call boundary_conditions_add_RHS(       &
+           index_node, k_u, i_tor,            &
+           index_min, index_max,              &
+           RHS_loc, rhs_tmp,                  &
+           i_tor_min, i_tor_max)
       
     ! --- Condition between nodes
     lhs_tmp = dsheath_ds_us
     call boundary_conditions_add_one_entry( &
-    	 index_node2, k_u, i_tor,	            &
-    	 index_node2, k_u, i_tor,	            &
-    	 lhs_tmp, solve_only, gmres,	        &
-    	 index_min, index_max)
+         index_node2, k_u, i_tor,           &
+         index_node2, k_u, i_tor,           &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
     lhs_tmp = dsheath_ds_Ts
     call boundary_conditions_add_one_entry( &
-    	 index_node2, k_u, i_tor,	            &
-    	 index_node2, k_Ti, i_tor,	          &
-    	 lhs_tmp, solve_only, gmres,	        &
-    	 index_min, index_max)
+         index_node2, k_u, i_tor,           &
+         index_node2, k_Ti, i_tor,          &
+         lhs_tmp, solve_only, gmres,        &
+         index_min, index_max,              &
+         ijA_index, ijA_size, irn_jcn,      &
+         irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-    if (i_tor .eq. 1) then
-       rhs_tmp = - sheath_ds
-    else
-       rhs_tmp = 0.d0
-    endif
+      if (i_tor .eq. 1) then
+        rhs_tmp = - sheath_ds
+      else
+        rhs_tmp = 0.d0
+      endif
+      call boundary_conditions_add_RHS(       &
+           index_node2, k_u, i_tor,           &
+           index_min, index_max,              &
+           RHS_loc, rhs_tmp,                  &
+           i_tor_min, i_tor_max)
 
-    call boundary_conditions_add_RHS(       &
-      	   index_node2, k_u, i_tor,	        &
-      	   index_min, index_max,	          &
-      	   RHS_loc, rhs_tmp)
-  
     return
   end subroutine apply_U_sheath
   

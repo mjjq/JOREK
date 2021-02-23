@@ -122,6 +122,7 @@ all: $(basename $(notdir $(PROGRAM_SOURCES)))
 # testing to pass
 most: jorek2_connection2 \
       jorek2_connection_stan \
+      jorek2_connection_flux_aligned \
       jorek2_diagno \
       jorek2_diagno_spi \
       jorek2_fieldlines_vtk \
@@ -147,7 +148,7 @@ objs: $(foreach file,$(foreach dir,$(DIRS), $(find_files)), $(OBJDIR)/$(notdir $
 INCLUDES += -Itools # for r3_info.h
 INCLUDES += -Imodels
 # C++ support
-LIBS += -lstdc++
+LIBS += -lstdc++ 
 CXXFLAGS += -pedantic -Wall
 
 # Rule-specific includes: an example

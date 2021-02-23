@@ -32,21 +32,21 @@ subroutine ELM_build_RZ_and_Jacobians(element, nodes, ms, mt)
   do i=1,n_vertex_max
     do j=1,n_order+1
 
-      x_g  = x_g  + nodes(i)%x(j,1) * element%size(i,j) * H   (i,j,ms,mt)
-      x_s  = x_s  + nodes(i)%x(j,1) * element%size(i,j) * H_s (i,j,ms,mt)
-      x_t  = x_t  + nodes(i)%x(j,1) * element%size(i,j) * H_t (i,j,ms,mt)
+      x_g  = x_g  + nodes(i)%x(1,j,1) * element%size(i,j) * H   (i,j,ms,mt)
+      x_s  = x_s  + nodes(i)%x(1,j,1) * element%size(i,j) * H_s (i,j,ms,mt)
+      x_t  = x_t  + nodes(i)%x(1,j,1) * element%size(i,j) * H_t (i,j,ms,mt)
 
-      x_ss = x_ss + nodes(i)%x(j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
-      x_st = x_st + nodes(i)%x(j,1) * element%size(i,j) * H_st(i,j,ms,mt)
-      x_tt = x_tt + nodes(i)%x(j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
+      x_ss = x_ss + nodes(i)%x(1,j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
+      x_st = x_st + nodes(i)%x(1,j,1) * element%size(i,j) * H_st(i,j,ms,mt)
+      x_tt = x_tt + nodes(i)%x(1,j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
 
-      y_g  = y_g  + nodes(i)%x(j,2) * element%size(i,j) * H   (i,j,ms,mt)
-      y_s  = y_s  + nodes(i)%x(j,2) * element%size(i,j) * H_s (i,j,ms,mt)
-      y_t  = y_t  + nodes(i)%x(j,2) * element%size(i,j) * H_t (i,j,ms,mt)
+      y_g  = y_g  + nodes(i)%x(1,j,2) * element%size(i,j) * H   (i,j,ms,mt)
+      y_s  = y_s  + nodes(i)%x(1,j,2) * element%size(i,j) * H_s (i,j,ms,mt)
+      y_t  = y_t  + nodes(i)%x(1,j,2) * element%size(i,j) * H_t (i,j,ms,mt)
 
-      y_ss = y_ss + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
-      y_st = y_st + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
-      y_tt = y_tt + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
+      y_ss = y_ss + nodes(i)%x(1,j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
+      y_st = y_st + nodes(i)%x(1,j,2) * element%size(i,j) * H_st(i,j,ms,mt)
+      y_tt = y_tt + nodes(i)%x(1,j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
     
     enddo
   enddo
@@ -204,6 +204,11 @@ subroutine ELM_build_variables(element, nodes, ms, mt, i_plane)
       enddo
     enddo
   enddo
+
+  ! changes deltas for variable time steps
+  delta_g = delta_g * tstep / tstep_prev
+  delta_s = delta_s * tstep / tstep_prev
+  delta_t = delta_t * tstep / tstep_prev
 
   ! --- Variable 1
   ps0_x    = get_deriv_x (ps0_s, ps0_t)
@@ -382,10 +387,14 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! -------------------------------------
   ! --- Temperature dependent resistivity
   ! -------------------------------------
-  if ( eta_T_dependent ) then
+  if ( eta_T_dependent .and. T0_corr <= T_max_eta) then
     eta_T     =   eta   * (T0_corr / T_0)**(-1.5d0)
     deta_dT   = - eta	* (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
     d2eta_d2T =   eta	* (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
+  else if ( eta_T_dependent .and. T0_corr > T_max_eta) then
+     eta_T     = eta   * (T_max_eta/T_0)**(-1.5d0)
+     deta_dT   = 0.
+     d2eta_d2T = 0.     
   else
     eta_T     = eta
     deta_dT   = 0.d0
@@ -396,8 +405,16 @@ subroutine ELM_build_diffusivities_and_sources(element, nodes, xpoint2, xcase2, 
   ! -------------------------
   ! --- Eta for ohmic heating
   ! -------------------------
-  eta_T_ohm   = (eta_T/eta)  * eta_ohmic
-  deta_dT_ohm = (deta_dT/eta) * eta_ohmic
+  if ( eta_T_dependent .and. T0_corr <= T_max_eta_ohm) then
+    eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
+    deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+  else if ( eta_T_dependent .and. T0_corr > T_max_eta_ohm) then
+    eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
+    deta_dT_ohm   = 0.    
+  else
+    eta_T_ohm     = eta_ohmic
+    deta_dT_ohm   = 0.d0
+  end if  
    
 
   ! -----------------------------------

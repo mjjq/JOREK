@@ -103,8 +103,12 @@ subroutine update_boundary_types(element_list,node_list, across_xpoint)
       if (found_first) exit
     enddo
     if (.not. found_first) then
-      write(*,*)'Could not find first boundary element. Aborting...'
-      return
+      if (i_times .eq. 1) then
+        write(*,*)'Could not find first boundary element. Aborting...'
+        return
+      else
+        cycle
+      endif
     endif
     if (debug) write(*,'(A,i6,2f10.3)')'Found first bnd elm    :',i_node,node_list%node(i_node)%x(1,1,1:2)
     

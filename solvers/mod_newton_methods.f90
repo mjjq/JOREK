@@ -149,11 +149,12 @@ module mod_newton_methods
     if (i_side .eq. 3) s_or_t = 1.d0 ! side t=1
     if (i_side .eq. 4) s_or_t = 0.d0 ! side s=0
 
-    ! --- We do 2 trials, starting from the edges
+    ! --- We do 3 trials, starting from the edges, and from the middle
     ! --- If Newton get us out of the interval [0,1] each time, we assume there is no inflexion
-    do i=1,2
+    do i=1,3
       if (i .eq. 1) step = 0.0d0
       if (i .eq. 2) step = 1.0d0
+      if (i .eq. 3) step = 0.5d0
       do k=1,ntrial
    
         ! --- Get 1st and 2nd derivative
@@ -215,7 +216,36 @@ module mod_newton_methods
         if (n_order .eq. 3) return
       endif
     endif
-  
+ 
+    if (n_found .eq. 3) then
+      ! --- If all trials found the same inflexion point, we assume it's the only one
+      if ( (abs(inflex(1)-inflex(2)) .lt. 2.0*tolx) .and. (abs(inflex(2)-inflex(3)) .lt. 2.0*tolx) ) then
+        n_found = 1
+        inflex(1) = ( inflex(1) + inflex(2) + inflex(3) ) / 3.d0
+        return
+      ! --- If we found two different inflexion points when starting from the edges
+      ! --- and the elements are bi-cubic, then these are our two inflextions, there won't be more
+      else
+        if (abs(inflex(1)-inflex(2)) .lt. 2.0*tolx) then
+          n_found = 2
+          inflex(1) = ( inflex(1) + inflex(2) ) / 2.d0
+          inflex(2) = inflex(3)
+          return
+        endif
+        if (abs(inflex(2)-inflex(3)) .lt. 2.0*tolx) then
+          n_found = 2
+          inflex(2) = ( inflex(2) + inflex(3) ) / 2.d0
+          return
+        endif
+        if (abs(inflex(1)-inflex(3)) .lt. 2.0*tolx) then
+          n_found = 2
+          inflex(1) = ( inflex(1) + inflex(3) ) / 2.d0
+          return
+        endif
+        if (n_order .eq. 3) return
+      endif
+    endif
+ 
     ! --- If we found only one inflexion point when starting from the edge
     ! --- and the elements are bi-cubic, then this means the second inflexion point is outside the element
     if ( (n_found .eq. 1) .and. (n_order .eq. 3) ) return

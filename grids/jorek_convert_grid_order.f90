@@ -293,6 +293,7 @@ call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list
 ! --- Export equilibrium
 call export_restart(node_list, element_list, 'jorek_restart')
 
+write(*,*)'done'
 
 deallocate(node_list)
 deallocate(element_list)

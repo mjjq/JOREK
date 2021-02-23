@@ -175,8 +175,8 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, &
     sep_list%psi_values(6) = flux_list%psi_values(n_flux+n_open+n_outer+n_inner+n_private+n_up_priv)
   endif
   
-  call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
   call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,sep_list)  
+  call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
   if(xcase .eq. 3) then
     do i=1,6
       nPieces = sep_list%flux_surfaces(i)%n_pieces

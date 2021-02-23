@@ -39,6 +39,7 @@ integer :: i, j, k, ifound, iv, im, is, n1, n2, n3
 integer :: ifail, itht(4), itmp,i_elm_xpoint(2)
 integer :: n_found
 real*8  :: st_found(n_order)
+real*8  :: psi,P_s,P_t,P_st,P_ss,P_tt, my_min, my_max
 
 if (my_id == 0) then
   write(*,*) '***********************************'

@@ -103,8 +103,12 @@ subroutine update_boundary_types(element_list,node_list, across_xpoint)
       if (found_first) exit
     enddo
     if (.not. found_first) then
-      write(*,*)'Could not find first boundary element. Aborting...'
-      return
+      if (i_times .eq. 1) then
+        write(*,*)'Could not find first boundary element. Aborting...'
+        return
+      else
+        cycle
+      endif
     endif
     if (debug) write(*,'(A,i6,2f10.3)')'Found first bnd elm    :',i_node,node_list%node(i_node)%x(1,1,1:2)
     
@@ -376,7 +380,7 @@ subroutine update_boundary_types_final(element_list,node_list)
   real*8  :: tang_R2, tang_Z2
   real*8  :: alpha_Bp, alpha_norm, alpha_tang, alpha_tang2, alpha_tmp, alpha_between1, alpha_between2
   logical :: surface_is_tangent
-  real*8, parameter  :: tol_tangent = 3.d-2 !1.5d-2 !1.d-2
+  real*8, parameter  :: tol_tangent = 2.d-2!3.d-2 !1.5d-2 !1.d-2
   
   ! --- Some printouts?
   if (debug) then

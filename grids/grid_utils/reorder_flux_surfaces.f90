@@ -61,7 +61,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
   
   ! --- Loop over all surfaces
   do i_surf = 1, surface_list%n_psi
-  
+    
     progress = 1.d2 * float(i_surf) / float(surface_list%n_psi)
     progress = max(0.d0,progress)
     progress = min(1.d2,progress)

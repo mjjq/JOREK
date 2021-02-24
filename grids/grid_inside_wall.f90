@@ -258,10 +258,6 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
       element_list%element(k)%size(iv,1)     = 1.
       element_list%element(k)%size(iv,iuv+1) = sign(dlength(xx_p,xx_0),ddot(n_dim,xx_p - xx_0,1,uv_0,1)) / float(n_order) 
       element_list%element(k)%size(ip,iuv+1) = sign(dlength(xx_p,xx_0),ddot(n_dim,xx_0 - xx_p,1,uv_p,1)) / float(n_order) 
-      if (n_order .ge. 5) then ! this grid is often skewed, this is safer at higher order
-        element_list%element(k)%size(iv,iuv+1) = element_list%element(k)%size(iv,iuv+1) / 2.0 
-        element_list%element(k)%size(ip,iuv+1) = element_list%element(k)%size(ip,iuv+1) / 2.0
-      endif
 
     enddo
 
@@ -706,7 +702,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
   width_prev1    = 0.0
   width_prev2    = 0.0
   inside_boot    = 0
-  jump_threshold = 0.85
+  jump_threshold = 0.95 !0.85
   elm_count      = 0
   do i = 1,nZ/2+1
     !write(*,*)'Doing lower horizontal line ',nZ/2+1-i

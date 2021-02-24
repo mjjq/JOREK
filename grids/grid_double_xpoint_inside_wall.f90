@@ -194,7 +194,7 @@ if (allocated(sep_list%flux_surfaces))     deallocate(sep_list%flux_surfaces)
 !-------------------------------------------------------------------------------------------!
 
 !-------------------------------- Call the routine
-call reorder_flux_surfaces(node_list, element_list, flux_list, ifail)
+call reorder_flux_surfaces(node_list, element_list, flux_list, .true., ifail)
 call clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_xpoint,Z_xpoint)
 call find_strategic_points_advanced(node_list, element_list, flux_list, xcase, force_horizontal_Xline, &
                                     R_xpoint, Z_xpoint, psi_xpoint, R_axis, Z_axis, n_grids, stpts)

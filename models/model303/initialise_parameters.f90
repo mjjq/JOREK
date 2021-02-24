@@ -44,7 +44,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
                 extend_existing_grid, no_mach1_bc,                  &
                 grid_to_wall, RZ_grid_inside_wall,                  &
-                n_ext_equidistant,                                  &
+                n_ext_equidistant, surface_cross_tol,               &
                 n_wall_blocks, n_ext_block, corner_block,           &
                 n_block_points_left,  n_block_points_right,         &
                 R_block_points_left,  R_block_points_right,         &

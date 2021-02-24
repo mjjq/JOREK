@@ -221,6 +221,7 @@ do i=1,newnode_list%n_nodes
                                      + PSI_ZZ * newnode_list%node(i)%x(1,2,2) * newnode_list%node(i)%x(1,3,2) &
                                      + PSI_R  * newnode_list%node(i)%x(1,4,1)                               &
                                      + PSI_Z  * newnode_list%node(i)%x(1,4,2)
+  if (n_order .ge. 5) newnode_list%node(i)%values(1,5:n_degrees,1) = 0.d0
 
   !if (newnode_list%node(i)%boundary .eq. 2) newnode_list%node(i)%values(1,3,1) = 0.d0 ! this is ok only if bnd 2 is aligned to surface!
 

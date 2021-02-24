@@ -5,7 +5,7 @@ end module reorder_surfaces_parameters
 
 
 !> This routine reorders fluxsurfaces so that pieces are one after the other
-subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
+subroutine reorder_flux_surfaces(node_list, element_list, surface_list, plot_surfaces, ier)
 
   use data_structure
   use reorder_surfaces_parameters
@@ -19,6 +19,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
   type (type_node_list),    intent(in)          :: node_list
   type (type_element_list), intent(in)          :: element_list
   type (type_surface_list), intent(inout)       :: surface_list
+  logical,                  intent(in)          :: plot_surfaces
   integer,                  intent(inout)       :: ier
   
   ! --- Local variables
@@ -54,7 +55,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
   ier      = 0
   
   ! --- Get a plot?
-  if (debug) then
+  if ( debug .and. plot_surfaces)  then
     filename = 'plot_unordered_flux_surfaces.py'
     call py_plot_surface(filename,node_list,element_list,respline, .false., surface_list, -1)
   endif
@@ -313,7 +314,7 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, ier)
   
   write(*,*) 'Processing  ... 100'
   write(*,*) 'finished reordering'
-  if (debug) then
+  if (debug .and. plot_surfaces) then
     filename = 'plot_ordered_flux_surfaces.py'
     call py_plot_surface(filename,node_list,element_list,.false., .true., surface_list, -1)
   endif
@@ -697,18 +698,12 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids,psi_xpoint,R_
   sep_list%psi_values(1) = flux_list%psi_values(n_flux)
   if ((xcase .eq. 3) .and. (psi_xpoint(2) .ne. psi_xpoint(1))) sep_list%psi_values(2) = flux_list%psi_values(n_flux+n_open)
   call find_flux_surfaces(0,.true.,xcase,node_list,element_list,sep_list)  
-  call reorder_flux_surfaces(node_list, element_list, sep_list, ifail)
+  call reorder_flux_surfaces(node_list, element_list, sep_list, .false., ifail)
   if (debug .eq. 2) write(*,*) 'cleaning all surfaces'
   if ((xcase .eq. 3) .and. (psi_xpoint(2) .eq. psi_xpoint(1))) then
     call get_symmetric_separatrix_contours(node_list, element_list, sep_list)
   else
     call get_separatrix_contours(node_list, element_list, sep_list)
-  endif
-  
-  ! --- Because this will have been overwritten with the separatrix!
-  if (debug .ge. 1) then
-    filename = 'plot_ordered_flux_surfaces.py'
-    call py_plot_surface(filename,node_list,element_list,.false., .true., flux_list, -1)
   endif
   
   ! --- Loop over each core surface

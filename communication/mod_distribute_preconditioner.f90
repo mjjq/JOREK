@@ -28,7 +28,7 @@ contains
   !>    mumps_par%jcn(1:mumps_par%nz)
 
     use tr_module
-    use mod_parameters, only : n_tor
+    use mod_parameters, only : n_tor, n_var
     use global_distributed_matrix, only : irn_glob, jcn_glob, A_glob, rhs_glob, nz_glob, ndof_glob
     use mumps_module, only : mumps_par
     use mpi_mod
@@ -181,7 +181,7 @@ contains
             ji = indx0(j)
             if (distribute) then
               nr = ranks_per_family(j)
-              n_per_rank = ndof_glob/nr ! number of rows per rank for j-th family
+              n_per_rank = n_var*((ndof_glob/n_var)/nr) - n_var ! number of rows per rank for j-th family
               ji =  ji + min((irn_glob(i)-Int1)/n_per_rank, nr-1) ! row bin index for j-th family
             endif
             indx(ji) = indx(ji) + 1
@@ -208,7 +208,7 @@ contains
                 if ((n_i.eq.kmode).and.(n_j.eq.lmode)) then
                   ji = indx0(j)
                   if (distribute) then
-                    n_per_rank = ndof_glob/nr ! number of rows per rank for j-th family
+                    n_per_rank = n_var*((ndof_glob/n_var)/nr) - n_var  ! number of rows per rank for j-th family
                     ji =  ji + min((irn_glob(i)-1)/n_per_rank, nr-1) ! row bin index for j-th family
                   endif
                   indx(ji) = indx(ji) + 1
@@ -303,7 +303,7 @@ contains
   !> Calculate send-recv counts
     use mpi_mod
     use mod_integer_types
-    use mod_parameters, only : n_tor
+    use mod_parameters, only : n_tor, n_var
     use global_distributed_matrix, only : irn_glob, jcn_glob, A_glob, ndof_glob
     use phys_module, only : centralize_harm_mat, modes_per_family, mode_families_modes, n_mode_families, &
                             ranks_per_family, autodistribute_modes
@@ -341,7 +341,7 @@ contains
               ji = indx0(j)
               if (distribute) then
                 nr = ranks_per_family(j) ! number of ranks per j-th family
-                n_per_rank = ndof_glob/nr ! number of rows per rank for j-th family
+                n_per_rank = n_var*((ndof_glob/n_var)/nr) - n_var  ! number of rows per rank for j-th family
                 ji =  ji + min((irn_glob(i)-Int1)/n_per_rank, nr-1) ! row bin index for j-th family
               endif
               long_send_counts(ji) = long_send_counts(ji) + 1

@@ -1472,14 +1472,6 @@ enddo
 ! --- Use Poisson to project psi variable from old grid onto new grid
 ! --- At high order, this is the best way to do it.
 if (n_order .ge. 5) then
-  ! --- Temporary, just for projection
-  index = 0
-  do i=1,node_list%n_nodes
-    do k=1,n_degrees
-      index = index + 1
-      newnode_list%node(i)%index(k) = index
-    enddo
-  enddo
   ! --- For some reason, Poisson needs to be called with -1 first (don't understand why, but gives NaN otherwise)
   call poisson(0,-1,newnode_list,newelement_list,bnd_node_list,bnd_elm_list, 3,1,1, &
                0.0,1.0,.true.,xcase,Z_xpoint,.false.,.false.,1)

@@ -13,6 +13,7 @@ use mod_interp
 use phys_module, only: force_central_node, write_ps, fix_axis_nodes
 use mod_grid_conversions
 use mod_poiss
+use mod_node_indices
 
 implicit none
 
@@ -59,6 +60,7 @@ real*8,external     :: root
 character*4         :: label
 integer             :: i_elm1, i_vertex1, i_node1, i_node_save
 integer             :: i_elm2, i_vertex2, i_node2
+integer             :: node_indices( (n_order+1)/2, (n_order+1)/2 ), ii, jj
 
 xpoint = .true.
 my_id  = 0
@@ -1386,6 +1388,9 @@ endif
 !*             fill in the values into the new grid                    *
 !***********************************************************************
 
+! --- calculate node_indices
+call calculate_node_indices(node_indices)
+
 index = 0
 do i=1,newnode_list%n_nodes
 
@@ -1403,24 +1408,25 @@ do i=1,newnode_list%n_nodes
       index = index - 1
     endif
     ! --- Remove Xpoint nodes
+    call get_node_coords_from_index(node_indices, k, ii, jj)
     if (i .eq. index_xpoint+1) then
-      if ( (k.eq.1) .or. (k.eq.3) .or. (k.eq.6) ) then
+      if (ii .eq. 1) then ! t-derivatives
         newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
         index = index - 1
       endif
     endif
     if (i .eq. index_xpoint+2) then
-      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+      if (jj .eq. 1) then ! s-derivatives
         newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
         index = index - 1
       endif
     endif
     if (i .eq. index_xpoint+3) then
-      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+      if (jj .eq. 1) then ! s-derivatives
         newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
         index = index - 1
       endif
-      if ( (k.eq.3) .or. (k.eq.6) ) then
+      if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
         newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
         index = index - 1
       endif

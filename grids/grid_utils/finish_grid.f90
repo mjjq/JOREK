@@ -12,6 +12,7 @@ use mod_interp, only: interp_RZ, interp
 use mod_element_rtree
 use mod_grid_conversions
 use mod_poiss
+use mod_node_indices
 
 implicit none
 
@@ -57,6 +58,7 @@ real*8              :: R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
 character*4         :: label
 logical             :: normal_eqdsk, normal_eqdsk_wall
 logical, parameter  :: plot_grid = .false.
+integer             :: node_indices( (n_order+1)/2, (n_order+1)/2 )
 
 
 write(*,*) '*****************************************'
@@ -353,6 +355,9 @@ write(*,*) '                 Definition of nodes index '
 
 ! --- Note: it's very important that we do this after copying the nodes and after eliminating the orphan nodes!
 
+! --- calculate node_indices
+call calculate_node_indices(node_indices)
+
 !-------------------------------- Combine multiple nodes at axis and Xpoints
 index = 0
 do i=1,node_list%n_nodes
@@ -388,24 +393,25 @@ do i=1,node_list%n_nodes
     endif
 
     ! Remove all but one node at first Xpoint
+    call get_node_coords_from_index(node_indices, k, ii, jj)
     if (i .eq. 2) then
-      if ( (k.eq.1) .or. (k.eq.3) .or. (k.eq.6) ) then
+      if (ii .eq. 1) then ! t-derivatives
         node_list%node(i)%index(k) = node_list%node(1)%index(k)
         index = index - 1
       endif
     endif
     if (i .eq. 3) then
-      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+      if (jj .eq. 1) then ! s-derivatives
         node_list%node(i)%index(k) = node_list%node(2)%index(k)
         index = index - 1
       endif
     endif
     if (i .eq. 4) then
-      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+      if (jj .eq. 1) then ! s-derivatives
         node_list%node(i)%index(k) = node_list%node(1)%index(k)
         index = index - 1
       endif
-      if ( (k.eq.3) .or. (k.eq.6) ) then
+      if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
         node_list%node(i)%index(k) = node_list%node(3)%index(k)
         index = index - 1
       endif
@@ -414,23 +420,23 @@ do i=1,node_list%n_nodes
     ! Remove all but one node at second Xpoint
     if (xcase .eq. 3) then
       if (i .eq. 6) then
-        if ( (k.eq.1) .or. (k.eq.3) .or. (k.eq.6) ) then
+        if (ii .eq. 1) then ! t-derivatives
           node_list%node(i)%index(k) = node_list%node(5)%index(k)
           index = index - 1
         endif
       endif
       if (i .eq. 7) then
-        if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+        if (jj .eq. 1) then ! s-derivatives
           node_list%node(i)%index(k) = node_list%node(6)%index(k)
           index = index - 1
         endif
       endif
       if (i .eq. 8) then
-        if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+        if (jj .eq. 1) then ! s-derivatives
           node_list%node(i)%index(k) = node_list%node(5)%index(k)
           index = index - 1
         endif
-        if ( (k.eq.3) .or. (k.eq.6) ) then
+        if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
           node_list%node(i)%index(k) = node_list%node(7)%index(k)
           index = index - 1
         endif

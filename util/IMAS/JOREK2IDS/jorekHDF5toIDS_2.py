@@ -13,7 +13,7 @@
 #           https://www.jorek.eu/wiki/doku.php?id=hdf5-tools&s[]=hdf5
 #
 #   Requirements:
-#       - pip3 install --user h2py
+#       - pip3 install --user h5py PyQt5
 #       - IMAS
 #
 #

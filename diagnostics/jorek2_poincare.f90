@@ -163,10 +163,10 @@ allocate(Rp(maxval(n_turn)),Zp(maxval(n_turn)), Tp(maxval(n_turn)),Pp(maxval(n_t
 
 Rmin = 1.d20; Rmax = -1.d20; Zmin = 1.d20; Zmax=-1.d20
 do i=1,node_list%n_nodes
-  Rmin = min(Rmin,node_list%node(i)%x(1,1))
-  Rmax = max(Rmax,node_list%node(i)%x(1,1))
-  Zmin = min(Zmin,node_list%node(i)%x(1,2))
-  Zmax = max(Zmax,node_list%node(i)%x(1,2))
+  Rmin = min(Rmin,node_list%node(i)%x(1,1,1))
+  Rmax = max(Rmax,node_list%node(i)%x(1,1,1))
+  Zmin = min(Zmin,node_list%node(i)%x(1,1,2))
+  Zmax = max(Zmax,node_list%node(i)%x(1,1,2))
 enddo
 
 mode(1) = 0
@@ -203,7 +203,8 @@ L_IL: do i_lines=1,n_lines
   write(*,'(1x,2(a,i6),a,2f8.3)') 'Line',i_lines,' of',n_lines,' started at',R_start(i_lines),Z_start(i_lines)
 
   call find_RZ(node_list,element_list,R_start(i_lines),Z_start(i_lines),R_out,Z_out,i_elm,s_out,t_out,ifail)
-  
+ 
+  if (ifail .ne. 0) write(*,*) "Can not find RZ,", ifail 
   if (ifail .ne. 0) exit
 
   R_line = R_start(i_lines)
@@ -483,7 +484,7 @@ psi_t = P0_t
   AR0_p = 0.d0
   AZ0_p = 0.d0
 
-  call interp(node_list,element_list,i_elm,456,1,s_in,t_in,P0,P0_s,P0_t,P0_st,P0_ss,P0_tt)
+  call interp(node_list,element_list,i_elm,710,1,s_in,t_in,P0,P0_s,P0_t,P0_st,P0_ss,P0_tt)
   Fprof = P0
 #endif
 

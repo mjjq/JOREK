@@ -14,6 +14,7 @@ use equil_info
 use vacuum
 use mpi_mod
 use mod_interp, only: interp
+use mod_F_profile
 implicit none
 
           
@@ -48,7 +49,7 @@ real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xj
 real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
 real*8     :: sigmas(16), dZ_axis, Z_axis_int, Z_axis_old, area_ref
 integer    :: n_grids(10)
-logical    :: freeboundary_equil2, find_pf2
+logical    :: freeboundary_equil2
 real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
 real*8, allocatable     :: T_profile(:)
 real*8     :: density_prof
@@ -147,14 +148,6 @@ end if ! my_id == 0
 !--------------------------------------- freeboundary equilibrium
 freeboundary_equil = freeboundary_equil2
 
-if ( (.not. freeboundary_equil) .and. (find_pf_coil_currents) ) then
-  find_pf2 = .false.  !just initial polar grid, don't call find_pf_coils later
-else
-  find_pf2 = .true.   ! find_pf_coils can be called if need it
-endif
-if (find_pf_coil_currents) freeboundary_equil = .false.
-
-
 current_int = 0.d0; Z_axis_int = 0.d0
  
 T_0_old = T_0;  FF_0_old = FF_0;  T_1_old = T_1;  FF_1_old = FF_1
@@ -193,26 +186,8 @@ if (freeboundary_equil) then
       
       write(*,*)
       write(*,'(1x,a,i5,a)') '>>> ITERATION', iter, ' <<<'
-         
-      call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_tot)
-  
-      current_int = current_int + (current_tot-current_ref)
-      
-      if (mod(iter,n_feedback_current) .eq. 0) then
-        current_FB_fact  = current_FB_fact * (1. - FB_Ip_position * (current_tot-current_ref)/current_ref &
-                                                 - FB_Ip_integral *  current_int/current_ref   )
-      endif
-      
-      !-------------- Multiplying FF' and p' profiles by the same factor to scale total current -------------------------
-      FF_0 = FF_0_old * current_FB_fact   
-      FF_1 = FF_1_old * current_FB_fact      
-        
-      T_0  = T_0_old  * current_FB_fact    
-      T_1  = T_1_old  * current_FB_fact
-      !------------------------------------------------------------------------------------------------------------------
-      
-      write(*,'(A,1e12.4)') 'Current Feedback factor = ',  current_FB_fact
                      
+      ! Update axis annd boundary values
       call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
       
       write(10,'(i6,9e20.12)') iter, current_tot, R_axis, Z_axis, psi_bnd-psi_axis
@@ -252,13 +227,33 @@ if (freeboundary_equil) then
           write(*,'(A,4f8.3)') ' LIMITER PLASMA ',psi_lim, psi_bnd, R_lim,Z_lim
         endif
       endif
-      
+
       if (freeb_equil_iterate_area .and. (.not. xpoint2)) then
         call iterate2area(node_list,element_list, psi_axis, psi_lim, xpoint2, xcase2, area_ref, psi_bnd)
       endif
       
       write(*,'(A,1f8.3)') ' Psi_bnd = ', psi_bnd   
+      
+      ! Calculate current feedback
+      call integral_current(node_list,element_list,psi_axis, psi_bnd, xpoint2, xcase2, Z_xpoint, current_tot)
   
+      current_int = current_int + (current_tot-current_ref)
+      
+      if (mod(iter,n_feedback_current) .eq. 0) then
+        current_FB_fact  = current_FB_fact * (1. - FB_Ip_position * (current_tot-current_ref)/current_ref &
+                                                 - FB_Ip_integral *  current_int/current_ref   )
+      endif
+      
+      !-------------- Multiplying FF' and p' profiles by the same factor to scale total current -------------------------
+      FF_0 = FF_0_old * current_FB_fact   
+      FF_1 = FF_1_old * current_FB_fact      
+        
+      T_0  = T_0_old  * current_FB_fact    
+      T_1  = T_1_old  * current_FB_fact
+      !------------------------------------------------------------------------------------------------------------------
+      
+      write(*,'(A,1e12.4)') 'Current Feedback factor = ',  current_FB_fact
+      
       !Vertical feedback - needed for vertically unstable plasmas        
       Z_axis_int = Z_axis_int + (Z_axis - Z_axis_ref)
       if (iter .eq. 1) then
@@ -266,25 +261,25 @@ if (freeboundary_equil) then
       else
         dZ_axis = Z_axis - Z_axis_old
       end if
-     
+      
       if ((mod(iter,n_feedback_vertical) .eq. 0) .and. (iter .ge. start_VFB) ) then
         vertical_FB = FB_Zaxis_position   * (Z_axis-Z_axis_ref) &   ! vertical_FB is used in vacuum_equilibrium.f90 to modify the coils current
                     + FB_Zaxis_integral   * Z_axis_int          &   
                     + FB_Zaxis_derivative * dZ_axis
       endif
-      
-      Z_axis_old = Z_axis
-     
+        
+        Z_axis_old = Z_axis
+       
     end if ! my_id == 0
     
     call MPI_bcast(vertical_FB, 1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD,ierr)
-
+  
     ! --- Iterate equation
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
                  psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1
-
-!    call boundary_check
- 
+  
+  !  call boundary_check
+   
     if (my_id == 0) then
       diff = 0.d0
       do i=1, node_list%n_nodes
@@ -294,9 +289,9 @@ if (freeboundary_equil) then
     
       write(*,'(A,i5,e14.6)') ' iteration, diff : ',iter,diff
     end if ! my_id == 0
-
+  
     call MPI_bcast(diff, 1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD,ierr)
-
+  
     if ( (iter > 1) .and. (diff < equil_accuracy_freeb) ) then
       if (my_id == 0) write(*,'(A,I4,A)') ' Free boundary equilibrium converged: after', iter, ' iterations'
       exit
@@ -304,16 +299,60 @@ if (freeboundary_equil) then
       if (my_id == 0) write(*,'(A,ES10.3)') ' WARNING: Free boundary equilibrium not fully converged: diff=', diff
       exit
     end if
-
+  
   enddo
-
+  
   if (freeb_equil_iterate_area .and. (.not. xpoint2)) then
     n_limiter = 1  ! set found limiter (defined inside iterate2area)
   endif
-
+  
 endif
 
 if (my_id == 0) then
+  ! Update psi axis and boundary with new values from the last iteration of equilibrium solvers 
+  call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+        
+  write(10,'(i6,9e20.12)') iter, current_tot, R_axis, Z_axis, psi_bnd-psi_axis
+  
+  if ((ifail .ne. 0) .and. (iter .le. 5)) then
+    call find_RZ(node_list,element_list,R_geo,Z_geo,R_out,Z_out,i_elm,s_out,t_out,ifail)
+    call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi_axis,P_s,P_t,P_st,P_ss,P_tt)
+    write(*,*)  ' changed magnetic axis to :  ', R_out,Z_out,psi_axis
+  endif
+  
+  psi_bnd = 0.d0
+  
+  if (xpoint2) then
+    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
+    if (ifail .ne. 1) then      
+      psi_bnd  = psi_xpoint(1)
+      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+        psi_bnd = psi_xpoint(2)
+      endif
+      if(xcase2 .eq. 1) Z_xpoint(2) = +99.d0
+      if(xcase2 .eq. 2) Z_xpoint(1) = -99.d0
+    else
+      Z_xpoint(1) = -99.d0 
+      Z_xpoint(2) = +99.d0
+    endif
+  endif
+  if (.not. xpoint2) then
+    call find_limiter(my_id,node_list,element_list,bnd_elm_list,psi_lim,R_lim,Z_lim)
+    if ( (Z_lim .gt. Z_xpoint(1)) .and. (Z_lim .lt. Z_xpoint(2)) ) then
+      call is_axis_psi_mininum(node_list, element_list, bnd_elm_list)
+      if (ES%axis_is_psi_minimum) then
+        psi_bnd = min(psi_lim,psi_bnd)
+      else
+        psi_bnd = max(psi_lim,psi_bnd)
+      endif
+      write(*,'(A,4f8.3)') ' LIMITER PLASMA ',psi_lim, psi_bnd, R_lim,Z_lim
+    endif
+  endif
+
+  if (freeboundary_equil .and. freeb_equil_iterate_area .and. (.not. xpoint2)) then
+    call iterate2area(node_list,element_list, psi_axis, psi_lim, xpoint2, xcase2, area_ref, psi_bnd)
+  endif
+  
   !------------------------------- end of equilibrium, start filling data
   psi_axis = psi_axis - psi_offset_freeb
   psi_bnd  = psi_bnd  - psi_offset_freeb
@@ -322,13 +361,13 @@ if (my_id == 0) then
   
     node_list%node(i)%values(1,1,1) = node_list%node(i)%values(1,1,1) - psi_offset_freeb
     psi = node_list%node(i)%values(1,1,1)
-    R   = node_list%node(i)%x(1,1)
-    Z   = node_list%node(i)%x(1,2)
+    R   = node_list%node(i)%x(1,1,1)
+    Z   = node_list%node(i)%x(1,1,2)
   
     call density(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
                                                                dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
   
-    if (jorek_model .eq. 400) then
+    if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 401) .or. (jorek_model .eq. 711) ) then
       call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
     		     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
   
@@ -355,14 +394,14 @@ if (my_id == 0) then
                                                                   dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
   
       node_list%node(i)%Fprof_eq(1) =   F_prof
-      node_list%node(i)%Fprof_eq(2) =   dF_dpsi * node_list%node(i)%values(1,2,var_A3)  + dF_dz * node_list%node(i)%x(2,2)
-      node_list%node(i)%Fprof_eq(3) =   dF_dpsi * node_list%node(i)%values(1,3,var_A3)  + dF_dz * node_list%node(i)%x(3,2)
-      node_list%node(i)%Fprof_eq(4) =   dF_dpsi * node_list%node(i)%values(1,4,var_A3)  + dF_dz * node_list%node(i)%x(4,2)      &
+      node_list%node(i)%Fprof_eq(2) =   dF_dpsi * node_list%node(i)%values(1,2,var_A3)  + dF_dz * node_list%node(i)%x(1,2,2)
+      node_list%node(i)%Fprof_eq(3) =   dF_dpsi * node_list%node(i)%values(1,3,var_A3)  + dF_dz * node_list%node(i)%x(1,3,2)
+      node_list%node(i)%Fprof_eq(4) =   dF_dpsi * node_list%node(i)%values(1,4,var_A3)  + dF_dz * node_list%node(i)%x(1,4,2)      &
                                       + dF_dpsi2 * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
-                                      + dF_dz2   * node_list%node(i)%x(2,2) * node_list%node(i)%x(3,2)
+                                      + dF_dz2   * node_list%node(i)%x(1,2,2) * node_list%node(i)%x(1,3,2)
 #else
     call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
-                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+                                                               dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .true.)
 #endif
 
   
@@ -392,43 +431,27 @@ if (my_id == 0) then
     node_list%node(i)%values(1,1,3) = zjz
   
     node_list%node(i)%values(1,2,3) = dj_dpsi * node_list%node(i)%values(1,2,1) &
-                                    + dj_dR   * node_list%node(i)%x(2,1)        &
-                                    + dj_dZ   * node_list%node(i)%x(2,2)
+                                    + dj_dR   * node_list%node(i)%x(1,2,1)        &
+                                    + dj_dZ   * node_list%node(i)%x(1,2,2)
   
     node_list%node(i)%values(1,3,3) = dj_dpsi * node_list%node(i)%values(1,3,1) &
-                                    + dj_dR   * node_list%node(i)%x(3,1)        &
-                                    + dj_dZ   * node_list%node(i)%x(3,2)
+                                    + dj_dR   * node_list%node(i)%x(1,3,1)        &
+                                    + dj_dZ   * node_list%node(i)%x(1,3,2)
   
     node_list%node(i)%values(1,4,3) = dj_dpsi  * node_list%node(i)%values(1,4,1) &
-                                    + dj_dR    * node_list%node(i)%x(4,1)        &
-                                    + dj_dZ    * node_list%node(i)%x(4,2)        &
-                                    + dj_dR_dR * node_list%node(i)%x(2,1) * node_list%node(i)%x(3,1)  &
-                                    + dj_dZ_dZ * node_list%node(i)%x(2,2) * node_list%node(i)%x(3,2)  &
+                                    + dj_dR    * node_list%node(i)%x(1,4,1)        &
+                                    + dj_dZ    * node_list%node(i)%x(1,4,2)        &
+                                    + dj_dR_dR * node_list%node(i)%x(1,2,1) * node_list%node(i)%x(1,3,1)  &
+                                    + dj_dZ_dZ * node_list%node(i)%x(1,2,2) * node_list%node(i)%x(1,3,2)  &
                                     + dj_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                    + dj_dR_dZ * ( node_list%node(i)%x(2,1) * node_list%node(i)%x(3,2)          &
-                                                 + node_list%node(i)%x(3,1) * node_list%node(i)%x(2,2) )        &
-                                    + dj_dR_dpsi*( node_list%node(i)%x(2,1) * node_list%node(i)%values(1,3,1)   &
-                                                 + node_list%node(i)%x(3,1) * node_list%node(i)%values(1,2,1) ) &
-                                    + dj_dZ_dpsi*( node_list%node(i)%x(2,2) * node_list%node(i)%values(1,3,1)   &
-                                                 + node_list%node(i)%x(3,2) * node_list%node(i)%values(1,2,1) )
+                                    + dj_dR_dZ * ( node_list%node(i)%x(1,2,1) * node_list%node(i)%x(1,3,2)          &
+                                                 + node_list%node(i)%x(1,3,1) * node_list%node(i)%x(1,2,2) )        &
+                                    + dj_dR_dpsi*( node_list%node(i)%x(1,2,1) * node_list%node(i)%values(1,3,1)   &
+                                                 + node_list%node(i)%x(1,3,1) * node_list%node(i)%values(1,2,1) ) &
+                                    + dj_dZ_dpsi*( node_list%node(i)%x(1,2,2) * node_list%node(i)%values(1,3,1)   &
+                                                 + node_list%node(i)%x(1,3,2) * node_list%node(i)%values(1,2,1) )
   
   enddo
-  
-  if (find_pf_coil_currents .and. find_pf2) then
-    if (starwall_equil_coils) then
-      write(*,*) 'The feature "find_pf_coil_currents" is not available yet with STARWALL coils'
-      write(*,*) 'Please use COIL_FIELD (in STARWALL repository) for the coil geometry instead'
-    else
-      if (tokamak_device == 'JET') then
-        call find_Icoils_JET(node_list,element_list,bnd_node_list,bnd_elm_list)
-      else
-        call find_Icoils2(node_list,element_list,bnd_node_list,bnd_elm_list)
-      endif
-      write(*,*) ' '
-      write(*,*) ' Please re-do the equilibrium with the found currents and set find_pf_coil_currents=.false.'
-    endif
-    stop  
-  endif
   
   ! --- Find flux surfaces and plot them; determine the q-profile.  
   if (xpoint2 .and. (n_flux .gt. 1)) then
@@ -522,8 +545,15 @@ if (my_id == 0) then
   endif
   
   if (nice_q) then
+    if (xpoint2) then
+      ES%xpoint = xpoint2
+      ES%Z_xpoint = Z_xpoint
+    endif
     ES%psi_bnd  = psi_bnd
     ES%psi_axis = psi_axis
+    ES%Z_xpoint = Z_xpoint
+    ES%xpoint   = xpoint
+    ES%xcase    = xcase
     call q_profile(node_list,element_list,surface_list,psi_axis,psi_bnd,psi_xpoint,Z_xpoint)
   endif
   
@@ -536,7 +566,7 @@ if (my_id == 0) then
   do i=2,surface_list%n_psi
     psi= surface_list%psi_values(i)
     
-    if (jorek_model .eq. 400) then
+    if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 401) .or. (jorek_model .eq. 711) ) then
       call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
            Ti_prof,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
   

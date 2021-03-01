@@ -1,0 +1,121 @@
+&in1
+
+ restart = .t.
+ regrid  = .f.
+ refinement=.f.
+ tstep_n   = 100.d0 
+ nstep_n   = 100 
+ 
+ time_evol_scheme = "Gears"
+
+ nout = 1 
+ 
+ tauIC     = 0.000
+ eta       = 1.d-06
+ eta_num   = 0.d-08
+ visco     = 1.d-05
+ visco_par = 1.d-05
+ visco_num = 0.d-05
+
+ eta_T_dependent = .f.
+ visco_T_dependent = .t.
+
+ D_par     = 0.0d0
+ D_perp(1) = 1.d-6
+ D_perp(2) = 0.9d0
+ D_perp(3) = 0.09d0
+ D_perp(4) = 0.01d0
+ D_perp(5) = 0.92d0
+ D_perp(6) = 5.0d-6
+
+ ZK_par     = 100.d0
+ ZK_perp(1) = 1.d-6
+ ZK_perp(2) = 0.95d0
+ ZK_perp(3) = 0.09d0
+ ZK_perp(4) = 0.01d0
+ ZK_perp(5) = 0.92
+ ZK_perp(6) = 5.0d-6
+
+ fbnd(1)   = 2.
+ fbnd(2:4) = 0.
+ mf        = 0
+
+ ellip  = 1.7
+ tria_u = 0.
+ tria_l = 0.
+ quad_u = -0.
+ quad_l = -0.4
+
+ xampl  = +0.75
+ xsig   = 0.6
+ xwidth = 1.5
+ xtheta = 4.7
+ xleft  = -0.01
+ xshift = 0.10
+ xpoint = .t.
+
+ R_begin = 2.9
+ R_end   = 3.1
+ Z_begin = -0.1
+ Z_end   = 0.1
+
+ R_geo = 3.0
+ Z_geo = 0.
+
+ F0    = 9.0
+
+ amin     = 1.
+
+ n_R      = 0
+ n_Z      = 0
+ n_radial = 101 
+ n_pol    = 128 
+
+ n_flux   = 81  
+ n_tht    = 100  
+ n_open   = 21 
+ n_leg    = 21  
+ n_private =15 
+
+ FF_0 = 4.8
+ FF_1 = 0.
+ FF_coef(1)  = -1.0
+ FF_coef(2)  = 0.d0
+ FF_coef(3)  = 0.d0
+ FF_coef(4)  = 0.03d0
+ FF_coef(5)  = 1.0d0
+ FF_coef(6)  = -0.04d0
+ FF_coef(7)  = 0.940d0
+ FF_coef(8)  = 0.07d0
+
+ heatsource     = 0.d0
+ particlesource = 0.d0
+
+ T_0 = 1.2d-1
+ T_1 = 2.5853d-4
+ T_coef(1) = -0.667d0
+ T_coef(2) = +0.0d0
+ T_coef(3) = 0.d0
+ T_coef(4) = 0.06d0
+ T_coef(5) = 0.96d0
+
+ rho_0 = 1.
+ rho_1 = 0.05
+ rho_coef(1)  =  -0.25
+ rho_coef(2)  =  0.0
+ rho_coef(3)  =  0.0
+ rho_coef(4)  =  0.06
+ rho_coef(5)  =  0.96d0
+
+ !visco_par_num = 0.d-05
+ !ZK_perp_num = 0.d-12
+ !D_perp_num = 0.d-12
+
+ !iter_precon = 22
+ !gmres_m = 20
+ !gmres_4 = 1.d0
+ !gmres_max_iter = 200
+ !gmres_tol = 1.d-8
+
+ /
+

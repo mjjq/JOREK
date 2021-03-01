@@ -3,7 +3,7 @@ module mod_boundary_matrix_open
 contains
 
 subroutine boundary_matrix_open(vertex, direction, element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, &
-                                psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
+                                psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, i_tor_min, i_tor_max)
 
 !---------------------------------------------------------------------
 ! calculates the matrix contribution of the boundaries of one element
@@ -19,6 +19,8 @@ implicit none
 
 type (type_element)   :: element
 type (type_node)      :: nodes(2)        ! the two nodes containing the boundary nodes
+integer, intent(in)   :: i_tor_min   
+integer, intent(in)   :: i_tor_max   
 
 real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
 real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)

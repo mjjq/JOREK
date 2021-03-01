@@ -32,7 +32,7 @@ psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
 call density(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,&
              zn,dn_dpsi,dn_dz,dn_dpsi2, dn_dz2, dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
 
-if (jorek_model .eq. 400) then
+if (with_TiTe) then
   
   call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
                    zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)
@@ -51,7 +51,7 @@ else
 endif
 
 call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd, &
-             zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz)
+             zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .true.)
 
 zjz   = zFFprime - R*R * (zn * dT_dpsi + dn_dpsi * zT)
 

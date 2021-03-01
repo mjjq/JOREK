@@ -7,7 +7,7 @@ use tr_module
 use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
-use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes
+use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes, force_central_node
 
 implicit none
 
@@ -39,6 +39,7 @@ real*8, allocatable :: S1(:), S2(:), SP1(:), SP2(:), SP3(:), SP4(:)
 real*8, allocatable :: T1(:), T2(:), TP1(:), TP2(:), TP3(:), TP4(:)
 real*8, external    :: spwert
 logical             :: skip_update_neighbours
+logical             :: doing_polar_square
 
 
 call tr_allocate(RR,1,4,1,nr*np,"RR",CAT_GRID)
@@ -70,6 +71,8 @@ n_index_start = 0
 do i=1,n_node_start
   n_index_start = max(n_index_start,maxval(node_list%node(i)%index(:)))
 enddo
+doing_polar_square = .false.
+if (n_index_start .gt. 0) doing_polar_square = .true.
 
 write(*,*) '*************************************'
 write(*,*) '*        grid_polar_bezier          *'
@@ -276,41 +279,45 @@ do i=1,nr
    index0 = np*(i-1) + j
    index  = n_node_start + np*(i-1) + j
 
-   node_list%node(index)%X(1,1)        = RR(1,index0)
-   node_list%node(index)%X(1,2)        = ZZ(1,index0)
+   node_list%node(index)%X(1,1,1)        = RR(1,index0)
+   node_list%node(index)%X(1,1,2)        = ZZ(1,index0)
    node_list%node(index)%values(1,1,1) = PSI(1,index0)
 
-   node_list%node(index)%X(2,1)        = RR(2,index0)  * 2.d0/3.d0
-   node_list%node(index)%X(2,2)        = ZZ(2,index0)  * 2.d0/3.d0
+   node_list%node(index)%X(1,2,1)        = RR(2,index0)  * 2.d0/3.d0
+   node_list%node(index)%X(1,2,2)        = ZZ(2,index0)  * 2.d0/3.d0
    node_list%node(index)%values(1,2,1) = PSI(2,index0) * 2.d0/3.d0
 
-   node_list%node(index)%X(3,1)        = RR(3,index0)  * 2.d0/3.d0
-   node_list%node(index)%X(3,2)        = ZZ(3,index0)  * 2.d0/3.d0
+   node_list%node(index)%X(1,3,1)        = RR(3,index0)  * 2.d0/3.d0
+   node_list%node(index)%X(1,3,2)        = ZZ(3,index0)  * 2.d0/3.d0
    node_list%node(index)%values(1,3,1) = PSI(3,index0) * 2.d0/3.d0
 
-   node_list%node(index)%X(4,1)        = RR(4,index0)  * 4.d0/9.d0
-   node_list%node(index)%X(4,2)        = ZZ(4,index0)  * 4.d0/9.d0
+   node_list%node(index)%X(1,4,1)        = RR(4,index0)  * 4.d0/9.d0
+   node_list%node(index)%X(1,4,2)        = ZZ(4,index0)  * 4.d0/9.d0
    node_list%node(index)%values(1,4,1) = PSI(4,index0) * 4.d0/9.d0
 
    node_list%node(index)%boundary = 0
    if (i .eq. nr) node_list%node(index)%boundary = 2
 
    node_list%node(index)%axis_node = .false.
-   if (fix_axis_nodes) then
-      if (i .eq. 1) then
-        node_list%node(index)%axis_node = .true.
-        ! --- On axis, the 3rd vector should not be null, it should be perpendicular to the 2nd (radial) vector
-        ! --- Then, to avoid elements overlapping eachother, we set the element_size to zero for the 3rd order
-        ! --- This trick ensures poloidal continuity as you get away from the axis, which is not possible
-        ! --- when the 3rd vector is zero, because then, by definition, there is no poloidal derivative...
-        node_list%node(index)%x(3,1) = +node_list%node(index)%x(2,2)
-        node_list%node(index)%x(3,2) = -node_list%node(index)%x(2,1)
-      endif
-   endif
+   if ( fix_axis_nodes .and. (.not. doing_polar_square) .and. (i .eq. 1) ) node_list%node(index)%axis_node = .true.
 
-   do k=1,n_order+1
-     node_list%node(index)%index(k) = n_index_start + (n_order+1)*(index0-1)+k
-   enddo
+   if (force_central_node .and. (.not. doing_polar_square) .and. (i.eq.1)) then
+
+     node_list%node(index)%index(1) = 1
+
+     if (j.eq.1) n_index_start = n_index_start + 1
+
+     node_list%node(index)%index(2) = n_index_start + 1
+     node_list%node(index)%index(3) = n_index_start + 2
+     node_list%node(index)%index(4) = n_index_start + 3
+     n_index_start = n_index_start + n_order
+
+   else
+     do k=1,n_order+1
+       node_list%node(index)%index(k) = n_index_start + k
+     enddo
+     n_index_start = n_index_start + n_order+1
+   endif
   
    node_list%node(index)%constrained=.false.
  enddo
@@ -331,23 +338,23 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
 
    if ((iv .eq. 1) .or. (iv .eq.3)) then
 
-     delta_Rp = node_list%node(node_ivp)%X(1,1) - node_list%node(node_iv)%X(1,1)
-     delta_Zp = node_list%node(node_ivp)%X(1,2) - node_list%node(node_iv)%X(1,2)
-     dir_2    = delta_Rp * node_list%node(node_iv)%X(2,1) + delta_Zp * node_list%node(node_iv)%X(2,2)
+     delta_Rp = node_list%node(node_ivp)%X(1,1,1) - node_list%node(node_iv)%X(1,1,1)
+     delta_Zp = node_list%node(node_ivp)%X(1,1,2) - node_list%node(node_iv)%X(1,1,2)
+     dir_2    = delta_Rp * node_list%node(node_iv)%X(1,2,1) + delta_Zp * node_list%node(node_iv)%X(1,2,2)
 
-     delta_Rm = node_list%node(node_ivm)%X(1,1) - node_list%node(node_iv)%X(1,1)
-     delta_Zm = node_list%node(node_ivm)%X(1,2) - node_list%node(node_iv)%X(1,2)
-     dir_3    = delta_Rm * node_list%node(node_iv)%X(3,1) + delta_Zm * node_list%node(node_iv)%X(3,2)
+     delta_Rm = node_list%node(node_ivm)%X(1,1,1) - node_list%node(node_iv)%X(1,1,1)
+     delta_Zm = node_list%node(node_ivm)%X(1,1,2) - node_list%node(node_iv)%X(1,1,2)
+     dir_3    = delta_Rm * node_list%node(node_iv)%X(1,3,1) + delta_Zm * node_list%node(node_iv)%X(1,3,2)
 
    else
 
-     delta_Rp = node_list%node(node_ivp)%X(1,1) - node_list%node(node_iv)%X(1,1)
-     delta_Zp = node_list%node(node_ivp)%X(1,2) - node_list%node(node_iv)%X(1,2)
-     dir_3    = delta_Rp * node_list%node(node_iv)%X(3,1) + delta_Zp * node_list%node(node_iv)%X(3,2)
+     delta_Rp = node_list%node(node_ivp)%X(1,1,1) - node_list%node(node_iv)%X(1,1,1)
+     delta_Zp = node_list%node(node_ivp)%X(1,1,2) - node_list%node(node_iv)%X(1,1,2)
+     dir_3    = delta_Rp * node_list%node(node_iv)%X(1,3,1) + delta_Zp * node_list%node(node_iv)%X(1,3,2)
 
-     delta_Rm = node_list%node(node_ivm)%X(1,1) - node_list%node(node_iv)%X(1,1)
-     delta_Zm = node_list%node(node_ivm)%X(1,2) - node_list%node(node_iv)%X(1,2)
-     dir_2    = delta_Rm * node_list%node(node_iv)%X(2,1) + delta_Zm * node_list%node(node_iv)%X(2,2)
+     delta_Rm = node_list%node(node_ivm)%X(1,1,1) - node_list%node(node_iv)%X(1,1,1)
+     delta_Zm = node_list%node(node_ivm)%X(1,1,2) - node_list%node(node_iv)%X(1,1,2)
+     dir_2    = delta_Rm * node_list%node(node_iv)%X(1,2,1) + delta_Zm * node_list%node(node_iv)%X(1,2,2)
 
    endif
 

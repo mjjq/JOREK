@@ -254,11 +254,64 @@ module mod_diag_output
     call close_file(ierr, i_file)
     
   end subroutine write_ascii_1d
-  
-  
-  
-  
-  
+
+
+
+
+
+  !> Write diagnostic output to an ascii file.
+  subroutine write_ascii_2d(ierr, eq, expr_list, res2d, format, header, filename, append, blanks,  &
+    comment)
+    
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME)//':write_ascii_2d'
+    
+    ! --- Routine parameters.
+    integer,                    intent(inout) :: ierr
+    type(t_equil_state),        intent(in)    :: eq
+    type(t_expr_list),          intent(in)    :: expr_list
+    real*8, allocatable,        intent(in)    :: res2d(:,:,:)
+    integer,                    intent(in)    :: format
+    logical,          optional, intent(in)    :: header
+    character(len=*), optional, intent(in)    :: filename
+    logical,          optional, intent(in)    :: append
+    logical,          optional, intent(in)    :: blanks
+    character(len=*), optional, intent(in)    :: comment
+    
+    ! --- Local variables.
+    integer :: i_file, i, j
+    
+    ierr = 0
+    
+    if ( .not. allocated(res2d) ) then
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': array res2d is not allocated.'
+      ierr = 101
+      return
+    end if
+    
+    call open_ascii_file(ierr, i_file, filename, append, blanks)
+    
+    if ( format == FORM_TABLE ) then
+      call write_ascii_header(i_file, expr_list, header, comment)
+      do j = 1, size(res2d,1)
+          write(i_file,'(a,i4.4,a,i4.4)') '  # Column ', j,' of ',size(res2d,1)
+        do i = 1, size(res2d,2)
+          write(i_file,'(9999es23.15)') res2d(j,i,:)
+        end do
+      end do 
+    else
+      write(*,*) 'ERROR in '//trim(THIS_ROUTINE_NAME)//': parameter format has illegal value.'
+      ierr = 103
+      return
+    end if
+    
+    call close_file(ierr, i_file)
+    
+  end subroutine write_ascii_2d 
+
+
+
+
+
   !> [Private] Auxilliary routine for write_ascii routines.
   subroutine open_ascii_file(ierr, i_file, filename, append, blanks)
     

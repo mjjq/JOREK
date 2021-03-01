@@ -46,13 +46,13 @@ do ife =1,  element_list%n_elements
       do ms=1, n_gauss
         do mt=1, n_gauss
 
-          x_g(ms,mt) = x_g(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H(i,j,ms,mt)
-          y_g(ms,mt) = y_g(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H(i,j,ms,mt)
+          x_g(ms,mt) = x_g(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H(i,j,ms,mt)
+          y_g(ms,mt) = y_g(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H(i,j,ms,mt)
 
-          x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
-          x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
-          y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
-          y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+          x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_s(i,j,ms,mt)
+          x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_t(i,j,ms,mt)
+          y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_s(i,j,ms,mt)
+          y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_t(i,j,ms,mt)
 
 #ifdef fullmhd
           Fprofile(ms,mt) = Fprofile(ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H(i,j,ms,mt)  
@@ -136,12 +136,12 @@ do ife =1,  element_list%n_elements
         factor = 2.d0 * PI * BigR * xjac * wst
 
         W_mag(in) = W_mag(in) + 0.5d0 * ( BR**2 + BZ**2 + Bp**2 ) * factor
-        W_kin(in) = W_kin(in) + 0.5d0 * factor * eq_g1(var_r,ms,mt)*( eq_g(var_uR,ms,mt)**2 + eq_g(var_uZ,ms,mt)**2 + eq_g(var_up,ms,mt)**2 )
+        W_kin(in) = W_kin(in) + 0.5d0 * factor * eq_g1(var_rho,ms,mt)*( eq_g(var_uR,ms,mt)**2 + eq_g(var_uZ,ms,mt)**2 + eq_g(var_up,ms,mt)**2 )
 
         if (in /= 1) then ! a non-axisymmetric density harmonic adds to the kinetic energy when there is a nonzero n=0 velocity component
           W_kin(in) = W_kin(in) + 0.5d0 * factor * ( & 
-        + eq_g(var_r,ms,mt) *( eq_g1(var_uR,ms,mt)*eq_g(var_uR,ms,mt) + eq_g1(var_uZ,ms,mt)*eq_g(var_uZ,ms,mt) + eq_g1(var_up,ms,mt)*eq_g(var_up,ms,mt)  ) &
-        + eq_g(var_r,ms,mt) *( eq_g(var_uR,ms,mt) *eq_g1(var_uR,ms,mt)+ eq_g(var_uZ,ms,mt) *eq_g1(var_uZ,ms,mt)+ eq_g(var_up,ms,mt) *eq_g1(var_up,ms,mt) ) )
+        + eq_g(var_rho,ms,mt) *( eq_g1(var_uR,ms,mt)*eq_g(var_uR,ms,mt) + eq_g1(var_uZ,ms,mt)*eq_g(var_uZ,ms,mt) + eq_g1(var_up,ms,mt)*eq_g(var_up,ms,mt)  ) &
+        + eq_g(var_rho,ms,mt) *( eq_g(var_uR,ms,mt) *eq_g1(var_uR,ms,mt)+ eq_g(var_uZ,ms,mt) *eq_g1(var_uZ,ms,mt)+ eq_g(var_up,ms,mt) *eq_g1(var_up,ms,mt) ) )
         endif
 
 #else
@@ -151,7 +151,7 @@ do ife =1,  element_list%n_elements
 
 !        if (gamma /= 1.d0) then ! the internal energy density p/(gamma-1) may be absorbed in the kinetic energy
 !                                  ( perhaps best is to output it as a separate energy in the future ? ) 
-!          W_kin(in) = W_kin(in) + eq_g(var_r,ms,mt)*eq_g(var_T,ms,mt) / ( gamma - 1.d0 ) * factor
+!          W_kin(in) = W_kin(in) + eq_g(var_rho,ms,mt)*eq_g(var_T,ms,mt) / ( gamma - 1.d0 ) * factor
 !        endif
 
 

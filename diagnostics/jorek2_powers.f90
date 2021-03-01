@@ -1,6 +1,10 @@
 !**********************************************************************
-!* program to calculate the density and power fluxes at the boudnary  *
+!* program to calculate the density and power fluxes at the boundary  *
 !* from a JOREK2 restart file                                         *
+!*                                                                    *
+!* This diagnostic has to be run with MPI (mpirun/mpiexec/srun        *
+!* depending on the system). For details, see:                        *
+!* https://www.jorek.eu/wiki/doku.php?id=diagnostics#diagnostics      *
 !**********************************************************************
 
 program jorek_powers
@@ -322,8 +326,9 @@ do m=1, n_plane
 
         enddo
 
-      elseif ((node_list%node(inode1)%boundary .ne. 0) .and. (node_list%node(inode2)%boundary .ne. 0)) then
-        write(*,*) 'problem : ',inode1,inode2,node_list%node(inode1)%boundary,node_list%node(inode2)%boundary
+      else if ((node_list%node(inode1)%boundary .ne. 0) .and. (node_list%node(inode2)%boundary .ne. 0)) then
+        write(*,*) 'Error : ',inode1,inode2,node_list%node(inode1)%boundary,node_list%node(inode2)%boundary
+        stop
       endif
 
     enddo

@@ -27,7 +27,7 @@ sim%groups(:)%Z    = 74
 sim%groups(:)%mass = 183.84 !< atomic mass units
 
 ! Prepare the coronal equilibrium
-adas = read_adf11('50_w')
+adas = read_adf11(0,'50_w')
 cor  = coronal(adas)
 
 ! Distribute particles uniformly throughout the domain

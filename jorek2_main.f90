@@ -1,9 +1,13 @@
 !> JOREK 2.0 -- Solves the (reduced) MHD equations in 3D toroidal geometry.
 !!
+!! By using this code, you accept the code license available at:
+!! https://www.jorek.eu/JOREK-license.pdf
+!!
 !! - solvers implemented:
 !!   - MUMPS
 !!   - PastiX
-!!   - GMRES (+MUMPS or PastiX preconditioner)
+!!   - STRUMPACK
+!!   - GMRES (+MUMPS, PastiX or STRUMPACK preconditioner)
 !!
 !! - required libraries :
 !!   - MPI
@@ -15,7 +19,7 @@
 !!   - LAPACK, BLAS
 !!   - PPPLIB
 !!
-!! @author Guido Huysmans (Euratom / CEA Association)
+!! @author Guido Huysmans (Euratom / CEA Association) and the whole JOREK Team
 !! @date 18-7-2008
 program JOREK2
 
@@ -46,6 +50,13 @@ program JOREK2
   use basis_at_gaussian, only: initialise_basis
   use mod_expression, only: exprs_all_int, init_expr
   use mod_integrals3D
+  use mod_openadas, only : read_adf11
+  use mod_atomic_coeff_deuterium, only: ad_deuterium 
+#ifdef USE_STRUMPACK
+  use strumpack_module
+#endif
+  use direct_construction_mod
+  use centralization_mod
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -62,12 +73,17 @@ program JOREK2
 #ifdef USE_HDF5
   use hdf5
   use hdf5_io_module
+  use matio_module, only: timestamp
 #endif
   use mpi_mod
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   use mod_neutral_source
 #endif
+#ifdef WITH_Impurities
+  use mod_injection_source
+#endif
+
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
@@ -126,7 +142,7 @@ program JOREK2
   type(clcktype)           :: t_itstart, t0, t1
   real*8                   :: mindelta, maxdelta
   integer                  :: my_id, my_id_n, my_id_master
-  integer                  :: istep,jstep,ierr,i,itor,inode
+  integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint(2)
   integer                  :: n_local_ELMs
   integer                  :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer                  :: iter_gmres
@@ -147,7 +163,7 @@ program JOREK2
   real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   real*8,allocatable       :: res(:) 
-  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev
+  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev, n_since_update
   logical                  :: is_local, file_exists
   integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
@@ -169,6 +185,8 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
+  integer :: nsolvers=0
+  logical :: solvers(4), solvers_eq(3)
  
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
@@ -231,6 +249,10 @@ required = 0
   ! --- Preset some solver variables
   pastix_initialised = .false.
   pastix_analysed    = .false.
+#ifdef USE_STRUMPACK  
+  spss_initialized = .false.
+  spss_analyzed    = .false.
+#endif  
   
   ! --- Preset input parameters to reasonable defaults, then read the input file.
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
@@ -241,19 +263,91 @@ required = 0
   ! --- GMRES makes no sense with n_tor=1
   if (n_tor == 1) then
     write(*,*) 'Remark: Setting gmres=.false. since n_tor=1'
-    gmres     = .false.
+    gmres     = .false. 
   end if
-  
+
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+  ! --- Read ADAS data and generate coronal equilibrium if needed
+  call init_imp_adas(my_id)
+#endif
+
   ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)
  
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+
+#if (!defined (USE_PASTIX))&&(!defined (USE_PASTIX6))
+  if (use_pastix.or.use_pastix_eq) then
+    write(*,*) ' FATAL : use_pastix requires defined USE_PASTIX or USE_PASTIX6'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
+#endif
+
+#ifndef USE_MUMPS
+  if (use_mumps.or.use_mumps_eq) then
+    write(*,*) ' FATAL : use_mumps requires defined USE_MUMPS'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
+#endif
+
+#ifndef USE_WSMP
+  if (use_wsmp) then
+    write(*,*) ' FATAL : use_wsmp requires defined USE_WSMP'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
+#endif
+
+#ifndef USE_STRUMPACK
+  if (use_strumpack.or.use_strumpack_eq) then
+    write(*,*) ' FATAL : use_strumpack requires defined USE_STRUMPACK'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
+#endif
+  
+  ! --- Check solver consistency
+  solvers = (/use_mumps,use_pastix,use_wsmp,use_strumpack/)
+  nsolvers = 0
+  do i=1,size(solvers)
+    if (solvers(i)) nsolvers = nsolvers + 1
+  enddo
+  if (nsolvers.eq.0) then
+    write(*,*) ' FATAL : specify a valid solver'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  elseif (nsolvers.gt.1) then
+    write(*,*) ' FATAL : specify only one solver'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
+  
+  solvers_eq = (/use_mumps_eq,use_pastix_eq,use_strumpack_eq/)
+  nsolvers = 0
+  do i=1,size(solvers_eq)
+    if (solvers_eq(i)) nsolvers = nsolvers + 1
+  enddo
+  if (nsolvers.eq.0) then
+    write(*,*) ' FATAL : specify a valid equilibrium solver'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  elseif (nsolvers.gt.1) then
+    write(*,*) ' FATAL : specify only one equilibrium solver'
+    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
+    stop
+  endif
 
   ! --- Some checks not to waste any cpu time
   if ( (n_tor < 1) .or. (mod(n_tor,2) == 0) ) then
     write(*,*) 'FATAL : Hard-coded parameter n_tor has an illegal value', n_tor
     call MPI_Abort(MPI_COMM_WORLD, 23, ierr)
     stop
+  else if ( (n_coord_tor > 1) .and. (rst_hdf5_version .eq. 1) ) then
+    write(*,*) 'FATAL : Hard-coded parameter n_coord_tor > 1 is only possible with rst_hdf5_version > 1'
+    call MPI_Abort(MPI_COMM_WORLD, 23, ierr)
   else if ( n_period<1 ) then
     write(*,*) 'FATAL : Hard-coded parameter n_period has an illegal value', n_period
     call MPI_Abort(MPI_COMM_WORLD, 24, ierr)
@@ -282,10 +376,6 @@ required = 0
     write(*,*) 'FATAL : MPI_THREAD_MULTIPLE (provided < required)', my_id, required, provided
     call MPI_Abort(MPI_COMM_WORLD, 2, ierr)
     stop
-  else if ( (.not. use_mumps) .and. (.not. use_pastix) .and. (.not. use_wsmp) ) then
-    write(*,*) ' FATAL : specify a valid solver'
-    call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
-    stop
   else if ( mod(n_tor,2) == 0 ) then
     write(*,*) ' FATAL: n_tor must be an uneven number.'
     call MPI_Abort(MPI_COMM_WORLD, 4, ierr)
@@ -310,18 +400,7 @@ required = 0
       (n_tor-1)/2+1,' harmonics'
     call MPI_Abort(MPI_COMM_WORLD, 6, ierr)
     stop
-  else if ( use_mumps ) then
-#ifndef USE_MUMPS
-    write(*,*) 'FATAL : use_mumps=.true. requires USE_MUMPS=1 in Makefile.inc'
-    call MPI_Abort(MPI_COMM_WORLD, 7, ierr)
-    stop
-#endif
   else if ( use_pastix ) then
-#if !( defined(USE_PASTIX)  ^  defined(USE_PASTIX6) ) 
-    write(*,*) 'FATAL : use_pastix=.true. requires USE_PASTIX=1 xor USE_PASTIX6 = 1 in Makefile.inc'
-    call MPI_Abort(MPI_COMM_WORLD, 8, ierr)
-    stop
-#endif
 #ifdef USE_PASTIX6
     if (n_cpu /= ((n_tor-1)/2+1)) then
       write(*,*) 'FATAL : Pastix6 is not yet MPI parallelised (Pastix 6.0)! Please use #procs = (n_tor+1)/2.'
@@ -329,24 +408,14 @@ required = 0
     endif
 #endif
   else if ( use_wsmp ) then
-#ifndef USE_WSMP
-    write(*,*) 'FATAL : use_wsmp=.true. requires USE_WSMP=1 in Makefile.inc'
-    call MPI_Abort(MPI_COMM_WORLD, 10, ierr)
-    stop
-#endif
 #ifdef USE_BLOCK
     write(*,*) 'FATAL : USE_BLOCK=1 in Makefile.inc is currently not possible with use_wsmp'
     call MPI_Abort(MPI_COMM_WORLD, 11, ierr)
     stop
 #endif
-      if ( .not. restart ) then
+    if ( .not. restart ) then
       write(*,*) 'FATAL : use_wsmp is currently not supported for the equilibrium'
       call MPI_Abort(MPI_COMM_WORLD, 12, ierr)
-      stop
-    end if
-    if ( use_pastix ) then
-      write(*,*) 'FATAL : you should only select one of use_wsmp or use_pastix'
-      call MPI_Abort(MPI_COMM_WORLD, 13, ierr)
       stop
     end if
   end if
@@ -359,13 +428,19 @@ required = 0
     write(*,*) '  Consider testing, whether you get better performance by increasing the number'
     write(*,*) '  of MPI tasks and reducing the number of OpenMP threads in the jobscript.'
   end if
-  if ((jorek_model==199) .or. (jorek_model==303)) then
-    if (abs(eta-eta_ohmic)/(eta+eta_ohmic) > 1.d-6) then
+  if (with_etaOhm) then
+    if (abs(eta-eta_ohmic)/(eta+eta_ohmic+1.d-12) > 1.d-6) then
       write(*,*) 'WARNING: The resistivity eta and the resistivity used for Ohmic heating '
       write(*,*) '  eta_ohm are not the same. No problem if you know what you are doing,  ' 
       write(*,*) '  but with this setup you are not conserving energy.   '
     endif
   endif
+  if (abs(T_max_eta-T_max_eta_ohm)/(T_max_eta+T_max_eta_ohm) > 1.d-6) then
+    write(*,*) 'WARNING: T_max_eta and T_max_eta_ohm are not the same, which breaks  &
+        energy conservation. No problem if you know what you are doing (a good reason to &
+	do this could be to avoid spurious Ohmic heating in the plasma core).'
+  end if
+
 #ifndef USE_BLOCK
   write(*,*) 'WARNING: You are not using USE_BLOCK=1 which might be inefficient.'
   write(*,*) '  Consider setting USE_BLOCK=1 in your Makefile.inc'
@@ -408,11 +483,18 @@ required = 0
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
     if ( ierr /= 0 ) stop
 
+    ! for variable time step Gears method
+    if ( index_now <= 1 ) then
+      tstep_prev = tstep
+    else
+      tstep_prev = xtime(index_start) - xtime(index_start-1)
+    end if
+
     ! --- Write live data for previous time-steps
     if ( .not. bench_without_plot ) then
       do index_now = 1, index_start
         call write_live_data(index_now)
-        call write_live_data_vacuum(index_now, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
+        call write_live_data_vacuum(index_now)
 #ifdef JECCD
         call write_live_data2(index_now)
         call write_live_data3(index_now)
@@ -433,23 +515,23 @@ required = 0
             call grid_double_xpoint(node_list, element_list)
           endif
         else
-          call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
+	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,  &
                            SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
         endif
       else
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
                                sig1, xr2, sig2, refinement)
       end if
-      if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
+      if ( freeboundary .or. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
+      
     end if
     
   end if !   if ( restart .and. (my_id == 0) ) then
 
-
   ! This is necessary for the parallel vacuum version during the code restart 
   if(restart) then
-    call MPI_BCAST(wall_curr_initialized, 1 , MPI_LOGICAl,          0, MPI_COMM_WORLD, ierr)
-    call MPI_BCAST(tstep,                 1 , MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call broadcast_phys(my_id)  
+    if(freeboundary) call broadcast_vacuum(my_id, resistive_wall)
   end if
   call populate_element_rtree(node_list, element_list)
   
@@ -491,7 +573,12 @@ required = 0
         call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
         stop
       end if 
-      if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
+
+      ! --- Optional: Add patches to an existing grid imported from restart file
+      if ( extend_existing_grid .and. (n_flux .le. 0) ) &
+          call grid_patches_on_existing_grid(node_list, element_list)
+
+      if ( freeboundary .or. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
       
       ! --- Determine boundary information from the grid
       call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
@@ -527,6 +614,9 @@ required = 0
       call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.true.,.false.,'initial')
     end if
     
+    ! --- Check sanity of grid
+    call check_grid(my_id, node_list, element_list)
+
 #ifdef USE_MUMPS
     ! --- Initialize MUMPS solver (used for equilibrium)
     call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
@@ -536,6 +626,7 @@ required = 0
 #endif
 
     ! --- Compute the plasma equilibrium
+    !if (my_id.eq.0) call timestamp("Equilibrium")
     if (equil) then
       call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
       if (export_for_nemec) then
@@ -590,13 +681,20 @@ required = 0
              
         end if ! (if xpoint)
 
-        if ( freeboundary .and. freeb_change_indices .and. (my_id == 0)) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
+        ! --- Optional: Add patches to an existing grid imported from restart file
+        if (extend_existing_grid) &
+            call grid_patches_on_existing_grid(node_list, element_list)
+
+        if ( freeboundary .or. freeb_change_indices .and. (my_id == 0)) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
 
         ! --- Determine boundary information from the grid
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
         call export_boundary(node_list, bnd_elm_list, bnd_node_list)
 
       endif ! if (my_id == 0) then        
+
+      ! --- Check sanity of grid
+      call check_grid(my_id, node_list, element_list)
 
       call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list) 
       if ( freeb_equil2) then
@@ -617,7 +715,7 @@ required = 0
     if (my_id == 0) then
           
       ! --- Update the status of the equilibrium
-      call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+      call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
       
       ! --- Set initial conditions for time-evolution
       call initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint,xcase)
@@ -650,6 +748,9 @@ required = 0
 #endif
   end if if_not_restart
   
+  ! --- Print some grid information
+  if ( my_id == 0 ) call log_grid_info(.false., node_list, element_list)
+  
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   ! --- Determine boundary information from the grid
@@ -663,6 +764,7 @@ required = 0
     call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
     call import_external_fields('coil_field.dat', my_id)
     call set_coil_curr_time_trace()
+    call read_Z_axis_profile() 
     if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
   end if
   
@@ -699,6 +801,9 @@ required = 0
   end do
   mumps_par%n = n_AA
 
+  ! --- Load deuterium ADAS data if required
+  if (deuterium_adas) ad_deuterium =  read_adf11(my_id,'96_h') 
+
    ! --- Initialize FFTW
 #ifdef USE_FFTW
   call dfftw_plan_dft_r2c_1d(fftw_plan,n_plane,in_fft,out_fft,FFTW_PATIENT)
@@ -727,7 +832,7 @@ required = 0
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
-  call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+  call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
   if ( my_id == 0 ) then
     call print_equil_state(.true.)
     call save_special_points('special_equilibrium_points.dat', .false., ierr)
@@ -793,7 +898,9 @@ required = 0
     else
        my_id_n = my_id
        MPI_COMM_N = MPI_COMM_WORLD
+       m_cpu = n_cpu
     endif
+
 
     !***********************************************************************
     !*  	  distribute nodes and elements over cpu's		   *
@@ -810,8 +917,8 @@ required = 0
     !
     ! Construct index_min, index_max and local_elems
     !
-    call distribute_nodes_elements(id_elements,index_size,node_list,element_list,local_elms,	  &
-    	 n_local_elms,ndof_glob,index_min,index_max)
+    call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,.false.,local_elms, & 
+         n_local_elms,ndof_glob,index_min,index_max, restart, freeboundary)    
 
     node_list%n_dof = ndof_glob
     local_index_start = index_min
@@ -819,10 +926,14 @@ required = 0
     ! Build ijA_index, ijA_size and irn_jcn
 
     call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
-         local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1))
+         local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),              & 
+         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, 1, n_tor,                 &
+         n_glob, nz_glob, ndof_glob, n_matrix_block_size)
+
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1)) 
+      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1),& 
+           1, n_tor, irn_glob, jcn_glob, n_matrix_block_size, ijA_index, ijA_size, irn_jcn) 
     endif
 
     if (use_mumps) then
@@ -859,9 +970,10 @@ required = 0
   
   if (nstep > 0) call update_deltas(my_id, node_list) ! create list of delta values in local_matrix module
 
-  iter_gmres  = iter_precon
-  iter_big    = gmres_max_iter
-  iter_prev   = 0
+  iter_gmres     = iter_precon
+  iter_big       = gmres_max_iter
+  iter_prev      = 0
+  n_since_update = 0
 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
@@ -879,12 +991,14 @@ required = 0
     index_now = index_now + 1
     
     tstep = tstep_n(jstep)
+    ! start from t=0 
+    if ( index_now <= 1 ) tstep_prev = tstep
     
     if ( freeboundary ) call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
 
     if ( my_id == 0 ) then
       write(*,*) '******************************************************'
-      write(*,'(A17,3i7,f14.5,A)') ' *   time step : ',jstep,istep,index_now,tstep,'  *'
+      write(*,'(A17,3i7,2f14.5,A)') ' *   time step : ',jstep,istep,index_now,tstep,tstep_prev,'  *'
       write(*,*) '******************************************************'
     end if
 
@@ -892,7 +1006,7 @@ required = 0
     ! --- n_plane, n_var have to remain the same until the end of the program.
     call new_thread_buffers()
     
-    call update_equil_state(node_list, element_list, bnd_elm_list, xpoint, xcase)
+    call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
     if ( my_id == 0 ) call print_equil_state(.false.)
 
     ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
@@ -917,58 +1031,112 @@ required = 0
       ! ... in the first step of a simulation (also when restarting)
       ! ... when tstep changes
       ! ... when the previous time steps took too many iterations
-      solve_only = (istep > 1) .and. (iter_gmres+iter_prev <= 2*iter_precon)
+      solve_only = (istep > 1) .and. ((iter_gmres+iter_prev <= 2*iter_precon) .or. (n_since_update > max_steps_noUpdate))
+      if (solve_only) then 
+        n_since_update = n_since_update + 1
+      else
+        n_since_update = 0
+      endif
       !if ( my_id == 0 ) write(*,*) 'solve_only: ', solve_only
     endif
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
-      call Integrals_3D(my_id, node_list,element_list,density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
+      call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
-    
-    call construct_matrix(my_id, local_elms, n_local_ELms, index_min(my_id+1),                  &
-         index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, ES%R_xpoint,   &
-         ES%Z_xpoint, ES%psi_xpoint)
+
+    !--------- Constructing Global Matrix
+    call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms,   &
+         n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,&
+         ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, 1, n_tor,   &
+         n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
+         irn_jcn, .false.)
 
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
        call clck_ldiff(t0,t1,tsecond)
-      write(*,FMT_TIMING) my_id, '# Elapsed time construct_matrix :',tsecond
+      write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
     endif     
-    ! Ici c'est OK
-    !CALL MPI_Abort(MPI_COMM_WORLD, 1, ierr)
-
-    ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
-    call del_thread_buffers()
 
     if (.not. gmres) then
 
        if (use_mumps) then
-    	  call solve_mumps_all(my_id)
-       else
+#ifdef USE_MUMPS
+         call solve_mumps_all(my_id)
+#endif
+       elseif (use_strumpack) then
+#ifdef USE_STRUMPACK
+         call solve_strumpack_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+#endif
+       elseif (use_pastix) then
           call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
        endif
 
     else
-       call clck_time(t0)
+
        if (.not. solve_only) then
-          call distribute_harmonics(my_id,my_id_n,n_cpu)
+
+#ifndef DIRECT_CONSTRUCTION
+         call clck_time(t0)
+         ! --- Extract harmonic matrix from global matrix via MPI communication
+         call distribute_harmonics(my_id,my_id_n,n_cpu)
+         call MPI_Barrier(MPI_COMM_WORLD,ierr)
+         call clck_time_barrier(t1)
+         call clck_ldiff(t0,t1,tsecond)
+         if (my_id .eq. 0) then
+           write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
+         end if
+#else 
+
+         call clck_time_barrier(t0) 
+         ! --- Direct construction of harmonic matrix
+         call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
+              node_list, element_list, bnd_elm_list, bnd_node_list, xpoint, xcase, freeboundary, .true.)
+         call MPI_Barrier(MPI_COMM_WORLD,ierr)
+         call clck_time_barrier(t1) 
+
+         if (my_id .eq. 0) then
+           call clck_ldiff(t0,t1,tsecond)
+           write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
+         endif     
+
+         call clck_time_barrier(t0) 
+         ! --- Centralize the harmonic matrix on the master task of the MPI group (if needed)
+         call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
+         call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  
+         call clck_time_barrier(t1) 
+
+         if (my_id .eq. 0) then
+           call clck_ldiff(t0,t1,tsecond)
+           write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
+         endif     
+
+#endif
+
        else
-          call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
+         call distribute_vector(my_id,rhs_glob,mumps_par%rhs,.true.)	       
        endif
-       call clck_time_barrier(t1)
-       call clck_ldiff(t0,t1,tsecond)
-       if (my_id .eq. 0) then
-          write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
-       end if
+
+       ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
+       call del_thread_buffers()
 
        call clck_time(t0)
-       call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+      !if (my_id.eq.0) call timestamp("solve_mat_n")
+      if (use_strumpack) then 
+#ifdef USE_STRUMPACK
+        call solve_matrix_n_spk(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+#endif
+      else
+        call solve_matrix_n(my_id,i_tor,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
+      endif
+
+
        call clck_time_barrier(t1)
        call clck_ldiff(t0,t1,tsecond)
        if (my_id .eq. 0) then
-          write(*,FMT_TIMING) my_id, '# Elapsed time first solve :',tsecond
+         write(*,FMT_TIMING) my_id, '# Elapsed time first solve :',tsecond
        end if
     endif
 
@@ -976,57 +1144,67 @@ required = 0
     if (gmres) then
       iter_prev = iter_gmres
       iter_gmres = gmres_max_iter
+      !if (my_id.eq.0) call timestamp("gmres")
       call gmres_driver(my_id,my_id_n,i_tor, n_tor,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
     endif
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) then
-       write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
+      write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
     end if
 
     call clck_time(t0)
     if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
 
-       if (use_pellet) then
-         pellet_volume = total_pellet_volume
-         call update_pellet(my_id,node_list,element_list)
+      if (use_pellet) then
+        pellet_volume = total_pellet_volume
+        call update_pellet(my_id,node_list,element_list)
 
-           if (my_id == 0) then
-            xtime_pellet_R(index_now)         = pellet_R
-            xtime_pellet_Z(index_now)         = pellet_Z
-            xtime_pellet_psi(index_now)       = pellet_psi
-            xtime_pellet_particles(index_now) = pellet_particles
-            xtime_phys_ablation(index_now)    = phys_ablation
-           endif
+        if (my_id == 0) then
+          xtime_pellet_R(index_now)         = pellet_R
+          xtime_pellet_Z(index_now)         = pellet_Z
+          xtime_pellet_psi(index_now)       = pellet_psi
+          xtime_pellet_particles(index_now) = pellet_particles
+          xtime_phys_ablation(index_now)    = phys_ablation
+        endif
 
-       endif
+      endif
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-       call total_neutrals(my_id,node_list,element_list)
-       if (using_spi .and. t_now >= t_ns) then
-         call update_spi(my_id,node_list,element_list)
-       end if
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+      call total_neutrals(my_id,node_list,element_list)
+      if (using_spi .and. t_now >= t_ns) then
+        call update_spi(my_id,node_list,element_list)
+      end if
+#endif
+#ifdef WITH_Impurities
+      if (using_spi .and. t_now >= t_ns) then
+        call update_spi(my_id,node_list,element_list)
+      end if
 #endif
 
 
-       call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
-       call update_deltas(my_id,node_list)
+      call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
+      call update_deltas(my_id,node_list)
  
-          t_now = t_now + tstep
+      t_now = t_now + tstep
 
-       else
-          if ( my_id == 0 ) then
-             write(*,*)
-             write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', iter_gmres, ' ITERATIONS. ABORTING <<<<<'
-             write(*,*)
-          end if
-          index_now = index_now - 1 ! Undo the time step
-          exit jstep_loop
-       end if
+      ! save previous time step
+      tstep_prev = tstep
+
+
+    else
+      if ( my_id == 0 ) then
+        write(*,*)
+        write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', iter_gmres, ' ITERATIONS. ABORTING <<<<<'
+        write(*,*)
+      end if
+      index_now = index_now - 1 ! Undo the time step
+      exit jstep_loop
+    end if
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) then
-       write(*,FMT_TIMING)  my_id, '#  Elapsed time Final Update:',tsecond
+      write(*,FMT_TIMING)  my_id, '#  Elapsed time Final Update:',tsecond
     end if
 
     !-------------------------------------------------------- adapt time step (in progress...)
@@ -1034,26 +1212,33 @@ required = 0
 
     if (gmres .and. adaptive_time) then        ! experimental
        if (iter_gmres .ge. iter_big) then
-    	  tstep = tstep /2.d0
-    	  write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
+          tstep = tstep /2.d0
+          write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
        elseif (max(abs(mindelta),abs(maxdelta)) .gt. 0.05) then
-    	  !	 tstep = tstep /2.d0
-    	  !	 iter_gmres = 99999
-    	  !	 write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
+          !	 tstep = tstep /2.d0
+          !	 iter_gmres = 99999
+          !	 write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
        elseif (max(abs(mindelta),abs(maxdelta)) .lt. 0.001) then
-    	  !	 tstep = tstep * 2.d0
-    	  !	 iter_gmres = 99999
-    	  !	 write(*,*) my_id,' INCREASE TIMESTEP : ',tstep
+          !	 tstep = tstep * 2.d0
+          !	 iter_gmres = 99999
+          !	 write(*,*) my_id,' INCREASE TIMESTEP : ',tstep
        endif
     endif
 
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
+
        call energy(node_list,element_list,W_mag,W_kin)
 
-       R_axis_t(index_now)   = ES%R_axis
-       Z_axis_t(index_now)   = ES%Z_axis
-       psi_axis_t(index_now) = ES%psi_axis
+       R_axis_t(index_now)       = ES%R_axis
+       Z_axis_t(index_now)       = ES%Z_axis
+       psi_axis_t(index_now)     = ES%psi_axis
+       R_xpoint_t(index_now,:)   = ES%R_xpoint(:)
+       Z_xpoint_t(index_now,:)   = ES%Z_xpoint(:)
+       psi_xpoint_t(index_now,:) = ES%psi_xpoint(:)
+       R_bnd_t(index_now)        = ES%R_bnd
+       Z_bnd_t(index_now)        = ES%Z_bnd
+       psi_bnd_t(index_now)      = ES%psi_bnd
 
        xtime(index_now) = t_now
        energies(1:n_tor,1,index_now) = W_mag(1:n_tor)
@@ -1094,11 +1279,11 @@ required = 0
        write(*,131) 'W_mag,_kin      =', W_mag(1), W_mag(n_tor), W_kin(1), W_kin(n_tor)
        Growth_mag  = 0.d0; Growth_kin  = 0.d0; Growth_mag0 = 0.d0; Growth_kin0 = 0.d0
        if (index_now > index_start+1) then
-    	 Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
-    	 Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
-    	 Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
-    	 Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
-    	 write(*,131) 'Growth_mag,_kin =', Growth_mag0, Growth_mag, Growth_kin0, Growth_kin
+         Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
+         Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
+         Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
+         Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
+         write(*,131) 'Growth_mag,_kin =', Growth_mag0, Growth_mag, Growth_kin0, Growth_kin
        endif
        write(*,132)
        write(*,*)
@@ -1109,7 +1294,7 @@ required = 0
     if (my_id .eq. 0 ) then
       ! --- Output energies and growth_rates to text files during the code run
       call write_live_data(index_now)
-      call write_live_data_vacuum(index_now, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
+      call write_live_data_vacuum(index_now)
 
 #ifdef JECCD
       call write_live_data2(index_now)
@@ -1118,7 +1303,7 @@ required = 0
       call write_live_data4(index_now)
 #endif
 #endif
-endif
+    endif
 
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
@@ -1144,12 +1329,27 @@ endif
     inquire(file='STOP_NOW', exist=file_exists)
     if ( file_exists ) then
       if ( my_id == 0 ) then
-    	write(*,*)
-    	write(*,*) '>>>>> FOUND FILE STOP_NOW: EXITING THE CODE <<<<<'
-    	write(*,*)
+        write(*,*)
+        write(*,*) '>>>>> FOUND FILE STOP_NOW: EXITING THE CODE <<<<<'
+        write(*,*)
       end if
       exit jstep_loop
     end if
+
+    ! --- Redo LU decomposition if a file "REDO_LU" exists in the run directory.
+    inquire(file='REDO_LU', exist=file_exists)
+    if ( file_exists ) then
+      if ( my_id == 0 ) then
+        write(*,*)
+        write(*,*) '>>>>> FOUND FILE REDO_LU: NEXT STEP DO AN LU DECOMPOSITION <<<<<'
+        write(*,*)
+        open(42, file='REDO_LU', iostat=ierr)
+        if ( ierr == 0 ) close(42, status='delete')
+      end if
+      iter_prev  = iter_precon + 1
+      iter_gmres = iter_precon + 1
+    end if
+
 
     ! --- Exit the code if SIGTERM has been called on any node
     call MPI_ALLReduce(sigterm_called(), to_quit, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, ierr)
@@ -1166,9 +1366,9 @@ endif
     if ( allocated(deltas) ) then
       sum_deltas = sum(deltas)
       if ( sum_deltas /= sum_deltas ) then
-    	write(*,*)
-    	write(*,*) '>>>>> NaNs DETECTED: EXITING THE CODE <<<<<'
-    	write(*,*)
+        write(*,*)
+        write(*,*) '>>>>> NaNs DETECTED: EXITING THE CODE <<<<<'
+        write(*,*)
         exit jstep_loop
       end if
     end if
@@ -1187,26 +1387,33 @@ endif
   !***********************************************************************
 
   if (nstep .gt.0) then
-
-    if (use_mumps) then
 #ifdef USE_MUMPS
+    if (use_mumps) then
       mumps_par%JOB = -2                            ! clean up this instance of mumps
       call DMUMPS(mumps_par)
+    endif
 #endif
 
-    elseif (use_pastix) then
+#ifdef USE_STRUMPACK
+    if (use_strumpack) then
+      call strumpack_finalize(MPI_COMM_WORLD)
+    endif
+#endif
+
+#if defined(USE_PASTIX)||defined(USE_PASTIX6)
+    if (use_pastix) then
 #ifndef USE_PASTIX6
       ! -- For PaStiX solver before version 6.x
       pastix_iparm(2)     = 7                       ! Clean-up
       pastix_iparm(3)     = 7
 
       if (.not. gmres) then
-         call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+        call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
+          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
       elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
-        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n,&
-             DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, &
+          DUMMY_INT,DUMMY_INT,DUMMY_REAL,                       &
+          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
       endif
 #else
       ! -- For PaStiX solver version 6.x
@@ -1214,14 +1421,14 @@ endif
         call pastixFinalize(pastix_data)
       endif
 #endif
-
-    elseif (use_wsmp) then
-
-#ifdef USE_WSMP
-      call PWGSMP__deallocate()
+    endif
 #endif
 
+#ifdef USE_WSMP
+    if (use_wsmp) then
+      call PWGSMP__deallocate()
     endif
+#endif
     
   endif
   
@@ -1321,25 +1528,25 @@ endif
     	  call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
 
     	  call density(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
-    	       zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
-    	  if (jorek_model .eq. 400) then	     
+    	     zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
+    	  if (with_TiTe) then	     
     	    call temperature_i(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
-    			     zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
+    	      zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2,dTi_dpsi2_dz)			   
     	    call temperature_e(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
-    	     zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)	     
+    	      zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2,dTe_dpsi2_dz)	     
             zT = zTi + zTe
     	    dT_dpsi = dTi_dpsi + dTe_dpsi	    
     	  else
             call temperature(xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd, &
-    		   zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
+    	      zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2,dT_dpsi2_dz)
     	  endif
     	  call FFprime(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
-    	       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
+    	       zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz, .true.)
 
           if (NEO) then
             if (num_neo_file) then
               call neo_coef (xpoint, xcase, Zp, ES%Z_xpoint, psi, ES%psi_axis,ES%psi_bnd, &
-                  amu_neo_node, aki_neo_node)
+                amu_neo_node, aki_neo_node)
             endif
           endif
 
@@ -1399,7 +1606,7 @@ endif
 #endif
 #endif
   endif
-  
+ 
 #ifdef USE_FFTW
   call dfftw_destroy_plan(fftw_plan)
 #endif

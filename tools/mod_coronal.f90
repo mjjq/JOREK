@@ -17,7 +17,12 @@ type coronal
   real*8, allocatable :: density(:) !< log10 density (m^-3)
   real*8, allocatable :: temperature(:) !< log10 temperature (K)
   real*8, allocatable :: Z(:,:,:) !< Charge state (e) density for specific densities, temperatures and charge states [i_n, i_T, i_q]
+  real*8, allocatable :: Z_1T(:,:,:) !< First temperature derivative of charge state (e) density for specific densities, temperatures and charge states [i_n, i_T, i_q]
   real*8, allocatable :: Prad(:,:) !< log10 Radiated power per ion (W) for the above densities and temperatures [i_n, i_T]
+  real*8, allocatable :: Prad_1T(:,:) !< First temperature gradient of log10 Radiated power per ion (W) for the above densities and temperatures [i_n, i_T]
+  real*8, allocatable :: Z_avg_CE(:,:) !< The average charge of impurity for the above densities and temperatures [i_n, i_T]
+  real*8, allocatable :: Z_avg_1T_CE(:,:) !< The first temperature gradient of the average charge for the above densities and temperatures [i_n, i_T]
+  real*8, allocatable :: Z_avg_2T_CE(:,:) !< The second temperature gradient of the average charge for the above densities and temperatures [i_n, i_T]
   type(Fspline)       :: ZFspline  !< Spline functions for effective charge
   type(Fspline)       :: PradFspline  !< Spline functions for CE radiation function
   type(Fspline), allocatable :: PFspline(:)  !< Spline functions for each charge state
@@ -40,12 +45,12 @@ real*8, intent(in), dimension(0:ad%n_Z) :: fractions !< Fractional charge states
 real*8, intent(in), optional            :: neutral_density !< log10 neutral density in m^-3
 real*8                                  :: coronal_Prad !< Output power in W / atom
 
-real*8, dimension(ad%n_Z) :: rad
-real*8, dimension(ad%n_Z) :: rad_RC
+real*8, dimension(0:ad%n_Z) :: rad
+real*8, dimension(0:ad%n_Z) :: rad_RC
 real*8  :: density_n, rad_RB, rad_LT
 integer :: iz
 
-do iz=1,ad%n_Z
+do iz=0,ad%n_Z
   call ad%PRB%interp(iz, density, temperature, rad_RB)
   call ad%PLT%interp(iz, density, temperature, rad_LT)
   call ad%PRC%interp(iz, density, temperature, rad_RC(iz))
@@ -60,9 +65,38 @@ else ! otherwise set it to some extremely low value
   density_n = -99.d0 ! this is log10 of density
 endif
 
-coronal_Prad = dot_product(fractions(1:ad%n_Z), rad*10.d0**density + rad_RC*10.d0**density_n)
+coronal_Prad = dot_product(fractions(0:ad%n_Z), rad*10.d0**density + rad_RC*10.d0**density_n)
 end function coronal_Prad
 
+!> The gradients of several quantities in a specific coronal equilibrium configuration and temperature
+subroutine coronal_gradients(ad, cor, n_d, n_T)
+type (ADF11_all), intent(in)            :: ad !< ADF11 datatype
+type (coronal), intent(inout)           :: cor !< Coronal equilibrium datatypei
+integer, intent(in)                     :: n_d, n_T
+
+real*8, dimension(0:cor%n_Z) :: dp_dT
+real*8  :: dPrad_dT, dZ_avg_dT, d2Z_avg_dT2
+real*8  :: temperature_cor, density_cor
+integer :: iz, m, k
+
+do m = 1, n_d
+  do k = 1, n_T
+
+    density_cor     = cor%density(m)
+    temperature_cor = cor%temperature(k)
+
+    call cor%interp(density=density_cor,temperature=temperature_cor, p_Te_out=dp_dT,&
+                    z_Te_out=dZ_avg_dT, z_TeTe_out=d2Z_avg_dT2, rad_Te_out=dPrad_dT)
+    
+    cor%Z_1T(m,k,:)       = dp_dT
+    cor%Prad_1T(m,k)      = dPrad_dT
+    cor%Z_avg_1T_CE(m,k)  = dZ_avg_dT
+    cor%Z_avg_2T_CE(m,k)  = d2Z_avg_dT2
+
+  enddo
+enddo
+
+end subroutine coronal_gradients
 
 !> Calculate the coronal equilibrium values at specific values of density and temperature
 function coronal_equilibrium(ad) result(cor)
@@ -80,6 +114,8 @@ n_d = 10
 n_T = 1000
 
 allocate(cor%density(n_d), cor%temperature(n_T), cor%Z(n_d,n_T,0:cor%n_Z), cor%Prad(n_d,n_T))
+allocate(cor%Z_1T(n_d,n_T,0:cor%n_Z),cor%Prad_1T(n_d,n_T))
+allocate(cor%Z_avg_CE(n_d,n_T),cor%Z_avg_1T_CE(n_d,n_T),cor%Z_avg_2T_CE(n_d,n_T))
 allocate(Z_eff(n_d,n_T))
 Z_eff = 0.0
 
@@ -91,7 +127,7 @@ call AllocFspline(cor%ZFspline,n_T,n_d)
 call AllocFspline(cor%PradFspline,n_T,n_d)
 
 do m=1, n_d
-  cor%density(m) = 18.d0 + float(m-1)/n_d * (21.-18.) ! log10 [m^-3], linear between 18 and 21
+  cor%density(m) = 18.d0 + real(m-1,8)/real(n_d-1,8) * (21.0-18.0) ! log10 [m^-3], linear between 18 and 21
 end do
 do k=1, n_T
   cor%temperature(k) = log10( 1.d0 + exp(log(4.d4)*float(k-1)/(float(n_T-1))) - 1.d0 ) + log10(EL_CHG) - log10(K_BOLTZ) ! in log10 [K], 1 to 40000 eV in logscale
@@ -110,8 +146,10 @@ do m=1, n_d
   do k=1, n_T
     p(0) = 1.d0
     do iz=1,ad%n_Z
-      call ad%SCD%interp(iz, cor%density(m), cor%temperature(k), ion_rate) ! ionizing to level iz (0 is neutral)
-      call ad%ACD%interp(iz, cor%density(m), cor%temperature(k), rec_rate) ! recombining from iz+1
+      ! The flux of particles from state iz to iz-1 is given by
+      ! p(iz-1) * scd(iz-1) - p(iz) * acd(iz)
+      call ad%SCD%interp(iz-1, cor%density(m), cor%temperature(k), ion_rate) ! ionizing from level iz-1 to iz
+      call ad%ACD%interp(iz, cor%density(m), cor%temperature(k), rec_rate) ! recombining from iz to iz - 1
       p(iz) = p(iz-1) * ion_rate/rec_rate
     end do
 
@@ -119,8 +157,24 @@ do m=1, n_d
     do iz=1,ad%n_Z
       Z_eff(m,k) = Z_eff(m,k) + cor%Z(m,k,iz) * real(iz,8)
     end do
+    cor%Z_avg_CE(m,k) = Z_eff(m,k)
     cor%Prad(m,k) = coronal_Prad(ad, cor%density(m), cor%temperature(k), p/sum(p)) ! Do not set neutral density yet
   enddo
+
+  cor%ZFspline%xspline = cor%temperature
+
+  call spline(n_T,cor%ZFspline%xspline,Z_eff(m,:),0.d0,0.d0,2,&
+                  cor%ZFspline%Aspline(m,:),cor%ZFspline%Bspline(m,:),&
+                  cor%ZFspline%Cspline(m,:),cor%ZFspline%Dspline(m,:))
+
+  call spline(n_T,cor%PradFspline%xspline,cor%Prad(m,:),0.d0,0.d0,2,&
+                  cor%PradFspline%Aspline(m,:),cor%PradFspline%Bspline(m,:),&
+                  cor%PradFspline%Cspline(m,:),cor%PradFspline%Dspline(m,:))
+  do iz=0,ad%n_Z
+    call spline(n_T,cor%PFspline(iz)%xspline,cor%Z(m,:,iz),0.d0,0.d0,2,&
+                    cor%PFspline(iz)%Aspline(m,:),cor%PFspline(iz)%Bspline(m,:),&
+                    cor%PFspline(iz)%Cspline(m,:),cor%PFspline(iz)%Dspline(m,:))
+  end do
 enddo
 
 call ConstructFspline(cor%ZFspline,Z_eff)
@@ -129,50 +183,67 @@ do iz=0,ad%n_Z
   call ConstructFspline(cor%PFspline(iz),cor%Z(:,:,iz))
 end do
 
+call coronal_gradients(ad, cor, n_d, n_T)
+
 end function coronal_equilibrium
 
 
 !> Linear interpolation of coronal model charge at specific density and temperature
-subroutine interpolate_coronal(cor, density, temperature, p_out, z_eff, rad)
+
+subroutine interpolate_coronal(cor, density, temperature, p_out, p_Te_out, &
+                               z_avg, z_avg_Te, z_avg_TeTe, rad_out, rad_Te_out)
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 real*8, intent(in)              :: density !< log10 density (m^-3)
 real*8, intent(in)              :: temperature !< log10 temperature (K)
-real*8, intent(out), optional, dimension(0:cor%n_Z) :: p_out !< distribution of charge states (sum = 1)
-real*8, intent(out), optional   :: z_eff !< effective charge according to coronal equilibrium
-real*8, intent(out), optional   :: rad !< radiated power according to coronal equilibrium
+real*8, intent(out), optional, dimension(0:cor%n_Z) :: p_out, p_Te_out !< distribution of charge states (sum = 1)
+real*8, intent(out), optional   :: z_avg, z_avg_Te, z_avg_TeTe !< Average charge according to coronal equilibrium and its derivatives
+real*8, intent(out), optional   :: rad_out, rad_Te_out !< radiated power according to coronal equilibrium and its derivatives
 
-real*8, dimension(0:cor%n_Z)    :: p !< distribution of charge states (sum = 1)
+real*8, dimension(0:cor%n_Z)    :: p, dp_dT !< distribution of charge states (sum = 1)
 real*8, dimension(0:cor%n_Z)    :: Z !< The charge number at each charge state
 integer                         :: iz
 
 p = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature)
+dp_dT = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z_1T(:,:,:),density,temperature)
 
-if (present(p_out)) then
-  p_out = p
+if (present(p_out)) p_out = p
+if (present(p_Te_out)) p_Te_out = dp_dT
+if (present(z_avg)) then
+  z_avg = L2Dinterp(cor%density,cor%temperature,cor%Z_avg_CE(:,:),density,temperature)
+endif
+if (present(z_avg_Te)) then
+  z_avg_Te = L2Dinterp(cor%density,cor%temperature,cor%Z_avg_1T_CE(:,:),density,temperature)
+endif
+if (present(z_avg_TeTe)) then
+  z_avg_TeTe = L2Dinterp(cor%density,cor%temperature,cor%Z_avg_2T_CE(:,:),density,temperature)
 endif
 
-if (present(z_eff)) then
-  do iz=0,cor%n_Z
-    Z(iz) = real(iz,8)
-    if (p(iz)<0.d0) p(iz)=0.d0
-  enddo
-  z_eff = dot_product(p/sum(p),Z)
-endif
+!if (present(z_avg)) then
+!  do iz=0,cor%n_Z
+!    Z(iz) = real(iz,8)
+!    if (p(iz)<0.d0) p(iz)=0.d0
+!  enddo
+!  z_avg = dot_product(p/sum(p),Z)
+!endif
 
-if (present(rad)) then
-  rad = L2Dinterp(cor%density,cor%temperature,cor%Prad(:,:),density,temperature)
+if (present(rad_out)) then
+  rad_out = L2Dinterp(cor%density,cor%temperature,cor%Prad(:,:),density,temperature)
+  !call SL2Dinterp(cor%PradFspline,temperature,density,fout=rad_out)
+endif
+if (present(rad_Te_out)) then
+  rad_Te_out = L2Dinterp(cor%density,cor%temperature,cor%Prad_1T(:,:),density,temperature)
 endif
 end subroutine interpolate_coronal
 
 
 !> Linear interpolation of coronal model charge at specific density and temperature.
 !> Evaluate the gradients only
-subroutine interpolate_coronal_gradients(cor, density, temperature, p_Te_out, p_Ne_out, z_eff_Te, z_eff_Ne)
+subroutine interpolate_coronal_gradients(cor, density, temperature, p_Te_out, p_Ne_out, z_avg_Te, z_avg_Ne)
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 real*8, intent(in)              :: density !< log10 density (m^-3)
 real*8, intent(in)              :: temperature !< log10 temperature (K)
 real*8, intent(out), optional, dimension(0:cor%n_Z) :: p_Te_out, p_Ne_out !< gradient of distribution of charge states (sum = 1) to Te and Ne
-real*8, intent(out), optional   :: z_eff_Te, z_eff_Ne !< effective charge gradient according to coronal equilibrium
+real*8, intent(out), optional   :: z_avg_Te, z_avg_Ne !< effective charge gradient according to coronal equilibrium
 
 real*8, dimension(0:cor%n_Z)    :: p !< distribution of charge states (sum = 1)
 real*8, dimension(0:cor%n_Z)    :: p_Te, p_Ne !< gradient of distribution of charge states (sum = 1) to Te and Ne
@@ -199,18 +270,18 @@ if (present(p_Ne_out)) then
   p_Ne_out = p_Ne/sum(p)
 endif
 
-if (present(z_eff_Te)) then
+if (present(z_avg_Te)) then
   do iz=0,cor%n_Z
     Z(iz) = real(iz,8)
   enddo
-  z_eff_Te =  dot_product(p_Te/sum(p),Z)
+  z_avg_Te =  dot_product(p_Te/sum(p),Z)
 endif
 
-if (present(z_eff_Ne)) then
+if (present(z_avg_Ne)) then
   do iz=0,cor%n_Z
     Z(iz) = real(iz,8)
   enddo
-  z_eff_Ne =  dot_product(p_Ne/sum(p),Z)
+  z_avg_Ne =  dot_product(p_Ne/sum(p),Z)
 endif
 
 end subroutine interpolate_coronal_gradients
@@ -306,7 +377,7 @@ class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 ! Temporary variable for charge state distribution
 integer             :: i_T, i_ion
 real*8, allocatable :: P_imp(:)
-real*8              :: T_rad, Lrad
+real*8              :: Te_eV, Lrad
 real*8              :: Z_eff
 
 open(20,file="charge_distribution.dat")
@@ -315,14 +386,14 @@ write(20,'(4A22)',advance='no') 'temperature (log10(K))', 'charge states', 'summ
 write(20,'(A22)') 'radiation function'
 
 do i_T = 1, size(cor%temperature,1)
-  T_rad = cor%temperature(i_T)
+  Te_eV = cor%temperature(i_T)
 
   if (allocated(P_imp)) deallocate(P_imp)
 
   allocate(P_imp(0:cor%n_Z))
-  call cor%interp(density=20.d0,temperature=T_rad,p_out=P_imp,z_out=Z_eff,rad_out=Lrad)
+  call cor%interp(density=20.d0,temperature=Te_eV,p_out=P_imp,z_out=Z_eff,rad_out=Lrad)
   Lrad = Lrad / (1.d20) ! This is to recover the radiation coefficient
-  write(20,'(f12.3)',advance='no') T_rad
+  write(20,'(f12.3)',advance='no') Te_eV
   do i_ion = 0, cor%n_Z
     write(20,'(f12.5)',advance='no') P_imp(i_ion)
   end do

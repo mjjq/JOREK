@@ -886,7 +886,7 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     integer, intent(in) :: MPI_COMM_N, MPI_COMM_MASTER
     logical, intent(in) :: solve_only
 
-    integer               :: my_id_n, n_cpu_n, ierr
+    integer               :: my_id_n, n_cpu_n, ierr, block_size
     integer(kind=int_all) :: i, j, k
     type(clcktype)        :: t_itstart, t0, t1, t2, t3
     real*8                :: tsecond
@@ -921,6 +921,7 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     
     n = mumps_par%n
     nnz = mumps_par%nz
+    block_size = n_var*my_mode_set_n
     
     if (.not. solve_only) then
       
@@ -948,8 +949,8 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         type='double'
         call split_broadcast(type,MPI_COMM_N)
 
-        call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
-                UPDATE=spss_analyzed,DISTRIBUTED=.false.)
+        call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,block_size,MPI_COMM_N,&
+                UPDATE=spss_analyzed,DISTRIBUTED=.false.,EQUILIBRIUM=.false.)
         !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
         
         if (n_cpu_n>1) then
@@ -963,9 +964,10 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         endif
 
       else
+        !call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
 
-        call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,MPI_COMM_N,&
-                UPDATE=spss_analyzed,DISTRIBUTED=.true.)
+        call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,block_size,&
+                MPI_COMM_N,UPDATE=spss_analyzed,DISTRIBUTED=.true.,EQUILIBRIUM=.false.)
 
         mumps_par%irn=>null()
         mumps_par%jcn=>null()

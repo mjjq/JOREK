@@ -41,12 +41,12 @@ contains
 
     integer                            :: my_id, my_id_n, n_cpu, j, k, l, n, ierr
     integer                            :: nm, ji, nr, lmode, kmode, n_i, n_j, isplit
-    integer(kind=int_all)              :: i, i0, i1, n_per_rank, n_tor_int, nz_split, ibufsize
+    integer(kind=int_all)              :: i, i0, i1, n_tor_int, nz_split, ibufsize, block_size
     integer, allocatable               :: send_disp(:), recv_disp(:)
 
     real*8,  allocatable               :: Asnd_buffer(:), Rsnd_buffer(:)
     integer(kind=int_all), allocatable :: isnd_buffer(:), jsnd_buffer(:)
-    integer(kind=int_all), allocatable :: long_recv_counts(:), long_send_counts(:), indx(:)
+    integer(kind=int_all), allocatable :: long_recv_counts(:), long_send_counts(:), indx(:), n_per_rank(:)
 
     logical                            :: distribute
     integer(kind=int_all)              :: INT_MAX
@@ -80,6 +80,13 @@ contains
 
     allocate(send_disp(n_cpu),recv_disp(n_cpu))
     allocate(indx(n_cpu))
+
+    allocate(n_per_rank(n_mode_families))
+    do j = 1, n_mode_families
+      block_size = n_var*modes_per_family(j)
+      nr = ranks_per_family(j) ! number of ranks per j-th family
+      n_per_rank(j) = block_size*((ndof_glob/block_size)/nr) - block_size ! number of rows per rank for j-th family
+    enddo
 
 ! --- Calculate send-recv counts for each communication split and store it for the future
     if (.not.analyzed) then
@@ -181,8 +188,7 @@ contains
             ji = indx0(j)
             if (distribute) then
               nr = ranks_per_family(j)
-              n_per_rank = n_var*((ndof_glob/n_var)/nr) - n_var ! number of rows per rank for j-th family
-              ji =  ji + min((irn_glob(i)-Int1)/n_per_rank, nr-1) ! row bin index for j-th family
+              ji =  ji + min((irn_glob(i)-Int1)/n_per_rank(j), nr-1) ! row bin index for j-th family
             endif
             indx(ji) = indx(ji) + 1
             Asnd_buffer(indx(ji)) = A_glob(i)
@@ -193,14 +199,13 @@ contains
 
       else
 
-  !$omp do private(i, j, ji, nm, nr, k, kmode, l, lmode, n_i, n_j, n_per_rank)
+  !$omp do private(i, j, ji, nm, nr, k, kmode, l, lmode, n_i, n_j)
         do i=istart(isplit),ifinish(isplit)
           n_i = mod(irn_glob(i)-Int1,n_tor_int) + 1
           n_j = mod(jcn_glob(i)-Int1,n_tor_int) + 1
 
           do j = 1, n_mode_families
             nm = modes_per_family(j) ! number of modes per j-th family
-            nr = ranks_per_family(j) ! number of ranks per j-th family
             do k = 1, nm
               kmode = mode_families_modes(j,k)
               do l = 1, nm
@@ -208,8 +213,8 @@ contains
                 if ((n_i.eq.kmode).and.(n_j.eq.lmode)) then
                   ji = indx0(j)
                   if (distribute) then
-                    n_per_rank = n_var*((ndof_glob/n_var)/nr) - n_var  ! number of rows per rank for j-th family
-                    ji =  ji + min((irn_glob(i)-1)/n_per_rank, nr-1) ! row bin index for j-th family
+                    nr = ranks_per_family(j)
+                    ji =  ji + min((irn_glob(i)-1)/n_per_rank(j), nr-1) ! row bin index for j-th family
                   endif
                   indx(ji) = indx(ji) + 1
                   Asnd_buffer(indx(ji)) = A_glob(i)
@@ -314,19 +319,25 @@ contains
     integer, intent(in) :: my_id, n_cpu
     integer(kind=int_all), intent(in)                 :: i0, i1
     integer(kind=int_all), allocatable, intent(inout) :: long_recv_counts(:), long_send_counts(:)
-    integer(kind=int_all), allocatable                :: sendrecv(:)
-    integer(kind=int_all)                             :: i, n_tor_int, n_per_rank
+    integer(kind=int_all), allocatable                :: sendrecv(:), n_per_rank(:)
+    integer(kind=int_all)                             :: i, n_tor_int, block_size
     integer(kind=int_all), parameter                  :: Int1=1
     integer                                           :: j, ji, nm, nr, k, kmode, l, lmode, n_i, n_j, ierr
     logical                                           :: distribute
 
     distribute = .not.centralize_harm_mat
     n_tor_int = n_tor
+    allocate(n_per_rank(n_mode_families))
+    do j = 1, n_mode_families
+      block_size = n_var*modes_per_family(j)
+      nr = ranks_per_family(j) ! number of ranks per j-th family
+      n_per_rank(j) = block_size*((ndof_glob/block_size)/nr) - block_size ! number of rows per rank for j-th family
+    enddo
 
     long_send_counts = 0 ! number of elements to be sent from current rank to others
 
    ! calculate number of entries to be distributed from the current rank
-!$omp do private(i, j, ji, nm, nr, k, kmode, l, lmode, n_i, n_j, n_per_rank)
+!$omp do private(i, j, ji, nm, nr, k, kmode, l, lmode, n_i, n_j)
     do i=i0, i1
       n_i = mod(irn_glob(i)-Int1,n_tor_int) + 1
       n_j = mod(jcn_glob(i)-Int1,n_tor_int) + 1
@@ -340,9 +351,8 @@ contains
             if ((n_i.eq.kmode).and.(n_j.eq.lmode)) then
               ji = indx0(j)
               if (distribute) then
-                nr = ranks_per_family(j) ! number of ranks per j-th family
-                n_per_rank = n_var*((ndof_glob/n_var)/nr) - n_var  ! number of rows per rank for j-th family
-                ji =  ji + min((irn_glob(i)-Int1)/n_per_rank, nr-1) ! row bin index for j-th family
+                nr = ranks_per_family(j)
+                ji =  ji + min((irn_glob(i)-Int1)/n_per_rank(j), nr-1) ! row bin index for j-th family
               endif
               long_send_counts(ji) = long_send_counts(ji) + 1
             endif

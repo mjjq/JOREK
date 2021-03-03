@@ -839,7 +839,7 @@ contains
       rhs_tmp = 0.d0
 
       do i = 1, mumps_par%n
-        rhs_tmp(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor(i)
+        rhs_tmp(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor
       enddo
 
       ! --- End undo the column scaling ------------------------------------------------------------
@@ -953,27 +953,22 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
                 UPDATE=spss_analyzed,DISTRIBUTED=.false.,EQUILIBRIUM=.false.)
         !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
         
-        if (n_cpu_n>1) then
-          call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
-          call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
-          call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-        else
-          mumps_par%irn=>null()
-          mumps_par%jcn=>null()
-          mumps_par%a=>null()
-        endif
-
       else
-        !call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
 
         call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,block_size,&
                 MPI_COMM_N,UPDATE=spss_analyzed,DISTRIBUTED=.true.,EQUILIBRIUM=.false.)
 
+      endif
+
+      if (n_cpu_n>1) then
+        call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+        call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+        call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
+      else
         mumps_par%irn=>null()
         mumps_par%jcn=>null()
         mumps_par%a=>null()
-
-      endif ! centralize_harm_mat
+      endif
 
       if (.not. spss_analyzed) then
         if (my_id_n.eq. 0) then                  ! elapsed time reorder start
@@ -1042,7 +1037,7 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
       rhs_tmp = 0.d0
       do i = 1, mumps_par%n
-        rhs_tmp(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor(i)
+        rhs_tmp(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor
       enddo
 
 

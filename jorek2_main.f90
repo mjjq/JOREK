@@ -895,12 +895,12 @@ required = 0
            1, n_tor, irn_glob, jcn_glob, n_matrix_block_size, ijA_index, ijA_size, irn_jcn) 
     endif
 
-    if (gmres) call map_row_index(ndof_glob)
+    if ((gmres).and.(my_id_n.eq.0)) call map_row_index(ndof_glob)
     if (use_mumps) then
        if (.not. gmres) then
-    	  call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
+         call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
        else
-    	  call initialise_mumps(MPI_COMM_N)	   ! start MUMPS sparse matrix solver on local groups
+         call initialise_mumps(MPI_COMM_N)        ! start MUMPS sparse matrix solver on local groups
        endif
     endif
 
@@ -1029,6 +1029,8 @@ required = 0
 #ifndef DIRECT_CONSTRUCTION
          ! --- Extract harmonic matrix from global matrix via MPI communication
         call distribute_harmonics(my_id,my_id_n,n_cpu)
+        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
+
         call MPI_Barrier(MPI_COMM_WORLD,ierr)
         call clck_time_barrier(t1)
         call clck_ldiff(t0,t1,tsecond)
@@ -1063,7 +1065,7 @@ required = 0
 
       else
 
-        call distribute_vector(my_id,rhs_glob,mumps_par%rhs)
+        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
       endif
 
        ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)

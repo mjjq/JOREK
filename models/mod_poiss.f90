@@ -26,7 +26,6 @@ use spmf
 
 #ifdef USE_STRUMPACK
 use strumpack_module
-use sorting_module, only : remove_duplicates, convert2csr
 #endif
 
 implicit none

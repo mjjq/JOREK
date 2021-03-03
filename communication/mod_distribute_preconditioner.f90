@@ -278,13 +278,11 @@ contains
     if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"dh_mumps_par%rhs",CAT_DMATRIX)
     call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"dh_mumps_par%rhs",CAT_DMATRIX)
 
-    call distribute_vector(my_id,rhs_glob,mumps_par%rhs)
-
   end subroutine distribute_harmonics
 
 
-  subroutine distribute_vector(my_id,rhs,rhs_dis)
-  !> Distribute vector rhs for each mode group
+  subroutine distribute_vector(rhs,rhs_dis,comm)
+  !> Distribute vector rhs among each mode group master
     use global_distributed_matrix, only: ndof_glob
     use mumps_module, only: mumps_par
     use mpi_mod
@@ -293,10 +291,11 @@ contains
     implicit none
 
     real*8                :: rhs(:), rhs_dis(:)
-    integer               :: my_id, ierr
+    integer               :: comm,ierr
     integer(kind=int_all) :: i
 
-    call MPI_BCAST(rhs,ndof_glob,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(rhs,ndof_glob,MPI_DOUBLE_PRECISION,0,comm,ierr)
+
     do i=1, mumps_par%n
       rhs_dis(i) = rhs(my_row_index(i))
     enddo

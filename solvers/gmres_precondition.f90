@@ -4,7 +4,7 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
 #ifdef USE_COMPLEX_PRECOND
   use real2complex_mod
 #endif
-  use tr_module 
+  use tr_module
   use mod_parameters
   use mumps_module
   use pastix_module
@@ -34,12 +34,12 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
   integer               :: my_id, my_id_n, MPI_COMM_MASTER, MPI_COMM_N
   real, intent (in)     :: x(*)
   real, intent (inout)  :: y(*)
-  
+
   real, allocatable     :: y_tmp(:)
   integer               :: i, ierr
   real, dimension(:), allocatable :: y_dum
-  integer(kind=int_all), parameter   :: Int1=1  
-  
+  integer(kind=int_all), parameter   :: Int1=1
+
   real*8                :: DUMMY_REAL(1:1)
   integer(kind=int_all) :: DUMMY_INT (1:1)
 
@@ -49,15 +49,17 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
   type(c_ptr)        :: pastix_rhs_ptr
 #endif
 
-
-  call MPI_BCAST(x,ndof_glob,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
   if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
   call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
+
+  if (my_id_n.eq.0) then
+    call MPI_BCAST(x,ndof_glob,MPI_DOUBLE_PRECISION,0,MPI_COMM_MASTER,ierr)
 ! construct local RHS from global vector x
-  do i = 1, mumps_par%n
-    mumps_par%rhs(i) = x(my_row_index(i))
-  enddo
-    
+    do i = 1, mumps_par%n
+      mumps_par%rhs(i) = x(my_row_index(i))
+    enddo
+  endif
+
 #ifdef USE_MUMPS
   if (use_mumps) then
     mumps_par%JOB = 3 ! Solve
@@ -68,20 +70,20 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
 #if defined(USE_PASTIX)||defined(USE_PASTIX6)
   if (use_pastix) then
     if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
-  
+
       if (.not. associated(mumps_par%rhs)) then
         call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
       endif
-     
+
       if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
-  
-#ifdef USE_COMPLEX_PRECOND 
+
+#ifdef USE_COMPLEX_PRECOND
         !-- converting RHS from real to complex
         call real2complex_rhs(my_id, my_id_n, rhs_cmplx_sol)
         if(my_id_n .gt. 0) then
           if (allocated(rhs_cmplx_sol))  deallocate(rhs_cmplx_sol)
-          allocate(rhs_cmplx_sol(1:n_cmplx)) 
-        endif 
+          allocate(rhs_cmplx_sol(1:n_cmplx))
+        endif
         call MPI_BCAST(rhs_cmplx_sol,n_cmplx,MPI_DOUBLE_COMPLEX,0,MPI_COMM_N,ierr)
 #endif
         ! pastix input parameters working in Pastix5 and Pastix6
@@ -97,8 +99,8 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
 #else
         pastix_iparm(IPARM_DOF_NBR)               = 1
 #endif
-  
-  
+
+
 #ifndef USE_PASTIX6
         ! -- For PaStiX solver before version 6.x
         pastix_iparm(IPARM_START_TASK)            = API_TASK_SOLVE
@@ -106,13 +108,13 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
         pastix_iparm(IPARM_RHS_MAKING)            = pastix_rhs                 ! right hand side (0 : use RHS)
         pastix_iparm(IPARM_SYM)                   = pastix_sym
         pastix_iparm(IPARM_AMALGAMATION_LEVEL)    = pastix_amalg
-  
+
 #else
         ! -- For PaStiX solver version 6.x
         pastix_iparm(IPARM_MTX_TYPE)              = pastix_sym
         pastix_iparm(IPARM_AMALGAMATION_LVLCBLK)  = pastix_amalg
 #endif
-       
+
 #ifndef USE_PASTIX6
         ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
@@ -122,25 +124,25 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
              !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                    DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
                       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
-#else      
+#else
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
              !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                    DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
                       pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_sol,Int1,pastix_iparm,pastix_dparm)
 #endif
 
-#else      
+#else
 
 #ifndef USE_COMPLEX_PRECOND
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
-#else      
+#else
         call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_sol,Int1,pastix_iparm,pastix_dparm)
 #endif
 
 #endif
- 
+
 #else
          ! -- For PaStiX solver version 6.x
          pastix_rhs_ptr = c_loc(mumps_par%rhs)
@@ -157,26 +159,28 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
 
 #ifdef USE_WSMP
   if (use_wsmp) then
+    call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
     call PWGSMP__back_substitution(mumps_par%rhs, my_id_n)
-  endif  
+  endif
 #endif
 
 #ifdef USE_STRUMPACK
   if (use_strumpack) then
+    call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
     call strumpack_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_N)
-  endif  
-#endif     
-    
+  endif
+#endif
+
   if (my_id_n .eq. 0) then
- 
+
     if (.not.use_strumpack) then
 !------------------------------------------ undo column scaling
 #ifdef USE_COMPLEX_PRECOND
 !-- converting RHS from complex to real
-      do i=1,n_cmplx 
+      do i=1,n_cmplx
         if(my_id .eq. 0) then
           mumps_par%rhs(i) = REAL(rhs_cmplx_sol(i))
-        else 
+        else
           mumps_par%rhs(2*i-1) = REAL(rhs_cmplx_sol(i))
           mumps_par%rhs(2*i) = AIMAG(rhs_cmplx_sol(i))
         endif
@@ -186,22 +190,22 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
         mumps_par%rhs(i) =  mumps_par%rhs(i) / column_scaling(i)
       enddo
     endif
-    
+
     allocate(y_dum(ndof_glob))
     y_dum = 0.d0
-    
+
     ! put local solution into global vector y
     do i = 1, mumps_par%n
-      y_dum(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor(i)
+      y_dum(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor
     enddo
-    
+
     call MPI_AllReduce(MPI_IN_PLACE,y_dum,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
     if (my_id.eq.0) y(1:ndof_glob) = y_dum(1:ndof_glob)
- 
+
     deallocate(y_dum)
 
   endif
-    
+
   return
-  
+
 end subroutine gmres_precondition

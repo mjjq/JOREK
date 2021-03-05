@@ -248,9 +248,9 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   integer            :: ind, ierr
 
   ! type_node, node_list%n_nodes
-  real(RKIND), allocatable :: t_x(:,:,:)                   ! n_order+1, n_dim
-  real(RKIND), allocatable :: t_values(:,:,:,:)            ! n_tor, n_order+1, n_var
-  real(RKIND), allocatable :: t_deltas(:,:,:,:)            ! n_tor, n_order+1, n_var
+  real(RKIND), allocatable :: t_x(:,:,:,:)                 ! n_coord_tor, n_order+1, n_dim
+  real(RKIND), allocatable :: t_values(:,:,:,:)            !       n_tor, n_order+1, n_var
+  real(RKIND), allocatable :: t_deltas(:,:,:,:)            !       n_tor, n_order+1, n_var
 
   real(RKIND), allocatable :: t_psi_eq(:,:)                ! n_order+1
   real(RKIND), allocatable :: t_Fprof_eq(:,:)              ! n_order+1
@@ -298,8 +298,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 #endif
 
   ! type_node, node_list%n_nodes
-  call tr_allocate(t_x,1,node_list%n_nodes,1,n_order+1,1,n_dim, &
-       "node_list%x",CAT_UNKNOWN)
+  call tr_allocate(t_x,1,node_list%n_nodes,1,n_coord_tor,1,n_order+1,1,n_dim, &
+      "node_list%x",CAT_UNKNOWN)
   call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_var, &
        "node_list%values",CAT_UNKNOWN)
   call tr_allocate(t_deltas,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_var, &
@@ -364,7 +364,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   !
   do i=1,node_list%n_nodes
-     t_x(i,:,:)        = node_list%node(i)%x
+     t_x(i,:,:,:)        = node_list%node(i)%x
      t_values(i,:,:,:) = node_list%node(i)%values
      t_deltas(i,:,:,:) = node_list%node(i)%deltas
 
@@ -434,6 +434,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0))
   call HDF5_integer_saving(file_id,n_order,'n_order'//char(0))
   call HDF5_integer_saving(file_id,n_tor,'n_tor'//char(0))
+  call HDF5_integer_saving(file_id,n_coord_tor,'n_coord_tor'//char(0))
   call HDF5_integer_saving(file_id,n_period,'n_period'//char(0))
   call HDF5_integer_saving(file_id,n_plane,'n_plane'//char(0))
   call HDF5_integer_saving(file_id,n_vertex_max,'n_vertex_max'//char(0))
@@ -449,9 +450,14 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call HDF5_integer_saving(file_id,node_list%n_nodes,'n_nodes'//char(0))
   call HDF5_integer_saving(file_id,element_list%n_elements,'n_elements'//char(0))
   call HDF5_integer_saving(file_id,node_list%n_dof,'n_dof'//char(0))
-
-  call HDF5_array3D_saving(file_id,t_x, &
-       node_list%n_nodes,n_order+1,n_dim,'x'//char(0))
+  
+  if (rst_hdf5_version .eq. 2) then
+    call HDF5_array4D_saving(file_id,t_x, &
+         node_list%n_nodes,n_coord_tor,n_order+1,n_dim,'x'//char(0))
+  else
+    call HDF5_array3D_saving(file_id,t_x(:,1,:,:), &
+         node_list%n_nodes,n_order+1,n_dim,'x'//char(0))
+  endif
   call HDF5_array4D_saving(file_id,t_values, &
        node_list%n_nodes,n_tor,n_order+1,n_var,'values'//char(0))
   call HDF5_array4D_saving(file_id,t_deltas, &
@@ -617,10 +623,10 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   ! Radiation and ionization energy history
   if (index_now .gt. 0) then
-    call HDF5_array1D_saving(file_id,xtime_radiation, index_now,'xtime_radiation'//char(0))
-    call HDF5_array1D_saving(file_id,xtime_rad_power, index_now,'xtime_rad_power'//char(0))
-    call HDF5_array1D_saving(file_id,xtime_E_ion, index_now,'xtime_E_ion'//char(0))
-    call HDF5_array1D_saving(file_id,xtime_E_ion_power, index_now,'xtime_E_ion_power'//char(0))
+    if ( allocated(xtime_radiation)   ) call HDF5_array1D_saving(file_id,xtime_radiation, index_now,'xtime_radiation'//char(0))
+    if ( allocated(xtime_rad_power)   ) call HDF5_array1D_saving(file_id,xtime_rad_power, index_now,'xtime_rad_power'//char(0))
+    if ( allocated(xtime_E_ion)       ) call HDF5_array1D_saving(file_id,xtime_E_ion, index_now,'xtime_E_ion'//char(0))
+    if ( allocated(xtime_E_ion_power) ) call HDF5_array1D_saving(file_id,xtime_E_ion_power, index_now,'xtime_E_ion_power'//char(0))
   end if
 
   ! Dynamically allocate memeries for temporary arrays in order to export

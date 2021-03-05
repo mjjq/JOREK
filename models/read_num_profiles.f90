@@ -55,11 +55,9 @@ subroutine read_num_profiles(my_id)
     num_Ti_y0 = num_Ti_y0 - Ti_1
   end if
   
-  if ( (jorek_model .eq. 400) .or. (jorek_model .eq. 711) ) then
-    if ( my_id ==0 ) then
-      T_0 = Te_0 + Ti_0
-      T_1 = Te_1 + Ti_1
-    end if
+  if (with_TiTe .and. my_id ==0) then
+    T_0 = Te_0 + Ti_0
+    T_1 = Te_1 + Ti_1
   end if
   
   num_ffprime = ( ffprime_file /= 'none' )
@@ -90,7 +88,8 @@ subroutine read_num_profiles(my_id)
     write(*,*)'*** Aborting...'
     stop
   endif
-  if ( ( my_id == 0 ) .and. ( (jorek_model == 710) .or. (jorek_model == 711) ) ) then
+#ifdef fullmhd
+  if (my_id == 0) then
     if ( .not. num_Fprofile ) then
       ! --- Numerical integration of FFprime
       call integrate_F_profile()
@@ -121,6 +120,7 @@ subroutine read_num_profiles(my_id)
         check_positive=.false.)
     end if
   end if
+#endif
   
   num_d_perp = ( d_perp_file /= 'none' )
   if ( num_d_perp .and. ( my_id == 0 ) ) then

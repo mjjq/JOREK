@@ -2,7 +2,7 @@
 !!
 !! @see vacuum_response, vacuum_equilibrium
 module vacuum
-  use phys_module, only: rst_hdf5_version
+  use phys_module, only: rst_hdf5_version, freeb_change_indices
   
   implicit none
   
@@ -598,8 +598,12 @@ module vacuum
     if ( freeboundary ) then
       
       if ( .not. freeboundary_rst ) then
-        write(*,*) 'WARNING: Restarting a simulation with freeboundary=.t. which was run with'
-        write(*,*) '  freeboundary=.f. so far.'
+        write(*,*) 'WARNING: Restarting a simulation with freeboundary=.t. which was run with freeboundary=.f. so far.'
+        if ( .not. freeb_change_indices ) then
+          write(*,*) 'WARNING: Your free boundary simulation might be parallelized badly if you re-start a fixed'
+          write(*,*) 'WARNING:   boundary simulation with free boundary, unless you set freeb_change_indices=.t.'
+          write(*,*) 'WARNING:   from the very beginning of the simulation (grid construction)'
+        end if
       end if
       
       if ( freeboundary_rst ) then
@@ -694,8 +698,8 @@ module vacuum
           if ( allocated(net_tor_wall_curr) ) deallocate(net_tor_wall_curr)
           allocate( t_net_tor_wall_curr(index_start) )
           call HDF5_array1D_reading(file_id,t_net_tor_wall_curr,"net_tor_wall_curr")
+          allocate( net_tor_wall_curr(index_start+nstep))
           net_tor_wall_curr = 0.d0
-          allocate( net_tor_wall_curr(index_start+nstep) )
           net_tor_wall_curr(1:index_start) = t_net_tor_wall_curr(1:index_start)
           deallocate(t_net_tor_wall_curr)
 

@@ -22,6 +22,8 @@ real*8     :: eq_g(n_plane,n_var,n_gauss), eq_s(n_plane,n_var,n_gauss), eq_p(n_p
 real*8     :: eq_ss(n_plane,n_var,n_gauss)
 real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
+!real*8, dimension (:,:), pointer  :: ELM
+!real*8, dimension (:)  , pointer  :: RHS
 real*8     :: ELM(n_vertex_max*n_var*(n_order+1)*n_tor,n_vertex_max*n_var*(n_order+1)*n_tor)
 real*8     :: RHS(n_vertex_max*n_var*(n_order+1)*n_tor)
 
@@ -38,9 +40,14 @@ real*8     :: psi, psi_s, vpar, rho,  T
 real*8     :: amat_61, amat_65, amat_66, amat_67
 logical    :: xpoint2
 
-theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
+!theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
 !theta = 1.0d0  ; zeta = 0.0d0       ! Euler scheme 
 !theta = 1.0d0   ; zeta = 0.5d0      ! BDF2 (Gears) scheme
+
+theta=time_evol_theta
+!zeta  = time_evol_zeta
+! change zeta for variable dt
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0;  x_ss  = 0.d0; 
@@ -55,11 +62,11 @@ do i=1,2
 
     do ms=1, n_gauss
 
-      x_g(ms)  = x_g(ms)  + nodes(i)%x(j,1) * element%size(i,j) * H1(i,j,ms)
-      x_s(ms)  = x_s(ms)  + nodes(i)%x(j,1) * element%size(i,j) * H1_s(i,j,ms)
+      x_g(ms)  = x_g(ms)  + nodes(i)%x(1,j,1) * element%size(i,j) * H1(i,j,ms)
+      x_s(ms)  = x_s(ms)  + nodes(i)%x(1,j,1) * element%size(i,j) * H1_s(i,j,ms)
 
-      y_g(ms)  = y_g(ms)  + nodes(i)%x(j,2) * element%size(i,j) * H1(i,j,ms)
-      y_s(ms)  = y_s(ms)  + nodes(i)%x(j,2) * element%size(i,j) * H1_s(i,j,ms)
+      y_g(ms)  = y_g(ms)  + nodes(i)%x(1,j,2) * element%size(i,j) * H1(i,j,ms)
+      y_s(ms)  = y_s(ms)  + nodes(i)%x(1,j,2) * element%size(i,j) * H1_s(i,j,ms)
 
       do mp=1,n_plane
 
@@ -86,8 +93,11 @@ do i=1,2
   enddo
 enddo
 
+! changes deltas for variable time steps
+delta_g = delta_g * tstep / tstep_prev
+delta_s = delta_s * tstep / tstep_prev
 
-gamma_sheeth = -3.d0
+!gamma_sheeth = -3.d0
 
 !--------------------------------------------------- sum over the Gaussian integration points
 do ms=1, n_gauss
@@ -124,7 +134,7 @@ do ms=1, n_gauss
 
            v   =  H1(i,j,ms) * element%size(vertex(i),j) * HZ(im,mp)
 
-           rhs_ij_6 = v * gamma_sheeth * r0 * T0 * vpar0 * ps0_s * tstep 
+           rhs_ij_6 = v * gamma_sheath * r0 * T0 * vpar0 * ps0_s * tstep 
 
            ij6 = index_ij + 5*n_tor
 
@@ -145,13 +155,13 @@ do ms=1, n_gauss
                  index_kl = n_tor*n_var*(n_order+1)*(vertex(k)-1) + n_tor * n_var * (l-1) + in   ! index in the ELM matrix
 
 
-                 amat_61 = - v * gamma_sheeth * r0  * T0 * vpar0 * psi_s * theta * tstep 
+                 amat_61 = - v * gamma_sheath * r0  * T0 * vpar0 * psi_s * theta * tstep 
 
-                 amat_65 = - v * gamma_sheeth * rho * T0 * vpar0 * ps0_s * theta * tstep 
+                 amat_65 = - v * gamma_sheath * rho * T0 * vpar0 * ps0_s * theta * tstep 
 
-                 amat_66 = - v * gamma_sheeth * r0  * T  * vpar0 * ps0_s * theta * tstep 
+                 amat_66 = - v * gamma_sheath * r0  * T  * vpar0 * ps0_s * theta * tstep 
 
-                 amat_67 = - v * gamma_sheeth * r0  * T0 * vpar  * ps0_s * theta * tstep 
+                 amat_67 = - v * gamma_sheath * r0  * T0 * vpar  * ps0_s * theta * tstep 
 		 
 
                  kl1 = index_kl

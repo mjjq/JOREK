@@ -52,7 +52,7 @@ subroutine preset_parameters
   freeboundary       = .false. ! use free or fixed boundary?
   resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
   freeb_equil_iterate_area = .false.
-  freeb_change_indices = .true. ! exchange grid node indices to parallelize boundary integral
+  freeb_change_indices = .false. ! exchange grid node indices to parallelize boundary integral (only needed when running fixed boundary at first)
 
   bc_natural_flux    = .false.! boundary conditions for flux surface boundaries (2 and 3)
   bc_natural_open    = .false. ! use sheath (Bohm) boundary conditions
@@ -175,8 +175,12 @@ subroutine preset_parameters
   Z_begin = -0.1d0
   Z_end   = 0.1d0
   
-  ZK_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_perp(1:5)   = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_i_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_e_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   ZK_par       = 1.d0
+  ZK_i_par     = 1.d0
+  ZK_e_par     = 1.d0
   ZK_par_max   = 1.d20
   D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par        = 0.d0
@@ -199,9 +203,8 @@ subroutine preset_parameters
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.
   rn0_min            = 1.d-8
-
-  T_min              =-1.0d20
-  rho_min            =-1.0d20
+  T_min              = 1.0d-20
+  rho_min            = 1.0d-20
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
@@ -212,8 +215,12 @@ subroutine preset_parameters
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
   Dn_perp_num   = 0.d0
+  eta_num_T_dependent   = .false.
+  visco_num_T_dependent = .false.
 
   heatsource          = 1.e-7
+  heatsource_e        = 0.5e-7
+  heatsource_i        = 0.5e-7
   heatsource_psin     = 1.0d0
   heatsource_sig      = 0.1d0
   particlesource      = 1.e-5
@@ -264,6 +271,12 @@ subroutine preset_parameters
   Ti_coef     = 0.d0;  Ti_coef(1)  = -1.d0
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
+
+  rhon_0 =  0.d0
+  rhon_1 =  0.d0
+  rhon_coef    = 0.d0
+  rhon_coef(4) = 0.01
+  rhon_coef(8) = 0.01
 
   pellet_amplitude  = 0.d0
   pellet_R          = 3.8d0
@@ -370,6 +383,8 @@ subroutine preset_parameters
   
   equil              = .true.               ! compute equilibrium
   
+  no_mach1_bc        = .false.              ! Never apply Mach-1 BCs
+
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
 
   eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
@@ -412,7 +427,9 @@ subroutine preset_parameters
   R_limiter = 0.d0
   Z_limiter = 0.d0
   
+  extend_existing_grid = .false.
   n_wall_blocks        = 0
+  corner_block         = 0
   n_ext_block          = 0
   n_block_points_left  = 0
   R_block_points_left  = 0.d0
@@ -443,6 +460,11 @@ subroutine preset_parameters
   D_neutral_p = 1.d-5
   delta_n_convection = 0
   nimp_bg = 0.
+  n_adas = 0
+  adas_dir = ''
+  imp_type = ''
+  use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one exists for argon
+
   !====== JET DMV-2 parameters
   L_tube = 2.4d0
   K_Dmv = 4.d-2
@@ -469,9 +491,6 @@ subroutine preset_parameters
   spi_tor_rot     = .false.
   using_spi       = .false.
 
-  n_adas          = 0
-  adas_dir        = ''
-  gas_type        = ''
   output_prad_phi = .false.
 
 !======================JP ECCD injection parameters
@@ -489,5 +508,9 @@ subroutine preset_parameters
   jw1=5.d-1 ! inner cut-off
   jw2=1.d0  ! outer cut-off
   jw3=1.d0  ! outer cut-off
+
+!===================== Thermalization flag========
+
+  thermalization = .false.
 
 end subroutine preset_parameters

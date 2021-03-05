@@ -212,21 +212,21 @@ do i=1,n_vertex_max
    do ms=1, n_gauss
      do mt=1, n_gauss
 
-       x_g(ms,mt)  = x_g(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H(i,j,ms,mt)
-       x_s(ms,mt)  = x_s(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
-       x_t(ms,mt)  = x_t(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
+       x_g(ms,mt)  = x_g(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H(i,j,ms,mt)
+       x_s(ms,mt)  = x_s(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H_s(i,j,ms,mt)
+       x_t(ms,mt)  = x_t(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H_t(i,j,ms,mt)
 
-       x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
-       x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_st(i,j,ms,mt)
-       x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
+       x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
+       x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_st(i,j,ms,mt)
+       x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
 
-       y_g(ms,mt)  = y_g(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H(i,j,ms,mt)
-       y_s(ms,mt)  = y_s(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
-       y_t(ms,mt)  = y_t(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+       y_g(ms,mt)  = y_g(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H(i,j,ms,mt)
+       y_s(ms,mt)  = y_s(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H_s(i,j,ms,mt)
+       y_t(ms,mt)  = y_t(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H_t(i,j,ms,mt)
 
-       y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
-       y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
-       y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
+       y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
+       y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_st(i,j,ms,mt)
+       y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
 
        do mp=1,n_plane
 
@@ -672,17 +672,15 @@ do ms=1, n_gauss
      if (xpoint2) then
        if (r0 .lt. D_prof_neg_thresh)  then
          D_prof  = D_prof_neg
+         D_prof_imp = D_prof_neg
          D_par   = D_prof_neg
-       endif
-       if (rn0 .lt. D_prof_imp_neg_thresh)  then
-         D_prof_imp = max(D_prof_imp, D_prof_imp_neg)
-         D_par_imp  = max(D_par_imp,  D_prof_imp_neg)
+         D_par_imp = D_prof_neg
        endif
        if (T0 .lt. ZK_prof_neg_thresh) then
          ZK_prof = ZK_prof_neg
        endif
        if (T0 .lt. ZK_par_neg_thresh) then
-         ZKpar_T = max(ZKpar_T, ZK_par_neg)
+         ZKpar_T = ZK_par_neg
        endif
      endif
    
@@ -690,7 +688,7 @@ do ms=1, n_gauss
      ! --- Impurity related things
      ! -------------------------------
 
-     select case ( trim(gas_type) )
+     select case ( trim(imp_type) )
        case('D2')
          m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
        case('Ar')
@@ -698,7 +696,7 @@ do ms=1, n_gauss
        case('Ne')
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
        case default
-         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
+         write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
          m_i_over_m_imp = central_mass/2.
      end select
@@ -1249,7 +1247,8 @@ do ms=1, n_gauss
                     + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)      * xjac * tstep &
+                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y) &
+                                                          * (F0 / BigR) **2                    * xjac * tstep &
 !==========================End of viscous heating terms==============================
                     + v * BigR * (GAMMA - 1.) * eta_T_ohm * (zj0/BigR)**2            * xjac * tstep  &
                     - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad          * xjac * tstep  &
@@ -1951,7 +1950,7 @@ do ms=1, n_gauss
 !================= End ionization potential energy ===========================
 !============================Behold, the parallel viscous heating terms!=============
                            - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y)              &
-                                                                                                 * xjac * theta * tstep  &
+                                                                        * (F0 / BigR) **2        * xjac * theta * tstep  &
 !==========================End of viscous heating terms==============================
 !===================== Additional terms from friction terms============
                            - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp) * xjac * theta * tstep &

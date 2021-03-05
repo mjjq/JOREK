@@ -185,14 +185,16 @@ subroutine preset_parameters
 
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0
-  D_prof_imp_neg     = 1.d-5
-  D_prof_imp_neg_thresh  = -1.d0 ! to disable by default enhanced impurities diffusion in model501
+
+  D_imp_num_x = 0.d0
+  D_imp_num_y = 0.d0
+  D_imp_num_p = 0.d0
+  D_imp_num_neg      = 1.d-6
+  D_imp_num_neg_thresh  = -1.d3 ! to disable by default enhanced impurities diffusion in model501
   ZK_prof_neg        = 1.d-5
   ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
   ZK_par_neg_thresh  = 0.d0
-  D_neutral_neg_thresh = 0.d0
-  D_neutral_neg      = 1.d-4
 
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.

@@ -132,6 +132,7 @@ real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablati
 !real*8     :: spi_Vel_R_tmp
 !real*8     :: spi_Vel_Z_tmp
 !real*8     :: spi_Vel_phi_tmp
+real*8     :: Dn0x, Dn0y, Dn0p
 
 ! Atomic physics coefficients:
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
@@ -238,21 +239,21 @@ do i=1,n_vertex_max
    do ms=1, n_gauss
      do mt=1, n_gauss
 
-       x_g(ms,mt)  = x_g(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H(i,j,ms,mt)
-       x_s(ms,mt)  = x_s(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
-       x_t(ms,mt)  = x_t(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
+       x_g(ms,mt)  = x_g(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H(i,j,ms,mt)
+       x_s(ms,mt)  = x_s(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H_s(i,j,ms,mt)
+       x_t(ms,mt)  = x_t(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H_t(i,j,ms,mt)
 
-       x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
-       x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_st(i,j,ms,mt)
-       x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
+       x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
+       x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_st(i,j,ms,mt)
+       x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
 
-       y_g(ms,mt)  = y_g(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H(i,j,ms,mt)
-       y_s(ms,mt)  = y_s(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
-       y_t(ms,mt)  = y_t(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+       y_g(ms,mt)  = y_g(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H(i,j,ms,mt)
+       y_s(ms,mt)  = y_s(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H_s(i,j,ms,mt)
+       y_t(ms,mt)  = y_t(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H_t(i,j,ms,mt)
 
-       y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
-       y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
-       y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
+       y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
+       y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_st(i,j,ms,mt)
+       y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
 
        do mp=1,n_plane
 
@@ -689,25 +690,35 @@ do ms=1, n_gauss
      if (xpoint2) then
        if (r0 .lt. D_prof_neg_thresh)  then
          D_prof  = D_prof_neg
+         D_prof_imp = D_prof_neg
          D_par   = D_prof_neg
-       endif
-       if (rn0 .lt. D_prof_imp_neg_thresh)  then
-         D_prof_imp = max(D_prof_imp, D_prof_imp_neg)
-         D_par_imp  = max(D_par_imp,  D_prof_imp_neg)
+         D_par_imp = D_prof_neg
        endif
        if (T0 .lt. ZK_prof_neg_thresh) then
          ZK_prof = ZK_prof_neg
        endif
        if (T0 .lt. ZK_par_neg_thresh) then
-         ZKpar_T = max(ZKpar_T, ZK_par_neg)
+         ZKpar_T = ZK_par_neg
        endif
      endif
+
+     Dn0x = D_imp_num_x      
+     Dn0y = D_imp_num_y      
+     Dn0p = D_imp_num_p      
+
+     if (xpoint2) then
+       if (rn0 .lt. D_imp_num_neg_thresh)  then
+        Dn0x = D_imp_num_neg
+        Dn0y = D_imp_num_neg
+        Dn0p = D_imp_num_neg
+       endif
+    endif
    
      ! -------------------------------
      ! --- Impurity related things
      ! -------------------------------
 
-     select case ( trim(gas_type) )
+     select case ( trim(imp_type) )
        case('D2')
          m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
        case('Ar')
@@ -715,7 +726,7 @@ do ms=1, n_gauss
        case('Ne')
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
        case default
-         write(*,*) '!! Gas type "', trim(gas_type), '" unknown (in mod_injection_source.f90) !!'
+         write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
          m_i_over_m_imp = central_mass/2.
      end select
@@ -1160,6 +1171,7 @@ do ms=1, n_gauss
                     !- (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho)               * xjac * tstep &
                     ! The old diffusion scheme for the impurities
                     !- D_prof * BigR  * (v_x*(r0_x) + v_y*(r0_y)             )                  * xjac * tstep &
+                    + BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y)                        * xjac * tstep &  
                     - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep &
                     - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep &
                     - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep &
@@ -1185,6 +1197,7 @@ do ms=1, n_gauss
                        !Old diffusion scheme for impurities
                        !- (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rho)             * xjac * tstep &
                        !- D_prof * BigR  * (          v_p*(r0_p) * eps_cyl**2 /BigR**2 )           * xjac * tstep &
+                       + BigR* ( - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2)                         * xjac * tstep & 
                     - TG_num5 * 0.25d0 / BigR * vpar0**2 &
                               * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
                               * (                            + F0 / BigR * v_p) * xjac * tstep * tstep
@@ -1275,7 +1288,8 @@ do ms=1, n_gauss
                     + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)      * xjac * tstep &
+                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)  &
+                                                          * (F0 / BigR) **2                    * xjac * tstep &
 !==========================End of viscous heating terms==============================
 
                     + v * BigR * (GAMMA - 1.) * eta_T_ohm * (zj0/BigR)**2           * xjac * tstep  &
@@ -1377,7 +1391,7 @@ do ms=1, n_gauss
 !################################################################################################### 
 
 
-	   rhs_ij_8 =    &       
+	   rhs_ij_8 = BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y)                                          * xjac * tstep &              
                     ! The new diffusion scheme for the impurities
                       - (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rhon) * xjac * tstep &
                     ! The new diffusion scheme for the impurities
@@ -1404,7 +1418,7 @@ do ms=1, n_gauss
                         * BigR * xjac * tstep
 
 
-           rhs_ij_8_k =  & 
+           rhs_ij_8_k = BigR* ( - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2)                             * xjac * tstep	        & 
                        ! The new diffusion scheme for the impurities
                        - (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rhon)             * xjac * tstep &
                        - D_prof_imp * BigR  * (          v_p*(rn0_p) * eps_cyl**2  /BigR**2)           * xjac * tstep &
@@ -1793,6 +1807,7 @@ do ms=1, n_gauss
              amat_57_n = + v * r0 * F0 / BigR * vpar_p                                             * xjac * theta * tstep
 	     
              amat_58   = &
+                         + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                      * xjac * theta * tstep &
                          - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon           * xjac * theta * tstep &
                          + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon   * xjac * theta * tstep &
                          - D_prof * BigR  * (v_x*rhon_x + v_y*rhon_y )                             * xjac * theta * tstep &
@@ -1805,6 +1820,7 @@ do ms=1, n_gauss
                           + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon_n * xjac * theta * tstep
 
              amat_58_kn = &
+                          + Dn0p * rhon_p * v_p*eps_cyl**2/BigR * xjac * theta * tstep &
                           - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rhon_n       * xjac * theta * tstep &
                           + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rhon_n * xjac * theta * tstep &
                           - D_prof * BigR  * ( v_p*rhon_p * eps_cyl**2 /BigR**2 )                   * xjac * theta * tstep &
@@ -2131,7 +2147,8 @@ do ms=1, n_gauss
                        - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp) * xjac * theta * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                       - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) * xjac * theta * tstep  &
+                       - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) &
+                                                                    * (F0 / BigR) **2           * xjac * theta * tstep  &
 !==========================End of viscous heating terms==============================
  
                    + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
@@ -2542,7 +2559,7 @@ do ms=1, n_gauss
                     + TG_num8 * 0.25d0 / BigR * vpar0**2                                                              &
                                * (rhon_x * ps0_y - rhon_y * ps0_x )                                                   &
                                * ( v_x * ps0_y -  v_y * ps0_x   ) * xjac * theta * tstep * tstep                      &
-
+                   + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                        * xjac * theta * tstep  &
                    + Dn_perp_num * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy)  * BigR * xjac * theta * tstep 
           
 
@@ -2562,7 +2579,7 @@ do ms=1, n_gauss
                                * ( v_x * ps0_y -  v_y * ps0_x                      ) * xjac * theta * tstep * tstep
 
 	          
-         amat_88_kn = &
+         amat_88_kn = + Dn0p * rhon_p * v_p*eps_cyl**2/BigR * xjac * theta * tstep                                    &
                      ! New diffusion scheme for impurities
                       + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rhon_n    * xjac * theta * tstep &
                       + D_prof_imp * BigR  * ( v_p*rhon_p * eps_cyl**2 /BigR**2 )                * xjac * theta * tstep &

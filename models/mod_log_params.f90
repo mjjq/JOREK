@@ -453,14 +453,15 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,LOGI_FMT) 'linear_run            ', linear_run
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
   write(*,REAL_FMT) 'D_prof_neg_thresh     ', D_prof_neg_thresh
-  write(*,REAL_FMT) 'D_prof_imp_neg        ', D_prof_imp_neg
-  write(*,REAL_FMT) 'D_prof_imp_neg_thresh ', D_prof_imp_neg_thresh
   write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
   write(*,REAL_FMT) 'ZK_par_neg            ', ZK_par_neg
   write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_par_neg_thresh     ', ZK_par_neg_thresh
-  write(*,REAL_FMT) 'D_neutral_neg         ', D_neutral_neg
-  write(*,REAL_FMT) 'D_neutral_neg_thresh  ', D_neutral_neg_thresh
+  write(*,REAL_FMT) 'D_imp_num_x           ', D_imp_num_x
+  write(*,REAL_FMT) 'D_imp_num_y           ', D_imp_num_y
+  write(*,REAL_FMT) 'D_imp_num_p           ', D_imp_num_p
+  write(*,REAL_FMT) 'D_imp_num_neg         ', D_imp_num_neg
+  write(*,REAL_FMT) 'D_imp_num_neg_thresh  ', D_imp_num_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
   write(*,REAL_FMT) 'ne_SI_min             ', ne_SI_min
   write(*,REAL_FMT) 'Te_eV_min             ', Te_eV_min

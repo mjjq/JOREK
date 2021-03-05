@@ -32,6 +32,7 @@ type(type_element_list), intent(inout) :: element_list   !< list of elements wit
 ! --- Local variables
 integer :: i_elm, i_vertex, k, l, node_index
 integer :: node_indices( (n_order+1)/2, (n_order+1)/2 )
+real*8  :: size_u, size_v
 
 if (n_order .lt. 5) return
 
@@ -40,28 +41,26 @@ call calculate_node_indices(node_indices)
 
 do i_elm = 1,element_list%n_elements
   do i_vertex = 1,n_vertex_max
+    size_u = element_list%element(i_elm)%size(i_vertex,2)
+    size_v = element_list%element(i_elm)%size(i_vertex,3)
+    ! --- C2 continuity
     element_list%element(i_elm)%size(i_vertex,5) = 1.d0
     element_list%element(i_elm)%size(i_vertex,6) = 1.d0
-    element_list%element(i_elm)%size(i_vertex,7) = element_list%element(i_elm)%size(i_vertex,3) ! because \vec{m} is similar to \vec{v}
-    element_list%element(i_elm)%size(i_vertex,8) = element_list%element(i_elm)%size(i_vertex,2) ! while   \vec{n} is similar to \vec{u}
-    element_list%element(i_elm)%size(i_vertex,9) = element_list%element(i_elm)%size(i_vertex,5) &
-                                                  *element_list%element(i_elm)%size(i_vertex,6)
-    do k=10,n_degrees
-      ! --- Just same size for all higher orders, (we take care of the other ones after)
-      element_list%element(i_elm)%size(i_vertex,k) =  element_list%element(i_elm)%size(i_vertex,5) &
-                                                    * element_list%element(i_elm)%size(i_vertex,6)
-    enddo
+    element_list%element(i_elm)%size(i_vertex,7) = size_v
+    element_list%element(i_elm)%size(i_vertex,8) = size_u
+    element_list%element(i_elm)%size(i_vertex,9) = 1.d0
+    ! --- C3 and above
     ! --- Loop over all indices
     do k = 1,(n_order+1)/2
       do l = 1,(n_order+1)/2
         node_index = node_indices(k,l)
         if (node_index .le. 9) cycle ! we want only derivatives >=3
-        if ( (k .ne. 2) .and. (l .ne. 2) ) cycle ! we want only the nodes that are next to boundary (the only ones with h_ij = - h_-ij)
-        if (k .eq. 2) then
-          element_list%element(i_elm)%size(i_vertex,node_index) = element_list%element(i_elm)%size(i_vertex,2)
-        endif
-        if (l .eq. 2) then
-          element_list%element(i_elm)%size(i_vertex,node_index) = element_list%element(i_elm)%size(i_vertex,3)
+        if ( (k .eq. 1) .or. (k .eq. 3) ) then
+          element_list%element(i_elm)%size(i_vertex,node_index) = size_v
+        elseif ( (l .eq. 1) .or. (l .eq. 3) ) then
+          element_list%element(i_elm)%size(i_vertex,node_index) = size_u
+        else
+          element_list%element(i_elm)%size(i_vertex,node_index) = size_u*size_v
         endif
       enddo
     enddo

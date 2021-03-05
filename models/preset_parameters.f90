@@ -184,7 +184,7 @@ subroutine preset_parameters
   D_par_imp        = 0.d0
 
   D_prof_neg         = 1.d-5
-  D_prof_neg_thresh  = 0.d0
+  D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
 
   D_imp_num_x = 0.d0
   D_imp_num_y = 0.d0

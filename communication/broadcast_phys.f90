@@ -1,4 +1,4 @@
-> Broadcast all namelist input parameters from MPI task 0 to the others
+!> Broadcast all namelist input parameters from MPI task 0 to the others
 subroutine broadcast_phys(my_id)
 
 use tr_module

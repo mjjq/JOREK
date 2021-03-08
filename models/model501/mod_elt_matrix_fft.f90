@@ -702,15 +702,15 @@ do ms=1, n_gauss
        endif
      endif
 
-     Dn0x = D_imp_num_x      
-     Dn0y = D_imp_num_y      
-     Dn0p = D_imp_num_p      
+     Dn0x = D_imp_extra_x      
+     Dn0y = D_imp_extra_y      
+     Dn0p = D_imp_extra_p      
 
      if (xpoint2) then
-       if (rn0 .lt. D_imp_num_neg_thresh)  then
-        Dn0x = D_imp_num_neg
-        Dn0y = D_imp_num_neg
-        Dn0p = D_imp_num_neg
+       if (rn0 .lt. D_imp_extra_neg_thresh)  then
+        Dn0x = D_imp_extra_neg
+        Dn0y = D_imp_extra_neg
+        Dn0p = D_imp_extra_neg
        endif
     endif
    

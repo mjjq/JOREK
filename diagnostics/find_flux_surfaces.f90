@@ -115,6 +115,10 @@ do i=1, element_list%n_elements
 
         ! --- For higher order, cubic root finder need to be replaced by Newton methods
         else
+          im = MOD(iv,4) + 1
+          n1 = element_list%element(i)%vertex(iv)
+          n2 = element_list%element(i)%vertex(im)
+          if (node_list%node(n1)%axis_node .and. node_list%node(n2)%axis_node) cycle
           call newton_1D_find_value_on_element_side(node_list,element_list,i, iv, var_psi, surface_list%psi_values(j), n_found, st_found)
           if (n_found .gt. 3) write(*,*)'Warning, found more than 3 intersections!',i,iv,n_found,surface_list%psi_values(j)
           ! SOLVP3 reverses the search on sides 3 and 4

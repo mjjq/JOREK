@@ -570,7 +570,7 @@ module vacuum_response
       sr%n_w    = read_intparam_parallel(filehandle, 'n_w'   , disp)
       sr%ntri_w = read_intparam_parallel(filehandle, 'ntri_w', disp)
 
-      if ( sr%file_version >= 5 ) then
+      if ( sr%file_version >= 5 .and. (.not. CARIDDI_mode)) then
         sr%iwall    = read_intparam_parallel(filehandle, 'iwall',    disp)
         sr%nwu      = read_intparam_parallel(filehandle, 'nwu',      disp)
         sr%nwv      = read_intparam_parallel(filehandle, 'nwv' ,     disp)
@@ -590,14 +590,13 @@ module vacuum_response
 
       call read_array_not_distr(filehandle, 'i_tor', (/sr%n_tor,0/), disp, int1d=sr%i_tor)
 
-      if ( sr%file_version >= 3 ) then
-        
-        sr%ntri_c                  = read_intparam_parallel(filehandle, 'ntri_c',          disp)
-        sr%n_pol_coils             = read_intparam_parallel(filehandle, 'n_pol_coils',     disp)
-        sr%n_rmp_coils             = read_intparam_parallel(filehandle, 'n_rmp_coils',     disp)
-        sr%n_voltage_coils         = read_intparam_parallel(filehandle, 'n_voltage_coils', disp)
-        sr%n_diag_coils            = read_intparam_parallel(filehandle, 'n_diag_coils',    disp)
-        
+      if ( sr%file_version >= 3) then
+         if (.not. CARIDDI_mode)   sr%ntri_c                 = read_intparam_parallel(filehandle, 'ntri_c',          disp)
+         sr%n_pol_coils            = read_intparam_parallel(filehandle, 'n_pol_coils',     disp)
+         sr%n_rmp_coils            = read_intparam_parallel(filehandle, 'n_rmp_coils',     disp)
+         sr%n_voltage_coils        = read_intparam_parallel(filehandle, 'n_voltage_coils', disp)
+         sr%n_diag_coils           = read_intparam_parallel(filehandle, 'n_diag_coils',    disp)
+
         if (sr%n_voltage_coils > 0 ) then
           write(*,*) 'ERROR: voltage_coils not yet implemented.'
           stop
@@ -607,13 +606,17 @@ module vacuum_response
           write(*,*) 'ERROR: STARWALL response is inconsistent: ncoil does not match sum.'
           stop
         end if
- 
+        if (CARIDDI_mode) then
+          sr%ind_start_coils = read_intparam_parallel(filehandle, 'ind_start_coils',     disp)
+        else
+           sr%ind_start_coils = 1
+        end if
         sr%ind_start_pol_coils     = read_intparam_parallel(filehandle, 'ind_start_pol_coils',     disp)
         sr%ind_start_rmp_coils     = read_intparam_parallel(filehandle, 'ind_start_rmp_coils',     disp)
         sr%ind_start_voltage_coils = read_intparam_parallel(filehandle, 'ind_start_voltage_coils', disp)
         sr%ind_start_diag_coils    = read_intparam_parallel(filehandle, 'ind_start_diag_coils',    disp)
 
-        if ( sr%ncoil > 0 ) then
+        if ( sr%ncoil > 0 .and. .not. CARIDDI_mode) then
           call read_array_not_distr(filehandle, 'jtri_c',        (/sr%ncoil,0/),  disp,  int1d=sr%jtri_c)
           call read_array_not_distr(filehandle, 'x_coil',        (/sr%ntri_c,3/), disp,  float2d=sr%x_coil)
           call read_array_not_distr(filehandle, 'y_coil',        (/sr%ntri_c,3/), disp,  float2d=sr%y_coil)
@@ -626,7 +629,7 @@ module vacuum_response
            endif
         end if
         
-        if ( (sr%ncoil .gt. 0) .and. sr%file_version .le. 3) then
+        if ( (sr%ncoil .gt. 0) .and. sr%file_version .le. 3 .or. CARIDDI_mode) then
          write(*,*) "Coil names not yet supported by starwall (ver <=3). Generic names used."
          if (allocated(sr%coil_name)) deallocate(sr%coil_name)
          allocate(sr%coil_name(sr%ncoil))
@@ -671,16 +674,16 @@ module vacuum_response
     call read_array_par    (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,  sr%a_ye,     .false.)    
     call read_array_par    (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,  sr%a_ey,     .true. )
     call read_array_par    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,  sr%a_ee,     .true. )
-    call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .true. )
+    if (.not. CARIDDI_mode) call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .true. )
     call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true. )
 
-    if(my_id == 0) then
-      call read_array_not_distr(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
-      call read_array_not_distr(filehandle, 'jpot_w',   (/sr%ntri_w,3/), disp, int2d=sr%jpot_w)
-      if ( sr%file_version >= 5 ) then
-        call read_array_not_distr(filehandle, 'phi0_w',   (/sr%ntri_w,3/), disp, float2d=sr%phi0_w)
-      endif
-    end if
+    if(my_id == 0 .and. .not. CARIDDI_mode) then
+     call read_array_not_distr(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
+     call read_array_not_distr(filehandle, 'jpot_w',   (/sr%ntri_w,3/), disp, int2d=sr%jpot_w)
+     if ( sr%file_version >= 5 ) then
+       call read_array_not_distr(filehandle, 'phi0_w',   (/sr%ntri_w,3/), disp, float2d=sr%phi0_w)!
+     endif
+   end if
 
     call MPI_FILE_CLOSE(filehandle, err)
 
@@ -966,6 +969,7 @@ module vacuum_response
     call MPI_bcast(sr%n_voltage_coils,         1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_diag_coils,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ind_start_pol_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%ind_start_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ind_start_rmp_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ind_start_voltage_coils, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ind_start_diag_coils,    1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
@@ -978,10 +982,11 @@ module vacuum_response
     if ( my_id /= 0 ) then
       if (allocated(sr%i_tor)   ) deallocate(sr%i_tor);    allocate(sr%i_tor(sr%n_tor))
       if (allocated(sr%d_yy)    ) deallocate(sr%d_yy);     allocate(sr%d_yy(sr%n_w))
-      if (allocated(sr%xyzpot_w)) deallocate(sr%xyzpot_w); allocate(sr%xyzpot_w(sr%npot_w,3))
-      if (allocated(sr%jpot_w)  ) deallocate(sr%jpot_w);   allocate(sr%jpot_w(sr%ntri_w,3))
-
-      if ( sr%file_version>=5 ) then 
+      if (.not. CARIDDI_mode) then
+        if (allocated(sr%xyzpot_w)) deallocate(sr%xyzpot_w); allocate(sr%xyzpot_w(sr%npot_w,3))
+        if (allocated(sr%jpot_w)  ) deallocate(sr%jpot_w);   allocate(sr%jpot_w(sr%ntri_w,3))
+      end if
+      if ( sr%file_version>=5 .and. .not. CARIDDI_mode) then 
         if (allocated(sr%m_w)        ) deallocate(sr%m_w);          allocate(        sr%m_w(sr%max_mn_w))
         if (allocated(sr%n_w_fourier)) deallocate(sr%n_w_fourier);  allocate(sr%n_w_fourier(sr%max_mn_w))
 
@@ -992,15 +997,16 @@ module vacuum_response
         if (allocated(sr%phi0_w)     ) deallocate(sr%phi0_w);       allocate(sr%phi0_w(sr%ntri_w,3))
       endif
 
-        
-      if ( sr%ncoil > 0 ) then
-        if (allocated(sr%jtri_c)       ) deallocate(sr%jtri_c);        allocate(sr%jtri_c(sr%ncoil))
-        if (allocated(sr%x_coil)       ) deallocate(sr%x_coil);        allocate(sr%x_coil(sr%ntri_c,3))
-        if (allocated(sr%y_coil)       ) deallocate(sr%y_coil);        allocate(sr%y_coil(sr%ntri_c,3))
-        if (allocated(sr%z_coil)       ) deallocate(sr%z_coil);        allocate(sr%z_coil(sr%ntri_c,3))
-        if (allocated(sr%phi_coil)     ) deallocate(sr%phi_coil);      allocate(sr%phi_coil(sr%ntri_c,3))
-        if (allocated(sr%eta_thin_coil)) deallocate(sr%eta_thin_coil); allocate(sr%eta_thin_coil(sr%ntri_c))
-        if (allocated(sr%coil_resist)  ) deallocate(sr%coil_resist);   allocate(sr%coil_resist(sr%ncoil))
+      if ( sr%ncoil > 0) then
+        if ( .not. CARIDDI_mode ) then
+          if (allocated(sr%jtri_c)       ) deallocate(sr%jtri_c);        allocate(sr%jtri_c(sr%ncoil))
+          if (allocated(sr%x_coil)       ) deallocate(sr%x_coil);        allocate(sr%x_coil(sr%ntri_c,3))
+          if (allocated(sr%y_coil)       ) deallocate(sr%y_coil);        allocate(sr%y_coil(sr%ntri_c,3))
+          if (allocated(sr%z_coil)       ) deallocate(sr%z_coil);        allocate(sr%z_coil(sr%ntri_c,3))
+          if (allocated(sr%phi_coil)     ) deallocate(sr%phi_coil);      allocate(sr%phi_coil(sr%ntri_c,3))
+          if (allocated(sr%eta_thin_coil)) deallocate(sr%eta_thin_coil); allocate(sr%eta_thin_coil(sr%ntri_c))
+          if (allocated(sr%coil_resist)  ) deallocate(sr%coil_resist);   allocate(sr%coil_resist(sr%ncoil))
+        end if
         if (allocated(sr%coil_name)  )   deallocate(sr%coil_name);     allocate(sr%coil_name(sr%ncoil))
       end if
     end if
@@ -1008,10 +1014,12 @@ module vacuum_response
     ! --- Broadcast matrices.
     call MPI_bcast(sr%i_tor,    sr%n_tor,                MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%d_yy,     sr%n_w,                  MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,             MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,             MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-
-    if ( sr%file_version>=5 ) then 
+    if (.not. CARIDDI_mode) then
+      call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,             MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,             MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+    end if
+    
+    if ( sr%file_version>=5 .and. .not. CARIDDI_mode) then 
       call MPI_bcast(sr%m_w,            sr%max_mn_w,     MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
       call MPI_bcast(sr%n_w_fourier,    sr%max_mn_w,     MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
       call MPI_bcast(sr%rc_w,           sr%max_mn_w,     MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
@@ -1022,25 +1030,26 @@ module vacuum_response
     endif
 
     if ( sr%ncoil > 0 ) then
-      call MPI_bcast(sr%jtri_c,   sr%ncoil,              MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%x_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%y_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%z_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,        MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%coil_resist,   sr%ncoil,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_bcast(sr%coil_name,sr%ncoil*COIL_NAME_LEN,MPI_CHARACTER       , 0, MPI_COMM_WORLD, ierr)
+      if (.not. CARIDDI_mode) then
+        call MPI_bcast(sr%jtri_c,   sr%ncoil,              MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+        call MPI_bcast(sr%x_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+        call MPI_bcast(sr%y_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+        call MPI_bcast(sr%z_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+        call MPI_bcast(sr%phi_coil,      sr%ntri_c*3,      MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+        call MPI_bcast(sr%eta_thin_coil, sr%ntri_c,        MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+        call MPI_bcast(sr%coil_resist,   sr%ncoil,         MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      end if
+      call MPI_bcast(sr%coil_name,sr%ncoil*COIL_NAME_LEN,MPI_CHARACTER       , 0, MPI_COMM_WORLD, ierr)    
     end if
     
     if ( vacuum_debug ) then
-
       loc_sum = sum(sr%a_ye%loc_mat) + sum(sr%a_ey%loc_mat) + sum(sr%a_ee%loc_mat) + &
-                sum(sr%a_nw%loc_mat) + sum(sr%s_ww%loc_mat) + sum(sr%s_ww_inv%loc_mat)   
+                sum(sr%a_nw%loc_mat)  + sum(sr%s_ww_inv%loc_mat)   
 
       if (my_id==0) then
 
-        loc_sum =   loc_sum + sum(sr%i_tor) + sum(sr%d_yy)+ sum(sr%xyzpot_w)     &
-                  + sum(sr%jpot_w) + sr%n_bnd + sr%nd_bez + sr%ncoil + sr%npot_w &
+        loc_sum =   loc_sum + sum(sr%i_tor) + sum(sr%d_yy)     &
+                   + sr%n_bnd + sr%nd_bez + sr%ncoil + sr%npot_w &
                   + sr%n_w + sr%ntri_w + sr%n_tor + sr%eta_thin_w                &
                   + sr%file_version + sr%ntri_c + sr%n_pol_coils                 &
                   + sr%n_rmp_coils + sr%n_voltage_coils + sr%n_diag_coils        &
@@ -1181,7 +1190,7 @@ module vacuum_response
         if (my_id == 0) write(*,36) 's_nw_inv         '
       end if
         
-      if (my_id == 0) then
+      if (my_id == 0 .and. .not. CARIDDI_mode) then
         if (allocated(sr%xyzpot_w     )) then; write(*,34) 'xyzpot_w     ',sum(sr%xyzpot_w      ); else; write(*,36) 'xyzpot_w     '; end if
         if (allocated(sr%jpot_w       )) then; write(*,35) 'jpot_w       ',sum(sr%jpot_w        ); else; write(*,36) 'jpot_w       '; end if
         if (allocated(sr%jtri_c       )) then; write(*,35) 'jtri_c       ',sum(sr%jtri_c        ); else; write(*,36) 'jtri_c       '; end if
@@ -2156,8 +2165,8 @@ module vacuum_response
     if ( allocated(old_dpsibnd_vec) ) deallocate(old_dpsibnd_vec)
     allocate( old_dpsibnd_vec(n_dof_starwall) )
     old_dpsibnd_vec(:) = 0.d0
-    
-    call write_wall_vtk(0, resistive_wall, my_id)
+
+    if (.not. CARIDDI_mode) call write_wall_vtk(0, resistive_wall, my_id)
     deallocate( psibnd_vec, dpsibnd_vec )
 
     ! --- Initialize net toroidal wall current (for plot_live_data)
@@ -2166,12 +2175,14 @@ module vacuum_response
         allocate( net_tor_wall_curr(index_start+nstep) )
         net_tor_wall_curr(:) = 0.d0
       end if
-      k2 = sr%ncoil + 1 
-      if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
-        global_index = my_id*sr%s_ww%step
-        net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
-      endif
-      call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      if (.not. CARIDDI_mode) then
+        k2 = sr%ncoil + 1 
+        if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
+          global_index = my_id*sr%s_ww%step
+          net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
+        endif
+        call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      end if
     end if
     
     ! --- Initialize coil currents (for plot_live_data)
@@ -2179,13 +2190,15 @@ module vacuum_response
       ! Calculate coil currents for all coil types
       if  (.not. allocated(tmp_coil_curr) ) allocate(tmp_coil_curr(sr%ncoil))
       tmp_coil_curr = 0.d0
-      do k = 1, sr%ncoil
-        if ( (k >= sr%s_ww%ind_start) .and. (k <= sr%s_ww%ind_end) ) then
-          global_index = my_id*sr%s_ww%step
-          tmp_coil_curr(k) = sum(sr%s_ww%loc_mat(k - global_index,:) * wall_curr(:))
-        endif
-      end do
-      call MPI_ALLReduce(MPI_IN_PLACE, tmp_coil_curr,sr%ncoil,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      if (.not. CARIDDI_mode) then
+        do k = 1, sr%ncoil
+          if ( (k >= sr%s_ww%ind_start) .and. (k <= sr%s_ww%ind_end) ) then
+            global_index = my_id*sr%s_ww%step
+            tmp_coil_curr(k) = sum(sr%s_ww%loc_mat(k - global_index,:) * wall_curr(:))
+          endif
+        end do
+        call MPI_ALLReduce(MPI_IN_PLACE, tmp_coil_curr,sr%ncoil,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      end if
 
       ! Distribute the coil currents to the different coil types
       if ( sr%n_diag_coils > 0 ) then
@@ -2206,8 +2219,8 @@ module vacuum_response
       
       if ( sr%n_pol_coils > 0 ) then
         if ( (.not. allocated(pf_coil_curr)) .and. (index_start+nstep >0) ) then
-          allocate( pf_coil_curr(index_start+nstep,sr%n_pol_coils) )
-          pf_coil_curr(:,:) = 0.d0
+           allocate( pf_coil_curr(index_start+nstep,sr%n_pol_coils) )
+           pf_coil_curr(:,:) = 0.d0
         end if
         pf_coil_curr(index_now,:) =  tmp_coil_curr(sr%ind_start_pol_coils:sr%ind_start_pol_coils + sr%n_pol_coils -1) 
       end if
@@ -2310,7 +2323,7 @@ module vacuum_response
     ! --- Transform real currents into starwall currents
     Y_coils0          = 0.d0
     potentials_real_0 = 0.d0
-    potentials_real_0(1:n_coils) = I_coils(1:n_coils) * mu_zero
+    potentials_real_0(sr%ind_start_coils:sr%ind_start_coils+n_coils-1) = I_coils(1:n_coils)  * mu_zero
     do i = 1, n_wall_curr
       if ( (i>=sr%s_ww_inv%ind_start) .and. (i<=sr%s_ww_inv%ind_end) ) then
         Y_coils0(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:)*potentials_real_0(:))
@@ -2368,39 +2381,46 @@ module vacuum_response
     if (index_now <= 1 ) dwall_curr = 0.d0
     wall_curr(:) = wall_curr(:) + dwall_curr(:)
 
-    call write_wall_vtk(index_now, resistive_wall, my_id)
+    if (.not. CARIDDI_mode) then
+      call write_wall_vtk(index_now, resistive_wall, my_id)
 
-    if ( vacuum_debug .and. resistive_wall ) then
-      call log_wall_curr(my_id)
-      !call log_coil_curr()
-    end if
+      if ( vacuum_debug .and. resistive_wall ) then
+        call log_wall_curr(my_id)
+!        call log_coil_curr()
+     end if
+  end if
 
     ! --- Extract net toroidal wall current such that it can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
     if ( (.not. allocated(net_tor_wall_curr)) .and. (index_start+nstep >0) ) then
       allocate( net_tor_wall_curr(index_start+nstep) )
       net_tor_wall_curr(:) = 0.d0
     end if
-    if (index_now>0) then
-      k2 = sr%ncoil + 1
-      if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
-        global_index = my_id*sr%s_ww%step
-        net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
-      endif
+    if (.not. CARIDDI_mode) then
+      if (index_now>0) then
+        k2 = sr%ncoil + 1
+        if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
+          global_index = my_id*sr%s_ww%step
+          net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
+        endif
+     endif
+     call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1 ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
     endif
-    call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1 ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
 
     ! --- Extract coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
     if (sr%ncoil > 0) then
       ! Calculate coil currents for all coil types
       if  (.not. allocated(tmp_coil_curr) ) allocate(tmp_coil_curr(sr%ncoil))
       tmp_coil_curr = 0.d0
-      do k = 1, sr%ncoil
-        if ( (k >= sr%s_ww%ind_start) .and. (k <= sr%s_ww%ind_end) ) then
-          global_index = my_id*sr%s_ww%step
-          tmp_coil_curr(k) = sum(sr%s_ww%loc_mat(k - global_index,:) * wall_curr(:))
-        endif
-      end do
-      call MPI_ALLReduce(MPI_IN_PLACE, tmp_coil_curr,sr%ncoil,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      if (.not. CARIDDI_mode) then
+        do k = 1, sr%ncoil
+          if ( (k >= sr%s_ww%ind_start) .and. (k <= sr%s_ww%ind_end) ) then
+            global_index = my_id*sr%s_ww%step
+            tmp_coil_curr(k) = sum(sr%s_ww%loc_mat(k - global_index,:) * wall_curr(:))
+          endif
+        end do
+        call MPI_ALLReduce(MPI_IN_PLACE, tmp_coil_curr,sr%ncoil,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      end if
 
       ! Distribute the coil currents to the different coil types
       if ( sr%n_diag_coils > 0 ) then
@@ -2748,16 +2768,17 @@ module vacuum_response
         call matrix_multiplication(my_id,sr%a_ey,mat2=response_m_d,res_mat_not_distr=response_m_j)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_j,size(response_m_j),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-        response_m_k=0.0        
-        do k = 1, n_wall_curr
-          do j = 1, sr%ncoil
-            if(sr%s_ww%ind_start<=j .AND. sr%s_ww%ind_end>=j) then   
-              response_m_k(k,j) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(j,k)
-            end if
+        response_m_k=0.0
+        if (.not. CARIDDI_mode) then
+          do k = 1, n_wall_curr
+            do j = 1, sr%ncoil
+              if(sr%s_ww%ind_start<=j .AND. sr%s_ww%ind_end>=j) then   
+                response_m_k(k,j) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(j,k)
+              end if
+            end do
           end do
-        end do
-        call MPI_AllREDUCE(MPI_IN_PLACE,response_m_k,size(response_m_k),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-
+          call MPI_AllREDUCE(MPI_IN_PLACE,response_m_k,size(response_m_k),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+        end if
         call matrix_multiplication(my_id,sr%a_ey,mat2_not_distr=response_m_k,res_mat_not_distr=response_m_l)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_l,size(response_m_l),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 

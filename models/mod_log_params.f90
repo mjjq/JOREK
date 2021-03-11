@@ -641,6 +641,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
     write(*,REA3_FMT) 'z_limiter             ', z_limiter(1:min(9,n_limiter))
   end if
 
+  write(*,LOGI_FMT) 'CARIDDI_mode          ', CARIDDI_mode
   write(*,LOGI_FMT) 'freeboundary_equil    ', freeboundary_equil
   write(*,LOGI_FMT) 'freeboundary          ', freeboundary
   write(*,LOGI_FMT) 'freeb_change_indices  ', freeb_change_indices

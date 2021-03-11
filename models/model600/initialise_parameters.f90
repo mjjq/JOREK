@@ -206,7 +206,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta_num_prof, eta_num_psin_dependent, D_par_imp,    &
                 D_perp_imp, spi_quantity_bg, pellet_density_bg,     &
                 visco_par_heating, constant_imp_source,             &
-                T_min_ZKpar,Ti_min_ZKpar,Te_min_ZKpar
+                T_min_ZKpar,Ti_min_ZKpar,Te_min_ZKpar,              &
+                CARIDDI_mode
+
 
 if (my_id .eq. 0) then
 

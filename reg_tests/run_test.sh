@@ -75,23 +75,6 @@ if [ ! -d "${codedir}/non_regression_tests" ]; then
     exit 1
 fi
 
-# --- Verify that $MPIRUN can be executed
-MPIRUN_cmd=`echo $MPIRUN | cut -d' ' -f1`
-stringarray=($MPIRUN)
-MPIRUN_cmd=${stringarray[0]}
-which $MPIRUN_cmd >/dev/null 2>&1
-if [ $? -ne 0 ]; then
-  printf "\nERROR: $MPIRUN_cmd not found\n"
-  exit 1
-fi
-
-# --- Verify that 'h5diff' can be executed
-which h5diff >/dev/null 2>&1
-if [ $? -ne 0 ]; then
-  printf "\nERROR: h5diff not found\n"
-  exit 1
-fi
-
 # --- Verify that 'Makefile.inc' exist
 if [ ! -f "Makefile.inc" ]; then
   printf "\n$ERROR_COL Please provide a Makefile.inc file.\n $NO_COL"
@@ -198,6 +181,25 @@ echo " tmpdir = " $tmpdir
 if [ "${testcase:0:17}" == "compile_objs_all_" ]; then
   compiletest="yes"
   compilemodel=${testcase:17}
+fi
+
+if [ "$compiletest" != "yes" ]; then
+  # --- Verify that $MPIRUN can be executed
+  MPIRUN_cmd=`echo $MPIRUN | cut -d' ' -f1`
+  stringarray=($MPIRUN)
+  MPIRUN_cmd=${stringarray[0]}
+  which $MPIRUN_cmd >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    printf "\nERROR: $MPIRUN_cmd not found\n"
+    exit 1
+  fi
+  
+  # --- Verify that 'h5diff' can be executed
+  which h5diff >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    printf "\nERROR: h5diff not found\n"
+    exit 1
+  fi
 fi
 
 # --- Check if the testcase exists

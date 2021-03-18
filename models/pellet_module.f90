@@ -198,7 +198,7 @@ module pellet_module
     use data_structure
     use phys_module
     use mpi_mod
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555 || JOREK_MODEL == 712)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
       use mod_neutral_source
 #endif
     use corr_neg
@@ -502,7 +502,7 @@ module pellet_module
     use data_structure
     use phys_module
     use mpi_mod
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555 || JOREK_MODEL == 712)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
     use mod_neutral_source
 #endif
     use corr_neg
@@ -558,7 +558,7 @@ module pellet_module
         shard_size = 1.
       end if
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
+#if (defined WITH_Neutrals)
       do i = 1, n_spi
         pellets(i)%spi_species = 0.
         N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * pellet_density * 1.d20
@@ -567,7 +567,7 @@ module pellet_module
       size_beta    = (spi_quantity / N_shard_norm) ** (-1./3.)
       write(*,*) "Characteristic shard size (m):", 1./size_beta
 #endif
-#if (JOREK_MODEL == 501 || JOREK_MODEL == 502) 
+#if (defined WITH_Impurities)
       ! Determine approximately how many fragments are of the impurity, how
       ! much are of the background species. 
 

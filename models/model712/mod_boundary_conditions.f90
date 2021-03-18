@@ -32,45 +32,46 @@ contains
                                   ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
 
     use data_structure
-    use phys_module, only: F0, GAMMA, Mach1_openBC, bc_natural_open, keep_n0_const
+    use phys_module, only: F0, GAMMA, Mach1_openBC, bc_natural_open, keep_n0_const, no_mach1_bc
     use vacuum, only: is_freebound
     use mpi_mod
     use mod_locate_irn_jcn
+    use mod_integer_types
 
     implicit none
 
     ! Subroutine parameters
-    INTEGER,                   intent(in)    :: my_id
-    INTEGER,                   intent(in)    :: local_elms(*)
-    INTEGER,                   intent(in)    :: n_local_elms
-    INTEGER,                   intent(in)    :: index_min
-    INTEGER,                   intent(in)    :: index_max
-    INTEGER,                   intent(in)    :: xcase2
-    TYPE (type_node_list),     intent(in)    :: node_list
-    TYPE (type_element_list),  intent(in)    :: element_list
-    TYPE (type_bnd_node_list), intent(in)    :: bnd_node_list
-    logical,                   intent(in)    :: xpoint2
-    REAL*8,                    intent(in)    :: R_axis
-    REAL*8,                    intent(in)    :: Z_axis
-    REAL*8,                    intent(in)    :: psi_axis
-    REAL*8,                    intent(in)    :: psi_bnd
-    REAL*8,                    intent(in)    :: R_xpoint(2)
-    REAL*8,                    intent(in)    :: Z_xpoint(2)
-    REAL*8,                    intent(in)    :: psi_xpoint(2)
-    logical,                   intent(in)    :: gmres
-    logical,                   intent(in)    :: solve_only
-    real*8,                    intent(inout) :: rhs_loc(*)
-    integer,                   intent(in)    :: i_tor_min, i_tor_max 
-    integer, allocatable,      intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, allocatable,      intent(inout) :: irn(:), jcn(:) 
-    real*8,  allocatable,      intent(inout) :: A_mat(:) 
+    INTEGER,                            intent(in)    :: my_id
+    INTEGER,                            intent(in)    :: local_elms(*)
+    INTEGER,                            intent(in)    :: n_local_elms
+    INTEGER,                            intent(in)    :: index_min
+    INTEGER,                            intent(in)    :: index_max
+    INTEGER,                            intent(in)    :: xcase2
+    TYPE (type_node_list),              intent(in)    :: node_list
+    TYPE (type_element_list),           intent(in)    :: element_list
+    TYPE (type_bnd_node_list),          intent(in)    :: bnd_node_list
+    logical,                            intent(in)    :: xpoint2
+    REAL*8,                             intent(in)    :: R_axis
+    REAL*8,                             intent(in)    :: Z_axis
+    REAL*8,                             intent(in)    :: psi_axis
+    REAL*8,                             intent(in)    :: psi_bnd
+    REAL*8,                             intent(in)    :: R_xpoint(2)
+    REAL*8,                             intent(in)    :: Z_xpoint(2)
+    REAL*8,                             intent(in)    :: psi_xpoint(2)
+    logical,                            intent(in)    :: gmres
+    logical,                            intent(in)    :: solve_only
+    real*8,                             intent(inout) :: rhs_loc(*)
+    integer,                            intent(in)    :: i_tor_min, i_tor_max 
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
+    real*8,                allocatable,      intent(inout) :: A_mat(:) 
 
     ! Internal parameters
     real*8  :: zbig, zbig_backup
     integer :: i, in, iv, inode, k
     integer :: index_large_i, index_node, index_node2, ielm
-    integer :: ijA_position, ijA_position2, ilarge2
-    integer :: ilarge_v(n_var), ilarge_vs(n_var)
+    integer(kind=int_all) :: ijA_position, ijA_position2, ilarge2
+    integer(kind=int_all) :: ilarge_v(n_var), ilarge_vs(n_var)
     integer :: ierr
     real*8  :: R, R_s, R_t, R_mid, R_cnt
     real*8  :: Z, Z_s, Z_t, Z_mid, Z_cnt
@@ -140,7 +141,7 @@ contains
               !------------------------------------ the open field lines (in case of x-point grid)
               if ((node_list%node(inode)%boundary == 1) .or. (node_list%node(inode)%boundary == 3)) then
 
-                if ((k .eq. var_AR) .or. (k .eq. var_AZ) .or. (k .eq. var_A3)) then
+                if ((k .eq. var_AR) .or. (k .eq. var_AZ) .or. (k .eq. var_A3) .or. (no_mach1_bc)) then
 
                   index_node = node_list%node(inode)%index(1)
                   if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
@@ -171,7 +172,7 @@ contains
                 endif
 
                 ! --- Mach-1 BCs
-                if (.not. Mach1_openBC) then 
+                if ( (.not. Mach1_openBC) .and. (.not. no_mach1_bc) ) then 
                   if ( (k == var_uR) .or. (k == var_uZ) .or. (k == var_up) ) then 
                     
                     index_node  = node_list%node(inode)%index(1)             ! position of value
@@ -360,7 +361,7 @@ contains
                   
                   endif
                 else
-                  if (.not. bc_natural_open) then
+                  if ( (.not. bc_natural_open) .and. (.not. no_mach1_bc) ) then
                     write(*,*)'*** MODEL710 WARNING ***'
                     write(*,*)'*** YOU ARE NOT USING ANY DIVERTOR BOUNDARY CONDITIONS!!!'
                     write(*,*)'*** YOU NEED TO USE EITHER Mach1_openBC=.f. OR bc_natural_open=.t.'
